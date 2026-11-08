@@ -20,5 +20,4 @@ A platform-run answer model or reranker. Translating questions. Query history fe
 
 ## History
 
-- 2026-11-08: accepted in the brainstorming conversation; recorded with the
-  design spec.
+- 2026-11-08: accepted in the brainstorming conversation.

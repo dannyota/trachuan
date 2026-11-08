@@ -25,7 +25,5 @@ behavior; a disagreement is a defect to repair together.
 | `runbooks/`       | Exact operating and recovery procedures         | Living with supported commands               |
 | `research/`       | Observations, experiments, bake-off results     | Not authority                                |
 | `standards/`      | Writing and comment rules                       | Living repository policy                     |
-| `superpowers/specs/` | Brainstormed design specs before they are split into `design/` and `adr/` | Deleted after the split |
 
-Current entry point: the
-[design spec of 2026-11-08](superpowers/specs/2026-11-08-traquydinh-design.md).
+Start at [design](design/README.md) and the [ADR index](adr/README.md).

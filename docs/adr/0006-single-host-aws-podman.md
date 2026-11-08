@@ -20,5 +20,4 @@ VNGCloud (approved for banhmi, never built). A Vietnamese VPS. Docker Compose on
 
 ## History
 
-- 2026-11-08: accepted in the brainstorming conversation; recorded with the
-  design spec.
+- 2026-11-08: accepted in the brainstorming conversation.

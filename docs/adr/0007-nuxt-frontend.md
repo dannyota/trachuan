@@ -20,5 +20,4 @@ Go templates with htmx (least code, but no reuse). A separate Next.js service. V
 
 ## History
 
-- 2026-11-08: accepted in the brainstorming conversation; recorded with the
-  design spec.
+- 2026-11-08: accepted in the brainstorming conversation.

@@ -31,8 +31,7 @@ check() {
   done
 }
 
-# Brainstormed specs under docs/superpowers/ are transitional and split later.
-check "$MD_MAX" < <(git ls-files -- '*.md' | grep -Ev '^docs/superpowers/')
+check "$MD_MAX" < <(git ls-files -- '*.md')
 check "$CODE_MAX" < <(
   git ls-files -- '*.go' '*.ts' '*.vue' '*.mjs' '*.js' '*.sh' |
     grep -Ev "$generated" | grep -Ev "$tests" || true

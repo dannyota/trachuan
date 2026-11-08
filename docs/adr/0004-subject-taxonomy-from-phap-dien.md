@@ -20,5 +20,7 @@ A hand-written tree. Pure embedding zero-shot classification. A fine-tuned class
 
 ## History
 
-- 2026-11-08: accepted in the brainstorming conversation; recorded with the
-  design spec.
+- 2026-11-08: accepted in the brainstorming conversation.
+- 2026-11-08: after design review findings S-08 to S-11, fixed the precedence
+  (manual over seed over llm), moved classification after embedding, and
+  defined the import mapping and code rules in design/taxonomy.md.

@@ -20,5 +20,4 @@ Reuse the Go engine (inherits the complexity). Greenfield including data (loses 
 
 ## History
 
-- 2026-11-08: accepted in the brainstorming conversation; recorded with the
-  design spec.
+- 2026-11-08: accepted in the brainstorming conversation.

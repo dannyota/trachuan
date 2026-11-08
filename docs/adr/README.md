@@ -15,3 +15,4 @@ only for a new topic.
 | [0005](0005-google-login-and-embedded-oauth.md) | Google-only login; OAuth server copied from aboutme |
 | [0006](0006-single-host-aws-podman.md)          | One AWS Graviton host, rootless Podman Quadlet |
 | [0007](0007-nuxt-frontend.md)                   | Nuxt 4 frontend with English routes         |
+| [0008](0008-write-path-temporal-self-hosted.md) | Write path on self-hosted Temporal, worker on the MacBook |

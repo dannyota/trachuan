@@ -20,5 +20,4 @@ Keycloak (about 1 GB RAM, MCP support experimental). A new hand-written server (
 
 ## History
 
-- 2026-11-08: accepted in the brainstorming conversation; recorded with the
-  design spec.
+- 2026-11-08: accepted in the brainstorming conversation.

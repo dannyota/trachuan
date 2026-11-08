@@ -8,7 +8,7 @@ The corpus is 142k chunks with dense and sparse vectors, a structure tree, relat
 
 ## Decision
 
-PostgreSQL with pgvector in a container on the host. Each corpus release is its own database (corpus_<cc>_<rel>) activated by a pointer; accounts and tokens live in a separate auth database that is never reloaded. The server never writes corpus data; the pipeline never touches auth.
+PostgreSQL with pgvector in a container on the host. Each corpus release is its own database (corpus_<cc>_<rel>) activated by a pointer; accounts and tokens live in a separate auth database that is never reloaded. The server never writes corpus data; the pipeline never connects to the host. Release activation uses a dedicated `activator` role limited to creating corpus databases and writing `auth.corpus_release`.
 
 ## Consequences
 
@@ -20,5 +20,7 @@ SQLite with sqlite-vec (no ANN index, re-measure everything). A separate search 
 
 ## History
 
-- 2026-11-08: accepted in the brainstorming conversation; recorded with the
-  design spec.
+- 2026-11-08: accepted in the brainstorming conversation.
+- 2026-11-08: added the `activator` role after design review finding S-01,
+  which showed activation could not both write the pointer and obey "the
+  pipeline never touches auth".

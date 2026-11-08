@@ -1,12 +1,24 @@
 # Design
 
-Intended behavior of traquydinh. The approved design currently lives in one
-spec, [2026-11-08 design](../superpowers/specs/2026-11-08-traquydinh-design.md),
-and is split into focused notes here as implementation starts. Decisions with
-alternatives are recorded in [ADRs](../adr/README.md).
+Intended behavior of traquydinh. Decisions with alternatives are in the
+[ADRs](../adr/README.md); numeric limits in [budgets](budgets.md).
 
-Planned notes: `system.md` (components and data flow), `data.md` (corpus and
-auth models), `retrieval.md` (hybrid search, subject filter, abstain),
-`taxonomy.md` (subject tree and classification), `pipeline.md` (write path),
-`auth.md` (Google login, OAuth for MCP), `web.md` (routes and visual system),
-`deployment.md` (host, Quadlet, backups), `budgets.md` (numeric limits).
+| Note                          | Owns                                                        |
+| ----------------------------- | ----------------------------------------------------------- |
+| [system](system.md)           | Success criteria, components, database roles, repository layout |
+| [data](data.md)               | Corpus, auth and workshop data models                       |
+| [retrieval](retrieval.md)     | Query validation, ranking, validity, subject filter, release pinning, MCP tools, web API |
+| [taxonomy](taxonomy.md)       | Subject tree import, classification layers, evaluation gate |
+| [pipeline](pipeline.md)       | Write path on Temporal, stages, batch submissions, release artifact |
+| [auth](auth.md)               | Google login, OAuth for MCP, CIMD, revocation, account lifecycle |
+| [web](web.md)                 | Routes, pages, visual system                                |
+| [deployment](deployment.md)   | Host, deploy, secrets, release activation, backups, observability |
+| [budgets](budgets.md)         | Cost, memory, request limits, retrieval and Temporal bounds |
+
+Spikes before implementation: real OAuth connections from Claude.ai, ChatGPT
+and Claude Code; Qwen3-Embedding-0.6B INT8 on ARM64 compared with
+Vietnamese_Embedding_v2 on the golden set; the Bộ pháp điển join coverage.
+
+Out of scope for the first release: other countries; dossiers, watch lists,
+exports; organizations; paid tier; a platform model or reranker; translation;
+query history; Coraza or CrowdSec; deployment observer; serving Pháp điển data.
