@@ -1,0 +1,13 @@
+{
+  // markdownlint-cli2 config — docs style gate (run: make docs-lint)
+  "default": true,
+  // Prettier owns wrapping; don't double-police line length
+  "MD013": false,
+  // Tables and badges legitimately use inline HTML in places
+  "MD033": { "allowed_elements": ["br", "sub", "sup", "details", "summary"] },
+  // Allow duplicate headings in different sections (e.g. "Decision" in ADRs)
+  "MD024": { "siblings_only": true },
+  // Prettier decides list indentation
+  "MD007": false,
+  "MD030": false
+}

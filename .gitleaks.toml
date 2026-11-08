@@ -1,0 +1,5 @@
+title = "traquydinh"
+[extend]
+useDefault = true
+[allowlist]
+paths = ['''docs/research/.*''']
