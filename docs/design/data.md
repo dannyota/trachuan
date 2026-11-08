@@ -66,7 +66,7 @@ Rules:
 | ------------ | ----------------------------------------------------------------------------------------------- |
 | `run`        | `id`, `country`, `rel`, `generation` (increments on every `corpus start` for the same rel), `started_at`, `finished_at`, `state`, Temporal workflow id, frozen snapshot (source list revision, recipe hashes, `taxonomy_version`, worker version, previous manifest hash) |
 | `run_item`   | `run_id`, `stage`, `item_key`, `input_hash`, `recipe_hash`, `state` (pending, done, gap, accepted_gap, failed), `generation`, `attempt`, `message` |
-| `submission` | `id` (UUID, prefix of every `custom_id`), `run_id`, `stage`, `provider`, items hash, `provider_job_id`, `state` (preparing, submitted, uncertain, abandoned, completed, cancelled), `created_at`, `submitted_at`, `deadline_at`, cost |
+| `submission` | `id` (32 hex, prefix of every `custom_id`), `run_id`, `stage`, `provider`, ordered item list and its hash, `provider_job_id`, `state` (preparing, submitted, uncertain, abandoned, completed, cancelling, cancelled, failed), `created_at`, `submitted_at`, `deadline_at`, cost; mirrored in the intent log outside the workshop |
 | `artifact`   | `stage`, `item_key`, `input_hash`, `recipe_hash`, `path`, `sha256`, `written_at`                 |
 | bronze, silver, gold tables | fetched metadata, extracted trees, relations, assignments, chunks and vectors feeding `build` |
 

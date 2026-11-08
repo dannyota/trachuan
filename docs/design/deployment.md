@@ -29,7 +29,11 @@ with the newest.
 ## Serving bundle and release activation
 
 A serving bundle is the server image, embedder image and recipe, and the active
-corpus release. `release activate <rel>` runs as the `activator` role:
+corpus release. `release activate <rel>` runs as the `activator` role in one of two modes,
+recorded in the journal: `new` restores a database from S3; `retained`
+reactivates a database still listed in `retired_release`, skipping steps 1
+to 3 and verifying instead that the database exists and its `release` row
+matches `<rel>`. Steps:
 
 0. Take the `activation` advisory lock, shared with `release prune`, `release
    resume` and `release abort`; append `release_journal` (`started`, target
@@ -49,14 +53,18 @@ corpus release. `release activate <rel>` runs as the `activator` role:
    against the expected current value, insert the old active database into
    `retired_release` with `retain_until` seven days ahead, and append the
    journal row `activated`.
+5a. In `retained` mode the same transaction also deletes the target from
+   `retired_release`.
 6. The server resolves the release once per request and holds that connection
    for the request. `release prune`, under the same lock, drops a database only
    when it is not `active_db`, is not the target of an unfinished journal, its
    `retain_until` has passed, and it has no connections; the journal records
-   the drop. After a crash, `release resume` rereads the journal, rechecks
-   that the target is still neither active nor retired, and continues from
-   the last step; `release abort` drops the target only under the same
-   checks.
+   the drop. After a crash, `release resume` rereads the journal and applies
+   the mode's guard: in `new` mode the target must still be neither active nor
+   retired; in `retained` mode it must still be retired and not active. It
+   then continues from the last recorded step. `release abort` drops the
+   target only in `new` mode and only when the guard holds; in `retained` mode
+   it only closes the journal.
 
 Retained releases stay readable through `document`; `search` against a
 retained release whose `dense_recipe` or `lexical_recipe` differs from the
@@ -68,8 +76,8 @@ and is loaded for the release being searched.
 
 A recipe change needs a maintenance window: stop traffic at Caddy, deploy the
 new server and embedder, activate the matching release, resume. Rollback of a
-bundle is the same window in reverse: previous image tags, then activation of
-the previous release, which is still retained. The runbook owns the exact
+bundle is the same window in reverse: previous image tags, then `release
+activate --retained` of the previous release. The runbook owns the exact
 steps.
 
 ## Backups
