@@ -19,8 +19,9 @@ already runs the pipeline, and may be off between runs.
 
 Run the Temporal server, its UI and PostgreSQL persistence on the MacBook
 through `deploy/compose.yml`, started for a run and stopped afterwards. One
-workflow `BuildRelease(country, rel)` with one activity per stage, batched by
-100 documents, payloads as references only. Completeness, idempotency,
+workflow `BuildRelease(country, rel)` with one activity per stage, fixed
+batches sized in design/budgets.md, continue-as-new after each stage, payloads
+as references only. Completeness, idempotency,
 submission reconciliation and the signed release artifact are application
 contracts in `apps/corpus`, recorded in [pipeline](../design/pipeline.md). No
 second workflow or scheduler without a measured need.

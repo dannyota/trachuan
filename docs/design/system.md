@@ -13,8 +13,8 @@ component shape and the data-flow rules. Decisions and alternatives live in the
   with validity and amendment context, behind Google login.
 - A signed-in person does the same on the website.
 - Vietnam retrieval holds the golden-set floors in [testing](../../instructions/testing.md).
-- A subject filter never lowers recall on the golden set under the response
-  contract in [retrieval](retrieval.md).
+- A subject filter never lowers recall on the golden set under the per-case
+  contract in [retrieval](retrieval.md) "Subject filter contract".
 - Recurring hosting stays within the [budget](budgets.md).
 
 ## Serving host
@@ -36,8 +36,12 @@ Browser / MCP client
                    └── corpus_<cc>_<rel>   one database per corpus release, read only
 ```
 
-Limits, authentication and rate control live in `server`. Caddy has no
-rate limiter and gets none.
+Caddy has no rate limiter and gets none. Authentication and the limits for
+`/api/v1` and `/mcp` live in `server`. Admission for public pages lives in
+`web`: Nitro middleware applies the per-IP limit from [budgets](budgets.md),
+serves cached pages, bounds the cache to the known public routes and node
+codes, and renders at most four pages concurrently; everything else waits or
+receives 429.
 
 ## Write path
 

@@ -22,8 +22,12 @@ Rules:
 
 - Results are provisions, never chunks. Citation and validity come from
   `document` and `provision`.
-- A provision may carry several assignments. Precedence when methods disagree
-  for the same node family: `manual` over `phapdien_seed` over `llm`.
+- A provision may carry several assignments from different families. A node
+  family is the set of nodes under one level-2 ancestor. Within a family a
+  provision holds assignments from one method only: a `manual` entry replaces
+  every `phapdien_seed` and `llm` entry in that family, and a seed replaces
+  `llm` entries there. A manual entry may be negative (`exclude`), which
+  removes the family from the provision and blocks later automatic entries.
 - The public identity of a node is its `code`; integer ids are internal. A
   retired node keeps its code; codes are never reused.
 - Provision-level repeal shows as "a repeal relation targets this provision",
@@ -43,7 +47,9 @@ Rules:
 | `web_session`                        | `token_hash`, `account_id`, `created_at`, `expires_at`, `revoked_at`                          |
 | `oauth_client`, `oauth_grant`, `oauth_code`, `oauth_token` | as defined by the copied `oauthsrv` store, pinned to one aboutme commit; refresh and access tokens stored hashed with `revoked_at` |
 | `personal_token`                     | `token_hash`, `account_id`, `name`, `last_used_at`, `revoked_at`                              |
-| `corpus_release`                     | `country`, `active_db`, `previous_db`, `activated_at`, `activated_by`                         |
+| `corpus_release`                     | `country`, `active_db`, `activated_at`, `activated_by`                                        |
+| `retired_release`                    | `country`, `db_name`, `retired_at`, `retain_until`, `dropped_at`                               |
+| `release_journal`                    | `id`, `country`, `rel`, `step`, `state`, `at`, `message`; append only                         |
 
 Rules:
 
@@ -58,10 +64,11 @@ Rules:
 
 | Table        | Content                                                                                         |
 | ------------ | ----------------------------------------------------------------------------------------------- |
-| `run`        | `id`, `country`, `rel`, `started_at`, `finished_at`, `state`, Temporal workflow id               |
-| `run_item`   | `run_id`, `stage`, `item_key`, `input_hash`, `recipe_hash`, `state` (pending, done, gap, failed), `attempts`, `message` |
-| `submission` | `run_id`, `stage`, `provider`, `idempotency_key`, `provider_job_id`, `submitted_at`, `state`     |
+| `run`        | `id`, `country`, `rel`, `started_at`, `finished_at`, `state`, Temporal workflow id, frozen snapshot (source list revision, recipe hashes, `taxonomy_version`, worker version, previous manifest hash) |
+| `run_item`   | `run_id`, `stage`, `item_key`, `input_hash`, `recipe_hash`, `state` (pending, done, gap, accepted_gap, failed), `attempt`, `message` |
+| `submission` | `run_id`, `stage`, `provider`, items hash, `provider_job_id`, `state` (preparing, submitted, uncertain, abandoned, completed), `submitted_at`, cost |
 | `artifact`   | `stage`, `item_key`, `input_hash`, `recipe_hash`, `path`, `sha256`, `written_at`                 |
 | bronze, silver, gold tables | fetched metadata, extracted trees, relations, assignments, chunks and vectors feeding `build` |
 
-Publication is blocked while any expected `run_item` is `pending` or `failed`.
+Publication is blocked while any expected `run_item` is `pending`, `failed` or
+an unaccepted `gap`.

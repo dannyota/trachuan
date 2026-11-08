@@ -40,16 +40,30 @@ corpus release. `release activate <rel>` runs as the `activator` role:
    dedicated `maintenance_work_mem`; the TOC is listed first and refused if it
    contains functions, extensions other than pgvector, or event triggers.
 4. Smoke queries: counts, one search, one document read.
-5. Compare-and-swap `auth.corpus_release`: expected `active_db` must equal the
-   current value; the old active becomes `previous_db`.
+5. Take the `activation` advisory lock (shared with `release prune`), append a
+   `release_journal` row for each step, then compare-and-swap
+   `auth.corpus_release.active_db` against the expected current value. The old
+   active database is appended to `retired_release` with `retain_until` seven
+   days ahead.
 6. The server resolves the release once per request and holds that connection
-   for the request. `previous_db` stays 7 days for pinned reads, then
-   `release prune` drops databases that are neither active nor previous and have
-   no connections.
+   for the request. `release prune`, under the same lock, drops a database only
+   when it is not active, its `retain_until` has passed, and it has no
+   connections; the journal records the drop. A failed activation leaves the
+   journal at the failed step for `release resume` or `release abort`, which
+   drops the half-restored database.
+
+Retained releases stay readable through `document`; `search` against a
+retained release whose dense or lexical recipe differs from the running
+bundle returns `release_incompatible`. Each release carries its own BM25
+statistics (vocabulary, document frequencies, length normalization) in
+`lexical_recipe`, and query sparse vectors are built from the release being
+searched.
 
 A recipe change needs a maintenance window: stop traffic at Caddy, deploy the
-new server and embedder, activate the matching release, resume. The runbook
-owns the exact steps.
+new server and embedder, activate the matching release, resume. Rollback of a
+bundle is the same window in reverse: previous image tags, then activation of
+the previous release, which is still retained. The runbook owns the exact
+steps.
 
 ## Backups
 

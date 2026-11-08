@@ -11,25 +11,45 @@ signed dump to S3. Decision and alternatives:
   Temporal resumes from persisted history.
 - `corpus worker` is one Go binary with one workflow, `BuildRelease(country,
   rel)`, and one activity per stage. Workflow ids are `build-<cc>-<rel>`; a
-  second start with the same id is rejected, which fences overlapping runs.
+  second start while one is running is rejected. The workflow calls
+  continue-as-new after each stage, so each history segment holds one stage.
+- `corpus start <rel>` first writes the `run` row with a frozen snapshot: the
+  source list revision, every recipe hash, `taxonomy_version`, worker version
+  and the previous release manifest hash. Activities read the snapshot from the
+  run row, never from the working tree, so a run is reproducible.
 - Activities receive and return references (run id, stage, item keys, artifact
-  hashes), never text or vectors. Items are processed in batches of 100
-  documents per activity execution with heartbeats.
-- Every activity is idempotent: it computes `recipe_hash` for its stage, skips
-  items whose `(input_hash, recipe_hash)` artifact exists, writes new output to
-  a temporary path, verifies it, then renames and records the `artifact` and
-  `run_item` rows in one transaction.
+  hashes), never text or vectors. Items are processed in fixed batches per
+  activity execution with heartbeats; the size is in [budgets](budgets.md).
+- Artifacts are immutable and content addressed:
+  `artifacts/<stage>/<input_hash>-<recipe_hash>/`. An activity skips an item
+  whose artifact row exists, writes new output to a temporary directory,
+  verifies it, renames it into place, then inserts the `artifact` row and
+  updates `run_item`. If a retry finds the directory present without a row, it
+  verifies the sha256 and inserts the row; if the directory is partial, it
+  deletes and redoes it. Each `run_item` carries the Temporal attempt number;
+  a commit with a lower attempt than the recorded one is ignored, so a late
+  duplicate attempt cannot overwrite a newer result. Different releases share
+  artifacts by hash without conflict.
 - `corpus status <rel>` and the Temporal UI show per-stage expected, done, gap,
   failed and pending counts, next retry times, provider job ids and cost so far.
-  `corpus cancel <rel>` cancels the workflow; completed artifacts stay.
+- Run states: `running`, `cancelling`, `cancelled`, `failed`, `evaluated`,
+  `released`. `corpus cancel <rel>` requests cancellation; activities finish
+  their current batch and the run becomes `cancelled`. `corpus start <rel>`
+  after `cancelled` or `failed` starts a new workflow with the same snapshot and
+  reuses artifacts. A gap becomes accepted only through `corpus accept-gaps
+  <rel>`, which records the owner's approval per gap kind; `release` refuses
+  unaccepted gaps.
+- `corpus backup` after each run copies the workshop database dump, the
+  `artifacts/` tree and the Temporal persistence dump to an external disk or
+  S3, so the MacBook is not the only copy.
 
 ## Stages
 
 | Stage      | Input                                                   | Output                                                        | Completeness rule                                                        |
 | ---------- | ------------------------------------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| `discover` | source list YAML; previous release manifest             | expected document set with source modified dates             | full listing per source every run; delta is computed by the pipeline, never trusted from a change feed |
-| `fetch`    | expected set                                            | metadata JSON, every listed attachment, hashes               | a document with a missing attachment is a gap, not a silent skip          |
-| `extract`  | files                                                   | structure tree with verbatim text                            | article count matches the table of contents; empty text is a gap           |
+| `discover` | source list YAML; previous release manifest             | expected document set with source modified dates             | full listing per source every run; a document absent from two consecutive listings is marked `withdrawn` and kept with a gap |
+| `fetch`    | expected set                                            | metadata JSON, every listed attachment, hashes               | every attachment is revalidated each run by size and hash of a fresh download when the source gives no ETag; a changed attachment reprocesses the document; a missing attachment is a gap |
+| `extract`  | files                                                   | structure tree with verbatim text                            | limits: 50 MB per file, 5 minutes per document, 500 OCR pages; article count matches the table of contents; table and appendix counts match the source inventory; empty or truncated text is a gap |
 | `relate`   | VBPL references, text                                   | relations with kind, evidence, affected provisions when captured | never guessed; unknown targets are gaps                                |
 | `chunk`, `embed` | trees                                             | chunks, dense and sparse vectors under the release recipes   | vector count equals chunk count; dimensions equal the recipe               |
 | `classify` | trees, vectors, taxonomy, seeds                         | assignments                                                   | every article has an assignment or an "unassigned" gap                     |
@@ -42,12 +62,20 @@ Recipe changes (parser version, prompt hash, taxonomy version, model) change
 
 ## External batch submissions
 
-Before calling the Claude Batch API, the activity writes a `submission` row
-with an idempotency key and the item list, then submits with that key in
-`metadata` and each item's key as `custom_id`. On restart it lists recent
-batches by metadata and reconciles: found means poll, not found means
-resubmit. Results apply per item after JSON validation; failed items become
-`failed` run items with bounded retries, then gaps. Cost per batch is recorded.
+The Batch API has no idempotency key and its list endpoint returns no
+request metadata (first-party docs read 2026-11-08), so the design does not rely
+on either. Before calling it, the activity writes a `submission` row in state
+`preparing` with the ordered item list and its hash. It then creates the batch
+with each item's key as `custom_id`, and stores the returned batch id in the
+same row (`submitted`) before doing anything else. If the create call fails
+without a response, the row becomes `uncertain` and the activity stops; it
+never resubmits on its own. `corpus submissions` shows uncertain rows with the
+request count and time window; the owner lists batches in that window, checks
+the request count and a sample `custom_id`, then either attaches the id or
+marks it `abandoned`, which allows exactly one new submission. Polling,
+result download and per-item application are idempotent on `custom_id`;
+malformed results become `failed` items with at most two retries, then gaps.
+Cost per batch is recorded on the row.
 
 ## Release artifact
 
