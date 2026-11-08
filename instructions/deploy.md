@@ -8,4 +8,4 @@ Read for `deploy/`, `.github/workflows/`, containers, the host and releases.
 - Secrets live in SSM Parameter Store and become Podman secrets at deploy. Never read secret values into a conversation or a brief.
 - Corpus release activation (`release activate <rel>`) is separate from code deploys and refuses a manifest whose embedding recipe differs from the running embedder.
 - Backups: pgBackRest to S3 with WAL archiving; monthly automated restore drill. A change to backup, restore or release scripts needs adversarial review.
-- Caddy does TLS and proxying only; limits and auth live in the Go server.
+- Caddy does TLS and proxying only. Authentication and limits for `/api/v1` and `/mcp` live in the Go server; admission for public pages lives in Nitro middleware in `apps/web`, with the values in `docs/design/budgets.md`.

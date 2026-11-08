@@ -26,9 +26,12 @@ signed dump to S3. Decision and alternatives:
   verifies it, renames it into place, then inserts the `artifact` row and
   updates `run_item`. If a retry finds the directory present without a row, it
   verifies the sha256 and inserts the row; if the directory is partial, it
-  deletes and redoes it. Each `run_item` carries the Temporal attempt number;
-  a commit with a lower attempt than the recorded one is ignored, so a late
-  duplicate attempt cannot overwrite a newer result. Different releases share
+  deletes and redoes it. Fencing uses the pair (`run.generation`, Temporal
+  attempt): `generation` increments on every `corpus start` for the release,
+  so it survives restarts; a commit whose pair is lower than the recorded pair
+  is ignored. When two activities publish the same artifact directory, the
+  first successful rename wins and the other verifies and adopts it; the
+  filesystem rename is the atomic winner selection. Different releases share
   artifacts by hash without conflict.
 - `corpus status <rel>` and the Temporal UI show per-stage expected, done, gap,
   failed and pending counts, next retry times, provider job ids and cost so far.
@@ -39,9 +42,14 @@ signed dump to S3. Decision and alternatives:
   reuses artifacts. A gap becomes accepted only through `corpus accept-gaps
   <rel>`, which records the owner's approval per gap kind; `release` refuses
   unaccepted gaps.
-- `corpus backup` after each run copies the workshop database dump, the
-  `artifacts/` tree and the Temporal persistence dump to an external disk or
-  S3, so the MacBook is not the only copy.
+- Checkpoints: at every stage boundary, before continue-as-new, the workflow
+  runs a `checkpoint` activity that dumps the workshop database, syncs
+  `artifacts/` and dumps Temporal persistence to an external disk or S3. No
+  activity is in flight at that point, so the three copies are consistent.
+  Recovery from storage loss restores the latest checkpoint and restarts the
+  run with a new generation; the stage in progress is redone from its
+  artifacts, and submissions recorded after the checkpoint are reconciled by
+  the rule below before any new submission.
 
 ## Stages
 
@@ -49,7 +57,7 @@ signed dump to S3. Decision and alternatives:
 | ---------- | ------------------------------------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------ |
 | `discover` | source list YAML; previous release manifest             | expected document set with source modified dates             | full listing per source every run; a document absent from two consecutive listings is marked `withdrawn` and kept with a gap |
 | `fetch`    | expected set                                            | metadata JSON, every listed attachment, hashes               | every attachment is revalidated each run by size and hash of a fresh download when the source gives no ETag; a changed attachment reprocesses the document; a missing attachment is a gap |
-| `extract`  | files                                                   | structure tree with verbatim text                            | limits: 50 MB per file, 5 minutes per document, 500 OCR pages; article count matches the table of contents; table and appendix counts match the source inventory; empty or truncated text is a gap |
+| `extract`  | files                                                   | structure tree with verbatim text                            | parser limits in [budgets](budgets.md); article count matches the table of contents; table and appendix counts match the source inventory; empty or truncated text is a gap |
 | `relate`   | VBPL references, text                                   | relations with kind, evidence, affected provisions when captured | never guessed; unknown targets are gaps                                |
 | `chunk`, `embed` | trees                                             | chunks, dense and sparse vectors under the release recipes   | vector count equals chunk count; dimensions equal the recipe               |
 | `classify` | trees, vectors, taxonomy, seeds                         | assignments                                                   | every article has an assignment or an "unassigned" gap                     |
@@ -64,18 +72,26 @@ Recipe changes (parser version, prompt hash, taxonomy version, model) change
 
 The Batch API has no idempotency key and its list endpoint returns no
 request metadata (first-party docs read 2026-11-08), so the design does not rely
-on either. Before calling it, the activity writes a `submission` row in state
-`preparing` with the ordered item list and its hash. It then creates the batch
-with each item's key as `custom_id`, and stores the returned batch id in the
-same row (`submitted`) before doing anything else. If the create call fails
-without a response, the row becomes `uncertain` and the activity stops; it
-never resubmits on its own. `corpus submissions` shows uncertain rows with the
-request count and time window; the owner lists batches in that window, checks
-the request count and a sample `custom_id`, then either attaches the id or
-marks it `abandoned`, which allows exactly one new submission. Polling,
-result download and per-item application are idempotent on `custom_id`;
-malformed results become `failed` items with at most two retries, then gaps.
-Cost per batch is recorded on the row.
+on either. Before calling it, the activity writes a `submission` row with a
+new UUID `id` in state `preparing`, holding the ordered item list and its hash.
+Every `custom_id` is `<submission id>:<item key>`, so any batch result
+identifies its submission exactly even when item keys recur across releases.
+The activity creates the batch and stores the returned batch id in the row
+(`submitted`) before anything else. A `preparing` row older than ten minutes
+with no batch id, found by any later activity start, becomes `uncertain`; so
+does a create call that fails without a response. Uncertain rows stop the
+stage. `corpus submissions` shows them with request count and time window;
+the owner lists batches in that window and, for each candidate that has
+ended, downloads its results and checks the `custom_id` prefix. A match
+attaches the batch id; no match after the provider's 24-hour processing
+window marks the row `abandoned`, which allows exactly one new submission.
+Polling runs every five minutes until the provider reports an end state or
+`deadline_at` (26 hours after submission) passes, which marks the row
+`failed`. `corpus cancel` cancels in-flight batches through the cancel
+endpoint and marks their rows `cancelled`. Result download and per-item
+application are idempotent on `custom_id`; malformed results become `failed`
+items with at most two retries, then gaps. Cost per batch is recorded on the
+row.
 
 ## Release artifact
 

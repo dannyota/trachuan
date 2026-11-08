@@ -31,33 +31,40 @@ with the newest.
 A serving bundle is the server image, embedder image and recipe, and the active
 corpus release. `release activate <rel>` runs as the `activator` role:
 
+0. Take the `activation` advisory lock, shared with `release prune`, `release
+   resume` and `release abort`; append `release_journal` (`started`, target
+   database name). Every later step appends its own row, so any crash leaves
+   a known last step.
 1. Download `manifest.json`, `manifest.sig`, dump. Verify the signature with
    the pinned public key, then the dump `sha256` and size against the manifest.
-2. Refuse when `schema_version`, `dense_recipe` or `lexical_recipe` differ from
+2. Refuse when `schema_version`, `dense_recipe` or `lexical_recipe` (the
+   runtime algorithm identifier, not the per-release statistics) differ from
    what the running server and embedder report, or when free memory or disk is
    below the thresholds in [budgets](budgets.md).
 3. `pg_restore --no-owner` as `restorer` into `corpus_<cc>_<rel>` with a
    dedicated `maintenance_work_mem`; the TOC is listed first and refused if it
    contains functions, extensions other than pgvector, or event triggers.
 4. Smoke queries: counts, one search, one document read.
-5. Take the `activation` advisory lock (shared with `release prune`), append a
-   `release_journal` row for each step, then compare-and-swap
-   `auth.corpus_release.active_db` against the expected current value. The old
-   active database is appended to `retired_release` with `retain_until` seven
-   days ahead.
+5. In one transaction: compare-and-swap `auth.corpus_release.active_db`
+   against the expected current value, insert the old active database into
+   `retired_release` with `retain_until` seven days ahead, and append the
+   journal row `activated`.
 6. The server resolves the release once per request and holds that connection
    for the request. `release prune`, under the same lock, drops a database only
-   when it is not active, its `retain_until` has passed, and it has no
-   connections; the journal records the drop. A failed activation leaves the
-   journal at the failed step for `release resume` or `release abort`, which
-   drops the half-restored database.
+   when it is not `active_db`, is not the target of an unfinished journal, its
+   `retain_until` has passed, and it has no connections; the journal records
+   the drop. After a crash, `release resume` rereads the journal, rechecks
+   that the target is still neither active nor retired, and continues from
+   the last step; `release abort` drops the target only under the same
+   checks.
 
 Retained releases stay readable through `document`; `search` against a
-retained release whose dense or lexical recipe differs from the running
-bundle returns `release_incompatible`. Each release carries its own BM25
-statistics (vocabulary, document frequencies, length normalization) in
-`lexical_recipe`, and query sparse vectors are built from the release being
-searched.
+retained release whose `dense_recipe` or `lexical_recipe` differs from the
+running bundle returns `release_incompatible`. `lexical_recipe` identifies
+the algorithm (tokenizer version, normalization, BM25 parameters) and must
+match the runtime; `lexical_stats` (vocabulary, document frequencies, length
+normalization) belongs to each release, changes with every corpus refresh,
+and is loaded for the release being searched.
 
 A recipe change needs a maintenance window: stop traffic at Caddy, deploy the
 new server and embedder, activate the matching release, resume. Rollback of a

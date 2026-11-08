@@ -16,7 +16,7 @@ template. Changing a rule here needs an ADR History entry when an ADR owns it.
 | `taxonomy_node`       | `id`, `country`, `parent_id`, `level`, public `code`, `name`, `description`, `origin` (phapdien, custom), `status` (active, retired), `path` ltree |
 | `taxonomy_assignment` | `provision_id`, `node_id`, `method` (manual, phapdien_seed, llm), `confidence`, `taxonomy_version`               |
 | `coverage_gap`        | `kind`, `document_id` or `node_id`, message                                                                     |
-| `release`             | one row: `rel`, `schema_version`, `taxonomy_version`, `dense_recipe`, `lexical_recipe`, `source_manifest_hash`, evaluation summary, `built_at` |
+| `release`             | one row: `rel`, `schema_version`, `taxonomy_version`, `dense_recipe`, `lexical_recipe` (algorithm identifier), `lexical_stats` (vocabulary hash, document frequencies, length normalization), `source_manifest_hash`, evaluation summary, `built_at` |
 
 Rules:
 
@@ -35,7 +35,7 @@ Rules:
 - `as_of` applies document-level dates only. Responses say so.
 - Everything that changes over time belongs to the release: schema version,
   dense recipe (model, dimensions, pooling, prompt, quantization), lexical
-  recipe (tokenizer version, normalization, BM25 parameters, vocabulary hash),
+  recipe (tokenizer version, normalization, BM25 parameters), lexical stats,
   taxonomy version, source manifest, evaluation. The server holds no corpus
   configuration except the active release pointer.
 
@@ -46,7 +46,7 @@ Rules:
 | `account`                            | `id`, `google_sub` unique, current `email`, `blocked_at`, `created_at`, `last_login_at`, `delete_requested_at`, `auth_epoch` |
 | `web_session`                        | `token_hash`, `account_id`, `created_at`, `expires_at`, `revoked_at`                          |
 | `oauth_client`, `oauth_grant`, `oauth_code`, `oauth_token` | as defined by the copied `oauthsrv` store, pinned to one aboutme commit; refresh and access tokens stored hashed with `revoked_at` |
-| `personal_token`                     | `token_hash`, `account_id`, `name`, `last_used_at`, `revoked_at`                              |
+| `personal_token`                     | `token_hash`, `account_id`, `name`, `created_at`, `expires_at` (at most one year, chosen at creation), `last_used_at`, `revoked_at` |
 | `corpus_release`                     | `country`, `active_db`, `activated_at`, `activated_by`                                        |
 | `retired_release`                    | `country`, `db_name`, `retired_at`, `retain_until`, `dropped_at`                               |
 | `release_journal`                    | `id`, `country`, `rel`, `step`, `state`, `at`, `message`; append only                         |
@@ -64,9 +64,9 @@ Rules:
 
 | Table        | Content                                                                                         |
 | ------------ | ----------------------------------------------------------------------------------------------- |
-| `run`        | `id`, `country`, `rel`, `started_at`, `finished_at`, `state`, Temporal workflow id, frozen snapshot (source list revision, recipe hashes, `taxonomy_version`, worker version, previous manifest hash) |
-| `run_item`   | `run_id`, `stage`, `item_key`, `input_hash`, `recipe_hash`, `state` (pending, done, gap, accepted_gap, failed), `attempt`, `message` |
-| `submission` | `run_id`, `stage`, `provider`, items hash, `provider_job_id`, `state` (preparing, submitted, uncertain, abandoned, completed), `submitted_at`, cost |
+| `run`        | `id`, `country`, `rel`, `generation` (increments on every `corpus start` for the same rel), `started_at`, `finished_at`, `state`, Temporal workflow id, frozen snapshot (source list revision, recipe hashes, `taxonomy_version`, worker version, previous manifest hash) |
+| `run_item`   | `run_id`, `stage`, `item_key`, `input_hash`, `recipe_hash`, `state` (pending, done, gap, accepted_gap, failed), `generation`, `attempt`, `message` |
+| `submission` | `id` (UUID, prefix of every `custom_id`), `run_id`, `stage`, `provider`, items hash, `provider_job_id`, `state` (preparing, submitted, uncertain, abandoned, completed, cancelled), `created_at`, `submitted_at`, `deadline_at`, cost |
 | `artifact`   | `stage`, `item_key`, `input_hash`, `recipe_hash`, `path`, `sha256`, `written_at`                 |
 | bronze, silver, gold tables | fetched metadata, extracted trees, relations, assignments, chunks and vectors feeding `build` |
 

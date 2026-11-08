@@ -57,12 +57,17 @@ prompts and thresholds, the sealed half is scored once per release.
 
 | Slice                                                   | Metric                                            | Floor |
 | ------------------------------------------------------- | ------------------------------------------------- | ----- |
-| 300 seeded articles, labels masked                      | level-2 precision and recall                      | 0.90  |
-| same                                                    | deepest-level precision and recall                | 0.75  |
+| 300 seeded articles, labels masked                      | precision and recall at level 2                   | 0.90  |
+| same                                                    | precision and recall at level 3                   | 0.80  |
+| same                                                    | precision and recall at the deepest level         | 0.75  |
+| 100 articles with labels in two or more families        | precision and recall over all pairs               | 0.80  |
 | every slice                                             | candidate recall at 10 (true node among candidates) | 0.95 |
-| 100 post-2023 articles labeled by the owner             | level-2 precision and recall                      | 0.85  |
-| same                                                    | deepest-level precision and recall                | 0.70  |
-| 50 articles that belong to custom nodes                 | recall of the custom node                         | 0.80  |
+| 100 post-2023 articles labeled by the owner             | precision and recall at level 2                   | 0.85  |
+| same                                                    | precision and recall at the deepest level         | 0.70  |
+| 50 articles that belong to custom nodes                 | precision and recall of custom nodes              | 0.80  |
+
+Every level that a release serves must have a floor in this table; a new
+level or slice is added here before it is served.
 
 The report also lists assignment counts per node, unassigned counts, and the
 diff of node changes against the previous release. A failed floor blocks

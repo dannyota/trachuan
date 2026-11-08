@@ -37,16 +37,18 @@ fetches, cache size and total client storage are in [budgets](budgets.md);
 when the client table is full, the least recently used unused client is
 evicted.
 
-Personal tokens for CLI clients are random, shown once, stored hashed, and
-pass the same middleware as OAuth tokens.
+Personal tokens for CLI clients are random, shown once, stored hashed with an
+expiry chosen at creation (default 90 days, at most one year), and pass the
+same middleware as OAuth tokens; the expiry check reads `personal_token.expires_at`.
 
 ## Token checks and revocation
 
 Each request to `/mcp` or `/api/v1` verifies: token or session hash exists,
 `revoked_at` is null and `expires_at` is in the future; grant not revoked;
 account not blocked; credential issued after `account.auth_epoch`; `aud` and
-scope. The lookup is cached per credential hash for at most 10 seconds and
-never beyond the credential's expiry; the entry is dropped on revoke. If the
+scope. The lookup is cached per credential hash for the duration in
+[budgets](budgets.md) and never beyond the credential's expiry; the entry is
+dropped on revoke. If the
 auth database is unavailable, requests fail closed with 503.
 
 A web cookie never authorizes `/mcp`; a bearer token never authorizes web

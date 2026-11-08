@@ -40,8 +40,8 @@ Caddy has no rate limiter and gets none. Authentication and the limits for
 `/api/v1` and `/mcp` live in `server`. Admission for public pages lives in
 `web`: Nitro middleware applies the per-IP limit from [budgets](budgets.md),
 serves cached pages, bounds the cache to the known public routes and node
-codes, and renders at most four pages concurrently; everything else waits or
-receives 429.
+codes, and caps concurrent renders at the value in budgets; an uncached
+request above the cap receives 429 at once, with no queue.
 
 ## Write path
 
@@ -56,7 +56,7 @@ separate command run by the owner ([deployment](deployment.md)).
 | Role         | Where        | May                                                   | May not                         |
 | ------------ | ------------ | ----------------------------------------------------- | ------------------------------- |
 | `server`     | host         | read any `corpus_*`; read and write `auth` tables     | create or drop databases        |
-| `activator`  | host, CLI    | create and drop `corpus_*` databases; write `auth.corpus_release` only | read other `auth` tables |
+| `activator`  | host, CLI    | create and drop `corpus_*` databases; write `auth.corpus_release`, `auth.release_journal`, `auth.retired_release` only | read or write other `auth` tables |
 | `restorer`   | host, CLI    | restore into one new `corpus_*` database              | touch `auth`; superuser rights  |
 | `pipeline`   | MacBook      | read and write the local workshop database            | connect to the host             |
 
