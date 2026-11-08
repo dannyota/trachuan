@@ -1,0 +1,12 @@
+.playwright-mcp/
+.env
+.env.*
+!.env.example
+node_modules/
+work/
+dist/
+.output/
+.nuxt/
+*.dump
+*.log
+.DS_Store
