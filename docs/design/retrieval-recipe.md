@@ -17,7 +17,9 @@ The API is:
 ```go
 func Open(ctx context.Context, db *pgxpool.Pool, embedder Embedder, options Options) (*Engine, error)
 func (e *Engine) Search(ctx context.Context, request Request) (Response, error)
-func (e *Engine) Collect(ctx context.Context, request Request, depths Depths) (Arms, error)
+func (e *Engine) Prepare(ctx context.Context, request Request) (Prepared, error)
+func (e *Engine) Collect(ctx context.Context, prepared Prepared, depths Depths) (Arms, error)
+func Rank(arms Arms, recipe Recipe, limit int, mode ArmMode) (Ranking, error)
 func Shape(arms Arms, recipe Recipe, limit int, mode ArmMode) (Response, error)
 ```
 
@@ -49,7 +51,7 @@ Types and required fields:
 | `Date`        | Valid civil year/month/day; encode `YYYY-MM-DD`, no time zone ambiguity                                                                                                                                                 |
 | `Depths`      | `Dense int`, `Lexical int`; bounded research-only overrides                                                                                                                                                             |
 | `Identity`    | `Country`, `DocumentKey`, `Anchor` strings                                                                                                                                                                              |
-| `Fragment`    | `Identity Identity`, `Start,End int` source rune offsets, `TextStart,TextEnd int` offsets in hit text, `Role string` (`body` or `lead`)                                                                                 |
+| `Fragment`    | `Identity Identity`, `Start,End int` source rune offsets, `TextStart,TextEnd int` offsets in hit text, `Role string` (`body` or `lead`), `Complete bool`                                                                |
 | `Hit`         | `Identity`, `Number`, `Citation`, `Title`, `Text`, `Fragments []Fragment`, `Complete bool`, `NextPart *int`, `SourceURL *string`, `Score`, `BestCosine float64`, `Stamp Validity`, `Relations []Relation`, `Gaps []Gap` |
 | `Validity`    | `StatusClass string`, `Current bool`, `AsOf *Date`, `EffectiveFrom,EffectiveTo *Date`, `Basis string` (`source_status` or `document_dates`)                                                                             |
 | `Relation`    | Source/target keys and numbers, nullable anchors, kind, raw label, evidence, evidence SHA-256, completeness flag, method, resolved flags                                                                                |
@@ -60,17 +62,25 @@ Types and required fields:
 | `Candidate`   | Chunk id/ordinal, owning identity, group identity, rank, cosine, BM25 score, fragments and grouping metadata                                                                                                            |
 
 `Recipe` is the versioned JSON below; `Release` mirrors the schema's release
-metadata. `Collect` does validation, embedding, arm SQL and bounded hydration
-once; `Shape` is pure fusion/grouping/cap/abstention over a sufficient cache. If
-the requested shaping needs uncached members or deeper pools, fail with
-`cache_insufficient`, never silently approximate. Dense-only and lexical-only
-diagnostics still embed once to compute the same abstention statistic. Cache
-collection hydrates the whole requested arm union as
-[eval](evaluation.md#cache-and-report-format) specifies; the smaller fusion
-hydration window applies only during `Shape`. `Search` collects recipe depths
-then shapes with `Request.Arms`; `Collect` always caches both arms so controls
-reuse the same candidates. Single-arm shaping removes the other arm before
-fusion and hydration, not after ranking.
+metadata. `Embedder` uses the protocol types of root package
+`internal/embedding`: `Recipe(ctx) (embedding.Recipe, error)` and
+`Embed(ctx, text) (embedding.Vector, error)`; `DenseRuntime` and `Vector` above
+name those types. `Prepare` validates and embeds once and returns
+`Prepared{Request, Validation, Vector}`; `PrepareLegacy` skips only the
+diacritics gate for trusted evaluation. Callers may reuse one `Prepared` across
+limits, modes and arm controls and may export its vector. `Collect` runs arm SQL
+and bounded hydration for a `Prepared`, never embedding again. `Rank` fuses,
+groups and caps without a threshold and returns the ordered groups with
+`FirstBestCosine`; build calibration uses it on a draft engine. `Shape` is
+`Rank` plus abstention and evidence over a sufficient cache. If the requested
+shaping needs uncached members or deeper pools, fail with `cache_insufficient`,
+never silently approximate. Dense-only and lexical-only diagnostics still embed
+once to compute the same abstention statistic. Cache collection hydrates the
+whole requested arm union as [eval](evaluation.md#cache-and-report-format)
+specifies; the smaller fusion hydration window applies only during `Shape`.
+`Search` collects recipe depths then shapes with `Request.Arms`; `Collect`
+always caches both arms so controls reuse the same candidates. Single-arm
+shaping removes the other arm before fusion and hydration, not after ranking.
 
 ## Validation and routing
 
@@ -192,17 +202,22 @@ and point labels in ancestor order with a comma and a space; otherwise use its
 own label. The number is a separate field. Never derive a citation from an
 anchor suffix or infer absent legal levels.
 
-Hydrate the grouped provision from its source representation and identified
-descendants, using [chunk rendering](chunk.md#tree-rendering), never by joining
-prefixes or guessing text from lexical tokens. Return the full representation
-when within the evidence cap. Above it, return the best matched member's body
-spans up to the cap, with exact offsets and `Complete:false`, `NextPart:1` for a
-document read. Mark any cut span incomplete. Child credit requires complete
-identified child text, not a coincidentally repeated sentence or shared label.
-Fragments reference slices of `Hit.Text`; they do not send duplicate text.
-Source/content aliases follow the chunk span contract. For ambiguous parent
-containment, return its own text and an ambiguity gap without child credit. Do
-not attach a second full enclosing article to every hit.
+Hit text is the substantive lead spans of the group's ancestors that the chunk
+recipe carried (role `lead`, ancestor order), followed by the group's own
+representation and identified descendants, using
+[chunk rendering](chunk.md#tree-rendering), never by joining prefixes or
+guessing text from lexical tokens. Return the full text when within the evidence
+cap. Above it, keep the leads first, then the best matched member's body spans
+up to the cap, with exact offsets and `Complete:false`, `NextPart:1` for a
+document read. A cut or missing lead makes the hit incomplete, so a clause never
+looks complete without the article condition that qualifies it. Mark any cut
+span incomplete. Each fragment carries `Complete`, true only when it holds every
+covered source interval of its identity; child credit requires a complete child
+fragment, not a coincidentally repeated sentence or shared label. Fragments
+reference slices of `Hit.Text`; they do not send duplicate text. Source/content
+aliases follow the chunk span contract. For ambiguous parent containment, return
+its own text and an ambiguity gap without child credit. Do not attach a second
+full enclosing article to every hit.
 
 Attach incident relations whose provision endpoint is null, the group itself, or
 its descendant. Preserve source direction; sort by kind, source key, target key,

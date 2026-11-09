@@ -119,13 +119,14 @@ report 3/3 separately as a hard gate.
 
 Product matching is exact country/key/anchor membership in the adjudicated
 alternatives. A document-level expectation accepts any returned provision of
-that exact document. A parent hit earns child credit only when fragments name
-the exact child identity and contain all its substantive source text. A child
-hit does not automatically satisfy a parent expectation. A relation-backed
-alternative requires the explicit mapped edge and evidence hash in the response.
-Count each expectation at most once, at its first matching rank; two hits or
-alternates never increase its denominator. No number substring,
-article-label-only or family membership credit.
+that exact document. A parent hit earns child credit only when a fragment names
+the exact child identity with `Complete:true`; a truncated parent holding part
+of a child earns nothing for that child. A child hit does not automatically
+satisfy a parent expectation. A relation-backed alternative requires the
+explicit mapped edge and evidence hash in the response. Count each expectation
+at most once, at its first matching rank; two hits or alternates never increase
+its denominator. No number substring, article-label-only or family membership
+credit.
 
 ## Metrics
 
@@ -187,12 +188,13 @@ negative while maximizing positive answer rate; ties choose the lowest
 threshold. If none answer any positive, keep the always-abstain threshold and
 report that failure rather than weaken the condition.
 
-Calibration calls `Collect` on the draft, then the shared fusion/grouping
-helpers without abstention; it never calls `Search`. Hash only the
-pre-calibration retrieval policy in `calibration.json`, never the finalized
-recipe that will contain that file's hash. Use finite float64 cosine values
-clamped to [-1,1]; if a rounded midpoint equals the lower score, use the upper
-score, since equality passes. Exclude the three rejection checks from fitting.
+Calibration calls `Prepare` and `Collect` on the draft, then `retrieval.Rank`,
+which returns `FirstBestCosine` without a threshold; it never calls `Search`.
+Hash only the pre-calibration retrieval policy in `calibration.json`, never the
+finalized recipe that will contain that file's hash. Use finite float64 cosine
+values clamped to [-1,1]; if a rounded midpoint equals the lower score, use the
+upper score, since equality passes. Exclude the three rejection checks from
+fitting.
 
 Record threshold, exact float values, fixture/mapping/recipe hashes, date and
 all candidate TP/FP/TN/FN counts in `calibration.json`. Hash that file into
@@ -213,26 +215,22 @@ Cache exact dense and lexical arms to the study's maximum trial depths in
 budgets. Recipe-1 responses use only their own shallower prefixes. Store ANN
 recipe-depth raw and fallback lists separately. `arms.jsonl` rows have
 `version,case_id,cohort,release_hash,recipe_hashes,evaluation_date, request_as_of,mode,depths,route, eligibility_hash,dense[],lexical[],raw_ann[],fallback,groups[],diagnostics`.
-Entries store chunk id, owning/group identity, rank, raw cosine or BM25 score.
-Groups cover the entire deep arm union before recipe-1 hydration, with each
-candidate's own, clause and article identities. Include complete span metadata,
-all member cosines for each grouping, evidence hashes/text, resolved family root
-and validity. Hydrate even candidates that recipe 1 would discard. A family root
-is the smallest document id in its resolved consolidation component; isolated
-documents root to themselves. This allows later grouping-before-fusion, cap,
-weight and depth trials without querying a different corpus. For grouping before
-fusion, cached chunk depths define the trial pool, not a claim to top-k over
-every provision. Missing required members or exceeding the cache budget fails
-explicitly. Changing tokenizer, prefix or dictionary needs fresh arms. The
-collector prepares data for trials but this work implements only recipe-1
-shaping, not the trial runner.
+Entries store chunk id, owning identity, rank and raw cosine or BM25 score;
+`groups[]` holds the recipe-1 groups of the shaped responses. Alternate-group
+evidence, member cosines for other groupings and consolidation family roots are
+deferred to the tuning plan, which hydrates them from the immutable dump and
+these deep arm lists. Exceeding the cache budget fails explicitly. Changing
+tokenizer, prefix or dictionary needs fresh arms. This work implements only
+recipe-1 shaping, not the trial runner.
 
 Reuse one query vector per accepted fixture input and recipe across limits, arm
-controls and modes. Exact deep-cache prefixes produce shallower exact arms;
-collect ANN separately at recipe-1 depth/settings. Record the database instance
-kind (`built` or `restored`) because restored HNSW pages may differ. Eval scores
-the resolved database it actually opens; the primary also runs the CLI after a
-restore and retains both reports as recovery evidence.
+controls and modes, through one `Engine.Prepare` (or `PrepareLegacy`) per input
+whose vector the cache writes to `queries.f32`. Exact deep-cache prefixes
+produce shallower exact arms; collect ANN separately at recipe-1 depth/settings.
+Record the database instance kind (`built` or `restored`) because restored HNSW
+pages may differ. Eval scores the resolved database it actually opens; the
+primary also runs the CLI after a restore and retains both reports as recovery
+evidence.
 
 `queries.f32` uses the embedding artifact's binary format; `query-index.json`
 maps case IDs/cohorts to rows, counts, query UTF-8 hashes and query recipe hash.

@@ -30,8 +30,11 @@ snapshot to produce an upstream inventory, sorted by stage order then
 byte-sorted item key, containing every predecessor item through `embed`:
 `{stage,item_key,state,input_hash,recipe_hash,artifact_sha256}`. Null artifact
 hashes are explicit for gap items. Include expected keys, frozen source-list
-hash and sorted gaps `{stage,item_key,kind,detail,accepted_at,note}`. Do not
-hash workshop sequence IDs, mutable paths or generation numbers.
+hash and sorted gaps `{stage,item_key,kind,detail}`. Gap acceptance is a release
+gate, not a build input, so it is never hashed. `Process` recomputes the
+inventory and fails with non-retryable `inventory_changed` when its hash differs
+from the planned input hash. Do not hash workshop sequence IDs, mutable paths or
+generation numbers.
 
 Before index stages are frozen, derive `identity_inventory_hash` from compact
 JSON `{country,source_list_hash,expected_keys,items}`. Keys are byte-sorted;
@@ -145,12 +148,16 @@ guards in the builder. Local bootstrap provisions a template database with
 `vector` and `ltree`; build clones it, never needs superuser to install them. Do
 not widen `pipeline` or reuse host activation credentials.
 
-Hold a workshop advisory lock keyed by country and rel for the whole operation.
-Check run generation before expensive work and before publication. A stale
-attempt may leave an orphan database but cannot commit its run item. A retry
-adopts a valid existing build artifact first. Without an artifact, recreate only
-a temporary database bearing this exact ownership marker and no foreign
-connections. A mismatched final database is an error, never an automatic drop.
+Every database mutation (create, load, dump, restore, rename) runs under a
+session advisory lock keyed by country and rel on the builder's maintenance
+connection. `Process` and `EnsureDatabase` each take it for their own duration
+and re-validate database state under it; no lock spans two calls, and a lost
+connection releases the lock and fails the operation. Check run generation
+before expensive work and before publication. A stale attempt may leave an
+orphan database but cannot commit its run item. A retry adopts a valid existing
+build artifact first. Without an artifact, recreate only a temporary database
+bearing this exact ownership marker and no foreign connections. A mismatched
+final database is an error, never an automatic drop.
 
 Populate template tables, normalize, copy rows in stable order, train BM25 in
 two streaming passes, build HNSW with `max_parallel_maintenance_workers=0`,
@@ -162,7 +169,9 @@ database as specified in [evaluation](evaluation.md#provisional-calibration).
 The helper takes explicit recipes and does not require a published release row.
 Insert the final release row with that threshold; then prohibit further writes.
 Dump before renaming, using subprocess arguments, not a shell:
-`pg_dump -Fc --no-owner --no-privileges --dbname <temporary-db>`. Database
+`pg_dump -Fc --no-owner --no-privileges --no-comments --dbname <temporary-db>`;
+the corpus schema carries no comments, and dropping them keeps extension
+comments, which a nonsuperuser cannot restore, out of the dump. Database
 identity never comes from a request body or a dump's embedded name.
 
 ## Build artifact and resolve
@@ -184,14 +193,22 @@ record must agree on every release field. Dump byte identity, not a later
 re-dump, is the future upload candidate. Restore can rebuild ANN index pages, so
 eval records and measures the restored database too.
 
-`Resolve` verifies the entire artifact, then ensures the final database exists:
-if absent, restore into the owned temporary name with
-`pg_restore --no-owner --no-privileges --exit-on-error`, validate release fields
-and counts, disconnect builder sessions, and rename it. After a fresh build, the
-same resolve path renames the already validated temporary database. If final
-exists, require its ownership marker, release hashes and counts to match. If a
-crash left no marker after restore, only the owned temporary database may be
-recreated. Never rewrite a final database to repair a mismatch.
+`Resolve` verifies the entire artifact, then calls the exported idempotent
+`EnsureDatabase`, which ensures the final database exists: if absent, create the
+owned temporary database from `corpus_template` (extensions already installed),
+list the dump's table of contents with `pg_restore -l`, drop its `EXTENSION`
+entries, refuse any other extension, function or event trigger entry, restore
+the rest as `corpus_builder` with
+`pg_restore --no-owner --no-privileges --exit-on-error --use-list`, validate
+release fields and counts, disconnect builder sessions, and rename it. The eval
+stage and `corpus eval` call `EnsureDatabase` too, so a database lost after
+evaluation returns through `corpus eval` without rerunning the run. Integration
+tests prove dump and restore under a nonsuperuser builder role whose template is
+provisioned the same way. After a fresh build, the same resolve path renames the
+already validated temporary database. If final exists, require its ownership
+marker, release hashes and counts to match. If a crash left no marker after
+restore, only the owned temporary database may be recreated. Never rewrite a
+final database to repair a mismatch.
 
 No SQL transaction spans CREATE DATABASE, restore or rename. Artifact
 publication precedes workshop commit, so recovery after a lost workshop or
