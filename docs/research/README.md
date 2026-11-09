@@ -17,3 +17,5 @@ Observations and experiments. Not project authority.
   local parity with banhmi and Vietnamese_Embedding_v2 under hybrid scoring.
 - [Vietnam legal sources](vn-sources-2026-11.md): which sources to read and
   their priority.
+- [Query embedder on an OCI A1 host](host-oci-a1-2026-11.md): first host latency
+  and memory for the query recipe.
