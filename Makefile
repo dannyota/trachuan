@@ -16,6 +16,17 @@ pre-push: ## Static checks before pushing
 docs-fmt: ## Format human-read Markdown with Prettier
 	npx prettier --write "**/*.md" "!**/AGENTS.md" "!**/CLAUDE.md" "!instructions/**" "!docs/plans/**" "!.claude/**" "!.codex/**" "!**/node_modules/**" "!**/.venv/**"
 
+EMBEDDER_MODEL_DIR ?= work/models/vi_v2-bundle
+
+embedder-test: ## Run embedder tests
+	cd apps/embedder && uv run --frozen pytest
+
+embedder-query: ## Start the query embedder on 127.0.0.1:8091 (model bundle in EMBEDDER_MODEL_DIR)
+	cd apps/embedder && uv run --frozen python -m trachuan_embedder --runtime query --host 127.0.0.1 --model-dir $(abspath $(EMBEDDER_MODEL_DIR))
+
+embedder-document: ## Start the document embedder on 127.0.0.1:8092 (MPS)
+	cd apps/embedder && uv run --frozen --group document python -m trachuan_embedder --runtime document --model-dir $(abspath $(EMBEDDER_MODEL_DIR))
+
 test: ## Run unit tests
 	go test ./...
 
@@ -47,7 +58,7 @@ db-up: ## Start local PostgreSQL with pgvector and wait until it is ready
 	$(COMPOSE) up -d postgres
 	@for i in $$(seq 1 60); do podman exec trachuan_postgres_1 pg_isready -q -U trachuan && exit 0; sleep 1; done; echo "postgres not ready" >&2; exit 1
 
-db-setup: ## Create the pipeline and Temporal roles and databases (idempotent)
+db-setup: ## Create the pipeline, Temporal and builder roles, their databases and the corpus template (idempotent)
 	bash deploy/local/db-setup.sh
 
 temporal-schema: ## Create or upgrade the Temporal schemas (idempotent)
@@ -64,4 +75,4 @@ services-up: db-up db-setup temporal-schema temporal-up temporal-namespace ## St
 db-down: ## Stop local services, keep their volumes
 	$(COMPOSE) down
 
-.PHONY: help hooks-install lengths-check pre-push docs-fmt test test-integration test-proof generate sqlc-check db-up db-setup temporal-schema temporal-up temporal-namespace services-up db-down
+.PHONY: help hooks-install lengths-check pre-push docs-fmt embedder-test embedder-query embedder-document test test-integration test-proof generate sqlc-check db-up db-setup temporal-schema temporal-up temporal-namespace services-up db-down

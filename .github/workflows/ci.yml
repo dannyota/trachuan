@@ -18,6 +18,7 @@ jobs:
     timeout-minutes: 5
     outputs:
       go: ${{ steps.paths.outputs.go }}
+      embedder: ${{ steps.paths.outputs.embedder }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -29,11 +30,16 @@ jobs:
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           go=true
+          embedder=true
           if [ "$EVENT_NAME" = pull_request ]; then
             paths=$(mktemp)
             git diff --no-ext-diff --no-textconv --no-renames --name-only -z "$BASE_SHA...$HEAD_SHA" -- > "$paths"
             go=false
+            embedder=false
             while IFS= read -r -d '' path; do
+              case "$path" in
+                apps/embedder/*|.github/workflows/*) embedder=true ;;
+              esac
               case "$path" in
                 docs/*.md) ;;
                 *.md) [[ "$path" != */* ]] || go=true ;;
@@ -43,6 +49,7 @@ jobs:
             rm "$paths"
           fi
           echo "go=$go" >> "$GITHUB_OUTPUT"
+          echo "embedder=$embedder" >> "$GITHUB_OUTPUT"
 
   static:
     needs: [preflight]
@@ -122,9 +129,25 @@ jobs:
           wait "$proof_pid" || result=1
           exit "$result"
 
+  embedder:
+    needs: [preflight]
+    if: needs.preflight.outputs.embedder == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: apps/embedder
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+      - run: uv sync --frozen
+      - run: uv run --frozen ruff check
+      - run: uv run --frozen ruff format --check
+      - run: uv run --frozen pytest
+
   ci:
     if: always()
-    needs: [preflight, static, integration]
+    needs: [preflight, static, integration, embedder]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     env:
@@ -132,9 +155,18 @@ jobs:
       GO: ${{ needs.preflight.outputs.go }}
       STATIC: ${{ needs.static.result }}
       INTEGRATION: ${{ needs.integration.result }}
+      EMBEDDER_NEEDED: ${{ needs.preflight.outputs.embedder }}
+      EMBEDDER: ${{ needs.embedder.result }}
     steps:
       - run: |
           test "$PREFLIGHT" = success
+          if [ "$EMBEDDER_NEEDED" = true ]; then
+            test "$EMBEDDER" = success
+          elif [ "$EMBEDDER_NEEDED" = false ]; then
+            test "$EMBEDDER" = skipped
+          else
+            exit 1
+          fi
           if [ "$GO" = true ]; then
             test "$STATIC" = success && test "$INTEGRATION" = success
           elif [ "$GO" = false ]; then

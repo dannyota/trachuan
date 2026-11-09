@@ -16,6 +16,9 @@ if command -v npx >/dev/null && [[ -f package.json ]]; then
   npx prettier --check "**/*.md" "!**/AGENTS.md" "!**/CLAUDE.md" "!instructions/**" "!docs/plans/**" "!.claude/**" "!.codex/**" "!**/node_modules/**" "!**/.venv/**"
   npx markdownlint-cli2 "**/*.md" "#**/node_modules" "#**/.venv" "#.superpowers" "#work" "#.playwright-mcp" "#**/AGENTS.md" "#**/CLAUDE.md" "#instructions" "#docs/plans" "#.claude" "#.codex"
 fi
+if command -v uv >/dev/null; then
+  (cd apps/embedder && uv run --frozen --only-group dev ruff check && uv run --frozen --only-group dev ruff format --check)
+fi
 if command -v shellcheck >/dev/null; then
   mapfile -t sh_files < <(git ls-files -- '*.sh' '.githooks/*')
   shellcheck "${sh_files[@]}"
