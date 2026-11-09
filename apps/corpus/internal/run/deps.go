@@ -12,14 +12,15 @@ import (
 
 // Deps supplies the workshop, workflow client, and compiled release inputs.
 type Deps struct {
-	Artifacts        artifact.Store
-	TaskQueue        string
-	BatchesInFlight  int
-	HeartbeatTimeout time.Duration
-	DB               *pgxpool.Pool
-	Temporal         client.Client
-	RecipesFor       func(stage.Snapshot) map[string]string
-	Stages           []string
-	SourceList       json.RawMessage
-	Now              func() time.Time
+	Artifacts            artifact.Store
+	TaskQueue            string
+	BatchesInFlight      int
+	FetchBatchesInFlight int
+	HeartbeatTimeout     time.Duration
+	DB                   *pgxpool.Pool
+	Temporal             client.Client
+	RecipesFor           func(stage.Snapshot) map[string]string
+	Stages               []string
+	SourceList           json.RawMessage
+	Now                  func() time.Time
 }

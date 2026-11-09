@@ -29,8 +29,10 @@ const apiLimit int64 = 20_000_000
 type Client struct {
 	base, userAgent string
 	http            *http.Client
+	fileHTTP        *http.Client
 	limiter         *rate.Limiter
 	slots           chan struct{}
+	fileSlots       chan struct{}
 	timeout         time.Duration
 	backoffs        []time.Duration
 	fileHosts       []string
@@ -44,12 +46,17 @@ func New(version string) *Client {
 
 // NewWithBase creates a client for the supplied gateway URL.
 func NewWithBase(base, version string, options ...Option) *Client {
-	c := &Client{base: base, userAgent: "trachuan/" + version + " (+https://github.com/dannyota/trachuan)", http: &http.Client{}, limiter: rate.NewLimiter(8, 1), slots: make(chan struct{}, 8), timeout: 30 * time.Second, fileHosts: []string{"s3-han02.fptcloud.com"}, backoffs: []time.Duration{2 * time.Second, 8 * time.Second, 30 * time.Second}}
+	c := &Client{base: base, userAgent: "trachuan/" + version + " (+https://github.com/dannyota/trachuan)", http: &http.Client{}, limiter: rate.NewLimiter(16, 1), slots: make(chan struct{}, 16), fileSlots: make(chan struct{}, 8), timeout: 30 * time.Second, fileHosts: []string{"s3-han02.fptcloud.com"}, backoffs: []time.Duration{2 * time.Second, 8 * time.Second, 30 * time.Second}}
 	for _, option := range options {
 		option(c)
 	}
-	c.http.Transport = &http.Transport{Proxy: http.ProxyFromEnvironment, TLSNextProto: map[string]func(string, *tls.Conn) http.RoundTripper{}, ForceAttemptHTTP2: false, MaxConnsPerHost: cap(c.slots), MaxIdleConnsPerHost: cap(c.slots)}
-	c.http.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
+	transport := func(limit int) *http.Transport {
+		return &http.Transport{Proxy: http.ProxyFromEnvironment, TLSNextProto: map[string]func(string, *tls.Conn) http.RoundTripper{}, ForceAttemptHTTP2: false, MaxConnsPerHost: limit, MaxIdleConnsPerHost: limit}
+	}
+	redirect := func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
+	c.http.Transport = transport(cap(c.slots))
+	c.http.CheckRedirect = redirect
+	c.fileHTTP = &http.Client{Transport: transport(cap(c.fileSlots)), CheckRedirect: redirect}
 	return c
 }
 
@@ -62,6 +69,11 @@ func WithLimits(rps float64, inFlight int) Option {
 		c.limiter = rate.NewLimiter(rate.Limit(rps), 1)
 		c.slots = make(chan struct{}, inFlight)
 	}
+}
+
+// WithFileInFlight sets the maximum concurrent attachment requests.
+func WithFileInFlight(inFlight int) Option {
+	return func(c *Client) { c.fileSlots = make(chan struct{}, inFlight) }
 }
 
 // WithBackoffs sets the delay before each retry.
@@ -85,15 +97,21 @@ type response struct {
 }
 
 // request holds a concurrency slot and timeout until the response body is consumed.
-func (c *Client) request(ctx context.Context, method, target string, body []byte, consume func(io.Reader) error) (int, error) {
+func (c *Client) request(ctx context.Context, method, target string, body []byte, file bool, consume func(io.Reader) error) (int, error) {
+	slots, client := c.slots, c.http
+	if file {
+		slots, client = c.fileSlots, c.fileHTTP
+	}
 	select {
-	case c.slots <- struct{}{}:
+	case slots <- struct{}{}:
 	case <-ctx.Done():
 		return 0, fmt.Errorf("wait for request slot: %w", ctx.Err())
 	}
-	defer func() { <-c.slots }()
-	if err := c.limiter.Wait(ctx); err != nil {
-		return 0, fmt.Errorf("wait for rate limit: %w", err)
+	defer func() { <-slots }()
+	if !file {
+		if err := c.limiter.Wait(ctx); err != nil {
+			return 0, fmt.Errorf("wait for rate limit: %w", err)
+		}
 	}
 	reqCtx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
@@ -108,7 +126,7 @@ func (c *Client) request(ctx context.Context, method, target string, body []byte
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
-	resp, err := c.http.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		return 0, fmt.Errorf("request: %w", safeError(err))
 	}
@@ -150,7 +168,7 @@ func (c *Client) apiRaw(ctx context.Context, method, path string, body []byte) (
 			}
 		}
 		var raw []byte
-		status, err := c.request(ctx, method, c.base+path, body, func(r io.Reader) error {
+		status, err := c.request(ctx, method, c.base+path, body, false, func(r io.Reader) error {
 			var e error
 			raw, e = io.ReadAll(io.LimitReader(r, apiLimit+1))
 			if e != nil {

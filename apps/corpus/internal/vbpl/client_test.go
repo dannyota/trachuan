@@ -323,3 +323,35 @@ func TestClient_PersistentServerErrorIsStatusError(t *testing.T) {
 		t.Fatalf("want a StatusError 500, got %v", err)
 	}
 }
+
+func TestClient_DownloadDoesNotBlockGateway(t *testing.T) {
+	started, release := make(chan struct{}), make(chan struct{})
+	fileServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		close(started)
+		<-release
+		_, _ = w.Write([]byte("file"))
+	}))
+	defer fileServer.Close()
+	gateway := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{"success":true,"data":{"id":"1"}}`))
+	}))
+	defer gateway.Close()
+	c := NewWithBase(gateway.URL, "test", WithTestHTTP(), WithFileHosts(strings.TrimPrefix(fileServer.URL, "http://")), WithLimits(float64(rate.Inf), 1))
+	done := make(chan error, 1)
+	dir := t.TempDir()
+	go func() {
+		_, err := c.Download(context.Background(), "1", File{URL: fileServer.URL}, dir, 100)
+		done <- err
+	}()
+	<-started
+	ctx, cancel := context.WithTimeout(context.Background(), 80*time.Millisecond)
+	defer cancel()
+	_, _, err := c.Detail(ctx, "1")
+	close(release)
+	if downloadErr := <-done; downloadErr != nil {
+		t.Fatal(downloadErr)
+	}
+	if err != nil {
+		t.Fatalf("gateway blocked by download: %v", err)
+	}
+}

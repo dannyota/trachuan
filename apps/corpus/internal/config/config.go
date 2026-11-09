@@ -22,15 +22,17 @@ type Config struct {
 	VBPLURL                                                                        string
 	VBPLFileHosts                                                                  string
 	// VBPLLoopbackHTTP permits plain HTTP downloads from 127.0.0.1 only; tests use it.
-	VBPLLoopbackHTTP bool
-	VBPLRate         float64
-	VBPLInFlight     int
-	BatchesInFlight  int
-	DiskStartGiB     int
-	DiskMinGiB       int
-	FileCache        string
-	HeartbeatEvery   time.Duration
-	HeartbeatTimeout time.Duration
+	VBPLLoopbackHTTP     bool
+	VBPLRate             float64
+	VBPLInFlight         int
+	VBPLFileInFlight     int
+	FetchBatchesInFlight int
+	BatchesInFlight      int
+	DiskStartGiB         int
+	DiskMinGiB           int
+	FileCache            string
+	HeartbeatEvery       time.Duration
+	HeartbeatTimeout     time.Duration
 }
 
 // Load reads configuration using getenv and requires a database URL.
@@ -57,7 +59,7 @@ func Load(getenv func(string) string) (Config, error) {
 	if cfg.DatabaseURL == "" {
 		return Config{}, errors.New("CORPUS_DATABASE_URL is required")
 	}
-	rateText := defaultValue(getenv("CORPUS_VBPL_RPS"), "8")
+	rateText := defaultValue(getenv("CORPUS_VBPL_RPS"), "16")
 	rate, err := strconv.ParseFloat(rateText, 64)
 	if err != nil || rate <= 0 || math.IsNaN(rate) || math.IsInf(rate, 0) {
 		return Config{}, fmt.Errorf("invalid CORPUS_VBPL_RPS %q", rateText)
@@ -66,7 +68,7 @@ func Load(getenv func(string) string) (Config, error) {
 	for _, setting := range []struct {
 		key, fallback string
 		target        *int
-	}{{"CORPUS_VBPL_IN_FLIGHT", "8", &cfg.VBPLInFlight}, {"CORPUS_BATCHES_IN_FLIGHT", "8", &cfg.BatchesInFlight}, {"CORPUS_DISK_START_GIB", "30", &cfg.DiskStartGiB}, {"CORPUS_DISK_MIN_GIB", "10", &cfg.DiskMinGiB}} {
+	}{{"CORPUS_VBPL_IN_FLIGHT", "16", &cfg.VBPLInFlight}, {"CORPUS_VBPL_FILE_IN_FLIGHT", "8", &cfg.VBPLFileInFlight}, {"CORPUS_FETCH_BATCHES_IN_FLIGHT", "16", &cfg.FetchBatchesInFlight}, {"CORPUS_BATCHES_IN_FLIGHT", "8", &cfg.BatchesInFlight}, {"CORPUS_DISK_START_GIB", "30", &cfg.DiskStartGiB}, {"CORPUS_DISK_MIN_GIB", "10", &cfg.DiskMinGiB}} {
 		value := defaultValue(getenv(setting.key), setting.fallback)
 		n, parseErr := strconv.Atoi(value)
 		if parseErr != nil || n <= 0 || ((setting.key == "CORPUS_DISK_START_GIB" || setting.key == "CORPUS_DISK_MIN_GIB") && uint64(n) > ^uint64(0)>>30) {

@@ -27,14 +27,22 @@ func testClient(base string) *vbpl.Client {
 }
 
 type fixtureServer struct {
-	files          []map[string]any
-	bodies         map[string]string
-	missing        bool
-	oversized      bool
-	treeBody       string
-	detailID       string
-	downloadStatus int
-	downloads      atomic.Int32
+	files           []map[string]any
+	bodies          map[string]string
+	missing         bool
+	oversized       bool
+	treeBody        string
+	detailID        string
+	barrier         int32
+	arrived         atomic.Int32
+	released        chan struct{}
+	timedOut        atomic.Bool
+	treeStatus      int
+	diagramStatus   int
+	downloadStarted chan struct{}
+	downloadRelease chan struct{}
+	downloadStatus  int
+	downloads       atomic.Int32
 }
 
 func setup(t *testing.T, f *fixtureServer) (*Stage, stage.Env) {
@@ -43,6 +51,18 @@ func setup(t *testing.T, f *fixtureServer) (*Stage, stage.Env) {
 		if f.oversized {
 			_, _ = w.Write(make([]byte, 20_000_001))
 			return
+		}
+		// With a barrier, each gateway call waits until all expected calls have
+		// started; sequential calls time out instead.
+		if f.barrier > 0 && !strings.HasPrefix(r.URL.Path, "/attachment/") {
+			if f.arrived.Add(1) == f.barrier {
+				close(f.released)
+			}
+			select {
+			case <-f.released:
+			case <-time.After(2 * time.Second):
+				f.timedOut.Store(true)
+			}
 		}
 		switch {
 		case r.URL.Path == "/doc/66518":
@@ -56,12 +76,20 @@ func setup(t *testing.T, f *fixtureServer) (*Stage, stage.Env) {
 			}
 			fixture(t, w, "detail-66518.json")
 		case strings.Contains(r.URL.Path, "/tree/"):
+			if f.treeStatus != 0 {
+				w.WriteHeader(f.treeStatus)
+				return
+			}
 			if f.treeBody != "" {
 				_, _ = w.Write([]byte(f.treeBody))
 			} else {
 				fixture(t, w, "tree-66518.json")
 			}
 		case strings.HasSuffix(r.URL.Path, "/diagram"):
+			if f.diagramStatus != 0 {
+				w.WriteHeader(f.diagramStatus)
+				return
+			}
 			fixture(t, w, "diagram-66518.json")
 		case strings.HasSuffix(r.URL.Path, "/files"):
 			for _, entry := range f.files {
@@ -70,6 +98,10 @@ func setup(t *testing.T, f *fixtureServer) (*Stage, stage.Env) {
 			_ = json.NewEncoder(w).Encode(map[string]any{"success": true, "data": f.files})
 		case strings.HasPrefix(r.URL.Path, "/attachment/"):
 			f.downloads.Add(1)
+			if f.downloadStarted != nil {
+				f.downloadStarted <- struct{}{}
+				<-f.downloadRelease
+			}
 			if f.downloadStatus != 0 {
 				w.WriteHeader(f.downloadStatus)
 				return
@@ -271,5 +303,94 @@ func TestFetch_TransientDownloadErrorIsRetryable(t *testing.T) {
 	var retryable *stage.RetryableError
 	if out.Artifact != nil || !errors.As(err, &retryable) {
 		t.Fatalf("output = %+v, error = %v", out, err)
+	}
+}
+
+func TestFetch_ParallelRequestsPreserveBundle(t *testing.T) {
+	f := &fixtureServer{files: []map[string]any{entry("b", "b"), entry("a", "a")}, bodies: map[string]string{"a": "one", "b": "two"}}
+	s, env := setup(t, f)
+	ctx := context.Background()
+	detail, _, err := s.client.Detail(ctx, "66518")
+	if err != nil {
+		t.Fatal(err)
+	}
+	tree, err := s.client.RawTree(ctx, "66518")
+	if err != nil {
+		t.Fatal(err)
+	}
+	diagram, err := s.client.Diagram(ctx, "66518")
+	if err != nil {
+		t.Fatal(err)
+	}
+	files, err := s.client.Files(ctx, "66518")
+	if err != nil {
+		t.Fatal(err)
+	}
+	before, err := env.Artifacts.PublishContent(ctx, s.Name(), s.Recipe(stage.Snapshot{}), func(dir string) error { return s.writeBundle(ctx, dir, "66518", detail, tree, diagram, files) })
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.released = make(chan struct{})
+	f.barrier = 4
+	after := process(t, s, env)
+	if f.timedOut.Load() {
+		t.Error("the four gateway calls did not run concurrently")
+	}
+	if before.SHA256 != after.Artifact.SHA256 {
+		t.Errorf("bundle changed: %s != %s", before.SHA256, after.Artifact.SHA256)
+	}
+	bundle := env.Artifacts.Abs(after.Artifact.Path)
+	one := fmt.Sprintf("%x", sha256.Sum256([]byte("one")))
+	two := fmt.Sprintf("%x", sha256.Sum256([]byte("two")))
+	want := map[string]string{
+		"files.json":   fmt.Sprintf(`[{"name":"a","sha256":"%s","size":3},{"name":"b","sha256":"%s","size":3}]`, one, two),
+		"report.json":  `{"missing":[],"too_large":[]}`,
+		"files/" + one: "one", "files/" + two: "two",
+	}
+	for _, name := range []string{"detail", "tree", "diagram"} {
+		data, readErr := os.ReadFile(filepath.Join("..", "..", "vbpl", "testdata", name+"-66518.json"))
+		if readErr != nil {
+			t.Fatal(readErr)
+		}
+		want[name+".json"] = string(data)
+	}
+	for name, expected := range want {
+		data, readErr := os.ReadFile(filepath.Join(bundle, name))
+		if readErr != nil || string(data) != expected {
+			t.Errorf("bundle file %s differs, error = %v", name, readErr)
+		}
+	}
+}
+
+func TestFetch_TreeErrorPrecedesDiagramError(t *testing.T) {
+	s, env := setup(t, &fixtureServer{treeStatus: http.StatusNotFound, diagramStatus: http.StatusInternalServerError})
+	_, err := s.Process(context.Background(), env, stage.Run{}, stage.Item{Key: "vn:vbpl:66518"})
+	var retry *stage.RetryableError
+	if !errors.As(err, &retry) || retry.GapKind != "" || !errors.Is(err, vbpl.ErrNotFound) {
+		t.Fatalf("error = %v", err)
+	}
+}
+
+func TestFetch_AttachmentsDownloadConcurrently(t *testing.T) {
+	f := &fixtureServer{files: []map[string]any{entry("a", "a"), entry("b", "b")}, bodies: map[string]string{"a": "one", "b": "two"}, downloadStarted: make(chan struct{}, 2), downloadRelease: make(chan struct{})}
+	s, env := setup(t, f)
+	done := make(chan error, 1)
+	go func() {
+		_, err := s.Process(context.Background(), env, stage.Run{}, stage.Item{Key: "vn:vbpl:66518"})
+		done <- err
+	}()
+	<-f.downloadStarted
+	concurrent := false
+	select {
+	case <-f.downloadStarted:
+		concurrent = true
+	case <-time.After(80 * time.Millisecond):
+	}
+	close(f.downloadRelease)
+	if err := <-done; err != nil {
+		t.Fatal(err)
+	}
+	if !concurrent {
+		t.Fatal("second download did not start while first was held")
 	}
 }

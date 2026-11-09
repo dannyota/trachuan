@@ -102,6 +102,9 @@ func BuildRelease(ctx temporalworkflow.Context, in run.BuildInput) error {
 	if limit <= 0 {
 		limit = 2
 	}
+	if in.Stage == "fetch" && in.FetchBatchesInFlight > 0 {
+		limit = in.FetchBatchesInFlight
+	}
 	if in.Stage == "embed" && limit > 2 && temporalworkflow.GetVersion(ctx, "embed-batch-limit", temporalworkflow.DefaultVersion, 1) != temporalworkflow.DefaultVersion {
 		limit = 2
 	}

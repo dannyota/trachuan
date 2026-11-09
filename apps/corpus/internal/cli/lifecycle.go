@@ -47,7 +47,7 @@ func dependencies(ctx context.Context, needSources bool, cc string) (run.Deps, f
 	}
 	registry := workflow.Default(index)
 	stages := registry.Names()
-	d := run.Deps{Artifacts: artifact.Store{Root: cfg.Artifacts}, BatchesInFlight: cfg.BatchesInFlight, HeartbeatTimeout: cfg.HeartbeatTimeout, DB: db, Temporal: temporalClient, Stages: stages, RecipesFor: func(snapshot stage.Snapshot) map[string]string {
+	d := run.Deps{Artifacts: artifact.Store{Root: cfg.Artifacts}, BatchesInFlight: cfg.BatchesInFlight, FetchBatchesInFlight: cfg.FetchBatchesInFlight, HeartbeatTimeout: cfg.HeartbeatTimeout, DB: db, Temporal: temporalClient, Stages: stages, RecipesFor: func(snapshot stage.Snapshot) map[string]string {
 		return registry.Recipes(snapshot)
 	}}
 	if needSources {

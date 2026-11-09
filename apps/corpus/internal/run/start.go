@@ -156,7 +156,7 @@ func Start(ctx context.Context, d Deps, cc, rel, until, previousManifest string)
 	if taskQueue == "" {
 		taskQueue = TaskQueue
 	}
-	_, err = d.Temporal.ExecuteWorkflow(ctx, client.StartWorkflowOptions{ID: id, TaskQueue: taskQueue, WorkflowIDConflictPolicy: enumspb.WORKFLOW_ID_CONFLICT_POLICY_FAIL, WorkflowExecutionErrorWhenAlreadyStarted: true, WorkflowIDReusePolicy: enumspb.WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE}, WorkflowName, BuildInput{RunID: row.ID, Country: cc, Rel: rel, Generation: int(row.Generation) + 1, Stage: next, Until: until, Begin: true, HistoryLimit: 5000, BatchesInFlight: d.BatchesInFlight, HeartbeatTimeout: d.HeartbeatTimeout})
+	_, err = d.Temporal.ExecuteWorkflow(ctx, client.StartWorkflowOptions{ID: id, TaskQueue: taskQueue, WorkflowIDConflictPolicy: enumspb.WORKFLOW_ID_CONFLICT_POLICY_FAIL, WorkflowExecutionErrorWhenAlreadyStarted: true, WorkflowIDReusePolicy: enumspb.WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE}, WorkflowName, BuildInput{RunID: row.ID, Country: cc, Rel: rel, Generation: int(row.Generation) + 1, Stage: next, Until: until, Begin: true, HistoryLimit: 5000, BatchesInFlight: d.BatchesInFlight, FetchBatchesInFlight: d.FetchBatchesInFlight, HeartbeatTimeout: d.HeartbeatTimeout})
 	if err != nil {
 		var already *serviceerror.WorkflowExecutionAlreadyStarted
 		if errors.As(err, &already) {

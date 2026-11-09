@@ -28,7 +28,7 @@ func TestLoad_Defaults(t *testing.T) {
 		PgDump:          "pg_dump",
 		VBPLFileHosts:   "s3-han02.fptcloud.com",
 		VBPLURL:         "https://vbpl-bientap-gateway.moj.gov.vn/api/qtdc/public",
-		VBPLRate:        8, VBPLInFlight: 8, BatchesInFlight: 8, DiskStartGiB: 30, DiskMinGiB: 10,
+		VBPLRate:        16, VBPLInFlight: 16, VBPLFileInFlight: 8, FetchBatchesInFlight: 16, BatchesInFlight: 8, DiskStartGiB: 30, DiskMinGiB: 10,
 		HeartbeatEvery: 20 * time.Second, HeartbeatTimeout: 2 * time.Minute,
 	}
 	if got != want {
@@ -130,5 +130,40 @@ func TestLoad_RejectsDiskStartBelowMinimum(t *testing.T) {
 	_, err := Load(func(key string) string { return env[key] })
 	if err == nil || !strings.Contains(err.Error(), "CORPUS_DISK_START_GIB") || !strings.Contains(err.Error(), "CORPUS_DISK_MIN_GIB") {
 		t.Fatalf("error = %v", err)
+	}
+}
+
+func TestLoad_FetchAndFileLimits(t *testing.T) {
+	for _, tc := range []struct {
+		name        string
+		values      map[string]string
+		file, fetch int
+		invalid     string
+	}{
+		{"defaults", nil, 8, 16, ""},
+		{"overrides", map[string]string{"CORPUS_VBPL_FILE_IN_FLIGHT": "3", "CORPUS_FETCH_BATCHES_IN_FLIGHT": "7"}, 3, 7, ""},
+		{"invalid file", map[string]string{"CORPUS_VBPL_FILE_IN_FLIGHT": "0"}, 0, 0, "CORPUS_VBPL_FILE_IN_FLIGHT"},
+		{"invalid fetch", map[string]string{"CORPUS_FETCH_BATCHES_IN_FLIGHT": "bad"}, 0, 0, "CORPUS_FETCH_BATCHES_IN_FLIGHT"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg, err := Load(func(k string) string {
+				if k == "CORPUS_DATABASE_URL" {
+					return "db"
+				}
+				return tc.values[k]
+			})
+			if tc.invalid != "" {
+				if err == nil || !strings.Contains(err.Error(), tc.invalid) {
+					t.Fatalf("error = %v", err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if cfg.VBPLFileInFlight != tc.file || cfg.FetchBatchesInFlight != tc.fetch || (tc.name == "defaults" && (cfg.VBPLRate != 16 || cfg.VBPLInFlight != 16)) {
+				t.Fatalf("config = %+v", cfg)
+			}
+		})
 	}
 }
