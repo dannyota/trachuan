@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"danny.vn/traquydinh/apps/corpus/internal/run"
-	"danny.vn/traquydinh/apps/corpus/internal/stage"
+	"danny.vn/trachuan/apps/corpus/internal/run"
+	"danny.vn/trachuan/apps/corpus/internal/stage"
 	"github.com/stretchr/testify/mock"
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/temporal"

@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"danny.vn/traquydinh/apps/corpus/internal/stage"
+	"danny.vn/trachuan/apps/corpus/internal/stage"
 )
 
 func validateRel(rel string) error {

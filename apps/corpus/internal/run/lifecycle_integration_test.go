@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"danny.vn/traquydinh/apps/corpus/internal/stage"
-	"danny.vn/traquydinh/apps/corpus/internal/testdb"
-	"danny.vn/traquydinh/apps/corpus/internal/testtemporal"
+	"danny.vn/trachuan/apps/corpus/internal/stage"
+	"danny.vn/trachuan/apps/corpus/internal/testdb"
+	"danny.vn/trachuan/apps/corpus/internal/testtemporal"
 	"github.com/jackc/pgx/v5/pgxpool"
 	enumspb "go.temporal.io/api/enums/v1"
 	"go.temporal.io/sdk/client"

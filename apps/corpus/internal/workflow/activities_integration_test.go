@@ -7,8 +7,8 @@ import (
 	"errors"
 	"testing"
 
-	"danny.vn/traquydinh/apps/corpus/internal/stage"
-	"danny.vn/traquydinh/apps/corpus/internal/testdb"
+	"danny.vn/trachuan/apps/corpus/internal/stage"
+	"danny.vn/trachuan/apps/corpus/internal/testdb"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.temporal.io/sdk/temporal"
 )

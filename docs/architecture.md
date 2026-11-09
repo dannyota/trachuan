@@ -6,9 +6,9 @@ in the [system design](design/system.md); contracts live in the
 
 ## Corpus pipeline (`apps/corpus`)
 
-One Go module, `danny.vn/traquydinh`, at the repository root. The pipeline is
-one binary, `corpus`, built from `apps/corpus/cmd/corpus`. It runs on the
-owner's MacBook against the local services in `deploy/compose.yml`
+One Go module, `danny.vn/trachuan`, at the repository root. The pipeline is one
+binary, `corpus`, built from `apps/corpus/cmd/corpus`. It runs on the owner's
+MacBook against the local services in `deploy/compose.yml`
 ([runbook](runbooks/corpus-local.md)).
 
 | Package            | Role                                                                                                           |

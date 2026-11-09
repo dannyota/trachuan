@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"danny.vn/traquydinh/apps/corpus/internal/store"
+	"danny.vn/trachuan/apps/corpus/internal/store"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 

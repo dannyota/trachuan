@@ -176,7 +176,7 @@ func TestClient_ListAndFiles(t *testing.T) {
 	listing := fixture(t, "list-agencies-62-908-page1.json")
 	files := fixture(t, "files-67878.json")
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("Origin") != "https://vbpl.vn" || r.Header.Get("Referer") != "https://vbpl.vn/" || r.Header.Get("User-Agent") != "traquydinh/test (+https://github.com/dannyota/traquydinh)" {
+		if r.Header.Get("Origin") != "https://vbpl.vn" || r.Header.Get("Referer") != "https://vbpl.vn/" || r.Header.Get("User-Agent") != "trachuan/test (+https://github.com/dannyota/trachuan)" {
 			t.Error("missing gateway headers")
 		}
 		switch r.URL.Path {

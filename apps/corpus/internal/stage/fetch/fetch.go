@@ -8,10 +8,10 @@ import (
 	"fmt"
 	"strings"
 
-	"danny.vn/traquydinh/apps/corpus/internal/filecache"
-	"danny.vn/traquydinh/apps/corpus/internal/stage"
-	"danny.vn/traquydinh/apps/corpus/internal/stage/discover"
-	"danny.vn/traquydinh/apps/corpus/internal/vbpl"
+	"danny.vn/trachuan/apps/corpus/internal/filecache"
+	"danny.vn/trachuan/apps/corpus/internal/stage"
+	"danny.vn/trachuan/apps/corpus/internal/stage/discover"
+	"danny.vn/trachuan/apps/corpus/internal/vbpl"
 )
 
 // Stage fetches documents and their attachments.

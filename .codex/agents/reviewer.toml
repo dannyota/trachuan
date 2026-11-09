@@ -1,5 +1,5 @@
 name = "reviewer"
-description = "Independent read-only review of traquydinh designs, ADRs and contract proposals; adversarial pass on security designs."
+description = "Independent read-only review of trachuan designs, ADRs and contract proposals; adversarial pass on security designs."
 model = "gpt-6-astra"
 model_reasoning_effort = "high"
 sandbox_mode = "read-only"

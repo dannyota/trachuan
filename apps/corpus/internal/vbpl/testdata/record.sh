@@ -9,7 +9,7 @@ fetch() {
   curl --fail --silent --show-error \
     -H 'Origin: https://vbpl.vn' \
     -H 'Referer: https://vbpl.vn/' \
-    -H 'User-Agent: traquydinh/0.0 (+https://github.com/dannyota/traquydinh)' \
+    -H 'User-Agent: trachuan/0.0 (+https://github.com/dannyota/trachuan)' \
     "$@" > "$output"
   sleep 1
 }

@@ -10,9 +10,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"danny.vn/traquydinh/apps/corpus/internal/artifact"
-	"danny.vn/traquydinh/apps/corpus/internal/fault"
-	"danny.vn/traquydinh/apps/corpus/internal/store"
+	"danny.vn/trachuan/apps/corpus/internal/artifact"
+	"danny.vn/trachuan/apps/corpus/internal/fault"
+	"danny.vn/trachuan/apps/corpus/internal/store"
 	"github.com/jackc/pgx/v5/pgconn"
 )
 

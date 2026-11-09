@@ -15,10 +15,10 @@ import (
 	"testing"
 	"time"
 
-	"danny.vn/traquydinh/apps/corpus/internal/artifact"
-	"danny.vn/traquydinh/apps/corpus/internal/filecache"
-	"danny.vn/traquydinh/apps/corpus/internal/stage"
-	"danny.vn/traquydinh/apps/corpus/internal/vbpl"
+	"danny.vn/trachuan/apps/corpus/internal/artifact"
+	"danny.vn/trachuan/apps/corpus/internal/filecache"
+	"danny.vn/trachuan/apps/corpus/internal/stage"
+	"danny.vn/trachuan/apps/corpus/internal/vbpl"
 	"golang.org/x/time/rate"
 )
 

@@ -1,7 +1,7 @@
 # System
 
-traquydinh serves a citable corpus of Vietnamese law to AI agents over MCP and
-to people on the web, behind Google login. Evidence only; see
+trachuan serves a citable corpus of Vietnamese law to AI agents over MCP and to
+people on the web, behind Google login. Evidence only; see
 [ADR 0002](../adr/0002-evidence-only-vietnamese-queries.md). This note holds the
 component shape and the data-flow rules. Decisions and alternatives live in the
 [ADRs](../adr/README.md).

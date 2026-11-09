@@ -9,10 +9,10 @@ set -a
 set +a
 : "${PIPELINE_PASSWORD:?set PIPELINE_PASSWORD in .env}"
 : "${TEMPORAL_DB_PASSWORD:?set TEMPORAL_DB_PASSWORD in .env}"
-container="${CORPUS_PG_CONTAINER:-traquydinh_postgres_1}"
+container="${CORPUS_PG_CONTAINER:-trachuan_postgres_1}"
 psql_admin() {
   podman exec -i -e PIPELINE_PASSWORD -e TEMPORAL_DB_PASSWORD "$container" \
-    psql -v ON_ERROR_STOP=1 -q -U traquydinh -d postgres
+    psql -v ON_ERROR_STOP=1 -q -U trachuan -d postgres
 }
 psql_admin <<'SQL'
 \getenv pipeline_pw PIPELINE_PASSWORD

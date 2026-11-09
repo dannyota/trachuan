@@ -11,10 +11,10 @@ import (
 	"path/filepath"
 	"time"
 
-	"danny.vn/traquydinh/apps/corpus/internal/artifact"
-	"danny.vn/traquydinh/apps/corpus/internal/stage"
-	"danny.vn/traquydinh/apps/corpus/internal/store"
-	"danny.vn/traquydinh/apps/corpus/internal/vbpl"
+	"danny.vn/trachuan/apps/corpus/internal/artifact"
+	"danny.vn/trachuan/apps/corpus/internal/stage"
+	"danny.vn/trachuan/apps/corpus/internal/store"
+	"danny.vn/trachuan/apps/corpus/internal/vbpl"
 	"github.com/jackc/pgx/v5"
 )
 

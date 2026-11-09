@@ -4,7 +4,7 @@
 
 **Goal:** `corpus worker` runs a resumable `BuildRelease` workflow on self-hosted Temporal that discovers, fetches, extracts and relates the Vietnam VBPL scope into the workshop database, with completeness accounting, gaps, cancellation, checkpoints and recovery.
 
-**Architecture:** One root Go module `danny.vn/traquydinh`; the pipeline lives in `apps/corpus`. The `run` row is the record of a run; Temporal coordinates. Each stage plans items, processes each into an immutable content-addressed artifact (pure function of input and recipe), and resolves the artifact against the run (run rows and gaps); one fenced transaction commits each item. VBPL is read through its public JSON gateway with rate limits; tests use recorded fixtures.
+**Architecture:** One root Go module `danny.vn/trachuan`; the pipeline lives in `apps/corpus`. The `run` row is the record of a run; Temporal coordinates. Each stage plans items, processes each into an immutable content-addressed artifact (pure function of input and recipe), and resolves the artifact against the run (run rows and gaps); one fenced transaction commits each item. VBPL is read through its public JSON gateway with rate limits; tests use recorded fixtures.
 
 **Tech Stack:** Go 1.27.3, Temporal Go SDK v1.50.0, Temporal server and admin-tools 1.32.2, Temporal UI 2.58.1, PostgreSQL 18 (pgvector image in compose), pgx/v5, sqlc 1.31.1, goose v3 as a library, golang.org/x/text, golang.org/x/time/rate, gopkg.in/yaml.v3, podman-compose.
 
@@ -23,13 +23,13 @@ Proofs listed in pipeline.md: crash after an activity commit (and after rename, 
 
 ## Global Constraints
 
-- Module path `danny.vn/traquydinh` (one `go.mod` at the repository root, `go 1.27.3`, like the owner's other projects); packages under `danny.vn/traquydinh/apps/corpus/...`. Any task may add dependencies to the root `go.mod` and `go.sum`.
+- Module path `danny.vn/trachuan` (one `go.mod` at the repository root, `go 1.27.3`, like the owner's other projects); packages under `danny.vn/trachuan/apps/corpus/...`. Any task may add dependencies to the root `go.mod` and `go.sum`.
 - Workflow id `build-<cc>-<rel>`; `cc` matches `^[a-z]{2}$`; `rel` matches `^[0-9]{8}(_[0-9]{1,2})?$` and orders by date, then sequence number as an integer.
 - Run states and transitions, the start protocol, `next_stage`, cancellation drain and `corpus recover` exactly as pipeline.md "Run lifecycle"; commit and gap rules exactly as "Items, artifacts and gaps".
 - One workflow `BuildRelease`; continue-as-new after every stage; payloads carry ids and counts only, at most 256 KB; a history segment above 5,000 events fails the run.
 - Batch 100 items, heartbeat every 20 seconds while a batch runs, start-to-close 1 hour, heartbeat timeout 2 minutes, at most 5 attempts, backoff 30 seconds to 10 minutes; at most 2 batches of a stage at once. A `starting` row is stale after 2 minutes.
 - Limits: 50 MB per file, 5 minutes per document, API response 20 MB, tree depth 32 and 50,000 nodes, 3 listing passes per query.
-- VBPL: base `https://vbpl-bientap-gateway.moj.gov.vn/api/qtdc/public`, headers `Origin: https://vbpl.vn`, `Referer: https://vbpl.vn/`, `User-Agent: traquydinh/<version> (+https://github.com/dannyota/traquydinh)`; at most 2 requests per second and 2 in flight; 30-second timeout; retry 429, 5xx and timeouts 3 times after 2, 8 and 30 seconds; never log a presigned URL query string. Document key `vn:vbpl:<id>` with the VBPL `id` verbatim.
+- VBPL: base `https://vbpl-bientap-gateway.moj.gov.vn/api/qtdc/public`, headers `Origin: https://vbpl.vn`, `Referer: https://vbpl.vn/`, `User-Agent: trachuan/<version> (+https://github.com/dannyota/trachuan)`; at most 2 requests per second and 2 in flight; 30-second timeout; retry 429, 5xx and timeouts 3 times after 2, 8 and 30 seconds; never log a presigned URL query string. Document key `vn:vbpl:<id>` with the VBPL `id` verbatim.
 - Recipe hash: `stage.RecipeHash(stage, version, extra...)` = hex sha256 of the arguments joined by a NUL byte.
 - Tests never call live VBPL; fixtures live in `apps/corpus/internal/vbpl/testdata/`. Integration tests use the `integration` tag, `-count=1`, a fresh database per package created through `CORPUS_TEST_ADMIN_URL` and dropped afterwards, and the Temporal SDK dev server. Proof tests add the `faultinject` tag.
 - No banhmi code is copied. Files at most 400 lines, one concern each; doc comments on exported symbols; errors wrapped with `%w`.

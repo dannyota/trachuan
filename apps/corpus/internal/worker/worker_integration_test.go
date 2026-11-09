@@ -10,13 +10,13 @@ import (
 	"testing"
 	"time"
 
-	"danny.vn/traquydinh/apps/corpus/internal/artifact"
-	"danny.vn/traquydinh/apps/corpus/internal/run"
-	"danny.vn/traquydinh/apps/corpus/internal/stage"
-	"danny.vn/traquydinh/apps/corpus/internal/store"
-	"danny.vn/traquydinh/apps/corpus/internal/testdb"
-	"danny.vn/traquydinh/apps/corpus/internal/testtemporal"
-	"danny.vn/traquydinh/apps/corpus/internal/workflow"
+	"danny.vn/trachuan/apps/corpus/internal/artifact"
+	"danny.vn/trachuan/apps/corpus/internal/run"
+	"danny.vn/trachuan/apps/corpus/internal/stage"
+	"danny.vn/trachuan/apps/corpus/internal/store"
+	"danny.vn/trachuan/apps/corpus/internal/testdb"
+	"danny.vn/trachuan/apps/corpus/internal/testtemporal"
+	"danny.vn/trachuan/apps/corpus/internal/workflow"
 	"github.com/jackc/pgx/v5"
 )
 

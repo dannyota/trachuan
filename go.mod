@@ -1,4 +1,4 @@
-module danny.vn/traquydinh
+module danny.vn/trachuan
 
 go 1.27.3
 

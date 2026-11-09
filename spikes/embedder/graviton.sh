@@ -4,7 +4,7 @@
 set -Eeuo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")"
 ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
-BUCKET="traquydinh-spike-${ACCOUNT}"
+BUCKET="trachuan-spike-${ACCOUNT}"
 M=../../work/models/qwen3-0.6b
 FILES=(model_q8w.onnx model_q8w.onnx.data model_q8w_a4.onnx model_q8w_a4.onnx.data model_int8.onnx model_int8.onnx.data tokenizer.json)
 CODE=(embedders.py serve.py soak.py golden_questions.json)
@@ -24,7 +24,7 @@ launch)
   aws ec2 run-instances --image-id "$AMI" --instance-type t4g.large --count 1 \
     --instance-initiated-shutdown-behavior terminate --metadata-options HttpTokens=required \
     --block-device-mappings 'DeviceName=/dev/xvda,Ebs={VolumeSize=20,VolumeType=gp3,DeleteOnTermination=true}' \
-    --tag-specifications 'ResourceType=instance,Tags=[{Key=Name,Value=traquydinh-spike}]' \
+    --tag-specifications 'ResourceType=instance,Tags=[{Key=Name,Value=trachuan-spike}]' \
     --user-data "file://../../work/graviton-userdata.sh" --query 'Instances[0].InstanceId' --output text
   ;;
 results)

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"danny.vn/traquydinh/apps/corpus/internal/testdb"
+	"danny.vn/trachuan/apps/corpus/internal/testdb"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 

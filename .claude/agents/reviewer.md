@@ -1,6 +1,6 @@
 ---
 name: reviewer
-description: Independent read-only code review for traquydinh on Claude Opus, including the adversarial security pass. Never implements.
+description: Independent read-only code review for trachuan on Claude Opus, including the adversarial security pass. Never implements.
 model: opus
 effort: xhigh
 tools: Read, Grep, Glob, Bash

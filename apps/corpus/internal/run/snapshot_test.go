@@ -3,7 +3,7 @@ package run
 import (
 	"testing"
 
-	"danny.vn/traquydinh/apps/corpus/internal/stage"
+	"danny.vn/trachuan/apps/corpus/internal/stage"
 )
 
 func TestValidateRel(t *testing.T) {

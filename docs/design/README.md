@@ -1,6 +1,6 @@
 # Design
 
-Intended behavior of traquydinh. Decisions with alternatives are in the
+Intended behavior of trachuan. Decisions with alternatives are in the
 [ADRs](../adr/README.md); numeric limits in [budgets](budgets.md).
 
 | Note                        | Owns                                                                                     |

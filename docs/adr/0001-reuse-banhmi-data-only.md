@@ -11,7 +11,7 @@ product.
 
 ## Decision
 
-traquydinh is a new codebase. It imports banhmi's corpus dumps, source lists,
+trachuan is a new codebase. It imports banhmi's corpus dumps, source lists,
 golden cases and extraction knowledge. It copies no banhmi Go packages.
 
 ## Consequences

@@ -2,11 +2,11 @@
 
 ## Scope and authority
 
-This file owns the shared rules for Claude Code and Codex in traquydinh. `CLAUDE.md` imports it and adds Claude Code specifics. Component `AGENTS.md` files, added when a component exists, map local sources, boundaries and checks. Agent definitions in `.claude/agents/` and `.codex/agents/` are thin wrappers that name a duty and the instruction files that role reads.
+This file owns the shared rules for Claude Code and Codex in trachuan. `CLAUDE.md` imports it and adds Claude Code specifics. Component `AGENTS.md` files, added when a component exists, map local sources, boundaries and checks. Agent definitions in `.claude/agents/` and `.codex/agents/` are thin wrappers that name a duty and the instruction files that role reads.
 
 Direct owner instructions and platform safety rules come first.
 
-## What traquydinh is
+## What trachuan is
 
 A citable corpus of Vietnamese law served to AI agents over MCP and to people through a website, behind Google login. Evidence only: no answer model, generative model or reranker runs on our servers; the query embedder is the only served model. Vietnam first; country, keys and routes carry a country code from day one. Successor to banhmi (archived); it reuses banhmi's data, never its code. Design: `docs/design/README.md` and `docs/adr/`.
 
