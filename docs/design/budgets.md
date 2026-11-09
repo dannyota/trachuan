@@ -84,7 +84,7 @@ approval under ADR 0009 and ADR 0011.
 
 | Process                                        | RSS MB |
 | ---------------------------------------------- | ------ |
-| embedder (ONNX FP32, Vietnamese_Embedding_v2)  | 2,500  |
+| embedder (ONNX INT8, Vietnamese_Embedding_v2)  | 1,200  |
 | postgres                                       | 1,000  |
 | web (Node)                                     | 250    |
 | server (Go)                                    | 150    |
@@ -95,9 +95,9 @@ Activation refuses to start below 2.5 GB free memory or 10 GB free disk.
 
 Acceptance gates before the first public release, each measured on the host:
 search p95 at most 1 s and p99 at most 2 s at 2 requests per second for 30
-minutes; embedder RSS at most 2.5 GB after a 30-minute soak; activation peak
-memory within the headroom row; disk under 70% after activation with two
-retained releases.
+minutes; embedder RSS at most 1.2 GB after a 30-minute soak (0.83 GB measured
+for the INT8 model in a direct run); activation peak memory within the headroom
+row; disk under 70% after activation with two retained releases.
 
 Owner-supplied host measurements from 2026-11-09, across three runs with
 four-thread FP32: short-query p50 207–267 ms; long 217-token query p50 1.2–1.7

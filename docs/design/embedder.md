@@ -38,10 +38,11 @@ order:
 2. Load `tokenizer.json` with truncation and padding disabled. Prove it by
    counting a fixed synthetic input longer than the cap; the count must exceed
    the cap.
-3. Open `onnx/model.onnx` with the CPU provider, the thread settings from
-   budgets and the CPU memory arena disabled (banhmi measured 200 to 400 MB less
-   resident memory at query rates). Refuse a model whose inputs are not exactly
-   int64 `input_ids` and `attention_mask`, or whose first output is not float32
+3. Open the INT8 query model (`onnx/model_int8.onnx`, see Model bundle) with the
+   CPU provider, the thread settings from budgets and the CPU memory arena
+   disabled (banhmi measured 200 to 400 MB less resident memory at query rates).
+   Refuse a model whose inputs are not exactly int64 `input_ids` and
+   `attention_mask`, or whose first output is not float32
    `[batch, sequence, dimensions]`.
 4. Run the fixed warmup, then report ready.
 
@@ -80,7 +81,9 @@ sizes and SHA-256 hashes. Each service verifies every tokenizer, config, weight
 and external ONNX data file it loads before readiness. Resolve the ADR's
 revision prefix to a full commit during provisioning and record both; refuse a
 prefix that resolves ambiguously. No arbitrary file paths or model IDs arrive
-over HTTP.
+over HTTP. Provisioning also writes `onnx/model_int8.onnx` with ONNX Runtime's
+`quantize_dynamic` (QInt8, per-channel weights) at the pinned ONNX Runtime
+version and records its size and hash in the bundle like any other file.
 
 ## Recipe report
 
@@ -89,7 +92,7 @@ contains, in this order, `model`, `revision`, `resolved_revision`,
 `tokenizer_revision`, `tokenizer_sha256`, `weights_sha256`, `dimensions`,
 `pooling:"cls"`, `normalization:"l2-float32"`, `input:"raw"`,
 `runtime:"query"|"document"`, `backend:"onnxruntime-cpu"|"torch-mps"`,
-`precision:"fp32"|"fp16"`, `token_cap`, `special_tokens:true`,
+`precision:"int8"|"fp16"`, `token_cap`, `special_tokens:true`,
 `truncation:false`, `language`, `tokenizer_library` and `runtime_library`. The
 last three record what the service loaded as `<name> <version>`: for example
 `go 1.27.3`, `daulet/tokenizers 1.27.0` and `onnxruntime 1.31.1` for the query
@@ -97,13 +100,13 @@ service; `python 3.14.x`, `transformers 5.22.2` and `torch 2.15.0` for the
 document service. Hash the fixed-field UTF-8 JSON without whitespace as SHA-256.
 `tokenizer_sha256` hashes the sorted manifest of the tokenizer files.
 `weights_sha256` hashes the sorted manifest of the files that service loads for
-the model: `onnx/model.onnx` and its external data for the query service,
-`config.json` and `model.safetensors` for the document service. Removing or
-changing a file only the other service loads leaves a report unchanged.
+the model: `onnx/model_int8.onnx` for the query service, `config.json` and
+`model.safetensors` for the document service. Removing or changing a file only
+the other service loads leaves a report unchanged.
 
 Callers compare all fields with the expected runtime side of `dense_recipe`.
 Document and query hashes intentionally differ, and so do their `weights_sha256`
-and `precision` (`fp32` for queries, `fp16` for documents); model, resolved
+and `precision` (`int8` for queries, `fp16` for documents); model, resolved
 revision, tokenizer hash, pooling, normalization and dimensions must agree.
 `dense_recipe` holds both reports. A response echoes `recipe_hash`; callers
 reject any change mid-run. Recipe and model file checks happen once at startup

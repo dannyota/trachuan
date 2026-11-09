@@ -14,17 +14,17 @@ serving precision. banhmi used Qwen3-Embedding-0.6B.
 
 Release 1 uses this dense recipe; the release manifest records every field.
 
-| Field              | Value                                                                            |
-| ------------------ | -------------------------------------------------------------------------------- |
-| Model              | `AITeamVN/Vietnamese_Embedding_v2`, revision `18b44161e041`                      |
-| Architecture       | XLM-RoBERTa encoder fine-tuned from BGE-M3, 568M parameters                      |
-| Dimensions         | 1,024, `vector(1024)`                                                            |
-| Pooling            | CLS token, then L2 normalization; similarity is cosine                           |
-| Query input        | the question as written, no instruction prefix, at most 256 tokens               |
-| Document input     | `strip(context_prefix) + "\n" + strip(content)`, no prefix, at most 2,048 tokens |
-| Document embedding | batch on the MacBook GPU (PyTorch MPS, FP16); about 20 minutes for 98,506 chunks |
-| Query serving      | ONNX Runtime CPU, FP32, the repository's `onnx/model.onnx`                       |
-| Tokenizer          | the model repository's tokenizer at the same revision                            |
+| Field              | Value                                                                              |
+| ------------------ | ---------------------------------------------------------------------------------- |
+| Model              | `AITeamVN/Vietnamese_Embedding_v2`, revision `18b44161e041`                        |
+| Architecture       | XLM-RoBERTa encoder fine-tuned from BGE-M3, 568M parameters                        |
+| Dimensions         | 1,024, `vector(1024)`                                                              |
+| Pooling            | CLS token, then L2 normalization; similarity is cosine                             |
+| Query input        | the question as written, no instruction prefix, at most 256 tokens                 |
+| Document input     | `strip(context_prefix) + "\n" + strip(content)`, no prefix, at most 2,048 tokens   |
+| Document embedding | batch on the MacBook GPU (PyTorch MPS, FP16); about 20 minutes for 98,506 chunks   |
+| Query serving      | ONNX Runtime CPU, dynamic INT8 per-channel from the repository's `onnx/model.onnx` |
+| Tokenizer          | the model repository's tokenizer at the same revision                              |
 
 Queries longer than 256 tokens are rejected before embedding; the model was
 trained with 256-token queries.
@@ -98,3 +98,11 @@ this record and ADR 0011.
   The recall figures in this record were measured with this pair. The first
   baseline release, vn/20261109, was embedded with FP32 documents before this
   choice.
+- 2026-11-10: the owner chose INT8 queries for speed. Query serving uses dynamic
+  INT8 with per-channel weights (`quantize_dynamic`, QInt8, per_channel) made
+  from `onnx/model.onnx`. On the A1 host it scored 75/96 recall@8 and MRR@8
+  0.5886 against 76/96 and 0.5885 for FP32, 3.2 times faster (65 ms short, 387
+  ms long at p50) in 0.83 GB; per-tensor INT8 lost four citations. Cosine to
+  FP32 is 0.987 at median, below the 0.995 parity gate, so release evaluation on
+  the trachuan corpus is the acceptance evidence. Documents stay FP16 on MPS.
+  [Research note](../research/query-int8-2026-11.md).

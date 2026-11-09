@@ -6,23 +6,23 @@ Status: accepted 2026-11-09; revised 2026-11-09 to serve queries from Go.
 
 [ADR 0009](0009-dense-embedding-recipe.md) selects the model, tokenizer, pooling
 and precision. Two paths embed text. The read path embeds one query per search
-on the host, on CPU with ONNX Runtime FP32. The write path embeds every chunk of
-a release on the MacBook, where PyTorch on the GPU (MPS) embeds the 98,506-chunk
-corpus in about 20 minutes in FP16; Go has no binding for that GPU path. Both
-paths need the same input limits and recipe checks, without model bindings
-inside the Go retrieval package. banhmi served queries from a standalone Go
-service built on the ONNX Runtime Go binding, which the owner maintains, and the
-Rust tokenizers library.
+on the host, on CPU with ONNX Runtime, INT8 (ADR 0009). The write path embeds
+every chunk of a release on the MacBook, where PyTorch on the GPU (MPS) embeds
+the 98,506-chunk corpus in about 20 minutes in FP16; Go has no binding for that
+GPU path. Both paths need the same input limits and recipe checks, without model
+bindings inside the Go retrieval package. banhmi served queries from a
+standalone Go service built on the ONNX Runtime Go binding, which the owner
+maintains, and the Rust tokenizers library.
 
 ## Decision
 
 One HTTP contract, specified in the [embedder design](../design/embedder.md),
 has two services with one runtime each:
 
-- Query service, Go, `apps/queryembed`: ONNX Runtime CPU FP32 with
-  `onnx/model.onnx`, tokenizer through `github.com/daulet/tokenizers`. It runs
-  in its own container on the host and locally for evaluation, never inside the
-  server process.
+- Query service, Go, `apps/queryembed`: ONNX Runtime CPU, dynamic INT8
+  per-channel made from `onnx/model.onnx`, tokenizer through
+  `github.com/daulet/tokenizers`. It runs in its own container on the host and
+  locally for evaluation, never inside the server process.
 - Document service, Python with uv, `apps/docembed`: PyTorch MPS FP16, on the
   MacBook only, bound to loopback.
 
@@ -48,8 +48,8 @@ model, with no Python dependency set. cgo appears only in the query service's
 tokenizer and ONNX packages, behind a build tag, so other binaries and default
 tests stay pure Go. Native libraries are pinned by version and SHA-256, like
 model files. HTTP adds serialization and one local hop; the host gates measure
-it. The separate process isolates model memory and admission. Query memory
-remains the FP32 budget from ADR 0009.
+it. The separate process isolates model memory and admission. Query memory is
+the INT8 model, about 0.8 GB resident on the A1 host.
 
 Two languages implement the contract, so each side has its own contract tests,
 and the opt-in real-model smoke checks both against one bundle. Both tokenize
@@ -91,3 +91,5 @@ Retain prior artifacts for rollback.
   FP32 so both services use one precision.
 - 2026-11-09: documents back to FP16 on MPS, queries stay FP32, after the FP16
   query measurement on the host CPU (ADR 0009 History).
+- 2026-11-10: queries move to dynamic INT8 per-channel (ADR 0009 History). The
+  parity gate compares the Go and Python services on the same INT8 model file.

@@ -19,3 +19,5 @@ Observations and experiments. Not project authority.
   their priority.
 - [Query embedder on an OCI A1 host](host-oci-a1-2026-11.md): first host latency
   and memory for the query recipe.
+- [INT8 query embedding](query-int8-2026-11.md): four finalist models, INT8
+  variants, quality and A1 latency.
