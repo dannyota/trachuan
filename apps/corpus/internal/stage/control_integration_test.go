@@ -26,7 +26,7 @@ func (s *controlStage) Plan(context.Context, Env, Run) ([]Item, error) {
 	return s.items, nil
 }
 func (*controlStage) Process(context.Context, Env, Run, Item) (Output, error) { return Output{}, nil }
-func (*controlStage) Rows(context.Context, artifact.Result) (func(context.Context, pgx.Tx, int64) error, error) {
+func (*controlStage) Rows(context.Context, Env, artifact.Result) (func(context.Context, pgx.Tx, int64) error, error) {
 	return nil, nil
 }
 func (*controlStage) Resolve(context.Context, Env, Run, Item, artifact.Result) (Resolution, error) {

@@ -132,7 +132,7 @@ func TestFetch_RetryAfterRenameWithChangedContent(t *testing.T) {
 		t.Fatal("same path")
 	}
 	for _, p := range []string{a.Artifact.Path, b.Artifact.Path} {
-		if _, err := artifact.Verify(p); err != nil {
+		if _, err := artifact.Verify(e.Artifacts.Abs(p)); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -174,7 +174,7 @@ func TestFetch_HostileFileNames(t *testing.T) {
 	f := &fixtureServer{files: []map[string]any{entry("../../x", "a"), entry("same", "b"), entry("same", "c"), entry("é", "d"), entry("e\u0301", "e")}, bodies: map[string]string{"a": "a", "b": "b", "c": "c", "d": "d", "e": "e"}}
 	s, e := setup(t, f)
 	out := process(t, s, e)
-	b, err := os.ReadFile(filepath.Join(out.Artifact.Path, "files.json"))
+	b, err := os.ReadFile(filepath.Join(e.Artifacts.Abs(out.Artifact.Path), "files.json"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -183,11 +183,11 @@ func TestFetch_HostileFileNames(t *testing.T) {
 		t.Fatalf("%s %v", b, err)
 	}
 	for _, item := range files {
-		if _, err = os.Stat(filepath.Join(out.Artifact.Path, "files", item.SHA256)); err != nil {
+		if _, err = os.Stat(filepath.Join(e.Artifacts.Abs(out.Artifact.Path), "files", item.SHA256)); err != nil {
 			t.Fatal(err)
 		}
 	}
-	if _, err = artifact.Verify(out.Artifact.Path); err != nil {
+	if _, err = artifact.Verify(e.Artifacts.Abs(out.Artifact.Path)); err != nil {
 		t.Fatal(err)
 	}
 }

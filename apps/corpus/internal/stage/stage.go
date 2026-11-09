@@ -35,7 +35,7 @@ type Stage interface {
 	Recipe(Snapshot) string
 	Plan(context.Context, Env, Run) ([]Item, error)
 	Process(context.Context, Env, Run, Item) (Output, error)
-	Rows(context.Context, artifact.Result) (func(context.Context, pgx.Tx, int64) error, error)
+	Rows(context.Context, Env, artifact.Result) (func(context.Context, pgx.Tx, int64) error, error)
 	Resolve(context.Context, Env, Run, Item, artifact.Result) (Resolution, error)
 }
 

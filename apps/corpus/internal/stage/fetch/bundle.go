@@ -87,8 +87,8 @@ func (s *Stage) writeBundle(ctx context.Context, dir, id string, detail, tree, d
 }
 
 // Resolve returns gaps recorded in the bundle for this run.
-func (*Stage) Resolve(_ context.Context, _ stage.Env, _ stage.Run, _ stage.Item, art artifact.Result) (stage.Resolution, error) {
-	data, err := os.ReadFile(filepath.Join(art.Path, "report.json"))
+func (*Stage) Resolve(_ context.Context, env stage.Env, _ stage.Run, _ stage.Item, art artifact.Result) (stage.Resolution, error) {
+	data, err := os.ReadFile(filepath.Join(env.Artifacts.Abs(art.Path), "report.json"))
 	if err != nil {
 		return stage.Resolution{}, fmt.Errorf("read fetch report: %w", err)
 	}

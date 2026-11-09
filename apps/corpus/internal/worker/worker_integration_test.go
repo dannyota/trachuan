@@ -37,7 +37,7 @@ func (s fakeStage) Process(ctx context.Context, env stage.Env, release stage.Run
 	}
 	return stage.Output{Artifact: &result}, nil
 }
-func (fakeStage) Rows(context.Context, artifact.Result) (func(context.Context, pgx.Tx, int64) error, error) {
+func (fakeStage) Rows(context.Context, stage.Env, artifact.Result) (func(context.Context, pgx.Tx, int64) error, error) {
 	return nil, nil
 }
 func (fakeStage) Resolve(context.Context, stage.Env, stage.Run, stage.Item, artifact.Result) (stage.Resolution, error) {

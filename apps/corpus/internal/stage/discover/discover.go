@@ -189,13 +189,13 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, r stage.Run, it stag
 }
 
 // Rows returns no artifact rows for listings.
-func (*Stage) Rows(context.Context, artifact.Result) (func(context.Context, pgx.Tx, int64) error, error) {
+func (*Stage) Rows(context.Context, stage.Env, artifact.Result) (func(context.Context, pgx.Tx, int64) error, error) {
 	return nil, nil
 }
 
 // Resolve prepares listing rows and an instability gap for this run.
-func (*Stage) Resolve(_ context.Context, _ stage.Env, r stage.Run, it stage.Item, art artifact.Result) (stage.Resolution, error) {
-	data, err := os.ReadFile(filepath.Join(art.Path, "report.json"))
+func (*Stage) Resolve(_ context.Context, env stage.Env, r stage.Run, it stage.Item, art artifact.Result) (stage.Resolution, error) {
+	data, err := os.ReadFile(filepath.Join(env.Artifacts.Abs(art.Path), "report.json"))
 	if err != nil {
 		return stage.Resolution{}, fmt.Errorf("read discovery report: %w", err)
 	}

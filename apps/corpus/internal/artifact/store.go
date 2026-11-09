@@ -14,7 +14,18 @@ import (
 )
 
 // Store holds artifacts under Root.
-type Store struct{ Root string }
+type Store struct {
+	Root string
+	sync func(string) error
+}
+
+// Abs resolves an artifact path against Root, preserving absolute paths.
+func (s Store) Abs(rel string) string {
+	if filepath.IsAbs(rel) {
+		return rel
+	}
+	return filepath.Join(s.Root, rel)
+}
 
 // Result identifies a published artifact and its input key.
 type Result struct {
@@ -42,7 +53,8 @@ func (s Store) Open(stage, inputHash, recipeHash string) (Result, bool, error) {
 	if err := validKey(stage, inputHash, recipeHash); err != nil {
 		return Result{}, false, err
 	}
-	path := filepath.Join(s.Root, stage, inputHash+"-"+recipeHash)
+	rel := filepath.Join(stage, inputHash+"-"+recipeHash)
+	path := s.Abs(rel)
 	_, err := os.Lstat(path)
 	if errors.Is(err, os.ErrNotExist) {
 		return Result{}, false, nil
@@ -54,7 +66,7 @@ func (s Store) Open(stage, inputHash, recipeHash string) (Result, bool, error) {
 	if err != nil {
 		return Result{}, false, fmt.Errorf("verify artifact: %w", err)
 	}
-	return Result{Path: path, SHA256: sum, InputHash: inputHash}, true, nil
+	return Result{Path: rel, SHA256: sum, InputHash: inputHash}, true, nil
 }
 
 // Publish writes an artifact using the supplied input hash.
@@ -82,6 +94,9 @@ func (s Store) publish(ctx context.Context, stage, inputHash, recipeHash string,
 			return Result{}, fmt.Errorf("create artifact directory: %w", err)
 		}
 	}
+	if err := syncPath(s.Root, s.sync); err != nil {
+		return Result{}, fmt.Errorf("sync artifact root: %w", err)
+	}
 	temp, err := os.MkdirTemp(filepath.Join(s.Root, ".tmp"), "artifact-")
 	if err != nil {
 		return Result{}, fmt.Errorf("create temporary artifact: %w", err)
@@ -102,6 +117,9 @@ func (s Store) publish(ctx context.Context, stage, inputHash, recipeHash string,
 	if err = os.WriteFile(filepath.Join(temp, manifestName), data, 0600); err != nil {
 		return Result{}, fmt.Errorf("write manifest: %w", err)
 	}
+	if err = syncTree(temp, s.sync); err != nil {
+		return Result{}, fmt.Errorf("sync artifact: %w", err)
+	}
 	sum := fmt.Sprintf("%x", sha256.Sum256(data))
 	if content {
 		inputHash = sum
@@ -113,12 +131,16 @@ func (s Store) publish(ctx context.Context, stage, inputHash, recipeHash string,
 	}
 	defer func() { _ = f.Close() }()
 	defer func() { _ = syscall.Flock(int(f.Fd()), syscall.LOCK_UN) }()
-	path := filepath.Join(s.Root, stage, inputHash+"-"+recipeHash)
+	rel := filepath.Join(stage, inputHash+"-"+recipeHash)
+	path := s.Abs(rel)
 	_, err = os.Lstat(path)
 	if err == nil {
 		existing, verifyErr := Verify(path)
 		if verifyErr == nil && (!content || existing == inputHash) {
-			return Result{Path: path, SHA256: existing, InputHash: inputHash, Adopted: true}, nil
+			if syncErr := syncPath(filepath.Dir(path), s.sync); syncErr != nil {
+				return Result{}, fmt.Errorf("sync artifact parent: %w", syncErr)
+			}
+			return Result{Path: rel, SHA256: existing, InputHash: inputHash, Adopted: true}, nil
 		}
 		trash := filepath.Join(s.Root, ".trash")
 		if err = os.MkdirAll(trash, 0700); err != nil {
@@ -144,5 +166,8 @@ func (s Store) publish(ctx context.Context, stage, inputHash, recipeHash string,
 	if err = os.Rename(temp, path); err != nil {
 		return Result{}, fmt.Errorf("publish artifact: %w", err)
 	}
-	return Result{Path: path, SHA256: sum, InputHash: inputHash}, nil
+	if err = syncPath(filepath.Dir(path), s.sync); err != nil {
+		return Result{}, fmt.Errorf("sync artifact parent: %w", err)
+	}
+	return Result{Path: rel, SHA256: sum, InputHash: inputHash}, nil
 }

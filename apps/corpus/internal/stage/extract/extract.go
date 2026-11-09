@@ -52,7 +52,7 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 	if input.Sha256 != item.InputHash {
 		return stage.Output{}, fmt.Errorf("fetch artifact hash changed for %q", item.Key)
 	}
-	data, err := os.ReadFile(filepath.Join(input.Path, "tree.json"))
+	data, err := os.ReadFile(filepath.Join(env.Artifacts.Abs(input.Path), "tree.json"))
 	if err != nil {
 		return stage.Output{}, fmt.Errorf("read tree: %w", err)
 	}
@@ -88,8 +88,8 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 }
 
 // Rows loads provision rows from the artifact.
-func (*Stage) Rows(_ context.Context, art artifact.Result) (func(context.Context, pgx.Tx, int64) error, error) {
-	data, err := os.ReadFile(filepath.Join(art.Path, "provisions.json"))
+func (*Stage) Rows(_ context.Context, env stage.Env, art artifact.Result) (func(context.Context, pgx.Tx, int64) error, error) {
+	data, err := os.ReadFile(filepath.Join(env.Artifacts.Abs(art.Path), "provisions.json"))
 	if err != nil {
 		return nil, fmt.Errorf("read provisions: %w", err)
 	}
@@ -109,8 +109,8 @@ func (*Stage) Rows(_ context.Context, art artifact.Result) (func(context.Context
 }
 
 // Resolve returns gaps recorded in the artifact.
-func (*Stage) Resolve(_ context.Context, _ stage.Env, _ stage.Run, _ stage.Item, art artifact.Result) (stage.Resolution, error) {
-	data, err := os.ReadFile(filepath.Join(art.Path, "report.json"))
+func (*Stage) Resolve(_ context.Context, env stage.Env, _ stage.Run, _ stage.Item, art artifact.Result) (stage.Resolution, error) {
+	data, err := os.ReadFile(filepath.Join(env.Artifacts.Abs(art.Path), "report.json"))
 	if err != nil {
 		return stage.Resolution{}, fmt.Errorf("read extract report: %w", err)
 	}

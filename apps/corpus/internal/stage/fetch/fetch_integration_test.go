@@ -16,7 +16,7 @@ func TestFetch_WritesBundleAndRows(t *testing.T) {
 	f := &fixtureServer{files: []map[string]any{entry("a", "a")}, bodies: map[string]string{"a": "content"}}
 	s, env := setup(t, f)
 	out := process(t, s, env)
-	rows, err := s.Rows(context.Background(), *out.Artifact)
+	rows, err := s.Rows(context.Background(), env, *out.Artifact)
 	if err != nil {
 		t.Fatal(err)
 	}

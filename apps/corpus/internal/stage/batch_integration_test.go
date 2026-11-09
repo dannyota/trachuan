@@ -32,8 +32,8 @@ func (s *batchStage) Process(ctx context.Context, env Env, r Run, it Item) (Outp
 	}
 	return Output{State: "gap", Gaps: []Gap{{Kind: "missing", Detail: it.Key}}}, nil
 }
-func (*batchStage) Rows(_ context.Context, art artifact.Result) (func(context.Context, pgx.Tx, int64) error, error) {
-	data, err := os.ReadFile(filepath.Join(art.Path, "row"))
+func (*batchStage) Rows(_ context.Context, env Env, art artifact.Result) (func(context.Context, pgx.Tx, int64) error, error) {
+	data, err := os.ReadFile(filepath.Join(env.Artifacts.Abs(art.Path), "row"))
 	if err != nil {
 		return nil, err
 	}

@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/dannyota/traquydinh/apps/corpus/internal/artifact"
+	"github.com/dannyota/traquydinh/apps/corpus/internal/stage"
 	"github.com/dannyota/traquydinh/apps/corpus/internal/store"
 	"github.com/jackc/pgx/v5"
 )
@@ -22,8 +23,8 @@ type detailEnvelope struct {
 }
 
 // Rows prepares artifact rows solely from the published bundle.
-func (*Stage) Rows(_ context.Context, art artifact.Result) (func(context.Context, pgx.Tx, int64) error, error) {
-	data, err := os.ReadFile(filepath.Join(art.Path, "detail.json"))
+func (*Stage) Rows(_ context.Context, env stage.Env, art artifact.Result) (func(context.Context, pgx.Tx, int64) error, error) {
+	data, err := os.ReadFile(filepath.Join(env.Artifacts.Abs(art.Path), "detail.json"))
 	if err != nil {
 		return nil, fmt.Errorf("read detail: %w", err)
 	}
@@ -34,7 +35,7 @@ func (*Stage) Rows(_ context.Context, art artifact.Result) (func(context.Context
 	if detail.Data.ID == "" {
 		return nil, fmt.Errorf("detail has no document id")
 	}
-	data, err = os.ReadFile(filepath.Join(art.Path, "files.json"))
+	data, err = os.ReadFile(filepath.Join(env.Artifacts.Abs(art.Path), "files.json"))
 	if err != nil {
 		return nil, fmt.Errorf("read files: %w", err)
 	}

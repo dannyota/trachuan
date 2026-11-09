@@ -53,11 +53,11 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 	if input.Sha256 != item.InputHash {
 		return stage.Output{}, fmt.Errorf("fetch artifact hash changed for %q", item.Key)
 	}
-	detail, err := os.ReadFile(filepath.Join(input.Path, "detail.json"))
+	detail, err := os.ReadFile(filepath.Join(env.Artifacts.Abs(input.Path), "detail.json"))
 	if err != nil {
 		return stage.Output{}, fmt.Errorf("read detail: %w", err)
 	}
-	diagram, err := os.ReadFile(filepath.Join(input.Path, "diagram.json"))
+	diagram, err := os.ReadFile(filepath.Join(env.Artifacts.Abs(input.Path), "diagram.json"))
 	if err != nil {
 		return stage.Output{}, fmt.Errorf("read diagram: %w", err)
 	}
@@ -102,9 +102,9 @@ func readJSON(path string, value any) error {
 }
 
 // Rows loads relation rows from the artifact.
-func (*Stage) Rows(_ context.Context, art artifact.Result) (func(context.Context, pgx.Tx, int64) error, error) {
+func (*Stage) Rows(_ context.Context, env stage.Env, art artifact.Result) (func(context.Context, pgx.Tx, int64) error, error) {
 	var rows []relation
-	if err := readJSON(filepath.Join(art.Path, "relations.json"), &rows); err != nil {
+	if err := readJSON(filepath.Join(env.Artifacts.Abs(art.Path), "relations.json"), &rows); err != nil {
 		return nil, err
 	}
 	return func(ctx context.Context, tx pgx.Tx, id int64) error {
@@ -122,11 +122,11 @@ func (*Stage) Rows(_ context.Context, art artifact.Result) (func(context.Context
 // Resolve checks unmapped codes and targets against this run.
 func (*Stage) Resolve(ctx context.Context, env stage.Env, run stage.Run, _ stage.Item, art artifact.Result) (stage.Resolution, error) {
 	var rows []relation
-	if err := readJSON(filepath.Join(art.Path, "relations.json"), &rows); err != nil {
+	if err := readJSON(filepath.Join(env.Artifacts.Abs(art.Path), "relations.json"), &rows); err != nil {
 		return stage.Resolution{}, err
 	}
 	var unmapped []string
-	if err := readJSON(filepath.Join(art.Path, "report.json"), &unmapped); err != nil {
+	if err := readJSON(filepath.Join(env.Artifacts.Abs(art.Path), "report.json"), &unmapped); err != nil {
 		return stage.Resolution{}, err
 	}
 	entries, err := discover.ExpectedSet(ctx, env.DB, run)

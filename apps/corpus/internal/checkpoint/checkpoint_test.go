@@ -34,11 +34,7 @@ func publish(t *testing.T, root, input string) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	rel, err := filepath.Rel(root, r.Path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return rel
+	return r.Path
 }
 func TestTake_CopiesOnlyNewArtifacts(t *testing.T) {
 	taker := setup(t)

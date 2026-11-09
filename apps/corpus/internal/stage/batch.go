@@ -140,7 +140,7 @@ func RunBatch(ctx context.Context, env Env, st Stage, in BatchInput, attempt int
 				if commit.State == "" {
 					commit.State = "done"
 				}
-				commit.ArtifactRows, err = st.Rows(ctx, *output.Artifact)
+				commit.ArtifactRows, err = st.Rows(ctx, env, *output.Artifact)
 				if err != nil {
 					if !itemError(err) {
 						return result, fmt.Errorf("load artifact rows for %q: %w", item.Key, err)

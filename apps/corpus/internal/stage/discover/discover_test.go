@@ -91,7 +91,7 @@ func exercise(t *testing.T, pages []testPage, wantPasses int, stable bool, wantI
 	if out.Artifact == nil || out.State != "done" {
 		t.Fatalf("output=%+v", out)
 	}
-	data, err := os.ReadFile(filepath.Join(out.Artifact.Path, "report.json"))
+	data, err := os.ReadFile(filepath.Join(env.Artifacts.Abs(out.Artifact.Path), "report.json"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -132,7 +132,7 @@ func exercise(t *testing.T, pages []testPage, wantPasses int, stable bool, wantI
 	if len(report.Items) != len(wantIDs) {
 		t.Errorf("items=%v", report.Items)
 	}
-	data, err = os.ReadFile(filepath.Join(out.Artifact.Path, "passes.json"))
+	data, err = os.ReadFile(filepath.Join(env.Artifacts.Abs(out.Artifact.Path), "passes.json"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -140,7 +140,7 @@ func exercise(t *testing.T, pages []testPage, wantPasses int, stable bool, wantI
 	if passErr := json.Unmarshal(data, &passes); passErr != nil || len(passes) != wantPasses {
 		t.Fatalf("passes=%s err=%v", data, passErr)
 	}
-	rows, err := s.Rows(context.Background(), *out.Artifact)
+	rows, err := s.Rows(context.Background(), env, *out.Artifact)
 	if err != nil || rows != nil {
 		t.Fatalf("rows=%v err=%v", rows != nil, err)
 	}
