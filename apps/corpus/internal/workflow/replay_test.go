@@ -12,6 +12,10 @@ func TestReplay_Histories(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Recorded production histories guard workflow changes; never let the set go empty.
+	if len(paths) == 0 {
+		t.Fatal("no recorded histories in testdata/histories")
+	}
 	for _, path := range paths {
 		t.Run(filepath.Base(path), func(t *testing.T) {
 			replayer := worker.NewWorkflowReplayer()
