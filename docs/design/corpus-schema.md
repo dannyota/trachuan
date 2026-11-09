@@ -187,8 +187,13 @@ CHECK country='vn', `rel text UNIQUE`, `schema_version integer CHECK(=1)`,
 `evaluation_summary jsonb`, `built_at timestamptz`. Every jsonb column has an
 object type check. Exactly one row is a build invariant; singleton CHECK
 prevents more than one. Recipes contain versioned values and hashes, not only
-opaque algorithm names. `source_manifest_hash` hashes the frozen upstream
-inventory defined in [build](index.md).
+opaque algorithm names. `dense_recipe` is the compact JSON object
+`{version:1,model,dimensions,document,document_hash,query,query_hash}`, where
+`document` and `query` are the embedder recipe reports of the two runtimes
+(`internal/embedding.Recipe`) and the hashes are their `Hash()`; search compares
+`query_hash` and the full `query` report with the running query embedder, and
+`dimensions` with the column typmod. `source_manifest_hash` hashes the frozen
+upstream inventory defined in [build](index.md).
 
 `evaluation_summary` is initially `{status:"not_run",release_eligible:false}`.
 Eval reports are immutable sidecars referencing the dump hash; eval does not
