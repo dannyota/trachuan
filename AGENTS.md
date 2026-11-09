@@ -28,6 +28,7 @@ Language: documents, code, comments and commits in English. Product interface in
 |-|-|
 |Planning, briefing, implementing, reviewing|`instructions/workflow.md`|
 |Go or SQL|`instructions/go.md`|
+|Python (`apps/embedder`)|`instructions/python.md`|
 |Nuxt or TypeScript|`instructions/web.md`|
 |Containers, host, OpenTofu, releases|`instructions/deploy.md`|
 |Tests, evaluation, CI evidence|`instructions/testing.md`|
@@ -50,7 +51,7 @@ No model reviews its own work. The primary states the route in every brief. Loca
 
 |Lane|Owned paths|Never|
 |-|-|-|
-|backend|`apps/server/`, `apps/corpus/`, `packages/schema/`, migrations|Edits web UI or production infrastructure|
+|backend|`apps/server/`, `apps/corpus/`, `apps/embedder/`, root `internal/`, `packages/schema/`, migrations|Edits web UI or production infrastructure|
 |frontend|`apps/web/`|Edits Go, migrations or infrastructure|
 |devops|`deploy/`, `.github/workflows/`, release scripts|Reads secret values or applies infrastructure unreviewed|
 
