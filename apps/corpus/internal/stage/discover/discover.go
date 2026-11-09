@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -34,6 +35,7 @@ type report struct {
 	Passes   int                        `json:"passes"`
 	Totals   []int                      `json:"totals"`
 	Stable   bool                       `json:"stable"`
+	Detail   string                     `json:"detail,omitempty"`
 	Items    map[string]json.RawMessage `json:"items"`
 }
 
@@ -88,7 +90,7 @@ func (*Stage) Plan(_ context.Context, _ stage.Env, r stage.Run) ([]stage.Item, e
 	return items, nil
 }
 
-// Process collects complete passes and publishes their union.
+// Process collects listing passes and publishes their results.
 func (s *Stage) Process(ctx context.Context, env stage.Env, r stage.Run, it stage.Item) (stage.Output, error) {
 	definitions, err := queries(r)
 	if err != nil {
@@ -108,44 +110,62 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, r stage.Run, it stag
 	result := report{QueryKey: identity, Items: make(map[string]json.RawMessage)}
 	var passes [][]page
 	var previous []string
+	previousComplete := false
 	for pass := 0; pass < 3; pass++ {
 		var pages []page
-		ids := make(map[string]struct{})
-		total, received := 0, 0
-		for number := 1; ; number++ {
+		items := make(map[string]json.RawMessage)
+		total, pageCap := 0, 1
+		for number := 1; number <= pageCap; number++ {
 			p, listErr := s.client.List(ctx, vbpl.ListQuery{AgencyIDs: definition.Agencies, Keyword: definition.Keyword, Page: number})
 			if listErr != nil {
-				return stage.Output{}, fmt.Errorf("list query %q pass %d page %d: %w", it.Key, pass+1, number, listErr)
+				wrapped := fmt.Errorf("list query %q pass %d page %d: %w", it.Key, pass+1, number, listErr)
+				if !errors.Is(listErr, vbpl.ErrTooLarge) && !errors.Is(listErr, vbpl.ErrNotFound) {
+					return stage.Output{}, stage.Retryable(wrapped)
+				}
+				return stage.Output{}, wrapped
 			}
-			total = p.Total
-			received += len(p.Items)
+			if number == 1 {
+				total = p.Total
+				if total > 0 && total <= 100_000 {
+					pageCap = (total+49)/50 + 1
+				}
+			}
+			if p.Total > 100_000 {
+				result.Detail = fmt.Sprintf("total %d", p.Total)
+			}
 			raw := page{Total: p.Total, Items: make([]json.RawMessage, 0, len(p.Items))}
 			for _, item := range p.Items {
 				if item.ID == "" {
 					return stage.Output{}, fmt.Errorf("list query %q returned an empty id", it.Key)
 				}
 				raw.Items = append(raw.Items, item.Raw)
-				ids[item.ID] = struct{}{}
+				items[item.ID] = item.Raw
 				result.Items[item.ID] = item.Raw
 			}
 			pages = append(pages, raw)
-			if len(p.Items) < 50 || received >= total {
+			if result.Detail != "" || len(p.Items) < 50 || len(items) >= total {
 				break
 			}
 		}
 		passes = append(passes, pages)
 		result.Totals = append(result.Totals, total)
 		result.Passes++
-		current := make([]string, 0, len(ids))
-		for id := range ids {
+		if result.Detail != "" {
+			break
+		}
+		current := make([]string, 0, len(items))
+		for id := range items {
 			current = append(current, id)
 		}
 		sort.Strings(current)
-		if pass > 0 && reflect.DeepEqual(previous, current) {
+		complete := len(items) == total
+		if complete && previousComplete && reflect.DeepEqual(previous, current) {
 			result.Stable = true
+			result.Items = items
 			break
 		}
 		previous = current
+		previousComplete = complete
 	}
 	art, err := env.Artifacts.PublishContent(ctx, s.Name(), s.Recipe(r.Snapshot), func(dir string) error {
 		for _, file := range []struct {
@@ -201,7 +221,11 @@ func (*Stage) Resolve(_ context.Context, _ stage.Env, r stage.Run, it stage.Item
 		return nil
 	}}
 	if !result.Stable {
-		resolution.Gaps = []stage.Gap{{Kind: "listing_unstable", Detail: strconv.Itoa(result.Passes)}}
+		detail := result.Detail
+		if detail == "" {
+			detail = strconv.Itoa(result.Passes)
+		}
+		resolution.Gaps = []stage.Gap{{Kind: "listing_unstable", Detail: detail}}
 	}
 	return resolution, nil
 }

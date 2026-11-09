@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -36,7 +37,7 @@ type testPage struct {
 	total int
 }
 
-func exercise(t *testing.T, pages []testPage, wantPasses int, stable bool, wantIDs []string) {
+func exercise(t *testing.T, pages []testPage, wantPasses int, stable bool, wantIDs []string, gapDetail ...string) {
 	t.Helper()
 	calls := 0
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
@@ -149,7 +150,11 @@ func exercise(t *testing.T, pages []testPage, wantPasses int, stable bool, wantI
 	}
 	var gaps []stage.Gap
 	if !stable {
-		gaps = []stage.Gap{{Kind: "listing_unstable", Detail: fmt.Sprint(wantPasses)}}
+		detail := fmt.Sprint(wantPasses)
+		if len(gapDetail) > 0 {
+			detail = gapDetail[0]
+		}
+		gaps = []stage.Gap{{Kind: "listing_unstable", Detail: detail}}
 	}
 	if !reflect.DeepEqual(resolved.Gaps, gaps) {
 		t.Errorf("gaps=%+v want=%+v", resolved.Gaps, gaps)
@@ -162,7 +167,7 @@ func TestDiscover_StableAfterTwoPasses(t *testing.T) {
 	exercise(t, []testPage{{[]string{"a", "b"}, 2}, {[]string{"b", "a"}, 2}}, 2, true, []string{"a", "b"})
 }
 func TestDiscover_EqualTotalReplacementTriggersThirdPass(t *testing.T) {
-	exercise(t, []testPage{{[]string{"a"}, 1}, {[]string{"b"}, 1}, {[]string{"b"}, 1}}, 3, true, []string{"a", "b"})
+	exercise(t, []testPage{{[]string{"a"}, 1}, {[]string{"b"}, 1}, {[]string{"b"}, 1}}, 3, true, []string{"b"})
 }
 func TestDiscover_UnstableAfterThreePassesIsGap(t *testing.T) {
 	exercise(t, []testPage{{[]string{"a"}, 1}, {[]string{"b"}, 1}, {[]string{"c"}, 1}}, 3, false, []string{"a", "b", "c"})
@@ -176,4 +181,50 @@ func TestDiscover_DedupesShiftedPages(t *testing.T) {
 	shifted[0] = "new"
 	expected := append(append([]string(nil), ids...), "new")
 	exercise(t, []testPage{{ids, 51}, {[]string{"0"}, 51}, {shifted, 51}, {[]string{"0"}, 51}, {shifted, 51}, {[]string{"0"}, 51}}, 3, true, expected)
+}
+
+func TestDiscover_ShortPageBelowTotalIsUnstable(t *testing.T) {
+	exercise(t, []testPage{{[]string{"a"}, 2}, {[]string{"a"}, 2}, {[]string{"a"}, 2}}, 3, false, []string{"a"})
+}
+
+func TestDiscover_StableReportUsesLastPass(t *testing.T) {
+	exercise(t, []testPage{{[]string{"a"}, 1}, {[]string{"b"}, 1}, {[]string{"b"}, 1}}, 3, true, []string{"b"})
+}
+
+func TestDiscover_PageCapStopsRunawayTotal(t *testing.T) {
+	ids := make([]string, 50)
+	for i := range ids {
+		ids[i] = fmt.Sprint(i)
+	}
+	pages := make([]testPage, 9)
+	for i := range pages {
+		pages[i] = testPage{ids, 51}
+	}
+	exercise(t, pages, 3, false, ids)
+}
+
+func TestDiscover_TransientListingErrorIsRetryable(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		http.Error(w, "unavailable", http.StatusBadRequest)
+	}))
+	defer server.Close()
+	s := New(vbpl.NewWithBase(server.URL, "test"))
+	run := stage.Run{Snapshot: stage.Snapshot{SourceList: json.RawMessage(`{"country":"vn","vbpl":{"sweep_agencies":["62"]}}`)}}
+	_, err := s.Process(context.Background(), stage.Env{}, run, stage.Item{Key: "vbpl:sweep"})
+	var retryable *stage.RetryableError
+	if !errors.As(err, &retryable) {
+		t.Fatalf("error=%v, want retryable error", err)
+	}
+}
+
+func TestDiscover_ExcessiveTotalIsUnstable(t *testing.T) {
+	exercise(t, []testPage{{[]string{"a"}, 100001}}, 1, false, []string{"a"}, "total 100001")
+}
+
+func TestDiscover_ExcessiveLaterTotalIsUnstable(t *testing.T) {
+	ids := make([]string, 50)
+	for i := range ids {
+		ids[i] = fmt.Sprint(i)
+	}
+	exercise(t, []testPage{{ids, 51}, {[]string{"extra"}, 100001}}, 1, false, append(ids, "extra"), "total 100001")
 }
