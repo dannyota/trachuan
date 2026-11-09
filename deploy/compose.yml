@@ -25,5 +25,33 @@ services:
       test: ["CMD-SHELL", "pg_isready -U traquydinh"]
       interval: 5s
       retries: 20
+  temporal:
+    image: docker.io/temporalio/server:1.32.2
+    # The server reads its configuration from these variables (embedded template).
+    environment:
+      DB: postgres12
+      DB_PORT: "5432"
+      POSTGRES_SEEDS: postgres
+      POSTGRES_USER: temporal
+      POSTGRES_PWD: ${TEMPORAL_DB_PASSWORD:?set TEMPORAL_DB_PASSWORD in .env}
+      DBNAME: temporal
+      VISIBILITY_DBNAME: temporal_visibility
+      TEMPORAL_ALLOW_NO_AUTH: "true"
+      BIND_ON_IP: 0.0.0.0
+    volumes:
+      - ./local/temporal-dynamicconfig.yaml:/etc/temporal/config/dynamicconfig/docker.yaml:ro
+    ports:
+      - "127.0.0.1:7233:7233"
+    depends_on:
+      - postgres
+  temporal-ui:
+    image: docker.io/temporalio/ui:2.58.1
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_CORS_ORIGINS: http://127.0.0.1:8233
+    ports:
+      - "127.0.0.1:8233:8080"
+    depends_on:
+      - temporal
 volumes:
   traquydinh-pg:

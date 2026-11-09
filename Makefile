@@ -43,10 +43,25 @@ sqlc-check: ## Fail when generated data layer files drift
 
 COMPOSE := podman compose --env-file .env -f deploy/compose.yml
 
-db-up: ## Start local PostgreSQL with pgvector
-	$(COMPOSE) up -d --wait
+db-up: ## Start local PostgreSQL with pgvector and wait until it is ready
+	$(COMPOSE) up -d postgres
+	@for i in $$(seq 1 60); do podman exec traquydinh_postgres_1 pg_isready -q -U traquydinh && exit 0; sleep 1; done; echo "postgres not ready" >&2; exit 1
 
-db-down: ## Stop local PostgreSQL, keep its volume
+db-setup: ## Create the pipeline and Temporal roles and databases (idempotent)
+	bash deploy/local/db-setup.sh
+
+temporal-schema: ## Create or upgrade the Temporal schemas (idempotent)
+	bash deploy/local/temporal-schema.sh
+
+temporal-up: ## Start the Temporal server and UI
+	$(COMPOSE) up -d temporal temporal-ui
+
+temporal-namespace: ## Create the corpus namespace when missing
+	bash deploy/local/temporal-namespace.sh
+
+services-up: db-up db-setup temporal-schema temporal-up temporal-namespace ## Start every local pipeline service in order
+
+db-down: ## Stop local services, keep their volumes
 	$(COMPOSE) down
 
-.PHONY: help hooks-install lengths-check pre-push docs-fmt test test-integration test-proof generate sqlc-check db-up db-down
+.PHONY: help hooks-install lengths-check pre-push docs-fmt test test-integration test-proof generate sqlc-check db-up db-setup temporal-schema temporal-up temporal-namespace services-up db-down
