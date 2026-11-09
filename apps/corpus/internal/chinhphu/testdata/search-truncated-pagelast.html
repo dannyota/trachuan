@@ -1,0 +1,2484 @@
+
+
+<!DOCTYPE html>
+<html lang="vi">
+<head><meta name="viewport" content="width=device-width, initial-scale=1" property="viewport" /><meta http-equiv="Content-Type" content="text/html; charset=utf-8" /><meta charset="utf-8" /><title>
+	Hệ thống văn bản
+</title><link type="text/css" rel="Stylesheet" href="/StyleSheet/StyleSheet.css?v=1" /><link href="StyleSheet/jQueryUI/jquery-ui-1.8.css?v=1" rel="stylesheet" type="text/css" /><link rel="stylesheet" href="/scripts/owlcarousel/owlcarousel/assets/owl.carousel.min.css?v=1" /><link rel="stylesheet" href="/scripts/owlcarousel/owlcarousel/assets/owl.theme.default.min.css?v=1" />
+    <script src="/scripts/jquery-3.6.0.min.js?v=1" type="text/javascript"></script>
+    <script src="/scripts/jquery-ui.min.js?v=1" type="text/javascript"></script> 
+    <script src="/Scripts/JDialog.js?v=1" type="text/javascript"></script>
+    <script src="/Scripts/configDialog.js?v=1" type="text/javascript"></script>
+    <script src="/scripts/owlcarousel/owlcarousel/owl.carousel.js?v=1"></script>
+    <script src="/scripts/swiper/swiper-bundle.min.js?v=1"></script>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z" crossorigin="anonymous" /><link type="image/x-icon" rel="shortcut icon" href="https://datafiles.chinhphu.vn/cpp/1/Logo/quoc-huy2.png" /><link id="panel_top-onecolumn-footer" href="https://datafiles.chinhphu.vn/cpp/themes/default/panelstylesheet/top-onecolumn-footer/default.css?v=239" type="text/css" rel="stylesheet" />
+                    <script async src="https://www.googletagmanager.com/gtag/js?id=G-4YC72F91YS"></script>
+                    <script>
+                      window.dataLayer = window.dataLayer || [];
+                      function gtag(){dataLayer.push(arguments);}
+                      gtag('js', new Date());
+
+                      gtag('config', 'G-4YC72F91YS');
+                    </script>
+                    <!-- Begin EMC Tracking Code -->
+                            <script type="text/javascript">
+                                var _govaq = window._govaq || [];
+                            _govaq.push(['trackPageView']);
+                            _govaq.push(['enableLinkTracking']);
+                            (function () {
+                                _govaq.push(['setTrackerUrl', 'https://f-emc.ngsp.gov.vn/tracking']);
+                                _govaq.push(['setSiteId', '1914']);
+                                var d = document,
+                                    g = d.createElement('script'),
+                                    s = d.getElementsByTagName('script')[0];
+                                g.type = 'text/javascript';
+                                g.async = true;
+                                g.defer = true;
+                                g.src = 'https://f-emc.ngsp.gov.vn/embed/gov-tracking.min.js';
+                                s.parentNode.insertBefore(g, s);
+                            })();
+                            </script>
+                        <!-- End EMC Tracking Code -->
+                    <link href="https://datafiles.chinhphu.vn/cpp/themes/responsive/responsive.css" rel="stylesheet" type="text/css" /><link id="_themes_default_uibannerdefault_css" href="https://datafiles.chinhphu.vn/cpp/themes/default/uibanner/default.css?v=239" type="text/css" rel="stylesheet" /><link id="_themes_default_uidropdownmenudefault_css" href="https://datafiles.chinhphu.vn/cpp/themes/default/uidropdownmenu/default.css?v=239" type="text/css" rel="stylesheet" /><link id="_themes_default_uisinglesearchdefault_css" href="https://datafiles.chinhphu.vn/cpp/themes/default/uisinglesearch/default.css?v=239" type="text/css" rel="stylesheet" /><link id="_themes_default_uiclocksystemdefault_css" href="https://datafiles.chinhphu.vn/cpp/themes/default/uiclocksystem/default.css?v=239" type="text/css" rel="stylesheet" /><link id="_themes_default_uiutilitycontrols_uiadvertisementdefault_css" href="https://datafiles.chinhphu.vn/cpp/themes/default/uiutilitycontrols/uiadvertisement/default.css?v=239" type="text/css" rel="stylesheet" /><link id="_themes_default_uiweatherforcastdefault_css" href="https://datafiles.chinhphu.vn/cpp/themes/default/uiweatherforcast/default.css?v=239" type="text/css" rel="stylesheet" /><link id="_themes_default_uilinkslidedefault_css" href="https://datafiles.chinhphu.vn/cpp/themes/default/uilinkslide/default.css?v=239" type="text/css" rel="stylesheet" /><link id="_themes_default_uimenunavigationcontent_css" href="https://datafiles.chinhphu.vn/cpp/themes/default/uimenunavigation/content.css?v=239" type="text/css" rel="stylesheet" /><link id="_themes_default_uisteeringdocument_documentlisttrangthutuong_css" href="https://datafiles.chinhphu.vn/cpp/themes/default/uisteeringdocument/documentlist/trangthutuong.css?v=239" type="text/css" rel="stylesheet" /><link id="_themes_default_uisteeringdocument_groupdefault2_css" href="https://datafiles.chinhphu.vn/cpp/themes/default/uisteeringdocument/group/default2.css?v=239" type="text/css" rel="stylesheet" /><link id="_themes_default_uifooterdefault_css" href="https://datafiles.chinhphu.vn/cpp/themes/default/uifooter/default.css?v=239" type="text/css" rel="stylesheet" /><meta name="og:title" content="Hệ thống văn bản" property="og:title" /><meta name="og:description" content="Hệ thống văn bản" property="og:description" /><meta name="og:type" content="website" property="og:type" /><meta name="og:image" content="https://datafiles.chinhphu.vn/cpp/1/Logo/quoc-huy2.png" property="og:image" /><meta name="og:url" content="http://vanban.chinhphu.vn/" property="og:url" /><meta name="author" content="Cổng Thông tin điện tử Chính phủ" property="author" /><meta name="copyright" content="Cổng Thông tin điện tử Chính phủ - http://vanban.chinhphu.vn" property="copyright" /><meta name="description" content="Hệ thống văn bản" property="description" /><meta name="twitter:card" content="summary" property="twitter:card" /><meta name="twitter:title" content="Hệ thống văn bản" property="twitter:title" /><meta name="twitter:description" content="Hệ thống văn bản" property="twitter:description" /><meta name="twitter:image" content="https://datafiles.chinhphu.vn/cpp/1/Logo/quoc-huy2.png" property="twitter:image" /><meta name="keywords" content="Trang Tiếng Việt,Cổng Thông tin điện tử Chính phủ," /></head>
+<body>
+    <form method="post" action="/" id="form1" style="display: none">
+<input type="hidden" name="__VIEWSTATE" id="__VIEWSTATE" value="REDACTED-__VIEWSTATE" />
+
+
+<script src="/DesktopModule/UIDropdownMenu/DropdownMenu.js" type="text/javascript"></script>
+<script src="/DesktopModule/UIUtilityControls/UIAdvertisement/Advertisement.js" type="text/javascript"></script>
+<script type="text/javascript">
+//<![CDATA[
+$(document).ready(function() {
+                var self = $('#ctrl_191973_202_LinkSlide'); 
+                self.attr('style','position:relative;overflow:hidden;min-height:25px'); 
+                var wrap = self.find('.block-row'); 
+                var items = $(wrap).children(); 
+                $(items).attr('style','display:inline-block;padding:0 5px;width:auto'); 
+                $(wrap).wrapAll('<marquee onmouseover=this.stop()  onmouseout=this.start() scrollamount =3 scrolldelay=5  direction =left></marquee>');
+            });//]]>
+</script>
+
+<script src="/ScriptResource.axd?d=NJmAwtEo3Ipnlaxl6CMhvlV4LwA6tM-rcsAnN2W0iYgcmuMOH_ZHobUzpt4l5dyjbuF5jt6Xb_UtpdGPisx6o6R4ngRLxmAoblcUzbbeEc33RTBcA4VeELl5CunIpDu1XVEhMl_V-MH9RCiOQ6v_pWSXKekjt3HLamJ94bw4w6Y1&amp;t=32e5dfca" type="text/javascript"></script>
+<input type="hidden" name="__VIEWSTATEGENERATOR" id="__VIEWSTATEGENERATOR" value="REDACTED-__VIEWSTATEGENERATOR" />
+<input type="hidden" name="__VIEWSTATEENCRYPTED" id="__VIEWSTATEENCRYPTED" value="" />
+<input type="hidden" name="__EVENTVALIDATION" id="__EVENTVALIDATION" value="REDACTED-__EVENTVALIDATION" />
+        
+        
+        <input type="hidden" id="hidText" name="hidText" value="" />
+    <div class="MainStructure table-3-col"><div class="TopBanner"><div class="TopBar" id="TopBar"><table border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td id="1" resizable="no" valign="top">
+<div class="UIBannerControl">
+    <div class="div-logo">
+<div style="width: 100%; text-align: center">
+<a href="https://chinhphu.vn"><img loading="lazy" alt="Cổng thông tin điện tử Chính phủ" src="https://datafiles.chinhphu.vn/cpp/1/banner/svg.png"></a>
+</div>
+<div class="lang">
+<div class="en"><a href="https://vietnam.gov.vn" target="_blank">English</a></div>
+<div class="cn"><a href="https://zh.chinhphu.vn/" target="_blank">中文</a></div>
+</div>
+</div>
+</div>
+</td></tr></table><div class="layout-flex"><div id="1">
+<style>
+    li.LanguageMenu {
+        cursor: pointer;
+    }
+</style>
+<div class="DropdownMenu">
+    <ul class="MenuList"><li class="TopMenu" style="display:inline-block"><a href="https://chinhphu.vn"  ><img src="https://datafiles.chinhphu.vn/cpp/1/Logo/quoc-huy.png"class='image'/><span class="trang-chu-68147">Trang chủ</span></a></li><li class="TopMenu" style="display:inline-block"><a href="https://chinhphu.vn/chinh-phu"  ><span class="chinh-phu-70544">Chính phủ</span></a></li><li class="TopMenu" style="display:inline-block"><a href="https://chinhphu.vn/cong-dan"  ><span class="cong-dan-68149">Công dân</span></a></li><li class="TopMenu" style="display:inline-block"><a href="https://chinhphu.vn/doanh-nghiep"  ><span class="doanh-nghiep-68150">Doanh nghiệp</span></a></li><li class="TopMenu" style="display:inline-block"><a href="https://chinhphu.vn/kieu-bao"  ><span class="kieu-bao-68151">Kiều bào</span></a></li><li class="TopMenu" style="display:inline-block"><a href="https://baochinhphu.vn"  target="_blank" ><span class="bao-dien-tu-chinh-phu-68152">Báo điện tử chính phủ</span></a></li><li class="TopMenu" style="display:inline-block"><a href="http://vpcp.chinhphu.vn"  target="_blank" ><span class="van-phong-chinh-phu-68153">Văn phòng chính phủ</span></a></li></ul>
+    
+</div>
+<script type="text/javascript">
+    $(document).ready(function () {
+        $('.language-button').on('click', function () {
+            var language_code = $(this).data('language-code');
+            document.cookie = "lang=" + language_code + "; path=/";
+            location.href = "/";
+        });
+
+        var value = getCookie("lang");
+        $('.language-button').each(function () {
+            if ($(this).data('language-code') == value) {
+                $(this).css({
+                    padding: "2px",
+                    borderBottom: "2px solid #ffeb3b"
+                });
+            }
+        })
+
+    });
+
+    function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(';').shift();
+    }
+
+</script>
+
+
+
+<div class="SingleSearch">
+    <div class="SearchBox">
+        <input name="ctrl_190922_45$txtSearch" type="text" id="ctrl_190922_45_txtSearch" class="Text" placeholder="Nhập từ khóa" data-link="/?pageid=473" />
+        <a onclick="return redirectToSearch();" id="ctrl_190922_45_lnkSearch" class="Button" href="javascript:__doPostBack(&#39;ctrl_190922_45$lnkSearch&#39;,&#39;&#39;)"></a>
+    </div>
+</div>
+<script type="text/javascript">
+    function redirectToSearch() {
+        var txtSearch = document.getElementById('ctrl_190922_45_txtSearch');
+        var searchText = txtSearch.value.trim();
+        var link = txtSearch.getAttribute("data-link");
+        if (searchText && link) {
+            window.location.href = link + "&q=" + encodeURIComponent(searchText);
+        }
+        return false; // Ngăn chặn postback
+    }
+    document.getElementById('ctrl_190922_45_txtSearch').addEventListener("keypress", function (event) {
+        if (event.key === "Enter") {
+            event.preventDefault(); // Ngăn Enter gây postback
+            redirectToSearch();
+        }
+    });
+</script>
+
+<div class="UIClockSystem">
+    <span id="ctrl_190923_97_clock" class="clock" type="4"></span>
+</div>
+<div class="hidDays">
+    <input type="hidden" name="ctrl_190923_97$hidDays" id="ctrl_190923_97_hidDays" value="Chủ Nhật, Thứ Hai, Thứ Ba, Thứ Tư, Thứ Năm, Thứ Sáu, Thứ Bảy" />
+</div>
+<script type="text/javascript">
+    $(document).ready(function () {
+        var days = $(".hidDays>input").val().split(",");
+        var months = new Array("01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12");
+
+        setInterval(function () {
+            var am_pm;
+            var d = new Date();
+            var s = d.getSeconds();
+            var m = d.getMinutes();
+            var h = d.getHours();
+            var day = d.getDay();
+            var date = d.getDate();
+            var month = d.getMonth();
+            var year = d.getFullYear();
+
+            if (date < 10) { date = "0" + date }
+            if (s < 10) { s = "0" + s }
+            if (m < 10) { m = "0" + m }
+            if (h > 12) { h -= 12; am_pm = "PM" } else { am_pm = "AM" }
+            if (h < 10) { h = "0" + h }
+            if ($(".UIClockSystem .clock").attr("type") == "1547")
+                $(".UIClockSystem .clock").text(`${year} 年 ${months[month]} 月 ${date} 日，${days[day]}`); 
+            else
+                $(".UIClockSystem .clock").text(days[day] + ', ' + date + "/" + months[month] + '/' + year);
+        }, 1000);
+    });
+</script>
+<div id="ctrl_190924_51_advertisement" class="AdvertisementBottomRight">
+    <div class="AdvertTitleBar"><span class="Collapse"></span><span class="Expand"></span></div>
+    <div class="AdvertContent">
+        <div class="intro">
+<div class="gtcp">
+<a href="https://chinhphu.vn/nuoc-chxhcn-viet-nam-68409">
+<span>Nước CHXHCN<br>
+Việt Nam</span>
+</a>
+<a href="https://chinhphu.vn/gioi-thieu-chinh-phu">
+<span>Giới thiệu<br>
+Chính phủ</span>
+</a>
+<a href="https://mail.chinhphu.vn" target="_blank">
+<span>Thư điện tử<br>
+ công vụ Chính phủ</span>
+</a>
+</div>
+</div>
+    </div>
+</div>
+
+
+<div class="UIWeatherForcast">
+    <div class="main">
+        <span id="ctrl_191196_181_lblName" class="info-name">Hà Nội</span>
+        <span id="ctrl_191196_181_lblTemperature" class="info-temp">21° - 23°</span>
+        <img id="ctrl_191196_181_imgIcon" class="info-icon" src="https://kttv.gov.vn/Upload/WeatherSymbol/2008/8/22/111.png" alt="icon" />
+        <i class="fa fa-caret-down" aria-hidden="true"></i>
+    </div>
+
+    <div class="more-info">
+        <input type="text" class="temperature-search" placeholder="" />
+        <div class="div-more-info">
+            
+                    <ul class="list-temperature">
+                
+                    <li>
+                        <a href='https://www.nchmf.gov.vn/kttv/vi-VN/1/tan-phong-lai-chau-w64.html' target="_blank" class="info-a">
+                            <span class="info-name">Lai Châu</span>
+                            <span class="info-temp">19° - 21°</span>
+                            <img class="info-icon" src='https://kttv.gov.vn/Upload/WeatherSymbol/2008/8/22/270.gif' alt="icon" />
+                        </a>
+                    </li>
+                
+                    <li>
+                        <a href='https://www.nchmf.gov.vn/kttv/vi-VN/1/muong-thanh-dien-bien-w38.html' target="_blank" class="info-a">
+                            <span class="info-name">Điện Biên</span>
+                            <span class="info-temp">21° - 23°</span>
+                            <img class="info-icon" src='https://kttv.gov.vn/Upload/WeatherSymbol/2008/8/22/270.gif' alt="icon" />
+                        </a>
+                    </li>
+                
+                    <li>
+                        <a href='https://www.nchmf.gov.vn/kttv/vi-VN/1/to-hieu-son-la-w45.html' target="_blank" class="info-a">
+                            <span class="info-name">Sơn La</span>
+                            <span class="info-temp">18° - 20°</span>
+                            <img class="info-icon" src='https://kttv.gov.vn/Upload/WeatherSymbol/2008/8/22/330.gif' alt="icon" />
+                        </a>
+                    </li>
+                
+                    <li>
+                        <a href='https://www.nchmf.gov.vn/kttv/vi-VN/1/hoa-binh-phu-tho-w2.html' target="_blank" class="info-a">
+                            <span class="info-name">Phú Thọ</span>
+                            <span class="info-temp">22° - 24°</span>
+                            <img class="info-icon" src='https://kttv.gov.vn/Upload/WeatherSymbol/2008/8/22/111.png' alt="icon" />
+                        </a>
+                    </li>
+                
+                    <li>
+                        <a href='https://www.nchmf.gov.vn/kttv/vi-VN/1/lao-cai-lao-cai-w37.html' target="_blank" class="info-a">
+                            <span class="info-name">Lào Cai</span>
+                            <span class="info-temp">21° - 23°</span>
+                            <img class="info-icon" src='https://kttv.gov.vn/Upload/WeatherSymbol/2008/8/22/450.gif' alt="icon" />
+                        </a>
+                    </li>
+                
+                    <li>
+                        <a href='https://www.nchmf.gov.vn/kttv/vi-VN/1/ha-giang-tuyen-quang-w36.html' target="_blank" class="info-a">
+                            <span class="info-name">Tuyên Quang</span>
+                            <span class="info-temp">24° - 26°</span>
+                            <img class="info-icon" src='https://kttv.gov.vn/Upload/WeatherSymbol/2008/8/22/270.gif' alt="icon" />
+                        </a>
+                    </li>
+                
+                    <li>
+                        <a href='https://www.nchmf.gov.vn/kttv/vi-VN/1/bac-kan-thai-nguyen-w52.html' target="_blank" class="info-a">
+                            <span class="info-name">Thái Nguyên</span>
+                            <span class="info-temp">22° - 24°</span>
+                            <img class="info-icon" src='https://kttv.gov.vn/Upload/WeatherSymbol/2008/8/22/270.gif' alt="icon" />
+                        </a>
+                    </li>
+                
+                    <li>
+                        <a href='https://www.nchmf.gov.vn/kttv/vi-VN/1/thuc-phan-cao-bang-w49.html' target="_blank" class="info-a">
+                            <span class="info-name">Cao Bằng</span>
+                            <span class="info-temp">21° - 23°</span>
+                            <img class="info-icon" src='https://kttv.gov.vn/Upload/WeatherSymbol/2008/8/22/270.gif' alt="icon" />
+                        </a>
+                    </li>
+                
+                    <li>
+                        <a href='https://www.nchmf.gov.vn/kttv/vi-VN/1/luong-van-tri-lang-son-w48.html' target="_blank" class="info-a">
+                            <span class="info-name">Lạng Sơn</span>
+                            <span class="info-temp">18° - 20°</span>
+                            <img class="info-icon" src='https://kttv.gov.vn/Upload/WeatherSymbol/2008/8/22/111.png' alt="icon" />
+                        </a>
+                    </li>
+                
+                    <li>
+                        <a href='https://www.nchmf.gov.vn/kttv/vi-VN/1/ha-long-quang-ninh-w63.html' target="_blank" class="info-a">
+                            <span class="info-name">Quảng Ninh</span>
+                            <span class="info-temp">22° - 24°</span>
+                            <img class="info-icon" src='https://kttv.gov.vn/Upload/WeatherSymbol/2008/8/22/450.gif' alt="icon" />
+                        </a>
+                    </li>
+                
+                    <li>
+                        <a href='https://www.nchmf.gov.vn/kttv/vi-VN/1/bac-giang-bac-ninh-w46.html' target="_blank" class="info-a">
+                            <span class="info-name">Bắc Ninh</span>
+                            <span class="info-temp">21° - 23°</span>
+                            <img class="info-icon" src='https://kttv.gov.vn/Upload/WeatherSymbol/2008/8/22/111.png' alt="icon" />
+                        </a>
+                    </li>
+                
+                    <li>
+                        <a href='https://www.nchmf.gov.vn/kttv/vi-VN/1/le-chan-tp-hai-phong-w54.html' target="_blank" class="info-a">
+                            <span class="info-name">Tp Hải Phòng</span>
+                            <span class="info-temp">21° - 23°</span>
+                            <img class="info-icon" src='https://kttv.gov.vn/Upload/WeatherSymbol/2008/8/22/261.png' alt="icon" />
+                        </a>
+                    </li>
+                
+                    <li>
+                        <a href='https://www.nchmf.gov.vn/kttv/vi-VN/1/hoan-kiem-tp-ha-noi-w28.html' target="_blank" class="info-a">
+                            <span class="info-name">Hà Nội</span>
+                            <span class="info-temp">21° - 23°</span>
+                            <img class="info-icon" src='https://kttv.gov.vn/Upload/WeatherSymbol/2008/8/22/111.png' alt="icon" />
+                        </a>
+                    </li>
+                
+                    <li>
+                        <a href='https://www.nchmf.gov.vn/kttv/vi-VN/1/pho-hien-hung-yen-w33.html' target="_blank" class="info-a">
+                            <span class="info-name">Hưng Yên</span>
+                            <span class="info-temp">21° - 23°</span>
+                            <img class="info-icon" src='https://kttv.gov.vn/Upload/WeatherSymbol/2008/8/22/111.png' alt="icon" />
+                        </a>
+                    </li>
+                
+                    <li>
+                        <a href='https://www.nchmf.gov.vn/kttv/vi-VN/1/nam-dinh-ninh-binh-w34.html' target="_blank" class="info-a">
+                            <span class="info-name">Ninh Bình</span>
+                            <span class="info-temp">24° - 26°</span>
+                            <img class="info-icon" src='https://kttv.gov.vn/Upload/WeatherSymbol/2008/8/22/40.png' alt="icon" />
+                        </a>
+                    </li>
+                
+                    <li>
+                        <a href='https://www.nchmf.gov.vn/kttv/vi-VN/1/hac-thanh-thanh-hoa-w61.html' target="_blank" class="info-a">
+                            <span class="info-name">Thanh Hóa</span>
+                            <span class="info-temp">24° - 26°</span>
+                            <img class="info-icon" src='https://kttv.gov.vn/Upload/WeatherSymbol/2008/8/22/111.png' alt="icon" />
+                        </a>
+                    </li>
+                
+                    <li>
+                        <a href='https://www.nchmf.gov.vn/kttv/vi-VN/1/truong-vinh-nghe-an-w3.html' target="_blank" class="info-a">
+                            <span class="info-name">Nghệ An</span>
+                            <span class="info-temp">24° - 26°</span>
+                            <img class="info-icon" src='https://kttv.gov.vn/Upload/WeatherSymbol/2008/8/22/261.png' alt="icon" />
+                        </a>
+                    </li>
+                
+                    <li>
+                        <a href='https://www.nchmf.gov.vn/kttv/vi-VN/1/thanh-sen-ha-tinh-w4.html' target="_blank" class="info-a">
+                            <span class="info-name">Hà Tĩnh</span>
+                            <span class="info-temp">24° - 26°</span>
+                            <img class="info-icon" src='https://kttv.gov.vn/Upload/WeatherSymbol/2008/8/22/261.png' alt="icon" />
+                        </a>
+                    </li>
+                
+                    <li>
+                        <a href='https://www.nchmf.gov.vn/kttv/vi-VN/1/dong-hoi-quang-tri-w5.html' target="_blank" class="info-a">
+                            <span class="info-name">Quảng Trị</span>
+                            <span class="info-temp">25° - 27°</span>
+                            <img class="info-icon" src='https://kttv.gov.vn/Upload/WeatherSymbol/2008/8/22/261.png' alt="icon" />
+                        </a>
+                    </li>
+                
+                    <li>
+                        <a href='https://www.nchmf.gov.vn/kttv/vi-VN/1/thuan-hoa-tp-hue-w7.html' target="_blank" class="info-a">
+                            <span class="info-name">Tp Huế</span>
+                            <span class="info-temp">24° - 26°</span>
+                            <img class="info-icon" src='https://kttv.gov.vn/Upload/WeatherSymbol/2008/8/22/450.gif' alt="icon" />
+                        </a>
+                    </li>
+                
+                    <li>
+                        <a href='https://www.nchmf.gov.vn/kttv/vi-VN/1/hai-chau-tp-da-nang-w55.html' target="_blank" class="info-a">
+                            <span class="info-name">Tp Đà Nẵng</span>
+                            <span class="info-temp">27° - 29°</span>
+                            <img class="info-icon" src='https://kttv.gov.vn/Upload/WeatherSymbol/2008/8/22/261.png' alt="icon" />
+                        </a>
+                    </li>
+                
+                    <li>
+                        <a href='https://www.nchmf.gov.vn/kttv/vi-VN/1/cam-thanh-quang-ngai-w8.html' target="_blank" class="info-a">
+                            <span class="info-name">Quảng Ngãi</span>
+                            <span class="info-temp">25° - 27°</span>
+                            <img class="info-icon" src='https://kttv.gov.vn/Upload/WeatherSymbol/2008/8/22/261.png' alt="icon" />
+                        </a>
+                    </li>
+                
+                    <li>
+                        <a href='https://www.nchmf.gov.vn/kttv/vi-VN/1/quy-nhon-gia-lai-w56.html' target="_blank" class="info-a">
+                            <span class="info-name">Gia Lai</span>
+                            <span class="info-temp">28° - 30°</span>
+                            <img class="info-icon" src='https://kttv.gov.vn/Upload/WeatherSymbol/2008/8/22/261.png' alt="icon" />
+                        </a>
+                    </li>
+                
+                    <li>
+                        <a href='https://www.nchmf.gov.vn/kttv/vi-VN/1/tuy-hoa-dak-lak-w59.html' target="_blank" class="info-a">
+                            <span class="info-name">Đắk Lắk</span>
+                            <span class="info-temp">27° - 29°</span>
+                            <img class="info-icon" src='https://kttv.gov.vn/Upload/WeatherSymbol/2008/8/22/261.png' alt="icon" />
+                        </a>
+                    </li>
+                
+                    <li>
+                        <a href='https://www.nchmf.gov.vn/kttv/vi-VN/1/nha-trang-khanh-hoa-w9.html' target="_blank" class="info-a">
+                            <span class="info-name">Khánh Hòa</span>
+                            <span class="info-temp">25° - 27°</span>
+                            <img class="info-icon" src='https://kttv.gov.vn/Upload/WeatherSymbol/2008/8/22/261.png' alt="icon" />
+                        </a>
+                    </li>
+                
+                    <li>
+                        <a href='https://www.nchmf.gov.vn/kttv/vi-VN/1/phan-thiet-lam-dong-w10.html' target="_blank" class="info-a">
+                            <span class="info-name">Lâm Đồng</span>
+                            <span class="info-temp">27° - 29°</span>
+                            <img class="info-icon" src='https://kttv.gov.vn/Upload/WeatherSymbol/2008/8/22/270.gif' alt="icon" />
+                        </a>
+                    </li>
+                
+                    <li>
+                        <a href='https://www.nchmf.gov.vn/kttv/vi-VN/1/phuoc-long-dong-nai-w30.html' target="_blank" class="info-a">
+                            <span class="info-name">Đồng Nai</span>
+                            <span class="info-temp">25° - 27°</span>
+                            <img class="info-icon" src='https://kttv.gov.vn/Upload/WeatherSymbol/2008/8/22/330.gif' alt="icon" />
+                        </a>
+                    </li>
+                
+                    <li>
+                        <a href='https://www.nchmf.gov.vn/kttv/vi-VN/1/tay-ninh-tay-ninh-w35.html' target="_blank" class="info-a">
+                            <span class="info-name">Tây Ninh</span>
+                            <span class="info-temp">25° - 27°</span>
+                            <img class="info-icon" src='https://kttv.gov.vn/Upload/WeatherSymbol/2008/8/22/270.gif' alt="icon" />
+                        </a>
+                    </li>
+                
+                    <li>
+                        <a href='https://www.nchmf.gov.vn/kttv/vi-VN/1/binh-duong-tp-ho-chi-minh-w16.html' target="_blank" class="info-a">
+                            <span class="info-name">Tp Hồ Chí Minh</span>
+                            <span class="info-temp">25° - 27°</span>
+                            <img class="info-icon" src='https://kttv.gov.vn/Upload/WeatherSymbol/2008/8/22/330.gif' alt="icon" />
+                        </a>
+                    </li>
+                
+                    <li>
+                        <a href='https://www.nchmf.gov.vn/kttv/vi-VN/1/my-tho-dong-thap-w23.html' target="_blank" class="info-a">
+                            <span class="info-name">Đồng Tháp</span>
+                            <span class="info-temp">27° - 29°</span>
+                            <img class="info-icon" src='https://kttv.gov.vn/Upload/WeatherSymbol/2008/8/22/270.gif' alt="icon" />
+                        </a>
+                    </li>
+                
+                    <li>
+                        <a href='https://www.nchmf.gov.vn/kttv/vi-VN/1/long-chau-vinh-long-w57.html' target="_blank" class="info-a">
+                            <span class="info-name">Vĩnh Long</span>
+                            <span class="info-temp">28° - 30°</span>
+                            <img class="info-icon" src='https://kttv.gov.vn/Upload/WeatherSymbol/2008/8/22/270.gif' alt="icon" />
+                        </a>
+                    </li>
+                
+                    <li>
+                        <a href='https://www.nchmf.gov.vn/kttv/vi-VN/1/long-xuyen-an-giang-w58.html' target="_blank" class="info-a">
+                            <span class="info-name">An Giang</span>
+                            <span class="info-temp">26° - 28°</span>
+                            <img class="info-icon" src='https://kttv.gov.vn/Upload/WeatherSymbol/2008/8/22/330.gif' alt="icon" />
+                        </a>
+                    </li>
+                
+                    <li>
+                        <a href='https://www.nchmf.gov.vn/kttv/vi-VN/1/ninh-kieu-tp-can-tho-w26.html' target="_blank" class="info-a">
+                            <span class="info-name">Tp Cần Thơ</span>
+                            <span class="info-temp">28° - 30°</span>
+                            <img class="info-icon" src='https://kttv.gov.vn/Upload/WeatherSymbol/2008/8/22/330.gif' alt="icon" />
+                        </a>
+                    </li>
+                
+                    <li>
+                        <a href='https://www.nchmf.gov.vn/kttv/vi-VN/1/bac-lieu-ca-mau-w29.html' target="_blank" class="info-a">
+                            <span class="info-name">Cà Mau</span>
+                            <span class="info-temp">28° - 30°</span>
+                            <img class="info-icon" src='https://kttv.gov.vn/Upload/WeatherSymbol/2008/8/22/270.gif' alt="icon" />
+                        </a>
+                    </li>
+                </ul>
+        </div>
+    </div>
+</div>
+</div></div><table border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td id="1" resizable="no" valign="top"><div id="ctrl_191973_202_LinkSlide" class="LinkSlide">
+    
+    <div class="block-row link-slide">
+        
+                <p class="Item0">
+                    <a class="Title" href="https://baochinhphu.vn/chu-de/thu-tuong-pham-minh-chinh-du-hoi-nghi-cap-cao-dac-biet-asean-hoa-ky-tham-va-lam-viec-tai-hoa-ky-lien-hop-quoc-177.htm" target="_blank">
+                        Thủ tướng Phạm Minh Chính dự Hội nghị Cấp cao Đặc biệt ASEAN-Hoa Kỳ, thăm và làm việc tại Hoa Kỳ, Liên Hợp Quốc
+                    </a>
+                </p>
+            
+                <p class="Item1">
+                    <a class="Title" href="https://baochinhphu.vn/chu-de/sea-games-31-viet-nam-2022-176.htm" target="_blank">
+                        SEA Games 31 - Việt Nam 2022
+                    </a>
+                </p>
+            
+                <p class="Item2">
+                    <a class="Title" href="https://baochinhphu.vn/chu-de/phuc-hoi-va-phat-trien-kinh-te-nhung-viec-can-lam-ngay-166.htm" target="_blank">
+                        Phục hồi và phát triển kinh tế: Những việc cần làm ngay
+                    </a>
+                </p>
+            
+                <p class="Item3">
+                    <a class="Title" href="https://baochinhphu.vn/chu-de/giai-ngan-von-dau-tu-cong-130.htm" target="_blank">
+                        Giải ngân vốn đầu tư công
+                    </a>
+                </p>
+            
+                <p class="Item4">
+                    <a class="Title" href="https://baochinhphu.vn/chu-de/chuyen-doi-so-171.htm" target="_blank">
+                        Chuyển đổi số
+                    </a>
+                </p>
+            
+                <p class="Item5">
+                    <a class="Title" href="https://baochinhphu.vn/chu-de/thich-ung-an-toan-linh-hoat-kiem-soat-hieu-qua-dich-covid-19-125.htm" target="_blank">
+                        Thích ứng an toàn, linh hoạt, kiểm soát hiệu quả dịch COVID-19
+                    </a>
+                </p>
+            
+    </div>
+</div>
+
+</td></tr></table></div></div><div class="ContentBanner"><table class="MainContent" border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td id="ContentBar" class="ContentBar"><table border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td id="1" resizable="no" valign="top"><div class="UIMenuNavigation_Content">
+
+<div class="MenuNavigation">
+    <ul id="ctrl_190920_20_ulNavContainer" class="NavContainer">
+        <li class="Home">
+            <span class="wrap">
+                <a id="ctrl_190920_20_lnkHome" class="Text" href="https://chinhphu.vn">Trang chủ</a>
+            </span>
+        </li>
+        
+        </ul>
+</div>
+
+
+</div></td></tr></table><table border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td style="width:836px;" id="1" resizable="true" class="col1" valign="top"><div class="DocumentList_TrangThuTuong">
+<div class="document-list-control">
+    <div class="document-search">
+        <div class="document-search-title">TÌM KIẾM VĂN BẢN</div>
+        <div class="document-search-input">
+            <table class="table search-condition">
+                <tr>
+                    <td>
+                        <div class="label">
+                            <span>Lĩnh vực:</span>
+                        </div>
+                        <div class="input">
+                            <select name="ctrl_191017_163$drdDocCategory" id="ctrl_191017_163_drdDocCategory">
+	<option selected="selected" value="0">-- Tất cả c&#225;c lĩnh vực --</option>
+	<option value="2">An ninh trật tự</option>
+	<option value="851">B&#225;o ch&#237;</option>
+	<option value="856">B&#225;o ch&#237;, CNTT, điện tử</option>
+	<option value="1284">B&#225;o ch&#237;, Viễn th&#244;ng</option>
+	<option value="844">B&#225;o ch&#237;, Xuất bản, Bưu ch&#237;nh, Viễn th&#244;ng, CNTT, điện tử</option>
+	<option value="848">B&#225;o ch&#237;, Xuất bản, Bưu ch&#237;nh, Viễn th&#244;ng, CNTT, điện tử, Lĩnh vực kh&#225;c</option>
+	<option value="853">Bưu ch&#237;nh</option>
+	<option value="859">Bưu ch&#237;nh, Viễn th&#244;ng</option>
+	<option value="857">Bưu ch&#237;nh, Viễn th&#244;ng, CNTT, điện tử</option>
+	<option value="5">Ch&#237;nh s&#225;ch</option>
+	<option value="6">Ch&#237;nh s&#225;ch x&#227; hội</option>
+	<option value="7">Chứng kho&#225;n</option>
+	<option value="1348">Chuyển đổi số</option>
+	<option value="845">CNTT, điện tử</option>
+	<option value="847">CNTT, điện tử, Lĩnh vực kh&#225;c</option>
+	<option value="4">Cơ cấu tổ chức</option>
+	<option value="850">Cơ cấu tổ chức, Lĩnh vực kh&#225;c</option>
+	<option value="1061">C&#244;ng an nh&#226;n d&#226;n</option>
+	<option value="281">C&#244;ng nghệ th&#244;ng tin</option>
+	<option value="3">C&#244;ng nghiệp</option>
+	<option value="21">Đất đai - Nh&#224; ở</option>
+	<option value="1">Đầu tư</option>
+	<option value="200">Địa giới h&#224;nh ch&#237;nh</option>
+	<option value="8">Doanh nghiệp</option>
+	<option value="1246">Đối ngoại</option>
+	<option value="9">Du lịch</option>
+	<option value="1349">Đường sắt </option>
+	<option value="10">Gi&#225;o dục - Đ&#224;o tạo</option>
+	<option value="11">Giao th&#244;ng</option>
+	<option value="14">Hải quan</option>
+	<option value="12">H&#224;ng hải</option>
+	<option value="262">h&#224;ng kh&#244;ng</option>
+	<option value="13">H&#224;nh ch&#237;nh</option>
+	<option value="1245">Khiếu nại tố c&#225;o</option>
+	<option value="15">Khoa học - C&#244;ng nghệ</option>
+	<option value="1264">Kinh tế x&#227; hội</option>
+	<option value="16">L&#226;m nghiệp</option>
+	<option value="17">Lao động - Tiền lương</option>
+	<option value="1351">Lập ph&#225;p </option>
+	<option value="35">Lĩnh vực kh&#225;c</option>
+	<option value="201">Luật</option>
+	<option value="18">M&#244;i trường</option>
+	<option value="1350">Năng lượng</option>
+	<option value="280">Ng&#226;n s&#225;ch Nh&#224; nước</option>
+	<option value="20">Ngoại giao</option>
+	<option value="1242">Nội ch&#237;nh</option>
+	<option value="19">N&#244;ng nghiệp</option>
+	<option value="1247">Quản trị - T&#224;i vụ</option>
+	<option value="22">Quốc ph&#242;ng</option>
+	<option value="1347">Quy hoạch</option>
+	<option value="23">Sở hữu c&#244;ng nghiệp</option>
+	<option value="1262">T&#224;i ch&#237;nh</option>
+	<option value="24">T&#224;i ch&#237;nh - Ng&#226;n h&#224;ng</option>
+	<option value="300">Thể dục thể thao</option>
+	<option value="1305">Thi đua Khen thưởng</option>
+	<option value="301">Thủ tục h&#224;nh ch&#237;nh</option>
+	<option value="29">Thuế - Lệ ph&#237;</option>
+	<option value="28">Thương mại</option>
+	<option value="1352">Thủy lợi</option>
+	<option value="27">Thủy sản</option>
+	<option value="1248">Tổ chức - H&#224;nh ch&#237;nh</option>
+	<option value="25">T&#242;a &#225;n</option>
+	<option value="1263">Tổng hợp</option>
+	<option value="26">Tư ph&#225;p</option>
+	<option value="30">Văn h&#243;a - Th&#244;ng tin</option>
+	<option value="1244">Văn x&#227;</option>
+	<option value="31">Vi phạm h&#224;nh ch&#237;nh</option>
+	<option value="849">Viễn th&#244;ng</option>
+	<option value="852">Viễn th&#244;ng, CNTT, điện tử</option>
+	<option value="855">Viễn th&#244;ng, CNTT, điện tử, Lĩnh vực kh&#225;c</option>
+	<option value="858">Viễn th&#244;ng, Lĩnh vực kh&#225;c</option>
+	<option value="220">X&#227; hội</option>
+	<option value="32">X&#226;y dựng</option>
+	<option value="33">Xuất - Nhập khẩu</option>
+	<option value="1060">Xuất bản</option>
+	<option value="1346">Xuất nhập cảnh</option>
+	<option value="34">Y tế - Sức khỏe</option>
+	<option value="1344">Khen thưởng - Kỷ luật</option>
+	<option value="1324">Thi đua khen thưởng</option>
+
+</select>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="label">
+                            <span>Cơ quan ban hành:</span>
+                        </div>
+                        <div class="input">
+                            <select name="ctrl_191017_163$drdDocOrg" id="ctrl_191017_163_drdDocOrg">
+	<option selected="selected" value="0">-- Tất cả --</option>
+	<option value="107">Ban Cải tạo c&#244;ng thương nghiệp tư doanh</option>
+	<option value="15079">Ban c&#225;n sự Đảng Ch&#237;nh phủ</option>
+	<option value="15982">Ban CĐĐMPTKTTTHTX</option>
+	<option value="15879">BAN CĐTKCLQG PCTN</option>
+	<option value="15880">BAN CĐTKTHLĐĐVXDDALĐĐSĐ</option>
+	<option value="209">Ban Chấp h&#224;nh Trung ương</option>
+	<option value="171">Ban Chấp h&#224;nh Trung ương Đảng Lao động Việt Nam</option>
+	<option value="13958">Ban chỉ  về đầu tư theo h&#236;nh thức đối t&#225;c c&#244;ng tư (PPP)</option>
+	<option value="15659">Ban Chỉ đạo &quot;Quỹ v&#236; biển đảo Việt Nam&quot;</option>
+	<option value="14418">Ban chỉ đạo 896</option>
+	<option value="108">Ban Chỉ đạo an to&#224;n giao th&#244;ng Trung ương</option>
+	<option value="14859">Ban Chỉ đạo bi&#234;n soạn v&#224; xuất bản Lịch sử Ch&#237;nh phủ Việt Nam</option>
+	<option value="14839">Ban Chỉ đạo bi&#234;n soạn v&#224; xuất bản Lịch sử Ch&#237;nh phủ Việt Nam 1945 - 2015</option>
+	<option value="15459">Ban Chỉ đạo cải c&#225;ch h&#224;nh ch&#237;nh của Ch&#237;nh phủ</option>
+	<option value="14578">Ban Chỉ đạo cải c&#225;ch h&#224;nh ch&#237;nh của Ch&#237;nh phủ</option>
+	<option value="15941">Ban Chỉ đạo Cải c&#225;ch HC của CP</option>
+	<option value="14238">Ban chỉ đạo cấp nh&#224; nước về x&#225;c định h&#224;i cốt liệt sĩ c&#242;n thiếu th&#244;ng tin</option>
+	<option value="15640">Ban Chỉ đạo Chiến lược c&#244;ng nghiệp h&#243;a của Việt Nam trong khu&#244;n khổ hợp t&#225;c Việt Nam - Nhật Bản hướng đến năm 2020, tầm nh&#236;n 2030</option>
+	<option value="16065">Ban Chỉ đạo Chương tr&#236;nh quốc gia về sử dụng năng lượng tiết kiệm v&#224; hiệu quả</option>
+	<option value="16128">Ban Chỉ đạo của Ch&#237;nh phủ về ph&#225;t triển khoa học, c&#244;ng nghệ, đổi mới s&#225;ng tạo, chuyển đổi số v&#224; Đề &#225;n 06</option>
+	<option value="16132">Ban Chỉ đạo của Ch&#237;nh phủ về RS v&#224; tổ chức thực hiện việc xử l&#253; vướng mắc trong hệ thống ph&#225;p luật</option>
+	<option value="15739">Ban Chỉ đạo Đại hội đại biểu to&#224;n quốc c&#225;c d&#226;n tộc thiểu số Việt Nam lần thứ II năm 2020</option>
+	<option value="15519">Ban Chỉ đạo Đề &#225;n &quot;Ph&#225;t triển Hệ tri thức việt số h&#243;a&quot;</option>
+	<option value="15199">Ban Chỉ đạo điều h&#224;nh gi&#225;</option>
+	<option value="14539">Ban Chỉ đạo điều h&#224;nh gi&#225;</option>
+	<option value="14618">Ban Chỉ đạo điều h&#224;nh gi&#225;</option>
+	<option value="14699">Ban Chỉ đạo đổi mới v&#224; ph&#225;t triển doanh nghiệp</option>
+	<option value="15119">Ban Chỉ đạo đổi mới v&#224; ph&#225;t triển doanh nghiệp</option>
+	<option value="15280">Ban Chỉ đạo đổi mới, ph&#225;t triển kinh tế tập thể, hợp t&#225;c x&#227;</option>
+	<option value="15983">Ban Chỉ đạo KTTT</option>
+	<option value="14719">Ban Chỉ đạo li&#234;n ng&#224;nh hội nhập quốc tế về kinh tế</option>
+	<option value="14779">Ban Chỉ đạo li&#234;n ng&#224;nh hội nhập quốc tế về văn h&#243;a, x&#227; hội, khoa học, c&#244;ng nghệ v&#224; gi&#225;o dục, đ&#224;o tạo</option>
+	<option value="14078">Ban chỉ đạo li&#234;n ng&#224;nh triển khai đề &#225;n &quot;Cơ cấu lại hệ thống c&#225;c tổ chức t&#237;n dụng giai đoạn 2011 - 2015&quot;</option>
+	<option value="14899">Ban Chỉ đạo li&#234;n ng&#224;nh về t&#225;i cơ cấu ng&#224;nh n&#244;ng nghiệp</option>
+	<option value="16137">Ban Chỉ đạo Nh&#224; nước c&#225;c chương tr&#236;nh, c&#244;ng tr&#236;nh, dự &#225;n quan trọng quốc gia, trọng điểm ng&#224;nh năng lượng</option>
+	<option value="16072">Ban Chỉ đạo Nh&#224; nước c&#225;c C&#244;ng tr&#236;nh, dự &#225;n quan trọng Quốc gia, trọng điểm ng&#224;nh GTVT</option>
+	<option value="14678">Ban Chỉ đạo Nh&#224; nước c&#225;c c&#244;ng tr&#236;nh, dự &#225;n trọng điểm ng&#224;nh Giao th&#244;ng vận tải</option>
+	<option value="13938">Ban chỉ đạo nh&#224; nước c&#225;c c&#244;ng tr&#236;nh, dự &#225;n trọng điểm ng&#224;nh giao th&#244;ng vận tải</option>
+	<option value="15479">Ban Chỉ đạo Nh&#224; nước c&#225;c dự &#225;n trọng điểm về dầu kh&#237;</option>
+	<option value="15299">Ban Chỉ đạo Nh&#224; nước về đổi mới cơ chế hoạt động của c&#225;c đơn vị sự nghiệp c&#244;ng lập</option>
+	<option value="229">Ban Chỉ đạo ph&#242;ng chống lụt, b&#227;o Trung ương</option>
+	<option value="16141">Ban Chỉ đạo ph&#242;ng kh&#244;ng nh&#226;n d&#226;n Trung ương</option>
+	<option value="15919">Ban Chỉ đạo ph&#242;ng thủ D&#226;n sự Quốc gia</option>
+	<option value="15799">Ban Chỉ đạo ph&#242;ng, chống tội phạm của Ch&#237;nh phủ</option>
+	<option value="14038">Ban chỉ đạo PPP</option>
+	<option value="15219">Ban Chỉ đạo PPP</option>
+	<option value="109">Ban Chỉ đạo quản l&#253; thị trường Trung ương</option>
+	<option value="15439">Ban Chỉ đạo quốc  gia về cơ cấu lại nền kinh tế, đổi mới m&#244; h&#236;nh tăng trưởng</option>
+	<option value="14759">Ban Chỉ đạo quốc gia chống bu&#244;n lậu, gian lận thương mại v&#224; h&#224;ng giả</option>
+	<option value="14498">Ban Chỉ đạo quốc gia chống bu&#244;n lậu, gian lận thương mại v&#224; h&#224;ng giả</option>
+	<option value="15559">Ban Chỉ đạo Quốc gia Chương tr&#236;nh h&#224;nh động &quot;Kh&#244;ng c&#242;n nạn đ&#243;i&quot; ở Việt Nam đến năm 2025</option>
+	<option value="13818">Ban chỉ đạo quốc gia hội nhập quốc tế về gi&#225;o dục v&#224; khoa học, c&#244;ng nghệ</option>
+	<option value="15379">Ban Chỉ đạo Quốc gia khắc phục hậu quả bom m&#236;n v&#224; chất độc h&#243;a học sau chiến tranh ở Việt Nam</option>
+	<option value="15759">Ban Chỉ đạo quốc gia ph&#242;ng, chống dịch bệnh vi&#234;m đường h&#244; hấp cấp do chủng mới của vi r&#250;t Corona g&#226;y ra</option>
+	<option value="16027">Ban chỉ đạo Quốc gia ph&#242;ng, chống dịch COVID-19</option>
+	<option value="14018">Ban chỉ đạo quốc gia thực hiện quy hoạch ph&#225;t triển nh&#226;n lực v&#224; đ&#224;o tạo theo nhu cầu x&#227; hội</option>
+	<option value="16126">Ban Chỉ đạo quốc gia triển khai Nghị quyết số 68-NQ/TW</option>
+	<option value="15699">Ban Chỉ dạo quốc gia về chống khai th&#225;c hải sản bất hợp ph&#225;p, kh&#244;ng b&#225;o c&#225;o v&#224; kh&#244;ng theo quy định</option>
+	<option value="16146">Ban Chỉ đạo quốc gia về chống khai th&#225;c hải sản bất hợp ph&#225;p, kh&#244;ng b&#225;o c&#225;o v&#224; kh&#244;ng theo quy định v&#224; ph&#225;t triển bền vững ng&#224;nh thủy sản</option>
+	<option value="14058">Ban chỉ đạo quốc gia về chương tr&#236;nh FSAB</option>
+	<option value="15480">Ban Chỉ đạo quốc gia về cơ cấu lại nền kinh tế, đổi mới m&#244; h&#236;nh tăng trưởng</option>
+	<option value="14598">Ban Chỉ đạo quốc gia về cơ chế một cửa ASEAN v&#224; cơ chế Hải quan một cửa quốc gia</option>
+	<option value="13838">Ban chỉ đạo quốc gia về đ&#224;o tạo nguồn nh&#226;n lực trong lĩnh vực năng lượng nguy&#234;n tử</option>
+	<option value="16111">Ban Chỉ đạo quốc gia về kinh tế tập thể</option>
+	<option value="14098">Ban chỉ đạo quốc gia về ODA v&#224; vốn vay ưu đ&#227;i</option>
+	<option value="15100">Ban Chỉ đạo quốc gia về ODA v&#224; vốn vay ưu đ&#227;i</option>
+	<option value="15239">Ban Chỉ đạo quốc gia về ph&#225;t triển điện lực</option>
+	<option value="16105">Ban Chỉ đạo Quốc gia về ph&#225;t triển ng&#224;nh c&#244;ng nghiệp b&#225;n dẫn</option>
+	<option value="15859">Ban Chỉ đạo Quốc gia về t&#224;i ch&#237;nh to&#224;n diện</option>
+	<option value="14298">Ban chỉ đạo quốc gia về t&#236;m kiếm, quy tập h&#224;i cốt liệt sĩ</option>
+	<option value="15521">Ban Chỉ đạo quốc gia về t&#236;m kiếm, quy tập v&#224; x&#225;c định danh t&#237;nh h&#224;i cốt liệt sĩ</option>
+	<option value="16142">BAN CHỈ ĐẠO R&#192; SO&#193;T V&#192; TỔ CHỨC THỰC HIỆN VIỆC XỬ L&#221; VƯỚNG MẮC TRONG HỆ THỐNG PH&#193;P LUẬT</option>
+	<option value="16103">Ban Chỉ đạo r&#224; so&#225;t, xử l&#253; vướng mắc trong hệ thống VBQPPL</option>
+	<option value="16138">Ban Chỉ đạo thực hiện c&#225;c Nghị quyết của QH về th&#237; điểm một số cơ chế, ch&#237;nh s&#225;ch đặc th&#249; ph&#225;t triển TPHCM</option>
+	<option value="15680">Ban Chỉ đạo thực hiện Đề &#225;n tiếp tục đổi mới v&#224; n&#226;ng cao hiệu quả hoạt động gi&#225;m định tư ph&#225;p ở cấp Trung ương</option>
+	<option value="16115">Ban Chỉ đạo thực hiện Nghị quyết số 136/2024/QH15 của Quốc hội</option>
+	<option value="16097">Ban Chỉ đạo thực hiện sắp xếp đơn vị h&#224;nh ch&#237;nh cấp huyện, cấp x&#227; giai đoạn 2023-2030</option>
+	<option value="14518">Ban Chỉ đạo thực hiện thỏa thuận</option>
+	<option value="14999">Ban Chỉ đạo tổng kết 10 năm thực hiện luật PCTN</option>
+	<option value="16101">Ban Chỉ đạo Tổng kết 20 năm thực hiện m&#244; h&#236;nh tổ chức bộ m&#225;y của Ch&#237;nh phủ</option>
+	<option value="13918">Ban chỉ đạo tổng kết nghị quyết số 28-NQ/TW của Bộ Ch&#237;nh trị</option>
+	<option value="16088">Ban Chỉ đạo triển khai Nghị quyết số 98/2023/QH15 của Quốc hội</option>
+	<option value="110">Ban Chỉ đạo triển khai thực hiện đề &#225;n cải c&#225;ch ch&#237;nh s&#225;ch tiền lương Nh&#224; nước</option>
+	<option value="16124">Ban Chỉ đạo triển l&#227;m th&#224;nh tựu KTXH nh&#226;n dịp kỷ niệm 80 năm ng&#224;y Quốc kh&#225;nh</option>
+	<option value="16113">Ban Chỉ đạo Trung t&#226;m t&#224;i ch&#237;nh khu vực v&#224; quốc tế tại Việt Nam</option>
+	<option value="16129">Ban Chỉ đạo Trung t&#226;m t&#224;i ch&#237;nh quốc tế tại Việt Nam </option>
+	<option value="15179">Ban Chỉ đạo Trung ương c&#225;c chương tr&#236;nh mục ti&#234;u quốc gia</option>
+	<option value="15779">Ban Chỉ đạo Trung ương c&#225;c chương tr&#236;nh mục ti&#234;u quốc gia giai đoạn 2016 - 2020</option>
+	<option value="15639">Ban Chỉ đạo Trung ương c&#225;c chương tr&#236;nh mực ti&#234;u quốc gia giai đoạn 2016 - 2020</option>
+	<option value="16066">Ban Chỉ đạo Trung ương c&#225;c chương tr&#236;nh mục ti&#234;u quốc gia giai đoạn 2021 - 2025</option>
+	<option value="796">Ban chỉ đạo trung ương chương tr&#236;nh MTQG x&#226;y dựng n&#244;ng th&#244;n mới</option>
+	<option value="15962">Ban Chỉ đạo Trung ương Chương tr&#236;nh mục ti&#234;u quốc gia ph&#225;t triển kinh tế - x&#227; hội v&#249;ng đồng b&#224;o d&#226;n tộc thiểu số v&#224; miền n&#250;i giai đoạn 2021 - 2030</option>
+	<option value="111">Ban Chỉ đạo Trung ương cổ phần h&#243;a</option>
+	<option value="16145">Ban Chỉ đạo Trung ương CT MTQG x&#226;y dựng n&#244;ng th&#244;n mới, giảm ngh&#232;o bền vững v&#224; ph&#225;t triển KTXH v&#249;ng đồng b&#224;o DTTS v&#224; miền n&#250;i giai đoạn 2026-2030</option>
+	<option value="14318">Ban chỉ đạo trung ương thực hiện nghị quyết số 70/NQ-CP của Ch&#237;nh phủ về ch&#237;nh s&#225;ch x&#227; hội</option>
+	<option value="16109">Ban Chỉ đạo Trung ương triển khai x&#243;a nh&#224; tạm, nh&#224; dột n&#225;t tr&#234;n phạm vi cả nước</option>
+	<option value="15819">Ban Chỉ đạo Trung ương về cải c&#225;ch ch&#237;nh s&#225;ch tiền lương, bảo hiểm x&#227; hội v&#224; ưu đ&#227;i người c&#243; c&#244;ng</option>
+	<option value="14378">Ban chỉ đạo trung ương về cải c&#225;ch ch&#237;nh s&#225;ch tiền lương, bảo hiểm x&#227; hội v&#224; ưu đ&#227;i người c&#243; c&#244;ng</option>
+	<option value="14879">Ban Chỉ đạo Trung ương về cải c&#225;ch ch&#237;nh s&#225;ch tiền lương, bảo hiểm x&#227; hội v&#224; ưu đ&#227;i người c&#243; c&#244;ng</option>
+	<option value="16133">Ban Chỉ đạo Trung ương về ch&#237;nh s&#225;ch nh&#224; ở v&#224; thị trường bất động sản</option>
+	<option value="14558">Ban Chỉ đạo Trung ương về giảm ngh&#232;o bền vững</option>
+	<option value="13798">Ban chỉ đạo trung ương x&#226;y dựng đề &#225;n th&#237; điểm m&#244; h&#236;nh tổ chức ch&#237;nh quyền đ&#244; thị</option>
+	<option value="16130">Ban Chỉ đạo về giải quyết c&#225;c vấn đề kh&#243; khăn, vướng mắc c&#225;c dự &#225;n tồn đọng</option>
+	<option value="16108">Ban chỉ đạo về r&#224; so&#225;t, th&#225;o gỡ kh&#243; khăn, vướng mắc li&#234;n quan đến c&#225;c dự &#225;n</option>
+	<option value="16071">Ban Chỉ đạo về triển khai Chương tr&#236;nh phục hồi v&#224; PT KT-XH</option>
+	<option value="13978">Ban chỉ đạo x&#226;y dựng c&#225;c trường đại học xuất sắc</option>
+	<option value="16104">Ban Chỉ đạo x&#226;y dựng Dự &#225;n Luật Khoa học v&#224; C&#244;ng nghệ (sửa đổi)</option>
+	<option value="16114">Ban Chỉ đạo x&#226;y dựng nh&#224; m&#225;y điện hạt nh&#226;n</option>
+	<option value="15259">Ban Chỉ đạo xử l&#253; c&#225;c tồn tại, yếu k&#233;m của một số dự &#225;n v&#224; Doanh nghiệp chậm tiến độ, k&#233;m hiệu quả thuộc ng&#224;nh C&#244;ng thương</option>
+	<option value="15399">Ban Chỉ đạo xử l&#253; c&#225;c tồn tại, yếu k&#233;m của một số dự &#225;n, doanh nghiệp chậm tiến độ, k&#233;m hiệu quả thuộc ng&#224;nh c&#244;ng thương</option>
+	<option value="30">Ban Cơ yếu Ch&#237;nh phủ</option>
+	<option value="173">Ban Thi đua Trung ương</option>
+	<option value="112">Ban Tổ chức - C&#225;n bộ Ch&#237;nh phủ</option>
+	<option value="33">Ban T&#244;n gi&#225;o Ch&#237;nh phủ</option>
+	<option value="113">Ban Vật gi&#225; Ch&#237;nh phủ</option>
+	<option value="175">Ban Việt kiều Trung ương</option>
+	<option value="16068">BCĐ  triển khai thực hiện DA XDCT đường bộ cao tốc Bắc - Nam ph&#237;a Đ&#244;ng v&#224; DA CHKQT Long Th&#224;nh</option>
+	<option value="16082">BCĐ ĐỔI MỚI, PTKT TẬP THỂ, HTX</option>
+	<option value="16098">BCĐ NN c&#225;c chương tr&#236;nh, c&#244;ng tr&#236;nh, dự &#225;n quan trọng quốc gia, trọng điểm ng&#224;nh năng lượng</option>
+	<option value="16070">BCĐ Quốc gia D&#226;n số v&#224; Ph&#225;t triển</option>
+	<option value="16093">BCĐ Tổng kết NQ 22-NQ/TW của Bộ Ch&#237;nh trị về Hội nhập quốc tế</option>
+	<option value="16100">BCĐ X&#194;Y DỰNG ĐỀ &#193;N TRUNG T&#194;M T&#192;I CH&#205;NH KHU VỰC V&#192; QUỐC TẾ</option>
+	<option value="16094">BCĐ x&#226;y dựng, thực hiện Đề &#225;n chủ trương đầu tư đường sắt tốc độ cao tr&#234;n trục Bắc - Nam v&#224; c&#225;c dự &#225;n đường sắt quan trọng quốc gia</option>
+	<option value="16062">BCĐQG chống bu&#244;n lậu, GL v&#224; TMHG</option>
+	<option value="16075">BCĐTW THCT PH&#193;T TRIỂN L&#194;M NGHIỆP BỀN VỮNG GĐ NĂM 2021 - 2025</option>
+	<option value="7962">Bộ Bưu ch&#237;nh, Viễn th&#244;ng</option>
+	<option value="192">Bộ Ch&#237;nh tri</option>
+	<option value="189">Bộ Ch&#237;nh trị</option>
+	<option value="5">Bộ C&#244;ng an</option>
+	<option value="17">Bộ C&#244;ng nghiệp</option>
+	<option value="249">Bộ C&#244;ng thương</option>
+	<option value="16127">Bộ D&#226;n tộc v&#224; T&#244;n gi&#225;o</option>
+	<option value="116">Bộ Gi&#225;o dục</option>
+	<option value="15">Bộ Gi&#225;o dục v&#224; Đ&#224;o tạo</option>
+	<option value="11">Bộ Giao th&#244;ng vận tải</option>
+	<option value="18">Bộ Kế hoạch v&#224; Đầu tư</option>
+	<option value="7111">Bộ Khoa học - C&#244;ng nghệ</option>
+	<option value="20">Bộ Khoa học v&#224; C&#244;ng nghệ</option>
+	<option value="117">Bộ Khoa học, C&#244;ng nghệ v&#224; M&#244;i trường</option>
+	<option value="118">Bộ Kinh tế đối ngoại</option>
+	<option value="119">Bộ L&#226;m nghiệp</option>
+	<option value="120">Bộ Lao động</option>
+	<option value="7116">Bộ Lao động - Thương binh v&#224; X&#227; hội</option>
+	<option value="10">Bộ Lao động, Thương binh v&#224; X&#227; hội</option>
+	<option value="121">Bộ Mỏ v&#224; Than</option>
+	<option value="122">Bộ Năng lượng</option>
+	<option value="6">Bộ Ngoại giao</option>
+	<option value="123">Bộ Ngoại thương</option>
+	<option value="23">Bộ Nội vụ</option>
+	<option value="7113">Bộ N&#244;ng nghiệp &amp; Ph&#225;t triển n&#244;ng th&#244;n</option>
+	<option value="126">Bộ N&#244;ng nghiệp v&#224; C&#244;ng nghiệp thực phẩm</option>
+	<option value="16122">Bộ N&#244;ng nghiệp v&#224; M&#244;i trường</option>
+	<option value="16">Bộ N&#244;ng nghiệp v&#224; Ph&#225;t triển n&#244;ng th&#244;n</option>
+	<option value="4">Bộ Quốc ph&#242;ng</option>
+	<option value="8">Bộ T&#224;i ch&#237;nh</option>
+	<option value="21">Bộ T&#224;i nguy&#234;n v&#224; M&#244;i trường</option>
+	<option value="7110">Bộ Th&#244;ng tin Truyền th&#244;ng</option>
+	<option value="309">Bộ Th&#244;ng tin v&#224; Truyền th&#244;ng</option>
+	<option value="14339">Bộ Thương binh v&#224; X&#227; hội</option>
+	<option value="9">Bộ Thương mại</option>
+	<option value="127">Bộ Thương mại v&#224; Du lịch</option>
+	<option value="128">Bộ Thương nghiệp</option>
+	<option value="129">Bộ Thủy lợi</option>
+	<option value="13">Bộ Thủy sản</option>
+	<option value="174">Bộ trưởng Tổng thư k&#253;</option>
+	<option value="7">Bộ Tư ph&#225;p</option>
+	<option value="14">Bộ Văn h&#243;a - Th&#244;ng tin</option>
+	<option value="269">Bộ Văn h&#243;a, Thể thao v&#224; Du lịch</option>
+	<option value="131">Bộ Văn h&#243;a, Th&#244;ng tin v&#224; Thể thao</option>
+	<option value="180">Bộ Văn h&#243;a, Th&#244;ng tin, Thể thao v&#224; Du lịch</option>
+	<option value="132">Bộ Vật tư</option>
+	<option value="12">Bộ X&#226;y dựng</option>
+	<option value="19">Bộ Y tế</option>
+	<option value="730">Ch&#225;nh &#225;n, t&#242;a &#225;n nh&#226;n d&#226;n tối cao</option>
+	<option value="2">Ch&#237;nh phủ</option>
+	<option value="13959">Ch&#237;nh phủ - BCH Trung ương đo&#224;n thanh ni&#234;n cộng sản Hồ CH&#237; Minh</option>
+	<option value="15039">Ch&#237;nh phủ - Đo&#224;n Chỉ tịch Ủy ban Trung ương mặt trận Tổ quốc Việt Nam</option>
+	<option value="15059">Ch&#237;nh phủ - Đo&#224;n Chủ tịch Ủy ban Trung ương Mặt trận Tổ quốc Việt Nam</option>
+	<option value="16095">Ch&#237;nh phủ - Đo&#224;n CTUBTWMTTQVN</option>
+	<option value="732">Ch&#237;nh phủ - T&#242;a &#225;n nh&#226;n d&#226;n tối cao - Viện kiểm s&#225;t nh&#226;n d&#226;n tối cao</option>
+	<option value="15419">Ch&#237;nh phủ -Ban chấp h&#224;nh Trung ương Đo&#224;n Thanh ni&#234;n Cộng sản Hồ Ch&#237; Minh</option>
+	<option value="169">Chủ tịch nước</option>
+	<option value="16134">Chủ tịch UBND tỉnh Ph&#250; Thọ</option>
+	<option value="184">Cục Đo đạc v&#224; Bản đồ Nh&#224; nước</option>
+	<option value="134">Cục Dự trữ Quốc gia</option>
+	<option value="135">Cục H&#224;ng kh&#244;ng d&#226;n dụng Việt Nam</option>
+	<option value="36">Đ&#224;i Tiếng n&#243;i Việt Nam</option>
+	<option value="37">Đ&#224;i Truyền h&#236;nh Việt Nam</option>
+	<option value="15160">Đo&#224;n Chủ tịch Ủy ban Trung ương Mặt trận Tổ quốc Việt Nam</option>
+	<option value="15339">Đo&#224;n Kiểm tra Ban Chỉ đạo cải c&#225;ch h&#224;nh ch&#237;nh của Ch&#237;nh phủ</option>
+	<option value="16092">HĐĐP v&#249;ng Trung Du v&#224; Miền n&#250;i Ph&#237;a Bắc</option>
+	<option value="15499">HĐND  tỉnh H&#224; Nam</option>
+	<option value="15940">HĐND Ki&#234;n Giang</option>
+	<option value="14198">HĐND Nam Định</option>
+	<option value="15942">HĐND tỉnh B&#236;nh Thuận</option>
+	<option value="609">HĐND tỉnh Đồng Nai</option>
+	<option value="669">HĐND tỉnh H&#224; Tĩnh</option>
+	<option value="136">HĐND Tỉnh Kon Tum</option>
+	<option value="14960">HĐND tỉnh L&#226;m Đồng</option>
+	<option value="137">HĐND Tỉnh Lạng Sơn</option>
+	<option value="349">HĐND Tỉnh Nghệ An</option>
+	<option value="15019">HĐND tỉnh Ninh B&#236;nh</option>
+	<option value="409">HĐND TỈNH PH&#218; THỌ</option>
+	<option value="138">HĐND TP Hồ Ch&#237; Minh</option>
+	<option value="14199">HĐND Tr&#224; Vinh</option>
+	<option value="16042">HĐPHPB,GDPLTW</option>
+	<option value="16084">HĐTĐ QH MẠNG LƯỚI CS Y TẾ</option>
+	<option value="38">Học viện Ch&#237;nh trị Quốc gia Hồ Ch&#237; Minh</option>
+	<option value="14979">Hội đồng Chỉ đạo bi&#234;n soạn B&#225;ch khoa to&#224;n thư Việt Nam</option>
+	<option value="168">Hội đồng Ch&#237;nh phủ</option>
+	<option value="16139">Hội đồng điều h&#224;nh Trung t&#226;m T&#224;i ch&#237;nh Quốc tế tại Việt Nam</option>
+	<option value="16090">Hội đồng điều phối v&#249;ng Bắc Trung Bộ v&#224; duy&#234;n hải Trung Bộ</option>
+	<option value="16063">Hội đồng điều phối v&#249;ng ĐBSCL</option>
+	<option value="16087">Hội đồng điều phối v&#249;ng đồng bằng s&#244;ng Hồng</option>
+	<option value="16086">Hội đồng điều phối v&#249;ng Đ&#244;ng Nam Bộ</option>
+	<option value="16089">Hội đồng điều phối v&#249;ng T&#226;y Nguy&#234;n</option>
+	<option value="16073">Hội đồng điều phối v&#249;ng trung du v&#224; miền n&#250;i ph&#237;a bắc</option>
+	<option value="15099">Hội đồng Gi&#225;o dục quốc ph&#242;ng v&#224; an ninh Trung ương</option>
+	<option value="15139">Hội đồng Gi&#225;o dục quốc ph&#242;ng v&#224; an ninh TW</option>
+	<option value="166">Hội đồng Nh&#224; nước</option>
+	<option value="569">Hội đồng nh&#226;n d&#226;n th&#224;nh phố Phan Rang - Th&#225;p ch&#224;m</option>
+	<option value="14118">Hội đồng nh&#226;n d&#226;n tỉnh An Giang</option>
+	<option value="529">Hội đồng nh&#226;n d&#226;n tỉnh B&#236;nh Định</option>
+	<option value="469">Hội đồng nh&#226;n d&#226;n tỉnh C&#224; Mau</option>
+	<option value="429">HỘI ĐỒNG NH&#194;N D&#194;N TỈNH NINH THUẬN</option>
+	<option value="691">Hội đồng Ph&#225;t triển bền vững quốc gia</option>
+	<option value="16064">Hội đồng phối hợp phổ biến, gi&#225;o dục ph&#225;p luật Trung ương</option>
+	<option value="16106">Hội đồng quốc gia về ph&#225;t triển bền vững</option>
+	<option value="14138">Hội đồng quốc gia về ph&#225;t triển bền vững v&#224; n&#226;ng cao năng lực cạnh tranh</option>
+	<option value="13858">Hội đồng quốc gia về ph&#225;t triển bền vững v&#224; n&#226;ng cao năng lực cạnh tranh</option>
+	<option value="15359">Hội đồng quốc gia về t&#224;i nguy&#234;n nước</option>
+	<option value="14658">Hội đồng Quốc gia về t&#224;i nguy&#234;n nước</option>
+	<option value="16155">Hội đồng quốc gia về tư ph&#225;p người chưa th&#224;nh ni&#234;n</option>
+	<option value="15599">Hội đồng quy hoạch quốc gia</option>
+	<option value="16140">Hội đồng thẩm định điều chỉnh Quy hoạch v&#249;ng thời kỳ 2021 - 2030,  tầm nh&#236;n đến năm 2050</option>
+	<option value="16078">Hội đồng thẩm định Quy hoạch bảo tồn đa dạng sinh học quốc gia</option>
+	<option value="16081">Hội đồng thẩm định Quy hoạch bảo vệ m&#244;i trường quốc gia</option>
+	<option value="16085">Hội đồng thẩm định Quy hoạch tổng thể khai th&#225;c, sử dụng bền vững t&#224;i nguy&#234;n v&#249;ng bờ</option>
+	<option value="16096">Hội đồng thẩm định quy hoạch v&#249;ng</option>
+	<option value="14279">Hội đồng Thẩm ph&#225;n T&#242;a &#225;n nh&#226;n d&#226;n tối cao</option>
+	<option value="140">Hội đồng Thẩm ph&#225;n T&#242;a &#225;n nh&#226;n d&#226;n tối cao</option>
+	<option value="16123">Hội đồng thi đua khen thưởng Trung ương </option>
+	<option value="14358">Hội đồng trọng t&#224;i Kinh tế Nh&#224; nước</option>
+	<option value="15899">Hội đồng Tư vấn Cải c&#225;ch thủ tục h&#224;nh ch&#237;nh</option>
+	<option value="750">Hội đồng tư vấn đặc x&#225;</option>
+	<option value="289">Hội đồng Tư vấn đặc x&#225; Trung ương</option>
+	<option value="185">Hội L&#224;m vườn Việt Nam</option>
+	<option value="141">Kiểm to&#225;n Nh&#224; nước</option>
+	<option value="142">Ng&#226;n h&#224;ng Nh&#224; nước</option>
+	<option value="25">Ng&#226;n h&#224;ng Nh&#224; nước Việt Nam</option>
+	<option value="13778">Ph&#226;n ban Việt Nam trong Ủy ban li&#234;n Ch&#237;nh phủ Việt Nam - H&#224; Lan về th&#237;ch ứng với biến đổi kh&#237; hậu v&#224; quản l&#253; nước</option>
+	<option value="143">Phủ Thủ tướng</option>
+	<option value="1">Quốc hội</option>
+	<option value="16083">TCT CỦA TTCP VỀ KT, RS, GQ, TGKK, VMLQ ĐẾN C&#193;C DỰ &#193;N, ĐẤT ĐAI TRONG C&#193;C KL TT, KT, BẢN &#193;N TẠI MỘT SỐ TỈNH, TP</option>
+	<option value="16102">TCT đường sắt đ&#244; thị TPHN v&#224; TPHCM</option>
+	<option value="24">Thanh tra Ch&#237;nh phủ</option>
+	<option value="144">Thanh tra Nh&#224; nước</option>
+	<option value="3">Thủ tướng Ch&#237;nh phủ</option>
+	<option value="145">Tiểu ban Soạn thảo sửa đổi, bổ sung Luật đất đai của Ch&#237;nh phủ</option>
+	<option value="16074">Tổ c&#244;ng t&#225;c 1121</option>
+	<option value="16091">TỔ C&#212;NG T&#193;C CẢI C&#193;CH TTHC</option>
+	<option value="16099">TỔ C&#212;NG T&#193;C CỦA  THỦ TƯỚNG CH&#205;NH PHỦ VỀ RSHT VBQPPL</option>
+	<option value="16110">Tổ c&#244;ng t&#225;c của Thủ tướng Ch&#237;nh phủ theo Quyết định số 963/QĐ-TTg ng&#224;y 12 th&#225;ng 9 năm 2024</option>
+	<option value="16144">Tổ c&#244;ng t&#225;c của Thủ tướng Ch&#237;nh phủ về bảo đảm an ninh năng lượng </option>
+	<option value="16067">Tổ c&#244;ng t&#225;c của TTCP về KT, , RS, GQ, th&#225;o gỡ kh&#243; khăn, vướng mắc li&#234;n quan đến c&#225;c DA, ĐĐ trong c&#225;c KL TT, KT, bản &#225;n tại một số Tỉnh, TP</option>
+	<option value="16119">Tổ c&#244;ng t&#225;c của TTgCP về triển khai đầu tư đường kết nối s&#226;n bay Gia B&#236;nh với thủ đ&#244; HN v&#224; x&#226;y dựng TT logistics tại khu vực SB Gia B&#236;nh</option>
+	<option value="16079">Tổ c&#244;ng t&#225;c đặc biệt của Thủ tướng Ch&#237;nh phủ về nghi&#234;n cứu v&#224; đề xu&#225;t c&#225;c giải ph&#225;p li&#234;n quan đến thuế suất tối thiểu to&#224;n cầu của OECD</option>
+	<option value="16023">Tổ C&#244;ng t&#225;c ĐB của TTg CP về r&#224; so&#225;t, th&#225;o gỡ kh&#243; khăn, vướng mắc v&#224; th&#250;c đẩy thực hiện Dự &#225;n Đầu tư</option>
+	<option value="16022">Tổ C&#244;ng t&#225;c ĐB của TTg CP về th&#225;o gỡ kh&#243; khăn cho DN v&#224; người d&#226;n bị ảnh hưởng bởi đại dịch COVID-19</option>
+	<option value="16080">TỔ C&#212;NG T&#193;C LONG TH&#192;NH</option>
+	<option value="16069">TỔ CT CỦA TTCP VỀ KT, RS, GQ, TH&#193;O GỠ KH&#211; KHẮN, VƯỚNG MẮC LI&#202;N QUAN ĐẾN C&#193; DỰ &#193;N, ĐẤT ĐAI TRONG C&#193;C KL TT, KT, BẢN &#193;N TẠI MỘT SỐ TỈNH, TP</option>
+	<option value="146">T&#242;a &#225;n nh&#226;n d&#226;n tối cao</option>
+	<option value="733">t&#242;a &#225;n nh&#226;n d&#226;n tối cao</option>
+	<option value="167">Tổng C&#244;ng đo&#224;n Việt Nam</option>
+	<option value="148">Tổng cục Địa ch&#237;nh</option>
+	<option value="39">Tổng cục Du lịch</option>
+	<option value="149">Tổng cục Hải quan</option>
+	<option value="150">Tổng cục Kh&#237; tượng thủy văn</option>
+	<option value="151">Tổng cục Quản l&#253; ruộng đất</option>
+	<option value="179">Tổng cục Thể dục thể thao</option>
+	<option value="40">Tổng cục Thống k&#234;</option>
+	<option value="172">Tổng li&#234;n đo&#224;n Lao động Việt Nam</option>
+	<option value="152">Trọng t&#224;i kinh tế Nh&#224; nước</option>
+	<option value="187">Trung ương Đo&#224;n Thanh ni&#234;n Cộng sản HCM</option>
+	<option value="16002">Trưởng Ban BCĐQG ph&#242;ng, chống dịch COVID-19</option>
+	<option value="449">UBND TH&#192;NH PHỐ  PHAN RANG - TH&#193;P CH&#192;M</option>
+	<option value="45">UBND Tỉnh An Giang</option>
+	<option value="46">UBND Tỉnh B&#224; Rịa - Vũng T&#224;u</option>
+	<option value="48">UBND Tỉnh Bắc Giang</option>
+	<option value="49">UBND Tỉnh Bắc Kạn</option>
+	<option value="47">UBND Tỉnh Bạc Li&#234;u</option>
+	<option value="50">UBND Tỉnh Bắc Ninh</option>
+	<option value="51">UBND Tỉnh Bến Tre</option>
+	<option value="53">UBND Tỉnh B&#236;nh Định</option>
+	<option value="52">UBND Tỉnh B&#236;nh Dương</option>
+	<option value="54">UBND Tỉnh B&#236;nh Phước</option>
+	<option value="55">UBND Tỉnh B&#236;nh Thuận</option>
+	<option value="57">UBND Tỉnh C&#224; Mau</option>
+	<option value="56">UBND Tỉnh Cao Bằng</option>
+	<option value="71">UBND Tỉnh Đăk Lăk</option>
+	<option value="72">UBND Tỉnh Đăk N&#244;ng</option>
+	<option value="70">UBND Tỉnh Điện Bi&#234;n</option>
+	<option value="73">UBND Tỉnh Đồng Nai</option>
+	<option value="74">UBND Tỉnh Đồng Th&#225;p</option>
+	<option value="61">UBND Tỉnh Gia Lai</option>
+	<option value="63">UBND Tỉnh H&#224; Giang</option>
+	<option value="64">UBND Tỉnh H&#224; Nam</option>
+	<option value="65">UBND Tỉnh H&#224; T&#226;y</option>
+	<option value="66">UBND Tỉnh H&#224; Tĩnh</option>
+	<option value="68">UBND Tỉnh Hải Dương</option>
+	<option value="69">UBND Tỉnh Hậu Giang</option>
+	<option value="62">UBND Tỉnh H&#242;a B&#236;nh</option>
+	<option value="67">UBND Tỉnh Hưng Y&#234;n</option>
+	<option value="75">UBND Tỉnh Kh&#225;nh H&#242;a</option>
+	<option value="76">UBND Tỉnh Ki&#234;n Giang</option>
+	<option value="77">UBND Tỉnh Kon Tum</option>
+	<option value="78">UBND Tỉnh Lai Ch&#226;u</option>
+	<option value="81">UBND Tỉnh L&#226;m Đồng</option>
+	<option value="82">UBND Tỉnh Lạng Sơn</option>
+	<option value="80">UBND Tỉnh L&#224;o Cai</option>
+	<option value="79">UBND Tỉnh Long An</option>
+	<option value="83">UBND Tỉnh Nam Định</option>
+	<option value="84">UBND Tỉnh Nghệ An</option>
+	<option value="85">UBND Tỉnh Ninh B&#236;nh</option>
+	<option value="86">UBND Tỉnh Ninh Thuận</option>
+	<option value="87">UBND Tỉnh Ph&#250; Thọ</option>
+	<option value="88">UBND Tỉnh Ph&#250; Y&#234;n</option>
+	<option value="89">UBND Tỉnh Quảng B&#236;nh</option>
+	<option value="90">UBND Tỉnh Quảng Nam</option>
+	<option value="91">UBND Tỉnh Quảng Ng&#227;i</option>
+	<option value="92">UBND Tỉnh Quảng Ninh</option>
+	<option value="93">UBND Tỉnh Quảng Trị</option>
+	<option value="94">UBND Tỉnh S&#243;c Trăng</option>
+	<option value="95">UBND Tỉnh Sơn La</option>
+	<option value="103">UBND Tỉnh T&#226;y Ninh</option>
+	<option value="97">UBND Tỉnh Th&#225;i B&#236;nh</option>
+	<option value="98">UBND Tỉnh Th&#225;i Nguy&#234;n</option>
+	<option value="96">UBND Tỉnh Thanh H&#243;a</option>
+	<option value="99">UBND Tỉnh Thừa Thi&#234;n - Huế</option>
+	<option value="100">UBND Tỉnh Tiền Giang</option>
+	<option value="101">UBND Tỉnh Tr&#224; Vinh</option>
+	<option value="102">UBND Tỉnh Tuy&#234;n Quang</option>
+	<option value="104">UBND Tỉnh Vĩnh Long</option>
+	<option value="389">UBND Tỉnh Vĩnh Ph&#250;</option>
+	<option value="105">UBND Tỉnh Vĩnh Ph&#250;c</option>
+	<option value="106">UBND Tỉnh Y&#234;n B&#225;i</option>
+	<option value="58">UBND TP Cần Thơ</option>
+	<option value="60">UBND TP Đ&#224; Nẵng</option>
+	<option value="43">UBND TP H&#224; Nội</option>
+	<option value="59">UBND TP Hải Ph&#242;ng</option>
+	<option value="44">UBND TP Hồ Ch&#237; Minh</option>
+	<option value="590">UBTVQH</option>
+	<option value="13758">Ủy ban An ninh h&#224;ng kh&#244;ng d&#226;n dụng Quốc gia</option>
+	<option value="14458">Ủy ban an to&#224;n giao th&#244;ng quốc gia</option>
+	<option value="183">Ủy ban Bảo vệ b&#224; mẹ trẻ em</option>
+	<option value="154">Ủy ban Bảo vệ v&#224; Chăm s&#243;c trẻ em Việt Nam</option>
+	<option value="15180">Ủy ban Chỉ đạo quốc gia về cơ chế một cửa ASEAN, cơ chế một cửa quốc gia v&#224; tạo thuận lợi thương mại</option>
+	<option value="155">Ủy Ban Chứng Kho&#225;n Nh&#224; Nước</option>
+	<option value="27">Ủy ban D&#226;n tộc</option>
+	<option value="329">Ủy ban d&#226;n tộc</option>
+	<option value="770">ỦY BAN D&#194;N TỘC</option>
+	<option value="156">Ủy ban D&#226;n tộc v&#224; Miền n&#250;i</option>
+	<option value="186">Ủy ban Hợp t&#225;c kinh tế văn ho&#225; với L&#224;o v&#224; Cam pu chia</option>
+	<option value="157">Ủy ban Kế hoạch Nh&#224; nước</option>
+	<option value="158">Ủy ban Khoa học Nh&#224; nước</option>
+	<option value="159">Ủy ban Khoa học v&#224; Kỹ thuật Nh&#224; nước</option>
+	<option value="160">Ủy ban Nh&#224; nước về Hợp t&#225;c v&#224; Đầu tư</option>
+	<option value="188">Ủy ban N&#244;ng nghiệp Trung ương</option>
+	<option value="15319">Ủy ban Quốc gia APEC 2017</option>
+	<option value="15619">Ủy ban Quốc gia ASEAN 2020</option>
+	<option value="14619">Ủy ban quốc gia Đổi mới gi&#225;o dục v&#224; đ&#224;o tạo</option>
+	<option value="795">Ủy ban quốc gia ph&#242;ng, chống AIDS v&#224; pc tệ nạn MT, MD</option>
+	<option value="689">Ủy ban quốc gia ph&#242;ng, chống AIDS v&#224; ph&#242;ng, chống tệ nạn ma t&#250;y, mại d&#226;m</option>
+	<option value="16077">Ủy ban Quốc gia ph&#242;ng, chống AIDS, ma t&#250;y, mại d&#226;m</option>
+	<option value="15839">Ủy ban Quốc gia ứng ph&#243; sự cố, thi&#234;n tai v&#224; t&#236;m kiếm cứu nạn</option>
+	<option value="710">Ủy ban quốc gia về ASEAN 2010</option>
+	<option value="13739">Ủy ban Quốc gia về biến đổi kh&#237; hậu</option>
+	<option value="15719">Ủy ban Quốc gia về chấm dứt bệnh lao</option>
+	<option value="15679">Ủy ban Quốc gia về Ch&#237;nh phủ điện tử</option>
+	<option value="15539">Ủy ban Quốc gia về Ch&#237;nh phủ điện tử</option>
+	<option value="16076">Ủy ban Quốc gia về Chuyển đổi số</option>
+	<option value="161">Ủy ban quốc gia về hợp t&#225;c kinh tế quốc tế</option>
+	<option value="14638">Ủy ban Quốc gia về người cao tuổi Việt Nam</option>
+	<option value="14679">Ủy ban Quốc gia về người cao tuổi Việt Nam</option>
+	<option value="16143">Ủy ban Quốc gia về trẻ em </option>
+	<option value="14919">Ủy ban Quốc gia về Ứng dụng C&#244;ng nghệ th&#244;ng tin</option>
+	<option value="14438">Ủy ban Quốc gia về ứng dụng c&#244;ng nghệ th&#244;ng tin</option>
+	<option value="14538">Ủy ban Quốc gia về ứng dụng C&#244;ng nghệ Th&#244;ng tin</option>
+	<option value="162">Ủy ban quốc gia v&#236; sự tiến bộ của phụ nữ Việt Nam</option>
+	<option value="26">Ủy ban Thể dục Thể thao</option>
+	<option value="163">Ủy ban Thường vụ Quốc hội</option>
+	<option value="690">ỦY BAN THƯỜNG VỤ QUỐC HỘI</option>
+	<option value="509">Ủy ban Trung ương Mặt trận Tổ quốc Việt Nạm</option>
+	<option value="178">Ủy ban Vật gi&#225; Nh&#224; nước</option>
+	<option value="13998">Văn ph&#242;ng Ch&#237;nh phủ</option>
+	<option value="29">Văn ph&#242;ng Ch&#237;nh phủ</option>
+	<option value="16116">Văn ph&#242;ng Quốc hội</option>
+	<option value="177">Văn ph&#242;ng Trung ương</option>
+	<option value="649">Viện Kiểm s&#225;t nh&#226;n d&#226;n tối cao</option>
+	<option value="734">viện kiểm s&#225;t nh&#226;n d&#226;n tối cao</option>
+	<option value="165">Viện kiểm s&#225;t nh&#226;n d&#226;n tối cao</option>
+
+</select>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="label">
+                            <span>Năm ban hành:</span>
+                        </div>
+                        <div class="input">
+                            <select name="ctrl_191017_163$drdDocYear" id="ctrl_191017_163_drdDocYear">
+	<option selected="selected" value="0">-- Tất cả --</option>
+	<option value="2026">2026</option>
+	<option value="2025">2025</option>
+	<option value="2024">2024</option>
+	<option value="2023">2023</option>
+	<option value="2022">2022</option>
+	<option value="2021">2021</option>
+	<option value="2020">2020</option>
+	<option value="2019">2019</option>
+	<option value="2018">2018</option>
+	<option value="2017">2017</option>
+	<option value="2016">2016</option>
+	<option value="2015">2015</option>
+	<option value="2014">2014</option>
+	<option value="2013">2013</option>
+	<option value="2012">2012</option>
+	<option value="2011">2011</option>
+	<option value="2010">2010</option>
+	<option value="2009">2009</option>
+	<option value="2008">2008</option>
+	<option value="2007">2007</option>
+	<option value="2006">2006</option>
+	<option value="2005">2005</option>
+	<option value="2004">2004</option>
+	<option value="2003">2003</option>
+	<option value="2002">2002</option>
+	<option value="2001">2001</option>
+	<option value="2000">2000</option>
+	<option value="1999">1999</option>
+	<option value="1998">1998</option>
+	<option value="1997">1997</option>
+	<option value="1996">1996</option>
+	<option value="1995">1995</option>
+	<option value="1994">1994</option>
+	<option value="1993">1993</option>
+	<option value="1992">1992</option>
+	<option value="1991">1991</option>
+	<option value="1990">1990</option>
+	<option value="1989">1989</option>
+	<option value="1988">1988</option>
+	<option value="1987">1987</option>
+	<option value="1986">1986</option>
+	<option value="1985">1985</option>
+	<option value="1984">1984</option>
+	<option value="1983">1983</option>
+	<option value="1982">1982</option>
+	<option value="1981">1981</option>
+	<option value="1980">1980</option>
+	<option value="1979">1979</option>
+	<option value="1978">1978</option>
+	<option value="1977">1977</option>
+	<option value="1976">1976</option>
+	<option value="1975">1975</option>
+	<option value="1974">1974</option>
+	<option value="1972">1972</option>
+	<option value="1971">1971</option>
+	<option value="1970">1970</option>
+	<option value="1969">1969</option>
+	<option value="1968">1968</option>
+	<option value="1967">1967</option>
+	<option value="1966">1966</option>
+	<option value="1965">1965</option>
+	<option value="1964">1964</option>
+	<option value="1963">1963</option>
+	<option value="1962">1962</option>
+	<option value="1961">1961</option>
+	<option value="1960">1960</option>
+	<option value="1959">1959</option>
+	<option value="1958">1958</option>
+	<option value="1957">1957</option>
+	<option value="1956">1956</option>
+	<option value="1955">1955</option>
+	<option value="1954">1954</option>
+	<option value="1953">1953</option>
+	<option value="1952">1952</option>
+	<option value="1951">1951</option>
+	<option value="1950">1950</option>
+	<option value="1949">1949</option>
+	<option value="1948">1948</option>
+	<option value="1947">1947</option>
+	<option value="1946">1946</option>
+	<option value="1945">1945</option>
+
+</select>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <div class="label">
+                            <span>Tìm kiếm:</span>
+                        </div>
+                        <div class="input">
+                            <input name="ctrl_191017_163$txtSearchKeyword" type="text" value="ngân hàng" maxlength="100" id="ctrl_191017_163_txtSearchKeyword" placeholder="Nhập từ khóa" />
+                        </div>
+                    </td>
+                    <td colspan="2">
+                        <div class="label">
+                            <span>Số lượng kết quả:</span>
+                        </div>
+                        <div class="input">
+                            <select name="ctrl_191017_163$drdRecordPerPage" id="ctrl_191017_163_drdRecordPerPage">
+	<option value="50">50</option>
+	<option value="100">100</option>
+	<option value="200">200</option>
+	<option selected="selected" value="500">500</option>
+
+</select>
+                            <input type="submit" name="ctrl_191017_163$btnSearch" value="Tìm kiếm" id="ctrl_191017_163_btnSearch" />
+                        </div>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+    <div class="document-content">
+        <div>
+            <h1 class="document-content-title">TẤT CẢ VĂN BẢN</h1>
+        </div>
+        <div class="col-in-mobile">
+            Số ký hiệu / Ngày ban hành / Trích yếu
+        </div>
+        <div>
+	<table class="table search-result" cellspacing="0" rules="all" border="1" id="ctrl_191017_163_grvDocument" width="100%">
+		<tr>
+			<th class="CodeClass" scope="col">Số ký hiệu</th><th scope="col">Ngày ban hành</th><th scope="col">Trích yếu</th>
+		</tr><tr>
+			<td>
+                        <a href='/?pageid=27160&docid=192757'>
+                            <span class="code">131/2017/TT-BTC</span>
+                            <span class="issue-v2">15/12/2017</span>
+                        </a>
+                    </td><td>
+                        <span class="issued-date">15/12/2017</span>
+                    </td><td>
+                        <a href='/?pageid=27160&docid=192757'>
+                            <span class="substract">Sửa đổi, bổ sung một số điều của Thông tư số 315/2016/TT-BTC ngày 30 tháng 11 năm 2016 của Bộ Tài chính quy định về quản lý và sử dụng tài khoản của Kho bạc Nhà nước mở tại Ngân hàng Nhà nước Việt Nam và các ngân hàng thương mại</span>
+                        </a>
+                        <div class="bl-issue-date">
+                            <span class="issued-date issued-date-inside">15/12/2017</span>
+                        </div>
+                        <div class="bl-doc-files">
+                            
+                                    <div class="bl-doc-file"><a href="https://datafiles.chinhphu.vn/cpp/files/vbpq/2018/01/131-btc.signed.pdf" target="_blank" download>Tài liệu đính kèm</a></div>
+                                
+                        </div>
+                    </td>
+		</tr><tr>
+			<td>
+                        <a href='/?pageid=27160&docid=193500'>
+                            <span class="code">30/2017/QĐ-UBND</span>
+                            <span class="issue-v2">13/12/2017</span>
+                        </a>
+                    </td><td>
+                        <span class="issued-date">13/12/2017</span>
+                    </td><td>
+                        <a href='/?pageid=27160&docid=193500'>
+                            <span class="substract">Ban hành Quy chế quản lý và sử dụng nguồn vốn ngân sách địa phương ủy thác qua Ngân hàng Chính sách xã hội để cho vay đối với người nghèo và các đối tượng chính sách khác trên địa bàn tỉnh Phú Thọ</span>
+                        </a>
+                        <div class="bl-issue-date">
+                            <span class="issued-date issued-date-inside">13/12/2017</span>
+                        </div>
+                        <div class="bl-doc-files">
+                            
+                                    <div class="bl-doc-file"><a href="https://datafiles.chinhphu.vn/cpp/files/vbpq/2018/04/30pt.signed.pdf" target="_blank" download>Tài liệu đính kèm</a></div>
+                                
+                        </div>
+                    </td>
+		</tr><tr>
+			<td>
+                        <a href='/?pageid=27160&docid=192122'>
+                            <span class="code">1942/QĐ-TTg</span>
+                            <span class="issue-v2">04/12/2017</span>
+                        </a>
+                    </td><td>
+                        <span class="issued-date">04/12/2017</span>
+                    </td><td>
+                        <a href='/?pageid=27160&docid=192122'>
+                            <span class="substract">Về  việc ông Phạm Quang Tùng thôi giữ chức vụ Chủ tịch Hội đồng quản trị Ngân hàng Phát triển Việt Nam</span>
+                        </a>
+                        <div class="bl-issue-date">
+                            <span class="issued-date issued-date-inside">04/12/2017</span>
+                        </div>
+                        <div class="bl-doc-files">
+                            
+                                    <div class="bl-doc-file"><a href="https://datafiles.chinhphu.vn/cpp/files/vbpq/2017/12/1942.signed.pdf" target="_blank" download>Tài liệu đính kèm</a></div>
+                                
+                        </div>
+                    </td>
+		</tr><tr>
+			<td>
+                        <a href='/?pageid=27160&docid=192731'>
+                            <span class="code">17/2017/TT-NHNN</span>
+                            <span class="issue-v2">20/11/2017</span>
+                        </a>
+                    </td><td>
+                        <span class="issued-date">20/11/2017</span>
+                    </td><td>
+                        <a href='/?pageid=27160&docid=192731'>
+                            <span class="substract">Sửa đổi, bổ sung một số điều của Thông tư số 40/2011/TT-NHNN ngày 15 tháng 12 năm 2011 quy định về việc cấp giấy phép và tổ chức, hoạt động của ngân hàng thương mại, chi nhánh ngân hàng nước ngoài, văn phòng đại diện của tổ chức tín dụng nước ngoài, tổ chức nước ngoài khác có hoạt động ngân hàng tại Việt Nam</span>
+                        </a>
+                        <div class="bl-issue-date">
+                            <span class="issued-date issued-date-inside">20/11/2017</span>
+                        </div>
+                        <div class="bl-doc-files">
+                            
+                                    <div class="bl-doc-file"><a href="https://datafiles.chinhphu.vn/cpp/files/vbpq/2018/01/17-nhnn.signed.pdf" target="_blank" download>Tài liệu đính kèm</a></div>
+                                
+                        </div>
+                    </td>
+		</tr><tr>
+			<td>
+                        <a href='/?pageid=27160&docid=191885'>
+                            <span class="code">1829/QĐ-TTg</span>
+                            <span class="issue-v2">17/11/2017</span>
+                        </a>
+                    </td><td>
+                        <span class="issued-date">17/11/2017</span>
+                    </td><td>
+                        <a href='/?pageid=27160&docid=191885'>
+                            <span class="substract">Về việc giao ông Đào Quang Trường, Phó Tổng Giám đốc Ngân hàng Phát triển Việt Nam nhiệm vụ Quyền Tổng Giám đốc Ngân hàng Phát triển Việt Nam</span>
+                        </a>
+                        <div class="bl-issue-date">
+                            <span class="issued-date issued-date-inside">17/11/2017</span>
+                        </div>
+                        <div class="bl-doc-files">
+                            
+                                    <div class="bl-doc-file"><a href="https://datafiles.chinhphu.vn/cpp/files/vbpq/2017/11/1829.signed.pdf" target="_blank" download>Tài liệu đính kèm</a></div>
+                                
+                        </div>
+                    </td>
+		</tr><tr>
+			<td>
+                        <a href='/?pageid=27160&docid=192754'>
+                            <span class="code">16/2017/TT-NHNN</span>
+                            <span class="issue-v2">10/11/2017</span>
+                        </a>
+                    </td><td>
+                        <span class="issued-date">10/11/2017</span>
+                    </td><td>
+                        <a href='/?pageid=27160&docid=192754'>
+                            <span class="substract">Sửa đổi, bổ sung một số điều của Thông tư số 27/2016/TT-NHNN ngày 28 tháng 9 năm 2016 của Thống đốc Ngân hàng Nhà nước Việt Nam hướng dẫn trình tự, thủ tục xây dựng, ban hành văn bản quy phạm pháp luật của Ngân hàng Nhà nước Việt Nam</span>
+                        </a>
+                        <div class="bl-issue-date">
+                            <span class="issued-date issued-date-inside">10/11/2017</span>
+                        </div>
+                        <div class="bl-doc-files">
+                            
+                                    <div class="bl-doc-file"><a href="https://datafiles.chinhphu.vn/cpp/files/vbpq/2018/01/16-nhnn.signed.pdf" target="_blank" download>Tài liệu đính kèm</a></div>
+                                
+                        </div>
+                    </td>
+		</tr><tr>
+			<td>
+                        <a href='/?pageid=27160&docid=191737'>
+                            <span class="code">15/2017/TT-NHNN</span>
+                            <span class="issue-v2">05/10/2017</span>
+                        </a>
+                    </td><td>
+                        <span class="issued-date">05/10/2017</span>
+                    </td><td>
+                        <a href='/?pageid=27160&docid=191737'>
+                            <span class="substract">Sửa đổi, bổ sung một số điều của Thông tư số 18/2014/TT-NHNN ngày 01 tháng 8 năm 2014 của Thống đốc Ngân hàng Việt Nam hướng dẫn hoạt động nhập khẩu hàng hóa thuộc diện quản lý chuyên ngành của Ngân hàng Nhà nước Việt Nam</span>
+                        </a>
+                        <div class="bl-issue-date">
+                            <span class="issued-date issued-date-inside">05/10/2017</span>
+                        </div>
+                        <div class="bl-doc-files">
+                            
+                                    <div class="bl-doc-file"><a href="https://datafiles.chinhphu.vn/cpp/files/vbpq/2017/11/15-nhnn.signed.pdf" target="_blank" download>Tài liệu đính kèm</a></div>
+                                
+                        </div>
+                    </td>
+		</tr><tr>
+			<td>
+                        <a href='/?pageid=27160&docid=191760'>
+                            <span class="code">13/2017/TT-NHNN</span>
+                            <span class="issue-v2">29/09/2017</span>
+                        </a>
+                    </td><td>
+                        <span class="issued-date">29/09/2017</span>
+                    </td><td>
+                        <a href='/?pageid=27160&docid=191760'>
+                            <span class="substract">Sửa đổi, bổ sung một số điều của Thông tư số 07/2015/TT-NHNN ngày 25 tháng 6 năm 2015 của Thống đốc Ngân hàng Nhà nước Việt Nam quy định về bảo lãnh ngân hàng</span>
+                        </a>
+                        <div class="bl-issue-date">
+                            <span class="issued-date issued-date-inside">29/09/2017</span>
+                        </div>
+                        <div class="bl-doc-files">
+                            
+                                    <div class="bl-doc-file"><a href="https://datafiles.chinhphu.vn/cpp/files/vbpq/2017/11/13-nhnn.signed.pdf" target="_blank" download>Tài liệu đính kèm</a></div>
+                                
+                        </div>
+                    </td>
+		</tr><tr>
+			<td>
+                        <a href='/?pageid=27160&docid=191729'>
+                            <span class="code">12/2017/TT-NHNN</span>
+                            <span class="issue-v2">31/08/2017</span>
+                        </a>
+                    </td><td>
+                        <span class="issued-date">31/08/2017</span>
+                    </td><td>
+                        <a href='/?pageid=27160&docid=191729'>
+                            <span class="substract">Sửa đổi, bổ sung một số điều của Thông tư số 01/2014/TT-NHNN ngày 06/01/2014 của Thống đốc Ngân hàng Nhà nước Việt Nam quy định về giao nhận, bảo quản , vận chuyển tiền mặt, tài sản quý, giấy tờ có giá</span>
+                        </a>
+                        <div class="bl-issue-date">
+                            <span class="issued-date issued-date-inside">31/08/2017</span>
+                        </div>
+                        <div class="bl-doc-files">
+                            
+                                    <div class="bl-doc-file"><a href="https://datafiles.chinhphu.vn/cpp/files/vbpq/2017/11/12-nhnn.signed.pdf" target="_blank" download>Tài liệu đính kèm</a></div>
+                                
+                        </div>
+                    </td>
+		</tr><tr>
+			<td>
+                        <a href='/?pageid=27160&docid=190839'>
+                            <span class="code">1235/QĐ-TTg</span>
+                            <span class="issue-v2">18/08/2017</span>
+                        </a>
+                    </td><td>
+                        <span class="issued-date">18/08/2017</span>
+                    </td><td>
+                        <a href='/?pageid=27160&docid=190839'>
+                            <span class="substract">Ban hành danh sách đơn vị sự nghiệp công lập trực thuộc Ngân hàng Nhà nước Việt Nam</span>
+                        </a>
+                        <div class="bl-issue-date">
+                            <span class="issued-date issued-date-inside">18/08/2017</span>
+                        </div>
+                        <div class="bl-doc-files">
+                            
+                                    <div class="bl-doc-file"><a href="https://datafiles.chinhphu.vn/cpp/files/vbpq/2017/08/1235.signed.pdf" target="_blank" download>Tài liệu đính kèm</a></div>
+                                
+                        </div>
+                    </td>
+		</tr><tr>
+			<td>
+                        <a href='/?pageid=27160&docid=191313'>
+                            <span class="code">09/2017/TT-NHNN</span>
+                            <span class="issue-v2">14/08/2017</span>
+                        </a>
+                    </td><td>
+                        <span class="issued-date">14/08/2017</span>
+                    </td><td>
+                        <a href='/?pageid=27160&docid=191313'>
+                            <span class="substract">Sửa đổi, bổ sung một số điều của Thông tư số 19/2013/TT-NHNN ngày 06 tháng 9 năm 2013 của Thống đốc Ngân hàng Nhà nước Việt Nam quy định về việc mua, bán và xử lý nợ xấu của Công ty Quản lý tài sản của các tổ chức tín dụng Việt Nam</span>
+                        </a>
+                        <div class="bl-issue-date">
+                            <span class="issued-date issued-date-inside">14/08/2017</span>
+                        </div>
+                        <div class="bl-doc-files">
+                            
+                                    <div class="bl-doc-file"><a href="https://datafiles.chinhphu.vn/cpp/files/vbpq/2017/10/09-nhnn.signed.pdf" target="_blank" download>Tài liệu đính kèm</a></div>
+                                
+                        </div>
+                    </td>
+		</tr><tr>
+			<td>
+                        <a href='/?pageid=27160&docid=191275'>
+                            <span class="code">1141/QĐ-TTg</span>
+                            <span class="issue-v2">07/08/2017</span>
+                        </a>
+                    </td><td>
+                        <span class="issued-date">07/08/2017</span>
+                    </td><td>
+                        <a href='/?pageid=27160&docid=191275'>
+                            <span class="substract">Về việc ông Nguyễn Phước Thanh, Phó Thống đốc Ngân hàng nhà nước Việt Nam, nghỉ hưu</span>
+                        </a>
+                        <div class="bl-issue-date">
+                            <span class="issued-date issued-date-inside">07/08/2017</span>
+                        </div>
+                        <div class="bl-doc-files">
+                            
+                                    <div class="bl-doc-file"><a href="https://datafiles.chinhphu.vn/cpp/files/vbpq/2017/10/1141.signed.pdf" target="_blank" download>Tài liệu đính kèm</a></div>
+                                
+                        </div>
+                    </td>
+		</tr><tr>
+			<td>
+                        <a href='/?pageid=27160&docid=191294'>
+                            <span class="code">1140/QĐ-TTg</span>
+                            <span class="issue-v2">07/08/2017</span>
+                        </a>
+                    </td><td>
+                        <span class="issued-date">07/08/2017</span>
+                    </td><td>
+                        <a href='/?pageid=27160&docid=191294'>
+                            <span class="substract">Về việc ông Trần Bá Huấn, Tổng Giám đốc Ngân hàng Phát triển Việt Nam, nghỉ hưu</span>
+                        </a>
+                        <div class="bl-issue-date">
+                            <span class="issued-date issued-date-inside">07/08/2017</span>
+                        </div>
+                        <div class="bl-doc-files">
+                            
+                                    <div class="bl-doc-file"><a href="https://datafiles.chinhphu.vn/cpp/files/vbpq/2017/10/1140.signed.pdf" target="_blank" download>Tài liệu đính kèm</a></div>
+                                
+                        </div>
+                    </td>
+		</tr><tr>
+			<td>
+                        <a href='/?pageid=27160&docid=190649'>
+                            <span class="code">93/2017/NĐ-CP</span>
+                            <span class="issue-v2">07/08/2017</span>
+                        </a>
+                    </td><td>
+                        <span class="issued-date">07/08/2017</span>
+                    </td><td>
+                        <a href='/?pageid=27160&docid=190649'>
+                            <span class="substract">Về chế độ tài chính đối với tổ chức tín dụng, chi nhánh ngân hàng nước ngoài và giám sát tài chính, đánh giá hiệu quả đầu tư vốn nhà nước tại tổ chức tín dụng do Nhà nước nắm giữ 100% vốn điều lệ và tổ chức tín dụng có vốn nhà nước</span>
+                        </a>
+                        <div class="bl-issue-date">
+                            <span class="issued-date issued-date-inside">07/08/2017</span>
+                        </div>
+                        <div class="bl-doc-files">
+                            
+                                    <div class="bl-doc-file"><a href="https://datafiles.chinhphu.vn/cpp/files/vbpq/2017/08/93.signed.pdf" target="_blank" download>Tài liệu đính kèm</a></div>
+                                
+                        </div>
+                    </td>
+		</tr><tr>
+			<td>
+                        <a href='/?pageid=27160&docid=190899'>
+                            <span class="code">08/2017/TT-NHNN</span>
+                            <span class="issue-v2">01/08/2017</span>
+                        </a>
+                    </td><td>
+                        <span class="issued-date">01/08/2017</span>
+                    </td><td>
+                        <a href='/?pageid=27160&docid=190899'>
+                            <span class="substract">Quy định về trình tự, thủ tục giám sát ngân hàng</span>
+                        </a>
+                        <div class="bl-issue-date">
+                            <span class="issued-date issued-date-inside">01/08/2017</span>
+                        </div>
+                        <div class="bl-doc-files">
+                            
+                                    <div class="bl-doc-file"><a href="https://datafiles.chinhphu.vn/cpp/files/vbpq/2017/08/08-nhnn.signed.pdf" target="_blank" download>Tài liệu đính kèm</a></div>
+                                
+                        </div>
+                    </td>
+		</tr><tr>
+			<td>
+                        <a href='/?pageid=27160&docid=192780'>
+                            <span class="code">10/NQ-HĐND</span>
+                            <span class="issue-v2">14/07/2017</span>
+                        </a>
+                    </td><td>
+                        <span class="issued-date">14/07/2017</span>
+                    </td><td>
+                        <a href='/?pageid=27160&docid=192780'>
+                            <span class="substract">Về việc chủ trương thực hiện, cơ chế tài chính, kế hoạch trả nợ vay của dự án mở rộng nâng cấp đô thị Việt Nam - Tiểu dự án thành phố Long Xuyên, tỉnh An Giang, vay vốn Ngân hàng Thế giới (WB)</span>
+                        </a>
+                        <div class="bl-issue-date">
+                            <span class="issued-date issued-date-inside">14/07/2017</span>
+                        </div>
+                        <div class="bl-doc-files">
+                            
+                                    <div class="bl-doc-file"><a href="https://datafiles.chinhphu.vn/cpp/files/vbpq/2018/01/10hdnd-ag.signed.pdf" target="_blank" download>Tài liệu đính kèm</a></div>
+                                
+                        </div>
+                    </td>
+		</tr><tr>
+			<td>
+                        <a href='/?pageid=27160&docid=190916'>
+                            <span class="code">06/2017/TT-NHNN</span>
+                            <span class="issue-v2">05/07/2017</span>
+                        </a>
+                    </td><td>
+                        <span class="issued-date">05/07/2017</span>
+                    </td><td>
+                        <a href='/?pageid=27160&docid=190916'>
+                            <span class="substract">Sửa đổi, bổ sung một số điều của Thông tư số 03/2014/TT-NHNN ngày 23/01/2014 của Thống đốc Ngân hàng Nhà nước quy định về Quỹ bảo đảm an toàn hệ thống quỹ tín dụng nhân dân và Thông tư số 04/2015/TT-NHNN ngày 31/03/2015 của Thống đốc Ngân hàng Nhà nước quy định về quỹ tín dụng nhân dân</span>
+                        </a>
+                        <div class="bl-issue-date">
+                            <span class="issued-date issued-date-inside">05/07/2017</span>
+                        </div>
+                        <div class="bl-doc-files">
+                            
+                                    <div class="bl-doc-file"><a href="https://datafiles.chinhphu.vn/cpp/files/vbpq/2017/08/06-nhnn.signed.pdf" target="_blank" download>Tài liệu đính kèm</a></div>
+                                
+                        </div>
+                    </td>
+		</tr><tr>
+			<td>
+                        <a href='/?pageid=27160&docid=190253'>
+                            <span class="code">59/NQ-CP</span>
+                            <span class="issue-v2">04/07/2017</span>
+                        </a>
+                    </td><td>
+                        <span class="issued-date">04/07/2017</span>
+                    </td><td>
+                        <a href='/?pageid=27160&docid=190253'>
+                            <span class="substract">Về việc đơn giản hóa thủ tục hành chính liên quan đến quản lý dân cư thuộc phạm vị chức năng quản lý của Ngân hàng Nhà nước Việt Nam</span>
+                        </a>
+                        <div class="bl-issue-date">
+                            <span class="issued-date issued-date-inside">04/07/2017</span>
+                        </div>
+                        <div class="bl-doc-files">
+                            
+                                    <div class="bl-doc-file"><a href="https://datafiles.chinhphu.vn/cpp/files/vbpq/2017/07/59.signed.pdf" target="_blank" download>Tài liệu đính kèm</a></div>
+                                
+                        </div>
+                    </td>
+		</tr><tr>
+			<td>
+                        <a href='/?pageid=27160&docid=190904'>
+                            <span class="code">05/2017/TT-NHNN</span>
+                            <span class="issue-v2">30/06/2017</span>
+                        </a>
+                    </td><td>
+                        <span class="issued-date">30/06/2017</span>
+                    </td><td>
+                        <a href='/?pageid=27160&docid=190904'>
+                            <span class="substract">Sửa đổi, bổ sung một số điều của Thông tư số 03/2016/TT-NHNN ngày 26 tháng 02 năm 2016 của Thống đốc Ngân hàng Nhà nước Việt Nam hướng dẫn một số nội dung về quản lý ngoại hối đối với việc vay, trả nợ nước ngoài của doanh nghiệp</span>
+                        </a>
+                        <div class="bl-issue-date">
+                            <span class="issued-date issued-date-inside">30/06/2017</span>
+                        </div>
+                        <div class="bl-doc-files">
+                            
+                                    <div class="bl-doc-file"><a href="https://datafiles.chinhphu.vn/cpp/files/vbpq/2017/08/05-nhnn.signed.pdf" target="_blank" download>Tài liệu đính kèm</a></div>
+                                
+                        </div>
+                    </td>
+		</tr><tr>
+			<td>
+                        <a href='/?pageid=27160&docid=190533'>
+                            <span class="code">04/2017/TT-NHNN</span>
+                            <span class="issue-v2">28/06/2017</span>
+                        </a>
+                    </td><td>
+                        <span class="issued-date">28/06/2017</span>
+                    </td><td>
+                        <a href='/?pageid=27160&docid=190533'>
+                            <span class="substract">Bãi bỏ một số văn bản quy phạm pháp luật do Thống đốc Ngân hàng Nhà nước Việt Nam ban hành, liên tịch ban hành</span>
+                        </a>
+                        <div class="bl-issue-date">
+                            <span class="issued-date issued-date-inside">28/06/2017</span>
+                        </div>
+                        <div class="bl-doc-files">
+                            
+                                    <div class="bl-doc-file"><a href="https://datafiles.chinhphu.vn/cpp/files/vbpq/2017/08/04-nhnn.signed.pdf" target="_blank" download>Tài liệu đính kèm</a></div>
+                                
+                        </div>
+                    </td>
+		</tr><tr>
+			<td>
+                        <a href='/?pageid=27160&docid=190554'>
+                            <span class="code">03/2017/TT-NHNN</span>
+                            <span class="issue-v2">06/06/2017</span>
+                        </a>
+                    </td><td>
+                        <span class="issued-date">06/06/2017</span>
+                    </td><td>
+                        <a href='/?pageid=27160&docid=190554'>
+                            <span class="substract">Sửa đổi, bổ sung một số điều của Thông tư số 16/2012/TT-NHNN ngày 25 tháng 5 năm 2012 của Thống đốc Ngân hàng Nhà nước Việt Nam hướng dẫn một số điều của Nghị định số 24/2012/NĐ-CP ngày 03 tháng 4 năm 2012 của Chính phủ về quản lý hoạt động kinh doanh vàng</span>
+                        </a>
+                        <div class="bl-issue-date">
+                            <span class="issued-date issued-date-inside">06/06/2017</span>
+                        </div>
+                        <div class="bl-doc-files">
+                            
+                                    <div class="bl-doc-file"><a href="https://datafiles.chinhphu.vn/cpp/files/vbpq/2017/08/03-nhnn.signed.pdf" target="_blank" download>Tài liệu đính kèm</a></div>
+                                
+                        </div>
+                    </td>
+		</tr><tr>
+			<td>
+                        <a href='/?pageid=27160&docid=189911'>
+                            <span class="code">747/QĐ-TTg</span>
+                            <span class="issue-v2">29/05/2017</span>
+                        </a>
+                    </td><td>
+                        <span class="issued-date">29/05/2017</span>
+                    </td><td>
+                        <a href='/?pageid=27160&docid=189911'>
+                            <span class="substract">Về việc bổ nhiệm lại ông Đào Minh Tú, giữ chức vụ Phó Thống đốc Ngân hàng Nhà nước Việt Nam</span>
+                        </a>
+                        <div class="bl-issue-date">
+                            <span class="issued-date issued-date-inside">29/05/2017</span>
+                        </div>
+                        <div class="bl-doc-files">
+                            
+                                    <div class="bl-doc-file"><a href="https://datafiles.chinhphu.vn/cpp/files/vbpq/2017/05/747.signed.pdf" target="_blank" download>Tài liệu đính kèm</a></div>
+                                
+                        </div>
+                    </td>
+		</tr><tr>
+			<td>
+                        <a href='/?pageid=27160&docid=190014'>
+                            <span class="code">02/2017/TT-NHNN</span>
+                            <span class="issue-v2">17/05/2017</span>
+                        </a>
+                    </td><td>
+                        <span class="issued-date">17/05/2017</span>
+                    </td><td>
+                        <a href='/?pageid=27160&docid=190014'>
+                            <span class="substract">Quy định về hoạt động bao thanh toán của tổ chức tín dụng, chi nhánh ngân hàng nước ngoài</span>
+                        </a>
+                        <div class="bl-issue-date">
+                            <span class="issued-date issued-date-inside">17/05/2017</span>
+                        </div>
+                        <div class="bl-doc-files">
+                            
+                                    <div class="bl-doc-file"><a href="https://datafiles.chinhphu.vn/cpp/files/vbpq/2017/06/02-nhnn.signed.pdf" target="_blank" download>Tài liệu đính kèm</a></div>
+                                
+                        </div>
+                    </td>
+		</tr><tr>
+			<td>
+                        <a href='/?pageid=27160&docid=188510'>
+                            <span class="code">263/QĐ-TTg</span>
+                            <span class="issue-v2">24/02/2017</span>
+                        </a>
+                    </td><td>
+                        <span class="issued-date">24/02/2017</span>
+                    </td><td>
+                        <a href='/?pageid=27160&docid=188510'>
+                            <span class="substract">Về việc bổ nhiệm ông Đỗ Văn Chiến, Bộ trưởng, Chủ nhiệm Ủy ban Dân tộc kiêm giữ chức vụ Ủy viên Hội đồng quản trị Ngân hàng Chính sách xã hội</span>
+                        </a>
+                        <div class="bl-issue-date">
+                            <span class="issued-date issued-date-inside">24/02/2017</span>
+                        </div>
+                        <div class="bl-doc-files">
+                            
+                                    <div class="bl-doc-file"><a href="https://datafiles.chinhphu.vn/cpp/files/vbpq/2017/02/263.signed.pdf" target="_blank" download>Tài liệu đính kèm</a></div>
+                                
+                        </div>
+                    </td>
+		</tr><tr>
+			<td>
+                        <a href='/?pageid=27160&docid=188347'>
+                            <span class="code">16/2017/NĐ-CP</span>
+                            <span class="issue-v2">17/02/2017</span>
+                        </a>
+                    </td><td>
+                        <span class="issued-date">17/02/2017</span>
+                    </td><td>
+                        <a href='/?pageid=27160&docid=188347'>
+                            <span class="substract">Quy định chức năng, nhiệm vụ, quyền hạn và cơ cấu tổ chức của Ngân hàng Nhà nước Việt Nam</span>
+                        </a>
+                        <div class="bl-issue-date">
+                            <span class="issued-date issued-date-inside">17/02/2017</span>
+                        </div>
+                        <div class="bl-doc-files">
+                            
+                                    <div class="bl-doc-file"><a href="https://datafiles.chinhphu.vn/cpp/files/vbpq/2017/02/16.signed.pdf" target="_blank" download>Tài liệu đính kèm</a></div>
+                                
+                        </div>
+                    </td>
+		</tr><tr>
+			<td>
+                        <a href='/?pageid=27160&docid=189308'>
+                            <span class="code">11/2017/TT-BTC</span>
+                            <span class="issue-v2">08/02/2017</span>
+                        </a>
+                    </td><td>
+                        <span class="issued-date">08/02/2017</span>
+                    </td><td>
+                        <a href='/?pageid=27160&docid=189308'>
+                            <span class="substract">Quy định về quản lý và sử dụng nguồn vốn ngân sách địa phương ủy thác qua Ngân hàng Chính sách xã hội để cho vay đối với người nghèo và các đối tượng chính sách khác</span>
+                        </a>
+                        <div class="bl-issue-date">
+                            <span class="issued-date issued-date-inside">08/02/2017</span>
+                        </div>
+                        <div class="bl-doc-files">
+                            
+                                    <div class="bl-doc-file"><a href="https://datafiles.chinhphu.vn/cpp/files/vbpq/2017/04/11-btc.signed.pdf" target="_blank" download>Tài liệu đính kèm</a></div>
+                                
+                        </div>
+                    </td>
+		</tr><tr>
+			<td>
+                        <a href='/?pageid=27160&docid=188937'>
+                            <span class="code">01/2017/TT-NHNN</span>
+                            <span class="issue-v2">07/02/2017</span>
+                        </a>
+                    </td><td>
+                        <span class="issued-date">07/02/2017</span>
+                    </td><td>
+                        <a href='/?pageid=27160&docid=188937'>
+                            <span class="substract">Ban hành Danh mục máy móc, thiết bị, nguyên liệu, vật tư, linh kiện, bộ phận, phụ tùng nhập khẩu phục vụ hoạt động in, đúc tiền của Ngân hàng Nhà nước Việt Nam</span>
+                        </a>
+                        <div class="bl-issue-date">
+                            <span class="issued-date issued-date-inside">07/02/2017</span>
+                        </div>
+                        <div class="bl-doc-files">
+                            
+                                    <div class="bl-doc-file"><a href="https://datafiles.chinhphu.vn/cpp/files/vbpq/2017/03/01-nhnn.signed.pdf" target="_blank" download>Tài liệu đính kèm</a></div>
+                                
+                        </div>
+                    </td>
+		</tr><tr>
+			<td>
+                        <a href='/?pageid=27160&docid=188060'>
+                            <span class="code">51/QĐ-TTg</span>
+                            <span class="issue-v2">13/01/2017</span>
+                        </a>
+                    </td><td>
+                        <span class="issued-date">13/01/2017</span>
+                    </td><td>
+                        <a href='/?pageid=27160&docid=188060'>
+                            <span class="substract">Về việc bổ nhiệm bà Nguyễn Thị Thu Hà, Chủ tịch Hội Liên hiệp Phụ nữ Việt Nam kiêm giữ chức vụ Ủy viên Hội đồng quản trị Ngân hàng Chính sách xã hội</span>
+                        </a>
+                        <div class="bl-issue-date">
+                            <span class="issued-date issued-date-inside">13/01/2017</span>
+                        </div>
+                        <div class="bl-doc-files">
+                            
+                                    <div class="bl-doc-file"><a href="https://datafiles.chinhphu.vn/cpp/files/vbpq/2017/01/51.signed.pdf" target="_blank" download>Tài liệu đính kèm</a></div>
+                                
+                        </div>
+                    </td>
+		</tr><tr>
+			<td>
+                        <a href='/?pageid=27160&docid=188256'>
+                            <span class="code">41/2016/TT-NHNN</span>
+                            <span class="issue-v2">30/12/2016</span>
+                        </a>
+                    </td><td>
+                        <span class="issued-date">30/12/2016</span>
+                    </td><td>
+                        <a href='/?pageid=27160&docid=188256'>
+                            <span class="substract">Quy định tỷ lệ an toàn vốn đối với ngân hàng, chi nhánh ngân hàng nước ngoài</span>
+                        </a>
+                        <div class="bl-issue-date">
+                            <span class="issued-date issued-date-inside">30/12/2016</span>
+                        </div>
+                        <div class="bl-doc-files">
+                            
+                                    <div class="bl-doc-file"><a href="https://datafiles.chinhphu.vn/cpp/files/vbpq/2017/02/41-nhnn.signed.pdf" target="_blank" download>Tài liệu đính kèm</a></div>
+                                
+                        </div>
+                    </td>
+		</tr><tr>
+			<td>
+                        <a href='/?pageid=27160&docid=188406'>
+                            <span class="code">40/2016/TT-NHNN</span>
+                            <span class="issue-v2">30/12/2016</span>
+                        </a>
+                    </td><td>
+                        <span class="issued-date">30/12/2016</span>
+                    </td><td>
+                        <a href='/?pageid=27160&docid=188406'>
+                            <span class="substract">Quy định hoạt động cung ứng sản phẩm phái sinh giá cả hàng hóa của ngân hàng thương mại</span>
+                        </a>
+                        <div class="bl-issue-date">
+                            <span class="issued-date issued-date-inside">30/12/2016</span>
+                        </div>
+                        <div class="bl-doc-files">
+                            
+                                    <div class="bl-doc-file"><a href="https://datafiles.chinhphu.vn/cpp/files/vbpq/2017/02/40-nhnn.signed.pdf" target="_blank" download>Tài liệu đính kèm</a></div>
+                                
+                        </div>
+                    </td>
+		</tr><tr>
+			<td>
+                        <a href='/?pageid=27160&docid=188822'>
+                            <span class="code">39/2016/TT-NHNN</span>
+                            <span class="issue-v2">30/12/2016</span>
+                        </a>
+                    </td><td>
+                        <span class="issued-date">30/12/2016</span>
+                    </td><td>
+                        <a href='/?pageid=27160&docid=188822'>
+                            <span class="substract">Quy định về hoạt động cho vay của tổ chức tín dụng chi nhánh ngân hàng nước ngoài đối với khách hàng</span>
+                        </a>
+                        <div class="bl-issue-date">
+                            <span class="issued-date issued-date-inside">30/12/2016</span>
+                        </div>
+                        <div class="bl-doc-files">
+                            
+                                    <div class="bl-doc-file"><a href="https://datafiles.chinhphu.vn/cpp/files/vbpq/2017/03/39-nhnn.signed.pdf" target="_blank" download>Tài liệu đính kèm</a></div>
+                                
+                        </div>
+                    </td>
+		</tr><tr>
+			<td>
+                        <a href='/?pageid=27160&docid=188442'>
+                            <span class="code">38/2016/TT-NHNN</span>
+                            <span class="issue-v2">30/12/2016</span>
+                        </a>
+                    </td><td>
+                        <span class="issued-date">30/12/2016</span>
+                    </td><td>
+                        <a href='/?pageid=27160&docid=188442'>
+                            <span class="substract">Quy định về phương pháp tính và hạch toán thu, trả lãi trong hoạt động nhận tiền gửi và cho vay giữa Ngân hàng Nhà nước Việt Nam với tổ chức tín dụng và các tổ chức khác</span>
+                        </a>
+                        <div class="bl-issue-date">
+                            <span class="issued-date issued-date-inside">30/12/2016</span>
+                        </div>
+                        <div class="bl-doc-files">
+                            
+                                    <div class="bl-doc-file"><a href="https://datafiles.chinhphu.vn/cpp/files/vbpq/2017/02/38-nhnn.signed.pdf" target="_blank" download>Tài liệu đính kèm</a></div>
+                                
+                        </div>
+                    </td>
+		</tr><tr>
+			<td>
+                        <a href='/?pageid=27160&docid=188752'>
+                            <span class="code">37/2016/TT-NHNN</span>
+                            <span class="issue-v2">30/12/2016</span>
+                        </a>
+                    </td><td>
+                        <span class="issued-date">30/12/2016</span>
+                    </td><td>
+                        <a href='/?pageid=27160&docid=188752'>
+                            <span class="substract">Quy định về việc quản lý, vận hành và sử dụng Hệ thống Thanh toán điện tử liên ngân hàng Quốc gia</span>
+                        </a>
+                        <div class="bl-issue-date">
+                            <span class="issued-date issued-date-inside">30/12/2016</span>
+                        </div>
+                        <div class="bl-doc-files">
+                            
+                                    <div class="bl-doc-file"><a href="https://datafiles.chinhphu.vn/cpp/files/vbpq/2017/03/37-nhnn.signed.pdf" target="_blank" download>Tài liệu đính kèm</a></div>
+                                
+                        </div>
+                    </td>
+		</tr><tr>
+			<td>
+                        <a href='/?pageid=27160&docid=188360'>
+                            <span class="code">36/2016/TT-NHNN</span>
+                            <span class="issue-v2">30/12/2016</span>
+                        </a>
+                    </td><td>
+                        <span class="issued-date">30/12/2016</span>
+                    </td><td>
+                        <a href='/?pageid=27160&docid=188360'>
+                            <span class="substract">Ban hành quy định về trình tự, thủ tục thanh tra chuyên ngành Ngân hàng</span>
+                        </a>
+                        <div class="bl-issue-date">
+                            <span class="issued-date issued-date-inside">30/12/2016</span>
+                        </div>
+                        <div class="bl-doc-files">
+                            
+                                    <div class="bl-doc-file"><a href="https://datafiles.chinhphu.vn/cpp/files/vbpq/2017/02/36-nhnnvn.signed.pdf" target="_blank" download>Tài liệu đính kèm</a></div>
+                                
+                        </div>
+                    </td>
+		</tr><tr>
+			<td>
+                        <a href='/?pageid=27160&docid=188405'>
+                            <span class="code">35/2016/TT-NHNN</span>
+                            <span class="issue-v2">29/12/2016</span>
+                        </a>
+                    </td><td>
+                        <span class="issued-date">29/12/2016</span>
+                    </td><td>
+                        <a href='/?pageid=27160&docid=188405'>
+                            <span class="substract">Quy định về an toàn, bảo mật cho việc cung cấp dịch vụ ngân hàng trên Internet</span>
+                        </a>
+                        <div class="bl-issue-date">
+                            <span class="issued-date issued-date-inside">29/12/2016</span>
+                        </div>
+                        <div class="bl-doc-files">
+                            
+                                    <div class="bl-doc-file"><a href="https://datafiles.chinhphu.vn/cpp/files/vbpq/2017/02/35-nhnn.signed.pdf" target="_blank" download>Tài liệu đính kèm</a></div>
+                                
+                        </div>
+                    </td>
+		</tr><tr>
+			<td>
+                        <a href='/?pageid=27160&docid=188035'>
+                            <span class="code">34/2016/TT-NHNN</span>
+                            <span class="issue-v2">28/12/2016</span>
+                        </a>
+                    </td><td>
+                        <span class="issued-date">28/12/2016</span>
+                    </td><td>
+                        <a href='/?pageid=27160&docid=188035'>
+                            <span class="substract">Quy định việc cung cấp thông tin giữa Ngân hàng Nhà nước Việt Nam và Bảo hiểm tiền gửi Việt Nam</span>
+                        </a>
+                        <div class="bl-issue-date">
+                            <span class="issued-date issued-date-inside">28/12/2016</span>
+                        </div>
+                        <div class="bl-doc-files">
+                            
+                                    <div class="bl-doc-file"><a href="https://datafiles.chinhphu.vn/cpp/files/vbpq/2017/01/34-nhnn.signed.pdf" target="_blank" download>Tài liệu đính kèm</a></div>
+                                
+                        </div>
+                    </td>
+		</tr><tr>
+			<td>
+                        <a href='/?pageid=27160&docid=188057'>
+                            <span class="code">315/2016/TT-BTC</span>
+                            <span class="issue-v2">30/11/2016</span>
+                        </a>
+                    </td><td>
+                        <span class="issued-date">30/11/2016</span>
+                    </td><td>
+                        <a href='/?pageid=27160&docid=188057'>
+                            <span class="substract">Quy định về quản lý và sử dụng tài khoản của Kho bạc Nhà nước mở tại Ngân hàng Nhà nước Việt Nam và các ngân hàng thương mại</span>
+                        </a>
+                        <div class="bl-issue-date">
+                            <span class="issued-date issued-date-inside">30/11/2016</span>
+                        </div>
+                        <div class="bl-doc-files">
+                            
+                                    <div class="bl-doc-file"><a href="https://datafiles.chinhphu.vn/cpp/files/vbpq/2017/01/315-btc.signed.pdf" target="_blank" download>Tài liệu đính kèm</a></div>
+                                
+                        </div>
+                    </td>
+		</tr><tr>
+			<td>
+                        <a href='/?pageid=27160&docid=187514'>
+                            <span class="code">31/2016/TT-NHNN</span>
+                            <span class="issue-v2">15/11/2016</span>
+                        </a>
+                    </td><td>
+                        <span class="issued-date">15/11/2016</span>
+                    </td><td>
+                        <a href='/?pageid=27160&docid=187514'>
+                            <span class="substract">Sửa đổi, bổ sung một số điều của Thông tư số 24/2015/TT-NHNN ngày 08 tháng 12 năm 2015 của Thống đốc Ngân hàng Nhà nước quy định cho vay bằng ngoại tệ của tổ chức tín dụng, chi nhánh ngân hàng nước ngoài đối với khách hàng vay là người cư trú</span>
+                        </a>
+                        <div class="bl-issue-date">
+                            <span class="issued-date issued-date-inside">15/11/2016</span>
+                        </div>
+                        <div class="bl-doc-files">
+                            
+                                    <div class="bl-doc-file"><a href="https://datafiles.chinhphu.vn/cpp/files/vbpq/2016/12/31-nhnn.signed.pdf" target="_blank" download>Tài liệu đính kèm</a></div>
+                                
+                        </div>
+                    </td>
+		</tr><tr>
+			<td>
+                        <a href='/?pageid=27160&docid=187182'>
+                            <span class="code">2183/QĐ-TTg</span>
+                            <span class="issue-v2">14/11/2016</span>
+                        </a>
+                    </td><td>
+                        <span class="issued-date">14/11/2016</span>
+                    </td><td>
+                        <a href='/?pageid=27160&docid=187182'>
+                            <span class="substract">Phê duyệt Đề án "Đẩy mạnh việc tham gia vào các thể chế tài chính - tiền tệ - ngân hàng khu vực và quốc tế"</span>
+                        </a>
+                        <div class="bl-issue-date">
+                            <span class="issued-date issued-date-inside">14/11/2016</span>
+                        </div>
+                        <div class="bl-doc-files">
+                            
+                                    <div class="bl-doc-file"><a href="https://datafiles.chinhphu.vn/cpp/files/vbpq/2016/11/2183.signed.pdf" target="_blank" download>Tài liệu đính kèm</a></div>
+                                
+                        </div>
+                    </td>
+		</tr><tr>
+			<td>
+                        <a href='/?pageid=27160&docid=188411'>
+                            <span class="code">242/2016/TT-BTC</span>
+                            <span class="issue-v2">11/11/2016</span>
+                        </a>
+                    </td><td>
+                        <span class="issued-date">11/11/2016</span>
+                    </td><td>
+                        <a href='/?pageid=27160&docid=188411'>
+                            <span class="substract">Quy định giá dịch vụ trong lĩnh vực chứng khoán áp dụng tại các tổ chức kinh doanh chứng khoán, ngân hàng thương mại tham gia vào thị trường chứng khoán Việt Nam</span>
+                        </a>
+                        <div class="bl-issue-date">
+                            <span class="issued-date issued-date-inside">11/11/2016</span>
+                        </div>
+                        <div class="bl-doc-files">
+                            
+                                    <div class="bl-doc-file"><a href="https://datafiles.chinhphu.vn/cpp/files/vbpq/2017/02/242-btc.signed.pdf" target="_blank" download>Tài liệu đính kèm</a></div>
+                                
+                        </div>
+                    </td>
+		</tr><tr>
+			<td>
+                        <a href='/?pageid=27160&docid=187205'>
+                            <span class="code">161/2016/TT-BQP</span>
+                            <span class="issue-v2">21/10/2016</span>
+                        </a>
+                    </td><td>
+                        <span class="issued-date">21/10/2016</span>
+                    </td><td>
+                        <a href='/?pageid=27160&docid=187205'>
+                            <span class="substract">Ban hành Quy chuẩn kỹ thuật quốc gia về mật mã dân sự sử dụng trong lĩnh vực ngân hàng</span>
+                        </a>
+                        <div class="bl-issue-date">
+                            <span class="issued-date issued-date-inside">21/10/2016</span>
+                        </div>
+                        <div class="bl-doc-files">
+                            
+                                    <div class="bl-doc-file"><a href="https://datafiles.chinhphu.vn/cpp/files/vbpq/2016/11/161-bqp.signed.pdf" target="_blank" download>Tài liệu đính kèm</a></div>
+                                
+                        </div>
+                    </td>
+		</tr><tr>
+			<td>
+                        <a href='/?pageid=27160&docid=187534'>
+                            <span class="code">150/2016/TT-BTC</span>
+                            <span class="issue-v2">14/10/2016</span>
+                        </a>
+                    </td><td>
+                        <span class="issued-date">14/10/2016</span>
+                    </td><td>
+                        <a href='/?pageid=27160&docid=187534'>
+                            <span class="substract">Quy định mức thu, chế độ thu, nộp lệ phí cấp giấy phép thành lập và hoạt động của tổ chức tín dụng; giấy phép thành lập chi nhánh ngân hàng nước ngoài, văn phòng đại diện của tổ chức tín dụng nước ngoài, tổ chức nước ngoài khác có hoạt động ngân hàng; giấy phép hoạt động cung ứng dịch vụ trung gian thanh toán cho các tổ chức không phải là ngân hàng</span>
+                        </a>
+                        <div class="bl-issue-date">
+                            <span class="issued-date issued-date-inside">14/10/2016</span>
+                        </div>
+                        <div class="bl-doc-files">
+                            
+                                    <div class="bl-doc-file"><a href="https://datafiles.chinhphu.vn/cpp/files/vbpq/2016/12/150-btc.signed.pdf" target="_blank" download>Tài liệu đính kèm</a></div>
+                                
+                        </div>
+                    </td>
+		</tr><tr>
+			<td>
+                        <a href='/?pageid=27160&docid=186563'>
+                            <span class="code">1888/QĐ-TTg</span>
+                            <span class="issue-v2">01/10/2016</span>
+                        </a>
+                    </td><td>
+                        <span class="issued-date">01/10/2016</span>
+                    </td><td>
+                        <a href='/?pageid=27160&docid=186563'>
+                            <span class="substract">Về việc bổ nhiệm lại ông Dương Quyết Thắng giữ chức vụ Ủy viên Hội đồng quản trị, Tổng Giám đốc Ngân hàng Chính sách Xã hội</span>
+                        </a>
+                        <div class="bl-issue-date">
+                            <span class="issued-date issued-date-inside">01/10/2016</span>
+                        </div>
+                        <div class="bl-doc-files">
+                            
+                                    <div class="bl-doc-file"><a href="https://datafiles.chinhphu.vn/cpp/files/vbpq/2016/10/1888.signed.pdf" target="_blank" download>Tài liệu đính kèm</a></div>
+                                
+                        </div>
+                    </td>
+		</tr><tr>
+			<td>
+                        <a href='/?pageid=27160&docid=186235'>
+                            <span class="code">1726/QĐ-TTg</span>
+                            <span class="issue-v2">05/09/2016</span>
+                        </a>
+                    </td><td>
+                        <span class="issued-date">05/09/2016</span>
+                    </td><td>
+                        <a href='/?pageid=27160&docid=186235'>
+                            <span class="substract">Phê duyệt Đề án nâng cao khả năng tiếp cận dịch vụ ngân hàng cho nền kinh tế</span>
+                        </a>
+                        <div class="bl-issue-date">
+                            <span class="issued-date issued-date-inside">05/09/2016</span>
+                        </div>
+                        <div class="bl-doc-files">
+                            
+                                    <div class="bl-doc-file"><a href="https://datafiles.chinhphu.vn/cpp/files/vbpq/2016/09/1726.signed.pdf" target="_blank" download>Tài liệu đính kèm</a></div>
+                                
+                        </div>
+                    </td>
+		</tr><tr>
+			<td>
+                        <a href='/?pageid=27160&docid=185818'>
+                            <span class="code">118/2016/NĐ-CP</span>
+                            <span class="issue-v2">22/07/2016</span>
+                        </a>
+                    </td><td>
+                        <span class="issued-date">22/07/2016</span>
+                    </td><td>
+                        <a href='/?pageid=27160&docid=185818'>
+                            <span class="substract">Sửa đổi, bổ sung một số điều của Nghị định số 56/2008/NĐ-CP ngày 29 tháng 4 năm 2008 của Chính phủ quy định về tổ chức, hoạt động của ngân hàng mô và Trung tâm điều phối quốc gia về ghép bộ phận cơ thể người</span>
+                        </a>
+                        <div class="bl-issue-date">
+                            <span class="issued-date issued-date-inside">22/07/2016</span>
+                        </div>
+                        <div class="bl-doc-files">
+                            
+                                    <div class="bl-doc-file"><a href="https://datafiles.chinhphu.vn/cpp/files/vbpq/2016/08/118.signed.pdf" target="_blank" download>Tài liệu đính kèm</a></div>
+                                
+                        </div>
+                    </td>
+		</tr><tr>
+			<td>
+                        <a href='/?pageid=27160&docid=185167'>
+                            <span class="code">160/TB-VPCP</span>
+                            <span class="issue-v2">28/06/2016</span>
+                        </a>
+                    </td><td>
+                        <span class="issued-date">28/06/2016</span>
+                    </td><td>
+                        <a href='/?pageid=27160&docid=185167'>
+                            <span class="substract">Ý kiến kết luận của Phó Thủ tướng Vương Đình Huệ tại buổi làm việc với Ngân hàng Chính sách xã hội</span>
+                        </a>
+                        <div class="bl-issue-date">
+                            <span class="issued-date issued-date-inside">28/06/2016</span>
+                        </div>
+                        <div class="bl-doc-files">
+                            
+                                    <div class="bl-doc-file"><a href="https://datafiles.chinhphu.vn/cpp/files/vbpq/2016/06/160.signed.pdf" target="_blank" download>Tài liệu đính kèm</a></div>
+                                
+                        </div>
+                    </td>
+		</tr><tr>
+			<td>
+                        <a href='/?pageid=27160&docid=186145'>
+                            <span class="code">92/2016/TTLT-BTC-NHNN</span>
+                            <span class="issue-v2">27/06/2016</span>
+                        </a>
+                    </td><td>
+                        <span class="issued-date">27/06/2016</span>
+                    </td><td>
+                        <a href='/?pageid=27160&docid=186145'>
+                            <span class="substract">Hướng dẫn việc phát hành tín phiếu kho bạc qua Ngân hàng Nhà nước Việt Nam</span>
+                        </a>
+                        <div class="bl-issue-date">
+                            <span class="issued-date issued-date-inside">27/06/2016</span>
+                        </div>
+                        <div class="bl-doc-files">
+                            
+                                    <div class="bl-doc-file"><a href="https://datafiles.chinhphu.vn/cpp/files/vbpq/2016/09/90-ttlt-btc-nhnn.signed.pdf" target="_blank" download>Tài liệu đính kèm</a></div>
+                                
+                        </div>
+                    </td>
+		</tr><tr>
+			<td>
+                        <a href='/?pageid=27160&docid=184951'>
+                            <span class="code">1013/QĐ-TTg</span>
+                            <span class="issue-v2">06/06/2016</span>
+                        </a>
+                    </td><td>
+                        <span class="issued-date">06/06/2016</span>
+                    </td><td>
+                        <a href='/?pageid=27160&docid=184951'>
+                            <span class="substract">Về lãi suất cho vay ưu đãi nhà ở xã hội tại Ngân hàng Chính sách xã hội theo quy định tại Nghị định số 100/2015/NĐ-CP của Chính phủ</span>
+                        </a>
+                        <div class="bl-issue-date">
+                            <span class="issued-date issued-date-inside">06/06/2016</span>
+                        </div>
+                        <div class="bl-doc-files">
+                            
+                                    <div class="bl-doc-file"><a href="https://datafiles.chinhphu.vn/cpp/files/vbpq/2016/06/1013.signed.pdf" target="_blank" download>Tài liệu đính kèm</a></div>
+                                
+                        </div>
+                    </td>
+		</tr><tr>
+			<td>
+                        <a href='/?pageid=27160&docid=184881'>
+                            <span class="code">978/QĐ-TTg</span>
+                            <span class="issue-v2">31/05/2016</span>
+                        </a>
+                    </td><td>
+                        <span class="issued-date">31/05/2016</span>
+                    </td><td>
+                        <a href='/?pageid=27160&docid=184881'>
+                            <span class="substract">Về việc ông Đào Quang Thu, Thứ trưởng Bộ Kế hoạch và Đầu tư thôi kiêm nhiệm thành viên Hội đồng quản lý Ngân hàng Phát triển Việt Nam</span>
+                        </a>
+                        <div class="bl-issue-date">
+                            <span class="issued-date issued-date-inside">31/05/2016</span>
+                        </div>
+                        <div class="bl-doc-files">
+                            
+                                    <div class="bl-doc-file"><a href="https://datafiles.chinhphu.vn/cpp/files/vbpq/2016/06/978.signed.pdf" target="_blank" download>Tài liệu đính kèm</a></div>
+                                
+                        </div>
+                    </td>
+		</tr><tr>
+			<td>
+                        <a href='/?pageid=27160&docid=184880'>
+                            <span class="code">977/QĐ-TTg</span>
+                            <span class="issue-v2">31/05/2016</span>
+                        </a>
+                    </td><td>
+                        <span class="issued-date">31/05/2016</span>
+                    </td><td>
+                        <a href='/?pageid=27160&docid=184880'>
+                            <span class="substract">Về việc ông Trần Xuân Hà, Thứ trưởng Bộ Tài chính thôi kiêm nhiệm thành viên Hội đồng quản lý Ngân hàng Phát triển Việt Nam</span>
+                        </a>
+                        <div class="bl-issue-date">
+                            <span class="issued-date issued-date-inside">31/05/2016</span>
+                        </div>
+                        <div class="bl-doc-files">
+                            
+                                    <div class="bl-doc-file"><a href="https://datafiles.chinhphu.vn/cpp/files/vbpq/2016/06/977.signed.pdf" target="_blank" download>Tài liệu đính kèm</a></div>
+                                
+                        </div>
+                    </td>
+		</tr><tr class="grid-pager" align="center">
+			<td colspan="3"><table>
+				<tr>
+					<td><a href="javascript:__doPostBack(&#39;ctrl_191017_163$grvDocument&#39;,&#39;Page$First&#39;)"><i class='fa fa-step-backward' aria-hidden='true'></i></a></td><td><a href="javascript:__doPostBack(&#39;ctrl_191017_163$grvDocument&#39;,&#39;Page$6&#39;)">...</a></td><td><a href="javascript:__doPostBack(&#39;ctrl_191017_163$grvDocument&#39;,&#39;Page$7&#39;)">7</a></td><td><a href="javascript:__doPostBack(&#39;ctrl_191017_163$grvDocument&#39;,&#39;Page$8&#39;)">8</a></td><td><a href="javascript:__doPostBack(&#39;ctrl_191017_163$grvDocument&#39;,&#39;Page$9&#39;)">9</a></td><td><span>10</span></td>
+				</tr>
+			</table></td>
+		</tr>
+	</table>
+</div>
+        <div class="document-page-info" id="document_page_info">
+            451 - 500 | 500
+        </div>
+    </div>
+
+    
+
+    
+
+    
+
+    <input type="hidden" name="ctrl_191017_163$hidSiteId" id="ctrl_191017_163_hidSiteId" value="4" />
+    <input type="hidden" name="ctrl_191017_163$hidIsSearch" id="ctrl_191017_163_hidIsSearch" value="1" />
+    <input type="hidden" name="ctrl_191017_163$hiIsTrangTTG" id="hiIsTrangTTG" value="thutuongpage" />
+</div>
+<script>
+    $(document).ready(function () {
+        var is = $("tr.grid-pager table tr").html();
+        if (is) {
+            $("#document_page_info").hide();
+            var document_page_info = "<th class='th-detail'><span>" + $("#document_page_info").html() + "</span></th>";
+            $("tr.grid-pager table tr").empty().append(document_page_info + is);
+        }
+        function change() {            
+            var width = $(window).width();
+            $("th.CodeClass").html("Số ký hiệu")
+            if (width < 768) {
+                $("th.CodeClass").html("Số ký hiệu <br> Ngày ban hành");
+            }
+        }
+        $(window).resize(function () {
+            change();
+        });
+        change();
+    });
+</script>
+</div></td><td id="2" valign="top" class="col2" resizable="true" style="width:32px;"></td><td id="3" valign="top" class="col3"><div class="Group_Default2">
+<div class="GroupControl">
+    <div class="Header" onclick="$(this.nextElementSibling).toggle()">
+        <span id="ctrl_190952_161_lblHeader"></span>
+    </div>
+    <div class="Detail">
+        <div class="Title">
+            <a href='/?pageid=41852&mode=0'>
+                <span>Tất cả văn bản</span>
+            </a>
+        </div>
+        <table id="ctrl_190952_161_dlsGroup" cellspacing="0">
+	<tr>
+		<td class="ItemStyle">
+                <input type="hidden" name="ctrl_190952_161$dlsGroup$ctl00$hidID" id="ctrl_190952_161_dlsGroup_hidID_0" value="0" />
+                <input type="hidden" name="ctrl_190952_161$dlsGroup$ctl00$hidPageKeyword" id="ctrl_190952_161_dlsGroup_hidPageKeyword_0" value="he-thong-van-ban" />
+                <div class="Title">
+                    <a href='/he-thong-van-ban?classid=0&mode=1&maxresults=50'>
+                        Văn bản mới</a>
+                </div>
+                
+                <input type="hidden" name="ctrl_190952_161$dlsGroup$ctl00$hidParentId" id="ctrl_190952_161_dlsGroup_hidParentId_0" value="0" />
+            </td>
+	</tr><tr>
+		<td class="ItemStyle">
+                <input type="hidden" name="ctrl_190952_161$dlsGroup$ctl01$hidID" id="ctrl_190952_161_dlsGroup_hidID_1" value="1" />
+                <input type="hidden" name="ctrl_190952_161$dlsGroup$ctl01$hidPageKeyword" id="ctrl_190952_161_dlsGroup_hidPageKeyword_1" value="he-thong-van-ban" />
+                <div class="Title">
+                    <a href='/he-thong-van-ban?classid=1&mode=1'>
+                        Văn bản quy phạm pháp luật</a>
+                </div>
+                
+                        <div class="UserItem">
+                            <a href='javascript:void(0)'>Cơ quan ban hành</a>
+                        </div>
+                        <ul><li> <a href="he-thong-van-ban?classid=1&mode=1&orggroupid=1">Quốc hội</a></li><li> <a href="he-thong-van-ban?classid=1&mode=1&orggroupid=2">Chính phủ</a></li><li> <a href="he-thong-van-ban?classid=1&mode=1&orggroupid=3">Thủ tướng Chính phủ</a></li><li> <a href="he-thong-van-ban?classid=1&mode=1&orggroupid=4">Bộ/Cơ quan ngang bộ</a></li><li> <a href="he-thong-van-ban?classid=1&mode=1&orggroupid=5">Liên bộ</a></li><li> <a href="he-thong-van-ban?classid=1&mode=1&orggroupid=6">UBND tỉnh/thành phố</a></li></ul>
+                        <div class="UserItem">
+                            <a href='javascript:void(0)'>Loại văn bản</a>
+                        </div>
+                        <ul><li> <a href="he-thong-van-ban?classid=1&mode=1&typegroupid=1">Hiến pháp</a></li><li> <a href="he-thong-van-ban?classid=1&mode=1&typegroupid=2">Sắc lệnh - Sắc luật</a></li><li> <a href="he-thong-van-ban?classid=1&mode=1&typegroupid=3">Luật - Pháp lệnh</a></li><li> <a href="he-thong-van-ban?classid=1&mode=1&typegroupid=4">Nghị định</a></li><li> <a href="he-thong-van-ban?classid=1&mode=1&typegroupid=5">Quyết định</a></li><li> <a href="he-thong-van-ban?classid=1&mode=1&typegroupid=6">Thông tư</a></li></ul>
+                <input type="hidden" name="ctrl_190952_161$dlsGroup$ctl01$hidParentId" id="ctrl_190952_161_dlsGroup_hidParentId_1" value="1" />
+            </td>
+	</tr><tr>
+		<td class="ItemStyle">
+                <input type="hidden" name="ctrl_190952_161$dlsGroup$ctl02$hidID" id="ctrl_190952_161_dlsGroup_hidID_2" value="2629" />
+                <input type="hidden" name="ctrl_190952_161$dlsGroup$ctl02$hidPageKeyword" id="ctrl_190952_161_dlsGroup_hidPageKeyword_2" value="he-thong-van-ban" />
+                <div class="Title">
+                    <a href='/he-thong-van-ban?classid=2629&mode=1'>
+                        Văn bản hợp nhất</a>
+                </div>
+                
+                <input type="hidden" name="ctrl_190952_161$dlsGroup$ctl02$hidParentId" id="ctrl_190952_161_dlsGroup_hidParentId_2" value="2629" />
+            </td>
+	</tr><tr>
+		<td class="ItemStyle">
+                <input type="hidden" name="ctrl_190952_161$dlsGroup$ctl03$hidID" id="ctrl_190952_161_dlsGroup_hidID_3" value="2" />
+                <input type="hidden" name="ctrl_190952_161$dlsGroup$ctl03$hidPageKeyword" id="ctrl_190952_161_dlsGroup_hidPageKeyword_3" value="he-thong-van-ban" />
+                <div class="Title">
+                    <a href='/he-thong-van-ban?classid=2&mode=1'>
+                        Văn bản chỉ đạo điều hành</a>
+                </div>
+                
+                <input type="hidden" name="ctrl_190952_161$dlsGroup$ctl03$hidParentId" id="ctrl_190952_161_dlsGroup_hidParentId_3" value="2" />
+            </td>
+	</tr><tr>
+		<td class="ItemStyle">
+                <input type="hidden" name="ctrl_190952_161$dlsGroup$ctl04$hidID" id="ctrl_190952_161_dlsGroup_hidID_4" value="509" />
+                <input type="hidden" name="ctrl_190952_161$dlsGroup$ctl04$hidPageKeyword" id="ctrl_190952_161_dlsGroup_hidPageKeyword_4" value="he-thong-van-ban" />
+                <div class="Title">
+                    <a href='/he-thong-van-ban?classid=509&mode=1'>
+                        Nghị quyết của Chính phủ</a>
+                </div>
+                
+                <input type="hidden" name="ctrl_190952_161$dlsGroup$ctl04$hidParentId" id="ctrl_190952_161_dlsGroup_hidParentId_4" value="509" />
+            </td>
+	</tr><tr>
+		<td class="ItemStyle">
+                <input type="hidden" name="ctrl_190952_161$dlsGroup$ctl05$hidID" id="ctrl_190952_161_dlsGroup_hidID_5" value="189" />
+                <input type="hidden" name="ctrl_190952_161$dlsGroup$ctl05$hidPageKeyword" id="ctrl_190952_161_dlsGroup_hidPageKeyword_5" value="he-thong-van-ban" />
+                <div class="Title">
+                    <a href='/he-thong-van-ban?classid=189&mode=1'>
+                        Nghị quyết phiên họp của Chính phủ</a>
+                </div>
+                
+                <input type="hidden" name="ctrl_190952_161$dlsGroup$ctl05$hidParentId" id="ctrl_190952_161_dlsGroup_hidParentId_5" value="189" />
+            </td>
+	</tr><tr>
+		<td class="ItemStyle">
+                <input type="hidden" name="ctrl_190952_161$dlsGroup$ctl06$hidID" id="ctrl_190952_161_dlsGroup_hidID_6" value="2643" />
+                <input type="hidden" name="ctrl_190952_161$dlsGroup$ctl06$hidPageKeyword" id="ctrl_190952_161_dlsGroup_hidPageKeyword_6" value="bao-cao-cua-chinh-phu" />
+                <div class="Title">
+                    <a href='/bao-cao-cua-chinh-phu?classid=2643&mode=1'>
+                        Báo cáo của Chính phủ</a>
+                </div>
+                
+                <input type="hidden" name="ctrl_190952_161$dlsGroup$ctl06$hidParentId" id="ctrl_190952_161_dlsGroup_hidParentId_6" value="2643" />
+            </td>
+	</tr><tr>
+		<td class="ItemStyle">
+                <input type="hidden" name="ctrl_190952_161$dlsGroup$ctl07$hidID" id="ctrl_190952_161_dlsGroup_hidID_7" value="2644" />
+                <input type="hidden" name="ctrl_190952_161$dlsGroup$ctl07$hidPageKeyword" id="ctrl_190952_161_dlsGroup_hidPageKeyword_7" value="thu-tuong-va-thanh-vien-chinh-phu-tra-loi-chat-van-cua-dbqh" />
+                <div class="Title">
+                    <a href='/thu-tuong-va-thanh-vien-chinh-phu-tra-loi-chat-van-cua-dbqh?classid=2644&mode=1'>
+                        Thủ tướng và thành viên Chính phủ trả lời chất vấn của ĐBQH</a>
+                </div>
+                
+                <input type="hidden" name="ctrl_190952_161$dlsGroup$ctl07$hidParentId" id="ctrl_190952_161_dlsGroup_hidParentId_7" value="2644" />
+            </td>
+	</tr>
+</table>
+    </div>
+
+    
+</div>
+</div><div id="ctrl_191023_51_advertisement" class="AdvertisementBottomRight">
+    <div class="AdvertTitleBar"><span class="Collapse"></span><span class="Expand"></span></div>
+    <div class="AdvertContent">
+        <div class="qc-vanban">
+<div style="width: 100%; text-align: center"><a href="http://vbpl.vn/" target="_blank"><img loading="lazy" alt="image advertisement" src="https://datafiles.chinhphu.vn/cpp/1/tienich/csdl.jpg" style="width: 100%; height: 117px"></a></div>
+<div style="width: 100%; text-align: center"><a href="https://phapdien.moj.gov.vn/Pages/chi-tiet-bo-phap-dien.aspx" target="_blank"><img loading="lazy" alt="image advertisement" src="https://datafiles.chinhphu.vn/cpp/1/tienich/phapdien.jpg" style="width: 100%; height: 115px"></a></div>
+<div style="width: 100%; text-align: center"><a href="https://paknvbqppl.moj.gov.vn/" target="_blank"><img loading="lazy" alt="image advertisement" src="https://datafiles.chinhphu.vn/cpp/1/banner/paknvbqppl.jpg" style="width: 100%; height: 115px"></a></div>
+</div>
+    </div>
+</div>
+</td></tr></table></td></tr></table><div class="middbar" id="midBar"></div><table class="bottom-content" border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td id="bottombar" class="bottombar"></td></tr></table></div><div class="FooterBanner"><div class="FooterBar" id="FooterBar"><table border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td id="1" resizable="no" valign="top">
+<div class="UIFooterControl">
+    <div class="footer-contain" style="background-color: rgba(0, 102, 188, 1)">
+<div class="row left">
+<div class="col-6">
+<div class="head">
+<div>
+<h2>
+<span>
+© Cục Thông tin và Truyền thông Chính phủ
+</span>
+</h2>
+<p>Cục trưởng:<strong> Nguyễn Hồng Sâm </strong></p>
+</div>
+</div>
+<p>Trụ sở: 16 Lê Hồng Phong - Ba Đình - Hà Nội.</p>
+<p>Điện thoại: Văn phòng: 080 43162; Fax: 080.48924</p>
+<p>Email: thongtinchinhphu@chinhphu.vn</p>
+</div>
+<div class="col-6">
+<div class="row link right" style="text-align: center; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.1); padding: 10px; margin-bottom: 20px">
+<div class="col-3" style="border-right: 1px solid rgba(255, 255, 255, 0.1)">
+<a href="/gioi-thieu-69424">
+<img loading="lazy" alt="Giới thiệu Cục Thông tin và Truyền thông Chính phủ" src="https://datafiles.chinhphu.vn/cpp/1/Icon/icon-link-1.png">
+</a>
+<p><a href="https://chinhphu.vn/gioi-thieu-69424">Giới thiệu <br>
+Cục Thông tin <br>
+và Truyền thông Chính phủ</a></p>
+</div>
+<div class="col-3" style="border-right: 1px solid rgba(255, 255, 255, 0.1)">
+<a href="https://mail.chinhphu.vn/">
+<img loading="lazy" alt="Thư điện tử công vụ Chính phủ" src="https://datafiles.chinhphu.vn/cpp/1/Icon/icon-link-2.png">
+</a>
+<p><a href="https://mail.chinhphu.vn/" target="_blank">Thư điện tử công vụ Chính phủ</a></p>
+</div>
+<div class="col-3" style="border-right: 1px solid rgba(255, 255, 255, 0.1)">
+<a href="/lien-he">
+<img loading="lazy" alt="Liên hệ" src="https://datafiles.chinhphu.vn/cpp/1/Icon/icon-link-3.png">
+</a>
+<p><a href="https://chinhphu.vn/lien-he">Liên hệ</a></p>
+</div>
+<div class="col-3">
+<a href="/so-do-cong">
+<img loading="lazy" alt="Sơ đồ Cổng TTĐT Chính phủ" src="https://datafiles.chinhphu.vn/cpp/1/Icon/icon-link-4.png">
+</a>
+<p><a href="https://chinhphu.vn/so-do-cong">Sơ đồ<br>
+Cổng TTĐT<br>
+Chính phủ</a></p>
+</div>
+</div>
+</div>
+</div>
+<hr>
+<div class="row">
+<div class="col-12" style="text-align: center">
+<p>Ghi rõ nguồn 'Cục Thông tin và Truyền thông Chính phủ' hoặc
+<a href="http://chinhphu.vn/">'www.chinhphu.vn'</a>
+khi phát hành lại thông tin từ các nguồn này.</p>
+</div>
+</div>
+</div>
+<div class="footer__nav-fixed"><span></span></div>
+</div>
+</td></tr></table></div></div></div>
+
+<script type="text/javascript">
+//<![CDATA[
+jQuery(document).ready(function($){ $('.DropdownMenu').DropdownMenu({menushow:0})});jQuery(document).ready(function($){ $('#ctrl_190924_51_advertisement').showAdvertisement({displayType:'BottomRight'})});jQuery(document).ready(function($){ $('#ctrl_191023_51_advertisement').showAdvertisement({displayType:'BottomRight'})});//]]>
+</script>
+</form>
+    <script>
+        $(document).ready(function () {
+            $('#form1').fadeIn(200);
+        })
+    </script>
+</body>
+</html>

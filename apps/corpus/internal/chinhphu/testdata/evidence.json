@@ -1,0 +1,55 @@
+{
+ "detail-215941.html": {
+  "status": 200
+ },
+ "detail-218029.html": {
+  "status": 200
+ },
+ "detail-missing.html": {
+  "status": 200
+ },
+ "file-missing.xml": {
+  "content_type": "application/xml",
+  "status": 404
+ },
+ "pdf-142-head.bin": {
+  "content_range": "bytes 0-1023/3661910",
+  "status": 206
+ },
+ "search-ai.html": {
+  "status": 200,
+  "token_rotated": true
+ },
+ "search-empty.html": {
+  "status": 200,
+  "token_rotated": true
+ },
+ "search-number-142-2026-ND-CP.html": {
+  "status": 200,
+  "token_rotated": true
+ },
+ "search-number-367-QD-TTg.html": {
+  "status": 200,
+  "token_rotated": true
+ },
+ "search-provincial-org-16134.html": {
+  "status": 200,
+  "token_rotated": true
+ },
+ "search-truncated-page1.html": {
+  "status": 200,
+  "token_rotated": true
+ },
+ "search-truncated-page2.html": {
+  "status": 200,
+  "token_rotated": true
+ },
+ "search-truncated-page3-stale-tokens.html": {
+  "status": 200,
+  "token_rotated": true
+ },
+ "search-truncated-pagelast.html": {
+  "status": 200,
+  "token_rotated": true
+ }
+}
