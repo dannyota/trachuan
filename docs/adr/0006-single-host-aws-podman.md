@@ -30,3 +30,7 @@ the host. Keycloak or any second identity service.
 ## History
 
 - 2026-11-08: accepted in the brainstorming conversation.
+- 2026-11-09: public domain `trachuan.vn`; DNS moves from Route 53 to a
+  Cloudflare zone on the Free plan used for DNS only (`proxied = false`),
+  managed by OpenTofu as for aboutme.vn and danny.vn
+  ([deployment](../design/deployment.md#domain-and-dns)).

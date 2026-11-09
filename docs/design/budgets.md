@@ -15,12 +15,12 @@ API and are verified before the host is created.
 | EBS gp3 60 GB, 0.096 USD/GB-month                         | 5.8  | Price List API                   |
 | Public IPv4, 0.005 USD/h                                  | 3.7  | assumed (AWS public IPv4 charge) |
 | S3 releases and backups, 50 GB plus requests              | 2    | assumed                          |
-| Route 53 zone and queries                                 | 1    | assumed                          |
+| Cloudflare DNS for trachuan.vn, Free plan                 | 0    | owner's plan                     |
 | CloudWatch alarms and logs                                | 1    | assumed                          |
 | Data transfer out, under 50 GB                            | 4    | assumed                          |
-| Total, on demand                                          | 79   |                                  |
+| Total, on demand                                          | 78   |                                  |
 | EC2 `t4g.large` 1-year reserved, no upfront, 0.0534 USD/h | 39.0 | Price List API                   |
-| Total with the reserved instance                          | 56   |                                  |
+| Total with the reserved instance                          | 55   |                                  |
 
 The 60 USD target holds only with a one-year reserved instance or savings plan.
 Decision rule: run on demand for the first month of measurement, then reserve if

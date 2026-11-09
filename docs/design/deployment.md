@@ -9,8 +9,21 @@ fake Google provider.
 
 One EC2 Graviton instance (initial `t4g.large`, 2 vCPU, 8 GB; final size from
 measurement), gp3 volume, Amazon Linux 2023, rootless Podman, sysctl
-`net.ipv4.ip_unprivileged_port_start=80`, one Elastic IP, Route 53 by OpenTofu.
-No CloudFront or ALB at launch.
+`net.ipv4.ip_unprivileged_port_start=80`, one Elastic IP. No CloudFront or ALB
+at launch.
+
+## Domain and DNS
+
+The public origin is `https://trachuan.vn`: the website, `/api/v1`, `/mcp`, the
+OAuth endpoints and `/.well-known/*` all live on the apex; `www.trachuan.vn`
+redirects to it in Caddy. DNS is a Cloudflare zone on the Free plan used for DNS
+only, as for aboutme.vn and danny.vn: every record has `proxied = false`, so
+browsers and MCP clients reach Caddy directly and Caddy obtains the TLS
+certificates. OpenTofu owns the records with the `cloudflare` provider,
+following aboutme's `deploy/vn/dns`: A records for the apex and `www` pointing
+at the Elastic IP, and CAA records that allow only the certificate authority
+Caddy uses. The zone and the registrar's name servers are set up by the owner
+before the host plan.
 
 ## Images and deploy
 
