@@ -260,3 +260,13 @@ Revised ADR 0011 and ADR 0009 History. Lands before Task 14 so the live run embe
 - [ ] **Step 3:** `corpus eval vn 20261109 --out` a scratch directory; drop and restore the local corpus database through resolve; evaluate again; compare both reports.
 - [ ] **Step 4:** Write the research note: coverage (86 of 96 citations have a document; five absent documents), legacy and old product metrics for exact and ANN, ANN loss, evidence characters, provisional threshold, every limitation. Measured values replace estimates in budgets only with a History or note line.
 - [ ] **Step 5:** Commit `docs: index baseline results for vn/20261109`; mark this plan landed in the plans README; findings not fixed go to the backlog.
+
+### Task 15: FP16 documents (after Task 14)
+
+ADR 0009 and ADR 0011 History: documents FP16 on MPS, queries FP32. Task 14 runs on the FP32 document recipe frozen in run vn/20261109; switch after its evidence is recorded so that run stays resumable.
+
+**Files:**
+- Modify: `apps/embedder/src/trachuan_embedder/{recipe.py,torch_runtime.py}`, its tests; `internal/embedding/recipe_test.go`, `internal/embedding/recipes/vi-v2-document.json`
+
+- [ ] **Step 1:** Failing tests first: the document runtime requests `torch.float16` and reports `precision:"fp16"`; the query runtime still reports `fp32`; `TestRecipe_SharedModelFieldsAgree` no longer requires equal precision.
+- [ ] **Step 2:** Implement; start the document embedder on the real bundle; re-pin `vi-v2-document.json` and its hash from `GET /v1/recipe`; real-model smoke (token counts equal, query/document cosine at least 0.999 on three questions); `make embedder-test`, `make test`, `make pre-push`; commit.

@@ -8,7 +8,7 @@ Status: accepted 2026-11-09; revised 2026-11-09 to serve queries from Go.
 and precision. Two paths embed text. The read path embeds one query per search
 on the host, on CPU with ONNX Runtime FP32. The write path embeds every chunk of
 a release on the MacBook, where PyTorch on the GPU (MPS) embeds the 98,506-chunk
-corpus in about 50 minutes in FP32; Go has no binding for that GPU path. Both
+corpus in about 20 minutes in FP16; Go has no binding for that GPU path. Both
 paths need the same input limits and recipe checks, without model bindings
 inside the Go retrieval package. banhmi served queries from a standalone Go
 service built on the ONNX Runtime Go binding, which the owner maintains, and the
@@ -23,7 +23,7 @@ has two services with one runtime each:
   `onnx/model.onnx`, tokenizer through `github.com/daulet/tokenizers`. It runs
   in its own container on the host and locally for evaluation, never inside the
   server process.
-- Document service, Python with uv, `apps/docembed`: PyTorch MPS FP32, on the
+- Document service, Python with uv, `apps/docembed`: PyTorch MPS FP16, on the
   MacBook only, bound to loopback.
 
 The host runs no Python. A release is evaluated with the query service that will
@@ -74,9 +74,9 @@ Retain prior artifacts for rollback.
 - Document embedding in Go, with ONNX Runtime on the MacBook CPU or its CoreML
   provider: not measured; the owner keeps the measured MPS path, the fastest
   known, for the write path.
-- Document embedding in FP16 on MPS: 2.6 times faster, but queries on the host
-  CPU stay FP32, so the two sides would differ in precision. The owner chose one
-  precision; ADR 0009 History has the measurement.
+- One precision on both sides: FP32 documents embed 2.6 times slower on MPS for
+  vectors that agree with FP16 to cosine 0.9998, and FP16 queries run 5 times
+  slower on the host CPU; ADR 0009 History has the measurements.
 - ONNX Runtime through cgo inside the Go server: couples native model memory and
   cancellation to the API process.
 - Rust service: an additional language without measured benefit.
@@ -89,3 +89,5 @@ Retain prior artifacts for rollback.
   standalone Go embedder. Python keeps only document embedding on the MacBook.
   Recipe version fields became language-neutral. Document embedding moved to
   FP32 so both services use one precision.
+- 2026-11-09: documents back to FP16 on MPS, queries stay FP32, after the FP16
+  query measurement on the host CPU (ADR 0009 History).

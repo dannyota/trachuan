@@ -22,7 +22,7 @@ Release 1 uses this dense recipe; the release manifest records every field.
 | Pooling            | CLS token, then L2 normalization; similarity is cosine                           |
 | Query input        | the question as written, no instruction prefix, at most 256 tokens               |
 | Document input     | `strip(context_prefix) + "\n" + strip(content)`, no prefix, at most 2,048 tokens |
-| Document embedding | batch on the MacBook GPU (PyTorch MPS, FP32), the same precision as queries      |
+| Document embedding | batch on the MacBook GPU (PyTorch MPS, FP16); about 20 minutes for 98,506 chunks |
 | Query serving      | ONNX Runtime CPU, FP32, the repository's `onnx/model.onnx`                       |
 | Tokenizer          | the model repository's tokenizer at the same revision                            |
 
@@ -39,7 +39,7 @@ models; they are not product quality. Hybrid recall with BM25 is measured before
 release.
 
 The embedder budget is 2.5 GB because the FP32 weights are 2.27 GB. Re-embedding
-a release of 98,506 chunks takes about 50 minutes on the MacBook GPU in FP32.
+a release of 98,506 chunks takes about 20 minutes on the MacBook GPU in FP16.
 The model comes from a small team, so the golden set is the only quality
 evidence we rely on.
 
@@ -48,9 +48,9 @@ host latency is unmeasured and FP32 on Graviton2 may be several times slower.
 The host acceptance gates in [budgets](../design/budgets.md) decide. If the host
 misses the search p95 gate or the 2 s embedder deadline at the 256-token query
 cap, lower the query cap to 128 tokens and record the change in this ADR's
-History. Both sides use one precision, so a precision change such as the dynamic
-INT8 ONNX export (measured: one citation lost, about 1 GB) needs an
-owner-approved revision of this record and ADR 0011.
+History. A query precision change such as the dynamic INT8 ONNX export
+(measured: one citation lost, about 1 GB) needs an owner-approved revision of
+this record and ADR 0011.
 
 ## Alternatives rejected
 
@@ -86,3 +86,15 @@ owner-approved revision of this record and ADR 0011.
   batch 16, FP32 runs at 33.2 chunks per second against 85.6 for FP16, and the
   two agree to cosine 0.99981 at minimum. [ADR 0011](0011-embedder-services.md)
   moved the query runtime to Go; query serving stays ONNX Runtime CPU FP32.
+- 2026-11-09: FP16 queries on the host CPU rejected by measurement. On the OCI
+  A1 host (Neoverse-N1, ONNX Runtime 1.31.1, golden questions), an FP16
+  conversion of `onnx/model.onnx` took 1,722 ms at p50 for short queries with 2
+  threads against 329 ms for FP32, and 15.2 s against 2.5 s for a 217-token
+  query; vectors agreed to cosine 0.99978 at minimum. One precision on both
+  sides therefore means FP32.
+- 2026-11-09: the owner chose FP16 documents and FP32 queries. FP16 queries are
+  5 times slower on the host CPU, FP16 documents are 2.6 times faster than FP32
+  on MPS, and FP16 and FP32 document vectors agree to cosine 0.99981 at minimum.
+  The recall figures in this record were measured with this pair. The first
+  baseline release, vn/20261109, was embedded with FP32 documents before this
+  choice.

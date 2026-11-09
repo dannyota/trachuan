@@ -67,7 +67,7 @@ tokenizer, runtime and clock objects. Start with
 `uv run python -m trachuan_docembed --model-dir DIR`. It runs on the MacBook
 only and binds `127.0.0.1`.
 
-It loads the PyTorch weights on MPS in FP32. Refuse unavailable MPS; never
+It loads the PyTorch weights on MPS in FP16. Refuse unavailable MPS; never
 silently move work to CPU. Take the CLS output, L2-normalize in float32 and
 return float32 vectors; fail on non-finite output or zero norm. One model
 process runs serialized GPU inference. It downloads nothing at startup and never
@@ -89,12 +89,12 @@ contains, in this order, `model`, `revision`, `resolved_revision`,
 `tokenizer_revision`, `tokenizer_sha256`, `weights_sha256`, `dimensions`,
 `pooling:"cls"`, `normalization:"l2-float32"`, `input:"raw"`,
 `runtime:"query"|"document"`, `backend:"onnxruntime-cpu"|"torch-mps"`,
-`precision:"fp32"`, `token_cap`, `special_tokens:true`, `truncation:false`,
-`language`, `tokenizer_library` and `runtime_library`. The last three record
-what the service loaded as `<name> <version>`: for example `go 1.27.3`,
-`daulet/tokenizers 1.27.0` and `onnxruntime 1.31.1` for the query service;
-`python 3.14.x`, `transformers 5.22.2` and `torch 2.15.0` for the document
-service. Hash the fixed-field UTF-8 JSON without whitespace as SHA-256.
+`precision:"fp32"|"fp16"`, `token_cap`, `special_tokens:true`,
+`truncation:false`, `language`, `tokenizer_library` and `runtime_library`. The
+last three record what the service loaded as `<name> <version>`: for example
+`go 1.27.3`, `daulet/tokenizers 1.27.0` and `onnxruntime 1.31.1` for the query
+service; `python 3.14.x`, `transformers 5.22.2` and `torch 2.15.0` for the
+document service. Hash the fixed-field UTF-8 JSON without whitespace as SHA-256.
 `tokenizer_sha256` hashes the sorted manifest of the tokenizer files.
 `weights_sha256` hashes the sorted manifest of the files that service loads for
 the model: `onnx/model.onnx` and its external data for the query service,
@@ -102,12 +102,12 @@ the model: `onnx/model.onnx` and its external data for the query service,
 changing a file only the other service loads leaves a report unchanged.
 
 Callers compare all fields with the expected runtime side of `dense_recipe`.
-Document and query hashes intentionally differ, and so do their
-`weights_sha256`; model, resolved revision, tokenizer hash, pooling,
-normalization, precision and dimensions must agree. `dense_recipe` holds both
-reports. A response echoes `recipe_hash`; callers reject any change mid-run.
-Recipe and model file checks happen once at startup and at client construction,
-not by downloading data during a request.
+Document and query hashes intentionally differ, and so do their `weights_sha256`
+and `precision` (`fp32` for queries, `fp16` for documents); model, resolved
+revision, tokenizer hash, pooling, normalization and dimensions must agree.
+`dense_recipe` holds both reports. A response echoes `recipe_hash`; callers
+reject any change mid-run. Recipe and model file checks happen once at startup
+and at client construction, not by downloading data during a request.
 
 ## HTTP contract
 
