@@ -58,9 +58,12 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, r stage.Run, item st
 		return stage.Output{}, fmt.Errorf("VBPL client is required")
 	}
 	id := strings.TrimPrefix(item.Key, prefix)
-	detail, _, err := s.client.Detail(ctx, id)
+	detail, decoded, err := s.client.Detail(ctx, id)
 	if err != nil {
 		return apiError(err, id, true)
+	}
+	if decoded.ID != id {
+		return stage.Output{State: "gap", Gaps: []stage.Gap{{Kind: "detail_id_mismatch", Detail: fmt.Sprintf("requested %q, received %q", id, decoded.ID)}}}, nil
 	}
 	tree, err := s.client.RawTree(ctx, id)
 	if err != nil {

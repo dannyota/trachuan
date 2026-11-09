@@ -3,6 +3,8 @@ package checkpoint
 import (
 	"context"
 	"fmt"
+	"net/url"
+	"os"
 	"os/exec"
 	"regexp"
 	"strconv"
@@ -13,11 +15,46 @@ type PgDump struct{ Path string }
 
 // Dump writes a custom-format dump without logging the database URL.
 func (p PgDump) Dump(ctx context.Context, databaseURL, path string) error {
-	command := exec.CommandContext(ctx, p.Path, "-Fc", "--file", path, databaseURL)
+	command, err := p.command(ctx, databaseURL, path)
+	if err != nil {
+		return err
+	}
 	if err := command.Run(); err != nil {
 		return fmt.Errorf("run pg_dump: %w", err)
 	}
 	return nil
+}
+
+func (p PgDump) command(ctx context.Context, databaseURL, path string) (*exec.Cmd, error) {
+	u, err := url.Parse(databaseURL)
+	if err != nil {
+		return nil, fmt.Errorf("invalid database URL")
+	}
+	var password string
+	var hasPassword bool
+	if u.User != nil {
+		password, hasPassword = u.User.Password()
+	}
+	if hasPassword {
+		u.User = url.User(u.User.Username())
+	}
+	query, queryErr := url.ParseQuery(u.RawQuery)
+	if queryErr != nil || (u.Scheme != "postgres" && u.Scheme != "postgresql") {
+		return nil, fmt.Errorf("invalid database URL")
+	}
+	if values, ok := query["password"]; ok {
+		if len(values) != 1 {
+			return nil, fmt.Errorf("invalid database password parameter")
+		}
+		password, hasPassword = values[0], true
+		query.Del("password")
+		u.RawQuery = query.Encode()
+	}
+	cmd := exec.CommandContext(ctx, p.Path, "-Fc", "--file", path, u.String())
+	if hasPassword {
+		cmd.Env = append(os.Environ(), "PGPASSWORD="+password)
+	}
+	return cmd, nil
 }
 
 // CheckVersion requires pg_dump major version 18 or newer.

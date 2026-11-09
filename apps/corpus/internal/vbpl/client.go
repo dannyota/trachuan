@@ -3,6 +3,7 @@ package vbpl
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,6 +11,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"syscall"
 	"time"
 
 	"golang.org/x/time/rate"
@@ -31,6 +33,8 @@ type Client struct {
 	slots           chan struct{}
 	timeout         time.Duration
 	backoffs        []time.Duration
+	fileHosts       []string
+	allowTestHTTP   bool
 }
 
 // New creates a client identifying this release by version.
@@ -40,10 +44,12 @@ func New(version string) *Client {
 
 // NewWithBase creates a client for the supplied gateway URL.
 func NewWithBase(base, version string, options ...Option) *Client {
-	c := &Client{base: base, userAgent: "traquydinh/" + version + " (+https://github.com/dannyota/traquydinh)", http: &http.Client{}, limiter: rate.NewLimiter(8, 1), slots: make(chan struct{}, 8), timeout: 30 * time.Second, backoffs: []time.Duration{2 * time.Second, 8 * time.Second, 30 * time.Second}}
+	c := &Client{base: base, userAgent: "traquydinh/" + version + " (+https://github.com/dannyota/traquydinh)", http: &http.Client{}, limiter: rate.NewLimiter(8, 1), slots: make(chan struct{}, 8), timeout: 30 * time.Second, fileHosts: []string{"s3-han02.fptcloud.com"}, backoffs: []time.Duration{2 * time.Second, 8 * time.Second, 30 * time.Second}}
 	for _, option := range options {
 		option(c)
 	}
+	c.http.Transport = &http.Transport{Proxy: http.ProxyFromEnvironment, TLSNextProto: map[string]func(string, *tls.Conn) http.RoundTripper{}, ForceAttemptHTTP2: false, MaxConnsPerHost: cap(c.slots), MaxIdleConnsPerHost: cap(c.slots)}
+	c.http.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
 	return c
 }
 
@@ -56,6 +62,16 @@ func WithLimits(rps float64, inFlight int) Option {
 		c.limiter = rate.NewLimiter(rate.Limit(rps), 1)
 		c.slots = make(chan struct{}, inFlight)
 	}
+}
+
+// WithFileHosts sets the permitted attachment hosts.
+func WithFileHosts(hosts ...string) Option {
+	return func(c *Client) { c.fileHosts = append([]string(nil), hosts...) }
+}
+
+// WithTestHTTP permits HTTP downloads from 127.0.0.1 for local tests.
+func WithTestHTTP() Option {
+	return func(c *Client) { c.allowTestHTTP = true }
 }
 
 type response struct {
@@ -109,7 +125,7 @@ func safeError(err error) error {
 }
 func retryable(status int, err error) bool {
 	var n net.Error
-	return status == 429 || status >= 500 || errors.Is(err, context.DeadlineExceeded) || (errors.As(err, &n) && n.Timeout())
+	return status == 429 || status >= 500 || errors.Is(err, context.DeadlineExceeded) || errors.Is(err, io.ErrUnexpectedEOF) || errors.Is(err, syscall.ECONNRESET) || (errors.As(err, &n) && n.Timeout())
 }
 func wait(ctx context.Context, d time.Duration) error {
 	timer := time.NewTimer(d)

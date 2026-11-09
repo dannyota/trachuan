@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"runtime/debug"
+	"strings"
 	"time"
 
 	"danny.vn/traquydinh/apps/corpus/internal/artifact"
@@ -90,7 +91,11 @@ func Run(ctx context.Context, cfg config.Config) error {
 		}
 	}
 	env := stage.Env{DB: db, Artifacts: artifact.Store{Root: cfg.Artifacts}, Now: time.Now}
-	registry := workflow.Default(workflow.Deps{Env: env, VBPL: vbpl.NewWithBase(cfg.VBPLURL, workerVersion(), vbpl.WithLimits(cfg.VBPLRate, cfg.VBPLInFlight))})
+	options := []vbpl.Option{vbpl.WithLimits(cfg.VBPLRate, cfg.VBPLInFlight), vbpl.WithFileHosts(strings.Split(cfg.VBPLFileHosts, ",")...)}
+	if cfg.VBPLLoopbackHTTP {
+		options = append(options, vbpl.WithTestHTTP())
+	}
+	registry := workflow.Default(workflow.Deps{Env: env, VBPL: vbpl.NewWithBase(cfg.VBPLURL, workerVersion(), options...)})
 	stages := registry.Stages()
 	for _, st := range stages {
 		if f, ok := st.(*fetch.Stage); ok {

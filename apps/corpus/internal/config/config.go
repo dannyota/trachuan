@@ -17,23 +17,28 @@ type Config struct {
 	CheckpointDir   string
 	PgDump          string
 	VBPLURL         string
-	VBPLRate        float64
-	VBPLInFlight    int
-	BatchesInFlight int
-	FileCache       string
+	VBPLFileHosts   string
+	// VBPLLoopbackHTTP permits plain HTTP downloads from 127.0.0.1 only; tests use it.
+	VBPLLoopbackHTTP bool
+	VBPLRate         float64
+	VBPLInFlight     int
+	BatchesInFlight  int
+	FileCache        string
 }
 
 // Load reads configuration using getenv and requires a database URL.
 func Load(getenv func(string) string) (Config, error) {
 	cfg := Config{
-		DatabaseURL:     getenv("CORPUS_DATABASE_URL"),
-		TemporalAddress: defaultValue(getenv("CORPUS_TEMPORAL_ADDRESS"), "127.0.0.1:7233"),
-		Namespace:       defaultValue(getenv("CORPUS_TEMPORAL_NAMESPACE"), "corpus"),
-		Artifacts:       defaultValue(getenv("CORPUS_ARTIFACTS"), "work/artifacts"),
-		CheckpointDir:   getenv("CORPUS_CHECKPOINT_DIR"),
-		PgDump:          defaultValue(getenv("CORPUS_PG_DUMP"), "pg_dump"),
-		FileCache:       getenv("CORPUS_FILE_CACHE"),
-		VBPLURL:         defaultValue(getenv("CORPUS_VBPL_URL"), "https://vbpl-bientap-gateway.moj.gov.vn/api/qtdc/public"),
+		DatabaseURL:      getenv("CORPUS_DATABASE_URL"),
+		TemporalAddress:  defaultValue(getenv("CORPUS_TEMPORAL_ADDRESS"), "127.0.0.1:7233"),
+		Namespace:        defaultValue(getenv("CORPUS_TEMPORAL_NAMESPACE"), "corpus"),
+		Artifacts:        defaultValue(getenv("CORPUS_ARTIFACTS"), "work/artifacts"),
+		CheckpointDir:    getenv("CORPUS_CHECKPOINT_DIR"),
+		PgDump:           defaultValue(getenv("CORPUS_PG_DUMP"), "pg_dump"),
+		FileCache:        getenv("CORPUS_FILE_CACHE"),
+		VBPLFileHosts:    defaultValue(getenv("CORPUS_VBPL_FILE_HOSTS"), "s3-han02.fptcloud.com"),
+		VBPLLoopbackHTTP: getenv("CORPUS_VBPL_LOOPBACK_HTTP") == "true",
+		VBPLURL:          defaultValue(getenv("CORPUS_VBPL_URL"), "https://vbpl-bientap-gateway.moj.gov.vn/api/qtdc/public"),
 	}
 	if cfg.DatabaseURL == "" {
 		return Config{}, errors.New("CORPUS_DATABASE_URL is required")

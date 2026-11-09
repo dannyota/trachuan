@@ -28,8 +28,7 @@ func fixture(t *testing.T, name string) []byte {
 	return b
 }
 func testClient(s *httptest.Server) *Client {
-	c := New("test")
-	c.base = s.URL
+	c := NewWithBase(s.URL, "test", WithTestHTTP())
 	c.limiter = rate.NewLimiter(rate.Inf, 1)
 	c.backoffs = []time.Duration{0, 0, 0}
 	return c
@@ -231,5 +230,72 @@ func TestFiles_UpdatedAtVietnamTime(t *testing.T) {
 	want := time.Date(2026, 4, 14, 7, 41, 19, 0, time.UTC)
 	if len(files) != 3 || !files[0].UpdatedAt.Equal(want) || !files[1].UpdatedAt.IsZero() || !files[2].UpdatedAt.IsZero() {
 		t.Fatalf("files = %+v", files)
+	}
+}
+
+func TestClient_RefusesRedirect(t *testing.T) {
+	var reached atomic.Bool
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/redirected" {
+			reached.Store(true)
+			return
+		}
+		http.Redirect(w, r, "/redirected", http.StatusFound)
+	}))
+	defer s.Close()
+	_, _, err := testClient(s).Detail(context.Background(), "1")
+	if err == nil || reached.Load() {
+		t.Fatalf("error = %v, reached redirect = %v", err, reached.Load())
+	}
+}
+
+func TestClient_UsesHTTP11(t *testing.T) {
+	var proto string
+	s := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		proto = r.Proto
+		_, _ = w.Write([]byte(`{"success":true,"data":{"id":"1"}}`))
+	}))
+	s.EnableHTTP2 = true
+	s.StartTLS()
+	defer s.Close()
+	c := testClient(s)
+	c.http.Transport.(*http.Transport).TLSClientConfig = s.Client().Transport.(*http.Transport).TLSClientConfig
+	_, _, err := c.Detail(context.Background(), "1")
+	if err != nil || proto != "HTTP/1.1" {
+		t.Fatalf("protocol = %q, error = %v", proto, err)
+	}
+}
+
+func TestDownload_RefusesForeignHost(t *testing.T) {
+	var reached atomic.Bool
+	s := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { reached.Store(true) }))
+	defer s.Close()
+	c := NewWithBase("https://gateway.example", "test")
+	c.http.Transport = s.Client().Transport
+	_, err := c.Download(context.Background(), "1", File{URL: s.URL}, t.TempDir(), 10)
+	if err == nil || reached.Load() {
+		t.Fatalf("error = %v, reached = %v", err, reached.Load())
+	}
+}
+
+func TestDownload_RefusesPlainHTTP(t *testing.T) {
+	var reached atomic.Bool
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { reached.Store(true) }))
+	defer s.Close()
+	c := NewWithBase(s.URL, "test")
+	_, err := c.Download(context.Background(), "1", File{URL: s.URL}, t.TempDir(), 10)
+	if err == nil || reached.Load() {
+		t.Fatalf("error = %v, reached = %v", err, reached.Load())
+	}
+}
+
+func TestDownload_SizeMismatchLeavesNoFile(t *testing.T) {
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write([]byte("short")) }))
+	defer s.Close()
+	dir := t.TempDir()
+	_, err := testClient(s).Download(context.Background(), "1", File{URL: s.URL, Size: 10}, dir, 100)
+	entries, readErr := os.ReadDir(dir)
+	if err == nil || readErr != nil || len(entries) != 0 {
+		t.Fatalf("error = %v, entries = %v, read = %v", err, entries, readErr)
 	}
 }

@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -18,19 +17,6 @@ import (
 	"danny.vn/traquydinh/apps/corpus/internal/stage"
 	"danny.vn/traquydinh/apps/corpus/internal/vbpl"
 )
-
-type redirectTransport struct {
-	target *url.URL
-	base   http.RoundTripper
-}
-
-func (r redirectTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	clone := req.Clone(req.Context())
-	u := *req.URL
-	u.Scheme, u.Host = r.target.Scheme, r.target.Host
-	clone.URL = &u
-	return r.base.RoundTrip(clone)
-}
 
 type testPage struct {
 	ids   []string
@@ -70,14 +56,7 @@ func exercise(t *testing.T, pages []testPage, wantPasses int, stable bool, wantI
 		_ = json.NewEncoder(w).Encode(map[string]any{"success": true, "data": map[string]any{"total": p.total, "items": items}})
 	}))
 	defer server.Close()
-	target, err := url.Parse(server.URL)
-	if err != nil {
-		t.Fatal(err)
-	}
-	old := http.DefaultTransport
-	http.DefaultTransport = redirectTransport{target, old}
-	defer func() { http.DefaultTransport = old }()
-	s := New(vbpl.New("test"))
+	s := New(vbpl.NewWithBase(server.URL+"/api/qtdc/public", "test", vbpl.WithLimits(1000, 8)))
 	env := stage.Env{Artifacts: artifact.Store{Root: t.TempDir()}}
 	run := stage.Run{ID: 1, Snapshot: stage.Snapshot{SourceList: json.RawMessage(`{"country":"vn","vbpl":{"sweep_agencies":["62","908"]}}`)}}
 	items, err := s.Plan(context.Background(), env, run)

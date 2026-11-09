@@ -47,8 +47,10 @@ func (s *Stage) writeBundle(ctx context.Context, dir, id string, detail, tree, d
 			}
 			if errors.Is(err, vbpl.ErrTooLarge) {
 				result.TooLarge = append(result.TooLarge, entry.Name)
-			} else {
+			} else if errors.Is(err, vbpl.ErrNotFound) {
 				result.Missing = append(result.Missing, entry.Name)
+			} else {
+				return stage.Retryable(fmt.Errorf("download attachment %q: %w", entry.Name, err))
 			}
 			continue
 		}

@@ -4,10 +4,10 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -20,27 +20,15 @@ import (
 	"danny.vn/traquydinh/apps/corpus/internal/vbpl"
 )
 
-type redirectTransport struct {
-	target *url.URL
-	base   http.RoundTripper
-}
-
-func (r redirectTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	clone := req.Clone(req.Context())
-	u := *req.URL
-	u.Scheme, u.Host = r.target.Scheme, r.target.Host
-	u.Path = strings.TrimPrefix(u.Path, "/api/qtdc/public")
-	clone.URL = &u
-	return r.base.RoundTrip(clone)
-}
-
 type fixtureServer struct {
-	files     []map[string]any
-	bodies    map[string]string
-	missing   bool
-	oversized bool
-	treeBody  string
-	downloads atomic.Int32
+	files          []map[string]any
+	bodies         map[string]string
+	missing        bool
+	oversized      bool
+	treeBody       string
+	detailID       string
+	downloadStatus int
+	downloads      atomic.Int32
 }
 
 func setup(t *testing.T, f *fixtureServer) (*Stage, stage.Env) {
@@ -56,6 +44,10 @@ func setup(t *testing.T, f *fixtureServer) (*Stage, stage.Env) {
 				w.WriteHeader(http.StatusNotFound)
 				return
 			}
+			if f.detailID != "" {
+				_ = json.NewEncoder(w).Encode(map[string]any{"success": true, "data": map[string]string{"id": f.detailID}})
+				return
+			}
 			fixture(t, w, "detail-66518.json")
 		case strings.Contains(r.URL.Path, "/tree/"):
 			if f.treeBody != "" {
@@ -66,9 +58,16 @@ func setup(t *testing.T, f *fixtureServer) (*Stage, stage.Env) {
 		case strings.HasSuffix(r.URL.Path, "/diagram"):
 			fixture(t, w, "diagram-66518.json")
 		case strings.HasSuffix(r.URL.Path, "/files"):
+			for _, entry := range f.files {
+				entry["presignedUrl"] = "http://" + r.Host + "/attachment/" + entry["fullPath"].(string)
+			}
 			_ = json.NewEncoder(w).Encode(map[string]any{"success": true, "data": f.files})
 		case strings.HasPrefix(r.URL.Path, "/attachment/"):
 			f.downloads.Add(1)
+			if f.downloadStatus != 0 {
+				w.WriteHeader(f.downloadStatus)
+				return
+			}
 			body, ok := f.bodies[strings.TrimPrefix(r.URL.Path, "/attachment/")]
 			if !ok {
 				w.WriteHeader(http.StatusNotFound)
@@ -80,14 +79,7 @@ func setup(t *testing.T, f *fixtureServer) (*Stage, stage.Env) {
 		}
 	}))
 	t.Cleanup(server.Close)
-	target, err := url.Parse(server.URL)
-	if err != nil {
-		t.Fatal(err)
-	}
-	old := http.DefaultTransport
-	http.DefaultTransport = redirectTransport{target: target, base: old}
-	t.Cleanup(func() { http.DefaultTransport = old })
-	return New(vbpl.New("test")), stage.Env{Artifacts: artifact.Store{Root: t.TempDir()}}
+	return New(vbpl.NewWithBase(server.URL, "test", vbpl.WithTestHTTP())), stage.Env{Artifacts: artifact.Store{Root: t.TempDir()}}
 }
 func fixture(t *testing.T, w http.ResponseWriter, name string) {
 	t.Helper()
@@ -256,5 +248,22 @@ func TestFetch_DoesNotDecodeTree(t *testing.T) {
 	data, err := os.ReadFile(filepath.Join(env.Artifacts.Abs(out.Artifact.Path), "tree.json"))
 	if err != nil || string(data) != "not valid JSON" {
 		t.Fatalf("tree = %q, error = %v", data, err)
+	}
+}
+
+func TestFetch_DetailIDMismatchIsGap(t *testing.T) {
+	s, env := setup(t, &fixtureServer{detailID: "other"})
+	out := process(t, s, env)
+	if out.Artifact != nil || out.State != "gap" || len(out.Gaps) != 1 || out.Gaps[0].Kind != "detail_id_mismatch" || !strings.Contains(out.Gaps[0].Detail, "66518") || !strings.Contains(out.Gaps[0].Detail, "other") {
+		t.Fatalf("output = %+v", out)
+	}
+}
+
+func TestFetch_TransientDownloadErrorIsRetryable(t *testing.T) {
+	s, env := setup(t, &fixtureServer{files: []map[string]any{entry("a", "a")}, downloadStatus: http.StatusInternalServerError})
+	out, err := s.Process(context.Background(), env, stage.Run{Country: "vn"}, stage.Item{Key: "vn:vbpl:66518"})
+	var retryable *stage.RetryableError
+	if out.Artifact != nil || !errors.As(err, &retryable) {
+		t.Fatalf("output = %+v, error = %v", out, err)
 	}
 }

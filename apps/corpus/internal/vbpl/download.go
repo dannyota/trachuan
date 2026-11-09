@@ -8,8 +8,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // Download saves a bounded attachment and returns its content hash.
@@ -26,6 +28,9 @@ func (c *Client) Download(ctx context.Context, id string, f File, dir string, li
 			if err := wait(ctx, c.backoffs[attempt-1]); err != nil {
 				return Downloaded{}, fmt.Errorf("retry download: %w", err)
 			}
+		}
+		if err := c.checkDownloadURL(f.URL); err != nil {
+			return Downloaded{}, err
 		}
 		tmp, err := os.CreateTemp(dir, ".vbpl-*")
 		if err != nil {
@@ -45,6 +50,9 @@ func (c *Client) Download(ctx context.Context, id string, f File, dir string, li
 			return nil
 		})
 		closeErr := tmp.Close()
+		if status == http.StatusOK && reqErr == nil && closeErr == nil && f.Size > 0 && size != f.Size {
+			reqErr = fmt.Errorf("download size %d does not match expected %d", size, f.Size)
+		}
 		if status == http.StatusOK && reqErr == nil && closeErr == nil {
 			digest := hex.EncodeToString(hash.Sum(nil))
 			path := filepath.Join(dir, digest)
@@ -91,4 +99,28 @@ func (c *Client) Download(ctx context.Context, id string, f File, dir string, li
 		}
 		return Downloaded{}, fmt.Errorf("download status %d", status)
 	}
+}
+
+func (c *Client) checkDownloadURL(raw string) error {
+	u, err := url.Parse(raw)
+	if err != nil || u.User != nil || u.Host == "" {
+		return fmt.Errorf("invalid download URL")
+	}
+	loopbackHTTP := c.allowTestHTTP && u.Scheme == "http" && u.Hostname() == "127.0.0.1"
+	if u.Scheme != "https" && !loopbackHTTP {
+		return fmt.Errorf("download URL scheme refused")
+	}
+	base, err := url.Parse(c.base)
+	if err != nil {
+		return fmt.Errorf("invalid gateway URL: %w", err)
+	}
+	if strings.EqualFold(u.Host, base.Host) {
+		return nil
+	}
+	for _, host := range c.fileHosts {
+		if strings.EqualFold(u.Host, strings.TrimSpace(host)) {
+			return nil
+		}
+	}
+	return fmt.Errorf("download host refused")
 }

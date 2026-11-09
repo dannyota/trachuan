@@ -23,6 +23,7 @@ func TestLoad_Defaults(t *testing.T) {
 		Namespace:       "corpus",
 		Artifacts:       "work/artifacts",
 		PgDump:          "pg_dump",
+		VBPLFileHosts:   "s3-han02.fptcloud.com",
 		VBPLURL:         "https://vbpl-bientap-gateway.moj.gov.vn/api/qtdc/public",
 		VBPLRate:        8, VBPLInFlight: 8, BatchesInFlight: 8,
 	}
@@ -58,9 +59,21 @@ func TestLoad_InvalidLimits(t *testing.T) {
 }
 
 func TestLoad_Overrides(t *testing.T) {
-	values := map[string]string{"CORPUS_DATABASE_URL": "db", "CORPUS_VBPL_RPS": "3.5", "CORPUS_VBPL_IN_FLIGHT": "4", "CORPUS_BATCHES_IN_FLIGHT": "5", "CORPUS_FILE_CACHE": "/cache"}
+	values := map[string]string{"CORPUS_DATABASE_URL": "db", "CORPUS_VBPL_RPS": "3.5", "CORPUS_VBPL_IN_FLIGHT": "4", "CORPUS_BATCHES_IN_FLIGHT": "5", "CORPUS_FILE_CACHE": "/cache", "CORPUS_VBPL_FILE_HOSTS": "one.example,two.example"}
 	got, err := Load(func(key string) string { return values[key] })
-	if err != nil || got.VBPLRate != 3.5 || got.VBPLInFlight != 4 || got.BatchesInFlight != 5 || got.FileCache != "/cache" {
+	if err != nil || got.VBPLRate != 3.5 || got.VBPLInFlight != 4 || got.BatchesInFlight != 5 || got.FileCache != "/cache" || got.VBPLFileHosts != "one.example,two.example" {
 		t.Fatalf("config = %+v, error = %v", got, err)
+	}
+}
+
+func TestLoad_LoopbackHTTPOffByDefault(t *testing.T) {
+	cfg, err := Load(func(key string) string {
+		if key == "CORPUS_DATABASE_URL" {
+			return "postgres://x"
+		}
+		return ""
+	})
+	if err != nil || cfg.VBPLLoopbackHTTP {
+		t.Fatalf("loopback=%v err=%v", cfg.VBPLLoopbackHTTP, err)
 	}
 }

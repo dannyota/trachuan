@@ -118,7 +118,7 @@ func newHarness(t *testing.T) *harness {
 }
 
 func (h *harness) env(fault string) []string {
-	return append(os.Environ(), "CORPUS_DATABASE_URL="+h.dbURL, "CORPUS_TEMPORAL_ADDRESS="+h.server.FrontendHostPort(), "CORPUS_TEMPORAL_NAMESPACE=corpus", "CORPUS_ARTIFACTS="+h.artifacts, "CORPUS_CHECKPOINT_DIR="+h.checkpoints, "CORPUS_PG_DUMP="+h.dump, "CORPUS_VBPL_URL="+h.gateway.server.URL, "CORPUS_FAULT="+fault)
+	return append(os.Environ(), "CORPUS_DATABASE_URL="+h.dbURL, "CORPUS_TEMPORAL_ADDRESS="+h.server.FrontendHostPort(), "CORPUS_TEMPORAL_NAMESPACE=corpus", "CORPUS_ARTIFACTS="+h.artifacts, "CORPUS_CHECKPOINT_DIR="+h.checkpoints, "CORPUS_PG_DUMP="+h.dump, "CORPUS_VBPL_URL="+h.gateway.server.URL, "CORPUS_VBPL_LOOPBACK_HTTP=true", "CORPUS_VBPL_FILE_HOSTS=127.0.0.1", "CORPUS_FAULT="+fault)
 }
 
 func (h *harness) command(args ...string) {
