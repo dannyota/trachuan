@@ -11,14 +11,16 @@ import (
 
 // Config holds the settings used by corpus commands.
 type Config struct {
-	DatabaseURL     string
-	TemporalAddress string
-	Namespace       string
-	Artifacts       string
-	CheckpointDir   string
-	PgDump          string
-	VBPLURL         string
-	VBPLFileHosts   string
+	EmbedderURL, QueryEmbedderURL                                                  string
+	BuilderDatabaseURL, BuilderTemplate, PgRestore, DatabaseDiskPath, EvalFixtures string
+	DatabaseURL                                                                    string
+	TemporalAddress                                                                string
+	Namespace                                                                      string
+	Artifacts                                                                      string
+	CheckpointDir                                                                  string
+	PgDump                                                                         string
+	VBPLURL                                                                        string
+	VBPLFileHosts                                                                  string
 	// VBPLLoopbackHTTP permits plain HTTP downloads from 127.0.0.1 only; tests use it.
 	VBPLLoopbackHTTP bool
 	VBPLRate         float64
@@ -32,16 +34,23 @@ type Config struct {
 // Load reads configuration using getenv and requires a database URL.
 func Load(getenv func(string) string) (Config, error) {
 	cfg := Config{
-		DatabaseURL:      getenv("CORPUS_DATABASE_URL"),
-		TemporalAddress:  defaultValue(getenv("CORPUS_TEMPORAL_ADDRESS"), "127.0.0.1:7233"),
-		Namespace:        defaultValue(getenv("CORPUS_TEMPORAL_NAMESPACE"), "corpus"),
-		Artifacts:        defaultValue(getenv("CORPUS_ARTIFACTS"), "work/artifacts"),
-		CheckpointDir:    getenv("CORPUS_CHECKPOINT_DIR"),
-		PgDump:           defaultValue(getenv("CORPUS_PG_DUMP"), "pg_dump"),
-		FileCache:        getenv("CORPUS_FILE_CACHE"),
-		VBPLFileHosts:    defaultValue(getenv("CORPUS_VBPL_FILE_HOSTS"), "s3-han02.fptcloud.com"),
-		VBPLLoopbackHTTP: getenv("CORPUS_VBPL_LOOPBACK_HTTP") == "true",
-		VBPLURL:          defaultValue(getenv("CORPUS_VBPL_URL"), "https://vbpl-bientap-gateway.moj.gov.vn/api/qtdc/public"),
+		EmbedderURL:        defaultValue(getenv("CORPUS_EMBEDDER_URL"), "http://127.0.0.1:8092"),
+		QueryEmbedderURL:   defaultValue(getenv("CORPUS_QUERY_EMBEDDER_URL"), "http://127.0.0.1:8091"),
+		BuilderDatabaseURL: getenv("CORPUS_BUILDER_DATABASE_URL"),
+		BuilderTemplate:    defaultValue(getenv("CORPUS_BUILDER_TEMPLATE"), "corpus_template"),
+		PgRestore:          defaultValue(getenv("CORPUS_PG_RESTORE"), "pg_restore"),
+		DatabaseDiskPath:   getenv("CORPUS_DATABASE_DISK_PATH"),
+		EvalFixtures:       getenv("CORPUS_EVAL_FIXTURES"),
+		DatabaseURL:        getenv("CORPUS_DATABASE_URL"),
+		TemporalAddress:    defaultValue(getenv("CORPUS_TEMPORAL_ADDRESS"), "127.0.0.1:7233"),
+		Namespace:          defaultValue(getenv("CORPUS_TEMPORAL_NAMESPACE"), "corpus"),
+		Artifacts:          defaultValue(getenv("CORPUS_ARTIFACTS"), "work/artifacts"),
+		CheckpointDir:      getenv("CORPUS_CHECKPOINT_DIR"),
+		PgDump:             defaultValue(getenv("CORPUS_PG_DUMP"), "pg_dump"),
+		FileCache:          getenv("CORPUS_FILE_CACHE"),
+		VBPLFileHosts:      defaultValue(getenv("CORPUS_VBPL_FILE_HOSTS"), "s3-han02.fptcloud.com"),
+		VBPLLoopbackHTTP:   getenv("CORPUS_VBPL_LOOPBACK_HTTP") == "true",
+		VBPLURL:            defaultValue(getenv("CORPUS_VBPL_URL"), "https://vbpl-bientap-gateway.moj.gov.vn/api/qtdc/public"),
 	}
 	if cfg.DatabaseURL == "" {
 		return Config{}, errors.New("CORPUS_DATABASE_URL is required")

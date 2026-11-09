@@ -17,7 +17,7 @@ func TestProof_RecoverFromCheckpoint(t *testing.T) {
 	requests := h.gateway.details.Load()
 	h.command("recover", "vn", release, "--terminate")
 	h.startWorker("")
-	h.command("start", "vn", release)
+	h.command("start", "vn", release, "--until", "relate")
 	h.waitState("paused")
 	after := h.fetchItems()
 	if got := h.gateway.details.Load(); got != requests {

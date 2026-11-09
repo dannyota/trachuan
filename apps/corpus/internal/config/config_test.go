@@ -19,6 +19,8 @@ func TestLoad_Defaults(t *testing.T) {
 		t.Fatalf("Load() error = %v", err)
 	}
 	want := Config{
+		EmbedderURL: "http://127.0.0.1:8092", QueryEmbedderURL: "http://127.0.0.1:8091",
+		BuilderTemplate: "corpus_template", PgRestore: "pg_restore",
 		DatabaseURL:     "postgres://example",
 		TemporalAddress: "127.0.0.1:7233",
 		Namespace:       "corpus",
@@ -84,5 +86,20 @@ func TestLoad_HeartbeatEveryMustBeBelowTimeout(t *testing.T) {
 	env := map[string]string{"CORPUS_DATABASE_URL": "postgres://x", "CORPUS_HEARTBEAT_EVERY": "2m", "CORPUS_HEARTBEAT_TIMEOUT": "2m"}
 	if _, err := Load(func(k string) string { return env[k] }); err == nil || !strings.Contains(err.Error(), "CORPUS_HEARTBEAT_EVERY") {
 		t.Fatalf("want an error naming CORPUS_HEARTBEAT_EVERY, got %v", err)
+	}
+}
+
+func TestConfig_EmbedderAndBuilderSettings(t *testing.T) {
+	cfg, err := Load(func(key string) string {
+		if key == "CORPUS_DATABASE_URL" {
+			return "postgres://example"
+		}
+		return ""
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.EmbedderURL != "http://127.0.0.1:8092" || cfg.QueryEmbedderURL != "http://127.0.0.1:8091" || cfg.BuilderTemplate != "corpus_template" || cfg.PgRestore != "pg_restore" {
+		t.Fatalf("unexpected defaults: %+v", cfg)
 	}
 }

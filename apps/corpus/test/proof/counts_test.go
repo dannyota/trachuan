@@ -25,8 +25,8 @@ func (h *harness) countRows() counts {
 	for rows.Next() {
 		var stage, state string
 		var count int
-		if err := rows.Scan(&stage, &state, &count); err != nil {
-			h.t.Fatal(err)
+		if scanErr := rows.Scan(&stage, &state, &count); scanErr != nil {
+			h.t.Fatal(scanErr)
 		}
 		result.items[stage+":"+state] = count
 	}
@@ -36,8 +36,8 @@ func (h *harness) countRows() counts {
 	rows.Close()
 	for _, table := range []string{"artifact", "document", "provision", "relation", "gap", "listing", "fetched_file"} {
 		var count int
-		if err := h.db.QueryRow(h.ctx, "SELECT count(*) FROM "+table).Scan(&count); err != nil {
-			h.t.Fatal(err)
+		if scanErr := h.db.QueryRow(h.ctx, "SELECT count(*) FROM "+table).Scan(&count); scanErr != nil {
+			h.t.Fatal(scanErr)
 		}
 		result.tables[table] = count
 	}

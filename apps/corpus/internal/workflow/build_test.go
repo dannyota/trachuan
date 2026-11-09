@@ -250,3 +250,17 @@ func TestBuildRelease_HeartbeatTimeout(t *testing.T) {
 		})
 	}
 }
+
+func TestBuildRelease_EvalEndsEvaluated(t *testing.T) {
+	env := workflowTest(t)
+	in := testInput()
+	in.Stage = "eval"
+	planMock(env, stage.PlanResult{})
+	finishMock(env, stage.CloseResult{})
+	markMock(env, "evaluated")
+	env.ExecuteWorkflow(BuildRelease, in)
+	if err := env.GetWorkflowError(); err != nil {
+		t.Fatal(err)
+	}
+	env.AssertExpectations(t)
+}

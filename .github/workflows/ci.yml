@@ -96,6 +96,7 @@ jobs:
       TEMPORAL_CLI_CACHE: /home/runner/.cache/temporal-cli
       # The runner image ships pg_dump 16 on PATH; checkpoints need the PGDG 18 client.
       CORPUS_PG_DUMP: /usr/lib/postgresql/18/bin/pg_dump
+      CORPUS_PG_RESTORE: /usr/lib/postgresql/18/bin/pg_restore
       CORPUS_TEST_ADMIN_URL: postgres://postgres:ci@localhost:5432/postgres
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

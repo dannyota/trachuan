@@ -3,11 +3,16 @@ package workflow
 
 import (
 	"danny.vn/trachuan/apps/corpus/internal/stage"
+	"danny.vn/trachuan/apps/corpus/internal/stage/build"
+	"danny.vn/trachuan/apps/corpus/internal/stage/chunk"
 	"danny.vn/trachuan/apps/corpus/internal/stage/discover"
+	"danny.vn/trachuan/apps/corpus/internal/stage/embed"
+	"danny.vn/trachuan/apps/corpus/internal/stage/eval"
 	"danny.vn/trachuan/apps/corpus/internal/stage/extract"
 	"danny.vn/trachuan/apps/corpus/internal/stage/fetch"
 	"danny.vn/trachuan/apps/corpus/internal/stage/relate"
 	"danny.vn/trachuan/apps/corpus/internal/vbpl"
+	"danny.vn/trachuan/internal/embedding"
 )
 
 // Registry holds the implemented stages in execution order.
@@ -61,11 +66,14 @@ func (r Registry) Recipes(s stage.Snapshot) map[string]string {
 
 // Deps holds dependencies for the default stages.
 type Deps struct {
-	Env  stage.Env
-	VBPL *vbpl.Client
+	Env      stage.Env
+	VBPL     *vbpl.Client
+	Document *embedding.Client
+	Build    build.Config
+	Eval     eval.Config
 }
 
 // Default returns the stages compiled into the worker.
 func Default(deps Deps) Registry {
-	return NewRegistry(discover.New(deps.VBPL), fetch.New(deps.VBPL), extract.New(), relate.New())
+	return NewRegistry(discover.New(deps.VBPL), fetch.New(deps.VBPL), extract.New(), relate.New(), chunk.New(), embed.New(deps.Document, embedding.DocumentRecipe1()), build.New(deps.Build), eval.New(deps.Eval))
 }

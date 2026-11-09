@@ -18,6 +18,7 @@ import (
 	"danny.vn/trachuan/apps/corpus/internal/migrate"
 	"danny.vn/trachuan/apps/corpus/internal/testdb"
 	"danny.vn/trachuan/apps/corpus/internal/testtemporal"
+	"danny.vn/trachuan/internal/testpg"
 	"github.com/jackc/pgx/v5/pgxpool"
 	workflowservice "go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/testsuite"
@@ -65,11 +66,15 @@ type harness struct {
 	gateway                                              *gateway
 	worker                                               *exec.Cmd
 	workerDone                                           chan error
+	extra                                                []string
+	rel                                                  string
 }
 
 func newHarness(t *testing.T) *harness {
 	t.Helper()
-	h := &harness{t: t, ctx: context.Background(), root: t.TempDir()}
+	h := &harness{t: t, ctx: context.Background(), root: t.TempDir(), rel: release}
+	builder := testpg.NewBuilder(t)
+	h.extra = []string{"CORPUS_BUILDER_DATABASE_URL=" + builder.URL, "CORPUS_BUILDER_TEMPLATE=" + builder.Template, "CORPUS_DATABASE_DISK_PATH=" + h.root}
 	h.artifacts = filepath.Join(h.root, "artifacts")
 	h.checkpoints = filepath.Join(h.root, "checkpoints")
 	h.dump = os.Getenv("CORPUS_PG_DUMP")
@@ -121,12 +126,12 @@ func newHarness(t *testing.T) *harness {
 }
 
 func (h *harness) env(fault string) []string {
-	return append(os.Environ(), "CORPUS_DATABASE_URL="+h.dbURL, "CORPUS_TEMPORAL_ADDRESS="+h.server.FrontendHostPort(), "CORPUS_TEMPORAL_NAMESPACE="+h.namespace, "CORPUS_ARTIFACTS="+h.artifacts, "CORPUS_CHECKPOINT_DIR="+h.checkpoints, "CORPUS_PG_DUMP="+h.dump, "CORPUS_VBPL_URL="+h.gateway.server.URL, "CORPUS_VBPL_LOOPBACK_HTTP=true", "CORPUS_VBPL_FILE_HOSTS=127.0.0.1", "CORPUS_HEARTBEAT_EVERY=200ms", "CORPUS_HEARTBEAT_TIMEOUT=2s", "CORPUS_VBPL_RPS=1000", "CORPUS_VBPL_IN_FLIGHT=16", "CORPUS_FAULT="+fault)
+	return append(append(os.Environ(), h.extra...), "CORPUS_DATABASE_URL="+h.dbURL, "CORPUS_TEMPORAL_ADDRESS="+h.server.FrontendHostPort(), "CORPUS_TEMPORAL_NAMESPACE="+h.namespace, "CORPUS_ARTIFACTS="+h.artifacts, "CORPUS_CHECKPOINT_DIR="+h.checkpoints, "CORPUS_PG_DUMP="+h.dump, "CORPUS_VBPL_URL="+h.gateway.server.URL, "CORPUS_VBPL_LOOPBACK_HTTP=true", "CORPUS_VBPL_FILE_HOSTS=127.0.0.1", "CORPUS_HEARTBEAT_EVERY=200ms", "CORPUS_HEARTBEAT_TIMEOUT=2s", "CORPUS_VBPL_RPS=1000", "CORPUS_VBPL_IN_FLIGHT=16", "CORPUS_FAULT="+fault)
 }
 
 func (h *harness) command(args ...string) {
 	h.t.Helper()
-	cmd := exec.Command(os.Getenv("CORPUS_PROOF_BINARY"), args...)
+	cmd := exec.CommandContext(h.ctx, os.Getenv("CORPUS_PROOF_BINARY"), args...)
 	cmd.Dir, cmd.Env = h.root, h.env("")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -152,7 +157,9 @@ func (h *harness) stopWorker() {
 	if err := h.worker.Process.Kill(); err != nil {
 		h.t.Fatal(err)
 	}
-	<-h.workerDone
+	if err := <-h.workerDone; err == nil {
+		h.t.Error("worker exited without kill error")
+	}
 	h.worker = nil
 }
 
@@ -160,14 +167,17 @@ func (h *harness) waitState(state string) {
 	h.t.Helper()
 	deadline := time.Now().Add(3 * time.Minute)
 	for time.Now().Before(deadline) {
-		var got string
-		err := h.db.QueryRow(h.ctx, "SELECT state FROM run WHERE country='vn' AND rel=$1", release).Scan(&got)
+		if err := h.ctx.Err(); err != nil {
+			h.t.Fatal(err)
+		}
+		var got, message string
+		err := h.db.QueryRow(h.ctx, "SELECT state, COALESCE(message, '') FROM run WHERE country='vn' AND rel=$1", h.rel).Scan(&got, &message)
 		if err == nil && got == state {
-			h.command("status", "vn", release)
+			h.command("status", "vn", h.rel)
 			return
 		}
 		if err == nil && got == "failed" {
-			h.t.Fatal("run entered failed state")
+			h.t.Fatalf("run entered failed state: %s", message)
 		}
 		time.Sleep(10 * time.Millisecond)
 	}

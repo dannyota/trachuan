@@ -154,7 +154,11 @@ func BuildRelease(ctx temporalworkflow.Context, in run.BuildInput) error {
 		return finish(err)
 	}
 	if in.Until == in.Stage || closed.NextStage == "" {
-		_, err := transition("running", "paused", "")
+		state := "paused"
+		if in.Stage == "eval" && temporalworkflow.GetVersion(ctx, "eval-complete", temporalworkflow.DefaultVersion, 1) != temporalworkflow.DefaultVersion {
+			state = "evaluated"
+		}
+		_, err := transition("running", state, "")
 		return err
 	}
 	in.Stage = closed.NextStage

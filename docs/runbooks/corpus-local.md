@@ -26,11 +26,31 @@ set -a; . ./.env; set +a
 export CORPUS_DATABASE_URL="postgres://pipeline:${PIPELINE_PASSWORD}@127.0.0.1:5432/workshop"
 export CORPUS_CHECKPOINT_DIR=work/checkpoints
 export CORPUS_PG_DUMP=/opt/homebrew/opt/postgresql@18/bin/pg_dump
+export CORPUS_PG_RESTORE=/opt/homebrew/opt/postgresql@18/bin/pg_restore
+export CORPUS_BUILDER_DATABASE_URL="postgres://corpus_builder:${BUILDER_PASSWORD}@127.0.0.1:5432/postgres"
+export CORPUS_DATABASE_DISK_PATH=work
 go run ./apps/corpus/cmd/corpus migrate
 go run ./apps/corpus/cmd/corpus worker &
 go run ./apps/corpus/cmd/corpus start vn 20261109 --until relate
 go run ./apps/corpus/cmd/corpus status vn 20261109
 ```
+
+Start `make embedder-query` and `make embedder-document` in separate terminals
+before extending a paused run. Both use the model bundle in
+`EMBEDDER_MODEL_DIR`. Set `CORPUS_EVAL_FIXTURES` to an adjudicated fixture
+directory before starting a run when the embedded inventory does not match it.
+For a run paused by an older worker before the index stages were registered, set
+the fixture directory before extending the run. Restart the worker with the same
+settings and extend the run:
+
+```sh
+go run ./apps/corpus/cmd/corpus start vn 20261109
+go run ./apps/corpus/cmd/corpus status vn 20261109
+go run ./apps/corpus/cmd/corpus eval vn 20261109 --out work/eval
+```
+
+Add `--previous <report.json>` to compare a previous report or
+`--require-floors` to return exit status 2 when a floor fails or is unavailable.
 
 `corpus cancel`, `corpus gaps`, `corpus accept-gaps --kind <kind> --note <text>`
 and `corpus export-history` take the same country and release. Run every command
