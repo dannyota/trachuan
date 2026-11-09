@@ -1,0 +1,2193 @@
+{
+  "version": 1,
+  "legacy_sha256": "881d09074ed5160e1e3ef97cd9220eb53ee16ccbbd7d7b0d39fb9483bbcb3aae",
+  "identity_inventory_hash": "eb479d25e37064475bd96a3c16d5851af7cc066fef942ba7bd5b307eb639cd37",
+  "entries": [
+    {
+      "case_id": "atttt-50-2024",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "50/2024/tt-nhnn",
+      "reason": "The stored provision identifies the expected article.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "bf2187f9115ec99f3ad697c76ac70f135d81f1f2ff2a6ebc2880f974efa7c8fe",
+          "node_id": "95516e00-eab4-11f0-9ae0-85d6d1e120d2",
+          "quoted_span": "Điều 3. Nguyên tắc chung về bảo đảm an toàn, bảo mật hệ thống thông tin cho việc cung cấp dịch vụ Online Banking\n1. Hệ thống Online Banking phải tuân thủ quy định về bảo đảm an toàn hệ thống thông tin"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:171687",
+          "anchor": "dieu-3",
+          "kind": "provision"
+        }
+      ]
+    },
+    {
+      "case_id": "ats-09-2020-dieu",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "09/2020/tt-nhnn",
+      "reason": "The stored provision identifies the expected article.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "c73bc7a0715a0bd8a6c0ee7d2b0c5ba00d5302ab0e1f0258c6ee11c0b4753715",
+          "node_id": "044bb83c-df3f-11f0-b20c-75527e48f141",
+          "quoted_span": "Điều 5. Phân loại hệ thống thông tin\n1. Đối với hệ thống thông tin cung cấp dịch vụ trực tuyến cho khách hàng, các tổ chức thực hiện phân loại theo quy định tại Nghị định số 85/2016/NĐ-CP ngày 01/7/20"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:144532",
+          "anchor": "dieu-5",
+          "kind": "provision"
+        }
+      ]
+    },
+    {
+      "case_id": "ekyc-17-2024",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "17/2024/tt-nhnn",
+      "reason": "The original document has Article 16 on electronic account opening. The 21/VBHN-NHNN candidates have no provision tree, including the matching-title document.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "8516e84652cae181e2eac543e6a8fd0808a73b1b5056d5c7e2f56e725b9494ad",
+          "node_id": "7d9ec820-2d44-11f1-9488-e32218e280a5",
+          "quoted_span": "Điều 16. Mở tài khoản thanh toán bằng phương tiện điện tử"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:168124",
+          "anchor": "dieu-16",
+          "kind": "provision"
+        }
+      ]
+    },
+    {
+      "case_id": "ekyc-17-2024",
+      "citation_index": 1,
+      "state": "resolved",
+      "expected_number": "25/2025/tt-nhnn",
+      "reason": "The stored provision identifies the expected article, clause.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "214db0f22c6860360e8ff808fb29d79ca420f62ed5a3e3f37f95135bc83adc99",
+          "node_id": "bae61d60-df3c-11f0-9a93-0bfbcc75d984",
+          "quoted_span": "2. Sửa đổi, bổ sung khoản 3 Điều 16 như sau:\n\"3. Việc mở tài khoản thanh toán bằng phương tiện điện tử không áp dụng đối với các trường hợp sau:\na) Tài khoản thanh toán chung;\nb) Khách hàng cá nhân th"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:181766",
+          "anchor": "dieu-7/khoan-2",
+          "kind": "provision"
+        }
+      ]
+    },
+    {
+      "case_id": "open-api-64-2024",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "64/2024/tt-nhnn",
+      "reason": "The stored provision identifies the expected article.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "b8c1117806b378a4e9cbfeef70dd4dafce877df3fd6399ffc69473ce1ad0d359",
+          "node_id": "79d85870-2ccf-11f1-bd1e-cf673d3953c2",
+          "quoted_span": "Điều 7.  Danh mục tiêu chuẩn kỹ thuật\n1.  Các tiêu chuẩn kỹ thuật triển khai Open API gồm tiêu chuẩn kiến trúc, tiêu chuẩn dữ liệu và tiêu chuẩn an toàn thông tin.\n2.  Tiêu chuẩn kỹ thuật triển khai O"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:174547",
+          "anchor": "dieu-7",
+          "kind": "provision"
+        }
+      ]
+    },
+    {
+      "case_id": "trung-gian-tt-40-2024",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "52/2024/nđ-cp",
+      "reason": "The stored provision identifies the expected article, clause.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "fb18e69a937912e4eb0de8eccdd0fe9455497c6df251098b575450228697fa35",
+          "node_id": "ac03c722-df58-11f0-ac1a-fbc48b602dad",
+          "quoted_span": "2. Điều kiện cung ứng dịch vụ trung gian thanh toán:\nTổ chức không phải là ngân hàng, chi nhánh ngân hàng nước ngoài được Ngân hàng Nhà nước cấp Giấy phép hoạt động cung ứng dịch vụ trung gian thanh t"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:167087",
+          "anchor": "dieu-22/khoan-2",
+          "kind": "provision"
+        }
+      ]
+    },
+    {
+      "case_id": "pdpl-91-2025",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "91/2025/qh15",
+      "reason": "The stored provision identifies the expected article.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "60cd5851a56a5fe04877683d80bf9b5bb1b19c891dc0e9d70977879fab10a837",
+          "node_id": "ca11a2ba-22e3-11f1-b653-99408dcb6cb2",
+          "quoted_span": "Điều 3. Nguyên tắc bảo vệ dữ liệu cá nhân\n1. Tuân thủ quy định của Hiến pháp, quy định của Luật này và quy định khác của pháp luật có liên quan.\n2. Chỉ được thu thập, xử lý dữ liệu cá nhân đúng phạm v"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:179252",
+          "anchor": "dieu-3",
+          "kind": "provision"
+        }
+      ]
+    },
+    {
+      "case_id": "onbank-pin-length-50-2024",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "50/2024/tt-nhnn",
+      "reason": "The stored provision identifies the expected article, clause.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "bf2187f9115ec99f3ad697c76ac70f135d81f1f2ff2a6ebc2880f974efa7c8fe",
+          "node_id": "956bfae0-eab4-11f0-a8bc-016ed79cdfd2",
+          "quoted_span": "2. Hình thức xác nhận bằng mã PIN (Personal Identification Number) là hình thức xác nhận bằng mã khóa bí mật trong đó mã khóa bí mật được tạo từ một chuỗi các chữ số. Hình thức xác nhận bằng mã PIN (t"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:171687",
+          "anchor": "dieu-11/khoan-2",
+          "kind": "provision"
+        }
+      ]
+    },
+    {
+      "case_id": "onbank-password-length-50-2024",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "50/2024/tt-nhnn",
+      "reason": "The stored provision identifies the expected article, clause.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "bf2187f9115ec99f3ad697c76ac70f135d81f1f2ff2a6ebc2880f974efa7c8fe",
+          "node_id": "956b3790-eab4-11f0-8bac-b733f87724f0",
+          "quoted_span": "1. Hình thức xác nhận bằng mã khóa bí mật (Password): khách hàng sử dụng mã khóa bí mật là một chuỗi ký tự để xác nhận quyền truy cập của khách hàng vào hệ thống thông tin, ứng dụng, dịch vụ hoặc xác "
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:171687",
+          "anchor": "dieu-11/khoan-1",
+          "kind": "provision"
+        }
+      ]
+    },
+    {
+      "case_id": "infosys-level3-09-2020",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "09/2020/tt-nhnn",
+      "reason": "The stored provision identifies the expected article, clause.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "c73bc7a0715a0bd8a6c0ee7d2b0c5ba00d5302ab0e1f0258c6ee11c0b4753715",
+          "node_id": "044bb882-df3f-11f0-bbf7-d1f9be0e9f7e",
+          "quoted_span": "4. Hệ thống thông tin cấp độ 3 là hệ thống thông tin có một trong các tiêu chí sau:"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:144532",
+          "anchor": "dieu-5/khoan-4",
+          "kind": "provision"
+        }
+      ]
+    },
+    {
+      "case_id": "sinh-trac-hoc-2345",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "50/2024/tt-nhnn",
+      "reason": "The stored provision identifies the expected article, clause.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "bf2187f9115ec99f3ad697c76ac70f135d81f1f2ff2a6ebc2880f974efa7c8fe",
+          "node_id": "95712b00-eab4-11f0-a093-1f70edb4d885",
+          "quoted_span": "5. Hình thức xác nhận khớp đúng thông tin sinh trắc học là việc đối chiếu, so sánh để bảo đảm trùng khớp thông tin sinh trắc học của khách hàng đang thực hiện giao dịch với thông tin sinh trắc học của"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:171687",
+          "anchor": "dieu-11/khoan-5",
+          "kind": "provision"
+        }
+      ]
+    },
+    {
+      "case_id": "sinh-trac-hoc-2345",
+      "citation_index": 1,
+      "state": "resolved",
+      "expected_number": "50/2024/tt-nhnn",
+      "reason": "The stored provision identifies the expected article.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "bf2187f9115ec99f3ad697c76ac70f135d81f1f2ff2a6ebc2880f974efa7c8fe",
+          "node_id": "95685160-eab4-11f0-9c4d-f9d87e61e3c5",
+          "quoted_span": "Điều 10. Xác nhận giao dịch\n1. Đối với giao dịch thanh toán trực tuyến:\na) Đối với giao dịch thanh toán sử dụng tài khoản thanh toán hoặc ví điện tử hoặc giao dịch chuyển tiền từ thẻ ghi nợ, thẻ trả t"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:171687",
+          "anchor": "dieu-10",
+          "kind": "provision"
+        }
+      ]
+    },
+    {
+      "case_id": "cybersec-prohibited-116-2025",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "116/2025/qh15",
+      "reason": "The stored provision identifies the expected article.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "b263e0973fde00aa912601daf16fa6960577d037b1c4821e576d45105689b35f",
+          "node_id": "97352db0-3177-11f1-9c8f-bf2ddf685e18",
+          "quoted_span": "Điều 7. Các hành vi bị nghiêm cấm về an ninh mạng"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:187039",
+          "anchor": "dieu-7",
+          "kind": "provision"
+        }
+      ]
+    },
+    {
+      "case_id": "cybersec-measures-116-2025",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "116/2025/qh15",
+      "reason": "The stored provision identifies the expected article.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "b263e0973fde00aa912601daf16fa6960577d037b1c4821e576d45105689b35f",
+          "node_id": "972fd680-3177-11f1-a2e0-4944b0b5fd21",
+          "quoted_span": "Điều 5. Biện pháp bảo vệ an ninh mạng"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:187039",
+          "anchor": "dieu-5",
+          "kind": "provision"
+        }
+      ]
+    },
+    {
+      "case_id": "esign-cert-validity-23-2025",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "23/2025/nđ-cp",
+      "reason": "The stored provision identifies the expected article.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "4db0b7fde620d8f02ca1e0d6a4883652f0d5f6247c9968efa29838e3f7114781",
+          "node_id": "d850a310-2d21-11f1-bc1b-ebdc69dcb7f8",
+          "quoted_span": "Điều 7. Thời hạn có hiệu lực của chứng thư chữ ký điện tử, chứng thư chữ ký số"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:175484",
+          "anchor": "dieu-7",
+          "kind": "provision"
+        }
+      ]
+    },
+    {
+      "case_id": "esign-cert-content-23-2025",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "23/2025/nđ-cp",
+      "reason": "The stored provision identifies the expected article.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "4db0b7fde620d8f02ca1e0d6a4883652f0d5f6247c9968efa29838e3f7114781",
+          "node_id": "d84c3640-2d21-11f1-822f-a3fb72fd155f",
+          "quoted_span": "Điều 6. Nội dung của chứng thư chữ ký số"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:175484",
+          "anchor": "dieu-6",
+          "kind": "provision"
+        }
+      ]
+    },
+    {
+      "case_id": "trung-gian-tt-scope-40-2024",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "40/2024/tt-nhnn",
+      "reason": "Both the original and consolidated documents contain Article 6 on the scope of intermediary payment services.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "09fa3a2c47add04e66b1e89089d4eae88c89cac93f630619d911e3044a7835dc",
+          "node_id": "8795b7ce-2c83-11f1-bb8f-33c4547396c2",
+          "quoted_span": "Điều 6. Phạm vi sử dụng dịch vụ trung gian thanh toán\nDịch vụ trung gian thanh toán (trừ dịch vụ chuyển mạch tài chính) được sử dụng cho các giao dịch thanh toán hàng hóa, dịch vụ hợp pháp theo quy đị"
+        },
+        {
+          "source_url": "",
+          "fetch_sha256": "a28981bf804167f88c72fd46fd39e085f456a9b81ad8c1e7725d1185ff9ef1a2",
+          "node_id": "9fc3fa50-4405-4efe-a3c4-26bc14ab39c9",
+          "quoted_span": "Điều 6. Phạm vi sử dụng dịch vụ trung gian thanh toán\nDịch vụ trung gian thanh toán (trừ dịch vụ chuyển mạch tài chính) được sử dụng cho các giao dịch thanh toán hàng hóa, dịch vụ hợp pháp theo quy đị"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:168578",
+          "anchor": "dieu-6",
+          "kind": "provision"
+        },
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:e1ff68d0-73ab-11f1-8703-2379f653f630",
+          "anchor": "dieu-6",
+          "kind": "provision"
+        }
+      ]
+    },
+    {
+      "case_id": "chu-ky-so-chuyen-dung-130-2018",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "130/2018/nđ-cp",
+      "reason": "The stored provision identifies the expected article.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "3d9ee443186bb55f7756577f32c04b535fa4e594cea5d239a775c758b9c8eb5e",
+          "node_id": "2f1307b0-2525-11f1-8cf0-e59c6d9760b6",
+          "quoted_span": "Điều 7. Sử dụng chữ ký số và chứng thư số của cơ quan, tổ chức và người có thẩm quyền của cơ quan, tổ chức"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:134267",
+          "anchor": "dieu-7",
+          "kind": "provision"
+        }
+      ]
+    },
+    {
+      "case_id": "edge-cite-09-2020-dieu33",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "09/2020/tt-nhnn",
+      "reason": "The stored provision identifies the expected article.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "c73bc7a0715a0bd8a6c0ee7d2b0c5ba00d5302ab0e1f0258c6ee11c0b4753715",
+          "node_id": "044c083c-df3f-11f0-8ddf-032bc273fc22",
+          "quoted_span": "Điều 33. Các yêu cầu khi sử dụng dịch vụ của bên thứ ba\nTrước khi sử dụng dịch vụ của bên thứ ba triển khai cho các hệ thống thông tin từ cấp độ 3 trở lên và các hệ thống thông tin có xử lý thông tin "
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:144532",
+          "anchor": "dieu-33",
+          "kind": "provision"
+        }
+      ]
+    },
+    {
+      "case_id": "edge-soky-only-50-2024",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "50/2024/tt-nhnn",
+      "reason": "The stored title identifies the expected document.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "bf2187f9115ec99f3ad697c76ac70f135d81f1f2ff2a6ebc2880f974efa7c8fe",
+          "node_id": "",
+          "quoted_span": "Thông tư số 50/2024/TT-NHNN Quy định về an toàn, bảo mật cho việc cung cấp dịch vụ trực tuyến trong ngành Ngân hàng"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:171687",
+          "anchor": null,
+          "kind": "document"
+        }
+      ]
+    },
+    {
+      "case_id": "edge-no-diacritics-infosec",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "09/2020/tt-nhnn",
+      "reason": "The stored title identifies the expected document.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "c73bc7a0715a0bd8a6c0ee7d2b0c5ba00d5302ab0e1f0258c6ee11c0b4753715",
+          "node_id": "",
+          "quoted_span": "Thông tư số 09/2020/TT-NHNN Quy định về an toàn hệ thống thông tin trong hoạt động ngân hàng"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:144532",
+          "anchor": null,
+          "kind": "document"
+        }
+      ]
+    },
+    {
+      "case_id": "edge-cloud-09-2020",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "09/2020/tt-nhnn",
+      "reason": "The stored provision identifies the expected article.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "c73bc7a0715a0bd8a6c0ee7d2b0c5ba00d5302ab0e1f0258c6ee11c0b4753715",
+          "node_id": "044c083c-df3f-11f0-8ddf-032bc273fc22",
+          "quoted_span": "Điều 33. Các yêu cầu khi sử dụng dịch vụ của bên thứ ba\nTrước khi sử dụng dịch vụ của bên thứ ba triển khai cho các hệ thống thông tin từ cấp độ 3 trở lên và các hệ thống thông tin có xử lý thông tin "
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:144532",
+          "anchor": "dieu-33",
+          "kind": "provision"
+        }
+      ]
+    },
+    {
+      "case_id": "edge-digital-assets-71-2025",
+      "citation_index": 0,
+      "state": "absent",
+      "expected_number": "71/2025/qh15",
+      "reason": "Searched 71/2025/qh15. No matching document exists in the exported inventory.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [],
+      "alternatives": []
+    },
+    {
+      "case_id": "edge-fintech-sandbox-94-2025",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "94/2025/nđ-cp",
+      "reason": "The stored title identifies the expected document.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "085dc2f535e74683e0243e99902dd176cce01ed0860ad81e2d0d794a288dd545",
+          "node_id": "",
+          "quoted_span": "Nghị định số 94/2025/NĐ-CP Quy định về Cơ chế thử nghiệm có kiểm soát\ntrong lĩnh vực ngân hàng"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:177341",
+          "anchor": null,
+          "kind": "document"
+        }
+      ]
+    },
+    {
+      "case_id": "edge-it-outsourcing-09-2020",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "09/2020/tt-nhnn",
+      "reason": "The stored provision identifies the expected article.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "c73bc7a0715a0bd8a6c0ee7d2b0c5ba00d5302ab0e1f0258c6ee11c0b4753715",
+          "node_id": "044c083c-df3f-11f0-8ddf-032bc273fc22",
+          "quoted_span": "Điều 33. Các yêu cầu khi sử dụng dịch vụ của bên thứ ba\nTrước khi sử dụng dịch vụ của bên thứ ba triển khai cho các hệ thống thông tin từ cấp độ 3 trở lên và các hệ thống thông tin có xử lý thông tin "
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:144532",
+          "anchor": "dieu-33",
+          "kind": "provision"
+        }
+      ]
+    },
+    {
+      "case_id": "edge-infosec-history-recall",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "09/2020/tt-nhnn",
+      "reason": "The stored title identifies the expected document.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "c73bc7a0715a0bd8a6c0ee7d2b0c5ba00d5302ab0e1f0258c6ee11c0b4753715",
+          "node_id": "",
+          "quoted_span": "Thông tư số 09/2020/TT-NHNN Quy định về an toàn hệ thống thông tin trong hoạt động ngân hàng"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:144532",
+          "anchor": null,
+          "kind": "document"
+        }
+      ]
+    },
+    {
+      "case_id": "edge-infosec-history-recall",
+      "citation_index": 1,
+      "state": "resolved",
+      "expected_number": "18/2018/tt-nhnn",
+      "reason": "The stored title identifies the expected document.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "b039c7e091b997fa725a03b958ba4a1bcb60651b6368cc64d78c89552e06b47d",
+          "node_id": "",
+          "quoted_span": "Thông tư số 18 /2018/TT-NHNN Quy định về an toàn hệ thống thông tin\ntrong hoạt động ngân hàng"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:130588",
+          "anchor": null,
+          "kind": "document"
+        }
+      ]
+    },
+    {
+      "case_id": "edge-infosec-history-recall",
+      "citation_index": 2,
+      "state": "resolved",
+      "expected_number": "31/2015/tt-nhnn",
+      "reason": "The stored title identifies the expected document.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "5133217c59184ce4c9ae9e4b0fcabef3eb38305b8a63f6b398e6ec91d6b80ac1",
+          "node_id": "",
+          "quoted_span": "Thông tư số 31/2015/TT-NHNN Quy định về đảm bảo an toàn, bảo mật hệ thống công nghệ thông tin trong hoạt động ngân hàng"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:97932",
+          "anchor": null,
+          "kind": "document"
+        }
+      ]
+    },
+    {
+      "case_id": "infosec-general-09-2020",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "09/2020/tt-nhnn",
+      "reason": "The stored title identifies the expected document.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "c73bc7a0715a0bd8a6c0ee7d2b0c5ba00d5302ab0e1f0258c6ee11c0b4753715",
+          "node_id": "",
+          "quoted_span": "Thông tư số 09/2020/TT-NHNN Quy định về an toàn hệ thống thông tin trong hoạt động ngân hàng"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:144532",
+          "anchor": null,
+          "kind": "document"
+        }
+      ]
+    },
+    {
+      "case_id": "pdpl-financial-institutions-91-2025",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "91/2025/qh15",
+      "reason": "The stored title identifies the expected document.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "60cd5851a56a5fe04877683d80bf9b5bb1b19c891dc0e9d70977879fab10a837",
+          "node_id": "",
+          "quoted_span": "Luật Bảo vệ dữ liệu cá nhân số 91/2025/QH15"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:179252",
+          "anchor": null,
+          "kind": "document"
+        }
+      ]
+    },
+    {
+      "case_id": "etrans-law-scope-20-2023",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "20/2023/qh15",
+      "reason": "The stored provision identifies the expected article.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "bd9f611978f710ba5a99b3e9114c63b04b485a31ac30b0d765130da68c9ae05b",
+          "node_id": "df366f24-e182-11f0-81d5-bbd853501e38",
+          "quoted_span": "Điều 1. Phạm vi điều chỉnh"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:165913",
+          "anchor": "dieu-1",
+          "kind": "provision"
+        }
+      ]
+    },
+    {
+      "case_id": "etrans-data-message-20-2023",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "20/2023/qh15",
+      "reason": "The stored provision identifies the expected article.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "bd9f611978f710ba5a99b3e9114c63b04b485a31ac30b0d765130da68c9ae05b",
+          "node_id": "df36710e-e182-11f0-aaf4-f7b25fa14132",
+          "quoted_span": "Điều 10. Thông điệp dữ liệu có giá trị như bản gốc\n1. Thông tin trong thông điệp dữ liệu được bảo đảm toàn vẹn kể từ khi được khởi tạo lần đầu tiên dưới dạng một thông điệp dữ liệu hoàn chỉnh. Thông t"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:165913",
+          "anchor": "dieu-10",
+          "kind": "provision"
+        }
+      ]
+    },
+    {
+      "case_id": "etrans-esig-conditions-20-2023",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "20/2023/qh15",
+      "reason": "The stored provision identifies the expected article.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "bd9f611978f710ba5a99b3e9114c63b04b485a31ac30b0d765130da68c9ae05b",
+          "node_id": "df36749c-e182-11f0-8b7b-e5142c637590",
+          "quoted_span": "Điều 23. Giá trị pháp lý của chữ ký điện tử\n1. Chữ ký điện tử không bị phủ nhận giá trị pháp lý chỉ vì được thể hiện dưới dạng chữ ký điện tử.\n2. Chữ ký điện tử chuyên dùng bảo đảm an toàn hoặc chữ ký"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:165913",
+          "anchor": "dieu-23",
+          "kind": "provision"
+        }
+      ]
+    },
+    {
+      "case_id": "pdpl-cross-border-356-2025",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "356/2025/nđ-cp",
+      "reason": "The stored provision identifies the expected article.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "cfd329cbf0f7fa7e0f6cfea620e14744d342c6a93de2432def6d37085b18b53c",
+          "node_id": "6f0655c0-31af-11f1-bb60-91e61639244d",
+          "quoted_span": "Điều 17. Chuyển dữ liệu cá nhân xuyên biên giới\n1. Bên kiểm soát dữ liệu cá nhân, bên kiểm soát và xử lý dữ liệu cá nhân, bên xử lý dữ liệu cá nhân và bên thứ ba thực hiện hoạt động chuyển dữ liệu cá "
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:187276",
+          "anchor": "dieu-17",
+          "kind": "provision"
+        }
+      ]
+    },
+    {
+      "case_id": "pdpl-data-subject-rights-91-2025",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "91/2025/qh15",
+      "reason": "The stored provision identifies the expected article.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "60cd5851a56a5fe04877683d80bf9b5bb1b19c891dc0e9d70977879fab10a837",
+          "node_id": "ca18f5ba-22e3-11f1-9ada-31e5e2d82af7",
+          "quoted_span": "Điều 4. Quyền và nghĩa vụ của chủ thể dữ liệu cá nhân\n1. Quyền của chủ thể dữ liệu cá nhân bao gồm:\na) Được biết về hoạt động xử lý dữ liệu cá nhân;\nb) Đồng ý hoặc không đồng ý, yêu cầu rút lại sự đồn"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:179252",
+          "anchor": "dieu-4",
+          "kind": "provision"
+        }
+      ]
+    },
+    {
+      "case_id": "pdpl-consent-91-2025",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "91/2025/qh15",
+      "reason": "The stored title identifies the expected document.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "60cd5851a56a5fe04877683d80bf9b5bb1b19c891dc0e9d70977879fab10a837",
+          "node_id": "",
+          "quoted_span": "Luật Bảo vệ dữ liệu cá nhân số 91/2025/QH15"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:179252",
+          "anchor": null,
+          "kind": "document"
+        }
+      ]
+    },
+    {
+      "case_id": "cybersec-cii-116-2025",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "116/2025/qh15",
+      "reason": "The stored title identifies the expected document.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "b263e0973fde00aa912601daf16fa6960577d037b1c4821e576d45105689b35f",
+          "node_id": "",
+          "quoted_span": "LUẬT AN NINH MẠNG SỐ 116/2025/QH15"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:187039",
+          "anchor": null,
+          "kind": "document"
+        }
+      ]
+    },
+    {
+      "case_id": "cybersec-incident-116-2025",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "116/2025/qh15",
+      "reason": "The stored title identifies the expected document.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "b263e0973fde00aa912601daf16fa6960577d037b1c4821e576d45105689b35f",
+          "node_id": "",
+          "quoted_span": "LUẬT AN NINH MẠNG SỐ 116/2025/QH15"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:187039",
+          "anchor": null,
+          "kind": "document"
+        }
+      ]
+    },
+    {
+      "case_id": "cashless-payment-security-52-2024",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "52/2024/nđ-cp",
+      "reason": "The stored provision identifies the expected article.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "fb18e69a937912e4eb0de8eccdd0fe9455497c6df251098b575450228697fa35",
+          "node_id": "ac03ed92-df58-11f0-8538-9557e74e5910",
+          "quoted_span": "Điều 29. Đảm bảo an toàn, bảo mật trong thanh toán\n1. Tổ chức cung ứng dịch vụ thanh toán, tổ chức cung ứng dịch vụ trung gian thanh toán phải áp dụng các biện pháp đảm bảo an toàn, bảo mật trong than"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:167087",
+          "anchor": "dieu-29",
+          "kind": "provision"
+        }
+      ]
+    },
+    {
+      "case_id": "ewallet-40-2024",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "40/2024/tt-nhnn",
+      "reason": "The stored title identifies the expected document.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "09fa3a2c47add04e66b1e89089d4eae88c89cac93f630619d911e3044a7835dc",
+          "node_id": "",
+          "quoted_span": "Thông tư số 40/2024/TT-NHNN Quy định về hoạt động cung ứng dịch vụ trung gian thanh toán"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:168578",
+          "anchor": null,
+          "kind": "document"
+        }
+      ]
+    },
+    {
+      "case_id": "mobile-money-368-2025",
+      "citation_index": 0,
+      "state": "absent",
+      "expected_number": "368/2025/nđ-cp",
+      "reason": "Searched 368/2025/nđ-cp. No matching document exists in the exported inventory.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [],
+      "alternatives": []
+    },
+    {
+      "case_id": "it-risk-report-09-2020",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "09/2020/tt-nhnn",
+      "reason": "The stored provision identifies the expected article.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "c73bc7a0715a0bd8a6c0ee7d2b0c5ba00d5302ab0e1f0258c6ee11c0b4753715",
+          "node_id": "044c5364-df3f-11f0-8ac9-8fdb6edc338e",
+          "quoted_span": "Điều 54. Chế độ báo cáo\nTổ chức có trách nhiệm gửi báo cáo về Ngân hàng Nhà nước (Cục Công nghệ thông tin) các nội dung sau:\n1. Báo cáo sự cố an toàn thông tin (theo Phụ lục 01 kèm theo Thông tư này) "
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:144532",
+          "anchor": "dieu-54",
+          "kind": "provision"
+        }
+      ]
+    },
+    {
+      "case_id": "it-audit-09-2020",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "09/2020/tt-nhnn",
+      "reason": "The stored provision identifies the expected article.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "c73bc7a0715a0bd8a6c0ee7d2b0c5ba00d5302ab0e1f0258c6ee11c0b4753715",
+          "node_id": "044c2c9a-df3f-11f0-857e-d13c21bf092a",
+          "quoted_span": "Điều 42. Kiểm tra, đánh giá an toàn thông tin\n1. Nội dung kiểm tra, đánh giá an toàn thông tin tối thiểu phải bao gồm các nội dung sau:\na) Kiểm tra việc tuân thủ quy định của pháp luật về bảo đảm an t"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:144532",
+          "anchor": "dieu-42",
+          "kind": "provision"
+        }
+      ]
+    },
+    {
+      "case_id": "bcp-09-2020",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "09/2020/tt-nhnn",
+      "reason": "The stored provision identifies the expected article.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "c73bc7a0715a0bd8a6c0ee7d2b0c5ba00d5302ab0e1f0258c6ee11c0b4753715",
+          "node_id": "044c2f92-df3f-11f0-b887-29e34c3f653b",
+          "quoted_span": "Điều 50. Xây dựng hệ thống dự phòng thảm họa\n1. Tổ chức xây dựng hệ thống dự phòng thảm họa đáp ứng các yêu cầu sau:\na) Đánh giá rủi ro và xem xét khả năng xảy ra các thảm họa ảnh hưởng đồng thời tới "
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:144532",
+          "anchor": "dieu-50",
+          "kind": "provision"
+        }
+      ]
+    },
+    {
+      "case_id": "data-backup-09-2020",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "09/2020/tt-nhnn",
+      "reason": "The stored provision identifies the expected article.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "c73bc7a0715a0bd8a6c0ee7d2b0c5ba00d5302ab0e1f0258c6ee11c0b4753715",
+          "node_id": "044be320-df3f-11f0-ad3a-317506d4d583",
+          "quoted_span": "Điều 22. Sao lưu dự phòng\nTổ chức thực hiện sao lưu dự phòng bảo đảm an toàn dữ liệu như sau:\n1. Lập danh sách hệ thống thông tin theo cấp độ quan trọng cần được sao lưu, kèm theo thời gian lưu trữ, đ"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:144532",
+          "anchor": "dieu-22",
+          "kind": "provision"
+        }
+      ]
+    },
+    {
+      "case_id": "network-security-09-2020",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "09/2020/tt-nhnn",
+      "reason": "The stored provision identifies the expected article.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "c73bc7a0715a0bd8a6c0ee7d2b0c5ba00d5302ab0e1f0258c6ee11c0b4753715",
+          "node_id": "044be366-df3f-11f0-9079-2f0144b08d96",
+          "quoted_span": "Điều 23. Quản lý an toàn, bảo mật hệ thống mạng\nTổ chức thực hiện quản lý an toàn, bảo mật hệ thống mạng như sau:\n1. Xây dựng quy định về quản lý an toàn, bảo mật hệ thống mạng và quản lý các thiết bị"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:144532",
+          "anchor": "dieu-23",
+          "kind": "provision"
+        }
+      ]
+    },
+    {
+      "case_id": "ai-law-scope-134-2025",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "134/2025/qh15",
+      "reason": "The stored provision identifies the expected article.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "9788c2dff9609a9e70369245c804afbeba0f5a07c5b70a13716c1c294e63e774",
+          "node_id": "f7b610a5-e2b5-447c-b37d-91211b07de22",
+          "quoted_span": "Điều 1. Phạm vi điều chỉnh\n1. Luật này quy định về nghiên cứu, phát triển, cung cấp, triển khai và sử dụng hệ thống trí tuệ nhân tạo (sau đây gọi là hoạt động trí tuệ nhân tạo); quyền, nghĩa vụ của tổ"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:69ba65c0-8a56-11f1-878c-399a87bcb3eb",
+          "anchor": "dieu-1",
+          "kind": "provision"
+        }
+      ]
+    },
+    {
+      "case_id": "ai-law-high-risk-134-2025",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "134/2025/qh15",
+      "reason": "The stored provision identifies the expected article.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "9788c2dff9609a9e70369245c804afbeba0f5a07c5b70a13716c1c294e63e774",
+          "node_id": "4cbf4944-0e28-46f8-9729-a92fa115a83e",
+          "quoted_span": "Điều 9. Phân loại mức độ rủi ro của hệ thống trí tuệ nhân tạo\n1. Hệ thống trí tuệ nhân tạo được phân loại theo các mức độ rủi ro sau đây:\na) Hệ thống trí tuệ nhân tạo có rủi ro cao là hệ thống có thể "
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:69ba65c0-8a56-11f1-878c-399a87bcb3eb",
+          "anchor": "dieu-9",
+          "kind": "provision"
+        }
+      ]
+    },
+    {
+      "case_id": "onbank-auth-methods-50-2024",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "50/2024/tt-nhnn",
+      "reason": "The stored provision identifies the expected article.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "bf2187f9115ec99f3ad697c76ac70f135d81f1f2ff2a6ebc2880f974efa7c8fe",
+          "node_id": "956b1080-eab4-11f0-8bb4-ebb147b48b2b",
+          "quoted_span": "Điều 11. Các hình thức xác nhận\n1. Hình thức xác nhận bằng mã khóa bí mật (Password): khách hàng sử dụng mã khóa bí mật là một chuỗi ký tự để xác nhận quyền truy cập của khách hàng vào hệ thống thông "
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:171687",
+          "anchor": "dieu-11",
+          "kind": "provision"
+        }
+      ]
+    },
+    {
+      "case_id": "onbank-customer-protection-50-2024",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "50/2024/tt-nhnn",
+      "reason": "The stored provision identifies the expected article.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "bf2187f9115ec99f3ad697c76ac70f135d81f1f2ff2a6ebc2880f974efa7c8fe",
+          "node_id": "95516e00-eab4-11f0-9ae0-85d6d1e120d2",
+          "quoted_span": "Điều 3. Nguyên tắc chung về bảo đảm an toàn, bảo mật hệ thống thông tin cho việc cung cấp dịch vụ Online Banking\n1. Hệ thống Online Banking phải tuân thủ quy định về bảo đảm an toàn hệ thống thông tin"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:171687",
+          "anchor": "dieu-3",
+          "kind": "provision"
+        }
+      ]
+    },
+    {
+      "case_id": "fintech-p2p-lending-94-2025",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "94/2025/nđ-cp",
+      "reason": "The stored provision identifies the expected article.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "085dc2f535e74683e0243e99902dd176cce01ed0860ad81e2d0d794a288dd545",
+          "node_id": "284d6aa0-df4e-11f0-9730-dd53b7ad6a90",
+          "quoted_span": "Điều 11. Điều kiện và tiêu chí tham gia Cơ chế thử nghiệm\n1. Giải pháp cho vay ngang hàng được xem xét cấp Giấy chứng nhận tham gia Cơ chế thử nghiệm khi giải pháp đáp ứng các tiêu chí quy định tại kh"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:177341",
+          "anchor": "dieu-11",
+          "kind": "provision"
+        }
+      ]
+    },
+    {
+      "case_id": "qr-payment-15-2024",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "15/2024/tt-nhnn",
+      "reason": "The stored title identifies the expected document.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "da6fada9b847f67d537f16aab68ad4f89c655ff9eb9544d98cf6071d6cf5b991",
+          "node_id": "",
+          "quoted_span": "Thông tư số 15/2024/TT-NHNN Quy định về cung ứng dịch vụ thanh toán không dùng tiền mặt"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:168089",
+          "anchor": null,
+          "kind": "document"
+        }
+      ]
+    },
+    {
+      "case_id": "edge-no-diacritics-payment",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "52/2024/nđ-cp",
+      "reason": "The stored title identifies the expected document.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "fb18e69a937912e4eb0de8eccdd0fe9455497c6df251098b575450228697fa35",
+          "node_id": "",
+          "quoted_span": "Nghị định số 52/2024/NĐ-CP quy định về thanh toán không dung tiền mặt"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:167087",
+          "anchor": null,
+          "kind": "document"
+        }
+      ]
+    },
+    {
+      "case_id": "edge-soky-only-09-2020",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "09/2020/tt-nhnn",
+      "reason": "The stored title identifies the expected document.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "c73bc7a0715a0bd8a6c0ee7d2b0c5ba00d5302ab0e1f0258c6ee11c0b4753715",
+          "node_id": "",
+          "quoted_span": "Thông tư số 09/2020/TT-NHNN Quy định về an toàn hệ thống thông tin trong hoạt động ngân hàng"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:144532",
+          "anchor": null,
+          "kind": "document"
+        }
+      ]
+    },
+    {
+      "case_id": "laisuat-chovay-39-2016",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "39/2016/tt-nhnn",
+      "reason": "The original document has Article 13 on lending interest. Other candidates, including the matching-title consolidated document and the English record, have no provision tree.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "883bed00abf5fb38082800af26bbcad07309125ab39634febaae6c74ac99e0ee",
+          "node_id": "ad16ccb8-2c7e-11f1-946a-17e7992b6e51",
+          "quoted_span": "Điều 13. Lãi suất cho vay\n1. Tổ chức tín dụng và khách hàng thỏa thuận về lãi suất cho vay theo cung cầu vốn thị trường, nhu cầu vay vốn và mức độ tín nhiệm của khách hàng, trừ trường hợp Ngân hàng Nh"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:118230",
+          "anchor": "dieu-13",
+          "kind": "provision"
+        }
+      ]
+    },
+    {
+      "case_id": "car-tctd-41-2016",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "41/2016/tt-nhnn",
+      "reason": "The original document has Article 6 on capital adequacy. The 05/VBHN-NHNN candidates have no provision tree, including the matching-title document.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "b6c306773ee04c57d25af8c83d160ead4ba7e02d0ba54fe98502dd663ef56d20",
+          "node_id": "0e053b34-eb9a-11f0-ba35-c764fcb9657c",
+          "quoted_span": "Điều 6. Tỷ lệ an toàn vốn\n1. Tỷ lệ an toàn vốn (CAR) tính theo đơn vị phần trăm (%) được xác định bằng công thức:\nTrong đó:\n- C: Vốn tự có;\n- RWA: Tổng tài sản tính theo rủi ro tín dụng;\n- KOR: Vốn yê"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:117310",
+          "anchor": "dieu-6",
+          "kind": "provision"
+        }
+      ]
+    },
+    {
+      "case_id": "new-banking-penalty-scope-340-2025",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "340/2025/nđ-cp",
+      "reason": "The stored provision identifies the expected article.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "644071b9cda9e473f4a703ee5f626cd60e5b83864c0f78c1c8f12c5953bb9433",
+          "node_id": "7edd9800-3029-11f1-a10a-c76ce3e839fe",
+          "quoted_span": "Điều 1. Phạm vi điều chỉnh"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:187101",
+          "anchor": "dieu-1",
+          "kind": "provision"
+        }
+      ]
+    },
+    {
+      "case_id": "new-penalty-it-safety-340-2025",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "340/2025/nđ-cp",
+      "reason": "The stored provision identifies the expected article.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "644071b9cda9e473f4a703ee5f626cd60e5b83864c0f78c1c8f12c5953bb9433",
+          "node_id": "7f8b1610-3029-11f1-8b5e-9f8e0e712af8",
+          "quoted_span": "Điều 61. Vi phạm quy định về an toàn công nghệ thông tin trong hoạt động ngân hàng"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:187101",
+          "anchor": "dieu-61",
+          "kind": "provision"
+        }
+      ]
+    },
+    {
+      "case_id": "new-credit-info-penalty-340-2025",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "340/2025/nđ-cp",
+      "reason": "The stored provision identifies the expected article.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "644071b9cda9e473f4a703ee5f626cd60e5b83864c0f78c1c8f12c5953bb9433",
+          "node_id": "7f1c9cd0-3029-11f1-a850-3f7a322310f9",
+          "quoted_span": "Điều 24. Vi phạm quy định về an toàn, lưu giữ thông tin tín dụng\nPhạt tiền từ 40.000.000 đồng đến 80.000.000 đồng đối với một trong các hành vi vi phạm sau đây:"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:187101",
+          "anchor": "dieu-24",
+          "kind": "provision"
+        }
+      ]
+    },
+    {
+      "case_id": "new-forex-penalty-340-2025",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "340/2025/nđ-cp",
+      "reason": "The stored provision identifies the expected article.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "644071b9cda9e473f4a703ee5f626cd60e5b83864c0f78c1c8f12c5953bb9433",
+          "node_id": "7f1faa10-3029-11f1-9d8c-23f9e9f28bf8",
+          "quoted_span": "Điều 27. Vi phạm quy định về hoạt động ngoại hối"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:187101",
+          "anchor": "dieu-27",
+          "kind": "provision"
+        }
+      ]
+    },
+    {
+      "case_id": "new-ics-scope-83-2025",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "83/2025/tt-nhnn",
+      "reason": "The stored provision identifies the expected article.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "b1a73d7170316fb24c5c2afa070d95958282b4eb4666ee905947623f10b8cc15",
+          "node_id": "399c79fa-31af-11f1-9edf-6562716f5abe",
+          "quoted_span": "Điều 4. Yêu cầu đối với hệ thống kiểm soát nội bộ\n1. Hệ thống kiểm soát nội bộ của ngân hàng phải đáp ứng các yêu cầu sau:\na) Tuân thủ quy định tại Luật Các tổ chức tín dụng và các văn bản sửa đổi, bổ"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:186792",
+          "anchor": "dieu-4",
+          "kind": "provision"
+        }
+      ]
+    },
+    {
+      "case_id": "new-ics-electronic-controls-83-2025",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "83/2025/tt-nhnn",
+      "reason": "The stored provision identifies the expected article, clause.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "b1a73d7170316fb24c5c2afa070d95958282b4eb4666ee905947623f10b8cc15",
+          "node_id": "39b001f0-31af-11f1-abae-a56f375a7e13",
+          "quoted_span": "7. Ngân hàng phải có quy định về hoạt động kiểm soát đối với các hoạt động được thực hiện bằng phương tiện điện tử đảm bảo đáp ứng các quy định tại Thông tư này và các quy định của pháp luật có liên q"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:186792",
+          "anchor": "dieu-11/khoan-7",
+          "kind": "provision"
+        }
+      ]
+    },
+    {
+      "case_id": "new-ics-senior-mgmt-83-2025",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "83/2025/tt-nhnn",
+      "reason": "The stored provision identifies the expected article.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "b1a73d7170316fb24c5c2afa070d95958282b4eb4666ee905947623f10b8cc15",
+          "node_id": "39b05010-31af-11f1-af33-592f75690965",
+          "quoted_span": "Điều 12. Giám sát của quản lý cấp cao\n1. Việc giám sát của quản lý cấp cao phải phù hợp với yêu cầu quy định tại Điều 11 Thông tư này.\n2. Việc giám sát của quản lý cấp cao tại ngân hàng thương mại đượ"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:186792",
+          "anchor": "dieu-12",
+          "kind": "provision"
+        }
+      ]
+    },
+    {
+      "case_id": "new-ai-decree-risk-tool-142-2026",
+      "citation_index": 0,
+      "state": "absent",
+      "expected_number": "142/2026/nđ-cp",
+      "reason": "Searched 142/2026/nđ-cp. No matching document exists in the exported inventory.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [],
+      "alternatives": []
+    },
+    {
+      "case_id": "new-ai-decree-reclassify-142-2026",
+      "citation_index": 0,
+      "state": "absent",
+      "expected_number": "142/2026/nđ-cp",
+      "reason": "Searched 142/2026/nđ-cp. No matching document exists in the exported inventory.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [],
+      "alternatives": []
+    },
+    {
+      "case_id": "new-ai-decree-dossier-142-2026",
+      "citation_index": 0,
+      "state": "absent",
+      "expected_number": "142/2026/nđ-cp",
+      "reason": "Searched 142/2026/nđ-cp. No matching document exists in the exported inventory.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [],
+      "alternatives": []
+    },
+    {
+      "case_id": "new-credit-info-scope-58-2021",
+      "citation_index": 0,
+      "state": "absent",
+      "expected_number": "58/2021/nđ-cp",
+      "reason": "Searched 58/2021/nđ-cp. No matching document exists in the exported inventory.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [],
+      "alternatives": []
+    },
+    {
+      "case_id": "new-credit-info-principles-58-2021",
+      "citation_index": 0,
+      "state": "absent",
+      "expected_number": "58/2021/nđ-cp",
+      "reason": "Searched 58/2021/nđ-cp, 35/vbhn-nhnn. No document for the expected number exists; the alternate-number documents have no provision tree, so the expected provision cannot be established.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [],
+      "alternatives": []
+    },
+    {
+      "case_id": "new-credit-info-prohibited-58-2021",
+      "citation_index": 0,
+      "state": "absent",
+      "expected_number": "58/2021/nđ-cp",
+      "reason": "Searched 58/2021/nđ-cp. No matching document exists in the exported inventory.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [],
+      "alternatives": []
+    },
+    {
+      "case_id": "new-credit-info-storage-58-2021",
+      "citation_index": 0,
+      "state": "absent",
+      "expected_number": "58/2021/nđ-cp",
+      "reason": "Searched 58/2021/nđ-cp, 35/vbhn-nhnn. No document for the expected number exists; the alternate-number documents have no provision tree, so the expected provision cannot be established.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [],
+      "alternatives": []
+    },
+    {
+      "case_id": "new-interbank-payment-scope-08-2024",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "08/2024/tt-nhnn",
+      "reason": "The stored provision identifies the expected article.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "1d6d5dd99a229f4f5e90b58b7800788a55bddd5a663f7bbe5dfce09eec58e955",
+          "node_id": "75ed5470-2d44-11f1-8a98-ef5b66cb2453",
+          "quoted_span": "Điều 1. Phạm vi điều chỉnh và đối tượng áp dụng"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:167911",
+          "anchor": "dieu-1",
+          "kind": "provision"
+        }
+      ]
+    },
+    {
+      "case_id": "new-interbank-high-value-08-2024",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "08/2024/tt-nhnn",
+      "reason": "The stored provision identifies the expected article.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "1d6d5dd99a229f4f5e90b58b7800788a55bddd5a663f7bbe5dfce09eec58e955",
+          "node_id": "75f9b080-2d44-11f1-8be2-a99d13c9f631",
+          "quoted_span": "Điều 10. Quy định về sử dụng dịch vụ thanh toán"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:167911",
+          "anchor": "dieu-10",
+          "kind": "provision"
+        }
+      ]
+    },
+    {
+      "case_id": "new-telecom-cloud-24-2023",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "24/2023/qh15",
+      "reason": "The stored provision identifies the expected article.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "2edac11bb989d5e12b9f4a50df7811826d8594077e19de5200718b7ca8b9ebe2",
+          "node_id": "de9d1fb8-e182-11f0-8ee4-b55e4df6784d",
+          "quoted_span": "Điều 29. Cung cấp và sử dụng dịch vụ trung tâm dữ liệu, dịch vụ điện toán đám mây\n1. Doanh nghiệp cung cấp dịch vụ trung tâm dữ liệu, dịch vụ điện toán đám mây có các quyền sau đây:\na) Đầu tư kinh doa"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:165912",
+          "anchor": "dieu-29",
+          "kind": "provision"
+        }
+      ]
+    },
+    {
+      "case_id": "new-relation-340-replaces-88",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "340/2025/nđ-cp",
+      "reason": "The stored title identifies the expected document.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "644071b9cda9e473f4a703ee5f626cd60e5b83864c0f78c1c8f12c5953bb9433",
+          "node_id": "",
+          "quoted_span": "NGHỊ ĐỊNH SỐ 340/2025/NĐ-CP QUY ĐỊNH VỀ XỬ PHẠT VI PHẠM HÀNH CHÍNH TRONG LĨNH VỰC TIỀN TỆ VÀ NGÂN HÀNG"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:187101",
+          "anchor": null,
+          "kind": "document"
+        }
+      ]
+    },
+    {
+      "case_id": "new-relation-340-replaces-88",
+      "citation_index": 1,
+      "state": "resolved",
+      "expected_number": "88/2019/nđ-cp",
+      "reason": "The stored title identifies the expected document.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "7d95dcdf6774fcb52f954fc5aac7f4aa87e8ca8ad86df703c7096f49a361099e",
+          "node_id": "",
+          "quoted_span": "Nghị định số 88/2019/NĐ-CP Quy định xử phạt vi phạm hành chính trong lĩnh vực tiền tệ và ngân hàng"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:139063",
+          "anchor": null,
+          "kind": "document"
+        }
+      ]
+    },
+    {
+      "case_id": "new-relation-83-amends-09-2024",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "83/2025/tt-nhnn",
+      "reason": "The stored title identifies the expected document. Relation credit is not mapped.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "b1a73d7170316fb24c5c2afa070d95958282b4eb4666ee905947623f10b8cc15",
+          "node_id": "",
+          "quoted_span": "Thông tư số 83/2025/TT-NHNN Quy định về hệ thống kiểm soát nội bộ của ngân hàng thương mại, \nchi nhánh ngân hàng nước ngoài"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:186792",
+          "anchor": null,
+          "kind": "document"
+        }
+      ]
+    },
+    {
+      "case_id": "new-relation-143-amends-88",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "143/2021/nđ-cp",
+      "reason": "The stored title identifies the expected document.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "cda1fb0cd198cbdba38c4ee3ae714896dc969ec69637f5c60a0e966189b252e1",
+          "node_id": "",
+          "quoted_span": "Nghị định số 143/2021/NĐ-CP sửa đổi, bổ sung một số điều của Nghị định số 88/2019/NĐ-CP ngày 14 tháng 11 năm 2019 quy định về xử phạt vi phạm hành chính trong lĩnh vực tiền tệ và ngân hàng"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:152636",
+          "anchor": null,
+          "kind": "document"
+        }
+      ]
+    },
+    {
+      "case_id": "new-relation-143-amends-88",
+      "citation_index": 1,
+      "state": "resolved",
+      "expected_number": "88/2019/nđ-cp",
+      "reason": "The stored title identifies the expected document.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "7d95dcdf6774fcb52f954fc5aac7f4aa87e8ca8ad86df703c7096f49a361099e",
+          "node_id": "",
+          "quoted_span": "Nghị định số 88/2019/NĐ-CP Quy định xử phạt vi phạm hành chính trong lĩnh vực tiền tệ và ngân hàng"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:139063",
+          "anchor": null,
+          "kind": "document"
+        }
+      ]
+    },
+    {
+      "case_id": "new-relation-ai-law-decree-pair",
+      "citation_index": 0,
+      "state": "absent",
+      "expected_number": "142/2026/nđ-cp",
+      "reason": "Searched 142/2026/nđ-cp. No matching document exists in the exported inventory.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [],
+      "alternatives": []
+    },
+    {
+      "case_id": "new-relation-ai-law-decree-pair",
+      "citation_index": 1,
+      "state": "resolved",
+      "expected_number": "134/2025/qh15",
+      "reason": "The stored provision identifies the expected article.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "9788c2dff9609a9e70369245c804afbeba0f5a07c5b70a13716c1c294e63e774",
+          "node_id": "4cbf4944-0e28-46f8-9729-a92fa115a83e",
+          "quoted_span": "Điều 9. Phân loại mức độ rủi ro của hệ thống trí tuệ nhân tạo\n1. Hệ thống trí tuệ nhân tạo được phân loại theo các mức độ rủi ro sau đây:\na) Hệ thống trí tuệ nhân tạo có rủi ro cao là hệ thống có thể "
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:69ba65c0-8a56-11f1-878c-399a87bcb3eb",
+          "anchor": "dieu-9",
+          "kind": "provision"
+        }
+      ]
+    },
+    {
+      "case_id": "new-multi-it-safety-penalty-plus-rules",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "340/2025/nđ-cp",
+      "reason": "Article 24 concerns credit information security and storage; the question asks more broadly about information system security. The original citation is retained as labeled.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "644071b9cda9e473f4a703ee5f626cd60e5b83864c0f78c1c8f12c5953bb9433",
+          "node_id": "7f1c9cd0-3029-11f1-a850-3f7a322310f9",
+          "quoted_span": "Điều 24. Vi phạm quy định về an toàn, lưu giữ thông tin tín dụng\nPhạt tiền từ 40.000.000 đồng đến 80.000.000 đồng đối với một trong các hành vi vi phạm sau đây:"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:187101",
+          "anchor": "dieu-24",
+          "kind": "provision"
+        }
+      ]
+    },
+    {
+      "case_id": "new-multi-it-safety-penalty-plus-rules",
+      "citation_index": 1,
+      "state": "resolved",
+      "expected_number": "09/2020/tt-nhnn",
+      "reason": "The stored provision identifies the expected article.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "c73bc7a0715a0bd8a6c0ee7d2b0c5ba00d5302ab0e1f0258c6ee11c0b4753715",
+          "node_id": "044bb7d8-df3f-11f0-b188-59c776772e02",
+          "quoted_span": "Điều 3. Nguyên tắc chung\n1. Tổ chức có trách nhiệm bảo đảm an toàn thông tin theo nguyên tắc xác định rõ quyền hạn, trách nhiệm từng bộ phận và cá nhân trong tổ chức.\n2. Hệ thống thông tin được phân l"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:144532",
+          "anchor": "dieu-3",
+          "kind": "provision"
+        }
+      ]
+    },
+    {
+      "case_id": "new-multi-credit-info-storage-and-pdpl",
+      "citation_index": 0,
+      "state": "absent",
+      "expected_number": "58/2021/nđ-cp",
+      "reason": "Searched 58/2021/nđ-cp. No matching document exists in the exported inventory.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [],
+      "alternatives": []
+    },
+    {
+      "case_id": "new-multi-credit-info-storage-and-pdpl",
+      "citation_index": 1,
+      "state": "resolved",
+      "expected_number": "91/2025/qh15",
+      "reason": "The stored title identifies the expected document.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "60cd5851a56a5fe04877683d80bf9b5bb1b19c891dc0e9d70977879fab10a837",
+          "node_id": "",
+          "quoted_span": "Luật Bảo vệ dữ liệu cá nhân số 91/2025/QH15"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:179252",
+          "anchor": null,
+          "kind": "document"
+        }
+      ]
+    },
+    {
+      "case_id": "luutru-tinh-thoihan-04-2025",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "04/2025/tt-nhnn",
+      "reason": "The stored provision identifies the expected article, clause.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "01b56a088d45ac3e370715378ff42fef48a179040968d12d7f544cc5fcd746f2",
+          "node_id": "dec2cf4c-e169-11f0-9d14-77cb3ce5c0d9",
+          "quoted_span": "1. Thời hạn lưu trữ hồ sơ, tài liệu là khoảng thời gian cần thiết để lưu trữ hồ sơ, tài liệu được tính từ năm kết thúc công việc."
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:180064",
+          "anchor": "dieu-3/khoan-1",
+          "kind": "provision"
+        }
+      ]
+    },
+    {
+      "case_id": "luutru-phuluc-tiengui-04-2025",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "04/2025/tt-nhnn",
+      "reason": "The stored title identifies the expected document.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "01b56a088d45ac3e370715378ff42fef48a179040968d12d7f544cc5fcd746f2",
+          "node_id": "",
+          "quoted_span": "Thông tư số 04/2025/TT-NHNN Quy định thời hạn lưu trữ hồ sơ, tài liệu ngành Ngân hàng"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:180064",
+          "anchor": null,
+          "kind": "document"
+        }
+      ]
+    },
+    {
+      "case_id": "luutru-amend-37-2026",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "37/2026/tt-nhnn",
+      "reason": "The stored title identifies the expected document. Relation credit is not mapped.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "e5f2cb60a4e2bdbaaada5d6327603ad5265bff06a9ee114e249cdb38edf9df68",
+          "node_id": "",
+          "quoted_span": "Thông tư số 37/2026/TT-NHNN Sửa đổi, bổ sung một số điều của Thông tư số 04/2025/TT-NHNN ngày 15 tháng 5 năm 2025 quy định thời hạn lưu trữ hồ sơ, tài liệu ngành Ngân hàng"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:420f79a0-8706-11f1-98cc-4f91ef2e45f8",
+          "anchor": null,
+          "kind": "document"
+        }
+      ]
+    },
+    {
+      "case_id": "car-tcvm-57-2025",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "57/2025/tt-nhnn",
+      "reason": "The stored provision identifies the expected article.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "96d9b9eff0db7d7dfec8090b8efb71b5d6be946fdfba49a631a44bdb418ae6b5",
+          "node_id": "1976c180-31b9-11f1-b7dd-dbcc5503704a",
+          "quoted_span": "Điều 7. Tỷ lệ an toàn vốn tối thiểu\n1. Tổ chức tài chính vi mô phải thường xuyên duy trì tỷ lệ an toàn vốn tối thiểu 10%.\n2. Tỷ lệ an toàn vốn được xác định bằng công thức sau đây: \n\nTrong đó:\na) Vốn "
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:185471",
+          "anchor": "dieu-7",
+          "kind": "provision"
+        }
+      ]
+    },
+    {
+      "case_id": "phanloai-no-nhpt-68-2025",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "68/2025/tt-nhnn",
+      "reason": "The stored provision identifies the expected article, clause.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "3f9224f301ce93e294cdc0df2a28aef0da9d08d1143ae4f0eab6db9149df11ef",
+          "node_id": "c8faa080-31a1-11f1-9687-49bf18461d28",
+          "quoted_span": "1. Ngân hàng Phát triển Việt Nam thực hiện phân loại nợ (trừ các khoản trả thay theo cam kết ngoại bảng) theo 05 nhóm như sau:"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:185547",
+          "anchor": "dieu-8/khoan-1",
+          "kind": "provision"
+        }
+      ]
+    },
+    {
+      "case_id": "chovaydacbiet-thoihan-35-2025",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "35/2025/tt-nhnn",
+      "reason": "The stored provision identifies the expected article.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "f07b09547177103257c12bf9fa9206e9f18b28812120d47e12ccc53f72dbe562",
+          "node_id": "33cdaaf0-3199-11f1-aa7e-c74c96a15860",
+          "quoted_span": "Điều 12. Thời hạn cho vay đặc biệt, gia hạn thời hạn cho vay đặc biệt"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:184068",
+          "anchor": "dieu-12",
+          "kind": "provision"
+        }
+      ]
+    },
+    {
+      "case_id": "kiemtoan-noibo-nhtm-83-2025",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "83/2025/tt-nhnn",
+      "reason": "The stored provision identifies the expected article.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "b1a73d7170316fb24c5c2afa070d95958282b4eb4666ee905947623f10b8cc15",
+          "node_id": "3a20ec30-31af-11f1-ba47-31b3245e162e",
+          "quoted_span": "Điều 70. Nội dung kiểm toán nội bộ\n1. Kiểm toán nội bộ của ngân hàng thương mại thực hiện quy định tại Điều 58 Luật Các tổ chức tín dụng trên cơ sở các nội dung sau đây:\na) Kiểm tra, đánh giá độc lập,"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:186792",
+          "anchor": "dieu-70",
+          "kind": "provision"
+        }
+      ]
+    },
+    {
+      "case_id": "chovay-nuocngoai-dangky-79-2025",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "79/2025/tt-nhnn",
+      "reason": "The stored provision identifies the expected article.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "ef2fb0116bd1b6eccc311e2b8fe8b7622a46e66d17d8f9787938d12396bb8253",
+          "node_id": "8b8e49c0-3270-11f1-9e16-5d1134c7a437",
+          "quoted_span": "Điều 14. Nghĩa vụ đăng ký khoản cho vay ra nước ngoài\nBên cho vay phải đăng ký với Ngân hàng Nhà nước các khoản cho vay ra nước ngoài sau:"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:186060",
+          "anchor": "dieu-14",
+          "kind": "provision"
+        }
+      ]
+    },
+    {
+      "case_id": "trangthaivang-gioihan-82-2025",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "82/2025/tt-nhnn",
+      "reason": "The stored provision identifies the expected article.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "73fbfc7bd9bc955e5c5078b48c6a80005ba0a5b62fc973a139bb34436d573525",
+          "node_id": "ee6e7bb0-31ac-11f1-94c1-37e74ded7a0c",
+          "quoted_span": "Điều 4. Giới hạn trạng thái vàng"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:185854",
+          "anchor": "dieu-4",
+          "kind": "provision"
+        }
+      ]
+    },
+    {
+      "case_id": "gopvon-tcvm-54-2025",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "54/2025/tt-nhnn",
+      "reason": "Both the original and consolidated documents contain Article 23 on charter capital, including the restriction on borrowed funds.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "04160e401a1af734e89410aba5037472754afe5bbef23d6be10b4659fe3aa1f5",
+          "node_id": "302e97f0-31a9-11f1-b176-49d8ab6dcfca",
+          "quoted_span": "2. Chủ sở hữu, thành viên góp vốn không được dùng vốn ủy thác, vốn huy động, vốn vay dưới bất kỳ hình thức nào để góp vốn vào tổ chức tài chính vi mô và phải cam kết, chịu trách nhiệm về tính hợp pháp"
+        },
+        {
+          "source_url": "",
+          "fetch_sha256": "5cff40a1012fd6ade67ea76e65b8ba060691ff8e99224855d8b08b5620449311",
+          "node_id": "b2385ec8-002d-4436-87f2-c893a99811fd",
+          "quoted_span": "2. Chủ sở hữu, thành viên góp vốn không được dùng vốn ủy thác, vốn huy động, vốn vay dưới bất kỳ hình thức nào để góp vốn vào tổ chức tài chính vi mô và phải cam kết, chịu trách nhiệm về tính hợp pháp"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:185478",
+          "anchor": "dieu-23",
+          "kind": "provision"
+        },
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:89204420-73a4-11f1-b581-2b248e5f26c5",
+          "anchor": "dieu-23",
+          "kind": "provision"
+        }
+      ]
+    },
+    {
+      "case_id": "mangluoi-chinhanh-hanoi-61-2025",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "61/2025/tt-nhnn",
+      "reason": "Both the original and consolidated documents contain Article 8 clause 1 on branch limits in Hanoi and Ho Chi Minh City.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "e8d8cb08dcbd1e8f8dee2e107f365850898e9981db19c39926ea41d017b86eca",
+          "node_id": "efa17d7a-31ac-11f1-b136-611f00149288",
+          "quoted_span": "1. Ngân hàng thương mại được thành lập tối đa 10 chi nhánh tại mỗi khu vực nội thành thành phố Hà Nội hoặc nội thành thành phố Hồ Chí Minh."
+        },
+        {
+          "source_url": "",
+          "fetch_sha256": "5eb7f687ca47f6ecac46c47f8abeaeb0d702df0a6adbaf5f246412ab2a16506f",
+          "node_id": "64dd88d5-eaaa-4647-bda4-f336888c132f",
+          "quoted_span": "1. Ngân hàng thương mại được thành lập tối đa 10 chi nhánh tại mỗi khu vực nội thành thành phố Hà Nội hoặc nội thành thành phố Hồ Chí Minh."
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:185599",
+          "anchor": "dieu-8/khoan-1",
+          "kind": "provision"
+        },
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:fba85260-6f82-11f1-b60f-1789c4ffaabf",
+          "anchor": "dieu-8/khoan-1",
+          "kind": "provision"
+        }
+      ]
+    },
+    {
+      "case_id": "edge-no-diacritics-mangluoi",
+      "citation_index": 0,
+      "state": "resolved",
+      "expected_number": "61/2025/tt-nhnn",
+      "reason": "The stored title identifies the expected document.",
+      "reviewed_at": "2026-11-09",
+      "evidence": [
+        {
+          "source_url": "",
+          "fetch_sha256": "e8d8cb08dcbd1e8f8dee2e107f365850898e9981db19c39926ea41d017b86eca",
+          "node_id": "",
+          "quoted_span": "Thông tư số 61/2025/TT-NHNN Quy định về mạng lưới hoạt động của ngân hàng thương mại"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:185599",
+          "anchor": null,
+          "kind": "document"
+        }
+      ]
+    }
+  ]
+}
