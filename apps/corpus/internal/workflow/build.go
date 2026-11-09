@@ -25,6 +25,7 @@ func BuildRelease(ctx temporalworkflow.Context, in run.BuildInput) error {
 	control := temporalworkflow.WithActivityOptions(ctx, temporalworkflow.ActivityOptions{StartToCloseTimeout: 10 * time.Minute, RetryPolicy: retry})
 	batch := temporalworkflow.WithActivityOptions(ctx, temporalworkflow.ActivityOptions{StartToCloseTimeout: time.Hour, HeartbeatTimeout: 2 * time.Minute, RetryPolicy: retry})
 	input := stage.StageInput{RunID: in.RunID, Generation: in.Generation, Stage: in.Stage}
+	transitionVersion := temporalworkflow.GetVersion(ctx, "refused-run-transition", temporalworkflow.DefaultVersion, 1)
 	guard := func() error {
 		if temporalworkflow.GetInfo(ctx).GetCurrentHistoryLength() <= in.HistoryLimit {
 			return nil
@@ -53,12 +54,33 @@ func BuildRelease(ctx temporalworkflow.Context, in run.BuildInput) error {
 		_ = temporalworkflow.ExecuteActivity(control, "MarkRun", mark).Get(control, nil)
 		return err
 	}
-	change := func(from, to, message string) error {
-		return execute("MarkRun", stage.MarkInput{RunID: in.RunID, Generation: in.Generation, From: []string{from}, To: to, Message: message}, nil)
+	change := func(from, to, message string) (bool, error) {
+		if transitionVersion == temporalworkflow.DefaultVersion {
+			err := execute("MarkRun", stage.MarkInput{RunID: in.RunID, Generation: in.Generation, From: []string{from}, To: to, Message: message}, nil)
+			return true, err
+		}
+		var changed bool
+		err := execute("MarkRun", stage.MarkInput{RunID: in.RunID, Generation: in.Generation, From: []string{from}, To: to, Message: message}, &changed)
+		return changed, err
+	}
+	cancel := func() error {
+		_, err := change("cancelling", "cancelled", "")
+		return finish(err)
+	}
+	transition := func(from, to, message string) (bool, error) {
+		changed, err := change(from, to, message)
+		if err != nil {
+			return false, finish(err)
+		}
+		if !changed {
+			return false, cancel()
+		}
+		return true, nil
 	}
 	if in.Begin {
-		if err := change("starting", "running", ""); err != nil {
-			return finish(err)
+		changed, err := transition("starting", "running", "")
+		if err != nil || !changed {
+			return err
 		}
 	}
 	var plan stage.PlanResult
@@ -66,7 +88,7 @@ func BuildRelease(ctx temporalworkflow.Context, in run.BuildInput) error {
 		return finish(err)
 	}
 	if plan.Cancelling {
-		return finish(change("cancelling", "cancelled", ""))
+		return cancel()
 	}
 	limit := in.BatchesInFlight
 	if limit <= 0 {
@@ -110,20 +132,22 @@ func BuildRelease(ctx temporalworkflow.Context, in run.BuildInput) error {
 		return finish(guard())
 	}
 	if cancelling {
-		return finish(change("cancelling", "cancelled", ""))
+		return cancel()
 	}
 	var closed stage.CloseResult
 	if err := execute("CloseStage", input, &closed); err != nil {
 		return finish(err)
 	}
 	if closed.Failed {
-		return finish(change("running", "failed", fmt.Sprintf("%d items failed in %s", closed.Counts.Failed, in.Stage)))
+		_, err := transition("running", "failed", fmt.Sprintf("%d items failed in %s", closed.Counts.Failed, in.Stage))
+		return err
 	}
 	if err := execute("Checkpoint", input, nil); err != nil {
 		return finish(err)
 	}
 	if in.Until == in.Stage || closed.NextStage == "" {
-		return finish(change("running", "paused", ""))
+		_, err := transition("running", "paused", "")
+		return err
 	}
 	in.Stage = closed.NextStage
 	in.Begin = false

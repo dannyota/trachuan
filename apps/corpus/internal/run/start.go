@@ -81,20 +81,20 @@ func Start(ctx context.Context, d Deps, cc, rel, until, previousManifest string)
 		return errors.New("run is already starting")
 	}
 	id := WorkflowID(cc, rel)
-	if row.State == "running" || row.State == "cancelling" || row.State == "starting" {
-		open, openErr := workflowOpen(ctx, d, id)
-		if openErr != nil {
-			return openErr
-		}
-		if open {
-			return errors.New("workflow is open; use corpus cancel or corpus recover")
-		}
+	open, openErr := workflowOpen(ctx, d, id)
+	if openErr != nil {
+		return openErr
 	}
+	if open {
+		return errors.New("workflow is open; use corpus cancel or corpus recover")
+	}
+	oldStageCount := 0
 	if row.Generation > 0 {
 		snap = stage.Snapshot{}
 		if err = json.Unmarshal(row.Snapshot, &snap); err != nil {
 			return fmt.Errorf("decode snapshot: %w", err)
 		}
+		oldStageCount = len(snap.Stages)
 		snap, _, err = extendSnapshot(snap, d.Stages, d.RecipesFor(snap))
 		if err != nil {
 			return err
@@ -112,11 +112,32 @@ func Start(ctx context.Context, d Deps, cc, rel, until, previousManifest string)
 		return fmt.Errorf("encode snapshot: %w", err)
 	}
 	next := d.Stages[0]
-	if row.NextStage != nil && *row.NextStage != "" {
-		next = *row.NextStage
+	if row.NextStage != nil {
+		if *row.NextStage == "" {
+			if oldStageCount >= len(snap.Stages) {
+				return errors.New("run is complete")
+			}
+			next = snap.Stages[oldStageCount]
+		} else {
+			next = *row.NextStage
+		}
 	}
 	if !containsStage(d.Stages, next) {
 		return fmt.Errorf("unknown next stage %q", next)
+	}
+	if until != "" {
+		nextIndex, untilIndex := -1, -1
+		for i, name := range snap.Stages {
+			if name == next {
+				nextIndex = i
+			}
+			if name == until {
+				untilIndex = i
+			}
+		}
+		if untilIndex < nextIndex {
+			return fmt.Errorf("until stage %q is before resume stage %q", until, next)
+		}
 	}
 	var untilPtr *string
 	if until != "" {
@@ -148,12 +169,19 @@ func workerVersion() string {
 	if !ok {
 		return "unknown"
 	}
+	version, dirty := "unknown", false
 	for _, setting := range info.Settings {
 		if setting.Key == "vcs.revision" && setting.Value != "" {
-			return setting.Value
+			version = setting.Value
+		}
+		if setting.Key == "vcs.modified" && setting.Value == "true" {
+			dirty = true
 		}
 	}
-	return "unknown"
+	if dirty {
+		version += "+dirty"
+	}
+	return version
 }
 
 func containsStage(stages []string, name string) bool {

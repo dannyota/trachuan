@@ -120,7 +120,7 @@ func TestCloseStage_EmptyStageAdvances(t *testing.T) {
 		t.Fatalf("result=%+v err=%v", got, err)
 	}
 	var next *string
-	if err := env.DB.QueryRow(context.Background(), `SELECT next_stage FROM run WHERE id=$1`, in.RunID).Scan(&next); err != nil || next != nil {
+	if err := env.DB.QueryRow(context.Background(), `SELECT next_stage FROM run WHERE id=$1`, in.RunID).Scan(&next); err != nil || next == nil || *next != "" {
 		t.Fatalf("next=%v err=%v", next, err)
 	}
 }
@@ -172,5 +172,24 @@ func TestControl_SupersededGenerationChangesNothing(t *testing.T) {
 	queryErr := env.DB.QueryRow(context.Background(), `SELECT (SELECT count(*) FROM run_item WHERE run_id=$1),state,next_stage FROM run WHERE id=$1`, in.RunID).Scan(&count, &state, &next)
 	if !errors.Is(planErr, ErrSuperseded) || !errors.Is(closeErr, ErrSuperseded) || !errors.Is(markErr, ErrSuperseded) || queryErr != nil || s.calls != 0 || count != 0 || state != "running" || next != "fetch" {
 		t.Fatalf("plan=%v close=%v mark=%v query=%v calls=%d count=%d state=%s next=%s", planErr, closeErr, markErr, queryErr, s.calls, count, state, next)
+	}
+}
+
+func TestPlanStage_ReportsCancelledAsCancelling(t *testing.T) {
+	env, in, s := controlSetup(t)
+	batchExec(t, env.DB, `UPDATE run SET state='cancelled' WHERE id=$1`, in.RunID)
+	got, err := controlPlan(env, in, s)
+	if err != nil || !got.Cancelling || s.calls != 0 {
+		t.Fatalf("result=%+v calls=%d err=%v", got, s.calls, err)
+	}
+}
+
+func TestCloseStage_LastStageMarksComplete(t *testing.T) {
+	env, in, _ := controlSetup(t)
+	_, err := CloseStage(context.Background(), env, in, "")
+	var next *string
+	queryErr := env.DB.QueryRow(context.Background(), `SELECT next_stage FROM run WHERE id=$1`, in.RunID).Scan(&next)
+	if err != nil || queryErr != nil || next == nil || *next != "" {
+		t.Fatalf("next=%v err=%v query=%v", next, err, queryErr)
 	}
 }

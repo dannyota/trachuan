@@ -169,3 +169,46 @@ func TestRunBatch_SupersededGenerationWritesNothing(t *testing.T) {
 		t.Fatalf("state=%s gaps=%d calls=%d err=%v", state, gaps, s.calls, err)
 	}
 }
+
+func TestRunBatch_RowsErrorFailsOnlyThatItem(t *testing.T) {
+	env, id, s := batchSetup(t)
+	s.process = func(_ context.Context, _ Env, _ Run, item Item) (Output, error) {
+		if item.Key == "item" {
+			return Output{Artifact: &artifact.Result{Path: filepath.Join(t.TempDir(), "missing"), InputHash: "input"}}, nil
+		}
+		return Output{State: "gap"}, nil
+	}
+	batchExec(t, env.DB, `INSERT INTO run_item (run_id,stage,item_key,state,batch) VALUES ($1,'fetch','later','pending',0)`, id)
+	result, err := batchRun(env, id, s, 1, func(...any) {})
+	state, _ := batchState(t, env.DB, id)
+	if err != nil || state != "failed" || result.Failed != 1 || result.Gap != 1 {
+		t.Fatalf("result=%+v state=%s err=%v", result, state, err)
+	}
+}
+
+func TestRunBatch_CancelledStopsBatch(t *testing.T) {
+	env, id, s := batchSetup(t)
+	batchExec(t, env.DB, `UPDATE run SET state='cancelled' WHERE id=$1`, id)
+	result, err := batchRun(env, id, s, 1, func(...any) {})
+	if err != nil || !result.Cancelling || s.calls != 0 {
+		t.Fatalf("result=%+v calls=%d err=%v", result, s.calls, err)
+	}
+}
+
+func TestRunBatch_SQLDataErrorFailsOnlyThatItem(t *testing.T) {
+	env, id, s := batchSetup(t)
+	hash := strings.Repeat("a", 64)
+	_, err := env.Artifacts.Publish(context.Background(), "fetch", hash, s.Recipe(Snapshot{}), func(dir string) error { return os.WriteFile(filepath.Join(dir, "row"), []byte("bad\x00text"), 0600) })
+	if err != nil {
+		t.Fatal(err)
+	}
+	batchExec(t, env.DB, `UPDATE run_item SET input_hash=$2 WHERE run_id=$1`, id, hash)
+	batchExec(t, env.DB, `INSERT INTO run_item (run_id,stage,item_key,state,batch) VALUES ($1,'fetch','later','pending',0)`, id)
+	result, err := batchRun(env, id, s, 1, func(...any) {})
+	var state, message string
+	var artifacts int
+	queryErr := env.DB.QueryRow(context.Background(), `SELECT state, message, (SELECT count(*) FROM artifact) FROM run_item WHERE run_id=$1 AND item_key='item'`, id).Scan(&state, &message, &artifacts)
+	if err != nil || queryErr != nil || state != "failed" || message == "" || artifacts != 0 || result.Failed != 1 || result.Gap != 1 {
+		t.Fatalf("result=%+v state=%s message=%q artifacts=%d err=%v query=%v", result, state, message, artifacts, err, queryErr)
+	}
+}

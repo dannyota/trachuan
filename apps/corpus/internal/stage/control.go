@@ -52,7 +52,7 @@ func PlanStage(ctx context.Context, env Env, st Stage, in StageInput, compiled m
 	if int(row.Generation) != in.Generation {
 		return result, ErrSuperseded
 	}
-	if row.State == "cancelling" {
+	if row.State == "cancelling" || row.State == "cancelled" {
 		return PlanResult{Cancelling: true}, nil
 	}
 	var snapshot Snapshot
@@ -165,10 +165,7 @@ func CloseStage(ctx context.Context, env Env, in StageInput, following string) (
 		result.Failed = true
 		return result, nil
 	}
-	var next *string
-	if following != "" {
-		next = &following
-	}
+	next := &following
 	if advanceErr := q.AdvanceRunStage(ctx, store.AdvanceRunStageParams{ID: in.RunID, NextStage: next}); advanceErr != nil {
 		return result, fmt.Errorf("advance stage: %w", advanceErr)
 	}

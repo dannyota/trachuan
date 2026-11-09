@@ -106,12 +106,19 @@ func Run(ctx context.Context, cfg config.Config) error {
 
 func workerVersion() string {
 	info, ok := debug.ReadBuildInfo()
+	version, dirty := "unknown", false
 	if ok {
 		for _, setting := range info.Settings {
 			if setting.Key == "vcs.revision" && setting.Value != "" {
-				return setting.Value
+				version = setting.Value
+			}
+			if setting.Key == "vcs.modified" && setting.Value == "true" {
+				dirty = true
 			}
 		}
 	}
-	return "unknown"
+	if dirty {
+		version += "+dirty"
+	}
+	return version
 }

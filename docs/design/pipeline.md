@@ -40,16 +40,15 @@ signed dump to S3. Decision and alternatives:
 - States: `starting`, `running`, `cancelling`, `cancelled`, `failed`, `paused`,
   `evaluated`, `released`.
 - `corpus start <cc> <rel> [--until <stage>]` locks the run row. It refuses when
-  the state is `running` or `cancelling` and Temporal reports an open workflow
-  for the id, and when the state is `starting` and younger than the stale limit
-  in [budgets](budgets.md). Otherwise it increments `generation`, sets
-  `starting` and commits, then starts the workflow with that generation and a
-  fail-on-conflict id policy. The workflow's first activity moves `starting` to
-  `running` only for its own generation. A crash before dispatch leaves a stale
-  `starting` row that the next start replaces; a lost start response leaves a
-  workflow that marks the row `running`. If an open workflow of an older
-  generation holds the id, start refuses and names `corpus cancel` or
-  `corpus recover`.
+  Temporal reports an open workflow for the id, and when the state is `starting`
+  and younger than the stale limit in [budgets](budgets.md). Otherwise it
+  increments `generation`, sets `starting` and commits, then starts the workflow
+  with that generation and a fail-on-conflict id policy. The workflow's first
+  activity moves `starting` to `running` only for its own generation. A crash
+  before dispatch leaves a stale `starting` row that the next start replaces; a
+  lost start response leaves a workflow that marks the row `running`. If an open
+  workflow of an older generation holds the id, start refuses and names
+  `corpus cancel` or `corpus recover`.
 - Every activity first compares its generation with `run.generation`. A mismatch
   returns a non-retryable `superseded` error and the workflow ends without
   writing the run row. Control activities change state only from an allowed set
@@ -60,8 +59,10 @@ signed dump to S3. Decision and alternatives:
   stage; otherwise `next_stage` advances in the same transaction that computes
   the stage counts from `run_item` and `gap` rows (counts are never stored
   separately). `corpus start` resumes at `next_stage` and resets that stage's
-  `failed` items to `pending`. `paused` means the workflow stopped after the
-  stage named by `--until` or after the last implemented stage.
+  `failed` items to `pending`. An empty `next_stage` means the run is complete
+  until new stages are appended. Per-item data errors fail the item instead of
+  the batch. `paused` means the workflow stopped after the stage named by
+  `--until` or after the last implemented stage.
 - `corpus cancel <cc> <rel>` sets `cancelling`. Stage activities check the state
   before each item and return early; the workflow waits for every batch of the
   stage to return, then sets `cancelled`. A stage that has not started its

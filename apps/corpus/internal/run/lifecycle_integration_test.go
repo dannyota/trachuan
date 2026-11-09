@@ -243,3 +243,77 @@ func TestStart_RecipesUseFrozenSourceList(t *testing.T) {
 		t.Fatalf("resumed snapshot = %+v, %v", snap, err)
 	}
 }
+
+func TestStart_CompleteRunRefusesWithoutNewStages(t *testing.T) {
+	d := lifecycleDeps(t)
+	next := ""
+	insertLifecycleRun(t, d, "paused", time.Now(), testSnapshot(), &next)
+	if err := Start(context.Background(), d, "vn", "20261109", "", ""); err == nil || !strings.Contains(err.Error(), "run is complete") {
+		t.Fatalf("err=%v", err)
+	}
+}
+
+func TestStart_CompleteRunStartsAtAppendedStage(t *testing.T) {
+	d := lifecycleDeps(t)
+	snap := testSnapshot()
+	snap.Stages = snap.Stages[:1]
+	delete(snap.Recipes, "fetch")
+	next := ""
+	insertLifecycleRun(t, d, "paused", time.Now(), snap, &next)
+	if err := Start(context.Background(), d, "vn", "20261109", "", ""); err != nil {
+		t.Fatal(err)
+	}
+	var got string
+	if err := d.DB.QueryRow(context.Background(), `SELECT next_stage FROM run`).Scan(&got); err != nil || got != "fetch" {
+		t.Fatalf("next=%q err=%v", got, err)
+	}
+}
+
+func TestStart_RefusesUntilBeforeResumeStage(t *testing.T) {
+	d := lifecycleDeps(t)
+	next := "fetch"
+	insertLifecycleRun(t, d, "paused", time.Now(), testSnapshot(), &next)
+	if err := Start(context.Background(), d, "vn", "20261109", "discover", ""); err == nil {
+		t.Fatal("earlier until accepted")
+	}
+}
+
+func TestStart_ChecksOpenWorkflowInEveryState(t *testing.T) {
+	for _, state := range []string{"failed", "paused", "cancelled"} {
+		t.Run(state, func(t *testing.T) {
+			d := lifecycleDeps(t)
+			insertLifecycleRun(t, d, state, time.Now(), testSnapshot(), nil)
+			startOpen(t, d)
+			err := Start(context.Background(), d, "vn", "20261109", "", "")
+			var generation int
+			queryErr := d.DB.QueryRow(context.Background(), `SELECT generation FROM run`).Scan(&generation)
+			if err == nil || !strings.Contains(err.Error(), "workflow is open") || queryErr != nil || generation != 1 {
+				t.Fatalf("err=%v generation=%d query=%v", err, generation, queryErr)
+			}
+		})
+	}
+}
+
+func TestCancel_RefusesReleasedRun(t *testing.T) {
+	for _, state := range []string{"evaluated", "released"} {
+		t.Run(state, func(t *testing.T) {
+			d := lifecycleDeps(t)
+			insertLifecycleRun(t, d, state, time.Now(), testSnapshot(), nil)
+			if err := Cancel(context.Background(), d, "vn", "20261109"); err == nil {
+				t.Fatal("terminal run accepted")
+			}
+		})
+	}
+}
+
+func TestRecover_RefusesReleasedRun(t *testing.T) {
+	for _, state := range []string{"evaluated", "released"} {
+		t.Run(state, func(t *testing.T) {
+			d := lifecycleDeps(t)
+			insertLifecycleRun(t, d, state, time.Now(), testSnapshot(), nil)
+			if err := Recover(context.Background(), d, "vn", "20261109", false); err == nil {
+				t.Fatal("terminal run accepted")
+			}
+		})
+	}
+}

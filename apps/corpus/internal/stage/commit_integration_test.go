@@ -180,3 +180,18 @@ func TestRunItem_RejectsUnknownState(t *testing.T) {
 		t.Fatal("unknown state accepted")
 	}
 }
+
+func TestCommitItem_FailedKeepsPlannedInputHash(t *testing.T) {
+	ctx := context.Background()
+	pool, id := setup(t)
+	batchExec(t, pool, `UPDATE run_item SET input_hash='planned' WHERE run_id=$1`, id)
+	c := testCommit(id)
+	c.State = "failed"
+	if applied, err := CommitItem(ctx, pool, c); err != nil || !applied {
+		t.Fatalf("applied=%v err=%v", applied, err)
+	}
+	var hash *string
+	if err := pool.QueryRow(ctx, `SELECT input_hash FROM run_item WHERE run_id=$1`, id).Scan(&hash); err != nil || hash == nil || *hash != "planned" {
+		t.Fatalf("hash=%v err=%v", hash, err)
+	}
+}

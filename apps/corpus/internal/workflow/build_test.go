@@ -30,7 +30,10 @@ func testInput() run.BuildInput {
 	return run.BuildInput{RunID: 1, Generation: 1, Stage: "fetch", HistoryLimit: 5000}
 }
 func markMock(env *testsuite.TestWorkflowEnvironment, to string) *testsuite.MockCallWrapper {
-	return env.OnActivity("MarkRun", mock.Anything, mock.MatchedBy(func(in stage.MarkInput) bool { return in.To == to })).Return(true, nil).Once()
+	return markMockResult(env, to, true)
+}
+func markMockResult(env *testsuite.TestWorkflowEnvironment, to string, result bool) *testsuite.MockCallWrapper {
+	return env.OnActivity("MarkRun", mock.Anything, mock.MatchedBy(func(in stage.MarkInput) bool { return in.To == to })).Return(result, nil).Once()
 }
 func planMock(env *testsuite.TestWorkflowEnvironment, result stage.PlanResult) {
 	env.OnActivity("PlanStage", mock.Anything, mock.Anything).Return(result, nil).Once()
@@ -181,4 +184,43 @@ func TestBuildRelease_EightBatchesStartBeforeAnyFinishes(t *testing.T) {
 	if started.Load() != 8 {
 		t.Fatalf("started %d batches", started.Load())
 	}
+}
+
+func TestBuildRelease_RefusedPauseFinishesCancel(t *testing.T) {
+	env := workflowTest(t)
+	planMock(env, stage.PlanResult{})
+	finishMock(env, stage.CloseResult{})
+	markMockResult(env, "paused", false)
+	markMock(env, "cancelled")
+	env.ExecuteWorkflow(BuildRelease, testInput())
+	if err := env.GetWorkflowError(); err != nil {
+		t.Fatal(err)
+	}
+	env.AssertExpectations(t)
+}
+
+func TestBuildRelease_RefusedBeginStops(t *testing.T) {
+	env := workflowTest(t)
+	in := testInput()
+	in.Begin = true
+	markMockResult(env, "running", false)
+	markMock(env, "cancelled")
+	env.ExecuteWorkflow(BuildRelease, in)
+	if err := env.GetWorkflowError(); err != nil {
+		t.Fatal(err)
+	}
+	env.AssertExpectations(t)
+}
+
+func TestBuildRelease_RefusedFailureFinishesCancel(t *testing.T) {
+	env := workflowTest(t)
+	planMock(env, stage.PlanResult{})
+	env.OnActivity("CloseStage", mock.Anything, mock.Anything).Return(stage.CloseResult{Failed: true, Counts: stage.Counts{Failed: 1}}, nil).Once()
+	markMockResult(env, "failed", false)
+	markMock(env, "cancelled")
+	env.ExecuteWorkflow(BuildRelease, testInput())
+	if err := env.GetWorkflowError(); err != nil {
+		t.Fatal(err)
+	}
+	env.AssertExpectations(t)
 }

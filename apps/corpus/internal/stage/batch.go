@@ -5,12 +5,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
+	"strings"
 	"sync/atomic"
 	"time"
 
 	"github.com/dannyota/traquydinh/apps/corpus/internal/artifact"
 	"github.com/dannyota/traquydinh/apps/corpus/internal/fault"
 	"github.com/dannyota/traquydinh/apps/corpus/internal/store"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 // BatchInput identifies one batch of one stage.
@@ -79,11 +82,12 @@ func RunBatch(ctx context.Context, env Env, st Stage, in BatchInput, attempt int
 		return result, fmt.Errorf("list pending batch items: %w", err)
 	}
 	for i, itemRow := range items {
+		err = nil
 		state, stateErr := q.GetBatchRunState(ctx, in.RunID)
 		if stateErr != nil {
 			return result, fmt.Errorf("load run state: %w", stateErr)
 		}
-		if state == "cancelling" {
+		if state == "cancelling" || state == "cancelled" {
 			result.Cancelling = true
 			return result, nil
 		}
@@ -117,6 +121,9 @@ func RunBatch(ctx context.Context, env Env, st Stage, in BatchInput, attempt int
 			} else {
 				output, err = st.Process(ctx, env, run, item)
 				if err != nil {
+					if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) || errors.Is(err, ErrSuperseded) {
+						return result, err
+					}
 					var retryable *RetryableError
 					if errors.As(err, &retryable) && attempt < cfg.MaxAttempts {
 						result.Pending++
@@ -135,20 +142,37 @@ func RunBatch(ctx context.Context, env Env, st Stage, in BatchInput, attempt int
 				}
 				commit.ArtifactRows, err = st.Rows(ctx, *output.Artifact)
 				if err != nil {
-					return result, fmt.Errorf("load artifact rows for %q: %w", item.Key, err)
+					if !itemError(err) {
+						return result, fmt.Errorf("load artifact rows for %q: %w", item.Key, err)
+					}
+					commit = failedCommit(commit, err)
 				}
 				var resolution Resolution
-				resolution, err = st.Resolve(ctx, env, run, item, *output.Artifact)
-				if err != nil {
-					return result, fmt.Errorf("resolve artifact for %q: %w", item.Key, err)
+				if err == nil {
+					resolution, err = st.Resolve(ctx, env, run, item, *output.Artifact)
+					if err != nil {
+						if !itemError(err) {
+							return result, fmt.Errorf("resolve artifact for %q: %w", item.Key, err)
+						}
+						commit = failedCommit(commit, err)
+					} else {
+						commit.RunRows = resolution.RunRows
+						commit.Gaps = append(commit.Gaps, resolution.Gaps...)
+					}
 				}
-				commit.RunRows = resolution.RunRows
-				commit.Gaps = append(commit.Gaps, resolution.Gaps...)
 			}
 		}
 		applied, commitErr := CommitItem(ctx, env.DB, commit)
 		if commitErr != nil {
-			return result, fmt.Errorf("commit item %q: %w", item.Key, commitErr)
+			var pgErr *pgconn.PgError
+			if !errors.As(commitErr, &pgErr) || !dataError(pgErr) {
+				return result, fmt.Errorf("commit item %q: %w", item.Key, commitErr)
+			}
+			commit = failedCommit(commit, commitErr)
+			applied, commitErr = CommitItem(ctx, env.DB, commit)
+			if commitErr != nil {
+				return result, fmt.Errorf("commit failed item %q: %w", item.Key, commitErr)
+			}
 		}
 		if !applied {
 			return result, ErrSuperseded
@@ -168,4 +192,38 @@ func RunBatch(ctx context.Context, env Env, st Stage, in BatchInput, attempt int
 		return result, fmt.Errorf("%d items pending after retryable errors", result.Pending)
 	}
 	return result, nil
+}
+
+// itemError reports whether err belongs to one item (its data or its files)
+// rather than to the infrastructure the whole batch shares.
+func itemError(err error) bool {
+	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) || errors.Is(err, ErrSuperseded) {
+		return false
+	}
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) {
+		return dataError(pgErr)
+	}
+	// Match concrete network and connection errors only: syscall.Errno also
+	// satisfies net.Error, so a missing local file would look like a network fault.
+	var opErr *net.OpError
+	var connErr *pgconn.ConnectError
+	return !errors.As(err, &opErr) && !errors.As(err, &connErr)
+}
+
+// dataError reports PostgreSQL data exceptions (class 22) and integrity
+// violations (class 23), which one item's content causes.
+func dataError(e *pgconn.PgError) bool {
+	return strings.HasPrefix(e.Code, "22") || strings.HasPrefix(e.Code, "23")
+}
+
+func failedCommit(c Commit, err error) Commit {
+	c.Artifact, c.ArtifactRows, c.RunRows, c.Gaps = nil, nil, nil, nil
+	c.State = "failed"
+	message := []rune(strings.ReplaceAll(err.Error(), "\x00", ""))
+	if len(message) > 500 {
+		message = message[:500]
+	}
+	c.Message = string(message)
+	return c
 }

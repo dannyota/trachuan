@@ -5,7 +5,7 @@ ON CONFLICT (run_id, stage, item_key) DO NOTHING;
 
 -- name: UpdateRunItemFenced :execrows
 UPDATE run_item AS i
-SET input_hash = sqlc.narg(input_hash), recipe_hash = sqlc.narg(recipe_hash),
+SET input_hash = COALESCE(sqlc.narg(input_hash), i.input_hash), recipe_hash = sqlc.narg(recipe_hash),
     generation = sqlc.arg(generation), attempt = sqlc.arg(attempt),
     artifact_id = sqlc.narg(artifact_id), state = sqlc.arg(state),
     message = sqlc.narg(message), updated_at = now()

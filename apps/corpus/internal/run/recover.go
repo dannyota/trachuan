@@ -19,6 +19,9 @@ func Recover(ctx context.Context, d Deps, cc, rel string, terminate bool) error 
 	if err != nil {
 		return fmt.Errorf("lock run: %w", err)
 	}
+	if row.State == "evaluated" || row.State == "released" {
+		return fmt.Errorf("cannot modify %s run", row.State)
+	}
 	if err = q.RecoverRun(ctx, row.ID); err != nil {
 		return fmt.Errorf("recover run: %w", err)
 	}

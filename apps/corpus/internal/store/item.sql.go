@@ -213,7 +213,7 @@ func (q *Queries) ResetOlderFailedStageItems(ctx context.Context, arg ResetOlder
 
 const updateRunItemFenced = `-- name: UpdateRunItemFenced :execrows
 UPDATE run_item AS i
-SET input_hash = $1, recipe_hash = $2,
+SET input_hash = COALESCE($1, i.input_hash), recipe_hash = $2,
     generation = $3, attempt = $4,
     artifact_id = $5, state = $6,
     message = $7, updated_at = now()
