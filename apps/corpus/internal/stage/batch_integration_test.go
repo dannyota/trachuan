@@ -306,3 +306,17 @@ func TestBatch_RechecksSourcesFromFailedProcess(t *testing.T) {
 		t.Fatalf("result=%+v state=%s message=%s gaps=%d err=%v query=%v", result, state, message, gaps, err, queryErr)
 	}
 }
+
+func TestRunBatch_ContextCarriesRun(t *testing.T) {
+	env, id, s := batchSetup(t)
+	var got int64
+	var ok bool
+	s.process = func(ctx context.Context, _ Env, _ Run, _ Item) (Output, error) {
+		got, ok = sourcegate.RunID(ctx)
+		return Output{State: "gap"}, nil
+	}
+	_, err := batchRun(env, id, s, 1, func(...any) {})
+	if err != nil || !ok || got != id {
+		t.Fatalf("run = %d, present = %v, want %d, error = %v", got, ok, id, err)
+	}
+}

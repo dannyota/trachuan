@@ -17,6 +17,7 @@ import (
 
 	"danny.vn/trachuan/apps/corpus/internal/artifact"
 	"danny.vn/trachuan/apps/corpus/internal/filecache"
+	"danny.vn/trachuan/apps/corpus/internal/sourcegate"
 	"danny.vn/trachuan/apps/corpus/internal/stage"
 	"danny.vn/trachuan/apps/corpus/internal/vbpl"
 	"golang.org/x/time/rate"
@@ -227,12 +228,16 @@ func TestFetch_GatewayStatus(t *testing.T) {
 			out, err := s.Process(context.Background(), env, stage.Run{}, stage.Item{Key: "vn:vbpl:66518"})
 			var retry *stage.RetryableError
 			if tt.retryable {
-				if !errors.As(err, &retry) || retry.GapKind != "" {
+				if !errors.As(err, &retry) || retry.GapKind != "source_unavailable" || retry.Cause.Cause != stage.CauseHTTP429 {
 					t.Fatalf("output = %+v, error = %v", out, err)
 				}
 				return
 			}
-			if err != nil || out.State != "gap" || len(out.Gaps) != 1 || out.Gaps[0] != (stage.Gap{Kind: "source_unavailable", Detail: "fetch document \"66518\": gateway status 500"}) {
+			if err != nil || out.State != "gap" || len(out.Gaps) != 1 {
+				t.Fatalf("output = %+v, error = %v", out, err)
+			}
+			g := out.Gaps[0]
+			if g.Kind != "source_unavailable" || g.Source != "vbpl" || g.Origin != stage.OriginGateway || g.Cause != stage.CauseHTTP5xx || g.HTTPStatus == nil || *g.HTTPStatus != 500 || g.Detail == "" {
 				t.Fatalf("output = %+v, error = %v", out, err)
 			}
 		})
@@ -329,14 +334,71 @@ func TestFetch_CacheChecksumMismatchDownloads(t *testing.T) {
 }
 
 func TestFetch_DoesNotDecodeTree(t *testing.T) {
-	s, env := setup(t, &fixtureServer{treeBody: "not valid JSON"})
+	s, env := setup(t, &fixtureServer{treeBody: `{"unexpected":1}`})
 	out := process(t, s, env)
 	if out.State != "done" || out.Artifact == nil {
 		t.Fatalf("output = %+v", out)
 	}
 	data, err := os.ReadFile(filepath.Join(env.Artifacts.Abs(out.Artifact.Path), "tree.json"))
-	if err != nil || string(data) != "not valid JSON" {
+	if err != nil || string(data) != `{"unexpected":1}` {
 		t.Fatalf("tree = %q, error = %v", data, err)
+	}
+}
+
+func TestFetch_NonJSONTreeRetryable(t *testing.T) {
+	// Synthetic gateway response, not a recorded fixture.
+	s, env := setup(t, &fixtureServer{treeBody: "not valid JSON"})
+	out, err := s.Process(context.Background(), env, stage.Run{Country: "vn"}, stage.Item{Key: "vn:vbpl:66518"})
+	var retry *stage.RetryableError
+	var failure *vbpl.Failure
+	if out.Artifact != nil || !errors.As(err, &retry) || !errors.As(err, &failure) || retry.GapKind != "source_unavailable" || retry.Cause.Source != "vbpl" || retry.Cause.Origin != stage.OriginGateway || retry.Cause.Cause != stage.CauseNonJSON200 || retry.Cause.Endpoint != "doc/provision/tree" || retry.Cause.HTTPStatus == nil || *retry.Cause.HTTPStatus != 200 {
+		t.Fatalf("output = %+v, error = %v", out, err)
+	}
+}
+
+func TestFetch_Gateway5xxCarriesCause(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusInternalServerError) }))
+	defer server.Close()
+	s := New(testClient(server.URL))
+	out, err := s.Process(context.Background(), stage.Env{}, stage.Run{Country: "vn"}, stage.Item{Key: "vn:vbpl:66518"})
+	if err != nil || out.Artifact != nil || out.State != "gap" || len(out.Gaps) != 1 {
+		t.Fatalf("output = %+v, error = %#v", out, err)
+	}
+	g := out.Gaps[0]
+	if g.Kind != "source_unavailable" || g.Source != "vbpl" || g.Origin != stage.OriginGateway || g.Cause != stage.CauseHTTP5xx || g.Endpoint != "doc/detail" || g.HTTPStatus == nil || *g.HTTPStatus != 500 {
+		t.Fatalf("output = %+v, error = %#v", out, err)
+	}
+}
+
+func TestFetch_APIErrorMappings(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		err       error
+		origin    stage.Origin
+		cause     stage.Cause
+		endpoint  string
+		status    int32
+		hasStatus bool
+	}{
+		{"transport", &vbpl.Failure{Origin: "transport", Cause: "timeout", Endpoint: "doc/detail"}, stage.OriginTransport, stage.CauseTimeout, "doc/detail", 0, false},
+		{"status 429", &vbpl.StatusError{Code: 429, Endpoint: "doc/files"}, stage.OriginGateway, stage.CauseHTTP429, "doc/files", 429, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := apiError(tc.err, "1", true)
+			var retry *stage.RetryableError
+			if !errors.As(err, &retry) || retry.GapKind != "source_unavailable" || retry.Cause.Source != "vbpl" || retry.Cause.Origin != tc.origin || retry.Cause.Cause != tc.cause || retry.Cause.Endpoint != tc.endpoint || (retry.Cause.HTTPStatus != nil) != tc.hasStatus || (tc.hasStatus && *retry.Cause.HTTPStatus != tc.status) {
+				t.Fatalf("retry = %+v, error = %v", retry, err)
+			}
+		})
+	}
+	out, err := apiError(&vbpl.StatusError{Code: 503, Endpoint: "doc/detail"}, "1", true)
+	if err != nil || out.State != "gap" || len(out.Gaps) != 1 || out.Gaps[0].Cause != stage.CauseHTTP5xx || out.Gaps[0].Endpoint != "doc/detail" || out.Gaps[0].HTTPStatus == nil || *out.Gaps[0].HTTPStatus != 503 {
+		t.Fatalf("status 503 output = %+v, error = %v", out, err)
+	}
+	_, err = apiError(fmt.Errorf("pause: %w", sourcegate.ErrSourcePaused), "1", true)
+	var retry *stage.RetryableError
+	if !errors.As(err, &retry) || !errors.Is(err, sourcegate.ErrSourcePaused) || retry.GapKind != "" {
+		t.Fatalf("paused error = %v", err)
 	}
 }
 

@@ -8,21 +8,27 @@ import (
 
 // ListQuery identifies a page of a gateway listing.
 type ListQuery struct {
-	AgencyIDs []string
-	Keyword   string
-	Page      int
+	AgencyIDs           []string
+	Keyword             string
+	Page                int
+	PageSize            int
+	Option, Mode, Level string
 }
 
 // ListPage holds a listing page and its total size.
 type ListPage struct {
-	Total int
-	Items []ListItem
+	Total      int
+	Items      []ListItem
+	Raw        json.RawMessage
+	totalKnown bool
 }
 
 // ListItem holds listing metadata and the original item.
 type ListItem struct {
 	ID, DocNum, Title, IssueDate string
 	Raw                          json.RawMessage
+	AgencyIDs                    []string
+	AgencyName                   string
 }
 
 // Detail holds document metadata.

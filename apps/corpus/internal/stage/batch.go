@@ -119,7 +119,7 @@ func RunBatch(ctx context.Context, env Env, st Stage, in BatchInput, attempt int
 			if found {
 				output = Output{Artifact: &art, State: "done"}
 			} else {
-				output, err = st.Process(ctx, env, run, item)
+				output, err = st.Process(sourcegate.WithRunID(ctx, in.RunID), env, run, item)
 				if err != nil {
 					// Only the activity's own context ends the batch; a timeout
 					// inside one item stays with that item.

@@ -68,8 +68,8 @@
 
 **Interfaces:** Produces `(*Client) LookupNumber(ctx, number string) (LookupResult, error)` (all pages, evidence-bearing per source-execution.md), `ListQuery.Size`, `ListQuery.Option`, `ListQuery.Mode` and an empty agency list for the central listing; a non-JSON 200 body is a retryable error (synthetic test body, labeled synthetic; no live source produced one).
 
-- [ ] Tests first against Task 1 fixtures: `TestLookupNumber_UniqueCollisionEmpty`, `TestLookupNumber_PagedTotalsAndEmptyLastPage`, `TestList_CentralNoAgencyNoKeyword`, `TestAPI_NonJSON200Retryable`.
-- [ ] Implement; commit `feat(corpus): exact number and title lookups in the VBPL client`.
+- [x] Tests first against Task 1 fixtures: `TestLookupNumber_UniqueCollisionEmpty`, `TestLookupNumber_PagedTotalsAndEmptyLastPage`, `TestList_CentralNoAgencyNoKeyword`, `TestAPI_NonJSON200Retryable`.
+- [x] Implement; commit `feat(corpus): exact number and title lookups in the VBPL client`.
 
 ### Task 5: Discover the central listing, local selection and named numbers
 

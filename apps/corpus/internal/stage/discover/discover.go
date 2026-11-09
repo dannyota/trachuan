@@ -91,7 +91,13 @@ func (*Stage) Plan(_ context.Context, _ stage.Env, r stage.Run) ([]stage.Item, e
 }
 
 // Process collects listing passes and publishes their results.
-func (s *Stage) Process(ctx context.Context, env stage.Env, r stage.Run, it stage.Item) (stage.Output, error) {
+func (s *Stage) Process(ctx context.Context, env stage.Env, r stage.Run, it stage.Item) (output stage.Output, err error) {
+	contacted := false
+	defer func() {
+		if contacted {
+			output.Sources = []string{"vbpl"}
+		}
+	}()
 	definitions, err := queries(r)
 	if err != nil {
 		return stage.Output{}, err
@@ -116,6 +122,7 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, r stage.Run, it stag
 		items := make(map[string]json.RawMessage)
 		total, pageCap := 0, 1
 		for number := 1; number <= pageCap; number++ {
+			contacted = true
 			p, listErr := s.client.List(ctx, vbpl.ListQuery{AgencyIDs: definition.Agencies, Keyword: definition.Keyword, Page: number})
 			if listErr != nil {
 				wrapped := fmt.Errorf("list query %q pass %d page %d: %w", it.Key, pass+1, number, listErr)
