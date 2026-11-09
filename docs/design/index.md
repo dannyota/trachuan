@@ -104,13 +104,16 @@ workshop is deleted when a corpus excludes it.
 
 ## Normalization
 
-Dates accept trimmed `YYYY-MM-DD`, `DD/MM/YYYY`, or RFC3339 timestamps with an
-explicit offset. Date-only values retain their civil date; timestamps convert to
-Asia/Ho_Chi_Minh before taking the date. Reject invalid calendar dates, year
-zero, missing timestamp offsets and other formats. Empty becomes null; invalid
-values become null plus `invalid_date` naming the field. Raw strings remain
-stored. If the parsed end precedes the start, clear both effective dates,
-preserve raw values and add `invalid_validity_interval`.
+Dates accept trimmed `YYYY-MM-DD`, `DD/MM/YYYY`, `YYYY-MM-DDT00:00:00` without
+an offset (the form VBPL uses for a civil date), or RFC3339 timestamps with an
+explicit offset. Date-only and offset-free midnight values retain their civil
+date; timestamps with an offset convert to Asia/Ho_Chi_Minh before taking the
+date. Reject invalid calendar dates, year zero, offset-free timestamps at any
+other time, and other formats. A change to date or number normalization bumps
+`normalizer_version` in the build recipe. Empty becomes null; invalid values
+become null plus `invalid_date` naming the field. Raw strings remain stored. If
+the parsed end precedes the start, clear both effective dates, preserve raw
+values and add `invalid_validity_interval`.
 
 `eff_to` is the first excluded civil date, so eligibility is
 `eff_from <= date AND (eff_to IS NULL OR date < eff_to)`. A same-day interval is

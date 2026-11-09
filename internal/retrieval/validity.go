@@ -16,7 +16,7 @@ func stamp(doc Document, arms Arms) (Validity, []Gap) {
 	}
 	value := d.String()
 	from, to := dateValue(doc.EffectiveFrom), dateValue(doc.EffectiveTo)
-	eligible := (from == nil || from.String() <= value) && (to == nil || to.String() >= value)
+	eligible := (from == nil || from.String() <= value) && (to == nil || value < to.String())
 	basis := "source_status"
 	current := eligible && doc.IsCurrent && (doc.StatusClass == "in_force" || doc.StatusClass == "partial")
 	if arms.AsOf != nil {

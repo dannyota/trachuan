@@ -479,3 +479,20 @@ func TestSearch_UnknownStatusHistoricalDateIsPrimary(t *testing.T) {
 	}
 	t.Fatal("unknown-status document missing from historical primary hits")
 }
+
+func TestCollect_EffectiveToIsFirstExcludedDay(t *testing.T) {
+	_, e, _ := fixture(t)
+	has := func(a Arms) bool {
+		for _, c := range a.Primary.Dense {
+			if c.Identity.DocumentKey == "vn:2" {
+				return true
+			}
+		}
+		return false
+	}
+	before := collectFixture(t, e, Request{Query: "ngân hàng", Mode: "exact", AsOf: &Date{2020, time.December, 31}}, Depths{10, 10})
+	on := collectFixture(t, e, Request{Query: "ngân hàng", Mode: "exact", AsOf: &Date{2021, time.January, 1}}, Depths{10, 10})
+	if !has(before) || has(on) {
+		t.Fatalf("document ending 2021-01-01: eligible on 2020-12-31 %v, on 2021-01-01 %v", has(before), has(on))
+	}
+}

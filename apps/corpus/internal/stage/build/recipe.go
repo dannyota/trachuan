@@ -62,6 +62,6 @@ func (s *Stage) Recipe(snapshot stage.Snapshot) string {
 		return ""
 	}
 	r := buildRecipe{SchemaVersion: corpusdb.SchemaVersion, SchemaSHA256: schema,
-		ChunkRecipeHash: chunk.Recipe1().Hash(), DocumentRecipeHash: embedding.DocumentRecipe1().Hash(), QueryRecipeHash: embedding.QueryRecipe1().Hash(), LexicalRecipeHash: lexical.Recipe1().Hash(), RetrievalPolicyHash: retrieval.Recipe1().Hash(), NormalizerVersion: "corpus-normalizer/1", StatusCodesSHA256: fmt.Sprintf("%x", sha256.Sum256(status)), CalibrationPolicy: "provisional-old-product/1", LegacyCasesSHA256: s.cfg.Suite.Hashes.Legacy, IdentityMapSHA256: s.cfg.Suite.Hashes.IdentityMap, PostgreSQLMajor: s.cfg.Versions.PostgreSQLMajor, PGVectorVersion: s.cfg.Versions.PGVector, LtreeVersion: s.cfg.Versions.Ltree, PgDumpVersion: s.cfg.Versions.PgDump, PgRestoreVersion: s.cfg.Versions.PgRestore}
+		ChunkRecipeHash: chunk.Recipe1().Hash(), DocumentRecipeHash: embedding.DocumentRecipe1().Hash(), QueryRecipeHash: embedding.QueryRecipe1().Hash(), LexicalRecipeHash: lexical.Recipe1().Hash(), RetrievalPolicyHash: retrieval.Recipe1().Hash(), NormalizerVersion: "corpus-normalizer/2", StatusCodesSHA256: fmt.Sprintf("%x", sha256.Sum256(status)), CalibrationPolicy: "provisional-old-product/1", LegacyCasesSHA256: s.cfg.Suite.Hashes.Legacy, IdentityMapSHA256: s.cfg.Suite.Hashes.IdentityMap, PostgreSQLMajor: s.cfg.Versions.PostgreSQLMajor, PGVectorVersion: s.cfg.Versions.PGVector, LtreeVersion: s.cfg.Versions.Ltree, PgDumpVersion: s.cfg.Versions.PgDump, PgRestoreVersion: s.cfg.Versions.PgRestore}
 	return r.hash()
 }

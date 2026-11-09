@@ -15,6 +15,10 @@ func ParseDate(raw string) (*time.Time, error) {
 	if value == "" {
 		return nil, nil
 	}
+	// VBPL writes a civil date as an offset-free midnight timestamp.
+	if date, ok := strings.CutSuffix(value, "T00:00:00"); ok {
+		value = date
+	}
 	for _, layout := range []string{"2006-01-02", "02/01/2006", time.RFC3339} {
 		parsed, err := time.Parse(layout, value)
 		if err != nil || parsed.Year() == 0 {

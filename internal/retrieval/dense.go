@@ -10,7 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-const eligibility = `(($3::boolean OR d.is_current) AND (d.eff_from IS NULL OR d.eff_from <= $2::date) AND (d.eff_to IS NULL OR d.eff_to >= $2::date)) = $4::boolean`
+const eligibility = `(($3::boolean OR d.is_current) AND (d.eff_from IS NULL OR d.eff_from <= $2::date) AND (d.eff_to IS NULL OR $2::date < d.eff_to)) = $4::boolean`
 const exactSQL = `SELECT c.id, 1-(c.embedding <=> $1::vector) AS cosine FROM chunk c JOIN document d ON d.id=c.document_id WHERE ` + eligibility + ` ORDER BY c.embedding <=> $1::vector, c.id LIMIT $5`
 const annSQL = `WITH pool AS MATERIALIZED (SELECT id, document_id, embedding <=> $1::vector AS distance FROM chunk ORDER BY embedding <=> $1::vector LIMIT $6) SELECT p.id, 1-p.distance FROM pool p JOIN document d ON d.id=p.document_id WHERE ` + eligibility + ` ORDER BY p.distance,p.id LIMIT $5`
 
