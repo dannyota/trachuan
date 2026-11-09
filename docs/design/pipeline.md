@@ -83,6 +83,39 @@ signed dump to OCI Object Storage. Decision and alternatives:
   gap, failed and pending counts, unaccepted gaps by kind, next retry times,
   provider job ids and cost so far.
 
+### Retry source gaps (proposed)
+
+On an otherwise permitted `corpus start`, inspect all stages for items with a
+nonempty gap set consisting only of `source_unavailable` or gateway-caused
+`invalid_source_data`. Include done items carrying gaps and accepted gaps.
+Require structured gateway origin evidence for `invalid_source_data`; malformed
+legal data, duplicate ids and database text errors do not qualify. Historical
+rows without that evidence stay unchanged pending primary classification from
+recorded evidence. Reason: retry transient transport failures without erasing
+real source defects or guessing from error-message text.
+
+In the generation-increment transaction, delete selected gaps and item-owned
+derived run rows, clear artifact/input references and attempt state, and set
+items pending. Rewind `next_stage` to the earliest affected stage, even if it
+was empty; apply `--until` validation after choosing that stage. Clear all later
+stage run items, derived run rows and gaps so they replan and resolve again.
+Keep immutable artifacts and their artifact-owned rows for reuse; keep
+unselected items and gaps at the rewind stage. Record retry counts and rewind
+stage in the run message. Recomputed gaps require fresh acceptance. Reason:
+retries must not leave stale expected sets, relations, builds or accepted
+losses.
+
+The worker still refuses changed frozen recipes, open workflows, and evaluated
+or released runs. Retry recovery cannot insert stages into an old snapshot. Use
+the existing generation/attempt fence for every reset and subsequent commit.
+
+Treat a bounded non-JSON HTTP 200 from any JSON gateway endpoint, including the
+raw tree endpoint, as retryable transport failure before decoding source data.
+After bounded retries, emit `source_unavailable` with structured endpoint/status
+and cause, not body contents. Oversize responses remain `response_too_large`;
+valid JSON with invalid source fields remains `invalid_source_data`. Reason:
+gateway error pages must not become permanent legal-data errors.
+
 ## Items, artifacts and gaps
 
 - A stage plans its items, processes each into an artifact, and resolves each
@@ -131,6 +164,7 @@ signed dump to OCI Object Storage. Decision and alternatives:
 | Stage      | Input                                       | Output                                                                          | Completeness rule                                                                                                                                                           |
 | ---------- | ------------------------------------------- | ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `discover` | source list YAML; previous release manifest | expected document set with source modified dates                                | full listing per source every run; a document absent from two consecutive listings is marked `withdrawn` and kept with a gap                                                |
+| `expand`   | Frozen direct VBPL seeds                    | One-hop context membership and source evidence                                  | Proposed scope stage; never expand context output; failures keep coverage gaps, [sources](sources.md#one-hop-relation-context)                                              |
 | `fetch`    | expected set                                | metadata JSON, every listed attachment, hashes                                  | attachments use a verified matching local cache entry or a fresh download; a changed attachment reprocesses the document; a missing attachment is a gap                     |
 | `extract`  | files                                       | structure tree with verbatim text                                               | parser limits in [budgets](budgets.md); article count matches the table of contents; table and appendix counts match the source inventory; empty or truncated text is a gap |
 | `relate`   | VBPL references, text                       | relations with kind, evidence, affected provisions when captured                | never guessed; unknown targets are gaps                                                                                                                                     |
@@ -155,13 +189,19 @@ verification are designed together in the host work. Nothing in this baseline
 sets `release_eligible` true. Taxonomy and filtered evaluation stay out of
 scope.
 
-VBPL ingest rules:
+## Source ingest rules
+
+[Sources](sources.md) owns the proposed selection rules, named and keyword
+queries, relation context, secondary precedence and query identity. The new
+scope run inserts `expand` before `fetch`; the existing ingest run keeps its
+frozen stage order. `discover` supplies direct seeds and secondary candidates;
+expand closes additions to the expected set before fetch planning.
 
 - `discover` lists every query until two consecutive passes return the same id
   set, at most the pass limit in [budgets](budgets.md); otherwise the query item
   gets gap `listing_unstable` and the expected set uses the union of the passes.
   A listing is complete when its query item is done without a `listing_unstable`
-  gap; a query's identity is the hash of its definition (agencies and keyword).
+  gap; a query's identity hashes its complete source-specific definition.
   Earlier runs of the same country are ordered by date, then sequence. For a
   document listed by some query in an earlier complete listing, take the queries
   that ever listed it and still exist: it is `withdrawn` when every one of them
@@ -179,19 +219,41 @@ VBPL ingest rules:
   response limit are gaps. A gateway error (HTTP 5xx) that persists through the
   client retries makes the item gap `source_unavailable` in that attempt,
   without a batch retry (budgets); the owner may accept it, and the next run
-  asks again. Known source failures never stall a batch or the stage close. An
-  attachment whose document id, name and size match a local cache entry
-  collected no earlier than the gateway's `updatedAt` for that file is taken
-  from the cache once its sha256 verifies; otherwise it is downloaded.
+  asks again; start retries these under the lifecycle rule above. Known source
+  failures never stall a batch or the stage close. An attachment whose document
+  id, name and size match a local cache entry collected no earlier than the
+  gateway's `updatedAt` for that file is taken from the cache once its sha256
+  verifies; otherwise it is downloaded.
 - `extract` refuses trees deeper or larger than the limits in
   [budgets](budgets.md) with gap `tree_too_large`.
 - `relate` maps relation codes with the source list's table, whose hash is part
   of the `relate` recipe hash. Resolving a target against the run's expected
   set, and the `unknown_target` gap, happen when the artifact is resolved for a
-  run, never inside the cached artifact.
+  run, never inside the cached artifact. Membership alone does not prove a
+  resolved corpus endpoint: a fetch gap or removed document remains unresolved
+  in build. Secondary bundles have no invented VBPL references.
 
-Recipe changes (parser version, prompt hash, taxonomy version, model) change
-`recipe_hash`, so unchanged documents are reprocessed where it matters.
+### Scope recipes and snapshots (proposed)
+
+Freeze parsed source definitions, comparison evidence hash and approval note on
+first start. Source-list changes alter `source_list_hash`; do not read live YAML
+on resume. Use a new release id for scope adoption. A paused old run cannot
+replace recipes or insert `expand` through the append-only extension rule.
+
+| Recipe                   | Scope change and reason                                                                                                                  |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `discover`               | Bump for exact/named queries, secondary parsing, number probes and query identity; hash adapter and number-normalizer versions.          |
+| `expand`                 | New recipe hashes relation-code table, qualifying kinds, direction, one-hop policy and parser version so scope evidence is reproducible. |
+| `fetch`                  | Bump for source dispatch, secondary bundle/provenance format and gateway failure classification.                                         |
+| `extract`                | Bump for explicit secondary `no_tree` handling; no PDF extraction is introduced.                                                         |
+| `relate`                 | Bump for secondary empty relations and expansion drift detection; retain relation-code hash.                                             |
+| `build`                  | Bump for source provenance, normalized numbers, membership exclusions and hand-over gaps.                                                |
+| `chunk`, `embed`, `eval` | Keep algorithms; changed inputs and reviewed evaluation identity-map hashes invalidate affected artifacts.                               |
+
+Expansion artifacts bind observed edges; inventories follow [index](index.md).
+Fresh fetch bytes still determine fetch input hashes. Reuse artifacts only when
+input and recipe match, and resolve gaps for this run. No old artifact, number
+mapping or evaluation result establishes coverage for a new run.
 
 ## External batch submissions
 

@@ -71,8 +71,8 @@ UNIQUE `(document_id,name,hash)`; index `document_id`. Unknown provenance stays
 null or `unknown`. Existing fetch artifacts do not reliably retain URL, role or
 fetch time: do not substitute artifact adoption time or guess from a suffix.
 Record `source_provenance_missing` once per document with the missing fields.
-`source` is the provider segment of the document key (`vbpl` here); `name`,
-`hash` and `size` come from the verified fetched-file record, not a file suffix.
+`source` follows the provider values in [data](data.md); `name`, `hash` and
+`size` come from the verified fetched-file record, not a file suffix.
 
 ## Provisions and chunks
 

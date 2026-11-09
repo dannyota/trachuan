@@ -23,6 +23,10 @@ Changing a rule here needs an ADR History entry when an ADR owns it.
 
 Rules:
 
+- `source_file.source` is the document key's provider: `vbpl` or `chinhphu` for
+  Vietnam. Preserve source-specific provenance; a hand-over never rewrites an
+  old file's provider. Membership and hand-over rules live in
+  [sources](sources.md).
 - Results are provisions, never chunks. Citation and validity come from
   `document` and `provision`.
 - Preserve every valid extracted provision even if a short/duplicate chunk is
@@ -51,6 +55,23 @@ Rules:
   build dump starts with evaluation `not_run`; [eval](evaluation.md) produces a
   hash-linked sidecar. The host plan must bind that sidecar in its signed
   manifest. The server holds no corpus configuration except the release pointer.
+
+### Official number normalization (proposed extension)
+
+Keep the raw official number. The shared matching form uses NFC, trim,
+uppercase, Cyrillic look-alike folding, `Đ` to `D`, then removes whitespace
+around `/` and `-`. Fold only `А→A`, `В→B`, `С→C`, `Е→E`, `Н→H`, `К→K`, `М→M`,
+`О→O`, `Р→P`, `Т→T`, `Х→X`; lowercase forms follow uppercasing. Thus `NĐ-CР` and
+`NĐ-CP` compare equally. Retain leading zeroes, years and other characters;
+never infer a missing year or use substring equality. Reason: known cache
+confusables need repair without collapsing distinct numbers.
+
+Use one versioned function for discovery comparisons, source precedence and
+corpus `number_norm`; serving document-number lookup must use the same version.
+Wire queries preserve official `Đ` spelling after confusable and whitespace
+cleanup. Freeze the normalizer version in dependent recipes. Ambiguous equality
+remains a candidate set, never proof that two documents are identical. Legacy
+evaluation's historical matcher stays unchanged under ADR 0010.
 
 ## Auth database `auth` (written when serving)
 
@@ -92,3 +113,21 @@ Rules:
 
 Publication is blocked while any expected `run_item` is `pending` or `failed` or
 any `gap` row is unaccepted.
+
+Scope work proposes a run-owned `run_document` projection keyed by
+`(run_id,document_key)`: source, source id, class (`primary`,
+`relation_context`, `secondary`), disposition (`active`, `withdrawn`,
+`scope_removed`, `source_replaced`), raw/normalized number when known, and
+membership evidence. Evidence records every query identity or seed key, raw
+relation code and artifact hash. Store the replacement key for
+`source_replaced`. Active and retained removal items form the expected set;
+replacement records only audit exclusion. Class is run membership, not a legal
+document type or ranking signal. Reason: retries and source hand-over must
+rebuild membership from evidence.
+
+Keep gap origin and retry cause as structured fields, separate from human detail
+and acceptance. The run snapshot also binds the source comparison hash and
+approval note. Workshop migrations and source-neutral document/file rows are
+implementation prerequisites; do not put a chinhphu id in `vbpl_id` or make a
+fake VBPL payload to satisfy today's fetch decoder. Source artifact formats
+retain enough evidence to recreate these projections after recovery.

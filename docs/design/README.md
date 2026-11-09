@@ -10,6 +10,7 @@ Intended behavior of trachuan. Decisions with alternatives are in the
 | [retrieval](retrieval.md)               | Query validation, ranking, validity, subject filter, release pinning, MCP tools, web API |
 | [taxonomy](taxonomy.md)                 | Subject tree import, classification layers, evaluation gate                              |
 | [pipeline](pipeline.md)                 | Write path on Temporal, stages, batch submissions, release artifact                      |
+| [sources](sources.md)                   | Vietnam discovery, relation context, secondary source and loss rules                     |
 | [auth](auth.md)                         | Google login, OAuth for MCP, CIMD, revocation, account lifecycle                         |
 | [web](web.md)                           | Routes, pages, visual system                                                             |
 | [deployment](deployment.md)             | Host, deploy, secrets, release activation, backups, observability                        |

@@ -172,6 +172,38 @@ waits in the document embedder queue while the other runs on the GPU.
 Attachment hosts: `CORPUS_VBPL_FILE_HOSTS` is a comma-separated allowlist,
 default `s3-han02.fptcloud.com`.
 
+### Corpus scope ceilings (proposed, pending measurement)
+
+| Limit                    | Value                                                           |
+| ------------------------ | --------------------------------------------------------------- |
+| Relation expansion       | 1 hop; 5,000 distinct added context ids per run                 |
+| Discovery result bound   | 100,000 ids per query; 3 complete passes maximum                |
+| chinhphu candidates      | 100 unique docids per run, before VBPL exclusion                |
+| chinhphu search          | 100 pages per query per pass; 3 passes maximum                  |
+| chinhphu requests        | 1 request/s, burst 1, 1 in flight across page and file hosts    |
+| chinhphu response        | 5 MB per HTML response; existing 50 MB attachment cap           |
+| chinhphu total downloads | 1 GB per run, including retries and rejected bodies             |
+| chinhphu deadlines       | 30 s page request; 120 s PDF request; 5 min per item            |
+| chinhphu redirects       | At most 3, with each destination revalidated                    |
+| chinhphu retries         | 3 after 2, 8 and 30 s for 429, 5xx or transport timeout         |
+| chinhphu Retry-After     | Wait at least the supplied delay; above 10 min defer with a gap |
+
+These are worker-wide source limits, not per-activity allowances. Honor the
+later of retry backoff and `Retry-After`; do not hold an activity past its item
+deadline to wait. Exhaustion produces a retryable source gap. Access denials
+stop the source rather than consuming retries. All attempts consume request and
+byte budgets. Record actual request count, bytes and time in run evidence.
+
+Exceeding any count or byte ceiling fails that scope stage explicitly; never
+truncate a listing, expansion or attachment inventory and mark it complete. The
+existing total build-document cap still applies after union and exclusions. The
+context ceiling permits up to 250 GB at one maximum-size attachment each, so it
+is a count bound, not a disk estimate. The primary measures attachment volume
+and available workshop/checkpoint disk before a full run; stop rather than raise
+limits automatically. Secondary payloads add at most 1 GB of wire data per run,
+plus stored artifacts and checkpoint copies. No new paid service or hosted model
+is introduced. These limits need owner approval after the spike.
+
 Submission polling every 5 minutes; `deadline_at` 26 hours after submission;
 `preparing` rows become uncertain after 10 minutes.
 

@@ -30,20 +30,24 @@ snapshot to produce an upstream inventory, sorted by stage order then
 byte-sorted item key, containing every predecessor item through `embed`:
 `{stage,item_key,state,input_hash,recipe_hash,artifact_sha256}`. Null artifact
 hashes are explicit for gap items. Include expected keys, frozen source-list
-hash and sorted gaps `{stage,item_key,kind,detail}`. Gap acceptance is a release
-gate, not a build input, so it is never hashed. `Process` recomputes the input
-hash from the inventory and pinned map and fails with non-retryable
+hash and sorted gaps `{stage,item_key,kind,detail}`. Scope adoption also
+includes expand items and sorted membership records from [data](data.md),
+including disposition, evidence hashes and replacement key. Gap acceptance is a
+release gate, not a build input, so it is never hashed. `Process` recomputes the
+input hash from the inventory and pinned map and fails with non-retryable
 `inventory_changed` when it differs from the planned input hash. Do not hash
 workshop sequence IDs, mutable paths or generation numbers.
 
 For inventory diagnostics, derive `identity_inventory_hash` from compact JSON
-`{country,source_list_hash,expected_keys,items}`. Keys are byte-sorted; items
-are the fetch/extract/relate inventory tuples above in stage/key order, without
-gap acceptance metadata. This hash does not bind the identity map or gate
-planning. [Evaluation](evaluation.md#fixtures-and-identity-adjudication) owns
-map production, review and per-case identity validation. Recipe freezing follows
-the [pipeline snapshot](pipeline.md#shape); ingest can finish before index
-recipes are appended. The reviewed map is input data, not a recipe.
+`{country,source_list_hash,expected_keys,items}`. Scope adoption versions this
+inventory to include the same membership records and expand evidence. Keys are
+byte-sorted; items are the fetch/extract/relate inventory tuples above in
+stage/key order, without gap acceptance metadata. This hash does not bind the
+identity map or gate planning.
+[Evaluation](evaluation.md#fixtures-and-identity-adjudication) owns map
+production, review and per-case identity validation. Recipe freezing follows the
+[pipeline snapshot](pipeline.md#shape); ingest can finish before index recipes
+are appended. The reviewed map is input data, not a recipe.
 
 Freeze the evaluation civil date from the first eight digits of `rel`, parsed as
 a real calendar date; an invalid date is a configuration failure. The same date
@@ -82,10 +86,11 @@ their recipe hashes; never read a newly edited fixture under an old frozen hash.
   work. Include no-tree documents as metadata with coverage gaps; they have no
   provisions or chunks. Keep all valid extracted provisions even when their
   chunks were omitted or rejected.
-- Exclude `withdrawn`, `scope_removed` and fetch-gap documents from searchable
-  documents. Preserve their keys and gap details in `coverage_gap`; do not carry
-  stale text from a previous run. English renditions never enter the expected
-  set. A reference to any excluded document remains an unresolved relation.
+- Exclude `withdrawn`, `scope_removed`, `source_replaced` and fetch-gap
+  documents from searchable documents. Preserve keys and gap details in
+  `coverage_gap`; do not carry stale text from a previous run. English
+  renditions never enter the expected set. References to excluded documents
+  remain unresolved.
 - Insert only chunks with a matching successful vector and verified input hash.
   Require `chunk count = embedded count + rejected count` before exclusions.
   Require inserted chunk count equals inserted dense vector count, with one
@@ -175,11 +180,10 @@ derivation gap; preserve other date, relation and provenance gaps and raw-source
 evidence. Derivation does not establish provision equivalence or alter
 historical date filtering.
 
-Number normalization uses NFC, uppercase, `Đ` to `D`, and removal of whitespace
-around `/` and `-`; retain leading zeroes and other characters. Do not fold to
-digits or use substring matching. Source URLs are copied only when present and
-verified as HTTP(S); otherwise use null plus a provenance gap. Do not make up an
-attachment or public portal URL from an opaque source id.
+Number normalization follows
+[data](data.md#official-number-normalization-proposed-extension). Source URLs
+are copied only when present and verified as HTTP(S); otherwise use null plus a
+provenance gap. Do not make up a URL from an opaque source id.
 
 ## Database lifecycle
 
