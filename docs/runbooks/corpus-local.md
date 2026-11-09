@@ -3,12 +3,13 @@
 ## Start the local services
 
 `make services-up` starts PostgreSQL, creates the `pipeline` and `temporal`
-roles and their databases, creates or upgrades the Temporal schemas, starts the
-Temporal server (`127.0.0.1:7233`) and its UI (`http://127.0.0.1:8233`), and
-creates the `corpus` namespace with 30-day retention. Every step is idempotent.
-`.env` must hold `POSTGRES_PASSWORD`, `PIPELINE_PASSWORD` and
-`TEMPORAL_DB_PASSWORD` (see `.env.example`). `make db-down` stops everything and
-keeps the volumes.
+roles and their databases, creates the `corpus_builder` role and its
+`corpus_template` database with `vector` and `ltree`, creates or upgrades the
+Temporal schemas, starts the Temporal server (`127.0.0.1:7233`) and its UI
+(`http://127.0.0.1:8233`), and creates the `corpus` namespace with 30-day
+retention. Every step is idempotent. `.env` must hold `POSTGRES_PASSWORD`,
+`PIPELINE_PASSWORD`, `TEMPORAL_DB_PASSWORD`, and `BUILDER_PASSWORD` (see
+`.env.example`). `make db-down` stops everything and keeps the volumes.
 
 Image tags, all published for arm64 and checked on 2026-11-09:
 `temporalio/server:1.32.2`, `temporalio/admin-tools:1.32.2`,
