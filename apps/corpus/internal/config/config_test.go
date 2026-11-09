@@ -23,6 +23,7 @@ func TestLoad_Defaults(t *testing.T) {
 		Namespace:       "corpus",
 		Artifacts:       "work/artifacts",
 		PgDump:          "pg_dump",
+		VBPLURL:         "https://vbpl-bientap-gateway.moj.gov.vn/api/qtdc/public",
 	}
 	if got != want {
 		t.Errorf("Load() = %+v, want %+v", got, want)

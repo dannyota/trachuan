@@ -81,7 +81,7 @@ func Run(ctx context.Context, cfg config.Config) error {
 	}
 	defer temporalClient.Close()
 	env := stage.Env{DB: db, Artifacts: artifact.Store{Root: cfg.Artifacts}, Now: time.Now}
-	w, err := New(ctx, Deps{Env: env, Temporal: temporalClient, Registry: workflow.Default(workflow.Deps{Env: env, VBPL: vbpl.New(workerVersion())}), Checkpointer: checkpoint.Taker{Config: checkpoint.Config{Dir: cfg.CheckpointDir, ArtifactsRoot: cfg.Artifacts, DatabaseURL: cfg.DatabaseURL, PgDump: cfg.PgDump, Keep: 3}}})
+	w, err := New(ctx, Deps{Env: env, Temporal: temporalClient, Registry: workflow.Default(workflow.Deps{Env: env, VBPL: vbpl.NewWithBase(cfg.VBPLURL, workerVersion())}), Checkpointer: checkpoint.Taker{Config: checkpoint.Config{Dir: cfg.CheckpointDir, ArtifactsRoot: cfg.Artifacts, DatabaseURL: cfg.DatabaseURL, PgDump: cfg.PgDump, Keep: 3}}})
 	if err != nil {
 		return fmt.Errorf("construct worker: %w", err)
 	}

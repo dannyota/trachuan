@@ -35,7 +35,12 @@ type Client struct {
 
 // New creates a client identifying this release by version.
 func New(version string) *Client {
-	return &Client{base: "https://vbpl-bientap-gateway.moj.gov.vn/api/qtdc/public", userAgent: "traquydinh/" + version + " (+https://github.com/dannyota/traquydinh)", http: &http.Client{}, limiter: rate.NewLimiter(2, 1), slots: make(chan struct{}, 2), timeout: 30 * time.Second, backoffs: []time.Duration{2 * time.Second, 8 * time.Second, 30 * time.Second}}
+	return NewWithBase("https://vbpl-bientap-gateway.moj.gov.vn/api/qtdc/public", version)
+}
+
+// NewWithBase creates a client for the supplied gateway URL.
+func NewWithBase(base, version string) *Client {
+	return &Client{base: base, userAgent: "traquydinh/" + version + " (+https://github.com/dannyota/traquydinh)", http: &http.Client{}, limiter: rate.NewLimiter(2, 1), slots: make(chan struct{}, 2), timeout: 30 * time.Second, backoffs: []time.Duration{2 * time.Second, 8 * time.Second, 30 * time.Second}}
 }
 
 type response struct {

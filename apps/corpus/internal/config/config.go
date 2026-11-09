@@ -11,6 +11,7 @@ type Config struct {
 	Artifacts       string
 	CheckpointDir   string
 	PgDump          string
+	VBPLURL         string
 }
 
 // Load reads configuration using getenv and requires a database URL.
@@ -22,6 +23,7 @@ func Load(getenv func(string) string) (Config, error) {
 		Artifacts:       defaultValue(getenv("CORPUS_ARTIFACTS"), "work/artifacts"),
 		CheckpointDir:   getenv("CORPUS_CHECKPOINT_DIR"),
 		PgDump:          defaultValue(getenv("CORPUS_PG_DUMP"), "pg_dump"),
+		VBPLURL:         defaultValue(getenv("CORPUS_VBPL_URL"), "https://vbpl-bientap-gateway.moj.gov.vn/api/qtdc/public"),
 	}
 	if cfg.DatabaseURL == "" {
 		return Config{}, errors.New("CORPUS_DATABASE_URL is required")
