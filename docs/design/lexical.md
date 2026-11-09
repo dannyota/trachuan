@@ -71,6 +71,8 @@ drop terms. Required checks cover Unicode normalization, collision addition,
 query presence, empty corpus, repeated terms, deterministic summation and
 build/query encoding parity.
 
-The [pgvector storage reference](https://github.com/pgvector/pgvector#reference)
-is cited by the local study. External documentation was not re-fetched for this
-design; the primary must verify the pinned version's limits before coding.
+Verified locally on 2026-11-09 against the pinned image (PostgreSQL 18.6,
+pgvector 0.8.7, ltree 1.3): `sparsevec(1048576)` stores 16,000 nonzeros and
+rejects 16,001 with "sparsevec cannot have more than 16000 non-zero elements",
+matching the
+[pgvector storage reference](https://github.com/pgvector/pgvector#reference).

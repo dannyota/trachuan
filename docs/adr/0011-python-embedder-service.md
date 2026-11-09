@@ -1,7 +1,7 @@
 # ADR 0011: Python embedding service with two runtimes
 
-Status: accepted 2026-11-09 by the primary brief; contract awaits independent
-design review.
+Status: accepted 2026-11-09; the contract passed independent design review on
+2026-11-09.
 
 ## Context
 
