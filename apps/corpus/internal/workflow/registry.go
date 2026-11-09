@@ -4,6 +4,7 @@ package workflow
 import (
 	"github.com/dannyota/traquydinh/apps/corpus/internal/stage"
 	"github.com/dannyota/traquydinh/apps/corpus/internal/stage/discover"
+	"github.com/dannyota/traquydinh/apps/corpus/internal/stage/extract"
 	"github.com/dannyota/traquydinh/apps/corpus/internal/stage/fetch"
 	"github.com/dannyota/traquydinh/apps/corpus/internal/vbpl"
 )
@@ -64,4 +65,6 @@ type Deps struct {
 }
 
 // Default returns the stages compiled into the worker.
-func Default(deps Deps) Registry { return NewRegistry(discover.New(deps.VBPL), fetch.New(deps.VBPL)) }
+func Default(deps Deps) Registry {
+	return NewRegistry(discover.New(deps.VBPL), fetch.New(deps.VBPL), extract.New())
+}

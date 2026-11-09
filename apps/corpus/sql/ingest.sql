@@ -10,3 +10,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14);
 -- name: InsertFetchedFile :exec
 INSERT INTO fetched_file (artifact_id, name, sha256, size, path)
 VALUES ($1, $2, $3, $4, $5);
+
+-- name: InsertProvision :exec
+INSERT INTO provision (artifact_id, node_id, parent_node_id, kind, label, heading, ordinal, path, text)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);

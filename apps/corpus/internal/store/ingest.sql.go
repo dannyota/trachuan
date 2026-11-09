@@ -76,6 +76,38 @@ func (q *Queries) InsertFetchedFile(ctx context.Context, arg InsertFetchedFilePa
 	return err
 }
 
+const insertProvision = `-- name: InsertProvision :exec
+INSERT INTO provision (artifact_id, node_id, parent_node_id, kind, label, heading, ordinal, path, text)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+`
+
+type InsertProvisionParams struct {
+	ArtifactID   int64
+	NodeID       string
+	ParentNodeID *string
+	Kind         string
+	Label        string
+	Heading      string
+	Ordinal      int32
+	Path         string
+	Text         string
+}
+
+func (q *Queries) InsertProvision(ctx context.Context, arg InsertProvisionParams) error {
+	_, err := q.db.Exec(ctx, insertProvision,
+		arg.ArtifactID,
+		arg.NodeID,
+		arg.ParentNodeID,
+		arg.Kind,
+		arg.Label,
+		arg.Heading,
+		arg.Ordinal,
+		arg.Path,
+		arg.Text,
+	)
+	return err
+}
+
 const upsertListing = `-- name: UpsertListing :exec
 INSERT INTO listing (run_id, query_key, item_key, payload)
 VALUES ($1, $2, $3, $4)

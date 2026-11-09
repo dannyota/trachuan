@@ -18,6 +18,7 @@ type Querier interface {
 	GetBatchRun(ctx context.Context, id int64) (Run, error)
 	GetBatchRunState(ctx context.Context, id int64) (string, error)
 	GetControlRunForUpdate(ctx context.Context, id int64) (Run, error)
+	GetExtractInput(ctx context.Context, arg GetExtractInputParams) (GetExtractInputRow, error)
 	GetRun(ctx context.Context, arg GetRunParams) (Run, error)
 	GetRunForUpdate(ctx context.Context, arg GetRunForUpdateParams) (Run, error)
 	GetRunGeneration(ctx context.Context, id int64) (int32, error)
@@ -27,10 +28,12 @@ type Querier interface {
 	InsertFetchedFile(ctx context.Context, arg InsertFetchedFileParams) error
 	InsertGap(ctx context.Context, arg InsertGapParams) error
 	InsertPlannedItem(ctx context.Context, arg InsertPlannedItemParams) error
+	InsertProvision(ctx context.Context, arg InsertProvisionParams) error
 	InsertRunItem(ctx context.Context, arg InsertRunItemParams) error
 	ListDiscoveryItems(ctx context.Context, country string) ([]ListDiscoveryItemsRow, error)
 	ListDiscoveryListings(ctx context.Context, country string) ([]ListDiscoveryListingsRow, error)
 	ListDiscoveryRuns(ctx context.Context, country string) ([]ListDiscoveryRunsRow, error)
+	ListExtractInputs(ctx context.Context, runID int64) ([]ListExtractInputsRow, error)
 	ListPendingBatchItems(ctx context.Context, arg ListPendingBatchItemsParams) ([]RunItem, error)
 	ListPendingStageBatches(ctx context.Context, arg ListPendingStageBatchesParams) ([]int32, error)
 	ListRunGaps(ctx context.Context, arg ListRunGapsParams) ([]Gap, error)

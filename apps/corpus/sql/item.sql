@@ -34,3 +34,12 @@ WHERE run_id = sqlc.arg(run_id) AND stage = sqlc.arg(stage)
 SELECT DISTINCT batch FROM run_item
 WHERE run_id = $1 AND stage = $2 AND state = 'pending'
 ORDER BY batch;
+
+-- name: ListExtractInputs :many
+SELECT i.item_key, a.sha256 FROM run_item i JOIN artifact a ON a.id = i.artifact_id
+WHERE i.run_id = $1 AND i.stage = 'fetch' AND i.state = 'done'
+ORDER BY i.item_key;
+
+-- name: GetExtractInput :one
+SELECT a.path, a.sha256 FROM run_item i JOIN artifact a ON a.id = i.artifact_id
+WHERE i.run_id = $1 AND i.stage = 'fetch' AND i.state = 'done' AND i.item_key = $2;
