@@ -1,5 +1,16 @@
 title = "traquydinh"
 [extend]
 useDefault = true
-[allowlist]
+
+[[allowlists]]
+description = "Research notes"
 paths = ['''docs/research/.*''']
+
+# VBPL provision tree fixtures name every node with "key": "<uuid>"; only that
+# exact shape, only in the VBPL tree fixtures, is allowed.
+[[allowlists]]
+description = "VBPL provision node keys in recorded fixtures"
+condition = "AND"
+paths = ['''apps/corpus/internal/vbpl/testdata/tree-.*\.json''']
+regexes = ['''key"\s*:\s*"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"''']
+regexTarget = "match"
