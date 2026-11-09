@@ -21,7 +21,7 @@ func gateDB(t *testing.T) (*pgxpool.Pool, int64) {
 	}
 	t.Cleanup(db.Close)
 	var id int64
-	if err := db.QueryRow(ctx, `INSERT INTO run (country,rel,state,snapshot) VALUES ('vn','20261109','running','{}') RETURNING id`).Scan(&id); err != nil {
+	if err := db.QueryRow(ctx, `INSERT INTO run (country,rel,state,snapshot) VALUES ('vn','20990109','running','{}') RETURNING id`).Scan(&id); err != nil {
 		t.Fatal(err)
 	}
 	return db, id

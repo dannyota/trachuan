@@ -24,7 +24,7 @@ func setup(t *testing.T) (*pgxpool.Pool, int64) {
 	}
 	t.Cleanup(pool.Close)
 	var id int64
-	if err := pool.QueryRow(ctx, `INSERT INTO run (country, rel, state, generation, snapshot) VALUES ('vn', '20261109', 'running', 2, '{}') RETURNING id`).Scan(&id); err != nil {
+	if err := pool.QueryRow(ctx, `INSERT INTO run (country, rel, state, generation, snapshot) VALUES ('vn', '20990109', 'running', 2, '{}') RETURNING id`).Scan(&id); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := pool.Exec(ctx, `INSERT INTO run_item (run_id, stage, item_key, state, batch, generation, attempt) VALUES ($1, 'fetch', 'item', 'pending', 0, 0, 0)`, id); err != nil {
@@ -211,7 +211,7 @@ func TestGapCause_RoundTrip(t *testing.T) {
 	if applied, err := CommitItem(ctx, pool, c); err != nil || !applied {
 		t.Fatalf("commit: %v %v", applied, err)
 	}
-	rows, err := store.New(pool).ListRunGaps(ctx, store.ListRunGapsParams{Country: "vn", Rel: "20261109"})
+	rows, err := store.New(pool).ListRunGaps(ctx, store.ListRunGapsParams{Country: "vn", Rel: "20990109"})
 	if err != nil || len(rows) != 1 {
 		t.Fatalf("read gaps: %+v %v", rows, err)
 	}
