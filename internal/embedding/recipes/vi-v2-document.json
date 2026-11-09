@@ -11,7 +11,7 @@
   "input": "raw",
   "runtime": "document",
   "backend": "torch-mps",
-  "precision": "fp32",
+  "precision": "fp16",
   "token_cap": 2048,
   "special_tokens": true,
   "truncation": false,

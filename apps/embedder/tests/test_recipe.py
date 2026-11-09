@@ -28,9 +28,9 @@ def manifest(path):
 
 
 @pytest.mark.parametrize("mode,library", [("document", "torch"), ("query", "onnxruntime")])
-def test_recipe_reports_loaded_versions_and_fp32(bundle, mode, library):
+def test_recipe_reports_loaded_versions_and_precision(bundle, mode, library):
     recipe = build_recipe(manifest(bundle), mode)
-    assert recipe["precision"] == "fp32"
+    assert recipe["precision"] == ("fp16" if mode == "document" else "fp32")
     assert list(recipe)[-3:] == ["language", "tokenizer_library", "runtime_library"]
     assert recipe["language"] == "python " + platform.python_version()
     assert recipe["tokenizer_library"] == "transformers " + importlib.metadata.version(

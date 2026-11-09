@@ -51,7 +51,7 @@ def build_recipe(manifest: dict, mode: str) -> dict:
         "input": "raw",
         "runtime": mode,
         "backend": "onnxruntime-cpu" if mode == "query" else "torch-mps",
-        "precision": "fp32",
+        "precision": "fp32" if mode == "query" else "fp16",
         "token_cap": 256 if mode == "query" else 2048,
         "special_tokens": True,
         "truncation": False,

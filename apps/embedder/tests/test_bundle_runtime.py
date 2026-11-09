@@ -37,7 +37,7 @@ def test_onnx_cls_selection_and_normalization(tmp_path):
     assert np.allclose(vector, [[0.6, 0.8]])
 
 
-def test_document_runtime_loads_float32_on_mps(monkeypatch, tmp_path):
+def test_document_runtime_loads_float16_on_mps(monkeypatch, tmp_path):
     torch = pytest.importorskip("torch")
     from transformers import AutoModel
 
@@ -53,7 +53,7 @@ def test_document_runtime_loads_float32_on_mps(monkeypatch, tmp_path):
         assert path == str(tmp_path)
         assert local_files_only is True
         assert trust_remote_code is False
-        assert dtype == torch.float32
+        assert dtype == torch.float16
         return FakeModel()
 
     monkeypatch.setattr(torch.backends.mps, "is_available", lambda: True)

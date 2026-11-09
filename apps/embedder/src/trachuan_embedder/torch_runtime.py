@@ -17,7 +17,7 @@ class TorchRuntime:
         self.torch = torch
         self.model = (
             AutoModel.from_pretrained(
-                str(model_dir), local_files_only=True, trust_remote_code=False, dtype=torch.float32
+                str(model_dir), local_files_only=True, trust_remote_code=False, dtype=torch.float16
             )
             .to("mps")
             .eval()
