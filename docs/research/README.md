@@ -15,3 +15,5 @@ Observations and experiments. Not project authority.
   throughput and gateway findings.
 - [Hybrid retrieval baseline and model ablation](retrieval-hybrid-results-2026-11.md):
   local parity with banhmi and Vietnamese_Embedding_v2 under hybrid scoring.
+- [Vietnam legal sources](vn-sources-2026-11.md): which sources to read and
+  their priority.
