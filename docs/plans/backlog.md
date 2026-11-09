@@ -15,3 +15,5 @@ One line per item: date, area, finding, source.
 - 2026-11-09, deploy, check t4g burstable CPU credits under sustained embedder load in the host acceptance gates; credit exhaustion would raise query latency, final review of the spikes branch.
 - 2026-11-09, pipeline, relation targets outside the discovery scope are gaps during ingest (banhmi held 1,108 context documents); decide one-hop fetching before the index plan, docs/plans/2026-11-09-corpus-ingest.md.
 - 2026-11-09, pipeline, add checkpoints to S3 in addition to the external disk, docs/plans/2026-11-09-corpus-ingest.md.
+- 2026-11-09, pipeline, `corpus start` does not retry items whose only gaps are `source_unavailable` (or `invalid_source_data` from a gateway response); reset them and delete those gap rows on start, and treat a non-JSON 200 body as retryable, final review R-14.
+- 2026-11-09, scope, VBPL `all_words` title search splits keywords into syllables: `tài sản số` and `ngân hàng số` match almost any title containing `số`; review the keyword list before the index plan, live run 20261109.
