@@ -3,6 +3,7 @@ package fetch
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -90,5 +91,17 @@ func apiError(err error, id string, detail bool) (stage.Output, error) {
 	if detail && errors.Is(err, vbpl.ErrNotFound) {
 		return stage.Output{State: "gap", Gaps: []stage.Gap{{Kind: "not_found", Detail: id}}}, nil
 	}
-	return stage.Output{}, stage.Retryable(fmt.Errorf("fetch document %q: %w", id, err))
+	wrapped := fmt.Errorf("fetch document %q: %w", id, err)
+	var syntax *json.SyntaxError
+	var typeErr *json.UnmarshalTypeError
+	if errors.As(err, &syntax) || errors.As(err, &typeErr) {
+		return stage.Output{}, stage.SourceData(wrapped)
+	}
+	var status *vbpl.StatusError
+	if errors.As(err, &status) && status.Code >= 500 {
+		// The gateway keeps refusing this document (seen live: detail 500 for
+		// old documents); after the last attempt it is a gap the owner can accept.
+		return stage.Output{}, stage.RetryableGap(wrapped, "source_unavailable")
+	}
+	return stage.Output{}, stage.Retryable(wrapped)
 }

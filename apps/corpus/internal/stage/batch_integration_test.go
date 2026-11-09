@@ -240,3 +240,35 @@ func TestRunBatch_ItemTimeoutDoesNotAbortBatch(t *testing.T) {
 		t.Fatalf("one item's timeout must leave it pending and let the batch continue: result=%+v err=%v", result, err)
 	}
 }
+
+func TestRunBatch_PersistentSourceErrorBecomesGapOnLastAttempt(t *testing.T) {
+	env, id, s := batchSetup(t)
+	s.process = func(context.Context, Env, Run, Item) (Output, error) {
+		return Output{}, RetryableGap(errors.New("gateway status 500"), "source_unavailable")
+	}
+	result, err := batchRun(env, id, s, 5, func(...any) {})
+	state, _ := batchState(t, env.DB, id)
+	var gaps int
+	if queryErr := env.DB.QueryRow(context.Background(), `SELECT count(*) FROM gap WHERE run_id=$1 AND kind='source_unavailable'`, id).Scan(&gaps); queryErr != nil {
+		t.Fatal(queryErr)
+	}
+	if err != nil || state != "gap" || gaps != 1 || result.Gap != 1 || result.Failed != 0 {
+		t.Fatalf("result=%+v state=%s gaps=%d err=%v", result, state, gaps, err)
+	}
+}
+
+func TestRunBatch_ProcessSourceDataErrorIsGap(t *testing.T) {
+	env, id, s := batchSetup(t)
+	s.process = func(context.Context, Env, Run, Item) (Output, error) {
+		return Output{}, SourceData(errors.New("decode tree: unexpected token"))
+	}
+	result, err := batchRun(env, id, s, 1, func(...any) {})
+	state, _ := batchState(t, env.DB, id)
+	var gaps int
+	if queryErr := env.DB.QueryRow(context.Background(), `SELECT count(*) FROM gap WHERE run_id=$1 AND kind='invalid_source_data'`, id).Scan(&gaps); queryErr != nil {
+		t.Fatal(queryErr)
+	}
+	if err != nil || state != "gap" || gaps != 1 || result.Failed != 0 {
+		t.Fatalf("result=%+v state=%s gaps=%d err=%v", result, state, gaps, err)
+	}
+}

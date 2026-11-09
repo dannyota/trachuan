@@ -66,7 +66,10 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 		return stage.Output{State: "gap", Gaps: []stage.Gap{{Kind: "tree_too_large"}}}, nil
 	}
 	if err != nil {
-		return stage.Output{}, fmt.Errorf("decode tree: %w", err)
+		if ctx.Err() != nil {
+			return stage.Output{}, fmt.Errorf("decode tree: %w", err)
+		}
+		return stage.Output{}, stage.SourceData(fmt.Errorf("decode tree: %w", err))
 	}
 	rows, gaps, err := extractTree(ctx, nodes)
 	if err != nil {

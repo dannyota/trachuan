@@ -82,7 +82,6 @@ func RunBatch(ctx context.Context, env Env, st Stage, in BatchInput, attempt int
 		return result, fmt.Errorf("list pending batch items: %w", err)
 	}
 	for i, itemRow := range items {
-		err = nil
 		state, stateErr := q.GetBatchRunState(ctx, in.RunID)
 		if stateErr != nil {
 			return result, fmt.Errorf("load run state: %w", stateErr)
@@ -132,7 +131,7 @@ func RunBatch(ctx context.Context, env Env, st Stage, in BatchInput, attempt int
 						last.Store(int64(i))
 						continue
 					}
-					output = Output{State: "failed", Message: err.Error()}
+					output = processFailure(err, retryable)
 				} else if output.Artifact != nil {
 					fault.Hit("after_rename", i)
 				}
@@ -220,6 +219,25 @@ func dataError(e *pgconn.PgError) bool {
 	return strings.HasPrefix(e.Code, "22") || strings.HasPrefix(e.Code, "23")
 }
 
+// processFailure turns a final Process error into an item outcome: a retryable
+// error with a gap kind becomes that gap, source data becomes gap
+// invalid_source_data, anything else a failed item.
+func processFailure(err error, retryable *RetryableError) Output {
+	c := itemCommit(Commit{}, err)
+	if retryable != nil && retryable.GapKind != "" {
+		c.State, c.Gaps = "gap", []Gap{{Kind: retryable.GapKind, Detail: trimRunes(c.Message, 200)}}
+	}
+	return Output{State: c.State, Message: c.Message, Gaps: c.Gaps}
+}
+
+func trimRunes(s string, n int) string {
+	r := []rune(s)
+	if len(r) > n {
+		r = r[:n]
+	}
+	return string(r)
+}
+
 // sourceDataError reports errors caused by the source document's content
 // (broken payload JSON, text PostgreSQL rejects, duplicate ids), which a retry
 // cannot fix and the owner may accept as a gap.
@@ -227,7 +245,7 @@ func sourceDataError(err error) bool {
 	var syntax *json.SyntaxError
 	var typeErr *json.UnmarshalTypeError
 	var pgErr *pgconn.PgError
-	return errors.As(err, &syntax) || errors.As(err, &typeErr) || (errors.As(err, &pgErr) && dataError(pgErr))
+	return errors.Is(err, ErrSourceData) || errors.As(err, &syntax) || errors.As(err, &typeErr) || (errors.As(err, &pgErr) && dataError(pgErr))
 }
 
 // itemCommit records an item-level error: source data errors become gap

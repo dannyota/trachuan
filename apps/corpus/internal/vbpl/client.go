@@ -171,11 +171,19 @@ func (c *Client) apiRaw(ctx context.Context, method, path string, body []byte) (
 			return nil, ErrNotFound
 		}
 		if status != 200 {
-			return nil, fmt.Errorf("gateway status %d", status)
+			return nil, &StatusError{Code: status}
 		}
 		return raw, nil
 	}
 }
+
+// StatusError reports a gateway response other than 200 or 404 that survived
+// the client's retries.
+type StatusError struct{ Code int }
+
+// Error describes the status.
+func (e *StatusError) Error() string { return fmt.Sprintf("gateway status %d", e.Code) }
+
 func (c *Client) api(ctx context.Context, method, path string, body []byte) (json.RawMessage, error) {
 	raw, err := c.apiRaw(ctx, method, path, body)
 	if err != nil {

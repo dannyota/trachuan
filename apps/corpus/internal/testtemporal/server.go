@@ -39,7 +39,7 @@ func Server(t *testing.T) *testsuite.DevServer {
 }
 
 // Release returns a release name unique within the test binary.
-func Release() string { return fmt.Sprintf("20260101_%d", counter.Add(1)) }
+func Release() string { return fmt.Sprintf("2026%04d", counter.Add(1)) }
 
 // Stop stops the shared server after all tests have completed.
 func Stop() error {

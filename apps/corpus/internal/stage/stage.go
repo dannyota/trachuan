@@ -2,6 +2,8 @@ package stage
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"time"
 
 	"danny.vn/traquydinh/apps/corpus/internal/artifact"
@@ -39,8 +41,13 @@ type Stage interface {
 	Resolve(context.Context, Env, Run, Item, artifact.Result) (Resolution, error)
 }
 
-// RetryableError marks an item failure that can be retried.
-type RetryableError struct{ Err error }
+// RetryableError marks an item failure that can be retried. When GapKind is
+// set and the last attempt still fails, the item becomes that gap instead of
+// failed, because the source itself keeps refusing.
+type RetryableError struct {
+	Err     error
+	GapKind string
+}
 
 // Error returns the underlying error message.
 func (e *RetryableError) Error() string { return e.Err.Error() }
@@ -50,3 +57,13 @@ func (e *RetryableError) Unwrap() error { return e.Err }
 
 // Retryable marks an item error for another activity attempt.
 func Retryable(err error) error { return &RetryableError{Err: err} }
+
+// RetryableGap marks a retryable failure that becomes gap kind after the last attempt.
+func RetryableGap(err error, kind string) error { return &RetryableError{Err: err, GapKind: kind} }
+
+// ErrSourceData marks errors caused by the source document's content.
+var ErrSourceData = errors.New("invalid source data")
+
+// SourceData marks err as caused by the source document's content; the item
+// becomes gap invalid_source_data, which the owner may accept.
+func SourceData(err error) error { return fmt.Errorf("%w: %w", ErrSourceData, err) }

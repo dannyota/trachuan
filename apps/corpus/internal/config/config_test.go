@@ -79,3 +79,10 @@ func TestLoad_LoopbackHTTPOffByDefault(t *testing.T) {
 		t.Fatalf("loopback=%v err=%v", cfg.VBPLLoopbackHTTP, err)
 	}
 }
+
+func TestLoad_HeartbeatEveryMustBeBelowTimeout(t *testing.T) {
+	env := map[string]string{"CORPUS_DATABASE_URL": "postgres://x", "CORPUS_HEARTBEAT_EVERY": "2m", "CORPUS_HEARTBEAT_TIMEOUT": "2m"}
+	if _, err := Load(func(k string) string { return env[k] }); err == nil || !strings.Contains(err.Error(), "CORPUS_HEARTBEAT_EVERY") {
+		t.Fatalf("want an error naming CORPUS_HEARTBEAT_EVERY, got %v", err)
+	}
+}

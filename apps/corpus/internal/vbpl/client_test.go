@@ -310,3 +310,16 @@ func TestDownload_SizeMismatchLeavesNoFile(t *testing.T) {
 		t.Fatalf("error = %v, entries = %v, read = %v", err, entries, readErr)
 	}
 }
+
+func TestClient_PersistentServerErrorIsStatusError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer server.Close()
+	client := NewWithBase(server.URL, "test", WithLimits(1000, 4), WithBackoffs(time.Millisecond, time.Millisecond))
+	_, _, err := client.Detail(context.Background(), "21657")
+	var status *StatusError
+	if !errors.As(err, &status) || status.Code != http.StatusInternalServerError {
+		t.Fatalf("want a StatusError 500, got %v", err)
+	}
+}
