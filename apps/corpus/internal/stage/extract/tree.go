@@ -36,6 +36,7 @@ func extractTree(ctx context.Context, nodes []vbpl.Node) ([]provision, []stage.G
 		stack = append(stack, pendingNode{node, 1})
 	}
 	count := 0
+	articleCount := 0
 	for len(stack) > 0 {
 		if err := ctx.Err(); err != nil {
 			return nil, nil, err
@@ -43,6 +44,9 @@ func extractTree(ctx context.Context, nodes []vbpl.Node) ([]provision, []stage.G
 		top := stack[len(stack)-1]
 		stack = stack[:len(stack)-1]
 		count++
+		if nodeKind(top.node.Level, top.node.PType) == "dieu" {
+			articleCount++
+		}
 		if count > 50000 || top.depth > 32 {
 			return rows, []stage.Gap{{Kind: "tree_too_large"}}, nil
 		}
@@ -96,7 +100,9 @@ func extractTree(ctx context.Context, nodes []vbpl.Node) ([]provision, []stage.G
 				if strings.TrimSpace(text) == "" {
 					gaps = append(gaps, stage.Gap{Kind: "empty_text", Detail: node.ID})
 				}
-				if number > 0 {
+				if number > articleCount+100 {
+					gaps = append(gaps, stage.Gap{Kind: "article_number_out_of_range", Detail: strings.TrimPrefix(label, "Điều ")})
+				} else if number > 0 {
 					articles[number] = true
 					if number > maxArticle {
 						maxArticle = number
@@ -123,12 +129,22 @@ func extractTree(ctx context.Context, nodes []vbpl.Node) ([]provision, []stage.G
 	if err := walk(nodes, nil, "", "", ""); err != nil {
 		return nil, nil, err
 	}
-	for i := 1; i < maxArticle; i++ {
+	sequenceGaps := 0
+	for i := 1; i < maxArticle && sequenceGaps < 100; i++ {
 		if err := ctx.Err(); err != nil {
 			return nil, nil, err
 		}
 		if !articles[i] {
-			gaps = append(gaps, stage.Gap{Kind: "article_sequence", Detail: strconv.Itoa(i)})
+			start := i
+			for i+1 < maxArticle && !articles[i+1] {
+				i++
+			}
+			detail := strconv.Itoa(start)
+			if i > start {
+				detail += "-" + strconv.Itoa(i)
+			}
+			gaps = append(gaps, stage.Gap{Kind: "article_sequence", Detail: detail})
+			sequenceGaps++
 		}
 	}
 	return rows, gaps, nil

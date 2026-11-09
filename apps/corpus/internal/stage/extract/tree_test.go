@@ -71,6 +71,21 @@ func TestExtract_ArticleSequenceGap(t *testing.T) {
 		t.Fatalf("%v %v", gaps, err)
 	}
 }
+func TestExtract_HugeArticleNumberIsOneGap(t *testing.T) {
+	nodes := []vbpl.Node{{ID: "1", Level: "Article", Title: "Điều 999999999999", Content: "a"}}
+	_, gaps, err := extractTree(context.Background(), nodes)
+	if err != nil || len(gaps) != 1 || !hasGap(gaps, "article_number_out_of_range", "999999999999") {
+		t.Fatalf("%v %v", gaps, err)
+	}
+}
+
+func TestExtract_MissingArticlesAsRanges(t *testing.T) {
+	nodes := []vbpl.Node{{ID: "1", Level: "Article", Title: "Điều 1", Content: "a"}, {ID: "8", Level: "Article", Title: "Điều 8", Content: "a"}}
+	_, gaps, err := extractTree(context.Background(), nodes)
+	if err != nil || len(gaps) != 1 || !hasGap(gaps, "article_sequence", "2-7") {
+		t.Fatalf("%v %v", gaps, err)
+	}
+}
 func TestExtract_UnknownKindIsOther(t *testing.T) {
 	rows, gaps, err := extractTree(context.Background(), []vbpl.Node{{ID: "x", Level: "unknown", Content: "a"}})
 	if err != nil || rows[0].Kind != "other" || !hasGap(gaps, "unknown_node_kind", "x") {
