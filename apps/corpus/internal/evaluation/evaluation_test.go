@@ -211,3 +211,22 @@ func TestMatchProduct_RelationNeedsCompleteEvidence(t *testing.T) {
 		t.Fatal("complete relation evidence missed")
 	}
 }
+
+func TestValidate_EvidenceURLOptionalNodeIDOnlyForDocuments(t *testing.T) {
+	cases := []Case{{ID: "a", ExpectedCitations: []Expectation{{DocNumber: "12"}}}}
+	doc := IdentityMap{Version: 1, LegacySHA256: "l", IdentityInventoryHash: "i", Entries: []MapEntry{{CaseID: "a", State: "resolved", ExpectedNumber: "12", Reason: "reviewed", ReviewedAt: "2026-01-01", Evidence: []Evidence{{FetchSHA256: "hash", QuotedSpan: "title"}}, Alternatives: []Alternative{{Country: "vn", DocumentKey: "d", Kind: "document"}}}}}
+	if err := doc.Validate(cases, "l", "i"); err != nil {
+		t.Fatalf("document-level evidence without URL or node rejected: %v", err)
+	}
+	anchor := "dieu-3"
+	prov := doc
+	prov.Entries = []MapEntry{doc.Entries[0]}
+	prov.Entries[0].Alternatives = []Alternative{{Country: "vn", DocumentKey: "d", Anchor: &anchor, Kind: "provision"}}
+	if err := prov.Validate(cases, "l", "i"); err == nil {
+		t.Fatal("provision evidence without a node id accepted")
+	}
+	prov.Entries[0].Evidence = []Evidence{{FetchSHA256: "hash", NodeID: "n1", QuotedSpan: "Điều 3"}}
+	if err := prov.Validate(cases, "l", "i"); err != nil {
+		t.Fatalf("provision evidence without URL rejected: %v", err)
+	}
+}

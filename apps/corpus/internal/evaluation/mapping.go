@@ -106,8 +106,14 @@ func (m IdentityMap) Validate(cases []Case, legacySHA256, inventoryHash string) 
 		if e.State != "resolved" || len(e.Alternatives) == 0 || len(e.Evidence) == 0 {
 			return fail("unresolved entry")
 		}
+		// No verified source URL is stored, so source_url may be empty; a node
+		// id is required whenever the entry credits a provision.
+		needsNode := false
+		for _, a := range e.Alternatives {
+			needsNode = needsNode || a.Kind == "provision"
+		}
 		for _, v := range e.Evidence {
-			if v.SourceURL == "" || v.FetchSHA256 == "" || v.NodeID == "" || v.QuotedSpan == "" {
+			if v.FetchSHA256 == "" || v.QuotedSpan == "" || (needsNode && v.NodeID == "") {
 				return fail("incomplete evidence")
 			}
 		}
