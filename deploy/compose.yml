@@ -1,0 +1,29 @@
+# Local development services. Production runs Quadlet units on the host.
+name: traquydinh
+services:
+  postgres:
+    image: docker.io/pgvector/pgvector:pg18
+    # Parallel HNSW builds allocate dynamic shared memory up to maintenance_work_mem.
+    shm_size: 3gb
+    command:
+      - postgres
+      - -c
+      - shared_buffers=1GB
+      - -c
+      - maintenance_work_mem=2GB
+      - -c
+      - max_parallel_maintenance_workers=4
+    environment:
+      POSTGRES_USER: traquydinh
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - traquydinh-pg:/var/lib/postgresql
+      - ../work/dumps:/dumps:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U traquydinh"]
+      interval: 5s
+      retries: 20
+volumes:
+  traquydinh-pg:

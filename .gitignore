@@ -10,3 +10,4 @@ dist/
 *.dump
 *.log
 .DS_Store
+.superpowers/

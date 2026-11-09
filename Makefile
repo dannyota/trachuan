@@ -19,4 +19,12 @@ docs-fmt: ## Format human-read Markdown with Prettier
 test: ## Unit tests (added with the first Go module)
 	@echo "no modules yet"
 
-.PHONY: help hooks-install lengths-check pre-push docs-fmt test
+COMPOSE := podman compose --env-file .env -f deploy/compose.yml
+
+db-up: ## Start local PostgreSQL with pgvector
+	$(COMPOSE) up -d --wait
+
+db-down: ## Stop local PostgreSQL, keep its volume
+	$(COMPOSE) down
+
+.PHONY: help hooks-install lengths-check pre-push docs-fmt test db-up db-down
