@@ -53,7 +53,6 @@ Freeze the evaluation civil date from the first eight digits of `rel`, parsed as
 a real calendar date; an invalid date is a configuration failure. The same date
 feeds calibration and eval, including retries after midnight.
 
-`source_manifest_hash` is SHA-256 of this fixed-field compact JSON inventory.
 Build input hash is
 `stage.RecipeHash("build-input","2",country,rel, source_manifest_hash,decimal_schema_version,identity_map_sha256)`.
 Pin the reviewed map bytes at planning and verify their SHA-256 before use.
@@ -81,7 +80,8 @@ their recipe hashes; never read a newly edited fixture under an old frozen hash.
 
 ## Inclusion and losses
 
-- Include one metadata document for each expected key with a done fetch. Include
+- Include one metadata document per final active member with a done fetch. Copy
+  its class from membership; never infer it from the document key. Include
   expired, suspended, not-yet and unknown statuses so historical retrieval can
   work. Include no-tree documents as metadata with coverage gaps; they have no
   provisions or chunks. Keep all valid extracted provisions even when their

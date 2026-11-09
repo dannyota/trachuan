@@ -5,7 +5,8 @@ Proposed execution contract for the owner's 2026-11-09 source choice in
 `chinhphu` fills central-document omissions, starting with AI. This note owns
 selection, identity and loss rules; [pipeline](pipeline.md) owns execution,
 [data](data.md) owns stored fields and [budgets](budgets.md#pipeline) owns
-limits.
+limits. Shared interfaces and close transactions live in
+[source execution](source-execution.md).
 
 ## Evidence and boundaries
 
@@ -47,6 +48,10 @@ with all candidate ids. Never pick the newest result. Already independently
 discovered candidates stay expected. Reason: official numbers are not unique,
 and a named lookup must expose uncertainty.
 
+Every search or lookup returns the [evidence-bearing result](source-execution.md#lookup-and-search-results).
+Apply zero/one/many rules only to complete results. A partial result may add
+observed ids, but cannot prove absence, uniqueness or withdrawal.
+
 A zero VBPL match can be covered by one eligible secondary candidate with the
 same number: keep the zero-match evidence and record secondary coverage instead
 of `named_document_missing`. Ambiguity is never converted to absence. Correct or
@@ -68,7 +73,7 @@ known golden law is missed by current discovery:
 | Banking operations      | hệ thống thông tin ngân hàng; thuê ngoài; kinh doanh liên tục                                      |
 | Payments and assets     | thanh toán không dùng tiền mặt; ví điện tử; ngân hàng số; tiền điện tử; tài sản số; tài sản mã hóa |
 
-`exact` semantics are undocumented. Before freezing a run with this change,
+`exact` semantics are undocumented. Before freezing the first migration run,
 record complete stable `all_words` and `exact` listings for every proposed term
 with identical agency filters in the same comparison session. Also compare the
 previous source list's full seed set with the candidate full seed set, including
@@ -81,10 +86,12 @@ The primary accounts for every old-only id: retained by another query, restored
 with a named number or revised term, or excluded with an owner-approved scope
 reason. No unexplained loss and no loss of the known VBPL golden documents is
 allowed. Include AI-related documents beyond the golden set in this review.
-Freeze the comparison artifact hash and approval note with the source snapshot;
-any change to the compared definition requires a new comparison. Do not edit a
-started run to incorporate the comparison. Reason: the migration needs evidence
-bound to the exact source definition, not an after-the-fact exception.
+Freeze one immutable migration comparison hash and approval note with the source
+snapshot. Later list changes need a loss review only for changed queries that
+can remove coverage, such as removals or narrower filters. Pure additions need
+no repeated migration comparison. Bind each loss review to the changed query
+definitions and old-only ids; carry prior reviews forward unchanged. Never edit
+a started run. Reason: review actual losses without repeating unrelated work.
 
 Query identity hashes source, query type, option, mode, level, agencies and
 keyword or number, with canonical ordering. Changing mode creates a new query;
@@ -127,22 +134,27 @@ Valid provisions are searchable without a special ranking penalty; missing trees
 stay metadata-only. Reason: agents need the cited law's text, and a
 metadata-only class would preserve the coverage failure.
 
-The expected set closes to additions after expand. An expand source failure
-retains known targets of that still-active seed and records a gap; a new failed
-seed has unknown coverage, never an assertion of no targets. Compare each
-primary seed's fresh fetch relations with expansion evidence: a new target not
-in the set produces `scope_changed` and requires a new run, never late recursive
-fetching. Check this in run-specific resolution, not the cached relation
-artifact. Target relations are still recorded and can have `unknown_target` gaps
-for second-hop endpoints. Reason: one hop bounds cost, not legal evidence.
+Expand freezes active membership, excluding retained `withdrawn` and
+`scope_removed` keys. A failed observation retains known targets of that active
+seed with a gap; a new failed seed has unknown coverage. Compare each primary
+seed's qualified fresh fetch targets against this frozen active membership.
+An absent target, including a retained removal key, causes non-retryable
+`scope_changed` failure with seed, target, reason and both evidence hashes.
+Persist it as a run failure, never an acceptable gap. Start, gap acceptance and
+release cannot clear it; a new run is required. Check during run-specific
+fetch finalization, never inside cached relation artifacts. Context documents'
+second-hop edges remain `unknown_target` gaps without expansion. Reason: the
+fetch inventory must not conceal an unfetched target or allow accepted drift.
 
 For context-only membership, keep the target while any active seed points to it.
 If every supporting seed leaves scope, retain a `scope_removed` gap item without
-fetching. If seeds stay but links disappear, retain and fetch until two
-consecutive complete expand observations for every supporting seed omit the
-link; then retain a `withdrawn` gap item without fetching. Incomplete
-observations cannot establish absence. A current direct hit or link overrides
-either removal. Reason: transient relation failures must not erase context.
+fetching. Otherwise consider only currently active supporting seeds: when all
+have complete observations and none retains the link, keep a `withdrawn` gap
+item without fetching. A failed or incomplete observation retains its known
+targets for fetch. A departed seed cannot prevent removal; a current direct hit
+or qualifying link always retains the document. No two-observation history is
+required. Reason: protect against failed observations without tracking absent
+seeds or delaying a fully evidenced removal.
 
 ## Secondary discovery and hand-over
 
@@ -162,28 +174,39 @@ filler, not a second unrestricted corpus.
 
 For every candidate, discover performs a fresh exact VBPL number lookup with the
 direct-discovery rules. A unique match becomes a primary seed, even if no
-keyword found it. If lookup fails or is ambiguous, record the corresponding
-source or ambiguity gap and defer secondary admission. Admit a candidate only
-after a complete zero-match lookup and no active VBPL document with its
-normalized number in the final run set. Repeat the check against context ids
-after their metadata is fetched, before extract. Fetch planning includes the
-candidate superset; its close transaction finalizes precedence, membership and
-hand-over gaps before downstream planning. If any active context id lacks a
-trustworthy number in fetched or reference metadata, defer secondary admission
-with `source_identity_ambiguous` until that id is identified. Never guess from
-its title. Reason: absence from a narrow keyword list is not evidence that VBPL
-lacks the document.
+keyword found it. An incomplete lookup records a source gap and defers new
+admission; it cannot remove an existing secondary member. A complete zero-match
+result admits the candidate unless its own identity evidence conflicts with an
+active member. Compare positive matches with the table below, including multiple
+VBPL matches. Fetch plans the candidate superset and finalizes precedence before
+extract through [source execution](source-execution.md#fetch-close-finalization).
+Post-fetch deferral applies only to that candidate's conflicting identity
+evidence. Missing metadata on an unrelated context id never blocks admission.
+Reason: narrow discovery is not proof of absence, and unrelated failures must
+not veto the secondary source.
 
-Key secondary documents as `vn:chinhphu:<docid>`, class `secondary`. Number
-equality is a precedence test, not identity aliasing: collisions with distinct
-issue dates or issuers produce `source_identity_ambiguous` and need review.
-Never rewrite a document key. A VBPL member wins even if its fetch fails; that
-failure remains visible rather than being concealed by fallback text.
+Key secondary documents as `vn:chinhphu:<docid>`, class `secondary`. Compare
+normalized number, issuer and issue date using [data](data.md#identity-comparison).
+For a candidate-specific comparison with an active VBPL member:
 
-When VBPL later supplies the number, remove the secondary key from the active
-expected set and record `source_replaced` on its discovery item, naming old key,
-VBPL key and comparison evidence. The owner must accept this gap before release;
-it does not mean legal repeal. Apply this exception to removal items; build
+| Evidence | Membership decision |
+| --- | --- |
+| Number, issuer and issue date all match; one VBPL identity | VBPL wins; mark secondary `source_replaced`. |
+| Any comparison field conflicts | Keep both with `source_identity_ambiguous`; never replace. |
+| Any comparison field is missing or unverifiable | Keep both with `source_identity_ambiguous`; never replace. |
+| Several VBPL identities remain possible | Keep all evidenced members with `source_identity_ambiguous`; never choose one. |
+
+The ambiguity rows are an explicit exception to single-source precedence;
+deferral means deferring that candidate's precedence decision, not dropping its
+metadata. Unrelated unequal numbers do not establish a candidate pair. Never
+rewrite keys. A failed VBPL fetch does not reverse a hand-over already proved by
+complete identity evidence; retain its fetch gap. Reason: number equality alone
+cannot safely replace a yearless-number document.
+
+Only the table's proven-match row removes the secondary key from active
+membership. Fetch finalization records `source_replaced` on its fetch item,
+naming old key, VBPL key and comparison evidence. The owner must accept it before
+release; it does not mean legal repeal. Apply this exception to removal items; build
 carries the gap and old absent key, not a secondary metadata row. Keep old
 release databases and artifacts intact. Re-adjudicate evaluation identity maps.
 Reason: provenance stays truthful and the new release avoids duplicate evidence.
@@ -214,31 +237,36 @@ Keep ASP.NET cookies and hidden postback tokens only in memory. Artifacts and
 fixtures retain placeholders, never cookie or token values. Use a named user
 agent, source-wide throttling, bounded retries and `Retry-After` handling from
 [budgets](budgets.md#pipeline). A challenge or access denial pauses the source
-for investigation; do not bypass it. Reason: unattended work must remain polite
-and reproducible without persisting session secrets.
+through the durable [source pause](source-execution.md#source-pause) contract;
+do not bypass it. Reason: unattended work must remain polite across concurrent
+batches and worker restarts.
 
 ## Dependencies and acceptance evidence
 
-Release order: record source fixtures and the keyword loss comparison; approve
-the scope and limits; implement discovery/expand and retry accounting; add the
-secondary adapter and provenance projection; run a new ingest and re-adjudicate
-coverage before indexing. The primary owns the plan and independent review. Text
+Release order: record fixtures and the keyword loss comparison; approve scope
+and limits; implement the shared [prerequisites](source-execution.md) before
+discovery, expansion or source adapters; integrate build inventory and schema;
+run a new ingest and re-adjudicate coverage before indexing. The primary owns
+the plan and independent review. Text
 extraction follows separately; metadata coverage is not search recall.
 
 The plan must include these spikes before adapter contracts are implemented:
 
 - Record redacted ASP.NET search, pagination, empty/multiple results, detail and
   attachment fixtures; establish field selectors, central issuer evidence,
-  completeness detection, redirects, access rules and change detection.
+  complete-versus-truncated detection, token rotation, redirects and challenge
+  recognition. Record safe PDF signature bytes, not only attachment headers.
+  Provide offline seams for clocks, transport, DNS and reduced limits.
 - Reconcile the claimed eleven AI documents and nine omissions with the supplied
   enumeration, which includes the already-present law and does not identify
   every claimed omission. Do not invent ids, years or missing document names.
 - Record VBPL exact-number collisions, phrase-match losses, relation direction
   examples and malformed/non-JSON gateway responses; confirm the five known
   golden omissions against the corrected source research.
-- Measure unique added targets, request count, bytes, elapsed time and final
-  document count against budgets. Report source failures and second-hop gaps
-  separately from successfully recovered first-hop targets.
+- Measure the full proposed seed set, including newly admitted seeds: unique
+  targets, requests, bytes, time and final document count against budgets.
+  Report source failures and second-hop gaps separately from successfully
+  recovered first-hop targets.
 
 Owner approval is still needed for deliberate old-only exclusions, the final
 keyword/named lists and budget ceilings after measurement. New sources or a

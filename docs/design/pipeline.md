@@ -83,38 +83,15 @@ signed dump to OCI Object Storage. Decision and alternatives:
   gap, failed and pending counts, unaccepted gaps by kind, next retry times,
   provider job ids and cost so far.
 
-### Retry source gaps (proposed)
+### Source execution (proposed)
 
-On an otherwise permitted `corpus start`, inspect all stages for items with a
-nonempty gap set consisting only of `source_unavailable` or gateway-caused
-`invalid_source_data`. Include done items carrying gaps and accepted gaps.
-Require structured gateway origin evidence for `invalid_source_data`; malformed
-legal data, duplicate ids and database text errors do not qualify. Historical
-rows without that evidence stay unchanged pending primary classification from
-recorded evidence. Reason: retry transient transport failures without erasing
-real source defects or guessing from error-message text.
-
-In the generation-increment transaction, delete selected gaps and item-owned
-derived run rows, clear artifact/input references and attempt state, and set
-items pending. Rewind `next_stage` to the earliest affected stage, even if it
-was empty; apply `--until` validation after choosing that stage. Clear all later
-stage run items, derived run rows and gaps so they replan and resolve again.
-Keep immutable artifacts and their artifact-owned rows for reuse; keep
-unselected items and gaps at the rewind stage. Record retry counts and rewind
-stage in the run message. Recomputed gaps require fresh acceptance. Reason:
-retries must not leave stale expected sets, relations, builds or accepted
-losses.
-
-The worker still refuses changed frozen recipes, open workflows, and evaluated
-or released runs. Retry recovery cannot insert stages into an old snapshot. Use
-the existing generation/attempt fence for every reset and subsequent commit.
-
-Treat a bounded non-JSON HTTP 200 from any JSON gateway endpoint, including the
-raw tree endpoint, as retryable transport failure before decoding source data.
-After bounded retries, emit `source_unavailable` with structured endpoint/status
-and cause, not body contents. Oversize responses remain `response_too_large`;
-valid JSON with invalid source fields remains `invalid_source_data`. Reason:
-gateway error pages must not become permanent legal-data errors.
+[Source execution](source-execution.md) defines shared membership readers,
+evidence-bearing lookup results, fetch-close finalization, retry invalidation
+and durable source pauses. These are prerequisites for source adapters. The
+existing `CloseStage` invokes a stage finalizer inside its fenced transaction;
+fetch cannot advance until final membership is committed. `scope_changed` blocks
+start and release permanently for that run; `source_paused` requires the owner's
+explicit source-resume command. Neither is an acceptable coverage gap.
 
 ## Items, artifacts and gaps
 
@@ -219,7 +196,8 @@ expand closes additions to the expected set before fetch planning.
   response limit are gaps. A gateway error (HTTP 5xx) that persists through the
   client retries makes the item gap `source_unavailable` in that attempt,
   without a batch retry (budgets); the owner may accept it, and the next run
-  asks again; start retries these under the lifecycle rule above. Known source
+  asks again; start retries these under
+  [source execution](source-execution.md#retry-source-gaps). Known source
   failures never stall a batch or the stage close. An attachment whose document
   id, name and size match a local cache entry collected no earlier than the
   gateway's `updatedAt` for that file is taken from the cache once its sha256
@@ -235,10 +213,11 @@ expand closes additions to the expected set before fetch planning.
 
 ### Scope recipes and snapshots (proposed)
 
-Freeze parsed source definitions, comparison evidence hash and approval note on
-first start. Source-list changes alter `source_list_hash`; do not read live YAML
-on resume. Use a new release id for scope adoption. A paused old run cannot
-replace recipes or insert `expand` through the append-only extension rule.
+Freeze parsed source definitions, the migration comparison and later loss-review
+references on first start. Source-list changes alter `source_list_hash`; never
+read live YAML on resume. Use a new release id for scope adoption. An old run
+cannot replace recipes or insert `expand` through the append-only extension
+rule.
 
 | Recipe                   | Scope change and reason                                                                                                                  |
 | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
@@ -246,7 +225,7 @@ replace recipes or insert `expand` through the append-only extension rule.
 | `expand`                 | New recipe hashes relation-code table, qualifying kinds, direction, one-hop policy and parser version so scope evidence is reproducible. |
 | `fetch`                  | Bump for source dispatch, secondary bundle/provenance format and gateway failure classification.                                         |
 | `extract`                | Bump for explicit secondary `no_tree` handling; no PDF extraction is introduced.                                                         |
-| `relate`                 | Bump for secondary empty relations and expansion drift detection; retain relation-code hash.                                             |
+| `relate`                 | Bump for secondary empty relations; retain relation-code hash.                                                                           |
 | `build`                  | Bump for source provenance, normalized numbers, membership exclusions and hand-over gaps.                                                |
 | `chunk`, `embed`, `eval` | Keep algorithms; changed inputs and reviewed evaluation identity-map hashes invalidate affected artifacts.                               |
 

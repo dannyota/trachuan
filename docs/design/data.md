@@ -73,6 +73,16 @@ cleanup. Freeze the normalizer version in dependent recipes. Ambiguous equality
 remains a candidate set, never proof that two documents are identical. Legacy
 evaluation's historical matcher stays unchanged under ADR 0010.
 
+### Identity comparison
+
+Hand-over compares raw identity fields through deterministic matching forms: the
+number form above; issuer NFC, trimmed and whitespace-collapsed with uppercase;
+and a fully parsed civil issue date in `YYYY-MM-DD`. Preserve raw values and
+evidence references. No fuzzy issuer aliases or inferred dates. Missing,
+unparsable or contradictory fields are unverifiable. A fetch failure does not
+invalidate identity evidence already present in a complete listing, but cannot
+supply missing fields. [Sources](sources.md) owns the decision table.
+
 ## Auth database `auth` (written when serving)
 
 | Table                                                      | Content                                                                                                                             |
@@ -114,20 +124,75 @@ Rules:
 Publication is blocked while any expected `run_item` is `pending` or `failed` or
 any `gap` row is unaccepted.
 
-Scope work proposes a run-owned `run_document` projection keyed by
-`(run_id,document_key)`: source, source id, class (`primary`,
-`relation_context`, `secondary`), disposition (`active`, `withdrawn`,
-`scope_removed`, `source_replaced`), raw/normalized number when known, and
-membership evidence. Evidence records every query identity or seed key, raw
-relation code and artifact hash. Store the replacement key for
-`source_replaced`. Active and retained removal items form the expected set;
-replacement records only audit exclusion. Class is run membership, not a legal
-document type or ranking signal. Reason: retries and source hand-over must
-rebuild membership from evidence.
+### Scope workshop contracts
 
-Keep gap origin and retry cause as structured fields, separate from human detail
-and acceptance. The run snapshot also binds the source comparison hash and
-approval note. Workshop migrations and source-neutral document/file rows are
-implementation prerequisites; do not put a chinhphu id in `vbpl_id` or make a
-fake VBPL payload to satisfy today's fetch decoder. Source artifact formats
-retain enough evidence to recreate these projections after recovery.
+These migrations are required before source-stage work; they are not optional
+per-adapter additions. Interface and transaction rules live in
+[source execution](source-execution.md).
+
+- `run_document`, keyed by `(run_id,document_key)`: `source`, `source_id`,
+  `class` in (`primary`,`relation_context`,`secondary`), `disposition` in
+  (`active`,`withdrawn`,`scope_removed`,`source_replaced`), nullable raw and
+  normalized number, and nullable `replacement_key`. Require replacement key
+  exactly for `source_replaced`. Key must equal country, source and source id.
+- `run_membership_evidence`: run, document key, producing stage/item, query
+  identity or supporting seed key, raw relation code when applicable, evidence
+  artifact hash and relative evidence path. Deduplicate by these fields. Keep
+  every independent support edge, not only the last writer's reason.
+- `run_seed_observation`: run, seed key, producing expand item, completeness,
+  artifact hash and observed targets. Failed observations retain prior known
+  support with its original evidence, explicitly marked retained. Departed seeds
+  are not current support. Membership can be rebuilt from these records.
+- `run_scope`: run, seed/expanded/final snapshot JSON and their hashes, nullable
+  until that phase closes, plus nullable fetch-close input hash. Snapshots
+  contain byte-sorted membership and evidence records serialized with the
+  [inventory](index.md#build-stage) convention. Freeze each phase's stored JSON
+  and hash on close. Expanded active keys exclude retained removals;
+  finalization may exclude candidates but never add unplanned keys. Retry
+  invalidation clears only the affected phase references.
+
+Active and retained-removal members form the expected set; replacement records
+only audit exclusion. Fetch work can be a larger candidate superset. The class
+is run membership, not legal document type or ranking. Build copies the final
+class to the corpus column defined in [schema](corpus-schema.md).
+
+The workshop `document` projection and bundle `document.json` version 2 carry
+`key`, `country`, `source`, `source_id`, `number`, `title`, `doc_type`,
+`issuer`, `raw_issue_date`, `raw_eff_from`, `raw_eff_to`, `status_code`,
+`status_name`, `is_consolidated`, `has_content`, nullable `source_url`, and
+`identity_evidence` references. Identity fields, dates and status retain raw
+values. The existing artifact id remains the row owner. Source id is opaque
+text; a VBPL-specific id is never required for a secondary row.
+
+`fetched_file` and bundle `files.json` version 2 entries carry `source`, `name`,
+`sha256`, `size`, artifact-relative `path`, nullable `url`, `role` and nullable
+actual `fetched_at`. Role uses the corpus vocabulary with explicit `unknown`.
+Source must agree with the owning document. Unknown legacy provenance stays
+null/unknown; adoption time is not fetch time. Original payloads remain beside
+these source-neutral envelopes. No adapter fabricates another source's JSON.
+
+Extend shared `Gap` and stored `gap` with nullable `source`, `origin`
+(`gateway`,`source_data`,`transport`,`unknown`), `cause`
+(`http_5xx`,`http_429`,`non_json_200`,`timeout`,`connection_error`,
+`invalid_payload`,`unknown`), endpoint name, HTTP status and redacted evidence
+reference. Propagate them through retry errors, outputs, resolution and commit.
+For legacy `invalid_source_data`, automatic retry requires `origin=gateway` and
+`cause=non_json_200|http_5xx`; unknown old rows are not reclassified by text.
+The independent `source_unavailable` kind remains retry-eligible. Reason:
+restart decisions must distinguish gateway failures from invalid legal data.
+
+`run_failure`, keyed by run and failure identity, stores non-acceptable code,
+producing stage/item, reason and evidence references; `scope_changed` is durable
+and cannot be cleared by start or gap acceptance. It is separate from `gap`.
+
+`run_source`, keyed by run/source, stores `state` (`active`,`source_paused`),
+pause reason, redacted evidence reference and paused/cleared timestamps. Append
+`run_source_event` entries for pause and explicit clear, including the owner's
+clear note. Source gates and worker startup read this shared state; retry reset
+never deletes it. Retain only operational identifiers, no personal data or
+response bodies in failure/state rows.
+
+The run snapshot binds the immutable migration comparison hash and approval
+note, plus later query-specific loss-review references. Scope projections,
+bundle formats and snapshot fields are versioned; an unknown version fails
+explicitly rather than defaulting class, source or completeness.

@@ -19,8 +19,9 @@ evidence; this design did not recheck the sites or assume a documented API.
 Keep VBPL as the only primary source. Widen discovery through explicit named
 numbers, reviewed exact title searches and one-hop relation context. Use
 `vanban.chinhphu.vn`, source key `chinhphu`, only for central documents absent
-from VBPL, starting with AI. VBPL takes precedence when it later supplies the
-number. [Sources](../design/sources.md) proposes the execution and loss rules.
+from VBPL, starting with AI. VBPL takes precedence only when number, issuer and
+issue date establish the same identity; missing or conflicting evidence retains
+ambiguity. [Sources](../design/sources.md) owns the hand-over decision table.
 
 Reuse banhmi data and source knowledge under
 [ADR 0001](0001-reuse-banhmi-data-only.md), never its scraper code. Keep the
@@ -56,3 +57,7 @@ the secondary key rather than claiming identical provenance.
 - 2026-11-09: recorded the owner's source choice from the corpus scope brief;
   execution details remain a proposal for independent review and owner approval
   of losses, lists and limits.
+- 2026-11-09: clarified precedence under the primary's review rulings: require
+  matching identity evidence before replacement, because a number alone can
+  collide. Execution now specifies shared contracts, durable pauses and a
+  non-acceptable expansion-drift failure; reviewer confirmation remains pending.
