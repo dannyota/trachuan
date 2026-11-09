@@ -74,7 +74,7 @@ func newHarness(t *testing.T) *harness {
 	t.Helper()
 	h := &harness{t: t, ctx: context.Background(), root: t.TempDir(), rel: release}
 	builder := testpg.NewBuilder(t)
-	h.extra = []string{"CORPUS_BUILDER_DATABASE_URL=" + builder.URL, "CORPUS_BUILDER_TEMPLATE=" + builder.Template, "CORPUS_DATABASE_DISK_PATH=" + h.root}
+	h.extra = []string{"CORPUS_BUILDER_DATABASE_URL=" + builder.URL, "CORPUS_BUILDER_TEMPLATE=" + builder.Template, "CORPUS_DATABASE_DISK_PATH=" + h.root, "CORPUS_DISK_START_GIB=1", "CORPUS_DISK_MIN_GIB=1"}
 	h.artifacts = filepath.Join(h.root, "artifacts")
 	h.checkpoints = filepath.Join(h.root, "checkpoints")
 	h.dump = os.Getenv("CORPUS_PG_DUMP")

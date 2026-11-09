@@ -60,3 +60,13 @@ def test_deadline_504():
         await asyncio.sleep(0.01)
 
     asyncio.run(run())
+
+
+def test_document_mode_admission_values(monkeypatch):
+    from trachuan_embedder import app
+
+    values = []
+    monkeypatch.setattr(app, "Admission", lambda *args: values.append(args))
+    monkeypatch.setattr(app, "recipe_hash", lambda _: "recipe")
+    app.create_app("document", object(), object(), {})
+    assert values == [(1, 1, 30.0, 120.0)]

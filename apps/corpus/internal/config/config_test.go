@@ -28,7 +28,7 @@ func TestLoad_Defaults(t *testing.T) {
 		PgDump:          "pg_dump",
 		VBPLFileHosts:   "s3-han02.fptcloud.com",
 		VBPLURL:         "https://vbpl-bientap-gateway.moj.gov.vn/api/qtdc/public",
-		VBPLRate:        8, VBPLInFlight: 8, BatchesInFlight: 8,
+		VBPLRate:        8, VBPLInFlight: 8, BatchesInFlight: 8, DiskStartGiB: 30, DiskMinGiB: 10,
 		HeartbeatEvery: 20 * time.Second, HeartbeatTimeout: 2 * time.Minute,
 	}
 	if got != want {
@@ -63,9 +63,9 @@ func TestLoad_InvalidLimits(t *testing.T) {
 }
 
 func TestLoad_Overrides(t *testing.T) {
-	values := map[string]string{"CORPUS_DATABASE_URL": "db", "CORPUS_HEARTBEAT_EVERY": "200ms", "CORPUS_HEARTBEAT_TIMEOUT": "2s", "CORPUS_VBPL_RPS": "3.5", "CORPUS_VBPL_IN_FLIGHT": "4", "CORPUS_BATCHES_IN_FLIGHT": "5", "CORPUS_FILE_CACHE": "/cache", "CORPUS_VBPL_FILE_HOSTS": "one.example,two.example"}
+	values := map[string]string{"CORPUS_DATABASE_URL": "db", "CORPUS_HEARTBEAT_EVERY": "200ms", "CORPUS_HEARTBEAT_TIMEOUT": "2s", "CORPUS_VBPL_RPS": "3.5", "CORPUS_VBPL_IN_FLIGHT": "4", "CORPUS_BATCHES_IN_FLIGHT": "5", "CORPUS_DISK_START_GIB": "2", "CORPUS_DISK_MIN_GIB": "3", "CORPUS_FILE_CACHE": "/cache", "CORPUS_VBPL_FILE_HOSTS": "one.example,two.example"}
 	got, err := Load(func(key string) string { return values[key] })
-	if err != nil || got.HeartbeatEvery != 200*time.Millisecond || got.HeartbeatTimeout != 2*time.Second || got.VBPLRate != 3.5 || got.VBPLInFlight != 4 || got.BatchesInFlight != 5 || got.FileCache != "/cache" || got.VBPLFileHosts != "one.example,two.example" {
+	if err != nil || got.HeartbeatEvery != 200*time.Millisecond || got.HeartbeatTimeout != 2*time.Second || got.VBPLRate != 3.5 || got.VBPLInFlight != 4 || got.BatchesInFlight != 5 || got.DiskStartGiB != 2 || got.DiskMinGiB != 3 || got.FileCache != "/cache" || got.VBPLFileHosts != "one.example,two.example" {
 		t.Fatalf("config = %+v, error = %v", got, err)
 	}
 }
@@ -101,5 +101,26 @@ func TestConfig_EmbedderAndBuilderSettings(t *testing.T) {
 	}
 	if cfg.EmbedderURL != "http://127.0.0.1:8092" || cfg.QueryEmbedderURL != "http://127.0.0.1:8091" || cfg.BuilderTemplate != "corpus_template" || cfg.PgRestore != "pg_restore" {
 		t.Fatalf("unexpected defaults: %+v", cfg)
+	}
+}
+
+func TestLoad_InvalidDiskLimits(t *testing.T) {
+	for _, key := range []string{"CORPUS_DISK_START_GIB", "CORPUS_DISK_MIN_GIB"} {
+		for _, value := range []string{"0", "-1", "bad"} {
+			t.Run(key+"/"+value, func(t *testing.T) {
+				_, err := Load(func(k string) string {
+					if k == "CORPUS_DATABASE_URL" {
+						return "db"
+					}
+					if k == key {
+						return value
+					}
+					return ""
+				})
+				if err == nil || !strings.Contains(err.Error(), key) {
+					t.Fatalf("error = %v", err)
+				}
+			})
+		}
 	}
 }

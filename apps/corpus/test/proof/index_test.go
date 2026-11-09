@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -201,12 +202,25 @@ func TestProof_IndexStagesAfterIngest(t *testing.T) {
 	h.ctx, cancel = context.WithDeadline(context.Background(), deadline)
 	defer cancel()
 	h.indexSetup()
+	cmd := exec.CommandContext(h.ctx, os.Getenv("CORPUS_PROOF_BINARY"), "status", "vn", h.rel)
+	cmd.Dir, cmd.Env = h.root, h.env("")
+	statusJSON, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("status: %v: %s", err, statusJSON)
+	}
+	var status struct {
+		QualityPass     *bool `json:"quality_pass"`
+		ReleaseEligible *bool `json:"release_eligible"`
+	}
+	if err = json.Unmarshal(statusJSON, &status); err != nil || status.QualityPass == nil || status.ReleaseEligible == nil || *status.ReleaseEligible {
+		t.Fatalf("status quality: %s: %v", statusJSON, err)
+	}
 	var n int
-	if err := h.db.QueryRow(h.ctx, `SELECT count(*) FROM run_item WHERE stage='eval' AND state='done'`).Scan(&n); err != nil || n != 1 {
+	if err = h.db.QueryRow(h.ctx, `SELECT count(*) FROM run_item WHERE stage='eval' AND state='done'`).Scan(&n); err != nil || n != 1 {
 		t.Fatalf("eval item count %d: %v", n, err)
 	}
 	var path string
-	if err := h.db.QueryRow(h.ctx, `SELECT a.path FROM artifact a JOIN run_item i ON i.artifact_id=a.id WHERE i.stage='eval' AND i.state='done'`).Scan(&path); err != nil {
+	if err = h.db.QueryRow(h.ctx, `SELECT a.path FROM artifact a JOIN run_item i ON i.artifact_id=a.id WHERE i.stage='eval' AND i.state='done'`).Scan(&path); err != nil {
 		t.Fatal(err)
 	}
 	data, err := os.ReadFile(filepath.Join(h.artifacts, path, "report.json"))
@@ -257,6 +271,9 @@ func TestProof_LostCorpusDatabaseRestored(t *testing.T) {
 		return n
 	}
 	before := count()
+	if before <= 0 {
+		t.Fatalf("expected chunks before restore, got %d", before)
+	}
 	if _, err = conn.Exec(h.ctx, "DROP DATABASE "+pgx.Identifier{"corpus_vn_" + h.rel}.Sanitize()+" WITH (FORCE)"); err != nil {
 		t.Fatal(err)
 	}

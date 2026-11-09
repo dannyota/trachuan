@@ -35,13 +35,15 @@ go run ./apps/corpus/cmd/corpus start vn 20261109 --until relate
 go run ./apps/corpus/cmd/corpus status vn 20261109
 ```
 
-Start `make embedder-query` and `make embedder-document` in separate terminals
-before extending a paused run. Both use the model bundle in
-`EMBEDDER_MODEL_DIR`. Set `CORPUS_EVAL_FIXTURES` to an adjudicated fixture
-directory before starting a run when the embedded inventory does not match it.
-For a run paused by an older worker before the index stages were registered, set
-the fixture directory before extending the run. Restart the worker with the same
-settings and extend the run:
+Apply workshop migrations with `go run ./apps/corpus/cmd/corpus migrate` after
+pulling new code and before restarting the worker; a missing table fails stage
+commits with `relation "chunk" does not exist`. Start `make embedder-query` and
+`make embedder-document` in separate terminals before extending a paused run.
+Both use the model bundle in `EMBEDDER_MODEL_DIR`. Set `CORPUS_EVAL_FIXTURES` to
+an adjudicated fixture directory before starting a run when the embedded
+inventory does not match it. For a run paused by an older worker before the
+index stages were registered, set the fixture directory before extending the
+run. Restart the worker with the same settings and extend the run:
 
 ```sh
 go run ./apps/corpus/cmd/corpus start vn 20261109

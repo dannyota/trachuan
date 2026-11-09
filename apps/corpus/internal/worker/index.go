@@ -42,6 +42,6 @@ func IndexDeps(ctx context.Context, cfg config.Config) (workflow.Deps, error) {
 
 func indexDeps(cfg config.Config, suite evaluation.Suite, now func() time.Time) workflow.Deps {
 	query := embedding.Query{Client: embedding.NewClient(cfg.QueryEmbedderURL, &http.Client{Timeout: 3 * time.Second}), RecipeHash: embedding.QueryRecipe1().Hash()}
-	b := build.Config{BuilderURL: cfg.BuilderDatabaseURL, Template: cfg.BuilderTemplate, PgDump: cfg.PgDump, PgRestore: cfg.PgRestore, DatabaseDiskPath: cfg.DatabaseDiskPath, Embedder: query, Suite: suite, Now: now}
+	b := build.Config{BuilderURL: cfg.BuilderDatabaseURL, Template: cfg.BuilderTemplate, PgDump: cfg.PgDump, PgRestore: cfg.PgRestore, DatabaseDiskPath: cfg.DatabaseDiskPath, MinFreeBeforeBytes: uint64(cfg.DiskStartGiB) << 30, MinFreeDuringBytes: uint64(cfg.DiskMinGiB) << 30, Embedder: query, Suite: suite, Now: now}
 	return workflow.Deps{Document: embedding.NewClient(cfg.EmbedderURL, nil), Build: b, Eval: eval.Config{Build: b, Suite: suite, Embedder: query}}
 }

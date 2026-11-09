@@ -30,7 +30,11 @@ type Config struct {
 }
 
 // Stage evaluates one built release.
-type Stage struct{ cfg Config }
+type Stage struct {
+	cfg    Config
+	lookup func(context.Context, stage.Env, stage.Run) (artifact.Result, error)
+	ensure func(context.Context, stage.Env, stage.Run) (build.Database, error)
+}
 
 // New constructs an evaluation stage.
 func New(cfg Config) *Stage { return &Stage{cfg: cfg} }
@@ -43,31 +47,6 @@ func (s *Stage) Recipe(stage.Snapshot) string {
 	return stage.RecipeHash("eval", "agent-eval/1", "legacy-matcher/1", "product-matcher/1", "recall,mrr,current-law-precision,abstention,evidence,ann/1", strings.Join(s.cfg.Suite.Rejections, "\x00"), "diacritics_required:Vui lòng nhập câu hỏi tiếng Việt có dấu hoặc số hiệu văn bản.", "cache/1:200:100", "nearest-rank", "0.90:0.66:0.99:0.95")
 }
 
-func buildArtifact(ctx context.Context, q *store.Queries, run stage.Run) (artifact.Result, error) {
-	raw, err := q.GetBuildInventory(ctx, run.ID)
-	if err != nil {
-		return artifact.Result{}, fmt.Errorf("read build inventory: %w", err)
-	}
-	var inv struct {
-		Items []struct {
-			Stage string  `json:"stage"`
-			Key   string  `json:"item_key"`
-			State string  `json:"state"`
-			Path  *string `json:"path"`
-			Hash  *string `json:"artifact_sha256"`
-			Input *string `json:"input_hash"`
-		} `json:"items"`
-	}
-	if err = json.Unmarshal(raw, &inv); err != nil {
-		return artifact.Result{}, fmt.Errorf("decode build inventory: %w", err)
-	}
-	for _, it := range inv.Items {
-		if it.Stage == "build" && it.Key == run.Country+"/"+run.Rel && it.State == "done" && it.Path != nil && it.Hash != nil && it.Input != nil {
-			return artifact.Result{Path: *it.Path, SHA256: *it.Hash, InputHash: *it.Input}, nil
-		}
-	}
-	return artifact.Result{}, fmt.Errorf("completed build artifact not found")
-}
 func dateForRun(run stage.Run) (time.Time, error) {
 	if len(run.Rel) < 8 {
 		return time.Time{}, fmt.Errorf("invalid release date")
@@ -97,11 +76,7 @@ func (s *Stage) inputHash(art artifact.Result, run stage.Run) (string, error) {
 
 // Plan resolves the build and selects its single evaluation item.
 func (s *Stage) Plan(ctx context.Context, env stage.Env, run stage.Run) ([]stage.Item, error) {
-	q := store.New(env.DB)
-	if _, err := build.EnsureForRun(ctx, s.cfg.Build, q, env.Artifacts, run); err != nil {
-		return nil, fmt.Errorf("ensure build: %w", err)
-	}
-	art, err := buildArtifact(ctx, q, run)
+	art, err := s.lookupBuild(ctx, env, run)
 	if err != nil {
 		return nil, err
 	}
@@ -114,12 +89,11 @@ func (s *Stage) Plan(ctx context.Context, env stage.Env, run stage.Run) ([]stage
 
 // Evaluate resolves the build and runs a diagnostic evaluation.
 func (s *Stage) Evaluate(ctx context.Context, env stage.Env, run stage.Run) (evaluation.Report, evaluation.Cache, error) {
-	q := store.New(env.DB)
-	db, err := build.EnsureForRun(ctx, s.cfg.Build, q, env.Artifacts, run)
+	db, err := s.ensureBuild(ctx, env, run)
 	if err != nil {
 		return evaluation.Report{}, evaluation.Cache{}, fmt.Errorf("ensure build: %w", err)
 	}
-	art, err := buildArtifact(ctx, q, run)
+	art, err := s.lookupBuild(ctx, env, run)
 	if err != nil {
 		return evaluation.Report{}, evaluation.Cache{}, err
 	}
@@ -158,13 +132,12 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 	if item.Key != run.Country+"/"+run.Rel {
 		return stage.Output{}, fmt.Errorf("evaluation item identity mismatch")
 	}
-	art, err := buildArtifact(ctx, store.New(env.DB), run)
+	art, err := s.lookupBuild(ctx, env, run)
 	if err != nil {
 		return stage.Output{}, err
 	}
-	hash, err := s.inputHash(art, run)
-	if err != nil || hash != item.InputHash {
-		return stage.Output{}, fmt.Errorf("evaluation input mismatch")
+	if err = s.checkInputHash(art, run, item.InputHash); err != nil {
+		return stage.Output{}, err
 	}
 	report, cache, err := s.Evaluate(ctx, env, run)
 	if err != nil {
@@ -222,4 +195,28 @@ func reportGaps(r evaluation.Report) []stage.Gap {
 		}
 	}
 	return gaps
+}
+
+func (s *Stage) checkInputHash(art artifact.Result, run stage.Run, expected string) error {
+	hash, err := s.inputHash(art, run)
+	if err != nil {
+		return fmt.Errorf("compute evaluation input hash: %w", err)
+	}
+	if hash != expected {
+		return fmt.Errorf("evaluation input mismatch")
+	}
+	return nil
+}
+
+func (s *Stage) lookupBuild(ctx context.Context, env stage.Env, run stage.Run) (artifact.Result, error) {
+	if s.lookup != nil {
+		return s.lookup(ctx, env, run)
+	}
+	return build.VerifyForRun(ctx, s.cfg.Build, store.New(env.DB), env.Artifacts, run)
+}
+func (s *Stage) ensureBuild(ctx context.Context, env stage.Env, run stage.Run) (build.Database, error) {
+	if s.ensure != nil {
+		return s.ensure(ctx, env, run)
+	}
+	return build.EnsureForRun(ctx, s.cfg.Build, store.New(env.DB), env.Artifacts, run)
 }

@@ -264,3 +264,30 @@ func TestBuildRelease_EvalEndsEvaluated(t *testing.T) {
 	}
 	env.AssertExpectations(t)
 }
+
+func TestBuildRelease_EmbedLimitsBatches(t *testing.T) {
+	env := workflowTest(t)
+	env.RegisterActivityWithOptions(func(context.Context, stage.BatchInput) (stage.BatchResult, error) { return stage.BatchResult{}, nil }, activity.RegisterOptions{Name: "embed"})
+	planMock(env, stage.PlanResult{Batches: []int{0, 1, 2, 3}})
+	var active, maximum atomic.Int32
+	env.OnActivity("embed", mock.Anything, mock.Anything).Return(func(context.Context, stage.BatchInput) (stage.BatchResult, error) {
+		n := active.Add(1)
+		for old := maximum.Load(); n > old && !maximum.CompareAndSwap(old, n); old = maximum.Load() {
+		}
+		time.Sleep(20 * time.Millisecond)
+		active.Add(-1)
+		return stage.BatchResult{}, nil
+	}).Times(4)
+	finishMock(env, stage.CloseResult{})
+	markMock(env, "paused")
+	in := testInput()
+	in.Stage = "embed"
+	in.BatchesInFlight = 8
+	env.ExecuteWorkflow(BuildRelease, in)
+	if err := env.GetWorkflowError(); err != nil {
+		t.Fatal(err)
+	}
+	if got := maximum.Load(); got != 2 {
+		t.Fatalf("maximum active = %d, want 2", got)
+	}
+}

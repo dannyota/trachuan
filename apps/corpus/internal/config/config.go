@@ -26,6 +26,8 @@ type Config struct {
 	VBPLRate         float64
 	VBPLInFlight     int
 	BatchesInFlight  int
+	DiskStartGiB     int
+	DiskMinGiB       int
 	FileCache        string
 	HeartbeatEvery   time.Duration
 	HeartbeatTimeout time.Duration
@@ -62,12 +64,12 @@ func Load(getenv func(string) string) (Config, error) {
 	}
 	cfg.VBPLRate = rate
 	for _, setting := range []struct {
-		key    string
-		target *int
-	}{{"CORPUS_VBPL_IN_FLIGHT", &cfg.VBPLInFlight}, {"CORPUS_BATCHES_IN_FLIGHT", &cfg.BatchesInFlight}} {
-		value := defaultValue(getenv(setting.key), "8")
+		key, fallback string
+		target        *int
+	}{{"CORPUS_VBPL_IN_FLIGHT", "8", &cfg.VBPLInFlight}, {"CORPUS_BATCHES_IN_FLIGHT", "8", &cfg.BatchesInFlight}, {"CORPUS_DISK_START_GIB", "30", &cfg.DiskStartGiB}, {"CORPUS_DISK_MIN_GIB", "10", &cfg.DiskMinGiB}} {
+		value := defaultValue(getenv(setting.key), setting.fallback)
 		n, parseErr := strconv.Atoi(value)
-		if parseErr != nil || n <= 0 {
+		if parseErr != nil || n <= 0 || ((setting.key == "CORPUS_DISK_START_GIB" || setting.key == "CORPUS_DISK_MIN_GIB") && uint64(n) > ^uint64(0)>>30) {
 			return Config{}, fmt.Errorf("invalid %s %q", setting.key, value)
 		}
 		*setting.target = n

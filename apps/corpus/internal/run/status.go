@@ -17,8 +17,9 @@ import (
 
 // Report contains workshop progress and Temporal activity details.
 type Report struct {
-	QualityPass       *bool `json:"quality_pass,omitempty"`
-	ReleaseEligible   *bool `json:"release_eligible,omitempty"`
+	QualityPass       *bool  `json:"quality_pass,omitempty"`
+	QualityReason     string `json:"quality_reason,omitempty"`
+	ReleaseEligible   *bool  `json:"release_eligible,omitempty"`
 	Run               store.Run
 	Stages            map[string]stage.Counts
 	PendingActivities []*workflowpb.PendingActivityInfo
@@ -32,6 +33,9 @@ func Status(ctx context.Context, d Deps, cc, rel string) (Report, error) {
 		return Report{}, fmt.Errorf("get run: %w", err)
 	}
 	report := Report{Run: row, Stages: make(map[string]stage.Counts)}
+	if row.State == "evaluated" {
+		report.QualityReason = "evaluation artifact unavailable"
+	}
 	raw, err := q.GetBuildInventory(ctx, row.ID)
 	if err != nil {
 		return Report{}, fmt.Errorf("read evaluation inventory: %w", err)
@@ -50,22 +54,7 @@ func Status(ctx context.Context, d Deps, cc, rel string) (Report, error) {
 		if item.Stage != "eval" || item.State != "done" {
 			continue
 		}
-		if item.Path == nil || item.Hash == nil {
-			return Report{}, fmt.Errorf("missing evaluation artifact")
-		}
-		dir := d.Artifacts.Abs(*item.Path)
-		sum, verifyErr := artifact.Verify(dir)
-		if verifyErr != nil || sum != *item.Hash {
-			return Report{}, fmt.Errorf("invalid evaluation artifact")
-		}
-		data, readErr := os.ReadFile(filepath.Join(dir, "report.json"))
-		if readErr != nil {
-			return Report{}, fmt.Errorf("read evaluation report: %w", readErr)
-		}
-		report.QualityPass, report.ReleaseEligible, err = qualityFields(data)
-		if err != nil {
-			return Report{}, err
-		}
+		report.loadQuality(d.Artifacts, item.Path, item.Hash)
 	}
 	counts, err := q.ListRunItemCounts(ctx, row.ID)
 	if err != nil {
@@ -124,4 +113,30 @@ func qualityFields(data []byte) (*bool, *bool, error) {
 		return nil, nil, fmt.Errorf("invalid evaluation report")
 	}
 	return report.Quality, report.Eligible, nil
+}
+
+func artifactQuality(store artifact.Store, path, hash *string) (*bool, *bool, error) {
+	if path == nil || hash == nil {
+		return nil, nil, fmt.Errorf("missing evaluation artifact")
+	}
+	dir := store.Abs(*path)
+	sum, err := artifact.Verify(dir)
+	if err != nil || sum != *hash {
+		return nil, nil, fmt.Errorf("invalid evaluation artifact")
+	}
+	data, err := os.ReadFile(filepath.Join(dir, "report.json"))
+	if err != nil {
+		return nil, nil, fmt.Errorf("read evaluation report: %w", err)
+	}
+	return qualityFields(data)
+}
+
+func (r *Report) loadQuality(store artifact.Store, path, hash *string) {
+	var err error
+	r.QualityPass, r.ReleaseEligible, err = artifactQuality(store, path, hash)
+	if err != nil {
+		r.QualityReason = "evaluation artifact unavailable"
+	} else {
+		r.QualityReason = ""
+	}
 }

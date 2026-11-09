@@ -30,8 +30,9 @@ verifies/resolves the build artifact, opens that release, runs exact and ANN
 plus arm controls, and writes the same report/cache as the stage. Exit 0 means
 the diagnostic run completed, including measured floor failures. Exit 1 means
 invalid inputs, infrastructure failure or incomplete scoring. Optional
-`--require-floors` exits 2 for failed or unavailable old-product floors, for
-future automation; it cannot turn an incomplete run into a passing report.
+`--require-floors` exits 2 for failed or unavailable old-product floors or a
+failed rejection check, for future automation; it cannot turn an incomplete run
+into a passing report.
 
 Stage key is `<cc>/<rel>`, one item after a done build. Input hash combines
 verified build artifact hash, fixture and mapping hashes, previous report hash

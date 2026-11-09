@@ -87,7 +87,9 @@ VBPL: at most 8 requests per second and 8 in flight by default
 (`CORPUS_VBPL_RPS`, `CORPUS_VBPL_IN_FLIGHT`), 8 stage batches in flight,
 measured 2026-11-09 (10.5 requests per second at concurrency 8, p50 636 ms, no
 errors); request timeout 30 seconds. Retry HTTP 429, HTTP 5xx and timeouts 3
-times, after 2, 8 and 30 seconds.
+times, after 2, 8 and 30 seconds. The `embed` stage runs at most 2 batches in
+flight, so one batch waits in the document embedder queue while the other runs
+on the GPU.
 
 Attachment hosts: `CORPUS_VBPL_FILE_HOSTS` is a comma-separated allowlist,
 default `s3-han02.fptcloud.com`.
@@ -102,30 +104,30 @@ Recipe 1 baseline values below implement the
 operational limits are proposed ceilings, not measured throughput claims.
 Exceeding a build ceiling fails explicitly; it never drops rows to fit.
 
-| Limit or parameter                                        | Value                                                   |
-| --------------------------------------------------------- | ------------------------------------------------------- |
-| Chunk rough body target; minimum substantive content      | 512 rough tokens; 20 normalized runes                   |
-| Prefix title and each structural heading; number          | 220 runes each; 128 runes                               |
-| Document input cap, including special tokens              | 2,048 model tokens (ADR 0009)                           |
-| Document embedding batch                                  | At most 16 texts, in chunk ordinal order                |
-| Document HTTP body; admission                             | 1 MiB; 1 active, 1 queued, 1 s maximum queue wait       |
-| Document request deadline; client timeout                 | 120 s total; 125 s                                      |
-| Query batch; HTTP body; client timeout                    | 1 text; existing 64 KB request cap; 2 s                 |
-| Query ONNX threads                                        | 2 intra-op, 1 inter-op, sequential execution            |
-| Vector validation                                         | Finite float32; absolute L2 norm error at most 0.001    |
-| Lexical dimensions; k1; b                                 | 1,048,576; 1.2; 0.75                                    |
-| Sparse nonzeros per chunk                                 | At most 16,000; overflow fails build, no pruning        |
-| HNSW construction                                         | m=16, ef_construction=64, cosine; no sparse index       |
-| Build concurrency                                         | 1 database build/restore per worker, 1 SQL index worker |
-| Build maximum documents; provisions; inserted chunks      | 10,000; 2,000,000; 500,000                              |
-| Build distinct normalized terms                           | 2,000,000                                               |
-| Build copy/update batch                                   | 2,000 rows; stream vectors rather than retain all       |
-| Build artifact file read                                  | At most 256 MiB per JSON file, checked before decoding  |
-| Build memory ceiling; maintenance_work_mem                | 8 GiB worker RSS; 512 MiB PostgreSQL                    |
-| Build/restore free disk before start; minimum during work | 30 GiB; 10 GiB                                          |
-| Build item deadline; dump/restore command deadline        | 50 minutes; 15 minutes each within the item deadline    |
-| Eval item deadline; ad-hoc exact query deadline           | 50 minutes; 60 s per query                              |
-| Eval artifact/cache total                                 | 2 GiB; fail explicitly if exceeded                      |
+| Limit or parameter                                        | Value                                                           |
+| --------------------------------------------------------- | --------------------------------------------------------------- |
+| Chunk rough body target; minimum substantive content      | 512 rough tokens; 20 normalized runes                           |
+| Prefix title and each structural heading; number          | 220 runes each; 128 runes                                       |
+| Document input cap, including special tokens              | 2,048 model tokens (ADR 0009)                                   |
+| Document embedding batch                                  | At most 16 texts, in chunk ordinal order                        |
+| Document HTTP body; admission                             | 1 MiB; 1 active, 1 queued, 30 s maximum queue wait              |
+| Document request deadline; client timeout                 | 120 s total; 125 s                                              |
+| Query batch; HTTP body; client timeout                    | 1 text; existing 64 KB request cap; 2 s                         |
+| Query ONNX threads                                        | 2 intra-op, 1 inter-op, sequential execution                    |
+| Vector validation                                         | Finite float32; absolute L2 norm error at most 0.001            |
+| Lexical dimensions; k1; b                                 | 1,048,576; 1.2; 0.75                                            |
+| Sparse nonzeros per chunk                                 | At most 16,000; overflow fails build, no pruning                |
+| HNSW construction                                         | m=16, ef_construction=64, cosine; no sparse index               |
+| Build concurrency                                         | 1 database build/restore per worker, 1 SQL index worker         |
+| Build maximum documents; provisions; inserted chunks      | 10,000; 2,000,000; 500,000                                      |
+| Build distinct normalized terms                           | 2,000,000                                                       |
+| Build copy/update batch                                   | 2,000 rows; stream vectors rather than retain all               |
+| Build artifact file read                                  | At most 256 MiB per JSON file, checked before decoding          |
+| Build memory ceiling; maintenance_work_mem                | 8 GiB worker RSS; 512 MiB PostgreSQL                            |
+| Build/restore free disk before start; minimum during work | 30 GiB; 10 GiB (`CORPUS_DISK_START_GIB`, `CORPUS_DISK_MIN_GIB`) |
+| Build item deadline; dump/restore command deadline        | 50 minutes; 15 minutes each within the item deadline            |
+| Eval item deadline; ad-hoc exact query deadline           | 50 minutes; 60 s per query                                      |
+| Eval artifact/cache total                                 | 2 GiB; fail explicitly if exceeded                              |
 
 The shared activity timeout and heartbeat still apply. Cancel work before its
 item deadline, leaving retryable infrastructure failures; resource estimates do
