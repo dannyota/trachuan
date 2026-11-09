@@ -13,12 +13,18 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"danny.vn/traquydinh/apps/corpus/internal/artifact"
 	"danny.vn/traquydinh/apps/corpus/internal/filecache"
 	"danny.vn/traquydinh/apps/corpus/internal/stage"
 	"danny.vn/traquydinh/apps/corpus/internal/vbpl"
+	"golang.org/x/time/rate"
 )
+
+func testClient(base string) *vbpl.Client {
+	return vbpl.NewWithBase(base, "test", vbpl.WithTestHTTP(), vbpl.WithLimits(float64(rate.Inf), 8), vbpl.WithBackoffs(time.Millisecond, time.Millisecond, time.Millisecond))
+}
 
 type fixtureServer struct {
 	files          []map[string]any
@@ -79,7 +85,7 @@ func setup(t *testing.T, f *fixtureServer) (*Stage, stage.Env) {
 		}
 	}))
 	t.Cleanup(server.Close)
-	return New(vbpl.NewWithBase(server.URL, "test", vbpl.WithTestHTTP())), stage.Env{Artifacts: artifact.Store{Root: t.TempDir()}}
+	return New(testClient(server.URL)), stage.Env{Artifacts: artifact.Store{Root: t.TempDir()}}
 }
 func fixture(t *testing.T, w http.ResponseWriter, name string) {
 	t.Helper()

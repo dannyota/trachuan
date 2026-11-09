@@ -12,11 +12,17 @@ import (
 	"path/filepath"
 	"reflect"
 	"testing"
+	"time"
 
 	"danny.vn/traquydinh/apps/corpus/internal/artifact"
 	"danny.vn/traquydinh/apps/corpus/internal/stage"
 	"danny.vn/traquydinh/apps/corpus/internal/vbpl"
+	"golang.org/x/time/rate"
 )
+
+func testClient(base string) *vbpl.Client {
+	return vbpl.NewWithBase(base, "test", vbpl.WithLimits(float64(rate.Inf), 8), vbpl.WithBackoffs(time.Millisecond, time.Millisecond, time.Millisecond))
+}
 
 type testPage struct {
 	ids   []string
@@ -56,7 +62,7 @@ func exercise(t *testing.T, pages []testPage, wantPasses int, stable bool, wantI
 		_ = json.NewEncoder(w).Encode(map[string]any{"success": true, "data": map[string]any{"total": p.total, "items": items}})
 	}))
 	defer server.Close()
-	s := New(vbpl.NewWithBase(server.URL+"/api/qtdc/public", "test", vbpl.WithLimits(1000, 8)))
+	s := New(testClient(server.URL + "/api/qtdc/public"))
 	env := stage.Env{Artifacts: artifact.Store{Root: t.TempDir()}}
 	run := stage.Run{ID: 1, Snapshot: stage.Snapshot{SourceList: json.RawMessage(`{"country":"vn","vbpl":{"sweep_agencies":["62","908"]}}`)}}
 	items, err := s.Plan(context.Background(), env, run)
@@ -187,7 +193,7 @@ func TestDiscover_TransientListingErrorIsRetryable(t *testing.T) {
 		http.Error(w, "unavailable", http.StatusBadRequest)
 	}))
 	defer server.Close()
-	s := New(vbpl.NewWithBase(server.URL, "test"))
+	s := New(testClient(server.URL))
 	run := stage.Run{Snapshot: stage.Snapshot{SourceList: json.RawMessage(`{"country":"vn","vbpl":{"sweep_agencies":["62"]}}`)}}
 	_, err := s.Process(context.Background(), stage.Env{}, run, stage.Item{Key: "vbpl:sweep"})
 	var retryable *stage.RetryableError

@@ -64,6 +64,11 @@ func WithLimits(rps float64, inFlight int) Option {
 	}
 }
 
+// WithBackoffs sets the delay before each retry.
+func WithBackoffs(delays ...time.Duration) Option {
+	return func(c *Client) { c.backoffs = append([]time.Duration(nil), delays...) }
+}
+
 // WithFileHosts sets the permitted attachment hosts.
 func WithFileHosts(hosts ...string) Option {
 	return func(c *Client) { c.fileHosts = append([]string(nil), hosts...) }

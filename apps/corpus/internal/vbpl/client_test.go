@@ -28,10 +28,7 @@ func fixture(t *testing.T, name string) []byte {
 	return b
 }
 func testClient(s *httptest.Server) *Client {
-	c := NewWithBase(s.URL, "test", WithTestHTTP())
-	c.limiter = rate.NewLimiter(rate.Inf, 1)
-	c.backoffs = []time.Duration{0, 0, 0}
-	return c
+	return NewWithBase(s.URL, "test", WithTestHTTP(), WithLimits(float64(rate.Inf), 8), WithBackoffs(time.Millisecond, time.Millisecond, time.Millisecond))
 }
 func TestClient_RetriesOn503ThenSucceeds(t *testing.T) {
 	var n atomic.Int32
@@ -49,20 +46,34 @@ func TestClient_RetriesOn503ThenSucceeds(t *testing.T) {
 		t.Fatalf("detail=%+v attempts=%d err=%v", d, n.Load(), err)
 	}
 }
+func TestClient_UsesConfiguredBackoffs(t *testing.T) {
+	var attempts atomic.Int32
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		attempts.Add(1)
+		w.WriteHeader(http.StatusServiceUnavailable)
+	}))
+	defer s.Close()
+	c := NewWithBase(s.URL, "test", WithLimits(float64(rate.Inf), 8), WithBackoffs(time.Millisecond, time.Millisecond))
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	_, _, err := c.Detail(ctx, "1")
+	if err == nil || errors.Is(err, context.DeadlineExceeded) || attempts.Load() != 3 {
+		t.Fatalf("error = %v, attempts = %d", err, attempts.Load())
+	}
+}
 func TestClient_LimitsRate(t *testing.T) {
 	b := fixture(t, "detail-67878.json")
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(b) }))
 	defer s.Close()
-	c := testClient(s)
-	c.limiter = rate.NewLimiter(2, 1)
+	c := NewWithBase(s.URL, "test", WithLimits(50, 8))
 	start := time.Now()
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 11; i++ {
 		if _, _, err := c.Detail(context.Background(), "67878"); err != nil {
 			t.Fatal(err)
 		}
 	}
-	if time.Since(start) < 4500*time.Millisecond {
-		t.Fatal("rate exceeded")
+	if elapsed := time.Since(start); elapsed < 190*time.Millisecond || elapsed > 2*time.Second {
+		t.Fatalf("11 requests took %v, want 190ms to 2s", elapsed)
 	}
 }
 func TestClient_ResponseOverLimit(t *testing.T) {
