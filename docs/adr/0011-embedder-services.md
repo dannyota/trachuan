@@ -34,9 +34,12 @@ reranker is added.
 
 The Python query mode written first stays only as the parity reference. The Go
 service replaces it after three checks on the same model bundle and ONNX Runtime
-version: identical token ids for the golden queries and edge-case texts, cosine
-at least 0.9999 for every input, and identical evaluation results on one build.
-The Python query mode is then deleted.
+version: identical token ids for the golden queries and edge-case texts; cosine
+at least 0.9999 for every input; and, for every evaluation case, identical
+ordered hit identities and abstention decisions from two builds of the same
+inputs that differ only in the query recipe. Each build keeps its strict recipe
+check; no build is evaluated with the other service. The Python query mode is
+then deleted.
 
 ## Consequences
 

@@ -47,9 +47,10 @@ Query latency is measured only on the MacBook (ONNX FP32, about 14 ms at p50);
 host latency is unmeasured and FP32 on Graviton2 may be several times slower.
 The host acceptance gates in [budgets](../design/budgets.md) decide. If the host
 misses the search p95 gate or the 2 s embedder deadline at the 256-token query
-cap, switch the query model to the dynamic INT8 ONNX export (measured: one
-citation lost, about 1 GB) and, if still slow, lower the query cap to 128
-tokens; record the change in this ADR's History.
+cap, lower the query cap to 128 tokens and record the change in this ADR's
+History. Both sides use one precision, so a precision change such as the dynamic
+INT8 ONNX export (measured: one citation lost, about 1 GB) needs an
+owner-approved revision of this record and ADR 0011.
 
 ## Alternatives rejected
 

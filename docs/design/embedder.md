@@ -95,14 +95,19 @@ what the service loaded as `<name> <version>`: for example `go 1.27.3`,
 `daulet/tokenizers 1.27.0` and `onnxruntime 1.31.1` for the query service;
 `python 3.14.x`, `transformers 5.22.2` and `torch 2.15.0` for the document
 service. Hash the fixed-field UTF-8 JSON without whitespace as SHA-256.
-`weights_sha256` hashes the sorted file manifest.
+`tokenizer_sha256` hashes the sorted manifest of the tokenizer files.
+`weights_sha256` hashes the sorted manifest of the files that service loads for
+the model: `onnx/model.onnx` and its external data for the query service,
+`config.json` and `model.safetensors` for the document service. Removing or
+changing a file only the other service loads leaves a report unchanged.
 
 Callers compare all fields with the expected runtime side of `dense_recipe`.
-Document and query hashes intentionally differ; the common model, tokenizer,
-pooling, normalization, precision and dimensions must agree. `dense_recipe`
-holds both reports. A response echoes `recipe_hash`; callers reject any change
-mid-run. Recipe and model file checks happen once at startup and at client
-construction, not by downloading data during a request.
+Document and query hashes intentionally differ, and so do their
+`weights_sha256`; model, resolved revision, tokenizer hash, pooling,
+normalization, precision and dimensions must agree. `dense_recipe` holds both
+reports. A response echoes `recipe_hash`; callers reject any change mid-run.
+Recipe and model file checks happen once at startup and at client construction,
+not by downloading data during a request.
 
 ## HTTP contract
 
