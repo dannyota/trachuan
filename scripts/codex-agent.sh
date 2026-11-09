@@ -58,8 +58,9 @@ except (OSError, ValueError, KeyError) as error:
 # caches are writable, loopback listeners work (network_access), and module
 # downloads are refused, so a brief never needs a live network call.
 home = Path.home()
-roots = [str(home / "Library/Caches/go-build"), str(home / "Library/Caches/golangci-lint"), "/tmp"]
-os.environ.update({"GOCACHE": roots[0], "GOLANGCI_LINT_CACHE": roots[1],
+roots = [str(home / "Library/Caches/go-build"), str(home / "Library/Caches/golangci-lint"),
+         str(home / ".cache/uv"), "/tmp"]
+os.environ.update({"GOCACHE": roots[0], "GOLANGCI_LINT_CACHE": roots[1], "UV_CACHE_DIR": roots[2],
                    "GOPROXY": "off", "GOTOOLCHAIN": "local", "GOFLAGS": "-mod=readonly"})
 command = ["codex"] + (["--search"] if args.search else []) + ["exec"]
 if args.resume:
