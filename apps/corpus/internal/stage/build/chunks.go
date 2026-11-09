@@ -155,7 +155,7 @@ func (l *loader) loadChunks(ctx context.Context) error {
 				_ = vr.Close()
 				return fmt.Errorf("encode spans: %w", e)
 			}
-			_, e = l.tx.Exec(ctx, `INSERT INTO chunk(id,document_id,provision_id,ordinal,context_prefix,content,spans,input_sha256,token_count,embedding,sparse) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::vector,'{}/1048576'::sparsevec)`, l.counts.Chunks+1, doc.id, pid, c.Ordinal, c.ContextPrefix, c.Content, spans, row.InputSHA256, row.TokenCount, denseText(vector))
+			_, e = l.tx.Exec(ctx, `INSERT INTO build_chunk(id,document_id,provision_id,ordinal,context_prefix,content,spans,input_sha256,token_count,embedding) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::vector)`, l.counts.Chunks+1, doc.id, pid, c.Ordinal, c.ContextPrefix, c.Content, spans, row.InputSHA256, row.TokenCount, denseText(vector))
 			if e != nil {
 				_ = vr.Close()
 				return fmt.Errorf("insert chunk: %w", e)

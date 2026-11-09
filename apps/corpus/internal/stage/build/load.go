@@ -68,6 +68,9 @@ func Load(ctx context.Context, conn *pgx.Conn, inv Inventory, artifacts artifact
 	if err = l.loadDocuments(ctx); err != nil {
 		return Counts{}, err
 	}
+	if _, err = tx.Exec(ctx, `CREATE TEMP TABLE build_chunk ON COMMIT DROP AS SELECT id,document_id,provision_id,ordinal,context_prefix,content,spans,input_sha256,token_count,embedding FROM chunk WITH NO DATA; CREATE UNIQUE INDEX ON build_chunk(id)`); err != nil {
+		return Counts{}, fmt.Errorf("create chunk staging table: %w", err)
+	}
 	if err = l.loadChunks(ctx); err != nil {
 		return Counts{}, err
 	}

@@ -297,3 +297,15 @@ func TestLoad_UnresolvedRelationsKept(t *testing.T) {
 		t.Fatalf("unresolved %v counts %+v: %v", unresolved, c, err)
 	}
 }
+
+func TestLoad_DoesNotInsertPlaceholderSparseVector(t *testing.T) {
+	f := fixture(t)
+	f.indexed(t, "vn:vbpl:1", false)
+	_, err := f.corpus.Exec(context.Background(), `CREATE FUNCTION reject_empty_sparse() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.sparse::text = '{}/1048576' THEN RAISE EXCEPTION 'placeholder sparse vector'; END IF; RETURN NEW; END $$; CREATE TRIGGER reject_placeholder BEFORE INSERT ON chunk FOR EACH ROW EXECUTE FUNCTION reject_empty_sparse()`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = f.load(t); err != nil {
+		t.Fatalf("load with placeholder guard: %v", err)
+	}
+}

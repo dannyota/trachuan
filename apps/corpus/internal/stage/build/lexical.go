@@ -38,7 +38,7 @@ type textIterator struct {
 }
 
 func (it *textIterator) fill(ctx context.Context) error {
-	rows, err := it.tx.Query(ctx, `SELECT id, content || ' ' || context_prefix FROM chunk WHERE id > $1 ORDER BY id LIMIT 2000`, it.after)
+	rows, err := it.tx.Query(ctx, `SELECT id, content || ' ' || context_prefix FROM build_chunk WHERE id > $1 ORDER BY id LIMIT 2000`, it.after)
 	if err != nil {
 		return fmt.Errorf("query lexical chunks: %w", err)
 	}
@@ -109,7 +109,7 @@ func loadLexical(ctx context.Context, tx pgx.Tx, recipe lexical.Recipe) (lexical
 			if encodeErr != nil {
 				return lexical.StatsSummary{}, fmt.Errorf("encode lexical document: %w", encodeErr)
 			}
-			batch.Queue(`UPDATE chunk SET sparse=$2::sparsevec WHERE id=$1`, row.id, sparseText(v))
+			batch.Queue(`INSERT INTO chunk(id,document_id,provision_id,ordinal,context_prefix,content,spans,input_sha256,token_count,embedding,sparse) SELECT id,document_id,provision_id,ordinal,context_prefix,content,spans,input_sha256,token_count,embedding,$2::sparsevec FROM build_chunk WHERE id=$1`, row.id, sparseText(v))
 			nnz = append(nnz, len(v))
 			it.after = row.id
 		}
