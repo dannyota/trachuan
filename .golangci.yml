@@ -10,3 +10,7 @@ linters:
         - shadow
     misspell:
       locale: US
+      # Run state names come from docs/design/pipeline.md and are stored data.
+      ignore-rules:
+        - cancelling
+        - cancelled

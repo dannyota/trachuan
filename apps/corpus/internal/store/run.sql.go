@@ -7,6 +7,7 @@ package store
 
 import (
 	"context"
+	"encoding/json"
 )
 
 const countIncompleteItems = `-- name: CountIncompleteItems :one
@@ -18,6 +19,80 @@ func (q *Queries) CountIncompleteItems(ctx context.Context, runID int64) (int64,
 	var count int64
 	err := row.Scan(&count)
 	return count, err
+}
+
+const createRun = `-- name: CreateRun :exec
+INSERT INTO run (country, rel, state, snapshot) VALUES ($1, $2, 'failed', $3)
+ON CONFLICT (country, rel) DO NOTHING
+`
+
+type CreateRunParams struct {
+	Country  string
+	Rel      string
+	Snapshot json.RawMessage
+}
+
+func (q *Queries) CreateRun(ctx context.Context, arg CreateRunParams) error {
+	_, err := q.db.Exec(ctx, createRun, arg.Country, arg.Rel, arg.Snapshot)
+	return err
+}
+
+const getRun = `-- name: GetRun :one
+SELECT id, country, rel, generation, state, next_stage, until_stage, workflow_id, snapshot, message, created_at, updated_at FROM run WHERE country = $1 AND rel = $2
+`
+
+type GetRunParams struct {
+	Country string
+	Rel     string
+}
+
+func (q *Queries) GetRun(ctx context.Context, arg GetRunParams) (Run, error) {
+	row := q.db.QueryRow(ctx, getRun, arg.Country, arg.Rel)
+	var i Run
+	err := row.Scan(
+		&i.ID,
+		&i.Country,
+		&i.Rel,
+		&i.Generation,
+		&i.State,
+		&i.NextStage,
+		&i.UntilStage,
+		&i.WorkflowID,
+		&i.Snapshot,
+		&i.Message,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getRunForUpdate = `-- name: GetRunForUpdate :one
+SELECT id, country, rel, generation, state, next_stage, until_stage, workflow_id, snapshot, message, created_at, updated_at FROM run WHERE country = $1 AND rel = $2 FOR UPDATE
+`
+
+type GetRunForUpdateParams struct {
+	Country string
+	Rel     string
+}
+
+func (q *Queries) GetRunForUpdate(ctx context.Context, arg GetRunForUpdateParams) (Run, error) {
+	row := q.db.QueryRow(ctx, getRunForUpdate, arg.Country, arg.Rel)
+	var i Run
+	err := row.Scan(
+		&i.ID,
+		&i.Country,
+		&i.Rel,
+		&i.Generation,
+		&i.State,
+		&i.NextStage,
+		&i.UntilStage,
+		&i.WorkflowID,
+		&i.Snapshot,
+		&i.Message,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const getRunGeneration = `-- name: GetRunGeneration :one
@@ -40,4 +115,129 @@ func (q *Queries) GetRunGenerationForShare(ctx context.Context, id int64) (int32
 	var generation int32
 	err := row.Scan(&generation)
 	return generation, err
+}
+
+const listRunItemCounts = `-- name: ListRunItemCounts :many
+SELECT stage, state, count(*) AS count FROM run_item WHERE run_id = $1 GROUP BY stage, state ORDER BY stage, state
+`
+
+type ListRunItemCountsRow struct {
+	Stage string
+	State string
+	Count int64
+}
+
+func (q *Queries) ListRunItemCounts(ctx context.Context, runID int64) ([]ListRunItemCountsRow, error) {
+	rows, err := q.db.Query(ctx, listRunItemCounts, runID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListRunItemCountsRow
+	for rows.Next() {
+		var i ListRunItemCountsRow
+		if err := rows.Scan(&i.Stage, &i.State, &i.Count); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listUnacceptedGapCounts = `-- name: ListUnacceptedGapCounts :many
+SELECT stage, kind, count(*) AS count FROM gap WHERE run_id = $1 AND accepted_at IS NULL GROUP BY stage, kind ORDER BY stage, kind
+`
+
+type ListUnacceptedGapCountsRow struct {
+	Stage string
+	Kind  string
+	Count int64
+}
+
+func (q *Queries) ListUnacceptedGapCounts(ctx context.Context, runID int64) ([]ListUnacceptedGapCountsRow, error) {
+	rows, err := q.db.Query(ctx, listUnacceptedGapCounts, runID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListUnacceptedGapCountsRow
+	for rows.Next() {
+		var i ListUnacceptedGapCountsRow
+		if err := rows.Scan(&i.Stage, &i.Kind, &i.Count); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const recoverRun = `-- name: RecoverRun :exec
+UPDATE run SET generation = generation + 1, state = 'failed', message = 'recovered', updated_at = now()
+WHERE id = $1
+`
+
+func (q *Queries) RecoverRun(ctx context.Context, id int64) error {
+	_, err := q.db.Exec(ctx, recoverRun, id)
+	return err
+}
+
+const resetFailedItems = `-- name: ResetFailedItems :exec
+UPDATE run_item SET state = 'pending', updated_at = now()
+WHERE run_id = $1 AND stage = $2 AND state = 'failed'
+`
+
+type ResetFailedItemsParams struct {
+	RunID int64
+	Stage string
+}
+
+func (q *Queries) ResetFailedItems(ctx context.Context, arg ResetFailedItemsParams) error {
+	_, err := q.db.Exec(ctx, resetFailedItems, arg.RunID, arg.Stage)
+	return err
+}
+
+const setRunState = `-- name: SetRunState :exec
+UPDATE run SET state = $2, message = $3, updated_at = now() WHERE id = $1
+`
+
+type SetRunStateParams struct {
+	ID      int64
+	State   string
+	Message *string
+}
+
+func (q *Queries) SetRunState(ctx context.Context, arg SetRunStateParams) error {
+	_, err := q.db.Exec(ctx, setRunState, arg.ID, arg.State, arg.Message)
+	return err
+}
+
+const startRun = `-- name: StartRun :exec
+UPDATE run SET generation = generation + 1, state = 'starting', next_stage = $2,
+    until_stage = $3, workflow_id = $4, snapshot = $5, message = NULL, updated_at = now()
+WHERE id = $1
+`
+
+type StartRunParams struct {
+	ID         int64
+	NextStage  *string
+	UntilStage *string
+	WorkflowID *string
+	Snapshot   json.RawMessage
+}
+
+func (q *Queries) StartRun(ctx context.Context, arg StartRunParams) error {
+	_, err := q.db.Exec(ctx, startRun,
+		arg.ID,
+		arg.NextStage,
+		arg.UntilStage,
+		arg.WorkflowID,
+		arg.Snapshot,
+	)
+	return err
 }
