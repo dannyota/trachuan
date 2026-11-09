@@ -20,6 +20,18 @@ type Artifact struct {
 	WrittenAt  time.Time
 }
 
+type Chunk struct {
+	ArtifactID        int64
+	Ordinal           int32
+	ExtractArtifactID int64
+	NodeID            string
+	Anchor            string
+	ContextPrefix     string
+	Content           string
+	RoughTokens       int32
+	Spans             json.RawMessage
+}
+
 type Document struct {
 	ArtifactID     int64
 	Key            string

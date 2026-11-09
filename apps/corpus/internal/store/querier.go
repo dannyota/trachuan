@@ -18,13 +18,16 @@ type Querier interface {
 	GetArtifactID(ctx context.Context, arg GetArtifactIDParams) (int64, error)
 	GetBatchRun(ctx context.Context, id int64) (Run, error)
 	GetBatchRunState(ctx context.Context, id int64) (string, error)
+	GetChunkInput(ctx context.Context, arg GetChunkInputParams) (GetChunkInputRow, error)
 	GetControlRunForUpdate(ctx context.Context, id int64) (Run, error)
+	GetExtractArtifactByHash(ctx context.Context, arg GetExtractArtifactByHashParams) (int64, error)
 	GetExtractInput(ctx context.Context, arg GetExtractInputParams) (GetExtractInputRow, error)
 	GetRun(ctx context.Context, arg GetRunParams) (Run, error)
 	GetRunForUpdate(ctx context.Context, arg GetRunForUpdateParams) (Run, error)
 	GetRunGeneration(ctx context.Context, id int64) (int32, error)
 	GetRunGenerationForShare(ctx context.Context, id int64) (int32, error)
 	InsertArtifact(ctx context.Context, arg InsertArtifactParams) (int64, error)
+	InsertChunk(ctx context.Context, arg InsertChunkParams) error
 	InsertDocument(ctx context.Context, arg InsertDocumentParams) error
 	InsertFetchedFile(ctx context.Context, arg InsertFetchedFileParams) error
 	InsertGap(ctx context.Context, arg InsertGapParams) error
@@ -32,6 +35,8 @@ type Querier interface {
 	InsertProvision(ctx context.Context, arg InsertProvisionParams) error
 	InsertRelation(ctx context.Context, arg InsertRelationParams) error
 	InsertRunItem(ctx context.Context, arg InsertRunItemParams) error
+	ListChunkInputs(ctx context.Context, runID int64) ([]ListChunkInputsRow, error)
+	ListChunks(ctx context.Context, artifactID int64) ([]Chunk, error)
 	ListDiscoveryItems(ctx context.Context, country string) ([]ListDiscoveryItemsRow, error)
 	ListDiscoveryListings(ctx context.Context, country string) ([]ListDiscoveryListingsRow, error)
 	ListDiscoveryRuns(ctx context.Context, country string) ([]ListDiscoveryRunsRow, error)
