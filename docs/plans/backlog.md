@@ -9,3 +9,4 @@ One line per item: date, area, finding, source.
 - 2026-11-09, classify, seeds cover only 25.3% of primary articles; size the LLM batch and the held-out set for the other 75%, docs/research/phapdien-join-2026-11.md.
 - 2026-11-09, classify, let consolidated-text articles inherit seeds through `consolidates` relations (4,648 of 8,963) with their own confidence and a held-out slice, same note finding 2.
 - 2026-11-09, taxonomy import, key package articles by load sequence; MAPC and (đề mục, label) repeat, same note finding 4.
+- 2026-11-09, auth, verify ChatGPT and Claude.ai connectors, refresh and revocation against traquydinh's own OAuth before release; aboutme proved only Claude Code, docs/research/oauth-clients-2026-11.md.

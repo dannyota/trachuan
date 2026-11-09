@@ -21,3 +21,7 @@ Keycloak (about 1 GB RAM, MCP support experimental). A new hand-written server (
 ## History
 
 - 2026-11-08: accepted in the brainstorming conversation.
+- 2026-11-09: client spike closed by the owner without a retest; earlier
+  sign-ins succeeded and aboutme records a Claude Code CIMD proof. Decision
+  stands: copy oauthsrv. ChatGPT and hosted Claude over CIMD remain
+  acceptance tests for Plan 2 ([research note](../research/oauth-clients-2026-11.md)).
