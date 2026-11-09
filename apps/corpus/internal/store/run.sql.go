@@ -9,6 +9,17 @@ import (
 	"context"
 )
 
+const countIncompleteItems = `-- name: CountIncompleteItems :one
+SELECT count(*) FROM run_item WHERE run_id = $1 AND state IN ('pending', 'failed')
+`
+
+func (q *Queries) CountIncompleteItems(ctx context.Context, runID int64) (int64, error) {
+	row := q.db.QueryRow(ctx, countIncompleteItems, runID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const getRunGeneration = `-- name: GetRunGeneration :one
 SELECT generation FROM run WHERE id = $1
 `

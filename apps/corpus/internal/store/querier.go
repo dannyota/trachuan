@@ -9,12 +9,16 @@ import (
 )
 
 type Querier interface {
+	AcceptRunGaps(ctx context.Context, arg AcceptRunGapsParams) (int64, error)
+	CountIncompleteItems(ctx context.Context, runID int64) (int64, error)
+	CountUnacceptedGaps(ctx context.Context, runID int64) (int64, error)
 	GetArtifactID(ctx context.Context, arg GetArtifactIDParams) (int64, error)
 	GetRunGeneration(ctx context.Context, id int64) (int32, error)
 	GetRunGenerationForShare(ctx context.Context, id int64) (int32, error)
 	InsertArtifact(ctx context.Context, arg InsertArtifactParams) (int64, error)
 	InsertGap(ctx context.Context, arg InsertGapParams) error
 	InsertRunItem(ctx context.Context, arg InsertRunItemParams) error
+	ListRunGaps(ctx context.Context, arg ListRunGapsParams) ([]Gap, error)
 	UpdateRunItemFenced(ctx context.Context, arg UpdateRunItemFencedParams) (int64, error)
 	UpsertListing(ctx context.Context, arg UpsertListingParams) error
 }
