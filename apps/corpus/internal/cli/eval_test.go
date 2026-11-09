@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"os"
@@ -82,5 +83,53 @@ func TestEvalCLI_OpenDatabaseErrorIncludesRelease(t *testing.T) {
 	_, err := openEvalDB(context.Background(), "vn", "20261109", "://invalid")
 	if err == nil || !strings.Contains(err.Error(), "corpus eval vn/20261109") {
 		t.Fatalf("error = %v", err)
+	}
+}
+
+func TestEvalOutput_ExistingEmptyDirectory(t *testing.T) {
+	out := filepath.Join(t.TempDir(), "output")
+	if err := os.Mkdir(out, 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := writeEvaluationOutput(out, evaluation.Report{}, evaluation.Cache{}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := artifact.Verify(out); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestEvalCLI_RejectsNonemptyOutputBeforeEvaluation(t *testing.T) {
+	out := t.TempDir()
+	if err := os.WriteFile(filepath.Join(out, "existing"), []byte("keep"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("CORPUS_DATABASE_URL", "")
+	var stderr bytes.Buffer
+	if code := runEval(context.Background(), []string{"vn", "20261109", "--out", out}, &stderr, &stderr); code != 1 || !strings.Contains(stderr.String(), "output directory is not empty") {
+		t.Fatalf("code=%d error=%s", code, stderr.String())
+	}
+}
+
+type replaceOutputWithFile struct{ out string }
+
+func (w replaceOutputWithFile) WriteFiles(string) error {
+	if err := os.Remove(w.out); err != nil {
+		return err
+	}
+	return os.WriteFile(w.out, []byte("keep"), 0600)
+}
+
+func TestEvalOutput_PreservesFileCreatedDuringEvaluation(t *testing.T) {
+	out := filepath.Join(t.TempDir(), "output")
+	if err := os.Mkdir(out, 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := writeEvaluationOutput(out, replaceOutputWithFile{out: out}, evaluation.Cache{}); err == nil {
+		t.Fatal("accepted file as output directory")
+	}
+	data, err := os.ReadFile(out)
+	if err != nil || string(data) != "keep" {
+		t.Fatalf("file = %q, error = %v", data, err)
 	}
 }

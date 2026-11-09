@@ -63,9 +63,9 @@ func TestLoad_InvalidLimits(t *testing.T) {
 }
 
 func TestLoad_Overrides(t *testing.T) {
-	values := map[string]string{"CORPUS_DATABASE_URL": "db", "CORPUS_HEARTBEAT_EVERY": "200ms", "CORPUS_HEARTBEAT_TIMEOUT": "2s", "CORPUS_VBPL_RPS": "3.5", "CORPUS_VBPL_IN_FLIGHT": "4", "CORPUS_BATCHES_IN_FLIGHT": "5", "CORPUS_DISK_START_GIB": "2", "CORPUS_DISK_MIN_GIB": "3", "CORPUS_FILE_CACHE": "/cache", "CORPUS_VBPL_FILE_HOSTS": "one.example,two.example"}
+	values := map[string]string{"CORPUS_DATABASE_URL": "db", "CORPUS_HEARTBEAT_EVERY": "200ms", "CORPUS_HEARTBEAT_TIMEOUT": "2s", "CORPUS_VBPL_RPS": "3.5", "CORPUS_VBPL_IN_FLIGHT": "4", "CORPUS_BATCHES_IN_FLIGHT": "5", "CORPUS_DISK_START_GIB": "4", "CORPUS_DISK_MIN_GIB": "3", "CORPUS_FILE_CACHE": "/cache", "CORPUS_VBPL_FILE_HOSTS": "one.example,two.example"}
 	got, err := Load(func(key string) string { return values[key] })
-	if err != nil || got.HeartbeatEvery != 200*time.Millisecond || got.HeartbeatTimeout != 2*time.Second || got.VBPLRate != 3.5 || got.VBPLInFlight != 4 || got.BatchesInFlight != 5 || got.DiskStartGiB != 2 || got.DiskMinGiB != 3 || got.FileCache != "/cache" || got.VBPLFileHosts != "one.example,two.example" {
+	if err != nil || got.HeartbeatEvery != 200*time.Millisecond || got.HeartbeatTimeout != 2*time.Second || got.VBPLRate != 3.5 || got.VBPLInFlight != 4 || got.BatchesInFlight != 5 || got.DiskStartGiB != 4 || got.DiskMinGiB != 3 || got.FileCache != "/cache" || got.VBPLFileHosts != "one.example,two.example" {
 		t.Fatalf("config = %+v, error = %v", got, err)
 	}
 }
@@ -122,5 +122,13 @@ func TestLoad_InvalidDiskLimits(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+func TestLoad_RejectsDiskStartBelowMinimum(t *testing.T) {
+	env := map[string]string{"CORPUS_DATABASE_URL": "db", "CORPUS_DISK_START_GIB": "2", "CORPUS_DISK_MIN_GIB": "3"}
+	_, err := Load(func(key string) string { return env[key] })
+	if err == nil || !strings.Contains(err.Error(), "CORPUS_DISK_START_GIB") || !strings.Contains(err.Error(), "CORPUS_DISK_MIN_GIB") {
+		t.Fatalf("error = %v", err)
 	}
 }

@@ -18,6 +18,7 @@ import (
 	"danny.vn/trachuan/apps/corpus/internal/store"
 	"danny.vn/trachuan/apps/corpus/internal/worker"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"golang.org/x/sys/unix"
 )
 
 func evalExit(r evaluation.Report, require bool) int {
@@ -47,6 +48,9 @@ func runEval(ctx context.Context, args []string, _ io.Writer, stderr io.Writer) 
 	}
 	if opts["--out"] == "" {
 		return fail(fmt.Errorf("--out DIR is required"))
+	}
+	if err = checkEvaluationOutput(opts["--out"]); err != nil {
+		return fail(err)
 	}
 	cfg, err := config.Load(os.Getenv)
 	if err != nil {
@@ -83,7 +87,7 @@ func runEval(ctx context.Context, args []string, _ io.Writer, stderr io.Writer) 
 
 type evaluationWriter interface{ WriteFiles(string) error }
 
-func writeEvaluationOutput(out string, report, cache evaluationWriter) error {
+func checkEvaluationOutput(out string) error {
 	out = filepath.Clean(out)
 	if info, err := os.Lstat(out); err == nil {
 		if !info.IsDir() {
@@ -98,6 +102,14 @@ func writeEvaluationOutput(out string, report, cache evaluationWriter) error {
 		}
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("inspect output: %w", err)
+	}
+	return nil
+}
+
+func writeEvaluationOutput(out string, report, cache evaluationWriter) error {
+	out = filepath.Clean(out)
+	if err := checkEvaluationOutput(out); err != nil {
+		return err
 	}
 	parent := filepath.Dir(out)
 	if err := os.MkdirAll(parent, 0700); err != nil {
@@ -118,6 +130,9 @@ func writeEvaluationOutput(out string, report, cache evaluationWriter) error {
 	})
 	if err != nil {
 		return fmt.Errorf("write evaluation output: %w", err)
+	}
+	if err = unix.Rmdir(out); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("remove empty output: %w", err)
 	}
 	if err = os.Rename(store.Abs(result.Path), out); err != nil {
 		return fmt.Errorf("publish evaluation output: %w", err)

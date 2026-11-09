@@ -10,7 +10,7 @@ import (
 )
 
 func TestIndexDeps_ConfiguresBuildAndEval(t *testing.T) {
-	cfg := config.Config{BuilderDatabaseURL: "postgres://builder", BuilderTemplate: "template", PgDump: "pg_dump_path", PgRestore: "pg_restore_path", DatabaseDiskPath: "disk", EmbedderURL: "http://document", QueryEmbedderURL: "http://query"}
+	cfg := config.Config{BuilderDatabaseURL: "postgres://builder", BuilderTemplate: "template", PgDump: "pg_dump_path", PgRestore: "pg_restore_path", DatabaseDiskPath: "disk", DiskStartGiB: 4, DiskMinGiB: 2, EmbedderURL: "http://document", QueryEmbedderURL: "http://query"}
 	suite := evaluation.Suite{Hashes: evaluation.FixtureHashes{Legacy: "legacy"}}
 	instant := time.Date(2026, 11, 9, 0, 0, 0, 0, time.UTC)
 	deps := indexDeps(cfg, suite, func() time.Time { return instant })
@@ -24,7 +24,7 @@ func TestIndexDeps_ConfiguresBuildAndEval(t *testing.T) {
 		{"build", deps.Build.Now, deps.Build.BuilderURL, deps.Build.Template, deps.Build.PgDump, deps.Build.PgRestore, deps.Build.DatabaseDiskPath, deps.Build.MinFreeBeforeBytes, deps.Build.MinFreeDuringBytes, deps.Build.Suite},
 		{"eval build", deps.Eval.Build.Now, deps.Eval.Build.BuilderURL, deps.Eval.Build.Template, deps.Eval.Build.PgDump, deps.Eval.Build.PgRestore, deps.Eval.Build.DatabaseDiskPath, deps.Eval.Build.MinFreeBeforeBytes, deps.Eval.Build.MinFreeDuringBytes, deps.Eval.Build.Suite},
 	} {
-		if b.clock == nil || !b.clock().Equal(instant) || b.url != cfg.BuilderDatabaseURL || b.template != cfg.BuilderTemplate || b.dump != cfg.PgDump || b.restore != cfg.PgRestore || b.disk != cfg.DatabaseDiskPath || b.before != 0 || b.during != 0 || b.suite.Hashes != suite.Hashes {
+		if b.clock == nil || !b.clock().Equal(instant) || b.url != cfg.BuilderDatabaseURL || b.template != cfg.BuilderTemplate || b.dump != cfg.PgDump || b.restore != cfg.PgRestore || b.disk != cfg.DatabaseDiskPath || b.before != 4294967296 || b.during != 2147483648 || b.suite.Hashes != suite.Hashes {
 			t.Errorf("%s config incomplete", b.name)
 		}
 	}

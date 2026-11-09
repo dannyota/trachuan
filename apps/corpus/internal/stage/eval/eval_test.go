@@ -28,18 +28,20 @@ func TestResolve_RejectsInvalidReport(t *testing.T) {
 	for _, tc := range []struct {
 		name, status, country, rel string
 		eligible                   bool
+		valid                      bool
 	}{
-		{"incomplete", "incomplete", "vn", "20261109", false},
-		{"eligible", "complete", "vn", "20261109", true},
-		{"country", "complete", "us", "20261109", false},
-		{"release", "complete", "vn", "20261108", false},
+		{"incomplete", "incomplete", "vn", "20261109", false, false},
+		{"eligible", "complete", "vn", "20261109", true, false},
+		{"country", "complete", "us", "20261109", false, false},
+		{"release", "complete", "vn", "20261108", false, false},
+		{"valid", "complete", "vn", "20261109", false, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			root := t.TempDir()
 			artifacts := artifact.Store{Root: root}
 			hash := strings.Repeat("a", 64)
 			art, err := artifacts.Publish(context.Background(), "eval", hash, hash, func(dir string) error {
-				data, err := json.Marshal(evaluation.Report{Status: tc.status, Country: tc.country, Rel: tc.rel, ReleaseEligible: tc.eligible})
+				data, err := json.Marshal(evaluation.Report{Status: tc.status, Country: tc.country, Rel: tc.rel, ReleaseEligible: tc.eligible, EvaluationDate: retrieval.Date{Year: 2026, Month: 11, Day: 9}})
 				if err != nil {
 					return err
 				}
@@ -49,8 +51,12 @@ func TestResolve_RejectsInvalidReport(t *testing.T) {
 				t.Fatal(err)
 			}
 			_, err = New(Config{}).Resolve(context.Background(), stage.Env{Artifacts: artifacts}, stage.Run{Country: "vn", Rel: "20261109"}, stage.Item{Key: "vn/20261109", InputHash: hash}, art)
-			if err == nil {
-				t.Fatal("accepted invalid report")
+			if tc.valid {
+				if err != nil {
+					t.Fatalf("valid report: %v", err)
+				}
+			} else if err == nil || !strings.Contains(err.Error(), "invalid evaluation report") {
+				t.Fatalf("expected invalid evaluation report, got %v", err)
 			}
 		})
 	}
@@ -75,9 +81,9 @@ func TestEvalStage_PlanDoesNotRestoreProcessDoes(t *testing.T) {
 	s.lookup = func(context.Context, stage.Env, stage.Run) (artifact.Result, error) {
 		return artifact.Result{SHA256: "build"}, nil
 	}
-	s.ensure = func(context.Context, stage.Env, stage.Run) (build.Database, error) {
+	s.ensure = func(context.Context, stage.Env, stage.Run) (build.Database, artifact.Result, error) {
 		calls++
-		return build.Database{}, sentinel
+		return build.Database{}, artifact.Result{}, sentinel
 	}
 	run := stage.Run{Country: "vn", Rel: "20261109"}
 	items, err := s.Plan(context.Background(), stage.Env{}, run)
@@ -87,5 +93,28 @@ func TestEvalStage_PlanDoesNotRestoreProcessDoes(t *testing.T) {
 	_, err = s.Process(context.Background(), stage.Env{}, run, items[0])
 	if !errors.Is(err, sentinel) || calls != 1 {
 		t.Fatalf("process did not restore: calls=%d error=%v", calls, err)
+	}
+}
+
+func TestProcess_VerifiesBuildOnce(t *testing.T) {
+	s := New(Config{})
+	calls, lookups := 0, 0
+	s.lookup = func(context.Context, stage.Env, stage.Run) (artifact.Result, error) {
+		lookups++
+		return artifact.Result{SHA256: "build"}, nil
+	}
+	s.ensure = func(context.Context, stage.Env, stage.Run) (build.Database, artifact.Result, error) {
+		calls++
+		return build.Database{URL: "://invalid"}, artifact.Result{SHA256: "build"}, nil
+	}
+	run := stage.Run{Country: "vn", Rel: "20261109"}
+	items, err := s.Plan(context.Background(), stage.Env{}, run)
+	if err != nil {
+		t.Fatal(err)
+	}
+	calls, lookups = 0, 0
+	_, err = s.Process(context.Background(), stage.Env{}, run, items[0])
+	if err == nil || calls != 1 || lookups != 0 {
+		t.Fatalf("ensures=%d lookups=%d error=%v", calls, lookups, err)
 	}
 }

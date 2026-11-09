@@ -33,7 +33,7 @@ type Config struct {
 type Stage struct {
 	cfg    Config
 	lookup func(context.Context, stage.Env, stage.Run) (artifact.Result, error)
-	ensure func(context.Context, stage.Env, stage.Run) (build.Database, error)
+	ensure func(context.Context, stage.Env, stage.Run) (build.Database, artifact.Result, error)
 }
 
 // New constructs an evaluation stage.
@@ -89,14 +89,14 @@ func (s *Stage) Plan(ctx context.Context, env stage.Env, run stage.Run) ([]stage
 
 // Evaluate resolves the build and runs a diagnostic evaluation.
 func (s *Stage) Evaluate(ctx context.Context, env stage.Env, run stage.Run) (evaluation.Report, evaluation.Cache, error) {
-	db, err := s.ensureBuild(ctx, env, run)
+	db, art, err := s.ensureBuild(ctx, env, run)
 	if err != nil {
 		return evaluation.Report{}, evaluation.Cache{}, fmt.Errorf("ensure build: %w", err)
 	}
-	art, err := s.lookupBuild(ctx, env, run)
-	if err != nil {
-		return evaluation.Report{}, evaluation.Cache{}, err
-	}
+	return s.evaluateBuild(ctx, env, run, db, art)
+}
+
+func (s *Stage) evaluateBuild(ctx context.Context, env stage.Env, run stage.Run, db build.Database, art artifact.Result) (evaluation.Report, evaluation.Cache, error) {
 	date, err := dateForRun(run)
 	if err != nil {
 		return evaluation.Report{}, evaluation.Cache{}, err
@@ -132,14 +132,14 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 	if item.Key != run.Country+"/"+run.Rel {
 		return stage.Output{}, fmt.Errorf("evaluation item identity mismatch")
 	}
-	art, err := s.lookupBuild(ctx, env, run)
+	db, art, err := s.ensureBuild(ctx, env, run)
 	if err != nil {
-		return stage.Output{}, err
+		return stage.Output{}, fmt.Errorf("ensure build: %w", err)
 	}
 	if err = s.checkInputHash(art, run, item.InputHash); err != nil {
 		return stage.Output{}, err
 	}
-	report, cache, err := s.Evaluate(ctx, env, run)
+	report, cache, err := s.evaluateBuild(ctx, env, run, db, art)
 	if err != nil {
 		return stage.Output{}, err
 	}
@@ -214,9 +214,9 @@ func (s *Stage) lookupBuild(ctx context.Context, env stage.Env, run stage.Run) (
 	}
 	return build.VerifyForRun(ctx, s.cfg.Build, store.New(env.DB), env.Artifacts, run)
 }
-func (s *Stage) ensureBuild(ctx context.Context, env stage.Env, run stage.Run) (build.Database, error) {
+func (s *Stage) ensureBuild(ctx context.Context, env stage.Env, run stage.Run) (build.Database, artifact.Result, error) {
 	if s.ensure != nil {
 		return s.ensure(ctx, env, run)
 	}
-	return build.EnsureForRun(ctx, s.cfg.Build, store.New(env.DB), env.Artifacts, run)
+	return build.EnsureForRunWithArtifact(ctx, s.cfg.Build, store.New(env.DB), env.Artifacts, run)
 }

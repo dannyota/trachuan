@@ -74,6 +74,9 @@ func Load(getenv func(string) string) (Config, error) {
 		}
 		*setting.target = n
 	}
+	if cfg.DiskStartGiB < cfg.DiskMinGiB {
+		return Config{}, fmt.Errorf("CORPUS_DISK_START_GIB must be at least CORPUS_DISK_MIN_GIB")
+	}
 	for _, setting := range []struct {
 		key, fallback string
 		target        *time.Duration

@@ -160,6 +160,17 @@ func databaseOwnership(ctx context.Context, conn *pgx.Conn, name string) (bool, 
 
 // VerifyForRun finds and verifies the committed build artifact without opening a corpus database.
 func VerifyForRun(ctx context.Context, cfg Config, q store.Querier, artifacts artifact.Store, run stage.Run) (artifact.Result, error) {
+	art, err := committedBuild(ctx, cfg, q, run)
+	if err != nil {
+		return artifact.Result{}, err
+	}
+	if _, _, err := verifyBuildArtifact(artifacts, art, run, cfg); err != nil {
+		return artifact.Result{}, fmt.Errorf("verify committed build artifact: %w", err)
+	}
+	return art, nil
+}
+
+func committedBuild(ctx context.Context, cfg Config, q store.Querier, run stage.Run) (artifact.Result, error) {
 	raw, err := q.GetBuildInventory(ctx, run.ID)
 	if err != nil {
 		return artifact.Result{}, fmt.Errorf("read build item: %w", err)
@@ -187,9 +198,6 @@ func VerifyForRun(ctx context.Context, cfg Config, q store.Querier, artifacts ar
 			return artifact.Result{}, errors.New("invalid committed build artifact")
 		}
 		art := artifact.Result{Path: *item.Path, SHA256: *item.ArtifactSHA256, InputHash: *item.InputHash}
-		if _, _, err := verifyBuildArtifact(artifacts, art, run, cfg); err != nil {
-			return artifact.Result{}, fmt.Errorf("verify committed build artifact: %w", err)
-		}
 		return art, nil
 	}
 	return artifact.Result{}, errors.New("completed build artifact not found")
@@ -197,9 +205,19 @@ func VerifyForRun(ctx context.Context, cfg Config, q store.Querier, artifacts ar
 
 // EnsureForRun finds the committed build artifact and resolves its database.
 func EnsureForRun(ctx context.Context, cfg Config, q store.Querier, artifacts artifact.Store, run stage.Run) (Database, error) {
-	art, err := VerifyForRun(ctx, cfg, q, artifacts, run)
+	db, _, err := EnsureForRunWithArtifact(ctx, cfg, q, artifacts, run)
+	return db, err
+}
+
+// EnsureForRunWithArtifact resolves the committed build and returns its verified artifact.
+func EnsureForRunWithArtifact(ctx context.Context, cfg Config, q store.Querier, artifacts artifact.Store, run stage.Run) (Database, artifact.Result, error) {
+	art, err := committedBuild(ctx, cfg, q, run)
 	if err != nil {
-		return Database{}, err
+		return Database{}, artifact.Result{}, err
 	}
-	return EnsureDatabase(ctx, cfg, artifacts, art, run)
+	db, err := EnsureDatabase(ctx, cfg, artifacts, art, run)
+	if err != nil {
+		return Database{}, artifact.Result{}, err
+	}
+	return db, art, nil
 }
