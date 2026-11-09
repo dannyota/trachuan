@@ -23,7 +23,7 @@ func TestValidateRel(t *testing.T) {
 }
 
 func TestCompareRel(t *testing.T) {
-	if compareRel("20261110_10", "20261110_2") <= 0 {
+	if CompareRel("20261110_10", "20261110_2") <= 0 {
 		t.Fatal("sequence 10 must follow sequence 2")
 	}
 }

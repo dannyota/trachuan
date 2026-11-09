@@ -21,7 +21,8 @@ func validateRel(rel string) error {
 	return nil
 }
 
-func compareRel(a, b string) int {
+// CompareRel orders releases by date, then by sequence number as an integer.
+func CompareRel(a, b string) int {
 	ap := strings.SplitN(a, "_", 2)
 	bp := strings.SplitN(b, "_", 2)
 	if ap[0] != bp[0] {
