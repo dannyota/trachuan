@@ -31,13 +31,44 @@ Evidence:
 - The web front-ends of `vbpl.vn` and `phapluat.gov.vn` return 403 to
   non-browser clients; the gateway API answers the pipeline's client.
 
+## The banhmi cache against the dropped sources
+
+banhmi read four sources: VBPL 3,937 documents, `vanban` 216, `sbv_hanoi` 70,
+`congbao` 6. 132 non-VBPL documents are not in run vn/20261109. Looking each
+number up in VBPL (after fixing Cyrillic look-alike letters and missing years in
+banhmi's numbers) leaves:
+
+- `vanban`: 84 of 105 are in VBPL and only outside the discovery scope; the rest
+  are recent central documents VBPL lacks (for example 142/2026/NĐ-CP,
+  174/2026/NĐ-CP, 228/2026/NĐ-CP, 353/2025/NĐ-CP, 05/2026/TT-BKHCN,
+  33/2026/QĐ-TTg) and four provincial decisions, which VBPL holds at the local
+  level and are out of scope.
+- `sbv_hanoi`: its circulars are in VBPL; the other 19 are State Bank decisions:
+  administrative-procedure notices, policy rate decisions, corrections, and
+  2345/QĐ-NHNN on online payment security (repealed by 2872/QĐ-NHNN; Circular
+  50/2024/TT-NHNN now governs).
+- `congbao`: its one document VBPL lacks, 33/2026/QĐ-TTg, is on `vanban`.
+
+## Artificial intelligence
+
+VBPL holds two central documents with "trí tuệ nhân tạo" in the title, the Law
+on Artificial Intelligence 134/2025/QH15 and 53/2026/TT-NHNN; both are in the
+corpus. `vanban.chinhphu.vn` lists eleven, including 142/2026/NĐ-CP,
+33/2026/QĐ-TTg (high-risk AI systems), 05/2026/TT-BKHCN (national AI ethics
+framework), 367/QĐ-TTg (law implementation plan), 804/QĐ-TTg (datasets),
+1671/QĐ-TTg and 1528/QĐ-TTg (strategy and workforce). VBPL title search with
+`matchMode: exact` also cuts noise: "tài sản số" falls from 1,176 hits under
+`all_words` to 7.
+
 ## Recommendations
 
 1. Keep VBPL as the only primary source. Fix coverage in discovery: fetch
-   relation targets one hop out, and add exact number lookups for documents
-   named by the source list or golden cases (corpus scope plan).
-2. Add `vanban.chinhphu.vn` as a secondary source only for central government
-   documents absent from VBPL, recorded with source `chinhphu`; its text comes
-   from the signed PDF, so it belongs to the text extraction plan.
-3. Do not read Công báo or the State Bank site; they add no document VBPL lacks
-   in the checked set.
+   relation targets one hop out, look up named documents by exact number
+   (`optionDoc: docNum`, `matchMode: exact`), and switch keyword searches to
+   `matchMode: exact` (corpus scope plan).
+2. Add `vanban.chinhphu.vn` as the secondary source for central documents VBPL
+   lacks, with source `chinhphu`, starting with the AI documents above; a
+   document VBPL later publishes moves to VBPL by number. Text comes from the
+   signed PDF in the text extraction plan.
+3. Drop Công báo and `sbv_hanoi`. Do not add `sbv.gov.vn` now; State Bank
+   decisions that are not law stay out until a case needs them.
