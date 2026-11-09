@@ -13,9 +13,13 @@ type Querier interface {
 	AcceptRunGaps(ctx context.Context, arg AcceptRunGapsParams) (int64, error)
 	AdvanceRunStage(ctx context.Context, arg AdvanceRunStageParams) error
 	ArtifactPathReferenced(ctx context.Context, arg ArtifactPathReferencedParams) (bool, error)
+	ClearExpanded(ctx context.Context, runID int64) error
+	ClearFinal(ctx context.Context, runID int64) error
+	ClearSeeds(ctx context.Context, runID int64) error
 	CountIncompleteItems(ctx context.Context, runID int64) (int64, error)
 	CountUnacceptedGaps(ctx context.Context, runID int64) (int64, error)
 	CreateRun(ctx context.Context, arg CreateRunParams) error
+	EnsureRunScope(ctx context.Context, runID int64) error
 	GetArtifactID(ctx context.Context, arg GetArtifactIDParams) (int64, error)
 	GetBatchRun(ctx context.Context, id int64) (Run, error)
 	GetBatchRunState(ctx context.Context, id int64) (string, error)
@@ -29,11 +33,13 @@ type Querier interface {
 	GetRunForUpdate(ctx context.Context, arg GetRunForUpdateParams) (Run, error)
 	GetRunGeneration(ctx context.Context, id int64) (int32, error)
 	GetRunGenerationForShare(ctx context.Context, id int64) (int32, error)
+	GetRunScope(ctx context.Context, runID int64) (RunScope, error)
 	InsertArtifact(ctx context.Context, arg InsertArtifactParams) (int64, error)
 	InsertChunk(ctx context.Context, arg InsertChunkParams) error
 	InsertDocument(ctx context.Context, arg InsertDocumentParams) error
 	InsertFetchedFile(ctx context.Context, arg InsertFetchedFileParams) error
 	InsertGap(ctx context.Context, arg InsertGapParams) error
+	InsertMembershipEvidence(ctx context.Context, arg InsertMembershipEvidenceParams) error
 	InsertPlannedItem(ctx context.Context, arg InsertPlannedItemParams) error
 	InsertProvision(ctx context.Context, arg InsertProvisionParams) error
 	InsertRelation(ctx context.Context, arg InsertRelationParams) error
@@ -45,12 +51,17 @@ type Querier interface {
 	ListDiscoveryRuns(ctx context.Context, country string) ([]ListDiscoveryRunsRow, error)
 	ListEmbedInputs(ctx context.Context, runID int64) ([]ListEmbedInputsRow, error)
 	ListExtractInputs(ctx context.Context, runID int64) ([]ListExtractInputsRow, error)
+	ListMembershipEvidence(ctx context.Context, runID int64) ([]RunMembershipEvidence, error)
 	ListPendingBatchItems(ctx context.Context, arg ListPendingBatchItemsParams) ([]RunItem, error)
 	ListPendingStageBatches(ctx context.Context, arg ListPendingStageBatchesParams) ([]int32, error)
+	ListRunDocuments(ctx context.Context, runID int64) ([]RunDocument, error)
 	ListRunGaps(ctx context.Context, arg ListRunGapsParams) ([]Gap, error)
 	ListRunItemCounts(ctx context.Context, runID int64) ([]ListRunItemCountsRow, error)
 	ListUnacceptedGapCounts(ctx context.Context, runID int64) ([]ListUnacceptedGapCountsRow, error)
 	MarkRunFromStates(ctx context.Context, arg MarkRunFromStatesParams) (int64, error)
+	PublishExpanded(ctx context.Context, arg PublishExpandedParams) (int64, error)
+	PublishFinal(ctx context.Context, arg PublishFinalParams) (int64, error)
+	PublishSeeds(ctx context.Context, arg PublishSeedsParams) (int64, error)
 	RecoverRun(ctx context.Context, id int64) error
 	ResetFailedItems(ctx context.Context, arg ResetFailedItemsParams) error
 	ResetOlderFailedStageItems(ctx context.Context, arg ResetOlderFailedStageItemsParams) error
@@ -58,6 +69,7 @@ type Querier interface {
 	StartRun(ctx context.Context, arg StartRunParams) error
 	UpdateRunItemFenced(ctx context.Context, arg UpdateRunItemFencedParams) (int64, error)
 	UpsertListing(ctx context.Context, arg UpsertListingParams) error
+	UpsertRunDocument(ctx context.Context, arg UpsertRunDocumentParams) error
 }
 
 var _ Querier = (*Queries)(nil)

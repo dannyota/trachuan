@@ -72,7 +72,7 @@ func (q *Queries) InsertGap(ctx context.Context, arg InsertGapParams) error {
 }
 
 const listRunGaps = `-- name: ListRunGaps :many
-SELECT gap.id, gap.run_id, gap.stage, gap.item_key, gap.kind, gap.detail, gap.accepted_at, gap.note, gap.created_at FROM gap JOIN run ON run.id = gap.run_id
+SELECT gap.id, gap.run_id, gap.stage, gap.item_key, gap.kind, gap.detail, gap.accepted_at, gap.note, gap.created_at, gap.source, gap.origin, gap.cause, gap.endpoint, gap.http_status, gap.evidence_ref FROM gap JOIN run ON run.id = gap.run_id
 WHERE run.country = $1 AND run.rel = $2 ORDER BY gap.stage, gap.item_key, gap.kind, gap.detail
 `
 
@@ -100,6 +100,12 @@ func (q *Queries) ListRunGaps(ctx context.Context, arg ListRunGapsParams) ([]Gap
 			&i.AcceptedAt,
 			&i.Note,
 			&i.CreatedAt,
+			&i.Source,
+			&i.Origin,
+			&i.Cause,
+			&i.Endpoint,
+			&i.HttpStatus,
+			&i.EvidenceRef,
 		); err != nil {
 			return nil, err
 		}

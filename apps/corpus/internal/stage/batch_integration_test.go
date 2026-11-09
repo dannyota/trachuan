@@ -39,7 +39,11 @@ func (*batchStage) Rows(_ context.Context, env Env, art artifact.Result) (func(c
 		return nil, err
 	}
 	return func(ctx context.Context, tx pgx.Tx, id int64) error {
-		_, execErr := tx.Exec(ctx, `INSERT INTO fetched_file (artifact_id, name, sha256, size, path) VALUES ($1, $2, 'hash', 1, 'path')`, id, string(data))
+		_, execErr := tx.Exec(ctx, `INSERT INTO document (artifact_id, key, country, source, source_id, vbpl_id, number, title, doc_type, issuer, issue_date, eff_from, eff_to, status_code, status_name, is_consolidated, has_content) VALUES ($1, 'vn:vbpl:1', 'vn', 'vbpl', '1', '1', '', '', '', '', '', '', '', '', '', false, false)`, id)
+		if execErr != nil {
+			return execErr
+		}
+		_, execErr = tx.Exec(ctx, `INSERT INTO fetched_file (artifact_id, name, sha256, size, path) VALUES ($1, $2, 'hash', 1, 'path')`, id, string(data))
 		return execErr
 	}, nil
 }

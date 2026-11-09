@@ -11,14 +11,17 @@ import (
 )
 
 const insertDocument = `-- name: InsertDocument :exec
-INSERT INTO document (artifact_id, key, vbpl_id, number, title, doc_type, issuer, issue_date, eff_from, eff_to, status_code, status_name, is_consolidated, has_content)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+INSERT INTO document (artifact_id, key, country, source, source_id, vbpl_id, number, title, doc_type, issuer, issue_date, eff_from, eff_to, status_code, status_name, is_consolidated, has_content)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
 `
 
 type InsertDocumentParams struct {
 	ArtifactID     int64
 	Key            string
-	VbplID         string
+	Country        string
+	Source         string
+	SourceID       string
+	VbplID         *string
 	Number         string
 	Title          string
 	DocType        string
@@ -36,6 +39,9 @@ func (q *Queries) InsertDocument(ctx context.Context, arg InsertDocumentParams) 
 	_, err := q.db.Exec(ctx, insertDocument,
 		arg.ArtifactID,
 		arg.Key,
+		arg.Country,
+		arg.Source,
+		arg.SourceID,
 		arg.VbplID,
 		arg.Number,
 		arg.Title,

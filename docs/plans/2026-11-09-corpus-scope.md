@@ -20,6 +20,7 @@
 - `chinhphu` safety: HTTPS only; pages on `vanban.chinhphu.vn`, files on `datafiles.chinhphu.vn`; no credentials, nonstandard ports or nonpublic addresses; redirects revalidated; cookies and postback tokens only in memory and never in artifacts or fixtures; named user agent; throttling and limits from budgets; a challenge or 403 pauses the source.
 - Recipes change for discover, expand, fetch and build; a frozen run never changes; the changes take effect in a new run.
 - chinhphu search requests the 500 cap; complete only when the reported total is below the cap, every page was read and distinct docids equal it; the empty marker is a complete zero; a missing detail page (HTTP 200, `Không tìm thấy văn bản này`) is not found.
+- Stages that call a narrow service (the chinhphu source at 1 in flight) use Plan 2's per-stage in-flight limit, not the worker-wide batch concurrency; after pulling new code, `corpus migrate` runs before the worker restarts (runbook).
 - Tests never call the network; fixtures are recorded and redacted by the primary. Files at most 400 lines; doc comments on exported symbols; errors wrapped with `%w`.
 
 ## Review Focus

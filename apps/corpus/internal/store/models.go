@@ -7,6 +7,8 @@ package store
 import (
 	"encoding/json"
 	"time"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Artifact struct {
@@ -33,20 +35,25 @@ type Chunk struct {
 }
 
 type Document struct {
-	ArtifactID     int64
-	Key            string
-	VbplID         string
-	Number         string
-	Title          string
-	DocType        string
-	Issuer         string
-	IssueDate      string
-	EffFrom        string
-	EffTo          string
-	StatusCode     string
-	StatusName     string
-	IsConsolidated bool
-	HasContent     bool
+	ArtifactID       int64
+	Key              string
+	VbplID           *string
+	Number           string
+	Title            string
+	DocType          string
+	Issuer           string
+	IssueDate        string
+	EffFrom          string
+	EffTo            string
+	StatusCode       string
+	StatusName       string
+	IsConsolidated   bool
+	HasContent       bool
+	Country          string
+	Source           string
+	SourceID         string
+	SourceUrl        *string
+	IdentityEvidence []byte
 }
 
 type FetchedFile struct {
@@ -55,18 +62,28 @@ type FetchedFile struct {
 	Sha256     string
 	Size       int64
 	Path       string
+	Source     string
+	Url        *string
+	Role       string
+	FetchedAt  *time.Time
 }
 
 type Gap struct {
-	ID         int64
-	RunID      int64
-	Stage      string
-	ItemKey    string
-	Kind       string
-	Detail     string
-	AcceptedAt *time.Time
-	Note       *string
-	CreatedAt  time.Time
+	ID          int64
+	RunID       int64
+	Stage       string
+	ItemKey     string
+	Kind        string
+	Detail      string
+	AcceptedAt  *time.Time
+	Note        *string
+	CreatedAt   time.Time
+	Source      *string
+	Origin      *string
+	Cause       *string
+	Endpoint    *string
+	HttpStatus  pgtype.Int4
+	EvidenceRef *string
 }
 
 type Listing struct {
@@ -117,6 +134,29 @@ type Run struct {
 	UpdatedAt  time.Time
 }
 
+type RunDocument struct {
+	RunID            int64
+	DocumentKey      string
+	Country          string
+	Source           string
+	SourceID         string
+	Class            string
+	Disposition      string
+	RawNumber        *string
+	NormalizedNumber *string
+	ReplacementKey   *string
+}
+
+type RunFailure struct {
+	RunID           int64
+	FailureIdentity string
+	Code            string
+	Stage           string
+	ItemKey         string
+	Reason          string
+	EvidenceRefs    json.RawMessage
+}
+
 type RunItem struct {
 	RunID      int64
 	Stage      string
@@ -130,4 +170,61 @@ type RunItem struct {
 	ArtifactID *int64
 	Message    *string
 	UpdatedAt  time.Time
+}
+
+type RunMembershipEvidence struct {
+	RunID          int64
+	DocumentKey    string
+	Stage          string
+	ItemKey        string
+	RuleKind       string
+	RuleValue      string
+	QueryIdentity  *string
+	Page           *string
+	ResponseSha256 string
+	ArtifactHash   string
+	EvidencePath   string
+	SupportState   string
+}
+
+type RunScope struct {
+	RunID               int64
+	SeedsSnapshot       []byte
+	SeedsHash           *string
+	ExpandedSnapshot    []byte
+	ExpandedHash        *string
+	FinalSnapshot       []byte
+	FinalHash           *string
+	FetchCloseInputHash *string
+}
+
+type RunSeedObservation struct {
+	RunID           int64
+	SeedKey         string
+	Stage           string
+	ItemKey         string
+	Completeness    string
+	ArtifactHash    string
+	ObservedTargets json.RawMessage
+}
+
+type RunSource struct {
+	RunID       int64
+	Source      string
+	State       string
+	PauseReason *string
+	EvidenceRef *string
+	PausedAt    *time.Time
+	ClearedAt   *time.Time
+}
+
+type RunSourceEvent struct {
+	ID          int64
+	RunID       int64
+	Source      string
+	Event       string
+	Reason      *string
+	EvidenceRef *string
+	ClearNote   *string
+	CreatedAt   time.Time
 }
