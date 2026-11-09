@@ -10,6 +10,72 @@ import (
 	"encoding/json"
 )
 
+const insertDocument = `-- name: InsertDocument :exec
+INSERT INTO document (artifact_id, key, vbpl_id, number, title, doc_type, issuer, issue_date, eff_from, eff_to, status_code, status_name, is_consolidated, has_content)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+`
+
+type InsertDocumentParams struct {
+	ArtifactID     int64
+	Key            string
+	VbplID         string
+	Number         string
+	Title          string
+	DocType        string
+	Issuer         string
+	IssueDate      string
+	EffFrom        string
+	EffTo          string
+	StatusCode     string
+	StatusName     string
+	IsConsolidated bool
+	HasContent     bool
+}
+
+func (q *Queries) InsertDocument(ctx context.Context, arg InsertDocumentParams) error {
+	_, err := q.db.Exec(ctx, insertDocument,
+		arg.ArtifactID,
+		arg.Key,
+		arg.VbplID,
+		arg.Number,
+		arg.Title,
+		arg.DocType,
+		arg.Issuer,
+		arg.IssueDate,
+		arg.EffFrom,
+		arg.EffTo,
+		arg.StatusCode,
+		arg.StatusName,
+		arg.IsConsolidated,
+		arg.HasContent,
+	)
+	return err
+}
+
+const insertFetchedFile = `-- name: InsertFetchedFile :exec
+INSERT INTO fetched_file (artifact_id, name, sha256, size, path)
+VALUES ($1, $2, $3, $4, $5)
+`
+
+type InsertFetchedFileParams struct {
+	ArtifactID int64
+	Name       string
+	Sha256     string
+	Size       int64
+	Path       string
+}
+
+func (q *Queries) InsertFetchedFile(ctx context.Context, arg InsertFetchedFileParams) error {
+	_, err := q.db.Exec(ctx, insertFetchedFile,
+		arg.ArtifactID,
+		arg.Name,
+		arg.Sha256,
+		arg.Size,
+		arg.Path,
+	)
+	return err
+}
+
 const upsertListing = `-- name: UpsertListing :exec
 INSERT INTO listing (run_id, query_key, item_key, payload)
 VALUES ($1, $2, $3, $4)

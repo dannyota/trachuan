@@ -23,6 +23,8 @@ type Querier interface {
 	GetRunGeneration(ctx context.Context, id int64) (int32, error)
 	GetRunGenerationForShare(ctx context.Context, id int64) (int32, error)
 	InsertArtifact(ctx context.Context, arg InsertArtifactParams) (int64, error)
+	InsertDocument(ctx context.Context, arg InsertDocumentParams) error
+	InsertFetchedFile(ctx context.Context, arg InsertFetchedFileParams) error
 	InsertGap(ctx context.Context, arg InsertGapParams) error
 	InsertPlannedItem(ctx context.Context, arg InsertPlannedItemParams) error
 	InsertRunItem(ctx context.Context, arg InsertRunItemParams) error
