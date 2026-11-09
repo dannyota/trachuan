@@ -8,5 +8,6 @@ Observations and experiments. Not project authority.
   Vietnam corpus.
 - [Dense embedding model for Vietnam](embedder-2026-11.md): model comparison,
   quantization, serving precision.
+- [Hybrid retrieval](retrieval-hybrid-2026-11.md): evaluation proposal.
 - [OAuth clients against aboutme](oauth-clients-2026-11.md): evidence for
   copying aboutme's OAuth server.
