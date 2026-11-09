@@ -120,6 +120,7 @@ Exceeding a build ceiling fails explicitly; it never drops rows to fit.
 | Build maximum documents; provisions; inserted chunks      | 10,000; 2,000,000; 500,000                              |
 | Build distinct normalized terms                           | 2,000,000                                               |
 | Build copy/update batch                                   | 2,000 rows; stream vectors rather than retain all       |
+| Build artifact file read                                  | At most 256 MiB per JSON file, checked before decoding  |
 | Build memory ceiling; maintenance_work_mem                | 8 GiB worker RSS; 512 MiB PostgreSQL                    |
 | Build/restore free disk before start; minimum during work | 30 GiB; 10 GiB                                          |
 | Build item deadline; dump/restore command deadline        | 50 minutes; 15 minutes each within the item deadline    |

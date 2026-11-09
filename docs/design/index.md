@@ -51,9 +51,12 @@ feeds calibration and eval, including retries after midnight.
 Build input hash is
 `stage.RecipeHash("build-input","1",country,rel, source_manifest_hash,decimal_schema_version)`.
 Verify all referenced artifact hashes and safe paths before decoding payloads;
-check byte sizes where declared and enforce streaming limits even when no size
-is declared. Never use the workshop's latest row for a document outside this
-inventory.
+check byte sizes where declared, and before decoding stat each artifact file
+against the per-file cap in [budgets](budgets.md#indexing); a file above it
+fails the item. Artifacts are immutable, content addressed and written by our
+own stages, so a file growing between the size check and the read is outside the
+threat model; the manifest hash still guards the bytes decoded. Never use the
+workshop's latest row for a document outside this inventory.
 
 Build recipe hash uses `stage.RecipeHash("build","corpus/1",recipe_json)`. Its
 fixed fields are `schema_version`, `schema_sha256`, `chunk_recipe_hash`,
