@@ -1,6 +1,6 @@
 # Corpus Scope Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. Route in this repository: Task 1 is a primary spike with recorded fixtures; Tasks 2 to 12 each go to one Codex `implementer` (`gpt-6.1-terra` high) with standing answers, resumed by session id; Task 11 is the primary's live run; the Claude `reviewer` reviews the whole branch after Task 12. Depends on Plan 2 (index and evaluation) being merged first; this branch is rebased onto it.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. Route in this repository: Task 1 is a primary spike with recorded fixtures; Tasks 2 to 12 each go to one Codex `implementer` (`gpt-6.1-terra` high) with standing answers, resumed by session id; Task 13 is the primary's live run; the Claude `reviewer` reviews the whole branch after Task 12. Depends on Plan 2 (index and evaluation) being merged first; this branch is rebased onto it.
 
 **Goal:** A new Vietnam run reaches the documents agents need: named numbers and one-hop relation targets from VBPL, exact-mode keyword searches with an audited loss comparison, retry of source gaps, and central documents VBPL lacks from `vanban.chinhphu.vn` (starting with AI), all with explicit provenance.
 
@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- VBPL is the only primary source; `chinhphu` admits a central document only after a complete exact VBPL number lookup returns zero matches and no active VBPL member holds its normalized number; VBPL always wins and a hand-over records `source_replaced`.
+- VBPL is the only primary source; `chinhphu` admits a central document only after a complete exact VBPL number lookup returns zero matches and no active VBPL member holds its normalized number; a later VBPL match replaces it only under the hand-over decision table in sources.md (matching number, issuer and issue date), recording `source_replaced`; conflicting or missing evidence keeps both with `source_identity_ambiguous`.
 - Expansion is one hop, explicit outward VBPL ids only, never recursive, never inbound; context never seeds expansion; the expected set closes after `expand`.
 - Named lookups: `optionDoc: docNum`, `matchMode: exact`, `agencyLevel: TRUNG_UONG`, all pages, local equality on normalized numbers; zero is `named_document_missing`, several is `named_document_ambiguous`; never pick one.
 - Keyword queries use `optionDoc: title`, `matchMode: exact`; a run with the new list is frozen only after the comparison artifact accounts for every old-only id.
@@ -25,7 +25,7 @@
 
 - A gateway or source failure read as "no document", so a missing lookup admits a duplicate secondary document or drops context (Task 5 `TestNamed_LookupFailureIsGapNotAbsence`, Task 9 `TestAdmit_LookupFailureDefers`).
 - A number collision between distinct documents merged into one identity (Task 3 `TestNormalize_CyrillicLookalikes`, Task 9 `TestAdmit_CollisionIsIdentityAmbiguous`).
-- Expansion that recurses or grows after the set closes (Task 6 `TestExpand_ContextNeverSeeds`, `TestResolve_NewTargetIsScopeChanged`).
+- Expansion that recurses or grows after the set closes (Task 6 `TestExpand_ContextNeverSeeds`, `TestFinalize_NewTargetIsScopeChanged`).
 - Session tokens or cookies written into artifacts or fixtures (Task 8 `TestClient_NoTokenInArtifacts`).
 - Retry on start that resets fetch but leaves stale downstream rows (Task 7 `TestStart_RetryRebuildsDependents`).
 
@@ -80,11 +80,11 @@
 
 ### Task 6: Expand stage
 
-**Files:** Create `apps/corpus/internal/stage/expand/` with tests; modify expected-set loading (`discover/expected.go`) and `relate` resolution for `scope_changed`; migration for membership class and supporting seeds if data.md requires columns.
+**Files:** Create `apps/corpus/internal/stage/expand/` with tests; modify expected-set loading (`discover/expected.go`); drift enforcement in the fetch-close finalization hook from Task 2 (qualified fetch targets compared with the frozen active membership); membership storage comes from Task 2.
 
 **Interfaces:** `expand.New(client *vbpl.Client) *expand.Stage` (name `expand`), registered between `discover` and `fetch` in Task 12; `relation_context` membership with supporting seeds, codes and evidence hashes.
 
-- [ ] Tests first: `TestExpand_QualifyingKindsOutwardOnly`, `TestExpand_ContextNeverSeeds`, `TestExpand_ExcludesRenditionsAndSelfLinks`, `TestExpand_SourceFailureKeepsKnownTargets`, `TestExpand_TwoObservationWithdrawal`, `TestResolve_NewTargetIsScopeChanged`.
+- [ ] Tests first: `TestExpand_QualifyingKindsOutwardOnly`, `TestExpand_ContextNeverSeeds`, `TestExpand_ExcludesRenditionsAndSelfLinks`, `TestExpand_SourceFailureKeepsKnownTargets`, `TestExpand_RemovalNeedsCompleteCurrentSupport`, `TestExpand_DepartedSeedDropsSupport`, `TestExpand_FailedObservationRetainsTargets`, `TestFinalize_NewTargetIsScopeChanged`, `TestFinalize_RetainedRemovalKeyIsDrift`, `TestDrift_GapCannotBeAccepted`.
 - [ ] Implement per sources.md "One-hop relation context"; commit `feat(corpus): expand stage for one-hop relation context`.
 
 ### Task 7: Retry source gaps on start
@@ -119,16 +119,16 @@
 
 ### Task 11: Build and evaluation integration (Plan 2 code)
 
-**Files:** Modify `apps/corpus/internal/stage/build/` (inventory version 2 with expand evidence and membership in the identity hash, class and provenance loading, exclusions), `internal/corpusdb/schema.sql` (schema version 2, `document.class`), `internal/retrieval` only if class reaches responses, `apps/corpus/internal/evaluation/mapping.go` (reject identity maps bound to inventory version 1).
+**Files:** Modify `apps/corpus/internal/stage/build/` (inventory version 2 with expand evidence and membership in the identity hash, class and provenance loading, exclusions, dump and restore validation of schema version 2), `internal/corpusdb/schema.sql` and `schema.go` (`SchemaVersion = 2`, `document.class`), `internal/retrieval` release reading (accept schema version 2, refuse 1 with a clear error), `internal/retrieval` only if class reaches responses, `apps/corpus/internal/evaluation/mapping.go` (reject identity maps bound to inventory version 1).
 
 - [ ] Tests first: `TestInventory_V2IncludesExpandEvidence`, `TestInventory_V1MapRejected`, `TestLoad_ClassColumnAndProvenance`, `TestSchema_Version2ClassCheck`, `TestBuild_SecondaryMetadataOnly`.
 - [ ] Implement per index.md, corpus-schema.md and evaluation.md as revised; commit `feat(corpus): build and evaluation for membership classes and secondary provenance`.
 
 ### Task 12: Wiring, config and proofs
 
-**Files:** Modify `workflow/registry.go` (stage order `discover, expand, fetch, ...`), config (`CORPUS_CHINHPHU_*` settings), worker, CLI status, runbook; proof `apps/corpus/test/proof/scope_test.go`.
+**Files:** Modify `workflow/registry.go` (stage order `discover, expand, fetch, ...`), config (`CORPUS_CHINHPHU_*` settings), worker, CLI status and a new `corpus source-resume <cc> <rel> <source>` command that clears a source pause, runbook; proof `apps/corpus/test/proof/scope_test.go`.
 
-- [ ] Tests first: `TestRegistry_ExpandAfterDiscover`, `TestReplay_Histories` still passes, `TestProof_ScopeRunWithExpansionAndSecondary` (fake VBPL and chinhphu servers, under 60 seconds).
+- [ ] Tests first: `TestRegistry_ExpandAfterDiscover`, `TestSourceResume_ClearsPauseExplicitly`, `TestSourceResume_PausedSourceStaysPausedAfterRestart`, `TestReplay_Histories` still passes, `TestProof_ScopeRunWithExpansionAndSecondary` (fake VBPL and chinhphu servers, under 60 seconds).
 - [ ] Implement; commit `feat(corpus): wire expand and the secondary source`.
 
 ### Task 13: Live run and coverage (primary)
