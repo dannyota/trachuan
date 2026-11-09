@@ -95,6 +95,43 @@ default `s3-han02.fptcloud.com`.
 Submission polling every 5 minutes; `deadline_at` 26 hours after submission;
 `preparing` rows become uncertain after 10 minutes.
 
+## Indexing
+
+Recipe 1 baseline values below implement the
+[study](../research/retrieval-hybrid-2026-11.md#reproduce-before-tuning). New
+operational limits are proposed ceilings, not measured throughput claims.
+Exceeding a build ceiling fails explicitly; it never drops rows to fit.
+
+| Limit or parameter                                        | Value                                                   |
+| --------------------------------------------------------- | ------------------------------------------------------- |
+| Chunk rough body target; minimum substantive content      | 512 rough tokens; 20 normalized runes                   |
+| Prefix title and each structural heading; number          | 220 runes each; 128 runes                               |
+| Document input cap, including special tokens              | 2,048 model tokens (ADR 0009)                           |
+| Document embedding batch                                  | At most 16 texts, in chunk ordinal order                |
+| Document HTTP body; admission                             | 1 MiB; 1 active, 1 queued, 1 s maximum queue wait       |
+| Document request deadline; client timeout                 | 120 s total; 125 s                                      |
+| Query batch; HTTP body; client timeout                    | 1 text; existing 64 KB request cap; 2 s                 |
+| Query ONNX threads                                        | 2 intra-op, 1 inter-op, sequential execution            |
+| Vector validation                                         | Finite float32; absolute L2 norm error at most 0.001    |
+| Lexical dimensions; k1; b                                 | 1,048,576; 1.2; 0.75                                    |
+| Sparse nonzeros per chunk                                 | At most 16,000; overflow fails build, no pruning        |
+| HNSW construction                                         | m=16, ef_construction=64, cosine; no sparse index       |
+| Build concurrency                                         | 1 database build/restore per worker, 1 SQL index worker |
+| Build maximum documents; provisions; inserted chunks      | 10,000; 2,000,000; 500,000                              |
+| Build distinct normalized terms                           | 2,000,000                                               |
+| Build copy/update batch                                   | 2,000 rows; stream vectors rather than retain all       |
+| Build memory ceiling; maintenance_work_mem                | 8 GiB worker RSS; 512 MiB PostgreSQL                    |
+| Build/restore free disk before start; minimum during work | 30 GiB; 10 GiB                                          |
+| Build item deadline; dump/restore command deadline        | 50 minutes; 15 minutes each within the item deadline    |
+| Eval item deadline; ad-hoc exact query deadline           | 50 minutes; 60 s per query                              |
+| Eval artifact/cache total                                 | 2 GiB; fail explicitly if exceeded                      |
+
+The shared activity timeout and heartbeat still apply. Cancel work before its
+item deadline, leaving retryable infrastructure failures; resource estimates do
+not authorize raising ceilings. The primary measures local RSS, disk, build
+time, sparse nnz and dump size before accepting these limits. No new paid
+service is added. Host latency and memory acceptance remain separate.
+
 ## Disk budget (host, estimates)
 
 | Item                                              | GB       |
@@ -112,9 +149,28 @@ in the acceptance gates leaves room for one unexpected release.
 
 ## Retrieval
 
-Dense candidates 50, lexical candidates 50, RRF k 60 (banhmi's measured
-settings). Golden-set floors: recall@8 0.90, MRR@8 0.66, current-law precision
-0.99, abstention 0.95. Taxonomy floors are in [taxonomy](taxonomy.md).
+| Recipe 1 parameter                          | Value                                                                          |
+| ------------------------------------------- | ------------------------------------------------------------------------------ |
+| Dense / lexical candidate depths            | 50 / 50                                                                        |
+| RRF k; dense / lexical weights              | 60; 1 / 0.5                                                                    |
+| Validated document-number lexical weight    | 1                                                                              |
+| ANN pool; ef_search                         | max(400, 24 times dense depth); min(pool, 1,000)                               |
+| ANN scan settings                           | strict_order; force_custom_plan; max_scan_tuples=20,000; scan_mem_multiplier=1 |
+| Hydration pool                              | First min(union size, 8 times response limit) fused chunks                     |
+| Per-document cap; backfill                  | 3; demoted hits in rank order until response full                              |
+| Default response limit; maximum             | 8; 50                                                                          |
+| Evidence text per hit                       | 14,000 Unicode code points, then source spans and read pointer                 |
+| Relations per hit; evidence per relation    | 20; 1,000 Unicode code points, omissions explicit                              |
+| Document-reference parser                   | At most 8 references, 128 runes per reference                                  |
+| Serving database statement deadline         | 2 s; no unbounded exact fallback                                               |
+| Evaluation exact arm cache depth            | Dense 200; lexical 100                                                         |
+| Provisional calibration threshold sentinels | -1 (all finite cosines pass); 2 (all abstain)                                  |
+
+Recipe behavior is in [retrieval recipe](retrieval-recipe.md); the threshold is
+derived by [calibration](evaluation.md#provisional-calibration), never assumed
+to be the historical Qwen threshold. Golden-set floors have one home in
+[testing](../../instructions/testing.md); taxonomy floors in
+[taxonomy](taxonomy.md).
 
 ## Temporal (self-hosted on the MacBook)
 

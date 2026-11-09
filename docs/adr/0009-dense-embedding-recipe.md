@@ -75,3 +75,7 @@ tokens; record the change in this ADR's History.
 - 2026-11-09: final review; added caveats, Mac-only labels and the host
   fallback, after rescoring with banhmi's alternate document numbers (counts
   unchanged, MRR@8 slightly higher).
+- 2026-11-09: the primary selected the Python service in
+  [ADR 0011](0011-python-embedder-service.md). It reports both runtime recipes
+  and rejects over-cap input without truncation; this record still owns the
+  model, tokenizer, pooling, dimensions and precision choices.

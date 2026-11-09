@@ -82,12 +82,12 @@ signed dump to S3. Decision and alternatives:
 - A stage plans its items, processes each into an artifact, and resolves each
   artifact against the run. Processing is a function of the item input and the
   recipe; it writes the artifact. The artifact's rows (`document`,
-  `fetched_file`, `provision`, `relation`) are loaded from the artifact files,
-  so an adopted directory without a committed row yields the same rows as a
-  fresh one. Resolving is a function of the artifact and the run; it writes run
-  rows (`listing`) and gaps. When planning already knows an item's input hash
-  and the artifact exists, processing is skipped and only resolving runs, so a
-  reused artifact still yields this run's gaps.
+  `fetched_file`, `provision`, `relation`, `chunk`) are loaded from the artifact
+  files, so an adopted directory without a committed row yields the same rows as
+  a fresh one. Resolving is a function of the artifact and the run; it writes
+  run rows (`listing`) and gaps. When planning already knows an item's input
+  hash and the artifact exists, processing is skipped and only resolving runs,
+  so a reused artifact still yields this run's gaps.
 - Artifacts are immutable and content addressed:
   `artifacts/<stage>/<input_hash>-<recipe_hash>/` with `MANIFEST.sha256` (sorted
   `<sha256>  <relative path>` lines); the artifact sha256 is the manifest's
@@ -122,17 +122,32 @@ signed dump to S3. Decision and alternatives:
 
 ## Stages
 
-| Stage            | Input                                             | Output                                                           | Completeness rule                                                                                                                                                           |
-| ---------------- | ------------------------------------------------- | ---------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `discover`       | source list YAML; previous release manifest       | expected document set with source modified dates                 | full listing per source every run; a document absent from two consecutive listings is marked `withdrawn` and kept with a gap                                                |
-| `fetch`          | expected set                                      | metadata JSON, every listed attachment, hashes                   | attachments use a verified matching local cache entry or a fresh download; a changed attachment reprocesses the document; a missing attachment is a gap                     |
-| `extract`        | files                                             | structure tree with verbatim text                                | parser limits in [budgets](budgets.md); article count matches the table of contents; table and appendix counts match the source inventory; empty or truncated text is a gap |
-| `relate`         | VBPL references, text                             | relations with kind, evidence, affected provisions when captured | never guessed; unknown targets are gaps                                                                                                                                     |
-| `chunk`, `embed` | trees                                             | chunks, dense and sparse vectors under the release recipes       | vector count equals chunk count; dimensions equal the recipe                                                                                                                |
-| `classify`       | trees, vectors, taxonomy, seeds                   | assignments                                                      | every article has an assignment or an "unassigned" gap                                                                                                                      |
-| `build`          | all gold tables                                   | local `corpus_<cc>_<rel>` database                               | schema template applied; `release` row written                                                                                                                              |
-| `eval`           | local database, golden set, taxonomy held-out set | report; diff against the previous release                        | floors in [testing](../../instructions/testing.md) and [taxonomy](taxonomy.md)                                                                                              |
-| `release`        | evaluated database                                | `corpus_<cc>_<rel>.dump`, `manifest.json`, `manifest.sig` in S3  | refused unless every expected item is done or a gap, every gap is accepted, and eval passed                                                                                 |
+| Stage      | Input                                       | Output                                                           | Completeness rule                                                                                                                                                           |
+| ---------- | ------------------------------------------- | ---------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `discover` | source list YAML; previous release manifest | expected document set with source modified dates                 | full listing per source every run; a document absent from two consecutive listings is marked `withdrawn` and kept with a gap                                                |
+| `fetch`    | expected set                                | metadata JSON, every listed attachment, hashes                   | attachments use a verified matching local cache entry or a fresh download; a changed attachment reprocesses the document; a missing attachment is a gap                     |
+| `extract`  | files                                       | structure tree with verbatim text                                | parser limits in [budgets](budgets.md); article count matches the table of contents; table and appendix counts match the source inventory; empty or truncated text is a gap |
+| `relate`   | VBPL references, text                       | relations with kind, evidence, affected provisions when captured | never guessed; unknown targets are gaps                                                                                                                                     |
+| `chunk`    | Done fetch and extract artifacts            | Chunks and source-span/omission report                           | [Chunk contract](chunk.md); metadata changes invalidate prefixes                                                                                                            |
+| `embed`    | Verified chunk artifacts                    | Binary dense vectors, ordinal/token index and gaps               | [Embed contract](embedder.md#embed-stage); each ordinal is embedded or explicitly rejected                                                                                  |
+| `classify` | trees, vectors, taxonomy, seeds             | assignments                                                      | every article has an assignment or an "unassigned" gap                                                                                                                      |
+| `build`    | Frozen upstream artifact inventory          | Local corpus database and verified custom dump                   | [Build contract](index.md); shared schema, dense/BM25 counts, empty taxonomy, provisional threshold                                                                         |
+| `eval`     | Verified build, fixtures and identity map   | Reports, exact/ANN arm caches and previous diff                  | [Eval contract](evaluation.md); floor failure is reported, incomplete scoring fails the stage                                                                               |
+| `release`  | evaluated database                          | `corpus_<cc>_<rel>.dump`, `manifest.json`, `manifest.sig` in S3  | refused unless every expected item is done or a gap, every gap is accepted, and eval passed                                                                                 |
+
+The index baseline appends `chunk`, `embed`, `build`, `eval` to the existing
+registry and frozen run snapshot. `classify` and `release` remain future stages;
+the baseline does not register placeholders for them. Build computes sparse
+vectors because BM25 needs corpus-wide statistics; there is no lexical stage.
+After a completed eval the run is `evaluated`, even when measured quality fails;
+status also shows `quality_pass` and `release_eligible`, never just "passed".
+Existing terminal/generation rules still fence every stage commit.
+
+Build artifacts contain the exact dump that later release work may upload; eval
+emits a sidecar bound to its hash. Signing, manifest production and host
+verification are designed together in the host work. Nothing in this baseline
+sets `release_eligible` true. Taxonomy and filtered evaluation stay out of
+scope.
 
 VBPL ingest rules:
 
@@ -209,11 +224,12 @@ on the row.
 
 ## Release artifact
 
-`manifest.json` binds: `rel`, `country`, `schema_version`, `dense_recipe`,
-`lexical_recipe`, `taxonomy_version`, source manifest hash, dump `sha256` and
-size, evaluation report hash, built-at, worker version. `manifest.sig` is an
-Ed25519 signature (minisign format) made with a key on the MacBook; the host
-holds only the public key. The dump is produced with
+The future `manifest.json` binds the versioned release metadata in
+[data](data.md), dump `sha256` and size, evaluation report hash, built-at and
+worker version. ADR 0010's chunk and retrieval fields must reach the producer
+and host verifier together; the index baseline defines no partial manifest.
+`manifest.sig` is an Ed25519 signature (minisign format) made with a key on the
+MacBook; the host holds only the public key. The dump is produced with
 `--no-owner --no-privileges`.
 
 ## Proofs before unattended releases

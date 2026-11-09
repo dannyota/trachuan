@@ -54,14 +54,17 @@ separate command run by the owner ([deployment](deployment.md)).
 
 ## Database roles
 
-| Role        | Where     | May                                                                                                                    | May not                           |
-| ----------- | --------- | ---------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
-| `server`    | host      | read any `corpus_*`; read and write `auth` tables                                                                      | create or drop databases          |
-| `activator` | host, CLI | create and drop `corpus_*` databases; write `auth.corpus_release`, `auth.release_journal`, `auth.retired_release` only | read or write other `auth` tables |
-| `restorer`  | host, CLI | restore into one new `corpus_*` database                                                                               | touch `auth`; superuser rights    |
-| `pipeline`  | MacBook   | read and write the local workshop database                                                                             | connect to the host               |
+| Role             | Where             | May                                                                                                                    | May not                             |
+| ---------------- | ----------------- | ---------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| `server`         | host              | read any `corpus_*`; read and write `auth` tables                                                                      | create or drop databases            |
+| `activator`      | host, CLI         | create and drop `corpus_*` databases; write `auth.corpus_release`, `auth.release_journal`, `auth.retired_release` only | read or write other `auth` tables   |
+| `restorer`       | host, CLI         | restore into one new `corpus_*` database                                                                               | touch `auth`; superuser rights      |
+| `pipeline`       | MacBook           | read and write the local workshop database                                                                             | connect to the host                 |
+| `corpus_builder` | MacBook, proposed | create and own local corpus build databases; separate connection                                                       | read auth/workshop; connect to host |
 
 The server never writes corpus data. The pipeline never connects to the host.
+The proposed local builder needs owner approval for CREATEDB; its actual scope
+and name guards are in [index construction](index.md#database-lifecycle).
 Activation has its own narrow identity; this amends the earlier wording that
 "the pipeline never touches auth"
 ([ADR 0003](../adr/0003-postgres-per-release-corpus.md) History).
@@ -69,9 +72,12 @@ Activation has its own narrow identity; this amends the earlier wording that
 ## Repository layout
 
 ```text
-apps/server      Go: API, MCP, OAuth, auth, retrieval
+apps/server      Go: API, MCP, OAuth, auth; imports shared retrieval
 apps/web         Nuxt 4: public pages, search, reader, account
 apps/corpus      Go: Temporal worker, stage activities, release and activation commands
+apps/embedder    Python, uv: query ONNX CPU and document PyTorch MPS runtimes
+internal/retrieval  Go: shared search and lexical encoding
+internal/corpusdb   Go: embedded corpus schema template and schema version
 packages/schema  OpenAPI document and generated TypeScript client
 deploy/aws       OpenTofu root and modules
 deploy/host      cloud-init, install.sh, Quadlet units, pgBackRest, alerts
