@@ -76,11 +76,13 @@ signed dump to S3. Decision and alternatives:
 
 - A stage plans its items, processes each into an artifact, and resolves each
   artifact against the run. Processing is a function of the item input and the
-  recipe; it writes the artifact and its rows (`document`, `fetched_file`,
-  `provision`, `relation`). Resolving is a function of the artifact and the run;
-  it writes run rows (`listing`) and gaps. When planning already knows an item's
-  input hash and the artifact exists, processing is skipped and only resolving
-  runs, so a reused artifact still yields this run's gaps.
+  recipe; it writes the artifact. The artifact's rows (`document`,
+  `fetched_file`, `provision`, `relation`) are loaded from the artifact files,
+  so an adopted directory without a committed row yields the same rows as a
+  fresh one. Resolving is a function of the artifact and the run; it writes run
+  rows (`listing`) and gaps. When planning already knows an item's input hash
+  and the artifact exists, processing is skipped and only resolving runs, so a
+  reused artifact still yields this run's gaps.
 - Artifacts are immutable and content addressed:
   `artifacts/<stage>/<input_hash>-<recipe_hash>/` with `MANIFEST.sha256` (sorted
   `<sha256>  <relative path>` lines); the artifact sha256 is the manifest's
@@ -132,12 +134,17 @@ VBPL ingest rules:
 - `discover` lists every query until two consecutive passes return the same id
   set, at most the pass limit in [budgets](budgets.md); otherwise the query item
   gets gap `listing_unstable` and the expected set uses the union of the passes.
-  A document is `withdrawn` when the queries that listed it in the most recent
-  earlier eligible run (same country, `discover` completed, no unaccepted
-  `listing_unstable`; releases ordered by date, then sequence) no longer list it
-  now and did not list it in that run either; one absence never withdraws. A
-  document listed earlier only by queries no longer in the source list leaves
-  the expected set with gap `scope_removed`.
+  A listing is complete when its query item is done without a `listing_unstable`
+  gap; a query's identity is the hash of its definition (agencies and keyword).
+  Earlier runs of the same country are ordered by date, then sequence. For a
+  document listed by some query in an earlier complete listing, take the queries
+  that ever listed it and still exist: it is `withdrawn` when every one of them
+  has a complete listing in this run and in its most recent earlier complete
+  listing, and both omit the document. If any of those listings is incomplete,
+  the document stays expected and is fetched by id. A document whose listing
+  queries are all gone from the source list is `scope_removed`. Withdrawn and
+  scope-removed documents stay in the expected set as gap items that are never
+  fetched.
 - `fetch` stores attachments as `files/<sha256>` and maps original names in
   `files.json`; each download attempt writes a fresh temporary file and is
   bounded by the per-file limit while streaming. API responses above the
