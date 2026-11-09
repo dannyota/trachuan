@@ -58,7 +58,7 @@ No model reviews its own work. The primary states the route in every brief. Loca
 
 - Small releases, one change per patch tag. GitHub CI is the gate; a tag and a deploy need green CI on that exact commit.
 - Write the failing test first, then the smallest correct change. Follow nearby code; do not add features, refactors or files beyond the brief.
-- Keep files small: Markdown at most 300 lines, non-test code at most 400 (`scripts/check-lengths.sh`, enforced in the pre-commit hook). Split by concern, one concern per file, named after it.
+- Keep files small: Markdown at most 300 lines (plans in `docs/plans/` exempt), non-test code at most 400 (`scripts/check-lengths.sh`, enforced in the pre-commit hook). Split by concern, one concern per file, named after it.
 - Each fact has one home. Plans are deleted when done; design, ADRs, code and runbooks remain.
 - Never commit secrets, personal data or user questions. The repository may become public.
 - Plain words, active voice, no em dashes, no plan or task IDs in code or living docs. Agent-only files (this file, `instructions/`, `.claude/`, `.codex/`, `docs/plans/`) stay minified: one line per paragraph or list item.

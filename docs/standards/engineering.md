@@ -23,8 +23,10 @@ own after every plan is gone. Do not use em dashes.
   file, command or value instead of "it" or "some".
 - Markdown that people read wraps at 80 columns (Prettier). Agent-only files
   stay minified: one line per paragraph or list item.
-- Markdown files are at most 300 lines; split by topic. Non-test code files are
-  at most 400 lines; split by concern. `scripts/check-lengths.sh` enforces both.
+- Markdown files are at most 300 lines; split by topic. Plans under
+  `docs/plans/` are exempt because they are deleted when their work lands.
+  Non-test code files are at most 400 lines; split by concern.
+  `scripts/check-lengths.sh` enforces both.
 - Comments explain why, not what. A comment that restates the code is deleted.
 - Verify before asserting: cite first-party documentation for product behavior
   and mark what stays unverified.

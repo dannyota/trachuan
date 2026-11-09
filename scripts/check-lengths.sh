@@ -31,7 +31,8 @@ check() {
   done
 }
 
-check "$MD_MAX" < <(git ls-files -- '*.md')
+# Plans under docs/plans/ are agent-only and deleted when their work lands.
+check "$MD_MAX" < <(git ls-files -- '*.md' | grep -Ev '^docs/plans/')
 check "$CODE_MAX" < <(
   git ls-files -- '*.go' '*.ts' '*.vue' '*.mjs' '*.js' '*.sh' |
     grep -Ev "$generated" | grep -Ev "$tests" || true
