@@ -1,7 +1,7 @@
 # Corpus pipeline
 
 The write path builds a corpus release on the owner's MacBook and publishes a
-signed dump to S3. Decision and alternatives:
+signed dump to OCI Object Storage. Decision and alternatives:
 [ADR 0008](../adr/0008-write-path-temporal-self-hosted.md).
 
 ## Shape
@@ -122,18 +122,18 @@ signed dump to S3. Decision and alternatives:
 
 ## Stages
 
-| Stage      | Input                                       | Output                                                           | Completeness rule                                                                                                                                                           |
-| ---------- | ------------------------------------------- | ---------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `discover` | source list YAML; previous release manifest | expected document set with source modified dates                 | full listing per source every run; a document absent from two consecutive listings is marked `withdrawn` and kept with a gap                                                |
-| `fetch`    | expected set                                | metadata JSON, every listed attachment, hashes                   | attachments use a verified matching local cache entry or a fresh download; a changed attachment reprocesses the document; a missing attachment is a gap                     |
-| `extract`  | files                                       | structure tree with verbatim text                                | parser limits in [budgets](budgets.md); article count matches the table of contents; table and appendix counts match the source inventory; empty or truncated text is a gap |
-| `relate`   | VBPL references, text                       | relations with kind, evidence, affected provisions when captured | never guessed; unknown targets are gaps                                                                                                                                     |
-| `chunk`    | Done fetch and extract artifacts            | Chunks and source-span/omission report                           | [Chunk contract](chunk.md); metadata changes invalidate prefixes                                                                                                            |
-| `embed`    | Verified chunk artifacts                    | Binary dense vectors, ordinal/token index and gaps               | [Embed contract](embedder.md#embed-stage); each ordinal is embedded or explicitly rejected                                                                                  |
-| `classify` | trees, vectors, taxonomy, seeds             | assignments                                                      | every article has an assignment or an "unassigned" gap                                                                                                                      |
-| `build`    | Frozen upstream artifact inventory          | Local corpus database and verified custom dump                   | [Build contract](index.md); shared schema, dense/BM25 counts, empty taxonomy, provisional threshold                                                                         |
-| `eval`     | Verified build, fixtures and identity map   | Reports, exact/ANN arm caches and previous diff                  | [Eval contract](evaluation.md); floor failure is reported, incomplete scoring fails the stage                                                                               |
-| `release`  | evaluated database                          | `corpus_<cc>_<rel>.dump`, `manifest.json`, `manifest.sig` in S3  | refused unless every expected item is done or a gap, every gap is accepted, and eval passed                                                                                 |
+| Stage      | Input                                       | Output                                                                          | Completeness rule                                                                                                                                                           |
+| ---------- | ------------------------------------------- | ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `discover` | source list YAML; previous release manifest | expected document set with source modified dates                                | full listing per source every run; a document absent from two consecutive listings is marked `withdrawn` and kept with a gap                                                |
+| `fetch`    | expected set                                | metadata JSON, every listed attachment, hashes                                  | attachments use a verified matching local cache entry or a fresh download; a changed attachment reprocesses the document; a missing attachment is a gap                     |
+| `extract`  | files                                       | structure tree with verbatim text                                               | parser limits in [budgets](budgets.md); article count matches the table of contents; table and appendix counts match the source inventory; empty or truncated text is a gap |
+| `relate`   | VBPL references, text                       | relations with kind, evidence, affected provisions when captured                | never guessed; unknown targets are gaps                                                                                                                                     |
+| `chunk`    | Done fetch and extract artifacts            | Chunks and source-span/omission report                                          | [Chunk contract](chunk.md); metadata changes invalidate prefixes                                                                                                            |
+| `embed`    | Verified chunk artifacts                    | Binary dense vectors, ordinal/token index and gaps                              | [Embed contract](embedder.md#embed-stage); each ordinal is embedded or explicitly rejected                                                                                  |
+| `classify` | trees, vectors, taxonomy, seeds             | assignments                                                                     | every article has an assignment or an "unassigned" gap                                                                                                                      |
+| `build`    | Frozen upstream artifact inventory          | Local corpus database and verified custom dump                                  | [Build contract](index.md); shared schema, dense/BM25 counts, empty taxonomy, provisional threshold                                                                         |
+| `eval`     | Verified build, fixtures and identity map   | Reports, exact/ANN arm caches and previous diff                                 | [Eval contract](evaluation.md); floor failure is reported, incomplete scoring fails the stage                                                                               |
+| `release`  | evaluated database                          | `corpus_<cc>_<rel>.dump`, `manifest.json`, `manifest.sig` in OCI Object Storage | refused unless every expected item is done or a gap, every gap is accepted, and eval passed                                                                                 |
 
 The index baseline appends `chunk`, `embed`, `build`, `eval` to the existing
 registry and frozen run snapshot. `classify` and `release` remain future stages;
@@ -193,36 +193,39 @@ metadata (first-party docs read 2026-11-08), so the design does not rely on
 either. Before calling it, the activity writes a `submission` row with a new
 128-bit `id` (32 hex characters) in state `preparing`, holding the ordered item
 list and its hash, and appends the same record as `submissions/<id>.json` to the
-intent log on S3 (or the external disk), which is never part of a checkpoint and
-is never deleted. Every `custom_id` is `<id>-<item index, six digits>`, 39
-characters from the provider's allowed set `[a-zA-Z0-9_-]`; the index maps to
-the item key through the ordered list in the intent record. The activity creates
-the batch and writes the batch id to the row and to `submissions/<id>.batch`
-(`submitted`) before anything else. After storage loss,
-`corpus submissions --rebuild` reconstructs rows from the intent log: a record
-with a `.batch` file resumes polling; a record without one is `uncertain`. A
-`preparing` row older than ten minutes with no batch id, found by any later
-activity start, becomes `uncertain`; so does a create call that fails without a
-response. Uncertain rows stop the stage. `corpus submissions` shows them with
-request count and time window; the owner lists batches in that window and, for
-each candidate that has ended, downloads its results and checks the `custom_id`
-prefix. A match attaches the batch id; no match after the provider's 24-hour
-processing window marks the row `abandoned`, which allows exactly one new
-submission. Polling runs every five minutes until the provider reports an end
-state or `deadline_at` (26 hours after submission) passes, which marks the row
-`failed`. `corpus cancel` calls the cancel endpoint for in-flight batches and
-marks their rows `cancelling`; the provider may still finish some requests after
-acknowledging. Polling continues until the provider reports the end state, then
-results are downloaded and every item outcome and the cost are recorded before
-the row becomes `cancelled`. If the end state does not arrive by `deadline_at`,
-the row becomes `failed` with a message for operator review. A new run for the
-same release does not submit while any earlier submission is non-terminal
-(`preparing`, `submitted`, `uncertain`, `cancelling`). Result download and
-per-item application are idempotent on `custom_id`; malformed results become
-`failed` items with at most two retries, then gaps. Cost per batch is recorded
-on the row.
+intent log on OCI Object Storage (or the external disk), which is never part of
+a checkpoint and is never deleted. Every `custom_id` is
+`<id>-<item index, six digits>`, 39 characters from the provider's allowed set
+`[a-zA-Z0-9_-]`; the index maps to the item key through the ordered list in the
+intent record. The activity creates the batch and writes the batch id to the row
+and to `submissions/<id>.batch` (`submitted`) before anything else. After
+storage loss, `corpus submissions --rebuild` reconstructs rows from the intent
+log: a record with a `.batch` file resumes polling; a record without one is
+`uncertain`. A `preparing` row older than ten minutes with no batch id, found by
+any later activity start, becomes `uncertain`; so does a create call that fails
+without a response. Uncertain rows stop the stage. `corpus submissions` shows
+them with request count and time window; the owner lists batches in that window
+and, for each candidate that has ended, downloads its results and checks the
+`custom_id` prefix. A match attaches the batch id; no match after the provider's
+24-hour processing window marks the row `abandoned`, which allows exactly one
+new submission. Polling runs every five minutes until the provider reports an
+end state or `deadline_at` (26 hours after submission) passes, which marks the
+row `failed`. `corpus cancel` calls the cancel endpoint for in-flight batches
+and marks their rows `cancelling`; the provider may still finish some requests
+after acknowledging. Polling continues until the provider reports the end state,
+then results are downloaded and every item outcome and the cost are recorded
+before the row becomes `cancelled`. If the end state does not arrive by
+`deadline_at`, the row becomes `failed` with a message for operator review. A
+new run for the same release does not submit while any earlier submission is
+non-terminal (`preparing`, `submitted`, `uncertain`, `cancelling`). Result
+download and per-item application are idempotent on `custom_id`; malformed
+results become `failed` items with at most two retries, then gaps. Cost per
+batch is recorded on the row.
 
 ## Release artifact
+
+Storage endpoint, upload credentials and access boundaries are defined in
+[deployment](deployment.md#object-storage).
 
 The future `manifest.json` binds the versioned release metadata in
 [data](data.md), dump `sha256` and size, evaluation report hash, built-at and

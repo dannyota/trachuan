@@ -3,29 +3,71 @@
 Numeric limits live here. Values marked "estimate" are replaced by measurement
 before the first release.
 
-## Hosting cost, monthly, ap-southeast-1
+## Hosting cost, monthly, ap-singapore-1
 
-Prices from the AWS Price List API (`aws pricing get-products`), read
-2026-11-08, 730 hours per month. Items marked "assumed" were not read from the
-API and are verified before the host is created.
+USD list prices read 2026-11-09; 730 hours/month, before tax. Estimate assumes
+one production host, no other usage of the quoted tenancy allowances, 50 GB
+Standard Object Storage and 100,000 requests/month. These are usage estimates,
+not a bill or a promise that the owner's remaining allowances are unused. The A1
+zero-cost rows use the paid price list; actual tenancy eligibility remains
+unverified until billing confirms it.
 
-| Item                                                      | USD  | Source                           |
-| --------------------------------------------------------- | ---- | -------------------------------- |
-| EC2 `t4g.large` Linux on demand, 0.0848 USD/h             | 61.9 | Price List API                   |
-| EBS gp3 60 GB, 0.096 USD/GB-month                         | 5.8  | Price List API                   |
-| Public IPv4, 0.005 USD/h                                  | 3.7  | assumed (AWS public IPv4 charge) |
-| S3 releases and backups, 50 GB plus requests              | 2    | assumed                          |
-| Cloudflare DNS for trachuan.vn, Free plan                 | 0    | owner's plan                     |
-| CloudWatch alarms and logs                                | 1    | assumed                          |
-| Data transfer out, under 50 GB                            | 4    | assumed                          |
-| Total, on demand                                          | 78   |                                  |
-| EC2 `t4g.large` 1-year reserved, no upfront, 0.0534 USD/h | 39.0 | Price List API                   |
-| Total with the reserved instance                          | 55   |                                  |
+| Item                              | Monthly USD                 | Basis and source                                                  |
+| --------------------------------- | --------------------------- | ----------------------------------------------------------------- |
+| A1, 4 OCPU and 24 GB              | 0.00                        | 2,920 OCPU-hours and 17,520 GB-hours; [paid A1 allowance][prices] |
+| Boot, 50 GB Balanced              | 0.00 eligible; 2.125 billed | [200 GB combined allowance][free]; [0.0425/GB-month][block-price] |
+| Data block volume, 60 GB Balanced | 0.00 eligible; 2.55 billed  | Same allowance and rate                                           |
+| Standard Object Storage, 50 GB    | 1.02                        | (50 minus 10 free) × [0.0255/GB-month][object-price]              |
+| Object requests, 100,000          | 0.017                       | (100,000 minus 50,000 free) / 10,000 × [0.0034][object-price]     |
+| Internet outbound, 50 GB          | 0.00                        | [First 10 TB/month free in APAC][prices]                          |
+| Reserved public IPv4              | 0.00                        | [Oracle public-IP pricing][ip-price]                              |
+| Vault, Monitoring, Notifications  | 0.00                        | Within [included allowances][free] below                          |
+| Cloudflare DNS, Free plan         | 0.00                        | Owner's existing plan                                             |
+| Total with eligible free volumes  | 1.04                        | Rounded from 1.037                                                |
+| Total with both volumes billed    | 5.71                        | Rounded from 5.712                                                |
 
-The 60 USD target holds only with a one-year reserved instance or savings plan.
-Decision rule: run on demand for the first month of measurement, then reserve if
-`t4g.large` is the right size. `t4g.medium` (4 GB) is rejected on the memory
-table below: the embedder, PostgreSQL and the activation headroom do not fit.
+[prices]: https://www.oracle.com/cloud/price-list/
+[free]:
+  https://docs.oracle.com/en-us/iaas/Content/FreeTier/freetier_topic-Always_Free_Resources.htm
+[block-price]:
+  https://blogs.oracle.com/cloud-infrastructure/elastic-performance-with-the-next-generation-block-storage-on-oracle-cloud
+[object-price]: https://www.oracle.com/cloud/storage/archive-storage/faq/
+[ip-price]:
+  https://blogs.oracle.com/cloud-infrastructure/release-announcement-reserved-public-ips-are-now-available-on-oracle-cloud-infrastructure
+
+Oracle's [price list][prices] explicitly gives **paid tenancies** 3,000 A1
+OCPU-hours and 18,000 GB-hours/month across VM, bare metal and container
+instances. The [Free Tier guide][free] instead says **all tenancies** get 1,500
+OCPU-hours and 9,000 GB-hours. Both were re-read 2026-11-10; the sources
+disagree. Keep the paid-price-list estimate, but the tenancy's actual allowance
+is unverified until billing shows it. [Upgrading retains free
+resources][upgrade] does not resolve which allowance applies.
+
+If the smaller allowance applies, the modeled compute charge is 26.98/month:
+1,420 excess OCPU-hours × 0.01 plus 8,520 excess GB-hours × 0.0015. Total cost
+would be 28.02 with eligible volumes or 32.69 with both volumes billed. If no A1
+allowance remains, [list rates][a1-price] add 55.48/month at 730 hours.
+
+[upgrade]: https://www.oracle.com/cloud/free/faq/
+[a1-price]: https://www.oracle.com/cloud/compute/arm/
+
+Free boot/block storage requires the home region and available eligibility;
+confirm whether Singapore is the home region before budgeting zero. Balanced
+uses 10 VPUs/GB: 0.0255 storage + 0.017 performance per GB-month. Do not assume
+the measurement VM and another full-size production VM both fit the allowance.
+The paid-account Standard-tier free amount is 10 GB, not the free-only account's
+pooled 20 GB. Budget all retained versions, WAL and checkpoints in the 50 GB;
+increase the estimate after measuring retention growth.
+
+For the Vault configuration in [deployment](deployment.md#secrets), budget at
+most 150 secrets. Keep Monitoring within 500 million ingestion and 1 billion
+retrieval points/month, Notifications within 1 million HTTPS and 1,000 email
+deliveries/month. No paid log export is assumed. If all A1, volume, Standard
+storage and request allowances are consumed elsewhere, this usage costs about
+61.46/month, before excess outbound or observability usage. The 60 USD target
+therefore needs usage alerts, not a reserved instance. Domain registration,
+taxes and GitHub/GHCR usage beyond the owner's existing plan are excluded;
+verify those separately before enabling deploy automation.
 
 Corpus processing is separate and per run: Claude Batch classification (estimate
 20 to 40 USD for a full run, under 5 USD for a weekly delta), MacBook
@@ -33,6 +75,12 @@ electricity, zero Temporal fees (self-hosted). Record actual cost in each
 release manifest.
 
 ## Host memory (estimates)
+
+For the [host selected in ADR 0006](../adr/0006-single-host-oci-podman.md), the
+rows total 5,950 MB, leaving about 18 GB for the OS, page cache and unallocated
+margin; this is not measured peak consumption. Keep the FP32 allocation below. A
+smaller INT8 model may replace it only after the separate precision study and
+approval under ADR 0009 and ADR 0011.
 
 | Process                                        | RSS MB |
 | ---------------------------------------------- | ------ |
@@ -50,6 +98,23 @@ search p95 at most 1 s and p99 at most 2 s at 2 requests per second for 30
 minutes; embedder RSS at most 2.5 GB after a 30-minute soak; activation peak
 memory within the headroom row; disk under 70% after activation with two
 retained releases.
+
+Owner-supplied host measurements from 2026-11-09, across three runs with
+four-thread FP32: short-query p50 207–267 ms; long 217-token query p50 1.2–1.7
+s. These are direct ONNX Runtime timings, not end-to-end search latency or
+full-load acceptance. The earlier
+[research note](../research/host-oci-a1-2026-11.md) records one of those runs.
+Keep the existing deadlines and release gates; measure contention with the
+thread limits below and two active embedding requests. Precision is unchanged.
+
+## Host alarms (proposed)
+
+| Signal                                       | Trigger                 |
+| -------------------------------------------- | ----------------------- |
+| Filesystem used, boot and data separately    | Above 70% for 5 minutes |
+| Memory utilization                           | Above 90% for 5 minutes |
+| Instance accessibility/infrastructure status | Nonzero for 1 minute    |
+| Host heartbeat or expected metric stream     | Absent for 5 minutes    |
 
 ## Request limits
 
@@ -113,7 +178,7 @@ Exceeding a build ceiling fails explicitly; it never drops rows to fit.
 | Document HTTP body; admission                             | 1 MiB; 1 active, 1 queued, 30 s maximum queue wait              |
 | Document request deadline; client timeout                 | 120 s total; 125 s                                              |
 | Query batch; HTTP body; client timeout                    | 1 text; existing 64 KB request cap; 2 s                         |
-| Query ONNX threads                                        | 2 intra-op, 1 inter-op, sequential execution                    |
+| Query ONNX threads                                        | 4 intra-op, 1 inter-op, sequential execution                    |
 | Vector validation                                         | Finite float32; absolute L2 norm error at most 0.001            |
 | Lexical dimensions; k1; b                                 | 1,048,576; 1.2; 0.75                                            |
 | Sparse nonzeros per chunk                                 | At most 16,000; overflow fails build, no pruning                |
@@ -147,8 +212,10 @@ service is added. Host latency and memory acceptance remain separate.
 | pgBackRest spool                                  | 2        |
 | Total                                             | 25       |
 
-The 60 GB volume keeps usage under 50% with three release copies; the 70% rule
-in the acceptance gates leaves room for one unexpected release.
+The host uses a 50 GB boot volume and a 60 GB data volume. Keep OS, images and
+model on boot; databases and pgBackRest spool on data. Both use Balanced
+performance. The existing estimates fit with margin; the 70% acceptance rule
+applies to each filesystem, including retained releases.
 
 ## Retrieval
 

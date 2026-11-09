@@ -20,8 +20,8 @@ component shape and the data-flow rules. Decisions and alternatives live in the
 
 ## Serving host
 
-One AWS Graviton host runs five containers under rootless Podman Quadlet
-([ADR 0006](../adr/0006-single-host-aws-podman.md)):
+The host selected in [ADR 0006](../adr/0006-single-host-oci-podman.md) runs five
+containers under rootless Podman Quadlet:
 
 ```text
 Browser / MCP client
@@ -49,8 +49,8 @@ the cap receives 429 at once, with no queue.
 Corpus releases are built on the owner's MacBook by the `corpus` worker under a
 self-hosted Temporal server ([pipeline](pipeline.md),
 [ADR 0008](../adr/0008-write-path-temporal-self-hosted.md)). A release is a
-signed manifest plus a PostgreSQL dump in S3. Activation on the host is a
-separate command run by the owner ([deployment](deployment.md)).
+signed manifest plus a PostgreSQL dump in OCI Object Storage. Activation on the
+host is a separate command run by the owner ([deployment](deployment.md)).
 
 ## Database roles
 
@@ -80,7 +80,7 @@ apps/docembed    Python, uv: document embedding on the MacBook GPU (write path)
 internal/retrieval  Go: shared search and lexical encoding
 internal/corpusdb   Go: embedded corpus schema template and schema version
 packages/schema  OpenAPI document and generated TypeScript client
-deploy/aws       OpenTofu root and modules
+deploy/oci       OpenTofu root and modules
 deploy/host      cloud-init, install.sh, Quadlet units, pgBackRest, alerts
 deploy/compose.yml  local development: PostgreSQL, Temporal, UI
 docs             design, ADRs, plans, runbooks, standards, research
