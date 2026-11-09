@@ -5,6 +5,7 @@ package stage
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -205,7 +206,7 @@ func TestRunBatch_CancelledStopsBatch(t *testing.T) {
 	}
 }
 
-func TestRunBatch_SQLDataErrorFailsOnlyThatItem(t *testing.T) {
+func TestRunBatch_SQLDataErrorIsSourceDataGap(t *testing.T) {
 	t.Parallel()
 	env, id, s := batchSetup(t)
 	hash := strings.Repeat("a", 64)
@@ -218,8 +219,24 @@ func TestRunBatch_SQLDataErrorFailsOnlyThatItem(t *testing.T) {
 	result, err := batchRun(env, id, s, 1, func(...any) {})
 	var state, message string
 	var artifacts int
-	queryErr := env.DB.QueryRow(context.Background(), `SELECT state, message, (SELECT count(*) FROM artifact) FROM run_item WHERE run_id=$1 AND item_key='item'`, id).Scan(&state, &message, &artifacts)
-	if err != nil || queryErr != nil || state != "failed" || message == "" || artifacts != 0 || result.Failed != 1 || result.Gap != 1 {
-		t.Fatalf("result=%+v state=%s message=%q artifacts=%d err=%v query=%v", result, state, message, artifacts, err, queryErr)
+	var gaps int
+	queryErr := env.DB.QueryRow(context.Background(), `SELECT state, coalesce(message, ''), (SELECT count(*) FROM artifact), (SELECT count(*) FROM gap WHERE item_key='item' AND kind='invalid_source_data') FROM run_item WHERE run_id=$1 AND item_key='item'`, id).Scan(&state, &message, &artifacts, &gaps)
+	if err != nil || queryErr != nil || state != "gap" || gaps != 1 || artifacts != 0 || result.Failed != 0 || result.Gap != 2 {
+		t.Fatalf("result=%+v state=%s message=%q artifacts=%d gaps=%d err=%v query=%v", result, state, message, artifacts, gaps, err, queryErr)
+	}
+}
+
+func TestRunBatch_ItemTimeoutDoesNotAbortBatch(t *testing.T) {
+	env, id, s := batchSetup(t)
+	s.process = func(_ context.Context, _ Env, _ Run, item Item) (Output, error) {
+		if item.Key == "item" {
+			return Output{}, Retryable(fmt.Errorf("download: %w", context.DeadlineExceeded))
+		}
+		return Output{State: "gap"}, nil
+	}
+	batchExec(t, env.DB, `INSERT INTO run_item (run_id,stage,item_key,state,batch) VALUES ($1,'fetch','later','pending',0)`, id)
+	result, err := batchRun(env, id, s, 1, func(...any) {})
+	if err == nil || errors.Is(err, context.DeadlineExceeded) || result.Pending != 1 || result.Gap != 1 {
+		t.Fatalf("one item's timeout must leave it pending and let the batch continue: result=%+v err=%v", result, err)
 	}
 }

@@ -60,9 +60,12 @@ signed dump to S3. Decision and alternatives:
   the stage counts from `run_item` and `gap` rows (counts are never stored
   separately). `corpus start` resumes at `next_stage` and resets that stage's
   `failed` items to `pending`. An empty `next_stage` means the run is complete
-  until new stages are appended. Per-item data errors fail the item instead of
-  the batch. `paused` means the workflow stopped after the stage named by
-  `--until` or after the last implemented stage.
+  until new stages are appended. Errors in one item stay with that item: errors
+  in the source data (broken payload JSON, text PostgreSQL rejects, duplicate
+  ids) become gap `invalid_source_data`, which the owner may accept, and other
+  item errors fail the item; only the activity's own context or an
+  infrastructure fault ends the batch. `paused` means the workflow stopped after
+  the stage named by `--until` or after the last implemented stage.
 - `corpus cancel <cc> <rel>` sets `cancelling`. Stage activities check the state
   before each item and return early; the workflow waits for every batch of the
   stage to return, then sets `cancelled`. A stage that has not started its

@@ -220,3 +220,13 @@ func TestStore_AbsKeepsAbsolutePaths(t *testing.T) {
 		t.Fatalf("got %q, want %q", got, path)
 	}
 }
+
+func TestStore_AbsAcceptsOldRelativeRootPaths(t *testing.T) {
+	s := Store{Root: "work/artifacts"}
+	if got := s.Abs("fetch/x"); got != filepath.Join("work", "artifacts", "fetch", "x") {
+		t.Fatalf("root-relative: %s", got)
+	}
+	if got := s.Abs("work/artifacts/fetch/x"); got != filepath.Join("work", "artifacts", "fetch", "x") {
+		t.Fatalf("old relative-root form doubled: %s", got)
+	}
+}

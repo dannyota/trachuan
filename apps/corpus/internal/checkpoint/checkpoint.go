@@ -148,6 +148,13 @@ func (t Taker) copyArtifacts(ctx context.Context, root, dest string) error {
 			}
 			src := filepath.Join(root, stage.Name(), entry.Name())
 			rel := filepath.Join(stage.Name(), entry.Name())
+			target := filepath.Join(dest, stage.Name(), entry.Name())
+			// Copies are verified when made; an existing copy is never re-hashed.
+			if _, statErr := os.Lstat(target); statErr == nil {
+				continue
+			} else if !errors.Is(statErr, os.ErrNotExist) {
+				return fmt.Errorf("inspect artifact copy: %w", statErr)
+			}
 			if _, verifyErr := artifact.Verify(src); verifyErr != nil {
 				referenced := t.referenced
 				if referenced == nil {
@@ -162,12 +169,6 @@ func (t Taker) copyArtifacts(ctx context.Context, root, dest string) error {
 				}
 				slog.Warn("skipping corrupt orphan artifact", "path", src, "error", verifyErr)
 				continue
-			}
-			target := filepath.Join(dest, stage.Name(), entry.Name())
-			if _, statErr := os.Lstat(target); statErr == nil {
-				continue
-			} else if !errors.Is(statErr, os.ErrNotExist) {
-				return fmt.Errorf("inspect artifact copy: %w", statErr)
 			}
 			if err := copyArtifact(src, target); err != nil {
 				return err

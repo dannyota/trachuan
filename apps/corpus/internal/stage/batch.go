@@ -121,7 +121,9 @@ func RunBatch(ctx context.Context, env Env, st Stage, in BatchInput, attempt int
 			} else {
 				output, err = st.Process(ctx, env, run, item)
 				if err != nil {
-					if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) || errors.Is(err, ErrSuperseded) {
+					// Only the activity's own context ends the batch; a timeout
+					// inside one item stays with that item.
+					if ctx.Err() != nil || errors.Is(err, ErrSuperseded) {
 						return result, err
 					}
 					var retryable *RetryableError
@@ -142,19 +144,19 @@ func RunBatch(ctx context.Context, env Env, st Stage, in BatchInput, attempt int
 				}
 				commit.ArtifactRows, err = st.Rows(ctx, env, *output.Artifact)
 				if err != nil {
-					if !itemError(err) {
+					if !itemError(ctx, err) {
 						return result, fmt.Errorf("load artifact rows for %q: %w", item.Key, err)
 					}
-					commit = failedCommit(commit, err)
+					commit = itemCommit(commit, err)
 				}
 				var resolution Resolution
 				if err == nil {
 					resolution, err = st.Resolve(ctx, env, run, item, *output.Artifact)
 					if err != nil {
-						if !itemError(err) {
+						if !itemError(ctx, err) {
 							return result, fmt.Errorf("resolve artifact for %q: %w", item.Key, err)
 						}
-						commit = failedCommit(commit, err)
+						commit = itemCommit(commit, err)
 					} else {
 						commit.RunRows = resolution.RunRows
 						commit.Gaps = append(commit.Gaps, resolution.Gaps...)
@@ -168,7 +170,7 @@ func RunBatch(ctx context.Context, env Env, st Stage, in BatchInput, attempt int
 			if !errors.As(commitErr, &pgErr) || !dataError(pgErr) {
 				return result, fmt.Errorf("commit item %q: %w", item.Key, commitErr)
 			}
-			commit = failedCommit(commit, commitErr)
+			commit = itemCommit(commit, commitErr)
 			applied, commitErr = CommitItem(ctx, env.DB, commit)
 			if commitErr != nil {
 				return result, fmt.Errorf("commit failed item %q: %w", item.Key, commitErr)
@@ -195,9 +197,10 @@ func RunBatch(ctx context.Context, env Env, st Stage, in BatchInput, attempt int
 }
 
 // itemError reports whether err belongs to one item (its data or its files)
-// rather than to the infrastructure the whole batch shares.
-func itemError(err error) bool {
-	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) || errors.Is(err, ErrSuperseded) {
+// rather than to the infrastructure the whole batch shares. Only the activity's
+// own context ends the batch; a timeout inside one item stays with that item.
+func itemError(ctx context.Context, err error) bool {
+	if ctx.Err() != nil || errors.Is(err, ErrSuperseded) {
 		return false
 	}
 	var pgErr *pgconn.PgError
@@ -215,6 +218,31 @@ func itemError(err error) bool {
 // violations (class 23), which one item's content causes.
 func dataError(e *pgconn.PgError) bool {
 	return strings.HasPrefix(e.Code, "22") || strings.HasPrefix(e.Code, "23")
+}
+
+// sourceDataError reports errors caused by the source document's content
+// (broken payload JSON, text PostgreSQL rejects, duplicate ids), which a retry
+// cannot fix and the owner may accept as a gap.
+func sourceDataError(err error) bool {
+	var syntax *json.SyntaxError
+	var typeErr *json.UnmarshalTypeError
+	var pgErr *pgconn.PgError
+	return errors.As(err, &syntax) || errors.As(err, &typeErr) || (errors.As(err, &pgErr) && dataError(pgErr))
+}
+
+// itemCommit records an item-level error: source data errors become gap
+// invalid_source_data, anything else a failed item a later attempt may fix.
+func itemCommit(c Commit, err error) Commit {
+	if !sourceDataError(err) {
+		return failedCommit(c, err)
+	}
+	c = failedCommit(c, err)
+	detail := []rune(c.Message)
+	if len(detail) > 200 {
+		detail = detail[:200]
+	}
+	c.State, c.Gaps = "gap", []Gap{{Kind: "invalid_source_data", Detail: string(detail)}}
+	return c
 }
 
 func failedCommit(c Commit, err error) Commit {

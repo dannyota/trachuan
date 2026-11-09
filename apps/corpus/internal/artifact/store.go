@@ -25,6 +25,12 @@ func (s Store) Abs(rel string) string {
 	if filepath.IsAbs(rel) {
 		return rel
 	}
+	clean, root := filepath.Clean(rel), filepath.Clean(s.Root)
+	// Rows written before paths became root-relative carry a relative root as
+	// their prefix; joining the root again would double it.
+	if !filepath.IsAbs(root) && root != "." && strings.HasPrefix(clean, root+string(filepath.Separator)) {
+		return clean
+	}
 	return filepath.Join(s.Root, rel)
 }
 

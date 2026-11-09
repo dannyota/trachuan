@@ -70,3 +70,20 @@ func TestTake_FailsOnReferencedCorruptArtifact(t *testing.T) {
 		t.Fatalf("marker: %v", err)
 	}
 }
+
+func TestTake_DoesNotReverifyCopiedArtifacts(t *testing.T) {
+	taker := setup(t)
+	rel := publish(t, taker.Config.ArtifactsRoot, "copied")
+	taker.referenced = func(context.Context, string, string) (bool, error) { return true, nil }
+	if _, err := taker.Take(context.Background(), "run", 1, "fetch"); err != nil {
+		t.Fatal(err)
+	}
+	// A later change to the source no longer matters once the copy exists:
+	// the checkpoint must not hash every stored artifact again.
+	if err := os.WriteFile(filepath.Join(taker.Config.ArtifactsRoot, rel, "data"), []byte("changed"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := taker.Take(context.Background(), "run", 1, "extract"); err != nil {
+		t.Fatalf("second checkpoint re-verified a copied artifact: %v", err)
+	}
+}
