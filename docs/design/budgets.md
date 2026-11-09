@@ -148,13 +148,21 @@ after 2 minutes.
 VBPL ingest bounds: API response 20 MB; provision tree depth 32 and 50,000
 nodes; at most 3 listing passes per query.
 
-VBPL: at most 8 requests per second and 8 in flight by default
-(`CORPUS_VBPL_RPS`, `CORPUS_VBPL_IN_FLIGHT`), 8 stage batches in flight,
-measured 2026-11-09 (10.5 requests per second at concurrency 8, p50 636 ms, no
-errors); request timeout 30 seconds. Retry HTTP 429, HTTP 5xx and timeouts 3
-times, after 2, 8 and 30 seconds. The `embed` stage runs at most 2 batches in
-flight, so one batch waits in the document embedder queue while the other runs
-on the GPU.
+VBPL gateway: at most 16 requests per second and 16 in flight by default
+(`CORPUS_VBPL_RPS`, `CORPUS_VBPL_IN_FLIGHT`); request timeout 30 seconds. Retry
+HTTP 429, HTTP 5xx and timeouts 3 times, after 2, 8 and 30 seconds. Measured
+2026-11-09: 10.5 requests per second at concurrency 8, p50 636 ms, no errors;
+measured 2026-11-10: 0.11 to 0.36 s per request. The 16 defaults are provisional
+until a live run records their error rate. Attachment downloads use a separate
+pool of 8 in flight (`CORPUS_VBPL_FILE_IN_FLIGHT`) with no request rate limit,
+because the attachment CDN caps throughput per IP (about 4 MB/s, measured by
+banhmi); a slow download never holds a gateway slot. Fetch issues a document's
+four gateway calls concurrently and downloads its attachments concurrently
+within the file pool.
+
+Stage batches in flight: 8 by default (`CORPUS_BATCHES_IN_FLIGHT`); `fetch` runs
+16 (`CORPUS_FETCH_BATCHES_IN_FLIGHT`); `embed` runs at most 2, so one batch
+waits in the document embedder queue while the other runs on the GPU.
 
 Attachment hosts: `CORPUS_VBPL_FILE_HOSTS` is a comma-separated allowlist,
 default `s3-han02.fptcloud.com`.
