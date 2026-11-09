@@ -150,6 +150,8 @@ VBPL ingest rules:
   queries are all gone from the source list is `scope_removed`. Withdrawn and
   scope-removed documents stay in the expected set as gap items that are never
   fetched.
+- VBPL English renditions (ids starting with `vbpqta_`) are not legal text in
+  Vietnamese and never enter the expected set.
 - `fetch` stores attachments as `files/<sha256>` and maps original names in
   `files.json`; each download attempt writes a fresh temporary file and is
   bounded by the per-file limit while streaming. API responses above the

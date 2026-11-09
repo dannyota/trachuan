@@ -176,3 +176,9 @@ func TestExpectedSet_CurrentUnstableUnionIsExpected(t *testing.T) {
 	db, r := expectedFixture(t, current)
 	checkExpected(t, db, r, []Expected{document("1", ""), document("2", "")})
 }
+
+func TestExpectedSet_SkipsEnglishRenditions(t *testing.T) {
+	t.Parallel()
+	db, r := expectedFixture(t, fixture("20261101", "1", "vbpqta_3188"))
+	checkExpected(t, db, r, []Expected{document("1", "")})
+}

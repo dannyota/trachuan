@@ -67,6 +67,9 @@ func ExpectedSet(ctx context.Context, db *pgxpool.Pool, r stage.Run) ([]Expected
 	}
 	byRun := make(map[int64]map[string]map[string]bool)
 	for _, listing := range listings {
+		if englishRendition(listing.ItemKey) {
+			continue
+		}
 		if byRun[listing.RunID] == nil {
 			byRun[listing.RunID] = make(map[string]map[string]bool)
 		}
@@ -149,4 +152,10 @@ func discoveryIdentities(r stage.Run) (map[string]string, error) {
 		identities[identity] = key
 	}
 	return identities, nil
+}
+
+// englishRendition reports VBPL English translations (ids starting with
+// vbpqta_). They are not legal text in Vietnamese, so they are never expected.
+func englishRendition(key string) bool {
+	return strings.Contains(key, ":vbpl:vbpqta_")
 }
