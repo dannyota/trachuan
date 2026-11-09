@@ -10,7 +10,7 @@ func TestProof_RestartMidRun(t *testing.T) {
 	h := newHarness(t)
 	h.gateway.blockAfterFirst = make(chan struct{})
 	h.startWorker("")
-	h.command("start", "vn", release, "--until", "relate")
+	h.command("start", "vn", h.rel, "--until", "relate")
 	h.waitFetchProgress()
 	h.stopWorker()
 	close(h.gateway.blockAfterFirst)

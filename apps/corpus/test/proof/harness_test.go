@@ -25,8 +25,6 @@ import (
 	"google.golang.org/protobuf/types/known/durationpb"
 )
 
-const release = "20261109"
-
 func TestMain(m *testing.M) {
 	dir, err := os.MkdirTemp("", "corpus-proof-binary-")
 	if err != nil {
@@ -72,7 +70,7 @@ type harness struct {
 
 func newHarness(t *testing.T) *harness {
 	t.Helper()
-	h := &harness{t: t, ctx: context.Background(), root: t.TempDir(), rel: release}
+	h := &harness{t: t, ctx: context.Background(), root: t.TempDir(), rel: testpg.Release(t)}
 	builder := testpg.NewBuilder(t)
 	h.extra = []string{"CORPUS_BUILDER_DATABASE_URL=" + builder.URL, "CORPUS_BUILDER_TEMPLATE=" + builder.Template, "CORPUS_DATABASE_DISK_PATH=" + h.root, "CORPUS_DISK_START_GIB=1", "CORPUS_DISK_MIN_GIB=1"}
 	h.artifacts = filepath.Join(h.root, "artifacts")
@@ -204,7 +202,7 @@ func uninterrupted(t *testing.T) counts {
 	t.Helper()
 	h := newHarness(t)
 	h.startWorker("")
-	h.command("start", "vn", release, "--until", "relate")
+	h.command("start", "vn", h.rel, "--until", "relate")
 	h.waitState("paused")
 	return h.countRows()
 }
@@ -214,7 +212,7 @@ func proveCrash(t *testing.T, point string) {
 	baseline := uninterrupted(t)
 	h := newHarness(t)
 	h.startWorker(point)
-	h.command("start", "vn", release, "--until", "relate")
+	h.command("start", "vn", h.rel, "--until", "relate")
 	select {
 	case err := <-h.workerDone:
 		var exitErr *exec.ExitError

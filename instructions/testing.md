@@ -14,3 +14,4 @@ Rules: write the failing test first; observe the failure before the fix. A repor
 - Integration tests share one dev server per package and clone the template database.
 - Proofs run under 60 seconds using the timing knobs.
 - CI targets under 5 minutes for a pull request and skips Go jobs for Markdown-only changes.
+- Integration tests and proofs share the local PostgreSQL with real release databases. Use test releases in 2099 from `internal/testpg` (never a real-looking release such as `20261109`), and drop a corpus database only through the marker-checked cleanup helper there; never `DROP DATABASE` by name alone.

@@ -50,11 +50,12 @@ func fixture(t *testing.T) *loadFixture {
 	if err = corpusdb.ApplyTables(ctx, c, 1024); err != nil {
 		t.Fatal(err)
 	}
+	rel := testpg.Release(t)
 	var id int64
-	if err = w.QueryRow(ctx, `INSERT INTO run(country,rel,state,snapshot) VALUES('vn','20261109','paused','{}') RETURNING id`).Scan(&id); err != nil {
+	if err = w.QueryRow(ctx, `INSERT INTO run(country,rel,state,snapshot) VALUES('vn',$1,'paused','{}') RETURNING id`, rel).Scan(&id); err != nil {
 		t.Fatal(err)
 	}
-	return &loadFixture{workshop: w, corpus: c, artifacts: artifact.Store{Root: t.TempDir()}, run: stage.Run{ID: id, Country: "vn", Rel: "20261109", Snapshot: stage.Snapshot{SourceListHash: strings.Repeat("a", 64)}}, recipes: Recipes{Dense: embedding.DocumentRecipe1(), Lexical: lexical.Recipe1()}}
+	return &loadFixture{workshop: w, corpus: c, artifacts: artifact.Store{Root: t.TempDir()}, run: stage.Run{ID: id, Country: "vn", Rel: rel, Snapshot: stage.Snapshot{SourceListHash: strings.Repeat("a", 64)}}, recipes: Recipes{Dense: embedding.DocumentRecipe1(), Lexical: lexical.Recipe1()}}
 }
 func (f *loadFixture) addArtifact(t *testing.T, name, key string, files map[string]any, inputs ...string) artifact.Result {
 	t.Helper()

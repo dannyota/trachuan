@@ -4,9 +4,7 @@ package proof
 
 import (
 	"context"
-	"crypto/rand"
 	"crypto/sha256"
-	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -14,8 +12,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
-	"strings"
 	"testing"
 	"time"
 
@@ -23,7 +19,6 @@ import (
 	"danny.vn/trachuan/apps/corpus/internal/stage"
 	"danny.vn/trachuan/apps/corpus/internal/stage/build"
 	"danny.vn/trachuan/apps/corpus/internal/store"
-	"danny.vn/trachuan/apps/corpus/internal/testtemporal"
 	"danny.vn/trachuan/internal/embedding"
 	"danny.vn/trachuan/internal/testpg"
 	"github.com/jackc/pgx/v5"
@@ -197,7 +192,6 @@ func (h *harness) reportBuildState(cause error) {
 func TestProof_IndexStagesAfterIngest(t *testing.T) {
 	deadline := time.Now().Add(55 * time.Second)
 	h := newHarness(t)
-	h.rel = uniqueIndexRelease(t)
 	var cancel context.CancelFunc
 	h.ctx, cancel = context.WithDeadline(context.Background(), deadline)
 	defer cancel()
@@ -235,7 +229,6 @@ func TestProof_IndexStagesAfterIngest(t *testing.T) {
 func TestProof_LostCorpusDatabaseRestored(t *testing.T) {
 	deadline := time.Now().Add(55 * time.Second)
 	h := newHarness(t)
-	h.rel = uniqueIndexRelease(t)
 	var cancel context.CancelFunc
 	h.ctx, cancel = context.WithDeadline(context.Background(), deadline)
 	defer cancel()
@@ -274,8 +267,8 @@ func TestProof_LostCorpusDatabaseRestored(t *testing.T) {
 	if before <= 0 {
 		t.Fatalf("expected chunks before restore, got %d", before)
 	}
-	if _, err = conn.Exec(h.ctx, "DROP DATABASE "+pgx.Identifier{"corpus_vn_" + h.rel}.Sanitize()+" WITH (FORCE)"); err != nil {
-		t.Fatal(err)
+	if !testpg.DropCorpusDatabase(t, conn, "corpus_vn_"+h.rel, "vn/"+h.rel) {
+		t.Fatal("database was not dropped")
 	}
 	out := filepath.Join(h.root, "diagnostic")
 	h.command("eval", "vn", h.rel, "--out", out)
@@ -290,21 +283,6 @@ func TestProof_LostCorpusDatabaseRestored(t *testing.T) {
 	if err = json.Unmarshal(data, &report); err != nil || report.DatabaseInstanceKind != "restored" {
 		t.Fatalf("restored report: %s %v", report.DatabaseInstanceKind, err)
 	}
-}
-
-func uniqueIndexRelease(t *testing.T) string {
-	t.Helper()
-	id := testtemporal.Release()
-	sequence, err := strconv.Atoi(strings.TrimPrefix(id, "2026"))
-	if err != nil || sequence < 1 || sequence > 99 {
-		t.Fatal("proof release sequence exhausted")
-	}
-	var random [4]byte
-	if _, err = rand.Read(random[:]); err != nil {
-		t.Fatalf("generate proof release: %v", err)
-	}
-	date := time.Date(2027, time.January, 1, 0, 0, 0, 0, time.UTC).AddDate(0, 0, int(binary.BigEndian.Uint32(random[:])%(70*365)))
-	return fmt.Sprintf("%s_%d", date.Format("20060102"), sequence)
 }
 
 func (h *harness) registerIndexCleanup(builderURL string) {
@@ -359,9 +337,7 @@ func (h *harness) registerIndexCleanup(builderURL string) {
 			return
 		}
 		for _, name := range names {
-			if _, err = conn.Exec(ctx, "DROP DATABASE "+pgx.Identifier{name}.Sanitize()+" WITH (FORCE)"); err != nil {
-				h.t.Errorf("drop owned index database %s: %v", name, err)
-			}
+			testpg.DropCorpusDatabase(h.t, conn, name, "vn/"+h.rel)
 		}
 	})
 }

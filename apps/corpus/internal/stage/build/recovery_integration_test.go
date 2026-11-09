@@ -60,8 +60,8 @@ func recoverySetup(t *testing.T) recoveryFixture {
 	temp := "corpus_tmp_vn_" + items[0].InputHash[:24]
 	final := "corpus_vn_" + f.run.Rel
 	t.Cleanup(func() {
-		_, _ = admin.Exec(ctx, "DROP DATABASE IF EXISTS "+pgx.Identifier{temp}.Sanitize())
-		_, _ = admin.Exec(ctx, "DROP DATABASE IF EXISTS "+pgx.Identifier{final}.Sanitize())
+		testpg.DropCorpusDatabase(t, admin, temp, "vn/"+f.run.Rel)
+		testpg.DropCorpusDatabase(t, admin, final, "vn/"+f.run.Rel)
 	})
 	output, err := st.Process(ctx, env, f.run, items[0])
 	if err != nil || output.Artifact == nil {
@@ -87,8 +87,8 @@ func TestResolve_RestoresLostDatabaseFromDump(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err = f.admin.Exec(ctx, "DROP DATABASE "+pgx.Identifier{built.Name}.Sanitize()); err != nil {
-		t.Fatal(err)
+	if !testpg.DropCorpusDatabase(t, f.admin, built.Name, "vn/"+f.run.Rel) {
+		t.Fatal("database was not dropped")
 	}
 	restored, err := EnsureDatabase(ctx, f.cfg, f.env.Artifacts, f.art, f.run)
 	if err != nil || restored.Instance != "restored" {
@@ -120,11 +120,19 @@ func TestResolve_MismatchedFinalDatabaseIsError(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	marker, err := readMarker(ctx, f.admin, built.Name)
+	if err != nil {
+		t.Fatal(err)
+	}
 	_, err = f.admin.Exec(ctx, "COMMENT ON DATABASE "+pgx.Identifier{built.Name}.Sanitize()+" IS 'foreign'")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err = EnsureDatabase(ctx, f.cfg, f.env.Artifacts, f.art, f.run); err == nil {
+	_, resolveErr := EnsureDatabase(ctx, f.cfg, f.env.Artifacts, f.art, f.run)
+	if err = writeMarker(ctx, f.admin, built.Name, marker); err != nil {
+		t.Fatal(err)
+	}
+	if resolveErr == nil {
 		t.Fatal("accepted mismatched final database")
 	}
 }
@@ -285,7 +293,7 @@ func TestBuild_LostLockConnectionCancelsWork(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = other.Close(ctx) }()
-	if err = lock(ctx, holder, "vn", "20261109"); err != nil {
+	if err = lock(ctx, holder, "vn", testpg.Release(t)); err != nil {
 		t.Fatal(err)
 	}
 	work, cancel := context.WithCancel(ctx)
@@ -303,10 +311,10 @@ func TestBuild_LostLockConnectionCancelsWork(t *testing.T) {
 	if err = stop(); err == nil {
 		t.Fatal("lost lock reported success")
 	}
-	if err = lock(ctx, other, "vn", "20261109"); err != nil {
+	if err = lock(ctx, other, "vn", testpg.Release(t)); err != nil {
 		t.Fatal(err)
 	}
-	if err = unlock(ctx, other, "vn", "20261109"); err != nil {
+	if err = unlock(ctx, other, "vn", testpg.Release(t)); err != nil {
 		t.Fatal(err)
 	}
 }

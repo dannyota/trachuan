@@ -54,7 +54,7 @@ func TestBuild_TemporaryDatabaseMarker(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() {
-		_, _ = admin.Exec(context.Background(), "DROP DATABASE IF EXISTS "+pgx.Identifier{name}.Sanitize())
+		testpg.DropCorpusDatabase(t, admin, name, "vn/"+testpg.Release(t))
 	})
 	got, err := readMarker(ctx, admin, name)
 	if err != nil || got != marker {
@@ -76,15 +76,15 @@ func TestBuild_LockAndRename(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = admin.Close(ctx) })
-	if err = lock(ctx, admin, "vn", "20261109"); err != nil {
+	if err = lock(ctx, admin, "vn", testpg.Release(t)); err != nil {
 		t.Fatal(err)
 	}
-	defer func() { _ = unlock(ctx, admin, "vn", "20261109") }()
+	defer func() { _ = unlock(ctx, admin, "vn", testpg.Release(t)) }()
 	temp := "corpus_tmp_vn_aaaaaaaaaaaaaaaaaaaaaaaa"
-	final := "corpus_vn_20261109_99"
+	final := "corpus_vn_" + testpg.Release(t)
 	t.Cleanup(func() {
-		_, _ = admin.Exec(context.Background(), "DROP DATABASE IF EXISTS "+pgx.Identifier{temp}.Sanitize())
-		_, _ = admin.Exec(context.Background(), "DROP DATABASE IF EXISTS "+pgx.Identifier{final}.Sanitize())
+		testpg.DropCorpusDatabase(t, admin, temp, "vn/"+testpg.Release(t))
+		testpg.DropCorpusDatabase(t, admin, final, "vn/"+testpg.Release(t))
 	})
 	if err = recreateTemporary(ctx, admin, Config{Template: builder.Template}, temp, testOwnershipMarker(t, "a", "built")); err != nil {
 		t.Fatal(err)
@@ -141,7 +141,7 @@ func TestBuild_ProcessCreatesTemporaryRelease(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = admin.Close(ctx) })
-	t.Cleanup(func() { _, _ = admin.Exec(ctx, "DROP DATABASE IF EXISTS "+pgx.Identifier{temp}.Sanitize()) })
+	t.Cleanup(func() { testpg.DropCorpusDatabase(t, admin, temp, "vn/"+f.run.Rel) })
 	out, err := st.Process(ctx, env, f.run, items[0])
 	if err != nil || out.Artifact == nil {
 		t.Fatalf("process: %v", err)
@@ -186,7 +186,7 @@ func TestEnsureForRun_RequiresDoneBuild(t *testing.T) {
 
 func testOwnershipMarker(t *testing.T, inputChar, instance string) string {
 	t.Helper()
-	marker, err := encodeOwnershipMarker(ownershipMarker{RunKey: "vn/20261109", InputHash: strings.Repeat(inputChar, 64), RecipeHash: strings.Repeat("b", 64), Instance: instance})
+	marker, err := encodeOwnershipMarker(ownershipMarker{RunKey: "vn/" + testpg.Release(t), InputHash: strings.Repeat(inputChar, 64), RecipeHash: strings.Repeat("b", 64), Instance: instance})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -202,7 +202,7 @@ func TestBuild_RestoredMarkerPreservesOwnership(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = admin.Close(ctx) })
 	name := "corpus_tmp_vn_bbbbbbbbbbbbbbbbbbbbbbbb"
-	t.Cleanup(func() { _, _ = admin.Exec(ctx, "DROP DATABASE IF EXISTS "+pgx.Identifier{name}.Sanitize()) })
+	t.Cleanup(func() { testpg.DropCorpusDatabase(t, admin, name, "vn/"+testpg.Release(t)) })
 	built := testOwnershipMarker(t, "a", "built")
 	if err = recreateTemporary(ctx, admin, Config{Template: builder.Template}, name, built); err != nil {
 		t.Fatal(err)
