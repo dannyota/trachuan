@@ -93,8 +93,8 @@
 
 **Files:** Modify `apps/corpus/internal/run/start.go` and tests, SQL in `apps/corpus/sql/` (regenerate).
 
-- [ ] Tests first: `TestStart_ResetsOnlySourceGapItems`, `TestStart_DeletesThoseGapRows`, `TestStart_RetryRebuildsDependents`, `TestStart_FrozenRecipesUnchanged`.
-- [ ] Implement per pipeline.md; commit `feat(corpus): retry source gaps when a run starts again`.
+- [x] Tests first: `TestStart_ResetsOnlySourceGapItems`, `TestStart_DeletesThoseGapRows`, `TestStart_RetryRebuildsDependents`, `TestStart_FrozenRecipesUnchanged`.
+- [x] Implement per pipeline.md; commit `feat(corpus): retry source gaps when a run starts again`.
 
 ### Task 8: chinhphu client
 

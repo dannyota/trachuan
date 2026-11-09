@@ -21,6 +21,12 @@ type Querier interface {
 	CountPausedSources(ctx context.Context, runID int64) (int64, error)
 	CountUnacceptedGaps(ctx context.Context, runID int64) (int64, error)
 	CreateRun(ctx context.Context, arg CreateRunParams) error
+	DeleteItemGaps(ctx context.Context, arg DeleteItemGapsParams) (int64, error)
+	DeleteStageGaps(ctx context.Context, arg DeleteStageGapsParams) (int64, error)
+	DeleteStageItems(ctx context.Context, arg DeleteStageItemsParams) (int64, error)
+	DeleteStageMembershipEvidence(ctx context.Context, arg DeleteStageMembershipEvidenceParams) (int64, error)
+	DeleteStageSeedObservations(ctx context.Context, arg DeleteStageSeedObservationsParams) (int64, error)
+	DeleteUnsupportedRunDocuments(ctx context.Context, runID int64) (int64, error)
 	EnsureRunScope(ctx context.Context, runID int64) error
 	EnsureRunSource(ctx context.Context, arg EnsureRunSourceParams) error
 	GetArtifactID(ctx context.Context, arg GetArtifactIDParams) (int64, error)
@@ -70,6 +76,7 @@ type Querier interface {
 	ListRunDocuments(ctx context.Context, runID int64) ([]RunDocument, error)
 	ListRunFailures(ctx context.Context, runID int64) ([]RunFailure, error)
 	ListRunGaps(ctx context.Context, arg ListRunGapsParams) ([]Gap, error)
+	ListRunGapsByRun(ctx context.Context, runID int64) ([]Gap, error)
 	ListRunItemCounts(ctx context.Context, runID int64) ([]ListRunItemCountsRow, error)
 	ListRunListings(ctx context.Context, runID int64) ([]ListRunListingsRow, error)
 	ListRunSources(ctx context.Context, runID int64) ([]RunSource, error)
@@ -84,7 +91,9 @@ type Querier interface {
 	RecoverRun(ctx context.Context, id int64) error
 	ResetFailedItems(ctx context.Context, arg ResetFailedItemsParams) error
 	ResetOlderFailedStageItems(ctx context.Context, arg ResetOlderFailedStageItemsParams) error
+	ResetRetryItem(ctx context.Context, arg ResetRetryItemParams) (int64, error)
 	SetFetchCloseInputHash(ctx context.Context, arg SetFetchCloseInputHashParams) (int64, error)
+	SetRunMessage(ctx context.Context, arg SetRunMessageParams) error
 	SetRunState(ctx context.Context, arg SetRunStateParams) error
 	StartRun(ctx context.Context, arg StartRunParams) error
 	UpdateRunItemFenced(ctx context.Context, arg UpdateRunItemFencedParams) (int64, error)
