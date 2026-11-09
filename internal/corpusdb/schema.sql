@@ -82,7 +82,7 @@ CREATE TABLE relation (
  raw_code text NOT NULL, raw_label text NOT NULL, source_provision_id bigint, target_provision_id bigint,
  source_node_id text COLLATE "C", target_node_id text COLLATE "C", evidence text NOT NULL, method text NOT NULL,
  artifact_sha256 text COLLATE "C" NOT NULL CHECK (artifact_sha256 ~ '^[0-9a-f]{64}$'),
- ordinal integer NOT NULL CHECK (ordinal >= 0), UNIQUE (artifact_sha256,ordinal),
+ ordinal integer NOT NULL CHECK (ordinal >= 0), UNIQUE (source_key,artifact_sha256,ordinal),
  FOREIGN KEY (source_document_id,source_provision_id) REFERENCES provision (document_id,id),
  FOREIGN KEY (target_document_id,target_provision_id) REFERENCES provision (document_id,id),
  CHECK (source_provision_id IS NULL OR source_document_id IS NOT NULL),

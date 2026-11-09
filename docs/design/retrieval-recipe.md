@@ -226,8 +226,9 @@ artifact hash and ordinal. Apply the relation count/text caps in budgets, mark
 omissions with `relations_omitted` and a document-read pointer, and mark cut
 evidence incomplete. `EvidenceSHA256` hashes the full stored UTF-8 evidence;
 product relation credit requires complete returned evidence and a mapped edge.
-Deduplicate edges by artifact hash/ordinal per hit, not across different hits.
-The response is bounded and its actual evidence size is scored.
+Deduplicate edges by source key, artifact hash and ordinal per hit, not across
+different hits; two documents can have byte-identical relation artifacts. The
+response is bounded and its actual evidence size is scored.
 
 Abstain on validation rejection, no eligible primary hits, or first-group best
 cosine strictly below the stored threshold. Equality passes. Low-confidence

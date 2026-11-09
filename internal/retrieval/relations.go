@@ -32,16 +32,20 @@ func shapeRelations(source []SourceRelation, recipe Recipe, id Identity) ([]Rela
 		return a.Ordinal < b.Ordinal
 	})
 	result := []Relation{}
-	seen := map[string]map[int]bool{}
+	// An edge is identified by its source key, artifact hash and ordinal:
+	// two documents can have byte-identical relation artifacts.
+	type edgeID struct {
+		source, artifact string
+		ordinal          int
+	}
+	seen := map[edgeID]bool{}
 	omitted := false
 	for _, e := range edges {
-		if seen[e.ArtifactSHA256] == nil {
-			seen[e.ArtifactSHA256] = map[int]bool{}
-		}
-		if seen[e.ArtifactSHA256][e.Ordinal] {
+		id := edgeID{e.Value.SourceKey, e.ArtifactSHA256, e.Ordinal}
+		if seen[id] {
 			continue
 		}
-		seen[e.ArtifactSHA256][e.Ordinal] = true
+		seen[id] = true
 		if len(result) >= recipe.RelationCap {
 			omitted = true
 			continue

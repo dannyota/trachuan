@@ -309,3 +309,24 @@ func TestLoad_DoesNotInsertPlaceholderSparseVector(t *testing.T) {
 		t.Fatalf("load with placeholder guard: %v", err)
 	}
 }
+
+func TestLoad_IdenticalRelationArtifactsOfTwoDocuments(t *testing.T) {
+	f := fixture(t)
+	rows := []relationRow{{Ordinal: 0, Kind: "cites", TargetID: "999", TargetNumber: "99/2024"}}
+	var hashes []string
+	for _, key := range []string{"vn:vbpl:2", "vn:vbpl:1"} {
+		fetch := f.fetch(t, key)
+		hashes = append(hashes, f.addArtifact(t, "relate", key, map[string]any{"relations.json": rows}, fetch.SHA256).SHA256)
+	}
+	if hashes[0] != hashes[1] {
+		t.Fatalf("fixture needs byte-identical relation artifacts: %v", hashes)
+	}
+	c, err := f.load(t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var first string
+	if err = f.corpus.QueryRow(context.Background(), `SELECT source_key FROM relation WHERE id=1`).Scan(&first); err != nil || first != "vn:vbpl:1" || c.Relations != 2 {
+		t.Fatalf("relation 1 source %q counts %+v: %v", first, c, err)
+	}
+}

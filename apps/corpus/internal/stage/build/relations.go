@@ -66,7 +66,12 @@ func (l *loader) loadRelations(ctx context.Context) error {
 			entries = append(entries, pendingRelation{key, *item.ArtifactSHA256, row})
 		}
 	}
+	// Documents can have byte-identical relation artifacts, so the source key
+	// leads the order and the unique key.
 	sort.Slice(entries, func(i, j int) bool {
+		if entries[i].key != entries[j].key {
+			return entries[i].key < entries[j].key
+		}
 		if entries[i].hash != entries[j].hash {
 			return entries[i].hash < entries[j].hash
 		}

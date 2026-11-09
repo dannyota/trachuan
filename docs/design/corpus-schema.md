@@ -119,7 +119,8 @@ checks df <= chunk count. The complete encoding and statistics contract lives in
 `raw_label text`, `source_provision_id bigint?`, `target_provision_id bigint?`,
 `source_node_id text?`, `target_node_id text?`, `evidence text`, `method text`,
 `artifact_sha256 text`, `ordinal integer >= 0`. UNIQUE
-`(artifact_sha256,ordinal)`. Composite FKs
+`(source_key,artifact_sha256,ordinal)`, because two documents can have
+byte-identical relation artifacts. Composite FKs
 `(source_document_id,source_provision_id)` and
 `(target_document_id,target_provision_id)` reference provision
 `(document_id,id)`. CHECK a non-null provision id requires its document id.
