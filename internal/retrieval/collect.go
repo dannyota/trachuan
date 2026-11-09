@@ -13,7 +13,7 @@ import (
 // Collect caches both candidate arms without calling the embedder.
 func (e *Engine) Collect(ctx context.Context, p Prepared, depths Depths) (Arms, error) {
 	if !p.Validation.Accepted {
-		return Arms{Validation: p.Validation}, nil
+		return Arms{Release: e.release.Rel, RecipeHash: e.release.RetrievalRecipe.Hash(), QueryRecipeHash: e.queryRecipe.Hash(), Validation: p.Validation}, nil
 	}
 	if e.db == nil || p.Vector == nil || len(p.Vector.Values) != e.queryRecipe.Dimensions || p.Vector.RecipeHash != e.queryRecipe.Hash() || depths.Dense < 1 || depths.Dense > 200 || depths.Lexical < 1 || depths.Lexical > 100 {
 		return Arms{}, errors.New("invalid prepared request or depths")
@@ -39,6 +39,13 @@ func (e *Engine) Collect(ctx context.Context, p Prepared, depths Depths) (Arms, 
 		return Arms{}, err
 	}
 	result := Arms{Release: e.release.Rel, RecipeHash: e.release.RetrievalRecipe.Hash(), QueryRecipeHash: e.queryRecipe.Hash(), Validation: p.Validation, Depths: depths}
+	parsedDate, err := time.Parse(time.DateOnly, date)
+	if err != nil {
+		return Arms{}, errors.New("invalid evaluation date")
+	}
+	result.Date = Date{Year: parsedDate.Year(), Month: parsedDate.Month(), Day: parsedDate.Day()}
+	result.AsOf = p.Request.AsOf
+	result.IncludeNonCurrent = p.Request.InForceOnly != nil && !*p.Request.InForceOnly
 	groups := []*ArmGroup{&result.Primary}
 	flags := []bool{true}
 	if p.Request.InForceOnly != nil && !*p.Request.InForceOnly {

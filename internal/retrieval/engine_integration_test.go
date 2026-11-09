@@ -393,3 +393,82 @@ func TestCollect_NoQueryTextInErrors(t *testing.T) {
 		t.Fatalf("error %v", err)
 	}
 }
+
+func TestCollect_HydratesDescendantsAndIncidentRelations(t *testing.T) {
+	db, e, _ := fixture(t)
+	ctx := context.Background()
+	_, err := db.Exec(ctx, `INSERT INTO relation (id,source_document_id,source_key,source_number,target_number,kind,raw_code,raw_label,source_provision_id,evidence,method,artifact_sha256,ordinal) VALUES (1,1,'vn:1','n','other','cites','','',13,'evidence','source',$1,0)`, strings.Repeat("b", 64))
+	if err != nil {
+		t.Fatal(err)
+	}
+	a := collectFixture(t, e, Request{Query: "ngân hàng", Mode: "exact"}, Depths{1, 2})
+	for _, c := range a.Primary.Members {
+		if c.GroupID != 12 {
+			continue
+		}
+		if len(c.Descendants) != 2 || c.Descendants[1].ID != 13 || len(c.Relations) != 1 || c.Relations[0].Value.Evidence != "evidence" {
+			t.Fatalf("incomplete hydration: %+v", c)
+		}
+		return
+	}
+	t.Fatal("missing group")
+}
+
+func TestSearch_EndToEndOnSyntheticCorpus(t *testing.T) {
+	_, e, _ := fixture(t)
+	for _, mode := range []Mode{"exact", "ann"} {
+		for _, limit := range []int{8, 20} {
+			t.Run(fmt.Sprintf("%s-%d", mode, limit), func(t *testing.T) {
+				include := false
+				got, err := e.Search(context.Background(), Request{Query: "ngân hàng", Mode: mode, Limit: limit, InForceOnly: &include})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if len(got.Hits) == 0 || len(got.NonCurrent) == 0 || got.Abstain {
+					t.Fatalf("unexpected search: hits=%d noncurrent=%d abstain=%t", len(got.Hits), len(got.NonCurrent), got.Abstain)
+				}
+				if got.Hits[0].Identity.DocumentKey != "vn:1" || got.Hits[0].Text == "" {
+					t.Fatalf("unexpected first hit: %+v", got.Hits[0].Identity)
+				}
+			})
+		}
+	}
+}
+
+func TestOpenDraft_SearchRefusedUntilCalibrated(t *testing.T) {
+	db, e, f := fixture(t)
+	release := e.Release()
+	release.RetrievalRecipe.Abstention.Threshold = nil
+	release.RetrievalRecipe.Abstention.CalibrationSHA256 = ""
+	draft, err := OpenDraft(context.Background(), db, f, release, fixtureOptions())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = draft.Search(context.Background(), Request{Query: "ngân hàng"}); err == nil {
+		t.Fatal("draft search accepted")
+	}
+	if f.calls != 0 {
+		t.Fatal("draft search embedded query")
+	}
+}
+
+func TestSearch_UnknownStatusHistoricalDateIsPrimary(t *testing.T) {
+	db, e, _ := fixture(t)
+	_, err := db.Exec(context.Background(), `UPDATE document SET status_class='unknown',is_current=false,eff_from='2020-01-01' WHERE id=3`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := e.Search(context.Background(), Request{Query: "ngân hàng", Mode: "exact", AsOf: &Date{2021, time.January, 1}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, hit := range got.Hits {
+		if hit.Identity.DocumentKey == "vn:3" {
+			if !hit.Stamp.Current {
+				t.Fatal("historical hit is not current")
+			}
+			return
+		}
+	}
+	t.Fatal("unknown-status document missing from historical primary hits")
+}

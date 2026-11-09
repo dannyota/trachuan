@@ -90,7 +90,13 @@ func hydrate(ctx context.Context, tx pgx.Tx, g *ArmGroup, vec string) error {
 		return errors.New("read hydrated ancestry failed")
 	}
 	rows.Close()
+	descendants, relations, err := hydrateTrees(ctx, tx, gids)
+	if err != nil {
+		return err
+	}
 	for id, c := range byID {
+		c.Descendants = descendants[c.GroupID]
+		c.Relations = relations[c.GroupID]
 		c.Ancestors = ancestors[c.GroupID]
 		byID[id] = c
 	}

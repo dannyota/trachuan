@@ -1,0 +1,62 @@
+package retrieval
+
+import (
+	"context"
+	"errors"
+
+	"github.com/jackc/pgx/v5"
+)
+
+func hydrateTrees(ctx context.Context, tx pgx.Tx, ids []int64) (map[int64][]Provision, map[int64][]SourceRelation, error) {
+	const treeSQL = `WITH RECURSIVE tree AS (
+ SELECT p.id AS group_id,p.id,p.parent_id,p.document_id,p.kind,p.label,p.heading,p.ordinal,p.preorder,p.text,p.anchor,p.node_id FROM provision p WHERE p.id=ANY($1::bigint[])
+ UNION ALL SELECT t.group_id,p.id,p.parent_id,p.document_id,p.kind,p.label,p.heading,p.ordinal,p.preorder,p.text,p.anchor,p.node_id FROM tree t JOIN provision p ON p.parent_id=t.id AND p.document_id=t.document_id
+ ) SELECT t.group_id,t.id,t.parent_id,t.kind,t.label,t.heading,t.ordinal,t.preorder,t.text,t.anchor,t.node_id,d.country,d.key FROM tree t JOIN document d ON d.id=t.document_id ORDER BY t.group_id,t.preorder`
+	rows, err := tx.Query(ctx, treeSQL, ids)
+	if err != nil {
+		return nil, nil, errors.New("hydrate descendant provisions failed")
+	}
+	trees := map[int64][]Provision{}
+	for rows.Next() {
+		var id int64
+		var p Provision
+		if rows.Scan(&id, &p.ID, &p.ParentID, &p.Kind, &p.Label, &p.Heading, &p.Ordinal, &p.Preorder, &p.Text, &p.Identity.Anchor, &p.NodeID, &p.Identity.Country, &p.Identity.DocumentKey) != nil {
+			rows.Close()
+			return nil, nil, errors.New("read descendant provision failed")
+		}
+		trees[id] = append(trees[id], p)
+	}
+	if rows.Err() != nil {
+		rows.Close()
+		return nil, nil, errors.New("read descendant provisions failed")
+	}
+	rows.Close()
+	const relationSQL = `WITH RECURSIVE tree AS (
+ SELECT p.id AS group_id,p.id,p.document_id FROM provision p WHERE p.id=ANY($1::bigint[])
+ UNION ALL SELECT t.group_id,p.id,p.document_id FROM tree t JOIN provision p ON p.parent_id=t.id AND p.document_id=t.document_id
+ ), endpoints AS (SELECT group_id,document_id,array_agg(id) AS ids FROM tree GROUP BY group_id,document_id)
+ SELECT e.group_id,r.source_key,r.target_key,r.source_number,r.target_number,sp.anchor,tp.anchor,r.kind,r.raw_label,r.evidence,r.method,r.source_document_id IS NOT NULL,r.target_document_id IS NOT NULL,r.artifact_sha256,r.ordinal
+ FROM endpoints e JOIN relation r ON (r.source_document_id=e.document_id AND (r.source_provision_id IS NULL OR r.source_provision_id=ANY(e.ids))) OR (r.target_document_id=e.document_id AND (r.target_provision_id IS NULL OR r.target_provision_id=ANY(e.ids)))
+ LEFT JOIN provision sp ON sp.id=r.source_provision_id LEFT JOIN provision tp ON tp.id=r.target_provision_id`
+	rows, err = tx.Query(ctx, relationSQL, ids)
+	if err != nil {
+		return nil, nil, errors.New("hydrate relations failed")
+	}
+	rels := map[int64][]SourceRelation{}
+	for rows.Next() {
+		var id int64
+		var r SourceRelation
+		v := &r.Value
+		if rows.Scan(&id, &v.SourceKey, &v.TargetKey, &v.SourceNumber, &v.TargetNumber, &v.SourceAnchor, &v.TargetAnchor, &v.Kind, &v.RawLabel, &v.Evidence, &v.Method, &v.SourceResolved, &v.TargetResolved, &r.ArtifactSHA256, &r.Ordinal) != nil {
+			rows.Close()
+			return nil, nil, errors.New("read relation failed")
+		}
+		rels[id] = append(rels[id], r)
+	}
+	if rows.Err() != nil {
+		rows.Close()
+		return nil, nil, errors.New("read relations failed")
+	}
+	rows.Close()
+	return trees, rels, nil
+}

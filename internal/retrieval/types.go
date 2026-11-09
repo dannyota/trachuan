@@ -75,6 +75,8 @@ type Provision struct {
 	Kind     string
 	Label    string
 	Heading  string
+	Ordinal  int
+	Preorder int
 	Text     string
 }
 
@@ -106,6 +108,15 @@ type Candidate struct {
 	Provision     Provision
 	Document      Document
 	Ancestors     []Provision
+	Descendants   []Provision
+	Relations     []SourceRelation
+}
+
+// SourceRelation associates a source edge with its stable artifact identity.
+type SourceRelation struct {
+	Value          Relation
+	ArtifactSHA256 string
+	Ordinal        int
 }
 
 // ArmGroup holds candidates for one document eligibility group.
@@ -119,11 +130,14 @@ type ArmGroup struct {
 
 // Arms is the reusable candidate cache for a prepared query.
 type Arms struct {
-	Release         string
-	RecipeHash      string
-	QueryRecipeHash string
-	Validation      Validation
-	Depths          Depths
-	Primary         ArmGroup
-	NonCurrent      ArmGroup
+	Release           string
+	RecipeHash        string
+	QueryRecipeHash   string
+	Validation        Validation
+	Depths            Depths
+	Date              Date
+	AsOf              *Date
+	IncludeNonCurrent bool
+	Primary           ArmGroup
+	NonCurrent        ArmGroup
 }
