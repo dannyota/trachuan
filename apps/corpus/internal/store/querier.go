@@ -26,6 +26,9 @@ type Querier interface {
 	InsertGap(ctx context.Context, arg InsertGapParams) error
 	InsertPlannedItem(ctx context.Context, arg InsertPlannedItemParams) error
 	InsertRunItem(ctx context.Context, arg InsertRunItemParams) error
+	ListDiscoveryItems(ctx context.Context, country string) ([]ListDiscoveryItemsRow, error)
+	ListDiscoveryListings(ctx context.Context, country string) ([]ListDiscoveryListingsRow, error)
+	ListDiscoveryRuns(ctx context.Context, country string) ([]ListDiscoveryRunsRow, error)
 	ListPendingBatchItems(ctx context.Context, arg ListPendingBatchItemsParams) ([]RunItem, error)
 	ListPendingStageBatches(ctx context.Context, arg ListPendingStageBatchesParams) ([]int32, error)
 	ListRunGaps(ctx context.Context, arg ListRunGapsParams) ([]Gap, error)

@@ -61,6 +61,15 @@ func queries(r stage.Run) (map[string]query, error) {
 	return result, nil
 }
 
+func queryIdentity(key string, definition query) (string, error) {
+	data, err := json.Marshal(definition)
+	if err != nil {
+		return "", fmt.Errorf("encode query: %w", err)
+	}
+	sum := sha256.Sum256(data)
+	return fmt.Sprintf("%s@%x", key, sum[:8]), nil
+}
+
 // Plan returns every frozen query without an input hash.
 func (*Stage) Plan(_ context.Context, _ stage.Env, r stage.Run) ([]stage.Item, error) {
 	definitions, err := queries(r)
@@ -92,12 +101,11 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, r stage.Run, it stag
 	if s.client == nil {
 		return stage.Output{}, fmt.Errorf("VBPL client is required")
 	}
-	data, err := json.Marshal(definition)
+	identity, err := queryIdentity(it.Key, definition)
 	if err != nil {
-		return stage.Output{}, fmt.Errorf("encode query: %w", err)
+		return stage.Output{}, err
 	}
-	sum := sha256.Sum256(data)
-	result := report{QueryKey: fmt.Sprintf("%s@%x", it.Key, sum[:8]), Items: make(map[string]json.RawMessage)}
+	result := report{QueryKey: identity, Items: make(map[string]json.RawMessage)}
 	var passes [][]page
 	var previous []string
 	for pass := 0; pass < 3; pass++ {
