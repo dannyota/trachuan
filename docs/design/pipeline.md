@@ -10,14 +10,26 @@ signed dump to S3. Decision and alternatives:
   Temporal server and its UI locally. The machine may be off between runs;
   Temporal resumes from persisted history.
 - `corpus worker` is one Go binary with one workflow,
-  `BuildRelease(country, rel)`, and one activity per stage. Workflow ids are
-  `build-<cc>-<rel>`; a second start while one is running is rejected. The
-  workflow calls continue-as-new after each stage, so each history segment holds
-  one stage.
-- `corpus start <rel>` first writes the `run` row with a frozen snapshot: the
-  source list revision, every recipe hash, `taxonomy_version`, worker version
-  and the previous release manifest hash. Activities read the snapshot from the
-  run row, never from the working tree, so a run is reproducible.
+  `BuildRelease(country, rel)`. Stage and control activities follow
+  [ADR 0008](../adr/0008-write-path-temporal-self-hosted.md#history). Workflow
+  ids are `build-<cc>-<rel>`; a second start while one is running is rejected.
+  The workflow calls continue-as-new after each stage, so each history segment
+  holds one stage.
+- `corpus start <cc> <rel>` first writes the `run` row, one per (`country`,
+  `rel`), with a snapshot frozen on first start: the parsed source list and its
+  hash, every recipe hash, `taxonomy_version`, worker version, stage list and
+  previous release manifest hash. Activities read the snapshot from the run row,
+  never from the working tree, so a run is reproducible. A worker whose compiled
+  recipe hash differs from the snapshot for any stage already in it refuses the
+  run. When a newer worker adds stages, `corpus start` on a paused run appends
+  their recipe hashes to the snapshot and records the extension in the run
+  message; recipes already frozen never change.
+- Workflow changes use
+  [`workflow.GetVersion`](https://docs.temporal.io/develop/go/workflows/versioning#patching-with-getversion).
+  CI replays every history in
+  `apps/corpus/internal/workflow/testdata/histories/` with the SDK
+  [workflow replayer](https://pkg.go.dev/go.temporal.io/sdk/worker#WorkflowReplayer)
+  to check compatibility before a worker upgrade.
 - Activities receive and return references (run id, stage, item keys, artifact
   hashes), never text or vectors. Items are processed in fixed batches per
   activity execution with heartbeats; the size is in [budgets](budgets.md).
@@ -34,17 +46,27 @@ signed dump to S3. Decision and alternatives:
   successful rename wins and the other verifies and adopts it; the filesystem
   rename is the atomic winner selection. Different releases share artifacts by
   hash without conflict.
-- `corpus status <rel>` and the Temporal UI show per-stage expected, done, gap,
-  failed and pending counts, next retry times, provider job ids and cost so far.
-- Run states: `running`, `cancelling`, `cancelled`, `failed`, `evaluated`,
-  `released`. `corpus cancel <rel>` requests cancellation; activities finish
-  their current batch and the run becomes `cancelled`. `corpus start <rel>`
-  after `cancelled` or `failed` starts a new workflow with the same snapshot and
-  reuses artifacts. A gap becomes accepted only through
-  `corpus accept-gaps <rel>`, which records the owner's approval per gap kind;
-  `release` refuses unaccepted gaps.
+- For `fetch`, `input_hash` is the sha256 of the fetched bundle manifest
+  `MANIFEST.sha256`, whose sorted entries bind each file's sha256 and relative
+  path. Unchanged remote content keeps its hash, so later stages skip it when
+  their recipes are unchanged. The artifact sha256 is the manifest sha256 and
+  becomes the input hash for `extract` and `relate`.
+- `corpus status <cc> <rel>` and the Temporal UI show per-stage expected, done,
+  gap, failed and pending counts, next retry times, provider job ids and cost so
+  far.
+- Run states: `running`, `cancelling`, `cancelled`, `failed`, `paused`,
+  `evaluated`, `released`. `paused` means the workflow stopped after the stage
+  named by `corpus start --until <stage>` or after the last implemented stage.
+  `corpus start <cc> <rel>` resumes a paused run at the next stage with a new
+  generation. After `cancelled` or `failed`, it starts a new workflow with the
+  same snapshot and reuses artifacts.
+- `corpus cancel <cc> <rel>` sets `run.state = cancelling`; activities check
+  that state between items, finish the current item and stop before the next.
+  The run then becomes `cancelled`. A gap becomes accepted only through
+  `corpus accept-gaps <cc> <rel>`, which records the owner's approval per gap
+  kind; `release` refuses unaccepted gaps.
 - Checkpoints: at every stage boundary, before continue-as-new, the workflow
-  runs a `checkpoint` activity that dumps the workshop database, syncs
+  runs a `Checkpoint` activity that dumps the workshop database, syncs
   `artifacts/` and dumps Temporal persistence to an external disk or S3. No
   activity is in flight at that point, so the three copies are consistent.
   Recovery from storage loss restores the latest checkpoint and restarts the run
