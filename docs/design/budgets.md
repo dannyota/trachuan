@@ -148,6 +148,12 @@ after 2 minutes.
 VBPL ingest bounds: API response 20 MB; provision tree depth 32 and 50,000
 nodes; at most 3 listing passes per query.
 
+Central listing page size: 1,000. The primary measured 57,951 documents on
+2026-11-09: 58 requests per pass, about 1.65 MB per response, below the API
+bound. Two identical complete passes used 116 requests and 172 MB, with 129 s
+server time at 1 request/s. These are discovery costs before named lookups,
+expansion or fetch, not a full-run estimate; retain the result bound below.
+
 VBPL gateway: at most 16 requests per second and 16 in flight by default
 (`CORPUS_VBPL_RPS`, `CORPUS_VBPL_IN_FLIGHT`); request timeout 30 seconds. Retry
 HTTP 429, HTTP 5xx and timeouts 3 times, after 2, 8 and 30 seconds. A document
@@ -179,7 +185,7 @@ default `s3-han02.fptcloud.com`.
 | Relation expansion       | 1 hop; 5,000 distinct added context ids per run                 |
 | Discovery result bound   | 100,000 ids per query; 3 complete passes maximum                |
 | chinhphu candidates      | 100 unique docids per run, before VBPL exclusion                |
-| chinhphu search          | 100 pages per query per pass; 3 passes maximum                  |
+| chinhphu search          | Request cap 500; 100 pages per query per pass; 3 passes maximum |
 | chinhphu requests        | 1 request/s, burst 1, 1 in flight across page and file hosts    |
 | chinhphu response        | 5 MB per HTML response; existing 50 MB attachment cap           |
 | chinhphu total downloads | 1 GB per run, including retries and rejected bodies             |

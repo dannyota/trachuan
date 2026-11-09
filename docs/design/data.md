@@ -73,15 +73,34 @@ cleanup. Freeze the normalizer version in dependent recipes. Ambiguous equality
 remains a candidate set, never proof that two documents are identical. Legacy
 evaluation's historical matcher stays unchanged under ADR 0010.
 
+### Named-entry eligibility
+
+VBPL named entries carry a number and optional civil issue date (`YYYY-MM-DD`);
+the qualifier is required without a four-digit year segment in the number. A
+returned item is eligible only when normalized numbers match and its parsed
+issue date equals the qualifier, if present. An unqualified entry must contain a
+four-digit year segment and the item must have a parsed issue date. An
+equal-number result with a missing or unparsable date is unresolved and makes
+the entry ambiguous. A different verified date under a qualified entry is
+ineligible, not unresolved. Preserve all result evidence. No issuer evidence is
+required: the entry has no expected issuer and VBPL is primary. This rule
+selects a VBPL document; it does not establish cross-source identity.
+
 ### Identity comparison
 
-Hand-over compares raw identity fields through deterministic matching forms: the
-number form above; issuer NFC, trimmed and whitespace-collapsed with uppercase;
-and a fully parsed civil issue date in `YYYY-MM-DD`. Preserve raw values and
-evidence references. No fuzzy issuer aliases or inferred dates. Missing,
-unparsable or contradictory fields are unverifiable. A fetch failure does not
-invalidate identity evidence already present in a complete listing, but cannot
-supply missing fields. [Sources](sources.md) owns the decision table.
+Only cross-source comparisons, for secondary probes and hand-over, require
+issuer comparison: use the number form above; issuer NFC, trimmed and
+whitespace-collapsed with uppercase; and a fully parsed civil issue date in
+`YYYY-MM-DD`. Preserve raw values and evidence references. No fuzzy issuer
+aliases or inferred dates. Missing, unparsable or contradictory fields are
+unverifiable. Equal normalized numbers identify the same document only with
+equal issue dates and matching issuer evidence. Different verified issue dates
+establish different documents, even for equal numbers; preserve that evidence
+without seeding or blocking secondary admission. Missing dates on either side,
+or missing/conflicting issuer evidence without a proven date difference, retain
+ambiguity. [Sources](sources.md) owns the hand-over table. A fetch failure does
+not invalidate identity evidence already present in a complete listing, but
+cannot supply missing fields.
 
 ## Auth database `auth` (written when serving)
 
@@ -135,21 +154,30 @@ per-adapter additions. Interface and transaction rules live in
   (`active`,`withdrawn`,`scope_removed`,`source_replaced`), nullable raw and
   normalized number, and nullable `replacement_key`. Require replacement key
   exactly for `source_replaced`. Key must equal country, source and source id.
-- `run_membership_evidence`: run, document key, producing stage/item, query
-  identity or supporting seed key, raw relation code when applicable, evidence
-  artifact hash and relative evidence path. Deduplicate by these fields. Keep
-  every independent support edge, not only the last writer's reason.
+- `run_membership_evidence`: run, document key, producing stage/item and typed
+  support tuple `(rule_kind, rule_value, evidence_reference)`. Kinds and values:
+  `agency` with agency id; `term` with term; `named` with the named entry;
+  `secondary_probe` with candidate docid; `relation` with seed id plus raw code.
+  The evidence reference carries listing or lookup query identity and page when
+  applicable, response SHA-256, artifact hash and relative evidence path;
+  relation support references the seed's detail/diagram response. Deduplicate by
+  these fields. Keep every independent support, including removed-rule evidence
+  for audit; a member leaves only when no current or retained support remains
+  under [pipeline](pipeline.md#source-ingest-rules).
 - `run_seed_observation`: run, seed key, producing expand item, completeness,
   artifact hash and observed targets. Failed observations retain prior known
   support with its original evidence, explicitly marked retained. Departed seeds
   are not current support. Membership can be rebuilt from these records.
 - `run_scope`: run, seed/expanded/final snapshot JSON and their hashes, nullable
   until that phase closes, plus nullable fetch-close input hash. Snapshots
-  contain byte-sorted membership and evidence records serialized with the
-  [inventory](index.md#build-stage) convention. Freeze each phase's stored JSON
-  and hash on close. Expanded active keys exclude retained removals;
-  finalization may exclude candidates but never add unplanned keys. Retry
-  invalidation clears only the affected phase references.
+  contain byte-sorted membership and complete typed support tuples in every
+  phase (`seeds`, `expanded`, `final`), serialized with the
+  [inventory](index.md#build-stage) convention. Include those tuples in
+  inventory membership and `identity_inventory_hash`, even when document keys do
+  not change. Freeze each phase's stored JSON and hash on close. Expanded active
+  keys exclude retained removals; finalization may exclude candidates but never
+  add unplanned keys. Retry invalidation clears only the affected phase
+  references.
 
 Active and retained-removal members form the expected set; replacement records
 only audit exclusion. Fetch work can be a larger candidate superset. The class

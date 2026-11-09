@@ -8,43 +8,57 @@ keeps adapters from inventing competing membership and failure contracts.
 
 ## Lookup and search results
 
-Both clients expose `LookupNumber(ctx, number) (LookupResult, error)` and their
-keyword search returns the same envelope. `LookupResult` contains `items` and
-`evidence`, even for zero results or partial results returned with an error.
-The envelope has `version:1`. Items carry source, source id, raw number, title,
-issuer, issue date and the page evidence reference. Missing metadata stays explicit.
+Both clients expose `LookupNumber(ctx, number) (LookupResult, error)`; the VBPL
+central listing and chinhphu search return the same envelope. `LookupResult`
+contains `items` and `evidence`, even for zero results or partial results
+returned with an error. The envelope has `version:1`. Items carry source, source
+id, raw number, title, issuer, issue date and the page evidence reference.
+Missing metadata stays explicit. VBPL listing items also retain `agencyIds` for
+local selection. Keep the full listing evidence and record matching rules
+separately from the query identity; local filtering never changes the reported
+total or completeness.
 
 Evidence contains `query_identity`, the canonical query definition,
 `pages_fetched`, `total_reported` and `completeness` (`complete`, `incomplete`).
 Each page records ordinal/cursor, reported total when available, result ids,
-redacted response SHA-256 and artifact-relative response path. The overall
-total is nullable when the source supplies no verifiable total. A page cursor
-is a nonsecret locator; session tokens are never evidence values.
+redacted response SHA-256 and artifact-relative response path. The overall total
+is nullable when the source supplies no verifiable total. A page cursor is a
+nonsecret locator; session tokens are never evidence values.
 
 Mark complete only when every page was read successfully, pagination ended
 normally, page totals agree and the distinct returned-id count equals the
 reported total. Unknown totals, truncation, duplicate-only page loops, parser
-uncertainty, challenges and failed pages are incomplete. The fixture spike must
-establish how each source reports totals; do not infer completeness from an
-empty slice or an exhausted budget. Empty results prove absence only when
-complete, with a recorded empty response and reported total zero.
+uncertainty, challenges and failed pages are incomplete. Do not infer
+completeness from an empty slice or an exhausted budget. Empty results prove
+absence only when complete, with a recorded empty response and reported total
+zero.
+
+For chinhphu, request `drdRecordPerPage` at the cap in
+[budgets](budgets.md#pipeline). Page info `a - b | N` reports the lesser of the
+match count and that cap. Completeness additionally requires `N` below the cap;
+equality is incomplete even after every page is read. Do not narrow capped
+queries in this work. `Không có thông tin văn bản!` with blank page info is the
+recorded zero total. A detail response with `Không tìm thấy văn bản này` is not
+found even at HTTP 200, not a transport failure. Stale postback tokens are not a
+failure signal; validate the returned page and pagination evidence.
 
 This is per-observation completeness; the stable-listing pass rule in
 [pipeline](pipeline.md#source-ingest-rules) still applies. Persist the evidence
-envelope with discover output before resolution. Reused artifacts reproduce
-the same completeness and gaps. Hash only redacted response bytes; keep tokens
-in memory. A network error is not a replacement for incomplete-result evidence.
-An incomplete result without a transport failure resolves as `listing_unstable`;
+envelope with discover output before resolution. Reused artifacts reproduce the
+same completeness and gaps. Hash only redacted response bytes; keep tokens in
+memory. A network error is not a replacement for incomplete-result evidence. An
+incomplete result without a transport failure resolves as `listing_unstable`;
 transport failures retain their structured cause and retry outcome.
 
 ## Shared membership and artifacts
 
 Replace VBPL-specific expected entries with `MembershipEntry`: document key,
-source, source id, class, disposition, supporting seeds and evidence references
-as defined in data. Shared readers take run and phase (`seeds`, `expanded`,
-`final`) and return sorted entries plus the phase hash. They expose active and
-retained-removal views explicitly, never derive membership from fetch items.
-Planning and finalization use transaction-bound readers under the run lock.
+source, source id, class, disposition and all typed support tuples defined in
+[data](data.md#scope-workshop-contracts). Shared readers take run and phase
+(`seeds`, `expanded`, `final`) and return sorted entries plus the phase hash.
+They expose active and retained-removal views explicitly, never derive
+membership from fetch items. Planning and finalization use transaction-bound
+readers under the run lock.
 
 Discover emits lookup envelopes; expand emits `version:1` per-seed observations
 with completeness, qualified target ids, raw codes and response references.
@@ -56,19 +70,18 @@ verified bundle. `Resolve` writes run membership evidence and gaps. No artifact
 embeds the run's final class or precedence decision.
 
 Source-independent document and file projections, structured failure causes,
-membership readers and finalization are mandatory workshop migrations and
-shared interfaces. Preserve old artifacts; decode their known formats into the
-common projection with unknown provenance explicit. Do not silently treat old
-rows as complete evidence or fill chinhphu ids into `vbpl_id`.
+membership readers and finalization are mandatory workshop migrations and shared
+interfaces. Preserve old artifacts; decode their known formats into the common
+projection with unknown provenance explicit. Do not silently treat old rows as
+complete evidence or fill chinhphu ids into `vbpl_id`.
 
 ## Fetch-close finalization
 
-Add an optional stage interface
-`Finalize(ctx, tx, run) (Finalization, error)` to the existing `CloseStage`
-control activity. `Finalization` carries a durable failure code, reason and
-evidence references, or success. Stages without it retain current close
-behavior. The control activity owns the transaction; finalizers never commit,
-perform network requests or mutate immutable artifacts.
+Add an optional stage interface `Finalize(ctx, tx, run) (Finalization, error)`
+to the existing `CloseStage` control activity. `Finalization` carries a durable
+failure code, reason and evidence references, or success. Stages without it
+retain current close behavior. The control activity owns the transaction;
+finalizers never commit, perform network requests or mutate immutable artifacts.
 Discover and expand use the same hook to publish their seed and expanded
 membership snapshot references before advancing. Build uses the final snapshot;
 drift checks always use the earlier frozen expanded active snapshot.
@@ -78,8 +91,8 @@ stage identity and that no stage item is pending or failed. Fetch finalization:
 
 1. Reads committed fetch outputs, lookup evidence and the expanded active
    membership snapshot; verifies their hashes and the source-state barrier.
-2. Checks each primary seed's qualified targets for drift under sources.md.
-   A drift commits `run_failure(scope_changed)`, marks the run failed and leaves
+2. Checks each primary seed's qualified targets for drift under sources.md. A
+   drift commits `run_failure(scope_changed)`, marks the run failed and leaves
    `next_stage` at fetch; it does not publish final membership or advance.
 3. Otherwise applies the hand-over table, updates final membership and writes
    replacement/ambiguity gaps on the secondary fetch item, including skipped
@@ -93,11 +106,11 @@ already-proven replacement is unnecessary. Downstream stages read only final
 active membership; build also reads excluded membership and gaps for audit.
 
 The input hash covers expanded membership and evidence, fetch item outcomes and
-artifact hashes, and comparison evidence. Repeating close with the same input
-is a no-op returning the committed result. Changed input after finalization is
-an error unless an authorized retry first invalidated that finalization.
-An infrastructure error rolls back; a domain failure must commit its reason
-before returning `Failed`. Start, accept-gaps and release reject a run with
+artifact hashes, and comparison evidence. Repeating close with the same input is
+a no-op returning the committed result. Changed input after finalization is an
+error unless an authorized retry first invalidated that finalization. An
+infrastructure error rolls back; a domain failure must commit its reason before
+returning `Failed`. Start, accept-gaps and release reject a run with
 `scope_changed`; neither a worker restart nor a generation change clears it.
 Reason: fetch completion and membership publication must be atomic and fenced.
 
@@ -106,8 +119,8 @@ Reason: fetch completion and membership publication must be atomic and fenced.
 The first recognized challenge or HTTP 403 atomically records
 `run_source.state=source_paused` for that run/source, with reason and redacted
 evidence. It is a persistent source-wide state, not an item retry or a gap.
-Every later item for that source fails fast with `source_paused`. Compound
-items also stop before any further request to the paused source.
+Every later item for that source fails fast with `source_paused`. Compound items
+also stop before any further request to the paused source.
 
 All clients, batches and workers use a shared request-admission gate backed by
 the workshop row. It serializes request admission with pause updates, checks
@@ -118,21 +131,21 @@ its stage. A paused source prevents advancement and release. Database failure
 fails admission closed; process-local caches cannot authorize requests.
 
 Worker startup, `corpus start` and `corpus recover` read and preserve the pause.
-Only `corpus source-resume <cc> <rel> --source <name> --note <reason>` clears it.
-The command requires no open workflow and an unreleased run, locks the run and
-source rows, and appends a clear event. It sends no request and does not start
-work; the owner then runs `corpus start`. Resume resets `source_paused` failed
-items through the normal failed-item path, retaining completed evidence.
+Only `corpus source-resume <cc> <rel> --source <name> --note <reason>` clears
+it. The command requires no open workflow and an unreleased run, locks the run
+and source rows, and appends a clear event. It sends no request and does not
+start work; the owner then runs `corpus start`. Resume resets `source_paused`
+failed items through the normal failed-item path, retaining completed evidence.
 Reason: concurrent batches and restarts must not bypass an access denial.
 
 ## Retry source gaps
 
 On an otherwise permitted `corpus start`, inspect all stages for items with a
 nonempty gap set consisting only of `source_unavailable` or gateway-caused
-`invalid_source_data`. Include done items carrying gaps and accepted gaps.
-Use the structured causes in data, never message matching. Malformed legal
-data, duplicate ids and database text errors do not qualify. Historical gaps
-without origin evidence stay unchanged pending classification from evidence.
+`invalid_source_data`. Include done items carrying gaps and accepted gaps. Use
+the structured causes in data, never message matching. Malformed legal data,
+duplicate ids and database text errors do not qualify. Historical gaps without
+origin evidence stay unchanged pending classification from evidence.
 
 In the generation-increment transaction, delete selected gaps and item-owned
 derived rows, clear artifact/input references and attempt state, and set items
@@ -164,3 +177,7 @@ removal keys and rejected acceptance; conflicting/missing hand-over fields;
 unrelated missing context metadata; concurrent source pause, restart and
 explicit clear. Use injected clocks, transport, DNS and reduced limits. These
 are acceptance requirements, not claims that checks have run.
+
+Also cover local selection from the recorded central listing, equal numbers with
+different or missing issue dates, capped chinhphu totals, the empty-result
+marker and HTTP 200 missing details under the source-specific rules above.

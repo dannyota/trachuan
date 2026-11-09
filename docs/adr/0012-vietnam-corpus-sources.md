@@ -17,11 +17,13 @@ evidence; this design did not recheck the sites or assume a documented API.
 ## Decision
 
 Keep VBPL as the only primary source. Widen discovery through explicit named
-numbers, reviewed exact title searches and one-hop relation context. Use
-`vanban.chinhphu.vn`, source key `chinhphu`, only for central documents absent
-from VBPL, starting with AI. VBPL takes precedence only when number, issuer and
-issue date establish the same identity; missing or conflicting evidence retains
-ambiguity. [Sources](../design/sources.md) owns the hand-over decision table.
+numbers, local scope selection over the full central listing and one-hop
+relation context. Use `vanban.chinhphu.vn`, source key `chinhphu`, only for
+central documents absent from VBPL, starting with AI. VBPL takes precedence only
+when number, issuer and issue date establish the same identity. Equal numbers
+with different verified issue dates are different documents; missing or
+conflicting evidence otherwise retains ambiguity.
+[Sources](../design/sources.md) owns the hand-over decision table.
 
 Reuse banhmi data and source knowledge under
 [ADR 0001](0001-reuse-banhmi-data-only.md), never its scraper code. Keep the
@@ -61,3 +63,6 @@ the secondary key rather than claiming identical provenance.
   matching identity evidence before replacement, because a number alone can
   collide. Execution now specifies shared contracts, durable pauses and a
   non-acceptable expansion-drift failure; reviewer confirmation remains pending.
+- 2026-11-09: recorded the owner's full central listing and local selection
+  choice, approved lists and carried-over migration loss approval; applied the
+  primary's date-qualified identity and capped chinhphu completeness rulings.

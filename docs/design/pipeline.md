@@ -140,7 +140,7 @@ explicit source-resume command. Neither is an acceptable coverage gap.
 
 | Stage      | Input                                       | Output                                                                          | Completeness rule                                                                                                                                                           |
 | ---------- | ------------------------------------------- | ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `discover` | source list YAML; previous release manifest | expected document set with source modified dates                                | full listing per source every run; a document absent from two consecutive listings is marked `withdrawn` and kept with a gap                                                |
+| `discover` | source list YAML; previous release manifest | expected document set with source modified dates                                | full listing per source every run; reconcile independent supports and distinguish selection loss from catalog absence under [source ingest rules](#source-ingest-rules)     |
 | `expand`   | Frozen direct VBPL seeds                    | One-hop context membership and source evidence                                  | Proposed scope stage; never expand context output; failures keep coverage gaps, [sources](sources.md#one-hop-relation-context)                                              |
 | `fetch`    | expected set                                | metadata JSON, every listed attachment, hashes                                  | attachments use a verified matching local cache entry or a fresh download; a changed attachment reprocesses the document; a missing attachment is a gap                     |
 | `extract`  | files                                       | structure tree with verbatim text                                               | parser limits in [budgets](budgets.md); article count matches the table of contents; table and appendix counts match the source inventory; empty or truncated text is a gap |
@@ -168,26 +168,36 @@ scope.
 
 ## Source ingest rules
 
-[Sources](sources.md) owns the proposed selection rules, named and keyword
-queries, relation context, secondary precedence and query identity. The new
-scope run inserts `expand` before `fetch`; the existing ingest run keeps its
-frozen stage order. `discover` supplies direct seeds and secondary candidates;
-expand closes additions to the expected set before fetch planning.
+[Sources](sources.md) owns local selection over the full central VBPL listing,
+named lookups, secondary searches and precedence, relation context and query
+identity. Apply the stable-listing rule below to complete passes of that single
+central listing; local agency and term rules do not create separate network
+queries. The new scope run inserts `expand` before `fetch`; the existing ingest
+run keeps its frozen stage order. `discover` supplies direct seeds and secondary
+candidates; expand closes additions to the expected set before fetch planning.
 
 - `discover` lists every query until two consecutive passes return the same id
   set, at most the pass limit in [budgets](budgets.md); otherwise the query item
   gets gap `listing_unstable` and the expected set uses the union of the passes.
   A listing is complete when its query item is done without a `listing_unstable`
   gap; a query's identity hashes its complete source-specific definition.
-  Earlier runs of the same country are ordered by date, then sequence. For a
-  document listed by some query in an earlier complete listing, take the queries
-  that ever listed it and still exist: it is `withdrawn` when every one of them
-  has a complete listing in this run and in its most recent earlier complete
-  listing, and both omit the document. If any of those listings is incomplete,
-  the document stays expected and is fetched by id. A document whose listing
-  queries are all gone from the source list is `scope_removed`. Withdrawn and
-  scope-removed documents stay in the expected set as gap items that are never
-  fetched.
+- Keep every independent [support tuple](data.md#scope-workshop-contracts). A
+  member leaves scope only when no current or retained support remains; losing
+  one agency or term never removes another rule's support. For an id present in
+  the latest complete stable central listing but supported by no frozen rule,
+  mark `scope_removed` and retain the removed rule tuples as audit evidence.
+  Only catalog absence in both this run's complete stable central listing and
+  its most recent earlier complete stable listing supports `withdrawn`; a local
+  nonmatch is not catalog absence. Other independent supports still retain the
+  member. Earlier runs of the same country are ordered by date, then sequence.
+  For other queries, withdrawal requires every still-configured query that
+  previously listed the document to omit it in this run and its most recent
+  earlier complete stable listing. Incomplete observations retain prior support
+  and fetch the document by id. Removing all supporting queries or rules leaves
+  `scope_removed` only if no other support remains. Removed-rule evidence is
+  audit, not active support. Both removal dispositions remain expected gap items
+  without fetch. Relation support follows
+  [sources](sources.md#one-hop-relation-context).
 - VBPL English renditions (ids starting with `vbpqta_`) are not legal text in
   Vietnamese and never enter the expected set.
 - `fetch` stores attachments as `files/<sha256>` and maps original names in
@@ -221,7 +231,7 @@ rule.
 
 | Recipe                   | Scope change and reason                                                                                                                  |
 | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `discover`               | Bump for exact/named queries, secondary parsing, number probes and query identity; hash adapter and number-normalizer versions.          |
+| `discover`               | Bump for listing, local selection, qualified probes and secondary parsing; hash rules, queries, adapter and normalizer versions.         |
 | `expand`                 | New recipe hashes relation-code table, qualifying kinds, direction, one-hop policy and parser version so scope evidence is reproducible. |
 | `fetch`                  | Bump for source dispatch, secondary bundle/provenance format and gateway failure classification.                                         |
 | `extract`                | Bump for explicit secondary `no_tree` handling; no PDF extraction is introduced.                                                         |

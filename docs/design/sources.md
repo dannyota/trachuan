@@ -10,7 +10,8 @@ limits. Shared interfaces and close transactions live in
 
 ## Evidence and boundaries
 
-Use the primary's measurements and the
+Use the primary's
+[scope measurements](../research/vn-scope-comparison-2026-11.md) and
 [source research](../research/vn-sources-2026-11.md). They supersede the missing
 document list in the earlier
 [ingest report](../research/vbpl-ingest-2026-11.md). No network research was
@@ -29,75 +30,91 @@ First-party entry points supplied by that evidence:
 
 ## Direct discovery
 
-Retain the configured State Bank sweeps and central keyword agencies. A direct
-VBPL hit is class `primary`, whether found by sweep, title, named number or a
-secondary candidate's VBPL number probe. Reason: discovery route must not change
-a document's authority or searchable content.
+List the full central catalog once per run through `POST /doc/all`, with
+`agencyLevel: TRUNG_UONG`, no agency filter and no keyword. Use the page size in
+[budgets](budgets.md#pipeline) and the stable-listing rule in
+[pipeline](pipeline.md#source-ingest-rules). Replace server-side title searches
+and the separate State Bank sweep with local selection over this listing.
+
+Select a listing item when `agencyIds` intersects `{62, 908}` or its title
+matches an approved term below. Normalize title and term with NFC, lowercase and
+whitespace collapse, then require a contiguous phrase. Exclude `vbpqta_`
+renditions. Record every matching rule using the
+[typed support tuple](data.md#scope-workshop-contracts). A direct hit stays
+class `primary`, including a qualified named lookup or secondary probe. Freeze
+agencies, terms and normalization version in the source list and discover
+recipe; changes require a new run.
+
+Reason: local selection retains prior hits and adds relevant central documents,
+with some noise. Listing items lack field classification; details often leave it
+unset, so it cannot define scope. Diacritic folding and phrase gaps added mostly
+noise; exclude both. Named numbers cover title typos.
 
 Add `vbpl.named_numbers` to `sources/vn.yaml`. Initially include `71/2025/QH15`,
 `368/2025/NĐ-CP`, `58/2021/NĐ-CP`, `18/2018/TT-NHNN`, `134/2025/QH15`,
-`53/2026/TT-NHNN` and `142/2026/NĐ-CP`. Reason: explicit coverage must survive
-titles that do not contain a subject keyword.
+`53/2026/TT-NHNN`, `142/2026/NĐ-CP`, `88/2019/NĐ-CP`, `143/2021/NĐ-CP`,
+`340/2025/NĐ-CP`, `52/2024/NĐ-CP` and `304/2025/NĐ-CP`. The owner approved these
+on 2026-11-09 to preserve coverage when titles omit a subject term.
 
 Discover each number with `optionDoc: docNum`, `matchMode: exact`,
 `agencyLevel: TRUNG_UONG`, no agency filter, and all result pages. Compare
 normalized returned numbers locally; an API hit alone does not establish
-equality. Deduplicate by VBPL id. One equal result joins the primary seeds; zero
-produces `named_document_missing`; several produce `named_document_ambiguous`
-with all candidate ids. Never pick the newest result. Already independently
-discovered candidates stay expected. Reason: official numbers are not unique,
-and a named lookup must expose uncertainty.
+equality. Deduplicate by VBPL id and apply only
+[VBPL named-entry eligibility](data.md#named-entry-eligibility) before counting
+matches. One eligible match with no unresolved candidate joins the primary
+seeds; zero produces `named_document_missing`; several or unresolved candidates
+produce `named_document_ambiguous`. Never pick the newest result. Independently
+discovered candidates stay expected.
 
-Every search or lookup returns the [evidence-bearing result](source-execution.md#lookup-and-search-results).
-Apply zero/one/many rules only to complete results. A partial result may add
-observed ids, but cannot prove absence, uniqueness or withdrawal.
+Every listing or lookup returns the
+[evidence-bearing result](source-execution.md#lookup-and-search-results). Apply
+zero/one/many rules only to complete results. A partial result may add observed
+ids, but cannot prove absence, uniqueness or withdrawal.
 
-A zero VBPL match can be covered by one eligible secondary candidate with the
-same number: keep the zero-match evidence and record secondary coverage instead
-of `named_document_missing`. Ambiguity is never converted to absence. Correct or
-qualify an ambiguous entry in a later reviewed source list, never inside a
-frozen run. The initial contract has no fuzzy title or inferred-year fallback.
+A zero eligible VBPL match can be covered by one eligible secondary candidate
+matching the named entry, including its date qualifier: keep the lookup evidence
+and record secondary coverage instead of `named_document_missing`. Never convert
+ambiguity to absence. Correct or qualify an ambiguous entry in a later reviewed
+source list, never inside a frozen run. The initial contract has no fuzzy title
+or inferred-year fallback.
 
-### Keyword list and loss gate
+### Local terms and loss gate
 
-Use `optionDoc: title`, `matchMode: exact` for keyword queries. Keep these
-reviewed proposal terms, adding the digital technology industry term because the
-known golden law is missed by current discovery:
+Use these owner-approved terms for local title selection:
 
-| Area                    | Terms                                                                                              |
-| ----------------------- | -------------------------------------------------------------------------------------------------- |
-| Security                | an toàn thông tin; an ninh mạng; dữ liệu cá nhân; bảo vệ dữ liệu cá nhân                           |
-| Electronic transactions | giao dịch điện tử; chữ ký số; chữ ký điện tử; định danh điện tử; thương mại điện tử                |
-| AI and technology       | trí tuệ nhân tạo; công nghiệp công nghệ số; cơ chế thử nghiệm có kiểm soát; công nghệ tài chính    |
-| Data and identity       | dữ liệu quan trọng; dữ liệu cốt lõi; luật căn cước; luật dữ liệu; luật viễn thông                  |
-| Banking operations      | hệ thống thông tin ngân hàng; thuê ngoài; kinh doanh liên tục                                      |
-| Payments and assets     | thanh toán không dùng tiền mặt; ví điện tử; ngân hàng số; tiền điện tử; tài sản số; tài sản mã hóa |
+| Area                    | Terms                                                                                                                   |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Security                | an toàn thông tin; an ninh mạng; dữ liệu cá nhân; bảo vệ dữ liệu cá nhân; an toàn hệ thống thông tin; an ninh thông tin |
+| Electronic transactions | giao dịch điện tử; chữ ký số; chữ ký điện tử; định danh điện tử; thương mại điện tử; định danh và xác thực điện tử      |
+| AI and technology       | trí tuệ nhân tạo; công nghiệp công nghệ số; cơ chế thử nghiệm có kiểm soát; công nghệ tài chính                         |
+| Data and identity       | dữ liệu quan trọng; dữ liệu cốt lõi; luật căn cước; luật dữ liệu; luật viễn thông; thông tin cá nhân                    |
+| Banking operations      | hệ thống thông tin ngân hàng; thuê ngoài; kinh doanh liên tục; ngân hàng                                                |
+| Payments and assets     | thanh toán không dùng tiền mặt; ví điện tử; ngân hàng số; tiền điện tử; tài sản số; tài sản mã hóa                      |
 
-`exact` semantics are undocumented. Before freezing the first migration run,
-record complete stable `all_words` and `exact` listings for every proposed term
-with identical agency filters in the same comparison session. Also compare the
-previous source list's full seed set with the candidate full seed set, including
-sweeps and named lookups. Save query definitions, response hashes, ids, numbers,
-titles, totals and both set differences in an immutable comparison artifact. An
-incomplete listing cannot pass this gate. Reason: fewer hits alone do not prove
-that the removed documents are irrelevant.
+The owner approved the keyword-exact candidate set's migration loss accounting
+on 2026-11-09. Local selection is a measured superset, so that approval carries
+over. Freeze the immutable comparison hash recorded by the primary in the scope
+research and its approval note with the source snapshot. Retain definitions,
+response hashes, ids, numbers, titles, totals and both set differences. A
+partial listing cannot pass a loss gate.
 
-The primary accounts for every old-only id: retained by another query, restored
+The primary accounts for every old-only id: retained by another rule, restored
 with a named number or revised term, or excluded with an owner-approved scope
 reason. No unexplained loss and no loss of the known VBPL golden documents is
 allowed. Include AI-related documents beyond the golden set in this review.
-Freeze one immutable migration comparison hash and approval note with the source
-snapshot. Later list changes need a loss review only for changed queries that
-can remove coverage, such as removals or narrower filters. Pure additions need
-no repeated migration comparison. Bind each loss review to the changed query
-definitions and old-only ids; carry prior reviews forward unchanged. Never edit
-a started run. Reason: review actual losses without repeating unrelated work.
+Review later changes only when rules or queries can remove coverage. Compute
+local differences offline from a recorded complete stable listing, without new
+network comparisons. Bind reviews to changed definitions and old-only ids;
+retain prior reviews. Pure additions need no loss review. Never edit a started
+run. Reason: review actual losses without repeating unrelated work.
 
-Query identity hashes source, query type, option, mode, level, agencies and
-keyword or number, with canonical ordering. Changing mode creates a new query;
-old-only documents become `scope_removed`, not evidence of source withdrawal.
-The comparison supplies their loss reasons. Normal two-listing withdrawal rules
-in [pipeline](pipeline.md) apply to unchanged query identities.
+The central listing has one query identity: source, listing type, level, absent
+agency and keyword filters, and page size. Other query identities hash their
+source-specific definitions, including option, mode and number or keyword, with
+canonical ordering. Local selection rules are frozen separately from the listing
+identity. Reconcile all independent supports under
+[pipeline](pipeline.md#source-ingest-rules); selection loss is not catalog
+absence.
 
 ## One-hop relation context
 
@@ -137,12 +154,12 @@ metadata-only class would preserve the coverage failure.
 Expand freezes active membership, excluding retained `withdrawn` and
 `scope_removed` keys. A failed observation retains known targets of that active
 seed with a gap; a new failed seed has unknown coverage. Compare each primary
-seed's qualified fresh fetch targets against this frozen active membership.
-An absent target, including a retained removal key, causes non-retryable
+seed's qualified fresh fetch targets against this frozen active membership. An
+absent target, including a retained removal key, causes non-retryable
 `scope_changed` failure with seed, target, reason and both evidence hashes.
 Persist it as a run failure, never an acceptable gap. Start, gap acceptance and
-release cannot clear it; a new run is required. Check during run-specific
-fetch finalization, never inside cached relation artifacts. Context documents'
+release cannot clear it; a new run is required. Check during run-specific fetch
+finalization, never inside cached relation artifacts. Context documents'
 second-hop edges remain `unknown_target` gaps without expansion. Reason: the
 fetch inventory must not conceal an unfetched target or allow accepted drift.
 
@@ -160,10 +177,10 @@ seeds or delaying a fully evidenced removal.
 
 Add `chinhphu.keywords` and `chinhphu.named_numbers` to the source list, frozen
 like VBPL inputs. Start keywords with `trí tuệ nhân tạo`; start named numbers
-with `142/2026/NĐ-CP`, `33/2026/QĐ-TTg`, `05/2026/TT-BKHCN`, `367/QĐ-TTg`,
-`804/QĐ-TTg`, `1671/QĐ-TTg`, `1528/QĐ-TTg`, `127/QĐ-TTg` and `134/2025/QH15`.
-Reason: the measured AI sample bounds the first adapter while named entries
-cover relevant titles that omit the keyword.
+with `142/2026/NĐ-CP`, `33/2026/QĐ-TTg`, `05/2026/TT-BKHCN` and `134/2025/QH15`.
+Drop the initial yearless named entries because the keyword search already
+covers them. Reason: the measured AI sample bounds the first adapter; retained
+named entries preserve explicit coverage if titles change.
 
 Discover candidates from recorded, paginated search responses and detail pages;
 deduplicate by docid. Require explicit central issuer evidence and an intact
@@ -172,29 +189,35 @@ number produces `invalid_source_data`, never inferred inclusion. Apply the same
 zero/multiple named-result rules as VBPL. Reason: this source is a central gap
 filler, not a second unrestricted corpus.
 
-For every candidate, discover performs a fresh exact VBPL number lookup with the
-direct-discovery rules. A unique match becomes a primary seed, even if no
-keyword found it. An incomplete lookup records a source gap and defers new
-admission; it cannot remove an existing secondary member. A complete zero-match
-result admits the candidate unless its own identity evidence conflicts with an
-active member. Compare positive matches with the table below, including multiple
-VBPL matches. Fetch plans the candidate superset and finalizes precedence before
-extract through [source execution](source-execution.md#fetch-close-finalization).
-Post-fetch deferral applies only to that candidate's conflicting identity
-evidence. Missing metadata on an unrelated context id never blocks admission.
-Reason: narrow discovery is not proof of absence, and unrelated failures must
-not veto the secondary source.
+For every candidate, discover performs a fresh exact VBPL number lookup using
+the wire and completeness rules above, then applies
+[cross-source identity comparison](data.md#identity-comparison) before seeding.
+Seed through this probe only with one proven identity and no unresolved
+candidate; unresolved matches retain `source_identity_ambiguous`. Different-date
+matches remain evidence and neither seed nor block admission. An incomplete
+lookup records a source gap and defers new admission; it cannot remove an
+existing secondary member. A complete lookup with no eligible or unresolved
+match admits the candidate unless its own identity evidence conflicts with an
+active member. Apply the table to positive matches. Fetch plans the candidate
+superset and finalizes precedence before extract through
+[source execution](source-execution.md#fetch-close-finalization). Post-fetch
+deferral applies only to that candidate's conflicting identity evidence. Missing
+metadata on an unrelated context id never blocks admission. Reason: narrow
+discovery is not proof of absence, and unrelated failures must not veto the
+secondary source.
 
 Key secondary documents as `vn:chinhphu:<docid>`, class `secondary`. Compare
-normalized number, issuer and issue date using [data](data.md#identity-comparison).
-For a candidate-specific comparison with an active VBPL member:
+normalized number, issuer and issue date using
+[data](data.md#identity-comparison). For a candidate-specific comparison with an
+active VBPL member:
 
-| Evidence | Membership decision |
-| --- | --- |
-| Number, issuer and issue date all match; one VBPL identity | VBPL wins; mark secondary `source_replaced`. |
-| Any comparison field conflicts | Keep both with `source_identity_ambiguous`; never replace. |
-| Any comparison field is missing or unverifiable | Keep both with `source_identity_ambiguous`; never replace. |
-| Several VBPL identities remain possible | Keep all evidenced members with `source_identity_ambiguous`; never choose one. |
+| Evidence                                                                                      | Membership decision                                                                                                                            |
+| --------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| Number, issuer and issue date all match; one VBPL identity                                    | VBPL wins; mark secondary `source_replaced`.                                                                                                   |
+| Equal number, different verified issue dates                                                  | Different documents; the probe neither seeds the VBPL result nor blocks secondary admission. Preserve evidence and any independent membership. |
+| Equal number and date, conflicting issuer evidence                                            | Keep both with `source_identity_ambiguous`; never replace.                                                                                     |
+| Equal number, missing or unverifiable date or issuer evidence, with no proven date difference | Keep both with `source_identity_ambiguous`; never replace.                                                                                     |
+| Several VBPL identities remain possible                                                       | Keep all evidenced members with `source_identity_ambiguous`; never choose one.                                                                 |
 
 The ambiguity rows are an explicit exception to single-source precedence;
 deferral means deferring that candidate's precedence decision, not dropping its
@@ -205,11 +228,12 @@ cannot safely replace a yearless-number document.
 
 Only the table's proven-match row removes the secondary key from active
 membership. Fetch finalization records `source_replaced` on its fetch item,
-naming old key, VBPL key and comparison evidence. The owner must accept it before
-release; it does not mean legal repeal. Apply this exception to removal items; build
-carries the gap and old absent key, not a secondary metadata row. Keep old
-release databases and artifacts intact. Re-adjudicate evaluation identity maps.
-Reason: provenance stays truthful and the new release avoids duplicate evidence.
+naming old key, VBPL key and comparison evidence. The owner must accept it
+before release; it does not mean legal repeal. Apply this exception to removal
+items; build carries the gap and old absent key, not a secondary metadata row.
+Keep old release databases and artifacts intact. Re-adjudicate evaluation
+identity maps. Reason: provenance stays truthful and the new release avoids
+duplicate evidence.
 
 For other secondary disappearance or source-list removal, use the same stable
 listing and retained-gap rules as VBPL, with source-specific query identities.
@@ -243,11 +267,10 @@ batches and worker restarts.
 
 ## Dependencies and acceptance evidence
 
-Release order: record fixtures and the keyword loss comparison; approve scope
-and limits; implement the shared [prerequisites](source-execution.md) before
-discovery, expansion or source adapters; integrate build inventory and schema;
-run a new ingest and re-adjudicate coverage before indexing. The primary owns
-the plan and independent review. Text
+Release order: record fixtures and freeze the approved comparison; approve
+remaining limits; implement [shared prerequisites](source-execution.md) before
+source stages; integrate build inventory and schema; ingest and re-adjudicate
+coverage before indexing. The primary owns the plan and independent review. Text
 extraction follows separately; metadata coverage is not search recall.
 
 The plan must include these spikes before adapter contracts are implemented:
@@ -268,7 +291,7 @@ The plan must include these spikes before adapter contracts are implemented:
   Report source failures and second-hop gaps separately from successfully
   recovered first-hop targets.
 
-Owner approval is still needed for deliberate old-only exclusions, the final
-keyword/named lists and budget ceilings after measurement. New sources or a
-broader State Bank administrative scope need a separate owner decision. No
-decision on those is implied by this proposal.
+The initial lists and migration losses are approved. Owner approval remains
+required for later deliberate old-only exclusions and unapproved budget ceilings
+after measurement. New sources or broader State Bank administrative scope need a
+separate owner decision; this proposal implies none.
