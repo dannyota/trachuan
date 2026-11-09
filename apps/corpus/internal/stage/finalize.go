@@ -11,11 +11,12 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// Finalizer publishes stage results in the close transaction without committing,
-// making network requests, or changing immutable artifacts. It must be
+// Finalizer publishes stage results in the close transaction. It reads artifacts
+// only through env.Artifacts and accesses the database only through tx, never
+// env.DB. It never commits, calls the network, or writes artifacts. It must be
 // idempotent for identical inputs and reject changed input after finalization.
 type Finalizer interface {
-	Finalize(context.Context, pgx.Tx, Run) (Finalization, error)
+	Finalize(context.Context, Env, pgx.Tx, Run) (Finalization, error)
 }
 
 // Finalization describes success when Code is empty, or a durable domain failure.

@@ -8,7 +8,9 @@ import (
 	"strings"
 
 	"danny.vn/trachuan/apps/corpus/internal/run"
+	"danny.vn/trachuan/apps/corpus/internal/source"
 	"danny.vn/trachuan/apps/corpus/internal/stage"
+	"danny.vn/trachuan/apps/corpus/internal/stage/membership"
 	"danny.vn/trachuan/apps/corpus/internal/store"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -27,6 +29,13 @@ type discoveryRun struct {
 // ExpectedSet returns current and previously discovered documents in key order.
 func ExpectedSet(ctx context.Context, db *pgxpool.Pool, r stage.Run) ([]Expected, error) {
 	q := store.New(db)
+	list, err := source.Parse(r.Snapshot.SourceList)
+	if err != nil {
+		return nil, fmt.Errorf("parse discovery sources: %w", err)
+	}
+	if list.VBPL.SelectionVersion == 1 {
+		return expectedMembership(ctx, q, r)
+	}
 	runs, err := q.ListDiscoveryRuns(ctx, r.Country)
 	if err != nil {
 		return nil, fmt.Errorf("list discovery runs: %w", err)
@@ -158,4 +167,34 @@ func discoveryIdentities(r stage.Run) (map[string]string, error) {
 // vbpqta_). They are not legal text in Vietnamese, so they are never expected.
 func englishRendition(key string) bool {
 	return strings.Contains(key, ":vbpl:vbpqta_")
+}
+
+func expectedMembership(ctx context.Context, q *store.Queries, r stage.Run) ([]Expected, error) {
+	scope, err := q.GetRunScope(ctx, r.ID)
+	if err != nil {
+		return nil, fmt.Errorf("read membership scope: %w", err)
+	}
+	phase := membership.Seeds
+	if scope.ExpandedSnapshot != nil {
+		phase = membership.Expanded
+	}
+	snapshot, err := membership.ReadPhase(ctx, q, r.ID, phase)
+	if err != nil {
+		return nil, fmt.Errorf("read expected membership: %w", err)
+	}
+	result := make([]Expected, 0, len(snapshot.Entries))
+	for _, entry := range snapshot.Entries {
+		if entry.Disposition == "source_replaced" {
+			continue
+		}
+		if entry.Disposition != "active" && entry.Disposition != "withdrawn" && entry.Disposition != "scope_removed" {
+			return nil, fmt.Errorf("unknown membership disposition %q", entry.Disposition)
+		}
+		e := Expected{Key: entry.DocumentKey, VBPLID: entry.SourceID}
+		if entry.Disposition != "active" {
+			e.Skip = &stage.Gap{Kind: entry.Disposition, Detail: entry.DocumentKey}
+		}
+		result = append(result, e)
+	}
+	return result, nil
 }

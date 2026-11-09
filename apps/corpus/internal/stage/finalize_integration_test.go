@@ -13,13 +13,15 @@ import (
 
 type testFinalizer struct {
 	*controlStage
-	result Finalization
-	err    error
-	calls  int
+	result        Finalization
+	err           error
+	calls         int
+	artifactsRoot string
 }
 
-func (s *testFinalizer) Finalize(ctx context.Context, tx pgx.Tx, run Run) (Finalization, error) {
+func (s *testFinalizer) Finalize(ctx context.Context, env Env, tx pgx.Tx, run Run) (Finalization, error) {
 	s.calls++
+	s.artifactsRoot = env.Artifacts.Root
 	_, err := tx.Exec(ctx, `UPDATE run SET message='finalized' WHERE id=$1`, run.ID)
 	if err != nil {
 		return Finalization{}, err
@@ -27,8 +29,11 @@ func (s *testFinalizer) Finalize(ctx context.Context, tx pgx.Tx, run Run) (Final
 	return s.result, s.err
 }
 
+var _ Finalizer = (*testFinalizer)(nil)
+
 func TestFinalize_FencedAndIdempotent(t *testing.T) {
 	env, in, base := controlSetup(t)
+	env.Artifacts.Root = t.TempDir()
 	st := &testFinalizer{controlStage: base}
 	batchExec(t, env.DB, `INSERT INTO run_item (run_id,stage,item_key,state,batch) VALUES ($1,'fetch','done','done',0)`, in.RunID)
 	stale := in
@@ -37,7 +42,7 @@ func TestFinalize_FencedAndIdempotent(t *testing.T) {
 		t.Fatalf("stale err=%v calls=%d", err, st.calls)
 	}
 	first, err := CloseStage(context.Background(), env, st, in, "extract")
-	if err != nil || first.NextStage != "extract" {
+	if err != nil || first.NextStage != "extract" || st.artifactsRoot != env.Artifacts.Root {
 		t.Fatalf("first=%+v err=%v", first, err)
 	}
 	second, err := CloseStage(context.Background(), env, st, in, "extract")

@@ -7,7 +7,33 @@ package store
 
 import (
 	"context"
+	"encoding/json"
 )
+
+const getRunItemArtifact = `-- name: GetRunItemArtifact :one
+SELECT run_item.state, artifact.path, artifact.sha256
+FROM run_item JOIN artifact ON artifact.id = run_item.artifact_id
+WHERE run_item.run_id = $1 AND run_item.stage = $2 AND run_item.item_key = $3
+`
+
+type GetRunItemArtifactParams struct {
+	RunID   int64
+	Stage   string
+	ItemKey string
+}
+
+type GetRunItemArtifactRow struct {
+	State  string
+	Path   string
+	Sha256 string
+}
+
+func (q *Queries) GetRunItemArtifact(ctx context.Context, arg GetRunItemArtifactParams) (GetRunItemArtifactRow, error) {
+	row := q.db.QueryRow(ctx, getRunItemArtifact, arg.RunID, arg.Stage, arg.ItemKey)
+	var i GetRunItemArtifactRow
+	err := row.Scan(&i.State, &i.Path, &i.Sha256)
+	return i, err
+}
 
 const insertMembershipEvidence = `-- name: InsertMembershipEvidence :exec
 INSERT INTO run_membership_evidence (run_id, document_key, stage, item_key, rule_kind, rule_value, query_identity, page, response_sha256, artifact_hash, evidence_path, support_state)
@@ -46,6 +72,106 @@ func (q *Queries) InsertMembershipEvidence(ctx context.Context, arg InsertMember
 		arg.SupportState,
 	)
 	return err
+}
+
+const listEarlierRuns = `-- name: ListEarlierRuns :many
+SELECT id, rel, snapshot FROM run WHERE country = $1 AND id <> $2
+`
+
+type ListEarlierRunsParams struct {
+	Country string
+	ID      int64
+}
+
+type ListEarlierRunsRow struct {
+	ID       int64
+	Rel      string
+	Snapshot json.RawMessage
+}
+
+func (q *Queries) ListEarlierRuns(ctx context.Context, arg ListEarlierRunsParams) ([]ListEarlierRunsRow, error) {
+	rows, err := q.db.Query(ctx, listEarlierRuns, arg.Country, arg.ID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListEarlierRunsRow
+	for rows.Next() {
+		var i ListEarlierRunsRow
+		if err := rows.Scan(&i.ID, &i.Rel, &i.Snapshot); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listLegacyExpectedKeys = `-- name: ListLegacyExpectedKeys :many
+SELECT run_item.item_key FROM run_item
+WHERE run_item.run_id = $1 AND run_item.stage = 'fetch'
+  AND NOT EXISTS (
+    SELECT 1 FROM gap WHERE gap.run_id = run_item.run_id AND gap.stage = 'fetch'
+      AND gap.item_key = run_item.item_key AND gap.kind IN ('scope_removed', 'withdrawn'))
+ORDER BY run_item.item_key COLLATE "C"
+`
+
+func (q *Queries) ListLegacyExpectedKeys(ctx context.Context, runID int64) ([]string, error) {
+	rows, err := q.db.Query(ctx, listLegacyExpectedKeys, runID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var item_key string
+		if err := rows.Scan(&item_key); err != nil {
+			return nil, err
+		}
+		items = append(items, item_key)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listLegacyListingSupports = `-- name: ListLegacyListingSupports :many
+SELECT listing.query_key, listing.item_key, artifact.sha256 AS artifact_sha256
+FROM listing
+JOIN run_item ON run_item.run_id = listing.run_id AND run_item.stage = 'discover'
+  AND listing.query_key LIKE run_item.item_key || '@%'
+JOIN artifact ON artifact.id = run_item.artifact_id
+WHERE listing.run_id = $1
+ORDER BY listing.item_key COLLATE "C", listing.query_key COLLATE "C"
+`
+
+type ListLegacyListingSupportsRow struct {
+	QueryKey       string
+	ItemKey        string
+	ArtifactSha256 string
+}
+
+func (q *Queries) ListLegacyListingSupports(ctx context.Context, runID int64) ([]ListLegacyListingSupportsRow, error) {
+	rows, err := q.db.Query(ctx, listLegacyListingSupports, runID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListLegacyListingSupportsRow
+	for rows.Next() {
+		var i ListLegacyListingSupportsRow
+		if err := rows.Scan(&i.QueryKey, &i.ItemKey, &i.ArtifactSha256); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listMembershipEvidence = `-- name: ListMembershipEvidence :many
@@ -110,6 +236,37 @@ func (q *Queries) ListRunDocuments(ctx context.Context, runID int64) ([]RunDocum
 			&i.NormalizedNumber,
 			&i.ReplacementKey,
 		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listRunListings = `-- name: ListRunListings :many
+SELECT query_key, item_key, payload FROM listing
+WHERE run_id = $1 ORDER BY query_key COLLATE "C", item_key COLLATE "C"
+`
+
+type ListRunListingsRow struct {
+	QueryKey string
+	ItemKey  string
+	Payload  json.RawMessage
+}
+
+func (q *Queries) ListRunListings(ctx context.Context, runID int64) ([]ListRunListingsRow, error) {
+	rows, err := q.db.Query(ctx, listRunListings, runID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListRunListingsRow
+	for rows.Next() {
+		var i ListRunListingsRow
+		if err := rows.Scan(&i.QueryKey, &i.ItemKey, &i.Payload); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

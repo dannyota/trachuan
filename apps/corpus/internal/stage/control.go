@@ -232,7 +232,7 @@ func CloseStage(ctx context.Context, env Env, st Stage, in StageInput, following
 			return result, fmt.Errorf("decode run snapshot: %w", err)
 		}
 		run := Run{ID: row.ID, Country: row.Country, Rel: row.Rel, Generation: int(row.Generation), Snapshot: snapshot}
-		final, finalizeErr := finalizer.Finalize(ctx, tx, run)
+		final, finalizeErr := finalizer.Finalize(ctx, env, tx, run)
 		if finalizeErr != nil {
 			return result, fmt.Errorf("finalize stage %s: %w", in.Stage, finalizeErr)
 		}
