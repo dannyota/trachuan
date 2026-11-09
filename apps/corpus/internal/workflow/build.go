@@ -23,7 +23,15 @@ func superseded(err error) bool {
 func BuildRelease(ctx temporalworkflow.Context, in run.BuildInput) error {
 	retry := &temporal.RetryPolicy{InitialInterval: 30 * time.Second, BackoffCoefficient: 2, MaximumInterval: 10 * time.Minute, MaximumAttempts: 5, NonRetryableErrorTypes: []string{"superseded"}}
 	control := temporalworkflow.WithActivityOptions(ctx, temporalworkflow.ActivityOptions{StartToCloseTimeout: 10 * time.Minute, RetryPolicy: retry})
-	batch := temporalworkflow.WithActivityOptions(ctx, temporalworkflow.ActivityOptions{StartToCloseTimeout: time.Hour, HeartbeatTimeout: 2 * time.Minute, RetryPolicy: retry})
+	heartbeatTimeout := in.HeartbeatTimeout
+	if heartbeatTimeout <= 0 {
+		heartbeatTimeout = 2 * time.Minute
+	}
+	batchRetry := *retry
+	if heartbeatTimeout < batchRetry.InitialInterval {
+		batchRetry.InitialInterval = heartbeatTimeout
+	}
+	batch := temporalworkflow.WithActivityOptions(ctx, temporalworkflow.ActivityOptions{StartToCloseTimeout: time.Hour, HeartbeatTimeout: heartbeatTimeout, RetryPolicy: &batchRetry})
 	input := stage.StageInput{RunID: in.RunID, Generation: in.Generation, Stage: in.Stage}
 	transitionVersion := temporalworkflow.GetVersion(ctx, "refused-run-transition", temporalworkflow.DefaultVersion, 1)
 	guard := func() error {

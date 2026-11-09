@@ -224,3 +224,29 @@ func TestBuildRelease_RefusedFailureFinishesCancel(t *testing.T) {
 	}
 	env.AssertExpectations(t)
 }
+
+func TestBuildRelease_HeartbeatTimeout(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		input time.Duration
+		want  time.Duration
+	}{{"older history", 0, 2 * time.Minute}, {"configured", 2 * time.Second, 2 * time.Second}} {
+		t.Run(tc.name, func(t *testing.T) {
+			env := workflowTest(t)
+			planMock(env, stage.PlanResult{Batches: []int{0}})
+			var got time.Duration
+			env.OnActivity("fetch", mock.Anything, mock.Anything).Return(func(ctx context.Context, _ stage.BatchInput) (stage.BatchResult, error) {
+				got = activity.GetInfo(ctx).HeartbeatTimeout
+				return stage.BatchResult{}, nil
+			}).Once()
+			finishMock(env, stage.CloseResult{})
+			markMock(env, "paused")
+			in := testInput()
+			in.HeartbeatTimeout = tc.input
+			env.ExecuteWorkflow(BuildRelease, in)
+			if err := env.GetWorkflowError(); err != nil || got != tc.want {
+				t.Fatalf("heartbeat timeout = %v, want %v; error = %v", got, tc.want, err)
+			}
+		})
+	}
+}

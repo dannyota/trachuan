@@ -15,8 +15,9 @@ import (
 )
 
 type gateway struct {
-	server  *httptest.Server
-	details atomic.Int64
+	server          *httptest.Server
+	details         atomic.Int64
+	blockAfterFirst chan struct{}
 }
 
 func newGateway(t *testing.T) *gateway {
@@ -31,11 +32,11 @@ func newGateway(t *testing.T) *gateway {
 		path := r.URL.Path
 		switch {
 		case path == "/doc/all":
-			items := make([]map[string]string, 0, 30)
-			for i := 1; i <= 30; i++ {
+			items := make([]map[string]string, 0, 12)
+			for i := 1; i <= 12; i++ {
 				items = append(items, map[string]string{"id": fmt.Sprintf("%d", i), "docNum": fmt.Sprintf("%d/2026", i), "title": "Document"})
 			}
-			_ = json.NewEncoder(w).Encode(map[string]any{"success": true, "data": map[string]any{"total": 30, "items": items}})
+			_ = json.NewEncoder(w).Encode(map[string]any{"success": true, "data": map[string]any{"total": 12, "items": items}})
 		case strings.HasPrefix(path, "/doc/provision/tree/"):
 			_, _ = w.Write(tree)
 		case strings.HasPrefix(path, "/doc/minio/buckets/vbpl/folders/") && strings.HasSuffix(path, "/files"):
@@ -46,7 +47,14 @@ func newGateway(t *testing.T) *gateway {
 		case strings.HasPrefix(path, "/doc/") && strings.HasSuffix(path, "/diagram"):
 			_ = json.NewEncoder(w).Encode(map[string]any{"success": true, "data": map[string]any{"documentNamesByType": map[string]any{"10": []map[string]string{{"id": "1", "name": "Document 1"}}}}})
 		case strings.HasPrefix(path, "/doc/"):
-			g.details.Add(1)
+			count := g.details.Add(1)
+			if count > 1 && g.blockAfterFirst != nil {
+				select {
+				case <-g.blockAfterFirst:
+				case <-r.Context().Done():
+					return
+				}
+			}
 			id := strings.TrimPrefix(path, "/doc/")
 			_ = json.NewEncoder(w).Encode(map[string]any{"success": true, "data": map[string]any{"id": id, "docNum": id + "/2026", "title": "Document " + id, "hasContent": true}})
 		default:

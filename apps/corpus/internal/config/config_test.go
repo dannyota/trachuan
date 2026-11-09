@@ -3,6 +3,7 @@ package config
 import (
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestLoad_Defaults(t *testing.T) {
@@ -26,6 +27,7 @@ func TestLoad_Defaults(t *testing.T) {
 		VBPLFileHosts:   "s3-han02.fptcloud.com",
 		VBPLURL:         "https://vbpl-bientap-gateway.moj.gov.vn/api/qtdc/public",
 		VBPLRate:        8, VBPLInFlight: 8, BatchesInFlight: 8,
+		HeartbeatEvery: 20 * time.Second, HeartbeatTimeout: 2 * time.Minute,
 	}
 	if got != want {
 		t.Errorf("Load() = %+v, want %+v", got, want)
@@ -40,7 +42,7 @@ func TestLoad_MissingDatabaseURL(t *testing.T) {
 }
 
 func TestLoad_InvalidLimits(t *testing.T) {
-	for _, key := range []string{"CORPUS_VBPL_RPS", "CORPUS_VBPL_IN_FLIGHT", "CORPUS_BATCHES_IN_FLIGHT"} {
+	for _, key := range []string{"CORPUS_VBPL_RPS", "CORPUS_VBPL_IN_FLIGHT", "CORPUS_BATCHES_IN_FLIGHT", "CORPUS_HEARTBEAT_EVERY", "CORPUS_HEARTBEAT_TIMEOUT"} {
 		t.Run(key, func(t *testing.T) {
 			_, err := Load(func(k string) string {
 				if k == "CORPUS_DATABASE_URL" {
@@ -59,9 +61,9 @@ func TestLoad_InvalidLimits(t *testing.T) {
 }
 
 func TestLoad_Overrides(t *testing.T) {
-	values := map[string]string{"CORPUS_DATABASE_URL": "db", "CORPUS_VBPL_RPS": "3.5", "CORPUS_VBPL_IN_FLIGHT": "4", "CORPUS_BATCHES_IN_FLIGHT": "5", "CORPUS_FILE_CACHE": "/cache", "CORPUS_VBPL_FILE_HOSTS": "one.example,two.example"}
+	values := map[string]string{"CORPUS_DATABASE_URL": "db", "CORPUS_HEARTBEAT_EVERY": "200ms", "CORPUS_HEARTBEAT_TIMEOUT": "2s", "CORPUS_VBPL_RPS": "3.5", "CORPUS_VBPL_IN_FLIGHT": "4", "CORPUS_BATCHES_IN_FLIGHT": "5", "CORPUS_FILE_CACHE": "/cache", "CORPUS_VBPL_FILE_HOSTS": "one.example,two.example"}
 	got, err := Load(func(key string) string { return values[key] })
-	if err != nil || got.VBPLRate != 3.5 || got.VBPLInFlight != 4 || got.BatchesInFlight != 5 || got.FileCache != "/cache" || got.VBPLFileHosts != "one.example,two.example" {
+	if err != nil || got.HeartbeatEvery != 200*time.Millisecond || got.HeartbeatTimeout != 2*time.Second || got.VBPLRate != 3.5 || got.VBPLInFlight != 4 || got.BatchesInFlight != 5 || got.FileCache != "/cache" || got.VBPLFileHosts != "one.example,two.example" {
 		t.Fatalf("config = %+v, error = %v", got, err)
 	}
 }

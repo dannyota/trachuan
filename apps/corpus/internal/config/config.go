@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math"
 	"strconv"
+	"time"
 )
 
 // Config holds the settings used by corpus commands.
@@ -24,6 +25,8 @@ type Config struct {
 	VBPLInFlight     int
 	BatchesInFlight  int
 	FileCache        string
+	HeartbeatEvery   time.Duration
+	HeartbeatTimeout time.Duration
 }
 
 // Load reads configuration using getenv and requires a database URL.
@@ -59,6 +62,17 @@ func Load(getenv func(string) string) (Config, error) {
 			return Config{}, fmt.Errorf("invalid %s %q", setting.key, value)
 		}
 		*setting.target = n
+	}
+	for _, setting := range []struct {
+		key, fallback string
+		target        *time.Duration
+	}{{"CORPUS_HEARTBEAT_EVERY", "20s", &cfg.HeartbeatEvery}, {"CORPUS_HEARTBEAT_TIMEOUT", "2m", &cfg.HeartbeatTimeout}} {
+		value := defaultValue(getenv(setting.key), setting.fallback)
+		duration, parseErr := time.ParseDuration(value)
+		if parseErr != nil || duration <= 0 {
+			return Config{}, fmt.Errorf("invalid %s %q", setting.key, value)
+		}
+		*setting.target = duration
 	}
 	return cfg, nil
 }

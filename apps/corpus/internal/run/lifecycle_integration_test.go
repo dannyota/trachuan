@@ -120,6 +120,7 @@ func TestStart_ResumesAtNextStage(t *testing.T) {
 	t.Parallel()
 	d := lifecycleDeps(t)
 	next := "fetch"
+	d.HeartbeatTimeout = 2 * time.Second
 	insertLifecycleRun(t, d, "failed", time.Now(), testSnapshot(), &next)
 	_, err := d.DB.Exec(context.Background(), `INSERT INTO run_item (run_id,stage,item_key,state,batch) SELECT id,'fetch','item','failed',0 FROM run`)
 	if err != nil {
@@ -138,7 +139,7 @@ func TestStart_ResumesAtNextStage(t *testing.T) {
 		t.Fatal(err)
 	}
 	var input BuildInput
-	if err = converter.GetDefaultDataConverter().FromPayloads(event.GetWorkflowExecutionStartedEventAttributes().Input, &input); err != nil || input.Stage != "fetch" || !input.Begin {
+	if err = converter.GetDefaultDataConverter().FromPayloads(event.GetWorkflowExecutionStartedEventAttributes().Input, &input); err != nil || input.Stage != "fetch" || !input.Begin || input.HeartbeatTimeout != 2*time.Second {
 		t.Fatalf("input = %+v, %v", input, err)
 	}
 }

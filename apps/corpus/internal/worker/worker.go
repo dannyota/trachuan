@@ -27,11 +27,12 @@ import (
 
 // Deps supplies the worker's clients and registered stages.
 type Deps struct {
-	TaskQueue    string
-	Env          stage.Env
-	Temporal     client.Client
-	Registry     workflow.Registry
-	Checkpointer workflow.Checkpointer
+	HeartbeatEvery time.Duration
+	TaskQueue      string
+	Env            stage.Env
+	Temporal       client.Client
+	Registry       workflow.Registry
+	Checkpointer   workflow.Checkpointer
 }
 
 // Worker runs a registered Temporal worker.
@@ -52,7 +53,11 @@ func New(_ context.Context, deps Deps) (*Worker, error) {
 	if checkpointer == nil {
 		checkpointer = workflow.NoCheckpoint{}
 	}
-	activities := &workflow.Activities{Env: deps.Env, Registry: deps.Registry, Checkpointer: checkpointer, Batch: stage.BatchConfig{HeartbeatEvery: 20 * time.Second, MaxAttempts: 5}}
+	heartbeatEvery := deps.HeartbeatEvery
+	if heartbeatEvery <= 0 {
+		heartbeatEvery = 20 * time.Second
+	}
+	activities := &workflow.Activities{Env: deps.Env, Registry: deps.Registry, Checkpointer: checkpointer, Batch: stage.BatchConfig{HeartbeatEvery: heartbeatEvery, MaxAttempts: 5}}
 	w.RegisterActivity(activities)
 	for _, st := range deps.Registry.Stages() {
 		w.RegisterActivityWithOptions(activities.RunBatch, activity.RegisterOptions{Name: st.Name()})
@@ -107,7 +112,7 @@ func Run(ctx context.Context, cfg config.Config) error {
 			f.WithCache(cache)
 		}
 	}
-	w, err := New(ctx, Deps{Env: env, Temporal: temporalClient, Registry: registry, Checkpointer: checkpoint.Taker{Config: checkpoint.Config{Dir: cfg.CheckpointDir, ArtifactsRoot: cfg.Artifacts, DatabaseURL: cfg.DatabaseURL, PgDump: cfg.PgDump, Keep: 3}}})
+	w, err := New(ctx, Deps{HeartbeatEvery: cfg.HeartbeatEvery, Env: env, Temporal: temporalClient, Registry: registry, Checkpointer: checkpoint.Taker{Config: checkpoint.Config{Dir: cfg.CheckpointDir, ArtifactsRoot: cfg.Artifacts, DatabaseURL: cfg.DatabaseURL, PgDump: cfg.PgDump, Keep: 3}}})
 	if err != nil {
 		return fmt.Errorf("construct worker: %w", err)
 	}

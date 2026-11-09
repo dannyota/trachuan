@@ -69,7 +69,7 @@ func (h *harness) assertCounts(want counts) {
 		h.t.Fatalf("counts = %+v, want %+v", got, want)
 	}
 	for _, stage := range []string{"discover", "fetch", "extract", "relate"} {
-		count := 30
+		count := 12
 		if stage == "discover" {
 			count = 2
 		}

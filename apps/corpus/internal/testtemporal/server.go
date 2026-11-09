@@ -6,6 +6,7 @@ package testtemporal
 import (
 	"context"
 	"fmt"
+	"os"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -23,7 +24,13 @@ var counter atomic.Uint64
 func Server(t *testing.T) *testsuite.DevServer {
 	t.Helper()
 	once.Do(func() {
-		server, startErr = testsuite.StartDevServer(context.Background(), testsuite.DevServerOptions{ClientOptions: &client.Options{Namespace: "corpus"}})
+		cacheDir := os.Getenv("TEMPORAL_CLI_CACHE")
+		if cacheDir != "" {
+			if startErr = os.MkdirAll(cacheDir, 0755); startErr != nil {
+				return
+			}
+		}
+		server, startErr = testsuite.StartDevServer(context.Background(), testsuite.DevServerOptions{CachedDownload: testsuite.CachedDownload{DestDir: cacheDir}, ClientOptions: &client.Options{Namespace: "corpus"}})
 	})
 	if startErr != nil {
 		t.Fatalf("start Temporal server: %v", startErr)
