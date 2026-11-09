@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/dannyota/traquydinh/apps/corpus/internal/stage"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.temporal.io/sdk/client"
 )
@@ -12,7 +13,7 @@ import (
 type Deps struct {
 	DB         *pgxpool.Pool
 	Temporal   client.Client
-	Recipes    map[string]string
+	RecipesFor func(stage.Snapshot) map[string]string
 	Stages     []string
 	SourceList json.RawMessage
 	Now        func() time.Time

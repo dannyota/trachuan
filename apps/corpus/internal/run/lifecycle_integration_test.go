@@ -52,7 +52,7 @@ func lifecycleDeps(t *testing.T) Deps {
 		t.Fatal(err)
 	}
 	t.Cleanup(w.Stop)
-	return Deps{DB: db, Temporal: server.Client(), Stages: []string{"discover", "fetch"}, Recipes: map[string]string{"discover": "one", "fetch": "two"}, SourceList: json.RawMessage(`{}`)}
+	return Deps{DB: db, Temporal: server.Client(), Stages: []string{"discover", "fetch"}, RecipesFor: func(stage.Snapshot) map[string]string { return map[string]string{"discover": "one", "fetch": "two"} }, SourceList: json.RawMessage(`{}`)}
 }
 
 func insertLifecycleRun(t *testing.T, d Deps, state string, updated time.Time, snapshot stage.Snapshot, next *string) {
@@ -198,5 +198,48 @@ func TestRecover_TerminatesOnlyWhenRequested(t *testing.T) {
 	open, err = workflowOpen(context.Background(), d, WorkflowID("vn", "20261109"))
 	if err != nil || open {
 		t.Fatalf("open after terminate = %v, %v", open, err)
+	}
+}
+
+func TestStart_RecipesUseFrozenSourceList(t *testing.T) {
+	d := lifecycleDeps(t)
+	d.SourceList = json.RawMessage(`{"source":"original"}`)
+	d.RecipesFor = func(s stage.Snapshot) map[string]string {
+		var source struct {
+			Source string `json:"source"`
+		}
+		_ = json.Unmarshal(s.SourceList, &source)
+		return map[string]string{"discover": source.Source, "fetch": source.Source}
+	}
+	if err := Start(context.Background(), d, "vn", "20261109", "", ""); err != nil {
+		t.Fatal(err)
+	}
+	var raw []byte
+	if err := d.DB.QueryRow(context.Background(), `SELECT snapshot FROM run`).Scan(&raw); err != nil {
+		t.Fatal(err)
+	}
+	var snap stage.Snapshot
+	if err := json.Unmarshal(raw, &snap); err != nil || snap.Recipes["discover"] != "original" {
+		t.Fatalf("snapshot = %+v, %v", snap, err)
+	}
+	if _, err := d.DB.Exec(context.Background(), `UPDATE run SET state='paused', snapshot=jsonb_set(snapshot::jsonb, '{Stages}', '["discover"]'::jsonb)`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := d.DB.Exec(context.Background(), `UPDATE run SET snapshot=jsonb_set(snapshot::jsonb, '{Recipes}', jsonb_build_object('discover', snapshot::jsonb->'Recipes'->'discover'))`); err != nil {
+		t.Fatal(err)
+	}
+	if err := d.Temporal.TerminateWorkflow(context.Background(), WorkflowID("vn", "20261109"), "", "test resume"); err != nil {
+		t.Fatal(err)
+	}
+	d.SourceList = json.RawMessage(`{"source":"changed"}`)
+	if err := Start(context.Background(), d, "vn", "20261109", "", ""); err != nil {
+		t.Fatal(err)
+	}
+	if err := d.DB.QueryRow(context.Background(), `SELECT snapshot FROM run`).Scan(&raw); err != nil {
+		t.Fatal(err)
+	}
+	snap = stage.Snapshot{}
+	if err := json.Unmarshal(raw, &snap); err != nil || snap.Recipes["discover"] != "original" || snap.Recipes["fetch"] != "original" {
+		t.Fatalf("resumed snapshot = %+v, %v", snap, err)
 	}
 }

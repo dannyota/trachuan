@@ -44,17 +44,15 @@ func Start(ctx context.Context, d Deps, cc, rel, until, previousManifest string)
 	if until != "" && !containsStage(d.Stages, until) {
 		return fmt.Errorf("unknown until stage %q", until)
 	}
-	for _, name := range d.Stages {
-		if _, ok := d.Recipes[name]; !ok {
-			return fmt.Errorf("missing recipe for stage %q", name)
-		}
+	if d.RecipesFor == nil {
+		return errors.New("recipe function is required")
 	}
 	if !json.Valid(d.SourceList) {
 		return errors.New("invalid source list JSON")
 	}
 	sum := sha256.Sum256(d.SourceList)
 	version := workerVersion()
-	snap := stage.Snapshot{SourceList: d.SourceList, SourceListHash: hex.EncodeToString(sum[:]), Stages: d.Stages, Recipes: d.Recipes, TaxonomyVersion: "none", WorkerVersion: version, PreviousManifest: previousManifest}
+	snap := stage.Snapshot{SourceList: d.SourceList, SourceListHash: hex.EncodeToString(sum[:]), Stages: d.Stages, TaxonomyVersion: "none", WorkerVersion: version, PreviousManifest: previousManifest}
 	raw, err := json.Marshal(snap)
 	if err != nil {
 		return fmt.Errorf("encode snapshot: %w", err)
@@ -97,14 +95,21 @@ func Start(ctx context.Context, d Deps, cc, rel, until, previousManifest string)
 		if err = json.Unmarshal(row.Snapshot, &snap); err != nil {
 			return fmt.Errorf("decode snapshot: %w", err)
 		}
-		snap, _, err = extendSnapshot(snap, d.Stages, d.Recipes)
+		snap, _, err = extendSnapshot(snap, d.Stages, d.RecipesFor(snap))
 		if err != nil {
 			return err
 		}
-		raw, err = json.Marshal(snap)
-		if err != nil {
-			return fmt.Errorf("encode snapshot: %w", err)
+	} else {
+		snap.Recipes = d.RecipesFor(snap)
+		for _, name := range d.Stages {
+			if _, ok := snap.Recipes[name]; !ok {
+				return fmt.Errorf("missing recipe for stage %q", name)
+			}
 		}
+	}
+	raw, err = json.Marshal(snap)
+	if err != nil {
+		return fmt.Errorf("encode snapshot: %w", err)
 	}
 	next := d.Stages[0]
 	if row.NextStage != nil && *row.NextStage != "" {

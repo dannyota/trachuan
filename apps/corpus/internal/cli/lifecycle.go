@@ -10,6 +10,8 @@ import (
 
 	"github.com/dannyota/traquydinh/apps/corpus/internal/config"
 	"github.com/dannyota/traquydinh/apps/corpus/internal/run"
+	"github.com/dannyota/traquydinh/apps/corpus/internal/stage"
+	"github.com/dannyota/traquydinh/apps/corpus/internal/workflow"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.temporal.io/sdk/client"
 	"gopkg.in/yaml.v3"
@@ -33,8 +35,12 @@ func dependencies(ctx context.Context, needSources bool, cc string) (run.Deps, f
 		return run.Deps{}, nil, fmt.Errorf("connect Temporal: %w", err)
 	}
 	closeDeps := func() { temporalClient.Close(); db.Close() }
-	stages, recipes := compiledStages()
-	d := run.Deps{DB: db, Temporal: temporalClient, Stages: stages, Recipes: recipes}
+	// The default registry needs no pool to provide stage names and recipes.
+	stages := workflow.Default(workflow.Deps{}).Names()
+	d := run.Deps{DB: db, Temporal: temporalClient, Stages: stages, RecipesFor: func(snapshot stage.Snapshot) map[string]string {
+		_, recipes := compiledStages(snapshot)
+		return recipes
+	}}
 	if needSources {
 		if !regexp.MustCompile(`^[a-z]{2}$`).MatchString(cc) {
 			closeDeps()
