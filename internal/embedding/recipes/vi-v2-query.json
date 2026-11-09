@@ -4,7 +4,7 @@
   "resolved_revision": "18b44161e041bf1d3a333ab5144b5b7b93f914d2",
   "tokenizer_revision": "18b44161e041bf1d3a333ab5144b5b7b93f914d2",
   "tokenizer_sha256": "c558bdf1dbb6376d11c7a7cee129cc12792a204e8ce62d0f6dc43dd41f53c386",
-  "weights_sha256": "ea67269024c0bc075696a6a48d1f48d43637e7704300cd1748ddfc0735e48bf1",
+  "weights_sha256": "f431b412f6438d4dd6007c0111969dca53ad92c0257795aa1c3ed001187b79e2",
   "dimensions": 1024,
   "pooling": "cls",
   "normalization": "l2-float32",
@@ -15,7 +15,7 @@
   "token_cap": 256,
   "special_tokens": true,
   "truncation": false,
-  "python_version": "3.12.16",
-  "tokenizer_version": "5.22.2",
-  "runtime_version": "1.31.1"
+  "language": "python 3.14.10",
+  "tokenizer_library": "transformers 5.22.2",
+  "runtime_library": "onnxruntime 1.31.1"
 }

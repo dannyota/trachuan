@@ -35,3 +35,27 @@ def test_onnx_cls_selection_and_normalization(tmp_path):
     runtime = OnnxRuntime(path)
     vector = runtime.embed({"input_ids": np.array([[[3, 4], [9, 9]]], dtype=np.float32)})
     assert np.allclose(vector, [[0.6, 0.8]])
+
+
+def test_document_runtime_loads_float32_on_mps(monkeypatch, tmp_path):
+    torch = pytest.importorskip("torch")
+    from transformers import AutoModel
+
+    class FakeModel:
+        def to(self, device):
+            assert device == "mps"
+            return self
+
+        def eval(self):
+            return self
+
+    def load(path, *, local_files_only, trust_remote_code, dtype):
+        assert path == str(tmp_path)
+        assert local_files_only is True
+        assert trust_remote_code is False
+        assert dtype == torch.float32
+        return FakeModel()
+
+    monkeypatch.setattr(torch.backends.mps, "is_available", lambda: True)
+    monkeypatch.setattr(AutoModel, "from_pretrained", load)
+    TorchRuntime(tmp_path)

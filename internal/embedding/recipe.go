@@ -13,7 +13,7 @@ import (
 
 // Recipe is the runtime recipe an embedder reports at GET /v1/recipe. Field
 // order matters: the hash is SHA-256 of the compact JSON in this order, the
-// same bytes the Python service hashes.
+// same bytes each embedding service hashes.
 type Recipe struct {
 	Model             string `json:"model"`
 	Revision          string `json:"revision"`
@@ -31,9 +31,9 @@ type Recipe struct {
 	TokenCap          int    `json:"token_cap"`
 	SpecialTokens     bool   `json:"special_tokens"`
 	Truncation        bool   `json:"truncation"`
-	PythonVersion     string `json:"python_version"`
-	TokenizerVersion  string `json:"tokenizer_version"`
-	RuntimeVersion    string `json:"runtime_version"`
+	Language          string `json:"language"`
+	TokenizerLibrary  string `json:"tokenizer_library"`
+	RuntimeLibrary    string `json:"runtime_library"`
 }
 
 // CompactJSON returns the recipe as compact JSON without HTML escaping.
