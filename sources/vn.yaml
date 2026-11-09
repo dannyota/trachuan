@@ -1,0 +1,52 @@
+country: vn
+vbpl:
+  sweep_agencies: ["62", "908"]
+  keyword_agencies: ["55", "56", "1", "57", "3", "14", "169", "2"]
+  keywords:
+    - "an toàn thông tin"
+    - "an ninh mạng"
+    - "dữ liệu cá nhân"
+    - "giao dịch điện tử"
+    - "chữ ký số"
+    - "chữ ký điện tử"
+    - "định danh điện tử"
+    - "thương mại điện tử"
+    - "trí tuệ nhân tạo"
+    - "cơ chế thử nghiệm có kiểm soát"
+    - "dữ liệu quan trọng"
+    - "dữ liệu cốt lõi"
+    - "luật căn cước"
+    - "luật dữ liệu"
+    - "luật viễn thông"
+    - "hệ thống thông tin ngân hàng"
+    - "thuê ngoài"
+    - "thanh toán không dùng tiền mặt"
+    - "ví điện tử"
+    - "ngân hàng số"
+    - "tiền điện tử"
+    - "bảo vệ dữ liệu cá nhân"
+    - "công nghệ tài chính"
+    - "tài sản số"
+    - "tài sản mã hóa"
+    - "kinh doanh liên tục"
+relation_codes:
+  "1": {kind: "repeals", label: "repeals", amending: true, superseding: true}
+  "2": {kind: "implements", label: "implements", amending: false, superseding: false}
+  "3": {kind: "legal_basis", label: "legal_basis", amending: false, superseding: false}
+  "4": {kind: "cites", label: "cites", amending: false, superseding: false}
+  "5": {kind: "suspends", label: "suspends", amending: true, superseding: false}
+  "7": {kind: "consolidates", label: "consolidates", amending: false, superseding: false}
+  "8": {kind: "guided_by", label: "guided_by", amending: false, superseding: false}
+  "9": {kind: "implements", label: "implements", amending: false, superseding: false}
+  "10": {kind: "amends_supplements", label: "amends_supplements", amending: true, superseding: false}
+  "12": {kind: "replaces", label: "replaces", amending: true, superseding: true}
+  "14": {kind: "references", label: "references", amending: false, superseding: false}
+status_codes:
+  "CHL": {class: "in_force", current: true}
+  "HHL": {class: "expired", current: false}
+  "HHL1P": {class: "partial", current: true}
+  "HHL1PHAN": {class: "partial", current: true}
+  "CCHL": {class: "not_yet", current: false}
+  "TNHL": {class: "not_yet", current: false}
+  "CHUACOHIEULUC": {class: "not_yet", current: false}
+  "TDHL": {class: "suspended", current: false}
