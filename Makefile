@@ -2,7 +2,7 @@
 SHELL := /usr/bin/env bash
 
 help: ## List targets
-	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*## "}{printf "  %-16s %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z_-]+:.*## ' $(firstword $(MAKEFILE_LIST)) | awk 'BEGIN{FS=":.*## "}{printf "  %-16s %s\n", $$1, $$2}'
 
 hooks-install: ## Point git at .githooks (gitleaks and length checks on commit)
 	git config core.hooksPath .githooks
@@ -16,8 +16,28 @@ pre-push: ## Static checks before pushing
 docs-fmt: ## Format human-read Markdown with Prettier
 	npx prettier --write "**/*.md" "!**/AGENTS.md" "!**/CLAUDE.md" "!instructions/**" "!docs/plans/**" "!.claude/**" "!.codex/**" "!**/node_modules/**" "!**/.venv/**"
 
-test: ## Unit tests (added with the first Go module)
-	@echo "no modules yet"
+test: ## Run unit tests
+	cd apps/corpus && go test ./...
+
+LOAD_ENV := set -a; if [ -f .env ]; then . ./.env; fi; set +a
+
+test-integration: ## Run integration tests (loads .env when present)
+	$(LOAD_ENV); cd apps/corpus && go test -tags integration -count=1 ./...
+
+test-proof: ## Run proof tests (loads .env when present)
+	@if [ ! -d apps/corpus/test/proof ]; then echo "test-proof: no proof tests yet"; exit 0; fi; \
+	$(LOAD_ENV); cd apps/corpus && go test -tags 'integration faultinject' -count=1 ./test/proof/...
+
+generate: ## Generate the typed data layer when sqlc is configured
+	@if [ -f apps/corpus/sqlc.yaml ]; then cd apps/corpus && sqlc generate; fi
+
+sqlc-check: ## Fail when generated data layer files drift
+	@if [ -f apps/corpus/sqlc.yaml ]; then \
+	  cd apps/corpus && sqlc generate && \
+	  { [ -z "$$(git status --porcelain -- internal/store)" ] || \
+	    { echo "generated data layer drifts; run make generate" >&2; \
+	      git status --porcelain -- internal/store; exit 1; }; }; \
+	fi
 
 COMPOSE := podman compose --env-file .env -f deploy/compose.yml
 
@@ -27,4 +47,4 @@ db-up: ## Start local PostgreSQL with pgvector
 db-down: ## Stop local PostgreSQL, keep its volume
 	$(COMPOSE) down
 
-.PHONY: help hooks-install lengths-check pre-push docs-fmt test db-up db-down
+.PHONY: help hooks-install lengths-check pre-push docs-fmt test test-integration test-proof generate sqlc-check db-up db-down
