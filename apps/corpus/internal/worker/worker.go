@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/dannyota/traquydinh/apps/corpus/internal/artifact"
+	"github.com/dannyota/traquydinh/apps/corpus/internal/checkpoint"
 	"github.com/dannyota/traquydinh/apps/corpus/internal/config"
 	"github.com/dannyota/traquydinh/apps/corpus/internal/run"
 	"github.com/dannyota/traquydinh/apps/corpus/internal/stage"
@@ -21,9 +22,10 @@ import (
 
 // Deps supplies the worker's clients and registered stages.
 type Deps struct {
-	Env      stage.Env
-	Temporal client.Client
-	Registry workflow.Registry
+	Env          stage.Env
+	Temporal     client.Client
+	Registry     workflow.Registry
+	Checkpointer workflow.Checkpointer
 }
 
 // Worker runs a registered Temporal worker.
@@ -36,7 +38,11 @@ func New(_ context.Context, deps Deps) (*Worker, error) {
 	}
 	w := temporalworker.New(deps.Temporal, run.TaskQueue, temporalworker.Options{})
 	w.RegisterWorkflowWithOptions(workflow.BuildRelease, temporalworkflow.RegisterOptions{Name: run.WorkflowName})
-	activities := &workflow.Activities{Env: deps.Env, Registry: deps.Registry, Checkpointer: workflow.NoCheckpoint{}, Batch: stage.BatchConfig{HeartbeatEvery: 20 * time.Second, MaxAttempts: 5}}
+	checkpointer := deps.Checkpointer
+	if checkpointer == nil {
+		checkpointer = workflow.NoCheckpoint{}
+	}
+	activities := &workflow.Activities{Env: deps.Env, Registry: deps.Registry, Checkpointer: checkpointer, Batch: stage.BatchConfig{HeartbeatEvery: 20 * time.Second, MaxAttempts: 5}}
 	w.RegisterActivity(activities)
 	for _, st := range deps.Registry.Stages() {
 		w.RegisterActivityWithOptions(activities.RunBatch, activity.RegisterOptions{Name: st.Name()})
@@ -59,6 +65,9 @@ func Run(ctx context.Context, cfg config.Config) error {
 	if cfg.CheckpointDir == "" {
 		return errors.New("CORPUS_CHECKPOINT_DIR is required")
 	}
+	if err := checkpoint.CheckVersion(ctx, cfg.PgDump); err != nil {
+		return fmt.Errorf("check pg_dump: %w", err)
+	}
 	db, err := store.Open(ctx, cfg.DatabaseURL)
 	if err != nil {
 		return fmt.Errorf("open workshop: %w", err)
@@ -70,7 +79,7 @@ func Run(ctx context.Context, cfg config.Config) error {
 	}
 	defer temporalClient.Close()
 	env := stage.Env{DB: db, Artifacts: artifact.Store{Root: cfg.Artifacts}, Now: time.Now}
-	w, err := New(ctx, Deps{Env: env, Temporal: temporalClient, Registry: workflow.Default(workflow.Deps{Env: env})})
+	w, err := New(ctx, Deps{Env: env, Temporal: temporalClient, Registry: workflow.Default(workflow.Deps{Env: env}), Checkpointer: checkpoint.Taker{Config: checkpoint.Config{Dir: cfg.CheckpointDir, ArtifactsRoot: cfg.Artifacts, DatabaseURL: cfg.DatabaseURL, PgDump: cfg.PgDump, Keep: 3}}})
 	if err != nil {
 		return fmt.Errorf("construct worker: %w", err)
 	}
