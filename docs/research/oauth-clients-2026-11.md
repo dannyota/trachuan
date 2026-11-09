@@ -1,7 +1,7 @@
 # OAuth clients against aboutme (2026-11-09)
 
 The spikes plan asked whether Claude.ai, ChatGPT and Claude Code connect to
-aboutme's OAuth server, before traquydinh copies it. The owner stopped the live
+aboutme's OAuth server, before trachuan copies it. The owner stopped the live
 retest on 2026-11-09 because earlier sign-ins through aboutme's OAuth already
 succeeded. This note records the evidence that decision rests on and what stays
 unverified. Not authority; the design owns the rules in
@@ -32,5 +32,5 @@ Copy aboutme's `oauthsrv`, `mcpapi` and Google login after their refactor, as
 [ADR 0005](../adr/0005-google-login-and-embedded-oauth.md) decided. The fallback
 (`github.com/giantswarm/mcp-oauth`) is not pursued now; revisit it if the
 server's OAuth acceptance tests fail for ChatGPT or hosted Claude. Those
-acceptance tests run against traquydinh's own deployment: a ChatGPT connector, a
+acceptance tests run against trachuan's own deployment: a ChatGPT connector, a
 Claude.ai connector, Claude Code, token refresh and revocation.

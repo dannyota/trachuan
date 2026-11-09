@@ -8,8 +8,8 @@ mkdir -p work/dumps
 if [[ ! -f "work/dumps/$DUMP" ]]; then
   aws s3 cp "s3://danny-banhmi-data-vn/dumps/$DUMP" "work/dumps/$DUMP"
 fi
-pg() { podman exec -i traquydinh_postgres_1 "$@"; }
-pg dropdb -U traquydinh --if-exists banhmi_vn
-pg createdb -U traquydinh banhmi_vn
-pg psql -U traquydinh -d banhmi_vn -v ON_ERROR_STOP=1 -c 'create extension if not exists vector'
-pg pg_restore -U traquydinh --no-owner --no-privileges -j 4 -d banhmi_vn "/dumps/$DUMP"
+pg() { podman exec -i trachuan_postgres_1 "$@"; }
+pg dropdb -U trachuan --if-exists banhmi_vn
+pg createdb -U trachuan banhmi_vn
+pg psql -U trachuan -d banhmi_vn -v ON_ERROR_STOP=1 -c 'create extension if not exists vector'
+pg pg_restore -U trachuan --no-owner --no-privileges -j 4 -d banhmi_vn "/dumps/$DUMP"

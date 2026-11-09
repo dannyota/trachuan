@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"strings"
 
-	"danny.vn/traquydinh/apps/corpus/internal/stage"
-	"danny.vn/traquydinh/apps/corpus/internal/vbpl"
+	"danny.vn/trachuan/apps/corpus/internal/stage"
+	"danny.vn/trachuan/apps/corpus/internal/vbpl"
 )
 
 type provision struct {

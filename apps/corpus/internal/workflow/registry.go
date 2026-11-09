@@ -2,12 +2,12 @@
 package workflow
 
 import (
-	"danny.vn/traquydinh/apps/corpus/internal/stage"
-	"danny.vn/traquydinh/apps/corpus/internal/stage/discover"
-	"danny.vn/traquydinh/apps/corpus/internal/stage/extract"
-	"danny.vn/traquydinh/apps/corpus/internal/stage/fetch"
-	"danny.vn/traquydinh/apps/corpus/internal/stage/relate"
-	"danny.vn/traquydinh/apps/corpus/internal/vbpl"
+	"danny.vn/trachuan/apps/corpus/internal/stage"
+	"danny.vn/trachuan/apps/corpus/internal/stage/discover"
+	"danny.vn/trachuan/apps/corpus/internal/stage/extract"
+	"danny.vn/trachuan/apps/corpus/internal/stage/fetch"
+	"danny.vn/trachuan/apps/corpus/internal/stage/relate"
+	"danny.vn/trachuan/apps/corpus/internal/vbpl"
 )
 
 // Registry holds the implemented stages in execution order.

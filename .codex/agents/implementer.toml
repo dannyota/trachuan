@@ -1,5 +1,5 @@
 name = "implementer"
-description = "Implements one bounded traquydinh task in the brief's owned paths; also root-causes and fixes a failure from supplied evidence."
+description = "Implements one bounded trachuan task in the brief's owned paths; also root-causes and fixes a failure from supplied evidence."
 model = "gpt-6.1-terra"
 model_reasoning_effort = "high"
 sandbox_mode = "workspace-write"

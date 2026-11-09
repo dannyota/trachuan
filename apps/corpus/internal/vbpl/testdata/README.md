@@ -1,7 +1,7 @@
 # VBPL fixtures recorded 2026-11-09 (primary, curl at 1 request per second)
 
 Headers: `Origin: https://vbpl.vn`, `Referer: https://vbpl.vn/`, User-Agent
-traquydinh/0.0. Presigned query strings removed from files-\*.json.
+trachuan/0.0. Presigned query strings removed from files-\*.json.
 
 - list-agencies-62-908-page1.json: POST /doc/all, agencies 62 and 908, page 1,
   size 5, issueDate desc.

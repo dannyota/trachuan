@@ -1,5 +1,5 @@
 [project]
-name = "traquydinh-spike-embedder"
+name = "trachuan-spike-embedder"
 version = "0.0.0"
 description = "Throwaway spike: dense embedding recipe for Vietnam on ARM64."
 requires-python = ">=3.12"

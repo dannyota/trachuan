@@ -1,4 +1,4 @@
-# traquydinh
+# trachuan
 
 A citable corpus of Vietnamese law for AI agents (over MCP) and people (on the
 web). Evidence only: verbatim provisions with citations, validity and amendment

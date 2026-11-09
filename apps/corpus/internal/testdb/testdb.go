@@ -15,8 +15,8 @@ import (
 	"strings"
 	"testing"
 
-	"danny.vn/traquydinh/apps/corpus/internal/migrate"
-	"danny.vn/traquydinh/apps/corpus/migrations"
+	"danny.vn/trachuan/apps/corpus/internal/migrate"
+	"danny.vn/trachuan/apps/corpus/migrations"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -31,7 +31,7 @@ func create(t *testing.T, migrated bool) string {
 	ctx := context.Background()
 	adminURL := os.Getenv("CORPUS_TEST_ADMIN_URL")
 	if adminURL == "" {
-		adminURL = "postgres://traquydinh@127.0.0.1:5432/postgres"
+		adminURL = "postgres://trachuan@127.0.0.1:5432/postgres"
 	}
 	parsed, err := url.Parse(adminURL)
 	if err != nil {

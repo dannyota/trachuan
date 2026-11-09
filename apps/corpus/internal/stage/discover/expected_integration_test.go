@@ -8,9 +8,9 @@ import (
 	"reflect"
 	"testing"
 
-	"danny.vn/traquydinh/apps/corpus/internal/source"
-	"danny.vn/traquydinh/apps/corpus/internal/stage"
-	"danny.vn/traquydinh/apps/corpus/internal/testdb"
+	"danny.vn/trachuan/apps/corpus/internal/source"
+	"danny.vn/trachuan/apps/corpus/internal/stage"
+	"danny.vn/trachuan/apps/corpus/internal/testdb"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 

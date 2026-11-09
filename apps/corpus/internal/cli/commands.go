@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 
-	"danny.vn/traquydinh/apps/corpus/internal/run"
+	"danny.vn/trachuan/apps/corpus/internal/run"
 )
 
 func runStart(ctx context.Context, a []string, out, errout io.Writer) int {

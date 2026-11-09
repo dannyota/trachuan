@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	"danny.vn/traquydinh/apps/corpus/internal/stage"
-	"danny.vn/traquydinh/apps/corpus/internal/vbpl"
+	"danny.vn/trachuan/apps/corpus/internal/stage"
+	"danny.vn/trachuan/apps/corpus/internal/vbpl"
 )
 
 func TestAPIError_Classifies(t *testing.T) {

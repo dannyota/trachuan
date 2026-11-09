@@ -45,7 +45,7 @@ COMPOSE := podman compose --env-file .env -f deploy/compose.yml
 
 db-up: ## Start local PostgreSQL with pgvector and wait until it is ready
 	$(COMPOSE) up -d postgres
-	@for i in $$(seq 1 60); do podman exec traquydinh_postgres_1 pg_isready -q -U traquydinh && exit 0; sleep 1; done; echo "postgres not ready" >&2; exit 1
+	@for i in $$(seq 1 60); do podman exec trachuan_postgres_1 pg_isready -q -U trachuan && exit 0; sleep 1; done; echo "postgres not ready" >&2; exit 1
 
 db-setup: ## Create the pipeline and Temporal roles and databases (idempotent)
 	bash deploy/local/db-setup.sh

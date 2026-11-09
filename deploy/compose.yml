@@ -1,5 +1,5 @@
 # Local development services. Production runs Quadlet units on the host.
-name: traquydinh
+name: trachuan
 services:
   postgres:
     image: docker.io/pgvector/pgvector:pg18
@@ -14,15 +14,15 @@ services:
       - -c
       - max_parallel_maintenance_workers=4
     environment:
-      POSTGRES_USER: traquydinh
+      POSTGRES_USER: trachuan
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
     ports:
       - "127.0.0.1:5432:5432"
     volumes:
-      - traquydinh-pg:/var/lib/postgresql
+      - trachuan-pg:/var/lib/postgresql
       - ../work/dumps:/dumps:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U traquydinh"]
+      test: ["CMD-SHELL", "pg_isready -U trachuan"]
       interval: 5s
       retries: 20
   temporal:
@@ -54,4 +54,4 @@ services:
     depends_on:
       - temporal
 volumes:
-  traquydinh-pg:
+  trachuan-pg:

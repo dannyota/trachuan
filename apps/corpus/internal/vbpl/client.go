@@ -44,7 +44,7 @@ func New(version string) *Client {
 
 // NewWithBase creates a client for the supplied gateway URL.
 func NewWithBase(base, version string, options ...Option) *Client {
-	c := &Client{base: base, userAgent: "traquydinh/" + version + " (+https://github.com/dannyota/traquydinh)", http: &http.Client{}, limiter: rate.NewLimiter(8, 1), slots: make(chan struct{}, 8), timeout: 30 * time.Second, fileHosts: []string{"s3-han02.fptcloud.com"}, backoffs: []time.Duration{2 * time.Second, 8 * time.Second, 30 * time.Second}}
+	c := &Client{base: base, userAgent: "trachuan/" + version + " (+https://github.com/dannyota/trachuan)", http: &http.Client{}, limiter: rate.NewLimiter(8, 1), slots: make(chan struct{}, 8), timeout: 30 * time.Second, fileHosts: []string{"s3-han02.fptcloud.com"}, backoffs: []time.Duration{2 * time.Second, 8 * time.Second, 30 * time.Second}}
 	for _, option := range options {
 		option(c)
 	}

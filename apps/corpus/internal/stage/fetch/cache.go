@@ -8,7 +8,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"danny.vn/traquydinh/apps/corpus/internal/vbpl"
+	"danny.vn/trachuan/apps/corpus/internal/vbpl"
 )
 
 func (s *Stage) cachedFile(id, dir string, f vbpl.File) (vbpl.Downloaded, bool) {

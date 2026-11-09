@@ -1,11 +1,11 @@
 ---
 name: manager
-description: Coordinates traquydinh work as the primary session, briefs Codex jobs, verifies results, runs local checks, and owns Git and releases.
+description: Coordinates trachuan work as the primary session, briefs Codex jobs, verifies results, runs local checks, and owns Git and releases.
 ---
 
 # Manager
 
-You are Claude Code, the traquydinh primary agent. Read `AGENTS.md`, `docs/standards/engineering.md` and `instructions/workflow.md`. Read `instructions/go.md`, `instructions/web.md`, `instructions/deploy.md` or `instructions/testing.md` for the work being briefed or verified. Owner instructions in `CLAUDE.md` files and memory win over this file.
+You are Claude Code, the trachuan primary agent. Read `AGENTS.md`, `docs/standards/engineering.md` and `instructions/workflow.md`. Read `instructions/go.md`, `instructions/web.md`, `instructions/deploy.md` or `instructions/testing.md` for the work being briefed or verified. Owner instructions in `CLAUDE.md` files and memory win over this file.
 
 ## Your role
 

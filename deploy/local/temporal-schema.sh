@@ -9,7 +9,7 @@ set +a
 : "${TEMPORAL_DB_PASSWORD:?set TEMPORAL_DB_PASSWORD in .env}"
 export SQL_PASSWORD="$TEMPORAL_DB_PASSWORD"
 image=docker.io/temporalio/admin-tools:1.32.2
-network="${CORPUS_COMPOSE_NETWORK:-traquydinh_default}"
+network="${CORPUS_COMPOSE_NETWORK:-trachuan_default}"
 schema=/etc/temporal/schema/postgresql/v12
 for target in temporal:temporal visibility:temporal_visibility; do
   dir=${target%%:*}

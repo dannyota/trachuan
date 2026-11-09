@@ -15,9 +15,9 @@ import (
 	"testing"
 	"time"
 
-	"danny.vn/traquydinh/apps/corpus/internal/migrate"
-	"danny.vn/traquydinh/apps/corpus/internal/testdb"
-	"danny.vn/traquydinh/apps/corpus/internal/testtemporal"
+	"danny.vn/trachuan/apps/corpus/internal/migrate"
+	"danny.vn/trachuan/apps/corpus/internal/testdb"
+	"danny.vn/trachuan/apps/corpus/internal/testtemporal"
 	"github.com/jackc/pgx/v5/pgxpool"
 	workflowservice "go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/testsuite"
