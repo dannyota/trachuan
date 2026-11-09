@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/dannyota/traquydinh/apps/corpus/internal/run"
-	"github.com/dannyota/traquydinh/apps/corpus/internal/stage"
+	"danny.vn/traquydinh/apps/corpus/internal/run"
+	"danny.vn/traquydinh/apps/corpus/internal/stage"
 	"go.temporal.io/sdk/temporal"
 	temporalworkflow "go.temporal.io/sdk/workflow"
 )

@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/dannyota/traquydinh/apps/corpus/internal/store"
+	"danny.vn/traquydinh/apps/corpus/internal/store"
 )
 
 // Cancel requests cancellation of an open workflow and records its state.

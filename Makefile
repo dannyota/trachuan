@@ -17,18 +17,18 @@ docs-fmt: ## Format human-read Markdown with Prettier
 	npx prettier --write "**/*.md" "!**/AGENTS.md" "!**/CLAUDE.md" "!instructions/**" "!docs/plans/**" "!.claude/**" "!.codex/**" "!**/node_modules/**" "!**/.venv/**"
 
 test: ## Run unit tests
-	cd apps/corpus && go test ./...
+	go test ./...
 
 # Local runs reuse the compose password for pgx; CI sets the password in its URL.
 LOAD_ENV := set -a; if [ -f .env ]; then . ./.env; fi; set +a; \
 	if [ -z "$$PGPASSWORD" ] && [ -n "$$POSTGRES_PASSWORD" ]; then export PGPASSWORD="$$POSTGRES_PASSWORD"; fi
 
 test-integration: ## Run integration tests (loads .env when present)
-	$(LOAD_ENV); cd apps/corpus && go test -tags integration -count=1 ./...
+	$(LOAD_ENV); go test -tags integration -count=1 ./...
 
 test-proof: ## Run proof tests (loads .env when present)
 	@if [ ! -d apps/corpus/test/proof ]; then echo "test-proof: no proof tests yet"; exit 0; fi; \
-	$(LOAD_ENV); cd apps/corpus && go test -tags 'integration faultinject' -count=1 ./test/proof/...
+	$(LOAD_ENV); go test -tags 'integration faultinject' -count=1 ./apps/corpus/test/proof/...
 
 generate: ## Generate the typed data layer when sqlc is configured
 	@if [ -f apps/corpus/sqlc.yaml ]; then cd apps/corpus && sqlc generate; fi

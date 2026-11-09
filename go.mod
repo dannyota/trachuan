@@ -1,4 +1,4 @@
-module github.com/dannyota/traquydinh/apps/corpus
+module danny.vn/traquydinh
 
 go 1.27.3
 

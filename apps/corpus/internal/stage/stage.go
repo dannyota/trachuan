@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/dannyota/traquydinh/apps/corpus/internal/artifact"
+	"danny.vn/traquydinh/apps/corpus/internal/artifact"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )

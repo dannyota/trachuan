@@ -5,7 +5,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/dannyota/traquydinh/apps/corpus/migrations"
+	"danny.vn/traquydinh/apps/corpus/migrations"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"

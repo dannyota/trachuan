@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/dannyota/traquydinh/apps/corpus/internal/stage"
+	"danny.vn/traquydinh/apps/corpus/internal/stage"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.temporal.io/sdk/client"
 )

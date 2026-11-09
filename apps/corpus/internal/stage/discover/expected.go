@@ -7,9 +7,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/dannyota/traquydinh/apps/corpus/internal/run"
-	"github.com/dannyota/traquydinh/apps/corpus/internal/stage"
-	"github.com/dannyota/traquydinh/apps/corpus/internal/store"
+	"danny.vn/traquydinh/apps/corpus/internal/run"
+	"danny.vn/traquydinh/apps/corpus/internal/stage"
+	"danny.vn/traquydinh/apps/corpus/internal/store"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 

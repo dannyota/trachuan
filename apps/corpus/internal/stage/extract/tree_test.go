@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dannyota/traquydinh/apps/corpus/internal/stage"
-	"github.com/dannyota/traquydinh/apps/corpus/internal/vbpl"
+	"danny.vn/traquydinh/apps/corpus/internal/stage"
+	"danny.vn/traquydinh/apps/corpus/internal/vbpl"
 )
 
 func fixture(t *testing.T, name string) []vbpl.Node {

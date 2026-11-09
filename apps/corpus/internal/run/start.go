@@ -11,8 +11,8 @@ import (
 	"runtime/debug"
 	"time"
 
-	"github.com/dannyota/traquydinh/apps/corpus/internal/stage"
-	"github.com/dannyota/traquydinh/apps/corpus/internal/store"
+	"danny.vn/traquydinh/apps/corpus/internal/stage"
+	"danny.vn/traquydinh/apps/corpus/internal/store"
 	enumspb "go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/sdk/client"

@@ -4,7 +4,7 @@
 
 **Goal:** `corpus worker` runs a resumable `BuildRelease` workflow on self-hosted Temporal that discovers, fetches, extracts and relates the Vietnam VBPL scope into the workshop database, with completeness accounting, gaps, cancellation, checkpoints and recovery.
 
-**Architecture:** One Go module `apps/corpus` in a root `go.work`. The `run` row is the record of a run; Temporal coordinates. Each stage plans items, processes each into an immutable content-addressed artifact (pure function of input and recipe), and resolves the artifact against the run (run rows and gaps); one fenced transaction commits each item. VBPL is read through its public JSON gateway with rate limits; tests use recorded fixtures.
+**Architecture:** One root Go module `danny.vn/traquydinh`; the pipeline lives in `apps/corpus`. The `run` row is the record of a run; Temporal coordinates. Each stage plans items, processes each into an immutable content-addressed artifact (pure function of input and recipe), and resolves the artifact against the run (run rows and gaps); one fenced transaction commits each item. VBPL is read through its public JSON gateway with rate limits; tests use recorded fixtures.
 
 **Tech Stack:** Go 1.27.3, Temporal Go SDK v1.50.0, Temporal server and admin-tools 1.32.2, Temporal UI 2.58.1, PostgreSQL 18 (pgvector image in compose), pgx/v5, sqlc 1.31.1, goose v3 as a library, golang.org/x/text, golang.org/x/time/rate, gopkg.in/yaml.v3, podman-compose.
 
@@ -23,7 +23,7 @@ Proofs listed in pipeline.md: crash after an activity commit (and after rename, 
 
 ## Global Constraints
 
-- Module path `github.com/dannyota/traquydinh/apps/corpus`; root `go.work` with `go 1.27.3` and `use ./apps/corpus`. Any task may add dependencies to `apps/corpus/go.mod` and `go.sum`.
+- Module path `danny.vn/traquydinh` (one `go.mod` at the repository root, `go 1.27.3`, like the owner's other projects); packages under `danny.vn/traquydinh/apps/corpus/...`. Any task may add dependencies to the root `go.mod` and `go.sum`.
 - Workflow id `build-<cc>-<rel>`; `cc` matches `^[a-z]{2}$`; `rel` matches `^[0-9]{8}(_[0-9]{1,2})?$` and orders by date, then sequence number as an integer.
 - Run states and transitions, the start protocol, `next_stage`, cancellation drain and `corpus recover` exactly as pipeline.md "Run lifecycle"; commit and gap rules exactly as "Items, artifacts and gaps".
 - One workflow `BuildRelease`; continue-as-new after every stage; payloads carry ids and counts only, at most 256 KB; a history segment above 5,000 events fails the run.

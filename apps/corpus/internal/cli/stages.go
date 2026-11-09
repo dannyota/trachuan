@@ -1,8 +1,8 @@
 package cli
 
 import (
-	"github.com/dannyota/traquydinh/apps/corpus/internal/stage"
-	"github.com/dannyota/traquydinh/apps/corpus/internal/workflow"
+	"danny.vn/traquydinh/apps/corpus/internal/stage"
+	"danny.vn/traquydinh/apps/corpus/internal/workflow"
 )
 
 func compiledStages(snapshot stage.Snapshot) ([]string, map[string]string) {

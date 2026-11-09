@@ -6,7 +6,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/dannyota/traquydinh/apps/corpus/internal/cli"
+	"danny.vn/traquydinh/apps/corpus/internal/cli"
 )
 
 func main() {

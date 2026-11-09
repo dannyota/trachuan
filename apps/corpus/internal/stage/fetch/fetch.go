@@ -7,10 +7,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/dannyota/traquydinh/apps/corpus/internal/filecache"
-	"github.com/dannyota/traquydinh/apps/corpus/internal/stage"
-	"github.com/dannyota/traquydinh/apps/corpus/internal/stage/discover"
-	"github.com/dannyota/traquydinh/apps/corpus/internal/vbpl"
+	"danny.vn/traquydinh/apps/corpus/internal/filecache"
+	"danny.vn/traquydinh/apps/corpus/internal/stage"
+	"danny.vn/traquydinh/apps/corpus/internal/stage/discover"
+	"danny.vn/traquydinh/apps/corpus/internal/vbpl"
 )
 
 // Stage fetches documents and their attachments.

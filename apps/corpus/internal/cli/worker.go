@@ -6,8 +6,8 @@ import (
 	"io"
 	"os"
 
-	"github.com/dannyota/traquydinh/apps/corpus/internal/config"
-	"github.com/dannyota/traquydinh/apps/corpus/internal/worker"
+	"danny.vn/traquydinh/apps/corpus/internal/config"
+	"danny.vn/traquydinh/apps/corpus/internal/worker"
 )
 
 func runWorker(ctx context.Context, args []string, _ io.Writer, stderr io.Writer) int {

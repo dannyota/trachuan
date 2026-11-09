@@ -6,9 +6,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/dannyota/traquydinh/apps/corpus/internal/artifact"
-	"github.com/dannyota/traquydinh/apps/corpus/internal/migrate"
-	"github.com/dannyota/traquydinh/apps/corpus/internal/testdb"
+	"danny.vn/traquydinh/apps/corpus/internal/artifact"
+	"danny.vn/traquydinh/apps/corpus/internal/migrate"
+	"danny.vn/traquydinh/apps/corpus/internal/testdb"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )

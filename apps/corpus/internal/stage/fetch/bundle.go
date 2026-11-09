@@ -10,9 +10,9 @@ import (
 	"path/filepath"
 	"sort"
 
-	"github.com/dannyota/traquydinh/apps/corpus/internal/artifact"
-	"github.com/dannyota/traquydinh/apps/corpus/internal/stage"
-	"github.com/dannyota/traquydinh/apps/corpus/internal/vbpl"
+	"danny.vn/traquydinh/apps/corpus/internal/artifact"
+	"danny.vn/traquydinh/apps/corpus/internal/stage"
+	"danny.vn/traquydinh/apps/corpus/internal/vbpl"
 )
 
 type file struct {

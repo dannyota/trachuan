@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dannyota/traquydinh/apps/corpus/internal/artifact"
-	"github.com/dannyota/traquydinh/apps/corpus/internal/stage"
+	"danny.vn/traquydinh/apps/corpus/internal/artifact"
+	"danny.vn/traquydinh/apps/corpus/internal/stage"
 )
 
 func TestVerifyFetch_RejectsInvalidArtifact(t *testing.T) {

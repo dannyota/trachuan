@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/dannyota/traquydinh/apps/corpus/internal/store"
+	"danny.vn/traquydinh/apps/corpus/internal/store"
 )
 
 // StageInput identifies a stage of a run generation.

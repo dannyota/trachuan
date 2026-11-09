@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/dannyota/traquydinh/apps/corpus/internal/source"
-	"github.com/dannyota/traquydinh/apps/corpus/internal/stage"
+	"danny.vn/traquydinh/apps/corpus/internal/source"
+	"danny.vn/traquydinh/apps/corpus/internal/stage"
 )
 
 func testRelations(t *testing.T, detail, diagram string, codes map[string]source.RelationCode) ([]relation, []string) {

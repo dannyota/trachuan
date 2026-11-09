@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/dannyota/traquydinh/apps/corpus/internal/artifact"
-	"github.com/dannyota/traquydinh/apps/corpus/internal/store"
+	"danny.vn/traquydinh/apps/corpus/internal/artifact"
+	"danny.vn/traquydinh/apps/corpus/internal/store"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )

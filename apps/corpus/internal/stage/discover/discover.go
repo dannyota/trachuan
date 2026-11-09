@@ -14,11 +14,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/dannyota/traquydinh/apps/corpus/internal/artifact"
-	"github.com/dannyota/traquydinh/apps/corpus/internal/source"
-	"github.com/dannyota/traquydinh/apps/corpus/internal/stage"
-	"github.com/dannyota/traquydinh/apps/corpus/internal/store"
-	"github.com/dannyota/traquydinh/apps/corpus/internal/vbpl"
+	"danny.vn/traquydinh/apps/corpus/internal/artifact"
+	"danny.vn/traquydinh/apps/corpus/internal/source"
+	"danny.vn/traquydinh/apps/corpus/internal/stage"
+	"danny.vn/traquydinh/apps/corpus/internal/store"
+	"danny.vn/traquydinh/apps/corpus/internal/vbpl"
 	"github.com/jackc/pgx/v5"
 )
 

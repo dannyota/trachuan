@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/dannyota/traquydinh/apps/corpus/internal/store"
+	"danny.vn/traquydinh/apps/corpus/internal/store"
 )
 
 // Recover fences old activities and optionally terminates an open workflow.

@@ -15,8 +15,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dannyota/traquydinh/apps/corpus/internal/migrate"
-	"github.com/dannyota/traquydinh/apps/corpus/internal/testdb"
+	"danny.vn/traquydinh/apps/corpus/internal/migrate"
+	"danny.vn/traquydinh/apps/corpus/internal/testdb"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/testsuite"

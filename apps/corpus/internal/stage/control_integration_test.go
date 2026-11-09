@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dannyota/traquydinh/apps/corpus/internal/artifact"
+	"danny.vn/traquydinh/apps/corpus/internal/artifact"
 	"github.com/jackc/pgx/v5"
 )
 

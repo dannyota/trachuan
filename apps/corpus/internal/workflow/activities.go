@@ -6,8 +6,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/dannyota/traquydinh/apps/corpus/internal/stage"
-	"github.com/dannyota/traquydinh/apps/corpus/internal/store"
+	"danny.vn/traquydinh/apps/corpus/internal/stage"
+	"danny.vn/traquydinh/apps/corpus/internal/store"
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/temporal"
 )

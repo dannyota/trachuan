@@ -2,12 +2,12 @@
 package workflow
 
 import (
-	"github.com/dannyota/traquydinh/apps/corpus/internal/stage"
-	"github.com/dannyota/traquydinh/apps/corpus/internal/stage/discover"
-	"github.com/dannyota/traquydinh/apps/corpus/internal/stage/extract"
-	"github.com/dannyota/traquydinh/apps/corpus/internal/stage/fetch"
-	"github.com/dannyota/traquydinh/apps/corpus/internal/stage/relate"
-	"github.com/dannyota/traquydinh/apps/corpus/internal/vbpl"
+	"danny.vn/traquydinh/apps/corpus/internal/stage"
+	"danny.vn/traquydinh/apps/corpus/internal/stage/discover"
+	"danny.vn/traquydinh/apps/corpus/internal/stage/extract"
+	"danny.vn/traquydinh/apps/corpus/internal/stage/fetch"
+	"danny.vn/traquydinh/apps/corpus/internal/stage/relate"
+	"danny.vn/traquydinh/apps/corpus/internal/vbpl"
 )
 
 // Registry holds the implemented stages in execution order.

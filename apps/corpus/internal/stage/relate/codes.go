@@ -7,8 +7,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/dannyota/traquydinh/apps/corpus/internal/source"
-	"github.com/dannyota/traquydinh/apps/corpus/internal/stage"
+	"danny.vn/traquydinh/apps/corpus/internal/source"
+	"danny.vn/traquydinh/apps/corpus/internal/stage"
 )
 
 type relation struct {

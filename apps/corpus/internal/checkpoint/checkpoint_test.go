@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dannyota/traquydinh/apps/corpus/internal/artifact"
+	"danny.vn/traquydinh/apps/corpus/internal/artifact"
 )
 
 type fakeDumper struct{ fail bool }

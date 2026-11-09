@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dannyota/traquydinh/apps/corpus/internal/migrate"
-	"github.com/dannyota/traquydinh/apps/corpus/internal/stage"
-	"github.com/dannyota/traquydinh/apps/corpus/internal/testdb"
+	"danny.vn/traquydinh/apps/corpus/internal/migrate"
+	"danny.vn/traquydinh/apps/corpus/internal/stage"
+	"danny.vn/traquydinh/apps/corpus/internal/testdb"
 	"github.com/jackc/pgx/v5/pgxpool"
 	enumspb "go.temporal.io/api/enums/v1"
 	"go.temporal.io/sdk/client"

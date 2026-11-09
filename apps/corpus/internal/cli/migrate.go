@@ -6,8 +6,8 @@ import (
 	"io"
 	"os"
 
-	"github.com/dannyota/traquydinh/apps/corpus/internal/config"
-	"github.com/dannyota/traquydinh/apps/corpus/internal/migrate"
+	"danny.vn/traquydinh/apps/corpus/internal/config"
+	"danny.vn/traquydinh/apps/corpus/internal/migrate"
 )
 
 func runMigrate(ctx context.Context, args []string, _ io.Writer, stderr io.Writer) int {
