@@ -9,6 +9,35 @@ import (
 	"context"
 )
 
+const insertPlannedItem = `-- name: InsertPlannedItem :exec
+INSERT INTO run_item (run_id, stage, item_key, input_hash, recipe_hash, state, batch, message)
+VALUES ($1, $2, $3, $4, $5, 'pending', $6, $7)
+ON CONFLICT (run_id, stage, item_key) DO NOTHING
+`
+
+type InsertPlannedItemParams struct {
+	RunID      int64
+	Stage      string
+	ItemKey    string
+	InputHash  *string
+	RecipeHash *string
+	Batch      int32
+	Message    *string
+}
+
+func (q *Queries) InsertPlannedItem(ctx context.Context, arg InsertPlannedItemParams) error {
+	_, err := q.db.Exec(ctx, insertPlannedItem,
+		arg.RunID,
+		arg.Stage,
+		arg.ItemKey,
+		arg.InputHash,
+		arg.RecipeHash,
+		arg.Batch,
+		arg.Message,
+	)
+	return err
+}
+
 const insertRunItem = `-- name: InsertRunItem :exec
 INSERT INTO run_item (run_id, stage, item_key, input_hash, recipe_hash, state, batch)
 VALUES ($1, $2, $3, $4, $5, 'pending', $6)
@@ -79,6 +108,54 @@ func (q *Queries) ListPendingBatchItems(ctx context.Context, arg ListPendingBatc
 		return nil, err
 	}
 	return items, nil
+}
+
+const listPendingStageBatches = `-- name: ListPendingStageBatches :many
+SELECT DISTINCT batch FROM run_item
+WHERE run_id = $1 AND stage = $2 AND state = 'pending'
+ORDER BY batch
+`
+
+type ListPendingStageBatchesParams struct {
+	RunID int64
+	Stage string
+}
+
+func (q *Queries) ListPendingStageBatches(ctx context.Context, arg ListPendingStageBatchesParams) ([]int32, error) {
+	rows, err := q.db.Query(ctx, listPendingStageBatches, arg.RunID, arg.Stage)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []int32
+	for rows.Next() {
+		var batch int32
+		if err := rows.Scan(&batch); err != nil {
+			return nil, err
+		}
+		items = append(items, batch)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const resetOlderFailedStageItems = `-- name: ResetOlderFailedStageItems :exec
+UPDATE run_item SET state = 'pending', updated_at = now()
+WHERE run_id = $1 AND stage = $2
+  AND state = 'failed' AND generation < $3
+`
+
+type ResetOlderFailedStageItemsParams struct {
+	RunID      int64
+	Stage      string
+	Generation int32
+}
+
+func (q *Queries) ResetOlderFailedStageItems(ctx context.Context, arg ResetOlderFailedStageItemsParams) error {
+	_, err := q.db.Exec(ctx, resetOlderFailedStageItems, arg.RunID, arg.Stage, arg.Generation)
+	return err
 }
 
 const updateRunItemFenced = `-- name: UpdateRunItemFenced :execrows

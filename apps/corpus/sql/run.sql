@@ -44,3 +44,13 @@ SELECT * FROM run WHERE id = $1;
 
 -- name: GetBatchRunState :one
 SELECT state FROM run WHERE id = $1;
+
+-- name: GetControlRunForUpdate :one
+SELECT * FROM run WHERE id = $1 FOR UPDATE;
+
+-- name: AdvanceRunStage :exec
+UPDATE run SET next_stage = sqlc.narg(next_stage), updated_at = now() WHERE id = sqlc.arg(id);
+
+-- name: MarkRunFromStates :execrows
+UPDATE run SET state = sqlc.arg(state), message = sqlc.narg(message), updated_at = now()
+WHERE id = sqlc.arg(id) AND generation = sqlc.arg(generation) AND state = ANY(sqlc.arg(allowed_states)::text[]);

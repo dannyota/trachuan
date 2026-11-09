@@ -19,3 +19,18 @@ WHERE i.run_id = r.id AND i.run_id = sqlc.arg(run_id)
 SELECT * FROM run_item
 WHERE run_id = $1 AND stage = $2 AND batch = $3 AND state = 'pending'
 ORDER BY item_key;
+
+-- name: InsertPlannedItem :exec
+INSERT INTO run_item (run_id, stage, item_key, input_hash, recipe_hash, state, batch, message)
+VALUES (sqlc.arg(run_id), sqlc.arg(stage), sqlc.arg(item_key), sqlc.narg(input_hash), sqlc.narg(recipe_hash), 'pending', sqlc.arg(batch), sqlc.narg(message))
+ON CONFLICT (run_id, stage, item_key) DO NOTHING;
+
+-- name: ResetOlderFailedStageItems :exec
+UPDATE run_item SET state = 'pending', updated_at = now()
+WHERE run_id = sqlc.arg(run_id) AND stage = sqlc.arg(stage)
+  AND state = 'failed' AND generation < sqlc.arg(generation);
+
+-- name: ListPendingStageBatches :many
+SELECT DISTINCT batch FROM run_item
+WHERE run_id = $1 AND stage = $2 AND state = 'pending'
+ORDER BY batch;

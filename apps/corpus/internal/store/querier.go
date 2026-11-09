@@ -10,25 +10,31 @@ import (
 
 type Querier interface {
 	AcceptRunGaps(ctx context.Context, arg AcceptRunGapsParams) (int64, error)
+	AdvanceRunStage(ctx context.Context, arg AdvanceRunStageParams) error
 	CountIncompleteItems(ctx context.Context, runID int64) (int64, error)
 	CountUnacceptedGaps(ctx context.Context, runID int64) (int64, error)
 	CreateRun(ctx context.Context, arg CreateRunParams) error
 	GetArtifactID(ctx context.Context, arg GetArtifactIDParams) (int64, error)
 	GetBatchRun(ctx context.Context, id int64) (Run, error)
 	GetBatchRunState(ctx context.Context, id int64) (string, error)
+	GetControlRunForUpdate(ctx context.Context, id int64) (Run, error)
 	GetRun(ctx context.Context, arg GetRunParams) (Run, error)
 	GetRunForUpdate(ctx context.Context, arg GetRunForUpdateParams) (Run, error)
 	GetRunGeneration(ctx context.Context, id int64) (int32, error)
 	GetRunGenerationForShare(ctx context.Context, id int64) (int32, error)
 	InsertArtifact(ctx context.Context, arg InsertArtifactParams) (int64, error)
 	InsertGap(ctx context.Context, arg InsertGapParams) error
+	InsertPlannedItem(ctx context.Context, arg InsertPlannedItemParams) error
 	InsertRunItem(ctx context.Context, arg InsertRunItemParams) error
 	ListPendingBatchItems(ctx context.Context, arg ListPendingBatchItemsParams) ([]RunItem, error)
+	ListPendingStageBatches(ctx context.Context, arg ListPendingStageBatchesParams) ([]int32, error)
 	ListRunGaps(ctx context.Context, arg ListRunGapsParams) ([]Gap, error)
 	ListRunItemCounts(ctx context.Context, runID int64) ([]ListRunItemCountsRow, error)
 	ListUnacceptedGapCounts(ctx context.Context, runID int64) ([]ListUnacceptedGapCountsRow, error)
+	MarkRunFromStates(ctx context.Context, arg MarkRunFromStatesParams) (int64, error)
 	RecoverRun(ctx context.Context, id int64) error
 	ResetFailedItems(ctx context.Context, arg ResetFailedItemsParams) error
+	ResetOlderFailedStageItems(ctx context.Context, arg ResetOlderFailedStageItemsParams) error
 	SetRunState(ctx context.Context, arg SetRunStateParams) error
 	StartRun(ctx context.Context, arg StartRunParams) error
 	UpdateRunItemFenced(ctx context.Context, arg UpdateRunItemFencedParams) (int64, error)

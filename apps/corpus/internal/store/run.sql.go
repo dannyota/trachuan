@@ -10,6 +10,20 @@ import (
 	"encoding/json"
 )
 
+const advanceRunStage = `-- name: AdvanceRunStage :exec
+UPDATE run SET next_stage = $1, updated_at = now() WHERE id = $2
+`
+
+type AdvanceRunStageParams struct {
+	NextStage *string
+	ID        int64
+}
+
+func (q *Queries) AdvanceRunStage(ctx context.Context, arg AdvanceRunStageParams) error {
+	_, err := q.db.Exec(ctx, advanceRunStage, arg.NextStage, arg.ID)
+	return err
+}
+
 const countIncompleteItems = `-- name: CountIncompleteItems :one
 SELECT count(*) FROM run_item WHERE run_id = $1 AND state IN ('pending', 'failed')
 `
@@ -70,6 +84,30 @@ func (q *Queries) GetBatchRunState(ctx context.Context, id int64) (string, error
 	var state string
 	err := row.Scan(&state)
 	return state, err
+}
+
+const getControlRunForUpdate = `-- name: GetControlRunForUpdate :one
+SELECT id, country, rel, generation, state, next_stage, until_stage, workflow_id, snapshot, message, created_at, updated_at FROM run WHERE id = $1 FOR UPDATE
+`
+
+func (q *Queries) GetControlRunForUpdate(ctx context.Context, id int64) (Run, error) {
+	row := q.db.QueryRow(ctx, getControlRunForUpdate, id)
+	var i Run
+	err := row.Scan(
+		&i.ID,
+		&i.Country,
+		&i.Rel,
+		&i.Generation,
+		&i.State,
+		&i.NextStage,
+		&i.UntilStage,
+		&i.WorkflowID,
+		&i.Snapshot,
+		&i.Message,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const getRun = `-- name: GetRun :one
@@ -210,6 +248,33 @@ func (q *Queries) ListUnacceptedGapCounts(ctx context.Context, runID int64) ([]L
 		return nil, err
 	}
 	return items, nil
+}
+
+const markRunFromStates = `-- name: MarkRunFromStates :execrows
+UPDATE run SET state = $1, message = $2, updated_at = now()
+WHERE id = $3 AND generation = $4 AND state = ANY($5::text[])
+`
+
+type MarkRunFromStatesParams struct {
+	State         string
+	Message       *string
+	ID            int64
+	Generation    int32
+	AllowedStates []string
+}
+
+func (q *Queries) MarkRunFromStates(ctx context.Context, arg MarkRunFromStatesParams) (int64, error) {
+	result, err := q.db.Exec(ctx, markRunFromStates,
+		arg.State,
+		arg.Message,
+		arg.ID,
+		arg.Generation,
+		arg.AllowedStates,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const recoverRun = `-- name: RecoverRun :exec
