@@ -90,7 +90,14 @@ func (a *Activities) RunBatch(ctx context.Context, in stage.BatchInput) (stage.B
 
 // CloseStage computes counts and advances a completed stage.
 func (a *Activities) CloseStage(ctx context.Context, in stage.StageInput) (stage.CloseResult, error) {
-	result, err := stage.CloseStage(ctx, a.Env, in, a.Registry.Following(in.Stage))
+	if _, err := a.load(ctx, in.RunID, in.Generation); err != nil {
+		return stage.CloseResult{}, activityError(err)
+	}
+	st, err := a.lookup(in.Stage)
+	if err != nil {
+		return stage.CloseResult{}, err
+	}
+	result, err := stage.CloseStage(ctx, a.Env, st, in, a.Registry.Following(in.Stage))
 	return result, activityError(err)
 }
 

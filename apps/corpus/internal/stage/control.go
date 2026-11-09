@@ -23,9 +23,11 @@ type PlanResult struct {
 
 // CloseResult reports a closed stage.
 type CloseResult struct {
-	Counts    Counts
-	NextStage string
-	Failed    bool
+	Counts     Counts
+	NextStage  string
+	Failed     bool
+	Cancelling bool
+	Reason     string
 }
 
 // MarkInput asks for a fenced run state change.
@@ -115,7 +117,7 @@ func PlanStage(ctx context.Context, env Env, st Stage, in StageInput, compiled m
 }
 
 // CloseStage records the stage's counts and moves next_stage when no item is pending or failed.
-func CloseStage(ctx context.Context, env Env, in StageInput, following string) (CloseResult, error) {
+func CloseStage(ctx context.Context, env Env, st Stage, in StageInput, following string) (CloseResult, error) {
 	var result CloseResult
 	tx, err := env.DB.Begin(ctx)
 	if err != nil {
@@ -129,6 +131,32 @@ func CloseStage(ctx context.Context, env Env, in StageInput, following string) (
 	}
 	if int(row.Generation) != in.Generation {
 		return result, ErrSuperseded
+	}
+	if row.State == "cancelling" || row.State == "cancelled" {
+		return CloseResult{Cancelling: true}, nil
+	}
+	finalizer, hasFinalizer := st.(Finalizer)
+	failures, err := q.ListRunFailures(ctx, in.RunID)
+	if err != nil {
+		return result, fmt.Errorf("list run failures: %w", err)
+	}
+	var priorReason string
+	for _, failure := range failures {
+		for _, code := range BlockingFailureCodes() {
+			if failure.Code == code {
+				priorReason = failure.Reason
+				break
+			}
+		}
+		if priorReason != "" {
+			break
+		}
+	}
+	alreadyClosed := hasFinalizer && row.NextStage != nil && *row.NextStage == following && *row.NextStage != in.Stage
+	if hasFinalizer && priorReason == "" && !alreadyClosed {
+		if row.NextStage == nil || *row.NextStage != in.Stage || st.Name() != in.Stage {
+			return result, fmt.Errorf("stage %s is not current", in.Stage)
+		}
 	}
 	items, err := q.ListRunItemCounts(ctx, in.RunID)
 	if err != nil {
@@ -161,12 +189,51 @@ func CloseStage(ctx context.Context, env Env, in StageInput, following string) (
 			result.Counts.UnacceptedGaps[gap.Kind] = int(gap.Count)
 		}
 	}
+	if priorReason != "" {
+		result.Failed, result.Reason = true, priorReason
+		return result, nil
+	}
+	if alreadyClosed {
+		result.NextStage = following
+		return result, nil
+	}
 	if result.Counts.Pending > 0 {
 		return result, fmt.Errorf("stage %s has %d pending items", in.Stage, result.Counts.Pending)
 	}
 	if result.Counts.Failed > 0 {
 		result.Failed = true
 		return result, nil
+	}
+	if hasFinalizer {
+		var snapshot Snapshot
+		if err = json.Unmarshal(row.Snapshot, &snapshot); err != nil {
+			return result, fmt.Errorf("decode run snapshot: %w", err)
+		}
+		run := Run{ID: row.ID, Country: row.Country, Rel: row.Rel, Generation: int(row.Generation), Snapshot: snapshot}
+		final, finalizeErr := finalizer.Finalize(ctx, tx, run)
+		if finalizeErr != nil {
+			return result, fmt.Errorf("finalize stage %s: %w", in.Stage, finalizeErr)
+		}
+		if final.Code != "" {
+			if err = recordFinalization(ctx, q, in, final); err != nil {
+				return result, err
+			}
+			if err = tx.Commit(ctx); err != nil {
+				return result, fmt.Errorf("commit stage failure: %w", err)
+			}
+			result.Failed, result.Reason = true, final.Reason
+			return result, nil
+		}
+		gaps, err = q.ListUnacceptedGapCounts(ctx, in.RunID)
+		if err != nil {
+			return result, fmt.Errorf("count finalized stage gaps: %w", err)
+		}
+		result.Counts.UnacceptedGaps = make(map[string]int)
+		for _, gap := range gaps {
+			if gap.Stage == in.Stage {
+				result.Counts.UnacceptedGaps[gap.Kind] = int(gap.Count)
+			}
+		}
 	}
 	next := &following
 	if advanceErr := q.AdvanceRunStage(ctx, store.AdvanceRunStageParams{ID: in.RunID, NextStage: next}); advanceErr != nil {

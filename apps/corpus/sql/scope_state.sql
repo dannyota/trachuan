@@ -21,3 +21,21 @@ UPDATE run_scope SET expanded_snapshot = NULL, expanded_hash = NULL WHERE run_id
 
 -- name: ClearFinal :exec
 UPDATE run_scope SET final_snapshot = NULL, final_hash = NULL, fetch_close_input_hash = NULL WHERE run_id = $1;
+
+-- name: InsertRunFailure :exec
+INSERT INTO run_failure (run_id, failure_identity, code, stage, item_key, reason, evidence_refs)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+ON CONFLICT (run_id, failure_identity) DO NOTHING;
+
+-- name: ListRunFailures :many
+SELECT * FROM run_failure WHERE run_id = $1 ORDER BY failure_identity COLLATE "C";
+
+-- name: ListBlockingRunFailureCodes :many
+SELECT DISTINCT code FROM run_failure
+WHERE run_id = sqlc.arg(run_id) AND code = ANY(sqlc.arg(codes)::text[])
+ORDER BY code;
+
+-- name: ListReleaseBlockingFailureCodes :many
+SELECT DISTINCT run_failure.code FROM run_failure JOIN run ON run.id = run_failure.run_id
+WHERE run.country = sqlc.arg(country) AND run.rel = sqlc.arg(rel) AND run_failure.code = ANY(sqlc.arg(codes)::text[])
+ORDER BY run_failure.code;

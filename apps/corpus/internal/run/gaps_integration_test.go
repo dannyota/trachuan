@@ -4,7 +4,11 @@ package run
 
 import (
 	"context"
+	"strings"
+
 	"testing"
+
+	"danny.vn/trachuan/apps/corpus/internal/stage"
 
 	"danny.vn/trachuan/apps/corpus/internal/testdb"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -57,5 +61,56 @@ func TestPublishable_DoneItemWithUnacceptedGap(t *testing.T) {
 	ok, reasons, err := Publishable(context.Background(), db, id)
 	if err != nil || ok || len(reasons) == 0 {
 		t.Fatalf("publishable = %v, %v, %v", ok, reasons, err)
+	}
+}
+
+func insertScopeFailure(t *testing.T, db *pgxpool.Pool, id int64) {
+	t.Helper()
+	if _, err := db.Exec(context.Background(), `INSERT INTO run_failure (run_id,failure_identity,code,stage,item_key,reason,evidence_refs) VALUES ($1,'scope','scope_changed','fetch','item','drift','[]')`, id); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestAcceptGaps_RejectsScopeChanged(t *testing.T) {
+	db, id := gapDB(t)
+	insertScopeFailure(t, db, id)
+	n, err := AcceptGaps(context.Background(), Deps{DB: db}, "vn", "20261109", "one", "accepted")
+	if err == nil || !strings.Contains(err.Error(), "scope_changed") || n != 0 {
+		t.Fatalf("n=%d err=%v", n, err)
+	}
+	var count int
+	if err := db.QueryRow(context.Background(), `SELECT count(*) FROM gap WHERE run_id=$1 AND accepted_at IS NOT NULL`, id).Scan(&count); err != nil || count != 0 {
+		t.Fatalf("count=%d err=%v", count, err)
+	}
+}
+
+func TestPublishable_RejectsRunFailure(t *testing.T) {
+	db, id := gapDB(t)
+	insertScopeFailure(t, db, id)
+	ok, reasons, err := Publishable(context.Background(), db, id)
+	if err != nil || ok || !strings.Contains(strings.Join(reasons, ","), "scope_changed") {
+		t.Fatalf("ok=%v reasons=%v err=%v", ok, reasons, err)
+	}
+}
+
+func TestStart_RejectsScopeChanged(t *testing.T) {
+	db, id := gapDB(t)
+	insertScopeFailure(t, db, id)
+	d := Deps{DB: db, Stages: []string{"fetch"}, SourceList: []byte(`[]`), RecipesFor: func(stage.Snapshot) map[string]string { return map[string]string{"fetch": "recipe"} }}
+	err := Start(context.Background(), d, "vn", "20261109", "", "")
+	if err == nil || !strings.Contains(err.Error(), "scope_changed") {
+		t.Fatalf("err=%v", err)
+	}
+}
+
+func TestRecover_PreservesScopeFailure(t *testing.T) {
+	db, id := gapDB(t)
+	insertScopeFailure(t, db, id)
+	d := Deps{DB: db, Stages: []string{"fetch"}, SourceList: []byte(`[]`), RecipesFor: func(stage.Snapshot) map[string]string { return map[string]string{"fetch": "recipe"} }}
+	if err := Recover(context.Background(), d, "vn", "20261109", false); err != nil {
+		t.Fatal(err)
+	}
+	if err := Start(context.Background(), d, "vn", "20261109", "", ""); err == nil || !strings.Contains(err.Error(), "scope_changed") {
+		t.Fatalf("start after recovery: %v", err)
 	}
 }

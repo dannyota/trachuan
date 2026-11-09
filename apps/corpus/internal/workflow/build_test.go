@@ -353,3 +353,27 @@ func TestBuildRelease_OtherStageKeepsBatchLimit(t *testing.T) {
 		t.Fatalf("maximum active = %d, want 8", n)
 	}
 }
+
+func TestBuildRelease_CloseCancelling(t *testing.T) {
+	env := workflowTest(t)
+	planMock(env, stage.PlanResult{})
+	env.OnActivity("CloseStage", mock.Anything, mock.Anything).Return(stage.CloseResult{Cancelling: true}, nil).Once()
+	markMock(env, "cancelled")
+	env.ExecuteWorkflow(BuildRelease, testInput())
+	if err := env.GetWorkflowError(); err != nil {
+		t.Fatal(err)
+	}
+	env.AssertExpectations(t)
+}
+
+func TestBuildRelease_FinalizationFailureReason(t *testing.T) {
+	env := workflowTest(t)
+	planMock(env, stage.PlanResult{})
+	env.OnActivity("CloseStage", mock.Anything, mock.Anything).Return(stage.CloseResult{Failed: true, Reason: "scope drift"}, nil).Once()
+	env.OnActivity("MarkRun", mock.Anything, mock.MatchedBy(func(in stage.MarkInput) bool { return in.To == "failed" && in.Message == "scope drift" })).Return(true, nil).Once()
+	env.ExecuteWorkflow(BuildRelease, testInput())
+	if err := env.GetWorkflowError(); err != nil {
+		t.Fatal(err)
+	}
+	env.AssertExpectations(t)
+}

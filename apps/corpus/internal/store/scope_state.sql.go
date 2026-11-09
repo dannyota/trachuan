@@ -7,6 +7,7 @@ package store
 
 import (
 	"context"
+	"encoding/json"
 )
 
 const clearExpanded = `-- name: ClearExpanded :exec
@@ -63,6 +64,130 @@ func (q *Queries) GetRunScope(ctx context.Context, runID int64) (RunScope, error
 		&i.FetchCloseInputHash,
 	)
 	return i, err
+}
+
+const insertRunFailure = `-- name: InsertRunFailure :exec
+INSERT INTO run_failure (run_id, failure_identity, code, stage, item_key, reason, evidence_refs)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+ON CONFLICT (run_id, failure_identity) DO NOTHING
+`
+
+type InsertRunFailureParams struct {
+	RunID           int64
+	FailureIdentity string
+	Code            string
+	Stage           string
+	ItemKey         string
+	Reason          string
+	EvidenceRefs    json.RawMessage
+}
+
+func (q *Queries) InsertRunFailure(ctx context.Context, arg InsertRunFailureParams) error {
+	_, err := q.db.Exec(ctx, insertRunFailure,
+		arg.RunID,
+		arg.FailureIdentity,
+		arg.Code,
+		arg.Stage,
+		arg.ItemKey,
+		arg.Reason,
+		arg.EvidenceRefs,
+	)
+	return err
+}
+
+const listBlockingRunFailureCodes = `-- name: ListBlockingRunFailureCodes :many
+SELECT DISTINCT code FROM run_failure
+WHERE run_id = $1 AND code = ANY($2::text[])
+ORDER BY code
+`
+
+type ListBlockingRunFailureCodesParams struct {
+	RunID int64
+	Codes []string
+}
+
+func (q *Queries) ListBlockingRunFailureCodes(ctx context.Context, arg ListBlockingRunFailureCodesParams) ([]string, error) {
+	rows, err := q.db.Query(ctx, listBlockingRunFailureCodes, arg.RunID, arg.Codes)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var code string
+		if err := rows.Scan(&code); err != nil {
+			return nil, err
+		}
+		items = append(items, code)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listReleaseBlockingFailureCodes = `-- name: ListReleaseBlockingFailureCodes :many
+SELECT DISTINCT run_failure.code FROM run_failure JOIN run ON run.id = run_failure.run_id
+WHERE run.country = $1 AND run.rel = $2 AND run_failure.code = ANY($3::text[])
+ORDER BY run_failure.code
+`
+
+type ListReleaseBlockingFailureCodesParams struct {
+	Country string
+	Rel     string
+	Codes   []string
+}
+
+func (q *Queries) ListReleaseBlockingFailureCodes(ctx context.Context, arg ListReleaseBlockingFailureCodesParams) ([]string, error) {
+	rows, err := q.db.Query(ctx, listReleaseBlockingFailureCodes, arg.Country, arg.Rel, arg.Codes)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var code string
+		if err := rows.Scan(&code); err != nil {
+			return nil, err
+		}
+		items = append(items, code)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listRunFailures = `-- name: ListRunFailures :many
+SELECT run_id, failure_identity, code, stage, item_key, reason, evidence_refs FROM run_failure WHERE run_id = $1 ORDER BY failure_identity COLLATE "C"
+`
+
+func (q *Queries) ListRunFailures(ctx context.Context, runID int64) ([]RunFailure, error) {
+	rows, err := q.db.Query(ctx, listRunFailures, runID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []RunFailure
+	for rows.Next() {
+		var i RunFailure
+		if err := rows.Scan(
+			&i.RunID,
+			&i.FailureIdentity,
+			&i.Code,
+			&i.Stage,
+			&i.ItemKey,
+			&i.Reason,
+			&i.EvidenceRefs,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const publishExpanded = `-- name: PublishExpanded :execrows

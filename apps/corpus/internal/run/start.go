@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"regexp"
 	"runtime/debug"
+	"strings"
 	"time"
 
 	"danny.vn/trachuan/apps/corpus/internal/stage"
@@ -69,6 +70,13 @@ func Start(ctx context.Context, d Deps, cc, rel, until, previousManifest string)
 	row, err := q.GetRunForUpdate(ctx, store.GetRunForUpdateParams{Country: cc, Rel: rel})
 	if err != nil {
 		return fmt.Errorf("lock run: %w", err)
+	}
+	codes, err := q.ListBlockingRunFailureCodes(ctx, store.ListBlockingRunFailureCodesParams{RunID: row.ID, Codes: stage.BlockingFailureCodes()})
+	if err != nil {
+		return fmt.Errorf("list blocking run failures: %w", err)
+	}
+	if len(codes) > 0 {
+		return fmt.Errorf("cannot start run with failure %s", strings.Join(codes, ", "))
 	}
 	if row.State == "evaluated" || row.State == "released" {
 		return fmt.Errorf("cannot start %s run", row.State)

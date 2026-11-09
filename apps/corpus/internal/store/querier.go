@@ -43,7 +43,9 @@ type Querier interface {
 	InsertPlannedItem(ctx context.Context, arg InsertPlannedItemParams) error
 	InsertProvision(ctx context.Context, arg InsertProvisionParams) error
 	InsertRelation(ctx context.Context, arg InsertRelationParams) error
+	InsertRunFailure(ctx context.Context, arg InsertRunFailureParams) error
 	InsertRunItem(ctx context.Context, arg InsertRunItemParams) error
+	ListBlockingRunFailureCodes(ctx context.Context, arg ListBlockingRunFailureCodesParams) ([]string, error)
 	ListChunkInputs(ctx context.Context, runID int64) ([]ListChunkInputsRow, error)
 	ListChunks(ctx context.Context, artifactID int64) ([]Chunk, error)
 	ListDiscoveryItems(ctx context.Context, country string) ([]ListDiscoveryItemsRow, error)
@@ -54,7 +56,9 @@ type Querier interface {
 	ListMembershipEvidence(ctx context.Context, runID int64) ([]RunMembershipEvidence, error)
 	ListPendingBatchItems(ctx context.Context, arg ListPendingBatchItemsParams) ([]RunItem, error)
 	ListPendingStageBatches(ctx context.Context, arg ListPendingStageBatchesParams) ([]int32, error)
+	ListReleaseBlockingFailureCodes(ctx context.Context, arg ListReleaseBlockingFailureCodesParams) ([]string, error)
 	ListRunDocuments(ctx context.Context, runID int64) ([]RunDocument, error)
+	ListRunFailures(ctx context.Context, runID int64) ([]RunFailure, error)
 	ListRunGaps(ctx context.Context, arg ListRunGapsParams) ([]Gap, error)
 	ListRunItemCounts(ctx context.Context, runID int64) ([]ListRunItemCountsRow, error)
 	ListUnacceptedGapCounts(ctx context.Context, runID int64) ([]ListUnacceptedGapCountsRow, error)

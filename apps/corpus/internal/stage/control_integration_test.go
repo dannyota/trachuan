@@ -130,7 +130,7 @@ func TestPlanStage_ResetsFailedOnResume(t *testing.T) {
 func TestCloseStage_EmptyStageAdvances(t *testing.T) {
 	t.Parallel()
 	env, in, _ := controlSetup(t)
-	got, err := CloseStage(context.Background(), env, in, "")
+	got, err := CloseStage(context.Background(), env, &controlStage{}, in, "")
 	if err != nil || got.Failed || got.NextStage != "" || got.Counts.Expected != 0 {
 		t.Fatalf("result=%+v err=%v", got, err)
 	}
@@ -144,7 +144,7 @@ func TestCloseStage_FailedItemsKeepCursor(t *testing.T) {
 	env, in, _ := controlSetup(t)
 	batchExec(t, env.DB, `INSERT INTO run_item (run_id,stage,item_key,state,batch) VALUES ($1,'fetch','a','failed',0),($1,'fetch','b','gap',0),($1,'fetch','c','done',0)`, in.RunID)
 	batchExec(t, env.DB, `INSERT INTO gap (run_id,stage,item_key,kind,detail,accepted_at) VALUES ($1,'fetch','b','missing','a',NULL),($1,'fetch','b','missing','b',now())`, in.RunID)
-	got, err := CloseStage(context.Background(), env, in, "extract")
+	got, err := CloseStage(context.Background(), env, &controlStage{}, in, "extract")
 	var next string
 	queryErr := env.DB.QueryRow(context.Background(), `SELECT next_stage FROM run WHERE id=$1`, in.RunID).Scan(&next)
 	if err != nil || queryErr != nil || !got.Failed || next != "fetch" || got.Counts.Expected != 3 || got.Counts.Done != 1 || got.Counts.Gap != 1 || got.Counts.Failed != 1 || got.Counts.UnacceptedGaps["missing"] != 1 {
@@ -155,7 +155,7 @@ func TestCloseStage_PendingItemsError(t *testing.T) {
 	t.Parallel()
 	env, in, _ := controlSetup(t)
 	batchExec(t, env.DB, `INSERT INTO run_item (run_id,stage,item_key,state,batch) VALUES ($1,'fetch','a','pending',0)`, in.RunID)
-	_, err := CloseStage(context.Background(), env, in, "extract")
+	_, err := CloseStage(context.Background(), env, &controlStage{}, in, "extract")
 	var next string
 	queryErr := env.DB.QueryRow(context.Background(), `SELECT next_stage FROM run WHERE id=$1`, in.RunID).Scan(&next)
 	if err == nil || queryErr != nil || next != "fetch" {
@@ -184,7 +184,7 @@ func TestControl_SupersededGenerationChangesNothing(t *testing.T) {
 	s.items = []Item{{Key: "new"}}
 	in.Generation--
 	_, planErr := controlPlan(env, in, s)
-	_, closeErr := CloseStage(context.Background(), env, in, "extract")
+	_, closeErr := CloseStage(context.Background(), env, &controlStage{}, in, "extract")
 	_, markErr := MarkRun(context.Background(), env, MarkInput{RunID: in.RunID, Generation: in.Generation, From: []string{"running"}, To: "paused"})
 	var count int
 	var state, next string
@@ -207,7 +207,7 @@ func TestPlanStage_ReportsCancelledAsCancelling(t *testing.T) {
 func TestCloseStage_LastStageMarksComplete(t *testing.T) {
 	t.Parallel()
 	env, in, _ := controlSetup(t)
-	_, err := CloseStage(context.Background(), env, in, "")
+	_, err := CloseStage(context.Background(), env, &controlStage{}, in, "")
 	var next *string
 	queryErr := env.DB.QueryRow(context.Background(), `SELECT next_stage FROM run WHERE id=$1`, in.RunID).Scan(&next)
 	if err != nil || queryErr != nil || next == nil || *next != "" {
