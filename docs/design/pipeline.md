@@ -118,17 +118,17 @@ signed dump to S3. Decision and alternatives:
 
 ## Stages
 
-| Stage            | Input                                             | Output                                                           | Completeness rule                                                                                                                                                                         |
-| ---------------- | ------------------------------------------------- | ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `discover`       | source list YAML; previous release manifest       | expected document set with source modified dates                 | full listing per source every run; a document absent from two consecutive listings is marked `withdrawn` and kept with a gap                                                              |
-| `fetch`          | expected set                                      | metadata JSON, every listed attachment, hashes                   | every attachment is revalidated each run by size and hash of a fresh download when the source gives no ETag; a changed attachment reprocesses the document; a missing attachment is a gap |
-| `extract`        | files                                             | structure tree with verbatim text                                | parser limits in [budgets](budgets.md); article count matches the table of contents; table and appendix counts match the source inventory; empty or truncated text is a gap               |
-| `relate`         | VBPL references, text                             | relations with kind, evidence, affected provisions when captured | never guessed; unknown targets are gaps                                                                                                                                                   |
-| `chunk`, `embed` | trees                                             | chunks, dense and sparse vectors under the release recipes       | vector count equals chunk count; dimensions equal the recipe                                                                                                                              |
-| `classify`       | trees, vectors, taxonomy, seeds                   | assignments                                                      | every article has an assignment or an "unassigned" gap                                                                                                                                    |
-| `build`          | all gold tables                                   | local `corpus_<cc>_<rel>` database                               | schema template applied; `release` row written                                                                                                                                            |
-| `eval`           | local database, golden set, taxonomy held-out set | report; diff against the previous release                        | floors in [testing](../../instructions/testing.md) and [taxonomy](taxonomy.md)                                                                                                            |
-| `release`        | evaluated database                                | `corpus_<cc>_<rel>.dump`, `manifest.json`, `manifest.sig` in S3  | refused unless every expected item is done or a gap, every gap is accepted, and eval passed                                                                                               |
+| Stage            | Input                                             | Output                                                           | Completeness rule                                                                                                                                                           |
+| ---------------- | ------------------------------------------------- | ---------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `discover`       | source list YAML; previous release manifest       | expected document set with source modified dates                 | full listing per source every run; a document absent from two consecutive listings is marked `withdrawn` and kept with a gap                                                |
+| `fetch`          | expected set                                      | metadata JSON, every listed attachment, hashes                   | attachments use a verified matching local cache entry or a fresh download; a changed attachment reprocesses the document; a missing attachment is a gap                     |
+| `extract`        | files                                             | structure tree with verbatim text                                | parser limits in [budgets](budgets.md); article count matches the table of contents; table and appendix counts match the source inventory; empty or truncated text is a gap |
+| `relate`         | VBPL references, text                             | relations with kind, evidence, affected provisions when captured | never guessed; unknown targets are gaps                                                                                                                                     |
+| `chunk`, `embed` | trees                                             | chunks, dense and sparse vectors under the release recipes       | vector count equals chunk count; dimensions equal the recipe                                                                                                                |
+| `classify`       | trees, vectors, taxonomy, seeds                   | assignments                                                      | every article has an assignment or an "unassigned" gap                                                                                                                      |
+| `build`          | all gold tables                                   | local `corpus_<cc>_<rel>` database                               | schema template applied; `release` row written                                                                                                                              |
+| `eval`           | local database, golden set, taxonomy held-out set | report; diff against the previous release                        | floors in [testing](../../instructions/testing.md) and [taxonomy](taxonomy.md)                                                                                              |
+| `release`        | evaluated database                                | `corpus_<cc>_<rel>.dump`, `manifest.json`, `manifest.sig` in S3  | refused unless every expected item is done or a gap, every gap is accepted, and eval passed                                                                                 |
 
 VBPL ingest rules:
 
@@ -149,7 +149,10 @@ VBPL ingest rules:
 - `fetch` stores attachments as `files/<sha256>` and maps original names in
   `files.json`; each download attempt writes a fresh temporary file and is
   bounded by the per-file limit while streaming. API responses above the
-  response limit are gaps.
+  response limit are gaps. An attachment whose document id, name and size match
+  a local cache entry collected no earlier than the gateway's `updatedAt` for
+  that file is taken from the cache once its sha256 verifies; otherwise it is
+  downloaded.
 - `extract` refuses trees deeper or larger than the limits in
   [budgets](budgets.md) with gap `tree_too_large`.
 - `relate` maps relation codes with the source list's table, whose hash is part

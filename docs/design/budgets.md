@@ -83,8 +83,11 @@ after 2 minutes.
 VBPL ingest bounds: API response 20 MB; provision tree depth 32 and 50,000
 nodes; at most 3 listing passes per query.
 
-VBPL: at most 2 requests per second and 2 in flight; request timeout 30 seconds.
-Retry HTTP 429, HTTP 5xx and timeouts 3 times, after 2, 8 and 30 seconds.
+VBPL: at most 8 requests per second and 8 in flight by default
+(`CORPUS_VBPL_RPS`, `CORPUS_VBPL_IN_FLIGHT`), 8 stage batches in flight,
+measured 2026-11-09 (10.5 requests per second at concurrency 8, p50 636 ms, no
+errors); request timeout 30 seconds. Retry HTTP 429, HTTP 5xx and timeouts 3
+times, after 2, 8 and 30 seconds.
 
 Submission polling every 5 minutes; `deadline_at` 26 hours after submission;
 `preparing` rows become uncertain after 10 minutes.

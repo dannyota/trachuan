@@ -39,8 +39,23 @@ func New(version string) *Client {
 }
 
 // NewWithBase creates a client for the supplied gateway URL.
-func NewWithBase(base, version string) *Client {
-	return &Client{base: base, userAgent: "traquydinh/" + version + " (+https://github.com/dannyota/traquydinh)", http: &http.Client{}, limiter: rate.NewLimiter(2, 1), slots: make(chan struct{}, 2), timeout: 30 * time.Second, backoffs: []time.Duration{2 * time.Second, 8 * time.Second, 30 * time.Second}}
+func NewWithBase(base, version string, options ...Option) *Client {
+	c := &Client{base: base, userAgent: "traquydinh/" + version + " (+https://github.com/dannyota/traquydinh)", http: &http.Client{}, limiter: rate.NewLimiter(8, 1), slots: make(chan struct{}, 8), timeout: 30 * time.Second, backoffs: []time.Duration{2 * time.Second, 8 * time.Second, 30 * time.Second}}
+	for _, option := range options {
+		option(c)
+	}
+	return c
+}
+
+// Option configures a client.
+type Option func(*Client)
+
+// WithLimits sets the request rate and maximum concurrent requests.
+func WithLimits(rps float64, inFlight int) Option {
+	return func(c *Client) {
+		c.limiter = rate.NewLimiter(rate.Limit(rps), 1)
+		c.slots = make(chan struct{}, inFlight)
+	}
 }
 
 type response struct {
@@ -267,15 +282,16 @@ func (c *Client) Files(ctx context.Context, id string) ([]File, error) {
 		return nil, err
 	}
 	var entries []struct {
-		FileName, FullPath, PresignedURL string
-		Size                             int64
+		FileName, FullPath, PresignedURL, UpdatedAt string
+		Size                                        int64
 	}
 	if err := data(raw, &entries); err != nil {
 		return nil, err
 	}
 	files := make([]File, 0, len(entries))
 	for _, e := range entries {
-		files = append(files, File{e.FileName, e.FullPath, e.Size, e.PresignedURL})
+		updated, _ := time.ParseInLocation("2006-01-02 15:04:05", e.UpdatedAt, time.FixedZone("ICT", 7*60*60))
+		files = append(files, File{Name: e.FileName, FullPath: e.FullPath, Size: e.Size, URL: e.PresignedURL, UpdatedAt: updated})
 	}
 	return files, nil
 }

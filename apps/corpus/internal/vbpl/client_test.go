@@ -218,3 +218,18 @@ func TestClient_NotFound(t *testing.T) {
 		})
 	}
 }
+
+func TestFiles_UpdatedAtVietnamTime(t *testing.T) {
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{"success":true,"data":[{"updatedAt":"2026-04-14 14:41:19"},{"updatedAt":"bad"},{}]}`))
+	}))
+	defer s.Close()
+	files, err := testClient(s).Files(context.Background(), "1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := time.Date(2026, 4, 14, 7, 41, 19, 0, time.UTC)
+	if len(files) != 3 || !files[0].UpdatedAt.Equal(want) || !files[1].UpdatedAt.IsZero() || !files[2].UpdatedAt.IsZero() {
+		t.Fatalf("files = %+v", files)
+	}
+}

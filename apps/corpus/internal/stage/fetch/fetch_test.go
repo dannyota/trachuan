@@ -2,16 +2,20 @@ package fetch
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/dannyota/traquydinh/apps/corpus/internal/artifact"
+	"github.com/dannyota/traquydinh/apps/corpus/internal/filecache"
 	"github.com/dannyota/traquydinh/apps/corpus/internal/stage"
 	"github.com/dannyota/traquydinh/apps/corpus/internal/vbpl"
 )
@@ -35,6 +39,7 @@ type fixtureServer struct {
 	bodies    map[string]string
 	missing   bool
 	oversized bool
+	downloads atomic.Int32
 }
 
 func setup(t *testing.T, f *fixtureServer) (*Stage, stage.Env) {
@@ -58,6 +63,7 @@ func setup(t *testing.T, f *fixtureServer) (*Stage, stage.Env) {
 		case strings.HasSuffix(r.URL.Path, "/files"):
 			_ = json.NewEncoder(w).Encode(map[string]any{"success": true, "data": f.files})
 		case strings.HasPrefix(r.URL.Path, "/attachment/"):
+			f.downloads.Add(1)
 			body, ok := f.bodies[strings.TrimPrefix(r.URL.Path, "/attachment/")]
 			if !ok {
 				w.WriteHeader(http.StatusNotFound)
@@ -183,5 +189,55 @@ func TestFetch_HostileFileNames(t *testing.T) {
 	}
 	if _, err = artifact.Verify(out.Artifact.Path); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func cacheFixture(t *testing.T, contents string) *filecache.Cache {
+	t.Helper()
+	dir := t.TempDir()
+	if err := os.Mkdir(filepath.Join(dir, "files"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	hash := fmt.Sprintf("%x", sha256.Sum256([]byte("one")))
+	index := fmt.Sprintf("vbpl_id\tname\tsize\tsha256\tformat\tcollected_at\n66518\ta\t3\t%s\ttxt\t2026-04-15T00:00:00Z\n", hash)
+	if err := os.WriteFile(filepath.Join(dir, "index.tsv"), []byte(index), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "files", hash+".txt"), []byte(contents), 0600); err != nil {
+		t.Fatal(err)
+	}
+	c, err := filecache.Load(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return c
+}
+func TestFetch_UsesVerifiedCacheHit(t *testing.T) {
+	e := entry("a", "a")
+	e["size"] = 3
+	e["updatedAt"] = "2026-04-14 14:41:19"
+	f := &fixtureServer{files: []map[string]any{e}, bodies: map[string]string{"a": "one"}}
+	s, env := setup(t, f)
+	gateway := process(t, s, env)
+	f.downloads.Store(0)
+	s.WithCache(cacheFixture(t, "one"))
+	cached := process(t, s, env)
+	if f.downloads.Load() != 0 {
+		t.Fatal("cache hit downloaded attachment")
+	}
+	if cached.Artifact.SHA256 != gateway.Artifact.SHA256 {
+		t.Fatal("cache changed bundle hash")
+	}
+}
+func TestFetch_CacheChecksumMismatchDownloads(t *testing.T) {
+	e := entry("a", "a")
+	e["size"] = 3
+	e["updatedAt"] = "2026-04-14 14:41:19"
+	f := &fixtureServer{files: []map[string]any{e}, bodies: map[string]string{"a": "one"}}
+	s, env := setup(t, f)
+	s.WithCache(cacheFixture(t, "bad"))
+	out := process(t, s, env)
+	if f.downloads.Load() != 1 || out.State != "done" {
+		t.Fatalf("downloads = %d, state = %s", f.downloads.Load(), out.State)
 	}
 }

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"sort"
@@ -31,8 +32,15 @@ func (s *Stage) writeBundle(ctx context.Context, dir, id string, detail, tree, d
 	}
 	files := make([]file, 0, len(entries))
 	result := report{Missing: []string{}, TooLarge: []string{}}
+	hits := 0
 	for _, entry := range entries {
-		downloaded, err := s.client.Download(ctx, id, entry, filesDir, s.fileLimit)
+		downloaded, hit := s.cachedFile(id, filesDir, entry)
+		var err error
+		if hit {
+			hits++
+		} else {
+			downloaded, err = s.client.Download(ctx, id, entry, filesDir, s.fileLimit)
+		}
 		if err != nil {
 			if ctx.Err() != nil {
 				return fmt.Errorf("download attachment: %w", ctx.Err())
@@ -45,6 +53,9 @@ func (s *Stage) writeBundle(ctx context.Context, dir, id string, detail, tree, d
 			continue
 		}
 		files = append(files, file{Name: entry.Name, SHA256: downloaded.SHA256, Size: downloaded.Size})
+	}
+	if hits > 0 {
+		slog.Info("attachment cache hits", "document_key", "vn:vbpl:"+id, "count", hits)
 	}
 	sort.Slice(files, func(i, j int) bool {
 		if files[i].Name != files[j].Name {

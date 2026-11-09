@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/dannyota/traquydinh/apps/corpus/internal/filecache"
 	"github.com/dannyota/traquydinh/apps/corpus/internal/stage"
 	"github.com/dannyota/traquydinh/apps/corpus/internal/stage/discover"
 	"github.com/dannyota/traquydinh/apps/corpus/internal/vbpl"
@@ -15,11 +16,15 @@ import (
 // Stage fetches documents and their attachments.
 type Stage struct {
 	client    *vbpl.Client
+	cache     *filecache.Cache
 	fileLimit int64
 }
 
 // New constructs a fetch stage.
 func New(client *vbpl.Client) *Stage { return &Stage{client: client, fileLimit: 50_000_000} }
+
+// WithCache sets the optional attachment cache.
+func (s *Stage) WithCache(cache *filecache.Cache) *Stage { s.cache = cache; return s }
 
 // WithFileLimit sets the attachment size limit in bytes.
 func (s *Stage) WithFileLimit(limit int64) *Stage { s.fileLimit = limit; return s }

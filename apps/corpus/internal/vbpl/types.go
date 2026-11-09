@@ -1,7 +1,10 @@
 // Package vbpl reads the Vietnamese legal database gateway.
 package vbpl
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"time"
+)
 
 // ListQuery identifies a page of a gateway listing.
 type ListQuery struct {
@@ -71,6 +74,7 @@ type File struct {
 	Name, FullPath string
 	Size           int64
 	URL            string
+	UpdatedAt      time.Time
 }
 
 // Downloaded identifies a completed local attachment.

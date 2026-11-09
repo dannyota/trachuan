@@ -37,7 +37,7 @@ func dependencies(ctx context.Context, needSources bool, cc string) (run.Deps, f
 	closeDeps := func() { temporalClient.Close(); db.Close() }
 	// The default registry needs no pool to provide stage names and recipes.
 	stages := workflow.Default(workflow.Deps{}).Names()
-	d := run.Deps{DB: db, Temporal: temporalClient, Stages: stages, RecipesFor: func(snapshot stage.Snapshot) map[string]string {
+	d := run.Deps{BatchesInFlight: cfg.BatchesInFlight, DB: db, Temporal: temporalClient, Stages: stages, RecipesFor: func(snapshot stage.Snapshot) map[string]string {
 		_, recipes := compiledStages(snapshot)
 		return recipes
 	}}

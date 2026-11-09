@@ -1,7 +1,12 @@
 // Package config loads corpus configuration from the environment.
 package config
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+	"math"
+	"strconv"
+)
 
 // Config holds the settings used by corpus commands.
 type Config struct {
@@ -12,6 +17,10 @@ type Config struct {
 	CheckpointDir   string
 	PgDump          string
 	VBPLURL         string
+	VBPLRate        float64
+	VBPLInFlight    int
+	BatchesInFlight int
+	FileCache       string
 }
 
 // Load reads configuration using getenv and requires a database URL.
@@ -23,10 +32,28 @@ func Load(getenv func(string) string) (Config, error) {
 		Artifacts:       defaultValue(getenv("CORPUS_ARTIFACTS"), "work/artifacts"),
 		CheckpointDir:   getenv("CORPUS_CHECKPOINT_DIR"),
 		PgDump:          defaultValue(getenv("CORPUS_PG_DUMP"), "pg_dump"),
+		FileCache:       getenv("CORPUS_FILE_CACHE"),
 		VBPLURL:         defaultValue(getenv("CORPUS_VBPL_URL"), "https://vbpl-bientap-gateway.moj.gov.vn/api/qtdc/public"),
 	}
 	if cfg.DatabaseURL == "" {
 		return Config{}, errors.New("CORPUS_DATABASE_URL is required")
+	}
+	rateText := defaultValue(getenv("CORPUS_VBPL_RPS"), "8")
+	rate, err := strconv.ParseFloat(rateText, 64)
+	if err != nil || rate <= 0 || math.IsNaN(rate) || math.IsInf(rate, 0) {
+		return Config{}, fmt.Errorf("invalid CORPUS_VBPL_RPS %q", rateText)
+	}
+	cfg.VBPLRate = rate
+	for _, setting := range []struct {
+		key    string
+		target *int
+	}{{"CORPUS_VBPL_IN_FLIGHT", &cfg.VBPLInFlight}, {"CORPUS_BATCHES_IN_FLIGHT", &cfg.BatchesInFlight}} {
+		value := defaultValue(getenv(setting.key), "8")
+		n, parseErr := strconv.Atoi(value)
+		if parseErr != nil || n <= 0 {
+			return Config{}, fmt.Errorf("invalid %s %q", setting.key, value)
+		}
+		*setting.target = n
 	}
 	return cfg, nil
 }

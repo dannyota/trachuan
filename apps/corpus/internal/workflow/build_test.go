@@ -2,7 +2,9 @@ package workflow
 
 import (
 	"context"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/dannyota/traquydinh/apps/corpus/internal/run"
 	"github.com/dannyota/traquydinh/apps/corpus/internal/stage"
@@ -150,4 +152,33 @@ func TestBuildRelease_ActivityErrorMarksRunFailed(t *testing.T) {
 		t.Fatal("expected the activity error")
 	}
 	env.AssertExpectations(t)
+}
+
+func TestBuildRelease_EightBatchesStartBeforeAnyFinishes(t *testing.T) {
+	env := workflowTest(t)
+	planMock(env, stage.PlanResult{Batches: []int{0, 1, 2, 3, 4, 5, 6, 7}})
+	var started atomic.Int32
+	gate := make(chan struct{})
+	env.OnActivity("fetch", mock.Anything, mock.Anything).Return(func(ctx context.Context, _ stage.BatchInput) (stage.BatchResult, error) {
+		if started.Add(1) == 8 {
+			close(gate)
+		}
+		select {
+		case <-gate:
+			return stage.BatchResult{}, nil
+		case <-time.After(2 * time.Second):
+			return stage.BatchResult{}, context.DeadlineExceeded
+		}
+	}).Times(8)
+	finishMock(env, stage.CloseResult{})
+	markMock(env, "paused")
+	in := testInput()
+	in.BatchesInFlight = 8
+	env.ExecuteWorkflow(BuildRelease, in)
+	if err := env.GetWorkflowError(); err != nil {
+		t.Fatal(err)
+	}
+	if started.Load() != 8 {
+		t.Fatalf("started %d batches", started.Load())
+	}
 }

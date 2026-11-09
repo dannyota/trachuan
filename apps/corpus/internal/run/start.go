@@ -131,7 +131,7 @@ func Start(ctx context.Context, d Deps, cc, rel, until, previousManifest string)
 	if err = tx.Commit(ctx); err != nil {
 		return fmt.Errorf("commit start: %w", err)
 	}
-	_, err = d.Temporal.ExecuteWorkflow(ctx, client.StartWorkflowOptions{ID: id, TaskQueue: TaskQueue, WorkflowIDConflictPolicy: enumspb.WORKFLOW_ID_CONFLICT_POLICY_FAIL, WorkflowExecutionErrorWhenAlreadyStarted: true, WorkflowIDReusePolicy: enumspb.WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE}, WorkflowName, BuildInput{RunID: row.ID, Country: cc, Rel: rel, Generation: int(row.Generation) + 1, Stage: next, Until: until, Begin: true, HistoryLimit: 5000})
+	_, err = d.Temporal.ExecuteWorkflow(ctx, client.StartWorkflowOptions{ID: id, TaskQueue: TaskQueue, WorkflowIDConflictPolicy: enumspb.WORKFLOW_ID_CONFLICT_POLICY_FAIL, WorkflowExecutionErrorWhenAlreadyStarted: true, WorkflowIDReusePolicy: enumspb.WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE}, WorkflowName, BuildInput{RunID: row.ID, Country: cc, Rel: rel, Generation: int(row.Generation) + 1, Stage: next, Until: until, Begin: true, HistoryLimit: 5000, BatchesInFlight: d.BatchesInFlight})
 	if err != nil {
 		var already *serviceerror.WorkflowExecutionAlreadyStarted
 		if errors.As(err, &already) {

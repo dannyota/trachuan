@@ -68,13 +68,17 @@ func BuildRelease(ctx temporalworkflow.Context, in run.BuildInput) error {
 	if plan.Cancelling {
 		return finish(change("cancelling", "cancelled", ""))
 	}
+	limit := in.BatchesInFlight
+	if limit <= 0 {
+		limit = 2
+	}
 	next, active := 0, 0
 	cancelling := false
 	var batchErr error
 	historyExceeded := false
 	selector := temporalworkflow.NewSelector(ctx)
 	for next < len(plan.Batches) || active > 0 {
-		for next < len(plan.Batches) && active < 2 && !cancelling && batchErr == nil {
+		for next < len(plan.Batches) && active < limit && !cancelling && batchErr == nil {
 			if temporalworkflow.GetInfo(ctx).GetCurrentHistoryLength() > in.HistoryLimit {
 				historyExceeded = true
 				break

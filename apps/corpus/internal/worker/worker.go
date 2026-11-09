@@ -11,8 +11,10 @@ import (
 	"github.com/dannyota/traquydinh/apps/corpus/internal/artifact"
 	"github.com/dannyota/traquydinh/apps/corpus/internal/checkpoint"
 	"github.com/dannyota/traquydinh/apps/corpus/internal/config"
+	"github.com/dannyota/traquydinh/apps/corpus/internal/filecache"
 	"github.com/dannyota/traquydinh/apps/corpus/internal/run"
 	"github.com/dannyota/traquydinh/apps/corpus/internal/stage"
+	"github.com/dannyota/traquydinh/apps/corpus/internal/stage/fetch"
 	"github.com/dannyota/traquydinh/apps/corpus/internal/store"
 	"github.com/dannyota/traquydinh/apps/corpus/internal/vbpl"
 	"github.com/dannyota/traquydinh/apps/corpus/internal/workflow"
@@ -80,8 +82,22 @@ func Run(ctx context.Context, cfg config.Config) error {
 		return fmt.Errorf("connect Temporal: %w", err)
 	}
 	defer temporalClient.Close()
+	var cache *filecache.Cache
+	if cfg.FileCache != "" {
+		cache, err = filecache.Load(cfg.FileCache)
+		if err != nil {
+			return fmt.Errorf("load file cache: %w", err)
+		}
+	}
 	env := stage.Env{DB: db, Artifacts: artifact.Store{Root: cfg.Artifacts}, Now: time.Now}
-	w, err := New(ctx, Deps{Env: env, Temporal: temporalClient, Registry: workflow.Default(workflow.Deps{Env: env, VBPL: vbpl.NewWithBase(cfg.VBPLURL, workerVersion())}), Checkpointer: checkpoint.Taker{Config: checkpoint.Config{Dir: cfg.CheckpointDir, ArtifactsRoot: cfg.Artifacts, DatabaseURL: cfg.DatabaseURL, PgDump: cfg.PgDump, Keep: 3}}})
+	registry := workflow.Default(workflow.Deps{Env: env, VBPL: vbpl.NewWithBase(cfg.VBPLURL, workerVersion(), vbpl.WithLimits(cfg.VBPLRate, cfg.VBPLInFlight))})
+	stages := registry.Stages()
+	for _, st := range stages {
+		if f, ok := st.(*fetch.Stage); ok {
+			f.WithCache(cache)
+		}
+	}
+	w, err := New(ctx, Deps{Env: env, Temporal: temporalClient, Registry: registry, Checkpointer: checkpoint.Taker{Config: checkpoint.Config{Dir: cfg.CheckpointDir, ArtifactsRoot: cfg.Artifacts, DatabaseURL: cfg.DatabaseURL, PgDump: cfg.PgDump, Keep: 3}}})
 	if err != nil {
 		return fmt.Errorf("construct worker: %w", err)
 	}
