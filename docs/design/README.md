@@ -16,8 +16,7 @@ Intended behavior of traquydinh. Decisions with alternatives are in the
 | [budgets](budgets.md)         | Cost, memory, request limits, retrieval and Temporal bounds |
 
 Spikes before implementation: real OAuth connections from Claude.ai, ChatGPT
-and Claude Code; Qwen3-Embedding-0.6B INT8 on ARM64 compared with
-Vietnamese_Embedding_v2 on the golden set; the Bộ pháp điển join coverage.
+and Claude Code; the dense model ([ADR 0009](../adr/0009-dense-embedding-recipe.md), done); the Bộ pháp điển join coverage.
 
 Out of scope for the first release: other countries; dossiers, watch lists,
 exports; organizations; paid tier; a platform model or reranker; translation;

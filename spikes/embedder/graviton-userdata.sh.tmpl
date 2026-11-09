@@ -1,0 +1,31 @@
+#!/bin/bash
+# Throwaway spike: runs on a temporary t4g.large, prints SPIKE_RESULT lines to the console, then terminates.
+shutdown -h +100
+exec > >(tee /var/log/spike.log | tee /dev/console) 2>&1
+echo "SPIKE_CPU $(lscpu | grep -E 'Model name|^Flags' | tr -s ' ' | tr '\n' ';')"
+dnf install -y -q python3.11 python3.11-pip
+python3.11 -m venv /opt/v
+/opt/v/bin/pip install -q onnxruntime==1.31.1 numpy tokenizers fastapi uvicorn psutil httpx pydantic
+mkdir -p /opt/s/m && cd /opt/s
+__DOWNLOADS__
+run_model() {
+  local name=$1 long=$2 short=$3
+  local t0=$(date +%s.%N)
+  MODEL_PATH=m/model_$name.onnx /opt/v/bin/uvicorn serve:app --port 8089 --log-level warning &
+  local pid=$!
+  until curl -sf http://127.0.0.1:8089/stats >/dev/null; do sleep 0.5; done
+  echo "SPIKE_RESULT {\"model\":\"$name\",\"cold_start_s\":$(echo "$(date +%s.%N) - $t0" | bc)}"
+  for kind in short 256; do
+    echo "SPIKE_RESULT $(/opt/v/bin/python soak.py --sequential 60 --kind $kind 2>&1 | tail -1 | sed "s/^{/{\"model\":\"$name\",/")"
+  done
+  echo "SPIKE_RESULT $(/opt/v/bin/python soak.py --seconds $short --kind short 2>&1 | tail -1 | sed "s/^{/{\"model\":\"$name\",/")"
+  echo "SPIKE_RESULT $(/opt/v/bin/python soak.py --seconds $long --kind 256 --rate 1 2>&1 | tail -1 | sed "s/^{/{\"model\":\"$name\",/")"
+  kill $pid; wait $pid
+}
+dnf install -y -q bc
+run_model q8w_a4 120 600
+run_model q8w 120 600
+run_model int8 120 120
+echo "SPIKE_DONE"
+sleep 20
+shutdown -h now

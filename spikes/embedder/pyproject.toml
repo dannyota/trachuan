@@ -1,0 +1,23 @@
+[project]
+name = "traquydinh-spike-embedder"
+version = "0.0.0"
+description = "Throwaway spike: dense embedding recipe for Vietnam on ARM64."
+requires-python = ">=3.12"
+dependencies = [
+  "onnxruntime",
+  "onnx-ir",
+  "sentence-transformers>=6.2",
+  "torch",
+  "transformers>=5.22",
+  "tokenizers",
+  "psycopg[binary]",
+  "numpy",
+  "psutil",
+  "httpx",
+  "fastapi",
+  "uvicorn",
+  "pytest",
+]
+
+[tool.uv]
+package = false

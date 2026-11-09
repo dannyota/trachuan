@@ -37,7 +37,7 @@ each release manifest.
 
 | Process          | RSS MB |
 | ---------------- | ------ |
-| embedder (INT8)  | 1,500  |
+| embedder (ONNX FP32, Vietnamese_Embedding_v2) | 2,500 |
 | postgres         | 1,000  |
 | web (Node)       | 250    |
 | server (Go)      | 150    |
@@ -48,7 +48,7 @@ Activation refuses to start below 2.5 GB free memory or 10 GB free disk.
 
 Acceptance gates before the first public release, each measured on the host:
 search p95 at most 1 s and p99 at most 2 s at 2 requests per second for 30
-minutes; embedder RSS at most 2 GB after a 30-minute soak; activation peak
+minutes; embedder RSS at most 2.5 GB after a 30-minute soak; activation peak
 memory within the headroom row; disk under 70% after activation with two
 retained releases.
 
@@ -56,7 +56,7 @@ retained releases.
 
 | Limit                                  | Value                                   |
 | -------------------------------------- | --------------------------------------- |
-| Query length                           | 2,000 characters                        |
+| Query length                           | 2,000 characters and 256 model tokens   |
 | Request body                           | 64 KB                                   |
 | `search` per account                   | 60 per minute                           |
 | `document` per account                 | 120 per minute                          |
