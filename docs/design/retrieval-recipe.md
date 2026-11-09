@@ -188,9 +188,9 @@ both groups. `as_of` never silently swaps expired and primary law based on
 score.
 
 Build `Citation` from the group's actual ancestry: join nonempty article, clause
-and point labels in ancestor order with `, `; otherwise use its own label. The
-number is a separate field. Never derive a citation from an anchor suffix or
-infer absent legal levels.
+and point labels in ancestor order with a comma and a space; otherwise use its
+own label. The number is a separate field. Never derive a citation from an
+anchor suffix or infer absent legal levels.
 
 Hydrate the grouped provision from its source representation and identified
 descendants, using [chunk rendering](chunk.md#tree-rendering), never by joining

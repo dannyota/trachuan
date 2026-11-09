@@ -91,6 +91,6 @@ spend.
   product settings on our corpus. Build the index and old-cohort harness first;
   later trials use cached arm rankings with our document/provision identities.
   This replaces the earlier experiments-before-index order. The baseline
-  threshold is calibrated on old product only as a provisional exception to
-  item 6, labeled until development cases exist; no superiority claim follows.
-  New cohorts, tuning, taxonomy, signing, upload and activation remain separate.
+  threshold is calibrated on old product only as a provisional exception to item
+  6, labeled until development cases exist; no superiority claim follows. New
+  cohorts, tuning, taxonomy, signing, upload and activation remain separate.

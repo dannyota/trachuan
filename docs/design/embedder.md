@@ -10,21 +10,20 @@ models or change input text. Limits live in [budgets](budgets.md#indexing).
 `apps/embedder/pyproject.toml` and `uv.lock` pin Python 3.12 and dependencies.
 Use FastAPI, Uvicorn, NumPy, transformers and ONNX Runtime in the default
 dependency set; optional group `document` adds PyTorch. Files under
-`src/traquydinh_embedder/`: `app.py`, `admission.py`, `recipe.py`,
-`tokenizer.py`, `runtime.py`, `onnx_runtime.py`, `torch_runtime.py`.
-`__main__.py` only wires startup. `tests/` uses injected tokenizer, runtime and
-clock objects.
+`src/trachuan_embedder/`: `app.py`, `admission.py`, `recipe.py`, `tokenizer.py`,
+`runtime.py`, `onnx_runtime.py`, `torch_runtime.py`. `__main__.py` only wires
+startup. `tests/` uses injected tokenizer, runtime and clock objects.
 
-Start with `uv run python -m traquydinh_embedder --runtime query --model-dir
-
-<dir>` or `uv run --group document python -m traquydinh_embedder --runtime
-document --model-dir <dir>`. Query loads `onnx/model.onnx` and its external data
-with CPUExecutionProvider; document loads PyTorch weights on MPS in FP16.
-Refuse unavailable MPS; never silently move document work to CPU. Convert CLS
-output to float32, L2-normalize in float32, and return float32 vectors in both
-modes. Fail on non-finite output or zero norm. Query uses one process with the
-thread limits in budgets; document uses one model process and serialized GPU
-inference. Neither mode downloads files at startup or enables remote code.
+Start with `uv run python -m trachuan_embedder --runtime query --model-dir DIR`
+or
+`uv run --group document python -m trachuan_embedder --runtime document --model-dir DIR`.
+Query loads `onnx/model.onnx` and its external data with CPUExecutionProvider;
+document loads PyTorch weights on MPS in FP16. Refuse unavailable MPS; never
+silently move document work to CPU. Convert CLS output to float32, L2-normalize
+in float32, and return float32 vectors in both modes. Fail on non-finite output
+or zero norm. Query uses one process with the thread limits in budgets; document
+uses one model process and serialized GPU inference. Neither mode downloads
+files at startup or enables remote code.
 
 Provisioning supplies a local model bundle with model id, revision, file paths,
 sizes and SHA-256 hashes. Verify every tokenizer, config, weight and external

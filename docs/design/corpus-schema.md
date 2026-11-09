@@ -1,7 +1,7 @@
 # Corpus schema version 1
 
 Proposed exact template contract for `internal/corpusdb/schema.sql`, embedded by
-`schema.go` in root module `danny.vn/traquydinh`. The workshop keeps goose
+`schema.go` in root module `danny.vn/trachuan`. The workshop keeps goose
 migrations under `apps/corpus/migrations/`. Corpus databases are rebuilt, never
 migrated in place. [Data](data.md) owns the overview; [build](index.md) owns
 population and recovery. This template is not an applied migration.
