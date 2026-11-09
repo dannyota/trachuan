@@ -75,9 +75,13 @@ retained releases.
 
 Parser limits: 50 MB per file, 5 minutes per document, 500 OCR pages.
 
-Activity batch 100 items, heartbeat after every item. Batch start-to-close
-timeout 1 hour; heartbeat timeout 2 minutes. At most 5 attempts, with retry
-backoff from 30 seconds to 10 minutes.
+Activity batch 100 items; a heartbeat every 20 seconds while a batch runs. Batch
+start-to-close timeout 1 hour; heartbeat timeout 2 minutes. At most 5 attempts,
+with retry backoff from 30 seconds to 10 minutes. A `starting` run row is stale
+after 2 minutes.
+
+VBPL ingest bounds: API response 20 MB; provision tree depth 32 and 50,000
+nodes; at most 3 listing passes per query.
 
 VBPL: at most 2 requests per second and 2 in flight; request timeout 30 seconds.
 Retry HTTP 429, HTTP 5xx and timeouts 3 times, after 2, 8 and 30 seconds.
