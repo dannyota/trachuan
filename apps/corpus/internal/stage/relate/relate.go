@@ -51,7 +51,10 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 		return stage.Output{}, fmt.Errorf("load fetch artifact: %w", err)
 	}
 	if input.Sha256 != item.InputHash {
-		return stage.Output{}, fmt.Errorf("fetch artifact hash changed for %q", item.Key)
+		return stage.Output{}, stage.Retryable(fmt.Errorf("fetch artifact hash changed for %q", item.Key))
+	}
+	if verifyErr := verifyFetch(env.Artifacts.Abs(input.Path), item.InputHash); verifyErr != nil {
+		return stage.Output{}, verifyErr
 	}
 	detail, err := os.ReadFile(filepath.Join(env.Artifacts.Abs(input.Path), "detail.json"))
 	if err != nil {
@@ -138,4 +141,15 @@ func (*Stage) Resolve(ctx context.Context, env stage.Env, run stage.Run, _ stage
 		expected[entry.Key] = true
 	}
 	return stage.Resolution{Gaps: resolveGaps(rows, unmapped, expected)}, nil
+}
+
+func verifyFetch(path, expected string) error {
+	sum, err := artifact.Verify(path)
+	if err != nil {
+		return stage.Retryable(fmt.Errorf("verify fetch artifact: %w", err))
+	}
+	if sum != expected {
+		return stage.Retryable(fmt.Errorf("fetch artifact hash mismatch: got %s, want %s", sum, expected))
+	}
+	return nil
 }

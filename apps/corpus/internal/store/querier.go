@@ -11,6 +11,7 @@ import (
 type Querier interface {
 	AcceptRunGaps(ctx context.Context, arg AcceptRunGapsParams) (int64, error)
 	AdvanceRunStage(ctx context.Context, arg AdvanceRunStageParams) error
+	ArtifactPathReferenced(ctx context.Context, arg ArtifactPathReferencedParams) (bool, error)
 	CountIncompleteItems(ctx context.Context, runID int64) (int64, error)
 	CountUnacceptedGaps(ctx context.Context, runID int64) (int64, error)
 	CreateRun(ctx context.Context, arg CreateRunParams) error

@@ -74,8 +74,8 @@ func partial(t *testing.T, s Store) string {
 func TestPublish_ReplacesPartialDir(t *testing.T) {
 	s := Store{Root: t.TempDir()}
 	partial(t, s)
-	if _, _, err := s.Open("fetch", hash("input"), hash("recipe")); err == nil {
-		t.Fatal("open accepted partial")
+	if _, ok, err := s.Open("fetch", hash("input"), hash("recipe")); err != nil || ok {
+		t.Fatalf("open partial: found=%v err=%v", ok, err)
 	}
 	r := publish(t, s)
 	if r.Adopted {

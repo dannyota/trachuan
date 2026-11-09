@@ -4,11 +4,13 @@ package checkpoint
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"io/fs"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"sort"
@@ -16,6 +18,8 @@ import (
 	"time"
 
 	"github.com/dannyota/traquydinh/apps/corpus/internal/artifact"
+	"github.com/dannyota/traquydinh/apps/corpus/internal/store"
+	"github.com/jackc/pgx/v5"
 )
 
 // Config contains checkpoint paths and retention settings.
@@ -31,9 +35,10 @@ type Dumper interface {
 
 // Taker saves a stage boundary.
 type Taker struct {
-	Config Config
-	Dumper Dumper
-	Now    func() time.Time
+	Config     Config
+	Dumper     Dumper
+	Now        func() time.Time
+	referenced func(context.Context, string, string) (bool, error)
 }
 type metadata struct {
 	Stage      string    `json:"stage"`
@@ -75,7 +80,7 @@ func (t Taker) Take(ctx context.Context, runKey string, generation int, stage st
 	if closeErr != nil {
 		return "", fmt.Errorf("close dump: %w", closeErr)
 	}
-	if copyErr := copyArtifacts(ctx, t.Config.ArtifactsRoot, filepath.Join(t.Config.Dir, "artifacts")); copyErr != nil {
+	if copyErr := t.copyArtifacts(ctx, t.Config.ArtifactsRoot, filepath.Join(t.Config.Dir, "artifacts")); copyErr != nil {
 		return "", copyErr
 	}
 	now := time.Now
@@ -115,7 +120,7 @@ func safeName(s string) bool {
 	return s != "" && s != "." && s != ".." && !strings.ContainsAny(s, `/\\`)
 }
 
-func copyArtifacts(ctx context.Context, root, dest string) error {
+func (t Taker) copyArtifacts(ctx context.Context, root, dest string) error {
 	if err := os.MkdirAll(dest, 0700); err != nil {
 		return fmt.Errorf("create artifact destination: %w", err)
 	}
@@ -127,11 +132,8 @@ func copyArtifacts(ctx context.Context, root, dest string) error {
 		return fmt.Errorf("read artifacts: %w", err)
 	}
 	for _, stage := range stages {
-		if stage.Name() == ".tmp" || stage.Name() == ".locks" || stage.Name() == ".trash" {
+		if !stage.IsDir() || stage.Name() == "" || strings.Trim(stage.Name(), "abcdefghijklmnopqrstuvwxyz0123456789_-") != "" {
 			continue
-		}
-		if !stage.IsDir() {
-			return fmt.Errorf("invalid artifact stage %q", stage.Name())
 		}
 		entries, readErr := os.ReadDir(filepath.Join(root, stage.Name()))
 		if readErr != nil {
@@ -141,10 +143,26 @@ func copyArtifacts(ctx context.Context, root, dest string) error {
 			if err := ctx.Err(); err != nil {
 				return fmt.Errorf("copy artifacts: %w", err)
 			}
-			if !entry.IsDir() {
-				return fmt.Errorf("invalid artifact directory %q", entry.Name())
+			if !entry.IsDir() || !artifactName(entry.Name()) {
+				continue
 			}
 			src := filepath.Join(root, stage.Name(), entry.Name())
+			rel := filepath.Join(stage.Name(), entry.Name())
+			if _, verifyErr := artifact.Verify(src); verifyErr != nil {
+				referenced := t.referenced
+				if referenced == nil {
+					referenced = t.artifactReferenced
+				}
+				used, queryErr := referenced(ctx, root, rel)
+				if queryErr != nil {
+					return fmt.Errorf("check artifact reference: %w", queryErr)
+				}
+				if used {
+					return fmt.Errorf("verify referenced artifact %s: %w", src, verifyErr)
+				}
+				slog.Warn("skipping corrupt orphan artifact", "path", src, "error", verifyErr)
+				continue
+			}
 			target := filepath.Join(dest, stage.Name(), entry.Name())
 			if _, statErr := os.Lstat(target); statErr == nil {
 				continue
@@ -158,6 +176,28 @@ func copyArtifacts(ctx context.Context, root, dest string) error {
 	}
 	return nil
 }
+func artifactName(name string) bool {
+	if len(name) != 129 || name[64] != '-' || strings.ToLower(name) != name {
+		return false
+	}
+	_, firstErr := hex.DecodeString(name[:64])
+	_, secondErr := hex.DecodeString(name[65:])
+	return firstErr == nil && secondErr == nil
+}
+
+func (t Taker) artifactReferenced(ctx context.Context, root, rel string) (bool, error) {
+	conn, err := pgx.Connect(ctx, t.Config.DatabaseURL)
+	if err != nil {
+		return false, fmt.Errorf("connect workshop: %w", err)
+	}
+	defer func() { _ = conn.Close(ctx) }()
+	used, err := store.New(conn).ArtifactPathReferenced(ctx, store.ArtifactPathReferencedParams{RelativePath: rel, AbsolutePath: filepath.Join(root, rel)})
+	if err != nil {
+		return false, fmt.Errorf("query artifact reference: %w", err)
+	}
+	return used, nil
+}
+
 func copyArtifact(src, target string) error {
 	sum, err := artifact.Verify(src)
 	if err != nil {

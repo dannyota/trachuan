@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -64,7 +65,8 @@ func (s Store) Open(stage, inputHash, recipeHash string) (Result, bool, error) {
 	}
 	sum, err := Verify(path)
 	if err != nil {
-		return Result{}, false, fmt.Errorf("verify artifact: %w", err)
+		slog.Warn("invalid artifact", "path", path, "error", err)
+		return Result{}, false, nil
 	}
 	return Result{Path: rel, SHA256: sum, InputHash: inputHash}, true, nil
 }

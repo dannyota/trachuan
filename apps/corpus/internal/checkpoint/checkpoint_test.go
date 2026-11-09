@@ -77,19 +77,6 @@ func TestTake_WritesCheckpointJSONLast(t *testing.T) {
 		t.Fatalf("checkpoint exists: %v", err)
 	}
 	taker.Dumper = fakeDumper{}
-	bad := filepath.Join(taker.Config.ArtifactsRoot, "fetch", "invalid")
-	if err := os.MkdirAll(bad, 0700); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := taker.Take(context.Background(), "vn-20261109", 1, "fetch"); err == nil {
-		t.Fatal("expected artifact verification failure")
-	}
-	if _, err := os.Stat(path); !errors.Is(err, os.ErrNotExist) {
-		t.Fatalf("checkpoint exists after copy failure: %v", err)
-	}
-	if err := os.RemoveAll(bad); err != nil {
-		t.Fatal(err)
-	}
 	if _, err := taker.Take(context.Background(), "vn-20261109", 1, "fetch"); err != nil {
 		t.Fatal(err)
 	}

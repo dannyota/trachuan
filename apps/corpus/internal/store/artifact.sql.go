@@ -9,6 +9,25 @@ import (
 	"context"
 )
 
+const artifactPathReferenced = `-- name: ArtifactPathReferenced :one
+SELECT EXISTS (
+    SELECT 1 FROM artifact
+    WHERE path = $1 OR path = $2
+)
+`
+
+type ArtifactPathReferencedParams struct {
+	RelativePath string
+	AbsolutePath string
+}
+
+func (q *Queries) ArtifactPathReferenced(ctx context.Context, arg ArtifactPathReferencedParams) (bool, error) {
+	row := q.db.QueryRow(ctx, artifactPathReferenced, arg.RelativePath, arg.AbsolutePath)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const getArtifactID = `-- name: GetArtifactID :one
 SELECT id FROM artifact WHERE stage = $1 AND input_hash = $2 AND recipe_hash = $3
 `
