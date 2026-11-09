@@ -24,3 +24,7 @@ A hand-written tree. Pure embedding zero-shot classification. A fine-tuned class
 - 2026-11-08: after design review findings S-08 to S-11, fixed the precedence
   (manual over seed over llm), moved classification after embedding, and
   defined the import mapping and code rules in design/taxonomy.md.
+- 2026-11-09: join spike ([research note](../research/phapdien-join-2026-11.md))
+  found seeds for 25.3% of primary corpus articles and 91.6% of chủ đề 22
+  package articles; added Tiểu mục flattening, STT collision and empty đề mục
+  rules to the import mapping.

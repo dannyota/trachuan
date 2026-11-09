@@ -10,10 +10,11 @@ about the source: [research note](../research/phap-dien-2026-11-08.md).
 | Package element                   | Level | Code form            | Rule                                                                 |
 | --------------------------------- | ----- | -------------------- | -------------------------------------------------------------------- |
 | chủ đề (`jdChuDe`, 45)            | 1     | `22`                 | STT as code                                                          |
-| đề mục (`jdDeMuc`)                | 2     | `22.3`               | chủ đề STT plus đề mục STT; entries marked "loại bỏ" import as `retired` |
+| đề mục (`jdDeMuc`)                | 2     | `22.3`               | chủ đề STT plus đề mục STT; when that code is taken, the next free number; entries marked "loại bỏ" import as `retired`; a đề mục with no placed article is imported but not served until it holds an assignment |
 | phần, when the đề mục has phần    | 3     | `22.3.p1`            | MAPC order                                                           |
 | chương                            | 3, or 4 under a phần | `22.3.c2`, `22.3.p1.c2` | MAPC order                                              |
 | mục inside a chương               | 4, or dropped when the chương is already level 4 | `22.3.c2.m1` | a dropped mục is recorded in the mapping file as flattened into its chương |
+| tiểu mục inside a mục             | never a node | none | flattened into its mục; recorded in the mapping file |
 | custom node                       | 3 or 4 | `22.3.x1`           | declared in `taxonomy/custom.yaml` with name and one-sentence description |
 
 Codes are stable identifiers, not display paths. `taxonomy/mapping.yaml` maps
