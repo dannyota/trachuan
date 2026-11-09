@@ -16,7 +16,7 @@ Intended behavior of trachuan. Decisions with alternatives are in the
 | [budgets](budgets.md)                   | Cost, memory, request limits, retrieval and Temporal bounds                              |
 | [index](index.md)                       | Index scope, build inventory, normalization, local database recovery                     |
 | [chunk](chunk.md)                       | Chunk recipe, source spans, omissions and workshop projection                            |
-| [embedder](embedder.md)                 | Python HTTP contract, runtimes and embedding artifacts                                   |
+| [embedder](embedder.md)                 | Embedding HTTP contract, Go query and Python document services, embedding artifacts      |
 | [corpus schema](corpus-schema.md)       | Exact shared corpus template contract and schema version                                 |
 | [lexical](lexical.md)                   | Shared normalization, hashing, BM25 and statistics                                       |
 | [retrieval recipe](retrieval-recipe.md) | Shared Go API, recipe 1, validity and evidence shaping                                   |

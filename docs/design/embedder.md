@@ -1,63 +1,118 @@
-# Embedding service and stage
+# Embedding services and stage
 
-One Python HTTP service has two startup modes, as decided in
-[ADR 0011](../adr/0011-python-embedder-service.md). The model recipe stays in
-[ADR 0009](../adr/0009-dense-embedding-recipe.md); the service does not choose
-models or change input text. Limits live in [budgets](budgets.md#indexing).
+Two services implement one HTTP contract, as decided in
+[ADR 0011](../adr/0011-embedder-services.md): the Go query service serves the
+read path on the host, and the Python document service embeds chunks for the
+write path on the MacBook GPU. The model recipe stays in
+[ADR 0009](../adr/0009-dense-embedding-recipe.md); neither service chooses
+models or changes input text. Limits live in [budgets](budgets.md#indexing).
 
-## Package and runtime
+## Query service (Go)
 
-`apps/embedder/pyproject.toml` and `uv.lock` pin Python 3.12 and dependencies.
-Use FastAPI, Uvicorn, NumPy, transformers and ONNX Runtime in the default
-dependency set; optional group `document` adds PyTorch. Files under
-`src/trachuan_embedder/`: `app.py`, `admission.py`, `recipe.py`, `tokenizer.py`,
-`runtime.py`, `onnx_runtime.py`, `torch_runtime.py`. `__main__.py` only wires
-startup. `tests/` uses injected tokenizer, runtime and clock objects.
+`apps/queryembed/` is part of the root Go module. `cmd/queryembed/main.go` only
+wires startup. Packages under `apps/queryembed/internal/`: `httpapi` (routes,
+strict JSON, errors), `admission`, `bundle` (manifest and hash checks),
+`tokenizer` and `onnx` (session, CLS selection, normalization). Recipe and
+protocol types come from root `internal/embedding`.
 
-Start with `uv run python -m trachuan_embedder --runtime query --model-dir DIR`
-or
-`uv run --group document python -m trachuan_embedder --runtime document --model-dir DIR`.
-Query loads `onnx/model.onnx` and its external data with CPUExecutionProvider;
-document loads PyTorch weights on MPS in FP16. Refuse unavailable MPS; never
-silently move document work to CPU. Convert CLS output to float32, L2-normalize
-in float32, and return float32 vectors in both modes. Fail on non-finite output
-or zero norm. Query uses one process with the thread limits in budgets; document
-uses one model process and serialized GPU inference. Neither mode downloads
-files at startup or enables remote code.
+`tokenizer` uses `github.com/daulet/tokenizers`, the Rust tokenizers library
+linked statically through cgo as `libtokenizers.a`. `onnx` uses the ONNX Runtime
+Go binding, module `github.com/microsoft/onnxruntime/go`, taken from the owner's
+fork `github.com/dannyota/onnxruntime/go` at a pinned tag through a `replace`
+until upstream tags releases. The binding loads the ONNX Runtime shared library
+at startup from a configured path. Both packages build only with tag `ort`;
+without it they compile to stubs whose constructors fail, so `go build ./...`,
+`go test ./...` and lint need no native libraries. Changing the ONNX Runtime or
+tokenizers version changes the query recipe.
+
+`apps/queryembed/native.lock` pins the release assets for `darwin-arm64` and
+`linux-arm64`: the ONNX Runtime shared library and `libtokenizers.a`, each with
+version, URL and SHA-256. `make queryembed-native` fetches and verifies them
+into `work/native/<os>-<arch>/`; the image build uses the same pins. Nothing is
+downloaded at runtime.
+
+Start with `queryembed --model-dir DIR --ort-lib FILE --listen ADDR`. Startup
+order:
+
+1. Verify the model bundle.
+2. Load `tokenizer.json` with truncation and padding disabled. Prove it by
+   counting a fixed synthetic input longer than the cap; the count must exceed
+   the cap.
+3. Open `onnx/model.onnx` with the CPU provider, the thread settings from
+   budgets and the CPU memory arena disabled (banhmi measured 200 to 400 MB less
+   resident memory at query rates). Refuse a model whose inputs are not exactly
+   int64 `input_ids` and `attention_mask`, or whose first output is not float32
+   `[batch, sequence, dimensions]`.
+4. Run the fixed warmup, then report ready.
+
+A query request carries one text, so there is no padding. Take position 0 of the
+first output (CLS), L2-normalize in float32, and fail on non-finite output or
+zero norm. Tokenizer calls are serialized behind one mutex because the cgo
+wrapper documents no thread safety; the binding documents `Session.Run` as safe
+for concurrent use. When a request deadline expires, answer 504 and set the
+run's terminate flag through its run options; the active slot stays held until
+`Run` returns.
+
+Go's `encoding/json` accepts duplicate object keys and replaces invalid UTF-8;
+the decoder rejects both explicitly. On the host the service binds only the
+container network; locally it binds `127.0.0.1`.
+
+## Document service (Python)
+
+`apps/docembed/pyproject.toml` and `uv.lock` pin Python 3.14 and FastAPI,
+Uvicorn, NumPy, transformers and PyTorch. Files under `src/trachuan_docembed/`:
+`app.py`, `admission.py`, `bundle.py`, `recipe.py`, `tokenizer.py`,
+`torch_runtime.py`; `__main__.py` only wires startup. `tests/` uses injected
+tokenizer, runtime and clock objects. Start with
+`uv run python -m trachuan_docembed --model-dir DIR`. It runs on the MacBook
+only and binds `127.0.0.1`.
+
+It loads the PyTorch weights on MPS in FP32. Refuse unavailable MPS; never
+silently move work to CPU. Take the CLS output, L2-normalize in float32 and
+return float32 vectors; fail on non-finite output or zero norm. One model
+process runs serialized GPU inference. It downloads nothing at startup and never
+enables remote code.
+
+## Model bundle
 
 Provisioning supplies a local model bundle with model id, revision, file paths,
-sizes and SHA-256 hashes. Verify every tokenizer, config, weight and external
-ONNX data file before readiness. Resolve the ADR's revision prefix to a full
-commit during provisioning and record both; refuse a prefix that resolves
-ambiguously. No arbitrary file paths or model IDs arrive over HTTP.
+sizes and SHA-256 hashes. Each service verifies every tokenizer, config, weight
+and external ONNX data file it loads before readiness. Resolve the ADR's
+revision prefix to a full commit during provisioning and record both; refuse a
+prefix that resolves ambiguously. No arbitrary file paths or model IDs arrive
+over HTTP.
 
 ## Recipe report
 
 `GET /v1/recipe` returns `{protocol_version:1, recipe_hash, recipe}`. `recipe`
-contains `model`, `revision`, `resolved_revision`, `tokenizer_revision`,
-`tokenizer_sha256`, `weights_sha256`, `dimensions`, `pooling:"cls"`,
-`normalization:"l2-float32"`, `input:"raw"`, `runtime:"query"|"document"`,
-`backend:"onnxruntime-cpu"|"torch-mps"`, `precision:"fp32"|"fp16"`, `token_cap`,
-`special_tokens:true`, `truncation:false`, and pinned Python, tokenizer-library
-and runtime versions. Hash the fixed-field UTF-8 JSON without whitespace as
-SHA-256. `weights_sha256` hashes the sorted file manifest.
+contains, in this order, `model`, `revision`, `resolved_revision`,
+`tokenizer_revision`, `tokenizer_sha256`, `weights_sha256`, `dimensions`,
+`pooling:"cls"`, `normalization:"l2-float32"`, `input:"raw"`,
+`runtime:"query"|"document"`, `backend:"onnxruntime-cpu"|"torch-mps"`,
+`precision:"fp32"`, `token_cap`, `special_tokens:true`, `truncation:false`,
+`language`, `tokenizer_library` and `runtime_library`. The last three record
+what the service loaded as `<name> <version>`: for example `go 1.27.3`,
+`daulet/tokenizers 1.27.0` and `onnxruntime 1.31.1` for the query service;
+`python 3.14.x`, `transformers 5.22.2` and `torch 2.15.0` for the document
+service. Hash the fixed-field UTF-8 JSON without whitespace as SHA-256.
+`weights_sha256` hashes the sorted file manifest.
 
 Callers compare all fields with the expected runtime side of `dense_recipe`.
 Document and query hashes intentionally differ; the common model, tokenizer,
-pooling, normalization and dimensions must agree. `dense_recipe` holds both
-reports. A response echoes `recipe_hash`; callers reject any change mid-run.
-Recipe and model file checks happen once at startup and at client construction,
-not by downloading data during a request.
+pooling, normalization, precision and dimensions must agree. `dense_recipe`
+holds both reports. A response echoes `recipe_hash`; callers reject any change
+mid-run. Recipe and model file checks happen once at startup and at client
+construction, not by downloading data during a request.
 
 ## HTTP contract
 
 All bodies are UTF-8 JSON; unknown fields, duplicate object keys, invalid UTF-8,
 non-finite numbers and a wrong content type are errors. No streaming or OpenAI
 compatibility endpoint. Every request supplies `recipe_hash` and `texts`, an
-ordered nonempty array of strings. Query mode accepts exactly one text; document
-mode accepts a bounded batch. Empty/whitespace-only text is invalid. Do not
-trim, restore diacritics or remove instruction-looking text in service. The
-caller constructs the exact ADR input.
+ordered nonempty array of strings. The query service accepts exactly one text;
+the document service accepts a bounded batch. Empty/whitespace-only text is
+invalid. Do not trim, restore diacritics or remove instruction-looking text in
+service. The caller constructs the exact ADR input.
 
 `POST /v1/tokenize` returns `{recipe_hash,counts:[integer]}` in input order.
 Counts include special tokens and exclude padding. Tokenization has truncation
@@ -100,14 +155,14 @@ and a fixed synthetic warmup, otherwise 503. Health routes have no inference
 admission. Recipe may be read during load with 503 until verified.
 
 Admission covers tokenization, inference and serialization, not just model
-calls. Enforce body size while reading, before parsing. Query has the existing
-active, queue, wait and total deadline from budgets; document has its own
-limits. A timed-out/disconnected request drops its response but retains the
-active slot until native inference actually finishes. A queue slot is removed on
-cancellation. Do not start replacement work while the old computation runs.
-There is no background unbounded executor queue and no cross-request batching.
+calls. Enforce body size while reading, before parsing. The query service has
+the active, queue, wait and total deadline from budgets; the document service
+has its own limits. A timed-out/disconnected request drops its response but
+retains the active slot until native inference actually finishes. A queue slot
+is removed on cancellation. Do not start replacement work while the old
+computation runs. There is no background unbounded executor queue and no
+cross-request batching.
 
-Bind document mode to `127.0.0.1`; query mode binds only the container network.
 The host plan owns network policy and the image. Disable access/body logging;
 metrics contain code, runtime, counts and latency only. Health and recipe never
 expose environment variables, paths or credentials.
@@ -156,19 +211,24 @@ attempt; repeated failure stops at the existing attempt limit.
 
 ## Checks without model weights
 
-Inject a deterministic tokenizer and runtime; unit tests never load or download
-the model. A tiny locally generated ONNX tensor graph tests the adapter shape,
-CLS selection, normalization and external error paths without production
-weights. HTTP tests cover exact caps, batch atomicity, recipe mismatch,
-cancellation, queue ownership and no truncation. Go uses a fake HTTP service for
-artifact order, gap/retry classification and vector validation. A separate
-opt-in Mac smoke with the pinned real bundle checks counts and query/document
-parity; the primary records its output. Fake results are not quality evidence.
+Unit tests never load or download production weights. Go tests inject a fake
+tokenizer and runtime and cover the HTTP contract: exact caps, recipe mismatch,
+strict JSON, cancellation, queue ownership and no truncation. Tests tagged `ort`
+load a tiny ONNX graph and a tiny tokenizer file, committed under `testdata/`
+with the script that generated them, through the real native libraries; they
+check input names, CLS selection, normalization and error paths. CI runs them in
+a job that fetches the pinned native assets. Python tests inject tokenizer,
+runtime and clock objects and cover the same contract for document batches. The
+corpus pipeline uses a fake HTTP service for artifact order, gap and retry
+classification and vector validation.
 
-First-party references for the primary's version check:
-[ONNX Python API](https://onnxruntime.ai/docs/api/python/api_summary.html),
+An opt-in Mac smoke with the pinned real bundle runs both services and checks
+token counts and query/document parity; the primary records its output. Fake
+results are not quality evidence.
+
+First-party references:
+[ONNX Runtime C API](https://onnxruntime.ai/docs/api/c/),
+[ONNX Runtime Go binding](https://github.com/microsoft/onnxruntime/tree/main/go),
+[daulet/tokenizers](https://github.com/daulet/tokenizers),
 [PyTorch MPS](https://docs.pytorch.org/docs/stable/notes/mps.html),
-[tokenizer API](https://huggingface.co/docs/transformers/main_classes/tokenizer),
-[uv groups](https://docs.astral.sh/uv/concepts/projects/dependencies/#dependency-groups).
-Network access was forbidden for this design; these APIs remain unverified
-against the proposed lockfile. Local spike evidence is linked from ADR 0009.
+[tokenizer API](https://huggingface.co/docs/transformers/main_classes/tokenizer).

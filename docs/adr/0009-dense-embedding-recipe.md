@@ -22,7 +22,7 @@ Release 1 uses this dense recipe; the release manifest records every field.
 | Pooling            | CLS token, then L2 normalization; similarity is cosine                           |
 | Query input        | the question as written, no instruction prefix, at most 256 tokens               |
 | Document input     | `strip(context_prefix) + "\n" + strip(content)`, no prefix, at most 2,048 tokens |
-| Document embedding | batch on the MacBook GPU (PyTorch MPS, FP16); about 18 minutes per full corpus   |
+| Document embedding | batch on the MacBook GPU (PyTorch MPS, FP32), the same precision as queries      |
 | Query serving      | ONNX Runtime CPU, FP32, the repository's `onnx/model.onnx`                       |
 | Tokenizer          | the model repository's tokenizer at the same revision                            |
 
@@ -39,8 +39,9 @@ models; they are not product quality. Hybrid recall with BM25 is measured before
 release.
 
 The embedder budget is 2.5 GB because the FP32 weights are 2.27 GB. Re-embedding
-a release takes about 18 minutes on the MacBook GPU. The model comes from a
-small team, so the golden set is the only quality evidence we rely on.
+a release of 98,506 chunks takes about 50 minutes on the MacBook GPU in FP32.
+The model comes from a small team, so the golden set is the only quality
+evidence we rely on.
 
 Query latency is measured only on the MacBook (ONNX FP32, about 14 ms at p50);
 host latency is unmeasured and FP32 on Graviton2 may be several times slower.
@@ -76,6 +77,11 @@ tokens; record the change in this ADR's History.
   fallback, after rescoring with banhmi's alternate document numbers (counts
   unchanged, MRR@8 slightly higher).
 - 2026-11-09: the primary selected the Python service in
-  [ADR 0011](0011-python-embedder-service.md). It reports both runtime recipes
-  and rejects over-cap input without truncation; this record still owns the
-  model, tokenizer, pooling, dimensions and precision choices.
+  [ADR 0011](0011-embedder-services.md). It reports both runtime recipes and
+  rejects over-cap input without truncation; this record still owns the model,
+  tokenizer, pooling, dimensions and precision choices.
+- 2026-11-09: one precision on both sides. Document embedding moved from MPS
+  FP16 to MPS FP32, because CPU queries stay FP32. On an 800-chunk sample at
+  batch 16, FP32 runs at 33.2 chunks per second against 85.6 for FP16, and the
+  two agree to cosine 0.99981 at minimum. [ADR 0011](0011-embedder-services.md)
+  moved the query runtime to Go; query serving stays ONNX Runtime CPU FP32.

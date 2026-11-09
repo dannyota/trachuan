@@ -4,9 +4,9 @@
 
 **Goal:** A paused run extends through `chunk`, `embed`, `build` and `eval`: the corpus is split into provision-owned chunks, embedded by a local Python embedder, loaded into a local `corpus_<cc>_<rel>` database with BM25 and HNSW, searched by a shared Go retrieval package, and scored under ADR 0010 on the legacy and old product cohorts.
 
-**Architecture:** One root Go module `danny.vn/trachuan`. Shared code the future server imports lives under root `internal/`: `corpusdb` (schema template), `retrieval` and `retrieval/lexical` (search and encoding), `embedding` (embedder protocol types and HTTP client), `testpg` (integration test databases). Pipeline stages live in `apps/corpus/internal/stage/{chunk,embed,build,eval}` and follow the existing `stage.Stage` contract; evaluation logic lives in `apps/corpus/internal/evaluation`. The embedder is a uv-managed Python HTTP service in `apps/embedder` with two startup runtimes (ONNX CPU FP32 for queries, PyTorch MPS FP16 for documents). Recipe 1 is the study's measured baseline; tuning, taxonomy, signing and upload are later plans.
+**Architecture:** One root Go module `danny.vn/trachuan`. Shared code the future server imports lives under root `internal/`: `corpusdb` (schema template), `retrieval` and `retrieval/lexical` (search and encoding), `embedding` (embedder protocol types and HTTP client), `testpg` (integration test databases). Pipeline stages live in `apps/corpus/internal/stage/{chunk,embed,build,eval}` and follow the existing `stage.Stage` contract; evaluation logic lives in `apps/corpus/internal/evaluation`. The embedder is a uv-managed Python HTTP service in `apps/embedder` with two startup runtimes (ONNX CPU FP32 for queries, PyTorch MPS FP32 for documents). Recipe 1 is the study's measured baseline; tuning, taxonomy, signing and upload are later plans.
 
-**Tech Stack:** Go 1.27.3, Temporal Go SDK v1.50.0, pgx/v5, sqlc 1.31.1, goose v3, golang.org/x/text, PostgreSQL 18 with pgvector and ltree (`pgvector/pgvector:pg18`), Python 3.12 with uv, FastAPI, Uvicorn, NumPy, transformers tokenizers, ONNX Runtime, PyTorch (optional `document` group), pytest, ruff.
+**Tech Stack:** Go 1.27.3, Temporal Go SDK v1.50.0, pgx/v5, sqlc 1.31.1, goose v3, golang.org/x/text, PostgreSQL 18 with pgvector and ltree (`pgvector/pgvector:pg18`), Python 3.14 with uv, FastAPI, Uvicorn, NumPy, transformers tokenizers, ONNX Runtime, PyTorch (optional `document` group), pytest, ruff.
 
 **Spec:** `docs/design/index.md`, `chunk.md`, `embedder.md`, `lexical.md`, `corpus-schema.md`, `retrieval-recipe.md`, `evaluation.md`, `budgets.md` ("Indexing", "Retrieval"), `data.md`, `pipeline.md`; ADR 0009, 0010, 0011. Study: `docs/research/retrieval-hybrid-2026-11.md`. Every task reads the spec sections it names; the spec wins over this plan.
 
@@ -237,6 +237,17 @@
 - [ ] **Step 3: Implement** the stage (one item `<cc>/<rel>` after a done build; it calls `build.EnsureForRun` first; input and recipe hashes as `evaluation.md`), the CLI (also through `build.EnsureForRun`), config, registry, worker and deps; update the runbook (start both embedders, extend a paused run) and architecture table.
 - [ ] **Step 4: Run** the same commands and `make pre-push`. Expected: PASS.
 - [ ] **Step 5: Commit** `feat(corpus): eval stage, eval command and index stage wiring`.
+
+### Task 13b: Language-neutral recipe fields, FP32 documents, Python 3.14
+
+Revised ADR 0011 and ADR 0009 History. Lands before Task 14 so the live run embeds once.
+
+**Files:**
+- Modify: `internal/embedding/recipe.go`, `internal/embedding/recipes/vi-v2-{document,query}.json`, recipe tests; `apps/embedder/{.python-version,pyproject.toml,uv.lock}`, `apps/embedder/src/trachuan_embedder/{recipe.py,torch_runtime.py}`, its tests; `instructions/python.md`
+
+- [ ] **Step 1:** Failing tests first: the recipe JSON fields `python_version`, `tokenizer_version`, `runtime_version` become `language`, `tokenizer_library`, `runtime_library`, each `<name> <version>` (`python 3.14.x`, `transformers 5.22.2`, `onnxruntime 1.31.1` or `torch 2.15.0`); the document runtime reports `precision:"fp32"` and loads MPS weights in float32.
+- [ ] **Step 2:** Implement in Go and Python; pin Python 3.14 (`.python-version`, `requires-python`, `uv lock`).
+- [ ] **Step 3:** Start both embedders on the real bundle; re-pin both recipe JSON files and hashes from `GET /v1/recipe`; run the real-model smoke; `make embedder-test`, `make test`, `make pre-push`; commit.
 
 ### Task 14: Live run and evidence (primary)
 

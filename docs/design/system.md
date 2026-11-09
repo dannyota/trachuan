@@ -75,7 +75,8 @@ Activation has its own narrow identity; this amends the earlier wording that
 apps/server      Go: API, MCP, OAuth, auth; imports shared retrieval
 apps/web         Nuxt 4: public pages, search, reader, account
 apps/corpus      Go: Temporal worker, stage activities, release and activation commands
-apps/embedder    Python, uv: query ONNX CPU and document PyTorch MPS runtimes
+apps/queryembed  Go: query embedding service, ONNX Runtime CPU (read path, host)
+apps/docembed    Python, uv: document embedding on the MacBook GPU (write path)
 internal/retrieval  Go: shared search and lexical encoding
 internal/corpusdb   Go: embedded corpus schema template and schema version
 packages/schema  OpenAPI document and generated TypeScript client
