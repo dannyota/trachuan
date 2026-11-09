@@ -8,7 +8,7 @@ research notes, not here.
 | Spike        | Question                                                        | Research note                                  |
 | ------------ | --------------------------------------------------------------- | ---------------------------------------------- |
 | `corpus/`    | Restore banhmi's Vietnam corpus into local PostgreSQL           | used by the two spikes below                   |
-| OAuth        | Do Claude.ai, ChatGPT and Claude Code connect to aboutme's OAuth server? | `docs/research/oauth-clients-2026-11.md` |
+| OAuth        | Do Claude.ai, ChatGPT and Claude Code connect to aboutme's OAuth server? (closed by the owner without a retest) | `docs/research/oauth-clients-2026-11.md` |
 | `embedder/`  | Which dense recipe serves Vietnam on ARM64?                     | `docs/research/embedder-2026-11.md`            |
 | `phapdien-join/` | How much of the corpus does the 2023 Bộ pháp điển package label? | `docs/research/phapdien-join-2026-11.md`   |
 
