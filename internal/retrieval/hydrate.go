@@ -10,9 +10,11 @@ import (
 )
 
 func hydrate(ctx context.Context, tx pgx.Tx, g *ArmGroup, vec string) error {
-	ids := make([]int64, 0, len(g.Dense)+len(g.Lexical))
+	// Raw ANN candidates are hydrated too: after a fallback they are no longer
+	// the dense list, but evaluation still reports them by identity.
+	ids := make([]int64, 0, len(g.Dense)+len(g.Lexical)+len(g.RawANN))
 	seen := map[int64]bool{}
-	for _, arm := range [][]Candidate{g.Dense, g.Lexical} {
+	for _, arm := range [][]Candidate{g.Dense, g.Lexical, g.RawANN} {
 		for _, c := range arm {
 			if !seen[c.ChunkID] {
 				seen[c.ChunkID] = true
@@ -108,7 +110,7 @@ func hydrate(ctx context.Context, tx pgx.Tx, g *ArmGroup, vec string) error {
 	for _, id := range ids {
 		g.Members = append(g.Members, byID[id])
 	}
-	for _, arm := range [][]Candidate{g.Dense, g.Lexical} {
+	for _, arm := range [][]Candidate{g.Dense, g.Lexical, g.RawANN} {
 		for i := range arm {
 			c, ok := byID[arm[i].ChunkID]
 			if !ok {
