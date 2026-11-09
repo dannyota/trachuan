@@ -29,6 +29,7 @@ type Querier interface {
 	InsertGap(ctx context.Context, arg InsertGapParams) error
 	InsertPlannedItem(ctx context.Context, arg InsertPlannedItemParams) error
 	InsertProvision(ctx context.Context, arg InsertProvisionParams) error
+	InsertRelation(ctx context.Context, arg InsertRelationParams) error
 	InsertRunItem(ctx context.Context, arg InsertRunItemParams) error
 	ListDiscoveryItems(ctx context.Context, country string) ([]ListDiscoveryItemsRow, error)
 	ListDiscoveryListings(ctx context.Context, country string) ([]ListDiscoveryListingsRow, error)

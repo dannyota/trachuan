@@ -108,6 +108,42 @@ func (q *Queries) InsertProvision(ctx context.Context, arg InsertProvisionParams
 	return err
 }
 
+const insertRelation = `-- name: InsertRelation :exec
+INSERT INTO relation (artifact_id, ordinal, kind, raw_code, raw_label, method, evidence, target_vbpl_id, target_number, source_node_id, target_node_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+`
+
+type InsertRelationParams struct {
+	ArtifactID   int64
+	Ordinal      int32
+	Kind         string
+	RawCode      string
+	RawLabel     string
+	Method       string
+	Evidence     string
+	TargetVbplID string
+	TargetNumber string
+	SourceNodeID *string
+	TargetNodeID *string
+}
+
+func (q *Queries) InsertRelation(ctx context.Context, arg InsertRelationParams) error {
+	_, err := q.db.Exec(ctx, insertRelation,
+		arg.ArtifactID,
+		arg.Ordinal,
+		arg.Kind,
+		arg.RawCode,
+		arg.RawLabel,
+		arg.Method,
+		arg.Evidence,
+		arg.TargetVbplID,
+		arg.TargetNumber,
+		arg.SourceNodeID,
+		arg.TargetNodeID,
+	)
+	return err
+}
+
 const upsertListing = `-- name: UpsertListing :exec
 INSERT INTO listing (run_id, query_key, item_key, payload)
 VALUES ($1, $2, $3, $4)

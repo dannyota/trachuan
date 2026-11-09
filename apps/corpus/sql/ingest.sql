@@ -14,3 +14,7 @@ VALUES ($1, $2, $3, $4, $5);
 -- name: InsertProvision :exec
 INSERT INTO provision (artifact_id, node_id, parent_node_id, kind, label, heading, ordinal, path, text)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);
+
+-- name: InsertRelation :exec
+INSERT INTO relation (artifact_id, ordinal, kind, raw_code, raw_label, method, evidence, target_vbpl_id, target_number, source_node_id, target_node_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11);
