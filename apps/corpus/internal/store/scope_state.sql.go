@@ -418,3 +418,20 @@ func (q *Queries) PublishSeeds(ctx context.Context, arg PublishSeedsParams) (int
 	}
 	return result.RowsAffected(), nil
 }
+
+const setFetchCloseInputHash = `-- name: SetFetchCloseInputHash :execrows
+UPDATE run_scope SET fetch_close_input_hash = $2 WHERE run_id = $1 AND (fetch_close_input_hash IS NULL OR fetch_close_input_hash = $2)
+`
+
+type SetFetchCloseInputHashParams struct {
+	RunID               int64
+	FetchCloseInputHash *string
+}
+
+func (q *Queries) SetFetchCloseInputHash(ctx context.Context, arg SetFetchCloseInputHashParams) (int64, error) {
+	result, err := q.db.Exec(ctx, setFetchCloseInputHash, arg.RunID, arg.FetchCloseInputHash)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}

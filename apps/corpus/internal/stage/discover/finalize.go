@@ -82,14 +82,7 @@ func (*Stage) Finalize(ctx context.Context, env stage.Env, tx pgx.Tx, r stage.Ru
 		retained := false
 		var old []membership.EvidenceRecord
 		for _, s := range direct {
-			same := false
-			for _, record := range m.records {
-				if sameSupport(s, record.Support) {
-					same = true
-					break
-				}
-			}
-			if same {
+			if superseded(s, m.records) {
 				continue
 			}
 			state := priorState(s, central.complete, configured, complete)

@@ -204,7 +204,7 @@ type RunSeedObservation struct {
 	Stage           string
 	ItemKey         string
 	Completeness    string
-	ArtifactHash    string
+	ArtifactHash    *string
 	ObservedTargets json.RawMessage
 }
 

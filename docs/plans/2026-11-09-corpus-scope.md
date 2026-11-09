@@ -86,8 +86,8 @@
 
 **Interfaces:** `expand.New(client *vbpl.Client) *expand.Stage` (name `expand`), registered between `discover` and `fetch` in Task 12; `relation_context` membership with supporting seeds, codes and evidence hashes.
 
-- [ ] Tests first: `TestExpand_QualifyingKindsOutwardOnly`, `TestExpand_ContextNeverSeeds`, `TestExpand_ExcludesRenditionsAndSelfLinks`, `TestExpand_SourceFailureKeepsKnownTargets`, `TestExpand_RemovalNeedsCompleteCurrentSupport`, `TestExpand_DepartedSeedDropsSupport`, `TestExpand_FailedObservationRetainsTargets`, `TestFinalize_NewTargetIsScopeChanged`, `TestFinalize_RetainedRemovalKeyIsDrift`, `TestDrift_GapCannotBeAccepted`.
-- [ ] Implement per sources.md "One-hop relation context"; commit `feat(corpus): expand stage for one-hop relation context`.
+- [x] Tests first: `TestExpand_QualifyingKindsOutwardOnly`, `TestExpand_ContextNeverSeeds`, `TestExpand_ExcludesRenditionsAndSelfLinks`, `TestExpand_SourceFailureKeepsKnownTargets`, `TestExpand_RemovalNeedsCompleteCurrentSupport`, `TestExpand_DepartedSeedDropsSupport`, `TestExpand_FailedObservationRetainsTargets`, `TestFinalize_NewTargetIsScopeChanged`, `TestFinalize_RetainedRemovalKeyIsDrift`, `TestDrift_GapCannotBeAccepted`.
+- [x] Implement per sources.md "One-hop relation context"; commit `feat(corpus): expand stage for one-hop relation context`.
 
 ### Task 7: Retry source gaps on start
 

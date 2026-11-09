@@ -170,13 +170,12 @@ func englishRendition(key string) bool {
 }
 
 func expectedMembership(ctx context.Context, q *store.Queries, r stage.Run) ([]Expected, error) {
-	scope, err := q.GetRunScope(ctx, r.ID)
-	if err != nil {
-		return nil, fmt.Errorf("read membership scope: %w", err)
-	}
 	phase := membership.Seeds
-	if scope.ExpandedSnapshot != nil {
-		phase = membership.Expanded
+	for _, name := range r.Snapshot.Stages {
+		if name == "expand" {
+			phase = membership.Expanded
+			break
+		}
 	}
 	snapshot, err := membership.ReadPhase(ctx, q, r.ID, phase)
 	if err != nil {

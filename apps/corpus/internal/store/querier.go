@@ -73,6 +73,8 @@ type Querier interface {
 	ListRunItemCounts(ctx context.Context, runID int64) ([]ListRunItemCountsRow, error)
 	ListRunListings(ctx context.Context, runID int64) ([]ListRunListingsRow, error)
 	ListRunSources(ctx context.Context, runID int64) ([]RunSource, error)
+	ListSeedObservations(ctx context.Context, runID int64) ([]RunSeedObservation, error)
+	ListStageItemArtifacts(ctx context.Context, arg ListStageItemArtifactsParams) ([]ListStageItemArtifactsRow, error)
 	ListUnacceptedGapCounts(ctx context.Context, runID int64) ([]ListUnacceptedGapCountsRow, error)
 	MarkRunFromStates(ctx context.Context, arg MarkRunFromStatesParams) (int64, error)
 	PauseRunSource(ctx context.Context, arg PauseRunSourceParams) (int64, error)
@@ -82,11 +84,13 @@ type Querier interface {
 	RecoverRun(ctx context.Context, id int64) error
 	ResetFailedItems(ctx context.Context, arg ResetFailedItemsParams) error
 	ResetOlderFailedStageItems(ctx context.Context, arg ResetOlderFailedStageItemsParams) error
+	SetFetchCloseInputHash(ctx context.Context, arg SetFetchCloseInputHashParams) (int64, error)
 	SetRunState(ctx context.Context, arg SetRunStateParams) error
 	StartRun(ctx context.Context, arg StartRunParams) error
 	UpdateRunItemFenced(ctx context.Context, arg UpdateRunItemFencedParams) (int64, error)
 	UpsertListing(ctx context.Context, arg UpsertListingParams) error
 	UpsertRunDocument(ctx context.Context, arg UpsertRunDocumentParams) error
+	UpsertSeedObservation(ctx context.Context, arg UpsertSeedObservationParams) error
 }
 
 var _ Querier = (*Queries)(nil)

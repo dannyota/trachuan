@@ -75,6 +75,15 @@ func earlierRuns(ctx context.Context, q *store.Queries, r stage.Run) ([]store.Li
 	sort.Slice(out, func(i, j int) bool { return run.CompareRel(out[i].Rel, out[j].Rel) > 0 })
 	return out, nil
 }
+
+// EarlierMembership reads the most recent earlier frozen membership or legacy set.
+func EarlierMembership(ctx context.Context, q *store.Queries, r stage.Run) ([]membership.Entry, error) {
+	rows, err := earlierRuns(ctx, q, r)
+	if err != nil {
+		return nil, err
+	}
+	return earlierMembership(ctx, q, rows, r.Country)
+}
 func earlierMembership(ctx context.Context, q *store.Queries, rows []store.ListEarlierRunsRow, country string) ([]membership.Entry, error) {
 	for _, row := range rows {
 		scope, err := q.GetRunScope(ctx, row.ID)

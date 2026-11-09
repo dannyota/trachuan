@@ -67,3 +67,6 @@ SELECT * FROM run_source WHERE run_id = $1 ORDER BY source COLLATE "C";
 
 -- name: CountPausedSources :one
 SELECT count(*) FROM run_source WHERE run_id = $1 AND state = 'source_paused';
+
+-- name: SetFetchCloseInputHash :execrows
+UPDATE run_scope SET fetch_close_input_hash = $2 WHERE run_id = $1 AND (fetch_close_input_hash IS NULL OR fetch_close_input_hash = $2);

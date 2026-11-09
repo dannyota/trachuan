@@ -42,8 +42,9 @@ CREATE TABLE run_seed_observation (
     stage text NOT NULL DEFAULT 'expand' CHECK (stage = 'expand'),
     item_key text NOT NULL,
     completeness text NOT NULL CHECK (completeness IN ('complete', 'incomplete')),
-    artifact_hash text NOT NULL,
+    artifact_hash text,
     observed_targets jsonb NOT NULL CHECK (jsonb_typeof(observed_targets) = 'array'),
+    CHECK (completeness = 'incomplete' OR artifact_hash IS NOT NULL),
     PRIMARY KEY (run_id, seed_key, item_key),
     FOREIGN KEY (run_id, stage, item_key) REFERENCES run_item (run_id, stage, item_key)
 );

@@ -97,3 +97,12 @@ func priorState(s membership.SupportTuple, central bool, configured, complete ma
 	}
 	return "removed"
 }
+
+func superseded(old membership.SupportTuple, records []membership.EvidenceRecord) bool {
+	for _, record := range records {
+		if record.State == "current" && record.Support.RuleKind == old.RuleKind && record.Support.RuleValue == old.RuleValue {
+			return true
+		}
+	}
+	return false
+}

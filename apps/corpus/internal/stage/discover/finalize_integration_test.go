@@ -235,9 +235,10 @@ func TestFinalize_LegacySnapshotNoop(t *testing.T) {
 		t.Fatalf("scope count = %d, err = %v", n, err)
 	}
 }
-func TestExpectedSet_FromMembership(t *testing.T) {
+func TestExpectedSet_ExpandedWhenStaged(t *testing.T) {
 	f := newSeedFixture(t)
-	r := f.run("20261103", 1)
+	r := f.run("20990103", 1)
+	r.Snapshot.Stages = []string{"discover", "expand", "fetch"}
 	entries := []membership.Entry{seedEntry("1"), seedEntry("2"), seedEntry("3"), seedEntry("4")}
 	entries[1].Disposition = "withdrawn"
 	entries[2].Disposition = "scope_removed"
@@ -390,5 +391,81 @@ func TestFinalize_AmbiguousNamedLookupRetainsEligiblePrior(t *testing.T) {
 	}
 	if got := f.read(r).Entries[0].Disposition; got != "active" {
 		t.Fatal(got)
+	}
+}
+
+func TestFinalize_FrozenDiscoveryIgnoresRelationEvidence(t *testing.T) {
+	f := newSeedFixture(t)
+	r := f.run("20990103", 1)
+	f.item(r, "vbpl:central", true, "1")
+	f.listing(r, "1", source.SelectionRule{Kind: "agency", Value: "62"})
+	mustFinalize(t, f, r)
+	relation := membership.EvidenceRecord{DocumentKey: "vn:vbpl:1", Stage: "discover", ItemKey: "vbpl:central", State: "removed", Support: seedTuple("relation", "vn:vbpl:2|A")}
+	if err := membership.RecordEvidence(f.ctx, store.New(f.db), r.ID, relation); err != nil {
+		t.Fatal(err)
+	}
+	mustFinalize(t, f, r)
+	if _, err := f.db.Exec(f.ctx, `UPDATE run_membership_evidence SET support_state='removed' WHERE run_id=$1 AND rule_kind='agency'`, r.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.finalize(r); err == nil {
+		t.Fatal("accepted changed direct evidence")
+	}
+}
+
+func TestExpectedSet_RequiresExpandedWhenStaged(t *testing.T) {
+	f := newSeedFixture(t)
+	r := f.run("20990103", 1)
+	r.Snapshot.Stages = []string{"discover", "expand", "fetch"}
+	f.previous(r, seedEntry("1"))
+	if _, err := ExpectedSet(f.ctx, f.db, r); err == nil {
+		t.Fatal("accepted unfrozen expanded membership")
+	}
+}
+func TestExpectedSet_UsesSeedsWhenExpandNotStaged(t *testing.T) {
+	f := newSeedFixture(t)
+	r := f.run("20990103", 1)
+	f.previous(r, seedEntry("1"))
+	if err := membership.PublishPhase(f.ctx, store.New(f.db), r.ID, membership.Expanded, []membership.Entry{seedEntry("2")}); err != nil {
+		t.Fatal(err)
+	}
+	got, err := ExpectedSet(f.ctx, f.db, r)
+	if err != nil || len(got) != 1 || got[0].Key != "vn:vbpl:1" {
+		t.Fatalf("expected=%#v err=%v", got, err)
+	}
+}
+
+func TestFinalize_CurrentRuleSupersedesOlderEvidence(t *testing.T) {
+	f := newSeedFixture(t)
+	for _, rel := range []string{"20990101", "20990102", "20990103"} {
+		r := f.run(rel, 1)
+		f.item(r, "vbpl:central", true, "1", rel)
+		f.listing(r, "1", source.SelectionRule{Kind: "agency", Value: "62"})
+		mustFinalize(t, f, r)
+		s := f.read(r)
+		if len(s.Entries) != 1 || len(s.Entries[0].Supports) != 1 {
+			t.Fatalf("%s entries=%#v", rel, s.Entries)
+		}
+		records, err := membership.ReadEvidence(f.ctx, store.New(f.db), r.ID)
+		if err != nil || len(records) != 1 || records[0].State != "current" {
+			t.Fatalf("%s records=%#v err=%v", rel, records, err)
+		}
+	}
+}
+func TestFinalize_DisappearedRuleDoesNotAccumulate(t *testing.T) {
+	f := newSeedFixture(t)
+	p := f.run("20990101", 1)
+	f.item(p, "vbpl:central", true, "1")
+	f.listing(p, "1", source.SelectionRule{Kind: "agency", Value: "62"})
+	mustFinalize(t, f, p)
+	for _, rel := range []string{"20990102", "20990103"} {
+		r := f.run(rel, 1)
+		f.item(r, "vbpl:central", true, "1")
+		mustFinalize(t, f, r)
+		s := f.read(r)
+		records, err := membership.ReadEvidence(f.ctx, store.New(f.db), r.ID)
+		if err != nil || len(s.Entries) != 1 || len(s.Entries[0].Supports) != 1 || len(records) != 1 || records[0].State != "removed" {
+			t.Fatalf("%s entries=%#v records=%#v err=%v", rel, s.Entries, records, err)
+		}
 	}
 }

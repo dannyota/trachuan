@@ -35,7 +35,7 @@ func verifyFrozenEvidence(ctx context.Context, q *store.Queries, runID int64, me
 		return string(b), nil
 	}
 	for _, record := range existing {
-		if record.Stage != "discover" {
+		if record.Stage != "discover" || (record.Support.RuleKind != "agency" && record.Support.RuleKind != "term" && record.Support.RuleKind != "named") {
 			continue
 		}
 		k, e := key(record)
