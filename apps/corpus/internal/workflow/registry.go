@@ -1,7 +1,11 @@
 // Package workflow coordinates corpus release stages.
 package workflow
 
-import "github.com/dannyota/traquydinh/apps/corpus/internal/stage"
+import (
+	"github.com/dannyota/traquydinh/apps/corpus/internal/stage"
+	"github.com/dannyota/traquydinh/apps/corpus/internal/stage/discover"
+	"github.com/dannyota/traquydinh/apps/corpus/internal/vbpl"
+)
 
 // Registry holds the implemented stages in execution order.
 type Registry struct{ stages []stage.Stage }
@@ -53,7 +57,10 @@ func (r Registry) Recipes(s stage.Snapshot) map[string]string {
 }
 
 // Deps holds dependencies for the default stages.
-type Deps struct{ Env stage.Env }
+type Deps struct {
+	Env  stage.Env
+	VBPL *vbpl.Client
+}
 
 // Default returns the stages compiled into the worker.
-func Default(_ Deps) Registry { return NewRegistry() }
+func Default(deps Deps) Registry { return NewRegistry(discover.New(deps.VBPL)) }
