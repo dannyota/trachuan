@@ -49,8 +49,8 @@
 
 **Interfaces:** Produces the membership storage (class, supporting seeds, evidence hashes), source-neutral document and file row writers, structured retry causes on gaps, the evidence-bearing `LookupResult`/`SearchResult` types (`Query`, `Pages`, `Total`, `Complete`, `ResponseHashes`, items), the fetch-close finalization hook, and the source pause state (`source_paused` storage and checks); exact names come from `source-execution.md`.
 
-- [ ] Tests first: `TestMembership_TypedSupportTuples` (agency, term, named, secondary_probe, relation; snapshot and hash include them), `TestMembership_LeavesOnlyWithoutSupport`, `TestMembership_ClassPrecedenceAndSeeds`, `TestLookupResult_EmptyIsAbsenceOnlyWhenComplete`, `TestFinalize_FencedAndIdempotent`, `TestSourcePause_PersistsAcrossWorkers`, `TestGapCause_RoundTrip`.
-- [ ] Implement; `TestReplay_Histories` must still pass; commit `feat(corpus): shared membership, lookup evidence and source pause contracts`.
+- [x] Tests first: `TestMembership_TypedSupportTuples` (agency, term, named, secondary_probe, relation; snapshot and hash include them), `TestMembership_LeavesOnlyWithoutSupport`, `TestMembership_ClassPrecedenceAndSeeds`, `TestLookupResult_EmptyIsAbsenceOnlyWhenComplete`, `TestFinalize_FencedAndIdempotent`, `TestSourcePause_PersistsAcrossWorkers`, `TestGapCause_RoundTrip`.
+- [x] Implement; `TestReplay_Histories` must still pass; commit `feat(corpus): shared membership, lookup evidence and source pause contracts`.
 
 ### Task 3: Source list and number normalization
 
@@ -58,9 +58,9 @@
 
 **Interfaces:** Produces `source.List.VBPL.NamedNumbers` (entries `number` or `number@YYYY-MM-DD`, parsed into number and optional date; yearless numbers without a date are rejected), `VBPL.SelectionVersion`, `Chinhphu{Keywords, NamedNumbers}`; `SweepAgencies` becomes the local selection agencies and `Keywords` the local terms, while `KeywordAgencies` stays parseable for older snapshots and leaves `sources/vn.yaml`; a selection function over listing items returning typed supports; query identity hashing for the central listing (source, type, level, no agencies, no keyword, page size) and lookups (option, mode, number); `retrieval.NormalizeNumber` folding Cyrillic look-alikes.
 
-- [ ] Tests first: `TestParse_NamedNumbersAndChinhphu`, `TestParse_YearlessNamedNeedsDate`, `TestSelect_AgencyAndTermSupports`, `TestSelect_ContiguousNFCPhraseNoFolding` (52/2024 title "không dung tiền mặt" does not match), `TestQueryIdentity_CentralListingAndLookup`, `TestNormalize_CyrillicLookalikes` (`280/2026/NĐ-CР` with Cyrillic `Р` equals `280/2026/NĐ-CP`), `TestNormalize_ExistingCasesUnchanged`.
-- [ ] Implement; `sources/vn.yaml` gets the 32 approved terms, 12 named numbers and the chinhphu lists from sources.md.
-- [ ] Commit `feat(corpus): source list for named numbers and the chinhphu source`.
+- [x] Tests first: `TestParse_NamedNumbersAndChinhphu`, `TestParse_YearlessNamedNeedsDate`, `TestSelect_AgencyAndTermSupports`, `TestSelect_ContiguousNFCPhraseNoFolding` (52/2024 title "không dung tiền mặt" does not match), `TestQueryIdentity_CentralListingAndLookup`, `TestNormalize_CyrillicLookalikes` (`280/2026/NĐ-CР` with Cyrillic `Р` equals `280/2026/NĐ-CP`), `TestNormalize_ExistingCasesUnchanged`.
+- [x] Implement; `sources/vn.yaml` gets the 32 approved terms, 12 named numbers and the chinhphu lists from sources.md.
+- [x] Commit `feat(corpus): source list for named numbers and the chinhphu source`.
 
 ### Task 4: VBPL client lookups
 

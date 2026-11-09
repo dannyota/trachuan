@@ -1,5 +1,6 @@
 country: vn
 vbpl:
+  selection_version: 1
   sweep_agencies: ["62", "908"]
   keyword_agencies: ["55", "56", "1", "57", "3", "14", "169", "2"]
   keywords:
@@ -29,6 +30,28 @@ vbpl:
     - "tài sản số"
     - "tài sản mã hóa"
     - "kinh doanh liên tục"
+    - "công nghiệp công nghệ số"
+    - "ngân hàng"
+    - "an toàn hệ thống thông tin"
+    - "định danh và xác thực điện tử"
+    - "an ninh thông tin"
+    - "thông tin cá nhân"
+  named_numbers:
+    - "71/2025/QH15"
+    - "368/2025/NĐ-CP"
+    - "58/2021/NĐ-CP"
+    - "18/2018/TT-NHNN"
+    - "134/2025/QH15"
+    - "53/2026/TT-NHNN"
+    - "142/2026/NĐ-CP"
+    - "88/2019/NĐ-CP"
+    - "143/2021/NĐ-CP"
+    - "340/2025/NĐ-CP"
+    - "52/2024/NĐ-CP"
+    - "304/2025/NĐ-CP"
+chinhphu:
+  keywords: ["trí tuệ nhân tạo"]
+  named_numbers: ["142/2026/NĐ-CP", "33/2026/QĐ-TTg", "05/2026/TT-BKHCN", "134/2025/QH15"]
 relation_codes:
   "1": {kind: "repeals", label: "repeals", amending: true, superseding: true}
   "2": {kind: "implements", label: "implements", amending: false, superseding: false}

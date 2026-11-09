@@ -10,10 +10,13 @@ import (
 	"golang.org/x/text/unicode/norm"
 )
 
+// NumberNormalizationVersion identifies the document number matching rules.
+const NumberNormalizationVersion = "document-number/2"
+
 // NormalizeNumber applies the corpus document-number normalization.
 func NormalizeNumber(s string) string {
 	s = strings.ToUpper(norm.NFC.String(strings.TrimSpace(s)))
-	s = strings.ReplaceAll(s, "Đ", "D")
+	s = strings.NewReplacer("Đ", "D", "А", "A", "В", "B", "Е", "E", "К", "K", "М", "M", "Н", "H", "О", "O", "Р", "P", "С", "C", "Т", "T", "Х", "X").Replace(s)
 	var b strings.Builder
 	r := []rune(s)
 	for i, c := range r {
