@@ -13,3 +13,4 @@ One line per item: date, area, finding, source.
 - 2026-11-09, retrieval, measure hybrid recall (Vietnamese_Embedding_v2 dense plus BM25, RRF) against banhmi's 93.8% before release 1, docs/research/embedder-2026-11.md.
 - 2026-11-09, deploy, measure Vietnamese_Embedding_v2 ONNX FP32 latency and RSS on the target Graviton host in the acceptance gates, ADR 0009.
 - 2026-11-09, retrieval, revisit Harrier-0.6B with a full-corpus run if hybrid results leave a gap; it led MRR@8 on the screening corpus, ADR 0009.
+- 2026-11-09, deploy, check t4g burstable CPU credits under sustained embedder load in the host acceptance gates; credit exhaustion would raise query latency, final review of the spikes branch.

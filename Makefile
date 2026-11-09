@@ -14,7 +14,7 @@ pre-push: ## Static checks before pushing
 	bash scripts/pre-push.sh
 
 docs-fmt: ## Format human-read Markdown with Prettier
-	npx prettier --write "**/*.md" "!**/AGENTS.md" "!**/CLAUDE.md" "!instructions/**" "!docs/plans/**" "!.claude/**" "!.codex/**" "!**/node_modules/**"
+	npx prettier --write "**/*.md" "!**/AGENTS.md" "!**/CLAUDE.md" "!instructions/**" "!docs/plans/**" "!.claude/**" "!.codex/**" "!**/node_modules/**" "!**/.venv/**"
 
 test: ## Unit tests (added with the first Go module)
 	@echo "no modules yet"

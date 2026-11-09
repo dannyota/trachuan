@@ -1,6 +1,7 @@
 """Throwaway spike: build the screening corpus spike.screen_chunk.
 
 Union of (1) every chunk of every document an expected golden citation names,
+including its alt_doc_numbers,
 (2) the top 50 chunks per golden query from the two fully embedded models (qwen3
 stored vectors, vi_v2) as hard negatives, (3) a seeded random sample of 15,000
 chunks. Models are compared on this subset first; finalists run on the full corpus.
@@ -21,7 +22,8 @@ FULL_TABLES = {"qwen3": "gold.chunk_embedding", "vi_v2": "spike.chunk_vector_vi_
 
 def main():
     cases = json.loads(GOLDEN.read_text())
-    expected_numbers = {ec["doc_number"] for c in cases for ec in c["expected_citations"]}
+    expected_numbers = {n for c in cases for ec in c["expected_citations"]
+                        for n in [ec["doc_number"], *ec.get("alt_doc_numbers", [])]}
     conn = psycopg.connect(os.environ["DATABASE_URL"], autocommit=True)
     docs = conn.execute("select id, coalesce(doc_number, '') from silver.document").fetchall()
     doc_ids = [d for d, num in docs if num and any(_same_doc(num, e) for e in expected_numbers)]

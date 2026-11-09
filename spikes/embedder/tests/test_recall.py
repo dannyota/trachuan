@@ -43,3 +43,9 @@ def test_recall_is_micro_averaged_over_expected_citations():
     expected = {"c": [{"doc_number": "A/2020/TT", "article": "1"}, {"doc_number": "A/2020/TT", "article": "2"}],
                 "abstain-case": []}
     assert recall_at_k(ranked, expected, 8) == 0.5
+
+
+def test_matches_accepts_alternate_document_numbers():
+    expected = {"doc_number": "09/2020/TT-NHNN", "alt_doc_numbers": ["21/VBHN-NHNN"], "article": "5"}
+    assert matches(expected, Hit("21/vbhn-nhnn", "Điều 5, Khoản 1"))
+    assert not matches(expected, Hit("22/VBHN-NHNN", "Điều 5"))

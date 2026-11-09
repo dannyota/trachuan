@@ -7,15 +7,15 @@ own after every plan is gone. Do not use em dashes.
 
 ## Ownership
 
-| Information                             | Owner                                   |
-| --------------------------------------- | --------------------------------------- |
-| Intended product or architecture        | `docs/design/`                          |
-| Numeric limits                          | `docs/design/budgets.md`                |
-| One accepted choice and its trade-offs  | `docs/adr/`                             |
-| Current implemented system              | Code, configuration, OpenAPI, `docs/architecture.md` |
-| Work order and delivery state           | `docs/plans/`                           |
-| Operational procedure                   | `docs/runbooks/`                        |
-| Contributor guidance                    | Repository or component `README.md`     |
+| Information                            | Owner                                                |
+| -------------------------------------- | ---------------------------------------------------- |
+| Intended product or architecture       | `docs/design/`                                       |
+| Numeric limits                         | `docs/design/budgets.md`                             |
+| One accepted choice and its trade-offs | `docs/adr/`                                          |
+| Current implemented system             | Code, configuration, OpenAPI, `docs/architecture.md` |
+| Work order and delivery state          | `docs/plans/`                                        |
+| Operational procedure                  | `docs/runbooks/`                                     |
+| Contributor guidance                   | Repository or component `README.md`                  |
 
 ## Writing
 
@@ -46,5 +46,5 @@ own after every plan is gone. Do not use em dashes.
 ## ADR rules
 
 A record has Status, Context, Decision, Consequences, Alternatives rejected and
-History. Changing a decision in force means updating its record with the
-owner's approval and a History line. A new record is for a new topic only.
+History. Changing a decision in force means updating its record with the owner's
+approval and a History line. A new record is for a new topic only.

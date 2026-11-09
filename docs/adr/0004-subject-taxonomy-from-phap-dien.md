@@ -4,27 +4,40 @@ Status: accepted 2026-11-08.
 
 ## Context
 
-Agents need to narrow a search by subject before retrieving. VBPL classifies only at document level. Bộ pháp điển (45 chủ đề, 271 đề mục, with phần/chương/mục inside each đề mục) places every in-force article in a tree, but its public portal now requires authentication; a 2023 official offline package exists with 86,388 placed articles linked to VBPL ItemIDs.
+Agents need to narrow a search by subject before retrieving. VBPL classifies
+only at document level. Bộ pháp điển (45 chủ đề, 271 đề mục, with
+phần/chương/mục inside each đề mục) places every in-force article in a tree, but
+its public portal now requires authentication; a 2023 official offline package
+exists with 86,388 placed articles linked to VBPL ItemIDs.
 
 ## Decision
 
-Levels 1 to 4 of the subject tree come from the 2023 codification package, keeping names and codes. Custom nodes are declared in a YAML file for subjects the codification lacks. Articles matching the package receive seed labels; the rest are classified by an LLM in batches (document, then chapter with all its articles) using embedding-selected candidate nodes; manual overrides win. The subject filter never hides results: search runs over the whole corpus and reports the count outside the filter.
+Levels 1 to 4 of the subject tree come from the 2023 codification package,
+keeping names and codes. Custom nodes are declared in a YAML file for subjects
+the codification lacks. Articles matching the package receive seed labels; the
+rest are classified by an LLM in batches (document, then chapter with all its
+articles) using embedding-selected candidate nodes; manual overrides win. The
+subject filter never hides results: search runs over the whole corpus and
+reports the count outside the filter.
 
 ## Consequences
 
-Official structure with little hand work; a ground-truth set to measure the classifier. The package is from 2023, so post-2023 law depends on the LLM layer. Pháp điển data is never served to users.
+Official structure with little hand work; a ground-truth set to measure the
+classifier. The package is from 2023, so post-2023 law depends on the LLM layer.
+Pháp điển data is never served to users.
 
 ## Alternatives rejected
 
-A hand-written tree. Pure embedding zero-shot classification. A fine-tuned classifier. Hard-cut subject filtering.
+A hand-written tree. Pure embedding zero-shot classification. A fine-tuned
+classifier. Hard-cut subject filtering.
 
 ## History
 
 - 2026-11-08: accepted in the brainstorming conversation.
 - 2026-11-08: after design review findings S-08 to S-11, fixed the precedence
-  (manual over seed over llm), moved classification after embedding, and
-  defined the import mapping and code rules in design/taxonomy.md.
+  (manual over seed over llm), moved classification after embedding, and defined
+  the import mapping and code rules in design/taxonomy.md.
 - 2026-11-09: join spike ([research note](../research/phapdien-join-2026-11.md))
-  found seeds for 25.3% of primary corpus articles and 91.6% of chủ đề 22
-  package articles; added Tiểu mục flattening, STT collision and empty đề mục
-  rules to the import mapping.
+  found seeds for 25.3% of primary corpus articles (24.7% through the VBPL
+  ItemID alone) and 91.6% of chủ đề 22 package articles; added Tiểu mục
+  flattening, STT collision and empty đề mục rules to the import mapping.

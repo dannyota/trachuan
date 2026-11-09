@@ -1,13 +1,16 @@
 """Throwaway spike: dense ranking and recall/MRR with banhmi's golden matching rule.
 
 Matching rule (from banhmi pkg/eval/eval.go, rewritten, not copied): a hit matches
-an expected citation when the document numbers agree after upper-casing and
-dropping every character outside [A-Za-z0-9] (equality or containment), and, for
+an expected citation when its document number agrees with the expected number or
+one of its alt_doc_numbers after upper-casing and dropping every character
+outside [A-Za-z0-9] (equality or containment), and, for
 each of article, clause and point the expectation names, the hit citation has a
 token equal to the keyword ("điều", "khoản", "điểm") followed by a token equal to
 the wanted value after trimming parentheses and dots. Recall is micro-averaged
 over expected citations; MRR is the mean reciprocal rank over cases that expect
-at least one citation.
+at least one citation. Not applied: banhmi's relation_ok credit (a hit whose
+confirmed relations name the expected document); dense chunk hits carry no
+relations here. Two of the 96 golden citations use it.
 """
 
 import re
@@ -47,7 +50,8 @@ def _citation_has(citation: str, keyword: str, want: str) -> bool:
 
 def matches(expected: dict, hit: Hit) -> bool:
     """Report whether hit satisfies one expected citation from golden.json."""
-    if not _same_doc(hit.doc_number or "", expected["doc_number"]):
+    numbers = [expected["doc_number"], *expected.get("alt_doc_numbers", [])]
+    if not any(_same_doc(hit.doc_number or "", n) for n in numbers):
         return False
     return all(
         _citation_has(hit.citation, kw, expected[field])
