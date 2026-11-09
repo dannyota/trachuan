@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"danny.vn/trachuan/apps/corpus/internal/store"
 )
@@ -191,6 +192,27 @@ func CloseStage(ctx context.Context, env Env, st Stage, in StageInput, following
 	}
 	if priorReason != "" {
 		result.Failed, result.Reason = true, priorReason
+		return result, nil
+	}
+	sources, err := q.ListRunSources(ctx, in.RunID)
+	if err != nil {
+		return result, fmt.Errorf("list run sources: %w", err)
+	}
+	var paused []string
+	for _, source := range sources {
+		if source.State == "source_paused" {
+			paused = append(paused, source.Source)
+		}
+	}
+	if len(paused) > 0 {
+		reason := "source_paused: " + strings.Join(paused, ", ")
+		if err = q.SetRunState(ctx, store.SetRunStateParams{ID: in.RunID, State: "failed", Message: &reason}); err != nil {
+			return result, fmt.Errorf("mark paused run failed: %w", err)
+		}
+		if err = tx.Commit(ctx); err != nil {
+			return result, fmt.Errorf("commit paused run failure: %w", err)
+		}
+		result.Failed, result.Reason = true, reason
 		return result, nil
 	}
 	if alreadyClosed {

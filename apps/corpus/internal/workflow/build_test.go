@@ -377,3 +377,27 @@ func TestBuildRelease_FinalizationFailureReason(t *testing.T) {
 	}
 	env.AssertExpectations(t)
 }
+
+func TestBuildRelease_PausedSourceEndsFailed(t *testing.T) {
+	env := workflowTest(t)
+	planMock(env, stage.PlanResult{})
+	var state atomic.Value
+	state.Store("running")
+	const reason = "source_paused: vbpl"
+	env.OnActivity("CloseStage", mock.Anything, mock.Anything).Return(func(context.Context, stage.StageInput) (stage.CloseResult, error) {
+		state.Store("failed")
+		return stage.CloseResult{Failed: true, Reason: reason}, nil
+	}).Once()
+	env.OnActivity("MarkRun", mock.Anything, mock.Anything).Return(func(_ context.Context, in stage.MarkInput) (bool, error) {
+		if len(in.From) != 1 || in.From[0] != state.Load().(string) || in.To != "failed" || in.Message != reason {
+			return false, nil
+		}
+		state.Store(in.To)
+		return true, nil
+	}).Once()
+	env.ExecuteWorkflow(BuildRelease, testInput())
+	if err := env.GetWorkflowError(); err != nil || state.Load() != "failed" {
+		t.Fatalf("state=%v err=%v", state.Load(), err)
+	}
+	env.AssertExpectations(t)
+}

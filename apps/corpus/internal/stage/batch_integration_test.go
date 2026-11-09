@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"danny.vn/trachuan/apps/corpus/internal/artifact"
+	"danny.vn/trachuan/apps/corpus/internal/sourcegate"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -274,5 +275,34 @@ func TestRunBatch_ProcessSourceDataErrorIsGap(t *testing.T) {
 	}
 	if err != nil || state != "gap" || gaps != 1 || result.Failed != 0 {
 		t.Fatalf("result=%+v state=%s gaps=%d err=%v", result, state, gaps, err)
+	}
+}
+
+func TestBatch_SourcePausedFailsFastWithoutRetry(t *testing.T) {
+	env, id, s := batchSetup(t)
+	s.process = func(context.Context, Env, Run, Item) (Output, error) {
+		return Output{}, RetryableGap(fmt.Errorf("wrapped: %w", sourcegate.ErrSourcePaused), "source_unavailable")
+	}
+	result, err := batchRun(env, id, s, 1, func(...any) {})
+	state, gaps := batchState(t, env.DB, id)
+	var message string
+	queryErr := env.DB.QueryRow(context.Background(), `SELECT message FROM run_item WHERE run_id=$1`, id).Scan(&message)
+	if err != nil || queryErr != nil || result.Failed != 1 || result.Pending != 0 || state != "failed" || message != "source_paused" || gaps != 0 || s.calls != 1 {
+		t.Fatalf("result=%+v state=%s message=%s gaps=%d calls=%d err=%v query=%v", result, state, message, gaps, s.calls, err, queryErr)
+	}
+}
+
+func TestBatch_RechecksSourcesFromFailedProcess(t *testing.T) {
+	env, id, s := batchSetup(t)
+	batchExec(t, env.DB, `INSERT INTO run_source(run_id,source,state,pause_reason) VALUES ($1,'vbpl','source_paused','challenge')`, id)
+	s.process = func(context.Context, Env, Run, Item) (Output, error) {
+		return Output{Sources: []string{"vbpl"}}, SourceData(errors.New("invalid"))
+	}
+	result, err := batchRun(env, id, s, 1, func(...any) {})
+	state, gaps := batchState(t, env.DB, id)
+	var message string
+	queryErr := env.DB.QueryRow(context.Background(), `SELECT message FROM run_item WHERE run_id=$1`, id).Scan(&message)
+	if err != nil || queryErr != nil || result.Failed != 1 || state != "failed" || message != "source_paused" || gaps != 0 {
+		t.Fatalf("result=%+v state=%s message=%s gaps=%d err=%v query=%v", result, state, message, gaps, err, queryErr)
 	}
 }

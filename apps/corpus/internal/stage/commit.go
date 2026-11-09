@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"danny.vn/trachuan/apps/corpus/internal/artifact"
+	"danny.vn/trachuan/apps/corpus/internal/sourcegate"
 	"danny.vn/trachuan/apps/corpus/internal/store"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -24,12 +25,18 @@ type Commit struct {
 	ArtifactRows func(context.Context, pgx.Tx, int64) error
 	RunRows      func(context.Context, pgx.Tx) error
 	Gaps         []Gap
-	State        string
-	Message      string
+	// Sources lists every source the item contacted or depends on.
+	Sources []string
+	State   string
+	Message string
 }
 
 // CommitItem commits an item and its rows if its fence is current.
 func CommitItem(ctx context.Context, pool *pgxpool.Pool, c Commit) (applied bool, err error) {
+	return commitItem(ctx, pool, &c)
+}
+
+func commitItem(ctx context.Context, pool *pgxpool.Pool, c *Commit) (applied bool, err error) {
 	tx, err := pool.Begin(ctx)
 	if err != nil {
 		return false, fmt.Errorf("begin item commit: %w", err)
@@ -43,6 +50,17 @@ func CommitItem(ctx context.Context, pool *pgxpool.Pool, c Commit) (applied bool
 	}
 	if int(generation) != c.Generation {
 		return false, nil
+	}
+
+	for _, source := range c.Sources {
+		row, sourceErr := q.GetRunSourceForShare(ctx, store.GetRunSourceForShareParams{RunID: c.RunID, Source: source})
+		if sourceErr != nil && !errors.Is(sourceErr, pgx.ErrNoRows) {
+			return false, fmt.Errorf("lock source for item commit: %w", sourceErr)
+		}
+		if sourceErr == nil && row.State != "active" {
+			*c = failedCommit(*c, sourcegate.ErrSourcePaused)
+			break
+		}
 	}
 
 	var artifactID *int64

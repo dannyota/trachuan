@@ -114,3 +114,17 @@ func TestRecover_PreservesScopeFailure(t *testing.T) {
 		t.Fatalf("start after recovery: %v", err)
 	}
 }
+
+func TestPublishable_ReportsPausedSource(t *testing.T) {
+	db, id := gapDB(t)
+	if _, err := db.Exec(context.Background(), `DELETE FROM gap WHERE run_id=$1`, id); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(context.Background(), `INSERT INTO run_source(run_id,source,state,pause_reason) VALUES ($1,'vbpl','source_paused','challenge')`, id); err != nil {
+		t.Fatal(err)
+	}
+	ok, reasons, err := Publishable(context.Background(), db, id)
+	if err != nil || ok || !strings.Contains(strings.Join(reasons, ","), "paused source") {
+		t.Fatalf("ok=%v reasons=%v err=%v", ok, reasons, err)
+	}
+}

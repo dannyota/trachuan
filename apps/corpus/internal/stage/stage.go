@@ -23,6 +23,8 @@ type Output struct {
 	Artifact       *artifact.Result
 	State, Message string
 	Gaps           []Gap
+	// Sources lists every source the item contacted or depends on.
+	Sources []string
 }
 
 // Resolution describes the run-specific rows and gaps for an artifact.

@@ -28,6 +28,24 @@ func (q *Queries) ClearFinal(ctx context.Context, runID int64) error {
 	return err
 }
 
+const clearRunSource = `-- name: ClearRunSource :execrows
+UPDATE run_source SET state = 'active', cleared_at = now()
+WHERE run_id = $1 AND source = $2 AND state = 'source_paused'
+`
+
+type ClearRunSourceParams struct {
+	RunID  int64
+	Source string
+}
+
+func (q *Queries) ClearRunSource(ctx context.Context, arg ClearRunSourceParams) (int64, error) {
+	result, err := q.db.Exec(ctx, clearRunSource, arg.RunID, arg.Source)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const clearSeeds = `-- name: ClearSeeds :exec
 UPDATE run_scope SET seeds_snapshot = NULL, seeds_hash = NULL WHERE run_id = $1
 `
@@ -37,12 +55,38 @@ func (q *Queries) ClearSeeds(ctx context.Context, runID int64) error {
 	return err
 }
 
+const countPausedSources = `-- name: CountPausedSources :one
+SELECT count(*) FROM run_source WHERE run_id = $1 AND state = 'source_paused'
+`
+
+func (q *Queries) CountPausedSources(ctx context.Context, runID int64) (int64, error) {
+	row := q.db.QueryRow(ctx, countPausedSources, runID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const ensureRunScope = `-- name: EnsureRunScope :exec
 INSERT INTO run_scope (run_id) VALUES ($1) ON CONFLICT DO NOTHING
 `
 
 func (q *Queries) EnsureRunScope(ctx context.Context, runID int64) error {
 	_, err := q.db.Exec(ctx, ensureRunScope, runID)
+	return err
+}
+
+const ensureRunSource = `-- name: EnsureRunSource :exec
+INSERT INTO run_source (run_id, source, state) VALUES ($1, $2, 'active')
+ON CONFLICT (run_id, source) DO NOTHING
+`
+
+type EnsureRunSourceParams struct {
+	RunID  int64
+	Source string
+}
+
+func (q *Queries) EnsureRunSource(ctx context.Context, arg EnsureRunSourceParams) error {
+	_, err := q.db.Exec(ctx, ensureRunSource, arg.RunID, arg.Source)
 	return err
 }
 
@@ -62,6 +106,54 @@ func (q *Queries) GetRunScope(ctx context.Context, runID int64) (RunScope, error
 		&i.FinalSnapshot,
 		&i.FinalHash,
 		&i.FetchCloseInputHash,
+	)
+	return i, err
+}
+
+const getRunSourceForShare = `-- name: GetRunSourceForShare :one
+SELECT run_id, source, state, pause_reason, evidence_ref, paused_at, cleared_at FROM run_source WHERE run_id = $1 AND source = $2 FOR SHARE
+`
+
+type GetRunSourceForShareParams struct {
+	RunID  int64
+	Source string
+}
+
+func (q *Queries) GetRunSourceForShare(ctx context.Context, arg GetRunSourceForShareParams) (RunSource, error) {
+	row := q.db.QueryRow(ctx, getRunSourceForShare, arg.RunID, arg.Source)
+	var i RunSource
+	err := row.Scan(
+		&i.RunID,
+		&i.Source,
+		&i.State,
+		&i.PauseReason,
+		&i.EvidenceRef,
+		&i.PausedAt,
+		&i.ClearedAt,
+	)
+	return i, err
+}
+
+const getRunSourceForUpdate = `-- name: GetRunSourceForUpdate :one
+SELECT run_id, source, state, pause_reason, evidence_ref, paused_at, cleared_at FROM run_source WHERE run_id = $1 AND source = $2 FOR UPDATE
+`
+
+type GetRunSourceForUpdateParams struct {
+	RunID  int64
+	Source string
+}
+
+func (q *Queries) GetRunSourceForUpdate(ctx context.Context, arg GetRunSourceForUpdateParams) (RunSource, error) {
+	row := q.db.QueryRow(ctx, getRunSourceForUpdate, arg.RunID, arg.Source)
+	var i RunSource
+	err := row.Scan(
+		&i.RunID,
+		&i.Source,
+		&i.State,
+		&i.PauseReason,
+		&i.EvidenceRef,
+		&i.PausedAt,
+		&i.ClearedAt,
 	)
 	return i, err
 }
@@ -91,6 +183,32 @@ func (q *Queries) InsertRunFailure(ctx context.Context, arg InsertRunFailurePara
 		arg.ItemKey,
 		arg.Reason,
 		arg.EvidenceRefs,
+	)
+	return err
+}
+
+const insertRunSourceEvent = `-- name: InsertRunSourceEvent :exec
+INSERT INTO run_source_event (run_id, source, event, reason, evidence_ref, clear_note)
+VALUES ($1, $2, $3, $4, $5, $6)
+`
+
+type InsertRunSourceEventParams struct {
+	RunID       int64
+	Source      string
+	Event       string
+	Reason      *string
+	EvidenceRef *string
+	ClearNote   *string
+}
+
+func (q *Queries) InsertRunSourceEvent(ctx context.Context, arg InsertRunSourceEventParams) error {
+	_, err := q.db.Exec(ctx, insertRunSourceEvent,
+		arg.RunID,
+		arg.Source,
+		arg.Event,
+		arg.Reason,
+		arg.EvidenceRef,
+		arg.ClearNote,
 	)
 	return err
 }
@@ -188,6 +306,63 @@ func (q *Queries) ListRunFailures(ctx context.Context, runID int64) ([]RunFailur
 		return nil, err
 	}
 	return items, nil
+}
+
+const listRunSources = `-- name: ListRunSources :many
+SELECT run_id, source, state, pause_reason, evidence_ref, paused_at, cleared_at FROM run_source WHERE run_id = $1 ORDER BY source COLLATE "C"
+`
+
+func (q *Queries) ListRunSources(ctx context.Context, runID int64) ([]RunSource, error) {
+	rows, err := q.db.Query(ctx, listRunSources, runID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []RunSource
+	for rows.Next() {
+		var i RunSource
+		if err := rows.Scan(
+			&i.RunID,
+			&i.Source,
+			&i.State,
+			&i.PauseReason,
+			&i.EvidenceRef,
+			&i.PausedAt,
+			&i.ClearedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const pauseRunSource = `-- name: PauseRunSource :execrows
+UPDATE run_source SET state = 'source_paused', pause_reason = $1, evidence_ref = $2, paused_at = now(), cleared_at = NULL
+WHERE run_id = $3 AND source = $4 AND state = 'active'
+`
+
+type PauseRunSourceParams struct {
+	Reason      *string
+	EvidenceRef *string
+	RunID       int64
+	Source      string
+}
+
+func (q *Queries) PauseRunSource(ctx context.Context, arg PauseRunSourceParams) (int64, error) {
+	result, err := q.db.Exec(ctx, pauseRunSource,
+		arg.Reason,
+		arg.EvidenceRef,
+		arg.RunID,
+		arg.Source,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const publishExpanded = `-- name: PublishExpanded :execrows

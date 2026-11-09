@@ -214,3 +214,16 @@ func TestCloseStage_LastStageMarksComplete(t *testing.T) {
 		t.Fatalf("next=%v err=%v query=%v", next, err, queryErr)
 	}
 }
+
+func TestCloseStage_PausedSourceBlocksAdvance(t *testing.T) {
+	env, in, s := controlSetup(t)
+	batchExec(t, env.DB, `INSERT INTO run_source(run_id,source,state,pause_reason) VALUES ($1,'vbpl','source_paused','challenge'),($1,'chinhphu','source_paused','denied')`, in.RunID)
+	result, err := CloseStage(context.Background(), env, s, in, "extract")
+	var next, state, message string
+	var failures int
+	queryErr := env.DB.QueryRow(context.Background(), `SELECT next_stage,state,message,(SELECT count(*) FROM run_failure WHERE run_id=$1) FROM run WHERE id=$1`, in.RunID).Scan(&next, &state, &message, &failures)
+	want := "source_paused: chinhphu, vbpl"
+	if err != nil || queryErr != nil || !result.Failed || result.Reason != want || next != "fetch" || state != "failed" || message != want || failures != 0 {
+		t.Fatalf("result=%+v next=%s state=%s message=%s failures=%d err=%v query=%v", result, next, state, message, failures, err, queryErr)
+	}
+}

@@ -220,3 +220,23 @@ func TestGapCause_RoundTrip(t *testing.T) {
 		t.Fatalf("unexpected gap: %+v", got)
 	}
 }
+
+func TestCommitItem_RecheckPausedSourceFailsItem(t *testing.T) {
+	ctx := context.Background()
+	pool, id := setup(t)
+	batchExec(t, pool, `INSERT INTO run_source(run_id,source,state,pause_reason) VALUES ($1,'vbpl','source_paused','challenge')`, id)
+	c := testCommit(id)
+	c.Sources = []string{"chinhphu", "vbpl"}
+	c.Artifact = &artifact.Result{Path: "path", SHA256: "sha", InputHash: "input"}
+	c.Gaps = []Gap{{Kind: "missing", Detail: "missing"}}
+	c.RunRows = func(context.Context, pgx.Tx) error { t.Error("run rows called"); return nil }
+	c.ArtifactRows = func(context.Context, pgx.Tx, int64) error { t.Error("artifact rows called"); return nil }
+	if applied, err := CommitItem(ctx, pool, c); err != nil || !applied {
+		t.Fatalf("applied=%v err=%v", applied, err)
+	}
+	var state, message string
+	var artifacts, gaps int
+	if err := pool.QueryRow(ctx, `SELECT state,message,(SELECT count(*) FROM artifact),(SELECT count(*) FROM gap) FROM run_item WHERE run_id=$1`, id).Scan(&state, &message, &artifacts, &gaps); err != nil || state != "failed" || message != "source_paused" || artifacts != 0 || gaps != 0 {
+		t.Fatalf("state=%s message=%s artifacts=%d gaps=%d err=%v", state, message, artifacts, gaps, err)
+	}
+}

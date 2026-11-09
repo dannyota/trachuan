@@ -63,9 +63,16 @@ func Publishable(ctx context.Context, db *pgxpool.Pool, runID int64) (bool, []st
 	if err != nil {
 		return false, nil, fmt.Errorf("list blocking run failures: %w", err)
 	}
+	paused, err := q.CountPausedSources(ctx, runID)
+	if err != nil {
+		return false, nil, fmt.Errorf("count paused sources: %w", err)
+	}
 	var reasons []string
 	for _, code := range codes {
 		reasons = append(reasons, fmt.Sprintf("run failure %s", code))
+	}
+	if paused > 0 {
+		reasons = append(reasons, fmt.Sprintf("%d paused sources", paused))
 	}
 	if items > 0 {
 		reasons = append(reasons, fmt.Sprintf("%d pending or failed items", items))

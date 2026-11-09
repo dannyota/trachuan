@@ -15,11 +15,14 @@ type Querier interface {
 	ArtifactPathReferenced(ctx context.Context, arg ArtifactPathReferencedParams) (bool, error)
 	ClearExpanded(ctx context.Context, runID int64) error
 	ClearFinal(ctx context.Context, runID int64) error
+	ClearRunSource(ctx context.Context, arg ClearRunSourceParams) (int64, error)
 	ClearSeeds(ctx context.Context, runID int64) error
 	CountIncompleteItems(ctx context.Context, runID int64) (int64, error)
+	CountPausedSources(ctx context.Context, runID int64) (int64, error)
 	CountUnacceptedGaps(ctx context.Context, runID int64) (int64, error)
 	CreateRun(ctx context.Context, arg CreateRunParams) error
 	EnsureRunScope(ctx context.Context, runID int64) error
+	EnsureRunSource(ctx context.Context, arg EnsureRunSourceParams) error
 	GetArtifactID(ctx context.Context, arg GetArtifactIDParams) (int64, error)
 	GetBatchRun(ctx context.Context, id int64) (Run, error)
 	GetBatchRunState(ctx context.Context, id int64) (string, error)
@@ -34,6 +37,8 @@ type Querier interface {
 	GetRunGeneration(ctx context.Context, id int64) (int32, error)
 	GetRunGenerationForShare(ctx context.Context, id int64) (int32, error)
 	GetRunScope(ctx context.Context, runID int64) (RunScope, error)
+	GetRunSourceForShare(ctx context.Context, arg GetRunSourceForShareParams) (RunSource, error)
+	GetRunSourceForUpdate(ctx context.Context, arg GetRunSourceForUpdateParams) (RunSource, error)
 	InsertArtifact(ctx context.Context, arg InsertArtifactParams) (int64, error)
 	InsertChunk(ctx context.Context, arg InsertChunkParams) error
 	InsertDocument(ctx context.Context, arg InsertDocumentParams) error
@@ -45,6 +50,7 @@ type Querier interface {
 	InsertRelation(ctx context.Context, arg InsertRelationParams) error
 	InsertRunFailure(ctx context.Context, arg InsertRunFailureParams) error
 	InsertRunItem(ctx context.Context, arg InsertRunItemParams) error
+	InsertRunSourceEvent(ctx context.Context, arg InsertRunSourceEventParams) error
 	ListBlockingRunFailureCodes(ctx context.Context, arg ListBlockingRunFailureCodesParams) ([]string, error)
 	ListChunkInputs(ctx context.Context, runID int64) ([]ListChunkInputsRow, error)
 	ListChunks(ctx context.Context, artifactID int64) ([]Chunk, error)
@@ -61,8 +67,10 @@ type Querier interface {
 	ListRunFailures(ctx context.Context, runID int64) ([]RunFailure, error)
 	ListRunGaps(ctx context.Context, arg ListRunGapsParams) ([]Gap, error)
 	ListRunItemCounts(ctx context.Context, runID int64) ([]ListRunItemCountsRow, error)
+	ListRunSources(ctx context.Context, runID int64) ([]RunSource, error)
 	ListUnacceptedGapCounts(ctx context.Context, runID int64) ([]ListUnacceptedGapCountsRow, error)
 	MarkRunFromStates(ctx context.Context, arg MarkRunFromStatesParams) (int64, error)
+	PauseRunSource(ctx context.Context, arg PauseRunSourceParams) (int64, error)
 	PublishExpanded(ctx context.Context, arg PublishExpandedParams) (int64, error)
 	PublishFinal(ctx context.Context, arg PublishFinalParams) (int64, error)
 	PublishSeeds(ctx context.Context, arg PublishSeedsParams) (int64, error)
