@@ -73,9 +73,27 @@ retained releases.
 
 ## Pipeline
 
-Parser limits: 50 MB per file, 5 minutes per document, 500 OCR pages. Activity
-batch 100 documents. Submission polling every 5 minutes; `deadline_at` 26 hours
-after submission; `preparing` rows become uncertain after 10 minutes.
+Parser limits: 50 MB per file, 5 minutes per document, 500 OCR pages.
+
+Activity batch 100 items; a heartbeat every 20 seconds while a batch runs. Batch
+start-to-close timeout 1 hour; heartbeat timeout 2 minutes. At most 5 attempts,
+with retry backoff from 30 seconds to 10 minutes. A `starting` run row is stale
+after 2 minutes.
+
+VBPL ingest bounds: API response 20 MB; provision tree depth 32 and 50,000
+nodes; at most 3 listing passes per query.
+
+VBPL: at most 8 requests per second and 8 in flight by default
+(`CORPUS_VBPL_RPS`, `CORPUS_VBPL_IN_FLIGHT`), 8 stage batches in flight,
+measured 2026-11-09 (10.5 requests per second at concurrency 8, p50 636 ms, no
+errors); request timeout 30 seconds. Retry HTTP 429, HTTP 5xx and timeouts 3
+times, after 2, 8 and 30 seconds.
+
+Attachment hosts: `CORPUS_VBPL_FILE_HOSTS` is a comma-separated allowlist,
+default `s3-han02.fptcloud.com`.
+
+Submission polling every 5 minutes; `deadline_at` 26 hours after submission;
+`preparing` rows become uncertain after 10 minutes.
 
 ## Disk budget (host, estimates)
 

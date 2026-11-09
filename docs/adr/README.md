@@ -17,3 +17,4 @@ only for a new topic.
 | [0007](0007-nuxt-frontend.md)                    | Nuxt 4 frontend with English routes                                |
 | [0008](0008-write-path-temporal-self-hosted.md)  | Write path on self-hosted Temporal, worker on the MacBook          |
 | [0009](0009-dense-embedding-recipe.md)           | Dense embedding recipe: Vietnamese_Embedding_v2, ONNX FP32 queries |
+| [0010](0010-retrieval-evaluation-for-agents.md)  | Retrieval evaluation for agent consumers                           |

@@ -1,0 +1,144 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event_name }}-${{ github.event_name == 'push' && github.run_id || github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'push' }}
+
+jobs:
+  preflight:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      go: ${{ steps.paths.outputs.go }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - id: paths
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          go=true
+          if [ "$EVENT_NAME" = pull_request ]; then
+            paths=$(mktemp)
+            git diff --no-ext-diff --no-textconv --no-renames --name-only -z "$BASE_SHA...$HEAD_SHA" -- > "$paths"
+            go=false
+            while IFS= read -r -d '' path; do
+              case "$path" in
+                docs/*.md) ;;
+                *.md) [[ "$path" != */* ]] || go=true ;;
+                *) go=true ;;
+              esac
+            done < "$paths"
+            rm "$paths"
+          fi
+          echo "go=$go" >> "$GITHUB_OUTPUT"
+
+  static:
+    needs: [preflight]
+    if: needs.preflight.outputs.go == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+          cache-dependency-path: go.sum
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .tool-versions
+          cache: npm
+      - run: npm ci
+      - uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+        with:
+          version: v2.15.0
+          skip-cache: true
+      - run: sudo apt-get update && sudo apt-get install -y shellcheck
+      - run: make pre-push
+      - run: make test
+
+  integration:
+    needs: [preflight]
+    if: needs.preflight.outputs.go == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: pgvector/pgvector:pg18
+        env:
+          POSTGRES_PASSWORD: ci
+        ports: [5432:5432]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      TEMPORAL_CLI_CACHE: /home/runner/.cache/temporal-cli
+      # The runner image ships pg_dump 16 on PATH; checkpoints need the PGDG 18 client.
+      CORPUS_PG_DUMP: /usr/lib/postgresql/18/bin/pg_dump
+      CORPUS_TEST_ADMIN_URL: postgres://postgres:ci@localhost:5432/postgres
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+          cache-dependency-path: go.sum
+      - name: Install PostgreSQL client
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo tee /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc > /dev/null
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt noble-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list > /dev/null
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-18
+      - name: Read Temporal SDK version
+        id: temporal
+        run: echo "version=$(awk '$1 == "go.temporal.io/sdk" { print $2 }' go.mod)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ env.TEMPORAL_CLI_CACHE }}
+          key: temporal-cli-${{ runner.os }}-${{ runner.arch }}-${{ steps.temporal.outputs.version }}
+      - name: Run integration tests and proofs
+        run: |
+          make test-integration &
+          integration_pid=$!
+          make test-proof &
+          proof_pid=$!
+          result=0
+          wait "$integration_pid" || result=1
+          wait "$proof_pid" || result=1
+          exit "$result"
+
+  ci:
+    if: always()
+    needs: [preflight, static, integration]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      PREFLIGHT: ${{ needs.preflight.result }}
+      GO: ${{ needs.preflight.outputs.go }}
+      STATIC: ${{ needs.static.result }}
+      INTEGRATION: ${{ needs.integration.result }}
+    steps:
+      - run: |
+          test "$PREFLIGHT" = success
+          if [ "$GO" = true ]; then
+            test "$STATIC" = success && test "$INTEGRATION" = success
+          elif [ "$GO" = false ]; then
+            test "$STATIC" = skipped && test "$INTEGRATION" = skipped
+          else
+            exit 1
+          fi

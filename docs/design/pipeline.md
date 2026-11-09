@@ -10,62 +10,163 @@ signed dump to S3. Decision and alternatives:
   Temporal server and its UI locally. The machine may be off between runs;
   Temporal resumes from persisted history.
 - `corpus worker` is one Go binary with one workflow,
-  `BuildRelease(country, rel)`, and one activity per stage. Workflow ids are
-  `build-<cc>-<rel>`; a second start while one is running is rejected. The
-  workflow calls continue-as-new after each stage, so each history segment holds
-  one stage.
-- `corpus start <rel>` first writes the `run` row with a frozen snapshot: the
-  source list revision, every recipe hash, `taxonomy_version`, worker version
-  and the previous release manifest hash. Activities read the snapshot from the
-  run row, never from the working tree, so a run is reproducible.
-- Activities receive and return references (run id, stage, item keys, artifact
-  hashes), never text or vectors. Items are processed in fixed batches per
-  activity execution with heartbeats; the size is in [budgets](budgets.md).
+  `BuildRelease(country, rel)`. Stage and control activities follow
+  [ADR 0008](../adr/0008-write-path-temporal-self-hosted.md#history). Workflow
+  ids are `build-<cc>-<rel>`. The workflow calls continue-as-new after each
+  stage, so each history segment holds one stage.
+- The `run` row, one per (`country`, `rel`), is the record of a run; Temporal
+  only coordinates and can be rebuilt empty. The snapshot is frozen on first
+  start: the parsed source list and its hash, every recipe hash,
+  `taxonomy_version`, worker version, stage list and previous release manifest
+  hash. Activities read the snapshot from the run row, never from the working
+  tree. A worker whose compiled recipe hash differs from the snapshot for any
+  stage already in it refuses the run. When a newer worker adds stages,
+  `corpus start` on a paused run appends their names and recipe hashes in one
+  update and records the extension in the run message; frozen recipes never
+  change.
+- Workflow changes use
+  [`workflow.GetVersion`](https://docs.temporal.io/develop/go/workflows/versioning#patching-with-getversion).
+  CI replays every history in
+  `apps/corpus/internal/workflow/testdata/histories/` with the SDK
+  [workflow replayer](https://pkg.go.dev/go.temporal.io/sdk/worker#WorkflowReplayer).
+- Activities receive and return references (run id, generation, stage, item
+  keys, artifact hashes), never text or vectors. Items are processed in fixed
+  batches per activity execution; a ticker heartbeats on the interval in
+  [budgets](budgets.md) while items run, so a slow item never misses a
+  heartbeat.
+
+## Run lifecycle
+
+- States: `starting`, `running`, `cancelling`, `cancelled`, `failed`, `paused`,
+  `evaluated`, `released`.
+- `corpus start <cc> <rel> [--until <stage>]` locks the run row. It refuses when
+  Temporal reports an open workflow for the id, and when the state is `starting`
+  and younger than the stale limit in [budgets](budgets.md). Otherwise it
+  increments `generation`, sets `starting` and commits, then starts the workflow
+  with that generation and a fail-on-conflict id policy. The workflow's first
+  activity moves `starting` to `running` only for its own generation. A crash
+  before dispatch leaves a stale `starting` row that the next start replaces; a
+  lost start response leaves a workflow that marks the row `running`. If an open
+  workflow of an older generation holds the id, start refuses and names
+  `corpus cancel` or `corpus recover`.
+- Every activity first compares its generation with `run.generation`. A mismatch
+  returns a non-retryable `superseded` error and the workflow ends without
+  writing the run row. Control activities change state only from an allowed set
+  of states and only for their own generation.
+- `run.next_stage` records progress. A stage completes when no item is
+  `pending`; a stage with no items completes at once. When a completed stage
+  holds `failed` items the run becomes `failed` and `next_stage` stays on that
+  stage; otherwise `next_stage` advances in the same transaction that computes
+  the stage counts from `run_item` and `gap` rows (counts are never stored
+  separately). `corpus start` resumes at `next_stage` and resets that stage's
+  `failed` items to `pending`. An empty `next_stage` means the run is complete
+  until new stages are appended. Errors in one item stay with that item: errors
+  in the source data (broken payload JSON, text PostgreSQL rejects, duplicate
+  ids) become gap `invalid_source_data`, which the owner may accept, and other
+  item errors fail the item; only the activity's own context or an
+  infrastructure fault ends the batch. `paused` means the workflow stopped after
+  the stage named by `--until` or after the last implemented stage.
+- `corpus cancel <cc> <rel>` sets `cancelling`. Stage activities check the state
+  before each item and return early; the workflow waits for every batch of the
+  stage to return, then sets `cancelled`. A stage that has not started its
+  batches is cancelled before planning.
+- `corpus recover <cc> <rel>` handles a restored workshop or a lost worker: it
+  increments `generation`, sets `failed` with a message, and terminates an open
+  workflow for the id only with `--terminate`. Then `corpus start` resumes.
+- `corpus status <cc> <rel>` and the Temporal UI show per-stage expected, done,
+  gap, failed and pending counts, unaccepted gaps by kind, next retry times,
+  provider job ids and cost so far.
+
+## Items, artifacts and gaps
+
+- A stage plans its items, processes each into an artifact, and resolves each
+  artifact against the run. Processing is a function of the item input and the
+  recipe; it writes the artifact. The artifact's rows (`document`,
+  `fetched_file`, `provision`, `relation`) are loaded from the artifact files,
+  so an adopted directory without a committed row yields the same rows as a
+  fresh one. Resolving is a function of the artifact and the run; it writes run
+  rows (`listing`) and gaps. When planning already knows an item's input hash
+  and the artifact exists, processing is skipped and only resolving runs, so a
+  reused artifact still yields this run's gaps.
 - Artifacts are immutable and content addressed:
-  `artifacts/<stage>/<input_hash>-<recipe_hash>/`. An activity skips an item
-  whose artifact row exists, writes new output to a temporary directory,
-  verifies it, renames it into place, then inserts the `artifact` row and
-  updates `run_item`. If a retry finds the directory present without a row, it
-  verifies the sha256 and inserts the row; if the directory is partial, it
-  deletes and redoes it. Fencing uses the pair (`run.generation`, Temporal
-  attempt): `generation` increments on every `corpus start` for the release, so
-  it survives restarts; a commit whose pair is lower than the recorded pair is
-  ignored. When two activities publish the same artifact directory, the first
-  successful rename wins and the other verifies and adopts it; the filesystem
-  rename is the atomic winner selection. Different releases share artifacts by
-  hash without conflict.
-- `corpus status <rel>` and the Temporal UI show per-stage expected, done, gap,
-  failed and pending counts, next retry times, provider job ids and cost so far.
-- Run states: `running`, `cancelling`, `cancelled`, `failed`, `evaluated`,
-  `released`. `corpus cancel <rel>` requests cancellation; activities finish
-  their current batch and the run becomes `cancelled`. `corpus start <rel>`
-  after `cancelled` or `failed` starts a new workflow with the same snapshot and
-  reuses artifacts. A gap becomes accepted only through
-  `corpus accept-gaps <rel>`, which records the owner's approval per gap kind;
-  `release` refuses unaccepted gaps.
-- Checkpoints: at every stage boundary, before continue-as-new, the workflow
-  runs a `checkpoint` activity that dumps the workshop database, syncs
-  `artifacts/` and dumps Temporal persistence to an external disk or S3. No
-  activity is in flight at that point, so the three copies are consistent.
-  Recovery from storage loss restores the latest checkpoint and restarts the run
-  with a new generation; the stage in progress is redone from its artifacts.
-  Submission identity does not depend on the checkpoint: the intent log
-  described below lives outside the workshop, so submissions made after the
-  checkpoint are rebuilt from it and reconciled before any new submission.
+  `artifacts/<stage>/<input_hash>-<recipe_hash>/` with `MANIFEST.sha256` (sorted
+  `<sha256>  <relative path>` lines); the artifact sha256 is the manifest's
+  sha256. A writer fills a temporary directory, writes the manifest, takes a
+  lock file for the key, then renames into place. Under the lock a present
+  directory with a valid manifest is adopted, and a partial one is moved aside
+  and replaced. Paths in a manifest are relative, without `..`, symlinks or
+  absolute names. Directories that no committed row references (a crash after
+  rename, or content that changed before the retry) are orphans; they waste
+  space but never change results.
+- For `fetch` the input hash is the bundle's own manifest sha256, learned after
+  download, so unchanged remote content keeps its hash. The fetch artifact
+  sha256 is the input hash of `extract` and `relate`.
+- One transaction commits an item: the artifact row when there is one, the
+  artifact's rows when that row is new, the run rows and gaps (idempotent), and
+  the `run_item` update. The update applies only when the pair
+  (`run.generation`, Temporal attempt) is not lower than the recorded pair; a
+  stale commit rolls back. Items that end as a gap or a failure without output
+  commit without an artifact.
+- Gaps are rows with a kind. `corpus accept-gaps <cc> <rel> --kind <kind>`
+  accepts every gap of that kind and records the owner's note. `release` is
+  refused while any expected item is `pending` or `failed` or any gap is
+  unaccepted.
+- Checkpoints: at every stage boundary the workflow runs a `Checkpoint` activity
+  that dumps the workshop database with one `pg_dump` (one consistent snapshot
+  across runs) and then copies new artifact directories, which are immutable and
+  written before the rows that reference them. Temporal persistence is not part
+  of a checkpoint. Recovery restores the dump and the artifacts, runs
+  `corpus recover`, and resumes with `corpus start`. Submission identity does
+  not depend on the checkpoint: the intent log described below lives outside the
+  workshop.
 
 ## Stages
 
-| Stage            | Input                                             | Output                                                           | Completeness rule                                                                                                                                                                         |
-| ---------------- | ------------------------------------------------- | ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `discover`       | source list YAML; previous release manifest       | expected document set with source modified dates                 | full listing per source every run; a document absent from two consecutive listings is marked `withdrawn` and kept with a gap                                                              |
-| `fetch`          | expected set                                      | metadata JSON, every listed attachment, hashes                   | every attachment is revalidated each run by size and hash of a fresh download when the source gives no ETag; a changed attachment reprocesses the document; a missing attachment is a gap |
-| `extract`        | files                                             | structure tree with verbatim text                                | parser limits in [budgets](budgets.md); article count matches the table of contents; table and appendix counts match the source inventory; empty or truncated text is a gap               |
-| `relate`         | VBPL references, text                             | relations with kind, evidence, affected provisions when captured | never guessed; unknown targets are gaps                                                                                                                                                   |
-| `chunk`, `embed` | trees                                             | chunks, dense and sparse vectors under the release recipes       | vector count equals chunk count; dimensions equal the recipe                                                                                                                              |
-| `classify`       | trees, vectors, taxonomy, seeds                   | assignments                                                      | every article has an assignment or an "unassigned" gap                                                                                                                                    |
-| `build`          | all gold tables                                   | local `corpus_<cc>_<rel>` database                               | schema template applied; `release` row written                                                                                                                                            |
-| `eval`           | local database, golden set, taxonomy held-out set | report; diff against the previous release                        | floors in [testing](../../instructions/testing.md) and [taxonomy](taxonomy.md)                                                                                                            |
-| `release`        | evaluated database                                | `corpus_<cc>_<rel>.dump`, `manifest.json`, `manifest.sig` in S3  | refused unless every expected item is done or an accepted gap and eval passed                                                                                                             |
+| Stage            | Input                                             | Output                                                           | Completeness rule                                                                                                                                                           |
+| ---------------- | ------------------------------------------------- | ---------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `discover`       | source list YAML; previous release manifest       | expected document set with source modified dates                 | full listing per source every run; a document absent from two consecutive listings is marked `withdrawn` and kept with a gap                                                |
+| `fetch`          | expected set                                      | metadata JSON, every listed attachment, hashes                   | attachments use a verified matching local cache entry or a fresh download; a changed attachment reprocesses the document; a missing attachment is a gap                     |
+| `extract`        | files                                             | structure tree with verbatim text                                | parser limits in [budgets](budgets.md); article count matches the table of contents; table and appendix counts match the source inventory; empty or truncated text is a gap |
+| `relate`         | VBPL references, text                             | relations with kind, evidence, affected provisions when captured | never guessed; unknown targets are gaps                                                                                                                                     |
+| `chunk`, `embed` | trees                                             | chunks, dense and sparse vectors under the release recipes       | vector count equals chunk count; dimensions equal the recipe                                                                                                                |
+| `classify`       | trees, vectors, taxonomy, seeds                   | assignments                                                      | every article has an assignment or an "unassigned" gap                                                                                                                      |
+| `build`          | all gold tables                                   | local `corpus_<cc>_<rel>` database                               | schema template applied; `release` row written                                                                                                                              |
+| `eval`           | local database, golden set, taxonomy held-out set | report; diff against the previous release                        | floors in [testing](../../instructions/testing.md) and [taxonomy](taxonomy.md)                                                                                              |
+| `release`        | evaluated database                                | `corpus_<cc>_<rel>.dump`, `manifest.json`, `manifest.sig` in S3  | refused unless every expected item is done or a gap, every gap is accepted, and eval passed                                                                                 |
+
+VBPL ingest rules:
+
+- `discover` lists every query until two consecutive passes return the same id
+  set, at most the pass limit in [budgets](budgets.md); otherwise the query item
+  gets gap `listing_unstable` and the expected set uses the union of the passes.
+  A listing is complete when its query item is done without a `listing_unstable`
+  gap; a query's identity is the hash of its definition (agencies and keyword).
+  Earlier runs of the same country are ordered by date, then sequence. For a
+  document listed by some query in an earlier complete listing, take the queries
+  that ever listed it and still exist: it is `withdrawn` when every one of them
+  has a complete listing in this run and in its most recent earlier complete
+  listing, and both omit the document. If any of those listings is incomplete,
+  the document stays expected and is fetched by id. A document whose listing
+  queries are all gone from the source list is `scope_removed`. Withdrawn and
+  scope-removed documents stay in the expected set as gap items that are never
+  fetched.
+- VBPL English renditions (ids starting with `vbpqta_`) are not legal text in
+  Vietnamese and never enter the expected set.
+- `fetch` stores attachments as `files/<sha256>` and maps original names in
+  `files.json`; each download attempt writes a fresh temporary file and is
+  bounded by the per-file limit while streaming. API responses above the
+  response limit are gaps. A gateway error (HTTP 5xx) that persists through
+  every attempt makes the item gap `source_unavailable`, which the owner may
+  accept; the next run asks again. An attachment whose document id, name and
+  size match a local cache entry collected no earlier than the gateway's
+  `updatedAt` for that file is taken from the cache once its sha256 verifies;
+  otherwise it is downloaded.
+- `extract` refuses trees deeper or larger than the limits in
+  [budgets](budgets.md) with gap `tree_too_large`.
+- `relate` maps relation codes with the source list's table, whose hash is part
+  of the `relate` recipe hash. Resolving a target against the run's expected
+  set, and the `unknown_target` gap, happen when the artifact is resolved for a
+  run, never inside the cached artifact.
 
 Recipe changes (parser version, prompt hash, taxonomy version, model) change
 `recipe_hash`, so unchanged documents are reprocessed where it matters.

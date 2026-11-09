@@ -1,0 +1,139 @@
+// Package worker runs corpus workflows and activities.
+package worker
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"runtime/debug"
+	"strings"
+	"time"
+
+	"danny.vn/traquydinh/apps/corpus/internal/artifact"
+	"danny.vn/traquydinh/apps/corpus/internal/checkpoint"
+	"danny.vn/traquydinh/apps/corpus/internal/config"
+	"danny.vn/traquydinh/apps/corpus/internal/filecache"
+	"danny.vn/traquydinh/apps/corpus/internal/run"
+	"danny.vn/traquydinh/apps/corpus/internal/stage"
+	"danny.vn/traquydinh/apps/corpus/internal/stage/fetch"
+	"danny.vn/traquydinh/apps/corpus/internal/store"
+	"danny.vn/traquydinh/apps/corpus/internal/vbpl"
+	"danny.vn/traquydinh/apps/corpus/internal/workflow"
+	"go.temporal.io/sdk/activity"
+	"go.temporal.io/sdk/client"
+	temporalworker "go.temporal.io/sdk/worker"
+	temporalworkflow "go.temporal.io/sdk/workflow"
+)
+
+// Deps supplies the worker's clients and registered stages.
+type Deps struct {
+	HeartbeatEvery time.Duration
+	TaskQueue      string
+	Env            stage.Env
+	Temporal       client.Client
+	Registry       workflow.Registry
+	Checkpointer   workflow.Checkpointer
+}
+
+// Worker runs a registered Temporal worker.
+type Worker struct{ worker temporalworker.Worker }
+
+// New constructs a worker using explicit dependencies.
+func New(_ context.Context, deps Deps) (*Worker, error) {
+	if deps.Env.DB == nil || deps.Temporal == nil {
+		return nil, errors.New("worker requires a workshop pool and Temporal client")
+	}
+	taskQueue := deps.TaskQueue
+	if taskQueue == "" {
+		taskQueue = run.TaskQueue
+	}
+	w := temporalworker.New(deps.Temporal, taskQueue, temporalworker.Options{})
+	w.RegisterWorkflowWithOptions(workflow.BuildRelease, temporalworkflow.RegisterOptions{Name: run.WorkflowName})
+	checkpointer := deps.Checkpointer
+	if checkpointer == nil {
+		checkpointer = workflow.NoCheckpoint{}
+	}
+	heartbeatEvery := deps.HeartbeatEvery
+	if heartbeatEvery <= 0 {
+		heartbeatEvery = 20 * time.Second
+	}
+	activities := &workflow.Activities{Env: deps.Env, Registry: deps.Registry, Checkpointer: checkpointer, Batch: stage.BatchConfig{HeartbeatEvery: heartbeatEvery, MaxAttempts: 5}}
+	w.RegisterActivity(activities)
+	for _, st := range deps.Registry.Stages() {
+		w.RegisterActivityWithOptions(activities.RunBatch, activity.RegisterOptions{Name: st.Name()})
+	}
+	return &Worker{worker: w}, nil
+}
+
+// Run starts the worker and stops it when the context is cancelled.
+func (w *Worker) Run(ctx context.Context) error {
+	if err := w.worker.Start(); err != nil {
+		return fmt.Errorf("start worker: %w", err)
+	}
+	defer w.worker.Stop()
+	<-ctx.Done()
+	return nil
+}
+
+// Run wires and runs the default corpus worker.
+func Run(ctx context.Context, cfg config.Config) error {
+	if cfg.CheckpointDir == "" {
+		return errors.New("CORPUS_CHECKPOINT_DIR is required")
+	}
+	if err := checkpoint.CheckVersion(ctx, cfg.PgDump); err != nil {
+		return fmt.Errorf("check pg_dump: %w", err)
+	}
+	db, err := store.Open(ctx, cfg.DatabaseURL)
+	if err != nil {
+		return fmt.Errorf("open workshop: %w", err)
+	}
+	defer db.Close()
+	temporalClient, err := client.Dial(client.Options{HostPort: cfg.TemporalAddress, Namespace: cfg.Namespace})
+	if err != nil {
+		return fmt.Errorf("connect Temporal: %w", err)
+	}
+	defer temporalClient.Close()
+	var cache *filecache.Cache
+	if cfg.FileCache != "" {
+		cache, err = filecache.Load(cfg.FileCache)
+		if err != nil {
+			return fmt.Errorf("load file cache: %w", err)
+		}
+	}
+	env := stage.Env{DB: db, Artifacts: artifact.Store{Root: cfg.Artifacts}, Now: time.Now}
+	options := []vbpl.Option{vbpl.WithLimits(cfg.VBPLRate, cfg.VBPLInFlight), vbpl.WithFileHosts(strings.Split(cfg.VBPLFileHosts, ",")...)}
+	if cfg.VBPLLoopbackHTTP {
+		options = append(options, vbpl.WithTestHTTP())
+	}
+	registry := workflow.Default(workflow.Deps{Env: env, VBPL: vbpl.NewWithBase(cfg.VBPLURL, workerVersion(), options...)})
+	stages := registry.Stages()
+	for _, st := range stages {
+		if f, ok := st.(*fetch.Stage); ok {
+			f.WithCache(cache)
+		}
+	}
+	w, err := New(ctx, Deps{HeartbeatEvery: cfg.HeartbeatEvery, Env: env, Temporal: temporalClient, Registry: registry, Checkpointer: checkpoint.Taker{Config: checkpoint.Config{Dir: cfg.CheckpointDir, ArtifactsRoot: cfg.Artifacts, DatabaseURL: cfg.DatabaseURL, PgDump: cfg.PgDump, Keep: 3}}})
+	if err != nil {
+		return fmt.Errorf("construct worker: %w", err)
+	}
+	return w.Run(ctx)
+}
+
+func workerVersion() string {
+	info, ok := debug.ReadBuildInfo()
+	version, dirty := "unknown", false
+	if ok {
+		for _, setting := range info.Settings {
+			if setting.Key == "vcs.revision" && setting.Value != "" {
+				version = setting.Value
+			}
+			if setting.Key == "vcs.modified" && setting.Value == "true" {
+				dirty = true
+			}
+		}
+	}
+	if dirty {
+		version += "+dirty"
+	}
+	return version
+}

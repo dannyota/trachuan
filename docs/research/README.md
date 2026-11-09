@@ -8,5 +8,10 @@ Observations and experiments. Not project authority.
   Vietnam corpus.
 - [Dense embedding model for Vietnam](embedder-2026-11.md): model comparison,
   quantization, serving precision.
+- [Hybrid retrieval](retrieval-hybrid-2026-11.md): evaluation proposal.
 - [OAuth clients against aboutme](oauth-clients-2026-11.md): evidence for
   copying aboutme's OAuth server.
+- [First VBPL ingest run](vbpl-ingest-2026-11.md): coverage against banhmi,
+  throughput and gateway findings.
+- [Hybrid retrieval baseline and model ablation](retrieval-hybrid-results-2026-11.md):
+  local parity with banhmi and Vietnamese_Embedding_v2 under hybrid scoring.

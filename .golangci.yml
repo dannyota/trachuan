@@ -1,0 +1,16 @@
+version: "2"
+linters:
+  enable:
+    - errcheck
+    - govet
+    - misspell
+  settings:
+    govet:
+      enable:
+        - shadow
+    misspell:
+      locale: US
+      # Run state names come from docs/design/pipeline.md and are stored data.
+      ignore-rules:
+        - cancelling
+        - cancelled

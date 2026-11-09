@@ -45,3 +45,8 @@ for production).
 ## History
 
 - 2026-11-08: accepted after the independent design review.
+- 2026-11-09: clarified that each stage's batches use an activity type named
+  after the stage, registered around one shared batch function; `PlanStage`,
+  `CloseStage`, `Checkpoint` and `MarkRun` are the four control activities for
+  planning, stage close, checkpoint and run-state changes, preserving one
+  activity per stage for stage work.
