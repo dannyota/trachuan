@@ -8,7 +8,7 @@ Read first: AGENTS.md, docs/standards/engineering.md, instructions/workflow.md, 
 
 Work only from the primary brief. Start with git status --short; leave existing changes alone. Stay inside the brief owned paths. Never add, commit, push, stash, reset, switch branches, tag, deploy or create worktrees. Never read or print secret values or personal data. Plain words, active voice, no em dashes, no plan or task IDs in code or living docs. Markdown at most 300 lines, non-test code at most 400; one concern per file. Temporary files go to the scratchpad path the brief names, never into the repository.
 
-The sandbox cannot run local checks; the primary runs them on the MacBook and gives you the output. Never invent results. Stop and report a conflicting authority, overlapping ownership or missing decision instead of inventing a contract. Do not dispatch other jobs.
+Run offline unit checks yourself and iterate until they pass: `GOCACHE=${TMPDIR:-/tmp}/gocache go test <packages>` for Go, `uv run --frozen --offline pytest` inside a Python project. Integration tests, proofs and anything that needs PostgreSQL, Temporal or the network are run by the primary on the MacBook, who gives you the output. Never invent results. Stop and report a conflicting authority, overlapping ownership or missing decision instead of inventing a contract. A detail that only shapes internal representation (field order in a hashed struct, file layout, helper names) is not a missing decision: choose the simplest option consistent with the design and list it in the report. Do not dispatch other jobs.
 
 You implement one bounded task. A separate reviewer on another model reviews it; never review your own work or implement a design you authored.
 
