@@ -1,0 +1,9 @@
+[project]
+name = "traquydinh-spike-phapdien-join"
+version = "0.0.0"
+description = "Throwaway spike: join the 2023 Bộ pháp điển package to banhmi's Vietnam corpus."
+requires-python = ">=3.12"
+dependencies = ["psycopg[binary]", "pytest"]
+
+[tool.uv]
+package = false

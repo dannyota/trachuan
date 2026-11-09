@@ -9,10 +9,11 @@ component shape and the data-flow rules. Decisions and alternatives live in the
 ## Success criteria
 
 - An agent in Claude.ai, ChatGPT or Claude Code browses the subject tree,
-  searches Vietnamese provisions filtered by subject, and reads a provision
-  with validity and amendment context, behind Google login.
+  searches Vietnamese provisions filtered by subject, and reads a provision with
+  validity and amendment context, behind Google login.
 - A signed-in person does the same on the website.
-- Vietnam retrieval holds the golden-set floors in [testing](../../instructions/testing.md).
+- Vietnam retrieval holds the golden-set floors in
+  [testing](../../instructions/testing.md).
 - A subject filter never lowers recall on the golden set under the per-case
   contract in [retrieval](retrieval.md) "Subject filter contract".
 - Recurring hosting stays within the [budget](budgets.md).
@@ -22,7 +23,7 @@ component shape and the data-flow rules. Decisions and alternatives live in the
 One AWS Graviton host runs five containers under rootless Podman Quadlet
 ([ADR 0006](../adr/0006-single-host-aws-podman.md)):
 
-```
+```text
 Browser / MCP client
         │ HTTPS 443
       caddy      TLS and reverse proxy only
@@ -39,9 +40,9 @@ Browser / MCP client
 Caddy has no rate limiter and gets none. Authentication and the limits for
 `/api/v1` and `/mcp` live in `server`. Admission for public pages lives in
 `web`: Nitro middleware applies the per-IP limit from [budgets](budgets.md),
-serves cached pages, bounds the cache to the known public routes and node
-codes, and caps concurrent renders at the value in budgets; an uncached
-request above the cap receives 429 at once, with no queue.
+serves cached pages, bounds the cache to the known public routes and node codes,
+and caps concurrent renders at the value in budgets; an uncached request above
+the cap receives 429 at once, with no queue.
 
 ## Write path
 
@@ -53,20 +54,21 @@ separate command run by the owner ([deployment](deployment.md)).
 
 ## Database roles
 
-| Role         | Where        | May                                                   | May not                         |
-| ------------ | ------------ | ----------------------------------------------------- | ------------------------------- |
-| `server`     | host         | read any `corpus_*`; read and write `auth` tables     | create or drop databases        |
-| `activator`  | host, CLI    | create and drop `corpus_*` databases; write `auth.corpus_release`, `auth.release_journal`, `auth.retired_release` only | read or write other `auth` tables |
-| `restorer`   | host, CLI    | restore into one new `corpus_*` database              | touch `auth`; superuser rights  |
-| `pipeline`   | MacBook      | read and write the local workshop database            | connect to the host             |
+| Role        | Where     | May                                                                                                                    | May not                           |
+| ----------- | --------- | ---------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
+| `server`    | host      | read any `corpus_*`; read and write `auth` tables                                                                      | create or drop databases          |
+| `activator` | host, CLI | create and drop `corpus_*` databases; write `auth.corpus_release`, `auth.release_journal`, `auth.retired_release` only | read or write other `auth` tables |
+| `restorer`  | host, CLI | restore into one new `corpus_*` database                                                                               | touch `auth`; superuser rights    |
+| `pipeline`  | MacBook   | read and write the local workshop database                                                                             | connect to the host               |
 
 The server never writes corpus data. The pipeline never connects to the host.
 Activation has its own narrow identity; this amends the earlier wording that
-"the pipeline never touches auth" ([ADR 0003](../adr/0003-postgres-per-release-corpus.md) History).
+"the pipeline never touches auth"
+([ADR 0003](../adr/0003-postgres-per-release-corpus.md) History).
 
 ## Repository layout
 
-```
+```text
 apps/server      Go: API, MCP, OAuth, auth, retrieval
 apps/web         Nuxt 4: public pages, search, reader, account
 apps/corpus      Go: Temporal worker, stage activities, release and activation commands

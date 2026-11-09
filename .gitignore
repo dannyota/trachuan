@@ -10,3 +10,8 @@ dist/
 *.dump
 *.log
 .DS_Store
+.superpowers/
+.venv/
+__pycache__/
+.pytest_cache/
+uv.lock
