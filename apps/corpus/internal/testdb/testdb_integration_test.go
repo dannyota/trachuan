@@ -16,7 +16,7 @@ func TestNew_MigratedAndIsolated(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer first.Close(ctx)
+	defer func() { _ = first.Close(ctx) }()
 	if _, execErr := first.Exec(ctx, `CREATE TABLE test_isolation (id int)`); execErr != nil {
 		t.Fatal(execErr)
 	}
@@ -24,7 +24,7 @@ func TestNew_MigratedAndIsolated(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer second.Close(ctx)
+	defer func() { _ = second.Close(ctx) }()
 	var migrated, isolated bool
 	if err := second.QueryRow(ctx, `SELECT to_regclass('run') IS NOT NULL, to_regclass('test_isolation') IS NULL`).Scan(&migrated, &isolated); err != nil {
 		t.Fatal(err)
@@ -41,7 +41,7 @@ func TestNewEmpty_HasNoMigrations(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.Close(ctx)
+	defer func() { _ = db.Close(ctx) }()
 	var empty bool
 	if err := db.QueryRow(ctx, `SELECT to_regclass('run') IS NULL`).Scan(&empty); err != nil {
 		t.Fatal(err)
