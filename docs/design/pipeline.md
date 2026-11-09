@@ -57,10 +57,11 @@ signed dump to S3. Decision and alternatives:
 - `run.next_stage` records progress. A stage completes when no item is
   `pending`; a stage with no items completes at once. When a completed stage
   holds `failed` items the run becomes `failed` and `next_stage` stays on that
-  stage; otherwise `next_stage` advances in the same transaction that records
-  the stage counts. `corpus start` resumes at `next_stage` and resets that
-  stage's `failed` items to `pending`. `paused` means the workflow stopped after
-  the stage named by `--until` or after the last implemented stage.
+  stage; otherwise `next_stage` advances in the same transaction that computes
+  the stage counts from `run_item` and `gap` rows (counts are never stored
+  separately). `corpus start` resumes at `next_stage` and resets that stage's
+  `failed` items to `pending`. `paused` means the workflow stopped after the
+  stage named by `--until` or after the last implemented stage.
 - `corpus cancel <cc> <rel>` sets `cancelling`. Stage activities check the state
   before each item and return early; the workflow waits for every batch of the
   stage to return, then sets `cancelled`. A stage that has not started its
