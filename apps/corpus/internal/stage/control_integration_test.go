@@ -44,6 +44,7 @@ func controlPlan(env Env, in StageInput, s *controlStage) (PlanResult, error) {
 	return PlanStage(context.Background(), env, s, in, map[string]string{"fetch": "recipe"})
 }
 func TestPlanStage_InsertsBatchesOfHundred(t *testing.T) {
+	t.Parallel()
 	env, in, s := controlSetup(t)
 	for i := 0; i < 250; i++ {
 		s.items = append(s.items, Item{Key: fmt.Sprintf("%03d", i), InputHash: "input"})
@@ -58,6 +59,7 @@ func TestPlanStage_InsertsBatchesOfHundred(t *testing.T) {
 	}
 }
 func TestPlanStage_ListsBatchesWithHoles(t *testing.T) {
+	t.Parallel()
 	env, in, s := controlSetup(t)
 	for i := 0; i < 250; i++ {
 		s.items = append(s.items, Item{Key: fmt.Sprintf("%03d", i)})
@@ -72,6 +74,7 @@ func TestPlanStage_ListsBatchesWithHoles(t *testing.T) {
 	}
 }
 func TestPlanStage_RecordsSkipGap(t *testing.T) {
+	t.Parallel()
 	env, in, s := controlSetup(t)
 	s.items = []Item{{Key: "skip", Skip: &Gap{Kind: "missing", Detail: "reason"}}}
 	if _, err := controlPlan(env, in, s); err != nil {
@@ -87,6 +90,7 @@ func TestPlanStage_RecordsSkipGap(t *testing.T) {
 	}
 }
 func TestPlanStage_ReportsCancelling(t *testing.T) {
+	t.Parallel()
 	env, in, s := controlSetup(t)
 	batchExec(t, env.DB, `UPDATE run SET state='cancelling' WHERE id=$1`, in.RunID)
 	got, err := controlPlan(env, in, s)
@@ -95,6 +99,7 @@ func TestPlanStage_ReportsCancelling(t *testing.T) {
 	}
 }
 func TestPlanStage_RefusesRecipeMismatch(t *testing.T) {
+	t.Parallel()
 	env, in, s := controlSetup(t)
 	_, err := PlanStage(context.Background(), env, s, in, map[string]string{"other": "changed"})
 	if err == nil || !strings.Contains(err.Error(), "other") || s.calls != 0 {
@@ -102,6 +107,7 @@ func TestPlanStage_RefusesRecipeMismatch(t *testing.T) {
 	}
 }
 func TestPlanStage_ResetsFailedOnResume(t *testing.T) {
+	t.Parallel()
 	env, in, s := controlSetup(t)
 	batchExec(t, env.DB, `INSERT INTO run_item (run_id,stage,item_key,state,batch,generation) VALUES ($1,'fetch','old','failed',0,1),($1,'fetch','current','failed',1,2)`, in.RunID)
 	got, err := controlPlan(env, in, s)
@@ -114,6 +120,7 @@ func TestPlanStage_ResetsFailedOnResume(t *testing.T) {
 	}
 }
 func TestCloseStage_EmptyStageAdvances(t *testing.T) {
+	t.Parallel()
 	env, in, _ := controlSetup(t)
 	got, err := CloseStage(context.Background(), env, in, "")
 	if err != nil || got.Failed || got.NextStage != "" || got.Counts.Expected != 0 {
@@ -125,6 +132,7 @@ func TestCloseStage_EmptyStageAdvances(t *testing.T) {
 	}
 }
 func TestCloseStage_FailedItemsKeepCursor(t *testing.T) {
+	t.Parallel()
 	env, in, _ := controlSetup(t)
 	batchExec(t, env.DB, `INSERT INTO run_item (run_id,stage,item_key,state,batch) VALUES ($1,'fetch','a','failed',0),($1,'fetch','b','gap',0),($1,'fetch','c','done',0)`, in.RunID)
 	batchExec(t, env.DB, `INSERT INTO gap (run_id,stage,item_key,kind,detail,accepted_at) VALUES ($1,'fetch','b','missing','a',NULL),($1,'fetch','b','missing','b',now())`, in.RunID)
@@ -136,6 +144,7 @@ func TestCloseStage_FailedItemsKeepCursor(t *testing.T) {
 	}
 }
 func TestCloseStage_PendingItemsError(t *testing.T) {
+	t.Parallel()
 	env, in, _ := controlSetup(t)
 	batchExec(t, env.DB, `INSERT INTO run_item (run_id,stage,item_key,state,batch) VALUES ($1,'fetch','a','pending',0)`, in.RunID)
 	_, err := CloseStage(context.Background(), env, in, "extract")
@@ -146,6 +155,7 @@ func TestCloseStage_PendingItemsError(t *testing.T) {
 	}
 }
 func TestMarkRun_OnlyFromAllowedStates(t *testing.T) {
+	t.Parallel()
 	env, in, _ := controlSetup(t)
 	batchExec(t, env.DB, `UPDATE run SET state='cancelling' WHERE id=$1`, in.RunID)
 	mark := MarkInput{RunID: in.RunID, Generation: in.Generation, From: []string{"running"}, To: "paused", Message: "pause"}
@@ -161,6 +171,7 @@ func TestMarkRun_OnlyFromAllowedStates(t *testing.T) {
 	}
 }
 func TestControl_SupersededGenerationChangesNothing(t *testing.T) {
+	t.Parallel()
 	env, in, s := controlSetup(t)
 	s.items = []Item{{Key: "new"}}
 	in.Generation--
@@ -176,6 +187,7 @@ func TestControl_SupersededGenerationChangesNothing(t *testing.T) {
 }
 
 func TestPlanStage_ReportsCancelledAsCancelling(t *testing.T) {
+	t.Parallel()
 	env, in, s := controlSetup(t)
 	batchExec(t, env.DB, `UPDATE run SET state='cancelled' WHERE id=$1`, in.RunID)
 	got, err := controlPlan(env, in, s)
@@ -185,6 +197,7 @@ func TestPlanStage_ReportsCancelledAsCancelling(t *testing.T) {
 }
 
 func TestCloseStage_LastStageMarksComplete(t *testing.T) {
+	t.Parallel()
 	env, in, _ := controlSetup(t)
 	_, err := CloseStage(context.Background(), env, in, "")
 	var next *string

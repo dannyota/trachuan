@@ -11,6 +11,7 @@ import (
 
 // Deps supplies the workshop, workflow client, and compiled release inputs.
 type Deps struct {
+	TaskQueue       string
 	BatchesInFlight int
 	DB              *pgxpool.Pool
 	Temporal        client.Client

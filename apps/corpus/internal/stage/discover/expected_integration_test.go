@@ -8,7 +8,6 @@ import (
 	"reflect"
 	"testing"
 
-	"danny.vn/traquydinh/apps/corpus/internal/migrate"
 	"danny.vn/traquydinh/apps/corpus/internal/source"
 	"danny.vn/traquydinh/apps/corpus/internal/stage"
 	"danny.vn/traquydinh/apps/corpus/internal/testdb"
@@ -28,9 +27,6 @@ func expectedFixture(t *testing.T, fixtures ...listingFixture) (*pgxpool.Pool, s
 	t.Helper()
 	ctx := context.Background()
 	url := testdb.New(t)
-	if err := migrate.Up(ctx, url); err != nil {
-		t.Fatal(err)
-	}
 	db, err := pgxpool.New(ctx, url)
 	if err != nil {
 		t.Fatal(err)
@@ -107,16 +103,19 @@ func document(id, gap string) Expected {
 }
 
 func TestExpectedSet_WithdrawnAfterTwoAbsences(t *testing.T) {
+	t.Parallel()
 	db, r := expectedFixture(t, fixture("20261101", "1"), fixture("20261102"), fixture("20261103"))
 	checkExpected(t, db, r, []Expected{document("1", "withdrawn")})
 }
 
 func TestExpectedSet_OneAbsenceKeepsDocument(t *testing.T) {
+	t.Parallel()
 	db, r := expectedFixture(t, fixture("20261101", "1"), fixture("20261102"))
 	checkExpected(t, db, r, []Expected{document("1", "")})
 }
 
 func TestExpectedSet_IncompleteListingKeepsDocument(t *testing.T) {
+	t.Parallel()
 	for _, scenario := range []struct {
 		name, state                 string
 		unstable, accepted, current bool
@@ -139,6 +138,7 @@ func TestExpectedSet_IncompleteListingKeepsDocument(t *testing.T) {
 }
 
 func TestExpectedSet_QueryDefinitionChangeIsNotComparable(t *testing.T) {
+	t.Parallel()
 	old, middle, current := fixture("20261101", "1"), fixture("20261102"), fixture("20261103")
 	middle.agencies, current.agencies = []string{"2"}, []string{"2"}
 	db, r := expectedFixture(t, old, middle, current)
@@ -146,11 +146,13 @@ func TestExpectedSet_QueryDefinitionChangeIsNotComparable(t *testing.T) {
 }
 
 func TestExpectedSet_OrdersRelsNumerically(t *testing.T) {
+	t.Parallel()
 	db, r := expectedFixture(t, fixture("20261110_1", "1"), fixture("20261110_10"), fixture("20261110_2", "1"), fixture("20261111"))
 	checkExpected(t, db, r, []Expected{document("1", "withdrawn")})
 }
 
 func TestExpectedSet_ScopeRemovedIsSkipGap(t *testing.T) {
+	t.Parallel()
 	current := fixture("20261102")
 	current.keywords = nil
 	current.items["vbpl:sweep"] = []string{"2"}
@@ -159,6 +161,7 @@ func TestExpectedSet_ScopeRemovedIsSkipGap(t *testing.T) {
 }
 
 func TestExpectedSet_AllListingQueriesMustBeAbsentTwice(t *testing.T) {
+	t.Parallel()
 	first, middle, current := fixture("20261101", "1"), fixture("20261102"), fixture("20261103")
 	first.items["vbpl:sweep"] = []string{"1"}
 	middle.items["vbpl:sweep"] = []string{"1"}
@@ -167,6 +170,7 @@ func TestExpectedSet_AllListingQueriesMustBeAbsentTwice(t *testing.T) {
 }
 
 func TestExpectedSet_CurrentUnstableUnionIsExpected(t *testing.T) {
+	t.Parallel()
 	current := fixture("20261101", "2", "1")
 	current.unstable = true
 	db, r := expectedFixture(t, current)

@@ -6,13 +6,13 @@ import (
 	"context"
 	"testing"
 
-	"danny.vn/traquydinh/apps/corpus/internal/migrate"
 	"danny.vn/traquydinh/apps/corpus/internal/stage"
 	"danny.vn/traquydinh/apps/corpus/internal/testdb"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func TestFetch_WritesBundleAndRows(t *testing.T) {
+	t.Parallel()
 	f := &fixtureServer{files: []map[string]any{entry("a", "a")}, bodies: map[string]string{"a": "content"}}
 	s, env := setup(t, f)
 	out := process(t, s, env)
@@ -22,9 +22,6 @@ func TestFetch_WritesBundleAndRows(t *testing.T) {
 	}
 	ctx := context.Background()
 	dbURL := testdb.New(t)
-	if err = migrate.Up(ctx, dbURL); err != nil {
-		t.Fatal(err)
-	}
 	db, err := pgxpool.New(ctx, dbURL)
 	if err != nil {
 		t.Fatal(err)

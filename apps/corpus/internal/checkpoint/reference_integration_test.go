@@ -7,17 +7,14 @@ import (
 	"strings"
 	"testing"
 
-	"danny.vn/traquydinh/apps/corpus/internal/migrate"
 	"danny.vn/traquydinh/apps/corpus/internal/testdb"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func TestTake_ChecksWorkshopArtifactReferences(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	url := testdb.New(t)
-	if err := migrate.Up(ctx, url); err != nil {
-		t.Fatal(err)
-	}
 	db, err := pgxpool.New(ctx, url)
 	if err != nil {
 		t.Fatal(err)

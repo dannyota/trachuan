@@ -7,7 +7,6 @@ import (
 	"errors"
 	"testing"
 
-	"danny.vn/traquydinh/apps/corpus/internal/migrate"
 	"danny.vn/traquydinh/apps/corpus/internal/stage"
 	"danny.vn/traquydinh/apps/corpus/internal/testdb"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -22,11 +21,9 @@ func (c *recordingCheckpoint) Take(context.Context, string, int, string) (string
 }
 
 func TestActivities_SupersededGenerationChangesNothing(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	url := testdb.New(t)
-	if err := migrate.Up(ctx, url); err != nil {
-		t.Fatal(err)
-	}
 	pool, err := pgxpool.New(ctx, url)
 	if err != nil {
 		t.Fatal(err)

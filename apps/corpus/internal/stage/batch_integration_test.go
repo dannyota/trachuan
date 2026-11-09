@@ -80,6 +80,7 @@ func publishBatchArtifact(t *testing.T, env Env, s *batchStage) string {
 }
 
 func TestRunBatch_SkipsDoneItems(t *testing.T) {
+	t.Parallel()
 	env, id, s := batchSetup(t)
 	batchExec(t, env.DB, `UPDATE run_item SET state='done' WHERE run_id=$1`, id)
 	result, err := batchRun(env, id, s, 1, func(...any) {})
@@ -88,6 +89,7 @@ func TestRunBatch_SkipsDoneItems(t *testing.T) {
 	}
 }
 func TestRunBatch_ReusesExistingArtifactAndResolves(t *testing.T) {
+	t.Parallel()
 	env, id, s := batchSetup(t)
 	hash := publishBatchArtifact(t, env, s)
 	batchExec(t, env.DB, `UPDATE run_item SET input_hash=$2 WHERE run_id=$1`, id, hash)
@@ -99,6 +101,7 @@ func TestRunBatch_ReusesExistingArtifactAndResolves(t *testing.T) {
 	}
 }
 func TestRunBatch_AdoptedDirWithoutRowLoadsRows(t *testing.T) {
+	t.Parallel()
 	env, id, s := batchSetup(t)
 	hash := publishBatchArtifact(t, env, s)
 	batchExec(t, env.DB, `UPDATE run_item SET input_hash=$2 WHERE run_id=$1`, id, hash)
@@ -110,6 +113,7 @@ func TestRunBatch_AdoptedDirWithoutRowLoadsRows(t *testing.T) {
 	}
 }
 func TestRunBatch_SkipItemCommitsGap(t *testing.T) {
+	t.Parallel()
 	env, id, s := batchSetup(t)
 	batchExec(t, env.DB, `UPDATE run_item SET message='{"skip":{"kind":"scope_removed","detail":"reason"}}' WHERE run_id=$1`, id)
 	result, err := batchRun(env, id, s, 1, func(...any) {})
@@ -121,6 +125,7 @@ func TestRunBatch_SkipItemCommitsGap(t *testing.T) {
 	}
 }
 func TestRunBatch_RetryableFailureErrorsUntilLastAttempt(t *testing.T) {
+	t.Parallel()
 	env, id, s := batchSetup(t)
 	s.process = func(context.Context, Env, Run, Item) (Output, error) {
 		return Output{}, Retryable(errors.New("temporary"))
@@ -137,6 +142,7 @@ func TestRunBatch_RetryableFailureErrorsUntilLastAttempt(t *testing.T) {
 	}
 }
 func TestRunBatch_HeartbeatsDuringSlowItem(t *testing.T) {
+	t.Parallel()
 	env, id, s := batchSetup(t)
 	s.process = func(context.Context, Env, Run, Item) (Output, error) {
 		time.Sleep(300 * time.Millisecond)
@@ -149,6 +155,7 @@ func TestRunBatch_HeartbeatsDuringSlowItem(t *testing.T) {
 	}
 }
 func TestRunBatch_StopsWhenCancelling(t *testing.T) {
+	t.Parallel()
 	env, id, s := batchSetup(t)
 	batchExec(t, env.DB, `INSERT INTO run_item (run_id, stage, item_key, state, batch) VALUES ($1, 'fetch', 'later', 'pending', 0)`, id)
 	s.process = func(ctx context.Context, env Env, _ Run, _ Item) (Output, error) {
@@ -161,6 +168,7 @@ func TestRunBatch_StopsWhenCancelling(t *testing.T) {
 	}
 }
 func TestRunBatch_SupersededGenerationWritesNothing(t *testing.T) {
+	t.Parallel()
 	env, id, s := batchSetup(t)
 	batchExec(t, env.DB, `UPDATE run SET generation=3 WHERE id=$1`, id)
 	_, err := batchRun(env, id, s, 1, func(...any) {})
@@ -171,6 +179,7 @@ func TestRunBatch_SupersededGenerationWritesNothing(t *testing.T) {
 }
 
 func TestRunBatch_RowsErrorFailsOnlyThatItem(t *testing.T) {
+	t.Parallel()
 	env, id, s := batchSetup(t)
 	s.process = func(_ context.Context, _ Env, _ Run, item Item) (Output, error) {
 		if item.Key == "item" {
@@ -187,6 +196,7 @@ func TestRunBatch_RowsErrorFailsOnlyThatItem(t *testing.T) {
 }
 
 func TestRunBatch_CancelledStopsBatch(t *testing.T) {
+	t.Parallel()
 	env, id, s := batchSetup(t)
 	batchExec(t, env.DB, `UPDATE run SET state='cancelled' WHERE id=$1`, id)
 	result, err := batchRun(env, id, s, 1, func(...any) {})
@@ -196,6 +206,7 @@ func TestRunBatch_CancelledStopsBatch(t *testing.T) {
 }
 
 func TestRunBatch_SQLDataErrorFailsOnlyThatItem(t *testing.T) {
+	t.Parallel()
 	env, id, s := batchSetup(t)
 	hash := strings.Repeat("a", 64)
 	_, err := env.Artifacts.Publish(context.Background(), "fetch", hash, s.Recipe(Snapshot{}), func(dir string) error { return os.WriteFile(filepath.Join(dir, "row"), []byte("bad\x00text"), 0600) })

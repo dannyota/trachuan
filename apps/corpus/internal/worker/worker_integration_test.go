@@ -4,22 +4,30 @@ package worker
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
 	"danny.vn/traquydinh/apps/corpus/internal/artifact"
-	"danny.vn/traquydinh/apps/corpus/internal/migrate"
 	"danny.vn/traquydinh/apps/corpus/internal/run"
 	"danny.vn/traquydinh/apps/corpus/internal/stage"
 	"danny.vn/traquydinh/apps/corpus/internal/store"
 	"danny.vn/traquydinh/apps/corpus/internal/testdb"
+	"danny.vn/traquydinh/apps/corpus/internal/testtemporal"
 	"danny.vn/traquydinh/apps/corpus/internal/workflow"
 	"github.com/jackc/pgx/v5"
-	"go.temporal.io/sdk/client"
-	"go.temporal.io/sdk/testsuite"
 )
+
+func TestMain(m *testing.M) {
+	code := m.Run()
+	if err := testtemporal.Stop(); err != nil {
+		_, _ = fmt.Fprintln(os.Stderr, "stop Temporal server:", err)
+		code = 1
+	}
+	os.Exit(code)
+}
 
 type fakeStage struct{}
 
@@ -45,29 +53,20 @@ func (fakeStage) Resolve(context.Context, stage.Env, stage.Run, stage.Item, arti
 }
 
 func TestWorker_RunsRegisteredStageEndToEnd(t *testing.T) {
+	t.Parallel()
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	url := testdb.New(t)
-	if err := migrate.Up(ctx, url); err != nil {
-		t.Fatal(err)
-	}
 	db, err := store.Open(ctx, url)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer db.Close()
-	server, err := testsuite.StartDevServer(ctx, testsuite.DevServerOptions{ClientOptions: &client.Options{Namespace: "corpus"}})
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		if stopErr := server.Stop(); stopErr != nil {
-			t.Error(stopErr)
-		}
-	}()
+	server := testtemporal.Server(t)
+	rel := testtemporal.Release()
 	registry := workflow.NewRegistry(fakeStage{})
 	env := stage.Env{DB: db, Artifacts: artifact.Store{Root: t.TempDir()}, Now: time.Now}
-	w, err := New(ctx, Deps{Env: env, Temporal: server.Client(), Registry: registry})
+	w, err := New(ctx, Deps{TaskQueue: rel, Env: env, Temporal: server.Client(), Registry: registry})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -80,7 +79,7 @@ func TestWorker_RunsRegisteredStageEndToEnd(t *testing.T) {
 			t.Error(runErr)
 		}
 	}()
-	if err := run.Start(ctx, run.Deps{DB: db, Temporal: server.Client(), Stages: registry.Names(), RecipesFor: registry.Recipes, SourceList: []byte(`{}`)}, "vn", "20261109", "", ""); err != nil {
+	if err := run.Start(ctx, run.Deps{TaskQueue: rel, DB: db, Temporal: server.Client(), Stages: registry.Names(), RecipesFor: registry.Recipes, SourceList: []byte(`{}`)}, "vn", rel, "", ""); err != nil {
 		t.Fatal(err)
 	}
 	ticker := time.NewTicker(100 * time.Millisecond)

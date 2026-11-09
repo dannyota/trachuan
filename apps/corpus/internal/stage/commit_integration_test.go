@@ -17,9 +17,6 @@ func setup(t *testing.T) (*pgxpool.Pool, int64) {
 	t.Helper()
 	ctx := context.Background()
 	url := testdb.New(t)
-	if err := migrate.Up(ctx, url); err != nil {
-		t.Fatal(err)
-	}
 	pool, err := pgxpool.New(ctx, url)
 	if err != nil {
 		t.Fatal(err)
@@ -36,8 +33,9 @@ func setup(t *testing.T) (*pgxpool.Pool, int64) {
 }
 
 func TestMigrate_UpFromEmpty(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
-	url := testdb.New(t)
+	url := testdb.NewEmpty(t)
 	if err := migrate.Up(ctx, url); err != nil {
 		t.Fatal(err)
 	}
@@ -62,6 +60,7 @@ func testCommit(id int64) Commit {
 }
 
 func TestCommitItem_IgnoresLowerFence(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	pool, id := setup(t)
 	c := testCommit(id)
@@ -90,6 +89,7 @@ func TestCommitItem_IgnoresLowerFence(t *testing.T) {
 }
 
 func TestCommitItem_IgnoresLowerAttemptInSameGeneration(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	pool, id := setup(t)
 	c := testCommit(id)
@@ -112,6 +112,7 @@ func TestCommitItem_IgnoresLowerAttemptInSameGeneration(t *testing.T) {
 }
 
 func TestCommitItem_SameArtifactTwiceKeepsOneRow(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	pool, id := setup(t)
 	c := testCommit(id)
@@ -133,6 +134,7 @@ func TestCommitItem_SameArtifactTwiceKeepsOneRow(t *testing.T) {
 }
 
 func TestCommitItem_RunRowsAndGapsIdempotent(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	pool, id := setup(t)
 	c := testCommit(id)
@@ -156,6 +158,7 @@ func TestCommitItem_RunRowsAndGapsIdempotent(t *testing.T) {
 }
 
 func TestCommitItem_GapWithoutArtifact(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	pool, id := setup(t)
 	c := testCommit(id)
@@ -175,6 +178,7 @@ func TestCommitItem_GapWithoutArtifact(t *testing.T) {
 }
 
 func TestRunItem_RejectsUnknownState(t *testing.T) {
+	t.Parallel()
 	pool, id := setup(t)
 	if _, err := pool.Exec(context.Background(), `UPDATE run_item SET state='unknown' WHERE run_id=$1`, id); err == nil {
 		t.Fatal("unknown state accepted")
@@ -182,6 +186,7 @@ func TestRunItem_RejectsUnknownState(t *testing.T) {
 }
 
 func TestCommitItem_FailedKeepsPlannedInputHash(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	pool, id := setup(t)
 	batchExec(t, pool, `UPDATE run_item SET input_hash='planned' WHERE run_id=$1`, id)

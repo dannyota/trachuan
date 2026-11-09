@@ -6,7 +6,6 @@ import (
 	"context"
 	"testing"
 
-	"danny.vn/traquydinh/apps/corpus/internal/migrate"
 	"danny.vn/traquydinh/apps/corpus/internal/testdb"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -15,9 +14,6 @@ func gapDB(t *testing.T) (*pgxpool.Pool, int64) {
 	t.Helper()
 	ctx := context.Background()
 	url := testdb.New(t)
-	if err := migrate.Up(ctx, url); err != nil {
-		t.Fatal(err)
-	}
 	db, err := pgxpool.New(ctx, url)
 	if err != nil {
 		t.Fatal(err)
@@ -37,6 +33,7 @@ func gapDB(t *testing.T) (*pgxpool.Pool, int64) {
 }
 
 func TestAcceptGaps_AcceptsOnlyThatKind(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	db, id := gapDB(t)
 	n, err := AcceptGaps(ctx, Deps{DB: db}, "vn", "20261109", "one", "accepted")
@@ -55,6 +52,7 @@ func TestAcceptGaps_AcceptsOnlyThatKind(t *testing.T) {
 }
 
 func TestPublishable_DoneItemWithUnacceptedGap(t *testing.T) {
+	t.Parallel()
 	db, id := gapDB(t)
 	ok, reasons, err := Publishable(context.Background(), db, id)
 	if err != nil || ok || len(reasons) == 0 {

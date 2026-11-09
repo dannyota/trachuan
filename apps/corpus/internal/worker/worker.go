@@ -27,6 +27,7 @@ import (
 
 // Deps supplies the worker's clients and registered stages.
 type Deps struct {
+	TaskQueue    string
 	Env          stage.Env
 	Temporal     client.Client
 	Registry     workflow.Registry
@@ -41,7 +42,11 @@ func New(_ context.Context, deps Deps) (*Worker, error) {
 	if deps.Env.DB == nil || deps.Temporal == nil {
 		return nil, errors.New("worker requires a workshop pool and Temporal client")
 	}
-	w := temporalworker.New(deps.Temporal, run.TaskQueue, temporalworker.Options{})
+	taskQueue := deps.TaskQueue
+	if taskQueue == "" {
+		taskQueue = run.TaskQueue
+	}
+	w := temporalworker.New(deps.Temporal, taskQueue, temporalworker.Options{})
 	w.RegisterWorkflowWithOptions(workflow.BuildRelease, temporalworkflow.RegisterOptions{Name: run.WorkflowName})
 	checkpointer := deps.Checkpointer
 	if checkpointer == nil {
