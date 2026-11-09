@@ -38,3 +38,9 @@ SELECT stage, state, count(*) AS count FROM run_item WHERE run_id = $1 GROUP BY 
 
 -- name: ListUnacceptedGapCounts :many
 SELECT stage, kind, count(*) AS count FROM gap WHERE run_id = $1 AND accepted_at IS NULL GROUP BY stage, kind ORDER BY stage, kind;
+
+-- name: GetBatchRun :one
+SELECT * FROM run WHERE id = $1;
+
+-- name: GetBatchRunState :one
+SELECT state FROM run WHERE id = $1;

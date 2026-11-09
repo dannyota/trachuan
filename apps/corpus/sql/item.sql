@@ -14,3 +14,8 @@ WHERE i.run_id = r.id AND i.run_id = sqlc.arg(run_id)
   AND i.stage = sqlc.arg(stage) AND i.item_key = sqlc.arg(item_key)
   AND r.generation = sqlc.arg(generation)
   AND (i.generation, i.attempt) <= (sqlc.arg(generation), sqlc.arg(attempt));
+
+-- name: ListPendingBatchItems :many
+SELECT * FROM run_item
+WHERE run_id = $1 AND stage = $2 AND batch = $3 AND state = 'pending'
+ORDER BY item_key;

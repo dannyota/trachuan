@@ -36,6 +36,51 @@ func (q *Queries) InsertRunItem(ctx context.Context, arg InsertRunItemParams) er
 	return err
 }
 
+const listPendingBatchItems = `-- name: ListPendingBatchItems :many
+SELECT run_id, stage, item_key, input_hash, recipe_hash, state, batch, generation, attempt, artifact_id, message, updated_at FROM run_item
+WHERE run_id = $1 AND stage = $2 AND batch = $3 AND state = 'pending'
+ORDER BY item_key
+`
+
+type ListPendingBatchItemsParams struct {
+	RunID int64
+	Stage string
+	Batch int32
+}
+
+func (q *Queries) ListPendingBatchItems(ctx context.Context, arg ListPendingBatchItemsParams) ([]RunItem, error) {
+	rows, err := q.db.Query(ctx, listPendingBatchItems, arg.RunID, arg.Stage, arg.Batch)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []RunItem
+	for rows.Next() {
+		var i RunItem
+		if err := rows.Scan(
+			&i.RunID,
+			&i.Stage,
+			&i.ItemKey,
+			&i.InputHash,
+			&i.RecipeHash,
+			&i.State,
+			&i.Batch,
+			&i.Generation,
+			&i.Attempt,
+			&i.ArtifactID,
+			&i.Message,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateRunItemFenced = `-- name: UpdateRunItemFenced :execrows
 UPDATE run_item AS i
 SET input_hash = $1, recipe_hash = $2,

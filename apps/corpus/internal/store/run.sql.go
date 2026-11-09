@@ -37,6 +37,41 @@ func (q *Queries) CreateRun(ctx context.Context, arg CreateRunParams) error {
 	return err
 }
 
+const getBatchRun = `-- name: GetBatchRun :one
+SELECT id, country, rel, generation, state, next_stage, until_stage, workflow_id, snapshot, message, created_at, updated_at FROM run WHERE id = $1
+`
+
+func (q *Queries) GetBatchRun(ctx context.Context, id int64) (Run, error) {
+	row := q.db.QueryRow(ctx, getBatchRun, id)
+	var i Run
+	err := row.Scan(
+		&i.ID,
+		&i.Country,
+		&i.Rel,
+		&i.Generation,
+		&i.State,
+		&i.NextStage,
+		&i.UntilStage,
+		&i.WorkflowID,
+		&i.Snapshot,
+		&i.Message,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getBatchRunState = `-- name: GetBatchRunState :one
+SELECT state FROM run WHERE id = $1
+`
+
+func (q *Queries) GetBatchRunState(ctx context.Context, id int64) (string, error) {
+	row := q.db.QueryRow(ctx, getBatchRunState, id)
+	var state string
+	err := row.Scan(&state)
+	return state, err
+}
+
 const getRun = `-- name: GetRun :one
 SELECT id, country, rel, generation, state, next_stage, until_stage, workflow_id, snapshot, message, created_at, updated_at FROM run WHERE country = $1 AND rel = $2
 `

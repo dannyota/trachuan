@@ -14,6 +14,8 @@ type Querier interface {
 	CountUnacceptedGaps(ctx context.Context, runID int64) (int64, error)
 	CreateRun(ctx context.Context, arg CreateRunParams) error
 	GetArtifactID(ctx context.Context, arg GetArtifactIDParams) (int64, error)
+	GetBatchRun(ctx context.Context, id int64) (Run, error)
+	GetBatchRunState(ctx context.Context, id int64) (string, error)
 	GetRun(ctx context.Context, arg GetRunParams) (Run, error)
 	GetRunForUpdate(ctx context.Context, arg GetRunForUpdateParams) (Run, error)
 	GetRunGeneration(ctx context.Context, id int64) (int32, error)
@@ -21,6 +23,7 @@ type Querier interface {
 	InsertArtifact(ctx context.Context, arg InsertArtifactParams) (int64, error)
 	InsertGap(ctx context.Context, arg InsertGapParams) error
 	InsertRunItem(ctx context.Context, arg InsertRunItemParams) error
+	ListPendingBatchItems(ctx context.Context, arg ListPendingBatchItemsParams) ([]RunItem, error)
 	ListRunGaps(ctx context.Context, arg ListRunGapsParams) ([]Gap, error)
 	ListRunItemCounts(ctx context.Context, runID int64) ([]ListRunItemCountsRow, error)
 	ListUnacceptedGapCounts(ctx context.Context, runID int64) ([]ListUnacceptedGapCountsRow, error)
