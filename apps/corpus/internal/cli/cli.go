@@ -11,7 +11,7 @@ type command func(context.Context, []string, io.Writer, io.Writer) int
 
 // Run dispatches a command and returns its exit status.
 func Run(ctx context.Context, args []string, stdout, stderr io.Writer) int {
-	commands := map[string]command{}
+	commands := map[string]command{"migrate": runMigrate}
 	if len(args) > 0 {
 		if run, ok := commands[args[0]]; ok {
 			return run(ctx, args[1:], stdout, stderr)

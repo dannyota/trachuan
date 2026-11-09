@@ -19,7 +19,9 @@ docs-fmt: ## Format human-read Markdown with Prettier
 test: ## Run unit tests
 	cd apps/corpus && go test ./...
 
-LOAD_ENV := set -a; if [ -f .env ]; then . ./.env; fi; set +a
+# Local runs reuse the compose password for pgx; CI sets the password in its URL.
+LOAD_ENV := set -a; if [ -f .env ]; then . ./.env; fi; set +a; \
+	if [ -z "$$PGPASSWORD" ] && [ -n "$$POSTGRES_PASSWORD" ]; then export PGPASSWORD="$$POSTGRES_PASSWORD"; fi
 
 test-integration: ## Run integration tests (loads .env when present)
 	$(LOAD_ENV); cd apps/corpus && go test -tags integration -count=1 ./...
