@@ -8,6 +8,7 @@ import (
 	"danny.vn/trachuan/apps/corpus/internal/artifact"
 	"danny.vn/trachuan/apps/corpus/internal/store"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -74,8 +75,16 @@ func CommitItem(ctx context.Context, pool *pgxpool.Pool, c Commit) (applied bool
 		}
 	}
 	for _, gap := range c.Gaps {
+		if validateErr := gap.Validate(); validateErr != nil {
+			return false, fmt.Errorf("validate gap: %w", validateErr)
+		}
+		status := pgtype.Int4{}
+		if gap.HTTPStatus != nil {
+			status = pgtype.Int4{Int32: *gap.HTTPStatus, Valid: true}
+		}
 		if gapErr := q.InsertGap(ctx, store.InsertGapParams{
 			RunID: c.RunID, Stage: c.Stage, ItemKey: c.ItemKey, Kind: gap.Kind, Detail: gap.Detail,
+			Source: optionalString(gap.Source), Origin: optionalString(string(gap.Origin)), Cause: optionalString(string(gap.Cause)), Endpoint: optionalString(gap.Endpoint), HttpStatus: status, EvidenceRef: optionalString(gap.EvidenceRef),
 		}); gapErr != nil {
 			return false, fmt.Errorf("insert gap: %w", gapErr)
 		}
@@ -95,4 +104,11 @@ func CommitItem(ctx context.Context, pool *pgxpool.Pool, c Commit) (applied bool
 		return false, fmt.Errorf("commit item: %w", err)
 	}
 	return true, nil
+}
+
+func optionalString(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
 }

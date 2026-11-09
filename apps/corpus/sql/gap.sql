@@ -1,6 +1,6 @@
 -- name: InsertGap :exec
-INSERT INTO gap (run_id, stage, item_key, kind, detail)
-VALUES ($1, $2, $3, $4, $5)
+INSERT INTO gap (run_id, stage, item_key, kind, detail, source, origin, cause, endpoint, http_status, evidence_ref)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 ON CONFLICT (run_id, stage, item_key, kind, detail) DO NOTHING;
 
 -- name: ListRunGaps :many

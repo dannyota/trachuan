@@ -8,6 +8,7 @@ import (
 
 	"danny.vn/trachuan/apps/corpus/internal/artifact"
 	"danny.vn/trachuan/apps/corpus/internal/migrate"
+	"danny.vn/trachuan/apps/corpus/internal/store"
 	"danny.vn/trachuan/apps/corpus/internal/testdb"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -198,5 +199,24 @@ func TestCommitItem_FailedKeepsPlannedInputHash(t *testing.T) {
 	var hash *string
 	if err := pool.QueryRow(ctx, `SELECT input_hash FROM run_item WHERE run_id=$1`, id).Scan(&hash); err != nil || hash == nil || *hash != "planned" {
 		t.Fatalf("hash=%v err=%v", hash, err)
+	}
+}
+
+func TestGapCause_RoundTrip(t *testing.T) {
+	ctx := context.Background()
+	pool, id := setup(t)
+	c := testCommit(id)
+	status := int32(503)
+	c.Gaps = []Gap{{Kind: "invalid_source_data", Detail: "failure", Source: "vbpl", Origin: OriginGateway, Cause: CauseHTTP5xx, Endpoint: "lookup", HTTPStatus: &status, EvidenceRef: "responses/1.json"}}
+	if applied, err := CommitItem(ctx, pool, c); err != nil || !applied {
+		t.Fatalf("commit: %v %v", applied, err)
+	}
+	rows, err := store.New(pool).ListRunGaps(ctx, store.ListRunGapsParams{Country: "vn", Rel: "20261109"})
+	if err != nil || len(rows) != 1 {
+		t.Fatalf("read gaps: %+v %v", rows, err)
+	}
+	got := rows[0]
+	if got.Source == nil || *got.Source != "vbpl" || got.Origin == nil || *got.Origin != "gateway" || got.Cause == nil || *got.Cause != "http_5xx" || got.Endpoint == nil || *got.Endpoint != "lookup" || !got.HttpStatus.Valid || got.HttpStatus.Int32 != 503 || got.EvidenceRef == nil || *got.EvidenceRef != "responses/1.json" {
+		t.Fatalf("unexpected gap: %+v", got)
 	}
 }

@@ -226,6 +226,18 @@ func processFailure(err error, retryable *RetryableError) Output {
 	c := itemCommit(Commit{}, err)
 	if retryable != nil && retryable.GapKind != "" {
 		c.State, c.Gaps = "gap", []Gap{{Kind: retryable.GapKind, Detail: trimRunes(c.Message, 200)}}
+		cause := retryable.Cause
+		if cause.Origin == "" && sourceDataError(err) && retryable.GapKind == "invalid_source_data" {
+			cause.Origin = OriginSourceData
+		}
+		c.Gaps[0].setCause(cause)
+	}
+	if retryable != nil && retryable.GapKind == "" && len(c.Gaps) > 0 {
+		cause := retryable.Cause
+		if cause.Origin == "" {
+			cause.Origin = OriginSourceData
+		}
+		c.Gaps[0].setCause(cause)
 	}
 	return Output{State: c.State, Message: c.Message, Gaps: c.Gaps}
 }
@@ -259,7 +271,7 @@ func itemCommit(c Commit, err error) Commit {
 	if len(detail) > 200 {
 		detail = detail[:200]
 	}
-	c.State, c.Gaps = "gap", []Gap{{Kind: "invalid_source_data", Detail: string(detail)}}
+	c.State, c.Gaps = "gap", []Gap{{Kind: "invalid_source_data", Detail: string(detail), Origin: OriginSourceData}}
 	return c
 }
 

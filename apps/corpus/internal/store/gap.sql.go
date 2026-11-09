@@ -7,6 +7,8 @@ package store
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const acceptRunGaps = `-- name: AcceptRunGaps :execrows
@@ -47,17 +49,23 @@ func (q *Queries) CountUnacceptedGaps(ctx context.Context, runID int64) (int64, 
 }
 
 const insertGap = `-- name: InsertGap :exec
-INSERT INTO gap (run_id, stage, item_key, kind, detail)
-VALUES ($1, $2, $3, $4, $5)
+INSERT INTO gap (run_id, stage, item_key, kind, detail, source, origin, cause, endpoint, http_status, evidence_ref)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 ON CONFLICT (run_id, stage, item_key, kind, detail) DO NOTHING
 `
 
 type InsertGapParams struct {
-	RunID   int64
-	Stage   string
-	ItemKey string
-	Kind    string
-	Detail  string
+	RunID       int64
+	Stage       string
+	ItemKey     string
+	Kind        string
+	Detail      string
+	Source      *string
+	Origin      *string
+	Cause       *string
+	Endpoint    *string
+	HttpStatus  pgtype.Int4
+	EvidenceRef *string
 }
 
 func (q *Queries) InsertGap(ctx context.Context, arg InsertGapParams) error {
@@ -67,6 +75,12 @@ func (q *Queries) InsertGap(ctx context.Context, arg InsertGapParams) error {
 		arg.ItemKey,
 		arg.Kind,
 		arg.Detail,
+		arg.Source,
+		arg.Origin,
+		arg.Cause,
+		arg.Endpoint,
+		arg.HttpStatus,
+		arg.EvidenceRef,
 	)
 	return err
 }

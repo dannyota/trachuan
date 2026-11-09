@@ -47,6 +47,7 @@ type Stage interface {
 type RetryableError struct {
 	Err     error
 	GapKind string
+	Cause   GapCause
 }
 
 // Error returns the underlying error message.
