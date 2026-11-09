@@ -41,8 +41,11 @@ metric definitions, rejection IDs/message, cache schema/depths, quantile rule,
 and floors. It reads but never changes the dump or singleton release row.
 Artifact files: `report.json`, `cases.jsonl`, `arms.jsonl`, `queries.f32`,
 `query-index.json`, `MANIFEST.sha256`. `Rows` is a no-op; `Resolve` exposes the
-report status and regenerates any evaluation gaps. No production queries enter
-these artifacts.
+report status and regenerates evaluation gaps: one `eval_floor_failed` per
+failed or unavailable old-product floor (detail `<mode>:<metric>`) and one
+`eval_rejection_failed` per failed rejection check (detail the case ID). The
+owner may accept them; release stays blocked by `release_eligible`. No
+production queries enter these artifacts.
 
 ## Fixtures and identity adjudication
 
