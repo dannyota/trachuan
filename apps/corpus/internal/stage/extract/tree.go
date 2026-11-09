@@ -20,10 +20,6 @@ type provision struct {
 	Path         string  `json:"path"`
 	Text         string  `json:"text"`
 }
-type pendingNode struct {
-	node  vbpl.Node
-	depth int
-}
 
 func extractTree(ctx context.Context, nodes []vbpl.Node) ([]provision, []stage.Gap, error) {
 	rows := []provision{}
@@ -31,11 +27,7 @@ func extractTree(ctx context.Context, nodes []vbpl.Node) ([]provision, []stage.G
 	if len(nodes) == 0 {
 		return rows, append(gaps, stage.Gap{Kind: "no_tree"}), nil
 	}
-	stack := make([]pendingNode, 0, len(nodes))
-	for _, node := range nodes {
-		stack = append(stack, pendingNode{node, 1})
-	}
-	count := 0
+	stack := append(make([]vbpl.Node, 0, len(nodes)), nodes...)
 	articleCount := 0
 	for len(stack) > 0 {
 		if err := ctx.Err(); err != nil {
@@ -43,16 +35,10 @@ func extractTree(ctx context.Context, nodes []vbpl.Node) ([]provision, []stage.G
 		}
 		top := stack[len(stack)-1]
 		stack = stack[:len(stack)-1]
-		count++
-		if nodeKind(top.node.Level, top.node.PType) == "dieu" {
+		if nodeKind(top.Level, top.PType) == "dieu" {
 			articleCount++
 		}
-		if count > 50000 || top.depth > 32 {
-			return rows, []stage.Gap{{Kind: "tree_too_large"}}, nil
-		}
-		for _, child := range top.node.Children {
-			stack = append(stack, pendingNode{child, top.depth + 1})
-		}
+		stack = append(stack, top.Children...)
 	}
 	paths := make(map[string]int)
 	articles := make(map[int]bool)

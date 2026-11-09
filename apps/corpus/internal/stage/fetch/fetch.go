@@ -62,7 +62,7 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, r stage.Run, item st
 	if err != nil {
 		return apiError(err, id, true)
 	}
-	tree, _, err := s.client.Tree(ctx, id)
+	tree, err := s.client.RawTree(ctx, id)
 	if err != nil {
 		return apiError(err, id, false)
 	}

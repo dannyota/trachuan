@@ -39,6 +39,7 @@ type fixtureServer struct {
 	bodies    map[string]string
 	missing   bool
 	oversized bool
+	treeBody  string
 	downloads atomic.Int32
 }
 
@@ -57,7 +58,11 @@ func setup(t *testing.T, f *fixtureServer) (*Stage, stage.Env) {
 			}
 			fixture(t, w, "detail-66518.json")
 		case strings.Contains(r.URL.Path, "/tree/"):
-			fixture(t, w, "tree-66518.json")
+			if f.treeBody != "" {
+				_, _ = w.Write([]byte(f.treeBody))
+			} else {
+				fixture(t, w, "tree-66518.json")
+			}
 		case strings.HasSuffix(r.URL.Path, "/diagram"):
 			fixture(t, w, "diagram-66518.json")
 		case strings.HasSuffix(r.URL.Path, "/files"):
@@ -239,5 +244,17 @@ func TestFetch_CacheChecksumMismatchDownloads(t *testing.T) {
 	out := process(t, s, env)
 	if f.downloads.Load() != 1 || out.State != "done" {
 		t.Fatalf("downloads = %d, state = %s", f.downloads.Load(), out.State)
+	}
+}
+
+func TestFetch_DoesNotDecodeTree(t *testing.T) {
+	s, env := setup(t, &fixtureServer{treeBody: "not valid JSON"})
+	out := process(t, s, env)
+	if out.State != "done" || out.Artifact == nil {
+		t.Fatalf("output = %+v", out)
+	}
+	data, err := os.ReadFile(filepath.Join(env.Artifacts.Abs(out.Artifact.Path), "tree.json"))
+	if err != nil || string(data) != "not valid JSON" {
+		t.Fatalf("tree = %q, error = %v", data, err)
 	}
 }

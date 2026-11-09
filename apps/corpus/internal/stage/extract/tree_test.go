@@ -1,8 +1,8 @@
 package extract
 
 import (
+	"bytes"
 	"context"
-	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -18,13 +18,11 @@ func fixture(t *testing.T, name string) []vbpl.Node {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var envelope struct {
-		Data []vbpl.Node `json:"data"`
-	}
-	if err = json.Unmarshal(data, &envelope); err != nil {
+	nodes, err := vbpl.DecodeTree(context.Background(), bytes.NewReader(data), vbpl.MaxTreeDepth, vbpl.MaxTreeNodes)
+	if err != nil {
 		t.Fatal(err)
 	}
-	return envelope.Data
+	return nodes
 }
 func TestExtract_Fixture67878(t *testing.T) {
 	rows, _, err := extractTree(context.Background(), fixture(t, "tree-67878.json"))
@@ -96,18 +94,6 @@ func TestExtract_EmptyArticleTextIsGap(t *testing.T) {
 	_, gaps, err := extractTree(context.Background(), []vbpl.Node{{ID: "x", Level: "Article", Title: "Điều 1"}})
 	if err != nil || !hasGap(gaps, "empty_text", "x") {
 		t.Fatalf("%v %v", gaps, err)
-	}
-}
-func TestExtract_TreeTooLargeIsGap(t *testing.T) {
-	n := vbpl.Node{ID: "x"}
-	for i := 0; i < 32; i++ {
-		n = vbpl.Node{ID: "x", Children: []vbpl.Node{n}}
-	}
-	for _, nodes := range [][]vbpl.Node{{n}, make([]vbpl.Node, 50001)} {
-		rows, gaps, err := extractTree(context.Background(), nodes)
-		if err != nil || len(rows) != 0 || !hasGap(gaps, "tree_too_large", "") {
-			t.Fatalf("%d %v %v", len(rows), gaps, err)
-		}
 	}
 }
 func TestText_ConvertsBreaksAndEntities(t *testing.T) {

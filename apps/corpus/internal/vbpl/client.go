@@ -121,7 +121,7 @@ func wait(ctx context.Context, d time.Duration) error {
 		return nil
 	}
 }
-func (c *Client) api(ctx context.Context, method, path string, body []byte) (json.RawMessage, error) {
+func (c *Client) apiRaw(ctx context.Context, method, path string, body []byte) (json.RawMessage, error) {
 	for attempt := 0; ; attempt++ {
 		if attempt > 0 {
 			if err := wait(ctx, c.backoffs[attempt-1]); err != nil {
@@ -152,16 +152,24 @@ func (c *Client) api(ctx context.Context, method, path string, body []byte) (jso
 		if status != 200 {
 			return nil, fmt.Errorf("gateway status %d", status)
 		}
-		var envelope response
-		if err := json.Unmarshal(raw, &envelope); err != nil {
-			return nil, fmt.Errorf("decode gateway response: %w", err)
-		}
-		if !envelope.Success {
-			return nil, ErrNotFound
-		}
 		return raw, nil
 	}
 }
+func (c *Client) api(ctx context.Context, method, path string, body []byte) (json.RawMessage, error) {
+	raw, err := c.apiRaw(ctx, method, path, body)
+	if err != nil {
+		return nil, err
+	}
+	var envelope response
+	if err := json.Unmarshal(raw, &envelope); err != nil {
+		return nil, fmt.Errorf("decode gateway response: %w", err)
+	}
+	if !envelope.Success {
+		return nil, ErrNotFound
+	}
+	return raw, nil
+}
+
 func data(raw json.RawMessage, out any) error {
 	var env response
 	if err := json.Unmarshal(raw, &env); err != nil {
@@ -257,14 +265,19 @@ func jsonText(raw json.RawMessage) string {
 	return string(raw)
 }
 
+// RawTree requests the unparsed provision tree response.
+func (c *Client) RawTree(ctx context.Context, id string) (json.RawMessage, error) {
+	return c.apiRaw(ctx, http.MethodGet, "/doc/provision/tree/"+url.PathEscape(id), nil)
+}
+
 // Tree requests raw and decoded provision nodes.
 func (c *Client) Tree(ctx context.Context, id string) (json.RawMessage, []Node, error) {
-	raw, err := c.api(ctx, http.MethodGet, "/doc/provision/tree/"+url.PathEscape(id), nil)
+	raw, err := c.RawTree(ctx, id)
 	if err != nil {
 		return nil, nil, err
 	}
-	var nodes []Node
-	if err = data(raw, &nodes); err != nil {
+	nodes, err := DecodeTree(ctx, bytes.NewReader(raw), MaxTreeDepth, MaxTreeNodes)
+	if err != nil {
 		return nil, nil, err
 	}
 	return raw, nodes, nil

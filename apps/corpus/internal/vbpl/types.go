@@ -45,30 +45,6 @@ type Node struct {
 	Children                  []Node
 }
 
-// UnmarshalJSON decodes the gateway's node shape, whose content is an object
-// holding the node's own title and HTML text, or null.
-func (n *Node) UnmarshalJSON(b []byte) error {
-	var wire struct {
-		ID         string `json:"id"`
-		Title      string `json:"title"`
-		Level      string `json:"level"`
-		PType      int    `json:"ptype"`
-		OrderIndex int    `json:"orderIndex"`
-		Content    *struct {
-			Content string `json:"content"`
-		} `json:"content"`
-		Children []Node `json:"children"`
-	}
-	if err := json.Unmarshal(b, &wire); err != nil {
-		return err
-	}
-	*n = Node{ID: wire.ID, Title: wire.Title, Level: wire.Level, PType: wire.PType, OrderIndex: wire.OrderIndex, Children: wire.Children}
-	if wire.Content != nil {
-		n.Content = wire.Content.Content
-	}
-	return nil
-}
-
 // File identifies an attachment in the gateway listing.
 type File struct {
 	Name, FullPath string
