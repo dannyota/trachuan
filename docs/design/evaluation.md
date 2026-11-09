@@ -100,10 +100,10 @@ article/clause/point is specified. Report direct-only scores alongside legacy
 relation credit. Guard fixtures against empty expected numbers.
 
 Legacy evaluation bypasses only the product diacritics rejection through
-`Engine.CollectLegacy(ctx,request,depths)`; it still enforces size/token and SQL
-safety limits, and does not restore accents or add Qwen instructions. The method
-is a trusted evaluation API, never exposed by the server. All other candidate
-and shaping choices are recipe 1. Call the result
+`Engine.PrepareLegacy(ctx,request)` followed by `Engine.Collect`; it still
+enforces size/token and SQL safety limits, and does not restore accents or add
+Qwen instructions. The method is a trusted evaluation API, never exposed by the
+server. All other candidate and shaping choices are recipe 1. Call the result
 `legacy_matcher_on_product_recipe`, not a reproduction of banhmi's engine.
 Compare descriptively with the accepted numbers and the
 [local exact baseline](../research/retrieval-hybrid-results-2026-11.md),

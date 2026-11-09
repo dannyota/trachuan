@@ -163,7 +163,8 @@ Consolidation collapse is `off-unverified-alignment` in recipe 1. Imported
 `consolidates` edges support family diagnostics, but do not establish provision
 equivalence or renumbering. The historical family+label collapse could discard
 different amendment articles. Keep both until a later adjudicated mapping
-supports collapse; cache family components for those trials.
+supports collapse. Caching family components for such trials is deferred to the
+tuning plan, which derives them from the immutable dump.
 
 Apply the per-document cap in rank order: take capped hits while collecting
 excess hits into a demoted list; if fewer than `limit` remain, append demoted

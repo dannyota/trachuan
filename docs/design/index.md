@@ -201,14 +201,17 @@ entries, refuse any other extension, function or event trigger entry, restore
 the rest as `corpus_builder` with
 `pg_restore --no-owner --no-privileges --exit-on-error --use-list`, validate
 release fields and counts, disconnect builder sessions, and rename it. The eval
-stage and `corpus eval` call `EnsureDatabase` too, so a database lost after
-evaluation returns through `corpus eval` without rerunning the run. Integration
-tests prove dump and restore under a nonsuperuser builder role whose template is
-provisioned the same way. After a fresh build, the same resolve path renames the
-already validated temporary database. If final exists, require its ownership
-marker, release hashes and counts to match. If a crash left no marker after
-restore, only the owned temporary database may be recreated. Never rewrite a
-final database to repair a mismatch.
+stage and `corpus eval` reach it through `EnsureForRun`, which looks up the
+run's committed done build artifact and calls `EnsureDatabase` with it.
+`EnsureDatabase` itself takes a verified artifact, not a run row, because
+`Resolve` runs before the item and its artifact row commit; so a database lost
+after evaluation returns through `corpus eval` without rerunning the run.
+Integration tests prove dump and restore under a nonsuperuser builder role whose
+template is provisioned the same way. After a fresh build, the same resolve path
+renames the already validated temporary database. If final exists, require its
+ownership marker, release hashes and counts to match. If a crash left no marker
+after restore, only the owned temporary database may be recreated. Never rewrite
+a final database to repair a mismatch.
 
 No SQL transaction spans CREATE DATABASE, restore or rename. Artifact
 publication precedes workshop commit, so recovery after a lost workshop or
