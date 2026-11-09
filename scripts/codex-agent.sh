@@ -22,11 +22,15 @@ parser = argparse.ArgumentParser(prog="scripts/codex-agent.sh")
 parser.add_argument("--model")
 parser.add_argument("--effort")
 parser.add_argument("--search", action="store_true")
+parser.add_argument("--resume", help="continue a stopped worker by session id; the brief file holds the answer")
 parser.add_argument("role")
 parser.add_argument("worktree")
 parser.add_argument("brief_file")
 parser.add_argument("report_file")
 args = parser.parse_args()
+if args.resume is not None and not re.fullmatch(
+        r"[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}", args.resume):
+    parser.error("invalid session id")
 if not re.fullmatch(r"[a-z_]+", args.role):
     parser.error("role must match ^[a-z_]+$")
 
@@ -50,12 +54,29 @@ try:
 except (OSError, ValueError, KeyError) as error:
     parser.error(str(error))
 
-command = ["codex"] + (["--search"] if args.search else []) + [
-    "exec", "-m", model, "-c", f"model_reasoning_effort={effort}",
-    "-c", "developer_instructions=" + toml_string(instructions),
-    "-s", sandbox, "-C", args.worktree, "--ephemeral", "-o", args.report_file, "--", brief,
-]
-with open(os.devnull, "rb") as source:
+# Workers run offline unit checks inside the sandbox: the Go build and lint
+# caches are writable, loopback listeners work (network_access), and module
+# downloads are refused, so a brief never needs a live network call.
+home = Path.home()
+roots = [str(home / "Library/Caches/go-build"), str(home / "Library/Caches/golangci-lint"), "/tmp"]
+os.environ.update({"GOCACHE": roots[0], "GOLANGCI_LINT_CACHE": roots[1],
+                   "GOPROXY": "off", "GOTOOLCHAIN": "local", "GOFLAGS": "-mod=readonly"})
+command = ["codex"] + (["--search"] if args.search else []) + ["exec"]
+if args.resume:
+    command += ["resume", args.resume]
+command += ["-m", model, "-c", f"model_reasoning_effort={effort}"]
+if args.resume:
+    command += ["-c", "sandbox_mode=" + toml_string(sandbox)]
+else:
+    command += ["-c", "developer_instructions=" + toml_string(instructions),
+                "-s", sandbox, "-C", args.worktree]
+if sandbox == "workspace-write":
+    command += ["-c", "sandbox_workspace_write.writable_roots=[" + ",".join(toml_string(r) for r in roots) + "]",
+                "-c", "sandbox_workspace_write.network_access=true"]
+command += ["-o", args.report_file, "-"]
+if args.resume:
+    os.chdir(args.worktree)
+with open(args.brief_file, "rb") as source:
     os.dup2(source.fileno(), 0)
 os.execvp(command[0], command)
 PY

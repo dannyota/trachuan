@@ -12,7 +12,7 @@ The primary session (`manager`) plans, briefs, verifies and owns Git. Codex work
 |Review of code, adversarial pass|Claude `reviewer` subagent, Opus 5.5 xhigh|
 |Searches, summaries, mechanical reading|Claude `Explore` agent|
 
-Dispatch: `scripts/codex-agent.sh [--model <m>] [--effort <e>] [--search] <role> <worktree> <brief-file> <report-file>`. The primary decides and states the route in each brief. No model reviews its own work; the original reviewer confirms each fix.
+Dispatch: `scripts/codex-agent.sh [--model <m>] [--effort <e>] [--search] [--resume <session-id>] <role> <worktree> <brief-file> <report-file>`. The primary decides and states the route in each brief. No model reviews its own work; the original reviewer confirms each fix.
 
 ## Flow
 
