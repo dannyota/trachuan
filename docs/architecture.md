@@ -39,6 +39,12 @@ MacBook against native local services (`deploy/local`)
 Stages run in order `discover`, `fetch`, `extract`, `relate`, `chunk`, `embed`,
 `build`, `eval`. A completed evaluation leaves the run `evaluated`.
 
+## Query service
+
+| App               | Role                                                                                             |
+| ----------------- | ------------------------------------------------------------------------------------------------ |
+| `apps/queryembed` | Go query embedding service with verified local model bundle and native ONNX Runtime and tokenizer |
+
 ## Local services
 
 Native PostgreSQL 18 with pgvector (`workshop` and `corpus_template`) and the
