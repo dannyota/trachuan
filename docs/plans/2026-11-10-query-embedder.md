@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. Routes (`instructions/workflow.md`): Tasks 1 to 4, 6 and 7 and Task 8 Step 3 go to Codex `implementer` on `gpt-6.1-terra`, reviewed by `gpt-6.1-sol`; Task 5 (cgo, native libraries, cancellation) goes to `implementer` with `--model gpt-6.1-sol`, reviewed by `reviewer` with `--model gpt-6-astra`; steps marked (primary) and Task 9 are the primary's (provisioning, live runs, parity evidence, host measurement). The primary verifies every task, runs the checks, owns Git and announces PostgreSQL use to the other session.
 
-**Goal:** Serve query embeddings from a Go service, `apps/queryembed`, running Vietnamese_Embedding_v2 in dynamic INT8 per-channel on ONNX Runtime CPU; prove parity with the Python query mode on the same INT8 file; then delete that mode and rename the Python service to `apps/docembed`.
+**Goal:** Serve query embeddings from a Go service, `apps/queryembed`, running Vietnamese_Embedding_v2 in dynamic INT8 per-channel on ONNX Runtime CPU; prove parity with the Python query mode on the same INT8 file; Go is the reference when they differ; then delete that mode and rename the Python service to `apps/docembed`.
 
 **Architecture:** A pure-Go HTTP layer (`httpapi`, `admission`, `bundle`) implements the embedder contract over two small interfaces, `Tokenizer` and `Runtime`. The native packages `tokenizer` (`github.com/daulet/tokenizers`) and `onnx` (the owner's ONNX Runtime Go binding) satisfy them only under build tag `ort`; without the tag they are stubs whose constructors fail, so default builds, tests and lint stay pure Go. Startup lives in `internal/app`; `cmd/queryembed/main.go` only wires it.
 
@@ -30,7 +30,7 @@
 
 ## Review Focus
 
-- Go and Python token ids differ on real Vietnamese input (NFD marks, zero-width characters, tabs and newlines, document numbers), silently shifting vectors: Task 8 parity covers a fixed edge-text list beside every evaluation question.
+- Go and Python token ids differ on real Vietnamese input (NFD marks, zero-width characters, tabs and newlines, document numbers), silently shifting vectors: Task 7 parity covers a fixed edge-text list beside every evaluation question and reports every difference; Go is the reference.
 - A request past its deadline returns 504 while native inference continues, and a new request starts on top of it: Task 2 `TestDo_DeadlineReturnsButSlotHeldUntilWorkEnds`; Task 5 `TestModel_CancelledContextTerminatesRun`.
 - Concurrent requests reach the cgo tokenizer at once: Task 5 `TestTokenizer_ConcurrentEncodeIsSerialized` under `-race`.
 - Strict JSON gaps: a duplicate key inside a nested object, invalid UTF-8 inside a string, a body exactly at the cap: Task 4 `TestPost_DuplicateKeyNested400`, `TestPost_InvalidUTF8_400`, `TestPost_BodyAtCapAccepted`.
@@ -51,7 +51,7 @@
 - [ ] **Step 2: Run** `make embedder-test`. Expected: FAIL.
 - [ ] **Step 3: Implement.** `make_bundle.py` quantizes with the call in Global Constraints before writing the manifest, and refuses when `onnx/model.onnx` is missing; the query recipe selects `onnx/model_int8.onnx` and reports `int8`; the document recipe is unchanged.
 - [ ] **Step 4: Run** `make embedder-test` and `make pre-push`. Expected: PASS.
-- [ ] **Step 5 (primary):** run `make_bundle.py` on `work/models/vi_v2-bundle`; start `make embedder-query`; re-pin `vi-v2-query.json` from `GET /v1/recipe`; smoke one Vietnamese query (token count, norm); record INT8 against FP32 cosine for the legacy questions (median near 0.987 on the Mac); `make test`; commit `feat(embedder): INT8 per-channel query model in the bundle`. Merge only after the scope run (the other session's next full run) has started, so it freezes the FP32 query recipe and serves as the FP32 side of the precision comparison in Task 8; tell the other session when it merges.
+- [ ] **Step 5 (primary):** run `make_bundle.py` on `work/models/vi_v2-bundle`; start `make embedder-query`; re-pin `vi-v2-query.json` from `GET /v1/recipe`; smoke one Vietnamese query (token count, norm); record INT8 against FP32 cosine for the legacy questions (median near 0.987 on the Mac); `make test`; commit `feat(embedder): INT8 per-channel query model in the bundle`. Land it on main on its own as soon as review and CI pass, so the scope run (the other session's next full run) freezes the INT8 query recipe; tell the other session when it merges.
 
 ### Task 2: Admission
 
@@ -149,12 +149,10 @@
 - Rename: `apps/embedder` to `apps/docembed`, package `trachuan_embedder` to `trachuan_docembed`
 - Delete: `apps/docembed/src/trachuan_docembed/onnx_runtime.py`, the query branches of `__main__.py`, `recipe.py` and `app.py`, and their tests
 
-- [ ] **Step 1 (primary):** start both query services on the same bundle; write the Python ids with `token_ids.py`; run `go test -tags 'ort parity' -count=1 ./apps/queryembed/test/parity/` with the four variables. Expected: PASS; record the counts and the minimum cosine.
-- [ ] **Step 2 (primary, needs a corpus database; announce PostgreSQL use):** three runs on one source list, the scope run's: run F is the scope run itself (FP32 queries, started before Task 1 merged); run A starts after Task 1 merged and is evaluated with the Python INT8 service; after re-pinning `vi-v2-query.json` from the Go service, run B is evaluated with the Go service. Ingest and embed artifacts are content-addressed, so A and B mostly reuse F's. Precondition for each comparison: equal source manifest hashes; if VBPL changed between two runs, list the changed documents, compare only cases whose expected and returned documents are outside that list, and record the excluded cases.
-  - Precision (F against A): report recall@8, MRR@8, abstention and current-law precision per cohort, mode and arm, and list every case whose hit identities differ; this is the INT8 cost on the trachuan corpus, the evidence ADR 0009 asks for, and it is recorded in `docs/research/query-int8-2026-11.md` beside the A1 study (75/96 against 76/96 recall@8 on banhmi's corpus).
-  - Parity (A against B): in `cases.jsonl`, ordered `returned` identities and `abstain` must be identical for every cohort, mode, arm and limit.
+- [ ] **Step 1 (primary):** start both query services on the same bundle; write the Python ids with `token_ids.py`; run `go test -tags 'ort parity' -count=1 ./apps/queryembed/test/parity/` with the four variables. Record the counts, every text whose ids or 422 decision differ, and the minimum cosine; a failure is recorded, not a blocker, because Go is the reference.
+- [ ] **Step 2 (primary, needs a corpus database; announce PostgreSQL use):** re-pin `vi-v2-query.json` from the Go service, start a run on the scope run's source list (ingest and embed artifacts are content-addressed, so it mostly reuses the scope run's), evaluate it with the Go service, and compare its `cases.jsonl` with the scope run's (Python INT8): list every case whose ordered `returned` identities or `abstain` differ. The Go service is the reference: a difference is recorded, not fixed on the Python side, and this run's evaluation replaces the scope run's as the current one.
 - [ ] **Step 3 (implementer):** delete the Python query mode and rename the service as listed; `make docembed-test`, `make docembed-run` and `make queryembed-run` replace the old embedder targets; the CI job and pre-push run ruff and pytest in `apps/docembed`. Tests: the document service refuses `--runtime query` and starts without it; the corpus config default `CORPUS_QUERY_EMBEDDER_URL` still points at `127.0.0.1:8091`.
-- [ ] **Step 4:** `make docembed-test`, `make test`, `make pre-push`, CI green; ADR 0011 History records the gate evidence and the deletion. Commit `feat: Go query service replaces the Python query mode`.
+- [ ] **Step 4:** `make docembed-test`, `make test`, `make pre-push`, CI green; ADR 0011 History records the parity results, that Go is the reference and the deletion; `docs/research/query-int8-2026-11.md` gains one line: the scope run changed corpus, validity rules and query precision at once, so the A1 study (75/96 against 76/96 recall@8) stays the only estimate of the INT8 effect. Commit `feat: Go query service replaces the Python query mode`.
 
 ### Task 9: Host latency and memory (primary, needs the OCI A1 host)
 
