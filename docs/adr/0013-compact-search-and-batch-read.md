@@ -82,3 +82,6 @@ they never state an inverse legal effect.
 
 - 2026-11-10: proposed after the owner asked for results that let agent models
   choose what to read, including related parts inside and across documents.
+- 2026-11-10: independent review (three rounds, findings S-01 to S-09) fixed
+  completeness, continuation, relation reach, endpoint identity, snippet
+  determinism and evaluation; verdict merge.
