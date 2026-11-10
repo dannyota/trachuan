@@ -77,10 +77,9 @@ release manifest.
 ## Host memory (estimates)
 
 For the [host selected in ADR 0006](../adr/0006-single-host-oci-podman.md), the
-rows total 5,950 MB, leaving about 18 GB for the OS, page cache and unallocated
-margin; this is not measured peak consumption. Keep the FP32 allocation below. A
-smaller INT8 model may replace it only after the separate precision study and
-approval under ADR 0009 and ADR 0011.
+rows total 4,650 MB, leaving about 19 GB for the OS, page cache and unallocated
+margin; this is not measured peak consumption. The INT8 allocation follows the
+accepted query precision in ADR 0009 and query service in ADR 0011.
 
 | Process                                        | RSS MB |
 | ---------------------------------------------- | ------ |
@@ -105,7 +104,8 @@ s. These are direct ONNX Runtime timings, not end-to-end search latency or
 full-load acceptance. The earlier
 [research note](../research/host-oci-a1-2026-11.md) records one of those runs.
 Keep the existing deadlines and release gates; measure contention with the
-thread limits below and two active embedding requests. Precision is unchanged.
+thread limits below and two active embedding requests. Current INT8 measurements
+and their limits are in [ADR 0009](../adr/0009-dense-embedding-recipe.md).
 
 ## Host alarms (proposed)
 
@@ -201,6 +201,15 @@ Exceeding a build ceiling fails explicitly; it never drops rows to fit.
 | Build item deadline; dump/restore command deadline        | 50 minutes; 15 minutes each within the item deadline            |
 | Eval item deadline; ad-hoc exact query deadline           | 50 minutes; 60 s per query                                      |
 | Eval artifact/cache total                                 | 2 GiB; fail explicitly if exceeded                              |
+
+Query limits apply to the Go query service. The transitional Python query mode
+uses the same query thread settings and client timeout in this table, including
+the corpus client's timeout, so evaluation matches serving budgets. Python is
+only the parity reference under [ADR 0011](../adr/0011-embedder-services.md),
+not a host service or an alternative release runtime. ONNX Runtime's
+[thread settings](https://onnxruntime.ai/docs/performance/tune-performance/threading.html)
+define intra-op parallelism; sequential execution does not create an inter-op
+thread pool.
 
 The shared activity timeout and heartbeat still apply. Cancel work before its
 item deadline, leaving retryable infrastructure failures; resource estimates do

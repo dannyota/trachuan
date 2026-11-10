@@ -31,17 +31,19 @@ byte-sorted item key, containing every predecessor item through `embed`:
 `{stage,item_key,state,input_hash,recipe_hash,artifact_sha256}`. Null artifact
 hashes are explicit for gap items. Include expected keys, frozen source-list
 hash and sorted gaps `{stage,item_key,kind,detail}`. Gap acceptance is a release
-gate, not a build input, so it is never hashed. `Process` recomputes the
-inventory and fails with non-retryable `inventory_changed` when its hash differs
-from the planned input hash. Do not hash workshop sequence IDs, mutable paths or
-generation numbers.
+gate, not a build input, so it is never hashed. `Process` recomputes the input
+hash from the inventory and pinned map and fails with non-retryable
+`inventory_changed` when it differs from the planned input hash. Do not hash
+workshop sequence IDs, mutable paths or generation numbers.
 
-Before index stages are frozen, derive `identity_inventory_hash` from compact
-JSON `{country,source_list_hash,expected_keys,items}`. Keys are byte-sorted;
-items are the fetch/extract/relate inventory tuples above in stage/key order,
-without gap acceptance metadata. This binds adjudication to source identities
-without depending on chunk/embed output. Freeze the reviewed map and authored
-fixtures before appending build/eval recipes; mismatch blocks planning.
+For inventory diagnostics, derive `identity_inventory_hash` from compact JSON
+`{country,source_list_hash,expected_keys,items}`. Keys are byte-sorted; items
+are the fetch/extract/relate inventory tuples above in stage/key order, without
+gap acceptance metadata. This hash does not bind the identity map or gate
+planning. [Evaluation](evaluation.md#fixtures-and-identity-adjudication) owns
+map production, review and per-case identity validation. Recipe freezing follows
+the [pipeline snapshot](pipeline.md#shape); ingest can finish before index
+recipes are appended. The reviewed map is input data, not a recipe.
 
 Freeze the evaluation civil date from the first eight digits of `rel`, parsed as
 a real calendar date; an invalid date is a configuration failure. The same date
@@ -49,21 +51,24 @@ feeds calibration and eval, including retries after midnight.
 
 `source_manifest_hash` is SHA-256 of this fixed-field compact JSON inventory.
 Build input hash is
-`stage.RecipeHash("build-input","1",country,rel, source_manifest_hash,decimal_schema_version)`.
-Verify all referenced artifact hashes and safe paths before decoding payloads;
-check byte sizes where declared, and before decoding stat each artifact file
-against the per-file cap in [budgets](budgets.md#indexing); a file above it
-fails the item. Artifacts are immutable, content addressed and written by our
-own stages, so a file growing between the size check and the read is outside the
-threat model; the manifest hash still guards the bytes decoded. Never use the
-workshop's latest row for a document outside this inventory.
+`stage.RecipeHash("build-input","2",country,rel, source_manifest_hash,decimal_schema_version,identity_map_sha256)`.
+Pin the reviewed map bytes at planning and verify their SHA-256 before use.
+Changing the map changes build input and invalidates dependent evaluation,
+without changing a frozen build recipe. Never read changed map bytes under the
+planned input hash. Verify all referenced artifact hashes and safe paths before
+decoding payloads; check byte sizes where declared, and before decoding stat
+each artifact file against the per-file cap in [budgets](budgets.md#indexing); a
+file above it fails the item. Artifacts are immutable, content addressed and
+written by our own stages, so a file growing between the size check and the read
+is outside the threat model; the manifest hash still guards the bytes decoded.
+Never use the workshop's latest row for a document outside this inventory.
 
 Build recipe hash uses `stage.RecipeHash("build","corpus/1",recipe_json)`. Its
 fixed fields are `schema_version`, `schema_sha256`, `chunk_recipe_hash`,
 `dense_recipe`, `lexical_recipe`, `retrieval_policy`, `normalizer_version`,
-`status_codes_sha256`, `calibration_policy`, `legacy_cases_sha256`,
-`identity_map_sha256`, PostgreSQL major, extension versions and tool versions.
-The calibration policy is fixed before build; its resulting numeric threshold is
+`status_codes_sha256`, `calibration_policy`, `legacy_cases_sha256`, PostgreSQL
+major, extension versions and tool versions. No identity map hash is a recipe
+field. The calibration policy is fixed before build; its numeric threshold is
 recorded in the final retrieval recipe. Source-list status codes come from the
 run snapshot. Changing any of these requires a new run recipe, not modification
 of a frozen run. The date is run-specific input derived from `rel`, not a value
@@ -104,31 +109,71 @@ workshop is deleted when a corpus excludes it.
 
 ## Normalization
 
-Dates accept trimmed `YYYY-MM-DD`, `DD/MM/YYYY`, `YYYY-MM-DDT00:00:00` without
-an offset (the form VBPL uses for a civil date), or RFC3339 timestamps with an
-explicit offset. Date-only and offset-free midnight values retain their civil
-date; timestamps with an offset convert to Asia/Ho_Chi_Minh before taking the
-date. Reject invalid calendar dates, year zero, offset-free timestamps at any
-other time, and other formats. A change to date or number normalization bumps
-`normalizer_version` in the build recipe. Empty becomes null; invalid values
-become null plus `invalid_date` naming the field. Raw strings remain stored. If
-the parsed end precedes the start, clear both effective dates, preserve raw
-values and add `invalid_validity_interval`.
+The single date normalizer accepts trimmed `YYYY-MM-DD`, `DD/MM/YYYY`,
+offset-free `YYYY-MM-DDTHH:MM:SS` at any valid time of day, or RFC3339
+timestamps with an explicit offset. Date-only and offset-free values retain
+their civil date; timestamps with an offset convert to Asia/Ho_Chi_Minh before
+taking the date. Reject invalid calendar dates, year zero, invalid times and
+other formats. `normalizer_version` is `corpus-normalizer/3`; a date or number
+normalization change bumps it in the build recipe. Empty becomes null; invalid
+values become null plus `invalid_date` naming the field. Raw strings remain
+stored. If the parsed end precedes the start, clear both effective dates,
+preserve raw values and add `invalid_validity_interval`.
 
 `eff_to` is the first excluded civil date, so eligibility is
 `eff_from <= date AND (eff_to IS NULL OR date < eff_to)`. A same-day interval is
 empty, not automatically extended. Missing `eff_from` stays eligible for the
 date test with `missing_effective_date`. No issue-date fallback for legal
-validity; the issue date is only a prefix hint. Source boundary semantics need
-the primary's official-source check before a release; this convention is
-explicitly reported as source-date interpretation, not independently adjudicated
-legal effect.
+validity; issue dates serve prefixes and consolidation ordering only. Source
+boundary semantics need the primary's official-source check before a release;
+this convention is explicitly reported as source-date interpretation, not
+independently adjudicated legal effect.
+
+Evidence supplied by the primary: live run `vn/20261109`, database
+`corpus_vn_20261109`, read 2026-11-10. Offset-free `effFrom` times included T17
+(319), T07 (243) and T01 (31); `effTo` included T17 (178), and `issueDate` T01
+(31). T07 effective dates equal issue dates in 242/243 documents. Of T17 starts,
+12.5% fall on a month's first day and 1.6% on its last; T17 ends have 41
+first-day and 4 last-day values. These distributions support retaining the date
+part, not advancing T17 to the next day. T01 texts state the same civil date,
+including 446-TC/LB, 01-01-1971. In 770/865 T00 replaces/repeals pairs, the old
+end equals the new start, supporting the exclusive-end interpretation. These are
+supplied observations, not an independent live-source verification.
 
 Trim and uppercase status code; look up its `class` and `current` in the frozen
 `sources/vn.yaml` map. Reject an inconsistent map at startup. Unmapped/empty
-codes become `unknown,false` plus `unknown_status`; never infer status from a
-translated name, title or date. Preserve status code and name. Source status and
-dated eligibility are separate, so a contradiction produces a warning.
+codes become `unknown,false` plus `unknown_status`, except for the consolidated
+derivation below. Never infer status from a translated name or title. Preserve
+raw status code and name. Status and dated eligibility remain separate; a
+contradiction produces a warning.
+
+After loading resolved `consolidates` relations, derive status only for a
+consolidated document whose source supplies no status. Never replace a supplied
+status, even if unrecognized. Apply the first matching branch in this release:
+
+| Condition                                                                         | `status_class,is_current` | `status_basis`              | Derivation gap                   |
+| --------------------------------------------------------------------------------- | ------------------------- | --------------------------- | -------------------------------- |
+| Source status present                                                             | Source mapping            | `source_status`             | None                             |
+| Unordered competition below                                                       | `unknown,false`           | `derived_from_consolidated` | `consolidated_status_unordered`  |
+| No resolved target                                                                | `unknown,false`           | `derived_from_consolidated` | `consolidated_status_unresolved` |
+| A current target and no newer consolidation of any shared target                  | `in_force,true`           | `derived_from_consolidated` | None                             |
+| Resolved targets, but none current, or a newer consolidation of any shared target | `expired,false`           | `derived_from_consolidated` | None                             |
+
+Ordering fails closed symmetrically. Any pair of consolidated documents sharing
+a target is unordered if either lacks a normalized issue date or both dates are
+equal. Every document participating in such a pair takes the unordered branch
+when deriving status, even if it also has an ordered competitor. This check
+precedes and overrides both current and expired derivation. With no competitor,
+a missing issue date alone does not prevent derivation. A strictly later issue
+date identifies a newer consolidation; one for any shared target makes the older
+document non-current even if another target is current.
+
+A target counts as current only through its own source-supplied `in_force` or
+`partial` status. A status-less consolidated target never counts as current;
+derivation never recurses, including through cycles. The table lists every
+derivation gap; preserve other date, relation and provenance gaps and raw-source
+evidence. Derivation does not establish provision equivalence or alter
+historical date filtering.
 
 Number normalization uses NFC, uppercase, `Đ` to `D`, and removal of whitespace
 around `/` and `-`; retain leading zeroes and other characters. Do not fold to
@@ -186,12 +231,12 @@ Publish `corpus.dump`, `build.json`, `inputs.json`, `calibration.json`, and
 `MANIFEST.sha256` through the existing immutable artifact writer. `inputs.json`
 is the upstream inventory. `build.json` fields: `version`, `country`, `rel`,
 `database_name`, `schema_version`, `build_input_hash`, `build_recipe_hash`,
-`source_manifest_hash`, `identity_inventory_hash`, all four recipes,
-`lexical_stats`, `taxonomy_version`, `counts` per table and exclusion reason,
-`dump:{sha256,bytes,format:"custom"}`, `postgres_version`, `pgvector_version`,
-`ltree_version`, `pg_dump_version`, `worker_version`, `built_at`,
-`durations_ms`, `relation_bytes`, `index_bytes`. No credentials, file system
-paths, user questions or host signatures.
+`source_manifest_hash`, `identity_inventory_hash`, `identity_map_sha256`, all
+four recipes, `lexical_stats`, `taxonomy_version`, `counts` per table and
+exclusion reason, `dump:{sha256,bytes,format:"custom"}`, `postgres_version`,
+`pgvector_version`, `ltree_version`, `pg_dump_version`, `worker_version`,
+`built_at`, `durations_ms`, `relation_bytes`, `index_bytes`. No credentials,
+file system paths, user questions or host signatures.
 
 `calibration.json` holds the reproducible scores and selected threshold, linked
 to fixture hashes. It uses case IDs only, not question text. The dump and build
@@ -227,6 +272,12 @@ creation, dump and restore; heartbeats continue throughout. Failed
 infrastructure leaves the item failed, not an owner-acceptable data gap.
 
 ## Release order and evidence
+
+Update the shared normalizer and schema readers, re-chunk/re-embed, then build
+and evaluate with the revised map and validity contracts. Frozen recipes and
+published databases stay immutable; use a new run when an included recipe
+changes. Retain old artifacts for rollback. Reprocessing uses the existing
+budgets and services; measure its time, disk and new coverage before release.
 
 Implement shared schema and lexical contracts, chunk, service and embed, shared
 retrieval, calibration helper and build, then eval adapters. The primary can

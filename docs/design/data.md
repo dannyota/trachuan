@@ -1,9 +1,9 @@
 # Data model
 
 Tables, keys and rules. The proposed exact corpus columns, indexes and
-constraints are in [schema version 1](corpus-schema.md), implemented by the root
-`internal/corpusdb` template. Workshop changes use goose migrations. Changing a
-rule here needs an ADR History entry when an ADR owns it.
+constraints are in the [corpus schema](corpus-schema.md), implemented by the
+root `internal/corpusdb` template. Workshop changes use goose migrations.
+Changing a rule here needs an ADR History entry when an ADR owns it.
 
 ## Corpus database `corpus_<cc>_<rel>` (read only when serving)
 

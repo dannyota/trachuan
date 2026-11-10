@@ -15,15 +15,15 @@ signed dump to OCI Object Storage. Decision and alternatives:
   ids are `build-<cc>-<rel>`. The workflow calls continue-as-new after each
   stage, so each history segment holds one stage.
 - The `run` row, one per (`country`, `rel`), is the record of a run; Temporal
-  only coordinates and can be rebuilt empty. The snapshot is frozen on first
-  start: the parsed source list and its hash, every recipe hash,
-  `taxonomy_version`, worker version, stage list and previous release manifest
-  hash. Activities read the snapshot from the run row, never from the working
-  tree. A worker whose compiled recipe hash differs from the snapshot for any
-  stage already in it refuses the run. When a newer worker adds stages,
-  `corpus start` on a paused run appends their names and recipe hashes in one
-  update and records the extension in the run message; frozen recipes never
-  change.
+  only coordinates and can be rebuilt empty. First start freezes the parsed
+  source list and its hash, `taxonomy_version`, worker version and previous
+  release manifest hash. Each stage's recipe freezes when the run first includes
+  that stage. `--until relate` freezes only discover, fetch, extract and relate,
+  even when the worker already supports later stages. Start and restart extend
+  the snapshot under the [run lifecycle](#run-lifecycle). Frozen recipes never
+  change. Activities read the snapshot from the run row, never the working tree.
+  A worker whose compiled recipe hash differs for an included stage refuses the
+  run; recipes for stages not yet included cannot block it.
 - Workflow changes use
   [`workflow.GetVersion`](https://docs.temporal.io/develop/go/workflows/versioning#patching-with-getversion).
   CI replays every history in
@@ -49,6 +49,11 @@ signed dump to OCI Object Storage. Decision and alternatives:
   lost start response leaves a workflow that marks the row `running`. If an open
   workflow of an older generation holds the id, start refuses and names
   `corpus cancel` or `corpus recover`.
+- A start with a later or no `--until` appends missing stages and freezes their
+  recipes at that moment, in one update recorded in the run message. A restart
+  from `cancelled` or `failed` extends exactly like one from `paused`. Stages
+  already in the snapshot keep their frozen recipes. A shorter `--until` only
+  stops earlier; it never removes included stages or recipes.
 - Every activity first compares its generation with `run.generation`. A mismatch
   returns a non-retryable `superseded` error and the workflow ends without
   writing the run row. Control activities change state only from an allowed set
@@ -72,7 +77,8 @@ signed dump to OCI Object Storage. Decision and alternatives:
   batches is cancelled before planning.
 - `corpus recover <cc> <rel>` handles a restored workshop or a lost worker: it
   increments `generation`, sets `failed` with a message, and terminates an open
-  workflow for the id only with `--terminate`. Then `corpus start` resumes.
+  workflow for the id only with `--terminate`. Recovery changes neither stages
+  nor recipes. Then `corpus start` resumes under the extension rules above.
 - `corpus status <cc> <rel>` and the Temporal UI show per-stage expected, done,
   gap, failed and pending counts, unaccepted gaps by kind, next retry times,
   provider job ids and cost so far.

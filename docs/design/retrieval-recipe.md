@@ -53,7 +53,7 @@ Types and required fields:
 | `Identity`    | `Country`, `DocumentKey`, `Anchor` strings                                                                                                                                                                              |
 | `Fragment`    | `Identity Identity`, `Start,End int` source rune offsets, `TextStart,TextEnd int` offsets in hit text, `Role string` (`body` or `lead`), `Complete bool`                                                                |
 | `Hit`         | `Identity`, `Number`, `Citation`, `Title`, `Text`, `Fragments []Fragment`, `Complete bool`, `NextPart *int`, `SourceURL *string`, `Score`, `BestCosine float64`, `Stamp Validity`, `Relations []Relation`, `Gaps []Gap` |
-| `Validity`    | `StatusClass string`, `Current bool`, `AsOf *Date`, `EffectiveFrom,EffectiveTo *Date`, `Basis string` (`source_status` or `document_dates`)                                                                             |
+| `Validity`    | `StatusClass string`, `StatusBasis string` (the document's `status_basis`), `Current bool`, `AsOf *Date`, `EffectiveFrom,EffectiveTo *Date`, `Basis string` (`source_status` or `document_dates`)                       |
 | `Relation`    | Source/target keys and numbers, nullable anchors, kind, raw label, evidence, evidence SHA-256, completeness flag, method, resolved flags                                                                                |
 | `Gap`         | `Kind,DocumentKey,Anchor,Message string`                                                                                                                                                                                |
 | `Response`    | `Release string`, `Hits,NonCurrent []Hit`, `Abstain bool`, `Reason,Message string`, `Gaps []Gap`, `Diagnostics Diagnostics`                                                                                             |
@@ -174,15 +174,22 @@ unbounded related hits. Use the same processing for dense and lexical controls.
 
 ## Validity and evidence
 
-Without explicit `as_of`, primary eligibility requires source `is_current` and
+Without explicit `as_of`, primary eligibility requires stored `is_current` and
 the known date interval containing the caller's civil date in Vietnam. The
 engine clock is injected; eval freezes that date. Missing start dates pass the
 date test with a gap. Unknown status is not current. Partial status is current
 at document level only, with targeted repeal relations as warnings.
 
-Set `Validity.Current` to that source-current/date eligibility result in this
-default mode, including eligible missing-start cases with their gap. With an
-explicit historical date, use the dated determination below instead.
+Set `Validity.Current` to that status/date eligibility result in this default
+mode, including eligible missing-start cases with their gap. With an explicit
+historical date, use the dated determination below instead.
+
+Copy the document's `status_basis` into `Validity.StatusBasis` in both modes,
+including `derived_from_consolidated` when [build](index.md#normalization)
+derived its status. `Basis` continues to distinguish default status/date
+filtering from explicit historical date filtering; `StatusBasis` separately
+exposes the origin of the status. Return derivation gaps with the hit. Derived
+status is not independently adjudicated legal effect.
 
 With `as_of`, primary eligibility uses document dates only, independent of the
 latest source status. Missing start dates remain in primary results with a gap,
@@ -245,12 +252,17 @@ Threshold provenance and provisional status follow
 `rrf:{k,dense_weight, lexical_weight,routed_lexical_weight}`, `ties:"score-id"`,
 `routing:"vn-number/1"`, `group:"nearest-khoan"`, `reducer:"max"`,
 `hydrate_multiplier`, `document_cap`, `backfill:"demoted-order"`,
-`family_collapse`, `validity:"document-dates/1"`, `default_in_force_only:true`,
+`family_collapse`, `validity:"document-dates/2"`, `default_in_force_only:true`,
 `query_gate:"vn-marks/1"`, `evidence:"source-spans/1"`, `evidence_rune_cap`,
 `relation_cap`, `relation_evidence_rune_cap`,
 `abstention:{statistic:"first-group-best-member-cosine",threshold, status:"provisional-old-product",calibration_sha256}`.
 Hash compact fixed-field JSON. Serving does not accept arbitrary recipe
 overrides.
+
+Any eligibility semantics change bumps `validity`, even if the response shape is
+unchanged. Version 2 records exclusive `eff_to` and the consolidated-status
+eligibility rule above. Rebuild and re-evaluate under the new recipe; do not
+reuse version 1 eligibility caches or relabel an old release.
 
 Required checks: diacritics/rejection message, document-number boundaries,
 ambiguous/unknown references, raw dense bytes, both validity modes, missing

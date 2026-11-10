@@ -1,4 +1,4 @@
-# Corpus schema version 1
+# Corpus schema version 2
 
 Proposed exact template contract for `internal/corpusdb/schema.sql`, embedded by
 `schema.go` in root module `danny.vn/trachuan`. The workshop keeps goose
@@ -28,12 +28,12 @@ ancestry index, not the public extraction anchor. This avoids interpreting
 slashes or Vietnamese letters as ltree syntax. Taxonomy ltree labels are `n<id>`
 along its parent chain.
 
-`schema.go` exports `SchemaVersion = 1` and
+`schema.go` exports `SchemaVersion = 2` and
 `Apply(ctx context.Context, db DB, dimensions int) error`; DB exposes
 `Exec(context.Context,string,...any)`. Its return values are
 `(pgconn.CommandTag,error)`, matching pgx connections and transactions. The only
 template substitution is the decimal vector dimension, validated against the
-supported recipe table before substitution. Version 1 permits only the ADR 0009
+supported recipe table before substitution. Version 2 permits only the ADR 0009
 dimension. Future dimensions require an explicitly supported recipe and
 compatible schema version; never take SQL identifiers from JSON. Search reads
 dimensions from `release.dense_recipe`, checks the actual column typmod, and
@@ -51,6 +51,9 @@ rejects a mismatch. No server dimension constant.
 - `status_code text`, `status_name text`, `status_class text` constrained to
   `in_force,partial,expired,not_yet,suspended,unknown`; `is_current boolean`.
   CHECK current equals status_class in (`in_force`,`partial`).
+- `status_basis text` constrained to `source_status,derived_from_consolidated`.
+  [Build normalization](index.md#normalization) owns assignment and derivation
+  gaps. `status_code` and `status_name` retain the raw source values.
 - `is_consolidated boolean`; `content_state text` in
   (`indexed`,`no_tree`,`no_chunks`,`embedding_gap`); `fetch_sha256 text`;
   `extract_sha256 text?`; `source_url text?`.
@@ -127,7 +130,7 @@ byte-identical relation artifacts. Composite FKs
 CHECK `target_key IS NOT NULL OR target_number <> '' OR kind = 'unknown'`.
 Indexes on source and target document ids, and `target_key`.
 
-Kinds are the frozen source list's relation vocabulary plus `unknown`; version 1
+Kinds are the frozen source list's relation vocabulary plus `unknown`; version 2
 CHECK permits
 `repeals,implements,legal_basis,cites,suspends, consolidates,guided_by,amends_supplements,replaces,references,unknown`.
 Keep both source and target keys even when either FK is null. Resolve only exact
@@ -181,7 +184,7 @@ precedence is implemented or that taxonomy gates passed.
 ## Release row
 
 `release`: `singleton boolean PRIMARY KEY CHECK(singleton)`, `country text`
-CHECK country='vn', `rel text UNIQUE`, `schema_version integer CHECK(=1)`,
+CHECK country='vn', `rel text UNIQUE`, `schema_version integer CHECK(=2)`,
 `taxonomy_version text`, `dense_recipe jsonb`, `chunk_recipe jsonb`,
 `lexical_recipe jsonb`, `retrieval_recipe jsonb`, `lexical_stats jsonb`,
 `source_manifest_hash text`, `build_input_hash text`, `build_recipe_hash text`,
@@ -208,6 +211,9 @@ Restore requires the same PostgreSQL major and compatible extension versions
 recorded in build metadata. Existing workshop artifacts remain authoritative;
 adding the chunk projection must not rewrite ingest rows. A schema change
 rebuilds a new corpus database; retain old artifacts for diagnosis and rollback.
+Version 2 adds `document.status_basis`; rebuild from preserved source artifacts,
+never backfill old releases with an assumed derivation. Readers must support
+this version before activation. Existing version 1 dumps remain unchanged.
 
 The host restore policy currently permits only pgvector extensions, while the
 existing data design already requires ltree. This work uses both locally; host

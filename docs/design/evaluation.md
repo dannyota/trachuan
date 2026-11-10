@@ -65,30 +65,51 @@ Missing booleans mean false. `expect_fail` never removes a case from scoring.
 Validate IDs, explicit expectations and contradictory abstention labels before
 any model call.
 
-`identity-map.json` is
-`{version:1,legacy_sha256,identity_inventory_hash, entries:[...]}`. Each entry
+`identity-map.json` is `{version:2,legacy_sha256,entries:[...]}`. Each entry
 contains `case_id`, zero-based `citation_index`, `state` (`resolved` or
 `absent`), `expected_number`, `reason`, `reviewed_at`,
-`evidence:[{source_url,fetch_sha256,node_id,quoted_span}]`, and `alternatives`.
-Each alternative is `{country,document_key,anchor:null|string,kind}` where kind
-is `document`, `provision`, or `relation`; a relation alternative additionally
-names `source_key,target_key,relation_kind,evidence_sha256`. Null anchor is
-required for document and document-level relation alternatives; provision
-alternatives require an exact anchor. Use official legal text and stored source
-evidence, not retrieval rank, to adjudicate alternatives.
+`evidence:[{source_url,fetch_sha256,document_key,document_number,node_id,quoted_span}]`,
+and `alternatives`. Each alternative is
+`{country,document_key,document_number,anchor:null|string,kind}`; kind is
+`document`, `provision`, or `relation`. A relation additionally requires
+`source_key,source_number,target_key,target_number,relation_kind,evidence_sha256`.
+Every number field tied to a document key is required and stores its normalized
+number under [build normalization](index.md#normalization). Evidence nodes are
+identified by `(document_key,node_id)`, never node id alone. Document and
+document-level relation anchors are null; provision anchors are exact. Use
+official legal text and stored evidence, never retrieval rank, to adjudicate.
 
 There is one mapping entry per original expectation, including absent documents.
 Resolved entries need at least one unique adjudicated identity; absent entries
 have no alternatives and are always misses. An absent entry names every
 original/alternate number searched and why no corpus identity is available.
-Ambiguous mappings or missing entries block scoring with `mapping_incomplete`;
-they are not absences to invent. If an absent document appears in a newer
-inventory, require re-adjudication, never auto-credit it. The primary reviews
-identities against official evidence before accepting the map. Do not invent an
-absent document key or a provision anchor from a label. Bind the map to the
-pre-index [identity inventory](index.md#build-stage), so it can be frozen before
-chunk/embed and does not depend on its own build hash. If any cited source
-identity or expectation changes, require re-adjudication.
+Ambiguous mappings or missing entries are `mapping_incomplete` for that case,
+not invented absences. If an absent document appears in a newer inventory,
+require re-adjudication, never auto-credit it. Do not invent a document key or
+provision anchor from a label.
+
+Validate every recorded identity against the run's fetch/extract/relate
+inventory: document key and normalized number, provision anchor, both relation
+endpoints and their numbers, and each document-qualified evidence node. Missing
+records or missing/changed identities yield `mapping_incomplete` for that case,
+with citation index and a detail naming the field, such as
+`alternatives[0].source_number` or `evidence[0].document_key`. This includes
+version 1 maps lacking these records until re-adjudication; missing records are
+case defects, not malformed-file errors. Block that case's credit and score the
+others. Keep cases and citation denominators; affected metrics are unavailable,
+so quality gates cannot pass. A refetch preserving mapped identities stays valid
+despite changed artifact hashes. Fetch hashes record review evidence, not
+freshness. Relation credit still requires the edge and evidence hash below.
+
+For a new run, use `corpus inventory <cc> <rel> --out FILE` after relate. It
+exports the inventory, not a rewritten map. The adjudicator reviews verified
+artifacts and official text, then edits `identity-map.json`; the primary reviews
+the evidence before accepting those bytes. Reuse an unchanged valid map. No
+build/eval command rewrites or automatically re-adjudicates it. Re-adjudicate
+version 1 maps into version 2, removing `identity_inventory_hash` and supplying
+every required identity record above. Map bytes are pinned by the
+[build input hash](index.md#build-stage) and eval input hash, not a recipe;
+editing the map requires new build/eval input, not changed frozen recipes.
 
 ## Scoring contracts
 
@@ -176,9 +197,10 @@ means both hybrid modes meet all old-product floors and all three rejection
 checks pass; legacy has no gate. `release_eligible` is always false in this
 baseline, including when `quality_pass` is true. Measured failures leave the
 stage done and the run evaluated, with `quality_pass:false` and
-`release_eligible:false`. Invalid fixtures, mappings, incomplete case execution
-or infrastructure failure fail the stage. CLI and status must distinguish
-completed evaluation from passed quality gates.
+`release_eligible:false`. Per-case `mapping_incomplete` is a reported
+diagnostic, not a run failure. Malformed fixture/map files, incomplete case
+execution or infrastructure failure fail the stage. CLI and status must
+distinguish completed evaluation from passed quality gates.
 
 ## Provisional calibration
 
@@ -266,8 +288,8 @@ reciprocal ranks; otherwise it is an integer count. Confusion counts are
 `status` from the vocabulary above. Size summaries hold `{n,p50,p95}`; timing
 summaries hold `{n,p50,p95,p99}` in milliseconds, using the same quantile rule.
 
-`cases.jsonl` records case ID, expected/matched counts, ranks, mapped
-identities, returned identities, arm/fusion/group/cap/abstention losses,
+`cases.jsonl` records case ID, mapping status, expected/matched counts, ranks,
+mapped identities, returned identities, arm/fusion/group/cap/abstention losses,
 decision reason, validity gaps and character counts, without query text.
 `previous_diff` is null with a reason when no previous report exists; otherwise
 compare per-case gains/losses and reject incompatible scorer/fixture versions.

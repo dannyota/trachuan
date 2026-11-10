@@ -9,9 +9,9 @@ One line per item: date, area, finding, source.
 - 2026-11-09, taxonomy import, key package articles by load sequence; MAPC and (đề mục, label) repeat, same note finding 4.
 - 2026-11-09, auth, verify ChatGPT and Claude.ai connectors, refresh and revocation against trachuan's own OAuth before release; aboutme proved only Claude Code, docs/research/oauth-clients-2026-11.md.
 - 2026-11-09, retrieval, measure hybrid recall (Vietnamese_Embedding_v2 dense plus BM25, RRF) against banhmi's 93.8% before release 1, docs/research/embedder-2026-11.md.
-- 2026-11-09, deploy, measure Vietnamese_Embedding_v2 ONNX FP32 latency and RSS on the target Graviton host in the acceptance gates, ADR 0009.
+- 2026-11-09, deploy, measure Vietnamese_Embedding_v2 ONNX INT8 per-channel latency and RSS through the Go query service on the OCI A1 host in the acceptance gates, ADR 0009.
 - 2026-11-09, retrieval, revisit Harrier-0.6B with a full-corpus run if hybrid results leave a gap; it led MRR@8 on the screening corpus, ADR 0009.
-- 2026-11-09, deploy, check t4g burstable CPU credits under sustained embedder load in the host acceptance gates; credit exhaustion would raise query latency, final review of the spikes branch.
+- 2026-11-09, deploy, measure sustained OCI A1 query embedder and PostgreSQL CPU contention in the host acceptance gates, docs/research/host-oci-a1-2026-11.md.
 - 2026-11-09, pipeline, relation targets outside the discovery scope are gaps during ingest (banhmi held 1,108 context documents); the corpus scope plan fetches one hop, docs/plans/2026-11-09-corpus-ingest.md.
 - 2026-11-09, pipeline, add checkpoints to S3 in addition to the external disk, docs/plans/2026-11-09-corpus-ingest.md.
 - 2026-11-09, pipeline, `corpus start` does not retry items whose only gaps are `source_unavailable` (or `invalid_source_data` from a gateway response); reset them and delete those gap rows on start, and treat a non-JSON 200 body as retryable, final review R-14.
