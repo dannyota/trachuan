@@ -3,10 +3,10 @@
 Proposed execution contract for the owner's 2026-11-09 source choice in
 [ADR 0012](../adr/0012-vietnam-corpus-sources.md). VBPL remains primary;
 `chinhphu` fills central-document omissions, starting with AI. This note owns
-selection, identity and loss rules; [pipeline](pipeline.md) owns execution,
-[data](data.md) owns stored fields and [budgets](budgets.md#pipeline) owns
-limits. Shared interfaces and close transactions live in
-[source execution](source-execution.md).
+selection and identity; [membership](membership.md) owns retention and loss,
+[pipeline](pipeline.md) owns execution, [data](data.md) owns stored fields and
+[budgets](budgets.md#pipeline) owns limits. Shared interfaces and close
+transactions live in [source execution](source-execution.md).
 
 ## Evidence and boundaries
 
@@ -112,9 +112,8 @@ The central listing has one query identity: source, listing type, level, absent
 agency and keyword filters, and page size. Other query identities hash their
 source-specific definitions, including option, mode and number or keyword, with
 canonical ordering. Local selection rules are frozen separately from the listing
-identity. Reconcile all independent supports under
-[pipeline](pipeline.md#source-ingest-rules); selection loss is not catalog
-absence.
+identity. Reconcile all independent supports under [membership](membership.md);
+selection loss is not catalog absence.
 
 ## One-hop relation context
 
@@ -123,9 +122,12 @@ VBPL seed. Freeze that seed list before planning expand; never plan from its
 output. Each item reads detail and diagram by VBPL id and records both payloads
 and hashes. Like discover, expand observes the source afresh each run and learns
 its content hash after download; a seed id is not a cache-validity signal. Fetch
-still downloads a fresh full bundle for every expected id. Reason: a separate
-bounded stage fits the existing batch/checkpoint model and avoids a mutable work
-queue inside fetch or recursive relate execution.
+requests fresh source responses for every active member. An attachment may come
+from the verified attachment cache under the
+[pipeline rule](pipeline.md#source-ingest-rules). Removal items (`withdrawn`,
+`scope_removed`) are never fetched. Reason: a separate bounded stage fits the
+existing batch/checkpoint model and avoids a mutable work queue inside fetch or
+recursive relate execution.
 
 Qualify explicit outward targets in the seed's `references.targetDocument` and
 `documentNamesByType`, using the existing relation-code table: `legal_basis`,
@@ -136,12 +138,13 @@ source record points to that target; preserve the kind's meaning, including
 citations supply useful legal context, but inferred inbound edges would widen
 scope without source evidence.
 
-Only a valid explicit VBPL id adds a target; keep number-only references as
-`unknown_target` for later named-list review. Unknown codes remain gaps and add
-no targets. Exclude `vbpqta_` renditions and self-links. Central or local
-targets may qualify by id without opening local title sweeps. Reason: the
-source's specific link supplies scope, while guessing a number match or
-jurisdiction would hide identity errors.
+Only an explicit VBPL id that passes the
+[observation contract](data.md#expand-observation-artifact) adds a target.
+Number-only records are audit input for later named-list review; they do not add
+targets. Unknown codes remain gaps and add no targets. Central or local targets
+may qualify by id without opening local title sweeps. Reason: the source's
+specific link supplies scope, while guessing a number match or jurisdiction
+would hide identity errors.
 
 Union and deduplicate targets as class `relation_context`; a direct seed always
 wins class `primary`. Retain every seed, raw code and evidence hash that caused
@@ -151,27 +154,10 @@ Valid provisions are searchable without a special ranking penalty; missing trees
 stay metadata-only. Reason: agents need the cited law's text, and a
 metadata-only class would preserve the coverage failure.
 
-Expand freezes active membership, excluding retained `withdrawn` and
-`scope_removed` keys. A failed observation retains known targets of that active
-seed with a gap; a new failed seed has unknown coverage. Compare each primary
-seed's qualified fresh fetch targets against this frozen active membership. An
-absent target, including a retained removal key, causes non-retryable
-`scope_changed` failure with seed, target, reason and both evidence hashes.
-Persist it as a run failure, never an acceptable gap. Start, gap acceptance and
-release cannot clear it; a new run is required. Check during run-specific fetch
-finalization, never inside cached relation artifacts. Context documents'
-second-hop edges remain `unknown_target` gaps without expansion. Reason: the
-fetch inventory must not conceal an unfetched target or allow accepted drift.
+Retention and removal follow [membership](membership.md#relation-loss).
 
-For context-only membership, keep the target while any active seed points to it.
-If every supporting seed leaves scope, retain a `scope_removed` gap item without
-fetching. Otherwise consider only currently active supporting seeds: when all
-have complete observations and none retains the link, keep a `withdrawn` gap
-item without fetching. A failed or incomplete observation retains its known
-targets for fetch. A departed seed cannot prevent removal; a current direct hit
-or qualifying link always retains the document. No two-observation history is
-required. Reason: protect against failed observations without tracking absent
-seeds or delaying a fully evidenced removal.
+Fetch checks the frozen inventory under the
+[drift rule](membership.md#fetch-drift), including incomplete expansion.
 
 ## Secondary discovery and hand-over
 
@@ -264,6 +250,15 @@ agent, source-wide throttling, bounded retries and `Retry-After` handling from
 through the durable [source pause](source-execution.md#source-pause) contract;
 do not bypass it. Reason: unattended work must remain polite across concurrent
 batches and worker restarts.
+
+A client enforces rate, burst and in-flight limits for every request it makes,
+including attempts, retries and redirects across page and file hosts. The worker
+shares one client instance per source across all batches and stages. One worker
+process serves a run, so instance limits are source-wide limits. Stages that
+call a narrow source also run at the per-stage in-flight limit. The client
+instance counts the per-run download budget; the secondary fetch stage owns
+durable accounting across worker restarts. Limits remain in
+[budgets](budgets.md#pipeline).
 
 ## Dependencies and acceptance evidence
 

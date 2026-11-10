@@ -60,10 +60,18 @@ They expose active and retained-removal views explicitly, never derive
 membership from fetch items. Planning and finalization use transaction-bound
 readers under the run lock.
 
-Discover emits lookup envelopes; expand emits `version:1` per-seed observations
-with completeness, qualified target ids, raw codes and response references.
-Common fetch bundle version 2 adds `document.json` and `files.json` with the
-envelopes `{version:2,document:{...}}` and `{version:2,files:[...]}` and the
+Discovery close records the chosen
+[membership predecessor](membership.md#membership-predecessor) run id, phase and
+snapshot hash in `run_scope`, atomically with freezing seeds. Expand and fetch
+close read that record and verify the hash before using earlier membership. Once
+seeds are frozen, no finalizer reselects the predecessor, including when the
+recorded choice is none. The required workshop schema addition lives in
+[data](data.md#scope-workshop-contracts).
+
+Discover emits lookup envelopes; expand emits the
+[seed observation](data.md#expand-observation-artifact) envelope. Common fetch
+bundle version 2 adds `document.json` and `files.json` with the envelopes
+`{version:2,document:{...}}` and `{version:2,files:[...]}` and the
 source-neutral fields in data. Original VBPL payloads and redacted secondary
 HTML remain evidence, not a forced common source format. `Rows` reads only the
 verified bundle. `Resolve` writes run membership evidence and gaps. No artifact
@@ -75,25 +83,43 @@ interfaces. Preserve old artifacts; decode their known formats into the common
 projection with unknown provenance explicit. Do not silently treat old rows as
 complete evidence or fill chinhphu ids into `vbpl_id`.
 
+## Stage close
+
+Add an optional stage interface
+`Finalize(ctx, env, tx, run) (Finalization, error)` to the existing `CloseStage`
+control activity. `Finalization` carries a durable failure code, reason and
+evidence references, or success. Stages without it retain current close
+behavior. The control activity owns the transaction; finalizers read artifacts
+only through `env.Artifacts` and access the database only through `tx`, never
+`env.DB`. They never commit, perform network requests or mutate immutable
+artifacts. Discover and expand use the same hook to publish their seed and
+expanded membership snapshot references before advancing. Build uses the final
+snapshot; drift checks always use the earlier frozen expanded active snapshot.
+
+After all batches return, lock the run row and verify generation. A cancelling
+or cancelled run returns cancellation without invoking the finalizer. A recorded
+blocking run failure returns its committed failure without invoking it again.
+Subject to the [source pause](#source-pause) barrier, a stage that already
+advanced returns its committed result. Otherwise verify stage identity and
+require no pending or failed items before invoking the finalizer.
+
+Expand has no close input hash. Repeating its finalizer must reproduce the
+frozen expanded snapshot bytes, membership evidence and seed observations
+exactly; any difference errors. Item-state changes alone do not change a frozen
+result when those outputs remain identical.
+
 ## Fetch-close finalization
 
-Add an optional stage interface `Finalize(ctx, tx, run) (Finalization, error)`
-to the existing `CloseStage` control activity. `Finalization` carries a durable
-failure code, reason and evidence references, or success. Stages without it
-retain current close behavior. The control activity owns the transaction;
-finalizers never commit, perform network requests or mutate immutable artifacts.
-Discover and expand use the same hook to publish their seed and expanded
-membership snapshot references before advancing. Build uses the final snapshot;
-drift checks always use the earlier frozen expanded active snapshot.
-
-After all batches return, lock the run row and verify generation, cancellation,
-stage identity and that no stage item is pending or failed. Fetch finalization:
+Fetch finalization:
 
 1. Reads committed fetch outputs, lookup evidence and the expanded active
-   membership snapshot; verifies their hashes and the source-state barrier.
-2. Checks each primary seed's qualified targets for drift under sources.md. A
-   drift commits `run_failure(scope_changed)`, marks the run failed and leaves
-   `next_stage` at fetch; it does not publish final membership or advance.
+   membership snapshot. For drift, verify the artifact manifest hash and the
+   hashes of the files read (`detail.json` and `diagram.json`), without
+   rereading every attachment. This is not a fresh attachment-integrity audit.
+2. Checks each primary seed's qualified targets for
+   [drift](membership.md#fetch-drift). A drift commits
+   `run_failure(scope_changed)`, marks the run failed and leaves `next_stage` at
+   fetch; it does not publish final membership or advance.
 3. Otherwise applies the hand-over table, updates final membership and writes
    replacement/ambiguity gaps on the secondary fetch item, including skipped
    secondary candidates. It never adds an id outside the planned superset.
@@ -105,14 +131,20 @@ precedence skips, so finalization always has a gap owner. Downloading an
 already-proven replacement is unnecessary. Downstream stages read only final
 active membership; build also reads excluded membership and gaps for audit.
 
-The input hash covers expanded membership and evidence, fetch item outcomes and
-artifact hashes, and comparison evidence. Repeating close with the same input is
-a no-op returning the committed result. Changed input after finalization is an
-error unless an authorized retry first invalidated that finalization. An
-infrastructure error rolls back; a domain failure must commit its reason before
-returning `Failed`. Start, accept-gaps and release reject a run with
-`scope_changed`; neither a worker restart nor a generation change clears it.
-Reason: fetch completion and membership publication must be atomic and fenced.
+With selection version 1 and no `expand` in the frozen stage list, final
+membership comes from the seeds phase; no expansion drift check runs. Do not
+insert a stage into that frozen run. Otherwise use the expanded phase.
+
+The fetch-close input hash covers the selected phase hash (`expanded_hash`, also
+used for the seeds fallback) and every fetch item's key, state and artifact
+hash, including a null hash for an item without an artifact. Serialize items in
+key order. The phase hash binds membership evidence; artifact hashes bind the
+comparison bytes. Repeating finalization with the same input is idempotent.
+Changed input after finalization is an error unless an authorized retry first
+invalidated that finalization. An infrastructure error rolls back; a domain
+failure must commit its reason before returning `Failed`. The drift policy owns
+the restrictions on a failed run. Reason: fetch completion and membership
+publication must be atomic and fenced.
 
 ## Source pause
 
@@ -124,11 +156,23 @@ also stop before any further request to the paused source.
 
 All clients, batches and workers use a shared request-admission gate backed by
 the workshop row. It serializes request admission with pause updates, checks
-state before every attempt, retry and redirect, and preserves the source-wide
-in-flight limit. Already admitted requests may finish; they cannot admit a
-follow-up request. Recheck state before committing an affected item and closing
-its stage. A paused source prevents advancement and release. Database failure
-fails admission closed; process-local caches cannot authorize requests.
+state before every attempt, retry and redirect. The gate owns admission and
+pause only; clients enforce [request limits](sources.md#fetch-and-safety).
+Already admitted requests may finish; they cannot admit a follow-up request.
+Database failure fails admission closed; process-local caches cannot authorize
+requests.
+
+Every item output lists all sources it contacted or depends on. The item commit
+rechecks those `run_source` rows under `FOR SHARE` locks. If any source is
+paused, commit a failed `source_paused` item instead of its artifact, derived
+rows or gaps. PostgreSQL's
+[row locks](https://www.postgresql.org/docs/current/explicit-locking.html#LOCKING-ROWS)
+hold concurrent updates to those rows until the transaction ends.
+
+Stage close rechecks source state under the run lock. A paused source marks the
+run failed with a `source_paused` message, without invoking the finalizer or
+advancing. It writes no `run_failure` row: the durable pause lives in
+`run_source`. A paused source also blocks release.
 
 Worker startup, `corpus start` and `corpus recover` read and preserve the pause.
 Only `corpus source-resume <cc> <rel> --source <name> --note <reason>` clears
@@ -150,11 +194,20 @@ origin evidence stay unchanged pending classification from evidence.
 In the generation-increment transaction, delete selected gaps and item-owned
 derived rows, clear artifact/input references and attempt state, and set items
 pending. Rewind to the earliest affected stage, including an empty next stage;
-validate `--until` after choosing it. Clear later stage run items, derived rows,
-gaps and membership finalization hashes so they replan. Preserve other support
-evidence at the rewind stage and rebuild membership from remaining observations.
-Keep immutable artifacts for reuse. Record counts and rewind stage in the run
-message; recomputed gaps require fresh acceptance.
+validate `--until` after choosing it. Clear later stage run items, derived rows
+and gaps so they replan.
+
+Delete all membership evidence and seed observations produced at or after the
+rewind stage, including evidence from unselected items at that stage. Every
+`relation` tuple counts as produced by expand, regardless of its attributed
+stage/item. Then delete run documents left without evidence and clear affected
+phase snapshots and hashes. Clear the fetch-close input hash only when the final
+phase is invalidated. Clear the predecessor record with the seeds phase;
+discovery close then selects and freezes it again. Evidence from earlier stages
+survives. Finalizers rebuild the cleared phases from remaining artifacts and
+earlier-run membership under the [loss rules](membership.md). Keep immutable
+artifacts for reuse. Record counts and rewind stage in the run message;
+recomputed gaps require fresh acceptance.
 
 Do not clear source pauses or durable run failures. Still refuse changed frozen
 recipes, open workflows, evaluated/released runs or stage insertion into an old
@@ -181,3 +234,13 @@ are acceptance requirements, not claims that checks have run.
 Also cover local selection from the recorded central listing, equal numbers with
 different or missing issue dates, capped chinhphu totals, the empty-result
 marker and HTTP 200 missing details under the source-specific rules above.
+
+Membership evidence must cover per-rule incompleteness, named ambiguity, first
+catalog absence, supersession across repeated runs and discovery-attributed
+relation removal during an expand rewind. Verify incomplete expansion followed
+by fetch with an unplanned target still fails, while targets already active do
+not cause drift. Verify unaccepted removal carries across runs, acceptance ends
+the carry, incomplete observations do not revive removals, and readmission
+starts a new removal event on later loss. Earlier audit and acceptance records
+must remain unchanged. Verify final-only predecessor selection, legacy fallback,
+recorded absence, hash verification and invalidation with the seeds phase.

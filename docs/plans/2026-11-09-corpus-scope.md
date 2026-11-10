@@ -96,6 +96,15 @@
 - [x] Tests first: `TestStart_ResetsOnlySourceGapItems`, `TestStart_DeletesThoseGapRows`, `TestStart_RetryRebuildsDependents`, `TestStart_FrozenRecipesUnchanged`.
 - [x] Implement per pipeline.md; commit `feat(corpus): retry source gaps when a run starts again`.
 
+### Task 7a: Membership predecessor and removal lifetime
+
+**Files:** Migration 00004 (three nullable `run_scope` predecessor columns, primary), SQL (primary); modify `stage/discover` (predecessor selection and record, legacy tuple exception, removal carry), `stage/expand` and `stage/fetch` finalizers (read and verify the recorded predecessor), `run/retry.go` (clear it with seeds); tests.
+
+**Interfaces:** one predecessor per run per `docs/design/membership.md`: the latest earlier run with a frozen `final` phase, else the latest selection-version-0 run through the legacy reader, else none; recorded at discovery close with run id, phase and hash; a removed-only member is dropped only after its removal gap was accepted.
+
+- [ ] Tests first: `TestPredecessor_RecordedAtDiscoveryClose`, `TestPredecessor_SkipsRunsWithoutFinal`, `TestPredecessor_HashMismatchFails`, `TestPredecessor_ExpandAndFetchUseRecord`, `TestRemoval_UnacceptedCarries`, `TestRemoval_AcceptedIsDropped`, `TestRetry_ClearsPredecessorWithSeeds`.
+- [ ] Implement per membership.md; commit `feat(corpus): frozen membership predecessor and accepted removal lifetime`.
+
 ### Task 8: chinhphu client
 
 **Files:** Create `apps/corpus/internal/chinhphu/{client,search,detail,download}.go` with tests.

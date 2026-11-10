@@ -181,23 +181,9 @@ candidates; expand closes additions to the expected set before fetch planning.
   gets gap `listing_unstable` and the expected set uses the union of the passes.
   A listing is complete when its query item is done without a `listing_unstable`
   gap; a query's identity hashes its complete source-specific definition.
-- Keep every independent [support tuple](data.md#scope-workshop-contracts). A
-  member leaves scope only when no current or retained support remains; losing
-  one agency or term never removes another rule's support. For an id present in
-  the latest complete stable central listing but supported by no frozen rule,
-  mark `scope_removed` and retain the removed rule tuples as audit evidence.
-  Only catalog absence in both this run's complete stable central listing and
-  its most recent earlier complete stable listing supports `withdrawn`; a local
-  nonmatch is not catalog absence. Other independent supports still retain the
-  member. Earlier runs of the same country are ordered by date, then sequence.
-  For other queries, withdrawal requires every still-configured query that
-  previously listed the document to omit it in this run and its most recent
-  earlier complete stable listing. Incomplete observations retain prior support
-  and fetch the document by id. Removing all supporting queries or rules leaves
-  `scope_removed` only if no other support remains. Removed-rule evidence is
-  audit, not active support. Both removal dispositions remain expected gap items
-  without fetch. Relation support follows
-  [sources](sources.md#one-hop-relation-context).
+- Reconcile supports under [membership](membership.md): supersession, per-tuple
+  retention, the two-listing withdrawal exception, relation loss and removal
+  lifetime have one home there.
 - VBPL English renditions (ids starting with `vbpqta_`) are not legal text in
   Vietnamese and never enter the expected set.
 - `fetch` stores attachments as `files/<sha256>` and maps original names in

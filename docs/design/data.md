@@ -154,20 +154,20 @@ per-adapter additions. Interface and transaction rules live in
   (`active`,`withdrawn`,`scope_removed`,`source_replaced`), nullable raw and
   normalized number, and nullable `replacement_key`. Require replacement key
   exactly for `source_replaced`. Key must equal country, source and source id.
-- `run_membership_evidence`: run, document key, producing stage/item and typed
-  support tuple `(rule_kind, rule_value, evidence_reference)`. Kinds and values:
-  `agency` with agency id; `term` with term; `named` with the named entry;
-  `secondary_probe` with candidate docid; `relation` with seed id plus raw code.
-  The evidence reference carries listing or lookup query identity and page when
-  applicable, response SHA-256, artifact hash and relative evidence path;
-  relation support references the seed's detail/diagram response. Deduplicate by
-  these fields. Keep every independent support, including removed-rule evidence
-  for audit; a member leaves only when no current or retained support remains
-  under [pipeline](pipeline.md#source-ingest-rules).
+- `run_membership_evidence`: run, document key, producing stage/item, support
+  state (`current`, `retained`, `removed`) and typed support tuple
+  `(rule_kind, rule_value, evidence_reference)`. Kinds and values: `agency` with
+  agency id; `term` with term; `named` with the named entry; `secondary_probe`
+  with candidate docid; `relation` under the
+  [relation evidence contract](#relation-support-evidence). The evidence
+  reference carries listing or lookup query identity and page when applicable,
+  response SHA-256, artifact hash and relative evidence path; deduplicate by
+  these fields. [Membership](membership.md) owns supersession, retention and
+  removal lifetime.
 - `run_seed_observation`: run, seed key, producing expand item, completeness,
-  artifact hash and observed targets. Failed observations retain prior known
-  support with its original evidence, explicitly marked retained. Departed seeds
-  are not current support. Membership can be rebuilt from these records.
+  nullable artifact hash and observed targets. Incomplete observations have no
+  artifact hash. Membership can be rebuilt from these records under the
+  [relation loss rules](membership.md#relation-loss).
 - `run_scope`: run, seed/expanded/final snapshot JSON and their hashes, nullable
   until that phase closes, plus nullable fetch-close input hash. Snapshots
   contain byte-sorted membership and complete typed support tuples in every
@@ -178,11 +178,21 @@ per-adapter additions. Interface and transaction rules live in
   keys exclude retained removals; finalization may exclude candidates but never
   add unplanned keys. Retry invalidation clears only the affected phase
   references.
+- Add three nullable workshop `run_scope` columns: `predecessor_run_id`,
+  `predecessor_phase` (`final` or `legacy`) and `predecessor_snapshot_hash`.
+  Require all three together or all null before selection or when none is
+  chosen. The hash binds the selected final snapshot or the legacy reader's
+  canonical membership projection using the same snapshot serialization.
+  Selection lives in [membership](membership.md#membership-predecessor);
+  freezing and verification live in
+  [source execution](source-execution.md#shared-membership-and-artifacts).
 
 Active and retained-removal members form the expected set; replacement records
-only audit exclusion. Fetch work can be a larger candidate superset. The class
-is run membership, not legal document type or ranking. Build copies the final
-class to the corpus column defined in [schema](corpus-schema.md).
+only audit exclusion. Removal members follow the
+[removal lifetime](membership.md#removal-lifetime). Fetch work can be a larger
+candidate superset. The class is run membership, not legal document type or
+ranking. Build copies the final class to the corpus column defined in
+[schema](corpus-schema.md).
 
 The workshop `document` projection and bundle `document.json` version 2 carry
 `key`, `country`, `source`, `source_id`, `number`, `title`, `doc_type`,
@@ -224,3 +234,38 @@ The run snapshot binds the immutable migration comparison hash and approval
 note, plus later query-specific loss-review references. Scope projections,
 bundle formats and snapshot fields are versioned; an unknown version fails
 explicitly rather than defaulting class, source or completeness.
+
+### Relation support evidence
+
+A `relation` tuple's `rule_value` is `<seed document key>|<raw code>`. Its
+evidence reference contains the detail or diagram response SHA-256, expand
+artifact hash and `detail.json` or `diagram.json` path. Retention and removal
+preserve that original evidence, not the later observation's hash.
+
+The producing stage/item is `expand` and the seed document key for current,
+retained and link-loss removed tuples. A tuple removed because its seed left the
+active seeds belongs to `discover` / `vbpl:central`. This attribution does not
+change its relation kind or logical production stage for
+[retry invalidation](source-execution.md#retry-source-gaps). Discovery's
+frozen-evidence check covers the
+[direct seed kinds](membership.md#direct-discovery), excluding these
+discovery-attributed relation removals.
+
+### Expand observation artifact
+
+`observation.json` version 1 contains `seed_key`, `targets`, `number_only` and
+`unknown_codes`. Each target has `target_key`, `raw_code`, `kind`, `method`
+(`vbpl_references` or `vbpl_diagram`), `response` (`detail.json` or
+`diagram.json`) and `response_sha256`. The artifact retains both response files.
+Completeness and the artifact hash belong to `run_seed_observation`, not this
+JSON envelope.
+
+An explicit target id matches `^[0-9A-Za-z][0-9A-Za-z_-]{0,63}$`, does not start
+with `vbpqta_` (case-insensitive), and differs from the seed id. Only qualified
+relation kinds in [sources](sources.md#one-hop-relation-context) add targets.
+Sort targets by target key, raw code and method; deduplicate that triple.
+
+Number-only records carry raw code and number or diagram name, including diagram
+entries without an id. They are audit only and never expand membership. Sort and
+deduplicate by raw code and number. Sort and deduplicate unknown codes; they add
+no targets. Never resolve a number by guessing an id.

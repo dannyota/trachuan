@@ -66,3 +66,13 @@ the secondary key rather than claiming identical provenance.
 - 2026-11-09: recorded the owner's full central listing and local selection
   choice, approved lists and carried-over migration loss approval; applied the
   primary's date-qualified identity and capped chinhphu completeness rulings.
+- 2026-11-10: clarified the execution contracts and preserved the two-listing
+  withdrawal exception. Kept drift fatal after incomplete expansion; selected
+  [one-run removal accounting](../design/membership.md#removal-lifetime) so
+  historical losses stay auditable without recurring acceptance. The changed
+  lifetime requires independent review and new run recipes before adoption; the
+  accepted source choice is unchanged.
+- 2026-11-10: applied the owner's review rulings: acceptance ends removal carry;
+  one recorded predecessor binds membership reconciliation. Clarified probe
+  seeds, legacy support migration and fetch freshness. Reviewer confirmation
+  remains pending.
