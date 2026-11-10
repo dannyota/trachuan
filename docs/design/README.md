@@ -3,27 +3,28 @@
 Intended behavior of trachuan. Decisions with alternatives are in the
 [ADRs](../adr/README.md); numeric limits in [budgets](budgets.md).
 
-| Note                                    | Owns                                                                                     |
-| --------------------------------------- | ---------------------------------------------------------------------------------------- |
-| [system](system.md)                     | Success criteria, components, database roles, repository layout                          |
-| [data](data.md)                         | Corpus, auth and workshop data models                                                    |
-| [retrieval](retrieval.md)               | Query validation, ranking, validity, subject filter, release pinning, MCP tools, web API |
-| [taxonomy](taxonomy.md)                 | Subject tree import, classification layers, evaluation gate                              |
-| [pipeline](pipeline.md)                 | Write path on Temporal, stages, batch submissions, release artifact                      |
-| [sources](sources.md)                   | Vietnam discovery, relation context, secondary source and loss approval                  |
-| [membership](membership.md)             | Support supersession, retention, withdrawal, fetch drift and removal lifetime            |
-| [source execution](source-execution.md) | Shared source interfaces, finalization, retries and durable pauses                       |
-| [auth](auth.md)                         | Google login, OAuth for MCP, CIMD, revocation, account lifecycle                         |
-| [web](web.md)                           | Routes, pages, visual system                                                             |
-| [deployment](deployment.md)             | Host, deploy, secrets, release activation, backups, observability                        |
-| [budgets](budgets.md)                   | Cost, memory, request limits, retrieval and Temporal bounds                              |
-| [index](index.md)                       | Index scope, build inventory, normalization, local database recovery                     |
-| [chunk](chunk.md)                       | Chunk recipe, source spans, omissions and workshop projection                            |
-| [embedder](embedder.md)                 | Embedding HTTP contract, Go query and Python document services, embedding artifacts      |
-| [corpus schema](corpus-schema.md)       | Exact shared corpus template contract and schema version                                 |
-| [lexical](lexical.md)                   | Shared normalization, hashing, BM25 and statistics                                       |
-| [retrieval recipe](retrieval-recipe.md) | Shared Go API, recipe 1, validity and evidence shaping                                   |
-| [evaluation](evaluation.md)             | Cohorts, identity mapping, calibration, metrics and caches                               |
+| Note                                       | Owns                                                                                     |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| [system](system.md)                        | Success criteria, components, database roles, repository layout                          |
+| [data](data.md)                            | Corpus, auth and workshop data models                                                    |
+| [retrieval](retrieval.md)                  | Query validation, ranking, validity, subject filter, release pinning, MCP tools, web API |
+| [taxonomy](taxonomy.md)                    | Subject tree import, classification layers, evaluation gate                              |
+| [pipeline](pipeline.md)                    | Write path on Temporal, stages, batch submissions, release artifact                      |
+| [sources](sources.md)                      | Vietnam discovery, relation context, secondary source and loss approval                  |
+| [validity corrections](validity-status.md) | Text rules, manual corrections and review queue for wrong or missing source validity     |
+| [membership](membership.md)                | Support supersession, retention, withdrawal, fetch drift and removal lifetime            |
+| [source execution](source-execution.md)    | Shared source interfaces, finalization, retries and durable pauses                       |
+| [auth](auth.md)                            | Google login, OAuth for MCP, CIMD, revocation, account lifecycle                         |
+| [web](web.md)                              | Routes, pages, visual system                                                             |
+| [deployment](deployment.md)                | Host, deploy, secrets, release activation, backups, observability                        |
+| [budgets](budgets.md)                      | Cost, memory, request limits, retrieval and Temporal bounds                              |
+| [index](index.md)                          | Index scope, build inventory, normalization, local database recovery                     |
+| [chunk](chunk.md)                          | Chunk recipe, source spans, omissions and workshop projection                            |
+| [embedder](embedder.md)                    | Embedding HTTP contract, Go query and Python document services, embedding artifacts      |
+| [corpus schema](corpus-schema.md)          | Exact shared corpus template contract and schema version                                 |
+| [lexical](lexical.md)                      | Shared normalization, hashing, BM25 and statistics                                       |
+| [retrieval recipe](retrieval-recipe.md)    | Shared Go API, recipe 1, validity and evidence shaping                                   |
+| [evaluation](evaluation.md)                | Cohorts, identity mapping, calibration, metrics and caches                               |
 
 Spikes done on 2026-11-09: OAuth clients
 ([note](../research/oauth-clients-2026-11.md)), the dense model
