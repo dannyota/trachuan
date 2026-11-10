@@ -102,6 +102,9 @@ func (e *Engine) Collect(ctx context.Context, p Prepared, depths Depths) (Arms, 
 			}
 		}
 	}
+	if err = indexSettings(ctx, tx); err != nil {
+		return Arms{}, err
+	}
 	for _, g := range groups {
 		if err = hydrate(ctx, tx, g, vec); err != nil {
 			return Arms{}, err

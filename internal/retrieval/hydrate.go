@@ -25,18 +25,42 @@ func hydrate(ctx context.Context, tx pgx.Tx, g *ArmGroup, vec string) error {
 	if len(ids) == 0 {
 		return nil
 	}
-	const sql = `WITH RECURSIVE ancestry AS (
- SELECT c.id AS chunk_id,p.id,p.parent_id,p.kind,0 AS depth FROM chunk c JOIN provision p ON p.id=c.provision_id WHERE c.id=ANY($1::bigint[])
- UNION ALL SELECT a.chunk_id,p.id,p.parent_id,p.kind,a.depth+1 FROM ancestry a JOIN provision p ON p.id=a.parent_id
+	const mappingSQL = `WITH RECURSIVE ancestry AS (
+ SELECT c.id AS chunk_id,p.id,p.parent_id,p.kind,0 AS depth FROM chunk c JOIN LATERAL (SELECT * FROM provision WHERE id=c.provision_id OFFSET 0) p ON true WHERE c.id=ANY($1::bigint[])
+ UNION ALL SELECT a.chunk_id,p.id,p.parent_id,p.kind,a.depth+1 FROM ancestry a JOIN LATERAL (SELECT * FROM provision WHERE id=a.parent_id OFFSET 0) p ON true
  ), chosen AS (
  SELECT DISTINCT ON (chunk_id) chunk_id,id AS group_id FROM ancestry ORDER BY chunk_id,CASE WHEN kind='khoan' THEN 0 ELSE 1 END,depth
- ), groups AS (SELECT DISTINCT p.id,p.kind FROM chosen JOIN provision p ON p.id=chosen.group_id), mapped AS (
- SELECT id AS group_id,id,kind FROM groups
- UNION ALL SELECT m.group_id,p.id,p.kind FROM mapped m JOIN provision p ON p.parent_id=m.id AND p.kind<>'khoan' WHERE m.kind='khoan' OR m.group_id<>m.id
- )
- SELECT c.id,c.ordinal,d.country,d.key,p.anchor,p.id,m.group_id,gp.anchor,c.content,c.context_prefix,c.spans,1-(c.embedding <=> $2::vector),p.parent_id,p.kind,p.label,p.heading,p.text,p.node_id,d.number,d.title,d.status_class,d.status_basis,d.is_current,d.eff_from,d.eff_to,d.source_url,ARRAY(SELECT DISTINCT g.kind FROM coverage_gap g WHERE g.document_id=d.id AND g.kind IN ('consolidated_status_unordered','consolidated_status_unresolved') ORDER BY g.kind)
- FROM mapped m JOIN chunk c ON c.provision_id=m.id JOIN document d ON d.id=c.document_id JOIN provision p ON p.id=c.provision_id JOIN provision gp ON gp.id=m.group_id WHERE m.id=m.group_id OR m.kind<>'khoan' ORDER BY c.id`
-	rows, err := tx.Query(ctx, sql, ids, vec)
+ ), groups AS (SELECT DISTINCT p.id,p.document_id,p.kind FROM chosen JOIN LATERAL (SELECT * FROM provision WHERE id=chosen.group_id OFFSET 0) p ON true), mapped AS (
+ SELECT id AS group_id,id,document_id,kind FROM groups
+ UNION ALL SELECT m.group_id,p.id,p.document_id,p.kind FROM mapped m JOIN LATERAL (SELECT * FROM provision WHERE document_id=m.document_id AND parent_id=m.id AND kind<>'khoan' OFFSET 0) p ON true WHERE m.kind='khoan' OR m.group_id<>m.id
+ ) SELECT group_id,id,kind FROM mapped WHERE id=group_id OR kind<>'khoan'`
+	rows, err := tx.Query(ctx, mappingSQL, ids)
+	if err != nil {
+		return errors.New("hydrate candidates failed")
+	}
+	var provisionIDs, mappingGroupIDs []int64
+	for rows.Next() {
+		var groupID, provisionID int64
+		var kind string
+		if rows.Scan(&groupID, &provisionID, &kind) != nil {
+			rows.Close()
+			return errors.New("read hydrated candidate mapping failed")
+		}
+		provisionIDs = append(provisionIDs, provisionID)
+		mappingGroupIDs = append(mappingGroupIDs, groupID)
+	}
+	if rows.Err() != nil {
+		rows.Close()
+		return errors.New("read hydrated candidate mapping failed")
+	}
+	rows.Close()
+	const sql = `SELECT c.id,c.ordinal,d.country,d.key,p.anchor,p.id,m.group_id,gp.anchor,c.content,c.context_prefix,c.spans,1-(c.embedding <=> $3::vector),p.parent_id,p.kind,p.label,p.heading,p.text,p.node_id,d.number,d.title,d.status_class,d.status_basis,d.is_current,d.eff_from,d.eff_to,d.source_url,ARRAY(SELECT DISTINCT g.kind FROM coverage_gap g WHERE g.document_id=d.id AND g.kind IN ('consolidated_status_unordered','consolidated_status_unresolved') ORDER BY g.kind)
+ FROM unnest($1::bigint[],$2::bigint[]) AS m(provision_id,group_id)
+ JOIN LATERAL (SELECT * FROM chunk WHERE provision_id=ANY($1::bigint[]) AND provision_id=m.provision_id OFFSET 0) c ON true
+ JOIN LATERAL (SELECT * FROM provision WHERE id=ANY($1::bigint[]) AND id=m.provision_id OFFSET 0) p ON true
+ JOIN LATERAL (SELECT * FROM provision WHERE id=ANY($2::bigint[]) AND id=m.group_id OFFSET 0) gp ON true
+ JOIN LATERAL (SELECT * FROM document WHERE id=c.document_id OFFSET 0) d ON true ORDER BY c.id`
+	rows, err = tx.Query(ctx, sql, provisionIDs, mappingGroupIDs, vec)
 	if err != nil {
 		return errors.New("hydrate candidates failed")
 	}
@@ -71,7 +95,7 @@ func hydrate(ctx context.Context, tx pgx.Tx, g *ArmGroup, vec string) error {
 	}
 	const ancestrySQL = `WITH RECURSIVE ancestry AS (
  SELECT p.id AS group_id,p.id,p.parent_id,p.kind,p.label,p.heading,p.text,p.anchor,p.node_id,d.country,d.key,0 AS depth FROM provision p JOIN document d ON d.id=p.document_id WHERE p.id=ANY($1::bigint[])
- UNION ALL SELECT a.group_id,p.id,p.parent_id,p.kind,p.label,p.heading,p.text,p.anchor,p.node_id,a.country,a.key,a.depth+1 FROM ancestry a JOIN provision p ON p.id=a.parent_id
+ UNION ALL SELECT a.group_id,p.id,p.parent_id,p.kind,p.label,p.heading,p.text,p.anchor,p.node_id,a.country,a.key,a.depth+1 FROM ancestry a JOIN LATERAL (SELECT * FROM provision WHERE id=a.parent_id OFFSET 0) p ON true
  ) SELECT group_id,id,parent_id,kind,label,heading,text,anchor,node_id,country,key FROM ancestry ORDER BY group_id,depth DESC`
 	rows, err = tx.Query(ctx, ancestrySQL, gids)
 	if err != nil {

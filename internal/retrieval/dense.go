@@ -60,6 +60,17 @@ func exactSettings(ctx context.Context, tx pgx.Tx) error {
 	}
 	return nil
 }
+
+// indexSettings re-enables index scans after exact search so hydration reads
+// only the rows its ids reach.
+func indexSettings(ctx context.Context, tx pgx.Tx) error {
+	for _, k := range []string{"enable_indexscan", "enable_bitmapscan"} {
+		if err := setLocal(ctx, tx, k, "on"); err != nil {
+			return err
+		}
+	}
+	return nil
+}
 func annSettings(ctx context.Context, tx pgx.Tx, depth int, r ANNRecipe) (int, error) {
 	pool := max(r.PoolMin, r.PoolMultiplier*depth)
 	ef := min(pool, r.EFMax)
