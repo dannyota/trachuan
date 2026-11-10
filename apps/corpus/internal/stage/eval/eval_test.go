@@ -36,6 +36,14 @@ func TestInputHash_OmitsInventory(t *testing.T) {
 	}
 }
 
+func TestRecipe_IncludesCompact(t *testing.T) {
+	s := New(Config{})
+	want := stage.RecipeHash("eval", "agent-eval/1", "legacy-matcher/1", "product-matcher/1", "recall,mrr,current-law-precision,abstention,evidence,ann/1", "", "diacritics_required:Vui lòng nhập câu hỏi tiếng Việt có dấu hoặc số hiệu văn bản.", "cache/1:200:100", "nearest-rank", "0.90:0.66:0.99:0.95", "compact/1")
+	if got := s.Recipe(stage.Snapshot{}); got != want {
+		t.Fatalf("recipe = %s, want %s", got, want)
+	}
+}
+
 func TestResolve_RejectsInvalidReport(t *testing.T) {
 	for _, tc := range []struct {
 		name, status, country, rel string

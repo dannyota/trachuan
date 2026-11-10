@@ -44,7 +44,7 @@ func (*Stage) Name() string { return "eval" }
 
 // Recipe identifies the scoring and cache policies.
 func (s *Stage) Recipe(stage.Snapshot) string {
-	return stage.RecipeHash("eval", "agent-eval/1", "legacy-matcher/1", "product-matcher/1", "recall,mrr,current-law-precision,abstention,evidence,ann/1", strings.Join(s.cfg.Suite.Rejections, "\x00"), "diacritics_required:Vui lòng nhập câu hỏi tiếng Việt có dấu hoặc số hiệu văn bản.", "cache/1:200:100", "nearest-rank", "0.90:0.66:0.99:0.95")
+	return stage.RecipeHash("eval", "agent-eval/1", "legacy-matcher/1", "product-matcher/1", "recall,mrr,current-law-precision,abstention,evidence,ann/1", strings.Join(s.cfg.Suite.Rejections, "\x00"), "diacritics_required:Vui lòng nhập câu hỏi tiếng Việt có dấu hoặc số hiệu văn bản.", "cache/1:200:100", "nearest-rank", "0.90:0.66:0.99:0.95", "compact/1")
 }
 
 func dateForRun(run stage.Run) (time.Time, error) {

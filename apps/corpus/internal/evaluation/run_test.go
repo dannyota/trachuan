@@ -6,9 +6,11 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	"danny.vn/trachuan/internal/embedding"
 	"danny.vn/trachuan/internal/retrieval"
@@ -18,6 +20,89 @@ type fakeEngine struct {
 	prepares, legacy, collects int
 	fail                       bool
 	date                       retrieval.Date
+	compactText, fullText      string
+}
+
+func (f *fakeEngine) Present(_ context.Context, _ retrieval.Response, d retrieval.Detail) (retrieval.SearchResult, error) {
+	value := f.compactText
+	if d == retrieval.DetailFull {
+		value = f.fullText
+	}
+	return retrieval.SearchResult{Release: string(d) + " Việt" + value}, nil
+}
+
+func TestRun_CompactDiagnosticOwnIdentityOnly(t *testing.T) {
+	child := "child"
+	entry := MapEntry{State: "resolved", Alternatives: []Alternative{{Country: "vn", DocumentKey: "d", Anchor: &child, Kind: "provision"}}}
+	hit := retrieval.Hit{Identity: retrieval.Identity{Country: "vn", DocumentKey: "d", Anchor: "parent"}, Complete: true, Fragments: []retrieval.Fragment{{Identity: retrieval.Identity{Country: "vn", DocumentKey: "d", Anchor: child}, Complete: true}}}
+	if MatchProduct(entry, []retrieval.Hit{hit}) != 1 || MatchProduct(entry, compactHits([]retrieval.Hit{hit})) != 0 {
+		t.Fatal("compact credited a child fragment")
+	}
+	hit.Identity.Anchor = child
+	if MatchProduct(entry, compactHits([]retrieval.Hit{hit})) != 1 {
+		t.Fatal("compact missed own identity")
+	}
+	date := retrieval.Date{Year: 2026, Month: time.November, Day: 9}
+	r, _, err := Run(context.Background(), &recordedEngine{fakeEngine: fakeEngine{date: date}}, recordedSuite(), Options{EvaluationDate: date, Modes: []retrieval.Mode{"exact"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, s := range r.Presented {
+		if s.Cohort == "old_product" && s.Detail == retrieval.DetailCompact && (s.Found != 1 || s.Expected != 1) {
+			t.Fatalf("summary: %+v", s)
+		}
+	}
+}
+
+func TestRun_PresentedSizeIsSerializedResult(t *testing.T) {
+	date := retrieval.Date{Year: 2026, Month: time.November, Day: 9}
+	r, _, err := Run(context.Background(), &fakeEngine{date: date}, recordedSuite(), Options{EvaluationDate: date, Modes: []retrieval.Mode{"exact"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(r.Presented) != 8 {
+		t.Fatalf("summaries: %d", len(r.Presented))
+	}
+	for _, s := range r.Presented {
+		b, err := json.Marshal(retrieval.SearchResult{Release: string(s.Detail) + " Việt"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		want := float64(utf8.RuneCount(b))
+		if s.SizeP50 == nil || s.SizeP95 == nil || *s.SizeP50 != want || *s.SizeP95 != want {
+			t.Fatalf("summary: %+v want %v", s, want)
+		}
+	}
+}
+
+func TestRun_CompactSizeGate(t *testing.T) {
+	for _, tc := range []struct {
+		full, compact float64
+		pass          bool
+	}{{10, 10, true}, {10, 9, true}, {10, 11, false}} {
+		r := Report{Presented: []PresentedSummary{{Cohort: "old_product", Mode: "exact", Detail: retrieval.DetailFull, Limit: 8, SizeP95: &tc.full}, {Cohort: "old_product", Mode: "exact", Detail: retrieval.DetailCompact, Limit: 20, SizeP95: &tc.compact}}, QualityPass: true, ReleaseEligible: false, Floors: []Floor{{Status: "pass"}}}
+		setCompactSizeGate(&r)
+		if r.CompactSizeGate.Pass != tc.pass || !r.QualityPass || r.ReleaseEligible || r.Floors[0].Status != "pass" {
+			t.Fatalf("gate: %+v", r.CompactSizeGate)
+		}
+	}
+	date := retrieval.Date{Year: 2026, Month: time.November, Day: 9}
+	var baseline Report
+	for i, extra := range []string{"", strings.Repeat("x", 100)} {
+		engine := &recordedEngine{fakeEngine: fakeEngine{date: date, compactText: extra, fullText: strings.Repeat("x", 50)}}
+		r, _, err := Run(context.Background(), engine, recordedSuite(), Options{EvaluationDate: date})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if r.CompactSizeGate.Pass != (i == 0) || r.CompactSizeGate.FullP95At8 == nil || r.CompactSizeGate.CompactP95At20 == nil {
+			t.Fatalf("gate: %+v", r.CompactSizeGate)
+		}
+		if i == 0 {
+			baseline = r
+		} else if !reflect.DeepEqual(baseline.Floors, r.Floors) || baseline.QualityPass != r.QualityPass || baseline.ReleaseEligible != r.ReleaseEligible || !reflect.DeepEqual(baseline.Cases, r.Cases) {
+			t.Fatal("size gate changed scoring or promotion")
+		}
+	}
 }
 
 func (f *fakeEngine) Release() retrieval.Release {

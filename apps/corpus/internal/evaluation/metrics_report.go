@@ -1,9 +1,67 @@
 package evaluation
 
 import (
-	"danny.vn/trachuan/internal/retrieval"
 	"sort"
+
+	"danny.vn/trachuan/internal/retrieval"
 )
+
+type presentedKey struct {
+	cohort string
+	mode   retrieval.Mode
+	detail retrieval.Detail
+	limit  int
+}
+
+type presentedSamples struct {
+	cases, expected, found int
+	sizes                  []float64
+}
+
+func compactHits(hits []retrieval.Hit) []retrieval.Hit {
+	out := append([]retrieval.Hit(nil), hits...)
+	for i := range out {
+		out[i].Fragments = nil
+		out[i].Relations = nil
+		out[i].Complete = false
+	}
+	return out
+}
+
+func finishPresented(r *Report, all map[presentedKey]*presentedSamples, modes []retrieval.Mode) {
+	for _, cohort := range []string{"legacy", "old_product"} {
+		for _, mode := range modes {
+			for _, detail := range []retrieval.Detail{retrieval.DetailCompact, retrieval.DetailFull} {
+				for _, limit := range []int{8, 20} {
+					s := all[presentedKey{cohort, mode, detail, limit}]
+					if s == nil {
+						continue
+					}
+					sort.Float64s(s.sizes)
+					r.Presented = append(r.Presented, PresentedSummary{cohort, mode, detail, limit, s.cases, s.expected, s.found, Quantile(s.sizes, .5), Quantile(s.sizes, .95)})
+				}
+			}
+		}
+	}
+	setCompactSizeGate(r)
+}
+
+func setCompactSizeGate(r *Report) {
+	var gate CompactSizeGate
+	for _, s := range r.Presented {
+		if s.Cohort != "old_product" || s.Mode != "exact" {
+			continue
+		}
+		if s.Detail == retrieval.DetailFull && s.Limit == 8 {
+			gate.FullP95At8 = s.SizeP95
+		}
+		if s.Detail == retrieval.DetailCompact && s.Limit == 20 {
+			gate.CompactP95At20 = s.SizeP95
+		}
+	}
+	gate.Pass = gate.FullP95At8 != nil && gate.CompactP95At20 != nil && *gate.CompactP95At20 <= *gate.FullP95At8
+	r.CompactSizeGate = gate
+}
 
 func finishReport(r *Report, all map[metricKey]*Metrics, modes []retrieval.Mode) {
 	for _, cohort := range []string{"legacy", "old_product"} {

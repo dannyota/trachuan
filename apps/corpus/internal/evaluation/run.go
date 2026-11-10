@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"time"
+	"unicode/utf8"
 
 	"danny.vn/trachuan/internal/retrieval"
 )
@@ -113,6 +114,7 @@ func Run(ctx context.Context, engine Engine, suite Suite, o Options) (Report, Ca
 	}
 	cache := Cache{}
 	metrics := map[metricKey]*Metrics{}
+	presented := map[presentedKey]*presentedSamples{}
 	timings := map[string][]float64{}
 	vectorRows := map[string]int{}
 	for _, c := range suite.Legacy {
@@ -218,6 +220,41 @@ func Run(ctx context.Context, engine Engine, suite Suite, o Options) (Report, Ca
 								}
 							}
 						}
+						if armMode == "hybrid" {
+							for _, detail := range []retrieval.Detail{retrieval.DetailCompact, retrieval.DetailFull} {
+								result, presentErr := engine.Present(ctx, response, detail)
+								if presentErr != nil {
+									return Report{}, Cache{}, fmt.Errorf("present case %s: %w", c.ID, presentErr)
+								}
+								data, marshalErr := json.Marshal(result)
+								if marshalErr != nil {
+									return Report{}, Cache{}, fmt.Errorf("encode presentation for case %s: %w", c.ID, marshalErr)
+								}
+								key := presentedKey{cohort, mode, detail, limit}
+								if presented[key] == nil {
+									presented[key] = &presentedSamples{}
+								}
+								sample := presented[key]
+								sample.cases++
+								sample.expected += len(ranks)
+								sample.sizes = append(sample.sizes, float64(utf8.RuneCount(data)))
+								if detail == retrieval.DetailFull {
+									sample.found += matchedCount(ranks)
+									continue
+								}
+								compact := compactHits(hits)
+								for i, e := range c.ExpectedCitations {
+									if cohort == "legacy" {
+										rank, _ := MatchLegacy(e, compact)
+										if rank > 0 {
+											sample.found++
+										}
+									} else if len(o.Mapping[c.ID]) == 0 && MatchProduct(entries[c.ID][i], compact) > 0 {
+										sample.found++
+									}
+								}
+							}
+						}
 						key := metricKey{cohort, mode, armMode, limit}
 						if metrics[key] == nil {
 							metrics[key] = &Metrics{}
@@ -259,6 +296,7 @@ func Run(ctx context.Context, engine Engine, suite Suite, o Options) (Report, Ca
 		r.TimingsMS[key] = summarizeTiming(samples)
 	}
 	finishReport(&r, metrics, modes)
+	finishPresented(&r, presented, modes)
 	for _, c := range suite.Legacy {
 		if !rejects[c.ID] && len(c.ExpectedCitations) > 0 && len(o.Mapping[c.ID]) > 0 {
 			markMappingUnavailable(&r)

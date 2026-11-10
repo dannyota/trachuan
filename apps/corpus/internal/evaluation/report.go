@@ -91,8 +91,30 @@ type Rejection struct {
 	Passed bool   `json:"passed"`
 }
 
+// PresentedSummary records matching and serialized response sizes.
+type PresentedSummary struct {
+	Cohort   string           `json:"cohort"`
+	Mode     retrieval.Mode   `json:"mode"`
+	Detail   retrieval.Detail `json:"detail"`
+	Limit    int              `json:"limit"`
+	Cases    int              `json:"cases"`
+	Expected int              `json:"expected"`
+	Found    int              `json:"found"`
+	SizeP50  *float64         `json:"size_p50"`
+	SizeP95  *float64         `json:"size_p95"`
+}
+
+// CompactSizeGate compares compact and full response sizes.
+type CompactSizeGate struct {
+	FullP95At8     *float64 `json:"full_p95_at_8"`
+	CompactP95At20 *float64 `json:"compact_p95_at_20"`
+	Pass           bool     `json:"pass"`
+}
+
 // Report is a completed diagnostic evaluation.
 type Report struct {
+	Presented            []PresentedSummary  `json:"presented"`
+	CompactSizeGate      CompactSizeGate     `json:"compact_size_gate"`
 	DocumentsByClass     map[string]int      `json:"documents_by_class"`
 	DocumentsBySource    map[string]int      `json:"documents_by_source"`
 	HitsByClass          map[string]int      `json:"hits_by_class"`
