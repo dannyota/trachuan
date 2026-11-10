@@ -1,6 +1,6 @@
 # ADR 0013: Compact search results and batch reading for agents
 
-Status: proposed 2026-11-10. The owner approved the direction and delegated the
+Status: accepted 2026-11-10. The owner approved the direction and delegated the
 details with the rule "we return results to agents, and you are agent".
 
 ## Context
@@ -85,3 +85,4 @@ they never state an inverse legal effect.
 - 2026-11-10: independent review (three rounds, findings S-01 to S-09) fixed
   completeness, continuation, relation reach, endpoint identity, snippet
   determinism and evaluation; verdict merge.
+- 2026-11-10: accepted by the owner.
