@@ -20,3 +20,4 @@ only for a new topic.
 | [0010](0010-retrieval-evaluation-for-agents.md)  | Retrieval evaluation for agent consumers                           |
 | [0011](0011-embedder-services.md)                | Go query embedder; Python document embedder on the MacBook         |
 | [0012](0012-vietnam-corpus-sources.md)           | Vietnam primary and secondary legal sources                        |
+| [0013](0013-compact-search-and-batch-read.md)    | Compact search results and batch reading for agents                |

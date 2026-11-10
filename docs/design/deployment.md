@@ -203,7 +203,7 @@ skipping steps 1 to 3 and verifying instead that the database exists and its
    in `new` mode and only when the guard holds; in `retained` mode it only
    closes the journal.
 
-Retained releases stay readable through `document`; `search` against a retained
+Retained releases stay readable through `read`; `search` against a retained
 release whose `dense_recipe` or `lexical_recipe` differs from the running bundle
 returns `release_incompatible`. `lexical_recipe` identifies the algorithm
 (tokenizer version, normalization, BM25 parameters) and must match the runtime;

@@ -118,23 +118,23 @@ and their limits are in [ADR 0009](../adr/0009-dense-embedding-recipe.md).
 
 ## Request limits
 
-| Limit                                                                | Value                                                                                                                                                                         |
-| -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Query length                                                         | 2,000 characters and 256 model tokens                                                                                                                                         |
-| Request body                                                         | 64 KB                                                                                                                                                                         |
-| `search` per account                                                 | 60 per minute                                                                                                                                                                 |
-| `document` per account                                               | 120 per minute                                                                                                                                                                |
-| `taxonomy` depth; nodes per response                                 | 3; 500                                                                                                                                                                        |
-| `search` limit; `nodes[]`; `doc_types[]`; `issuers[]`; `documents[]` | 50; 20; 10; 10; 20                                                                                                                                                            |
-| `quality_gaps` page                                                  | 200 with cursor                                                                                                                                                               |
-| Document text per response                                           | 2 MB; a response stops at a provision boundary with `next_from`; a provision above 2 MB is split into parts of 1 MB                                                           |
-| Embedder admission                                                   | 2 active, 8 queued, 250 ms max wait, 2 s deadline                                                                                                                             |
-| Login and OAuth endpoints per IP                                     | 20 per minute                                                                                                                                                                 |
-| Public routes per IP (Nitro)                                         | 120 per minute, served from a 10-minute cache; cache keys limited to known routes and node codes; 4 concurrent renders, excess uncached requests receive 429 without queueing |
-| Credential lookup cache                                              | 10 s, never beyond the credential's expiry                                                                                                                                    |
-| Personal token lifetime                                              | default 90 days, at most 1 year                                                                                                                                               |
-| CIMD fetch                                                           | 5 s, 64 KB, no redirects, 4 concurrent fetches, 1,000 cached documents for 24 h                                                                                               |
-| OAuth clients stored                                                 | 10,000 total, 10 per client URL, LRU eviction of clients unused for 90 days                                                                                                   |
+| Limit                                                                | Value                                                                                                                                                                                                             |
+| -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Query length                                                         | 2,000 characters and 256 model tokens                                                                                                                                                                             |
+| Request body                                                         | 64 KB                                                                                                                                                                                                             |
+| `search` per account                                                 | 60 per minute                                                                                                                                                                                                     |
+| `read` per account; items per call                                   | 120 per minute; 8                                                                                                                                                                                                 |
+| `taxonomy` depth; nodes per response                                 | 3; 500                                                                                                                                                                                                            |
+| `search` limit; `nodes[]`; `doc_types[]`; `issuers[]`; `documents[]` | 50; 20; 10; 10; 20                                                                                                                                                                                                |
+| `quality_gaps` page                                                  | 200 with cursor                                                                                                                                                                                                   |
+| Web document text per response; MCP `read` text per call             | 2 MB; a response stops at a provision boundary with `next_from`; a provision above 2 MB is split into parts of 1 MB. `read`: 40,000 Unicode code points across items, with `next_from`, `next_part` or `not_read` |
+| Embedder admission                                                   | 2 active, 8 queued, 250 ms max wait, 2 s deadline                                                                                                                                                                 |
+| Login and OAuth endpoints per IP                                     | 20 per minute                                                                                                                                                                                                     |
+| Public routes per IP (Nitro)                                         | 120 per minute, served from a 10-minute cache; cache keys limited to known routes and node codes; 4 concurrent renders, excess uncached requests receive 429 without queueing                                     |
+| Credential lookup cache                                              | 10 s, never beyond the credential's expiry                                                                                                                                                                        |
+| Personal token lifetime                                              | default 90 days, at most 1 year                                                                                                                                                                                   |
+| CIMD fetch                                                           | 5 s, 64 KB, no redirects, 4 concurrent fetches, 1,000 cached documents for 24 h                                                                                                                                   |
+| OAuth clients stored                                                 | 10,000 total, 10 per client URL, LRU eviction of clients unused for 90 days                                                                                                                                       |
 
 ## Pipeline
 
@@ -269,22 +269,22 @@ applies to each filesystem, including retained releases.
 
 ## Retrieval
 
-| Recipe 1 parameter                          | Value                                                                          |
-| ------------------------------------------- | ------------------------------------------------------------------------------ |
-| Dense / lexical candidate depths            | 50 / 50                                                                        |
-| RRF k; dense / lexical weights              | 60; 1 / 0.5                                                                    |
-| Validated document-number lexical weight    | 1                                                                              |
-| ANN pool; ef_search                         | max(400, 24 times dense depth); min(pool, 1,000)                               |
-| ANN scan settings                           | strict_order; force_custom_plan; max_scan_tuples=20,000; scan_mem_multiplier=1 |
-| Hydration pool                              | First min(union size, 8 times response limit) fused chunks                     |
-| Per-document cap; backfill                  | 3; demoted hits in rank order until response full                              |
-| Default response limit; maximum             | 8; 50                                                                          |
-| Evidence text per hit                       | 14,000 Unicode code points, then source spans and read pointer                 |
-| Relations per hit; evidence per relation    | 20; 1,000 Unicode code points, omissions explicit                              |
-| Document-reference parser                   | At most 8 references, 128 runes per reference                                  |
-| Serving database statement deadline         | 2 s; no unbounded exact fallback                                               |
-| Evaluation exact arm cache depth            | Dense 200; lexical 100                                                         |
-| Provisional calibration threshold sentinels | -1 (all finite cosines pass); 2 (all abstain)                                  |
+| Recipe 1 parameter                                                                        | Value                                                                                                      |
+| ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Dense / lexical candidate depths                                                          | 50 / 50                                                                                                    |
+| RRF k; dense / lexical weights                                                            | 60; 1 / 0.5                                                                                                |
+| Validated document-number lexical weight                                                  | 1                                                                                                          |
+| ANN pool; ef_search                                                                       | max(400, 24 times dense depth); min(pool, 1,000)                                                           |
+| ANN scan settings                                                                         | strict_order; force_custom_plan; max_scan_tuples=20,000; scan_mem_multiplier=1                             |
+| Hydration pool                                                                            | First min(union size, 8 times response limit) fused chunks                                                 |
+| Per-document cap; backfill                                                                | 3; demoted hits in rank order until response full                                                          |
+| Default response limit compact; full; maximum                                             | 20; 8; 50                                                                                                  |
+| Evidence text per full hit; compact snippet                                               | 14,000 Unicode code points, then source spans and read pointer; 600 code points including omission markers |
+| Relations per full hit or read item; evidence per relation; related pointers per document | 20; 1,000 Unicode code points, omissions explicit; 5                                                       |
+| Document-reference parser                                                                 | At most 8 references, 128 runes per reference                                                              |
+| Serving database statement deadline                                                       | 2 s; no unbounded exact fallback                                                                           |
+| Evaluation exact arm cache depth                                                          | Dense 200; lexical 100                                                                                     |
+| Provisional calibration threshold sentinels                                               | -1 (all finite cosines pass); 2 (all abstain)                                                              |
 
 Recipe behavior is in [retrieval recipe](retrieval-recipe.md); the threshold is
 derived by [calibration](evaluation.md#provisional-calibration), never assumed
