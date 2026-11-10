@@ -366,3 +366,68 @@ func TestRead_ResultSameWhateverElseCallReads(t *testing.T) {
 		t.Fatal("continuation changed with other items")
 	}
 }
+
+func TestRead_ContinuationSequenceSameAcrossBudgets(t *testing.T) {
+	db, e := readFixture(t)
+	readExec(t, db, `UPDATE provision SET text=$1 WHERE id=9`, strings.Repeat("a", 100000))
+	readExec(t, db, `UPDATE provision SET text=$1 WHERE id=8`, strings.Repeat("b", 16000))
+	initial := readItems(t, e, ReadItem{Handle: "vn:1#p9"}).Items[0]
+	if initial.Next == "" {
+		t.Fatal("missing initial continuation")
+	}
+	collect := func(prefix bool) ([]Unit, int) {
+		t.Helper()
+		item := ReadItem{Next: initial.Next}
+		var units []Unit
+		firstCount := 0
+		for page := 0; page < 20; page++ {
+			items := []ReadItem{item}
+			if prefix {
+				items = append([]ReadItem{{Handle: "vn:1#p8"}}, item)
+			}
+			result := readItems(t, e, items...).Items[len(items)-1]
+			if result.Error != "" {
+				t.Fatal(result.Error)
+			}
+			if page == 0 {
+				firstCount = len(result.Units)
+			}
+			for _, unit := range result.Units {
+				if readSize(unit) > PartSize {
+					t.Fatal("oversized part")
+				}
+			}
+			units = append(units, result.Units...)
+			if result.Next == "" {
+				if !result.Complete {
+					t.Fatal("incomplete chain")
+				}
+				return units, firstCount
+			}
+			item = ReadItem{Next: result.Next}
+		}
+		t.Fatal("chain did not terminate")
+		return nil, 0
+	}
+	alone, aloneCount := collect(false)
+	batch, batchCount := collect(true)
+	if aloneCount <= batchCount || batchCount == 0 || !reflect.DeepEqual(alone, batch) {
+		t.Fatal("continuation sequence changed across a cap boundary")
+	}
+}
+
+func TestRead_UnitTooLargeIsItemError(t *testing.T) {
+	db, e := readFixture(t)
+	readExec(t, db, `UPDATE provision SET heading=$1 WHERE id=9`, strings.Repeat("h", 20000))
+	item := ReadItem{Handle: "vn:1#p9"}
+	next := encodeNext(cursor{V: 1, Release: e.release.Rel, Item: item})
+	result := readItems(t, e, item, ReadItem{Next: next}, ReadItem{Handle: "vn:2"})
+	for _, page := range result.Items[:2] {
+		if page.Error != "unit_too_large" || page.Next != "" || page.Complete || len(page.Units) != 0 {
+			t.Fatalf("expected terminal unit error: %+v", page)
+		}
+	}
+	if !result.Items[2].Complete || result.Items[2].Error != "" {
+		t.Fatal("unit error failed another item")
+	}
+}

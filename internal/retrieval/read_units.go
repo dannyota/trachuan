@@ -17,58 +17,36 @@ func splitParts(r []rune, partSize int) [][]rune {
 	return parts
 }
 
-func unitParts(u Unit) []Unit {
+func unitParts(u Unit) ([]Unit, bool) {
 	if readSize(u) <= PartSize {
-		return []Unit{u}
+		return []Unit{u}, true
 	}
-	// Reserve the largest possible part counters before choosing boundaries.
-	// JSON escaping counts too, so a source quote can cost two code points.
-	u.Part, u.Parts = readSize(u), readSize(u)
-	field := 0
-	for i := 1; i < 6; i++ {
-		if len(unitField(u, i)) > len(unitField(u, field)) {
-			field = i
+	text := unitSplitText(u)
+	if text == "" {
+		return nil, false
+	}
+	// Recompute only when the total counter changes. Counter widths can grow,
+	// so boundaries account for the counters actually serialized on each part.
+	total := 1
+	for {
+		parts, ok := splitUnitField(u, text, total)
+		if !ok {
+			return nil, false
 		}
-	}
-	base := withUnitField(u, field, "")
-	var parts []Unit
-	if readSize(base) < PartSize && u.Relation == nil {
-		parts = splitUnitField(base, field, unitField(u, field))
-	} else {
-		// Oversized labels or headings are source fields too. When the metadata
-		// cannot ride on every part, deliver each field once in field order.
-		base = u
-		for i := 0; i < 6; i++ {
-			base = withUnitField(base, i, "")
+		if len(parts) == total {
+			return parts, true
 		}
-		for i := 0; i < 6; i++ {
-			parts = append(parts, splitUnitField(base, i, unitField(u, i))...)
-		}
+		total = len(parts)
 	}
-	if len(parts) == 0 {
-		parts = []Unit{u}
-	}
-	for i := range parts {
-		parts[i].Part, parts[i].Parts = i+1, len(parts)
-	}
-	return parts
 }
 
-func unitField(u Unit, field int) string {
-	switch field {
-	case 0:
+func unitSplitText(u Unit) string {
+	switch u.Kind {
+	case "lead", "provision":
 		return u.Text
-	case 1:
+	case "outline":
 		return u.Heading
-	case 2:
-		return u.Label
-	case 3:
-		return u.Citation
-	case 4:
-		if u.Relation != nil {
-			return u.Relation.RawLabel
-		}
-	case 5:
+	case "relation":
 		if u.Relation != nil {
 			return u.Relation.Evidence
 		}
@@ -76,48 +54,52 @@ func unitField(u Unit, field int) string {
 	return ""
 }
 
-func withUnitField(u Unit, field int, text string) Unit {
-	switch field {
-	case 0:
+func withUnitSplitText(u Unit, text string) Unit {
+	switch u.Kind {
+	case "lead", "provision":
 		u.Text = text
-	case 1:
+	case "outline":
 		u.Heading = text
-	case 2:
-		u.Label = text
-	case 3:
-		u.Citation = text
-	case 4, 5:
+	case "relation":
 		if u.Relation != nil {
 			r := *u.Relation
-			if field == 4 {
-				r.RawLabel = text
-			} else {
-				r.Evidence = text
-			}
+			r.Evidence = text
 			u.Relation = &r
 		}
 	}
 	return u
 }
 
-func splitUnitField(base Unit, field int, text string) []Unit {
+func splitUnitField(u Unit, text string, total int) ([]Unit, bool) {
 	var parts []Unit
 	for r := []rune(text); len(r) > 0; {
+		base := withUnitSplitText(u, "")
+		base.Part, base.Parts = len(parts)+1, total
+		if readSize(base) > PartSize {
+			return nil, false
+		}
 		// Find the largest encoded prefix that fits, then use the common cut rule.
-		lo, hi := 1, min(len(r), PartSize)
+		lo, hi := 0, min(len(r), PartSize)
 		for lo < hi {
 			mid := (lo + hi + 1) / 2
-			if readSize(withUnitField(base, field, string(r[:mid]))) <= PartSize {
+			if readSize(withUnitSplitText(base, string(r[:mid]))) <= PartSize {
 				lo = mid
 			} else {
 				hi = mid - 1
 			}
 		}
-		span := splitParts(r[:min(len(r), lo+1)], lo)[0]
-		parts = append(parts, withUnitField(base, field, string(span)))
-		r = r[len(span):]
+		if lo == 0 {
+			return nil, false
+		}
+		end := cutAt(r, lo)
+		part := withUnitSplitText(base, string(r[:end]))
+		if readSize(part) > PartSize {
+			return nil, false
+		}
+		parts = append(parts, part)
+		r = r[end:]
 	}
-	return parts
+	return parts, true
 }
 
 func readAncestry(nodes []Provision, p Provision) []Provision {

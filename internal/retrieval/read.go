@@ -100,8 +100,14 @@ func (e *Engine) readItem(ctx context.Context, tx pgx.Tx, item ReadItem, budget 
 	}
 	local := c.Unit - seq.offset
 	emptyDocument := seq.document != nil && len(seq.units) == 0 && c.Unit == 0 && c.Part == 0
-	if continued && !emptyDocument && (local < 0 || local >= len(seq.units) || c.Part >= len(unitParts(seq.units[local]))) {
-		return ItemResult{Error: "invalid_next"}, 0, nil
+	if continued && !emptyDocument {
+		if local < 0 || local >= len(seq.units) {
+			return ItemResult{Error: "invalid_next"}, 0, nil
+		}
+		parts, ok := unitParts(seq.units[local])
+		if (ok && c.Part >= len(parts)) || (!ok && c.Part != 0) {
+			return ItemResult{Error: "invalid_next"}, 0, nil
+		}
 	}
 	return readPage(seq, c, budget, first)
 }
@@ -117,7 +123,11 @@ func readPage(seq readSequence, c cursor, budget int, first bool) (ItemResult, i
 		}
 	}
 	for i := c.Unit - seq.offset; i < len(seq.units); i++ {
-		parts := unitParts(seq.units[i])
+		parts, ok := unitParts(seq.units[i])
+		if !ok {
+			result.Error = "unit_too_large"
+			return result, used, nil
+		}
 		start := 0
 		if i+seq.offset == c.Unit {
 			start = c.Part
