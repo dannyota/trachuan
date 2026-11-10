@@ -29,7 +29,7 @@ def main() -> None:
         raise ValueError("bundle does not match the dense recipe")
     tokenizer = Tokenizer(args.model_dir)
     if args.runtime == "query":
-        runtime = OnnxRuntime(args.model_dir / "onnx/model.onnx")
+        runtime = OnnxRuntime(args.model_dir / "onnx/model_int8.onnx")
     else:
         from .torch_runtime import TorchRuntime
 

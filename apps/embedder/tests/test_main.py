@@ -27,6 +27,14 @@ def test_default_host_is_loopback(monkeypatch, tmp_path, mode):
             return np.zeros((1, 2))
 
     host = []
+    runtime_paths = []
+    original_init = Runtime.__init__
+
+    def record_path(self, path):
+        runtime_paths.append(path)
+        original_init(self, path)
+
+    monkeypatch.setattr(Runtime, "__init__", record_path)
     monkeypatch.setattr(sys, "argv", ["embedder", "--runtime", mode, "--model-dir", str(tmp_path)])
     monkeypatch.setattr(
         entry,
@@ -41,3 +49,6 @@ def test_default_host_is_loopback(monkeypatch, tmp_path, mode):
     monkeypatch.setattr(entry.uvicorn, "run", lambda app, **kwargs: host.append(kwargs["host"]))
     entry.main()
     assert host == ["127.0.0.1"]
+
+    if mode == "query":
+        assert runtime_paths == [tmp_path / "onnx/model_int8.onnx"]
