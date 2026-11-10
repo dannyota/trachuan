@@ -156,7 +156,7 @@ func (e *validityEngine) commencement(d validityDocument) {
 			o.values.Current = true
 			o.values.Basis = "derived_from_text"
 			o.values.From = ptrDate(date)
-			o.history = append(o.history, validityDecision{layer: "A", version: "validity/1", before: before, after: o.values, anchor: d.anchor, quote: truncateQuote(d.quote), artifact: d.extractHash})
+			o.history = append(o.history, validityDecision{layer: "A", version: "validity/2", before: before, after: o.values, anchor: d.anchor, quote: truncateQuote(d.quote), artifact: d.extractHash})
 			e.outputs[d.key] = o
 			e.counts.ruleA++
 			e.operative[d.key] = date

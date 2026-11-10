@@ -59,7 +59,7 @@ func TestLoad_ValidityRuleBSetsPredecessorEnd(t *testing.T) {
 }
 func TestLoad_ValidityRuleCMarksConflict(t *testing.T) {
 	f := fixture(t)
-	addReplacementFixture(t, f, "")
+	addReplacementFixture(t, f, "Nghị định này có hiệu lực từ ngày 1/2/2021.")
 	if err := loadValidityFixture(t, f, nil); err != nil {
 		t.Fatal(err)
 	}

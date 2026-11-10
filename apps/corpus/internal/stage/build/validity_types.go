@@ -33,6 +33,7 @@ type validityReview struct {
 	targetFetchHash, targetExtractHash                             string
 	kind, key, number, targetKey, targetNumber, detail             string
 	statusCode, statusName, rawFrom, rawTo                         string
+	relationID                                                     int64
 	sentences                                                      []string
 	extractHash, fetchHash                                         string
 	proposed                                                       *source.Correction
