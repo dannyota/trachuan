@@ -35,8 +35,9 @@ a target document in the corpus.
    on the hit as warnings.
 3. `read` replaces `document`. One call reads several handles: a document handle
    returns its metadata and outline, a provision handle returns its verbatim
-   text with its ancestors' lead-ins and its relation pointers. A per-call text
-   cap applies; every call makes progress and says what to read next.
+   text with its ancestors' lead-ins, and a relation item lists every counted
+   relation. A per-call cap applies; parts are fixed per release, every call
+   makes progress, and opaque `next` tokens say what to read next.
 4. The compact default limit is 20 hits; the full default stays 8; the maximum
    stays 50. Numbers live in [budgets](../design/budgets.md).
 5. Results are JSON in `structuredContent` with the same compact JSON in one
@@ -51,12 +52,14 @@ snippet rule and the read rules.
 
 Typical searches cost a fraction of the old evidence, so an agent can run more
 searches and see more candidates per task; a second call is needed before citing
-a long provision. Recall, MRR and abstention are computed on the ranked
-identities and do not change between modes. Evaluation reports response size for
+a long provision. ADR 0010 product scoring and promotion keep running on full
+responses; compact responses get the same matcher as a diagnostic, without the
+child or relation credit they cannot carry. Evaluation reports response size for
 both modes. Before release 1, an agent-in-the-loop check with one Claude and one
 OpenAI client model compares compact and full on development cases for cited
-expected provisions, tool calls and input tokens. Compact stays the default only
-if cited provisions do not fall.
+expected provisions, tool calls and total input tokens. Compact stays the
+default only if, for each model, cited provisions do not fall and tokens are
+lower.
 
 A snippet is not the provision. A snippet that cuts text is marked incomplete
 and shows each omission with the marker `[…]`, the only text not taken from the

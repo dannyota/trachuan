@@ -55,65 +55,92 @@ A compact hit has, in this order:
 | `warnings`  | Provision-level relations whose endpoint is this provision or a descendant, as pointers, under the recipe's validity rule   |
 | `gaps`      | The recipe's hit gaps                                                                                                       |
 
-A full hit has the same fields, then the recipe's `text`, `fragments`, `score`
-and complete `relations` with evidence, without `snippet`. Rank order, the
-document cap and the `non_current` group follow the recipe in both modes.
+A full hit has the same fields except `snippet`, then the recipe's `text`,
+`fragments`, `score` and complete `relations` with evidence; its `complete` is
+the recipe's `Complete`, and an incomplete full hit carries a `next` read item
+(see Read). Rank order, the document cap and the `non_current` group follow the
+recipe in both modes.
 
 ## Snippet rule
 
-The snippet is cut from the recipe's hit text and fragments only; it never joins
-lexical tokens, paraphrases or adds text.
+The snippet is cut from the recipe's hit text only; it never joins lexical
+tokens, paraphrases or adds text. The recipe exposes the best matched member as
+`Hit.BestMember` and `Hit.BestTextStart`, the offset in `Hit.Text` where that
+member's first body span begins.
 
 1. If the hit text is at most the snippet cap, the snippet is the whole text.
-2. Otherwise the snippet is the lead fragments in ancestor order, then the body
-   of the recipe's best matched member from the start of its first fragment,
-   until the snippet cap. Leads take at most half of the cap; a longer lead is
-   cut.
-3. Every cut ends at the last whitespace at or before its limit. Each omission,
-   inside or between spans and at the end, is shown once as `[…]` separated by
-   one space from adjacent text; it is the only text not taken from the source.
-   A body that does not start at the start of the hit's own text is preceded by
-   the marker.
+2. Otherwise the snippet is the lead fragments in ancestor order, then the text
+   from `BestTextStart`, until the snippet cap. Leads take at most half of the
+   cap; a longer lead is cut.
+3. Every cut ends at the last whitespace at or before its limit, or at the limit
+   when the span has none. Each omission, inside or between spans and at the
+   end, is shown once as `[…]` separated by one space from adjacent text; it is
+   the only text not taken from the source. Text from `BestTextStart` that does
+   not start at the start of the hit's own text is preceded by the marker.
 
 Count code points after the marker is inserted. `complete` is false whenever any
-marker appears or the recipe marked the hit incomplete.
+marker appears or the recipe marked the hit incomplete, including a cut or
+missing lead.
 
 ## Related pointers
 
 `related` lists relation rows in which the document is the source (`dir:"out"`)
 or the target (`dir:"in"`), as stored by `relate`. A pointer has `dir`, `kind`,
-`number` of the other document, and `handle` only when that document is in the
-release. Order by kind: `repeals`, `replaces`, `suspends`, `amends_supplements`,
-`consolidates`, `implements`, `guided_by`, `legal_basis`, `cites`, `references`,
-`unknown`; then `in` before `out`; then the other document's issue date, newest
-first, unknown dates last; then number. The pointer cap per document is in
-budgets. `related_counts` maps `<dir>:<kind>` to the full count, so an omission
-is never silent. Pointers carry no evidence text and state no inverse legal
-effect; evidence and raw labels are returned by `read`.
+the other endpoint's stored `key` when known, its `number`, and `in_release`;
+`handle` appears exactly when that endpoint resolved to a document of this
+release. Pointer order is total: kind in the order `repeals`, `replaces`,
+`suspends`, `amends_supplements`, `consolidates`, `implements`, `guided_by`,
+`legal_basis`, `cites`, `references`, `unknown`; then `in` before `out`; then
+the other document's issue date, newest first, unknown dates last; then number;
+then the relation's unique `(source_key, artifact_sha256, ordinal)`. Search
+returns the first pointers up to the cap in budgets; `related_counts` maps
+`<dir>:<kind>` to the full count, and `read` reaches every counted relation.
+Pointers carry no evidence text and state no inverse legal effect. A pointer
+whose endpoint is not in the release is never replaced by a number lookup.
 
 ## Read
 
-Input: `country`, `items` (each a `handle` or an exact document `number`, with
-optional `from`, `to` and `part`), `release`. A number must resolve to exactly
-one document; otherwise the item fails with `ambiguous_number` or `not_found`
-and lists no guesses.
+Input: `country`, `release`, `items`. An item is one of:
 
-| Item                       | Returns                                                                                                                                                                                                                |
-| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Document handle or number  | The document entry and its outline: `phan`, `chuong`, `muc` and `dieu` nodes in document order, or its top-level provisions when it has no `dieu`, each with `label`, `heading`, `handle` and text size in code points |
-| Provision handle           | `citation`, `path`, the ancestors' lead fragments, then the provision's own text and descendants by [chunk rendering](chunk.md#tree-rendering), `complete`, `warnings`                                                 |
-| `from` and `to` provisions | The provisions from `from` to `to` in document order, each as above                                                                                                                                                    |
-| Any item                   | Relation pointers for the read scope, in pointer order, with `raw_label` and evidence, under the relation caps in budgets, and `related_counts` for the rest                                                           |
+- `{handle}`: a document handle returns the document entry and its outline; a
+  provision handle returns that provision's text.
+- `{number}`: an exact document number that resolves to one document, read like
+  its handle; otherwise `ambiguous_number` or `not_found`, with no guesses.
+- `{handle, from, to}`: the provisions of one document between the anchors
+  `from` and `to`, both inclusive, in preorder.
+- `{handle, relations:true}`: the relation list of that document or provision.
+- `{next}`: a continuation token copied from an earlier result.
 
-The read cap in budgets counts returned text across all items of one call. Items
-are processed in order. When the cap is reached inside an item, that item stops
-at a provision boundary with `next_from`, or inside a single provision above the
-cap with `part`, `parts` and `next_part`; later items return
-`not_read:"call_cap"`. The first item always returns at least one provision, one
-outline page or one part, so every call makes progress. An outline longer than
-the cap pages with `next_from` the same way. Per-item failures (`not_found`,
-`ambiguous_number`, `release_expired`, `invalid_range`) do not fail the call.
-Every result carries `release`.
+Units of text never overlap. A provision handle returns the provision with its
+descendants by [chunk rendering](chunk.md#tree-rendering), preceded by its
+ancestors' lead fragments. A range returns each provision in it once, with its
+own text only, in preorder, and the first unit is preceded by the leads of
+ancestors outside the range. An outline lists `phan`, `chuong`, `muc` and `dieu`
+nodes in document order, or the top-level provisions when the document has no
+`dieu`, each with `label`, `heading`, `handle` and text size in code points.
+Relation lists follow pointer order and add `raw_label` and evidence.
+
+The call cap in budgets counts returned text, outline entries and relation
+evidence across items. Items are processed in order and each returns whole
+units: a provision, an outline entry, a relation, or a part. When an item has
+more to return, its result carries `next`, an opaque token that fixes the
+release, the item, its mode and the next unit; the continuation result is the
+same whatever else that call reads. When an item does not fit in what remains of
+the cap, it returns `not_read:"call_cap"` and its own `next`. The first item
+always returns at least one unit, so every call makes progress; the last unit of
+an item returns no `next`.
+
+A provision whose rendered text exceeds the part size in budgets is served in
+parts. Part boundaries are fixed per release: cut at the last whitespace at or
+before the part size, counting from the start of the leads. Each part carries
+`part` and `parts`; only part 1 holds the leads.
+
+`complete` on a provision, range unit or part is true only when the returned
+unit holds all of its text and every required ancestor lead whole. A part is
+false; a provision read in parts is complete once parts 1 to `parts` were read
+at the same release. Per-item failures (`not_found`, `ambiguous_number`,
+`release_expired`, `invalid_range`, `invalid_next`) do not fail the call. Every
+result carries `release`.
 
 ## Guide
 
@@ -121,22 +148,30 @@ Every result carries `release`.
 handles in one `read` call, choosing a `path` handle to read a whole article or
 chapter; check `status`, `warnings` and `in` pointers of kinds `repeals`,
 `replaces`, `suspends` and `amends_supplements` before relying on a document;
-read `in:implements` documents for detailed rules. It says that a snippet is not
-the provision, that `[…]` marks omitted text, that pointer direction is as
-recorded by the source, and that only text returned complete may be cited.
+read `in:implements` documents for detailed rules; follow `next` tokens to
+continue. It says that a snippet is not the provision, that `[…]` marks omitted
+text, that pointer direction is as recorded by the source, that a pointer
+outside the release must not be replaced by a number lookup, and that only text
+returned complete may be cited.
 
 ## Evaluation
 
-Recall, MRR, current-law precision and abstention use the ranked identities and
-are equal in both modes. Each trial also reports serialized response size in
-code points (p50, p95) for compact at its default limit and full at its default
-limit. Compact at limit 20 must not exceed full at limit 8 at p95 on the old
+[ADR 0010](../adr/0010-retrieval-evaluation-for-agents.md) product scoring,
+gates and promotion run on full responses at their default limit, as before.
+Compact responses are scored separately with the same matcher on what they
+return: own identities match, while child credit (no fragments) and
+relation-backed credit (no edge evidence) earn nothing. That compact score is a
+diagnostic, reported at limits 8 and 20. Each trial also reports serialized
+response size in code points (p50, p95) for compact at limit 20 and full at
+limit 8. Compact at limit 20 must not exceed full at limit 8 at p95 on the old
 product cohort; otherwise the snippet cap or the compact default changes before
 the server ships.
 
-After the server exists, an agent-in-the-loop check runs one Claude and one
-OpenAI client model on the development cohort with only the MCP tools, compact
-against full. It records expected provisions the agent cites under the product
-matcher, tool calls and input tokens. Compact stays the default only if cited
-expected provisions do not fall. Sealed cases are never used, and no question
-text is stored outside the evaluation files.
+After the server exists, an agent-in-the-loop check runs on the development
+cohort with only the MCP tools: one Claude and one OpenAI client model, model
+versions recorded, the same system prompt, each case twice per mode per model.
+Per model it records expected provisions cited under the product matcher, tool
+calls, and total input tokens of all tool results in the task. Compact stays the
+default only if, for each model, mean cited expected provisions do not fall and
+mean total input tokens are lower than full. Sealed cases are never used, and no
+question text is stored outside the evaluation files.
