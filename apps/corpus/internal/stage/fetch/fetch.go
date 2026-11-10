@@ -3,10 +3,12 @@ package fetch
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"danny.vn/trachuan/apps/corpus/internal/filecache"
 	"danny.vn/trachuan/apps/corpus/internal/sourcegate"
@@ -70,10 +72,27 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, r stage.Run, item st
 	var decoded vbpl.Detail
 	var files []vbpl.File
 	var errs [4]error
+	var times [3]time.Time
+	now := env.Now
+	if now == nil {
+		now = time.Now
+	}
 	group, requestCtx := errgroup.WithContext(ctx)
-	group.Go(func() error { detail, decoded, errs[0] = s.client.Detail(requestCtx, id); return nil })
-	group.Go(func() error { tree, errs[1] = s.client.RawTree(requestCtx, id); return nil })
-	group.Go(func() error { diagram, errs[2] = s.client.Diagram(requestCtx, id); return nil })
+	group.Go(func() error {
+		detail, decoded, errs[0] = s.client.Detail(requestCtx, id)
+		times[0] = now().UTC().Truncate(time.Microsecond)
+		return nil
+	})
+	group.Go(func() error {
+		tree, errs[1] = s.client.RawTree(requestCtx, id)
+		times[1] = now().UTC().Truncate(time.Microsecond)
+		return nil
+	})
+	group.Go(func() error {
+		diagram, errs[2] = s.client.Diagram(requestCtx, id)
+		times[2] = now().UTC().Truncate(time.Microsecond)
+		return nil
+	})
 	group.Go(func() error { files, errs[3] = s.client.Files(requestCtx, id); return nil })
 	_ = group.Wait()
 	if errs[0] != nil {
@@ -87,11 +106,21 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, r stage.Run, item st
 			return apiError(err, id, false)
 		}
 	}
-	art, err := env.Artifacts.PublishContent(ctx, s.Name(), s.Recipe(r.Snapshot), func(dir string) error { return s.writeBundle(ctx, dir, id, detail, tree, diagram, files) })
+	var observations []stage.FetchObservation
+	for i, payload := range []struct {
+		endpoint, path string
+		data           []byte
+	}{{"doc/detail", "detail.json", detail}, {"doc/provision/tree", "tree.json", tree}, {"doc/diagram", "diagram.json", diagram}} {
+		key, _ := json.Marshal([3]any{payload.endpoint, nil, nil})
+		observations = append(observations, stage.FetchObservation{ResourceKey: string(key), Source: "vbpl", Path: payload.path, ContentSHA256: fmt.Sprintf("%x", sha256.Sum256(payload.data)), Size: int64(len(payload.data)), Acquisition: "network", FetchedAt: &times[i]})
+	}
+	art, err := env.Artifacts.PublishContent(ctx, s.Name(), s.Recipe(r.Snapshot), func(dir string) error {
+		return s.writeBundleObservations(ctx, dir, id, detail, tree, diagram, files, now, &observations)
+	})
 	if err != nil {
 		return stage.Output{}, fmt.Errorf("publish fetch artifact: %w", err)
 	}
-	return stage.Output{Artifact: &art, State: "done"}, nil
+	return stage.Output{Artifact: &art, State: "done", Observations: observations}, nil
 }
 func apiError(err error, id string, detail bool) (stage.Output, error) {
 	if errors.Is(err, vbpl.ErrTooLarge) {

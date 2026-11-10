@@ -120,8 +120,8 @@ func TestCommitItem_SameArtifactTwiceKeepsOneRow(t *testing.T) {
 	c.Artifact = &artifact.Result{Path: "path", SHA256: "sha", InputHash: "input"}
 	calls := 0
 	c.ArtifactRows = func(context.Context, pgx.Tx, int64) error { calls++; return nil }
-	for range 2 {
-		if applied, err := CommitItem(ctx, pool, c); err != nil || !applied {
+	for i := range 2 {
+		if applied, err := CommitItem(ctx, pool, c); err != nil || applied != (i == 0) {
 			t.Fatalf("commit: applied=%v err=%v", applied, err)
 		}
 	}
@@ -144,8 +144,8 @@ func TestCommitItem_RunRowsAndGapsIdempotent(t *testing.T) {
 		_, err := tx.Exec(ctx, `INSERT INTO listing VALUES ($1, 'q', 'item', '{}') ON CONFLICT (run_id, query_key, item_key) DO UPDATE SET payload=excluded.payload`, id)
 		return err
 	}
-	for range 2 {
-		if applied, err := CommitItem(ctx, pool, c); err != nil || !applied {
+	for i := range 2 {
+		if applied, err := CommitItem(ctx, pool, c); err != nil || applied != (i == 0) {
 			t.Fatalf("commit: applied=%v err=%v", applied, err)
 		}
 	}

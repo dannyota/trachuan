@@ -43,12 +43,14 @@ type Querier interface {
 	GetRunGeneration(ctx context.Context, id int64) (int32, error)
 	GetRunGenerationForShare(ctx context.Context, id int64) (int32, error)
 	GetRunItemArtifact(ctx context.Context, arg GetRunItemArtifactParams) (GetRunItemArtifactRow, error)
+	GetRunItemCommitted(ctx context.Context, arg GetRunItemCommittedParams) (GetRunItemCommittedRow, error)
 	GetRunScope(ctx context.Context, runID int64) (RunScope, error)
 	GetRunSourceForShare(ctx context.Context, arg GetRunSourceForShareParams) (RunSource, error)
 	GetRunSourceForUpdate(ctx context.Context, arg GetRunSourceForUpdateParams) (RunSource, error)
 	InsertArtifact(ctx context.Context, arg InsertArtifactParams) (int64, error)
 	InsertChunk(ctx context.Context, arg InsertChunkParams) error
 	InsertDocument(ctx context.Context, arg InsertDocumentParams) error
+	InsertFetchObservation(ctx context.Context, arg InsertFetchObservationParams) error
 	InsertFetchedFile(ctx context.Context, arg InsertFetchedFileParams) error
 	InsertGap(ctx context.Context, arg InsertGapParams) error
 	InsertMembershipEvidence(ctx context.Context, arg InsertMembershipEvidenceParams) error
@@ -68,6 +70,7 @@ type Querier interface {
 	ListEarlierRuns(ctx context.Context, arg ListEarlierRunsParams) ([]ListEarlierRunsRow, error)
 	ListEmbedInputs(ctx context.Context, runID int64) ([]ListEmbedInputsRow, error)
 	ListExtractInputs(ctx context.Context, runID int64) ([]ListExtractInputsRow, error)
+	ListItemFetchObservations(ctx context.Context, arg ListItemFetchObservationsParams) ([]RunFetchObservation, error)
 	ListLegacyExpectedKeys(ctx context.Context, runID int64) ([]string, error)
 	ListLegacyListingSupports(ctx context.Context, runID int64) ([]ListLegacyListingSupportsRow, error)
 	ListMembershipEvidence(ctx context.Context, runID int64) ([]RunMembershipEvidence, error)
@@ -94,6 +97,7 @@ type Querier interface {
 	ResetOlderFailedStageItems(ctx context.Context, arg ResetOlderFailedStageItemsParams) error
 	ResetRetryItem(ctx context.Context, arg ResetRetryItemParams) (int64, error)
 	SetFetchCloseInputHash(ctx context.Context, arg SetFetchCloseInputHashParams) (int64, error)
+	SetFetchedFileTime(ctx context.Context, arg SetFetchedFileTimeParams) (int64, error)
 	SetMembershipPredecessor(ctx context.Context, arg SetMembershipPredecessorParams) (int64, error)
 	SetRunMessage(ctx context.Context, arg SetRunMessageParams) error
 	SetRunState(ctx context.Context, arg SetRunStateParams) error

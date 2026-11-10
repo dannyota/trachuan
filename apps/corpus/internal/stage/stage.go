@@ -24,7 +24,16 @@ type Output struct {
 	State, Message string
 	Gaps           []Gap
 	// Sources lists every source the item contacted or depends on.
-	Sources []string
+	Sources      []string
+	Observations []FetchObservation
+}
+
+// FetchObservation describes one retained source resource.
+type FetchObservation struct {
+	ResourceKey, Source, Path, ContentSHA256, Acquisition string
+	Name, URL, OriginRef                                  *string
+	Size                                                  int64
+	FetchedAt                                             *time.Time
 }
 
 // Resolution describes the run-specific rows and gaps for an artifact.

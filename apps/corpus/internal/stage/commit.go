@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"danny.vn/trachuan/apps/corpus/internal/artifact"
 	"danny.vn/trachuan/apps/corpus/internal/sourcegate"
@@ -26,9 +27,10 @@ type Commit struct {
 	RunRows      func(context.Context, pgx.Tx) error
 	Gaps         []Gap
 	// Sources lists every source the item contacted or depends on.
-	Sources []string
-	State   string
-	Message string
+	Sources      []string
+	Observations []FetchObservation
+	State        string
+	Message      string
 }
 
 // CommitItem commits an item and its rows if its fence is current.
@@ -44,12 +46,36 @@ func commitItem(ctx context.Context, pool *pgxpool.Pool, c *Commit) (applied boo
 	defer func() { _ = tx.Rollback(ctx) }()
 
 	q := store.New(tx)
+	item, err := q.GetRunItemCommitted(ctx, store.GetRunItemCommittedParams{RunID: c.RunID, Stage: c.Stage, ItemKey: c.ItemKey})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("lock run item: %w", err)
+	}
 	generation, err := q.GetRunGenerationForShare(ctx, c.RunID)
 	if err != nil {
 		return false, fmt.Errorf("lock run generation: %w", err)
 	}
 	if int(generation) != c.Generation {
 		return false, nil
+	}
+
+	if int(item.Generation) > c.Generation || (int(item.Generation) == c.Generation && int(item.Attempt) > c.Attempt) {
+		return false, nil
+	}
+	if int(item.Generation) == c.Generation && int(item.Attempt) == c.Attempt && (item.State == "done" || item.State == "gap" || item.State == "failed") {
+		same, compareErr := sameResult(ctx, q, c, item)
+		if compareErr != nil {
+			return false, compareErr
+		}
+		if !same {
+			return false, fmt.Errorf("conflicting terminal item replay")
+		}
+		return false, nil
+	}
+	if c.Stage != "fetch" && len(c.Observations) != 0 {
+		return false, fmt.Errorf("observations on non-fetch item")
 	}
 
 	for _, source := range c.Sources {
@@ -80,12 +106,36 @@ func commitItem(ctx context.Context, pool *pgxpool.Pool, c *Commit) (applied boo
 			}
 		} else if insertErr != nil {
 			return false, fmt.Errorf("insert artifact: %w", insertErr)
-		} else if c.ArtifactRows != nil {
-			if rowsErr := c.ArtifactRows(ctx, tx, id); rowsErr != nil {
-				return false, fmt.Errorf("write artifact rows: %w", rowsErr)
+		} else {
+			if c.ArtifactRows != nil {
+				if rowsErr := c.ArtifactRows(ctx, tx, id); rowsErr != nil {
+					return false, fmt.Errorf("write artifact rows: %w", rowsErr)
+				}
+			}
+			for _, observation := range c.Observations {
+				if observation.Name == nil {
+					continue
+				}
+				_, timeErr := q.SetFetchedFileTime(ctx, store.SetFetchedFileTimeParams{ArtifactID: id, Source: observation.Source, Name: *observation.Name, Path: observation.Path, Sha256: observation.ContentSHA256, Size: observation.Size, FetchedAt: observation.FetchedAt})
+				if timeErr != nil {
+					return false, fmt.Errorf("set fetched file time: %w", timeErr)
+				}
 			}
 		}
 		artifactID = &id
+	}
+	if c.Artifact != nil {
+		seen := make(map[string]bool, len(c.Observations))
+		for _, o := range c.Observations {
+			if seen[o.ResourceKey] {
+				return false, fmt.Errorf("duplicate fetch observation resource key")
+			}
+			seen[o.ResourceKey] = true
+			err = q.InsertFetchObservation(ctx, store.InsertFetchObservationParams{RunID: c.RunID, ItemKey: c.ItemKey, Generation: int32(c.Generation), Attempt: int32(c.Attempt), ResourceKey: o.ResourceKey, ArtifactSha256: c.Artifact.SHA256, Source: o.Source, Path: o.Path, Url: o.URL, ContentSha256: o.ContentSHA256, Size: o.Size, Acquisition: o.Acquisition, FetchedAt: o.FetchedAt, OriginRef: o.OriginRef})
+			if err != nil {
+				return false, fmt.Errorf("insert fetch observation: %w", err)
+			}
+		}
 	}
 	if c.RunRows != nil {
 		if runErr := c.RunRows(ctx, tx); runErr != nil {
@@ -129,4 +179,46 @@ func optionalString(s string) *string {
 		return nil
 	}
 	return &s
+}
+
+func sameResult(ctx context.Context, q *store.Queries, c *Commit, item store.GetRunItemCommittedRow) (bool, error) {
+	if item.State != c.State || item.Message == nil || *item.Message != c.Message {
+		return false, nil
+	}
+	var hash *string
+	if c.Artifact != nil {
+		hash = &c.Artifact.SHA256
+	}
+	if !sameString(item.ArtifactSha256, hash) {
+		return false, nil
+	}
+	if c.Stage != "fetch" {
+		return len(c.Observations) == 0, nil
+	}
+	rows, err := q.ListItemFetchObservations(ctx, store.ListItemFetchObservationsParams{RunID: c.RunID, ItemKey: c.ItemKey, Generation: int32(c.Generation), Attempt: int32(c.Attempt)})
+	if err != nil {
+		return false, fmt.Errorf("list fetch observations: %w", err)
+	}
+	if len(rows) != len(c.Observations) {
+		return false, nil
+	}
+	byKey := make(map[string]FetchObservation, len(c.Observations))
+	for _, o := range c.Observations {
+		if _, found := byKey[o.ResourceKey]; found {
+			return false, nil
+		}
+		byKey[o.ResourceKey] = o
+	}
+	for _, row := range rows {
+		o, ok := byKey[row.ResourceKey]
+		if !ok || hash == nil || row.ArtifactSha256 != *hash || row.Source != o.Source || row.Path != o.Path || !sameString(row.Url, o.URL) || row.ContentSha256 != o.ContentSHA256 || row.Size != o.Size || row.Acquisition != o.Acquisition || !sameTime(row.FetchedAt, o.FetchedAt) || !sameString(row.OriginRef, o.OriginRef) {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
+func sameString(a, b *string) bool { return a == nil && b == nil || a != nil && b != nil && *a == *b }
+func sameTime(a, b *time.Time) bool {
+	return a == nil && b == nil || a != nil && b != nil && a.Equal(b.Truncate(time.Microsecond))
 }

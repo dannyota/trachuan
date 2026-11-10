@@ -139,7 +139,7 @@ func RunBatch(ctx context.Context, env Env, st Stage, in BatchInput, attempt int
 					fault.Hit("after_rename", i)
 				}
 			}
-			commit.State, commit.Message, commit.Gaps, commit.Artifact, commit.Sources = output.State, output.Message, output.Gaps, output.Artifact, output.Sources
+			commit.State, commit.Message, commit.Gaps, commit.Artifact, commit.Sources, commit.Observations = output.State, output.Message, output.Gaps, output.Artifact, output.Sources, output.Observations
 			if output.Artifact != nil {
 				if commit.State == "" {
 					commit.State = "done"
@@ -285,7 +285,7 @@ func itemCommit(c Commit, err error) Commit {
 }
 
 func failedCommit(c Commit, err error) Commit {
-	c.Artifact, c.ArtifactRows, c.RunRows, c.Gaps = nil, nil, nil, nil
+	c.Artifact, c.ArtifactRows, c.RunRows, c.Gaps, c.Observations = nil, nil, nil, nil, nil
 	c.State = "failed"
 	message := []rune(strings.ReplaceAll(err.Error(), "\x00", ""))
 	if len(message) > 500 {

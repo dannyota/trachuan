@@ -86,6 +86,24 @@ CREATE TABLE run_source (
     PRIMARY KEY (run_id, source)
 );
 
+CREATE TABLE run_fetch_observation (
+    run_id bigint NOT NULL REFERENCES run(id),
+    item_key text NOT NULL,
+    generation integer NOT NULL,
+    attempt integer NOT NULL,
+    resource_key text NOT NULL,
+    artifact_sha256 text NOT NULL,
+    source text NOT NULL,
+    path text NOT NULL,
+    url text,
+    content_sha256 text NOT NULL,
+    size bigint NOT NULL CHECK (size >= 0),
+    acquisition text NOT NULL CHECK (acquisition IN ('network', 'cache', 'adopted')),
+    fetched_at timestamptz,
+    origin_ref text,
+    PRIMARY KEY (run_id, item_key, generation, attempt, resource_key)
+);
+
 CREATE TABLE run_source_event (
     id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     run_id bigint NOT NULL,
@@ -135,6 +153,7 @@ ALTER TABLE document DROP CONSTRAINT document_artifact_source_unique, DROP CONST
 ALTER TABLE document ALTER COLUMN vbpl_id SET NOT NULL;
 ALTER TABLE document DROP COLUMN identity_evidence, DROP COLUMN source_url, DROP COLUMN source_id, DROP COLUMN source, DROP COLUMN country;
 ALTER TABLE gap DROP COLUMN evidence_ref, DROP COLUMN http_status, DROP COLUMN endpoint, DROP COLUMN cause, DROP COLUMN origin, DROP COLUMN source;
+DROP TABLE run_fetch_observation;
 DROP TABLE run_source_event;
 DROP TABLE run_source;
 DROP TABLE run_failure;

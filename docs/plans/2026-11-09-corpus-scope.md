@@ -125,8 +125,8 @@
 
 **Files:** Migration 00004 (`run_fetch_observation`, primary), SQL (primary); `apps/corpus/internal/stage/` (`Output` observations, `commit.go` replay rule and observation writes, `fetched_file.fetched_at` at first artifact-row insertion), `apps/corpus/internal/stage/fetch/` (VBPL observations for retained detail, tree and diagram responses and attachments, network or cache acquisition); tests. Bundle bytes unchanged.
 
-- [ ] Tests first: `TestFetch_BundleBytesIndependentOfClock`, `TestFetch_CacheHitAndDownloadSameBytes`, `TestCommit_SameAttemptIdenticalIsNoop`, `TestCommit_SameAttemptConflictRollsBack`, `TestCommit_ObservationsOnlyWithNewResult`, `TestCommit_FetchedAtFromFirstObservation`, `TestRetry_DetachesObservations`.
-- [ ] Implement per fetch-bundles.md; commit `feat(corpus): fetch observations outside content-addressed bundles`.
+- [x] Tests first: `TestFetch_BundleBytesIndependentOfClock`, `TestFetch_CacheHitAndDownloadSameBytes`, `TestCommit_SameAttemptIdenticalIsNoop`, `TestCommit_SameAttemptConflictRollsBack`, `TestCommit_ObservationsOnlyWithNewResult`, `TestCommit_FetchedAtFromFirstObservation`, `TestRetry_DetachesObservations`.
+- [x] Implement per fetch-bundles.md; commit `feat(corpus): fetch observations outside content-addressed bundles`.
 
 ### Task 10b: Secondary fetch bundles
 

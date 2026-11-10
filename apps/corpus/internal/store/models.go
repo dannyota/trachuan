@@ -157,6 +157,23 @@ type RunFailure struct {
 	EvidenceRefs    json.RawMessage
 }
 
+type RunFetchObservation struct {
+	RunID          int64
+	ItemKey        string
+	Generation     int32
+	Attempt        int32
+	ResourceKey    string
+	ArtifactSha256 string
+	Source         string
+	Path           string
+	Url            *string
+	ContentSha256  string
+	Size           int64
+	Acquisition    string
+	FetchedAt      *time.Time
+	OriginRef      *string
+}
+
 type RunItem struct {
 	RunID      int64
 	Stage      string

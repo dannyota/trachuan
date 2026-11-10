@@ -127,8 +127,9 @@ explicit source-resume command. Neither is an acceptable coverage gap.
   (`run.generation`, Temporal attempt) is not lower than the recorded pair; a
   stale commit rolls back. For an equal pair on a terminal item (`done`, `gap`,
   `failed`), compare the incoming result before any writes or pause override. An
-  identical result, including artifact hash (or null) and resource evidence, is
-  a no-op; any difference rolls back the whole commit, leaving the item, derived
+  identical result (the item's state, message and artifact hash or null, plus
+  its resource evidence; gaps and run rows are idempotent and not compared) is a
+  no-op; any difference rolls back the whole commit, leaving the item, derived
   rows, gaps and observations unchanged. Compare resource evidence by resource
   key, including every stored observation field. A later source pause cannot
   replace that terminal result. Only a new committed result may write
