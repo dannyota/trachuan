@@ -35,8 +35,9 @@ func hydrateTrees(ctx context.Context, tx pgx.Tx, ids []int64) (map[int64][]Prov
  SELECT p.id AS group_id,p.id,p.document_id FROM provision p WHERE p.id=ANY($1::bigint[])
  UNION ALL SELECT t.group_id,p.id,p.document_id FROM tree t JOIN LATERAL (SELECT * FROM provision WHERE parent_id=t.id AND document_id=t.document_id OFFSET 0) p ON true
  ), endpoints AS (SELECT group_id,document_id,array_agg(id) AS ids FROM tree GROUP BY group_id,document_id)
- SELECT e.group_id,r.source_key,r.target_key,r.source_number,r.target_number,sp.anchor,tp.anchor,r.kind,r.raw_label,r.evidence,r.method,r.source_document_id IS NOT NULL,r.target_document_id IS NOT NULL,r.artifact_sha256,r.ordinal,COALESCE(r.source_document_id=e.document_id AND r.source_provision_id=ANY(e.ids),false),COALESCE(r.target_document_id=e.document_id AND r.target_provision_id=ANY(e.ids),false)
+ SELECT e.group_id,r.source_key,r.target_key,r.source_number,r.target_number,sp.anchor,tp.anchor,r.kind,r.raw_label,r.evidence,r.method,r.source_document_id IS NOT NULL,r.target_document_id IS NOT NULL,COALESCE(sd.key,''),COALESCE(td.key,''),r.artifact_sha256,r.ordinal,COALESCE(r.source_document_id=e.document_id AND r.source_provision_id=ANY(e.ids),false),COALESCE(r.target_document_id=e.document_id AND r.target_provision_id=ANY(e.ids),false)
  FROM endpoints e JOIN relation r ON (r.source_document_id=e.document_id AND (r.source_provision_id IS NULL OR r.source_provision_id=ANY(e.ids))) OR (r.target_document_id=e.document_id AND (r.target_provision_id IS NULL OR r.target_provision_id=ANY(e.ids)))
+ LEFT JOIN document sd ON sd.id=r.source_document_id LEFT JOIN document td ON td.id=r.target_document_id
  LEFT JOIN LATERAL (SELECT anchor FROM provision WHERE id=r.source_provision_id OFFSET 0) sp ON true LEFT JOIN LATERAL (SELECT anchor FROM provision WHERE id=r.target_provision_id OFFSET 0) tp ON true`
 	rows, err = tx.Query(ctx, relationSQL, ids)
 	if err != nil {
@@ -47,7 +48,7 @@ func hydrateTrees(ctx context.Context, tx pgx.Tx, ids []int64) (map[int64][]Prov
 		var id int64
 		var r SourceRelation
 		v := &r.Value
-		if rows.Scan(&id, &v.SourceKey, &v.TargetKey, &v.SourceNumber, &v.TargetNumber, &v.SourceAnchor, &v.TargetAnchor, &v.Kind, &v.RawLabel, &v.Evidence, &v.Method, &v.SourceResolved, &v.TargetResolved, &r.ArtifactSHA256, &r.Ordinal, &r.SourceInHit, &r.TargetInHit) != nil {
+		if rows.Scan(&id, &v.SourceKey, &v.TargetKey, &v.SourceNumber, &v.TargetNumber, &v.SourceAnchor, &v.TargetAnchor, &v.Kind, &v.RawLabel, &v.Evidence, &v.Method, &v.SourceResolved, &v.TargetResolved, &v.SourceDocKey, &v.TargetDocKey, &r.ArtifactSHA256, &r.Ordinal, &r.SourceInHit, &r.TargetInHit) != nil {
 			rows.Close()
 			return nil, nil, errors.New("read relation failed")
 		}

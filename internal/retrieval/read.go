@@ -96,30 +96,30 @@ func (e *Engine) readItem(ctx context.Context, tx pgx.Tx, item ReadItem, budget 
 		if continued {
 			code = "invalid_next"
 		}
-		return ItemResult{Error: code}, 0, nil
+		return ItemResult{Doc: seq.doc, Error: code}, 0, nil
 	}
 	local := c.Unit - seq.offset
 	emptyDocument := seq.document != nil && len(seq.units) == 0 && c.Unit == 0 && c.Part == 0
 	if continued && !emptyDocument {
 		if local < 0 || local >= len(seq.units) {
-			return ItemResult{Error: "invalid_next"}, 0, nil
+			return ItemResult{Doc: seq.doc, Error: "invalid_next"}, 0, nil
 		}
 		parts, ok := unitParts(seq.units[local])
 		if (ok && c.Part >= len(parts)) || (!ok && c.Part != 0) {
-			return ItemResult{Error: "invalid_next"}, 0, nil
+			return ItemResult{Doc: seq.doc, Error: "invalid_next"}, 0, nil
 		}
 	}
 	return readPage(seq, c, budget, first)
 }
 
 func readPage(seq readSequence, c cursor, budget int, first bool) (ItemResult, int, error) {
-	result := ItemResult{Gaps: seq.gaps}
+	result := ItemResult{Doc: seq.doc, Gaps: seq.gaps}
 	used := 0
 	if c.Unit == 0 && c.Part == 0 && seq.document != nil {
 		result.Document = seq.document
 		used = readSize(seq.document)
 		if used > budget && !first {
-			return ItemResult{NotRead: "call_cap", Next: encodeNext(c)}, 0, nil
+			return ItemResult{Doc: seq.doc, NotRead: "call_cap", Next: encodeNext(c)}, 0, nil
 		}
 	}
 	for i := c.Unit - seq.offset; i < len(seq.units); i++ {
@@ -177,7 +177,7 @@ func (e *Engine) readScope(ctx context.Context, tx pgx.Tx, c cursor) (readSequen
 		}
 	}
 	if anchor != "" && target < 0 {
-		return readSequence{}, "not_found", nil
+		return readSequence{doc: key}, "not_found", nil
 	}
 	if item.Relations {
 		ids := []int64{}
@@ -187,9 +187,10 @@ func (e *Engine) readScope(ctx context.Context, tx pgx.Tx, c cursor) (readSequen
 			}
 		}
 		seq, err := readRelations(ctx, tx, key, ids, anchor != "", c.Unit, e.release.RetrievalRecipe.RelationEvidenceRuneCap)
+		seq.doc = key
 		return seq, "", err
 	}
-	seq := readSequence{complete: true}
+	seq := readSequence{doc: key, complete: true}
 	if anchor == "" && item.From == "" {
 		seq.document = &doc
 		seq.units = readOutline(nodes)

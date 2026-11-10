@@ -34,7 +34,7 @@ func TestPresent_CompactHitFields(t *testing.T) {
 	h.Relations = []Relation{{Kind: "cites"}}
 	got := present(Response{Hits: []Hit{h}}, map[string]DocumentEntry{"vn:1": {}}, DetailCompact).Hits[0]
 	snippet, complete := Snippet(h, SnippetCap)
-	if got.Handle != "vn:1#article/clause" || got.Doc != "vn:1" || got.Citation != "Điều 1" || got.Snippet != snippet || got.Complete != complete || len(got.Path) != 2 || got.Path[0].Handle != "vn:1#article" || got.Path[0].Heading != "Heading" || got.Path[1].Handle != "vn:1#article/clause" {
+	if got.Handle != "vn:1#article/clause" || got.Doc != "vn:1" || got.Citation != "Điều 1" || got.Snippet != snippet || got.Complete != complete || len(got.Path) != 2 || got.Path[0].Anchor != "article" || got.Path[0].Heading != "Heading" || got.Path[1].Anchor != "article/clause" {
 		t.Fatalf("hit: %+v", got)
 	}
 	b, err := json.Marshal(got)
@@ -81,12 +81,12 @@ func TestPresent_WarningsOnlyProvisionLevel(t *testing.T) {
 	other, sourceAnchor := "vn:2", "source"
 	h.Relations = []Relation{
 		{SourceKey: "vn:2", TargetKey: &target, Kind: "repeals"},
-		{SourceKey: "vn:2", TargetKey: &target, TargetAnchor: &anchor, TargetInHit: true, Kind: "repeals", SourceNumber: "two", SourceResolved: true},
+		{SourceKey: "vn:2", TargetKey: &target, TargetAnchor: &anchor, TargetInHit: true, Kind: "repeals", SourceNumber: "two", SourceResolved: true, SourceDocKey: "vn:2"},
 		{SourceKey: "vn:1", SourceAnchor: &sourceAnchor, SourceInHit: true, TargetKey: &other, TargetNumber: "two", Kind: "amends_supplements", TargetResolved: false},
 		{SourceKey: "vn:2", TargetKey: &target, TargetAnchor: &anchor, TargetInHit: true, Kind: "cites"},
 	}
 	got := present(Response{Hits: []Hit{h}}, nil, DetailCompact).Hits[0].Warnings
-	want := []Pointer{{Dir: "in", Kind: "repeals", Key: "vn:2", Number: "two", InRelease: true, Handle: "vn:2"}, {Dir: "out", Kind: "amends_supplements", Key: "vn:2", Number: "two"}}
+	want := []Pointer{{Dir: "in", Kind: "repeals", Key: "vn:2", Number: "two", InRelease: true}, {Dir: "out", Kind: "amends_supplements", Key: "vn:2", Number: "two"}}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("warnings: %+v", got)
 	}
@@ -94,7 +94,7 @@ func TestPresent_WarningsOnlyProvisionLevel(t *testing.T) {
 
 func TestPresent_IntraDocumentWarnings(t *testing.T) {
 	key, source, target := "vn:1", "article-a", "article-b"
-	relation := Relation{SourceKey: key, TargetKey: &key, SourceAnchor: &source, TargetAnchor: &target, SourceNumber: "one", TargetNumber: "one", Kind: "repeals", SourceResolved: true, TargetResolved: true}
+	relation := Relation{SourceKey: key, TargetKey: &key, SourceAnchor: &source, TargetAnchor: &target, SourceNumber: "one", TargetNumber: "one", Kind: "repeals", SourceResolved: true, TargetResolved: true, SourceDocKey: key, TargetDocKey: key}
 	for _, tc := range []struct{ anchor, direction string }{{source, "out"}, {target, "in"}} {
 		t.Run(tc.direction, func(t *testing.T) {
 			h := presentationHit(key, tc.anchor)
@@ -113,6 +113,7 @@ func TestPresent_IntraDocumentWarnings(t *testing.T) {
 func TestPresent_RelationFlagsDoNotChangeJSON(t *testing.T) {
 	r := Relation{SourceKey: "vn:1", Kind: "repeals"}
 	without, _ := shapeRelations([]SourceRelation{{Value: r}}, Recipe1(), Identity{})
+	r.SourceDocKey, r.TargetDocKey = "vn:1", "vn:2"
 	with, _ := shapeRelations([]SourceRelation{{Value: r, SourceInHit: true, TargetInHit: true}}, Recipe1(), Identity{})
 	if len(with) != 1 || !with[0].SourceInHit || !with[0].TargetInHit {
 		t.Fatalf("shaped flags: %+v", with)
@@ -162,5 +163,31 @@ func TestDefaultLimit(t *testing.T) {
 		if got := DefaultLimit(tc.detail); got != tc.want {
 			t.Errorf("DefaultLimit(%q) = %d, want %d", tc.detail, got, tc.want)
 		}
+	}
+}
+
+func TestPresent_PathNodesUseAnchors(t *testing.T) {
+	h := presentationHit("vn:1", "article/clause")
+	h.Path = []PathNode{{Identity: Identity{DocumentKey: "vn:1", Anchor: "article"}, Label: "Article"}}
+	b, err := json.Marshal(present(Response{Hits: []Hit{h}}, nil, DetailCompact).Hits[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(b), `"path":[{"label":"Article","anchor":"article"}]`) {
+		t.Fatalf("path JSON: %s", b)
+	}
+}
+
+func TestPresent_WarningUsesResolvedDocumentKey(t *testing.T) {
+	h := presentationHit("vn:1", "a")
+	stored := "vn:stale"
+	h.Relations = []Relation{
+		{SourceKey: "vn:stale", SourceDocKey: "vn:2", SourceResolved: true, TargetInHit: true, Kind: "repeals"},
+		{TargetKey: &stored, TargetDocKey: "vn:3", TargetResolved: true, SourceInHit: true, Kind: "repeals"},
+		{TargetDocKey: "vn:2", TargetResolved: true, SourceInHit: true, Kind: "repeals"},
+	}
+	got := warningPointers(h)
+	if len(got) != 3 || got[0].Key != "vn:2" || got[1].Key != "vn:3" || got[2].Key != "vn:2" {
+		t.Fatalf("warnings: %+v", got)
 	}
 }

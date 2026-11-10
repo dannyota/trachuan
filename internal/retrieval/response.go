@@ -63,6 +63,8 @@ type Relation struct {
 	Method         string  `json:"method"`
 	SourceResolved bool    `json:"source_resolved"`
 	TargetResolved bool    `json:"target_resolved"`
+	SourceDocKey   string  `json:"-"`
+	TargetDocKey   string  `json:"-"`
 	SourceInHit    bool    `json:"-"`
 	TargetInHit    bool    `json:"-"`
 }

@@ -48,7 +48,7 @@ func present(resp Response, docs map[string]DocumentEntry, d Detail) SearchResul
 			}
 			p := PresentedHit{Handle: Handle(h.Identity), Doc: key, Citation: h.Citation, Gaps: h.Gaps, Warnings: warningPointers(h)}
 			for _, node := range h.Path {
-				p.Path = append(p.Path, PresentedPathNode{Label: node.Label, Heading: node.Heading, Handle: Handle(node.Identity)})
+				p.Path = append(p.Path, PresentedPathNode{Label: node.Label, Heading: node.Heading, Anchor: node.Identity.Anchor})
 			}
 			if d == DetailFull {
 				p.Text, p.Fragments, p.Relations, p.Complete = h.Text, h.Fragments, h.Relations, h.Complete
@@ -80,7 +80,7 @@ func warningPointers(h Hit) []Pointer {
 		if r.TargetInHit {
 			p := Pointer{Dir: "in", Kind: r.Kind, Key: r.SourceKey, Number: r.SourceNumber, InRelease: r.SourceResolved}
 			if p.InRelease {
-				p.Handle = p.Key
+				p.Key = r.SourceDocKey
 			}
 			warnings = append(warnings, p)
 		}
@@ -90,7 +90,7 @@ func warningPointers(h Hit) []Pointer {
 				p.Key = *r.TargetKey
 			}
 			if p.InRelease {
-				p.Handle = p.Key
+				p.Key = r.TargetDocKey
 			}
 			warnings = append(warnings, p)
 		}

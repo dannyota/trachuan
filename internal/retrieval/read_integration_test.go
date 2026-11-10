@@ -4,6 +4,7 @@ package retrieval
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
@@ -83,7 +84,7 @@ func TestRead_DocumentOutline(t *testing.T) {
 		t.Fatalf("outline units: %d", len(a.Units))
 	}
 	for i, u := range a.Units {
-		if u.Kind != "outline" || u.Handle != "vn:1#"+want[i] || u.Label == "" || u.Heading != "heading" || u.Size == 0 || u.Text != "" {
+		if u.Kind != "outline" || u.Anchor != want[i] || u.Label == "" || u.Heading != "heading" || u.Size == 0 || u.Text != "" {
 			t.Fatalf("outline unit: %+v", u)
 		}
 	}
@@ -91,7 +92,7 @@ func TestRead_DocumentOutline(t *testing.T) {
 		t.Fatalf("article size %d", a.Units[4].Size)
 	}
 	b := r.Items[1]
-	if b.Document == nil || len(b.Units) != 1 || b.Units[0].Handle != "vn:2#p10" {
+	if b.Document == nil || len(b.Units) != 1 || b.Units[0].Anchor != "p10" {
 		t.Fatalf("fallback outline: %+v", b)
 	}
 }
@@ -143,10 +144,10 @@ func TestRead_RangeInclusiveOwnTextOnce(t *testing.T) {
 	}
 	seen := map[string]bool{}
 	for i, u := range r.Units {
-		if u.Text != want[i] || seen[u.Handle] {
+		if u.Text != want[i] || seen[u.Anchor] {
 			t.Fatalf("range unit: %+v", u)
 		}
-		seen[u.Handle] = true
+		seen[u.Anchor] = true
 	}
 }
 
@@ -281,7 +282,7 @@ func TestRead_RelationsPaged(t *testing.T) {
 	for pos, u := range got {
 		i := want[pos]
 		r := u.Relation
-		if u.Kind != "relation" || r == nil || r.RawLabel != fmt.Sprintf("raw %d", i) || r.Number != fmt.Sprintf("N%02d", i) || r.Handle != "vn:2" || !r.InRelease {
+		if u.Kind != "relation" || r == nil || r.RawLabel != fmt.Sprintf("raw %d", i) || r.Number != fmt.Sprintf("N%02d", i) || r.Key != "vn:2" || !r.InRelease {
 			t.Fatalf("relation at %d: %+v", pos, r)
 		}
 		if i%2 == 1 {
@@ -429,5 +430,40 @@ func TestRead_UnitTooLargeIsItemError(t *testing.T) {
 	}
 	if !result.Items[2].Complete || result.Items[2].Error != "" {
 		t.Fatal("unit error failed another item")
+	}
+}
+
+func TestRead_ItemDocAndAnchorsIntegration(t *testing.T) {
+	_, e := readFixture(t)
+	for _, item := range []ReadItem{{Handle: "vn:1"}, {Number: "N1"}, {Handle: "vn:1#p5"}, {Handle: "vn:1", From: "p8", To: "p5"}, {Handle: "vn:1#missing"}} {
+		result := readItems(t, e, item).Items[0]
+		b, err := json.Marshal(result)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(string(b), `"doc":"vn:1"`) || strings.Contains(string(b), `"handle"`) {
+			t.Fatalf("item JSON: %s", b)
+		}
+	}
+	page := readItems(t, e, ReadItem{Handle: "vn:1#p9"}).Items[0]
+	if page.Next == "" {
+		t.Fatal("missing continuation")
+	}
+	page = readItems(t, e, ReadItem{Next: page.Next}).Items[0]
+	b, err := json.Marshal(page)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(b), `"doc":"vn:1"`) || !strings.Contains(string(b), `"anchor":"p9"`) {
+		t.Fatalf("continuation JSON: %s", b)
+	}
+}
+
+func TestRead_RelationKeyIsResolvedKey(t *testing.T) {
+	db, e := readFixture(t)
+	insertDocumentRelation(t, db, 1, 1, 2, "vn:1", nil, "one", "two", "cites", strings.Repeat("a", 64), 1)
+	result := readItems(t, e, ReadItem{Handle: "vn:1", Relations: true}).Items[0]
+	if result.Doc != "vn:1" || len(result.Units) != 1 || result.Units[0].Relation == nil || result.Units[0].Relation.Key != "vn:2" || !result.Units[0].Relation.InRelease {
+		t.Fatalf("relation: %+v", result)
 	}
 }

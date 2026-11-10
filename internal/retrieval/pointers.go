@@ -7,7 +7,6 @@ type Pointer struct {
 	Key       string `json:"key,omitempty"`
 	Number    string `json:"number,omitempty"`
 	InRelease bool   `json:"in_release"`
-	Handle    string `json:"handle,omitempty"`
 }
 
 func pointerKinds() []string {
@@ -47,5 +46,5 @@ const documentPointersSQL = `WITH incident AS (` + incidentRelationsSQL + `), ra
  dir COLLATE "C", issue_date DESC NULLS LAST, other_number COLLATE "C",
  source_key COLLATE "C", artifact_sha256 COLLATE "C", ordinal) AS rank
  FROM incident)
- SELECT doc, dir, kind, COALESCE(other_key, ''), other_number, COALESCE(handle, '')
+ SELECT doc, dir, kind, COALESCE(handle, other_key, ''), other_number, handle IS NOT NULL
  FROM ranked WHERE rank <= $3 ORDER BY doc, rank`

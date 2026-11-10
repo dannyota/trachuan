@@ -1,6 +1,7 @@
 package retrieval
 
 import (
+	"encoding/json"
 	"reflect"
 	"strings"
 	"testing"
@@ -46,8 +47,8 @@ func TestSplitParts_FixedBoundaries(t *testing.T) {
 
 func TestReadParts_SerializedBudgetAndLossless(t *testing.T) {
 	for _, u := range []Unit{
-		{Kind: "provision", Handle: "vn:1#p1", Text: strings.Repeat("\"\\\n<&e\u0301 ", 6000)},
-		{Kind: "outline", Handle: "vn:1#p1", Heading: strings.Repeat("đ", 40000), Label: "Điều 1"},
+		{Kind: "provision", Anchor: "p1", Text: strings.Repeat("\"\\\n<&e\u0301 ", 6000)},
+		{Kind: "outline", Anchor: "p1", Heading: strings.Repeat("đ", 40000), Label: "Điều 1"},
 		{Kind: "relation", Relation: &ListedRelation{RawLabel: "raw label", Evidence: strings.Repeat("evidence ", 10000), EvidenceComplete: true}},
 	} {
 		parts, ok := unitParts(u)
@@ -134,7 +135,7 @@ func TestReadPage_EmptyOutlineCountsDocument(t *testing.T) {
 func TestReadParts_OnlySplitFieldIsCut(t *testing.T) {
 	for _, kind := range []string{"lead", "provision", "outline", "relation"} {
 		t.Run(kind, func(t *testing.T) {
-			original := Unit{Kind: kind, Handle: "vn:1#p1", Citation: "Điều 1", Label: "label", Heading: "short heading", Text: "duty"}
+			original := Unit{Kind: kind, Anchor: "p1", Citation: "Điều 1", Label: "label", Heading: "short heading", Text: "duty"}
 			source := strings.Repeat("source \"\\\ne\u0301 ", 5000)
 			switch kind {
 			case "lead", "provision":
@@ -145,7 +146,7 @@ func TestReadParts_OnlySplitFieldIsCut(t *testing.T) {
 				original.Relation = &ListedRelation{Pointer: Pointer{Number: "number", InRelease: true}, RawLabel: "raw label", Evidence: source, EvidenceComplete: true}
 			}
 			seq := readSequence{units: []Unit{original}, complete: true}
-			c := cursor{V: 1, Release: "release", Item: ReadItem{Handle: original.Handle}}
+			c := cursor{V: 1, Release: "release", Item: ReadItem{Handle: "vn:1#p1"}}
 			var joined strings.Builder
 			count := 0
 			for page := 0; page < 20; page++ {
@@ -258,5 +259,22 @@ func TestReadPage_ContinuationSequenceSameAcrossBudgets(t *testing.T) {
 	reduced, reducedCount := collect(20000)
 	if aloneCount <= reducedCount || !reflect.DeepEqual(alone, reduced) {
 		t.Fatal("continuation sequence changed with the budget")
+	}
+}
+
+func TestRead_ItemDocAndAnchors(t *testing.T) {
+	p := Provision{Identity: Identity{DocumentKey: "vn:1", Anchor: "article"}, Kind: "dieu", Text: "text"}
+	u := readTextUnit("provision", p, []Provision{p}, "text")
+	b, err := json.Marshal(u)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(b), `"anchor":"article"`) || strings.Contains(string(b), `"handle"`) {
+		t.Fatalf("unit JSON: %s", b)
+	}
+	seq := readSequence{doc: "vn:1", units: []Unit{u}, complete: true}
+	result, _, err := readPage(seq, cursor{}, ReadCallCap, true)
+	if err != nil || result.Doc != "vn:1" || !result.Complete {
+		t.Fatalf("item: %+v, %v", result, err)
 	}
 }

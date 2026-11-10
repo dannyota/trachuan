@@ -18,7 +18,7 @@ type ReadRequest struct {
 // Unit is one lead, provision, outline entry or relation, or a fixed part of it.
 type Unit struct {
 	Kind     string          `json:"kind"`
-	Handle   string          `json:"handle,omitempty"`
+	Anchor   string          `json:"anchor,omitempty"`
 	Citation string          `json:"citation,omitempty"`
 	Label    string          `json:"label,omitempty"`
 	Heading  string          `json:"heading,omitempty"`
@@ -39,6 +39,7 @@ type ListedRelation struct {
 
 // ItemResult is one page of a read item's chain.
 type ItemResult struct {
+	Doc      string         `json:"doc,omitempty"`
 	Document *DocumentEntry `json:"document,omitempty"`
 	Units    []Unit         `json:"units,omitempty"`
 	Complete bool           `json:"complete"`
@@ -55,6 +56,7 @@ type ReadResult struct {
 }
 
 type readSequence struct {
+	doc      string
 	document *DocumentEntry
 	units    []Unit
 	gaps     []Gap

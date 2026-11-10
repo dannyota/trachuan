@@ -49,7 +49,7 @@ func TestDocuments_MetadataAndCounts(t *testing.T) {
 	if d.RelatedCounts["in:implements"] != 2 || d.RelatedCounts["out:legal_basis"] != 1 || len(d.RelatedCounts) != 2 || len(d.Related) != 3 {
 		t.Fatalf("relations: %+v", d)
 	}
-	if d.Related[0].Dir != "in" || !d.Related[0].InRelease || d.Related[0].Key != "vn:3" || d.Related[0].Handle != "vn:3" {
+	if d.Related[0].Dir != "in" || !d.Related[0].InRelease || d.Related[0].Key != "vn:3" {
 		t.Fatalf("pointer: %+v", d.Related[0])
 	}
 }
@@ -67,7 +67,7 @@ func TestDocuments_PointerOrderTotal(t *testing.T) {
 		t.Fatalf("order: %+v", d.Related)
 	}
 	for i, p := range d.Related {
-		if p.Handle != want[i] {
+		if p.Key != want[i] {
 			t.Fatalf("order: %+v", d.Related)
 		}
 	}
@@ -77,7 +77,7 @@ func TestDocuments_EndpointOutsideRelease(t *testing.T) {
 	db, e, _ := fixture(t)
 	insertDocumentRelation(t, db, 1, 1, nil, "vn:1", "vn:outside", "one", "other", "cites", strings.Repeat("a", 64), 1)
 	p := documentForTest(t, e, "vn:1").Related[0]
-	if p.Key != "vn:outside" || p.InRelease || p.Handle != "" {
+	if p.Key != "vn:outside" || p.InRelease {
 		t.Fatalf("pointer: %+v", p)
 	}
 	b, err := json.Marshal(p)
@@ -93,7 +93,7 @@ func TestDocuments_UnresolvedEndpointNumberOnly(t *testing.T) {
 	db, e, _ := fixture(t)
 	insertDocumentRelation(t, db, 1, 1, nil, "vn:1", nil, "one", "other", "cites", strings.Repeat("a", 64), 1)
 	p := documentForTest(t, e, "vn:1").Related[0]
-	if p.Key != "" || p.Number != "other" || p.InRelease || p.Handle != "" {
+	if p.Key != "" || p.Number != "other" || p.InRelease {
 		t.Fatalf("pointer: %+v", p)
 	}
 	b, err := json.Marshal(p)
@@ -126,5 +126,14 @@ func TestDocuments_UnknownKeyAbsent(t *testing.T) {
 	}
 	if _, ok := docs["vn:missing"]; ok || len(docs) != 1 {
 		t.Fatalf("documents: %+v", docs)
+	}
+}
+
+func TestDocuments_KeyIsResolvedKeyInRelease(t *testing.T) {
+	db, e, _ := fixture(t)
+	insertDocumentRelation(t, db, 1, 1, 2, "vn:1", nil, "one", "two", "cites", strings.Repeat("a", 64), 1)
+	p := documentForTest(t, e, "vn:1").Related[0]
+	if p.Key != "vn:2" || !p.InRelease {
+		t.Fatalf("resolved pointer: %+v", p)
 	}
 }

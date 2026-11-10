@@ -14,7 +14,7 @@ const (
 type PresentedPathNode struct {
 	Label   string `json:"label,omitempty"`
 	Heading string `json:"heading,omitempty"`
-	Handle  string `json:"handle,omitempty"`
+	Anchor  string `json:"anchor,omitempty"`
 }
 
 // PresentedHit is the agent-facing presentation of a search hit.

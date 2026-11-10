@@ -82,11 +82,10 @@ func (e *Engine) readDocument(ctx context.Context, tx pgx.Tx, item ReadItem) (in
 	for rows.Next() {
 		var docKey string
 		var p Pointer
-		if err = rows.Scan(&docKey, &p.Dir, &p.Kind, &p.Key, &p.Number, &p.Handle); err != nil {
+		if err = rows.Scan(&docKey, &p.Dir, &p.Kind, &p.Key, &p.Number, &p.InRelease); err != nil {
 			rows.Close()
 			return 0, key, doc, "", fmt.Errorf("scan read pointer: %w", err)
 		}
-		p.InRelease = p.Handle != ""
 		doc.Related = append(doc.Related, p)
 	}
 	err = rows.Err()
@@ -140,7 +139,7 @@ const readRelationsSQL = `WITH incident AS (` + incidentRelationsSQL + `), scope
  ON r.source_key=i.source_key AND r.artifact_sha256=i.artifact_sha256 AND r.ordinal=i.ordinal
  WHERE NOT $3 OR (i.dir='in' AND (r.target_provision_id IS NULL OR r.target_provision_id=ANY($4::bigint[])))
  OR (i.dir='out' AND (r.source_provision_id IS NULL OR r.source_provision_id=ANY($4::bigint[])))
- ) SELECT dir,kind,COALESCE(other_key,''),other_number,COALESCE(handle,''),raw_label,evidence,
+ ) SELECT dir,kind,COALESCE(handle,other_key,''),other_number,handle IS NOT NULL,raw_label,evidence,
  count(*) OVER (),bool_or(char_length(evidence)>$7) OVER () FROM scoped ORDER BY
  COALESCE(array_position($2::text[],kind),cardinality($2::text[])+1),
  dir COLLATE "C",issue_date DESC NULLS LAST,other_number COLLATE "C",
@@ -157,10 +156,9 @@ func readRelations(ctx context.Context, tx pgx.Tx, key string, ids []int64, prov
 		var r ListedRelation
 		var total int
 		var cut bool
-		if err = rows.Scan(&r.Dir, &r.Kind, &r.Key, &r.Number, &r.Handle, &r.RawLabel, &r.Evidence, &total, &cut); err != nil {
+		if err = rows.Scan(&r.Dir, &r.Kind, &r.Key, &r.Number, &r.InRelease, &r.RawLabel, &r.Evidence, &total, &cut); err != nil {
 			return seq, fmt.Errorf("scan read relation: %w", err)
 		}
-		r.InRelease = r.Handle != ""
 		evidence := []rune(r.Evidence)
 		r.EvidenceComplete = len(evidence) <= evidenceCap
 		if !r.EvidenceComplete {

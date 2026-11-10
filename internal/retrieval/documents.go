@@ -95,11 +95,10 @@ func (e *Engine) Documents(ctx context.Context, keys []string) (map[string]Docum
 	for rows.Next() {
 		var key string
 		var pointer Pointer
-		if err = rows.Scan(&key, &pointer.Dir, &pointer.Kind, &pointer.Key, &pointer.Number, &pointer.Handle); err != nil {
+		if err = rows.Scan(&key, &pointer.Dir, &pointer.Kind, &pointer.Key, &pointer.Number, &pointer.InRelease); err != nil {
 			rows.Close()
 			return nil, fmt.Errorf("scan document pointers: %w", err)
 		}
-		pointer.InRelease = pointer.Handle != ""
 		doc := docs[key]
 		doc.Related = append(doc.Related, pointer)
 		docs[key] = doc
