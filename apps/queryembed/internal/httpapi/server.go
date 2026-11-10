@@ -58,10 +58,11 @@ func (s *Server) Handler() http.Handler {
 }
 
 type response struct {
-	status  int
-	code    string
-	payload []byte
-	count   int
+	status      int
+	code        string
+	payload     []byte
+	count       int
+	bodyTimeout bool
 }
 
 func jsonResponse(v any) response {
@@ -74,7 +75,7 @@ func jsonResponse(v any) response {
 func (s *Server) serve(w http.ResponseWriter, r *http.Request, fn func() response) {
 	start := time.Now()
 	res := fn()
-	if r.Context().Err() == nil {
+	if r.Context().Err() == nil || res.bodyTimeout {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(res.status)
 		_, _ = w.Write(res.payload)
@@ -115,26 +116,31 @@ func (s *Server) post(w http.ResponseWriter, r *http.Request, embed bool) {
 	s.serve(w, r, func() response { return s.process(w, r, embed) })
 }
 func (s *Server) process(w http.ResponseWriter, r *http.Request, embed bool) response {
-	if !s.ready.Load() {
-		return failure(503, "not_ready", nil)
-	}
 	ctx, cancel := context.WithTimeout(r.Context(), admission.QueryLimits().Deadline)
 	defer cancel()
 	if deadline, ok := ctx.Deadline(); ok {
 		controller := http.NewResponseController(w)
 		_ = controller.SetReadDeadline(deadline)
-		defer func() { _ = controller.SetReadDeadline(time.Time{}) }()
+	}
+	if !s.ready.Load() {
+		w.Header().Set("Connection", "close")
+		return failure(503, "not_ready", nil)
 	}
 	text, problem := decodeRequest(r, s.hash)
 	if problem.status != 0 {
+		w.Header().Set("Connection", "close")
 		return problem
 	}
+	_ = http.NewResponseController(w).SetReadDeadline(time.Time{})
 	if ctx.Err() != nil {
 		return failure(504, "deadline_exceeded", nil)
 	}
 	var result response
 	err := s.cfg.Admission.Do(ctx, func(workCtx context.Context) error {
 		ids, e := s.cfg.Tokenizer.Encode(text)
+		if err := workCtx.Err(); err != nil {
+			return err
+		}
 		if e != nil {
 			result = failure(500, "inference_failed", nil)
 			return nil
@@ -154,6 +160,9 @@ func (s *Server) process(w http.ResponseWriter, r *http.Request, embed bool) res
 			return nil
 		}
 		vector, e := s.cfg.Runtime.Embed(workCtx, ids)
+		if err := workCtx.Err(); err != nil {
+			return err
+		}
 		if e != nil || !validVector(vector, s.cfg.Recipe.Dimensions) {
 			result = failure(500, "inference_failed", nil)
 			result.count = count

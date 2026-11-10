@@ -26,7 +26,9 @@ func decodeRequest(r *http.Request, hash string) (string, response) {
 	}
 	var timeout net.Error
 	if errors.As(err, &timeout) && timeout.Timeout() {
-		return "", failure(504, "deadline_exceeded", nil)
+		problem := failure(504, "deadline_exceeded", nil)
+		problem.bodyTimeout = true
+		return "", problem
 	}
 	if err != nil || !utf8.Valid(data) || !uniqueJSON(data) {
 		return "", failure(400, "invalid_request", nil)
@@ -41,7 +43,7 @@ func decodeRequest(r *http.Request, hash string) (string, response) {
 		return "", failure(400, "invalid_request", nil)
 	}
 	var text string
-	if json.Unmarshal(texts[0], &text) != nil || string(texts[0]) == "null" || strings.TrimSpace(text) == "" {
+	if json.Unmarshal(texts[0], &text) != nil || string(texts[0]) == "null" || strings.TrimSpace(text) == "" || strings.ContainsRune(text, 0) {
 		return "", failure(400, "invalid_request", nil)
 	}
 	if recipe != hash {
