@@ -111,9 +111,11 @@ stops being present, and when a resolved secondary key has disposition
 - One `document` row per present document; class and source from the verified
   snapshot. A legacy run assigns class `primary` and source `vbpl`.
 - A final member that is not present loads no document; its key, disposition and
-  gaps go to `coverage_gap`. Chunk and embed artifacts of a key that is not
-  present are ignored; artifacts of present keys are reused when their lineage
-  and recipes match.
+  gaps go to `coverage_gap`. Chunk and embed artifacts are verified and
+  reconciled for every key in the inventory, as
+  [build](index.md#inclusion-and-losses) requires, before exclusions; those of a
+  key that is not present then load no rows. Artifacts of present keys are
+  reused when their lineage and recipes match.
 - A secondary document loads metadata, source files and its `no_tree` gap. It
   has no provisions, chunks or outgoing relations until text extraction exists;
   incoming relations from present documents are kept.

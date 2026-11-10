@@ -149,16 +149,7 @@ func loadInventoryV2(ctx context.Context, q store.Querier, run stage.Run, limit 
 			i.Gaps = append(i.Gaps, InventoryGap{Stage: g.Stage, ItemKey: g.ItemKey, Kind: g.Kind, Detail: g.Detail, Source: g.Source, Origin: g.Origin, Cause: g.Cause, EvidenceRef: g.EvidenceRef})
 		}
 	}
-	present := map[string]bool{}
-	active := map[string]bool{}
-	for _, e := range snap.Active {
-		active[e.DocumentKey] = true
-	}
-	for _, item := range i.Items {
-		if item.Stage == "fetch" && item.State == "done" && active[item.ItemKey] {
-			present[item.ItemKey] = true
-		}
-	}
+	present := i.Presence()
 	i.Provenance = provenanceSnapshot(p.Files, present)
 	return i.sorted(), nil
 }

@@ -6,12 +6,19 @@ import (
 	"danny.vn/trachuan/apps/corpus/internal/artifact"
 	"danny.vn/trachuan/apps/corpus/internal/evaluation"
 	"danny.vn/trachuan/apps/corpus/internal/stage/chunk"
+	"danny.vn/trachuan/apps/corpus/internal/stage/fetch"
 	"danny.vn/trachuan/internal/retrieval"
 )
 
 // IdentityInventory verifies artifacts and extracts document-qualified identities.
 func IdentityInventory(inv Inventory, artifacts artifact.Store) (evaluation.IdentityInventory, error) {
-	out := evaluation.IdentityInventory{Documents: map[string]evaluation.IdentityDocument{}}
+	out := evaluation.IdentityInventory{Documents: map[string]evaluation.IdentityDocument{}, Replacements: map[string]string{}}
+	for _, entry := range inv.Membership.Entries {
+		if entry.Disposition == "source_replaced" && entry.ReplacementKey != nil {
+			out.Replacements[entry.DocumentKey] = *entry.ReplacementKey
+		}
+	}
+	present := inv.Presence()
 	fetches := map[string]InventoryItem{}
 	for _, item := range inv.Items {
 		if item.Stage != "fetch" || item.State != "done" {
@@ -21,14 +28,14 @@ func IdentityInventory(inv Inventory, artifacts artifact.Store) (evaluation.Iden
 		if err != nil {
 			return out, fmt.Errorf("identity fetch: %w", err)
 		}
-		var detail fetchDetail
-		if err = readArtifactJSON(dir, "detail.json", &detail); err != nil {
-			return out, err
+		detail, err := fetch.ReadDocument(dir, item.ItemKey)
+		if err != nil {
+			return out, fmt.Errorf("decode identity fetch: %w", err)
 		}
-		if "vn:vbpl:"+detail.Data.ID != item.ItemKey {
-			return out, fmt.Errorf("identity fetch key mismatch")
+		if !present[item.ItemKey] {
+			continue
 		}
-		out.Documents[item.ItemKey] = evaluation.IdentityDocument{Number: retrieval.NormalizeNumber(detail.Data.DocNum), Anchors: map[string]bool{}, Nodes: map[string]bool{}}
+		out.Documents[item.ItemKey] = evaluation.IdentityDocument{Number: retrieval.NormalizeNumber(detail.Number), Anchors: map[string]bool{}, Nodes: map[string]bool{}}
 		fetches[item.ItemKey] = item
 	}
 	for _, item := range inv.Items {
@@ -36,6 +43,9 @@ func IdentityInventory(inv Inventory, artifacts artifact.Store) (evaluation.Iden
 			continue
 		}
 		fetch, ok := fetches[item.ItemKey]
+		if !present[item.ItemKey] {
+			continue
+		}
 		if !ok || fetch.ArtifactSHA256 == nil {
 			return out, fmt.Errorf("missing identity fetch")
 		}

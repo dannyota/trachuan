@@ -76,6 +76,9 @@ func (f *loadFixture) addArtifact(t *testing.T, name, key string, files map[stri
 			if e != nil {
 				return e
 			}
+			if e = os.MkdirAll(filepath.Dir(filepath.Join(dir, file)), 0700); e != nil {
+				return e
+			}
 			if e = os.WriteFile(filepath.Join(dir, file), data, 0600); e != nil {
 				return e
 			}
@@ -239,6 +242,25 @@ func TestLoad_VectorOrdinalAlignment(t *testing.T) {
 	var value string
 	if err = f.corpus.QueryRow(context.Background(), `SELECT embedding::text FROM chunk WHERE ordinal=2`).Scan(&value); err != nil || !strings.HasPrefix(value, "[0,0,1,") {
 		t.Fatalf("wrong vector: %v", err)
+	}
+}
+func TestLoad_IgnoresArtifactsOfAbsentKeys(t *testing.T) {
+	f := fixture(t)
+	key := "vn:vbpl:1"
+	f.indexed(t, key, true)
+	if _, err := f.workshop.Exec(context.Background(), `INSERT INTO gap(run_id,stage,item_key,kind,detail) VALUES($1,'fetch',$2,'withdrawn','')`, f.run.ID, key); err != nil {
+		t.Fatal(err)
+	}
+	counts, err := f.load(t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if counts.Documents != 0 || counts.Provisions != 0 || counts.Chunks != 0 || counts.DenseVectors != 0 {
+		t.Fatalf("absent key loaded rows: %+v", counts)
+	}
+	var gaps int
+	if err = f.corpus.QueryRow(context.Background(), `SELECT count(*) FROM coverage_gap WHERE document_key=$1 AND kind='withdrawn'`, key).Scan(&gaps); err != nil || gaps != 1 {
+		t.Fatalf("withdrawn gaps=%d: %v", gaps, err)
 	}
 }
 func TestLoad_ChunkCountReconciles(t *testing.T) {

@@ -6,6 +6,7 @@ import (
 
 	"danny.vn/trachuan/apps/corpus/internal/artifact"
 	"danny.vn/trachuan/apps/corpus/internal/source"
+	"danny.vn/trachuan/apps/corpus/internal/stage/membership"
 	"danny.vn/trachuan/internal/embedding"
 	"danny.vn/trachuan/internal/retrieval/lexical"
 	"github.com/jackc/pgx/v5"
@@ -24,15 +25,18 @@ type Counts struct {
 }
 
 type loader struct {
-	tx        pgx.Tx
-	inv       Inventory
-	artifacts artifact.Store
-	recipes   Recipes
-	codes     map[string]source.StatusCode
-	items     map[string]map[string]InventoryItem
-	docs      map[string]*loadedDocument
-	gaps      []InventoryGap
-	counts    Counts
+	tx              pgx.Tx
+	inv             Inventory
+	artifacts       artifact.Store
+	recipes         Recipes
+	codes           map[string]source.StatusCode
+	items           map[string]map[string]InventoryItem
+	docs            map[string]*loadedDocument
+	present         map[string]bool
+	members         map[string]membership.Entry
+	provenanceFiles map[string][]provenanceFile
+	gaps            []InventoryGap
+	counts          Counts
 }
 
 // Load inserts a frozen inventory into an already initialized corpus database.
@@ -55,12 +59,23 @@ func Load(ctx context.Context, conn *pgx.Conn, inv Inventory, artifacts artifact
 		return Counts{}, fmt.Errorf("begin corpus load: %w", err)
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
-	l := loader{tx: tx, inv: inv.sorted(), artifacts: artifacts, recipes: recipes, codes: codes, items: make(map[string]map[string]InventoryItem), docs: make(map[string]*loadedDocument), gaps: append([]InventoryGap{}, inv.Gaps...)}
+	l := loader{tx: tx, inv: inv.sorted(), artifacts: artifacts, recipes: recipes, codes: codes, items: make(map[string]map[string]InventoryItem), docs: make(map[string]*loadedDocument), present: inv.Presence(), members: map[string]membership.Entry{}, provenanceFiles: map[string][]provenanceFile{}, gaps: append([]InventoryGap{}, inv.Gaps...)}
 	for _, item := range l.inv.Items {
 		if l.items[item.Stage] == nil {
 			l.items[item.Stage] = make(map[string]InventoryItem)
 		}
 		l.items[item.Stage][item.ItemKey] = item
+	}
+	for _, file := range inv.Provenance.Files {
+		l.provenanceFiles[file.DocumentKey] = append(l.provenanceFiles[file.DocumentKey], file)
+	}
+	if l.inv.Version == 2 {
+		for _, member := range l.inv.Membership.Entries {
+			l.members[member.DocumentKey] = member
+			if member.Disposition != "active" {
+				l.addGap("build", member.DocumentKey, member.Disposition, "")
+			}
+		}
 	}
 	if err = l.reconcileInventory(); err != nil {
 		return Counts{}, err

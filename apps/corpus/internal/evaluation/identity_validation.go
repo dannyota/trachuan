@@ -14,7 +14,10 @@ type IdentityDocument struct {
 }
 
 // IdentityInventory holds source document identities for one run.
-type IdentityInventory struct{ Documents map[string]IdentityDocument }
+type IdentityInventory struct {
+	Documents    map[string]IdentityDocument
+	Replacements map[string]string
+}
 
 // MappingIssue identifies a defect in one citation's mapping.
 type MappingIssue struct {
@@ -100,7 +103,9 @@ func (m IdentityMap) Validate(cases []Case, legacy string, inventory IdentityInv
 			}
 			checkDoc := func(prefix, key, number string) IdentityDocument {
 				doc, ok := inventory.Documents[key]
-				if key == "" || !ok {
+				if replacement, replaced := inventory.Replacements[key]; replaced {
+					issue(prefix+"_key", "source replaced by "+replacement+"; re-adjudication required")
+				} else if key == "" || !ok {
 					issue(prefix+"_key", "missing document identity")
 				}
 				if number == "" || !ok || number != doc.Number || retrieval.NormalizeNumber(number) != number {
