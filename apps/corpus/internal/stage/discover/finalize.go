@@ -12,7 +12,7 @@ import (
 )
 
 // Finalize publishes the discovery seed membership in the close transaction.
-func (*Stage) Finalize(ctx context.Context, env stage.Env, tx pgx.Tx, r stage.Run) (stage.Finalization, error) {
+func (s *Stage) Finalize(ctx context.Context, env stage.Env, tx pgx.Tx, r stage.Run) (stage.Finalization, error) {
 	list, err := source.Parse(r.Snapshot.SourceList)
 	if err != nil {
 		return stage.Finalization{}, fmt.Errorf("parse discovery sources: %w", err)
@@ -24,8 +24,20 @@ func (*Stage) Finalize(ctx context.Context, env stage.Env, tx pgx.Tx, r stage.Ru
 		return stage.Finalization{}, fmt.Errorf("unsupported selection version %d", list.VBPL.SelectionVersion)
 	}
 	q := store.New(tx)
+	secondary, err := readSecondaryObservations(ctx, q, env, r, list.Chinhphu)
+	if err != nil {
+		return stage.Finalization{}, err
+	}
+	if failure := secondaryCeiling(secondary, s.candidateCeiling()); failure.Code != "" {
+		return failure, nil
+	}
+	markSecondaryConflicts(secondary)
+	secondaryByKey := secondaryObservationMap(secondary)
 	members, err := currentMembers(ctx, q, r)
 	if err != nil {
+		return stage.Finalization{}, err
+	}
+	if err = addSecondaryMembers(ctx, q, env, r, secondary, members); err != nil {
 		return stage.Finalization{}, err
 	}
 	ambiguous, err := supplementNamed(ctx, q, env, r, list.VBPL.NamedNumbers, members)
@@ -89,6 +101,9 @@ func (*Stage) Finalize(ctx context.Context, env stage.Env, tx pgx.Tx, r stage.Ru
 				continue
 			}
 			state := priorState(s, pred.phase != nil && *pred.phase == "legacy", central.complete, configured, complete)
+			if s.RuleKind == "secondary_probe" {
+				state = secondaryPriorState(s, secondaryByKey)
+			}
 			if entry.Disposition == "withdrawn" || entry.Disposition == "scope_removed" {
 				state = "removed"
 			}
@@ -96,7 +111,7 @@ func (*Stage) Finalize(ctx context.Context, env stage.Env, tx pgx.Tx, r stage.Ru
 				state = "retained"
 			}
 			retained = retained || state == "retained"
-			old = append(old, membership.EvidenceRecord{DocumentKey: entry.DocumentKey, Stage: "discover", ItemKey: "vbpl:central", Support: s, State: state})
+			old = append(old, membership.EvidenceRecord{DocumentKey: entry.DocumentKey, Stage: "discover", ItemKey: priorEvidenceItem(s), Support: s, State: state})
 		}
 		if entry.Disposition == "active" && !hasCurrent && !retained {
 			switch {
@@ -115,6 +130,11 @@ func (*Stage) Finalize(ctx context.Context, env stage.Env, tx pgx.Tx, r stage.Ru
 			m.records = append(m.records, record)
 		}
 	}
+	secondaryHistory, err := earlierSecondary(ctx, q, env, history, secondaryByKey)
+	if err != nil {
+		return stage.Finalization{}, err
+	}
+	retainSecondary(prior, secondaryByKey, members, secondaryHistory)
 	entries := make([]membership.Entry, 0, len(members))
 	for _, m := range members {
 		m.entry.Supports = membership.MergeSupports(nil, m.entry.Supports)

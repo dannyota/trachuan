@@ -17,7 +17,7 @@ func TestParseVN(t *testing.T) {
 		t.Fatal(err)
 	}
 	wantVBPL := []string{"71/2025/QH15", "368/2025/NĐ-CP", "58/2021/NĐ-CP", "18/2018/TT-NHNN", "134/2025/QH15", "53/2026/TT-NHNN", "142/2026/NĐ-CP", "88/2019/NĐ-CP", "143/2021/NĐ-CP", "340/2025/NĐ-CP", "52/2024/NĐ-CP", "304/2025/NĐ-CP"}
-	wantChinhphu := ChinhphuSources{Keywords: []string{"trí tuệ nhân tạo"}, NamedNumbers: []string{"142/2026/NĐ-CP", "33/2026/QĐ-TTg", "05/2026/TT-BKHCN", "134/2025/QH15"}}
+	wantChinhphu := ChinhphuSources{IssuerPolicyVersion: 1, CentralIssuerForms: []string{"Chính phủ", "Thủ tướng Chính phủ", "Quốc hội", "Bộ Khoa học và Công nghệ", "Ngân hàng Nhà nước Việt Nam"}, Keywords: []string{"trí tuệ nhân tạo"}, NamedNumbers: []string{"142/2026/NĐ-CP", "33/2026/QĐ-TTg", "05/2026/TT-BKHCN", "134/2025/QH15"}}
 	if list.VBPL.SelectionVersion != 1 || !reflect.DeepEqual(list.VBPL.NamedNumbers, wantVBPL) || !reflect.DeepEqual(list.Chinhphu, wantChinhphu) {
 		t.Fatalf("unexpected named rules: %+v %+v", list.VBPL, list.Chinhphu)
 	}
@@ -67,7 +67,7 @@ func TestParse_YearlessNamedNeedsDate(t *testing.T) {
 }
 
 func TestParse_NamedNumbersAndChinhphu(t *testing.T) {
-	list, err := Parse([]byte("vbpl:\n  selection_version: 1\n  named_numbers: ['367/QĐ-TTg@2026-02-28']\nchinhphu:\n  keywords: ['trí tuệ nhân tạo']\n  named_numbers: ['71/2025/QH15']\n"))
+	list, err := Parse([]byte("vbpl:\n  selection_version: 1\n  named_numbers: ['367/QĐ-TTg@2026-02-28']\nchinhphu:\n  issuer_policy_version: 1\n  central_issuer_forms: ['Chính phủ']\n  keywords: ['trí tuệ nhân tạo']\n  named_numbers: ['71/2025/QH15']\n"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -77,5 +77,35 @@ func TestParse_NamedNumbersAndChinhphu(t *testing.T) {
 	entry, err := ParseNamedNumber(list.VBPL.NamedNumbers[0])
 	if err != nil || entry.Number != "367/QĐ-TTg" || entry.Date != "2026-02-28" {
 		t.Fatalf("entry = %+v, error = %v", entry, err)
+	}
+}
+
+func TestParse_ChinhphuIssuerPolicy(t *testing.T) {
+	for _, tc := range []struct {
+		name, policy string
+		valid        bool
+	}{
+		{"missing forms", "issuer_policy_version: 1", false},
+		{"empty form", "issuer_policy_version: 1\n  central_issuer_forms: [' ']", false},
+		{"duplicate normalized forms", "issuer_policy_version: 1\n  central_issuer_forms: ['Chính phủ', ' CHÍNH  PHỦ ']", false},
+		{"unsupported version", "issuer_policy_version: 2\n  central_issuer_forms: ['Chính phủ']", false},
+		{"valid", "issuer_policy_version: 1\n  central_issuer_forms: ['Chính phủ']", true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			list, err := Parse([]byte("chinhphu:\n  " + tc.policy + "\n"))
+			if err == nil {
+				err = list.ValidateSecondary()
+			}
+			if (err == nil) != tc.valid {
+				t.Fatalf("error = %v, valid = %v", err, tc.valid)
+			}
+		})
+	}
+}
+
+func TestParse_HistoricalChinhphuSnapshot(t *testing.T) {
+	_, err := Parse([]byte(`{"vbpl":{"selection_version":1},"chinhphu":{"keywords":["law"]}}`))
+	if err != nil {
+		t.Fatalf("historical snapshot rejected: %v", err)
 	}
 }

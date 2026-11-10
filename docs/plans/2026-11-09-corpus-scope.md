@@ -118,8 +118,8 @@
 
 **Files:** `sources/vn.yaml` and `apps/corpus/internal/source/` (`chinhphu.issuer_policy_version`, `central_issuer_forms`, validation); `apps/corpus/internal/chinhphu/detail.go` (lossless repeated fields); `apps/corpus/internal/stage/discover/` (compound `chinhphu:keyword:` and `chinhphu:named:` items, issuer classification, candidate VBPL probes, `secondary_probe` tuples `<item key>|<docid>`, run-wide candidate ceiling at close); `apps/corpus/internal/stage/finalize.go` (`secondary_candidate_ceiling` in the non-acceptable list); tests. Hand-over at fetch close moves to Task 10.
 
-- [ ] Tests first: `TestAdmit_ZeroVBPLMatchAdmits`, `TestAdmit_DifferentDateNeitherSeedsNorBlocks`, `TestAdmit_UniqueVBPLMatchSeedsPrimary`, `TestAdmit_LookupFailureDefers`, `TestAdmit_CollisionIsIdentityAmbiguous`, `TestAdmit_ProvincialOutOfScope`, `TestIssuer_RepeatedConflictingFieldsUnknown`, `TestNamed_SubstringHitRejected`, `TestCeiling_RunWideOverflowFailsDiscover`, `TestSupport_PerQueryTuplesSurviveSupersession`.
-- [ ] Implement per secondary-discovery.md and sources.md; commit `feat(corpus): secondary discovery from vanban.chinhphu.vn`.
+- [x] Tests first: `TestAdmit_ZeroVBPLMatchAdmits`, `TestAdmit_DifferentDateNeitherSeedsNorBlocks`, `TestAdmit_UniqueVBPLMatchSeedsPrimary`, `TestAdmit_LookupFailureDefers`, `TestAdmit_CollisionIsIdentityAmbiguous`, `TestAdmit_ProvincialOutOfScope`, `TestIssuer_RepeatedConflictingFieldsUnknown`, `TestNamed_SubstringHitRejected`, `TestCeiling_RunWideOverflowFailsDiscover`, `TestSupport_PerQueryTuplesSurviveSupersession`.
+- [x] Implement per secondary-discovery.md and sources.md; commit `feat(corpus): secondary discovery from vanban.chinhphu.vn`.
 
 ### Task 10: Secondary fetch and provenance
 

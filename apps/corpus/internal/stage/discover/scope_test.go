@@ -13,11 +13,12 @@ import (
 	"os"
 	"path/filepath"
 
-	"danny.vn/trachuan/apps/corpus/internal/artifact"
 	"encoding/json"
 	"reflect"
 	"strings"
 	"testing"
+
+	"danny.vn/trachuan/apps/corpus/internal/artifact"
 
 	"danny.vn/trachuan/apps/corpus/internal/stage"
 )
@@ -248,5 +249,37 @@ func TestNamed_LookupFailureIsGapNotAbsence(t *testing.T) {
 	var retry *stage.RetryableError
 	if !errors.As(err, &retry) || retry.GapKind != "source_unavailable" {
 		t.Fatalf("err=%v", err)
+	}
+}
+
+func TestPlan_SecondaryQueriesAreDistinctAndSorted(t *testing.T) {
+	run := stage.Run{Snapshot: stage.Snapshot{SourceList: json.RawMessage(`{"vbpl":{"selection_version":1},"chinhphu":{"issuer_policy_version":1,"central_issuer_forms":["Chính phủ"],"keywords":["b","a","a"],"named_numbers":["71/2025/QH15","71/2025/QH15"]}}`)}}
+	items, err := New(nil).Plan(context.Background(), stage.Env{}, run)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var keys []string
+	for _, item := range items {
+		keys = append(keys, item.Key)
+	}
+	want := []string{"chinhphu:keyword:a", "chinhphu:keyword:b", "chinhphu:named:71/2025/QH15", "vbpl:central"}
+	if !reflect.DeepEqual(keys, want) {
+		t.Fatalf("keys = %v, want %v", keys, want)
+	}
+}
+
+func TestRecipe_SecondaryConfigurationBumpsRecipe(t *testing.T) {
+	base := stage.Snapshot{SourceList: json.RawMessage(`{"vbpl":{"selection_version":1}}`)}
+	secondary := stage.Snapshot{SourceList: json.RawMessage(`{"vbpl":{"selection_version":1},"chinhphu":{"issuer_policy_version":1,"central_issuer_forms":["Chính phủ"],"keywords":["law"]}}`)}
+	legacyRecipe := stage.RecipeHash("discover", "vbpl-discover/selection-2", secondary.SourceListHash, string(secondary.SourceList))
+	if New(nil).Recipe(secondary) == legacyRecipe || New(nil).Recipe(base) != stage.RecipeHash("discover", "vbpl-discover/selection-2", base.SourceListHash, string(base.SourceList)) {
+		t.Fatal("recipe does not bind secondary implementation")
+	}
+}
+
+func TestPlan_InvalidSecondaryPolicyFails(t *testing.T) {
+	run := stage.Run{Snapshot: stage.Snapshot{SourceList: json.RawMessage(`{"vbpl":{"selection_version":1},"chinhphu":{"keywords":["law"]}}`)}}
+	if _, err := New(nil).Plan(context.Background(), stage.Env{}, run); err == nil {
+		t.Fatal("missing issuer policy accepted")
 	}
 }

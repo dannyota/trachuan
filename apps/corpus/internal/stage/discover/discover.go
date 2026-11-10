@@ -15,10 +15,12 @@ import (
 	"strings"
 
 	"danny.vn/trachuan/apps/corpus/internal/artifact"
+	"danny.vn/trachuan/apps/corpus/internal/chinhphu"
 	"danny.vn/trachuan/apps/corpus/internal/source"
 	"danny.vn/trachuan/apps/corpus/internal/stage"
 	"danny.vn/trachuan/apps/corpus/internal/store"
 	"danny.vn/trachuan/apps/corpus/internal/vbpl"
+	"danny.vn/trachuan/internal/retrieval"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -40,10 +42,35 @@ type report struct {
 }
 
 // Stage discovers the documents named by VBPL listings.
-type Stage struct{ client *vbpl.Client }
+type Stage struct {
+	client   *vbpl.Client
+	chinhphu *chinhphu.Client
+	ceiling  int
+}
+
+// Option configures discovery.
+type Option func(*Stage)
+
+// WithChinhphu sets the secondary source client.
+func WithChinhphu(client *chinhphu.Client) Option { return func(s *Stage) { s.chinhphu = client } }
+
+// WithCandidateCeiling sets a lower ceiling for controlled runs.
+func WithCandidateCeiling(limit int) Option {
+	return func(s *Stage) {
+		if limit > 0 && limit < 100 {
+			s.ceiling = limit
+		}
+	}
+}
 
 // New constructs a discover stage.
-func New(client *vbpl.Client) *Stage { return &Stage{client: client} }
+func New(client *vbpl.Client, options ...Option) *Stage {
+	s := &Stage{client: client}
+	for _, option := range options {
+		option(s)
+	}
+	return s
+}
 
 // Name returns the stage name.
 func (*Stage) Name() string { return "discover" }
@@ -52,6 +79,9 @@ func (*Stage) Name() string { return "discover" }
 func (*Stage) Recipe(snapshot stage.Snapshot) string {
 	list, err := source.Parse(snapshot.SourceList)
 	if err == nil && list.VBPL.SelectionVersion == 1 {
+		if len(list.Chinhphu.Keywords) > 0 || len(list.Chinhphu.NamedNumbers) > 0 {
+			return stage.RecipeHash("discover", "secondary-discover/1", "issuer-classifier/1", "issuer-normalization/1", retrieval.NumberNormalizationVersion, snapshot.SourceListHash, string(snapshot.SourceList))
+		}
 		return stage.RecipeHash("discover", "vbpl-discover/selection-2", snapshot.SourceListHash, string(snapshot.SourceList))
 	}
 	return stage.RecipeHash("discover", "vbpl-discover/1")
@@ -85,9 +115,25 @@ func (*Stage) Plan(_ context.Context, _ stage.Env, r stage.Run) ([]stage.Item, e
 		return nil, fmt.Errorf("parse discovery sources: %w", err)
 	}
 	if list.VBPL.SelectionVersion == 1 {
+		if err = list.ValidateSecondary(); err != nil {
+			return nil, fmt.Errorf("validate secondary sources: %w", err)
+		}
 		items := []stage.Item{{Key: "vbpl:central"}}
 		for _, entry := range list.VBPL.NamedNumbers {
 			items = append(items, stage.Item{Key: "vbpl:named:" + entry})
+		}
+		seen := map[string]bool{}
+		for _, group := range []struct {
+			prefix string
+			values []string
+		}{{"chinhphu:keyword:", list.Chinhphu.Keywords}, {"chinhphu:named:", list.Chinhphu.NamedNumbers}} {
+			for _, value := range group.values {
+				key := group.prefix + value
+				if !seen[key] {
+					items = append(items, stage.Item{Key: key})
+					seen[key] = true
+				}
+			}
 		}
 		sort.Slice(items, func(i, j int) bool { return items[i].Key < items[j].Key })
 		return items, nil
@@ -118,6 +164,9 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, r stage.Run, it stag
 		return stage.Output{}, fmt.Errorf("parse discovery sources: %w", parseErr)
 	}
 	if list.VBPL.SelectionVersion == 1 {
+		if strings.HasPrefix(it.Key, "chinhphu:") {
+			return s.processSecondary(ctx, env, r, it, list.Chinhphu)
+		}
 		return s.processScope(ctx, env, r, it, list.VBPL)
 	}
 	if list.VBPL.SelectionVersion != 0 {
@@ -238,6 +287,9 @@ func (*Stage) Resolve(_ context.Context, env stage.Env, r stage.Run, it stage.It
 		return stage.Resolution{}, fmt.Errorf("parse discovery sources: %w", err)
 	}
 	if list.VBPL.SelectionVersion == 1 {
+		if strings.HasPrefix(it.Key, "chinhphu:") {
+			return resolveSecondary(env, it, art)
+		}
 		return resolveScope(env, r, it, art, list.VBPL)
 	}
 	if list.VBPL.SelectionVersion != 0 {

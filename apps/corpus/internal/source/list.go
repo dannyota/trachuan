@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/text/unicode/norm"
 	"gopkg.in/yaml.v3"
 )
 
@@ -32,8 +33,10 @@ type VBPLSources struct {
 
 // ChinhphuSources defines secondary discovery queries.
 type ChinhphuSources struct {
-	Keywords     []string `yaml:"keywords" json:"keywords,omitempty"`
-	NamedNumbers []string `yaml:"named_numbers" json:"named_numbers,omitempty"`
+	IssuerPolicyVersion int      `yaml:"issuer_policy_version" json:"issuer_policy_version,omitempty"`
+	CentralIssuerForms  []string `yaml:"central_issuer_forms" json:"central_issuer_forms,omitempty"`
+	Keywords            []string `yaml:"keywords" json:"keywords,omitempty"`
+	NamedNumbers        []string `yaml:"named_numbers" json:"named_numbers,omitempty"`
 }
 
 // NamedNumber is a number and its optional civil issue date.
@@ -95,7 +98,32 @@ func Parse(data []byte) (List, error) {
 			}
 		}
 	}
+
 	return list, nil
+}
+
+// ValidateSecondary checks the configured secondary issuer policy.
+func (l List) ValidateSecondary() error {
+	c := l.Chinhphu
+	if len(c.Keywords) > 0 || len(c.NamedNumbers) > 0 || c.IssuerPolicyVersion != 0 || len(c.CentralIssuerForms) > 0 {
+		if c.IssuerPolicyVersion != 1 || len(c.CentralIssuerForms) == 0 {
+			return fmt.Errorf("invalid chinhphu issuer policy")
+		}
+		seen := map[string]bool{}
+		for _, form := range c.CentralIssuerForms {
+			normalized := NormalizeIssuer(form)
+			if normalized == "" || seen[normalized] {
+				return fmt.Errorf("empty or duplicate chinhphu issuer form %q", form)
+			}
+			seen[normalized] = true
+		}
+	}
+	return nil
+}
+
+// NormalizeIssuer returns the identity comparison form of an issuer.
+func NormalizeIssuer(value string) string {
+	return strings.Join(strings.Fields(strings.ToUpper(norm.NFC.String(value))), " ")
 }
 
 // RelationCodesHash returns the hash of the canonical relation code JSON.

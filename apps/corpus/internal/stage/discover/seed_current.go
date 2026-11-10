@@ -76,7 +76,7 @@ func isLegacy(s membership.SupportTuple) bool {
 	return s.Evidence.QueryIdentity != nil && (strings.HasPrefix(*s.Evidence.QueryIdentity, "vbpl:sweep@") || strings.HasPrefix(*s.Evidence.QueryIdentity, "vbpl:keyword:"))
 }
 func directSupport(s membership.SupportTuple) bool {
-	return s.RuleKind == "agency" || s.RuleKind == "term" || s.RuleKind == "named" || isLegacy(s)
+	return s.RuleKind == "agency" || s.RuleKind == "term" || s.RuleKind == "named" || (s.RuleKind == "secondary_probe" && strings.Contains(s.RuleValue, "|")) || isLegacy(s)
 }
 func sameSupport(a, b membership.SupportTuple) bool {
 	return len(membership.MergeSupports([]membership.SupportTuple{a}, []membership.SupportTuple{b})) == 1

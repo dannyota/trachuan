@@ -674,3 +674,29 @@ func TestClient_RejectsIPv6TranslationAddress(t *testing.T) {
 		t.Fatal(e)
 	}
 }
+
+func TestDetail_RepeatedFieldsPreserveOccurrences(t *testing.T) {
+	c, _ := clientFor(t, func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = io.WriteString(w, `<div id="ctrl_190596_91_Content"><table><tr><td>Cơ quan ban hành</td><td> Chính phủ </td></tr><tr><td>Số ký hiệu</td><td>123</td></tr><tr><td>Cơ quan ban hành</td><td>Quốc hội</td></tr></table></div>`)
+	})
+	d, _, err := c.Detail(context.Background(), 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(d.Occurrences) != 3 || d.Occurrences[0].Value != " Chính phủ " || d.Occurrences[2].Value != "Quốc hội" || d.Issuer != "" {
+		t.Fatalf("detail = %+v", d)
+	}
+}
+
+func TestDetail_StructurallyAmbiguousRepeatedFieldIsExposed(t *testing.T) {
+	c, _ := clientFor(t, func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = io.WriteString(w, `<div id="ctrl_190596_91_Content"><table><tr><td>Cơ quan ban hành</td><td>Chính phủ</td></tr><tr><td>Cơ quan ban hành</td><td>Quốc hội</td><td>khác</td></tr></table></div>`)
+	})
+	d, _, err := c.Detail(context.Background(), 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(d.Occurrences) != 2 || d.Issuer != "" {
+		t.Fatal("ambiguous field was hidden")
+	}
+}

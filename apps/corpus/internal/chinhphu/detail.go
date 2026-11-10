@@ -13,8 +13,16 @@ import (
 // Attachment describes a source-linked file.
 type Attachment struct{ Name, URL string }
 
+// FieldOccurrence holds one displayed field and its untrimmed text.
+type FieldOccurrence struct {
+	Name, Value string
+	Cells       []string
+	Ambiguous   bool
+}
+
 // Detail holds the fields and attachment inventory displayed by the source.
 type Detail struct {
+	Occurrences                           []FieldOccurrence
 	Number, Title, Issuer, IssueDate, URL string
 	Fields                                map[string]string
 	Attachments                           []Attachment
@@ -65,6 +73,7 @@ func (c *Client) Detail(ctx context.Context, id int) (Detail, []byte, error) {
 		return Detail{}, raw, &Failure{Origin: "source_data", Cause: "invalid_payload", Endpoint: "detail"}
 	}
 	invalidAttachment := false
+	conflicts := map[string]bool{}
 	walk(container, func(row *xhtml.Node) {
 		if row.Type != xhtml.ElementNode || row.Data != "tr" {
 			return
@@ -76,15 +85,38 @@ func (c *Client) Detail(ctx context.Context, id int) (Detail, []byte, error) {
 			}
 		}
 		if len(cells) != 2 {
+			if len(cells) == 0 {
+				return
+			}
+			key := strings.TrimSpace(content(cells[0]))
+			if key == "" {
+				return
+			}
+			texts := make([]string, 0, len(cells)-1)
+			for _, cell := range cells[1:] {
+				texts = append(texts, content(cell))
+			}
+			d.Occurrences = append(d.Occurrences, FieldOccurrence{Name: content(cells[0]), Cells: texts, Ambiguous: true})
+			conflicts[key] = true
+			delete(d.Fields, key)
 			return
 		}
 		key := strings.TrimSpace(content(cells[0]))
-		value := strings.TrimSpace(content(cells[1]))
+		rawValue := content(cells[1])
+		value := strings.TrimSpace(rawValue)
 		if key == "" {
 			return
 		}
+		d.Occurrences = append(d.Occurrences, FieldOccurrence{Name: content(cells[0]), Value: rawValue})
 		if key != "Tài liệu đính kèm" {
-			d.Fields[key] = value
+			if prior, ok := d.Fields[key]; ok && prior != value {
+				conflicts[key] = true
+			}
+			if !conflicts[key] {
+				d.Fields[key] = value
+			} else {
+				delete(d.Fields, key)
+			}
 			return
 		}
 		walk(cells[1], func(a *xhtml.Node) {
