@@ -54,6 +54,9 @@ func Snippet(h Hit, capRunes int) (text string, complete bool) {
 		out = strings.TrimRightFunc(out, unicode.IsSpace)
 	}
 	omitted := leadCut || best > ownStart
+	if out != "" && len([]rune(out))+markerLen+1 > capRunes {
+		return OmissionMarker, false
+	}
 	if omitted && out != "" {
 		out += " " + OmissionMarker
 	}
@@ -65,7 +68,7 @@ func Snippet(h Hit, capRunes int) (text string, complete bool) {
 		} else {
 			separator = "\n"
 		}
-	} else if best > ownStart {
+	} else if omitted {
 		out = OmissionMarker
 		separator = " "
 	}
@@ -94,10 +97,10 @@ func cutAt(r []rune, limit int) int {
 	if len(r) == 0 {
 		return 0
 	}
+	limit = max(1, limit)
 	if limit >= len(r) {
 		return len(r)
 	}
-	limit = max(1, limit)
 	if unicode.IsSpace(r[limit]) {
 		return limit
 	}
@@ -106,8 +109,12 @@ func cutAt(r []rune, limit int) int {
 			return i
 		}
 	}
-	for limit > 1 && unicode.Is(unicode.Mn, r[limit]) {
-		limit--
+	end := limit
+	for end > 0 && unicode.Is(unicode.Mn, r[end]) {
+		end--
 	}
-	return limit
+	if end == 0 {
+		return limit
+	}
+	return end
 }

@@ -77,3 +77,37 @@ func TestCutAt_WhitespaceAtLimit(t *testing.T) {
 		t.Fatalf("cutAt = %d, want 7", got)
 	}
 }
+
+func TestSnippet_SmallCaps(t *testing.T) {
+	h := Hit{Text: "L\nabcdefghij", BestTextStart: 3, Fragments: []Fragment{{Role: "lead", TextEnd: 1}}}
+	for capRunes := 1; capRunes <= 6; capRunes++ {
+		got, complete := Snippet(h, capRunes)
+		if len([]rune(got)) > capRunes || complete {
+			t.Errorf("cap %d: got %q, complete %v", capRunes, got, complete)
+		}
+	}
+}
+
+func TestSnippet_LongCombiningSequence(t *testing.T) {
+	source := "a" + strings.Repeat("\u0301", 699)
+	got, complete := Snippet(Hit{Text: source}, 600)
+	want := string([]rune(source)[:596]) + " " + OmissionMarker
+	if got != want || len([]rune(got)) > 600 || complete {
+		t.Fatalf("unexpected cut: length %d, complete %v", len([]rune(got)), complete)
+	}
+}
+
+func TestCutAt_CombiningSequence(t *testing.T) {
+	r := []rune(strings.Repeat("a\u0301", 5))
+	if got := cutAt(r, 5); got != 4 {
+		t.Fatalf("cutAt = %d, want 4", got)
+	}
+}
+
+func TestCutAt_OneRuneNonpositiveLimit(t *testing.T) {
+	for _, limit := range []int{0, -1} {
+		if got := cutAt([]rune("x"), limit); got != 1 {
+			t.Errorf("limit %d: got %d", limit, got)
+		}
+	}
+}
