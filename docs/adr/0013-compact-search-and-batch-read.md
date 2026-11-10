@@ -86,3 +86,7 @@ they never state an inverse legal effect.
   completeness, continuation, relation reach, endpoint identity, snippet
   determinism and evaluation; verdict merge.
 - 2026-11-10: accepted by the owner.
+- 2026-11-11: measured on vn/20261110_4 (92 golden questions): compact at 20
+  hits is 31,932 code points at p50 and 36,034 at p95, full at 8 is 58,062 and
+  80,305. Document keys were 30% of compact size, so positions inside one
+  document became bare anchors and pointers dropped the duplicate handle.

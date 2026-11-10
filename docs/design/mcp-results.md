@@ -23,7 +23,10 @@ A handle names a document, `<key>`, or a provision, `<key>#<anchor>`, using the
 public identity in [corpus schema](corpus-schema.md):
 `vn:vbpl:03206030-6f7b-11f1-95c5-bd4e620e4897#dieu-1/khoan-1`. A handle is
 stable while that identity exists; the text behind it is pinned by `release`.
-Handles never encode a release, a database id or a rank.
+Handles never encode a release, a database id or a rank. Inside one document
+context (a hit's `path`, a read item's units and outline) positions are bare
+anchors; the document key appears once, as the hit's `doc` or the read item's
+`doc`.
 
 ## Search response
 
@@ -47,7 +50,7 @@ A compact hit has, in this order:
 | `handle`    | The hit's provision                                                                                                                                       |
 | `doc`       | Key into `documents`                                                                                                                                      |
 | `citation`  | Canonical citation from the recipe, number excluded                                                                                                       |
-| `path`      | Ancestors from the top structural level down to and including the hit: `label`, `heading` when the source has one, `handle`                               |
+| `path`      | Ancestors from the top structural level down to and including the hit: `label`, `heading` when the source has one, `anchor` (read as `<doc>#<anchor>`)    |
 | `snippet`   | Verbatim text under the snippet rule                                                                                                                      |
 | `complete`  | True only when `snippet` is the whole hit text and the recipe marked the hit complete                                                                     |
 | `in_filter` | Subject filter result, only when `nodes` were requested                                                                                                   |
@@ -88,17 +91,18 @@ missing lead.
 
 `related` lists relation rows in which the document is the source (`dir:"out"`)
 or the target (`dir:"in"`), as stored by `relate`. A pointer has `dir`, `kind`,
-the other endpoint's stored `key` when known, its `number`, and `in_release`;
-`handle` appears exactly when that endpoint resolved to a document of this
-release. Pointer order is total: kind in the order `repeals`, `replaces`,
-`suspends`, `amends_supplements`, `consolidates`, `implements`, `guided_by`,
-`legal_basis`, `cites`, `references`, `unknown`; then `in` before `out`; then
-the other document's issue date, newest first, unknown dates last; then number;
-then the relation's unique `(source_key, artifact_sha256, ordinal)`. Search
-returns the first pointers up to the cap in budgets; `related_counts` maps
-`<dir>:<kind>` to the full count, and `read` reaches every counted relation.
-Pointers carry no evidence text and state no inverse legal effect. A pointer
-whose endpoint is not in the release is never replaced by a number lookup.
+`key`, `number` and `in_release`: `key` is the other document's key in this
+release when `in_release` is true, otherwise its stored key when known. An
+`in_release` pointer is read by its `key`. Pointer order is total: kind in the
+order `repeals`, `replaces`, `suspends`, `amends_supplements`, `consolidates`,
+`implements`, `guided_by`, `legal_basis`, `cites`, `references`, `unknown`; then
+`in` before `out`; then the other document's issue date, newest first, unknown
+dates last; then number; then the relation's unique
+`(source_key, artifact_sha256, ordinal)`. Search returns the first pointers up
+to the cap in budgets; `related_counts` maps `<dir>:<kind>` to the full count,
+and `read` reaches every counted relation. Pointers carry no evidence text and
+state no inverse legal effect. A pointer whose endpoint is not in the release is
+never replaced by a number lookup.
 
 ## Read
 
@@ -119,7 +123,7 @@ ancestors' lead fragments. A range returns each provision in it once, with its
 own text only, in preorder, and the first unit is preceded by the leads of
 ancestors outside the range. An outline lists `phan`, `chuong`, `muc` and `dieu`
 nodes in document order, or the top-level provisions when the document has no
-`dieu`, each with `label`, `heading`, `handle` and text size in code points.
+`dieu`, each with `label`, `heading`, `anchor` and text size in code points.
 Relation lists follow pointer order and add `raw_label` and evidence.
 
 An item's output is a fixed sequence of units: the leads, then each provision,
@@ -154,19 +158,20 @@ from a provision, a range or a part may be cited once its chain was read to that
 last page, so range units share the leads at the start of their chain. Per-item
 failures (`not_found`, `ambiguous_number`, `release_expired`, `invalid_range`,
 `invalid_next`, `invalid_item` for an item that is not exactly one of the forms
-above, `unit_too_large`) do not fail the call. Every result carries `release`.
+above, `unit_too_large`) do not fail the call. Every result carries `release`,
+and every item result that resolved a document carries its `doc` key.
 
 ## Guide
 
 `guide` states the flow: `search`; scan `documents` and `hits`; read the chosen
-handles in one `read` call, choosing a `path` handle to read a whole article or
-chapter; check `status`, `warnings` and `in` pointers of kinds `repeals`,
-`replaces`, `suspends` and `amends_supplements` before relying on a document;
-read `in:implements` documents for detailed rules; follow `next` tokens to the
-last page before citing read text. It says that a snippet is not the provision,
-that `[…]` marks omitted text, that pointer direction is as recorded by the
-source, that a pointer outside the release must not be replaced by a number
-lookup, and that only text returned complete may be cited.
+handles in one `read` call, choosing a `path` anchor, read as `<doc>#<anchor>`,
+to read a whole article or chapter; check `status`, `warnings` and `in` pointers
+of kinds `repeals`, `replaces`, `suspends` and `amends_supplements` before
+relying on a document; read `in:implements` documents for detailed rules; follow
+`next` tokens to the last page before citing read text. It says that a snippet
+is not the provision, that `[…]` marks omitted text, that pointer direction is
+as recorded by the source, that a pointer outside the release must not be
+replaced by a number lookup, and that only text returned complete may be cited.
 
 ## Evaluation
 
