@@ -2,16 +2,24 @@ package discover
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 
+	"danny.vn/trachuan/apps/corpus/internal/artifact"
 	"danny.vn/trachuan/apps/corpus/internal/run"
 	"danny.vn/trachuan/apps/corpus/internal/source"
 	"danny.vn/trachuan/apps/corpus/internal/stage"
 	"danny.vn/trachuan/apps/corpus/internal/stage/membership"
 	"danny.vn/trachuan/apps/corpus/internal/store"
+	"danny.vn/trachuan/internal/retrieval"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -27,14 +35,14 @@ type discoveryRun struct {
 }
 
 // ExpectedSet returns current and previously discovered documents in key order.
-func ExpectedSet(ctx context.Context, db *pgxpool.Pool, r stage.Run) ([]Expected, error) {
+func ExpectedSet(ctx context.Context, db *pgxpool.Pool, r stage.Run, stores ...artifact.Store) ([]Expected, error) {
 	q := store.New(db)
 	list, err := source.Parse(r.Snapshot.SourceList)
 	if err != nil {
 		return nil, fmt.Errorf("parse discovery sources: %w", err)
 	}
 	if list.VBPL.SelectionVersion == 1 {
-		return expectedMembership(ctx, q, r)
+		return expectedMembership(ctx, q, r, stores...)
 	}
 	runs, err := q.ListDiscoveryRuns(ctx, r.Country)
 	if err != nil {
@@ -169,7 +177,7 @@ func englishRendition(key string) bool {
 	return strings.Contains(key, ":vbpl:vbpqta_")
 }
 
-func expectedMembership(ctx context.Context, q *store.Queries, r stage.Run) ([]Expected, error) {
+func expectedMembership(ctx context.Context, q *store.Queries, r stage.Run, stores ...artifact.Store) ([]Expected, error) {
 	phase := membership.Seeds
 	for _, name := range r.Snapshot.Stages {
 		if name == "expand" {
@@ -181,6 +189,10 @@ func expectedMembership(ctx context.Context, q *store.Queries, r stage.Run) ([]E
 	if err != nil {
 		return nil, fmt.Errorf("read expected membership: %w", err)
 	}
+	active := make(map[string]bool, len(snapshot.Active))
+	for _, entry := range snapshot.Active {
+		active[entry.DocumentKey] = true
+	}
 	result := make([]Expected, 0, len(snapshot.Entries))
 	for _, entry := range snapshot.Entries {
 		if entry.Disposition == "source_replaced" {
@@ -190,10 +202,142 @@ func expectedMembership(ctx context.Context, q *store.Queries, r stage.Run) ([]E
 			return nil, fmt.Errorf("unknown membership disposition %q", entry.Disposition)
 		}
 		e := Expected{Key: entry.DocumentKey, VBPLID: entry.SourceID}
+		if entry.Disposition == "active" && entry.Source == "chinhphu" && len(stores) > 0 {
+			candidates, err := currentHandOverCandidates(ctx, q, stores[0], r.ID, entry)
+			if err != nil {
+				return nil, err
+			}
+			e.Skip = precedenceGap(entry.DocumentKey, candidates)
+			if e.Skip != nil && !active[strings.TrimPrefix(e.Skip.Detail, entry.DocumentKey+" -> ")] {
+				e.Skip = nil
+			}
+		}
 		if entry.Disposition != "active" {
 			e.Skip = &stage.Gap{Kind: entry.Disposition, Detail: entry.DocumentKey}
 		}
 		result = append(result, e)
+	}
+	return result, nil
+}
+
+type handOverCandidate struct {
+	record HandOverRecord
+}
+
+func precedenceGap(key string, candidates []handOverCandidate) *stage.Gap {
+	target := ""
+	var number, issuer, date string
+	for _, c := range candidates {
+		r := c.record
+		matches, unresolved := 0, false
+		for _, pair := range r.Comparisons {
+			if pair.ID == "" || pair.Number == nil || retrieval.NormalizeNumber(*pair.Number) == "" {
+				unresolved = true
+				continue
+			}
+			candidateNumber, pairNumber := retrieval.NormalizeNumber(r.Number), retrieval.NormalizeNumber(*pair.Number)
+			switch pair.State {
+			case "match":
+				matches++
+				if pair.ID != r.PrimaryID || candidateNumber == "" || pairNumber != candidateNumber || pair.Issuer == nil || pair.Date == nil || source.NormalizeIssuer(r.Issuer) == "" || source.NormalizeIssuer(*pair.Issuer) != source.NormalizeIssuer(r.Issuer) || dateValue(r.Date) == "" || dateValue(*pair.Date) != dateValue(r.Date) {
+					unresolved = true
+				}
+			case "different_date":
+				if candidateNumber == "" || pairNumber != candidateNumber || pair.Date == nil || dateValue(r.Date) == "" || dateValue(*pair.Date) == "" || dateValue(r.Date) == dateValue(*pair.Date) {
+					unresolved = true
+				}
+			case "different_number":
+				if candidateNumber == "" || pairNumber == candidateNumber {
+					unresolved = true
+				}
+			default:
+				unresolved = true
+			}
+		}
+		if r.State != "seed_primary" || r.ProbeState != "complete" || r.Number == "" || r.Issuer == "" || r.Date == "" || r.PrimaryID == "" || matches != 1 || unresolved {
+			return nil
+		}
+		if target != "" && (target != r.PrimaryID || number != retrieval.NormalizeNumber(r.Number) || issuer != source.NormalizeIssuer(r.Issuer) || date != dateValue(r.Date)) {
+			return nil
+		}
+		target = r.PrimaryID
+		number, issuer, date = retrieval.NormalizeNumber(r.Number), source.NormalizeIssuer(r.Issuer), dateValue(r.Date)
+	}
+	if target == "" {
+		return nil
+	}
+	return &stage.Gap{Kind: "source_replaced", Detail: key + " -> vn:vbpl:" + target}
+}
+
+func currentHandOverCandidates(ctx context.Context, q *store.Queries, artifacts artifact.Store, runID int64, entry membership.Entry) ([]handOverCandidate, error) {
+	id, err := strconv.Atoi(entry.SourceID)
+	if err != nil || id <= 0 || strconv.Itoa(id) != entry.SourceID {
+		return nil, fmt.Errorf("invalid secondary id %q", entry.SourceID)
+	}
+	var result []handOverCandidate
+	seen := map[string]bool{}
+	for _, support := range entry.Supports {
+		if support.RuleKind != "secondary_probe" {
+			continue
+		}
+		key, docid, ok := strings.Cut(support.RuleValue, "|")
+		if !ok || docid != entry.SourceID || seen[key] {
+			continue
+		}
+		seen[key] = true
+		row, err := q.GetRunItemArtifact(ctx, store.GetRunItemArtifactParams{RunID: runID, Stage: "discover", ItemKey: key})
+		if errors.Is(err, pgx.ErrNoRows) {
+			continue
+		}
+		if err != nil {
+			return nil, fmt.Errorf("read discovery item: %w", err)
+		}
+		if row.State != "done" {
+			continue
+		}
+		dir := artifacts.Abs(row.Path)
+		name := "candidate-" + entry.SourceID + ".json"
+		if _, err = os.Stat(filepath.Join(dir, name)); errors.Is(err, os.ErrNotExist) {
+			continue
+		} else if err != nil {
+			return nil, fmt.Errorf("inspect candidate: %w", err)
+		}
+		hash, err := artifact.VerifyFiles(dir, name)
+		if err != nil {
+			return nil, fmt.Errorf("verify candidate artifact: %w", err)
+		}
+		if hash != row.Sha256 {
+			return nil, fmt.Errorf("candidate artifact hash mismatch")
+		}
+		record, err := ReadHandOverRecord(dir, entry.SourceID)
+		if err != nil {
+			return nil, fmt.Errorf("read candidate: %w", err)
+		}
+		if hash == support.Evidence.ArtifactHash && (record.Path != support.Evidence.Path || record.SHA256 != support.Evidence.ResponseSHA256) {
+			return nil, fmt.Errorf("discovery candidate evidence mismatch")
+		}
+		if record.DetailPath == "" || len(record.Files) < 2 {
+			record.ProbeState = "incomplete"
+			result = append(result, handOverCandidate{record: record})
+			continue
+		}
+		for _, file := range record.Files {
+			verified, err := artifact.VerifyFiles(dir, file.Path)
+			if err != nil {
+				return nil, fmt.Errorf("verify discovery response: %w", err)
+			}
+			if verified != hash {
+				return nil, fmt.Errorf("discovery manifest changed")
+			}
+			data, err := os.ReadFile(filepath.Join(dir, file.Path))
+			if err != nil {
+				return nil, fmt.Errorf("read discovery response: %w", err)
+			}
+			if fmt.Sprintf("%x", sha256.Sum256(data)) != file.SHA256 {
+				return nil, fmt.Errorf("discovery response hash mismatch")
+			}
+		}
+		result = append(result, handOverCandidate{record: record})
 	}
 	return result, nil
 }

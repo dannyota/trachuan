@@ -49,11 +49,17 @@ func (c *Client) Detail(ctx context.Context, id int) (Detail, []byte, error) {
 	if e != nil {
 		return Detail{}, nil, fmt.Errorf("detail: %w", e)
 	}
+	d, e := c.ParseDetail(raw, u.String())
+	return d, raw, e
+}
+
+// ParseDetail parses a saved detail response without making a request.
+func (c *Client) ParseDetail(raw []byte, sourceURL string) (Detail, error) {
 	node, e := parseHTML(raw)
 	if e != nil {
-		return Detail{}, raw, fmt.Errorf("parse redacted detail: %w", e)
+		return Detail{}, fmt.Errorf("parse redacted detail: %w", e)
 	}
-	d := Detail{URL: u.String(), Fields: map[string]string{}, Attachments: []Attachment{}}
+	d := Detail{URL: sourceURL, Fields: map[string]string{}, Attachments: []Attachment{}}
 	var container *xhtml.Node
 	walk(node, func(n *xhtml.Node) {
 		if attr(n, "id") == "ctrl_190596_91_Content" {
@@ -70,9 +76,9 @@ func (c *Client) Detail(ctx context.Context, id int) (Detail, []byte, error) {
 	}
 	if !hasTable {
 		if strings.Contains(content(node), "Không tìm thấy văn bản này") {
-			return Detail{}, raw, ErrNotFound
+			return Detail{}, ErrNotFound
 		}
-		return Detail{}, raw, &Failure{Origin: "source_data", Cause: "invalid_payload", Endpoint: "detail"}
+		return Detail{}, &Failure{Origin: "source_data", Cause: "invalid_payload", Endpoint: "detail"}
 	}
 	invalidAttachment := false
 	conflicts := map[string]bool{}
@@ -145,11 +151,11 @@ func (c *Client) Detail(ctx context.Context, id int) (Detail, []byte, error) {
 		})
 	})
 	if invalidAttachment {
-		return Detail{}, raw, &Failure{Origin: "source_data", Cause: "invalid_payload", Endpoint: "detail", Err: errInvalidPayload}
+		return Detail{}, &Failure{Origin: "source_data", Cause: "invalid_payload", Endpoint: "detail", Err: errInvalidPayload}
 	}
 	d.Number = d.Fields["Số ký hiệu"]
 	d.Title = d.Fields["Trích yếu"]
 	d.Issuer = d.Fields["Cơ quan ban hành"]
 	d.IssueDate = d.Fields["Ngày ban hành"]
-	return d, raw, nil
+	return d, nil
 }

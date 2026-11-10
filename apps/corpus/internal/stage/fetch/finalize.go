@@ -51,7 +51,7 @@ func findDrift(seed string, obs expand.Observation, s membership.PhaseSnapshot, 
 }
 
 // Finalize rejects scope drift and freezes final membership in the close transaction.
-func (*Stage) Finalize(ctx context.Context, env stage.Env, tx pgx.Tx, r stage.Run) (stage.Finalization, error) {
+func (s *Stage) Finalize(ctx context.Context, env stage.Env, tx pgx.Tx, r stage.Run) (stage.Finalization, error) {
 	list, err := source.Parse(r.Snapshot.SourceList)
 	if err != nil {
 		return stage.Finalization{}, fmt.Errorf("parse source list: %w", err)
@@ -178,7 +178,11 @@ func (*Stage) Finalize(ctx context.Context, env stage.Env, tx pgx.Tx, r stage.Ru
 			return stage.Finalization{Code: "scope_changed", ItemKey: first.seed, Reason: fmt.Sprintf("%d scope drift(s): seed=%s target=%s code=%s reason=%s", len(drifts), first.seed, first.target, first.code, first.reason), EvidenceRefs: refs}, nil
 		}
 	}
-	if err = membership.PublishPhase(ctx, q, r.ID, membership.Final, snapshot.Entries); err != nil {
+	entries, err := s.handOver(ctx, env, q, r, snapshot, items)
+	if err != nil {
+		return stage.Finalization{}, fmt.Errorf("hand over secondary members: %w", err)
+	}
+	if err = membership.PublishPhase(ctx, q, r.ID, membership.Final, entries); err != nil {
 		return stage.Finalization{}, fmt.Errorf("publish final membership: %w", err)
 	}
 	n, err := q.SetFetchCloseInputHash(ctx, store.SetFetchCloseInputHashParams{RunID: r.ID, FetchCloseInputHash: &hash})

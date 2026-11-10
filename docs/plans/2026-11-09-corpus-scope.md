@@ -41,7 +41,7 @@
 - [x] Define the offline test seams later tasks use: injectable clock, HTTP transport, DNS resolver and reduced limits for both clients; record them in the research note.
 - [x] Run the keyword comparison (then, by owner decision, the full central listing with local selection, artifact v2): complete stable `all_words` and `exact` listings for every proposed term plus the full old and new seed sets; save the immutable comparison artifact (hash recorded in the note); account for every old-only id; owner approves exclusions.
 - [x] Measure the expansion set for the proposed seed set (old seeds plus named numbers and the exact-mode keyword seeds), not only the old run: unique targets, requests, bytes, elapsed time, against budgets.
-- [ ] Commit `test(corpus): VBPL and chinhphu fixtures and the scope comparison`.
+- [x] Commit `test(corpus): VBPL and chinhphu fixtures and the scope comparison`.
 
 ### Task 2: Shared execution contracts
 
@@ -77,8 +77,8 @@
 
 **Interfaces:** Discover plans one central listing item (two stable passes at page size 1000, at most three) and one item per named number; local selection writes typed supports; classes `primary` in the expected set; gaps `named_document_missing`, `named_document_ambiguous`; `scope_removed` for selection losses, `withdrawn` only for catalog absence.
 
-- [ ] Tests first: `TestDiscover_CentralListingStablePasses`, `TestDiscover_PartialListingProvesNothing`, `TestDiscover_LocalSelectionSupports`, `TestNamed_UniqueJoinsSeeds`, `TestNamed_DifferentDateNeitherSeedsNorBlocks`, `TestNamed_ZeroAndManyAreGaps`, `TestNamed_LookupFailureIsGapNotAbsence`, `TestScopeRemoved_SelectionLossVsCatalogAbsence`.
-- [ ] Implement; commit `feat(corpus): discover the central listing with local scope selection`.
+- [x] Tests first: `TestDiscover_CentralListingStablePasses`, `TestDiscover_PartialListingProvesNothing`, `TestDiscover_LocalSelectionSupports`, `TestNamed_UniqueJoinsSeeds`, `TestNamed_DifferentDateNeitherSeedsNorBlocks`, `TestNamed_ZeroAndManyAreGaps`, `TestNamed_LookupFailureIsGapNotAbsence`, `TestScopeRemoved_SelectionLossVsCatalogAbsence`.
+- [x] Implement; commit `feat(corpus): discover the central listing with local scope selection`.
 
 ### Task 6: Expand stage
 
@@ -139,8 +139,8 @@
 
 **Files:** `apps/corpus/internal/stage/fetch/` (plan the secondary candidate superset including precedence skips; finalizer hand-over table, `source_replaced` and `source_identity_ambiguous` gaps, final membership); tests.
 
-- [ ] Tests first: `TestHandOver_SourceReplaced`, `TestHandOver_AmbiguousKeepsBoth`, `TestHandOver_DifferentDateKeepsBoth`, `TestHandOver_SkippedDownloadUsesDiscoveryRecord`, `TestHandOver_FailedFetchKeepsProvenMatch`.
-- [ ] Implement per sources.md and fetch-bundles.md "Hand-over reader"; commit `feat(corpus): hand over secondary documents at fetch close`.
+- [x] Tests first: `TestHandOver_SourceReplaced`, `TestHandOver_AmbiguousKeepsBoth`, `TestHandOver_DifferentDateKeepsBoth`, `TestHandOver_SkippedDownloadUsesDiscoveryRecord`, `TestHandOver_FailedFetchKeepsProvenMatch`.
+- [x] Implement per sources.md and fetch-bundles.md "Hand-over reader"; commit `feat(corpus): hand over secondary documents at fetch close`.
 
 ### Task 11: Build and evaluation integration (Plan 2 code)
 

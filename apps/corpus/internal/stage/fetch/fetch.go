@@ -52,7 +52,7 @@ func (*Stage) Recipe(stage.Snapshot) string {
 
 // Plan returns the expected documents and their skip reasons.
 func (*Stage) Plan(ctx context.Context, env stage.Env, r stage.Run) ([]stage.Item, error) {
-	expected, err := discover.ExpectedSet(ctx, env.DB, r)
+	expected, err := discover.ExpectedSet(ctx, env.DB, r, env.Artifacts)
 	if err != nil {
 		return nil, fmt.Errorf("load expected documents: %w", err)
 	}
