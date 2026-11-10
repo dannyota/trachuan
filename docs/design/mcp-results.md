@@ -106,7 +106,10 @@ never replaced by a number lookup.
 
 ## Read
 
-Input: `country`, `release`, `items`. An item is one of:
+Input: `country`, `release`, `items`. Handles, numbers and anchors must be valid
+UTF-8 without NUL and within the lengths in budgets; otherwise the item fails
+with `invalid_item` (or `invalid_next` inside a token) before any database
+access. An item is one of:
 
 - `{handle}`: a document handle returns the document entry and its outline; a
   provision handle returns that provision's text.
@@ -141,15 +144,15 @@ concatenate to the original field. Parts carry `part` and `parts`. Boundaries
 depend only on the release and the item, never on the call.
 
 The call cap in budgets counts the serialized size of returned units across
-items, and the part size is below it. Items are processed in order and each
-returns whole units or parts. When an item has more to return, its result
-carries `next`, an opaque token that fixes the release, the item, its mode and
-the next unit or part. The units and parts that follow a `next` are the same
-whatever else that call reads; how many of them fit on one page depends on the
-cap left. When the next unit does not fit in what remains of the cap, the item
-returns `not_read:"call_cap"` and its own `next`. The first item always returns
-at least one unit or part, so every call makes progress; the last page of an
-item returns no `next`.
+items, including a document entry on the first page of its item, and the part
+size is below it. Items are processed in order and each returns whole units or
+parts. When an item has more to return, its result carries `next`, an opaque
+token that fixes the release, the item, its mode and the next unit or part. The
+units and parts that follow a `next` are the same whatever else that call reads;
+how many of them fit on one page depends on the cap left. When the next unit
+does not fit in what remains of the cap, the item returns `not_read:"call_cap"`
+and its own `next`. The first item always returns at least one unit or part, so
+every call makes progress; the last page of an item returns no `next`.
 
 `complete` belongs to an item's chain of pages. The page without `next` reports
 `complete:true` when the chain, read in order at one release, delivered the

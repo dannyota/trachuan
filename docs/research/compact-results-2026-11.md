@@ -41,5 +41,6 @@ path nodes.
 
 ## Not measured
 
-Token counts per client model, `read` call sizes, latency, and the
-agent-in-the-loop check, which needs the server.
+Token counts per client model, `read` call sizes, latency, the compact
+diagnostic recall (the evaluation stage needs a committed build that matches the
+branch's build recipe), and the agent-in-the-loop check, which needs the server.
