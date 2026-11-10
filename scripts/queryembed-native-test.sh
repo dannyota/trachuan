@@ -24,7 +24,8 @@ fi
 failures=0
 for platform in darwin-arm64 linux-arm64; do
   for scenario in safe work native cache platform dangling-platform \
-    first-directory second-directory directory-symlink; do
+    first-directory second-directory directory-symlink \
+    archive-directory archive-symlink first-archive-symlink; do
     root="$scratch/$platform-$scenario"
     repo="$root/repo"
     outside="$root/outside"
@@ -55,6 +56,11 @@ for platform in darwin-arm64 linux-arm64; do
     mkdir -p "$cache"
     cp "$scratch/fixture.tgz" "$cache/first.tgz"
     cp "$scratch/fixture.tgz" "$cache/second.tgz"
+    case "$scenario" in
+      archive-directory) rm "$cache/second.tgz"; mkdir "$cache/second.tgz" ;;
+      archive-symlink) rm "$cache/second.tgz"; ln -s "$outside" "$cache/second.tgz" ;;
+      first-archive-symlink) rm "$cache/first.tgz"; ln -s "$outside" "$cache/first.tgz" ;;
+    esac
     destination="$repo/work/native/$platform"
     case "$scenario" in
       first-directory) mkdir "$destination/first.a" ;;

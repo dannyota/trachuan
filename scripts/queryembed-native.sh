@@ -31,12 +31,15 @@ for directory in "$repo/work" "$repo/work/native" "$cache" "$destination"; do
     exit 1
   fi
 done
-# Check every target before installing the first asset.
-while IFS=$'\t' read -r _ _ _ install; do
-  if [[ -d "$destination/$install" ]]; then
-    echo "native install target must not be a directory: $destination/$install" >&2
-    exit 1
-  fi
+# Check every archive and install target before writing anything: each must
+# be absent or a regular file, never a directory or a symlink that mv follows.
+while IFS=$'\t' read -r url _ _ install; do
+  for target in "$cache/${url##*/}" "$destination/$install"; do
+    if [[ -L "$target" || -d "$target" ]]; then
+      echo "native target must not be a directory or symlink: $target" >&2
+      exit 1
+    fi
+  done
 done <<< "$assets"
 mkdir -p "$cache" "$destination"
 staging=
