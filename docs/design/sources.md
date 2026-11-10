@@ -254,9 +254,9 @@ including attempts, retries and redirects across page and file hosts. The worker
 shares one client instance per source across all batches and stages. One worker
 process serves a run, so instance limits are source-wide limits. Stages that
 call a narrow source also run at the per-stage in-flight limit. The client
-instance counts the per-run download budget; the secondary fetch stage owns
-durable accounting across worker restarts. Limits remain in
-[budgets](budgets.md#pipeline).
+instance counts the download budget for its own lifetime: a worker restart
+resets it and runs sharing a worker share it. Durable per-run accounting is
+deferred work. Limits remain in [budgets](budgets.md#pipeline).
 
 ## Dependencies and acceptance evidence
 

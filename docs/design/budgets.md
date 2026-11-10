@@ -183,7 +183,7 @@ default `s3-han02.fptcloud.com`.
 | chinhphu search          | Request cap 500; 100 pages per query per pass; 3 passes maximum                                                       |
 | chinhphu requests        | 1 request/s, burst 1, 1 in flight across page and file hosts                                                          |
 | chinhphu response        | 5 MB per HTML response; existing 50 MB attachment cap                                                                 |
-| chinhphu total downloads | 1 GB per run, including retries and rejected bodies                                                                   |
+| chinhphu total downloads | 1 GB per client lifetime (one worker process), retries and rejected bodies included; no durable per-run cap yet       |
 | chinhphu deadlines       | 30 s page request; 120 s PDF request; 5 min per item; at most 3 redirects, each revalidated                           |
 | chinhphu retries         | 3 after 2, 8 and 30 s for 429, 5xx or transport timeout; wait at least `Retry-After`, above 10 min defer with a gap   |
 
@@ -197,8 +197,8 @@ truncate a listing, expansion or attachment inventory and mark it complete. The
 build-document cap still applies after union and exclusions. The context ceiling
 is a count bound (up to 250 GB at one maximum-size attachment each), so the
 primary measures attachment volume and disk before a full run and stops rather
-than raising limits. Secondary payloads add at most 1 GB of wire data per run;
-no new paid service or hosted model is introduced.
+than raising limits. Secondary payloads add at most 1 GB of wire data per worker
+process; no new paid service or hosted model is introduced.
 
 Submission polling every 5 minutes; `deadline_at` 26 hours after submission;
 `preparing` rows become uncertain after 10 minutes.

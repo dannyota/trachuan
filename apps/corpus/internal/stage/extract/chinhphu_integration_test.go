@@ -107,12 +107,37 @@ func TestPlan_FinalMembershipFiltersFetchedItems(t *testing.T) {
 	if _, err = New().Plan(ctx, stage.Env{DB: db}, run); err == nil {
 		t.Fatal("corrupt final phase accepted")
 	}
+}
+
+func TestPlan_SelectionOneWithoutFinalMembershipFails(t *testing.T) {
+	ctx := context.Background()
+	db, err := pgxpool.New(ctx, testdb.New(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	var id int64
+	if err = db.QueryRow(ctx, `INSERT INTO run (country,rel,state,snapshot) VALUES ('vn','20990103','running','{}') RETURNING id`).Scan(&id); err != nil {
+		t.Fatal(err)
+	}
+	run := stage.Run{ID: id, Snapshot: stage.Snapshot{SourceList: []byte(`{"vbpl":{"selection_version":1}}`)}}
+	check := func(t *testing.T) {
+		t.Helper()
+		if _, planErr := New().Plan(ctx, stage.Env{DB: db}, run); planErr == nil {
+			t.Error("extract accepted missing final membership")
+		}
+		if _, planErr := relate.New().Plan(ctx, stage.Env{DB: db}, run); planErr == nil {
+			t.Error("relate accepted missing final membership")
+		}
+	}
+	t.Run("missing scope", check)
+	if err = membership.PublishPhase(ctx, store.New(db), id, membership.Final, nil); err != nil {
+		t.Fatal(err)
+	}
 	if err = membership.ClearPhase(ctx, store.New(db), id, membership.Final); err != nil {
 		t.Fatal(err)
 	}
-	items, err = New().Plan(ctx, stage.Env{DB: db}, run)
-	if err != nil || len(items) != 2 {
-		t.Fatalf("missing phase items=%+v err=%v", items, err)
-	}
+	t.Run("cleared final phase", check)
 }
+
 func ptr(s string) *string { return &s }
