@@ -96,7 +96,7 @@ func TestSchema_Version3Constraints(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = conn.Exec(ctx, `INSERT INTO validity_decision(document_id,ordinal,layer,rule_version,before,after) VALUES(1,1,'source','1','{}','{}')`)
+	_, err = conn.Exec(ctx, `INSERT INTO validity_decision(document_id,ordinal,layer,rule_version,before,after) VALUES(1,1,'source','1',$1,$1)`, `{"status_class":"unknown","is_current":false,"status_basis":"source_status","eff_from":null,"eff_to":null,"validity_conflict":false}`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -108,7 +108,7 @@ func TestSchema_Version3Constraints(t *testing.T) {
 		"class": `UPDATE document SET class='bad'`, "class null": `UPDATE document SET class=NULL`,
 		"source": `UPDATE document SET source='bad'`, "source null": `UPDATE document SET source=NULL`,
 		"basis": `UPDATE document SET status_basis='bad'`, "conflict null": `UPDATE document SET validity_conflict=NULL`,
-		"document foreign key": `INSERT INTO validity_decision VALUES(2,2,'source','1','{}','{}',NULL,NULL,NULL,NULL,NULL,NULL)`,
+		"document foreign key": `INSERT INTO validity_decision SELECT 2,2,layer,rule_version,before,after,actor_key,effect_date,relation_id,anchor,quote,artifact_sha256 FROM validity_decision`,
 		"duplicate key":        `INSERT INTO validity_decision SELECT * FROM validity_decision`,
 		"ordinal zero":         `UPDATE validity_decision SET ordinal=0`, "ordinal nine": `UPDATE validity_decision SET ordinal=9`,
 		"layer": `UPDATE validity_decision SET layer='bad'`, "quote": `UPDATE validity_decision SET quote=repeat('x',401)`,
@@ -120,6 +120,15 @@ func TestSchema_Version3Constraints(t *testing.T) {
 		"relation foreign key": `UPDATE validity_decision SET relation_id=99`,
 		"release version":      `INSERT INTO release VALUES(true,'vn','r',2,'','{}','{}','{}','{}','{}','` + hash + `','` + hash + `','` + hash + `','{}',now())`,
 	}
+	for _, column := range []string{"before", "after"} {
+		for name, value := range map[string]string{
+			"empty": `{}`, "missing": `{"status_class":"unknown","is_current":false,"status_basis":"source_status","eff_from":null,"eff_to":null}`,
+			"extra": `{"status_class":"unknown","is_current":false,"status_basis":"source_status","eff_from":null,"eff_to":null,"validity_conflict":false,"extra":1}`, "non_object": `[]`,
+		} {
+			cases[column+" "+name] = "UPDATE validity_decision SET " + column + "='" + value + "'::jsonb"
+		}
+	}
+
 	for name, query := range cases {
 		t.Run(name, func(t *testing.T) {
 			_, execErr := conn.Exec(ctx, query)

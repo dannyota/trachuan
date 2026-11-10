@@ -68,11 +68,14 @@ func verbName(s string) string {
 	return "repeals"
 }
 func parseItem(s string) (Item, bool) {
+	if regexp.MustCompile(`(?i)(?:^|[^\pL\pN_])trừ(?:$|[^\pL\pN_])|không bao gồm`).MatchString(s) {
+		return Item{}, false
+	}
 	partial := regexp.MustCompile(`(?i)^(?:điều|khoản|điểm|chương|mục|phụ\s+lục|cụm\s+từ)\s+\S`)
 	if partial.MatchString(s) {
 		return Item{Scope: "partial"}, true
 	}
-	pattern := `(?i)^(nghị\s+định|luật|thông\s+tư|quyết\s+định|nghị\s+quyết|pháp\s+lệnh)\s+số\s+(\S+)\s+ngày\s+(` + datePattern + `)(?:\s+của\s+(.+?))?(?:\s+(?:về|quy\s+định|sửa\s+đổi,?|ban\s+hành|hướng\s+dẫn)\s+.*)?$`
+	pattern := `(?i)^(nghị\s+định|luật|thông\s+tư|quyết\s+định|nghị\s+quyết|pháp\s+lệnh)\s+số\s+(\S+)\s+ngày\s+(` + datePattern + `)(?:\s+của\s+(.+)|\s+.+)?$`
 	m := regexp.MustCompile(pattern).FindStringSubmatch(s)
 	if m == nil {
 		return Item{}, false

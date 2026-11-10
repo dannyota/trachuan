@@ -138,6 +138,29 @@ func (s *Stage) evaluateBuild(ctx context.Context, env stage.Env, run stage.Run,
 	if err != nil {
 		return evaluation.Report{}, evaluation.Cache{}, fmt.Errorf("verify validity cases: %w", err)
 	}
+	var numbers []string
+	for _, c := range suite.ValidityCases {
+		numbers = append(numbers, retrieval.NormalizeNumber(c.Number))
+	}
+	identityRows, err := pool.Query(ctx, `SELECT key, number_norm, COALESCE(issue_date::text, '') FROM document WHERE number_norm = ANY($1::text[])`, numbers)
+	if err != nil {
+		return evaluation.Report{}, evaluation.Cache{}, fmt.Errorf("resolve validity cases: %w", err)
+	}
+	var validityDocuments []evaluation.ValidityDocument
+	for identityRows.Next() {
+		var d evaluation.ValidityDocument
+		if err = identityRows.Scan(&d.Key, &d.Number, &d.IssueDate); err != nil {
+			identityRows.Close()
+			return evaluation.Report{}, evaluation.Cache{}, fmt.Errorf("scan validity identity: %w", err)
+		}
+		validityDocuments = append(validityDocuments, d)
+	}
+	err = identityRows.Err()
+	identityRows.Close()
+	if err != nil {
+		return evaluation.Report{}, evaluation.Cache{}, fmt.Errorf("read validity identities: %w", err)
+	}
+	evaluation.ResolveValidityCases(suite.ValidityCases, validityDocuments)
 	mapping, err := suite.Map.Validate(suite.Legacy, suite.Hashes.Legacy, identities)
 	if err != nil {
 		return evaluation.Report{}, evaluation.Cache{}, fmt.Errorf("validate evaluation mapping: %w", err)
@@ -166,15 +189,8 @@ func (s *Stage) evaluateBuild(ctx context.Context, env stage.Env, run stage.Run,
 		return report, cache, fmt.Errorf("read document counts: %w", err)
 	}
 	for _, c := range suite.ValidityCases {
-		found := false
-		for _, doc := range identities.Documents {
-			if retrieval.NormalizeNumber(c.Number) == retrieval.NormalizeNumber(doc.Number) {
-				found = true
-				break
-			}
-		}
-		if !found {
-			report.ValidityAdjudicated.NotEvaluated = append(report.ValidityAdjudicated.NotEvaluated, c.Number)
+		if c.Resolution != "" {
+			report.ValidityAdjudicated.NotEvaluated = append(report.ValidityAdjudicated.NotEvaluated, c.Number+": "+c.Resolution)
 		}
 	}
 	return report, cache, nil

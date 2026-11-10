@@ -105,6 +105,8 @@ CREATE TABLE validity_decision (
  actor_key text COLLATE "C", effect_date date, relation_id bigint REFERENCES relation(id),
  anchor text COLLATE "C", quote text CHECK (char_length(quote) <= 400),
  artifact_sha256 text COLLATE "C" CHECK (artifact_sha256 ~ '^[0-9a-f]{64}$'),
+ CHECK (jsonb_typeof(before) = 'object' AND before ?& ARRAY['status_class','is_current','status_basis','eff_from','eff_to','validity_conflict'] AND jsonb_array_length(jsonb_path_query_array(before, '$.keyvalue()')) = 6),
+ CHECK (jsonb_typeof(after) = 'object' AND after ?& ARRAY['status_class','is_current','status_basis','eff_from','eff_to','validity_conflict'] AND jsonb_array_length(jsonb_path_query_array(after, '$.keyvalue()')) = 6),
  PRIMARY KEY (document_id,ordinal),
  CHECK (layer NOT IN ('B','C') OR (actor_key IS NOT NULL AND effect_date IS NOT NULL)),
  CHECK (layer <> 'C' OR relation_id IS NOT NULL)

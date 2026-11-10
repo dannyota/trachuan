@@ -51,21 +51,12 @@ func validateCorrections(entries []source.Correction, docs map[string]correction
 				return nil, fmt.Errorf("correction %q: invalid status class", entry.Key)
 			}
 		}
-		from, to := doc.from, doc.to
-		for _, field := range []struct {
-			value  *string
-			target **time.Time
-		}{{set.EffFrom, &from}, {set.EffTo, &to}} {
-			if field.value != nil {
-				date, err := time.Parse("2006-01-02", *field.value)
-				if err != nil {
+		for _, value := range []*string{set.EffFrom, set.EffTo} {
+			if value != nil {
+				if _, err := time.Parse("2006-01-02", *value); err != nil {
 					return nil, fmt.Errorf("correction %q: invalid date: %w", entry.Key, err)
 				}
-				*field.target = &date
 			}
-		}
-		if from != nil && to != nil && to.Before(*from) {
-			return nil, fmt.Errorf("correction %q: invalid interval", entry.Key)
 		}
 		result[entry.Key] = entry
 	}

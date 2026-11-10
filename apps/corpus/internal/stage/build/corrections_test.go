@@ -1,7 +1,9 @@
 package build
 
 import (
+	"strings"
 	"testing"
+	"time"
 
 	"danny.vn/trachuan/apps/corpus/internal/source"
 )
@@ -20,7 +22,6 @@ func TestCorrections_EveryRejection(t *testing.T) {
 		{"wrong number", func(c *source.Correction) { c.Number = "2/2024/NĐ-CP" }},
 		{"missing anchor", func(c *source.Correction) { c.Evidence.Anchor = "Điều 2" }},
 		{"missing quote", func(c *source.Correction) { c.Evidence.Quote = "other" }},
-		{"invalid interval", func(c *source.Correction) { d := "2023-01-01"; c.Set.EffTo = &d }},
 		{"empty correction", func(c *source.Correction) { c.Set = source.CorrectionSet{} }},
 		{"invalid class", func(c *source.Correction) { s := "other"; c.Set.StatusClass = &s }},
 		{"missing reason", func(c *source.Correction) { c.Reason = "" }},
@@ -59,5 +60,26 @@ func TestCorrections_RedundantAndConflictReports(t *testing.T) {
 	_, report = applyCorrection(validityValues{Class: "expired", Basis: "derived_from_text"}, correction, true)
 	if report != "correction_conflict" {
 		t.Errorf("conflict report = %q", report)
+	}
+}
+
+func TestCorrections_IntervalValidatedAfterRules(t *testing.T) {
+	end := "2025-01-01"
+	c := source.Correction{Key: "a", Number: "1/2020/NĐ-CP", Set: source.CorrectionSet{EffTo: &end}, Reason: "source error", Evidence: source.CorrectionEvidence{Quote: "evidence"}, Reviewed: "2026-11-10"}
+	from, _ := time.Parse("2006-01-02", "2027-07-01")
+	if _, err := validateCorrections([]source.Correction{c}, map[string]correctionDocument{"a": {number: c.Number, from: &from}}); err != nil {
+		t.Fatal(err)
+	}
+	d := testDoc("a", c.Number, "2020-01-01", "2027-07-01")
+	d.sourceClass = "not_yet"
+	d.statusCode = "CCHL"
+	d.article = testArticle("1/7/2024", "")
+	if _, err := runValidity([]validityDocument{d}, nil, map[string]source.Correction{"a": c}, "2026-11-10"); err != nil {
+		t.Fatal(err)
+	}
+	bad := "2023-01-01"
+	c.Set.EffTo = &bad
+	if _, err := runValidity([]validityDocument{d}, nil, map[string]source.Correction{"a": c}, "2026-11-10"); err == nil || !strings.Contains(err.Error(), "a") {
+		t.Fatalf("expected named invalid interval: %v", err)
 	}
 }

@@ -56,7 +56,7 @@ func TestHit_CarriesClassSourceAndDecisions(t *testing.T) {
 	db, e, _ := fixture(t)
 	ctx := context.Background()
 	_, err := db.Exec(ctx, `UPDATE document SET class='relation_context',source='chinhphu',validity_conflict=true WHERE id=1;
- INSERT INTO validity_decision(document_id,ordinal,layer,rule_version,before,after) VALUES (1,2,'manual','2','{}','{}'),(1,1,'source','1','{}','{}')`)
+ INSERT INTO validity_decision(document_id,ordinal,layer,rule_version,before,after) VALUES (1,2,'manual','2','{"status_class":"in_force","is_current":true,"status_basis":"source_status","eff_from":null,"eff_to":null,"validity_conflict":false}','{"status_class":"in_force","is_current":true,"status_basis":"source_status","eff_from":null,"eff_to":null,"validity_conflict":false}'),(1,1,'source','1','{"status_class":"in_force","is_current":true,"status_basis":"source_status","eff_from":null,"eff_to":null,"validity_conflict":false}','{"status_class":"in_force","is_current":true,"status_basis":"source_status","eff_from":null,"eff_to":null,"validity_conflict":false}')`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -86,7 +86,7 @@ func TestHit_CarriesClassSourceAndDecisions(t *testing.T) {
 func TestLoadDecisions_ShapedHits(t *testing.T) {
 	db, e, _ := fixture(t)
 	ctx := context.Background()
-	if _, err := db.Exec(ctx, `INSERT INTO validity_decision(document_id,ordinal,layer,rule_version,before,after) VALUES (1,1,'source','1','{}','{}')`); err != nil {
+	if _, err := db.Exec(ctx, `INSERT INTO validity_decision(document_id,ordinal,layer,rule_version,before,after) VALUES (1,1,'source','1','{"status_class":"in_force","is_current":true,"status_basis":"source_status","eff_from":null,"eff_to":null,"validity_conflict":false}','{"status_class":"in_force","is_current":true,"status_basis":"source_status","eff_from":null,"eff_to":null,"validity_conflict":false}')`); err != nil {
 		t.Fatal(err)
 	}
 	recipe := e.Release().RetrievalRecipe

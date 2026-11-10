@@ -41,9 +41,12 @@ func (e *validityEngine) apply(events []validityEvent) error {
 			continue
 		}
 		a := e.outputs[actor.key].values
+		if correction, ok := e.corrections[actor.key]; ok {
+			a, _ = applyCorrection(a, correction, false)
+		}
 		t := e.outputs[target.key].values
 		date := e.operative[actor.key]
-		if !a.Current || date == "" || date > e.asOf || !t.Current {
+		if !a.Current || a.From == nil || *a.From > e.asOf || (a.To != nil && *a.To <= e.asOf) || date == "" || date > e.asOf || !t.Current {
 			continue
 		}
 		if rel.kind == "repeals" {

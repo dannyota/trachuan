@@ -3,16 +3,20 @@ package evaluation
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"danny.vn/trachuan/internal/retrieval"
 )
 
 // ValidityCase records an adjudicated document and its supporting text.
 type ValidityCase struct {
-	Number  string `json:"number"`
-	Current bool   `json:"current"`
-	Anchor  string `json:"anchor"`
-	Quote   string `json:"quote"`
+	Number      string `json:"number"`
+	IssueDate   string `json:"issue_date"`
+	DocumentKey string `json:"-"`
+	Resolution  string `json:"-"`
+	Current     bool   `json:"current"`
+	Anchor      string `json:"anchor"`
+	Quote       string `json:"quote"`
 }
 
 // ValidityDisagreement identifies a returned stamp that differs from adjudication.
@@ -41,10 +45,12 @@ func validateValidityCases(cases []ValidityCase) error {
 	seen := map[string]bool{}
 	for _, c := range cases {
 		n := retrieval.NormalizeNumber(c.Number)
-		if n == "" || seen[n] || strings.TrimSpace(c.Anchor) == "" || strings.TrimSpace(c.Quote) == "" {
+		_, dateErr := time.Parse("2006-01-02", c.IssueDate)
+		identity := n + "\x00" + c.IssueDate
+		if n == "" || dateErr != nil || seen[identity] || strings.TrimSpace(c.Anchor) == "" || strings.TrimSpace(c.Quote) == "" {
 			return fmt.Errorf("invalid validity case %q", c.Number)
 		}
-		seen[n] = true
+		seen[identity] = true
 	}
 	return nil
 }
@@ -65,7 +71,7 @@ func (r *Report) addHits(caseID string, hits []retrieval.Hit, cases []ValidityCa
 		}
 		r.ValidityAdjudicated.total++
 		for _, c := range cases {
-			if retrieval.NormalizeNumber(c.Number) != retrieval.NormalizeNumber(h.Number) {
+			if c.DocumentKey == "" || c.DocumentKey != h.Identity.DocumentKey {
 				continue
 			}
 			r.ValidityAdjudicated.Hits++
@@ -79,4 +85,29 @@ func (r *Report) addHits(caseID string, hits []retrieval.Hit, cases []ValidityCa
 		}
 	}
 	r.ValidityAdjudicated.Coverage = ratio(r.ValidityAdjudicated.Hits, r.ValidityAdjudicated.total)
+}
+
+// ValidityDocument identifies one document in the evaluated corpus.
+type ValidityDocument struct{ Key, Number, IssueDate string }
+
+// ResolveValidityCases binds each case to a unique corpus document.
+func ResolveValidityCases(cases []ValidityCase, documents []ValidityDocument) {
+	for i := range cases {
+		c := &cases[i]
+		c.DocumentKey = ""
+		c.Resolution = "absent"
+		count := 0
+		for _, d := range documents {
+			if retrieval.NormalizeNumber(c.Number) == retrieval.NormalizeNumber(d.Number) && c.IssueDate == d.IssueDate {
+				count++
+				c.DocumentKey = d.Key
+			}
+		}
+		if count == 1 {
+			c.Resolution = ""
+		} else if count > 1 {
+			c.DocumentKey = ""
+			c.Resolution = "ambiguous"
+		}
+	}
 }

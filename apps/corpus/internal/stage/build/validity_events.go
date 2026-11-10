@@ -18,8 +18,16 @@ type validityEvent struct {
 }
 
 func verifiedIssuer(item validity.Item, d validityDocument) bool {
-	if item.Issuer != "" && source.NormalizeIssuer(item.Issuer) == source.NormalizeIssuer(d.issuer) {
-		return true
+	tail, issuer := source.NormalizeIssuer(item.Issuer), source.NormalizeIssuer(d.issuer)
+	if issuer != "" && strings.HasPrefix(tail, issuer) {
+		rest := tail[len(issuer):]
+		if rest == "" {
+			return true
+		}
+		r, _ := utf8.DecodeRuneInString(rest)
+		if !unicode.IsLetter(r) && !unicode.IsDigit(r) && r != '_' {
+			return true
+		}
 	}
 	number := retrieval.NormalizeNumber(d.number)
 	code := ""

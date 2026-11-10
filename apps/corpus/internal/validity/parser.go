@@ -32,7 +32,7 @@ type Result struct {
 
 // Select reports whether heading identifies an effect article.
 func Select(heading string) bool {
-	s := strings.ToLower(norm.NFC.String(heading))
+	s := strings.ToLower(normalizeText(heading))
 	return s == "hiệu lực thi hành" || s == "điều khoản thi hành"
 }
 
@@ -44,7 +44,13 @@ func Parse(documentType, article string) Result {
 		result.Reasons = append(result.Reasons, Reason{Kind: "missing_commencement"})
 		return result
 	}
-	body := regexp.MustCompile(`(?m)^\s*\d+\.\s*`).ReplaceAllString(lines[1], "")
+	bodyLines := strings.Split(lines[1], "\n")
+	for i := range bodyLines {
+		bodyLines[i] = normalizeText(bodyLines[i])
+	}
+	body := regexp.MustCompile(`(?m)^\s*\d+\.\s*`).ReplaceAllString(strings.Join(bodyLines, "\n"), "")
+	body = normalizeText(body)
+	documentType = normalizeText(documentType)
 	count := 0
 	for _, raw := range splitSentences(body) {
 		sentence := strings.TrimSpace(raw)
@@ -160,4 +166,8 @@ func splitSentences(s string) []string {
 		sentences = append(sentences, s[start:])
 	}
 	return sentences
+}
+
+func normalizeText(s string) string {
+	return strings.Join(strings.Fields(norm.NFC.String(s)), " ")
 }

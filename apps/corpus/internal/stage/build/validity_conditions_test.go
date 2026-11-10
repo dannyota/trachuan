@@ -357,3 +357,46 @@ func TestReview_HoldDoesNotHidePartialTarget(t *testing.T) {
 		t.Fatal(v.reviews)
 	}
 }
+
+func TestRuleB_ReplacementWithExceptionMakesNoEvent(t *testing.T) {
+	a := testDoc("a", "1/2020/NĐ-CP", "2020-01-01", "2020-01-01")
+	b := testDoc("b", "2/2021/NĐ-CP", "2021-01-01", "2021-02-01")
+	b.article = testArticle("1/2/2021", "Nghị định này thay thế Nghị định số 1/2020/NĐ-CP ngày 1/1/2020 của Chính phủ, trừ Điều 3.")
+	v := runTest(t, []validityDocument{a, b}, nil, nil)
+	if v.documents["a"].values.To != nil {
+		t.Fatal(v.documents)
+	}
+}
+
+func TestRuleC_EndedActorMakesNoConflict(t *testing.T) {
+	a := testDoc("a", "1/2020/NĐ-CP", "2020-01-01", "2020-01-01")
+	b := testDoc("b", "2/2021/NĐ-CP", "2021-01-01", "2021-02-01")
+	b.to = "2025-01-01"
+	rel := []validityRelation{{source: "b", target: "a", kind: "replaces", id: 1}}
+	if v := runTest(t, []validityDocument{a, b}, rel, nil); v.documents["a"].values.Conflict {
+		t.Fatal(v.documents)
+	}
+	b.to = ""
+	end := "2026-11-10"
+	correction := map[string]source.Correction{"b": {Set: source.CorrectionSet{EffTo: &end}}}
+	if v := runTest(t, []validityDocument{a, b}, rel, correction); v.documents["a"].values.Conflict {
+		t.Fatal(v.documents)
+	}
+}
+
+func TestRuleB_IssuerTailRequiresWordBoundary(t *testing.T) {
+	d := testDoc("a", "1/2020/TT-OTHER", "2020-01-01", "2020-01-01")
+	d.issuer = "Bộ Tài chính"
+	for _, tc := range []struct {
+		tail string
+		want bool
+	}{
+		{"Bộ Tài chính quy định đối với thuế", true},
+		{"Bộ Tài chính, hướng dẫn", true},
+		{"Bộ Tài chínhkhác", false},
+	} {
+		if got := verifiedIssuer(validity.Item{Issuer: tc.tail}, d); got != tc.want {
+			t.Errorf("tail %q: got %v", tc.tail, got)
+		}
+	}
+}

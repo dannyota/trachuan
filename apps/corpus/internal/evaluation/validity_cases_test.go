@@ -15,8 +15,8 @@ func TestReport_CountsByClassSourceAndBasis(t *testing.T) {
 
 func TestValidityCases_ScoredOverPrimaryGroup(t *testing.T) {
 	r := Report{}
-	cases := []ValidityCase{{Number: "52/2024/NĐ-CP", Current: true}}
-	r.addHits("case-1", []retrieval.Hit{{Number: "52/2024/NĐ-CP", Stamp: retrieval.Validity{Current: true}}, {Number: "52/2024/NĐ-CP"}}, cases)
+	cases := []ValidityCase{{Number: "52/2024/NĐ-CP", Current: true, DocumentKey: "correct"}}
+	r.addHits("case-1", []retrieval.Hit{{Identity: retrieval.Identity{DocumentKey: "correct"}, Number: "52/2024/NĐ-CP", Stamp: retrieval.Validity{Current: true}}, {Identity: retrieval.Identity{DocumentKey: "correct"}, Number: "52/2024/NĐ-CP"}}, cases)
 	if r.ValidityAdjudicated.Hits != 2 || r.ValidityAdjudicated.Agree != 1 || r.ValidityAdjudicated.Disagree != 1 || len(r.ValidityAdjudicated.Disagreements) != 1 {
 		t.Fatalf("unexpected score: %+v", r.ValidityAdjudicated)
 	}
@@ -35,7 +35,7 @@ func TestValidityCases_FixturePinnedByHash(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(s.ValidityCases) != 5 || s.Hashes.ValidityCases != "3eae05af43d3c86eeb42bab1e95e4ea4241fbd656c533a3e0d54c95db8102822" {
+	if len(s.ValidityCases) != 5 || s.Hashes.ValidityCases != "470d86435c7b96105d273c3374417d40f7710f8e066aaf8ad3c9c78c48654592" {
 		t.Fatal("missing validity fixture or hash")
 	}
 	s.ValidityBytes[0] ^= 1
@@ -49,5 +49,23 @@ func TestMetrics_StatusConsistencyDenominatorUnchanged(t *testing.T) {
 	d := m.PrecisionCounts()
 	if d.PrimaryTotal != 2 || d.PrimaryCurrent != 1 {
 		t.Fatalf("counts: %+v", d)
+	}
+}
+
+func TestValidityCases_SameNumberDifferentDocumentNotAdjudicated(t *testing.T) {
+	r := Report{}
+	cases := []ValidityCase{{Number: "52/2024/NĐ-CP", IssueDate: "2024-05-15", Current: true}}
+	ResolveValidityCases(cases, []ValidityDocument{{Key: "correct", Number: "52/2024/NĐ-CP", IssueDate: "2024-05-15"}, {Key: "other", Number: "52/2024/NĐ-CP", IssueDate: "2020-01-01"}})
+	r.addHits("case", []retrieval.Hit{{Identity: retrieval.Identity{DocumentKey: "other"}, Number: "52/2024/NĐ-CP"}}, cases)
+	if r.ValidityAdjudicated.Hits != 0 {
+		t.Fatal(r.ValidityAdjudicated)
+	}
+}
+
+func TestValidityCases_Resolution(t *testing.T) {
+	cases := []ValidityCase{{Number: "1/2020/NĐ-CP", IssueDate: "2020-01-01"}, {Number: "2/2020/NĐ-CP", IssueDate: "2020-01-01"}, {Number: "3/2020/NĐ-CP", IssueDate: "2020-01-01"}}
+	ResolveValidityCases(cases, []ValidityDocument{{Key: "one", Number: "1/2020/NĐ-CP", IssueDate: "2020-01-01"}, {Key: "two", Number: "2/2020/NĐ-CP", IssueDate: "2020-01-01"}, {Key: "three", Number: "2/2020/NĐ-CP", IssueDate: "2020-01-01"}})
+	if cases[0].DocumentKey != "one" || cases[1].Resolution != "ambiguous" || cases[1].DocumentKey != "" || cases[2].Resolution != "absent" {
+		t.Fatal(cases)
 	}
 }

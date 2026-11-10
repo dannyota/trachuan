@@ -24,7 +24,7 @@ func TestParse_Dieu37TwoWholeOnePartial(t *testing.T) {
 		verb, scope, number string
 		date                Date
 		issuer              string
-	}{{"replaces", "whole", "101/2012/NĐ-CP", Date{2012, 11, 22}, "Chính phủ"}, {"replaces", "whole", "80/2016/NĐ-CP", Date{2016, 7, 1}, "Chính phủ"}, {"repeals", "partial", "", Date{}, ""}} {
+	}{{"replaces", "whole", "101/2012/NĐ-CP", Date{2012, 11, 22}, "Chính phủ về thanh toán không dùng tiền mặt"}, {"replaces", "whole", "80/2016/NĐ-CP", Date{2016, 7, 1}, "Chính phủ sửa đổi, bổ sung một số điều của Nghị định số 101/2012/NĐ-CP ngày 22 tháng 11 năm 2012 của Chính phủ về thanh toán không dùng tiền mặt"}, {"repeals", "partial", "", Date{}, ""}} {
 		v := r.Items[i]
 		if v.Verb != want.verb || v.Scope != want.scope || v.Number != want.number || v.IssueDate != want.date || v.Issuer != want.issuer || v.Sentence == "" {
 			t.Errorf("item %d: %+v", i, v)
@@ -146,5 +146,33 @@ func TestParse_WholeItemRequiresIssueDate(t *testing.T) {
 	r := Parse("Luật", article("Luật này có hiệu lực từ ngày 1/1/2024. Luật này thay thế Luật số 1/2020/QH14."))
 	if r.Usable || !hasReason(r, "unparsed_effect_sentence") {
 		t.Fatalf("%+v", r)
+	}
+}
+
+func TestParse_ReplacementWithExceptionUnresolved(t *testing.T) {
+	// Refusing "khấu trừ" is a deliberate cost of failing closed on "trừ".
+	for _, q := range []string{"trừ Điều 3", "ngoại trừ Điều 3", "không bao gồm Điều 3", "khấu trừ thuế"} {
+		t.Run(q, func(t *testing.T) {
+			r := Parse("Nghị định", article("Nghị định này có hiệu lực từ ngày 1/7/2024. Nghị định này thay thế Nghị định số 1/2020/NĐ-CP ngày 1/1/2020 của Chính phủ, "+q+"."))
+			if r.Usable {
+				t.Fatalf("qualified replacement accepted: %+v", r)
+			}
+		})
+	}
+}
+
+func TestParse_SpacedAndWrappedClauseDateUnusable(t *testing.T) {
+	for _, gap := range []string{"  ", "\n", "\u00a0"} {
+		r := Parse("Luật", article("Luật này có hiệu lực từ ngày 1/7/2024. Khoản 2 có"+gap+"hiệu lực từ ngày 1/1/2025."))
+		if r.Usable {
+			t.Fatalf("gap %q accepted: %+v", gap, r)
+		}
+	}
+}
+
+func TestParse_ReplacementTitleWithDoiVoiAccepted(t *testing.T) {
+	r := Parse("Nghị định", article("Nghị định này có hiệu lực từ ngày 1/7/2024. Nghị định này thay thế Nghị định số 1/2020/NĐ-CP ngày 1/1/2020 của Chính phủ quy định đối với thanh toán."))
+	if !r.Usable {
+		t.Fatal(r)
 	}
 }
