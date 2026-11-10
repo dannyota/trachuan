@@ -165,13 +165,21 @@ func TestValidate_AbsentNamesAllNumbers(t *testing.T) {
 	}
 }
 func TestValidate_AbsentNumberPresentOnlyWithProvisions(t *testing.T) {
-	cases := []Case{{ID: "a", ExpectedCitations: []Expectation{{DocNumber: "12"}}}}
+	cases := []Case{{ID: "a", ExpectedCitations: []Expectation{{DocNumber: "12", Article: "5"}}}}
 	m := IdentityMap{Version: 2, LegacySHA256: "l", Entries: []MapEntry{{CaseID: "a", State: "absent", ExpectedNumber: "12", Reason: "searched 12", ReviewedAt: "2026-01-01"}}}
 	inventory := IdentityInventory{Documents: map[string]IdentityDocument{"vn:x:1": {Number: "12"}}}
 	report, err := m.Validate(cases, "l", inventory)
 	if err != nil || len(report["a"]) != 0 {
 		t.Fatalf("document without provisions contradicted absence: %v %v", report, err)
 	}
+	for _, documentLevel := range []Expectation{{DocNumber: "12"}, {DocNumber: "12", Article: "5", RelationOK: true}} {
+		cases[0].ExpectedCitations[0] = documentLevel
+		report, err = m.Validate(cases, "l", inventory)
+		if err != nil || len(report["a"]) != 1 || report["a"][0].Field != "state" {
+			t.Fatalf("document-level expectation %+v accepted as absent: %v %v", documentLevel, report, err)
+		}
+	}
+	cases[0].ExpectedCitations[0] = Expectation{DocNumber: "12", Article: "5"}
 	inventory.Documents["vn:x:1"] = IdentityDocument{Number: "12", Anchors: map[string]bool{"dieu-1": true}}
 	report, err = m.Validate(cases, "l", inventory)
 	if err != nil || len(report["a"]) != 1 || report["a"][0].Field != "state" {

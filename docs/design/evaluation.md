@@ -86,8 +86,8 @@ original/alternate number searched and why no corpus identity is available.
 Ambiguous mappings or missing entries are `mapping_incomplete` for that case,
 not invented absences. If an absent document appears in a newer inventory,
 require re-adjudication, never auto-credit it. A document appears when it has
-the searched number and at least one provision anchor; one without a provision
-tree offers no identity to adjudicate and stays in the entry's reason. Do not
+the searched number, except that for an expectation naming an article without
+relation credit, a document with no provision anchor stays in the reason. Do not
 invent a document key or provision anchor from a label.
 
 Validate every recorded identity against the run's fetch/extract/relate
