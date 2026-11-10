@@ -33,6 +33,9 @@ type Querier interface {
 	GetBatchRun(ctx context.Context, id int64) (Run, error)
 	GetBatchRunState(ctx context.Context, id int64) (string, error)
 	GetBuildInventory(ctx context.Context, runID int64) (json.RawMessage, error)
+	// One statement, so items, gaps, the final membership snapshot and the file
+	// projection come from one consistent read.
+	GetBuildInventoryV2(ctx context.Context, runID int64) (json.RawMessage, error)
 	GetChunkInput(ctx context.Context, arg GetChunkInputParams) (GetChunkInputRow, error)
 	GetControlRunForUpdate(ctx context.Context, id int64) (Run, error)
 	GetEmbedInput(ctx context.Context, arg GetEmbedInputParams) (GetEmbedInputRow, error)

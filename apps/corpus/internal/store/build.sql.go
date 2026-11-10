@@ -30,3 +30,37 @@ func (q *Queries) GetBuildInventory(ctx context.Context, runID int64) (json.RawM
 	err := row.Scan(&inventory)
 	return inventory, err
 }
+
+const getBuildInventoryV2 = `-- name: GetBuildInventoryV2 :one
+SELECT jsonb_build_object(
+  'items', COALESCE((SELECT jsonb_agg(jsonb_build_object(
+    'stage', i.stage, 'item_key', i.item_key, 'state', i.state,
+    'input_hash', i.input_hash, 'recipe_hash', i.recipe_hash,
+    'artifact_sha256', a.sha256, 'path', a.path))
+    FROM run_item i LEFT JOIN artifact a ON a.id = i.artifact_id
+    WHERE i.run_id = $1), '[]'::jsonb),
+  'gaps', COALESCE((SELECT jsonb_agg(jsonb_build_object(
+    'stage', g.stage, 'item_key', g.item_key, 'kind', g.kind, 'detail', g.detail,
+    'source', g.source, 'origin', g.origin, 'cause', g.cause, 'evidence_ref', g.evidence_ref))
+    FROM gap g WHERE g.run_id = $1), '[]'::jsonb),
+  'final_snapshot', (SELECT encode(s.final_snapshot, 'base64') FROM run_scope s WHERE s.run_id = $1),
+  'final_hash', (SELECT s.final_hash FROM run_scope s WHERE s.run_id = $1),
+  'failures', (SELECT count(*) FROM run_failure f WHERE f.run_id = $1),
+  'paused_sources', COALESCE((SELECT jsonb_agg(rs.source ORDER BY rs.source)
+    FROM run_source rs WHERE rs.run_id = $1 AND rs.state <> 'active'), '[]'::jsonb),
+  'files', COALESCE((SELECT jsonb_agg(jsonb_build_object(
+    'document_key', i.item_key, 'source', ff.source, 'name', ff.name, 'sha256', ff.sha256,
+    'size', ff.size, 'path', ff.path, 'url', ff.url, 'role', ff.role, 'fetched_at', ff.fetched_at))
+    FROM run_item i JOIN fetched_file ff ON ff.artifact_id = i.artifact_id
+    WHERE i.run_id = $1 AND i.stage = 'fetch' AND i.state = 'done'), '[]'::jsonb)
+)::jsonb AS inventory
+`
+
+// One statement, so items, gaps, the final membership snapshot and the file
+// projection come from one consistent read.
+func (q *Queries) GetBuildInventoryV2(ctx context.Context, runID int64) (json.RawMessage, error) {
+	row := q.db.QueryRow(ctx, getBuildInventoryV2, runID)
+	var inventory json.RawMessage
+	err := row.Scan(&inventory)
+	return inventory, err
+}
