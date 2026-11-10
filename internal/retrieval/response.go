@@ -63,6 +63,8 @@ type Relation struct {
 	Method         string  `json:"method"`
 	SourceResolved bool    `json:"source_resolved"`
 	TargetResolved bool    `json:"target_resolved"`
+	SourceInHit    bool    `json:"-"`
+	TargetInHit    bool    `json:"-"`
 }
 
 // Gap is a coverage or validity gap reported with a response or a hit.

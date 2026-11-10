@@ -81,14 +81,52 @@ func TestPresent_WarningsOnlyProvisionLevel(t *testing.T) {
 	other, sourceAnchor := "vn:2", "source"
 	h.Relations = []Relation{
 		{SourceKey: "vn:2", TargetKey: &target, Kind: "repeals"},
-		{SourceKey: "vn:2", TargetKey: &target, TargetAnchor: &anchor, Kind: "repeals", SourceNumber: "two", SourceResolved: true},
-		{SourceKey: "vn:1", SourceAnchor: &sourceAnchor, TargetKey: &other, TargetNumber: "two", Kind: "amends_supplements", TargetResolved: false},
-		{SourceKey: "vn:2", TargetKey: &target, TargetAnchor: &anchor, Kind: "cites"},
+		{SourceKey: "vn:2", TargetKey: &target, TargetAnchor: &anchor, TargetInHit: true, Kind: "repeals", SourceNumber: "two", SourceResolved: true},
+		{SourceKey: "vn:1", SourceAnchor: &sourceAnchor, SourceInHit: true, TargetKey: &other, TargetNumber: "two", Kind: "amends_supplements", TargetResolved: false},
+		{SourceKey: "vn:2", TargetKey: &target, TargetAnchor: &anchor, TargetInHit: true, Kind: "cites"},
 	}
 	got := present(Response{Hits: []Hit{h}}, nil, DetailCompact).Hits[0].Warnings
 	want := []Pointer{{Dir: "in", Kind: "repeals", Key: "vn:2", Number: "two", InRelease: true, Handle: "vn:2"}, {Dir: "out", Kind: "amends_supplements", Key: "vn:2", Number: "two"}}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("warnings: %+v", got)
+	}
+}
+
+func TestPresent_IntraDocumentWarnings(t *testing.T) {
+	key, source, target := "vn:1", "article-a", "article-b"
+	relation := Relation{SourceKey: key, TargetKey: &key, SourceAnchor: &source, TargetAnchor: &target, SourceNumber: "one", TargetNumber: "one", Kind: "repeals", SourceResolved: true, TargetResolved: true}
+	for _, tc := range []struct{ anchor, direction string }{{source, "out"}, {target, "in"}} {
+		t.Run(tc.direction, func(t *testing.T) {
+			h := presentationHit(key, tc.anchor)
+			r := relation
+			r.SourceInHit = tc.direction == "out"
+			r.TargetInHit = tc.direction == "in"
+			h.Relations = []Relation{r}
+			warnings := present(Response{Hits: []Hit{h}}, nil, DetailCompact).Hits[0].Warnings
+			if len(warnings) != 1 || warnings[0].Dir != tc.direction {
+				t.Fatalf("warnings: %+v, want only %s", warnings, tc.direction)
+			}
+		})
+	}
+}
+
+func TestPresent_RelationFlagsDoNotChangeJSON(t *testing.T) {
+	r := Relation{SourceKey: "vn:1", Kind: "repeals"}
+	without, _ := shapeRelations([]SourceRelation{{Value: r}}, Recipe1(), Identity{})
+	with, _ := shapeRelations([]SourceRelation{{Value: r, SourceInHit: true, TargetInHit: true}}, Recipe1(), Identity{})
+	if len(with) != 1 || !with[0].SourceInHit || !with[0].TargetInHit {
+		t.Fatalf("shaped flags: %+v", with)
+	}
+	before, err := json.Marshal(without[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	after, err := json.Marshal(with[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(before) != string(after) {
+		t.Fatalf("relation JSON changed: %s, %s", before, after)
 	}
 }
 

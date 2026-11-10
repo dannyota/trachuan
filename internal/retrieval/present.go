@@ -77,14 +77,14 @@ func warningPointers(h Hit) []Pointer {
 		default:
 			continue
 		}
-		if r.TargetKey != nil && *r.TargetKey == h.Identity.DocumentKey && r.TargetAnchor != nil {
+		if r.TargetInHit {
 			p := Pointer{Dir: "in", Kind: r.Kind, Key: r.SourceKey, Number: r.SourceNumber, InRelease: r.SourceResolved}
 			if p.InRelease {
 				p.Handle = p.Key
 			}
 			warnings = append(warnings, p)
 		}
-		if r.SourceKey == h.Identity.DocumentKey && r.SourceAnchor != nil {
+		if r.SourceInHit {
 			p := Pointer{Dir: "out", Kind: r.Kind, Number: r.TargetNumber, InRelease: r.TargetResolved}
 			if r.TargetKey != nil {
 				p.Key = *r.TargetKey
