@@ -1,12 +1,13 @@
-# Corpus schema version 2
+# Corpus schema version 3
 
 Proposed exact template contract for `internal/corpusdb/schema.sql`, embedded by
 `schema.go` in root module `danny.vn/trachuan`. The workshop keeps goose
 migrations under `apps/corpus/migrations/`. Corpus databases are rebuilt, never
 migrated in place. [Data](data.md) owns the overview; [build](index.md) owns
-population and recovery. This template is not an applied migration. Version 2
-adds run membership class for scope releases; version 1 dumps remain unchanged
-and require their compatible reader.
+population and recovery. This template is not an applied migration. Version 3
+adds membership class and validity corrections per
+[scope adoption](scope-adoption.md); earlier dumps remain unchanged and require
+their compatible reader.
 
 ## Conventions and identity
 
@@ -30,7 +31,7 @@ ancestry index, not the public extraction anchor. This avoids interpreting
 slashes or Vietnamese letters as ltree syntax. Taxonomy ltree labels are `n<id>`
 along its parent chain.
 
-`schema.go` exports `SchemaVersion = 2` and
+`schema.go` exports `SchemaVersion = 3` and
 `Apply(ctx context.Context, db DB, dimensions int) error`; DB exposes
 `Exec(context.Context,string,...any)`. Its return values are
 `(pgconn.CommandTag,error)`, matching pgx connections and transactions. The only
@@ -56,7 +57,10 @@ rejects a mismatch. No server dimension constant.
 - `status_code text`, `status_name text`, `status_class text` constrained to
   `in_force,partial,expired,not_yet,suspended,unknown`; `is_current boolean`.
   CHECK current equals status_class in (`in_force`,`partial`).
-- `status_basis text` constrained to `source_status,derived_from_consolidated`.
+- `status_basis text` constrained to
+  `source_status,derived_from_consolidated,derived_from_text,manual_correction`;
+  `validity_conflict boolean`, with decisions in `validity_decision` per
+  [validity corrections](validity-status.md).
   [Build normalization](index.md#normalization) owns assignment and derivation
   gaps. `status_code` and `status_name` retain the raw source values.
 - `is_consolidated boolean`; `content_state text` in
