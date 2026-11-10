@@ -19,6 +19,7 @@ jobs:
     outputs:
       go: ${{ steps.paths.outputs.go }}
       embedder: ${{ steps.paths.outputs.embedder }}
+      queryembed: ${{ steps.paths.outputs.queryembed }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -31,14 +32,19 @@ jobs:
         run: |
           go=true
           embedder=true
+          queryembed=true
           if [ "$EVENT_NAME" = pull_request ]; then
             paths=$(mktemp)
             git diff --no-ext-diff --no-textconv --no-renames --name-only -z "$BASE_SHA...$HEAD_SHA" -- > "$paths"
             go=false
             embedder=false
+            queryembed=false
             while IFS= read -r -d '' path; do
               case "$path" in
                 apps/embedder/*|.github/workflows/*) embedder=true ;;
+              esac
+              case "$path" in
+                apps/queryembed/*|internal/embedding/*|go.mod|go.sum|scripts/queryembed-native.sh|.github/workflows/ci.yml) queryembed=true ;;
               esac
               case "$path" in
                 docs/*.md) ;;
@@ -50,6 +56,7 @@ jobs:
           fi
           echo "go=$go" >> "$GITHUB_OUTPUT"
           echo "embedder=$embedder" >> "$GITHUB_OUTPUT"
+          echo "queryembed=$queryembed" >> "$GITHUB_OUTPUT"
 
   static:
     needs: [preflight]
@@ -146,9 +153,32 @@ jobs:
       - run: uv run --frozen ruff format --check
       - run: uv run --frozen pytest
 
+  queryembed:
+    needs: [preflight]
+    if: needs.preflight.outputs.queryembed == 'true'
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 15
+    env:
+      CGO_LDFLAGS: -L${{ github.workspace }}/work/native/linux-arm64
+      QUERYEMBED_ORT_LIB: ${{ github.workspace }}/work/native/linux-arm64/libonnxruntime.so
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+          cache-dependency-path: go.sum
+      - run: bash scripts/queryembed-native.sh linux-arm64
+      - run: go test -race -tags ort ./apps/queryembed/...
+      - uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+        with:
+          version: v2.15.0
+          skip-cache: true
+          args: --build-tags ort ./apps/queryembed/...
+
   ci:
     if: always()
-    needs: [preflight, static, integration, embedder]
+    needs: [preflight, static, integration, embedder, queryembed]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     env:
@@ -158,9 +188,18 @@ jobs:
       INTEGRATION: ${{ needs.integration.result }}
       EMBEDDER_NEEDED: ${{ needs.preflight.outputs.embedder }}
       EMBEDDER: ${{ needs.embedder.result }}
+      QUERYEMBED_NEEDED: ${{ needs.preflight.outputs.queryembed }}
+      QUERYEMBED: ${{ needs.queryembed.result }}
     steps:
       - run: |
           test "$PREFLIGHT" = success
+          if [ "$QUERYEMBED_NEEDED" = true ]; then
+            test "$QUERYEMBED" = success
+          elif [ "$QUERYEMBED_NEEDED" = false ]; then
+            test "$QUERYEMBED" = skipped
+          else
+            exit 1
+          fi
           if [ "$EMBEDDER_NEEDED" = true ]; then
             test "$EMBEDDER" = success
           elif [ "$EMBEDDER_NEEDED" = false ]; then

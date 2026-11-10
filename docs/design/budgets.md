@@ -77,13 +77,12 @@ release manifest.
 ## Host memory (estimates)
 
 For the [host selected in ADR 0006](../adr/0006-single-host-oci-podman.md), the
-rows total 4,650 MB, leaving about 19 GB for the OS, page cache and unallocated
-margin; this is not measured peak consumption. The INT8 allocation follows the
-accepted query precision in ADR 0009 and query service in ADR 0011.
+rows total 5,450 MB, leaving about 18 GB for the OS, page cache and margin; this
+is not measured peak use. The owner accepted the embedder row (ADR 0009, 0011).
 
 | Process                                        | RSS MB |
 | ---------------------------------------------- | ------ |
-| embedder (ONNX INT8, Vietnamese_Embedding_v2)  | 1,200  |
+| embedder (ONNX INT8, Vietnamese_Embedding_v2)  | 2,000  |
 | postgres                                       | 1,000  |
 | web (Node)                                     | 250    |
 | server (Go)                                    | 150    |
@@ -94,9 +93,9 @@ Activation refuses to start below 2.5 GB free memory or 10 GB free disk.
 
 Acceptance gates before the first public release, each measured on the host:
 search p95 at most 1 s and p99 at most 2 s at 2 requests per second for 30
-minutes; embedder RSS at most 1.2 GB after a 30-minute soak (0.83 GB measured
-for the INT8 model in a direct run); activation peak memory within the headroom
-row; disk under 70% after activation with two retained releases.
+minutes; embedder RSS at most 2.0 GB after a 30-minute soak (Go service: 1.7 GB
+on the Mac); activation peak memory within the headroom row; disk under 70%
+after activation with two retained releases.
 
 Owner-supplied host measurements from 2026-11-09, across three runs with
 four-thread FP32: short-query p50 207–267 ms; long 217-token query p50 1.2–1.7

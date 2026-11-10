@@ -125,7 +125,7 @@ func Start(ctx context.Context, d Deps, cc, rel, until, previousManifest string)
 	if err != nil {
 		return fmt.Errorf("encode snapshot: %w", err)
 	}
-	plan, err := planRetry(ctx, q, row.ID, snap.Stages)
+	plan, err := planRetry(ctx, q, row.ID, cc, snap.Stages)
 	if err != nil {
 		return err
 	}

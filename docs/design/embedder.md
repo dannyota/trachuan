@@ -119,7 +119,8 @@ non-finite numbers and a wrong content type are errors. No streaming or OpenAI
 compatibility endpoint. Every request supplies `recipe_hash` and `texts`, an
 ordered nonempty array of strings. The query service accepts exactly one text;
 the document service accepts a bounded batch. Empty/whitespace-only text is
-invalid. Do not trim, restore diacritics or remove instruction-looking text in
+invalid, and so is text containing U+0000, which the native tokenizer cannot
+receive. Do not trim, restore diacritics or remove instruction-looking text in
 service. The caller constructs the exact ADR input.
 
 `POST /v1/tokenize` returns `{recipe_hash,counts:[integer]}` in input order.

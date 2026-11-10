@@ -18,6 +18,30 @@ docs-fmt: ## Format human-read Markdown with Prettier
 
 EMBEDDER_MODEL_DIR ?= work/models/vi_v2-bundle
 
+queryembed-native: ## Install pinned native libraries for the host
+	@platform="$$(uname -s | tr '[:upper:]' '[:lower:]')-$$(uname -m)"; \
+	case "$$platform" in darwin-arm64|linux-arm64) ;; linux-aarch64) platform=linux-arm64 ;; \
+	  *) echo "unsupported native platform: $$platform" >&2; exit 1 ;; esac; \
+	bash scripts/queryembed-native.sh "$$platform"
+
+queryembed-test-ort: queryembed-native ## Run native query embedder tests with the race detector
+	@platform="$$(uname -s | tr '[:upper:]' '[:lower:]')-$$(uname -m)"; \
+	case "$$platform" in darwin-arm64) library=libonnxruntime.dylib ;; \
+	  linux-arm64|linux-aarch64) platform=linux-arm64; library=libonnxruntime.so ;; \
+	  *) echo "unsupported native platform: $$platform" >&2; exit 1 ;; esac; \
+	CGO_LDFLAGS="-L$(CURDIR)/work/native/$$platform $${CGO_LDFLAGS:-}" \
+	QUERYEMBED_ORT_LIB="$(CURDIR)/work/native/$$platform/$$library" \
+	go test -race -tags ort ./apps/queryembed/...
+
+queryembed-run: ## Start the native query service on 127.0.0.1:8091
+	@platform="$$(uname -s | tr '[:upper:]' '[:lower:]')-$$(uname -m)"; \
+	case "$$platform" in darwin-arm64) library=libonnxruntime.dylib ;; \
+	  linux-arm64|linux-aarch64) platform=linux-arm64; library=libonnxruntime.so ;; \
+	  *) echo "unsupported native platform: $$platform" >&2; exit 1 ;; esac; \
+	CGO_LDFLAGS="-L$(CURDIR)/work/native/$$platform $${CGO_LDFLAGS:-}" \
+	go run -tags ort ./apps/queryembed/cmd/queryembed --model-dir "$(EMBEDDER_MODEL_DIR)" \
+	  --ort-lib "$(CURDIR)/work/native/$$platform/$$library"
+
 embedder-test: ## Run embedder tests
 	cd apps/embedder && uv run --frozen pytest
 
@@ -67,4 +91,4 @@ services-down: ## Stop the local Temporal server and PostgreSQL, keep their data
 	bash deploy/local/temporal.sh down
 	bash deploy/local/postgres.sh down
 
-.PHONY: help hooks-install lengths-check pre-push docs-fmt embedder-test embedder-query embedder-document test test-integration test-proof generate sqlc-check db-up db-setup temporal-up services-up services-down
+.PHONY: help hooks-install lengths-check pre-push docs-fmt queryembed-native queryembed-test-ort queryembed-run embedder-test embedder-query embedder-document test test-integration test-proof generate sqlc-check db-up db-setup temporal-up services-up services-down
