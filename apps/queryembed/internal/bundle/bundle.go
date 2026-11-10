@@ -47,6 +47,9 @@ func Load(dir string) (Manifest, error) {
 	if err != nil {
 		return m, fmt.Errorf("open manifest: %w", err)
 	}
+	if err := validateKeys(data); err != nil {
+		return Manifest{}, fmt.Errorf("decode manifest: %w", err)
+	}
 	dec := json.NewDecoder(bytes.NewReader(data))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&m); err != nil {
@@ -84,7 +87,8 @@ func (m Manifest) Verify(dir string, paths []string) error {
 			return fmt.Errorf("requested file %q not listed", p)
 		}
 		current := dir
-		for _, part := range strings.Split(p, "/") {
+		parts := strings.Split(p, "/")
+		for i, part := range parts {
 			current = filepath.Join(current, part)
 			info, err := os.Lstat(current)
 			if err != nil {
@@ -92,6 +96,9 @@ func (m Manifest) Verify(dir string, paths []string) error {
 			}
 			if info.Mode()&os.ModeSymlink != 0 {
 				return fmt.Errorf("symlink in bundle path %q", p)
+			}
+			if i == len(parts)-1 && !info.Mode().IsRegular() {
+				return fmt.Errorf("bundle file %q is not regular", p)
 			}
 		}
 		file, err := os.Open(current)

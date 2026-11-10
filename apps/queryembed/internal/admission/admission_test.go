@@ -144,3 +144,12 @@ func TestDo_CallerCancellationDuringWork(t *testing.T) {
 	close(release)
 	<-finished
 }
+
+func TestDo_ExpiredWaitAndAvailableSlot(t *testing.T) {
+	a := New(Limits{1, 1, -time.Second, time.Second})
+	for range 100 {
+		if err := a.Do(context.Background(), func(context.Context) error { return nil }); !errors.Is(err, ErrBusy) {
+			t.Fatalf("expired wait admitted work: %v", err)
+		}
+	}
+}

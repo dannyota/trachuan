@@ -48,11 +48,12 @@ func (a *Admission) Do(ctx context.Context, work func(context.Context) error) er
 	}
 	workCtx, cancel := context.WithTimeout(ctx, a.limits.Deadline)
 	defer cancel()
-	timer := time.NewTimer(a.limits.Wait)
+	queueDeadline := time.Now().Add(a.limits.Wait)
+	timer := time.NewTimer(time.Until(queueDeadline))
 	defer timer.Stop()
 	select {
 	case a.active <- struct{}{}:
-		if err := workCtx.Err(); err != nil {
+		if workCtx.Err() != nil || !time.Now().Before(queueDeadline) {
 			<-a.active
 			<-a.capacity
 			if ctx.Err() != nil {

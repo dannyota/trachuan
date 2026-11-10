@@ -5,7 +5,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
+	"time"
 )
 
 func fixture(t *testing.T) (string, Manifest) {
@@ -180,5 +182,64 @@ func TestQueryRecipe_RefusesWrongModelOrMissingFiles(t *testing.T) {
 				t.Fatal("accepted invalid manifest")
 			}
 		})
+	}
+}
+
+func TestLoad_RejectsDuplicateAndCaseAliasKeys(t *testing.T) {
+	data, err := os.ReadFile("testdata/bundle.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct{ name, old, replacement string }{
+		{"root duplicate", `"model":`, `"model":"wrong", "model":`},
+		{"root alias", `"model":`, `"Model":"wrong", "model":`},
+		{"entry duplicate", `"path":`, `"path":"wrong", "path":`},
+		{"entry alias", `"path":`, `"Path":"wrong", "path":`},
+		{"entry unknown", `"path":`, `"extra":1, "path":`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := t.TempDir()
+			if err := os.WriteFile(filepath.Join(dir, "bundle.json"), []byte(strings.Replace(string(data), tc.old, tc.replacement, 1)), 0644); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := Load(dir); err == nil {
+				t.Fatal("accepted invalid keys")
+			}
+		})
+	}
+}
+
+func TestVerify_RejectsFIFOWithoutBlocking(t *testing.T) {
+	dir := t.TempDir()
+	p := filepath.Join(dir, "fifo")
+	if err := syscall.Mkfifo(p, 0600); err != nil {
+		t.Skipf("FIFO unsupported: %v", err)
+	}
+	m := Manifest{Files: []File{{Path: "fifo"}}}
+	done := make(chan error, 1)
+	go func() { done <- m.Verify(dir, []string{"fifo"}) }()
+	select {
+	case err := <-done:
+		if err == nil {
+			t.Fatal("accepted FIFO")
+		}
+	case <-time.After(30 * time.Millisecond):
+		fd, err := syscall.Open(p, syscall.O_WRONLY|syscall.O_NONBLOCK, 0)
+		if err == nil {
+			_ = syscall.Close(fd)
+		}
+		t.Fatal("verification blocked opening FIFO")
+	}
+}
+
+func TestManifestHash_PythonGolden(t *testing.T) {
+	// python3 -c 'import json,hashlib; items=[dict(path="tiếng Việt/<>&\u2028\u2029",sha256="a",size=9007199254740993),dict(path=r"literal\u2028",sha256="b",size=2),dict(path="third",sha256="c",size=3)]; print(hashlib.sha256(json.dumps(items,ensure_ascii=False,separators=(",",":"),sort_keys=True).encode()).hexdigest())'
+	files := []File{{Path: "tiếng Việt/<>&\u2028\u2029", SHA256: "a", Size: 9007199254740993}, {Path: `literal\u2028`, SHA256: "b", Size: 2}, {Path: "third", SHA256: "c", Size: 3}}
+	got, err := manifestHash(files)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != "f2834e3123671813e10ab47957b5b7e33f98a67b58cd80761359d2b04a5fb2c2" {
+		t.Fatalf("hash: %s", got)
 	}
 }
