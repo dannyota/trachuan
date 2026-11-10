@@ -62,13 +62,13 @@ document outside this inventory.
 Build recipe hash uses `stage.RecipeHash("build","corpus/1",recipe_json)`. Its
 fixed fields are `schema_version`, `schema_sha256`, `chunk_recipe_hash`,
 `dense_recipe`, `lexical_recipe`, `retrieval_policy`, `normalizer_version`,
-`status_codes_sha256`, `corrections_sha256`, `validity_rules_version`,
-`calibration_policy`, `legacy_cases_sha256`, PostgreSQL major, extension
-versions and tool versions. No identity map hash is a recipe field. The
-calibration policy is fixed before build; its numeric threshold is recorded in
-the final retrieval recipe. Source-list status codes come from the run snapshot.
-Changing any of these requires a new run recipe, not modification of a frozen
-run. The date is run-specific input derived from `rel`, not a value read inside
+`status_codes_sha256`, `validity_rules_version`, `calibration_policy`,
+`legacy_cases_sha256`, PostgreSQL major, extension versions and tool versions.
+No identity map hash is a recipe field. The calibration policy is fixed before
+build; its numeric threshold is recorded in the final retrieval recipe.
+Source-list status codes come from the run snapshot. Changing any of these
+requires a new run recipe, not modification of a frozen run. The date is
+run-specific input derived from `rel`, not a value read inside
 `Recipe(Snapshot)`. Keep fixture bytes and runtime reports pinned by their
 recipe hashes; never read a newly edited fixture under an old frozen hash.
 

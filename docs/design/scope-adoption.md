@@ -40,7 +40,8 @@ Version 1 (selection version 0), byte-identical to today:
   `{stage,item_key,kind,detail}`;
 - identity: `{country,source_list_hash,expected_keys,items}` with fetch, extract
   and relate items only;
-- build input label `"2"`.
+- build input label `"2"`, with `corrections_sha256` appended only when the
+  corrections list is not empty, so existing hashes stay unchanged.
 
 Version 2 (selection version 1):
 
@@ -51,8 +52,8 @@ Version 2 (selection version 1):
 - identity:
   `{version:2,country,source_list_hash,final_membership_hash,expected_keys,items}`
   with discover, expand, fetch, extract and relate items;
-- build input label `"3"`, with `provenance_sha256` appended as the last
-  argument.
+- build input label `"3"`, with `provenance_sha256` then `corrections_sha256`
+  appended as the last arguments.
 
 `final_membership_hash` is the frozen `final` phase hash from `run_scope`. The
 canonical snapshot binds every member, class, disposition, replacement key,
