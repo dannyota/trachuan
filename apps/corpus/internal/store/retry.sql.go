@@ -27,6 +27,43 @@ func (q *Queries) DeleteItemGaps(ctx context.Context, arg DeleteItemGapsParams) 
 	return result.RowsAffected(), nil
 }
 
+const deleteRunListingsByItem = `-- name: DeleteRunListingsByItem :execrows
+DELETE FROM listing
+WHERE run_id = $1 AND starts_with(query_key, $2::text || '@')
+`
+
+type DeleteRunListingsByItemParams struct {
+	RunID   int64
+	ItemKey string
+}
+
+// Listing rows written by one discover item: their query key is the item key,
+// "@" and the query identity, the convention the membership readers use.
+func (q *Queries) DeleteRunListingsByItem(ctx context.Context, arg DeleteRunListingsByItemParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteRunListingsByItem, arg.RunID, arg.ItemKey)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const deleteRunListingsByQuery = `-- name: DeleteRunListingsByQuery :execrows
+DELETE FROM listing WHERE run_id = $1 AND query_key = $2
+`
+
+type DeleteRunListingsByQueryParams struct {
+	RunID    int64
+	QueryKey string
+}
+
+func (q *Queries) DeleteRunListingsByQuery(ctx context.Context, arg DeleteRunListingsByQueryParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteRunListingsByQuery, arg.RunID, arg.QueryKey)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const deleteStageGaps = `-- name: DeleteStageGaps :execrows
 DELETE FROM gap WHERE run_id = $1 AND stage = ANY($2::text[])
 `

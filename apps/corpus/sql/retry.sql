@@ -30,3 +30,12 @@ WHERE d.run_id = $1
 
 -- name: SetRunMessage :exec
 UPDATE run SET message = $2, updated_at = now() WHERE id = $1;
+
+-- name: DeleteRunListingsByQuery :execrows
+DELETE FROM listing WHERE run_id = sqlc.arg(run_id) AND query_key = sqlc.arg(query_key);
+
+-- name: DeleteRunListingsByItem :execrows
+-- Listing rows written by one discover item: their query key is the item key,
+-- "@" and the query identity, the convention the membership readers use.
+DELETE FROM listing
+WHERE run_id = sqlc.arg(run_id) AND starts_with(query_key, sqlc.arg(item_key)::text || '@');

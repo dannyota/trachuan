@@ -284,8 +284,16 @@ func TestDownload_RefusesForeignHost(t *testing.T) {
 	c := NewWithBase("https://gateway.example", "test")
 	c.http.Transport = s.Client().Transport
 	_, err := c.Download(context.Background(), "1", File{URL: s.URL}, t.TempDir(), 10)
-	if err == nil || reached.Load() {
+	if err == nil || errors.Is(err, ErrNotFound) || reached.Load() {
 		t.Fatalf("error = %v, reached = %v", err, reached.Load())
+	}
+}
+
+func TestDownload_EmptyURLIsNotFound(t *testing.T) {
+	c := NewWithBase("https://gateway.example", "test")
+	_, err := c.Download(context.Background(), "1", File{URL: ""}, t.TempDir(), 10)
+	if !errors.Is(err, ErrNotFound) {
+		t.Fatalf("error = %v, want ErrNotFound", err)
 	}
 }
 

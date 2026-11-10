@@ -2,14 +2,12 @@ package run
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 
 	"danny.vn/trachuan/apps/corpus/internal/stage"
 	"danny.vn/trachuan/apps/corpus/internal/stage/membership"
 	"danny.vn/trachuan/apps/corpus/internal/store"
-	"github.com/jackc/pgx/v5"
 )
 
 type retryItem struct{ stage, key string }
@@ -19,7 +17,7 @@ type retryPlan struct {
 	stages []string
 }
 
-func planRetry(ctx context.Context, q *store.Queries, runID int64, stages []string) (retryPlan, error) {
+func planRetry(ctx context.Context, q *store.Queries, runID int64, country string, stages []string) (retryPlan, error) {
 	gaps, err := q.ListRunGapsByRun(ctx, runID)
 	if err != nil {
 		return retryPlan{}, fmt.Errorf("list retry gaps: %w", err)
@@ -50,15 +48,6 @@ func planRetry(ctx context.Context, q *store.Queries, runID int64, stages []stri
 				continue
 			}
 			delete(eligible, item)
-			if name == "discover" {
-				_, artifactErr := q.GetRunItemArtifact(ctx, store.GetRunItemArtifactParams{RunID: runID, Stage: name, ItemKey: item.key})
-				if artifactErr == nil {
-					return retryPlan{}, fmt.Errorf("discover item with an artifact cannot be retried: %s", item.key)
-				}
-				if !errors.Is(artifactErr, pgx.ErrNoRows) {
-					return retryPlan{}, fmt.Errorf("check discover artifact: %w", artifactErr)
-				}
-			}
 			plan.items = append(plan.items, item)
 			has = true
 		}
@@ -74,11 +63,19 @@ func planRetry(ctx context.Context, q *store.Queries, runID int64, stages []stri
 			return retryPlan{}, fmt.Errorf("retry item %s has unknown stage %q", item.key, item.stage)
 		}
 	}
+	if err := widenDiscoverRetry(ctx, q, runID, country, &plan); err != nil {
+		return retryPlan{}, err
+	}
 	return plan, nil
 }
 
 func applyRetry(ctx context.Context, q *store.Queries, runID int64, generation int32, stages []string, plan retryPlan) error {
 	for _, item := range plan.items {
+		if item.stage == "discover" {
+			if err := deleteDiscoverListings(ctx, q, runID, item.key); err != nil {
+				return err
+			}
+		}
 		if _, err := q.DeleteItemGaps(ctx, store.DeleteItemGapsParams{RunID: runID, Stage: item.stage, ItemKey: item.key}); err != nil {
 			return fmt.Errorf("delete retry gaps: %w", err)
 		}

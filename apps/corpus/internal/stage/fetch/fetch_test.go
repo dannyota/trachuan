@@ -104,7 +104,9 @@ func setup(t *testing.T, f *fixtureServer) (*Stage, stage.Env) {
 				return
 			}
 			for _, entry := range f.files {
-				entry["presignedUrl"] = "http://" + r.Host + "/attachment/" + entry["fullPath"].(string)
+				if entry["presignedUrl"] != "" {
+					entry["presignedUrl"] = "http://" + r.Host + "/attachment/" + entry["fullPath"].(string)
+				}
 			}
 			_ = json.NewEncoder(w).Encode(map[string]any{"success": true, "data": f.files})
 		case strings.HasPrefix(r.URL.Path, "/attachment/"):
@@ -190,6 +192,27 @@ func TestFetch_MissingAttachmentIsGap(t *testing.T) {
 	res, err := s.Resolve(context.Background(), e, stage.Run{}, stage.Item{Key: "vn:vbpl:66518"}, *out.Artifact)
 	if err != nil || len(res.Gaps) != 1 || res.Gaps[0] != (stage.Gap{Kind: "missing_attachment", Detail: "a"}) {
 		t.Fatalf("%+v %v", res, err)
+	}
+}
+
+func TestFetch_AttachmentWithoutURLIsMissingNotFailure(t *testing.T) {
+	const name = "983 + 984 original.pdf"
+	f := &fixtureServer{files: []map[string]any{{"fileName": name, "fullPath": name, "presignedUrl": ""}}}
+	s, env := setup(t, f)
+	out := process(t, s, env)
+	if out.State != "done" || out.Artifact == nil {
+		t.Fatalf("output = %+v", out)
+	}
+	data, err := os.ReadFile(filepath.Join(env.Artifacts.Abs(out.Artifact.Path), "report.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(data) != `{"missing":["983 + 984 original.pdf"],"too_large":[]}` {
+		t.Fatalf("report = %s", data)
+	}
+	res, err := s.Resolve(context.Background(), env, stage.Run{}, stage.Item{Key: "vn:vbpl:66518"}, *out.Artifact)
+	if err != nil || len(res.Gaps) != 1 || res.Gaps[0] != (stage.Gap{Kind: "missing_attachment", Detail: name}) {
+		t.Fatalf("resolution = %+v, error = %v", res, err)
 	}
 }
 func TestFetch_FileOverLimitIsGap(t *testing.T) {
@@ -318,6 +341,19 @@ func TestFetch_UsesVerifiedCacheHit(t *testing.T) {
 	}
 	if cached.Artifact.SHA256 != gateway.Artifact.SHA256 {
 		t.Fatal("cache changed bundle hash")
+	}
+}
+func TestFetch_EmptyURLIsMissingWithCacheHit(t *testing.T) {
+	e := entry("a", "a")
+	e["presignedUrl"] = ""
+	e["size"] = 3
+	e["updatedAt"] = "2026-04-14 14:41:19"
+	s, env := setup(t, &fixtureServer{files: []map[string]any{e}})
+	s.WithCache(cacheFixture(t, "one"))
+	out := process(t, s, env)
+	res, err := s.Resolve(context.Background(), env, stage.Run{}, stage.Item{Key: "vn:vbpl:66518"}, *out.Artifact)
+	if err != nil || len(res.Gaps) != 1 || res.Gaps[0] != (stage.Gap{Kind: "missing_attachment", Detail: "a"}) {
+		t.Fatalf("resolution = %+v, error = %v", res, err)
 	}
 }
 func TestFetch_CacheChecksumMismatchDownloads(t *testing.T) {

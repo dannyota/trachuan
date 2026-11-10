@@ -193,8 +193,10 @@ On an otherwise permitted `corpus start`, inspect all stages for items with a
 nonempty gap set consisting only of `source_unavailable` or gateway-caused
 `invalid_source_data`. Include done items carrying gaps and accepted gaps. Use
 the structured causes in data, never message matching. Malformed legal data,
-duplicate ids and database text errors do not qualify. Historical gaps without
-origin evidence stay unchanged pending classification from evidence.
+duplicate ids and database text errors do not qualify. A `source_unavailable`
+gap is retry-eligible whatever its origin, as [data](data.md) states; a
+historical `invalid_source_data` gap without origin evidence stays unchanged
+pending classification from evidence.
 
 In the generation-increment transaction, delete selected gaps and item-owned
 derived rows, clear artifact/input references and attempt state, and set items
