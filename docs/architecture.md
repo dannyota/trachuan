@@ -41,8 +41,8 @@ Stages run in order `discover`, `fetch`, `extract`, `relate`, `chunk`, `embed`,
 
 ## Query service
 
-| App               | Role                                                                                             |
-| ----------------- | ------------------------------------------------------------------------------------------------ |
+| App               | Role                                                                                              |
+| ----------------- | ------------------------------------------------------------------------------------------------- |
 | `apps/queryembed` | Go query embedding service with verified local model bundle and native ONNX Runtime and tokenizer |
 
 ## Local services

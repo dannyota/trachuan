@@ -126,8 +126,8 @@ terminated.
 
 Run `make queryembed-native` to install the pinned native libraries, then run
 `make queryembed-run` with the bundle at `EMBEDDER_MODEL_DIR` (default
-`work/models/vi_v2-bundle`). The service listens on `127.0.0.1:8091`. Do not
-run both query services on the same port.
+`work/models/vi_v2-bundle`). The service listens on `127.0.0.1:8091`. Do not run
+both query services on the same port.
 
-The binary accepts `--model-dir DIR`, `--ort-lib FILE`, and `--listen ADDR`.
-The first two flags are required; `--listen` defaults to `127.0.0.1:8091`.
+The binary accepts `--model-dir DIR`, `--ort-lib FILE`, and `--listen ADDR`. The
+first two flags are required; `--listen` defaults to `127.0.0.1:8091`.
