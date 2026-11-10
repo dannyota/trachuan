@@ -30,6 +30,8 @@ down)
   rm -f "$pidfile"
   echo "temporal: down"
   ;;
-status) running && echo "temporal: running (pid $(cat "$pidfile"))" || { echo "temporal: stopped"; exit 1; } ;;
+status)
+  if running; then echo "temporal: running (pid $(cat "$pidfile"))"; else echo "temporal: stopped"; exit 1; fi
+  ;;
 *) echo "usage: temporal.sh up|down|status" >&2; exit 2 ;;
 esac
