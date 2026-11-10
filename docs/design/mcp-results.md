@@ -74,11 +74,11 @@ member's first body span begins.
    cap; a longer lead is cut.
 3. Every cut ends at the last whitespace at or before its limit; when the span
    has none, at the last code point at or before the limit that does not
-   separate a combining mark from its base. Each omission, inside or between
-   spans and at the end, is shown once as `[…]` separated by one space from
-   adjacent text; it is the only text not taken from the source. Text from
-   `BestTextStart` that does not start at the start of the hit's own text is
-   preceded by the marker.
+   separate a combining mark from its base, or at the limit when no such code
+   point exists. Each omission, inside or between spans and at the end, is shown
+   once as `[…]` separated by one space from adjacent text; it is the only text
+   not taken from the source. Text from `BestTextStart` that does not start at
+   the start of the hit's own text is preceded by the marker.
 
 Count code points after the marker is inserted. `complete` is false whenever any
 marker appears or the recipe marked the hit incomplete, including a cut or
@@ -127,9 +127,10 @@ outline entry or relation, in the order above. Any unit whose serialized size
 exceeds the part size in budgets is split into parts. One rule cuts every kind
 of unit: cut at the last whitespace at or before the part size; when the
 remaining span has none, at the last code point at or before the part size that
-does not separate a combining mark from its base, so every part is nonempty and
-the parts concatenate to the unit. Parts carry `part` and `parts`. Boundaries
-depend only on the release and the item, never on the call.
+does not separate a combining mark from its base, or at the part size when no
+such code point exists, so every part is nonempty and the parts concatenate to
+the unit. Parts carry `part` and `parts`. Boundaries depend only on the release
+and the item, never on the call.
 
 The call cap in budgets counts the serialized size of returned units across
 items, and the part size is below it. Items are processed in order and each
