@@ -47,7 +47,7 @@ func readFixture(t *testing.T) (*pgxpool.Pool, *Engine) {
 		{11, 2, 10, "khoan", "1", "Nội dung chi tiết."},
 	}
 	for _, n := range nodes {
-		readExec(t, db, `INSERT INTO provision(id,document_id,parent_id,node_id,kind,label,heading,ordinal,preorder,path,text,anchor) VALUES($1,$2,$3,$4,$5,$6,'heading',$1,$1,$4::text::ltree,$7,$4)`, n.id, n.doc, n.parent, fmt.Sprintf("p%d", n.id), n.kind, n.label, n.text)
+		readExec(t, db, `INSERT INTO provision(id,document_id,parent_id,node_id,kind,label,heading,ordinal,preorder,path,text,anchor) VALUES($1,$2,$3,$4,$5,$6,'heading',$8,$8,$4::text::ltree,$7,$4)`, n.id, n.doc, n.parent, fmt.Sprintf("p%d", n.id), n.kind, n.label, n.text, n.id)
 	}
 	return db, &Engine{db: db, release: Release{Rel: "20991110_1", RetrievalRecipe: Recipe1()}, options: fixtureOptions()}
 }
@@ -244,7 +244,7 @@ func TestRead_RelationsPaged(t *testing.T) {
 		if i%2 == 1 {
 			evidence = strings.Repeat("đ", 1100)
 		}
-		readExec(t, db, `INSERT INTO relation(id,source_document_id,target_document_id,source_key,target_key,source_number,target_number,kind,raw_code,raw_label,evidence,method,artifact_sha256,ordinal) VALUES($1,$2,$3,$4,$5,$6,$7,$8,'',$9,$10,'source',$11,$1)`, i, source, target, sk, tk, sn, tn, kinds[i%3], fmt.Sprintf("raw %d", i), evidence, strings.Repeat("b", 64))
+		readExec(t, db, `INSERT INTO relation(id,source_document_id,target_document_id,source_key,target_key,source_number,target_number,kind,raw_code,raw_label,evidence,method,artifact_sha256,ordinal) VALUES($1,$2,$3,$4,$5,$6,$7,$8,'',$9,$10,'source',$11,$12)`, i, source, target, sk, tk, sn, tn, kinds[i%3], fmt.Sprintf("raw %d", i), evidence, strings.Repeat("b", 64), i)
 	}
 	var want []int
 	for i := 1; i <= 45; i++ {
