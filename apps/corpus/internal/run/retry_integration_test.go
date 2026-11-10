@@ -65,31 +65,6 @@ func TestStart_ResetsOnlySourceGapItems(t *testing.T) {
 	}
 }
 
-func TestStart_RefusesDiscoverItemWithArtifact(t *testing.T) {
-	d := retryRun(t, "fetch")
-	ctx := context.Background()
-	_, err := d.DB.Exec(ctx, `INSERT INTO artifact(stage,item_key,input_hash,recipe_hash,path,sha256) VALUES ('discover','vbpl:central','input','recipe','path','hash')`)
-	if err != nil {
-		t.Fatal(err)
-	}
-	_, err = d.DB.Exec(ctx, `INSERT INTO run_item(run_id,stage,item_key,state,batch,artifact_id) SELECT r.id,'discover','vbpl:central','done',0,a.id FROM run r CROSS JOIN artifact a`)
-	if err != nil {
-		t.Fatal(err)
-	}
-	_, err = d.DB.Exec(ctx, `INSERT INTO gap(run_id,stage,item_key,kind,detail) SELECT id,'discover','vbpl:central','source_unavailable','' FROM run`)
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = Start(ctx, d, "vn", d.TaskQueue, "", "")
-	if err == nil || !strings.Contains(err.Error(), "discover item with an artifact cannot be retried") || !strings.Contains(err.Error(), "vbpl:central") {
-		t.Fatalf("error=%v", err)
-	}
-	var generation, gaps int
-	if err = d.DB.QueryRow(ctx, `SELECT generation,(SELECT count(*) FROM gap) FROM run`).Scan(&generation, &gaps); err != nil || generation != 1 || gaps != 1 {
-		t.Fatalf("generation=%d gaps=%d err=%v", generation, gaps, err)
-	}
-}
-
 func TestStart_RetriesDoneDiscoverItemWithSourceGap(t *testing.T) {
 	d := lifecycleDeps(t)
 	d.Stages = []string{"discover", "expand", "fetch"}

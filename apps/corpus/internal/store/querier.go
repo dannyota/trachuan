@@ -22,6 +22,10 @@ type Querier interface {
 	CountUnacceptedGaps(ctx context.Context, runID int64) (int64, error)
 	CreateRun(ctx context.Context, arg CreateRunParams) error
 	DeleteItemGaps(ctx context.Context, arg DeleteItemGapsParams) (int64, error)
+	// Listing rows written by one discover item: their query key is the item key,
+	// "@" and the query identity, the convention the membership readers use.
+	DeleteRunListingsByItem(ctx context.Context, arg DeleteRunListingsByItemParams) (int64, error)
+	DeleteRunListingsByQuery(ctx context.Context, arg DeleteRunListingsByQueryParams) (int64, error)
 	DeleteStageGaps(ctx context.Context, arg DeleteStageGapsParams) (int64, error)
 	DeleteStageItems(ctx context.Context, arg DeleteStageItemsParams) (int64, error)
 	DeleteStageMembershipEvidence(ctx context.Context, arg DeleteStageMembershipEvidenceParams) (int64, error)
