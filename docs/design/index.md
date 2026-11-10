@@ -30,24 +30,20 @@ snapshot to produce an upstream inventory, sorted by stage order then
 byte-sorted item key, containing every predecessor item through `embed`:
 `{stage,item_key,state,input_hash,recipe_hash,artifact_sha256}`. Null artifact
 hashes are explicit for gap items. Include expected keys, frozen source-list
-hash and sorted gaps `{stage,item_key,kind,detail}`. Scope adoption also
-includes expand items and sorted membership records from [data](data.md),
-including disposition, evidence hashes and replacement key. Gap acceptance is a
-release gate, not a build input, so it is never hashed. `Process` recomputes the
-input hash from the inventory and pinned map and fails with non-retryable
+hash and sorted gaps `{stage,item_key,kind,detail}`. Gap acceptance is a release
+gate, not a build input, so it is never hashed. `Process` recomputes the input
+hash from the inventory and pinned map and fails with non-retryable
 `inventory_changed` when it differs from the planned input hash. Do not hash
 workshop sequence IDs, mutable paths or generation numbers.
 
 For inventory diagnostics, derive `identity_inventory_hash` from compact JSON
-`{country,source_list_hash,expected_keys,items}`. Scope adoption versions this
-inventory to include the same membership records and expand evidence. Keys are
-byte-sorted; items are the fetch/extract/relate inventory tuples above in
-stage/key order, without gap acceptance metadata. This hash does not bind the
-identity map or gate planning.
-[Evaluation](evaluation.md#fixtures-and-identity-adjudication) owns map
-production, review and per-case identity validation. Recipe freezing follows the
-[pipeline snapshot](pipeline.md#shape); ingest can finish before index recipes
-are appended. The reviewed map is input data, not a recipe.
+`{country,source_list_hash,expected_keys,items}`. Keys are byte-sorted; items
+are the fetch/extract/relate inventory tuples above in stage/key order, without
+gap acceptance metadata. This hash does not bind the identity map or gate
+planning. [Evaluation](evaluation.md#fixtures-and-identity-adjudication) owns
+map production, review and per-case identity validation. Recipe freezing follows
+the [pipeline snapshot](pipeline.md#shape); ingest can finish before index
+recipes are appended. The reviewed map is input data, not a recipe.
 
 Freeze the evaluation civil date from the first eight digits of `rel`, parsed as
 a real calendar date; an invalid date is a configuration failure. The same date

@@ -148,12 +148,6 @@ after 2 minutes.
 VBPL ingest bounds: API response 20 MB; provision tree depth 32 and 50,000
 nodes; at most 3 listing passes per query.
 
-Central listing page size: 1,000. The primary measured 57,951 documents on
-2026-11-09: 58 requests per pass, about 1.65 MB per response, below the API
-bound. Two identical complete passes used 116 requests and 172 MB, with 129 s
-server time at 1 request/s. These are discovery costs before named lookups,
-expansion or fetch, not a full-run estimate; retain the result bound below.
-
 VBPL gateway: at most 16 requests per second and 16 in flight by default
 (`CORPUS_VBPL_RPS`, `CORPUS_VBPL_IN_FLIGHT`); request timeout 30 seconds. Retry
 HTTP 429, HTTP 5xx and timeouts 3 times, after 2, 8 and 30 seconds. A document
@@ -180,19 +174,20 @@ default `s3-han02.fptcloud.com`.
 
 ### Corpus scope ceilings (proposed, pending measurement)
 
-| Limit                    | Value                                                           |
-| ------------------------ | --------------------------------------------------------------- |
-| Relation expansion       | 1 hop; 5,000 distinct added context ids per run                 |
-| Discovery result bound   | 100,000 ids per query; 3 complete passes maximum                |
-| chinhphu candidates      | 100 unique docids per run, before VBPL exclusion                |
-| chinhphu search          | Request cap 500; 100 pages per query per pass; 3 passes maximum |
-| chinhphu requests        | 1 request/s, burst 1, 1 in flight across page and file hosts    |
-| chinhphu response        | 5 MB per HTML response; existing 50 MB attachment cap           |
-| chinhphu total downloads | 1 GB per run, including retries and rejected bodies             |
-| chinhphu deadlines       | 30 s page request; 120 s PDF request; 5 min per item            |
-| chinhphu redirects       | At most 3, with each destination revalidated                    |
-| chinhphu retries         | 3 after 2, 8 and 30 s for 429, 5xx or transport timeout         |
-| chinhphu Retry-After     | Wait at least the supplied delay; above 10 min defer with a gap |
+| Limit                    | Value                                                                                                                 |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------- |
+| Relation expansion       | 1 hop; 5,000 distinct added context ids per run                                                                       |
+| Discovery result bound   | 100,000 ids per query; 3 complete passes maximum                                                                      |
+| Central listing          | Page size 1,000; measured 2026-11-09: 57,951 ids, 58 requests and 86 MB per pass, 129 s for two passes at 1 request/s |
+| chinhphu candidates      | 100 unique docids per run, before VBPL exclusion                                                                      |
+| chinhphu search          | Request cap 500; 100 pages per query per pass; 3 passes maximum                                                       |
+| chinhphu requests        | 1 request/s, burst 1, 1 in flight across page and file hosts                                                          |
+| chinhphu response        | 5 MB per HTML response; existing 50 MB attachment cap                                                                 |
+| chinhphu total downloads | 1 GB per run, including retries and rejected bodies                                                                   |
+| chinhphu deadlines       | 30 s page request; 120 s PDF request; 5 min per item                                                                  |
+| chinhphu redirects       | At most 3, with each destination revalidated                                                                          |
+| chinhphu retries         | 3 after 2, 8 and 30 s for 429, 5xx or transport timeout                                                               |
+| chinhphu Retry-After     | Wait at least the supplied delay; above 10 min defer with a gap                                                       |
 
 These are worker-wide source limits, not per-activity allowances. Honor the
 later of retry backoff and `Retry-After`; do not hold an activity past its item
