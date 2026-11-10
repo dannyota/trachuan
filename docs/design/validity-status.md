@@ -189,7 +189,9 @@ No network or model at build time; only verified artifacts and resolved
 relations. Tests cover each sentence form, quoted text, a clause-scoped date, an
 unparsed sentence, staggered effect, D before issue, D after `eff_to`, an
 incoming amendment, a partial repeal, an ambiguous number, chains (C replaces B
-replaces A), every manual entry check, and both retrieval modes. Before the new
-baseline is accepted, the primary reviews every rule B expiry, every rule C
-conflict and the whole review queue for the run, and records the counts and the
-recall cost in the research note.
+replaces A), both processing orders of a chain, an expired actor, an adverse
+status name, a cleared invalid interval, list continuation, every manual entry
+check, and both retrieval modes. Before the new baseline is accepted, the
+primary reviews every rule B expiry, every rule C conflict and the whole review
+queue for the run, and records the counts and the recall cost in the research
+note.
