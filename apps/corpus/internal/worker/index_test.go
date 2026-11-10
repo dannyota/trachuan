@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"reflect"
 	"testing"
 	"time"
 
@@ -35,6 +36,11 @@ func TestIndexDeps_ConfiguresBuildAndEval(t *testing.T) {
 		q, ok := e.(embedding.Query)
 		if !ok || q.Client == nil || q.RecipeHash != embedding.QueryRecipe1().Hash() {
 			t.Error("invalid query embedder")
+			continue
+		}
+		timeout := reflect.ValueOf(q.Client).Elem().FieldByName("http").Elem().FieldByName("Timeout").Int()
+		if time.Duration(timeout) != 2*time.Second {
+			t.Errorf("query timeout = %v, want 2s", time.Duration(timeout))
 		}
 	}
 }

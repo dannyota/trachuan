@@ -1,5 +1,6 @@
 import numpy as np
 import onnx
+import onnxruntime as ort
 import pytest
 from onnx import TensorProto, helper
 
@@ -33,6 +34,10 @@ def test_onnx_cls_selection_and_normalization(tmp_path):
     path = tmp_path / "model.onnx"
     onnx.save(model, path)
     runtime = OnnxRuntime(path)
+    options = runtime.session.get_session_options()
+    assert options.intra_op_num_threads == 4
+    assert options.inter_op_num_threads == 1
+    assert options.execution_mode == ort.ExecutionMode.ORT_SEQUENTIAL
     vector = runtime.embed({"input_ids": np.array([[[3, 4], [9, 9]]], dtype=np.float32)})
     assert np.allclose(vector, [[0.6, 0.8]])
 

@@ -11,7 +11,7 @@ from .runtime import normalize
 class OnnxRuntime:
     def __init__(self, path: Path):
         options = ort.SessionOptions()
-        options.intra_op_num_threads = 2
+        options.intra_op_num_threads = 4
         options.inter_op_num_threads = 1
         options.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
         self.session = ort.InferenceSession(str(path), options, providers=["CPUExecutionProvider"])

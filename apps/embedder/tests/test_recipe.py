@@ -44,7 +44,7 @@ def test_recipe_reports_loaded_versions_and_precision(bundle, mode, library):
     [
         ("onnx/model.onnx", {"query"}),
         ("onnx/model.onnx_data", {"query"}),
-        ("onnx/extra.data", {"query"}),
+        ("onnx/extra.data", set()),
         ("model.safetensors", {"document"}),
         ("config.json", {"document"}),
         ("tokenizer.json", {"query", "document"}),
@@ -58,3 +58,18 @@ def test_recipe_hash_tracks_only_runtime_files(bundle, path, changed):
         assert (
             recipe_hash(build_recipe(before, mode)) != recipe_hash(build_recipe(after, mode))
         ) == (mode in changed)
+
+
+def test_query_recipe_ignores_int8_model_and_data(bundle):
+    before = build_recipe(manifest(bundle), "query")
+    for name in ("model_int8.onnx", "model_int8.onnx_data"):
+        (bundle / "onnx" / name).write_text(name)
+    assert build_recipe(manifest(bundle), "query") == before
+
+
+def test_query_recipe_tracks_dot_data(bundle):
+    path = bundle / "onnx/model.onnx.data"
+    path.write_text("first")
+    before = build_recipe(manifest(bundle), "query")
+    path.write_text("second")
+    assert build_recipe(manifest(bundle), "query")["weights_sha256"] != before["weights_sha256"]

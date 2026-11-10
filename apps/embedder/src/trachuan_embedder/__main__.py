@@ -42,7 +42,7 @@ def main() -> None:
     app = create_app(args.runtime, tokenizer, runtime, recipe, ready=True)
     uvicorn.run(
         app,
-        host=args.host or ("127.0.0.1" if args.runtime == "document" else "0.0.0.0"),
+        host=args.host or "127.0.0.1",
         port=args.port or (8092 if args.runtime == "document" else 8091),
         access_log=False,
     )

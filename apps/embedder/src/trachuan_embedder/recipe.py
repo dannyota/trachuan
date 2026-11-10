@@ -24,8 +24,7 @@ def build_recipe(manifest: dict, mode: str) -> dict:
         item
         for item in files
         if (
-            item["path"].startswith("onnx/")
-            and item["path"].endswith((".onnx", ".onnx_data", ".data"))
+            item["path"] in ("onnx/model.onnx", "onnx/model.onnx_data", "onnx/model.onnx.data")
             if mode == "query"
             else item["path"] in ("config.json", "model.safetensors")
         )
