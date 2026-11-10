@@ -9,6 +9,7 @@ import (
 	"sort"
 
 	"danny.vn/trachuan/apps/corpus/internal/artifact"
+	"danny.vn/trachuan/apps/corpus/internal/source"
 	"danny.vn/trachuan/apps/corpus/internal/stage"
 	"danny.vn/trachuan/apps/corpus/internal/stage/discover"
 	"danny.vn/trachuan/apps/corpus/internal/stage/membership"
@@ -22,6 +23,13 @@ import (
 // accepts only identical recomputed membership, evidence and observations;
 // item-state changes with identical outputs do not alter the frozen result.
 func (*Stage) Finalize(ctx context.Context, env stage.Env, tx pgx.Tx, r stage.Run) (stage.Finalization, error) {
+	list, err := source.Parse(r.Snapshot.SourceList)
+	if err != nil {
+		return stage.Finalization{}, fmt.Errorf("parse source list: %w", err)
+	}
+	if list.VBPL.SelectionVersion == 0 {
+		return stage.Finalization{}, nil
+	}
 	q := store.New(tx)
 	seeds, err := membership.ReadPhase(ctx, q, r.ID, membership.Seeds)
 	if err != nil {

@@ -44,6 +44,13 @@ func seedItems(entries []membership.Entry) []stage.Item {
 
 // Plan selects only active primary seeds from the verified frozen phase.
 func (*Stage) Plan(ctx context.Context, env stage.Env, r stage.Run) ([]stage.Item, error) {
+	list, err := source.Parse(r.Snapshot.SourceList)
+	if err != nil {
+		return nil, fmt.Errorf("parse source list: %w", err)
+	}
+	if list.VBPL.SelectionVersion == 0 {
+		return nil, nil
+	}
 	s, err := membership.ReadPhase(ctx, store.New(env.DB), r.ID, membership.Seeds)
 	if err != nil {
 		return nil, fmt.Errorf("read seeds: %w", err)

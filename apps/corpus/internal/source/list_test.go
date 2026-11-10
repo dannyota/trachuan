@@ -21,7 +21,7 @@ func TestParseVN(t *testing.T) {
 	if list.VBPL.SelectionVersion != 1 || !reflect.DeepEqual(list.VBPL.NamedNumbers, wantVBPL) || !reflect.DeepEqual(list.Chinhphu, wantChinhphu) {
 		t.Fatalf("unexpected named rules: %+v %+v", list.VBPL, list.Chinhphu)
 	}
-	if list.Country != "vn" || len(list.VBPL.SweepAgencies) != 2 || len(list.VBPL.KeywordAgencies) != 8 || len(list.VBPL.Keywords) != 32 || len(list.RelationCodes) != 11 || len(list.StatusCodes) != 8 {
+	if list.Country != "vn" || len(list.VBPL.SweepAgencies) != 2 || len(list.VBPL.KeywordAgencies) != 0 || len(list.VBPL.Keywords) != 32 || len(list.RelationCodes) != 11 || len(list.StatusCodes) != 8 {
 		t.Fatalf("unexpected source list: %+v", list)
 	}
 }
@@ -107,5 +107,12 @@ func TestParse_HistoricalChinhphuSnapshot(t *testing.T) {
 	_, err := Parse([]byte(`{"vbpl":{"selection_version":1},"chinhphu":{"keywords":["law"]}}`))
 	if err != nil {
 		t.Fatalf("historical snapshot rejected: %v", err)
+	}
+}
+
+func TestParse_OlderSnapshotRetainsKeywordAgencies(t *testing.T) {
+	list, err := Parse([]byte(`{"country":"vn","vbpl":{"keyword_agencies":["55","56"]}}`))
+	if err != nil || !reflect.DeepEqual(list.VBPL.KeywordAgencies, []string{"55", "56"}) {
+		t.Fatalf("agencies=%v err=%v", list.VBPL.KeywordAgencies, err)
 	}
 }

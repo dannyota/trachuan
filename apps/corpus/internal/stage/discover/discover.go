@@ -80,9 +80,9 @@ func (*Stage) Recipe(snapshot stage.Snapshot) string {
 	list, err := source.Parse(snapshot.SourceList)
 	if err == nil && list.VBPL.SelectionVersion == 1 {
 		if len(list.Chinhphu.Keywords) > 0 || len(list.Chinhphu.NamedNumbers) > 0 {
-			return stage.RecipeHash("discover", "secondary-discover/1", "issuer-classifier/1", "issuer-normalization/1", retrieval.NumberNormalizationVersion, snapshot.SourceListHash, string(snapshot.SourceList))
+			return stage.RecipeHash("discover", "secondary-discover/1", "issuer-classifier/1", "issuer-normalization/1", retrieval.NumberNormalizationVersion, snapshot.SourceListHash)
 		}
-		return stage.RecipeHash("discover", "vbpl-discover/selection-2", snapshot.SourceListHash, string(snapshot.SourceList))
+		return stage.RecipeHash("discover", "vbpl-discover/selection-2", snapshot.SourceListHash)
 	}
 	return stage.RecipeHash("discover", "vbpl-discover/1")
 }

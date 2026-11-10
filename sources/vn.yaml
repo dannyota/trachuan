@@ -2,7 +2,6 @@ country: vn
 vbpl:
   selection_version: 1
   sweep_agencies: ["62", "908"]
-  keyword_agencies: ["55", "56", "1", "57", "3", "14", "169", "2"]
   keywords:
     - "an toàn thông tin"
     - "an ninh mạng"

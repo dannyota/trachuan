@@ -58,6 +58,27 @@ and `corpus export-history` take the same country and release. Run every command
 from the repository root: `start` reads `sources/<cc>.yaml` there and artifacts
 default to `work/artifacts`.
 
+## Source settings and pauses
+
+The secondary source defaults to
+`CORPUS_CHINHPHU_URL=https://vanban.chinhphu.vn` and
+`CORPUS_CHINHPHU_FILE_URL=https://datafiles.chinhphu.vn`. Its request rate and
+concurrency default to 1, set by `CORPUS_CHINHPHU_RPS` and
+`CORPUS_CHINHPHU_IN_FLIGHT`. `CORPUS_CHINHPHU_LOOPBACK_HTTP=true` permits
+127.0.0.1 HTTP endpoints for tests and proofs only.
+
+`corpus status <cc> <rel>` lists paused sources and their reasons. A pause
+survives worker restarts and blocks the run. After resolving the cause and
+ensuring no workflow is open, clear the pause on an unreleased run:
+
+```sh
+corpus source-resume <cc> <rel> --source <name> --note <reason>
+corpus start <cc> <rel>
+```
+
+Resume records the note and prints the previous pause reason. It does not start
+work. An already active source needs no change.
+
 ## Restore from a checkpoint
 
 Stop the corpus worker. Choose a completed checkpoint directory under

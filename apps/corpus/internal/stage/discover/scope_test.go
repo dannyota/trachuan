@@ -271,9 +271,17 @@ func TestPlan_SecondaryQueriesAreDistinctAndSorted(t *testing.T) {
 func TestRecipe_SecondaryConfigurationBumpsRecipe(t *testing.T) {
 	base := stage.Snapshot{SourceList: json.RawMessage(`{"vbpl":{"selection_version":1}}`)}
 	secondary := stage.Snapshot{SourceList: json.RawMessage(`{"vbpl":{"selection_version":1},"chinhphu":{"issuer_policy_version":1,"central_issuer_forms":["Chính phủ"],"keywords":["law"]}}`)}
-	legacyRecipe := stage.RecipeHash("discover", "vbpl-discover/selection-2", secondary.SourceListHash, string(secondary.SourceList))
-	if New(nil).Recipe(secondary) == legacyRecipe || New(nil).Recipe(base) != stage.RecipeHash("discover", "vbpl-discover/selection-2", base.SourceListHash, string(base.SourceList)) {
+	legacyRecipe := stage.RecipeHash("discover", "vbpl-discover/selection-2", secondary.SourceListHash)
+	if New(nil).Recipe(secondary) == legacyRecipe || New(nil).Recipe(base) != stage.RecipeHash("discover", "vbpl-discover/selection-2", base.SourceListHash) {
 		t.Fatal("recipe does not bind secondary implementation")
+	}
+	for _, snapshot := range []stage.Snapshot{base, secondary} {
+		snapshot.SourceListHash = "first"
+		first := New(nil).Recipe(snapshot)
+		snapshot.SourceListHash = "second"
+		if first == New(nil).Recipe(snapshot) {
+			t.Fatal("recipe does not bind the source list hash")
+		}
 	}
 }
 

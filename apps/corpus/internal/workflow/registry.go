@@ -2,12 +2,14 @@
 package workflow
 
 import (
+	"danny.vn/trachuan/apps/corpus/internal/chinhphu"
 	"danny.vn/trachuan/apps/corpus/internal/stage"
 	"danny.vn/trachuan/apps/corpus/internal/stage/build"
 	"danny.vn/trachuan/apps/corpus/internal/stage/chunk"
 	"danny.vn/trachuan/apps/corpus/internal/stage/discover"
 	"danny.vn/trachuan/apps/corpus/internal/stage/embed"
 	"danny.vn/trachuan/apps/corpus/internal/stage/eval"
+	"danny.vn/trachuan/apps/corpus/internal/stage/expand"
 	"danny.vn/trachuan/apps/corpus/internal/stage/extract"
 	"danny.vn/trachuan/apps/corpus/internal/stage/fetch"
 	"danny.vn/trachuan/apps/corpus/internal/stage/relate"
@@ -68,6 +70,7 @@ func (r Registry) Recipes(s stage.Snapshot) map[string]string {
 type Deps struct {
 	Env      stage.Env
 	VBPL     *vbpl.Client
+	Chinhphu *chinhphu.Client
 	Document *embedding.Client
 	Build    build.Config
 	Eval     eval.Config
@@ -75,5 +78,5 @@ type Deps struct {
 
 // Default returns the stages compiled into the worker.
 func Default(deps Deps) Registry {
-	return NewRegistry(discover.New(deps.VBPL), fetch.New(deps.VBPL), extract.New(), relate.New(), chunk.New(), embed.New(deps.Document, embedding.DocumentRecipe1()), build.New(deps.Build), eval.New(deps.Eval))
+	return NewRegistry(discover.New(deps.VBPL, discover.WithChinhphu(deps.Chinhphu)), expand.New(deps.VBPL), fetch.New(deps.VBPL).WithChinhphu(deps.Chinhphu), extract.New(), relate.New(), chunk.New(), embed.New(deps.Document, embedding.DocumentRecipe1()), build.New(deps.Build), eval.New(deps.Eval))
 }

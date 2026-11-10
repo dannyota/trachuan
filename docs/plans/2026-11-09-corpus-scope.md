@@ -155,8 +155,8 @@
 
 **Files:** Modify `workflow/registry.go` (stage order `discover, expand, fetch, ...`), config (`CORPUS_CHINHPHU_*` settings), worker, CLI status and a new `corpus source-resume <cc> <rel> <source>` command that clears a source pause, runbook; proof `apps/corpus/test/proof/scope_test.go`.
 
-- [ ] Tests first: `TestRegistry_ExpandAfterDiscover`, `TestSourceResume_ClearsPauseExplicitly`, `TestSourceResume_PausedSourceStaysPausedAfterRestart`, `TestReplay_Histories` still passes, `TestProof_ScopeRunWithExpansionAndSecondary` (fake VBPL and chinhphu servers, under 60 seconds).
-- [ ] Implement; commit `feat(corpus): wire expand and the secondary source`.
+- [x] Tests first: `TestRegistry_ExpandAfterDiscover`, `TestSourceResume_ClearsPauseExplicitly`, `TestSourceResume_PausedSourceStaysPausedAfterRestart`, `TestReplay_Histories` still passes, `TestProof_ScopeRunWithExpansionAndSecondary` (fake VBPL and chinhphu servers, under 60 seconds).
+- [x] Implement; commit `feat(corpus): wire expand and the secondary source`.
 
 ### Task 13: Live run and coverage (primary)
 

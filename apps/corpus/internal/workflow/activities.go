@@ -90,14 +90,19 @@ func (a *Activities) RunBatch(ctx context.Context, in stage.BatchInput) (stage.B
 
 // CloseStage computes counts and advances a completed stage.
 func (a *Activities) CloseStage(ctx context.Context, in stage.StageInput) (stage.CloseResult, error) {
-	if _, err := a.load(ctx, in.RunID, in.Generation); err != nil {
+	row, err := a.load(ctx, in.RunID, in.Generation)
+	if err != nil {
 		return stage.CloseResult{}, activityError(err)
+	}
+	next, err := frozenFollowing(row.Snapshot, in.Stage)
+	if err != nil {
+		return stage.CloseResult{}, err
 	}
 	st, err := a.lookup(in.Stage)
 	if err != nil {
 		return stage.CloseResult{}, err
 	}
-	result, err := stage.CloseStage(ctx, a.Env, st, in, a.Registry.Following(in.Stage))
+	result, err := stage.CloseStage(ctx, a.Env, st, in, next)
 	return result, activityError(err)
 }
 
@@ -115,4 +120,20 @@ func (a *Activities) Checkpoint(ctx context.Context, in stage.StageInput) (strin
 func (a *Activities) MarkRun(ctx context.Context, in stage.MarkInput) (bool, error) {
 	result, err := stage.MarkRun(ctx, a.Env, in)
 	return result, activityError(err)
+}
+
+func frozenFollowing(raw json.RawMessage, current string) (string, error) {
+	var snapshot stage.Snapshot
+	if err := json.Unmarshal(raw, &snapshot); err != nil {
+		return "", fmt.Errorf("decode run snapshot: %w", err)
+	}
+	for i, name := range snapshot.Stages {
+		if name == current {
+			if i+1 < len(snapshot.Stages) {
+				return snapshot.Stages[i+1], nil
+			}
+			return "", nil
+		}
+	}
+	return "", fmt.Errorf("stage %q is not in run snapshot", current)
 }
