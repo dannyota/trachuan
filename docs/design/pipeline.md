@@ -176,12 +176,13 @@ VBPL ingest rules:
 - `fetch` stores attachments as `files/<sha256>` and maps original names in
   `files.json`; each download attempt writes a fresh temporary file and is
   bounded by the per-file limit while streaming. API responses above the
-  response limit are gaps. A gateway error (HTTP 5xx) that persists through
-  every attempt makes the item gap `source_unavailable`, which the owner may
-  accept; the next run asks again. An attachment whose document id, name and
-  size match a local cache entry collected no earlier than the gateway's
-  `updatedAt` for that file is taken from the cache once its sha256 verifies;
-  otherwise it is downloaded.
+  response limit are gaps. A gateway error (HTTP 5xx) that persists through the
+  client retries makes the item gap `source_unavailable` in that attempt,
+  without a batch retry (budgets); the owner may accept it, and the next run
+  asks again. Known source failures never stall a batch or the stage close. An
+  attachment whose document id, name and size match a local cache entry
+  collected no earlier than the gateway's `updatedAt` for that file is taken
+  from the cache once its sha256 verifies; otherwise it is downloaded.
 - `extract` refuses trees deeper or larger than the limits in
   [budgets](budgets.md) with gap `tree_too_large`.
 - `relate` maps relation codes with the source list's table, whose hash is part

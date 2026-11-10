@@ -150,15 +150,20 @@ nodes; at most 3 listing passes per query.
 
 VBPL gateway: at most 16 requests per second and 16 in flight by default
 (`CORPUS_VBPL_RPS`, `CORPUS_VBPL_IN_FLIGHT`); request timeout 30 seconds. Retry
-HTTP 429, HTTP 5xx and timeouts 3 times, after 2, 8 and 30 seconds. Measured
-2026-11-09: 10.5 requests per second at concurrency 8, p50 636 ms, no errors;
-measured 2026-11-10: 0.11 to 0.36 s per request. The 16 defaults are provisional
-until a live run records their error rate. Attachment downloads use a separate
-pool of 8 in flight (`CORPUS_VBPL_FILE_IN_FLIGHT`) with no request rate limit,
-because the attachment CDN caps throughput per IP (about 4 MB/s, measured by
-banhmi); a slow download never holds a gateway slot. Fetch issues a document's
-four gateway calls concurrently and downloads its attachments concurrently
-within the file pool.
+HTTP 429, HTTP 5xx and timeouts 3 times, after 2, 8 and 30 seconds. A document
+whose gateway calls still return HTTP 5xx after those retries becomes a
+`source_unavailable` gap in the same attempt: the stage does not retry it, so a
+document the source keeps refusing never holds a batch or the stage close; the
+next run fetches it again. HTTP 429 and timeouts that outlast the client retries
+stay retryable at the batch level, because they signal load, not a broken
+document. Measured 2026-11-09: 10.5 requests per second at concurrency 8, p50
+636 ms, no errors; measured 2026-11-10: 0.11 to 0.36 s per request. The 16
+defaults are provisional until a live run records their error rate. Attachment
+downloads use a separate pool of 8 in flight (`CORPUS_VBPL_FILE_IN_FLIGHT`) with
+no request rate limit, because the attachment CDN caps throughput per IP (about
+4 MB/s, measured by banhmi); a slow download never holds a gateway slot. Fetch
+issues a document's four gateway calls concurrently and downloads its
+attachments concurrently within the file pool.
 
 Stage batches in flight: 8 by default (`CORPUS_BATCHES_IN_FLIGHT`); `fetch` runs
 16 (`CORPUS_FETCH_BATCHES_IN_FLIGHT`); `embed` runs at most 2, so one batch
