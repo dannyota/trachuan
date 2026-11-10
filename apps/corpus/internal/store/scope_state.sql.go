@@ -47,7 +47,9 @@ func (q *Queries) ClearRunSource(ctx context.Context, arg ClearRunSourceParams) 
 }
 
 const clearSeeds = `-- name: ClearSeeds :exec
-UPDATE run_scope SET seeds_snapshot = NULL, seeds_hash = NULL WHERE run_id = $1
+UPDATE run_scope SET seeds_snapshot = NULL, seeds_hash = NULL,
+    predecessor_run_id = NULL, predecessor_phase = NULL, predecessor_snapshot_hash = NULL
+WHERE run_id = $1
 `
 
 func (q *Queries) ClearSeeds(ctx context.Context, runID int64) error {
@@ -91,7 +93,7 @@ func (q *Queries) EnsureRunSource(ctx context.Context, arg EnsureRunSourceParams
 }
 
 const getRunScope = `-- name: GetRunScope :one
-SELECT run_id, seeds_snapshot, seeds_hash, expanded_snapshot, expanded_hash, final_snapshot, final_hash, fetch_close_input_hash FROM run_scope WHERE run_id = $1
+SELECT run_id, seeds_snapshot, seeds_hash, expanded_snapshot, expanded_hash, final_snapshot, final_hash, fetch_close_input_hash, predecessor_run_id, predecessor_phase, predecessor_snapshot_hash FROM run_scope WHERE run_id = $1
 `
 
 func (q *Queries) GetRunScope(ctx context.Context, runID int64) (RunScope, error) {
@@ -106,6 +108,9 @@ func (q *Queries) GetRunScope(ctx context.Context, runID int64) (RunScope, error
 		&i.FinalSnapshot,
 		&i.FinalHash,
 		&i.FetchCloseInputHash,
+		&i.PredecessorRunID,
+		&i.PredecessorPhase,
+		&i.PredecessorSnapshotHash,
 	)
 	return i, err
 }
@@ -211,6 +216,37 @@ func (q *Queries) InsertRunSourceEvent(ctx context.Context, arg InsertRunSourceE
 		arg.ClearNote,
 	)
 	return err
+}
+
+const listAcceptedRemovalGaps = `-- name: ListAcceptedRemovalGaps :many
+SELECT item_key, kind FROM gap
+WHERE run_id = $1 AND stage = 'fetch' AND kind IN ('withdrawn', 'scope_removed') AND accepted_at IS NOT NULL
+ORDER BY item_key COLLATE "C", kind
+`
+
+type ListAcceptedRemovalGapsRow struct {
+	ItemKey string
+	Kind    string
+}
+
+func (q *Queries) ListAcceptedRemovalGaps(ctx context.Context, runID int64) ([]ListAcceptedRemovalGapsRow, error) {
+	rows, err := q.db.Query(ctx, listAcceptedRemovalGaps, runID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListAcceptedRemovalGapsRow
+	for rows.Next() {
+		var i ListAcceptedRemovalGapsRow
+		if err := rows.Scan(&i.ItemKey, &i.Kind); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listBlockingRunFailureCodes = `-- name: ListBlockingRunFailureCodes :many
@@ -430,6 +466,32 @@ type SetFetchCloseInputHashParams struct {
 
 func (q *Queries) SetFetchCloseInputHash(ctx context.Context, arg SetFetchCloseInputHashParams) (int64, error) {
 	result, err := q.db.Exec(ctx, setFetchCloseInputHash, arg.RunID, arg.FetchCloseInputHash)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const setMembershipPredecessor = `-- name: SetMembershipPredecessor :execrows
+UPDATE run_scope SET predecessor_run_id = $1, predecessor_phase = $2,
+    predecessor_snapshot_hash = $3
+WHERE run_id = $4 AND seeds_snapshot IS NULL
+`
+
+type SetMembershipPredecessorParams struct {
+	PredecessorRunID        *int64
+	PredecessorPhase        *string
+	PredecessorSnapshotHash *string
+	RunID                   int64
+}
+
+func (q *Queries) SetMembershipPredecessor(ctx context.Context, arg SetMembershipPredecessorParams) (int64, error) {
+	result, err := q.db.Exec(ctx, setMembershipPredecessor,
+		arg.PredecessorRunID,
+		arg.PredecessorPhase,
+		arg.PredecessorSnapshotHash,
+		arg.RunID,
+	)
 	if err != nil {
 		return 0, err
 	}

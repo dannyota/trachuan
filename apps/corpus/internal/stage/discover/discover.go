@@ -52,7 +52,7 @@ func (*Stage) Name() string { return "discover" }
 func (*Stage) Recipe(snapshot stage.Snapshot) string {
 	list, err := source.Parse(snapshot.SourceList)
 	if err == nil && list.VBPL.SelectionVersion == 1 {
-		return stage.RecipeHash("discover", "vbpl-discover/selection-1", snapshot.SourceListHash, string(snapshot.SourceList))
+		return stage.RecipeHash("discover", "vbpl-discover/selection-2", snapshot.SourceListHash, string(snapshot.SourceList))
 	}
 	return stage.RecipeHash("discover", "vbpl-discover/1")
 }

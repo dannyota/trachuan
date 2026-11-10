@@ -30,7 +30,7 @@ func (*Stage) Name() string { return "expand" }
 // Recipe binds the qualifying kinds and relation table.
 func (*Stage) Recipe(snapshot stage.Snapshot) string {
 	list, _ := source.Parse(snapshot.SourceList)
-	return stage.RecipeHash("expand", "vbpl-expand/1", list.RelationCodesHash(), "legal_basis,implements,guided_by,amends_supplements,replaces,repeals,suspends,consolidates,cites,references", "outward", "one-hop")
+	return stage.RecipeHash("expand", "vbpl-expand/2", list.RelationCodesHash(), "legal_basis,implements,guided_by,amends_supplements,replaces,repeals,suspends,consolidates,cites,references", "outward", "one-hop")
 }
 func seedItems(entries []membership.Entry) []stage.Item {
 	items := []stage.Item{}

@@ -248,3 +248,26 @@ func TestStart_FrozenRecipesUnchanged(t *testing.T) {
 		t.Fatalf("recipes: %s -> %s; stages: %s -> %s", beforeRecipes, afterRecipes, beforeStages, afterStages)
 	}
 }
+
+func TestRetry_ClearsPredecessorWithSeeds(t *testing.T) {
+	d := retryRun(t, "fetch")
+	ctx := context.Background()
+	statements := []string{
+		`INSERT INTO run_item(run_id,stage,item_key,state,batch) SELECT id,'discover','central','gap',0 FROM run`,
+		`INSERT INTO gap(run_id,stage,item_key,kind,detail) SELECT id,'discover','central','source_unavailable','' FROM run`,
+		`INSERT INTO run_scope(run_id,seeds_snapshot,seeds_hash,predecessor_run_id,predecessor_phase,predecessor_snapshot_hash) SELECT id,'s','s',id,'final','hash' FROM run`,
+	}
+	for _, sql := range statements {
+		if _, err := d.DB.Exec(ctx, sql); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := Start(ctx, d, "vn", d.TaskQueue, "", ""); err != nil {
+		t.Fatal(err)
+	}
+	var id *int64
+	var phase, hash, seeds *string
+	if err := d.DB.QueryRow(ctx, `SELECT predecessor_run_id,predecessor_phase,predecessor_snapshot_hash,seeds_hash FROM run_scope`).Scan(&id, &phase, &hash, &seeds); err != nil || id != nil || phase != nil || hash != nil || seeds != nil {
+		t.Fatalf("id=%v phase=%v hash=%v seeds=%v err=%v", id, phase, hash, seeds, err)
+	}
+}

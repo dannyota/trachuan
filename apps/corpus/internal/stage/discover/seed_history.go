@@ -76,52 +76,6 @@ func earlierRuns(ctx context.Context, q *store.Queries, r stage.Run) ([]store.Li
 	return out, nil
 }
 
-// EarlierMembership reads the most recent earlier frozen membership or legacy set.
-func EarlierMembership(ctx context.Context, q *store.Queries, r stage.Run) ([]membership.Entry, error) {
-	rows, err := earlierRuns(ctx, q, r)
-	if err != nil {
-		return nil, err
-	}
-	return earlierMembership(ctx, q, rows, r.Country)
-}
-func earlierMembership(ctx context.Context, q *store.Queries, rows []store.ListEarlierRunsRow, country string) ([]membership.Entry, error) {
-	for _, row := range rows {
-		scope, err := q.GetRunScope(ctx, row.ID)
-		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-			return nil, fmt.Errorf("read earlier scope: %w", err)
-		}
-		if err == nil {
-			var phase membership.Phase
-			switch {
-			case scope.FinalSnapshot != nil:
-				phase = membership.Final
-			case scope.ExpandedSnapshot != nil:
-				phase = membership.Expanded
-			case scope.SeedsSnapshot != nil:
-				phase = membership.Seeds
-			}
-			if phase != "" {
-				s, e := membership.ReadPhase(ctx, q, row.ID, phase)
-				if e != nil {
-					return nil, fmt.Errorf("read earlier membership: %w", e)
-				}
-				return s.Entries, nil
-			}
-		}
-		var snapshot stage.Snapshot
-		if err = json.Unmarshal(row.Snapshot, &snapshot); err != nil {
-			return nil, fmt.Errorf("decode earlier snapshot: %w", err)
-		}
-		list, err := source.Parse(snapshot.SourceList)
-		if err != nil {
-			return nil, fmt.Errorf("parse earlier sources: %w", err)
-		}
-		if list.VBPL.SelectionVersion == 0 {
-			return legacyMembership(ctx, q, row.ID, country)
-		}
-	}
-	return nil, nil
-}
 func legacyMembership(ctx context.Context, q *store.Queries, id int64, country string) ([]membership.Entry, error) {
 	keys, err := q.ListLegacyExpectedKeys(ctx, id)
 	if err != nil {

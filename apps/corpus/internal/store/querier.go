@@ -58,6 +58,7 @@ type Querier interface {
 	InsertRunFailure(ctx context.Context, arg InsertRunFailureParams) error
 	InsertRunItem(ctx context.Context, arg InsertRunItemParams) error
 	InsertRunSourceEvent(ctx context.Context, arg InsertRunSourceEventParams) error
+	ListAcceptedRemovalGaps(ctx context.Context, runID int64) ([]ListAcceptedRemovalGapsRow, error)
 	ListBlockingRunFailureCodes(ctx context.Context, arg ListBlockingRunFailureCodesParams) ([]string, error)
 	ListChunkInputs(ctx context.Context, runID int64) ([]ListChunkInputsRow, error)
 	ListChunks(ctx context.Context, artifactID int64) ([]Chunk, error)
@@ -93,6 +94,7 @@ type Querier interface {
 	ResetOlderFailedStageItems(ctx context.Context, arg ResetOlderFailedStageItemsParams) error
 	ResetRetryItem(ctx context.Context, arg ResetRetryItemParams) (int64, error)
 	SetFetchCloseInputHash(ctx context.Context, arg SetFetchCloseInputHashParams) (int64, error)
+	SetMembershipPredecessor(ctx context.Context, arg SetMembershipPredecessorParams) (int64, error)
 	SetRunMessage(ctx context.Context, arg SetRunMessageParams) error
 	SetRunState(ctx context.Context, arg SetRunStateParams) error
 	StartRun(ctx context.Context, arg StartRunParams) error

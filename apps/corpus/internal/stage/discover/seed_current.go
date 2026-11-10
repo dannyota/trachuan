@@ -81,8 +81,8 @@ func directSupport(s membership.SupportTuple) bool {
 func sameSupport(a, b membership.SupportTuple) bool {
 	return len(membership.MergeSupports([]membership.SupportTuple{a}, []membership.SupportTuple{b})) == 1
 }
-func priorState(s membership.SupportTuple, central bool, configured, complete map[string]bool) string {
-	if isLegacy(s) {
+func priorState(s membership.SupportTuple, legacy, central bool, configured, complete map[string]bool) string {
+	if legacy && isLegacy(s) {
 		return "removed"
 	}
 	switch s.RuleKind {

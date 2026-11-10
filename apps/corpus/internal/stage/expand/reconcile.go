@@ -54,7 +54,7 @@ func reconcile(seeds, prior []membership.Entry, observations map[string]seedObse
 		}
 	}
 	for _, old := range prior {
-		retainedRemoval := old.Class == "relation_context" && (old.Disposition == "withdrawn" || old.Disposition == "scope_removed")
+		retainedRemoval := old.Disposition == "withdrawn" || old.Disposition == "scope_removed"
 		if old.Disposition != "active" && !retainedRemoval {
 			continue
 		}
@@ -80,7 +80,7 @@ func reconcile(seeds, prior []membership.Entry, observations map[string]seedObse
 			records = append(records, membership.EvidenceRecord{DocumentKey: old.DocumentKey, Stage: owner, ItemKey: item, Support: s, State: state})
 		}
 		m := members[old.DocumentKey]
-		if m == nil && old.Class != "relation_context" {
+		if m == nil && old.Class != "relation_context" && !retainedRemoval {
 			retain := false
 			for _, rec := range records {
 				retain = retain || rec.State == "retained"

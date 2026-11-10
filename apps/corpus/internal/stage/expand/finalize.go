@@ -67,7 +67,7 @@ func (*Stage) Finalize(ctx context.Context, env stage.Env, tx pgx.Tx, r stage.Ru
 		}
 		stored = append(stored, store.UpsertSeedObservationParams{RunID: r.ID, SeedKey: item.ItemKey, ItemKey: item.ItemKey, Completeness: completeness, ArtifactHash: o.artifactHash, ObservedTargets: data})
 	}
-	prior, err := discover.EarlierMembership(ctx, q, r)
+	prior, err := discover.RecordedMembership(ctx, q, r)
 	if err != nil {
 		return stage.Finalization{}, fmt.Errorf("read earlier membership: %w", err)
 	}

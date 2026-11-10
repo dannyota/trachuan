@@ -93,6 +93,12 @@ func (f *seedFixture) previous(r stage.Run, entries ...membership.Entry) {
 		f.t.Fatal(err)
 	}
 }
+func (f *seedFixture) finalPrevious(r stage.Run, entries ...membership.Entry) {
+	f.t.Helper()
+	if err := membership.PublishPhase(f.ctx, store.New(f.db), r.ID, membership.Final, entries); err != nil {
+		f.t.Fatal(err)
+	}
+}
 func seedEntry(id string, tuples ...membership.SupportTuple) membership.Entry {
 	return membership.Entry{DocumentKey: "vn:vbpl:" + id, Source: "vbpl", SourceID: id, Class: "primary", Disposition: "active", Supports: tuples}
 }
@@ -137,7 +143,7 @@ func mustFinalize(t *testing.T, f *seedFixture, r stage.Run) {
 }
 func TestFinalize_SeedsFromCurrentSupports(t *testing.T) {
 	f := newSeedFixture(t)
-	r := f.run("20261103", 1)
+	r := f.run("20990103", 1)
 	f.item(r, "vbpl:central", true, "1")
 	f.listing(r, "1", source.SelectionRule{Kind: "agency", Value: "62"}, source.SelectionRule{Kind: "term", Value: "law"})
 	mustFinalize(t, f, r)
@@ -154,10 +160,10 @@ func TestScopeRemoved_SelectionLossVsCatalogAbsence(t *testing.T) {
 	}{{"present", nil, []string{"1"}, "scope_removed"}, {"twice absent", nil, nil, "withdrawn"}, {"once absent", []string{"1"}, nil, "active"}} {
 		t.Run(tc.name, func(t *testing.T) {
 			f := newSeedFixture(t)
-			p := f.run("20261101", 1)
+			p := f.run("20990101", 1)
 			f.item(p, "vbpl:central", true, tc.old...)
-			f.previous(p, seedEntry("1", seedTuple("agency", "62")))
-			r := f.run("20261102", 1)
+			f.finalPrevious(p, seedEntry("1", seedTuple("agency", "62")))
+			r := f.run("20990102", 1)
 			f.item(r, "vbpl:central", true, tc.now...)
 			mustFinalize(t, f, r)
 			s := f.read(r)
@@ -169,9 +175,9 @@ func TestScopeRemoved_SelectionLossVsCatalogAbsence(t *testing.T) {
 }
 func TestMembership_IndependentSupportRetained(t *testing.T) {
 	f := newSeedFixture(t)
-	p := f.run("20261101", 1)
-	f.previous(p, seedEntry("1", seedTuple("agency", "62"), seedTuple("term", "law")))
-	r := f.run("20261102", 1)
+	p := f.run("20990101", 1)
+	f.finalPrevious(p, seedEntry("1", seedTuple("agency", "62"), seedTuple("term", "law")))
+	r := f.run("20990102", 1)
 	f.item(r, "vbpl:central", false)
 	f.listing(r, "1", source.SelectionRule{Kind: "agency", Value: "62"})
 	mustFinalize(t, f, r)
@@ -184,9 +190,9 @@ func TestMembership_IndependentSupportRetained(t *testing.T) {
 }
 func TestFinalize_IncompleteCatalogRetains(t *testing.T) {
 	f := newSeedFixture(t)
-	p := f.run("20261101", 1)
-	f.previous(p, seedEntry("1", seedTuple("agency", "62")))
-	r := f.run("20261102", 1)
+	p := f.run("20990101", 1)
+	f.finalPrevious(p, seedEntry("1", seedTuple("agency", "62")))
+	r := f.run("20990102", 1)
 	f.item(r, "vbpl:central", false)
 	mustFinalize(t, f, r)
 	if got := f.state(r, "1", "agency", "62"); got != "retained" {
@@ -196,10 +202,10 @@ func TestFinalize_IncompleteCatalogRetains(t *testing.T) {
 func TestFinalize_IncompleteNamedLookupRetains(t *testing.T) {
 	f := newSeedFixture(t)
 	const name = "71/2025/QH15"
-	p := f.run("20261101", 1, name)
+	p := f.run("20990101", 1, name)
 	f.item(p, "vbpl:central", true)
-	f.previous(p, seedEntry("1", seedTuple("named", name)))
-	r := f.run("20261102", 1, name)
+	f.finalPrevious(p, seedEntry("1", seedTuple("named", name)))
+	r := f.run("20990102", 1, name)
 	f.item(r, "vbpl:central", true)
 	f.item(r, "vbpl:named:"+name, false)
 	mustFinalize(t, f, r)
@@ -212,7 +218,7 @@ func TestFinalize_IncompleteNamedLookupRetains(t *testing.T) {
 }
 func TestFinalize_Idempotent(t *testing.T) {
 	f := newSeedFixture(t)
-	r := f.run("20261103", 1)
+	r := f.run("20990103", 1)
 	f.item(r, "vbpl:central", true, "1")
 	f.listing(r, "1", source.SelectionRule{Kind: "agency", Value: "62"})
 	mustFinalize(t, f, r)
@@ -228,7 +234,7 @@ func TestFinalize_Idempotent(t *testing.T) {
 }
 func TestFinalize_LegacySnapshotNoop(t *testing.T) {
 	f := newSeedFixture(t)
-	r := f.run("20261103", 0)
+	r := f.run("20990103", 0)
 	mustFinalize(t, f, r)
 	var n int
 	if err := f.db.QueryRow(f.ctx, `SELECT count(*) FROM run_scope WHERE run_id=$1`, r.ID).Scan(&n); err != nil || n != 0 {
@@ -256,7 +262,7 @@ func TestExpectedSet_ExpandedWhenStaged(t *testing.T) {
 }
 func TestFinalize_LegacyPriorRunMigration(t *testing.T) {
 	f := newSeedFixture(t)
-	p := f.run("20261101", 0)
+	p := f.run("20990101", 0)
 	f.item(p, "vbpl:sweep", true)
 	if _, err := f.db.Exec(f.ctx, `INSERT INTO run_item(run_id,stage,item_key,state,batch) VALUES ($1,'fetch','vn:vbpl:1','done',0)`, p.ID); err != nil {
 		t.Fatal(err)
@@ -264,7 +270,7 @@ func TestFinalize_LegacyPriorRunMigration(t *testing.T) {
 	if _, err := f.db.Exec(f.ctx, `INSERT INTO listing(run_id,query_key,item_key,payload) VALUES ($1,'vbpl:sweep@old','vn:vbpl:1','{}')`, p.ID); err != nil {
 		t.Fatal(err)
 	}
-	r := f.run("20261102", 1)
+	r := f.run("20990102", 1)
 	f.item(r, "vbpl:central", true, "1")
 	mustFinalize(t, f, r)
 	s := f.read(r)
@@ -275,9 +281,9 @@ func TestFinalize_LegacyPriorRunMigration(t *testing.T) {
 
 func TestFinalize_RejectsChangedSupportStateAfterFreeze(t *testing.T) {
 	f := newSeedFixture(t)
-	p := f.run("20261101", 1)
-	f.previous(p, seedEntry("1", seedTuple("term", "law")))
-	r := f.run("20261102", 1)
+	p := f.run("20990101", 1)
+	f.finalPrevious(p, seedEntry("1", seedTuple("term", "law")))
+	r := f.run("20990102", 1)
 	f.item(r, "vbpl:central", false)
 	f.listing(r, "1", source.SelectionRule{Kind: "agency", Value: "62"})
 	mustFinalize(t, f, r)
@@ -290,9 +296,9 @@ func TestFinalize_RejectsChangedSupportStateAfterFreeze(t *testing.T) {
 }
 func TestFinalize_IgnoresNonDirectPriorSupport(t *testing.T) {
 	f := newSeedFixture(t)
-	p := f.run("20261101", 1)
-	f.previous(p, seedEntry("1", seedTuple("relation", "seed|code")), seedEntry("2", seedTuple("term", "law"), seedTuple("relation", "seed|code")), seedEntry("3", seedTuple("secondary_probe", "doc")))
-	r := f.run("20261102", 1)
+	p := f.run("20990101", 1)
+	f.finalPrevious(p, seedEntry("1", seedTuple("relation", "seed|code")), seedEntry("2", seedTuple("term", "law"), seedTuple("relation", "seed|code")), seedEntry("3", seedTuple("secondary_probe", "doc")))
+	r := f.run("20990102", 1)
 	f.item(r, "vbpl:central", false)
 	mustFinalize(t, f, r)
 	s := f.read(r)
@@ -304,7 +310,7 @@ func TestFinalize_IgnoresNonDirectPriorSupport(t *testing.T) {
 func TestFinalize_NamedEntriesSharingLookupKeepBothSupports(t *testing.T) {
 	f := newSeedFixture(t)
 	a, b := "71/2025/QH15", "71/2025/QH15@2025-01-01"
-	r := f.run("20261103", 1, a, b)
+	r := f.run("20990103", 1, a, b)
 	f.item(r, "vbpl:central", true, "1")
 	for _, name := range []string{a, b} {
 		f.namedItem(r, name, "1")
@@ -362,7 +368,7 @@ func (f *seedFixture) namedItem(r stage.Run, name string, ids ...string) {
 
 func TestFinalize_RepeatDoesNotOverwriteLaterMembership(t *testing.T) {
 	f := newSeedFixture(t)
-	r := f.run("20261103", 1)
+	r := f.run("20990103", 1)
 	f.item(r, "vbpl:central", true, "1")
 	f.listing(r, "1", source.SelectionRule{Kind: "agency", Value: "62"})
 	mustFinalize(t, f, r)
@@ -379,10 +385,10 @@ func TestFinalize_RepeatDoesNotOverwriteLaterMembership(t *testing.T) {
 func TestFinalize_AmbiguousNamedLookupRetainsEligiblePrior(t *testing.T) {
 	f := newSeedFixture(t)
 	const name = "71/2025/QH15"
-	p := f.run("20261101", 1, name)
+	p := f.run("20990101", 1, name)
 	f.item(p, "vbpl:central", true)
-	f.previous(p, seedEntry("1", seedTuple("named", name)))
-	r := f.run("20261102", 1, name)
+	f.finalPrevious(p, seedEntry("1", seedTuple("named", name)))
+	r := f.run("20990102", 1, name)
 	f.item(r, "vbpl:central", true)
 	f.namedItem(r, name, "1", "2")
 	mustFinalize(t, f, r)
@@ -447,6 +453,9 @@ func TestFinalize_CurrentRuleSupersedesOlderEvidence(t *testing.T) {
 			t.Fatalf("%s entries=%#v", rel, s.Entries)
 		}
 		records, err := membership.ReadEvidence(f.ctx, store.New(f.db), r.ID)
+		if publishErr := membership.PublishPhase(f.ctx, store.New(f.db), r.ID, membership.Final, s.Entries); publishErr != nil {
+			t.Fatal(publishErr)
+		}
 		if err != nil || len(records) != 1 || records[0].State != "current" {
 			t.Fatalf("%s records=%#v err=%v", rel, records, err)
 		}
@@ -458,12 +467,18 @@ func TestFinalize_DisappearedRuleDoesNotAccumulate(t *testing.T) {
 	f.item(p, "vbpl:central", true, "1")
 	f.listing(p, "1", source.SelectionRule{Kind: "agency", Value: "62"})
 	mustFinalize(t, f, p)
+	if err := membership.PublishPhase(f.ctx, store.New(f.db), p.ID, membership.Final, f.read(p).Entries); err != nil {
+		t.Fatal(err)
+	}
 	for _, rel := range []string{"20990102", "20990103"} {
 		r := f.run(rel, 1)
 		f.item(r, "vbpl:central", true, "1")
 		mustFinalize(t, f, r)
 		s := f.read(r)
 		records, err := membership.ReadEvidence(f.ctx, store.New(f.db), r.ID)
+		if publishErr := membership.PublishPhase(f.ctx, store.New(f.db), r.ID, membership.Final, s.Entries); publishErr != nil {
+			t.Fatal(publishErr)
+		}
 		if err != nil || len(s.Entries) != 1 || len(s.Entries[0].Supports) != 1 || len(records) != 1 || records[0].State != "removed" {
 			t.Fatalf("%s entries=%#v records=%#v err=%v", rel, s.Entries, records, err)
 		}

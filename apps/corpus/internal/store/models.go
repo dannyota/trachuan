@@ -188,14 +188,17 @@ type RunMembershipEvidence struct {
 }
 
 type RunScope struct {
-	RunID               int64
-	SeedsSnapshot       []byte
-	SeedsHash           *string
-	ExpandedSnapshot    []byte
-	ExpandedHash        *string
-	FinalSnapshot       []byte
-	FinalHash           *string
-	FetchCloseInputHash *string
+	RunID                   int64
+	SeedsSnapshot           []byte
+	SeedsHash               *string
+	ExpandedSnapshot        []byte
+	ExpandedHash            *string
+	FinalSnapshot           []byte
+	FinalHash               *string
+	FetchCloseInputHash     *string
+	PredecessorRunID        *int64
+	PredecessorPhase        *string
+	PredecessorSnapshotHash *string
 }
 
 type RunSeedObservation struct {

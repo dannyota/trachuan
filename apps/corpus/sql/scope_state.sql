@@ -14,7 +14,9 @@ UPDATE run_scope SET expanded_snapshot = $2, expanded_hash = $3 WHERE run_id = $
 UPDATE run_scope SET final_snapshot = $2, final_hash = $3 WHERE run_id = $1 AND (final_snapshot IS NULL OR (final_snapshot = $2 AND final_hash = $3));
 
 -- name: ClearSeeds :exec
-UPDATE run_scope SET seeds_snapshot = NULL, seeds_hash = NULL WHERE run_id = $1;
+UPDATE run_scope SET seeds_snapshot = NULL, seeds_hash = NULL,
+    predecessor_run_id = NULL, predecessor_phase = NULL, predecessor_snapshot_hash = NULL
+WHERE run_id = $1;
 
 -- name: ClearExpanded :exec
 UPDATE run_scope SET expanded_snapshot = NULL, expanded_hash = NULL WHERE run_id = $1;
@@ -70,3 +72,13 @@ SELECT count(*) FROM run_source WHERE run_id = $1 AND state = 'source_paused';
 
 -- name: SetFetchCloseInputHash :execrows
 UPDATE run_scope SET fetch_close_input_hash = $2 WHERE run_id = $1 AND (fetch_close_input_hash IS NULL OR fetch_close_input_hash = $2);
+
+-- name: SetMembershipPredecessor :execrows
+UPDATE run_scope SET predecessor_run_id = sqlc.narg(predecessor_run_id), predecessor_phase = sqlc.narg(predecessor_phase),
+    predecessor_snapshot_hash = sqlc.narg(predecessor_snapshot_hash)
+WHERE run_id = sqlc.arg(run_id) AND seeds_snapshot IS NULL;
+
+-- name: ListAcceptedRemovalGaps :many
+SELECT item_key, kind FROM gap
+WHERE run_id = $1 AND stage = 'fetch' AND kind IN ('withdrawn', 'scope_removed') AND accepted_at IS NOT NULL
+ORDER BY item_key COLLATE "C", kind;

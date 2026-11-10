@@ -49,7 +49,11 @@ func (*Stage) Finalize(ctx context.Context, env stage.Env, tx pgx.Tx, r stage.Ru
 	if err != nil {
 		return stage.Finalization{}, err
 	}
-	prior, err := earlierMembership(ctx, q, history, r.Country)
+	pred, err := discoveryPredecessor(ctx, q, r, history)
+	if err != nil {
+		return stage.Finalization{}, err
+	}
+	prior, err := unacceptedMembership(ctx, q, pred)
 	if err != nil {
 		return stage.Finalization{}, err
 	}
@@ -58,7 +62,7 @@ func (*Stage) Finalize(ctx context.Context, env stage.Env, tx pgx.Tx, r stage.Ru
 		return stage.Finalization{}, err
 	}
 	for _, entry := range prior {
-		if entry.Source != "vbpl" || englishRendition(entry.DocumentKey) {
+		if entry.Source != "vbpl" || englishRendition(entry.DocumentKey) || (entry.Disposition != "active" && entry.Disposition != "withdrawn" && entry.Disposition != "scope_removed") {
 			continue
 		}
 		var direct []membership.SupportTuple
@@ -74,7 +78,6 @@ func (*Stage) Finalize(ctx context.Context, env stage.Env, tx pgx.Tx, r stage.Ru
 		if m == nil {
 			entry.Supports = nil
 			entry.ReplacementKey = nil
-			entry.Disposition = "active"
 			m = &seedMember{entry: entry}
 			members[entry.DocumentKey] = m
 		}
@@ -85,14 +88,17 @@ func (*Stage) Finalize(ctx context.Context, env stage.Env, tx pgx.Tx, r stage.Ru
 			if superseded(s, m.records) {
 				continue
 			}
-			state := priorState(s, central.complete, configured, complete)
-			if s.RuleKind == "named" && ambiguous[s.RuleValue][entry.SourceID] {
+			state := priorState(s, pred.phase != nil && *pred.phase == "legacy", central.complete, configured, complete)
+			if entry.Disposition == "withdrawn" || entry.Disposition == "scope_removed" {
+				state = "removed"
+			}
+			if entry.Disposition == "active" && s.RuleKind == "named" && ambiguous[s.RuleValue][entry.SourceID] {
 				state = "retained"
 			}
 			retained = retained || state == "retained"
 			old = append(old, membership.EvidenceRecord{DocumentKey: entry.DocumentKey, Stage: "discover", ItemKey: "vbpl:central", Support: s, State: state})
 		}
-		if !hasCurrent && !retained {
+		if entry.Disposition == "active" && !hasCurrent && !retained {
 			switch {
 			case central.complete && central.catalog[entry.SourceID]:
 				m.entry.Disposition = "scope_removed"

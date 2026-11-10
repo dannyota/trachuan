@@ -56,6 +56,12 @@ func (f *fixture) phase(r stage.Run, p membership.Phase, entries ...membership.E
 	if err := membership.PublishPhase(f.ctx, store.New(f.db), r.ID, p, entries); err != nil {
 		f.t.Fatal(err)
 	}
+	if p == membership.Seeds {
+		_, err := f.db.Exec(f.ctx, `UPDATE run_scope SET predecessor_run_id = prior.run_id, predecessor_phase = 'final', predecessor_snapshot_hash = prior.final_hash FROM (SELECT s.run_id,s.final_hash FROM run_scope s JOIN run old ON old.id=s.run_id WHERE old.country=$2 AND old.rel < $3 AND s.final_snapshot IS NOT NULL ORDER BY old.rel DESC LIMIT 1) prior WHERE run_scope.run_id=$1`, r.ID, r.Country, r.Rel)
+		if err != nil {
+			f.t.Fatal(err)
+		}
+	}
 }
 func (f *fixture) item(r stage.Run, key, state string, obs *Observation) {
 	f.t.Helper()
@@ -103,7 +109,7 @@ func (f *fixture) close(r stage.Run) error {
 func TestExpand_FinalizeRetainedAndIdempotent(t *testing.T) {
 	f := newFixture(t)
 	old := f.run("20990101")
-	f.phase(old, membership.Expanded, testSeed("1"), testContext("2", "1"))
+	f.phase(old, membership.Final, testSeed("1"), testContext("2", "1"))
 	r := f.run("20990102")
 	f.phase(r, membership.Seeds, testSeed("1"))
 	f.item(r, "vn:vbpl:1", "gap", nil)
@@ -125,7 +131,7 @@ func TestExpand_FinalizeRetainedAndIdempotent(t *testing.T) {
 func TestExpand_FinalizeDepartedSeed(t *testing.T) {
 	f := newFixture(t)
 	old := f.run("20990101")
-	f.phase(old, membership.Expanded, testSeed("1"), testContext("2", "1"))
+	f.phase(old, membership.Final, testSeed("1"), testContext("2", "1"))
 	r := f.run("20990102")
 	f.phase(r, membership.Seeds)
 	f.central(r)
@@ -217,7 +223,7 @@ func TestExpand_RejectsInvalidObservation(t *testing.T) {
 func TestExpand_DepartedSupportNeedsDiscoveryItem(t *testing.T) {
 	f := newFixture(t)
 	old := f.run("20990101")
-	f.phase(old, membership.Expanded, testContext("2", "1"))
+	f.phase(old, membership.Final, testContext("2", "1"))
 	r := f.run("20990102")
 	f.phase(r, membership.Seeds)
 	if err := f.close(r); err == nil {
@@ -261,6 +267,7 @@ func TestExpand_RefreshedRuleAndRemovalAcrossRuns(t *testing.T) {
 			t.Fatalf("%s snapshot=%#v err=%v", rel, s, err)
 		}
 		records, err := membership.ReadEvidence(f.ctx, store.New(f.db), r.ID)
+		f.phase(r, membership.Final, s.Entries...)
 		if err != nil || len(records) != 1 || records[0].State != state {
 			t.Fatalf("%s records=%#v err=%v", rel, records, err)
 		}

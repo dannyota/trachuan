@@ -55,6 +55,10 @@ CREATE TABLE run_scope (
     expanded_snapshot bytea, expanded_hash text,
     final_snapshot bytea, final_hash text,
     fetch_close_input_hash text,
+    predecessor_run_id bigint REFERENCES run(id),
+    predecessor_phase text CHECK (predecessor_phase IN ('final', 'legacy')),
+    predecessor_snapshot_hash text,
+    CHECK ((predecessor_run_id IS NULL) = (predecessor_phase IS NULL) AND (predecessor_phase IS NULL) = (predecessor_snapshot_hash IS NULL)),
     CHECK ((seeds_snapshot IS NULL) = (seeds_hash IS NULL)),
     CHECK ((expanded_snapshot IS NULL) = (expanded_hash IS NULL)),
     CHECK ((final_snapshot IS NULL) = (final_hash IS NULL))
