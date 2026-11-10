@@ -38,69 +38,80 @@ Precedence, highest first: manual correction, automatic text rule, source.
 status and dates are always preserved. A lower layer's result that a higher
 layer overrides is kept in the validity evidence.
 
+## Fail-closed principle
+
+Automatic rules apply only to the narrow shapes below. Every other shape changes
+nothing and becomes a review entry with a proposed manual correction. Reason:
+reading legal effect from text has more variants than a grammar can enumerate;
+the grammar's job is to be right when it fires and loud when it does not, and
+the manual list carries the rest.
+
 ## Text evidence
 
 Automatic rules read only the document's own effect article: a `dieu` whose
 heading, NFC and lowercase, equals `hiệu lực thi hành` or `điều khoản thi hành`,
-from the run's verified extract artifact. Sentences are split on `.` and `;` at
-clause level; text inside quotation marks is ignored. The subject must be the
-document itself (`<loại văn bản> này`, with the type equal to the document's own
-type).
+from the run's verified extract artifact. Text inside quotation marks is
+ignored. Sentences end at `.`; within a sentence, list items are separated by
+`;`, `,` before an instrument, or `và` before an instrument, and every item
+inherits the sentence's subject and verb. The subject must be the document
+itself (`<loại văn bản> này`, the type equal to the document's own type).
 
-- Commencement sentence: `<subject> có hiệu lực [thi hành] [kể] từ ngày <date>`
-  with a spelled (`D tháng M năm YYYY`) or numeric (`D/M/YYYY`) date. A trailing
-  `trừ ...` exception is allowed and recorded as `staggered_effect`.
-- Replacement sentence: `<subject> thay thế [cho] <instruments>` or
-  `<subject> bãi bỏ <instruments>`, where each instrument is
-  `<loại văn bản> số <number> [ngày <date>] ...`. An instrument introduced by
-  `Điều`, `khoản`, `điểm`, `Chương`, `Mục` or `Phụ lục`
-  (`bãi bỏ Điều 3 của ...`) is a partial effect and never a whole-document
-  effect.
+- Commencement sentence: `<subject> có hiệu lực [thi hành] [kể] từ ngày <date>`,
+  date spelled (`D tháng M năm YYYY`) or numeric (`D/M/YYYY`).
+- Replacement sentence: `<subject> thay thế [cho] <items>` or
+  `<subject> bãi bỏ <items>`, also when coordinated in one sentence
+  (`thay thế cho A; B và bãi bỏ Điều 3 của C`). A whole item is
+  `<loại văn bản> số <number> ngày <date> [của <issuer>] ...`. An item
+  introduced by `Điều`, `khoản`, `điểm`, `Chương`, `Mục`, `Phụ lục` or `cụm từ`
+  is partial.
 
-The article is usable only when every sentence in it that contains
-`có hiệu lực`, `thay thế`, `bãi bỏ` or `hết hiệu lực` parses as one of these
-forms or as a clause-scoped sentence about a named `Điều`, `khoản` or `điểm`.
-One unparsed sentence makes the whole article unresolved. Reason: a sentence we
-cannot read may be the exception that matters.
+The article is usable only when it holds exactly one commencement sentence, that
+sentence has no `trừ` exception, the article has no clause-scoped commencement
+sentence, and every sentence containing `có hiệu lực`, `thay thế`, `bãi bỏ` or
+`hết hiệu lực` parses as one of the forms above. Anything else makes the article
+unresolved. The complete Điều 37 of `52/2024/NĐ-CP` is an acceptance fixture:
+two whole replacements and one partial repeal.
 
 ## Automatic rules
 
-Applied in this order to non-consolidated documents.
+Non-consolidated documents only. Compute in three passes over all documents, so
+the result does not depend on traversal order or on a document's latest status:
+first every document's commencement date (source date, or rule A); then every
+replacement event; then apply events and conflicts.
 
-**A. Commencement.** For a document whose source class is `not_yet` or whose
-status code is empty: when the usable article has exactly one commencement date
-D, D is not before the issue date, D is before any retained `eff_to`, and the
-corpus holds no resolved `amends_supplements`, `suspends`, `replaces` or
-`repeals` relation targeting the document from any source, set `eff_from = D`,
-class `in_force,true`, basis `derived_from_text`. Query-time date eligibility
-still keeps a future D out of current results. Otherwise no change and a review
-entry (below). Reason: the enacting clause is the legal source of the date, but
-a later instrument can move it, so any incoming amendment sends the case to
-review instead.
+**A. Commencement.** Candidate: source class `not_yet`, or status code and
+status name both empty. Conditions: usable article with commencement date D; D
+not before the issue date; raw `eff_to` empty; no date or interval normalization
+gap on the document; no resolved `amends_supplements`, `suspends`, `replaces` or
+`repeals` relation targeting it from any source. Result: `eff_from = D`, class
+`in_force,true`, basis `derived_from_text`. Query-time date eligibility still
+keeps a future D out of current results. An empty code with a nonempty status
+name is never a candidate.
 
-**B. Whole-document replacement.** For a source document that is current and
-started after rule A and manual corrections: for each instrument in a
-replacement sentence that resolves to exactly one corpus document by normalized
-number (and by issue date when the sentence states one), with the source's
-commencement D after that document's `eff_from`: set the target's class
-`expired,false`, `eff_to = D` (exclusive), basis `derived_from_text`, unless the
-target already has an earlier end or a source class of `expired`. An existing
-later `eff_to` is replaced by D. The effect is an event: a later change to the
-source's own status never revives the target. A matching diagram relation is
-recorded as agreement but not required. Reason: the replacing text names its
-targets explicitly; the diagram edge alone has no scope.
+**B. Whole-document replacement event.** For every document with a usable
+article and a known commencement date D, whatever its own status: each whole
+item is an event `(actor, target, D)` when the item's number, document type and
+stated issue date all match exactly one corpus document, the stated issuer
+matches when present, and D is after the target's `eff_from`. Apply: the
+target's class becomes `expired,false`, `eff_to = D` (exclusive), basis
+`derived_from_text`, unless the target's source class is `expired` or it has an
+earlier end. Several events on one target use the earliest D. An item that
+matches no document, several documents, or lacks a stated date produces no event
+and a review entry naming the failure. A diagram relation is recorded as
+agreement, never required.
 
 **C. Unconfirmed replacement.** A resolved diagram `replaces` relation from a
-current, started source to a current target that rule B did not confirm marks
-the target `validity_conflict`: it keeps its source status but is not eligible
-for the default current list, and is shown in the non-current group as
-unresolved. `repeals` relations are often partial, so they only add a review
-entry and the existing warning. Reason: handing an agent a probably replaced
-text as current is the failure this note exists to stop; the cost is recall on
-targets the source mislabels as replaced, measured before release.
+current, started source to a target whose source class is `in_force` (not
+`partial`) sets `validity_conflict` on the target when the source's text neither
+confirms a whole replacement (rule B) nor names the target in a partial item.
+The target keeps its status but is not eligible for the default current list and
+appears in the non-current group as unresolved. `repeals` relations and
+`partial` targets only add a review entry. Measured on `vn/20261110_2`: of 55
+such `replaces` pairs, about 22 are whole replacements in the text, 24 are
+partial and 9 are silent or transitional; 30 targets are already `partial`.
 
-Partial effects (one article repealed) do not change document status in this
-release; provision-level validity is later work.
+Partial effects never change document status in this release; provision-level
+validity is later work.
 
 ## Manual corrections
 
@@ -110,6 +121,7 @@ release; provision-level validity is later work.
 - key: vn:vbpl:167087
   number: 52/2024/NĐ-CP
   set: { status_class: in_force, eff_from: "2024-07-01" }
+  eligible: true
   reason: VBPL metadata gives effFrom 2027-07-01
   evidence:
     {
@@ -119,30 +131,36 @@ release; provision-level validity is later work.
   reviewed: "2026-11-10"
 ```
 
-`set` may hold `status_class`, `eff_from`, `eff_to`, or be empty with
-`hold: true` to keep the source values and suppress the automatic rules for that
-document. The build rejects an entry whose key is absent from the run, whose
-number does not match the key, whose quote is not found in the named provision
-when an anchor is given, or which produces an invalid interval. Entries apply
-last and win. The build reports `correction_redundant` when the source or an
-automatic rule now gives the same result, and `correction_conflict` when an
-automatic rule gives a different one. Reason: the source and our parser both
-fail in ways we cannot enumerate; a short reviewed list repairs them without
-widening the rules.
+`set` may hold `status_class`, `eff_from`, `eff_to`. Optional `eligible` (`true`
+or `false`) overrides `validity_conflict` in either direction. Optional
+`hold: true` suppresses rules A, B and C for that document as a target. An entry
+needs at least one of the three. The build rejects an entry whose key is absent
+from the run, whose number does not match the key, whose quote is not found in
+the named provision when an anchor is given, or which produces an invalid
+interval. Entries apply last and win. The build reports `correction_redundant`
+when the source or an automatic rule now gives the same result and
+`correction_conflict` when an automatic rule gives a different one. Reason: the
+source and our parser both fail in ways we cannot enumerate; a short reviewed
+list repairs them without widening the rules.
 
 ## Review queue and evidence
 
 The build writes `validity-review.json` beside the build record: every
-unresolved article, rule A candidate blocked by an incoming relation, rule C
-conflict, `repeals` pair with both sides current, empty-status document left
-`unknown`, and correction report, each with keys, numbers, raw status and dates,
-the sentences read and artifact hashes. It is the input for new manual entries.
+unresolved article of a rule A candidate or of a document with an outgoing
+`replaces` or `repeals` relation; every skipped rule B item with its identity or
+timing failure; every rule A candidate blocked by a relation, date gap or status
+name; every rule C conflict; every `repeals` pair with both sides current; every
+document left `unknown`; every correction report. Each entry has keys, numbers,
+raw status and dates, the sentences read, artifact hashes and, where the parser
+has a reading, a proposed manual entry.
 
-Each corrected or conflicted document stores one validity evidence record: rule
-(`A`, `B`, `C`, `manual`), rule version, raw status code and name, raw dates,
-derived values, the acting document key and D for rule B, provision anchor,
-quote capped at 400 characters, and extract artifact hash. Retrieval returns it
-with every hit of that document, outside the relation cap.
+Each affected document stores a decision history of at most 8 records, in
+application order, the last one deciding: layer (`source`, `A`, `B`, `C`,
+`manual`), rule version, values before and after, acting document key and D for
+B and C, the relation id for C, provision anchor, quote capped at 400 characters
+and extract artifact hash. More than 8 fails the build for that document's
+review. Retrieval returns the history with every hit of the document, outside
+the relation cap.
 
 ## Contracts changed
 
