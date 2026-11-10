@@ -184,26 +184,21 @@ default `s3-han02.fptcloud.com`.
 | chinhphu requests        | 1 request/s, burst 1, 1 in flight across page and file hosts                                                          |
 | chinhphu response        | 5 MB per HTML response; existing 50 MB attachment cap                                                                 |
 | chinhphu total downloads | 1 GB per run, including retries and rejected bodies                                                                   |
-| chinhphu deadlines       | 30 s page request; 120 s PDF request; 5 min per item                                                                  |
-| chinhphu redirects       | At most 3, with each destination revalidated                                                                          |
-| chinhphu retries         | 3 after 2, 8 and 30 s for 429, 5xx or transport timeout                                                               |
-| chinhphu Retry-After     | Wait at least the supplied delay; above 10 min defer with a gap                                                       |
+| chinhphu deadlines       | 30 s page request; 120 s PDF request; 5 min per item; at most 3 redirects, each revalidated                           |
+| chinhphu retries         | 3 after 2, 8 and 30 s for 429, 5xx or transport timeout; wait at least `Retry-After`, above 10 min defer with a gap   |
 
 These are worker-wide source limits, not per-activity allowances. Honor the
-later of retry backoff and `Retry-After`; do not hold an activity past its item
-deadline to wait. Exhaustion produces a retryable source gap. Access denials
-stop the source rather than consuming retries. All attempts consume request and
-byte budgets. Record actual request count, bytes and time in run evidence.
+later of retry backoff and `Retry-After` within the item deadline; exhaustion is
+a retryable source gap and access denials pause the source. All attempts consume
+request and byte budgets; record count, bytes and time in run evidence.
 
-Exceeding any count or byte ceiling fails that scope stage explicitly; never
+Exceeding a count or byte ceiling fails that scope stage explicitly; never
 truncate a listing, expansion or attachment inventory and mark it complete. The
-existing total build-document cap still applies after union and exclusions. The
-context ceiling permits up to 250 GB at one maximum-size attachment each, so it
-is a count bound, not a disk estimate. The primary measures attachment volume
-and available workshop/checkpoint disk before a full run; stop rather than raise
-limits automatically. Secondary payloads add at most 1 GB of wire data per run,
-plus stored artifacts and checkpoint copies. No new paid service or hosted model
-is introduced. These limits need owner approval after the spike.
+build-document cap still applies after union and exclusions. The context ceiling
+is a count bound (up to 250 GB at one maximum-size attachment each), so the
+primary measures attachment volume and disk before a full run and stops rather
+than raising limits. Secondary payloads add at most 1 GB of wire data per run;
+no new paid service or hosted model is introduced.
 
 Submission polling every 5 minutes; `deadline_at` 26 hours after submission;
 `preparing` rows become uncertain after 10 minutes.
