@@ -5,8 +5,8 @@ or silent: automatic rules backed by the document text, a reviewed manual list,
 and the evidence both leave. [Build normalization](index.md#normalization) owns
 source status mapping and the consolidated derivation;
 [retrieval](retrieval-recipe.md#validity-and-evidence) owns eligibility at query
-time. The changes ship with the next corpus schema version, together with scope
-adoption.
+time. The changes ship in corpus schema version 3 per
+[scope adoption](scope-adoption.md).
 
 ## Problem
 
@@ -176,7 +176,8 @@ the relation cap.
 
 - [Corpus schema](corpus-schema.md): `status_basis` gains `derived_from_text`
   and `manual_correction`; `document.validity_conflict boolean`; a
-  `validity_evidence` table. Next schema version.
+  `validity_decision` table. Schema version 3, per
+  [scope adoption](scope-adoption.md).
 - [Build normalization](index.md#normalization): the consolidated derivation is
   unchanged and still counts only source-supplied `in_force` or `partial`
   targets; derived and corrected targets do not count in this release.

@@ -142,14 +142,9 @@
 - [x] Tests first: `TestHandOver_SourceReplaced`, `TestHandOver_AmbiguousKeepsBoth`, `TestHandOver_DifferentDateKeepsBoth`, `TestHandOver_SkippedDownloadUsesDiscoveryRecord`, `TestHandOver_FailedFetchKeepsProvenMatch`.
 - [x] Implement per sources.md and fetch-bundles.md "Hand-over reader"; commit `feat(corpus): hand over secondary documents at fetch close`.
 
-### Task 11: Build and evaluation integration (Plan 2 code)
+### Task 11: Build and evaluation integration
 
-**Files:** Modify `apps/corpus/internal/stage/build/` (inventory version 2 with expand evidence, membership and typed support tuples in the identity hash, class and provenance loading, exclusions, dump and restore validation of schema version 2), `internal/corpusdb/schema.sql` and `schema.go` (`SchemaVersion = 2`, `document.class`), `internal/retrieval` release reading (accept schema version 2, refuse 1 with a clear error), `internal/retrieval` only if class reaches responses, `apps/corpus/internal/evaluation/mapping.go` (reject identity maps bound to inventory version 1).
-
-**Design first:** Plan 2's review (`906d03c`) took schema version 2 for `document.status_basis` and moved the identity map hash into the build input, so the scope adoption text was dropped from `corpus-schema.md`, `index.md` and `evaluation.md` during the rebase (dropped hunks saved in the ignored `work/scope/rebase-dropped-scope-adoption.md` of the scope worktree). Before this task, a designer pass re-adds scope adoption against those decisions (scope schema version 3, `document.class`, inventory version 2 with membership, map hash in build input) and a design review approves it; then revise this task's file list and test names.
-
-- [ ] Tests first: `TestInventory_V2IncludesExpandEvidence`, `TestInventory_V1MapRejected`, `TestLoad_ClassColumnAndProvenance`, `TestSchema_Version2ClassCheck`, `TestBuild_SecondaryMetadataOnly`.
-- [ ] Implement per index.md, corpus-schema.md and evaluation.md as revised; commit `feat(corpus): build and evaluation for membership classes and secondary provenance`.
+Moved to [`2026-11-10-corpus-schema-3.md`](2026-11-10-corpus-schema-3.md), together with validity corrections.
 
 ### Task 12: Wiring, config and proofs
 
@@ -160,5 +155,4 @@
 
 ### Task 13: Live run and coverage (primary)
 
-- [ ] Start a new run with the reviewed source list; record expansion size, requests, time, gaps by kind; confirm the four VBPL golden documents and the AI documents are present.
-- [ ] Re-adjudicate the vn identity map for the new inventory; write `docs/research/vn-scope-run-2026-11.md`; mark this plan landed.
+Moved to Task 9 of [`2026-11-10-corpus-schema-3.md`](2026-11-10-corpus-schema-3.md).
