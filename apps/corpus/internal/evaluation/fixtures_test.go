@@ -34,7 +34,7 @@ func TestSuite_RejectsMissingMapBytes(t *testing.T) {
 
 func TestLoadSuiteFS_DoesNotRequireInventoryHash(t *testing.T) {
 	files := fstest.MapFS{}
-	for _, name := range []string{"legacy.json", "old-product.json", "identity-map.json", "fixtures.json"} {
+	for _, name := range []string{"legacy.json", "old-product.json", "identity-map.json", "fixtures.json", "validity-cases.json"} {
 		data, err := vnFixtures.ReadFile("testdata/vn/" + name)
 		if err != nil {
 			t.Fatal(err)

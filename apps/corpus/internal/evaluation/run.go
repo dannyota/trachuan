@@ -201,6 +201,9 @@ func Run(ctx context.Context, engine Engine, suite Suite, o Options) (Report, Ca
 						for _, g := range ranking.Groups {
 							ar.Groups = append(ar.Groups, CachedGroup{armMode, limit, g.Identity, g.Score, g.BestCosine})
 						}
+						if limit == 8 {
+							r.addHits(c.ID, response.Hits, suite.ValidityCases)
+						}
 						hits := append(append([]retrieval.Hit{}, response.Hits...), response.NonCurrent...)
 						ranks := make([]int, len(c.ExpectedCitations))
 						direct := make([]int, len(ranks))
