@@ -36,7 +36,7 @@ func citation(ancestors []Provision) string {
 	return strings.Join(labels, ", ")
 }
 
-func evidence(g Group, capRunes int) (string, []Fragment, bool, []Gap, error) {
+func evidence(g Group, capRunes int) (string, []Fragment, bool, []Gap, Identity, int, error) {
 	c := g.Best
 	foundRoot := false
 	for _, p := range c.Descendants {
@@ -46,10 +46,10 @@ func evidence(g Group, capRunes int) (string, []Fragment, bool, []Gap, error) {
 		}
 	}
 	if !foundRoot {
-		return "", nil, false, nil, ErrCacheInsufficient
+		return "", nil, false, nil, Identity{}, 0, ErrCacheInsufficient
 	}
 	if capRunes < 1 {
-		return "", nil, false, nil, errors.New("invalid evidence cap")
+		return "", nil, false, nil, Identity{}, 0, errors.New("invalid evidence cap")
 	}
 	byNode := map[string]Provision{}
 	for _, p := range c.Ancestors {
@@ -60,7 +60,7 @@ func evidence(g Group, capRunes int) (string, []Fragment, bool, []Gap, error) {
 	}
 	var spans []sourceSpan
 	if len(c.Spans) > 0 && json.Unmarshal(c.Spans, &spans) != nil {
-		return "", nil, false, nil, errors.New("invalid evidence spans")
+		return "", nil, false, nil, Identity{}, 0, errors.New("invalid evidence spans")
 	}
 	leads := rendered{}
 	for _, ancestor := range c.Ancestors {
@@ -69,9 +69,22 @@ func evidence(g Group, capRunes int) (string, []Fragment, bool, []Gap, error) {
 		}
 		part, err := renderSpans(c.Content, spans, byNode, "lead", ancestor.NodeID)
 		if err != nil {
-			return "", nil, false, nil, err
+			return "", nil, false, nil, Identity{}, 0, err
 		}
 		appendRendered(&leads, part)
+	}
+	bestMember := c.Identity
+	var bestSpan *sourceSpan
+	for i := range spans {
+		span := &spans[i]
+		if span.Role == "body" && (bestSpan == nil || span.ContentStart < bestSpan.ContentStart) {
+			bestSpan = span
+		}
+	}
+	if bestSpan != nil {
+		if p, ok := byNode[bestSpan.NodeID]; ok {
+			bestMember = p.Identity
+		}
 	}
 	tree := renderTree(c.Descendants, c.GroupID)
 	full := rendered{}
@@ -79,12 +92,24 @@ func evidence(g Group, capRunes int) (string, []Fragment, bool, []Gap, error) {
 	appendRendered(&full, tree)
 	expected := append([]Fragment(nil), full.fragments...)
 	complete := len(full.text) <= capRunes
+	bestStart := 0
+	if complete && bestSpan != nil {
+		for _, f := range full.fragments {
+			if f.Role == "body" && f.Identity == bestMember && f.Start <= bestSpan.Start && bestSpan.Start < f.End {
+				bestStart = f.TextStart + bestSpan.Start - f.Start
+				break
+			}
+		}
+	}
 	if !complete {
 		full = rendered{}
 		appendRendered(&full, leads)
 		body, err := renderSpans(c.Content, spans, byNode, "body", "")
 		if err != nil {
-			return "", nil, false, nil, err
+			return "", nil, false, nil, Identity{}, 0, err
+		}
+		if len(leads.text) > 0 && len(body.text) > 0 {
+			bestStart = len(leads.text) + 1
 		}
 		appendRendered(&full, body)
 	}
@@ -121,7 +146,7 @@ func evidence(g Group, capRunes int) (string, []Fragment, bool, []Gap, error) {
 			}
 		}
 	}
-	return string(full.text), full.fragments, complete, gaps, nil
+	return string(full.text), full.fragments, complete, gaps, bestMember, min(bestStart, len(full.text)), nil
 }
 
 func appendRendered(out *rendered, part rendered) {
