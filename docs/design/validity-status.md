@@ -76,8 +76,15 @@ two whole replacements and one partial repeal.
 
 Non-consolidated documents only. Compute in three passes over all documents, so
 the result does not depend on traversal order or on a document's latest status:
-first every document's commencement date (source date, or rule A); then every
-replacement event; then apply events and conflicts.
+
+1. Operative commencement date of every document: the manual correction's
+   `eff_from` when one exists; else rule A's date; else the source `eff_from`
+   when the usable article states the same date or the document has no usable
+   article. A source date that differs from the stated date on a document
+   outside rule A is a date conflict: the document has no operative date, makes
+   no events and enters the review queue.
+2. Replacement events from every document with an operative date.
+3. Apply events and conflicts, then the remaining manual fields.
 
 **A. Commencement.** Candidate: source class `not_yet`, or status code and
 status name both empty. Conditions: usable article with commencement date D; D
@@ -89,16 +96,19 @@ keeps a future D out of current results. An empty code with a nonempty status
 name is never a candidate.
 
 **B. Whole-document replacement event.** For every document with a usable
-article and a known commencement date D, whatever its own status: each whole
-item is an event `(actor, target, D)` when the item's number, document type and
-stated issue date all match exactly one corpus document, the stated issuer
-matches when present, and D is after the target's `eff_from`. Apply: the
-target's class becomes `expired,false`, `eff_to = D` (exclusive), basis
-`derived_from_text`, unless the target's source class is `expired` or it has an
-earlier end. Several events on one target use the earliest D. An item that
-matches no document, several documents, or lacks a stated date produces no event
-and a review entry naming the failure. A diagram relation is recorded as
-agreement, never required.
+article and an operative date D, whatever its own status: each whole item is an
+event `(actor, target, D)` when its number, document type and stated issue date
+all match exactly one corpus document, D is after the target's `eff_from`, and
+the issuer is verified: the item states an issuer equal to the target's, or the
+normalized number has the form `n/YYYY/<type>-<issuer code>` whose code names
+the issuer (`NĐ-CP`, `QH15`, `TT-NHNN`). Apply: the target's `eff_to = D`
+(exclusive) with basis `derived_from_text`, unless it already has an earlier
+end; the status class is not changed. Retrieval's date interval then keeps the
+target current until D and not after, so a replacement scheduled for a future
+date never hides the predecessor early. Several events on one target use the
+earliest D. An item that matches no document or several, lacks a stated date, or
+lacks a verified issuer produces no event and a review entry naming the failure.
+A diagram relation is recorded as agreement, never required.
 
 **C. Unconfirmed replacement.** A resolved diagram `replaces` relation from a
 current, started source to a target whose source class is `in_force` (not
@@ -146,13 +156,13 @@ list repairs them without widening the rules.
 ## Review queue and evidence
 
 The build writes `validity-review.json` beside the build record: every
-unresolved article of a rule A candidate or of a document with an outgoing
-`replaces` or `repeals` relation; every skipped rule B item with its identity or
-timing failure; every rule A candidate blocked by a relation, date gap or status
-name; every rule C conflict; every `repeals` pair with both sides current; every
-document left `unknown`; every correction report. Each entry has keys, numbers,
-raw status and dates, the sentences read, artifact hashes and, where the parser
-has a reading, a proposed manual entry.
+unresolved effect article of any non-consolidated document; every date conflict
+from pass 1; every skipped rule B item with its identity or timing failure;
+every rule A candidate blocked by a relation, date gap or status name; every
+rule C conflict; every `repeals` pair with both sides current; every document
+left `unknown`; every correction report. Each entry has keys, numbers, raw
+status and dates, the sentences read, artifact hashes and, where the parser has
+a reading, a proposed manual entry.
 
 Each affected document stores a decision history of at most 8 records, in
 application order, the last one deciding: layer (`source`, `A`, `B`, `C`,
