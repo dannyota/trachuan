@@ -39,3 +39,19 @@ func (l *loader) loadGaps(ctx context.Context) error {
 	}
 	return nil
 }
+
+func (l *loader) addMembershipGaps() {
+	if l.inv.Version != 2 {
+		return
+	}
+	existing := make(map[[2]string]bool, len(l.gaps))
+	for _, gap := range l.gaps {
+		existing[[2]string{gap.ItemKey, gap.Kind}] = true
+	}
+	for _, member := range l.inv.Membership.Entries {
+		l.members[member.DocumentKey] = member
+		if member.Disposition != "active" && !existing[[2]string{member.DocumentKey, member.Disposition}] {
+			l.addGap("build", member.DocumentKey, member.Disposition, "")
+		}
+	}
+}

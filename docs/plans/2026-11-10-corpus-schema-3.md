@@ -64,7 +64,7 @@
 
 ### Task 8: Proof and review
 
-- [ ] Extend the scope proof through `build` and `eval` (`TestProof_ScopeRunBuildsAndEvaluates`: replaced secondary not loaded, class and source set, one rule A correction, one rule B event, `validity-review.json` present, dump and restore keep decisions), under 60 seconds.
+- [x] Extend the scope proof through `build` and `eval` (`TestProof_ScopeRunBuildsAndEvaluates`: replaced secondary not loaded, class and source set, one rule A correction, one rule B event, `validity-review.json` present, dump and restore keep decisions), under 60 seconds.
 - [ ] Whole-branch `gpt-6.1-sol` review; fix findings; `make pre-push`, `make sqlc-check`; push; draft pull request; merge on green CI.
 
 ### Task 9: Live run and coverage (primary)

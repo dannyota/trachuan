@@ -70,14 +70,7 @@ func Load(ctx context.Context, conn *pgx.Conn, inv Inventory, artifacts artifact
 	for _, file := range inv.Provenance.Files {
 		l.provenanceFiles[file.DocumentKey] = append(l.provenanceFiles[file.DocumentKey], file)
 	}
-	if l.inv.Version == 2 {
-		for _, member := range l.inv.Membership.Entries {
-			l.members[member.DocumentKey] = member
-			if member.Disposition != "active" {
-				l.addGap("build", member.DocumentKey, member.Disposition, "")
-			}
-		}
-	}
+	l.addMembershipGaps()
 	if err = l.reconcileInventory(); err != nil {
 		return Counts{}, err
 	}
