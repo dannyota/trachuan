@@ -31,4 +31,3 @@ One line per item: date, area, finding, source.
 - 2026-11-10, eval, the report names mapping issues only inside per-case rows; add a top-level list of cases with `mapping_incomplete` so an unavailable floor explains itself, found in the vn/20261110_2 evaluation.
 - 2026-11-10, corpus, stages that call chinhphu still use the worker-wide batch concurrency; the shared client gate (1 in flight) is the only limit. Add a per-stage batch limit if secondary items wait past their deadlines.
 - 2026-11-10, corpus, the chinhphu download budget (1 GB) is counted per client instance: a worker restart resets it and several attachments, retries and restarts can exceed it for one run. Add durable per-run accounting of every consumed response body (needs a workshop table).
-- 2026-11-10, corpus, implement `docs/design/validity-status.md` (text rules A to C, `sources/vn-corrections.yaml`, review queue, decision history) together with scope adoption in the next corpus schema version.
