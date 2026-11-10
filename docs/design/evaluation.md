@@ -87,8 +87,8 @@ Ambiguous mappings or missing entries are `mapping_incomplete` for that case,
 not invented absences. If an absent document appears in a newer inventory,
 require re-adjudication, never auto-credit it. A document appears when it has
 the searched number and at least one provision anchor; one without a provision
-tree offers no identity to adjudicate and stays in the entry's reason. Do not invent a document key or
-provision anchor from a label.
+tree offers no identity to adjudicate and stays in the entry's reason. Do not
+invent a document key or provision anchor from a label.
 
 Validate every recorded identity against the run's fetch/extract/relate
 inventory: document key and normalized number, provision anchor, both relation

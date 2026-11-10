@@ -21,3 +21,5 @@ Observations and experiments. Not project authority.
   and memory for the query recipe.
 - [INT8 query embedding](query-int8-2026-11.md): four finalist models, INT8
   variants, quality and A1 latency.
+- [Index baseline](index-baseline-2026-11.md): first chunk, embed, build and
+  evaluation run on vn/20261110_2.
