@@ -38,7 +38,9 @@ type fixtureServer struct {
 	released        chan struct{}
 	timedOut        atomic.Bool
 	treeStatus      int
+	detailStatus    int
 	diagramStatus   int
+	filesStatus     int
 	downloadStarted chan struct{}
 	downloadRelease chan struct{}
 	downloadStatus  int
@@ -66,6 +68,10 @@ func setup(t *testing.T, f *fixtureServer) (*Stage, stage.Env) {
 		}
 		switch {
 		case r.URL.Path == "/doc/66518":
+			if f.detailStatus != 0 {
+				w.WriteHeader(f.detailStatus)
+				return
+			}
 			if f.missing {
 				w.WriteHeader(http.StatusNotFound)
 				return
@@ -92,6 +98,10 @@ func setup(t *testing.T, f *fixtureServer) (*Stage, stage.Env) {
 			}
 			fixture(t, w, "diagram-66518.json")
 		case strings.HasSuffix(r.URL.Path, "/files"):
+			if f.filesStatus != 0 {
+				w.WriteHeader(f.filesStatus)
+				return
+			}
 			for _, entry := range f.files {
 				entry["presignedUrl"] = "http://" + r.Host + "/attachment/" + entry["fullPath"].(string)
 			}
@@ -196,6 +206,47 @@ func TestFetch_DetailNotFoundIsGap(t *testing.T) {
 	out := process(t, s, e)
 	if out.Artifact != nil || out.State != "gap" || len(out.Gaps) != 1 || out.Gaps[0] != (stage.Gap{Kind: "not_found", Detail: "66518"}) {
 		t.Fatalf("%+v", out)
+	}
+}
+
+func TestFetch_GatewayStatus(t *testing.T) {
+	tests := []struct {
+		name      string
+		fixture   *fixtureServer
+		retryable bool
+	}{
+		{name: "detail 500", fixture: &fixtureServer{detailStatus: 500}},
+		{name: "tree 500", fixture: &fixtureServer{treeStatus: 500}},
+		{name: "diagram 500", fixture: &fixtureServer{diagramStatus: 500}},
+		{name: "files 500", fixture: &fixtureServer{filesStatus: 500}},
+		{name: "detail 429", fixture: &fixtureServer{detailStatus: 429}, retryable: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s, env := setup(t, tt.fixture)
+			out, err := s.Process(context.Background(), env, stage.Run{}, stage.Item{Key: "vn:vbpl:66518"})
+			var retry *stage.RetryableError
+			if tt.retryable {
+				if !errors.As(err, &retry) || retry.GapKind != "" {
+					t.Fatalf("output = %+v, error = %v", out, err)
+				}
+				return
+			}
+			if err != nil || out.State != "gap" || len(out.Gaps) != 1 || out.Gaps[0] != (stage.Gap{Kind: "source_unavailable", Detail: "fetch document \"66518\": gateway status 500"}) {
+				t.Fatalf("output = %+v, error = %v", out, err)
+			}
+		})
+	}
+}
+
+func TestFetch_TimeoutIsRetryable(t *testing.T) {
+	s, env := setup(t, &fixtureServer{})
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(-time.Second))
+	defer cancel()
+	out, err := s.Process(ctx, env, stage.Run{}, stage.Item{Key: "vn:vbpl:66518"})
+	var retry *stage.RetryableError
+	if !errors.As(err, &retry) || retry.GapKind != "" || !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("output = %+v, error = %v", out, err)
 	}
 }
 func TestFetch_ResponseOverLimitIsGap(t *testing.T) {

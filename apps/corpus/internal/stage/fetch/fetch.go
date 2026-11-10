@@ -101,10 +101,12 @@ func apiError(err error, id string, detail bool) (stage.Output, error) {
 		return stage.Output{}, stage.SourceData(wrapped)
 	}
 	var status *vbpl.StatusError
-	if errors.As(err, &status) && status.Code >= 500 {
-		// The gateway keeps refusing this document (seen live: detail 500 for
-		// old documents); after the last attempt it is a gap the owner can accept.
-		return stage.Output{}, stage.RetryableGap(wrapped, "source_unavailable")
+	if errors.As(err, &status) && status.Code >= 500 && status.Code < 600 {
+		detail := []rune(wrapped.Error())
+		if len(detail) > 200 {
+			detail = detail[:200]
+		}
+		return stage.Output{State: "gap", Gaps: []stage.Gap{{Kind: "source_unavailable", Detail: string(detail)}}}, nil
 	}
 	return stage.Output{}, stage.Retryable(wrapped)
 }
