@@ -444,14 +444,18 @@ func TestShapeHit_PathFromAncestors(t *testing.T) {
 }
 
 func bestMemberFixture() (Arms, Recipe) {
-	a, r := shapeFixture("Điều 5")
+	a, r := shapeFixture("Điều 5\nKhoản 1 nội dung\nKhoản 2 nội dung")
 	c := &a.Primary.Dense[0]
-	parent := c.GroupID
-	child := Provision{ID: 3, ParentID: &parent, NodeID: "child", Kind: "khoan", Identity: Identity{Country: "vn", DocumentKey: "vn:1", Anchor: "clause-2"}, Text: "  Khoản 2 nội dung  "}
-	c.Descendants = append(c.Descendants, child)
-	c.Provision, c.Identity, c.ProvisionID = child, child.Identity, child.ID
+	article := c.Descendants[0]
+	article.Kind, article.Label = "dieu", "Điều 5"
+	article.Identity.Anchor = "article-5"
+	parent := article.ID
+	first := Provision{ID: 3, ParentID: &parent, NodeID: "first", Kind: "khoan", Identity: Identity{Country: "vn", DocumentKey: "vn:1", Anchor: "clause-1"}, Text: "Khoản 1 nội dung"}
+	second := Provision{ID: 4, ParentID: &parent, NodeID: "child", Kind: "khoan", Identity: Identity{Country: "vn", DocumentKey: "vn:1", Anchor: "clause-2"}, Text: "  Khoản 2 nội dung  ", Ordinal: 1}
+	c.Group, c.Ancestors, c.Descendants = article.Identity, []Provision{article}, []Provision{article, first, second}
+	c.Provision, c.Identity, c.ProvisionID = second, second.Identity, second.ID
 	c.Content = "Khoản 2 nội dung"
-	c.Spans = []byte(`[{"node_id":"child","start":2,"end":18,"content_start":0,"content_end":16,"role":"body"}]`)
+	c.Spans = []byte(`[{"node_id":"child","start":10,"end":18,"content_start":8,"content_end":16,"role":"body"},{"node_id":"child","start":2,"end":10,"content_start":0,"content_end":8,"role":"body"}]`)
 	a.Primary.Members[0] = *c
 	return a, r
 }
@@ -508,6 +512,49 @@ func TestShapeHit_BestMemberIsBestChunkOwner(t *testing.T) {
 		t.Fatal(err)
 	}
 	if h := got.Hits[0]; h.BestMember != (Identity{Country: "vn", DocumentKey: "vn:1", Anchor: "clause-2"}) || h.BestMember == h.Identity {
+		t.Fatalf("hit: %+v", h)
+	}
+}
+
+func TestShapeHit_BestSpanUnlocatedFallsBackToOwnText(t *testing.T) {
+	a, r := shapeFixture("intro point point")
+	c := &a.Primary.Dense[0]
+	c.Ancestors[0].Text = "lead"
+	parent := c.GroupID
+	point := Provision{ID: 3, ParentID: &parent, NodeID: "point", Kind: "diem", Text: "point", Identity: Identity{Country: "vn", DocumentKey: "vn:1", Anchor: "point"}}
+	c.Descendants = append(c.Descendants, point)
+	c.Provision, c.Identity, c.ProvisionID = point, point.Identity, point.ID
+	c.Content = "lead\npoint"
+	c.Spans = []byte(`[{"node_id":"a","start":0,"end":4,"content_start":0,"content_end":4,"role":"lead"},{"node_id":"point","start":0,"end":5,"content_start":5,"content_end":10,"role":"body"}]`)
+	a.Primary.Members[0] = *c
+	got, err := Shape(a, r, 8, "hybrid")
+	if err != nil {
+		t.Fatal(err)
+	}
+	h := got.Hits[0]
+	if h.BestMember != h.Identity || h.BestTextStart != 5 || h.Text != "lead\nintro point point" {
+		t.Fatalf("hit: %+v", h)
+	}
+}
+
+func TestShapeHit_LeadsFillCapFallsBack(t *testing.T) {
+	a, r := shapeFixture("body")
+	r.EvidenceRuneCap = 4
+	c := &a.Primary.Dense[0]
+	c.Ancestors[0].Text = "long lead"
+	parent := c.GroupID
+	point := Provision{ID: 3, ParentID: &parent, NodeID: "point", Kind: "diem", Text: "body", Identity: Identity{Country: "vn", DocumentKey: "vn:1", Anchor: "point"}}
+	c.Descendants = append(c.Descendants, point)
+	c.Provision, c.Identity, c.ProvisionID = point, point.Identity, point.ID
+	c.Content = "long lead\nbody"
+	c.Spans = []byte(`[{"node_id":"a","start":0,"end":9,"content_start":0,"content_end":9,"role":"lead"},{"node_id":"point","start":0,"end":4,"content_start":10,"content_end":14,"role":"body"}]`)
+	a.Primary.Members[0] = *c
+	got, err := Shape(a, r, 8, "hybrid")
+	if err != nil {
+		t.Fatal(err)
+	}
+	h := got.Hits[0]
+	if h.BestMember != h.Identity || h.BestTextStart != 4 || h.Text != "long" {
 		t.Fatalf("hit: %+v", h)
 	}
 }

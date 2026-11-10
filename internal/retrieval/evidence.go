@@ -92,24 +92,12 @@ func evidence(g Group, capRunes int) (string, []Fragment, bool, []Gap, Identity,
 	appendRendered(&full, tree)
 	expected := append([]Fragment(nil), full.fragments...)
 	complete := len(full.text) <= capRunes
-	bestStart := 0
-	if complete && bestSpan != nil {
-		for _, f := range full.fragments {
-			if f.Role == "body" && f.Identity == bestMember && f.Start <= bestSpan.Start && bestSpan.Start < f.End {
-				bestStart = f.TextStart + bestSpan.Start - f.Start
-				break
-			}
-		}
-	}
 	if !complete {
 		full = rendered{}
 		appendRendered(&full, leads)
 		body, err := renderSpans(c.Content, spans, byNode, "body", "")
 		if err != nil {
 			return "", nil, false, nil, Identity{}, 0, err
-		}
-		if len(leads.text) > 0 && len(body.text) > 0 {
-			bestStart = len(leads.text) + 1
 		}
 		appendRendered(&full, body)
 	}
@@ -146,7 +134,25 @@ func evidence(g Group, capRunes int) (string, []Fragment, bool, []Gap, Identity,
 			}
 		}
 	}
-	return string(full.text), full.fragments, complete, gaps, bestMember, min(bestStart, len(full.text)), nil
+	bestStart := 0
+	located := false
+	if bestSpan != nil {
+		for _, f := range full.fragments {
+			if f.Role == "body" && f.Identity == bestMember && f.Start <= bestSpan.Start && bestSpan.Start < f.End {
+				bestStart = f.TextStart + bestSpan.Start - f.Start
+				located = true
+				break
+			}
+		}
+	}
+	if !located {
+		// Fall back to the hit when the best span is absent from returned text.
+		bestMember = g.Identity
+		if len(leads.text) > 0 {
+			bestStart = min(len(leads.text)+1, len(full.text))
+		}
+	}
+	return string(full.text), full.fragments, complete, gaps, bestMember, bestStart, nil
 }
 
 func appendRendered(out *rendered, part rendered) {
