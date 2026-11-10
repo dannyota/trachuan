@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -47,6 +48,10 @@ func secondaryFailure(name string, err error) stage.Gap {
 			s := int32(vb.HTTPStatus)
 			g.HTTPStatus = &s
 		}
+	}
+	if name == "vbpl" && g.Origin == stage.OriginUnknown && errors.Is(err, io.EOF) {
+		g.Origin = stage.OriginTransport
+		g.Cause = stage.CauseConnectionError
 	}
 	switch {
 	case errors.Is(err, chinhphu.ErrNotFound), errors.Is(err, vbpl.ErrNotFound):

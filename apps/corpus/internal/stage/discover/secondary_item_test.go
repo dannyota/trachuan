@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -303,6 +304,17 @@ func TestSecondary_SourceFailuresAreClassified(t *testing.T) {
 		if got := secondaryFailure("chinhphu", tc.err); got.Kind != tc.want {
 			t.Errorf("kind=%s want=%s", got.Kind, tc.want)
 		}
+	}
+}
+
+func TestSecondary_ProbeEOFFailureIsTransport(t *testing.T) {
+	err := fmt.Errorf("lookup page 1: gateway request: request: %w", io.EOF)
+	gap := secondaryFailure("vbpl", err)
+	if gap.Kind != "source_unavailable" || gap.Origin != stage.OriginTransport || gap.Cause != stage.CauseConnectionError || !stage.RetryEligible(gap) {
+		t.Fatalf("gap=%+v", gap)
+	}
+	if !stage.RetryEligible(stage.Gap{Kind: "source_unavailable", Origin: stage.OriginUnknown, Cause: stage.CauseUnknown}) {
+		t.Fatal("historical unknown source gap is not retry eligible")
 	}
 }
 

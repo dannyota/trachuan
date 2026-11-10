@@ -50,7 +50,7 @@ func planRetry(ctx context.Context, q *store.Queries, runID int64, stages []stri
 				continue
 			}
 			delete(eligible, item)
-			if name == "discover" {
+			if name == "discover" && !strings.HasPrefix(item.key, "chinhphu:") {
 				_, artifactErr := q.GetRunItemArtifact(ctx, store.GetRunItemArtifactParams{RunID: runID, Stage: name, ItemKey: item.key})
 				if artifactErr == nil {
 					return retryPlan{}, fmt.Errorf("discover item with an artifact cannot be retried: %s", item.key)

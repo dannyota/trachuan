@@ -48,7 +48,11 @@ func (s *Stage) writeBundleObservations(ctx context.Context, dir, id string, det
 	group, requestCtx := errgroup.WithContext(ctx)
 	for i, entry := range entries {
 		group.Go(func() error {
-			downloaded, hit := s.cachedFile(id, filesDir, entry)
+			var downloaded vbpl.Downloaded
+			var hit bool
+			if entry.URL != "" {
+				downloaded, hit = s.cachedFile(id, filesDir, entry)
+			}
 			var err error
 			if !hit {
 				downloaded, err = s.client.Download(requestCtx, id, entry, filesDir, s.fileLimit)

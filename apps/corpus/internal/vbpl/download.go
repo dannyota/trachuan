@@ -29,6 +29,9 @@ func (c *Client) Download(ctx context.Context, id string, f File, dir string, li
 				return Downloaded{}, fmt.Errorf("retry download: %w", err)
 			}
 		}
+		if f.URL == "" {
+			return Downloaded{}, ErrNotFound
+		}
 		if err := c.checkDownloadURL(f.URL); err != nil {
 			return Downloaded{}, err
 		}

@@ -90,6 +90,44 @@ func TestStart_RefusesDiscoverItemWithArtifact(t *testing.T) {
 	}
 }
 
+func TestStart_RetriesDoneDiscoverItemWithSourceGap(t *testing.T) {
+	d := lifecycleDeps(t)
+	d.Stages = []string{"discover", "expand", "fetch"}
+	d.RecipesFor = func(stage.Snapshot) map[string]string {
+		return map[string]string{"discover": "one", "expand": "two", "fetch": "three"}
+	}
+	snap := stage.Snapshot{SourceList: []byte(`{}`), Stages: d.Stages, Recipes: d.RecipesFor(stage.Snapshot{})}
+	next := "fetch"
+	insertLifecycleRun(t, d, "paused", time.Now(), snap, &next)
+	ctx := context.Background()
+	statements := []string{
+		`INSERT INTO artifact(stage,item_key,input_hash,recipe_hash,path,sha256) VALUES ('discover','chinhphu:keyword:law','input','recipe','path','hash')`,
+		`INSERT INTO run_item(run_id,stage,item_key,state,batch,attempt,generation,input_hash,artifact_id) SELECT id,'discover','chinhphu:keyword:law','done',0,3,1,'input',(SELECT id FROM artifact) FROM run`,
+		`INSERT INTO run_item(run_id,stage,item_key,state,batch) SELECT id,'discover',k,'pending',0 FROM run CROSS JOIN unnest(ARRAY['vbpl:central','vbpl:named:law']) k`,
+		`INSERT INTO run_item(run_id,stage,item_key,state,batch) SELECT id,'expand','seed','done',0 FROM run`,
+		`INSERT INTO gap(run_id,stage,item_key,kind,detail,origin,cause) SELECT id,'discover','chinhphu:keyword:law','source_unavailable','EOF','unknown','unknown' FROM run`,
+		`INSERT INTO run_document(run_id,document_key,country,source,source_id,class,disposition) SELECT id,'vn:vbpl:1','vn','vbpl','1','primary','active' FROM run`,
+		`INSERT INTO run_membership_evidence(run_id,document_key,stage,item_key,rule_kind,rule_value,response_sha256,artifact_hash,evidence_path,support_state) SELECT id,'vn:vbpl:1','discover','chinhphu:keyword:law','secondary_probe','law','hash','art','path','current' FROM run`,
+		`INSERT INTO run_seed_observation(run_id,seed_key,item_key,completeness,observed_targets) SELECT id,'vn:vbpl:1','seed','incomplete','[]' FROM run`,
+	}
+	for _, statement := range statements {
+		if _, err := d.DB.Exec(ctx, statement); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := Start(ctx, d, "vn", d.TaskQueue, "", ""); err != nil {
+		t.Fatal(err)
+	}
+	var state string
+	var attempt, generation, pending, gaps, evidence, observations, artifacts int
+	var input *string
+	var artifactID *int64
+	err := d.DB.QueryRow(ctx, `SELECT state,attempt,generation,input_hash,artifact_id,(SELECT count(*) FROM run_item WHERE stage='discover' AND state='pending'),(SELECT count(*) FROM gap),(SELECT count(*) FROM run_membership_evidence),(SELECT count(*) FROM run_seed_observation),(SELECT count(*) FROM artifact) FROM run_item WHERE item_key='chinhphu:keyword:law'`).Scan(&state, &attempt, &generation, &input, &artifactID, &pending, &gaps, &evidence, &observations, &artifacts)
+	if err != nil || state != "pending" || attempt != 0 || generation != 2 || input != nil || artifactID != nil || pending != 3 || gaps != 0 || evidence != 0 || observations != 0 || artifacts != 1 {
+		t.Fatalf("state=%s attempt=%d generation=%d input=%v artifact=%v pending=%d gaps=%d evidence=%d observations=%d artifacts=%d err=%v", state, attempt, generation, input, artifactID, pending, gaps, evidence, observations, artifacts, err)
+	}
+}
+
 func TestStart_RetryCompleteRunAndFence(t *testing.T) {
 	d := retryRun(t, "")
 	ctx := context.Background()
