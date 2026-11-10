@@ -1,15 +1,15 @@
 # Workflow
 
-The primary session (`manager`) plans, writes and reviews designs, ADRs and documentation, makes the decisions, briefs, verifies and owns Git. Codex workers do implementation and troubleshooting; Codex `gpt-6-astra` reviews architecture designs and code independently. The primary asks the owner only for decisions the owner must make, one at a time, with a recommendation.
+The primary session (`manager`) plans, writes and reviews designs, ADRs and documentation, makes the decisions, briefs, verifies and owns Git. Codex workers do implementation and troubleshooting; Codex `gpt-6.1-sol` reviews architecture designs and code independently. The primary asks the owner only for decisions the owner must make, one at a time, with a recommendation.
 
 ## Routes
 
 |Work|Role and model|
 |-|-|
 |Design, ADR, contract proposal, documentation, decisions|The primary (`manager`), which reviews its own documentation and prose|
-|Independent review of an architecture design or ADR|Codex `reviewer`, `gpt-6-astra` high (`--search` when sources are needed)|
+|Independent review of an architecture design or ADR|Codex `reviewer`, `gpt-6.1-sol` high (`--search` when sources are needed)|
 |Implementation, troubleshooting with supplied evidence|Codex `implementer`, `gpt-6.1-terra` high|
-|Review of code, adversarial pass|Codex `reviewer`, `gpt-6-astra` high|
+|Review of code, adversarial pass|Codex `reviewer`, `gpt-6.1-sol` high|
 |Searches, summaries, mechanical reading|Claude `Explore` agent|
 
 Dispatch: `scripts/codex-agent.sh [--model <m>] [--effort <e>] [--search] [--resume <session-id>] <role> <worktree> <brief-file> <report-file>`. The primary decides and states the route in each brief. No model reviews its own work; the original reviewer confirms each fix.

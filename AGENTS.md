@@ -37,11 +37,11 @@ Precedence: an accepted ADR wins over design text; design wins over a plan. Code
 
 ## Agents
 
-The owner talks to the primary Claude session, which runs as `manager`. It plans, writes designs, ADRs and documentation, reviews them itself and makes the decisions; it writes briefs, verifies results, runs local checks, and owns Git, tags and deploys. Codex `gpt-6-astra` independently reviews architecture designs and code, and Codex `implementer` does implementation and troubleshooting, through `scripts/codex-agent.sh <role> <worktree> <brief> <report>`. Documentation and prose the primary wrote need no independent review.
+The owner talks to the primary Claude session, which runs as `manager`. It plans, writes designs, ADRs and documentation, reviews them itself and makes the decisions; it writes briefs, verifies results, runs local checks, and owns Git, tags and deploys. Codex `gpt-6.1-sol` independently reviews architecture designs and code, and Codex `implementer` does implementation and troubleshooting, through `scripts/codex-agent.sh <role> <worktree> <brief> <report>`. Documentation and prose the primary wrote need no independent review.
 
 |Role|Where|Model, effort|Duty|
 |-|-|-|-|
-|`reviewer`|Codex `.codex/agents/reviewer.toml`|`gpt-6-astra` high, read-only|Independent review of architecture designs, ADRs and code; adversarial pass|
+|`reviewer`|Codex `.codex/agents/reviewer.toml`|`gpt-6.1-sol` high, read-only|Independent review of architecture designs, ADRs and code; adversarial pass|
 |`implementer`|Codex `.codex/agents/implementer.toml`|`gpt-6.1-terra` high, workspace-write|One bounded task in named paths; root-causes and fixes a failure from supplied evidence|
 |exploration|Claude `Explore` agent|default|Searches and mechanical reading|
 |`designer`|Codex `.codex/agents/designer.toml`|`gpt-6-astra` high, workspace-write in `docs/`|Optional second author of a design draft, only when the primary chooses it; never the default|
