@@ -51,7 +51,8 @@ Version 2 (selection version 1):
 - identity:
   `{version:2,country,source_list_hash,final_membership_hash,expected_keys,items}`
   with discover, expand, fetch, extract and relate items;
-- build input label `"3"`.
+- build input label `"3"`, with `provenance_sha256` appended as the last
+  argument.
 
 `final_membership_hash` is the frozen `final` phase hash from `run_scope`. The
 canonical snapshot binds every member, class, disposition, replacement key,
@@ -67,9 +68,24 @@ each version.
 Build planning for selection version 1 requires the committed `final` phase, no
 durable run failure and no paused source, and reconciles membership with items:
 every final active member has a fetch item in state `done` or `gap`, and every
-member with a done fetch has terminal extract and relate items. A missing or
-non-terminal item fails planning with non-retryable `membership_unreconciled`
-naming the keys. It never rebuilds membership from fetch items.
+present document ([presence](#presence)) has terminal extract and relate items.
+A missing or non-terminal item fails planning with non-retryable
+`membership_unreconciled` naming the keys. It never rebuilds membership from
+fetch items.
+
+## Provenance snapshot
+
+Bundles carry no fetch time. For inventory version 2, planning reads, in the
+same consistent read as the inventory, the workshop file projection of every
+present document's fetch artifact and writes `provenance.json`:
+`{version:1,files:[{document_key,source,name,sha256,size,path,url,role,fetched_at}]}`,
+sorted by document key, then name, then hash; `fetched_at` is RFC 3339 UTC or
+null. A file's row is written once at its first artifact-row commit and never
+updated, so the bytes are stable for an unchanged inventory. Its SHA-256 is
+`provenance_sha256` in the build input and the build record, not part of the
+source manifest or identity hashes. `source_file.url`, `role` and `fetched_at`
+load from this snapshot; a null time records `source_provenance_missing` as
+today. A legacy run keeps its current provenance loading.
 
 ## Presence
 
@@ -101,9 +117,10 @@ stops being present, and when a resolved secondary key has disposition
 - A secondary document loads metadata, source files and its `no_tree` gap. It
   has no provisions, chunks or outgoing relations until text extraction exists;
   incoming relations from present documents are kept.
-- A relation whose source document is not present is not loaded and is counted
-  in the build record as excluded-source evidence; a relation whose target is
-  not present stays with an unresolved target, as today.
+- Relations keep the [corpus schema](corpus-schema.md) rule unchanged: an edge
+  whose source or target is not present keeps its key and number with no
+  document row. Only present documents have relate items, so a replaced
+  secondary contributes no edges.
 - The build document cap applies after exclusions.
 - Validity rules and manual corrections run after documents and relations load,
   per the validity note; `validity-review.json` is published with the build
@@ -134,6 +151,6 @@ stops being present, and when a resolved secondary key has disposition
 `TestLoad_IgnoresArtifactsOfAbsentKeys`, `TestLoad_SecondaryMetadataOnly`,
 `TestRelations_ReplacedSecondaryNeverResolvesNumber`,
 `TestIdentity_ReplacedSecondaryNeedsReadjudication`,
-`TestOpen_RejectsSchemaVersion2`, `TestSchema_Version3Constraints`,
-`TestDump_RestoresValidityDecisions`, and a proof that takes the scope proof run
-through `build` and `eval`.
+`TestProvenance_SnapshotStableAndBound`, `TestOpen_RejectsSchemaVersion2`,
+`TestSchema_Version3Constraints`, `TestDump_RestoresValidityDecisions`, and a
+proof that takes the scope proof run through `build` and `eval`.

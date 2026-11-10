@@ -79,12 +79,13 @@ never an arbitrary id. No title or issuer fuzzy identity matching.
 `source text`, `name text`, `url text?`, `hash text`, `size bigint >= 0`,
 `role text` in (`main`,`appendix`,`scan`,`unknown`), `fetched_at timestamptz?`.
 UNIQUE `(document_id,name,hash)`; index `document_id`. Unknown provenance stays
-null or `unknown`. VBPL fetch artifacts do not reliably retain URL, role or
-fetch time (version 2 secondary bundles do): do not substitute artifact adoption
-time or guess from a suffix. Record `source_provenance_missing` once per
-document with the missing fields. `source` follows the provider values in
-[data](data.md); `name`, `hash` and `size` come from the verified fetched-file
-record, not a file suffix.
+null or `unknown`. VBPL fetch artifacts do not reliably retain URL or role, and
+no bundle carries fetch time (it comes from the
+[provenance snapshot](scope-adoption.md#provenance-snapshot)): do not substitute
+artifact adoption time or guess from a suffix. Record
+`source_provenance_missing` once per document with the missing fields. `source`
+follows the provider values in [data](data.md); `name`, `hash` and `size` come
+from the verified fetched-file record, not a file suffix.
 
 ## Provisions and chunks
 
