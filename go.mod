@@ -3,7 +3,9 @@ module danny.vn/trachuan
 go 1.27.3
 
 require (
+	github.com/daulet/tokenizers v1.27.0
 	github.com/jackc/pgx/v5 v5.12.0
+	github.com/microsoft/onnxruntime/go v1.28.4
 	github.com/pressly/goose/v3 v3.29.0
 	github.com/stretchr/testify v1.12.1
 	go.temporal.io/api v1.63.5
@@ -39,3 +41,5 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20261005182115-fad411399dd8 // indirect
 	google.golang.org/grpc v1.84.0 // indirect
 )
+
+replace github.com/microsoft/onnxruntime/go => github.com/dannyota/onnxruntime/go v1.28.4
