@@ -23,6 +23,23 @@ def bundle(tmp_path):
     return tmp_path
 
 
+@pytest.fixture(autouse=True)
+def torch_version(monkeypatch):
+    # The default environment has no PyTorch; the document recipe only reads
+    # its version, so a fixed one stands in when the package is missing.
+    real = importlib.metadata.version
+
+    def version(name):
+        try:
+            return real(name)
+        except importlib.metadata.PackageNotFoundError:
+            if name == "torch":
+                return "0.0.0"
+            raise
+
+    monkeypatch.setattr(importlib.metadata, "version", version)
+
+
 def manifest(path):
     return create_bundle(path, "model", "abc", "abc" + "0" * 37)
 
