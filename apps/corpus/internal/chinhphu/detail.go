@@ -5,13 +5,14 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"path"
 	"strings"
 
 	xhtml "golang.org/x/net/html"
 )
 
 // Attachment describes a source-linked file.
-type Attachment struct{ Name, URL string }
+type Attachment struct{ Name, Label, URL string }
 
 // FieldOccurrence holds one displayed field and its untrimmed text.
 type FieldOccurrence struct {
@@ -39,10 +40,11 @@ func (c *Client) Detail(ctx context.Context, id int) (Detail, []byte, error) {
 	if e != nil {
 		return Detail{}, nil, fmt.Errorf("invalid base URL: %w", e)
 	}
-	q := u.Query()
+	q := url.Values{}
 	q.Set("pageid", "27160")
 	q.Set("docid", fmt.Sprint(id))
 	u.RawQuery = q.Encode()
+	u.Fragment = ""
 	raw, _, e := c.fetchPage(ctx, http.MethodGet, u.String(), nil)
 	if e != nil {
 		return Detail{}, nil, fmt.Errorf("detail: %w", e)
@@ -139,7 +141,7 @@ func (c *Client) Detail(ctx context.Context, id int) (Detail, []byte, error) {
 				invalidAttachment = true
 				return
 			}
-			d.Attachments = append(d.Attachments, Attachment{Name: strings.TrimSpace(content(a)), URL: href})
+			d.Attachments = append(d.Attachments, Attachment{Name: path.Base(v.Path), Label: content(a), URL: href})
 		})
 	})
 	if invalidAttachment {

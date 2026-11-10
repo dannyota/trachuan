@@ -235,9 +235,6 @@ func (c *Client) one(ctx context.Context, method, target string, form url.Values
 		return 0, "", 0, e
 	}
 	defer func() { _ = resp.Body.Close() }()
-	for _, cookie := range resp.Cookies() {
-		c.remember(cookie.Value, "cookie")
-	}
 	r := budgetReader{c, resp.Body}
 	status := resp.StatusCode
 	after := retryDelay(resp.Header.Get("Retry-After"), c.now())

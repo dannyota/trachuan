@@ -37,7 +37,6 @@ func (c *Client) fetchPage(ctx context.Context, method, target string, form url.
 			return c.pause(ctx, "challenge")
 		}
 		c.form(n)
-		c.rememberEncodedTokens(b)
 		b = c.redact(b)
 		return nil
 	})

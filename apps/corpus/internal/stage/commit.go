@@ -116,7 +116,7 @@ func commitItem(ctx context.Context, pool *pgxpool.Pool, c *Commit) (applied boo
 				if observation.Name == nil {
 					continue
 				}
-				_, timeErr := q.SetFetchedFileTime(ctx, store.SetFetchedFileTimeParams{ArtifactID: id, Source: observation.Source, Name: *observation.Name, Path: observation.Path, Sha256: observation.ContentSHA256, Size: observation.Size, FetchedAt: observation.FetchedAt})
+				_, timeErr := q.SetFetchedFileTime(ctx, store.SetFetchedFileTimeParams{ArtifactID: id, Source: observation.Source, Name: *observation.Name, Path: observation.Path, Sha256: observation.ContentSHA256, Size: observation.Size, FetchedAt: observation.FetchedAt, Url: observation.URL})
 				if timeErr != nil {
 					return false, fmt.Errorf("set fetched file time: %w", timeErr)
 				}

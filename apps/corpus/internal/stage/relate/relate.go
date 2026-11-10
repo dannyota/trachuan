@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"danny.vn/trachuan/apps/corpus/internal/artifact"
 	"danny.vn/trachuan/apps/corpus/internal/source"
@@ -28,7 +29,7 @@ func (*Stage) Name() string { return "relate" }
 // Recipe returns the recipe hash for the frozen relation code table.
 func (*Stage) Recipe(snapshot stage.Snapshot) string {
 	list, _ := source.Parse(snapshot.SourceList)
-	return stage.RecipeHash("relate", "vbpl-relations/1", list.RelationCodesHash())
+	return stage.RecipeHash("relate", "vbpl-relations/1", "chinhphu-empty/1", list.RelationCodesHash())
 }
 
 // Plan selects completed fetch artifacts for this run.
@@ -56,22 +57,28 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 	if verifyErr := verifyFetch(env.Artifacts.Abs(input.Path), item.InputHash); verifyErr != nil {
 		return stage.Output{}, verifyErr
 	}
-	detail, err := os.ReadFile(filepath.Join(env.Artifacts.Abs(input.Path), "detail.json"))
-	if err != nil {
-		return stage.Output{}, fmt.Errorf("read detail: %w", err)
+	rows := []relation{}
+	unmapped := []string{}
+	secondary := strings.HasPrefix(item.Key, "vn:chinhphu:")
+	if !secondary {
+		detail, readErr := os.ReadFile(filepath.Join(env.Artifacts.Abs(input.Path), "detail.json"))
+		if readErr != nil {
+			return stage.Output{}, fmt.Errorf("read detail: %w", readErr)
+		}
+		diagram, readErr := os.ReadFile(filepath.Join(env.Artifacts.Abs(input.Path), "diagram.json"))
+		if readErr != nil {
+			return stage.Output{}, fmt.Errorf("read diagram: %w", readErr)
+		}
+		list, parseErr := source.Parse(run.Snapshot.SourceList)
+		if parseErr != nil {
+			return stage.Output{}, fmt.Errorf("parse source list: %w", parseErr)
+		}
+		rows, unmapped, err = relations(detail, diagram, list.RelationCodes)
+		if err != nil {
+			return stage.Output{}, fmt.Errorf("extract relations: %w", err)
+		}
 	}
-	diagram, err := os.ReadFile(filepath.Join(env.Artifacts.Abs(input.Path), "diagram.json"))
-	if err != nil {
-		return stage.Output{}, fmt.Errorf("read diagram: %w", err)
-	}
-	list, err := source.Parse(run.Snapshot.SourceList)
-	if err != nil {
-		return stage.Output{}, fmt.Errorf("parse source list: %w", err)
-	}
-	rows, unmapped, err := relations(detail, diagram, list.RelationCodes)
-	if err != nil {
-		return stage.Output{}, fmt.Errorf("extract relations: %w", err)
-	}
+
 	art, err := env.Artifacts.Publish(ctx, s.Name(), item.InputHash, s.Recipe(run.Snapshot), func(dir string) error {
 		for _, file := range []struct {
 			name  string
@@ -83,6 +90,12 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 			}
 			if writeErr := os.WriteFile(filepath.Join(dir, file.name), b, 0600); writeErr != nil {
 				return fmt.Errorf("write %s: %w", file.name, writeErr)
+			}
+		}
+		if secondary {
+			evidence := []byte(`{"source":"chinhphu","relations":"not_parsed"}`)
+			if writeErr := os.WriteFile(filepath.Join(dir, "evidence.json"), evidence, 0600); writeErr != nil {
+				return fmt.Errorf("write evidence: %w", writeErr)
 			}
 		}
 		return ctx.Err()

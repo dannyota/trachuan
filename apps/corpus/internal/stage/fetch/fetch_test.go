@@ -187,7 +187,7 @@ func TestFetch_MissingAttachmentIsGap(t *testing.T) {
 	f := &fixtureServer{files: []map[string]any{entry("a", "a")}, bodies: map[string]string{}}
 	s, e := setup(t, f)
 	out := process(t, s, e)
-	res, err := s.Resolve(context.Background(), e, stage.Run{}, stage.Item{}, *out.Artifact)
+	res, err := s.Resolve(context.Background(), e, stage.Run{}, stage.Item{Key: "vn:vbpl:66518"}, *out.Artifact)
 	if err != nil || len(res.Gaps) != 1 || res.Gaps[0] != (stage.Gap{Kind: "missing_attachment", Detail: "a"}) {
 		t.Fatalf("%+v %v", res, err)
 	}
@@ -197,7 +197,7 @@ func TestFetch_FileOverLimitIsGap(t *testing.T) {
 	s, e := setup(t, f)
 	s.WithFileLimit(2)
 	out := process(t, s, e)
-	res, err := s.Resolve(context.Background(), e, stage.Run{}, stage.Item{}, *out.Artifact)
+	res, err := s.Resolve(context.Background(), e, stage.Run{}, stage.Item{Key: "vn:vbpl:66518"}, *out.Artifact)
 	if err != nil || len(res.Gaps) != 1 || res.Gaps[0].Kind != "file_too_large" {
 		t.Fatalf("%+v %v", res, err)
 	}

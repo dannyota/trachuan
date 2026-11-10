@@ -134,7 +134,24 @@ func (s *Stage) writeBundleObservations(ctx context.Context, dir, id string, det
 }
 
 // Resolve returns gaps recorded in the bundle for this run.
-func (*Stage) Resolve(_ context.Context, env stage.Env, _ stage.Run, _ stage.Item, art artifact.Result) (stage.Resolution, error) {
+func (*Stage) Resolve(_ context.Context, env stage.Env, _ stage.Run, item stage.Item, art artifact.Result) (stage.Resolution, error) {
+	dir := env.Artifacts.Abs(art.Path)
+	if _, err := os.Stat(filepath.Join(dir, "document.json")); err == nil {
+		return resolveChinhphu(dir, item)
+	} else if !os.IsNotExist(err) {
+		return stage.Resolution{}, fmt.Errorf("stat document: %w", err)
+	}
+	detailData, err := os.ReadFile(filepath.Join(env.Artifacts.Abs(art.Path), "detail.json"))
+	if err != nil {
+		return stage.Resolution{}, fmt.Errorf("read detail: %w", err)
+	}
+	var detail detailEnvelope
+	if err = json.Unmarshal(detailData, &detail); err != nil {
+		return stage.Resolution{}, fmt.Errorf("decode detail: %w", err)
+	}
+	if "vn:vbpl:"+detail.Data.ID != item.Key {
+		return stage.Resolution{}, fmt.Errorf("fetch identity disagrees with planned key %q", item.Key)
+	}
 	data, err := os.ReadFile(filepath.Join(env.Artifacts.Abs(art.Path), "report.json"))
 	if err != nil {
 		return stage.Resolution{}, fmt.Errorf("read fetch report: %w", err)

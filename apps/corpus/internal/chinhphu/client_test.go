@@ -169,7 +169,6 @@ func TestClient_NoTokenInArtifacts(t *testing.T) {
 			name = "search-ai.html"
 		}
 		b := bytes.ReplaceAll(fixture(t, name), []byte("REDACTED-__VIEWSTATE"), []byte(token))
-		b = bytes.Replace(b, []byte(`<span class="substract">`), []byte(`<span class="substract">`+cookie), 1) //nolint:misspell // The source uses this CSS class.
 		_, _ = w.Write(b)
 	})
 	r, b, e := c.Search(context.Background(), "none")
@@ -698,5 +697,32 @@ func TestDetail_StructurallyAmbiguousRepeatedFieldIsExposed(t *testing.T) {
 	}
 	if len(d.Occurrences) != 2 || d.Issuer != "" {
 		t.Fatal("ambiguous field was hidden")
+	}
+}
+
+func TestDetail_AttachmentLabelsLossless(t *testing.T) {
+	c, _ := clientFor(t, func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = io.WriteString(w, `<div id="ctrl_190596_91_Content"><table><tr><td>Tài liệu đính kèm</td><td><a href="https://datafiles.chinhphu.vn/docs/original.pdf">  Display
+ label  </a></td></tr></table></div>`)
+	})
+	d, _, err := c.Detail(context.Background(), 1)
+	if err != nil || len(d.Attachments) != 1 {
+		t.Fatalf("detail = %+v, err = %v", d, err)
+	}
+	if got := d.Attachments[0]; got.Name != "original.pdf" || got.Label != `  Display
+ label  ` || got.URL != "https://datafiles.chinhphu.vn/docs/original.pdf" {
+		t.Fatalf("attachment = %+v", got)
+	}
+}
+
+func TestDetail_CanonicalURLExcludesTracking(t *testing.T) {
+	c, base := clientFor(t, func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write(fixture(t, "detail-218029.html")) })
+	c.page = base + "/?tracking=discard"
+	d, _, err := c.Detail(context.Background(), 218029)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d.URL != base+"/?docid=218029&pageid=27160" {
+		t.Fatalf("URL %q", d.URL)
 	}
 }

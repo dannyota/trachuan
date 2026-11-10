@@ -42,23 +42,22 @@ type Gate interface {
 
 // Client holds source session and request state. Share one instance per worker.
 type Client struct {
-	page, file          string
-	testHosts           map[string]bool
-	gate                Gate
-	http                *http.Client
-	transport           http.RoundTripper
-	limits              Limits
-	limiter             *rate.Limiter
-	slots               chan struct{}
-	backoffs            []time.Duration
-	budget, used        int64
-	budgetMu, secretsMu sync.Mutex
-	session             chan struct{}
-	secrets             map[string]string
-	now                 func() time.Time
-	sleep               func(context.Context, time.Duration) error
-	resolve             func(context.Context, string) ([]net.IPAddr, error)
-	userAgent           string
+	page, file   string
+	testHosts    map[string]bool
+	gate         Gate
+	http         *http.Client
+	transport    http.RoundTripper
+	limits       Limits
+	limiter      *rate.Limiter
+	slots        chan struct{}
+	backoffs     []time.Duration
+	budget, used int64
+	budgetMu     sync.Mutex
+	session      chan struct{}
+	now          func() time.Time
+	sleep        func(context.Context, time.Duration) error
+	resolve      func(context.Context, string) ([]net.IPAddr, error)
+	userAgent    string
 }
 
 // Option configures a client.
@@ -67,7 +66,7 @@ type Option func(*Client)
 // New creates a client with the source budgets.
 func New(opts ...Option) *Client {
 	jar, _ := cookiejar.New(nil)
-	c := &Client{page: "https://vanban.chinhphu.vn", file: "https://datafiles.chinhphu.vn", testHosts: map[string]bool{}, http: &http.Client{Jar: jar}, limits: Limits{RequestsPerSecond: 1, Burst: 1, InFlight: 1, Pages: 100, HTMLBytes: 5000000, FileBytes: 50000000, Redirects: 3}, backoffs: []time.Duration{2 * time.Second, 8 * time.Second, 30 * time.Second}, budget: 1000000000, secrets: map[string]string{}, now: time.Now, sleep: wait, resolve: net.DefaultResolver.LookupIPAddr, userAgent: "trachuan/0.0"}
+	c := &Client{page: "https://vanban.chinhphu.vn", file: "https://datafiles.chinhphu.vn", testHosts: map[string]bool{}, http: &http.Client{Jar: jar}, limits: Limits{RequestsPerSecond: 1, Burst: 1, InFlight: 1, Pages: 100, HTMLBytes: 5000000, FileBytes: 50000000, Redirects: 3}, backoffs: []time.Duration{2 * time.Second, 8 * time.Second, 30 * time.Second}, budget: 1000000000, now: time.Now, sleep: wait, resolve: net.DefaultResolver.LookupIPAddr, userAgent: "trachuan/0.0"}
 	for _, o := range opts {
 		o(c)
 	}

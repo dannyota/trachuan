@@ -11,7 +11,8 @@ ORDER BY resource_key COLLATE "C";
 -- name: SetFetchedFileTime :execrows
 UPDATE fetched_file SET fetched_at = sqlc.narg(fetched_at)
 WHERE artifact_id = sqlc.arg(artifact_id) AND source = sqlc.arg(source) AND name = sqlc.arg(name)
-  AND path = sqlc.arg(path) AND sha256 = sqlc.arg(sha256) AND size = sqlc.arg(size) AND fetched_at IS NULL;
+  AND path = sqlc.arg(path) AND sha256 = sqlc.arg(sha256) AND size = sqlc.arg(size) AND fetched_at IS NULL
+  AND (source = 'vbpl' OR url IS NOT DISTINCT FROM sqlc.narg(url));
 
 -- name: GetRunItemCommitted :one
 SELECT run_item.state, run_item.generation, run_item.attempt, run_item.message, artifact.sha256 AS artifact_sha256

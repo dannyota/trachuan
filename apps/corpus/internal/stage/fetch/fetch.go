@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"danny.vn/trachuan/apps/corpus/internal/chinhphu"
 	"danny.vn/trachuan/apps/corpus/internal/filecache"
 	"danny.vn/trachuan/apps/corpus/internal/sourcegate"
 	"danny.vn/trachuan/apps/corpus/internal/stage"
@@ -21,12 +22,16 @@ import (
 // Stage fetches documents and their attachments.
 type Stage struct {
 	client    *vbpl.Client
+	chinhphu  *chinhphu.Client
 	cache     *filecache.Cache
 	fileLimit int64
 }
 
 // New constructs a fetch stage.
 func New(client *vbpl.Client) *Stage { return &Stage{client: client, fileLimit: 50_000_000} }
+
+// WithChinhphu sets the secondary source client.
+func (s *Stage) WithChinhphu(client *chinhphu.Client) *Stage { s.chinhphu = client; return s }
 
 // WithCache sets the optional attachment cache.
 func (s *Stage) WithCache(cache *filecache.Cache) *Stage { s.cache = cache; return s }
@@ -38,7 +43,12 @@ func (s *Stage) WithFileLimit(limit int64) *Stage { s.fileLimit = limit; return 
 func (*Stage) Name() string { return "fetch" }
 
 // Recipe returns the fetch recipe hash.
-func (*Stage) Recipe(stage.Snapshot) string { return stage.RecipeHash("fetch", "vbpl-fetch/1") }
+func (*Stage) Recipe(stage.Snapshot) string {
+	return stage.RecipeHash("fetch", "vbpl-fetch/1", "chinhphu-fetch/2", "json:encoding/json:compact:no-newline",
+		"metadata:version,source_id,source_url,occurrences,attachments;occurrence:name,value,cells,ambiguous;attachment:name,label,url",
+		"document:version,document;fields:key,country,source,source_id,number,title,doc_type,issuer,raw_issue_date,raw_eff_from,raw_eff_to,status_code,status_name,is_consolidated,has_content,source_url,identity_evidence",
+		"files:version,files;file:source,name,sha256,size,path,url,role;report:version,missing,too_large;outcome:name,url;evidence:path,sha256")
+}
 
 // Plan returns the expected documents and their skip reasons.
 func (*Stage) Plan(ctx context.Context, env stage.Env, r stage.Run) ([]stage.Item, error) {
@@ -55,6 +65,11 @@ func (*Stage) Plan(ctx context.Context, env stage.Env, r stage.Run) ([]stage.Ite
 
 // Process fetches the source responses and publishes a bundle.
 func (s *Stage) Process(ctx context.Context, env stage.Env, r stage.Run, item stage.Item) (output stage.Output, err error) {
+	if strings.HasPrefix(item.Key, "vn:chinhphu:") {
+		out, processErr := s.processChinhphu(ctx, env, r, item)
+		out.Sources = []string{"chinhphu"}
+		return out, processErr
+	}
 	defer func() {
 		if s.client != nil && strings.HasPrefix(item.Key, "vn:vbpl:") && len(item.Key) > len("vn:vbpl:") {
 			output.Sources = []string{"vbpl"}

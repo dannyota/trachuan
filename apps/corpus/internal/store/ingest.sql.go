@@ -11,28 +11,30 @@ import (
 )
 
 const insertDocument = `-- name: InsertDocument :exec
-INSERT INTO document (artifact_id, key, country, source, source_id, vbpl_id, number, title, doc_type, issuer, issue_date, eff_from, eff_to, status_code, status_name, is_consolidated, has_content)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+INSERT INTO document (artifact_id, key, country, source, source_id, vbpl_id, number, title, doc_type, issuer, issue_date, eff_from, eff_to, status_code, status_name, is_consolidated, has_content, source_url, identity_evidence)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
 `
 
 type InsertDocumentParams struct {
-	ArtifactID     int64
-	Key            string
-	Country        string
-	Source         string
-	SourceID       string
-	VbplID         *string
-	Number         string
-	Title          string
-	DocType        string
-	Issuer         string
-	IssueDate      string
-	EffFrom        string
-	EffTo          string
-	StatusCode     string
-	StatusName     string
-	IsConsolidated bool
-	HasContent     bool
+	ArtifactID       int64
+	Key              string
+	Country          string
+	Source           string
+	SourceID         string
+	VbplID           *string
+	Number           string
+	Title            string
+	DocType          string
+	Issuer           string
+	IssueDate        string
+	EffFrom          string
+	EffTo            string
+	StatusCode       string
+	StatusName       string
+	IsConsolidated   bool
+	HasContent       bool
+	SourceUrl        *string
+	IdentityEvidence []byte
 }
 
 func (q *Queries) InsertDocument(ctx context.Context, arg InsertDocumentParams) error {
@@ -54,13 +56,15 @@ func (q *Queries) InsertDocument(ctx context.Context, arg InsertDocumentParams) 
 		arg.StatusName,
 		arg.IsConsolidated,
 		arg.HasContent,
+		arg.SourceUrl,
+		arg.IdentityEvidence,
 	)
 	return err
 }
 
 const insertFetchedFile = `-- name: InsertFetchedFile :exec
-INSERT INTO fetched_file (artifact_id, name, sha256, size, path)
-VALUES ($1, $2, $3, $4, $5)
+INSERT INTO fetched_file (artifact_id, name, sha256, size, path, source, url, role)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 `
 
 type InsertFetchedFileParams struct {
@@ -69,6 +73,9 @@ type InsertFetchedFileParams struct {
 	Sha256     string
 	Size       int64
 	Path       string
+	Source     string
+	Url        *string
+	Role       string
 }
 
 func (q *Queries) InsertFetchedFile(ctx context.Context, arg InsertFetchedFileParams) error {
@@ -78,6 +85,9 @@ func (q *Queries) InsertFetchedFile(ctx context.Context, arg InsertFetchedFilePa
 		arg.Sha256,
 		arg.Size,
 		arg.Path,
+		arg.Source,
+		arg.Url,
+		arg.Role,
 	)
 	return err
 }

@@ -144,6 +144,7 @@ const setFetchedFileTime = `-- name: SetFetchedFileTime :execrows
 UPDATE fetched_file SET fetched_at = $1
 WHERE artifact_id = $2 AND source = $3 AND name = $4
   AND path = $5 AND sha256 = $6 AND size = $7 AND fetched_at IS NULL
+  AND (source = 'vbpl' OR url IS NOT DISTINCT FROM $8)
 `
 
 type SetFetchedFileTimeParams struct {
@@ -154,6 +155,7 @@ type SetFetchedFileTimeParams struct {
 	Path       string
 	Sha256     string
 	Size       int64
+	Url        *string
 }
 
 func (q *Queries) SetFetchedFileTime(ctx context.Context, arg SetFetchedFileTimeParams) (int64, error) {
@@ -165,6 +167,7 @@ func (q *Queries) SetFetchedFileTime(ctx context.Context, arg SetFetchedFileTime
 		arg.Path,
 		arg.Sha256,
 		arg.Size,
+		arg.Url,
 	)
 	if err != nil {
 		return 0, err

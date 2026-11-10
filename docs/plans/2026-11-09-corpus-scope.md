@@ -132,8 +132,8 @@
 
 **Files:** `apps/corpus/internal/chinhphu/` (field-based deterministic redaction, lossless attachment labels); `apps/corpus/internal/stage/fetch/` (dispatch by source, chinhphu version 2 bundle, dual-format `Rows` reader with source, URL and role); `extract` (`no_tree`), `relate` (empty evidenced set); SQL for the projection columns (primary); tests.
 
-- [ ] Tests first: `TestRedact_FieldBasedAndHistoryIndependent`, `TestDetail_AttachmentLabelsLossless`, `TestFetch_ChinhphuBundleHashesFiles`, `TestFetch_ChinhphuInventoryReconciled`, `TestRows_DualFormatReader`, `TestExtract_ChinhphuNoTree`, `TestRelate_ChinhphuEmptySet`.
-- [ ] Implement per fetch-bundles.md and sources.md "Fetch and safety"; commit `feat(corpus): fetch secondary documents`.
+- [x] Tests first: `TestRedact_FieldBasedAndHistoryIndependent`, `TestDetail_AttachmentLabelsLossless`, `TestFetch_ChinhphuBundleHashesFiles`, `TestFetch_ChinhphuInventoryReconciled`, `TestRows_DualFormatReader`, `TestExtract_ChinhphuNoTree`, `TestRelate_ChinhphuEmptySet`.
+- [x] Implement per fetch-bundles.md and sources.md "Fetch and safety"; commit `feat(corpus): fetch secondary documents`.
 
 ### Task 10c: Hand-over at fetch close
 
@@ -146,7 +146,7 @@
 
 **Files:** Modify `apps/corpus/internal/stage/build/` (inventory version 2 with expand evidence, membership and typed support tuples in the identity hash, class and provenance loading, exclusions, dump and restore validation of schema version 2), `internal/corpusdb/schema.sql` and `schema.go` (`SchemaVersion = 2`, `document.class`), `internal/retrieval` release reading (accept schema version 2, refuse 1 with a clear error), `internal/retrieval` only if class reaches responses, `apps/corpus/internal/evaluation/mapping.go` (reject identity maps bound to inventory version 1).
 
-**Design first:** Plan 2's review (`906d03c`) took schema version 2 for `document.status_basis` and moved the identity map hash into the build input, so the scope adoption text was dropped from `corpus-schema.md`, `index.md` and `evaluation.md` during the rebase (dropped hunks saved in the primary's scratchpad `rebase/dropped.md`). Before this task, a designer pass re-adds scope adoption against those decisions (scope schema version 3, `document.class`, inventory version 2 with membership, map hash in build input) and a design review approves it; then revise this task's file list and test names.
+**Design first:** Plan 2's review (`906d03c`) took schema version 2 for `document.status_basis` and moved the identity map hash into the build input, so the scope adoption text was dropped from `corpus-schema.md`, `index.md` and `evaluation.md` during the rebase (dropped hunks saved in the ignored `work/scope/rebase-dropped-scope-adoption.md` of the scope worktree). Before this task, a designer pass re-adds scope adoption against those decisions (scope schema version 3, `document.class`, inventory version 2 with membership, map hash in build input) and a design review approves it; then revise this task's file list and test names.
 
 - [ ] Tests first: `TestInventory_V2IncludesExpandEvidence`, `TestInventory_V1MapRejected`, `TestLoad_ClassColumnAndProvenance`, `TestSchema_Version2ClassCheck`, `TestBuild_SecondaryMetadataOnly`.
 - [ ] Implement per index.md, corpus-schema.md and evaluation.md as revised; commit `feat(corpus): build and evaluation for membership classes and secondary provenance`.

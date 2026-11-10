@@ -7,7 +7,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"regexp"
 	"strings"
 
 	xhtml "golang.org/x/net/html"
@@ -51,14 +50,6 @@ func parseHTML(b []byte) (*xhtml.Node, error) {
 	}
 	return n, nil
 }
-func (c *Client) remember(value, name string) {
-	if value == "" {
-		return
-	}
-	c.secretsMu.Lock()
-	defer c.secretsMu.Unlock()
-	c.secrets[value] = "REDACTED-" + name
-}
 func (c *Client) form(n *xhtml.Node) url.Values {
 	v := url.Values{}
 	walk(n, func(x *xhtml.Node) {
@@ -76,9 +67,6 @@ func (c *Client) form(n *xhtml.Node) url.Values {
 				return
 			}
 			val := attr(x, "value")
-			if strings.HasPrefix(name, "__VIEWSTATE") || name == "__EVENTVALIDATION" {
-				c.remember(val, name)
-			}
 			v.Set(name, val)
 		case "select":
 			value := "0"
@@ -100,15 +88,85 @@ func (c *Client) form(n *xhtml.Node) url.Values {
 }
 
 func (c *Client) redact(b []byte) []byte {
-	c.secretsMu.Lock()
-	defer c.secretsMu.Unlock()
-	s := string(b)
-	for value, replacement := range c.secrets {
-		s = strings.ReplaceAll(s, html.EscapeString(value), replacement)
-		s = strings.ReplaceAll(s, value, replacement)
+	tokenizer := xhtml.NewTokenizer(bytes.NewReader(b))
+	var out bytes.Buffer
+	for {
+		typ := tokenizer.Next()
+		if typ == xhtml.ErrorToken {
+			return out.Bytes()
+		}
+		raw := append([]byte(nil), tokenizer.Raw()...)
+		if typ == xhtml.StartTagToken || typ == xhtml.SelfClosingTagToken {
+			tok := tokenizer.Token()
+			if tok.Data == "input" {
+				for _, a := range tok.Attr {
+					if a.Key == "name" && (strings.HasPrefix(a.Val, "__VIEWSTATE") || a.Val == "__EVENTVALIDATION") {
+						raw = redactInput(raw, a.Val)
+						break
+					}
+				}
+			}
+		}
+		out.Write(raw)
 	}
-	return []byte(s)
 }
+func redactInput(raw []byte, name string) []byte {
+	var out bytes.Buffer
+	start := 0
+	i := 1
+	for i < len(raw) && !htmlSpace(raw[i]) && raw[i] != '>' {
+		i++
+	}
+	for i < len(raw) {
+		for i < len(raw) && htmlSpace(raw[i]) {
+			i++
+		}
+		attrStart := i
+		for i < len(raw) && !htmlSpace(raw[i]) && raw[i] != '=' && raw[i] != '>' && raw[i] != '/' {
+			i++
+		}
+		if i == attrStart {
+			i++
+			continue
+		}
+		attribute := string(raw[attrStart:i])
+		for i < len(raw) && htmlSpace(raw[i]) {
+			i++
+		}
+		if i >= len(raw) || raw[i] != '=' {
+			continue
+		}
+		i++
+		for i < len(raw) && htmlSpace(raw[i]) {
+			i++
+		}
+		valueStart := i
+		if i < len(raw) && (raw[i] == '\'' || raw[i] == '"') {
+			quote := raw[i]
+			i++
+			for i < len(raw) && raw[i] != quote {
+				i++
+			}
+			if i < len(raw) {
+				i++
+			}
+		} else {
+			for i < len(raw) && !htmlSpace(raw[i]) && raw[i] != '>' {
+				i++
+			}
+		}
+		if strings.EqualFold(attribute, "value") {
+			out.Write(raw[start:valueStart])
+			fmt.Fprintf(&out, `"REDACTED-%s"`, html.EscapeString(name))
+			start = i
+		}
+	}
+	out.Write(raw[start:])
+	return out.Bytes()
+}
+
+func htmlSpace(b byte) bool { return b == ' ' || b == '\t' || b == '\n' || b == '\r' || b == '\f' }
+
 func (c *Client) readPage(ctxReader io.Reader, header http.Header) ([]byte, error) {
 	media := strings.ToLower(header.Get("Content-Type"))
 	if media != "" && !strings.Contains(media, "text/html") && !strings.Contains(media, "application/xhtml") && !strings.Contains(media, "text/plain") {
@@ -122,44 +180,6 @@ func (c *Client) readPage(ctxReader io.Reader, header http.Header) ([]byte, erro
 		return nil, ErrTooLarge
 	}
 	return b, nil
-}
-
-func (c *Client) rememberEncodedTokens(b []byte) {
-	tokenizer := xhtml.NewTokenizer(bytes.NewReader(b))
-	valuePattern := regexp.MustCompile(`(?i)(?:^|\s)value\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))`)
-	for {
-		typ := tokenizer.Next()
-		if typ == xhtml.ErrorToken {
-			return
-		}
-		if typ != xhtml.StartTagToken && typ != xhtml.SelfClosingTagToken {
-			continue
-		}
-		raw := string(tokenizer.Raw())
-		tok := tokenizer.Token()
-		if tok.Data != "input" {
-			continue
-		}
-		name := ""
-		for _, a := range tok.Attr {
-			if a.Key == "name" {
-				name = a.Val
-			}
-		}
-		if !strings.HasPrefix(name, "__VIEWSTATE") && name != "__EVENTVALIDATION" {
-			continue
-		}
-		match := valuePattern.FindStringSubmatch(raw)
-		if match == nil {
-			continue
-		}
-		for _, v := range match[1:] {
-			if v != "" {
-				c.remember(v, name)
-				break
-			}
-		}
-	}
 }
 
 func isChallenge(n *xhtml.Node, b []byte) bool {
