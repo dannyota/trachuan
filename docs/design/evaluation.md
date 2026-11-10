@@ -83,18 +83,18 @@ There is one mapping entry per original expectation, including absent documents.
 Resolved entries need at least one unique adjudicated identity; absent entries
 have no alternatives and are always misses. An absent entry names every
 original/alternate number searched and why no corpus identity is available.
-Ambiguous mappings or missing entries are `mapping_incomplete` for that case,
-not invented absences. If an absent document appears in a newer inventory,
-require re-adjudication, never auto-credit it. A document appears when it has
-the searched number, except that for an expectation naming an article without
-relation credit, a document with no provision anchor stays in the reason. Do not
-invent a document key or provision anchor from a label.
+Ambiguous or missing entries are `mapping_incomplete`, not invented absences.
+Re-adjudicate, never auto-credit, when [presence](scope-adoption.md#presence)
+changes. A document appears when it has the searched number; for an expectation
+naming an article without relation credit, a document with no provision anchor
+stays in the reason. Do not invent a document key or provision anchor from a
+label.
 
-Validate every recorded identity against the run's fetch/extract/relate
-inventory: document key and normalized number, provision anchor, both relation
-endpoints and their numbers, and each document-qualified evidence node. Missing
-records or missing/changed identities yield `mapping_incomplete` for that case,
-with citation index and a detail naming the field, such as
+Validate every recorded identity against the run's present documents: document
+key and normalized number, provision anchor, both relation endpoints and their
+numbers, and each document-qualified evidence node. Missing records or
+missing/changed identities yield `mapping_incomplete` for that case, with
+citation index and a detail naming the field, such as
 `alternatives[0].source_number` or `evidence[0].document_key`. This includes
 version 1 maps lacking these records until re-adjudication; missing records are
 case defects, not malformed-file errors. Block that case's credit and score the
@@ -166,13 +166,13 @@ under identical eligibility and response processing; only hybrid gates apply.
   fractions. MRR@8 averages `1/first_correct_rank`, or zero for a miss, over all
   positive cases. Empty/abstaining positives remain in denominators. Returned
   low-confidence evidence still counts as returned evidence for recall.
-- Current-law precision: current primary hits / all returned primary hits in
-  limit-8 responses, micro-averaged. Count every hit, including hits on negative
-  cases and abstaining responses; unknown validity is not current. Report
-  unknown and contradictory status counts and non-current group precision
-  separately. Legacy only trims a trailing non-current run, unless all hits are
-  non-current, in which case all count. Zero denominator is null/N/A, never 1.
-  Independently adjudicated legal validity is not claimed.
+- Current-law precision (stored-status consistency): current hits / all hits of
+  the primary response group, any class, in limit-8 responses. Count every hit,
+  including hits on negative cases and abstaining responses; unknown validity is
+  not current. Report unknown and contradictory status counts and non-current
+  group precision separately. Legacy only trims a trailing non-current run,
+  unless all hits are non-current, in which case all count. Zero denominator is
+  null/N/A, never 1. Independently adjudicated legal validity is not claimed.
 - Abstention accuracy: correct abstain flag / all non-rejection cases. Treat
   abstention as the positive class: TP negative case abstained; FN negative
   answered; FP positive case abstained; TN positive answered. Also report

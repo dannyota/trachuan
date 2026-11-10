@@ -24,60 +24,58 @@ evaluation in `apps/corpus/internal/evaluation`. The stage uses the existing
 `Stage` interface; `Rows` does not create workshop vector or corpus tables.
 
 Plan one item keyed `<country>/<rel>`. Refuse planning while any predecessor
-item is pending or failed. Gap items are allowed for diagnostic builds and
-remain visible; release still requires acceptance. Read one consistent workshop
-snapshot to produce an upstream inventory, sorted by stage order then
-byte-sorted item key, containing every predecessor item through `embed`:
-`{stage,item_key,state,input_hash,recipe_hash,artifact_sha256}`. Null artifact
-hashes are explicit for gap items. Include expected keys, frozen source-list
-hash and sorted gaps `{stage,item_key,kind,detail}`. Gap acceptance is a release
-gate, not a build input, so it is never hashed. `Process` recomputes the input
-hash from the inventory and pinned map and fails with non-retryable
-`inventory_changed` when it differs from the planned input hash. Do not hash
-workshop sequence IDs, mutable paths or generation numbers.
+item is pending or failed. Gap items are allowed for diagnostic builds; release
+still requires acceptance. Read one consistent workshop snapshot to produce the
+upstream inventory defined in [scope adoption](scope-adoption.md#inventory):
+every predecessor item through `embed`, expected keys, the source-list hash and
+gaps. Gap acceptance is a release gate, not a build input, so it is never
+hashed. `Process` recomputes the input hash from the inventory and pinned map
+and fails with non-retryable `inventory_changed` when it differs from the
+planned input hash. Do not hash workshop sequence IDs, mutable paths or
+generation numbers.
 
-For inventory diagnostics, derive `identity_inventory_hash` from compact JSON
-`{country,source_list_hash,expected_keys,items}`. Keys are byte-sorted; items
-are the fetch/extract/relate inventory tuples above in stage/key order, without
-gap acceptance metadata. This hash does not bind the identity map or gate
-planning. [Evaluation](evaluation.md#fixtures-and-identity-adjudication) owns
-map production, review and per-case identity validation. Recipe freezing follows
-the [pipeline snapshot](pipeline.md#shape); ingest can finish before index
-recipes are appended. The reviewed map is input data, not a recipe.
+For inventory diagnostics, derive `identity_inventory_hash` from the identity
+projection in [scope adoption](scope-adoption.md#inventory). This hash does not
+bind the identity map or gate planning.
+[Evaluation](evaluation.md#fixtures-and-identity-adjudication) owns map
+production, review and per-case identity validation. Recipe freezing follows the
+[pipeline snapshot](pipeline.md#shape); ingest can finish before index recipes
+are appended. The reviewed map is input data, not a recipe.
 
-Freeze the evaluation civil date from the first eight digits of `rel`, parsed as
-a real calendar date; an invalid date is a configuration failure. The same date
-feeds calibration and eval, including retries after midnight.
+Freeze the evaluation civil date from the first eight digits of `rel`; an
+invalid date is a configuration failure. It feeds calibration and eval.
 
 Build input hash is
-`stage.RecipeHash("build-input","2",country,rel, source_manifest_hash,decimal_schema_version,identity_map_sha256)`.
-Pin the reviewed map bytes at planning and verify their SHA-256 before use.
-Changing the map changes build input and invalidates dependent evaluation,
-without changing a frozen build recipe. Never read changed map bytes under the
-planned input hash. Verify all referenced artifact hashes and safe paths before
-decoding payloads; check byte sizes where declared, and before decoding stat
-each artifact file against the per-file cap in [budgets](budgets.md#indexing); a
-file above it fails the item. Artifacts are immutable, content addressed and
-written by our own stages, so a file growing between the size check and the read
-is outside the threat model; the manifest hash still guards the bytes decoded.
-Never use the workshop's latest row for a document outside this inventory.
+`stage.RecipeHash("build-input",label,country,rel, source_manifest_hash,decimal_schema_version,identity_map_sha256)`,
+label per inventory version. Pin the reviewed map bytes at planning and verify
+their SHA-256 before use. Changing the map changes build input and invalidates
+dependent evaluation, without changing a frozen build recipe. Never read changed
+map bytes under the planned input hash. Verify all referenced artifact hashes
+and safe paths before decoding payloads; check byte sizes where declared, and
+before decoding stat each artifact file against the per-file cap in
+[budgets](budgets.md#indexing); a file above it fails the item. Artifacts are
+immutable, content addressed and written by our own stages, so a file growing
+between the size check and the read is outside the threat model; the manifest
+hash still guards the bytes decoded. Never use the workshop's latest row for a
+document outside this inventory.
 
 Build recipe hash uses `stage.RecipeHash("build","corpus/1",recipe_json)`. Its
 fixed fields are `schema_version`, `schema_sha256`, `chunk_recipe_hash`,
 `dense_recipe`, `lexical_recipe`, `retrieval_policy`, `normalizer_version`,
-`status_codes_sha256`, `calibration_policy`, `legacy_cases_sha256`, PostgreSQL
-major, extension versions and tool versions. No identity map hash is a recipe
-field. The calibration policy is fixed before build; its numeric threshold is
-recorded in the final retrieval recipe. Source-list status codes come from the
-run snapshot. Changing any of these requires a new run recipe, not modification
-of a frozen run. The date is run-specific input derived from `rel`, not a value
-read inside `Recipe(Snapshot)`. Keep fixture bytes and runtime reports pinned by
-their recipe hashes; never read a newly edited fixture under an old frozen hash.
+`status_codes_sha256`, `corrections_sha256`, `calibration_policy`,
+`legacy_cases_sha256`, PostgreSQL major, extension versions and tool versions.
+No identity map hash is a recipe field. The calibration policy is fixed before
+build; its numeric threshold is recorded in the final retrieval recipe.
+Source-list status codes come from the run snapshot. Changing any of these
+requires a new run recipe, not modification of a frozen run. The date is
+run-specific input derived from `rel`, not a value read inside
+`Recipe(Snapshot)`. Keep fixture bytes and runtime reports pinned by their
+recipe hashes; never read a newly edited fixture under an old frozen hash.
 
 ## Inclusion and losses
 
-- Include one metadata document per final active member with a done fetch. Copy
-  its class from membership; never infer it from the document key. Include
+- Include one metadata document per final active member with a done fetch. Class
+  and source follow [scope adoption](scope-adoption.md#loading). Include
   expired, suspended, not-yet and unknown statuses so historical retrieval can
   work. Include no-tree documents as metadata with coverage gaps; they have no
   provisions or chunks. Keep all valid extracted provisions even when their
@@ -115,7 +113,7 @@ offset-free `YYYY-MM-DDTHH:MM:SS` at any valid time of day, or RFC3339
 timestamps with an explicit offset. Date-only and offset-free values retain
 their civil date; timestamps with an offset convert to Asia/Ho_Chi_Minh before
 taking the date. Reject invalid calendar dates, year zero, invalid times and
-other formats. `normalizer_version` is `corpus-normalizer/3`; a date or number
+other formats. `normalizer_version` is `corpus-normalizer/4`; a date or number
 normalization change bumps it in the build recipe. Empty becomes null; invalid
 values become null plus `invalid_date` naming the field. Raw strings remain
 stored. If the parsed end precedes the start, clear both effective dates,
@@ -142,11 +140,12 @@ end equals the new start, supporting the exclusive-end interpretation. These are
 supplied observations, not an independent live-source verification.
 
 Trim and uppercase status code; look up its `class` and `current` in the frozen
-`sources/vn.yaml` map. Reject an inconsistent map at startup. Unmapped/empty
-codes become `unknown,false` plus `unknown_status`, except for the consolidated
-derivation below. Never infer status from a translated name or title. Preserve
-raw status code and name. Status and dated eligibility remain separate; a
-contradiction produces a warning.
+`sources/vn.yaml` map. Reject an inconsistent map at startup. Before
+[validity corrections](validity-status.md), unmapped/empty codes become
+`unknown,false` plus `unknown_status`, except for the consolidated derivation
+below. Never infer status from a translated name or title. Preserve raw status
+code and name. Status and dated eligibility remain separate; a contradiction
+produces a warning.
 
 After loading resolved `consolidates` relations, derive status only for a
 consolidated document whose source supplies no status. Never replace a supplied
@@ -227,16 +226,17 @@ identity never comes from a request body or a dump's embedded name.
 
 ## Build artifact and resolve
 
-Publish `corpus.dump`, `build.json`, `inputs.json`, `calibration.json`, and
-`MANIFEST.sha256` through the existing immutable artifact writer. `inputs.json`
-is the upstream inventory. `build.json` fields: `version`, `country`, `rel`,
-`database_name`, `schema_version`, `build_input_hash`, `build_recipe_hash`,
-`source_manifest_hash`, `identity_inventory_hash`, `identity_map_sha256`, all
-four recipes, `lexical_stats`, `taxonomy_version`, `counts` per table and
-exclusion reason, `dump:{sha256,bytes,format:"custom"}`, `postgres_version`,
-`pgvector_version`, `ltree_version`, `pg_dump_version`, `worker_version`,
-`built_at`, `durations_ms`, `relation_bytes`, `index_bytes`. No credentials,
-file system paths, user questions or host signatures.
+Publish `corpus.dump`, `build.json`, `inputs.json`, `calibration.json`,
+`validity-review.json` and `MANIFEST.sha256` through the existing immutable
+artifact writer. `inputs.json` is the upstream inventory. `build.json` fields:
+`version`, `country`, `rel`, `database_name`, `schema_version`,
+`build_input_hash`, `build_recipe_hash`, `source_manifest_hash`,
+`identity_inventory_hash`, `identity_map_sha256`, all four recipes,
+`lexical_stats`, `taxonomy_version`, `counts` per table and exclusion reason,
+`dump:{sha256,bytes,format:"custom"}`, `postgres_version`, `pgvector_version`,
+`ltree_version`, `pg_dump_version`, `worker_version`, `built_at`,
+`durations_ms`, `relation_bytes`, `index_bytes`. No credentials, file system
+paths, user questions or host signatures.
 
 `calibration.json` holds the reproducible scores and selected threshold, linked
 to fixture hashes. It uses case IDs only, not question text. The dump and build
@@ -273,11 +273,12 @@ infrastructure leaves the item failed, not an owner-acceptable data gap.
 
 ## Release order and evidence
 
-Update the shared normalizer and schema readers, re-chunk/re-embed, then build
-and evaluate with the revised map and validity contracts. Frozen recipes and
-published databases stay immutable; use a new run when an included recipe
-changes. Retain old artifacts for rollback. Reprocessing uses the existing
-budgets and services; measure its time, disk and new coverage before release.
+Update the shared normalizer and schema readers, reuse compatible chunk and
+embed artifacts, then build and evaluate with the revised map and validity
+contracts. Frozen recipes and published databases stay immutable; use a new run
+when an included recipe changes. Retain old artifacts for rollback. Reprocessing
+uses the existing budgets and services; measure its time, disk and new coverage
+before release.
 
 Implement shared schema and lexical contracts, chunk, service and embed, shared
 retrieval, calibration helper and build, then eval adapters. The primary can

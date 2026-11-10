@@ -173,12 +173,13 @@ per-adapter additions. Interface and transaction rules live in
   until that phase closes, plus nullable fetch-close input hash. Snapshots
   contain byte-sorted membership and complete typed support tuples in every
   phase (`seeds`, `expanded`, `final`), serialized with the
-  [inventory](index.md#build-stage) convention. Include those tuples in
-  inventory membership and `identity_inventory_hash`, even when document keys do
-  not change. Freeze each phase's stored JSON and hash on close. Expanded active
-  keys exclude retained removals; finalization may exclude candidates but never
-  add unplanned keys. Retry invalidation clears only the affected phase
-  references.
+  [inventory](index.md#build-stage) convention. The inventory commits to them
+  through the final snapshot hash
+  ([scope adoption](scope-adoption.md#inventory)), so they change
+  `identity_inventory_hash` even when document keys do not. Freeze each phase's
+  stored JSON and hash on close. Expanded active keys exclude retained removals;
+  finalization may exclude candidates but never add unplanned keys. Retry
+  invalidation clears only the affected phase references.
 - Add three nullable workshop `run_scope` columns: `predecessor_run_id`,
   `predecessor_phase` (`final` or `legacy`) and `predecessor_snapshot_hash`.
   Require all three together or all null before selection or when none is

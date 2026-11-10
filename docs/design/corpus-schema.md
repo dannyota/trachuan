@@ -36,7 +36,7 @@ along its parent chain.
 `Exec(context.Context,string,...any)`. Its return values are
 `(pgconn.CommandTag,error)`, matching pgx connections and transactions. The only
 template substitution is the decimal vector dimension, validated against the
-supported recipe table before substitution. Version 2 permits only the ADR 0009
+supported recipe table before substitution. Version 3 permits only the ADR 0009
 dimension. Future dimensions require an explicitly supported recipe and
 compatible schema version; never take SQL identifiers from JSON. Search reads
 dimensions from `release.dense_recipe`, checks the actual column typmod, and
@@ -49,9 +49,11 @@ rejects a mismatch. No server dimension constant.
 - `id bigint PRIMARY KEY`; `country text CHECK(country = 'vn')`;
   `key text UNIQUE CHECK(key LIKE 'vn:%')`; `number text`; `number_norm text`;
   `title text`; `doc_type text`; `issuer text`.
-- `class text CHECK(class IN ('primary','relation_context','secondary'))`,
-  copied from final run membership, with no default. It describes inclusion, not
-  legal type or ranking; supporting evidence stays in the build inventory.
+- `class text NOT NULL CHECK(class IN ('primary','relation_context','secondary'))`
+  and `source text NOT NULL CHECK(source IN ('vbpl','chinhphu'))`, no defaults,
+  assigned per [scope adoption](scope-adoption.md#loading). Class describes
+  inclusion, not legal type or ranking; its evidence is the final membership
+  snapshot the inventory commits to.
 - `issue_date date?`, `eff_from date?`, `eff_to date?`; `raw_issue_date text`,
   `raw_eff_from text`, `raw_eff_to text`.
 - `status_code text`, `status_name text`, `status_class text` constrained to
@@ -77,11 +79,12 @@ never an arbitrary id. No title or issuer fuzzy identity matching.
 `source text`, `name text`, `url text?`, `hash text`, `size bigint >= 0`,
 `role text` in (`main`,`appendix`,`scan`,`unknown`), `fetched_at timestamptz?`.
 UNIQUE `(document_id,name,hash)`; index `document_id`. Unknown provenance stays
-null or `unknown`. Existing fetch artifacts do not reliably retain URL, role or
-fetch time: do not substitute artifact adoption time or guess from a suffix.
-Record `source_provenance_missing` once per document with the missing fields.
-`source` follows the provider values in [data](data.md); `name`, `hash` and
-`size` come from the verified fetched-file record, not a file suffix.
+null or `unknown`. VBPL fetch artifacts do not reliably retain URL, role or
+fetch time (version 2 secondary bundles do): do not substitute artifact adoption
+time or guess from a suffix. Record `source_provenance_missing` once per
+document with the missing fields. `source` follows the provider values in
+[data](data.md); `name`, `hash` and `size` come from the verified fetched-file
+record, not a file suffix.
 
 ## Provisions and chunks
 
@@ -139,8 +142,8 @@ byte-identical relation artifacts. Composite FKs
 CHECK `target_key IS NOT NULL OR target_number <> '' OR kind = 'unknown'`.
 Indexes on source and target document ids, and `target_key`.
 
-Kinds are the frozen source list's relation vocabulary plus `unknown`; version 2
-CHECK permits
+Kinds are the frozen source list's relation vocabulary plus `unknown`; the CHECK
+permits
 `repeals,implements,legal_basis,cites,suspends, consolidates,guided_by,amends_supplements,replaces,references,unknown`.
 Keep both source and target keys even when either FK is null. Resolve only exact
 source IDs, or unique normalized number when the target has no ID. Never replace
@@ -190,10 +193,27 @@ enforce the family precedence in [data](data.md) in one transaction and validate
 family_id as the node's level-2 ancestor. Empty tables do not claim that
 precedence is implemented or that taxonomy gates passed.
 
+## Validity decisions
+
+`validity_decision`: `document_id bigint NOT NULL REFERENCES document(id)`,
+`ordinal smallint NOT NULL CHECK(ordinal BETWEEN 1 AND 8)`,
+`layer text NOT NULL CHECK(layer IN ('source','A','B','C','manual'))`,
+`rule_version text NOT NULL`, `before jsonb NOT NULL`, `after jsonb NOT NULL`,
+`actor_key text?`, `effect_date date?`,
+`relation_id bigint? REFERENCES relation(id)`, `anchor text?`,
+`quote text? CHECK(char_length(quote) <= 400)`, `artifact_sha256 text?` with the
+SHA-256 CHECK. PRIMARY KEY `(document_id,ordinal)`; ordinals are contiguous from
+1 and the highest one decided the stored values. `before` and `after` are
+objects with exactly the keys `status_class`, `is_current`, `status_basis`,
+`eff_from`, `eff_to`, `validity_conflict`; dates are `YYYY-MM-DD` strings or
+null. `actor_key` and `effect_date` are required for layers `B` and `C`,
+`relation_id` for `C`. [Validity corrections](validity-status.md) owns the
+rules.
+
 ## Release row
 
 `release`: `singleton boolean PRIMARY KEY CHECK(singleton)`, `country text`
-CHECK country='vn', `rel text UNIQUE`, `schema_version integer CHECK(=2)`,
+CHECK country='vn', `rel text UNIQUE`, `schema_version integer CHECK(=3)`,
 `taxonomy_version text`, `dense_recipe jsonb`, `chunk_recipe jsonb`,
 `lexical_recipe jsonb`, `retrieval_recipe jsonb`, `lexical_stats jsonb`,
 `source_manifest_hash text`, `build_input_hash text`, `build_recipe_hash text`,
@@ -220,9 +240,10 @@ Restore requires the same PostgreSQL major and compatible extension versions
 recorded in build metadata. Existing workshop artifacts remain authoritative;
 adding the chunk projection must not rewrite ingest rows. A schema change
 rebuilds a new corpus database; retain old artifacts for diagnosis and rollback.
-Version 2 adds `document.status_basis`; rebuild from preserved source artifacts,
-never backfill old releases with an assumed derivation. Readers must support
-this version before activation. Existing version 1 dumps remain unchanged.
+Version 2 added `document.status_basis`. Version 3 adds class, source and
+validity decisions. Always rebuild from preserved source artifacts, never
+backfill an old release with an assumed value. Readers must support version 3
+before activation; version 1 and 2 dumps remain unchanged.
 
 The host restore policy currently permits only pgvector extensions, while the
 existing data design already requires ltree. This work uses both locally; host

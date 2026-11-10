@@ -18,79 +18,122 @@ refuse them with an error naming both versions.
 
 ## Schema version 3
 
-Additions to version 2, exact DDL in the corpus schema:
+Additions to version 2; the [corpus schema](corpus-schema.md) holds the exact
+columns and constraints: `document.class`, `document.source`, two more
+`status_basis` values, `document.validity_conflict`, the `validity_decision`
+table, and `source_file` provenance filled for secondary documents from the
+version 2 fetch bundle. A frozen run whose build recipe names schema version 2
+is refused by the existing frozen-recipe guard, never rebuilt at version 3; a
+run frozen only through ingest may append `build` under the new recipe.
 
-- `document.class text NOT NULL CHECK (class IN ('primary','relation_context','secondary'))`,
-  copied from final membership; no default.
-- `document.source text NOT NULL` (`vbpl`, `chinhphu`), from the document key.
-- `document.status_basis` also accepts `derived_from_text` and
-  `manual_correction`; `document.validity_conflict boolean NOT NULL`.
-- `validity_decision(document_id, ordinal, layer, rule_version, before jsonb, after jsonb, actor_key, effect_date, relation_id, anchor, quote, artifact_sha256)`,
-  at most 8 rows per document, per the validity note.
-- `source_file.source`, `source_file.url`, `source_file.role` filled for
-  secondary documents from the version 2 fetch bundle.
+## Inventory
 
-A legacy run (selection version 0) builds at version 3 with class `primary` for
-every document. Reason: one reader, one schema; the class of a legacy run is
-known by construction.
+Two versions, chosen by the frozen source list's selection version. Both are
+compact JSON with keys in the order shown, arrays never null, absent values as
+JSON `null`, and the existing ordering (stage order, then byte-sorted key; gaps
+by stage, item, kind, detail).
 
-## Inventory version 2
+Version 1 (selection version 0), byte-identical to today:
 
-For a run with selection version 1 the upstream inventory is
-`{version:2,country,source_list_hash,final_membership_hash,expected_keys,items,gaps}`:
+- source manifest: `{country,source_list_hash,expected_keys,items,gaps}`, item
+  `{stage,item_key,state,input_hash,recipe_hash,artifact_sha256}`, gap
+  `{stage,item_key,kind,detail}`;
+- identity: `{country,source_list_hash,expected_keys,items}` with fetch, extract
+  and relate items only;
+- build input label `"2"`.
 
-- `final_membership_hash` is the frozen `final` phase hash from `run_scope`. The
-  canonical snapshot already binds every member, class, disposition, replacement
-  key and support tuple, so the inventory does not repeat them.
-- `expected_keys` are the final active members plus retained removals, byte
-  sorted. Replaced members are not expected keys.
-- `items` holds every predecessor through `embed` in frozen stage order,
-  including `expand`, then byte-sorted key. `gaps` adds `source`, `origin`,
-  `cause` and `evidence_ref` to the existing tuple.
+Version 2 (selection version 1):
 
-`source_manifest_hash` and `identity_inventory_hash` are computed as today over
-these fields; the identity form keeps discover, expand, fetch, extract and
-relate items. The build input becomes
-`stage.RecipeHash("build-input","3",country,rel,source_manifest_hash,decimal_schema_version,identity_map_sha256)`.
-A selection version 0 run keeps the version 1 inventory shape with no `version`
-field, so its hashes stay comparable with earlier runs.
+- source manifest:
+  `{version:2,country,source_list_hash,final_membership_hash,expected_keys,items,gaps}`,
+  same item tuple with `expand` in stage order after `discover`, gap
+  `{stage,item_key,kind,detail,source,origin,cause,evidence_ref}`;
+- identity:
+  `{version:2,country,source_list_hash,final_membership_hash,expected_keys,items}`
+  with discover, expand, fetch, extract and relate items;
+- build input label `"3"`.
+
+`final_membership_hash` is the frozen `final` phase hash from `run_scope`. The
+canonical snapshot binds every member, class, disposition, replacement key,
+number and support tuple, so the inventory does not repeat them. `expected_keys`
+are the final active members plus retained removals; replaced members are not
+expected keys. The inventory query reads the snapshot bytes and the items in one
+consistent read, verifies the bytes against the hash, and the loader uses only
+that verified snapshot, never mutable membership rows. A source-gap retry clears
+and republishes the final phase; the new hash changes the build input, so an
+earlier build is not reused. Golden fixtures pin the bytes and both hashes of
+each version.
 
 Build planning for selection version 1 requires the committed `final` phase, no
-durable run failure and no paused source; otherwise it fails with a clear
-non-retryable error. It never rebuilds membership from fetch items.
+durable run failure and no paused source, and reconciles membership with items:
+every final active member has a fetch item in state `done` or `gap`, and every
+member with a done fetch has terminal extract and relate items. A missing or
+non-terminal item fails planning with non-retryable `membership_unreconciled`
+naming the keys. It never rebuilds membership from fetch items.
+
+## Presence
+
+A document is present in a run when its key is a final active member with a done
+fetch item (selection version 0: an expected key with a done fetch that no
+exclusion rule removes). Everything that asks "is this document in the corpus"
+uses presence: build loading, number-to-document resolution for relations,
+inventory export for adjudication, and identity-map validation.
+
+A done fetch artifact that is not present (a secondary replaced at hand-over, a
+member removed from scope) is retained identity evidence only. It is decoded
+with the reader for its own source, it never resolves a number, never makes an
+`absent` map entry look present, and never loads rows. Re-adjudication is
+required when an `absent` expectation becomes present, when a resolved identity
+stops being present, and when a resolved secondary key has disposition
+`source_replaced` (the issue names the replacement key).
 
 ## Loading
 
-- One `document` row per final active member with a done fetch item; class and
-  source from membership. A member with disposition `source_replaced`,
-  `withdrawn` or `scope_removed`, and a member whose fetch item is a gap, loads
-  no document; its key and gaps go to `coverage_gap`.
-- A secondary document loads metadata, source files and its `no_tree` gap; it
-  has no provisions, chunks or relations until text extraction exists.
-- A fetch artifact whose key is not a final active member is ignored, even when
-  done (a downloaded secondary later replaced at hand-over).
+- One shared source-aware reader decodes a fetch artifact by its key's source:
+  VBPL `detail.json`, or the secondary `document.json` with its hash-linked
+  files. Build loading, relation loading and inventory export all use it.
+- One `document` row per present document; class and source from the verified
+  snapshot. A legacy run assigns class `primary` and source `vbpl`.
+- A final member that is not present loads no document; its key, disposition and
+  gaps go to `coverage_gap`. Chunk and embed artifacts of a key that is not
+  present are ignored; artifacts of present keys are reused when their lineage
+  and recipes match.
+- A secondary document loads metadata, source files and its `no_tree` gap. It
+  has no provisions, chunks or outgoing relations until text extraction exists;
+  incoming relations from present documents are kept.
+- A relation whose source document is not present is not loaded and is counted
+  in the build record as excluded-source evidence; a relation whose target is
+  not present stays with an unresolved target, as today.
+- The build document cap applies after exclusions.
 - Validity rules and manual corrections run after documents and relations load,
-  per the validity note; `validity-review.json` is written beside `build.json`.
+  per the validity note; `validity-review.json` is published with the build
+  record.
 
 ## Readers and evaluation
 
-- `corpusdb.SchemaVersion = 3`; retrieval `Open` rejects other versions.
+- `corpusdb.SchemaVersion = 3`; retrieval `Open` rejects other versions with an
+  error naming both.
 - Retrieval returns `class` and `source` on every hit and does not rank by them
   in recipe 1. Eligibility adds "not `validity_conflict`" under the bumped
-  validity policy.
+  validity policy. "Primary hits" in metrics means the primary response group,
+  whatever the membership class.
 - The identity map stays version 2: entries bind to per-document identity
-  records, not to an inventory hash, so documents that enter the corpus need
-  re-adjudication of the affected `absent` entries only, under the existing
-  rule. The four documents the baseline lacked are re-adjudicated after the
-  scope run.
-- The evaluation report adds document counts by class and source, hits by class,
-  and the validity counts from the validity note.
+  records, validated against present documents.
+- `report.json` adds `documents_by_class`, `documents_by_source`,
+  `hits_by_class` (primary response group, limit 8) and the validity counts of
+  the validity note (`hits_by_status_basis`, `hits_by_conflict_kind`, same
+  group).
 
 ## Tests
 
-`TestInventory_V2BindsFinalMembershipHash`,
-`TestInventory_LegacyShapeUnchanged`, `TestBuild_RequiresFinalMembership`,
-`TestLoad_ClassAndSourceFromMembership`, `TestLoad_ReplacedMemberNotLoaded`,
-`TestLoad_IgnoresFetchOutsideMembership`, `TestLoad_SecondaryMetadataOnly`,
-`TestOpen_RejectsSchemaVersion2`, `TestSchema_Version3Constraints`, and a proof
-that builds the scope proof run through `build` and `eval`.
+`TestInventory_V2GoldenBytesAndHashes`, `TestInventory_V1GoldenBytesUnchanged`,
+`TestInventory_RepublishedFinalChangesBuildInput`,
+`TestBuild_RequiresFinalMembership`, `TestBuild_MembershipUnreconciled`,
+`TestBuild_FrozenSchema2RecipeRefused`, `TestLoad_ClassAndSourceFromSnapshot`,
+`TestLoad_EachExcludedDispositionNotLoaded`,
+`TestLoad_IgnoresArtifactsOfAbsentKeys`, `TestLoad_SecondaryMetadataOnly`,
+`TestRelations_ReplacedSecondaryNeverResolvesNumber`,
+`TestIdentity_ReplacedSecondaryNeedsReadjudication`,
+`TestOpen_RejectsSchemaVersion2`, `TestSchema_Version3Constraints`,
+`TestDump_RestoresValidityDecisions`, and a proof that takes the scope proof run
+through `build` and `eval`.
