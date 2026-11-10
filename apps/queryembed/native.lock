@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "assets": [
+    {
+      "name": "onnxruntime",
+      "version": "1.31.1",
+      "platform": "darwin-arm64",
+      "url": "https://github.com/microsoft/onnxruntime/releases/download/v1.31.1/onnxruntime-osx-arm64-1.31.1.tgz",
+      "sha256": "2e1344a1926ee50eb25b38153cb6992c3567515aef0e677a1a520a1798896d6f",
+      "member": "onnxruntime-osx-arm64-1.31.1/lib/libonnxruntime.1.31.1.dylib",
+      "install": "libonnxruntime.dylib"
+    },
+    {
+      "name": "onnxruntime",
+      "version": "1.31.1",
+      "platform": "linux-arm64",
+      "url": "https://github.com/microsoft/onnxruntime/releases/download/v1.31.1/onnxruntime-linux-aarch64-1.31.1.tgz",
+      "sha256": "5317505e2da99be65f8e2775ba3c2afd6d2961fd78aba1bd8f56159f48820c78",
+      "member": "onnxruntime-linux-aarch64-1.31.1/lib/libonnxruntime.so.1.31.1",
+      "install": "libonnxruntime.so"
+    },
+    {
+      "name": "tokenizers",
+      "version": "1.27.0",
+      "platform": "darwin-arm64",
+      "url": "https://github.com/daulet/tokenizers/releases/download/v1.27.0/libtokenizers.darwin-arm64.tar.gz",
+      "sha256": "fb84b8b2e349a5952767ffe80ccd862fc44084de47f3b0cc3f0b7c9d4e649cf7",
+      "member": "libtokenizers.a",
+      "install": "libtokenizers.a"
+    },
+    {
+      "name": "tokenizers",
+      "version": "1.27.0",
+      "platform": "linux-arm64",
+      "url": "https://github.com/daulet/tokenizers/releases/download/v1.27.0/libtokenizers.linux-arm64.tar.gz",
+      "sha256": "e96545ad05930c26f51f63d932ee6d3bbd32bbed149e102c5290d587a2293067",
+      "member": "libtokenizers.a",
+      "install": "libtokenizers.a"
+    }
+  ]
+}

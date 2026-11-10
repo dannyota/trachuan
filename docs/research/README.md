@@ -23,3 +23,5 @@ Observations and experiments. Not project authority.
   variants, quality and A1 latency.
 - [Index baseline](index-baseline-2026-11.md): first chunk, embed, build and
   evaluation run on vn/20261110_2.
+- [Query runtime: llama.cpp against ONNX Runtime](query-runtime-llamacpp-2026-11.md):
+  A1 latency, recall and memory for GGUF variants and ONNX Runtime INT8.

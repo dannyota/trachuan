@@ -80,6 +80,10 @@ Retain prior artifacts for rollback.
 - ONNX Runtime through cgo inside the Go server: couples native model memory and
   cancellation to the API process.
 - Rust service: an additional language without measured benefit.
+- llama.cpp for queries (GGUF F32, F16 or Q8_0): slower than ONNX Runtime INT8
+  on the A1 host, Q8_0 82 ms short and 542 ms long against 64 and 373 ms, with
+  no recall gain;
+  [research note](../research/query-runtime-llamacpp-2026-11.md).
 
 ## History
 
@@ -93,3 +97,5 @@ Retain prior artifacts for rollback.
   query measurement on the host CPU (ADR 0009 History).
 - 2026-11-10: queries move to dynamic INT8 per-channel (ADR 0009 History). The
   parity gate compares the Go and Python services on the same INT8 model file.
+- 2026-11-10: llama.cpp measured against ONNX Runtime on the A1 host and
+  rejected; queries stay ONNX Runtime INT8.

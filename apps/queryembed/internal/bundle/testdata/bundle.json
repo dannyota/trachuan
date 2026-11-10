@@ -1,0 +1,17 @@
+{
+  "model": "AITeamVN/Vietnamese_Embedding_v2",
+  "revision": "18b44161e041",
+  "resolved_revision": "18b44161e041bf1d3a333ab5144b5b7b93f914d2",
+  "files": [
+    {
+      "path": "onnx/model_int8.onnx",
+      "size": 8,
+      "sha256": "1b465fa6b6bcbc06a3199e3d2d8aec35d37494a712f888b6d5536684dd89d0f0"
+    },
+    {
+      "path": "tokenizer.json",
+      "size": 7,
+      "sha256": "2de8bce5133f08dc3ebb75abcb1ef6c0951800ee3ae8ca06fcf58395d1244218"
+    }
+  ]
+}
