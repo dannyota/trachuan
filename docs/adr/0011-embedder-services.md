@@ -32,14 +32,15 @@ reports its complete runtime recipe; callers reject mismatches before using
 vectors. Reject input above the token cap; never truncate. No answer model or
 reranker is added.
 
-The Python query mode written first stays only as the parity reference. The Go
-service replaces it after three checks on the same model bundle and ONNX Runtime
-version: identical token ids for the golden queries and edge-case texts; cosine
-at least 0.9999 for every input; and, for every evaluation case, identical
-ordered hit identities and abstention decisions from two builds of the same
-inputs that differ only in the query recipe. Each build keeps its strict recipe
-check; no build is evaluated with the other service. The Python query mode is
-then deleted.
+The Python query mode written first was the parity reference. The Go service is
+the reference for queries: where the two differ, Go wins. The Python query mode
+is deleted once, on the same model bundle and ONNX Runtime version, the Go
+service gives identical token ids for the golden queries and edge-case texts and
+cosine at least 0.9999 for every input. The first full run built and evaluated
+with the Go service is compared case by case with the last run evaluated with
+the Python service, and the differences are recorded, not fixed on the Python
+side. Each build keeps its strict recipe check; no build is evaluated with the
+other service.
 
 ## Consequences
 
@@ -99,3 +100,8 @@ Retain prior artifacts for rollback.
   parity gate compares the Go and Python services on the same INT8 model file.
 - 2026-11-10: llama.cpp measured against ONNX Runtime on the A1 host and
   rejected; queries stay ONNX Runtime INT8.
+- 2026-11-10: the owner made Go the query reference and dropped the two-build
+  gate. On the real bundle the Go and Python INT8 services gave identical token
+  ids for 103 texts (92 golden questions, 11 edge texts) and minimum cosine 1.0;
+  the Python query mode was deleted and the Python service became
+  `apps/docembed`.
