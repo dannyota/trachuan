@@ -13,6 +13,10 @@ const (
 	PointersPerDocument = 5
 	// ReadItemsMax is the read item limit in docs/design/budgets.md.
 	ReadItemsMax = 8
+	// ReadHandleMax is the handle and anchor code-point limit in docs/design/budgets.md.
+	ReadHandleMax = 512
+	// ReadNumberMax is the number code-point limit in docs/design/budgets.md.
+	ReadNumberMax = 128
 	// ReadCallCap is the read call limit in docs/design/budgets.md.
 	ReadCallCap = 40000
 	// PartSize is the read part limit in docs/design/budgets.md.

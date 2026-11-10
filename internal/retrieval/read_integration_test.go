@@ -323,6 +323,33 @@ func TestRead_ItemErrorsDoNotFailCall(t *testing.T) {
 	}
 }
 
+func TestRead_NulOrInvalidUTF8IsItemErrorMixedBatch(t *testing.T) {
+	_, e := readFixture(t)
+	valid := ReadItem{Handle: "vn:1#p5"}
+	want := readItems(t, e, valid).Items[0]
+	for name, value := range map[string]string{"nul": "\x00", "invalid_utf8": "\xff"} {
+		for field, item := range readTextItems(value) {
+			t.Run(name+"/"+field, func(t *testing.T) {
+				got := readItems(t, e, item, valid, ReadItem{Next: readTestNext(item)})
+				if got.Items[0].Error != "invalid_item" || got.Items[2].Error != "invalid_next" || !reflect.DeepEqual(got.Items[1], want) {
+					t.Fatalf("invalid input failed a valid batch item: %+v", got)
+				}
+			})
+		}
+	}
+}
+
+func TestRead_HostileNumberIsItemErrorMixedBatch(t *testing.T) {
+	_, e := readFixture(t)
+	item := ReadItem{Number: "1/" + strings.Repeat(" ", 60000) + "2026/QH"}
+	valid := ReadItem{Number: "N1"}
+	want := readItems(t, e, valid).Items[0]
+	got := readItems(t, e, item, valid, ReadItem{Next: readTestNext(item)})
+	if got.Items[0].Error != "invalid_item" || got.Items[2].Error != "invalid_next" || !reflect.DeepEqual(got.Items[1], want) {
+		t.Fatalf("hostile number failed a valid batch item: %+v", got)
+	}
+}
+
 func TestRead_TamperedNextIsItemError(t *testing.T) {
 	_, e := readFixture(t)
 	for _, tc := range []struct {

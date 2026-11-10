@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"unicode/utf8"
 )
 
 // ReadItem describes one document, provision, range, relation list or continuation.
@@ -35,7 +36,7 @@ func encodeNext(c cursor) string {
 
 func decodeNext(s string) (cursor, error) {
 	data, err := base64.RawURLEncoding.DecodeString(s)
-	if err != nil {
+	if err != nil || !utf8.Valid(data) {
 		return cursor{}, errInvalidNext
 	}
 	dec := json.NewDecoder(bytes.NewReader(data))

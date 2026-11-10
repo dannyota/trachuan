@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -24,6 +25,18 @@ func (e *Engine) Read(ctx context.Context, req ReadRequest) (ReadResult, error) 
 		}
 		return result, nil
 	}
+	cursors := make([]cursor, len(req.Items))
+	result.Items = make([]ItemResult, len(req.Items))
+	pending := false
+	for i, item := range req.Items {
+		c, code := readCursor(item, e.release.Rel)
+		cursors[i] = c
+		result.Items[i].Error = code
+		pending = pending || code == ""
+	}
+	if !pending {
+		return result, nil
+	}
 	ctx, cancel := context.WithTimeout(ctx, e.deadline())
 	defer cancel()
 	tx, err := e.db.BeginTx(ctx, pgx.TxOptions{AccessMode: pgx.ReadOnly, IsoLevel: pgx.RepeatableRead})
@@ -35,13 +48,16 @@ func (e *Engine) Read(ctx context.Context, req ReadRequest) (ReadResult, error) 
 		return result, fmt.Errorf("set read deadline: %w", err)
 	}
 	used := 0
-	for i, item := range req.Items {
-		page, cost, readErr := e.readItem(ctx, tx, item, ReadCallCap-used, i == 0)
+	for i, c := range cursors {
+		if result.Items[i].Error != "" {
+			continue
+		}
+		page, cost, readErr := e.readItem(ctx, tx, c, req.Items[i].Next != "", ReadCallCap-used, i == 0)
 		if readErr != nil {
 			return ReadResult{}, fmt.Errorf("read item: %w", readErr)
 		}
 		used += cost
-		result.Items = append(result.Items, page)
+		result.Items[i] = page
 	}
 	if err = tx.Commit(ctx); err != nil {
 		return ReadResult{}, fmt.Errorf("commit read transaction: %w", err)
@@ -50,6 +66,9 @@ func (e *Engine) Read(ctx context.Context, req ReadRequest) (ReadResult, error) 
 }
 
 func validReadItem(item ReadItem) bool {
+	if !validReadText(item.Handle, ReadHandleMax) || !validReadText(item.From, ReadHandleMax) || !validReadText(item.To, ReadHandleMax) || !validReadText(item.Number, ReadNumberMax) {
+		return false
+	}
 	if item.Next != "" {
 		return item.Handle == "" && item.Number == "" && item.From == "" && item.To == "" && !item.Relations
 	}
@@ -69,25 +88,39 @@ func validReadItem(item ReadItem) bool {
 	return true
 }
 
-func (e *Engine) readItem(ctx context.Context, tx pgx.Tx, item ReadItem, budget int, first bool) (ItemResult, int, error) {
-	if !validReadItem(item) {
-		return ItemResult{Error: "invalid_item"}, 0, nil
+func validReadText(s string, limit int) bool {
+	for count := 0; s != ""; count++ {
+		r, size := utf8.DecodeRuneInString(s)
+		if count >= limit || r == 0 || (r == utf8.RuneError && size == 1) {
+			return false
+		}
+		s = s[size:]
 	}
-	c := cursor{V: 1, Release: e.release.Rel, Item: item}
-	continued := item.Next != ""
-	if continued {
+	return true
+}
+
+func readCursor(item ReadItem, release string) (cursor, string) {
+	if !validReadItem(item) {
+		return cursor{}, "invalid_item"
+	}
+	c := cursor{V: 1, Release: release, Item: item}
+	if item.Next != "" {
 		var err error
 		c, err = decodeNext(item.Next)
 		if err != nil {
-			return ItemResult{Error: "invalid_next"}, 0, nil
+			return cursor{}, "invalid_next"
 		}
-		if c.Release != e.release.Rel {
-			return ItemResult{Error: "release_expired"}, 0, nil
+		if c.Release != release {
+			return cursor{}, "release_expired"
 		}
 		if !validReadItem(c.Item) || c.Item.Next != "" {
-			return ItemResult{Error: "invalid_next"}, 0, nil
+			return cursor{}, "invalid_next"
 		}
 	}
+	return c, ""
+}
+
+func (e *Engine) readItem(ctx context.Context, tx pgx.Tx, c cursor, continued bool, budget int, first bool) (ItemResult, int, error) {
 	seq, code, err := e.readScope(ctx, tx, c)
 	if err != nil {
 		return ItemResult{}, 0, err

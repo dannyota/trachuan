@@ -1,45 +1,153 @@
 package retrieval
 
 import (
+	"context"
+	"encoding/base64"
 	"encoding/json"
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 	"unicode"
 )
 
-func TestSplitParts_LosslessAndPositive(t *testing.T) {
-	for _, text := range []string{"", "a", strings.Repeat("điều kiện \n", 7000), strings.Repeat("á", 40000)} {
-		parts := splitParts([]rune(text), PartSize)
-		var joined []rune
-		for _, p := range parts {
-			if len(p) < 1 || len(p) > PartSize {
-				t.Fatalf("part length %d", len(p))
+func TestRead_HostileNumberIsItemErrorFast(t *testing.T) {
+	item := ReadItem{Number: "1/" + strings.Repeat(" ", 60000) + "2026/QH"}
+	for mode, continued := range map[string]bool{"direct": false, "next": true} {
+		t.Run(mode, func(t *testing.T) {
+			start := time.Now()
+			assertReadInputError(t, item, continued)
+			if elapsed := time.Since(start); elapsed >= 100*time.Millisecond {
+				t.Fatalf("hostile number took %s", elapsed)
 			}
-			joined = append(joined, p...)
+		})
+	}
+}
+
+func TestRead_NulOrInvalidUTF8IsItemError(t *testing.T) {
+	for name, value := range map[string]string{"nul": "\x00", "invalid_utf8": "\xff"} {
+		for field, item := range readTextItems(value) {
+			for mode, continued := range map[string]bool{"direct": false, "next": true} {
+				t.Run(name+"/"+field+"/"+mode, func(t *testing.T) {
+					assertReadInputError(t, item, continued)
+				})
+			}
 		}
-		if string(joined) != text {
+	}
+}
+
+func TestRead_InputBounds(t *testing.T) {
+	for field, item := range map[string]ReadItem{
+		"handle": {Handle: "vn:" + strings.Repeat("đ", 510)},
+		"number": {Number: strings.Repeat("đ", 129)},
+		"from":   {Handle: "vn:1", From: strings.Repeat("đ", 513), To: "p8"},
+		"to":     {Handle: "vn:1", From: "p5", To: strings.Repeat("đ", 513)},
+	} {
+		for mode, continued := range map[string]bool{"direct": false, "next": true} {
+			t.Run(field+"/"+mode, func(t *testing.T) {
+				assertReadInputError(t, item, continued)
+			})
+		}
+	}
+	for name, item := range map[string]ReadItem{
+		"handle":           {Handle: "vn:" + strings.Repeat("đ", 509)},
+		"number":           {Number: strings.Repeat("đ", 128)},
+		"from":             {Handle: "vn:1", From: strings.Repeat("đ", 512), To: "p8"},
+		"to":               {Handle: "vn:1", From: "p5", To: strings.Repeat("đ", 512)},
+		"replacement_rune": {Handle: "vn:\ufffd"},
+	} {
+		t.Run(name+"/valid", func(t *testing.T) {
+			if !validReadItem(item) {
+				t.Fatal("valid code-point boundary rejected")
+			}
+		})
+	}
+}
+
+func readTextItems(value string) map[string]ReadItem {
+	return map[string]ReadItem{
+		"handle": {Handle: "vn:" + value},
+		"number": {Number: value},
+		"from":   {Handle: "vn:1", From: value, To: "p8"},
+		"to":     {Handle: "vn:1", From: "p5", To: value},
+	}
+}
+
+func readTestNext(item ReadItem) string {
+	c := cursor{V: 1, Release: "20991110_1", Item: item}
+	data, _ := json.Marshal(c)
+	// Marshal replaces invalid UTF-8. Restore the hostile byte in crafted tokens.
+	data = []byte(strings.NewReplacer(`\ufffd`, "\xff", "\ufffd", "\xff").Replace(string(data)))
+	return base64.RawURLEncoding.EncodeToString(data)
+}
+
+func assertReadInputError(t *testing.T, item ReadItem, continued bool) {
+	t.Helper()
+	defer func() {
+		if p := recover(); p != nil {
+			t.Fatalf("invalid input reached the nil database: %v", p)
+		}
+	}()
+	want := "invalid_item"
+	if continued {
+		item = ReadItem{Next: readTestNext(item)}
+		want = "invalid_next"
+	}
+	// A nil database proves validation precedes even transaction creation.
+	e := &Engine{release: Release{Rel: "20991110_1"}}
+	got, err := e.Read(context.Background(), ReadRequest{Release: e.release.Rel, Items: []ReadItem{item}})
+	if err != nil || len(got.Items) != 1 || got.Items[0].Error != want {
+		t.Fatalf("Read() = %+v, %v; want %s", got, err, want)
+	}
+}
+
+func TestReadParts_LosslessAndPositive(t *testing.T) {
+	for _, text := range []string{"", "a", strings.Repeat("điều kiện \n", 7000), strings.Repeat("á", 40000)} {
+		parts, ok := unitParts(Unit{Kind: "provision", Text: text})
+		if !ok || len(parts) == 0 {
+			t.Fatal("valid unit rejected")
+		}
+		var joined strings.Builder
+		for _, p := range parts {
+			if readSize(p) > PartSize || (text != "" && p.Text == "") {
+				t.Fatal("empty or oversized part")
+			}
+			joined.WriteString(p.Text)
+		}
+		if joined.String() != text {
 			t.Fatal("parts lost source text")
 		}
 	}
 }
 
-func TestSplitParts_NoWhitespaceKeepsCombiningMark(t *testing.T) {
-	text := strings.Repeat("a", PartSize-1) + "e\u0301" + strings.Repeat("b", 20)
-	parts := splitParts([]rune(text), PartSize)
-	if len(parts) != 2 || len(parts[0]) != PartSize-1 || unicode.Is(unicode.Mn, parts[1][0]) || string(parts[1][:2]) != "e\u0301" {
-		t.Fatal("split separated a combining mark")
+func TestReadParts_NoWhitespaceKeepsCombiningMark(t *testing.T) {
+	for _, tc := range []struct {
+		prefix string
+		width  int
+	}{{"a", 1}, {"\"", 2}} {
+		u := Unit{Kind: "provision", Part: 1, Parts: 2}
+		capacity := PartSize - readSize(u) - len(`,"text":""`)
+		prefix := strings.Repeat(tc.prefix, (capacity-1)/tc.width) + strings.Repeat("a", (capacity-1)%tc.width)
+		u.Part, u.Parts = 0, 0
+		u.Text = prefix + "e\u0301" + strings.Repeat("b", 20)
+		parts, ok := unitParts(u)
+		if !ok || len(parts) != 2 || parts[0].Text != prefix || !strings.HasPrefix(parts[1].Text, "e\u0301") || readSize(parts[0]) > PartSize {
+			t.Fatal("split separated a combining mark at the encoded boundary")
+		}
 	}
 }
 
-func TestSplitParts_FixedBoundaries(t *testing.T) {
-	r := []rune(strings.Repeat("văn bản pháp luật\n", 3000))
-	a, b := splitParts(r, PartSize), splitParts(r, PartSize)
-	if !reflect.DeepEqual(a, b) {
+func TestReadParts_FixedBoundaries(t *testing.T) {
+	u := Unit{Kind: "provision", Text: strings.Repeat("văn bản pháp luật\n", 3000)}
+	a, aOK := unitParts(u)
+	b, bOK := unitParts(u)
+	if !aOK || !bOK || len(a) < 2 || !reflect.DeepEqual(a, b) {
 		t.Fatal("boundaries changed")
 	}
-	for _, p := range a[:len(a)-1] {
-		if !unicode.IsSpace(p[len(p)-1]) {
+	for i, p := range a[:len(a)-1] {
+		r := []rune(p.Text)
+		next := []rune(a[i+1].Text)
+		if len(r) == 0 || len(next) == 0 || (!unicode.IsSpace(r[len(r)-1]) && !unicode.IsSpace(next[0])) || readSize(p) > PartSize {
 			t.Fatal("did not cut at whitespace")
 		}
 	}

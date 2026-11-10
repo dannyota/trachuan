@@ -7,16 +7,6 @@ import (
 	"golang.org/x/text/unicode/norm"
 )
 
-func splitParts(r []rune, partSize int) [][]rune {
-	var parts [][]rune
-	for len(r) > 0 {
-		end := cutAt(r, partSize)
-		parts = append(parts, r[:end])
-		r = r[end:]
-	}
-	return parts
-}
-
 func unitParts(u Unit) ([]Unit, bool) {
 	if readSize(u) <= PartSize {
 		return []Unit{u}, true

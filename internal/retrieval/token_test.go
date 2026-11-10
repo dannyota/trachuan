@@ -35,6 +35,7 @@ func TestDecodeNext_RejectsTampered(t *testing.T) {
 		"nested next":   encode(`{"V":1,"Item":{"Handle":"vn:key","Next":"nested"}}`),
 		"both forms":    encode(`{"V":1,"Item":{"Handle":"vn:key","Number":"number"}}`),
 		"trailing data": encode(`{"V":1,"Item":{"Handle":"vn:key"}} {}`),
+		"invalid UTF-8": encode("{\"V\":1,\"Item\":{\"handle\":\"vn:\xff\"}}"),
 	}
 	for name, input := range tests {
 		t.Run(name, func(t *testing.T) {
