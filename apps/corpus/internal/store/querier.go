@@ -13,9 +13,22 @@ type Querier interface {
 	AcceptRunGaps(ctx context.Context, arg AcceptRunGapsParams) (int64, error)
 	AdvanceRunStage(ctx context.Context, arg AdvanceRunStageParams) error
 	ArtifactPathReferenced(ctx context.Context, arg ArtifactPathReferencedParams) (bool, error)
+	ClearExpanded(ctx context.Context, runID int64) error
+	ClearFinal(ctx context.Context, runID int64) error
+	ClearRunSource(ctx context.Context, arg ClearRunSourceParams) (int64, error)
+	ClearSeeds(ctx context.Context, runID int64) error
 	CountIncompleteItems(ctx context.Context, runID int64) (int64, error)
+	CountPausedSources(ctx context.Context, runID int64) (int64, error)
 	CountUnacceptedGaps(ctx context.Context, runID int64) (int64, error)
 	CreateRun(ctx context.Context, arg CreateRunParams) error
+	DeleteItemGaps(ctx context.Context, arg DeleteItemGapsParams) (int64, error)
+	DeleteStageGaps(ctx context.Context, arg DeleteStageGapsParams) (int64, error)
+	DeleteStageItems(ctx context.Context, arg DeleteStageItemsParams) (int64, error)
+	DeleteStageMembershipEvidence(ctx context.Context, arg DeleteStageMembershipEvidenceParams) (int64, error)
+	DeleteStageSeedObservations(ctx context.Context, arg DeleteStageSeedObservationsParams) (int64, error)
+	DeleteUnsupportedRunDocuments(ctx context.Context, runID int64) (int64, error)
+	EnsureRunScope(ctx context.Context, runID int64) error
+	EnsureRunSource(ctx context.Context, arg EnsureRunSourceParams) error
 	GetArtifactID(ctx context.Context, arg GetArtifactIDParams) (int64, error)
 	GetBatchRun(ctx context.Context, id int64) (Run, error)
 	GetBatchRunState(ctx context.Context, id int64) (string, error)
@@ -29,35 +42,70 @@ type Querier interface {
 	GetRunForUpdate(ctx context.Context, arg GetRunForUpdateParams) (Run, error)
 	GetRunGeneration(ctx context.Context, id int64) (int32, error)
 	GetRunGenerationForShare(ctx context.Context, id int64) (int32, error)
+	GetRunItemArtifact(ctx context.Context, arg GetRunItemArtifactParams) (GetRunItemArtifactRow, error)
+	GetRunItemCommitted(ctx context.Context, arg GetRunItemCommittedParams) (GetRunItemCommittedRow, error)
+	GetRunScope(ctx context.Context, runID int64) (RunScope, error)
+	GetRunSourceForShare(ctx context.Context, arg GetRunSourceForShareParams) (RunSource, error)
+	GetRunSourceForUpdate(ctx context.Context, arg GetRunSourceForUpdateParams) (RunSource, error)
 	InsertArtifact(ctx context.Context, arg InsertArtifactParams) (int64, error)
 	InsertChunk(ctx context.Context, arg InsertChunkParams) error
 	InsertDocument(ctx context.Context, arg InsertDocumentParams) error
+	InsertFetchObservation(ctx context.Context, arg InsertFetchObservationParams) error
 	InsertFetchedFile(ctx context.Context, arg InsertFetchedFileParams) error
 	InsertGap(ctx context.Context, arg InsertGapParams) error
+	InsertMembershipEvidence(ctx context.Context, arg InsertMembershipEvidenceParams) error
 	InsertPlannedItem(ctx context.Context, arg InsertPlannedItemParams) error
 	InsertProvision(ctx context.Context, arg InsertProvisionParams) error
 	InsertRelation(ctx context.Context, arg InsertRelationParams) error
+	InsertRunFailure(ctx context.Context, arg InsertRunFailureParams) error
 	InsertRunItem(ctx context.Context, arg InsertRunItemParams) error
+	InsertRunSourceEvent(ctx context.Context, arg InsertRunSourceEventParams) error
+	ListAcceptedRemovalGaps(ctx context.Context, runID int64) ([]ListAcceptedRemovalGapsRow, error)
+	ListBlockingRunFailureCodes(ctx context.Context, arg ListBlockingRunFailureCodesParams) ([]string, error)
 	ListChunkInputs(ctx context.Context, runID int64) ([]ListChunkInputsRow, error)
 	ListChunks(ctx context.Context, artifactID int64) ([]Chunk, error)
 	ListDiscoveryItems(ctx context.Context, country string) ([]ListDiscoveryItemsRow, error)
 	ListDiscoveryListings(ctx context.Context, country string) ([]ListDiscoveryListingsRow, error)
 	ListDiscoveryRuns(ctx context.Context, country string) ([]ListDiscoveryRunsRow, error)
+	ListEarlierRuns(ctx context.Context, arg ListEarlierRunsParams) ([]ListEarlierRunsRow, error)
 	ListEmbedInputs(ctx context.Context, runID int64) ([]ListEmbedInputsRow, error)
 	ListExtractInputs(ctx context.Context, runID int64) ([]ListExtractInputsRow, error)
+	ListItemFetchObservations(ctx context.Context, arg ListItemFetchObservationsParams) ([]RunFetchObservation, error)
+	ListLegacyExpectedKeys(ctx context.Context, runID int64) ([]string, error)
+	ListLegacyListingSupports(ctx context.Context, runID int64) ([]ListLegacyListingSupportsRow, error)
+	ListMembershipEvidence(ctx context.Context, runID int64) ([]RunMembershipEvidence, error)
 	ListPendingBatchItems(ctx context.Context, arg ListPendingBatchItemsParams) ([]RunItem, error)
 	ListPendingStageBatches(ctx context.Context, arg ListPendingStageBatchesParams) ([]int32, error)
+	ListReleaseBlockingFailureCodes(ctx context.Context, arg ListReleaseBlockingFailureCodesParams) ([]string, error)
+	ListRunDocuments(ctx context.Context, runID int64) ([]RunDocument, error)
+	ListRunFailures(ctx context.Context, runID int64) ([]RunFailure, error)
 	ListRunGaps(ctx context.Context, arg ListRunGapsParams) ([]Gap, error)
+	ListRunGapsByRun(ctx context.Context, runID int64) ([]Gap, error)
 	ListRunItemCounts(ctx context.Context, runID int64) ([]ListRunItemCountsRow, error)
+	ListRunListings(ctx context.Context, runID int64) ([]ListRunListingsRow, error)
+	ListRunSources(ctx context.Context, runID int64) ([]RunSource, error)
+	ListSeedObservations(ctx context.Context, runID int64) ([]RunSeedObservation, error)
+	ListStageItemArtifacts(ctx context.Context, arg ListStageItemArtifactsParams) ([]ListStageItemArtifactsRow, error)
 	ListUnacceptedGapCounts(ctx context.Context, runID int64) ([]ListUnacceptedGapCountsRow, error)
 	MarkRunFromStates(ctx context.Context, arg MarkRunFromStatesParams) (int64, error)
+	PauseRunSource(ctx context.Context, arg PauseRunSourceParams) (int64, error)
+	PublishExpanded(ctx context.Context, arg PublishExpandedParams) (int64, error)
+	PublishFinal(ctx context.Context, arg PublishFinalParams) (int64, error)
+	PublishSeeds(ctx context.Context, arg PublishSeedsParams) (int64, error)
 	RecoverRun(ctx context.Context, id int64) error
 	ResetFailedItems(ctx context.Context, arg ResetFailedItemsParams) error
 	ResetOlderFailedStageItems(ctx context.Context, arg ResetOlderFailedStageItemsParams) error
+	ResetRetryItem(ctx context.Context, arg ResetRetryItemParams) (int64, error)
+	SetFetchCloseInputHash(ctx context.Context, arg SetFetchCloseInputHashParams) (int64, error)
+	SetFetchedFileTime(ctx context.Context, arg SetFetchedFileTimeParams) (int64, error)
+	SetMembershipPredecessor(ctx context.Context, arg SetMembershipPredecessorParams) (int64, error)
+	SetRunMessage(ctx context.Context, arg SetRunMessageParams) error
 	SetRunState(ctx context.Context, arg SetRunStateParams) error
 	StartRun(ctx context.Context, arg StartRunParams) error
 	UpdateRunItemFenced(ctx context.Context, arg UpdateRunItemFencedParams) (int64, error)
 	UpsertListing(ctx context.Context, arg UpsertListingParams) error
+	UpsertRunDocument(ctx context.Context, arg UpsertRunDocumentParams) error
+	UpsertSeedObservation(ctx context.Context, arg UpsertSeedObservationParams) error
 }
 
 var _ Querier = (*Queries)(nil)

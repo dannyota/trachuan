@@ -49,7 +49,6 @@ Freeze the evaluation civil date from the first eight digits of `rel`, parsed as
 a real calendar date; an invalid date is a configuration failure. The same date
 feeds calibration and eval, including retries after midnight.
 
-`source_manifest_hash` is SHA-256 of this fixed-field compact JSON inventory.
 Build input hash is
 `stage.RecipeHash("build-input","2",country,rel, source_manifest_hash,decimal_schema_version,identity_map_sha256)`.
 Pin the reviewed map bytes at planning and verify their SHA-256 before use.
@@ -77,15 +76,17 @@ their recipe hashes; never read a newly edited fixture under an old frozen hash.
 
 ## Inclusion and losses
 
-- Include one metadata document for each expected key with a done fetch. Include
+- Include one metadata document per final active member with a done fetch. Copy
+  its class from membership; never infer it from the document key. Include
   expired, suspended, not-yet and unknown statuses so historical retrieval can
   work. Include no-tree documents as metadata with coverage gaps; they have no
   provisions or chunks. Keep all valid extracted provisions even when their
   chunks were omitted or rejected.
-- Exclude `withdrawn`, `scope_removed` and fetch-gap documents from searchable
-  documents. Preserve their keys and gap details in `coverage_gap`; do not carry
-  stale text from a previous run. English renditions never enter the expected
-  set. A reference to any excluded document remains an unresolved relation.
+- Exclude `withdrawn`, `scope_removed`, `source_replaced` and fetch-gap
+  documents from searchable documents. Preserve keys and gap details in
+  `coverage_gap`; do not carry stale text from a previous run. English
+  renditions never enter the expected set. References to excluded documents
+  remain unresolved.
 - Insert only chunks with a matching successful vector and verified input hash.
   Require `chunk count = embedded count + rejected count` before exclusions.
   Require inserted chunk count equals inserted dense vector count, with one
@@ -175,11 +176,10 @@ derivation gap; preserve other date, relation and provenance gaps and raw-source
 evidence. Derivation does not establish provision equivalence or alter
 historical date filtering.
 
-Number normalization uses NFC, uppercase, `Đ` to `D`, and removal of whitespace
-around `/` and `-`; retain leading zeroes and other characters. Do not fold to
-digits or use substring matching. Source URLs are copied only when present and
-verified as HTTP(S); otherwise use null plus a provenance gap. Do not make up an
-attachment or public portal URL from an opaque source id.
+Number normalization follows
+[data](data.md#official-number-normalization-proposed-extension). Source URLs
+are copied only when present and verified as HTTP(S); otherwise use null plus a
+provenance gap. Do not make up a URL from an opaque source id.
 
 ## Database lifecycle
 

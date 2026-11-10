@@ -12,6 +12,7 @@ import (
 
 	"danny.vn/trachuan/apps/corpus/internal/artifact"
 	"danny.vn/trachuan/apps/corpus/internal/fault"
+	"danny.vn/trachuan/apps/corpus/internal/sourcegate"
 	"danny.vn/trachuan/apps/corpus/internal/store"
 	"github.com/jackc/pgx/v5/pgconn"
 )
@@ -118,7 +119,7 @@ func RunBatch(ctx context.Context, env Env, st Stage, in BatchInput, attempt int
 			if found {
 				output = Output{Artifact: &art, State: "done"}
 			} else {
-				output, err = st.Process(ctx, env, run, item)
+				output, err = st.Process(sourcegate.WithRunID(ctx, in.RunID), env, run, item)
 				if err != nil {
 					// Only the activity's own context ends the batch; a timeout
 					// inside one item stays with that item.
@@ -126,17 +127,19 @@ func RunBatch(ctx context.Context, env Env, st Stage, in BatchInput, attempt int
 						return result, err
 					}
 					var retryable *RetryableError
-					if errors.As(err, &retryable) && attempt < cfg.MaxAttempts {
+					if !errors.Is(err, sourcegate.ErrSourcePaused) && errors.As(err, &retryable) && attempt < cfg.MaxAttempts {
 						result.Pending++
 						last.Store(int64(i))
 						continue
 					}
+					sources := output.Sources
 					output = processFailure(err, retryable)
+					output.Sources = sources
 				} else if output.Artifact != nil {
 					fault.Hit("after_rename", i)
 				}
 			}
-			commit.State, commit.Message, commit.Gaps, commit.Artifact = output.State, output.Message, output.Gaps, output.Artifact
+			commit.State, commit.Message, commit.Gaps, commit.Artifact, commit.Sources, commit.Observations = output.State, output.Message, output.Gaps, output.Artifact, output.Sources, output.Observations
 			if output.Artifact != nil {
 				if commit.State == "" {
 					commit.State = "done"
@@ -163,14 +166,14 @@ func RunBatch(ctx context.Context, env Env, st Stage, in BatchInput, attempt int
 				}
 			}
 		}
-		applied, commitErr := CommitItem(ctx, env.DB, commit)
+		applied, commitErr := commitItem(ctx, env.DB, &commit)
 		if commitErr != nil {
 			var pgErr *pgconn.PgError
 			if !errors.As(commitErr, &pgErr) || !dataError(pgErr) {
 				return result, fmt.Errorf("commit item %q: %w", item.Key, commitErr)
 			}
 			commit = itemCommit(commit, commitErr)
-			applied, commitErr = CommitItem(ctx, env.DB, commit)
+			applied, commitErr = commitItem(ctx, env.DB, &commit)
 			if commitErr != nil {
 				return result, fmt.Errorf("commit failed item %q: %w", item.Key, commitErr)
 			}
@@ -224,8 +227,23 @@ func dataError(e *pgconn.PgError) bool {
 // invalid_source_data, anything else a failed item.
 func processFailure(err error, retryable *RetryableError) Output {
 	c := itemCommit(Commit{}, err)
+	if errors.Is(err, sourcegate.ErrSourcePaused) {
+		return Output{State: c.State, Message: c.Message}
+	}
 	if retryable != nil && retryable.GapKind != "" {
 		c.State, c.Gaps = "gap", []Gap{{Kind: retryable.GapKind, Detail: trimRunes(c.Message, 200)}}
+		cause := retryable.Cause
+		if cause.Origin == "" && sourceDataError(err) && retryable.GapKind == "invalid_source_data" {
+			cause.Origin = OriginSourceData
+		}
+		c.Gaps[0].setCause(cause)
+	}
+	if retryable != nil && retryable.GapKind == "" && len(c.Gaps) > 0 {
+		cause := retryable.Cause
+		if cause.Origin == "" {
+			cause.Origin = OriginSourceData
+		}
+		c.Gaps[0].setCause(cause)
 	}
 	return Output{State: c.State, Message: c.Message, Gaps: c.Gaps}
 }
@@ -251,6 +269,9 @@ func sourceDataError(err error) bool {
 // itemCommit records an item-level error: source data errors become gap
 // invalid_source_data, anything else a failed item a later attempt may fix.
 func itemCommit(c Commit, err error) Commit {
+	if errors.Is(err, sourcegate.ErrSourcePaused) {
+		return failedCommit(c, sourcegate.ErrSourcePaused)
+	}
 	if !sourceDataError(err) {
 		return failedCommit(c, err)
 	}
@@ -259,12 +280,12 @@ func itemCommit(c Commit, err error) Commit {
 	if len(detail) > 200 {
 		detail = detail[:200]
 	}
-	c.State, c.Gaps = "gap", []Gap{{Kind: "invalid_source_data", Detail: string(detail)}}
+	c.State, c.Gaps = "gap", []Gap{{Kind: "invalid_source_data", Detail: string(detail), Origin: OriginSourceData}}
 	return c
 }
 
 func failedCommit(c Commit, err error) Commit {
-	c.Artifact, c.ArtifactRows, c.RunRows, c.Gaps = nil, nil, nil, nil
+	c.Artifact, c.ArtifactRows, c.RunRows, c.Gaps, c.Observations = nil, nil, nil, nil, nil
 	c.State = "failed"
 	message := []rune(strings.ReplaceAll(err.Error(), "\x00", ""))
 	if len(message) > 500 {

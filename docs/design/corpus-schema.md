@@ -4,7 +4,9 @@ Proposed exact template contract for `internal/corpusdb/schema.sql`, embedded by
 `schema.go` in root module `danny.vn/trachuan`. The workshop keeps goose
 migrations under `apps/corpus/migrations/`. Corpus databases are rebuilt, never
 migrated in place. [Data](data.md) owns the overview; [build](index.md) owns
-population and recovery. This template is not an applied migration.
+population and recovery. This template is not an applied migration. Version 2
+adds run membership class for scope releases; version 1 dumps remain unchanged
+and require their compatible reader.
 
 ## Conventions and identity
 
@@ -46,6 +48,9 @@ rejects a mismatch. No server dimension constant.
 - `id bigint PRIMARY KEY`; `country text CHECK(country = 'vn')`;
   `key text UNIQUE CHECK(key LIKE 'vn:%')`; `number text`; `number_norm text`;
   `title text`; `doc_type text`; `issuer text`.
+- `class text CHECK(class IN ('primary','relation_context','secondary'))`,
+  copied from final run membership, with no default. It describes inclusion, not
+  legal type or ranking; supporting evidence stays in the build inventory.
 - `issue_date date?`, `eff_from date?`, `eff_to date?`; `raw_issue_date text`,
   `raw_eff_from text`, `raw_eff_to text`.
 - `status_code text`, `status_name text`, `status_class text` constrained to
@@ -71,8 +76,8 @@ UNIQUE `(document_id,name,hash)`; index `document_id`. Unknown provenance stays
 null or `unknown`. Existing fetch artifacts do not reliably retain URL, role or
 fetch time: do not substitute artifact adoption time or guess from a suffix.
 Record `source_provenance_missing` once per document with the missing fields.
-`source` is the provider segment of the document key (`vbpl` here); `name`,
-`hash` and `size` come from the verified fetched-file record, not a file suffix.
+`source` follows the provider values in [data](data.md); `name`, `hash` and
+`size` come from the verified fetched-file record, not a file suffix.
 
 ## Provisions and chunks
 

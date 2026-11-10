@@ -5,9 +5,11 @@ package stage
 import (
 	"context"
 	"testing"
+	"time"
 
 	"danny.vn/trachuan/apps/corpus/internal/artifact"
 	"danny.vn/trachuan/apps/corpus/internal/migrate"
+	"danny.vn/trachuan/apps/corpus/internal/store"
 	"danny.vn/trachuan/apps/corpus/internal/testdb"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -23,7 +25,7 @@ func setup(t *testing.T) (*pgxpool.Pool, int64) {
 	}
 	t.Cleanup(pool.Close)
 	var id int64
-	if err := pool.QueryRow(ctx, `INSERT INTO run (country, rel, state, generation, snapshot) VALUES ('vn', '20261109', 'running', 2, '{}') RETURNING id`).Scan(&id); err != nil {
+	if err := pool.QueryRow(ctx, `INSERT INTO run (country, rel, state, generation, snapshot) VALUES ('vn', '20990109', 'running', 2, '{}') RETURNING id`).Scan(&id); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := pool.Exec(ctx, `INSERT INTO run_item (run_id, stage, item_key, state, batch, generation, attempt) VALUES ($1, 'fetch', 'item', 'pending', 0, 0, 0)`, id); err != nil {
@@ -119,8 +121,8 @@ func TestCommitItem_SameArtifactTwiceKeepsOneRow(t *testing.T) {
 	c.Artifact = &artifact.Result{Path: "path", SHA256: "sha", InputHash: "input"}
 	calls := 0
 	c.ArtifactRows = func(context.Context, pgx.Tx, int64) error { calls++; return nil }
-	for range 2 {
-		if applied, err := CommitItem(ctx, pool, c); err != nil || !applied {
+	for i := range 2 {
+		if applied, err := CommitItem(ctx, pool, c); err != nil || applied != (i == 0) {
 			t.Fatalf("commit: applied=%v err=%v", applied, err)
 		}
 	}
@@ -143,8 +145,8 @@ func TestCommitItem_RunRowsAndGapsIdempotent(t *testing.T) {
 		_, err := tx.Exec(ctx, `INSERT INTO listing VALUES ($1, 'q', 'item', '{}') ON CONFLICT (run_id, query_key, item_key) DO UPDATE SET payload=excluded.payload`, id)
 		return err
 	}
-	for range 2 {
-		if applied, err := CommitItem(ctx, pool, c); err != nil || !applied {
+	for i := range 2 {
+		if applied, err := CommitItem(ctx, pool, c); err != nil || applied != (i == 0) {
 			t.Fatalf("commit: applied=%v err=%v", applied, err)
 		}
 	}
@@ -198,5 +200,96 @@ func TestCommitItem_FailedKeepsPlannedInputHash(t *testing.T) {
 	var hash *string
 	if err := pool.QueryRow(ctx, `SELECT input_hash FROM run_item WHERE run_id=$1`, id).Scan(&hash); err != nil || hash == nil || *hash != "planned" {
 		t.Fatalf("hash=%v err=%v", hash, err)
+	}
+}
+
+func TestGapCause_RoundTrip(t *testing.T) {
+	ctx := context.Background()
+	pool, id := setup(t)
+	c := testCommit(id)
+	status := int32(503)
+	c.Gaps = []Gap{{Kind: "invalid_source_data", Detail: "failure", Source: "vbpl", Origin: OriginGateway, Cause: CauseHTTP5xx, Endpoint: "lookup", HTTPStatus: &status, EvidenceRef: "responses/1.json"}}
+	if applied, err := CommitItem(ctx, pool, c); err != nil || !applied {
+		t.Fatalf("commit: %v %v", applied, err)
+	}
+	rows, err := store.New(pool).ListRunGaps(ctx, store.ListRunGapsParams{Country: "vn", Rel: "20990109"})
+	if err != nil || len(rows) != 1 {
+		t.Fatalf("read gaps: %+v %v", rows, err)
+	}
+	got := rows[0]
+	if got.Source == nil || *got.Source != "vbpl" || got.Origin == nil || *got.Origin != "gateway" || got.Cause == nil || *got.Cause != "http_5xx" || got.Endpoint == nil || *got.Endpoint != "lookup" || !got.HttpStatus.Valid || got.HttpStatus.Int32 != 503 || got.EvidenceRef == nil || *got.EvidenceRef != "responses/1.json" {
+		t.Fatalf("unexpected gap: %+v", got)
+	}
+}
+
+func TestCommitItem_RecheckPausedSourceFailsItem(t *testing.T) {
+	ctx := context.Background()
+	pool, id := setup(t)
+	batchExec(t, pool, `INSERT INTO run_source(run_id,source,state,pause_reason) VALUES ($1,'vbpl','source_paused','challenge')`, id)
+	c := testCommit(id)
+	c.Sources = []string{"chinhphu", "vbpl"}
+	c.Artifact = &artifact.Result{Path: "path", SHA256: "sha", InputHash: "input"}
+	c.Gaps = []Gap{{Kind: "missing", Detail: "missing"}}
+	c.RunRows = func(context.Context, pgx.Tx) error { t.Error("run rows called"); return nil }
+	c.ArtifactRows = func(context.Context, pgx.Tx, int64) error { t.Error("artifact rows called"); return nil }
+	if applied, err := CommitItem(ctx, pool, c); err != nil || !applied {
+		t.Fatalf("applied=%v err=%v", applied, err)
+	}
+	var state, message string
+	var artifacts, gaps int
+	if err := pool.QueryRow(ctx, `SELECT state,message,(SELECT count(*) FROM artifact),(SELECT count(*) FROM gap) FROM run_item WHERE run_id=$1`, id).Scan(&state, &message, &artifacts, &gaps); err != nil || state != "failed" || message != "source_paused" || artifacts != 0 || gaps != 0 {
+		t.Fatalf("state=%s message=%s artifacts=%d gaps=%d err=%v", state, message, artifacts, gaps, err)
+	}
+}
+
+func TestCommitItem_RunLockPrecedesItemLock(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	pool, id := setup(t)
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = tx.Rollback(context.Background()) }()
+	if _, err = tx.Exec(ctx, `SELECT id FROM run WHERE id=$1 FOR UPDATE`, id); err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan error, 1)
+	go func() { _, e := CommitItem(ctx, pool, testCommit(id)); done <- e }()
+	ticker := time.NewTicker(10 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		var blocked bool
+		err = pool.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM pg_stat_activity WHERE datname=current_database() AND wait_event_type='Lock' AND query LIKE '%GetRunGenerationForShare%')`).Scan(&blocked)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if blocked {
+			break
+		}
+		select {
+		case err = <-done:
+			t.Fatalf("commit finished before lock probe: %v", err)
+		case <-ctx.Done():
+			t.Fatal("commit did not wait on run lock")
+		case <-ticker.C:
+		}
+	}
+	probe, err := pool.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = probe.Exec(ctx, `SELECT run_id FROM run_item WHERE run_id=$1 AND stage='fetch' AND item_key='item' FOR UPDATE NOWAIT`, id); err != nil {
+		_ = probe.Rollback(ctx)
+		t.Fatalf("item was locked: %v", err)
+	}
+	if err = probe.Rollback(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if err = tx.Commit(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if err = <-done; err != nil {
+		t.Fatal(err)
 	}
 }

@@ -24,6 +24,11 @@ type detailEnvelope struct {
 
 // Rows prepares artifact rows solely from the published bundle.
 func (*Stage) Rows(_ context.Context, env stage.Env, art artifact.Result) (func(context.Context, pgx.Tx, int64) error, error) {
+	if _, err := os.Stat(filepath.Join(env.Artifacts.Abs(art.Path), "document.json")); err == nil {
+		return chinhphuRows(env.Artifacts.Abs(art.Path))
+	} else if !os.IsNotExist(err) {
+		return nil, fmt.Errorf("stat document: %w", err)
+	}
 	data, err := os.ReadFile(filepath.Join(env.Artifacts.Abs(art.Path), "detail.json"))
 	if err != nil {
 		return nil, fmt.Errorf("read detail: %w", err)
@@ -46,12 +51,12 @@ func (*Stage) Rows(_ context.Context, env stage.Env, art artifact.Result) (func(
 	d := detail.Data
 	return func(ctx context.Context, tx pgx.Tx, artifactID int64) error {
 		q := store.New(tx)
-		err := q.InsertDocument(ctx, store.InsertDocumentParams{ArtifactID: artifactID, Key: "vn:vbpl:" + d.ID, VbplID: d.ID, Number: d.DocNum, Title: d.Title, DocType: d.DocType.Name, Issuer: d.AgencyName, IssueDate: d.IssueDate, EffFrom: d.EffFrom, EffTo: d.EffTo, StatusCode: d.EffStatus.Code, StatusName: d.EffStatus.Name, IsConsolidated: d.IsConsolidatedDocument, HasContent: d.HasContent || d.DocumentContent.Content != ""})
+		err := q.InsertDocument(ctx, store.InsertDocumentParams{ArtifactID: artifactID, Key: "vn:vbpl:" + d.ID, Country: "vn", Source: "vbpl", SourceID: d.ID, VbplID: &d.ID, Number: d.DocNum, Title: d.Title, DocType: d.DocType.Name, Issuer: d.AgencyName, IssueDate: d.IssueDate, EffFrom: d.EffFrom, EffTo: d.EffTo, StatusCode: d.EffStatus.Code, StatusName: d.EffStatus.Name, IsConsolidated: d.IsConsolidatedDocument, HasContent: d.HasContent || d.DocumentContent.Content != ""})
 		if err != nil {
 			return fmt.Errorf("insert document: %w", err)
 		}
 		for _, f := range files {
-			if insertErr := q.InsertFetchedFile(ctx, store.InsertFetchedFileParams{ArtifactID: artifactID, Name: f.Name, Sha256: f.SHA256, Size: f.Size, Path: "files/" + f.SHA256}); insertErr != nil {
+			if insertErr := q.InsertFetchedFile(ctx, store.InsertFetchedFileParams{ArtifactID: artifactID, Source: "vbpl", Role: "unknown", Name: f.Name, Sha256: f.SHA256, Size: f.Size, Path: "files/" + f.SHA256}); insertErr != nil {
 				return fmt.Errorf("insert fetched file: %w", insertErr)
 			}
 		}

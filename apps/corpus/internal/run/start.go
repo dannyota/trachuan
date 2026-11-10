@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"regexp"
 	"runtime/debug"
+	"strings"
 	"time"
 
 	"danny.vn/trachuan/apps/corpus/internal/stage"
@@ -70,6 +71,13 @@ func Start(ctx context.Context, d Deps, cc, rel, until, previousManifest string)
 	if err != nil {
 		return fmt.Errorf("lock run: %w", err)
 	}
+	codes, err := q.ListBlockingRunFailureCodes(ctx, store.ListBlockingRunFailureCodesParams{RunID: row.ID, Codes: stage.BlockingFailureCodes()})
+	if err != nil {
+		return fmt.Errorf("list blocking run failures: %w", err)
+	}
+	if len(codes) > 0 {
+		return fmt.Errorf("cannot start run with failure %s", strings.Join(codes, ", "))
+	}
 	if row.State == "evaluated" || row.State == "released" {
 		return fmt.Errorf("cannot start %s run", row.State)
 	}
@@ -117,13 +125,21 @@ func Start(ctx context.Context, d Deps, cc, rel, until, previousManifest string)
 	if err != nil {
 		return fmt.Errorf("encode snapshot: %w", err)
 	}
+	plan, err := planRetry(ctx, q, row.ID, snap.Stages)
+	if err != nil {
+		return err
+	}
 	next := d.Stages[0]
 	if row.NextStage != nil {
 		if *row.NextStage == "" {
 			if oldStageCount >= len(snap.Stages) {
-				return errors.New("run is complete")
+				if len(plan.items) == 0 {
+					return errors.New("run is complete")
+				}
+				next = snap.Stages[plan.rewind]
+			} else {
+				next = snap.Stages[oldStageCount]
 			}
-			next = snap.Stages[oldStageCount]
 		} else {
 			next = *row.NextStage
 		}
@@ -133,6 +149,14 @@ func Start(ctx context.Context, d Deps, cc, rel, until, previousManifest string)
 	}
 	if !containsStage(snap.Stages, next) {
 		return fmt.Errorf("resume stage %q is not included in snapshot", next)
+	}
+	if len(plan.items) > 0 {
+		for i, name := range snap.Stages {
+			if name == next && plan.rewind < i {
+				next = snap.Stages[plan.rewind]
+				break
+			}
+		}
 	}
 	if until != "" {
 		nextIndex, untilIndex := -1, -1
@@ -148,12 +172,23 @@ func Start(ctx context.Context, d Deps, cc, rel, until, previousManifest string)
 			return fmt.Errorf("until stage %q is before resume stage %q", until, next)
 		}
 	}
+	if len(plan.items) > 0 {
+		if err = applyRetry(ctx, q, row.ID, row.Generation+1, snap.Stages, plan); err != nil {
+			return err
+		}
+	}
 	var untilPtr *string
 	if until != "" {
 		untilPtr = &until
 	}
 	if err = q.StartRun(ctx, store.StartRunParams{ID: row.ID, NextStage: &next, UntilStage: untilPtr, WorkflowID: &id, Snapshot: raw}); err != nil {
 		return fmt.Errorf("mark starting: %w", err)
+	}
+	if len(plan.items) > 0 {
+		message := plan.message(snap.Stages)
+		if err = q.SetRunMessage(ctx, store.SetRunMessageParams{ID: row.ID, Message: &message}); err != nil {
+			return fmt.Errorf("record retry message: %w", err)
+		}
 	}
 	if err = q.ResetFailedItems(ctx, store.ResetFailedItemsParams{RunID: row.ID, Stage: next}); err != nil {
 		return fmt.Errorf("reset failed items: %w", err)

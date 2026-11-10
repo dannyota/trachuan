@@ -26,9 +26,10 @@ func TestLoad_Defaults(t *testing.T) {
 		Namespace:       "corpus",
 		Artifacts:       "work/artifacts",
 		PgDump:          "pg_dump",
-		VBPLFileHosts:   "s3-han02.fptcloud.com",
-		VBPLURL:         "https://vbpl-bientap-gateway.moj.gov.vn/api/qtdc/public",
-		VBPLRate:        16, VBPLInFlight: 16, VBPLFileInFlight: 8, FetchBatchesInFlight: 16, BatchesInFlight: 8, DiskStartGiB: 30, DiskMinGiB: 10,
+		ChinhphuURL:     "https://vanban.chinhphu.vn", ChinhphuFileURL: "https://datafiles.chinhphu.vn", ChinhphuRate: 1, ChinhphuInFlight: 1,
+		VBPLFileHosts: "s3-han02.fptcloud.com",
+		VBPLURL:       "https://vbpl-bientap-gateway.moj.gov.vn/api/qtdc/public",
+		VBPLRate:      16, VBPLInFlight: 16, VBPLFileInFlight: 8, FetchBatchesInFlight: 16, BatchesInFlight: 8, DiskStartGiB: 30, DiskMinGiB: 10,
 		HeartbeatEvery: 20 * time.Second, HeartbeatTimeout: 2 * time.Minute,
 	}
 	if got != want {
@@ -163,6 +164,34 @@ func TestLoad_FetchAndFileLimits(t *testing.T) {
 			}
 			if cfg.VBPLFileInFlight != tc.file || cfg.FetchBatchesInFlight != tc.fetch || (tc.name == "defaults" && (cfg.VBPLRate != 16 || cfg.VBPLInFlight != 16)) {
 				t.Fatalf("config = %+v", cfg)
+			}
+		})
+	}
+}
+
+func TestConfig_ChinhphuDefaultsAndValidation(t *testing.T) {
+	cfg, err := Load(func(k string) string {
+		if k == "CORPUS_DATABASE_URL" {
+			return "db"
+		}
+		return ""
+	})
+	if err != nil || cfg.ChinhphuURL != "https://vanban.chinhphu.vn" || cfg.ChinhphuFileURL != "https://datafiles.chinhphu.vn" || cfg.ChinhphuRate != 1 || cfg.ChinhphuInFlight != 1 || cfg.ChinhphuLoopbackHTTP {
+		t.Fatalf("defaults = %+v, error = %v", cfg, err)
+	}
+	for _, key := range []string{"CORPUS_CHINHPHU_RPS", "CORPUS_CHINHPHU_IN_FLIGHT"} {
+		t.Run(key, func(t *testing.T) {
+			_, err := Load(func(k string) string {
+				if k == "CORPUS_DATABASE_URL" {
+					return "db"
+				}
+				if k == key {
+					return "0"
+				}
+				return ""
+			})
+			if err == nil || !strings.Contains(err.Error(), key) {
+				t.Fatalf("error = %v", err)
 			}
 		})
 	}

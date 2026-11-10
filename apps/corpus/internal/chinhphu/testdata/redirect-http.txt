@@ -1,0 +1,4 @@
+HTTP 301
+content-length: 0
+location: https://vanban.chinhphu.vn/
+connection: close

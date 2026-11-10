@@ -68,7 +68,7 @@ func (c *Client) Download(ctx context.Context, id string, f File, dir string, li
 		if closeErr != nil {
 			return Downloaded{}, fmt.Errorf("close download: %w", closeErr)
 		}
-		if status == http.StatusForbidden && !refreshed {
+		if status == http.StatusForbidden && reqErr == nil && !refreshed {
 			refreshed = true
 			files, err := c.Files(ctx, id)
 			if err != nil {

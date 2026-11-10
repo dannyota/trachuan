@@ -152,8 +152,16 @@ func BuildRelease(ctx temporalworkflow.Context, in run.BuildInput) error {
 	if err := execute("CloseStage", input, &closed); err != nil {
 		return finish(err)
 	}
+	if closed.Cancelling {
+		return cancel()
+	}
 	if closed.Failed {
-		_, err := transition("running", "failed", fmt.Sprintf("%d items failed in %s", closed.Counts.Failed, in.Stage))
+		message := fmt.Sprintf("%d items failed in %s", closed.Counts.Failed, in.Stage)
+		from := "running"
+		if closed.Reason != "" {
+			message, from = closed.Reason, "failed"
+		}
+		_, err := transition(from, "failed", message)
 		return err
 	}
 	if err := execute("Checkpoint", input, nil); err != nil {

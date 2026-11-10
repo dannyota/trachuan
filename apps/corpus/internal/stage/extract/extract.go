@@ -9,10 +9,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"danny.vn/trachuan/apps/corpus/internal/artifact"
 	"danny.vn/trachuan/apps/corpus/internal/stage"
+	"danny.vn/trachuan/apps/corpus/internal/stage/membership"
 	"danny.vn/trachuan/apps/corpus/internal/store"
 	"danny.vn/trachuan/apps/corpus/internal/vbpl"
 	"github.com/jackc/pgx/v5"
@@ -28,16 +30,26 @@ func New() *Stage { return &Stage{} }
 func (*Stage) Name() string { return "extract" }
 
 // Recipe returns the extract recipe hash.
-func (*Stage) Recipe(stage.Snapshot) string { return stage.RecipeHash("extract", "tree/1") }
+func (*Stage) Recipe(stage.Snapshot) string {
+	return stage.RecipeHash("extract", "tree/1", "chinhphu-no-tree/1")
+}
 
 // Plan selects completed fetch artifacts for this run.
 func (*Stage) Plan(ctx context.Context, env stage.Env, run stage.Run) ([]stage.Item, error) {
-	inputs, err := store.New(env.DB).ListExtractInputs(ctx, run.ID)
+	q := store.New(env.DB)
+	active, err := membership.FinalActiveKeys(ctx, q, run)
+	if err != nil {
+		return nil, err
+	}
+	inputs, err := q.ListExtractInputs(ctx, run.ID)
 	if err != nil {
 		return nil, fmt.Errorf("list fetch artifacts: %w", err)
 	}
 	items := make([]stage.Item, 0, len(inputs))
 	for _, input := range inputs {
+		if active != nil && !active[input.ItemKey] {
+			continue
+		}
 		items = append(items, stage.Item{Key: input.ItemKey, InputHash: input.Sha256})
 	}
 	return items, nil
@@ -57,20 +69,24 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 	if verifyErr := verifyFetch(env.Artifacts.Abs(input.Path), item.InputHash); verifyErr != nil {
 		return stage.Output{}, verifyErr
 	}
-	data, err := os.ReadFile(filepath.Join(env.Artifacts.Abs(input.Path), "tree.json"))
-	if err != nil {
-		return stage.Output{}, fmt.Errorf("read tree: %w", err)
-	}
-	nodes, err := vbpl.DecodeTree(ctx, bytes.NewReader(data), vbpl.MaxTreeDepth, vbpl.MaxTreeNodes)
-	if errors.Is(err, vbpl.ErrTreeTooLarge) {
-		return stage.Output{State: "gap", Gaps: []stage.Gap{{Kind: "tree_too_large"}}}, nil
-	}
-	if err != nil {
-		if ctx.Err() != nil {
-			return stage.Output{}, fmt.Errorf("decode tree: %w", err)
+	var nodes []vbpl.Node
+	if !strings.HasPrefix(item.Key, "vn:chinhphu:") {
+		data, readErr := os.ReadFile(filepath.Join(env.Artifacts.Abs(input.Path), "tree.json"))
+		if readErr != nil {
+			return stage.Output{}, fmt.Errorf("read tree: %w", readErr)
 		}
-		return stage.Output{}, stage.SourceData(fmt.Errorf("decode tree: %w", err))
+		nodes, err = vbpl.DecodeTree(ctx, bytes.NewReader(data), vbpl.MaxTreeDepth, vbpl.MaxTreeNodes)
+		if errors.Is(err, vbpl.ErrTreeTooLarge) {
+			return stage.Output{State: "gap", Gaps: []stage.Gap{{Kind: "tree_too_large"}}}, nil
+		}
+		if err != nil {
+			if ctx.Err() != nil {
+				return stage.Output{}, fmt.Errorf("decode tree: %w", err)
+			}
+			return stage.Output{}, stage.SourceData(fmt.Errorf("decode tree: %w", err))
+		}
 	}
+
 	rows, gaps, err := extractTree(ctx, nodes)
 	if err != nil {
 		return stage.Output{}, fmt.Errorf("extract tree: %w", err)

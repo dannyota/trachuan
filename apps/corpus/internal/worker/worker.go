@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"runtime/debug"
-	"strings"
 	"time"
 
 	"danny.vn/trachuan/apps/corpus/internal/artifact"
@@ -14,10 +13,10 @@ import (
 	"danny.vn/trachuan/apps/corpus/internal/config"
 	"danny.vn/trachuan/apps/corpus/internal/filecache"
 	"danny.vn/trachuan/apps/corpus/internal/run"
+	"danny.vn/trachuan/apps/corpus/internal/sourcegate"
 	"danny.vn/trachuan/apps/corpus/internal/stage"
 	"danny.vn/trachuan/apps/corpus/internal/stage/fetch"
 	"danny.vn/trachuan/apps/corpus/internal/store"
-	"danny.vn/trachuan/apps/corpus/internal/vbpl"
 	"danny.vn/trachuan/apps/corpus/internal/workflow"
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/client"
@@ -101,16 +100,17 @@ func Run(ctx context.Context, cfg config.Config) error {
 		}
 	}
 	env := stage.Env{DB: db, Artifacts: artifact.Store{Root: cfg.Artifacts}, Now: time.Now}
-	options := []vbpl.Option{vbpl.WithLimits(cfg.VBPLRate, cfg.VBPLInFlight), vbpl.WithFileInFlight(cfg.VBPLFileInFlight), vbpl.WithFileHosts(strings.Split(cfg.VBPLFileHosts, ",")...)}
-	if cfg.VBPLLoopbackHTTP {
-		options = append(options, vbpl.WithTestHTTP())
+	vb, cp, err := sourceClients(cfg, sourcegate.New(db))
+	if err != nil {
+		return fmt.Errorf("configure sources: %w", err)
 	}
 	index, err := IndexDeps(ctx, cfg)
 	if err != nil {
 		return err
 	}
 	index.Env = env
-	index.VBPL = vbpl.NewWithBase(cfg.VBPLURL, workerVersion(), options...)
+	index.VBPL = vb
+	index.Chinhphu = cp
 	registry := workflow.Default(index)
 	stages := registry.Stages()
 	for _, st := range stages {

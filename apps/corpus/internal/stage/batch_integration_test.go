@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"danny.vn/trachuan/apps/corpus/internal/artifact"
+	"danny.vn/trachuan/apps/corpus/internal/sourcegate"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -39,7 +40,11 @@ func (*batchStage) Rows(_ context.Context, env Env, art artifact.Result) (func(c
 		return nil, err
 	}
 	return func(ctx context.Context, tx pgx.Tx, id int64) error {
-		_, execErr := tx.Exec(ctx, `INSERT INTO fetched_file (artifact_id, name, sha256, size, path) VALUES ($1, $2, 'hash', 1, 'path')`, id, string(data))
+		_, execErr := tx.Exec(ctx, `INSERT INTO document (artifact_id, key, country, source, source_id, vbpl_id, number, title, doc_type, issuer, issue_date, eff_from, eff_to, status_code, status_name, is_consolidated, has_content) VALUES ($1, 'vn:vbpl:1', 'vn', 'vbpl', '1', '1', '', '', '', '', '', '', '', '', '', false, false)`, id)
+		if execErr != nil {
+			return execErr
+		}
+		_, execErr = tx.Exec(ctx, `INSERT INTO fetched_file (artifact_id, name, sha256, size, path) VALUES ($1, $2, 'hash', 1, 'path')`, id, string(data))
 		return execErr
 	}, nil
 }
@@ -270,5 +275,48 @@ func TestRunBatch_ProcessSourceDataErrorIsGap(t *testing.T) {
 	}
 	if err != nil || state != "gap" || gaps != 1 || result.Failed != 0 {
 		t.Fatalf("result=%+v state=%s gaps=%d err=%v", result, state, gaps, err)
+	}
+}
+
+func TestBatch_SourcePausedFailsFastWithoutRetry(t *testing.T) {
+	env, id, s := batchSetup(t)
+	s.process = func(context.Context, Env, Run, Item) (Output, error) {
+		return Output{}, RetryableGap(fmt.Errorf("wrapped: %w", sourcegate.ErrSourcePaused), "source_unavailable")
+	}
+	result, err := batchRun(env, id, s, 1, func(...any) {})
+	state, gaps := batchState(t, env.DB, id)
+	var message string
+	queryErr := env.DB.QueryRow(context.Background(), `SELECT message FROM run_item WHERE run_id=$1`, id).Scan(&message)
+	if err != nil || queryErr != nil || result.Failed != 1 || result.Pending != 0 || state != "failed" || message != "source_paused" || gaps != 0 || s.calls != 1 {
+		t.Fatalf("result=%+v state=%s message=%s gaps=%d calls=%d err=%v query=%v", result, state, message, gaps, s.calls, err, queryErr)
+	}
+}
+
+func TestBatch_RechecksSourcesFromFailedProcess(t *testing.T) {
+	env, id, s := batchSetup(t)
+	batchExec(t, env.DB, `INSERT INTO run_source(run_id,source,state,pause_reason) VALUES ($1,'vbpl','source_paused','challenge')`, id)
+	s.process = func(context.Context, Env, Run, Item) (Output, error) {
+		return Output{Sources: []string{"vbpl"}}, SourceData(errors.New("invalid"))
+	}
+	result, err := batchRun(env, id, s, 1, func(...any) {})
+	state, gaps := batchState(t, env.DB, id)
+	var message string
+	queryErr := env.DB.QueryRow(context.Background(), `SELECT message FROM run_item WHERE run_id=$1`, id).Scan(&message)
+	if err != nil || queryErr != nil || result.Failed != 1 || state != "failed" || message != "source_paused" || gaps != 0 {
+		t.Fatalf("result=%+v state=%s message=%s gaps=%d err=%v query=%v", result, state, message, gaps, err, queryErr)
+	}
+}
+
+func TestRunBatch_ContextCarriesRun(t *testing.T) {
+	env, id, s := batchSetup(t)
+	var got int64
+	var ok bool
+	s.process = func(ctx context.Context, _ Env, _ Run, _ Item) (Output, error) {
+		got, ok = sourcegate.RunID(ctx)
+		return Output{State: "gap"}, nil
+	}
+	_, err := batchRun(env, id, s, 1, func(...any) {})
+	if err != nil || !ok || got != id {
+		t.Fatalf("run = %d, present = %v, want %d, error = %v", got, ok, id, err)
 	}
 }

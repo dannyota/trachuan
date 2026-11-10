@@ -14,6 +14,7 @@ import (
 	"syscall"
 	"time"
 
+	"danny.vn/trachuan/apps/corpus/internal/sourcegate"
 	"golang.org/x/time/rate"
 )
 
@@ -37,6 +38,8 @@ type Client struct {
 	backoffs        []time.Duration
 	fileHosts       []string
 	allowTestHTTP   bool
+	gate            sourcegate.Gate
+	lookupPageSize  int
 }
 
 // New creates a client identifying this release by version.
@@ -46,7 +49,7 @@ func New(version string) *Client {
 
 // NewWithBase creates a client for the supplied gateway URL.
 func NewWithBase(base, version string, options ...Option) *Client {
-	c := &Client{base: base, userAgent: "trachuan/" + version + " (+https://github.com/dannyota/trachuan)", http: &http.Client{}, limiter: rate.NewLimiter(16, 1), slots: make(chan struct{}, 16), fileSlots: make(chan struct{}, 8), timeout: 30 * time.Second, fileHosts: []string{"s3-han02.fptcloud.com"}, backoffs: []time.Duration{2 * time.Second, 8 * time.Second, 30 * time.Second}}
+	c := &Client{lookupPageSize: 1000, base: base, userAgent: "trachuan/" + version + " (+https://github.com/dannyota/trachuan)", http: &http.Client{}, limiter: rate.NewLimiter(16, 1), slots: make(chan struct{}, 16), fileSlots: make(chan struct{}, 8), timeout: 30 * time.Second, fileHosts: []string{"s3-han02.fptcloud.com"}, backoffs: []time.Duration{2 * time.Second, 8 * time.Second, 30 * time.Second}}
 	for _, option := range options {
 		option(c)
 	}
@@ -62,6 +65,9 @@ func NewWithBase(base, version string, options ...Option) *Client {
 
 // Option configures a client.
 type Option func(*Client)
+
+// WithGate enables source admission for every request.
+func WithGate(g sourcegate.Gate) Option { return func(c *Client) { c.gate = g } }
 
 // WithLimits sets the request rate and maximum concurrent requests.
 func WithLimits(rps float64, inFlight int) Option {
@@ -113,6 +119,15 @@ func (c *Client) request(ctx context.Context, method, target string, body []byte
 			return 0, fmt.Errorf("wait for rate limit: %w", err)
 		}
 	}
+	if c.gate != nil {
+		id, ok := sourcegate.RunID(ctx)
+		if !ok {
+			return 0, fmt.Errorf("source admission: missing run id")
+		}
+		if err := c.gate.Admit(ctx, id, "vbpl"); err != nil {
+			return 0, fmt.Errorf("source admission: %w", err)
+		}
+	}
 	reqCtx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 	req, err := http.NewRequestWithContext(reqCtx, method, target, bytes.NewReader(body))
@@ -131,6 +146,14 @@ func (c *Client) request(ctx context.Context, method, target string, body []byte
 		return 0, fmt.Errorf("request: %w", safeError(err))
 	}
 	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode == http.StatusForbidden && c.gate != nil {
+		id, _ := sourcegate.RunID(ctx)
+		reason := fmt.Sprintf("%s status 403", endpoint(target))
+		if err := c.gate.Pause(ctx, id, "vbpl", reason, ""); err != nil {
+			return resp.StatusCode, fmt.Errorf("pause source: %w", err)
+		}
+		return resp.StatusCode, fmt.Errorf("%s: %w", reason, sourcegate.ErrSourcePaused)
+	}
 	if resp.StatusCode != http.StatusOK {
 		return resp.StatusCode, nil
 	}
@@ -179,17 +202,24 @@ func (c *Client) apiRaw(ctx context.Context, method, path string, body []byte) (
 			}
 			return nil
 		})
-		if retryable(status, err) && attempt < len(c.backoffs) {
+		if err == nil && status == http.StatusOK && !objectFramed(raw) {
+			err = &Failure{Origin: "gateway", Cause: "non_json_200", Endpoint: endpoint(path), HTTPStatus: status}
+		}
+		if (retryable(status, err) || isNonJSON(err)) && attempt < len(c.backoffs) {
 			continue
 		}
 		if err != nil {
-			return nil, fmt.Errorf("gateway request: %w", err)
+			return nil, fmt.Errorf("gateway request: %w", classify(err, endpoint(path), status))
 		}
 		if status == 404 {
 			return nil, ErrNotFound
 		}
 		if status != 200 {
-			return nil, &StatusError{Code: status}
+			statusErr := &StatusError{Code: status, Endpoint: endpoint(path)}
+			if status == 429 || status >= 500 {
+				return nil, &Failure{Origin: "gateway", Cause: statusCause(status), Endpoint: endpoint(path), HTTPStatus: status, Err: statusErr}
+			}
+			return nil, statusErr
 		}
 		return raw, nil
 	}
@@ -197,7 +227,10 @@ func (c *Client) apiRaw(ctx context.Context, method, path string, body []byte) (
 
 // StatusError reports a gateway response other than 200 or 404 that survived
 // the client's retries.
-type StatusError struct{ Code int }
+type StatusError struct {
+	Code     int
+	Endpoint string
+}
 
 // Error describes the status.
 func (e *StatusError) Error() string { return fmt.Sprintf("gateway status %d", e.Code) }
@@ -228,46 +261,6 @@ func data(raw json.RawMessage, out any) error {
 	return nil
 }
 func docPath(id string) string { return "/doc/" + url.PathEscape(id) }
-
-// List requests one page of a discovery query.
-func (c *Client) List(ctx context.Context, q ListQuery) (ListPage, error) {
-	input := struct {
-		Page      int      `json:"pageNumber"`
-		Size      int      `json:"pageSize"`
-		Sort      string   `json:"sortBy"`
-		Direction string   `json:"sortDirection"`
-		Group     bool     `json:"groupVbpl"`
-		Level     string   `json:"agencyLevel"`
-		Option    string   `json:"optionDoc"`
-		Mode      string   `json:"matchMode"`
-		Agencies  []string `json:"agencyIds,omitempty"`
-		Keyword   string   `json:"keyword,omitempty"`
-	}{q.Page, 50, "issueDate", "desc", false, "TRUNG_UONG", "title", "all_words", q.AgencyIDs, q.Keyword}
-	body, err := json.Marshal(input)
-	if err != nil {
-		return ListPage{}, fmt.Errorf("encode list query: %w", err)
-	}
-	raw, err := c.api(ctx, http.MethodPost, "/doc/all", body)
-	if err != nil {
-		return ListPage{}, err
-	}
-	var result struct {
-		Total int               `json:"total"`
-		Items []json.RawMessage `json:"items"`
-	}
-	if err := data(raw, &result); err != nil {
-		return ListPage{}, err
-	}
-	page := ListPage{Total: result.Total}
-	for _, item := range result.Items {
-		var v struct{ ID, DocNum, Title, IssueDate string }
-		if err := json.Unmarshal(item, &v); err != nil {
-			return ListPage{}, fmt.Errorf("decode list item: %w", err)
-		}
-		page.Items = append(page.Items, ListItem{v.ID, v.DocNum, v.Title, v.IssueDate, item})
-	}
-	return page, nil
-}
 
 // Detail requests raw and decoded document metadata.
 func (c *Client) Detail(ctx context.Context, id string) (json.RawMessage, Detail, error) {

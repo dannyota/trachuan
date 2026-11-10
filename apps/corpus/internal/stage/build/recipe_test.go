@@ -2,11 +2,19 @@ package build
 
 import (
 	"context"
+	"crypto/sha256"
+	"fmt"
 	"reflect"
 	"testing"
 
 	"danny.vn/trachuan/apps/corpus/internal/evaluation"
 	"danny.vn/trachuan/apps/corpus/internal/stage"
+	"danny.vn/trachuan/apps/corpus/internal/stage/chunk"
+	"danny.vn/trachuan/apps/corpus/internal/stage/chunk/normalizer"
+	"danny.vn/trachuan/internal/corpusdb"
+	"danny.vn/trachuan/internal/embedding"
+	"danny.vn/trachuan/internal/retrieval"
+	"danny.vn/trachuan/internal/retrieval/lexical"
 )
 
 func TestBuildRecipe_EveryFieldAffectsHash(t *testing.T) {
@@ -59,5 +67,22 @@ func TestBuildInput_MapBytesChangeInputNotRecipe(t *testing.T) {
 func TestBuild_InitialEvaluationSummary(t *testing.T) {
 	if got := initialEvaluationSummary(); string(got) != `{"status":"not_run","release_eligible":false}` {
 		t.Fatalf("summary = %s", got)
+	}
+}
+
+func TestRecipe_NumberNormalizationVersionChangesHash(t *testing.T) {
+	schema, err := corpusdb.SchemaSHA256(embedding.DocumentRecipe1().Dimensions)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := buildRecipe{SchemaVersion: corpusdb.SchemaVersion, SchemaSHA256: schema,
+		ChunkRecipeHash: chunk.Recipe1().Hash(), DocumentRecipeHash: embedding.DocumentRecipe1().Hash(), QueryRecipeHash: embedding.QueryRecipe1().Hash(), LexicalRecipeHash: lexical.Recipe1().Hash(), RetrievalPolicyHash: retrieval.Recipe1().Hash(), NormalizerVersion: normalizer.Version, NumberNormalizationVersion: retrieval.NumberNormalizationVersion, StatusCodesSHA256: fmt.Sprintf("%x", sha256.Sum256([]byte("null"))), CalibrationPolicy: "provisional-old-product/1"}
+	got := New(Config{}).Recipe(stage.Snapshot{SourceList: []byte(`{}`)})
+	if got != r.hash() {
+		t.Fatalf("Recipe() = %s, want %s", got, r.hash())
+	}
+	r.NumberNormalizationVersion = "different"
+	if got == r.hash() {
+		t.Fatal("number normalization version did not change hash")
 	}
 }

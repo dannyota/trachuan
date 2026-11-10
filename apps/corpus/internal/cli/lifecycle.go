@@ -12,6 +12,7 @@ import (
 	"danny.vn/trachuan/apps/corpus/internal/config"
 	"danny.vn/trachuan/apps/corpus/internal/run"
 	"danny.vn/trachuan/apps/corpus/internal/stage"
+	"danny.vn/trachuan/apps/corpus/internal/store"
 	"danny.vn/trachuan/apps/corpus/internal/worker"
 	"danny.vn/trachuan/apps/corpus/internal/workflow"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -135,7 +136,19 @@ func lifecycle(ctx context.Context, name string, args []string, stdout, stderr i
 	case "start":
 		err = run.Start(ctx, d, cc, rel, opts["--until"], opts["--previous-manifest"])
 	case "status":
-		result, err = run.Status(ctx, d, cc, rel)
+		report, statusErr := run.Status(ctx, d, cc, rel)
+		err = statusErr
+		if err == nil {
+			var sources []store.RunSource
+			sources, err = store.New(d.DB).ListRunSources(ctx, report.Run.ID)
+			if err == nil {
+				paused := pausedSources(sources)
+				result = struct {
+					run.Report
+					PausedSources []store.RunSource `json:"paused_sources"`
+				}{report, paused}
+			}
+		}
 	case "cancel":
 		err = run.Cancel(ctx, d, cc, rel)
 	case "recover":
@@ -156,4 +169,14 @@ func lifecycle(ctx context.Context, name string, args []string, stdout, stderr i
 		}
 	}
 	return 0
+}
+
+func pausedSources(sources []store.RunSource) []store.RunSource {
+	paused := make([]store.RunSource, 0)
+	for _, source := range sources {
+		if source.State == "source_paused" {
+			paused = append(paused, source)
+		}
+	}
+	return paused
 }

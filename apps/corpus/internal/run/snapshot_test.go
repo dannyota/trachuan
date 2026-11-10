@@ -1,6 +1,7 @@
 package run
 
 import (
+	"reflect"
 	"testing"
 
 	"danny.vn/trachuan/apps/corpus/internal/stage"
@@ -55,5 +56,23 @@ func TestIncludedStages_StopsAtUntilAndPreservesEarlierStages(t *testing.T) {
 		if len(got) != tc.want {
 			t.Errorf("until %q prior %d: got %v", tc.until, tc.prior, got)
 		}
+	}
+}
+
+func TestExtend_NeverInsertsExpandIntoFrozenRun(t *testing.T) {
+	snapshot := stage.Snapshot{Stages: []string{"discover", "fetch"}, Recipes: map[string]string{"discover": "one", "fetch": "two"}}
+	stages := []string{"discover", "expand", "fetch", "extract"}
+	recipes := map[string]string{"discover": "one", "expand": "new", "fetch": "two", "extract": "three"}
+	got, changed, err := extendSnapshot(snapshot, stages, recipes)
+	if err != nil || !changed || !reflect.DeepEqual(got.Stages, []string{"discover", "fetch", "extract"}) {
+		t.Fatalf("stages=%v changed=%v err=%v", got.Stages, changed, err)
+	}
+}
+
+func TestExtend_LegacyDiscoverOmitsExpand(t *testing.T) {
+	snapshot := stage.Snapshot{SourceList: []byte(`{"vbpl":{"selection_version":0}}`), Stages: []string{"discover"}, Recipes: map[string]string{"discover": "one"}}
+	got, _, err := extendSnapshot(snapshot, []string{"discover", "expand", "fetch"}, map[string]string{"discover": "one", "expand": "two", "fetch": "three"})
+	if err != nil || !reflect.DeepEqual(got.Stages, []string{"discover", "fetch"}) {
+		t.Fatalf("stages=%v err=%v", got.Stages, err)
 	}
 }

@@ -23,6 +23,17 @@ type Output struct {
 	Artifact       *artifact.Result
 	State, Message string
 	Gaps           []Gap
+	// Sources lists every source the item contacted or depends on.
+	Sources      []string
+	Observations []FetchObservation
+}
+
+// FetchObservation describes one retained source resource.
+type FetchObservation struct {
+	ResourceKey, Source, Path, ContentSHA256, Acquisition string
+	Name, URL, OriginRef                                  *string
+	Size                                                  int64
+	FetchedAt                                             *time.Time
 }
 
 // Resolution describes the run-specific rows and gaps for an artifact.
@@ -47,6 +58,7 @@ type Stage interface {
 type RetryableError struct {
 	Err     error
 	GapKind string
+	Cause   GapCause
 }
 
 // Error returns the underlying error message.

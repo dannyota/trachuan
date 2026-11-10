@@ -15,10 +15,12 @@ import (
 	"strings"
 
 	"danny.vn/trachuan/apps/corpus/internal/artifact"
+	"danny.vn/trachuan/apps/corpus/internal/chinhphu"
 	"danny.vn/trachuan/apps/corpus/internal/source"
 	"danny.vn/trachuan/apps/corpus/internal/stage"
 	"danny.vn/trachuan/apps/corpus/internal/store"
 	"danny.vn/trachuan/apps/corpus/internal/vbpl"
+	"danny.vn/trachuan/internal/retrieval"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -40,16 +42,50 @@ type report struct {
 }
 
 // Stage discovers the documents named by VBPL listings.
-type Stage struct{ client *vbpl.Client }
+type Stage struct {
+	client   *vbpl.Client
+	chinhphu *chinhphu.Client
+	ceiling  int
+}
+
+// Option configures discovery.
+type Option func(*Stage)
+
+// WithChinhphu sets the secondary source client.
+func WithChinhphu(client *chinhphu.Client) Option { return func(s *Stage) { s.chinhphu = client } }
+
+// WithCandidateCeiling sets a lower ceiling for controlled runs.
+func WithCandidateCeiling(limit int) Option {
+	return func(s *Stage) {
+		if limit > 0 && limit < 100 {
+			s.ceiling = limit
+		}
+	}
+}
 
 // New constructs a discover stage.
-func New(client *vbpl.Client) *Stage { return &Stage{client: client} }
+func New(client *vbpl.Client, options ...Option) *Stage {
+	s := &Stage{client: client}
+	for _, option := range options {
+		option(s)
+	}
+	return s
+}
 
 // Name returns the stage name.
 func (*Stage) Name() string { return "discover" }
 
 // Recipe returns the discovery recipe hash.
-func (*Stage) Recipe(stage.Snapshot) string { return stage.RecipeHash("discover", "vbpl-discover/1") }
+func (*Stage) Recipe(snapshot stage.Snapshot) string {
+	list, err := source.Parse(snapshot.SourceList)
+	if err == nil && list.VBPL.SelectionVersion == 1 {
+		if len(list.Chinhphu.Keywords) > 0 || len(list.Chinhphu.NamedNumbers) > 0 {
+			return stage.RecipeHash("discover", "secondary-discover/1", "issuer-classifier/1", "issuer-normalization/1", retrieval.NumberNormalizationVersion, snapshot.SourceListHash)
+		}
+		return stage.RecipeHash("discover", "vbpl-discover/selection-2", snapshot.SourceListHash)
+	}
+	return stage.RecipeHash("discover", "vbpl-discover/1")
+}
 
 func queries(r stage.Run) (map[string]query, error) {
 	list, err := source.Parse(r.Snapshot.SourceList)
@@ -74,6 +110,37 @@ func queryIdentity(key string, definition query) (string, error) {
 
 // Plan returns every frozen query without an input hash.
 func (*Stage) Plan(_ context.Context, _ stage.Env, r stage.Run) ([]stage.Item, error) {
+	list, err := source.Parse(r.Snapshot.SourceList)
+	if err != nil {
+		return nil, fmt.Errorf("parse discovery sources: %w", err)
+	}
+	if list.VBPL.SelectionVersion == 1 {
+		if err = list.ValidateSecondary(); err != nil {
+			return nil, fmt.Errorf("validate secondary sources: %w", err)
+		}
+		items := []stage.Item{{Key: "vbpl:central"}}
+		for _, entry := range list.VBPL.NamedNumbers {
+			items = append(items, stage.Item{Key: "vbpl:named:" + entry})
+		}
+		seen := map[string]bool{}
+		for _, group := range []struct {
+			prefix string
+			values []string
+		}{{"chinhphu:keyword:", list.Chinhphu.Keywords}, {"chinhphu:named:", list.Chinhphu.NamedNumbers}} {
+			for _, value := range group.values {
+				key := group.prefix + value
+				if !seen[key] {
+					items = append(items, stage.Item{Key: key})
+					seen[key] = true
+				}
+			}
+		}
+		sort.Slice(items, func(i, j int) bool { return items[i].Key < items[j].Key })
+		return items, nil
+	}
+	if list.VBPL.SelectionVersion != 0 {
+		return nil, fmt.Errorf("unsupported selection version %d", list.VBPL.SelectionVersion)
+	}
 	definitions, err := queries(r)
 	if err != nil {
 		return nil, err
@@ -91,7 +158,26 @@ func (*Stage) Plan(_ context.Context, _ stage.Env, r stage.Run) ([]stage.Item, e
 }
 
 // Process collects listing passes and publishes their results.
-func (s *Stage) Process(ctx context.Context, env stage.Env, r stage.Run, it stage.Item) (stage.Output, error) {
+func (s *Stage) Process(ctx context.Context, env stage.Env, r stage.Run, it stage.Item) (output stage.Output, err error) {
+	list, parseErr := source.Parse(r.Snapshot.SourceList)
+	if parseErr != nil {
+		return stage.Output{}, fmt.Errorf("parse discovery sources: %w", parseErr)
+	}
+	if list.VBPL.SelectionVersion == 1 {
+		if strings.HasPrefix(it.Key, "chinhphu:") {
+			return s.processSecondary(ctx, env, r, it, list.Chinhphu)
+		}
+		return s.processScope(ctx, env, r, it, list.VBPL)
+	}
+	if list.VBPL.SelectionVersion != 0 {
+		return stage.Output{}, fmt.Errorf("unsupported selection version %d", list.VBPL.SelectionVersion)
+	}
+	contacted := false
+	defer func() {
+		if contacted {
+			output.Sources = []string{"vbpl"}
+		}
+	}()
 	definitions, err := queries(r)
 	if err != nil {
 		return stage.Output{}, err
@@ -116,6 +202,7 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, r stage.Run, it stag
 		items := make(map[string]json.RawMessage)
 		total, pageCap := 0, 1
 		for number := 1; number <= pageCap; number++ {
+			contacted = true
 			p, listErr := s.client.List(ctx, vbpl.ListQuery{AgencyIDs: definition.Agencies, Keyword: definition.Keyword, Page: number})
 			if listErr != nil {
 				wrapped := fmt.Errorf("list query %q pass %d page %d: %w", it.Key, pass+1, number, listErr)
@@ -195,6 +282,19 @@ func (*Stage) Rows(context.Context, stage.Env, artifact.Result) (func(context.Co
 
 // Resolve prepares listing rows and an instability gap for this run.
 func (*Stage) Resolve(_ context.Context, env stage.Env, r stage.Run, it stage.Item, art artifact.Result) (stage.Resolution, error) {
+	list, err := source.Parse(r.Snapshot.SourceList)
+	if err != nil {
+		return stage.Resolution{}, fmt.Errorf("parse discovery sources: %w", err)
+	}
+	if list.VBPL.SelectionVersion == 1 {
+		if strings.HasPrefix(it.Key, "chinhphu:") {
+			return resolveSecondary(env, it, art)
+		}
+		return resolveScope(env, r, it, art, list.VBPL)
+	}
+	if list.VBPL.SelectionVersion != 0 {
+		return stage.Resolution{}, fmt.Errorf("unsupported selection version %d", list.VBPL.SelectionVersion)
+	}
 	data, err := os.ReadFile(filepath.Join(env.Artifacts.Abs(art.Path), "report.json"))
 	if err != nil {
 		return stage.Resolution{}, fmt.Errorf("read discovery report: %w", err)

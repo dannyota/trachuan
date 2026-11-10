@@ -83,17 +83,29 @@ signed dump to OCI Object Storage. Decision and alternatives:
   gap, failed and pending counts, unaccepted gaps by kind, next retry times,
   provider job ids and cost so far.
 
+### Source execution (proposed)
+
+[Source execution](source-execution.md) defines shared membership readers,
+evidence-bearing lookup results, fetch-close finalization, retry invalidation
+and durable source pauses. These are prerequisites for source adapters. The
+existing `CloseStage` invokes a stage finalizer inside its fenced transaction;
+fetch cannot advance until final membership is committed. `scope_changed` blocks
+start and release permanently for that run; `source_paused` requires the owner's
+explicit source-resume command. Neither is an acceptable coverage gap.
+
 ## Items, artifacts and gaps
 
 - A stage plans its items, processes each into an artifact, and resolves each
   artifact against the run. Processing is a function of the item input and the
   recipe; it writes the artifact. The artifact's rows (`document`,
   `fetched_file`, `provision`, `relation`, `chunk`) are loaded from the artifact
-  files, so an adopted directory without a committed row yields the same rows as
-  a fresh one. Resolving is a function of the artifact and the run; it writes
-  run rows (`listing`) and gaps. When planning already knows an item's input
-  hash and the artifact exists, processing is skipped and only resolving runs,
-  so a reused artifact still yields this run's gaps.
+  files. Fetch times are separate
+  [observation evidence](fetch-bundles.md#observation-commit-and-recovery), so
+  adoption reproduces content rows without inventing a download time. Resolving
+  is a function of the artifact and the run; it writes run rows (`listing`) and
+  gaps. When planning already knows an item's input hash and the artifact
+  exists, processing is skipped and only resolving runs, so a reused artifact
+  still yields this run's gaps.
 - Artifacts are immutable and content addressed:
   `artifacts/<stage>/<input_hash>-<recipe_hash>/` with `MANIFEST.sha256` (sorted
   `<sha256>  <relative path>` lines); the artifact sha256 is the manifest's
@@ -105,14 +117,25 @@ signed dump to OCI Object Storage. Decision and alternatives:
   rename, or content that changed before the retry) are orphans; they waste
   space but never change results.
 - For `fetch` the input hash is the bundle's own manifest sha256, learned after
-  download, so unchanged remote content keeps its hash. The fetch artifact
-  sha256 is the input hash of `extract` and `relate`.
+  download. [Byte stability](fetch-bundles.md#byte-stability) excludes
+  observation times and run state, so unchanged source bytes under the same
+  recipe keep their hash. The fetch artifact sha256 is the input hash of
+  `extract` and `relate`.
 - One transaction commits an item: the artifact row when there is one, the
   artifact's rows when that row is new, the run rows and gaps (idempotent), and
   the `run_item` update. The update applies only when the pair
   (`run.generation`, Temporal attempt) is not lower than the recorded pair; a
-  stale commit rolls back. Items that end as a gap or a failure without output
-  commit without an artifact.
+  stale commit rolls back. For an equal pair on a terminal item (`done`, `gap`,
+  `failed`), compare the incoming result before any writes or pause override. An
+  identical result (the item's state, message and artifact hash or null, plus
+  its resource evidence; gaps and run rows are idempotent and not compared) is a
+  no-op; any difference rolls back the whole commit, leaving the item, derived
+  rows, gaps and observations unchanged. Compare resource evidence by resource
+  key, including every stored observation field. A later source pause cannot
+  replace that terminal result. Only a new committed result may write
+  observations; a new failed `source_paused` result writes none. This tightens
+  the shared commit fence and requires stage commit package tests. Items ending
+  as a gap or failure without output commit without an artifact.
 - Gaps are rows with a kind. `corpus accept-gaps <cc> <rel> --kind <kind>`
   accepts every gap of that kind and records the owner's note. `release` is
   refused while any expected item is `pending` or `failed` or any gap is
@@ -130,7 +153,8 @@ signed dump to OCI Object Storage. Decision and alternatives:
 
 | Stage      | Input                                       | Output                                                                          | Completeness rule                                                                                                                                                           |
 | ---------- | ------------------------------------------- | ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `discover` | source list YAML; previous release manifest | expected document set with source modified dates                                | full listing per source every run; a document absent from two consecutive listings is marked `withdrawn` and kept with a gap                                                |
+| `discover` | source list YAML; previous release manifest | expected document set with source modified dates                                | full listing per source every run; reconcile independent supports and distinguish selection loss from catalog absence under [source ingest rules](#source-ingest-rules)     |
+| `expand`   | Frozen direct VBPL seeds                    | One-hop context membership and source evidence                                  | Proposed scope stage; never expand context output; failures keep coverage gaps, [sources](sources.md#one-hop-relation-context)                                              |
 | `fetch`    | expected set                                | metadata JSON, every listed attachment, hashes                                  | attachments use a verified matching local cache entry or a fresh download; a changed attachment reprocesses the document; a missing attachment is a gap                     |
 | `extract`  | files                                       | structure tree with verbatim text                                               | parser limits in [budgets](budgets.md); article count matches the table of contents; table and appendix counts match the source inventory; empty or truncated text is a gap |
 | `relate`   | VBPL references, text                       | relations with kind, evidence, affected provisions when captured                | never guessed; unknown targets are gaps                                                                                                                                     |
@@ -155,22 +179,24 @@ verification are designed together in the host work. Nothing in this baseline
 sets `release_eligible` true. Taxonomy and filtered evaluation stay out of
 scope.
 
-VBPL ingest rules:
+## Source ingest rules
+
+[Sources](sources.md) owns local selection over the full central VBPL listing,
+named lookups, secondary searches and precedence, relation context and query
+identity. Apply the stable-listing rule below to complete passes of that single
+central listing; local agency and term rules do not create separate network
+queries. The new scope run inserts `expand` before `fetch`; the existing ingest
+run keeps its frozen stage order. `discover` supplies direct seeds and secondary
+candidates; expand closes additions to the expected set before fetch planning.
 
 - `discover` lists every query until two consecutive passes return the same id
   set, at most the pass limit in [budgets](budgets.md); otherwise the query item
   gets gap `listing_unstable` and the expected set uses the union of the passes.
   A listing is complete when its query item is done without a `listing_unstable`
-  gap; a query's identity is the hash of its definition (agencies and keyword).
-  Earlier runs of the same country are ordered by date, then sequence. For a
-  document listed by some query in an earlier complete listing, take the queries
-  that ever listed it and still exist: it is `withdrawn` when every one of them
-  has a complete listing in this run and in its most recent earlier complete
-  listing, and both omit the document. If any of those listings is incomplete,
-  the document stays expected and is fetched by id. A document whose listing
-  queries are all gone from the source list is `scope_removed`. Withdrawn and
-  scope-removed documents stay in the expected set as gap items that are never
-  fetched.
+  gap; a query's identity hashes its complete source-specific definition.
+- Reconcile supports under [membership](membership.md): supersession, per-tuple
+  retention, the two-listing withdrawal exception, relation loss and removal
+  lifetime have one home there.
 - VBPL English renditions (ids starting with `vbpqta_`) are not legal text in
   Vietnamese and never enter the expected set.
 - `fetch` stores attachments as `files/<sha256>` and maps original names in
@@ -179,19 +205,44 @@ VBPL ingest rules:
   response limit are gaps. A gateway error (HTTP 5xx) that persists through the
   client retries makes the item gap `source_unavailable` in that attempt,
   without a batch retry (budgets); the owner may accept it, and the next run
-  asks again. Known source failures never stall a batch or the stage close. An
-  attachment whose document id, name and size match a local cache entry
-  collected no earlier than the gateway's `updatedAt` for that file is taken
-  from the cache once its sha256 verifies; otherwise it is downloaded.
+  asks again; start retries these under
+  [source execution](source-execution.md#retry-source-gaps). Known source
+  failures never stall a batch or the stage close. An attachment whose document
+  id, name and size match a local cache entry collected no earlier than the
+  gateway's `updatedAt` for that file is taken from the cache once its sha256
+  verifies; otherwise it is downloaded.
 - `extract` refuses trees deeper or larger than the limits in
   [budgets](budgets.md) with gap `tree_too_large`.
 - `relate` maps relation codes with the source list's table, whose hash is part
   of the `relate` recipe hash. Resolving a target against the run's expected
   set, and the `unknown_target` gap, happen when the artifact is resolved for a
-  run, never inside the cached artifact.
+  run, never inside the cached artifact. Membership alone does not prove a
+  resolved corpus endpoint: a fetch gap or removed document remains unresolved
+  in build. Secondary bundles have no invented VBPL references.
 
-Recipe changes (parser version, prompt hash, taxonomy version, model) change
-`recipe_hash`, so unchanged documents are reprocessed where it matters.
+### Scope recipes and snapshots (proposed)
+
+Freeze parsed source definitions, the migration comparison and later loss-review
+references on first start. Source-list changes alter `source_list_hash`; never
+read live YAML on resume. Use a new release id for scope adoption. An old run
+cannot replace recipes or insert `expand` through the append-only extension
+rule.
+
+| Recipe                   | Scope change and reason                                                                                                                  |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `discover`               | Bump for listing, local selection, qualified probes and secondary parsing; hash rules, queries, adapter and normalizer versions.         |
+| `expand`                 | New recipe hashes relation-code table, qualifying kinds, direction, one-hop policy and parser version so scope evidence is reproducible. |
+| `fetch`                  | Bump for source dispatch, secondary bundle/provenance format and gateway failure classification.                                         |
+| `extract`                | Bump for explicit secondary `no_tree` handling; no PDF extraction is introduced.                                                         |
+| `relate`                 | Bump for secondary empty relations; retain relation-code hash.                                                                           |
+| `build`                  | Bump for source provenance, normalized numbers, membership exclusions and hand-over gaps.                                                |
+| `chunk`, `embed`, `eval` | Keep algorithms; changed inputs and reviewed evaluation identity-map hashes invalidate affected artifacts.                               |
+
+Expansion artifacts bind observed edges; inventories follow [index](index.md).
+Fetch format adoption and its one-time cost follow
+[fetch bundles](fetch-bundles.md#adoption-and-cost). Reuse artifacts only when
+input and recipe match, and resolve gaps for this run. No old artifact, number
+mapping or evaluation result establishes coverage for a new run.
 
 ## External batch submissions
 

@@ -1,0 +1,20 @@
+HTTP 200
+date: Mon, 09 Nov 2026 15:08:32 GMT
+content-type: application/pdf
+content-length: 3661910
+connection: close
+content-security-policy: block-all-mixed-content
+no-gzip-compression: true
+strict-transport-security: max-age=31536000; includeSubDomains
+slice: MP4
+server: Bizfly Cloud CDN / 567.2347c23b235b567ad8169520d033ca87
+alt-svc: h3=":443"; ma=604800
+x-xss-protection: 1; mode=block
+access-control-allow-origin: *
+access-control-allow-methods: GET, HEAD, POST, OPTIONS
+access-control-allow-headers: Accept,Authorization,Cache-Control,Content-Length,Content-Type,DNT,If-Modified-Since,Keep-Alive,Origin,Range,User-Agent,X-Requested-With
+access-control-expose-headers: Content-Length
+cache-control: private, max-age=0
+timing-allow-origin: *
+x-cache: HIT from VCCloud CDN
+accept-ranges: bytes

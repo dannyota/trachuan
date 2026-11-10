@@ -40,7 +40,7 @@ func TestFetch_WritesBundleAndRows(t *testing.T) {
 	if err = rows(ctx, tx, id); err != nil {
 		t.Fatal(err)
 	}
-	var key, number, status, name, hash, path string
+	var key, number, status, name, hash, path, source, role string
 	var size int64
 	err = tx.QueryRow(ctx, `SELECT key,number,status_code FROM document WHERE artifact_id=$1`, id).Scan(&key, &number, &status)
 	if err != nil {
@@ -49,11 +49,11 @@ func TestFetch_WritesBundleAndRows(t *testing.T) {
 	if key != "vn:vbpl:66518" || number != "04/VBHN-NHNN" || status != "" {
 		t.Fatalf("document: %q %q %q", key, number, status)
 	}
-	err = tx.QueryRow(ctx, `SELECT name,sha256,size,path FROM fetched_file WHERE artifact_id=$1`, id).Scan(&name, &hash, &size, &path)
+	err = tx.QueryRow(ctx, `SELECT name,sha256,size,path,source,role FROM fetched_file WHERE artifact_id=$1`, id).Scan(&name, &hash, &size, &path, &source, &role)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if name != "a" || size != 7 || path != "files/"+hash {
+	if name != "a" || size != 7 || path != "files/"+hash || source != "vbpl" || role != "unknown" {
 		t.Fatalf("file: %q %q %d %q", name, hash, size, path)
 	}
 }

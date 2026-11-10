@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"time"
 
 	"danny.vn/trachuan/apps/corpus/internal/artifact"
 	"danny.vn/trachuan/apps/corpus/internal/stage"
@@ -27,6 +28,10 @@ type report struct {
 }
 
 func (s *Stage) writeBundle(ctx context.Context, dir, id string, detail, tree, diagram json.RawMessage, entries []vbpl.File) error {
+	return s.writeBundleObservations(ctx, dir, id, detail, tree, diagram, entries, time.Now, nil)
+}
+
+func (s *Stage) writeBundleObservations(ctx context.Context, dir, id string, detail, tree, diagram json.RawMessage, entries []vbpl.File, now func() time.Time, observations *[]stage.FetchObservation) error {
 	filesDir := filepath.Join(dir, "files")
 	if err := os.Mkdir(filesDir, 0700); err != nil {
 		return fmt.Errorf("create files directory: %w", err)
@@ -36,6 +41,7 @@ func (s *Stage) writeBundle(ctx context.Context, dir, id string, detail, tree, d
 	type fileResult struct {
 		downloaded vbpl.Downloaded
 		hit        bool
+		completed  time.Time
 		err        error
 	}
 	results := make([]fileResult, len(entries))
@@ -47,12 +53,13 @@ func (s *Stage) writeBundle(ctx context.Context, dir, id string, detail, tree, d
 			if !hit {
 				downloaded, err = s.client.Download(requestCtx, id, entry, filesDir, s.fileLimit)
 			}
-			results[i] = fileResult{downloaded: downloaded, hit: hit, err: err}
+			results[i] = fileResult{downloaded: downloaded, hit: hit, err: err, completed: now().UTC().Truncate(time.Microsecond)}
 			return nil
 		})
 	}
 	_ = group.Wait()
 	hits := 0
+	seen := make(map[string]stage.FetchObservation)
 	for i, entry := range entries {
 		item := results[i]
 		if item.hit {
@@ -72,6 +79,27 @@ func (s *Stage) writeBundle(ctx context.Context, dir, id string, detail, tree, d
 			continue
 		}
 		files = append(files, file{Name: entry.Name, SHA256: item.downloaded.SHA256, Size: item.downloaded.Size})
+		if observations != nil {
+			name := entry.Name
+			var resourceURL *string
+			if entry.URL != "" {
+				resourceURL = &entry.URL
+			}
+			key, _ := json.Marshal([3]any{"attachment", name, resourceURL})
+			o := stage.FetchObservation{ResourceKey: string(key), Source: "vbpl", Name: &name, URL: resourceURL, Path: "files/" + item.downloaded.SHA256, ContentSHA256: item.downloaded.SHA256, Size: item.downloaded.Size, Acquisition: "network", FetchedAt: &item.completed}
+			if item.hit {
+				o.Acquisition = "cache"
+				o.FetchedAt = nil
+			}
+			if prior, ok := seen[o.ResourceKey]; ok {
+				if prior.ContentSHA256 != o.ContentSHA256 || prior.Size != o.Size || prior.Acquisition != o.Acquisition {
+					return stage.Retryable(fmt.Errorf("duplicate attachment resource has conflicting content"))
+				}
+			} else {
+				seen[o.ResourceKey] = o
+				*observations = append(*observations, o)
+			}
+		}
 	}
 	if hits > 0 {
 		slog.Info("attachment cache hits", "document_key", "vn:vbpl:"+id, "count", hits)
@@ -106,7 +134,24 @@ func (s *Stage) writeBundle(ctx context.Context, dir, id string, detail, tree, d
 }
 
 // Resolve returns gaps recorded in the bundle for this run.
-func (*Stage) Resolve(_ context.Context, env stage.Env, _ stage.Run, _ stage.Item, art artifact.Result) (stage.Resolution, error) {
+func (*Stage) Resolve(_ context.Context, env stage.Env, _ stage.Run, item stage.Item, art artifact.Result) (stage.Resolution, error) {
+	dir := env.Artifacts.Abs(art.Path)
+	if _, err := os.Stat(filepath.Join(dir, "document.json")); err == nil {
+		return resolveChinhphu(dir, item)
+	} else if !os.IsNotExist(err) {
+		return stage.Resolution{}, fmt.Errorf("stat document: %w", err)
+	}
+	detailData, err := os.ReadFile(filepath.Join(env.Artifacts.Abs(art.Path), "detail.json"))
+	if err != nil {
+		return stage.Resolution{}, fmt.Errorf("read detail: %w", err)
+	}
+	var detail detailEnvelope
+	if err = json.Unmarshal(detailData, &detail); err != nil {
+		return stage.Resolution{}, fmt.Errorf("decode detail: %w", err)
+	}
+	if "vn:vbpl:"+detail.Data.ID != item.Key {
+		return stage.Resolution{}, fmt.Errorf("fetch identity disagrees with planned key %q", item.Key)
+	}
 	data, err := os.ReadFile(filepath.Join(env.Artifacts.Abs(art.Path), "report.json"))
 	if err != nil {
 		return stage.Resolution{}, fmt.Errorf("read fetch report: %w", err)
