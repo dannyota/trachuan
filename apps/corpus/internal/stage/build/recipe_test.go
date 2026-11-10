@@ -76,7 +76,7 @@ func TestRecipe_NumberNormalizationVersionChangesHash(t *testing.T) {
 		t.Fatal(err)
 	}
 	r := buildRecipe{SchemaVersion: corpusdb.SchemaVersion, SchemaSHA256: schema,
-		ChunkRecipeHash: chunk.Recipe1().Hash(), DocumentRecipeHash: embedding.DocumentRecipe1().Hash(), QueryRecipeHash: embedding.QueryRecipe1().Hash(), LexicalRecipeHash: lexical.Recipe1().Hash(), RetrievalPolicyHash: retrieval.Recipe1().Hash(), NormalizerVersion: normalizer.Version, NumberNormalizationVersion: retrieval.NumberNormalizationVersion, StatusCodesSHA256: fmt.Sprintf("%x", sha256.Sum256([]byte("null"))), CalibrationPolicy: "provisional-old-product/1"}
+		ChunkRecipeHash: chunk.Recipe1().Hash(), DocumentRecipeHash: embedding.DocumentRecipe1().Hash(), QueryRecipeHash: embedding.QueryRecipe1().Hash(), LexicalRecipeHash: lexical.Recipe1().Hash(), RetrievalPolicyHash: retrieval.Recipe1().Hash(), NormalizerVersion: normalizer.Version, NumberNormalizationVersion: retrieval.NumberNormalizationVersion, StatusCodesSHA256: fmt.Sprintf("%x", sha256.Sum256([]byte("null"))), ValidityRulesVersion: "validity/1", CalibrationPolicy: "provisional-old-product/1"}
 	got := New(Config{}).Recipe(stage.Snapshot{SourceList: []byte(`{}`)})
 	if got != r.hash() {
 		t.Fatalf("Recipe() = %s, want %s", got, r.hash())
@@ -84,5 +84,56 @@ func TestRecipe_NumberNormalizationVersionChangesHash(t *testing.T) {
 	r.NumberNormalizationVersion = "different"
 	if got == r.hash() {
 		t.Fatal("number normalization version did not change hash")
+	}
+}
+
+func TestBuildRecipe_CorrectionBytesDoNotChangeHash(t *testing.T) {
+	first := stage.Snapshot{SourceList: []byte(`{"corrections_bytes":"[]\n"}`)}
+	second := stage.Snapshot{SourceList: []byte(`{"corrections_bytes":"[]\n# reviewed\n"}`)}
+	if New(Config{}).Recipe(first) != New(Config{}).Recipe(second) {
+		t.Fatal("correction bytes changed build recipe")
+	}
+}
+
+func TestBuildRecipe_ValidityRulesVersion(t *testing.T) {
+	schema, err := corpusdb.SchemaSHA256(embedding.DocumentRecipe1().Dimensions)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := buildRecipe{SchemaVersion: corpusdb.SchemaVersion, SchemaSHA256: schema,
+		ChunkRecipeHash: chunk.Recipe1().Hash(), DocumentRecipeHash: embedding.DocumentRecipe1().Hash(), QueryRecipeHash: embedding.QueryRecipe1().Hash(), LexicalRecipeHash: lexical.Recipe1().Hash(), RetrievalPolicyHash: retrieval.Recipe1().Hash(), NormalizerVersion: normalizer.Version, NumberNormalizationVersion: retrieval.NumberNormalizationVersion, StatusCodesSHA256: fmt.Sprintf("%x", sha256.Sum256([]byte("null"))), ValidityRulesVersion: "validity/1", CalibrationPolicy: "provisional-old-product/1"}
+	want := r.hash()
+	if got := New(Config{}).Recipe(stage.Snapshot{SourceList: []byte(`{}`)}); got != want {
+		t.Fatalf("recipe = %s, want %s", got, want)
+	}
+}
+
+func TestBuildInput_CorrectionHash(t *testing.T) {
+	legacy := Inventory{}
+	modern := Inventory{Version: 2}
+	empty := hashBytes([]byte("[]"))
+	if got := inventoryInputHash("vn", "20990101", legacy, "map", correctionInput{"", false}); got != buildInputHash("vn", "20990101", legacy.SourceManifestHash(), "map") {
+		t.Fatal("empty legacy corrections changed hash")
+	}
+	if inventoryInputHash("vn", "20990101", legacy, "map", correctionInput{"one", true}) == inventoryInputHash("vn", "20990101", legacy, "map", correctionInput{"two", true}) {
+		t.Fatal("legacy corrections not bound")
+	}
+	if inventoryInputHash("vn", "20990101", modern, "map", correctionInput{empty, false}) == inventoryInputHash("vn", "20990101", modern, "map", correctionInput{"changed", false}) {
+		t.Fatal("modern corrections not bound")
+	}
+}
+
+func TestBuildInput_RecordMatchesCorrectionsHash(t *testing.T) {
+	for _, tc := range []struct {
+		version  int
+		hash     string
+		nonempty bool
+	}{{0, "", false}, {0, "nonempty", true}, {2, hashBytes([]byte("[]")), false}} {
+		inv := Inventory{Version: tc.version}
+		got := recordInputHash("vn", "20990101", inv, "map", hashJSON(inv.Provenance), tc.hash)
+		want := inventoryInputHash("vn", "20990101", inv, "map", correctionInput{hash: tc.hash, nonempty: tc.nonempty})
+		if got != want {
+			t.Fatalf("version %d: got %s want %s", tc.version, got, want)
+		}
 	}
 }

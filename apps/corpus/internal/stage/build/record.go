@@ -25,6 +25,8 @@ type BuildRecord struct {
 	BuildRecipeHash       string           `json:"build_recipe_hash"`
 	SourceManifestHash    string           `json:"source_manifest_hash"`
 	IdentityInventoryHash string           `json:"identity_inventory_hash"`
+	ProvenanceSHA256      string           `json:"provenance_sha256,omitempty"`
+	CorrectionsSHA256     string           `json:"corrections_sha256,omitempty"`
 	IdentityMapSHA256     string           `json:"identity_map_sha256"`
 	DenseRecipe           json.RawMessage  `json:"dense_recipe"`
 	ChunkRecipe           json.RawMessage  `json:"chunk_recipe"`
@@ -69,6 +71,9 @@ func verifyBuildArtifact(store artifact.Store, art artifact.Result, run stage.Ru
 	if err = read("build.json", &record); err != nil {
 		return record, "", err
 	}
+	if err = verifyValidityReview(dir); err != nil {
+		return record, "", err
+	}
 	var inventory Inventory
 	if err = read("inputs.json", &inventory); err != nil {
 		return record, "", err
@@ -77,8 +82,17 @@ func verifyBuildArtifact(store artifact.Store, art artifact.Result, run stage.Ru
 	if err != nil {
 		return record, "", err
 	}
-	if record.Version != 1 || record.Country != run.Country || record.Rel != run.Rel || record.DatabaseName != final || record.SchemaVersion != corpusdb.SchemaVersion || inventory.Country != run.Country || inventory.SourceListHash != run.Snapshot.SourceListHash || record.BuildInputHash != art.InputHash || record.BuildInputHash != buildInputHash(run.Country, run.Rel, inventory.SourceManifestHash(), record.IdentityMapSHA256) || record.BuildRecipeHash != New(cfg).Recipe(run.Snapshot) || record.SourceManifestHash != inventory.SourceManifestHash() || record.IdentityInventoryHash != inventory.IdentityHash() || record.Dump.Format != "custom" || record.PostgresVersion != cfg.Versions.PostgreSQLMajor || record.PGVectorVersion != cfg.Versions.PGVector || record.LtreeVersion != cfg.Versions.Ltree || record.PgDumpVersion != cfg.Versions.PgDump || record.WorkerVersion != run.Snapshot.WorkerVersion || record.BuiltAt.IsZero() {
+	if record.Version != 1 || record.Country != run.Country || record.Rel != run.Rel || record.DatabaseName != final || record.SchemaVersion != corpusdb.SchemaVersion || inventory.Country != run.Country || inventory.SourceListHash != run.Snapshot.SourceListHash || record.BuildInputHash != art.InputHash || record.BuildInputHash != recordInputHash(run.Country, run.Rel, inventory, record.IdentityMapSHA256, record.ProvenanceSHA256, record.CorrectionsSHA256) || record.BuildRecipeHash != New(cfg).Recipe(run.Snapshot) || record.SourceManifestHash != inventory.SourceManifestHash() || record.IdentityInventoryHash != inventory.IdentityHash() || record.Dump.Format != "custom" || record.PostgresVersion != cfg.Versions.PostgreSQLMajor || record.PGVectorVersion != cfg.Versions.PGVector || record.LtreeVersion != cfg.Versions.Ltree || record.PgDumpVersion != cfg.Versions.PgDump || record.WorkerVersion != run.Snapshot.WorkerVersion || record.BuiltAt.IsZero() {
 		return record, "", fmt.Errorf("build artifact identity mismatch")
+	}
+	if inventory.Version == 2 {
+		data, e := os.ReadFile(filepath.Join(dir, "provenance.json"))
+		if e != nil {
+			return record, "", fmt.Errorf("read provenance: %w", e)
+		}
+		if hashBytes(data) != record.ProvenanceSHA256 {
+			return record, "", fmt.Errorf("provenance hash mismatch")
+		}
 	}
 	calibration, err := os.ReadFile(filepath.Join(dir, "calibration.json"))
 	if err != nil {
@@ -128,4 +142,8 @@ func verifyCalibration(recipeJSON, calibration []byte) error {
 		return fmt.Errorf("calibration hash or threshold mismatch")
 	}
 	return nil
+}
+
+func recordInputHash(country, rel string, inv Inventory, identityMap, provenanceHash, correctionsHash string) string {
+	return buildHash(country, rel, inv, identityMap, provenanceHash, correctionInput{hash: correctionsHash, nonempty: correctionsHash != ""})
 }

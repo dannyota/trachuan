@@ -50,3 +50,10 @@ func TestCollect_RejectsMissingVector(t *testing.T) {
 		t.Fatal("accepted missing vector")
 	}
 }
+
+func TestLoadDecisions_EmptyHits(t *testing.T) {
+	var engine Engine
+	if err := engine.LoadDecisions(context.Background(), nil); err != nil {
+		t.Fatal(err)
+	}
+}

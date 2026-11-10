@@ -77,7 +77,7 @@ func (m Metrics) MRRAt8() *float64 {
 	return &v
 }
 
-// CurrentLawPrecision returns the fraction of primary hits marked current.
+// CurrentLawPrecision measures stored-status consistency over the primary response group, any class.
 // Legacy mode removes a trailing non-current run unless every hit is non-current.
 func (m Metrics) CurrentLawPrecision(legacy bool) *float64 {
 	current, total := 0, 0

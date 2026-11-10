@@ -21,6 +21,7 @@ import (
 	"danny.vn/trachuan/internal/retrieval/lexical"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"go.temporal.io/sdk/temporal"
 )
 
 // Process builds and dumps a corpus from the planned inventory.
@@ -48,19 +49,23 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 	if err = checkGeneration(ctx, env, run); err != nil {
 		return stage.Output{}, err
 	}
+	entries, correction, err := s.cfg.Corrections.pinned()
+	if err != nil {
+		return stage.Output{}, temporal.NewNonRetryableApplicationError("inventory_changed", "inventory_changed", err)
+	}
 	planned, err := s.Plan(ctx, env, run)
 	if err != nil {
 		return stage.Output{}, err
 	}
 	if len(planned) != 1 || planned[0].Key != item.Key || planned[0].InputHash != item.InputHash {
-		return stage.Output{}, fmt.Errorf("inventory_changed")
+		return stage.Output{}, temporal.NewNonRetryableApplicationError("inventory_changed", "inventory_changed", nil)
 	}
 	inv, err := LoadInventory(ctx, store.New(env.DB), run, "embed")
 	if err != nil {
 		return stage.Output{}, err
 	}
-	if buildInputHash(run.Country, run.Rel, inv.SourceManifestHash(), s.cfg.Suite.Hashes.IdentityMap) != item.InputHash {
-		return stage.Output{}, fmt.Errorf("inventory_changed")
+	if inventoryInputHash(run.Country, run.Rel, inv, s.cfg.Suite.Hashes.IdentityMap, correction) != item.InputHash {
+		return stage.Output{}, temporal.NewNonRetryableApplicationError("inventory_changed", "inventory_changed", nil)
 	}
 	recipeHash := s.Recipe(run.Snapshot)
 	if len(item.InputHash) != 64 || len(recipeHash) != 64 {
@@ -111,7 +116,7 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 	if err != nil {
 		return stage.Output{}, fmt.Errorf("parse sources: %w", err)
 	}
-	counts, err := Load(ctx, conn.Conn(), inv, env.Artifacts, Recipes{Dense: embedding.DocumentRecipe1(), Lexical: lexical.Recipe1()}, codes.StatusCodes)
+	counts, err := Load(ctx, conn.Conn(), inv, env.Artifacts, Recipes{Dense: embedding.DocumentRecipe1(), Lexical: lexical.Recipe1()}, codes.StatusCodes, entries, run.Rel[:4]+"-"+run.Rel[4:6]+"-"+run.Rel[6:8])
 	if err != nil {
 		return stage.Output{}, err
 	}
@@ -144,6 +149,7 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 	if err != nil {
 		return stage.Output{}, err
 	}
+	addValidityCounts(tableCounts, counts.validity.counts)
 	for reason, count := range exclusionCounts(inv) {
 		tableCounts[reason] = count
 	}
@@ -173,10 +179,27 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 			return fmt.Errorf("close dump: %w", closeErr)
 		}
 		record := map[string]any{"version": 1, "country": run.Country, "rel": run.Rel, "database_name": final, "schema_version": corpusdb.SchemaVersion, "build_input_hash": item.InputHash, "build_recipe_hash": recipeHash, "source_manifest_hash": inv.SourceManifestHash(), "identity_inventory_hash": inv.IdentityHash(), "identity_map_sha256": s.cfg.Suite.Hashes.IdentityMap, "dense_recipe": release.DenseRecipe, "chunk_recipe": release.ChunkRecipe, "lexical_recipe": release.LexicalRecipe, "retrieval_recipe": release.RetrievalRecipe, "lexical_stats": release.LexicalStats, "taxonomy_version": "", "counts": tableCounts, "postgres_version": s.cfg.Versions.PostgreSQLMajor, "pgvector_version": s.cfg.Versions.PGVector, "ltree_version": s.cfg.Versions.Ltree, "pg_dump_version": s.cfg.Versions.PgDump, "worker_version": run.Snapshot.WorkerVersion, "durations_ms": map[string]int64{"total": time.Since(started).Milliseconds()}, "relation_bytes": relationBytes, "index_bytes": indexBytes, "dump": map[string]any{"sha256": fmt.Sprintf("%x", hasher.Sum(nil)), "bytes": size, "format": "custom"}, "built_at": release.BuiltAt}
+		if inv.Version == 2 || correction.nonempty {
+			record["corrections_sha256"] = correction.hash
+		}
+		if inv.Version == 2 {
+			provenanceBytes, e := json.Marshal(inv.Provenance)
+			if e != nil {
+				return fmt.Errorf("encode provenance: %w", e)
+			}
+			if e = os.WriteFile(filepath.Join(dir, "provenance.json"), provenanceBytes, 0600); e != nil {
+				return fmt.Errorf("write provenance: %w", e)
+			}
+			record["provenance_sha256"] = hashBytes(provenanceBytes)
+		}
+		reviewJSON, e := encodeValidityReview(counts.validity.reviews)
+		if e != nil {
+			return e
+		}
 		for _, f := range []struct {
 			name  string
 			value any
-		}{{"inputs.json", inv}, {"build.json", record}, {"calibration.json", json.RawMessage(calJSON)}} {
+		}{{"inputs.json", inv}, {"build.json", record}, {"calibration.json", json.RawMessage(calJSON)}, {"validity-review.json", json.RawMessage(reviewJSON)}} {
 			b, e := json.Marshal(f.value)
 			if e != nil {
 				return fmt.Errorf("encode %s: %w", f.name, e)

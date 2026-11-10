@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strings"
 
+	"danny.vn/trachuan/apps/corpus/internal/stage/fetch"
 	"danny.vn/trachuan/internal/retrieval"
 )
 
@@ -44,7 +46,7 @@ func nodeID(d *loadedDocument, n *string) any {
 func (l *loader) loadRelations(ctx context.Context) error {
 	var entries []pendingRelation
 	for key, item := range l.items["relate"] {
-		if item.State != "done" {
+		if item.State != "done" || (l.inv.Version == 2 && (!l.present[key] || strings.HasPrefix(key, "vn:chinhphu:"))) {
 			continue
 		}
 		fetch, ok := l.items["fetch"][key]
@@ -77,24 +79,7 @@ func (l *loader) loadRelations(ctx context.Context) error {
 		}
 		return entries[i].row.Ordinal < entries[j].row.Ordinal
 	})
-	numbers := map[string][]string{}
-	for key, item := range l.items["fetch"] {
-		if item.State != "done" {
-			continue
-		}
-		dir, err := artifactDir(l.artifacts, item)
-		if err != nil {
-			return fmt.Errorf("relation target artifact: %w", err)
-		}
-		var detail fetchDetail
-		if err = readArtifactJSON(dir, "detail.json", &detail); err != nil {
-			return err
-		}
-		n := retrieval.NormalizeNumber(detail.Data.DocNum)
-		if n != "" {
-			numbers[n] = append(numbers[n], key)
-		}
-	}
+	numbers := l.documentNumbers()
 	for _, entry := range entries {
 		r := entry.row
 		source := l.docs[entry.key]
@@ -111,16 +96,16 @@ func (l *loader) loadRelations(ctx context.Context) error {
 		srcNumber := ""
 		if source != nil {
 			srcNumber = source.number
-		} else if fetch, ok := l.items["fetch"][entry.key]; ok && fetch.State == "done" {
-			dir, err := artifactDir(l.artifacts, fetch)
+		} else if fetchItem, ok := l.items["fetch"][entry.key]; ok && fetchItem.State == "done" {
+			dir, err := artifactDir(l.artifacts, fetchItem)
 			if err != nil {
 				return fmt.Errorf("relation source artifact: %w", err)
 			}
-			var detail fetchDetail
-			if err = readArtifactJSON(dir, "detail.json", &detail); err != nil {
-				return err
+			detail, err := fetch.ReadDocument(dir, entry.key)
+			if err != nil {
+				return fmt.Errorf("decode relation source: %w", err)
 			}
-			srcNumber = detail.Data.DocNum
+			srcNumber = detail.Number
 		} else {
 			l.addGap("build", entry.key, "source_provenance_missing", "relation source number")
 		}
@@ -143,4 +128,14 @@ func resolveNumber(numbers map[string][]string, number string) string {
 		return ""
 	}
 	return matches[0]
+}
+
+func (l *loader) documentNumbers() map[string][]string {
+	numbers := map[string][]string{}
+	for key, doc := range l.docs {
+		if number := retrieval.NormalizeNumber(doc.number); number != "" {
+			numbers[number] = append(numbers[number], key)
+		}
+	}
+	return numbers
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math"
 	"regexp"
 	"time"
@@ -23,6 +24,9 @@ func Open(ctx context.Context, db *pgxpool.Pool, embedder Embedder, options Opti
 	err := db.QueryRow(ctx, `SELECT country, rel, schema_version, taxonomy_version, dense_recipe, chunk_recipe, lexical_recipe, retrieval_recipe, lexical_stats, source_manifest_hash, build_input_hash, build_recipe_hash, evaluation_summary, built_at FROM release WHERE singleton`).Scan(&r.Country, &r.Rel, &r.SchemaVersion, &r.TaxonomyVersion, &dense, &r.ChunkRecipe, &lex, &retrieval, &stats, &r.SourceManifestHash, &r.BuildInputHash, &r.BuildRecipeHash, &r.EvaluationSummary, &r.BuiltAt)
 	if err != nil {
 		return nil, errors.New("read release failed")
+	}
+	if r.SchemaVersion != corpusdb.SchemaVersion {
+		return nil, fmt.Errorf("corpus schema version %d, supported version %d", r.SchemaVersion, corpusdb.SchemaVersion)
 	}
 	for _, v := range []struct {
 		raw []byte

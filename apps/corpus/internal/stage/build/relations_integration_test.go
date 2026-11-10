@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func TestLoad_RelationNumberResolutionCountsExcluded(t *testing.T) {
+func TestLoad_RelationNumberResolutionExcludesAbsent(t *testing.T) {
 	f := fixture(t)
 	fetches := map[int]string{}
 	for _, doc := range []struct {
@@ -27,17 +27,17 @@ func TestLoad_RelationNumberResolutionCountsExcluded(t *testing.T) {
 		t.Fatal(err)
 	}
 	var key *string
-	if err := f.corpus.QueryRow(context.Background(), `SELECT target_key FROM relation WHERE ordinal=0`).Scan(&key); err != nil || key != nil {
-		t.Fatalf("ambiguous target = %v, %v", key, err)
+	if err := f.corpus.QueryRow(context.Background(), `SELECT target_key FROM relation WHERE ordinal=0`).Scan(&key); err != nil || key == nil || *key != "vn:vbpl:2" {
+		t.Fatalf("present target = %v, %v", key, err)
 	}
 	var targetID *int64
-	if err := f.corpus.QueryRow(context.Background(), `SELECT target_document_id FROM relation WHERE ordinal=0`).Scan(&targetID); err != nil || targetID != nil {
-		t.Fatalf("ambiguous target id = %v, %v", targetID, err)
+	if err := f.corpus.QueryRow(context.Background(), `SELECT target_document_id FROM relation WHERE ordinal=0`).Scan(&targetID); err != nil || targetID == nil {
+		t.Fatalf("present target id = %v, %v", targetID, err)
 	}
 	if err := f.corpus.QueryRow(context.Background(), `SELECT target_key FROM relation WHERE ordinal=1`).Scan(&key); err != nil || key == nil || *key != "vn:vbpl:4" {
 		t.Fatalf("unique target = %v, %v", key, err)
 	}
-	if err := f.corpus.QueryRow(context.Background(), `SELECT target_key,target_document_id FROM relation WHERE ordinal=2`).Scan(&key, &targetID); err != nil || key == nil || *key != "vn:vbpl:5" || targetID != nil {
+	if err := f.corpus.QueryRow(context.Background(), `SELECT target_key,target_document_id FROM relation WHERE ordinal=2`).Scan(&key, &targetID); err != nil || key != nil || targetID != nil {
 		t.Fatalf("excluded unique target = %v, id %v, %v", key, targetID, err)
 	}
 }

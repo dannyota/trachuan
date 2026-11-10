@@ -5,7 +5,6 @@ package retrieval
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"strings"
 	"testing"
 
@@ -64,7 +63,7 @@ func TestHydrate_StatementsAvoidFullScans(t *testing.T) {
 	defer func() { _ = tx.Rollback(ctx) }()
 	statements := []string{
 		`SET LOCAL enable_seqscan = on`,
-		`INSERT INTO document (id,country,key,number,number_norm,title,doc_type,issuer,raw_issue_date,raw_eff_from,raw_eff_to,status_code,status_name,status_class,status_basis,is_current,is_consolidated,content_state,fetch_sha256) SELECT n,'vn','vn:filler-'||n,'n','n','title','law','issuer','','','','','','in_force','source_status',true,false,'indexed',repeat('a',64) FROM generate_series(100,129) n`,
+		`INSERT INTO document (id,country,key,number,number_norm,title,doc_type,issuer,class,source,validity_conflict,raw_issue_date,raw_eff_from,raw_eff_to,status_code,status_name,status_class,status_basis,is_current,is_consolidated,content_state,fetch_sha256) SELECT n,'vn','vn:filler-'||n,'n','n','title','law','issuer','primary','vbpl',false,'','','','','','in_force','source_status',true,false,'indexed',repeat('a',64) FROM generate_series(100,129) n`,
 		`INSERT INTO provision (id,document_id,node_id,kind,label,heading,ordinal,preorder,path,text,anchor) SELECT 10000+n,100+(n-1)/100,'p'||n,'dieu','p','',n,n,('p'||n)::ltree,'p','p'||n FROM generate_series(1,3000) n`,
 		`INSERT INTO chunk (id,document_id,provision_id,ordinal,context_prefix,content,spans,input_sha256,token_count,embedding,sparse) SELECT 10000+n,100+(n-1)/100,10000+n,(n-1)%100,'','p','[]',repeat('a',64),1,c.embedding,c.sparse FROM generate_series(1,3000) n CROSS JOIN chunk c WHERE c.id=1`,
 		`ANALYZE document`, `ANALYZE provision`, `ANALYZE chunk`, `ANALYZE relation`,
@@ -82,6 +81,6 @@ func TestHydrate_StatementsAvoidFullScans(t *testing.T) {
 		t.Fatal(err)
 	}
 	if traced.count < 4 {
-		t.Fatal(fmt.Sprintf("explained only %d hydration statements", traced.count))
+		t.Fatalf("explained only %d hydration statements", traced.count)
 	}
 }

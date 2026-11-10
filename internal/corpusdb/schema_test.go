@@ -66,8 +66,13 @@ func TestApplyTables_DefersANNIndex(t *testing.T) {
 	}
 }
 
-func TestSchema_StatusBasisVersion(t *testing.T) {
-	if SchemaVersion != 2 || !strings.Contains(schema, "status_basis text") || !strings.Contains(schema, "schema_version = 2") {
-		t.Fatal("status basis schema version missing")
+func TestSchema_Version3Template(t *testing.T) {
+	if SchemaVersion != 3 {
+		t.Fatalf("schema version = %d, want 3", SchemaVersion)
+	}
+	for _, part := range []string{"validity_decision", "validity_conflict", "derived_from_text", "manual_correction", "schema_version = 3"} {
+		if !strings.Contains(schema, part) {
+			t.Errorf("schema missing %q", part)
+		}
 	}
 }

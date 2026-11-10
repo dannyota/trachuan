@@ -75,7 +75,7 @@ func shapeHit(g Group, arms Arms, recipe Recipe) (Hit, error) {
 	gaps = append(gaps, evidenceGaps...)
 	rels, relationGaps := shapeRelations(c.Relations, recipe, g.Identity)
 	gaps = append(gaps, relationGaps...)
-	h := Hit{Identity: g.Identity, Number: c.Document.Number, Title: c.Document.Title, Citation: citation(c.Ancestors), Text: text, Fragments: fragments, Complete: complete, SourceURL: c.Document.SourceURL, Score: g.Score, BestCosine: g.BestCosine, Stamp: validity, Relations: rels, Gaps: gaps}
+	h := Hit{Identity: g.Identity, Number: c.Document.Number, Class: c.Document.Class, Source: c.Document.Source, Title: c.Document.Title, Citation: citation(c.Ancestors), Text: text, Fragments: fragments, Complete: complete, SourceURL: c.Document.SourceURL, Score: g.Score, BestCosine: g.BestCosine, Stamp: validity, Relations: rels, Gaps: gaps}
 	if !complete {
 		v := 1
 		h.NextPart = &v

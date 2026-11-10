@@ -71,7 +71,7 @@ func (s *Stage) inputHash(art artifact.Result, run stage.Run) (string, error) {
 		previous = fmt.Sprintf("%x", sha256.Sum256(b))
 	}
 	h := s.cfg.Suite.Hashes
-	return stage.RecipeHash("eval-input", "1", art.SHA256, h.Legacy, h.OldProduct, h.IdentityMap, previous, d.Format("2006-01-02"), "exact,ann"), nil
+	return stage.RecipeHash("eval-input", "1", art.SHA256, h.Legacy, h.OldProduct, h.IdentityMap, h.ValidityCases, previous, d.Format("2006-01-02"), "exact,ann"), nil
 }
 
 // Plan resolves the build and selects its single evaluation item.
@@ -134,6 +134,33 @@ func (s *Stage) evaluateBuild(ctx context.Context, env stage.Env, run stage.Run,
 	if err != nil {
 		return evaluation.Report{}, evaluation.Cache{}, fmt.Errorf("verify identity map: %w", err)
 	}
+	suite.ValidityCases, err = suite.PinnedValidityCases()
+	if err != nil {
+		return evaluation.Report{}, evaluation.Cache{}, fmt.Errorf("verify validity cases: %w", err)
+	}
+	var numbers []string
+	for _, c := range suite.ValidityCases {
+		numbers = append(numbers, retrieval.NormalizeNumber(c.Number))
+	}
+	identityRows, err := pool.Query(ctx, `SELECT key, number_norm, COALESCE(issue_date::text, '') FROM document WHERE number_norm = ANY($1::text[])`, numbers)
+	if err != nil {
+		return evaluation.Report{}, evaluation.Cache{}, fmt.Errorf("resolve validity cases: %w", err)
+	}
+	var validityDocuments []evaluation.ValidityDocument
+	for identityRows.Next() {
+		var d evaluation.ValidityDocument
+		if err = identityRows.Scan(&d.Key, &d.Number, &d.IssueDate); err != nil {
+			identityRows.Close()
+			return evaluation.Report{}, evaluation.Cache{}, fmt.Errorf("scan validity identity: %w", err)
+		}
+		validityDocuments = append(validityDocuments, d)
+	}
+	err = identityRows.Err()
+	identityRows.Close()
+	if err != nil {
+		return evaluation.Report{}, evaluation.Cache{}, fmt.Errorf("read validity identities: %w", err)
+	}
+	evaluation.ResolveValidityCases(suite.ValidityCases, validityDocuments)
 	mapping, err := suite.Map.Validate(suite.Legacy, suite.Hashes.Legacy, identities)
 	if err != nil {
 		return evaluation.Report{}, evaluation.Cache{}, fmt.Errorf("validate evaluation mapping: %w", err)
@@ -141,6 +168,30 @@ func (s *Stage) evaluateBuild(ctx context.Context, env stage.Env, run stage.Run,
 	report, cache, err := evaluation.Run(ctx, engine, suite, evaluation.Options{Mapping: mapping, EvaluationDate: retrieval.Date{Year: date.Year(), Month: date.Month(), Day: date.Day()}, PreviousReport: s.cfg.Previous, BuildArtifactSHA256: art.SHA256, DumpSHA256: db.Record.Dump.SHA256, DatabaseInstanceKind: db.Instance, Calibration: cal, Software: map[string]string{"postgresql": db.Record.PostgresVersion, "pgvector": db.Record.PGVectorVersion, "ltree": db.Record.LtreeVersion, "pg_dump": db.Record.PgDumpVersion, "worker": db.Record.WorkerVersion}})
 	if err != nil {
 		return report, cache, fmt.Errorf("run evaluation: %w", err)
+	}
+	report.DocumentsByClass = map[string]int{}
+	report.DocumentsBySource = map[string]int{}
+	rows, err := pool.Query(ctx, "SELECT class, source, count(*) FROM document GROUP BY class, source")
+	if err != nil {
+		return report, cache, fmt.Errorf("count documents: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var class, source string
+		var count int
+		if err = rows.Scan(&class, &source, &count); err != nil {
+			return report, cache, fmt.Errorf("scan document counts: %w", err)
+		}
+		report.DocumentsByClass[class] += count
+		report.DocumentsBySource[source] += count
+	}
+	if err = rows.Err(); err != nil {
+		return report, cache, fmt.Errorf("read document counts: %w", err)
+	}
+	for _, c := range suite.ValidityCases {
+		if c.Resolution != "" {
+			report.ValidityAdjudicated.NotEvaluated = append(report.ValidityAdjudicated.NotEvaluated, c.Number+": "+c.Resolution)
+		}
 	}
 	return report, cache, nil
 }

@@ -58,6 +58,11 @@ and `corpus export-history` take the same country and release. Run every command
 from the repository root: `start` reads `sources/<cc>.yaml` there and artifacts
 default to `work/artifacts`.
 
+Review `sources/vn-corrections.yaml` before a build; a missing file means no
+corrections. The build pins the parsed entries at planning. Review
+`validity-review.json` in the build artifact for unresolved validity and
+proposed corrections before accepting the release.
+
 ## Source settings and pauses
 
 The secondary source defaults to

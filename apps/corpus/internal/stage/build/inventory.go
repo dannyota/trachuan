@@ -9,7 +9,9 @@ import (
 	"fmt"
 	"sort"
 
+	"danny.vn/trachuan/apps/corpus/internal/source"
 	"danny.vn/trachuan/apps/corpus/internal/stage"
+	"danny.vn/trachuan/apps/corpus/internal/stage/membership"
 	"danny.vn/trachuan/apps/corpus/internal/store"
 )
 
@@ -26,39 +28,58 @@ type InventoryItem struct {
 
 // InventoryGap records an upstream coverage gap.
 type InventoryGap struct {
-	Stage      string `json:"stage"`
-	ItemKey    string `json:"item_key"`
-	Kind       string `json:"kind"`
-	Detail     string `json:"detail"`
-	AcceptedAt string `json:"-"`
-	Note       string `json:"-"`
+	Stage       string  `json:"stage"`
+	ItemKey     string  `json:"item_key"`
+	Kind        string  `json:"kind"`
+	Detail      string  `json:"detail"`
+	AcceptedAt  string  `json:"-"`
+	Note        string  `json:"-"`
+	Source      *string `json:"-"`
+	Origin      *string `json:"-"`
+	Cause       *string `json:"-"`
+	EvidenceRef *string `json:"-"`
 }
 
 // Inventory holds frozen source identities and upstream results.
 type Inventory struct {
-	Country        string          `json:"country"`
-	SourceListHash string          `json:"source_list_hash"`
-	ExpectedKeys   []string        `json:"expected_keys"`
-	Items          []InventoryItem `json:"items"`
-	Gaps           []InventoryGap  `json:"gaps"`
+	Version             int                      `json:"-"`
+	FinalMembershipHash string                   `json:"-"`
+	Membership          membership.PhaseSnapshot `json:"-"`
+	Provenance          provenance               `json:"-"`
+	Failures            int                      `json:"-"`
+	PausedSources       []string                 `json:"-"`
+	Country             string                   `json:"country"`
+	SourceListHash      string                   `json:"source_list_hash"`
+	ExpectedKeys        []string                 `json:"expected_keys"`
+	Items               []InventoryItem          `json:"items"`
+	Gaps                []InventoryGap           `json:"gaps"`
 }
 
 func stageOrder(s string) int {
 	switch s {
 	case "discover":
 		return 0
-	case "fetch":
+	case "expand":
 		return 1
-	case "extract":
+	case "fetch":
 		return 2
-	case "relate":
+	case "extract":
 		return 3
-	case "chunk":
+	case "relate":
 		return 4
-	case "embed":
+	case "chunk":
 		return 5
+	case "embed":
+		return 6
 	}
-	return 6
+	return 7
+}
+
+func (i Inventory) order(s string) int {
+	if i.Version != 2 && s == "expand" {
+		return 7
+	}
+	return stageOrder(s)
 }
 
 func (i Inventory) sorted() Inventory {
@@ -69,14 +90,14 @@ func (i Inventory) sorted() Inventory {
 	sort.Slice(i.Items, func(a, b int) bool {
 		x, y := i.Items[a], i.Items[b]
 		if x.Stage != y.Stage {
-			return stageOrder(x.Stage) < stageOrder(y.Stage)
+			return i.order(x.Stage) < i.order(y.Stage)
 		}
 		return x.ItemKey < y.ItemKey
 	})
 	sort.Slice(i.Gaps, func(a, b int) bool {
 		x, y := i.Gaps[a], i.Gaps[b]
 		if x.Stage != y.Stage {
-			return stageOrder(x.Stage) < stageOrder(y.Stage)
+			return i.order(x.Stage) < i.order(y.Stage)
 		}
 		if x.ItemKey != y.ItemKey {
 			return x.ItemKey < y.ItemKey
@@ -102,9 +123,12 @@ func (i Inventory) IdentityJSON() ([]byte, error) {
 	i = i.sorted()
 	items := make([]InventoryItem, 0, len(i.Items))
 	for _, item := range i.Items {
-		if item.Stage == "fetch" || item.Stage == "extract" || item.Stage == "relate" {
+		if item.Stage == "fetch" || item.Stage == "extract" || item.Stage == "relate" || (i.Version == 2 && (item.Stage == "discover" || item.Stage == "expand")) {
 			items = append(items, item)
 		}
+	}
+	if i.Version == 2 {
+		return json.Marshal(identityV2{2, i.Country, i.SourceListHash, i.FinalMembershipHash, i.ExpectedKeys, items})
 	}
 	return json.Marshal(struct {
 		Country        string          `json:"country"`
@@ -124,7 +148,20 @@ func (i Inventory) IdentityHash() string {
 // LoadInventory reads the requested stages in one workshop snapshot.
 func LoadInventory(ctx context.Context, q store.Querier, run stage.Run, through string) (Inventory, error) {
 	limit := stageOrder(through)
-	if limit == 6 {
+	if limit == 7 {
+		return Inventory{}, fmt.Errorf("unknown stage %q", through)
+	}
+	list, err := source.Parse(run.Snapshot.SourceList)
+	if err != nil {
+		return Inventory{}, fmt.Errorf("parse source list: %w", err)
+	}
+	if list.VBPL.SelectionVersion == 1 {
+		return loadInventoryV2(ctx, q, run, limit)
+	}
+	if list.VBPL.SelectionVersion != 0 {
+		return Inventory{}, fmt.Errorf("unsupported selection version %d", list.VBPL.SelectionVersion)
+	}
+	if through == "expand" {
 		return Inventory{}, fmt.Errorf("unknown stage %q", through)
 	}
 	raw, err := q.GetBuildInventory(ctx, run.ID)
@@ -151,7 +188,7 @@ func LoadInventory(ctx context.Context, q store.Querier, run stage.Run, through 
 			return Inventory{}, fmt.Errorf("decode artifact path: %w", err)
 		}
 		item.Path = path.Path
-		if stageOrder(item.Stage) <= limit {
+		if result.order(item.Stage) <= limit {
 			result.Items = append(result.Items, item)
 			if item.Stage == "fetch" {
 				result.ExpectedKeys = append(result.ExpectedKeys, item.ItemKey)
@@ -159,7 +196,7 @@ func LoadInventory(ctx context.Context, q store.Querier, run stage.Run, through 
 		}
 	}
 	for _, gap := range payload.Gaps {
-		if stageOrder(gap.Stage) <= limit {
+		if result.order(gap.Stage) <= limit {
 			result.Gaps = append(result.Gaps, gap)
 		}
 	}

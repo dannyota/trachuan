@@ -82,15 +82,19 @@ type Provision struct {
 
 // Document holds source metadata for validity and evidence.
 type Document struct {
-	Number         string
-	Title          string
-	StatusClass    string
-	StatusBasis    string
-	IsCurrent      bool
-	EffectiveFrom  *time.Time
-	EffectiveTo    *time.Time
-	SourceURL      *string
-	DerivationGaps []string
+	Number           string
+	Class            string
+	Source           string
+	ValidityConflict bool
+	Decisions        []ValidityDecision
+	Title            string
+	StatusClass      string
+	StatusBasis      string
+	IsCurrent        bool
+	EffectiveFrom    *time.Time
+	EffectiveTo      *time.Time
+	SourceURL        *string
+	DerivationGaps   []string
 }
 
 // Candidate is an ordered candidate and its hydrated source metadata.

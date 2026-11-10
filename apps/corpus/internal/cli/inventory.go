@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 
+	"danny.vn/trachuan/apps/corpus/internal/artifact"
 	"danny.vn/trachuan/apps/corpus/internal/config"
 	"danny.vn/trachuan/apps/corpus/internal/stage"
 	"danny.vn/trachuan/apps/corpus/internal/stage/build"
@@ -48,6 +49,10 @@ func runInventory(ctx context.Context, args []string, stdout, stderr io.Writer) 
 	}
 	inv, err := build.LoadInventory(ctx, q, stage.Run{ID: row.ID, Country: row.Country, Rel: row.Rel, Snapshot: snapshot}, "relate")
 	if err != nil {
+		_, _ = fmt.Fprintln(stderr, err)
+		return 1
+	}
+	if _, err = build.IdentityInventory(inv, artifact.Store{Root: cfg.Artifacts}); err != nil {
 		_, _ = fmt.Fprintln(stderr, err)
 		return 1
 	}

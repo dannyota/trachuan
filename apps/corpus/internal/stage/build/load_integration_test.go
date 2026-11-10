@@ -76,6 +76,9 @@ func (f *loadFixture) addArtifact(t *testing.T, name, key string, files map[stri
 			if e != nil {
 				return e
 			}
+			if e = os.MkdirAll(filepath.Dir(filepath.Join(dir, file)), 0700); e != nil {
+				return e
+			}
 			if e = os.WriteFile(filepath.Join(dir, file), data, 0600); e != nil {
 				return e
 			}
@@ -108,9 +111,13 @@ func (f *loadFixture) inventory(t *testing.T) Inventory {
 	}
 	return inv
 }
+func (f *loadFixture) asOf() string {
+	return f.run.Rel[:4] + "-" + f.run.Rel[4:6] + "-" + f.run.Rel[6:8]
+}
+
 func (f *loadFixture) load(t *testing.T) (Counts, error) {
 	t.Helper()
-	return Load(context.Background(), f.corpus, f.inventory(t), f.artifacts, f.recipes, nil)
+	return Load(context.Background(), f.corpus, f.inventory(t), f.artifacts, f.recipes, nil, nil, f.asOf())
 }
 
 func TestLoad_IncludesMetadataForNoTree(t *testing.T) {
@@ -123,9 +130,10 @@ func TestLoad_IncludesMetadataForNoTree(t *testing.T) {
 	if counts.Documents != 1 || counts.Chunks != 0 {
 		t.Fatalf("counts: %+v", counts)
 	}
-	var state string
-	if err = f.corpus.QueryRow(context.Background(), `SELECT content_state FROM document`).Scan(&state); err != nil || state != "no_tree" {
-		t.Fatalf("state %q: %v", state, err)
+	var state, class, source string
+	var conflict bool
+	if err = f.corpus.QueryRow(context.Background(), `SELECT content_state,class,source,validity_conflict FROM document`).Scan(&state, &class, &source, &conflict); err != nil || state != "no_tree" || class != "primary" || source != "vbpl" || conflict {
+		t.Fatalf("state %q class %q source %q conflict %v: %v", state, class, source, conflict, err)
 	}
 }
 func TestLoad_ExcludesWithdrawnAndFetchGaps(t *testing.T) {
@@ -238,6 +246,25 @@ func TestLoad_VectorOrdinalAlignment(t *testing.T) {
 	var value string
 	if err = f.corpus.QueryRow(context.Background(), `SELECT embedding::text FROM chunk WHERE ordinal=2`).Scan(&value); err != nil || !strings.HasPrefix(value, "[0,0,1,") {
 		t.Fatalf("wrong vector: %v", err)
+	}
+}
+func TestLoad_IgnoresArtifactsOfAbsentKeys(t *testing.T) {
+	f := fixture(t)
+	key := "vn:vbpl:1"
+	f.indexed(t, key, true)
+	if _, err := f.workshop.Exec(context.Background(), `INSERT INTO gap(run_id,stage,item_key,kind,detail) VALUES($1,'fetch',$2,'withdrawn','')`, f.run.ID, key); err != nil {
+		t.Fatal(err)
+	}
+	counts, err := f.load(t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if counts.Documents != 0 || counts.Provisions != 0 || counts.Chunks != 0 || counts.DenseVectors != 0 {
+		t.Fatalf("absent key loaded rows: %+v", counts)
+	}
+	var gaps int
+	if err = f.corpus.QueryRow(context.Background(), `SELECT count(*) FROM coverage_gap WHERE document_key=$1 AND kind='withdrawn'`, key).Scan(&gaps); err != nil || gaps != 1 {
+		t.Fatalf("withdrawn gaps=%d: %v", gaps, err)
 	}
 }
 func TestLoad_ChunkCountReconciles(t *testing.T) {

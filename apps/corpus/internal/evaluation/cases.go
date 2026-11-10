@@ -30,18 +30,21 @@ type Case struct {
 
 // FixtureHashes identifies the inputs used to construct a suite.
 type FixtureHashes struct {
-	Legacy      string
-	IdentityMap string
-	OldProduct  string
+	Legacy        string
+	IdentityMap   string
+	OldProduct    string
+	ValidityCases string
 }
 
 // Suite holds the cases and adjudications for evaluation.
 type Suite struct {
-	Legacy     []Case
-	Map        IdentityMap
-	MapBytes   []byte
-	Rejections []string
-	Hashes     FixtureHashes
+	Legacy        []Case
+	ValidityCases []ValidityCase
+	ValidityBytes []byte
+	Map           IdentityMap
+	MapBytes      []byte
+	Rejections    []string
+	Hashes        FixtureHashes
 }
 
 // LoadLegacy decodes and validates the authored cases.

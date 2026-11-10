@@ -62,7 +62,7 @@ document outside this inventory.
 Build recipe hash uses `stage.RecipeHash("build","corpus/1",recipe_json)`. Its
 fixed fields are `schema_version`, `schema_sha256`, `chunk_recipe_hash`,
 `dense_recipe`, `lexical_recipe`, `retrieval_policy`, `normalizer_version`,
-`status_codes_sha256`, `corrections_sha256`, `calibration_policy`,
+`status_codes_sha256`, `validity_rules_version`, `calibration_policy`,
 `legacy_cases_sha256`, PostgreSQL major, extension versions and tool versions.
 No identity map hash is a recipe field. The calibration policy is fixed before
 build; its numeric threshold is recorded in the final retrieval recipe.
@@ -113,7 +113,7 @@ offset-free `YYYY-MM-DDTHH:MM:SS` at any valid time of day, or RFC3339
 timestamps with an explicit offset. Date-only and offset-free values retain
 their civil date; timestamps with an offset convert to Asia/Ho_Chi_Minh before
 taking the date. Reject invalid calendar dates, year zero, invalid times and
-other formats. `normalizer_version` is `corpus-normalizer/4`; a date or number
+other formats. `normalizer_version` is `corpus-normalizer/3`; a date or number
 normalization change bumps it in the build recipe. Empty becomes null; invalid
 values become null plus `invalid_date` naming the field. Raw strings remain
 stored. If the parsed end precedes the start, clear both effective dates,

@@ -116,3 +116,17 @@ func TestParse_OlderSnapshotRetainsKeywordAgencies(t *testing.T) {
 		t.Fatalf("agencies=%v err=%v", list.VBPL.KeywordAgencies, err)
 	}
 }
+
+func TestParseCorrections_RejectsMalformed(t *testing.T) {
+	for _, raw := range []string{"not: a list", "- key: x\n  set: {unknown: value}", "- key: x\n  set: {eff_from: 2024-02-30}"} {
+		if _, err := ParseCorrections([]byte(raw)); err == nil {
+			t.Errorf("accepted malformed corrections %q", raw)
+		}
+	}
+}
+
+func TestParseCorrections_RejectsTrailingDocument(t *testing.T) {
+	if _, err := ParseCorrections([]byte("[]\n---\n- key: x\n  hold: true\n")); err == nil {
+		t.Fatal("accepted trailing YAML document")
+	}
+}

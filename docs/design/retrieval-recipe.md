@@ -177,8 +177,11 @@ unbounded related hits. Use the same processing for dense and lexical controls.
 Without explicit `as_of`, primary eligibility requires stored `is_current` and
 the known date interval containing the caller's civil date in Vietnam. The
 engine clock is injected; eval freezes that date. Missing start dates pass the
-date test with a gap. Unknown status is not current. Partial status is current
-at document level only, with targeted repeal relations as warnings.
+date test with a gap. Unknown status is not current. A document with
+`validity_conflict` is not eligible in default mode and appears only in the
+non-current group, marked unresolved; with an explicit `as_of` the dated
+determination ignores the flag and the hit still carries it. Partial status is
+current at document level only, with targeted repeal relations as warnings.
 
 Set `Validity.Current` to that status/date eligibility result in this default
 mode, including eligible missing-start cases with their gap. With an explicit
@@ -252,7 +255,7 @@ Threshold provenance and provisional status follow
 `rrf:{k,dense_weight, lexical_weight,routed_lexical_weight}`, `ties:"score-id"`,
 `routing:"vn-number/1"`, `group:"nearest-khoan"`, `reducer:"max"`,
 `hydrate_multiplier`, `document_cap`, `backfill:"demoted-order"`,
-`family_collapse`, `validity:"document-dates/2"`, `default_in_force_only:true`,
+`family_collapse`, `validity:"document-dates/3"`, `default_in_force_only:true`,
 `query_gate:"vn-marks/1"`, `evidence:"source-spans/1"`, `evidence_rune_cap`,
 `relation_cap`, `relation_evidence_rune_cap`,
 `abstention:{statistic:"first-group-best-member-cosine",threshold, status:"provisional-old-product",calibration_sha256}`.

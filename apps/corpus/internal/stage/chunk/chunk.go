@@ -9,6 +9,8 @@ import (
 
 	"danny.vn/trachuan/apps/corpus/internal/artifact"
 	"danny.vn/trachuan/apps/corpus/internal/stage"
+	"danny.vn/trachuan/apps/corpus/internal/stage/fetch"
+	"danny.vn/trachuan/apps/corpus/internal/stage/membership"
 	"danny.vn/trachuan/apps/corpus/internal/store"
 )
 
@@ -30,12 +32,20 @@ func inputHash(key, fetch, extract string) string {
 
 // Plan selects completed extract and fetch artifacts.
 func (*Stage) Plan(ctx context.Context, env stage.Env, run stage.Run) ([]stage.Item, error) {
-	inputs, err := store.New(env.DB).ListChunkInputs(ctx, run.ID)
+	q := store.New(env.DB)
+	active, err := membership.FinalActiveKeys(ctx, q, run)
+	if err != nil {
+		return nil, err
+	}
+	inputs, err := q.ListChunkInputs(ctx, run.ID)
 	if err != nil {
 		return nil, fmt.Errorf("list chunk inputs: %w", err)
 	}
 	items := make([]stage.Item, 0, len(inputs))
 	for _, in := range inputs {
+		if active != nil && !active[in.ItemKey] {
+			continue
+		}
 		items = append(items, stage.Item{Key: in.ItemKey, InputHash: inputHash(in.ItemKey, in.FetchSha256, in.ExtractSha256)})
 	}
 	return items, nil
@@ -79,20 +89,7 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 			return stage.Output{}, err
 		}
 	}
-	var detail struct {
-		Data struct{ ID, DocNum, Title, EffFrom, IssueDate string } `json:"data"`
-	}
-	if err = decode(filepath.Join(env.Artifacts.Abs(in.FetchPath), "detail.json"), &detail); err != nil {
-		return stage.Output{}, err
-	}
-	if "vn:vbpl:"+detail.Data.ID != item.Key {
-		return stage.Output{}, fmt.Errorf("fetch document key mismatch")
-	}
-	var nodes []Node
-	if err = decode(filepath.Join(env.Artifacts.Abs(in.ExtractPath), "provisions.json"), &nodes); err != nil {
-		return stage.Output{}, err
-	}
-	file, coverage, err := Split(nodes, Meta{Key: item.Key, Number: detail.Data.DocNum, Title: detail.Data.Title, EffFrom: detail.Data.EffFrom, IssueDate: detail.Data.IssueDate}, Recipe1())
+	file, coverage, err := chunkInputs(env.Artifacts.Abs(in.FetchPath), env.Artifacts.Abs(in.ExtractPath), item.Key)
 	if err != nil {
 		return stage.Output{}, err
 	}
@@ -116,4 +113,16 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 		return stage.Output{}, fmt.Errorf("publish chunk artifact: %w", err)
 	}
 	return stage.Output{Artifact: &art, State: "done"}, nil
+}
+
+func chunkInputs(fetchDir, extractDir, key string) (File, Coverage, error) {
+	doc, err := fetch.ReadDocument(fetchDir, key)
+	if err != nil {
+		return File{}, Coverage{}, fmt.Errorf("read fetch document: %w", err)
+	}
+	var nodes []Node
+	if err = decode(filepath.Join(extractDir, "provisions.json"), &nodes); err != nil {
+		return File{}, Coverage{}, err
+	}
+	return Split(nodes, Meta{Key: key, Number: doc.Number, Title: doc.Title, EffFrom: doc.EffFrom, IssueDate: doc.IssueDate}, Recipe1())
 }

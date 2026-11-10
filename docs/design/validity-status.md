@@ -125,7 +125,11 @@ validity is later work.
 
 ## Manual corrections
 
-`sources/vn-corrections.yaml` is part of the frozen source list. Each entry:
+`sources/vn-corrections.yaml` is reviewed input data like the identity map: its
+parsed entries are pinned at build planning and the SHA-256 of their canonical
+JSON (entries sorted by key, fixed field order) is part of the build input, not
+of the frozen source list. A new entry therefore needs only a new build and
+evaluation, never a new ingest run; a missing file is an empty list. Each entry:
 
 ```yaml
 - key: vn:vbpl:167087
@@ -181,8 +185,10 @@ the relation cap.
 - [Build normalization](index.md#normalization): the consolidated derivation is
   unchanged and still counts only source-supplied `in_force` or `partial`
   targets; derived and corrected targets do not count in this release.
-  `normalizer_version` changes and the corrections file hash joins the build
-  recipe, so a frozen run is never rebuilt under new rules.
+  `validity_rules_version` (`validity/1`) joins the build recipe and the
+  corrections file hash joins the build input; the shared `normalizer_version`
+  is not bumped, because chunk recipes depend on it, so a frozen run is never
+  rebuilt under new rules.
 - [Retrieval](retrieval-recipe.md#validity-and-evidence): eligibility adds "not
   `validity_conflict`"; the `validity` policy version is bumped; `Validity`
   carries the evidence record.

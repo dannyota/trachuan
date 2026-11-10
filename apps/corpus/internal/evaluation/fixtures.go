@@ -42,6 +42,10 @@ func LoadSuiteFS(fsys fs.FS, dir string) (Suite, error) {
 	if err != nil {
 		return Suite{}, err
 	}
+	validity, err := read("validity-cases.json")
+	if err != nil {
+		return Suite{}, err
+	}
 	fixture, err := read("fixtures.json")
 	if err != nil {
 		return Suite{}, err
@@ -75,7 +79,14 @@ func LoadSuiteFS(fsys fs.FS, dir string) (Suite, error) {
 	if err != nil {
 		return Suite{}, err
 	}
-	s := Suite{Legacy: cases, Map: m, MapBytes: append([]byte(nil), mapping...), Rejections: old.Rejections, Hashes: FixtureHashes{Legacy: hash(legacy), OldProduct: hash(product), IdentityMap: hash(mapping)}}
+	var validityCases []ValidityCase
+	if err = json.Unmarshal(validity, &validityCases); err != nil {
+		return Suite{}, fmt.Errorf("decode validity cases: %w", err)
+	}
+	if err = validateValidityCases(validityCases); err != nil {
+		return Suite{}, err
+	}
+	s := Suite{ValidityCases: validityCases, ValidityBytes: append([]byte(nil), validity...), Legacy: cases, Map: m, MapBytes: append([]byte(nil), mapping...), Rejections: old.Rejections, Hashes: FixtureHashes{Legacy: hash(legacy), OldProduct: hash(product), IdentityMap: hash(mapping), ValidityCases: hash(validity)}}
 	if err = validateSuite(s); err != nil {
 		return Suite{}, fmt.Errorf("validate suite: %w", err)
 	}
@@ -96,3 +107,22 @@ func (s Suite) PinnedMap() (IdentityMap, error) {
 
 // VerifyMapBytes checks that the captured identity map matches its hash.
 func (s Suite) VerifyMapBytes() error { _, err := s.PinnedMap(); return err }
+
+// PinnedValidityCases verifies and decodes the captured fixture.
+func (s Suite) PinnedValidityCases() ([]ValidityCase, error) {
+	sum := sha256.Sum256(s.ValidityBytes)
+	if len(s.ValidityBytes) == 0 || hex.EncodeToString(sum[:]) != s.Hashes.ValidityCases {
+		return nil, fmt.Errorf("validity fixture bytes changed")
+	}
+	var cases []ValidityCase
+	if err := json.Unmarshal(s.ValidityBytes, &cases); err != nil {
+		return nil, fmt.Errorf("decode validity cases: %w", err)
+	}
+	if err := validateValidityCases(cases); err != nil {
+		return nil, err
+	}
+	return cases, nil
+}
+
+// VerifyValidityBytes checks the captured fixture hash.
+func (s Suite) VerifyValidityBytes() error { _, err := s.PinnedValidityCases(); return err }

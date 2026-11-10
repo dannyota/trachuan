@@ -40,7 +40,8 @@ Version 1 (selection version 0), byte-identical to today:
   `{stage,item_key,kind,detail}`;
 - identity: `{country,source_list_hash,expected_keys,items}` with fetch, extract
   and relate items only;
-- build input label `"2"`.
+- build input label `"2"`, with `corrections_sha256` appended only when the
+  corrections list is not empty, so existing hashes stay unchanged.
 
 Version 2 (selection version 1):
 
@@ -51,8 +52,8 @@ Version 2 (selection version 1):
 - identity:
   `{version:2,country,source_list_hash,final_membership_hash,expected_keys,items}`
   with discover, expand, fetch, extract and relate items;
-- build input label `"3"`, with `provenance_sha256` appended as the last
-  argument.
+- build input label `"3"`, with `provenance_sha256` then `corrections_sha256`
+  appended as the last arguments.
 
 `final_membership_hash` is the frozen `final` phase hash from `run_scope`. The
 canonical snapshot binds every member, class, disposition, replacement key,
@@ -111,9 +112,11 @@ stops being present, and when a resolved secondary key has disposition
 - One `document` row per present document; class and source from the verified
   snapshot. A legacy run assigns class `primary` and source `vbpl`.
 - A final member that is not present loads no document; its key, disposition and
-  gaps go to `coverage_gap`. Chunk and embed artifacts of a key that is not
-  present are ignored; artifacts of present keys are reused when their lineage
-  and recipes match.
+  gaps go to `coverage_gap`. Chunk and embed artifacts are verified and
+  reconciled for every key in the inventory, as
+  [build](index.md#inclusion-and-losses) requires, before exclusions; those of a
+  key that is not present then load no rows. Artifacts of present keys are
+  reused when their lineage and recipes match.
 - A secondary document loads metadata, source files and its `no_tree` gap. It
   has no provisions, chunks or outgoing relations until text extraction exists;
   incoming relations from present documents are kept.

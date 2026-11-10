@@ -19,15 +19,32 @@ type Fragment struct {
 	Complete  bool     `json:"complete"`
 }
 
+// ValidityDecision records one applied validity rule and its evidence.
+type ValidityDecision struct {
+	Ordinal        int             `json:"ordinal"`
+	Layer          string          `json:"layer"`
+	RuleVersion    string          `json:"rule_version"`
+	Before         json.RawMessage `json:"before"`
+	After          json.RawMessage `json:"after"`
+	ActorKey       *string         `json:"actor_key"`
+	EffectDate     *Date           `json:"effect_date"`
+	RelationID     *int64          `json:"relation_id"`
+	Anchor         *string         `json:"anchor"`
+	Quote          *string         `json:"quote"`
+	ArtifactSHA256 *string         `json:"artifact_sha256"`
+}
+
 // Validity is the stamp a hit carries about its document's legal effect.
 type Validity struct {
-	StatusClass   string `json:"status_class"`
-	StatusBasis   string `json:"status_basis"`
-	Current       bool   `json:"current"`
-	AsOf          *Date  `json:"as_of,omitempty"`
-	EffectiveFrom *Date  `json:"effective_from,omitempty"`
-	EffectiveTo   *Date  `json:"effective_to,omitempty"`
-	Basis         string `json:"basis"`
+	Decisions     []ValidityDecision `json:"decisions"`
+	Unresolved    bool               `json:"unresolved"`
+	StatusClass   string             `json:"status_class"`
+	StatusBasis   string             `json:"status_basis"`
+	Current       bool               `json:"current"`
+	AsOf          *Date              `json:"as_of,omitempty"`
+	EffectiveFrom *Date              `json:"effective_from,omitempty"`
+	EffectiveTo   *Date              `json:"effective_to,omitempty"`
+	Basis         string             `json:"basis"`
 }
 
 // Relation is one source relation incident to a hit, in source direction.
@@ -60,6 +77,8 @@ type Gap struct {
 type Hit struct {
 	Identity   Identity   `json:"identity"`
 	Number     string     `json:"number"`
+	Class      string     `json:"class"`
+	Source     string     `json:"source"`
 	Citation   string     `json:"citation"`
 	Title      string     `json:"title"`
 	Text       string     `json:"text"`

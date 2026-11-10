@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"danny.vn/trachuan/apps/corpus/internal/stage/chunk"
+	"danny.vn/trachuan/apps/corpus/internal/stage/fetch"
 	"danny.vn/trachuan/internal/retrieval"
 )
 
@@ -20,18 +21,6 @@ type loadedDocument struct {
 	nodes            map[string]int64
 	anchors          map[string]string
 	chunk, embedding *InventoryItem
-}
-type fetchDetail struct {
-	Data struct {
-		ID, DocNum, Title, AgencyName, IssueDate, EffFrom, EffTo string
-		DocType, EffStatus                                       struct{ Code, Name string }
-		IsConsolidatedDocument                                   bool
-	} `json:"data"`
-}
-type fetchedFile struct {
-	Name   string `json:"name"`
-	SHA256 string `json:"sha256"`
-	Size   int64  `json:"size"`
 }
 
 func readArtifactJSON(dir, name string, dst any) error {
@@ -63,12 +52,12 @@ func (l *loader) excluded(key string) bool {
 	return false
 }
 func (l *loader) loadDocuments(ctx context.Context) error {
-	if len(l.inv.ExpectedKeys) > 10000 {
-		return fmt.Errorf("document limit exceeded")
-	}
 	for _, key := range l.inv.ExpectedKeys {
-		if l.excluded(key) {
+		if !l.present[key] {
 			continue
+		}
+		if l.counts.Documents >= 10000 {
+			return fmt.Errorf("document limit exceeded")
 		}
 		item, ok := l.items["fetch"][key]
 		if !ok || item.State != "done" {
@@ -78,28 +67,33 @@ func (l *loader) loadDocuments(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("fetch artifact: %w", err)
 		}
-		var detail fetchDetail
-		if err = readArtifactJSON(dir, "detail.json", &detail); err != nil {
-			return err
+		d, err := fetch.ReadDocument(dir, key)
+		if err != nil {
+			return fmt.Errorf("decode fetch artifact: %w", err)
 		}
-		d := detail.Data
-		if "vn:vbpl:"+d.ID != key {
-			return fmt.Errorf("fetch identity mismatch")
-		}
-		var files []fetchedFile
-		if err = readArtifactJSON(dir, "files.json", &files); err != nil {
-			return err
-		}
+		files := d.Files
 		sort.Slice(files, func(i, j int) bool {
 			if files[i].Name != files[j].Name {
 				return files[i].Name < files[j].Name
 			}
 			return files[i].SHA256 < files[j].SHA256
 		})
+		if strings.HasPrefix(key, "vn:chinhphu:") {
+			hasGap := false
+			for _, gap := range l.gaps {
+				if gap.ItemKey == key && gap.Kind == "no_tree" {
+					hasGap = true
+					break
+				}
+			}
+			if !hasGap {
+				l.addGap("build", key, "no_tree", "")
+			}
+		}
 		var nodes []treeNode
 		var extractHash *string
 		ext, exists := l.items["extract"][key]
-		if exists && ext.State == "done" {
+		if exists && ext.State == "done" && !strings.HasPrefix(key, "vn:chinhphu:") {
 			if err = checkInputHash(ext, *item.ArtifactSHA256); err != nil {
 				return err
 			}
@@ -142,22 +136,27 @@ func (l *loader) loadDocuments(ctx context.Context) error {
 		if from == nil {
 			l.addGap("build", key, "missing_effective_date", "")
 		}
-		class, current, known := Status(d.EffStatus.Code, l.codes)
-		derived := d.IsConsolidatedDocument && strings.TrimSpace(d.EffStatus.Code) == "" && strings.TrimSpace(d.EffStatus.Name) == ""
+		class, current, known := Status(d.StatusCode, l.codes)
+		derived := d.IsConsolidated && strings.TrimSpace(d.StatusCode) == "" && strings.TrimSpace(d.StatusName) == ""
 		basis := "source_status"
 		if derived {
 			basis = "derived_from_consolidated"
 		}
 		if !known && !derived {
-			l.addGap("build", key, "unknown_status", d.EffStatus.Code)
+			l.addGap("build", key, "unknown_status", d.StatusCode)
 		}
 		id := l.counts.Documents + 1
-		_, err = l.tx.Exec(ctx, `INSERT INTO document(id,country,key,number,number_norm,title,doc_type,issuer,issue_date,eff_from,eff_to,raw_issue_date,raw_eff_from,raw_eff_to,status_code,status_name,status_class,status_basis,is_current,is_consolidated,content_state,fetch_sha256,extract_sha256,source_url) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,NULL)`, id, l.inv.Country, key, d.DocNum, retrieval.NormalizeNumber(d.DocNum), d.Title, d.DocType.Name, d.AgencyName, issue, from, to, d.IssueDate, d.EffFrom, d.EffTo, d.EffStatus.Code, d.EffStatus.Name, class, basis, current, d.IsConsolidatedDocument, state, *item.ArtifactSHA256, extractHash)
+		docClass, docSource := "primary", "vbpl"
+		if l.inv.Version == 2 {
+			member := l.members[key]
+			docClass, docSource = member.Class, member.Source
+		}
+		_, err = l.tx.Exec(ctx, `INSERT INTO document(id,country,key,number,number_norm,title,doc_type,issuer,class,source,validity_conflict,issue_date,eff_from,eff_to,raw_issue_date,raw_eff_from,raw_eff_to,status_code,status_name,status_class,status_basis,is_current,is_consolidated,content_state,fetch_sha256,extract_sha256,source_url) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$24,$25,false,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$26)`, id, l.inv.Country, key, d.Number, retrieval.NormalizeNumber(d.Number), d.Title, d.DocType, d.Issuer, issue, from, to, d.IssueDate, d.EffFrom, d.EffTo, d.StatusCode, d.StatusName, class, basis, current, d.IsConsolidated, state, *item.ArtifactSHA256, extractHash, docClass, docSource, d.SourceURL)
 		if err != nil {
 			return fmt.Errorf("insert document: %w", err)
 		}
 		l.counts.Documents++
-		doc := &loadedDocument{id: id, key: key, number: d.DocNum, nodes: map[string]int64{}, anchors: map[string]string{}}
+		doc := &loadedDocument{id: id, key: key, number: d.Number, nodes: map[string]int64{}, anchors: map[string]string{}}
 		if hasChunk && ci.State == "done" {
 			doc.chunk = &ci
 		}
@@ -165,17 +164,8 @@ func (l *loader) loadDocuments(ctx context.Context) error {
 			doc.embedding = &ei
 		}
 		l.docs[key] = doc
-		l.addGap("build", key, "source_provenance_missing", "url,role,fetched_at")
-		for _, file := range files {
-			e := checkSourceFile(filepath.Join(dir, "files", file.SHA256), file.Size, file.SHA256)
-			if e != nil {
-				return e
-			}
-			_, e = l.tx.Exec(ctx, `INSERT INTO source_file(id,document_id,source,name,hash,size,role) VALUES($1,$2,$3,$4,$5,$6,'unknown')`, l.counts.SourceFiles+1, id, "vbpl", file.Name, file.SHA256, file.Size)
-			if e != nil {
-				return fmt.Errorf("insert source file: %w", e)
-			}
-			l.counts.SourceFiles++
+		if err = l.loadSourceFiles(ctx, key, docSource, dir, id, files); err != nil {
+			return err
 		}
 		localIDs := make([]int64, 0, len(nodes))
 		for i, n := range nodes {

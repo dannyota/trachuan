@@ -17,7 +17,6 @@ import (
 	"danny.vn/trachuan/apps/corpus/internal/workflow"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.temporal.io/sdk/client"
-	"gopkg.in/yaml.v3"
 )
 
 func dependencies(ctx context.Context, needSources bool, cc string) (run.Deps, func(), error) {
@@ -61,15 +60,10 @@ func dependencies(ctx context.Context, needSources bool, cc string) (run.Deps, f
 			closeDeps()
 			return run.Deps{}, nil, fmt.Errorf("read source list: %w", readErr)
 		}
-		var source any
-		if yamlErr := yaml.Unmarshal(data, &source); yamlErr != nil {
-			closeDeps()
-			return run.Deps{}, nil, fmt.Errorf("parse source list: %w", yamlErr)
-		}
-		d.SourceList, err = json.Marshal(source)
+		d.SourceList, err = sourceSnapshot(data)
 		if err != nil {
 			closeDeps()
-			return run.Deps{}, nil, fmt.Errorf("encode source list: %w", err)
+			return run.Deps{}, nil, fmt.Errorf("freeze sources: %w", err)
 		}
 	}
 	return d, closeDeps, nil

@@ -16,7 +16,9 @@ import (
 
 	"danny.vn/trachuan/apps/corpus/internal/artifact"
 	"danny.vn/trachuan/apps/corpus/internal/stage"
+	"danny.vn/trachuan/apps/corpus/internal/stage/membership"
 	"danny.vn/trachuan/apps/corpus/internal/store"
+	"danny.vn/trachuan/internal/testpg"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -187,5 +189,107 @@ func TestBuild_InventoryChangedFails(t *testing.T) {
 	}
 	if after := inspectTemporary(t, f); before != after {
 		t.Fatal("inventory change altered database or build evidence")
+	}
+}
+
+func TestBuild_ChangedCorrectionsFileIsInventoryChanged(t *testing.T) {
+	for _, version := range []int{0, 1} {
+		t.Run(fmt.Sprint(version), func(t *testing.T) {
+			f := recoverySetup(t)
+			ctx := context.Background()
+			if version == 1 {
+				f.run.Snapshot.SourceList = []byte(`{"country":"vn","vbpl":{"selection_version":1},"status_codes":{}}`)
+				entries := []membership.Entry{{DocumentKey: "vn:vbpl:1", Source: "vbpl", SourceID: "1", Class: "primary", Disposition: "active"}}
+				if err := membership.PublishPhase(ctx, store.New(f.env.DB), f.run.ID, membership.Final, entries); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := f.env.DB.Exec(ctx, `INSERT INTO run_item(run_id,stage,item_key,state,batch) VALUES($1,'relate','vn:vbpl:1','gap',0)`, f.run.ID); err != nil {
+					t.Fatal(err)
+				}
+			}
+			path := filepath.Join(t.TempDir(), "corrections.yaml")
+			if err := os.WriteFile(path, []byte("[]\n"), 0600); err != nil {
+				t.Fatal(err)
+			}
+			cfg := f.cfg
+			var err error
+			cfg.Corrections, err = ReadCorrections(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			st := New(cfg)
+			items, err := st.Plan(ctx, f.env, f.run)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err = os.WriteFile(path, []byte("[]\n# formatting only\n"), 0600); err != nil {
+				t.Fatal(err)
+			}
+			same, err := st.Plan(ctx, f.env, f.run)
+			if err != nil || same[0].InputHash != items[0].InputHash {
+				t.Fatalf("comment changed plan: %v", err)
+			}
+			temp := "corpus_tmp_" + f.run.Country + "_" + items[0].InputHash[:24]
+			t.Cleanup(func() { testpg.DropCorpusDatabase(t, f.admin, temp, f.run.Country+"/"+f.run.Rel) })
+			unchanged, err := st.Process(ctx, f.env, f.run, items[0])
+			if err != nil || unchanged.Artifact == nil {
+				t.Fatalf("comment-only change failed build: %v", err)
+			}
+			content := []byte("- key: vn:vbpl:1\n  number: example\n  hold: true\n  reason: review\n  evidence: {quote: text}\n  reviewed: '2026-11-10'\n")
+			if err = os.WriteFile(path, content, 0600); err != nil {
+				t.Fatal(err)
+			}
+			out, err := st.Process(ctx, f.env, f.run, items[0])
+			if err == nil || !strings.Contains(err.Error(), "inventory_changed") || out.Artifact != nil {
+				t.Fatalf("added correction: %v", err)
+			}
+			changed, err := st.Plan(ctx, f.env, f.run)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err = os.WriteFile(path, []byte(strings.Replace(string(content), "reason: review", "reason: updated", 1)), 0600); err != nil {
+				t.Fatal(err)
+			}
+			out, err = st.Process(ctx, f.env, f.run, changed[0])
+			if err == nil || !strings.Contains(err.Error(), "inventory_changed") || out.Artifact != nil {
+				t.Fatalf("changed correction: %v", err)
+			}
+		})
+	}
+}
+
+func TestBuild_PublishesValidityReview(t *testing.T) {
+	f := recoverySetup(t)
+	dir := f.env.Artifacts.Abs(f.art.Path)
+	data, err := os.ReadFile(filepath.Join(dir, "validity-review.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var report struct {
+		Version int               `json:"version"`
+		Entries []json.RawMessage `json:"entries"`
+	}
+	if err = json.Unmarshal(data, &report); err != nil || report.Version != 1 || report.Entries == nil {
+		t.Fatalf("review: %v", err)
+	}
+	manifest, err := os.ReadFile(filepath.Join(dir, "MANIFEST.sha256"))
+	if err != nil || !strings.Contains(string(manifest), "validity-review.json") {
+		t.Fatalf("manifest missing review: %v", err)
+	}
+	if _, err = artifact.Verify(dir); err != nil {
+		t.Fatal(err)
+	}
+	var record BuildRecord
+	data, err = os.ReadFile(filepath.Join(dir, "build.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = json.Unmarshal(data, &record); err != nil {
+		t.Fatal(err)
+	}
+	for _, key := range []string{"documents_by_status_basis_source_status", "rule_a_corrections", "rule_b_events", "rule_c_conflicts"} {
+		if _, ok := record.Counts[key]; !ok {
+			t.Errorf("missing count %s", key)
+		}
 	}
 }

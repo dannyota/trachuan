@@ -83,3 +83,20 @@ func TestParseDate_RecordedVBPLDetails(t *testing.T) {
 		}
 	}
 }
+
+// Run vn/20261110_2 recorded six TNHL documents with status name "Ngưng hiệu lực".
+func TestStatus_SuspendedRecordedCode(t *testing.T) {
+	data, err := os.ReadFile("../../../../../sources/vn.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	list, err := source.Parse(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fixture := struct{ code, label string }{"TNHL", "Ngưng hiệu lực"}
+	class, current, known := Status(fixture.code, list.StatusCodes)
+	if class != "suspended" || current || !known {
+		t.Fatalf("%s (%s): got %s, current=%v, known=%v", fixture.code, fixture.label, class, current, known)
+	}
+}
