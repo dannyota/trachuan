@@ -6,9 +6,9 @@ signed dump to OCI Object Storage. Decision and alternatives:
 
 ## Shape
 
-- `deploy/compose.yml` runs PostgreSQL (workshop and Temporal persistence), the
-  Temporal server and its UI locally. The machine may be off between runs;
-  Temporal resumes from persisted history.
+- Native PostgreSQL 18 (the workshop) and the Temporal development server with
+  SQLite persistence run on the MacBook (`deploy/local`, `make services-up`).
+  The machine may be off between runs; Temporal resumes from persisted history.
 - `corpus worker` is one Go binary with one workflow,
   `BuildRelease(country, rel)`. Stage and control activities follow
   [ADR 0008](../adr/0008-write-path-temporal-self-hosted.md#history). Workflow

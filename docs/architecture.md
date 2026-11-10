@@ -8,7 +8,7 @@ in the [system design](design/system.md); contracts live in the
 
 One Go module, `danny.vn/trachuan`, at the repository root. The pipeline is one
 binary, `corpus`, built from `apps/corpus/cmd/corpus`. It runs on the owner's
-MacBook against the local services in `deploy/compose.yml`
+MacBook against native local services (`deploy/local`)
 ([runbook](runbooks/corpus-local.md)).
 
 | Package            | Role                                                                                                                                |
@@ -41,9 +41,9 @@ Stages run in order `discover`, `fetch`, `extract`, `relate`, `chunk`, `embed`,
 
 ## Local services
 
-PostgreSQL 18 with pgvector (`workshop`, `temporal`, `temporal_visibility`
-databases), Temporal server 1.32.2 and UI 2.58.1, started in order by
-`make services-up`.
+Native PostgreSQL 18 with pgvector (`workshop` and `corpus_template`) and the
+Temporal development server (Temporal CLI 1.10.0, server 1.32.2) with SQLite
+persistence, started in order by `make services-up`.
 
 ## Tests
 

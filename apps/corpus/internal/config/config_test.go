@@ -22,7 +22,7 @@ func TestLoad_Defaults(t *testing.T) {
 		EmbedderURL: "http://127.0.0.1:8092", QueryEmbedderURL: "http://127.0.0.1:8091",
 		BuilderTemplate: "corpus_template", PgRestore: "pg_restore",
 		DatabaseURL:     "postgres://example",
-		TemporalAddress: "127.0.0.1:7233",
+		TemporalAddress: "127.0.0.1:27233",
 		Namespace:       "corpus",
 		Artifacts:       "work/artifacts",
 		PgDump:          "pg_dump",

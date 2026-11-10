@@ -4,7 +4,7 @@
 |-|-|-|
 |Static|before every push|`make pre-push`: gofmt, goimports, golangci-lint, eslint, prettier check, markdownlint, lengths, shellcheck|
 |Unit|every push|`make test`|
-|Integration with PostgreSQL|every push|`make test-integration` (compose database)|
+|Integration with PostgreSQL|every push|`make test-integration` (native PostgreSQL from `make services-up`)|
 |Corpus evaluation|before every `corpus release`|`make eval`: product suite floors (ADR 0010) recall@8 0.90, MRR@8 0.66, current-law precision 0.99, abstention 0.95; filtered cases; diff against previous release|
 |Browser|every pull request|`make e2e`: Playwright against the local stack with the fake Google provider|
 

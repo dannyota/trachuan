@@ -82,6 +82,6 @@ internal/corpusdb   Go: embedded corpus schema template and schema version
 packages/schema  OpenAPI document and generated TypeScript client
 deploy/oci       OpenTofu root and modules
 deploy/host      cloud-init, install.sh, Quadlet units, pgBackRest, alerts
-deploy/compose.yml  local development: PostgreSQL, Temporal, UI
+deploy/local     native local development: PostgreSQL 18, Temporal dev server
 docs             design, ADRs, plans, runbooks, standards, research
 ```

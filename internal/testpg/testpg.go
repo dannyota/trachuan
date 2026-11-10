@@ -36,7 +36,7 @@ func administrator(t *testing.T) (*pgx.Conn, *url.URL) {
 	t.Helper()
 	raw := os.Getenv("CORPUS_TEST_ADMIN_URL")
 	if raw == "" {
-		raw = "postgres://trachuan@127.0.0.1:5432/postgres"
+		raw = "postgres://trachuan@127.0.0.1:25433/postgres"
 	}
 	parsed, err := url.Parse(raw)
 	if err != nil || (parsed.Scheme != "postgres" && parsed.Scheme != "postgresql") {

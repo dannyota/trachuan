@@ -31,7 +31,7 @@ func create(t *testing.T, migrated bool) string {
 	ctx := context.Background()
 	adminURL := os.Getenv("CORPUS_TEST_ADMIN_URL")
 	if adminURL == "" {
-		adminURL = "postgres://trachuan@127.0.0.1:5432/postgres"
+		adminURL = "postgres://trachuan@127.0.0.1:25433/postgres"
 	}
 	parsed, err := url.Parse(adminURL)
 	if err != nil {

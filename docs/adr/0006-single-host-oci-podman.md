@@ -18,9 +18,9 @@ Use rootless Podman and systemd Quadlet for caddy, web, server, embedder and
 postgres; [deployment](../design/deployment.md#host) owns the OS and packages.
 OpenTofu owns infrastructure. GitHub Actions builds arm64 images, pinned by
 digest in GHCR. pgBackRest archives WAL to OCI Object Storage. Cloudflare
-remains DNS only. Compose stays local; no Ansible. Thread limits live in
-[budgets](../design/budgets.md#indexing); precision remains owned by
-[ADR 0009](0009-dense-embedding-recipe.md).
+remains DNS only. Local development runs natively, without containers; no
+Ansible. Thread limits live in [budgets](../design/budgets.md#indexing);
+precision remains owned by [ADR 0009](0009-dense-embedding-recipe.md).
 
 [Deployment](../design/deployment.md) owns the mechanism and source details:
 Balanced boot/block volumes replace gp3; Vault secrets use instance-principal
@@ -87,3 +87,6 @@ credentials; published image layers and release metadata are public.
 - 2026-11-10: after independent review, the owner chose pull deployment and
   default Oracle-managed backup encryption. Added host-side authorization and
   rollback rules; kept host, OS and thread facts in their respective homes.
+- 2026-11-10: local development runs natively (PostgreSQL 18 and the Temporal
+  development server on the MacBook); `deploy/compose.yml` is removed.
+  Production keeps rootless Podman Quadlet on the host.

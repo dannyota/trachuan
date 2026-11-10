@@ -46,7 +46,7 @@ func Load(getenv func(string) string) (Config, error) {
 		DatabaseDiskPath:   getenv("CORPUS_DATABASE_DISK_PATH"),
 		EvalFixtures:       getenv("CORPUS_EVAL_FIXTURES"),
 		DatabaseURL:        getenv("CORPUS_DATABASE_URL"),
-		TemporalAddress:    defaultValue(getenv("CORPUS_TEMPORAL_ADDRESS"), "127.0.0.1:7233"),
+		TemporalAddress:    defaultValue(getenv("CORPUS_TEMPORAL_ADDRESS"), "127.0.0.1:27233"),
 		Namespace:          defaultValue(getenv("CORPUS_TEMPORAL_NAMESPACE"), "corpus"),
 		Artifacts:          defaultValue(getenv("CORPUS_ARTIFACTS"), "work/artifacts"),
 		CheckpointDir:      getenv("CORPUS_CHECKPOINT_DIR"),

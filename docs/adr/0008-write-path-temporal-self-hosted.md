@@ -17,14 +17,14 @@ pipeline, and may be off between runs.
 
 ## Decision
 
-Run the Temporal server, its UI and PostgreSQL persistence on the MacBook
-through `deploy/compose.yml`, started for a run and stopped afterwards. One
-workflow `BuildRelease(country, rel)` with one activity per stage, fixed batches
-sized in design/budgets.md, continue-as-new after each stage, payloads as
-references only. Completeness, idempotency, submission reconciliation and the
-signed release artifact are application contracts in `apps/corpus`, recorded in
-[pipeline](../design/pipeline.md). No second workflow or scheduler without a
-measured need.
+Run the Temporal server and its UI on the MacBook as the native Temporal
+development server with SQLite persistence, started for a run and stopped
+afterwards. One workflow `BuildRelease(country, rel)` with one activity per
+stage, fixed batches sized in design/budgets.md, continue-as-new after each
+stage, payloads as references only. Completeness, idempotency, submission
+reconciliation and the signed release artifact are application contracts in
+`apps/corpus`, recorded in [pipeline](../design/pipeline.md). No second workflow
+or scheduler without a measured need.
 
 ## Consequences
 
@@ -50,3 +50,9 @@ for production).
   `CloseStage`, `Checkpoint` and `MarkRun` are the four control activities for
   planning, stage close, checkpoint and run-state changes, preserving one
   activity per stage for stage work.
+- 2026-11-10: local development leaves Podman. The Temporal server runs as the
+  native development server (`temporal server start-dev`) with SQLite
+  persistence under `~/.local/share/trachuan-temporal`, and the workshop moves
+  to a native PostgreSQL 18. The shared Podman virtual machine (6 GB) starved
+  Temporal during a live run and heartbeats timed out; the MacBook and the host
+  are both arm64, so containers add nothing locally.

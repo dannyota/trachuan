@@ -1,5 +1,0 @@
-# Dynamic configuration for the local Temporal server (deploy/compose.yml).
-# SQL visibility needs fresh search attributes on read in a single-node setup.
-system.forceSearchAttributesCacheRefreshOnRead:
-  - value: true
-    constraints: {}

@@ -13,4 +13,5 @@ research notes, not here.
 | `phapdien-join/` | How much of the corpus does the 2023 Bộ pháp điển package label?                                                | `docs/research/phapdien-join-2026-11.md` |
 
 Run `make db-up`, then `bash spikes/corpus/restore.sh`, then
-`podman exec -i trachuan_postgres_1 psql -U trachuan -d banhmi_vn < spikes/corpus/verify.sql`.
+`psql -h 127.0.0.1 -U trachuan -d banhmi_vn < spikes/corpus/verify.sql` (native
+PostgreSQL 18).
