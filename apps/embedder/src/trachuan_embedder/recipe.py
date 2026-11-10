@@ -24,7 +24,7 @@ def build_recipe(manifest: dict, mode: str) -> dict:
         item
         for item in files
         if (
-            item["path"] in ("onnx/model.onnx", "onnx/model.onnx_data", "onnx/model.onnx.data")
+            item["path"] == "onnx/model_int8.onnx"
             if mode == "query"
             else item["path"] in ("config.json", "model.safetensors")
         )
@@ -50,7 +50,7 @@ def build_recipe(manifest: dict, mode: str) -> dict:
         "input": "raw",
         "runtime": mode,
         "backend": "onnxruntime-cpu" if mode == "query" else "torch-mps",
-        "precision": "fp32" if mode == "query" else "fp16",
+        "precision": "int8" if mode == "query" else "fp16",
         "token_cap": 256 if mode == "query" else 2048,
         "special_tokens": True,
         "truncation": False,

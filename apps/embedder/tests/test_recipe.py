@@ -1,4 +1,6 @@
+import hashlib
 import importlib.metadata
+import json
 import platform
 
 import pytest
@@ -14,6 +16,7 @@ def bundle(tmp_path):
         "model.safetensors",
         "tokenizer.json",
         "onnx/model.onnx",
+        "onnx/model_int8.onnx",
         "onnx/model.onnx_data",
         "onnx/extra.data",
     ):
@@ -47,7 +50,7 @@ def manifest(path):
 @pytest.mark.parametrize("mode,library", [("document", "torch"), ("query", "onnxruntime")])
 def test_recipe_reports_loaded_versions_and_precision(bundle, mode, library):
     recipe = build_recipe(manifest(bundle), mode)
-    assert recipe["precision"] == ("fp16" if mode == "document" else "fp32")
+    assert recipe["precision"] == ("fp16" if mode == "document" else "int8")
     assert list(recipe)[-3:] == ["language", "tokenizer_library", "runtime_library"]
     assert recipe["language"] == "python " + platform.python_version()
     assert recipe["tokenizer_library"] == "transformers " + importlib.metadata.version(
@@ -59,9 +62,10 @@ def test_recipe_reports_loaded_versions_and_precision(bundle, mode, library):
 @pytest.mark.parametrize(
     "path,changed",
     [
-        ("onnx/model.onnx", {"query"}),
-        ("onnx/model.onnx_data", {"query"}),
+        ("onnx/model.onnx", set()),
+        ("onnx/model.onnx_data", set()),
         ("onnx/extra.data", set()),
+        ("onnx/model_int8.onnx", {"query"}),
         ("model.safetensors", {"document"}),
         ("config.json", {"document"}),
         ("tokenizer.json", {"query", "document"}),
@@ -77,16 +81,15 @@ def test_recipe_hash_tracks_only_runtime_files(bundle, path, changed):
         ) == (mode in changed)
 
 
-def test_query_recipe_ignores_int8_model_and_data(bundle):
-    before = build_recipe(manifest(bundle), "query")
-    for name in ("model_int8.onnx", "model_int8.onnx_data"):
-        (bundle / "onnx" / name).write_text(name)
-    assert build_recipe(manifest(bundle), "query") == before
-
-
-def test_query_recipe_tracks_dot_data(bundle):
-    path = bundle / "onnx/model.onnx.data"
-    path.write_text("first")
-    before = build_recipe(manifest(bundle), "query")
-    path.write_text("second")
-    assert build_recipe(manifest(bundle), "query")["weights_sha256"] != before["weights_sha256"]
+def test_query_recipe_int8_weights(bundle):
+    entries = manifest(bundle)
+    selected = [item for item in entries["files"] if item["path"] == "onnx/model_int8.onnx"]
+    expected = hashlib.sha256(
+        json.dumps(selected, ensure_ascii=False, separators=(",", ":"), sort_keys=True).encode()
+    ).hexdigest()
+    recipe = build_recipe(entries, "query")
+    assert recipe["precision"] == "int8"
+    assert recipe["weights_sha256"] == expected
+    for name in ("onnx/model.onnx", "onnx/model.onnx_data", "model.safetensors"):
+        (bundle / name).write_text("changed")
+    assert build_recipe(manifest(bundle), "query") == recipe
