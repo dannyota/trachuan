@@ -123,21 +123,26 @@ nodes in document order, or the top-level provisions when the document has no
 Relation lists follow pointer order and add `raw_label` and evidence.
 
 An item's output is a fixed sequence of units: the leads, then each provision,
-outline entry or relation, in the order above. Any unit whose serialized size
-exceeds the part size in budgets is split into parts. One rule cuts every kind
-of unit: cut at the last whitespace at or before the part size; when the
+outline entry or relation, in the order above. Each unit kind has one split
+field: `text` for leads and provisions, `heading` for outline entries,
+`evidence` for relations. Any unit whose serialized size exceeds the part size
+in budgets is split into parts by cutting only that field; every other field is
+copied to each part. If a part with an empty split field would already exceed
+the part size, the item ends with `unit_too_large` and no `next`. One rule cuts
+the split field: cut at the last whitespace at or before the part size; when the
 remaining span has none, at the last code point at or before the part size that
 does not separate a combining mark from its base, or at the part size when no
-such code point exists, so every part is nonempty and the parts concatenate to
-the unit. Parts carry `part` and `parts`. Boundaries depend only on the release
-and the item, never on the call.
+such code point exists, so every part is nonempty and the split field's parts
+concatenate to the original field. Parts carry `part` and `parts`. Boundaries
+depend only on the release and the item, never on the call.
 
 The call cap in budgets counts the serialized size of returned units across
 items, and the part size is below it. Items are processed in order and each
 returns whole units or parts. When an item has more to return, its result
 carries `next`, an opaque token that fixes the release, the item, its mode and
-the next unit or part; the continuation result is the same whatever else that
-call reads. When the next unit does not fit in what remains of the cap, the item
+the next unit or part. The units and parts that follow a `next` are the same
+whatever else that call reads; how many of them fit on one page depends on the
+cap left. When the next unit does not fit in what remains of the cap, the item
 returns `not_read:"call_cap"` and its own `next`. The first item always returns
 at least one unit or part, so every call makes progress; the last page of an
 item returns no `next`.
@@ -149,7 +154,7 @@ from a provision, a range or a part may be cited once its chain was read to that
 last page, so range units share the leads at the start of their chain. Per-item
 failures (`not_found`, `ambiguous_number`, `release_expired`, `invalid_range`,
 `invalid_next`, `invalid_item` for an item that is not exactly one of the forms
-above) do not fail the call. Every result carries `release`.
+above, `unit_too_large`) do not fail the call. Every result carries `release`.
 
 ## Guide
 
