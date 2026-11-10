@@ -80,7 +80,7 @@ func (m IdentityMap) Validate(cases []Case, legacy string, inventory IdentityInv
 						issue("reason", "searched number missing")
 					}
 					for _, doc := range inventory.Documents {
-						if retrieval.NormalizeNumber(number) == doc.Number {
+						if retrieval.NormalizeNumber(number) == doc.Number && len(doc.Anchors) > 0 {
 							issue("state", "absent number now present")
 							break
 						}

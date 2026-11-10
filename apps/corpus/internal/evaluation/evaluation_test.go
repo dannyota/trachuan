@@ -164,6 +164,20 @@ func TestValidate_AbsentNamesAllNumbers(t *testing.T) {
 		t.Fatalf("report %v: %v", report, err)
 	}
 }
+func TestValidate_AbsentNumberPresentOnlyWithProvisions(t *testing.T) {
+	cases := []Case{{ID: "a", ExpectedCitations: []Expectation{{DocNumber: "12"}}}}
+	m := IdentityMap{Version: 2, LegacySHA256: "l", Entries: []MapEntry{{CaseID: "a", State: "absent", ExpectedNumber: "12", Reason: "searched 12", ReviewedAt: "2026-01-01"}}}
+	inventory := IdentityInventory{Documents: map[string]IdentityDocument{"vn:x:1": {Number: "12"}}}
+	report, err := m.Validate(cases, "l", inventory)
+	if err != nil || len(report["a"]) != 0 {
+		t.Fatalf("document without provisions contradicted absence: %v %v", report, err)
+	}
+	inventory.Documents["vn:x:1"] = IdentityDocument{Number: "12", Anchors: map[string]bool{"dieu-1": true}}
+	report, err = m.Validate(cases, "l", inventory)
+	if err != nil || len(report["a"]) != 1 || report["a"][0].Field != "state" {
+		t.Fatalf("document with provisions accepted as absent: %v %v", report, err)
+	}
+}
 func TestMetrics_UnknownIsNotCurrent(t *testing.T) {
 	m := Metrics{Cases: []CaseScore{{Response: retrieval.Response{Hits: []retrieval.Hit{{Stamp: retrieval.Validity{Current: true}}}}}}}
 	if *m.CurrentLawPrecision(false) != 0 {
