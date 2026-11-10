@@ -123,9 +123,10 @@ func TestLoad_IncludesMetadataForNoTree(t *testing.T) {
 	if counts.Documents != 1 || counts.Chunks != 0 {
 		t.Fatalf("counts: %+v", counts)
 	}
-	var state string
-	if err = f.corpus.QueryRow(context.Background(), `SELECT content_state FROM document`).Scan(&state); err != nil || state != "no_tree" {
-		t.Fatalf("state %q: %v", state, err)
+	var state, class, source string
+	var conflict bool
+	if err = f.corpus.QueryRow(context.Background(), `SELECT content_state,class,source,validity_conflict FROM document`).Scan(&state, &class, &source, &conflict); err != nil || state != "no_tree" || class != "primary" || source != "vbpl" || conflict {
+		t.Fatalf("state %q class %q source %q conflict %v: %v", state, class, source, conflict, err)
 	}
 }
 func TestLoad_ExcludesWithdrawnAndFetchGaps(t *testing.T) {

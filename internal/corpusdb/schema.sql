@@ -4,11 +4,14 @@ CREATE TABLE document (
  key text COLLATE "C" NOT NULL UNIQUE CHECK (key LIKE 'vn:%'),
  number text NOT NULL, number_norm text COLLATE "C" NOT NULL,
  title text NOT NULL, doc_type text NOT NULL, issuer text NOT NULL,
+ class text NOT NULL CHECK (class IN ('primary','relation_context','secondary')),
+ source text NOT NULL CHECK (source IN ('vbpl','chinhphu')),
  issue_date date, eff_from date, eff_to date,
  raw_issue_date text NOT NULL, raw_eff_from text NOT NULL, raw_eff_to text NOT NULL,
  status_code text NOT NULL, status_name text NOT NULL,
  status_class text NOT NULL CHECK (status_class IN ('in_force','partial','expired','not_yet','suspended','unknown')),
- status_basis text NOT NULL CHECK (status_basis IN ('source_status','derived_from_consolidated')),
+ status_basis text NOT NULL CHECK (status_basis IN ('source_status','derived_from_consolidated','derived_from_text','manual_correction')),
+ validity_conflict boolean NOT NULL,
  is_current boolean NOT NULL CHECK (is_current = (status_class IN ('in_force','partial'))),
  is_consolidated boolean NOT NULL,
  content_state text NOT NULL CHECK (content_state IN ('indexed','no_tree','no_chunks','embedding_gap')),
@@ -94,6 +97,19 @@ CREATE INDEX ON relation (source_document_id);
 CREATE INDEX ON relation (target_document_id);
 CREATE INDEX ON relation (target_key);
 
+CREATE TABLE validity_decision (
+ document_id bigint NOT NULL REFERENCES document(id),
+ ordinal smallint NOT NULL CHECK (ordinal BETWEEN 1 AND 8),
+ layer text NOT NULL CHECK (layer IN ('source','A','B','C','manual')),
+ rule_version text NOT NULL, before jsonb NOT NULL, after jsonb NOT NULL,
+ actor_key text COLLATE "C", effect_date date, relation_id bigint REFERENCES relation(id),
+ anchor text COLLATE "C", quote text CHECK (char_length(quote) <= 400),
+ artifact_sha256 text COLLATE "C" CHECK (artifact_sha256 ~ '^[0-9a-f]{64}$'),
+ PRIMARY KEY (document_id,ordinal),
+ CHECK (layer NOT IN ('B','C') OR (actor_key IS NOT NULL AND effect_date IS NOT NULL)),
+ CHECK (layer <> 'C' OR relation_id IS NOT NULL)
+);
+
 CREATE TABLE taxonomy_node (
  id bigint PRIMARY KEY CHECK (id > 0), country text COLLATE "C" NOT NULL CHECK (country = 'vn'),
  parent_id bigint REFERENCES taxonomy_node(id), level integer NOT NULL CHECK (level BETWEEN 1 AND 4),
@@ -129,7 +145,7 @@ CREATE INDEX ON taxonomy_assignment (provision_id,family_id);
 
 CREATE TABLE release (
  singleton boolean PRIMARY KEY CHECK (singleton), country text COLLATE "C" NOT NULL CHECK (country = 'vn'),
- rel text COLLATE "C" NOT NULL UNIQUE, schema_version integer NOT NULL CHECK (schema_version = 2),
+ rel text COLLATE "C" NOT NULL UNIQUE, schema_version integer NOT NULL CHECK (schema_version = 3),
  taxonomy_version text COLLATE "C" NOT NULL,
  dense_recipe jsonb NOT NULL CHECK (jsonb_typeof(dense_recipe) = 'object'),
  chunk_recipe jsonb NOT NULL CHECK (jsonb_typeof(chunk_recipe) = 'object'),

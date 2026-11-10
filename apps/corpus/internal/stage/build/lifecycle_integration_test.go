@@ -4,6 +4,9 @@ package build
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,7 +14,11 @@ import (
 	"time"
 
 	"danny.vn/trachuan/apps/corpus/internal/evaluation"
+	"danny.vn/trachuan/apps/corpus/internal/stage/chunk"
+	"danny.vn/trachuan/apps/corpus/internal/stage/chunk/normalizer"
 	"danny.vn/trachuan/internal/embedding"
+	"danny.vn/trachuan/internal/retrieval"
+	"danny.vn/trachuan/internal/retrieval/lexical"
 
 	"danny.vn/trachuan/apps/corpus/internal/stage"
 	"danny.vn/trachuan/apps/corpus/internal/store"
@@ -221,5 +228,34 @@ func TestBuild_RestoredMarkerPreservesOwnership(t *testing.T) {
 	}
 	if err = recreateTemporary(ctx, admin, Config{Template: builder.Template}, name, built); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestBuild_FrozenSchema2RecipeRefused(t *testing.T) {
+	f := fixture(t)
+	ctx := context.Background()
+	pool, err := pgxpool.New(ctx, f.workshop.Config().ConnString())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pool.Close()
+	snapshot := stage.Snapshot{SourceList: []byte(`{"country":"vn","status_codes":{}}`)}
+	// The old recipe includes schema version 2 in its hashed fields.
+	old := buildRecipe{SchemaVersion: 2, SchemaSHA256: "3aa0edadd92150db2ddbb4eb17ad47e55e2e91db3c872a8488a9b6488843aff6", ChunkRecipeHash: chunk.Recipe1().Hash(), DocumentRecipeHash: embedding.DocumentRecipe1().Hash(), QueryRecipeHash: embedding.QueryRecipe1().Hash(), LexicalRecipeHash: lexical.Recipe1().Hash(), RetrievalPolicyHash: retrieval.Recipe1().Hash(), NormalizerVersion: normalizer.Version, NumberNormalizationVersion: retrieval.NumberNormalizationVersion, StatusCodesSHA256: fmt.Sprintf("%x", sha256.Sum256([]byte("{}"))), CalibrationPolicy: "provisional-old-product/1"}
+	snapshot.Recipes = map[string]string{"build": old.hash()}
+	data, err := json.Marshal(snapshot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, updateErr := f.workshop.Exec(ctx, `UPDATE run SET snapshot=$2 WHERE id=$1`, f.run.ID, data); updateErr != nil {
+		t.Fatal(updateErr)
+	}
+	compiled := New(Config{}).Recipe(snapshot)
+	if compiled == "" || compiled == old.hash() {
+		t.Fatal("invalid compiled recipe")
+	}
+	_, err = stage.PlanStage(ctx, stage.Env{DB: pool}, New(Config{}), stage.StageInput{RunID: f.run.ID, Stage: "build"}, map[string]string{"build": compiled})
+	if err == nil || !strings.Contains(err.Error(), "recipe mismatch for stage build") {
+		t.Fatalf("error = %v", err)
 	}
 }
