@@ -120,27 +120,31 @@ nodes in document order, or the top-level provisions when the document has no
 `dieu`, each with `label`, `heading`, `handle` and text size in code points.
 Relation lists follow pointer order and add `raw_label` and evidence.
 
-The call cap in budgets counts returned text, outline entries and relation
-evidence across items. Items are processed in order and each returns whole
-units: a provision, an outline entry, a relation, or a part. When an item has
-more to return, its result carries `next`, an opaque token that fixes the
-release, the item, its mode and the next unit; the continuation result is the
-same whatever else that call reads. When an item does not fit in what remains of
-the cap, it returns `not_read:"call_cap"` and its own `next`. The first item
-always returns at least one unit, so every call makes progress; the last unit of
-an item returns no `next`.
+An item's output is a fixed sequence of units: the leads, then each provision,
+outline entry or relation, in the order above. Any unit whose serialized size
+exceeds the part size in budgets is split into parts. One rule cuts every kind
+of unit: cut at the last whitespace at or before the part size, or exactly at
+the part size when the remaining span has none, so every part is nonempty and
+the parts concatenate to the unit. Parts carry `part` and `parts`. Boundaries
+depend only on the release and the item, never on the call.
 
-A provision whose rendered text exceeds the part size in budgets is served in
-parts. Part boundaries are fixed per release: cut at the last whitespace at or
-before the part size, counting from the start of the leads. Each part carries
-`part` and `parts`; only part 1 holds the leads.
+The call cap in budgets counts the serialized size of returned units across
+items, and the part size is below it. Items are processed in order and each
+returns whole units or parts. When an item has more to return, its result
+carries `next`, an opaque token that fixes the release, the item, its mode and
+the next unit or part; the continuation result is the same whatever else that
+call reads. When the next unit does not fit in what remains of the cap, the item
+returns `not_read:"call_cap"` and its own `next`. The first item always returns
+at least one unit or part, so every call makes progress; the last page of an
+item returns no `next`.
 
-`complete` on a provision, range unit or part is true only when the returned
-unit holds all of its text and every required ancestor lead whole. A part is
-false; a provision read in parts is complete once parts 1 to `parts` were read
-at the same release. Per-item failures (`not_found`, `ambiguous_number`,
-`release_expired`, `invalid_range`, `invalid_next`) do not fail the call. Every
-result carries `release`.
+`complete` belongs to an item's chain of pages. The page without `next` reports
+`complete:true` when the chain, read in order at one release, delivered the
+whole scope with its leads; every earlier page reports `complete:false`. Text
+from a provision, a range or a part may be cited once its chain was read to that
+last page, so range units share the leads at the start of their chain. Per-item
+failures (`not_found`, `ambiguous_number`, `release_expired`, `invalid_range`,
+`invalid_next`) do not fail the call. Every result carries `release`.
 
 ## Guide
 
@@ -148,18 +152,19 @@ result carries `release`.
 handles in one `read` call, choosing a `path` handle to read a whole article or
 chapter; check `status`, `warnings` and `in` pointers of kinds `repeals`,
 `replaces`, `suspends` and `amends_supplements` before relying on a document;
-read `in:implements` documents for detailed rules; follow `next` tokens to
-continue. It says that a snippet is not the provision, that `[…]` marks omitted
-text, that pointer direction is as recorded by the source, that a pointer
-outside the release must not be replaced by a number lookup, and that only text
-returned complete may be cited.
+read `in:implements` documents for detailed rules; follow `next` tokens to the
+last page before citing read text. It says that a snippet is not the provision,
+that `[…]` marks omitted text, that pointer direction is as recorded by the
+source, that a pointer outside the release must not be replaced by a number
+lookup, and that only text returned complete may be cited.
 
 ## Evaluation
 
-[ADR 0010](../adr/0010-retrieval-evaluation-for-agents.md) product scoring,
-gates and promotion run on full responses at their default limit, as before.
-Compact responses are scored separately with the same matcher on what they
-return: own identities match, while child credit (no fragments) and
+[ADR 0010](../adr/0010-retrieval-evaluation-for-agents.md) and
+[evaluation](evaluation.md) product scoring, gates and promotion run on full
+responses at limits 8 and 20 exactly as specified there; this note changes none
+of them. Compact responses are scored separately with the same matcher on what
+they return: own identities match, while child credit (no fragments) and
 relation-backed credit (no edge evidence) earn nothing. That compact score is a
 diagnostic, reported at limits 8 and 20. Each trial also reports serialized
 response size in code points (p50, p95) for compact at limit 20 and full at
@@ -171,7 +176,8 @@ After the server exists, an agent-in-the-loop check runs on the development
 cohort with only the MCP tools: one Claude and one OpenAI client model, model
 versions recorded, the same system prompt, each case twice per mode per model.
 Per model it records expected provisions cited under the product matcher, tool
-calls, and total input tokens of all tool results in the task. Compact stays the
-default only if, for each model, mean cited expected provisions do not fall and
-mean total input tokens are lower than full. Sealed cases are never used, and no
-question text is stored outside the evaluation files.
+calls, input tokens summed over every model request in the task as the provider
+reports them, and tool-result size separately. Compact stays the default only
+if, for each model, mean cited expected provisions do not fall and mean summed
+input tokens are lower than full. Sealed cases are never used, and no question
+text is stored outside the evaluation files.

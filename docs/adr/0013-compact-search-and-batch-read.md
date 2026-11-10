@@ -53,13 +53,13 @@ snippet rule and the read rules.
 Typical searches cost a fraction of the old evidence, so an agent can run more
 searches and see more candidates per task; a second call is needed before citing
 a long provision. ADR 0010 product scoring and promotion keep running on full
-responses; compact responses get the same matcher as a diagnostic, without the
-child or relation credit they cannot carry. Evaluation reports response size for
-both modes. Before release 1, an agent-in-the-loop check with one Claude and one
-OpenAI client model compares compact and full on development cases for cited
-expected provisions, tool calls and total input tokens. Compact stays the
-default only if, for each model, cited provisions do not fall and tokens are
-lower.
+responses at limits 8 and 20; compact responses get the same matcher as a
+diagnostic, without the child or relation credit they cannot carry. Evaluation
+reports response size for both modes. Before release 1, an agent-in-the-loop
+check with one Claude and one OpenAI client model compares compact and full on
+development cases for cited expected provisions, tool calls and total input
+tokens. Compact stays the default only if, for each model, cited provisions do
+not fall and tokens are lower.
 
 A snippet is not the provision. A snippet that cuts text is marked incomplete
 and shows each omission with the marker `[…]`, the only text not taken from the
