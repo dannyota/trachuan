@@ -72,11 +72,13 @@ member's first body span begins.
 2. Otherwise the snippet is the lead fragments in ancestor order, then the text
    from `BestTextStart`, until the snippet cap. Leads take at most half of the
    cap; a longer lead is cut.
-3. Every cut ends at the last whitespace at or before its limit, or at the limit
-   when the span has none. Each omission, inside or between spans and at the
-   end, is shown once as `[…]` separated by one space from adjacent text; it is
-   the only text not taken from the source. Text from `BestTextStart` that does
-   not start at the start of the hit's own text is preceded by the marker.
+3. Every cut ends at the last whitespace at or before its limit; when the span
+   has none, at the last code point at or before the limit that does not
+   separate a combining mark from its base. Each omission, inside or between
+   spans and at the end, is shown once as `[…]` separated by one space from
+   adjacent text; it is the only text not taken from the source. Text from
+   `BestTextStart` that does not start at the start of the hit's own text is
+   preceded by the marker.
 
 Count code points after the marker is inserted. `complete` is false whenever any
 marker appears or the recipe marked the hit incomplete, including a cut or
@@ -123,8 +125,9 @@ Relation lists follow pointer order and add `raw_label` and evidence.
 An item's output is a fixed sequence of units: the leads, then each provision,
 outline entry or relation, in the order above. Any unit whose serialized size
 exceeds the part size in budgets is split into parts. One rule cuts every kind
-of unit: cut at the last whitespace at or before the part size, or exactly at
-the part size when the remaining span has none, so every part is nonempty and
+of unit: cut at the last whitespace at or before the part size; when the
+remaining span has none, at the last code point at or before the part size that
+does not separate a combining mark from its base, so every part is nonempty and
 the parts concatenate to the unit. Parts carry `part` and `parts`. Boundaries
 depend only on the release and the item, never on the call.
 
@@ -144,7 +147,8 @@ whole scope with its leads; every earlier page reports `complete:false`. Text
 from a provision, a range or a part may be cited once its chain was read to that
 last page, so range units share the leads at the start of their chain. Per-item
 failures (`not_found`, `ambiguous_number`, `release_expired`, `invalid_range`,
-`invalid_next`) do not fail the call. Every result carries `release`.
+`invalid_next`, `invalid_item` for an item that is not exactly one of the forms
+above) do not fail the call. Every result carries `release`.
 
 ## Guide
 

@@ -17,9 +17,10 @@ history keeps it. States: `planned`, `in progress`, `landed`, `verified`,
 |6|Taxonomy import and seeds|Pháp điển import, `taxonomy/mapping.yaml`, seeds, subject-filter ordering|Plan 1|not written|
 |7|Text extraction|documents without a VBPL tree: HTML transcription, PDF, OCR; `vanban.chinhphu.vn` signed PDFs for central documents VBPL lacks|Plan 1|not written|
 |8|Classification|LLM batch classification, submission intent log, taxonomy evaluation gate|Plans 2 and 6|not written|
-|9|Server|`apps/server`: auth, OAuth for MCP, retrieval, MCP tools, web API, OpenAPI document|Plan 2 corpus database; Plan 4 query embedder; Plan 0 OAuth decision|not written|
+|9|Server|`apps/server`: auth, OAuth for MCP, retrieval, MCP tools (compact `search`, batch `read`, `guide`), web API, OpenAPI document; agent-in-the-loop check of ADR 0013|Plan 2 corpus database; Plan 4 query embedder; Plan 12 presentation and read; Plan 0 OAuth decision|not written|
 |10|Web|`apps/web`: public pages, search, reader, account|Plan 9 OpenAPI document|not written|
 |11|Host and release|`deploy/`: OpenTofu, host bundle, Quadlet, pgBackRest, signed release manifest and S3 upload, `release activate`, deploy workflows|Plans 1 to 10 images|not written|
+|12|[Compact results and read](2026-11-10-agent-results.md)|`internal/retrieval`: hit path and best member, snippets, document entries and relation pointers, `Engine.Present` (compact and full), `Engine.Read` (outline, provision, range, relations, parts, `next` tokens); eval compact diagnostic and size gate (ADR 0013)|Plan 2; ADR 0013|planned|
 
 Each later plan is written with the writing-plans skill when its dependency
 lands, against `docs/design/README.md` and the research notes from Plan 0.
