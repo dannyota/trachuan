@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -17,7 +18,6 @@ import (
 	"danny.vn/trachuan/apps/corpus/internal/workflow"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.temporal.io/sdk/client"
-	"gopkg.in/yaml.v3"
 )
 
 func dependencies(ctx context.Context, needSources bool, cc string) (run.Deps, func(), error) {
@@ -61,15 +61,19 @@ func dependencies(ctx context.Context, needSources bool, cc string) (run.Deps, f
 			closeDeps()
 			return run.Deps{}, nil, fmt.Errorf("read source list: %w", readErr)
 		}
-		var source any
-		if yamlErr := yaml.Unmarshal(data, &source); yamlErr != nil {
+		corrections, readErr := os.ReadFile("sources/" + cc + "-corrections.yaml")
+		// A country without a corrections file has an empty list.
+		if readErr != nil && !errors.Is(readErr, os.ErrNotExist) {
 			closeDeps()
-			return run.Deps{}, nil, fmt.Errorf("parse source list: %w", yamlErr)
+			return run.Deps{}, nil, fmt.Errorf("read corrections: %w", readErr)
 		}
-		d.SourceList, err = json.Marshal(source)
+		if readErr != nil {
+			corrections = []byte("[]\n")
+		}
+		d.SourceList, err = sourceSnapshot(data, corrections)
 		if err != nil {
 			closeDeps()
-			return run.Deps{}, nil, fmt.Errorf("encode source list: %w", err)
+			return run.Deps{}, nil, fmt.Errorf("freeze sources: %w", err)
 		}
 	}
 	return d, closeDeps, nil

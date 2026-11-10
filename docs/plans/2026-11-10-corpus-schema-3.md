@@ -17,29 +17,29 @@
 
 **Files:** `internal/corpusdb/schema.sql`, `schema.go` and tests; `internal/retrieval/engine.go`, `release.go` and tests; `apps/corpus/internal/stage/build/` only where rows must supply the new NOT NULL columns (class `primary`, source from the key, `validity_conflict` false) so the suite stays green.
 
-- [ ] Tests first: `TestSchema_Version3Constraints` (class, source, status_basis values, validity_conflict, validity_decision keys, ordinal range, quote length, layer-required fields, release `schema_version = 3`), `TestOpen_RejectsSchemaVersion2` (error names both versions), `TestBuild_FrozenSchema2RecipeRefused`.
-- [ ] Implement; commit `feat: corpus schema version 3 with class, source and validity decisions`.
+- [x] Tests first: `TestSchema_Version3Constraints` (class, source, status_basis values, validity_conflict, validity_decision keys, ordinal range, quote length, layer-required fields, release `schema_version = 3`), `TestOpen_RejectsSchemaVersion2` (error names both versions), `TestBuild_FrozenSchema2RecipeRefused`.
+- [x] Implement; commit `feat: corpus schema version 3 with class, source and validity decisions`.
 
 ### Task 2: Inventory version 2, provenance snapshot and planning reconciliation
 
 **Files:** `apps/corpus/sql/build.sql` (primary: one consistent read of items, gaps with structured fields, final snapshot bytes and hash, file projection), regenerated store; `apps/corpus/internal/stage/build/{inventory,build,record}.go` and tests.
 
-- [ ] Tests first: `TestInventory_V1GoldenBytesUnchanged`, `TestInventory_V2GoldenBytesAndHashes`, `TestInventory_RepublishedFinalChangesBuildInput`, `TestBuild_RequiresFinalMembership`, `TestBuild_MembershipUnreconciled`, `TestProvenance_SnapshotStableAndBound`.
-- [ ] Implement; commit `feat(corpus): inventory version 2 bound to final membership, with a provenance snapshot`.
+- [x] Tests first: `TestInventory_V1GoldenBytesUnchanged`, `TestInventory_V2GoldenBytesAndHashes`, `TestInventory_RepublishedFinalChangesBuildInput`, `TestBuild_RequiresFinalMembership`, `TestBuild_MembershipUnreconciled`, `TestProvenance_SnapshotStableAndBound`.
+- [x] Implement; commit `feat(corpus): inventory version 2 bound to final membership, with a provenance snapshot`.
 
 ### Task 3: Presence, source-aware reader and loading
 
 **Files:** `apps/corpus/internal/stage/build/{documents,load,relations}.go` and new files by concern (`presence.go`, `reader.go`); `apps/corpus/internal/cli/inventory.go`; `apps/corpus/internal/evaluation/mapping.go`; tests.
 
-- [ ] Tests first: `TestLoad_ClassAndSourceFromSnapshot`, `TestLoad_EachExcludedDispositionNotLoaded`, `TestLoad_IgnoresArtifactsOfAbsentKeys`, `TestLoad_SecondaryMetadataOnly`, `TestRelations_ReplacedSecondaryNeverResolvesNumber`, `TestIdentity_ReplacedSecondaryNeedsReadjudication`, `TestLoad_LegacyRunClassPrimary`.
-- [ ] Implement; commit `feat(corpus): load present documents with class, source and secondary metadata`.
+- [x] Tests first: `TestLoad_ClassAndSourceFromSnapshot`, `TestLoad_EachExcludedDispositionNotLoaded`, `TestLoad_IgnoresArtifactsOfAbsentKeys`, `TestLoad_SecondaryMetadataOnly`, `TestRelations_ReplacedSecondaryNeverResolvesNumber`, `TestIdentity_ReplacedSecondaryNeedsReadjudication`, `TestLoad_LegacyRunClassPrimary`.
+- [x] Implement; commit `feat(corpus): load present documents with class, source and secondary metadata`.
 
 ### Task 4: Effect article parser
 
 **Files:** new `apps/corpus/internal/validity/` (pure package: article selection, sentence and list splitting, commencement and replacement forms, usable-article rule) with tests and fixtures, including the complete Điều 37 of `52/2024/NĐ-CP` and Điều 34 of `134/2025/QH15` recorded from the corpus by the primary.
 
-- [ ] Tests first: `TestParse_Dieu37TwoWholeOnePartial`, `TestParse_SpelledAndNumericDates`, `TestParse_QuotedTextIgnored`, `TestParse_ClauseScopedDateMakesArticleUnusable`, `TestParse_TruExceptionUnusable`, `TestParse_UnparsedEffectSentenceUnresolved`, `TestParse_ListContinuationInheritsSubject`, `TestParse_PartialItemPrefixes`, `TestParse_SubjectTypeMustMatchDocument`.
-- [ ] Implement; commit `feat(corpus): parser for effect articles`.
+- [x] Tests first: `TestParse_Dieu37TwoWholeOnePartial`, `TestParse_SpelledAndNumericDates`, `TestParse_QuotedTextIgnored`, `TestParse_ClauseScopedDateMakesArticleUnusable`, `TestParse_TruExceptionUnusable`, `TestParse_UnparsedEffectSentenceUnresolved`, `TestParse_ListContinuationInheritsSubject`, `TestParse_PartialItemPrefixes`, `TestParse_SubjectTypeMustMatchDocument`.
+- [x] Implement; commit `feat(corpus): parser for effect articles`.
 
 ### Task 5: Validity rules, manual corrections and review queue
 
@@ -52,15 +52,15 @@
 
 **Files:** `internal/retrieval/` (hit `class`, `source`, decision history outside the relation cap, eligibility "not `validity_conflict`", validity policy version), tests.
 
-- [ ] Tests first: `TestCollect_ValidityConflictNotInPrimaryGroup`, `TestShape_ConflictShownAsUnresolvedNonCurrent`, `TestHit_CarriesClassSourceAndDecisions`, `TestValidity_BothModesRoundTripDecisions`, `TestRecipe_ValidityPolicyVersionBumped`.
-- [ ] Implement; commit `feat(retrieval): class, source and validity decisions on hits`.
+- [x] Tests first: `TestCollect_ValidityConflictNotInPrimaryGroup`, `TestShape_ConflictShownAsUnresolvedNonCurrent`, `TestHit_CarriesClassSourceAndDecisions`, `TestValidity_BothModesRoundTripDecisions`, `TestRecipe_ValidityPolicyVersionBumped`.
+- [x] Implement; commit `feat(retrieval): class, source and validity decisions on hits`.
 
 ### Task 7: Evaluation
 
 **Files:** `apps/corpus/internal/evaluation/`, `apps/corpus/internal/stage/eval/`, `apps/corpus/internal/evaluation/testdata/vn/` (adjudicated validity cases for 52/2024, 101/2012, 80/2016, 134/2025, 16/2019), tests.
 
-- [ ] Tests first: `TestReport_CountsByClassSourceAndBasis`, `TestValidityCases_ScoredOverPrimaryGroup`, `TestMetrics_StatusConsistencyNameAndDenominator`.
-- [ ] Implement; commit `feat(corpus): evaluation counts by class and adjudicated validity cases`.
+- [x] Tests first: `TestReport_CountsByClassSourceAndBasis`, `TestValidityCases_ScoredOverPrimaryGroup`, `TestMetrics_StatusConsistencyNameAndDenominator`.
+- [x] Implement; commit `feat(corpus): evaluation counts by class and adjudicated validity cases`.
 
 ### Task 8: Proof and review
 

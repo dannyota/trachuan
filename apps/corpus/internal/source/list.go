@@ -15,11 +15,12 @@ import (
 
 // List holds the sources and code tables for a country.
 type List struct {
-	Country       string                  `yaml:"country" json:"country"`
-	Chinhphu      ChinhphuSources         `yaml:"chinhphu" json:"chinhphu,omitempty"`
-	VBPL          VBPLSources             `yaml:"vbpl" json:"vbpl"`
-	RelationCodes map[string]RelationCode `yaml:"relation_codes" json:"relation_codes"`
-	StatusCodes   map[string]StatusCode   `yaml:"status_codes" json:"status_codes"`
+	CorrectionsBytes string                  `yaml:"corrections_bytes" json:"corrections_bytes,omitempty"`
+	Country          string                  `yaml:"country" json:"country"`
+	Chinhphu         ChinhphuSources         `yaml:"chinhphu" json:"chinhphu,omitempty"`
+	VBPL             VBPLSources             `yaml:"vbpl" json:"vbpl"`
+	RelationCodes    map[string]RelationCode `yaml:"relation_codes" json:"relation_codes"`
+	StatusCodes      map[string]StatusCode   `yaml:"status_codes" json:"status_codes"`
 }
 
 // VBPLSources defines the discovery queries.
@@ -90,6 +91,11 @@ func Parse(data []byte) (List, error) {
 	var list List
 	if err := yaml.Unmarshal(data, &list); err != nil {
 		return List{}, fmt.Errorf("parse source list: %w", err)
+	}
+	if list.CorrectionsBytes != "" {
+		if _, err := ParseCorrections([]byte(list.CorrectionsBytes)); err != nil {
+			return List{}, err
+		}
 	}
 	for _, entries := range [][]string{list.VBPL.NamedNumbers, list.Chinhphu.NamedNumbers} {
 		for _, entry := range entries {

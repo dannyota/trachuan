@@ -1,6 +1,7 @@
 package source
 
 import (
+	"encoding/json"
 	"os"
 	"reflect"
 	"strings"
@@ -114,5 +115,27 @@ func TestParse_OlderSnapshotRetainsKeywordAgencies(t *testing.T) {
 	list, err := Parse([]byte(`{"country":"vn","vbpl":{"keyword_agencies":["55","56"]}}`))
 	if err != nil || !reflect.DeepEqual(list.VBPL.KeywordAgencies, []string{"55", "56"}) {
 		t.Fatalf("agencies=%v err=%v", list.VBPL.KeywordAgencies, err)
+	}
+}
+
+func TestParse_FrozenCorrectionBytes(t *testing.T) {
+	list, err := Parse([]byte(`{"country":"vn","corrections_bytes":"[]\n# reviewed\n"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if list.CorrectionsBytes != "[]\n# reviewed\n" {
+		t.Fatal("snapshot did not preserve correction bytes")
+	}
+}
+
+func TestParse_RejectsMalformedCorrections(t *testing.T) {
+	for _, raw := range []string{"not: a list", "- key: x\n  set: {unknown: value}", "- key: x\n  set: {eff_from: 2024-02-30}"} {
+		snapshot, err := json.Marshal(map[string]string{"corrections_bytes": raw})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := Parse(snapshot); err == nil {
+			t.Errorf("accepted malformed corrections %q", raw)
+		}
 	}
 }

@@ -76,6 +76,6 @@ status_codes:
   "HHL1P": {class: "partial", current: true}
   "HHL1PHAN": {class: "partial", current: true}
   "CCHL": {class: "not_yet", current: false}
-  "TNHL": {class: "not_yet", current: false}
+  "TNHL": {class: "suspended", current: false}
   "CHUACOHIEULUC": {class: "not_yet", current: false}
   "TDHL": {class: "suspended", current: false}
