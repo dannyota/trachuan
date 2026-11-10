@@ -31,3 +31,17 @@ func TestSuite_RejectsMissingMapBytes(t *testing.T) {
 		t.Fatal("missing map bytes accepted")
 	}
 }
+
+func TestLoadSuiteFS_DoesNotRequireInventoryHash(t *testing.T) {
+	files := fstest.MapFS{}
+	for _, name := range []string{"legacy.json", "old-product.json", "identity-map.json", "fixtures.json"} {
+		data, err := vnFixtures.ReadFile("testdata/vn/" + name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		files[name] = &fstest.MapFile{Data: data}
+	}
+	if _, err := LoadSuiteFS(files, "."); err != nil {
+		t.Fatalf("load without inventory hash: %v", err)
+	}
+}

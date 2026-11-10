@@ -45,7 +45,7 @@ func recordedSuite() Suite {
 		}
 		entries = append(entries, MapEntry{CaseID: c.ID, CitationIndex: 0, State: "resolved", ExpectedNumber: "doc", Reason: "reviewed", ReviewedAt: "2026-11-09", Evidence: []Evidence{{FetchSHA256: "hash", QuotedSpan: "evidence"}}, Alternatives: []Alternative{{Country: "vn", DocumentKey: "doc", Kind: "document"}}})
 	}
-	return Suite{Legacy: cases, Rejections: []string{"reject1", "reject2", "reject3"}, Hashes: FixtureHashes{Legacy: "fixture", Inventory: "inventory"}, Map: IdentityMap{Version: 1, LegacySHA256: "fixture", IdentityInventoryHash: "inventory", Entries: entries}}
+	return Suite{Legacy: cases, Rejections: []string{"reject1", "reject2", "reject3"}, Hashes: FixtureHashes{Legacy: "fixture"}, Map: IdentityMap{Version: 1, LegacySHA256: "fixture", IdentityInventoryHash: "inventory", Entries: entries}}
 }
 func TestRun_RecordedArmsPassQuality(t *testing.T) {
 	date := retrieval.Date{Year: 2026, Month: time.November, Day: 9}

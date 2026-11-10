@@ -71,7 +71,7 @@ func (s *Stage) inputHash(art artifact.Result, run stage.Run) (string, error) {
 		previous = fmt.Sprintf("%x", sha256.Sum256(b))
 	}
 	h := s.cfg.Suite.Hashes
-	return stage.RecipeHash("eval-input", "1", art.SHA256, h.Legacy, h.OldProduct, h.IdentityMap, h.Inventory, previous, d.Format("2006-01-02"), "exact,ann"), nil
+	return stage.RecipeHash("eval-input", "1", art.SHA256, h.Legacy, h.OldProduct, h.IdentityMap, previous, d.Format("2006-01-02"), "exact,ann"), nil
 }
 
 // Plan resolves the build and selects its single evaluation item.

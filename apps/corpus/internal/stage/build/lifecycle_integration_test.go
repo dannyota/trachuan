@@ -123,7 +123,7 @@ func TestBuild_ProcessCreatesTemporaryRelease(t *testing.T) {
 	defer pool.Close()
 	f.run.Snapshot.SourceList = []byte(`{"country":"vn","status_codes":{}}`)
 	inv := f.inventory(t)
-	suite := evaluation.Suite{Legacy: []evaluation.Case{{ID: "one", Question: "ngân hàng", ExpectAbstain: true}, {ID: "two", Question: "abc", ExpectAbstain: true}, {ID: "three", Question: "def", ExpectAbstain: true}, {ID: "four", Question: "ghi", ExpectAbstain: true}}, Rejections: []string{"two", "three", "four"}, Hashes: evaluation.FixtureHashes{Legacy: "legacy", Inventory: inv.IdentityHash()}, Map: evaluation.IdentityMap{Version: 1, LegacySHA256: "legacy", IdentityInventoryHash: inv.IdentityHash()}}
+	suite := evaluation.Suite{Legacy: []evaluation.Case{{ID: "one", Question: "ngân hàng", ExpectAbstain: true}, {ID: "two", Question: "abc", ExpectAbstain: true}, {ID: "three", Question: "def", ExpectAbstain: true}, {ID: "four", Question: "ghi", ExpectAbstain: true}}, Rejections: []string{"two", "three", "four"}, Hashes: evaluation.FixtureHashes{Legacy: "legacy"}, Map: evaluation.IdentityMap{Version: 1, LegacySHA256: "legacy", IdentityInventoryHash: inv.IdentityHash()}}
 	pinTestSuite(t, &suite)
 	cfg := Config{BuilderURL: builder.URL, Template: builder.Template, PgDump: testTool("CORPUS_PG_DUMP", "pg_dump"), PgRestore: testTool("CORPUS_PG_RESTORE", "pg_restore"), Suite: suite, Now: time.Now, Embedder: buildFakeEmbedder{}, DatabaseDiskPath: t.TempDir(), MinFreeBeforeBytes: 1, MinFreeDuringBytes: 1}
 	cfg.Versions, err = InspectVersions(ctx, cfg)

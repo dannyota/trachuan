@@ -107,8 +107,8 @@ func TestGetExtractArtifactByHash_ReturnsLowestID(t *testing.T) {
 	defer db.Close()
 	var first, second int64
 	hash := strings.Repeat("a", 64)
-	for i, id := range []*int64{&first, &second} {
-		err = db.QueryRow(ctx, `INSERT INTO artifact (stage,item_key,input_hash,recipe_hash,path,sha256) VALUES ('extract','vn:vbpl:1',$1,$2,$3,$4) RETURNING id`, strings.Repeat(string(rune('b'+i)), 64), strings.Repeat("d", 64), string(rune('a'+i)), hash).Scan(id)
+	for i, id := range []*int64{&second, &first} {
+		err = db.QueryRow(ctx, `INSERT INTO artifact (id,stage,item_key,input_hash,recipe_hash,path,sha256) OVERRIDING SYSTEM VALUE VALUES ($5,'extract','vn:vbpl:1',$1,$2,$3,$4) RETURNING id`, strings.Repeat(string(rune('b'+i)), 64), strings.Repeat("d", 64), string(rune('a'+i)), hash, 2-i).Scan(id)
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"testing"
 
+	"danny.vn/trachuan/apps/corpus/internal/evaluation"
 	"danny.vn/trachuan/apps/corpus/internal/stage"
 )
 
@@ -46,6 +47,12 @@ func TestBuildInput_MapBytesChangeInputNotRecipe(t *testing.T) {
 	second := buildInputHash("vn", "20990101", "manifest", "map-two")
 	if first == second {
 		t.Fatal("map did not change input hash")
+	}
+	snapshot := stage.Snapshot{SourceList: []byte(`{"country":"vn","status_codes":{}}`)}
+	a := New(Config{Suite: evaluation.Suite{MapBytes: []byte("map-one"), Hashes: evaluation.FixtureHashes{IdentityMap: "map-one"}}}).Recipe(snapshot)
+	b := New(Config{Suite: evaluation.Suite{MapBytes: []byte("map-two"), Hashes: evaluation.FixtureHashes{IdentityMap: "map-two"}}}).Recipe(snapshot)
+	if a == "" || a != b {
+		t.Fatalf("map changed build recipe: %q != %q", a, b)
 	}
 }
 

@@ -9,10 +9,9 @@ import (
 	"fmt"
 	"io/fs"
 	"path"
-	"strings"
 )
 
-//go:embed testdata/vn/*.json testdata/vn/inventory.sha256
+//go:embed testdata/vn/*.json
 var vnFixtures embed.FS
 
 // VNSuite loads the embedded Vietnamese evaluation suite.
@@ -47,10 +46,6 @@ func LoadSuiteFS(fsys fs.FS, dir string) (Suite, error) {
 	if err != nil {
 		return Suite{}, err
 	}
-	inventory, err := read("inventory.sha256")
-	if err != nil {
-		return Suite{}, err
-	}
 	hash := func(b []byte) string { sum := sha256.Sum256(b); return hex.EncodeToString(sum[:]) }
 	var meta struct {
 		SHA256           string `json:"sha256"`
@@ -80,14 +75,7 @@ func LoadSuiteFS(fsys fs.FS, dir string) (Suite, error) {
 	if err != nil {
 		return Suite{}, err
 	}
-	inv := strings.TrimSpace(string(inventory))
-	if len(inv) != 64 {
-		return Suite{}, fmt.Errorf("invalid inventory hash")
-	}
-	if _, err = hex.DecodeString(inv); err != nil {
-		return Suite{}, fmt.Errorf("invalid inventory hash: %w", err)
-	}
-	s := Suite{Legacy: cases, Map: m, MapBytes: append([]byte(nil), mapping...), Rejections: old.Rejections, Hashes: FixtureHashes{Legacy: hash(legacy), OldProduct: hash(product), IdentityMap: hash(mapping), Inventory: inv}}
+	s := Suite{Legacy: cases, Map: m, MapBytes: append([]byte(nil), mapping...), Rejections: old.Rejections, Hashes: FixtureHashes{Legacy: hash(legacy), OldProduct: hash(product), IdentityMap: hash(mapping)}}
 	if err = validateSuite(s); err != nil {
 		return Suite{}, fmt.Errorf("validate suite: %w", err)
 	}

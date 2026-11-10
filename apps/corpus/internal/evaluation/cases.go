@@ -33,7 +33,6 @@ type FixtureHashes struct {
 	Legacy      string
 	IdentityMap string
 	OldProduct  string
-	Inventory   string
 }
 
 // Suite holds the cases and adjudications for evaluation.

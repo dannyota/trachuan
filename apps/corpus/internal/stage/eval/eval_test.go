@@ -24,6 +24,18 @@ func TestEvalStage_ReportStatusAndGaps(t *testing.T) {
 	}
 }
 
+func TestInputHash_OmitsInventory(t *testing.T) {
+	s := New(Config{Suite: evaluation.Suite{Hashes: evaluation.FixtureHashes{Legacy: "legacy", OldProduct: "product", IdentityMap: "map"}}})
+	got, err := s.inputHash(artifact.Result{SHA256: "build"}, stage.Run{Rel: "20990101"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := stage.RecipeHash("eval-input", "1", "build", "legacy", "product", "map", "", "2099-01-01", "exact,ann")
+	if got != want {
+		t.Fatalf("input hash = %s, want %s", got, want)
+	}
+}
+
 func TestResolve_RejectsInvalidReport(t *testing.T) {
 	for _, tc := range []struct {
 		name, status, country, rel string

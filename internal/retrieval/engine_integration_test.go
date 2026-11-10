@@ -179,6 +179,30 @@ func fixtureWithTrace(t *testing.T, trace *exactSettingsTrace) (*pgxpool.Pool, *
 func fixtureOptions() Options {
 	return Options{Now: func() time.Time { return time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC) }, Profile: "evaluation"}
 }
+
+func TestSearch_ReturnsDocumentDerivationGaps(t *testing.T) {
+	db, engine, _ := fixture(t)
+	ctx := context.Background()
+	_, err := db.Exec(ctx, `INSERT INTO coverage_gap(id,kind,document_id,document_key,stage,item_key,detail,message,note) VALUES (1,'consolidated_status_unordered',1,'vn:1','build','vn:1','','',''),(2,'consolidated_status_unresolved',3,'vn:3','build','vn:3','','','')`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	response, err := engine.Search(ctx, Request{Query: "ngân hàng", Mode: "exact"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := map[string]bool{}
+	for _, hit := range response.Hits {
+		for _, gap := range hit.Gaps {
+			found[hit.Identity.DocumentKey+":"+gap.Kind] = true
+		}
+	}
+	for _, want := range []string{"vn:1:consolidated_status_unordered", "vn:3:consolidated_status_unresolved"} {
+		if !found[want] {
+			t.Errorf("missing gap %s", want)
+		}
+	}
+}
 func collectFixture(t *testing.T, e *Engine, req Request, depth Depths) Arms {
 	t.Helper()
 	p, err := e.Prepare(context.Background(), req)

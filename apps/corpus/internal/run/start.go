@@ -131,9 +131,12 @@ func Start(ctx context.Context, d Deps, cc, rel, until, previousManifest string)
 	if !containsStage(d.Stages, next) {
 		return fmt.Errorf("unknown next stage %q", next)
 	}
+	if !containsStage(snap.Stages, next) {
+		return fmt.Errorf("resume stage %q is not included in snapshot", next)
+	}
 	if until != "" {
 		nextIndex, untilIndex := -1, -1
-		for i, name := range snap.Stages {
+		for i, name := range d.Stages {
 			if name == next {
 				nextIndex = i
 			}

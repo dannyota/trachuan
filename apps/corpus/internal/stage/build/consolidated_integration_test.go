@@ -46,6 +46,15 @@ func TestLoad_ConsolidatedStatus(t *testing.T) {
 	if _, err := Load(context.Background(), f.corpus, f.inventory(t), f.artifacts, f.recipes, codes); err != nil {
 		t.Fatal(err)
 	}
+	for _, doc := range docs {
+		if doc.code == "" {
+			continue
+		}
+		var basis string
+		if err := f.corpus.QueryRow(context.Background(), `SELECT status_basis FROM document WHERE key=$1`, fmt.Sprintf("vn:vbpl:%d", doc.id)).Scan(&basis); err != nil || basis != "source_status" {
+			t.Errorf("document %d status basis %q: %v", doc.id, basis, err)
+		}
+	}
 	for id, want := range map[int]struct{ class, gap string }{
 		1: {"unknown", "consolidated_status_unordered"}, 3: {"unknown", "consolidated_status_unordered"}, 5: {"unknown", "consolidated_status_unordered"}, 7: {"unknown", "consolidated_status_unresolved"}, 9: {"unknown", "consolidated_status_unordered"}, 11: {"unknown", "consolidated_status_unordered"}, 13: {"expired", ""}, 14: {"unknown", "consolidated_status_unresolved"}, 15: {"in_force", ""}, 17: {"expired", ""}, 19: {"expired", ""},
 	} {

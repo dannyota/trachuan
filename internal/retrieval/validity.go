@@ -24,6 +24,9 @@ func stamp(doc Document, arms Arms) (Validity, []Gap) {
 		current = eligible && from != nil
 	}
 	var gaps []Gap
+	for _, kind := range doc.DerivationGaps {
+		gaps = append(gaps, Gap{Kind: kind, Message: "Consolidated document status could not be fully derived."})
+	}
 	if from == nil {
 		gaps = append(gaps, Gap{Kind: "missing_effective_date", Message: "Effective start date is missing."})
 	}

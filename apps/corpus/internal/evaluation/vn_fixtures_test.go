@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"danny.vn/trachuan/internal/retrieval"
 )
 
 func TestVNFixtures_Validate(t *testing.T) {
@@ -70,5 +72,39 @@ func TestVNFixtures_Validate(t *testing.T) {
 	}
 	if len(report) == 0 {
 		t.Fatal("missing inventory should report incomplete mappings")
+	}
+}
+
+func TestVNIdentityMap_ResolvedRecordsComplete(t *testing.T) {
+	suite, err := VNSuite()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range suite.Map.Entries {
+		if entry.State != "resolved" {
+			continue
+		}
+		if len(entry.Evidence) == 0 || len(entry.Alternatives) == 0 {
+			t.Errorf("%s/%d: missing evidence or alternatives", entry.CaseID, entry.CitationIndex)
+		}
+		for _, evidence := range entry.Evidence {
+			found := false
+			for _, alt := range entry.Alternatives {
+				if alt.DocumentKey == evidence.DocumentKey && alt.DocumentNumber == evidence.DocumentNumber {
+					found = true
+				}
+			}
+			if evidence.DocumentKey == "" || evidence.DocumentNumber == "" || retrieval.NormalizeNumber(evidence.DocumentNumber) != evidence.DocumentNumber || !found {
+				t.Errorf("%s/%d: incomplete evidence identity", entry.CaseID, entry.CitationIndex)
+			}
+		}
+		for _, alt := range entry.Alternatives {
+			if alt.DocumentKey == "" || alt.DocumentNumber == "" || retrieval.NormalizeNumber(alt.DocumentNumber) != alt.DocumentNumber {
+				t.Errorf("%s/%d: incomplete alternative identity", entry.CaseID, entry.CitationIndex)
+			}
+			if alt.Kind == "relation" && (alt.SourceKey == "" || alt.SourceNumber == "" || retrieval.NormalizeNumber(alt.SourceNumber) != alt.SourceNumber || alt.TargetKey == "" || alt.TargetNumber == "" || retrieval.NormalizeNumber(alt.TargetNumber) != alt.TargetNumber) {
+				t.Errorf("%s/%d: incomplete relation identity", entry.CaseID, entry.CitationIndex)
+			}
+		}
 	}
 }

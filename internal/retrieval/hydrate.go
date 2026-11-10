@@ -34,7 +34,7 @@ func hydrate(ctx context.Context, tx pgx.Tx, g *ArmGroup, vec string) error {
  SELECT id AS group_id,id,kind FROM groups
  UNION ALL SELECT m.group_id,p.id,p.kind FROM mapped m JOIN provision p ON p.parent_id=m.id AND p.kind<>'khoan' WHERE m.kind='khoan' OR m.group_id<>m.id
  )
- SELECT c.id,c.ordinal,d.country,d.key,p.anchor,p.id,m.group_id,gp.anchor,c.content,c.context_prefix,c.spans,1-(c.embedding <=> $2::vector),p.parent_id,p.kind,p.label,p.heading,p.text,p.node_id,d.number,d.title,d.status_class,d.status_basis,d.is_current,d.eff_from,d.eff_to,d.source_url
+ SELECT c.id,c.ordinal,d.country,d.key,p.anchor,p.id,m.group_id,gp.anchor,c.content,c.context_prefix,c.spans,1-(c.embedding <=> $2::vector),p.parent_id,p.kind,p.label,p.heading,p.text,p.node_id,d.number,d.title,d.status_class,d.status_basis,d.is_current,d.eff_from,d.eff_to,d.source_url,ARRAY(SELECT DISTINCT g.kind FROM coverage_gap g WHERE g.document_id=d.id AND g.kind IN ('consolidated_status_unordered','consolidated_status_unresolved') ORDER BY g.kind)
  FROM mapped m JOIN chunk c ON c.provision_id=m.id JOIN document d ON d.id=c.document_id JOIN provision p ON p.id=c.provision_id JOIN provision gp ON gp.id=m.group_id WHERE m.id=m.group_id OR m.kind<>'khoan' ORDER BY c.id`
 	rows, err := tx.Query(ctx, sql, ids, vec)
 	if err != nil {
@@ -44,7 +44,7 @@ func hydrate(ctx context.Context, tx pgx.Tx, g *ArmGroup, vec string) error {
 	groupIDs := map[int64]bool{}
 	for rows.Next() {
 		var c Candidate
-		if rows.Scan(&c.ChunkID, &c.Ordinal, &c.Identity.Country, &c.Identity.DocumentKey, &c.Identity.Anchor, &c.ProvisionID, &c.GroupID, &c.Group.Anchor, &c.Content, &c.ContextPrefix, &c.Spans, &c.Cosine, &c.Provision.ParentID, &c.Provision.Kind, &c.Provision.Label, &c.Provision.Heading, &c.Provision.Text, &c.Provision.NodeID, &c.Document.Number, &c.Document.Title, &c.Document.StatusClass, &c.Document.StatusBasis, &c.Document.IsCurrent, &c.Document.EffectiveFrom, &c.Document.EffectiveTo, &c.Document.SourceURL) != nil {
+		if rows.Scan(&c.ChunkID, &c.Ordinal, &c.Identity.Country, &c.Identity.DocumentKey, &c.Identity.Anchor, &c.ProvisionID, &c.GroupID, &c.Group.Anchor, &c.Content, &c.ContextPrefix, &c.Spans, &c.Cosine, &c.Provision.ParentID, &c.Provision.Kind, &c.Provision.Label, &c.Provision.Heading, &c.Provision.Text, &c.Provision.NodeID, &c.Document.Number, &c.Document.Title, &c.Document.StatusClass, &c.Document.StatusBasis, &c.Document.IsCurrent, &c.Document.EffectiveFrom, &c.Document.EffectiveTo, &c.Document.SourceURL, &c.Document.DerivationGaps) != nil {
 			rows.Close()
 			return errors.New("read hydrated candidate failed")
 		}

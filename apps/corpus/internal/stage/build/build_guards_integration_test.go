@@ -80,7 +80,7 @@ func TestBuild_IdentityInventoryHashDoesNotGatePlanning(t *testing.T) {
 	cfg := f.cfg
 	cfg.Suite.Map.IdentityInventoryHash = strings.Repeat("f", 64)
 	pinTestSuite(t, &cfg.Suite)
-	if cfg.Suite.Map.IdentityInventoryHash == cfg.Suite.Hashes.Inventory {
+	if cfg.Suite.Map.IdentityInventoryHash == f.cfg.Suite.Map.IdentityInventoryHash {
 		t.Fatal("test did not change inventory identity")
 	}
 	if _, err := New(cfg).Plan(ctx, f.env, f.run); err != nil {

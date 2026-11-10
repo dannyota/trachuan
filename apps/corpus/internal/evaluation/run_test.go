@@ -79,7 +79,7 @@ func testSuite(t *testing.T) Suite {
 	if err = json.Unmarshal(read("old-product.json"), &product); err != nil {
 		t.Fatal(err)
 	}
-	return Suite{Legacy: cases, Map: m, Rejections: product.Rejections, Hashes: FixtureHashes{Legacy: m.LegacySHA256, Inventory: m.IdentityInventoryHash}}
+	return Suite{Legacy: cases, Map: m, Rejections: product.Rejections, Hashes: FixtureHashes{Legacy: m.LegacySHA256}}
 }
 func TestRun_RejectionsVectorsAndFiles(t *testing.T) {
 	suite := testSuite(t)
