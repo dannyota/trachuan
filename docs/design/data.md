@@ -1,27 +1,37 @@
 # Data model
 
-Tables, keys and rules. Exact DDL belongs to migrations and the corpus schema
-template. Changing a rule here needs an ADR History entry when an ADR owns it.
+Tables, keys and rules. The proposed exact corpus columns, indexes and
+constraints are in the [corpus schema](corpus-schema.md), implemented by the
+root `internal/corpusdb` template. Workshop changes use goose migrations.
+Changing a rule here needs an ADR History entry when an ADR owns it.
 
 ## Corpus database `corpus_<cc>_<rel>` (read only when serving)
 
-| Table                 | Content                                                                                                                                                                                                                                              |
-| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `document`            | `id`, durable `key` (`vn:vbpl:<ItemID>`), number, title, type, issuer, issue date, `eff_from`, `eff_to`, source validity status, `is_consolidated`                                                                                                   |
-| `source_file`         | `document_id`, `source` (vbpl, congbao, sbv), `url`, `hash`, `role` (main, appendix, scan), `fetched_at`                                                                                                                                             |
-| `provision`           | `id`, `document_id`, `parent_id`, `kind` (text, per-country list), `label` native, `ordinal`, `path` ltree, `text` verbatim, `anchor`                                                                                                                |
-| `provision_validity`  | provision-level validity when evidence exists; empty at launch                                                                                                                                                                                       |
-| `chunk`               | `id`, `provision_id`, `text` with context prefix, `embedding` (dimensions from the release recipe, HNSW cosine), `sparse` (BM25 `sparsevec`), `token_count`                                                                                          |
-| `relation`            | `source_document_id`, `target_document_id`, `kind`, optional `source_provision_id`, `target_provision_id`, `evidence` verbatim, `method`                                                                                                             |
-| `taxonomy_node`       | `id`, `country`, `parent_id`, `level`, public `code`, `name`, `description`, `origin` (phapdien, custom), `status` (active, retired), `path` ltree                                                                                                   |
-| `taxonomy_assignment` | `provision_id`, `node_id`, `method` (manual, phapdien_seed, llm), `confidence`, `taxonomy_version`                                                                                                                                                   |
-| `coverage_gap`        | `kind`, `document_id` or `node_id`, message                                                                                                                                                                                                          |
-| `release`             | one row: `rel`, `schema_version`, `taxonomy_version`, `dense_recipe`, `lexical_recipe` (algorithm identifier), `lexical_stats` (vocabulary hash, document frequencies, length normalization), `source_manifest_hash`, evaluation summary, `built_at` |
+| Table                 | Content                                                                                                                                                  |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `document`            | Durable key, metadata, raw and parsed dates, mapped status/current flag, content state and source hashes                                                 |
+| `source_file`         | Attachment name, hash, size and known provenance; missing URL, role or time stays explicit                                                               |
+| `provision`           | Source node, actual parent, native kind/label/heading, source text, public anchor and internal ltree ancestry                                            |
+| `provision_validity`  | Provision validity backed by evidence; empty at launch                                                                                                   |
+| `chunk`               | One owning provision, separate content/prefix, source spans, dense and sparse vectors, actual token count and input hash                                 |
+| `lexical_df`          | Complete pre-hash token document frequencies; summary and hashes in release lexical statistics                                                           |
+| `relation`            | Source/target keys and numbers, nullable resolved document/provision IDs, raw source codes, evidence and method                                          |
+| `taxonomy_node`       | Public code, parent, level, name, description, origin, status and internal ancestry                                                                      |
+| `taxonomy_assignment` | Provision, node, family, method, exclusion, confidence and taxonomy version                                                                              |
+| `coverage_gap`        | Kind, optional document/taxonomy identity, absent document key, source stage/item, detail and acceptance                                                 |
+| `release`             | Singleton: schema/taxonomy versions; dense, chunk, lexical and retrieval recipes; lexical statistics; source/build hashes; evaluation status; build time |
 
 Rules:
 
 - Results are provisions, never chunks. Citation and validity come from
   `document` and `provision`.
+- Preserve every valid extracted provision even if a short/duplicate chunk is
+  omitted or its vector is rejected. Missing document endpoints remain named
+  relations; no fake document or vector row conceals a gap. Invalid ancestry
+  remains in its source artifact with a gap, not a broken corpus tree.
+- Corpus tables for taxonomy and provision validity are empty in the index
+  baseline; `taxonomy_version` is empty. Absence of taxonomy is not a passed
+  classification or subject-filter gate.
 - A provision may carry several assignments from different families. A node
   family is the set of nodes under one level-2 ancestor. Within a family a
   provision holds assignments from one method only: a `manual` entry replaces
@@ -36,8 +46,11 @@ Rules:
 - Everything that changes over time belongs to the release: schema version,
   dense recipe (model, dimensions, pooling, prompt, quantization), lexical
   recipe (tokenizer version, normalization, BM25 parameters), lexical stats,
-  taxonomy version, source manifest, evaluation. The server holds no corpus
-  configuration except the active release pointer.
+  chunk recipe, retrieval recipe, taxonomy version, source manifest, evaluation.
+  Recipe 1 retrieval includes provisional threshold provenance. The immutable
+  build dump starts with evaluation `not_run`; [eval](evaluation.md) produces a
+  hash-linked sidecar. The host plan must bind that sidecar in its signed
+  manifest. The server holds no corpus configuration except the release pointer.
 
 ## Auth database `auth` (written when serving)
 
@@ -74,7 +87,8 @@ Rules:
 | `fetched_file`     | fetched attachment metadata, keyed by the artifact that produced it                                                                                                                                                                                                                                                              |
 | `provision`        | extracted structure and verbatim text, keyed by the artifact that produced it                                                                                                                                                                                                                                                    |
 | `relation`         | source relations and evidence, keyed by the artifact that produced it                                                                                                                                                                                                                                                            |
-| Later stage tables | assignments, chunks and vectors feeding `build`                                                                                                                                                                                                                                                                                  |
+| `chunk`            | Artifact ordinal, owning extracted provision, prefix, content, spans and rough size; exact projection in [chunk](chunk.md#workshop-projection-and-checks)                                                                                                                                                                        |
+| Later stage tables | Assignments when taxonomy lands; vectors stay only in verified embedding artifacts, never a workshop vector table                                                                                                                                                                                                                |
 
 Publication is blocked while any expected `run_item` is `pending` or `failed` or
 any `gap` row is unaccepted.

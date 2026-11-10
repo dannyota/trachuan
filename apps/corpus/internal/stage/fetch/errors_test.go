@@ -14,10 +14,10 @@ func TestAPIError_Classifies(t *testing.T) {
 	if !errors.Is(err, stage.ErrSourceData) {
 		t.Fatalf("malformed payload: %v", err)
 	}
-	_, err = apiError(&vbpl.StatusError{Code: 500}, "21657", true)
+	out, err := apiError(&vbpl.StatusError{Code: 500}, "21657", true)
 	var retryable *stage.RetryableError
-	if !errors.As(err, &retryable) || retryable.GapKind != "source_unavailable" {
-		t.Fatalf("persistent 500: %v", err)
+	if err != nil || out.State != "gap" || len(out.Gaps) != 1 || out.Gaps[0] != (stage.Gap{Kind: "source_unavailable", Detail: "fetch document \"21657\": gateway status 500"}) {
+		t.Fatalf("persistent 500: %+v, %v", out, err)
 	}
 	_, err = apiError(errors.New("connection reset"), "1", true)
 	if !errors.As(err, &retryable) || retryable.GapKind != "" {

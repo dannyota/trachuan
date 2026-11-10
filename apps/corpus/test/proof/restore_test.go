@@ -41,7 +41,7 @@ func (h *harness) restoreFetch() {
 		h.t.Fatal("locate pg_dump")
 	}
 	restore := filepath.Join(filepath.Dir(dumpTool), "pg_restore")
-	dump := filepath.Join(h.checkpoints, "vn-"+release, "1-fetch", "workshop.dump")
+	dump := filepath.Join(h.checkpoints, "vn-"+h.rel, "1-fetch", "workshop.dump")
 	cmd := exec.Command(restore, "--exit-on-error", "--dbname", h.dbURL, dump)
 	if restoreErr := cmd.Run(); restoreErr != nil {
 		h.t.Fatalf("restore checkpoint: %v", restoreErr)

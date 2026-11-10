@@ -13,12 +13,13 @@ func WorkflowID(cc, rel string) string { return "build-" + cc + "-" + rel }
 
 // BuildInput carries the release workflow's durable inputs.
 type BuildInput struct {
-	RunID            int64
-	Country, Rel     string
-	Generation       int
-	Stage, Until     string
-	Begin            bool
-	HistoryLimit     int
-	BatchesInFlight  int
-	HeartbeatTimeout time.Duration
+	RunID                int64
+	Country, Rel         string
+	Generation           int
+	Stage, Until         string
+	Begin                bool
+	HistoryLimit         int
+	BatchesInFlight      int
+	FetchBatchesInFlight int
+	HeartbeatTimeout     time.Duration
 }

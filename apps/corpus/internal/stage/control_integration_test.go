@@ -106,6 +106,14 @@ func TestPlanStage_RefusesRecipeMismatch(t *testing.T) {
 		t.Fatalf("calls=%d err=%v", s.calls, err)
 	}
 }
+func TestPlanStage_RefusesMissingFrozenRecipe(t *testing.T) {
+	env, in, s := controlSetup(t)
+	batchExec(t, env.DB, `UPDATE run SET snapshot='{"Recipes":{"other":"other"}}' WHERE id=$1`, in.RunID)
+	_, err := controlPlan(env, in, s)
+	if err == nil || s.calls != 0 {
+		t.Fatalf("calls=%d err=%v", s.calls, err)
+	}
+}
 func TestPlanStage_ResetsFailedOnResume(t *testing.T) {
 	t.Parallel()
 	env, in, s := controlSetup(t)

@@ -13,6 +13,7 @@ import (
 	"danny.vn/trachuan/apps/corpus/internal/artifact"
 	"danny.vn/trachuan/apps/corpus/internal/stage"
 	"danny.vn/trachuan/apps/corpus/internal/vbpl"
+	"golang.org/x/sync/errgroup"
 )
 
 type file struct {
@@ -32,29 +33,45 @@ func (s *Stage) writeBundle(ctx context.Context, dir, id string, detail, tree, d
 	}
 	files := make([]file, 0, len(entries))
 	result := report{Missing: []string{}, TooLarge: []string{}}
+	type fileResult struct {
+		downloaded vbpl.Downloaded
+		hit        bool
+		err        error
+	}
+	results := make([]fileResult, len(entries))
+	group, requestCtx := errgroup.WithContext(ctx)
+	for i, entry := range entries {
+		group.Go(func() error {
+			downloaded, hit := s.cachedFile(id, filesDir, entry)
+			var err error
+			if !hit {
+				downloaded, err = s.client.Download(requestCtx, id, entry, filesDir, s.fileLimit)
+			}
+			results[i] = fileResult{downloaded: downloaded, hit: hit, err: err}
+			return nil
+		})
+	}
+	_ = group.Wait()
 	hits := 0
-	for _, entry := range entries {
-		downloaded, hit := s.cachedFile(id, filesDir, entry)
-		var err error
-		if hit {
+	for i, entry := range entries {
+		item := results[i]
+		if item.hit {
 			hits++
-		} else {
-			downloaded, err = s.client.Download(ctx, id, entry, filesDir, s.fileLimit)
 		}
-		if err != nil {
+		if item.err != nil {
 			if ctx.Err() != nil {
 				return fmt.Errorf("download attachment: %w", ctx.Err())
 			}
-			if errors.Is(err, vbpl.ErrTooLarge) {
+			if errors.Is(item.err, vbpl.ErrTooLarge) {
 				result.TooLarge = append(result.TooLarge, entry.Name)
-			} else if errors.Is(err, vbpl.ErrNotFound) {
+			} else if errors.Is(item.err, vbpl.ErrNotFound) {
 				result.Missing = append(result.Missing, entry.Name)
 			} else {
-				return stage.Retryable(fmt.Errorf("download attachment %q: %w", entry.Name, err))
+				return stage.Retryable(fmt.Errorf("download attachment %q: %w", entry.Name, item.err))
 			}
 			continue
 		}
-		files = append(files, file{Name: entry.Name, SHA256: downloaded.SHA256, Size: downloaded.Size})
+		files = append(files, file{Name: entry.Name, SHA256: item.downloaded.SHA256, Size: item.downloaded.Size})
 	}
 	if hits > 0 {
 		slog.Info("attachment cache hits", "document_key", "vn:vbpl:"+id, "count", hits)

@@ -292,6 +292,20 @@ func TestStart_RefusesUntilBeforeResumeStage(t *testing.T) {
 	}
 }
 
+func TestStart_RefusesResumeBeyondFrozenStages(t *testing.T) {
+	for _, until := range []string{"discover", "fetch"} {
+		t.Run(until, func(t *testing.T) {
+			d := lifecycleDeps(t)
+			d.Stages = []string{"discover", "fetch", "chunk"}
+			next := "chunk"
+			insertLifecycleRun(t, d, "paused", time.Now(), testSnapshot(), &next)
+			if err := Start(context.Background(), d, "vn", d.TaskQueue, until, ""); err == nil {
+				t.Fatal("resume beyond until accepted")
+			}
+		})
+	}
+}
+
 func TestStart_ChecksOpenWorkflowInEveryState(t *testing.T) {
 	t.Parallel()
 	for _, state := range []string{"failed", "paused", "cancelled"} {

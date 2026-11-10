@@ -44,7 +44,7 @@ func expectedFixture(t *testing.T, fixtures ...listingFixture) (*pgxpool.Pool, s
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := db.QueryRow(ctx, `INSERT INTO run (country,rel,state,snapshot) VALUES ('vn',$1,'paused',$2) RETURNING id`, f.rel, snapshot).Scan(&current.ID); err != nil {
+		if err = db.QueryRow(ctx, `INSERT INTO run (country,rel,state,snapshot) VALUES ('vn',$1,'paused',$2) RETURNING id`, f.rel, snapshot).Scan(&current.ID); err != nil {
 			t.Fatal(err)
 		}
 		definitions, err := queries(current)

@@ -14,3 +14,14 @@ condition = "AND"
 paths = ['''apps/corpus/internal/vbpl/testdata/tree-.*\.json''']
 regexes = ['''key"\s*:\s*"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"''']
 regexTarget = "match"
+
+# Embedder recipe reports pin the model by commit ("resolved_revision",
+# "tokenizer_revision", 40 hex characters) and by file hashes
+# ("tokenizer_sha256", "weights_sha256", 64 hex characters); only those fields,
+# only in the recipe files, are allowed.
+[[allowlists]]
+description = "Model file hashes in embedder recipes"
+condition = "AND"
+paths = ['''internal/embedding/recipes/.*\.json''']
+regexes = ['''(tokenizer|weights)_sha256"\s*:\s*"[0-9a-f]{64}"''', '''(resolved|tokenizer)_revision"\s*:\s*"[0-9a-f]{40}"''']
+regexTarget = "line"

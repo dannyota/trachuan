@@ -28,6 +28,7 @@ Language: documents, code, comments and commits in English. Product interface in
 |-|-|
 |Planning, briefing, implementing, reviewing|`instructions/workflow.md`|
 |Go or SQL|`instructions/go.md`|
+|Python (`apps/embedder`)|`instructions/python.md`|
 |Nuxt or TypeScript|`instructions/web.md`|
 |Containers, host, OpenTofu, releases|`instructions/deploy.md`|
 |Tests, evaluation, CI evidence|`instructions/testing.md`|
@@ -36,21 +37,20 @@ Precedence: an accepted ADR wins over design text; design wins over a plan. Code
 
 ## Agents
 
-The owner talks to the primary Claude session, which runs as `manager`. It plans, writes briefs, verifies results, runs local checks, and owns Git, tags and deploys. Codex does design, design review, implementation and troubleshooting through `scripts/codex-agent.sh <role> <worktree> <brief> <report>`; Claude Opus does code review as a subagent.
+The owner talks to the primary Claude session, which runs as `manager`. It plans, writes designs, ADRs and documentation, reviews them itself and makes the decisions; it writes briefs, verifies results, runs local checks, and owns Git, tags and deploys. Codex `gpt-6.1-sol` independently reviews architecture designs and code, and Codex `implementer` does implementation and troubleshooting, through `scripts/codex-agent.sh <role> <worktree> <brief> <report>`. Documentation and prose the primary wrote need no independent review.
 
 |Role|Where|Model, effort|Duty|
 |-|-|-|-|
-|`designer`|Codex `.codex/agents/designer.toml`|`gpt-6-astra` high, workspace-write in `docs/`|Design notes, ADRs, contract proposals, UI specs; never code|
-|`reviewer` (design)|Codex `.codex/agents/reviewer.toml`|`gpt-6-astra` high, read-only|Independent review of designs and ADRs before implementation|
+|`reviewer`|Codex `.codex/agents/reviewer.toml`|`gpt-6.1-sol` high, read-only|Independent review of architecture designs, ADRs and code; adversarial pass|
 |`implementer`|Codex `.codex/agents/implementer.toml`|`gpt-6.1-terra` high, workspace-write|One bounded task in named paths; root-causes and fixes a failure from supplied evidence|
-|`reviewer` (code)|Claude `.claude/agents/reviewer.md`|Opus 5.5 xhigh, read-only|Independent code review and adversarial pass after the last code task|
 |exploration|Claude `Explore` agent|default|Searches and mechanical reading|
+|`designer`|Codex `.codex/agents/designer.toml`|`gpt-6-astra` high, workspace-write in `docs/`|Optional second author of a design draft, only when the primary chooses it; never the default|
 
 No model reviews its own work. The primary states the route in every brief. Local builds and tests run on the owner's MacBook; the primary runs them and gives reviewers the output.
 
 |Lane|Owned paths|Never|
 |-|-|-|
-|backend|`apps/server/`, `apps/corpus/`, `packages/schema/`, migrations|Edits web UI or production infrastructure|
+|backend|`apps/server/`, `apps/corpus/`, `apps/embedder/`, root `internal/`, `packages/schema/`, migrations|Edits web UI or production infrastructure|
 |frontend|`apps/web/`|Edits Go, migrations or infrastructure|
 |devops|`deploy/`, `.github/workflows/`, release scripts|Reads secret values or applies infrastructure unreviewed|
 

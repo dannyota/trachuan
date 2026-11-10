@@ -1,0 +1,8 @@
+{
+  "legacy_sha256": "881d09074ed5160e1e3ef97cd9220eb53ee16ccbbd7d7b0d39fb9483bbcb3aae",
+  "rejection_ids": [
+    "edge-no-diacritics-infosec",
+    "edge-no-diacritics-payment",
+    "edge-no-diacritics-mangluoi"
+  ]
+}

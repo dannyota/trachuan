@@ -52,7 +52,7 @@ func Start(ctx context.Context, d Deps, cc, rel, until, previousManifest string)
 	}
 	sum := sha256.Sum256(d.SourceList)
 	version := workerVersion()
-	snap := stage.Snapshot{SourceList: d.SourceList, SourceListHash: hex.EncodeToString(sum[:]), Stages: d.Stages, TaxonomyVersion: "none", WorkerVersion: version, PreviousManifest: previousManifest}
+	snap := stage.Snapshot{SourceList: d.SourceList, SourceListHash: hex.EncodeToString(sum[:]), Stages: includedStages(d.Stages, until, 0), TaxonomyVersion: "none", WorkerVersion: version, PreviousManifest: previousManifest}
 	raw, err := json.Marshal(snap)
 	if err != nil {
 		return fmt.Errorf("encode snapshot: %w", err)
@@ -95,13 +95,19 @@ func Start(ctx context.Context, d Deps, cc, rel, until, previousManifest string)
 			return fmt.Errorf("decode snapshot: %w", err)
 		}
 		oldStageCount = len(snap.Stages)
-		snap, _, err = extendSnapshot(snap, d.Stages, d.RecipesFor(snap))
+		snap, _, err = extendSnapshot(snap, includedStages(d.Stages, until, oldStageCount), d.RecipesFor(snap))
 		if err != nil {
 			return err
 		}
 	} else {
-		snap.Recipes = d.RecipesFor(snap)
-		for _, name := range d.Stages {
+		recipes := d.RecipesFor(snap)
+		snap.Recipes = make(map[string]string, len(snap.Stages))
+		for _, name := range snap.Stages {
+			if recipe, ok := recipes[name]; ok {
+				snap.Recipes[name] = recipe
+			}
+		}
+		for _, name := range snap.Stages {
 			if _, ok := snap.Recipes[name]; !ok {
 				return fmt.Errorf("missing recipe for stage %q", name)
 			}
@@ -125,9 +131,12 @@ func Start(ctx context.Context, d Deps, cc, rel, until, previousManifest string)
 	if !containsStage(d.Stages, next) {
 		return fmt.Errorf("unknown next stage %q", next)
 	}
+	if !containsStage(snap.Stages, next) {
+		return fmt.Errorf("resume stage %q is not included in snapshot", next)
+	}
 	if until != "" {
 		nextIndex, untilIndex := -1, -1
-		for i, name := range snap.Stages {
+		for i, name := range d.Stages {
 			if name == next {
 				nextIndex = i
 			}
@@ -156,7 +165,7 @@ func Start(ctx context.Context, d Deps, cc, rel, until, previousManifest string)
 	if taskQueue == "" {
 		taskQueue = TaskQueue
 	}
-	_, err = d.Temporal.ExecuteWorkflow(ctx, client.StartWorkflowOptions{ID: id, TaskQueue: taskQueue, WorkflowIDConflictPolicy: enumspb.WORKFLOW_ID_CONFLICT_POLICY_FAIL, WorkflowExecutionErrorWhenAlreadyStarted: true, WorkflowIDReusePolicy: enumspb.WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE}, WorkflowName, BuildInput{RunID: row.ID, Country: cc, Rel: rel, Generation: int(row.Generation) + 1, Stage: next, Until: until, Begin: true, HistoryLimit: 5000, BatchesInFlight: d.BatchesInFlight, HeartbeatTimeout: d.HeartbeatTimeout})
+	_, err = d.Temporal.ExecuteWorkflow(ctx, client.StartWorkflowOptions{ID: id, TaskQueue: taskQueue, WorkflowIDConflictPolicy: enumspb.WORKFLOW_ID_CONFLICT_POLICY_FAIL, WorkflowExecutionErrorWhenAlreadyStarted: true, WorkflowIDReusePolicy: enumspb.WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE}, WorkflowName, BuildInput{RunID: row.ID, Country: cc, Rel: rel, Generation: int(row.Generation) + 1, Stage: next, Until: until, Begin: true, HistoryLimit: 5000, BatchesInFlight: d.BatchesInFlight, FetchBatchesInFlight: d.FetchBatchesInFlight, HeartbeatTimeout: d.HeartbeatTimeout})
 	if err != nil {
 		var already *serviceerror.WorkflowExecutionAlreadyStarted
 		if errors.As(err, &already) {

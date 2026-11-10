@@ -102,6 +102,12 @@ func BuildRelease(ctx temporalworkflow.Context, in run.BuildInput) error {
 	if limit <= 0 {
 		limit = 2
 	}
+	if in.Stage == "fetch" && in.FetchBatchesInFlight > 0 {
+		limit = in.FetchBatchesInFlight
+	}
+	if in.Stage == "embed" && limit > 2 && temporalworkflow.GetVersion(ctx, "embed-batch-limit", temporalworkflow.DefaultVersion, 1) != temporalworkflow.DefaultVersion {
+		limit = 2
+	}
 	next, active := 0, 0
 	cancelling := false
 	var batchErr error
@@ -154,7 +160,11 @@ func BuildRelease(ctx temporalworkflow.Context, in run.BuildInput) error {
 		return finish(err)
 	}
 	if in.Until == in.Stage || closed.NextStage == "" {
-		_, err := transition("running", "paused", "")
+		state := "paused"
+		if in.Stage == "eval" && temporalworkflow.GetVersion(ctx, "eval-complete", temporalworkflow.DefaultVersion, 1) != temporalworkflow.DefaultVersion {
+			state = "evaluated"
+		}
+		_, err := transition("running", state, "")
 		return err
 	}
 	in.Stage = closed.NextStage

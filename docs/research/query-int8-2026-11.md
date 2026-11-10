@@ -1,0 +1,67 @@
+# INT8 query embedding for the four finalist models (2026-11-10)
+
+Measured on the OCI A1 host to choose a fast query precision. Not authority;
+[ADR 0009](../adr/0009-dense-embedding-recipe.md) decides.
+
+## Setup
+
+OCI `VM.Standard.A1.Flex` (Neoverse-N1), ONNX Runtime 1.31.1 CPU, 4 intra-op
+threads, 1 inter-op, sequential. Models at the revisions pinned in the embedder
+spike; Qwen-family models exported with optimum (opset 17), each FP32 export
+reproducing the spike's recall exactly. Query vectors were computed on the host,
+because ARM integer kernels differ from the Mac (Vietnamese_Embedding_v2 dynamic
+INT8: median cosine 0.989 on the Mac, 0.98 per-tensor on the host). Recall uses
+the stored banhmi document vectors (MPS FP16) and the spike's 92 golden
+questions with 96 citations. Short latency is over the 92 questions one at a
+time; the long input is a 900-character text (217 tokens for
+Vietnamese_Embedding_v2, 251-254 for Qwen-family models with their prompt).
+
+Variants: dynamic INT8 (`quantize_dynamic`, QInt8, per-channel), and 8-bit
+weight-only with integer compute (`MatMulNBits`, bits 8, block 128, accuracy
+level 4, "q8w_a4").
+
+## Results
+
+| Model, variant                    | recall@8 | MRR@8  | Cosine to FP32, median / min | Short p50 / p95 | Long p50 | RSS     |
+| --------------------------------- | -------- | ------ | ---------------------------- | --------------- | -------- | ------- |
+| Vietnamese_Embedding_v2 FP32      | 76/96    | 0.5885 | 1 / 1                        | 207 / 347 ms    | 1,214 ms | 1.60 GB |
+| Vietnamese_Embedding_v2 INT8 p-ch | 75/96    | 0.5886 | 0.9873 / 0.9756              | 65 / 86 ms      | 387 ms   | 0.83 GB |
+| Vietnamese_Embedding_v2 q8w_a4    | 74/96    | 0.5872 | 0.9983 / 0.9972              | 76 / 104 ms     | 488 ms   | 1.05 GB |
+| Vietnamese_Embedding_v2 INT8 p-t  | 72/96    | 0.5640 | 0.9786 / 0.9675              | 67 / 81 ms      | 415 ms   | 1.18 GB |
+| Qwen3-Embedding-0.6B FP32         | 69/96    | 0.4922 | 1 / 1                        | 433 / 538 ms    | 1,859 ms | 1.92 GB |
+| Qwen3-Embedding-0.6B INT8 p-ch    | 51/96    | 0.3844 | 0.8174 / 0.5140              | 146 / 205 ms    | 1,057 ms | 0.63 GB |
+| Qwen3-Embedding-0.6B q8w_a4       | 69/96    | 0.4867 | 0.9982 / 0.9960              | 262 / 322 ms    | 1,114 ms | 0.91 GB |
+
+p-ch is per-channel, p-t per-tensor. Harrier models have document vectors only
+for the 28,632-chunk screening corpus, so their recall is an upper bound:
+
+| Model, variant (screening corpus) | recall@8 | MRR@8  | Cosine median / min | Short p50 | Long p50 |
+| --------------------------------- | -------- | ------ | ------------------- | --------- | -------- |
+| harrier-oss-v1-0.6b FP32          | 74/96    | 0.6433 | 1 / 1               | 419 ms    | 2,021 ms |
+| harrier-oss-v1-0.6b INT8 p-ch     | 74/96    | 0.6205 | 0.9438 / 0.8004     | 156 ms    | 921 ms   |
+| harrier-oss-v1-0.6b q8w_a4        | 74/96    | 0.6473 | 0.9995 / 0.9990     | 215 ms    | 1,185 ms |
+| vietlegal-harrier-0.6b FP32       | 69/96    | 0.5583 | 1 / 1               | 424 ms    | 1,922 ms |
+| vietlegal-harrier-0.6b INT8 p-ch  | 62/96    | 0.4997 | 0.9003 / 0.6013     | 152 ms    | 765 ms   |
+| vietlegal-harrier-0.6b q8w_a4     | 70/96    | 0.5580 | 0.9992 / 0.9981     | 193 ms    | 840 ms   |
+
+On the screening corpus Vietnamese_Embedding_v2 INT8 per-channel scores the same
+75/96 and 0.5886 as on the full corpus.
+
+## Reading
+
+- Vietnamese_Embedding_v2 with per-channel dynamic INT8 loses one citation and
+  no MRR, runs about 3.2 times faster than FP32 and halves resident memory. Its
+  cosine to FP32 is below the 0.995 parity gate, so recall, not parity, is the
+  evidence.
+- Per-tensor dynamic INT8, the default, loses four citations; do not use it.
+- Dynamic INT8 breaks the Qwen-family models on ARM; only q8w_a4 holds their
+  quality, and it is 3 to 4 times slower than Vietnamese_Embedding_v2 INT8.
+- Changing the document model would also force a full re-embed, about 20 minutes
+  for Vietnamese_Embedding_v2 on MPS FP16 and five or more times longer for
+  Qwen-family models.
+
+## Not measured
+
+Full-corpus recall for the Harrier models, latency under concurrent load or
+through the Go service, static or calibrated INT8, and evaluation on the
+trachuan corpus through the eval stage.

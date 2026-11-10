@@ -1,0 +1,299 @@
+package evaluation
+
+import (
+	"bytes"
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"fmt"
+	"os"
+	"time"
+
+	"danny.vn/trachuan/internal/retrieval"
+)
+
+func rejectionSet(s Suite) map[string]bool {
+	out := map[string]bool{}
+	for _, id := range s.Rejections {
+		out[id] = true
+	}
+	return out
+}
+func validateSuite(s Suite) error {
+	b, err := json.Marshal(s.Legacy)
+	if err != nil {
+		return fmt.Errorf("encode suite: %w", err)
+	}
+	if _, err = LoadLegacy(bytes.NewReader(b)); err != nil {
+		return fmt.Errorf("validate suite: %w", err)
+	}
+	if (s.Map.Version != 1 && s.Map.Version != 2) || s.Map.LegacySHA256 != s.Hashes.Legacy {
+		return fmt.Errorf("invalid map version or legacy hash")
+	}
+	ids := map[string]bool{}
+	for _, c := range s.Legacy {
+		ids[c.ID] = true
+	}
+	seen := map[string]bool{}
+	if len(s.Rejections) != 3 {
+		return fmt.Errorf("expected three rejection checks")
+	}
+	for _, id := range s.Rejections {
+		if !ids[id] || seen[id] {
+			return fmt.Errorf("invalid rejection ID")
+		}
+		seen[id] = true
+	}
+	return nil
+}
+
+type metricKey struct {
+	cohort string
+	mode   retrieval.Mode
+	arms   retrieval.ArmMode
+	limit  int
+}
+
+// Run scores the old-product and legacy cohorts with a frozen release recipe.
+func Run(ctx context.Context, engine Engine, suite Suite, o Options) (Report, Cache, error) {
+	if err := validateSuite(suite); err != nil {
+		return Report{}, Cache{}, err
+	}
+	date := o.EvaluationDate
+	dt := time.Date(date.Year, date.Month, date.Day, 0, 0, 0, 0, time.UTC)
+	if date.Year < 1 || date.Year > 9999 || dt.Year() != date.Year || dt.Month() != date.Month || dt.Day() != date.Day {
+		return Report{}, Cache{}, fmt.Errorf("invalid evaluation date")
+	}
+	modes := o.Modes
+	if len(modes) == 0 {
+		modes = []retrieval.Mode{"exact", "ann"}
+	}
+	seenModes := map[retrieval.Mode]bool{}
+	for _, m := range modes {
+		if (m != "exact" && m != "ann") || seenModes[m] {
+			return Report{}, Cache{}, fmt.Errorf("invalid evaluation modes")
+		}
+		seenModes[m] = true
+	}
+	rel := engine.Release()
+	o = withReleaseRecipes(o, rel, modes)
+	recipe := rel.RetrievalRecipe
+	r := Report{Version: 1, Scorer: "agent-eval/1", Status: "complete", Country: rel.Country, Rel: rel.Rel, BuildArtifactSHA256: o.BuildArtifactSHA256, DumpSHA256: o.DumpSHA256, FixtureHashes: suite.Hashes, IdentityMapSHA256: suite.Hashes.IdentityMap, Recipes: o.Recipes, EvaluationDate: date, DatabaseInstanceKind: o.DatabaseInstanceKind, Software: o.Software, Calibration: o.Calibration, Cohorts: map[string]Cohort{"legacy": {}, "old_product": {}}, TimingsMS: map[string]any{}, CacheManifest: map[string]any{}, PreviousDiff: map[string]any{"reason": "no previous report"}, NotRun: map[string]string{"sealed": "not_run", "development": "not_run", "taxonomy": "out_of_scope", "filtered": "out_of_scope"}, Limitations: []string{"Small sample size; old-product cases were reused for provisional calibration.", "Legacy results use the product recipe and are not a reproduction of the legacy engine."}}
+	var previous *Report
+	if o.PreviousReport != "" {
+		b, err := os.ReadFile(o.PreviousReport)
+		if err != nil {
+			return Report{}, Cache{}, fmt.Errorf("read previous report: %w", err)
+		}
+		var prior Report
+		if err = json.Unmarshal(b, &prior); err != nil {
+			return Report{}, Cache{}, fmt.Errorf("decode previous report: %w", err)
+		}
+		if prior.Version != 1 || prior.Scorer != r.Scorer || prior.FixtureHashes.Legacy != r.FixtureHashes.Legacy || prior.FixtureHashes.OldProduct != r.FixtureHashes.OldProduct {
+			return Report{}, Cache{}, fmt.Errorf("incompatible previous scorer or fixtures")
+		}
+		previous = &prior
+	}
+	rejects := rejectionSet(suite)
+	entries := map[string]map[int]MapEntry{}
+	for _, e := range suite.Map.Entries {
+		if entries[e.CaseID] == nil {
+			entries[e.CaseID] = map[int]MapEntry{}
+		}
+		entries[e.CaseID][e.CitationIndex] = e
+		if e.State == "absent" {
+			for _, c := range suite.Legacy {
+				if c.ID == e.CaseID && e.CitationIndex >= 0 && e.CitationIndex < len(c.ExpectedCitations) {
+					x := c.ExpectedCitations[e.CitationIndex]
+					r.Coverage = append(r.Coverage, Coverage{c.ID, e.CitationIndex, append([]string{x.DocNumber}, x.AltDocNumbers...)})
+				}
+			}
+		}
+	}
+	cache := Cache{}
+	metrics := map[metricKey]*Metrics{}
+	timings := map[string][]float64{}
+	vectorRows := map[string]int{}
+	for _, c := range suite.Legacy {
+		force := true
+		request := retrieval.Request{Query: c.Question, Limit: 8, Mode: "exact", Arms: "hybrid", InForceOnly: &force}
+		product, err := engine.Prepare(ctx, request)
+		if err != nil {
+			return Report{}, Cache{}, fmt.Errorf("prepare case %s: %w", c.ID, err)
+		}
+		legacy := product
+		if !product.Validation.Accepted {
+			legacy, err = engine.PrepareLegacy(ctx, request)
+			if err != nil {
+				return Report{}, Cache{}, fmt.Errorf("prepare legacy case %s: %w", c.ID, err)
+			}
+		}
+		if !legacy.Validation.Accepted || legacy.Vector == nil {
+			return Report{}, Cache{}, fmt.Errorf("legacy case %s rejected", c.ID)
+		}
+		if rejects[c.ID] {
+			v := product.Validation
+			r.Rejections = append(r.Rejections, Rejection{c.ID, v.Reason, !v.Accepted && product.Vector == nil && v.Reason == "diacritics_required" && v.Message == "Vui lòng nhập câu hỏi tiếng Việt có dấu hoặc số hiệu văn bản."})
+		} else if !product.Validation.Accepted || product.Vector == nil {
+			return Report{}, Cache{}, fmt.Errorf("product case %s unexpectedly rejected", c.ID)
+		}
+		for _, cohort := range []string{"legacy", "old_product"} {
+			stats := r.Cohorts[cohort]
+			stats.CaseCount++
+			if cohort == "old_product" && rejects[c.ID] {
+				stats.RejectionCount++
+				cache.Index = append(cache.Index, QueryIndex{CaseID: c.ID, Cohort: cohort, Reason: product.Validation.Reason})
+				r.Cohorts[cohort] = stats
+				continue
+			}
+			if c.ExpectAbstain {
+				stats.NegativeCount++
+			} else {
+				stats.PositiveCount++
+				stats.ExpectedCitations += len(c.ExpectedCitations)
+			}
+			r.Cohorts[cohort] = stats
+			p := product
+			if cohort == "legacy" {
+				p = legacy
+			}
+			hash := sha256.Sum256([]byte(c.Question))
+			queryHash := hex.EncodeToString(hash[:])
+			key := queryHash + ":" + p.Vector.RecipeHash
+			row, ok := vectorRows[key]
+			if !ok {
+				row = len(cache.Vectors)
+				vectorRows[key] = row
+				cache.Vectors = append(cache.Vectors, append([]float32(nil), p.Vector.Values...))
+			}
+			rowCopy := row
+			cache.Index = append(cache.Index, QueryIndex{CaseID: c.ID, Cohort: cohort, Row: &rowCopy, Count: len(p.Vector.Values), QuerySHA256: queryHash, RecipeHash: p.Vector.RecipeHash})
+			collected := map[retrieval.Mode]retrieval.Arms{}
+			for _, mode := range modes {
+				p.Request.Mode = mode
+				depths := retrieval.Depths{Dense: recipe.DenseDepth, Lexical: recipe.LexicalDepth}
+				if mode == "exact" {
+					depths = retrieval.Depths{Dense: 200, Lexical: 100}
+				}
+				started := time.Now()
+				arms, err := engine.Collect(ctx, p, depths)
+				timingKey := cohort + "/" + string(mode)
+				timings[timingKey] = append(timings[timingKey], float64(time.Since(started))/float64(time.Millisecond))
+				if err != nil {
+					return Report{}, Cache{}, fmt.Errorf("collect case %s: %w", c.ID, err)
+				}
+				if arms.Date != date || arms.AsOf != nil {
+					return Report{}, Cache{}, fmt.Errorf("evaluation date mismatch for case %s", c.ID)
+				}
+				collected[mode] = arms
+				ar := ArmRow{Version: 1, CaseID: c.ID, Cohort: cohort, ReleaseHash: o.DumpSHA256, RecipeHashes: o.Recipes, EvaluationDate: date, Mode: mode, Depths: arms.Depths, Route: arms.Validation.Routed, EligibilityHash: eligibilityHash(date), Dense: cachedCandidates(arms.Primary.Dense, false), Lexical: cachedCandidates(arms.Primary.Lexical, true), RawANN: cachedCandidates(arms.Primary.RawANN, false), Fallback: arms.Primary.Fallback, Diagnostics: map[string]any{}}
+				for _, armMode := range []retrieval.ArmMode{"hybrid", "dense", "lexical"} {
+					for _, limit := range []int{8, 20} {
+						response, err := retrieval.Shape(arms, recipe, limit, armMode)
+						if err != nil {
+							return Report{}, Cache{}, fmt.Errorf("shape case %s: %w", c.ID, err)
+						}
+						ranking, err := retrieval.Rank(arms, recipe, limit, armMode)
+						if err != nil {
+							return Report{}, Cache{}, fmt.Errorf("rank case %s: %w", c.ID, err)
+						}
+						for _, g := range ranking.Groups {
+							ar.Groups = append(ar.Groups, CachedGroup{armMode, limit, g.Identity, g.Score, g.BestCosine})
+						}
+						hits := append(append([]retrieval.Hit{}, response.Hits...), response.NonCurrent...)
+						ranks := make([]int, len(c.ExpectedCitations))
+						direct := make([]int, len(ranks))
+						for i, e := range c.ExpectedCitations {
+							if cohort == "legacy" {
+								ranks[i], _ = MatchLegacy(e, hits)
+								e.RelationOK = false
+								direct[i], _ = MatchLegacy(e, hits)
+							} else {
+								if len(o.Mapping[c.ID]) == 0 {
+									ranks[i] = MatchProduct(entries[c.ID][i], hits)
+								}
+							}
+						}
+						key := metricKey{cohort, mode, armMode, limit}
+						if metrics[key] == nil {
+							metrics[key] = &Metrics{}
+						}
+						score := CaseScore{Negative: c.ExpectAbstain, Ranks: ranks, Response: response}
+						metrics[key].Cases = append(metrics[key].Cases, score)
+						chars := int((Metrics{Cases: []CaseScore{score}}).EvidenceCharacters()[0])
+						diagnosticEntries := entries[c.ID]
+						if cohort == "old_product" && len(o.Mapping[c.ID]) > 0 {
+							diagnosticEntries = nil
+						}
+						losses, gaps, err := caseDiagnostics(arms, recipe, limit, armMode, cohort, c.ExpectedCitations, diagnosticEntries, response)
+						if err != nil {
+							return Report{}, Cache{}, fmt.Errorf("diagnose case %s: %w", c.ID, err)
+						}
+						result := CaseResult{CaseID: c.ID, Cohort: cohort, Mode: mode, Arms: armMode, Limit: limit, Expected: len(ranks), Ranks: ranks, Matched: matchedCount(ranks), Mapped: caseMappings(entries[c.ID], len(ranks)), Abstain: response.Abstain, Reason: response.Reason, Gaps: gaps, Losses: losses, Characters: chars}
+						if cohort == "old_product" {
+							result.MappingIssues = o.Mapping[c.ID]
+						}
+						if cohort == "legacy" {
+							result.DirectRanks = direct
+						}
+						for _, hit := range hits {
+							result.Returned = append(result.Returned, hit.Identity)
+						}
+						r.Cases = append(r.Cases, result)
+					}
+				}
+				cache.Arms = append(cache.Arms, ar)
+			}
+			if exact, ok := collected["exact"]; ok {
+				if ann, ok := collected["ann"]; ok {
+					r.ANN = append(r.ANN, annMeasure(c.ID, cohort, exact.Primary.Dense, ann.Primary.RawANN, ann.Primary.Dense, ann.Primary.Fallback, recipe.DenseDepth))
+				}
+			}
+		}
+	}
+	for key, samples := range timings {
+		r.TimingsMS[key] = summarizeTiming(samples)
+	}
+	finishReport(&r, metrics, modes)
+	for _, c := range suite.Legacy {
+		if !rejects[c.ID] && len(c.ExpectedCitations) > 0 && len(o.Mapping[c.ID]) > 0 {
+			markMappingUnavailable(&r)
+			break
+		}
+	}
+	addLegacyDirectMetrics(&r)
+	r.ANNResults = map[string]ANNLoss{}
+	for _, cohort := range []string{"legacy", "old_product"} {
+		subset := r
+		subset.ANN = nil
+		for _, item := range r.ANN {
+			if item.Cohort == cohort {
+				subset.ANN = append(subset.ANN, item)
+			}
+		}
+		r.ANNResults[cohort] = summarizeANN(subset, cohort)
+	}
+	if previous != nil {
+		r.PreviousDiff = map[string]any{"label": "corpus changes are coverage changes", "cases": compareCases(previous.Cases, r.Cases)}
+	}
+	r.CacheManifest = map[string]any{"arm_rows": len(cache.Arms), "query_rows": len(cache.Vectors), "query_index_entries": len(cache.Index), "cache_key": cacheKey(cache, o, suite.Hashes)}
+	return r, cache, nil
+}
+func annMeasure(id, cohort string, exact, raw, effective []retrieval.Candidate, fallback bool, depth int) ANNMeasure {
+	exact = exact[:min(len(exact), depth)]
+	return ANNMeasure{id, cohort, len(exact), overlap(exact, raw), overlap(exact, effective), fallback}
+}
+func overlap(exact, other []retrieval.Candidate) int {
+	ids := map[int64]bool{}
+	for _, c := range exact {
+		ids[c.ChunkID] = true
+	}
+	n := 0
+	for _, c := range other {
+		if ids[c.ChunkID] {
+			n++
+		}
+	}
+	return n
+}

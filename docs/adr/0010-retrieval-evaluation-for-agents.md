@@ -86,3 +86,11 @@ spend.
 - 2026-11-09: accepted after the study's review findings S-01 to S-06 were
   fixed; cohorts, tie-break order, the sealed-case location and old-cohort
   recall@8 non-regression clarified after findings S-07 to S-10.
+- 2026-11-09: the primary moved baseline implementation before tuning: recipe 1
+  reproduces the study's baseline algorithms with ADR 0009 dense embedding and
+  product settings on our corpus. Build the index and old-cohort harness first;
+  later trials use cached arm rankings with our document/provision identities.
+  This replaces the earlier experiments-before-index order. The baseline
+  threshold is calibrated on old product only as a provisional exception to item
+  6, labeled until development cases exist; no superiority claim follows. New
+  cohorts, tuning, taxonomy, signing, upload and activation remain separate.

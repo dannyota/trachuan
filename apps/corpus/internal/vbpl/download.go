@@ -38,7 +38,7 @@ func (c *Client) Download(ctx context.Context, id string, f File, dir string, li
 		}
 		hash := sha256.New()
 		var size int64
-		status, reqErr := c.request(ctx, http.MethodGet, f.URL, nil, func(r io.Reader) error {
+		status, reqErr := c.request(ctx, http.MethodGet, f.URL, nil, true, func(r io.Reader) error {
 			var e error
 			size, e = io.Copy(io.MultiWriter(tmp, hash), io.LimitReader(r, limit+1))
 			if e != nil {

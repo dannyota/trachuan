@@ -12,6 +12,7 @@ import (
 	"danny.vn/trachuan/apps/corpus/internal/stage"
 	"danny.vn/trachuan/apps/corpus/internal/stage/discover"
 	"danny.vn/trachuan/apps/corpus/internal/vbpl"
+	"golang.org/x/sync/errgroup"
 )
 
 // Stage fetches documents and their attachments.
@@ -59,24 +60,26 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, r stage.Run, item st
 		return stage.Output{}, fmt.Errorf("VBPL client is required")
 	}
 	id := strings.TrimPrefix(item.Key, prefix)
-	detail, decoded, err := s.client.Detail(ctx, id)
-	if err != nil {
-		return apiError(err, id, true)
+	var detail, tree, diagram json.RawMessage
+	var decoded vbpl.Detail
+	var files []vbpl.File
+	var errs [4]error
+	group, requestCtx := errgroup.WithContext(ctx)
+	group.Go(func() error { detail, decoded, errs[0] = s.client.Detail(requestCtx, id); return nil })
+	group.Go(func() error { tree, errs[1] = s.client.RawTree(requestCtx, id); return nil })
+	group.Go(func() error { diagram, errs[2] = s.client.Diagram(requestCtx, id); return nil })
+	group.Go(func() error { files, errs[3] = s.client.Files(requestCtx, id); return nil })
+	_ = group.Wait()
+	if errs[0] != nil {
+		return apiError(errs[0], id, true)
 	}
 	if decoded.ID != id {
 		return stage.Output{State: "gap", Gaps: []stage.Gap{{Kind: "detail_id_mismatch", Detail: fmt.Sprintf("requested %q, received %q", id, decoded.ID)}}}, nil
 	}
-	tree, err := s.client.RawTree(ctx, id)
-	if err != nil {
-		return apiError(err, id, false)
-	}
-	diagram, err := s.client.Diagram(ctx, id)
-	if err != nil {
-		return apiError(err, id, false)
-	}
-	files, err := s.client.Files(ctx, id)
-	if err != nil {
-		return apiError(err, id, false)
+	for _, err := range errs[1:] {
+		if err != nil {
+			return apiError(err, id, false)
+		}
 	}
 	art, err := env.Artifacts.PublishContent(ctx, s.Name(), s.Recipe(r.Snapshot), func(dir string) error { return s.writeBundle(ctx, dir, id, detail, tree, diagram, files) })
 	if err != nil {
@@ -98,10 +101,12 @@ func apiError(err error, id string, detail bool) (stage.Output, error) {
 		return stage.Output{}, stage.SourceData(wrapped)
 	}
 	var status *vbpl.StatusError
-	if errors.As(err, &status) && status.Code >= 500 {
-		// The gateway keeps refusing this document (seen live: detail 500 for
-		// old documents); after the last attempt it is a gap the owner can accept.
-		return stage.Output{}, stage.RetryableGap(wrapped, "source_unavailable")
+	if errors.As(err, &status) && status.Code >= 500 && status.Code < 600 {
+		detail := []rune(wrapped.Error())
+		if len(detail) > 200 {
+			detail = detail[:200]
+		}
+		return stage.Output{State: "gap", Gaps: []stage.Gap{{Kind: "source_unavailable", Detail: string(detail)}}}, nil
 	}
 	return stage.Output{}, stage.Retryable(wrapped)
 }

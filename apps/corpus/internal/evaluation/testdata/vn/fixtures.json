@@ -1,0 +1,8 @@
+{
+  "source_path": "deploy/eval/golden.json",
+  "source_repository": "banhmi",
+  "source_commit": "6c3c531d29a5e97080d0e3415269d6a642c04f19",
+  "sha256": "881d09074ed5160e1e3ef97cd9220eb53ee16ccbbd7d7b0d39fb9483bbcb3aae",
+  "origin": "authored evaluation cases, not user questions",
+  "case_count": 92
+}

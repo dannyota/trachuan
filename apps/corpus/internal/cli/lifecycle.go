@@ -8,9 +8,11 @@ import (
 	"os"
 	"regexp"
 
+	"danny.vn/trachuan/apps/corpus/internal/artifact"
 	"danny.vn/trachuan/apps/corpus/internal/config"
 	"danny.vn/trachuan/apps/corpus/internal/run"
 	"danny.vn/trachuan/apps/corpus/internal/stage"
+	"danny.vn/trachuan/apps/corpus/internal/worker"
 	"danny.vn/trachuan/apps/corpus/internal/workflow"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.temporal.io/sdk/client"
@@ -35,11 +37,18 @@ func dependencies(ctx context.Context, needSources bool, cc string) (run.Deps, f
 		return run.Deps{}, nil, fmt.Errorf("connect Temporal: %w", err)
 	}
 	closeDeps := func() { temporalClient.Close(); db.Close() }
-	// The default registry needs no pool to provide stage names and recipes.
-	stages := workflow.Default(workflow.Deps{}).Names()
-	d := run.Deps{BatchesInFlight: cfg.BatchesInFlight, HeartbeatTimeout: cfg.HeartbeatTimeout, DB: db, Temporal: temporalClient, Stages: stages, RecipesFor: func(snapshot stage.Snapshot) map[string]string {
-		_, recipes := compiledStages(snapshot)
-		return recipes
+	index := workflow.Deps{}
+	if needSources {
+		index, err = worker.IndexDeps(ctx, cfg)
+		if err != nil {
+			closeDeps()
+			return run.Deps{}, nil, err
+		}
+	}
+	registry := workflow.Default(index)
+	stages := registry.Names()
+	d := run.Deps{Artifacts: artifact.Store{Root: cfg.Artifacts}, BatchesInFlight: cfg.BatchesInFlight, FetchBatchesInFlight: cfg.FetchBatchesInFlight, HeartbeatTimeout: cfg.HeartbeatTimeout, DB: db, Temporal: temporalClient, Stages: stages, RecipesFor: func(snapshot stage.Snapshot) map[string]string {
+		return registry.Recipes(snapshot)
 	}}
 	if needSources {
 		if !regexp.MustCompile(`^[a-z]{2}$`).MatchString(cc) {

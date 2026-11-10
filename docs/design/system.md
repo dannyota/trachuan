@@ -20,8 +20,8 @@ component shape and the data-flow rules. Decisions and alternatives live in the
 
 ## Serving host
 
-One AWS Graviton host runs five containers under rootless Podman Quadlet
-([ADR 0006](../adr/0006-single-host-aws-podman.md)):
+The host selected in [ADR 0006](../adr/0006-single-host-oci-podman.md) runs five
+containers under rootless Podman Quadlet:
 
 ```text
 Browser / MCP client
@@ -49,19 +49,22 @@ the cap receives 429 at once, with no queue.
 Corpus releases are built on the owner's MacBook by the `corpus` worker under a
 self-hosted Temporal server ([pipeline](pipeline.md),
 [ADR 0008](../adr/0008-write-path-temporal-self-hosted.md)). A release is a
-signed manifest plus a PostgreSQL dump in S3. Activation on the host is a
-separate command run by the owner ([deployment](deployment.md)).
+signed manifest plus a PostgreSQL dump in OCI Object Storage. Activation on the
+host is a separate command run by the owner ([deployment](deployment.md)).
 
 ## Database roles
 
-| Role        | Where     | May                                                                                                                    | May not                           |
-| ----------- | --------- | ---------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
-| `server`    | host      | read any `corpus_*`; read and write `auth` tables                                                                      | create or drop databases          |
-| `activator` | host, CLI | create and drop `corpus_*` databases; write `auth.corpus_release`, `auth.release_journal`, `auth.retired_release` only | read or write other `auth` tables |
-| `restorer`  | host, CLI | restore into one new `corpus_*` database                                                                               | touch `auth`; superuser rights    |
-| `pipeline`  | MacBook   | read and write the local workshop database                                                                             | connect to the host               |
+| Role             | Where             | May                                                                                                                    | May not                             |
+| ---------------- | ----------------- | ---------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| `server`         | host              | read any `corpus_*`; read and write `auth` tables                                                                      | create or drop databases            |
+| `activator`      | host, CLI         | create and drop `corpus_*` databases; write `auth.corpus_release`, `auth.release_journal`, `auth.retired_release` only | read or write other `auth` tables   |
+| `restorer`       | host, CLI         | restore into one new `corpus_*` database                                                                               | touch `auth`; superuser rights      |
+| `pipeline`       | MacBook           | read and write the local workshop database                                                                             | connect to the host                 |
+| `corpus_builder` | MacBook, proposed | create and own local corpus build databases; separate connection                                                       | read auth/workshop; connect to host |
 
 The server never writes corpus data. The pipeline never connects to the host.
+The proposed local builder needs owner approval for CREATEDB; its actual scope
+and name guards are in [index construction](index.md#database-lifecycle).
 Activation has its own narrow identity; this amends the earlier wording that
 "the pipeline never touches auth"
 ([ADR 0003](../adr/0003-postgres-per-release-corpus.md) History).
@@ -69,12 +72,16 @@ Activation has its own narrow identity; this amends the earlier wording that
 ## Repository layout
 
 ```text
-apps/server      Go: API, MCP, OAuth, auth, retrieval
+apps/server      Go: API, MCP, OAuth, auth; imports shared retrieval
 apps/web         Nuxt 4: public pages, search, reader, account
 apps/corpus      Go: Temporal worker, stage activities, release and activation commands
+apps/queryembed  Go: query embedding service, ONNX Runtime CPU (read path, host)
+apps/docembed    Python, uv: document embedding on the MacBook GPU (write path)
+internal/retrieval  Go: shared search and lexical encoding
+internal/corpusdb   Go: embedded corpus schema template and schema version
 packages/schema  OpenAPI document and generated TypeScript client
-deploy/aws       OpenTofu root and modules
+deploy/oci       OpenTofu root and modules
 deploy/host      cloud-init, install.sh, Quadlet units, pgBackRest, alerts
-deploy/compose.yml  local development: PostgreSQL, Temporal, UI
+deploy/local     native local development: PostgreSQL 18, Temporal dev server
 docs             design, ADRs, plans, runbooks, standards, research
 ```

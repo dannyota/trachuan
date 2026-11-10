@@ -12,7 +12,6 @@ import (
 	"io/fs"
 	"net/url"
 	"os"
-	"strings"
 	"testing"
 
 	"danny.vn/trachuan/apps/corpus/internal/migrate"
@@ -31,7 +30,7 @@ func create(t *testing.T, migrated bool) string {
 	ctx := context.Background()
 	adminURL := os.Getenv("CORPUS_TEST_ADMIN_URL")
 	if adminURL == "" {
-		adminURL = "postgres://trachuan@127.0.0.1:5432/postgres"
+		adminURL = "postgres://trachuan@127.0.0.1:25433/postgres"
 	}
 	parsed, err := url.Parse(adminURL)
 	if err != nil {
@@ -56,15 +55,7 @@ func create(t *testing.T, migrated bool) string {
 	})
 	query := "CREATE DATABASE " + pgx.Identifier{name}.Sanitize()
 	if migrated {
-		if _, err := admin.Exec(ctx, `SELECT pg_advisory_lock(723548171)`); err != nil {
-			t.Fatalf("lock template: %v", err)
-		}
-		defer func() {
-			if _, err := admin.Exec(ctx, `SELECT pg_advisory_unlock(723548171)`); err != nil {
-				t.Errorf("unlock template: %v", err)
-			}
-		}()
-		template, err := ensureTemplate(ctx, admin, parsed)
+		template, err := ensureTemplate(ctx, t, admin, parsed)
 		if err != nil {
 			t.Fatalf("prepare template: %v", err)
 		}
@@ -77,7 +68,7 @@ func create(t *testing.T, migrated bool) string {
 	return parsed.String()
 }
 
-func ensureTemplate(ctx context.Context, admin *pgx.Conn, adminURL *url.URL) (string, error) {
+func ensureTemplate(ctx context.Context, t *testing.T, admin *pgx.Conn, adminURL *url.URL) (string, error) {
 	files, err := fs.Glob(migrations.FS, "*.sql")
 	if err != nil {
 		return "", fmt.Errorf("list migrations: %w", err)
@@ -91,37 +82,30 @@ func ensureTemplate(ctx context.Context, admin *pgx.Conn, adminURL *url.URL) (st
 		_, _ = hash.Write(data)
 	}
 	name := "corpus_tpl_" + hex.EncodeToString(hash.Sum(nil))[:12]
-	var exists bool
-	if queryErr := admin.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM pg_database WHERE datname = $1)`, name).Scan(&exists); queryErr != nil {
-		return "", fmt.Errorf("find template: %w", queryErr)
+	ready, err := templateReady(ctx, admin, name)
+	if err != nil {
+		return "", err
 	}
-	if exists {
+	if ready {
 		return name, nil
 	}
-	rows, err := admin.Query(ctx, `SELECT datname FROM pg_database WHERE datname LIKE 'corpus\_tpl\_%' ESCAPE '\'`)
+	if _, lockErr := admin.Exec(ctx, `SELECT pg_advisory_lock(723548171, hashtext($1))`, name); lockErr != nil {
+		return "", fmt.Errorf("lock template: %w", lockErr)
+	}
+	defer func() {
+		if _, unlockErr := admin.Exec(ctx, `SELECT pg_advisory_unlock(723548171, hashtext($1))`, name); unlockErr != nil {
+			t.Errorf("unlock template: %v", unlockErr)
+		}
+	}()
+	ready, err = templateReady(ctx, admin, name)
 	if err != nil {
-		return "", fmt.Errorf("list templates: %w", err)
+		return "", err
 	}
-	var old []string
-	for rows.Next() {
-		var value string
-		if scanErr := rows.Scan(&value); scanErr != nil {
-			rows.Close()
-			return "", fmt.Errorf("read template name: %w", scanErr)
-		}
-		if strings.HasPrefix(value, "corpus_tpl_") {
-			old = append(old, value)
-		}
+	if ready {
+		return name, nil
 	}
-	if rowsErr := rows.Err(); rowsErr != nil {
-		rows.Close()
-		return "", fmt.Errorf("read templates: %w", rowsErr)
-	}
-	rows.Close()
-	for _, value := range old {
-		if _, err := admin.Exec(ctx, "DROP DATABASE "+pgx.Identifier{value}.Sanitize()+" WITH (FORCE)"); err != nil {
-			return "", fmt.Errorf("drop old template: %w", err)
-		}
+	if _, err := admin.Exec(ctx, "DROP DATABASE IF EXISTS "+pgx.Identifier{name}.Sanitize()+" WITH (FORCE)"); err != nil {
+		return "", fmt.Errorf("drop incomplete template: %w", err)
 	}
 	if _, err := admin.Exec(ctx, "CREATE DATABASE "+pgx.Identifier{name}.Sanitize()); err != nil {
 		return "", fmt.Errorf("create template: %w", err)
@@ -134,5 +118,16 @@ func ensureTemplate(ctx context.Context, admin *pgx.Conn, adminURL *url.URL) (st
 		}
 		return "", fmt.Errorf("migrate template: %w", err)
 	}
+	if _, err := admin.Exec(ctx, "ALTER DATABASE "+pgx.Identifier{name}.Sanitize()+" IS_TEMPLATE true"); err != nil {
+		return "", fmt.Errorf("mark template ready: %w", err)
+	}
 	return name, nil
+}
+
+func templateReady(ctx context.Context, admin *pgx.Conn, name string) (bool, error) {
+	var ready bool
+	if err := admin.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM pg_database WHERE datname = $1 AND datistemplate)`, name).Scan(&ready); err != nil {
+		return false, fmt.Errorf("find template: %w", err)
+	}
+	return ready, nil
 }

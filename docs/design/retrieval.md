@@ -6,30 +6,31 @@ token) and `/mcp` for agents (bearer token). Same functions, rules and limits.
 ## Query validation
 
 Accept Vietnamese text with diacritics or a document-number pattern such as
-`50/2024/TT-NHNN`. Reject Vietnamese without diacritics with a request to add
-them, and other text with `abstain: true` and a reason. Never translate.
+`50/2024/TT-NHNN`. The exact character gate, bounded number grammar and
+rejection message are in [recipe 1](retrieval-recipe.md#validation-and-routing).
+A character gate does not establish the language or subject of a question;
+evidence-based abstention handles unsupported accepted text. Never translate.
 
 ## Ranking
 
-1. Dense arm: embed the query with the release's dense recipe, HNSW cosine
-   candidates.
-2. Lexical arm: BM25 over `sparse` using the release's lexical recipe.
-3. Reciprocal rank fusion. Group by provision. Candidate pools and k are in
-   [budgets](budgets.md).
-4. Abstain when the top cosine score is below the threshold calibrated for the
-   recipe and recorded in the release.
-
-These are banhmi's measured settings and the starting point.
+The shared Go engine implements [retrieval recipe 1](retrieval-recipe.md): dense
+cosine and BM25, weighted reciprocal rank fusion, provision grouping, document
+diversity and explicit abstention. [Budgets](budgets.md#retrieval) owns
+parameters; [evaluation](evaluation.md) owns calibration and measurement. The
+first recipe is a baseline, with a provisional old-product threshold; new
+development and sealed cohorts precede tuning or superiority claims.
 
 ## Validity
 
-`in_force_only` defaults to true. `as_of` filters document `eff_from` and
-`eff_to`. Documents without an effective date stay in the results with a gap
-"missing effective date". When `in_force_only` is false, expired results form a
-separate group after current ones. Provision-level repeal relations appear as
-warnings on the card, never as a changed stamp.
+`in_force_only` defaults to true. Document dates, missing-date gaps, historical
+filtering and the separate non-current group follow
+[recipe 1](retrieval-recipe.md#validity-and-evidence). Provision-level repeal
+relations appear as warnings, never as a changed stamp.
 
 ## Subject filter contract
+
+This contract lands with taxonomy. The index and evaluation work implements
+unfiltered search only and reports filtered evaluation as out of scope.
 
 Retrieval always runs over the whole country corpus. The response carries one
 ranked list where each hit has `in_filter: true|false`. Hits inside the

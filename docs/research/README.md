@@ -15,3 +15,11 @@ Observations and experiments. Not project authority.
   throughput and gateway findings.
 - [Hybrid retrieval baseline and model ablation](retrieval-hybrid-results-2026-11.md):
   local parity with banhmi and Vietnamese_Embedding_v2 under hybrid scoring.
+- [Vietnam legal sources](vn-sources-2026-11.md): which sources to read and
+  their priority.
+- [Query embedder on an OCI A1 host](host-oci-a1-2026-11.md): first host latency
+  and memory for the query recipe.
+- [INT8 query embedding](query-int8-2026-11.md): four finalist models, INT8
+  variants, quality and A1 latency.
+- [Index baseline](index-baseline-2026-11.md): first chunk, embed, build and
+  evaluation run on vn/20261110_2.

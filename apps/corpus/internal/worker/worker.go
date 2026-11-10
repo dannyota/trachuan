@@ -101,11 +101,17 @@ func Run(ctx context.Context, cfg config.Config) error {
 		}
 	}
 	env := stage.Env{DB: db, Artifacts: artifact.Store{Root: cfg.Artifacts}, Now: time.Now}
-	options := []vbpl.Option{vbpl.WithLimits(cfg.VBPLRate, cfg.VBPLInFlight), vbpl.WithFileHosts(strings.Split(cfg.VBPLFileHosts, ",")...)}
+	options := []vbpl.Option{vbpl.WithLimits(cfg.VBPLRate, cfg.VBPLInFlight), vbpl.WithFileInFlight(cfg.VBPLFileInFlight), vbpl.WithFileHosts(strings.Split(cfg.VBPLFileHosts, ",")...)}
 	if cfg.VBPLLoopbackHTTP {
 		options = append(options, vbpl.WithTestHTTP())
 	}
-	registry := workflow.Default(workflow.Deps{Env: env, VBPL: vbpl.NewWithBase(cfg.VBPLURL, workerVersion(), options...)})
+	index, err := IndexDeps(ctx, cfg)
+	if err != nil {
+		return err
+	}
+	index.Env = env
+	index.VBPL = vbpl.NewWithBase(cfg.VBPLURL, workerVersion(), options...)
+	registry := workflow.Default(index)
 	stages := registry.Stages()
 	for _, st := range stages {
 		if f, ok := st.(*fetch.Stage); ok {
