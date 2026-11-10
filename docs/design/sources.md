@@ -14,9 +14,8 @@ Use the primary's
 [scope measurements](../research/vn-scope-comparison-2026-11.md) and
 [source research](../research/vn-sources-2026-11.md). They supersede the missing
 document list in the earlier
-[ingest report](../research/vbpl-ingest-2026-11.md). No network research was
-authorized for this design. Endpoint behavior below is measured evidence, not a
-published API guarantee; fixtures must pin it.
+[ingest report](../research/vbpl-ingest-2026-11.md). Endpoint behavior below is
+measured evidence, not a published API guarantee; fixtures must pin it.
 
 First-party entry points supplied by that evidence:
 
@@ -168,12 +167,10 @@ Drop the initial yearless named entries because the keyword search already
 covers them. Reason: the measured AI sample bounds the first adapter; retained
 named entries preserve explicit coverage if titles change.
 
-Discover candidates from recorded, paginated search responses and detail pages;
-deduplicate by docid. Require explicit central issuer evidence and an intact
-official number. Provincial documents are out of scope. Unknown jurisdiction or
-number produces `invalid_source_data`, never inferred inclusion. Apply the same
-zero/multiple named-result rules as VBPL. Reason: this source is a central gap
-filler, not a second unrestricted corpus.
+Use the [secondary discovery contracts](secondary-discovery.md) for central
+issuer evidence, query items, exact named filtering, the candidate ceiling and
+support attribution. Reason: this source is a central gap filler; explicit
+classification and complete query evidence bound admission and later loss.
 
 For every candidate, discover performs a fresh exact VBPL number lookup using
 the wire and completeness rules above, then applies

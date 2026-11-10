@@ -114,18 +114,18 @@
 - [x] Tests first on Task 1 fixtures: `TestSearch_PaginatesAndDedupes`, `TestSearch_EmptyAndMultiple`, `TestDetail_ParsesCentralIssuerAndAttachments`, `TestDownload_HostAllowlistAndPDFSignature`, `TestSearch_CapEqualIsIncomplete`, `TestSearch_EmptyMarkerIsCompleteZero`, `TestDetail_MissingIsNotFound`, `TestClient_NoTokenInArtifacts`, `TestClient_ChallengePausesSource` (through the shared pause state, so concurrent batches and a restarted worker stop too).
 - [x] Implement; commit `feat(corpus): vanban.chinhphu.vn client`.
 
-### Task 9: Secondary discovery and hand-over
+### Task 9: Secondary discovery
 
-**Files:** Modify `apps/corpus/internal/stage/discover/` (secondary items), expected-set rules; tests.
+**Files:** `sources/vn.yaml` and `apps/corpus/internal/source/` (`chinhphu.issuer_policy_version`, `central_issuer_forms`, validation); `apps/corpus/internal/chinhphu/detail.go` (lossless repeated fields); `apps/corpus/internal/stage/discover/` (compound `chinhphu:keyword:` and `chinhphu:named:` items, issuer classification, candidate VBPL probes, `secondary_probe` tuples `<item key>|<docid>`, run-wide candidate ceiling at close); `apps/corpus/internal/stage/finalize.go` (`secondary_candidate_ceiling` in the non-acceptable list); tests. Hand-over at fetch close moves to Task 10.
 
-- [ ] Tests first: `TestAdmit_ZeroVBPLMatchAdmits`, `TestAdmit_DifferentDateNeitherSeedsNorBlocks`, `TestAdmit_UniqueVBPLMatchSeedsPrimary`, `TestAdmit_LookupFailureDefers`, `TestAdmit_CollisionIsIdentityAmbiguous`, `TestAdmit_ProvincialOutOfScope`, `TestHandOver_SourceReplaced`.
-- [ ] Implement per sources.md "Secondary discovery and hand-over"; commit `feat(corpus): secondary discovery from vanban.chinhphu.vn`.
+- [ ] Tests first: `TestAdmit_ZeroVBPLMatchAdmits`, `TestAdmit_DifferentDateNeitherSeedsNorBlocks`, `TestAdmit_UniqueVBPLMatchSeedsPrimary`, `TestAdmit_LookupFailureDefers`, `TestAdmit_CollisionIsIdentityAmbiguous`, `TestAdmit_ProvincialOutOfScope`, `TestIssuer_RepeatedConflictingFieldsUnknown`, `TestNamed_SubstringHitRejected`, `TestCeiling_RunWideOverflowFailsDiscover`, `TestSupport_PerQueryTuplesSurviveSupersession`.
+- [ ] Implement per secondary-discovery.md and sources.md; commit `feat(corpus): secondary discovery from vanban.chinhphu.vn`.
 
 ### Task 10: Secondary fetch and provenance
 
-**Files:** Modify `apps/corpus/internal/stage/fetch/` (secondary bundles through the shared source-neutral writers), `extract` (`no_tree`), `relate` (empty evidenced set); tests. Build loading belongs to Task 11.
+**Files:** Modify `apps/corpus/internal/stage/fetch/` (secondary bundles through the shared source-neutral writers, hand-over in the fetch finalizer), `extract` (`no_tree`), `relate` (empty evidenced set); tests. Build loading belongs to Task 11.
 
-- [ ] Tests first: `TestFetch_ChinhphuBundleHashesFiles`, `TestExtract_ChinhphuNoTree`, `TestRelate_ChinhphuEmptySet`.
+- [ ] Tests first: `TestFetch_ChinhphuBundleHashesFiles`, `TestExtract_ChinhphuNoTree`, `TestRelate_ChinhphuEmptySet`, `TestHandOver_SourceReplaced` (fetch close applies the hand-over table and records `source_replaced`), `TestHandOver_AmbiguousKeepsBoth`.
 - [ ] Implement; commit `feat(corpus): fetch secondary documents`.
 
 ### Task 11: Build and evaluation integration (Plan 2 code)

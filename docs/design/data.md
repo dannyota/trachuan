@@ -158,12 +158,13 @@ per-adapter additions. Interface and transaction rules live in
   state (`current`, `retained`, `removed`) and typed support tuple
   `(rule_kind, rule_value, evidence_reference)`. Kinds and values: `agency` with
   agency id; `term` with term; `named` with the named entry; `secondary_probe`
-  with candidate docid; `relation` under the
-  [relation evidence contract](#relation-support-evidence). The evidence
-  reference carries listing or lookup query identity and page when applicable,
-  response SHA-256, artifact hash and relative evidence path; deduplicate by
-  these fields. [Membership](membership.md) owns supersession, retention and
-  removal lifetime.
+  with `<chinhphu item key>|<docid>` under the
+  [secondary support contract](secondary-discovery.md#support-and-retention-evidence);
+  `relation` under the [relation evidence contract](#relation-support-evidence).
+  The evidence reference carries listing or lookup query identity and page when
+  applicable, response SHA-256, artifact hash and relative evidence path;
+  deduplicate by these fields. [Membership](membership.md) owns supersession,
+  retention and removal lifetime.
 - `run_seed_observation`: run, seed key, producing expand item, completeness,
   nullable artifact hash and observed targets. Incomplete observations have no
   artifact hash. Membership can be rebuilt from these records under the
@@ -220,8 +221,12 @@ The independent `source_unavailable` kind remains retry-eligible. Reason:
 restart decisions must distinguish gateway failures from invalid legal data.
 
 `run_failure`, keyed by run and failure identity, stores non-acceptable code,
-producing stage/item, reason and evidence references; `scope_changed` is durable
-and cannot be cleared by start or gap acceptance. It is separate from `gap`.
+producing stage/item, reason and evidence references. Codes are `scope_changed`
+and
+[`secondary_candidate_ceiling`](secondary-discovery.md#candidate-ceiling-and-close).
+Both are durable: start, gap acceptance and release refuse the run; only a new
+run under the failure's recovery rule clears it. This record is separate from
+`gap`.
 
 `run_source`, keyed by run/source, stores `state` (`active`,`source_paused`),
 pause reason, redacted evidence reference and paused/cleared timestamps. Append
