@@ -223,7 +223,10 @@ func TestBuild_CancellationStopsCopy(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	done := make(chan error, 1)
-	go func() { _, loadErr := Load(ctx, f.corpus, inv, f.artifacts, f.recipes, nil); done <- loadErr }()
+	go func() {
+		_, loadErr := Load(ctx, f.corpus, inv, f.artifacts, f.recipes, nil, nil, f.asOf())
+		done <- loadErr
+	}()
 	deadline := time.Now().Add(10 * time.Second)
 	for {
 		var waiting bool

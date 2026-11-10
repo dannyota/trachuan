@@ -26,6 +26,7 @@ type Config struct {
 	diskCheck          func(string, uint64) error
 	Embedder           retrieval.Embedder
 	Suite              evaluation.Suite
+	Corrections        CorrectionsInput
 	Now                func() time.Time
 	Versions           Versions
 	Calibrate          func(context.Context, *pgxpool.Pool, retrieval.Release) (evaluation.Calibration, error)
@@ -72,7 +73,11 @@ func (s *Stage) Plan(ctx context.Context, env stage.Env, run stage.Run) ([]stage
 	if _, err = mapping.Validate(s.cfg.Suite.Legacy, s.cfg.Suite.Hashes.Legacy, identities); err != nil {
 		return nil, fmt.Errorf("validate identity map: %w", err)
 	}
-	hash := inventoryInputHash(run.Country, run.Rel, inv, s.cfg.Suite.Hashes.IdentityMap)
+	_, correction, err := s.cfg.Corrections.pinned()
+	if err != nil {
+		return nil, fmt.Errorf("verify corrections: %w", err)
+	}
+	hash := inventoryInputHash(run.Country, run.Rel, inv, s.cfg.Suite.Hashes.IdentityMap, correction)
 	return []stage.Item{{Key: run.Country + "/" + run.Rel, InputHash: hash}}, nil
 }
 
@@ -80,9 +85,26 @@ func buildInputHash(country, rel, manifest, identityMap string) string {
 	return stage.RecipeHash("build-input", "2", country, rel, manifest, strconv.Itoa(corpusdb.SchemaVersion), identityMap)
 }
 
-func inventoryInputHash(country, rel string, inv Inventory, identityMap string) string {
-	if inv.Version == 2 {
-		return stage.RecipeHash("build-input", "3", country, rel, inv.SourceManifestHash(), strconv.Itoa(corpusdb.SchemaVersion), identityMap, hashJSON(inv.Provenance))
+type correctionInput struct {
+	hash     string
+	nonempty bool
+}
+
+func inventoryInputHash(country, rel string, inv Inventory, identityMap string, corrections ...correctionInput) string {
+	c := correctionInput{hash: hashBytes([]byte("[]"))}
+	if len(corrections) > 0 {
+		c = corrections[0]
 	}
-	return buildInputHash(country, rel, inv.SourceManifestHash(), identityMap)
+	return buildHash(country, rel, inv, identityMap, hashJSON(inv.Provenance), c)
+}
+func buildHash(country, rel string, inv Inventory, identityMap, provenance string, c correctionInput) string {
+	args := []string{country, rel, inv.SourceManifestHash(), strconv.Itoa(corpusdb.SchemaVersion), identityMap}
+	if inv.Version == 2 {
+		args = append(args, provenance, c.hash)
+		return stage.RecipeHash("build-input", "3", args...)
+	}
+	if c.nonempty {
+		args = append(args, c.hash)
+	}
+	return stage.RecipeHash("build-input", "2", args...)
 }

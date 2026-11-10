@@ -3,7 +3,6 @@ package cli
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -61,16 +60,7 @@ func dependencies(ctx context.Context, needSources bool, cc string) (run.Deps, f
 			closeDeps()
 			return run.Deps{}, nil, fmt.Errorf("read source list: %w", readErr)
 		}
-		corrections, readErr := os.ReadFile("sources/" + cc + "-corrections.yaml")
-		// A country without a corrections file has an empty list.
-		if readErr != nil && !errors.Is(readErr, os.ErrNotExist) {
-			closeDeps()
-			return run.Deps{}, nil, fmt.Errorf("read corrections: %w", readErr)
-		}
-		if readErr != nil {
-			corrections = []byte("[]\n")
-		}
-		d.SourceList, err = sourceSnapshot(data, corrections)
+		d.SourceList, err = sourceSnapshot(data)
 		if err != nil {
 			closeDeps()
 			return run.Deps{}, nil, fmt.Errorf("freeze sources: %w", err)

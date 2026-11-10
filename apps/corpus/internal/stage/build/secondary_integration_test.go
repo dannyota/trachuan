@@ -35,7 +35,7 @@ func TestLoad_SecondaryMetadataOnly(t *testing.T) {
 	inv.Provenance = provenance{Version: 1, Files: []provenanceFile{file}}
 	inv.Version = 2
 	inv.Membership.Entries = []membership.Entry{{DocumentKey: key, Disposition: "active", Class: "secondary", Source: "chinhphu"}}
-	counts, err := Load(context.Background(), f.corpus, inv, f.artifacts, f.recipes, nil)
+	counts, err := Load(context.Background(), f.corpus, inv, f.artifacts, f.recipes, nil, nil, f.asOf())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -63,7 +63,7 @@ func TestLoad_ProvenanceFromSnapshot(t *testing.T) {
 	url, role := "https://example.test/source", "main"
 	when := time.Date(2024, 1, 2, 3, 4, 5, 0, time.UTC)
 	inv.Provenance = provenance{Version: 1, Files: []provenanceFile{{DocumentKey: key, Source: "vbpl", Name: "law.pdf", SHA256: hash, Size: int64(len(content)), Path: path, URL: &url, Role: &role, FetchedAt: &when}}}
-	if _, err := Load(context.Background(), f.corpus, inv, f.artifacts, f.recipes, nil); err != nil {
+	if _, err := Load(context.Background(), f.corpus, inv, f.artifacts, f.recipes, nil, nil, f.asOf()); err != nil {
 		t.Fatal(err)
 	}
 	var actualURL, actualRole string
@@ -84,7 +84,7 @@ func TestRelations_ReplacedSecondaryNeverResolvesNumber(t *testing.T) {
 	inv.Version = 2
 	replacement := source
 	inv.Membership.Entries = []membership.Entry{{DocumentKey: source, Disposition: "active", Class: "primary", Source: "vbpl"}, {DocumentKey: secondary, Disposition: "source_replaced", Class: "secondary", Source: "chinhphu", ReplacementKey: &replacement}}
-	if _, err := Load(context.Background(), f.corpus, inv, f.artifacts, f.recipes, nil); err != nil {
+	if _, err := Load(context.Background(), f.corpus, inv, f.artifacts, f.recipes, nil, nil, f.asOf()); err != nil {
 		t.Fatal(err)
 	}
 	var key *string

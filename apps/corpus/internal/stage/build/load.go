@@ -22,6 +22,7 @@ type Recipes struct {
 type Counts struct {
 	Documents, SourceFiles, Provisions, Chunks, DenseVectors, Rejected, UnavailableArtifacts, Relations, Gaps int64
 	LexicalStats                                                                                              lexical.StatsSummary
+	validity                                                                                                  validityResult
 }
 
 type loader struct {
@@ -40,7 +41,7 @@ type loader struct {
 }
 
 // Load inserts a frozen inventory into an already initialized corpus database.
-func Load(ctx context.Context, conn *pgx.Conn, inv Inventory, artifacts artifact.Store, recipes Recipes, codes map[string]source.StatusCode) (Counts, error) {
+func Load(ctx context.Context, conn *pgx.Conn, inv Inventory, artifacts artifact.Store, recipes Recipes, codes map[string]source.StatusCode, corrections []source.Correction, asOf string) (Counts, error) {
 	if conn == nil {
 		return Counts{}, fmt.Errorf("corpus connection is nil")
 	}
@@ -97,6 +98,10 @@ func Load(ctx context.Context, conn *pgx.Conn, inv Inventory, artifacts artifact
 		return Counts{}, err
 	}
 	if err = l.deriveConsolidated(ctx); err != nil {
+		return Counts{}, err
+	}
+	l.counts.validity, err = l.loadValidity(ctx, corrections, asOf)
+	if err != nil {
 		return Counts{}, err
 	}
 	if err = l.loadGaps(ctx); err != nil {

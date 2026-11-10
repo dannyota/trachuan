@@ -45,8 +45,8 @@
 
 **Files:** `apps/corpus/internal/source/` (corrections file `sources/vn-corrections.yaml` in the frozen source list, validation), `sources/vn.yaml` (`TNHL` remap with a recorded-source fixture), `apps/corpus/internal/stage/build/` new files (`validity_pass.go`, `validity_events.go`, `corrections.go`, `review.go`), recipe fields (`validity_rules_version` `validity/1`, `corrections_sha256`), tests.
 
-- [ ] Tests first: one per row of the validity note's rules, plus `TestValidity_ChainBothOrders`, `TestValidity_ExpiredActorStillEmitsEvent`, `TestValidity_FutureReplacementKeepsPredecessorCurrent`, `TestValidity_DateConflictMakesNoEvents`, `TestValidity_IssuerMustBeVerified`, `TestValidity_AdverseStatusNameNotCandidate`, `TestValidity_ClearedIntervalBlocksRuleA`, `TestRuleC_OnlyInForceTargetsWithoutPartialMention`, `TestCorrections_EveryRejection`, `TestCorrections_RedundantAndConflictReports`, `TestReview_ListsEverySkippedItem`, `TestDecisions_HistoryOrderAndCap`.
-- [ ] Implement; commit `feat(corpus): validity corrections from text rules and a reviewed manual list`.
+- [x] Tests first: one per row of the validity note's rules, plus `TestValidity_ChainBothOrders`, `TestValidity_ExpiredActorStillEmitsEvent`, `TestValidity_FutureReplacementKeepsPredecessorCurrent`, `TestValidity_DateConflictMakesNoEvents`, `TestValidity_IssuerMustBeVerified`, `TestValidity_AdverseStatusNameNotCandidate`, `TestValidity_ClearedIntervalBlocksRuleA`, `TestRuleC_OnlyInForceTargetsWithoutPartialMention`, `TestCorrections_EveryRejection`, `TestCorrections_RedundantAndConflictReports`, `TestReview_ListsEverySkippedItem`, `TestDecisions_HistoryOrderAndCap`.
+- [x] Implement; commit `feat(corpus): validity corrections from text rules and a reviewed manual list`.
 
 ### Task 6: Retrieval
 

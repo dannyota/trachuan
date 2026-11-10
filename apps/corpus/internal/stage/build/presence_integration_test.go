@@ -17,7 +17,7 @@ func TestLoad_ClassAndSourceFromSnapshot(t *testing.T) {
 	inv := f.inventory(t)
 	inv.Version = 2
 	inv.Membership.Entries = []membership.Entry{{DocumentKey: key, Disposition: "active", Class: "relation_context", Source: "vbpl"}}
-	if _, err := Load(context.Background(), f.corpus, inv, f.artifacts, f.recipes, nil); err != nil {
+	if _, err := Load(context.Background(), f.corpus, inv, f.artifacts, f.recipes, nil, nil, f.asOf()); err != nil {
 		t.Fatal(err)
 	}
 	var class, source string
@@ -50,7 +50,7 @@ func TestLoad_EachExcludedDispositionNotLoaded(t *testing.T) {
 		}
 		inv.Membership.Entries = append(inv.Membership.Entries, entry)
 	}
-	counts, err := Load(context.Background(), f.corpus, inv, f.artifacts, f.recipes, nil)
+	counts, err := Load(context.Background(), f.corpus, inv, f.artifacts, f.recipes, nil, nil, f.asOf())
 	if err != nil {
 		t.Fatal(err)
 	}

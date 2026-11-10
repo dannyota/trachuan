@@ -30,7 +30,13 @@ func IndexDeps(ctx context.Context, cfg config.Config) (workflow.Deps, error) {
 	if err != nil {
 		return workflow.Deps{}, fmt.Errorf("load evaluation fixtures: %w", err)
 	}
+	corrections, err := build.ReadCorrections("sources/vn-corrections.yaml")
+	if err != nil {
+		return workflow.Deps{}, fmt.Errorf("load corrections: %w", err)
+	}
 	deps := indexDeps(cfg, suite, time.Now)
+	deps.Build.Corrections = corrections
+	deps.Eval.Build.Corrections = corrections
 	versions, err := build.InspectVersions(ctx, deps.Build)
 	if err != nil {
 		return workflow.Deps{}, fmt.Errorf("inspect build versions: %w", err)

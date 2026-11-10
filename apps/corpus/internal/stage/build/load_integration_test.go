@@ -111,9 +111,13 @@ func (f *loadFixture) inventory(t *testing.T) Inventory {
 	}
 	return inv
 }
+func (f *loadFixture) asOf() string {
+	return f.run.Rel[:4] + "-" + f.run.Rel[4:6] + "-" + f.run.Rel[6:8]
+}
+
 func (f *loadFixture) load(t *testing.T) (Counts, error) {
 	t.Helper()
-	return Load(context.Background(), f.corpus, f.inventory(t), f.artifacts, f.recipes, nil)
+	return Load(context.Background(), f.corpus, f.inventory(t), f.artifacts, f.recipes, nil, nil, f.asOf())
 }
 
 func TestLoad_IncludesMetadataForNoTree(t *testing.T) {

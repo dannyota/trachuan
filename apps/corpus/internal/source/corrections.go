@@ -2,6 +2,7 @@ package source
 
 import (
 	"fmt"
+	"io"
 	"strings"
 	"time"
 
@@ -40,6 +41,13 @@ func ParseCorrections(data []byte) ([]Correction, error) {
 	decoder.KnownFields(true)
 	if err := decoder.Decode(&entries); err != nil {
 		return nil, fmt.Errorf("parse corrections: %w", err)
+	}
+	var extra any
+	if err := decoder.Decode(&extra); err != io.EOF {
+		if err != nil {
+			return nil, fmt.Errorf("parse trailing corrections: %w", err)
+		}
+		return nil, fmt.Errorf("multiple correction documents")
 	}
 	for _, entry := range entries {
 		for _, value := range []*string{entry.Set.EffFrom, entry.Set.EffTo} {

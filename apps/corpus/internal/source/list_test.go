@@ -1,7 +1,6 @@
 package source
 
 import (
-	"encoding/json"
 	"os"
 	"reflect"
 	"strings"
@@ -118,24 +117,16 @@ func TestParse_OlderSnapshotRetainsKeywordAgencies(t *testing.T) {
 	}
 }
 
-func TestParse_FrozenCorrectionBytes(t *testing.T) {
-	list, err := Parse([]byte(`{"country":"vn","corrections_bytes":"[]\n# reviewed\n"}`))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if list.CorrectionsBytes != "[]\n# reviewed\n" {
-		t.Fatal("snapshot did not preserve correction bytes")
+func TestParseCorrections_RejectsMalformed(t *testing.T) {
+	for _, raw := range []string{"not: a list", "- key: x\n  set: {unknown: value}", "- key: x\n  set: {eff_from: 2024-02-30}"} {
+		if _, err := ParseCorrections([]byte(raw)); err == nil {
+			t.Errorf("accepted malformed corrections %q", raw)
+		}
 	}
 }
 
-func TestParse_RejectsMalformedCorrections(t *testing.T) {
-	for _, raw := range []string{"not: a list", "- key: x\n  set: {unknown: value}", "- key: x\n  set: {eff_from: 2024-02-30}"} {
-		snapshot, err := json.Marshal(map[string]string{"corrections_bytes": raw})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if _, err := Parse(snapshot); err == nil {
-			t.Errorf("accepted malformed corrections %q", raw)
-		}
+func TestParseCorrections_RejectsTrailingDocument(t *testing.T) {
+	if _, err := ParseCorrections([]byte("[]\n---\n- key: x\n  hold: true\n")); err == nil {
+		t.Fatal("accepted trailing YAML document")
 	}
 }

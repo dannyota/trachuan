@@ -126,8 +126,9 @@ validity is later work.
 ## Manual corrections
 
 `sources/vn-corrections.yaml` is reviewed input data like the identity map: its
-bytes are pinned at build planning and their SHA-256 is part of the build input,
-not of the frozen source list. A new entry therefore needs only a new build and
+parsed entries are pinned at build planning and the SHA-256 of their canonical
+JSON (entries sorted by key, fixed field order) is part of the build input, not
+of the frozen source list. A new entry therefore needs only a new build and
 evaluation, never a new ingest run; a missing file is an empty list. Each entry:
 
 ```yaml
