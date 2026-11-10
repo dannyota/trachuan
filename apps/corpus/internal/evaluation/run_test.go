@@ -31,26 +31,52 @@ func (f *fakeEngine) Present(_ context.Context, _ retrieval.Response, d retrieva
 	return retrieval.SearchResult{Release: string(d) + " Việt" + value}, nil
 }
 
+type parentHitEngine struct{ fakeEngine }
+
+func (f *parentHitEngine) Collect(_ context.Context, p retrieval.Prepared, d retrieval.Depths) (retrieval.Arms, error) {
+	arms := retrieval.Arms{Validation: p.Validation, Depths: d, Date: f.date}
+	if p.Request.Query != "Câu hỏi tốt" {
+		return arms, nil
+	}
+	hit := lossCandidate(1, "doc", "parent")
+	parentID := hit.GroupID
+	hit.Descendants = append(hit.Descendants, retrieval.Provision{ID: 2, ParentID: &parentID, NodeID: "child", Kind: "diem", Text: "child text", Identity: retrieval.Identity{Country: "vn", DocumentKey: "doc", Anchor: "child"}})
+	arms.Primary.Dense = []retrieval.Candidate{hit}
+	arms.Primary.Lexical = []retrieval.Candidate{hit}
+	arms.Primary.Members = []retrieval.Candidate{hit}
+	return arms, nil
+}
+
 func TestRun_CompactDiagnosticOwnIdentityOnly(t *testing.T) {
-	child := "child"
-	entry := MapEntry{State: "resolved", Alternatives: []Alternative{{Country: "vn", DocumentKey: "d", Anchor: &child, Kind: "provision"}}}
-	hit := retrieval.Hit{Identity: retrieval.Identity{Country: "vn", DocumentKey: "d", Anchor: "parent"}, Complete: true, Fragments: []retrieval.Fragment{{Identity: retrieval.Identity{Country: "vn", DocumentKey: "d", Anchor: child}, Complete: true}}}
-	if MatchProduct(entry, []retrieval.Hit{hit}) != 1 || MatchProduct(entry, compactHits([]retrieval.Hit{hit})) != 0 {
-		t.Fatal("compact credited a child fragment")
-	}
-	hit.Identity.Anchor = child
-	if MatchProduct(entry, compactHits([]retrieval.Hit{hit})) != 1 {
-		t.Fatal("compact missed own identity")
-	}
+	child, parent := "child", "parent"
+	suite := recordedSuite()
+	suite.Legacy[0].ExpectedCitations = append(suite.Legacy[0].ExpectedCitations, Expectation{DocNumber: "doc"})
+	suite.Map.Entries[0].Alternatives = []Alternative{{Country: "vn", DocumentKey: "doc", Anchor: &child, Kind: "provision"}}
+	own := suite.Map.Entries[0]
+	own.CitationIndex = 1
+	own.Alternatives = []Alternative{{Country: "vn", DocumentKey: "doc", Anchor: &parent, Kind: "provision"}}
+	suite.Map.Entries = append(suite.Map.Entries, own)
 	date := retrieval.Date{Year: 2026, Month: time.November, Day: 9}
-	r, _, err := Run(context.Background(), &recordedEngine{fakeEngine: fakeEngine{date: date}}, recordedSuite(), Options{EvaluationDate: date, Modes: []retrieval.Mode{"exact"}})
+	r, _, err := Run(context.Background(), &parentHitEngine{fakeEngine{date: date}}, suite, Options{EvaluationDate: date, Modes: []retrieval.Mode{"exact"}})
 	if err != nil {
 		t.Fatal(err)
 	}
+	checked := 0
 	for _, s := range r.Presented {
-		if s.Cohort == "old_product" && s.Detail == retrieval.DetailCompact && (s.Found != 1 || s.Expected != 1) {
+		if s.Cohort != "old_product" || s.Mode != "exact" {
+			continue
+		}
+		want := 1
+		if s.Detail == retrieval.DetailFull {
+			want = 2
+		}
+		if s.Found != want || s.Expected != 2 {
 			t.Fatalf("summary: %+v", s)
 		}
+		checked++
+	}
+	if checked != 4 {
+		t.Fatalf("checked %d summaries, want 4", checked)
 	}
 }
 
