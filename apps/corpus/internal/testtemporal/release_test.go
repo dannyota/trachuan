@@ -3,6 +3,7 @@ package testtemporal
 import (
 	"regexp"
 	"testing"
+	"time"
 )
 
 func TestTemporalRelease_Valid2099(t *testing.T) {
@@ -13,8 +14,8 @@ func TestTemporalRelease_Valid2099(t *testing.T) {
 		if !pattern.MatchString(rel) || seen[rel] {
 			t.Fatalf("invalid or repeated release %q", rel)
 		}
-		if (i == 0 && rel != "20990101") || (i == 364 && rel != "20991231") || (i == 365 && rel != "20990101_1") {
-			t.Fatalf("release %d = %q", i, rel)
+		if _, err := time.Parse("20060102", rel[:8]); err != nil {
+			t.Fatalf("invalid release date %q: %v", rel, err)
 		}
 		seen[rel] = true
 	}

@@ -6,6 +6,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/binary"
+	"sync"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -19,21 +20,64 @@ func TestRelease_StableWithinTest(t *testing.T) {
 }
 
 func TestRelease_DistinctForCollidingNames(t *testing.T) {
-	results := make(chan string, 2)
-	done := make(chan struct{})
-	var first, second string
-	t.Run("parallel", func(t *testing.T) {
-		go func() { first = <-results; second = <-results; close(done) }()
-		for _, name := range []string{"a", "b"} {
-			t.Run(name, func(t *testing.T) {
-				t.Parallel()
-				results <- releaseForName(t, "collision")
-				<-done
-			})
+	connections := make([]*pgx.Conn, 2)
+	for i := range connections {
+		connections[i], _ = administrator(t)
+	}
+	results := make([]string, 2)
+	errors := make([]error, 2)
+	var wg sync.WaitGroup
+	for i, conn := range connections {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			results[i], _, errors[i] = acquireReservation(context.Background(), conn, "collision")
+		}()
+	}
+	wg.Wait()
+	for _, err := range errors {
+		if err != nil {
+			t.Fatal(err)
 		}
+	}
+	if results[0] == results[1] {
+		t.Fatalf("colliding tests received %q", results[0])
+	}
+}
+
+func TestRelease_CleanupKeepsIdentity(t *testing.T) {
+	admin, _ := administrator(t)
+	var first, later string
+	t.Run("reserve", func(t *testing.T) {
+		t.Cleanup(func() {
+			hash := sha256.Sum256([]byte("trachuan-test-release:" + first))
+			key := int64(binary.BigEndian.Uint64(hash[:8]))
+			var locked bool
+			if err := admin.QueryRow(context.Background(), `SELECT pg_try_advisory_lock($1)`, key).Scan(&locked); err != nil || !locked {
+				t.Fatalf("lock released candidate: locked=%v error=%v", locked, err)
+			}
+			later = Release(t)
+		})
+		first = Release(t)
 	})
-	if first == second {
-		t.Fatalf("colliding tests received %q", first)
+	if later != first {
+		t.Fatalf("release changed during cleanup from %q to %q", first, later)
+	}
+}
+
+func TestRelease_LostReservationFails(t *testing.T) {
+	Release(t)
+	value, _ := releases.Load(t)
+	entry := value.(*reservation)
+	admin, _ := administrator(t)
+	var terminated bool
+	if err := admin.QueryRow(context.Background(), `SELECT pg_terminate_backend($1)`, entry.conn.PgConn().PID()).Scan(&terminated); err != nil || !terminated {
+		t.Fatalf("terminate reservation: terminated=%v error=%v", terminated, err)
+	}
+	failed := false
+	releaseForNameChecked(t, t.Name(), func() { failed = true })
+	if !failed {
+		t.Fatal("lost reservation was accepted")
 	}
 }
 

@@ -210,7 +210,8 @@ func TestBuild_RestoredMarkerPreservesOwnership(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = admin.Close(ctx) })
 	name := "corpus_tmp_vn_bbbbbbbbbbbbbbbbbbbbbbbb"
-	t.Cleanup(func() { testpg.DropCorpusDatabase(t, admin, name, "vn/"+testpg.Release(t)) })
+	rel := testpg.Release(t)
+	t.Cleanup(func() { testpg.DropCorpusDatabase(t, admin, name, "vn/"+rel) })
 	built := testOwnershipMarker(t, "a", "built")
 	if err = recreateTemporary(ctx, admin, Config{Template: builder.Template}, name, built); err != nil {
 		t.Fatal(err)
