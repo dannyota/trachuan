@@ -99,11 +99,13 @@ explicit source-resume command. Neither is an acceptable coverage gap.
   artifact against the run. Processing is a function of the item input and the
   recipe; it writes the artifact. The artifact's rows (`document`,
   `fetched_file`, `provision`, `relation`, `chunk`) are loaded from the artifact
-  files, so an adopted directory without a committed row yields the same rows as
-  a fresh one. Resolving is a function of the artifact and the run; it writes
-  run rows (`listing`) and gaps. When planning already knows an item's input
-  hash and the artifact exists, processing is skipped and only resolving runs,
-  so a reused artifact still yields this run's gaps.
+  files. Fetch times are separate
+  [observation evidence](fetch-bundles.md#observation-commit-and-recovery), so
+  adoption reproduces content rows without inventing a download time. Resolving
+  is a function of the artifact and the run; it writes run rows (`listing`) and
+  gaps. When planning already knows an item's input hash and the artifact
+  exists, processing is skipped and only resolving runs, so a reused artifact
+  still yields this run's gaps.
 - Artifacts are immutable and content addressed:
   `artifacts/<stage>/<input_hash>-<recipe_hash>/` with `MANIFEST.sha256` (sorted
   `<sha256>  <relative path>` lines); the artifact sha256 is the manifest's
@@ -115,14 +117,24 @@ explicit source-resume command. Neither is an acceptable coverage gap.
   rename, or content that changed before the retry) are orphans; they waste
   space but never change results.
 - For `fetch` the input hash is the bundle's own manifest sha256, learned after
-  download, so unchanged remote content keeps its hash. The fetch artifact
-  sha256 is the input hash of `extract` and `relate`.
+  download. [Byte stability](fetch-bundles.md#byte-stability) excludes
+  observation times and run state, so unchanged source bytes under the same
+  recipe keep their hash. The fetch artifact sha256 is the input hash of
+  `extract` and `relate`.
 - One transaction commits an item: the artifact row when there is one, the
   artifact's rows when that row is new, the run rows and gaps (idempotent), and
   the `run_item` update. The update applies only when the pair
   (`run.generation`, Temporal attempt) is not lower than the recorded pair; a
-  stale commit rolls back. Items that end as a gap or a failure without output
-  commit without an artifact.
+  stale commit rolls back. For an equal pair on a terminal item (`done`, `gap`,
+  `failed`), compare the incoming result before any writes or pause override. An
+  identical result, including artifact hash (or null) and resource evidence, is
+  a no-op; any difference rolls back the whole commit, leaving the item, derived
+  rows, gaps and observations unchanged. Compare resource evidence by resource
+  key, including every stored observation field. A later source pause cannot
+  replace that terminal result. Only a new committed result may write
+  observations; a new failed `source_paused` result writes none. This tightens
+  the shared commit fence and requires stage commit package tests. Items ending
+  as a gap or failure without output commit without an artifact.
 - Gaps are rows with a kind. `corpus accept-gaps <cc> <rel> --kind <kind>`
   accepts every gap of that kind and records the owner's note. `release` is
   refused while any expected item is `pending` or `failed` or any gap is
@@ -226,7 +238,8 @@ rule.
 | `chunk`, `embed`, `eval` | Keep algorithms; changed inputs and reviewed evaluation identity-map hashes invalidate affected artifacts.                               |
 
 Expansion artifacts bind observed edges; inventories follow [index](index.md).
-Fresh fetch bytes still determine fetch input hashes. Reuse artifacts only when
+Fetch format adoption and its one-time cost follow
+[fetch bundles](fetch-bundles.md#adoption-and-cost). Reuse artifacts only when
 input and recipe match, and resolve gaps for this run. No old artifact, number
 mapping or evaluation result establishes coverage for a new run.
 

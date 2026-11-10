@@ -121,12 +121,26 @@
 - [x] Tests first: `TestAdmit_ZeroVBPLMatchAdmits`, `TestAdmit_DifferentDateNeitherSeedsNorBlocks`, `TestAdmit_UniqueVBPLMatchSeedsPrimary`, `TestAdmit_LookupFailureDefers`, `TestAdmit_CollisionIsIdentityAmbiguous`, `TestAdmit_ProvincialOutOfScope`, `TestIssuer_RepeatedConflictingFieldsUnknown`, `TestNamed_SubstringHitRejected`, `TestCeiling_RunWideOverflowFailsDiscover`, `TestSupport_PerQueryTuplesSurviveSupersession`.
 - [x] Implement per secondary-discovery.md and sources.md; commit `feat(corpus): secondary discovery from vanban.chinhphu.vn`.
 
-### Task 10: Secondary fetch and provenance
+### Task 10a: Fetch observations and the same-attempt replay rule
 
-**Files:** Modify `apps/corpus/internal/stage/fetch/` (secondary bundles through the shared source-neutral writers, hand-over in the fetch finalizer), `extract` (`no_tree`), `relate` (empty evidenced set); tests. Build loading belongs to Task 11.
+**Files:** Migration 00004 (`run_fetch_observation`, primary), SQL (primary); `apps/corpus/internal/stage/` (`Output` observations, `commit.go` replay rule and observation writes, `fetched_file.fetched_at` at first artifact-row insertion), `apps/corpus/internal/stage/fetch/` (VBPL observations for retained detail, tree and diagram responses and attachments, network or cache acquisition); tests. Bundle bytes unchanged.
 
-- [ ] Tests first: `TestFetch_ChinhphuBundleHashesFiles`, `TestExtract_ChinhphuNoTree`, `TestRelate_ChinhphuEmptySet`, `TestHandOver_SourceReplaced` (fetch close applies the hand-over table and records `source_replaced`), `TestHandOver_AmbiguousKeepsBoth`.
-- [ ] Implement; commit `feat(corpus): fetch secondary documents`.
+- [ ] Tests first: `TestFetch_BundleBytesIndependentOfClock`, `TestFetch_CacheHitAndDownloadSameBytes`, `TestCommit_SameAttemptIdenticalIsNoop`, `TestCommit_SameAttemptConflictRollsBack`, `TestCommit_ObservationsOnlyWithNewResult`, `TestCommit_FetchedAtFromFirstObservation`, `TestRetry_DetachesObservations`.
+- [ ] Implement per fetch-bundles.md; commit `feat(corpus): fetch observations outside content-addressed bundles`.
+
+### Task 10b: Secondary fetch bundles
+
+**Files:** `apps/corpus/internal/chinhphu/` (field-based deterministic redaction, lossless attachment labels); `apps/corpus/internal/stage/fetch/` (dispatch by source, chinhphu version 2 bundle, dual-format `Rows` reader with source, URL and role); `extract` (`no_tree`), `relate` (empty evidenced set); SQL for the projection columns (primary); tests.
+
+- [ ] Tests first: `TestRedact_FieldBasedAndHistoryIndependent`, `TestDetail_AttachmentLabelsLossless`, `TestFetch_ChinhphuBundleHashesFiles`, `TestFetch_ChinhphuInventoryReconciled`, `TestRows_DualFormatReader`, `TestExtract_ChinhphuNoTree`, `TestRelate_ChinhphuEmptySet`.
+- [ ] Implement per fetch-bundles.md and sources.md "Fetch and safety"; commit `feat(corpus): fetch secondary documents`.
+
+### Task 10c: Hand-over at fetch close
+
+**Files:** `apps/corpus/internal/stage/fetch/` (plan the secondary candidate superset including precedence skips; finalizer hand-over table, `source_replaced` and `source_identity_ambiguous` gaps, final membership); tests.
+
+- [ ] Tests first: `TestHandOver_SourceReplaced`, `TestHandOver_AmbiguousKeepsBoth`, `TestHandOver_DifferentDateKeepsBoth`, `TestHandOver_SkippedDownloadUsesDiscoveryRecord`, `TestHandOver_FailedFetchKeepsProvenMatch`.
+- [ ] Implement per sources.md and fetch-bundles.md "Hand-over reader"; commit `feat(corpus): hand over secondary documents at fetch close`.
 
 ### Task 11: Build and evaluation integration (Plan 2 code)
 

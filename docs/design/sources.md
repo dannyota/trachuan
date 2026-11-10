@@ -224,14 +224,15 @@ An unavailable lookup never triggers hand-over or proves withdrawal.
 
 ### Fetch and safety
 
-Store token-redacted detail HTML, parsed metadata, canonical URL, attachment
-inventory and each linked signed PDF as hashed files. Preserve original names,
-URLs, actual fetch times, sizes and hashes; do not guess missing roles or
-status. Source labels claiming a signed PDF do not prove cryptographic
-validation. No PDF parsing, OCR, tree fabrication or inferred relations in this
-work: extract emits `no_tree`, relate emits an empty evidenced relation set, and
-build keeps metadata with no provisions/chunks. Reason: text extraction has its
-own plan and acceptance criteria.
+The [secondary bundle](fetch-bundles.md#secondary-contents) retains redacted
+detail HTML, parsed metadata, canonical URL, attachment inventory and signed PDF
+bytes. Actual times live in workshop observations outside the bundle; preserve
+names, URLs, sizes and hashes. Do not guess missing roles or status. Source
+labels claiming a signed PDF do not prove cryptographic validation. No PDF
+parsing, OCR, tree fabrication or inferred relations in this work: extract emits
+`no_tree`, relate emits an empty evidenced relation set, and build keeps
+metadata with no provisions/chunks. Reason: text extraction has its own plan and
+acceptance criteria.
 
 Use HTTPS with exact host allowlists: pages on `vanban.chinhphu.vn`, files on
 `datafiles.chinhphu.vn`. Reject credentials, nonstandard ports and nonpublic

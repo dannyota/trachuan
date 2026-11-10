@@ -69,13 +69,14 @@ recorded choice is none. The required workshop schema addition lives in
 [data](data.md#scope-workshop-contracts).
 
 Discover emits lookup envelopes; expand emits the
-[seed observation](data.md#expand-observation-artifact) envelope. Common fetch
-bundle version 2 adds `document.json` and `files.json` with the envelopes
-`{version:2,document:{...}}` and `{version:2,files:[...]}` and the
-source-neutral fields in data. Original VBPL payloads and redacted secondary
-HTML remain evidence, not a forced common source format. `Rows` reads only the
-verified bundle. `Resolve` writes run membership evidence and gaps. No artifact
-embeds the run's final class or precedence decision.
+[seed observation](data.md#expand-observation-artifact) envelope. Fetch uses the
+[source-specific bundle formats](fetch-bundles.md#bundle-formats): retain VBPL
+files and use version 2 envelopes for chinhphu. `Rows` decodes the common
+content projection only from verified bundle files. Item commit separately
+persists [fetch observations](fetch-bundles.md#observation-commit-and-recovery),
+including when an artifact already exists. `Resolve` writes run membership
+evidence and gaps. No artifact embeds observation times, final class or
+precedence decisions.
 
 Source-independent document and file projections, structured failure causes,
 membership readers and finalization are mandatory workshop migrations and shared
@@ -122,7 +123,10 @@ Fetch finalization:
    fetch; it does not publish final membership or advance.
 3. Otherwise applies the hand-over table, updates final membership and writes
    replacement/ambiguity gaps on the secondary fetch item, including skipped
-   secondary candidates. It never adds an id outside the planned superset.
+   secondary candidates. It never adds an id outside the planned superset. Read
+   identity through the verified
+   [bundle hand-over reader](fetch-bundles.md#hand-over-reader), not workshop
+   latest rows; skipped candidates use their committed discovery evidence.
 4. Stores the final membership hash and input hash, recomputes stage/gap counts
    and advances `next_stage` in that same transaction.
 
@@ -162,10 +166,11 @@ Already admitted requests may finish; they cannot admit a follow-up request.
 Database failure fails admission closed; process-local caches cannot authorize
 requests.
 
-Every item output lists all sources it contacted or depends on. The item commit
-rechecks those `run_source` rows under `FOR SHARE` locks. If any source is
-paused, commit a failed `source_paused` item instead of its artifact, derived
-rows or gaps. PostgreSQL's
+Every item output lists all sources it contacted or depends on. Item commit
+first applies the [terminal replay fence](pipeline.md#items-artifacts-and-gaps).
+For a new committed result, recheck those `run_source` rows under `FOR SHARE`
+locks. If any source is paused, commit a failed `source_paused` item without its
+artifact, derived rows, gaps or observations. PostgreSQL's
 [row locks](https://www.postgresql.org/docs/current/explicit-locking.html#LOCKING-ROWS)
 hold concurrent updates to those rows until the transaction ends.
 
@@ -230,6 +235,12 @@ removal keys and rejected acceptance; conflicting/missing hand-over fields;
 unrelated missing context metadata; concurrent source pause, restart and
 explicit clear. Use injected clocks, transport, DNS and reduced limits. These
 are acceptance requirements, not claims that checks have run.
+
+Stage commit package tests must cover identical terminal same-attempt replay,
+changed artifact hash, changed resource evidence (including timestamps), and
+both replay cases after a later source pause. Prove no writes on a no-op, full
+rollback on conflict, and no observations when a pause converts a new result to
+failed `source_paused`. Cover each terminal state and stale fences.
 
 Also cover local selection from the recorded central listing, equal numbers with
 different or missing issue dates, capped chinhphu totals, the empty-result

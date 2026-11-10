@@ -195,20 +195,36 @@ candidate superset. The class is run membership, not legal document type or
 ranking. Build copies the final class to the corpus column defined in
 [schema](corpus-schema.md).
 
-The workshop `document` projection and bundle `document.json` version 2 carry
-`key`, `country`, `source`, `source_id`, `number`, `title`, `doc_type`,
-`issuer`, `raw_issue_date`, `raw_eff_from`, `raw_eff_to`, `status_code`,
-`status_name`, `is_consolidated`, `has_content`, nullable `source_url`, and
-`identity_evidence` references. Identity fields, dates and status retain raw
-values. The existing artifact id remains the row owner. Source id is opaque
-text; a VBPL-specific id is never required for a secondary row.
+The workshop `document` projection carries `key`, `country`, `source`,
+`source_id`, `number`, `title`, `doc_type`, `issuer`, `raw_issue_date`,
+`raw_eff_from`, `raw_eff_to`, `status_code`, `status_name`, `is_consolidated`,
+`has_content`, nullable `source_url`, and `identity_evidence` references.
+Identity fields, dates and status retain raw values. The existing artifact id
+remains the row owner. Source id is opaque text; a VBPL-specific id is never
+required for a secondary row.
 
-`fetched_file` and bundle `files.json` version 2 entries carry `source`, `name`,
-`sha256`, `size`, artifact-relative `path`, nullable `url`, `role` and nullable
-actual `fetched_at`. Role uses the corpus vocabulary with explicit `unknown`.
-Source must agree with the owning document. Unknown legacy provenance stays
-null/unknown; adoption time is not fetch time. Original payloads remain beside
-these source-neutral envelopes. No adapter fabricates another source's JSON.
+`fetched_file` carries `source`, `name`, `sha256`, `size`, artifact-relative
+`path`, nullable `url`, `role` and nullable `fetched_at`. Role uses the corpus
+vocabulary with explicit `unknown`. Source must agree with the owning document.
+The row's time is the actual download time known at its first artifact-row
+commit, or null. Reuse never updates that value; adoption time is not fetch
+time. [Fetch bundles](fetch-bundles.md) owns the wire formats, observation
+lifetime and recovery rules. Bundle files omit fetch times.
+
+Add `run_fetch_observation`, keyed by
+`(run_id,item_key,generation,attempt,resource_key)`: artifact SHA-256, source,
+artifact-relative path, nullable URL, content SHA-256, size, acquisition
+(`network`,`cache`,`adopted`), nullable `fetched_at`, and nullable `origin_ref`
+to a retained observation or verified cache record. Resource keys are compact
+JSON tuples `[endpoint,name,url]`, with null name for a response and null URL
+when unknown. Paths identify only retained source payloads or attachments under
+the [observation scope](fetch-bundles.md#observation-commit-and-recovery), never
+generated envelopes; distinct resources may share a content path. Times are UTC
+completion times; cached/adopted bytes inherit only a verifiable origin time.
+Unknown origins stay null. Rows are immutable audit evidence outside the
+artifact; retry invalidation clears their current item association, not their
+history. Only observations matching the committed item's artifact and attempt
+are current.
 
 Extend shared `Gap` and stored `gap` with nullable `source`, `origin`
 (`gateway`,`source_data`,`transport`,`unknown`), `cause`
