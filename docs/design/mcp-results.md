@@ -42,18 +42,18 @@ validity stamp: class, current flag, basis, status basis), `source_url`,
 
 A compact hit has, in this order:
 
-| Field       | Meaning                                                                                                                     |
-| ----------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `handle`    | The hit's provision                                                                                                         |
-| `doc`       | Key into `documents`                                                                                                        |
-| `citation`  | Canonical citation from the recipe, number excluded                                                                         |
-| `path`      | Ancestors from the top structural level down to and including the hit: `label`, `heading` when the source has one, `handle` |
-| `snippet`   | Verbatim text under the snippet rule                                                                                        |
-| `complete`  | True only when `snippet` is the whole hit text and the recipe marked the hit complete                                       |
-| `in_filter` | Subject filter result, only when `nodes` were requested                                                                     |
-| `nodes`     | Taxonomy node codes                                                                                                         |
-| `warnings`  | Provision-level relations whose endpoint is this provision or a descendant, as pointers, under the recipe's validity rule   |
-| `gaps`      | The recipe's hit gaps                                                                                                       |
+| Field       | Meaning                                                                                                                                                   |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `handle`    | The hit's provision                                                                                                                                       |
+| `doc`       | Key into `documents`                                                                                                                                      |
+| `citation`  | Canonical citation from the recipe, number excluded                                                                                                       |
+| `path`      | Ancestors from the top structural level down to and including the hit: `label`, `heading` when the source has one, `handle`                               |
+| `snippet`   | Verbatim text under the snippet rule                                                                                                                      |
+| `complete`  | True only when `snippet` is the whole hit text and the recipe marked the hit complete                                                                     |
+| `in_filter` | Subject filter result, only when `nodes` were requested                                                                                                   |
+| `nodes`     | Taxonomy node codes                                                                                                                                       |
+| `warnings`  | Provision-level relations whose endpoint is this provision or a descendant, as pointers, under the recipe's validity rule, in the recipe's relation order |
+| `gaps`      | The recipe's hit gaps                                                                                                                                     |
 
 A full hit has the same fields except `snippet`, then the recipe's `text`,
 `fragments`, `score` and complete `relations` with evidence; its `complete` is
