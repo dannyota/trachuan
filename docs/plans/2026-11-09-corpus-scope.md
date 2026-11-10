@@ -111,8 +111,8 @@
 
 **Interfaces:** `chinhphu.New(opts ...Option) *Client`; `(*Client) Search(ctx, keyword string) (SearchResult, error)` (all pages, evidence-bearing); `(*Client) LookupNumber(ctx, number string) (SearchResult, error)`; `(*Client) Detail(ctx, docid int) (Detail, error)`; `(*Client) Download(ctx, url string, dst io.Writer, max int64) (FileInfo, error)`; `Candidate{DocID int; Number, Title, Issuer, IssueDate string}`.
 
-- [ ] Tests first on Task 1 fixtures: `TestSearch_PaginatesAndDedupes`, `TestSearch_EmptyAndMultiple`, `TestDetail_ParsesCentralIssuerAndAttachments`, `TestDownload_HostAllowlistAndPDFSignature`, `TestSearch_CapEqualIsIncomplete`, `TestSearch_EmptyMarkerIsCompleteZero`, `TestDetail_MissingIsNotFound`, `TestClient_NoTokenInArtifacts`, `TestClient_ChallengePausesSource` (through the shared pause state, so concurrent batches and a restarted worker stop too).
-- [ ] Implement; commit `feat(corpus): vanban.chinhphu.vn client`.
+- [x] Tests first on Task 1 fixtures: `TestSearch_PaginatesAndDedupes`, `TestSearch_EmptyAndMultiple`, `TestDetail_ParsesCentralIssuerAndAttachments`, `TestDownload_HostAllowlistAndPDFSignature`, `TestSearch_CapEqualIsIncomplete`, `TestSearch_EmptyMarkerIsCompleteZero`, `TestDetail_MissingIsNotFound`, `TestClient_NoTokenInArtifacts`, `TestClient_ChallengePausesSource` (through the shared pause state, so concurrent batches and a restarted worker stop too).
+- [x] Implement; commit `feat(corpus): vanban.chinhphu.vn client`.
 
 ### Task 9: Secondary discovery and hand-over
 

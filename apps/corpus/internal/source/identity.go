@@ -16,6 +16,11 @@ func NamedLookupIdentity(source, option, mode, level, number string) string {
 	return queryIdentity(map[string]any{"source": source, "type": "named", "option": option, "mode": mode, "level": level, "number": number})
 }
 
+// KeywordSearchIdentity hashes a keyword search definition.
+func KeywordSearchIdentity(source, keyword string, cap int) string {
+	return queryIdentity(map[string]any{"source": source, "type": "keyword", "keyword": keyword, "cap": cap})
+}
+
 func queryIdentity(definition map[string]any) string {
 	data, _ := json.Marshal(definition)
 	sum := sha256.Sum256(data)
