@@ -22,6 +22,7 @@ type Fragment struct {
 // Validity is the stamp a hit carries about its document's legal effect.
 type Validity struct {
 	StatusClass   string `json:"status_class"`
+	StatusBasis   string `json:"status_basis"`
 	Current       bool   `json:"current"`
 	AsOf          *Date  `json:"as_of,omitempty"`
 	EffectiveFrom *Date  `json:"effective_from,omitempty"`

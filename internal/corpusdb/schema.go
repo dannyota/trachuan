@@ -14,7 +14,7 @@ import (
 )
 
 // SchemaVersion is the version of the corpus schema.
-const SchemaVersion = 1
+const SchemaVersion = 2
 
 // SparseDimensions is the dimension count of lexical recipe 1.
 const SparseDimensions = 1048576

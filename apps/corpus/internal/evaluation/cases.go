@@ -40,6 +40,7 @@ type FixtureHashes struct {
 type Suite struct {
 	Legacy     []Case
 	Map        IdentityMap
+	MapBytes   []byte
 	Rejections []string
 	Hashes     FixtureHashes
 }

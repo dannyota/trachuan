@@ -65,3 +65,9 @@ func TestApplyTables_DefersANNIndex(t *testing.T) {
 		t.Fatalf("index SQL = %q", db.sql[len(db.sql)-1])
 	}
 }
+
+func TestSchema_StatusBasisVersion(t *testing.T) {
+	if SchemaVersion != 2 || !strings.Contains(schema, "status_basis text") || !strings.Contains(schema, "schema_version = 2") {
+		t.Fatal("status basis schema version missing")
+	}
+}

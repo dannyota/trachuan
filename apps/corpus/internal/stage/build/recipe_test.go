@@ -40,3 +40,17 @@ func TestPlan_RejectsYearZero(t *testing.T) {
 		t.Fatal("accepted year zero")
 	}
 }
+
+func TestBuildInput_MapBytesChangeInputNotRecipe(t *testing.T) {
+	first := buildInputHash("vn", "20990101", "manifest", "map-one")
+	second := buildInputHash("vn", "20990101", "manifest", "map-two")
+	if first == second {
+		t.Fatal("map did not change input hash")
+	}
+}
+
+func TestBuild_InitialEvaluationSummary(t *testing.T) {
+	if got := initialEvaluationSummary(); string(got) != `{"status":"not_run","release_eligible":false}` {
+		t.Fatalf("summary = %s", got)
+	}
+}

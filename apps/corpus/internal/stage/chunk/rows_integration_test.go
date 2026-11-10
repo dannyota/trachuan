@@ -12,6 +12,7 @@ import (
 
 	"danny.vn/trachuan/apps/corpus/internal/artifact"
 	"danny.vn/trachuan/apps/corpus/internal/stage"
+	"danny.vn/trachuan/apps/corpus/internal/store"
 	"danny.vn/trachuan/apps/corpus/internal/testdb"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -94,5 +95,29 @@ func TestChunkStage_RowsAndResolveGaps(t *testing.T) {
 	}
 	if !got["chunk_omission"] || !got["no_chunks"] {
 		t.Fatalf("missing gaps: %#v", resolution.Gaps)
+	}
+}
+
+func TestGetExtractArtifactByHash_ReturnsLowestID(t *testing.T) {
+	ctx := context.Background()
+	db, err := pgxpool.New(ctx, testdb.New(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	var first, second int64
+	hash := strings.Repeat("a", 64)
+	for i, id := range []*int64{&first, &second} {
+		err = db.QueryRow(ctx, `INSERT INTO artifact (stage,item_key,input_hash,recipe_hash,path,sha256) VALUES ('extract','vn:vbpl:1',$1,$2,$3,$4) RETURNING id`, strings.Repeat(string(rune('b'+i)), 64), strings.Repeat("d", 64), string(rune('a'+i)), hash).Scan(id)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	q := store.New(db)
+	for i := 0; i < 10; i++ {
+		got, e := q.GetExtractArtifactByHash(ctx, store.GetExtractArtifactByHashParams{Sha256: hash, ItemKey: "vn:vbpl:1"})
+		if e != nil || got != first {
+			t.Fatalf("got %d, want %d: %v", got, first, e)
+		}
 	}
 }

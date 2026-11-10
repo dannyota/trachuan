@@ -8,6 +8,7 @@ import (
 	"danny.vn/trachuan/apps/corpus/internal/source"
 	"danny.vn/trachuan/apps/corpus/internal/stage"
 	"danny.vn/trachuan/apps/corpus/internal/stage/chunk"
+	"danny.vn/trachuan/apps/corpus/internal/stage/chunk/normalizer"
 	"danny.vn/trachuan/internal/corpusdb"
 	"danny.vn/trachuan/internal/embedding"
 	"danny.vn/trachuan/internal/retrieval"
@@ -26,7 +27,6 @@ type buildRecipe struct {
 	StatusCodesSHA256   string `json:"status_codes_sha256"`
 	CalibrationPolicy   string `json:"calibration_policy"`
 	LegacyCasesSHA256   string `json:"legacy_cases_sha256"`
-	IdentityMapSHA256   string `json:"identity_map_sha256"`
 	PostgreSQLMajor     string `json:"postgresql_major"`
 	PGVectorVersion     string `json:"pgvector_version"`
 	LtreeVersion        string `json:"ltree_version"`
@@ -62,6 +62,6 @@ func (s *Stage) Recipe(snapshot stage.Snapshot) string {
 		return ""
 	}
 	r := buildRecipe{SchemaVersion: corpusdb.SchemaVersion, SchemaSHA256: schema,
-		ChunkRecipeHash: chunk.Recipe1().Hash(), DocumentRecipeHash: embedding.DocumentRecipe1().Hash(), QueryRecipeHash: embedding.QueryRecipe1().Hash(), LexicalRecipeHash: lexical.Recipe1().Hash(), RetrievalPolicyHash: retrieval.Recipe1().Hash(), NormalizerVersion: "corpus-normalizer/2", StatusCodesSHA256: fmt.Sprintf("%x", sha256.Sum256(status)), CalibrationPolicy: "provisional-old-product/1", LegacyCasesSHA256: s.cfg.Suite.Hashes.Legacy, IdentityMapSHA256: s.cfg.Suite.Hashes.IdentityMap, PostgreSQLMajor: s.cfg.Versions.PostgreSQLMajor, PGVectorVersion: s.cfg.Versions.PGVector, LtreeVersion: s.cfg.Versions.Ltree, PgDumpVersion: s.cfg.Versions.PgDump, PgRestoreVersion: s.cfg.Versions.PgRestore}
+		ChunkRecipeHash: chunk.Recipe1().Hash(), DocumentRecipeHash: embedding.DocumentRecipe1().Hash(), QueryRecipeHash: embedding.QueryRecipe1().Hash(), LexicalRecipeHash: lexical.Recipe1().Hash(), RetrievalPolicyHash: retrieval.Recipe1().Hash(), NormalizerVersion: normalizer.Version, StatusCodesSHA256: fmt.Sprintf("%x", sha256.Sum256(status)), CalibrationPolicy: "provisional-old-product/1", LegacyCasesSHA256: s.cfg.Suite.Hashes.Legacy, PostgreSQLMajor: s.cfg.Versions.PostgreSQLMajor, PGVectorVersion: s.cfg.Versions.PGVector, LtreeVersion: s.cfg.Versions.Ltree, PgDumpVersion: s.cfg.Versions.PgDump, PgRestoreVersion: s.cfg.Versions.PgRestore}
 	return r.hash()
 }

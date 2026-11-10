@@ -1,6 +1,8 @@
 package build
 
 import (
+	"context"
+	"errors"
 	"math"
 	"path/filepath"
 	"testing"
@@ -33,5 +35,12 @@ func TestDiskLimits_DefaultAndConfigured(t *testing.T) {
 func TestCheckDisks_RequiresDatabasePath(t *testing.T) {
 	if err := (Config{}).checkDisks(t.TempDir(), 1); err == nil {
 		t.Fatal("accepted an empty database disk path")
+	}
+}
+
+func TestWatchError_PreservesDiskFailure(t *testing.T) {
+	diskErr := errors.New("disk full")
+	if got := watchError(context.Canceled, diskErr); !errors.Is(got, diskErr) {
+		t.Fatalf("got %v", got)
 	}
 }

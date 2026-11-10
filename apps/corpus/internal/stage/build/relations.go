@@ -77,11 +77,22 @@ func (l *loader) loadRelations(ctx context.Context) error {
 		}
 		return entries[i].row.Ordinal < entries[j].row.Ordinal
 	})
-	numbers := map[string][]*loadedDocument{}
-	for _, d := range l.docs {
-		n := retrieval.NormalizeNumber(d.number)
+	numbers := map[string][]string{}
+	for key, item := range l.items["fetch"] {
+		if item.State != "done" {
+			continue
+		}
+		dir, err := artifactDir(l.artifacts, item)
+		if err != nil {
+			return fmt.Errorf("relation target artifact: %w", err)
+		}
+		var detail fetchDetail
+		if err = readArtifactJSON(dir, "detail.json", &detail); err != nil {
+			return err
+		}
+		n := retrieval.NormalizeNumber(detail.Data.DocNum)
 		if n != "" {
-			numbers[n] = append(numbers[n], d)
+			numbers[n] = append(numbers[n], key)
 		}
 	}
 	for _, entry := range entries {
@@ -93,8 +104,9 @@ func (l *loader) loadRelations(ctx context.Context) error {
 			key := "vn:vbpl:" + r.TargetID
 			targetKey = key
 			target = l.docs[key]
-		} else if matches := numbers[retrieval.NormalizeNumber(r.TargetNumber)]; len(matches) == 1 {
-			target = matches[0]
+		} else if key := resolveNumber(numbers, r.TargetNumber); key != "" {
+			targetKey = key
+			target = l.docs[key]
 		}
 		srcNumber := ""
 		if source != nil {
@@ -123,4 +135,12 @@ func (l *loader) loadRelations(ctx context.Context) error {
 		l.counts.Relations++
 	}
 	return nil
+}
+
+func resolveNumber(numbers map[string][]string, number string) string {
+	matches := numbers[retrieval.NormalizeNumber(number)]
+	if len(matches) != 1 {
+		return ""
+	}
+	return matches[0]
 }

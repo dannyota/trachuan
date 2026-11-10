@@ -15,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"danny.vn/trachuan/apps/corpus/internal/artifact"
 	"danny.vn/trachuan/apps/corpus/internal/evaluation"
 	"danny.vn/trachuan/apps/corpus/internal/stage"
 	"danny.vn/trachuan/apps/corpus/internal/stage/build"
@@ -82,18 +83,6 @@ func (h *harness) indexSetup() {
 	if err != nil {
 		h.t.Fatal(err)
 	}
-	// Represent a paused run created by the earlier four-stage worker.
-	snapshot.Stages = []string{"discover", "fetch", "extract", "relate"}
-	for _, name := range []string{"chunk", "embed", "build", "eval"} {
-		delete(snapshot.Recipes, name)
-	}
-	raw, err := json.Marshal(snapshot)
-	if err != nil {
-		h.t.Fatal(err)
-	}
-	if _, err = h.db.Exec(h.ctx, `UPDATE run SET snapshot=$1,next_stage='' WHERE id=$2`, raw, row.ID); err != nil {
-		h.t.Fatal(err)
-	}
 	cases := []evaluation.Case{{ID: "positive", Question: "ngân hàng", ExpectedCitations: []evaluation.Expectation{{DocNumber: "1/2026"}}}, {ID: "reject1", Question: "abc", ExpectAbstain: true}, {ID: "reject2", Question: "def", ExpectAbstain: true}, {ID: "reject3", Question: "ghi", ExpectAbstain: true}}
 	legacy, err := json.Marshal(cases)
 	if err != nil {
@@ -110,7 +99,7 @@ func (h *harness) indexSetup() {
 	if fetchHash == "" {
 		h.t.Fatal("missing proof fetch artifact")
 	}
-	m := evaluation.IdentityMap{Version: 1, LegacySHA256: hash, IdentityInventoryHash: invHash, Entries: []evaluation.MapEntry{{CaseID: "positive", CitationIndex: 0, State: "resolved", ExpectedNumber: "1/2026", Reason: "proof document", ReviewedAt: "2026-11-09", Evidence: []evaluation.Evidence{{FetchSHA256: fetchHash, QuotedSpan: "Document 1"}}, Alternatives: []evaluation.Alternative{{Country: "vn", DocumentKey: "vn:vbpl:1", Kind: "document"}}}}}
+	m := evaluation.IdentityMap{Version: 2, LegacySHA256: hash, Entries: []evaluation.MapEntry{{CaseID: "positive", CitationIndex: 0, State: "resolved", ExpectedNumber: "1/2026", Reason: "proof document", ReviewedAt: "2026-11-09", Evidence: []evaluation.Evidence{{DocumentKey: "vn:vbpl:1", DocumentNumber: "1/2026", FetchSHA256: fetchHash, QuotedSpan: "Document 1"}}, Alternatives: []evaluation.Alternative{{Country: "vn", DocumentKey: "vn:vbpl:1", DocumentNumber: "1/2026", Kind: "document"}}}}}
 	dir := filepath.Join(h.root, "fixtures")
 	if err = os.Mkdir(dir, 0700); err != nil {
 		h.t.Fatal(err)
@@ -138,8 +127,12 @@ func (h *harness) indexSetup() {
 	if err != nil {
 		h.t.Fatalf("load proof fixtures: %v", err)
 	}
-	if err = suite.Map.Validate(suite.Legacy, suite.Hashes.Legacy, inv.IdentityHash()); err != nil {
-		h.t.Fatalf("validate proof inventory: %v", err)
+	identities, err := build.IdentityInventory(inv, artifact.Store{Root: h.artifacts})
+	if err != nil {
+		h.t.Fatal(err)
+	}
+	if issues, e := suite.Map.Validate(suite.Legacy, suite.Hashes.Legacy, identities); e != nil || len(issues) != 0 {
+		h.t.Fatalf("validate proof inventory: %v %v", issues, e)
 	}
 	builder := testpg.NewBuilder(h.t)
 	doc := fakeEmbedder(h.t, embedding.DocumentRecipe1())

@@ -8,6 +8,7 @@ CREATE TABLE document (
  raw_issue_date text NOT NULL, raw_eff_from text NOT NULL, raw_eff_to text NOT NULL,
  status_code text NOT NULL, status_name text NOT NULL,
  status_class text NOT NULL CHECK (status_class IN ('in_force','partial','expired','not_yet','suspended','unknown')),
+ status_basis text NOT NULL CHECK (status_basis IN ('source_status','derived_from_consolidated')),
  is_current boolean NOT NULL CHECK (is_current = (status_class IN ('in_force','partial'))),
  is_consolidated boolean NOT NULL,
  content_state text NOT NULL CHECK (content_state IN ('indexed','no_tree','no_chunks','embedding_gap')),
@@ -128,7 +129,7 @@ CREATE INDEX ON taxonomy_assignment (provision_id,family_id);
 
 CREATE TABLE release (
  singleton boolean PRIMARY KEY CHECK (singleton), country text COLLATE "C" NOT NULL CHECK (country = 'vn'),
- rel text COLLATE "C" NOT NULL UNIQUE, schema_version integer NOT NULL CHECK (schema_version = 1),
+ rel text COLLATE "C" NOT NULL UNIQUE, schema_version integer NOT NULL CHECK (schema_version = 2),
  taxonomy_version text COLLATE "C" NOT NULL,
  dense_recipe jsonb NOT NULL CHECK (jsonb_typeof(dense_recipe) = 'object'),
  chunk_recipe jsonb NOT NULL CHECK (jsonb_typeof(chunk_recipe) = 'object'),

@@ -64,14 +64,11 @@ func TestVNFixtures_Validate(t *testing.T) {
 	if len(cases) != 92 || expectations != 96 || negatives != 5 || len(m.Entries) != 96 {
 		t.Fatalf("counts: cases=%d expectations=%d negatives=%d entries=%d", len(cases), expectations, negatives, len(m.Entries))
 	}
-	if m.IdentityInventoryHash == "pending" {
-		if err := m.Validate(cases, hash, "pending"); err != nil {
-			t.Fatal(err)
-		}
-		t.Skip("identity inventory hash is pending")
-	}
-	inventory := strings.TrimSpace(string(read("inventory.sha256")))
-	if err := m.Validate(cases, hash, inventory); err != nil {
+	report, err := m.Validate(cases, hash, IdentityInventory{})
+	if err != nil {
 		t.Fatal(err)
+	}
+	if len(report) == 0 {
+		t.Fatal("missing inventory should report incomplete mappings")
 	}
 }

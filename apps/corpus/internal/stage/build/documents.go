@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"time"
 
 	"danny.vn/trachuan/apps/corpus/internal/stage/chunk"
@@ -142,11 +143,16 @@ func (l *loader) loadDocuments(ctx context.Context) error {
 			l.addGap("build", key, "missing_effective_date", "")
 		}
 		class, current, known := Status(d.EffStatus.Code, l.codes)
-		if !known {
+		derived := d.IsConsolidatedDocument && strings.TrimSpace(d.EffStatus.Code) == "" && strings.TrimSpace(d.EffStatus.Name) == ""
+		basis := "source_status"
+		if derived {
+			basis = "derived_from_consolidated"
+		}
+		if !known && !derived {
 			l.addGap("build", key, "unknown_status", d.EffStatus.Code)
 		}
 		id := l.counts.Documents + 1
-		_, err = l.tx.Exec(ctx, `INSERT INTO document(id,country,key,number,number_norm,title,doc_type,issuer,issue_date,eff_from,eff_to,raw_issue_date,raw_eff_from,raw_eff_to,status_code,status_name,status_class,is_current,is_consolidated,content_state,fetch_sha256,extract_sha256,source_url) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,NULL)`, id, l.inv.Country, key, d.DocNum, retrieval.NormalizeNumber(d.DocNum), d.Title, d.DocType.Name, d.AgencyName, issue, from, to, d.IssueDate, d.EffFrom, d.EffTo, d.EffStatus.Code, d.EffStatus.Name, class, current, d.IsConsolidatedDocument, state, *item.ArtifactSHA256, extractHash)
+		_, err = l.tx.Exec(ctx, `INSERT INTO document(id,country,key,number,number_norm,title,doc_type,issuer,issue_date,eff_from,eff_to,raw_issue_date,raw_eff_from,raw_eff_to,status_code,status_name,status_class,status_basis,is_current,is_consolidated,content_state,fetch_sha256,extract_sha256,source_url) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,NULL)`, id, l.inv.Country, key, d.DocNum, retrieval.NormalizeNumber(d.DocNum), d.Title, d.DocType.Name, d.AgencyName, issue, from, to, d.IssueDate, d.EffFrom, d.EffTo, d.EffStatus.Code, d.EffStatus.Name, class, basis, current, d.IsConsolidatedDocument, state, *item.ArtifactSHA256, extractHash)
 		if err != nil {
 			return fmt.Errorf("insert document: %w", err)
 		}

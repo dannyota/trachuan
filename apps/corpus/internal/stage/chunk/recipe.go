@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	"danny.vn/trachuan/apps/corpus/internal/stage"
+	"danny.vn/trachuan/apps/corpus/internal/stage/chunk/normalizer"
 )
 
 // Recipe identifies the deterministic chunking rules.
@@ -25,7 +26,7 @@ type Recipe struct {
 
 // Recipe1 returns the baseline chunking recipe.
 func Recipe1() Recipe {
-	return Recipe{"1", "max(1,runes/2)", 512, 20, "parent-node-id-depth-first", "substantive-before-first-child", "lines-then-words", "nfc-collapsed-whitespace", "own-text", "number-title-chapter-section-date", 220, 128, "civil-or-rfc3339-asia-ho-chi-minh"}
+	return Recipe{"1", "max(1,runes/2)", 512, 20, "parent-node-id-depth-first", "substantive-before-first-child", "lines-then-words", "nfc-collapsed-whitespace", "own-text", "number-title-chapter-section-date", 220, 128, normalizer.Version}
 }
 
 // Hash returns the recipe identity.

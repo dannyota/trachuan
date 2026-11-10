@@ -20,3 +20,10 @@ func TestStamp_EffectiveToIsFirstExcludedDay(t *testing.T) {
 		}
 	}
 }
+
+func TestValidity_StatusBasis(t *testing.T) {
+	got, _ := stamp(Document{StatusClass: "unknown", StatusBasis: "derived_from_consolidated"}, Arms{})
+	if got.StatusBasis != "derived_from_consolidated" {
+		t.Fatalf("status basis = %q", got.StatusBasis)
+	}
+}

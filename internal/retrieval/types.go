@@ -85,6 +85,7 @@ type Document struct {
 	Number        string
 	Title         string
 	StatusClass   string
+	StatusBasis   string
 	IsCurrent     bool
 	EffectiveFrom *time.Time
 	EffectiveTo   *time.Time

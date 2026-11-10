@@ -41,3 +41,19 @@ func TestSnapshot_Extend(t *testing.T) {
 		t.Fatal("changed frozen recipe accepted")
 	}
 }
+
+func TestIncludedStages_StopsAtUntilAndPreservesEarlierStages(t *testing.T) {
+	all := []string{"discover", "fetch", "relate", "build"}
+	for _, tc := range []struct {
+		until string
+		prior int
+		want  int
+	}{
+		{"fetch", 0, 2}, {"build", 2, 4}, {"fetch", 3, 3}, {"", 1, 4},
+	} {
+		got := includedStages(all, tc.until, tc.prior)
+		if len(got) != tc.want {
+			t.Errorf("until %q prior %d: got %v", tc.until, tc.prior, got)
+		}
+	}
+}

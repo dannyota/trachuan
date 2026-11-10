@@ -24,7 +24,7 @@ JOIN artifact fa ON fa.id = f.artifact_id
 WHERE e.run_id = $1 AND e.item_key = $2 AND e.stage = 'extract' AND e.state = 'done';
 
 -- name: GetExtractArtifactByHash :one
-SELECT id FROM artifact WHERE stage = 'extract' AND sha256 = $1 AND item_key = $2;
+SELECT id FROM artifact WHERE stage = 'extract' AND sha256 = $1 AND item_key = $2 ORDER BY id LIMIT 1;
 
 -- name: InsertChunk :exec
 INSERT INTO chunk (artifact_id, ordinal, extract_artifact_id, node_id, anchor, context_prefix, content, rough_tokens, spans)

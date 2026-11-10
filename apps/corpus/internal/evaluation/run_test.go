@@ -256,3 +256,28 @@ func TestRun_CompletedWithLossDiagnostics(t *testing.T) {
 		t.Fatal("expected a complete report")
 	}
 }
+
+func TestRun_MappingIncompleteScoresOtherCases(t *testing.T) {
+	suite := testSuite(t)
+	date := retrieval.Date{Year: 2026, Month: time.November, Day: 9}
+	id := suite.Legacy[0].ID
+	issues := ValidationReport{id: {{CitationIndex: 0, Kind: "mapping_incomplete", Field: "alternatives[0].document_number", Detail: "missing"}}}
+	report, _, err := Run(context.Background(), &fakeEngine{date: date}, suite, Options{EvaluationDate: date, Mapping: issues})
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, result := range report.Cases {
+		if result.CaseID == id && result.Cohort == "old_product" {
+			found = len(result.MappingIssues) > 0
+		}
+	}
+	if !found {
+		t.Fatal("missing per-case issue")
+	}
+	for _, floor := range report.Floors {
+		if floor.Name == "recall" && floor.Status != "unavailable" {
+			t.Fatalf("recall status = %s", floor.Status)
+		}
+	}
+}

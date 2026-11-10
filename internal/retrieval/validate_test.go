@@ -68,3 +68,9 @@ func TestValidateQuery_RejectsExcessRunes(t *testing.T) {
 		t.Fatal("accepted query above the rune limit")
 	}
 }
+
+func TestRecipe1_ValidityVersion(t *testing.T) {
+	if got := Recipe1().Validity; got != "document-dates/2" {
+		t.Errorf("validity = %q", got)
+	}
+}

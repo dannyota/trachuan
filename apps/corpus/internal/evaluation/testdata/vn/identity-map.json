@@ -1,7 +1,6 @@
 {
-  "version": 1,
+  "version": 2,
   "legacy_sha256": "881d09074ed5160e1e3ef97cd9220eb53ee16ccbbd7d7b0d39fb9483bbcb3aae",
-  "identity_inventory_hash": "eb479d25e37064475bd96a3c16d5851af7cc066fef942ba7bd5b307eb639cd37",
   "entries": [
     {
       "case_id": "atttt-50-2024",
@@ -12,6 +11,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:171687",
+          "document_number": "50/2024/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "bf2187f9115ec99f3ad697c76ac70f135d81f1f2ff2a6ebc2880f974efa7c8fe",
           "node_id": "95516e00-eab4-11f0-9ae0-85d6d1e120d2",
@@ -22,6 +23,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:171687",
+          "document_number": "50/2024/TT-NHNN",
           "anchor": "dieu-3",
           "kind": "provision"
         }
@@ -36,6 +38,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:144532",
+          "document_number": "09/2020/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "c73bc7a0715a0bd8a6c0ee7d2b0c5ba00d5302ab0e1f0258c6ee11c0b4753715",
           "node_id": "044bb83c-df3f-11f0-b20c-75527e48f141",
@@ -46,6 +50,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:144532",
+          "document_number": "09/2020/TT-NHNN",
           "anchor": "dieu-5",
           "kind": "provision"
         }
@@ -60,6 +65,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:168124",
+          "document_number": "17/2024/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "8516e84652cae181e2eac543e6a8fd0808a73b1b5056d5c7e2f56e725b9494ad",
           "node_id": "7d9ec820-2d44-11f1-9488-e32218e280a5",
@@ -70,6 +77,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:168124",
+          "document_number": "17/2024/TT-NHNN",
           "anchor": "dieu-16",
           "kind": "provision"
         }
@@ -84,6 +92,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:181766",
+          "document_number": "25/2025/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "214db0f22c6860360e8ff808fb29d79ca420f62ed5a3e3f37f95135bc83adc99",
           "node_id": "bae61d60-df3c-11f0-9a93-0bfbcc75d984",
@@ -94,6 +104,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:181766",
+          "document_number": "25/2025/TT-NHNN",
           "anchor": "dieu-7/khoan-2",
           "kind": "provision"
         }
@@ -108,6 +119,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:174547",
+          "document_number": "64/2024/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "b8c1117806b378a4e9cbfeef70dd4dafce877df3fd6399ffc69473ce1ad0d359",
           "node_id": "79d85870-2ccf-11f1-bd1e-cf673d3953c2",
@@ -118,6 +131,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:174547",
+          "document_number": "64/2024/TT-NHNN",
           "anchor": "dieu-7",
           "kind": "provision"
         }
@@ -132,6 +146,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:167087",
+          "document_number": "52/2024/ND-CP",
           "source_url": "",
           "fetch_sha256": "fb18e69a937912e4eb0de8eccdd0fe9455497c6df251098b575450228697fa35",
           "node_id": "ac03c722-df58-11f0-ac1a-fbc48b602dad",
@@ -142,6 +158,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:167087",
+          "document_number": "52/2024/ND-CP",
           "anchor": "dieu-22/khoan-2",
           "kind": "provision"
         }
@@ -156,6 +173,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:179252",
+          "document_number": "91/2025/QH15",
           "source_url": "",
           "fetch_sha256": "60cd5851a56a5fe04877683d80bf9b5bb1b19c891dc0e9d70977879fab10a837",
           "node_id": "ca11a2ba-22e3-11f1-b653-99408dcb6cb2",
@@ -166,6 +185,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:179252",
+          "document_number": "91/2025/QH15",
           "anchor": "dieu-3",
           "kind": "provision"
         }
@@ -180,6 +200,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:171687",
+          "document_number": "50/2024/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "bf2187f9115ec99f3ad697c76ac70f135d81f1f2ff2a6ebc2880f974efa7c8fe",
           "node_id": "956bfae0-eab4-11f0-a8bc-016ed79cdfd2",
@@ -190,6 +212,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:171687",
+          "document_number": "50/2024/TT-NHNN",
           "anchor": "dieu-11/khoan-2",
           "kind": "provision"
         }
@@ -204,6 +227,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:171687",
+          "document_number": "50/2024/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "bf2187f9115ec99f3ad697c76ac70f135d81f1f2ff2a6ebc2880f974efa7c8fe",
           "node_id": "956b3790-eab4-11f0-8bac-b733f87724f0",
@@ -214,6 +239,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:171687",
+          "document_number": "50/2024/TT-NHNN",
           "anchor": "dieu-11/khoan-1",
           "kind": "provision"
         }
@@ -228,6 +254,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:144532",
+          "document_number": "09/2020/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "c73bc7a0715a0bd8a6c0ee7d2b0c5ba00d5302ab0e1f0258c6ee11c0b4753715",
           "node_id": "044bb882-df3f-11f0-bbf7-d1f9be0e9f7e",
@@ -238,6 +266,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:144532",
+          "document_number": "09/2020/TT-NHNN",
           "anchor": "dieu-5/khoan-4",
           "kind": "provision"
         }
@@ -252,6 +281,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:171687",
+          "document_number": "50/2024/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "bf2187f9115ec99f3ad697c76ac70f135d81f1f2ff2a6ebc2880f974efa7c8fe",
           "node_id": "95712b00-eab4-11f0-a093-1f70edb4d885",
@@ -262,6 +293,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:171687",
+          "document_number": "50/2024/TT-NHNN",
           "anchor": "dieu-11/khoan-5",
           "kind": "provision"
         }
@@ -276,6 +308,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:171687",
+          "document_number": "50/2024/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "bf2187f9115ec99f3ad697c76ac70f135d81f1f2ff2a6ebc2880f974efa7c8fe",
           "node_id": "95685160-eab4-11f0-9c4d-f9d87e61e3c5",
@@ -286,6 +320,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:171687",
+          "document_number": "50/2024/TT-NHNN",
           "anchor": "dieu-10",
           "kind": "provision"
         }
@@ -300,6 +335,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:187039",
+          "document_number": "116/2025/QH15",
           "source_url": "",
           "fetch_sha256": "b263e0973fde00aa912601daf16fa6960577d037b1c4821e576d45105689b35f",
           "node_id": "97352db0-3177-11f1-9c8f-bf2ddf685e18",
@@ -310,6 +347,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:187039",
+          "document_number": "116/2025/QH15",
           "anchor": "dieu-7",
           "kind": "provision"
         }
@@ -324,6 +362,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:187039",
+          "document_number": "116/2025/QH15",
           "source_url": "",
           "fetch_sha256": "b263e0973fde00aa912601daf16fa6960577d037b1c4821e576d45105689b35f",
           "node_id": "972fd680-3177-11f1-a2e0-4944b0b5fd21",
@@ -334,6 +374,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:187039",
+          "document_number": "116/2025/QH15",
           "anchor": "dieu-5",
           "kind": "provision"
         }
@@ -348,6 +389,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:175484",
+          "document_number": "23/2025/ND-CP",
           "source_url": "",
           "fetch_sha256": "4db0b7fde620d8f02ca1e0d6a4883652f0d5f6247c9968efa29838e3f7114781",
           "node_id": "d850a310-2d21-11f1-bc1b-ebdc69dcb7f8",
@@ -358,6 +401,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:175484",
+          "document_number": "23/2025/ND-CP",
           "anchor": "dieu-7",
           "kind": "provision"
         }
@@ -372,6 +416,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:175484",
+          "document_number": "23/2025/ND-CP",
           "source_url": "",
           "fetch_sha256": "4db0b7fde620d8f02ca1e0d6a4883652f0d5f6247c9968efa29838e3f7114781",
           "node_id": "d84c3640-2d21-11f1-822f-a3fb72fd155f",
@@ -382,6 +428,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:175484",
+          "document_number": "23/2025/ND-CP",
           "anchor": "dieu-6",
           "kind": "provision"
         }
@@ -396,12 +443,16 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:168578",
+          "document_number": "40/2024/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "09fa3a2c47add04e66b1e89089d4eae88c89cac93f630619d911e3044a7835dc",
           "node_id": "8795b7ce-2c83-11f1-bb8f-33c4547396c2",
           "quoted_span": "Điều 6. Phạm vi sử dụng dịch vụ trung gian thanh toán\nDịch vụ trung gian thanh toán (trừ dịch vụ chuyển mạch tài chính) được sử dụng cho các giao dịch thanh toán hàng hóa, dịch vụ hợp pháp theo quy đị"
         },
         {
+          "document_key": "vn:vbpl:e1ff68d0-73ab-11f1-8703-2379f653f630",
+          "document_number": "76/VBHN-NHNN",
           "source_url": "",
           "fetch_sha256": "a28981bf804167f88c72fd46fd39e085f456a9b81ad8c1e7725d1185ff9ef1a2",
           "node_id": "9fc3fa50-4405-4efe-a3c4-26bc14ab39c9",
@@ -412,12 +463,14 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:168578",
+          "document_number": "40/2024/TT-NHNN",
           "anchor": "dieu-6",
           "kind": "provision"
         },
         {
           "country": "vn",
           "document_key": "vn:vbpl:e1ff68d0-73ab-11f1-8703-2379f653f630",
+          "document_number": "76/VBHN-NHNN",
           "anchor": "dieu-6",
           "kind": "provision"
         }
@@ -432,6 +485,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:134267",
+          "document_number": "130/2018/ND-CP",
           "source_url": "",
           "fetch_sha256": "3d9ee443186bb55f7756577f32c04b535fa4e594cea5d239a775c758b9c8eb5e",
           "node_id": "2f1307b0-2525-11f1-8cf0-e59c6d9760b6",
@@ -442,6 +497,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:134267",
+          "document_number": "130/2018/ND-CP",
           "anchor": "dieu-7",
           "kind": "provision"
         }
@@ -456,6 +512,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:144532",
+          "document_number": "09/2020/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "c73bc7a0715a0bd8a6c0ee7d2b0c5ba00d5302ab0e1f0258c6ee11c0b4753715",
           "node_id": "044c083c-df3f-11f0-8ddf-032bc273fc22",
@@ -466,6 +524,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:144532",
+          "document_number": "09/2020/TT-NHNN",
           "anchor": "dieu-33",
           "kind": "provision"
         }
@@ -480,6 +539,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:171687",
+          "document_number": "50/2024/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "bf2187f9115ec99f3ad697c76ac70f135d81f1f2ff2a6ebc2880f974efa7c8fe",
           "node_id": "",
@@ -490,6 +551,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:171687",
+          "document_number": "50/2024/TT-NHNN",
           "anchor": null,
           "kind": "document"
         }
@@ -504,6 +566,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:144532",
+          "document_number": "09/2020/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "c73bc7a0715a0bd8a6c0ee7d2b0c5ba00d5302ab0e1f0258c6ee11c0b4753715",
           "node_id": "",
@@ -514,6 +578,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:144532",
+          "document_number": "09/2020/TT-NHNN",
           "anchor": null,
           "kind": "document"
         }
@@ -528,6 +593,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:144532",
+          "document_number": "09/2020/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "c73bc7a0715a0bd8a6c0ee7d2b0c5ba00d5302ab0e1f0258c6ee11c0b4753715",
           "node_id": "044c083c-df3f-11f0-8ddf-032bc273fc22",
@@ -538,6 +605,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:144532",
+          "document_number": "09/2020/TT-NHNN",
           "anchor": "dieu-33",
           "kind": "provision"
         }
@@ -562,6 +630,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:177341",
+          "document_number": "94/2025/ND-CP",
           "source_url": "",
           "fetch_sha256": "085dc2f535e74683e0243e99902dd176cce01ed0860ad81e2d0d794a288dd545",
           "node_id": "",
@@ -572,6 +642,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:177341",
+          "document_number": "94/2025/ND-CP",
           "anchor": null,
           "kind": "document"
         }
@@ -586,6 +657,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:144532",
+          "document_number": "09/2020/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "c73bc7a0715a0bd8a6c0ee7d2b0c5ba00d5302ab0e1f0258c6ee11c0b4753715",
           "node_id": "044c083c-df3f-11f0-8ddf-032bc273fc22",
@@ -596,6 +669,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:144532",
+          "document_number": "09/2020/TT-NHNN",
           "anchor": "dieu-33",
           "kind": "provision"
         }
@@ -610,6 +684,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:144532",
+          "document_number": "09/2020/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "c73bc7a0715a0bd8a6c0ee7d2b0c5ba00d5302ab0e1f0258c6ee11c0b4753715",
           "node_id": "",
@@ -620,6 +696,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:144532",
+          "document_number": "09/2020/TT-NHNN",
           "anchor": null,
           "kind": "document"
         }
@@ -634,6 +711,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:130588",
+          "document_number": "18/2018/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "b039c7e091b997fa725a03b958ba4a1bcb60651b6368cc64d78c89552e06b47d",
           "node_id": "",
@@ -644,6 +723,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:130588",
+          "document_number": "18/2018/TT-NHNN",
           "anchor": null,
           "kind": "document"
         }
@@ -658,6 +738,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:97932",
+          "document_number": "31/2015/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "5133217c59184ce4c9ae9e4b0fcabef3eb38305b8a63f6b398e6ec91d6b80ac1",
           "node_id": "",
@@ -668,6 +750,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:97932",
+          "document_number": "31/2015/TT-NHNN",
           "anchor": null,
           "kind": "document"
         }
@@ -682,6 +765,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:144532",
+          "document_number": "09/2020/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "c73bc7a0715a0bd8a6c0ee7d2b0c5ba00d5302ab0e1f0258c6ee11c0b4753715",
           "node_id": "",
@@ -692,6 +777,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:144532",
+          "document_number": "09/2020/TT-NHNN",
           "anchor": null,
           "kind": "document"
         }
@@ -706,6 +792,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:179252",
+          "document_number": "91/2025/QH15",
           "source_url": "",
           "fetch_sha256": "60cd5851a56a5fe04877683d80bf9b5bb1b19c891dc0e9d70977879fab10a837",
           "node_id": "",
@@ -716,6 +804,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:179252",
+          "document_number": "91/2025/QH15",
           "anchor": null,
           "kind": "document"
         }
@@ -730,6 +819,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:165913",
+          "document_number": "20/2023/QH15",
           "source_url": "",
           "fetch_sha256": "bd9f611978f710ba5a99b3e9114c63b04b485a31ac30b0d765130da68c9ae05b",
           "node_id": "df366f24-e182-11f0-81d5-bbd853501e38",
@@ -740,6 +831,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:165913",
+          "document_number": "20/2023/QH15",
           "anchor": "dieu-1",
           "kind": "provision"
         }
@@ -754,6 +846,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:165913",
+          "document_number": "20/2023/QH15",
           "source_url": "",
           "fetch_sha256": "bd9f611978f710ba5a99b3e9114c63b04b485a31ac30b0d765130da68c9ae05b",
           "node_id": "df36710e-e182-11f0-aaf4-f7b25fa14132",
@@ -764,6 +858,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:165913",
+          "document_number": "20/2023/QH15",
           "anchor": "dieu-10",
           "kind": "provision"
         }
@@ -778,6 +873,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:165913",
+          "document_number": "20/2023/QH15",
           "source_url": "",
           "fetch_sha256": "bd9f611978f710ba5a99b3e9114c63b04b485a31ac30b0d765130da68c9ae05b",
           "node_id": "df36749c-e182-11f0-8b7b-e5142c637590",
@@ -788,6 +885,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:165913",
+          "document_number": "20/2023/QH15",
           "anchor": "dieu-23",
           "kind": "provision"
         }
@@ -802,6 +900,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:187276",
+          "document_number": "356/2025/ND-CP",
           "source_url": "",
           "fetch_sha256": "cfd329cbf0f7fa7e0f6cfea620e14744d342c6a93de2432def6d37085b18b53c",
           "node_id": "6f0655c0-31af-11f1-bb60-91e61639244d",
@@ -812,6 +912,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:187276",
+          "document_number": "356/2025/ND-CP",
           "anchor": "dieu-17",
           "kind": "provision"
         }
@@ -826,6 +927,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:179252",
+          "document_number": "91/2025/QH15",
           "source_url": "",
           "fetch_sha256": "60cd5851a56a5fe04877683d80bf9b5bb1b19c891dc0e9d70977879fab10a837",
           "node_id": "ca18f5ba-22e3-11f1-9ada-31e5e2d82af7",
@@ -836,6 +939,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:179252",
+          "document_number": "91/2025/QH15",
           "anchor": "dieu-4",
           "kind": "provision"
         }
@@ -850,6 +954,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:179252",
+          "document_number": "91/2025/QH15",
           "source_url": "",
           "fetch_sha256": "60cd5851a56a5fe04877683d80bf9b5bb1b19c891dc0e9d70977879fab10a837",
           "node_id": "",
@@ -860,6 +966,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:179252",
+          "document_number": "91/2025/QH15",
           "anchor": null,
           "kind": "document"
         }
@@ -874,6 +981,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:187039",
+          "document_number": "116/2025/QH15",
           "source_url": "",
           "fetch_sha256": "b263e0973fde00aa912601daf16fa6960577d037b1c4821e576d45105689b35f",
           "node_id": "",
@@ -884,6 +993,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:187039",
+          "document_number": "116/2025/QH15",
           "anchor": null,
           "kind": "document"
         }
@@ -898,6 +1008,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:187039",
+          "document_number": "116/2025/QH15",
           "source_url": "",
           "fetch_sha256": "b263e0973fde00aa912601daf16fa6960577d037b1c4821e576d45105689b35f",
           "node_id": "",
@@ -908,6 +1020,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:187039",
+          "document_number": "116/2025/QH15",
           "anchor": null,
           "kind": "document"
         }
@@ -922,6 +1035,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:167087",
+          "document_number": "52/2024/ND-CP",
           "source_url": "",
           "fetch_sha256": "fb18e69a937912e4eb0de8eccdd0fe9455497c6df251098b575450228697fa35",
           "node_id": "ac03ed92-df58-11f0-8538-9557e74e5910",
@@ -932,6 +1047,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:167087",
+          "document_number": "52/2024/ND-CP",
           "anchor": "dieu-29",
           "kind": "provision"
         }
@@ -946,6 +1062,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:168578",
+          "document_number": "40/2024/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "09fa3a2c47add04e66b1e89089d4eae88c89cac93f630619d911e3044a7835dc",
           "node_id": "",
@@ -956,6 +1074,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:168578",
+          "document_number": "40/2024/TT-NHNN",
           "anchor": null,
           "kind": "document"
         }
@@ -980,6 +1099,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:144532",
+          "document_number": "09/2020/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "c73bc7a0715a0bd8a6c0ee7d2b0c5ba00d5302ab0e1f0258c6ee11c0b4753715",
           "node_id": "044c5364-df3f-11f0-8ac9-8fdb6edc338e",
@@ -990,6 +1111,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:144532",
+          "document_number": "09/2020/TT-NHNN",
           "anchor": "dieu-54",
           "kind": "provision"
         }
@@ -1004,6 +1126,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:144532",
+          "document_number": "09/2020/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "c73bc7a0715a0bd8a6c0ee7d2b0c5ba00d5302ab0e1f0258c6ee11c0b4753715",
           "node_id": "044c2c9a-df3f-11f0-857e-d13c21bf092a",
@@ -1014,6 +1138,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:144532",
+          "document_number": "09/2020/TT-NHNN",
           "anchor": "dieu-42",
           "kind": "provision"
         }
@@ -1028,6 +1153,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:144532",
+          "document_number": "09/2020/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "c73bc7a0715a0bd8a6c0ee7d2b0c5ba00d5302ab0e1f0258c6ee11c0b4753715",
           "node_id": "044c2f92-df3f-11f0-b887-29e34c3f653b",
@@ -1038,6 +1165,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:144532",
+          "document_number": "09/2020/TT-NHNN",
           "anchor": "dieu-50",
           "kind": "provision"
         }
@@ -1052,6 +1180,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:144532",
+          "document_number": "09/2020/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "c73bc7a0715a0bd8a6c0ee7d2b0c5ba00d5302ab0e1f0258c6ee11c0b4753715",
           "node_id": "044be320-df3f-11f0-ad3a-317506d4d583",
@@ -1062,6 +1192,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:144532",
+          "document_number": "09/2020/TT-NHNN",
           "anchor": "dieu-22",
           "kind": "provision"
         }
@@ -1076,6 +1207,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:144532",
+          "document_number": "09/2020/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "c73bc7a0715a0bd8a6c0ee7d2b0c5ba00d5302ab0e1f0258c6ee11c0b4753715",
           "node_id": "044be366-df3f-11f0-9079-2f0144b08d96",
@@ -1086,6 +1219,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:144532",
+          "document_number": "09/2020/TT-NHNN",
           "anchor": "dieu-23",
           "kind": "provision"
         }
@@ -1100,6 +1234,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:69ba65c0-8a56-11f1-878c-399a87bcb3eb",
+          "document_number": "134/2025/QH15",
           "source_url": "",
           "fetch_sha256": "9788c2dff9609a9e70369245c804afbeba0f5a07c5b70a13716c1c294e63e774",
           "node_id": "f7b610a5-e2b5-447c-b37d-91211b07de22",
@@ -1110,6 +1246,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:69ba65c0-8a56-11f1-878c-399a87bcb3eb",
+          "document_number": "134/2025/QH15",
           "anchor": "dieu-1",
           "kind": "provision"
         }
@@ -1124,6 +1261,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:69ba65c0-8a56-11f1-878c-399a87bcb3eb",
+          "document_number": "134/2025/QH15",
           "source_url": "",
           "fetch_sha256": "9788c2dff9609a9e70369245c804afbeba0f5a07c5b70a13716c1c294e63e774",
           "node_id": "4cbf4944-0e28-46f8-9729-a92fa115a83e",
@@ -1134,6 +1273,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:69ba65c0-8a56-11f1-878c-399a87bcb3eb",
+          "document_number": "134/2025/QH15",
           "anchor": "dieu-9",
           "kind": "provision"
         }
@@ -1148,6 +1288,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:171687",
+          "document_number": "50/2024/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "bf2187f9115ec99f3ad697c76ac70f135d81f1f2ff2a6ebc2880f974efa7c8fe",
           "node_id": "956b1080-eab4-11f0-8bb4-ebb147b48b2b",
@@ -1158,6 +1300,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:171687",
+          "document_number": "50/2024/TT-NHNN",
           "anchor": "dieu-11",
           "kind": "provision"
         }
@@ -1172,6 +1315,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:171687",
+          "document_number": "50/2024/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "bf2187f9115ec99f3ad697c76ac70f135d81f1f2ff2a6ebc2880f974efa7c8fe",
           "node_id": "95516e00-eab4-11f0-9ae0-85d6d1e120d2",
@@ -1182,6 +1327,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:171687",
+          "document_number": "50/2024/TT-NHNN",
           "anchor": "dieu-3",
           "kind": "provision"
         }
@@ -1196,6 +1342,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:177341",
+          "document_number": "94/2025/ND-CP",
           "source_url": "",
           "fetch_sha256": "085dc2f535e74683e0243e99902dd176cce01ed0860ad81e2d0d794a288dd545",
           "node_id": "284d6aa0-df4e-11f0-9730-dd53b7ad6a90",
@@ -1206,6 +1354,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:177341",
+          "document_number": "94/2025/ND-CP",
           "anchor": "dieu-11",
           "kind": "provision"
         }
@@ -1220,6 +1369,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:168089",
+          "document_number": "15/2024/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "da6fada9b847f67d537f16aab68ad4f89c655ff9eb9544d98cf6071d6cf5b991",
           "node_id": "",
@@ -1230,6 +1381,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:168089",
+          "document_number": "15/2024/TT-NHNN",
           "anchor": null,
           "kind": "document"
         }
@@ -1244,6 +1396,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:167087",
+          "document_number": "52/2024/ND-CP",
           "source_url": "",
           "fetch_sha256": "fb18e69a937912e4eb0de8eccdd0fe9455497c6df251098b575450228697fa35",
           "node_id": "",
@@ -1254,6 +1408,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:167087",
+          "document_number": "52/2024/ND-CP",
           "anchor": null,
           "kind": "document"
         }
@@ -1268,6 +1423,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:144532",
+          "document_number": "09/2020/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "c73bc7a0715a0bd8a6c0ee7d2b0c5ba00d5302ab0e1f0258c6ee11c0b4753715",
           "node_id": "",
@@ -1278,6 +1435,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:144532",
+          "document_number": "09/2020/TT-NHNN",
           "anchor": null,
           "kind": "document"
         }
@@ -1292,6 +1450,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:118230",
+          "document_number": "39/2016/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "883bed00abf5fb38082800af26bbcad07309125ab39634febaae6c74ac99e0ee",
           "node_id": "ad16ccb8-2c7e-11f1-946a-17e7992b6e51",
@@ -1302,6 +1462,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:118230",
+          "document_number": "39/2016/TT-NHNN",
           "anchor": "dieu-13",
           "kind": "provision"
         }
@@ -1316,6 +1477,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:117310",
+          "document_number": "41/2016/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "b6c306773ee04c57d25af8c83d160ead4ba7e02d0ba54fe98502dd663ef56d20",
           "node_id": "0e053b34-eb9a-11f0-ba35-c764fcb9657c",
@@ -1326,6 +1489,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:117310",
+          "document_number": "41/2016/TT-NHNN",
           "anchor": "dieu-6",
           "kind": "provision"
         }
@@ -1340,6 +1504,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:187101",
+          "document_number": "340/2025/ND-CP",
           "source_url": "",
           "fetch_sha256": "644071b9cda9e473f4a703ee5f626cd60e5b83864c0f78c1c8f12c5953bb9433",
           "node_id": "7edd9800-3029-11f1-a10a-c76ce3e839fe",
@@ -1350,6 +1516,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:187101",
+          "document_number": "340/2025/ND-CP",
           "anchor": "dieu-1",
           "kind": "provision"
         }
@@ -1364,6 +1531,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:187101",
+          "document_number": "340/2025/ND-CP",
           "source_url": "",
           "fetch_sha256": "644071b9cda9e473f4a703ee5f626cd60e5b83864c0f78c1c8f12c5953bb9433",
           "node_id": "7f8b1610-3029-11f1-8b5e-9f8e0e712af8",
@@ -1374,6 +1543,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:187101",
+          "document_number": "340/2025/ND-CP",
           "anchor": "dieu-61",
           "kind": "provision"
         }
@@ -1388,6 +1558,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:187101",
+          "document_number": "340/2025/ND-CP",
           "source_url": "",
           "fetch_sha256": "644071b9cda9e473f4a703ee5f626cd60e5b83864c0f78c1c8f12c5953bb9433",
           "node_id": "7f1c9cd0-3029-11f1-a850-3f7a322310f9",
@@ -1398,6 +1570,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:187101",
+          "document_number": "340/2025/ND-CP",
           "anchor": "dieu-24",
           "kind": "provision"
         }
@@ -1412,6 +1585,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:187101",
+          "document_number": "340/2025/ND-CP",
           "source_url": "",
           "fetch_sha256": "644071b9cda9e473f4a703ee5f626cd60e5b83864c0f78c1c8f12c5953bb9433",
           "node_id": "7f1faa10-3029-11f1-9d8c-23f9e9f28bf8",
@@ -1422,6 +1597,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:187101",
+          "document_number": "340/2025/ND-CP",
           "anchor": "dieu-27",
           "kind": "provision"
         }
@@ -1436,6 +1612,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:186792",
+          "document_number": "83/2025/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "b1a73d7170316fb24c5c2afa070d95958282b4eb4666ee905947623f10b8cc15",
           "node_id": "399c79fa-31af-11f1-9edf-6562716f5abe",
@@ -1446,6 +1624,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:186792",
+          "document_number": "83/2025/TT-NHNN",
           "anchor": "dieu-4",
           "kind": "provision"
         }
@@ -1460,6 +1639,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:186792",
+          "document_number": "83/2025/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "b1a73d7170316fb24c5c2afa070d95958282b4eb4666ee905947623f10b8cc15",
           "node_id": "39b001f0-31af-11f1-abae-a56f375a7e13",
@@ -1470,6 +1651,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:186792",
+          "document_number": "83/2025/TT-NHNN",
           "anchor": "dieu-11/khoan-7",
           "kind": "provision"
         }
@@ -1484,6 +1666,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:186792",
+          "document_number": "83/2025/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "b1a73d7170316fb24c5c2afa070d95958282b4eb4666ee905947623f10b8cc15",
           "node_id": "39b05010-31af-11f1-af33-592f75690965",
@@ -1494,6 +1678,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:186792",
+          "document_number": "83/2025/TT-NHNN",
           "anchor": "dieu-12",
           "kind": "provision"
         }
@@ -1578,6 +1763,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:167911",
+          "document_number": "08/2024/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "1d6d5dd99a229f4f5e90b58b7800788a55bddd5a663f7bbe5dfce09eec58e955",
           "node_id": "75ed5470-2d44-11f1-8a98-ef5b66cb2453",
@@ -1588,6 +1775,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:167911",
+          "document_number": "08/2024/TT-NHNN",
           "anchor": "dieu-1",
           "kind": "provision"
         }
@@ -1602,6 +1790,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:167911",
+          "document_number": "08/2024/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "1d6d5dd99a229f4f5e90b58b7800788a55bddd5a663f7bbe5dfce09eec58e955",
           "node_id": "75f9b080-2d44-11f1-8be2-a99d13c9f631",
@@ -1612,6 +1802,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:167911",
+          "document_number": "08/2024/TT-NHNN",
           "anchor": "dieu-10",
           "kind": "provision"
         }
@@ -1626,6 +1817,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:165912",
+          "document_number": "24/2023/QH15",
           "source_url": "",
           "fetch_sha256": "2edac11bb989d5e12b9f4a50df7811826d8594077e19de5200718b7ca8b9ebe2",
           "node_id": "de9d1fb8-e182-11f0-8ee4-b55e4df6784d",
@@ -1636,6 +1829,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:165912",
+          "document_number": "24/2023/QH15",
           "anchor": "dieu-29",
           "kind": "provision"
         }
@@ -1650,6 +1844,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:187101",
+          "document_number": "340/2025/ND-CP",
           "source_url": "",
           "fetch_sha256": "644071b9cda9e473f4a703ee5f626cd60e5b83864c0f78c1c8f12c5953bb9433",
           "node_id": "",
@@ -1660,6 +1856,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:187101",
+          "document_number": "340/2025/ND-CP",
           "anchor": null,
           "kind": "document"
         }
@@ -1674,6 +1871,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:139063",
+          "document_number": "88/2019/ND-CP",
           "source_url": "",
           "fetch_sha256": "7d95dcdf6774fcb52f954fc5aac7f4aa87e8ca8ad86df703c7096f49a361099e",
           "node_id": "",
@@ -1684,6 +1883,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:139063",
+          "document_number": "88/2019/ND-CP",
           "anchor": null,
           "kind": "document"
         }
@@ -1698,6 +1898,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:186792",
+          "document_number": "83/2025/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "b1a73d7170316fb24c5c2afa070d95958282b4eb4666ee905947623f10b8cc15",
           "node_id": "",
@@ -1708,6 +1910,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:186792",
+          "document_number": "83/2025/TT-NHNN",
           "anchor": null,
           "kind": "document"
         }
@@ -1722,6 +1925,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:152636",
+          "document_number": "143/2021/ND-CP",
           "source_url": "",
           "fetch_sha256": "cda1fb0cd198cbdba38c4ee3ae714896dc969ec69637f5c60a0e966189b252e1",
           "node_id": "",
@@ -1732,6 +1937,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:152636",
+          "document_number": "143/2021/ND-CP",
           "anchor": null,
           "kind": "document"
         }
@@ -1746,6 +1952,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:139063",
+          "document_number": "88/2019/ND-CP",
           "source_url": "",
           "fetch_sha256": "7d95dcdf6774fcb52f954fc5aac7f4aa87e8ca8ad86df703c7096f49a361099e",
           "node_id": "",
@@ -1756,6 +1964,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:139063",
+          "document_number": "88/2019/ND-CP",
           "anchor": null,
           "kind": "document"
         }
@@ -1780,6 +1989,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:69ba65c0-8a56-11f1-878c-399a87bcb3eb",
+          "document_number": "134/2025/QH15",
           "source_url": "",
           "fetch_sha256": "9788c2dff9609a9e70369245c804afbeba0f5a07c5b70a13716c1c294e63e774",
           "node_id": "4cbf4944-0e28-46f8-9729-a92fa115a83e",
@@ -1790,6 +2001,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:69ba65c0-8a56-11f1-878c-399a87bcb3eb",
+          "document_number": "134/2025/QH15",
           "anchor": "dieu-9",
           "kind": "provision"
         }
@@ -1804,6 +2016,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:187101",
+          "document_number": "340/2025/ND-CP",
           "source_url": "",
           "fetch_sha256": "644071b9cda9e473f4a703ee5f626cd60e5b83864c0f78c1c8f12c5953bb9433",
           "node_id": "7f1c9cd0-3029-11f1-a850-3f7a322310f9",
@@ -1814,6 +2028,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:187101",
+          "document_number": "340/2025/ND-CP",
           "anchor": "dieu-24",
           "kind": "provision"
         }
@@ -1828,6 +2043,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:144532",
+          "document_number": "09/2020/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "c73bc7a0715a0bd8a6c0ee7d2b0c5ba00d5302ab0e1f0258c6ee11c0b4753715",
           "node_id": "044bb7d8-df3f-11f0-b188-59c776772e02",
@@ -1838,6 +2055,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:144532",
+          "document_number": "09/2020/TT-NHNN",
           "anchor": "dieu-3",
           "kind": "provision"
         }
@@ -1862,6 +2080,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:179252",
+          "document_number": "91/2025/QH15",
           "source_url": "",
           "fetch_sha256": "60cd5851a56a5fe04877683d80bf9b5bb1b19c891dc0e9d70977879fab10a837",
           "node_id": "",
@@ -1872,6 +2092,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:179252",
+          "document_number": "91/2025/QH15",
           "anchor": null,
           "kind": "document"
         }
@@ -1886,6 +2107,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:180064",
+          "document_number": "04/2025/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "01b56a088d45ac3e370715378ff42fef48a179040968d12d7f544cc5fcd746f2",
           "node_id": "dec2cf4c-e169-11f0-9d14-77cb3ce5c0d9",
@@ -1896,6 +2119,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:180064",
+          "document_number": "04/2025/TT-NHNN",
           "anchor": "dieu-3/khoan-1",
           "kind": "provision"
         }
@@ -1910,6 +2134,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:180064",
+          "document_number": "04/2025/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "01b56a088d45ac3e370715378ff42fef48a179040968d12d7f544cc5fcd746f2",
           "node_id": "",
@@ -1920,6 +2146,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:180064",
+          "document_number": "04/2025/TT-NHNN",
           "anchor": null,
           "kind": "document"
         }
@@ -1934,6 +2161,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:420f79a0-8706-11f1-98cc-4f91ef2e45f8",
+          "document_number": "37/2026/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "e5f2cb60a4e2bdbaaada5d6327603ad5265bff06a9ee114e249cdb38edf9df68",
           "node_id": "",
@@ -1944,6 +2173,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:420f79a0-8706-11f1-98cc-4f91ef2e45f8",
+          "document_number": "37/2026/TT-NHNN",
           "anchor": null,
           "kind": "document"
         }
@@ -1958,6 +2188,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:185471",
+          "document_number": "57/2025/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "96d9b9eff0db7d7dfec8090b8efb71b5d6be946fdfba49a631a44bdb418ae6b5",
           "node_id": "1976c180-31b9-11f1-b7dd-dbcc5503704a",
@@ -1968,6 +2200,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:185471",
+          "document_number": "57/2025/TT-NHNN",
           "anchor": "dieu-7",
           "kind": "provision"
         }
@@ -1982,6 +2215,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:185547",
+          "document_number": "68/2025/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "3f9224f301ce93e294cdc0df2a28aef0da9d08d1143ae4f0eab6db9149df11ef",
           "node_id": "c8faa080-31a1-11f1-9687-49bf18461d28",
@@ -1992,6 +2227,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:185547",
+          "document_number": "68/2025/TT-NHNN",
           "anchor": "dieu-8/khoan-1",
           "kind": "provision"
         }
@@ -2006,6 +2242,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:184068",
+          "document_number": "35/2025/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "f07b09547177103257c12bf9fa9206e9f18b28812120d47e12ccc53f72dbe562",
           "node_id": "33cdaaf0-3199-11f1-aa7e-c74c96a15860",
@@ -2016,6 +2254,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:184068",
+          "document_number": "35/2025/TT-NHNN",
           "anchor": "dieu-12",
           "kind": "provision"
         }
@@ -2030,6 +2269,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:186792",
+          "document_number": "83/2025/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "b1a73d7170316fb24c5c2afa070d95958282b4eb4666ee905947623f10b8cc15",
           "node_id": "3a20ec30-31af-11f1-ba47-31b3245e162e",
@@ -2040,6 +2281,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:186792",
+          "document_number": "83/2025/TT-NHNN",
           "anchor": "dieu-70",
           "kind": "provision"
         }
@@ -2054,6 +2296,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:186060",
+          "document_number": "79/2025/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "ef2fb0116bd1b6eccc311e2b8fe8b7622a46e66d17d8f9787938d12396bb8253",
           "node_id": "8b8e49c0-3270-11f1-9e16-5d1134c7a437",
@@ -2064,6 +2308,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:186060",
+          "document_number": "79/2025/TT-NHNN",
           "anchor": "dieu-14",
           "kind": "provision"
         }
@@ -2078,6 +2323,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:185854",
+          "document_number": "82/2025/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "73fbfc7bd9bc955e5c5078b48c6a80005ba0a5b62fc973a139bb34436d573525",
           "node_id": "ee6e7bb0-31ac-11f1-94c1-37e74ded7a0c",
@@ -2088,6 +2335,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:185854",
+          "document_number": "82/2025/TT-NHNN",
           "anchor": "dieu-4",
           "kind": "provision"
         }
@@ -2102,12 +2350,16 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:185478",
+          "document_number": "54/2025/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "04160e401a1af734e89410aba5037472754afe5bbef23d6be10b4659fe3aa1f5",
           "node_id": "302e97f0-31a9-11f1-b176-49d8ab6dcfca",
           "quoted_span": "2. Chủ sở hữu, thành viên góp vốn không được dùng vốn ủy thác, vốn huy động, vốn vay dưới bất kỳ hình thức nào để góp vốn vào tổ chức tài chính vi mô và phải cam kết, chịu trách nhiệm về tính hợp pháp"
         },
         {
+          "document_key": "vn:vbpl:89204420-73a4-11f1-b581-2b248e5f26c5",
+          "document_number": "62/VBHN-NHNN",
           "source_url": "",
           "fetch_sha256": "5cff40a1012fd6ade67ea76e65b8ba060691ff8e99224855d8b08b5620449311",
           "node_id": "b2385ec8-002d-4436-87f2-c893a99811fd",
@@ -2118,12 +2370,14 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:185478",
+          "document_number": "54/2025/TT-NHNN",
           "anchor": "dieu-23",
           "kind": "provision"
         },
         {
           "country": "vn",
           "document_key": "vn:vbpl:89204420-73a4-11f1-b581-2b248e5f26c5",
+          "document_number": "62/VBHN-NHNN",
           "anchor": "dieu-23",
           "kind": "provision"
         }
@@ -2138,12 +2392,16 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:185599",
+          "document_number": "61/2025/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "e8d8cb08dcbd1e8f8dee2e107f365850898e9981db19c39926ea41d017b86eca",
           "node_id": "efa17d7a-31ac-11f1-b136-611f00149288",
           "quoted_span": "1. Ngân hàng thương mại được thành lập tối đa 10 chi nhánh tại mỗi khu vực nội thành thành phố Hà Nội hoặc nội thành thành phố Hồ Chí Minh."
         },
         {
+          "document_key": "vn:vbpl:fba85260-6f82-11f1-b60f-1789c4ffaabf",
+          "document_number": "55/VBHN-NHNN",
           "source_url": "",
           "fetch_sha256": "5eb7f687ca47f6ecac46c47f8abeaeb0d702df0a6adbaf5f246412ab2a16506f",
           "node_id": "64dd88d5-eaaa-4647-bda4-f336888c132f",
@@ -2154,12 +2412,14 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:185599",
+          "document_number": "61/2025/TT-NHNN",
           "anchor": "dieu-8/khoan-1",
           "kind": "provision"
         },
         {
           "country": "vn",
           "document_key": "vn:vbpl:fba85260-6f82-11f1-b60f-1789c4ffaabf",
+          "document_number": "55/VBHN-NHNN",
           "anchor": "dieu-8/khoan-1",
           "kind": "provision"
         }
@@ -2174,6 +2434,8 @@
       "reviewed_at": "2026-11-09",
       "evidence": [
         {
+          "document_key": "vn:vbpl:185599",
+          "document_number": "61/2025/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "e8d8cb08dcbd1e8f8dee2e107f365850898e9981db19c39926ea41d017b86eca",
           "node_id": "",
@@ -2184,6 +2446,7 @@
         {
           "country": "vn",
           "document_key": "vn:vbpl:185599",
+          "document_number": "61/2025/TT-NHNN",
           "anchor": null,
           "kind": "document"
         }

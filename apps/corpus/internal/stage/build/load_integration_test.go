@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"danny.vn/trachuan/apps/corpus/internal/artifact"
+	"danny.vn/trachuan/apps/corpus/internal/evaluation"
 	"danny.vn/trachuan/apps/corpus/internal/stage"
 	"danny.vn/trachuan/apps/corpus/internal/stage/chunk"
 	"danny.vn/trachuan/apps/corpus/internal/stage/embed"
@@ -330,4 +331,14 @@ func TestLoad_IdenticalRelationArtifactsOfTwoDocuments(t *testing.T) {
 	if err = f.corpus.QueryRow(context.Background(), `SELECT source_key FROM relation WHERE id=1`).Scan(&first); err != nil || first != "vn:vbpl:1" || c.Relations != 2 {
 		t.Fatalf("relation 1 source %q counts %+v: %v", first, c, err)
 	}
+}
+
+func pinTestSuite(t *testing.T, suite *evaluation.Suite) {
+	t.Helper()
+	b, err := json.Marshal(suite.Map)
+	if err != nil {
+		t.Fatal(err)
+	}
+	suite.MapBytes = b
+	suite.Hashes.IdentityMap = fmt.Sprintf("%x", sha256.Sum256(b))
 }

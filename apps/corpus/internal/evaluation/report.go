@@ -11,6 +11,7 @@ import (
 
 // Options identifies the inputs and environment of an evaluation.
 type Options struct {
+	Mapping              ValidationReport
 	EvaluationDate       retrieval.Date
 	Modes                []retrieval.Mode
 	PreviousReport       string
@@ -64,22 +65,23 @@ type SizeSummary struct {
 
 // CaseResult contains the non-sensitive result of one response.
 type CaseResult struct {
-	CaseID      string               `json:"case_id"`
-	Cohort      string               `json:"cohort"`
-	Mode        retrieval.Mode       `json:"mode"`
-	Arms        retrieval.ArmMode    `json:"arms"`
-	Limit       int                  `json:"limit"`
-	Expected    int                  `json:"expected"`
-	Ranks       []int                `json:"ranks"`
-	DirectRanks []int                `json:"direct_ranks,omitempty"`
-	Returned    []retrieval.Identity `json:"returned"`
-	Mapped      [][]Alternative      `json:"mapped_identities"`
-	Matched     int                  `json:"matched"`
-	Losses      []CitationLoss       `json:"losses"`
-	Abstain     bool                 `json:"abstain"`
-	Reason      string               `json:"reason,omitempty"`
-	Gaps        []retrieval.Gap      `json:"gaps"`
-	Characters  int                  `json:"characters"`
+	MappingIssues []MappingIssue       `json:"mapping_issues,omitempty"`
+	CaseID        string               `json:"case_id"`
+	Cohort        string               `json:"cohort"`
+	Mode          retrieval.Mode       `json:"mode"`
+	Arms          retrieval.ArmMode    `json:"arms"`
+	Limit         int                  `json:"limit"`
+	Expected      int                  `json:"expected"`
+	Ranks         []int                `json:"ranks"`
+	DirectRanks   []int                `json:"direct_ranks,omitempty"`
+	Returned      []retrieval.Identity `json:"returned"`
+	Mapped        [][]Alternative      `json:"mapped_identities"`
+	Matched       int                  `json:"matched"`
+	Losses        []CitationLoss       `json:"losses"`
+	Abstain       bool                 `json:"abstain"`
+	Reason        string               `json:"reason,omitempty"`
+	Gaps          []retrieval.Gap      `json:"gaps"`
+	Characters    int                  `json:"characters"`
 }
 
 // Rejection records a product input gate check.

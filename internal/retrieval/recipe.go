@@ -61,7 +61,7 @@ type Recipe struct {
 
 // Recipe1 returns the uncalibrated baseline.
 func Recipe1() Recipe {
-	return Recipe{1, 50, 50, ANNRecipe{400, 24, 1000, "strict_order", "force_custom_plan", 20000, 1, "exact"}, RRFRecipe{60, 1, .5, 1}, "score-id", "vn-number/1", "nearest-khoan", "max", 8, 3, "demoted-order", "off-unverified-alignment", "document-dates/1", true, "vn-marks/1", "source-spans/1", 14000, 20, 1000, AbstentionRecipe{"first-group-best-member-cosine", nil, "provisional-old-product", ""}}
+	return Recipe{1, 50, 50, ANNRecipe{400, 24, 1000, "strict_order", "force_custom_plan", 20000, 1, "exact"}, RRFRecipe{60, 1, .5, 1}, "score-id", "vn-number/1", "nearest-khoan", "max", 8, 3, "demoted-order", "off-unverified-alignment", "document-dates/2", true, "vn-marks/1", "source-spans/1", 14000, 20, 1000, AbstentionRecipe{"first-group-best-member-cosine", nil, "provisional-old-product", ""}}
 }
 
 // JSON returns compact fixed-field JSON.

@@ -118,7 +118,27 @@ func (s *Stage) evaluateBuild(ctx context.Context, env stage.Env, run stage.Run,
 	if err = json.Unmarshal(calibration, &cal); err != nil {
 		return evaluation.Report{}, evaluation.Cache{}, fmt.Errorf("decode calibration: %w", err)
 	}
-	report, cache, err := evaluation.Run(ctx, engine, s.cfg.Suite, evaluation.Options{EvaluationDate: retrieval.Date{Year: date.Year(), Month: date.Month(), Day: date.Day()}, PreviousReport: s.cfg.Previous, BuildArtifactSHA256: art.SHA256, DumpSHA256: db.Record.Dump.SHA256, DatabaseInstanceKind: db.Instance, Calibration: cal, Software: map[string]string{"postgresql": db.Record.PostgresVersion, "pgvector": db.Record.PGVectorVersion, "ltree": db.Record.LtreeVersion, "pg_dump": db.Record.PgDumpVersion, "worker": db.Record.WorkerVersion}})
+	if db.Record.IdentityMapSHA256 != s.cfg.Suite.Hashes.IdentityMap {
+		return evaluation.Report{}, evaluation.Cache{}, fmt.Errorf("identity map differs from build input")
+	}
+	inv, err := build.LoadInventory(ctx, store.New(env.DB), run, "relate")
+	if err != nil {
+		return evaluation.Report{}, evaluation.Cache{}, fmt.Errorf("load evaluation inventory: %w", err)
+	}
+	identities, err := build.IdentityInventory(inv, env.Artifacts)
+	if err != nil {
+		return evaluation.Report{}, evaluation.Cache{}, fmt.Errorf("verify evaluation inventory: %w", err)
+	}
+	suite := s.cfg.Suite
+	suite.Map, err = suite.PinnedMap()
+	if err != nil {
+		return evaluation.Report{}, evaluation.Cache{}, fmt.Errorf("verify identity map: %w", err)
+	}
+	mapping, err := suite.Map.Validate(suite.Legacy, suite.Hashes.Legacy, identities)
+	if err != nil {
+		return evaluation.Report{}, evaluation.Cache{}, fmt.Errorf("validate evaluation mapping: %w", err)
+	}
+	report, cache, err := evaluation.Run(ctx, engine, suite, evaluation.Options{Mapping: mapping, EvaluationDate: retrieval.Date{Year: date.Year(), Month: date.Month(), Day: date.Day()}, PreviousReport: s.cfg.Previous, BuildArtifactSHA256: art.SHA256, DumpSHA256: db.Record.Dump.SHA256, DatabaseInstanceKind: db.Instance, Calibration: cal, Software: map[string]string{"postgresql": db.Record.PostgresVersion, "pgvector": db.Record.PGVectorVersion, "ltree": db.Record.LtreeVersion, "pg_dump": db.Record.PgDumpVersion, "worker": db.Record.WorkerVersion}})
 	if err != nil {
 		return report, cache, fmt.Errorf("run evaluation: %w", err)
 	}

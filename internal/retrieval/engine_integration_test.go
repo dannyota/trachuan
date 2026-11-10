@@ -93,7 +93,7 @@ func fixtureWithTrace(t *testing.T, trace *exactSettingsTrace) (*pgxpool.Pool, *
 		if i == 3 {
 			start = nil
 		}
-		_, err = db.Exec(ctx, `INSERT INTO document (id,country,key,number,number_norm,title,doc_type,issuer,eff_from,eff_to,raw_issue_date,raw_eff_from,raw_eff_to,status_code,status_name,status_class,is_current,is_consolidated,content_state,fetch_sha256) VALUES ($1,'vn',$2,'n','n','title','law','issuer',$3,$4,'','','','','',$5,$6,false,'indexed',$7)`, i, fmt.Sprintf("vn:%d", i), start, end, status, i != 2, hash)
+		_, err = db.Exec(ctx, `INSERT INTO document (id,country,key,number,number_norm,title,doc_type,issuer,eff_from,eff_to,raw_issue_date,raw_eff_from,raw_eff_to,status_code,status_name,status_class,status_basis,is_current,is_consolidated,content_state,fetch_sha256) VALUES ($1,'vn',$2,'n','n','title','law','issuer',$3,$4,'','','','','',$5,'source_status',$6,false,'indexed',$7)`, i, fmt.Sprintf("vn:%d", i), start, end, status, i != 2, hash)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -165,7 +165,7 @@ func fixtureWithTrace(t *testing.T, trace *exactSettingsTrace) (*pgxpool.Pool, *
 		}
 		return string(b)
 	}
-	_, err = db.Exec(ctx, `INSERT INTO release VALUES (true,'vn','test',1,'v1',$1::jsonb,'{}',$2::jsonb,$3::jsonb,$4::jsonb,$5,$5,$5,'{}',now())`, marshal(dense), marshal(lexical.Recipe1()), marshal(recipe), marshal(stats.Summary(lexical.Recipe1(), nil)), hash)
+	_, err = db.Exec(ctx, `INSERT INTO release VALUES (true,'vn','test',2,'v1',$1::jsonb,'{}',$2::jsonb,$3::jsonb,$4::jsonb,$5,$5,$5,'{}',now())`, marshal(dense), marshal(lexical.Recipe1()), marshal(recipe), marshal(stats.Summary(lexical.Recipe1(), nil)), hash)
 	if err != nil {
 		t.Fatal(err)
 	}

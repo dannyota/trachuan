@@ -31,7 +31,7 @@ func schemaDB(t *testing.T) *pgx.Conn {
 	return conn
 }
 
-func TestApply_CreatesSchemaVersion1(t *testing.T) {
+func TestApply_CreatesSchemaVersion2(t *testing.T) {
 	conn := schemaDB(t)
 	ctx := context.Background()
 	for _, table := range []string{"document", "source_file", "provision", "provision_validity", "chunk", "lexical_df", "relation", "coverage_gap", "taxonomy_node", "taxonomy_assignment", "release"} {
@@ -61,11 +61,11 @@ func TestApply_ConstraintsRejectBadRows(t *testing.T) {
 	conn := schemaDB(t)
 	ctx := context.Background()
 	hash := strings.Repeat("a", 64)
-	_, err := conn.Exec(ctx, `INSERT INTO document (id,country,key,number,number_norm,title,doc_type,issuer,raw_issue_date,raw_eff_from,raw_eff_to,status_code,status_name,status_class,is_current,is_consolidated,content_state,fetch_sha256) VALUES (1,'vn','vn:test','n','n','t','t','i','','','','','','unknown',false,false,'indexed',$1)`, hash)
+	_, err := conn.Exec(ctx, `INSERT INTO document (id,country,key,number,number_norm,title,doc_type,issuer,raw_issue_date,raw_eff_from,raw_eff_to,status_code,status_name,status_class,status_basis,is_current,is_consolidated,content_state,fetch_sha256) VALUES (1,'vn','vn:test','n','n','t','t','i','','','','','','unknown','source_status',false,false,'indexed',$1)`, hash)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = conn.Exec(ctx, `INSERT INTO release VALUES (true,'vn','r',1,'','{}','{}','{}','{}','{}',$1,$1,$1,'{}',now())`, hash)
+	_, err = conn.Exec(ctx, `INSERT INTO release VALUES (true,'vn','r',2,'','{}','{}','{}','{}','{}',$1,$1,$1,'{}',now())`, hash)
 	if err != nil {
 		t.Fatal(err)
 	}

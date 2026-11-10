@@ -194,3 +194,14 @@ func TestChunkStage_InputHashChangesWithFetchMetadata(t *testing.T) {
 		t.Fatal("fetch metadata change did not change input hash")
 	}
 }
+
+func TestPrefix_UsesBuildDateNormalizer(t *testing.T) {
+	for _, raw := range []string{"2020-07-10T00:00:00", "2020-07-10T01:00:00", "2020-07-10T07:00:00", "2020-07-10T17:00:00"} {
+		if got := civilDate(raw); got != "2020-07-10" {
+			t.Errorf("civilDate(%q) = %q", raw, got)
+		}
+	}
+	if got := Recipe1().DateNormalizer; got != "corpus-normalizer/3" {
+		t.Errorf("date normalizer = %q", got)
+	}
+}

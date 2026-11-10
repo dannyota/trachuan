@@ -7,7 +7,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"strconv"
 	"time"
 
 	"danny.vn/trachuan/apps/corpus/internal/artifact"
@@ -26,6 +25,7 @@ type BuildRecord struct {
 	BuildRecipeHash       string           `json:"build_recipe_hash"`
 	SourceManifestHash    string           `json:"source_manifest_hash"`
 	IdentityInventoryHash string           `json:"identity_inventory_hash"`
+	IdentityMapSHA256     string           `json:"identity_map_sha256"`
 	DenseRecipe           json.RawMessage  `json:"dense_recipe"`
 	ChunkRecipe           json.RawMessage  `json:"chunk_recipe"`
 	LexicalRecipe         json.RawMessage  `json:"lexical_recipe"`
@@ -77,7 +77,7 @@ func verifyBuildArtifact(store artifact.Store, art artifact.Result, run stage.Ru
 	if err != nil {
 		return record, "", err
 	}
-	if record.Version != 1 || record.Country != run.Country || record.Rel != run.Rel || record.DatabaseName != final || record.SchemaVersion != corpusdb.SchemaVersion || inventory.Country != run.Country || inventory.SourceListHash != run.Snapshot.SourceListHash || record.BuildInputHash != art.InputHash || record.BuildInputHash != stage.RecipeHash("build-input", "1", run.Country, run.Rel, inventory.SourceManifestHash(), strconv.Itoa(record.SchemaVersion)) || record.BuildRecipeHash != New(cfg).Recipe(run.Snapshot) || record.SourceManifestHash != inventory.SourceManifestHash() || record.IdentityInventoryHash != inventory.IdentityHash() || record.Dump.Format != "custom" || record.PostgresVersion != cfg.Versions.PostgreSQLMajor || record.PGVectorVersion != cfg.Versions.PGVector || record.LtreeVersion != cfg.Versions.Ltree || record.PgDumpVersion != cfg.Versions.PgDump || record.WorkerVersion != run.Snapshot.WorkerVersion || record.BuiltAt.IsZero() {
+	if record.Version != 1 || record.Country != run.Country || record.Rel != run.Rel || record.DatabaseName != final || record.SchemaVersion != corpusdb.SchemaVersion || inventory.Country != run.Country || inventory.SourceListHash != run.Snapshot.SourceListHash || record.BuildInputHash != art.InputHash || record.BuildInputHash != buildInputHash(run.Country, run.Rel, inventory.SourceManifestHash(), record.IdentityMapSHA256) || record.BuildRecipeHash != New(cfg).Recipe(run.Snapshot) || record.SourceManifestHash != inventory.SourceManifestHash() || record.IdentityInventoryHash != inventory.IdentityHash() || record.Dump.Format != "custom" || record.PostgresVersion != cfg.Versions.PostgreSQLMajor || record.PGVectorVersion != cfg.Versions.PGVector || record.LtreeVersion != cfg.Versions.Ltree || record.PgDumpVersion != cfg.Versions.PgDump || record.WorkerVersion != run.Snapshot.WorkerVersion || record.BuiltAt.IsZero() {
 		return record, "", fmt.Errorf("build artifact identity mismatch")
 	}
 	calibration, err := os.ReadFile(filepath.Join(dir, "calibration.json"))

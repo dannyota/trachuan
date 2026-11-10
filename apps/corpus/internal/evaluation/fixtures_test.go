@@ -14,3 +14,20 @@ func TestVNSuite_EmbeddedAndInvalidFixtures(t *testing.T) {
 		t.Fatal("missing fixtures accepted")
 	}
 }
+
+func TestSuite_RejectsChangedMapBytes(t *testing.T) {
+	suite, err := VNSuite()
+	if err != nil {
+		t.Fatal(err)
+	}
+	suite.MapBytes[0] ^= 1
+	if err = suite.VerifyMapBytes(); err == nil {
+		t.Fatal("changed map bytes accepted")
+	}
+}
+
+func TestSuite_RejectsMissingMapBytes(t *testing.T) {
+	if err := (Suite{}).VerifyMapBytes(); err == nil {
+		t.Fatal("missing map bytes accepted")
+	}
+}

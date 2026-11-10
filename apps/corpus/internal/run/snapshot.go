@@ -72,3 +72,22 @@ func extendSnapshot(snapshot stage.Snapshot, stages []string, recipes map[string
 	}
 	return result, changed, nil
 }
+
+func includedStages(stages []string, until string, previousCount int) []string {
+	count := len(stages)
+	if until != "" {
+		for i, name := range stages {
+			if name == until {
+				count = i + 1
+				break
+			}
+		}
+	}
+	if previousCount > count {
+		count = previousCount
+	}
+	if count > len(stages) {
+		count = len(stages)
+	}
+	return stages[:count]
+}

@@ -27,5 +27,5 @@ func stamp(doc Document, arms Arms) (Validity, []Gap) {
 	if from == nil {
 		gaps = append(gaps, Gap{Kind: "missing_effective_date", Message: "Effective start date is missing."})
 	}
-	return Validity{StatusClass: doc.StatusClass, Current: current, AsOf: arms.AsOf, EffectiveFrom: from, EffectiveTo: to, Basis: basis}, gaps
+	return Validity{StatusClass: doc.StatusClass, StatusBasis: doc.StatusBasis, Current: current, AsOf: arms.AsOf, EffectiveFrom: from, EffectiveTo: to, Basis: basis}, gaps
 }

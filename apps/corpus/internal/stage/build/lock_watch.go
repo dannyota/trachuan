@@ -2,6 +2,7 @@ package build
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -42,4 +43,11 @@ func watchLock(ctx context.Context, conn *pgx.Conn, cancel context.CancelFunc, d
 	var once sync.Once
 	var result error
 	return func() error { once.Do(func() { close(stop); result = <-done }); return result }
+}
+
+func watchError(result, watch error) error {
+	if watch != nil && !errors.Is(watch, context.Canceled) {
+		return watch
+	}
+	return result
 }

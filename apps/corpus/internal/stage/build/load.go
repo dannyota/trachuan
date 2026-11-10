@@ -81,6 +81,9 @@ func Load(ctx context.Context, conn *pgx.Conn, inv Inventory, artifacts artifact
 	if err = l.loadRelations(ctx); err != nil {
 		return Counts{}, err
 	}
+	if err = l.deriveConsolidated(ctx); err != nil {
+		return Counts{}, err
+	}
 	if err = l.loadGaps(ctx); err != nil {
 		return Counts{}, err
 	}

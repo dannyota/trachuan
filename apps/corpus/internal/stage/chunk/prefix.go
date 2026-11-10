@@ -2,7 +2,8 @@ package chunk
 
 import (
 	"strings"
-	"time"
+
+	"danny.vn/trachuan/apps/corpus/internal/stage/chunk/normalizer"
 )
 
 func collapse(s string) string { return strings.Join(strings.Fields(s), " ") }
@@ -16,18 +17,11 @@ func capped(s string, limit int) string {
 }
 
 func civilDate(s string) string {
-	s = strings.TrimSpace(s)
-	for _, layout := range []string{"2006-01-02", "02/01/2006", time.RFC3339Nano} {
-		t, err := time.Parse(layout, s)
-		if err != nil || t.Year() == 0 {
-			continue
-		}
-		if layout == time.RFC3339Nano {
-			t = t.In(time.FixedZone("ICT", 7*60*60))
-		}
-		return t.Format("2006-01-02")
+	date, err := normalizer.ParseDate(s)
+	if err != nil || date == nil {
+		return ""
 	}
-	return ""
+	return date.Format("2006-01-02")
 }
 
 func prefix(meta Meta, owner *treeNode, recipe Recipe) string {

@@ -26,22 +26,20 @@ func TestLoadLegacy_ValidatesIDsAndFlags(t *testing.T) {
 	}
 }
 
-func TestValidate_MissingOrAmbiguousEntryBlocks(t *testing.T) {
+func TestValidate_MissingOrAmbiguousEntryIsPerCase(t *testing.T) {
 	cases := []Case{{ID: "a", ExpectedCitations: []Expectation{{DocNumber: "12"}}}}
-	m := IdentityMap{Version: 1, LegacySHA256: "l", IdentityInventoryHash: "i"}
-	if err := m.Validate(cases, "l", "i"); err == nil || !strings.Contains(err.Error(), "mapping_incomplete") {
-		t.Fatalf("missing: %v", err)
+	m := IdentityMap{Version: 1, LegacySHA256: "l"}
+	report, err := m.Validate(cases, "l", IdentityInventory{})
+	if err != nil || len(report["a"]) == 0 {
+		t.Fatalf("missing entry: %v %v", report, err)
 	}
-	m.Entries = []MapEntry{{CaseID: "a", CitationIndex: 0, State: "resolved", ExpectedNumber: "12", Reason: "reviewed", ReviewedAt: "2026-01-01", Evidence: []Evidence{{SourceURL: "url", FetchSHA256: "hash", NodeID: "node", QuotedSpan: "span"}}, Alternatives: []Alternative{{Country: "vn", DocumentKey: "d", Kind: "document"}, {Country: "vn", DocumentKey: "d", Kind: "document"}}}}
-	if err := m.Validate(cases, "l", "i"); err == nil {
-		t.Fatal("duplicate alternatives accepted")
-	}
-}
-func TestValidate_InventoryHashMismatchBlocks(t *testing.T) {
-	if (IdentityMap{Version: 1, LegacySHA256: "l", IdentityInventoryHash: "old"}).Validate(nil, "l", "new") == nil {
-		t.Fatal("accepted mismatch")
+	m.Entries = []MapEntry{{CaseID: "a"}, {CaseID: "a"}}
+	report, err = m.Validate(cases, "l", IdentityInventory{})
+	if err != nil || len(report["a"]) == 0 {
+		t.Fatalf("duplicate entry: %v %v", report, err)
 	}
 }
+
 func TestMatchLegacy_NumberEqualityThenContainment(t *testing.T) {
 	for _, n := range []string{" 12/AB ", "XX12-ABYY"} {
 		if r, _ := MatchLegacy(Expectation{DocNumber: "12/ab"}, []retrieval.Hit{{Number: n}}); r != 1 {
@@ -155,13 +153,15 @@ func TestQuantile_NearestRank(t *testing.T) {
 
 func TestValidate_AbsentNamesAllNumbers(t *testing.T) {
 	cases := []Case{{ID: "a", ExpectedCitations: []Expectation{{DocNumber: "12", AltDocNumbers: []string{"13"}}}}}
-	m := IdentityMap{Version: 1, LegacySHA256: "l", IdentityInventoryHash: "i", Entries: []MapEntry{{CaseID: "a", State: "absent", ExpectedNumber: "12", Reason: "searched 12", ReviewedAt: "2026-01-01"}}}
-	if m.Validate(cases, "l", "i") == nil {
+	m := IdentityMap{Version: 2, LegacySHA256: "l", Entries: []MapEntry{{CaseID: "a", State: "absent", ExpectedNumber: "12", Reason: "searched 12", ReviewedAt: "2026-01-01"}}}
+	report, err := m.Validate(cases, "l", IdentityInventory{})
+	if err != nil || len(report["a"]) == 0 {
 		t.Fatal("absence omits alternate number")
 	}
 	m.Entries[0].Reason = "searched 12 and 13"
-	if err := m.Validate(cases, "l", "i"); err != nil {
-		t.Fatal(err)
+	report, err = m.Validate(cases, "l", IdentityInventory{})
+	if err != nil || len(report["a"]) != 0 {
+		t.Fatalf("report %v: %v", report, err)
 	}
 }
 func TestMetrics_UnknownIsNotCurrent(t *testing.T) {
@@ -177,14 +177,6 @@ func TestMetrics_EvidenceCharacters(t *testing.T) {
 		t.Fatal(v)
 	}
 }
-func TestValidate_ValidResolved(t *testing.T) {
-	cases := []Case{{ID: "a", ExpectedCitations: []Expectation{{DocNumber: "12"}}}}
-	m := IdentityMap{Version: 1, LegacySHA256: "l", IdentityInventoryHash: "i", Entries: []MapEntry{{CaseID: "a", State: "resolved", ExpectedNumber: "12", Reason: "reviewed", ReviewedAt: "2026-01-01", Evidence: []Evidence{{SourceURL: "url", FetchSHA256: "hash", NodeID: "node", QuotedSpan: "span"}}, Alternatives: []Alternative{{Country: "vn", DocumentKey: "d", Kind: "document"}}}}}
-	if err := m.Validate(cases, "l", "i"); err != nil {
-		t.Fatal(err)
-	}
-}
-
 func TestMatchProduct_RelationAnchorNamesMappedEndpoint(t *testing.T) {
 	target, anchor := "t", "child"
 	e := MapEntry{State: "resolved", Alternatives: []Alternative{{Country: "vn", DocumentKey: "t", Anchor: &anchor, Kind: "relation", SourceKey: "s", TargetKey: "t", RelationKind: "amends", EvidenceSHA256: "hash"}}}
@@ -214,19 +206,23 @@ func TestMatchProduct_RelationNeedsCompleteEvidence(t *testing.T) {
 
 func TestValidate_EvidenceURLOptionalNodeIDOnlyForDocuments(t *testing.T) {
 	cases := []Case{{ID: "a", ExpectedCitations: []Expectation{{DocNumber: "12"}}}}
-	doc := IdentityMap{Version: 1, LegacySHA256: "l", IdentityInventoryHash: "i", Entries: []MapEntry{{CaseID: "a", State: "resolved", ExpectedNumber: "12", Reason: "reviewed", ReviewedAt: "2026-01-01", Evidence: []Evidence{{FetchSHA256: "hash", QuotedSpan: "title"}}, Alternatives: []Alternative{{Country: "vn", DocumentKey: "d", Kind: "document"}}}}}
-	if err := doc.Validate(cases, "l", "i"); err != nil {
-		t.Fatalf("document-level evidence without URL or node rejected: %v", err)
+	entry := MapEntry{CaseID: "a", State: "resolved", ExpectedNumber: "12", Reason: "reviewed", ReviewedAt: "2026-01-01", Evidence: []Evidence{{DocumentKey: "d", DocumentNumber: "12", FetchSHA256: "hash", QuotedSpan: "title"}}, Alternatives: []Alternative{{Country: "vn", DocumentKey: "d", DocumentNumber: "12", Kind: "document"}}}
+	m := IdentityMap{Version: 2, LegacySHA256: "l", Entries: []MapEntry{entry}}
+	inv := IdentityInventory{Documents: map[string]IdentityDocument{"d": {Number: "12", Anchors: map[string]bool{"dieu-3": true}, Nodes: map[string]bool{"n1": true}}}}
+	report, err := m.Validate(cases, "l", inv)
+	if err != nil || len(report["a"]) != 0 {
+		t.Fatalf("document: %v %v", report, err)
 	}
 	anchor := "dieu-3"
-	prov := doc
-	prov.Entries = []MapEntry{doc.Entries[0]}
-	prov.Entries[0].Alternatives = []Alternative{{Country: "vn", DocumentKey: "d", Anchor: &anchor, Kind: "provision"}}
-	if err := prov.Validate(cases, "l", "i"); err == nil {
-		t.Fatal("provision evidence without a node id accepted")
+	m.Entries[0].Alternatives[0].Kind = "provision"
+	m.Entries[0].Alternatives[0].Anchor = &anchor
+	report, err = m.Validate(cases, "l", inv)
+	if err != nil || len(report["a"]) == 0 {
+		t.Fatal("missing node accepted")
 	}
-	prov.Entries[0].Evidence = []Evidence{{FetchSHA256: "hash", NodeID: "n1", QuotedSpan: "Điều 3"}}
-	if err := prov.Validate(cases, "l", "i"); err != nil {
-		t.Fatalf("provision evidence without URL rejected: %v", err)
+	m.Entries[0].Evidence[0].NodeID = "n1"
+	report, err = m.Validate(cases, "l", inv)
+	if err != nil || len(report["a"]) != 0 {
+		t.Fatalf("provision: %v %v", report, err)
 	}
 }

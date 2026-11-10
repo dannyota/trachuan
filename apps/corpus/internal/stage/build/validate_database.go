@@ -28,7 +28,7 @@ func validateDatabase(ctx context.Context, cfg Config, name string, record Build
 	}
 	defer func() { _ = db.Close(context.Background()) }()
 	var matches bool
-	err = db.QueryRow(ctx, `SELECT country=$1 AND rel=$2 AND schema_version=$3 AND taxonomy_version=$4 AND dense_recipe=$5::jsonb AND chunk_recipe=$6::jsonb AND lexical_recipe=$7::jsonb AND retrieval_recipe=$8::jsonb AND lexical_stats=$9::jsonb AND source_manifest_hash=$10 AND build_input_hash=$11 AND build_recipe_hash=$12 AND evaluation_summary='{}'::jsonb AND built_at=$13 FROM release WHERE singleton`, record.Country, record.Rel, record.SchemaVersion, record.TaxonomyVersion, record.DenseRecipe, record.ChunkRecipe, record.LexicalRecipe, record.RetrievalRecipe, record.LexicalStats, record.SourceManifestHash, record.BuildInputHash, record.BuildRecipeHash, record.BuiltAt).Scan(&matches)
+	err = db.QueryRow(ctx, `SELECT country=$1 AND rel=$2 AND schema_version=$3 AND taxonomy_version=$4 AND dense_recipe=$5::jsonb AND chunk_recipe=$6::jsonb AND lexical_recipe=$7::jsonb AND retrieval_recipe=$8::jsonb AND lexical_stats=$9::jsonb AND source_manifest_hash=$10 AND build_input_hash=$11 AND build_recipe_hash=$12 AND evaluation_summary=$14::jsonb AND built_at=$13 FROM release WHERE singleton`, record.Country, record.Rel, record.SchemaVersion, record.TaxonomyVersion, record.DenseRecipe, record.ChunkRecipe, record.LexicalRecipe, record.RetrievalRecipe, record.LexicalStats, record.SourceManifestHash, record.BuildInputHash, record.BuildRecipeHash, record.BuiltAt, initialEvaluationSummary()).Scan(&matches)
 	if err != nil {
 		return fmt.Errorf("read corpus release: %w", err)
 	}

@@ -71,7 +71,7 @@ func inspectTemporary(t *testing.T, f recoveryFixture) temporaryState {
 	return state
 }
 
-func TestBuild_RefusesIdentityMapMismatch(t *testing.T) {
+func TestBuild_IdentityInventoryHashDoesNotGatePlanning(t *testing.T) {
 	f := recoverySetup(t)
 	ctx := context.Background()
 	if _, err := New(f.cfg).Plan(ctx, f.env, f.run); err != nil {
@@ -79,11 +79,12 @@ func TestBuild_RefusesIdentityMapMismatch(t *testing.T) {
 	}
 	cfg := f.cfg
 	cfg.Suite.Map.IdentityInventoryHash = strings.Repeat("f", 64)
+	pinTestSuite(t, &cfg.Suite)
 	if cfg.Suite.Map.IdentityInventoryHash == cfg.Suite.Hashes.Inventory {
 		t.Fatal("test did not change inventory identity")
 	}
-	if _, err := New(cfg).Plan(ctx, f.env, f.run); err == nil || !strings.Contains(err.Error(), "mapping_incomplete") {
-		t.Fatalf("identity mismatch: %v", err)
+	if _, err := New(cfg).Plan(ctx, f.env, f.run); err != nil {
+		t.Fatalf("diagnostic inventory hash blocked plan: %v", err)
 	}
 }
 

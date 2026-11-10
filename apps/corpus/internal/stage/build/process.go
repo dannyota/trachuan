@@ -24,7 +24,7 @@ import (
 )
 
 // Process builds and dumps a corpus from the planned inventory.
-func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item stage.Item) (stage.Output, error) {
+func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item stage.Item) (output stage.Output, resultErr error) {
 	started := time.Now()
 	ctx, cancel := context.WithTimeout(ctx, 50*time.Minute)
 	defer cancel()
@@ -59,7 +59,7 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 	if err != nil {
 		return stage.Output{}, err
 	}
-	if stage.RecipeHash("build-input", "1", run.Country, run.Rel, inv.SourceManifestHash(), fmt.Sprint(corpusdb.SchemaVersion)) != item.InputHash {
+	if buildInputHash(run.Country, run.Rel, inv.SourceManifestHash(), s.cfg.Suite.Hashes.IdentityMap) != item.InputHash {
 		return stage.Output{}, fmt.Errorf("inventory_changed")
 	}
 	recipeHash := s.Recipe(run.Snapshot)
@@ -80,7 +80,7 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 	workCtx, cancelWork := context.WithCancel(ctx)
 	defer cancelWork()
 	stopWatch := watchLock(workCtx, admin, cancelWork, func() error { return s.cfg.checkDisks(env.Artifacts.Root, s.cfg.duringBytes()) })
-	defer func() { _ = stopWatch() }()
+	defer func() { resultErr = watchError(resultErr, stopWatch()) }()
 	ctx = workCtx
 	dbCfg, err := pgxpool.ParseConfig(s.cfg.BuilderURL)
 	if err != nil {
@@ -126,7 +126,7 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 	}
 	chunkJSON, _ := json.Marshal(chunk.Recipe1())
 	doc, query := embedding.DocumentRecipe1(), embedding.QueryRecipe1()
-	release := retrieval.Release{Country: run.Country, Rel: run.Rel, SchemaVersion: corpusdb.SchemaVersion, DenseRecipe: retrieval.DenseRecipe{Version: 1, Model: doc.Model, Dimensions: doc.Dimensions, Document: doc, DocumentHash: doc.Hash(), Query: query, QueryHash: query.Hash()}, ChunkRecipe: chunkJSON, LexicalRecipe: lexical.Recipe1(), RetrievalRecipe: retrieval.Recipe1(), LexicalStats: counts.LexicalStats, SourceManifestHash: inv.SourceManifestHash(), BuildInputHash: item.InputHash, BuildRecipeHash: recipeHash, EvaluationSummary: json.RawMessage(`{}`), BuiltAt: s.cfg.Now().UTC().Truncate(time.Microsecond)}
+	release := retrieval.Release{Country: run.Country, Rel: run.Rel, SchemaVersion: corpusdb.SchemaVersion, DenseRecipe: retrieval.DenseRecipe{Version: 1, Model: doc.Model, Dimensions: doc.Dimensions, Document: doc, DocumentHash: doc.Hash(), Query: query, QueryHash: query.Hash()}, ChunkRecipe: chunkJSON, LexicalRecipe: lexical.Recipe1(), RetrievalRecipe: retrieval.Recipe1(), LexicalStats: counts.LexicalStats, SourceManifestHash: inv.SourceManifestHash(), BuildInputHash: item.InputHash, BuildRecipeHash: recipeHash, EvaluationSummary: initialEvaluationSummary(), BuiltAt: s.cfg.Now().UTC().Truncate(time.Microsecond)}
 	cal, err := calibrate(ctx, s.cfg, pool, release)
 	if err != nil {
 		return stage.Output{}, err
@@ -172,7 +172,7 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 		if closeErr != nil {
 			return fmt.Errorf("close dump: %w", closeErr)
 		}
-		record := map[string]any{"version": 1, "country": run.Country, "rel": run.Rel, "database_name": final, "schema_version": corpusdb.SchemaVersion, "build_input_hash": item.InputHash, "build_recipe_hash": recipeHash, "source_manifest_hash": inv.SourceManifestHash(), "identity_inventory_hash": inv.IdentityHash(), "dense_recipe": release.DenseRecipe, "chunk_recipe": release.ChunkRecipe, "lexical_recipe": release.LexicalRecipe, "retrieval_recipe": release.RetrievalRecipe, "lexical_stats": release.LexicalStats, "taxonomy_version": "", "counts": tableCounts, "postgres_version": s.cfg.Versions.PostgreSQLMajor, "pgvector_version": s.cfg.Versions.PGVector, "ltree_version": s.cfg.Versions.Ltree, "pg_dump_version": s.cfg.Versions.PgDump, "worker_version": run.Snapshot.WorkerVersion, "durations_ms": map[string]int64{"total": time.Since(started).Milliseconds()}, "relation_bytes": relationBytes, "index_bytes": indexBytes, "dump": map[string]any{"sha256": fmt.Sprintf("%x", hasher.Sum(nil)), "bytes": size, "format": "custom"}, "built_at": release.BuiltAt}
+		record := map[string]any{"version": 1, "country": run.Country, "rel": run.Rel, "database_name": final, "schema_version": corpusdb.SchemaVersion, "build_input_hash": item.InputHash, "build_recipe_hash": recipeHash, "source_manifest_hash": inv.SourceManifestHash(), "identity_inventory_hash": inv.IdentityHash(), "identity_map_sha256": s.cfg.Suite.Hashes.IdentityMap, "dense_recipe": release.DenseRecipe, "chunk_recipe": release.ChunkRecipe, "lexical_recipe": release.LexicalRecipe, "retrieval_recipe": release.RetrievalRecipe, "lexical_stats": release.LexicalStats, "taxonomy_version": "", "counts": tableCounts, "postgres_version": s.cfg.Versions.PostgreSQLMajor, "pgvector_version": s.cfg.Versions.PGVector, "ltree_version": s.cfg.Versions.Ltree, "pg_dump_version": s.cfg.Versions.PgDump, "worker_version": run.Snapshot.WorkerVersion, "durations_ms": map[string]int64{"total": time.Since(started).Milliseconds()}, "relation_bytes": relationBytes, "index_bytes": indexBytes, "dump": map[string]any{"sha256": fmt.Sprintf("%x", hasher.Sum(nil)), "bytes": size, "format": "custom"}, "built_at": release.BuiltAt}
 		for _, f := range []struct {
 			name  string
 			value any
@@ -240,4 +240,8 @@ func (s *Stage) Resolve(ctx context.Context, env stage.Env, run stage.Run, item 
 		return stage.Resolution{}, err
 	}
 	return stage.Resolution{Gaps: gaps}, nil
+}
+
+func initialEvaluationSummary() json.RawMessage {
+	return json.RawMessage(`{"status":"not_run","release_eligible":false}`)
 }

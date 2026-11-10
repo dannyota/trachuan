@@ -58,9 +58,21 @@ func (s *Stage) Plan(ctx context.Context, env stage.Env, run stage.Run) ([]stage
 			return nil, fmt.Errorf("predecessor %s is %s", item.Stage, item.State)
 		}
 	}
-	if err = s.cfg.Suite.Map.Validate(s.cfg.Suite.Legacy, s.cfg.Suite.Hashes.Legacy, inv.IdentityHash()); err != nil {
+	identities, err := IdentityInventory(inv, env.Artifacts)
+	if err != nil {
+		return nil, fmt.Errorf("load identity inventory: %w", err)
+	}
+	mapping, err := s.cfg.Suite.PinnedMap()
+	if err != nil {
+		return nil, fmt.Errorf("verify identity map: %w", err)
+	}
+	if _, err = mapping.Validate(s.cfg.Suite.Legacy, s.cfg.Suite.Hashes.Legacy, identities); err != nil {
 		return nil, fmt.Errorf("validate identity map: %w", err)
 	}
-	hash := stage.RecipeHash("build-input", "1", run.Country, run.Rel, inv.SourceManifestHash(), strconv.Itoa(corpusdb.SchemaVersion))
+	hash := buildInputHash(run.Country, run.Rel, inv.SourceManifestHash(), s.cfg.Suite.Hashes.IdentityMap)
 	return []stage.Item{{Key: run.Country + "/" + run.Rel, InputHash: hash}}, nil
+}
+
+func buildInputHash(country, rel, manifest, identityMap string) string {
+	return stage.RecipeHash("build-input", "2", country, rel, manifest, strconv.Itoa(corpusdb.SchemaVersion), identityMap)
 }

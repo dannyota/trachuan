@@ -54,7 +54,7 @@ func (q *Queries) GetChunkInput(ctx context.Context, arg GetChunkInputParams) (G
 }
 
 const getExtractArtifactByHash = `-- name: GetExtractArtifactByHash :one
-SELECT id FROM artifact WHERE stage = 'extract' AND sha256 = $1 AND item_key = $2
+SELECT id FROM artifact WHERE stage = 'extract' AND sha256 = $1 AND item_key = $2 ORDER BY id LIMIT 1
 `
 
 type GetExtractArtifactByHashParams struct {

@@ -87,9 +87,24 @@ func LoadSuiteFS(fsys fs.FS, dir string) (Suite, error) {
 	if _, err = hex.DecodeString(inv); err != nil {
 		return Suite{}, fmt.Errorf("invalid inventory hash: %w", err)
 	}
-	s := Suite{Legacy: cases, Map: m, Rejections: old.Rejections, Hashes: FixtureHashes{Legacy: hash(legacy), OldProduct: hash(product), IdentityMap: hash(mapping), Inventory: inv}}
+	s := Suite{Legacy: cases, Map: m, MapBytes: append([]byte(nil), mapping...), Rejections: old.Rejections, Hashes: FixtureHashes{Legacy: hash(legacy), OldProduct: hash(product), IdentityMap: hash(mapping), Inventory: inv}}
 	if err = validateSuite(s); err != nil {
 		return Suite{}, fmt.Errorf("validate suite: %w", err)
 	}
 	return s, nil
 }
+
+// PinnedMap verifies and decodes the map bytes captured when the suite loaded.
+func (s Suite) PinnedMap() (IdentityMap, error) {
+	if len(s.MapBytes) == 0 {
+		return IdentityMap{}, fmt.Errorf("missing identity map bytes")
+	}
+	sum := sha256.Sum256(s.MapBytes)
+	if hex.EncodeToString(sum[:]) != s.Hashes.IdentityMap {
+		return IdentityMap{}, fmt.Errorf("identity map bytes changed")
+	}
+	return LoadIdentityMap(bytes.NewReader(s.MapBytes))
+}
+
+// VerifyMapBytes checks that the captured identity map matches its hash.
+func (s Suite) VerifyMapBytes() error { _, err := s.PinnedMap(); return err }
