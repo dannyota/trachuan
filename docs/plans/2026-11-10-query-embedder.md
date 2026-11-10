@@ -121,7 +121,7 @@
 
 **Interfaces:**
 - Consumes: Tasks 2 to 5.
-- Produces: `func app.Run(ctx context.Context, args []string, stderr io.Writer) int`; `type app.Natives struct{ OpenTokenizer func(path string) (httpapi.Tokenizer, io.Closer, error); OpenModel func(path string, o onnx.Options) (httpapi.Runtime, int, io.Closer, error); Versions func() (bundle.Versions, error) }` injected for tests.
+- Produces: `func app.Run(ctx context.Context, args []string, stderr io.Writer, n Natives) int`; `type app.Natives struct{ OpenTokenizer func(path string) (httpapi.Tokenizer, io.Closer, error); OpenModel func(path string, o onnx.Options) (httpapi.Runtime, int, io.Closer, error); Versions func() (bundle.Versions, error) }`; `main.go` passes the real natives, tests pass fakes.
 
 - [ ] **Step 1: Write the failing tests** with fake natives: `TestRun_StartupOrder` (verify bundle, open tokenizer, count a fixed synthetic text of 300 repeated words and require more than 256 ids, open model, require 1,024 dimensions, warm up, then ready); `TestRun_RefusesTruncatingTokenizer`; `TestRun_RefusesBundleMismatch`; `TestRun_ReadyOnlyAfterWarmup`; `TestRun_DrainOnSignal` (readiness turns 503, in-flight requests finish, exit 0); `TestRun_DefaultListenLoopback`.
 - [ ] **Step 2: Run** `go test ./apps/queryembed/...`. Expected: FAIL.
