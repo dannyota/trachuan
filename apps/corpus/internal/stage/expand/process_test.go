@@ -66,7 +66,8 @@ func TestExpand_ProcessSourceFailuresAndMismatch(t *testing.T) {
 		retry  bool
 	}{
 		{name: "not found", status: http.StatusNotFound, kind: "not_found"},
-		{name: "unavailable", status: http.StatusServiceUnavailable, retry: true},
+		{name: "unavailable", status: http.StatusServiceUnavailable, kind: "source_unavailable"},
+		{name: "rate limited", status: http.StatusTooManyRequests, retry: true},
 		{name: "wrong detail id", status: http.StatusOK, body: `{"success":true,"data":{"id":"2"}}`, kind: "detail_id_mismatch"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -82,13 +83,16 @@ func TestExpand_ProcessSourceFailuresAndMismatch(t *testing.T) {
 			}
 			if tc.retry {
 				var retry *stage.RetryableError
-				if !errors.As(err, &retry) || retry.GapKind != "source_unavailable" || retry.Cause.Cause != stage.CauseHTTP5xx {
+				if !errors.As(err, &retry) || retry.GapKind != "source_unavailable" || retry.Cause.Cause != stage.CauseHTTP429 {
 					t.Fatalf("error = %#v", err)
 				}
 				return
 			}
 			if err != nil || out.State != "gap" || len(out.Gaps) != 1 || out.Gaps[0].Kind != tc.kind {
 				t.Fatalf("out=%#v err=%v", out, err)
+			}
+			if tc.kind == "source_unavailable" && (out.Gaps[0].Cause != stage.CauseHTTP5xx || out.Gaps[0].Origin != stage.OriginGateway || out.Gaps[0].HTTPStatus == nil || *out.Gaps[0].HTTPStatus != http.StatusServiceUnavailable) {
+				t.Fatalf("gap cause = %#v", out.Gaps[0])
 			}
 		})
 	}
