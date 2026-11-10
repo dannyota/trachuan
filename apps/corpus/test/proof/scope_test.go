@@ -185,6 +185,19 @@ status_codes: {}
 	if err := h.db.QueryRow(h.ctx, `SELECT id FROM run WHERE country='vn' AND rel=$1`, h.rel).Scan(&id); err != nil {
 		t.Fatal(err)
 	}
+	seeds, err := membership.ReadPhase(h.ctx, store.New(h.db), id, membership.Seeds)
+	if err != nil {
+		t.Fatal(err)
+	}
+	foundSeed := false
+	for _, entry := range seeds.Active {
+		if entry.DocumentKey == "vn:chinhphu:218030" && entry.Class == "secondary" {
+			foundSeed = true
+		}
+	}
+	if !foundSeed {
+		t.Fatal("precedence candidate missing from seeds")
+	}
 	phase, err := membership.ReadPhase(h.ctx, store.New(h.db), id, membership.Final)
 	if err != nil {
 		t.Fatal(err)

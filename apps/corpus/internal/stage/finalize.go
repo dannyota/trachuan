@@ -63,4 +63,6 @@ func recordFinalization(ctx context.Context, q *store.Queries, in StageInput, f 
 }
 
 // BlockingFailureCodes lists non-acceptable run failure codes.
-func BlockingFailureCodes() []string { return []string{"scope_changed", "secondary_candidate_ceiling"} }
+func BlockingFailureCodes() []string {
+	return []string{"scope_changed", "secondary_candidate_ceiling", "expansion_context_ceiling"}
+}

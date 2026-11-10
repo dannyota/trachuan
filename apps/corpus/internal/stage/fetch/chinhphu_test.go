@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -297,5 +298,37 @@ func TestFetch_ChinhphuPreservesUnparsedEffectiveDate(t *testing.T) {
 	}
 	if doc.Document.EffFrom != "chưa rõ" {
 		t.Fatalf("raw date %q", doc.Document.EffFrom)
+	}
+}
+
+type deadlineTransport struct {
+	detail []byte
+}
+
+func (t *deadlineTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	body := t.detail
+	contentType := "text/html"
+	if strings.HasSuffix(req.URL.Path, ".pdf") {
+		timer := time.NewTimer(25 * time.Millisecond)
+		defer timer.Stop()
+		select {
+		case <-timer.C:
+		case <-req.Context().Done():
+			return nil, req.Context().Err()
+		}
+		body = []byte("%PDF-test")
+		contentType = "application/pdf"
+	}
+	return &http.Response{StatusCode: http.StatusOK, Header: http.Header{"Content-Type": []string{contentType}}, Body: io.NopCloser(bytes.NewReader(body)), Request: req}, nil
+}
+
+func TestFetch_ChinhphuItemDeadlineCoversAllAttachments(t *testing.T) {
+	const base = "https://test.invalid"
+	body := []byte(`<div id="ctrl_190596_91_Content"><table><tr><td>Tài liệu đính kèm</td><td><a href="https://test.invalid/a/first.pdf">first</a><a href="https://test.invalid/b/second.pdf">second</a></td></tr></table></div>`)
+	transport := &deadlineTransport{detail: body}
+	client := chinhphu.New(chinhphu.WithBaseURLs(base, base), chinhphu.WithTransport(transport), chinhphu.WithLimits(chinhphu.Limits{RequestsPerSecond: 100000, Burst: 10, ItemTimeout: 40 * time.Millisecond}), chinhphu.WithBackoffs())
+	out, err := New(nil).WithChinhphu(client).Process(context.Background(), stage.Env{Artifacts: artifact.Store{Root: t.TempDir()}}, stage.Run{Country: "vn"}, stage.Item{Key: "vn:chinhphu:218029"})
+	if !errors.Is(err, context.DeadlineExceeded) || out.Artifact != nil {
+		t.Fatalf("output=%+v err=%v", out, err)
 	}
 }

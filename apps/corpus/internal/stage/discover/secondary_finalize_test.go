@@ -81,11 +81,13 @@ func TestSupport_ProvenReplacementKeepsSecondaryForFetch(t *testing.T) {
 	old := membership.SupportTuple{RuleKind: "secondary_probe", RuleValue: "chinhphu:keyword:a|1"}
 	prior := []membership.Entry{{DocumentKey: "vn:chinhphu:1", Source: "chinhphu", SourceID: "1", Class: "secondary", Disposition: "active", Supports: []membership.SupportTuple{old}}}
 	obs := map[string]secondaryObservation{"chinhphu:keyword:a": {report: secondaryReport{Stable: true, Passes: []lookup.Result{{Items: []lookup.Item{{SourceID: "1"}}}}, Candidates: []secondaryCandidate{{ID: "1", State: "seed_primary", PrimaryID: "v1"}}}}}
-	members := map[string]*seedMember{}
+	current := old
+	current.Evidence.ResponseSHA256 = "current"
+	members := map[string]*seedMember{"vn:chinhphu:1": {entry: prior[0], records: []membership.EvidenceRecord{{DocumentKey: "vn:chinhphu:1", Support: current, State: "current"}}}}
 	retainSecondary(prior, obs, members)
 	m := members["vn:chinhphu:1"]
-	if m.entry.Disposition != "active" || len(m.records) != 1 || m.records[0].State != "retained" {
-		t.Fatal("secondary was not retained for fetch hand-over")
+	if m.entry.Disposition != "active" || len(m.records) != 1 || m.records[0].State != "current" {
+		t.Fatal("current secondary support was not preserved")
 	}
 }
 

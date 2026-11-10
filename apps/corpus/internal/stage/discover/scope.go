@@ -34,6 +34,11 @@ type selectedItem struct {
 	AgencyIDs []string               `json:"agency_ids"`
 	Rules     []source.SelectionRule `json:"rules"`
 	Page      pageReference          `json:"page"`
+	RulePages []rulePage             `json:"rule_pages,omitempty"`
+}
+type rulePage struct {
+	Rule source.SelectionRule `json:"rule"`
+	Page pageReference        `json:"page"`
 }
 type pageReference struct {
 	Pass   int    `json:"pass"`

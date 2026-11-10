@@ -5,6 +5,7 @@ package stage
 import (
 	"context"
 	"testing"
+	"time"
 
 	"danny.vn/trachuan/apps/corpus/internal/artifact"
 	"danny.vn/trachuan/apps/corpus/internal/migrate"
@@ -238,5 +239,57 @@ func TestCommitItem_RecheckPausedSourceFailsItem(t *testing.T) {
 	var artifacts, gaps int
 	if err := pool.QueryRow(ctx, `SELECT state,message,(SELECT count(*) FROM artifact),(SELECT count(*) FROM gap) FROM run_item WHERE run_id=$1`, id).Scan(&state, &message, &artifacts, &gaps); err != nil || state != "failed" || message != "source_paused" || artifacts != 0 || gaps != 0 {
 		t.Fatalf("state=%s message=%s artifacts=%d gaps=%d err=%v", state, message, artifacts, gaps, err)
+	}
+}
+
+func TestCommitItem_RunLockPrecedesItemLock(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	pool, id := setup(t)
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = tx.Rollback(context.Background()) }()
+	if _, err = tx.Exec(ctx, `SELECT id FROM run WHERE id=$1 FOR UPDATE`, id); err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan error, 1)
+	go func() { _, e := CommitItem(ctx, pool, testCommit(id)); done <- e }()
+	ticker := time.NewTicker(10 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		var blocked bool
+		err = pool.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM pg_stat_activity WHERE datname=current_database() AND wait_event_type='Lock' AND query LIKE '%GetRunGenerationForShare%')`).Scan(&blocked)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if blocked {
+			break
+		}
+		select {
+		case err = <-done:
+			t.Fatalf("commit finished before lock probe: %v", err)
+		case <-ctx.Done():
+			t.Fatal("commit did not wait on run lock")
+		case <-ticker.C:
+		}
+	}
+	probe, err := pool.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = probe.Exec(ctx, `SELECT run_id FROM run_item WHERE run_id=$1 AND stage='fetch' AND item_key='item' FOR UPDATE NOWAIT`, id); err != nil {
+		_ = probe.Rollback(ctx)
+		t.Fatalf("item was locked: %v", err)
+	}
+	if err = probe.Rollback(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if err = tx.Commit(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if err = <-done; err != nil {
+		t.Fatal(err)
 	}
 }

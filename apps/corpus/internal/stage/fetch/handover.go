@@ -109,15 +109,12 @@ func (s *Stage) handOver(ctx context.Context, env stage.Env, q *store.Queries, r
 		}
 		pairs := ev.pairOutcomes(primary)
 		decision := decideHandOver(pairs)
-		skipped := precedenceSkipped(item, itemGaps[entry.DocumentKey], records)
+		skipped := precedenceSkipped(item, itemGaps[entry.DocumentKey])
 		if skipped {
 			_, err = q.DeleteItemGaps(ctx, store.DeleteItemGapsParams{RunID: run.ID, Stage: "fetch", ItemKey: entry.DocumentKey})
 			if err != nil {
 				return nil, fmt.Errorf("delete provisional hand-over gap: %w", err)
 			}
-		}
-		if decision.kind == "" {
-			continue
 		}
 		detail := entry.DocumentKey + " ~ " + strings.Join(decision.keys, ",")
 		if decision.kind == "source_replaced" {
@@ -130,6 +127,19 @@ func (s *Stage) handOver(ctx context.Context, env stage.Env, q *store.Queries, r
 		refs := uniqueHandOverRefs(ev.refs)
 		evidence := strings.Join(refs, ";")
 		source, origin := "chinhphu", "source_data"
+		finalized := false
+		for _, gap := range itemGaps[entry.DocumentKey] {
+			if gap.EvidenceRef == nil || (gap.Kind != "source_replaced" && gap.Kind != "source_identity_ambiguous") {
+				continue
+			}
+			if finalized || gap.Kind != decision.kind || gap.Detail != detail || *gap.EvidenceRef != evidence || gap.Source == nil || *gap.Source != source || gap.Origin == nil || *gap.Origin != origin {
+				return nil, fmt.Errorf("hand-over outcome changed after finalization")
+			}
+			finalized = true
+		}
+		if finalized || decision.kind == "" {
+			continue
+		}
 		if err = q.InsertGap(ctx, store.InsertGapParams{RunID: run.ID, Stage: "fetch", ItemKey: entry.DocumentKey, Kind: decision.kind, Detail: detail, Source: &source, Origin: &origin, EvidenceRef: &evidence}); err != nil {
 			return nil, fmt.Errorf("insert hand-over gap: %w", err)
 		}
@@ -145,41 +155,6 @@ func uniqueHandOverRefs(refs []string) []string {
 	}
 	return out
 }
-func precedenceSkipped(item store.ListStageItemArtifactsRow, gaps []store.Gap, records []handOverRecord) bool {
-	if item.State != "gap" || len(gaps) != 1 || (gaps[0].Kind != "source_replaced" && gaps[0].Kind != "source_identity_ambiguous") {
-		return false
-	}
-	target := ""
-	var identity handOverIdentity
-	for _, r := range records {
-		if !r.current {
-			continue
-		}
-		candidate := r.record
-		if !r.complete || candidate.State != "seed_primary" || candidate.ProbeState != "complete" || candidate.PrimaryID == "" {
-			return false
-		}
-		next := recordIdentity(candidate)
-		matches := 0
-		for _, comparison := range candidate.Comparisons {
-			if comparison.ID == "" || comparison.Number == nil || compareHandOver(next, comparisonIdentity(comparison)) != comparison.State {
-				return false
-			}
-			switch comparison.State {
-			case "match":
-				matches++
-				if comparison.ID != candidate.PrimaryID {
-					return false
-				}
-			case "different_date", "different_number":
-			default:
-				return false
-			}
-		}
-		if matches != 1 || (target != "" && (target != candidate.PrimaryID || identity != next)) {
-			return false
-		}
-		target, identity = candidate.PrimaryID, next
-	}
-	return target != ""
+func precedenceSkipped(item store.ListStageItemArtifactsRow, gaps []store.Gap) bool {
+	return item.State == "gap" && len(gaps) == 1 && gaps[0].Kind == "source_replaced" && gaps[0].EvidenceRef == nil
 }

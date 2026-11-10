@@ -27,39 +27,42 @@ func addSecondaryMembers(ctx context.Context, q *store.Queries, env stage.Env, r
 			if c.State != "admit_secondary" && c.State != "seed_primary" && c.State != "ambiguous" {
 				continue
 			}
-			src, id, class := "chinhphu", c.ID, "secondary"
+			targets := []struct{ src, id, class string }{{"chinhphu", c.ID, "secondary"}}
 			if c.State == "seed_primary" {
-				src, id, class = "vbpl", c.PrimaryID, "primary"
+				targets = append(targets, struct{ src, id, class string }{"vbpl", c.PrimaryID, "primary"})
 			}
-			if id == "" {
-				return fmt.Errorf("secondary candidate %s lacks target", c.ID)
+			for _, target := range targets {
+				src, id, class := target.src, target.id, target.class
+				if id == "" {
+					return fmt.Errorf("secondary candidate %s lacks target", c.ID)
+				}
+				key := r.Country + ":" + src + ":" + id
+				m := members[key]
+				if m == nil {
+					m = &seedMember{entry: membership.Entry{DocumentKey: key, Source: src, SourceID: id, Class: class, Disposition: "active"}}
+					members[key] = m
+				}
+				number := c.Number
+				norm := retrieval.NormalizeNumber(number)
+				if m.entry.RawNumber == nil {
+					m.entry.RawNumber = &number
+					m.entry.NormalizedNumber = &norm
+				}
+				path := "candidate-" + c.ID + ".json"
+				row, err := q.GetRunItemArtifact(ctx, store.GetRunItemArtifactParams{RunID: r.ID, Stage: "discover", ItemKey: o.key})
+				if err != nil {
+					return fmt.Errorf("read candidate artifact: %w", err)
+				}
+				b, err := os.ReadFile(filepath.Join(env.Artifacts.Abs(row.Path), path))
+				if err != nil {
+					return fmt.Errorf("read candidate evidence: %w", err)
+				}
+				hash := sha256.Sum256(b)
+				identity := o.report.QueryIdentity
+				tuple := membership.SupportTuple{RuleKind: "secondary_probe", RuleValue: o.key + "|" + c.ID, Evidence: membership.EvidenceRef{QueryIdentity: &identity, ResponseSHA256: fmt.Sprintf("%x", hash), ArtifactHash: o.hash, Path: path}}
+				m.entry.Supports = append(m.entry.Supports, tuple)
+				m.records = append(m.records, membership.EvidenceRecord{DocumentKey: key, Stage: "discover", ItemKey: o.key, Support: tuple, State: "current"})
 			}
-			key := r.Country + ":" + src + ":" + id
-			m := members[key]
-			if m == nil {
-				m = &seedMember{entry: membership.Entry{DocumentKey: key, Source: src, SourceID: id, Class: class, Disposition: "active"}}
-				members[key] = m
-			}
-			number := c.Number
-			norm := retrieval.NormalizeNumber(number)
-			if m.entry.RawNumber == nil {
-				m.entry.RawNumber = &number
-				m.entry.NormalizedNumber = &norm
-			}
-			path := "candidate-" + c.ID + ".json"
-			row, err := q.GetRunItemArtifact(ctx, store.GetRunItemArtifactParams{RunID: r.ID, Stage: "discover", ItemKey: o.key})
-			if err != nil {
-				return fmt.Errorf("read candidate artifact: %w", err)
-			}
-			b, err := os.ReadFile(filepath.Join(env.Artifacts.Abs(row.Path), path))
-			if err != nil {
-				return fmt.Errorf("read candidate evidence: %w", err)
-			}
-			hash := sha256.Sum256(b)
-			identity := o.report.QueryIdentity
-			tuple := membership.SupportTuple{RuleKind: "secondary_probe", RuleValue: o.key + "|" + c.ID, Evidence: membership.EvidenceRef{QueryIdentity: &identity, ResponseSHA256: fmt.Sprintf("%x", hash), ArtifactHash: o.hash, Path: path}}
-			m.entry.Supports = append(m.entry.Supports, tuple)
-			m.records = append(m.records, membership.EvidenceRecord{DocumentKey: key, Stage: "discover", ItemKey: o.key, Support: tuple, State: "current"})
 		}
 	}
 	return nil
@@ -96,14 +99,8 @@ func retainSecondary(prior []membership.Entry, obs map[string]secondaryObservati
 				continue
 			}
 			state := secondaryPriorState(s, obs)
-			key, id, _ := strings.Cut(s.RuleValue, "|")
-			if o, ok := obs[key]; ok {
-				for _, candidate := range o.report.Candidates {
-					if candidate.ID == id && candidate.State == "seed_primary" {
-						state = "retained"
-					}
-				}
-			}
+			key, _, _ := strings.Cut(s.RuleValue, "|")
+
 			if entry.Disposition != "active" {
 				state = "removed"
 			}

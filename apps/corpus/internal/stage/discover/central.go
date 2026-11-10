@@ -18,7 +18,7 @@ func (s *Stage) central(ctx context.Context, dir string, rules source.VBPLSource
 	union := map[string]bool{}
 	var previous []string
 	var final []lookup.Item
-	refs := map[string]pageReference{}
+	passReferences := []map[string]pageReference{}
 	for pass := 1; pass <= 3; pass++ {
 		result, passRefs, err := s.centralPass(ctx, dir, pass, identity, definition)
 		if err != nil {
@@ -30,7 +30,7 @@ func (s *Stage) central(ctx context.Context, dir string, rules source.VBPLSource
 			union[id] = true
 		}
 		final = result.Items
-		refs = passRefs
+		passReferences = append(passReferences, passRefs)
 		if len(report.Passes) > 1 && result.Evidence.Completeness == lookup.Complete && report.Passes[len(report.Passes)-2].Evidence.Completeness == lookup.Complete && sameIDs(previous, current) {
 			report.Stable = true
 			break
@@ -46,24 +46,56 @@ func (s *Stage) central(ctx context.Context, dir string, rules source.VBPLSource
 		}
 		sort.Strings(catalog.IDs)
 	}
-	inputs := make([]source.ListingItem, 0, len(final))
-	byID := map[string]lookup.Item{}
-	for _, item := range final {
-		title := ""
-		if item.Title != nil {
-			title = *item.Title
-		}
-		inputs = append(inputs, source.ListingItem{ID: item.SourceID, Title: title, AgencyIDs: item.AgencyIDs})
-		byID[item.SourceID] = item
+	selectedByID := map[string]selectedItem{}
+	first := 0
+	if report.Stable {
+		first = len(report.Passes) - 1
 	}
-	choices, err := source.Select(inputs, rules)
-	if err != nil {
-		return fmt.Errorf("select listing: %w", err)
+	for i := first; i < len(report.Passes); i++ {
+		for _, item := range report.Passes[i].Items {
+			title := ""
+			if item.Title != nil {
+				title = *item.Title
+			}
+			choices, err := source.Select([]source.ListingItem{{ID: item.SourceID, Title: title, AgencyIDs: item.AgencyIDs}}, rules)
+			if err != nil {
+				return fmt.Errorf("select listing: %w", err)
+			}
+			if len(choices) != 0 {
+				page := passReferences[i][item.SourceID]
+				prior := selectedByID[item.SourceID]
+				current := selectedItem{ID: item.SourceID, Number: item.RawNumber, Title: item.Title, IssueDate: item.IssueDate, Issuer: item.Issuer, AgencyIDs: item.AgencyIDs, Page: page}
+				current.RulePages = append(current.RulePages, prior.RulePages...)
+				rulesSeen := map[source.SelectionRule]bool{}
+				for _, rp := range current.RulePages {
+					rulesSeen[rp.Rule] = true
+				}
+				for _, rule := range choices[0].Rules {
+					current.RulePages = append(current.RulePages, rulePage{Rule: rule, Page: page})
+					rulesSeen[rule] = true
+				}
+				for rule := range rulesSeen {
+					current.Rules = append(current.Rules, rule)
+				}
+				sort.Slice(current.Rules, func(a, b int) bool {
+					x, y := current.Rules[a], current.Rules[b]
+					if x.Kind != y.Kind {
+						return x.Kind < y.Kind
+					}
+					return x.Value < y.Value
+				})
+				selectedByID[item.SourceID] = current
+			}
+		}
 	}
 	selected := selectedFile{Items: []selectedItem{}}
-	for _, choice := range choices {
-		item := byID[choice.ID]
-		selected.Items = append(selected.Items, selectedItem{ID: item.SourceID, Number: item.RawNumber, Title: item.Title, IssueDate: item.IssueDate, Issuer: item.Issuer, AgencyIDs: item.AgencyIDs, Rules: choice.Rules, Page: refs[choice.ID]})
+	keys := make([]string, 0, len(selectedByID))
+	for key := range selectedByID {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		selected.Items = append(selected.Items, selectedByID[key])
 	}
 	for _, file := range []struct {
 		name  string

@@ -13,6 +13,7 @@ import (
 	"danny.vn/trachuan/apps/corpus/internal/source"
 	"danny.vn/trachuan/apps/corpus/internal/stage"
 	"danny.vn/trachuan/apps/corpus/internal/stage/discover"
+	"danny.vn/trachuan/apps/corpus/internal/stage/membership"
 	"danny.vn/trachuan/apps/corpus/internal/store"
 	"github.com/jackc/pgx/v5"
 )
@@ -34,12 +35,20 @@ func (*Stage) Recipe(snapshot stage.Snapshot) string {
 
 // Plan selects completed fetch artifacts for this run.
 func (*Stage) Plan(ctx context.Context, env stage.Env, run stage.Run) ([]stage.Item, error) {
-	inputs, err := store.New(env.DB).ListExtractInputs(ctx, run.ID)
+	q := store.New(env.DB)
+	active, err := membership.FinalActiveKeys(ctx, q, run)
+	if err != nil {
+		return nil, err
+	}
+	inputs, err := q.ListExtractInputs(ctx, run.ID)
 	if err != nil {
 		return nil, fmt.Errorf("list fetch artifacts: %w", err)
 	}
 	items := make([]stage.Item, 0, len(inputs))
 	for _, input := range inputs {
+		if active != nil && !active[input.ItemKey] {
+			continue
+		}
 		items = append(items, stage.Item{Key: input.ItemKey, InputHash: input.Sha256})
 	}
 	return items, nil

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -210,6 +211,9 @@ func TestHandOver_RepeatFinalizeIdentical(t *testing.T) {
 	f := newHandOverFixture(t, "2026-01-01", "2026-01-01", "skip", "done")
 	f.close()
 	q := store.New(f.db)
+	if _, err := f.db.Exec(f.ctx, `UPDATE gap SET accepted_at=now(), note='accepted' WHERE run_id=$1 AND kind='source_replaced'`, f.run.ID); err != nil {
+		t.Fatal(err)
+	}
 	first, err := q.ListRunGapsByRun(f.ctx, f.run.ID)
 	if err != nil {
 		t.Fatal(err)
@@ -227,7 +231,7 @@ func TestHandOver_RepeatFinalizeIdentical(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(first) != 1 || len(second) != 1 || first[0].Kind != second[0].Kind || first[0].Detail != second[0].Detail || first[0].EvidenceRef == nil || second[0].EvidenceRef == nil || *first[0].EvidenceRef != *second[0].EvidenceRef {
+	if len(first) != 1 || len(second) != 1 || first[0].AcceptedAt == nil || first[0].ID != second[0].ID || !reflect.DeepEqual(first[0].AcceptedAt, second[0].AcceptedAt) || first[0].Kind != second[0].Kind || first[0].Detail != second[0].Detail || first[0].EvidenceRef == nil || second[0].EvidenceRef == nil || *first[0].EvidenceRef != *second[0].EvidenceRef {
 		t.Fatalf("first=%+v second=%+v", first, second)
 	}
 	if !bytes.Equal(before.FinalSnapshot, after.FinalSnapshot) || before.FinalHash == nil || after.FinalHash == nil || *before.FinalHash != *after.FinalHash || before.FetchCloseInputHash == nil || after.FetchCloseInputHash == nil || *before.FetchCloseInputHash != *after.FetchCloseInputHash {
@@ -353,5 +357,22 @@ func TestHandOver_GapEvidenceExcludesUnrelatedVBPL(t *testing.T) {
 		if present != (id == "1" || id == "2") {
 			t.Errorf("VBPL %s reference present=%v refs=%v", id, present, refs)
 		}
+	}
+}
+
+func TestHandOver_ChangedFinalizedOutcomeFails(t *testing.T) {
+	f := newHandOverFixture(t, "2026-01-01", "2026-01-01", "skip", "done")
+	f.close()
+	if _, err := f.db.Exec(f.ctx, `UPDATE gap SET detail='changed' WHERE run_id=$1 AND kind='source_replaced'`, f.run.ID); err != nil {
+		t.Fatal(err)
+	}
+	tx, err := f.db.Begin(f.ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = tx.Rollback(f.ctx) }()
+	_, err = f.stage.Finalize(f.ctx, f.env, tx, f.run)
+	if err == nil || !strings.Contains(err.Error(), "hand-over outcome changed after finalization") {
+		t.Fatalf("error=%v", err)
 	}
 }

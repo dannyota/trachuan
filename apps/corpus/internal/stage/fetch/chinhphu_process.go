@@ -24,6 +24,8 @@ func (s *Stage) processChinhphu(ctx context.Context, env stage.Env, run stage.Ru
 	if s.chinhphu == nil {
 		return stage.Output{}, fmt.Errorf("chinhphu client is required")
 	}
+	ctx, cancel := context.WithTimeout(ctx, s.chinhphu.ItemTimeout())
+	defer cancel()
 	detail, body, err := s.chinhphu.Detail(ctx, id)
 	if err != nil {
 		return chinhphuError(err, idstr, true)

@@ -1,6 +1,8 @@
 package expand
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 
 	"danny.vn/trachuan/apps/corpus/internal/stage/membership"
@@ -109,5 +111,21 @@ func TestExpand_RemovedTargetDoesNotReturnOnIncompleteObservation(t *testing.T) 
 	m := reconcile([]membership.Entry{testSeed("1")}, []membership.Entry{prior}, map[string]seedObservation{"vn:vbpl:1": {}})["vn:vbpl:2"]
 	if m == nil || m.entry.Disposition != "withdrawn" || len(m.records) != 1 || m.records[0].State != "removed" {
 		t.Fatalf("member=%#v", m)
+	}
+}
+
+func TestContextCeiling_CountsDistinctActiveContext(t *testing.T) {
+	members := map[string]*member{}
+	for i := 0; i < 5001; i++ {
+		key := fmt.Sprint(i)
+		members[key] = &member{entry: membership.Entry{DocumentKey: key, Class: "relation_context", Disposition: "active"}}
+	}
+	failure := contextCeiling(members)
+	if failure.Code != "expansion_context_ceiling" || !strings.Contains(failure.Reason, "5001") {
+		t.Fatalf("failure=%+v", failure)
+	}
+	delete(members, "5000")
+	if got := contextCeiling(members); got.Code != "" {
+		t.Fatalf("failure=%+v", got)
 	}
 }

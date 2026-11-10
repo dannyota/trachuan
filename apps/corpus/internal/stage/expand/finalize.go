@@ -80,6 +80,9 @@ func (*Stage) Finalize(ctx context.Context, env stage.Env, tx pgx.Tx, r stage.Ru
 		return stage.Finalization{}, fmt.Errorf("read earlier membership: %w", err)
 	}
 	members := reconcile(seeds.Entries, prior, observations)
+	if failure := contextCeiling(members); failure.Code != "" {
+		return failure, nil
+	}
 	entries := make([]membership.Entry, 0, len(members))
 	records := []membership.EvidenceRecord{}
 	for _, m := range members {
@@ -142,4 +145,19 @@ func readSeedObservation(env stage.Env, item store.ListStageItemArtifactsRow) (s
 		}
 	}
 	return seedObservation{complete: true, artifactHash: item.Sha256, observation: obs}, nil
+}
+
+const maxRelationContext = 5000
+
+func contextCeiling(members map[string]*member) stage.Finalization {
+	count := 0
+	for _, m := range members {
+		if m.entry.Class == "relation_context" && m.entry.Disposition == "active" {
+			count++
+		}
+	}
+	if count > maxRelationContext {
+		return stage.Finalization{Code: "expansion_context_ceiling", Reason: fmt.Sprintf("relation context %d exceeds ceiling %d", count, maxRelationContext)}
+	}
+	return stage.Finalization{}
 }

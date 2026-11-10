@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"danny.vn/trachuan/apps/corpus/internal/stage/discover"
+	"danny.vn/trachuan/apps/corpus/internal/store"
 )
 
 func TestHandOver_SourceReplaced(t *testing.T) {
@@ -66,5 +67,22 @@ func TestHandOver_EvidenceOnlyIncludesComparedPairs(t *testing.T) {
 	want := []string{"different-date/detail.json", "match/detail.json", "secondary/document.json"}
 	if !reflect.DeepEqual(evidence.refs, want) {
 		t.Fatalf("refs=%v want=%v", evidence.refs, want)
+	}
+}
+
+func TestHandOver_UnownedUnresolvedProbePreventsReplacement(t *testing.T) {
+	number, issuer, date := "42", "A", "2026-01-01"
+	e := handOverEvidence{pairs: map[string][]handOverObservation{}}
+	e.addRecord(handOverRecord{complete: true, record: discover.HandOverRecord{Number: number, Issuer: issuer, Date: date, ProbeState: "complete", Comparisons: []discover.HandOverComparison{{ID: "1", State: "match", Number: &number, Issuer: &issuer, Date: &date}, {ID: "2", State: "ambiguous", Number: &number}}}}, map[string]handOverFetched{"vn:vbpl:1": {}})
+	if got := decideHandOver(e.pairOutcomes(map[string]handOverFetched{"vn:vbpl:1": {}})); got.kind != "source_identity_ambiguous" {
+		t.Fatalf("outcome=%+v", got)
+	}
+}
+
+func TestPrecedenceSkipped_FinalizedGapIsNotProvisional(t *testing.T) {
+	evidence := "artifact/detail.json"
+	item := store.ListStageItemArtifactsRow{State: "gap"}
+	if precedenceSkipped(item, []store.Gap{{Kind: "source_replaced", EvidenceRef: &evidence}}) {
+		t.Fatal("finalized gap treated as provisional")
 	}
 }

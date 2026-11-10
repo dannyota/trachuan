@@ -46,14 +46,10 @@ func commitItem(ctx context.Context, pool *pgxpool.Pool, c *Commit) (applied boo
 	defer func() { _ = tx.Rollback(ctx) }()
 
 	q := store.New(tx)
-	item, err := q.GetRunItemCommitted(ctx, store.GetRunItemCommittedParams{RunID: c.RunID, Stage: c.Stage, ItemKey: c.ItemKey})
+	generation, err := q.GetRunGenerationForShare(ctx, c.RunID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil
 	}
-	if err != nil {
-		return false, fmt.Errorf("lock run item: %w", err)
-	}
-	generation, err := q.GetRunGenerationForShare(ctx, c.RunID)
 	if err != nil {
 		return false, fmt.Errorf("lock run generation: %w", err)
 	}
@@ -61,6 +57,13 @@ func commitItem(ctx context.Context, pool *pgxpool.Pool, c *Commit) (applied boo
 		return false, nil
 	}
 
+	item, err := q.GetRunItemCommitted(ctx, store.GetRunItemCommittedParams{RunID: c.RunID, Stage: c.Stage, ItemKey: c.ItemKey})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("lock run item: %w", err)
+	}
 	if int(item.Generation) > c.Generation || (int(item.Generation) == c.Generation && int(item.Attempt) > c.Attempt) {
 		return false, nil
 	}

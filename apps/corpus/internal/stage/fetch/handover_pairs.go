@@ -26,7 +26,7 @@ func commonIdentity(a, b handOverIdentity) handOverIdentity {
 	}
 	return a
 }
-func (e *handOverEvidence) addRecord(r handOverRecord, primary map[string]handOverFetched) {
+func (e *handOverEvidence) addRecord(r handOverRecord, _ map[string]handOverFetched) {
 	identity := recordIdentity(r.record)
 	if !r.complete {
 		identity = handOverIdentity{}
@@ -46,11 +46,11 @@ func (e *handOverEvidence) addRecord(r handOverRecord, primary map[string]handOv
 	e.refs = append(e.refs, r.refs...)
 	for _, comparison := range r.record.Comparisons {
 		key := "vn:vbpl:" + comparison.ID
-		if _, ok := primary[key]; !ok || comparison.ID == "" {
+		if comparison.ID == "" {
 			continue
 		}
 		id := comparisonIdentity(comparison)
-		if identity.number != "" && id.number != "" && identity.number != id.number {
+		if comparison.State != "match" && comparison.State != "ambiguous" && identity.number != "" && id.number != "" && identity.number != id.number {
 			continue
 		}
 		e.pairs[key] = append(e.pairs[key], handOverObservation{identity: id, state: comparison.State, complete: r.complete && r.record.ProbeState == "complete"})
@@ -90,6 +90,11 @@ func (e *handOverEvidence) pairOutcomes(primary map[string]handOverFetched) []ha
 				if compareHandOver(e.secondary, observation.identity) != state {
 					state = "ambiguous"
 				}
+			}
+		}
+		for _, observation := range observations {
+			if observation.state == "ambiguous" {
+				state = "ambiguous"
 			}
 		}
 		if conflict {

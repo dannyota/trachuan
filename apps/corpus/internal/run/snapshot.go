@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"danny.vn/trachuan/apps/corpus/internal/source"
 	"danny.vn/trachuan/apps/corpus/internal/stage"
 )
 
@@ -70,6 +71,15 @@ func extendSnapshot(snapshot stage.Snapshot, stages []string, recipes map[string
 		}
 	}
 	for _, name := range stages[start:] {
+		if name == "expand" {
+			list, err := source.Parse(snapshot.SourceList)
+			if err != nil {
+				return stage.Snapshot{}, false, fmt.Errorf("parse frozen source list: %w", err)
+			}
+			if list.VBPL.SelectionVersion == 0 {
+				continue
+			}
+		}
 		if _, ok := result.Recipes[name]; ok {
 			continue
 		}

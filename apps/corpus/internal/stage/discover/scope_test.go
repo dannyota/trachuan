@@ -291,3 +291,52 @@ func TestPlan_InvalidSecondaryPolicyFails(t *testing.T) {
 		t.Fatal("missing issuer policy accepted")
 	}
 }
+
+func TestDiscover_UnstableListingSelectsEarlierObservation(t *testing.T) {
+	a := response(`[{"id":"a","title":"Ngân hàng số"}]`, 1)
+	b := response(`[{"id":"b","title":"Other"}]`, 1)
+	c := response(`[{"id":"c","title":"Other"}]`, 1)
+	res, _, dir, err := scopeRun(t, "", []string{a, b, c})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var selected selectedFile
+	data, err := os.ReadFile(filepath.Join(dir, "selected.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = json.Unmarshal(data, &selected); err != nil {
+		t.Fatal(err)
+	}
+	if len(res.Gaps) != 1 || res.Gaps[0].Kind != "listing_unstable" || len(selected.Items) != 1 || selected.Items[0].ID != "a" || selected.Items[0].Page.Pass != 1 {
+		t.Fatalf("gaps=%+v selected=%+v", res.Gaps, selected.Items)
+	}
+}
+
+func TestDiscover_UnstableListingRetainsEachObservedRule(t *testing.T) {
+	a := response(`[{"id":"a","title":"Ngân hàng"}]`, 1)
+	b := response(`[{"id":"a","title":"Other","agencyIds":["62"]},{"id":"b"}]`, 2)
+	c := response(`[{"id":"c"}]`, 1)
+	_, _, dir, err := scopeRun(t, "", []string{a, b, c})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var selected selectedFile
+	data, err := os.ReadFile(filepath.Join(dir, "selected.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = json.Unmarshal(data, &selected); err != nil {
+		t.Fatal(err)
+	}
+	if len(selected.Items) != 1 || len(selected.Items[0].Rules) != 2 {
+		t.Fatalf("selected=%+v", selected.Items)
+	}
+	pages := map[string]int{}
+	for _, rp := range selected.Items[0].RulePages {
+		pages[rp.Rule.Kind] = rp.Page.Pass
+	}
+	if pages["term"] != 1 || pages["agency"] != 2 {
+		t.Fatalf("rule pages=%v", pages)
+	}
+}

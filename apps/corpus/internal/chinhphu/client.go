@@ -108,6 +108,9 @@ func New(opts ...Option) *Client {
 	return c
 }
 
+// ItemTimeout returns the configured timeout for one item.
+func (c *Client) ItemTimeout() time.Duration { return c.limits.ItemTimeout }
+
 // WithBaseURLs sets local test endpoints and permits their exact origins.
 func WithBaseURLs(page, file string) Option {
 	return func(c *Client) { c.page = page; c.file = file; c.testHosts[page] = true; c.testHosts[file] = true }

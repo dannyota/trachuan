@@ -112,3 +112,20 @@ func TestSupport_PerQueryTuplesSurviveSupersession_Integration(t *testing.T) {
 		t.Fatalf("states=%v", states)
 	}
 }
+
+func TestSecondarySeed_AlsoCreatesSecondaryMember_Integration(t *testing.T) {
+	f := newSeedFixture(t)
+	r := f.secondaryRun("20990114", "a")
+	f.item(r, "vbpl:central", true)
+	f.secondaryItem(r, "a", secondaryCandidate{ID: "1", State: "seed_primary", PrimaryID: "2", Number: "42", Issuer: "central", IssuerForm: "Chính phủ", Date: "2026-04-30"})
+	mustFinalize(t, f, r)
+	active := map[string]membership.Entry{}
+	for _, entry := range f.read(r).Active {
+		active[entry.DocumentKey] = entry
+	}
+	for _, key := range []string{"vn:chinhphu:1", "vn:vbpl:2"} {
+		if len(active[key].Supports) == 0 {
+			t.Fatalf("missing member or support %s: %+v", key, active)
+		}
+	}
+}

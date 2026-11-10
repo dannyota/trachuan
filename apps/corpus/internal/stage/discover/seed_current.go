@@ -64,10 +64,21 @@ func currentMembers(ctx context.Context, q *store.Queries, r stage.Run) (map[str
 				artifacts[item] = art
 			}
 			identity := row.QueryKey
-			page := fmt.Sprintf("%d:%d", selected.Page.Pass, selected.Page.Page)
-			tuple := membership.SupportTuple{RuleKind: rule.Kind, RuleValue: rule.Value, Evidence: membership.EvidenceRef{QueryIdentity: &identity, Page: &page, ResponseSHA256: selected.Page.SHA256, ArtifactHash: art.Sha256, Path: selected.Page.Path}}
-			m.entry.Supports = append(m.entry.Supports, tuple)
-			m.records = append(m.records, membership.EvidenceRecord{DocumentKey: row.ItemKey, Stage: "discover", ItemKey: item, Support: tuple, State: "current"})
+			refs := []pageReference{}
+			for _, rp := range selected.RulePages {
+				if rp.Rule == rule {
+					refs = append(refs, rp.Page)
+				}
+			}
+			if len(refs) == 0 {
+				refs = append(refs, selected.Page)
+			}
+			for _, ref := range refs {
+				page := fmt.Sprintf("%d:%d", ref.Pass, ref.Page)
+				tuple := membership.SupportTuple{RuleKind: rule.Kind, RuleValue: rule.Value, Evidence: membership.EvidenceRef{QueryIdentity: &identity, Page: &page, ResponseSHA256: ref.SHA256, ArtifactHash: art.Sha256, Path: ref.Path}}
+				m.entry.Supports = append(m.entry.Supports, tuple)
+				m.records = append(m.records, membership.EvidenceRecord{DocumentKey: row.ItemKey, Stage: "discover", ItemKey: item, Support: tuple, State: "current"})
+			}
 		}
 	}
 	return members, nil
