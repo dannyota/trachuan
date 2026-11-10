@@ -18,7 +18,12 @@ import (
 // Tokenizer owns a native tokenizer and serializes encoding and cleanup.
 type Tokenizer struct {
 	mu     sync.Mutex
-	native *tokenizers.Tokenizer
+	native nativeTokenizer
+}
+
+type nativeTokenizer interface {
+	EncodeErr(string, bool) ([]uint32, []string, error)
+	Close() error
 }
 
 // Open loads a tokenizer with saved truncation and padding disabled.

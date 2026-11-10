@@ -25,6 +25,19 @@ assets=$(jq -er --arg platform "$platform" '
 ' "$repo/apps/queryembed/native.lock")
 cache="$repo/work/native/cache"
 destination="$repo/work/native/$platform"
+for directory in "$repo/work" "$repo/work/native" "$cache" "$destination"; do
+  if [[ -L "$directory" ]]; then
+    echo "native directory must not be a symlink: $directory" >&2
+    exit 1
+  fi
+done
+# Check every target before installing the first asset.
+while IFS=$'\t' read -r _ _ _ install; do
+  if [[ -d "$destination/$install" ]]; then
+    echo "native install target must not be a directory: $destination/$install" >&2
+    exit 1
+  fi
+done <<< "$assets"
 mkdir -p "$cache" "$destination"
 staging=
 trap 'if [[ -n "$staging" ]]; then rm -f "$staging"; fi' EXIT

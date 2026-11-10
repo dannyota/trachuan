@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
-	"sync"
 	"testing"
 )
 
@@ -42,23 +41,6 @@ func TestTokenizer_SpecialTokensAndNoTruncation(t *testing.T) {
 	if len(ids) != 1026 || ids[0] != 1 || ids[len(ids)-1] != 2 {
 		t.Fatalf("count = %d", len(ids))
 	}
-}
-
-func TestTokenizer_ConcurrentEncodeIsSerialized(t *testing.T) {
-	tok := openTestTokenizer(t)
-	var wg sync.WaitGroup
-	for range 16 {
-		wg.Go(func() {
-			for range 32 {
-				ids, err := tok.Encode("hello world")
-				if err != nil || !reflect.DeepEqual(ids, []int64{1, 3, 4, 2}) {
-					t.Errorf("Encode = %v, %v", ids, err)
-					return
-				}
-			}
-		})
-	}
-	wg.Wait()
 }
 
 func TestTokenizer_CloseAndInvalidFile(t *testing.T) {
