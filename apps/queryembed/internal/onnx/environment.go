@@ -42,7 +42,7 @@ func initialize(libraryPath string) error {
 	return nil
 }
 
-// Version returns the loaded ONNX Runtime library version after Open initializes it.
+// Version returns the loaded ONNX Runtime version after OpenBytes initializes it.
 func Version() (string, error) {
 	version, err := ort.GetVersion()
 	if err != nil {

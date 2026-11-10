@@ -15,13 +15,13 @@ import (
 // Model owns a CPU session and permits concurrent inference calls.
 type Model struct {
 	mu         sync.RWMutex
-	session    *ort.Session
+	session    modelSession
 	dimensions int
 	outputName string
 }
 
-// Open loads a CPU model and validates its input and first-output signatures.
-func Open(modelPath string, o Options) (*Model, error) {
+// OpenBytes loads a CPU model from verified bytes and validates its signatures.
+func OpenBytes(model []byte, o Options) (*Model, error) {
 	if err := initialize(o.LibraryPath); err != nil {
 		return nil, err
 	}
@@ -30,7 +30,7 @@ func Open(modelPath string, o Options) (*Model, error) {
 		return nil, err
 	}
 	defer func() { _ = options.Close() }()
-	session, err := ort.NewSession(modelPath, options)
+	session, err := ort.NewSessionFromBytes(model, options)
 	if err != nil {
 		return nil, fmt.Errorf("open ONNX model: %w", nativeError{err})
 	}

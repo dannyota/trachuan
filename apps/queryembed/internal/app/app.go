@@ -21,7 +21,7 @@ import (
 // Natives supplies the native operations used at startup.
 type Natives struct {
 	OpenTokenizer func(string) (httpapi.Tokenizer, io.Closer, error)
-	OpenModel     func(string, onnx.Options) (httpapi.Runtime, int, io.Closer, error)
+	OpenModel     func([]byte, onnx.Options) (httpapi.Runtime, int, io.Closer, error)
 	Versions      func() (bundle.Versions, error)
 }
 

@@ -9,8 +9,8 @@ import (
 // Model is unavailable without the ort build tag.
 type Model struct{}
 
-// Open fails because native support is unavailable.
-func Open(string, Options) (*Model, error) { return nil, ErrNativeUnavailable }
+// OpenBytes fails because native support is unavailable.
+func OpenBytes([]byte, Options) (*Model, error) { return nil, ErrNativeUnavailable }
 
 // Embed fails because native support is unavailable.
 func (*Model) Embed(context.Context, []int64) ([]float32, error) { return nil, ErrNativeUnavailable }

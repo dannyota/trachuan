@@ -45,7 +45,7 @@ func (closer) Close() error { return nil }
 func natives(truncate bool, m fakeModel) Natives {
 	return Natives{
 		OpenTokenizer: func(string) (httpapi.Tokenizer, io.Closer, error) { return fakeTokenizer{truncate}, closer{}, nil },
-		OpenModel:     func(string, onnx.Options) (httpapi.Runtime, int, io.Closer, error) { return m, 1024, closer{}, nil },
+		OpenModel:     func([]byte, onnx.Options) (httpapi.Runtime, int, io.Closer, error) { return m, 1024, closer{}, nil },
 		Versions: func() (bundle.Versions, error) {
 			return bundle.Versions{Go: "1", Tokenizers: "1", ONNXRuntime: "1"}, nil
 		},
@@ -95,9 +95,9 @@ func TestStartup_OrderAndBundleMismatch(t *testing.T) {
 		return openTokenizer(path)
 	}
 	openModel := n.OpenModel
-	n.OpenModel = func(path string, options onnx.Options) (httpapi.Runtime, int, io.Closer, error) {
+	n.OpenModel = func(data []byte, options onnx.Options) (httpapi.Runtime, int, io.Closer, error) {
 		calls = append(calls, "model")
-		return openModel(path, options)
+		return openModel(data, options)
 	}
 	service, closeAll, err := startup(context.Background(), dir, "library", n, io.Discard)
 	if err != nil {

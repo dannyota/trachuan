@@ -29,8 +29,8 @@ func main() {
 			}
 			return t, t, nil
 		},
-		OpenModel: func(path string, o onnx.Options) (httpapi.Runtime, int, io.Closer, error) {
-			m, err := onnx.Open(path, o)
+		OpenModel: func(data []byte, o onnx.Options) (httpapi.Runtime, int, io.Closer, error) {
+			m, err := onnx.OpenBytes(data, o)
 			if err != nil {
 				return nil, 0, nil, err
 			}

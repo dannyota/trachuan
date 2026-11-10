@@ -71,48 +71,14 @@ func validPath(p string) bool {
 
 // Verify checks the requested files against the manifest without loading others.
 func (m Manifest) Verify(dir string, paths []string) error {
-	entries := make(map[string]File, len(m.Files))
-	for _, f := range m.Files {
-		if !validPath(f.Path) {
-			return fmt.Errorf("invalid bundle path %q", f.Path)
-		}
-		if _, ok := entries[f.Path]; ok {
-			return fmt.Errorf("duplicate bundle path %q", f.Path)
-		}
-		entries[f.Path] = f
+	entries, err := m.fileEntries()
+	if err != nil {
+		return err
 	}
 	for _, p := range paths {
-		f, ok := entries[p]
-		if !ok {
-			return fmt.Errorf("requested file %q not listed", p)
-		}
-		current := dir
-		parts := strings.Split(p, "/")
-		for i, part := range parts {
-			current = filepath.Join(current, part)
-			info, err := os.Lstat(current)
-			if err != nil {
-				return fmt.Errorf("stat bundle file %q: %w", p, err)
-			}
-			if info.Mode()&os.ModeSymlink != 0 {
-				return fmt.Errorf("symlink in bundle path %q", p)
-			}
-			if i == len(parts)-1 && !info.Mode().IsRegular() {
-				return fmt.Errorf("bundle file %q is not regular", p)
-			}
-		}
-		file, err := os.Open(current)
+		file, f, err := openFile(dir, p, entries)
 		if err != nil {
-			return fmt.Errorf("open bundle file %q: %w", p, err)
-		}
-		info, err := file.Stat()
-		if err != nil {
-			_ = file.Close()
-			return fmt.Errorf("stat bundle file %q: %w", p, err)
-		}
-		if !info.Mode().IsRegular() || info.Size() != f.Size {
-			_ = file.Close()
-			return fmt.Errorf("bundle file %q size or type mismatch", p)
+			return err
 		}
 		h := sha256.New()
 		_, err = io.Copy(h, file)

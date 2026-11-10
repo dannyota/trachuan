@@ -8,7 +8,6 @@ import (
 	"math"
 	"os"
 	"path/filepath"
-	"sync"
 	"testing"
 	"time"
 
@@ -26,7 +25,7 @@ func testOptions(t *testing.T) Options {
 
 func openTestModel(t *testing.T, name string) *Model {
 	t.Helper()
-	m, err := Open(filepath.Join("../../testdata", name), testOptions(t))
+	m, err := OpenBytes(modelBytes(t, name), testOptions(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -41,12 +40,23 @@ func openTestModel(t *testing.T, name string) *Model {
 func TestModel_RefusesWrongInputsOrOutput(t *testing.T) {
 	for _, file := range []string{"wrong_inputs.onnx", "wrong_output.onnx"} {
 		t.Run(file, func(t *testing.T) {
-			m, err := Open(filepath.Join("../../testdata", file), testOptions(t))
+			m, err := OpenBytes(modelBytes(t, file), testOptions(t))
 			if err == nil {
 				_ = m.Close()
 				t.Fatal("Open accepted wrong signature")
 			}
 		})
+	}
+}
+
+func TestModel_RefusesExternalData(t *testing.T) {
+	m, err := OpenBytes(modelBytes(t, "external.onnx"), testOptions(t))
+	if err == nil {
+		_ = m.Close()
+		t.Fatal("accepted external weights outside the verified model")
+	}
+	if err.Error() != "open ONNX model: native operation failed" {
+		t.Fatalf("error leaks native diagnostics: %v", err)
 	}
 }
 
@@ -92,29 +102,32 @@ func TestModel_RejectsNonFiniteOutput(t *testing.T) {
 	}
 }
 
-// watchedContext lets the test cancel once the native run watcher is installed.
-type watchedContext struct {
-	context.Context
-	once     sync.Once
-	watching chan struct{}
-}
-
-func (c *watchedContext) Done() <-chan struct{} {
-	c.once.Do(func() { close(c.watching) })
-	return c.Context.Done()
-}
-
 func TestModel_CancelledContextTerminatesRun(t *testing.T) {
-	m, err := Open("../../testdata/cancel.onnx", testOptions(t))
+	m, err := OpenBytes(modelBytes(t, "cancel.onnx"), testOptions(t))
 	if err != nil {
 		t.Fatal(err)
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	watched := &watchedContext{Context: ctx, watching: make(chan struct{})}
+	observed := &observedRun{session: m.session, started: make(chan struct{}), returned: make(chan struct{})}
+	m.session = observed
 	result := make(chan error, 1)
-	go func() { _, runErr := m.Embed(watched, []int64{1, 2}); result <- runErr }()
-	<-watched.watching
+	go func() { _, runErr := m.Embed(ctx, []int64{1, 2}); result <- runErr }()
+	select {
+	case <-observed.started:
+	case <-time.After(200 * time.Millisecond):
+		t.Fatal("native run did not start")
+	}
+	// The hook fires immediately before the binding call. Let the billion-step
+	// Loop enter native execution, and prove it has not completed on its own.
+	time.Sleep(50 * time.Millisecond)
+	select {
+	case err := <-result:
+		t.Fatalf("long graph completed before cancellation: %v", err)
+	case <-observed.returned:
+		t.Fatal("native call returned before cancellation")
+	default:
+	}
 	cancel()
 	select {
 	case err := <-result:
@@ -124,9 +137,15 @@ func TestModel_CancelledContextTerminatesRun(t *testing.T) {
 		if !errors.Is(err, context.Canceled) {
 			t.Fatalf("Embed error = %v", err)
 		}
-	case <-time.After(100 * time.Millisecond):
+	case <-time.After(500 * time.Millisecond):
 		t.Fatal("native run did not terminate")
 	}
+	select {
+	case <-observed.returned:
+	default:
+		t.Fatal("Embed returned before the native call")
+	}
+	m.session = observed.session
 	// Each call owns its terminate flag; cancellation must not poison a later run.
 	reuse, stop := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer stop()
@@ -181,7 +200,7 @@ func TestModel_LibraryPathAndLifetime(t *testing.T) {
 	m := openTestModel(t, "tiny.onnx")
 	options := testOptions(t)
 	options.LibraryPath += ".different"
-	if other, err := Open("../../testdata/tiny.onnx", options); err == nil {
+	if other, err := OpenBytes(modelBytes(t, "tiny.onnx"), options); err == nil {
 		_ = other.Close()
 		t.Fatal("different library path accepted")
 	}
@@ -224,3 +243,28 @@ func TestModel_RejectsInvalidSignatureMetadata(t *testing.T) {
 		})
 	}
 }
+
+func modelBytes(t *testing.T, name string) []byte {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join("../../testdata", name))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return data
+}
+
+// observedRun wraps the real session so the hook and return signal surround
+// the binding call, rather than the cancellation watcher.
+type observedRun struct {
+	session           modelSession
+	started, returned chan struct{}
+}
+
+func (r *observedRun) RunWithOptions(ctx context.Context, options *ort.RunOptions, inputs map[string]*ort.Tensor, names []string) (map[string]*ort.Tensor, error) {
+	close(r.started)
+	outputs, err := r.session.RunWithOptions(ctx, options, inputs, names)
+	close(r.returned)
+	return outputs, err
+}
+
+func (r *observedRun) Close() error { return r.session.Close() }

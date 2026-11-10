@@ -9,6 +9,11 @@ import (
 	ort "github.com/microsoft/onnxruntime/go/onnxruntime"
 )
 
+type modelSession interface {
+	RunWithOptions(context.Context, *ort.RunOptions, map[string]*ort.Tensor, []string) (map[string]*ort.Tensor, error)
+	Close() error
+}
+
 func (m *Model) run(ctx context.Context, inputs map[string]*ort.Tensor) (map[string]*ort.Tensor, error) {
 	options, err := ort.NewRunOptions()
 	if err != nil {

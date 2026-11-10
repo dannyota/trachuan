@@ -22,7 +22,11 @@ func startup(ctx context.Context, dir, lib string, n Natives, stderr io.Writer) 
 	if _, err = bundle.QueryRecipe(m, bundle.Versions{}); err != nil {
 		return nil, nil, fmt.Errorf("check recipe: %w", err)
 	}
-	paths := []string{bundle.QueryModelPath}
+	modelBytes, err := m.ReadVerified(dir, bundle.QueryModelPath)
+	if err != nil {
+		return nil, nil, fmt.Errorf("read verified model: %w", err)
+	}
+	var paths []string
 	foundTokenizer := false
 	for _, f := range bundle.TokenizerFiles(m) {
 		paths = append(paths, f.Path)
@@ -44,7 +48,8 @@ func startup(ctx context.Context, dir, lib string, n Natives, stderr io.Writer) 
 		closeTok()
 		return nil, nil, errors.New("tokenizer probe failed")
 	}
-	model, dimensions, mc, err := n.OpenModel(filepath.Join(dir, bundle.QueryModelPath), onnx.QueryOptions(lib))
+	model, dimensions, mc, err := n.OpenModel(modelBytes, onnx.QueryOptions(lib))
+	modelBytes = nil //nolint:ineffassign // Release the verified model buffer before warmup.
 	if err != nil {
 		closeTok()
 		return nil, nil, fmt.Errorf("open model: %w", err)

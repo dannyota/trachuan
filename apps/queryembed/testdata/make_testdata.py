@@ -8,13 +8,25 @@ from onnx import TensorProto, helper, numpy_helper
 from tokenizers import Tokenizer, models, pre_tokenizers, processors
 
 
-def write_model(name: str, graph: onnx.GraphProto) -> None:
+def write_model(name: str, graph: onnx.GraphProto, *, external: bool = False) -> None:
     # These graphs need only IR 8; ONNX's newest default can exceed the runtime.
     model = helper.make_model(
         graph, ir_version=8, opset_imports=[helper.make_opsetid("", 18)]
     )
     onnx.checker.check_model(model)
-    onnx.save(model, Path(__file__).parent / name)
+    directory = Path(__file__).parent
+    if external:
+        (directory / "external.data").unlink(missing_ok=True)
+        onnx.save_model(
+            model,
+            directory / name,
+            save_as_external_data=True,
+            all_tensors_to_one_file=True,
+            location="external.data",
+            size_threshold=64,
+        )
+    else:
+        onnx.save(model, directory / name)
 
 
 def main() -> None:
@@ -68,6 +80,7 @@ def main() -> None:
     ]
     graph = helper.make_graph(nodes, "embedding_lookup", inputs, [output], initializers)
     write_model("tiny.onnx", graph)
+    write_model("external.onnx", graph, external=True)
     wrong = onnx.GraphProto()
     wrong.CopyFrom(graph)
     wrong.input[0].name = "wrong_ids"
@@ -81,7 +94,7 @@ def main() -> None:
     wrong.output[0].type.tensor_type.elem_type = TensorProto.INT64
     write_model("wrong_output.onnx", wrong)
 
-    # A long, bounded Loop exercises native termination without a timing sleep.
+    # A billion serial iterations take several seconds even on a fast CPU.
     body = helper.make_graph(
         [
             helper.make_node("Identity", ["condition"], ["continue"]),

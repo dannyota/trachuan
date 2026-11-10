@@ -1,6 +1,7 @@
 package app
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -103,6 +104,10 @@ func (m recordingModel) Embed(context.Context, []int64) ([]float32, error) {
 func TestRun_StartupOrder(t *testing.T) {
 	dir := fixture(t)
 	calls := []string{}
+	wantModel, readErr := os.ReadFile(filepath.Join(dir, bundle.QueryModelPath))
+	if readErr != nil {
+		t.Fatal(readErr)
+	}
 	n := natives(false, fakeModel{})
 	n.OpenTokenizer = func(string) (httpapi.Tokenizer, io.Closer, error) {
 		calls = append(calls, "verified and tokenizer")
@@ -111,8 +116,11 @@ func TestRun_StartupOrder(t *testing.T) {
 		}
 		return recordingTokenizer{&calls}, closer{}, nil
 	}
-	n.OpenModel = func(_ string, _ onnx.Options) (httpapi.Runtime, int, io.Closer, error) {
+	n.OpenModel = func(data []byte, _ onnx.Options) (httpapi.Runtime, int, io.Closer, error) {
 		calls = append(calls, "model")
+		if !bytes.Equal(data, wantModel) {
+			return nil, 0, nil, fmt.Errorf("model bytes differ from verified snapshot")
+		}
 		return recordingModel{&calls}, 1024, closer{}, nil
 	}
 	n.Versions = func() (bundle.Versions, error) { calls = append(calls, "versions"); return bundle.Versions{}, nil }
@@ -151,8 +159,8 @@ func TestRun_StartupOrder(t *testing.T) {
 	calls = nil
 	dir = fixture(t)
 	original := n.OpenModel
-	n.OpenModel = func(path string, o onnx.Options) (httpapi.Runtime, int, io.Closer, error) {
-		m, _, c, e := original(path, o)
+	n.OpenModel = func(data []byte, o onnx.Options) (httpapi.Runtime, int, io.Closer, error) {
+		m, _, c, e := original(data, o)
 		return m, 8, c, e
 	}
 	if code := Run(context.Background(), []string{"--model-dir", dir, "--ort-lib", "lib"}, io.Discard, n); code != 1 {
@@ -203,7 +211,7 @@ func TestRun_DrainOnSignal(t *testing.T) {
 	unready, releaseShutdown := make(chan struct{}), make(chan struct{})
 	model := &blockingModel{started: make(chan struct{}), release: make(chan struct{})}
 	n := natives(false, fakeModel{})
-	n.OpenModel = func(string, onnx.Options) (httpapi.Runtime, int, io.Closer, error) { return model, 1024, closer{}, nil }
+	n.OpenModel = func([]byte, onnx.Options) (httpapi.Runtime, int, io.Closer, error) { return model, 1024, closer{}, nil }
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	done := make(chan int, 1)

@@ -8,8 +8,8 @@ import (
 )
 
 func TestStubs_ReturnErrNativeUnavailable(t *testing.T) {
-	if _, err := Open("unused", QueryOptions("unused")); !errors.Is(err, ErrNativeUnavailable) {
-		t.Fatalf("Open error = %v", err)
+	if _, err := OpenBytes([]byte("unused"), QueryOptions("unused")); !errors.Is(err, ErrNativeUnavailable) {
+		t.Fatalf("OpenBytes error = %v", err)
 	}
 	if _, err := Version(); !errors.Is(err, ErrNativeUnavailable) {
 		t.Fatalf("Version error = %v", err)
