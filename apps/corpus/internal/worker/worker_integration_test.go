@@ -54,10 +54,8 @@ func (fakeStage) Resolve(context.Context, stage.Env, stage.Run, stage.Item, arti
 
 func TestWorker_RunsRegisteredStageEndToEnd(t *testing.T) {
 	t.Parallel()
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
 	url := testdb.New(t)
-	db, err := store.Open(ctx, url)
+	db, err := store.Open(context.Background(), url)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -66,10 +64,12 @@ func TestWorker_RunsRegisteredStageEndToEnd(t *testing.T) {
 	rel := testtemporal.Release()
 	registry := workflow.NewRegistry(fakeStage{})
 	env := stage.Env{DB: db, Artifacts: artifact.Store{Root: t.TempDir()}, Now: time.Now}
-	w, err := New(ctx, Deps{TaskQueue: rel, Env: env, Temporal: server.Client(), Registry: registry})
+	w, err := New(context.Background(), Deps{TaskQueue: rel, Env: env, Temporal: server.Client(), Registry: registry})
 	if err != nil {
 		t.Fatal(err)
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
 	workerCtx, stop := context.WithCancel(ctx)
 	workerDone := make(chan error, 1)
 	go func() { workerDone <- w.Run(workerCtx) }()
