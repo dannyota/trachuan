@@ -283,9 +283,9 @@ func TestCollect_ExactPlanAvoidsHNSW(t *testing.T) {
 	defer func() { _ = tx.Rollback(ctx) }()
 	v := make([]float32, 1024)
 	v[0] = 1
-	explain := func() string {
+	explain := func(sql string, args ...any) string {
 		t.Helper()
-		rows, queryErr := tx.Query(ctx, "EXPLAIN "+exactSQL, denseVector(v), "2025-01-01", false, true, 4)
+		rows, queryErr := tx.Query(ctx, "EXPLAIN "+sql, args...)
 		if queryErr != nil {
 			t.Fatal(queryErr)
 		}
@@ -306,9 +306,14 @@ func TestCollect_ExactPlanAvoidsHNSW(t *testing.T) {
 	if _, err = tx.Exec(ctx, `SAVEPOINT hnsw_control; SET LOCAL enable_sort = off`); err != nil {
 		t.Fatal(err)
 	}
-	control := explain()
+	args := []any{denseVector(v), "2025-01-01", false, true, 4, []string{}}
+	control := explain(exactSQL, args...)
 	if !strings.Contains(control, "Index Scan using chunk_embedding_hnsw") {
 		t.Fatalf("control does not use HNSW index:\n%s", control)
+	}
+	ann := explain(annSQL, append(args, 400)...)
+	if !strings.Contains(ann, "Index Scan using chunk_embedding_hnsw") {
+		t.Fatalf("ANN plan does not use HNSW index:\n%s", ann)
 	}
 	if _, err = tx.Exec(ctx, `ROLLBACK TO SAVEPOINT hnsw_control`); err != nil {
 		t.Fatal(err)
@@ -316,7 +321,7 @@ func TestCollect_ExactPlanAvoidsHNSW(t *testing.T) {
 	if err = exactSettings(ctx, tx); err != nil {
 		t.Fatal(err)
 	}
-	exact := explain()
+	exact := explain(exactSQL, args...)
 	if strings.Contains(exact, "chunk_embedding_hnsw") {
 		t.Fatalf("exact plan uses HNSW index:\n%s", exact)
 	}

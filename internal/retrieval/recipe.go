@@ -49,6 +49,7 @@ type Recipe struct {
 	DocumentCap             int              `json:"document_cap"`
 	Backfill                string           `json:"backfill"`
 	FamilyCollapse          string           `json:"family_collapse"`
+	ContextScope            string           `json:"context_scope"`
 	Validity                string           `json:"validity"`
 	DefaultInForceOnly      bool             `json:"default_in_force_only"`
 	QueryGate               string           `json:"query_gate"`
@@ -61,7 +62,7 @@ type Recipe struct {
 
 // Recipe1 returns the uncalibrated baseline.
 func Recipe1() Recipe {
-	return Recipe{1, 50, 50, ANNRecipe{400, 24, 1000, "strict_order", "force_custom_plan", 20000, 1, "exact"}, RRFRecipe{60, 1, .5, 1}, "score-id", "vn-number/1", "nearest-khoan", "max", 8, 3, "demoted-order", "off-unverified-alignment", "document-dates/3", true, "vn-marks/1", "source-spans/1", 14000, 20, 1000, AbstentionRecipe{"first-group-best-member-cosine", nil, "provisional-old-product", ""}}
+	return Recipe{1, 50, 50, ANNRecipe{400, 24, 1000, "strict_order", "force_custom_plan", 20000, 1, "exact"}, RRFRecipe{60, 1, .5, 1}, "score-id", "vn-number/1", "nearest-khoan", "max", 8, 3, "demoted-order", "off-unverified-alignment", "number-routed/1", "document-dates/3", true, "vn-marks/1", "source-spans/1", 14000, 20, 1000, AbstentionRecipe{"first-group-best-member-cosine", nil, "provisional-old-product", ""}}
 }
 
 // JSON returns compact fixed-field JSON.

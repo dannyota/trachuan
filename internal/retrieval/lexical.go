@@ -26,7 +26,7 @@ func sparseVector(v lexical.Vector, dimensions int) string {
 	return b.String()
 }
 func lexicalQuery(ctx context.Context, tx pgx.Tx, args ...any) ([]Candidate, error) {
-	sql := `SELECT c.id, -(c.sparse <#> $1::sparsevec) AS score FROM chunk c JOIN document d ON d.id=c.document_id WHERE ` + eligibility + ` AND -(c.sparse <#> $1::sparsevec) > 0 ORDER BY score DESC,c.id LIMIT $5`
+	sql := `SELECT c.id, -(c.sparse <#> $1::sparsevec) AS score FROM chunk c JOIN document d ON d.id=c.document_id WHERE ` + eligibility + contextScope + ` AND -(c.sparse <#> $1::sparsevec) > 0 ORDER BY score DESC,c.id LIMIT $5`
 	rows, err := tx.Query(ctx, sql, args...)
 	if err != nil {
 		return nil, errors.New("lexical query failed")

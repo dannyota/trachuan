@@ -70,10 +70,17 @@ func TestValidateQuery_RejectsExcessRunes(t *testing.T) {
 }
 
 func TestRecipe_ValidityPolicyVersionBumped(t *testing.T) {
-	if got := Recipe1().Hash(); got != "e1834fc9b4368d6d225fa26a945e9541e4c0909920a4303a87bf9a2148349b41" {
+	if got := Recipe1().Hash(); got != "91d48abaac12636c72021ac0dc39d00ba1682ecbd8be16bc086a6d32c5f5dfcb" {
 		t.Errorf("hash = %q", got)
 	}
 	if got := Recipe1().Validity; got != "document-dates/3" {
 		t.Errorf("validity = %q", got)
+	}
+}
+
+func TestRecipe1_ContextScopeField(t *testing.T) {
+	b, err := Recipe1().JSON()
+	if err != nil || !strings.Contains(string(b), `"context_scope":"number-routed/1"`) {
+		t.Fatalf("recipe = %s, error %v", b, err)
 	}
 }
