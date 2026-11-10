@@ -7,7 +7,7 @@ import onnx
 import pytest
 from onnx import TensorProto, helper
 
-from trachuan_embedder.bundle import verify_bundle
+from trachuan_docembed.bundle import verify_bundle
 
 SCRIPT = Path(__file__).resolve().parents[1] / "scripts/make_bundle.py"
 REVISION = "a" * 40

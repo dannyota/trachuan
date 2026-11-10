@@ -42,14 +42,11 @@ queryembed-run: ## Start the native query service on 127.0.0.1:8091
 	go run -tags ort ./apps/queryembed/cmd/queryembed --model-dir "$(EMBEDDER_MODEL_DIR)" \
 	  --ort-lib "$(CURDIR)/work/native/$$platform/$$library"
 
-embedder-test: ## Run embedder tests
-	cd apps/embedder && uv run --frozen pytest
+docembed-test: ## Run document embedder tests
+	cd apps/docembed && uv run --frozen pytest
 
-embedder-query: ## Start the query embedder on 127.0.0.1:8091 (model bundle in EMBEDDER_MODEL_DIR)
-	cd apps/embedder && uv run --frozen python -m trachuan_embedder --runtime query --host 127.0.0.1 --model-dir $(abspath $(EMBEDDER_MODEL_DIR))
-
-embedder-document: ## Start the document embedder on 127.0.0.1:8092 (MPS)
-	cd apps/embedder && uv run --frozen --group document python -m trachuan_embedder --runtime document --model-dir $(abspath $(EMBEDDER_MODEL_DIR))
+docembed-run: ## Start the document embedder on 127.0.0.1:8092 (MPS)
+	cd apps/docembed && uv run --frozen --group document python -m trachuan_docembed --model-dir $(abspath $(EMBEDDER_MODEL_DIR))
 
 test: ## Run unit tests
 	go test ./...
@@ -91,4 +88,4 @@ services-down: ## Stop the local Temporal server and PostgreSQL, keep their data
 	bash deploy/local/temporal.sh down
 	bash deploy/local/postgres.sh down
 
-.PHONY: help hooks-install lengths-check pre-push docs-fmt queryembed-native queryembed-test-ort queryembed-run embedder-test embedder-query embedder-document test test-integration test-proof generate sqlc-check db-up db-setup temporal-up services-up services-down
+.PHONY: help hooks-install lengths-check pre-push docs-fmt queryembed-native queryembed-test-ort queryembed-run docembed-test docembed-run test test-integration test-proof generate sqlc-check db-up db-setup temporal-up services-up services-down

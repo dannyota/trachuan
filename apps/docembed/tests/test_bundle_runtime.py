@@ -1,12 +1,7 @@
-import numpy as np
-import onnx
-import onnxruntime as ort
 import pytest
-from onnx import TensorProto, helper
 
-from trachuan_embedder.bundle import create_bundle, verify_bundle
-from trachuan_embedder.onnx_runtime import OnnxRuntime
-from trachuan_embedder.torch_runtime import TorchRuntime
+from trachuan_docembed.bundle import create_bundle, verify_bundle
+from trachuan_docembed.torch_runtime import TorchRuntime
 
 
 def test_bundle_hash_mismatch_refuses_ready(tmp_path):
@@ -22,24 +17,6 @@ def test_document_mode_refuses_without_mps(monkeypatch, tmp_path):
     monkeypatch.setattr(torch.backends.mps, "is_available", lambda: False)
     with pytest.raises(RuntimeError):
         TorchRuntime(tmp_path)
-
-
-def test_onnx_cls_selection_and_normalization(tmp_path):
-    source = helper.make_tensor_value_info("input_ids", TensorProto.FLOAT, [1, 2, 2])
-    result = helper.make_tensor_value_info("hidden", TensorProto.FLOAT, [1, 2, 2])
-    graph = helper.make_graph(
-        [helper.make_node("Identity", ["input_ids"], ["hidden"])], "tiny", [source], [result]
-    )
-    model = helper.make_model(graph, opset_imports=[helper.make_opsetid("", 13)], ir_version=10)
-    path = tmp_path / "model.onnx"
-    onnx.save(model, path)
-    runtime = OnnxRuntime(path)
-    options = runtime.session.get_session_options()
-    assert options.intra_op_num_threads == 4
-    assert options.inter_op_num_threads == 1
-    assert options.execution_mode == ort.ExecutionMode.ORT_SEQUENTIAL
-    vector = runtime.embed({"input_ids": np.array([[[3, 4], [9, 9]]], dtype=np.float32)})
-    assert np.allclose(vector, [[0.6, 0.8]])
 
 
 def test_document_runtime_loads_float16_on_mps(monkeypatch, tmp_path):

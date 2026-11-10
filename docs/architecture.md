@@ -39,11 +39,12 @@ MacBook against native local services (`deploy/local`)
 Stages run in order `discover`, `fetch`, `extract`, `relate`, `chunk`, `embed`,
 `build`, `eval`. A completed evaluation leaves the run `evaluated`.
 
-## Query service
+## Embedding services
 
 | App               | Role                                                                                              |
 | ----------------- | ------------------------------------------------------------------------------------------------- |
 | `apps/queryembed` | Go query embedding service with verified local model bundle and native ONNX Runtime and tokenizer |
+| `apps/docembed`   | Python document embedding service using PyTorch MPS on the MacBook                                |
 
 ## Local services
 

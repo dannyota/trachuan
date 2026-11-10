@@ -5,8 +5,8 @@ import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 
-from trachuan_embedder.app import create_app
-from trachuan_embedder.recipe import recipe_hash
+from trachuan_docembed.app import create_app
+from trachuan_docembed.recipe import recipe_hash
 
 
 class Tokenizer:
@@ -27,7 +27,7 @@ class Runtime:
 @pytest.fixture
 def service():
     runtime = Runtime()
-    app = create_app("document", Tokenizer(), runtime, {"dimensions": 2}, ready=True)
+    app = create_app(Tokenizer(), runtime, {"dimensions": 2}, ready=True)
     return TestClient(app), runtime, app.state.recipe_hash
 
 
@@ -62,7 +62,7 @@ def test_embed_returns_float32_l2_normalized(service):
 
 @pytest.mark.parametrize("values", [[[0, 0]], [[float("nan"), 1]], [[float("inf"), 1]]])
 def test_embed_rejects_non_finite_or_zero_norm(values):
-    app = create_app("document", Tokenizer(), Runtime(values), {"dimensions": 2}, ready=True)
+    app = create_app(Tokenizer(), Runtime(values), {"dimensions": 2}, ready=True)
     client = TestClient(app)
     response = client.post("/v1/embed", json={"recipe_hash": app.state.recipe_hash, "texts": ["x"]})
     assert response.status_code == 500
@@ -111,19 +111,8 @@ def test_wrong_media_type_415(service):
     )
 
 
-def test_query_mode_accepts_exactly_one_text():
-    app = create_app("query", Tokenizer(), Runtime(), {"dimensions": 2}, ready=True)
-    client = TestClient(app)
-    assert (
-        client.post(
-            "/v1/tokenize", json={"recipe_hash": app.state.recipe_hash, "texts": ["a", "b"]}
-        ).status_code
-        == 400
-    )
-
-
 def test_readyz_503_until_bundle_verified():
-    app = create_app("query", Tokenizer(), Runtime(), {"dimensions": 2}, ready=False)
+    app = create_app(Tokenizer(), Runtime(), {"dimensions": 2}, ready=False)
     assert TestClient(app).get("/readyz").status_code == 503
 
 

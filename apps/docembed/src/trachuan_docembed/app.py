@@ -25,17 +25,11 @@ def pairs(items: list) -> dict:
     return result
 
 
-def create_app(
-    mode: str, tokenizer: object, runtime: object, recipe: dict, *, ready: bool = False
-) -> FastAPI:
+def create_app(tokenizer: object, runtime: object, recipe: dict, *, ready: bool = False) -> FastAPI:
     app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
     app.state.ready = ready
     app.state.recipe_hash = recipe_hash(recipe)
-    cap, body_cap, batch, active, queued, wait, deadline = (
-        (256, 64000, 1, 2, 8, 0.25, 2.0)
-        if mode == "query"
-        else (2048, 1048576, 16, 1, 1, 30.0, 120.0)
-    )
+    cap, body_cap, batch, active, queued, wait, deadline = (2048, 1048576, 16, 1, 1, 30.0, 120.0)
     admission = Admission(active, queued, wait, deadline)
 
     @app.get("/healthz")

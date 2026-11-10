@@ -10,7 +10,7 @@ def recipe_hash(recipe: dict) -> str:
     ).hexdigest()
 
 
-def build_recipe(manifest: dict, mode: str) -> dict:
+def build_recipe(manifest: dict) -> dict:
     import importlib.metadata
     import platform
 
@@ -20,15 +20,7 @@ def build_recipe(manifest: dict, mode: str) -> dict:
         for item in files
         if "token" in item["path"] or item["path"].endswith("sentencepiece.bpe.model")
     ]
-    weights = [
-        item
-        for item in files
-        if (
-            item["path"] == "onnx/model_int8.onnx"
-            if mode == "query"
-            else item["path"] in ("config.json", "model.safetensors")
-        )
-    ]
+    weights = [item for item in files if item["path"] in ("config.json", "model.safetensors")]
     if not tokenizer or not weights:
         raise ValueError("bundle lacks tokenizer or weights")
 
@@ -48,17 +40,13 @@ def build_recipe(manifest: dict, mode: str) -> dict:
         "pooling": "cls",
         "normalization": "l2-float32",
         "input": "raw",
-        "runtime": mode,
-        "backend": "onnxruntime-cpu" if mode == "query" else "torch-mps",
-        "precision": "int8" if mode == "query" else "fp16",
-        "token_cap": 256 if mode == "query" else 2048,
+        "runtime": "document",
+        "backend": "torch-mps",
+        "precision": "fp16",
+        "token_cap": 2048,
         "special_tokens": True,
         "truncation": False,
         "language": "python " + platform.python_version(),
         "tokenizer_library": "transformers " + importlib.metadata.version("transformers"),
-        "runtime_library": (
-            "onnxruntime " + importlib.metadata.version("onnxruntime")
-            if mode == "query"
-            else "torch " + importlib.metadata.version("torch")
-        ),
+        "runtime_library": "torch " + importlib.metadata.version("torch"),
     }

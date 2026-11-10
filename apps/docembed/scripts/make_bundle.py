@@ -7,7 +7,7 @@ from pathlib import Path
 
 from onnxruntime.quantization import QuantType, quantize_dynamic
 
-from trachuan_embedder.bundle import create_bundle
+from trachuan_docembed.bundle import create_bundle
 
 
 def main() -> None:
