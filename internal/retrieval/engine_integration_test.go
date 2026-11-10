@@ -303,9 +303,15 @@ func TestCollect_ExactPlanAvoidsHNSW(t *testing.T) {
 		}
 		return strings.Join(lines, "\n")
 	}
+	if _, err = tx.Exec(ctx, `SAVEPOINT hnsw_control; SET LOCAL enable_sort = off`); err != nil {
+		t.Fatal(err)
+	}
 	control := explain()
 	if !strings.Contains(control, "Index Scan using chunk_embedding_hnsw") {
 		t.Fatalf("control does not use HNSW index:\n%s", control)
+	}
+	if _, err = tx.Exec(ctx, `ROLLBACK TO SAVEPOINT hnsw_control`); err != nil {
+		t.Fatal(err)
 	}
 	if err = exactSettings(ctx, tx); err != nil {
 		t.Fatal(err)

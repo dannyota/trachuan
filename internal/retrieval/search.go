@@ -24,5 +24,8 @@ func (e *Engine) Search(ctx context.Context, req Request) (Response, error) {
 	if err != nil {
 		return Response{}, fmt.Errorf("shape search: %w", err)
 	}
+	if err := e.LoadDecisions(ctx, response.Hits, response.NonCurrent); err != nil {
+		return Response{}, fmt.Errorf("load validity decisions: %w", err)
+	}
 	return response, nil
 }

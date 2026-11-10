@@ -54,7 +54,7 @@ func hydrate(ctx context.Context, tx pgx.Tx, g *ArmGroup, vec string) error {
 		return errors.New("read hydrated candidate mapping failed")
 	}
 	rows.Close()
-	const sql = `SELECT c.id,c.ordinal,d.country,d.key,p.anchor,p.id,m.group_id,gp.anchor,c.content,c.context_prefix,c.spans,1-(c.embedding <=> $3::vector),p.parent_id,p.kind,p.label,p.heading,p.text,p.node_id,d.number,d.title,d.status_class,d.status_basis,d.is_current,d.eff_from,d.eff_to,d.source_url,ARRAY(SELECT DISTINCT g.kind FROM coverage_gap g WHERE g.document_id=d.id AND g.kind IN ('consolidated_status_unordered','consolidated_status_unresolved') ORDER BY g.kind)
+	const sql = `SELECT c.id,c.ordinal,d.country,d.key,p.anchor,p.id,m.group_id,gp.anchor,c.content,c.context_prefix,c.spans,1-(c.embedding <=> $3::vector),p.parent_id,p.kind,p.label,p.heading,p.text,p.node_id,d.number,d.class,d.source,d.validity_conflict,d.title,d.status_class,d.status_basis,d.is_current,d.eff_from,d.eff_to,d.source_url,ARRAY(SELECT DISTINCT g.kind FROM coverage_gap g WHERE g.document_id=d.id AND g.kind IN ('consolidated_status_unordered','consolidated_status_unresolved') ORDER BY g.kind)
  FROM unnest($1::bigint[],$2::bigint[]) AS m(provision_id,group_id)
  JOIN LATERAL (SELECT * FROM chunk WHERE provision_id=ANY($1::bigint[]) AND provision_id=m.provision_id OFFSET 0) c ON true
  JOIN LATERAL (SELECT * FROM provision WHERE id=ANY($1::bigint[]) AND id=m.provision_id OFFSET 0) p ON true
@@ -68,7 +68,7 @@ func hydrate(ctx context.Context, tx pgx.Tx, g *ArmGroup, vec string) error {
 	groupIDs := map[int64]bool{}
 	for rows.Next() {
 		var c Candidate
-		if rows.Scan(&c.ChunkID, &c.Ordinal, &c.Identity.Country, &c.Identity.DocumentKey, &c.Identity.Anchor, &c.ProvisionID, &c.GroupID, &c.Group.Anchor, &c.Content, &c.ContextPrefix, &c.Spans, &c.Cosine, &c.Provision.ParentID, &c.Provision.Kind, &c.Provision.Label, &c.Provision.Heading, &c.Provision.Text, &c.Provision.NodeID, &c.Document.Number, &c.Document.Title, &c.Document.StatusClass, &c.Document.StatusBasis, &c.Document.IsCurrent, &c.Document.EffectiveFrom, &c.Document.EffectiveTo, &c.Document.SourceURL, &c.Document.DerivationGaps) != nil {
+		if rows.Scan(&c.ChunkID, &c.Ordinal, &c.Identity.Country, &c.Identity.DocumentKey, &c.Identity.Anchor, &c.ProvisionID, &c.GroupID, &c.Group.Anchor, &c.Content, &c.ContextPrefix, &c.Spans, &c.Cosine, &c.Provision.ParentID, &c.Provision.Kind, &c.Provision.Label, &c.Provision.Heading, &c.Provision.Text, &c.Provision.NodeID, &c.Document.Number, &c.Document.Class, &c.Document.Source, &c.Document.ValidityConflict, &c.Document.Title, &c.Document.StatusClass, &c.Document.StatusBasis, &c.Document.IsCurrent, &c.Document.EffectiveFrom, &c.Document.EffectiveTo, &c.Document.SourceURL, &c.Document.DerivationGaps) != nil {
 			rows.Close()
 			return errors.New("read hydrated candidate failed")
 		}

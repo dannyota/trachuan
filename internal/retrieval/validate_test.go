@@ -69,8 +69,11 @@ func TestValidateQuery_RejectsExcessRunes(t *testing.T) {
 	}
 }
 
-func TestRecipe1_ValidityVersion(t *testing.T) {
-	if got := Recipe1().Validity; got != "document-dates/2" {
+func TestRecipe_ValidityPolicyVersionBumped(t *testing.T) {
+	if got := Recipe1().Hash(); got != "e1834fc9b4368d6d225fa26a945e9541e4c0909920a4303a87bf9a2148349b41" {
+		t.Errorf("hash = %q", got)
+	}
+	if got := Recipe1().Validity; got != "document-dates/3" {
 		t.Errorf("validity = %q", got)
 	}
 }
