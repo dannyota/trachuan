@@ -66,14 +66,14 @@ account. ID tokens are RS256 with a key made at startup.
 The server takes the provider from `SERVER_GOOGLE_ISSUER`; unset or empty means
 `https://accounts.google.com`. Any other value is accepted only when all of
 these hold, and otherwise `serve` exits at startup with
-`SERVER_GOOGLE_ISSUER requires a loopback deployment`, never echoing values:
-the host of `SERVER_PUBLIC_URL` and of `SERVER_LISTEN` is loopback, and the
-issuer is exactly `http://<loopback host>:<port>` (explicit port 1 to 65535, no
-user info, path, query or fragment, and equal to its own normalized form). A
-loopback host is `localhost` in lowercase or an IP literal in 127.0.0.0/8 or
-`::1`, with no zone, no IPv4-mapped form and no trailing dot. When the override
-is active, `serve` writes one startup line saying so, and the callback accepts
-only that exact issuer.
+`SERVER_GOOGLE_ISSUER requires a loopback deployment`, never echoing values: the
+host of `SERVER_PUBLIC_URL` and of `SERVER_LISTEN` is loopback, and the issuer
+is exactly `http://<loopback host>:<port>` (explicit port 1 to 65535, no user
+info, path, query or fragment, and equal to its own normalized form). A loopback
+host is `localhost` in lowercase or an IP literal in 127.0.0.0/8 or `::1`, with
+no zone, no IPv4-mapped form and no trailing dot. When the override is active,
+`serve` writes one startup line saying so, and the callback accepts only that
+exact issuer.
 
 ## Sessions
 
