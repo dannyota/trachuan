@@ -62,6 +62,7 @@ test-integration: ## Run integration tests (loads .env when present)
 	$(LOAD_ENV); go test -tags integration -count=1 ./...
 
 e2e: ## Run end-to-end flow tests against the local stack with the fake Google provider (loads .env when present)
+	bash scripts/e2e-test.sh
 	bash scripts/e2e.sh
 
 test-proof: ## Run proof tests (loads .env when present)
