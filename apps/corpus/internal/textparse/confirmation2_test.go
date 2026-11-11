@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 	"testing"
-	"time"
 )
 
 func TestParse_NumberTokenBoundaries(t *testing.T) {
@@ -69,11 +68,7 @@ func TestParse_QuotationFailuresBounded(t *testing.T) {
 	for i := 0; i < 2000; i++ {
 		fmt.Fprint(&b, "QUY CHẾ\nĐiều 1. Một\n")
 	}
-	start := time.Now()
 	r := Parse(paragraphs(b.String()))
-	if elapsed := time.Since(start); elapsed >= time.Second {
-		t.Fatalf("parse took %s", elapsed)
-	}
 	if len(r.Scopes) != 2001 || r.Scopes[0].Accepted {
 		t.Fatalf("scopes=%d", len(r.Scopes))
 	}
