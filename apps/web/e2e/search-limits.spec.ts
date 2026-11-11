@@ -18,7 +18,7 @@ test('restarts an expired pinned search without the release', async ({ page }) =
     const body = route.request().postDataJSON()
     bodies.push(body)
     if (body.release) return route.fulfill({ status: 409, json: { error: { code: 'release_expired', message: 'expired' } } })
-    return route.fulfill({ json: { release: bodies.length === 1 ? 'r1' : 'r2', abstain: false, hits: [{ handle: 'vn:1', doc: 'vn:1', citation: 'Citation', complete: true }], documents: { 'vn:1': { status: { current: true }, text_source: 'source_tree', text_complete: true } } } })
+    return route.fulfill({ json: { release: bodies.length === 1 ? 'r1' : 'r2', abstain: false, hits: [{ handle: 'vn:vbpl:1', doc: 'vn:vbpl:1', citation: 'Citation', complete: true }], documents: { 'vn:vbpl:1': { status: { current: true }, text_source: 'source_tree', text_complete: true } } } })
   })
   await page.goto('/')
   await expect(page.getByRole('link', { name: /account|tài khoản/i })).toBeVisible()
@@ -36,8 +36,8 @@ test('renders compact and full evidence as text and shows gaps and abstention', 
   await page.route('**/api/v1/me', route => route.fulfill({ json: { id: 1, email: 'test@example.invalid', created_at: '2026-01-01T00:00:00Z', csrf_token: 'token' } }))
   await page.route('**/api/v1/search', route => {
     call++
-    const base = { release: 'r1', documents: { 'vn:1': { status: { class: 'future_status', current: false }, text_source: 'source_tree', text_complete: true } }, gaps: [{ kind: 'missing', message: 'Gap detail' }] }
-    const hit = { handle: 'vn:1#dieu-1', doc: 'vn:1', citation: 'Citation', complete: true }
+    const base = { release: 'r1', documents: { 'vn:vbpl:1': { status: { class: 'future_status', current: false }, text_source: 'source_tree', text_complete: true } }, gaps: [{ kind: 'missing', message: 'Gap detail' }] }
+    const hit = { handle: 'vn:vbpl:1#dieu-1', doc: 'vn:vbpl:1', citation: 'Citation', complete: true }
     const result = call === 3 ? { ...base, abstain: true, hits: [hit] } : { ...base, abstain: false, hits: [{ ...hit, ...(call === 1 ? { snippet: '<compact>' } : { text: '<full>' }) }] }
     return route.fulfill({ json: result })
   })

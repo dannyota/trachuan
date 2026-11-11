@@ -22,11 +22,11 @@ it('protects real signed-in pages without probing public pages on SSR', () => {
     const nitro = await import('./.output/server/chunks/nitro/nitro.mjs');
     const app = nitro.g();
     const results = [];
-    for (const path of ['/', '/account', '/vn/search', '/vn/documents/vn:1']) {
+    for (const path of ['/', '/account', '/vn/search', '/vn/documents/vn:vbpl:1']) {
       const response = await app.localFetch(path);
       results.push({ status: response.status, location: response.headers.get('location'), probes, publicCalls });
     }
-    for (const path of ['/account', '/vn/search', '/vn/documents/vn:1']) {
+    for (const path of ['/account', '/vn/search', '/vn/documents/vn:vbpl:1']) {
       const response = await app.localFetch(path, { headers: { cookie: 'session=ok' } });
       results.push({ status: response.status });
     }
@@ -38,5 +38,5 @@ it('protects real signed-in pages without probing public pages on SSR', () => {
   expect(results[1]).toMatchObject({ status: 302, location: '/api/v1/auth/google/start?next=%2Faccount', probes: 1 })
   expect(results[2]).toMatchObject({ status: 302, location: '/api/v1/auth/google/start?next=%2Fvn%2Fsearch', probes: 2 })
   for (const result of results.slice(4)) expect(result.status).toBe(200)
-  expect(results[3]).toMatchObject({ status: 302, location: '/api/v1/auth/google/start?next=%2Fvn%2Fdocuments%2Fvn%3A1', probes: 3 })
+  expect(results[3]).toMatchObject({ status: 302, location: '/api/v1/auth/google/start?next=%2Fvn%2Fdocuments%2Fvn%3Avbpl%3A1', probes: 3 })
 })

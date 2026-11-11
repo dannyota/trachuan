@@ -1,4 +1,5 @@
 import type { components } from '@trachuan/schema/gen/openapi'
+import { isDocumentKey } from './document-key'
 
 type Hit = components['schemas']['Hit']
 type Result = components['schemas']['SearchResult']
@@ -17,7 +18,8 @@ export function resultHits(result: Result): Hit[] {
   return result.abstain ? [] : [...(result.hits || []), ...(result.non_current || [])]
 }
 
-export function readerLink(hit: Hit, release: string): string {
+export function readerLink(hit: Hit, release: string): string | null {
+  if (!hit.doc || !isDocumentKey(hit.doc)) return null
   const anchor = hit.handle?.split('#', 2)[1]
-  return `/vn/documents/${encodeURIComponent(hit.doc || '')}?release=${encodeURIComponent(release)}${anchor ? `#${encodeURIComponent(anchor).replace(/%2F/gi, '/')}` : ''}`
+  return `/vn/documents/${hit.doc}?release=${encodeURIComponent(release)}${anchor ? `#${encodeURI(anchor)}` : ''}`
 }

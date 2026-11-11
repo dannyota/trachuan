@@ -52,6 +52,11 @@ export const en: Catalog = {
   searchAbstain: 'No evidence found for this query.',
   searchRetry: 'Try again in',
   searchSeconds: 'seconds.',
+  gapValidityConflict: 'Document validity is unresolved.',
+  gapMissingEffectiveDate: 'Effective start date is missing.',
+  gapConsolidatedUnordered: 'Consolidated document status could not be ordered.',
+  gapConsolidatedUnresolved: 'Consolidated document status could not be resolved.',
+  gapAmbiguousText: 'Source tree text overlaps ambiguously.',
   errors: {
     invalid_request: 'The request is invalid.',
     unauthenticated: 'Please sign in.',

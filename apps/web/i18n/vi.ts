@@ -49,6 +49,11 @@ export const vi = {
   searchAbstain: 'Không tìm thấy bằng chứng cho câu hỏi này.',
   searchRetry: 'Thử lại sau',
   searchSeconds: 'giây.',
+  gapValidityConflict: 'Hiệu lực của văn bản chưa được xác định.',
+  gapMissingEffectiveDate: 'Thiếu ngày bắt đầu có hiệu lực.',
+  gapConsolidatedUnordered: 'Không xác định được thứ tự để suy ra hiệu lực văn bản hợp nhất.',
+  gapConsolidatedUnresolved: 'Không xác định được hiệu lực văn bản hợp nhất.',
+  gapAmbiguousText: 'Nội dung trong cấu trúc nguồn chồng lấn không rõ ràng.',
   errors: {
     invalid_request: 'Yêu cầu không hợp lệ.',
     unauthenticated: 'Vui lòng đăng nhập.',

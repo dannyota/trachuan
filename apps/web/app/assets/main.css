@@ -23,3 +23,7 @@ button { cursor: pointer; }
 .relations { display: flex; flex-wrap: wrap; gap: .4rem; margin: .5rem 0; }
 .ink-in-force { color: #176142; } .ink-partial { color: #805000; } .ink-not-yet { color: #24558a; } .ink-expired { color: #963a38; } .ink-neutral { color: #555; }
 @media (prefers-color-scheme: dark) { .ink-in-force { color: #83d9aa; } .ink-partial { color: #f0c472; } .ink-not-yet { color: #9cc8fa; } .ink-expired { color: #ffaaa7; } .ink-neutral { color: #ccc; } }
+
+.document-identity { display: flex; flex-wrap: wrap; gap: .5rem; }
+.document-number { font-family: RobotoMono, monospace; }
+.hit-gaps { margin: .5rem 0; padding-left: 1.5rem; }
