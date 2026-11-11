@@ -5,11 +5,11 @@ import { useSessionStore } from '../stores/session'
 
 const publicPaths = new Set(['/', '/connect', '/sources', '/privacy', '/terms', '/llms.txt'])
 
-export function useApi(options: { userAction?: boolean, route?: { path: string, fullPath: string } } = {}) {
+export function useApi(options: { userAction?: boolean, route?: { path: string, fullPath: string, meta: Record<string, unknown> } } = {}) {
   const route = options.route || useRoute()
   const event = import.meta.server ? useRequestEvent() : undefined
   const publicRoute = import.meta.server && publicPaths.has(route.path)
-  const protectedRoute = route.path === '/account' || route.path === '/vn' || route.path.startsWith('/vn/')
+  const protectedRoute = route.meta.signedIn === true
   const origin = import.meta.server ? useRuntimeConfig().apiOrigin : window.location.origin
   return createApi({
     origin,

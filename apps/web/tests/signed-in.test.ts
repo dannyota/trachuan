@@ -29,10 +29,45 @@ it('loads the session for protected routes and redirects a signed-out visitor', 
   })
   vi.stubGlobal('navigateTo', (url: string) => url)
   try {
-    const { default: guard } = await import('../app/middleware/signed-in')
-    const to = { path: '/vn/search', fullPath: '/vn/search?q=x' }
+    const { default: guard } = await import('../app/middleware/signed-in.global')
+    const to = { path: '/vn/search', fullPath: '/vn/search?q=x', meta: { signedIn: true } }
     expect(await guard(to as never, {} as never)).toBe('/api/v1/auth/google/start?next=%2Fvn%2Fsearch')
     expect(requested).toBe('/vn/search?q=x')
+  } finally {
+    vi.unstubAllGlobals()
+  }
+})
+
+
+it('uses matched route metadata to decide whether to load a session', async () => {
+  const { vi } = await import('vitest')
+  const { createMemoryHistory, createRouter } = await import('vue-router')
+  const routerOptions = (await import('../app/router.options')).default
+  const router = createRouter({
+    ...routerOptions,
+    history: createMemoryHistory(),
+    routes: [
+      { path: '/account', component: {}, meta: { signedIn: true } },
+      { path: '/vn/search', component: {}, meta: { signedIn: true } },
+      { path: '/public', component: {} },
+      { path: '/future', component: {}, meta: { signedIn: true } },
+    ],
+  })
+  let loads = 0
+  vi.stubGlobal('defineNuxtRouteMiddleware', (handler: unknown) => handler)
+  vi.stubGlobal('useApi', () => ({ session: { status: 'unknown' }, loadSession: async () => { loads++ } }))
+  try {
+    const { default: guard } = await import('../app/middleware/signed-in.global')
+    for (const path of ['/account', '/vn/search', '/future']) {
+      await guard(router.resolve(path) as never, {} as never)
+    }
+    expect(loads).toBe(3)
+    for (const path of ['/public', '/account/', '/Account', '/VN/search']) {
+      const route = router.resolve(path)
+      if (path !== '/public') expect(route.matched).toHaveLength(0)
+      await guard(route as never, {} as never)
+    }
+    expect(loads).toBe(3)
   } finally {
     vi.unstubAllGlobals()
   }
