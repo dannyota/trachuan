@@ -1,0 +1,70 @@
+{
+  "articles": {
+    "key": "vn:vbpl:22934",
+    "number": "1472/2001/QĐ-NHNN",
+    "doc_type": "Quyết định",
+    "file": "22934_content.html",
+    "sha256_of_text_lines": 26
+  },
+  "outline": {
+    "key": "vn:vbpl:12535",
+    "number": "01/2009/TT-NHNN",
+    "doc_type": "Thông tư",
+    "file": "12535_content.html",
+    "sha256_of_text_lines": 17
+  },
+  "plain": {
+    "key": "vn:vbpl:502",
+    "number": "7-SL",
+    "doc_type": "Sắc lệnh",
+    "file": "502_content.html",
+    "sha256_of_text_lines": 14
+  },
+  "images": {
+    "key": "vn:vbpl:4fe2c840-4f4b-11f1-8ea1-a9b94532546c",
+    "number": "21/VBHN-NHNN",
+    "doc_type": "Văn bản hợp nhất",
+    "file": "4fe2c840-4f4b-11f1-8ea1-a9b94532546c_content.html",
+    "sha256_of_text_lines": 184
+  },
+  "second": {
+    "key": "vn:vbpl:17291",
+    "number": "1498/2005/QĐ-NHNN",
+    "doc_type": "Quyết định",
+    "file": "17291_content.html",
+    "sha256_of_text_lines": 133
+  },
+  "quoted": {
+    "key": "vn:vbpl:5408c100-5efe-11f1-90b2-e39cc09873a5",
+    "number": "18/2026/TT-NHNN",
+    "doc_type": "Thông tư",
+    "file": "5408c100-5efe-11f1-90b2-e39cc09873a5_content.html",
+    "sha256_of_text_lines": 120
+  },
+  "tables": {
+    "key": "vn:vbpl:1902",
+    "number": "125/NH-TT",
+    "doc_type": "Thông tư",
+    "file": "1902_content.html",
+    "sha256_of_text_lines": 116
+  },
+  "empty": {
+    "key": "vn:vbpl:142072",
+    "number": "07/VBHN-NHNN",
+    "doc_type": "Văn bản hợp nhất",
+    "file": "142072_content.html",
+    "sha256_of_text_lines": 0
+  },
+  "ocr_consolidated": {
+    "key": "vn:vbpl:140651",
+    "number": "02/VBHN-NHNN",
+    "pdf_sha256": "20a5744145f75694bf15b2c25bae93c9a80c55f2f62f298573b118c6c6e7d7f0",
+    "origin": "banhmi vision-ocr/builtin-latest"
+  },
+  "ocr_decree_142_2026": {
+    "key": "vn:chinhphu:218029",
+    "number": "142/2026/NĐ-CP",
+    "pdf_sha256": "988fa7091b9f70615b8ae984e7e43b15293eb31398a113c86cc34f26666d5e40",
+    "origin": "banhmi vision-ocr/builtin-latest"
+  }
+}

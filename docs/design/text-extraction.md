@@ -78,7 +78,11 @@ Grammar, applied to paragraph starts only:
 
 - `Phần <roman|word>`, `Chương <roman|number>`, `Mục <number>`: structure
   headings; the title is the rest of the line or the next line in capitals.
-- `Điều <n>.` or `Điều <n>` followed by a title: an article.
+- `Điều <n>.` or `Điều <n><letter>.` (an inserted article such as `Điều 3a.`),
+  the period directly after the number, then a title starting with a capital
+  letter or the end of the line: an article. A line such as
+  `Điều 6 của Luật ...` is running text wrapped by the source or the OCR, never
+  a heading.
 
 Parsed and OCR text asserts articles only. Clauses and points stay inside their
 article's text and get no provision, anchor or citation of their own in this
@@ -88,24 +92,32 @@ sequence below. The loss of granularity is recorded in the backlog, with the
 measurement that can lift it (clause and point parsing compared against
 documents that have both a source tree and a transcription).
 
-Instrument scopes. A document often carries a second instrument (a regulation
-"ban hành kèm theo"). A new scope starts at a paragraph that is a title line
-(`QUY CHẾ`, `QUY ĐỊNH`, `ĐIỀU LỆ`, `PHỤ LỤC` and their variants) followed, with
-no article in between, by an article numbered 1. Anchors and citations in the
-second and later scopes carry the scope: anchor `kem-theo-<k>/dieu-<n>`, label
-"Điều n (văn bản kèm theo k)". A restart at `Điều 1` without such a title is
-ambiguity, below.
+Scopes. The main scope starts at the first article and closes at the first of: a
+recipient or signature block (`Nơi nhận:`, `TM.`, `KT.`, a signing title alone
+on a line, `XÁC THỰC VĂN BẢN HỢP NHẤT`), an appendix or form title (`PHỤ LỤC`,
+`Phụ lục <n>`, `Mẫu số`), or an instrument title (`QUY CHẾ`, `QUY ĐỊNH`,
+`ĐIỀU LỆ` in capitals alone on a line). Everything after it belongs to later
+scopes. An instrument title followed, with no article in between, by an article
+numbered 1 opens an instrument scope: a regulation "ban hành kèm theo", with
+anchors `kem-theo-<k>/dieu-<n>` and the label "Điều n (văn bản kèm theo k)". Any
+other later scope (appendices, forms, footnotes, a restart at `Điều 1` without
+an instrument title) is a tail scope and never asserts articles.
 
-Fail closed. The article-level reading is accepted for a scope only when its
-article numbers run 1, 2, 3, ... with no gap, repeat or step back, and the last
-article is followed only by a signature or recipient block or by a new scope. If
-any check fails, that scope asserts no article, clause or point: its paragraphs
+Fail closed. The article-level reading is accepted for the main scope or an
+instrument scope only when its article numbers run 1, 2, 3, ... where an
+inserted `n<letter>` may follow `n`, with no gap, repeat or step back before the
+scope closes. If the check fails, that scope asserts no article: its paragraphs
 are grouped into neutral provisions of kind `other`, anchor `doan-<n>` (a new
 one at each line that looks like a heading, else every 20 paragraphs), and the
-document gets the gap `structure_uncertain` with the failed check. Structure
-headings (`chuong`, `muc`) are kept in either case. Reason: a missed heading
-attaches text to the wrong article silently; a strict sequence check catches it,
-and a neutral anchor is a true citation where "Điều 5" might not be.
+document gets the gap `structure_uncertain` with the failed check. Tail scopes
+use the same neutral provisions without the gap. Structure headings (`chuong`,
+`muc`) are kept in either case. Reason: a missed heading attaches text to the
+wrong article silently; a strict sequence check catches it, and a neutral anchor
+is a true citation where "Điều 5" might not be. Measured on recorded texts:
+decree 142/2026/NĐ-CP reads as articles 1 to 46 with wrapped references such as
+`Điều 6 của Luật` correctly ignored and its sample forms (which restart at
+`Điều 1`) in tail scopes; a consolidated text whose footnotes repeat `Điều 4`
+before its appendix fails the check and stays neutral.
 
 A document with no article at all uses neutral provisions too, grouped by its
 numbered outline (`I.`, `1.`) when one exists. Text under 300 characters is

@@ -1,0 +1,151 @@
+{
+  "articles.html": {
+    "text_source": "html_transcription",
+    "scopes": [
+      {
+        "kind": "main",
+        "accepted": true,
+        "articles": ["1", "2", "3"]
+      }
+    ],
+    "gaps": []
+  },
+  "second.html": {
+    "text_source": "html_transcription",
+    "scopes": [
+      {
+        "kind": "main",
+        "accepted": true,
+        "articles": ["1", "2", "3"]
+      },
+      {
+        "kind": "instrument",
+        "accepted": true,
+        "anchor_prefix": "kem-theo-1",
+        "articles": ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"]
+      }
+    ],
+    "gaps": []
+  },
+  "images.html": {
+    "text_source": "html_transcription",
+    "scopes": [
+      {
+        "kind": "main",
+        "accepted": true,
+        "articles": ["1", "2", "3", "4", "5", "6", "7", "8"]
+      },
+      {
+        "kind": "tail"
+      }
+    ],
+    "gaps": ["image_content"],
+    "note": "PHỤ LỤC I closes the main scope; the repeated Điều 8 after the appendices is in a tail scope."
+  },
+  "quoted.html": {
+    "text_source": "html_transcription",
+    "scopes": [
+      {
+        "kind": "main",
+        "accepted": false
+      }
+    ],
+    "gaps": ["structure_uncertain"],
+    "note": "An amending circular quotes replaced articles (Điều 9, Điều 10) inside its own Điều 3 and 4; the sequence steps, so no article is asserted."
+  },
+  "outline.html": {
+    "text_source": "html_transcription",
+    "scopes": [],
+    "neutral_only": true,
+    "gaps": []
+  },
+  "plain.html": {
+    "text_source": "html_transcription",
+    "scopes": [],
+    "neutral_only": true,
+    "gaps": []
+  },
+  "tables.html": {
+    "text_source": "html_transcription",
+    "scopes": [],
+    "neutral_only": true,
+    "gaps_may_include": ["table_text"]
+  },
+  "empty.html": {
+    "text_source": "none",
+    "gaps": ["no_text_source"]
+  },
+  "ocr_decree_142_2026.txt": {
+    "text_source": "ocr",
+    "scopes": [
+      {
+        "kind": "main",
+        "accepted": true,
+        "articles": [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7",
+          "8",
+          "9",
+          "10",
+          "11",
+          "12",
+          "13",
+          "14",
+          "15",
+          "16",
+          "17",
+          "18",
+          "19",
+          "20",
+          "21",
+          "22",
+          "23",
+          "24",
+          "25",
+          "26",
+          "27",
+          "28",
+          "29",
+          "30",
+          "31",
+          "32",
+          "33",
+          "34",
+          "35",
+          "36",
+          "37",
+          "38",
+          "39",
+          "40",
+          "41",
+          "42",
+          "43",
+          "44",
+          "45",
+          "46"
+        ]
+      },
+      {
+        "kind": "tail"
+      }
+    ],
+    "gaps": [],
+    "note": "Lines 246, 329 and 745 start with \"Điều 6 của\", \"Điều 10 của\", \"Điều 12 của\": wrapped references, not headings. The main scope closes at the first \"Nơi nhận:\"; sample forms restart at Điều 1 in tail scopes."
+  },
+  "ocr_consolidated.txt": {
+    "text_source": "ocr",
+    "scopes": [
+      {
+        "kind": "main",
+        "accepted": false
+      }
+    ],
+    "gaps": ["structure_uncertain"],
+    "note": "Articles 1, 2, 3, 3a, 4, 5, 6, then \"Điều 4. Điều khoản thi hành\" again before PHỤ LỤC: a step back inside the open scope."
+  }
+}
