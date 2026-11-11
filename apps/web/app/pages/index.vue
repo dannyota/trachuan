@@ -6,11 +6,15 @@ import { messagesFor, statusMessage, type Language } from '../../i18n'
 const sample = rawSample as components['schemas']['SearchResult']
 const language = useState<Language>('language', () => 'vi')
 const messages = computed(() => messagesFor(language.value))
+const route = useRoute()
+const deleted = ref(false)
+onMounted(() => { deleted.value = route.query.account === 'deleted' })
 const api = useApi()
 const { data: status } = await useAsyncData('coverage-home', () => import.meta.server ? getCoverage(() => api.client.GET('/api/v1/public/status')).then(status => ({ status })) : Promise.resolve({ status: null }), { server: true, default: () => ({ status: null }) })
 </script>
 <template>
   <div>
+    <p v-if="deleted" role="status">{{ messages.deletedNotice }}</p>
     <h1>{{ messages.home }}</h1><p>{{ messages.purpose }}</p>
     <a href="/api/v1/auth/google/start?next=%2F">{{ messages.signIn }}</a>
     <NuxtLink to="/connect">{{ messages.connect }}</NuxtLink>

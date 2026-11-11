@@ -30,3 +30,8 @@ button { cursor: pointer; }
 .reader { display: grid; grid-template-columns: minmax(10rem, 1fr) minmax(0, 3fr) minmax(12rem, 1fr); gap: 2rem; }
 .reader-rail, .reader-content { overflow-wrap: anywhere; }
 @media (max-width: 800px) { .reader { display: block; } }
+.account-row { border-top: 1px solid #888; padding: 1rem 0; overflow-wrap: anywhere; }
+dialog[open] { box-sizing: border-box; width: min(32rem, calc(100vw - 2rem)); max-height: calc(100vh - 2rem); margin: auto; overflow: auto; padding: 1.5rem; border: 1px solid #888; background: Canvas; color: CanvasText; }
+dialog form { display: grid; gap: .75rem; }
+dialog input { border: 1px solid #888; padding: .3rem; }
+.token-value { overflow-wrap: anywhere; font-family: RobotoMono, monospace; }
