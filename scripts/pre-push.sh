@@ -3,7 +3,7 @@
 set -Eeuo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 bash scripts/check-lengths.sh
-if command -v gofmt >/dev/null && git ls-files -- '*.go' | grep -q .; then
+if command -v gofmt >/dev/null && [[ -n "$(git ls-files -- '*.go')" ]]; then
   mapfile -t go_files < <(git ls-files -- '*.go')
   unformatted=$(gofmt -l "${go_files[@]}")
   [[ -z "$unformatted" ]] || { echo "gofmt: $unformatted" >&2; exit 1; }
