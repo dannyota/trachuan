@@ -61,6 +61,9 @@ LOAD_ENV := set -a; if [ -f .env ]; then . ./.env; fi; set +a; \
 test-integration: ## Run integration tests (loads .env when present)
 	$(LOAD_ENV); go test -tags integration -count=1 ./...
 
+e2e: ## Run end-to-end flow tests against the local stack with the fake Google provider (loads .env when present)
+	bash scripts/e2e.sh
+
 test-proof: ## Run proof tests (loads .env when present)
 	@if [ ! -d apps/corpus/test/proof ]; then echo "test-proof: no proof tests yet"; exit 0; fi; \
 	$(LOAD_ENV); go test -tags 'integration faultinject' -count=1 ./apps/corpus/test/proof/...
@@ -105,4 +108,4 @@ services-down: ## Stop the local Temporal server and PostgreSQL, keep their data
 	bash deploy/local/temporal.sh down
 	bash deploy/local/postgres.sh down
 
-.PHONY: schema-gen schema-check server-run help hooks-install lengths-check pre-push docs-fmt queryembed-native queryembed-test-ort queryembed-run docembed-test docembed-run test test-integration test-proof generate sqlc-check db-up db-setup temporal-up services-up services-down
+.PHONY: e2e schema-gen schema-check server-run help hooks-install lengths-check pre-push docs-fmt queryembed-native queryembed-test-ort queryembed-run docembed-test docembed-run test test-integration test-proof generate sqlc-check db-up db-setup temporal-up services-up services-down

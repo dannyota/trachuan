@@ -6,15 +6,16 @@ import (
 	"net/netip"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 
 	"danny.vn/trachuan/apps/server/internal/oauth"
 )
 
 type config struct {
-	listen, authURL, corpusURL, embedderURL, audience, publicURL, googleID, googleSecret string
-	trustedProxies                                                                       []netip.Prefix
-	oauthClients                                                                         []oauth.Client
+	listen, authURL, corpusURL, embedderURL, audience, publicURL, googleID, googleSecret, googleIssuer string
+	trustedProxies                                                                                     []netip.Prefix
+	oauthClients                                                                                       []oauth.Client
 }
 
 func loadConfig() (config, error) {
@@ -26,7 +27,12 @@ func loadConfig() (config, error) {
 		c.embedderURL = "http://127.0.0.1:8091"
 	}
 	var err error
-	origin, ok := publicOrigin(os.Getenv("SERVER_PUBLIC_URL"))
+	rawPublicURL := os.Getenv("SERVER_PUBLIC_URL")
+	origin, ok := publicOrigin(rawPublicURL)
+	c.googleIssuer = os.Getenv("SERVER_GOOGLE_ISSUER")
+	if c.googleIssuer != "" && (!ok || !issuerAllowed(c.googleIssuer, rawPublicURL, c.listen)) {
+		return config{}, errors.New("SERVER_GOOGLE_ISSUER requires a loopback deployment")
+	}
 	if c.authURL == "" || !validCorpusURL(c.corpusURL) || !ok {
 		return config{}, errors.New("invalid or missing server configuration")
 	}
@@ -92,4 +98,37 @@ func validCorpusURL(template string) bool {
 	}
 	_, overrides := q["dbname"]
 	return !overrides
+}
+
+func strictLoopback(host string) bool {
+	if host == "localhost" {
+		return true
+	}
+	ip, err := netip.ParseAddr(host)
+	return err == nil && ip.IsLoopback() && ip.Zone() == "" && !ip.Is4In6()
+}
+
+func issuerAllowed(issuer, origin, listen string) bool {
+	public, err := url.Parse(origin)
+	if err != nil || !strictLoopback(public.Hostname()) {
+		return false
+	}
+	host, _, err := net.SplitHostPort(listen)
+	if err != nil || !strictLoopback(host) {
+		return false
+	}
+	u, err := url.Parse(issuer)
+	if err != nil || u.Scheme != "http" || u.User != nil || u.Opaque != "" || u.Path != "" || u.RawPath != "" || strings.ContainsAny(issuer, "?#") || !strictLoopback(u.Hostname()) {
+		return false
+	}
+	host = u.Hostname()
+	ip, err := netip.ParseAddr(host)
+	if err == nil {
+		host = ip.String()
+	}
+	port, err := strconv.Atoi(u.Port())
+	if err != nil || port < 1 || port > 65535 || port == 80 {
+		return false
+	}
+	return issuer == "http://"+net.JoinHostPort(host, strconv.Itoa(port))
 }
