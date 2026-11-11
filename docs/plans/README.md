@@ -21,6 +21,7 @@ history keeps it. States: `planned`, `in progress`, `landed`, `verified`,
 |10|Web|`apps/web`: public pages, search, reader, account|Plan 9 OpenAPI document|not written|
 |11|Host and release|`deploy/`: OpenTofu, host bundle, Quadlet, pgBackRest, signed release manifest and S3 upload, `release activate`, deploy workflows|Plans 1 to 10 images|not written|
 |12|Compact results and read|`internal/retrieval`: hit path and best member, snippets, document entries and relation pointers, `Engine.Present` (compact and full), `Engine.Read` (outline, provision, range, relations, parts, `next` tokens, input bounds); eval compact diagnostic and size gate (ADR 0013); evidence `docs/research/compact-results-2026-11.md`|Plan 2; ADR 0013|landed|
+|13|Agent error reports|Owner request 2026-11-11: an MCP tool and a web form through which users' agents report wrong text, wrong validity, broken citations or missing documents (handle, kind, short note that must not carry the user's question); an auth-database table and a triage queue; accepted reports feed `sources/vn-corrections.yaml`, OCR fixes and identity-map review; design first, with the ADR 0002 privacy rules|Plan 9a (MCP), Plan 9b (web form)|not written|
 
 Each later plan is written with the writing-plans skill when its dependency
 lands, against `docs/design/README.md` and the research notes from Plan 0.
