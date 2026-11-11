@@ -29,14 +29,17 @@ type CalibrationCandidate struct {
 
 // Calibration records the fitted threshold and its evidence.
 type Calibration struct {
-	Status         string                   `json:"status"`
-	Threshold      float64                  `json:"threshold"`
-	Success        bool                     `json:"success"`
-	Scores         []CalibrationObservation `json:"scores"`
-	Candidates     []CalibrationCandidate   `json:"candidates"`
-	FixtureHashes  FixtureHashes            `json:"fixture_hashes"`
-	RecipeHash     string                   `json:"recipe_hash"`
-	EvaluationDate retrieval.Date           `json:"evaluation_date"`
+	Status                 string                   `json:"status"`
+	Threshold              float64                  `json:"threshold"`
+	Success                bool                     `json:"success"`
+	PositiveAnswerRate     *float64                 `json:"positive_answer_rate"`
+	NegativeAbstentionRate *float64                 `json:"negative_abstention_rate"`
+	BalancedAccuracy       *float64                 `json:"balanced_accuracy"`
+	Scores                 []CalibrationObservation `json:"scores"`
+	Candidates             []CalibrationCandidate   `json:"candidates"`
+	FixtureHashes          FixtureHashes            `json:"fixture_hashes"`
+	RecipeHash             string                   `json:"recipe_hash"`
+	EvaluationDate         retrieval.Date           `json:"evaluation_date"`
 }
 
 // CalibrationObservation records a case's pre-threshold score.
@@ -72,7 +75,7 @@ func calibrationThreshold(scores []calibrationScore) (float64, []CalibrationCand
 		thresholds = append(thresholds, m)
 	}
 	thresholds = append(thresholds, 2)
-	best, bestTN := 2.0, 0
+	best, bestScore := -1.0, -1
 	candidates := make([]CalibrationCandidate, 0, len(thresholds))
 	for _, threshold := range thresholds {
 		c := CalibrationCandidate{Threshold: threshold}
@@ -90,8 +93,11 @@ func calibrationThreshold(scores []calibrationScore) (float64, []CalibrationCand
 			}
 		}
 		candidates = append(candidates, c)
-		if c.FN == 0 && c.TN > bestTN {
-			best, bestTN = threshold, c.TN
+		if c.TN+c.FP > 0 && c.TP+c.FN > 0 {
+			score := c.TN*(c.TP+c.FN) + c.TP*(c.TN+c.FP)
+			if score > bestScore {
+				best, bestScore = threshold, score
+			}
 		}
 	}
 	return best, candidates
@@ -147,6 +153,18 @@ func Calibrate(ctx context.Context, engine Engine, suite Suite) (Calibration, er
 		out.Scores = append(out.Scores, observation)
 	}
 	out.Threshold, out.Candidates = calibrationThreshold(scores)
-	out.Success = out.Threshold != 2
+	for _, c := range out.Candidates {
+		if c.Threshold != out.Threshold {
+			continue
+		}
+		out.PositiveAnswerRate = ratio(c.TN, c.TN+c.FP)
+		out.NegativeAbstentionRate = ratio(c.TP, c.TP+c.FN)
+		out.Success = out.PositiveAnswerRate != nil && out.NegativeAbstentionRate != nil
+		if out.Success {
+			v := (*out.PositiveAnswerRate + *out.NegativeAbstentionRate) / 2
+			out.BalancedAccuracy = &v
+		}
+		break
+	}
 	return out, nil
 }

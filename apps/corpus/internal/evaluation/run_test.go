@@ -276,8 +276,8 @@ func TestRun_MissingModeFloorsUnavailable(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(report.Floors) != 4 {
-		t.Fatalf("floors = %d, want 4", len(report.Floors))
+	if len(report.Floors) != 2 {
+		t.Fatalf("floors = %d, want 2", len(report.Floors))
 	}
 	count := 0
 	for _, f := range report.Floors {
@@ -285,7 +285,7 @@ func TestRun_MissingModeFloorsUnavailable(t *testing.T) {
 			count++
 		}
 	}
-	if count != 2 {
+	if count != 1 {
 		t.Fatalf("unavailable ANN floors = %d", count)
 	}
 }
@@ -391,12 +391,12 @@ func TestRun_MappingIncompleteScoresOtherCases(t *testing.T) {
 		t.Fatal("incomplete mapping passed quality")
 	}
 	for _, target := range report.Targets {
-		if target.Status != "unavailable" {
+		if target.Name != "abstention_balanced_accuracy" && target.Status != "unavailable" {
 			t.Fatalf("target: %+v", target)
 		}
 	}
 	for _, regression := range report.NonRegression {
-		if regression.Status != "unavailable" {
+		if regression.Name != "abstention_balanced_accuracy" && regression.Status != "unavailable" {
 			t.Fatalf("regression: %+v", regression)
 		}
 	}
@@ -415,6 +415,7 @@ func TestRun_ReportsTargetsAndNonRegression(t *testing.T) {
 	var result struct {
 		Targets []struct {
 			Status string `json:"status"`
+			Name   string `json:"name"`
 		} `json:"targets"`
 		NonRegression []struct {
 			Status string `json:"status"`
@@ -423,11 +424,11 @@ func TestRun_ReportsTargetsAndNonRegression(t *testing.T) {
 	if err := json.Unmarshal(b, &result); err != nil {
 		t.Fatal(err)
 	}
-	if len(result.Targets) != 6 || len(result.NonRegression) != 4 {
+	if len(result.Targets) != 8 || len(result.NonRegression) != 6 {
 		t.Fatalf("targets %d non-regression %d", len(result.Targets), len(result.NonRegression))
 	}
 	for _, target := range result.Targets {
-		if target.Status != "met" {
+		if target.Name != "abstention_balanced_accuracy" && target.Status != "met" {
 			t.Fatalf("target status %s", target.Status)
 		}
 	}
@@ -722,4 +723,109 @@ func TestRun_CapChangesResultsNotCachedGroups(t *testing.T) {
 	if len(baseCache.Arms) == 0 || len(baseCache.Arms[0].Groups) == 0 || !reflect.DeepEqual(baseCache.Arms, trialCache.Arms) {
 		t.Fatal("cached arms or groups changed")
 	}
+}
+
+func TestReport_AbstentionIsTargetNotFloor(t *testing.T) {
+	date := retrieval.Date{Year: 2026, Month: 11, Day: 9}
+	r, _, err := Run(context.Background(), &recordedEngine{fakeEngine: fakeEngine{date: date}}, developmentSuite(), Options{EvaluationDate: date})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"old_product", "development"} {
+		c := r.Cohorts[name]
+		for _, f := range c.Floors {
+			if f.Name == "abstention" {
+				t.Fatal("abstention floor")
+			}
+		}
+		count := 0
+		for _, target := range c.Targets {
+			if target.Name == "abstention_balanced_accuracy" && target.Target == .85 && target.Confusion != nil {
+				if target.Value != nil && (target.Denominator != 2 || target.Numerator/float64(target.Denominator) != *target.Value) {
+					t.Fatalf("invalid balanced ratio: %+v", target)
+				}
+				count++
+			}
+		}
+		if count != 2 {
+			t.Fatalf("%s balanced targets = %d", name, count)
+		}
+	}
+}
+func TestQualityPass_IgnoresAbstention(t *testing.T) {
+	r := Report{Cohorts: map[string]Cohort{}, Rejections: []Rejection{{Passed: true}, {Passed: true}, {Passed: true}}}
+	for _, mode := range []retrieval.Mode{"exact", "ann"} {
+		for _, spec := range []struct {
+			name  string
+			limit int
+			value float64
+		}{{"current_law_precision", 8, 1}, {"recall", 20, 1}, {"mrr", 8, 1}, {"abstention", 8, 0}} {
+			v := spec.value
+			c := r.Cohorts["old_product"]
+			c.Metrics = append(c.Metrics, Metric{Mode: mode, Arms: "hybrid", Name: spec.name, Limit: spec.limit, Value: &v})
+			r.Cohorts["old_product"] = c
+		}
+	}
+	finishQuality(&r, nil)
+	if !r.QualityPass {
+		t.Fatalf("abstention affected quality: %+v", r.Floors)
+	}
+}
+func TestPreviousDiff_OldAbstentionPolicyIncompatible(t *testing.T) {
+	date := retrieval.Date{Year: 2026, Month: 11, Day: 9}
+	opts := Options{EvaluationDate: date, Modes: []retrieval.Mode{"exact"}}
+	prior, _, err := Run(context.Background(), &fakeEngine{date: date}, recordedSuite(), opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prior.Scorer = "agent-eval/1"
+	data, err := json.Marshal(prior)
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(t.TempDir(), "previous.json")
+	if err = os.WriteFile(path, data, 0600); err != nil {
+		t.Fatal(err)
+	}
+	opts.PreviousReport = path
+	current, _, err := Run(context.Background(), &fakeEngine{date: date}, recordedSuite(), opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	d, ok := current.PreviousDiff.(map[string]any)
+	if !ok || !strings.Contains(fmt.Sprint(d["reason"]), "incompatible") {
+		t.Fatalf("diff = %v", current.PreviousDiff)
+	}
+}
+
+func TestReport_AbstentionCountsAndRatesSerialized(t *testing.T) {
+	date := retrieval.Date{Year: 2026, Month: 11, Day: 9}
+	r, _, err := Run(context.Background(), &recordedEngine{fakeEngine: fakeEngine{date: date}}, developmentSuite(), Options{EvaluationDate: date})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, m := range r.Cohorts["old_product"].Metrics {
+		if m.Name != "abstention" || m.Mode != "exact" || m.Arms != "hybrid" || m.Limit != 8 {
+			continue
+		}
+		data, err := json.Marshal(m)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var row map[string]any
+		if err = json.Unmarshal(data, &row); err != nil {
+			t.Fatal(err)
+		}
+		conf, ok := row["confusion"].(map[string]any)
+		if !ok {
+			t.Fatal("missing confusion")
+		}
+		for _, key := range []string{"tp", "fp", "tn", "fn", "negative_recall", "positive_answer_rate", "balanced_accuracy"} {
+			if _, ok = conf[key]; !ok {
+				t.Fatalf("missing %s in %s", key, data)
+			}
+		}
+		return
+	}
+	t.Fatal("missing abstention metric")
 }

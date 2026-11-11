@@ -25,11 +25,11 @@ func TestEvalCLI_ExitCodes(t *testing.T) {
 		require bool
 		want    int
 	}{{"pass", true, 0}, {"fail", true, 2}, {"unavailable", true, 2}, {"fail", false, 0}} {
-		r := evaluation.Report{Status: "complete", QualityPass: true, Floors: make([]evaluation.Floor, 4)}
+		r := evaluation.Report{Status: "complete", QualityPass: true, Floors: make([]evaluation.Floor, 2)}
 		for i := range r.Floors {
 			r.Floors[i].Status = tc.status
-			r.Floors[i].Mode = []retrieval.Mode{"exact", "exact", "ann", "ann"}[i]
-			r.Floors[i].Name = []string{"current_law_precision", "abstention", "current_law_precision", "abstention"}[i]
+			r.Floors[i].Mode = []retrieval.Mode{"exact", "ann"}[i]
+			r.Floors[i].Name = "current_law_precision"
 			r.Floors[i].Arms = "hybrid"
 			r.Floors[i].Limit = 8
 		}
@@ -43,11 +43,11 @@ func TestEvalCLI_ExitCodes(t *testing.T) {
 }
 
 func TestEvalCLI_RequireFloorsRejectsFailedQuality(t *testing.T) {
-	r := evaluation.Report{Status: "complete", Floors: make([]evaluation.Floor, 4)}
+	r := evaluation.Report{Status: "complete", Floors: make([]evaluation.Floor, 2)}
 	for i := range r.Floors {
 		r.Floors[i].Status = "pass"
-		r.Floors[i].Mode = []retrieval.Mode{"exact", "exact", "ann", "ann"}[i]
-		r.Floors[i].Name = []string{"current_law_precision", "abstention", "current_law_precision", "abstention"}[i]
+		r.Floors[i].Mode = []retrieval.Mode{"exact", "ann"}[i]
+		r.Floors[i].Name = "current_law_precision"
 		r.Floors[i].Arms = "hybrid"
 		r.Floors[i].Limit = 8
 	}
@@ -175,9 +175,9 @@ func TestEvalOutput_PreservesFileCreatedDuringEvaluation(t *testing.T) {
 }
 
 func TestEvalCLI_RejectsDuplicateGates(t *testing.T) {
-	r := evaluation.Report{Status: "complete", QualityPass: true, Floors: make([]evaluation.Floor, 4)}
+	r := evaluation.Report{Status: "complete", QualityPass: true, Floors: make([]evaluation.Floor, 2)}
 	for i := range r.Floors {
-		r.Floors[i] = evaluation.Floor{Metric: evaluation.Metric{Mode: "exact", Arms: "hybrid", Limit: 8, Name: "abstention"}, Status: "pass"}
+		r.Floors[i] = evaluation.Floor{Metric: evaluation.Metric{Mode: "exact", Arms: "hybrid", Limit: 8, Name: "current_law_precision"}, Status: "pass"}
 	}
 	if got := evalExit(r, true); got != 2 {
 		t.Fatalf("duplicate gates exit %d", got)
@@ -187,9 +187,7 @@ func TestEvalCLI_RejectsDuplicateGates(t *testing.T) {
 func TestEvalCLI_RequireFloorsDevelopment(t *testing.T) {
 	floors := []evaluation.Floor{
 		{Metric: evaluation.Metric{Mode: "exact", Arms: "hybrid", Limit: 8, Name: "current_law_precision"}, Status: "pass"},
-		{Metric: evaluation.Metric{Mode: "exact", Arms: "hybrid", Limit: 8, Name: "abstention"}, Status: "pass"},
 		{Metric: evaluation.Metric{Mode: "ann", Arms: "hybrid", Limit: 8, Name: "current_law_precision"}, Status: "pass"},
-		{Metric: evaluation.Metric{Mode: "ann", Arms: "hybrid", Limit: 8, Name: "abstention"}, Status: "pass"},
 	}
 	for _, tc := range []struct {
 		name, status string
@@ -304,5 +302,13 @@ func TestEvalCLI_CapForwardedToResults(t *testing.T) {
 	}
 	if results[0].Cases[0].Returned[3].DocumentKey != "other" || results[1].Cases[0].Returned[3].DocumentKey != "doc" {
 		t.Fatalf("baseline %v trial %v", results[0].Cases[0].Returned, results[1].Cases[0].Returned)
+	}
+}
+
+func TestEvalCLI_RequireFloorsIgnoresAbstention(t *testing.T) {
+	floors := []evaluation.Floor{{Metric: evaluation.Metric{Mode: "exact", Arms: "hybrid", Limit: 8, Name: "current_law_precision"}, Status: "pass"}, {Metric: evaluation.Metric{Mode: "ann", Arms: "hybrid", Limit: 8, Name: "current_law_precision"}, Status: "pass"}}
+	r := evaluation.Report{Status: "complete", QualityPass: true, Floors: floors, Targets: []evaluation.Target{{Metric: evaluation.Metric{Name: "abstention_balanced_accuracy"}, Status: "below"}}}
+	if got := evalExit(r, true); got != 0 {
+		t.Fatalf("exit = %d", got)
 	}
 }

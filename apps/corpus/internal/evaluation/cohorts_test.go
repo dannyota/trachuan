@@ -93,7 +93,7 @@ func TestDevelopment_NotRunWhenEmpty(t *testing.T) {
 		t.Fatal("empty development changed quality or status")
 	}
 	summary := readDevelopmentSummary(t, r)
-	if len(summary.Floors) != 4 {
+	if len(summary.Floors) != 2 {
 		t.Fatal("missing development floors")
 	}
 	for _, f := range summary.Floors {
@@ -124,7 +124,7 @@ func TestDevelopment_FloorsApply(t *testing.T) {
 				}
 			}
 			summary := readDevelopmentSummary(t, r)
-			if len(summary.Floors) != 4 || len(summary.NonRegression) != 4 || len(summary.Targets) != 6 {
+			if len(summary.Floors) != 2 || len(summary.NonRegression) != 6 || len(summary.Targets) != 8 {
 				t.Fatal("development quality records missing")
 			}
 			for _, f := range summary.Floors {
@@ -207,6 +207,9 @@ func TestDevelopment_NonRegressionIsIndependent(t *testing.T) {
 		}
 	}
 	for _, comparison := range summary.NonRegression {
+		if comparison.Name == "abstention_balanced_accuracy" {
+			continue
+		}
 		if comparison.Status != "fail" || comparison.Value == nil || *comparison.Value != 0 || comparison.PreviousValue == nil || *comparison.PreviousValue != 1 {
 			t.Fatalf("comparison: %+v", comparison)
 		}
@@ -234,7 +237,7 @@ func TestDevelopment_MappingUnavailableIsIndependent(t *testing.T) {
 		}
 	}
 	for _, comparison := range readDevelopmentSummary(t, r).NonRegression {
-		if comparison.Status != "unavailable" {
+		if comparison.Name != "abstention_balanced_accuracy" && comparison.Status != "unavailable" {
 			t.Fatal("incomplete mapping has available comparison")
 		}
 	}

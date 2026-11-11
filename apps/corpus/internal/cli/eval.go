@@ -53,12 +53,12 @@ func passingEvalFloors(floors []evaluation.Floor, allowNotRun bool) bool {
 			return true
 		}
 	}
-	if len(floors) != 4 {
+	if len(floors) != 2 {
 		return false
 	}
 	seen := make(map[string]bool)
 	for _, f := range floors {
-		if f.Status != "pass" || f.Arms != "hybrid" || f.Limit != 8 || (f.Mode != "exact" && f.Mode != "ann") || (f.Name != "current_law_precision" && f.Name != "abstention") {
+		if f.Status != "pass" || f.Arms != "hybrid" || f.Limit != 8 || (f.Mode != "exact" && f.Mode != "ann") || f.Name != "current_law_precision" {
 			return false
 		}
 		key := string(f.Mode) + ":" + f.Name

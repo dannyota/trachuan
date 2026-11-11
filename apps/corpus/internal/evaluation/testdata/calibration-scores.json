@@ -1,0 +1,618 @@
+[
+  {
+    "negative": false,
+    "cosine": 0.610173995212389
+  },
+  {
+    "negative": false,
+    "cosine": 0.6608937776621553
+  },
+  {
+    "negative": false,
+    "cosine": 0.5937179941779656
+  },
+  {
+    "negative": false,
+    "cosine": 0.5835299466637098
+  },
+  {
+    "negative": false,
+    "cosine": 0.712053899054692
+  },
+  {
+    "negative": false,
+    "cosine": 0.6925349372542103
+  },
+  {
+    "negative": false,
+    "cosine": 0.7212342854636172
+  },
+  {
+    "negative": false,
+    "cosine": 0.7066586049431536
+  },
+  {
+    "negative": false,
+    "cosine": 0.5881808189639818
+  },
+  {
+    "negative": false,
+    "cosine": 0.5144956707954407
+  },
+  {
+    "negative": false,
+    "cosine": 0.7341599539948198
+  },
+  {
+    "negative": false,
+    "cosine": 0.7196170400774651
+  },
+  {
+    "negative": false,
+    "cosine": 0.6675480399711167
+  },
+  {
+    "negative": false,
+    "cosine": 0.7071174004111964
+  },
+  {
+    "negative": false,
+    "cosine": 0.7132314610117255
+  },
+  {
+    "negative": false,
+    "cosine": 0.6457489766331368
+  },
+  {
+    "negative": false,
+    "cosine": 0.5900377416520777
+  },
+  {
+    "negative": false,
+    "cosine": 0.4413558148125625
+  },
+  {
+    "negative": false,
+    "cosine": 0.5432942826397921
+  },
+  {
+    "negative": false,
+    "cosine": 0.6048427195294426
+  },
+  {
+    "negative": false,
+    "cosine": 0.5919031367128746
+  },
+  {
+    "negative": false,
+    "cosine": 0.5778182148933452
+  },
+  {
+    "negative": false,
+    "cosine": 0.4623598892200127
+  },
+  {
+    "negative": true,
+    "cosine": 0.29424702250820745
+  },
+  {
+    "negative": false,
+    "cosine": 0.6035219205100252
+  },
+  {
+    "negative": false,
+    "cosine": 0.6256204693770561
+  },
+  {
+    "negative": false,
+    "cosine": 0.5713632532411924
+  },
+  {
+    "negative": false,
+    "cosine": 0.7316729513774358
+  },
+  {
+    "negative": false,
+    "cosine": 0.6058940345739909
+  },
+  {
+    "negative": false,
+    "cosine": 0.563568344435276
+  },
+  {
+    "negative": false,
+    "cosine": 0.6205380066682596
+  },
+  {
+    "negative": false,
+    "cosine": 0.6274485880259244
+  },
+  {
+    "negative": false,
+    "cosine": 0.5327835481191887
+  },
+  {
+    "negative": false,
+    "cosine": 0.6116552170618794
+  },
+  {
+    "negative": false,
+    "cosine": 0.6080817064851463
+  },
+  {
+    "negative": false,
+    "cosine": 0.4324838358125418
+  },
+  {
+    "negative": false,
+    "cosine": 0.6783735124659735
+  },
+  {
+    "negative": false,
+    "cosine": 0.6209749416023295
+  },
+  {
+    "negative": false,
+    "cosine": 0.6206389007611277
+  },
+  {
+    "negative": false,
+    "cosine": 0.5316506511030593
+  },
+  {
+    "negative": false,
+    "cosine": 0.5768428983190749
+  },
+  {
+    "negative": false,
+    "cosine": 0.5836754837809881
+  },
+  {
+    "negative": false,
+    "cosine": 0.6815827855146592
+  },
+  {
+    "negative": false,
+    "cosine": 0.6459709424405591
+  },
+  {
+    "negative": false,
+    "cosine": 0.7261839072601549
+  },
+  {
+    "negative": false,
+    "cosine": 0.5688718212949966
+  },
+  {
+    "negative": false,
+    "cosine": 0.43747228569711305
+  },
+  {
+    "negative": false,
+    "cosine": 0.5528455744914151
+  },
+  {
+    "negative": false,
+    "cosine": 0.3967977000722951
+  },
+  {
+    "negative": false,
+    "cosine": 0.5810704037975344
+  },
+  {
+    "negative": false,
+    "cosine": 0.6464288866945124
+  },
+  {
+    "negative": true,
+    "cosine": 0.3641589502712038
+  },
+  {
+    "negative": false,
+    "cosine": 0.5777934816214437
+  },
+  {
+    "negative": false,
+    "cosine": 0.6544281710943296
+  },
+  {
+    "negative": false,
+    "cosine": 0.6464279787884595
+  },
+  {
+    "negative": false,
+    "cosine": 0.605520187163479
+  },
+  {
+    "negative": false,
+    "cosine": 0.7276025145306094
+  },
+  {
+    "negative": false,
+    "cosine": 0.6024866420677307
+  },
+  {
+    "negative": false,
+    "cosine": 0.6304630494282234
+  },
+  {
+    "negative": false,
+    "cosine": 0.5039936585453227
+  },
+  {
+    "negative": false,
+    "cosine": 0.5598073459130893
+  },
+  {
+    "negative": false,
+    "cosine": 0.5447204384374367
+  },
+  {
+    "negative": false,
+    "cosine": 0.5734085528145658
+  },
+  {
+    "negative": false,
+    "cosine": 0.6866669112444608
+  },
+  {
+    "negative": false,
+    "cosine": 0.8000811576746514
+  },
+  {
+    "negative": false,
+    "cosine": 0.5108739011322925
+  },
+  {
+    "negative": false,
+    "cosine": 0.5707072869997359
+  },
+  {
+    "negative": false,
+    "cosine": 0.5012744061503516
+  },
+  {
+    "negative": false,
+    "cosine": 0.7189396787321874
+  },
+  {
+    "negative": false,
+    "cosine": 0.49356086264312293
+  },
+  {
+    "negative": false,
+    "cosine": 0.46349860619007865
+  },
+  {
+    "negative": false,
+    "cosine": 0.46094842859889007
+  },
+  {
+    "negative": false,
+    "cosine": 0.5522471586305125
+  },
+  {
+    "negative": false,
+    "cosine": 0.48250348918132135
+  },
+  {
+    "negative": false,
+    "cosine": 0.47743597357703305
+  },
+  {
+    "negative": true,
+    "cosine": 0.4015426281332708
+  },
+  {
+    "negative": true,
+    "cosine": 0.4541821507106938
+  },
+  {
+    "negative": false,
+    "cosine": 0.6650586727156924
+  },
+  {
+    "negative": false,
+    "cosine": 0.47469627763698763
+  },
+  {
+    "negative": false,
+    "cosine": 0.5904496505352677
+  },
+  {
+    "negative": false,
+    "cosine": 0.7208945127569797
+  },
+  {
+    "negative": false,
+    "cosine": 0.6127814516089616
+  },
+  {
+    "negative": false,
+    "cosine": 0.6263205343203181
+  },
+  {
+    "negative": false,
+    "cosine": 0.6789760802955771
+  },
+  {
+    "negative": false,
+    "cosine": 0.7119312649428904
+  },
+  {
+    "negative": false,
+    "cosine": 0.6937096970072449
+  },
+  {
+    "negative": false,
+    "cosine": 0.6426990053625036
+  },
+  {
+    "negative": false,
+    "cosine": 0.682784085002823
+  },
+  {
+    "negative": true,
+    "cosine": 0.4587070395103776
+  },
+  {
+    "negative": false,
+    "cosine": 0.6960398890889172
+  },
+  {
+    "negative": false,
+    "cosine": 0.6448546937714316
+  },
+  {
+    "negative": true,
+    "cosine": 0.44521824178486136
+  },
+  {
+    "negative": false,
+    "cosine": 0.7047643349277588
+  },
+  {
+    "negative": false,
+    "cosine": 0.6886485609815103
+  },
+  {
+    "negative": false,
+    "cosine": 0.7119602914070544
+  },
+  {
+    "negative": true,
+    "cosine": 0.5277575751217931
+  },
+  {
+    "negative": false,
+    "cosine": 0.6305522692679797
+  },
+  {
+    "negative": false,
+    "cosine": 0.6895570158958632
+  },
+  {
+    "negative": false,
+    "cosine": 0.6563304411655272
+  },
+  {
+    "negative": true,
+    "cosine": 0.5852131479442229
+  },
+  {
+    "negative": false,
+    "cosine": 0.7641301644237004
+  },
+  {
+    "negative": false,
+    "cosine": 0.6081511068119557
+  },
+  {
+    "negative": false,
+    "cosine": 0.49553479028021685
+  },
+  {
+    "negative": true,
+    "cosine": 0.3311146312269162
+  },
+  {
+    "negative": false,
+    "cosine": 0.6547829899063451
+  },
+  {
+    "negative": false,
+    "cosine": 0.5886627505425895
+  },
+  {
+    "negative": false,
+    "cosine": 0.49232781070580145
+  },
+  {
+    "negative": false,
+    "cosine": 0.5062085382689788
+  },
+  {
+    "negative": false,
+    "cosine": 0.7399680400162724
+  },
+  {
+    "negative": true,
+    "cosine": 0.3323247932419945
+  },
+  {
+    "negative": false,
+    "cosine": 0.6095958119389909
+  },
+  {
+    "negative": false,
+    "cosine": 0.6582588508325716
+  },
+  {
+    "negative": false,
+    "cosine": 0.6230376754454894
+  },
+  {
+    "negative": false,
+    "cosine": 0.6606284412350684
+  },
+  {
+    "negative": false,
+    "cosine": 0.5618470873461147
+  },
+  {
+    "negative": false,
+    "cosine": 0.6445019403684425
+  },
+  {
+    "negative": false,
+    "cosine": 0.5346747324101637
+  },
+  {
+    "negative": false,
+    "cosine": 0.6493217140031894
+  },
+  {
+    "negative": true,
+    "cosine": 0.342313027844213
+  },
+  {
+    "negative": false,
+    "cosine": 0.6370670088926033
+  },
+  {
+    "negative": false,
+    "cosine": 0.6247893383643104
+  },
+  {
+    "negative": false,
+    "cosine": 0.7195769548416189
+  },
+  {
+    "negative": false,
+    "cosine": 0.7270330189087125
+  },
+  {
+    "negative": false,
+    "cosine": 0.6671710807418761
+  },
+  {
+    "negative": true,
+    "cosine": 0.453213147777039
+  },
+  {
+    "negative": false,
+    "cosine": 0.569489258023119
+  },
+  {
+    "negative": false,
+    "cosine": 0.7102554111911936
+  },
+  {
+    "negative": false,
+    "cosine": 0.6100234863295055
+  },
+  {
+    "negative": true,
+    "cosine": 0.4102410582355327
+  },
+  {
+    "negative": false,
+    "cosine": 0.7043072413026673
+  },
+  {
+    "negative": false,
+    "cosine": 0.6091505885124596
+  },
+  {
+    "negative": false,
+    "cosine": 0.5969185401828486
+  },
+  {
+    "negative": false,
+    "cosine": 0.5657109762926357
+  },
+  {
+    "negative": true,
+    "cosine": 0.4263774507630227
+  },
+  {
+    "negative": false,
+    "cosine": 0.729101695143591
+  },
+  {
+    "negative": false,
+    "cosine": 0.6357916107924618
+  },
+  {
+    "negative": false,
+    "cosine": 0.6766773462295724
+  },
+  {
+    "negative": false,
+    "cosine": 0.5590656899570667
+  },
+  {
+    "negative": false,
+    "cosine": 0.7332747539268883
+  },
+  {
+    "negative": true,
+    "cosine": 0.4934983284481389
+  },
+  {
+    "negative": false,
+    "cosine": 0.5497326345367413
+  },
+  {
+    "negative": false,
+    "cosine": 0.5142331685464127
+  },
+  {
+    "negative": false,
+    "cosine": 0.6668762168295739
+  },
+  {
+    "negative": true,
+    "cosine": 0.5125498816549501
+  },
+  {
+    "negative": false,
+    "cosine": 0.4029691984457544
+  },
+  {
+    "negative": true,
+    "cosine": 0.4661974391466822
+  },
+  {
+    "negative": false,
+    "cosine": 0.6382167149121687
+  },
+  {
+    "negative": false,
+    "cosine": 0.4493536979345272
+  },
+  {
+    "negative": false,
+    "cosine": 0.7264175909850068
+  },
+  {
+    "negative": false,
+    "cosine": 0.5251978978868578
+  },
+  {
+    "negative": false,
+    "cosine": 0.3525970454145404
+  },
+  {
+    "negative": true,
+    "cosine": 0.7258955408144118
+  },
+  {
+    "negative": true,
+    "cosine": 0.46198633051912386
+  },
+  {
+    "negative": true,
+    "cosine": 0.5203395616705008
+  }
+]
