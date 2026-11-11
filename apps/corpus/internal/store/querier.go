@@ -18,8 +18,10 @@ type Querier interface {
 	ClearFinal(ctx context.Context, runID int64) error
 	ClearRunSource(ctx context.Context, arg ClearRunSourceParams) (int64, error)
 	ClearSeeds(ctx context.Context, runID int64) error
+	CountAdoptedRunItems(ctx context.Context, arg CountAdoptedRunItemsParams) (int64, error)
 	CountIncompleteItems(ctx context.Context, runID int64) (int64, error)
 	CountPausedSources(ctx context.Context, runID int64) (int64, error)
+	CountRunAcquisitions(ctx context.Context, runID int64) (int64, error)
 	CountUnacceptedGaps(ctx context.Context, runID int64) (int64, error)
 	CreateRun(ctx context.Context, arg CreateRunParams) error
 	DeleteItemGaps(ctx context.Context, arg DeleteItemGapsParams) (int64, error)
@@ -50,6 +52,7 @@ type Querier interface {
 	GetOCRCheck(ctx context.Context, arg GetOCRCheckParams) (OcrCheck, error)
 	GetOCRText(ctx context.Context, arg GetOCRTextParams) (OcrText, error)
 	GetRun(ctx context.Context, arg GetRunParams) (Run, error)
+	GetRunAcquisition(ctx context.Context, arg GetRunAcquisitionParams) (GetRunAcquisitionRow, error)
 	GetRunForUpdate(ctx context.Context, arg GetRunForUpdateParams) (Run, error)
 	GetRunGeneration(ctx context.Context, id int64) (int32, error)
 	GetRunGenerationForShare(ctx context.Context, id int64) (int32, error)
@@ -118,6 +121,9 @@ type Querier interface {
 	ResetFailedItems(ctx context.Context, arg ResetFailedItemsParams) error
 	ResetOlderFailedStageItems(ctx context.Context, arg ResetOlderFailedStageItemsParams) error
 	ResetRetryItem(ctx context.Context, arg ResetRetryItemParams) (int64, error)
+	// Seeds acquisitions from the run's own committed done items; used once,
+	// before the first retry invalidation of a run that has none.
+	SeedRunAcquisitions(ctx context.Context, runID int64) (int64, error)
 	SetFetchCloseInputHash(ctx context.Context, arg SetFetchCloseInputHashParams) (int64, error)
 	SetFetchedFileTime(ctx context.Context, arg SetFetchedFileTimeParams) (int64, error)
 	SetMembershipPredecessor(ctx context.Context, arg SetMembershipPredecessorParams) (int64, error)
@@ -127,6 +133,7 @@ type Querier interface {
 	SumOCRCheckUsage(ctx context.Context, checkerID string) ([]json.RawMessage, error)
 	UpdateRunItemFenced(ctx context.Context, arg UpdateRunItemFencedParams) (int64, error)
 	UpsertListing(ctx context.Context, arg UpsertListingParams) error
+	UpsertRunAcquisition(ctx context.Context, arg UpsertRunAcquisitionParams) error
 	UpsertRunDocument(ctx context.Context, arg UpsertRunDocumentParams) error
 	UpsertSeedObservation(ctx context.Context, arg UpsertSeedObservationParams) error
 }

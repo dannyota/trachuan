@@ -275,9 +275,8 @@ The producing stage/item is `expand` and the seed document key for current,
 retained and link-loss removed tuples. A tuple removed because its seed left the
 active seeds belongs to `discover` / `vbpl:central`. This attribution does not
 change its relation kind or logical production stage for
-[retry invalidation](source-execution.md#retry-source-gaps). Discovery's
-frozen-evidence check covers the
-[direct seed kinds](membership.md#direct-discovery), excluding these
+[retry invalidation](source-retry.md). Discovery's frozen-evidence check covers
+the [direct seed kinds](membership.md#direct-discovery), excluding these
 discovery-attributed relation removals.
 
 ### Expand observation artifact

@@ -70,6 +70,15 @@ func planRetry(ctx context.Context, q *store.Queries, runID int64, country strin
 }
 
 func applyRetry(ctx context.Context, q *store.Queries, runID int64, generation int32, stages []string, plan retryPlan) error {
+	count, err := q.CountRunAcquisitions(ctx, runID)
+	if err != nil {
+		return fmt.Errorf("count acquisitions before retry: %w", err)
+	}
+	if count == 0 {
+		if _, err = q.SeedRunAcquisitions(ctx, runID); err != nil {
+			return fmt.Errorf("seed acquisitions before retry: %w", err)
+		}
+	}
 	for _, item := range plan.items {
 		if item.stage == "discover" {
 			if err := deleteDiscoverListings(ctx, q, runID, item.key); err != nil {

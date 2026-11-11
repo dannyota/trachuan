@@ -15,9 +15,11 @@ import (
 )
 
 type gateway struct {
-	server          *httptest.Server
-	details         atomic.Int64
-	blockAfterFirst chan struct{}
+	server             *httptest.Server
+	details            atomic.Int64
+	attachments        atomic.Int64
+	unavailableDiagram string
+	blockAfterFirst    chan struct{}
 }
 
 func newGateway(t *testing.T) *gateway {
@@ -32,9 +34,9 @@ func newGateway(t *testing.T) *gateway {
 		path := r.URL.Path
 		switch {
 		case path == "/doc/all":
-			items := make([]map[string]string, 0, 12)
+			items := make([]map[string]any, 0, 12)
 			for i := 1; i <= 12; i++ {
-				items = append(items, map[string]string{"id": fmt.Sprintf("%d", i), "docNum": fmt.Sprintf("%d/2026", i), "title": "Document"})
+				items = append(items, map[string]any{"id": fmt.Sprintf("%d", i), "docNum": fmt.Sprintf("%d/2026", i), "title": "Document", "agencyIds": []string{"62"}})
 			}
 			_ = json.NewEncoder(w).Encode(map[string]any{"success": true, "data": map[string]any{"total": 12, "items": items}})
 		case strings.HasPrefix(path, "/doc/provision/tree/"):
@@ -43,8 +45,13 @@ func newGateway(t *testing.T) *gateway {
 			id := strings.TrimSuffix(strings.TrimPrefix(path, "/doc/minio/buckets/vbpl/folders/"), "/files")
 			_ = json.NewEncoder(w).Encode(map[string]any{"success": true, "data": []map[string]any{{"fileName": "attachment.txt", "fullPath": id + "/attachment.txt", "size": 7, "presignedURL": g.server.URL + "/attachment/" + id}}})
 		case strings.HasPrefix(path, "/attachment/"):
+			g.attachments.Add(1)
 			_, _ = w.Write([]byte("content"))
 		case strings.HasPrefix(path, "/doc/") && strings.HasSuffix(path, "/diagram"):
+			if path == "/doc/"+g.unavailableDiagram+"/diagram" {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
 			_ = json.NewEncoder(w).Encode(map[string]any{"success": true, "data": map[string]any{"documentNamesByType": map[string]any{"10": []map[string]string{{"id": "1", "name": "Document 1"}}}}})
 		case strings.HasPrefix(path, "/doc/"):
 			count := g.details.Add(1)

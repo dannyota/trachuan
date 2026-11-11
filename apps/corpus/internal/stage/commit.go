@@ -31,6 +31,8 @@ type Commit struct {
 	Observations []FetchObservation
 	State        string
 	Message      string
+	// SourceRead distinguishes a fresh read from reuse of committed bytes.
+	SourceRead bool
 }
 
 // CommitItem commits an item and its rows if its fence is current.
@@ -170,6 +172,11 @@ func commitItem(ctx context.Context, pool *pgxpool.Pool, c *Commit) (applied boo
 	}
 	if rows == 0 {
 		return false, nil
+	}
+	if c.SourceRead && len(c.Sources) > 0 && c.State == "done" && artifactID != nil && (c.Stage == "fetch" || c.Stage == "expand") {
+		if err = q.UpsertRunAcquisition(ctx, store.UpsertRunAcquisitionParams{RunID: c.RunID, Stage: c.Stage, DocumentKey: c.ItemKey, ArtifactID: *artifactID, Generation: int32(c.Generation)}); err != nil {
+			return false, fmt.Errorf("record acquisition: %w", err)
+		}
 	}
 	if err := tx.Commit(ctx); err != nil {
 		return false, fmt.Errorf("commit item: %w", err)

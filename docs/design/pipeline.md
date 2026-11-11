@@ -207,12 +207,11 @@ candidates; expand closes additions to the expected set before fetch planning.
   response limit are gaps. A gateway error (HTTP 5xx) that persists through the
   client retries makes the item gap `source_unavailable` in that attempt,
   without a batch retry (budgets); the owner may accept it, and the next run
-  asks again; start retries these under
-  [source execution](source-execution.md#retry-source-gaps). Known source
-  failures never stall a batch or the stage close. An attachment whose document
-  id, name and size match a local cache entry collected no earlier than the
-  gateway's `updatedAt` for that file is taken from the cache once its sha256
-  verifies; otherwise it is downloaded.
+  asks again; start retries these under [source execution](source-retry.md).
+  Known source failures never stall a batch or the stage close. An attachment
+  whose document id, name and size match a local cache entry collected no
+  earlier than the gateway's `updatedAt` for that file is taken from the cache
+  once its sha256 verifies; otherwise it is downloaded.
 - `extract` refuses trees deeper or larger than the limits in
   [budgets](budgets.md) with gap `tree_too_large`.
 - `relate` maps relation codes with the source list's table, whose hash is part

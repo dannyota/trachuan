@@ -11,8 +11,8 @@ import (
 
 const artifactPathReferenced = `-- name: ArtifactPathReferenced :one
 SELECT EXISTS (
-    SELECT 1 FROM artifact
-    WHERE path = $1 OR path = $2
+    SELECT 1 FROM artifact a JOIN run_item i ON i.artifact_id = a.id
+    WHERE a.path = $1 OR a.path = $2
 )
 `
 

@@ -17,7 +17,7 @@ import (
 
 type fakeDumper struct{ fail bool }
 
-func (d fakeDumper) Dump(_ context.Context, _, path string) error {
+func (d fakeDumper) Dump(_ context.Context, _, path, _ string) error {
 	if d.fail {
 		return errors.New("dump failed")
 	}
@@ -25,7 +25,7 @@ func (d fakeDumper) Dump(_ context.Context, _, path string) error {
 }
 func setup(t *testing.T) Taker {
 	t.Helper()
-	return Taker{Config: Config{Dir: t.TempDir(), ArtifactsRoot: t.TempDir(), Keep: 3}, Dumper: fakeDumper{}, Now: func() time.Time { return time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC) }}
+	return Taker{Config: Config{Dir: t.TempDir(), ArtifactsRoot: t.TempDir(), Keep: 3}, Dumper: fakeDumper{}, beginSnapshot: snapshotWithReference(nil), Now: func() time.Time { return time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC) }}
 }
 func publish(t *testing.T, root, input string) string {
 	t.Helper()

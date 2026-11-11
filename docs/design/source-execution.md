@@ -189,44 +189,8 @@ Reason: concurrent batches and restarts must not bypass an access denial.
 
 ## Retry source gaps
 
-On an otherwise permitted `corpus start`, inspect all stages for items with a
-nonempty gap set consisting only of `source_unavailable` or gateway-caused
-`invalid_source_data`. Include done items carrying gaps and accepted gaps. Use
-the structured causes in data, never message matching. Malformed legal data,
-duplicate ids and database text errors do not qualify. A `source_unavailable`
-gap is retry-eligible whatever its origin, as [data](data.md) states; a
-historical `invalid_source_data` gap without origin evidence stays unchanged
-pending classification from evidence.
-
-In the generation-increment transaction, delete selected gaps and item-owned
-derived rows, clear artifact/input references and attempt state, and set items
-pending. Rewind to the earliest affected stage, including an empty next stage;
-validate `--until` after choosing it. Clear later stage run items, derived rows
-and gaps so they replan.
-
-Delete all membership evidence and seed observations produced at or after the
-rewind stage, including evidence from unselected items at that stage. Every
-`relation` tuple counts as produced by expand, regardless of its attributed
-stage/item. Then delete run documents left without evidence and clear affected
-phase snapshots and hashes. Clear the fetch-close input hash only when the final
-phase is invalidated. Clear the predecessor record with the seeds phase;
-discovery close then selects and freezes it again. Evidence from earlier stages
-survives. Finalizers rebuild the cleared phases from remaining artifacts and
-earlier-run membership under the [loss rules](membership.md). Keep immutable
-artifacts for reuse. Record counts and rewind stage in the run message;
-recomputed gaps require fresh acceptance.
-
-Do not clear source pauses or durable run failures. Still refuse changed frozen
-recipes, open workflows, evaluated/released runs or stage insertion into an old
-snapshot. The generation/attempt fence applies to reset and every later commit.
-Reason: retry transport failures without preserving stale downstream results.
-
-A bounded non-JSON 200 from a JSON gateway endpoint, including raw tree, is
-retryable before source decoding. After bounded retries emit
-`source_unavailable` with structured endpoint, status and cause, not body text.
-Oversize responses stay `response_too_large`; valid JSON with invalid fields
-stays `invalid_source_data`. Recognized challenges take the source-pause path
-first. Reason: a gateway error page is not a permanent legal-data defect.
+[Retry of source gaps](source-retry.md) owns the restart rules: selection,
+rewind, what is cleared and the reuse of a run's own acquisitions.
 
 ## Required evidence
 
