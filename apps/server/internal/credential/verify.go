@@ -13,6 +13,8 @@ import (
 )
 
 const (
+	maxCacheTTL = 10 * time.Second
+
 	// ErrUnauthorized means the credential is missing, invalid or no longer valid.
 	ErrUnauthorized failure = "unauthorized"
 	// ErrUnavailable means the verifier cannot check the credential.
@@ -55,36 +57,52 @@ func (v *Verifier) Verify(ctx context.Context, bearer string) (Principal, error)
 	if v.Store == nil || v.Audience == "" {
 		return Principal{}, ErrUnavailable
 	}
-	started := v.now()
 	hash := tokenHash(bearer)
-	entry, ok := v.cached(hash, started)
-	if !ok {
-		row, err := v.Store.GetCredential(ctx, hash)
-		if errors.Is(err, pgx.ErrNoRows) {
+	if entry, ok := v.cached(hash, v.now()); ok {
+		// Cached hits skip availability checks and touches because the lookup is
+		// cached by design: docs/design/auth.md, "Token checks and revocation".
+		if !entry.expires.After(v.now()) {
 			return Principal{}, ErrUnauthorized
 		}
-		if err != nil {
-			// Store errors can contain SQL, parameters or connection details.
-			return Principal{}, fmt.Errorf("verify credential: %w", ErrUnavailable)
-		}
-		if row.RevokedAt != nil || row.BlockedAt != nil || row.AccountAuthEpoch != row.TokenAuthEpoch || !row.ExpiresAt.After(v.now()) {
-			return Principal{}, ErrUnauthorized
-		}
-		entry = cacheEntry{
-			hash:      hash,
-			principal: Principal{AccountID: row.AccountID, Scope: "mcp:read", Audience: v.Audience},
-			expires:   row.ExpiresAt,
-			until:     minTime(started.Add(v.ttl()), row.ExpiresAt),
-		}
-		v.remember(entry, v.now())
+		return entry.principal, nil
 	}
-	if v.admitTouch(hash, v.now()) {
-		// Usage tracking must never change the authorization result.
-		_ = v.Store.TouchPersonalToken(ctx, hash)
-	}
-	if !entry.expires.After(v.now()) {
+	started := v.now()
+	row, err := v.Store.GetCredential(ctx, hash)
+	if errors.Is(err, pgx.ErrNoRows) {
 		return Principal{}, ErrUnauthorized
 	}
+	if err != nil {
+		// Store errors can contain SQL, parameters or connection details.
+		return Principal{}, fmt.Errorf("verify credential: %w", ErrUnavailable)
+	}
+	if row.RevokedAt != nil || row.BlockedAt != nil || row.AccountAuthEpoch != row.TokenAuthEpoch || !row.ExpiresAt.After(v.now()) {
+		return Principal{}, ErrUnauthorized
+	}
+	if v.admitTouch(hash, v.now()) {
+		if err := v.Store.TouchPersonalToken(ctx, hash); err != nil {
+			return Principal{}, fmt.Errorf("touch credential: %w", ErrUnavailable)
+		}
+	}
+	now := v.now()
+	if !row.ExpiresAt.After(now) {
+		return Principal{}, ErrUnauthorized
+	}
+	ttl := v.ttl()
+	freshness := ttl
+	if freshness < 0 {
+		// Disabling cached reuse still bounds the age of a fresh lookup.
+		freshness = maxCacheTTL
+	}
+	if now.Sub(started) > freshness {
+		return Principal{}, fmt.Errorf("verify credential freshness: %w", ErrUnavailable)
+	}
+	entry := cacheEntry{
+		hash:      hash,
+		principal: Principal{AccountID: row.AccountID, Scope: "mcp:read", Audience: v.Audience},
+		expires:   row.ExpiresAt,
+		until:     minTime(started.Add(ttl), row.ExpiresAt),
+	}
+	v.remember(entry, now)
 	return entry.principal, nil
 }
 
@@ -96,8 +114,8 @@ func (v *Verifier) now() time.Time {
 }
 
 func (v *Verifier) ttl() time.Duration {
-	if v.CacheTTL == 0 || v.CacheTTL > 10*time.Second {
-		return 10 * time.Second
+	if v.CacheTTL == 0 || v.CacheTTL > maxCacheTTL {
+		return maxCacheTTL
 	}
 	return v.CacheTTL
 }

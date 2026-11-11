@@ -27,23 +27,25 @@ type fakeStore struct {
 
 func (s *fakeStore) GetCredential(_ context.Context, hash string) (store.GetCredentialRow, error) {
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	s.lookups++
 	s.lastHash = hash
-	if s.lookup != nil {
-		s.lookup()
+	row, err, lookup := s.row, s.err, s.lookup
+	s.mu.Unlock()
+	if lookup != nil {
+		lookup()
 	}
-	return s.row, s.err
+	return row, err
 }
 
 func (s *fakeStore) TouchPersonalToken(context.Context, string) error {
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	s.touches++
-	if s.touch != nil {
-		s.touch()
+	err, touch := s.touchErr, s.touch
+	s.mu.Unlock()
+	if touch != nil {
+		touch()
 	}
-	return s.touchErr
+	return err
 }
 
 func fixture(t *testing.T) (*Verifier, *fakeStore, *time.Time, string) {
@@ -133,15 +135,24 @@ func TestVerify_AuthDownFailsClosed(t *testing.T) {
 
 func TestVerify_TouchOncePerMinuteDespiteCacheExpiry(t *testing.T) {
 	v, s, now, plain := fixture(t)
-	s.touchErr = errors.New("sensitive touch failure")
-	for _, elapsed := range []time.Duration{0, 10 * time.Second, 59 * time.Second, time.Minute, 61 * time.Second} {
-		*now = time.Date(2026, 11, 11, 0, 0, 0, 0, time.UTC).Add(elapsed)
+	for _, tc := range []struct {
+		elapsed time.Duration
+		touches int
+	}{
+		{0, 1},
+		{10 * time.Second, 1},
+		{59 * time.Second, 1},
+		{time.Minute, 1},
+		{61 * time.Second, 1},
+		{69 * time.Second, 2},
+	} {
+		*now = time.Date(2026, 11, 11, 0, 0, 0, 0, time.UTC).Add(tc.elapsed)
 		if _, err := v.Verify(context.Background(), plain); err != nil {
-			t.Fatal("touch failure denied request")
+			t.Fatal(err)
 		}
-	}
-	if s.touches != 2 {
-		t.Fatalf("touches=%d, want 2", s.touches)
+		if s.touches != tc.touches {
+			t.Fatalf("at %v touches=%d, want %d", tc.elapsed, s.touches, tc.touches)
+		}
 	}
 }
 
@@ -204,8 +215,11 @@ func TestVerify_CacheAndTouchStateBoundedOldestFirst(t *testing.T) {
 func TestVerify_SlowLookupDoesNotExtendCacheWindow(t *testing.T) {
 	v, s, now, plain := fixture(t)
 	s.lookup = func() { *now = now.Add(11 * time.Second) }
-	if _, err := v.Verify(context.Background(), plain); err != nil {
-		t.Fatal(err)
+	if p, err := v.Verify(context.Background(), plain); !errors.Is(err, ErrUnavailable) || p != (Principal{}) {
+		t.Fatal("slow lookup must fail unavailable without a principal")
+	}
+	if len(v.entries) != 0 {
+		t.Fatal("stale lookup was cached")
 	}
 	s.err = pgx.ErrNoRows
 	if _, err := v.Verify(context.Background(), plain); !errors.Is(err, ErrUnauthorized) {
@@ -217,6 +231,7 @@ func TestVerify_ExpiryDuringStoreWork(t *testing.T) {
 	for _, phase := range []string{"lookup", "touch"} {
 		t.Run(phase, func(t *testing.T) {
 			v, s, now, plain := fixture(t)
+			s.row.ExpiresAt = now.Add(5 * time.Second)
 			advance := func() { *now = s.row.ExpiresAt }
 			if phase == "lookup" {
 				s.lookup = advance
@@ -225,6 +240,9 @@ func TestVerify_ExpiryDuringStoreWork(t *testing.T) {
 			}
 			if _, err := v.Verify(context.Background(), plain); !errors.Is(err, ErrUnauthorized) {
 				t.Fatal("expired credential accepted after store work")
+			}
+			if len(v.entries) != 0 {
+				t.Fatal("expired credential was cached")
 			}
 		})
 	}

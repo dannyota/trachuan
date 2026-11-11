@@ -32,7 +32,7 @@ func response(v *Verifier, headers []string) *httptest.ResponseRecorder {
 }
 
 func TestMiddleware_HeadersAndStatus(t *testing.T) {
-	for _, name := range []string{"missing", "valid", "mixed scheme", "wrong scheme", "double space", "tab", "trailing space", "newline", "duplicate", "combined", "unknown", "unavailable"} {
+	for _, name := range []string{"missing", "valid", "mixed scheme", "wrong scheme", "double space", "tab", "trailing space", "newline", "duplicate", "combined", "unknown", "unavailable", "touch unavailable"} {
 		t.Run(name, func(t *testing.T) {
 			v, s, _, plain := fixture(t)
 			headers := []string{"Bearer " + plain}
@@ -63,6 +63,8 @@ func TestMiddleware_HeadersAndStatus(t *testing.T) {
 				s.err, lookup = pgx.ErrNoRows, true
 			case "unavailable":
 				s.err, status, lookup = errors.New("sensitive failure"), http.StatusServiceUnavailable, true
+			case "touch unavailable":
+				s.touchErr, status, lookup = errors.New("sensitive failure"), http.StatusServiceUnavailable, true
 			}
 			w := response(v, headers)
 			if w.Code != status {
@@ -136,11 +138,18 @@ func TestMiddleware_NoTokenInLogs(t *testing.T) {
 	previous := slog.Default()
 	slog.SetDefault(slog.New(slog.NewTextHandler(&logs, nil)))
 	t.Cleanup(func() { slog.SetDefault(previous) })
-	v, s, _, plain := fixture(t)
 	_, hash, _ := Issue(bytes.NewReader(make([]byte, 32)))
-	for _, failure := range []error{nil, pgx.ErrNoRows, errors.New("query " + plain + " " + hash)} {
-		v.CacheTTL = -1
-		s.err = failure
+	for _, phase := range []string{"valid", "unknown", "lookup failure", "touch failure"} {
+		v, s, _, plain := fixture(t)
+		failure := errors.New("query " + plain + " " + hash)
+		switch phase {
+		case "unknown":
+			s.err = pgx.ErrNoRows
+		case "lookup failure":
+			s.err = failure
+		case "touch failure":
+			s.touchErr = failure
+		}
 		w := response(v, []string{"Bearer " + plain})
 		for _, output := range []string{logs.String(), w.Body.String(), w.Header().Get("WWW-Authenticate")} {
 			if strings.Contains(output, plain) || strings.Contains(output, hash) || strings.Contains(output, "query ") {
