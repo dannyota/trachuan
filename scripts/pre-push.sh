@@ -14,7 +14,7 @@ for mod in $(git ls-files -- '**/go.mod' 'go.mod' 2>/dev/null); do
 done
 if command -v npx >/dev/null && [[ -f package.json ]]; then
   npx prettier --check "**/*.md" "!**/AGENTS.md" "!**/CLAUDE.md" "!instructions/**" "!docs/plans/**" "!.claude/**" "!.codex/**" "!**/node_modules/**" "!**/.venv/**"
-  npx markdownlint-cli2 "**/*.md" "#**/node_modules" "#**/.venv" "#.superpowers" "#work" "#.playwright-mcp" "#**/AGENTS.md" "#**/CLAUDE.md" "#instructions" "#docs/plans" "#.claude" "#.codex"
+  npx markdownlint-cli2 "**/*.md" "#**/node_modules" "#**/.venv" "#.superpowers" "#work" "#.playwright-mcp" "#**/test-results" "#**/playwright-report" "#**/AGENTS.md" "#**/CLAUDE.md" "#instructions" "#docs/plans" "#.claude" "#.codex"
 fi
 if command -v uv >/dev/null; then
   (cd apps/docembed && uv run --frozen --only-group dev ruff check && uv run --frozen --only-group dev ruff format --check)

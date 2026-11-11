@@ -31,10 +31,10 @@ useHead(() => ({ htmlAttrs: { lang: language.value } }))
 <template>
   <div>
     <header>
-      <NuxtLink to="/">trachuan</NuxtLink>
+      <a href="/">trachuan</a>
       <nav>
         <NuxtLink to="/connect">{{ messages.connect }}</NuxtLink>
-        <NuxtLink to="/sources">{{ messages.sources }}</NuxtLink>
+        <a href="/sources">{{ messages.sources }}</a>
       </nav>
       <button type="button" @click="toggleLanguage">{{ messages.language }}</button>
       <NuxtLink v-if="session.status === 'signed-in'" to="/account">{{ messages.account }}</NuxtLink>

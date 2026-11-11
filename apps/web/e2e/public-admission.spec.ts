@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 import { clientAddress } from './client-address'
 
 test('the 121st request from a client is rejected', async ({ request }, testInfo) => {
-  const headers = { 'X-Forwarded-For': clientAddress({ ...testInfo, testIndex: 0 }) }
+  const headers = { 'X-Forwarded-For': clientAddress(testInfo) }
   for (let i = 0; i < 120; i++) {
     const response = await request.get('/', { headers })
     expect(response.status()).toBe(200)
@@ -13,7 +13,7 @@ test('the 121st request from a client is rejected', async ({ request }, testInfo
 })
 
 test('cached pages vary by normalized language only', async ({ request }, testInfo) => {
-  const headers = { 'X-Forwarded-For': clientAddress({ ...testInfo, testIndex: 1 }) }
+  const headers = { 'X-Forwarded-For': clientAddress(testInfo) }
   const vi = await request.get('/sources?view=first', { headers })
   const invalid = await request.get('/sources?view=second', { headers: { ...headers, Cookie: 'lang=xx' } })
   const en = await request.get('/sources', { headers: { ...headers, Cookie: 'lang=en' } })
@@ -30,7 +30,7 @@ test('cached pages vary by normalized language only', async ({ request }, testIn
 
 
 test('public responses revalidate while private routes are not stored', async ({ request }, testInfo) => {
-  const headers = { 'X-Forwarded-For': clientAddress({ ...testInfo, testIndex: 2 }) }
+  const headers = { 'X-Forwarded-For': clientAddress(testInfo) }
   for (const path of ['/llms.txt', '/', '/connect', '/sources', '/privacy', '/terms']) {
     const miss = await request.get(path, { headers })
     const hit = await request.get(path, { headers })
@@ -57,7 +57,7 @@ test('public responses revalidate while private routes are not stored', async ({
 })
 
 test('public revalidation uses ETags and preserves response headers', async ({ request }, testInfo) => {
-  const headers = { 'X-Forwarded-For': clientAddress({ ...testInfo, testIndex: 3 }) }
+  const headers = { 'X-Forwarded-For': clientAddress(testInfo) }
   for (const path of ['/', '/connect', '/sources', '/privacy', '/terms', '/llms.txt']) {
     const first = await request.get(path, { headers })
     expect(first.headers()['last-modified'], path).toBeUndefined()

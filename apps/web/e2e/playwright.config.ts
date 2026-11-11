@@ -7,7 +7,7 @@ export default defineConfig({
   webServer: {
     command: 'node .output/server/index.mjs',
     cwd: new URL('..', import.meta.url).pathname,
-    env: { NITRO_HOST: '127.0.0.1', NITRO_PORT: '3031', NUXT_TRUSTED_PROXIES: '127.0.0.1/32' },
+    env: { NITRO_HOST: '127.0.0.1', NITRO_PORT: '3031', NUXT_TRUSTED_PROXIES: '127.0.0.1/32', NUXT_API_ORIGIN: 'http://127.0.0.1:1' },
     url: 'http://127.0.0.1:3031',
     reuseExistingServer: false,
   },

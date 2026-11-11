@@ -1,23 +1,12 @@
 import { expect, it } from 'vitest'
 import { clientAddress } from '../e2e/client-address'
 
-it('assigns distinct documentation addresses to test executions and retries', () => {
-  const addresses = new Set<string>()
-  for (let workerIndex = 0; workerIndex < 12; workerIndex++) {
-    for (let repeatEachIndex = 0; repeatEachIndex < 3; repeatEachIndex++) {
-      for (let retry = 0; retry < 3; retry++) {
-        for (let testIndex = 0; testIndex < 7; testIndex++) {
-          const address = clientAddress({ workerIndex, repeatEachIndex, retry, testIndex })
-          expect(address).toMatch(/^(192\.0\.2|198\.51\.100|203\.0\.113)\.\d+$/)
-          expect(addresses.has(address)).toBe(false)
-          addresses.add(address)
-        }
-      }
-    }
-  }
-  expect(addresses.size).toBe(756)
-})
-
-it('rejects inputs outside the address allocation', () => {
-  expect(() => clientAddress({ workerIndex: 12, repeatEachIndex: 0, retry: 0, testIndex: 0 })).toThrow()
+it('derives stable IPv6 documentation addresses without worker or repeat limits', () => {
+  const input = { testId: 'suite:test', repeatEachIndex: 100, retry: 300 }
+  const address = clientAddress(input)
+  expect(address).toBe('2001:db8:c388:f08d:4e15:5fc7:5bc4:7289')
+  expect(clientAddress(input)).toBe(address)
+  expect(clientAddress({ ...input, testId: 'suite:other' })).not.toBe(address)
+  expect(clientAddress({ ...input, repeatEachIndex: 101 })).not.toBe(address)
+  expect(clientAddress({ ...input, retry: 301 })).not.toBe(address)
 })

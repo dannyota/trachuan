@@ -15,3 +15,5 @@ dist/
 __pycache__/
 .pytest_cache/
 spikes/**/uv.lock
+test-results/
+playwright-report/

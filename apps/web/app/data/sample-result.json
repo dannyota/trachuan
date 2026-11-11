@@ -1,0 +1,1221 @@
+{
+  "abstain": false,
+  "documents": {
+    "vn:vbpl:127395": {
+      "effective_from": "2018-03-01",
+      "issued": "2017-12-19",
+      "issuer": "Bộ Tài chính",
+      "number": "134/2017/TT-BTC",
+      "related": [
+        {
+          "dir": "out",
+          "in_release": true,
+          "key": "vn:vbpl:57250",
+          "kind": "replaces",
+          "number": "87/2013/TT-BTC"
+        },
+        {
+          "dir": "in",
+          "in_release": true,
+          "key": "vn:vbpl:144570",
+          "kind": "amends_supplements",
+          "number": "73/2020/TT-BTC"
+        },
+        {
+          "dir": "in",
+          "in_release": true,
+          "key": "vn:vbpl:146302",
+          "kind": "consolidates",
+          "number": "37/VBHN-BTC"
+        },
+        {
+          "dir": "out",
+          "in_release": true,
+          "key": "vn:vbpl:123330",
+          "kind": "legal_basis",
+          "number": "87/2017/NĐ-CP"
+        },
+        {
+          "dir": "out",
+          "in_release": true,
+          "key": "vn:vbpl:115470",
+          "kind": "legal_basis",
+          "number": "156/2016/NĐ-CP"
+        }
+      ],
+      "related_counts": {
+        "in:amends_supplements": 1,
+        "in:consolidates": 1,
+        "out:legal_basis": 11,
+        "out:replaces": 1
+      },
+      "status": {
+        "basis": "source_status",
+        "class": "in_force",
+        "current": true,
+        "status_basis": "source_status"
+      },
+      "text_complete": true,
+      "text_source": "source_tree",
+      "title": "Thông tư số 134/2017/TT-BTC Hướng dẫn giao dịch điện tử trên thị trường chứng khoán",
+      "type": "Thông tư"
+    },
+    "vn:vbpl:130985": {
+      "effective_from": "2018-11-01",
+      "issued": "2018-09-11",
+      "issuer": "Chính phủ",
+      "number": "117/2018/NĐ-CP",
+      "related": [
+        {
+          "dir": "out",
+          "in_release": true,
+          "key": "vn:vbpl:5917",
+          "kind": "replaces",
+          "number": "70/2000/NĐ-CP"
+        },
+        {
+          "dir": "in",
+          "in_release": true,
+          "key": "vn:vbpl:132734",
+          "kind": "legal_basis",
+          "number": "35/2018/TT-NHNN"
+        },
+        {
+          "dir": "out",
+          "in_release": true,
+          "key": "vn:vbpl:126820",
+          "kind": "legal_basis",
+          "number": "17/2017/QH14"
+        },
+        {
+          "dir": "out",
+          "in_release": true,
+          "key": "vn:vbpl:70821",
+          "kind": "legal_basis",
+          "number": "76/2015/QH13"
+        },
+        {
+          "dir": "out",
+          "in_release": true,
+          "key": "vn:vbpl:27704",
+          "kind": "legal_basis",
+          "number": "06/2012/QH13"
+        }
+      ],
+      "related_counts": {
+        "in:legal_basis": 1,
+        "out:legal_basis": 4,
+        "out:replaces": 1
+      },
+      "status": {
+        "basis": "source_status",
+        "class": "in_force",
+        "current": true,
+        "status_basis": "source_status"
+      },
+      "text_complete": true,
+      "text_source": "source_tree",
+      "title": "Nghị định số 117/2018/NĐ-CP Về việc giữ bí mật, cung cấp thông tin khách hành của tổ chức tín dụng, chi nhánh ngân hàng nước ngoài",
+      "type": "Nghị định"
+    },
+    "vn:vbpl:138989": {
+      "effective_from": "2020-01-01",
+      "issued": "2019-11-15",
+      "issuer": "Ngân hàng Nhà nước Việt Nam",
+      "number": "22/2019/TT-NHNN",
+      "related": [
+        {
+          "dir": "out",
+          "in_release": true,
+          "key": "vn:vbpl:137326",
+          "kind": "repeals",
+          "number": "13/2019/TT-NHNN"
+        },
+        {
+          "dir": "out",
+          "in_release": true,
+          "key": "vn:vbpl:130018",
+          "kind": "repeals",
+          "number": "16/2018/TT-NHNN"
+        },
+        {
+          "dir": "out",
+          "in_release": true,
+          "key": "vn:vbpl:126732",
+          "kind": "repeals",
+          "number": "19/2017/TT-NHNN"
+        },
+        {
+          "dir": "out",
+          "in_release": true,
+          "key": "vn:vbpl:104204",
+          "kind": "replaces",
+          "number": "06/2016/TT-NHNN"
+        },
+        {
+          "dir": "out",
+          "in_release": true,
+          "key": "vn:vbpl:38214",
+          "kind": "replaces",
+          "number": "36/2014/TT-NHNN"
+        }
+      ],
+      "related_counts": {
+        "in:amends_supplements": 5,
+        "in:consolidates": 6,
+        "in:legal_basis": 1,
+        "out:amends_supplements": 1,
+        "out:implements": 2,
+        "out:legal_basis": 4,
+        "out:repeals": 3,
+        "out:replaces": 2
+      },
+      "status": {
+        "basis": "source_status",
+        "class": "partial",
+        "current": true,
+        "status_basis": "source_status"
+      },
+      "text_complete": true,
+      "text_source": "source_tree",
+      "title": "Thông tư số 22/2019/TT-NHNN Quy định các giới hạn, tỷ lệ bảo đảm an toàn trong hoạt động của\nngân hàng, chi nhánh ngân hàng nước ngoài",
+      "type": "Thông tư"
+    },
+    "vn:vbpl:144532": {
+      "effective_from": "2021-01-01",
+      "issued": "2020-10-21",
+      "issuer": "Ngân hàng Nhà nước Việt Nam",
+      "number": "09/2020/TT-NHNN",
+      "related": [
+        {
+          "dir": "in",
+          "in_release": true,
+          "key": "vn:vbpl:171687",
+          "kind": "repeals",
+          "number": "50/2024/TT-NHNN"
+        },
+        {
+          "dir": "out",
+          "in_release": true,
+          "key": "vn:vbpl:130588",
+          "kind": "replaces",
+          "number": "18/2018/TT-NHNN"
+        },
+        {
+          "dir": "out",
+          "in_release": true,
+          "key": "vn:vbpl:132957",
+          "kind": "legal_basis",
+          "number": "24/2018/QH14"
+        },
+        {
+          "dir": "out",
+          "in_release": true,
+          "key": "vn:vbpl:126820",
+          "kind": "legal_basis",
+          "number": "17/2017/QH14"
+        },
+        {
+          "dir": "out",
+          "in_release": true,
+          "key": "vn:vbpl:118609",
+          "kind": "legal_basis",
+          "number": "16/2017/NĐ-CP"
+        }
+      ],
+      "related_counts": {
+        "in:repeals": 1,
+        "out:legal_basis": 9,
+        "out:replaces": 1
+      },
+      "status": {
+        "basis": "source_status",
+        "class": "partial",
+        "current": true,
+        "status_basis": "source_status"
+      },
+      "text_complete": true,
+      "text_source": "source_tree",
+      "title": "Thông tư số 09/2020/TT-NHNN Quy định về an toàn hệ thống thông tin trong hoạt động ngân hàng",
+      "type": "Thông tư"
+    },
+    "vn:vbpl:145859": {
+      "effective_from": "2021-02-14",
+      "issued": "2020-12-31",
+      "issuer": "Ngân hàng Nhà nước Việt Nam",
+      "number": "23/2020/TT-NHNN",
+      "related": [
+        {
+          "dir": "out",
+          "in_release": true,
+          "key": "vn:vbpl:137326",
+          "kind": "replaces",
+          "number": "13/2019/TT-NHNN"
+        },
+        {
+          "dir": "out",
+          "in_release": true,
+          "key": "vn:vbpl:130018",
+          "kind": "replaces",
+          "number": "16/2018/TT-NHNN"
+        },
+        {
+          "dir": "out",
+          "in_release": true,
+          "key": "vn:vbpl:126732",
+          "kind": "replaces",
+          "number": "19/2017/TT-NHNN"
+        },
+        {
+          "dir": "out",
+          "in_release": true,
+          "key": "vn:vbpl:104204",
+          "kind": "replaces",
+          "number": "06/2016/TT-NHNN"
+        },
+        {
+          "dir": "out",
+          "in_release": true,
+          "key": "vn:vbpl:38214",
+          "kind": "replaces",
+          "number": "36/2014/TT-NHNN"
+        }
+      ],
+      "related_counts": {
+        "in:amends_supplements": 1,
+        "in:consolidates": 1,
+        "out:legal_basis": 6,
+        "out:replaces": 5
+      },
+      "status": {
+        "basis": "source_status",
+        "class": "partial",
+        "current": true,
+        "status_basis": "source_status"
+      },
+      "text_complete": true,
+      "text_source": "source_tree",
+      "title": "Thông tư số 23/2020/TT-NHNN Quy định các giới hạn, tỷ lệ bảo đảm an toàn trong hoạt động của\ntổ chức tín dụng phi ngân hàng",
+      "type": "Thông tư"
+    },
+    "vn:vbpl:160901": {
+      "effective_from": "2023-09-01",
+      "issued": "2023-06-28",
+      "issuer": "Ngân hàng Nhà nước Việt Nam",
+      "number": "06/2023/TT-NHNN",
+      "related": [
+        {
+          "dir": "in",
+          "in_release": true,
+          "key": "vn:vbpl:03a52e90-84da-11f1-bb78-cf3252a415e6",
+          "kind": "repeals",
+          "number": "29/2026/TT-NHNN"
+        },
+        {
+          "dir": "in",
+          "in_release": true,
+          "key": "vn:vbpl:167991",
+          "kind": "repeals",
+          "number": "12/2024/TT-NHNN"
+        },
+        {
+          "dir": "out",
+          "in_release": true,
+          "key": "vn:vbpl:118230",
+          "kind": "amends_supplements",
+          "number": "39/2016/TT-NHNN"
+        },
+        {
+          "dir": "in",
+          "in_release": true,
+          "key": "vn:vbpl:164710",
+          "kind": "consolidates",
+          "number": "18/VBHN-NHNN"
+        },
+        {
+          "dir": "out",
+          "in_release": true,
+          "key": "vn:vbpl:157663",
+          "kind": "legal_basis",
+          "number": "102/2022/NĐ-CP"
+        }
+      ],
+      "related_counts": {
+        "in:consolidates": 1,
+        "in:repeals": 2,
+        "out:amends_supplements": 1,
+        "out:legal_basis": 4
+      },
+      "status": {
+        "basis": "source_status",
+        "class": "partial",
+        "current": true,
+        "status_basis": "source_status"
+      },
+      "text_complete": true,
+      "text_source": "source_tree",
+      "title": "Thông tư số 06/2023/TT-NHNN Sửa đổi, bổ sung một số điều của Thông tư số 39/2016/TT-NHNN \nngày 30 tháng 12 năm 2016 của Thống đốc Ngân hàng Nhà nước\nViệt Nam quy định về hoạt động cho vay của tổ chức tín dụng,\nchi nhánh ngân hàng nước ngoài đối với khách hàng",
+      "type": "Thông tư"
+    },
+    "vn:vbpl:168578": {
+      "effective_from": "2024-07-17",
+      "issued": "2024-07-17",
+      "issuer": "Ngân hàng Nhà nước Việt Nam",
+      "number": "40/2024/TT-NHNN",
+      "related": [
+        {
+          "dir": "out",
+          "in_release": true,
+          "key": "vn:vbpl:139072",
+          "kind": "replaces",
+          "number": "23/2019/TT-NHNN"
+        },
+        {
+          "dir": "out",
+          "in_release": true,
+          "key": "vn:vbpl:44361",
+          "kind": "replaces",
+          "number": "39/2014/TT-NHNN"
+        },
+        {
+          "dir": "in",
+          "in_release": true,
+          "key": "vn:vbpl:183319",
+          "kind": "amends_supplements",
+          "number": "41/2025/TT-NHNN"
+        },
+        {
+          "dir": "in",
+          "in_release": true,
+          "key": "vn:vbpl:e1ff68d0-73ab-11f1-8703-2379f653f630",
+          "kind": "consolidates",
+          "number": "76/VBHN-NHNN"
+        },
+        {
+          "dir": "in",
+          "in_release": true,
+          "key": "vn:vbpl:186078",
+          "kind": "consolidates",
+          "number": "29/VBHN-NHNN"
+        }
+      ],
+      "related_counts": {
+        "in:amends_supplements": 1,
+        "in:consolidates": 2,
+        "out:legal_basis": 4,
+        "out:replaces": 2
+      },
+      "status": {
+        "basis": "source_status",
+        "class": "partial",
+        "current": true,
+        "status_basis": "source_status"
+      },
+      "text_complete": true,
+      "text_source": "source_tree",
+      "title": "Thông tư số 40/2024/TT-NHNN Quy định về hoạt động cung ứng dịch vụ trung gian thanh toán",
+      "type": "Thông tư"
+    },
+    "vn:vbpl:171687": {
+      "effective_from": "2025-01-01",
+      "issued": "2024-10-31",
+      "issuer": "Ngân hàng Nhà nước Việt Nam",
+      "number": "50/2024/TT-NHNN",
+      "related": [
+        {
+          "dir": "out",
+          "in_release": true,
+          "key": "vn:vbpl:144532",
+          "kind": "repeals",
+          "number": "09/2020/TT-NHNN"
+        },
+        {
+          "dir": "out",
+          "in_release": true,
+          "key": "vn:vbpl:132734",
+          "kind": "replaces",
+          "number": "35/2018/TT-NHNN"
+        },
+        {
+          "dir": "out",
+          "in_release": true,
+          "key": "vn:vbpl:117031",
+          "kind": "replaces",
+          "number": "35/2016/TT-NHNN"
+        },
+        {
+          "dir": "in",
+          "in_release": true,
+          "key": "vn:vbpl:186058",
+          "kind": "amends_supplements",
+          "number": "77/2025/TT-NHNN"
+        },
+        {
+          "dir": "out",
+          "in_release": true,
+          "key": "vn:vbpl:166170",
+          "kind": "legal_basis",
+          "number": "32/2024/QH15"
+        }
+      ],
+      "related_counts": {
+        "in:amends_supplements": 1,
+        "out:legal_basis": 6,
+        "out:repeals": 1,
+        "out:replaces": 2
+      },
+      "status": {
+        "basis": "source_status",
+        "class": "partial",
+        "current": true,
+        "status_basis": "source_status"
+      },
+      "text_complete": true,
+      "text_source": "source_tree",
+      "title": "Thông tư số 50/2024/TT-NHNN Quy định về an toàn, bảo mật cho việc cung cấp dịch vụ trực tuyến trong ngành Ngân hàng",
+      "type": "Thông tư"
+    },
+    "vn:vbpl:185857": {
+      "effective_from": "2026-01-01",
+      "issued": "2025-12-31",
+      "issuer": "Chính phủ",
+      "number": "368/2025/NĐ-CP",
+      "related": [
+        {
+          "dir": "out",
+          "in_release": true,
+          "key": "vn:vbpl:179292",
+          "kind": "legal_basis",
+          "number": "96/2025/QH15"
+        },
+        {
+          "dir": "out",
+          "in_release": true,
+          "key": "vn:vbpl:175258",
+          "kind": "legal_basis",
+          "number": "63/2025/QH15"
+        },
+        {
+          "dir": "out",
+          "in_release": true,
+          "key": "vn:vbpl:166170",
+          "kind": "legal_basis",
+          "number": "32/2024/QH15"
+        },
+        {
+          "dir": "out",
+          "in_release": true,
+          "key": "vn:vbpl:165912",
+          "kind": "legal_basis",
+          "number": "24/2023/QH15"
+        },
+        {
+          "dir": "out",
+          "in_release": true,
+          "key": "vn:vbpl:157721",
+          "kind": "legal_basis",
+          "number": "14/2022/QH15"
+        }
+      ],
+      "related_counts": {
+        "out:legal_basis": 7
+      },
+      "status": {
+        "basis": "source_status",
+        "class": "in_force",
+        "current": true,
+        "status_basis": "source_status"
+      },
+      "text_complete": true,
+      "text_source": "source_tree",
+      "title": "Nghị định số 368/2025/NĐ-CP Quy định về hoạt động cung ứng dịch vụ Tiền di động",
+      "type": "Nghị định"
+    },
+    "vn:vbpl:186058": {
+      "effective_from": "2025-03-01",
+      "issued": "2025-12-31",
+      "issuer": "Ngân hàng Nhà nước Việt Nam",
+      "number": "77/2025/TT-NHNN",
+      "related": [
+        {
+          "dir": "out",
+          "in_release": true,
+          "key": "vn:vbpl:171687",
+          "kind": "amends_supplements",
+          "number": "50/2024/TT-NHNN"
+        },
+        {
+          "dir": "out",
+          "in_release": true,
+          "key": "vn:vbpl:175337",
+          "kind": "legal_basis",
+          "number": "26/2025/NĐ-CP"
+        },
+        {
+          "dir": "out",
+          "in_release": true,
+          "key": "vn:vbpl:166170",
+          "kind": "legal_basis",
+          "number": "32/2024/QH15"
+        },
+        {
+          "dir": "out",
+          "in_release": true,
+          "key": "vn:vbpl:165913",
+          "kind": "legal_basis",
+          "number": "20/2023/QH15"
+        },
+        {
+          "dir": "out",
+          "in_release": true,
+          "key": "vn:vbpl:132957",
+          "kind": "legal_basis",
+          "number": "24/2018/QH14"
+        }
+      ],
+      "related_counts": {
+        "out:amends_supplements": 1,
+        "out:legal_basis": 6
+      },
+      "status": {
+        "basis": "source_status",
+        "class": "in_force",
+        "current": true,
+        "status_basis": "source_status"
+      },
+      "text_complete": true,
+      "text_source": "source_tree",
+      "title": "Thông tư số 77/2025/TT-NHNN Sửa đổi, bổ sung một số điều của Thông tư số 50/2024/TT-NHNN của Thống đốc Ngân hàng Nhà nước Việt Nam quy định về an toàn, bảo mật cho việc cung cấp dịch vụ trực tuyến trong ngành Ngân hàng",
+      "type": "Thông tư"
+    },
+    "vn:vbpl:46996": {
+      "effective_from": "2015-04-01",
+      "issued": "2014-12-31",
+      "issuer": "Ngân hàng Nhà nước Việt Nam",
+      "number": "47/2014/TT-NHNN",
+      "related": [
+        {
+          "dir": "in",
+          "in_release": true,
+          "key": "vn:vbpl:131436",
+          "kind": "repeals",
+          "number": "24/2018/TT-NHNN"
+        },
+        {
+          "dir": "in",
+          "in_release": true,
+          "key": "vn:vbpl:145780",
+          "kind": "amends_supplements",
+          "number": "20/2020/TT-NHNN"
+        },
+        {
+          "dir": "in",
+          "in_release": true,
+          "key": "vn:vbpl:146349",
+          "kind": "consolidates",
+          "number": "02/VBHN-NHNN"
+        },
+        {
+          "dir": "out",
+          "in_release": true,
+          "key": "vn:vbpl:30443",
+          "kind": "implements",
+          "number": "101/2012/NĐ-CP"
+        },
+        {
+          "dir": "out",
+          "in_release": true,
+          "key": "vn:vbpl:25692",
+          "kind": "implements",
+          "number": "46/2010/QH12"
+        }
+      ],
+      "related_counts": {
+        "in:amends_supplements": 1,
+        "in:consolidates": 1,
+        "in:repeals": 1,
+        "out:implements": 5,
+        "out:legal_basis": 6
+      },
+      "status": {
+        "basis": "source_status",
+        "class": "partial",
+        "current": true,
+        "status_basis": "source_status"
+      },
+      "text_complete": true,
+      "text_source": "source_tree",
+      "title": "Thông tư số 47/2014/TT-NHNN Quy định các yêu cầu kỹ thuật về an toàn bảo mật đối với trang thiết bị phục vụ thanh toán thẻ ngân hàng",
+      "type": "Thông tư"
+    },
+    "vn:vbpl:47660": {
+      "effective_from": "2013-03-01",
+      "issued": "2012-12-28",
+      "issuer": "Ngân hàng Nhà nước Việt Nam",
+      "number": "36/2012/TT-NHNN",
+      "related": [
+        {
+          "dir": "in",
+          "in_release": true,
+          "key": "vn:vbpl:114612",
+          "kind": "repeals",
+          "number": "30/2016/TT-NHNN"
+        },
+        {
+          "dir": "in",
+          "in_release": true,
+          "key": "vn:vbpl:164602",
+          "kind": "amends_supplements",
+          "number": "21/2023/TT-NHNN"
+        },
+        {
+          "dir": "in",
+          "in_release": true,
+          "key": "vn:vbpl:137583",
+          "kind": "amends_supplements",
+          "number": "14/2019/TT-NHNN"
+        },
+        {
+          "dir": "in",
+          "in_release": true,
+          "key": "vn:vbpl:132899",
+          "kind": "amends_supplements",
+          "number": "44/2018/TT-NHNN"
+        },
+        {
+          "dir": "in",
+          "in_release": true,
+          "key": "vn:vbpl:111956",
+          "kind": "amends_supplements",
+          "number": "20/2016/TT-NHNN"
+        }
+      ],
+      "related_counts": {
+        "in:amends_supplements": 4,
+        "in:consolidates": 5,
+        "in:repeals": 1,
+        "out:implements": 4,
+        "out:legal_basis": 5
+      },
+      "status": {
+        "basis": "source_status",
+        "class": "partial",
+        "current": true,
+        "status_basis": "source_status"
+      },
+      "text_complete": true,
+      "text_source": "source_tree",
+      "title": "Thông tư số 36/2012/TT-NHNN Quy định về trang bị, quản lý, vận hành và đảm bảo an toàn hoạt động của máy giao dịch tự động",
+      "type": "Thông tư"
+    },
+    "vn:vbpl:e1ff68d0-73ab-11f1-8703-2379f653f630": {
+      "issued": "2026-05-26",
+      "issuer": "Ngân hàng Nhà nước Việt Nam",
+      "number": "76/VBHN-NHNN",
+      "related": [
+        {
+          "dir": "out",
+          "in_release": true,
+          "key": "vn:vbpl:168578",
+          "kind": "consolidates",
+          "number": "40/2024/TT-NHNN"
+        }
+      ],
+      "related_counts": {
+        "out:consolidates": 1
+      },
+      "status": {
+        "basis": "source_status",
+        "class": "in_force",
+        "current": true,
+        "status_basis": "derived_from_consolidated"
+      },
+      "text_complete": true,
+      "text_source": "source_tree",
+      "title": "Văn bản hợp nhất số 76/VBHN-NHNN Quy định về hoạt động cung ứng dịch vụ trung gian thanh toán",
+      "type": "Văn bản hợp nhất"
+    }
+  },
+  "hits": [
+    {
+      "citation": "Điều 25, Khoản 1",
+      "complete": false,
+      "doc": "vn:vbpl:144532",
+      "handle": "vn:vbpl:144532#dieu-25/khoan-1",
+      "path": [
+        {
+          "anchor": "chuong-ii",
+          "heading": "CÁC QUY ĐỊNH VỀ BẢO ĐẢM AN TOÀN THÔNG TIN",
+          "label": "Chương II"
+        },
+        {
+          "anchor": "chuong-ii/muc-4",
+          "heading": "QUẢN LÝ VẬN HÀNH VÀ TRAO ĐỔI THÔNG TIN",
+          "label": "Mục 4"
+        },
+        {
+          "anchor": "dieu-25",
+          "heading": "Quản lý hệ thống thông tin cung cấp dịch vụ giao dịch trực tuyến",
+          "label": "Điều 25"
+        },
+        {
+          "anchor": "dieu-25/khoan-1",
+          "label": "Khoản 1"
+        }
+      ],
+      "snippet": "Điều 25. Quản lý hệ thống thông tin cung cấp dịch vụ giao dịch trực tuyến\n1. Hệ thống thông tin cung cấp dịch vụ trực tuyến cho khách hàng phải tuân thủ tiêu chuẩn TCVN 11930:2017 (tiêu chuẩn Công nghệ thông tin - Các kỹ thuật an toàn - Yêu cầu cơ bản về an toàn hệ thống thông tin theo cấp độ) và các yêu cầu sau:\na) Bảo đảm tính toàn vẹn của dữ liệu trao đổi với khách hàng trong giao dịch trực tuyến;\nb) Dữ liệu trên đường truyền phải bảo đảm tính bí mật và phải được truyền đầy đủ, đúng địa chỉ và có biện pháp bảo vệ để phát hiện các thay đổi hoặc sao chép trái phép;\nc) Đánh giá cấp độ rủi […]"
+    },
+    {
+      "citation": "Điều 1",
+      "complete": false,
+      "doc": "vn:vbpl:171687",
+      "handle": "vn:vbpl:171687#dieu-1",
+      "path": [
+        {
+          "anchor": "chuong-i",
+          "heading": "QUY ĐỊNH CHUNG",
+          "label": "Chương I"
+        },
+        {
+          "anchor": "dieu-1",
+          "heading": "Phạm vi điều chỉnh và đối tượng áp dụng",
+          "label": "Điều 1"
+        }
+      ],
+      "snippet": "Điều 1. Phạm vi điều chỉnh và đối tượng áp dụng\n1. Phạm vi điều chỉnh\nThông tư này quy định các yêu cầu bảo đảm an toàn, bảo mật cho việc cung cấp dịch vụ trực tuyến trong ngành Ngân hàng, bao gồm:\na) Hoạt động ngân hàng và các hoạt động kinh doanh khác của tổ chức tín dụng, chi nhánh ngân hàng nước ngoài;\nb) Hoạt động cung ứng dịch vụ trung gian thanh toán;\nc) Hoạt động thông tin tín dụng.\n2. Đối tượng áp dụng\nThông tư này áp dụng đối với các tổ chức tín dụng, chi nhánh ngân hàng nước ngoài, tổ chức cung ứng dịch vụ trung gian thanh toán, công ty thông tin tín dụng (sau đây gọi chung là […]"
+    },
+    {
+      "citation": "Điều 3, Khoản 1",
+      "complete": false,
+      "doc": "vn:vbpl:171687",
+      "handle": "vn:vbpl:171687#dieu-3/khoan-1",
+      "path": [
+        {
+          "anchor": "chuong-i",
+          "heading": "QUY ĐỊNH CHUNG",
+          "label": "Chương I"
+        },
+        {
+          "anchor": "dieu-3",
+          "heading": "Nguyên tắc chung về bảo đảm an toàn, bảo mật hệ thống thông tin cho việc cung cấp dịch vụ Online Banking",
+          "label": "Điều 3"
+        },
+        {
+          "anchor": "dieu-3/khoan-1",
+          "label": "Khoản 1"
+        }
+      ],
+      "snippet": "Điều 3. Nguyên tắc chung về bảo đảm an toàn, bảo mật hệ thống thông tin cho việc cung cấp dịch vụ Online Banking\n1. Hệ thống Online Banking phải tuân thủ quy định về bảo đảm an toàn hệ thống thông tin cấp độ 3 trở lên theo quy định của pháp luật về bảo đảm an toàn hệ thống thông tin theo cấp độ, đối với hệ thống thông tin cung cấp dịch vụ chuyển mạch tài chính, dịch vụ bù trừ điện tử phải tuân thủ quy định về bảo đảm an toàn hệ thống thông tin cấp độ 4 trở lên; tuân thủ tiêu chuẩn TCVN 11930:2017 (tiêu chuẩn Công nghệ thông tin - Các kỹ thuật an toàn - Yêu cầu cơ bản về an toàn hệ thống […]"
+    },
+    {
+      "citation": "Điều 18, Khoản 3",
+      "complete": true,
+      "doc": "vn:vbpl:185857",
+      "handle": "vn:vbpl:185857#dieu-18/khoan-3",
+      "path": [
+        {
+          "anchor": "chuong-ii",
+          "heading": "HOẠT ĐỘNG CUNG ỨNG DỊCH VỤ TIỀN DI ĐỘNG",
+          "label": "Chương II"
+        },
+        {
+          "anchor": "chuong-ii/muc-1",
+          "heading": "MỞ VÀ SỬ DỤNG TÀI KHOẢN TIỀN DI ĐỘNG",
+          "label": "Mục 1"
+        },
+        {
+          "anchor": "dieu-18",
+          "heading": "Các biện pháp đảm bảo an toàn khi cung ứng dịch vụ Tiền di động cho khách hàng",
+          "label": "Điều 18"
+        },
+        {
+          "anchor": "dieu-18/khoan-3",
+          "label": "Khoản 3"
+        }
+      ],
+      "snippet": "Điều 18. Các biện pháp đảm bảo an toàn khi cung ứng dịch vụ Tiền di động cho khách hàng\n3. Tổ chức cung ứng dịch vụ Tiền di động phải tuân thủ yêu cầu về an toàn, bảo mật cho việc cung cấp dịch vụ trực tuyến trong ngành ngân hàng; triển khai các giải pháp an toàn, bảo mật trong thanh toán trực tuyến và thanh toán thẻ ngân hàng."
+    },
+    {
+      "citation": "Điều 3, Khoản 2",
+      "complete": true,
+      "doc": "vn:vbpl:171687",
+      "handle": "vn:vbpl:171687#dieu-3/khoan-2",
+      "path": [
+        {
+          "anchor": "chuong-i",
+          "heading": "QUY ĐỊNH CHUNG",
+          "label": "Chương I"
+        },
+        {
+          "anchor": "dieu-3",
+          "heading": "Nguyên tắc chung về bảo đảm an toàn, bảo mật hệ thống thông tin cho việc cung cấp dịch vụ Online Banking",
+          "label": "Điều 3"
+        },
+        {
+          "anchor": "dieu-3/khoan-2",
+          "label": "Khoản 2"
+        }
+      ],
+      "snippet": "Điều 3. Nguyên tắc chung về bảo đảm an toàn, bảo mật hệ thống thông tin cho việc cung cấp dịch vụ Online Banking\n2. Bảo đảm tính bí mật, tính toàn vẹn của thông tin khách hàng; bảo đảm tính sẵn sàng của hệ thống Online Banking để cung cấp dịch vụ một cách liên tục."
+    },
+    {
+      "citation": "Điều 9, Khoản 3",
+      "complete": true,
+      "doc": "vn:vbpl:e1ff68d0-73ab-11f1-8703-2379f653f630",
+      "gaps": [
+        {
+          "anchor": "dieu-9/khoan-3",
+          "document_key": "vn:vbpl:e1ff68d0-73ab-11f1-8703-2379f653f630",
+          "kind": "missing_effective_date",
+          "message": "Effective start date is missing."
+        }
+      ],
+      "handle": "vn:vbpl:e1ff68d0-73ab-11f1-8703-2379f653f630#dieu-9/khoan-3",
+      "path": [
+        {
+          "anchor": "chuong-i",
+          "label": "Chương I"
+        },
+        {
+          "anchor": "dieu-9",
+          "heading": "Đảm bảo an toàn trong cung ứng dịch vụ trung gian thanh toán",
+          "label": "Điều 9"
+        },
+        {
+          "anchor": "dieu-9/khoan-3",
+          "label": "Khoản 3"
+        }
+      ],
+      "snippet": "Điều 9. Đảm bảo an toàn trong cung ứng dịch vụ trung gian thanh toán\n3. Tổ chức cung ứng dịch vụ trung gian thanh toán phải tuân thủ yêu cầu kỹ thuật về an toàn bảo mật đối với trang thiết bị phục vụ thanh toán thẻ ngân hàng; yêu cầu về an toàn hệ thống thông tin trong hoạt động ngân hàng; yêu cầu về an toàn, bảo mật cho việc cung cấp dịch vụ trực tuyến trong ngành ngân hàng; triển khai các giải pháp an toàn, bảo mật trong thanh toán trực tuyến và thanh toán thẻ ngân hàng."
+    },
+    {
+      "citation": "Điều 9, Khoản 3",
+      "complete": true,
+      "doc": "vn:vbpl:168578",
+      "handle": "vn:vbpl:168578#dieu-9/khoan-3",
+      "path": [
+        {
+          "anchor": "chuong-i",
+          "heading": "QUY ĐỊNH CHUNG",
+          "label": "Chương I"
+        },
+        {
+          "anchor": "dieu-9",
+          "heading": "Đảm bảo an toàn trong cung ứng dịch vụ trung gian thanh toán",
+          "label": "Điều 9"
+        },
+        {
+          "anchor": "dieu-9/khoan-3",
+          "label": "Khoản 3"
+        }
+      ],
+      "snippet": "Điều 9. Đảm bảo an toàn trong cung ứng dịch vụ trung gian thanh toán\n3. Tổ chức cung ứng dịch vụ trung gian thanh toán phải tuân thủ yêu cầu kỹ thuật về an toàn bảo mật đối với trang thiết bị phục vụ thanh toán thẻ ngân hàng; yêu cầu về an toàn hệ thống thông tin trong hoạt động ngân hàng; yêu cầu về an toàn, bảo mật cho việc cung cấp dịch vụ trực tuyến trong ngành ngân hàng; triển khai các giải pháp an toàn, bảo mật trong thanh toán trực tuyến và thanh toán thẻ ngân hàng."
+    },
+    {
+      "citation": "Điều 7, Khoản 6",
+      "complete": true,
+      "doc": "vn:vbpl:127395",
+      "handle": "vn:vbpl:127395#dieu-7/khoan-6",
+      "path": [
+        {
+          "anchor": "chuong-ii",
+          "heading": "HOẠT ĐỘNG GIAO DỊCH CHỨNG KHOÁN TRỰC TUYẾN",
+          "label": "Chương II"
+        },
+        {
+          "anchor": "chuong-ii/muc-1",
+          "heading": "YÊU CẦU DỊCH VỤ, HẠ TẦNG KỸ THUẬT, AN NINH BẢO MẬT VÀ LƯU TRỮ DỮ LIỆU",
+          "label": "Mục 1"
+        },
+        {
+          "anchor": "dieu-7",
+          "heading": "Quy định về an ninh bảo mật thông tin và lưu trữ dữ liệu của tổ chức cung cấp dịch vụ giao dịch chứng khoán trực tuyến",
+          "label": "Điều 7"
+        },
+        {
+          "anchor": "dieu-7/khoan-6",
+          "label": "Khoản 6"
+        }
+      ],
+      "snippet": "Điều 7. Quy định về an ninh bảo mật thông tin và lưu trữ dữ liệu của tổ chức cung cấp dịch vụ giao dịch chứng khoán trực tuyến\n6. Thông tin về khách hàng sử dụng dịch vụ giao dịch trực tuyến, các lệnh giao dịch và thông tin trao đổi trên hệ thống phải được mã hóa trên đường truyền và ở mức ứng dụng, được bảo mật theo quy định của pháp luật trừ khi có yêu cầu từ cơ quan quản lý nhà nước có thẩm quyền."
+    },
+    {
+      "citation": "Điều 25, Khoản 4",
+      "complete": true,
+      "doc": "vn:vbpl:144532",
+      "handle": "vn:vbpl:144532#dieu-25/khoan-4",
+      "path": [
+        {
+          "anchor": "chuong-ii",
+          "heading": "CÁC QUY ĐỊNH VỀ BẢO ĐẢM AN TOÀN THÔNG TIN",
+          "label": "Chương II"
+        },
+        {
+          "anchor": "chuong-ii/muc-4",
+          "heading": "QUẢN LÝ VẬN HÀNH VÀ TRAO ĐỔI THÔNG TIN",
+          "label": "Mục 4"
+        },
+        {
+          "anchor": "dieu-25",
+          "heading": "Quản lý hệ thống thông tin cung cấp dịch vụ giao dịch trực tuyến",
+          "label": "Điều 25"
+        },
+        {
+          "anchor": "dieu-25/khoan-4",
+          "label": "Khoản 4"
+        }
+      ],
+      "snippet": "Điều 25. Quản lý hệ thống thông tin cung cấp dịch vụ giao dịch trực tuyến\n4. Khi cung cấp phần mềm ứng dụng giao dịch trực tuyến trên Internet, tổ chức phải áp dụng các biện pháp bảo đảm tính toàn vẹn của phần mềm."
+    },
+    {
+      "citation": "Điều 5, Khoản 2",
+      "complete": false,
+      "doc": "vn:vbpl:127395",
+      "handle": "vn:vbpl:127395#dieu-5/khoan-2",
+      "path": [
+        {
+          "anchor": "chuong-ii",
+          "heading": "HOẠT ĐỘNG GIAO DỊCH CHỨNG KHOÁN TRỰC TUYẾN",
+          "label": "Chương II"
+        },
+        {
+          "anchor": "chuong-ii/muc-1",
+          "heading": "YÊU CẦU DỊCH VỤ, HẠ TẦNG KỸ THUẬT, AN NINH BẢO MẬT VÀ LƯU TRỮ DỮ LIỆU",
+          "label": "Mục 1"
+        },
+        {
+          "anchor": "dieu-5",
+          "heading": "Yêu cầu về dịch vụ",
+          "label": "Điều 5"
+        },
+        {
+          "anchor": "dieu-5/khoan-2",
+          "label": "Khoản 2"
+        }
+      ],
+      "snippet": "Điều 5. Yêu cầu về dịch vụ\n2. Đối với công ty chứng khoán cung cấp dịch vụ giao dịch chứng khoán trực tuyến: […] đ) Việc cung cấp và sử dụng dịch vụ giao dịch chứng khoán trực tuyến với nhà đầu tư phải được thể hiện bằng hợp đồng hoặc điều khoản của hợp đồng mở tài khoản giao dịch chứng khoán, trong đó quy định cụ thể về phương thức giao dịch chứng khoán trực tuyến, những rủi ro có thể xảy ra khi thực hiện giao dịch chứng khoán trực tuyến theo quy định tại khoản 1 Điều 15 Thông tư này, trách nhiệm bồi thường của mỗi bên khi xảy ra rủi ro và trách nhiệm khác liên quan đến hoạt động giao […]"
+    },
+    {
+      "citation": "Điều 4, Khoản 3",
+      "complete": true,
+      "doc": "vn:vbpl:186058",
+      "handle": "vn:vbpl:186058#dieu-4/khoan-3",
+      "path": [
+        {
+          "anchor": "dieu-4",
+          "heading": "Sửa đổi, bổ sung một số điểm, khoản của Điều 7",
+          "label": "Điều 4"
+        },
+        {
+          "anchor": "dieu-4/khoan-3",
+          "label": "Khoản 3"
+        }
+      ],
+      "snippet": "Điều 4. Sửa đổi, bổ sung một số điểm, khoản của Điều 7\n3. Sửa đổi, bổ sung điểm b khoản 8 Điều 7 như sau:\n“b) Phần mềm ứng dụng Online Banking phải có chức năng xác thực kết nối với phần mềm của khách hàng tổ chức để bảo đảm an toàn, bảo mật, chống gian lận, giả mạo theo tiêu chuẩn, quy chuẩn quốc tế hoặc Việt Nam;”."
+    },
+    {
+      "citation": "Điều 1, Khoản 11",
+      "complete": false,
+      "doc": "vn:vbpl:160901",
+      "handle": "vn:vbpl:160901#dieu-1/khoan-11",
+      "path": [
+        {
+          "anchor": "dieu-1",
+          "heading": "Sửa đổi, bổ sung một số điều của Thông tư số 39/2016/TT-NHNN",
+          "label": "Điều 1"
+        },
+        {
+          "anchor": "dieu-1/khoan-11",
+          "label": "Khoản 11"
+        }
+      ],
+      "snippet": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư số 39/2016/TT-NHNN […] 3. Tổ chức tín dụng phải lưu trữ, bảo quản thông tin, dữ liệu theo quy định của pháp luật, đảm bảo an toàn, bảo mật và được sao lưu dự phòng đảm bảo tính đầy đủ, toàn vẹn của hồ sơ cho phép truy cập, sử dụng khi cần thiết hoặc để phục vụ công tác kiểm tra, đối chiếu, giải quyết tra soát, khiếu nại, tranh chấp và cung cấp thông tin khi có yêu cầu từ cơ quan quản lý nhà nước có thẩm quyền.\n4. Tổ chức tín dụng tự quyết định biện pháp, hình thức, công nghệ phục vụ hoạt động cho vay bằng phương tiện điện tử, tự chịu rủi ro […]"
+    },
+    {
+      "citation": "Điều 4, Khoản 1",
+      "complete": false,
+      "doc": "vn:vbpl:186058",
+      "handle": "vn:vbpl:186058#dieu-4/khoan-1",
+      "path": [
+        {
+          "anchor": "dieu-4",
+          "heading": "Sửa đổi, bổ sung một số điểm, khoản của Điều 7",
+          "label": "Điều 4"
+        },
+        {
+          "anchor": "dieu-4/khoan-1",
+          "label": "Khoản 1"
+        }
+      ],
+      "snippet": "Điều 4. Sửa đổi, bổ sung một số điểm, khoản của Điều 7\n1. Sửa đổi, bổ sung điểm c khoản 3 Điều 7 như sau:\n“c) Đánh giá, dò quét phát hiện lỗ hổng, điểm yếu về mặt kỹ thuật. Đánh giá khả năng phòng, chống các lỗ hổng, điểm yếu, kiểu tấn công bảo đảm tối thiểu các yêu cầu sau:\n(i) Đối với phần mềm ứng dụng Online Banking cung cấp qua nền tảng web, phải phòng, chống 10 lỗ hổng phổ biến nhất được công bố bởi tổ chức OWASP (OWASP Top Ten).\n(ii) Đối với phần mềm ứng dụng Mobile Banking, đáp ứng tối thiểu các yêu cầu về an toàn bảo mật ứng dụng di động do tổ chức OWASP công bố (OWASP Mobile […]"
+    },
+    {
+      "citation": "Điều 5",
+      "complete": false,
+      "doc": "vn:vbpl:145859",
+      "handle": "vn:vbpl:145859#dieu-5",
+      "path": [
+        {
+          "anchor": "chuong-i",
+          "heading": "QUY ĐỊNH CHUNG",
+          "label": "Chương I"
+        },
+        {
+          "anchor": "dieu-5",
+          "heading": "Hệ thống công nghệ thông tin",
+          "label": "Điều 5"
+        }
+      ],
+      "snippet": "Điều 5. Hệ thống công nghệ thông tin\nTổ chức tín dụng phi ngân hàng phải có hệ thống công nghệ thông tin được kết nối toàn hệ thống để thực hiện các quy định tại Thông tư này, đảm bảo các yêu cầu tối thiểu sau:\n1. Lưu giữ, truy cập, bổ sung cơ sở dữ liệu về khách hàng, thị trường, bảo đảm quản lý rủi ro theo quy định của Ngân hàng Nhà nước và quy định nội bộ của tổ chức tín dụng phi ngân hàng.\n2. Thống kê, theo dõi, quản lý dòng tiền, các khoản mục vốn, tài sản, nợ phải trả; tính toán, quản lý, giám sát các giới hạn, tỷ lệ bảo đảm an toàn trong hoạt động.\n3. Thực hiện chế độ báo cáo thống […]"
+    },
+    {
+      "citation": "Điều 6, Khoản 2",
+      "complete": false,
+      "doc": "vn:vbpl:130985",
+      "handle": "vn:vbpl:130985#dieu-6/khoan-2",
+      "path": [
+        {
+          "anchor": "chuong-ii",
+          "heading": "QUY ĐỊNH CỤ THỂ",
+          "label": "Chương II"
+        },
+        {
+          "anchor": "chuong-ii/muc-1",
+          "heading": "VIỆC GIỮ BÍ MẬT, CUNG CẤP THÔNG TIN KHÁCH HÀNG CHO CƠ QUAN NHÀ NƯỚC",
+          "label": "Mục 1"
+        },
+        {
+          "anchor": "dieu-6",
+          "heading": "Hình thức yêu cầu, cung cấp thông tin khách hàng",
+          "label": "Điều 6"
+        },
+        {
+          "anchor": "dieu-6/khoan-2",
+          "label": "Khoản 2"
+        }
+      ],
+      "snippet": "Điều 6. Hình thức yêu cầu, cung cấp thông tin khách hàng\n2. Giao nhận thông tin khách hàng: […] b) Đối với hình thức gián tiếp thông qua phương tiện điện tử, hệ thống mạng viễn thông và mạng máy tính: việc truyền, nhận, cung cấp, lưu trữ thông tin khách hàng phải bảo đảm an toàn thông tin và tuân thủ trình tự, thủ tục theo quy định của pháp luật về giao dịch điện tử, an toàn thông tin mạng, hướng dẫn của tổ chức tín dụng, chi nhánh ngân hàng nước ngoài;\nc) Đối với hình thức trực tiếp: việc giao nhận thông tin khách hàng phải được lập thành biên bản, có con dấu, chữ ký của người có thẩm […]"
+    },
+    {
+      "citation": "Điều 5, Khoản 3",
+      "complete": true,
+      "doc": "vn:vbpl:127395",
+      "handle": "vn:vbpl:127395#dieu-5/khoan-3",
+      "path": [
+        {
+          "anchor": "chuong-ii",
+          "heading": "HOẠT ĐỘNG GIAO DỊCH CHỨNG KHOÁN TRỰC TUYẾN",
+          "label": "Chương II"
+        },
+        {
+          "anchor": "chuong-ii/muc-1",
+          "heading": "YÊU CẦU DỊCH VỤ, HẠ TẦNG KỸ THUẬT, AN NINH BẢO MẬT VÀ LƯU TRỮ DỮ LIỆU",
+          "label": "Mục 1"
+        },
+        {
+          "anchor": "dieu-5",
+          "heading": "Yêu cầu về dịch vụ",
+          "label": "Điều 5"
+        },
+        {
+          "anchor": "dieu-5/khoan-3",
+          "label": "Khoản 3"
+        }
+      ],
+      "snippet": "Điều 5. Yêu cầu về dịch vụ\n3. Công ty quản lý quỹ, đại lý phân phối chứng chỉ quỹ cung cấp dịch vụ giao dịch chứng khoán trực tuyến phải đáp ứng các yêu cầu theo quy định tại điểm a, b, c, đ, e và g khoản 2 Điều này."
+    },
+    {
+      "citation": "Điều 5",
+      "complete": false,
+      "doc": "vn:vbpl:138989",
+      "gaps": [
+        {
+          "anchor": "dieu-5",
+          "document_key": "vn:vbpl:138989",
+          "kind": "relations_omitted",
+          "message": "Read the document for omitted relations."
+        }
+      ],
+      "handle": "vn:vbpl:138989#dieu-5",
+      "path": [
+        {
+          "anchor": "chuong-i",
+          "heading": "QUY ĐỊNH CHUNG",
+          "label": "Chương I"
+        },
+        {
+          "anchor": "dieu-5",
+          "heading": "Hệ thống công nghệ thông tin",
+          "label": "Điều 5"
+        }
+      ],
+      "snippet": "Điều 5. Hệ thống công nghệ thông tin\nNgân hàng, chi nhánh ngân hàng nước ngoài phải có hệ thống công nghệ thông tin được kết nối toàn hệ thống để thực hiện các quy định tại Thông tư này, đảm bảo các yêu cầu tối thiểu sau:\n1. Lưu giữ, truy cập, bổ sung cơ sở dữ liệu về khách hàng, thị trường, bảo đảm quản lý rủi ro theo quy định của Ngân hàng Nhà nước và quy định nội bộ của ngân hàng, chi nhánh ngân hàng nước ngoài.\n2. Thống kê, theo dõi, quản lý dòng tiền, các khoản mục vốn, tài sản, nợ phải trả; tính toán, quản lý, giám sát các giới hạn, tỷ lệ bảo đảm an toàn trong hoạt động.\n3. Thực hiện […]"
+    },
+    {
+      "citation": "Điều 7, Khoản 1",
+      "complete": false,
+      "doc": "vn:vbpl:46996",
+      "handle": "vn:vbpl:46996#dieu-7/khoan-1",
+      "path": [
+        {
+          "anchor": "chuong-iii",
+          "heading": "CÁC YÊU CẦU KỸ THUẬT ĐỐI VỚI ATM",
+          "label": "Chương III"
+        },
+        {
+          "anchor": "dieu-7",
+          "heading": "Các yêu cầu kỹ thuật lắp đặt và an toàn vật lý ATM",
+          "label": "Điều 7"
+        },
+        {
+          "anchor": "dieu-7/khoan-1",
+          "label": "Khoản 1"
+        }
+      ],
+      "snippet": "Điều 7. Các yêu cầu kỹ thuật lắp đặt và an toàn vật lý ATM\n1. Yêu cầu về lắp đặt ATM\na) Tổ chức hoạt động thẻ có cung cấp dịch vụ ATM (sau đây gọi chung là tổ chức cung cấp dịch vụ ATM) phải đảm bảo các yêu cầu về việc lắp đặt ATM theo quy định của Ngân hàng Nhà nước Việt Nam về trang bị, quản lý, vận hành và đảm bảo an toàn hoạt động của ATM;\nb) Đối với ATM đặt bên ngoài\nNgoài các yêu cầu tại Điểm a Khoản 1 Điều này, tổ chức cung cấp dịch vụ ATM thực hiện thêm các biện pháp đảm bảo an toàn cho ATM đặt bên ngoài đối với những nguy cơ mất an toàn vật lý sau:\n- Có biện pháp đảm bảo ATM tránh […]"
+    },
+    {
+      "citation": "Điều 25, Khoản 3",
+      "complete": true,
+      "doc": "vn:vbpl:144532",
+      "handle": "vn:vbpl:144532#dieu-25/khoan-3",
+      "path": [
+        {
+          "anchor": "chuong-ii",
+          "heading": "CÁC QUY ĐỊNH VỀ BẢO ĐẢM AN TOÀN THÔNG TIN",
+          "label": "Chương II"
+        },
+        {
+          "anchor": "chuong-ii/muc-4",
+          "heading": "QUẢN LÝ VẬN HÀNH VÀ TRAO ĐỔI THÔNG TIN",
+          "label": "Mục 4"
+        },
+        {
+          "anchor": "dieu-25",
+          "heading": "Quản lý hệ thống thông tin cung cấp dịch vụ giao dịch trực tuyến",
+          "label": "Điều 25"
+        },
+        {
+          "anchor": "dieu-25/khoan-3",
+          "label": "Khoản 3"
+        }
+      ],
+      "snippet": "Điều 25. Quản lý hệ thống thông tin cung cấp dịch vụ giao dịch trực tuyến\n3. Tổ chức hướng dẫn các biện pháp bảo đảm an toàn thông tin và cảnh báo rủi ro cho khách hàng trước khi tham gia sử dụng dịch vụ giao dịch trực tuyến và theo định kỳ."
+    },
+    {
+      "citation": "Điều 10",
+      "complete": true,
+      "doc": "vn:vbpl:47660",
+      "handle": "vn:vbpl:47660#dieu-10",
+      "path": [
+        {
+          "anchor": "dieu-10",
+          "heading": "Thông tin, báo cáo",
+          "label": "Điều 10"
+        }
+      ],
+      "snippet": "Điều 10. Thông tin, báo cáo\n1. Tổ chức cung ứng dịch vụ thanh toán, chi nhánh Ngân hàng Nhà nước phải thực hiện báo cáo theo chế độ báo cáo thống kê của Ngân hàng Nhà nước Việt Nam và khi có yêu cầu đột xuất của cơ quan có thẩm quyền theo quy định của pháp luật.\n2. Tổ chức cung ứng dịch vụ thanh toán báo cáo việc thực hiện nâng cấp hệ thống ATM; những vấn đề bất thường phát sinh có thể gây rủi ro, mất an toàn trong hệ thống ATM của mình và đối với hệ thống ATM của các tổ chức cung ứng dịch vụ thanh toán khác về Ngân hàng Nhà nước Việt Nam (qua Vụ Thanh toán)."
+    }
+  ],
+  "release": "20261111_2"
+}
