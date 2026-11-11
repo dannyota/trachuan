@@ -36,6 +36,7 @@ export function createApi(options: Options) {
         await response.clone().json()
       }
     } catch {
+      if (request.signal.aborted) throw new DOMException('Aborted', 'AbortError')
       options.onUnavailable?.()
       throw new ApiError('unavailable', 503)
     }
@@ -44,12 +45,14 @@ export function createApi(options: Options) {
     }
     return response
   }
-  async function loadSession(): Promise<void> {
+  async function loadSession(signal?: AbortSignal): Promise<void> {
     if (options.publicRoute) {
       if (options.development) throw new Error('Session lookup on cached public SSR')
       return
     }
-    const response = await send(new Request(new URL('/api/v1/me', options.origin)))
+    signal?.throwIfAborted()
+    const response = await send(new Request(new URL('/api/v1/me', options.origin), { signal }))
+    signal?.throwIfAborted()
     if (response.status === 401) {
       session.account = null
       session.csrfToken = null
@@ -58,6 +61,7 @@ export function createApi(options: Options) {
     }
     if (!response.ok) throw new ApiError('session_failed', response.status)
     const { csrf_token, ...account } = await response.json() as Account
+    signal?.throwIfAborted()
     session.account = account
     session.csrfToken = csrf_token
     session.status = 'signed-in'
@@ -73,11 +77,13 @@ export function createApi(options: Options) {
       if (options.development) throw new Error('Session lookup on cached public SSR')
       return new Response(JSON.stringify({ error: { code: 'unauthenticated', message: 'Session lookup unavailable' } }), { status: 401, headers: { 'content-type': 'application/json' } })
     }
+    input.signal.throwIfAborted()
     const unsafe = !['GET', 'HEAD', 'OPTIONS'].includes(input.method)
     let { accountId, csrfToken } = action
     if (unsafe && ((action.bound && accountId === null) || accountId !== (session.account?.id ?? null))) return accountChanged()
     if (unsafe && !csrfToken) {
-      await loadSession()
+      await loadSession(input.signal)
+      input.signal.throwIfAborted()
       if (accountId !== null && accountId !== session.account?.id) return accountChanged()
       accountId = session.account?.id ?? null
       csrfToken = session.csrfToken
@@ -92,13 +98,17 @@ export function createApi(options: Options) {
       return new Request(input.clone(), { headers })
     }
     let response = await send(makeRequest(csrfToken))
+    if (unsafe) input.signal.throwIfAborted()
     if (unsafe && response.status === 403) {
       const error = await response.clone().json().catch(() => null)
       if (error?.error?.code === 'csrf_rejected') {
-        await loadSession()
+        input.signal.throwIfAborted()
+        await loadSession(input.signal)
+        input.signal.throwIfAborted()
         if (accountId === null || accountId !== session.account?.id || !session.csrfToken) return accountChanged()
         csrfToken = session.csrfToken
         response = await send(makeRequest(csrfToken))
+        input.signal.throwIfAborted()
         if (response.status === 403 && (await response.clone().json().catch(() => null))?.error?.code === 'csrf_rejected') throw new ApiError('csrf_rejected', 403)
       }
     }

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { components } from '@trachuan/schema/gen/openapi'
+import ReportsSection from '../components/ReportsSection.vue'
 import { accountActions } from '../api/account-actions'
 import type { Action } from '../api/client'
 import { useSessionStore } from '../stores/session'
@@ -105,6 +106,7 @@ async function tokenCreated() { try { await loadTokens() } catch { showError() }
         <button type="button" :disabled="busy" @click="revokeGrant(item.id)">{{ messages.revoke }}</button>
       </article>
     </section>
+    <ReportsSection />
     <section><h2>{{ messages.deleteAccount }}</h2><button type="button" @click="openDeletion">{{ messages.deleteAccount }}</button></section>
     <TokenCreateDialog v-if="creating && tokenAction" :action="tokenAction" @close="creating = false" @created="tokenCreated" />
     <AccountDeleteDialog v-if="deleting && deletionAction" :email="deletionEmail" :action="deletionAction" @close="deleting = false" />
