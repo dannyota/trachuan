@@ -40,8 +40,9 @@ choice, and three of them send unaccented queries that ADR 0002 rejects.
 4. Change rule: a recipe or model change targets a named failure class seen in
    case results, such as a per-document cap that drops expected provisions,
    never a parameter grid. It ships when every gate passes on the old product
-   and development cohorts, it gains at least one expected citation within 20
-   hits on either cohort, and recall@20 and MRR@8 fall on neither cohort;
+   and development cohorts, the net count of matched expected citations within
+   20 hits rises on at least one cohort (same fixtures and scoring modes before
+   and after), and recall@20 and MRR@8 fall on neither cohort;
    otherwise the current recipe stays. Recall@20 counts because 20 compact hits
    are what an agent receives by default
    ([ADR 0013](0013-compact-search-and-batch-read.md)). Current-law precision,

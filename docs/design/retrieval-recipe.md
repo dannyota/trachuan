@@ -269,7 +269,7 @@ Threshold provenance and provisional status follow [evaluation](calibration.md).
 `validity:"document-dates/3"`, `default_in_force_only:true`,
 `query_gate:"vn-marks/1"`, `evidence:"source-spans/1"`, `evidence_rune_cap`,
 `relation_cap`, `relation_evidence_rune_cap`,
-`abstention:{statistic:"first-group-best-member-cosine",threshold, status:"provisional-old-product",calibration_sha256}`.
+`abstention:{statistic:"first-group-best-member-cosine",threshold, status:"provisional-old-product"|"old-product+development",calibration_sha256}`.
 Hash compact fixed-field JSON. Serving does not accept arbitrary recipe
 overrides.
 

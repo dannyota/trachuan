@@ -37,7 +37,7 @@
 
 ### Task 1: Development cohort in the suite
 
-**Files:** Modify `apps/corpus/internal/evaluation/{cases.go,fixtures.go,run.go,report.go,metrics_report.go,calibrate.go}` and tests; create `apps/corpus/internal/evaluation/testdata/vn/development.json` (empty array, filled in Task 2).
+**Files:** Modify `apps/corpus/internal/evaluation/{cases.go,fixtures.go,run.go,report.go,metrics_report.go,calibrate.go}` and tests, `apps/corpus/internal/stage/eval/eval.go` (development floor gaps) and `apps/corpus/internal/cli/eval.go` (`--require-floors` covers development); create `apps/corpus/internal/evaluation/testdata/vn/development.json` (empty array, filled in Task 2).
 
 **Interfaces:** Development cases use the legacy case format plus `tags` (from `identifier`, `clause`, `multi_document`, `abbreviation`, `missing_date`, `historical`, `out_of_domain`, `negative`); their identity entries live in `identity-map.json` like old product entries. The report gains `cohorts.development` with the same records and floors as old product; development is `not_run` while the file is empty; the report has no sealed entry. Calibration fits on old product and development together and labels itself `provisional-old-product` or `old-product+development`.
 
@@ -49,7 +49,8 @@
 - [ ] Scenarios: a subagent with only the run's document list (number, title, type, issuer, dates; no provision text) and the tag list writes scenarios `{id, subject, situation, intent, tags, negative}` in Vietnamese, about 50 positive and 15 negative so that drops still leave 30 and 10. A Codex worker on another model removes duplicates and scenarios that name an article or quote text, and records why.
 - [ ] Queries: a fresh subagent that sees only the scenarios writes the one query an agent would send to `search` for each.
 - [ ] Labels: a subagent with read access to the run's corpus database and official sources (VBPL, vanban.chinhphu.vn) labels each positive with expected citations `{doc_number, article?, clause?, point?, alt_doc_numbers?}` and evidence (`fetch_sha256`, node id, quoted span), or reclassifies it negative with a reason; current law at the evaluation date unless tagged `historical`. A Codex worker on another model rechecks every label against its evidence; the executing session settles disagreements from official text.
-- [ ] Show Danny 10 cases and apply his corrections; commit `development.json` and the identity entries; `make eval` on the newest run; record development and old product results.
+- [ ] Show Danny 10 cases and apply his corrections; commit `development.json` and the identity entries.
+- [ ] Rebuild the newest run so calibration fits on both cohorts (status `old-product+development`; eval never refits), then `make eval` on that build; this report is the baseline for Tasks 3 to 5; record development and old product results.
 
 ### Task 3: Per-document cap
 

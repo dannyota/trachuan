@@ -29,8 +29,9 @@ verifies/resolves the build artifact, opens that release, runs exact and ANN
 plus arm controls, and writes the same report/cache as the stage. Exit 0 means
 the diagnostic run completed, including measured floor failures. Exit 1 means
 invalid inputs, infrastructure failure or incomplete scoring. Optional
-`--require-floors` exits 2 for failed or unavailable old-product floors or a
-failed rejection check, for future automation; it cannot turn an incomplete run
+`--require-floors` exits 2 for failed or unavailable old-product or development
+floors or a failed rejection check (development floors that are `not_run`
+because the file is empty do not count), for future automation; it cannot turn an incomplete run
 into a passing report.
 
 Stage key is `<cc>/<rel>`, one item after a done build. Input hash combines
@@ -42,7 +43,8 @@ and floors. It reads but never changes the dump or singleton release row.
 Artifact files: `report.json`, `cases.jsonl`, `arms.jsonl`, `queries.f32`,
 `query-index.json`, `MANIFEST.sha256`. `Rows` is a no-op; `Resolve` exposes the
 report status and regenerates evaluation gaps: one `eval_floor_failed` per
-failed or unavailable old-product floor (detail `<mode>:<metric>`) and one
+failed or unavailable old-product floor (detail `<mode>:<metric>`) or
+development floor (detail `development:<mode>:<metric>`) and one
 `eval_rejection_failed` per failed rejection check (detail the case ID). The
 owner may accept them; release stays blocked by `release_eligible`. No
 production queries enter these artifacts.
@@ -56,7 +58,11 @@ public authored evaluation data, not captured user questions. Copy no matcher
 implementation. `fixtures.json` records its source path, source commit if
 available, byte hash, authoring origin and case count. `old-product.json`
 references the legacy fixture hash and the three rejection IDs, rather than
-duplicating questions or rewriting expectations.
+duplicating questions or rewriting expectations. `development.json` holds the
+development cases in the legacy case format plus a required `tags` list;
+`fixtures.json` records its hash, authoring origin and case count, an empty
+array is valid, and case IDs are unique across legacy and development. Its
+identity entries live in `identity-map.json` beside the old product entries.
 
 Legacy case format is the existing JSON array:
 `{id,question, expected_citations:[{doc_number,article?,clause?,point?,relation_ok?, alt_doc_numbers?}],expect_abstain?,expect_fail?,notes?}`.
@@ -241,7 +247,7 @@ versions; mismatches invalidate reuse.
 `country`, `rel`, `build_artifact_sha256`, `dump_sha256`, `fixture_hashes`,
 `identity_map_sha256`, `recipes`, `evaluation_date`, `request_as_of`,
 `database_instance_kind`, `software`, `calibration`,
-`cohorts:{legacy,old_product}`, `floors`, `rejections`, `coverage`, `ann_loss`,
+`cohorts:{legacy,old_product,development}`, `floors`, `rejections`, `coverage`, `ann_loss`,
 `timings_ms`, `evidence_characters`, `cache_manifest`, `previous_diff`,
 `not_run`, `limitations`, and the counts in
 [scope adoption](scope-adoption.md#readers-and-evaluation). Each metric stores
