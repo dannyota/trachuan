@@ -75,7 +75,7 @@ func TestMigrate_00002PopulatedRoundTrip(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if _, err = provider.Up(ctx); err != nil {
+	if _, err = provider.UpTo(ctx, 2); err != nil {
 		t.Fatal(err)
 	}
 	var id int64
@@ -89,7 +89,7 @@ func TestMigrate_00002PopulatedRoundTrip(t *testing.T) {
 	if err = conn.QueryRow(ctx, `SELECT count(*) FROM personal_token WHERE account_id = $1`, cascade).Scan(&count); err != nil || count != 0 {
 		t.Fatalf("cascade tokens=%d err=%v", count, err)
 	}
-	if _, err = provider.Down(ctx); err != nil {
+	if _, err = provider.DownTo(ctx, 1); err != nil {
 		t.Fatal(err)
 	}
 	_, err = conn.Exec(ctx, `DELETE FROM account WHERE id = $1`, survivor)
@@ -97,7 +97,7 @@ func TestMigrate_00002PopulatedRoundTrip(t *testing.T) {
 	if !errors.As(err, &pgErr) || pgErr.Code != "23503" {
 		t.Fatalf("delete after down: %v, want foreign key violation", err)
 	}
-	if _, err = provider.Up(ctx); err != nil {
+	if _, err = provider.UpTo(ctx, 2); err != nil {
 		t.Fatal(err)
 	}
 	if err = conn.QueryRow(ctx, `SELECT id FROM personal_token WHERE token_hash = $1 AND account_id = $2`, strings.Repeat("a", 64), survivor).Scan(&id); err != nil || id == 0 {

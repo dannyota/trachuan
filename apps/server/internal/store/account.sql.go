@@ -21,6 +21,15 @@ WITH blocked AS (
 ), revoked AS (
     UPDATE personal_token SET revoked_at = now()
     WHERE account_id IN (SELECT id FROM blocked) AND revoked_at IS NULL
+), revoked_grants AS (
+    UPDATE oauth_grant SET revoked_at = COALESCE(revoked_at, now())
+    WHERE account_id IN (SELECT id FROM blocked) RETURNING id
+), revoked_codes AS (
+    UPDATE oauth_code SET revoked_at = COALESCE(revoked_at, now())
+    WHERE grant_id IN (SELECT id FROM revoked_grants)
+), revoked_oauth_tokens AS (
+    UPDATE oauth_token SET revoked_at = COALESCE(revoked_at, now())
+    WHERE grant_id IN (SELECT id FROM revoked_grants)
 )
 SELECT id, google_sub, email, blocked_at, created_at, last_login_at, delete_requested_at, auth_epoch FROM blocked
 `
@@ -141,6 +150,15 @@ WITH blocked AS (
 ), revoked_tokens AS (
     UPDATE personal_token SET revoked_at = now()
     WHERE account_id IN (SELECT id FROM blocked) AND revoked_at IS NULL
+), revoked_grants AS (
+    UPDATE oauth_grant SET revoked_at = COALESCE(revoked_at, now())
+    WHERE account_id IN (SELECT id FROM blocked) RETURNING id
+), revoked_codes AS (
+    UPDATE oauth_code SET revoked_at = COALESCE(revoked_at, now())
+    WHERE grant_id IN (SELECT id FROM revoked_grants)
+), revoked_oauth_tokens AS (
+    UPDATE oauth_token SET revoked_at = COALESCE(revoked_at, now())
+    WHERE grant_id IN (SELECT id FROM revoked_grants)
 )
 SELECT id, google_sub, email, blocked_at, created_at, last_login_at, delete_requested_at, auth_epoch FROM blocked
 `
