@@ -48,6 +48,12 @@ func validateDatabase(ctx context.Context, cfg Config, name string, record Build
 			return fmt.Errorf("corpus count mismatch for %s: %w", table, errInvalidDatabase)
 		}
 	}
+	if err = db.QueryRow(ctx, `SELECT NOT EXISTS (SELECT 1 FROM provision p JOIN document d ON d.id=p.document_id WHERE (p.locator IS NULL) <> (d.text_source='source_tree'))`).Scan(&matches); err != nil {
+		return fmt.Errorf("validate provision locators: %w", err)
+	}
+	if !matches {
+		return fmt.Errorf("invalid provision locator: %w", errInvalidDatabase)
+	}
 	return nil
 }
 

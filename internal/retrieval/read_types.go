@@ -29,6 +29,7 @@ type ReadRequest struct {
 // Unit is one lead, provision, outline entry or relation, or a fixed part of it.
 type Unit struct {
 	Kind     string          `json:"kind"`
+	Locator  *string         `json:"locator,omitempty"`
 	Anchor   string          `json:"anchor,omitempty"`
 	Citation string          `json:"citation,omitempty"`
 	Label    string          `json:"label,omitempty"`

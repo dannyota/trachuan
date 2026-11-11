@@ -1,4 +1,4 @@
-# Corpus schema version 3
+# Corpus schema version 4
 
 Proposed exact template contract for `internal/corpusdb/schema.sql`, embedded by
 `schema.go` in root module `danny.vn/trachuan`. The workshop keeps goose
@@ -7,7 +7,8 @@ migrated in place. [Data](data.md) owns the overview; [build](index.md) owns
 population and recovery. This template is not an applied migration. Version 3
 adds membership class and validity corrections per
 [scope adoption](scope-adoption.md); earlier dumps remain unchanged and require
-their compatible reader.
+their compatible reader. Version 4 adds the text source columns per
+[text extraction](text-extraction.md).
 
 ## Conventions and identity
 
@@ -64,7 +65,12 @@ rejects a mismatch. No server dimension constant.
   `validity_conflict boolean`, with decisions in `validity_decision` per
   [validity corrections](validity-status.md).
   [Build normalization](normalization.md) owns assignment and derivation gaps.
-  `status_code` and `status_name` retain the raw source values.
+- `text_source text NOT NULL CHECK(text_source IN ('source_tree','html_transcription','ocr','none'))`
+  and `text_complete boolean NOT NULL`, no defaults, assigned per
+  [text extraction](text-extraction.md#what-is-recorded). CHECK `text_complete`
+  is false when `text_source = 'none'`; build also sets it false for a document
+  with no provision. `status_code` and `status_name` retain the raw source
+  values.
 - `is_consolidated boolean`; `content_state text` in
   (`indexed`,`no_tree`,`no_chunks`,`embedding_gap`); `fetch_sha256 text`;
   `extract_sha256 text?`; `source_url text?`.
@@ -93,10 +99,13 @@ from the verified fetched-file record, not a file suffix.
 `parent_id bigint?`, `node_id text`, `kind text` in
 (`phan`,`chuong`,`muc`,`dieu`,`khoan`,`diem`,`other`), `label text`,
 `heading text`, `ordinal integer > 0`, `preorder integer > 0`, `path ltree`,
-`text text`, `anchor text`. UNIQUE `(document_id,id)`, `(document_id,node_id)`,
-`(document_id,anchor)`, `(document_id,preorder)`, `(document_id,path)`.
-Composite FK `(document_id,parent_id)` to provision `(document_id,id)`; CHECK
-`parent_id IS NULL OR parent_id <> id`. Indexes:
+`text text`, `anchor text`, `locator text?`. `locator` is NULL exactly for
+documents whose `text_source` is `source_tree` (build validates this); otherwise
+it is `block:<first>-<last>`, the HTML block ordinals of the provision's
+paragraphs, or `page:<first>-<last>` for OCR text. UNIQUE `(document_id,id)`,
+`(document_id,node_id)`, `(document_id,anchor)`, `(document_id,preorder)`,
+`(document_id,path)`. Composite FK `(document_id,parent_id)` to provision
+`(document_id,id)`; CHECK `parent_id IS NULL OR parent_id <> id`. Indexes:
 `(document_id,parent_id,ordinal)`, GiST `(path)`. Build validates cycles, parent
 path prefix and preorder before publication; cross-row ancestry is not expressed
 as a CHECK constraint.
@@ -214,7 +223,7 @@ rules.
 ## Release row
 
 `release`: `singleton boolean PRIMARY KEY CHECK(singleton)`, `country text`
-CHECK country='vn', `rel text UNIQUE`, `schema_version integer CHECK(=3)`,
+CHECK country='vn', `rel text UNIQUE`, `schema_version integer CHECK(=4)`,
 `taxonomy_version text`, `dense_recipe jsonb`, `chunk_recipe jsonb`,
 `lexical_recipe jsonb`, `retrieval_recipe jsonb`, `lexical_stats jsonb`,
 `source_manifest_hash text`, `build_input_hash text`, `build_recipe_hash text`,
@@ -242,9 +251,11 @@ recorded in build metadata. Existing workshop artifacts remain authoritative;
 adding the chunk projection must not rewrite ingest rows. A schema change
 rebuilds a new corpus database; retain old artifacts for diagnosis and rollback.
 Version 2 added `document.status_basis`. Version 3 adds class, source and
-validity decisions. Always rebuild from preserved source artifacts, never
-backfill an old release with an assumed value. Readers must support version 3
-before activation; version 1 and 2 dumps remain unchanged.
+validity decisions. Version 4 adds `document.text_source`,
+`document.text_complete` and `provision.locator`. Always rebuild from preserved
+source artifacts, never backfill an old release with an assumed value. Readers
+must support version 4 before activation; version 1, 2 and 3 dumps remain
+unchanged.
 
 The host restore policy currently permits only pgvector extensions, while the
 existing data design already requires ltree. This work uses both locally; host

@@ -31,7 +31,7 @@ func schemaDB(t *testing.T) *pgx.Conn {
 	return conn
 }
 
-func TestApply_CreatesSchemaVersion3(t *testing.T) {
+func TestApply_CreatesSchemaVersion4(t *testing.T) {
 	conn := schemaDB(t)
 	ctx := context.Background()
 	for _, table := range []string{"document", "source_file", "provision", "provision_validity", "chunk", "lexical_df", "relation", "coverage_gap", "taxonomy_node", "taxonomy_assignment", "validity_decision", "release"} {
@@ -61,11 +61,11 @@ func TestApply_ConstraintsRejectBadRows(t *testing.T) {
 	conn := schemaDB(t)
 	ctx := context.Background()
 	hash := strings.Repeat("a", 64)
-	_, err := conn.Exec(ctx, `INSERT INTO document (id,country,key,number,number_norm,title,doc_type,issuer,class,source,validity_conflict,raw_issue_date,raw_eff_from,raw_eff_to,status_code,status_name,status_class,status_basis,is_current,is_consolidated,content_state,fetch_sha256) VALUES (1,'vn','vn:test','n','n','t','t','i','primary','vbpl',false,'','','','','','unknown','source_status',false,false,'indexed',$1)`, hash)
+	_, err := conn.Exec(ctx, `INSERT INTO document (id,country,key,number,number_norm,title,doc_type,issuer,class,source,validity_conflict,raw_issue_date,raw_eff_from,raw_eff_to,status_code,status_name,status_class,status_basis,is_current,is_consolidated,content_state,fetch_sha256,text_source,text_complete) VALUES (1,'vn','vn:test','n','n','t','t','i','primary','vbpl',false,'','','','','','unknown','source_status',false,false,'indexed',$1,'source_tree',true)`, hash)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = conn.Exec(ctx, `INSERT INTO release VALUES (true,'vn','r',3,'','{}','{}','{}','{}','{}',$1,$1,$1,'{}',now())`, hash)
+	_, err = conn.Exec(ctx, `INSERT INTO release VALUES (true,'vn','r',4,'','{}','{}','{}','{}','{}',$1,$1,$1,'{}',now())`, hash)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -88,11 +88,11 @@ func TestApply_ConstraintsRejectBadRows(t *testing.T) {
 	}
 }
 
-func TestSchema_Version3Constraints(t *testing.T) {
+func TestSchema_PreviousConstraints(t *testing.T) {
 	conn := schemaDB(t)
 	ctx := context.Background()
 	hash := strings.Repeat("a", 64)
-	_, err := conn.Exec(ctx, `INSERT INTO document(id,country,key,number,number_norm,title,doc_type,issuer,class,source,raw_issue_date,raw_eff_from,raw_eff_to,status_code,status_name,status_class,status_basis,validity_conflict,is_current,is_consolidated,content_state,fetch_sha256) VALUES(1,'vn','vn:test','','','','','','primary','vbpl','','','','','','unknown','source_status',false,false,false,'indexed',$1)`, hash)
+	_, err := conn.Exec(ctx, `INSERT INTO document(id,country,key,number,number_norm,title,doc_type,issuer,class,source,raw_issue_date,raw_eff_from,raw_eff_to,status_code,status_name,status_class,status_basis,validity_conflict,is_current,is_consolidated,content_state,fetch_sha256,text_source,text_complete) VALUES(1,'vn','vn:test','','','','','','primary','vbpl','','','','','','unknown','source_status',false,false,false,'indexed',$1,'source_tree',true)`, hash)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -107,6 +107,8 @@ func TestSchema_Version3Constraints(t *testing.T) {
 	cases := map[string]string{
 		"class": `UPDATE document SET class='bad'`, "class null": `UPDATE document SET class=NULL`,
 		"source": `UPDATE document SET source='bad'`, "source null": `UPDATE document SET source=NULL`,
+		"text source": `UPDATE document SET text_source='bad'`, "text source null": `UPDATE document SET text_source=NULL`,
+		"text complete null": `UPDATE document SET text_complete=NULL`, "none complete": `UPDATE document SET text_source='none',text_complete=true`,
 		"basis": `UPDATE document SET status_basis='bad'`, "conflict null": `UPDATE document SET validity_conflict=NULL`,
 		"document foreign key": `INSERT INTO validity_decision SELECT 2,2,layer,rule_version,before,after,actor_key,effect_date,relation_id,anchor,quote,artifact_sha256 FROM validity_decision`,
 		"duplicate key":        `INSERT INTO validity_decision SELECT * FROM validity_decision`,
@@ -143,7 +145,7 @@ func TestSchema_Version3Constraints(t *testing.T) {
 			t.Fatal(execErr)
 		}
 	}
-	_, err = conn.Exec(ctx, `INSERT INTO release VALUES(true,'vn','r',3,'','{}','{}','{}','{}','{}',$1,$1,$1,'{}',now())`, hash)
+	_, err = conn.Exec(ctx, `INSERT INTO release VALUES(true,'vn','r',4,'','{}','{}','{}','{}','{}',$1,$1,$1,'{}',now())`, hash)
 	if err != nil {
 		t.Fatal(err)
 	}

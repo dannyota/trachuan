@@ -82,6 +82,7 @@ type Provision struct {
 	Ordinal  int
 	Preorder int
 	Text     string
+	Locator  *string
 }
 
 // Document holds source metadata for validity and evidence.

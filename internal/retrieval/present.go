@@ -46,7 +46,7 @@ func present(resp Response, docs map[string]DocumentEntry, d Detail) SearchResul
 					result.Documents[key] = doc
 				}
 			}
-			p := PresentedHit{Handle: Handle(h.Identity), Doc: key, Citation: h.Citation, Gaps: h.Gaps, Warnings: warningPointers(h)}
+			p := PresentedHit{Handle: Handle(h.Identity), Doc: key, Citation: h.Citation, Gaps: h.Gaps, Locator: h.Locator, Warnings: warningPointers(h)}
 			for _, node := range h.Path {
 				p.Path = append(p.Path, PresentedPathNode{Label: node.Label, Heading: node.Heading, Anchor: node.Identity.Anchor})
 			}

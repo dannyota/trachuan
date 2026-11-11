@@ -79,7 +79,7 @@ func corpusFixtureWithBuilder(t *testing.T, builder testpg.Builder) (*Resolver, 
 		}
 		return value
 	}
-	_, err = db.Exec(ctx, `INSERT INTO release VALUES(true,'vn',$1,3,'v1',$2,'{}',$3,$4,$5,$6,$6,$6,'{}',now())`, rel, marshal(dense), marshal(lexical.Recipe1()), marshal(recipe), marshal(stats), hash)
+	_, err = db.Exec(ctx, `INSERT INTO release VALUES(true,'vn',$1,$7,'v1',$2,'{}',$3,$4,$5,$6,$6,$6,'{}',now())`, rel, marshal(dense), marshal(lexical.Recipe1()), marshal(recipe), marshal(stats), hash, corpusdb.SchemaVersion)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -155,13 +155,13 @@ func TestResolver_PinnedRetiredRowIsExpired(t *testing.T) {
 		t.Fatal("connect test auth database")
 	}
 	t.Cleanup(func() {
-		if err := db.Close(ctx); err != nil {
-			t.Error(err)
+		if closeErr := db.Close(ctx); closeErr != nil {
+			t.Error(closeErr)
 		}
 	})
-	if _, err := db.Exec(ctx, `INSERT INTO corpus_release VALUES ('vn','corpus_vn_20990103',now(),'operator');
-INSERT INTO retired_release VALUES ('vn','corpus_vn_20990102',now(),now()+interval '7 days',NULL)`); err != nil {
-		t.Fatal(err)
+	if _, execErr := db.Exec(ctx, `INSERT INTO corpus_release VALUES ('vn','corpus_vn_20990103',now(),'operator');
+INSERT INTO retired_release VALUES ('vn','corpus_vn_20990102',now(),now()+interval '7 days',NULL)`); execErr != nil {
+		t.Fatal(execErr)
 	}
 	r, _, _ := resolverFixture(t)
 	r.Auth = authStore{queries: store.New(db)}

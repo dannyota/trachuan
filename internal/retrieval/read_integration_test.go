@@ -29,7 +29,7 @@ func readFixture(t *testing.T) (*pgxpool.Pool, *Engine) {
 	if err = corpusdb.Apply(ctx, db, 1024); err != nil {
 		t.Fatal(err)
 	}
-	readExec(t, db, `INSERT INTO document(id,country,key,number,number_norm,title,doc_type,issuer,class,source,validity_conflict,eff_from,raw_issue_date,raw_eff_from,raw_eff_to,status_code,status_name,status_class,status_basis,is_current,is_consolidated,content_state,fetch_sha256) SELECT i,'vn','vn:'||i,'N'||i,'N'||i,'title','law','issuer','primary','vbpl',false,'2020-01-01','','','','','','in_force','source_status',true,false,'indexed',$1 FROM generate_series(1,3) i`, strings.Repeat("a", 64))
+	readExec(t, db, `INSERT INTO document(id,country,key,number,number_norm,title,doc_type,issuer,class,source,validity_conflict,eff_from,raw_issue_date,raw_eff_from,raw_eff_to,status_code,status_name,status_class,status_basis,is_current,is_consolidated,content_state,fetch_sha256,text_source,text_complete) SELECT i,'vn','vn:'||i,'N'||i,'N'||i,'title','law','issuer','primary','vbpl',false,'2020-01-01','','','','','','in_force','source_status',true,false,'indexed',$1,'source_tree',true FROM generate_series(1,3) i`, strings.Repeat("a", 64))
 	nodes := []struct {
 		id, doc           int
 		parent            any
@@ -76,7 +76,7 @@ func TestRead_DocumentOutline(t *testing.T) {
 	_, e := readFixture(t)
 	r := readItems(t, e, ReadItem{Handle: "vn:1"}, ReadItem{Handle: "vn:2"})
 	a := r.Items[0]
-	if a.Document == nil || a.Document.Number != "N1" || a.Document.Status.Class != "in_force" || !a.Document.Status.Current || !a.Complete || a.Next != "" {
+	if a.Document == nil || a.Document.Number != "N1" || a.Document.TextSource != "source_tree" || !a.Document.TextComplete || a.Document.Status.Class != "in_force" || !a.Document.Status.Current || !a.Complete || a.Next != "" {
 		t.Fatalf("outline metadata: %+v", a)
 	}
 	want := []string{"p1", "p2", "p3", "p4", "p9"}

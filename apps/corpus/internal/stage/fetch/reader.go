@@ -2,10 +2,13 @@ package fetch
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"danny.vn/trachuan/apps/corpus/internal/stage"
 )
 
 // Document is the source-neutral metadata of a verified fetch bundle.
@@ -70,4 +73,45 @@ func ReadDocument(dir, key string) (Document, error) {
 		out.Files = append(out.Files, DocumentFile(f))
 	}
 	return out, nil
+}
+
+// ExtractInputHash binds the fetch manifest and selected text source.
+func ExtractInputHash(fetchHash, source string) string {
+	if source == "source_tree" {
+		return fetchHash
+	}
+	if source == "none" || source == "ocr" {
+		return stage.RecipeHash("extract-input", "1", fetchHash, source, "absent")
+	}
+	return stage.RecipeHash("extract-input", "1", fetchHash, source)
+}
+
+// CheckExtractLineage checks an extract artifact against its verified fetch hash.
+// The caller verifies the extract manifest before calling this function.
+func CheckExtractLineage(dir, fetchHash, inputHash string) error {
+	data, err := os.ReadFile(filepath.Join(dir, "text.json"))
+	if errors.Is(err, os.ErrNotExist) {
+		if inputHash == fetchHash {
+			return nil
+		}
+		return fmt.Errorf("artifact input hash mismatch")
+	}
+	if err != nil {
+		return fmt.Errorf("read extract text record: %w", err)
+	}
+	var record struct {
+		TextSource string `json:"text_source"`
+	}
+	if err = json.Unmarshal(data, &record); err != nil {
+		return fmt.Errorf("decode extract text record: %w", err)
+	}
+	switch record.TextSource {
+	case "none", "html_transcription", "source_tree":
+	default:
+		return fmt.Errorf("invalid text source %q", record.TextSource)
+	}
+	if ExtractInputHash(fetchHash, record.TextSource) != inputHash {
+		return fmt.Errorf("artifact input hash mismatch")
+	}
+	return nil
 }

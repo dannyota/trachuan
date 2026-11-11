@@ -15,7 +15,7 @@ func TestReadRelease_ReturnsReleaseQueryRecipe(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if release.Country != "vn" || release.Rel != "test" || release.SchemaVersion != 3 || release.DenseRecipe.QueryHash != embedding.QueryRecipe1().Hash() {
+	if release.Country != "vn" || release.Rel != "test" || release.SchemaVersion != 4 || release.DenseRecipe.QueryHash != embedding.QueryRecipe1().Hash() {
 		t.Fatal("release identity or query recipe differs from the stored row")
 	}
 }

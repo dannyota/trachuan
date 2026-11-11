@@ -140,7 +140,7 @@ func TestPresent_JSONOmitsEmptyKeepsBooleans(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := `{"release":"r","abstain":false,"documents":{"vn:1":{"status":{"current":false}}},"hits":[{"handle":"vn:1#a","doc":"vn:1","citation":"Điều 1","complete":false}]}`
+	want := `{"release":"r","abstain":false,"documents":{"vn:1":{"status":{"current":false},"text_source":"","text_complete":false}},"hits":[{"handle":"vn:1#a","doc":"vn:1","citation":"Điều 1","complete":false}]}`
 	if string(b) != want {
 		t.Fatalf("JSON: %s\nwant: %s", b, want)
 	}
@@ -189,5 +189,28 @@ func TestPresent_WarningUsesResolvedDocumentKey(t *testing.T) {
 	got := warningPointers(h)
 	if len(got) != 3 || got[0].Key != "vn:2" || got[1].Key != "vn:3" || got[2].Key != "vn:2" {
 		t.Fatalf("warnings: %+v", got)
+	}
+}
+
+func TestHit_DocumentEntryCarriesTextSource(t *testing.T) {
+	doc := DocumentEntry{TextSource: "html_transcription", TextComplete: false}
+	b, err := json.Marshal(doc)
+	if err != nil || !strings.Contains(string(b), `"text_source":"html_transcription"`) || !strings.Contains(string(b), `"text_complete":false`) {
+		t.Fatalf("document %s: %v", b, err)
+	}
+}
+func TestHit_LocatorOnlyForGeneratedText(t *testing.T) {
+	locator := "block:1-3"
+	h := presentationHit("vn:1", "a")
+	h.Locator = &locator
+	result := present(Response{Hits: []Hit{h}}, nil, DetailCompact)
+	b, err := json.Marshal(result.Hits[0])
+	if err != nil || !strings.Contains(string(b), `"locator":"block:1-3"`) {
+		t.Fatalf("hit %s: %v", b, err)
+	}
+	h.Locator = nil
+	b, err = json.Marshal(present(Response{Hits: []Hit{h}}, nil, DetailCompact).Hits[0])
+	if err != nil || strings.Contains(string(b), `"locator"`) {
+		t.Fatalf("hit %s: %v", b, err)
 	}
 }

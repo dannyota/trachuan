@@ -2,14 +2,12 @@
 package extract
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"danny.vn/trachuan/apps/corpus/internal/artifact"
@@ -31,7 +29,7 @@ func (*Stage) Name() string { return "extract" }
 
 // Recipe returns the extract recipe hash.
 func (*Stage) Recipe(stage.Snapshot) string {
-	return stage.RecipeHash("extract", "tree/1", "chinhphu-no-tree/1")
+	return stage.RecipeHash("extract", "tree/1", "html-transcription/1", "textparse/2", "ocr-absent/1")
 }
 
 // Plan selects completed fetch artifacts for this run.
@@ -50,7 +48,19 @@ func (*Stage) Plan(ctx context.Context, env stage.Env, run stage.Run) ([]stage.I
 		if active != nil && !active[input.ItemKey] {
 			continue
 		}
-		items = append(items, stage.Item{Key: input.ItemKey, InputHash: input.Sha256})
+		entry, getErr := q.GetExtractInput(ctx, store.GetExtractInputParams{RunID: run.ID, ItemKey: input.ItemKey})
+		if getErr != nil {
+			return nil, fmt.Errorf("load fetch artifact: %w", getErr)
+		}
+		selected, _, selectErr := choose(ctx, env.Artifacts.Abs(entry.Path), input.ItemKey)
+		if errors.Is(selectErr, vbpl.ErrTreeTooLarge) {
+			selected.source = "source_tree"
+			selectErr = nil
+		}
+		if selectErr != nil {
+			return nil, fmt.Errorf("select text source: %w", selectErr)
+		}
+		items = append(items, stage.Item{Key: input.ItemKey, InputHash: selectionHash(input.Sha256, selected.source)})
 	}
 	return items, nil
 }
@@ -63,33 +73,43 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 	if err != nil {
 		return stage.Output{}, fmt.Errorf("load fetch artifact: %w", err)
 	}
-	if input.Sha256 != item.InputHash {
-		return stage.Output{}, stage.Retryable(fmt.Errorf("fetch artifact hash changed for %q", item.Key))
-	}
-	if verifyErr := verifyFetch(env.Artifacts.Abs(input.Path), item.InputHash); verifyErr != nil {
+	if verifyErr := verifyFetch(env.Artifacts.Abs(input.Path), input.Sha256); verifyErr != nil {
 		return stage.Output{}, verifyErr
 	}
-	var nodes []vbpl.Node
-	if !strings.HasPrefix(item.Key, "vn:chinhphu:") {
-		data, readErr := os.ReadFile(filepath.Join(env.Artifacts.Abs(input.Path), "tree.json"))
-		if readErr != nil {
-			return stage.Output{}, fmt.Errorf("read tree: %w", readErr)
-		}
-		nodes, err = vbpl.DecodeTree(ctx, bytes.NewReader(data), vbpl.MaxTreeDepth, vbpl.MaxTreeNodes)
-		if errors.Is(err, vbpl.ErrTreeTooLarge) {
-			return stage.Output{State: "gap", Gaps: []stage.Gap{{Kind: "tree_too_large"}}}, nil
-		}
-		if err != nil {
-			if ctx.Err() != nil {
-				return stage.Output{}, fmt.Errorf("decode tree: %w", err)
-			}
-			return stage.Output{}, stage.SourceData(fmt.Errorf("decode tree: %w", err))
-		}
+	selected, nodes, err := choose(ctx, env.Artifacts.Abs(input.Path), item.Key)
+	if errors.Is(err, vbpl.ErrTreeTooLarge) {
+		return stage.Output{State: "gap", Gaps: []stage.Gap{{Kind: "tree_too_large"}}}, nil
 	}
-
-	rows, gaps, err := extractTree(ctx, nodes)
 	if err != nil {
-		return stage.Output{}, fmt.Errorf("extract tree: %w", err)
+		return stage.Output{}, fmt.Errorf("select text source: %w", err)
+	}
+	if selectionHash(input.Sha256, selected.source) != item.InputHash {
+		return stage.Output{}, stage.Retryable(fmt.Errorf("text selection changed for %q", item.Key))
+	}
+	var rows []provision
+	var gaps []stage.Gap
+	var record *textRecord
+	switch selected.source {
+	case "source_tree":
+		rows, gaps, err = extractTree(ctx, nodes)
+		if err != nil {
+			return stage.Output{}, fmt.Errorf("extract tree: %w", err)
+		}
+		if selected.gap != "" {
+			gaps = append(gaps, stage.Gap{Kind: selected.gap})
+		}
+	case "html_transcription":
+		if selected.tooLarge {
+			rows = []provision{}
+			gaps = []stage.Gap{{Kind: "text_limit", Detail: "file exceeds 50000000 bytes"}, {Kind: "no_tree"}}
+			record = &textRecord{TextSource: selected.source, FileName: selected.name, SHA256: selected.hash}
+		} else {
+			rows, gaps, record = parseTranscription(selected.data, selected.name, selected.hash)
+		}
+	default:
+		rows = []provision{}
+		gaps = []stage.Gap{{Kind: "no_tree"}, {Kind: selected.gap}}
+		record = &textRecord{TextSource: "none"}
 	}
 
 	art, err := env.Artifacts.Publish(ctx, s.Name(), item.InputHash, s.Recipe(run.Snapshot), func(dir string) error {
@@ -103,6 +123,15 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 			}
 			if writeErr := os.WriteFile(filepath.Join(dir, file.name), b, 0600); writeErr != nil {
 				return fmt.Errorf("write %s: %w", file.name, writeErr)
+			}
+		}
+		if record != nil {
+			b, marshalErr := json.Marshal(record)
+			if marshalErr != nil {
+				return fmt.Errorf("encode text.json: %w", marshalErr)
+			}
+			if writeErr := os.WriteFile(filepath.Join(dir, "text.json"), b, 0600); writeErr != nil {
+				return fmt.Errorf("write text.json: %w", writeErr)
 			}
 		}
 		return ctx.Err()

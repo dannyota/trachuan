@@ -27,6 +27,7 @@ type PresentedHit struct {
 	Complete  bool                `json:"complete"`
 	Warnings  []Pointer           `json:"warnings,omitempty"`
 	Gaps      []Gap               `json:"gaps,omitempty"`
+	Locator   *string             `json:"locator,omitempty"`
 	Text      string              `json:"text,omitempty"`
 	Fragments []Fragment          `json:"fragments,omitempty"`
 	Score     *float64            `json:"score,omitempty"`

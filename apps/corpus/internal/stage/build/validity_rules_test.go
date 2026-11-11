@@ -222,3 +222,21 @@ func TestReview_ItemsWithoutOperativeDate(t *testing.T) {
 		t.Fatal(v.reviews)
 	}
 }
+
+func TestValidity_ParsedTextIsReviewOnly(t *testing.T) {
+	actor := testDoc("actor", "2/2021/NĐ-CP", "2021-01-01", "2021-02-01")
+	target := testDoc("target", "1/2020/NĐ-CP", "2020-01-01", "2020-01-01")
+	actor.textSource = "html_transcription"
+	actor.article = testArticle("1/2/2021", replacement(target.number, "1/1/2020"))
+	actor.anchor, actor.quote = "dieu-1", "effect article"
+	result := runTest(t, []validityDocument{actor, target}, []validityRelation{{source: actor.key, target: target.key, kind: "replaces", id: 1}}, nil)
+	if result.documents[target.key].values.To != nil || result.documents[target.key].values.Conflict {
+		t.Fatal(result.documents[target.key])
+	}
+	for _, r := range result.reviews {
+		if r.kind == "parsed_text_article" && r.proposed != nil {
+			return
+		}
+	}
+	t.Fatal("missing parsed text review with proposed correction")
+}

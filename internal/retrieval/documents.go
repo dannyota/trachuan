@@ -27,6 +27,8 @@ type DocumentEntry struct {
 	EffectiveFrom *Date          `json:"effective_from,omitempty"`
 	EffectiveTo   *Date          `json:"effective_to,omitempty"`
 	Status        Status         `json:"status"`
+	TextSource    string         `json:"text_source"`
+	TextComplete  bool           `json:"text_complete"`
 	SourceURL     string         `json:"source_url,omitempty"`
 	Related       []Pointer      `json:"related,omitempty"`
 	RelatedCounts map[string]int `json:"related_counts,omitempty"`
@@ -44,7 +46,7 @@ func (e *Engine) loadDocuments(ctx context.Context, keys []string) (map[string]D
 		return nil, fmt.Errorf("set documents deadline: %w", err)
 	}
 	docs := make(map[string]DocumentEntry)
-	rows, err := tx.Query(ctx, `SELECT key, number, title, doc_type, issuer, issue_date, eff_from, eff_to, COALESCE(source_url, '') FROM document WHERE key = ANY($1)`, keys)
+	rows, err := tx.Query(ctx, `SELECT key, number, title, doc_type, issuer, issue_date, eff_from, eff_to, COALESCE(source_url, ''), text_source, text_complete FROM document WHERE key = ANY($1)`, keys)
 	if err != nil {
 		return nil, databaseFailure("query document metadata", err)
 	}
@@ -52,7 +54,7 @@ func (e *Engine) loadDocuments(ctx context.Context, keys []string) (map[string]D
 		var key string
 		var doc DocumentEntry
 		var issued, from, to *time.Time
-		if err = rows.Scan(&key, &doc.Number, &doc.Title, &doc.Type, &doc.Issuer, &issued, &from, &to, &doc.SourceURL); err != nil {
+		if err = rows.Scan(&key, &doc.Number, &doc.Title, &doc.Type, &doc.Issuer, &issued, &from, &to, &doc.SourceURL, &doc.TextSource, &doc.TextComplete); err != nil {
 			rows.Close()
 			return nil, databaseFailure("scan document metadata", err)
 		}

@@ -48,7 +48,7 @@ func documentEngine(t *testing.T, longOutline bool) (*retrieval.Engine, map[stri
 		}
 	}
 	hash := strings.Repeat("a", 64)
-	exec(`INSERT INTO document(id,country,key,number,number_norm,title,doc_type,issuer,class,source,validity_conflict,eff_from,raw_issue_date,raw_eff_from,raw_eff_to,status_code,status_name,status_class,status_basis,is_current,is_consolidated,content_state,fetch_sha256) VALUES(1,'vn','vn:1','N1','N1','title','law','issuer','primary','vbpl',false,'2099-01-01','','','','','','in_force','source_status',true,false,'indexed',$1)`, hash)
+	exec(`INSERT INTO document(id,country,key,number,number_norm,title,doc_type,issuer,class,source,validity_conflict,eff_from,raw_issue_date,raw_eff_from,raw_eff_to,status_code,status_name,status_class,status_basis,is_current,is_consolidated,content_state,fetch_sha256,text_source,text_complete) VALUES(1,'vn','vn:1','N1','N1','title','law','issuer','primary','vbpl',false,'2099-01-01','','','','','','in_force','source_status',true,false,'indexed',$1,'source_tree',true)`, hash)
 	source := map[string]string{"a": strings.Repeat("Điều kiện áp dụng. ", 70000) + "Kết thúc.", "b": strings.Repeat("Nghĩa vụ cụ thể. ", 70000) + "Kết thúc."}
 	count := 2
 	if longOutline {

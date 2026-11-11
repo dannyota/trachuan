@@ -39,7 +39,7 @@ func TestInputHash_OmitsInventory(t *testing.T) {
 
 func TestRecipe_IncludesCompact(t *testing.T) {
 	s := New(Config{})
-	want := stage.RecipeHash("eval", "agent-eval/1", "legacy-matcher/1", "product-matcher/1", "recall,mrr,current-law-precision,abstention,evidence,ann/1", "", "diacritics_required:Vui lòng nhập câu hỏi tiếng Việt có dấu hoặc số hiệu văn bản.", "cache/1:200:100", "nearest-rank", "gates:0.99:0.95;targets:recall20=0.90,mrr8=0.66,recall8=0.90;nonregression:recall20,mrr8", "compact/1")
+	want := stage.RecipeHash("eval", "agent-eval/1", "legacy-matcher/1", "product-matcher/1", "recall,mrr,current-law-precision,abstention,evidence,ann/1", "", "diacritics_required:Vui lòng nhập câu hỏi tiếng Việt có dấu hoặc số hiệu văn bản.", "cache/1:200:100", "nearest-rank", "gates:0.99:0.95;targets:recall20=0.90,mrr8=0.66,recall8=0.90;nonregression:recall20,mrr8", "compact/1", "corpus-text-counts/1")
 	if got := s.Recipe(stage.Snapshot{}); got != want {
 		t.Fatalf("recipe = %s, want %s", got, want)
 	}

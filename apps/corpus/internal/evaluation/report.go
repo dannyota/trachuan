@@ -134,53 +134,49 @@ type CompactSizeGate struct {
 
 // Report is a completed diagnostic evaluation.
 type Report struct {
-	Presented            []PresentedSummary  `json:"presented"`
-	CompactSizeGate      CompactSizeGate     `json:"compact_size_gate"`
-	DocumentsByClass     map[string]int      `json:"documents_by_class"`
-	DocumentsBySource    map[string]int      `json:"documents_by_source"`
-	HitsByClass          map[string]int      `json:"hits_by_class"`
-	HitsByStatusBasis    map[string]int      `json:"hits_by_status_basis"`
-	HitsByConflictKind   map[string]int      `json:"hits_by_conflict_kind"`
-	ValidityAdjudicated  AdjudicatedValidity `json:"validity_adjudicated"`
-	Version              int                 `json:"version"`
-	Scorer               string              `json:"scorer"`
-	Status               string              `json:"status"`
-	QualityPass          bool                `json:"quality_pass"`
-	ReleaseEligible      bool                `json:"release_eligible"`
-	Country              string              `json:"country"`
-	Rel                  string              `json:"rel"`
-	BuildArtifactSHA256  string              `json:"build_artifact_sha256"`
-	DumpSHA256           string              `json:"dump_sha256"`
-	FixtureHashes        FixtureHashes       `json:"fixture_hashes"`
-	IdentityMapSHA256    string              `json:"identity_map_sha256"`
-	Recipes              map[string]string   `json:"recipes"`
-	EvaluationDate       retrieval.Date      `json:"evaluation_date"`
-	RequestAsOf          *retrieval.Date     `json:"request_as_of"`
-	DatabaseInstanceKind string              `json:"database_instance_kind"`
-	Software             map[string]string   `json:"software"`
-	Calibration          any                 `json:"calibration"`
-	Cohorts              map[string]Cohort   `json:"cohorts"`
-	Targets              []Target            `json:"targets"`
-	NonRegression        []NonRegression     `json:"non_regression"`
-	Floors               []Floor             `json:"floors"`
-	Rejections           []Rejection         `json:"rejections"`
-	Coverage             []Coverage          `json:"coverage"`
-	ANN                  []ANNMeasure        `json:"-"`
-	ANNResults           map[string]ANNLoss  `json:"ann_loss"`
-	TimingsMS            map[string]any      `json:"timings_ms"`
-	EvidenceCharacters   []SizeSummary       `json:"evidence_characters"`
-	CacheManifest        map[string]any      `json:"cache_manifest"`
-	PreviousDiff         any                 `json:"previous_diff"`
-	NotRun               map[string]string   `json:"not_run"`
-	Limitations          []string            `json:"limitations"`
-	Cases                []CaseResult        `json:"cases"`
-}
-
-// Coverage identifies an absent expectation and its searched numbers.
-type Coverage struct {
-	CaseID        string   `json:"case_id"`
-	CitationIndex int      `json:"citation_index"`
-	Numbers       []string `json:"numbers"`
+	Presented                     []PresentedSummary        `json:"presented"`
+	CompactSizeGate               CompactSizeGate           `json:"compact_size_gate"`
+	DocumentsByClass              map[string]int            `json:"documents_by_class"`
+	DocumentsBySource             map[string]int            `json:"documents_by_source"`
+	DocumentsByTextSource         map[string]int            `json:"documents_by_text_source"`
+	DocumentsByTextSourceAndClass map[string]map[string]int `json:"documents_by_text_source_and_class"`
+	DocumentsTextIncomplete       int                       `json:"documents_text_incomplete"`
+	HitsByClass                   map[string]int            `json:"hits_by_class"`
+	HitsByStatusBasis             map[string]int            `json:"hits_by_status_basis"`
+	HitsByConflictKind            map[string]int            `json:"hits_by_conflict_kind"`
+	ValidityAdjudicated           AdjudicatedValidity       `json:"validity_adjudicated"`
+	Version                       int                       `json:"version"`
+	Scorer                        string                    `json:"scorer"`
+	Status                        string                    `json:"status"`
+	QualityPass                   bool                      `json:"quality_pass"`
+	ReleaseEligible               bool                      `json:"release_eligible"`
+	Country                       string                    `json:"country"`
+	Rel                           string                    `json:"rel"`
+	BuildArtifactSHA256           string                    `json:"build_artifact_sha256"`
+	DumpSHA256                    string                    `json:"dump_sha256"`
+	FixtureHashes                 FixtureHashes             `json:"fixture_hashes"`
+	IdentityMapSHA256             string                    `json:"identity_map_sha256"`
+	Recipes                       map[string]string         `json:"recipes"`
+	EvaluationDate                retrieval.Date            `json:"evaluation_date"`
+	RequestAsOf                   *retrieval.Date           `json:"request_as_of"`
+	DatabaseInstanceKind          string                    `json:"database_instance_kind"`
+	Software                      map[string]string         `json:"software"`
+	Calibration                   any                       `json:"calibration"`
+	Cohorts                       map[string]Cohort         `json:"cohorts"`
+	Targets                       []Target                  `json:"targets"`
+	NonRegression                 []NonRegression           `json:"non_regression"`
+	Floors                        []Floor                   `json:"floors"`
+	Rejections                    []Rejection               `json:"rejections"`
+	Coverage                      []Coverage                `json:"coverage"`
+	ANN                           []ANNMeasure              `json:"-"`
+	ANNResults                    map[string]ANNLoss        `json:"ann_loss"`
+	TimingsMS                     map[string]any            `json:"timings_ms"`
+	EvidenceCharacters            []SizeSummary             `json:"evidence_characters"`
+	CacheManifest                 map[string]any            `json:"cache_manifest"`
+	PreviousDiff                  any                       `json:"previous_diff"`
+	NotRun                        map[string]string         `json:"not_run"`
+	Limitations                   []string                  `json:"limitations"`
+	Cases                         []CaseResult              `json:"cases"`
 }
 
 // ANNMeasure reports candidate overlap before and after fallback.

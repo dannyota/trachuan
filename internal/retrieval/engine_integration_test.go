@@ -93,7 +93,7 @@ func fixtureWithTrace(t *testing.T, trace *exactSettingsTrace) (*pgxpool.Pool, *
 		if i == 3 {
 			start = nil
 		}
-		_, err = db.Exec(ctx, `INSERT INTO document (id,country,key,number,number_norm,title,doc_type,issuer,class,source,validity_conflict,eff_from,eff_to,raw_issue_date,raw_eff_from,raw_eff_to,status_code,status_name,status_class,status_basis,is_current,is_consolidated,content_state,fetch_sha256) VALUES ($1,'vn',$2,'n','n','title','law','issuer','primary','vbpl',false,$3,$4,'','','','','',$5,'source_status',$6,false,'indexed',$7)`, i, fmt.Sprintf("vn:%d", i), start, end, status, i != 2, hash)
+		_, err = db.Exec(ctx, `INSERT INTO document (id,country,key,number,number_norm,title,doc_type,issuer,class,source,validity_conflict,eff_from,eff_to,raw_issue_date,raw_eff_from,raw_eff_to,status_code,status_name,status_class,status_basis,is_current,is_consolidated,content_state,fetch_sha256,text_source,text_complete) VALUES ($1,'vn',$2,'n','n','title','law','issuer','primary','vbpl',false,$3,$4,'','','','','',$5,'source_status',$6,false,'indexed',$7,'source_tree',true)`, i, fmt.Sprintf("vn:%d", i), start, end, status, i != 2, hash)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -165,7 +165,7 @@ func fixtureWithTrace(t *testing.T, trace *exactSettingsTrace) (*pgxpool.Pool, *
 		}
 		return string(b)
 	}
-	_, err = db.Exec(ctx, `INSERT INTO release VALUES (true,'vn','test',3,'v1',$1::jsonb,'{}',$2::jsonb,$3::jsonb,$4::jsonb,$5,$5,$5,'{}',now())`, marshal(dense), marshal(lexical.Recipe1()), marshal(recipe), marshal(stats.Summary(lexical.Recipe1(), nil)), hash)
+	_, err = db.Exec(ctx, `INSERT INTO release VALUES (true,'vn','test',4,'v1',$1::jsonb,'{}',$2::jsonb,$3::jsonb,$4::jsonb,$5,$5,$5,'{}',now())`, marshal(dense), marshal(lexical.Recipe1()), marshal(recipe), marshal(stats.Summary(lexical.Recipe1(), nil)), hash)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -532,14 +532,14 @@ func TestCollect_EffectiveToIsFirstExcludedDay(t *testing.T) {
 	}
 }
 
-func TestOpen_RejectsSchemaVersion2(t *testing.T) {
+func TestOpen_RejectsSchemaVersion3(t *testing.T) {
 	db, _, embedder := fixture(t)
 	ctx := context.Background()
-	if _, err := db.Exec(ctx, `ALTER TABLE release DROP CONSTRAINT release_schema_version_check; UPDATE release SET schema_version=2`); err != nil {
+	if _, err := db.Exec(ctx, `ALTER TABLE release DROP CONSTRAINT release_schema_version_check; UPDATE release SET schema_version=3`); err != nil {
 		t.Fatal(err)
 	}
 	_, err := Open(ctx, db, embedder, fixtureOptions())
-	if err == nil || !strings.Contains(err.Error(), "2") || !strings.Contains(err.Error(), "3") {
-		t.Fatalf("error = %v, want found 2 and supported 3", err)
+	if err == nil || !strings.Contains(err.Error(), "3") || !strings.Contains(err.Error(), "4") {
+		t.Fatalf("error = %v, want found 3 and supported 4", err)
 	}
 }

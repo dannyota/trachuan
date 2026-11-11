@@ -38,6 +38,13 @@ func runValidity(docs []validityDocument, relations []validityRelation, correcti
 		if d.numberNorm == "" {
 			d.numberNorm = retrieval.NormalizeNumber(d.number)
 		}
+		if d.textSource != "" && d.textSource != "source_tree" && d.article != nil && !d.consolidated {
+			e.review("parsed_text_article", d, "", "", "")
+			if e.reviews[len(e.reviews)-1].proposed == nil {
+				e.reviews[len(e.reviews)-1].proposed = &source.Correction{Key: d.key, Number: d.number, Evidence: source.CorrectionEvidence{Anchor: d.anchor, Quote: d.quote}}
+			}
+			d.article = nil
+		}
 		e.docs[d.key] = d
 		e.keys = append(e.keys, d.key)
 	}

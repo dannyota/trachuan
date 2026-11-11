@@ -15,29 +15,36 @@
 
 ### Task 1: Fixtures and expected provisions (primary)
 
-- [ ] Record bundles from run 6 per stratum: articles, numbered outline, plain, tables, images, a second instrument (regulation issued with a decision), quoted amendments with footnotes, an empty transcription, two banhmi OCR texts (one consolidated circular, 142/2026/NĐ-CP).
-- [ ] Write the expected provision list for each by hand from the file (anchors, article boundaries, scope), and adverse fixtures that must fall back to neutral anchors; commit under `apps/corpus/internal/textparse/testdata/`.
+- [x] Record bundles from run 6 per stratum: articles, numbered outline, plain, tables, images, a second instrument (regulation issued with a decision), quoted amendments with footnotes, an empty transcription, two banhmi OCR texts (one consolidated circular, 142/2026/NĐ-CP).
+- [x] Write the expected provision list for each by hand from the file (anchors, article boundaries, scope), and adverse fixtures that must fall back to neutral anchors; commit under `apps/corpus/internal/textparse/testdata/`.
 
 ### Task 2: Paragraphs and the provision parser
 
 **Files:** new `apps/corpus/internal/textparse/` (HTML to paragraphs with locators; plain OCR text to paragraphs; grammar, scopes, strict sequence check, neutral provisions, node ids).
 
-- [ ] Tests first against Task 1 fixtures: one per fixture plus `TestParse_SequenceGapFallsBackToNeutral`, `TestParse_SecondInstrumentScopedAnchors`, `TestParse_RestartWithoutTitleIsUncertain`, `TestParse_NodeIDBindsScopeAnchorText`, `TestParse_TableAndImageMarkers`, `TestParse_ShortTextIsNoText`, `TestParagraphs_LimitsBecomeGap`.
-- [ ] Implement; commit `feat(corpus): paragraph and article parser for transcribed text`.
+- [x] Tests first against Task 1 fixtures: one per fixture plus `TestParse_SequenceGapFallsBackToNeutral`, `TestParse_SecondInstrumentScopedAnchors`, `TestParse_RestartWithoutTitleIsUncertain`, `TestParse_NodeIDBindsScopeAnchorText`, `TestParse_TableAndImageMarkers`, `TestParse_ShortTextIsNoText`, `TestParagraphs_LimitsBecomeGap`.
+- [x] Implement; commit `feat(corpus): paragraph and article parser for transcribed text`.
 
 ### Task 3: Extract stage, text source selection and inputs
 
 **Files:** `apps/corpus/internal/stage/extract/` (source selection, `text.json`, input hash for documents without a source tree, gaps), `apps/corpus/internal/stage/chunk/` (read generated provisions), recipe strings.
 
-- [ ] Tests first: `TestExtract_SourceTreeArtifactBytesUnchanged` (pinned hashes through chunk and embed inputs), `TestExtract_HTMLTranscriptionBecomesProvisions`, `TestExtract_IgnoresOriginAndBackupVariants`, `TestExtract_NoSourceGaps` (each gap kind), `TestExtract_InputHashFreezesSelection`.
-- [ ] Implement with the OCR source wired to an interface that returns "absent" until Task 5; commit `feat(corpus): extract provisions from HTML transcriptions`.
+- [x] Tests first: `TestExtract_SourceTreeArtifactBytesUnchanged` (pinned hashes through chunk and embed inputs), `TestExtract_HTMLTranscriptionBecomesProvisions`, `TestExtract_IgnoresOriginAndBackupVariants`, `TestExtract_NoSourceGaps` (each gap kind), `TestExtract_InputHashFreezesSelection`.
+- [x] Implement with the OCR source wired to an interface that returns "absent" until Task 5; commit `feat(corpus): extract provisions from HTML transcriptions`.
 
 ### Task 4: Schema version 4, build, retrieval and validity gating
 
 **Files:** `internal/corpusdb` (`text_source`, `text_complete`, version 4), `apps/corpus/internal/stage/build/` (load both, validity rules read effect articles only from `source_tree`), `internal/retrieval` (document entry fields, provision locators), evaluation report counts by text source.
 
-- [ ] Tests first: `TestSchema_Version4Constraints`, `TestOpen_RejectsSchemaVersion3`, `TestLoad_TextSourceAndComplete`, `TestValidity_ParsedTextIsReviewOnly`, `TestHit_DocumentEntryCarriesTextSource`, proof `TestProof_TranscriptionDocumentIsSearchable`.
+- [x] Tests first: `TestSchema_Version4Constraints`, `TestOpen_RejectsSchemaVersion3`, `TestLoad_TextSourceAndComplete`, `TestValidity_ParsedTextIsReviewOnly`, `TestHit_DocumentEntryCarriesTextSource`, proof `TestProof_TranscriptionDocumentIsSearchable`.
 - [ ] Implement; whole-slice `gpt-6.1-sol` review; pull request A.
+
+### Task 4b: Heading-only source trees
+
+**Files:** `apps/corpus/internal/stage/extract/` (selection), build `text_complete`.
+
+- [x] Tests first: `TestExtract_HeadingOnlyTreeUsesTranscription`, `TestExtract_HeadingOnlyTreeWithoutTextKeepsTreeWithGap`, `TestExtract_PartlyBareTreeStaysSourceTree`; the source-tree golden stays unchanged.
+- [x] Implement; commit `feat(corpus): read the transcription when the source tree holds headings only`.
 
 ### Task 5: OCR store and banhmi import
 

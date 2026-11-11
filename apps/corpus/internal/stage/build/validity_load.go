@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -20,7 +21,7 @@ func dateString(t *time.Time) string {
 }
 
 func (l *loader) loadValidity(ctx context.Context, corrections []source.Correction, asOf string) (validityResult, error) {
-	rows, err := l.tx.Query(ctx, `SELECT key,number,number_norm,doc_type,issuer,issue_date,status_code,status_name,status_class,status_basis,raw_eff_from,raw_eff_to,eff_from,eff_to,is_consolidated,fetch_sha256,extract_sha256 FROM document ORDER BY key`)
+	rows, err := l.tx.Query(ctx, `SELECT key,number,number_norm,doc_type,issuer,issue_date,status_code,status_name,status_class,status_basis,raw_eff_from,raw_eff_to,eff_from,eff_to,is_consolidated,fetch_sha256,extract_sha256,text_source FROM document ORDER BY key`)
 	if err != nil {
 		return validityResult{}, fmt.Errorf("read validity documents: %w", err)
 	}
@@ -30,7 +31,7 @@ func (l *loader) loadValidity(ctx context.Context, corrections []source.Correcti
 		var d validityDocument
 		var issue, from, to *time.Time
 		var extract *string
-		if err = rows.Scan(&d.key, &d.number, &d.numberNorm, &d.docType, &d.issuer, &issue, &d.statusCode, &d.statusName, &d.initialClass, &d.basis, &d.rawFrom, &d.rawTo, &from, &to, &d.consolidated, &d.fetchHash, &extract); err != nil {
+		if err = rows.Scan(&d.key, &d.number, &d.numberNorm, &d.docType, &d.issuer, &issue, &d.statusCode, &d.statusName, &d.initialClass, &d.basis, &d.rawFrom, &d.rawTo, &from, &to, &d.consolidated, &d.fetchHash, &extract, &d.textSource); err != nil {
 			rows.Close()
 			return validityResult{}, fmt.Errorf("scan validity document: %w", err)
 		}
@@ -84,6 +85,7 @@ func (l *loader) readValidityProvisions(ctx context.Context, docs map[string]val
 		return fmt.Errorf("read validity provisions: %w", err)
 	}
 	labels := map[int64]string{}
+	articlePrefix := regexp.MustCompile(`^Điều\s+[0-9]+[a-zA-Z]?\.\s*`)
 	for rows.Next() {
 		var key, kind, label, heading, anchor, text string
 		var id int64
@@ -104,7 +106,11 @@ func (l *loader) readValidityProvisions(ctx context.Context, docs map[string]val
 		}
 		validation[key] = cd
 		d := docs[key]
-		if kind == "dieu" && validity.Select(heading) {
+		title := heading
+		if kind == "dieu" && d.textSource != "" && d.textSource != "source_tree" {
+			title = articlePrefix.ReplaceAllString(title, "")
+		}
+		if kind == "dieu" && validity.Select(title) {
 			if d.article != nil {
 				d.article = &validity.Result{Reasons: []validity.Reason{{Kind: "multiple_effect_articles"}}}
 			} else {

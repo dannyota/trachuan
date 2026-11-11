@@ -42,19 +42,26 @@ func IdentityInventory(inv Inventory, artifacts artifact.Store) (evaluation.Iden
 		if (item.Stage != "extract" && item.Stage != "relate") || item.State != "done" {
 			continue
 		}
-		fetch, ok := fetches[item.ItemKey]
+		fetchItem, ok := fetches[item.ItemKey]
 		if !present[item.ItemKey] {
 			continue
 		}
-		if !ok || fetch.ArtifactSHA256 == nil {
+		if !ok || fetchItem.ArtifactSHA256 == nil {
 			return out, fmt.Errorf("missing identity fetch")
-		}
-		if err := checkInputHash(item, *fetch.ArtifactSHA256); err != nil {
-			return out, err
 		}
 		dir, err := artifactDir(artifacts, item)
 		if err != nil {
 			return out, fmt.Errorf("identity %s: %w", item.Stage, err)
+		}
+		if item.Stage == "extract" {
+			if item.InputHash == nil {
+				return out, fmt.Errorf("missing extract input hash")
+			}
+			if err = fetch.CheckExtractLineage(dir, *fetchItem.ArtifactSHA256, *item.InputHash); err != nil {
+				return out, fmt.Errorf("identity extract lineage: %w", err)
+			}
+		} else if err = checkInputHash(item, *fetchItem.ArtifactSHA256); err != nil {
+			return out, err
 		}
 		if item.Stage == "relate" {
 			var rows []relationRow

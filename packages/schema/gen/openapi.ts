@@ -1196,6 +1196,9 @@ export interface components {
             /** Format: date */
             effective_to?: string;
             status: components["schemas"]["StatusStamp"];
+            /** @enum {string} */
+            text_source: "source_tree" | "html_transcription" | "ocr" | "none";
+            text_complete: boolean;
             source_url?: string;
             related?: components["schemas"]["Pointer"][];
             related_counts?: {
@@ -1251,6 +1254,7 @@ export interface components {
             handle?: string;
             doc?: string;
             citation?: string;
+            locator?: string;
             path?: components["schemas"]["PathNode"][];
             snippet?: string;
             complete: boolean;
@@ -1303,6 +1307,7 @@ export interface components {
         Unit: {
             kind?: string;
             anchor?: string;
+            locator?: string;
             citation?: string;
             label?: string;
             heading?: string;
