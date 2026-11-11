@@ -1,1 +1,1167 @@
-[]
+[
+  {
+    "id": "dev-001",
+    "question": "giới hạn tổng dư nợ cho vay tiêu dùng đối với một khách hàng của công ty tài chính",
+    "tags": [
+      "clause"
+    ],
+    "expected_citations": [
+      {
+        "doc_number": "43/2016/TT-NHNN",
+        "article": "3",
+        "clause": "1"
+      }
+    ]
+  },
+  {
+    "id": "dev-002",
+    "question": "văn bản sửa đổi, bổ sung Thông tư 43/2016/TT-NHNN cho vay tiêu dùng của công ty tài chính",
+    "tags": [
+      "identifier",
+      "multi_document"
+    ],
+    "expected_citations": [
+      {
+        "doc_number": "18/2019/TT-NHNN",
+        "article": "1"
+      }
+    ]
+  },
+  {
+    "id": "dev-003",
+    "question": "điều kiện và thủ tục cấp giấy chứng nhận quyền sử dụng đất lần đầu đối với đất mua bằng giấy tay",
+    "tags": [
+      "negative",
+      "out_of_domain"
+    ],
+    "expect_abstain": true
+  },
+  {
+    "id": "dev-004",
+    "question": "tổ chức tín dụng không được cho vay đối với nhu cầu vốn nào",
+    "tags": [
+      "clause"
+    ],
+    "expected_citations": [
+      {
+        "doc_number": "86/VBHN-NHNN",
+        "article": "8"
+      },
+      {
+        "doc_number": "10/2023/TT-NHNN",
+        "article": "1"
+      }
+    ]
+  },
+  {
+    "id": "dev-006",
+    "question": "rút trước hạn một phần tiền gửi tiết kiệm có kỳ hạn lãi suất phần rút trước hạn và phần còn lại",
+    "tags": [
+      "clause"
+    ],
+    "expected_citations": [
+      {
+        "doc_number": "04/2022/TT-NHNN",
+        "article": "5",
+        "clause": "2",
+        "point": "a"
+      },
+      {
+        "doc_number": "04/2022/TT-NHNN",
+        "article": "5",
+        "clause": "2",
+        "point": "b"
+      }
+    ]
+  },
+  {
+    "id": "dev-007",
+    "question": "hạn mức chi trả tiền bảo hiểm tiền gửi tối đa cho mỗi người gửi tiền",
+    "tags": [
+      "clause",
+      "missing_date"
+    ],
+    "expected_citations": [
+      {
+        "doc_number": "05/2026/TT-NHNN",
+        "article": "3"
+      }
+    ]
+  },
+  {
+    "id": "dev-008",
+    "question": "ngân hàng nào trả lãi suất tiền gửi tiết kiệm cao nhất và an toàn nhất",
+    "tags": [
+      "negative"
+    ],
+    "expect_abstain": true
+  },
+  {
+    "id": "dev-009",
+    "question": "người từ đủ 15 tuổi đến chưa đủ 18 tuổi tự mở tài khoản thanh toán điều kiện",
+    "tags": [
+      "clause"
+    ],
+    "expected_citations": [
+      {
+        "doc_number": "17/2024/TT-NHNN",
+        "article": "11",
+        "clause": "1",
+        "point": "a"
+      }
+    ]
+  },
+  {
+    "id": "dev-010",
+    "question": "mở tài khoản thanh toán của cá nhân bằng phương thức điện tử nhận biết, xác minh khách hàng sinh trắc học",
+    "tags": [
+      "abbreviation",
+      "multi_document"
+    ],
+    "expected_citations": [
+      {
+        "doc_number": "17/2024/TT-NHNN",
+        "article": "16",
+        "clause": "1",
+        "point": "b"
+      },
+      {
+        "doc_number": "25/2025/TT-NHNN",
+        "article": "7",
+        "clause": "1"
+      },
+      {
+        "doc_number": "25/2025/TT-NHNN",
+        "article": "3",
+        "clause": "1"
+      }
+    ]
+  },
+  {
+    "id": "dev-012",
+    "question": "Thông tư 64/2024/TT-NHNN yêu cầu đối với bên thứ ba sử dụng giao diện lập trình ứng dụng mở của ngân hàng",
+    "tags": [
+      "abbreviation",
+      "identifier"
+    ],
+    "expected_citations": [
+      {
+        "doc_number": "64/2024/TT-NHNN",
+        "article": "12",
+        "clause": "2"
+      },
+      {
+        "doc_number": "64/2024/TT-NHNN",
+        "article": "8"
+      }
+    ]
+  },
+  {
+    "id": "dev-013",
+    "question": "Thông tư 99/2026/TT-NHNN tỷ lệ cho vay mua nhà ở",
+    "tags": [
+      "identifier",
+      "negative"
+    ],
+    "expect_abstain": true
+  },
+  {
+    "id": "dev-014",
+    "question": "hạn mức giao dịch ví điện tử của cá nhân tổng giá trị giao dịch trong một tháng",
+    "tags": [
+      "clause"
+    ],
+    "expected_citations": [
+      {
+        "doc_number": "41/2025/TT-NHNN",
+        "article": "10",
+        "clause": "1",
+        "alt_doc_numbers": [
+          "76/VBHN-NHNN"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "dev-015",
+    "question": "điều kiện cấp giấy phép hoạt động cung ứng dịch vụ trung gian thanh toán vốn điều lệ nhân sự hệ thống kỹ thuật",
+    "tags": [
+      "multi_document"
+    ],
+    "expected_citations": [
+      {
+        "doc_number": "52/2024/NĐ-CP",
+        "article": "22",
+        "clause": "2"
+      }
+    ]
+  },
+  {
+    "id": "dev-018",
+    "question": "văn bản quy định hoạt động thẻ ngân hàng năm 2020 và các văn bản sửa đổi, bổ sung",
+    "tags": [
+      "historical",
+      "multi_document"
+    ],
+    "expected_citations": [
+      {
+        "doc_number": "19/2016 /TT-NHNN",
+        "article": "1"
+      },
+      {
+        "doc_number": "30/2016/TT-NHNN",
+        "article": "1"
+      },
+      {
+        "doc_number": "26/2017/TT-NHNN",
+        "article": "1"
+      },
+      {
+        "doc_number": "41/2018/TT-NHNN",
+        "article": "1"
+      },
+      {
+        "doc_number": "28/2019/TT-NHNN",
+        "article": "1"
+      }
+    ]
+  },
+  {
+    "id": "dev-019",
+    "question": "thời hạn tạm giữ, tạm giam tối đa và quyền gặp người bào chữa trong tố tụng hình sự",
+    "tags": [
+      "negative",
+      "out_of_domain"
+    ],
+    "expect_abstain": true
+  },
+  {
+    "id": "dev-020",
+    "question": "bên đại lý thanh toán của ngân hàng phạm vi nghiệp vụ hạn mức giao dịch điều kiện",
+    "tags": [
+      "multi_document"
+    ],
+    "expected_citations": [
+      {
+        "doc_number": "44/2025/TT-NHNN",
+        "article": "1"
+      },
+      {
+        "doc_number": "07/2024/TT-NHNN",
+        "article": "5",
+        "clause": "1"
+      },
+      {
+        "doc_number": "07/2024/TT-NHNN",
+        "article": "6",
+        "clause": "4"
+      },
+      {
+        "doc_number": "07/2024/TT-NHNN",
+        "article": "7",
+        "clause": "4"
+      }
+    ]
+  },
+  {
+    "id": "dev-021",
+    "question": "thông tin nhận biết khách hàng cá nhân và trường hợp áp dụng nhận biết khách hàng tăng cường phòng, chống rửa tiền",
+    "tags": [
+      "abbreviation"
+    ],
+    "expected_citations": [
+      {
+        "doc_number": "27/2025/TT-NHNN",
+        "article": "4",
+        "clause": "5"
+      }
+    ]
+  },
+  {
+    "id": "dev-022",
+    "question": "thông tư hướng dẫn phòng, chống rửa tiền của Ngân hàng Nhà nước và văn bản sửa đổi, bổ sung",
+    "tags": [
+      "historical",
+      "multi_document"
+    ],
+    "expected_citations": [
+      {
+        "doc_number": "35/2013/TT-NHNN",
+        "article": "1"
+      },
+      {
+        "doc_number": "31/2014/TT-NHNN",
+        "article": "1"
+      },
+      {
+        "doc_number": "20/2019/TT-NHNN",
+        "article": "1"
+      },
+      {
+        "doc_number": "09/2023/TT-NHNN",
+        "article": "11"
+      }
+    ]
+  },
+  {
+    "id": "dev-023",
+    "question": "Thông tư 09/2023/TT-NHNN phòng, chống rửa tiền hiệu lực và văn bản thay thế",
+    "tags": [
+      "historical",
+      "identifier"
+    ],
+    "expected_citations": [
+      {
+        "doc_number": "27/2025/TT-NHNN",
+        "article": "13",
+        "clause": "4"
+      }
+    ]
+  },
+  {
+    "id": "dev-024",
+    "question": "mang ngoại tệ tiền mặt khi xuất cảnh mức phải khai báo hải quan cửa khẩu",
+    "tags": [
+      "clause"
+    ],
+    "expected_citations": [
+      {
+        "doc_number": "15/2011/TT-NHNN",
+        "article": "2",
+        "clause": "1",
+        "point": "a"
+      }
+    ]
+  },
+  {
+    "id": "dev-025",
+    "question": "dự báo tỷ giá USD/VND cuối năm có nên mua đô la Mỹ tích trữ",
+    "tags": [
+      "negative"
+    ],
+    "expect_abstain": true
+  },
+  {
+    "id": "dev-027",
+    "question": "khoản vay nước ngoài trung hạn, dài hạn không có bảo lãnh của Chính phủ điều kiện và đăng ký với Ngân hàng Nhà nước",
+    "tags": [
+      "abbreviation",
+      "multi_document"
+    ],
+    "expected_citations": [
+      {
+        "doc_number": "08/2023/TT-NHNN",
+        "article": "17",
+        "clause": "2"
+      },
+      {
+        "doc_number": "08/2023/TT-NHNN",
+        "article": "18",
+        "clause": "1"
+      },
+      {
+        "doc_number": "12/2022/TT-NHNN",
+        "article": "11",
+        "clause": "1",
+        "alt_doc_numbers": [
+          "19/2024/TT-NHNN"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "dev-028",
+    "question": "mở và sử dụng tài khoản vốn đầu tư trực tiếp bằng ngoại tệ của nhà đầu tư nước ngoài",
+    "tags": [
+      "missing_date"
+    ],
+    "expected_citations": [
+      {
+        "doc_number": "38/2026/TT-NHNN",
+        "article": "7",
+        "clause": "1"
+      },
+      {
+        "doc_number": "38/2026/TT-NHNN",
+        "article": "8"
+      }
+    ]
+  },
+  {
+    "id": "dev-029",
+    "question": "niêm yết, quảng cáo, báo giá và thanh toán bằng ngoại tệ trên lãnh thổ Việt Nam",
+    "tags": [
+      "missing_date"
+    ],
+    "expected_citations": [
+      {
+        "doc_number": "32/2013/TT-NHNN",
+        "article": "3"
+      }
+    ]
+  },
+  {
+    "id": "dev-030",
+    "question": "điều kiện cấp giấy phép kinh doanh mua, bán vàng miếng đối với doanh nghiệp",
+    "tags": [
+      "missing_date",
+      "multi_document"
+    ],
+    "expected_citations": [
+      {
+        "doc_number": "117/2026/VBHN-NĐ-NHNN",
+        "article": "11",
+        "clause": "1"
+      }
+    ]
+  },
+  {
+    "id": "dev-031",
+    "question": "Nghị định 512/2026/NĐ-CP trả lãi trên số dư ví điện tử",
+    "tags": [
+      "identifier"
+    ],
+    "expected_citations": [
+      {
+        "doc_number": "40/2024/TT-NHNN",
+        "article": "25",
+        "clause": "5",
+        "alt_doc_numbers": [
+          "76/VBHN-NHNN"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "dev-032",
+    "question": "chấm dứt huy động vốn và cho vay bằng vàng của tổ chức tín dụng",
+    "tags": [
+      "historical",
+      "multi_document"
+    ],
+    "expected_citations": [
+      {
+        "doc_number": "11/2011/TT-NHNN",
+        "article": "2"
+      },
+      {
+        "doc_number": "11/2011/TT-NHNN",
+        "article": "1"
+      },
+      {
+        "doc_number": "11/2011/TT-NHNN",
+        "article": "5",
+        "clause": "1"
+      },
+      {
+        "doc_number": "12/2012/TT-NHNN",
+        "article": "1",
+        "clause": "1"
+      }
+    ]
+  },
+  {
+    "id": "dev-033",
+    "question": "văn bản quy định lãi suất tối đa tiền gửi bằng đồng Việt Nam giai đoạn 2011 đến 2014",
+    "tags": [
+      "historical",
+      "multi_document"
+    ],
+    "expected_citations": [
+      {
+        "doc_number": "02/2011/TT-NHNN",
+        "article": "1"
+      },
+      {
+        "doc_number": "30/2011/TT-NHNN",
+        "article": "1",
+        "alt_doc_numbers": [
+          "05/2012/TT-NHNN",
+          "08/2012/TT-NHNN",
+          "17/2012/TT-NHNN",
+          "19/2012/TT-NHNN"
+        ]
+      },
+      {
+        "doc_number": "32/2012/TT-NHNN",
+        "article": "1"
+      },
+      {
+        "doc_number": "08/2013/TT-NHNN",
+        "article": "1"
+      },
+      {
+        "doc_number": "15/2013/TT-NHNN",
+        "article": "1"
+      },
+      {
+        "doc_number": "07/2014/TT-NHNN",
+        "article": "1",
+        "clause": "1"
+      }
+    ]
+  },
+  {
+    "id": "dev-035",
+    "question": "tổ chức tín dụng cung cấp thông tin khách hàng cho cơ quan nhà nước có thẩm quyền điều kiện và nội dung văn bản yêu cầu",
+    "tags": [
+      "clause"
+    ],
+    "expected_citations": [
+      {
+        "doc_number": "117/2018/NĐ-CP",
+        "article": "4",
+        "clause": "3"
+      },
+      {
+        "doc_number": "117/2018/NĐ-CP",
+        "article": "8"
+      },
+      {
+        "doc_number": "117/2018/NĐ-CP",
+        "article": "9",
+        "clause": "1"
+      }
+    ]
+  },
+  {
+    "id": "dev-036",
+    "question": "căn cứ giao con cho cha hoặc mẹ trực tiếp nuôi và mức cấp dưỡng khi ly hôn",
+    "tags": [
+      "negative",
+      "out_of_domain"
+    ],
+    "expect_abstain": true
+  },
+  {
+    "id": "dev-038",
+    "question": "xử phạt cá nhân mua bán ngoại tệ tại tổ chức không được phép thu đổi ngoại tệ tịch thu ngoại tệ",
+    "tags": [
+      "clause"
+    ],
+    "expected_citations": [
+      {
+        "doc_number": "340/2025/NĐ-CP",
+        "article": "27",
+        "clause": "2"
+      },
+      {
+        "doc_number": "340/2025/NĐ-CP",
+        "article": "27",
+        "clause": "10",
+        "point": "a"
+      },
+      {
+        "doc_number": "340/2025/NĐ-CP",
+        "article": "5",
+        "clause": "3",
+        "point": "a"
+      }
+    ]
+  },
+  {
+    "id": "dev-039",
+    "question": "nghị định xử phạt vi phạm hành chính trong lĩnh vực tiền tệ, ngân hàng áp dụng năm 2022 và văn bản sửa đổi",
+    "tags": [
+      "historical",
+      "multi_document"
+    ],
+    "expected_citations": [
+      {
+        "doc_number": "88/2019/NĐ-CP",
+        "article": "1",
+        "clause": "1"
+      },
+      {
+        "doc_number": "143/2021/NĐ-CP",
+        "article": "1"
+      }
+    ]
+  },
+  {
+    "id": "dev-040",
+    "question": "mức vốn pháp định của ngân hàng thương mại, công ty tài chính, quỹ tín dụng nhân dân, tổ chức tài chính vi mô",
+    "tags": [
+      "clause"
+    ],
+    "expected_citations": [
+      {
+        "doc_number": "86/2019/NĐ-CP",
+        "article": "2"
+      }
+    ]
+  },
+  {
+    "id": "dev-042",
+    "question": "hồ sơ, trình tự chấp thuận nhà đầu tư nước ngoài mua cổ phần của tổ chức tín dụng Việt Nam",
+    "tags": [
+      "abbreviation",
+      "missing_date"
+    ],
+    "expected_citations": [
+      {
+        "doc_number": "38/2014/TT-NHNN",
+        "article": "6",
+        "alt_doc_numbers": [
+          "46/VBHN-NHNN"
+        ]
+      },
+      {
+        "doc_number": "46/VBHN-NHNN",
+        "article": "12",
+        "alt_doc_numbers": [
+          "38/2014/TT-NHNN"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "dev-044",
+    "question": "cơ chế thử nghiệm có kiểm soát giải pháp công nghệ tài chính trong lĩnh vực ngân hàng thời gian thử nghiệm tối đa",
+    "tags": [
+      "abbreviation",
+      "clause"
+    ],
+    "expected_citations": [
+      {
+        "doc_number": "94/2025/NĐ-CP",
+        "article": "1",
+        "clause": "2"
+      },
+      {
+        "doc_number": "94/2025/NĐ-CP",
+        "article": "6",
+        "clause": "1"
+      }
+    ]
+  },
+  {
+    "id": "dev-046",
+    "question": "GDPR thời hạn thông báo vi phạm dữ liệu cho cơ quan giám sát và mức phạt tối đa",
+    "tags": [
+      "abbreviation",
+      "negative",
+      "out_of_domain"
+    ],
+    "expect_abstain": true
+  },
+  {
+    "id": "dev-047",
+    "question": "yêu cầu an toàn, quản lý rủi ro khi ứng dụng hệ thống trí tuệ nhân tạo trong ngành Ngân hàng",
+    "tags": [
+      "abbreviation"
+    ],
+    "expected_citations": [
+      {
+        "doc_number": "53/2026/TT-NHNN",
+        "article": "6"
+      },
+      {
+        "doc_number": "53/2026/TT-NHNN",
+        "article": "14"
+      },
+      {
+        "doc_number": "53/2026/TT-NHNN",
+        "article": "22"
+      },
+      {
+        "doc_number": "53/2026/TT-NHNN",
+        "article": "23",
+        "clause": "1"
+      }
+    ]
+  },
+  {
+    "id": "dev-048",
+    "question": "Luật Trí tuệ nhân tạo phân loại hệ thống theo mức độ rủi ro nghĩa vụ của nhà cung cấp hệ thống rủi ro cao",
+    "tags": [
+      "clause"
+    ],
+    "expected_citations": [
+      {
+        "doc_number": "134/2025/QH15",
+        "article": "9",
+        "clause": "1"
+      },
+      {
+        "doc_number": "134/2025/QH15",
+        "article": "14",
+        "clause": "1"
+      }
+    ]
+  },
+  {
+    "id": "dev-049",
+    "question": "thông báo vi phạm quy định bảo vệ dữ liệu cá nhân thời hạn cơ quan tiếp nhận nội dung thông báo",
+    "tags": [
+      "abbreviation",
+      "clause"
+    ],
+    "expected_citations": [
+      {
+        "doc_number": "91/2025/QH15",
+        "article": "23",
+        "clause": "1"
+      },
+      {
+        "doc_number": "356/2025/NĐ-CP",
+        "article": "28"
+      },
+      {
+        "doc_number": "356/2025/NĐ-CP",
+        "article": "8",
+        "clause": "3"
+      }
+    ]
+  },
+  {
+    "id": "dev-051",
+    "question": "chính sách siết tín dụng bất động sản của Ngân hàng Nhà nước có nên nới lỏng",
+    "tags": [
+      "negative"
+    ],
+    "expect_abstain": true
+  },
+  {
+    "id": "dev-052",
+    "question": "bảo vệ dữ liệu cá nhân năm 2024 nghĩa vụ lập hồ sơ đánh giá tác động xử lý dữ liệu cá nhân",
+    "tags": [
+      "historical"
+    ],
+    "expected_citations": [
+      {
+        "doc_number": "13/2023/NĐ-CP",
+        "article": "24",
+        "clause": "1"
+      }
+    ]
+  },
+  {
+    "id": "dev-053",
+    "question": "Nghị định 356/2025/NĐ-CP bộ phận và nhân sự bảo vệ dữ liệu cá nhân doanh nghiệp được miễn",
+    "tags": [
+      "clause",
+      "identifier"
+    ],
+    "expected_citations": [
+      {
+        "doc_number": "356/2025/NĐ-CP",
+        "article": "13"
+      },
+      {
+        "doc_number": "356/2025/NĐ-CP",
+        "article": "14"
+      },
+      {
+        "doc_number": "356/2025/NĐ-CP",
+        "article": "41"
+      }
+    ]
+  },
+  {
+    "id": "dev-055",
+    "question": "Luật An ninh mạng 2025 ngày có hiệu lực và hiệu lực của Luật An ninh mạng 2018, Luật An toàn thông tin mạng",
+    "tags": [
+      "historical",
+      "multi_document"
+    ],
+    "expected_citations": [
+      {
+        "doc_number": "116/2025/QH15",
+        "article": "44",
+        "clause": "1"
+      },
+      {
+        "doc_number": "116/2025/QH15",
+        "article": "44",
+        "clause": "2"
+      }
+    ]
+  },
+  {
+    "id": "dev-056",
+    "question": "an toàn hệ thống thông tin tổ chức tín dụng thuê ngoài dịch vụ công nghệ thông tin điện toán đám mây",
+    "tags": [
+      "clause"
+    ],
+    "expected_citations": [
+      {
+        "doc_number": "09/2020/TT-NHNN",
+        "article": "33",
+        "clause": "1"
+      },
+      {
+        "doc_number": "09/2020/TT-NHNN",
+        "article": "33",
+        "clause": "2"
+      },
+      {
+        "doc_number": "09/2020/TT-NHNN",
+        "article": "34"
+      }
+    ]
+  },
+  {
+    "id": "dev-057",
+    "question": "Thông tư 63/2023/TT-NHNN hoạt động thẻ ngân hàng",
+    "tags": [
+      "identifier",
+      "negative"
+    ],
+    "expect_abstain": true
+  },
+  {
+    "id": "dev-060",
+    "question": "người bán hàng livestream thương mại điện tử nghĩa vụ xác thực danh tính và cung cấp thông tin sản phẩm",
+    "tags": [
+      "abbreviation",
+      "multi_document"
+    ],
+    "expected_citations": [
+      {
+        "doc_number": "122/2025/QH15",
+        "article": "24",
+        "clause": "1"
+      },
+      {
+        "doc_number": "122/2025/QH15",
+        "article": "23",
+        "clause": "1"
+      },
+      {
+        "doc_number": "248/2026/NĐ-CP",
+        "article": "52",
+        "clause": "2"
+      }
+    ]
+  },
+  {
+    "id": "dev-061",
+    "question": "thí điểm thị trường tài sản mã hóa nhà đầu tư trong nước giao dịch qua tổ chức không được cấp phép",
+    "tags": [
+      "clause",
+      "multi_document"
+    ],
+    "expected_citations": [
+      {
+        "doc_number": "05/2025/NQ-CP",
+        "article": "7",
+        "clause": "2"
+      },
+      {
+        "doc_number": "284/2026/NĐ-CP",
+        "article": "9",
+        "clause": "1"
+      }
+    ]
+  },
+  {
+    "id": "dev-063",
+    "question": "thuế thu nhập cá nhân chuyển nhượng tài sản mã hóa thuế suất khấu trừ nộp thay",
+    "tags": [
+      "abbreviation",
+      "multi_document"
+    ],
+    "expected_citations": [
+      {
+        "doc_number": "32/2026/TT-BTC",
+        "article": "5"
+      },
+      {
+        "doc_number": "41/2026/TT-BTC",
+        "article": "4",
+        "clause": "1"
+      }
+    ]
+  },
+  {
+    "id": "dev-064",
+    "question": "Thông tư 15/2026/TT-BTC ghi nhận và đo lường tài sản mã hóa do tổ chức nắm giữ",
+    "tags": [
+      "clause",
+      "identifier"
+    ],
+    "expected_citations": [
+      {
+        "doc_number": "15/2026/TT-BTC",
+        "article": "5",
+        "clause": "3"
+      },
+      {
+        "doc_number": "15/2026/TT-BTC",
+        "article": "4",
+        "clause": "2"
+      },
+      {
+        "doc_number": "15/2026/TT-BTC",
+        "article": "5",
+        "clause": "2",
+        "point": "b"
+      }
+    ]
+  },
+  {
+    "id": "dev-066",
+    "question": "hồ sơ, thủ tục Ngân hàng Nhà nước chấp thuận tổ chức tín dụng niêm yết cổ phiếu trên thị trường chứng khoán nước ngoài",
+    "tags": [
+      "abbreviation"
+    ],
+    "expected_citations": [
+      {
+        "doc_number": "47/2025/TT-NHNN",
+        "article": "5",
+        "clause": "1",
+        "alt_doc_numbers": [
+          "48/VBHN-NHNN"
+        ]
+      },
+      {
+        "doc_number": "47/2025/TT-NHNN",
+        "article": "6",
+        "clause": "1",
+        "alt_doc_numbers": [
+          "48/VBHN-NHNN"
+        ]
+      },
+      {
+        "doc_number": "48/VBHN-NHNN",
+        "article": "6",
+        "clause": "2"
+      }
+    ]
+  },
+  {
+    "id": "dev-068",
+    "question": "so sánh vay tín chấp công ty tài chính và trả góp bằng thẻ tín dụng mua xe máy",
+    "tags": [
+      "negative"
+    ],
+    "expect_abstain": true
+  },
+  {
+    "id": "dev-069",
+    "question": "nội dung bắt buộc của cam kết bảo lãnh ngân hàng và chấm dứt nghĩa vụ bảo lãnh",
+    "tags": [
+      "clause",
+      "missing_date"
+    ],
+    "expected_citations": [
+      {
+        "doc_number": "61/2024/TT-NHNN",
+        "article": "16",
+        "clause": "1",
+        "alt_doc_numbers": [
+          "102/2026/VBHN-TT-NHNN"
+        ]
+      },
+      {
+        "doc_number": "61/2024/TT-NHNN",
+        "article": "23",
+        "alt_doc_numbers": [
+          "102/2026/VBHN-TT-NHNN"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "dev-070",
+    "question": "văn bản quy định nghiệp vụ bảo lãnh ngân hàng năm 2018",
+    "tags": [
+      "historical"
+    ],
+    "expected_citations": [
+      {
+        "doc_number": "07/2015/TT-NHNN",
+        "article": "1"
+      },
+      {
+        "doc_number": "13/2017/TT-NHNN",
+        "article": "1"
+      }
+    ]
+  },
+  {
+    "id": "dev-073",
+    "question": "cơ cấu lại thời hạn trả nợ, miễn giảm lãi, giữ nguyên nhóm nợ do dịch Covid-19 và văn bản sửa đổi",
+    "tags": [
+      "historical",
+      "multi_document"
+    ],
+    "expected_citations": [
+      {
+        "doc_number": "01/2020/TT-NHNN",
+        "article": "1"
+      },
+      {
+        "doc_number": "03/2021/TT-NHNN",
+        "article": "1"
+      },
+      {
+        "doc_number": "14/2021/TT-NHNN",
+        "article": "1"
+      }
+    ]
+  },
+  {
+    "id": "dev-074",
+    "question": "Luật số 15/2026/QH16 Bitcoin làm phương tiện thanh toán",
+    "tags": [
+      "identifier",
+      "negative"
+    ],
+    "expect_abstain": true
+  },
+  {
+    "id": "dev-076",
+    "question": "Thông tư 11/2021/TT-NHNN dự phòng rủi ro hết hiệu lực và văn bản thay thế",
+    "tags": [
+      "historical",
+      "identifier"
+    ],
+    "expected_citations": [
+      {
+        "doc_number": "31/2024/TT-NHNN",
+        "article": "16",
+        "clause": "2"
+      },
+      {
+        "doc_number": "31/2024/TT-NHNN",
+        "article": "16",
+        "clause": "1"
+      }
+    ]
+  },
+  {
+    "id": "dev-079",
+    "question": "giới hạn số giờ làm thêm trong tháng và cách tính tiền lương làm thêm giờ",
+    "tags": [
+      "negative",
+      "out_of_domain"
+    ],
+    "expect_abstain": true
+  },
+  {
+    "id": "dev-080",
+    "question": "tỷ lệ an toàn vốn tối thiểu và đệm bảo toàn vốn của ngân hàng thương mại lộ trình áp dụng",
+    "tags": [
+      "abbreviation",
+      "clause"
+    ],
+    "expected_citations": [
+      {
+        "doc_number": "14/2025/TT-NHNN",
+        "article": "5",
+        "clause": "3"
+      },
+      {
+        "doc_number": "14/2025/TT-NHNN",
+        "article": "5",
+        "clause": "5"
+      },
+      {
+        "doc_number": "14/2025/TT-NHNN",
+        "article": "7"
+      }
+    ]
+  },
+  {
+    "id": "dev-088",
+    "question": "văn bản thành lập Ngân hàng Quốc gia Việt Nam năm 1951 và bổ nhiệm Tổng giám đốc",
+    "tags": [
+      "historical",
+      "multi_document"
+    ],
+    "expected_citations": [
+      {
+        "doc_number": "16/SL"
+      }
+    ]
+  },
+  {
+    "id": "dev-089",
+    "question": "Nghị định 26/2025/NĐ-CP chức năng, nhiệm vụ, cơ cấu tổ chức Ngân hàng Nhà nước văn bản sửa đổi, bổ sung",
+    "tags": [
+      "identifier",
+      "multi_document"
+    ],
+    "expected_citations": [
+      {
+        "doc_number": "198/2026/NĐ-CP",
+        "article": "1"
+      }
+    ]
+  },
+  {
+    "id": "dev-092",
+    "question": "Luật số 23/2026/QH16 sửa đổi, bổ sung một số luật trong lĩnh vực ngân hàng hiệu lực thi hành",
+    "tags": [
+      "identifier"
+    ],
+    "expected_citations": [
+      {
+        "doc_number": "23/2026/QH16",
+        "article": "1"
+      },
+      {
+        "doc_number": "23/2026/QH16",
+        "article": "2"
+      },
+      {
+        "doc_number": "23/2026/QH16",
+        "article": "3"
+      },
+      {
+        "doc_number": "23/2026/QH16",
+        "article": "4",
+        "clause": "1"
+      }
+    ]
+  },
+  {
+    "id": "dev-093",
+    "question": "Nghị định 340/2025/NĐ-CP hiệu lực thi hành và văn bản bị thay thế",
+    "tags": [
+      "historical",
+      "identifier"
+    ],
+    "expected_citations": [
+      {
+        "doc_number": "340/2025/NĐ-CP",
+        "article": "72",
+        "clause": "1"
+      },
+      {
+        "doc_number": "340/2025/NĐ-CP",
+        "article": "72",
+        "clause": "2"
+      }
+    ]
+  },
+  {
+    "id": "dev-097",
+    "question": "Quyết định 20/2025/QĐ-TTg dữ liệu quan trọng, dữ liệu cốt lõi trong lĩnh vực tài chính, ngân hàng",
+    "tags": [
+      "identifier",
+      "negative"
+    ],
+    "expect_abstain": true
+  },
+  {
+    "id": "dev-106",
+    "question": "yêu cầu vốn tối thiểu và quy trình cấp phép ngân hàng số của Cơ quan Tiền tệ Singapore",
+    "tags": [
+      "abbreviation",
+      "negative",
+      "out_of_domain"
+    ],
+    "expect_abstain": true
+  },
+  {
+    "id": "dev-108",
+    "question": "ngân hàng tự trích tiền tài khoản khách hàng để thu nợ thẻ tín dụng không thông báo trước",
+    "tags": [
+      "negative"
+    ],
+    "expect_abstain": true
+  }
+]
