@@ -29,3 +29,6 @@ Observations and experiments. Not project authority.
   of compact and full presentation and the size gate.
 - [Text inventory](vn-text-inventory-2026-11.md): what text the 562 documents
   without a tree carry in their fetch bundles, and the OCR workload.
+- [OCR cross-check pilot](vn-ocr-check-2026-11.md): cost and findings of
+  checking stored OCR text against PDF pages with Sonnet 5.5 and Opus 5.5, every
+  item read against its page.
