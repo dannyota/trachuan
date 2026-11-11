@@ -21,7 +21,7 @@ it('clears the session and returns home after signing out', async () => {
     const path = new URL(request.url).pathname
     calls.push(`${request.method} ${path} ${request.headers.get('x-csrf-token')}`)
     if (request.method === 'POST') return new Response(null, { status: 204 })
-    const data = path.endsWith('/sessions') ? [{ id: 1, created_at: '2026-01-01T00:00:00Z', last_seen_at: '2026-01-01T00:00:00Z', current: true }] : []
+    const data = path.endsWith('/reports') ? { reports: [] } : path.endsWith('/sessions') ? [{ id: 1, created_at: '2026-01-01T00:00:00Z', last_seen_at: '2026-01-01T00:00:00Z', current: true }] : []
     return new Response(JSON.stringify(data), { headers: { 'content-type': 'application/json' } })
   } })
   vi.stubGlobal('definePageMeta', () => {})
