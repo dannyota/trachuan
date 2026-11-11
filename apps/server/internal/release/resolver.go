@@ -38,6 +38,11 @@ type Resolver struct {
 	EmbedderFor func(queryRecipeHash string) retrieval.Embedder
 	Options     retrieval.Options
 
+	// OnActivate reports the first pointer observation and each change, including
+	// an empty pointer. Calls run under the resolver lock before lending leases.
+	// The callback must not call resolver methods.
+	OnActivate func(release string)
+
 	mu         sync.Mutex
 	entries    map[string]*cacheEntry
 	active     map[string]string
@@ -143,6 +148,7 @@ func (r *Resolver) resolveName(ctx context.Context, country, rel string) (string
 	if r.active == nil {
 		r.active = make(map[string]string)
 	}
+	previous, observed := r.active[country]
 	r.active[country] = active
 	var retired []*cacheEntry
 	for name, entry := range r.entries {
@@ -153,6 +159,9 @@ func (r *Resolver) resolveName(ctx context.Context, country, rel string) (string
 				retired = append(retired, entry)
 			}
 		}
+	}
+	if r.OnActivate != nil && (!observed || previous != active) {
+		r.OnActivate(strings.TrimPrefix(active, "corpus_"+country+"_"))
 	}
 	allowed := active != "" && (rel == "" || active == "corpus_"+country+"_"+rel)
 	r.mu.Unlock()
