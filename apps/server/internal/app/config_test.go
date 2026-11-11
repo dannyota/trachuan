@@ -1,6 +1,8 @@
 package app
 
 import (
+	"context"
+	"io"
 	"strings"
 	"testing"
 )
@@ -20,7 +22,7 @@ func TestConfig_RequiredAndDefaults(t *testing.T) {
 		t.Fatal(err)
 	}
 	if cfg.listen != "127.0.0.1:8080" || cfg.embedderURL != "http://127.0.0.1:8091" || cfg.audience != "http://localhost:8080/mcp" {
-		t.Fatalf("unexpected defaults: %+v", cfg)
+		t.Fatal("unexpected defaults")
 	}
 }
 
@@ -89,6 +91,27 @@ func TestConfig_CorpusURLTemplate(t *testing.T) {
 			}
 			if err != nil && strings.Contains(err.Error(), tt.template) {
 				t.Fatal("error exposed URL")
+			}
+		})
+	}
+}
+
+func TestConfig_WebRequiresGoogleAndPublicURL(t *testing.T) {
+	t.Setenv("SERVER_AUTH_DATABASE_URL", "postgres://localhost/auth")
+	t.Setenv("SERVER_CORPUS_DATABASE_URL", "postgres://localhost/{database}")
+	for _, tt := range []struct{ name, id, secret, public string }{
+		{"client id", "", "configured", "http://localhost:8080"},
+		{"client secret", "configured", "", "http://localhost:8080"},
+		{"public URL", "configured", "configured", ""},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("GOOGLE_CLIENT_ID", tt.id)
+			t.Setenv("GOOGLE_CLIENT_SECRET", tt.secret)
+			t.Setenv("SERVER_PUBLIC_URL", tt.public)
+			ctx, cancel := context.WithCancel(context.Background())
+			cancel()
+			if err := run(ctx, []string{"serve"}, io.Discard, io.Discard); err == nil || err.Error() != "invalid or missing server configuration" {
+				t.Fatalf("expected configuration error, got %v", err)
 			}
 		})
 	}

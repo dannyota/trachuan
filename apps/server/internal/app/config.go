@@ -3,12 +3,16 @@ package app
 import (
 	"errors"
 	"net"
+	"net/netip"
 	"net/url"
 	"os"
 	"strings"
 )
 
-type config struct{ listen, authURL, corpusURL, embedderURL, audience string }
+type config struct {
+	listen, authURL, corpusURL, embedderURL, audience, publicURL, googleID, googleSecret string
+	trustedProxies                                                                       []netip.Prefix
+}
 
 func loadConfig() (config, error) {
 	c := config{listen: os.Getenv("SERVER_LISTEN"), authURL: os.Getenv("SERVER_AUTH_DATABASE_URL"), corpusURL: os.Getenv("SERVER_CORPUS_DATABASE_URL"), embedderURL: os.Getenv("SERVER_QUERY_EMBEDDER_URL")}
@@ -23,6 +27,19 @@ func loadConfig() (config, error) {
 		return config{}, errors.New("invalid or missing server configuration")
 	}
 	c.audience = audience
+	c.publicURL = os.Getenv("SERVER_PUBLIC_URL")
+	c.googleID = os.Getenv("GOOGLE_CLIENT_ID")
+	c.googleSecret = os.Getenv("GOOGLE_CLIENT_SECRET")
+	raw := strings.TrimSpace(os.Getenv("SERVER_TRUSTED_PROXIES"))
+	if raw != "" {
+		for _, part := range strings.Split(raw, ",") {
+			p, err := netip.ParsePrefix(strings.TrimSpace(part))
+			if err != nil {
+				return config{}, errors.New("invalid or missing server configuration")
+			}
+			c.trustedProxies = append(c.trustedProxies, p.Masked())
+		}
+	}
 	return c, nil
 }
 
