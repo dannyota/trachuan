@@ -12,9 +12,8 @@ func webCursor() cursor {
 	return cursor{V: 1, Release: "20991110_1", Item: ReadItem{Handle: "vn:1"}, PageCap: 2_000_000, PartSize: 1_000_000, WholeDocument: true}
 }
 
-func collectWebPages(t *testing.T, seq readSequence) []Unit {
+func collectWebPages(t *testing.T, seq readSequence, c cursor) []Unit {
 	t.Helper()
-	c := webCursor()
 	var units []Unit
 	for page := 0; page < 30; page++ {
 		result, _, err := readPage(seq, c, c.PageCap, true)
@@ -65,9 +64,11 @@ func collectWebPages(t *testing.T, seq readSequence) []Unit {
 func TestDocuments_OversizedLeadAndProvisionAdvance(t *testing.T) {
 	for _, kind := range []string{"lead", "provision"} {
 		t.Run(kind, func(t *testing.T) {
-			text := strings.Repeat("Điều kiện áp dụng. ", 120000)
+			text := strings.Repeat("Điều kiện áp dụng. ", 120)
 			seq := readSequence{doc: "vn:1", document: &DocumentEntry{Title: "title"}, units: []Unit{{Kind: kind, Text: text}}, complete: true}
-			units := collectWebPages(t, seq)
+			c := webCursor()
+			c.PageCap, c.PartSize = 2000, 1000
+			units := collectWebPages(t, seq, c)
 			var joined strings.Builder
 			for i, u := range units {
 				if u.Part != i+1 || u.Parts != len(units) {
@@ -85,9 +86,11 @@ func TestDocuments_OversizedLeadAndProvisionAdvance(t *testing.T) {
 func TestDocuments_OutlineLongerThanPageContinues(t *testing.T) {
 	seq := readSequence{doc: "vn:1", document: &DocumentEntry{Title: "title"}, complete: true}
 	for i := 0; i < 8; i++ {
-		seq.units = append(seq.units, Unit{Kind: "outline", Heading: strings.Repeat("đ", 200000)})
+		seq.units = append(seq.units, Unit{Kind: "outline", Heading: strings.Repeat("đ", 200)})
 	}
-	units := collectWebPages(t, seq)
+	c := webCursor()
+	c.PageCap, c.PartSize = 2000, 1000
+	units := collectWebPages(t, seq, c)
 	if len(units) != 8 {
 		t.Fatalf("outline units: %d", len(units))
 	}
@@ -118,7 +121,8 @@ func TestDocuments_TokensBindModeCapsAndKey(t *testing.T) {
 
 func TestDocuments_OversizedEntryIsTerminal(t *testing.T) {
 	c := webCursor()
-	seq := readSequence{doc: "vn:1", document: &DocumentEntry{Title: strings.Repeat("đ", 900000)}, units: []Unit{{Kind: "outline", Heading: strings.Repeat("a", 500000)}}, complete: true}
+	c.PageCap, c.PartSize = 2000, 1000
+	seq := readSequence{doc: "vn:1", document: &DocumentEntry{Title: strings.Repeat("đ", 900)}, units: []Unit{{Kind: "outline", Heading: strings.Repeat("a", 500)}}, complete: true}
 	result, cost, err := readPage(seq, c, c.PageCap, true)
 	if err != nil || result.Error != "unit_too_large" || result.Next != "" || result.Document != nil || cost != 0 {
 		t.Fatal("oversized entry plus first unit escaped cap")
@@ -155,5 +159,54 @@ func TestDocuments_WholeScopeAndCacheStaySeparateFromMCP(t *testing.T) {
 	split, _, _, err := e.readItem(t.Context(), tx, changed, false, changed.PageCap, true)
 	if err != nil || len(split.Units) <= 2 || split.Units[1].Part != 1 {
 		t.Fatal("part-size change reused cached parts", err)
+	}
+}
+
+func TestDocuments_MultipleProvisionsAcrossPages(t *testing.T) {
+	source := map[string]string{
+		"a": strings.Repeat("Điều kiện áp dụng. ", 60) + "x",
+		"b": strings.Repeat("Nghĩa vụ cụ thể. ", 60) + "x",
+	}
+	nodes := []Provision{
+		{ID: 1, Identity: Identity{DocumentKey: "vn:1", Anchor: "a"}, Kind: "dieu", Text: " " + source["a"] + " "},
+		{ID: 2, Identity: Identity{DocumentKey: "vn:1", Anchor: "b"}, Kind: "dieu", Text: " " + source["b"] + " "},
+	}
+	seq := readRange(readSequence{doc: "vn:1", document: &DocumentEntry{Title: "title"}, units: readOutline(nodes), complete: true}, nodes, 0, len(nodes)-1)
+	c := cursor{V: 1, Release: "20991110_1", Item: ReadItem{Handle: "vn:1"}, PageCap: 1024, PartSize: 512, WholeDocument: true}
+	joined := map[string]string{}
+	partCounts := map[string]int{}
+	pages := 0
+	for ; pages < 10; pages++ {
+		page, _, err := readPage(seq, c, c.PageCap, true)
+		if err != nil || page.Error != "" {
+			t.Fatalf("page error: %v %s", err, page.Error)
+		}
+		for _, u := range page.Units {
+			if u.Kind == "provision" {
+				joined[u.Anchor] += u.Text
+				partCounts[u.Anchor]++
+			}
+		}
+		if page.Next == "" {
+			if !page.Complete {
+				t.Fatal("incomplete chain")
+			}
+			break
+		}
+		c, err = decodeNext(page.Next)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	if pages == 0 || pages == 10 {
+		t.Fatal("expected multiple advancing pages")
+	}
+	for anchor, want := range source {
+		if partCounts[anchor] < 2 {
+			t.Fatalf("anchor %s was not split", anchor)
+		}
+		if joined[anchor] != want {
+			t.Fatalf("anchor %s: got %d bytes, want %d", anchor, len(joined[anchor]), len(want))
+		}
 	}
 }

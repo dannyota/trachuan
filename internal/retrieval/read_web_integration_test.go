@@ -40,9 +40,9 @@ func TestDocuments_WholeDocumentMatchesRange(t *testing.T) {
 
 func TestDocuments_WholeDocumentPaginationAndTokenIsolation(t *testing.T) {
 	db, e := readFixture(t)
-	source := strings.Repeat("đ", 1_200_000)
+	source := strings.Repeat("đ", 45_000)
 	readExec(t, db, `UPDATE provision SET text=$1 WHERE id=9`, source)
-	req := ReadRequest{Release: e.release.Rel, WholeDocument: true, DocumentKey: "vn:1", PageCap: 2_000_000, PartSize: 1_000_000, Items: []ReadItem{{Handle: "vn:1"}}}
+	req := ReadRequest{Release: e.release.Rel, WholeDocument: true, DocumentKey: "vn:1", PageCap: 64_000, PartSize: 32_000, Items: []ReadItem{{Handle: "vn:1"}}}
 	first, err := e.Read(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)

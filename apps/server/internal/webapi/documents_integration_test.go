@@ -49,7 +49,7 @@ func documentEngine(t *testing.T, longOutline bool) (*retrieval.Engine, map[stri
 	}
 	hash := strings.Repeat("a", 64)
 	exec(`INSERT INTO document(id,country,key,number,number_norm,title,doc_type,issuer,class,source,validity_conflict,eff_from,raw_issue_date,raw_eff_from,raw_eff_to,status_code,status_name,status_class,status_basis,is_current,is_consolidated,content_state,fetch_sha256) VALUES(1,'vn','vn:1','N1','N1','title','law','issuer','primary','vbpl',false,'2099-01-01','','','','','','in_force','source_status',true,false,'indexed',$1)`, hash)
-	source := map[string]string{"a": strings.Repeat("Điều kiện áp dụng. ", 70000), "b": strings.Repeat("Nghĩa vụ cụ thể. ", 70000)}
+	source := map[string]string{"a": strings.Repeat("Điều kiện áp dụng. ", 70000) + "Kết thúc.", "b": strings.Repeat("Nghĩa vụ cụ thể. ", 70000) + "Kết thúc."}
 	count := 2
 	if longOutline {
 		count = 8
@@ -152,8 +152,27 @@ func TestDocuments_IsReadWithWebCapsIntegration(t *testing.T) {
 				}
 				next = got.Next
 			}
-			if !finished || !reflect.DeepEqual(joined, source) {
-				t.Fatal("pages lost source text")
+			if !finished {
+				t.Fatal("pages did not finish")
+			}
+			for anchor, expected := range source {
+				actual, ok := joined[anchor]
+				if !ok {
+					t.Errorf("anchor %q missing; first differing byte offset 0", anchor)
+					continue
+				}
+				if actual != expected {
+					offset := 0
+					for offset < min(len(actual), len(expected)) && actual[offset] == expected[offset] {
+						offset++
+					}
+					t.Errorf("anchor %q differs at byte offset %d (got %d bytes, want %d)", anchor, offset, len(actual), len(expected))
+				}
+			}
+			for anchor := range joined {
+				if _, ok := source[anchor]; !ok {
+					t.Errorf("unexpected anchor %q at byte offset 0", anchor)
+				}
 			}
 		})
 	}
