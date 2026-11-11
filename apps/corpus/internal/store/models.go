@@ -169,6 +169,15 @@ type Run struct {
 	UpdatedAt  time.Time
 }
 
+type RunAcquisition struct {
+	RunID       int64
+	Stage       string
+	DocumentKey string
+	ArtifactID  int64
+	Generation  int32
+	RecordedAt  time.Time
+}
+
 type RunDocument struct {
 	RunID            int64
 	DocumentKey      string
