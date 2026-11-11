@@ -7,7 +7,10 @@ CREATE TABLE oauth_client (
     redirect_uris text[] NOT NULL,
     metadata_sha256 text CHECK (metadata_sha256 ~ '^[0-9a-f]{64}$'),
     created_at timestamptz NOT NULL DEFAULT now(),
-    last_used_at timestamptz NOT NULL DEFAULT now()
+    last_used_at timestamptz NOT NULL DEFAULT now(),
+    grant_types text[] NOT NULL DEFAULT ARRAY['authorization_code', 'refresh_token']::text[]
+        CHECK (cardinality(grant_types) > 0 AND array_position(grant_types, NULL) IS NULL
+            AND grant_types <@ ARRAY['authorization_code', 'refresh_token']::text[])
 );
 
 CREATE TABLE oauth_request (

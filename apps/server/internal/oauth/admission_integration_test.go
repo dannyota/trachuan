@@ -22,6 +22,7 @@ import (
 	"danny.vn/trachuan/apps/server/internal/store"
 	"danny.vn/trachuan/internal/testpg"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -354,5 +355,97 @@ func TestAdmission_PreregisteredChangePersistsMetadata(t *testing.T) {
 	}
 	if row.MetadataSha256 != nil || !row.CreatedAt.Equal(first.CreatedAt) {
 		t.Fatal("preregistered identity changed")
+	}
+}
+
+func TestAdmission_InUseGrantRoundTrip(t *testing.T) {
+	pool := admissionDB(t)
+	ctx := t.Context()
+	id := "https://example.com/refresh-only"
+	raw := strings.TrimSuffix(cimdFixture(id), "}") + `,"grant_types":["refresh_token"]}`
+	client, err := parseCIMD([]byte(raw), id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx := admissionTx(t, pool)
+	admitted, err := Admit(ctx, tx, client)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if admitted.Allows("authorization_code") || !admitted.Allows("refresh_token") {
+		t.Fatal("admitted grants differ")
+	}
+	if commitErr := tx.Commit(ctx); commitErr != nil {
+		t.Fatal(commitErr)
+	}
+	tx = admissionTx(t, pool)
+	stored, err := InUse(ctx, tx, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stored.Allows("authorization_code") || !stored.Allows("refresh_token") {
+		t.Fatal("stored grants differ")
+	}
+	if commitErr := tx.Commit(ctx); commitErr != nil {
+		t.Fatal(commitErr)
+	}
+	// A later admission of the same client must replace the stored grant set.
+	updated, err := parseCIMD([]byte(cimdFixture(id)), id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx = admissionTx(t, pool)
+	if _, admitErr := Admit(ctx, tx, updated); admitErr != nil {
+		t.Fatal(admitErr)
+	}
+	if commitErr := tx.Commit(ctx); commitErr != nil {
+		t.Fatal(commitErr)
+	}
+	tx = admissionTx(t, pool)
+	stored, err = InUse(ctx, tx, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !stored.Allows("authorization_code") || stored.Allows("refresh_token") {
+		t.Fatal("updated grants differ")
+	}
+}
+
+func TestAdmission_GrantSetConstraint(t *testing.T) {
+	pool := admissionDB(t)
+	ctx := t.Context()
+	for _, tc := range []struct {
+		name   string
+		grants []string
+		valid  bool
+	}{
+		{"empty", []string{}, false},
+		{"unknown", []string{"unsupported"}, false},
+		{"mixed unknown", []string{"refresh_token", "unsupported"}, false},
+		{"code", []string{"authorization_code"}, true},
+		{"refresh", []string{"refresh_token"}, true},
+		{"both", []string{"authorization_code", "refresh_token"}, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := pool.Exec(ctx, `UPDATE oauth_client SET grant_types=$1 WHERE client_id='client-1'`, tc.grants)
+			if tc.valid && err != nil {
+				t.Fatal(err)
+			}
+			if !tc.valid {
+				var pgErr *pgconn.PgError
+				if !errors.As(err, &pgErr) || pgErr.Code != "23514" {
+					t.Fatalf("want check violation, got %v", err)
+				}
+			}
+		})
+	}
+}
+
+func TestAdmission_NullGrantElementRejected(t *testing.T) {
+	pool := admissionDB(t)
+	_, err := pool.Exec(t.Context(), `UPDATE oauth_client SET grant_types=ARRAY['refresh_token',NULL]::text[] WHERE client_id='client-1'`)
+	var pgErr *pgconn.PgError
+	if !errors.As(err, &pgErr) || pgErr.Code != "23514" {
+		t.Fatalf("want check violation, got %v", err)
 	}
 }

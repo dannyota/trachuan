@@ -33,8 +33,7 @@ const (
 	grantRefreshToken
 )
 
-// Allows reports whether validated client metadata permits a grant. CIMD
-// clients must come from Resolve or Admit, since InUse reads no grant metadata.
+// Allows reports whether validated client metadata permits a grant.
 func (c Client) Allows(grant string) bool {
 	var flag uint8
 	switch grant {
@@ -45,10 +44,7 @@ func (c Client) Allows(grant string) bool {
 	default:
 		return false
 	}
-	if c.Kind == "dcr" || c.Kind == "preregistered" {
-		return true
-	}
-	return c.Kind == "cimd" && c.grants&flag != 0
+	return c.grants&flag != 0
 }
 
 // ClientDB is the auth database used to resolve and admit clients.
@@ -68,6 +64,7 @@ type Clients struct {
 func NewClients(db ClientDB, preregistered []Client, cimd *CIMDResolver) *Clients {
 	c := &Clients{db: db, preregistered: map[string]Client{}, cimd: cimd}
 	for _, client := range preregistered {
+		client.grants = grantAuthorizationCode | grantRefreshToken
 		c.preregistered[client.ID] = cloneClient(client)
 	}
 	return c
@@ -134,5 +131,23 @@ func (c *Clients) Register(ctx context.Context, client Client) (Client, error) {
 }
 
 func clientFromRow(row store.OauthClient) Client {
-	return Client{ID: row.ClientID, Kind: row.Kind, Name: row.Name, RedirectURIs: slices.Clone(row.RedirectUris), CreatedAt: row.CreatedAt}
+	var grants uint8
+	if slices.Contains(row.GrantTypes, "authorization_code") {
+		grants |= grantAuthorizationCode
+	}
+	if slices.Contains(row.GrantTypes, "refresh_token") {
+		grants |= grantRefreshToken
+	}
+	return Client{ID: row.ClientID, Kind: row.Kind, Name: row.Name, RedirectURIs: slices.Clone(row.RedirectUris), CreatedAt: row.CreatedAt, grants: grants}
+}
+
+func (c Client) grantTypes() []string {
+	grants := make([]string, 0, 2)
+	if c.Allows("authorization_code") {
+		grants = append(grants, "authorization_code")
+	}
+	if c.Allows("refresh_token") {
+		grants = append(grants, "refresh_token")
+	}
+	return grants
 }

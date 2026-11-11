@@ -29,6 +29,10 @@ func Admit(ctx context.Context, tx pgx.Tx, client Client) (Client, error) {
 		return unavailable(err)
 	}
 	q := store.New(tx)
+	if client.Kind == "dcr" || client.Kind == "preregistered" {
+		client.grants = grantAuthorizationCode | grantRefreshToken
+	}
+	grants := client.grantTypes()
 	var digest *string
 	if client.Kind == "cimd" {
 		raw, marshalErr := json.Marshal(struct {
@@ -45,15 +49,13 @@ func Admit(ctx context.Context, tx pgx.Tx, client Client) (Client, error) {
 	existing, err := q.GetClient(ctx, client.ID)
 	if err == nil {
 		sameDigest := existing.MetadataSha256 == nil && digest == nil || existing.MetadataSha256 != nil && digest != nil && *existing.MetadataSha256 == *digest
-		if existing.Kind != client.Kind || existing.Name != client.Name || !slices.Equal(existing.RedirectUris, client.RedirectURIs) || !sameDigest {
-			if _, updateErr := tx.Exec(ctx, `UPDATE oauth_client SET kind=$2, name=$3, redirect_uris=$4, metadata_sha256=$5 WHERE client_id=$1`, client.ID, client.Kind, client.Name, client.RedirectURIs, digest); updateErr != nil {
+		if existing.Kind != client.Kind || existing.Name != client.Name || !slices.Equal(existing.RedirectUris, client.RedirectURIs) || !slices.Equal(existing.GrantTypes, grants) || !sameDigest {
+			if _, updateErr := tx.Exec(ctx, `UPDATE oauth_client SET kind=$2, name=$3, redirect_uris=$4, metadata_sha256=$5, grant_types=$6 WHERE client_id=$1`, client.ID, client.Kind, client.Name, client.RedirectURIs, digest, grants); updateErr != nil {
 				return unavailable(updateErr)
 			}
-			existing.Kind, existing.Name, existing.RedirectUris, existing.MetadataSha256 = client.Kind, client.Name, client.RedirectURIs, digest
+			existing.Kind, existing.Name, existing.RedirectUris, existing.MetadataSha256, existing.GrantTypes = client.Kind, client.Name, client.RedirectURIs, digest, grants
 		}
-		admitted := clientFromRow(existing)
-		admitted.grants = client.grants
-		return admitted, nil
+		return clientFromRow(existing), nil
 	}
 	if !errors.Is(err, pgx.ErrNoRows) {
 		return unavailable(err)
@@ -67,13 +69,11 @@ func Admit(ctx context.Context, tx pgx.Tx, client Client) (Client, error) {
 			return unavailable(evictErr)
 		}
 	}
-	row, err := q.CreateClient(ctx, store.CreateClientParams{ClientID: client.ID, Kind: client.Kind, Name: client.Name, RedirectUris: client.RedirectURIs, MetadataSha256: digest})
+	row, err := q.CreateClient(ctx, store.CreateClientParams{ClientID: client.ID, Kind: client.Kind, Name: client.Name, RedirectUris: client.RedirectURIs, MetadataSha256: digest, GrantTypes: grants})
 	if err != nil {
 		return unavailable(err)
 	}
-	admitted := clientFromRow(row)
-	admitted.grants = client.grants
-	return admitted, nil
+	return clientFromRow(row), nil
 }
 
 // InUse takes the shared clients lock, reads the client and touches its hourly

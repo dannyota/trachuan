@@ -158,7 +158,7 @@ func clientMetadata(fields map[string]json.RawMessage, cimd bool) (Client, strin
 			return bad("invalid_redirect_uri")
 		}
 	}
-	var grants uint8
+	grants := grantAuthorizationCode | grantRefreshToken
 	if cimd {
 		grants = grantAuthorizationCode
 		if _, exists := fields["grant_types"]; exists {

@@ -31,6 +31,7 @@ func (r clientRow) Scan(values ...any) error {
 	*values[5].(**string) = r.row.MetadataSha256
 	*values[6].(*time.Time) = r.row.CreatedAt
 	*values[7].(*time.Time) = r.row.LastUsedAt
+	*values[8].(*[]string) = r.row.GrantTypes
 	return nil
 }
 
@@ -151,6 +152,7 @@ func (tx *metadataUpdateTx) Exec(_ context.Context, sql string, args ...any) (pg
 		tx.row.Name = args[2].(string)
 		tx.row.RedirectUris = args[3].([]string)
 		tx.row.MetadataSha256 = args[4].(*string)
+		tx.row.GrantTypes = args[5].([]string)
 	}
 	return pgconn.NewCommandTag("UPDATE 1"), nil
 }
@@ -160,7 +162,7 @@ func TestAdmission_ExistingMetadataUpdates(t *testing.T) {
 		t.Run(kind, func(t *testing.T) {
 			oldDigest := "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 			tx := &metadataUpdateTx{row: store.OauthClient{ClientID: "fixture", Kind: kind, Name: "Old", RedirectUris: []string{"https://old.example/cb"}, MetadataSha256: &oldDigest}}
-			c := Client{ID: "fixture", Kind: kind, Name: "New", RedirectURIs: []string{"https://new.example/cb"}}
+			c := Client{ID: "fixture", Kind: kind, Name: "New", RedirectURIs: []string{"https://new.example/cb"}, grants: grantAuthorizationCode}
 			got, err := Admit(t.Context(), tx, c)
 			if err != nil {
 				t.Fatal(err)
@@ -187,7 +189,7 @@ func TestAdmission_ExistingMetadataUpdates(t *testing.T) {
 func TestClients_RegisteredGrants(t *testing.T) {
 	for _, kind := range []string{"dcr", "preregistered"} {
 		t.Run(kind, func(t *testing.T) {
-			client := clientFromRow(store.OauthClient{Kind: kind})
+			client := clientFromRow(store.OauthClient{Kind: kind, GrantTypes: []string{"authorization_code", "refresh_token"}})
 			allows, ok := any(client).(interface{ Allows(string) bool })
 			if !ok {
 				t.Fatal("Client does not expose grant checks")
@@ -259,7 +261,15 @@ func TestClients_ResolvePreservesCIMDGrants(t *testing.T) {
 		t.Fatalf("metadata fetches = %d", calls)
 	}
 	stored := clientFromRow(tx.row)
-	if stored.Allows("authorization_code") || stored.Allows("refresh_token") {
-		t.Fatal("stored CIMD row must not invent grants")
+	if stored.Allows("authorization_code") || !stored.Allows("refresh_token") {
+		t.Fatal("stored CIMD row lost grants")
+	}
+}
+
+func TestClients_StoredGrantSet(t *testing.T) {
+	row := store.OauthClient{ClientID: "https://example.com/client", Kind: "cimd", GrantTypes: []string{"refresh_token"}}
+	c := clientFromRow(row)
+	if c.Allows("authorization_code") || !c.Allows("refresh_token") {
+		t.Fatalf("stored grants were not restored: %v", c)
 	}
 }

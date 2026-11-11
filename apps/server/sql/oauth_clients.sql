@@ -1,6 +1,6 @@
 -- name: CreateClient :one
-INSERT INTO oauth_client (client_id, kind, name, redirect_uris, metadata_sha256)
-VALUES ($1, $2, $3, $4, $5) RETURNING *;
+INSERT INTO oauth_client (client_id, kind, name, redirect_uris, metadata_sha256, grant_types)
+VALUES ($1, $2, $3, $4, $5, COALESCE(sqlc.narg(grant_types)::text[], ARRAY['authorization_code', 'refresh_token']::text[])) RETURNING *;
 
 -- name: GetClient :one
 SELECT * FROM oauth_client WHERE client_id = $1;

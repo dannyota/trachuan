@@ -47,6 +47,7 @@ type OauthClient struct {
 	MetadataSha256 *string
 	CreatedAt      time.Time
 	LastUsedAt     time.Time
+	GrantTypes     []string
 }
 
 type OauthCode struct {

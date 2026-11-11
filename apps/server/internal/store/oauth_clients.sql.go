@@ -21,8 +21,8 @@ func (q *Queries) CountClients(ctx context.Context) (int64, error) {
 }
 
 const createClient = `-- name: CreateClient :one
-INSERT INTO oauth_client (client_id, kind, name, redirect_uris, metadata_sha256)
-VALUES ($1, $2, $3, $4, $5) RETURNING id, client_id, kind, name, redirect_uris, metadata_sha256, created_at, last_used_at
+INSERT INTO oauth_client (client_id, kind, name, redirect_uris, metadata_sha256, grant_types)
+VALUES ($1, $2, $3, $4, $5, COALESCE($6::text[], ARRAY['authorization_code', 'refresh_token']::text[])) RETURNING id, client_id, kind, name, redirect_uris, metadata_sha256, created_at, last_used_at, grant_types
 `
 
 type CreateClientParams struct {
@@ -31,6 +31,7 @@ type CreateClientParams struct {
 	Name           string
 	RedirectUris   []string
 	MetadataSha256 *string
+	GrantTypes     []string
 }
 
 func (q *Queries) CreateClient(ctx context.Context, arg CreateClientParams) (OauthClient, error) {
@@ -40,6 +41,7 @@ func (q *Queries) CreateClient(ctx context.Context, arg CreateClientParams) (Oau
 		arg.Name,
 		arg.RedirectUris,
 		arg.MetadataSha256,
+		arg.GrantTypes,
 	)
 	var i OauthClient
 	err := row.Scan(
@@ -51,6 +53,7 @@ func (q *Queries) CreateClient(ctx context.Context, arg CreateClientParams) (Oau
 		&i.MetadataSha256,
 		&i.CreatedAt,
 		&i.LastUsedAt,
+		&i.GrantTypes,
 	)
 	return i, err
 }
@@ -62,7 +65,7 @@ DELETE FROM oauth_client WHERE id = (
       AND NOT EXISTS (SELECT 1 FROM oauth_code x WHERE x.client_id = c.client_id AND x.expires_at > now() AND x.consumed_at IS NULL AND x.revoked_at IS NULL)
       AND NOT EXISTS (SELECT 1 FROM oauth_token t JOIN oauth_grant g ON g.id = t.grant_id WHERE t.client_id = c.client_id AND t.family_expires_at > now() AND t.revoked_at IS NULL AND g.revoked_at IS NULL)
     ORDER BY c.last_used_at, c.id LIMIT 1
-) RETURNING id, client_id, kind, name, redirect_uris, metadata_sha256, created_at, last_used_at
+) RETURNING id, client_id, kind, name, redirect_uris, metadata_sha256, created_at, last_used_at, grant_types
 `
 
 func (q *Queries) EvictClient(ctx context.Context) (OauthClient, error) {
@@ -77,12 +80,13 @@ func (q *Queries) EvictClient(ctx context.Context) (OauthClient, error) {
 		&i.MetadataSha256,
 		&i.CreatedAt,
 		&i.LastUsedAt,
+		&i.GrantTypes,
 	)
 	return i, err
 }
 
 const getClient = `-- name: GetClient :one
-SELECT id, client_id, kind, name, redirect_uris, metadata_sha256, created_at, last_used_at FROM oauth_client WHERE client_id = $1
+SELECT id, client_id, kind, name, redirect_uris, metadata_sha256, created_at, last_used_at, grant_types FROM oauth_client WHERE client_id = $1
 `
 
 func (q *Queries) GetClient(ctx context.Context, clientID string) (OauthClient, error) {
@@ -97,6 +101,7 @@ func (q *Queries) GetClient(ctx context.Context, clientID string) (OauthClient, 
 		&i.MetadataSha256,
 		&i.CreatedAt,
 		&i.LastUsedAt,
+		&i.GrantTypes,
 	)
 	return i, err
 }
