@@ -57,7 +57,7 @@ Metadata Document (CIMD); an ID listed in the pre-registered file
 other ID must come from [registration](#registration). All clients are public.
 For a CIMD document the method is `none` when `token_endpoint_auth_method` is
 absent or `none` and `token_endpoint_auth_methods_supported`, when present,
-contains `none`; any other value or combination rejects the client.
+contains `none`; a client whose either field names any other method is rejected.
 
 CIMD fetching follows auth.md (HTTPS, DNS name, global unicast addresses only,
 validated dial, no redirects, `client_id` equal to the fetched URL) with the
@@ -71,11 +71,15 @@ No other `http` URI is accepted. Redirect URI counts are in budgets.
 
 The client table holds at most the number in budgets. A client is in use while
 it has an unexpired pending request, an unconsumed unexpired code or an
-unexpired token family. Admitting a new client (registration or first CIMD use)
-runs in one transaction that takes a table-wide advisory lock: when the cap is
-reached it deletes the least recently used client not in use, or fails with 503
-`temporarily_unavailable` when every client is in use. `last_used_at` is written
-by authorization and token requests at the interval in budgets.
+unexpired token family. Every transaction that makes a client in use (storing a
+pending request, issuing a code, issuing a token family) takes the clients
+advisory lock in shared mode and reads the client row inside it; a missing row
+is an unknown client. Admitting a new client (registration or first CIMD use)
+takes the same lock in exclusive mode: when the cap is reached it rechecks
+eligibility under the lock and deletes the least recently used client not in
+use, or fails with 503 `temporarily_unavailable` when every client is in use.
+`last_used_at` is written by authorization and token requests at the interval in
+budgets.
 
 ## Registration
 
@@ -105,8 +109,8 @@ defaults to `mcp:read`; any other value returns `invalid_scope`.
 `code`, the PKCE `S256` challenge, `state`, resource and scope (sizes in
 budgets). Any error, before or after the redirect URI is known, renders a server
 page with the error and, when the redirect URI is valid, a button that returns
-to the client with `error` and `state`; the server never redirects to a client
-without that click or a consent decision (RFC 9700 §4.11.2).
+to the client with `error`, `state` and `iss`; the server never redirects to a
+client without that click or a consent decision (RFC 9700 §4.11.2).
 
 A valid request is stored as a pending request under a random handle and bound
 to the browser: the response sets cookie `__Host-oauth` (`Path=/`, `Secure`,
@@ -185,18 +189,24 @@ The process drops its cached credential entries at once. The account routes
 ## Retention
 
 A cleanup loop in the server deletes, in batches, at the interval in budgets:
-pending requests after expiry; codes one day after expiry (kept for replay
-detection until then); tokens one day after their family expires or their grant
-is revoked; grants with no unexpired family and no pending code for the
-retirement period in budgets. Unexpired pending requests are capped in budgets;
-at the cap `/oauth/authorize` returns the 503 server page.
+pending requests after expiry; codes after the replay retention in budgets (kept
+for replay detection until then); tokens after the same retention once their
+family expires or their grant is revoked; grants with no unexpired family and no
+pending code for the retirement period in budgets. Unexpired pending requests
+are capped in budgets; at the cap `/oauth/authorize` returns the 503 server
+page.
 
 ## Errors
 
 OAuth endpoints use RFC 6749 error codes in JSON (token, registration,
 revocation) or the server page (authorize, consent). Auth database errors,
 including the query deadline in budgets, return 503 `temporarily_unavailable` at
-OAuth endpoints and 503 `unavailable` at `/mcp`, and change nothing.
+OAuth endpoints and 503 `unavailable` at `/mcp`. A request whose transaction
+rolled back changed nothing. When the outcome of a commit is unknown (the
+connection failed after the commit was sent) the request also fails with 503 and
+the state may have changed: a rotated refresh token is then superseded, and
+presenting it again revokes the grant, so the client must authorize again. This
+fails closed by design.
 
 ## Acceptance
 
