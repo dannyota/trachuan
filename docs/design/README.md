@@ -19,6 +19,7 @@ Intended behavior of trachuan. Decisions with alternatives are in the
 | [membership](membership.md)                | Support supersession, retention, withdrawal, fetch drift and removal lifetime            |
 | [source execution](source-execution.md)    | Shared source interfaces, finalization, retries and durable pauses                       |
 | [auth](auth.md)                            | Google login, OAuth for MCP, CIMD, revocation, account lifecycle                         |
+| [web API](web-api.md)                      | Google login flow, web sessions, CSRF, `/api/v1` routes, OpenAPI contract                |
 | [web](web.md)                              | Routes, pages, visual system                                                             |
 | [deployment](deployment.md)                | Host, deploy, secrets, release activation, backups, observability                        |
 | [budgets](budgets.md)                      | Request, pipeline, indexing, retrieval and Temporal limits                               |

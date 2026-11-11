@@ -104,15 +104,16 @@ cannot supply missing fields.
 
 ## Auth database `auth` (written when serving)
 
-| Table                                                      | Content                                                                                                                             |
-| ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `account`                                                  | `id`, `google_sub` unique, current `email`, `blocked_at`, `created_at`, `last_login_at`, `delete_requested_at`, `auth_epoch`        |
-| `web_session`                                              | `token_hash`, `account_id`, `created_at`, `expires_at`, `revoked_at`                                                                |
-| `oauth_client`, `oauth_grant`, `oauth_code`, `oauth_token` | as defined by the copied `oauthsrv` store, pinned to one aboutme commit; refresh and access tokens stored hashed with `revoked_at`  |
-| `personal_token`                                           | `token_hash`, `account_id`, `name`, `created_at`, `expires_at` (at most one year, chosen at creation), `last_used_at`, `revoked_at` |
-| `corpus_release`                                           | `country`, `active_db`, `activated_at`, `activated_by`                                                                              |
-| `retired_release`                                          | `country`, `db_name`, `retired_at`, `retain_until`, `dropped_at`                                                                    |
-| `release_journal`                                          | `id`, `country`, `rel`, `step`, `state`, `at`, `message`; append only                                                               |
+| Table                                                      | Content                                                                                                                                                      |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `account`                                                  | `id`, `google_sub` unique, current `email`, `blocked_at`, `created_at`, `last_login_at`, `delete_requested_at`, `auth_epoch`                                 |
+| `web_session`                                              | `id`, `token_hash`, `account_id`, `csrf_secret`, `auth_epoch`, `created_at`, `last_seen_at`, `expires_at`, `revoked_at` ([web API](web-api.md#sessions))     |
+| `login_transaction`                                        | `handle_hash`, `state`, `nonce`, `pkce_verifier`, `next_path`, `redirect_uri`, `created_at`, `expires_at`, `claimed_at` ([web API](web-api.md#google-login)) |
+| `oauth_client`, `oauth_grant`, `oauth_code`, `oauth_token` | as defined by the copied `oauthsrv` store, pinned to one aboutme commit; refresh and access tokens stored hashed with `revoked_at`                           |
+| `personal_token`                                           | `id`, `token_hash`, `account_id`, `name`, `created_at`, `expires_at` (at most one year, chosen at creation), `last_used_at`, `revoked_at`, `auth_epoch`      |
+| `corpus_release`                                           | `country`, `active_db`, `activated_at`, `activated_by`                                                                                                       |
+| `retired_release`                                          | `country`, `db_name`, `retired_at`, `retain_until`, `dropped_at`                                                                                             |
+| `release_journal`                                          | `id`, `country`, `rel`, `step`, `state`, `at`, `message`; append only                                                                                        |
 
 Rules:
 
