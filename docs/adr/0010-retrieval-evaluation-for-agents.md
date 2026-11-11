@@ -51,8 +51,10 @@ choice, and three of them send unaccented queries that ADR 0002 rejects.
    the flag keeps the hits and an agent reads it as a signal. Recall and MRR
    have targets that every report states, but a target is not a gate: a release
    ships when the gates pass and recall@20 and MRR@8 do not fall against the
-   previous release. Reports state the small sample size; no interval or
-   superiority claim is required.
+   previous release. A change that alters only the abstention threshold or its
+   calibration policy ships when matched citations are identical on every cohort
+   and abstention balanced accuracy does not fall on either cohort. Reports
+   state the small sample size; no interval or superiority claim is required.
 5. Every evaluation reports returned evidence characters per response (p50,
    p95). A change that only reduces size ships when matched citations and gate
    results are identical on every cohort.
@@ -79,6 +81,14 @@ chunk, lexical and retrieval recipes from the experiments this protocol scores.
 Gates and targets change only with a History line. These metrics measure
 retrieval and response size, not the quality of an agent's final answer or its
 real token spend.
+
+Abstention as a target, not a gate, is an accepted trade-off: an agent may
+refuse a flagged response that held the answer, or trust unflagged weak
+evidence, and a release where every response is flagged, or none is, passes the
+retrieval gates. Every report states both rates per cohort so that state is
+visible, `guide` tells agents the flag is advisory and the hits remain, and the
+non-regression rule in item 4 stops a calibration change that lowers balanced
+accuracy on either cohort.
 
 ## Alternatives rejected
 

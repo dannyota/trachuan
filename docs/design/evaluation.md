@@ -186,6 +186,10 @@ under identical eligibility and response processing; only hybrid gates apply.
   means abstain; an infrastructure error means evaluation incomplete, not
   abstention. Low-confidence responses keep their hits, so the flag is a signal
   agents read, not a loss of evidence; recall and MRR score the hits regardless.
+  Balanced accuracy is a target record (`targets`, like recall@20 and MRR@8,
+  target 0.85, per cohort, with both rates and the confusion counts); it never
+  enters `floors`, `quality_pass`, `--require-floors` exit codes or
+  `eval_floor_failed` gaps, and `non_regression` compares it between releases.
 - Evidence characters: sum Unicode code points actually returned in hit text and
   relation evidence, across both groups. Count repeated bytes again if sent
   twice; omit keys, scores, titles, context prefixes and structural JSON.
