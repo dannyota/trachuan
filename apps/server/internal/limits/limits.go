@@ -72,7 +72,18 @@ func (l *Limiter) Allow(accountID int64, class Class) (ok bool, retryAfter time.
 	e := l.buckets[k]
 	if e == nil {
 		if len(l.buckets) == maxBuckets {
-			l.remove(l.recent.Back())
+			var evict *list.Element
+			for candidate := l.recent.Back(); candidate != nil; candidate = candidate.Prev() {
+				b := candidate.Value.(*bucket)
+				if now.Sub(b.updated) >= capacity-b.credit {
+					evict = candidate
+					break
+				}
+			}
+			if evict == nil {
+				return false, time.Second
+			}
+			l.remove(evict)
 		}
 		e = l.recent.PushFront(&bucket{key: k, credit: capacity, updated: now, used: now})
 		l.buckets[k] = e

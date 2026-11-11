@@ -98,24 +98,41 @@ func TestAllow_IdleAccountsEvicted(t *testing.T) {
 	}
 }
 
-func TestAllow_LeastRecentlyUsedEvictedAtCapacity(t *testing.T) {
-	l := New(func() time.Time { return time.Unix(0, 0) })
-	for i := int64(0); i < 100000; i++ {
-		l.Allow(i, Search)
-	}
-	for i := 0; i < 59; i++ {
-		l.Allow(0, Search)
-	}
-	l.Allow(100000, Search)
-	if len(l.buckets) != 100000 {
-		t.Fatalf("got %d buckets", len(l.buckets))
-	}
-	if ok, _ := l.Allow(0, Search); ok {
-		t.Fatal("recent bucket was evicted")
-	}
-	for i := 0; i < 60; i++ {
-		if ok, _ := l.Allow(1, Search); !ok {
-			t.Fatalf("old bucket was not evicted at request %d", i)
-		}
+func TestAllow_CapacityPreservesDepletedBuckets(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		wait time.Duration
+	}{
+		{name: "full bucket", wait: time.Second},
+		{name: "idle bucket", wait: 10*time.Minute + time.Nanosecond},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			now := time.Unix(0, 0)
+			l := New(func() time.Time { return now })
+			for i := int64(0); i < 100000; i++ {
+				l.Allow(i, Search)
+			}
+			for i := 0; i < 59; i++ {
+				l.Allow(0, Search)
+			}
+			if ok, retry := l.Allow(100000, Search); ok || retry != time.Second {
+				t.Fatalf("new key at capacity: got %v, %v", ok, retry)
+			}
+			if ok, retry := l.Allow(0, Search); ok || retry != time.Second {
+				t.Fatalf("depleted key after denial: got %v, %v", ok, retry)
+			}
+			now = now.Add(tc.wait)
+			if ok, retry := l.Allow(100000, Search); !ok || retry != 0 {
+				t.Fatalf("new key after wait: got %v, %v", ok, retry)
+			}
+			if tc.wait == time.Second {
+				if ok, _ := l.Allow(0, Search); !ok {
+					t.Fatal("depleted key did not refill")
+				}
+				if ok, retry := l.Allow(0, Search); ok || retry != time.Second {
+					t.Fatalf("depleted key was reset: got %v, %v", ok, retry)
+				}
+			}
+		})
 	}
 }
