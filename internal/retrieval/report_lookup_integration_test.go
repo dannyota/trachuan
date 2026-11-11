@@ -86,7 +86,15 @@ func TestReportLookups_CorpusIdentities(t *testing.T) {
 func TestReportSegments_CorpusBudget(t *testing.T) {
 	db, _, embedder := fixture(t)
 	ctx := t.Context()
-	_, err := db.Exec(ctx, `UPDATE document SET number_norm=(SELECT string_agg('S'||lpad(i::text,5,'0'),'/') FROM generate_series(0,49999) AS i) || '/' || repeat('A',32) || '/' || repeat('B',33) WHERE id=1`)
+	_, err := db.Exec(ctx, `UPDATE document SET number_norm=CASE id WHEN 1 THEN repeat('A',32) WHEN 2 THEN repeat('B',33) END WHERE id IN (1,2)`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = db.Exec(ctx, `INSERT INTO document (id,country,key,number,number_norm,title,doc_type,issuer,class,source,validity_conflict,raw_issue_date,raw_eff_from,raw_eff_to,status_code,status_name,status_class,status_basis,is_current,is_consolidated,content_state,fetch_sha256,text_source,text_complete)
+SELECT 1000+i,d.country,'vn:segment:'||i,n.value,n.value,d.title,d.doc_type,d.issuer,d.class,d.source,d.validity_conflict,d.raw_issue_date,d.raw_eff_from,d.raw_eff_to,d.status_code,d.status_name,d.status_class,d.status_basis,d.is_current,d.is_consolidated,d.content_state,d.fetch_sha256,d.text_source,d.text_complete
+FROM document d CROSS JOIN generate_series(0,12499) AS g(i)
+CROSS JOIN LATERAL (SELECT format('S%s/S%s/S%s/S%s',lpad((i*4)::text,5,'0'),lpad((i*4+1)::text,5,'0'),lpad((i*4+2)::text,5,'0'),lpad((i*4+3)::text,5,'0')) AS value) n
+WHERE d.id=3`)
 	if err != nil {
 		t.Fatal(err)
 	}
