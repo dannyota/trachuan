@@ -81,7 +81,9 @@ func readEmbeddingDimensions(ctx context.Context, db dimensionReader) (int, erro
 	return typmod, nil
 }
 
-func validHash(s string) bool { return regexp.MustCompile(`^[0-9a-f]{64}$`).MatchString(s) }
+var hashPattern = regexp.MustCompile(`^[0-9a-f]{64}$`)
+
+func validHash(s string) bool { return hashPattern.MatchString(s) }
 func validObject(b []byte) bool {
 	var v map[string]json.RawMessage
 	return json.Unmarshal(b, &v) == nil && v != nil

@@ -38,14 +38,15 @@ func NormalizeNumber(s string) string {
 	return b.String()
 }
 
+var referencePattern = regexp.MustCompile(`[0-9]{1,4}[\s\p{Z}]*/[\s\p{Z}]*(?:[0-9]{4}[\s\p{Z}]*/[\s\p{Z}]*)?[\p{Latin}][\p{Latin}0-9]*(?:[\s\p{Z}]*-[\s\p{Z}]*[\p{Latin}0-9]+)*`)
+
 // ParseReferences extracts bounded document-number references.
 func ParseReferences(q string) ([]string, error) {
 	if !utf8.ValidString(q) {
 		return nil, errors.New("invalid UTF-8")
 	}
-	re := regexp.MustCompile(`[0-9]{1,4}[\s\p{Z}]*/[\s\p{Z}]*(?:[0-9]{4}[\s\p{Z}]*/[\s\p{Z}]*)?[\p{Latin}][\p{Latin}0-9]*(?:[\s\p{Z}]*-[\s\p{Z}]*[\p{Latin}0-9]+)*`)
 	var out []string
-	for _, loc := range re.FindAllStringIndex(q, -1) {
+	for _, loc := range referencePattern.FindAllStringIndex(q, -1) {
 		if loc[0] > 0 {
 			c, _ := utf8.DecodeLastRuneInString(q[:loc[0]])
 			if unicode.IsLetter(c) || unicode.IsDigit(c) {
