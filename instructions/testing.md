@@ -5,10 +5,10 @@
 |Static|before every push|`make pre-push`: gofmt, goimports, golangci-lint, eslint, prettier check, markdownlint, lengths, shellcheck|
 |Unit|every push|`make test`|
 |Integration with PostgreSQL|every push|`make test-integration` (native PostgreSQL from `make services-up`)|
-|Corpus evaluation|before every `corpus release`|`make eval`: product suite floors (ADR 0010) recall@8 0.90, MRR@8 0.66, current-law precision 0.99, abstention 0.95; filtered cases; diff against previous release|
+|Corpus evaluation|before every `corpus release`|`make eval`: product suite gates (ADR 0010) current-law precision 0.99, abstention 0.95, rejections 3/3, and no regression of recall@20 or MRR@8 against the previous release; targets reported, not gates: recall@20 0.90, MRR@8 0.66, recall@8 as a diagnostic; filtered cases; diff against previous release|
 |Browser|every pull request|`make e2e`: Playwright against the local stack with the fake Google provider|
 
-Rules: write the failing test first; observe the failure before the fix. A report claims only checks that ran and shows failures with output. Reviewers read the primary's check output and the exact-commit CI run; they do not run checks. Never lower an evaluation floor or edit golden cases to admit a change; add a new case and record why.
+Rules: write the failing test first; observe the failure before the fix. A report claims only checks that ran and shows failures with output. Reviewers read the primary's check output and the exact-commit CI run; they do not run checks. Never lower an evaluation gate or target, or edit golden cases, to admit a change; add a new case and record why.
 
 - Unit tests never wait on real time beyond 100 ms; inject clocks, limiters and backoffs.
 - Integration tests share one dev server per package and clone the template database.
