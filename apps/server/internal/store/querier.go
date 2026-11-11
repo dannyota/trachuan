@@ -15,7 +15,6 @@ type Querier interface {
 	GetAccount(ctx context.Context, id int64) (Account, error)
 	GetActiveRelease(ctx context.Context, country string) (CorpusRelease, error)
 	GetCredential(ctx context.Context, tokenHash string) (GetCredentialRow, error)
-	ListRetainedReleases(ctx context.Context, country string) ([]RetiredRelease, error)
 	RevokePersonalToken(ctx context.Context, tokenHash string) error
 	TouchPersonalToken(ctx context.Context, tokenHash string) error
 }

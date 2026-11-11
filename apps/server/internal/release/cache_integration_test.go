@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"danny.vn/trachuan/apps/server/internal/migrate"
+	"danny.vn/trachuan/apps/server/internal/store"
 	"danny.vn/trachuan/internal/corpusdb"
 	"danny.vn/trachuan/internal/embedding"
 	"danny.vn/trachuan/internal/retrieval"
@@ -86,20 +88,17 @@ func corpusFixture(t *testing.T) (*Resolver, *pgx.Conn, *pgxpool.Pool, string) {
 func TestResolver_DefaultOpenSharesPoolAndChecksIdentity(t *testing.T) {
 	r, _, db, rel := corpusFixture(t)
 	ctx := context.Background()
-	read, _, err := r.Resolve(ctx, "vn", "", false)
+	read, _, err := r.Resolve(ctx, "vn", "")
 	if err != nil {
 		t.Fatal(err)
-	}
-	if _, searchErr := read.Search(ctx, retrieval.Request{Query: "ngân hàng"}); !errors.Is(searchErr, retrieval.ErrSearchUnavailable) {
-		t.Fatalf("read-only search error=%v", searchErr)
 	}
 	name := "corpus_vn_" + rel
 	pool := r.entries[name].pool
-	search, _, err := r.Resolve(ctx, "vn", rel, true)
+	search, _, err := r.Resolve(ctx, "vn", rel)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if search.Release().Rel != rel || r.entries[name].pool != pool || pool.Config().MaxConns != 4 {
+	if search != read || search.Release().Rel != rel || r.entries[name].pool != pool || pool.Config().MaxConns != 4 {
 		t.Fatal("release or pool not pinned")
 	}
 	r.Close()
@@ -109,57 +108,112 @@ func TestResolver_DefaultOpenSharesPoolAndChecksIdentity(t *testing.T) {
 	if _, updateErr := db.Exec(ctx, `UPDATE release SET rel='20990101_invalid'`); updateErr != nil {
 		t.Fatal(updateErr)
 	}
-	if _, _, resolveErr := r2.Resolve(ctx, "vn", "", false); resolveErr == nil {
+	if _, _, resolveErr := r2.Resolve(ctx, "vn", ""); resolveErr == nil {
 		t.Fatal("accepted mismatched release identity")
 	}
 }
-func TestResolver_DefaultOpenIncompatibleSearchStillReadable(t *testing.T) {
-	for _, arm := range []string{"dense", "lexical"} {
-		t.Run(arm, func(t *testing.T) {
-			r, _, db, rel := corpusFixture(t)
-			if arm == "dense" {
-				recipe := embedding.QueryRecipe1()
-				recipe.Runtime = "other-runtime"
-				r.Embedder = recipeEmbedder{recipe: recipe}
-			} else {
-				if _, err := db.Exec(context.Background(), `UPDATE release SET lexical_recipe=jsonb_set(lexical_recipe,'{tokenizer}','"older-tokenizer"')`); err != nil {
-					t.Fatal(err)
-				}
-			}
-			_, _, err := r.Resolve(context.Background(), "vn", rel, true)
-			if !errors.Is(err, ErrIncompatible) {
-				t.Fatalf("search error=%v", err)
-			}
-			e, _, err := r.Resolve(context.Background(), "vn", rel, false)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if _, err := e.Status(context.Background()); err != nil {
-				t.Fatal(err)
-			}
-		})
-	}
-}
-func TestResolver_DefaultOpenPrunedDatabaseIsExpired(t *testing.T) {
+func TestResolver_DefaultOpenMissingDatabaseIsExpired(t *testing.T) {
 	for _, cached := range []bool{false, true} {
 		t.Run(map[bool]string{false: "first_open", true: "cached"}[cached], func(t *testing.T) {
 			r, admin, db, rel := corpusFixture(t)
-			store := r.Auth.(*fakeStore)
-			store.active = ""
-			store.retained = []RetainedRelease{{DBName: "corpus_vn_" + rel, RetainUntil: r.Clock().Add(time.Hour)}}
 			if cached {
-				if _, _, err := r.Resolve(context.Background(), "vn", rel, true); err != nil {
+				if _, _, err := r.Resolve(context.Background(), "vn", rel); err != nil {
 					t.Fatal(err)
 				}
 			}
 			db.Close()
 			if !testpg.DropCorpusDatabase(t, admin, "corpus_vn_"+rel, "vn/"+rel) {
-				t.Fatal("failed marker-checked prune")
+				t.Fatal("failed marker-checked removal")
 			}
-			_, _, err := r.Resolve(context.Background(), "vn", rel, true)
+			_, _, err := r.Resolve(context.Background(), "vn", rel)
 			if !errors.Is(err, ErrExpired) {
-				t.Fatalf("pruned release error=%v", err)
+				t.Fatalf("missing database error=%v", err)
 			}
 		})
+	}
+}
+
+// authStore exposes only the active pointer from the generated store.
+type authStore struct{ queries *store.Queries }
+
+func (s authStore) GetActiveRelease(ctx context.Context, country string) (string, error) {
+	row, err := s.queries.GetActiveRelease(ctx, country)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", nil
+	}
+	return row.ActiveDb, err
+}
+
+func TestResolver_PinnedRetiredRowIsExpired(t *testing.T) {
+	ctx := context.Background()
+	url := testpg.NewDatabase(t)
+	if err := migrate.Up(ctx, url); err != nil {
+		t.Fatal(err)
+	}
+	db, err := pgx.Connect(ctx, url)
+	if err != nil {
+		t.Fatal("connect test auth database")
+	}
+	t.Cleanup(func() {
+		if err := db.Close(ctx); err != nil {
+			t.Error(err)
+		}
+	})
+	if _, err := db.Exec(ctx, `INSERT INTO corpus_release VALUES ('vn','corpus_vn_20990103',now(),'operator');
+INSERT INTO retired_release VALUES ('vn','corpus_vn_20990102',now(),now()+interval '7 days',NULL)`); err != nil {
+		t.Fatal(err)
+	}
+	r, _, _ := resolverFixture()
+	r.Auth = authStore{queries: store.New(db)}
+	r.Open = func(string) (*retrieval.Engine, error) {
+		t.Error("opened non-active database")
+		return nil, nil
+	}
+	t.Cleanup(r.Close)
+	got, rel, err := r.Resolve(ctx, "vn", "20990102")
+	if !errors.Is(err, ErrExpired) || got != nil || rel != "" {
+		t.Fatalf("engine=%p release=%q error=%v", got, rel, err)
+	}
+}
+
+func TestResolver_RemovingActiveDrainsPool(t *testing.T) {
+	r, _, _, rel := corpusFixture(t)
+	ctx := context.Background()
+	if _, _, err := r.Resolve(ctx, "vn", rel); err != nil {
+		t.Fatal(err)
+	}
+	entry := r.entries["corpus_vn_"+rel]
+	conn, err := entry.pool.Acquire(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Release()
+	closing := make(chan struct{})
+	entry.closePool = func() {
+		close(closing)
+		entry.pool.Close()
+	}
+	s := r.Auth.(*fakeStore)
+	s.mu.Lock()
+	s.active = ""
+	s.mu.Unlock()
+	result := make(chan error, 1)
+	go func() { _, _, err := r.Resolve(ctx, "vn", rel); result <- err }()
+	<-closing
+	select {
+	case err := <-result:
+		t.Fatalf("closed with an in-flight connection: %v", err)
+	default:
+	}
+	if _, err := conn.Exec(ctx, "SELECT 1"); err != nil {
+		t.Fatalf("in-flight connection failed: %v", err)
+	}
+	conn.Release()
+	if err := <-result; !errors.Is(err, ErrExpired) {
+		t.Fatalf("removed active release error=%v", err)
+	}
+	if unexpected, err := entry.pool.Acquire(ctx); err == nil {
+		unexpected.Release()
+		t.Fatal("old pool still accepts connections")
 	}
 }

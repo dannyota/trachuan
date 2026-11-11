@@ -1,4 +1,4 @@
-// Package release resolves active and retained corpus releases.
+// Package release resolves the active corpus release.
 package release
 
 import (
@@ -14,38 +14,24 @@ import (
 	"golang.org/x/sync/singleflight"
 )
 
-// ErrExpired means a requested release is absent, dropped, or past retention.
+// ErrExpired means a requested release is not active.
 var ErrExpired = errors.New("release expired")
-
-// ErrIncompatible means a retained release is readable but cannot be searched.
-var ErrIncompatible = errors.New("release incompatible")
-
-// RetainedRelease contains the retirement fields used to authorize a release.
-type RetainedRelease struct {
-	DBName      string
-	RetainUntil time.Time
-	DroppedAt   *time.Time
-}
 
 // Store is the resolver's auth database view. GetActiveRelease returns active_db
 // from corpus_release for country, or an empty string when no row exists.
-// ListRetainedReleases returns retired_release rows shaped as db_name,
-// retain_until, dropped_at. The resolver also filters expired and dropped rows.
 // Adapters should translate a missing active row into an empty name, not an error.
 type Store interface {
 	GetActiveRelease(context.Context, string) (string, error)
-	ListRetainedReleases(context.Context, string) ([]RetainedRelease, error)
 }
 
 // Resolver caches engines and pools by trusted corpus database name.
-// Configure either URLTemplate and Embedder, or both Open and OpenRead.
+// Configure either URLTemplate and Embedder, or Open.
 // URLTemplate contains exactly one {database} placeholder in its database name.
-// Injected openers share one pool per name and supply CloseDatabase to retire it.
+// Injected openers supply one pool per name and CloseDatabase to retire it.
 // Configure fields before the first Resolve and do not modify them concurrently.
 type Resolver struct {
 	Auth          Store
 	Open          func(dbName string) (*retrieval.Engine, error)
-	OpenRead      func(dbName string) (*retrieval.Engine, error)
 	Clock         func() time.Time
 	URLTemplate   string
 	Embedder      retrieval.Embedder
@@ -54,14 +40,14 @@ type Resolver struct {
 
 	mu      sync.Mutex
 	entries map[string]*cacheEntry
-	live    map[string]map[string]bool
+	active  map[string]string
 	flight  singleflight.Group
 	closed  bool
 }
 
 // Resolve returns an engine and its release identifier, resolving an empty rel
 // to the active pointer. Every call checks the auth store before using the cache.
-func (r *Resolver) Resolve(ctx context.Context, country, rel string, forSearch bool) (*retrieval.Engine, string, error) {
+func (r *Resolver) Resolve(ctx context.Context, country, rel string) (*retrieval.Engine, string, error) {
 	if country != "vn" {
 		return nil, "", ErrExpired
 	}
@@ -72,46 +58,35 @@ func (r *Resolver) Resolve(ctx context.Context, country, rel string, forSearch b
 
 	for {
 		result := r.flight.DoChan(name, func() (any, error) {
-			_, openErr := r.load(ctx, country, name, forSearch)
-			return openAttempt{search: forSearch, err: openErr}, nil
+			return nil, r.load(ctx, country, name)
 		})
-		var attempt openAttempt
+		var openErr error
 		select {
 		case <-ctx.Done():
 			return nil, "", ctx.Err()
 		case opened := <-result:
-			attempt = opened.Val.(openAttempt)
+			openErr = opened.Err
 		}
 		r.mu.Lock()
 		entry := r.entries[name]
-		if r.closed || !r.live[country][name] {
+		if r.closed || r.active[country] != name {
 			r.mu.Unlock()
 			return nil, "", ErrExpired
 		}
 		var engine *retrieval.Engine
 		if entry != nil {
-			engine = entry.search
-			if engine == nil && !forSearch {
-				engine = entry.read
-			}
+			engine = entry.engine
 		}
 		r.mu.Unlock()
-		if attempt.search == forSearch && attempt.err != nil {
-			return nil, "", attempt.err
+		if openErr != nil {
+			return nil, "", openErr
 		}
 		if engine != nil {
 			return engine, release, nil
 		}
-		// A caller needing the other capability may win the single flight. Retry
-		// only the missing capability; never pass a search-only error to a read.
-		// An activation may also evict and reauthorize the name before this caller
-		// consumes the result. A successful attempt then needs a fresh cache entry.
+		// An activation can evict and reauthorize this name before the caller
+		// consumes the open result. Retry against the current cache entry.
 	}
-}
-
-type openAttempt struct {
-	search bool
-	err    error
 }
 
 func (r *Resolver) resolveName(ctx context.Context, country, rel string) (string, string, error) {
@@ -128,48 +103,24 @@ func (r *Resolver) resolveName(ctx context.Context, country, rel string) (string
 		r.mu.Unlock()
 		return "", "", fmt.Errorf("get active release: %w", err)
 	}
-	rows, err := r.Auth.ListRetainedReleases(ctx, country)
-	if err != nil {
+	if active != "" && !validDBName(country, active) {
 		r.mu.Unlock()
-		return "", "", fmt.Errorf("list retained releases: %w", err)
+		return "", "", errors.New("invalid active database name")
 	}
-	live := make(map[string]bool)
-	if active != "" {
-		if !validDBName(country, active) {
-			r.mu.Unlock()
-			return "", "", errors.New("invalid active database name")
-		}
-		live[active] = true
+	if r.active == nil {
+		r.active = make(map[string]string)
 	}
-	now := r.Clock()
-	for _, row := range rows {
-		if row.DroppedAt != nil || !row.RetainUntil.After(now) {
-			continue
-		}
-		if !validDBName(country, row.DBName) {
-			r.mu.Unlock()
-			return "", "", errors.New("invalid retained database name")
-		}
-		live[row.DBName] = true
-	}
-	if r.live == nil {
-		r.live = make(map[string]map[string]bool)
-	}
-	r.live[country] = live
+	r.active[country] = active
 	var retired []*cacheEntry
 	for name, entry := range r.entries {
-		if entry.country == country && !live[name] {
+		if entry.country == country && name != active {
 			delete(r.entries, name)
 			if !entry.opening {
 				retired = append(retired, entry)
 			}
 		}
 	}
-	name := active
-	if rel != "" {
-		name = "corpus_" + country + "_" + rel
-	}
-	allowed := live[name]
+	allowed := active != "" && (rel == "" || active == "corpus_"+country+"_"+rel)
 	r.mu.Unlock()
 	for _, entry := range retired {
 		entry.close()
@@ -177,7 +128,7 @@ func (r *Resolver) resolveName(ctx context.Context, country, rel string) (string
 	if !allowed {
 		return "", "", ErrExpired
 	}
-	return name, strings.TrimPrefix(name, "corpus_"+country+"_"), nil
+	return active, strings.TrimPrefix(active, "corpus_"+country+"_"), nil
 }
 
 func validDBName(country, name string) bool {

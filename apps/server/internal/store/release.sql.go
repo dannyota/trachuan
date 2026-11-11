@@ -24,35 +24,3 @@ func (q *Queries) GetActiveRelease(ctx context.Context, country string) (CorpusR
 	)
 	return i, err
 }
-
-const listRetainedReleases = `-- name: ListRetainedReleases :many
-SELECT country, db_name, retired_at, retain_until, dropped_at FROM retired_release
-WHERE country = $1 AND dropped_at IS NULL AND retain_until > now()
-ORDER BY db_name
-`
-
-func (q *Queries) ListRetainedReleases(ctx context.Context, country string) ([]RetiredRelease, error) {
-	rows, err := q.db.Query(ctx, listRetainedReleases, country)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []RetiredRelease
-	for rows.Next() {
-		var i RetiredRelease
-		if err := rows.Scan(
-			&i.Country,
-			&i.DbName,
-			&i.RetiredAt,
-			&i.RetainUntil,
-			&i.DroppedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}

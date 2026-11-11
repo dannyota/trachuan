@@ -4,6 +4,7 @@ package store_test
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -79,21 +80,21 @@ func TestStore_BlockRevokesTokensAndBumpsEpoch(t *testing.T) {
 
 func TestStore_ReleaseQueries(t *testing.T) {
 	ctx, conn, q := setup(t)
-	_, err := conn.Exec(ctx, `INSERT INTO corpus_release VALUES ('vn', 'active', now(), 'operator');
-INSERT INTO retired_release (country, db_name, retired_at, retain_until, dropped_at) VALUES
-('vn', 'retained', now(), now() + interval '1 day', NULL),
-('vn', 'expired', now(), now() - interval '1 day', NULL),
-('vn', 'dropped', now(), now() + interval '1 day', now()),
-('xx', 'other', now(), now() + interval '1 day', NULL)`)
+	_, err := conn.Exec(ctx, `INSERT INTO corpus_release VALUES
+('vn', 'corpus_vn_20990103', now(), 'operator'),
+('xx', 'corpus_xx_20990104', now(), 'operator')`)
 	if err != nil {
 		t.Fatal(err)
 	}
 	active, err := q.GetActiveRelease(ctx, "vn")
-	if err != nil || active.ActiveDb != "active" {
+	if err != nil || active.ActiveDb != "corpus_vn_20990103" {
 		t.Fatalf("active=%+v err=%v", active, err)
 	}
-	retained, err := q.ListRetainedReleases(ctx, "vn")
-	if err != nil || len(retained) != 1 || retained[0].DbName != "retained" {
-		t.Fatalf("retained=%+v err=%v", retained, err)
+	other, err := q.GetActiveRelease(ctx, "xx")
+	if err != nil || other.ActiveDb != "corpus_xx_20990104" {
+		t.Fatalf("other=%+v err=%v", other, err)
+	}
+	if _, err := q.GetActiveRelease(ctx, "us"); !errors.Is(err, pgx.ErrNoRows) {
+		t.Fatalf("missing country error=%v", err)
 	}
 }

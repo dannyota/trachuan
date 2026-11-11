@@ -15,8 +15,7 @@ import (
 type cacheEntry struct {
 	opening   bool
 	country   string
-	read      *retrieval.Engine
-	search    *retrieval.Engine
+	engine    *retrieval.Engine
 	pool      *pgxpool.Pool
 	closePool func()
 	closeOnce sync.Once
@@ -30,11 +29,11 @@ func (entry *cacheEntry) close() {
 	})
 }
 
-func (r *Resolver) load(ctx context.Context, country, name string, search bool) (any, error) {
+func (r *Resolver) load(ctx context.Context, country, name string) error {
 	r.mu.Lock()
-	if r.closed || !r.live[country][name] {
+	if r.closed || r.active[country] != name {
 		r.mu.Unlock()
-		return nil, ErrExpired
+		return ErrExpired
 	}
 	if r.entries == nil {
 		r.entries = make(map[string]*cacheEntry)
@@ -47,50 +46,29 @@ func (r *Resolver) load(ctx context.Context, country, name string, search bool) 
 			entry.closePool = func() { r.CloseDatabase(name) }
 		}
 	}
-	cached := entry.search
-	if cached == nil && !search {
-		cached = entry.read
-	}
+	engine := entry.engine
 	entry.opening = true
 	r.mu.Unlock()
-	// The per-name single flight serializes opens, including a read-to-search
-	// upgrade. A pool belongs to this entry until eviction or a failed first open.
-	engine := cached
 	var err error
-	if cached != nil {
+	if engine != nil {
 		if entry.pool != nil {
 			err = entry.pool.Ping(ctx)
 		}
 	} else {
-		engine, err = r.open(ctx, name, entry, search)
-	}
-	incompatible := false
-	if search && err != nil && compatibilityFailure(err) {
-		r.mu.Lock()
-		read := entry.read
-		r.mu.Unlock()
-		if read == nil {
-			read, err = r.open(ctx, name, entry, false)
-		} else {
-			err = nil
-		}
-		if err == nil {
-			engine = read
-			incompatible = true
-		}
+		engine, err = r.open(ctx, name, entry)
 	}
 	if err == nil && engine == nil {
 		err = errors.New("opener returned no engine")
 	}
 	r.mu.Lock()
 	entry.opening = false
-	if r.closed || r.entries[name] != entry || !r.live[country][name] {
+	if r.closed || r.entries[name] != entry || r.active[country] != name {
 		r.mu.Unlock()
 		entry.close()
-		return nil, ErrExpired
+		return ErrExpired
 	}
 	if err != nil {
-		empty := (entry.read == nil && entry.search == nil) || databaseGone(err)
+		empty := entry.engine == nil || databaseGone(err)
 		if empty {
 			delete(r.entries, name)
 		}
@@ -99,31 +77,18 @@ func (r *Resolver) load(ctx context.Context, country, name string, search bool) 
 			entry.close()
 		}
 		if databaseGone(err) {
-			return nil, ErrExpired
+			return ErrExpired
 		}
-		return nil, fmt.Errorf("open corpus engine: %w", err)
+		return fmt.Errorf("open corpus engine: %w", err)
 	}
-	if search && !incompatible {
-		entry.search = engine
-	} else {
-		entry.read = engine
-	}
+	entry.engine = engine
 	r.mu.Unlock()
-	if incompatible {
-		return nil, ErrIncompatible
-	}
-	return nil, nil
+	return nil
 }
 
-func (r *Resolver) open(ctx context.Context, name string, entry *cacheEntry, search bool) (*retrieval.Engine, error) {
-	if r.Open != nil || r.OpenRead != nil {
-		if r.Open == nil || r.OpenRead == nil {
-			return nil, errors.New("both corpus openers are required")
-		}
-		if search {
-			return r.Open(name)
-		}
-		return r.OpenRead(name)
+func (r *Resolver) open(ctx context.Context, name string, entry *cacheEntry) (*retrieval.Engine, error) {
+	if r.Open != nil {
+		return r.Open(name)
 	}
 	if entry.pool == nil {
 		cfg, err := poolConfig(r.URLTemplate, name)
@@ -155,15 +120,9 @@ func (r *Resolver) open(ctx context.Context, name string, entry *cacheEntry, sea
 	if err := entry.pool.Ping(ctx); err != nil {
 		return nil, fmt.Errorf("connect corpus: %w", err)
 	}
-	var engine *retrieval.Engine
-	var err error
-	if search {
-		engine, err = retrieval.Open(ctx, entry.pool, r.Embedder, options)
-	} else {
-		engine, err = retrieval.OpenForRead(ctx, entry.pool, options)
-	}
+	engine, err := retrieval.Open(ctx, entry.pool, r.Embedder, options)
 	if err != nil {
-		if search && err.Error() == "read release failed" {
+		if err.Error() == "read release failed" {
 			if pingErr := entry.pool.Ping(ctx); databaseGone(pingErr) {
 				return nil, pingErr
 			}
@@ -192,20 +151,6 @@ func poolConfig(template, name string) (*pgxpool.Config, error) {
 	cfg.MinConns = 0
 	cfg.MinIdleConns = 0
 	return cfg, nil
-}
-
-func compatibilityFailure(err error) bool {
-	// Open predates typed recipe errors. Only these validation failures can be
-	// reclassified, and only after OpenForRead independently validates the corpus.
-	if errors.Is(err, ErrIncompatible) {
-		return true
-	}
-	for cause := err; cause != nil; cause = errors.Unwrap(cause) {
-		if cause.Error() == "invalid dense recipe" || cause.Error() == "invalid release metadata" {
-			return true
-		}
-	}
-	return false
 }
 
 func databaseGone(err error) bool {
