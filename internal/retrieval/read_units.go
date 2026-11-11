@@ -1,6 +1,7 @@
 package retrieval
 
 import (
+	"context"
 	"strings"
 	"unicode/utf8"
 
@@ -145,21 +146,36 @@ func readDescendants(nodes []Provision, root int64) []Provision {
 }
 
 func readOutline(nodes []Provision) []Unit {
+	units, _ := readOutlineContext(context.Background(), nodes)
+	return units
+}
+
+func readOutlineContext(ctx context.Context, nodes []Provision) ([]Unit, error) {
 	articles := false
-	for _, p := range nodes {
+	for i, p := range nodes {
+		if i%128 == 0 {
+			if err := ctx.Err(); err != nil {
+				return nil, err
+			}
+		}
 		if p.Kind == "dieu" {
 			articles = true
 			break
 		}
 	}
 	var units []Unit
-	for _, p := range nodes {
+	for i, p := range nodes {
+		if i%128 == 0 {
+			if err := ctx.Err(); err != nil {
+				return nil, err
+			}
+		}
 		structural := p.Kind == "phan" || p.Kind == "chuong" || p.Kind == "muc" || p.Kind == "dieu"
 		if (articles && structural) || (!articles && p.ParentID == nil) {
 			units = append(units, Unit{Kind: "outline", Anchor: p.Identity.Anchor, Label: p.Label, Heading: p.Heading, Size: utf8.RuneCountInString(strings.TrimSpace(p.Text))})
 		}
 	}
-	return units
+	return units, ctx.Err()
 }
 
 func readTextUnit(kind string, p Provision, ancestors []Provision, text string) Unit {

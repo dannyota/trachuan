@@ -20,6 +20,11 @@ func (e *Engine) readScope(ctx context.Context, tx pgx.Tx, c cursor) (readSequen
 	}
 	target := -1
 	for i, p := range nodes {
+		if i%128 == 0 {
+			if err = ctx.Err(); err != nil {
+				return readSequence{}, "", err
+			}
+		}
 		if p.Identity.Anchor == anchor {
 			target = i
 			break
@@ -35,22 +40,33 @@ func (e *Engine) readScope(ctx context.Context, tx pgx.Tx, c cursor) (readSequen
 				ids = append(ids, p.ID)
 			}
 		}
-		seq, err := readRelations(ctx, tx, key, ids, anchor != "", c.Unit, e.release.RetrievalRecipe.RelationEvidenceRuneCap)
-		seq.doc = key
-		return seq, "", err
+		relations, readErr := readRelations(ctx, tx, key, ids, anchor != "", c.Unit, e.release.RetrievalRecipe.RelationEvidenceRuneCap)
+		relations.doc = key
+		return relations, "", readErr
 	}
 	seq := readSequence{doc: key, source: source, complete: true}
 	if anchor == "" && item.From == "" {
 		seq.document = &doc
-		seq.units = readOutline(nodes)
+		seq.units, err = readOutlineContext(ctx, nodes)
+		if err != nil {
+			return readSequence{}, "", err
+		}
 		if c.WholeDocument && len(nodes) > 0 {
-			seq = readRange(seq, nodes, 0, len(nodes)-1)
+			seq, err = readRangeContext(ctx, seq, nodes, 0, len(nodes)-1)
+			if err != nil {
+				return readSequence{}, "", err
+			}
 		}
 		return seq, "", nil
 	}
 	if item.From != "" {
 		from, to := -1, -1
 		for i, p := range nodes {
+			if i%128 == 0 {
+				if err = ctx.Err(); err != nil {
+					return readSequence{}, "", err
+				}
+			}
 			if p.Identity.Anchor == item.From {
 				from = i
 			}
@@ -61,7 +77,10 @@ func (e *Engine) readScope(ctx context.Context, tx pgx.Tx, c cursor) (readSequen
 		if from < 0 || to < from {
 			return seq, "invalid_range", nil
 		}
-		seq = readRange(seq, nodes, from, to)
+		seq, err = readRangeContext(ctx, seq, nodes, from, to)
+		if err != nil {
+			return readSequence{}, "", err
+		}
 	} else {
 		seq.units, seq.gaps = readLeads(nodes, nodes[target])
 		subtree, err := readSubtree(ctx, tx, id, key, anchor)
@@ -78,15 +97,38 @@ func (e *Engine) readScope(ctx context.Context, tx pgx.Tx, c cursor) (readSequen
 	return seq, "", nil
 }
 
-func readRange(seq readSequence, nodes []Provision, from, to int) readSequence {
-	leads, gaps := readLeads(nodes, nodes[from])
+func readRangeContext(ctx context.Context, seq readSequence, nodes []Provision, from, to int) (readSequence, error) {
+	tree, err := newReadTree(ctx, nodes)
+	if err != nil {
+		return readSequence{}, err
+	}
+	leads, gaps, err := tree.leads(ctx, from)
+	if err != nil {
+		return readSequence{}, err
+	}
 	seq.units = append(seq.units, leads...)
 	seq.gaps = append(seq.gaps, gaps...)
-	for _, p := range nodes[from : to+1] {
-		text, ownGaps := readOwnText(nodes, p)
-		seq.gaps = append(seq.gaps, ownGaps...)
-		seq.units = append(seq.units, readTextUnit("provision", p, readAncestry(nodes, p), text))
+	for i := from; i <= to; i++ {
+		if i%128 == 0 {
+			if err = ctx.Err(); err != nil {
+				return readSequence{}, err
+			}
+		}
+		if err = tree.render(ctx, i); err != nil {
+			return readSequence{}, err
+		}
+		n := &tree.nodes[i]
+		if n.ambiguous {
+			seq.gaps = append(seq.gaps, readAmbiguity(n.provision))
+		}
+		p := n.provision
+		seq.units = append(seq.units, Unit{Kind: "provision", Anchor: p.Identity.Anchor, Citation: n.citation, Label: p.Label, Heading: p.Heading, Text: n.own})
 	}
 	seq.complete = len(seq.gaps) == 0
-	return seq
+	return seq, nil
+}
+
+func readRange(seq readSequence, nodes []Provision, from, to int) readSequence {
+	result, _ := readRangeContext(context.Background(), seq, nodes, from, to)
+	return result
 }
