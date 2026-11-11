@@ -22,3 +22,50 @@ RETURNING id;
 -- name: GetOCRCheck :one
 SELECT id, ocr_text_id, checker_id, result_sha256, result, flagged, created_at
 FROM ocr_check WHERE ocr_text_id = $1 AND checker_id = $2;
+
+-- name: InsertOCRCheckAttempt :one
+INSERT INTO ocr_check_attempt (ocr_text_id, checker_id, mode, batch_id, state, reason, usage)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+RETURNING id;
+
+-- name: FinishOCRCheckAttempt :execrows
+UPDATE ocr_check_attempt
+SET state = $2, reason = $3, usage = $4, updated_at = now()
+WHERE id = $1 AND state = 'submitted';
+
+-- name: ListSubmittedOCRCheckAttempts :many
+SELECT id, ocr_text_id, checker_id, mode, batch_id, state, reason, usage, created_at, updated_at
+FROM ocr_check_attempt
+WHERE checker_id = $1 AND state = 'submitted'
+ORDER BY id;
+
+-- name: SumOCRCheckUsage :many
+SELECT usage FROM ocr_check_attempt WHERE checker_id = $1 AND state <> 'submitted' ORDER BY id;
+
+-- name: ListOCRChecks :many
+SELECT c.id, c.ocr_text_id, c.checker_id, c.result_sha256, c.result, c.flagged, c.created_at, t.pdf_sha256, t.engine_id
+FROM ocr_check c JOIN ocr_text t ON t.id = c.ocr_text_id
+WHERE c.checker_id = $1 AND t.pdf_sha256 = ANY(sqlc.arg(pdf_sha256s)::text[])
+ORDER BY t.pdf_sha256;
+
+-- name: InsertRunOCRSelection :exec
+INSERT INTO run_ocr_selection (run_id, item_key, gap, pdf_sha256, ocr_text_id, ocr_check_id)
+VALUES ($1, $2, $3, $4, $5, $6)
+ON CONFLICT (run_id, item_key) DO NOTHING;
+
+-- name: GetRunOCRSelection :one
+SELECT s.run_id, s.item_key, s.gap, s.pdf_sha256, s.ocr_text_id, s.ocr_check_id,
+       t.engine_id, t.text_sha256, c.checker_id, c.result_sha256, c.flagged
+FROM run_ocr_selection s
+LEFT JOIN ocr_text t ON t.id = s.ocr_text_id
+LEFT JOIN ocr_check c ON c.id = s.ocr_check_id
+WHERE s.run_id = $1 AND s.item_key = $2;
+
+-- name: ListRunOCRSelections :many
+SELECT s.run_id, s.item_key, s.gap, s.pdf_sha256, s.ocr_text_id, s.ocr_check_id,
+       t.engine_id, t.text_sha256, c.checker_id, c.result_sha256, c.flagged
+FROM run_ocr_selection s
+LEFT JOIN ocr_text t ON t.id = s.ocr_text_id
+LEFT JOIN ocr_check c ON c.id = s.ocr_check_id
+WHERE s.run_id = $1
+ORDER BY s.item_key;

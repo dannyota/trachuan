@@ -103,6 +103,19 @@ type OcrCheck struct {
 	CreatedAt    time.Time
 }
 
+type OcrCheckAttempt struct {
+	ID        int64
+	OcrTextID int64
+	CheckerID string
+	Mode      string
+	BatchID   *string
+	State     string
+	Reason    string
+	Usage     json.RawMessage
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
 type OcrText struct {
 	ID         int64
 	PdfSha256  string
@@ -223,6 +236,15 @@ type RunMembershipEvidence struct {
 	ArtifactHash   string
 	EvidencePath   string
 	SupportState   string
+}
+
+type RunOcrSelection struct {
+	RunID      int64
+	ItemKey    string
+	Gap        string
+	PdfSha256  *string
+	OcrTextID  *int64
+	OcrCheckID *int64
 }
 
 type RunScope struct {
