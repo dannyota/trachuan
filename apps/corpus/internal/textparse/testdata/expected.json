@@ -49,10 +49,13 @@
         "kind": "main",
         "accepted": true,
         "articles": ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
+      },
+      {
+        "kind": "tail"
       }
     ],
     "gaps": [],
-    "note": "An amending circular: its own articles run 1 to 10; the replaced articles it quotes (Điều 9, Điều 10) open with a quotation mark and are text of Điều 3 and Điều 4, not headings."
+    "note": "An amending circular: its own articles run 1 to 10; the replaced articles it quotes (Điều 9, Điều 10) open with a quotation mark and are text of Điều 3 and Điều 4, not headings. An appendix after the signature block is a tail scope."
   },
   "outline.html": {
     "text_source": "html_transcription",
