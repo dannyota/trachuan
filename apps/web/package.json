@@ -7,10 +7,11 @@
     "build": "nuxt build",
     "preview": "node .output/server/index.mjs",
     "lint": "eslint .",
-    "typecheck": "vue-tsc --noEmit",
+    "typecheck": "nuxt typecheck",
     "test": "vitest run",
     "e2e": "playwright test -c e2e/playwright.config.ts",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "pretest": "nuxt build"
   },
   "dependencies": {
     "@lucide/vue": "1.69.0",

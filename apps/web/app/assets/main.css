@@ -1,0 +1,13 @@
+@import 'tailwindcss';
+@font-face { font-family: BeVietnam; src: url('/fonts/be-vietnam-pro-var.woff2') format('woff2'); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: NotoSerif; src: url('/fonts/noto-serif-var.woff2') format('woff2'); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: RobotoMono; src: url('/fonts/roboto-mono-var.woff2') format('woff2'); font-weight: 100 900; font-display: swap; }
+:root { color-scheme: light dark; font-family: BeVietnam, sans-serif; }
+body { margin: 0; background: #fff; color: #182222; }
+a { color: inherit; }
+header { display: flex; align-items: center; gap: 1.5rem; padding: 1rem; border-bottom: 1px solid #888; }
+nav { display: flex; flex-wrap: wrap; gap: 1rem; }
+main { max-width: 72rem; margin: auto; padding: 2rem 1rem; }
+button { cursor: pointer; }
+:focus-visible { outline: 3px solid #178477; outline-offset: 3px; }
+@media (prefers-color-scheme: dark) { body { background: #182222; color: #f3f5f4; } }

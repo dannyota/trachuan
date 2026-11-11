@@ -15,7 +15,11 @@ text is never translated.
 | `/privacy`, `/terms`, `/llms.txt` | Legal pages ("evidence, not legal advice"; account email stored in Singapore; Google is the identity provider; no questions stored) and agent guidance |
 
 Public pages are rendered from release data at build or cached by Nitro route
-rules with a 10-minute window; they make no per-visitor corpus query.
+rules with a 10-minute window; they make no per-visitor corpus query. Only Nitro
+holds that copy. Browsers revalidate public responses by ETag only: every
+response, 304 included, carries `Cache-Control: no-cache` and `Vary: Cookie` and
+no `Last-Modified`, and Nitro ignores `If-Modified-Since` on these routes, so a
+copy in one language never revalidates as the other.
 
 ## Signed in
 

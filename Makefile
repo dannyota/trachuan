@@ -74,6 +74,15 @@ generate: ## Generate the typed data layer when sqlc is configured
 	  if [ -f apps/$$app/sqlc.yaml ]; then (cd apps/$$app && sqlc generate) || exit $$?; fi; \
 	done
 
+web-dev: ## Start Nuxt on :3000 (proxies /api/ to the Go server on :8080)
+	cd apps/web && npm run dev
+
+web-test: ## Lint, typecheck and unit-test the website
+	cd apps/web && npm run lint && npm run typecheck && npm test
+
+web-build: ## Build the website and run its Playwright specs against the build
+	cd apps/web && npm run build && npm run e2e
+
 schema-gen: ## Generate the web API client
 	bash packages/schema/scripts/gen.sh
 
@@ -109,4 +118,4 @@ services-down: ## Stop the local Temporal server and PostgreSQL, keep their data
 	bash deploy/local/temporal.sh down
 	bash deploy/local/postgres.sh down
 
-.PHONY: e2e schema-gen schema-check server-run help hooks-install lengths-check pre-push docs-fmt queryembed-native queryembed-test-ort queryembed-run docembed-test docembed-run test test-integration test-proof generate sqlc-check db-up db-setup temporal-up services-up services-down
+.PHONY: e2e web-dev web-test web-build schema-gen schema-check server-run help hooks-install lengths-check pre-push docs-fmt queryembed-native queryembed-test-ort queryembed-run docembed-test docembed-run test test-integration test-proof generate sqlc-check db-up db-setup temporal-up services-up services-down
