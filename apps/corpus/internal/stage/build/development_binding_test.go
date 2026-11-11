@@ -15,7 +15,7 @@ import (
 	"danny.vn/trachuan/internal/corpusdb"
 )
 
-func bindingArtifact(t *testing.T, binding *string, oldRecipe bool) (artifact.Store, artifact.Result, stage.Run, Config, string) {
+func bindingArtifact(t *testing.T, binding *string, oldRecipe bool, durations ...map[string]int64) (artifact.Store, artifact.Result, stage.Run, Config, string) {
 	t.Helper()
 	cfg := Config{Suite: evaluation.Suite{Hashes: evaluation.FixtureHashes{IdentityMap: "map", Development: "current-fixture"}}}
 	run := stage.Run{Country: "vn", Rel: "20990101", Snapshot: stage.Snapshot{SourceListHash: "sources", SourceList: []byte(`{"country":"vn","status_codes":{}}`), WorkerVersion: "worker"}}
@@ -32,8 +32,12 @@ func bindingArtifact(t *testing.T, binding *string, oldRecipe bool) (artifact.St
 		"version": 1, "country": run.Country, "rel": run.Rel, "database_name": "corpus_vn_20990101", "schema_version": corpusdb.SchemaVersion,
 		"build_input_hash": input, "build_recipe_hash": rowRecipe, "source_manifest_hash": inv.SourceManifestHash(), "identity_inventory_hash": inv.IdentityHash(), "identity_map_sha256": "map",
 		"worker_version": "worker", "built_at": time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC),
+		"durations_ms":     map[string]int64{"total": 1},
 		"dump":             map[string]any{"sha256": hashBytes(dump), "bytes": len(dump), "format": "custom"},
 		"retrieval_recipe": map[string]any{"abstention": map[string]any{"threshold": 0, "calibration_sha256": hashBytes(calibration)}},
+	}
+	if len(durations) > 0 {
+		record["durations_ms"] = durations[0]
 	}
 	if binding != nil {
 		record["development_cases_sha256"] = *binding
@@ -56,6 +60,28 @@ func bindingArtifact(t *testing.T, binding *string, oldRecipe bool) (artifact.St
 		t.Fatal(err)
 	}
 	return artifacts, art, run, cfg, rowRecipe
+}
+
+func TestVerifyBuildArtifact_Durations(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		durations map[string]int64
+		valid     bool
+	}{
+		{"legacy", map[string]int64{"total": 1}, true},
+		{"phases and future key", map[string]int64{"total": 5, "plan": 1, "prepare": 1, "load": 1, "load_documents": 1, "load_chunks": 0, "load_lexical": 0, "load_relations": 0, "load_validity": 0, "indexes": 0, "analyze": 0, "calibrate": 0, "metrics": 0, "dump": 0, "dump_hash": 0, "load_taxonomy": 0}, true},
+		{"negative", map[string]int64{"total": 1, "future": -1}, false},
+		{"missing total", map[string]int64{"plan": 0}, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			binding := "current-fixture"
+			artifacts, art, run, cfg, _ := bindingArtifact(t, &binding, false, tc.durations)
+			_, _, err := verifyBuildArtifact(artifacts, art, run, cfg)
+			if (err == nil) != tc.valid {
+				t.Fatalf("verification error = %v, valid = %v", err, tc.valid)
+			}
+		})
+	}
 }
 
 func TestVerifyBuildArtifact_DevelopmentBinding(t *testing.T) {
