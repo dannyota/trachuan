@@ -119,9 +119,11 @@ Each node carries its sibling `ordinal`: active package siblings in package
 order, then custom siblings in file order, then retired siblings in code order;
 and the counts of distinct provisions with an effective node in its subtree and
 of their documents. The build computes both. It places a retired node under its
-recorded parent at the parent's level plus one, and leaves out a retired node
-that would fall below level 4, with its descendants. A release whose assignments
-come only from seeds and overrides serves them without the classification floors
+recorded parent at the parent's level plus one and leaves out a retired node
+that would fall below level 4. Every mapping and custom node reaches a chủ đề
+through its parents in at most four steps; any other chain, including a cycle,
+fails `corpus taxonomy check` and the build. A release whose assignments come
+only from seeds and overrides serves them without the classification floors
 below, which gate the LLM layer; it must still pass the filter gate in
 [evaluation](evaluation.md). The LLM layer's candidate text for a node is,
 versioned with the classification recipe, the names of its ancestors and itself
