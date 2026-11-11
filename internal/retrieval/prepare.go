@@ -13,11 +13,12 @@ import (
 
 // Engine holds one corpus and its query runtime.
 type Engine struct {
-	db          *pgxpool.Pool
-	release     Release
-	options     Options
-	embedder    Embedder
-	queryRecipe embedding.Recipe
+	db             *pgxpool.Pool
+	release        Release
+	options        Options
+	embedder       Embedder
+	queryRecipe    embedding.Recipe
+	numberSegments map[string]struct{}
 }
 
 // Prepare validates and embeds an accepted query exactly once.

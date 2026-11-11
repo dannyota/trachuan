@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"math"
 
 	"danny.vn/trachuan/apps/server/internal/apierror"
 	"danny.vn/trachuan/apps/server/internal/release"
+	"danny.vn/trachuan/apps/server/internal/reports"
 	"danny.vn/trachuan/internal/retrieval"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -23,9 +25,20 @@ type toolError struct {
 	Message string `json:"message"`
 }
 
-// ErrorMessage maps read-path failures to fixed public codes and messages.
+// ErrorMessage maps tool failures to fixed public codes and messages.
 func ErrorMessage(err error) (string, string) {
 	var invalid invalidRequest
+	var report reports.Error
+	if delay, ok := reports.RetryDelay(err); ok {
+		seconds := max(1, int(math.Ceil(delay.Seconds())))
+		return "rate_limited", apierror.RetryMessage(seconds)
+	}
+	if errors.As(err, &report) {
+		switch report {
+		case reports.ErrInvalidRequest, reports.ErrRateLimited, reports.ErrReleaseExpired, reports.ErrUnavailable, reports.ErrUnauthenticated:
+			return string(report), apierror.Message(string(report))
+		}
+	}
 	switch {
 	case errors.As(err, &invalid):
 		return "invalid_request", apierror.Message("invalid_request")

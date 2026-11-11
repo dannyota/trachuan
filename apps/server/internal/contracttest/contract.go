@@ -24,6 +24,7 @@ type response struct {
 	Content map[string]media `yaml:"content"`
 }
 type operation struct {
+	Tags        []string            `yaml:"tags"`
 	Responses   map[string]response `yaml:"responses"`
 	RequestBody struct {
 		Content map[string]media `yaml:"content"`

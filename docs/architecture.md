@@ -44,11 +44,12 @@ Stages run in order `discover`, `fetch`, `extract`, `relate`, `chunk`, `embed`,
 The server command serves authenticated MCP tools and the session-based web API
 from the active corpus release. Google login discovers its provider at startup.
 The server shares account limits and retrieval caches between both transports,
-and purges expired login transactions and deleted accounts hourly. It holds an
-auth pool and lazily opens read-only corpus pools through its release resolver.
-The query client checks each release's query recipe and shares a vector cache
-across releases. Search, document and read caches follow the active release. See
-the [local runbook](runbooks/server-local.md).
+and purges expired login transactions, deleted accounts, closed reports and
+report export snapshots hourly. It holds an auth pool and lazily opens read-only
+corpus pools through its release resolver. The query client checks each
+release's query recipe and shares a vector cache across releases. Search,
+document and read caches follow the active release. See the
+[local runbook](runbooks/server-local.md).
 
 The `oauth` package serves authorization server and protected resource metadata
 under `/.well-known/`, and `/oauth/authorize`, `/oauth/consent/{handle}`,
@@ -57,6 +58,10 @@ share an IP limit. MCP accepts OAuth access tokens and personal tokens.
 Signed-in accounts list and revoke grants through `/api/v1/me/grants`. OAuth
 retention runs every ten minutes. The OAuth protocol helpers start from aboutme
 `oauthsrv` at commit `1b1ece3d`.
+
+The `reports` package validates and admits structured corpus issue reports. The
+`reportsapi` package serves the session-based submission, listing and withdrawal
+routes. The admin CLI triages and exports reports.
 
 ## Embedding services
 

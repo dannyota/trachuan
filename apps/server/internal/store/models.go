@@ -5,6 +5,7 @@
 package store
 
 import (
+	"encoding/json"
 	"time"
 )
 
@@ -24,6 +25,36 @@ type CorpusRelease struct {
 	ActiveDb    string
 	ActivatedAt time.Time
 	ActivatedBy string
+}
+
+type IssueReport struct {
+	ID             int64
+	AccountID      int64
+	Release        string
+	DocumentKey    string
+	Anchor         string
+	DocumentNumber string
+	Kind           string
+	Target         string
+	Suggestion     json.RawMessage
+	State          string
+	CreatedAt      time.Time
+	ChangedAt      time.Time
+	DecidedBy      *string
+	ExportBatch    *string
+}
+
+type IssueReportExport struct {
+	BatchID        string
+	ReportID       int64
+	CreatedAt      time.Time
+	DocumentKey    string
+	Anchor         string
+	DocumentNumber string
+	Release        string
+	Kind           string
+	Target         string
+	Suggestion     json.RawMessage
 }
 
 type LoginTransaction struct {

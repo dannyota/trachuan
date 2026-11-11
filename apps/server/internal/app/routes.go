@@ -9,6 +9,7 @@ import (
 	"danny.vn/trachuan/apps/server/internal/limits"
 	"danny.vn/trachuan/apps/server/internal/mcpapi"
 	"danny.vn/trachuan/apps/server/internal/oauth"
+	"danny.vn/trachuan/apps/server/internal/reportsapi"
 	"danny.vn/trachuan/apps/server/internal/webapi"
 	"danny.vn/trachuan/apps/server/internal/weblogin"
 	"danny.vn/trachuan/apps/server/internal/websession"
@@ -16,6 +17,7 @@ import (
 
 type webDeps struct {
 	store        accountapi.Store
+	reportStore  reportsapi.Store
 	sessions     *websession.Manager
 	login        *weblogin.Handler
 	verifier     *credential.Verifier
@@ -38,6 +40,10 @@ func newWebMux(d webDeps) *http.ServeMux {
 		}
 		d.sessions.Logout(w, r)
 	})))
+	reportHandler := d.sessions.Middleware(d.sessions.CSRF(reportsapi.New(reportsapi.Config{Store: d.reportStore, Reports: d.tools.Reports, Limiter: d.tools.Limiter})))
+	mux.Handle("POST /api/v1/reports", reportHandler)
+	mux.Handle("GET /api/v1/me/reports", reportHandler)
+	mux.Handle("DELETE /api/v1/me/reports/{id}", reportHandler)
 	corpus := webapi.New(webapi.Config{Tools: d.tools, Sessions: d.sessions})
 	clients := oauth.NewClients(d.oauthDB, d.oauthClients, oauth.NewCIMDResolver())
 	for pattern, handler := range map[string]http.Handler{

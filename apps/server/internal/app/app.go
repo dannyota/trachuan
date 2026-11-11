@@ -18,6 +18,7 @@ import (
 	"danny.vn/trachuan/apps/server/internal/migrate"
 	"danny.vn/trachuan/apps/server/internal/oauth"
 	"danny.vn/trachuan/apps/server/internal/release"
+	"danny.vn/trachuan/apps/server/internal/reports"
 	"danny.vn/trachuan/apps/server/internal/store"
 	"danny.vn/trachuan/apps/server/internal/weblogin"
 	"danny.vn/trachuan/apps/server/internal/websession"
@@ -113,7 +114,8 @@ func serve(ctx context.Context, cfg config, pool *pgxpool.Pool, queries *store.Q
 		OnActivate: caches.ActivateRelease}
 	verifier := &credential.Verifier{Store: queries, Audience: cfg.audience}
 	limiter := limits.New(clock)
-	tools := mcpapi.Config{Resolver: mcpResolver{resolver}, Limiter: limiter, Logger: slog.New(slog.NewJSONHandler(stderr, nil)), Caches: caches}
+	reportService := &reports.Service{Store: reports.PGXRunner{DB: pool}, Resolver: reports.ReleaseResolver{Resolver: resolver}, Clock: clock}
+	tools := mcpapi.Config{Reports: reportService, Resolver: mcpResolver{resolver}, Limiter: limiter, Logger: slog.New(slog.NewJSONHandler(stderr, nil)), Caches: caches}
 	bounded := credentialStore{Queries: queries, db: pool}
 	sessions := &websession.Manager{Store: bounded, PublicURL: cfg.publicURL, Clock: clock}
 	login, err := weblogin.New(ctx, weblogin.Config{ClientID: cfg.googleID, ClientSecret: cfg.googleSecret, PublicURL: cfg.publicURL, Store: loginStore{queries}, Sessions: sessions})
@@ -121,7 +123,7 @@ func serve(ctx context.Context, cfg config, pool *pgxpool.Pool, queries *store.Q
 		resolver.Close()
 		return errors.New("google provider discovery failed")
 	}
-	mux := newWebMux(webDeps{store: bounded, sessions: sessions, login: login, verifier: verifier, tools: tools, loginLimit: newLoginLimiter(clock, cfg.trustedProxies), oauthDB: pool, oauthClients: cfg.oauthClients, publicURL: cfg.publicURL})
+	mux := newWebMux(webDeps{store: bounded, reportStore: queries, sessions: sessions, login: login, verifier: verifier, tools: tools, loginLimit: newLoginLimiter(clock, cfg.trustedProxies), oauthDB: pool, oauthClients: cfg.oauthClients, publicURL: cfg.publicURL})
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) })
 	mux.Handle("GET /readyz", readiness(ctx, func(ctx context.Context) error {
 		return readyCheck(ctx, pool.Ping, func(ctx context.Context) error {

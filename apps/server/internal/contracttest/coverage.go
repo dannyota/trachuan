@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"mime"
 	"net/http/httptest"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -23,6 +24,27 @@ func NewCoverage(c *Contract, paths []string) *Coverage {
 	result := &Coverage{contract: c, expected: make(map[responseKey]bool)}
 	for _, path := range paths {
 		for method, op := range c.Paths[path] {
+			for status, response := range op.Responses {
+				if len(response.Content) == 0 {
+					result.expected[responseKey{method, path, status, ""}] = false
+				}
+				for media := range response.Content {
+					result.expected[responseKey{method, path, status, media}] = false
+				}
+			}
+		}
+	}
+	return result
+}
+
+// NewCoverageForTag tracks responses of operations with the given owner tag.
+func NewCoverageForTag(c *Contract, tag string) *Coverage {
+	result := &Coverage{contract: c, expected: make(map[responseKey]bool)}
+	for path, methods := range c.Paths {
+		for method, op := range methods {
+			if !slices.Contains(op.Tags, tag) {
+				continue
+			}
 			for status, response := range op.Responses {
 				if len(response.Content) == 0 {
 					result.expected[responseKey{method, path, status, ""}] = false

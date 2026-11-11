@@ -173,7 +173,7 @@ func TestMCP_ToolsListedWithSchemas(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(r.Tools) != 5 {
+	if len(r.Tools) != 6 {
 		t.Fatalf("tools %d", len(r.Tools))
 	}
 	names := map[string]bool{}
@@ -183,7 +183,7 @@ func TestMCP_ToolsListedWithSchemas(t *testing.T) {
 			t.Fatal("missing schema")
 		}
 	}
-	for _, name := range []string{"guide", "corpus_status", "search", "read", "quality_gaps"} {
+	for _, name := range []string{"guide", "corpus_status", "search", "read", "quality_gaps", "report_issue"} {
 		if !names[name] {
 			t.Fatal("missing " + name)
 		}

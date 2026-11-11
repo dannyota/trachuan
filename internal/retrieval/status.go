@@ -84,11 +84,18 @@ func (e *Engine) metadataTx(ctx context.Context) (pgx.Tx, error) {
 	if err != nil {
 		return nil, databaseFailure("begin corpus metadata", err)
 	}
-	if err = setLocal(ctx, tx, "statement_timeout", strconv.FormatInt(e.deadline().Milliseconds(), 10)); err != nil {
-		_ = tx.Rollback(context.Background())
-		return nil, fmt.Errorf("set metadata deadline: %w", err)
+	if err = configureMetadataTx(ctx, tx, e.deadline(), reportRollbackTimeout); err != nil {
+		return nil, err
 	}
 	return tx, nil
+}
+
+func configureMetadataTx(ctx context.Context, tx pgx.Tx, deadline, rollbackTimeout time.Duration) error {
+	if err := setLocal(ctx, tx, "statement_timeout", strconv.FormatInt(deadline.Milliseconds(), 10)); err != nil {
+		rollbackReport(ctx, tx, rollbackTimeout)
+		return fmt.Errorf("set metadata deadline: %w", err)
+	}
+	return nil
 }
 
 func sourceDate(raw string) *time.Time {
