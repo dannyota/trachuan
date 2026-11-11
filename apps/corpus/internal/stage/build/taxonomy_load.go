@@ -31,8 +31,11 @@ func taxonomyNodes(input TaxonomyInput) ([]taxonomyNode, error) {
 		return nil, fmt.Errorf("order taxonomy nodes: %w", err)
 	}
 	state := map[string]int{}
-	var resolve func(string) (bool, error)
-	resolve = func(code string) (bool, error) {
+	var resolve func(string, int) (bool, error)
+	resolve = func(code string, depth int) (bool, error) {
+		if depth > 4 {
+			return false, fmt.Errorf("taxonomy parent chain too long for %s", code)
+		}
 		n := all[code]
 		if n == nil {
 			return false, fmt.Errorf("missing taxonomy node %s", code)
@@ -45,7 +48,7 @@ func taxonomyNodes(input TaxonomyInput) ([]taxonomyNode, error) {
 		}
 		state[code] = 1
 		if n.parentCode != "" {
-			ok, e := resolve(n.parentCode)
+			ok, e := resolve(n.parentCode, depth+1)
 			if e != nil {
 				return false, e
 			}
@@ -65,7 +68,7 @@ func taxonomyNodes(input TaxonomyInput) ([]taxonomyNode, error) {
 	}
 	var nodes []taxonomyNode
 	for _, n := range ordered.Nodes {
-		ok, e := resolve(n.Code)
+		ok, e := resolve(n.Code, 0)
 		if e != nil {
 			return nil, e
 		}
@@ -110,15 +113,20 @@ func taxonomyNodes(input TaxonomyInput) ([]taxonomyNode, error) {
 	for i := range nodes {
 		index[nodes[i].code] = &nodes[i]
 	}
-	var fill func(*taxonomyNode)
-	fill = func(n *taxonomyNode) {
+	var fill func(*taxonomyNode, int) error
+	fill = func(n *taxonomyNode, depth int) error {
+		if depth > 4 {
+			return fmt.Errorf("taxonomy parent chain too long for %s", n.code)
+		}
 		if n.path != "" {
-			return
+			return nil
 		}
 		n.path = fmt.Sprintf("n%d", n.id)
 		if n.parentCode != "" {
 			p := index[n.parentCode]
-			fill(p)
+			if err := fill(p, depth+1); err != nil {
+				return err
+			}
 			n.parent = p.id
 			n.path = p.path + "." + n.path
 			n.family = p.family
@@ -126,9 +134,12 @@ func taxonomyNodes(input TaxonomyInput) ([]taxonomyNode, error) {
 		if n.level == 2 {
 			n.family = n.id
 		}
+		return nil
 	}
 	for i := range nodes {
-		fill(&nodes[i])
+		if err := fill(&nodes[i], 0); err != nil {
+			return nil, err
+		}
 	}
 	return nodes, nil
 }

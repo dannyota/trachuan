@@ -173,3 +173,17 @@ func TestTaxonomy_RetiredPlacement(t *testing.T) {
 		t.Fatalf("got %d nodes, want 4", len(nodes))
 	}
 }
+
+func TestTaxonomyNodes_RejectsLongParentWalk(t *testing.T) {
+	input := TaxonomyInput{mapping: taxonomy.Mapping{Nodes: []taxonomy.MappedNode{
+		{Code: "1", ParentCode: "2", Level: 4, Status: "retired"},
+		{Code: "2", ParentCode: "3", Level: 4, Status: "retired"},
+		{Code: "3", ParentCode: "4", Level: 4, Status: "retired"},
+		{Code: "4", ParentCode: "5", Level: 4, Status: "retired"},
+		{Code: "5", ParentCode: "6", Level: 4, Status: "retired"},
+		{Code: "6", Level: 1, Status: "active", Ordinal: 1},
+	}}}
+	if _, err := taxonomyNodes(input); err == nil {
+		t.Fatal("accepted excessive parent walk")
+	}
+}

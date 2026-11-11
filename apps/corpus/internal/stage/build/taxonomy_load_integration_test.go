@@ -4,6 +4,7 @@ package build
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 
@@ -170,5 +171,50 @@ func TestImportThenBuild_RemovalAndReplacement(t *testing.T) {
 	var replacements int
 	if err = f.corpus.QueryRow(context.Background(), `SELECT count(*) FROM taxonomy_node WHERE name='New' AND code<>'1.1' AND status='active'`).Scan(&replacements); err != nil || replacements != 1 {
 		t.Fatalf("replacements=%d: %v", replacements, err)
+	}
+}
+
+func TestValidateTaxonomy_PopulatedAndTampering(t *testing.T) {
+	ctx := context.Background()
+	f := fixture(t)
+	taxonomyDocument(t, f)
+	input := taxonomyInputFixture()
+	input.seeds = []taxonomySeed{{"1", "1", "1.1.c1"}, {"1", "5", "1.1.c1"}}
+	input.overrides = []taxonomy.Override{
+		{DocumentKey: "vn:vbpl:1", Anchor: "dieu-5a", Code: "1.1.x1"},
+		{DocumentKey: "vn:vbpl:1", Anchor: "dieu-1-khoan-1", Code: "1.1.x1", Exclude: true},
+		{DocumentKey: "vn:vbpl:missing", Anchor: "dieu-1", Code: "1.1.c1"},
+	}
+	counts := loadTaxonomyFixture(t, f, input)
+	stats := counts.Taxonomy
+	if stats.Nodes == 0 || stats.Seeds != 1 || stats.Overrides != 1 || stats.Excluded != 1 || stats.MissingArticles != 1 || stats.MissingOverrideTargets != 1 {
+		t.Fatalf("stats=%+v", stats)
+	}
+	record := BuildRecord{TaxonomyVersion: input.version, Taxonomy: &stats}
+	if err := validateTaxonomy(ctx, f.corpus, record); err != nil {
+		t.Fatalf("valid taxonomy: %v", err)
+	}
+	for _, tc := range []struct{ name, query string }{
+		{"count", `UPDATE taxonomy_node SET provision_count=provision_count+1 WHERE code='1.1.c1'`},
+		{"family", `UPDATE taxonomy_assignment SET family_id=(SELECT id FROM taxonomy_node WHERE code='1') WHERE method='phapdien_seed'`},
+		{"version", `UPDATE taxonomy_assignment SET taxonomy_version='tampered' WHERE method='phapdien_seed'`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if _, err := f.corpus.Exec(ctx, "BEGIN"); err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() {
+				if _, err := f.corpus.Exec(ctx, "ROLLBACK"); err != nil {
+					t.Error(err)
+				}
+			})
+			tag, err := f.corpus.Exec(ctx, tc.query)
+			if err != nil || tag.RowsAffected() != 1 {
+				t.Fatalf("tamper rows=%d: %v", tag.RowsAffected(), err)
+			}
+			if err = validateTaxonomy(ctx, f.corpus, record); !errors.Is(err, errInvalidDatabase) {
+				t.Fatalf("tampering accepted or unexpected error: %v", err)
+			}
+		})
 	}
 }

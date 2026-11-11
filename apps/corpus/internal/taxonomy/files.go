@@ -138,6 +138,27 @@ func Validate(m Mapping, custom []CustomNode, overrides []Override) error {
 		}
 		pending = next
 	}
+	for code := range codes {
+		current := code
+		rooted := false
+		for steps := 0; steps <= 4; steps++ {
+			level, ok := codes[current]
+			if !ok {
+				return fmt.Errorf("invalid parent chain for %s", code)
+			}
+			if parents[current] == "" {
+				if level != 1 {
+					return fmt.Errorf("invalid parent chain for %s", code)
+				}
+				rooted = true
+				break
+			}
+			current = parents[current]
+		}
+		if !rooted {
+			return fmt.Errorf("invalid parent chain for %s", code)
+		}
+	}
 	seen := map[string]bool{}
 	families := map[string]bool{}
 	familySeen := map[string]bool{}
@@ -147,8 +168,11 @@ func Validate(m Mapping, custom []CustomNode, overrides []Override) error {
 			return fmt.Errorf("invalid override %s", o.Code)
 		}
 		family := o.Code
-		for codes[family] > 2 {
+		for steps := 0; codes[family] > 2 && steps < 4; steps++ {
 			family = parents[family]
+		}
+		if codes[family] != 2 {
+			return fmt.Errorf("invalid override family %s", o.Code)
 		}
 		familyKey := o.DocumentKey + "\x00" + o.Anchor + "\x00" + family
 		if familySeen[familyKey] && families[familyKey] != o.Exclude {

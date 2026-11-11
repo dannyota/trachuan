@@ -15,7 +15,16 @@ import (
 	"danny.vn/trachuan/internal/corpusdb"
 )
 
-func bindingArtifact(t *testing.T, binding *string, oldRecipe bool, durations ...map[string]int64) (artifact.Store, artifact.Result, stage.Run, Config, string) {
+type bindingOptions struct {
+	durations map[string]int64
+	taxonomy  *TaxonomyStats
+}
+
+func bindingArtifact(t *testing.T, binding *string, oldRecipe bool, options ...bindingOptions) (artifact.Store, artifact.Result, stage.Run, Config, string) {
+	opts := bindingOptions{}
+	if len(options) > 0 {
+		opts = options[0]
+	}
 	t.Helper()
 	cfg := Config{Suite: evaluation.Suite{Hashes: evaluation.FixtureHashes{IdentityMap: "map", Development: "current-fixture"}}}
 	run := stage.Run{Country: "vn", Rel: "20990101", Snapshot: stage.Snapshot{SourceListHash: "sources", SourceList: []byte(`{"country":"vn","status_codes":{}}`), WorkerVersion: "worker"}}
@@ -36,11 +45,15 @@ func bindingArtifact(t *testing.T, binding *string, oldRecipe bool, durations ..
 		"dump":             map[string]any{"sha256": hashBytes(dump), "bytes": len(dump), "format": "custom"},
 		"retrieval_recipe": map[string]any{"abstention": map[string]any{"threshold": 0, "calibration_sha256": hashBytes(calibration)}},
 	}
-	if len(durations) > 0 {
-		record["durations_ms"] = durations[0]
+	if opts.durations != nil {
+		record["durations_ms"] = opts.durations
 	}
 	if binding != nil {
 		record["development_cases_sha256"] = *binding
+	}
+	if opts.taxonomy != nil {
+		record["taxonomy"] = *opts.taxonomy
+		record["taxonomy_version"] = "fixture-version"
 	}
 	files := map[string]any{"build.json": record, "inputs.json": inv, "calibration.json": json.RawMessage(calibration), "validity-review.json": json.RawMessage(`{"version":1,"entries":[]}`)}
 	artifacts := artifact.Store{Root: t.TempDir()}
@@ -75,7 +88,7 @@ func TestVerifyBuildArtifact_Durations(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			binding := "current-fixture"
-			artifacts, art, run, cfg, _ := bindingArtifact(t, &binding, false, tc.durations)
+			artifacts, art, run, cfg, _ := bindingArtifact(t, &binding, false, bindingOptions{durations: tc.durations})
 			_, _, err := verifyBuildArtifact(artifacts, art, run, cfg)
 			if (err == nil) != tc.valid {
 				t.Fatalf("verification error = %v, valid = %v", err, tc.valid)
@@ -152,5 +165,18 @@ func TestVerifyForRun_DevelopmentBinding(t *testing.T) {
 				t.Fatalf("committed artifact = %+v, error = %v", got, err)
 			}
 		})
+	}
+}
+
+func TestVerifyBuildArtifact_PopulatedTaxonomy(t *testing.T) {
+	binding := "current-fixture"
+	stats := TaxonomyStats{Nodes: 5, Served: 3, Seeds: 1, Overrides: 1, Excluded: 1, MissingArticles: 1, MissingOverrideTargets: 1}
+	artifacts, art, run, cfg, _ := bindingArtifact(t, &binding, false, bindingOptions{taxonomy: &stats})
+	record, _, err := verifyBuildArtifact(artifacts, art, run, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if record.Taxonomy == nil || *record.Taxonomy != stats || record.TaxonomyVersion != "fixture-version" {
+		t.Fatalf("taxonomy=%+v version=%q", record.Taxonomy, record.TaxonomyVersion)
 	}
 }
