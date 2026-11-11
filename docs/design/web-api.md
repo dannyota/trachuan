@@ -109,6 +109,9 @@ follow the same rule. The OAuth consent form has its own rule in
 | `DELETE /api/v1/me/tokens/{id}`    | session + CSRF | read         | Revoke one own personal token                                       |
 | `GET /api/v1/me/grants`            | session        | read         | Own OAuth grants ([OAuth](oauth.md))                                |
 | `DELETE /api/v1/me/grants/{id}`    | session + CSRF | read         | Revoke one own OAuth grant and its tokens                           |
+| `POST /api/v1/reports`             | session + CSRF | read         | Report a corpus defect ([error reports](error-reports.md))          |
+| `GET /api/v1/me/reports`           | session        | read         | Own error reports                                                   |
+| `DELETE /api/v1/me/reports/{id}`   | session + CSRF | read         | Withdraw an own open report                                         |
 | `POST /api/v1/search`              | session + CSRF | search       | The `search` tool's input and result                                |
 | `POST /api/v1/read`                | session + CSRF | read         | The `read` tool's input and result                                  |
 | `GET /api/v1/documents/{key}`      | session        | read         | Reader page: document entry, outline and text from `from`           |
