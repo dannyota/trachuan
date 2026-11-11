@@ -22,7 +22,7 @@ WITH expired AS (
     WHERE g.revoked_at <= sqlc.arg(as_of)::timestamptz - sqlc.arg(retention)::interval
     ORDER BY g.revoked_at LIMIT sqlc.arg(batch_limit)
 ), candidates AS (
-    SELECT token_hash FROM expired UNION ALL SELECT token_hash FROM revoked
+    SELECT token_hash FROM expired UNION SELECT token_hash FROM revoked
     LIMIT sqlc.arg(batch_limit)
 )
 DELETE FROM oauth_token WHERE token_hash IN (SELECT token_hash FROM candidates);

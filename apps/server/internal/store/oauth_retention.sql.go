@@ -66,7 +66,7 @@ WITH expired AS (
     WHERE g.revoked_at <= $1::timestamptz - $2::interval
     ORDER BY g.revoked_at LIMIT $3
 ), candidates AS (
-    SELECT token_hash FROM expired UNION ALL SELECT token_hash FROM revoked
+    SELECT token_hash FROM expired UNION SELECT token_hash FROM revoked
     LIMIT $3
 )
 DELETE FROM oauth_token WHERE token_hash IN (SELECT token_hash FROM candidates)
