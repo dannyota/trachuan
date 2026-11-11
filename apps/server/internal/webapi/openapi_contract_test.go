@@ -126,6 +126,7 @@ func TestOpenAPIContract(t *testing.T) {
 	t.Run("TestWebContract_Errors", func(t *testing.T) { testWebContract_Errors(t, coverage) })
 	t.Run("TestWebContract_BodyAndRateLimits", func(t *testing.T) { testWebContract_BodyAndRateLimits(t, coverage) })
 	t.Run("populated", func(t *testing.T) { testWebContract_Populated(t, coverage) })
+	t.Run("public status", func(t *testing.T) { testPublicStatus(t, coverage) })
 	t.Run("request boundaries", func(t *testing.T) { testRequestContractBoundaries(t, c) })
 	if missing := coverage.Missing(); len(missing) > 0 {
 		t.Errorf("unexercised responses: %v", missing)
