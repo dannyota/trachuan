@@ -9,7 +9,7 @@ func TestRecipe_HashMatchesService(t *testing.T) {
 		want string
 	}{
 		{"document", DocumentRecipe1(), "13a832d5b076a4ecac77ea73c35c5fae8fe735c7aa2763c6b74dfef65d14d5ec"},
-		{"query", QueryRecipe1(), "649d2f6e54c3eda29f5c4d2f1937f526e16a467495638f185a39099bfd741574"},
+		{"query", QueryRecipe1(), "63ac35af615196ceda67fda05fb5abdbfd30128ef7275899f4cf621fcaed333c"},
 	} {
 		if h := tc.got.Hash(); h != tc.want {
 			t.Errorf("%s recipe hash = %s, want %s", tc.name, h, tc.want)

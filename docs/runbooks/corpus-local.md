@@ -36,11 +36,11 @@ go run ./apps/corpus/cmd/corpus status vn 20261109
 
 Apply workshop migrations with `go run ./apps/corpus/cmd/corpus migrate` after
 pulling new code and before restarting the worker; a missing table fails stage
-commits with `relation "chunk" does not exist`. Start `make embedder-query` and
-`make embedder-document` in separate terminals before extending a paused run.
-Both use the model bundle in `EMBEDDER_MODEL_DIR`. Provision it with
+commits with `relation "chunk" does not exist`. Start `make queryembed-run` and
+`make docembed-run` in separate terminals before extending a paused run. Both
+use the model bundle in `EMBEDDER_MODEL_DIR`. Provision it with
 `uv run python scripts/make_bundle.py <dir> --model AITeamVN/Vietnamese_Embedding_v2 --revision 18b44161e041bf1d3a333ab5144b5b7b93f914d2`
-in `apps/embedder`; it writes the INT8 query model `onnx/model_int8.onnx` from
+in `apps/docembed`; it writes the INT8 query model `onnx/model_int8.onnx` from
 `onnx/model.onnx` (about 12 seconds and 9.5 GB peak memory) before the manifest.
 Set `CORPUS_EVAL_FIXTURES` to an adjudicated fixture directory before starting a
 run when the embedded inventory does not match it. For a run paused by an older
@@ -126,8 +126,7 @@ terminated.
 
 Run `make queryembed-native` to install the pinned native libraries, then run
 `make queryembed-run` with the bundle at `EMBEDDER_MODEL_DIR` (default
-`work/models/vi_v2-bundle`). The service listens on `127.0.0.1:8091`. Do not run
-both query services on the same port.
+`work/models/vi_v2-bundle`). The service listens on `127.0.0.1:8091`.
 
 The binary accepts `--model-dir DIR`, `--ort-lib FILE`, and `--listen ADDR`. The
 first two flags are required; `--listen` defaults to `127.0.0.1:8091`.

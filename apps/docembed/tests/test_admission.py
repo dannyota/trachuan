@@ -3,7 +3,7 @@ import threading
 
 import pytest
 
-from trachuan_embedder.admission import Admission, Busy, Deadline
+from trachuan_docembed.admission import Admission, Busy, Deadline
 
 
 def test_admission_busy_429_when_queue_full():
@@ -63,10 +63,10 @@ def test_deadline_504():
 
 
 def test_document_mode_admission_values(monkeypatch):
-    from trachuan_embedder import app
+    from trachuan_docembed import app
 
     values = []
     monkeypatch.setattr(app, "Admission", lambda *args: values.append(args))
     monkeypatch.setattr(app, "recipe_hash", lambda _: "recipe")
-    app.create_app("document", object(), object(), {})
+    app.create_app(object(), object(), {})
     assert values == [(1, 1, 30.0, 120.0)]

@@ -233,11 +233,7 @@ Exceeding a build ceiling fails explicitly; it never drops rows to fit.
 | Eval item deadline; ad-hoc exact query deadline           | 50 minutes; 60 s per query                                      |
 | Eval artifact/cache total                                 | 2 GiB; fail explicitly if exceeded                              |
 
-Query limits apply to the Go query service. The transitional Python query mode
-uses the same query thread settings and client timeout in this table, including
-the corpus client's timeout, so evaluation matches serving budgets. Python is
-only the parity reference under [ADR 0011](../adr/0011-embedder-services.md),
-not a host service or an alternative release runtime. ONNX Runtime's
+Query limits apply to the Go query service. ONNX Runtime's
 [thread settings](https://onnxruntime.ai/docs/performance/tune-performance/threading.html)
 define intra-op parallelism; sequential execution does not create an inter-op
 thread pool.

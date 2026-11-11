@@ -18,7 +18,7 @@ jobs:
     timeout-minutes: 5
     outputs:
       go: ${{ steps.paths.outputs.go }}
-      embedder: ${{ steps.paths.outputs.embedder }}
+      docembed: ${{ steps.paths.outputs.docembed }}
       queryembed: ${{ steps.paths.outputs.queryembed }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -31,17 +31,17 @@ jobs:
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           go=true
-          embedder=true
+          docembed=true
           queryembed=true
           if [ "$EVENT_NAME" = pull_request ]; then
             paths=$(mktemp)
             git diff --no-ext-diff --no-textconv --no-renames --name-only -z "$BASE_SHA...$HEAD_SHA" -- > "$paths"
             go=false
-            embedder=false
+            docembed=false
             queryembed=false
             while IFS= read -r -d '' path; do
               case "$path" in
-                apps/embedder/*|.github/workflows/*) embedder=true ;;
+                apps/docembed/*|.github/workflows/*) docembed=true ;;
               esac
               case "$path" in
                 apps/queryembed/*|internal/embedding/*|go.mod|go.sum|scripts/queryembed-native.sh|.github/workflows/ci.yml) queryembed=true ;;
@@ -55,7 +55,7 @@ jobs:
             rm "$paths"
           fi
           echo "go=$go" >> "$GITHUB_OUTPUT"
-          echo "embedder=$embedder" >> "$GITHUB_OUTPUT"
+          echo "docembed=$docembed" >> "$GITHUB_OUTPUT"
           echo "queryembed=$queryembed" >> "$GITHUB_OUTPUT"
 
   static:
@@ -137,14 +137,14 @@ jobs:
           wait "$proof_pid" || result=1
           exit "$result"
 
-  embedder:
+  docembed:
     needs: [preflight]
-    if: needs.preflight.outputs.embedder == 'true'
+    if: needs.preflight.outputs.docembed == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     defaults:
       run:
-        working-directory: apps/embedder
+        working-directory: apps/docembed
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
@@ -178,7 +178,7 @@ jobs:
 
   ci:
     if: always()
-    needs: [preflight, static, integration, embedder, queryembed]
+    needs: [preflight, static, integration, docembed, queryembed]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     env:
@@ -186,8 +186,8 @@ jobs:
       GO: ${{ needs.preflight.outputs.go }}
       STATIC: ${{ needs.static.result }}
       INTEGRATION: ${{ needs.integration.result }}
-      EMBEDDER_NEEDED: ${{ needs.preflight.outputs.embedder }}
-      EMBEDDER: ${{ needs.embedder.result }}
+      DOCEMBED_NEEDED: ${{ needs.preflight.outputs.docembed }}
+      DOCEMBED: ${{ needs.docembed.result }}
       QUERYEMBED_NEEDED: ${{ needs.preflight.outputs.queryembed }}
       QUERYEMBED: ${{ needs.queryembed.result }}
     steps:
@@ -200,10 +200,10 @@ jobs:
           else
             exit 1
           fi
-          if [ "$EMBEDDER_NEEDED" = true ]; then
-            test "$EMBEDDER" = success
-          elif [ "$EMBEDDER_NEEDED" = false ]; then
-            test "$EMBEDDER" = skipped
+          if [ "$DOCEMBED_NEEDED" = true ]; then
+            test "$DOCEMBED" = success
+          elif [ "$DOCEMBED_NEEDED" = false ]; then
+            test "$DOCEMBED" = skipped
           else
             exit 1
           fi

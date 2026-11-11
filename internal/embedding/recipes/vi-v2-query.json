@@ -15,7 +15,7 @@
   "token_cap": 256,
   "special_tokens": true,
   "truncation": false,
-  "language": "python 3.14.10",
-  "tokenizer_library": "transformers 5.22.2",
+  "language": "go 1.27.3",
+  "tokenizer_library": "daulet/tokenizers 1.27.0",
   "runtime_library": "onnxruntime 1.31.1"
 }
