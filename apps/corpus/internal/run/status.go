@@ -17,6 +17,7 @@ import (
 
 // Report contains workshop progress and Temporal activity details.
 type Report struct {
+	AdoptedItems      int    `json:"adopted_items"`
 	QualityPass       *bool  `json:"quality_pass,omitempty"`
 	QualityReason     string `json:"quality_reason,omitempty"`
 	ReleaseEligible   *bool  `json:"release_eligible,omitempty"`
@@ -33,6 +34,10 @@ func Status(ctx context.Context, d Deps, cc, rel string) (Report, error) {
 		return Report{}, fmt.Errorf("get run: %w", err)
 	}
 	report := Report{Run: row, Stages: make(map[string]stage.Counts)}
+	report.AdoptedItems, err = countAdoptedItems(ctx, q, row.ID, int(row.Generation))
+	if err != nil {
+		return Report{}, err
+	}
 	if row.State == "evaluated" {
 		report.QualityReason = "evaluation artifact unavailable"
 	}

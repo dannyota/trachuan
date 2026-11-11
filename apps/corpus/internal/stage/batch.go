@@ -122,20 +122,25 @@ func RunBatch(ctx context.Context, env Env, st Stage, in BatchInput, attempt int
 		if item.Skip != nil {
 			commit.State, commit.Gaps = "gap", []Gap{*item.Skip}
 		} else {
-			var output Output
-			var found bool
+			output, acquired, adoptErr := adoptAcquisition(ctx, env, st, run, item)
+			if adoptErr != nil {
+				return result, fmt.Errorf("adopt acquisition for %q: %w", item.Key, adoptErr)
+			}
+			found := acquired
 			var art artifact.Result
-			if item.InputHash != "" {
+			_, acquisitionCapable := st.(acquisitionVerifier)
+			if !acquired && item.InputHash != "" && !acquisitionCapable {
 				art, found, err = env.Artifacts.Open(in.Stage, item.InputHash, recipe)
 				if err != nil {
 					return result, fmt.Errorf("open artifact for %q: %w", item.Key, err)
 				}
 			}
-			if found {
+			if found && !acquired {
 				output = Output{Artifact: &art, State: "done"}
-			} else {
+			} else if !found {
 				itemCtx := sourcegate.WithItem(sourcegate.WithRunID(ctx, in.RunID), item.Key)
 				output, err = st.Process(itemCtx, env, run, item)
+				commit.SourceRead = err == nil
 				if err != nil {
 					// Only the activity's own context ends the batch; a timeout
 					// inside one item stays with that item.
