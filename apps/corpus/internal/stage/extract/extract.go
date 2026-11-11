@@ -72,11 +72,13 @@ func (s *Stage) Plan(ctx context.Context, env stage.Env, run stage.Run) ([]stage
 		if getErr != nil {
 			return nil, fmt.Errorf("load fetch artifact: %w", getErr)
 		}
-		selected, _, selectErr := chooseWithOCR(ctx, env.Artifacts.Abs(entry.Path), input.ItemKey, s.ocr, s.engines, s.checker)
-		if errors.Is(selectErr, vbpl.ErrTreeTooLarge) {
-			selected.source = "source_tree"
-			selectErr = nil
-		}
+		selected, selectErr := planFrozenSelection(ctx, q, run.ID, input.ItemKey, func() (selection, error) {
+			choice, _, err := chooseWithOCR(ctx, env.Artifacts.Abs(entry.Path), input.ItemKey, s.ocr, s.engines, s.checker)
+			if errors.Is(err, vbpl.ErrTreeTooLarge) {
+				return selection{source: "source_tree"}, nil
+			}
+			return choice, err
+		})
 		if selectErr != nil {
 			return nil, fmt.Errorf("select text source: %w", selectErr)
 		}
@@ -96,7 +98,23 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 	if verifyErr := verifyFetch(env.Artifacts.Abs(input.Path), input.Sha256); verifyErr != nil {
 		return stage.Output{}, verifyErr
 	}
-	selected, nodes, err := chooseWithOCR(ctx, env.Artifacts.Abs(input.Path), item.Key, s.ocr, s.engines, s.checker)
+	q := store.New(env.DB)
+	row, lookupErr := q.GetRunOCRSelection(ctx, store.GetRunOCRSelectionParams{RunID: run.ID, ItemKey: item.Key})
+	var selected selection
+	var nodes []vbpl.Node
+	if lookupErr == nil {
+		selected, err = selectionFromRow(row)
+		if err == nil {
+			selected, nodes, err = materializeFrozen(ctx, env.Artifacts.Abs(input.Path), item.Key, selected)
+		}
+	} else if errors.Is(lookupErr, pgx.ErrNoRows) {
+		selected, nodes, err = choose(ctx, env.Artifacts.Abs(input.Path), item.Key)
+		if err == nil && selected.consulted {
+			return stage.Output{}, fmt.Errorf("missing frozen OCR selection")
+		}
+	} else {
+		return stage.Output{}, fmt.Errorf("read OCR selection: %w", lookupErr)
+	}
 	if errors.Is(err, vbpl.ErrTreeTooLarge) {
 		return stage.Output{State: "gap", Gaps: []stage.Gap{{Kind: "tree_too_large"}}}, nil
 	}
@@ -127,6 +145,9 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 			rows, gaps, record = parseTranscription(selected.data, selected.name, selected.hash)
 		}
 	case "ocr":
+		if s.ocr == nil {
+			return stage.Output{}, fmt.Errorf("OCR store is not configured")
+		}
 		data, readErr := s.ocr.ReadText(selected.entry.Text)
 		if readErr != nil {
 			return stage.Output{}, fmt.Errorf("read OCR text: %w", readErr)
@@ -134,7 +155,7 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 		rows, gaps, record = parseOCR(selected, data)
 	default:
 		rows = []provision{}
-		gaps = []stage.Gap{{Kind: "no_tree"}, {Kind: selected.gap}}
+		gaps = []stage.Gap{{Kind: "no_tree"}, {Kind: selected.gap, Detail: selected.reason}}
 		record = &textRecord{TextSource: "none", Gap: selected.gap}
 	}
 

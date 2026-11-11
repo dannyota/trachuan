@@ -76,14 +76,14 @@ func TestStore_EntriesImmutable(t *testing.T) {
 			t.Fatalf("mutation succeeded: %s", query)
 		}
 	}
-	if _, checkErr := s.PutCheck(ctx, entry.ID, "checker", json.RawMessage(`{"z":2,"a":1}`), 2, false); checkErr == nil {
+	if _, checkErr := s.PutCheck(ctx, entry, "checker", json.RawMessage(`{"same_document":true,"pages":10,"items":[{"kind":"date","page":1,"ocr":"a","pdf":"b","note":"x"},{"kind":"amount","page":2,"ocr":"c","pdf":"d","note":"y"}],"verdict":"flagged"}`), 2, false); checkErr == nil {
 		t.Fatal("incomplete check accepted")
 	}
-	present, err = s.PutCheck(ctx, entry.ID, "checker", json.RawMessage(`{"z":2,"a":1}`), 2, true)
+	present, err = s.PutCheck(ctx, entry, "checker", json.RawMessage(`{"same_document":true,"pages":10,"items":[{"kind":"date","page":1,"ocr":"a","pdf":"b","note":"x"},{"kind":"amount","page":2,"ocr":"c","pdf":"d","note":"y"}],"verdict":"flagged"}`), 2, true)
 	if err != nil || present {
 		t.Fatalf("put check: %v %v", present, err)
 	}
-	present, err = s.PutCheck(ctx, entry.ID, "checker", json.RawMessage(`{"a":9}`), 0, true)
+	present, err = s.PutCheck(ctx, entry, "checker", json.RawMessage(`{"same_document":true,"pages":10,"items":[],"verdict":"clean"}`), 0, true)
 	if err != nil || !present {
 		t.Fatalf("duplicate check: %v %v", present, err)
 	}
@@ -92,9 +92,19 @@ func TestStore_EntriesImmutable(t *testing.T) {
 		t.Fatalf("checked lookup: %+v %v", entries, err)
 	}
 	check := entries[pdf].Check
-	want := fmt.Sprintf("%x", sha256.Sum256([]byte(`{"a":1,"z":2}`)))
+	want := fmt.Sprintf("%x", sha256.Sum256([]byte(`{"items":[{"kind":"date","note":"x","ocr":"a","page":1,"pdf":"b"},{"kind":"amount","note":"y","ocr":"c","page":2,"pdf":"d"}],"pages":10,"same_document":true,"verdict":"flagged"}`)))
 	if check.ResultSha256 != want || check.Flagged != 2 {
 		t.Fatalf("unexpected check: %+v", check)
+	}
+	if present, err = s.Put(ctx, pdf, "engine-c", "vision", pgtype.Int4{Int32: 10, Valid: true}, data); err != nil || present {
+		t.Fatalf("put paged entry: present=%v err=%v", present, err)
+	}
+	paged, err := s.Lookup(ctx, []string{pdf}, []string{"engine-c"}, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = s.PutCheck(ctx, paged[pdf].Text, "checker", json.RawMessage(`{"same_document":true,"pages":9,"items":[],"verdict":"clean"}`), 0, true); err == nil {
+		t.Fatal("accepted incomplete page coverage")
 	}
 	for _, query := range []string{"UPDATE ocr_check SET flagged=0 WHERE id=$1", "DELETE FROM ocr_check WHERE id=$1"} {
 		if _, err := db.Exec(ctx, query, check.ID); err == nil {

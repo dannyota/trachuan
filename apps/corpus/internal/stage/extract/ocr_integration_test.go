@@ -82,12 +82,25 @@ func TestExtract_OCRStageIntegration(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err = ocr.PutCheck(ctx, entries[pdf].Text.ID, "checker", json.RawMessage(`{"flags":[1]}`), 1, true); err != nil {
+	if _, err = ocr.PutCheck(ctx, entries[pdf].Text, "checker", json.RawMessage(`{"same_document":true,"pages":10,"items":[{"kind":"amount","page":1,"ocr":"1","pdf":"2","note":"x"}],"verdict":"flagged"}`), 1, true); err != nil {
 		t.Fatal(err)
 	}
 	next, err := extractor.Plan(ctx, env, run)
+	if err != nil || len(next) != 1 || next[0].InputHash != items[0].InputHash {
+		t.Fatalf("replayed plan: %v %v", next, err)
+	}
+	if _, err = extractor.Process(ctx, env, run, items[0]); err != nil {
+		t.Fatalf("process frozen selection: %v", err)
+	}
+	if err = db.QueryRow(ctx, `INSERT INTO run(country,rel,state,snapshot) VALUES ('vn','20990106','running','{}') RETURNING id`).Scan(&run.ID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = db.Exec(ctx, `INSERT INTO run_item(run_id,stage,item_key,state,batch,artifact_id) VALUES ($1,'fetch','vn:vbpl:1','done',0,$2)`, run.ID, artifactID); err != nil {
+		t.Fatal(err)
+	}
+	next, err = extractor.Plan(ctx, env, run)
 	if err != nil || len(next) != 1 || next[0].InputHash == items[0].InputHash {
-		t.Fatalf("checked plan: %v %v", next, err)
+		t.Fatalf("new run plan: %v %v", next, err)
 	}
 	out, err = extractor.Process(ctx, env, run, next[0])
 	if err != nil {
@@ -171,8 +184,21 @@ func TestExtract_UncheckedEntryReplansArtifact(t *testing.T) {
 		t.Fatal(err)
 	}
 	next, err := extractor.Plan(ctx, env, run)
+	if err != nil || len(next) != 1 || next[0].InputHash != first[0].InputHash {
+		t.Fatalf("replayed plan: %v %v", next, err)
+	}
+	if _, err = extractor.Process(ctx, env, run, first[0]); err != nil {
+		t.Fatalf("process frozen selection: %v", err)
+	}
+	if err = db.QueryRow(ctx, `INSERT INTO run(country,rel,state,snapshot) VALUES ('vn','20990106','running','{}') RETURNING id`).Scan(&run.ID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = db.Exec(ctx, `INSERT INTO run_item(run_id,stage,item_key,state,batch,artifact_id) VALUES ($1,'fetch','vn:vbpl:1','done',0,$2)`, run.ID, artifactID); err != nil {
+		t.Fatal(err)
+	}
+	next, err = extractor.Plan(ctx, env, run)
 	if err != nil || len(next) != 1 || next[0].InputHash == first[0].InputHash {
-		t.Fatalf("second plan: %v %v", next, err)
+		t.Fatalf("new run plan: %v %v", next, err)
 	}
 	after, err := extractor.Process(ctx, env, run, next[0])
 	if err != nil {
@@ -187,5 +213,111 @@ func TestExtract_UncheckedEntryReplansArtifact(t *testing.T) {
 	}
 	if err = fetch.CheckExtractLineage(artifacts.Abs(after.Artifact.Path), art.SHA256, next[0].InputHash); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestExtract_FrozenHeadingAndRejected(t *testing.T) {
+	for _, tc := range []struct {
+		name, tree, result, initialGap, newGap string
+		preexisting                            bool
+	}{
+		{"heading", bareTree, `{"same_document":true,"pages":1,"items":[],"verdict":"clean"}`, "tree_headings_only", "", false},
+		{"rejected", `{"success":true,"data":[]}`, `{"same_document":false,"pages":1,"items":[],"verdict":"rejected"}`, "needs_ocr", "ocr_rejected", true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
+			db, err := pgxpool.New(ctx, testdb.New(t))
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer db.Close()
+			pdf := fmt.Sprintf("%x", sha256.Sum256([]byte("pdf")))
+			text, err := os.ReadFile(filepath.Join("..", "..", "textparse", "testdata", "ocr_decree_142_2026.txt"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			artifacts := artifact.Store{Root: t.TempDir()}
+			art, err := artifacts.PublishContent(ctx, "fetch", strings.Repeat("a", 64), func(dir string) error {
+				for name, body := range map[string]string{"tree.json": tc.tree, "detail.json": `{"data":{"id":"1"}}`, "files.json": fmt.Sprintf(`[{"name":"x.pdf","sha256":"%s","size":3}]`, pdf)} {
+					if writeErr := os.WriteFile(filepath.Join(dir, name), []byte(body), 0600); writeErr != nil {
+						return writeErr
+					}
+				}
+				return nil
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			var artifactID int64
+			if err = db.QueryRow(ctx, `INSERT INTO artifact(stage,item_key,input_hash,recipe_hash,path,sha256) VALUES ('fetch','vn:vbpl:1',$1,$2,$3,$4) RETURNING id`, art.InputHash, strings.Repeat("a", 64), art.Path, art.SHA256).Scan(&artifactID); err != nil {
+				t.Fatal(err)
+			}
+			makeRun := func(rel string) stage.Run {
+				t.Helper()
+				var id int64
+				if e := db.QueryRow(ctx, `INSERT INTO run(country,rel,state,snapshot) VALUES ('vn',$1,'running','{}') RETURNING id`, rel).Scan(&id); e != nil {
+					t.Fatal(e)
+				}
+				if _, e := db.Exec(ctx, `INSERT INTO run_item(run_id,stage,item_key,state,batch,artifact_id) VALUES ($1,'fetch','vn:vbpl:1','done',0,$2)`, id, artifactID); e != nil {
+					t.Fatal(e)
+				}
+				return stage.Run{ID: id, Snapshot: stage.Snapshot{SourceList: []byte(`{"vbpl":{"selection_version":0}}`)}}
+			}
+			ocr := ocrstore.Open(t.TempDir(), db)
+			put := func() {
+				t.Helper()
+				if _, e := ocr.Put(ctx, pdf, "vision-ocr/builtin-latest", "banhmi", pgtype.Int4{}, text); e != nil {
+					t.Fatal(e)
+				}
+			}
+			if tc.preexisting {
+				put()
+			}
+			extractor := New().WithOCR(ocr, nil, "checker")
+			env := stage.Env{DB: db, Artifacts: artifacts}
+			run := makeRun("20990101")
+			first, err := extractor.Plan(ctx, env, run)
+			if err != nil || len(first) != 1 {
+				t.Fatalf("plan: %v %v", first, err)
+			}
+			if !tc.preexisting {
+				put()
+			}
+			entries, err := ocr.Lookup(ctx, []string{pdf}, []string{"vision-ocr/builtin-latest"}, "")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err = ocr.PutCheck(ctx, entries[pdf].Text, "checker", json.RawMessage(tc.result), 0, true); err != nil {
+				t.Fatal(err)
+			}
+			replay, err := extractor.Plan(ctx, env, run)
+			if err != nil || len(replay) != 1 || replay[0].InputHash != first[0].InputHash {
+				t.Fatalf("replay: %v %v", replay, err)
+			}
+			out, err := extractor.Process(ctx, env, run, first[0])
+			if err != nil {
+				t.Fatal(err)
+			}
+			resolved, err := extractor.Resolve(ctx, env, run, first[0], *out.Artifact)
+			if err != nil || !hasGap(resolved.Gaps, tc.initialGap, "") {
+				t.Fatalf("initial gap: %v %v", resolved.Gaps, err)
+			}
+			nextRun := makeRun("20990102")
+			next, err := extractor.Plan(ctx, env, nextRun)
+			if err != nil || len(next) != 1 || next[0].InputHash == first[0].InputHash {
+				t.Fatalf("new run: %v %v", next, err)
+			}
+			out, err = extractor.Process(ctx, env, nextRun, next[0])
+			if err != nil {
+				t.Fatal(err)
+			}
+			resolved, err = extractor.Resolve(ctx, env, nextRun, next[0], *out.Artifact)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if tc.newGap != "" && (!hasGap(resolved.Gaps, tc.newGap, "checker rejected OCR text") || !hasGap(resolved.Gaps, "no_tree", "")) {
+				t.Fatalf("new gap: %v", resolved.Gaps)
+			}
+		})
 	}
 }

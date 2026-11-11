@@ -59,6 +59,14 @@ func TestWorker_ConfiguresOCRStore(t *testing.T) {
 	run := stage.Run{ID: runID, Snapshot: stage.Snapshot{SourceList: []byte(`{"vbpl":{"selection_version":0}}`)}}
 	for _, tc := range []struct{ name, root, gap string }{{"unset", "", "text_source_ambiguous"}, {"set", root, "needs_ocr"}} {
 		t.Run(tc.name, func(t *testing.T) {
+			if tc.name == "set" {
+				if err := db.QueryRow(ctx, `INSERT INTO run(country,rel,state,snapshot) VALUES ('vn','20990106','running','{}') RETURNING id`).Scan(&run.ID); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := db.Exec(ctx, `INSERT INTO run_item(run_id,stage,item_key,state,batch,artifact_id) VALUES ($1,'fetch','vn:vbpl:1','done',0,$2)`, run.ID, artID); err != nil {
+					t.Fatal(err)
+				}
+			}
 			t.Setenv("CORPUS_OCR_STORE", tc.root)
 			env := stage.Env{DB: db, Artifacts: artifact.Store{Root: t.TempDir()}}
 			extractor := extract.New()

@@ -70,7 +70,13 @@ func TestExtract_HeadingOnlyArtifactsIntegration(t *testing.T) {
 				t.Fatal(err)
 			}
 			input := InputHash(fetchArt.SHA256, tc.source)
-			out, err := New().Process(ctx, stage.Env{DB: db, Artifacts: artifacts}, stage.Run{ID: runID}, stage.Item{Key: "vn:vbpl:1", InputHash: input})
+			extractor := New()
+			run := stage.Run{ID: runID, Snapshot: stage.Snapshot{SourceList: []byte(`{"vbpl":{"selection_version":0}}`)}}
+			env := stage.Env{DB: db, Artifacts: artifacts}
+			if _, err = extractor.Plan(ctx, env, run); err != nil {
+				t.Fatal(err)
+			}
+			out, err := extractor.Process(ctx, env, run, stage.Item{Key: "vn:vbpl:1", InputHash: input})
 			if err != nil {
 				t.Fatal(err)
 			}

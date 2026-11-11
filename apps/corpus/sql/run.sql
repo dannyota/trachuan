@@ -46,7 +46,7 @@ SELECT * FROM run WHERE id = $1;
 SELECT state FROM run WHERE id = $1;
 
 -- name: GetControlRunForUpdate :one
-SELECT * FROM run WHERE id = $1 FOR UPDATE;
+SELECT * FROM run WHERE id = $1 FOR NO KEY UPDATE;
 
 -- name: AdvanceRunStage :exec
 UPDATE run SET next_stage = sqlc.narg(next_stage), updated_at = now() WHERE id = sqlc.arg(id);

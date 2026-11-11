@@ -46,7 +46,7 @@ func ocrFixture(t *testing.T, checked bool, flagged int32) fakeOCR {
 	}
 	entry := ocrstore.Entry{Text: store.OcrText{PdfSha256: strings.Repeat("a", 64), EngineID: "vision-ocr/builtin-latest", TextSha256: strings.Repeat("b", 64)}}
 	if checked {
-		entry.Check = &store.OcrCheck{CheckerID: "checker", ResultSha256: strings.Repeat("c", 64), Flagged: flagged}
+		entry.Check = &store.OcrCheck{CheckerID: "checker", ResultSha256: strings.Repeat("c", 64), Flagged: flagged, Result: []byte(`{"same_document":true,"verdict":"flagged"}`)}
 	}
 	return fakeOCR{entries: map[string]ocrstore.Entry{entry.Text.PdfSha256: entry}, data: data}
 }
@@ -211,5 +211,17 @@ func TestExtract_UncheckedEntryChangesGapArtifact(t *testing.T) {
 	data, err := os.ReadFile(filepath.Join(artifacts.Abs(second.Path), "report.json"))
 	if err != nil || string(data) != "needs_ocr" {
 		t.Fatalf("gap %q: %v", data, err)
+	}
+}
+
+func TestExtract_RejectsFailedCheck(t *testing.T) {
+	src := ocrFixture(t, true, 0)
+	hash := strings.Repeat("a", 64)
+	entry := src.entries[hash]
+	entry.Check.Result = []byte(`{"same_document":false,"pages":1,"items":[],"verdict":"rejected"}`)
+	src.entries[hash] = entry
+	selected, err := selectOCRFiles(context.Background(), t.TempDir(), "1", []fetch.DocumentFile{{Name: "a.pdf", SHA256: hash}}, src, []string{"vision-ocr/builtin-latest"}, "checker")
+	if err != nil || selected.source != "none" || selected.gap != "ocr_rejected" {
+		t.Fatalf("selection=%+v err=%v", selected, err)
 	}
 }

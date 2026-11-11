@@ -122,7 +122,7 @@ func CheckExtractLineage(dir, fetchHash, inputHash string) error {
 	expected := ExtractInputHash(fetchHash, record.TextSource)
 	if record.TextSource == "none" {
 		switch record.Gap {
-		case "needs_ocr", "text_source_ambiguous", "file_format_unsupported", "no_text_source":
+		case "needs_ocr", "text_source_ambiguous", "file_format_unsupported", "no_text_source", "ocr_rejected":
 		default:
 			return fmt.Errorf("invalid absent text gap %q", record.Gap)
 		}

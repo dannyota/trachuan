@@ -18,6 +18,9 @@ func TestTextMetadata_SourceAndComplete(t *testing.T) {
 	if textComplete(1, "x", []InventoryGap{{Stage: "extract", ItemKey: "x", Kind: "tree_headings_only"}}) {
 		t.Fatal("heading-only tree marked complete")
 	}
+	if textComplete(1, "x", []InventoryGap{{Stage: "extract", ItemKey: "x", Kind: "ocr_rejected"}}) {
+		t.Fatal("rejected OCR marked complete")
+	}
 	if textComplete(0, "x", nil) {
 		t.Fatal("empty text marked complete")
 	}

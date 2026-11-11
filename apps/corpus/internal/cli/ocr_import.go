@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -26,7 +27,12 @@ type importCounts struct{ imported, present, notInRun, rejected int }
 func importBanhmi(ctx context.Context, s ocrImporter, dir string, pdfs map[string]bool) (importCounts, error) {
 	var counts importCounts
 	root := filepath.Join(dir, "ocr")
-	entries, err := os.ReadDir(root)
+	directory, err := os.Open(root)
+	if err != nil {
+		return counts, fmt.Errorf("open OCR import directory: %w", err)
+	}
+	defer func() { _ = directory.Close() }()
+	entries, err := directory.ReadDir(-1)
 	if err != nil {
 		return counts, fmt.Errorf("read OCR import directory: %w", err)
 	}
@@ -56,26 +62,21 @@ func importBanhmi(ctx context.Context, s ocrImporter, dir string, pdfs map[strin
 			counts.notInRun++
 			continue
 		}
-		path := filepath.Join(root, name)
-		info, err := os.Lstat(path)
-		if err != nil {
-			return counts, fmt.Errorf("stat OCR import: %w", err)
-		}
-		if !info.Mode().IsRegular() {
+		f, err := openImportAt(directory, name)
+		var rejected rejectedOCR
+		if errors.As(err, &rejected) {
 			counts.rejected++
 			continue
+		}
+		if err != nil {
+			return counts, err
 		}
 		if _, ok := existing[hash]; ok {
+			if err = f.Close(); err != nil {
+				return counts, fmt.Errorf("close OCR import: %w", err)
+			}
 			counts.present++
 			continue
-		}
-		if info.Size() <= 0 || info.Size() > importTextLimit {
-			counts.rejected++
-			continue
-		}
-		f, err := os.Open(path)
-		if err != nil {
-			return counts, fmt.Errorf("open OCR import: %w", err)
 		}
 		data, readErr := io.ReadAll(io.LimitReader(f, importTextLimit+1))
 		closeErr := f.Close()

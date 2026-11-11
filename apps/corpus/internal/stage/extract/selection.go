@@ -23,8 +23,10 @@ func (absentOCR) available(string) bool { return false }
 
 type selection struct {
 	source, gap, name, hash string
+	reason                  string
 	data                    []byte
 	tooLarge, parseLimit    bool
+	consulted               bool
 	entry                   *ocrstore.Entry
 }
 
@@ -147,7 +149,7 @@ func chooseWithOCR(ctx context.Context, dir, key string, ocr ocrReader, engines 
 			if selected.source != "none" && !selected.tooLarge && !selected.parseLimit {
 				return selected, nil, nil
 			}
-			return selection{source: "source_tree", gap: "tree_headings_only"}, nodes, nil
+			return selection{source: "source_tree", gap: "tree_headings_only", consulted: selected.consulted || selected.source == "none"}, nodes, nil
 		}
 	}
 	doc, err := fetch.ReadDocument(dir, key)

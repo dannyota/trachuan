@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"syscall"
 	"testing"
 
 	"danny.vn/trachuan/apps/corpus/internal/ocrstore"
@@ -55,5 +56,41 @@ func TestImport_OnlyMatchingHashes(t *testing.T) {
 	}
 	if s.seen[other] || s.seen[invalid] {
 		t.Fatal("imported a nonmatching or invalid file")
+	}
+}
+
+func TestImport_OpenPinnedDirectoryRejectsUnsafeFiles(t *testing.T) {
+	root := t.TempDir()
+	dir, err := os.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = dir.Close() }()
+	if err = os.Symlink("target", filepath.Join(root, "symlink")); err != nil {
+		t.Fatal(err)
+	}
+	if err = syscall.Mkfifo(filepath.Join(root, "fifo"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	large, err := os.Create(filepath.Join(root, "large"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = large.Truncate(importTextLimit + 1); err != nil {
+		t.Fatal(err)
+	}
+	if err = large.Close(); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"symlink", "fifo", "large"} {
+		t.Run(name, func(t *testing.T) {
+			f, err := openImportAt(dir, name)
+			if f != nil {
+				_ = f.Close()
+			}
+			if err == nil {
+				t.Fatal("accepted unsafe file")
+			}
+		})
 	}
 }

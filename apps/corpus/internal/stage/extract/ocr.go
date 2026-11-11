@@ -2,6 +2,7 @@ package extract
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -20,7 +21,7 @@ type ocrReader interface {
 
 func selectOCRFiles(ctx context.Context, dir, id string, files []fetch.DocumentFile, source ocrReader, engines []string, checker string) (selection, error) {
 	selected, err := selectFiles(dir, id, files, absentOCR{})
-	if err != nil || selected.source != "none" || source == nil {
+	if err != nil || selected.source != "none" {
 		return selected, err
 	}
 	names := map[string]string{}
@@ -37,6 +38,10 @@ func selectOCRFiles(ctx context.Context, dir, id string, files []fetch.DocumentF
 	if len(hashes) == 0 {
 		return selected, nil
 	}
+	selected.consulted = true
+	if source == nil {
+		return selected, nil
+	}
 	entries, err := source.Lookup(ctx, hashes, engines, checker)
 	if err != nil {
 		return selection{}, fmt.Errorf("lookup OCR text: %w", err)
@@ -49,13 +54,26 @@ func selectOCRFiles(ctx context.Context, dir, id string, files []fetch.DocumentF
 			hash = h
 		}
 	} else {
-		return selection{source: "none", gap: "text_source_ambiguous"}, nil
+		return selection{source: "none", gap: "text_source_ambiguous", consulted: true}, nil
 	}
 	entry, found := entries[hash]
 	if !found || entry.Check == nil {
-		return selection{source: "none", gap: "needs_ocr"}, nil
+		return selection{source: "none", gap: "needs_ocr", consulted: true}, nil
 	}
-	return selection{source: "ocr", name: names[hash], hash: hash, entry: &entry}, nil
+	var result struct {
+		Verdict      string `json:"verdict"`
+		SameDocument *bool  `json:"same_document"`
+	}
+	if err := json.Unmarshal(entry.Check.Result, &result); err != nil || result.SameDocument == nil {
+		return selection{}, fmt.Errorf("invalid stored OCR check")
+	}
+	if result.Verdict == "rejected" {
+		return selection{source: "none", gap: "ocr_rejected", reason: "checker rejected OCR text", consulted: true}, nil
+	}
+	if result.Verdict != "clean" && result.Verdict != "flagged" {
+		return selection{}, fmt.Errorf("invalid stored OCR verdict")
+	}
+	return selection{source: "ocr", name: names[hash], hash: hash, entry: &entry, consulted: true}, nil
 }
 
 func selectionInputHash(fetchHash string, selected selection) string {
