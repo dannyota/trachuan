@@ -133,12 +133,20 @@ part size of 1 MB, so a long lead or provision is split into parts and every
 page makes progress. The unit sequence starts with the document entry with its
 status, then the outline entries, then the leads and provisions; outline entries
 are ordinary units of that sequence, so a long outline continues across pages
-through `next` like any other units. The response is the `read` item result
-object; continuation is its `next` token, passed back as `next`.
+through `next` like any other units. The response is
+`{release, fetch_sha256, item}`: `release` is the release the page was read
+from, `item` is the `read` item result object, and `fetch_sha256` is the
+document's fetch hash in that release, read in the same pinned transaction. It
+is present on every page that carries the document, first or continuation, and
+absent when `item.error` is set. Continuation is `item.next`, passed back as
+`next`. The website links search results to the reader with `?release=`, so the
+reader shows the release the result came from; the reader shows the document's
+single `source_url` only when present.
 
 Search, read and status take the same inputs and return the same objects as the
-MCP tools, and documents returns `read` item results with the web caps; all four
-keep `release` pinning and `release_expired`; only the transport differs.
+MCP tools. Documents wraps one `read` item result with the web caps in the
+object above; MCP result shapes do not change. All four keep `release` pinning
+and `release_expired`; only the transport differs.
 
 ## Errors and limits
 
