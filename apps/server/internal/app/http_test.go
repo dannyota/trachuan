@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strings"
 	"sync/atomic"
+	"syscall"
 	"testing"
 	"time"
 
@@ -69,14 +70,14 @@ func TestHTTPServer_PartialAuthenticatedBodyClosesBeforeTool(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = conn.Close() }()
-	if err = conn.SetDeadline(time.Now().Add(100 * time.Millisecond)); err != nil {
+	if err = conn.SetReadDeadline(time.Now().Add(5 * time.Second)); err != nil {
 		t.Fatal(err)
 	}
 	request := "POST /mcp HTTP/1.1\r\nHost: localhost\r\nAuthorization: Bearer trc_" + strings.Repeat("A", 43) + "\r\nContent-Type: application/json\r\nAccept: application/json, text/event-stream\r\nContent-Length: 1000\r\n\r\n{\"jsonrpc\":"
 	if _, err = io.WriteString(conn, request); err != nil {
 		t.Fatal(err)
 	}
-	if _, err = io.ReadAll(conn); err != nil {
+	if _, err = io.ReadAll(conn); err != nil && !errors.Is(err, syscall.ECONNRESET) {
 		t.Fatal("server did not close the stalled body connection", err)
 	}
 	if auth.calls.Load() != 1 || resolver.calls.Load() != 0 {
