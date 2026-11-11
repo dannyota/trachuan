@@ -14,6 +14,8 @@ CREATE TABLE document (
  validity_conflict boolean NOT NULL,
  is_current boolean NOT NULL CHECK (is_current = (status_class IN ('in_force','partial'))),
  is_consolidated boolean NOT NULL,
+ text_source text NOT NULL CHECK (text_source IN ('source_tree','html_transcription','ocr','none')),
+ text_complete boolean NOT NULL CHECK (text_source <> 'none' OR NOT text_complete),
  content_state text NOT NULL CHECK (content_state IN ('indexed','no_tree','no_chunks','embedding_gap')),
  fetch_sha256 text COLLATE "C" NOT NULL CHECK (fetch_sha256 ~ '^[0-9a-f]{64}$'),
  extract_sha256 text COLLATE "C" CHECK (extract_sha256 ~ '^[0-9a-f]{64}$'),
@@ -39,7 +41,7 @@ CREATE TABLE provision (
  kind text NOT NULL CHECK (kind IN ('phan','chuong','muc','dieu','khoan','diem','other')),
  label text NOT NULL, heading text NOT NULL, ordinal integer NOT NULL CHECK (ordinal > 0),
  preorder integer NOT NULL CHECK (preorder > 0), path ltree NOT NULL, text text NOT NULL,
- anchor text COLLATE "C" NOT NULL,
+ anchor text COLLATE "C" NOT NULL, locator text,
  UNIQUE (document_id,id), UNIQUE (document_id,node_id), UNIQUE (document_id,anchor),
  UNIQUE (document_id,preorder), UNIQUE (document_id,path),
  FOREIGN KEY (document_id,parent_id) REFERENCES provision (document_id,id),
@@ -147,7 +149,7 @@ CREATE INDEX ON taxonomy_assignment (provision_id,family_id);
 
 CREATE TABLE release (
  singleton boolean PRIMARY KEY CHECK (singleton), country text COLLATE "C" NOT NULL CHECK (country = 'vn'),
- rel text COLLATE "C" NOT NULL UNIQUE, schema_version integer NOT NULL CHECK (schema_version = 3),
+ rel text COLLATE "C" NOT NULL UNIQUE, schema_version integer NOT NULL CHECK (schema_version = 4),
  taxonomy_version text COLLATE "C" NOT NULL,
  dense_recipe jsonb NOT NULL CHECK (jsonb_typeof(dense_recipe) = 'object'),
  chunk_recipe jsonb NOT NULL CHECK (jsonb_typeof(chunk_recipe) = 'object'),

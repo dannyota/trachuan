@@ -80,7 +80,14 @@ func shapeHit(g Group, arms Arms, recipe Recipe) (Hit, error) {
 	for _, p := range c.Ancestors {
 		path = append(path, PathNode{Identity: p.Identity, Kind: p.Kind, Label: strings.TrimSpace(p.Label), Heading: strings.TrimSpace(p.Heading)})
 	}
-	h := Hit{Identity: g.Identity, Path: path, BestMember: bestMember, BestTextStart: bestStart, Number: c.Document.Number, Class: c.Document.Class, Source: c.Document.Source, Title: c.Document.Title, Citation: citation(c.Ancestors), Text: text, Fragments: fragments, Complete: complete, SourceURL: c.Document.SourceURL, Score: g.Score, BestCosine: g.BestCosine, Stamp: validity, Relations: rels, Gaps: gaps}
+	var locator *string
+	for _, p := range c.Descendants {
+		if p.ID == c.GroupID {
+			locator = p.Locator
+			break
+		}
+	}
+	h := Hit{Locator: locator, Identity: g.Identity, Path: path, BestMember: bestMember, BestTextStart: bestStart, Number: c.Document.Number, Class: c.Document.Class, Source: c.Document.Source, Title: c.Document.Title, Citation: citation(c.Ancestors), Text: text, Fragments: fragments, Complete: complete, SourceURL: c.Document.SourceURL, Score: g.Score, BestCosine: g.BestCosine, Stamp: validity, Relations: rels, Gaps: gaps}
 	if !complete {
 		v := 1
 		h.NextPart = &v

@@ -16,7 +16,7 @@ func TestLoad_ExtractSelectionLineage(t *testing.T) {
 	art := f.fetch(t, key)
 	input := fetch.ExtractInputHash(art.SHA256, "html_transcription")
 	nodes := []chunk.Node{{NodeID: "tx:1234567890abcdef", Kind: "dieu", Label: "Điều 1", Ordinal: 1, Path: "dieu-1", Text: "Điều 1. Nội dung văn bản."}}
-	f.addArtifact(t, "extract", key, map[string]any{"text.json": map[string]string{"text_source": "html_transcription"}, "provisions.json": nodes}, input)
+	f.addArtifact(t, "extract", key, map[string]any{"text.json": map[string]any{"text_source": "html_transcription", "provisions": []map[string]any{{"NodeID": nodes[0].NodeID, "StartOrdinal": 1, "EndOrdinal": 1}}}, "provisions.json": nodes}, input)
 	counts, err := f.load(t)
 	if err != nil {
 		t.Fatal(err)

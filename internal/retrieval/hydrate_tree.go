@@ -8,9 +8,9 @@ import (
 
 func hydrateTrees(ctx context.Context, tx pgx.Tx, ids []int64) (map[int64][]Provision, map[int64][]SourceRelation, error) {
 	const treeSQL = `WITH RECURSIVE tree AS (
- SELECT p.id AS group_id,p.id,p.parent_id,p.document_id,p.kind,p.label,p.heading,p.ordinal,p.preorder,p.text,p.anchor,p.node_id FROM provision p WHERE p.id=ANY($1::bigint[])
- UNION ALL SELECT t.group_id,p.id,p.parent_id,p.document_id,p.kind,p.label,p.heading,p.ordinal,p.preorder,p.text,p.anchor,p.node_id FROM tree t JOIN LATERAL (SELECT * FROM provision WHERE parent_id=t.id AND document_id=t.document_id OFFSET 0) p ON true
- ) SELECT t.group_id,t.id,t.parent_id,t.kind,t.label,t.heading,t.ordinal,t.preorder,t.text,t.anchor,t.node_id,d.country,d.key FROM tree t JOIN document d ON d.id=t.document_id ORDER BY t.group_id,t.preorder`
+ SELECT p.id AS group_id,p.id,p.parent_id,p.document_id,p.kind,p.label,p.heading,p.ordinal,p.preorder,p.text,p.anchor,p.node_id,p.locator FROM provision p WHERE p.id=ANY($1::bigint[])
+ UNION ALL SELECT t.group_id,p.id,p.parent_id,p.document_id,p.kind,p.label,p.heading,p.ordinal,p.preorder,p.text,p.anchor,p.node_id,p.locator FROM tree t JOIN LATERAL (SELECT * FROM provision WHERE parent_id=t.id AND document_id=t.document_id OFFSET 0) p ON true
+ ) SELECT t.group_id,t.id,t.parent_id,t.kind,t.label,t.heading,t.ordinal,t.preorder,t.text,t.anchor,t.node_id,t.locator,d.country,d.key FROM tree t JOIN document d ON d.id=t.document_id ORDER BY t.group_id,t.preorder`
 	rows, err := tx.Query(ctx, treeSQL, ids)
 	if err != nil {
 		return nil, nil, databaseFailure("hydrate descendant provisions failed", err)
@@ -19,7 +19,7 @@ func hydrateTrees(ctx context.Context, tx pgx.Tx, ids []int64) (map[int64][]Prov
 	for rows.Next() {
 		var id int64
 		var p Provision
-		if err = rows.Scan(&id, &p.ID, &p.ParentID, &p.Kind, &p.Label, &p.Heading, &p.Ordinal, &p.Preorder, &p.Text, &p.Identity.Anchor, &p.NodeID, &p.Identity.Country, &p.Identity.DocumentKey); err != nil {
+		if err = rows.Scan(&id, &p.ID, &p.ParentID, &p.Kind, &p.Label, &p.Heading, &p.Ordinal, &p.Preorder, &p.Text, &p.Identity.Anchor, &p.NodeID, &p.Locator, &p.Identity.Country, &p.Identity.DocumentKey); err != nil {
 			rows.Close()
 			return nil, nil, databaseFailure("read descendant provision failed", err)
 		}

@@ -106,6 +106,7 @@ type Hit struct {
 	Stamp         Validity   `json:"stamp"`
 	Relations     []Relation `json:"relations"`
 	Gaps          []Gap      `json:"gaps"`
+	Locator       *string    `json:"locator,omitempty"`
 }
 
 // Diagnostics describes how a response was produced; it never holds query text.

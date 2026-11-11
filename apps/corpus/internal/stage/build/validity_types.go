@@ -11,7 +11,7 @@ type validityDocument struct {
 	rawFrom, rawTo, from, to                                 string
 	dateGap, consolidated                                    bool
 	article                                                  *validity.Result
-	anchor, quote, extractHash, fetchHash                    string
+	textSource, anchor, quote, extractHash, fetchHash        string
 }
 
 type validityRelation struct {
