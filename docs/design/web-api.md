@@ -26,15 +26,16 @@ path; it is never taken from the request.
 `GET /api/v1/auth/google/callback` claims the transaction for the cookie's
 handle atomically and once, then requires: `state` equal to the stored value;
 the code exchanged with the stored verifier; an ID token verified for signature,
-issuer, audience (the client id) and expiry; `nonce` equal to the stored value;
-`email_verified` true. A rejected login (bad state, nonce, token or code, an
-unverified email, an expired or already claimed transaction, a blocked account)
-clears the cookie and redirects to `/login?error=<code>` with a fixed code
-(`login_failed`, `login_expired`, `account_blocked`). A failure of the auth
-database or of Google's endpoints at any step (claiming the transaction,
-upserting the account, revoking a presented session, creating the session) is
-503 `unavailable` and issues no session; the transaction stays claimed, so the
-user starts again. Provider error text is never shown or logged.
+issuer (`https://accounts.google.com`, or `accounts.google.com`, which Google
+also documents as valid), audience (the client id) and expiry; `nonce` equal to
+the stored value; `email_verified` true. A rejected login (bad state, nonce,
+token or code, an unverified email, an expired or already claimed transaction, a
+blocked account) clears the cookie and redirects to `/login?error=<code>` with a
+fixed code (`login_failed`, `login_expired`, `account_blocked`). A failure of
+the auth database or of Google's endpoints at any step (claiming the
+transaction, upserting the account, revoking a presented session, creating the
+session) is 503 `unavailable` and issues no session; the transaction stays
+claimed, so the user starts again. Provider error text is never shown or logged.
 
 The account is found by `google_sub` only, never by email. The first login
 creates it; every login stores the current email and `last_login_at`. A blocked

@@ -19,7 +19,7 @@
 ## Global Constraints
 
 - Cookies: `__Host-login` (`Path=/`, `Max-Age=600`, `Secure`, `HttpOnly`, `SameSite=Lax`) and `__Host-session` (`Path=/`, `Max-Age` 30 days, `Secure`, `HttpOnly`, `SameSite=Lax`). Tokens, handles, state, nonce and CSRF secrets: 32 random bytes, base64url without padding; tokens and handles stored only as SHA-256 hex.
-- Login transaction valid 10 minutes, claimed once atomically. ID token checks: signature, issuer `https://accounts.google.com`, audience the client id, expiry, nonce, `email_verified` true. Account lookup by `google_sub` only. `next` path rules exactly as the spec.
+- Login transaction valid 10 minutes, claimed once atomically. ID token checks: signature, issuer `https://accounts.google.com` or `accounts.google.com`, audience the client id, expiry, nonce, `email_verified` true. Account lookup by `google_sub` only. `next` path rules exactly as the spec.
 - Sessions: sliding 30-day expiry capped at 90 days after creation, `last_seen_at` written at most once an hour; new session on every login and the previous cookie's session revoked; checks per request as the spec, 10-second lookup cache never beyond `expires_at`, entries dropped at once on every revocation the server process makes; auth database failure is 503.
 - CSRF: unsafe methods need `Origin` (or `Referer`) equal to `SERVER_PUBLIC_URL`'s origin and `X-CSRF-Token` equal to the session secret in constant time; JSON bodies only; 403 `csrf_rejected`.
 - A session never authorizes `/mcp`; a bearer token never authorizes `/api/v1`. Account routes act only on the caller's rows; another account's id is 404.
