@@ -8,7 +8,8 @@
     "preview": "node .output/server/index.mjs",
     "lint": "eslint .",
     "typecheck": "nuxt typecheck",
-    "test": "vitest run",
+    "test": "vitest run && npm run test:edge",
+    "test:edge": "node --test e2e-stack/edge.test.mjs",
     "e2e": "playwright test -c e2e/playwright.config.ts",
     "postinstall": "nuxt prepare",
     "pretest": "nuxt build"

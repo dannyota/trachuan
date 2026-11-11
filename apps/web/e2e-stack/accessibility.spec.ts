@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Locator, type Page } from '@playwright/test'
 import { freshEmail, signIn } from './identity'
 
 test.use({ extraHTTPHeaders: { 'X-Forwarded-For': '192.0.2.10' } })
@@ -35,31 +35,63 @@ async function keyboard(page: Page) {
   await previous.dispose()
 }
 
-test('keyboard focus and validity contrast on the website', async ({ page }) => {
-  await page.goto('/')
-  await expect(page.getByRole('banner').getByRole('link', { name: 'Đăng nhập', exact: true })).toBeVisible()
-  await keyboard(page)
-  await page.goto('/login')
-  await keyboard(page)
-  await signIn(page, freshEmail())
-  await expect(page.getByText('Phiên hiện tại')).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Tạo mã truy cập' })).toBeVisible()
-  await keyboard(page)
-  await page.getByRole('button', { name: 'Tạo mã truy cập' }).click()
-  await expect(page.getByRole('dialog')).toBeVisible()
-  const dialog = page.getByRole('dialog')
-  const dialogControls = dialog.locator('input, button')
-  await expect(dialogControls.first()).toBeFocused()
-  for (let index = 0; index < await dialogControls.count(); index++) {
-    const control = dialogControls.nth(index)
+async function modalKeyboard(page: Page, dialog: Locator, controls: Locator[]) {
+  await expect(controls[0]!).toBeFocused()
+  await page.keyboard.press('Shift+Tab')
+  expect(await dialog.evaluate(element => element.contains(document.activeElement))).toBe(true)
+  await expect(controls[controls.length - 1]!).toBeFocused()
+  await page.keyboard.press('Tab')
+  await expect(controls[0]!).toBeFocused()
+  for (const control of controls) {
     await expect(control).toBeFocused()
     expect(await control.evaluate(element => {
       const style = getComputedStyle(element)
       return element.matches(':focus-visible') && ((style.outlineStyle !== 'none' && parseFloat(style.outlineWidth) > 0) || style.boxShadow !== 'none')
     })).toBe(true)
     await page.keyboard.press('Tab')
+    expect(await dialog.evaluate(element => element.contains(document.activeElement))).toBe(true)
   }
+}
+
+test('keyboard focus and validity contrast on the website', async ({ page }) => {
+  await page.goto('/')
+  await expect(page.getByRole('banner').getByRole('link', { name: 'Đăng nhập', exact: true })).toBeVisible()
+  await keyboard(page)
+  await page.goto('/login')
+  await keyboard(page)
+  const accountEmail = freshEmail()
+  await signIn(page, accountEmail)
+  await expect(page.getByText('Phiên hiện tại')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Tạo mã truy cập' })).toBeVisible()
+  await keyboard(page)
+  const openToken = page.getByRole('button', { name: 'Tạo mã truy cập', exact: true })
+  await openToken.click()
+  const dialog = page.getByRole('dialog')
+  await expect(dialog).toBeVisible()
+  const name = dialog.getByLabel('Tên', { exact: true })
+  await name.fill('accessibility token')
+  await modalKeyboard(page, dialog, [name, dialog.getByLabel('Số ngày'), dialog.getByRole('button', { name: 'Tạo', exact: true }), dialog.getByRole('button', { name: 'Đóng', exact: true })])
+  await dialog.getByRole('button', { name: 'Tạo', exact: true }).focus()
+  await page.keyboard.press('Enter')
+  await expect(dialog.locator('.token-value')).toBeVisible()
+  expect(await dialog.evaluate(element => element.contains(document.activeElement))).toBe(true)
+  const copy = dialog.getByRole('button', { name: 'Sao chép', exact: true })
+  if (!(await copy.evaluate(element => element === document.activeElement))) await page.keyboard.press('Tab')
+  await modalKeyboard(page, dialog, [copy, dialog.getByRole('button', { name: 'Đóng', exact: true })])
   await page.keyboard.press('Escape')
+  await expect(dialog).toHaveCount(0)
+  await expect(openToken).toBeFocused()
+
+  const openDeletion = page.getByRole('button', { name: 'Xóa tài khoản', exact: true })
+  await openDeletion.click()
+  const deletion = page.getByRole('dialog')
+  await expect(deletion).toBeVisible()
+  const email = deletion.getByLabel('Email', { exact: true })
+  await email.fill(accountEmail)
+  await modalKeyboard(page, deletion, [email, deletion.getByRole('button', { name: 'Xóa tài khoản', exact: true }), deletion.getByRole('button', { name: 'Đóng', exact: true })])
+  await page.keyboard.press('Escape')
+  await expect(deletion).toHaveCount(0)
+  await expect(openDeletion).toBeFocused()
   await page.goto('/vn/search')
   await keyboard(page)
   await page.getByLabel('Câu hỏi tiếng Việt').fill('Văn bản thử nghiệm\nMẫu giả lập vườn thử nghiệm xanh')

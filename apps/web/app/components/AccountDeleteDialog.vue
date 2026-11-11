@@ -3,13 +3,23 @@ import { messagesFor, errorMessage, type Language } from '../../i18n'
 import { accountActions } from '../api/account-actions'
 import type { Action } from '../api/client'
 import { useSessionStore } from '../stores/session'
+import { wrapDialogFocus } from '../utils/dialog-focus'
 
 const props = defineProps<{ email: string, action: Action }>()
 const emit = defineEmits<{ close: [] }>()
 const language = useState<Language>('language', () => 'vi')
 const messages = computed(() => messagesFor(language.value))
 const dialog = ref<HTMLDialogElement | null>(null)
-onMounted(() => dialog.value?.showModal())
+let opener: HTMLElement | null = null
+onMounted(() => {
+  opener = document.activeElement instanceof HTMLElement ? document.activeElement : null
+  dialog.value?.showModal()
+})
+function close() {
+  dialog.value?.close()
+  if (opener?.isConnected) opener.focus()
+  emit('close')
+}
 const confirmation = ref('')
 const error = ref('')
 const busy = ref(false)
@@ -36,13 +46,13 @@ async function remove() {
 }
 </script>
 <template>
-  <dialog ref="dialog" @cancel.prevent="emit('close')">
+  <dialog ref="dialog" @cancel.prevent="close" @keydown="wrapDialogFocus">
     <h2>{{ messages.deleteAccount }}</h2><p>{{ messages.deletePrompt }}</p>
     <form @submit.prevent="remove">
       <label>{{ messages.email }} <input v-model="confirmation" autocomplete="off"></label>
       <button type="submit" :disabled="confirmation !== email || busy || accountChanged">{{ messages.deleteAccount }}</button>
     </form>
     <p v-if="error" role="alert">{{ error }}</p>
-    <button type="button" @click="emit('close')">{{ messages.close }}</button>
+    <button type="button" @click="close">{{ messages.close }}</button>
   </dialog>
 </template>
