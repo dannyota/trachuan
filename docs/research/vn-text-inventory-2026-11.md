@@ -11,14 +11,14 @@ sampled from the first three pages and the middle page with `pypdf`. Feeds
 | Source                                                      | Documents |
 | ----------------------------------------------------------- | --------- |
 | `<id>_content.html` with at least 300 characters of text    | 188       |
-| PDF with a Unicode Vietnamese text layer                    | 24        |
+| PDF with a Unicode Vietnamese text layer                    | 23        |
 | PDF text layer present but not Vietnamese (earlier bad OCR) | 203       |
-| Scanned PDF without a text layer                            | 96        |
+| Scanned PDF without a text layer                            | 88        |
 | No attachment (58), only `.doc` (1), only `.rar` (1)        | 60        |
 
-The 24 include one secondary document (05/2026/TT-BKHCN); the 96 include the
-other eight secondary documents, among them 142/2026/NĐ-CP (97 pages). The nine
-secondary documents have one signed PDF each.
+The rows sum to 562 and include the secondary documents: one of the 23
+(05/2026/TT-BKHCN) and eight of the 88, among them 142/2026/NĐ-CP (97 pages).
+The nine secondary documents have one signed PDF each.
 
 ## HTML transcriptions
 
@@ -40,10 +40,13 @@ usable transcription or PDF, except one document with only a `.doc`.
 
 ## OCR workload
 
-Documents needing OCR: 299 (291 VBPL, 8 secondary), about 10,500 pages taking
-the largest PDF per document; median 25 pages, 95th percentile 90, largest 507.
-By type among the VBPL ones: 263 consolidated texts, 14 decrees, 6 circulars, 6
-decisions, 1 law, 1 telegram.
+Documents with text only in a PDF: 314. banhmi's cache holds Google Vision OCR
+text keyed by the PDF's SHA-256 for 266 of them (261 list one distinct PDF under
+several names, 5 have exactly one PDF with cached text); 48 documents, 1,342
+pages, need fresh OCR. Pages over the 291 documents without a good text layer:
+about 10,500 taking the largest PDF per document; median 25 pages, 95th
+percentile 90, largest 507. By type among the VBPL ones: 263 consolidated texts,
+14 decrees, 6 circulars, 6 decisions, 1 law, 1 telegram.
 
 ## By document type (VBPL, 553)
 

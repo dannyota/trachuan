@@ -4,9 +4,9 @@ Status: accepted (owner decision 2026-11-11).
 
 ## Context
 
-299 of the 562 documents without a source tree exist only as scanned PDFs or
-PDFs with an unusable text layer, about 10,500 pages; 263 are consolidated
-texts, the current reading of amended State Bank rules
+314 of the 562 documents without a source tree have text only in a PDF, most of
+them scans or PDFs with an unusable text layer, about 10,500 pages; 263 are
+consolidated texts, the current reading of amended State Bank rules
 ([inventory](../research/vn-text-inventory-2026-11.md)). Without OCR they cannot
 be found. banhmi, the predecessor, read the same files with Google Cloud Vision
 and kept the output; its cache holds OCR text keyed by the PDF's SHA-256 for 266
@@ -29,7 +29,10 @@ serving path only.
    the OCR text and reports disagreements in document numbers, dates, article
    labels and amounts. Disagreements are stored with the text, set the gap
    `ocr_flagged` on the document and enter a review file; the model never
-   rewrites the stored text.
+   rewrites the stored text. An OCR text is usable only with a completed check
+   covering every page: no check, a timeout, a partial or a malformed result
+   leaves the document `needs_ocr` and unindexed, never clean. This applies to
+   text reused from banhmi as well.
 4. OCR text ships as citable evidence, marked `text_source = ocr` on every
    result, under the fail-closed parsing of
    [text extraction](../design/text-extraction.md).
@@ -46,7 +49,9 @@ serving path only.
   picks and is measured on a 100-page sample before the full pass.
 - Credentials for both services live on the MacBook outside the repository and
   are named by environment variables in the runbook; the pipeline fails closed
-  when they are absent, and reused OCR needs none.
+  when they are absent. Importing banhmi output needs no credential; checking it
+  needs the model credential once, after which the stored check record is
+  reused.
 - A new engine or model version is a new store entry, never an overwrite, so a
   release can always name the OCR reading it was built from.
 - Risks kept visible: OCR misreads of numbers and dates; the cross-check and the
@@ -58,7 +63,7 @@ serving path only.
 - Local engines (Apple Vision, Tesseract `vie`): no cost and no data leaves the
   machine, but unmeasured accuracy on Vietnamese legal scans; the owner chose
   the engine banhmi already proved on these files.
-- Reading PDF text layers: 203 measured layers are garbage and only 24 are good;
+- Reading PDF text layers: 203 measured layers are garbage and only 23 are good;
   not worth a second parser.
 
 ## History

@@ -17,16 +17,17 @@ source per document:
 | Text source                                               | Documents |
 | --------------------------------------------------------- | --------- |
 | HTML transcription `<id>_content.html` with text          | 188       |
-| PDF with a Unicode Vietnamese text layer                  | 24        |
+| PDF with a Unicode Vietnamese text layer                  | 23        |
 | PDF whose text layer is garbage from a non-Vietnamese OCR | 203       |
-| Scanned PDF, no text layer                                | 96        |
+| Scanned PDF, no text layer                                | 88        |
 | No attachment, or only `.doc` or `.rar`                   | 60        |
 
 Of the 188 transcriptions, 73 have two or more `Điều` lines, 80 a numbered
 outline, 35 plain text; 46 have more than two tables, 9 have images. Where
 `_content.html` and `_content_origin.html` both hold text, 98 are identical and
-49 differ; none has text only in the origin. So this work recovers 212 documents
-with no model, and 299 (about 10,500 pages) wait for OCR.
+49 differ; none has text only in the origin. So 188 documents need no OCR and
+314 have only a PDF (about 10,500 pages); the counts include the nine secondary
+documents and sum to 562.
 
 ## Text source per document
 
@@ -46,11 +47,11 @@ Exactly one source supplies a document's text, chosen in this order:
    data (266 documents matched by hash), else a fresh Google Cloud Vision
    request (48 documents, 1,342 pages measured).
 4. `none`: the document stays `no_tree` with a gap naming why (`needs_ocr` until
-   the OCR store holds its text, `no_text_source`, `file_format_unsupported` for
-   `.doc` and archives, `text_source_ambiguous`).
+   the OCR store holds its text with a completed cross-check, `no_text_source`,
+   `file_format_unsupported` for `.doc` and archives, `text_source_ambiguous`).
 
 A PDF's own text layer is never read: 203 measured layers are garbage from an
-earlier non-Vietnamese OCR pass, and the 24 good ones go through OCR like the
+earlier non-Vietnamese OCR pass, and the 23 good ones go through OCR like the
 scans, so there is one PDF path and no PDF parser in the pipeline. DOCX is not
 read: it would recover no document. Reason for the order: the transcription is
 the publisher's own text; OCR is a machine reading and says so.
@@ -65,8 +66,8 @@ images and formulas leave a marker paragraph `[hình]`, never invented text.
 ## From paragraphs to provisions
 
 Provision kinds stay those the schema has (`phan`, `chuong`, `muc`, `dieu`,
-`khoan`, `diem`, `other`). Generated `node_id` values are `tx:<ordinal>` (the
-first paragraph's ordinal), a namespace no source id uses, so a source relation
+`khoan`, `diem`, `other`). Generated `node_id` values use the `tx:` namespace
+defined under "What is recorded", which no source id uses, so a source relation
 endpoint can never resolve to one by accident.
 
 A provision's `text` holds its heading line and every paragraph under it up to
@@ -119,11 +120,12 @@ numbered outline (`I.`, `1.`) when one exists. Text under 300 characters is
   is unchanged in every file and in its manifest, so its chunk and embed
   artifacts are reused; a compatibility test pins the fetch, extract, chunk and
   embed hashes of recorded documents.
-- Generated node ids are
-  `tx:<first 16 hex of the SHA-256 of the provision's text>` with a `~n` suffix
-  on a repeat. The id changes whenever the text behind an anchor changes, so the
-  identity map's existing changed-identity check forces re-adjudication even
-  when anchor strings such as `doan-3` survive a refetch or a parser change.
+- Generated node ids are `tx:` plus the first 16 hex characters of the SHA-256
+  of the scope index, the anchor and the provision text joined by newlines. The
+  id therefore names one text at one anchor in one scope: if text moves to
+  another anchor, or an anchor comes to hold other text, the old id no longer
+  exists, and the identity map's node check forces re-adjudication even when
+  anchor strings such as `doan-3` survive a refetch or a parser change.
 - Corpus: `document.text_source` (`source_tree`, `html_transcription`, `ocr`,
   `none`) and `document.text_complete boolean`, false when any gap of
   `structure_uncertain`, `table_text` (more than a tenth of the characters in
@@ -131,6 +133,18 @@ numbered outline (`I.`, `1.`) when one exists. Text under 300 characters is
   `source_tree` for artifacts without `text.json`. Search and read results
   return both on the document entry, with each provision's locator. This is
   corpus schema version 4.
+
+## Inputs and reuse
+
+A source-tree document's extract input stays its fetch artifact hash. For any
+other document, planning selects the text source and freezes it into the input
+hash: the fetch hash, the source name, and for OCR the store entry's hash and
+its cross-check record's hash, or the literal `absent` when the store has no
+checked entry. Adding OCR text or a cross-check to the store therefore changes
+the input and reruns extract on the next run; a frozen run never changes. The
+store keeps one entry per PDF hash and engine id and one check record per entry
+and checker id; both are immutable, and the engine and checker ids are part of
+the extract recipe.
 
 ## Validity rules
 
