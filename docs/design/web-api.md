@@ -114,9 +114,11 @@ follow the same rule. The OAuth consent form has its own rule in
 | `GET /api/v1/documents/{key}`      | session        | read         | Reader page: document entry, outline and text from `from`           |
 | `GET /api/v1/status`               | session        | read         | The `corpus_status` tool's result                                   |
 
-Account routes act only on rows whose `account_id` is the caller's; an id that
-belongs to another account is 404, the same as an unknown id. Personal tokens
-created here follow [auth](auth.md): default 90 days, at most one year.
+Account routes list and create within the per-account credential bounds in
+[budgets](budgets.md#request-limits). Account routes act only on rows whose
+`account_id` is the caller's; an id that belongs to another account is 404, the
+same as an unknown id. Personal tokens created here follow [auth](auth.md):
+default 90 days, at most one year.
 
 `GET /api/v1/documents/{key}?release=<rel>&next=<token>` is the reader's
 whole-document read: the `read` item `{handle: key, from: first, to: last}` of
