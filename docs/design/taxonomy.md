@@ -21,13 +21,17 @@ source: [research note](../research/phap-dien-2026-11-08.md).
 Codes are stable identifiers, not display paths. `taxonomy/mapping.yaml` maps
 each package node GUID (`ID` in `jdAllTree`, `Value` in `jdChuDe` and `jdDeMuc`)
 to its code. A later import looks up the GUID first and keeps the code even when
-the position changed; a GUID not in the file receives the next free code at its
-level, and a code is never reused. A GUID missing from a later import marks its
-node `retired`. A GUID that keeps a node changes only its level, parent and
-ordinal, never its code. A GUID whose node becomes flattened retires its code
-(kept, never reused) and is recorded as flattened; a flattened GUID that becomes
-a node receives a new code. `taxonomy_version` is the hash of the mapping file,
-the custom file and the overrides file.
+the position changed; a GUID not in the file receives a new code, and a code is
+never reused. A new code is its parent's code, the kind letter and one more than
+the highest number of any code ever recorded in the mapping with exactly that
+prefix, whatever the status or current position of that code's node; a chủ đề or
+đề mục number follows the STT rule in the table, falling back to the same scan.
+A GUID missing from a later import marks its node `retired`. A GUID that keeps a
+node changes only its level, parent and ordinal, never its code. A GUID whose
+node becomes flattened retires its code (kept, never reused) and is recorded as
+flattened; a flattened GUID that becomes a node receives a new code.
+`taxonomy_version` is the hash of the mapping file, the custom file and the
+overrides file.
 
 ## Inputs
 
