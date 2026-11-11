@@ -83,7 +83,7 @@ func TestClient_PersistsPauseAfterAttemptDeadline(t *testing.T) {
 	gate := slowPauseGate{sourcegate.NewMemory()}
 	c := NewWithBase(server.URL, "test", WithLimits(float64(rate.Inf), 1), WithBackoffs(), WithGate(gate))
 	c.timeout = 30 * time.Millisecond
-	ctx := sourcegate.WithRunID(context.Background(), 1)
+	ctx := sourcegate.WithActivity(sourcegate.WithRunID(context.Background(), 1))
 	_, _, err := c.Detail(ctx, "1")
 	waitForPaused(t, ctx, gate, 1)
 	if !errors.Is(err, sourcegate.ErrSourcePaused) || !errors.Is(gate.Admit(ctx, 1, "vbpl"), sourcegate.ErrSourcePaused) {
@@ -115,7 +115,7 @@ func TestClient_WaitsForPauseBeforeNextRequest(t *testing.T) {
 	defer server.Close()
 	gate := &waitingPauseGate{Memory: sourcegate.NewMemory(), started: make(chan struct{}), release: make(chan struct{})}
 	c := NewWithBase(server.URL, "test", WithLimits(float64(rate.Inf), 2), WithBackoffs(time.Millisecond), WithGate(gate))
-	ctx := sourcegate.WithRunID(context.Background(), 1)
+	ctx := sourcegate.WithActivity(sourcegate.WithRunID(context.Background(), 1))
 	errs := make(chan error, 2)
 	go func() { _, _, err := c.Detail(ctx, "1"); errs <- err }()
 	<-gate.started
@@ -150,7 +150,7 @@ func TestClient_RetriesFailedPauseBeforeRequest(t *testing.T) {
 	defer server.Close()
 	gate := &retryPauseGate{Memory: sourcegate.NewMemory()}
 	c := NewWithBase(server.URL, "test", WithLimits(float64(rate.Inf), 2), WithBackoffs(time.Millisecond), WithGate(gate))
-	ctx := sourcegate.WithRunID(context.Background(), 1)
+	ctx := sourcegate.WithActivity(sourcegate.WithRunID(context.Background(), 1))
 	_, _, _ = c.Detail(ctx, "1")
 	_, _, err := c.Detail(ctx, "2")
 	if !errors.Is(err, sourcegate.ErrSourcePaused) || calls.Load() != 1 || gate.writes.Load() != 2 {

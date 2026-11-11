@@ -44,6 +44,7 @@ var ErrSuperseded = errors.New("superseded")
 
 // RunBatch processes the pending items of one batch.
 func RunBatch(ctx context.Context, env Env, st Stage, in BatchInput, attempt int, cfg BatchConfig, heartbeat func(details ...any)) (BatchResult, error) {
+	ctx = sourcegate.WithActivity(ctx)
 	var result BatchResult
 	q := store.New(env.DB)
 	runRow, err := q.GetBatchRun(ctx, in.RunID)

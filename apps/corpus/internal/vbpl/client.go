@@ -120,7 +120,6 @@ func (c *Client) request(ctx context.Context, method, target string, body []byte
 	defer func() {
 		sourcegate.LogSlow(ctx, "vbpl", endpoint(target), time.Since(started), c.slowThreshold, status, err)
 	}()
-	parent := pauseParent(ctx)
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 	slots, client := c.slots, c.http
@@ -175,7 +174,11 @@ func (c *Client) request(ctx context.Context, method, target string, body []byte
 	if resp.StatusCode == http.StatusForbidden && c.gate != nil {
 		id, _ := sourcegate.RunID(ctx)
 		reason := fmt.Sprintf("%s status 403", endpoint(target))
-		c.startPause(parent, id, reason)
+		activity, ok := sourcegate.Activity(ctx)
+		if !ok {
+			return resp.StatusCode, errors.New("source pause: missing activity context")
+		}
+		c.startPause(activity, id, reason)
 		return resp.StatusCode, fmt.Errorf("%s: %w", reason, sourcegate.ErrSourcePaused)
 	}
 	if resp.StatusCode != http.StatusOK {
@@ -208,8 +211,7 @@ func wait(ctx context.Context, d time.Duration) error {
 	}
 }
 func (c *Client) apiRaw(ctx context.Context, method, path string, body []byte) (json.RawMessage, error) {
-	ctx = withPauseParent(ctx)
-	activityCtx := pauseParent(ctx)
+	activityCtx := ctx
 	ctx, cancel := context.WithTimeout(ctx, c.requestBudget)
 	defer cancel()
 	for attempt := 0; ; attempt++ {

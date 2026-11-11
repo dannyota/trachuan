@@ -2,38 +2,31 @@ package vbpl
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"danny.vn/trachuan/apps/corpus/internal/sourcegate"
 )
 
-type pauseContextKey struct{}
 type pauseState struct {
-	done    chan struct{}
-	reason  string
-	running bool
-}
-
-func withPauseParent(ctx context.Context) context.Context {
-	if ctx.Value(pauseContextKey{}) != nil {
-		return ctx
-	}
-	return context.WithValue(ctx, pauseContextKey{}, ctx)
-}
-
-func pauseParent(ctx context.Context) context.Context {
-	if parent, ok := ctx.Value(pauseContextKey{}).(context.Context); ok {
-		return parent
-	}
-	return ctx
+	done      chan struct{}
+	reason    string
+	running   bool
+	ownerDone chan struct{}
 }
 
 func (c *Client) awaitPause(ctx context.Context, id int64) error {
 	c.pauseMu.Lock()
 	state := c.pauses[id]
-	if state != nil && !state.running && pauseParent(ctx).Err() == nil {
+	activity, ok := sourcegate.Activity(ctx)
+	if state != nil && !ok {
+		c.pauseMu.Unlock()
+		return errors.New("source pause: missing activity context")
+	}
+	if state != nil && !state.running && activity.Err() == nil {
 		state.running = true
-		go c.pauseOwner(pauseParent(ctx), id, state)
+		state.ownerDone = make(chan struct{})
+		go c.pauseOwner(activity, id, state, state.ownerDone)
 	}
 	c.pauseMu.Unlock()
 	if state == nil {
@@ -60,11 +53,13 @@ func (c *Client) startPause(ctx context.Context, id int64, reason string) {
 	}
 	if !state.running {
 		state.running = true
-		go c.pauseOwner(ctx, id, state)
+		state.ownerDone = make(chan struct{})
+		go c.pauseOwner(ctx, id, state, state.ownerDone)
 	}
 }
 
-func (c *Client) pauseOwner(ctx context.Context, id int64, state *pauseState) {
+func (c *Client) pauseOwner(ctx context.Context, id int64, state *pauseState, done chan struct{}) {
+	defer close(done)
 	delay := 2 * time.Second
 	if len(c.backoffs) > 0 && c.backoffs[0] > 0 {
 		delay = c.backoffs[0]

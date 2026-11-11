@@ -7,6 +7,7 @@ import (
 
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync/atomic"
 	"testing"
 
@@ -34,7 +35,7 @@ func TestClient_ForbiddenPausesSource(t *testing.T) {
 	defer s.Close()
 	gate := sourcegate.NewMemory()
 	c := NewWithBase(s.URL, "test", WithLimits(float64(rate.Inf), 8), WithBackoffs(time.Millisecond), WithGate(gate))
-	ctx := sourcegate.WithRunID(context.Background(), 7)
+	ctx := sourcegate.WithActivity(sourcegate.WithRunID(context.Background(), 7))
 	_, _, err := c.Detail(ctx, "1")
 	waitForPaused(t, ctx, gate, 7)
 	if !errors.Is(err, sourcegate.ErrSourcePaused) || attempts.Load() != 1 || !errors.Is(gate.Admit(ctx, 7, "vbpl"), sourcegate.ErrSourcePaused) {
@@ -81,6 +82,16 @@ func TestClient_GateWithoutRunFailsClosed(t *testing.T) {
 	}
 }
 
+func TestClient_ForbiddenWithoutActivityFailsClosed(t *testing.T) {
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusForbidden) }))
+	defer s.Close()
+	c := NewWithBase(s.URL, "test", WithGate(sourcegate.NewMemory()), WithBackoffs())
+	_, _, err := c.Detail(sourcegate.WithRunID(context.Background(), 7), "1")
+	if err == nil || !strings.Contains(err.Error(), "missing activity context") {
+		t.Fatalf("error = %v", err)
+	}
+}
+
 func TestClient_RequestSlotWaitUsesRequestTimeout(t *testing.T) {
 	c := NewWithBase("https://example.invalid", "test", WithLimits(float64(rate.Inf), 1), WithBackoffs())
 	c.timeout = 5 * time.Millisecond
@@ -121,7 +132,9 @@ func TestAPI_FailureCauses(t *testing.T) {
 			}))
 			defer s.Close()
 			c := testClient(s)
-			c.timeout = 5 * time.Millisecond
+			if tc.status == 0 {
+				c.timeout = 5 * time.Millisecond
+			}
 			_, _, err := c.Detail(context.Background(), "1")
 			var f *Failure
 			if !errors.As(err, &f) || f.Cause != tc.cause || f.Origin != tc.origin || f.HTTPStatus != tc.status || f.Endpoint != "doc/detail" {
