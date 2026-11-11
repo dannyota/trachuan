@@ -29,6 +29,7 @@ func TestParseReferences_Grammar(t *testing.T) {
 		q    string
 		want []string
 	}{
+		{"50/2024/TT", []string{"50/2024/TT"}},
 		{"50 / 2024 / TT-NHNN, 21/VBHN-NHNN", []string{"50/2024/TT-NHNN", "21/VBHN-NHNN"}},
 		{"2024 50/2024 % abc50/2024/TT", nil},
 	} {

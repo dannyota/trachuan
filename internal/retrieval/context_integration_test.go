@@ -85,6 +85,7 @@ func TestCollect_ContextReferenceRequiresFullNumberMatch(t *testing.T) {
 	}{
 		{"different", "50/2024/TT-NHNN", "ngân hàng hết hạn 51/2024/TT-NHNN", 1, false},
 		{"leading-zero", "09/2020/TT-NHNN", "ngân hàng hết hạn 9/2020/TT-NHNN", 1, false},
+		{"number-prefix", "50/2024/TT-NHNN", "ngân hàng hết hạn 50/2024/TT", 1, false},
 		{"number-suffix", "150/2024/TT-NHNN", "ngân hàng hết hạn 50/2024/TT-NHNN", 1, false},
 		{"one-of-two", "50/2024/TT-NHNN", "ngân hàng hết hạn 51/2024/TT-NHNN và 50/2024/TT-NHNN", 2, true},
 	}
