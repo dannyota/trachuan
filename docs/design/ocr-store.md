@@ -54,8 +54,11 @@ row of the first accepted engine id that exists. It is usable only when
   check result SHA-256. `text.json` records the PDF name and SHA-256, engine id,
   text SHA-256, checker id, result SHA-256 and flagged count. One or more
   flagged items add the gap `ocr_flagged`; the text is still indexed.
-- No entry, or no completed check: the input hash freezes `absent` and the
-  document keeps `needs_ocr`.
+- No entry, or no completed check: the input hash freezes `absent` and the gap
+  the selection ends with (`needs_ocr`, `text_source_ambiguous`,
+  `file_format_unsupported` or `no_text_source`), so a store change that moves a
+  document from one gap to another reruns extract instead of reusing the
+  artifact with the old gap.
 
 `extract` verifies the text file against its SHA-256 before parsing and fails
 the item, never the run, on a mismatch or a missing file. Without
