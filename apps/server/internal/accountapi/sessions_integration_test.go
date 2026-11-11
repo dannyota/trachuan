@@ -51,7 +51,8 @@ VALUES (lpad('1', 64, '0'), $1, 'secret', 0, now() + interval '1 day') RETURNING
 	if _, err := conn.Exec(ctx, `INSERT INTO web_session (token_hash, account_id, csrf_secret, auth_epoch, created_at, expires_at, revoked_at)
 VALUES (lpad('2', 64, '0'), $1, 'secret', 0, now(), now() + interval '1 day', now()),
        (lpad('3', 64, '0'), $1, 'secret', 0, now(), now() - interval '1 day', NULL),
-       (lpad('4', 64, '0'), $1, 'secret', 0, now() - interval '91 days', now() + interval '1 day', NULL)`, a.ID); err != nil {
+       (lpad('4', 64, '0'), $1, 'secret', 0, now() - interval '91 days', now() + interval '1 day', NULL),
+       (lpad('5', 64, '0'), $1, 'secret', -1, now(), now() + interval '1 day', NULL)`, a.ID); err != nil {
 		t.Fatal(err)
 	}
 	v := &credential.Verifier{Store: q, Audience: "mcp"}
@@ -64,5 +65,22 @@ VALUES (lpad('2', 64, '0'), $1, 'secret', 0, now(), now() + interval '1 day', no
 	}
 	if len(rows) != 2 || rows[0].ID != otherLiveID || rows[0].Current || rows[1].ID != current.ID || !rows[1].Current {
 		t.Fatalf("sessions = %+v, want other live session and current session", rows)
+	}
+	for _, tc := range []struct {
+		name  string
+		query string
+	}{
+		{"blocked", `UPDATE account SET blocked_at = now(), delete_requested_at = NULL WHERE id = $1`},
+		{"deletion requested", `UPDATE account SET blocked_at = NULL, delete_requested_at = now() WHERE id = $1`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if _, err := conn.Exec(ctx, tc.query, a.ID); err != nil {
+				t.Fatal(err)
+			}
+			sessions, err := q.ListLiveSessions(ctx, a.ID)
+			if err != nil || len(sessions) != 0 {
+				t.Fatalf("sessions = %+v, error = %v; want none", sessions, err)
+			}
+		})
 	}
 }

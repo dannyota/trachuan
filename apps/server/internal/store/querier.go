@@ -47,6 +47,8 @@ type Querier interface {
 	GetToken(ctx context.Context, tokenHash string) (GetTokenRow, error)
 	InsertReport(ctx context.Context, arg InsertReportParams) (IssueReport, error)
 	ListGrants(ctx context.Context, accountID int64) ([]ListGrantsRow, error)
+	// Keep revocation, account state, auth epoch and both expiry bounds aligned
+	// with validSession in apps/server/internal/websession/middleware.go.
 	ListLiveSessions(ctx context.Context, accountID int64) ([]WebSession, error)
 	ListOwnReports(ctx context.Context, arg ListOwnReportsParams) ([]IssueReport, error)
 	ListSessions(ctx context.Context, accountID int64) ([]WebSession, error)

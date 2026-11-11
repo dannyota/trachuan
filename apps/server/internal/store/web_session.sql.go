@@ -118,11 +118,16 @@ func (q *Queries) GetSession(ctx context.Context, tokenHash string) (GetSessionR
 }
 
 const listLiveSessions = `-- name: ListLiveSessions :many
-SELECT id, token_hash, account_id, csrf_secret, auth_epoch, created_at, last_seen_at, expires_at, revoked_at FROM web_session WHERE account_id = $1 AND revoked_at IS NULL
-    AND expires_at > now() AND created_at + interval '90 days' > now()
-ORDER BY created_at DESC, id DESC LIMIT 100
+SELECT s.id, s.token_hash, s.account_id, s.csrf_secret, s.auth_epoch, s.created_at, s.last_seen_at, s.expires_at, s.revoked_at FROM web_session s JOIN account a ON a.id = s.account_id
+WHERE s.account_id = $1 AND s.revoked_at IS NULL
+    AND a.blocked_at IS NULL AND a.delete_requested_at IS NULL
+    AND s.auth_epoch = a.auth_epoch
+    AND s.expires_at > now() AND s.created_at + interval '90 days' > now()
+ORDER BY s.created_at DESC, s.id DESC LIMIT 100
 `
 
+// Keep revocation, account state, auth epoch and both expiry bounds aligned
+// with validSession in apps/server/internal/websession/middleware.go.
 func (q *Queries) ListLiveSessions(ctx context.Context, accountID int64) ([]WebSession, error) {
 	rows, err := q.db.Query(ctx, listLiveSessions, accountID)
 	if err != nil {
