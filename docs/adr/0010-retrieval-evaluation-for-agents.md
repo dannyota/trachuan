@@ -17,58 +17,59 @@ choice, and three of them send unaccented queries that ADR 0002 rejects.
 
 ## Decision
 
-1. Four cohorts. **Legacy parity**: banhmi's 92 cases with their expectations
+1. Three cohorts. **Legacy parity**: banhmi's 92 cases with their expectations
    and matcher unchanged, compared only with banhmi's accepted numbers; no floor
    applies. **Old product**: the same 92 cases under product scoring; the three
    unaccented cases become rejection checks that must all return the ADR 0002
    diacritics message and sit outside the recall, MRR and abstention
-   denominators; the other 89 keep their expectations. **Development** and
-   **sealed**: the new cases below. The targets and gates in
-   [testing](../../instructions/testing.md) apply to the old product and sealed
-   cohorts, each on its own.
+   denominators; the other 89 keep their expectations. **Development**: the new
+   cases below. The targets and gates in
+   [testing](../../instructions/testing.md) apply to the old product and
+   development cohorts, each on its own.
 2. Product scoring matches exact document and provision identities, with
    alternates adjudicated from official text; no substring credit. Product
    current-law precision counts every returned primary hit.
-3. New cases: about 40 development and 40 sealed, 30 positive and 10 negative in
-   each, grouped by connected document family and intent as the study defines.
-   Each scenario is written from a legal subject, not from provision text; an
-   agent that has not seen the provision writes the queries it would send to
-   `search`; a second pass adjudicates labels against official text; the owner
-   spot-checks 10 cases per cohort. A separate agent session writes the sealed
-   cases straight into `work/eval-sealed/` (mode 700, never committed until
-   release). Until the baseline and one finalist are frozen, no brief, scratch
-   file, prompt or tuning context may contain sealed queries or labels; the
-   scoring script reads them and prints aggregates only.
-4. Promotion order: every gate passes on the old product and sealed cohorts;
-   then sealed product micro-recall@20 decides, because 20 compact hits are what
-   an agent receives by default
-   ([ADR 0013](0013-compact-search-and-batch-read.md)), and its paired 95%
-   interval for finalist minus baseline must lie above zero; recall@20 must not
-   fall on the old product cohort, and MRR@8 and recall@8 must not fall on
-   either cohort. Otherwise the baseline stays. Current-law precision,
+3. New cases: about 40 development cases, 30 positive and 10 negative,
+   committed and readable by everyone who works on search. Each scenario is
+   written from a legal subject, not from provision text; an agent that has not
+   seen the provision writes the query it would send to `search`; a second pass
+   adjudicates labels against official text; the owner spot-checks 10 cases.
+   The same cases score later recipe, corpus and model changes. Cases are added
+   from agent error reports and owner findings and are never removed to raise a
+   score.
+4. Change rule: a recipe or model change targets a named failure class seen in
+   case results, such as a per-document cap that drops expected provisions,
+   never a parameter grid. It ships when every gate passes on the old product
+   and development cohorts, it gains at least one expected citation within 20
+   hits on either cohort, and recall@20 and MRR@8 fall on neither cohort;
+   otherwise the current recipe stays. Recall@20 counts because 20 compact hits
+   are what an agent receives by default
+   ([ADR 0013](0013-compact-search-and-batch-read.md)). Current-law precision,
    abstention and the rejection checks are hard gates. Recall and MRR have
    targets that every report states, but a target is not a gate: a release ships
    when the gates pass and recall@20 and MRR@8 do not fall against the previous
-   release.
-5. Every trial reports returned evidence characters per response (p50, p95).
-   Size breaks ties only on the development cohort, between configurations of
-   the same model with identical matched-citation counts and abstention
-   decisions: lower p95 first, then lower p50. A size-only promotion of a frozen
-   finalist needs identical matched citations and gate results on every cohort,
-   and never changes the model.
+   release. Reports state the small sample size; no interval or superiority
+   claim is required.
+5. Every evaluation reports returned evidence characters per response (p50,
+   p95). A change that only reduces size ships when matched citations and gate
+   results are identical on every cohort.
 6. Abstention uses the best-member cosine of the first fused provision,
-   including lexical-only hits; the threshold is calibrated on development cases
-   per dense recipe.
-7. Models are compared exact search against exact search; ANN loss and cost are
-   measured separately per model. Vietnamese_Embedding_v2 stays unless a
-   different model wins under item 4.
+   including lexical-only hits; the threshold is calibrated on the old product
+   and development cohorts together, per dense recipe.
+7. Models are compared exact search against exact search on the same cases; ANN
+   loss and cost are measured separately per model. Vietnamese_Embedding_v2
+   stays unless a different model passes item 4.
 8. The release contract gains versioned `chunk_recipe` and `retrieval_recipe`
    fields; [data](../design/data.md) changes with the index plan.
 
 ## Consequences
 
-About 80 new labeled cases before any superiority claim, with low statistical
-power stated in every report. The three unaccented legacy cases count as
+About 40 new labeled cases, visible to everyone, and about 130 scored product
+cases in all, with low statistical power stated in every report. No result
+proves a recipe better on unseen questions; the guards are that changes target
+named failure classes and must not fall on the old product cohort, which the
+model choice already used. Case authoring stays small enough to repeat as the
+corpus grows. The three unaccented legacy cases count as
 rejection checks in the old product cohort and as written in legacy parity. The
 index plan takes its chunk, lexical and retrieval recipes from the experiments
 this protocol scores. Gates and targets change only with a History line. These
@@ -85,6 +86,11 @@ answer or its real token spend.
   reading the first hit; an agent reads the list, so coverage within it matters
   more.
 - Questions written from provision text: shared wording favors the lexical arm.
+- A sealed cohort of about 40 cases with isolated authoring and one sealed run
+  per finalist (this ADR's 2026-11-09 text): it proves superiority on unseen
+  questions, which matters when training or benchmarking models. trachuan
+  applies a fixed model, and the isolation cost bought no decision the visible
+  cases cannot make.
 
 ## History
 
@@ -114,3 +120,10 @@ answer or its real token spend.
   who chose recall@20, the compact default agents receive. Gates are current-law
   precision, abstention, rejections and no regression of recall@20 or MRR@8
   against the previous release; recall@8 stays a reported diagnostic.
+- 2026-11-11: the owner removed the sealed cohort: "we dont try to train ai
+  model and benchmarks, we use and apply AI, improve for it, and when we change
+  embedding models, we can reuse them too". Items 1 and 3 to 7 now use one
+  visible development cohort of about 40 cases, a change rule of named failure
+  classes with non-regression on both cohorts instead of a sealed paired
+  interval, and calibration on old product and development together.
+  `work/eval-sealed/` is not created.

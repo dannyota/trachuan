@@ -1,11 +1,10 @@
 # Retrieval evaluation harness
 
-Proposed implementation of
-[ADR 0010](../adr/0010-retrieval-evaluation-for-agents.md). This work measures
-the legacy and old product cohorts only. Development cases, sealed cases, tuning
-experiments and promotion decisions come later. Never create or read
-`work/eval-sealed/` during this work. A low baseline score is a result, not
-grounds to remove cases or lower a floor.
+Implementation of
+[ADR 0010](../adr/0010-retrieval-evaluation-for-agents.md). It measures the
+legacy, old product and development cohorts; development is `not_run` while its
+case file is empty. A low score is a result, not grounds to remove cases or
+lower a floor.
 
 ## Package, command and stage
 
@@ -194,10 +193,11 @@ under identical eligibility and response processing; only hybrid gates apply.
 Old-product floors are those in [testing](../../instructions/testing.md),
 checked independently for exact and serving ANN hybrid. Report each as `pass`,
 `fail`, or `unavailable` with numerator, denominator, value and floor. Any
-unavailable required metric cannot pass. Future sealed gates are `not_run`;
-taxonomy and filtered cases are `out_of_scope`, never passing. `quality_pass`
-means both hybrid modes meet all old-product floors and all three rejection
-checks pass; legacy has no gate. `release_eligible` is always false in this
+unavailable required metric cannot pass. Development floors use the same
+records and are `not_run` while the development case file is empty; taxonomy and
+filtered cases are `out_of_scope`, never passing. `quality_pass` means both
+hybrid modes meet all old-product floors, and development floors once
+development cases exist, and all three rejection checks pass; legacy has no gate. `release_eligible` is always false in this
 baseline, including when `quality_pass` is true. Measured failures leave the
 stage done and the run evaluated, with `quality_pass:false` and
 `release_eligible:false`. Per-case `mapping_incomplete` is a reported
