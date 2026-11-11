@@ -36,15 +36,15 @@
 
 **Files:** `internal/corpusdb` (`text_source`, `text_complete`, version 4), `apps/corpus/internal/stage/build/` (load both, validity rules read effect articles only from `source_tree`), `internal/retrieval` (document entry fields, provision locators), evaluation report counts by text source.
 
-- [ ] Tests first: `TestSchema_Version4Constraints`, `TestOpen_RejectsSchemaVersion3`, `TestLoad_TextSourceAndComplete`, `TestValidity_ParsedTextIsReviewOnly`, `TestHit_DocumentEntryCarriesTextSource`, proof `TestProof_TranscriptionDocumentIsSearchable`.
+- [x] Tests first: `TestSchema_Version4Constraints`, `TestOpen_RejectsSchemaVersion3`, `TestLoad_TextSourceAndComplete`, `TestValidity_ParsedTextIsReviewOnly`, `TestHit_DocumentEntryCarriesTextSource`, proof `TestProof_TranscriptionDocumentIsSearchable`.
 - [ ] Implement; whole-slice `gpt-6.1-sol` review; pull request A.
 
 ### Task 4b: Heading-only source trees
 
 **Files:** `apps/corpus/internal/stage/extract/` (selection), build `text_complete`.
 
-- [ ] Tests first: `TestExtract_HeadingOnlyTreeUsesTranscription`, `TestExtract_HeadingOnlyTreeWithoutTextKeepsTreeWithGap`, `TestExtract_PartlyBareTreeStaysSourceTree`; the source-tree golden stays unchanged.
-- [ ] Implement; commit `feat(corpus): read the transcription when the source tree holds headings only`.
+- [x] Tests first: `TestExtract_HeadingOnlyTreeUsesTranscription`, `TestExtract_HeadingOnlyTreeWithoutTextKeepsTreeWithGap`, `TestExtract_PartlyBareTreeStaysSourceTree`; the source-tree golden stays unchanged.
+- [x] Implement; commit `feat(corpus): read the transcription when the source tree holds headings only`.
 
 ### Task 5: OCR store and banhmi import
 
