@@ -65,7 +65,12 @@ func openEngine(ctx context.Context, db *pgxpool.Pool, embedder Embedder, r Rele
 	if err = validateDenseRecipe(r.DenseRecipe, running, typmod); err != nil {
 		return nil, err
 	}
-	return &Engine{db: db, embedder: embedder, queryRecipe: running, release: r, options: options}, nil
+	engine := &Engine{db: db, embedder: embedder, queryRecipe: running, release: r, options: options}
+	engine.numberSegments, err = engine.loadNumberSegments(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return engine, nil
 }
 
 type dimensionReader interface {

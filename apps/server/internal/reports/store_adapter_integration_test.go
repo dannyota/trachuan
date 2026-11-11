@@ -1,0 +1,134 @@
+//go:build integration
+
+package reports
+
+import (
+	"context"
+	"fmt"
+	"sync"
+	"testing"
+	"time"
+
+	"danny.vn/trachuan/apps/server/internal/migrate"
+	"danny.vn/trachuan/apps/server/internal/store"
+	"danny.vn/trachuan/internal/testpg"
+	"github.com/jackc/pgx/v5/pgxpool"
+)
+
+type admissionResolver struct{}
+
+func (admissionResolver) Resolve(context.Context, string, string) (Lease, error) {
+	return Lease{Corpus: fakeCorpus{}, Release: "20991111", Done: func() {}}, nil
+}
+
+func TestPGXRunner_AdmissionDedupeAndCaps(t *testing.T) {
+	ctx := t.Context()
+	url := testpg.NewDatabase(t)
+	if err := migrate.Up(ctx, url); err != nil {
+		t.Fatal(err)
+	}
+	db, err := pgxpool.New(ctx, url)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(db.Close)
+	q := store.New(db)
+	account, err := q.CreateAccount(ctx, store.CreateAccountParams{GoogleSub: "report-adapter", Email: "report-adapter@example.invalid"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	svc := Service{Store: PGXRunner{DB: db}, Resolver: admissionResolver{}}
+	var wg sync.WaitGroup
+	results := make(chan Result, 8)
+	for range 8 {
+		wg.Go(func() {
+			result, submitErr := svc.Submit(ctx, account.ID, validInput("wrong_text"))
+			if submitErr != nil {
+				t.Error(submitErr)
+				return
+			}
+			results <- result
+		})
+	}
+	wg.Wait()
+	close(results)
+	var id int64
+	created := 0
+	received := 0
+	for result := range results {
+		received++
+		if id == 0 {
+			id = result.ReportID
+		}
+		if id != result.ReportID || result.State != "open" {
+			t.Fatal("dedupe returned different rows")
+		}
+		if !result.Deduplicated {
+			created++
+		}
+	}
+	if created != 1 || received != 8 {
+		t.Fatal("duplicate insertion")
+	}
+	for i := 1; i < 20; i++ {
+		in := validInput("missing_document")
+		in.Suggestion = suggestion(map[string]string{"document_number": fmt.Sprintf("%d/2025/TT", i)})
+		if _, err = svc.Submit(ctx, account.ID, in); err != nil {
+			t.Fatal(err)
+		}
+	}
+	in := validInput("missing_document")
+	in.Suggestion = suggestion(map[string]string{"document_number": "21/2025/TT"})
+	_, err = svc.Submit(ctx, account.ID, in)
+	requireCode(t, err, ErrRateLimited)
+	if result, repeatErr := svc.Submit(ctx, account.ID, validInput("wrong_text")); repeatErr != nil || !result.Deduplicated || result.ReportID != id {
+		t.Fatalf("duplicate at cap: %+v %v", result, repeatErr)
+	}
+	if _, err = q.WithdrawOwnReport(ctx, store.WithdrawOwnReportParams{ID: id, AccountID: account.ID}); err != nil {
+		t.Fatal(err)
+	}
+	_, err = svc.Submit(ctx, account.ID, validInput("wrong_text"))
+	requireCode(t, err, ErrRateLimited)
+	counts, err := q.CountAccountReports(ctx, store.CountAccountReportsParams{AccountID: account.ID, Today: time.Now().Add(-24 * time.Hour)})
+	if err != nil || counts.Daily != 20 || counts.Open != 19 || counts.Retained != 20 {
+		t.Fatalf("counts=%+v err=%v", counts, err)
+	}
+	if _, err = db.Exec(ctx, `UPDATE account SET blocked_at=now() WHERE id=$1`, account.ID); err != nil {
+		t.Fatal(err)
+	}
+	_, err = svc.Submit(ctx, account.ID, in)
+	requireCode(t, err, ErrUnauthenticated)
+}
+
+func TestPGXRunner_RollbackKeepsDatabaseUnchanged(t *testing.T) {
+	ctx := t.Context()
+	url := testpg.NewDatabase(t)
+	if err := migrate.Up(ctx, url); err != nil {
+		t.Fatal(err)
+	}
+	db, err := pgxpool.New(ctx, url)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(db.Close)
+	q := store.New(db)
+	account, err := q.CreateAccount(ctx, store.CreateAccountParams{GoogleSub: "report-rollback", Email: "report-rollback@example.invalid"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx, err := (PGXRunner{DB: db}).Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = tx.Rollback(context.Background()) })
+	if _, err = tx.InsertReport(ctx, InsertReportParams{AccountID: account.ID, Report: Report{GroupKey: GroupKey{Kind: "wrong_text", DocumentKey: testKey}, Release: "20991111"}}); err != nil {
+		t.Fatal(err)
+	}
+	if err = tx.Rollback(ctx); err != nil {
+		t.Fatal(err)
+	}
+	count, err := q.CountRetainedReports(ctx)
+	if err != nil || count != 0 {
+		t.Fatalf("rolled back rows=%d err=%v", count, err)
+	}
+}

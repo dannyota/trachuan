@@ -1,4 +1,4 @@
-// Package mcpapi serves the authenticated MCP read tools.
+// Package mcpapi serves authenticated MCP corpus tools.
 package mcpapi
 
 import (
@@ -12,6 +12,7 @@ import (
 	"danny.vn/trachuan/apps/server/internal/apierror"
 	"danny.vn/trachuan/apps/server/internal/credential"
 	"danny.vn/trachuan/apps/server/internal/limits"
+	"danny.vn/trachuan/apps/server/internal/reports"
 	"danny.vn/trachuan/internal/retrieval"
 	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -45,13 +46,19 @@ type Limiter interface {
 	Allow(int64, limits.Class) (bool, time.Duration)
 }
 
-// Config supplies read-path dependencies. Configure it before calling New.
+// Reports admits structured reports under the authenticated account.
+type Reports interface {
+	Submit(context.Context, int64, reports.Input) (reports.Result, error)
+}
+
+// Config supplies tool dependencies. Configure it before calling New.
 type Config struct {
 	Resolver Resolver
 	Limiter  Limiter
 	Logger   *slog.Logger
 	Clock    func() time.Time
 	Caches   *Caches
+	Reports  Reports
 }
 
 // New constructs a stateless JSON Streamable HTTP endpoint behind credential.Middleware.
@@ -81,14 +88,21 @@ func registerTools(s *mcp.Server, cfg Config) {
 	register(s, cfg, "quality_gaps", "Page through recorded corpus quality gaps.", cfg.gaps)
 	register(s, cfg, "search", "Search Vietnamese law; compact hits by default.", cfg.search)
 	register(s, cfg, "read", "Read chosen handles in one batch; follow every next token.", cfg.read)
+	no := false
+	registerAnnotated(s, cfg, "report_issue", "Report a corpus defect using structured fields only.", cfg.reportIssue,
+		&mcp.ToolAnnotations{ReadOnlyHint: false, DestructiveHint: &no, IdempotentHint: true, OpenWorldHint: &no})
 }
 
 // Raw handlers keep SDK schema diagnostics, which may quote input, off the wire.
 func register[In, Out any](s *mcp.Server, cfg Config, name, description string, run func(context.Context, In) (Out, error)) {
+	registerAnnotated(s, cfg, name, description, run, &mcp.ToolAnnotations{ReadOnlyHint: true, IdempotentHint: true})
+}
+
+func registerAnnotated[In, Out any](s *mcp.Server, cfg Config, name, description string, run func(context.Context, In) (Out, error), annotations *mcp.ToolAnnotations) {
 	input, output, call := toolCall(cfg, name, run)
 
 	s.AddTool(&mcp.Tool{Name: name, Description: description, InputSchema: input, OutputSchema: output,
-		Annotations: &mcp.ToolAnnotations{ReadOnlyHint: true, IdempotentHint: true}}, func(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		Annotations: annotations}, func(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		start := cfg.Clock()
 		latencyStart := time.Now()
 		ctx = context.WithValue(ctx, requestInstantKey{}, start)

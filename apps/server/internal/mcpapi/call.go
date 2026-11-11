@@ -10,7 +10,12 @@ import (
 )
 
 func toolCall[In, Out any](cfg Config, name string, run func(context.Context, In) (Out, error)) (*jsonschema.Schema, *jsonschema.Schema, func(context.Context, json.RawMessage) (*mcp.CallToolResult, error)) {
-	input := schemaFor[In]()
+	var input *jsonschema.Schema
+	if name == "report_issue" {
+		input = reportSchema()
+	} else {
+		input = schemaFor[In]()
+	}
 	input.Properties["country"].Enum = []any{"vn"}
 	if name == "search" {
 		input.Properties["detail"].Enum = []any{"compact", "full"}
@@ -33,7 +38,9 @@ func toolCall[In, Out any](cfg Config, name string, run func(context.Context, In
 		panic("invalid tool input schema")
 	}
 	output := schemaFor[Out]()
-	optionalEmptyFields(output)
+	if name != "report_issue" {
+		optionalEmptyFields(output)
+	}
 	output = &jsonschema.Schema{Type: "object", AnyOf: []*jsonschema.Schema{output, schemaFor[errorResult]()}}
 	outputResolved, err := output.Resolve(nil)
 	if err != nil {
