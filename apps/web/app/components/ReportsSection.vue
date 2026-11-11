@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { components } from '@trachuan/schema/gen/openapi'
-import { errorMessage, messagesFor, type Language } from '../../i18n'
+import { errorMessage, messagesFor, statusMessage, type Language } from '../../i18n'
 import { isDocumentKey } from '../utils/document-key'
 
 type Report = components['schemas']['Report']
@@ -66,7 +66,7 @@ onMounted(() => load())
       <p>{{ messages.accountCreated }}: {{ date(item.created_at) }}</p>
       <p>{{ messages.reportChanged }}: {{ date(item.changed_at) }}</p>
       <div><p>{{ messages.reportSuggestion }}:</p>
-        <p v-if="item.suggestion.status_class">{{ messages.reportStatus }}: {{ item.suggestion.status_class }}</p>
+        <p v-if="item.suggestion.status_class">{{ messages.reportStatus }}: {{ statusMessage(language, item.suggestion.status_class) }}</p>
         <p v-if="item.suggestion.eff_from">{{ messages.readerEffectiveFrom }}: {{ item.suggestion.eff_from }}</p>
         <p v-if="item.suggestion.eff_to">{{ messages.readerEffectiveTo }}: {{ item.suggestion.eff_to }}</p>
         <p v-if="item.suggestion.document_number">{{ messages.reportDocument }}: {{ item.suggestion.document_number }}</p>
