@@ -10,21 +10,22 @@ import (
 // Import assigns stable codes and records removed nodes as retired.
 func Import(pkg Package, previous Mapping) (Mapping, error) {
 	m := Mapping{PackageSHA256: pkg.SHA256, Nodes: []MappedNode{}, Flattened: []Flattened{}}
-	old := map[string]MappedNode{}
+	active := map[string]MappedNode{}
+	hadPrevious := map[string]bool{}
 	used := map[string]bool{}
 	max := map[string]int{}
 	seen := map[string]bool{}
-	wasFlat := map[string]bool{}
-	for _, f := range previous.Flattened {
-		wasFlat[f.GUID] = true
-	}
 	for _, n := range previous.Nodes {
 		if n.GUID == "" || n.Code == "" || used[n.Code] {
 			return m, fmt.Errorf("invalid previous mapping")
 		}
-		if !wasFlat[n.GUID] && (old[n.GUID].GUID == "" || n.Status == "active") {
-			old[n.GUID] = n
+		if n.Status == "active" {
+			if active[n.GUID].GUID != "" {
+				return m, fmt.Errorf("duplicate active GUID %s", n.GUID)
+			}
+			active[n.GUID] = n
 		}
+		hadPrevious[n.GUID] = true
 		used[n.Code] = true
 		reserve(max, n.Code)
 	}
@@ -33,7 +34,7 @@ func Import(pkg Package, previous Mapping) (Mapping, error) {
 			return fmt.Errorf("duplicate or empty GUID %q", n.GUID)
 		}
 		seen[n.GUID] = true
-		if prev, ok := old[n.GUID]; ok {
+		if prev, ok := active[n.GUID]; ok {
 			n.Code = prev.Code
 		} else if used[n.Code] {
 			return fmt.Errorf("code %s already used", n.Code)
@@ -53,7 +54,7 @@ func Import(pkg Package, previous Mapping) (Mapping, error) {
 			return m, fmt.Errorf("invalid subject STT")
 		}
 		code := strconv.Itoa(s.STT)
-		if _, ok := old[s.GUID]; !ok && used[code] {
+		if _, ok := active[s.GUID]; !ok && used[code] {
 			code = strconv.Itoa(max[""] + 1)
 		}
 		n := MappedNode{GUID: s.GUID, Code: code, Level: 1, Kind: "chude", Name: cleanName(s.Name), Status: "active"}
@@ -77,13 +78,21 @@ func Import(pkg Package, previous Mapping) (Mapping, error) {
 		if !ok || d.STT < 1 {
 			return m, fmt.Errorf("invalid section %s", d.GUID)
 		}
-		code := parent + "." + strconv.Itoa(d.STT)
-		if _, ok := old[d.GUID]; !ok && used[code] {
-			code = nextCode(parent, "", max)
-		}
 		status := "active"
 		if d.Removed {
 			status = "retired"
+			if _, ok := active[d.GUID]; !ok && hadPrevious[d.GUID] {
+				if seen[d.GUID] {
+					return m, fmt.Errorf("duplicate or empty GUID %q", d.GUID)
+				}
+				seen[d.GUID] = true
+				statuses[d.GUID] = status
+				continue
+			}
+		}
+		code := parent + "." + strconv.Itoa(d.STT)
+		if _, ok := active[d.GUID]; !ok && used[code] {
+			code = nextCode(parent, "", max)
 		}
 		n := MappedNode{GUID: d.GUID, Code: code, ParentCode: parent, Level: 2, Kind: "demuc", Name: cleanName(strings.TrimSuffix(d.Name, " (loại bỏ)")), Status: status}
 		if err := add(n); err != nil {
@@ -97,8 +106,8 @@ func Import(pkg Package, previous Mapping) (Mapping, error) {
 		indices[n.GUID] = i
 	}
 	for _, d := range sections {
-		i := indices[d.GUID]
-		if m.Nodes[i].Status == "active" {
+		i, ok := indices[d.GUID]
+		if ok && m.Nodes[i].Status == "active" {
 			ordinal[m.Nodes[i].ParentCode]++
 			m.Nodes[i].Ordinal = ordinal[m.Nodes[i].ParentCode]
 		}
@@ -121,8 +130,8 @@ func Import(pkg Package, previous Mapping) (Mapping, error) {
 			return a.MAPC < b.MAPC
 		})
 	}
-	var walk func(TreeNode, string, int, string, bool) error
-	walk = func(t TreeNode, parent string, level int, ancestor string, retired bool) error {
+	var walk func(TreeNode, string, int, string) error
+	walk = func(t TreeNode, parent string, level int, ancestor string) error {
 		if seen[t.GUID] {
 			return fmt.Errorf("duplicate tree GUID %s", t.GUID)
 		}
@@ -130,7 +139,7 @@ func Import(pkg Package, previous Mapping) (Mapping, error) {
 			seen[t.GUID] = true
 			for _, c := range children[t.GUID] {
 				if c.DeMucGUID == t.DeMucGUID {
-					if err := walk(c, parent, level, ancestor, retired); err != nil {
+					if err := walk(c, parent, level, ancestor); err != nil {
 						return err
 					}
 				}
@@ -171,15 +180,9 @@ func Import(pkg Package, previous Mapping) (Mapping, error) {
 			kind := string(t.Kind)
 			prefix := map[NodeKind]string{KindPhan: "p", KindChuong: "c", KindMuc: "m"}[t.Kind]
 			code := nextCode(parent, prefix, max)
-			status := "active"
-			if retired {
-				status = "retired"
-			}
-			n := MappedNode{GUID: t.GUID, Code: code, ParentCode: parent, Level: level + 1, Kind: kind, Name: cleanName(t.Name), Status: status}
-			if status == "active" {
-				ordinal[parent]++
-				n.Ordinal = ordinal[parent]
-			}
+			n := MappedNode{GUID: t.GUID, Code: code, ParentCode: parent, Level: level + 1, Kind: kind, Name: cleanName(t.Name), Status: "active"}
+			ordinal[parent]++
+			n.Ordinal = ordinal[parent]
 			if err := add(n); err != nil {
 				return err
 			}
@@ -189,17 +192,28 @@ func Import(pkg Package, previous Mapping) (Mapping, error) {
 		}
 		for _, c := range children[t.GUID] {
 			if c.DeMucGUID == t.DeMucGUID {
-				if err := walk(c, nextParent, nextLevel, nextAncestor, retired); err != nil {
+				if err := walk(c, nextParent, nextLevel, nextAncestor); err != nil {
 					return err
 				}
 			}
 		}
 		return nil
 	}
+	for _, t := range pkg.Tree {
+		if statuses[t.DeMucGUID] == "retired" {
+			if seen[t.GUID] {
+				return m, fmt.Errorf("duplicate tree GUID %s", t.GUID)
+			}
+			seen[t.GUID] = true
+		}
+	}
 	for _, d := range pkg.DeMuc {
+		if d.Removed {
+			continue
+		}
 		for _, t := range children[""] {
 			if t.DeMucGUID == d.GUID {
-				if err := walk(t, codes[d.GUID], 2, "demuc", statuses[d.GUID] == "retired"); err != nil {
+				if err := walk(t, codes[d.GUID], 2, "demuc"); err != nil {
 					return m, err
 				}
 			}
@@ -216,8 +230,10 @@ func Import(pkg Package, previous Mapping) (Mapping, error) {
 	}
 	for _, n := range previous.Nodes {
 		if !presentCodes[n.Code] {
-			n.Status = "retired"
-			n.Ordinal = 0
+			if n.Status == "active" {
+				n.Status = "retired"
+				n.Ordinal = 0
+			}
 			m.Nodes = append(m.Nodes, n)
 		}
 	}

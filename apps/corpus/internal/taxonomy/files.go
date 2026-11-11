@@ -69,12 +69,29 @@ func Validate(m Mapping, custom []CustomNode, overrides []Override) error {
 		}
 		codes[n.Code] = n.Level
 	}
+	ordinals := map[string]map[int]bool{}
 	for _, n := range m.Nodes {
 		if n.Level > 1 && (codes[n.ParentCode] == 0 || (n.Status == "active" && codes[n.ParentCode] != n.Level-1)) {
 			return fmt.Errorf("invalid parent for %s", n.Code)
 		}
 		if n.Status == "active" && n.Ordinal < 1 || n.Status == "retired" && n.Ordinal != 0 {
 			return fmt.Errorf("invalid ordinal for %s", n.Code)
+		}
+		if n.Status == "active" {
+			if ordinals[n.ParentCode] == nil {
+				ordinals[n.ParentCode] = map[int]bool{}
+			}
+			if ordinals[n.ParentCode][n.Ordinal] {
+				return fmt.Errorf("duplicate ordinal for %s", n.Code)
+			}
+			ordinals[n.ParentCode][n.Ordinal] = true
+		}
+	}
+	for parent, siblings := range ordinals {
+		for i := 1; i <= len(siblings); i++ {
+			if !siblings[i] {
+				return fmt.Errorf("ordinal gap under %s", parent)
+			}
 		}
 	}
 	flatGUIDs := map[string]bool{}

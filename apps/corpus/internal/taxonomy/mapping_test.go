@@ -36,7 +36,7 @@ func TestImport_CodeRules(t *testing.T) {
 		}
 	}
 	for id, want := range map[string]string{"guide": "22.3.c1.m1", "a": "22.3.c1.m1", "bare": "22.3"} {
-		got, ok := m.ArticleCode(p, Article{DeMucGUID: "d", TreeGUID: id})
+		got, ok := NewArticleResolver(p, m).Code(Article{DeMucGUID: "d", TreeGUID: id})
 		if !ok || got != want {
 			t.Errorf("article %s: %q %v", id, got, ok)
 		}
@@ -96,10 +96,10 @@ func TestImport_ReorderAndArticleRetired(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, ok := third.ArticleCode(p, Article{DeMucGUID: "d", TreeGUID: "a"}); ok {
+	if _, ok := NewArticleResolver(p, third).Code(Article{DeMucGUID: "d", TreeGUID: "a"}); ok {
 		t.Fatal("retired section resolved")
 	}
-	if _, ok := second.ArticleCode(p, Article{DeMucGUID: "d"}); ok {
+	if _, ok := NewArticleResolver(p, second).Code(Article{DeMucGUID: "d"}); ok {
 		t.Fatal("unplaced article resolved")
 	}
 }
