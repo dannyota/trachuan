@@ -115,95 +115,77 @@ func (tree *readTree) render(ctx context.Context, index int) error {
 		return err
 	}
 	n.ordered = ordered
-	var parts []int
+	partCount := 0
+	found, last := 0, 0
+	any := false
+	childAmbiguous := false
 	for _, child := range n.ordered {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		if renderErr := tree.render(ctx, child); renderErr != nil {
 			return renderErr
 		}
-		if tree.nodes[child].text != "" {
-			parts = append(parts, child)
+		text := tree.nodes[child].text
+		if text == "" {
+			continue
 		}
-	}
-	matches, err := tree.matchChildren(ctx, raw, parts)
-	if err != nil {
-		return err
-	}
-	found, last := 0, 0
-	for i, child := range parts {
-		if i%128 == 0 {
-			if err := ctx.Err(); err != nil {
-				return err
-			}
+		partCount++
+		match := findReadChild(raw, text, last)
+		if match.count > 0 {
+			any = true
 		}
-		match := matches[child]
 		if match.count == 1 && match.first >= last {
 			found++
-			last = match.first + len(tree.nodes[child].text)
+			last = match.first + len(text)
+			if match.first < n.firstChild {
+				n.firstChild = match.first
+			}
 		}
+		childAmbiguous = childAmbiguous || tree.nodes[child].ambiguous
 	}
-	switch {
-	case found == len(parts):
-		for i, child := range parts {
-			if i%128 == 0 {
-				if err := ctx.Err(); err != nil {
-					return err
-				}
-			}
-			at := matches[child].first
-			if at < n.firstChild {
-				n.firstChild = at
-			}
-			n.ambiguous = n.ambiguous || tree.nodes[child].ambiguous
-		}
-	case found == 0:
-		any := false
-		for i, child := range parts {
-			if i%128 == 0 {
-				if err := ctx.Err(); err != nil {
-					return err
-				}
-			}
-			if matches[child].count > 0 {
-				any = true
-				break
-			}
-		}
+
+	switch found {
+	case partCount:
+		n.ambiguous = childAmbiguous
+	case 0:
 		if any {
 			n.ambiguous = true
 			break
 		}
 		var out strings.Builder
 		out.WriteString(raw)
-		for i, child := range parts {
-			if i%128 == 0 {
-				if err := ctx.Err(); err != nil {
-					return err
-				}
+		for _, child := range n.ordered {
+			if err := ctx.Err(); err != nil {
+				return err
+			}
+			text := tree.nodes[child].text
+			if text == "" {
+				continue
 			}
 			if out.Len() > 0 {
 				out.WriteByte('\n')
 			}
-			out.WriteString(tree.nodes[child].text)
+			out.WriteString(text)
 			n.ambiguous = n.ambiguous || tree.nodes[child].ambiguous
 		}
 		n.text = out.String()
+
 	default:
 		n.ambiguous = true
 	}
 	if !n.ambiguous {
 		var own strings.Builder
 		last = 0
-		for i, child := range n.children {
-			if i%128 == 0 {
-				if err := ctx.Err(); err != nil {
-					return err
-				}
+		for _, child := range n.children {
+			if err := ctx.Err(); err != nil {
+				return err
 			}
 			text := tree.nodes[child].text
 			if text == "" {
 				continue
 			}
-			at := matches[child].first
+			at := strings.Index(raw, text)
 			if at < 0 {
 				continue
 			}
@@ -247,53 +229,4 @@ func (tree *readTree) leads(ctx context.Context, index int) ([]Unit, []Gap, erro
 		}
 	}
 	return units, gaps, nil
-}
-
-func (tree *readTree) matchChildren(ctx context.Context, raw string, parts []int) (map[int]readMatch, error) {
-	matches := make(map[int]readMatch, len(parts))
-	if len(parts) <= 8 {
-		for i, child := range parts {
-			if i%128 == 0 {
-				if err := ctx.Err(); err != nil {
-					return nil, err
-				}
-			}
-			text := tree.nodes[child].text
-			matches[child] = readMatch{count: min(strings.Count(raw, text), 2), first: strings.Index(raw, text)}
-		}
-		return matches, ctx.Err()
-	}
-	matcher := newReadMatcher()
-	ids := make(map[int]int, len(parts))
-	for i, child := range parts {
-		if i%128 == 0 {
-			if err := ctx.Err(); err != nil {
-				return nil, err
-			}
-		}
-		text := tree.nodes[child].text
-		if len(text) > len(raw) {
-			matches[child] = readMatch{first: -1}
-			continue
-		}
-		id, err := matcher.add(ctx, text)
-		if err != nil {
-			return nil, err
-		}
-		ids[child] = id
-	}
-	if err := matcher.scan(ctx, raw); err != nil {
-		return nil, err
-	}
-	i := 0
-	for child, id := range ids {
-		if i%128 == 0 {
-			if err := ctx.Err(); err != nil {
-				return nil, err
-			}
-		}
-		i++
-		matches[child] = matcher.matches[id]
-	}
-	return matches, nil
 }
