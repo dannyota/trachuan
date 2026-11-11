@@ -3,8 +3,10 @@ package websession
 import (
 	"crypto/subtle"
 	"mime"
+	"net"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 )
 
@@ -27,25 +29,51 @@ func (m *Manager) CSRF(next http.Handler) http.Handler {
 }
 
 func (m *Manager) originAllowed(r *http.Request) bool {
-	public, err := url.Parse(m.PublicURL)
-	if err != nil || !validOriginURL(public) {
+	allowed, ok := parseOrigin(m.PublicURL, false)
+	if !ok {
 		return false
 	}
-	allowed := public.Scheme + "://" + public.Host
 	if values, present := r.Header[http.CanonicalHeaderKey("Origin")]; present {
-		origin, ok := singleHeader(r.Header, "Origin")
-		return len(values) == 1 && ok && origin == allowed
+		raw, present := singleHeader(r.Header, "Origin")
+		origin, valid := parseOrigin(raw, true)
+		return len(values) == 1 && present && valid && origin == allowed
 	}
 	referer, ok := singleHeader(r.Header, "Referer")
 	if !ok {
 		return false
 	}
-	u, err := url.Parse(referer)
-	return err == nil && validOriginURL(u) && u.Scheme+"://"+u.Host == allowed
+	origin, valid := parseOrigin(referer, false)
+	return valid && origin == allowed
 }
 
-func validOriginURL(u *url.URL) bool {
-	return (u.Scheme == "https" || u.Scheme == "http") && u.Host != "" && u.Hostname() != "" && u.User == nil && u.Opaque == ""
+type origin struct {
+	scheme, host, port string
+}
+
+func parseOrigin(raw string, onlyOrigin bool) (origin, bool) {
+	u, err := url.Parse(raw)
+	if err != nil || strings.Contains(raw, "#") || u.User != nil || u.Opaque != "" || u.Host == "" || u.Hostname() == "" || strings.HasSuffix(u.Host, ":") {
+		return origin{}, false
+	}
+	scheme, host := strings.ToLower(u.Scheme), strings.ToLower(u.Hostname())
+	if (scheme != "https" && scheme != "http") || (onlyOrigin && (u.Path != "" || u.RawQuery != "" || u.ForceQuery)) {
+		return origin{}, false
+	}
+	if strings.HasPrefix(u.Host, "[") && net.ParseIP(host) == nil {
+		return origin{}, false
+	}
+	port := u.Port()
+	if port != "" {
+		n, portErr := strconv.ParseUint(port, 10, 16)
+		if portErr != nil {
+			return origin{}, false
+		}
+		port = strconv.FormatUint(n, 10)
+		if (scheme == "https" && port == "443") || (scheme == "http" && port == "80") {
+			port = ""
+		}
+	}
+	return origin{scheme: scheme, host: host, port: port}, true
 }
 
 func singleHeader(h http.Header, name string) (string, bool) {

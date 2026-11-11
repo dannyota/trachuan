@@ -91,8 +91,8 @@ func (s *fakeStore) TouchSession(ctx context.Context, hash string) (int64, error
 	if err := s.check(ctx, "touch"); err != nil {
 		return 0, err
 	}
-	row := s.rows[hash]
-	if s.touchZero || s.now.Sub(row.LastSeenAt) < time.Hour {
+	row, ok := s.rows[hash]
+	if !ok || row.RevokedAt != nil || !row.ExpiresAt.After(s.now) || s.touchZero || s.now.Sub(row.LastSeenAt) < time.Hour {
 		return 0, nil
 	}
 	s.touches++

@@ -127,3 +127,46 @@ func assertCSRFError(t *testing.T, w *httptest.ResponseRecorder) {
 		t.Fatalf("error=%s", w.Body.String())
 	}
 }
+
+func TestCSRF_NormalizedOrigins(t *testing.T) {
+	tests := []struct {
+		name, publicURL, header, value string
+		want                           int
+	}{
+		{"https public port", "https://example.invalid:443/base", "Origin", "https://example.invalid", 204},
+		{"https origin port", "https://example.invalid/base", "Origin", "https://example.invalid:443", 204},
+		{"http public port", "http://example.invalid:80/base", "Origin", "http://example.invalid", 204},
+		{"http origin port", "http://example.invalid/base", "Origin", "http://example.invalid:80", 204},
+		{"host and scheme case", "HTTPS://EXAMPLE.INVALID/base", "Origin", "https://example.invalid", 204},
+		{"origin host case", "https://example.invalid/base", "Origin", "https://EXAMPLE.INVALID", 204},
+		{"referer normalized", "https://EXAMPLE.INVALID:443/base", "Referer", "https://example.invalid/account?x=1", 204},
+		{"referer default port", "http://example.invalid/base", "Referer", "http://EXAMPLE.INVALID:80/account", 204},
+		{"ipv6 default port", "https://[::1]:443/base", "Origin", "https://[::1]", 204},
+		{"different port", "https://example.invalid:443", "Origin", "https://example.invalid:444", 403},
+		{"different scheme", "https://example.invalid", "Origin", "http://example.invalid", 403},
+		{"origin with path", "https://example.invalid", "Origin", "https://example.invalid/path", 403},
+		{"origin with slash", "https://example.invalid", "Origin", "https://example.invalid/", 403},
+		{"origin with query", "https://example.invalid", "Origin", "https://example.invalid?x=1", 403},
+		{"origin with empty query", "https://example.invalid", "Origin", "https://example.invalid?", 403},
+		{"origin with fragment", "https://example.invalid", "Origin", "https://example.invalid#", 403},
+		{"origin with userinfo", "https://example.invalid", "Origin", "https://u@example.invalid", 403},
+		{"origin empty port", "https://example.invalid", "Origin", "https://example.invalid:", 403},
+		{"origin invalid port", "https://example.invalid", "Origin", "https://example.invalid:65536", 403},
+		{"malformed referer", "https://example.invalid", "Referer", "https://example.invalid:bad/a", 403},
+		{"referer userinfo", "https://example.invalid", "Referer", "https://u@example.invalid/a", 403},
+		{"referer fragment", "https://example.invalid", "Referer", "https://example.invalid/a#part", 403},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			m, _, raw := harness()
+			m.PublicURL = tc.publicURL
+			r := httptest.NewRequest("POST", "/api/v1/read", nil)
+			r.AddCookie(&http.Cookie{Name: "__Host-session", Value: raw})
+			r.Header.Set("X-CSRF-Token", rawValue(2))
+			r.Header.Set(tc.header, tc.value)
+			w := httptest.NewRecorder()
+			m.Middleware(m.CSRF(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(204) }))).ServeHTTP(w, r)
+			assertStatus(t, w, tc.want)
+		})
+	}
+}
