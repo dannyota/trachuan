@@ -25,6 +25,10 @@ that the store imported were made that way.
 
 The client sends page images, one page per request, for every PDF:
 
+- The PDF is read once from the run's verified fetch bundle, and its SHA-256
+  must equal the hash the bundle lists; the same bytes are then counted,
+  rendered and named in the store entry. A mismatch fails the document before
+  any request.
 - Pages are rendered by the cross-check's
   [contained renderer](ocr-check.md#limits): `pdftoppm` in the sandbox, page by
   page, grayscale PNG, at 200 dpi with the same raster cap. The page count read
@@ -39,10 +43,11 @@ The client sends page images, one page per request, for every PDF:
   Transient failures (unavailable, deadline, resource exhausted, internal) are
   retried three times after 1, 4 and 16 seconds; anything else fails at once.
 - A document is stored only when every page succeeded: the page texts joined
-  with one blank line, in page order, as the imported texts are. The entry
-  records origin `vision`, the page count and the engine id
-  `vision-ocr/builtin-latest/poppler-200`. A failed document stores nothing and
-  is tried again by the next invocation.
+  with one blank line, in page order, as the imported texts are. A document
+  whose joined text is empty fails with outcome `empty_text`; the store holds no
+  empty entry. The entry records origin `vision`, the page count and the engine
+  id `vision-ocr/builtin-latest/poppler-200`. A failed document stores nothing
+  and is tried again by the next invocation.
 - Requests in flight and requests per minute are in [budgets](budgets.md).
 
 The official Go client (`cloud.google.com/go/vision/v2`) makes the calls with
@@ -60,10 +65,11 @@ text.
   any engine id the extract recipe accepts. `--pdf` names one PDF of the run
   instead, whatever the store holds for other engines; it exists to compare
   engines on files that already have imported text.
-- `--max-pages` is required. A page is a billed unit. Before a document is sent
-  its page count is compared with the pages left; a document that does not fit
-  is skipped and reported, and the command never sends more pages than the
-  limit. Pages of a document that failed midway were billed and are counted.
+- `--max-pages` is required and counts requests, because each request is one
+  page and one billed unit. A document is started only when its page count fits
+  in what is left. Every request, a retry included, takes one unit from the
+  limit before it is sent; when none is left the document fails and nothing is
+  stored. The command therefore never sends more requests than the limit.
 - `--dry-run` renders nothing and sends nothing: it lists the selected PDFs with
   their page counts and the total.
 - Output: one line per document (PDF SHA-256, pages, outcome) and totals:
@@ -76,10 +82,13 @@ not a budget.
 ## After a fresh text
 
 The text has no check yet, so `extract` still reports `needs_ocr`. The
-cross-check command then checks it like any other entry. The extract recipe's
-list of accepted engine ids gains the new id after the imported one; that
-changes the recipe, so it ships together with the checker id change, as one
-recipe change and one rerun of extract.
+cross-check command selects entries as `extract` does: for each PDF, the row of
+the first engine id in the recipe's accepted list that exists. A PDF with only a
+fresh entry is therefore checked; a comparison entry written with `--pdf` beside
+an imported one is selected by neither `extract` nor the check, and exists only
+to be compared. The extract recipe's list of accepted engine ids gains the new
+id after the imported one; that changes the recipe, so it ships together with
+the checker id change, as one recipe change and one rerun of extract.
 
 ## Checks
 
@@ -90,7 +99,14 @@ The primary runs these; they are requirements, not results.
   transient error is retried and succeeds; a page with no text contributes an
   empty page and the document is still stored.
 - The page limit: a document that does not fit is skipped without any request;
-  the fake counts requests and never sees more than the limit.
+  with a limit of 1, a one-page document whose first request fails transiently
+  is not retried and stores nothing; the fake counts requests and never sees
+  more than the limit.
+- A one-page document whose response has no text stores nothing and reports
+  `empty_text`.
+- A bundle file whose bytes do not match the listed SHA-256 sends no request.
+- Cross-check selection: a PDF with only a fresh entry is selected for checking;
+  with an imported and a fresh entry the imported one is selected.
 - Selection: a PDF with imported text is not selected; `--pdf` selects it and
   the new entry sits beside the imported one.
 - The rendered page count differing from the counted pages stores nothing.
