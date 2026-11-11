@@ -13,6 +13,12 @@ WHERE a.run_id = $1 AND a.stage = $2 AND a.document_key = $3;
 -- name: CountRunAcquisitions :one
 SELECT count(*) FROM run_acquisition WHERE run_id = $1;
 
+-- name: CountAdoptedRunItems :one
+SELECT count(*) FROM run_item
+WHERE run_id = $1 AND generation = $2
+  AND stage IN ('expand', 'fetch') AND state = 'done'
+  AND artifact_id IS NOT NULL AND message = $3;
+
 -- name: SeedRunAcquisitions :execrows
 -- Seeds acquisitions from the run's own committed done items; used once,
 -- before the first retry invalidation of a run that has none.

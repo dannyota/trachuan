@@ -187,6 +187,8 @@ func artifactName(name string) bool {
 }
 
 func (t Taker) artifactReferenced(ctx context.Context, root, rel string) (bool, error) {
+	// Historical artifact rows and acquisition-only references are reuse hints.
+	// Only current item references make corrupt bytes fatal to the checkpoint.
 	conn, err := pgx.Connect(ctx, t.Config.DatabaseURL)
 	if err != nil {
 		return false, fmt.Errorf("connect workshop: %w", err)

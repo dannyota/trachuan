@@ -9,6 +9,26 @@ import (
 	"context"
 )
 
+const countAdoptedRunItems = `-- name: CountAdoptedRunItems :one
+SELECT count(*) FROM run_item
+WHERE run_id = $1 AND generation = $2
+  AND stage IN ('expand', 'fetch') AND state = 'done'
+  AND artifact_id IS NOT NULL AND message = $3
+`
+
+type CountAdoptedRunItemsParams struct {
+	RunID      int64
+	Generation int32
+	Message    *string
+}
+
+func (q *Queries) CountAdoptedRunItems(ctx context.Context, arg CountAdoptedRunItemsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countAdoptedRunItems, arg.RunID, arg.Generation, arg.Message)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countRunAcquisitions = `-- name: CountRunAcquisitions :one
 SELECT count(*) FROM run_acquisition WHERE run_id = $1
 `

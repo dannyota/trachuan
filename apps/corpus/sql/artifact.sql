@@ -9,6 +9,6 @@ SELECT id FROM artifact WHERE stage = $1 AND input_hash = $2 AND recipe_hash = $
 
 -- name: ArtifactPathReferenced :one
 SELECT EXISTS (
-    SELECT 1 FROM artifact
-    WHERE path = sqlc.arg(relative_path) OR path = sqlc.arg(absolute_path)
+    SELECT 1 FROM artifact a JOIN run_item i ON i.artifact_id = a.id
+    WHERE a.path = sqlc.arg(relative_path) OR a.path = sqlc.arg(absolute_path)
 );
