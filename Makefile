@@ -63,15 +63,19 @@ test-proof: ## Run proof tests (loads .env when present)
 	$(LOAD_ENV); go test -tags 'integration faultinject' -count=1 ./apps/corpus/test/proof/...
 
 generate: ## Generate the typed data layer when sqlc is configured
-	@if [ -f apps/corpus/sqlc.yaml ]; then cd apps/corpus && sqlc generate; fi
+	@for app in corpus server; do \
+	  if [ -f apps/$$app/sqlc.yaml ]; then (cd apps/$$app && sqlc generate) || exit $$?; fi; \
+	done
 
 sqlc-check: ## Fail when generated data layer files drift
-	@if [ -f apps/corpus/sqlc.yaml ]; then \
-	  cd apps/corpus && sqlc generate && \
-	  { [ -z "$$(git status --porcelain -- internal/store)" ] || \
-	    { echo "generated data layer drifts; run make generate" >&2; \
-	      git status --porcelain -- internal/store; exit 1; }; }; \
-	fi
+	@for app in corpus server; do \
+	  if [ -f apps/$$app/sqlc.yaml ]; then \
+	    (cd apps/$$app && sqlc generate && \
+	      { [ -z "$$(git status --porcelain -- internal/store)" ] || \
+	        { echo "generated data layer drifts; run make generate" >&2; \
+	          git status --porcelain -- internal/store; exit 1; }; }) || exit $$?; \
+	  fi; \
+	done
 
 db-up: ## Start native PostgreSQL 18 on 127.0.0.1:25433 (initializes ~/.local/share/trachuan-pg18 once)
 	bash deploy/local/postgres.sh up
