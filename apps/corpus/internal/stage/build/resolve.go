@@ -160,7 +160,7 @@ func databaseOwnership(ctx context.Context, conn *pgx.Conn, name string) (bool, 
 
 // VerifyForRun finds and verifies the committed build artifact without opening a corpus database.
 func VerifyForRun(ctx context.Context, cfg Config, q store.Querier, artifacts artifact.Store, run stage.Run) (artifact.Result, error) {
-	art, err := committedBuild(ctx, cfg, q, run)
+	art, err := committedBuild(ctx, cfg, q, artifacts, run)
 	if err != nil {
 		return artifact.Result{}, err
 	}
@@ -170,7 +170,7 @@ func VerifyForRun(ctx context.Context, cfg Config, q store.Querier, artifacts ar
 	return art, nil
 }
 
-func committedBuild(ctx context.Context, cfg Config, q store.Querier, run stage.Run) (artifact.Result, error) {
+func committedBuild(ctx context.Context, cfg Config, q store.Querier, artifacts artifact.Store, run stage.Run) (artifact.Result, error) {
 	raw, err := q.GetBuildInventory(ctx, run.ID)
 	if err != nil {
 		return artifact.Result{}, fmt.Errorf("read build item: %w", err)
@@ -194,10 +194,17 @@ func committedBuild(ctx context.Context, cfg Config, q store.Querier, run stage.
 		if item.Stage != "build" || item.ItemKey != run.Country+"/"+run.Rel || item.State != "done" {
 			continue
 		}
-		if item.Path == nil || item.InputHash == nil || item.RecipeHash == nil || item.ArtifactSHA256 == nil || *item.RecipeHash != New(cfg).Recipe(run.Snapshot) {
+		if item.Path == nil || item.InputHash == nil || item.RecipeHash == nil || item.ArtifactSHA256 == nil {
 			return artifact.Result{}, errors.New("invalid committed build artifact")
 		}
 		art := artifact.Result{Path: *item.Path, SHA256: *item.ArtifactSHA256, InputHash: *item.InputHash}
+		if *item.RecipeHash != New(cfg).Recipe(run.Snapshot) {
+			// Inspect the record before rejecting an older recipe so recovery is clear.
+			if _, _, err := verifyBuildArtifact(artifacts, art, run, cfg); err != nil {
+				return artifact.Result{}, fmt.Errorf("verify committed build artifact: %w", err)
+			}
+			return artifact.Result{}, errors.New("invalid committed build artifact")
+		}
 		return art, nil
 	}
 	return artifact.Result{}, errors.New("completed build artifact not found")
@@ -211,7 +218,7 @@ func EnsureForRun(ctx context.Context, cfg Config, q store.Querier, artifacts ar
 
 // EnsureForRunWithArtifact resolves the committed build and returns its verified artifact.
 func EnsureForRunWithArtifact(ctx context.Context, cfg Config, q store.Querier, artifacts artifact.Store, run stage.Run) (Database, artifact.Result, error) {
-	art, err := committedBuild(ctx, cfg, q, run)
+	art, err := committedBuild(ctx, cfg, q, artifacts, run)
 	if err != nil {
 		return Database{}, artifact.Result{}, err
 	}
