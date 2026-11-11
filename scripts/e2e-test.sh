@@ -72,6 +72,19 @@ if [[ -e "$E2E_TEST_PSQL_CALLED" ]]; then
   exit 1
 fi
 
+# The edge and web ports are checked before the harness touches PostgreSQL.
+for port_var in E2E_EDGE_PORT E2E_WEB_PORT; do
+  if env PATH="$test_dir/bin:$PATH" E2E_SERVER_PORT=28080 E2E_GOOGLE_PORT=28081 E2E_EMBED_PORT=28082 "$port_var=$server_port" \
+    CORPUS_TEST_ADMIN_URL='postgres://localhost/postgres' bash "$test_dir/scripts/e2e.sh" >"$test_dir/extra-output" 2>&1; then
+    echo "e2e-test: occupied $port_var was accepted" >&2
+    exit 1
+  fi
+  if ! grep -Fxq 'e2e: port in use' "$test_dir/extra-output" || [[ -e "$E2E_TEST_PSQL_CALLED" ]]; then
+    echo "e2e-test: $port_var check did not precede psql" >&2
+    exit 1
+  fi
+done
+
 # The embedder port is checked before the harness touches PostgreSQL.
 embed_port="$server_port"
 server_port="$(python3 - <<'PYCODE'

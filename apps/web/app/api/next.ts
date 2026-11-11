@@ -8,7 +8,7 @@ export function safeNext(input: string): string {
   let result = path || ''
   if (/^\/vn\/documents\/[^/]+$/.test(result)) {
     const release = new URLSearchParams(query).get('release')
-    if (release && /^[0-9]{8}_[0-9]+$/.test(release)) result += `?release=${release}`
+    if (release && /^[0-9]{8}(?:_[0-9]+)?$/.test(release)) result += `?release=${release}`
   }
   if (new TextEncoder().encode(result).length > 512 || !valid(result)) return '/'
   try {

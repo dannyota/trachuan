@@ -62,7 +62,7 @@ async function search(more = false) {
     <h1>{{ messages.searchTitle }}</h1>
     <form class="search-form" @submit.prevent="search()">
       <label for="search-query">{{ messages.searchQuery }}</label>
-      <input id="search-query" v-model="query" autocomplete="off" type="search">
+      <textarea id="search-query" v-model="query" autocomplete="off" />
       <label for="search-date">{{ messages.searchDate }}</label>
       <input id="search-date" v-model="asOf" type="date" autocomplete="off">
       <label><input v-model="inForce" type="checkbox" autocomplete="off"> {{ messages.searchInForce }}</label>

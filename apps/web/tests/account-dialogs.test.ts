@@ -92,3 +92,66 @@ it('requires email confirmation again when the account changes', async () => {
   expect(wrapper.get('button[type=submit]').attributes('disabled')).toBeDefined()
   wrapper.unmount()
 })
+
+
+it.each([
+  ['token', TokenCreateDialog, { action }],
+  ['deletion', AccountDeleteDialog, { email: 'test@example.invalid', action }],
+])('wraps focus at both ends of the %s dialog', async (_name, component, props) => {
+  const wrapper = mount(component, { props, attachTo: document.body })
+  const first = wrapper.get('input').element as HTMLElement
+  const last = wrapper.findAll('button').at(-1)!.element as HTMLElement
+  last.focus()
+  const forward = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true })
+  last.dispatchEvent(forward)
+  expect(forward.defaultPrevented).toBe(true)
+  expect(document.activeElement).toBe(first)
+  const backward = new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true, cancelable: true })
+  first.dispatchEvent(backward)
+  expect(backward.defaultPrevented).toBe(true)
+  expect(document.activeElement).toBe(last)
+  wrapper.unmount()
+})
+
+it.each([
+  ['token', TokenCreateDialog, { action }],
+  ['deletion', AccountDeleteDialog, { email: 'test@example.invalid', action }],
+])('returns focus to the opener when the %s dialog closes', async (_name, component, props) => {
+  const opener = document.createElement('button')
+  document.body.append(opener)
+  opener.focus()
+  const wrapper = mount(component, { props, attachTo: document.body })
+  ;(wrapper.get('input').element as HTMLElement).focus()
+  await wrapper.findAll('button').at(-1)!.trigger('click')
+  expect(document.activeElement).toBe(opener)
+  wrapper.unmount()
+  opener.remove()
+})
+
+it('keeps focus in the token dialog when the token appears', async () => {
+  const wrapper = mount(TokenCreateDialog, { props: { action }, attachTo: document.body })
+  await wrapper.get('input').setValue('test')
+  ;(wrapper.get('button[type=submit]').element as HTMLElement).focus()
+  await wrapper.get('form').trigger('submit')
+  await flushPromises()
+  expect(document.activeElement).toBe(wrapper.findAll('button')[0]!.element)
+  wrapper.unmount()
+})
+
+it('wraps the controls shown after token creation', async () => {
+  const wrapper = mount(TokenCreateDialog, { props: { action }, attachTo: document.body })
+  await wrapper.get('input').setValue('test')
+  await wrapper.get('form').trigger('submit')
+  await flushPromises()
+  const [copy, close] = wrapper.findAll('button').map(button => button.element as HTMLElement)
+  copy!.focus()
+  const backward = new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true, cancelable: true })
+  copy!.dispatchEvent(backward)
+  expect(backward.defaultPrevented).toBe(true)
+  expect(document.activeElement).toBe(close)
+  const forward = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true })
+  close!.dispatchEvent(forward)
+  expect(forward.defaultPrevented).toBe(true)
+  expect(document.activeElement).toBe(copy)
+  wrapper.unmount()
+})

@@ -25,3 +25,14 @@ it('serves only the form on signed-in SSR', async () => {
   expect(html).not.toContain('search-results')
   expect(html).not.toContain('search-card')
 })
+
+it('preserves line breaks in the search field', async () => {
+  const { Window } = await import('happy-dom')
+  const source = readFileSync('app/pages/vn/search.vue', 'utf8')
+  const template = source.slice(source.indexOf('<template>'))
+  const document = new Window().document
+  document.body.innerHTML = template.replace('<template>', '').replace('</template>', '')
+  const field = document.querySelector<HTMLInputElement | HTMLTextAreaElement>('#search-query')!
+  field.value = 'first\nsecond'
+  expect(field.value).toBe('first\nsecond')
+})

@@ -17,16 +17,23 @@ export CORPUS_TEST_ADMIN_URL="${CORPUS_TEST_ADMIN_URL:-postgres://trachuan@127.0
 server_port="${E2E_SERVER_PORT:-28080}"
 google_port="${E2E_GOOGLE_PORT:-28081}"
 embed_port="${E2E_EMBED_PORT:-28082}"
-for port in "$server_port" "$google_port" "$embed_port"; do
+edge_port="${E2E_EDGE_PORT:-28083}"
+web_port="${E2E_WEB_PORT:-28084}"
+ports=("$server_port" "$google_port" "$embed_port" "$edge_port" "$web_port")
+for port in "${ports[@]}"; do
   if [[ ! "$port" =~ ^[1-9][0-9]{0,4}$ ]] || (( port > 65535 )); then
     echo "e2e: invalid port" >&2
     exit 1
   fi
 done
-if [[ "$server_port" == "$google_port" || "$server_port" == "$embed_port" || "$google_port" == "$embed_port" ]]; then
-  echo "e2e: ports must differ" >&2
-  exit 1
-fi
+for ((i = 0; i < ${#ports[@]}; i++)); do
+  for ((j = i + 1; j < ${#ports[@]}; j++)); do
+    if [[ "${ports[i]}" == "${ports[j]}" ]]; then
+      echo "e2e: ports must differ" >&2
+      exit 1
+    fi
+  done
+done
 
 db_name="trachuan_e2e_$(od -An -N6 -tx1 /dev/urandom | tr -d ' \n')"
 database_url() {
@@ -71,6 +78,8 @@ require_available_port() {
 require_available_port "$server_port"
 require_available_port "$google_port"
 require_available_port "$embed_port"
+require_available_port "$edge_port"
+require_available_port "$web_port"
 if ! command -v lsof >/dev/null 2>&1; then
   echo "e2e: port not owned by child" >&2
   exit 1
@@ -79,11 +88,15 @@ tmp_dir="$(mktemp -d "${TMPDIR:-/tmp}/trachuan-e2e.XXXXXXXX")"
 server_pid=""
 google_pid=""
 embed_pid=""
+web_pid=""
+edge_pid=""
 fixture_name=""
 fixture_key=""
 db_created=0
 cleanup() {
   local status=$?
+  if [[ -n "$edge_pid" ]]; then kill "$edge_pid" 2>/dev/null || true; wait "$edge_pid" 2>/dev/null || true; fi
+  if [[ -n "$web_pid" ]]; then kill "$web_pid" 2>/dev/null || true; wait "$web_pid" 2>/dev/null || true; fi
   if [[ -n "$server_pid" ]]; then kill "$server_pid" 2>/dev/null || true; wait "$server_pid" 2>/dev/null || true; fi
   if [[ -n "$google_pid" ]]; then kill "$google_pid" 2>/dev/null || true; wait "$google_pid" 2>/dev/null || true; fi
   if [[ -n "$embed_pid" ]]; then kill "$embed_pid" 2>/dev/null || true; wait "$embed_pid" 2>/dev/null || true; fi
@@ -116,7 +129,8 @@ require_available_port "$server_port" "e2e: port not owned by child"
 export SERVER_AUTH_DATABASE_URL="$auth_url"
 export SERVER_CORPUS_DATABASE_URL="$corpus_url"
 export SERVER_LISTEN="127.0.0.1:$server_port"
-export SERVER_PUBLIC_URL="http://127.0.0.1:$server_port"
+export SERVER_TRUSTED_PROXIES="127.0.0.1/32"
+export SERVER_PUBLIC_URL="http://localhost:$edge_port"
 export SERVER_QUERY_EMBEDDER_URL="http://127.0.0.1:$embed_port"
 export SERVER_GOOGLE_ISSUER="http://127.0.0.1:$google_port"
 export GOOGLE_CLIENT_ID=e2e-client
@@ -177,9 +191,27 @@ fi
 require_available_port "$server_port" "e2e: port not owned by child"
 "$tmp_dir/server" serve >"$tmp_dir/server.log" 2>&1 &
 server_pid=$!
-if ! wait_for "$SERVER_PUBLIC_URL/healthz" "$server_pid" "$server_port"; then
+if ! wait_for "http://127.0.0.1:$server_port/healthz" "$server_pid" "$server_port"; then
   echo "e2e: server did not start" >&2
   exit 1
 fi
+if [[ "${E2E_WEB_PREBUILT:-0}" != 1 ]]; then
+  (cd apps/web && npm run build)
+fi
+require_available_port "$web_port" "e2e: port not owned by child"
+(cd apps/web && exec env NITRO_HOST=127.0.0.1 NITRO_PORT="$web_port" NUXT_API_ORIGIN="http://127.0.0.1:$server_port" NUXT_TRUSTED_PROXIES=127.0.0.1/32 node .output/server/index.mjs) >"$tmp_dir/web.log" 2>&1 &
+web_pid=$!
+if ! wait_for "http://127.0.0.1:$web_port/" "$web_pid" "$web_port"; then
+  echo "e2e: Nuxt did not start" >&2
+  exit 1
+fi
+require_available_port "$edge_port" "e2e: port not owned by child"
+(cd apps/web && exec env E2E_EDGE_PORT="$edge_port" E2E_SERVER_PORT="$server_port" E2E_WEB_PORT="$web_port" node e2e/edge.mjs) >"$tmp_dir/edge.log" 2>&1 &
+edge_pid=$!
+if ! wait_for "http://127.0.0.1:$edge_port/" "$edge_pid" "$edge_port" "edge listening on 127.0.0.1:$edge_port" "$tmp_dir/edge.log"; then
+  echo "e2e: edge did not start" >&2
+  exit 1
+fi
+export E2E_EDGE_PORT="$edge_port"
 go test -tags e2e -count=1 ./apps/server/e2e/...
-# Future hook: start Nuxt and run Playwright here.
+(cd apps/web && npx --no-install playwright test -c e2e-stack/playwright.config.ts)

@@ -12,7 +12,7 @@ button { cursor: pointer; }
 :focus-visible { outline: 3px solid #178477; outline-offset: 3px; }
 @media (prefers-color-scheme: dark) { body { background: #182222; color: #f3f5f4; } }
 .search-form { display: grid; gap: .6rem; max-width: 42rem; margin: 1.5rem 0; }
-.search-form input[type='search'], .search-form input[type='date'] { padding: .6rem; border: 1px solid #777; border-radius: .25rem; }
+.search-form textarea, .search-form input[type='date'] { padding: .6rem; border: 1px solid #777; border-radius: .25rem; }
 .search-form button { justify-self: start; }
 .search-summary { display: flex; flex-wrap: wrap; gap: 1rem; padding: 1rem 0; }
 .search-summary div { flex-basis: 100%; }

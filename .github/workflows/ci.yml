@@ -172,7 +172,7 @@ jobs:
 
   e2e:
     needs: [preflight]
-    if: needs.preflight.outputs.go == 'true'
+    if: needs.preflight.outputs.go == 'true' || needs.preflight.outputs.web == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     services:
@@ -195,6 +195,16 @@ jobs:
           go-version-file: go.mod
           cache: true
           cache-dependency-path: go.sum
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .tool-versions
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - run: npm ci
+        working-directory: apps/web
+      # The runner image already has Chrome's system libraries; only the browser download is needed.
+      - run: npx playwright install chromium
+        working-directory: apps/web
       - run: make e2e
 
   web:
@@ -300,6 +310,13 @@ jobs:
           else
             exit 1
           fi
+          if [ "$GO" = true ] || [ "$WEB_NEEDED" = true ]; then
+            test "$E2E" = success
+          elif [ "$GO" = false ] && [ "$WEB_NEEDED" = false ]; then
+            test "$E2E" = skipped
+          else
+            exit 1
+          fi
           if [ "$WEB_NEEDED" = true ]; then
             test "$WEB" = success
           elif [ "$WEB_NEEDED" = false ]; then
@@ -315,9 +332,9 @@ jobs:
             exit 1
           fi
           if [ "$GO" = true ]; then
-            test "$STATIC" = success && test "$INTEGRATION" = success && test "$E2E" = success
+            test "$STATIC" = success && test "$INTEGRATION" = success
           elif [ "$GO" = false ]; then
-            test "$STATIC" = skipped && test "$INTEGRATION" = skipped && test "$E2E" = skipped
+            test "$STATIC" = skipped && test "$INTEGRATION" = skipped
           else
             exit 1
           fi

@@ -1,15 +1,17 @@
 import { expect, test, type Page } from '@playwright/test'
 import { openAccount, secret } from './account-fixture'
+import { containsPrivateValue } from './privacy-state'
 
 async function outsideState(page: Page) {
   const state = await page.evaluate(() => {
     const app = (document.querySelector('#__nuxt') as unknown as { __vue_app__?: { $nuxt?: { $pinia?: { state?: { value?: unknown } } } } })?.__vue_app__
     const pinia = app?.$nuxt?.$pinia?.state?.value
     if (!pinia) throw new Error('Nuxt Pinia state is unavailable')
-    return JSON.stringify({ local: { ...localStorage }, session: { ...sessionStorage }, cookies: document.cookie, history: history.state, pinia, payload: document.querySelector('#__NUXT_DATA__')?.textContent, nuxt: (window as unknown as { __NUXT__?: unknown }).__NUXT__, url: location.href })
+    return { local: { ...localStorage }, session: { ...sessionStorage }, cookies: document.cookie, history: history.state, pinia, payload: document.querySelector('#__NUXT_DATA__')?.textContent, nuxt: (window as unknown as { __NUXT__?: unknown }).__NUXT__, url: location.href }
   })
-  expect(state).not.toContain(secret)
-  expect(JSON.stringify(await page.context().cookies())).not.toContain(secret)
+  const collected = { state, cookies: await page.context().cookies() }
+  expect(containsPrivateValue(collected, secret)).toBe(false)
+  expect(JSON.stringify(collected)).not.toContain(JSON.stringify(secret).slice(1, -1))
 }
 async function create(page: Page) {
   await page.getByRole('button', { name: 'Create token', exact: true }).click()
