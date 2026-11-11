@@ -157,6 +157,44 @@ func TestLossDiagnostics_RecordsLateNaturalRank(t *testing.T) {
 	}
 }
 
+func TestLossDiagnostics_FirstAlternativeAcrossGroups(t *testing.T) {
+	recipe := retrieval.Recipe1()
+	threshold := 0.0
+	recipe.Abstention.Threshold = &threshold
+	recipe.DocumentCap = 1
+	primary := []retrieval.Candidate{lossCandidate(1, "primary-first", "a"), lossCandidate(2, "primary-target", "b")}
+	other := []retrieval.Candidate{lossCandidate(3, "historic-target", "a"), lossCandidate(4, "historic-target", "b"), lossCandidate(5, "historic-other", "a")}
+	arms := retrieval.Arms{Validation: retrieval.Validation{Accepted: true}, Depths: retrieval.Depths{Dense: 200, Lexical: 100}, Primary: retrieval.ArmGroup{Dense: primary, Members: primary}, NonCurrent: retrieval.ArmGroup{Dense: other, Members: other}, IncludeNonCurrent: true}
+	entry := MapEntry{State: "resolved", Alternatives: []Alternative{{Country: "vn", DocumentKey: "primary-target", Kind: "document"}, {Country: "vn", DocumentKey: "historic-target", Anchor: &other[1].Identity.Anchor, Kind: "provision"}}}
+	for _, useTail := range []bool{false, true} {
+		t.Run(fmt.Sprintf("tail_%t", useTail), func(t *testing.T) {
+			var response retrieval.Response
+			var tail *int
+			var err error
+			if useTail {
+				v := 3
+				tail = &v
+				response, err = retrieval.ShapeWithNonCurrentTail(arms, recipe, 5, "dense", nil, v)
+			} else {
+				response, err = retrieval.Shape(arms, recipe, 5, "dense")
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if diagnosticRank("old_product", Expectation{}, entry, response.Hits) != 2 || diagnosticRank("old_product", Expectation{}, entry, response.NonCurrent) != 3 {
+				t.Fatalf("unexpected response: %+v", response)
+			}
+			stage, err := diagnoseLoss(arms, recipe, 5, "dense", "old_product", Expectation{}, entry, response, tail)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if stage != "ranked" {
+				t.Fatalf("stage = %q, want ranked", stage)
+			}
+		})
+	}
+}
+
 func TestLossDiagnostics_TailReservationIsRankLimit(t *testing.T) {
 	tailLossTest(t, false)
 }

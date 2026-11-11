@@ -172,11 +172,9 @@ func diagnoseLoss(arms retrieval.Arms, recipe retrieval.Recipe, limit int, mode 
 	if err != nil {
 		return "", fmt.Errorf("shape uncapped diagnostics: %w", err)
 	}
-	primaryRank := diagnosticRank(cohort, e, entry, response.Hits)
-	otherRank := diagnosticRank(cohort, e, entry, response.NonCurrent)
-	altPrimary := diagnosticRank(cohort, e, entry, alternate.Hits)
-	altOther := diagnosticRank(cohort, e, entry, alternate.NonCurrent)
-	if (altPrimary > 0 && (primaryRank == 0 || altPrimary < primaryRank)) || (altOther > 0 && (otherRank == 0 || altOther < otherRank)) {
+	altHits := append(append([]retrieval.Hit{}, alternate.Hits...), alternate.NonCurrent...)
+	altRank := diagnosticRank(cohort, e, entry, altHits)
+	if altRank > 0 && (rank == 0 || altRank < rank) {
 		return "cap", nil
 	}
 	if rank == 0 {
