@@ -303,6 +303,7 @@ func Run(ctx context.Context, engine Engine, suite Suite, o Options) (Report, Ca
 			break
 		}
 	}
+	finishQuality(&r, previous)
 	addLegacyDirectMetrics(&r)
 	r.ANNResults = map[string]ANNLoss{}
 	for _, cohort := range []string{"legacy", "old_product"} {

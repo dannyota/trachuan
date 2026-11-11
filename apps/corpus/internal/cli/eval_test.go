@@ -11,6 +11,7 @@ import (
 
 	"danny.vn/trachuan/apps/corpus/internal/artifact"
 	"danny.vn/trachuan/apps/corpus/internal/evaluation"
+	"danny.vn/trachuan/internal/retrieval"
 )
 
 func TestEvalCLI_ExitCodes(t *testing.T) {
@@ -19,9 +20,13 @@ func TestEvalCLI_ExitCodes(t *testing.T) {
 		require bool
 		want    int
 	}{{"pass", true, 0}, {"fail", true, 2}, {"unavailable", true, 2}, {"fail", false, 0}} {
-		r := evaluation.Report{Status: "complete", QualityPass: true, Floors: make([]evaluation.Floor, 8)}
+		r := evaluation.Report{Status: "complete", QualityPass: true, Floors: make([]evaluation.Floor, 4)}
 		for i := range r.Floors {
 			r.Floors[i].Status = tc.status
+			r.Floors[i].Mode = []retrieval.Mode{"exact", "exact", "ann", "ann"}[i]
+			r.Floors[i].Name = []string{"current_law_precision", "abstention", "current_law_precision", "abstention"}[i]
+			r.Floors[i].Arms = "hybrid"
+			r.Floors[i].Limit = 8
 		}
 		if got := evalExit(r, tc.require); got != tc.want {
 			t.Fatalf("%s %v: %d", tc.status, tc.require, got)
@@ -33,7 +38,7 @@ func TestEvalCLI_ExitCodes(t *testing.T) {
 }
 
 func TestEvalCLI_RequireFloorsRejectsFailedQuality(t *testing.T) {
-	r := evaluation.Report{Status: "complete", Floors: make([]evaluation.Floor, 8)}
+	r := evaluation.Report{Status: "complete", Floors: make([]evaluation.Floor, 4)}
 	for i := range r.Floors {
 		r.Floors[i].Status = "pass"
 	}
@@ -131,5 +136,15 @@ func TestEvalOutput_PreservesFileCreatedDuringEvaluation(t *testing.T) {
 	data, err := os.ReadFile(out)
 	if err != nil || string(data) != "keep" {
 		t.Fatalf("file = %q, error = %v", data, err)
+	}
+}
+
+func TestEvalCLI_RejectsDuplicateGates(t *testing.T) {
+	r := evaluation.Report{Status: "complete", QualityPass: true, Floors: make([]evaluation.Floor, 4)}
+	for i := range r.Floors {
+		r.Floors[i] = evaluation.Floor{Metric: evaluation.Metric{Mode: "exact", Arms: "hybrid", Limit: 8, Name: "abstention"}, Status: "pass"}
+	}
+	if got := evalExit(r, true); got != 2 {
+		t.Fatalf("duplicate gates exit %d", got)
 	}
 }
