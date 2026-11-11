@@ -16,7 +16,7 @@ Rules:
 - The reviewed design is the contract. Report an edit needed outside your paths instead of making it. Read your diff line by line and update every test and doc that asserts changed behavior.
 - Failing regression test first, then the smallest correct change. If the failure was not observed, report the test as unrun.
 - Follow Google Go style and instructions/go.md: doc comments on exported symbols, %w error wrapping, context first, no package-level mutable state, small consumer-side interfaces, main.go wires only.
-- Never hand-edit generated output; ask the primary to regenerate and report every generated file changed.
+- Never hand-edit generated output; regenerate it with `make generate`, which runs offline, and report every generated file changed.
 - When given CI logs, read the whole log and fix every reported error together; never retry an unchanged failure or weaken a check without evidence.
 
 Report: exact new, changed and deleted files; tests added; checks run with results; checks not run with exact commands and reasons; open items and assumptions.
