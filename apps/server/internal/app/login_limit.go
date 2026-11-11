@@ -1,9 +1,11 @@
 package app
 
 import (
+	"math"
 	"net"
 	"net/http"
 	"net/netip"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -93,6 +95,21 @@ func (l *loginLimiter) middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if ok, wait := l.allow(l.clientIP(r)); !ok {
 			apierror.RateLimited(w, wait)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func (l *loginLimiter) oauthJSON(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if ok, wait := l.allow(l.clientIP(r)); !ok {
+			w.Header().Set("Retry-After", strconv.FormatInt(max(1, int64(math.Ceil(wait.Seconds()))), 10))
+			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("Cache-Control", "no-store")
+			w.Header().Set("Pragma", "no-cache")
+			w.WriteHeader(http.StatusTooManyRequests)
+			_, _ = w.Write([]byte(`{"error":"temporarily_unavailable"}`))
 			return
 		}
 		next.ServeHTTP(w, r)

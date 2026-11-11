@@ -248,3 +248,19 @@ func TestRoutes_OAuthCredentials(t *testing.T) {
 		})
 	}
 }
+
+func TestRoutes_OAuthRateLimitJSON(t *testing.T) {
+	for _, path := range []string{"/oauth/token", "/oauth/register", "/oauth/revoke"} {
+		t.Run(path, func(t *testing.T) {
+			mux, _, _ := routeFixture(t)
+			for range 20 {
+				mux.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("GET", "/.well-known/oauth-authorization-server", nil))
+			}
+			w := httptest.NewRecorder()
+			mux.ServeHTTP(w, httptest.NewRequest("POST", path, nil))
+			if w.Code != 429 || w.Header().Get("Retry-After") != "3" || w.Header().Get("Content-Type") != "application/json" || strings.TrimSpace(w.Body.String()) != `{"error":"temporarily_unavailable"}` {
+				t.Fatalf("status=%d headers=%v body=%s", w.Code, w.Header(), w.Body.String())
+			}
+		})
+	}
+}

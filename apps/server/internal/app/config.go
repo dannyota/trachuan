@@ -26,12 +26,12 @@ func loadConfig() (config, error) {
 		c.embedderURL = "http://127.0.0.1:8091"
 	}
 	var err error
-	audience, ok := publicAudience(os.Getenv("SERVER_PUBLIC_URL"))
+	origin, ok := publicOrigin(os.Getenv("SERVER_PUBLIC_URL"))
 	if c.authURL == "" || !validCorpusURL(c.corpusURL) || !ok {
 		return config{}, errors.New("invalid or missing server configuration")
 	}
-	c.audience = audience
-	c.publicURL = strings.TrimSuffix(os.Getenv("SERVER_PUBLIC_URL"), "/")
+	c.publicURL = origin
+	c.audience = origin + "/mcp"
 	c.oauthClients, err = oauth.LoadPreregistered(os.Getenv("SERVER_OAUTH_CLIENTS"))
 	if err != nil {
 		return config{}, errors.New("invalid preregistered OAuth clients")
@@ -51,7 +51,7 @@ func loadConfig() (config, error) {
 	return c, nil
 }
 
-func publicAudience(base string) (string, bool) {
+func publicOrigin(base string) (string, bool) {
 	u, err := url.Parse(base)
 	if err != nil || u == nil || u.Host == "" || u.Hostname() == "" || u.User != nil || u.Opaque != "" || (u.Path != "" && u.Path != "/") || u.RawPath != "" || strings.ContainsAny(base, "?#") || strings.HasSuffix(u.Host, ":") {
 		return "", false
@@ -59,7 +59,17 @@ func publicAudience(base string) (string, bool) {
 	if u.Scheme != "https" && (u.Scheme != "http" || !loopback(u.Hostname())) {
 		return "", false
 	}
-	return u.Scheme + "://" + u.Host + "/mcp", true
+	host := strings.ToLower(u.Hostname())
+	port := u.Port()
+	if (u.Scheme == "https" && port == "443") || (u.Scheme == "http" && port == "80") {
+		port = ""
+	}
+	if port != "" {
+		host = net.JoinHostPort(host, port)
+	} else if strings.Contains(host, ":") {
+		host = "[" + host + "]"
+	}
+	return u.Scheme + "://" + host, true
 }
 func loopback(host string) bool {
 	if strings.EqualFold(host, "localhost") {
