@@ -9,14 +9,15 @@ FROM grant_row RETURNING *;
 
 -- name: RotateRefresh :one
 WITH locked AS (
-    SELECT * FROM oauth_token WHERE oauth_token.token_hash = $1 AND kind = 'refresh' AND revoked_at IS NULL
-      AND family_expires_at > now() FOR UPDATE
+    SELECT * FROM oauth_token WHERE oauth_token.token_hash = $1 AND kind = 'refresh' AND (superseded_at IS NOT NULL OR (revoked_at IS NULL AND family_expires_at > now() AND expires_at > now())) FOR UPDATE
 ), updated AS (
-    UPDATE oauth_token t SET superseded_at = COALESCE(t.superseded_at, now())
-    FROM locked WHERE t.token_hash = locked.token_hash
-    RETURNING t.*, (locked.superseded_at IS NOT NULL)::boolean AS reuse
+    UPDATE oauth_token t SET superseded_at = now()
+    FROM locked WHERE t.token_hash = locked.token_hash AND locked.superseded_at IS NULL
+    RETURNING t.*
 )
-SELECT * FROM updated;
+SELECT updated.*, false::boolean AS reuse FROM updated
+UNION ALL
+SELECT locked.*, true::boolean AS reuse FROM locked WHERE locked.superseded_at IS NOT NULL;
 
 -- name: GetToken :one
 SELECT t.*, g.revoked_at AS grant_revoked_at, a.blocked_at, a.delete_requested_at, a.auth_epoch AS account_auth_epoch

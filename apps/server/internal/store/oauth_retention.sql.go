@@ -14,19 +14,19 @@ import (
 
 const deleteExpiredOAuthCodes = `-- name: DeleteExpiredOAuthCodes :execrows
 DELETE FROM oauth_code WHERE code_hash IN (
-    SELECT code_hash FROM oauth_code WHERE expires_at + $1::interval <= $2::timestamptz
+    SELECT code_hash FROM oauth_code WHERE expires_at <= $1::timestamptz - $2::interval
     ORDER BY expires_at LIMIT $3
 )
 `
 
 type DeleteExpiredOAuthCodesParams struct {
-	Retention  pgtype.Interval
 	AsOf       time.Time
+	Retention  pgtype.Interval
 	BatchLimit int32
 }
 
 func (q *Queries) DeleteExpiredOAuthCodes(ctx context.Context, arg DeleteExpiredOAuthCodesParams) (int64, error) {
-	result, err := q.db.Exec(ctx, deleteExpiredOAuthCodes, arg.Retention, arg.AsOf, arg.BatchLimit)
+	result, err := q.db.Exec(ctx, deleteExpiredOAuthCodes, arg.AsOf, arg.Retention, arg.BatchLimit)
 	if err != nil {
 		return 0, err
 	}
@@ -54,21 +54,32 @@ func (q *Queries) DeleteExpiredOAuthRequests(ctx context.Context, arg DeleteExpi
 }
 
 const deleteExpiredOAuthTokens = `-- name: DeleteExpiredOAuthTokens :execrows
-DELETE FROM oauth_token WHERE token_hash IN (
-    SELECT t.token_hash FROM oauth_token t JOIN oauth_grant g ON g.id = t.grant_id
-    WHERE LEAST(t.family_expires_at, g.revoked_at) + $1::interval <= $2::timestamptz
-    ORDER BY LEAST(t.family_expires_at, g.revoked_at) LIMIT $3
+WITH expired AS (
+    SELECT token_hash FROM oauth_token
+    WHERE family_expires_at <= $1::timestamptz - $2::interval
+    ORDER BY family_expires_at LIMIT $3
+), revoked AS (
+    SELECT t.token_hash FROM oauth_grant g
+    CROSS JOIN LATERAL (
+        SELECT token_hash FROM oauth_token WHERE grant_id = g.id OFFSET 0
+    ) t
+    WHERE g.revoked_at <= $1::timestamptz - $2::interval
+    ORDER BY g.revoked_at LIMIT $3
+), candidates AS (
+    SELECT token_hash FROM expired UNION ALL SELECT token_hash FROM revoked
+    LIMIT $3
 )
+DELETE FROM oauth_token WHERE token_hash IN (SELECT token_hash FROM candidates)
 `
 
 type DeleteExpiredOAuthTokensParams struct {
-	Retention  pgtype.Interval
 	AsOf       time.Time
+	Retention  pgtype.Interval
 	BatchLimit int32
 }
 
 func (q *Queries) DeleteExpiredOAuthTokens(ctx context.Context, arg DeleteExpiredOAuthTokensParams) (int64, error) {
-	result, err := q.db.Exec(ctx, deleteExpiredOAuthTokens, arg.Retention, arg.AsOf, arg.BatchLimit)
+	result, err := q.db.Exec(ctx, deleteExpiredOAuthTokens, arg.AsOf, arg.Retention, arg.BatchLimit)
 	if err != nil {
 		return 0, err
 	}
@@ -76,23 +87,25 @@ func (q *Queries) DeleteExpiredOAuthTokens(ctx context.Context, arg DeleteExpire
 }
 
 const deleteRetiredOAuthGrants = `-- name: DeleteRetiredOAuthGrants :execrows
-DELETE FROM oauth_grant WHERE id IN (
+DELETE FROM oauth_grant AS target WHERE target.id IN (
     SELECT g.id FROM oauth_grant g
-    WHERE g.retirement_anchor + $1::interval <= $2::timestamptz
-      AND NOT EXISTS (SELECT 1 FROM oauth_token t WHERE t.grant_id = g.id AND t.family_expires_at > $2::timestamptz)
-      AND NOT EXISTS (SELECT 1 FROM oauth_code c WHERE c.grant_id = g.id AND c.expires_at > $2::timestamptz)
-    ORDER BY g.retirement_anchor LIMIT $3
-)
+    WHERE g.retirement_anchor <= $1::timestamptz - $2::interval
+      AND NOT EXISTS (SELECT 1 FROM oauth_token t WHERE t.grant_id = g.id AND t.family_expires_at > $1::timestamptz)
+      AND NOT EXISTS (SELECT 1 FROM oauth_code c WHERE c.grant_id = g.id AND c.expires_at > $1::timestamptz)
+    ORDER BY g.retirement_anchor LIMIT $3 FOR UPDATE SKIP LOCKED
+) AND target.retirement_anchor <= $1::timestamptz - $2::interval
+  AND NOT EXISTS (SELECT 1 FROM oauth_token t WHERE t.grant_id = target.id AND t.family_expires_at > $1::timestamptz)
+  AND NOT EXISTS (SELECT 1 FROM oauth_code c WHERE c.grant_id = target.id AND c.expires_at > $1::timestamptz)
 `
 
 type DeleteRetiredOAuthGrantsParams struct {
-	Retention  pgtype.Interval
 	AsOf       time.Time
+	Retention  pgtype.Interval
 	BatchLimit int32
 }
 
 func (q *Queries) DeleteRetiredOAuthGrants(ctx context.Context, arg DeleteRetiredOAuthGrantsParams) (int64, error) {
-	result, err := q.db.Exec(ctx, deleteRetiredOAuthGrants, arg.Retention, arg.AsOf, arg.BatchLimit)
+	result, err := q.db.Exec(ctx, deleteRetiredOAuthGrants, arg.AsOf, arg.Retention, arg.BatchLimit)
 	if err != nil {
 		return 0, err
 	}

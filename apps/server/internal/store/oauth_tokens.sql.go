@@ -139,14 +139,15 @@ func (q *Queries) RevokeToken(ctx context.Context, tokenHash string) (int64, err
 
 const rotateRefresh = `-- name: RotateRefresh :one
 WITH locked AS (
-    SELECT token_hash, kind, grant_id, account_id, client_id, family_id, rotated_from, resource, scope, auth_epoch, created_at, expires_at, family_expires_at, revoked_at, superseded_at, last_used_at FROM oauth_token WHERE oauth_token.token_hash = $1 AND kind = 'refresh' AND revoked_at IS NULL
-      AND family_expires_at > now() FOR UPDATE
+    SELECT token_hash, kind, grant_id, account_id, client_id, family_id, rotated_from, resource, scope, auth_epoch, created_at, expires_at, family_expires_at, revoked_at, superseded_at, last_used_at FROM oauth_token WHERE oauth_token.token_hash = $1 AND kind = 'refresh' AND (superseded_at IS NOT NULL OR (revoked_at IS NULL AND family_expires_at > now() AND expires_at > now())) FOR UPDATE
 ), updated AS (
-    UPDATE oauth_token t SET superseded_at = COALESCE(t.superseded_at, now())
-    FROM locked WHERE t.token_hash = locked.token_hash
-    RETURNING t.token_hash, t.kind, t.grant_id, t.account_id, t.client_id, t.family_id, t.rotated_from, t.resource, t.scope, t.auth_epoch, t.created_at, t.expires_at, t.family_expires_at, t.revoked_at, t.superseded_at, t.last_used_at, (locked.superseded_at IS NOT NULL)::boolean AS reuse
+    UPDATE oauth_token t SET superseded_at = now()
+    FROM locked WHERE t.token_hash = locked.token_hash AND locked.superseded_at IS NULL
+    RETURNING t.token_hash, t.kind, t.grant_id, t.account_id, t.client_id, t.family_id, t.rotated_from, t.resource, t.scope, t.auth_epoch, t.created_at, t.expires_at, t.family_expires_at, t.revoked_at, t.superseded_at, t.last_used_at
 )
-SELECT token_hash, kind, grant_id, account_id, client_id, family_id, rotated_from, resource, scope, auth_epoch, created_at, expires_at, family_expires_at, revoked_at, superseded_at, last_used_at, reuse FROM updated
+SELECT updated.token_hash, updated.kind, updated.grant_id, updated.account_id, updated.client_id, updated.family_id, updated.rotated_from, updated.resource, updated.scope, updated.auth_epoch, updated.created_at, updated.expires_at, updated.family_expires_at, updated.revoked_at, updated.superseded_at, updated.last_used_at, false::boolean AS reuse FROM updated
+UNION ALL
+SELECT locked.token_hash, locked.kind, locked.grant_id, locked.account_id, locked.client_id, locked.family_id, locked.rotated_from, locked.resource, locked.scope, locked.auth_epoch, locked.created_at, locked.expires_at, locked.family_expires_at, locked.revoked_at, locked.superseded_at, locked.last_used_at, true::boolean AS reuse FROM locked WHERE locked.superseded_at IS NOT NULL
 `
 
 type RotateRefreshRow struct {

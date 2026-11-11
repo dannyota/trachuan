@@ -40,6 +40,8 @@ CREATE TABLE oauth_grant (
 );
 CREATE UNIQUE INDEX oauth_grant_live_idx ON oauth_grant (account_id, client_id) WHERE revoked_at IS NULL;
 CREATE INDEX oauth_grant_client_id_idx ON oauth_grant (client_id);
+CREATE INDEX oauth_grant_retirement_anchor_idx ON oauth_grant (retirement_anchor);
+CREATE INDEX oauth_grant_revoked_at_idx ON oauth_grant (revoked_at) WHERE revoked_at IS NOT NULL;
 
 CREATE TABLE oauth_code (
     code_hash text PRIMARY KEY CHECK (code_hash ~ '^[0-9a-f]{64}$'),
