@@ -614,12 +614,29 @@
     {
       "case_id": "edge-digital-assets-71-2025",
       "citation_index": 0,
-      "state": "absent",
+      "state": "resolved",
       "expected_number": "71/2025/qh15",
-      "reason": "Searched 71/2025/qh15. No matching document exists in the exported inventory.",
-      "reviewed_at": "2026-11-09",
-      "evidence": [],
-      "alternatives": []
+      "reason": "The stored provision identifies the expected article.",
+      "reviewed_at": "2026-11-11",
+      "evidence": [
+        {
+          "document_key": "vn:vbpl:179989",
+          "document_number": "71/2025/QH15",
+          "source_url": "",
+          "fetch_sha256": "eceb97f8acc13551e00b4584c300bc21851482e2ca101b7c827416a526e3c81e",
+          "node_id": "3b8d08aa-eb7e-11f0-9478-0907a0aefba1",
+          "quoted_span": "Điều 47. Phân loại tài sản số\n1. Tài sản số được phân loại theo một hoặc một số tiêu chí sau:"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:179989",
+          "document_number": "71/2025/QH15",
+          "anchor": "dieu-47",
+          "kind": "provision"
+        }
+      ]
     },
     {
       "case_id": "edge-fintech-sandbox-94-2025",
@@ -1083,12 +1100,29 @@
     {
       "case_id": "mobile-money-368-2025",
       "citation_index": 0,
-      "state": "absent",
+      "state": "resolved",
       "expected_number": "368/2025/nđ-cp",
-      "reason": "Searched 368/2025/nđ-cp. No matching document exists in the exported inventory.",
-      "reviewed_at": "2026-11-09",
-      "evidence": [],
-      "alternatives": []
+      "reason": "The stored provision identifies the expected document and its transaction limit.",
+      "reviewed_at": "2026-11-11",
+      "evidence": [
+        {
+          "document_key": "vn:vbpl:185857",
+          "document_number": "368/2025/ND-CP",
+          "source_url": "",
+          "fetch_sha256": "e9ea0c5044e648f690e70ca3f28111aa3146c13de5898719260e841fc47113f6",
+          "node_id": "1411aba0-31b5-11f1-87f3-63f8c92aeaa3",
+          "quoted_span": "Điều 15. Hạn mức giao dịch tài khoản Tiền di động"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:185857",
+          "document_number": "368/2025/ND-CP",
+          "anchor": null,
+          "kind": "document"
+        }
+      ]
     },
     {
       "case_id": "it-risk-report-09-2020",
@@ -1717,42 +1751,110 @@
     {
       "case_id": "new-credit-info-scope-58-2021",
       "citation_index": 0,
-      "state": "absent",
+      "state": "resolved",
       "expected_number": "58/2021/nđ-cp",
-      "reason": "Searched 58/2021/nđ-cp. No matching document exists in the exported inventory.",
-      "reviewed_at": "2026-11-09",
-      "evidence": [],
-      "alternatives": []
+      "reason": "The stored provision identifies the expected article.",
+      "reviewed_at": "2026-11-11",
+      "evidence": [
+        {
+          "document_key": "vn:vbpl:148075",
+          "document_number": "58/2021/ND-CP",
+          "source_url": "",
+          "fetch_sha256": "b98bd812424539404e423b2c695bb61118f86bfa9eb321e1296a47dcaaeb68e6",
+          "node_id": "ecd87c80-2d45-11f1-9573-c96e7df733d0",
+          "quoted_span": "Điều 1. Phạm vi điều chỉnh\n1. Nghị định này quy định về điều kiện, thủ tục cấp, cấp lại, thay đổi nội dung và thu hồi Giấy chứng nhận đủ điều kiện hoạt động cung ứng dịch vụ thông tin tín dụng"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:148075",
+          "document_number": "58/2021/ND-CP",
+          "anchor": "dieu-1",
+          "kind": "provision"
+        }
+      ]
     },
     {
       "case_id": "new-credit-info-principles-58-2021",
       "citation_index": 0,
-      "state": "absent",
+      "state": "resolved",
       "expected_number": "58/2021/nđ-cp",
-      "reason": "Searched 58/2021/nđ-cp, 35/vbhn-nhnn. No document for the expected number exists; the alternate-number documents have no provision tree, so the expected provision cannot be established.",
-      "reviewed_at": "2026-11-09",
-      "evidence": [],
-      "alternatives": []
+      "reason": "The original document has the expected article. The 35/VBHN-NHNN candidates have no provision tree.",
+      "reviewed_at": "2026-11-11",
+      "evidence": [
+        {
+          "document_key": "vn:vbpl:148075",
+          "document_number": "58/2021/ND-CP",
+          "source_url": "",
+          "fetch_sha256": "b98bd812424539404e423b2c695bb61118f86bfa9eb321e1296a47dcaaeb68e6",
+          "node_id": "ece0e0f0-2d45-11f1-a3b9-e3c52c7750b1",
+          "quoted_span": "Điều 5. Nguyên tắc sử dụng sản phẩm thông tin tín dụng"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:148075",
+          "document_number": "58/2021/ND-CP",
+          "anchor": "dieu-5",
+          "kind": "provision"
+        }
+      ]
     },
     {
       "case_id": "new-credit-info-prohibited-58-2021",
       "citation_index": 0,
-      "state": "absent",
+      "state": "resolved",
       "expected_number": "58/2021/nđ-cp",
-      "reason": "Searched 58/2021/nđ-cp. No matching document exists in the exported inventory.",
-      "reviewed_at": "2026-11-09",
-      "evidence": [],
-      "alternatives": []
+      "reason": "The stored provision identifies the expected article.",
+      "reviewed_at": "2026-11-11",
+      "evidence": [
+        {
+          "document_key": "vn:vbpl:148075",
+          "document_number": "58/2021/ND-CP",
+          "source_url": "",
+          "fetch_sha256": "b98bd812424539404e423b2c695bb61118f86bfa9eb321e1296a47dcaaeb68e6",
+          "node_id": "ece17d30-2d45-11f1-9b91-074bf6116a69",
+          "quoted_span": "Điều 6. Các hành vi bị cấm trong hoạt động cung ứng dịch vụ thông tin tín dụng"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:148075",
+          "document_number": "58/2021/ND-CP",
+          "anchor": "dieu-6",
+          "kind": "provision"
+        }
+      ]
     },
     {
       "case_id": "new-credit-info-storage-58-2021",
       "citation_index": 0,
-      "state": "absent",
+      "state": "resolved",
       "expected_number": "58/2021/nđ-cp",
-      "reason": "Searched 58/2021/nđ-cp, 35/vbhn-nhnn. No document for the expected number exists; the alternate-number documents have no provision tree, so the expected provision cannot be established.",
-      "reviewed_at": "2026-11-09",
-      "evidence": [],
-      "alternatives": []
+      "reason": "The original document has the expected article. The 35/VBHN-NHNN candidates have no provision tree.",
+      "reviewed_at": "2026-11-11",
+      "evidence": [
+        {
+          "document_key": "vn:vbpl:148075",
+          "document_number": "58/2021/ND-CP",
+          "source_url": "",
+          "fetch_sha256": "b98bd812424539404e423b2c695bb61118f86bfa9eb321e1296a47dcaaeb68e6",
+          "node_id": "ecf8aeb0-2d45-11f1-82ea-974f1558d270",
+          "quoted_span": "Điều 20. Lưu giữ thông tin tín dụng\n1. Thông tin tín dụng phải được lưu giữ an toàn, bảo mật, phòng tránh các sự cố, thảm họa có thể xảy ra và ngăn chặn sự xâm nhập, truy cập bất hợp pháp từ bên ngoài.\n2. Thông tin tín dụng được lưu giữ tối thiểu trong 05 năm, kể từ ngày công ty thông tin tín dụng thu thập."
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:148075",
+          "document_number": "58/2021/ND-CP",
+          "anchor": "dieu-20",
+          "kind": "provision"
+        }
+      ]
     },
     {
       "case_id": "new-interbank-payment-scope-08-2024",
@@ -2064,12 +2166,29 @@
     {
       "case_id": "new-multi-credit-info-storage-and-pdpl",
       "citation_index": 0,
-      "state": "absent",
+      "state": "resolved",
       "expected_number": "58/2021/nđ-cp",
-      "reason": "Searched 58/2021/nđ-cp. No matching document exists in the exported inventory.",
-      "reviewed_at": "2026-11-09",
-      "evidence": [],
-      "alternatives": []
+      "reason": "The stored provision identifies the expected article.",
+      "reviewed_at": "2026-11-11",
+      "evidence": [
+        {
+          "document_key": "vn:vbpl:148075",
+          "document_number": "58/2021/ND-CP",
+          "source_url": "",
+          "fetch_sha256": "b98bd812424539404e423b2c695bb61118f86bfa9eb321e1296a47dcaaeb68e6",
+          "node_id": "ecf8aeb0-2d45-11f1-82ea-974f1558d270",
+          "quoted_span": "Điều 20. Lưu giữ thông tin tín dụng\n1. Thông tin tín dụng phải được lưu giữ an toàn, bảo mật, phòng tránh các sự cố, thảm họa có thể xảy ra và ngăn chặn sự xâm nhập, truy cập bất hợp pháp từ bên ngoài.\n2. Thông tin tín dụng được lưu giữ tối thiểu trong 05 năm, kể từ ngày công ty thông tin tín dụng thu thập."
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:148075",
+          "document_number": "58/2021/ND-CP",
+          "anchor": "dieu-20",
+          "kind": "provision"
+        }
+      ]
     },
     {
       "case_id": "new-multi-credit-info-storage-and-pdpl",
