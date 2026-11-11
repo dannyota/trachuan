@@ -91,7 +91,7 @@ func serve(ctx context.Context, cfg config, pool *pgxpool.Pool, queries *store.Q
 		EmbedderFor: func(hash string) retrieval.Embedder {
 			return &cachedQuery{query: embedding.Query{Client: client, RecipeHash: hash}, vectors: vectors}
 		},
-		Options: retrieval.Options{Documents: caches.Documents, Sequences: caches.Sequences}, OnActivate: caches.ActivateRelease}
+		OnActivate: caches.ActivateRelease}
 	verifier := &credential.Verifier{Store: queries, Audience: cfg.audience}
 	handler := mcpapi.New(mcpapi.Config{Resolver: mcpResolver{resolver}, Limiter: limits.New(clock), Logger: slog.New(slog.NewJSONHandler(stderr, nil)), Caches: caches})
 	mux := http.NewServeMux()
