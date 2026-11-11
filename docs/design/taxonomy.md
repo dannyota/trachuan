@@ -62,9 +62,10 @@ under the corpus rules.
 
 1. Seed. An article whose VBPL ItemID and article anchor match a placed article
    in the package receives that node down to its deepest imported level,
-   `confidence = 1.0`. The ItemID is the one in the article's first source link;
-   it matches the release document whose key is `vn:vbpl:<ItemID>`, of any
-   class. The article number is the one after `Dieu_` in that link, else the
+   `confidence = 1.0`. The ItemID comes from the first link in the article's
+   note that points to `vbpq-toanvan.aspx` with an `ItemID`, skipping other
+   links; it matches the release document whose key is `vn:vbpl:<ItemID>`, of
+   any class. The article number is the one after `Dieu_` in that link, else the
    first `(Điều <n>` in the note, and matches the provision anchored `dieu-<n>`
    in that document. An article listed twice yields one assignment. A document
    that is not in the release is expected and yields nothing; a document found
