@@ -183,9 +183,10 @@ skipping steps 1 to 3 and verifying instead that the database exists and its
    leaves a known last step.
 1. Download `manifest.json`, `manifest.sig`, dump. Verify the signature with the
    pinned public key, then the dump `sha256` and size against the manifest.
-2. Refuse when `schema_version`, `dense_recipe` or `lexical_recipe` (the runtime
-   algorithm identifier, not the per-release statistics) differ from what the
-   running server and embedder report, or when free memory or disk is below the
+2. Refuse when `schema_version` is not among the versions the running server
+   reads, or when `dense_recipe` or `lexical_recipe` (the runtime algorithm
+   identifier, not the per-release statistics) differ from what the running
+   server and embedder report, or when free memory or disk is below the
    thresholds in [host budgets](budgets-host.md#host-memory-estimates).
 3. `pg_restore --no-owner` as `restorer` into `corpus_<cc>_<rel>` with a
    dedicated `maintenance_work_mem`; the TOC is listed first and refused if it

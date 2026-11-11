@@ -39,20 +39,23 @@ document's `type` and `issuer` after trimming and NFC normalization; `documents`
 match document keys. `corpus_status` lists the release's document types and
 issuers with counts, so callers pick values that exist.
 
-Retrieval always runs over the whole country corpus. A search builds one list:
-the recipe's shaping at the list cap of 100 hits, with its `hits` group and its
-`non_current` group. When any filter is given, each group is ordered inside hits
-first in rank order, then outside hits in rank order, every hit carries
-`in_filter: true|false`, and `outside_filter_count` counts outside hits in both
-groups. A page of size `limit` is the next `limit` hits of the `hits` group;
-`non_current` comes whole on the first page and is absent from later pages.
-`next_cursor` continues while hits remain, so every hit the unfiltered search
-would return stays reachable. The cursor is opaque and holds the release, the
-offset, the resolved `as_of` date and a SHA-256 digest of the request without
-`cursor` and `limit`, never query text; later pages use the cursor's date, and a
+Retrieval always runs over the whole country corpus. Paging walks one list: the
+recipe's primary hits shaped at the list cap of 100, then its `non_current` hits
+shaped at the list cap of 100, as the recipe fills a response (primary first,
+`non_current` only in remaining slots). Each page holds at most `limit` hits,
+split into `hits` and `non_current` by group. Without filters the first page is
+exactly today's response of that `limit`, and later pages are the list without
+the hits already shown, in list order. When any filter is given, each group of
+the list is ordered inside hits first in rank order, then outside hits in rank
+order; pages are consecutive slices from the first; every hit carries
+`in_filter: true|false`; and `outside_filter_count` counts outside hits over the
+whole list. `next_cursor` continues while hits remain, so every hit the
+unfiltered search would return stays reachable. The cursor is opaque and holds
+the release, the first page's `limit`, the offset, the resolved `as_of` date and
+a SHA-256 digest of the request without `cursor` and `limit`, never query text;
+later pages use the cursor's date and recompute earlier pages from it, and a
 cursor whose digest or release does not match is `invalid_request` or
-`release_expired`. Without filters the list is the unfiltered ranking, its first
-page equals today's response of the same size, and the same cursor pages it.
+`release_expired`.
 
 The filter changes order, so the recall guarantee is stated per case: for a
 golden case whose expected citations lie inside the selected nodes, filtered
