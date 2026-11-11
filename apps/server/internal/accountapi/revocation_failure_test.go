@@ -30,7 +30,7 @@ func (s *uncertainStore) outcome() error {
 	}
 	return nil
 }
-func (s *uncertainStore) RevokeOwnToken(ctx context.Context, p store.RevokeOwnTokenParams) (int64, error) {
+func (s *uncertainStore) RevokeOwnToken(ctx context.Context, p store.RevokeOwnTokenParams) (string, error) {
 	n, err := s.fakeStore.RevokeOwnToken(ctx, p)
 	if err != nil {
 		return n, err

@@ -42,7 +42,7 @@ type Principal struct {
 // Store supplies session state and account eligibility. Generated Queries satisfy it.
 type Store interface {
 	GetAccount(context.Context, int64) (store.Account, error)
-	CreateSession(context.Context, store.CreateSessionParams) (store.WebSession, error)
+	CreateSession(context.Context, store.CreateSessionParams) (store.CreateSessionRow, error)
 	GetSession(context.Context, string) (store.GetSessionRow, error)
 	TouchSession(context.Context, string) (int64, error)
 	RevokeSession(context.Context, string) (int64, error)
@@ -59,11 +59,13 @@ type Manager struct {
 	PublicURL string
 	CacheTTL  time.Duration
 
-	randomMu sync.Mutex
-	mu       sync.Mutex
-	entries  map[string]cacheEntry
-	flights  map[*lookupFence]struct{}
-	revoking map[revocation]int
+	randomMu           sync.Mutex
+	mu                 sync.Mutex
+	entries            map[string]cacheEntry
+	flights            map[*lookupFence]struct{}
+	revoking           map[revocation]int
+	generation         uint64
+	accountGenerations map[int64]uint64
 }
 
 // CreateSession revokes presented sessions before creating a fresh login session.
@@ -94,7 +96,14 @@ func (m *Manager) CreateSession(ctx context.Context, w http.ResponseWriter, r *h
 	}
 	row, err := m.Store.CreateSession(ctx, store.CreateSessionParams{TokenHash: hashToken(token), AccountID: accountID, CsrfSecret: secret, AuthEpoch: account.AuthEpoch, ExpiresAt: m.now().Add(idleLifetime)})
 	if ctx.Err() != nil || err != nil {
+		m.EvictAccount(accountID)
 		return fmt.Errorf("create session: %w", errUnavailable)
+	}
+	// Preserve marks for lookups that read a session before SQL revoked it.
+	for _, digest := range row.RevokedHashes {
+		rev := revocation{hash: digest}
+		m.fence(rev)
+		m.unfence(rev)
 	}
 	expires := minTime(row.ExpiresAt, row.CreatedAt.Add(absoluteLifetime))
 	if !expires.After(m.now()) {

@@ -40,3 +40,6 @@ SELECT * FROM blocked;
 
 -- name: PurgeDeletedAccounts :execrows
 DELETE FROM account WHERE delete_requested_at < $1::timestamptz - interval '7 days';
+
+-- name: LockCredentialAccount :one
+SELECT * FROM account WHERE id = $1 FOR UPDATE;

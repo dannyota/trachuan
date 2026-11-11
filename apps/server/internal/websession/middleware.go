@@ -63,7 +63,7 @@ func (m *Manager) lookup(ctx context.Context, raw string) (store.GetSessionRow, 
 		}
 		delete(m.entries, hash)
 	}
-	fence := &lookupFence{hash: hash, revoked: make(map[revocation]struct{})}
+	fence := &lookupFence{hash: hash, generation: m.generation, revoked: make(map[revocation]struct{})}
 	for rev := range m.revoking {
 		fence.mark(rev)
 	}
@@ -75,6 +75,16 @@ func (m *Manager) lookup(ctx context.Context, raw string) (store.GetSessionRow, 
 	defer func() {
 		m.mu.Lock()
 		delete(m.flights, fence)
+		// Retire fences as old lookups finish, even when traffic never becomes idle.
+		oldest := m.generation
+		for f := range m.flights {
+			oldest = min(oldest, f.generation)
+		}
+		for id, generation := range m.accountGenerations {
+			if generation <= oldest {
+				delete(m.accountGenerations, id)
+			}
+		}
 		m.mu.Unlock()
 	}()
 	if m.Store == nil {
@@ -136,6 +146,9 @@ func (m *Manager) lookup(ctx context.Context, raw string) (store.GetSessionRow, 
 	until := minTime(started.Add(m.ttl()), minTime(row.ExpiresAt, row.CreatedAt.Add(absoluteLifetime)))
 	// Keep revocation marks until each lookup finishes, so a database snapshot
 	// taken before a local revoke cannot authorize or repopulate the cache.
+	if m.accountGenerations[row.AccountID] > fence.generation {
+		return row, false, errUnauthenticated
+	}
 	for rev := range fence.revoked {
 		if rev.matches(row) {
 			return row, false, errUnauthenticated

@@ -15,8 +15,9 @@ type cacheEntry struct {
 }
 
 type lookupFlight struct {
-	hash    string
-	revoked bool
+	hash       string
+	revoked    bool
+	generation uint64
 }
 
 // Evict removes a cached credential and invalidates lookups already in flight.
@@ -43,7 +44,7 @@ func (v *Verifier) startLookup(hash string, now time.Time) (cacheEntry, *lookupF
 		}
 		v.remove(e)
 	}
-	flight := &lookupFlight{hash: hash}
+	flight := &lookupFlight{hash: hash, generation: v.generation}
 	if v.flights == nil {
 		v.flights = make(map[*lookupFlight]struct{})
 	}
@@ -55,12 +56,22 @@ func (v *Verifier) finishLookup(flight *lookupFlight) {
 	v.mu.Lock()
 	defer v.mu.Unlock()
 	delete(v.flights, flight)
+	// Retire fences as old lookups finish, even when traffic never becomes idle.
+	oldest := v.generation
+	for f := range v.flights {
+		oldest = min(oldest, f.generation)
+	}
+	for id, generation := range v.accountGenerations {
+		if generation <= oldest {
+			delete(v.accountGenerations, id)
+		}
+	}
 }
 
 func (v *Verifier) remember(entry cacheEntry, now time.Time, flight *lookupFlight) bool {
 	v.mu.Lock()
 	defer v.mu.Unlock()
-	if flight.revoked {
+	if flight.revoked || v.accountGenerations[entry.principal.AccountID] > flight.generation {
 		return false
 	}
 	if !entry.until.After(now) {
@@ -114,4 +125,22 @@ func (v *Verifier) admitTouch(hash string, now time.Time) bool {
 	v.touches[hash] = until
 	v.used.PushBack(touchMark{hash: hash, until: until})
 	return true
+}
+
+// EvictAccount removes every cached credential for the account and fences old lookups.
+func (v *Verifier) EvictAccount(accountID int64) {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	for _, e := range v.entries {
+		if e.Value.(cacheEntry).principal.AccountID == accountID {
+			v.remove(e)
+		}
+	}
+	if len(v.flights) > 0 {
+		v.generation++
+		if v.accountGenerations == nil {
+			v.accountGenerations = make(map[int64]uint64)
+		}
+		v.accountGenerations[accountID] = v.generation
+	}
 }

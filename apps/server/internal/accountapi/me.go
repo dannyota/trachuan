@@ -19,23 +19,28 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// Store supplies account and personal token state.
+// Store supplies account and personal token state. CreatePersonalToken returns
+// credential.ErrTokenLimit when the account has twenty live tokens.
 type Store interface {
 	GetAccount(context.Context, int64) (store.Account, error)
 	ListSessions(context.Context, int64) ([]store.WebSession, error)
 	ListTokens(context.Context, int64) ([]store.PersonalToken, error)
 	CreatePersonalToken(context.Context, store.CreatePersonalTokenParams) (store.PersonalToken, error)
-	RevokeOwnToken(context.Context, store.RevokeOwnTokenParams) (int64, error)
+	RevokeOwnToken(context.Context, store.RevokeOwnTokenParams) (string, error)
 	RequestDeletion(context.Context, int64) (store.RequestDeletionRow, error)
 }
 
 // Sessions revokes sessions through the shared session manager.
 type Sessions interface {
+	EvictAccount(int64)
 	RevokeOwnSession(context.Context, int64, int64) (int64, error)
 }
 
 // Verifier evicts cached personal credentials.
-type Verifier interface{ Evict(string) }
+type Verifier interface {
+	Evict(string)
+	EvictAccount(int64)
+}
 
 // Limiter consumes the shared per-account request budget.
 type Limiter interface {

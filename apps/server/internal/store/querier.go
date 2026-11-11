@@ -15,7 +15,7 @@ type Querier interface {
 	CreateAccount(ctx context.Context, arg CreateAccountParams) (Account, error)
 	CreateLoginTransaction(ctx context.Context, arg CreateLoginTransactionParams) (LoginTransaction, error)
 	CreatePersonalToken(ctx context.Context, arg CreatePersonalTokenParams) (PersonalToken, error)
-	CreateSession(ctx context.Context, arg CreateSessionParams) (WebSession, error)
+	CreateSession(ctx context.Context, arg CreateSessionParams) (CreateSessionRow, error)
 	DeleteExpiredLoginTransactions(ctx context.Context) error
 	GetAccount(ctx context.Context, id int64) (Account, error)
 	GetActiveRelease(ctx context.Context, country string) (CorpusRelease, error)
@@ -23,10 +23,12 @@ type Querier interface {
 	GetSession(ctx context.Context, tokenHash string) (GetSessionRow, error)
 	ListSessions(ctx context.Context, accountID int64) ([]WebSession, error)
 	ListTokens(ctx context.Context, accountID int64) ([]PersonalToken, error)
+	LockCredentialAccount(ctx context.Context, id int64) (Account, error)
 	PurgeDeletedAccounts(ctx context.Context, dollar_1 time.Time) (int64, error)
+	PurgeEndedCredentials(ctx context.Context) (int64, error)
 	RequestDeletion(ctx context.Context, id int64) (RequestDeletionRow, error)
 	RevokeOwnSession(ctx context.Context, arg RevokeOwnSessionParams) (int64, error)
-	RevokeOwnToken(ctx context.Context, arg RevokeOwnTokenParams) (int64, error)
+	RevokeOwnToken(ctx context.Context, arg RevokeOwnTokenParams) (string, error)
 	RevokePersonalToken(ctx context.Context, tokenHash string) error
 	RevokeSession(ctx context.Context, tokenHash string) (int64, error)
 	TouchPersonalToken(ctx context.Context, tokenHash string) error

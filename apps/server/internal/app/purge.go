@@ -11,6 +11,7 @@ import (
 type purgeStore interface {
 	accountapi.PurgeStore
 	DeleteExpiredLoginTransactions(context.Context) error
+	PurgeEndedCredentials(context.Context) (int64, error)
 }
 
 func purgeLoop(ctx context.Context, store purgeStore, clock func() time.Time, logger *slog.Logger) {
@@ -30,6 +31,12 @@ func runPurgeLoop(ctx context.Context, store purgeStore, clock func() time.Time,
 			cancel()
 			if err != nil {
 				logger.Error("purge failed", "step", "login_transactions")
+			}
+			queryCtx, cancel = context.WithTimeout(ctx, 2*time.Second)
+			_, err = store.PurgeEndedCredentials(queryCtx)
+			cancel()
+			if err != nil {
+				logger.Error("purge failed", "step", "ended_credentials")
 			}
 			if _, err := accountapi.Purge(ctx, store, clock()); err != nil {
 				logger.Error("purge failed", "step", "deleted_accounts")

@@ -9,10 +9,11 @@ import (
 	"time"
 
 	"danny.vn/trachuan/apps/server/internal/admin"
-	"danny.vn/trachuan/apps/server/internal/store"
 )
 
-func runAdmin(ctx context.Context, args []string, queries *store.Queries, out io.Writer) error {
+type accountEvicter interface{ EvictAccount(int64) }
+
+func runAdmin(ctx context.Context, args []string, queries admin.Store, out io.Writer, caches ...accountEvicter) error {
 	if len(args) < 2 {
 		return errors.New("missing admin subcommand")
 	}
@@ -43,7 +44,11 @@ func runAdmin(ctx context.Context, args []string, queries *store.Queries, out io
 		if *account <= 0 {
 			return errors.New("invalid account")
 		}
-		return service.BlockAccount(ctx, *account)
+		err := service.BlockAccount(ctx, *account)
+		for _, cache := range caches {
+			cache.EvictAccount(*account)
+		}
+		return err
 	case "token create":
 		if *account <= 0 || *name == "" || *days < 1 || *days > 365 {
 			return errors.New("invalid token fields")

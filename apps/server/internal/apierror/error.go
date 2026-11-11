@@ -15,7 +15,7 @@ func Message(code string) string {
 	messages := map[string]string{
 		"invalid_request": "Invalid request.", "unauthenticated": "Authentication required.",
 		"csrf_rejected": "CSRF check failed.", "account_blocked": "Account blocked.",
-		"not_found": "Not found.", "release_expired": "Release expired.",
+		"token_limit": "Token limit reached.", "not_found": "Not found.", "release_expired": "Release expired.",
 		"body_too_large": "Request body too large.", "unsupported_media_type": "Unsupported media type.",
 		"rate_limited": "Rate limited.", "busy": "Query embedder busy.",
 		"unavailable": "Service unavailable.", "inference_failed": "Query inference failed.", "internal": "Internal error.",

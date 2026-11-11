@@ -3,6 +3,7 @@ package websession
 import (
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strconv"
 	"testing"
 
@@ -64,7 +65,9 @@ func TestOpenAPIContract(t *testing.T) {
 	coverage := contracttest.NewCoverage(c, paths)
 	t.Run("TestLogoutContract", func(t *testing.T) { testLogoutContract(t, coverage) })
 	t.Run("TestLogoutContract_Errors", func(t *testing.T) { testLogoutContract_Errors(t, coverage) })
-	if missing := coverage.Missing(); len(missing) > 0 {
+	// The application mux contract test exercises throttling, which wraps these handlers.
+	want := []string{"post /api/v1/auth/logout 429 application/json"}
+	if missing := coverage.Missing(); !slices.Equal(missing, want) {
 		t.Errorf("unexercised responses: %v", missing)
 	}
 }

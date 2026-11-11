@@ -34,6 +34,16 @@ export interface paths {
                     };
                 };
                 /** @description Request failed */
+                429: {
+                    headers: {
+                        "Retry-After"?: number;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request failed */
                 503: {
                     headers: {
                         [name: string]: unknown;
@@ -81,6 +91,16 @@ export interface paths {
                     };
                     content: {
                         "text/html": string;
+                    };
+                };
+                /** @description Request failed */
+                429: {
+                    headers: {
+                        "Retry-After"?: number;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
                     };
                 };
                 /** @description Request failed */
@@ -145,6 +165,16 @@ export interface paths {
                 /** @description Request failed */
                 403: {
                     headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request failed */
+                429: {
+                    headers: {
+                        "Retry-After"?: number;
                         [name: string]: unknown;
                     };
                     content: {
@@ -545,6 +575,15 @@ export interface paths {
                 };
                 /** @description Request failed */
                 403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Token limit reached */
+                409: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -1067,7 +1106,7 @@ export interface components {
         Error: {
             error: {
                 /** @enum {string} */
-                code: "invalid_request" | "unauthenticated" | "csrf_rejected" | "account_blocked" | "not_found" | "release_expired" | "body_too_large" | "unsupported_media_type" | "rate_limited" | "busy" | "unavailable" | "inference_failed" | "internal";
+                code: "invalid_request" | "unauthenticated" | "csrf_rejected" | "account_blocked" | "not_found" | "release_expired" | "body_too_large" | "unsupported_media_type" | "token_limit" | "rate_limited" | "busy" | "unavailable" | "inference_failed" | "internal";
                 message: string;
             };
         };

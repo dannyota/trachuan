@@ -12,7 +12,12 @@ import (
 
 const createPersonalToken = `-- name: CreatePersonalToken :one
 INSERT INTO personal_token (token_hash, account_id, name, expires_at, auth_epoch)
-VALUES ($1, $2, $3, $4, $5) RETURNING token_hash, account_id, name, created_at, expires_at, last_used_at, revoked_at, auth_epoch, id
+SELECT $1, $2, $3, $4, $5
+WHERE EXISTS (SELECT 1 FROM account WHERE id = $2 AND blocked_at IS NULL
+    AND delete_requested_at IS NULL AND auth_epoch = $5)
+    AND (SELECT count(*) FROM personal_token WHERE account_id = $2
+        AND revoked_at IS NULL AND expires_at > now()) < 20
+RETURNING token_hash, account_id, name, created_at, expires_at, last_used_at, revoked_at, auth_epoch, id
 `
 
 type CreatePersonalTokenParams struct {
@@ -77,7 +82,9 @@ func (q *Queries) GetCredential(ctx context.Context, tokenHash string) (GetCrede
 }
 
 const listTokens = `-- name: ListTokens :many
-SELECT token_hash, account_id, name, created_at, expires_at, last_used_at, revoked_at, auth_epoch, id FROM personal_token WHERE account_id = $1 ORDER BY id
+SELECT token_hash, account_id, name, created_at, expires_at, last_used_at, revoked_at, auth_epoch, id FROM personal_token WHERE account_id = $1
+    AND LEAST(expires_at, revoked_at) >= now() - interval '7 days'
+ORDER BY created_at DESC, id DESC LIMIT 100
 `
 
 func (q *Queries) ListTokens(ctx context.Context, accountID int64) ([]PersonalToken, error) {
@@ -110,9 +117,10 @@ func (q *Queries) ListTokens(ctx context.Context, accountID int64) ([]PersonalTo
 	return items, nil
 }
 
-const revokeOwnToken = `-- name: RevokeOwnToken :execrows
+const revokeOwnToken = `-- name: RevokeOwnToken :one
 UPDATE personal_token SET revoked_at = now()
 WHERE account_id = $1 AND id = $2 AND revoked_at IS NULL
+RETURNING token_hash
 `
 
 type RevokeOwnTokenParams struct {
@@ -120,12 +128,11 @@ type RevokeOwnTokenParams struct {
 	ID        int64
 }
 
-func (q *Queries) RevokeOwnToken(ctx context.Context, arg RevokeOwnTokenParams) (int64, error) {
-	result, err := q.db.Exec(ctx, revokeOwnToken, arg.AccountID, arg.ID)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
+func (q *Queries) RevokeOwnToken(ctx context.Context, arg RevokeOwnTokenParams) (string, error) {
+	row := q.db.QueryRow(ctx, revokeOwnToken, arg.AccountID, arg.ID)
+	var token_hash string
+	err := row.Scan(&token_hash)
+	return token_hash, err
 }
 
 const revokePersonalToken = `-- name: RevokePersonalToken :exec

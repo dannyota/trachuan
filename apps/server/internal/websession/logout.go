@@ -83,8 +83,9 @@ func (rev revocation) matches(row store.GetSessionRow) bool {
 }
 
 type lookupFence struct {
-	hash    string
-	revoked map[revocation]struct{}
+	generation uint64
+	hash       string
+	revoked    map[revocation]struct{}
 }
 
 func (f *lookupFence) mark(rev revocation) {
@@ -121,5 +122,23 @@ func (m *Manager) evict(rev revocation) {
 		if rev.matches(entry.row) {
 			delete(m.entries, hash)
 		}
+	}
+}
+
+// EvictAccount removes every cached session for the account and fences old lookups.
+func (m *Manager) EvictAccount(accountID int64) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for hash, entry := range m.entries {
+		if entry.row.AccountID == accountID {
+			delete(m.entries, hash)
+		}
+	}
+	if len(m.flights) > 0 {
+		m.generation++
+		if m.accountGenerations == nil {
+			m.accountGenerations = make(map[int64]uint64)
+		}
+		m.accountGenerations[accountID] = m.generation
 	}
 }

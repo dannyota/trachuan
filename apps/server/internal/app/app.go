@@ -68,7 +68,7 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 	queries := store.New(pool)
 	switch args[0] {
 	case "admin":
-		return runAdmin(ctx, args[1:], queries, stdout)
+		return runAdmin(ctx, args[1:], credentialStore{Queries: queries, db: pool}, stdout)
 	case "serve":
 		if len(args) != 1 {
 			return errors.New("invalid serve arguments")
@@ -113,13 +113,14 @@ func serve(ctx context.Context, cfg config, pool *pgxpool.Pool, queries *store.Q
 	verifier := &credential.Verifier{Store: queries, Audience: cfg.audience}
 	limiter := limits.New(clock)
 	tools := mcpapi.Config{Resolver: mcpResolver{resolver}, Limiter: limiter, Logger: slog.New(slog.NewJSONHandler(stderr, nil)), Caches: caches}
-	sessions := &websession.Manager{Store: queries, PublicURL: cfg.publicURL, Clock: clock}
+	bounded := credentialStore{Queries: queries, db: pool}
+	sessions := &websession.Manager{Store: bounded, PublicURL: cfg.publicURL, Clock: clock}
 	login, err := weblogin.New(ctx, weblogin.Config{ClientID: cfg.googleID, ClientSecret: cfg.googleSecret, PublicURL: cfg.publicURL, Store: loginStore{queries}, Sessions: sessions})
 	if err != nil {
 		resolver.Close()
 		return errors.New("google provider discovery failed")
 	}
-	mux := newWebMux(webDeps{store: queries, sessions: sessions, login: login, verifier: verifier, tools: tools, loginLimit: newLoginLimiter(clock, cfg.trustedProxies)})
+	mux := newWebMux(webDeps{store: bounded, sessions: sessions, login: login, verifier: verifier, tools: tools, loginLimit: newLoginLimiter(clock, cfg.trustedProxies)})
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) })
 	mux.Handle("GET /readyz", readiness(ctx, func(ctx context.Context) error {
 		return readyCheck(ctx, pool.Ping, func(ctx context.Context) error {
@@ -188,5 +189,5 @@ func runNonServe(ctx context.Context, args []string, stdout io.Writer) error {
 		return errors.New("create auth pool failed")
 	}
 	defer pool.Close()
-	return runAdmin(ctx, args[1:], store.New(pool), stdout)
+	return runAdmin(ctx, args[1:], credentialStore{Queries: store.New(pool), db: pool}, stdout)
 }

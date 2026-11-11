@@ -208,8 +208,8 @@ func TestStore_OwnRowsOnly(t *testing.T) {
 	if count, err := q.RevokeOwnSession(ctx, store.RevokeOwnSessionParams{AccountID: owner, ID: session}); err != nil || count != 0 {
 		t.Fatalf("revoke session: count=%d err=%v", count, err)
 	}
-	if count, err := q.RevokeOwnToken(ctx, store.RevokeOwnTokenParams{AccountID: owner, ID: token.ID}); err != nil || count != 0 {
-		t.Fatalf("revoke token: count=%d err=%v", count, err)
+	if digest, err := q.RevokeOwnToken(ctx, store.RevokeOwnTokenParams{AccountID: owner, ID: token.ID}); !errors.Is(err, pgx.ErrNoRows) || digest != "" {
+		t.Fatalf("revoke token: hash returned=%t err=%v", digest != "", err)
 	}
 	if sessions, err := q.ListSessions(ctx, owner); err != nil || len(sessions) != 0 {
 		t.Fatalf("sessions=%v err=%v", sessions, err)
@@ -220,7 +220,7 @@ func TestStore_OwnRowsOnly(t *testing.T) {
 	if count, err := q.RevokeOwnSession(ctx, store.RevokeOwnSessionParams{AccountID: other, ID: session}); err != nil || count != 1 {
 		t.Fatalf("revoke own session: count=%d err=%v", count, err)
 	}
-	if count, err := q.RevokeOwnToken(ctx, store.RevokeOwnTokenParams{AccountID: other, ID: token.ID}); err != nil || count != 1 {
-		t.Fatalf("revoke own token: count=%d err=%v", count, err)
+	if digest, err := q.RevokeOwnToken(ctx, store.RevokeOwnTokenParams{AccountID: other, ID: token.ID}); err != nil || digest != token.TokenHash {
+		t.Fatalf("revoke own token: hash matches=%t err=%v", digest == token.TokenHash, err)
 	}
 }

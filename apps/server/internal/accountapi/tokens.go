@@ -92,6 +92,14 @@ func (h *Handler) createToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	row, err := h.cfg.Store.CreatePersonalToken(r.Context(), store.CreatePersonalTokenParams{TokenHash: hash, AccountID: p.AccountID, Name: name, ExpiresAt: h.cfg.Clock().Add(time.Duration(days) * 24 * time.Hour), AuthEpoch: a.AuthEpoch})
+	if errors.Is(err, credential.ErrUnauthorized) && r.Context().Err() == nil {
+		apierror.Write(w, 403, "account_blocked")
+		return
+	}
+	if errors.Is(err, credential.ErrTokenLimit) && r.Context().Err() == nil {
+		apierror.Write(w, 409, "token_limit")
+		return
+	}
 	if err != nil || r.Context().Err() != nil {
 		unavailable(w)
 		return
@@ -108,32 +116,18 @@ func (h *Handler) revokeToken(w http.ResponseWriter, r *http.Request) {
 		notFound(w)
 		return
 	}
-	rows, err := h.cfg.Store.ListTokens(r.Context(), p.AccountID)
+	digest, err := h.cfg.Store.RevokeOwnToken(r.Context(), store.RevokeOwnTokenParams{AccountID: p.AccountID, ID: id})
 	if err != nil || r.Context().Err() != nil {
-		unavailable(w)
-		return
-	}
-	var hash string
-	for _, row := range rows {
-		if row.ID == id {
-			hash = row.TokenHash
-			break
+		// A failed response can hide a committed revocation.
+		h.cfg.Verifier.EvictAccount(p.AccountID)
+		if r.Context().Err() != nil {
+			unavailable(w)
+		} else {
+			storeError(w, err)
 		}
-	}
-	if hash == "" {
-		notFound(w)
 		return
 	}
-	n, err := h.cfg.Store.RevokeOwnToken(r.Context(), store.RevokeOwnTokenParams{AccountID: p.AccountID, ID: id})
-	h.cfg.Verifier.Evict(hash)
-	if err != nil || r.Context().Err() != nil {
-		unavailable(w)
-		return
-	}
-	if n == 0 {
-		notFound(w)
-		return
-	}
+	h.cfg.Verifier.Evict(digest)
 	w.Header().Set("Cache-Control", "no-store")
 	w.WriteHeader(204)
 }

@@ -26,36 +26,15 @@ func Purge(ctx context.Context, s PurgeStore, now time.Time) (int64, error) {
 }
 func (h *Handler) deleteAccount(w http.ResponseWriter, r *http.Request) {
 	p, _ := websession.FromContext(r.Context())
-	sessions, err := h.cfg.Store.ListSessions(r.Context(), p.AccountID)
-	if err != nil || r.Context().Err() != nil {
-		unavailable(w)
-		return
-	}
-	tokens, err := h.cfg.Store.ListTokens(r.Context(), p.AccountID)
-	if err != nil || r.Context().Err() != nil {
-		unavailable(w)
-		return
-	}
-	_, err = h.cfg.Store.RequestDeletion(r.Context(), p.AccountID)
-	for _, token := range tokens {
-		h.cfg.Verifier.Evict(token.TokenHash)
-	}
-	failed := false
-	for _, session := range sessions {
-		if _, revokeErr := h.cfg.Sessions.RevokeOwnSession(r.Context(), p.AccountID, session.ID); revokeErr != nil {
-			failed = true
-		}
-	}
+	_, err := h.cfg.Store.RequestDeletion(r.Context(), p.AccountID)
+	h.cfg.Verifier.EvictAccount(p.AccountID)
+	h.cfg.Sessions.EvictAccount(p.AccountID)
 	if err != nil || r.Context().Err() != nil {
 		if err != nil {
 			storeError(w, err)
 		} else {
 			unavailable(w)
 		}
-		return
-	}
-	if failed {
-		unavailable(w)
 		return
 	}
 	w.Header().Set("Cache-Control", "no-store")

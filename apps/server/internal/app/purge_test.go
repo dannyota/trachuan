@@ -12,9 +12,9 @@ import (
 )
 
 type failingPurgeStore struct {
-	mu             sync.Mutex
-	login, account int
-	done           chan struct{}
+	mu                          sync.Mutex
+	login, account, credentials int
+	done                        chan struct{}
 }
 
 func (s *failingPurgeStore) DeleteExpiredLoginTransactions(context.Context) error {
@@ -28,6 +28,12 @@ func (s *failingPurgeStore) PurgeDeletedAccounts(context.Context, time.Time) (in
 	defer s.mu.Unlock()
 	s.account++
 	s.done <- struct{}{}
+	return 0, errors.New("private driver detail")
+}
+func (s *failingPurgeStore) PurgeEndedCredentials(context.Context) (int64, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.credentials++
 	return 0, errors.New("private driver detail")
 }
 func TestPurge_LogsRetriesAndStops(t *testing.T) {
@@ -45,13 +51,13 @@ func TestPurge_LogsRetriesAndStops(t *testing.T) {
 	cancel()
 	<-done
 	s.mu.Lock()
-	login, account := s.login, s.account
+	login, account, credentials := s.login, s.account, s.credentials
 	s.mu.Unlock()
-	if login != 2 || account != 2 {
+	if login != 2 || account != 2 || credentials != 2 {
 		t.Fatalf("purge calls login=%d account=%d", login, account)
 	}
 	out := logs.String()
-	if strings.Count(out, `"msg":"purge failed"`) != 4 || strings.Count(out, `"step":"login_transactions"`) != 2 || strings.Count(out, `"step":"deleted_accounts"`) != 2 || strings.Contains(out, "private driver detail") {
+	if strings.Count(out, `"msg":"purge failed"`) != 6 || strings.Count(out, `"step":"login_transactions"`) != 2 || strings.Count(out, `"step":"deleted_accounts"`) != 2 || strings.Count(out, `"step":"ended_credentials"`) != 2 || strings.Contains(out, "private driver detail") {
 		t.Fatal("unexpected purge events", out)
 	}
 }

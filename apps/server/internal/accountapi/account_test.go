@@ -56,15 +56,15 @@ func (s *fakeStore) CreatePersonalToken(_ context.Context, p store.CreatePersona
 	s.tokens = append(s.tokens, r)
 	return r, nil
 }
-func (s *fakeStore) RevokeOwnToken(_ context.Context, p store.RevokeOwnTokenParams) (int64, error) {
+func (s *fakeStore) RevokeOwnToken(_ context.Context, p store.RevokeOwnTokenParams) (string, error) {
 	for i := range s.tokens {
 		r := &s.tokens[i]
 		if r.ID == p.ID && r.AccountID == p.AccountID && r.RevokedAt == nil {
 			r.RevokedAt = &s.now
-			return 1, nil
+			return r.TokenHash, nil
 		}
 	}
-	return 0, nil
+	return "", pgx.ErrNoRows
 }
 func (s *fakeStore) RequestDeletion(_ context.Context, id int64) (store.RequestDeletionRow, error) {
 	if id != s.account.ID {
@@ -90,7 +90,7 @@ func (s *fakeStore) PurgeDeletedAccounts(_ context.Context, now time.Time) (int6
 	}
 	return 0, nil
 }
-func (s *fakeStore) CreateSession(context.Context, store.CreateSessionParams) (store.WebSession, error) {
+func (s *fakeStore) CreateSession(context.Context, store.CreateSessionParams) (store.CreateSessionRow, error) {
 	panic("unused")
 }
 func (s *fakeStore) GetSession(_ context.Context, hash string) (store.GetSessionRow, error) {

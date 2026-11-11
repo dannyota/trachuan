@@ -45,12 +45,14 @@ type Verifier struct {
 	// QueryTimeout can shorten the two-second auth database deadline.
 	QueryTimeout time.Duration
 
-	mu      sync.Mutex
-	entries map[string]*list.Element
-	oldest  list.List
-	touches map[string]time.Time
-	used    list.List
-	flights map[*lookupFlight]struct{}
+	mu                 sync.Mutex
+	entries            map[string]*list.Element
+	oldest             list.List
+	touches            map[string]time.Time
+	used               list.List
+	flights            map[*lookupFlight]struct{}
+	generation         uint64
+	accountGenerations map[int64]uint64
 }
 
 // Verify authenticates a raw personal token without the Bearer scheme.

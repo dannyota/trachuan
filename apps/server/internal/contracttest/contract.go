@@ -20,6 +20,7 @@ type media struct {
 	Schema map[string]any `yaml:"schema"`
 }
 type response struct {
+	Headers map[string]media `yaml:"headers"`
 	Content map[string]media `yaml:"content"`
 }
 type operation struct {

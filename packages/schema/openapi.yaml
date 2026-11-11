@@ -22,6 +22,16 @@ paths:
             text/html:
               schema:
                 type: string
+        '429':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          headers:
+            Retry-After:
+              schema:
+                type: integer
         '503':
           description: Request failed
           content:
@@ -48,6 +58,16 @@ paths:
             text/html:
               schema:
                 type: string
+        '429':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          headers:
+            Retry-After:
+              schema:
+                type: integer
         '503':
           description: Request failed
           content:
@@ -86,6 +106,16 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '429':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          headers:
+            Retry-After:
+              schema:
+                type: integer
         '503':
           description: Request failed
           content:
@@ -325,6 +355,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CreatedToken'
+        '409':
+          description: Token limit reached
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '401':
           description: Request failed
           content:
@@ -733,6 +769,7 @@ components:
               - release_expired
               - body_too_large
               - unsupported_media_type
+              - token_limit
               - rate_limited
               - busy
               - unavailable

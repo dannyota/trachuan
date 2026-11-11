@@ -97,6 +97,26 @@ func (q *Queries) GetAccount(ctx context.Context, id int64) (Account, error) {
 	return i, err
 }
 
+const lockCredentialAccount = `-- name: LockCredentialAccount :one
+SELECT id, google_sub, email, blocked_at, created_at, last_login_at, delete_requested_at, auth_epoch FROM account WHERE id = $1 FOR UPDATE
+`
+
+func (q *Queries) LockCredentialAccount(ctx context.Context, id int64) (Account, error) {
+	row := q.db.QueryRow(ctx, lockCredentialAccount, id)
+	var i Account
+	err := row.Scan(
+		&i.ID,
+		&i.GoogleSub,
+		&i.Email,
+		&i.BlockedAt,
+		&i.CreatedAt,
+		&i.LastLoginAt,
+		&i.DeleteRequestedAt,
+		&i.AuthEpoch,
+	)
+	return i, err
+}
+
 const purgeDeletedAccounts = `-- name: PurgeDeletedAccounts :execrows
 DELETE FROM account WHERE delete_requested_at < $1::timestamptz - interval '7 days'
 `

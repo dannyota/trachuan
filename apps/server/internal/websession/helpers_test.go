@@ -67,16 +67,16 @@ func (s *fakeStore) GetSession(ctx context.Context, hash string) (store.GetSessi
 	return row, nil
 }
 
-func (s *fakeStore) CreateSession(ctx context.Context, p store.CreateSessionParams) (store.WebSession, error) {
+func (s *fakeStore) CreateSession(ctx context.Context, p store.CreateSessionParams) (store.CreateSessionRow, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if err := s.check(ctx, "create"); err != nil {
-		return store.WebSession{}, err
+		return store.CreateSessionRow{}, err
 	}
 	s.writes++
 	row := store.GetSessionRow{ID: int64(len(s.rows) + 1), TokenHash: p.TokenHash, AccountID: p.AccountID, CsrfSecret: p.CsrfSecret, SessionAuthEpoch: p.AuthEpoch, AccountAuthEpoch: p.AuthEpoch, CreatedAt: s.now, LastSeenAt: s.now, ExpiresAt: p.ExpiresAt}
 	s.rows[p.TokenHash] = row
-	return store.WebSession{ID: row.ID, TokenHash: p.TokenHash, CreatedAt: s.now, LastSeenAt: s.now, ExpiresAt: p.ExpiresAt}, nil
+	return store.CreateSessionRow{ID: row.ID, TokenHash: p.TokenHash, CreatedAt: s.now, LastSeenAt: s.now, ExpiresAt: p.ExpiresAt}, nil
 }
 
 func (s *fakeStore) TouchSession(ctx context.Context, hash string) (int64, error) {
