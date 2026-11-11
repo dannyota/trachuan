@@ -7,8 +7,9 @@ Decision: [ADR 0005](../adr/0005-google-login-and-embedded-oauth.md).
 Google OpenID Connect handled by the Go server, scopes `openid email`, consent
 screen in Production mode. Identity is `google_sub`; the email is kept only in
 its current value. First login creates the account. Session cookie `HttpOnly`,
-`Secure`, `SameSite=Lax`, stored hashed, rotated on login, 30-day sliding
-expiry. Logout revokes the server-side session.
+`Secure`, `SameSite=Lax`, stored hashed, rotated on login, 30-day sliding expiry
+and at most 90 days after creation ([web API](web-api.md#sessions)). Logout
+revokes the server-side session.
 
 ## MCP authorization
 

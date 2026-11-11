@@ -17,25 +17,36 @@ authorization code flow with PKCE (S256), scopes `openid email`, issuer
 `golang.org/x/oauth2`. The server creates a login transaction: a random handle,
 `state`, `nonce` and PKCE verifier (32 random bytes each, base64url), the
 validated `next` path and the redirect URI, stored in `login_transaction` keyed
-by the SHA-256 of the handle, valid for 10 minutes. The browser gets only the
-handle, in cookie `__Host-login` (`Path=/`, `Max-Age=600`, `Secure`, `HttpOnly`,
-`SameSite=Lax`), and a 302 to Google. The redirect URI is `SERVER_PUBLIC_URL`
-plus the callback path; it is never taken from the request.
+by the SHA-256 of the handle, valid for 10 minutes. The server deletes expired
+and claimed transactions every hour. The browser gets only the handle, in cookie
+`__Host-login` (`Path=/`, `Max-Age=600`, `Secure`, `HttpOnly`, `SameSite=Lax`),
+and a 302 to Google. The redirect URI is `SERVER_PUBLIC_URL` plus the callback
+path; it is never taken from the request.
 
 `GET /api/v1/auth/google/callback` claims the transaction for the cookie's
 handle atomically and once, then requires: `state` equal to the stored value;
 the code exchanged with the stored verifier; an ID token verified for signature,
 issuer, audience (the client id) and expiry; `nonce` equal to the stored value;
-`email_verified` true. Any failure clears the cookie and redirects to
-`/login?error=<code>` with a fixed code (`login_failed`, `login_expired`,
-`account_blocked`); provider error text is never shown or logged.
+`email_verified` true. A rejected login (bad state, nonce, token or code, an
+unverified email, an expired or already claimed transaction, a blocked account)
+clears the cookie and redirects to `/login?error=<code>` with a fixed code
+(`login_failed`, `login_expired`, `account_blocked`). A failure of the auth
+database or of Google's endpoints at any step (claiming the transaction,
+upserting the account, revoking a presented session, creating the session) is
+503 `unavailable` and issues no session; the transaction stays claimed, so the
+user starts again. Provider error text is never shown or logged.
 
 The account is found by `google_sub` only, never by email. The first login
 creates it; every login stores the current email and `last_login_at`. A blocked
-account, or one whose deletion was requested, cannot log in. `next` must be a
-path that starts with one `/`, has no `//` prefix, backslash or control
-character and is at most 512 bytes; otherwise it becomes `/`. The `hd` claim is
-not checked: any Google account may sign in.
+account, or one whose deletion was requested, cannot log in.
+
+`next` is validated twice, on the raw value and after decoding percent-escapes
+once (a malformed escape rejects it). Both forms must start with exactly one
+`/`, must not start with `//` or `/\`, and must contain no backslash, no control
+character (U+0000 to U+001F, U+007F) and no `.` or `..` path segment; the raw
+value is at most 512 bytes. A rejected `next` becomes `/`. The redirect uses the
+validated raw value. The `hd` claim is not checked: any Google account may sign
+in.
 
 ## Sessions
 
@@ -51,8 +62,13 @@ Each request on `/api/v1` with a session verifies: the hash exists, `revoked_at`
 is null, `expires_at` is in the future, the account is not blocked and the
 session's `auth_epoch` equals the account's. The lookup uses the same 10-second
 cache as bearer credentials ([auth](auth.md)), never beyond `expires_at`; a
-failure of the auth database is 503. A session cookie never authorizes `/mcp`
-and a bearer token never authorizes `/api/v1`.
+failure of the auth database is 503. Every revocation made by the server process
+(logout, revoking a session or personal token on the account page, a deletion
+request) drops the cache entries of the credentials it revokes before it
+responds, so they stop working at once, including a lookup that was in flight;
+revocations made by another process, such as the admin command, take effect
+within the 10-second window. A session cookie never authorizes `/mcp` and a
+bearer token never authorizes `/api/v1`.
 
 `POST /api/v1/auth/logout` revokes the session, clears the cookie and sends
 `Clear-Site-Data: "cookies"`. Sessions are listed and revoked on the account
@@ -92,18 +108,20 @@ Account routes act only on rows whose `account_id` is the caller's; an id that
 belongs to another account is 404, the same as an unknown id. Personal tokens
 created here follow [auth](auth.md): default 90 days, at most one year.
 
-`GET /api/v1/documents/{key}?from=<anchor>&part=<n>&release=<rel>` returns the
-document entry with its status, its outline and the provisions in preorder from
-`from` (default: the first), each with its own text and the leads of ancestors
-outside the page, until the next provision would pass 2 MB of text; the response
-stops at a provision boundary and carries `next_from`. A provision longer than 2
-MB is returned in parts of 1 MB cut by the [read](mcp-results.md#read) cutting
-rule, with `part`, `parts` and the `part` to request next. Boundaries depend
-only on the release, the document and `from`.
+`GET /api/v1/documents/{key}?release=<rel>&next=<token>` is the reader's
+whole-document read: the `read` item `{handle: key, from: first, to: last}` of
+[search results](mcp-results.md#read) with the web caps of
+[budgets](budgets.md#request-limits): units (ancestor leads, provisions) and
+parts by the same cutting rule, a page cap of 2 MB of serialized units and a
+part size of 1 MB, so a long lead or provision is split into parts and every
+page makes progress. The first page also carries the document entry with its
+status and the outline (outline entries are units of the same page, split like
+any unit). The response is the `read` item result object; continuation is its
+`next` token, passed back as `next`.
 
-Search, read, documents and status take the same inputs and return the same
-objects as the MCP tools, including `release` pinning and `release_expired`;
-only the transport differs.
+Search, read and status take the same inputs and return the same objects as the
+MCP tools, and documents returns `read` item results with the web caps; all four
+keep `release` pinning and `release_expired`; only the transport differs.
 
 ## Errors and limits
 
