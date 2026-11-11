@@ -42,10 +42,12 @@ the backlog carries them with their counts.
 Exactly one source supplies a document's text, chosen in this order:
 
 1. `source_tree`: the source's tree, as today, unless it is a heading-only tree:
-   it has at least one article, no article has a child, and every article's text
-   is only its heading line. A heading-only tree is used only when no later
-   source is usable; the document then keeps its provisions and gets the gap
-   `tree_headings_only`.
+   it has at least one article, no article has a child, and every node's text is
+   only its own label and heading (an article's heading line, a structure node's
+   label and title), so no node anywhere holds body text. A heading-only tree is
+   used only when no later source is usable, and a later source that exceeds a
+   parsing limit is not usable; the document then keeps its provisions and gets
+   the gap `tree_headings_only`.
 2. `html_transcription`: `<id>_content.html` of the bundle when its text has at
    least 300 characters. `_content_origin`, `_body_content` and dated backups
    are never read: the inventory shows they add no document, and where the
@@ -87,16 +89,30 @@ article, structure heading or scope close, so it is the whole article. A
 structure provision (`phan`, `chuong`, `muc`) holds only its label and title
 lines. Every paragraph of a scope therefore sits in exactly one provision.
 
-Grammar, applied to paragraph starts only (a paragraph that opens with a
-quotation mark is quoted text, never a heading):
+Quoted text. A paragraph that opens with an opening quotation mark starts quoted
+text, which runs through the first paragraph that ends with a closing quotation
+mark (a following `.`, `;` or `,` allowed). No heading and no scope boundary is
+recognized inside quoted text, so an amended article quoted over several
+paragraphs stays in the article that quotes it. Quoted text still open at the
+end of the document fails the check of the scope it started in.
 
-- `Phần <roman|word>`, `Chương <roman|number>`, `Mục <number>`: structure
-  headings; the title is the rest of the line or the next line in capitals.
+Grammar, applied to paragraph starts outside quoted text:
+
+- `Phần <roman|ordinal word>` (`thứ nhất`, `thứ hai`, ...),
+  `Chương <roman|number>`, `Mục <number>`: structure headings, the number
+  followed by the end of the line or by `.`, `:` or a dash; the title is the
+  rest of the line or the next line in capitals. Any other word after `Chương`,
+  `Phần` or `Mục` (`Chương này quy định ...`) is running text.
 - `Điều <n>.` or `Điều <n><letter>.` (an inserted article such as `Điều 3a.`),
   the period directly after the number, then a title starting with a capital
   letter or the end of the line: an article. A line such as
   `Điều 6 của Luật ...` is running text wrapped by the source or the OCR, never
   a heading.
+- A heading candidate is a paragraph that starts with `Điều <n>` or
+  `Điều <n><letter>` followed by the end of the line, `.`, `:`, a dash or a
+  capital letter. A candidate that is not a heading by the rule above
+  (`Điều 2: ...`, `Điều 2 Phạm vi`) fails the check of its scope: it may be a
+  heading the grammar missed.
 
 Parsed and OCR text asserts articles only. Clauses and points stay inside their
 article's text and get no provision, anchor or citation of their own in this
@@ -108,33 +124,41 @@ documents that have both a source tree and a transcription).
 
 Scopes. The main scope starts at the first article and closes at the first of: a
 recipient or signature block (`Nơi nhận:`, `TM.`, `KT.`, a signing title alone
-on a line, `XÁC THỰC VĂN BẢN HỢP NHẤT`), an appendix or form title (`PHỤ LỤC`,
-`Phụ lục <n>`, `Mẫu số`), or an instrument title: a line wholly in capitals that
-begins with `QUY CHẾ`, `QUY ĐỊNH` or `ĐIỀU LỆ` and is not the title line of the
-structure heading just before it (`Chương I` then `QUY ĐỊNH CHUNG` is a chapter
-title). Everything after it belongs to later scopes. An instrument title
-followed, with no article in between, by an article numbered 1 opens an
-instrument scope: a regulation "ban hành kèm theo", with anchors
-`kem-theo-<k>/dieu-<n>` and the label "Điều n (văn bản kèm theo k)". Any other
-later scope (appendices, forms, footnotes, a restart at `Điều 1` without an
-instrument title) is a tail scope and never asserts articles.
+on a line, `XÁC THỰC VĂN BẢN HỢP NHẤT`), an appendix or form title (a line
+wholly in capitals that begins with `PHỤ LỤC` or `MẪU SỐ`, or `Phụ lục <number>`
+or `Mẫu số <number>` followed by the end of the line or by a title that does not
+end in sentence punctuation; `Phụ lục này là ...` is running text), or an
+instrument title: a line wholly in capitals that begins with `QUY CHẾ`,
+`QUY ĐỊNH` or `ĐIỀU LỆ` and is not the title line of the structure heading just
+before it (`Chương I` then `QUY ĐỊNH CHUNG` is a chapter title). Everything
+after it belongs to later scopes. An instrument title followed, with no article
+in between, by an article numbered 1 opens an instrument scope: a regulation
+"ban hành kèm theo", with anchors `kem-theo-<k>/dieu-<n>` and the label "Điều n
+(văn bản kèm theo k)"; its structure headings carry the same prefix
+(`kem-theo-<k>/chuong-i`). Structure headings before the first article belong to
+the main scope and are ancestors of its articles. Any other later scope
+(appendices, forms, footnotes, a restart at `Điều 1` without an instrument
+title) is a tail scope and never asserts articles.
 
 Fail closed. The article-level reading is accepted for the main scope or an
 instrument scope only when its article numbers run 1, 2, 3, ... where an
 inserted `n<letter>` may follow `n`, with no gap, repeat or step back before the
-scope closes. If the check fails, that scope asserts no article: its paragraphs
-are grouped into neutral provisions of kind `other`, anchor `doan-<n>` numbered
-across the whole document, so anchors stay unique when several scopes are
-neutral (a new one at each line that looks like a heading, else every 20
-paragraphs), and the document gets the gap `structure_uncertain` with the failed
-check. Tail scopes use the same neutral provisions without the gap. Structure
-headings (`chuong`, `muc`) are kept in either case. Reason: a missed heading
-attaches text to the wrong article silently; a strict sequence check catches it,
-and a neutral anchor is a true citation where "Điều 5" might not be. Measured on
-recorded texts: decree 142/2026/NĐ-CP reads as articles 1 to 46 with wrapped
-references such as `Điều 6 của Luật` correctly ignored and its sample forms
-(which restart at `Điều 1`) in tail scopes; a consolidated text whose footnotes
-repeat `Điều 4` before its appendix fails the check and stays neutral.
+scope closes, no failed heading candidate, no quoted text left open, and no
+structure anchor used twice. If the check fails, that scope asserts no article:
+its paragraphs are grouped into neutral provisions of kind `other`, anchor
+`doan-<n>` numbered across the whole document, so anchors stay unique when
+several scopes are neutral (a new one at each line that looks like a heading,
+else every 20 paragraphs), and the document gets the gap `structure_uncertain`
+with the failed check. Tail scopes use the same neutral provisions without the
+gap. Structure headings are provisions only in an accepted scope; in a neutral
+or tail scope a structure heading starts a new neutral provision, so every
+anchor in a document is unique. Reason: a missed heading attaches text to the
+wrong article silently; a strict sequence check catches it, and a neutral anchor
+is a true citation where "Điều 5" might not be. Measured on recorded texts:
+decree 142/2026/NĐ-CP reads as articles 1 to 46 with wrapped references such as
+`Điều 6 của Luật` correctly ignored and its sample forms (which restart at
+`Điều 1`) in tail scopes; a consolidated text whose footnotes repeat `Điều 4`
+before its appendix fails the check and stays neutral.
 
 A document with no article at all uses neutral provisions too, grouped by its
 numbered outline (`I.`, `1.`) when one exists. Text under 300 characters is
@@ -162,7 +186,8 @@ numbered outline (`I.`, `1.`) when one exists. Text under 300 characters is
   tables outside any provision do not count), `image_content`, `ocr_flagged` or
   `needs_ocr` applies; build derives `source_tree` for artifacts without
   `text.json`. Search and read results return both on the document entry, with
-  each provision's locator. This is corpus schema version 4.
+  each provision's locator (hits, read units, ranges and continued parts alike).
+  This is corpus schema version 4.
 
 ## Inputs and reuse
 
@@ -180,11 +205,12 @@ the extract recipe.
 
 Rules A, B and C of [validity corrections](validity-status.md) read effect
 articles only from documents whose text source is `source_tree`. For every other
-document the effect article is review evidence: it appears in
-`validity-review.json` with a proposed manual entry and changes nothing. Reason:
-nothing proves a transcription or an OCR reading is complete, and a partial text
-can show a commencement sentence and hide its exception; a reviewed manual entry
-is the safe way to use it.
+document the effect article (selected by its title without the `Điều n.` label)
+is review evidence: it appears in `validity-review.json` with a proposed manual
+entry and changes nothing. Consolidated texts are skipped here as they are for
+source trees. Reason: nothing proves a transcription or an OCR reading is
+complete, and a partial text can show a commencement sentence and hide its
+exception; a reviewed manual entry is the safe way to use it.
 
 ## Limits and safety
 
