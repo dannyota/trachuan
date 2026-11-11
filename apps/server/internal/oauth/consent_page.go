@@ -48,15 +48,15 @@ type consentPageData struct {
 
 func (p *consentPages) consent(w http.ResponseWriter, r *http.Request, client Client, row store.OauthRequest, handle, token string) {
 	en := r.URL.Query().Get("lang") == "en"
-	data := consentPageData{Lang: "vi", Title: "Cho phép truy cập", Name: client.Name, Token: token, Action: "/oauth/consent/" + handle, Toggle: "?lang=en", ToggleLabel: "English", RedirectLabel: "Máy chủ nhận quyền", ScopeLabel: "Quyền truy cập", Prompt: "Cho phép ứng dụng truy cập tài khoản của bạn?", Approve: "Cho phép", Deny: "Từ chối"}
+	data := consentPageData{Lang: "vi", Title: "Cho phép truy cập · Tra Chuẩn", Name: client.Name, Token: token, Action: "/oauth/consent/" + handle, Toggle: "?lang=en", ToggleLabel: "English", RedirectLabel: "Máy chủ nhận quyền", ScopeLabel: "Quyền truy cập", Prompt: "Cho phép ứng dụng truy cập tài khoản Tra Chuẩn của bạn?", Approve: "Cho phép", Deny: "Từ chối"}
 	if en {
 		data.Lang = "en"
-		data.Title = "Authorize access"
+		data.Title = "Authorize access · Tra Chuẩn"
 		data.Toggle = "?lang=vi"
 		data.ToggleLabel = "Tiếng Việt"
 		data.RedirectLabel = "Redirect host"
 		data.ScopeLabel = "Scope"
-		data.Prompt = "Allow this application to access your account?"
+		data.Prompt = "Allow this app to access your Tra Chuẩn account?"
 		data.Approve = "Allow"
 		data.Deny = "Deny"
 		data.Action += "?lang=en"
@@ -85,10 +85,10 @@ func (p *consentPages) consent(w http.ResponseWriter, r *http.Request, client Cl
 }
 func (p *consentPages) failure(w http.ResponseWriter, r *http.Request, status int, code, redirect, state string) {
 	en := r.URL.Query().Get("lang") == "en"
-	data := consentPageData{Lang: "vi", Title: "Không thể cấp quyền truy cập", Error: code, Message: "Yêu cầu không hợp lệ hoặc đã hết hạn. Hãy thử kết nối lại từ ứng dụng.", Return: "Quay lại ứng dụng", Toggle: "?lang=en", ToggleLabel: "English"}
+	data := consentPageData{Lang: "vi", Title: "Không thể cấp quyền truy cập · Tra Chuẩn", Error: code, Message: "Yêu cầu không hợp lệ hoặc đã hết hạn. Hãy thử kết nối lại từ ứng dụng.", Return: "Quay lại ứng dụng", Toggle: "?lang=en", ToggleLabel: "English"}
 	if en {
 		data.Lang = "en"
-		data.Title = "Cannot authorize access"
+		data.Title = "Cannot authorize access · Tra Chuẩn"
 		data.Message = "The request is invalid or expired. Connect again from the application."
 		data.Return = "Return to application"
 		data.Toggle = "?lang=vi"

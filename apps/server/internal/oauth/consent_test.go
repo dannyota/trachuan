@@ -400,3 +400,25 @@ func TestConsent_BrowserOriginTracksReferrerPolicy(t *testing.T) {
 		t.Fatalf("browser form with %q policy returned %d", page.Header().Get("Referrer-Policy"), w.Code)
 	}
 }
+
+func TestConsent_ProductDisplayName(t *testing.T) {
+	for _, tc := range []struct{ lang, title, prompt, failure string }{
+		{"vi", "Cho phép truy cập · Tra Chuẩn", "Cho phép ứng dụng truy cập tài khoản Tra Chuẩn của bạn?", "Không thể cấp quyền truy cập · Tra Chuẩn"},
+		{"en", "Authorize access · Tra Chuẩn", "Allow this app to access your Tra Chuẩn account?", "Cannot authorize access · Tra Chuẩn"},
+	} {
+		t.Run(tc.lang, func(t *testing.T) {
+			d := newConsentDB()
+			path, cookie := pendingConsent(t, d)
+			w := consentResponse(d, consentRequest(path+"?lang="+tc.lang, "GET", cookie, true, nil))
+			for _, want := range []string{"<title>" + tc.title + "</title>", tc.prompt} {
+				if !strings.Contains(w.Body.String(), want) {
+					t.Errorf("missing %q", want)
+				}
+			}
+			w = consentResponse(d, consentRequest(path+"?lang="+tc.lang, "POST", cookie, true, nil))
+			if !strings.Contains(w.Body.String(), "<title>"+tc.failure+"</title>") {
+				t.Errorf("missing failure title %q", tc.failure)
+			}
+		})
+	}
+}

@@ -66,7 +66,7 @@ func New(cfg Config) http.Handler {
 	if cfg.Clock == nil {
 		cfg.Clock = time.Now
 	}
-	s := mcp.NewServer(&mcp.Implementation{Name: "trachuan", Version: "1"}, &mcp.ServerOptions{
+	s := mcp.NewServer(&mcp.Implementation{Name: "trachuan", Title: "Tra Chuẩn", Version: "1"}, &mcp.ServerOptions{
 		Capabilities: &mcp.ServerCapabilities{Tools: &mcp.ToolCapabilities{}},
 	})
 	registerTools(s, cfg)

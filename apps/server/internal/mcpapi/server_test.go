@@ -381,3 +381,10 @@ func TestMCP_MetadataTools(t *testing.T) {
 		t.Fatal("metadata leases leaked")
 	}
 }
+
+func TestServer_ProductDisplayName(t *testing.T) {
+	info := newHarness(t, nil).session.InitializeResult().ServerInfo
+	if info.Name != "trachuan" || info.Title != "Tra Chuẩn" {
+		t.Fatalf("server info: name %q title %q", info.Name, info.Title)
+	}
+}

@@ -6,6 +6,7 @@ const cache = { maxAge: 600, swr: false, varies: ['x-trachuan-language'] }
 export default defineNuxtConfig({
   compatibilityDate: '2026-11-11',
   modules: ['@pinia/nuxt', '@nuxt/eslint'],
+  app: { head: { title: 'Tra Chuẩn' } },
   css: ['~/assets/main.css'],
   features: { inlineStyles: false },
   experimental: { payloadExtraction: false, entryImportMap: false },
