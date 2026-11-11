@@ -62,6 +62,18 @@ func TestRecover_CheckpointOwnsAcquisitionHistory(t *testing.T) {
 			if n := f.scalar(`SELECT count(*) FROM run_acquisition`); n != tc.acquisitions {
 				t.Fatalf("restored acquisitions=%d, want %d", n, tc.acquisitions)
 			}
+			wantBaselines := 0
+			if tc.name == "after" {
+				wantBaselines = 1
+			}
+			if n := f.scalar(`SELECT count(*) FROM fetch_baseline`); n != wantBaselines {
+				t.Fatalf("restored baselines=%d, want %d", n, wantBaselines)
+			}
+			if wantBaselines == 1 {
+				if n := f.scalar(`SELECT count(*) FROM fetch_baseline b JOIN run_item i ON i.run_id=b.run_id AND i.stage='fetch' AND i.item_key=b.item_key AND i.generation=b.generation AND i.attempt=b.attempt AND i.artifact_id=b.artifact_id JOIN artifact a ON a.id=b.artifact_id WHERE b.document_key='vn:vbpl:1' AND b.fetch_recipe_hash=i.recipe_hash AND a.path<>'' AND a.sha256<>''`); n != 1 {
+					t.Fatal("restored baseline lost its producing commit or artifact")
+				}
+			}
 			requests := f.count("/doc/1")
 			if e = run.Recover(ctx, f.deps(), "vn", f.run.Rel, false); e != nil {
 				t.Fatal(e)
