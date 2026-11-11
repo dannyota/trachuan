@@ -61,6 +61,14 @@ const renderFailed renderError = "render_failed"
 
 // Render removes every page before allocating the next and always removes scratch.
 func (p PopplerRenderer) Render(ctx context.Context, pdf []byte, allowance int) (result Rendered, renderErr error) {
+	return p.RenderDPI(ctx, pdf, allowance, 150)
+}
+
+// RenderDPI uses the contained renderer at the requested resolution and raster cap.
+func (p PopplerRenderer) RenderDPI(ctx context.Context, pdf []byte, allowance, dpi int) (result Rendered, renderErr error) {
+	if dpi < 1 || dpi > 200 {
+		return result, renderFailed
+	}
 	result.Stats.ExitCode = -1
 	if err := p.Preflight(ctx); err != nil {
 		return result, err
@@ -128,7 +136,7 @@ func (p PopplerRenderer) Render(ctx context.Context, pdf []byte, allowance int) 
 	}
 	total := 0
 	for i, size := range sizes {
-		if err = run(p.tools.raster, rasterArgs(i+1, size), io.Discard); err != nil {
+		if err = run(p.tools.raster, rasterArgsDPI(i+1, size, dpi), io.Discard); err != nil {
 			return result, err
 		}
 		page, readErr := readRenderedPage(filepath.Join(dir, "page.png"))
