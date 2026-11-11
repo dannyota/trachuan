@@ -16,6 +16,7 @@ import (
 	"danny.vn/trachuan/apps/server/internal/limits"
 	"danny.vn/trachuan/apps/server/internal/mcpapi"
 	"danny.vn/trachuan/apps/server/internal/migrate"
+	"danny.vn/trachuan/apps/server/internal/oauth"
 	"danny.vn/trachuan/apps/server/internal/release"
 	"danny.vn/trachuan/apps/server/internal/store"
 	"danny.vn/trachuan/apps/server/internal/weblogin"
@@ -120,7 +121,7 @@ func serve(ctx context.Context, cfg config, pool *pgxpool.Pool, queries *store.Q
 		resolver.Close()
 		return errors.New("google provider discovery failed")
 	}
-	mux := newWebMux(webDeps{store: bounded, sessions: sessions, login: login, verifier: verifier, tools: tools, loginLimit: newLoginLimiter(clock, cfg.trustedProxies)})
+	mux := newWebMux(webDeps{store: bounded, sessions: sessions, login: login, verifier: verifier, tools: tools, loginLimit: newLoginLimiter(clock, cfg.trustedProxies), oauthDB: pool, oauthClients: cfg.oauthClients, publicURL: cfg.publicURL})
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) })
 	mux.Handle("GET /readyz", readiness(ctx, func(ctx context.Context) error {
 		return readyCheck(ctx, pool.Ping, func(ctx context.Context) error {
@@ -135,7 +136,9 @@ func serve(ctx context.Context, cfg config, pool *pgxpool.Pool, queries *store.Q
 	purgeCtx, cancel := context.WithCancel(ctx)
 	done := make(chan struct{})
 	go func() { defer close(done); purgeLoop(purgeCtx, queries, clock, tools.Logger) }()
-	defer func() { cancel(); <-done }()
+	retentionDone := make(chan struct{})
+	go func() { defer close(retentionDone); oauth.RunRetention(purgeCtx, queries, tools.Logger) }()
+	defer func() { cancel(); <-done; <-retentionDone }()
 	return runHTTP(ctx, server, resolver.Close)
 }
 

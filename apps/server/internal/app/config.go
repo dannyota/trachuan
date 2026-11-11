@@ -7,11 +7,14 @@ import (
 	"net/url"
 	"os"
 	"strings"
+
+	"danny.vn/trachuan/apps/server/internal/oauth"
 )
 
 type config struct {
 	listen, authURL, corpusURL, embedderURL, audience, publicURL, googleID, googleSecret string
 	trustedProxies                                                                       []netip.Prefix
+	oauthClients                                                                         []oauth.Client
 }
 
 func loadConfig() (config, error) {
@@ -22,12 +25,17 @@ func loadConfig() (config, error) {
 	if c.embedderURL == "" {
 		c.embedderURL = "http://127.0.0.1:8091"
 	}
+	var err error
 	audience, ok := publicAudience(os.Getenv("SERVER_PUBLIC_URL"))
 	if c.authURL == "" || !validCorpusURL(c.corpusURL) || !ok {
 		return config{}, errors.New("invalid or missing server configuration")
 	}
 	c.audience = audience
-	c.publicURL = os.Getenv("SERVER_PUBLIC_URL")
+	c.publicURL = strings.TrimSuffix(os.Getenv("SERVER_PUBLIC_URL"), "/")
+	c.oauthClients, err = oauth.LoadPreregistered(os.Getenv("SERVER_OAUTH_CLIENTS"))
+	if err != nil {
+		return config{}, errors.New("invalid preregistered OAuth clients")
+	}
 	c.googleID = os.Getenv("GOOGLE_CLIENT_ID")
 	c.googleSecret = os.Getenv("GOOGLE_CLIENT_SECRET")
 	raw := strings.TrimSpace(os.Getenv("SERVER_TRUSTED_PROXIES"))

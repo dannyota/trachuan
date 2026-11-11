@@ -33,6 +33,8 @@ localhost or a loopback address. Its path must be empty or `/`, with no query or
 fragment. `serve` requires both Google variables and `SERVER_PUBLIC_URL`;
 `migrate` and `admin` do not. `SERVER_TRUSTED_PROXIES` is an optional
 comma-separated list of proxy CIDRs; it defaults to empty.
+`SERVER_OAUTH_CLIENTS` optionally names a JSON file of pre-registered clients;
+when absent, no clients are pre-registered.
 
 Apply auth migrations and select the built database. Replace the database name
 with the actual local release name before executing the SQL.
@@ -76,3 +78,21 @@ caddy reverse-proxy --from localhost:8443 --to 127.0.0.1:8080
 Trust Caddy's local CA when prompted, register
 `https://localhost:8443/api/v1/auth/google/callback` with the Google client, set
 `SERVER_PUBLIC_URL=https://localhost:8443`, and restart the server.
+
+## Connect Claude Code
+
+Add the local server using the
+[Claude Code MCP command](https://code.claude.com/docs/en/mcp):
+
+```sh
+claude mcp add --transport http trachuan http://localhost:8080/mcp
+```
+
+In Claude Code, open `/mcp`, select trachuan and follow the browser login. Sign
+in with Google and approve the consent page. The local acceptance run must
+confirm the connection and tool calls.
+
+To revoke access, use the signed-in account API: `GET /api/v1/me/grants` lists
+clients and `DELETE /api/v1/me/grants/{id}` revokes one. Send the session
+cookie, matching `Origin` and CSRF token with the DELETE request. Removing the
+server from Claude Code alone does not revoke the grant.
