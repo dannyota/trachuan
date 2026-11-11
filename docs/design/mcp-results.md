@@ -201,5 +201,5 @@ Per model it records expected provisions cited under the product matcher, tool
 calls, input tokens summed over every model request in the task as the provider
 reports them, and tool-result size separately. Compact stays the default only
 if, for each model, mean cited expected provisions do not fall and mean summed
-input tokens are lower than full. Sealed cases are never used, and no question
-text is stored outside the evaluation files.
+input tokens are lower than full. No question text is stored outside the
+evaluation files.

@@ -17,8 +17,8 @@ The shared Go engine implements [retrieval recipe 1](retrieval-recipe.md): dense
 cosine and BM25, weighted reciprocal rank fusion, provision grouping, document
 diversity and explicit abstention. [Budgets](budgets.md#retrieval) owns
 parameters; [evaluation](evaluation.md) owns calibration and measurement. The
-first recipe is a baseline, with a provisional old-product threshold; new
-development and sealed cohorts precede tuning or superiority claims.
+first recipe is a baseline, with a provisional old-product threshold; the
+development cohort precedes recipe changes under ADR 0010 item 4.
 
 ## Validity
 
