@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"danny.vn/trachuan/apps/server/internal/store"
 	"github.com/jackc/pgx/v5"
@@ -83,6 +84,15 @@ func (s QueryStore) CountAccountReports(ctx context.Context, p CountAccountRepor
 		return AccountCounts{}, fmt.Errorf("count account reports: %w", err)
 	}
 	return AccountCounts{Daily: row.Daily, Open: row.Open, Retained: row.Retained}, nil
+}
+
+// OldestAccountReport returns the earliest report inside the rolling window.
+func (s QueryStore) OldestAccountReport(ctx context.Context, p CountAccountReportsParams) (time.Time, error) {
+	created, err := s.Queries.OldestAccountReport(ctx, store.OldestAccountReportParams{AccountID: p.AccountID, Since: p.Since})
+	if err != nil {
+		return time.Time{}, fmt.Errorf("find oldest account report: %w", err)
+	}
+	return created, nil
 }
 
 // CountRetainedReports includes both report rows and export snapshot rows.

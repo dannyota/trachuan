@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"time"
 	"unicode/utf8"
@@ -30,6 +31,27 @@ const (
 	// ErrUnauthenticated matches the bearer check for blocked accounts.
 	ErrUnauthenticated Error = "unauthenticated"
 )
+
+// RateLimitError carries the retry delay for a report admission cap.
+type RateLimitError struct{ RetryAfter time.Duration }
+
+// Error returns the fixed public rate limit message.
+func (e RateLimitError) Error() string { return ErrRateLimited.Error() }
+
+// Unwrap identifies the report admission error as rate limited.
+func (e RateLimitError) Unwrap() error { return ErrRateLimited }
+
+// RetryDelay returns the retry delay for a rate-limited admission error.
+func RetryDelay(err error) (time.Duration, bool) {
+	if !errors.Is(err, ErrRateLimited) {
+		return 0, false
+	}
+	var capErr RateLimitError
+	if errors.As(err, &capErr) {
+		return capErr.RetryAfter, true
+	}
+	return time.Hour, true
+}
 
 // Input accepts only the structured report fields.
 type Input struct {
@@ -216,6 +238,7 @@ type Store interface {
 	LockAccountForReport(context.Context, LockAccountForReportParams) (AccountState, error)
 	LockReports(context.Context) error
 	CountAccountReports(context.Context, CountAccountReportsParams) (AccountCounts, error)
+	OldestAccountReport(context.Context, CountAccountReportsParams) (time.Time, error)
 	CountRetainedReports(context.Context) (int64, error)
 	FindOpenReport(context.Context, FindOpenReportParams) (Result, bool, error)
 	InsertReport(context.Context, InsertReportParams) (Result, error)

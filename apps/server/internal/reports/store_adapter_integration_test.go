@@ -178,3 +178,49 @@ func TestPGXRunner_RollingWindowUsesServiceClock(t *testing.T) {
 		t.Fatalf("expired window rejected report: %v", err)
 	}
 }
+
+func TestPGXRunner_DailyRetryUsesOldestOwnReport(t *testing.T) {
+	ctx := t.Context()
+	url := testpg.NewDatabase(t)
+	if err := migrate.Up(ctx, url); err != nil {
+		t.Fatal(err)
+	}
+	db, err := pgxpool.New(ctx, url)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(db.Close)
+	q := store.New(db)
+	account, err := q.CreateAccount(ctx, store.CreateAccountParams{GoogleSub: "retry-owner", Email: "retry-owner@example.invalid"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	other, err := q.CreateAccount(ctx, store.CreateAccountParams{GoogleSub: "retry-other", Email: "retry-other@example.invalid"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Date(2099, 1, 1, 12, 0, 0, 0, time.UTC)
+	insert := func(accountID int64, key string, at time.Time) int64 {
+		t.Helper()
+		r, e := q.InsertReport(ctx, store.InsertReportParams{AccountID: accountID, Release: "20991111", DocumentKey: key, Kind: "wrong_text", Suggestion: []byte(`{}`), CreatedAt: at})
+		if e != nil {
+			t.Fatal(e)
+		}
+		return r.ID
+	}
+	insert(account.ID, "outside", now.Add(-25*time.Hour))
+	insert(other.ID, "other", now.Add(-24*time.Hour+time.Second))
+	oldest := insert(account.ID, "oldest", now.Add(-24*time.Hour+2*time.Minute+500*time.Millisecond))
+	if _, err = q.WithdrawOwnReport(ctx, store.WithdrawOwnReportParams{ID: oldest, AccountID: account.ID}); err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 19; i++ {
+		insert(account.ID, fmt.Sprintf("key-%d", i), now.Add(-time.Hour))
+	}
+	svc := Service{Store: PGXRunner{DB: db}, Resolver: admissionResolver{}, Clock: func() time.Time { return now }}
+	_, err = svc.Submit(ctx, account.ID, validInput("wrong_text"))
+	delay, ok := RetryDelay(err)
+	if !ok || delay != 2*time.Minute+500*time.Millisecond {
+		t.Fatalf("retry %v, err %v", delay, err)
+	}
+}

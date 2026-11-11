@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"math"
 
 	"danny.vn/trachuan/apps/server/internal/apierror"
 	"danny.vn/trachuan/apps/server/internal/release"
@@ -28,6 +29,10 @@ type toolError struct {
 func ErrorMessage(err error) (string, string) {
 	var invalid invalidRequest
 	var report reports.Error
+	if delay, ok := reports.RetryDelay(err); ok {
+		seconds := max(1, int(math.Ceil(delay.Seconds())))
+		return "rate_limited", apierror.RetryMessage(seconds)
+	}
 	if errors.As(err, &report) {
 		switch report {
 		case reports.ErrInvalidRequest, reports.ErrRateLimited, reports.ErrReleaseExpired, reports.ErrUnavailable, reports.ErrUnauthenticated:

@@ -99,6 +99,9 @@ func (tx *fakeTx) CountAccountReports(ctx context.Context, p CountAccountReports
 	}
 	return counts, tx.r.step(ctx, "counts")
 }
+func (tx *fakeTx) OldestAccountReport(ctx context.Context, _ CountAccountReportsParams) (time.Time, error) {
+	return testNow().Add(-23 * time.Hour), tx.r.step(ctx, "oldest")
+}
 func (tx *fakeTx) CountRetainedReports(ctx context.Context) (int64, error) {
 	return tx.r.retained + int64(len(tx.r.rows)), tx.r.step(ctx, "retained")
 }

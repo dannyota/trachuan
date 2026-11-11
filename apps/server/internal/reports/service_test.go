@@ -241,3 +241,14 @@ func TestSubmit_ConcurrentAdmission(t *testing.T) {
 		}
 	}
 }
+
+func TestSubmit_DailyCapOldestFailure(t *testing.T) {
+	svc, runner, _ := serviceFixture()
+	runner.counts.Daily = 20
+	runner.fail = "oldest"
+	result, err := svc.Submit(t.Context(), 1, validInput("wrong_text"))
+	requireCode(t, err, ErrUnavailable)
+	if result != (Result{}) || runner.commits != 0 || runner.rollbacks != 1 {
+		t.Fatalf("result=%+v runner=%+v", result, runner)
+	}
+}

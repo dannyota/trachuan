@@ -102,7 +102,18 @@ func admit(ctx context.Context, tx Store, accountID int64, report Report, now ti
 		return result, nil
 	}
 	if counts.Daily >= 20 || counts.Open >= 200 || counts.Retained >= 1000 || retained >= 100000 {
-		return Result{}, ErrRateLimited
+		var delay time.Duration
+		if counts.Daily >= 20 {
+			oldest, oldestErr := tx.OldestAccountReport(ctx, CountAccountReportsParams{AccountID: accountID, Since: now.Add(-24 * time.Hour)})
+			if oldestErr != nil || ctx.Err() != nil {
+				return Result{}, ErrUnavailable
+			}
+			delay = oldest.Add(24 * time.Hour).Sub(now)
+		}
+		if counts.Open >= 200 || counts.Retained >= 1000 || retained >= 100000 {
+			delay = max(delay, time.Hour)
+		}
+		return Result{}, RateLimitError{RetryAfter: delay}
 	}
 	result, err = tx.InsertReport(ctx, InsertReportParams{AccountID: accountID, Report: report, CreatedAt: now})
 	if err != nil {

@@ -10,6 +10,11 @@ SELECT count(*) FILTER (WHERE created_at >= sqlc.arg(today)::timestamptz) AS dai
        count(*) AS retained
 FROM issue_report WHERE account_id = sqlc.arg(account_id);
 
+-- name: OldestAccountReport :one
+SELECT created_at FROM issue_report
+WHERE account_id = sqlc.arg(account_id) AND created_at >= sqlc.arg(since)::timestamptz
+ORDER BY created_at ASC LIMIT 1;
+
 -- name: CountRetainedReports :one
 SELECT count(*) AS retained FROM (SELECT id FROM issue_report UNION ALL SELECT report_id FROM issue_report_export) AS retained_rows;
 

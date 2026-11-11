@@ -53,6 +53,7 @@ type Querier interface {
 	LockAccountForReport(ctx context.Context, id int64) (LockAccountForReportRow, error)
 	LockCredentialAccount(ctx context.Context, id int64) (Account, error)
 	LockReports(ctx context.Context) error
+	OldestAccountReport(ctx context.Context, arg OldestAccountReportParams) (time.Time, error)
 	PurgeDeletedAccounts(ctx context.Context, dollar_1 time.Time) (int64, error)
 	PurgeEndedCredentials(ctx context.Context) (int64, error)
 	RequestDeletion(ctx context.Context, id int64) (RequestDeletionRow, error)

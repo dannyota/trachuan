@@ -5,7 +5,6 @@ import (
 	"errors"
 	"io"
 	"net/http"
-	"time"
 
 	"danny.vn/trachuan/apps/server/internal/apierror"
 	"danny.vn/trachuan/apps/server/internal/reports"
@@ -42,7 +41,8 @@ func (h *handler) submit(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, reports.ErrReleaseExpired):
 			apierror.Write(w, 409, "release_expired")
 		case errors.Is(err, reports.ErrRateLimited):
-			apierror.RateLimited(w, time.Second)
+			delay, _ := reports.RetryDelay(err)
+			apierror.RateLimited(w, delay)
 		default:
 			apierror.Write(w, 503, "unavailable")
 		}

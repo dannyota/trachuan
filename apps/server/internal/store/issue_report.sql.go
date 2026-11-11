@@ -328,6 +328,24 @@ func (q *Queries) LockReports(ctx context.Context) error {
 	return err
 }
 
+const oldestAccountReport = `-- name: OldestAccountReport :one
+SELECT created_at FROM issue_report
+WHERE account_id = $1 AND created_at >= $2::timestamptz
+ORDER BY created_at ASC LIMIT 1
+`
+
+type OldestAccountReportParams struct {
+	AccountID int64
+	Since     time.Time
+}
+
+func (q *Queries) OldestAccountReport(ctx context.Context, arg OldestAccountReportParams) (time.Time, error) {
+	row := q.db.QueryRow(ctx, oldestAccountReport, arg.AccountID, arg.Since)
+	var created_at time.Time
+	err := row.Scan(&created_at)
+	return created_at, err
+}
+
 const triageGroups = `-- name: TriageGroups :many
 SELECT document_key, anchor, kind, target, count(*) AS report_count,
        count(DISTINCT account_id) AS account_count, max(created_at)::timestamptz AS newest,

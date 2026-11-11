@@ -83,6 +83,11 @@ func TestQueryStore_MapsAdmission(t *testing.T) {
 				t.Fatal(args)
 			}
 			return adapterRow{values: []any{int64(4), int64(2), int64(6)}}
+		case strings.Contains(sql, "name: OldestAccountReport"):
+			if !reflect.DeepEqual(args, []any{int64(7), now}) {
+				t.Fatal(args)
+			}
+			return adapterRow{values: []any{now}}
 		case strings.Contains(sql, "name: CountRetainedReports"):
 			return adapterRow{values: []any{int64(9)}}
 		case strings.Contains(sql, "name: FindOpenReport"):
@@ -113,6 +118,10 @@ func TestQueryStore_MapsAdmission(t *testing.T) {
 	counts, err := q.CountAccountReports(t.Context(), CountAccountReportsParams{AccountID: 7, Since: now})
 	if err != nil || counts != (AccountCounts{Daily: 4, Open: 2, Retained: 6}) {
 		t.Fatalf("%+v %v", counts, err)
+	}
+	oldest, err := q.OldestAccountReport(t.Context(), CountAccountReportsParams{AccountID: 7, Since: now})
+	if err != nil || !oldest.Equal(now) {
+		t.Fatalf("oldest %v: %v", oldest, err)
 	}
 	retained, err := q.CountRetainedReports(t.Context())
 	if err != nil || retained != 9 {
@@ -152,6 +161,9 @@ func TestQueryStore_MissingRowsAndErrors(t *testing.T) {
 			t.Fatal(err)
 		}
 		if _, err = q.CountAccountReports(t.Context(), CountAccountReportsParams{}); !errors.Is(err, cause) {
+			t.Fatal(err)
+		}
+		if _, err = q.OldestAccountReport(t.Context(), CountAccountReportsParams{}); !errors.Is(err, cause) {
 			t.Fatal(err)
 		}
 		if _, err = q.CountRetainedReports(t.Context()); !errors.Is(err, cause) {
