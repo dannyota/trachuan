@@ -7,7 +7,11 @@ const emit = defineEmits<{ close: [], created: [] }>()
 const language = useState<Language>('language', () => 'vi')
 const messages = computed(() => messagesFor(language.value))
 const dialog = ref<HTMLDialogElement | null>(null)
-onMounted(() => dialog.value?.showModal())
+onMounted(() => {
+  dialog.value?.showModal()
+  window.addEventListener('pagehide', close)
+  window.addEventListener('pageshow', restored)
+})
 const api = useApi({ userAction: true })
 const name = ref('')
 const days = ref(90)
@@ -17,8 +21,13 @@ const busy = ref(false)
 let active = true
 function clear() { active = false; token.value = '' }
 function close() { clear(); emit('close') }
+function restored(event: PageTransitionEvent) { if (event.persisted) close() }
 onBeforeRouteLeave(clear)
-onBeforeUnmount(clear)
+onBeforeUnmount(() => {
+  clear()
+  window.removeEventListener('pagehide', close)
+  window.removeEventListener('pageshow', restored)
+})
 async function create() {
   if (busy.value || !name.value || !Number.isInteger(days.value) || days.value < 1 || days.value > 365) return
   busy.value = true

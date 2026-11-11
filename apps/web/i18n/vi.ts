@@ -84,6 +84,7 @@ export const vi = {
   deletedNotice: 'Tài khoản đã bị khóa và sẽ được xóa sau 7 ngày.',
   none: 'Không có',
   errors: {
+    account_changed: 'Tài khoản đã thay đổi. Vui lòng kiểm tra và thử lại.',
     invalid_request: 'Yêu cầu không hợp lệ.',
     unauthenticated: 'Vui lòng đăng nhập.',
     csrf_rejected: 'Phiên bảo mật không hợp lệ. Vui lòng thử lại.',

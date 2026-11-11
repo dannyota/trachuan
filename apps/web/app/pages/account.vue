@@ -19,6 +19,12 @@ const grants = ref<Grant[]>([])
 const error = ref('')
 const creating = ref(false)
 const deleting = ref(false)
+const deletionEmail = ref('')
+function openDeletion() {
+  if (!session.account) return
+  deletionEmail.value = session.account.email
+  deleting.value = true
+}
 const busy = ref(false)
 function date(value: string | null) { return value ? new Intl.DateTimeFormat(language.value, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value)) : messages.value.none }
 function showError(code?: string) { error.value = errorMessage(language.value, code || 'generic') }
@@ -91,8 +97,8 @@ async function tokenCreated() { try { await loadTokens() } catch { showError() }
         <button type="button" :disabled="busy" @click="revokeGrant(item.id)">{{ messages.revoke }}</button>
       </article>
     </section>
-    <section><h2>{{ messages.deleteAccount }}</h2><button type="button" @click="deleting = true">{{ messages.deleteAccount }}</button></section>
+    <section><h2>{{ messages.deleteAccount }}</h2><button type="button" @click="openDeletion">{{ messages.deleteAccount }}</button></section>
     <TokenCreateDialog v-if="creating" @close="creating = false" @created="tokenCreated" />
-    <AccountDeleteDialog v-if="deleting && session.account" :email="session.account.email" @close="deleting = false" />
+    <AccountDeleteDialog v-if="deleting" :email="deletionEmail" @close="deleting = false" />
   </div>
 </template>

@@ -87,6 +87,7 @@ export const en: Catalog = {
   deletedNotice: 'Your account is blocked now and will be removed after 7 days.',
   none: 'None',
   errors: {
+    account_changed: 'Your account changed. Please review and try again.',
     invalid_request: 'The request is invalid.',
     unauthenticated: 'Please sign in.',
     csrf_rejected: 'The security session is invalid. Please try again.',
