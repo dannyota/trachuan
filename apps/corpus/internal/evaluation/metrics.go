@@ -137,8 +137,14 @@ func (m Metrics) PrecisionCounts() PrecisionDetails {
 
 // Confusion holds abstention counts and their derived rates.
 type Confusion struct {
-	TP, FN, FP, TN                               int
-	Accuracy, NegativeRecall, PositiveAnswerRate *float64
+	TP                 int      `json:"tp"`
+	FN                 int      `json:"fn"`
+	FP                 int      `json:"fp"`
+	TN                 int      `json:"tn"`
+	Accuracy           *float64 `json:"accuracy"`
+	NegativeRecall     *float64 `json:"negative_recall"`
+	PositiveAnswerRate *float64 `json:"positive_answer_rate"`
+	BalancedAccuracy   *float64 `json:"balanced_accuracy"`
 }
 
 // Abstention measures the abstention decision over all cases.
@@ -160,6 +166,10 @@ func (m Metrics) Abstention() Confusion {
 	a.Accuracy = ratio(a.TP+a.TN, a.TP+a.TN+a.FP+a.FN)
 	a.NegativeRecall = ratio(a.TP, a.TP+a.FN)
 	a.PositiveAnswerRate = ratio(a.TN, a.TN+a.FP)
+	if a.NegativeRecall != nil && a.PositiveAnswerRate != nil {
+		v := (*a.NegativeRecall + *a.PositiveAnswerRate) / 2
+		a.BalancedAccuracy = &v
+	}
 	return a
 }
 

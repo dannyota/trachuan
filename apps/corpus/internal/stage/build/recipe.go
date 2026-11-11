@@ -65,9 +65,9 @@ func (s *Stage) Recipe(snapshot stage.Snapshot) string {
 		return ""
 	}
 	r := buildRecipe{SchemaVersion: corpusdb.SchemaVersion, SchemaSHA256: schema,
-		ChunkRecipeHash: chunk.Recipe1().Hash(), DocumentRecipeHash: embedding.DocumentRecipe1().Hash(), QueryRecipeHash: embedding.QueryRecipe1().Hash(), LexicalRecipeHash: lexical.Recipe1().Hash(), RetrievalPolicyHash: retrieval.Recipe1().Hash(), NormalizerVersion: normalizer.Version, NumberNormalizationVersion: retrieval.NumberNormalizationVersion, StatusCodesSHA256: fmt.Sprintf("%x", sha256.Sum256(status)), ValidityRulesVersion: "validity/2", CalibrationPolicy: "provisional-old-product/1", LegacyCasesSHA256: s.cfg.Suite.Hashes.Legacy, DevelopmentCasesSHA256: s.cfg.Suite.Hashes.Development, PostgreSQLMajor: s.cfg.Versions.PostgreSQLMajor, PGVectorVersion: s.cfg.Versions.PGVector, LtreeVersion: s.cfg.Versions.Ltree, PgDumpVersion: s.cfg.Versions.PgDump, PgRestoreVersion: s.cfg.Versions.PgRestore}
+		ChunkRecipeHash: chunk.Recipe1().Hash(), DocumentRecipeHash: embedding.DocumentRecipe1().Hash(), QueryRecipeHash: embedding.QueryRecipe1().Hash(), LexicalRecipeHash: lexical.Recipe1().Hash(), RetrievalPolicyHash: retrieval.Recipe1().Hash(), NormalizerVersion: normalizer.Version, NumberNormalizationVersion: retrieval.NumberNormalizationVersion, StatusCodesSHA256: fmt.Sprintf("%x", sha256.Sum256(status)), ValidityRulesVersion: "validity/2", CalibrationPolicy: "provisional-old-product/balanced/1", LegacyCasesSHA256: s.cfg.Suite.Hashes.Legacy, DevelopmentCasesSHA256: s.cfg.Suite.Hashes.Development, PostgreSQLMajor: s.cfg.Versions.PostgreSQLMajor, PGVectorVersion: s.cfg.Versions.PGVector, LtreeVersion: s.cfg.Versions.Ltree, PgDumpVersion: s.cfg.Versions.PgDump, PgRestoreVersion: s.cfg.Versions.PgRestore}
 	if len(s.cfg.Suite.Development) > 0 {
-		r.CalibrationPolicy = "old-product+development/1"
+		r.CalibrationPolicy = "old-product+development/balanced/1"
 	}
 	return r.hash()
 }

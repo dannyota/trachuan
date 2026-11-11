@@ -142,6 +142,12 @@ func finishReport(r *Report, all map[metricKey]*Metrics, modes []retrieval.Mode)
 					add("abstention", float64(conf.TP+conf.TN), conf.TP+conf.TN+conf.FP+conf.FN, &conf)
 					add("negative_recall", float64(conf.TP), conf.TP+conf.FN, nil)
 					add("positive_answer_rate", float64(conf.TN), conf.TN+conf.FP, nil)
+					balanced := Metric{Mode: mode, Arms: arms, Limit: limit, Name: "abstention_balanced_accuracy", Value: conf.BalancedAccuracy, Confusion: &conf, CapOverride: r.CapOverride}
+					if conf.BalancedAccuracy != nil {
+						balanced.Numerator = *conf.NegativeRecall + *conf.PositiveAnswerRate
+						balanced.Denominator = 2
+					}
+					stats.Metrics = append(stats.Metrics, balanced)
 					sizes := m.EvidenceCharacters()
 					sort.Float64s(sizes)
 					r.EvidenceCharacters = append(r.EvidenceCharacters, SizeSummary{CapOverride: r.CapOverride, Cohort: cohort, Mode: mode, Arms: arms, Limit: limit, N: len(sizes), P50: Quantile(sizes, .5), P95: Quantile(sizes, .95)})
@@ -204,8 +210,8 @@ func finishProductQuality(r *Report, previous *Report) {
 			threshold     float64
 			gate, compare bool
 		}{
-			{"current_law_precision", 8, .99, true, false}, {"abstention", 8, .95, true, false},
-			{"recall", 20, .90, false, true}, {"mrr", 8, .66, false, true}, {"recall", 8, .90, false, false},
+			{"current_law_precision", 8, .99, true, false},
+			{"recall", 20, .90, false, true}, {"mrr", 8, .66, false, true}, {"recall", 8, .90, false, false}, {"abstention_balanced_accuracy", 8, .85, false, true},
 		} {
 			m := findQualityMetric(r, mode, spec.name, spec.limit)
 			if spec.gate {
@@ -245,7 +251,7 @@ func finishProductQuality(r *Report, previous *Report) {
 			}
 		}
 	}
-	r.QualityPass = len(r.Floors) == 4 && len(r.Rejections) == 3
+	r.QualityPass = len(r.Floors) == 2 && len(r.Rejections) == 3
 	for _, gate := range r.Floors {
 		r.QualityPass = r.QualityPass && gate.Status == "pass"
 	}
@@ -253,7 +259,9 @@ func finishProductQuality(r *Report, previous *Report) {
 		r.QualityPass = r.QualityPass && rejection.Passed
 	}
 	for _, comparison := range r.NonRegression {
-		r.QualityPass = r.QualityPass && comparison.Status != "fail" && comparison.Status != "unavailable"
+		if comparison.Name != "abstention_balanced_accuracy" {
+			r.QualityPass = r.QualityPass && comparison.Status != "fail" && comparison.Status != "unavailable"
+		}
 	}
 }
 

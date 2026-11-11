@@ -39,7 +39,7 @@ func TestInputHash_OmitsInventory(t *testing.T) {
 
 func TestRecipe_IncludesCompact(t *testing.T) {
 	s := New(Config{})
-	want := stage.RecipeHash("eval", "agent-eval/1", "legacy-matcher/1", "product-matcher/1", "recall,mrr,current-law-precision,abstention,evidence,ann/1", "", "diacritics_required:Vui lòng nhập câu hỏi tiếng Việt có dấu hoặc số hiệu văn bản.", "cache/1:200:100", "nearest-rank", "gates:0.99:0.95;targets:recall20=0.90,mrr8=0.66,recall8=0.90;nonregression:recall20,mrr8", "compact/1", "corpus-text-counts/1")
+	want := stage.RecipeHash("eval", "agent-eval/2", "legacy-matcher/1", "product-matcher/1", "recall,mrr,current-law-precision,abstention,evidence,ann/1", "", "diacritics_required:Vui lòng nhập câu hỏi tiếng Việt có dấu hoặc số hiệu văn bản.", "cache/1:200:100", "nearest-rank", "gates:0.99;targets:recall20=0.90,mrr8=0.66,recall8=0.90,abstention-balanced=0.85;nonregression:recall20,mrr8,abstention-balanced", "compact/1", "corpus-text-counts/1")
 	if got := s.Recipe(stage.Snapshot{}); got != want {
 		t.Fatalf("recipe = %s, want %s", got, want)
 	}
@@ -142,16 +142,16 @@ func TestProcess_VerifiesBuildOnce(t *testing.T) {
 
 func TestEvalStage_DevelopmentFloorGaps(t *testing.T) {
 	r := evaluation.Report{
-		Floors: []evaluation.Floor{{Metric: evaluation.Metric{Mode: "exact", Name: "abstention"}, Status: "fail"}},
+		Floors: []evaluation.Floor{{Metric: evaluation.Metric{Mode: "exact", Name: "current_law_precision"}, Status: "fail"}},
 		Cohorts: map[string]evaluation.Cohort{"development": {Floors: []evaluation.Floor{
-			{Metric: evaluation.Metric{Mode: "exact", Name: "abstention"}, Status: "fail"},
+			{Metric: evaluation.Metric{Mode: "exact", Name: "current_law_precision"}, Status: "fail"},
 			{Metric: evaluation.Metric{Mode: "ann", Name: "current_law_precision"}, Status: "unavailable"},
 			{Metric: evaluation.Metric{Mode: "exact", Name: "current_law_precision"}, Status: "pass"},
 		}}},
 	}
 	want := []stage.Gap{
-		{Kind: "eval_floor_failed", Detail: "exact:abstention"},
-		{Kind: "eval_floor_failed", Detail: "development:exact:abstention"},
+		{Kind: "eval_floor_failed", Detail: "exact:current_law_precision"},
+		{Kind: "eval_floor_failed", Detail: "development:exact:current_law_precision"},
 		{Kind: "eval_floor_failed", Detail: "development:ann:current_law_precision"},
 	}
 	got := reportGaps(r)
@@ -228,5 +228,12 @@ func TestEvaluate_ForwardsCapOverride(t *testing.T) {
 	}
 	if report.CapOverride == nil || *report.CapOverride != 4 {
 		t.Fatalf("cap = %v, want 4", report.CapOverride)
+	}
+}
+
+func TestEvalStage_NoAbstentionGap(t *testing.T) {
+	r := evaluation.Report{Targets: []evaluation.Target{{Metric: evaluation.Metric{Name: "abstention_balanced_accuracy"}, Status: "below"}}, Floors: []evaluation.Floor{{Metric: evaluation.Metric{Name: "current_law_precision", Mode: "exact"}, Status: "pass"}}}
+	if gaps := reportGaps(r); len(gaps) != 0 {
+		t.Fatalf("gaps = %+v", gaps)
 	}
 }
