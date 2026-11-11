@@ -78,3 +78,22 @@ func TestCommittedFiles_Valid(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestValidate_RootParentsAndOrdinals(t *testing.T) {
+	tests := []struct {
+		name  string
+		nodes []MappedNode
+	}{
+		{"active root with parent", []MappedNode{{GUID: "a", Code: "1", ParentCode: "missing", Level: 1, Status: "active", Ordinal: 1}}},
+		{"retired root with parent", []MappedNode{{GUID: "a", Code: "1", ParentCode: "missing", Level: 1, Status: "retired"}}},
+		{"level two without parent", []MappedNode{{GUID: "a", Code: "1.1", Level: 2, Status: "active", Ordinal: 1}}},
+		{"duplicate root ordinal", []MappedNode{{GUID: "a", Code: "1", Level: 1, Status: "active", Ordinal: 1}, {GUID: "b", Code: "2", Level: 1, Status: "active", Ordinal: 1}}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := Validate(Mapping{Nodes: tt.nodes}, nil, nil); err == nil {
+				t.Fatal("accepted invalid mapping")
+			}
+		})
+	}
+}

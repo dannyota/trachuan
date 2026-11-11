@@ -71,6 +71,9 @@ func Validate(m Mapping, custom []CustomNode, overrides []Override) error {
 	}
 	ordinals := map[string]map[int]bool{}
 	for _, n := range m.Nodes {
+		if (n.Level == 1) != (n.ParentCode == "") {
+			return fmt.Errorf("invalid parent for %s", n.Code)
+		}
 		if n.Level > 1 && (codes[n.ParentCode] == 0 || (n.Status == "active" && codes[n.ParentCode] != n.Level-1)) {
 			return fmt.Errorf("invalid parent for %s", n.Code)
 		}
