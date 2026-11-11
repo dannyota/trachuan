@@ -50,7 +50,7 @@ func (e *validityEngine) reviewReplacesUnverified(actor, target validityDocument
 	r.relationID = relationID
 	r.sentences = nil
 	if actor.quote != "" {
-		r.sentences = []string{truncateQuote(actor.quote)}
+		r.sentences = []string{actor.quote}
 	}
 	r.proposed = &source.Correction{Key: target.key, Number: target.number}
 }

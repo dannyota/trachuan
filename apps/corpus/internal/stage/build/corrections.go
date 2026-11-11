@@ -34,6 +34,9 @@ func validateCorrections(entries []source.Correction, docs map[string]correction
 		if _, err := time.Parse("2006-01-02", entry.Reviewed); err != nil {
 			return nil, fmt.Errorf("correction %q: invalid review date: %w", entry.Key, err)
 		}
+		if (entry.Evidence.Anchor == "") == (entry.Evidence.URL == "") || (entry.Evidence.Key != "" && entry.Evidence.Anchor == "") {
+			return nil, fmt.Errorf("correction %q: invalid evidence location", entry.Key)
+		}
 		evidenceDoc := doc
 		if entry.Evidence.Key != "" {
 			var found bool

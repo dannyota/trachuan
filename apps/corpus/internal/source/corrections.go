@@ -32,6 +32,7 @@ type CorrectionSet struct {
 type CorrectionEvidence struct {
 	Key    string `yaml:"key"`
 	Anchor string `yaml:"anchor"`
+	URL    string `yaml:"url"`
 	Quote  string `yaml:"quote"`
 }
 

@@ -82,6 +82,12 @@ func (e *validityEngine) apply(events []validityEvent) error {
 		o := e.outputs[key]
 		c, has := e.corrections[key]
 		if has {
+			if c.Evidence.URL != "" {
+				e.review("correction_external", doc, "", "", c.Evidence.URL)
+				r := &e.reviews[len(e.reviews)-1]
+				r.sentences = []string{c.Evidence.Quote}
+				r.proposed = &c
+			}
 			before := o.values
 			automatic := false
 			if len(o.history) > 0 {
@@ -94,10 +100,14 @@ func (e *validityEngine) apply(events []validityEvent) error {
 			}
 			if c.Set.StatusClass != nil || c.Set.EffFrom != nil || c.Set.EffTo != nil || c.Eligible != nil {
 				artifact := doc.extractHash
-				if c.Evidence.Key != "" {
+				anchor := c.Evidence.Anchor
+				if c.Evidence.URL != "" {
+					anchor = "external:" + c.Evidence.URL
+					artifact = ""
+				} else if c.Evidence.Key != "" {
 					artifact = e.docs[c.Evidence.Key].extractHash
 				}
-				o.history = append(o.history, validityDecision{layer: "manual", version: "validity/2", before: before, after: after, actor: c.Evidence.Key, anchor: c.Evidence.Anchor, quote: truncateQuote(c.Evidence.Quote), artifact: artifact})
+				o.history = append(o.history, validityDecision{layer: "manual", version: "validity/2", before: before, after: after, actor: c.Evidence.Key, anchor: anchor, quote: truncateQuote(c.Evidence.Quote), artifact: artifact})
 			}
 		}
 		if o.values.From != nil && o.values.To != nil && *o.values.To < *o.values.From {
