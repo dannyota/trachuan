@@ -70,7 +70,7 @@ func documentEngine(t *testing.T, longOutline bool) (*retrieval.Engine, map[stri
 			heading = strings.Repeat("đ", 200000)
 			source[anchor] = text
 		}
-		exec(`INSERT INTO provision(id,document_id,node_id,kind,label,heading,ordinal,preorder,path,text,anchor) VALUES($1,1,$2,'dieu','Điều',$3,$1,$1,$2::ltree,$4,$5)`, i, fmt.Sprintf("p%d", i), heading, text, anchor)
+		exec(`INSERT INTO provision(id,document_id,node_id,kind,label,heading,ordinal,preorder,path,text,anchor) VALUES($1,1,$2,'dieu','Điều',$3,$1,$1,$2::text::ltree,$4,$5)`, i, fmt.Sprintf("p%d", i), heading, text, anchor)
 	}
 	now := func() time.Time { return time.Date(2099, 11, 10, 0, 0, 0, 0, time.UTC) }
 	rel := retrieval.Release{Country: "vn", Rel: "20991110_1", SchemaVersion: corpusdb.SchemaVersion, RetrievalRecipe: retrieval.Recipe1(), LexicalRecipe: lexical.Recipe1(), ChunkRecipe: json.RawMessage(`{}`), EvaluationSummary: json.RawMessage(`{}`), SourceManifestHash: hash, BuildInputHash: hash, BuildRecipeHash: hash, BuiltAt: now(), LexicalStats: lexical.StatsSummary{Version: 1, AvgDL: 1, VocabularySHA256: hash, DFSHA256: hash}, DenseRecipe: retrieval.DenseRecipe{Version: 1, Model: q.Model, Dimensions: q.Dimensions, Document: d, DocumentHash: d.Hash(), Query: q, QueryHash: q.Hash()}}
