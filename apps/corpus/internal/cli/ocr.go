@@ -17,8 +17,16 @@ import (
 )
 
 func runOCR(ctx context.Context, args []string, stdout, stderr io.Writer) int {
+	if len(args) > 0 {
+		switch args[0] {
+		case "check":
+			return runOCRCheck(ctx, args[1:], stdout, stderr)
+		case "review":
+			return runOCRReview(ctx, args[1:], stdout, stderr)
+		}
+	}
 	if len(args) != 4 || args[0] != "import-banhmi" {
-		_, _ = fmt.Fprintln(stderr, "usage: corpus ocr import-banhmi <cc> <rel> <dir>")
+		_, _ = fmt.Fprintln(stderr, "usage: corpus ocr <check|review|import-banhmi> <cc> <rel> [options]")
 		return 2
 	}
 	root := os.Getenv("CORPUS_OCR_STORE")

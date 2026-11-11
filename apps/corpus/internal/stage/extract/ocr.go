@@ -2,7 +2,6 @@ package extract
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -20,6 +19,10 @@ type ocrReader interface {
 }
 
 func selectOCRFiles(ctx context.Context, dir, id string, files []fetch.DocumentFile, source ocrReader, engines []string, checker string) (selection, error) {
+	return selectOCRFilesMode(ctx, dir, id, files, source, engines, checker, false)
+}
+
+func selectOCRFilesMode(ctx context.Context, dir, id string, files []fetch.DocumentFile, source ocrReader, engines []string, checker string, unchecked bool) (selection, error) {
 	selected, err := selectFiles(dir, id, files, absentOCR{})
 	if err != nil || selected.source != "none" {
 		return selected, err
@@ -57,15 +60,15 @@ func selectOCRFiles(ctx context.Context, dir, id string, files []fetch.DocumentF
 		return selection{source: "none", gap: "text_source_ambiguous", consulted: true}, nil
 	}
 	entry, found := entries[hash]
-	if !found || entry.Check == nil {
+	if !found || (entry.Check == nil && !unchecked) {
 		return selection{source: "none", gap: "needs_ocr", consulted: true}, nil
 	}
-	var result struct {
-		Verdict      string `json:"verdict"`
-		SameDocument *bool  `json:"same_document"`
+	if unchecked {
+		return selection{source: "ocr", name: names[hash], hash: hash, entry: &entry, consulted: true}, nil
 	}
-	if err := json.Unmarshal(entry.Check.Result, &result); err != nil || result.SameDocument == nil {
-		return selection{}, fmt.Errorf("invalid stored OCR check")
+	result, err := ocrstore.DecodeCheck(entry.Check.Result)
+	if err != nil {
+		return selection{}, fmt.Errorf("invalid stored OCR check: %w", err)
 	}
 	if result.Verdict == "rejected" {
 		return selection{source: "none", gap: "ocr_rejected", reason: "checker rejected OCR text", consulted: true}, nil

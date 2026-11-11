@@ -82,7 +82,7 @@ func TestExtract_OCRStageIntegration(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err = ocr.PutCheck(ctx, entries[pdf].Text, "checker", json.RawMessage(`{"same_document":true,"pages":10,"items":[{"kind":"amount","page":1,"ocr":"1","pdf":"2","note":"x"}],"verdict":"flagged"}`), 1, true); err != nil {
+	if _, err = ocr.PutCheck(ctx, entries[pdf].Text, "checker", json.RawMessage(`{"same_document":true,"pages":10,"pdf_pages":10,"items":[{"kind":"amount","page":1,"ocr":"1","pdf":"2","note":"x"}],"verdict":"flagged"}`), 1, true); err != nil {
 		t.Fatal(err)
 	}
 	next, err := extractor.Plan(ctx, env, run)
@@ -221,8 +221,8 @@ func TestExtract_FrozenHeadingAndRejected(t *testing.T) {
 		name, tree, result, initialGap, newGap string
 		preexisting                            bool
 	}{
-		{"heading", bareTree, `{"same_document":true,"pages":1,"items":[],"verdict":"clean"}`, "tree_headings_only", "", false},
-		{"rejected", `{"success":true,"data":[]}`, `{"same_document":false,"pages":1,"items":[],"verdict":"rejected"}`, "needs_ocr", "ocr_rejected", true},
+		{"heading", bareTree, `{"same_document":true,"pages":1,"pdf_pages":1,"items":[],"verdict":"clean"}`, "tree_headings_only", "", false},
+		{"rejected", `{"success":true,"data":[]}`, `{"same_document":false,"pages":1,"pdf_pages":1,"items":[],"verdict":"rejected"}`, "needs_ocr", "ocr_rejected", true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := context.Background()

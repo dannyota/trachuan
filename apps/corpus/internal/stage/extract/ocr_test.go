@@ -2,6 +2,7 @@ package extract
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -46,7 +47,16 @@ func ocrFixture(t *testing.T, checked bool, flagged int32) fakeOCR {
 	}
 	entry := ocrstore.Entry{Text: store.OcrText{PdfSha256: strings.Repeat("a", 64), EngineID: "vision-ocr/builtin-latest", TextSha256: strings.Repeat("b", 64)}}
 	if checked {
-		entry.Check = &store.OcrCheck{CheckerID: "checker", ResultSha256: strings.Repeat("c", 64), Flagged: flagged, Result: []byte(`{"same_document":true,"verdict":"flagged"}`)}
+		result := ocrstore.CheckResult{SameDocument: true, Pages: 10, PDFPages: 10, Items: []ocrstore.CheckItem{}, Verdict: "clean"}
+		for i := int32(0); i < flagged; i++ {
+			result.Items = append(result.Items, ocrstore.CheckItem{Kind: "amount", Page: 1, OCR: "1", PDF: "2", Note: "x"})
+			result.Verdict = "flagged"
+		}
+		checkData, encodeErr := json.Marshal(result)
+		if encodeErr != nil {
+			t.Fatal(encodeErr)
+		}
+		entry.Check = &store.OcrCheck{CheckerID: "checker", ResultSha256: strings.Repeat("c", 64), Flagged: flagged, Result: checkData}
 	}
 	return fakeOCR{entries: map[string]ocrstore.Entry{entry.Text.PdfSha256: entry}, data: data}
 }
@@ -218,7 +228,7 @@ func TestExtract_RejectsFailedCheck(t *testing.T) {
 	src := ocrFixture(t, true, 0)
 	hash := strings.Repeat("a", 64)
 	entry := src.entries[hash]
-	entry.Check.Result = []byte(`{"same_document":false,"pages":1,"items":[],"verdict":"rejected"}`)
+	entry.Check.Result = []byte(`{"same_document":false,"pages":1,"pdf_pages":1,"items":[],"verdict":"rejected"}`)
 	src.entries[hash] = entry
 	selected, err := selectOCRFiles(context.Background(), t.TempDir(), "1", []fetch.DocumentFile{{Name: "a.pdf", SHA256: hash}}, src, []string{"vision-ocr/builtin-latest"}, "checker")
 	if err != nil || selected.source != "none" || selected.gap != "ocr_rejected" {
