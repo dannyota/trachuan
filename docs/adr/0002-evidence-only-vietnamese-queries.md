@@ -27,3 +27,7 @@ features.
 ## History
 
 - 2026-11-08: accepted in the brainstorming conversation.
+- 2026-11-11: the owner allowed in-memory server caches to cut latency. Cache
+  keys are digests of the query and request, values are vectors or responses,
+  and nothing is written to disk, logs or backups; questions are still never
+  stored ([caching](../design/caching.md)).

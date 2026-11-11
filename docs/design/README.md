@@ -21,6 +21,7 @@ Intended behavior of trachuan. Decisions with alternatives are in the
 | [deployment](deployment.md)                | Host, deploy, secrets, release activation, backups, observability                        |
 | [budgets](budgets.md)                      | Request, pipeline, indexing, retrieval and Temporal limits                               |
 | [host budgets](budgets-host.md)            | Hosting cost, host memory, alarms and disk                                               |
+| [caching](caching.md)                      | Server caches for query vectors, search responses, read items and document entries       |
 | [index](index.md)                          | Index scope, build inventory, normalization, local database recovery                     |
 | [chunk](chunk.md)                          | Chunk recipe, source spans, omissions and workshop projection                            |
 | [embedder](embedder.md)                    | Embedding HTTP contract, Go query and Python document services, embedding artifacts      |

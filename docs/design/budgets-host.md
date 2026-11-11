@@ -77,19 +77,30 @@ release manifest.
 ## Host memory (estimates)
 
 For the [host selected in ADR 0006](../adr/0006-single-host-oci-podman.md), the
-rows total 8,950 MB (estimates, not measured peak use), leaving about 14 GB for
-the OS, page cache and margin. PostgreSQL uses `shared_buffers` 4 GiB and
-`effective_cache_size` 16 GiB so the active corpus (2.9 GB for vn/20261110_4)
-stays in memory. The owner accepted the embedder row (ADR 0009, 0011).
+rows total 10,800 MB (estimates, not measured peak use), leaving about 12 GB for
+the OS, page cache and margin. The server row includes its [caches](caching.md).
+PostgreSQL uses `shared_buffers` 4 GiB and `effective_cache_size` 16 GiB so the
+active corpus (2.9 GB for vn/20261110_4) stays in memory. The owner accepted the
+embedder row (ADR 0009, 0011).
 
 | Process                                        | RSS MB |
 | ---------------------------------------------- | ------ |
 | embedder (ONNX INT8, Vietnamese_Embedding_v2)  | 2,000  |
 | postgres, shared_buffers 4 GiB                 | 4,500  |
 | web (Node)                                     | 250    |
-| server (Go)                                    | 150    |
+| server (Go), with caches                       | 2,000  |
 | caddy                                          | 50     |
 | headroom for activation restore and HNSW build | 2,000  |
+
+Server caches, each a byte-capped least-recently-used map
+([caching](caching.md)):
+
+| Cache            | Byte cap | Maximum age        |
+| ---------------- | -------- | ------------------ |
+| Query vectors    | 256 MB   | 24 hours           |
+| Search responses | 1,024 MB | 1 hour             |
+| Read items       | 512 MB   | release life, 24 h |
+| Document entries | 64 MB    | release life       |
 
 Activation refuses to start below 2.5 GB free memory or 10 GB free disk.
 
