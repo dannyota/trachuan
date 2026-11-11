@@ -17,8 +17,10 @@ history keeps it. States: `planned`, `in progress`, `landed`, `verified`,
 |6|Taxonomy import and seeds|Pháp điển import, `taxonomy/mapping.yaml`, seeds, subject-filter ordering|Plan 1|not written|
 |7|Text extraction|documents without a VBPL tree: HTML transcription, PDF, OCR; `vanban.chinhphu.vn` signed PDFs for central documents VBPL lacks|Plan 1|not written|
 |8|Classification|LLM batch classification, submission intent log, taxonomy evaluation gate|Plans 2 and 6|not written|
-|9|Server|`apps/server`: auth, OAuth for MCP, retrieval, MCP tools (compact `search`, batch `read`, `guide`), web API, OpenAPI document; agent-in-the-loop check of ADR 0013|Plan 2 corpus database; Plan 4 query embedder; Plan 12 presentation and read; Plan 0 OAuth decision|not written|
-|10|Web|`apps/web`: public pages, search, reader, account|Plan 9 OpenAPI document|not written|
+|9a|[Server core and MCP read path](2026-11-11-server-core.md)|`apps/server`: auth schema and store, personal bearer tokens, credential middleware, release resolver and engine cache, per-account limits, MCP tools `guide`, `corpus_status`, `search`, `read`, `quality_gaps` (ADR 0013), command and runbook|Plans 2, 4 and 12|planned|
+|9b|Web login and web API|Google OIDC login, web sessions, CSRF, `/api/v1` search, read and documents, account endpoints, personal token management, OpenAPI document and generated client|Plan 9a|not written|
+|9c|OAuth for MCP|aboutme `oauthsrv` and `mcpapi` import after review, CIMD fetching, DCR, RFC 9728 metadata, ChatGPT and Claude.ai connector acceptance, agent-in-the-loop check of ADR 0013|Plan 9a|not written|
+|10|Web|`apps/web`: public pages, search, reader, account|Plan 9b OpenAPI document|not written|
 |11|Host and release|`deploy/`: OpenTofu, host bundle, Quadlet, pgBackRest, signed release manifest and S3 upload, `release activate`, deploy workflows|Plans 1 to 10 images|not written|
 |12|Compact results and read|`internal/retrieval`: hit path and best member, snippets, document entries and relation pointers, `Engine.Present` (compact and full), `Engine.Read` (outline, provision, range, relations, parts, `next` tokens, input bounds); eval compact diagnostic and size gate (ADR 0013); evidence `docs/research/compact-results-2026-11.md`|Plan 2; ADR 0013|landed|
 
