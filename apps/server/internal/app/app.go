@@ -11,8 +11,6 @@ import (
 	"os"
 	"time"
 
-	"danny.vn/trachuan/apps/server/internal/accountapi"
-	"danny.vn/trachuan/apps/server/internal/apierror"
 	"danny.vn/trachuan/apps/server/internal/credential"
 	"danny.vn/trachuan/apps/server/internal/embedcache"
 	"danny.vn/trachuan/apps/server/internal/limits"
@@ -20,7 +18,6 @@ import (
 	"danny.vn/trachuan/apps/server/internal/migrate"
 	"danny.vn/trachuan/apps/server/internal/release"
 	"danny.vn/trachuan/apps/server/internal/store"
-	"danny.vn/trachuan/apps/server/internal/webapi"
 	"danny.vn/trachuan/apps/server/internal/weblogin"
 	"danny.vn/trachuan/apps/server/internal/websession"
 	"danny.vn/trachuan/internal/embedding"
@@ -116,27 +113,13 @@ func serve(ctx context.Context, cfg config, pool *pgxpool.Pool, queries *store.Q
 	verifier := &credential.Verifier{Store: queries, Audience: cfg.audience}
 	limiter := limits.New(clock)
 	tools := mcpapi.Config{Resolver: mcpResolver{resolver}, Limiter: limiter, Logger: slog.New(slog.NewJSONHandler(stderr, nil)), Caches: caches}
-	handler := mcpapi.New(tools)
 	sessions := &websession.Manager{Store: queries, PublicURL: cfg.publicURL, Clock: clock}
 	login, err := weblogin.New(ctx, weblogin.Config{ClientID: cfg.googleID, ClientSecret: cfg.googleSecret, PublicURL: cfg.publicURL, Store: loginStore{queries}, Sessions: sessions})
 	if err != nil {
 		resolver.Close()
 		return errors.New("google provider discovery failed")
 	}
-	account := sessions.Middleware(sessions.CSRF(accountapi.New(accountapi.Config{Store: queries, Sessions: sessions, Verifier: verifier, Limiter: limiter, Clock: clock})))
-	logout := sessions.Middleware(sessions.CSRF(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		p, _ := websession.FromContext(r.Context())
-		if ok, wait := limiter.Allow(p.AccountID, limits.Read); !ok {
-			apierror.RateLimited(w, wait)
-			return
-		}
-		sessions.Logout(w, r)
-	})))
-	corpus := webapi.New(webapi.Config{Tools: tools, Sessions: sessions})
-	loginLimit := newLoginLimiter(clock, cfg.trustedProxies)
-	mux := http.NewServeMux()
-	mux.Handle("/mcp", credential.Middleware(verifier, handler))
-	mountRoutes(mux, loginLimit.middleware(login.Start), loginLimit.middleware(login.Callback), logout, account, corpus)
+	mux := newWebMux(webDeps{store: queries, sessions: sessions, login: login, verifier: verifier, tools: tools, loginLimit: newLoginLimiter(clock, cfg.trustedProxies)})
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) })
 	mux.Handle("GET /readyz", readiness(ctx, func(ctx context.Context) error {
 		return readyCheck(ctx, pool.Ping, func(ctx context.Context) error {
@@ -150,7 +133,7 @@ func serve(ctx context.Context, cfg config, pool *pgxpool.Pool, queries *store.Q
 	server := newHTTPServer(cfg.listen, mux)
 	purgeCtx, cancel := context.WithCancel(ctx)
 	done := make(chan struct{})
-	go func() { defer close(done); purgeLoop(purgeCtx, queries, clock) }()
+	go func() { defer close(done); purgeLoop(purgeCtx, queries, clock, tools.Logger) }()
 	defer func() { cancel(); <-done }()
 	return runHTTP(ctx, server, resolver.Close)
 }
