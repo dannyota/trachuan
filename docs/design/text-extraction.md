@@ -52,7 +52,10 @@ Exactly one source supplies a document's text, chosen in this order:
    least 300 characters. `_content_origin`, `_body_content` and dated backups
    are never read: the inventory shows they add no document, and where the
    origin differs we take the published version.
-3. `ocr`: OCR text of the document's PDF under
+3. `pdf_text`: the PDF's own text layer when it passes the gate in
+   [PDF text layer](pdf-text.md) (owner decision 2026-11-11: prefer the file's
+   text, OCR only when it fails). Measured: 16 documents.
+4. `ocr`: OCR text of the document's PDF under
    [ADR 0014](../adr/0014-ocr-on-the-write-path.md). The PDF is the bundle's
    only distinct PDF by SHA-256 (261 of the measured documents list one file
    under several names), or the only one with OCR text; several distinct
@@ -60,15 +63,15 @@ Exactly one source supplies a document's text, chosen in this order:
    keyed by the PDF's SHA-256: first banhmi's Google Vision output reused as
    data (266 documents matched by hash), else a fresh Google Cloud Vision
    request (48 documents, 1,342 pages measured).
-4. `none`: the document stays `no_tree` with a gap naming why (`needs_ocr` until
+5. `none`: the document stays `no_tree` with a gap naming why (`needs_ocr` until
    the OCR store holds its text with a completed cross-check, `no_text_source`,
    `file_format_unsupported` for `.doc` and archives, `text_source_ambiguous`).
 
-A PDF's own text layer is never read: 203 measured layers are garbage from an
-earlier non-Vietnamese OCR pass, and the 23 good ones go through OCR like the
-scans, so there is one PDF path and no PDF parser in the pipeline. DOCX is not
-read: it would recover no document. Reason for the order: the transcription is
-the publisher's own text; OCR is a machine reading and says so.
+A PDF's text layer is read only through that gate: most measured layers are
+garbage from an earlier non-Vietnamese OCR pass, and a scan with an embedded
+layer goes to OCR however fluent the layer looks. DOCX is not read: it would
+recover no document. Reason for the order: the transcription and the file's own
+text are the publisher's; OCR is a machine reading and says so.
 
 ## Paragraphs
 
@@ -193,15 +196,15 @@ numbered outline (`I.`, `1.`) when one exists. Text under 300 characters is
   another anchor, or an anchor comes to hold other text, the old id no longer
   exists, and the identity map's node check forces re-adjudication even when
   anchor strings such as `doan-3` survive a refetch or a parser change.
-- Corpus: `document.text_source` (`source_tree`, `html_transcription`, `ocr`,
-  `none`) and `document.text_complete boolean`, false when any gap of
-  `tree_headings_only`, `structure_uncertain`, `table_text` (more than a tenth
-  of the characters inside provisions are in tables; letterhead and signature
-  tables outside any provision do not count), `image_content`, `ocr_flagged`,
-  `ocr_rejected` or `needs_ocr` applies; build derives `source_tree` for
-  artifacts without `text.json`. Search and read results return both on the
-  document entry, with each provision's locator (hits, read units, ranges and
-  continued parts alike). This is corpus schema version 4.
+- Corpus: `document.text_source` (`source_tree`, `html_transcription`,
+  `pdf_text`, `ocr`, `none`) and `document.text_complete boolean`, false when
+  any gap of `tree_headings_only`, `structure_uncertain`, `table_text` (more
+  than a tenth of the characters inside provisions are in tables; letterhead and
+  signature tables outside any provision do not count), `image_content`,
+  `ocr_flagged`, `ocr_rejected` or `needs_ocr` applies; build derives
+  `source_tree` for artifacts without `text.json`. Search and read results
+  return both on the document entry, with each provision's locator (hits, read
+  units, ranges and continued parts alike). This is corpus schema version 4.
 
 ## Inputs and reuse
 
