@@ -212,6 +212,8 @@ candidates; expand closes additions to the expected set before fetch planning.
   whose document id, name and size match a local cache entry collected no
   earlier than the gateway's `updatedAt` for that file is taken from the cache
   once its sha256 verifies; otherwise it is downloaded.
+  [Fetch reuse](fetch-reuse.md) adds the previous bundle as a second cache and
+  says when neither cache may be used.
 - `extract` refuses trees deeper or larger than the limits in
   [budgets](budgets.md) with gap `tree_too_large`.
 - `relate` maps relation codes with the source list's table, whose hash is part

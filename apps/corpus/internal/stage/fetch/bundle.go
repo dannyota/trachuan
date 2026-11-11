@@ -32,6 +32,10 @@ func (s *Stage) writeBundle(ctx context.Context, dir, id string, detail, tree, d
 }
 
 func (s *Stage) writeBundleObservations(ctx context.Context, dir, id string, detail, tree, diagram json.RawMessage, entries []vbpl.File, now func() time.Time, observations *[]stage.FetchObservation) error {
+	return s.writeBundleWithBaseline(ctx, dir, id, detail, tree, diagram, entries, now, observations, nil, "no_baseline", false)
+}
+
+func (s *Stage) writeBundleWithBaseline(ctx context.Context, dir, id string, detail, tree, diagram json.RawMessage, entries []vbpl.File, now func() time.Time, observations *[]stage.FetchObservation, base *baseline, decision string, expired bool) error {
 	filesDir := filepath.Join(dir, "files")
 	if err := os.Mkdir(filesDir, 0700); err != nil {
 		return fmt.Errorf("create files directory: %w", err)
@@ -41,23 +45,45 @@ func (s *Stage) writeBundleObservations(ctx context.Context, dir, id string, det
 	type fileResult struct {
 		downloaded vbpl.Downloaded
 		hit        bool
+		adopted    *stage.FetchObservation
 		completed  time.Time
 		err        error
 	}
 	results := make([]fileResult, len(entries))
+	counts := make(map[fileIdentity]int, len(entries))
+	for _, entry := range entries {
+		if err := ctx.Err(); err != nil {
+			return fmt.Errorf("count attachments: %w", err)
+		}
+		counts[fileIdentity{entry.Name, entry.Size}]++
+	}
 	group, requestCtx := errgroup.WithContext(ctx)
 	for i, entry := range entries {
+		if err := ctx.Err(); err != nil {
+			_ = group.Wait()
+			return fmt.Errorf("fetch attachments: %w", err)
+		}
 		group.Go(func() error {
 			var downloaded vbpl.Downloaded
 			var hit bool
-			if entry.URL != "" {
+			var origin *stage.FetchObservation
+			var copyErr error
+			if base != nil && counts[fileIdentity{entry.Name, entry.Size}] == 1 && entry.URL != "" && entry.Size <= s.fileLimit && decision != "age" && decision != "control" && !expired {
+				downloaded, origin, copyErr = base.copyMatching(entry, filesDir, now(), reuseAgeLimit)
+				hit = origin != nil
+			}
+			if copyErr != nil {
+				results[i] = fileResult{err: copyErr}
+				return nil
+			}
+			if !hit && counts[fileIdentity{entry.Name, entry.Size}] == 1 && decision != "age" && decision != "control" && !expired && entry.URL != "" {
 				downloaded, hit = s.cachedFile(id, filesDir, entry)
 			}
 			var err error
 			if !hit {
 				downloaded, err = s.client.Download(requestCtx, id, entry, filesDir, s.fileLimit)
 			}
-			results[i] = fileResult{downloaded: downloaded, hit: hit, err: err, completed: now().UTC().Truncate(time.Microsecond)}
+			results[i] = fileResult{downloaded: downloaded, hit: hit, adopted: origin, err: err, completed: now().UTC().Truncate(time.Microsecond)}
 			return nil
 		})
 	}
@@ -65,11 +91,17 @@ func (s *Stage) writeBundleObservations(ctx context.Context, dir, id string, det
 	hits := 0
 	seen := make(map[string]stage.FetchObservation)
 	for i, entry := range entries {
+		if err := ctx.Err(); err != nil {
+			return fmt.Errorf("collect attachments: %w", err)
+		}
 		item := results[i]
 		if item.hit {
 			hits++
 		}
 		if item.err != nil {
+			if errors.Is(item.err, errInvalidBaseline) {
+				return item.err
+			}
 			if ctx.Err() != nil {
 				return fmt.Errorf("download attachment: %w", ctx.Err())
 			}
@@ -91,7 +123,11 @@ func (s *Stage) writeBundleObservations(ctx context.Context, dir, id string, det
 			}
 			key, _ := json.Marshal([3]any{"attachment", name, resourceURL})
 			o := stage.FetchObservation{ResourceKey: string(key), Source: "vbpl", Name: &name, URL: resourceURL, Path: "files/" + item.downloaded.SHA256, ContentSHA256: item.downloaded.SHA256, Size: item.downloaded.Size, Acquisition: "network", FetchedAt: &item.completed}
-			if item.hit {
+			if item.adopted != nil {
+				o.Acquisition = "adopted"
+				o.FetchedAt = item.adopted.FetchedAt
+				o.OriginRef = item.adopted.OriginRef
+			} else if item.hit {
 				o.Acquisition = "cache"
 				o.FetchedAt = nil
 			}

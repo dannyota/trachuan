@@ -56,6 +56,17 @@ type Document struct {
 	IdentityEvidence []byte
 }
 
+type FetchBaseline struct {
+	DocumentKey     string
+	FetchRecipeHash string
+	ArtifactID      int64
+	RunID           int64
+	ItemKey         string
+	Generation      int32
+	Attempt         int32
+	RecordedAt      time.Time
+}
+
 type FetchedFile struct {
 	ArtifactID int64
 	Name       string

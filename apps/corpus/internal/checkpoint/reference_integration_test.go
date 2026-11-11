@@ -45,6 +45,15 @@ func TestTake_ChecksWorkshopArtifactReferences(t *testing.T) {
 	if _, takeErr := taker.Take(ctx, "run", 3, "expand"); takeErr != nil {
 		t.Fatalf("acquisition hint blocked checkpoint: %v", takeErr)
 	}
+	if _, err = db.Exec(ctx, `DELETE FROM run_acquisition`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = db.Exec(ctx, `INSERT INTO fetch_baseline(document_key,fetch_recipe_hash,artifact_id,run_id,item_key,generation,attempt) SELECT 'vn:vbpl:1','recipe',a.id,r.id,'vn:vbpl:1',1,1 FROM run r CROSS JOIN artifact a`); err != nil {
+		t.Fatal(err)
+	}
+	if _, takeErr := taker.Take(ctx, "run", 8, "fetch"); takeErr != nil {
+		t.Fatalf("baseline hint blocked checkpoint: %v", takeErr)
+	}
 	if _, err = db.Exec(ctx, `INSERT INTO run_item(run_id,stage,item_key,state,batch,generation,artifact_id) SELECT r.id,'fetch','item','done',0,1,a.id FROM run r CROSS JOIN artifact a`); err != nil {
 		t.Fatal(err)
 	}
@@ -55,14 +64,14 @@ func TestTake_ChecksWorkshopArtifactReferences(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, takeErr := taker.Take(ctx, "run", 5, "fetch"); takeErr != nil {
-		t.Fatalf("detached acquisition blocked checkpoint: %v", takeErr)
+		t.Fatalf("detached baseline blocked checkpoint: %v", takeErr)
 	}
 	// Older rows can carry absolute artifact paths.
 	if _, err = db.Exec(ctx, `UPDATE artifact SET path=$1`, filepath.Join(taker.Config.ArtifactsRoot, rel)); err != nil {
 		t.Fatal(err)
 	}
 	if _, takeErr := taker.Take(ctx, "run", 6, "fetch"); takeErr != nil {
-		t.Fatalf("absolute acquisition path blocked checkpoint: %v", takeErr)
+		t.Fatalf("absolute baseline path blocked checkpoint: %v", takeErr)
 	}
 	if _, err = db.Exec(ctx, `INSERT INTO run_item(run_id,stage,item_key,state,batch,artifact_id) SELECT r.id,'fetch','item','done',0,a.id FROM run r CROSS JOIN artifact a`); err != nil {
 		t.Fatal(err)

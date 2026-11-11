@@ -71,8 +71,9 @@ defaults are provisional until a live run records their error rate. Attachment
 downloads use a separate pool of 8 in flight (`CORPUS_VBPL_FILE_IN_FLIGHT`) with
 no request rate limit, because the attachment CDN caps throughput per IP (about
 4 MB/s, measured by banhmi); a slow download never holds a gateway slot. Fetch
-issues a document's four gateway calls concurrently and downloads its
-attachments concurrently within the file pool.
+issues a document's detail and diagram calls concurrently; a full read under
+[fetch reuse](fetch-reuse.md#read-rule) then issues the tree and file list calls
+concurrently and downloads its attachments concurrently within the file pool.
 
 [Fetch reuse](fetch-reuse.md): reuse age limit 30 days from the original network
 read; control divisor 20 (about 5% of documents re-read in full per run). Both

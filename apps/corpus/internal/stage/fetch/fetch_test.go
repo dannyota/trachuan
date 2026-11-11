@@ -47,11 +47,15 @@ type fixtureServer struct {
 	downloadRelease chan struct{}
 	downloadStatus  int
 	downloads       atomic.Int32
+	requests        atomic.Int32
 }
 
 func setup(t *testing.T, f *fixtureServer) (*Stage, stage.Env) {
 	t.Helper()
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !strings.HasPrefix(r.URL.Path, "/attachment/") {
+			f.requests.Add(1)
+		}
 		if f.oversized {
 			_, _ = w.Write(make([]byte, 20_000_001))
 			return
@@ -136,6 +140,15 @@ func setup(t *testing.T, f *fixtureServer) (*Stage, stage.Env) {
 	}))
 	t.Cleanup(server.Close)
 	return New(testClient(server.URL)), stage.Env{Artifacts: artifact.Store{Root: t.TempDir()}}
+}
+
+func TestFetch_DetailFailureSkipsRemainingReads(t *testing.T) {
+	f := &fixtureServer{missing: true}
+	s, env := setup(t, f)
+	out := process(t, s, env)
+	if out.State != "gap" || f.requests.Load() != 2 {
+		t.Fatalf("state %q, gateway calls %d; want gap and two calls", out.State, f.requests.Load())
+	}
 }
 func fixture(t *testing.T, w http.ResponseWriter, name string) {
 	t.Helper()
@@ -489,10 +502,10 @@ func TestFetch_ParallelRequestsPreserveBundle(t *testing.T) {
 		t.Fatal(err)
 	}
 	f.released = make(chan struct{})
-	f.barrier = 4
+	f.barrier = 2
 	after := process(t, s, env)
 	if f.timedOut.Load() {
-		t.Error("the four gateway calls did not run concurrently")
+		t.Error("the initial gateway calls did not run concurrently")
 	}
 	if before.SHA256 != after.Artifact.SHA256 {
 		t.Errorf("bundle changed: %s != %s", before.SHA256, after.Artifact.SHA256)
@@ -523,12 +536,12 @@ func TestFetch_ParallelRequestsPreserveBundle(t *testing.T) {
 	}
 }
 
-func TestFetch_TreeErrorPrecedesDiagramError(t *testing.T) {
-	s, env := setup(t, &fixtureServer{treeStatus: http.StatusNotFound, diagramStatus: http.StatusInternalServerError})
-	_, err := s.Process(context.Background(), env, stage.Run{}, stage.Item{Key: "vn:vbpl:66518"})
-	var retry *stage.RetryableError
-	if !errors.As(err, &retry) || retry.GapKind != "" || !errors.Is(err, vbpl.ErrNotFound) {
-		t.Fatalf("error = %v", err)
+func TestFetch_DiagramErrorSkipsTree(t *testing.T) {
+	f := &fixtureServer{treeStatus: http.StatusNotFound, diagramStatus: http.StatusInternalServerError}
+	s, env := setup(t, f)
+	out, err := s.Process(context.Background(), env, stage.Run{}, stage.Item{Key: "vn:vbpl:66518"})
+	if err != nil || out.State != "gap" || len(out.Gaps) != 1 || out.Gaps[0].Kind != "source_unavailable" {
+		t.Fatalf("output = %+v, error = %v", out, err)
 	}
 }
 
