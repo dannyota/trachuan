@@ -110,6 +110,26 @@ func (f *e2eFixture) request(c *http.Client, method, target, body, contentType, 
 	}
 	return resp
 }
+func (f *e2eFixture) postWithHeaders(c *http.Client, path, body, contentType, origin, csrf string) *http.Response {
+	f.t.Helper()
+	req, err := http.NewRequestWithContext(f.t.Context(), http.MethodPost, f.server.URL+path, strings.NewReader(body))
+	if err != nil {
+		f.t.Fatal("create request")
+	}
+	req.Header.Set("Content-Type", contentType)
+	if origin != "" {
+		req.Header.Set("Origin", origin)
+	}
+	if csrf != "" {
+		req.Header.Set("X-CSRF-Token", csrf)
+	}
+	resp, err := c.Do(req)
+	if err != nil {
+		f.t.Fatal("HTTP request failed")
+	}
+	return resp
+}
+
 func (f *e2eFixture) status(resp *http.Response, want int) {
 	f.t.Helper()
 	defer func() { _ = resp.Body.Close() }()

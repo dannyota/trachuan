@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/cookiejar"
 	"net/url"
 	"strings"
 	"testing"
@@ -17,7 +18,7 @@ import (
 
 type e2eOAuth struct{ client, access, refresh string }
 
-func (f *e2eFixture) grant(c *http.Client) e2eOAuth {
+func (f *e2eFixture) grant(c *http.Client, signedOut bool) e2eOAuth {
 	f.t.Helper()
 	const redirect = "http://127.0.0.1:12345/callback"
 	var registration struct {
@@ -43,6 +44,47 @@ func (f *e2eFixture) grant(c *http.Client) e2eOAuth {
 		f.t.Fatal("missing consent redirect or cookie")
 	}
 	f.status(r, 303)
+	if signedOut {
+		base, err := url.Parse(f.server.URL)
+		if err != nil {
+			f.t.Fatal("invalid server URL")
+		}
+		var oauthCookie string
+		for _, ck := range c.Jar.Cookies(base) {
+			if ck.Name == "__Host-oauth" {
+				oauthCookie = ck.Value
+			}
+		}
+		if oauthCookie == "" {
+			f.t.Fatal("missing browser cookie")
+		}
+		r = f.request(c, "GET", path, "", "", "", "")
+		loginURL, err := url.Parse(r.Header.Get("Location"))
+		if err != nil || loginURL.Path != "/api/v1/auth/google/start" || loginURL.Query().Get("next") != path {
+			f.t.Fatal("invalid login redirect")
+		}
+		f.status(r, 303)
+		r = f.request(c, "GET", loginURL.String(), "", "", "", "")
+		location := r.Header.Get("Location")
+		f.status(r, 302)
+		r = f.request(c, "GET", location, "", "", "", "")
+		location = r.Header.Get("Location")
+		f.status(r, 302)
+		r = f.request(c, "GET", location, "", "", "", "")
+		if r.Header.Get("Location") != path {
+			f.t.Fatal("login did not return to consent")
+		}
+		f.status(r, 302)
+		found := false
+		for _, ck := range c.Jar.Cookies(base) {
+			if ck.Name == "__Host-oauth" && ck.Value == oauthCookie {
+				found = true
+			}
+		}
+		if !found {
+			f.t.Fatal("browser cookie did not survive login")
+		}
+	}
 	r = f.request(c, "GET", path, "", "", "", "")
 	if r.StatusCode != 200 {
 		f.status(r, 200)
@@ -73,6 +115,45 @@ func (f *e2eFixture) grant(c *http.Client) e2eOAuth {
 		f.t.Fatal("missing consent form token")
 	}
 	form := url.Values{"csrf_token": {formToken}, "decision": {"approve"}}
+	if signedOut {
+		base, parseErr := url.Parse(f.server.URL)
+		if parseErr != nil {
+			f.t.Fatal("invalid server URL")
+		}
+		jar, jarErr := cookiejar.New(nil)
+		if jarErr != nil {
+			f.t.Fatal("cookie jar failed")
+		}
+		for _, ck := range c.Jar.Cookies(base) {
+			if ck.Name == "__Host-session" {
+				jar.SetCookies(base, []*http.Cookie{ck})
+			}
+		}
+		withoutOAuth := *c
+		withoutOAuth.Jar = jar
+		for _, tc := range []struct {
+			name, token, origin string
+			client              *http.Client
+		}{
+			{"missing form token", "", f.server.URL, c},
+			{"wrong form token", "wrong", f.server.URL, c},
+			{"wrong origin", formToken, "https://other.invalid", c},
+			{"missing browser cookie", formToken, f.server.URL, &withoutOAuth},
+		} {
+			f.t.Run(tc.name, func(t *testing.T) {
+				attempt := url.Values{"csrf_token": {tc.token}, "decision": {"approve"}}
+				f.status(f.postWithHeaders(tc.client, path, attempt.Encode(), "application/x-www-form-urlencoded", tc.origin, ""), 400)
+				f.status(f.request(c, "GET", path, "", "", "", ""), 200)
+			})
+		}
+		var grants []struct {
+			ID int64 `json:"id"`
+		}
+		f.json(f.request(c, "GET", "/api/v1/me/grants", "", "", "", ""), 200, &grants)
+		if len(grants) != 0 {
+			f.t.Fatal("rejected consent created a grant")
+		}
+	}
 	r = f.request(c, "POST", path, form.Encode(), "application/x-www-form-urlencoded", formToken, "")
 	location := r.Header.Get("Location")
 	f.status(r, 303)
@@ -114,13 +195,13 @@ func TestE2E_OAuthGrantAndBlock(t *testing.T) {
 	browser := f.client()
 	f.login(browser)
 	me := f.me(browser)
-	first := f.grant(browser)
+	first := f.grant(browser, false)
 	f.mcp(browser, first.access, 200)
 	rotated := f.refresh(browser, first, 200)
 	f.mcp(browser, rotated.access, 200)
 	f.refresh(browser, first, 400)
 	f.mcp(browser, rotated.access, 401)
-	second := f.grant(browser)
+	second := f.grant(browser, false)
 	f.mcp(browser, second.access, 200)
 	var grants []struct {
 		ID   int64  `json:"id"`
@@ -132,7 +213,7 @@ func TestE2E_OAuthGrantAndBlock(t *testing.T) {
 	}
 	f.status(f.request(browser, "DELETE", fmt.Sprintf("/api/v1/me/grants/%d", grants[0].ID), "", "", me.CSRF, ""), 204)
 	f.mcp(browser, second.access, 401)
-	third := f.grant(browser)
+	third := f.grant(browser, false)
 	personal := f.personal(browser, me.CSRF)
 	f.mcp(browser, third.access, 200)
 	f.mcp(browser, personal.Token, 200)
@@ -144,4 +225,12 @@ func TestE2E_OAuthGrantAndBlock(t *testing.T) {
 	f.status(f.request(browser, "GET", "/api/v1/me", "", "", "", ""), 401)
 	f.mcp(browser, personal.Token, 401)
 	f.mcp(browser, third.access, 401)
+}
+
+func TestE2E_OAuthLoginAndConsentRejections(t *testing.T) {
+	f := newE2E(t)
+	browser := f.client()
+	grant := f.grant(browser, true)
+	f.me(browser)
+	f.mcp(browser, grant.access, 200)
 }

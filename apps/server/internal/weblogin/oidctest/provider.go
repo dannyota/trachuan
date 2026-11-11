@@ -151,6 +151,10 @@ func (p *Provider) serveHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		q := r.URL.Query()
+		if q.Get("code_challenge") == "" || q.Get("code_challenge_method") != "S256" {
+			http.Error(w, "invalid request", http.StatusBadRequest)
+			return
+		}
 		var raw [32]byte
 		if _, err := rand.Read(raw[:]); err != nil {
 			http.Error(w, "unavailable", http.StatusServiceUnavailable)
