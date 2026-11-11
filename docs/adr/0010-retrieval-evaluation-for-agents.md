@@ -45,18 +45,21 @@ choice, and three of them send unaccented queries that ADR 0002 rejects.
    and after), and recall@20 and MRR@8 fall on neither cohort; otherwise the
    current recipe stays. Recall@20 counts because 20 compact hits are what an
    agent receives by default
-   ([ADR 0013](0013-compact-search-and-batch-read.md)). Current-law precision,
-   abstention and the rejection checks are hard gates. Recall and MRR have
-   targets that every report states, but a target is not a gate: a release ships
-   when the gates pass and recall@20 and MRR@8 do not fall against the previous
-   release. Reports state the small sample size; no interval or superiority
-   claim is required.
+   ([ADR 0013](0013-compact-search-and-batch-read.md)). Current-law precision
+   and the rejection checks are hard gates; abstention is a target (balanced
+   accuracy of the low-confidence flag, both rates reported per cohort), because
+   the flag keeps the hits and an agent reads it as a signal. Recall and MRR
+   have targets that every report states, but a target is not a gate: a release
+   ships when the gates pass and recall@20 and MRR@8 do not fall against the
+   previous release. Reports state the small sample size; no interval or
+   superiority claim is required.
 5. Every evaluation reports returned evidence characters per response (p50,
    p95). A change that only reduces size ships when matched citations and gate
    results are identical on every cohort.
 6. Abstention uses the best-member cosine of the first fused provision,
    including lexical-only hits; the threshold is calibrated on the old product
-   and development cohorts together, per dense recipe.
+   and development cohorts together, per dense recipe, to the best balanced
+   accuracy ([calibration](../design/calibration.md)).
 7. Models are compared exact search against exact search on the same cases; ANN
    loss and cost are measured separately per model. Vietnamese_Embedding_v2
    stays unless a different model passes item 4.
@@ -135,3 +138,14 @@ real token spend.
   without provision text, labels adjudicated against official text of run
   vn/20261111_2, rechecked by a second model, 10 cases spot-checked by the
   owner. The spot check turned one negative into a positive.
+- 2026-11-12: abstention moved from gate to target and the calibration objective
+  changed to balanced accuracy. Run vn/20261111_3, the first fit on both cohorts
+  (20 negatives), chose threshold 0.726 under the "abstain on every negative"
+  rule because one development negative scores 0.726 (a document that exists but
+  lacks the annex the question needs); 79 of 84 old product and 44 of 50
+  development positives then carried the low-confidence flag, and the 0.95
+  abstention gate failed while retrieval was unchanged (old product recall@20
+  80/93). The recipe keeps the hits on a low-confidence response, so the flag is
+  a signal, not a refusal; a gate on it blocked releases for no evidence lost.
+  Balanced accuracy on the same scores reaches about 0.86 at threshold 0.53
+  (positives answered 111 of 134, negatives flagged 18 of 20).
