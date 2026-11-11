@@ -17,7 +17,9 @@ export SERVER_PUBLIC_URL='http://127.0.0.1:8080'
 `SERVER_LISTEN` defaults to `127.0.0.1:8080` and `SERVER_QUERY_EMBEDDER_URL`
 defaults to `http://127.0.0.1:8091`. The corpus URL must contain `{database}` as
 its database name. Configure authentication for both roles outside the URLs if
-possible.
+possible. `SERVER_PUBLIC_URL` must be an HTTPS origin, or an HTTP origin on
+localhost or a loopback address. Its path must be empty or `/`, with no query or
+fragment.
 
 Apply auth migrations and select the built database. Replace the database name
 with the actual local release name before executing the SQL.

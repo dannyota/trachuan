@@ -2,6 +2,7 @@ package app
 
 import (
 	"errors"
+	"net"
 	"net/url"
 	"os"
 	"strings"
@@ -17,11 +18,43 @@ func loadConfig() (config, error) {
 	if c.embedderURL == "" {
 		c.embedderURL = "http://127.0.0.1:8091"
 	}
-	base := os.Getenv("SERVER_PUBLIC_URL")
-	u, err := url.Parse(base)
-	if c.authURL == "" || c.corpusURL == "" || err != nil || u == nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" {
+	audience, ok := publicAudience(os.Getenv("SERVER_PUBLIC_URL"))
+	if c.authURL == "" || !validCorpusURL(c.corpusURL) || !ok {
 		return config{}, errors.New("invalid or missing server configuration")
 	}
-	c.audience = strings.TrimRight(base, "/") + "/mcp"
+	c.audience = audience
 	return c, nil
+}
+
+func publicAudience(base string) (string, bool) {
+	u, err := url.Parse(base)
+	if err != nil || u == nil || u.Host == "" || u.Hostname() == "" || u.User != nil || u.Opaque != "" || (u.Path != "" && u.Path != "/") || u.RawPath != "" || strings.ContainsAny(base, "?#") || strings.HasSuffix(u.Host, ":") {
+		return "", false
+	}
+	if u.Scheme != "https" && (u.Scheme != "http" || !loopback(u.Hostname())) {
+		return "", false
+	}
+	return u.Scheme + "://" + u.Host + "/mcp", true
+}
+func loopback(host string) bool {
+	if strings.EqualFold(host, "localhost") {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
+}
+func validCorpusURL(template string) bool {
+	if strings.Count(template, "{database}") != 1 {
+		return false
+	}
+	u, err := url.Parse(template)
+	if err != nil || u == nil || (u.Scheme != "postgres" && u.Scheme != "postgresql") || u.Host == "" || u.Path != "/{database}" {
+		return false
+	}
+	q, err := url.ParseQuery(u.RawQuery)
+	if err != nil {
+		return false
+	}
+	_, overrides := q["dbname"]
+	return !overrides
 }

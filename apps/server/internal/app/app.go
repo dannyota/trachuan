@@ -25,7 +25,11 @@ import (
 
 // Run executes a server subcommand and returns its exit status.
 func Run(ctx context.Context, args []string, stderr io.Writer) int {
-	if err := run(ctx, args, os.Stdout, stderr); err != nil {
+	return exitCode(run(ctx, args, os.Stdout, stderr), stderr)
+}
+
+func exitCode(err error, stderr io.Writer) int {
+	if err != nil {
 		_, _ = fmt.Fprintln(stderr, "server:", err)
 		return 1
 	}
@@ -68,7 +72,7 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 }
 func readiness(runCtx context.Context, check func(context.Context) error) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if runCtx.Err() != nil || check(r.Context()) != nil {
+		if runCtx.Err() != nil || check(r.Context()) != nil || runCtx.Err() != nil {
 			http.Error(w, "unavailable", http.StatusServiceUnavailable)
 			return
 		}
