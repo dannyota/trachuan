@@ -21,7 +21,7 @@ func Middleware(v *Verifier, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		headers := r.Header.Values("Authorization")
 		if len(headers) != 1 || len(headers[0]) < 7 || !strings.EqualFold(headers[0][:7], "Bearer ") {
-			unauthorized(w, v.Audience, len(headers) != 0)
+			unauthorized(w, v.Audience, hasBearer(headers))
 			return
 		}
 		p, err := v.Verify(r.Context(), headers[0][7:])
@@ -35,6 +35,15 @@ func Middleware(v *Verifier, next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), principalKey{}, p)))
 	})
+}
+
+func hasBearer(headers []string) bool {
+	for _, header := range headers {
+		if len(header) > 6 && strings.EqualFold(header[:6], "Bearer") && (header[6] == ' ' || header[6] == '\t') {
+			return true
+		}
+	}
+	return false
 }
 
 func unauthorized(w http.ResponseWriter, audience string, invalid bool) {

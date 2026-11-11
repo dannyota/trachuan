@@ -32,7 +32,7 @@ func response(v *Verifier, headers []string) *httptest.ResponseRecorder {
 }
 
 func TestMiddleware_HeadersAndStatus(t *testing.T) {
-	for _, name := range []string{"missing", "valid", "mixed scheme", "wrong scheme", "double space", "tab", "trailing space", "newline", "duplicate", "combined", "unknown", "unavailable", "touch unavailable"} {
+	for _, name := range []string{"missing", "valid", "mixed scheme", "wrong scheme", "duplicate wrong scheme", "bearer prefix", "double space", "tab", "trailing space", "newline", "duplicate", "combined", "unknown", "unavailable", "touch unavailable"} {
 		t.Run(name, func(t *testing.T) {
 			v, s, _, plain := fixture(t)
 			headers := []string{"Bearer " + plain}
@@ -47,6 +47,10 @@ func TestMiddleware_HeadersAndStatus(t *testing.T) {
 				headers[0], status, lookup = "bEaReR "+plain, http.StatusNoContent, true
 			case "wrong scheme":
 				headers[0] = "Basic " + plain
+			case "duplicate wrong scheme":
+				headers = []string{"Basic " + plain, "Basic " + plain}
+			case "bearer prefix":
+				headers[0] = "BearerX " + plain
 			case "double space":
 				headers[0] = "Bearer  " + plain
 			case "tab":
@@ -73,7 +77,7 @@ func TestMiddleware_HeadersAndStatus(t *testing.T) {
 			challenge := ""
 			if status == http.StatusUnauthorized {
 				challenge = `Bearer resource_metadata="https://example.invalid/.well-known/oauth-protected-resource/mcp", scope="mcp:read"`
-				if name != "missing" {
+				if name != "missing" && name != "wrong scheme" && name != "duplicate wrong scheme" && name != "bearer prefix" {
 					challenge += `, error="invalid_token"`
 				}
 			}

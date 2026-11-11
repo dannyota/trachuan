@@ -25,3 +25,34 @@ func TestRedirect_ExactOtherwise(t *testing.T) {
 		}
 	}
 }
+
+func TestRedirect_InvalidOnEitherSide(t *testing.T) {
+	const valid = "http://localhost/cb"
+	for _, tc := range []struct{ name, uri string }{
+		{"fragment", "http://localhost/cb#fragment"},
+		{"userinfo", "http://user@localhost/cb"},
+		{"malformed IPv6", "http://[::1/cb"},
+		{"non-loopback HTTP", "http://example.test/cb"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if MatchRedirect(tc.uri, valid) || MatchRedirect(valid, tc.uri) || MatchRedirect(tc.uri, tc.uri) {
+				t.Fatal("accepted invalid redirect")
+			}
+		})
+	}
+}
+
+func TestRedirect_ByteDifferences(t *testing.T) {
+	for _, tc := range []struct{ name, registered, requested string }{
+		{"host case", "http://localhost:123/cb", "http://LOCALHOST:456/cb"},
+		{"percent encoding", "http://localhost:123/%63b", "http://localhost:456/cb"},
+		{"trailing slash", "http://localhost:123/cb", "http://localhost:456/cb/"},
+		{"query order", "http://localhost:123/cb?a=1&b=2", "http://localhost:456/cb?b=2&a=1"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if MatchRedirect(tc.registered, tc.requested) || MatchRedirect(tc.requested, tc.registered) {
+				t.Fatal("accepted different redirect")
+			}
+		})
+	}
+}
