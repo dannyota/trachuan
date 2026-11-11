@@ -4,12 +4,14 @@ import (
 	"context"
 	"crypto/x509"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/netip"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -319,5 +321,98 @@ func TestCIMD_ResponseBounds(t *testing.T) {
 				t.Fatal("failed document cached or successful document refetched")
 			}
 		})
+	}
+}
+
+func TestCIMD_SharedFetchSurvivesInitiatorCancellation(t *testing.T) {
+	entered := make(chan struct{})
+	release := make(chan struct{})
+	f := tlsResolver(t, func(w http.ResponseWriter, _ *http.Request) {
+		close(entered)
+		<-release
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = fmt.Fprint(w, cimdFixture("https://example.com/client"))
+	})
+	defer func() {
+		select {
+		case <-release:
+		default:
+			close(release)
+		}
+	}()
+	firstCtx, cancel := context.WithCancel(t.Context())
+	firstDone := make(chan error, 1)
+	go func() { _, err := f.Resolve(firstCtx, "https://example.com/client"); firstDone <- err }()
+	<-entered
+	waiting := make(chan struct{})
+	secondCtx := &waitSignalContext{Context: t.Context(), waiting: waiting}
+	secondDone := make(chan error, 1)
+	go func() { _, err := f.Resolve(secondCtx, "https://example.com/client"); secondDone <- err }()
+	<-waiting
+	cancel()
+	if err := <-firstDone; !errors.Is(err, context.Canceled) {
+		t.Fatalf("initiator error = %v", err)
+	}
+	close(release)
+	if err := <-secondDone; err != nil {
+		t.Fatalf("waiter failed: %v", err)
+	}
+}
+
+type waitSignalContext struct {
+	context.Context
+	once    sync.Once
+	waiting chan struct{}
+}
+
+func (c *waitSignalContext) Done() <-chan struct{} {
+	c.once.Do(func() { close(c.waiting) })
+	return c.Context.Done()
+}
+
+func TestCIMD_SupportedGrantAndResponseIntersection(t *testing.T) {
+	id := "https://example.com/client"
+	for _, tc := range []struct {
+		fields string
+		valid  bool
+	}{
+		{`,"grant_types":["authorization_code","urn:other","refresh_token"],"response_types":["code","token"]`, true},
+		{`,"grant_types":["refresh_token","urn:other"]`, false},
+		{`,"response_types":["token"]`, false},
+		{`,"grant_types":[]`, false},
+		{`,"response_types":null`, false},
+		{`,"grant_types":["authorization_code",null]`, false},
+	} {
+		t.Run(tc.fields, func(t *testing.T) {
+			raw := strings.TrimSuffix(cimdFixture(id), "}") + tc.fields + "}"
+			_, err := parseCIMD([]byte(raw), id)
+			if (err == nil) != tc.valid {
+				t.Fatalf("error = %v", err)
+			}
+		})
+	}
+}
+
+func TestCIMD_PathRejectedBeforeDNS(t *testing.T) {
+	for _, raw := range []string{
+		"https://example.com", "https://example.com/", "https://example.com/.",
+		"https://example.com/a/../b", "https://example.com/%2e/client", "https://example.com/a/%2E%2e/b",
+		"https://example.com/a%2f..%2fb", "https://example.com/%2e%2E", "https://example.com/%2f",
+	} {
+		t.Run(raw, func(t *testing.T) {
+			f := NewCIMDResolver()
+			f.lookup = func(context.Context, string) ([]netip.Addr, error) {
+				t.Error("unsafe path reached DNS")
+				return nil, fmt.Errorf("unexpected lookup")
+			}
+			if _, err := f.Resolve(t.Context(), raw); err == nil {
+				t.Fatal("unsafe path accepted")
+			}
+		})
+	}
+	for _, raw := range []string{"https://example.com/client", "https://example.com/.well-known/client", "https://example.com/a..b"} {
+		if _, err := cimdURL(raw); err != nil {
+			t.Errorf("valid path %s: %v", raw, err)
+		}
 	}
 }

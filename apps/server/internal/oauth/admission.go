@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	"danny.vn/trachuan/apps/server/internal/store"
@@ -28,8 +29,27 @@ func Admit(ctx context.Context, tx pgx.Tx, client Client) (Client, error) {
 		return unavailable(err)
 	}
 	q := store.New(tx)
+	var digest *string
+	if client.Kind == "cimd" {
+		raw, marshalErr := json.Marshal(struct {
+			Name      string
+			Redirects []string
+		}{client.Name, client.RedirectURIs})
+		if marshalErr != nil {
+			return unavailable(marshalErr)
+		}
+		value := fmt.Sprintf("%x", sha256.Sum256(raw))
+		digest = &value
+	}
 	existing, err := q.GetClient(ctx, client.ID)
 	if err == nil {
+		sameDigest := existing.MetadataSha256 == nil && digest == nil || existing.MetadataSha256 != nil && digest != nil && *existing.MetadataSha256 == *digest
+		if existing.Kind != client.Kind || existing.Name != client.Name || !slices.Equal(existing.RedirectUris, client.RedirectURIs) || !sameDigest {
+			if _, updateErr := tx.Exec(ctx, `UPDATE oauth_client SET kind=$2, name=$3, redirect_uris=$4, metadata_sha256=$5 WHERE client_id=$1`, client.ID, client.Kind, client.Name, client.RedirectURIs, digest); updateErr != nil {
+				return unavailable(updateErr)
+			}
+			existing.Kind, existing.Name, existing.RedirectUris, existing.MetadataSha256 = client.Kind, client.Name, client.RedirectURIs, digest
+		}
 		return clientFromRow(existing), nil
 	}
 	if !errors.Is(err, pgx.ErrNoRows) {
@@ -43,18 +63,6 @@ func Admit(ctx context.Context, tx pgx.Tx, client Client) (Client, error) {
 		if _, evictErr := q.EvictClient(ctx); evictErr != nil {
 			return unavailable(evictErr)
 		}
-	}
-	var digest *string
-	if client.Kind == "cimd" {
-		raw, marshalErr := json.Marshal(struct {
-			Name      string
-			Redirects []string
-		}{client.Name, client.RedirectURIs})
-		if marshalErr != nil {
-			return unavailable(marshalErr)
-		}
-		value := fmt.Sprintf("%x", sha256.Sum256(raw))
-		digest = &value
 	}
 	row, err := q.CreateClient(ctx, store.CreateClientParams{ClientID: client.ID, Kind: client.Kind, Name: client.Name, RedirectUris: client.RedirectURIs, MetadataSha256: digest})
 	if err != nil {

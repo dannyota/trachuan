@@ -9,8 +9,12 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -251,5 +255,101 @@ func TestAdmission_ProtectsCodesAndFamilies(t *testing.T) {
 	}
 	if _, err := q.GetClient(ctx, "client-9998"); !errors.Is(err, pgx.ErrNoRows) {
 		t.Fatalf("eligible LRU retained: %v", err)
+	}
+}
+
+func TestAdmission_CIMDRefreshPersistsMetadata(t *testing.T) {
+	pool := admissionDB(t)
+	ctx := t.Context()
+	var version atomic.Int32
+	now := time.Date(2026, 11, 11, 0, 0, 0, 0, time.UTC)
+	f := tlsResolver(t, func(w http.ResponseWriter, _ *http.Request) {
+		name, redirect := "Old", "https://old.example/cb"
+		if version.Load() != 0 {
+			name, redirect = "New", "https://new.example/cb"
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = fmt.Fprintf(w, `{"client_id":"https://example.com/client","client_name":%q,"redirect_uris":[%q]}`, name, redirect)
+	})
+	f.clock = func() time.Time { return now }
+	clients := NewClients(pool, nil, f)
+	old, err := clients.Resolve(ctx, "https://example.com/client")
+	if err != nil {
+		t.Fatal(err)
+	}
+	row, err := store.New(pool).GetClient(ctx, old.ID)
+	if err != nil || row.MetadataSha256 == nil {
+		t.Fatalf("initial row: %v", err)
+	}
+	oldDigest := *row.MetadataSha256
+	version.Store(1)
+	now = now.Add(24 * time.Hour)
+	updated, err := clients.Resolve(ctx, old.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if updated.Name != "New" || !slices.Equal(updated.RedirectURIs, []string{"https://new.example/cb"}) {
+		t.Fatalf("resolved metadata: %v", updated)
+	}
+	tx := admissionTx(t, pool)
+	inUse, err := InUse(ctx, tx, old.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	row, err = store.New(tx).GetClient(ctx, old.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if inUse.Name != updated.Name || !slices.Equal(inUse.RedirectURIs, updated.RedirectURIs) || row.Name != updated.Name || !slices.Equal(row.RedirectUris, updated.RedirectURIs) {
+		t.Fatalf("stored metadata differs: %v %v", inUse, row)
+	}
+	if row.MetadataSha256 == nil || *row.MetadataSha256 == oldDigest {
+		t.Fatal("metadata digest did not change")
+	}
+	if !row.CreatedAt.Equal(old.CreatedAt) || !updated.CreatedAt.Equal(old.CreatedAt) {
+		t.Fatal("client issuance time changed")
+	}
+}
+
+func TestAdmission_PreregisteredChangePersistsMetadata(t *testing.T) {
+	pool := admissionDB(t)
+	ctx := t.Context()
+	path := filepath.Join(t.TempDir(), "clients.json")
+	load := func(name, redirect string) []Client {
+		t.Helper()
+		raw := fmt.Sprintf(`[{"client_id":"pre-client","client_name":%q,"redirect_uris":[%q]}]`, name, redirect)
+		if err := os.WriteFile(path, []byte(raw), 0600); err != nil {
+			t.Fatal(err)
+		}
+		configured, err := LoadPreregistered(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return configured
+	}
+	clients := NewClients(pool, load("Old", "https://old.example/cb"), nil)
+	first, err := clients.Resolve(ctx, "pre-client")
+	if err != nil {
+		t.Fatal(err)
+	}
+	clients = NewClients(pool, load("New", "https://new.example/cb"), nil)
+	updated, err := clients.Resolve(ctx, first.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx := admissionTx(t, pool)
+	inUse, err := InUse(ctx, tx, first.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	row, err := store.New(tx).GetClient(ctx, first.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if updated.Name != "New" || inUse.Name != "New" || row.Name != "New" || !slices.Equal(inUse.RedirectURIs, []string{"https://new.example/cb"}) || !slices.Equal(row.RedirectUris, updated.RedirectURIs) {
+		t.Fatalf("metadata not refreshed: %v %v %v", updated, inUse, row)
+	}
+	if row.MetadataSha256 != nil || !row.CreatedAt.Equal(first.CreatedAt) {
+		t.Fatal("preregistered identity changed")
 	}
 }

@@ -96,39 +96,40 @@ func (f *CIMDResolver) Resolve(ctx context.Context, id string) (Client, error) {
 		delete(f.cache, id)
 		f.lru.Remove(element)
 	}
-	if flight := f.flights[id]; flight != nil {
-		f.mu.Unlock()
-		select {
-		case <-ctx.Done():
-			return Client{}, fmt.Errorf("wait for client metadata: %w", ctx.Err())
-		case <-flight.done:
-			return cloneClient(flight.client), flight.err
+	flight := f.flights[id]
+	if flight == nil {
+		if len(f.flights) >= 4 {
+			f.mu.Unlock()
+			return Client{}, ErrTemporarilyUnavailable
 		}
+		flight = &cimdFlight{done: make(chan struct{})}
+		f.flights[id] = flight
+		fetchCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), f.timeout)
+		go func() {
+			defer cancel()
+			c, err := f.fetch(fetchCtx, id, u)
+			f.mu.Lock()
+			if err == nil {
+				for len(f.cache) >= 1000 {
+					old := f.lru.Back()
+					delete(f.cache, old.Value.(cimdEntry).client.ID)
+					f.lru.Remove(old)
+				}
+				f.cache[id] = f.lru.PushFront(cimdEntry{cloneClient(c), f.clock().Add(24 * time.Hour)})
+			}
+			flight.client, flight.err = c, err
+			delete(f.flights, id)
+			close(flight.done)
+			f.mu.Unlock()
+		}()
 	}
-	if len(f.flights) >= 4 {
-		f.mu.Unlock()
-		return Client{}, ErrTemporarilyUnavailable
-	}
-	flight := &cimdFlight{done: make(chan struct{})}
-	f.flights[id] = flight
 	f.mu.Unlock()
-	fetchCtx, cancel := context.WithTimeout(ctx, f.timeout)
-	c, err := f.fetch(fetchCtx, id, u)
-	cancel()
-	f.mu.Lock()
-	if err == nil {
-		for len(f.cache) >= 1000 {
-			old := f.lru.Back()
-			delete(f.cache, old.Value.(cimdEntry).client.ID)
-			f.lru.Remove(old)
-		}
-		f.cache[id] = f.lru.PushFront(cimdEntry{cloneClient(c), f.clock().Add(24 * time.Hour)})
+	select {
+	case <-ctx.Done():
+		return Client{}, fmt.Errorf("wait for client metadata: %w", ctx.Err())
+	case <-flight.done:
+		return cloneClient(flight.client), flight.err
 	}
-	flight.client, flight.err = c, err
-	delete(f.flights, id)
-	close(flight.done)
-	f.mu.Unlock()
-	return cloneClient(c), err
 }
 
 func (f *CIMDResolver) addressAllowed(addr netip.Addr) bool {

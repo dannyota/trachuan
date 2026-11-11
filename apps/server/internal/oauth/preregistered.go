@@ -41,7 +41,7 @@ func LoadPreregistered(path string) ([]Client, error) {
 		if !metadataString(fields, "client_id", &id) || id == "" || len(id) > 2048 || strings.HasPrefix(id, "https://") || strings.ContainsAny(id, " \t\r\n") || seen[id] {
 			return nil, ErrInvalidClient
 		}
-		c, code := clientMetadata(fields)
+		c, code := clientMetadata(fields, false)
 		if code != "" {
 			return nil, ErrInvalidClient
 		}

@@ -29,6 +29,8 @@ func TestRegister_FieldsResponseAndErrors(t *testing.T) {
 		{"secret", `{` + redirects + `,"client_secret":"refused"}`, "invalid_client_metadata", 400},
 		{"plural secret", `{` + redirects + `,"token_endpoint_auth_methods_supported":["none","private_key_jwt"]}`, "invalid_client_metadata", 400},
 		{"grant", `{` + redirects + `,"grant_types":["client_credentials"]}`, "invalid_client_metadata", 400},
+		{"mixed grants", `{` + redirects + `,"grant_types":["authorization_code","unsupported"]}`, "invalid_client_metadata", 400},
+		{"mixed responses", `{` + redirects + `,"response_types":["code","token"]}`, "invalid_client_metadata", 400},
 		{"empty grant", `{` + redirects + `,"grant_types":[]}`, "invalid_client_metadata", 400},
 		{"response", `{` + redirects + `,"response_types":["token"]}`, "invalid_client_metadata", 400},
 		{"scope", `{` + redirects + `,"scope":"other"}`, "invalid_client_metadata", 400},

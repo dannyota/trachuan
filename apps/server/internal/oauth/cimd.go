@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"unicode"
@@ -23,7 +24,7 @@ func parseCIMD(raw []byte, id string) (Client, error) {
 	if !metadataString(fields, "client_id", &documentID) || documentID != id {
 		return Client{}, ErrInvalidClient
 	}
-	c, code := clientMetadata(fields)
+	c, code := clientMetadata(fields, true)
 	if code != "" {
 		return Client{}, ErrInvalidClient
 	}
@@ -116,7 +117,7 @@ func metadataList(fields map[string]json.RawMessage, key string) ([]string, bool
 	return values, true
 }
 
-func clientMetadata(fields map[string]json.RawMessage) (Client, string) {
+func clientMetadata(fields map[string]json.RawMessage, cimd bool) (Client, string) {
 	bad := func(code string) (Client, string) { return Client{}, code }
 	for _, key := range []string{"client_secret", "client_secret_expires_at"} {
 		if _, ok := fields[key]; ok {
@@ -165,6 +166,16 @@ func clientMetadata(fields map[string]json.RawMessage) (Client, string) {
 		if !valid || len(values) == 0 {
 			return bad("invalid_client_metadata")
 		}
+		if cimd {
+			required := "authorization_code"
+			if key == "response_types" {
+				required = "code"
+			}
+			if !slices.Contains(values, required) {
+				return bad("invalid_client_metadata")
+			}
+			continue
+		}
 		seen := map[string]bool{}
 		for _, v := range values {
 			if seen[v] || (key == "grant_types" && v != "authorization_code" && v != "refresh_token") || (key == "response_types" && v != "code") {
@@ -206,6 +217,14 @@ func cimdURL(raw string) (*url.URL, error) {
 	u, err := url.Parse(raw)
 	if err != nil || u.Scheme != "https" || u.User != nil || u.Opaque != "" || u.Hostname() == "" {
 		return nil, ErrInvalidClient
+	}
+	if strings.Trim(u.Path, "/") == "" {
+		return nil, ErrInvalidClient
+	}
+	for _, segment := range strings.Split(u.Path, "/") {
+		if segment == "." || segment == ".." {
+			return nil, ErrInvalidClient
+		}
 	}
 	for _, r := range raw {
 		if r < 0x21 || r > 0x7e {

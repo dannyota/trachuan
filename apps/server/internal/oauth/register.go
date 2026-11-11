@@ -34,7 +34,7 @@ func NewRegisterHandler(admit func(context.Context, Client) (Client, error)) htt
 			writeClientError(w, 400, "invalid_client_metadata")
 			return
 		}
-		c, code := clientMetadata(fields)
+		c, code := clientMetadata(fields, false)
 		if code != "" {
 			writeClientError(w, 400, code)
 			return

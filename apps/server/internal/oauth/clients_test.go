@@ -129,3 +129,52 @@ func TestClientMetadata_RejectsMalformedRedirects(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+type metadataUpdateTx struct {
+	pgx.Tx
+	row     store.OauthClient
+	updates int
+}
+
+func (tx *metadataUpdateTx) QueryRow(context.Context, string, ...any) pgx.Row {
+	return clientRow{row: tx.row}
+}
+func (tx *metadataUpdateTx) Exec(_ context.Context, sql string, args ...any) (pgconn.CommandTag, error) {
+	if strings.Contains(sql, "UPDATE oauth_client") {
+		tx.updates++
+		tx.row.Kind = args[1].(string)
+		tx.row.Name = args[2].(string)
+		tx.row.RedirectUris = args[3].([]string)
+		tx.row.MetadataSha256 = args[4].(*string)
+	}
+	return pgconn.NewCommandTag("UPDATE 1"), nil
+}
+
+func TestAdmission_ExistingMetadataUpdates(t *testing.T) {
+	for _, kind := range []string{"cimd", "preregistered"} {
+		t.Run(kind, func(t *testing.T) {
+			oldDigest := "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+			tx := &metadataUpdateTx{row: store.OauthClient{ClientID: "fixture", Kind: kind, Name: "Old", RedirectUris: []string{"https://old.example/cb"}, MetadataSha256: &oldDigest}}
+			c := Client{ID: "fixture", Kind: kind, Name: "New", RedirectURIs: []string{"https://new.example/cb"}}
+			got, err := Admit(t.Context(), tx, c)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got.Name != "New" || got.RedirectURIs[0] != "https://new.example/cb" || tx.row.Name != "New" || tx.row.RedirectUris[0] != "https://new.example/cb" {
+				t.Fatalf("updated = %v, row = %v", got, tx.row)
+			}
+			if kind == "cimd" && (tx.row.MetadataSha256 == nil || *tx.row.MetadataSha256 == oldDigest) {
+				t.Fatal("digest did not change")
+			}
+			if kind == "preregistered" && tx.row.MetadataSha256 != nil {
+				t.Fatal("unexpected digest")
+			}
+			if _, err := Admit(t.Context(), tx, c); err != nil {
+				t.Fatal(err)
+			}
+			if tx.updates != 1 {
+				t.Fatalf("unchanged metadata updated %d times", tx.updates)
+			}
+		})
+	}
+}
