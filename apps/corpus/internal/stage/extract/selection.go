@@ -112,7 +112,25 @@ func choose(ctx context.Context, dir, key string) (selection, []vbpl.Node, error
 			return selection{}, nil, err
 		}
 		if len(nodes) > 0 {
-			return selection{source: "source_tree"}, nodes, nil
+			rows, _, extractErr := extractTree(ctx, nodes)
+			if extractErr != nil {
+				return selection{}, nil, extractErr
+			}
+			if !headingOnly(rows) {
+				return selection{source: "source_tree"}, nodes, nil
+			}
+			doc, readErr := fetch.ReadDocument(dir, key)
+			if readErr != nil {
+				return selection{}, nil, fmt.Errorf("read fetch document: %w", readErr)
+			}
+			selected, selectErr := selectFiles(dir, parts[2], doc.Files, absentOCR{})
+			if selectErr != nil {
+				return selection{}, nil, selectErr
+			}
+			if selected.source != "none" {
+				return selected, nil, nil
+			}
+			return selection{source: "source_tree", gap: "tree_headings_only"}, nodes, nil
 		}
 	}
 	doc, err := fetch.ReadDocument(dir, key)
@@ -121,4 +139,33 @@ func choose(ctx context.Context, dir, key string) (selection, []vbpl.Node, error
 	}
 	s, err := selectFiles(dir, parts[2], doc.Files, absentOCR{})
 	return s, nil, err
+}
+
+func headingOnly(rows []provision) bool {
+	children := make(map[string]bool)
+	for _, row := range rows {
+		if row.ParentNodeID != nil {
+			children[*row.ParentNodeID] = true
+		}
+	}
+	found := false
+	for _, row := range rows {
+		if row.Kind != "dieu" {
+			continue
+		}
+		found = true
+		if children[row.NodeID] {
+			return false
+		}
+		text := strings.Join(strings.Fields(row.Text), " ")
+		label := strings.Join(strings.Fields(row.Label), " ")
+		heading := strings.Join(strings.Fields(row.Heading), " ")
+		if text != label && text != label+"." && text != label+" "+heading && text != label+". "+heading {
+			return false
+		}
+		if heading != "" && (text == label || text == label+".") {
+			return false
+		}
+	}
+	return found
 }

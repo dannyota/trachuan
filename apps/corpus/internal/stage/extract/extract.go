@@ -95,6 +95,9 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 		if err != nil {
 			return stage.Output{}, fmt.Errorf("extract tree: %w", err)
 		}
+		if selected.gap != "" {
+			gaps = append(gaps, stage.Gap{Kind: selected.gap})
+		}
 	case "html_transcription":
 		if selected.tooLarge {
 			rows = []provision{}
