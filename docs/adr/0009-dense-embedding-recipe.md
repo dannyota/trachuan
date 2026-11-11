@@ -43,12 +43,12 @@ accepted precision trade-off, not a reason to waive release retrieval floors.
 The [earlier A1 measurement](../research/host-oci-a1-2026-11.md) measured FP32
 through the Python service and showed thread-sensitive long-query latency. The
 later INT8 measurements are direct ONNX Runtime timings, not Go service latency
-or concurrent search acceptance. [Budgets](../design/budgets.md) owns the memory
-allocation, thread limits, deadlines and host gates. Measure the Go INT8 service
-with PostgreSQL loaded before release. If the host misses those gates at the
-query cap, the existing fallback is a 128-token cap, recorded in History. INT8
-is already approved; any further precision change revises this record and ADR
-0011 with owner approval.
+or concurrent search acceptance. [Host budgets](../design/budgets-host.md) owns
+the memory allocation, thread limits, deadlines and host gates. Measure the Go
+INT8 service with PostgreSQL loaded before release. If the host misses those
+gates at the query cap, the existing fallback is a 128-token cap, recorded in
+History. INT8 is already approved; any further precision change revises this
+record and ADR 0011 with owner approval.
 
 Changing only the query recipe requires a new build and evaluation, not new
 document vectors. Keep earlier artifacts for rollback. FP16 document cost and

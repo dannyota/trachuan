@@ -16,7 +16,7 @@ component shape and the data-flow rules. Decisions and alternatives live in the
   [testing](../../instructions/testing.md).
 - A subject filter never lowers recall on the golden set under the per-case
   contract in [retrieval](retrieval.md) "Subject filter contract".
-- Recurring hosting stays within the [budget](budgets.md).
+- Recurring hosting stays within the [budget](budgets-host.md).
 
 ## Serving host
 

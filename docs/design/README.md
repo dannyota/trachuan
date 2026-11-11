@@ -1,7 +1,8 @@
 # Design
 
 Intended behavior of trachuan. Decisions with alternatives are in the
-[ADRs](../adr/README.md); numeric limits in [budgets](budgets.md).
+[ADRs](../adr/README.md); numeric limits in [budgets](budgets.md) and
+[host budgets](budgets-host.md).
 
 | Note                                       | Owns                                                                                     |
 | ------------------------------------------ | ---------------------------------------------------------------------------------------- |
@@ -18,7 +19,8 @@ Intended behavior of trachuan. Decisions with alternatives are in the
 | [auth](auth.md)                            | Google login, OAuth for MCP, CIMD, revocation, account lifecycle                         |
 | [web](web.md)                              | Routes, pages, visual system                                                             |
 | [deployment](deployment.md)                | Host, deploy, secrets, release activation, backups, observability                        |
-| [budgets](budgets.md)                      | Cost, memory, request limits, retrieval and Temporal bounds                              |
+| [budgets](budgets.md)                      | Request, pipeline, indexing, retrieval and Temporal limits                               |
+| [host budgets](budgets-host.md)            | Hosting cost, host memory, alarms and disk                                               |
 | [index](index.md)                          | Index scope, build inventory, normalization, local database recovery                     |
 | [chunk](chunk.md)                          | Chunk recipe, source spans, omissions and workshop projection                            |
 | [embedder](embedder.md)                    | Embedding HTTP contract, Go query and Python document services, embedding artifacts      |

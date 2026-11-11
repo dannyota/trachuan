@@ -7,8 +7,8 @@ encryption settled by the owner 2026-11-10.
 
 Budget is about USD 60 per month. The owner already operates aboutme.vn with
 Podman Quadlet, pgBackRest and Telegram alerts. The OCI A1 measurement host
-offers more memory within this budget; see [costs](../design/budgets.md) and
-[measurements](../research/host-oci-a1-2026-11.md).
+offers more memory within this budget; see [costs](../design/budgets-host.md)
+and [measurements](../research/host-oci-a1-2026-11.md).
 
 ## Decision
 
@@ -26,7 +26,7 @@ precision remains owned by [ADR 0009](0009-dense-embedding-recipe.md).
 Balanced boot/block volumes replace gp3; Vault secrets use instance-principal
 access; Object Storage uses its S3-compatible API and customer secret keys; OCI
 Monitoring and Notifications replace CloudWatch. Numeric sizes and costs live in
-[budgets](../design/budgets.md).
+[host budgets](../design/budgets-host.md).
 
 The host pulls an authorized, signed image release manifest on a systemd timer.
 It verifies the [host trust policy](../design/deployment.md#images-and-deploy)
