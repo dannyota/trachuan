@@ -97,3 +97,38 @@ func TestValidate_RootParentsAndOrdinals(t *testing.T) {
 		})
 	}
 }
+
+func TestValidate_OverrideCodes(t *testing.T) {
+	m := Mapping{Nodes: []MappedNode{
+		{GUID: "s", Code: "1", Level: 1, Status: "active", Ordinal: 1},
+		{GUID: "d", Code: "1.1", ParentCode: "1", Level: 2, Status: "active", Ordinal: 1},
+		{GUID: "a", Code: "1.1.c1", ParentCode: "1.1", Level: 3, Status: "active", Ordinal: 1},
+		{GUID: "r", Code: "1.1.c2", ParentCode: "1.1", Level: 3, Status: "retired"},
+	}}
+	for _, tc := range []struct {
+		name    string
+		entries []Override
+	}{
+		{"root", []Override{{DocumentKey: "doc", Anchor: "a", Code: "1", Reason: "r"}}},
+		{"retired", []Override{{DocumentKey: "doc", Anchor: "a", Code: "1.1.c2", Reason: "r"}}},
+		{"unknown", []Override{{DocumentKey: "doc", Anchor: "a", Code: "1.9", Reason: "r"}}},
+		{"mixed family", []Override{{DocumentKey: "doc", Anchor: "a", Code: "1.1", Reason: "r", Exclude: true}, {DocumentKey: "doc", Anchor: "a", Code: "1.1.c1", Reason: "r"}}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if err := Validate(m, nil, tc.entries); err == nil {
+				t.Fatal("accepted invalid override")
+			}
+		})
+	}
+}
+
+func TestValidate_CustomUnderRetiredParent(t *testing.T) {
+	m := Mapping{Nodes: []MappedNode{
+		{GUID: "s", Code: "1", Level: 1, Status: "active", Ordinal: 1},
+		{GUID: "d", Code: "1.1", ParentCode: "1", Level: 2, Status: "retired"},
+	}}
+	custom := []CustomNode{{Code: "1.1.x1", ParentCode: "1.1", Name: "Name", Description: "A sentence."}}
+	if err := Validate(m, custom, nil); err == nil {
+		t.Fatal("accepted custom node under retired parent")
+	}
+}

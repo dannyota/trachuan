@@ -27,6 +27,7 @@ type Config struct {
 	Embedder           retrieval.Embedder
 	Suite              evaluation.Suite
 	Corrections        CorrectionsInput
+	Taxonomy           TaxonomyInput
 	Now                func() time.Time
 	Versions           Versions
 	Calibrate          func(context.Context, *pgxpool.Pool, retrieval.Release) (evaluation.Calibration, error)
@@ -73,6 +74,9 @@ func (s *Stage) Plan(ctx context.Context, env stage.Env, run stage.Run) ([]stage
 	if err != nil {
 		return nil, fmt.Errorf("verify corrections: %w", err)
 	}
+	if err = s.cfg.Taxonomy.pinned(); err != nil {
+		return nil, fmt.Errorf("verify taxonomy: %w", err)
+	}
 	hash := s.inputHash(run.Country, run.Rel, inv, correction)
 	return []stage.Item{{Key: run.Country + "/" + run.Rel, InputHash: hash}}, nil
 }
@@ -93,11 +97,15 @@ func inventoryInputHash(country, rel string, inv Inventory, identityMap string, 
 	}
 	return buildHash(country, rel, inv, identityMap, hashJSON(inv.Provenance), c)
 }
-func buildHash(country, rel string, inv Inventory, identityMap, provenance string, c correctionInput) string {
+func buildHash(country, rel string, inv Inventory, identityMap, provenance string, c correctionInput, versions ...string) string {
 	args := []string{country, rel, inv.SourceManifestHash(), strconv.Itoa(corpusdb.SchemaVersion), identityMap}
 	if inv.Version == 2 {
-		args = append(args, provenance, c.hash)
-		return stage.RecipeHash("build-input", "3", args...)
+		version := ""
+		if len(versions) > 0 {
+			version = versions[0]
+		}
+		args = append(args, provenance, c.hash, version)
+		return stage.RecipeHash("build-input", "4", args...)
 	}
 	if c.nonempty {
 		args = append(args, c.hash)
@@ -118,7 +126,7 @@ func (s *Stage) validateMappings(identities evaluation.IdentityInventory) (evalu
 }
 
 func (s *Stage) inputHash(country, rel string, inv Inventory, correction correctionInput) string {
-	return withDevelopmentHash(inventoryInputHash(country, rel, inv, s.cfg.Suite.Hashes.IdentityMap, correction), s.cfg.Suite.Hashes.Development)
+	return withDevelopmentHash(buildHash(country, rel, inv, s.cfg.Suite.Hashes.IdentityMap, hashJSON(inv.Provenance), correction, s.cfg.Taxonomy.version), s.cfg.Suite.Hashes.Development)
 }
 
 func withDevelopmentHash(inputHash, development string) string {

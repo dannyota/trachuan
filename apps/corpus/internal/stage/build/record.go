@@ -34,6 +34,7 @@ type BuildRecord struct {
 	LexicalRecipe          json.RawMessage  `json:"lexical_recipe"`
 	RetrievalRecipe        json.RawMessage  `json:"retrieval_recipe"`
 	LexicalStats           json.RawMessage  `json:"lexical_stats"`
+	Taxonomy               *TaxonomyStats   `json:"taxonomy"`
 	TaxonomyVersion        string           `json:"taxonomy_version"`
 	Counts                 map[string]int64 `json:"counts"`
 	Dump                   struct {
@@ -94,8 +95,11 @@ func verifyBuildArtifact(store artifact.Store, art artifact.Result, run stage.Ru
 	if err != nil {
 		return record, "", err
 	}
-	if record.Version != 1 || record.Country != run.Country || record.Rel != run.Rel || record.DatabaseName != final || record.SchemaVersion != corpusdb.SchemaVersion || inventory.Country != run.Country || inventory.SourceListHash != run.Snapshot.SourceListHash || record.BuildInputHash != art.InputHash || record.BuildInputHash != recordInputHash(run.Country, run.Rel, inventory, record.IdentityMapSHA256, record.ProvenanceSHA256, record.CorrectionsSHA256, *record.DevelopmentCasesSHA256) || *record.DevelopmentCasesSHA256 != cfg.Suite.Hashes.Development || record.BuildRecipeHash != New(cfg).Recipe(run.Snapshot) || record.SourceManifestHash != inventory.SourceManifestHash() || record.IdentityInventoryHash != inventory.IdentityHash() || record.Dump.Format != "custom" || record.PostgresVersion != cfg.Versions.PostgreSQLMajor || record.PGVectorVersion != cfg.Versions.PGVector || record.LtreeVersion != cfg.Versions.Ltree || record.PgDumpVersion != cfg.Versions.PgDump || record.WorkerVersion != run.Snapshot.WorkerVersion || record.BuiltAt.IsZero() {
+	if record.Version != 1 || record.Country != run.Country || record.Rel != run.Rel || record.DatabaseName != final || record.SchemaVersion != corpusdb.SchemaVersion || inventory.Country != run.Country || inventory.SourceListHash != run.Snapshot.SourceListHash || record.BuildInputHash != art.InputHash || record.BuildInputHash != recordInputHash(run.Country, run.Rel, inventory, record.IdentityMapSHA256, record.ProvenanceSHA256, record.CorrectionsSHA256, *record.DevelopmentCasesSHA256, record.TaxonomyVersion) || *record.DevelopmentCasesSHA256 != cfg.Suite.Hashes.Development || record.BuildRecipeHash != New(cfg).Recipe(run.Snapshot) || record.SourceManifestHash != inventory.SourceManifestHash() || record.IdentityInventoryHash != inventory.IdentityHash() || record.Dump.Format != "custom" || record.PostgresVersion != cfg.Versions.PostgreSQLMajor || record.PGVectorVersion != cfg.Versions.PGVector || record.LtreeVersion != cfg.Versions.Ltree || record.PgDumpVersion != cfg.Versions.PgDump || record.WorkerVersion != run.Snapshot.WorkerVersion || record.BuiltAt.IsZero() {
 		return record, "", fmt.Errorf("build artifact identity mismatch")
+	}
+	if record.Taxonomy == nil || record.Taxonomy.Nodes < 0 || record.Taxonomy.Served < 0 || record.Taxonomy.Seeds < 0 || record.Taxonomy.Overrides < 0 || record.Taxonomy.Excluded < 0 || record.Taxonomy.MissingArticles < 0 || record.Taxonomy.MissingOverrideTargets < 0 {
+		return record, "", fmt.Errorf("invalid taxonomy stats")
 	}
 	if inventory.Version == 2 {
 		data, e := os.ReadFile(filepath.Join(dir, "provenance.json"))
@@ -156,6 +160,6 @@ func verifyCalibration(recipeJSON, calibration []byte) error {
 	return nil
 }
 
-func recordInputHash(country, rel string, inv Inventory, identityMap, provenanceHash, correctionsHash, developmentHash string) string {
-	return withDevelopmentHash(buildHash(country, rel, inv, identityMap, provenanceHash, correctionInput{hash: correctionsHash, nonempty: correctionsHash != ""}), developmentHash)
+func recordInputHash(country, rel string, inv Inventory, identityMap, provenanceHash, correctionsHash, developmentHash string, versions ...string) string {
+	return withDevelopmentHash(buildHash(country, rel, inv, identityMap, provenanceHash, correctionInput{hash: correctionsHash, nonempty: correctionsHash != ""}, versions...), developmentHash)
 }

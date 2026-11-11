@@ -29,7 +29,7 @@ func bindingArtifact(t *testing.T, binding *string, oldRecipe bool, durations ..
 	dump := []byte("synthetic dump")
 	calibration := []byte(`{"threshold":0}`)
 	record := map[string]any{
-		"version": 1, "country": run.Country, "rel": run.Rel, "database_name": "corpus_vn_20990101", "schema_version": corpusdb.SchemaVersion,
+		"taxonomy": TaxonomyStats{}, "version": 1, "country": run.Country, "rel": run.Rel, "database_name": "corpus_vn_20990101", "schema_version": corpusdb.SchemaVersion,
 		"build_input_hash": input, "build_recipe_hash": rowRecipe, "source_manifest_hash": inv.SourceManifestHash(), "identity_inventory_hash": inv.IdentityHash(), "identity_map_sha256": "map",
 		"worker_version": "worker", "built_at": time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC),
 		"durations_ms":     map[string]int64{"total": 1},

@@ -209,3 +209,11 @@ func TestConfig_ChinhphuDefaultsAndValidation(t *testing.T) {
 		})
 	}
 }
+
+func TestLoad_PhapdienPackage(t *testing.T) {
+	values := map[string]string{"CORPUS_DATABASE_URL": "db", "CORPUS_PHAPDIEN_PACKAGE": "/fixture/package.zip"}
+	cfg, err := Load(func(key string) string { return values[key] })
+	if err != nil || cfg.PhapdienPackage != values["CORPUS_PHAPDIEN_PACKAGE"] {
+		t.Fatalf("package=%q error=%v", cfg.PhapdienPackage, err)
+	}
+}

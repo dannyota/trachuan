@@ -54,6 +54,9 @@ func validateDatabase(ctx context.Context, cfg Config, name string, record Build
 	if !matches {
 		return fmt.Errorf("invalid provision locator: %w", errInvalidDatabase)
 	}
+	if err = validateTaxonomy(ctx, db, record); err != nil {
+		return err
+	}
 	return nil
 }
 
