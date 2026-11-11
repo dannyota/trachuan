@@ -15,7 +15,7 @@ abstention rate (negatives below it); ties choose the lowest threshold. Record
 both rates at the chosen threshold. Reason: a single best-member cosine cannot
 separate every negative from every positive; requiring every negative to abstain
 lets the one highest-scoring negative set the threshold (run vn/20261111_3:
-threshold 0.726 from one negative, 17 of 134 positives answered).
+threshold 0.726 from one negative, 11 of 134 positives answered).
 
 Calibration calls `Prepare` and `Collect` on the draft, then `retrieval.Rank`,
 which returns `FirstBestCosine` without a threshold; it never calls `Search`.
