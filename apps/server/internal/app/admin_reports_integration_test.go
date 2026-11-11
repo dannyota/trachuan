@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"danny.vn/trachuan/apps/server/internal/store"
 )
@@ -19,7 +20,7 @@ func TestExport_DatabaseMembershipAndRecovery(t *testing.T) {
 	ctx, pool, s, account := boundsFixture(t)
 	insert := func(key string) int64 {
 		t.Helper()
-		r, err := s.InsertReport(ctx, store.InsertReportParams{AccountID: account, Release: "20990101", DocumentKey: key, DocumentNumber: "1/2024/QH15", Kind: "wrong_validity", Suggestion: json.RawMessage(`{"status_class":"in_force"}`)})
+		r, err := s.InsertReport(ctx, store.InsertReportParams{AccountID: account, CreatedAt: time.Now(), Release: "20990101", DocumentKey: key, DocumentNumber: "1/2024/QH15", Kind: "wrong_validity", Suggestion: json.RawMessage(`{"status_class":"in_force"}`)})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -78,7 +79,7 @@ func TestExport_DatabaseMembershipAndRecovery(t *testing.T) {
 
 func TestExport_RetainedCapRollsBack(t *testing.T) {
 	ctx, pool, s, account := boundsFixture(t)
-	_, err := s.InsertReport(ctx, store.InsertReportParams{AccountID: account, Release: "20990101", DocumentKey: "vn:one", DocumentNumber: "1/2024/QH15", Kind: "wrong_validity", Suggestion: json.RawMessage(`{}`)})
+	_, err := s.InsertReport(ctx, store.InsertReportParams{AccountID: account, CreatedAt: time.Now(), Release: "20990101", DocumentKey: "vn:one", DocumentNumber: "1/2024/QH15", Kind: "wrong_validity", Suggestion: json.RawMessage(`{}`)})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -97,7 +98,7 @@ func TestExport_RetainedCapRollsBack(t *testing.T) {
 
 func TestDecide_DatabaseUnknownIDRollsBack(t *testing.T) {
 	ctx, pool, s, account := boundsFixture(t)
-	r, err := s.InsertReport(ctx, store.InsertReportParams{AccountID: account, Release: "20990101", DocumentKey: "vn:one", Kind: "wrong_text", Suggestion: json.RawMessage(`{}`)})
+	r, err := s.InsertReport(ctx, store.InsertReportParams{AccountID: account, CreatedAt: time.Now(), Release: "20990101", DocumentKey: "vn:one", Kind: "wrong_text", Suggestion: json.RawMessage(`{}`)})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -121,7 +122,7 @@ func TestDecide_DatabaseSelectors(t *testing.T) {
 			}
 			insert := func(accountID int64, key, state string) int64 {
 				t.Helper()
-				r, err := s.InsertReport(ctx, store.InsertReportParams{AccountID: accountID, Release: "20990101", DocumentKey: key, Kind: "wrong_text", Suggestion: json.RawMessage(`{}`)})
+				r, err := s.InsertReport(ctx, store.InsertReportParams{AccountID: accountID, CreatedAt: time.Now(), Release: "20990101", DocumentKey: key, Kind: "wrong_text", Suggestion: json.RawMessage(`{}`)})
 				if err != nil {
 					t.Fatal(err)
 				}

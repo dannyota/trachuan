@@ -15,7 +15,7 @@ import (
 
 func report(t *testing.T, ctx context.Context, q *store.Queries, account int64, key string) store.IssueReport {
 	t.Helper()
-	r, err := q.InsertReport(ctx, store.InsertReportParams{AccountID: account, Release: "release", DocumentKey: key, Kind: "wrong_text", Suggestion: []byte(`{}`)})
+	r, err := q.InsertReport(ctx, store.InsertReportParams{AccountID: account, CreatedAt: time.Now(), Release: "release", DocumentKey: key, Kind: "wrong_text", Suggestion: []byte(`{}`)})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -147,7 +147,7 @@ func TestStore_DedupeAndCapsUnderRace(t *testing.T) {
 		if counts.Retained >= cap {
 			return tx.Commit(ctx)
 		}
-		_, err = q.InsertReport(ctx, store.InsertReportParams{AccountID: account, Release: "release", DocumentKey: key, Kind: "wrong_text", Suggestion: []byte(`{}`)})
+		_, err = q.InsertReport(ctx, store.InsertReportParams{AccountID: account, CreatedAt: time.Now(), Release: "release", DocumentKey: key, Kind: "wrong_text", Suggestion: []byte(`{}`)})
 		if err != nil {
 			return err
 		}
@@ -200,7 +200,7 @@ func TestStore_RetainedCapAcrossWithdrawals(t *testing.T) {
 		if count >= 3 {
 			return tx.Commit(ctx)
 		}
-		r, err := queries.InsertReport(ctx, store.InsertReportParams{AccountID: account, Release: "release", DocumentKey: key, Kind: "wrong_text", Suggestion: []byte(`{}`)})
+		r, err := queries.InsertReport(ctx, store.InsertReportParams{AccountID: account, CreatedAt: time.Now(), Release: "release", DocumentKey: key, Kind: "wrong_text", Suggestion: []byte(`{}`)})
 		if err != nil {
 			return err
 		}
