@@ -85,5 +85,5 @@
 
 ### Task 7: Proof (executing session)
 
-- [ ] **Step 1:** Local server with a personal token: report each kind through `report_issue`, repeat one (deduplicated), hit a cap with a lowered test limit; triage, accept, export; check the export files and that no account data or free text appears anywhere; record in the PR.
-- [ ] **Step 2:** Open the PR; the coordinator merges after the final adversarial review and green CI.
+- [ ] **Step 1:** Open the PR; the coordinator merges the code after the final adversarial review and green CI (decided 2026-11-11, as for Plan 9c). The plan stays open until Step 2 passes, and `report_issue` is not announced to users before then.
+- [ ] **Step 2 (after merge, on a schema-4 corpus):** Local server with a personal token: report each kind through `report_issue`, repeat one (deduplicated), hit a cap with a lowered test limit; triage, accept, export; check the export files and that no account data or free text appears anywhere; record the results in a follow-up PR that marks this plan landed.
