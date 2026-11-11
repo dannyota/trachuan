@@ -36,7 +36,7 @@ type Sessions interface {
 	RevokeOwnSession(context.Context, int64, int64) (int64, error)
 }
 
-// Verifier evicts cached personal credentials.
+// Verifier evicts cached bearer credentials.
 type Verifier interface {
 	Evict(string)
 	EvictAccount(int64)
@@ -77,6 +77,8 @@ func New(cfg Config) *Handler {
 	h.mux.HandleFunc("DELETE /api/v1/me", h.deleteAccount)
 	h.mux.HandleFunc("GET /api/v1/me/sessions", h.listSessions)
 	h.mux.HandleFunc("DELETE /api/v1/me/sessions/{id}", h.revokeSession)
+	h.mux.HandleFunc("GET /api/v1/me/grants", h.listGrants)
+	h.mux.HandleFunc("DELETE /api/v1/me/grants/{id}", h.revokeGrant)
 	h.mux.HandleFunc("GET /api/v1/me/tokens", h.listTokens)
 	h.mux.HandleFunc("POST /api/v1/me/tokens", h.createToken)
 	h.mux.HandleFunc("DELETE /api/v1/me/tokens/{id}", h.revokeToken)

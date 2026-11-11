@@ -53,6 +53,7 @@ type Querier interface {
 	RevokeToken(ctx context.Context, tokenHash string) (int64, error)
 	RotateRefresh(ctx context.Context, tokenHash string) (RotateRefreshRow, error)
 	TouchClient(ctx context.Context, clientID string) (int64, error)
+	TouchOAuthGrant(ctx context.Context, id int64) error
 	TouchPersonalToken(ctx context.Context, tokenHash string) error
 	TouchSession(ctx context.Context, tokenHash string) (int64, error)
 	UpsertGoogleAccount(ctx context.Context, arg UpsertGoogleAccountParams) (Account, error)

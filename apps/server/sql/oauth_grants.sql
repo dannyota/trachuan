@@ -22,7 +22,7 @@ SELECT * FROM grant_row;
 
 -- name: ListGrants :many
 SELECT g.*, c.name, c.kind FROM oauth_grant g JOIN oauth_client c ON c.client_id = g.client_id
-WHERE g.account_id = $1 AND g.revoked_at IS NULL ORDER BY g.created_at DESC, g.id DESC;
+WHERE g.account_id = $1 AND g.revoked_at IS NULL ORDER BY g.created_at DESC, g.id DESC LIMIT 100;
 
 -- name: RevokeOwnGrant :one
 WITH grant_row AS (
@@ -35,3 +35,7 @@ WITH grant_row AS (
     WHERE grant_id IN (SELECT id FROM grant_row) RETURNING token_hash
 )
 SELECT * FROM grant_row;
+
+-- name: TouchOAuthGrant :exec
+UPDATE oauth_grant SET last_used_at = now()
+WHERE id = $1 AND revoked_at IS NULL AND last_used_at <= now() - interval '1 hour';

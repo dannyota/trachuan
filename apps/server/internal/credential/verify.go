@@ -18,6 +18,8 @@ const (
 
 	// ErrUnauthorized means the credential is missing, invalid or no longer valid.
 	ErrUnauthorized failure = "unauthorized"
+	// ErrInsufficientScope means an otherwise valid token lacks MCP read scope.
+	ErrInsufficientScope failure = "insufficient scope"
 	// ErrUnavailable means the verifier cannot check the credential.
 	ErrUnavailable failure = "credential service unavailable"
 )
@@ -35,8 +37,8 @@ type Store interface {
 	TouchPersonalToken(context.Context, string) error
 }
 
-// Verifier checks personal tokens. Configure its fields before use, do not copy
-// it after use, and share one instance across requests.
+// Verifier checks personal and OAuth access tokens. Configure its fields before
+// use, do not copy it after use, and share one instance across requests.
 type Verifier struct {
 	Store    Store
 	Clock    func() time.Time
@@ -53,9 +55,10 @@ type Verifier struct {
 	flights            map[*lookupFlight]struct{}
 	generation         uint64
 	accountGenerations map[int64]uint64
+	grantGenerations   map[int64]uint64
 }
 
-// Verify authenticates a raw personal token without the Bearer scheme.
+// Verify authenticates a raw personal or OAuth access token without the Bearer scheme.
 func (v *Verifier) Verify(ctx context.Context, bearer string) (Principal, error) {
 	if !validToken(bearer) {
 		return Principal{}, ErrUnauthorized
@@ -81,11 +84,11 @@ func (v *Verifier) Verify(ctx context.Context, bearer string) (Principal, error)
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	started := v.now()
-	row, err := v.Store.GetCredential(ctx, hash)
+	row, grantID, scope, touch, err := v.lookup(ctx, bearer, hash)
 	if ctx.Err() != nil {
 		return Principal{}, fmt.Errorf("verify credential: %w", ErrUnavailable)
 	}
-	if errors.Is(err, pgx.ErrNoRows) {
+	if errors.Is(err, pgx.ErrNoRows) || errors.Is(err, ErrUnauthorized) {
 		return Principal{}, ErrUnauthorized
 	}
 	if err != nil {
@@ -95,8 +98,11 @@ func (v *Verifier) Verify(ctx context.Context, bearer string) (Principal, error)
 	if row.RevokedAt != nil || row.BlockedAt != nil || row.AccountAuthEpoch != row.TokenAuthEpoch || !row.ExpiresAt.After(v.now()) {
 		return Principal{}, ErrUnauthorized
 	}
+	if scope != "mcp:read" {
+		return Principal{}, ErrInsufficientScope
+	}
 	if v.admitTouch(hash, v.now()) {
-		if err := v.Store.TouchPersonalToken(ctx, hash); err != nil {
+		if err := touch(ctx); err != nil {
 			return Principal{}, fmt.Errorf("touch credential: %w", ErrUnavailable)
 		}
 	}
@@ -118,6 +124,7 @@ func (v *Verifier) Verify(ctx context.Context, bearer string) (Principal, error)
 	}
 	entry = cacheEntry{
 		hash:      hash,
+		grantID:   grantID,
 		principal: Principal{AccountID: row.AccountID, Scope: "mcp:read", Audience: v.Audience},
 		expires:   row.ExpiresAt,
 		until:     minTime(started.Add(ttl), row.ExpiresAt),

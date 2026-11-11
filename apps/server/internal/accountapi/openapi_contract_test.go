@@ -125,6 +125,7 @@ func TestOpenAPIContract(t *testing.T) {
 	t.Run("TestAccountContract", func(t *testing.T) { testAccountContract(t, coverage) })
 	t.Run("TestAccountContract_Guards", func(t *testing.T) { testAccountContract_Guards(t, coverage) })
 	t.Run("TestAccountContract_Errors", func(t *testing.T) { testAccountContract_Errors(t, coverage) })
+	t.Run("grants", func(t *testing.T) { testGrantsContract(t, coverage) })
 	t.Run("token limit", func(t *testing.T) { testTokensLimitContract(t, coverage) })
 	t.Run("request boundaries", func(t *testing.T) { testTokenRequestContractDays(t, c) })
 	if missing := coverage.Missing(); len(missing) > 0 {

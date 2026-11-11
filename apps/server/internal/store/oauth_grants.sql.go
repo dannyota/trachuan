@@ -23,7 +23,7 @@ func (q *Queries) CountLiveGrants(ctx context.Context, accountID int64) (int64, 
 
 const listGrants = `-- name: ListGrants :many
 SELECT g.id, g.account_id, g.client_id, g.scope, g.resource, g.created_at, g.last_used_at, g.retirement_anchor, g.revoked_at, c.name, c.kind FROM oauth_grant g JOIN oauth_client c ON c.client_id = g.client_id
-WHERE g.account_id = $1 AND g.revoked_at IS NULL ORDER BY g.created_at DESC, g.id DESC
+WHERE g.account_id = $1 AND g.revoked_at IS NULL ORDER BY g.created_at DESC, g.id DESC LIMIT 100
 `
 
 type ListGrantsRow struct {
@@ -159,6 +159,16 @@ func (q *Queries) RevokeOwnGrant(ctx context.Context, arg RevokeOwnGrantParams) 
 		&i.RevokedAt,
 	)
 	return i, err
+}
+
+const touchOAuthGrant = `-- name: TouchOAuthGrant :exec
+UPDATE oauth_grant SET last_used_at = now()
+WHERE id = $1 AND revoked_at IS NULL AND last_used_at <= now() - interval '1 hour'
+`
+
+func (q *Queries) TouchOAuthGrant(ctx context.Context, id int64) error {
+	_, err := q.db.Exec(ctx, touchOAuthGrant, id)
+	return err
 }
 
 const upsertGrant = `-- name: UpsertGrant :one

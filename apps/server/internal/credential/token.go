@@ -40,7 +40,7 @@ func tokenHash(plain string) string {
 }
 
 func validToken(plain string) bool {
-	if len(plain) != 47 || plain[:4] != "trc_" {
+	if len(plain) != 47 || (plain[:4] != "trc_" && plain[:4] != "tra_") {
 		return false
 	}
 	for _, c := range []byte(plain[4:]) {

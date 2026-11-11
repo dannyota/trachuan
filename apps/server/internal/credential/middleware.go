@@ -29,6 +29,10 @@ func Middleware(v *Verifier, next http.Handler) http.Handler {
 			http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
 			return
 		}
+		if errors.Is(err, ErrInsufficientScope) {
+			InsufficientScope(w, v.Audience)
+			return
+		}
 		if err != nil {
 			unauthorized(w, v.Audience, true)
 			return
