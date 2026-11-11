@@ -13,7 +13,8 @@ WHERE s.token_hash = $1;
 -- name: TouchSession :execrows
 UPDATE web_session SET last_seen_at = now(),
     expires_at = LEAST(now() + interval '30 days', created_at + interval '90 days')
-WHERE token_hash = $1 AND last_seen_at <= now() - interval '1 hour';
+WHERE token_hash = $1 AND revoked_at IS NULL AND expires_at > now()
+    AND last_seen_at <= now() - interval '1 hour';
 
 -- name: RevokeSession :execrows
 UPDATE web_session SET revoked_at = now()

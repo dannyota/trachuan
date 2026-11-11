@@ -115,6 +115,41 @@ func TestStore_TouchAtMostHourly(t *testing.T) {
 	}
 }
 
+func TestStore_TouchInactiveSession(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		update string
+	}{
+		{"expired", `expires_at = now() - interval '1 day'`},
+		{"revoked", `revoked_at = now()`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx, conn, q := setup(t)
+			id := webAccount(t, ctx, conn, "one")
+			hash := strings.Repeat("c", 64)
+			webSession(t, ctx, conn, id, hash)
+			if _, err := conn.Exec(ctx, `UPDATE web_session SET last_seen_at = now() - interval '2 hours', `+tc.update+` WHERE token_hash = $1`, hash); err != nil {
+				t.Fatal(err)
+			}
+			before, err := q.GetSession(ctx, hash)
+			if err != nil {
+				t.Fatal(err)
+			}
+			count, err := q.TouchSession(ctx, hash)
+			if err != nil || count != 0 {
+				t.Fatalf("touch: count=%d err=%v", count, err)
+			}
+			after, err := q.GetSession(ctx, hash)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !after.ExpiresAt.Equal(before.ExpiresAt) || !after.LastSeenAt.Equal(before.LastSeenAt) {
+				t.Fatalf("touch changed expiry or last seen: before=%+v after=%+v", before, after)
+			}
+		})
+	}
+}
+
 func TestStore_RequestDeletionRevokesAll(t *testing.T) {
 	ctx, conn, q := setup(t)
 	id := webAccount(t, ctx, conn, "one")

@@ -158,7 +158,8 @@ func (q *Queries) RevokeSession(ctx context.Context, tokenHash string) (int64, e
 const touchSession = `-- name: TouchSession :execrows
 UPDATE web_session SET last_seen_at = now(),
     expires_at = LEAST(now() + interval '30 days', created_at + interval '90 days')
-WHERE token_hash = $1 AND last_seen_at <= now() - interval '1 hour'
+WHERE token_hash = $1 AND revoked_at IS NULL AND expires_at > now()
+    AND last_seen_at <= now() - interval '1 hour'
 `
 
 func (q *Queries) TouchSession(ctx context.Context, tokenHash string) (int64, error) {
