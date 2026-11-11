@@ -111,17 +111,18 @@ Fail closed. The article-level reading is accepted for the main scope or an
 instrument scope only when its article numbers run 1, 2, 3, ... where an
 inserted `n<letter>` may follow `n`, with no gap, repeat or step back before the
 scope closes. If the check fails, that scope asserts no article: its paragraphs
-are grouped into neutral provisions of kind `other`, anchor `doan-<n>` (a new
-one at each line that looks like a heading, else every 20 paragraphs), and the
-document gets the gap `structure_uncertain` with the failed check. Tail scopes
-use the same neutral provisions without the gap. Structure headings (`chuong`,
-`muc`) are kept in either case. Reason: a missed heading attaches text to the
-wrong article silently; a strict sequence check catches it, and a neutral anchor
-is a true citation where "Điều 5" might not be. Measured on recorded texts:
-decree 142/2026/NĐ-CP reads as articles 1 to 46 with wrapped references such as
-`Điều 6 của Luật` correctly ignored and its sample forms (which restart at
-`Điều 1`) in tail scopes; a consolidated text whose footnotes repeat `Điều 4`
-before its appendix fails the check and stays neutral.
+are grouped into neutral provisions of kind `other`, anchor `doan-<n>` numbered
+across the whole document, so anchors stay unique when several scopes are
+neutral (a new one at each line that looks like a heading, else every 20
+paragraphs), and the document gets the gap `structure_uncertain` with the failed
+check. Tail scopes use the same neutral provisions without the gap. Structure
+headings (`chuong`, `muc`) are kept in either case. Reason: a missed heading
+attaches text to the wrong article silently; a strict sequence check catches it,
+and a neutral anchor is a true citation where "Điều 5" might not be. Measured on
+recorded texts: decree 142/2026/NĐ-CP reads as articles 1 to 46 with wrapped
+references such as `Điều 6 của Luật` correctly ignored and its sample forms
+(which restart at `Điều 1`) in tail scopes; a consolidated text whose footnotes
+repeat `Điều 4` before its appendix fails the check and stays neutral.
 
 A document with no article at all uses neutral provisions too, grouped by its
 numbered outline (`I.`, `1.`) when one exists. Text under 300 characters is
