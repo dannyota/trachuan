@@ -31,8 +31,8 @@ A check is complete only when the request ended normally (`end_turn`), the
 answer parses under the schema and `pages` is at least one. Then:
 
 - `rejected`: `same_document` is false, or `missing_text` items cover more than
-  a tenth of the pages. The text must not be indexed; the document keeps
-  `needs_ocr` with the reason.
+  a tenth of the pages. The text must not be indexed; the document gets the gap
+  `ocr_rejected` with the reason.
 - `flagged`: one or more items. The text is indexed with the gap `ocr_flagged`
   and the items go to the review file.
 - `clean`: no item.

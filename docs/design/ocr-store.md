@@ -78,7 +78,12 @@ in `run_ocr_selection` (run, item key, gap or the `ocr_text` and `ocr_check` row
 ids, PDF SHA-256). Planning first reads that row and derives the input hash from
 it; only when none exists does it consult the store and insert one. Processing
 reads the row and never selects from the live store. A frozen run therefore
-processes exactly what it planned, and a new run sees the store as it is then.
+processes exactly what it planned, and a new run sees the store as it is then. A
+heading-only tree kept because no OCR text was usable is such a document too:
+its row carries the gap `tree_headings_only` and its input hash stays the fetch
+hash. A check with verdict `rejected` gives the gap `ocr_rejected` instead of
+`needs_ocr`, so the reason is frozen with the selection and the artifact is not
+shared with the unchecked state.
 
 `extract` verifies the text file against its SHA-256 before parsing and fails
 the item, never the run, on a mismatch or a missing file. Without

@@ -197,11 +197,11 @@ numbered outline (`I.`, `1.`) when one exists. Text under 300 characters is
   `none`) and `document.text_complete boolean`, false when any gap of
   `tree_headings_only`, `structure_uncertain`, `table_text` (more than a tenth
   of the characters inside provisions are in tables; letterhead and signature
-  tables outside any provision do not count), `image_content`, `ocr_flagged` or
-  `needs_ocr` applies; build derives `source_tree` for artifacts without
-  `text.json`. Search and read results return both on the document entry, with
-  each provision's locator (hits, read units, ranges and continued parts alike).
-  This is corpus schema version 4.
+  tables outside any provision do not count), `image_content`, `ocr_flagged`,
+  `ocr_rejected` or `needs_ocr` applies; build derives `source_tree` for
+  artifacts without `text.json`. Search and read results return both on the
+  document entry, with each provision's locator (hits, read units, ranges and
+  continued parts alike). This is corpus schema version 4.
 
 ## Inputs and reuse
 
