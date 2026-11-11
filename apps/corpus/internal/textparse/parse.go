@@ -37,7 +37,11 @@ func Parse(paragraphs []Paragraph) Result {
 	}
 	r.Provisions = append(r.Provisions, preamble(paragraphs[:spans[0].start], quoted[:spans[0].start])...)
 	instrumentNumber := 0
+	failureIndex := 0
 	for index, sp := range spans {
+		for failureIndex < len(quoteFailures) && quoteFailures[failureIndex] < sp.start {
+			failureIndex++
+		}
 		scope := Scope{Kind: sp.kind}
 		var nums []string
 		structures := map[string]bool{}
@@ -59,11 +63,8 @@ func Parse(paragraphs []Paragraph) Result {
 			}
 		}
 		if sp.kind != "tail" {
-			for _, failure := range quoteFailures {
-				if failure >= sp.start && failure < sp.end {
-					scope.FailedCheck = "unbalanced quotation"
-					break
-				}
+			if failureIndex < len(quoteFailures) && quoteFailures[failureIndex] < sp.end {
+				scope.FailedCheck = "unbalanced quotation"
 			}
 			if scope.FailedCheck == "" {
 				scope.FailedCheck = sequence(nums)

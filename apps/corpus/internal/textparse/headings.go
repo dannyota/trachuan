@@ -8,7 +8,7 @@ import (
 )
 
 func article(s string) (string, bool) {
-	r := regexp.MustCompile(`^Điều\s+([0-9]+[a-zA-Z]?)\.(?:\s*(.*))?$`).FindStringSubmatch(s)
+	r := regexp.MustCompile(`^Điều\s+([0-9]+[a-z]?)\.(?:\s*(.*))?$`).FindStringSubmatch(s)
 	if r == nil {
 		return "", false
 	}
@@ -35,16 +35,21 @@ func structure(s string) (string, string, bool) {
 	return "", "", false
 }
 func headingCandidate(s string) bool {
-	match := regexp.MustCompile(`^Điều\s+[0-9]+[a-zA-Z]?`).FindString(s)
+	match := regexp.MustCompile(`^Điều\s+[0-9]+`).FindString(s)
 	if match == "" {
 		return false
 	}
-	rest := strings.TrimSpace(strings.TrimPrefix(s, match))
-	if rest == "" {
+	rest := []rune(s[len(match):])
+	if len(rest) > 0 && rest[0] >= 'a' && rest[0] <= 'z' && (len(rest) == 1 || !unicode.IsLetter(rest[1])) {
+		rest = rest[1:]
+	}
+	hasSpace := len(rest) > 0 && unicode.IsSpace(rest[0])
+	rest = []rune(strings.TrimLeftFunc(string(rest), unicode.IsSpace))
+	if len(rest) == 0 {
 		return true
 	}
-	first := []rune(rest)[0]
-	return !unicode.IsLower(first) && first != ',' && first != ';' && first != ')'
+	first := rest[0]
+	return first != ',' && first != ';' && first != ')' && (!hasSpace || !unicode.IsLower(first))
 }
 func capitals(s string) bool {
 	hasLetter := false

@@ -115,8 +115,8 @@ Grammar, applied to paragraph starts outside quoted text:
   `Điều 6 của Luật ...` is running text wrapped by the source or the OCR, never
   a heading.
 - The number token is the digits, plus one lowercase letter only when that
-  letter is not followed by another letter (`3a.`, `3a `; in `2Phạm` and `2phạm`
-  the token is `2`).
+  letter is not followed by another letter (`3a.`, or `3a` before a space; in
+  `2Phạm` and `2phạm` the token is `2`).
 - Every other paragraph that starts with `Điều`, spaces and a number token is
   either running text or a failed heading candidate. It is running text only
   when the token is followed by at least one space and then a lowercase letter,

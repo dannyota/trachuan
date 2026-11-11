@@ -75,7 +75,7 @@ func TestParse_AppendixTitles(t *testing.T) {
 	}
 }
 func TestParse_InvalidHeadingCandidate(t *testing.T) {
-	for _, s := range []string{"Điều 2: Phạm vi", "Điều 2 Phạm vi", "Điều 2"} {
+	for _, s := range []string{"Điều 2: Phạm vi", "Điều 2 Phạm vi", "Điều 2Phạm vi", "Điều 2"} {
 		r := Parse(paragraphs(long("Điều 1. Một\n" + s)))
 		if r.Scopes[0].Accepted || !contains(r.Gaps, "structure_uncertain") {
 			t.Fatalf("%q: %+v", s, r.Scopes)
@@ -159,18 +159,9 @@ func TestParse_QuoteHidesScopeBoundary(t *testing.T) {
 	}
 }
 
-func TestParse_QuoteEndsWithClosingMark(t *testing.T) {
+func TestParse_MismatchedQuoteStylesFailScope(t *testing.T) {
 	r := Parse(paragraphs(long("Điều 1. Một\n“Trích dẫn\nKết thúc.\"\nĐiều 2. Hai")))
-	if len(r.Scopes) != 1 || !r.Scopes[0].Accepted {
-		t.Fatalf("scopes %+v", r.Scopes)
-	}
-	var n int
-	for _, p := range r.Provisions {
-		if p.Kind == "dieu" {
-			n++
-		}
-	}
-	if n != 2 {
-		t.Fatalf("articles %d", n)
+	if len(r.Scopes) != 1 || r.Scopes[0].Accepted || !contains(r.Gaps, "structure_uncertain") {
+		t.Fatalf("scopes %+v gaps %v", r.Scopes, r.Gaps)
 	}
 }
