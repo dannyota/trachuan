@@ -32,7 +32,7 @@ func (e *Engine) Collect(ctx context.Context, p Prepared, depths Depths) (Arms, 
 	defer cancel()
 	tx, err := e.db.BeginTx(ctx, pgx.TxOptions{AccessMode: pgx.ReadOnly})
 	if err != nil {
-		return Arms{}, errors.New("begin retrieval failed")
+		return Arms{}, databaseFailure("begin retrieval failed", err)
 	}
 	defer func() { _ = tx.Rollback(context.Background()) }()
 	if err = setLocal(ctx, tx, "statement_timeout", strconv.FormatInt(e.deadline().Milliseconds(), 10)); err != nil {
@@ -112,7 +112,7 @@ func (e *Engine) Collect(ctx context.Context, p Prepared, depths Depths) (Arms, 
 		}
 	}
 	if err = tx.Commit(ctx); err != nil {
-		return Arms{}, errors.New("commit retrieval failed")
+		return Arms{}, databaseFailure("commit retrieval failed", err)
 	}
 	return result, nil
 }

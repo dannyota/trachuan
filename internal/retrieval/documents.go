@@ -38,7 +38,7 @@ func (e *Engine) Documents(ctx context.Context, keys []string) (map[string]Docum
 	defer cancel()
 	tx, err := e.db.BeginTx(ctx, pgx.TxOptions{AccessMode: pgx.ReadOnly, IsoLevel: pgx.RepeatableRead})
 	if err != nil {
-		return nil, fmt.Errorf("begin documents transaction: %w", err)
+		return nil, databaseFailure("begin documents transaction", err)
 	}
 	defer func() { _ = tx.Rollback(context.Background()) }()
 	if err = setLocal(ctx, tx, "statement_timeout", strconv.FormatInt(e.deadline().Milliseconds(), 10)); err != nil {
@@ -47,7 +47,7 @@ func (e *Engine) Documents(ctx context.Context, keys []string) (map[string]Docum
 	docs := make(map[string]DocumentEntry)
 	rows, err := tx.Query(ctx, `SELECT key, number, title, doc_type, issuer, issue_date, eff_from, eff_to, COALESCE(source_url, '') FROM document WHERE key = ANY($1)`, keys)
 	if err != nil {
-		return nil, fmt.Errorf("query document metadata: %w", err)
+		return nil, databaseFailure("query document metadata", err)
 	}
 	for rows.Next() {
 		var key string
@@ -55,7 +55,7 @@ func (e *Engine) Documents(ctx context.Context, keys []string) (map[string]Docum
 		var issued, from, to *time.Time
 		if err = rows.Scan(&key, &doc.Number, &doc.Title, &doc.Type, &doc.Issuer, &issued, &from, &to, &doc.SourceURL); err != nil {
 			rows.Close()
-			return nil, fmt.Errorf("scan document metadata: %w", err)
+			return nil, databaseFailure("scan document metadata", err)
 		}
 		doc.Issued, doc.EffectiveFrom, doc.EffectiveTo = dateValue(issued), dateValue(from), dateValue(to)
 		docs[key] = doc
@@ -63,18 +63,18 @@ func (e *Engine) Documents(ctx context.Context, keys []string) (map[string]Docum
 	err = rows.Err()
 	rows.Close()
 	if err != nil {
-		return nil, fmt.Errorf("read document metadata: %w", err)
+		return nil, databaseFailure("read document metadata", err)
 	}
 	rows, err = tx.Query(ctx, documentCountsSQL, keys)
 	if err != nil {
-		return nil, fmt.Errorf("query document relation counts: %w", err)
+		return nil, databaseFailure("query document relation counts", err)
 	}
 	for rows.Next() {
 		var key, dir, kind string
 		var count int
 		if err = rows.Scan(&key, &dir, &kind, &count); err != nil {
 			rows.Close()
-			return nil, fmt.Errorf("scan document relation counts: %w", err)
+			return nil, databaseFailure("scan document relation counts", err)
 		}
 		doc := docs[key]
 		if doc.RelatedCounts == nil {
@@ -86,18 +86,18 @@ func (e *Engine) Documents(ctx context.Context, keys []string) (map[string]Docum
 	err = rows.Err()
 	rows.Close()
 	if err != nil {
-		return nil, fmt.Errorf("read document relation counts: %w", err)
+		return nil, databaseFailure("read document relation counts", err)
 	}
 	rows, err = tx.Query(ctx, documentPointersSQL, keys, pointerKinds(), PointersPerDocument)
 	if err != nil {
-		return nil, fmt.Errorf("query document pointers: %w", err)
+		return nil, databaseFailure("query document pointers", err)
 	}
 	for rows.Next() {
 		var key string
 		var pointer Pointer
 		if err = rows.Scan(&key, &pointer.Dir, &pointer.Kind, &pointer.Key, &pointer.Number, &pointer.InRelease); err != nil {
 			rows.Close()
-			return nil, fmt.Errorf("scan document pointers: %w", err)
+			return nil, databaseFailure("scan document pointers", err)
 		}
 		doc := docs[key]
 		doc.Related = append(doc.Related, pointer)
@@ -106,10 +106,10 @@ func (e *Engine) Documents(ctx context.Context, keys []string) (map[string]Docum
 	err = rows.Err()
 	rows.Close()
 	if err != nil {
-		return nil, fmt.Errorf("read document pointers: %w", err)
+		return nil, databaseFailure("read document pointers", err)
 	}
 	if err = tx.Commit(ctx); err != nil {
-		return nil, fmt.Errorf("commit documents transaction: %w", err)
+		return nil, databaseFailure("commit documents transaction", err)
 	}
 	return docs, nil
 }

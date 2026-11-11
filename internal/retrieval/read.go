@@ -41,7 +41,7 @@ func (e *Engine) Read(ctx context.Context, req ReadRequest) (ReadResult, error) 
 	defer cancel()
 	tx, err := e.db.BeginTx(ctx, pgx.TxOptions{AccessMode: pgx.ReadOnly, IsoLevel: pgx.RepeatableRead})
 	if err != nil {
-		return result, fmt.Errorf("begin read transaction: %w", err)
+		return result, databaseFailure("begin read transaction", err)
 	}
 	defer func() { _ = tx.Rollback(context.Background()) }()
 	if err = setLocal(ctx, tx, "statement_timeout", strconv.FormatInt(e.deadline().Milliseconds(), 10)); err != nil {
@@ -60,7 +60,7 @@ func (e *Engine) Read(ctx context.Context, req ReadRequest) (ReadResult, error) 
 		result.Items[i] = page
 	}
 	if err = tx.Commit(ctx); err != nil {
-		return ReadResult{}, fmt.Errorf("commit read transaction: %w", err)
+		return ReadResult{}, databaseFailure("commit read transaction", err)
 	}
 	return result, nil
 }

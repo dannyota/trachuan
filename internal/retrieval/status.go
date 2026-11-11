@@ -33,35 +33,35 @@ func (e *Engine) Status(ctx context.Context) (CorpusStatus, error) {
 	defer func() { _ = tx.Rollback(context.Background()) }()
 	err = tx.QueryRow(ctx, `SELECT (SELECT count(*) FROM document),(SELECT count(*) FROM provision),(SELECT count(*) FROM taxonomy_node)`).Scan(&result.Documents, &result.Provisions, &result.Nodes)
 	if err != nil {
-		return result, fmt.Errorf("count corpus: %w", err)
+		return result, databaseFailure("count corpus", err)
 	}
 	rows, err := tx.Query(ctx, `SELECT kind,count(*) FROM coverage_gap GROUP BY kind`)
 	if err != nil {
-		return result, fmt.Errorf("count gaps: %w", err)
+		return result, databaseFailure("count gaps", err)
 	}
 	for rows.Next() {
 		var kind string
 		var count int64
 		if err = rows.Scan(&kind, &count); err != nil {
 			rows.Close()
-			return result, fmt.Errorf("scan gap count: %w", err)
+			return result, databaseFailure("scan gap count", err)
 		}
 		result.Gaps[kind] = count
 	}
 	err = rows.Err()
 	rows.Close()
 	if err != nil {
-		return result, fmt.Errorf("read gap counts: %w", err)
+		return result, databaseFailure("read gap counts", err)
 	}
 	rows, err = tx.Query(ctx, `SELECT DISTINCT raw_issue_date FROM document WHERE raw_issue_date <> ''`)
 	if err != nil {
-		return result, fmt.Errorf("query source dates: %w", err)
+		return result, databaseFailure("query source dates", err)
 	}
 	for rows.Next() {
 		var raw string
 		if err = rows.Scan(&raw); err != nil {
 			rows.Close()
-			return result, fmt.Errorf("scan source date: %w", err)
+			return result, databaseFailure("scan source date", err)
 		}
 		date := sourceDate(raw)
 		if date != nil && (result.NewestSourceDate == nil || date.After(*result.NewestSourceDate)) {
@@ -71,10 +71,10 @@ func (e *Engine) Status(ctx context.Context) (CorpusStatus, error) {
 	err = rows.Err()
 	rows.Close()
 	if err != nil {
-		return result, fmt.Errorf("read source dates: %w", err)
+		return result, databaseFailure("read source dates", err)
 	}
 	if err = tx.Commit(ctx); err != nil {
-		return result, fmt.Errorf("commit corpus status: %w", err)
+		return result, databaseFailure("commit corpus status", err)
 	}
 	return result, nil
 }
@@ -82,7 +82,7 @@ func (e *Engine) Status(ctx context.Context) (CorpusStatus, error) {
 func (e *Engine) metadataTx(ctx context.Context) (pgx.Tx, error) {
 	tx, err := e.db.BeginTx(ctx, pgx.TxOptions{AccessMode: pgx.ReadOnly, IsoLevel: pgx.RepeatableRead})
 	if err != nil {
-		return nil, fmt.Errorf("begin corpus metadata: %w", err)
+		return nil, databaseFailure("begin corpus metadata", err)
 	}
 	if err = setLocal(ctx, tx, "statement_timeout", strconv.FormatInt(e.deadline().Milliseconds(), 10)); err != nil {
 		_ = tx.Rollback(context.Background())
