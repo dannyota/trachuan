@@ -45,6 +45,7 @@ type Provider struct {
 	lastForm        url.Values
 	discoveryIssuer string
 	brokenJWKS      bool
+	autoLogin       bool
 }
 
 // New starts a provider and registers its cleanup with t.
@@ -66,6 +67,13 @@ func (p *Provider) RegisterCode(code string, c Claims) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.codes[code] = c
+}
+
+// EnableLogin makes the authorization endpoint issue a test identity.
+func (p *Provider) EnableLogin() {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.autoLogin = true
 }
 
 // SetStatus makes path return status; zero restores normal behavior.
@@ -113,6 +121,7 @@ func (p *Provider) serveHTTP(w http.ResponseWriter, r *http.Request) {
 	status := p.statuses[r.URL.Path]
 	issuer := p.discoveryIssuer
 	broken := p.brokenJWKS
+	autoLogin := p.autoLogin
 	p.mu.Unlock()
 	if status != 0 {
 		p.writeJSON(w, status, map[string]any{"error": "server_error", "error_description": "provider-private-detail"})
@@ -136,6 +145,29 @@ func (p *Provider) serveHTTP(w http.ResponseWriter, r *http.Request) {
 			"kty": "RSA", "kid": "test-key", "use": "sig", "alg": "RS256",
 			"n": base64.RawURLEncoding.EncodeToString(p.key.N.Bytes()), "e": base64.RawURLEncoding.EncodeToString(big.NewInt(int64(p.key.E)).Bytes()),
 		}}})
+	case "/authorize":
+		if !autoLogin {
+			http.NotFound(w, r)
+			return
+		}
+		q := r.URL.Query()
+		var raw [32]byte
+		if _, err := rand.Read(raw[:]); err != nil {
+			http.Error(w, "unavailable", http.StatusServiceUnavailable)
+			return
+		}
+		code := base64.RawURLEncoding.EncodeToString(raw[:])
+		p.RegisterCode(code, Claims{Subject: "e2e-subject", Email: "fixture@example.invalid", EmailVerified: true, Nonce: q.Get("nonce"), Challenge: q.Get("code_challenge"), RedirectURI: q.Get("redirect_uri")})
+		redirect, err := url.Parse(q.Get("redirect_uri"))
+		if err != nil || redirect.Host == "" {
+			http.Error(w, "invalid redirect", http.StatusBadRequest)
+			return
+		}
+		values := redirect.Query()
+		values.Set("code", code)
+		values.Set("state", q.Get("state"))
+		redirect.RawQuery = values.Encode()
+		http.Redirect(w, r, redirect.String(), http.StatusFound)
 	case "/token":
 		p.serveToken(w, r)
 	default:
