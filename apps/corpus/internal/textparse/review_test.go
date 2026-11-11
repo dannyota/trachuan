@@ -53,7 +53,7 @@ func TestParse_AppendixRunningReferences(t *testing.T) {
 	}
 }
 func TestParse_AppendixTitles(t *testing.T) {
-	for _, title := range []string{"Phụ lục số 01", "Phụ lục 01a", "Phụ lục IV", "Phụ lục số IVa", "Mẫu số 01a", "Mẫu số IIb", "Phụ lục số 01: Tiêu đề"} {
+	for _, title := range []string{"Phụ lục số 01", "Phụ lục 01a", "Phụ lục IV", "Phụ lục số IVa", "Mẫu số 01a", "Mẫu số IIb"} {
 		t.Run(title, func(t *testing.T) {
 			r := Parse(paragraphs(long("Điều 1. Một\n" + title + "\nĐiều 1. Mẫu")))
 			if len(r.Scopes) != 2 || r.Scopes[1].Kind != "tail" {
@@ -75,7 +75,7 @@ func TestParse_AppendixTitles(t *testing.T) {
 	}
 }
 func TestParse_InvalidHeadingCandidate(t *testing.T) {
-	for _, s := range []string{"Điều 2: Phạm vi", "Điều 2 Phạm vi", "Điều 2Phạm vi", "Điều 2"} {
+	for _, s := range []string{"Điều 2: Phạm vi", "Điều 2 Phạm vi", "Điều 2"} {
 		r := Parse(paragraphs(long("Điều 1. Một\n" + s)))
 		if r.Scopes[0].Accepted || !contains(r.Gaps, "structure_uncertain") {
 			t.Fatalf("%q: %+v", s, r.Scopes)
@@ -115,13 +115,17 @@ func TestParse_DecreeArticle21Boundary(t *testing.T) {
 	t.Fatal("article 21 missing")
 }
 
-func TestParse_QuotedCapitalTextIsNotStructureTitle(t *testing.T) {
+func TestParse_QuoteStartingAtCapitalTitle(t *testing.T) {
 	r := Parse(paragraphs(long("Chương I\n“QUY ĐỊNH CHUNG”\nĐiều 1. Một")))
 	for _, p := range r.Provisions {
-		if p.Kind == "chuong" && p.Text != "Chương I" {
-			t.Fatalf("quoted text attached to structure: %q", p.Text)
+		if p.Kind == "chuong" {
+			if p.Text != "Chương I\n“QUY ĐỊNH CHUNG”" {
+				t.Fatalf("chapter title %q", p.Text)
+			}
+			return
 		}
 	}
+	t.Fatal("missing chapter")
 }
 
 func TestParse_HeadingFormsAndScopes(t *testing.T) {

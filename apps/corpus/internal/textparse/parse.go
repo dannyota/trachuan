@@ -27,7 +27,7 @@ func Parse(paragraphs []Paragraph) Result {
 		r.Gaps = append(r.Gaps, "no_text")
 		return r
 	}
-	quoted, unclosed := quotedParagraphs(paragraphs)
+	quoted, quoteFailures := quotedParagraphs(paragraphs)
 	spans := scopes(paragraphs, quoted)
 	if len(spans) == 0 {
 		r.Provisions = neutral(paragraphs, quoted, -1, 0)
@@ -59,8 +59,11 @@ func Parse(paragraphs []Paragraph) Result {
 			}
 		}
 		if sp.kind != "tail" {
-			if unclosed >= sp.start && unclosed < sp.end {
-				scope.FailedCheck = "unclosed quotation"
+			for _, failure := range quoteFailures {
+				if failure >= sp.start && failure < sp.end {
+					scope.FailedCheck = "unbalanced quotation"
+					break
+				}
 			}
 			if scope.FailedCheck == "" {
 				scope.FailedCheck = sequence(nums)

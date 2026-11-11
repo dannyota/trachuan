@@ -35,7 +35,16 @@ func structure(s string) (string, string, bool) {
 	return "", "", false
 }
 func headingCandidate(s string) bool {
-	return regexp.MustCompile(`^Điều\s+[0-9]+[a-zA-Z]?(?:$|[.:–—-]|\s*\p{Lu})`).MatchString(s)
+	match := regexp.MustCompile(`^Điều\s+[0-9]+[a-zA-Z]?`).FindString(s)
+	if match == "" {
+		return false
+	}
+	rest := strings.TrimSpace(strings.TrimPrefix(s, match))
+	if rest == "" {
+		return true
+	}
+	first := []rune(rest)[0]
+	return !unicode.IsLower(first) && first != ',' && first != ';' && first != ')'
 }
 func capitals(s string) bool {
 	hasLetter := false
@@ -74,10 +83,7 @@ func appendix(s string) bool {
 	if capitals(s) && (strings.HasPrefix(u, "PHỤ LỤC") || strings.HasPrefix(u, "MẪU SỐ")) {
 		return true
 	}
-	if !regexp.MustCompile(`^(?:Phụ lục(?: số)?|Mẫu số)\s+(?:[0-9]+|[IVXLCDMivxlcdm]+)[a-zA-Z]*(?:$|[. :–—-])`).MatchString(s) {
-		return false
-	}
-	return !strings.ContainsAny(string([]rune(s)[len([]rune(s))-1:]), ".;:!?")
+	return regexp.MustCompile(`^(?:Phụ lục(?: số)?|Mẫu số)\s+(?:[0-9]+|[IVXLCDMivxlcdm]+)[a-zA-Z]*[.:]?$`).MatchString(s)
 }
 func instrumentAt(p []Paragraph, i int) bool {
 	return instrument(p[i].Text) && (i == 0 || !bareStructure(p[i-1].Text))

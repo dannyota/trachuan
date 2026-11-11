@@ -1,33 +1,40 @@
 package textparse
 
-import "strings"
-
-// quotedParagraphs marks paragraphs in quoted text and returns the unclosed start.
-func quotedParagraphs(p []Paragraph) ([]bool, int) {
+// quotedParagraphs marks paragraph starts inside quotes and unbalanced marks.
+func quotedParagraphs(p []Paragraph) ([]bool, []int) {
 	quoted := make([]bool, len(p))
-	start := -1
+	var failures []int
+	depth, start := 0, -1
 	for i, para := range p {
-		s := strings.TrimSpace(para.Text)
-		runes := []rune(s)
-		if start < 0 && len(runes) > 0 && strings.ContainsRune("“‘«\"", runes[0]) {
-			start = i
-		}
-		if start < 0 {
-			continue
-		}
-		quoted[i] = true
-		end := strings.TrimSpace(strings.TrimRight(s, ".;,"))
-		if (i > start || len([]rune(end)) > 1) && strings.ContainsAny(lastRune(end), "”’»\"") {
-			start = -1
+		quoted[i] = depth > 0
+		for _, mark := range para.Text {
+			switch mark {
+			case '“', '«':
+				if depth == 0 {
+					start = i
+				}
+				depth++
+			case '”', '»':
+				if depth == 0 {
+					failures = append(failures, i)
+				} else {
+					depth--
+					if depth == 0 {
+						start = -1
+					}
+				}
+			case '"':
+				switch depth {
+				case 0:
+					depth, start = 1, i
+				case 1:
+					depth, start = 0, -1
+				}
+			}
 		}
 	}
-	return quoted, start
-}
-
-func lastRune(s string) string {
-	r := []rune(s)
-	if len(r) == 0 {
-		return ""
+	if depth > 0 {
+		failures = append(failures, start)
 	}
-	return string(r[len(r)-1])
+	return quoted, failures
 }

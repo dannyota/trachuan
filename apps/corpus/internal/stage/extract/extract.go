@@ -29,7 +29,7 @@ func (*Stage) Name() string { return "extract" }
 
 // Recipe returns the extract recipe hash.
 func (*Stage) Recipe(stage.Snapshot) string {
-	return stage.RecipeHash("extract", "tree/1", "html-transcription/1", "textparse/1", "ocr-absent/1")
+	return stage.RecipeHash("extract", "tree/1", "html-transcription/1", "textparse/2", "ocr-absent/1")
 }
 
 // Plan selects completed fetch artifacts for this run.
