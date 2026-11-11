@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net"
 	"strings"
 	"sync/atomic"
@@ -33,8 +34,9 @@ type BatchResult struct {
 
 // BatchConfig bounds a batch run.
 type BatchConfig struct {
-	HeartbeatEvery time.Duration
-	MaxAttempts    int
+	HeartbeatEvery   time.Duration
+	HeartbeatTimeout time.Duration
+	MaxAttempts      int
 }
 
 // ErrSuperseded reports that the run's generation moved past the caller's.
@@ -42,6 +44,7 @@ var ErrSuperseded = errors.New("superseded")
 
 // RunBatch processes the pending items of one batch.
 func RunBatch(ctx context.Context, env Env, st Stage, in BatchInput, attempt int, cfg BatchConfig, heartbeat func(details ...any)) (BatchResult, error) {
+	ctx = sourcegate.WithActivity(ctx)
 	var result BatchResult
 	q := store.New(env.DB)
 	runRow, err := q.GetBatchRun(ctx, in.RunID)
@@ -68,10 +71,22 @@ func RunBatch(ctx context.Context, env Env, st Stage, in BatchInput, attempt int
 		defer close(stopped)
 		ticker := time.NewTicker(cfg.HeartbeatEvery)
 		defer ticker.Stop()
+		lastTick := time.Now()
+		timeout := cfg.HeartbeatTimeout
+		if timeout <= 0 {
+			timeout = 2 * time.Minute
+		}
 		for {
 			select {
 			case <-ticker.C:
+				started := time.Now()
+				gap := started.Sub(lastTick)
+				lastTick = started
 				heartbeat(int(last.Load()))
+				duration := time.Since(started)
+				if gap > timeout/2 || duration > timeout/2 {
+					slog.Warn("activity heartbeat delayed", "activity", in.Stage, "batch", in.Batch, "gap", gap, "call_duration", duration)
+				}
 			case <-stop:
 				return
 			}
@@ -119,7 +134,8 @@ func RunBatch(ctx context.Context, env Env, st Stage, in BatchInput, attempt int
 			if found {
 				output = Output{Artifact: &art, State: "done"}
 			} else {
-				output, err = st.Process(sourcegate.WithRunID(ctx, in.RunID), env, run, item)
+				itemCtx := sourcegate.WithItem(sourcegate.WithRunID(ctx, in.RunID), item.Key)
+				output, err = st.Process(itemCtx, env, run, item)
 				if err != nil {
 					// Only the activity's own context ends the batch; a timeout
 					// inside one item stays with that item.

@@ -94,6 +94,24 @@ func TestRunBatch_SkipsDoneItems(t *testing.T) {
 		t.Fatalf("result=%+v calls=%d err=%v", result, s.calls, err)
 	}
 }
+
+func TestRunBatch_HungItemDoesNotBlockNext(t *testing.T) {
+	env, id, s := batchSetup(t)
+	batchExec(t, env.DB, `INSERT INTO run_item (run_id, stage, item_key, state, batch, generation, attempt) VALUES ($1, 'fetch', 'next', 'pending', 0, 0, 0)`, id)
+	s.process = func(ctx context.Context, _ Env, _ Run, it Item) (Output, error) {
+		if it.Key == "item" {
+			request, cancel := context.WithTimeout(ctx, 10*time.Millisecond)
+			defer cancel()
+			<-request.Done()
+			return Output{}, RetryableGap(request.Err(), "source_unavailable")
+		}
+		return Output{State: "gap", Gaps: []Gap{{Kind: "missing", Detail: it.Key}}}, nil
+	}
+	result, err := batchRun(env, id, s, 1, func(...any) {})
+	if err == nil || result.Pending != 1 || result.Gap != 1 || s.calls != 2 {
+		t.Fatalf("result=%+v calls=%d error=%v", result, s.calls, err)
+	}
+}
 func TestRunBatch_ReusesExistingArtifactAndResolves(t *testing.T) {
 	t.Parallel()
 	env, id, s := batchSetup(t)

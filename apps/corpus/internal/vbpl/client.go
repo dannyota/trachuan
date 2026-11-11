@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"sync"
 	"syscall"
 	"time"
 
@@ -35,11 +36,15 @@ type Client struct {
 	slots           chan struct{}
 	fileSlots       chan struct{}
 	timeout         time.Duration
+	requestBudget   time.Duration
+	slowThreshold   time.Duration
 	backoffs        []time.Duration
 	fileHosts       []string
 	allowTestHTTP   bool
 	gate            sourcegate.Gate
 	lookupPageSize  int
+	pauseMu         sync.Mutex
+	pauses          map[int64]*pauseState
 }
 
 // New creates a client identifying this release by version.
@@ -50,6 +55,8 @@ func New(version string) *Client {
 // NewWithBase creates a client for the supplied gateway URL.
 func NewWithBase(base, version string, options ...Option) *Client {
 	c := &Client{lookupPageSize: 1000, base: base, userAgent: "trachuan/" + version + " (+https://github.com/dannyota/trachuan)", http: &http.Client{}, limiter: rate.NewLimiter(16, 1), slots: make(chan struct{}, 16), fileSlots: make(chan struct{}, 8), timeout: 30 * time.Second, fileHosts: []string{"s3-han02.fptcloud.com"}, backoffs: []time.Duration{2 * time.Second, 8 * time.Second, 30 * time.Second}}
+	c.requestBudget = 200 * time.Second
+	c.slowThreshold = 10 * time.Second
 	for _, option := range options {
 		option(c)
 	}
@@ -97,13 +104,24 @@ func WithTestHTTP() Option {
 	return func(c *Client) { c.allowTestHTTP = true }
 }
 
+// WithTestTimeouts sets short request deadlines for offline tests.
+func WithTestTimeouts(attempt, sequence time.Duration) Option {
+	return func(c *Client) { c.timeout, c.requestBudget = attempt, sequence }
+}
+
 type response struct {
 	Success bool            `json:"success"`
 	Data    json.RawMessage `json:"data"`
 }
 
 // request holds a concurrency slot and timeout until the response body is consumed.
-func (c *Client) request(ctx context.Context, method, target string, body []byte, file bool, consume func(io.Reader) error) (int, error) {
+func (c *Client) request(ctx context.Context, method, target string, body []byte, file bool, consume func(io.Reader) error) (status int, err error) {
+	started := time.Now()
+	defer func() {
+		sourcegate.LogSlow(ctx, "vbpl", endpoint(target), time.Since(started), c.slowThreshold, status, err)
+	}()
+	ctx, cancel := context.WithTimeout(ctx, c.timeout)
+	defer cancel()
 	slots, client := c.slots, c.http
 	if file {
 		slots, client = c.fileSlots, c.fileHTTP
@@ -115,8 +133,11 @@ func (c *Client) request(ctx context.Context, method, target string, body []byte
 	}
 	defer func() { <-slots }()
 	if !file {
-		if err := c.limiter.Wait(ctx); err != nil {
-			return 0, fmt.Errorf("wait for rate limit: %w", err)
+		if waitErr := c.limiter.Wait(ctx); waitErr != nil {
+			if ctx.Err() == nil {
+				waitErr = fmt.Errorf("%w: %v", context.DeadlineExceeded, waitErr)
+			}
+			return 0, fmt.Errorf("wait for rate limit: %w", waitErr)
 		}
 	}
 	if c.gate != nil {
@@ -124,13 +145,17 @@ func (c *Client) request(ctx context.Context, method, target string, body []byte
 		if !ok {
 			return 0, fmt.Errorf("source admission: missing run id")
 		}
-		if err := c.gate.Admit(ctx, id, "vbpl"); err != nil {
-			return 0, fmt.Errorf("source admission: %w", err)
+		if pauseErr := c.awaitPause(ctx, id); pauseErr != nil {
+			return 0, pauseErr
+		}
+		if admitErr := c.gate.Admit(ctx, id, "vbpl"); admitErr != nil {
+			return 0, fmt.Errorf("source admission: %w", admitErr)
+		}
+		if pauseErr := c.awaitPause(ctx, id); pauseErr != nil {
+			return 0, pauseErr
 		}
 	}
-	reqCtx, cancel := context.WithTimeout(ctx, c.timeout)
-	defer cancel()
-	req, err := http.NewRequestWithContext(reqCtx, method, target, bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, method, target, bytes.NewReader(body))
 	if err != nil {
 		return 0, fmt.Errorf("create request: %w", safeError(err))
 	}
@@ -149,9 +174,11 @@ func (c *Client) request(ctx context.Context, method, target string, body []byte
 	if resp.StatusCode == http.StatusForbidden && c.gate != nil {
 		id, _ := sourcegate.RunID(ctx)
 		reason := fmt.Sprintf("%s status 403", endpoint(target))
-		if err := c.gate.Pause(ctx, id, "vbpl", reason, ""); err != nil {
-			return resp.StatusCode, fmt.Errorf("pause source: %w", err)
+		activity, ok := sourcegate.Activity(ctx)
+		if !ok {
+			return resp.StatusCode, errors.New("source pause: missing activity context")
 		}
+		c.startPause(activity, id, reason)
 		return resp.StatusCode, fmt.Errorf("%s: %w", reason, sourcegate.ErrSourcePaused)
 	}
 	if resp.StatusCode != http.StatusOK {
@@ -184,10 +211,16 @@ func wait(ctx context.Context, d time.Duration) error {
 	}
 }
 func (c *Client) apiRaw(ctx context.Context, method, path string, body []byte) (json.RawMessage, error) {
+	activityCtx := ctx
+	ctx, cancel := context.WithTimeout(ctx, c.requestBudget)
+	defer cancel()
 	for attempt := 0; ; attempt++ {
 		if attempt > 0 {
 			if err := wait(ctx, c.backoffs[attempt-1]); err != nil {
-				return nil, fmt.Errorf("retry: %w", err)
+				if activityCtx.Err() != nil {
+					return nil, activityCtx.Err()
+				}
+				return nil, fmt.Errorf("retry: %w", classify(err, endpoint(path), 0))
 			}
 		}
 		var raw []byte
@@ -202,6 +235,9 @@ func (c *Client) apiRaw(ctx context.Context, method, path string, body []byte) (
 			}
 			return nil
 		})
+		if activityCtx.Err() != nil {
+			return nil, activityCtx.Err()
+		}
 		if err == nil && status == http.StatusOK && !objectFramed(raw) {
 			err = &Failure{Origin: "gateway", Cause: "non_json_200", Endpoint: endpoint(path), HTTPStatus: status}
 		}

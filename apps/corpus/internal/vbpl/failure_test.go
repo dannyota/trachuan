@@ -7,6 +7,7 @@ import (
 
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync/atomic"
 	"testing"
 
@@ -34,10 +35,23 @@ func TestClient_ForbiddenPausesSource(t *testing.T) {
 	defer s.Close()
 	gate := sourcegate.NewMemory()
 	c := NewWithBase(s.URL, "test", WithLimits(float64(rate.Inf), 8), WithBackoffs(time.Millisecond), WithGate(gate))
-	ctx := sourcegate.WithRunID(context.Background(), 7)
+	ctx := sourcegate.WithActivity(sourcegate.WithRunID(context.Background(), 7))
 	_, _, err := c.Detail(ctx, "1")
+	waitForPaused(t, ctx, gate, 7)
 	if !errors.Is(err, sourcegate.ErrSourcePaused) || attempts.Load() != 1 || !errors.Is(gate.Admit(ctx, 7, "vbpl"), sourcegate.ErrSourcePaused) {
 		t.Fatalf("err = %v, attempts = %d", err, attempts.Load())
+	}
+}
+
+func waitForPaused(t *testing.T, ctx context.Context, gate sourcegate.Gate, id int64) {
+	t.Helper()
+	deadline := time.After(90 * time.Millisecond)
+	for !errors.Is(gate.Admit(ctx, id, "vbpl"), sourcegate.ErrSourcePaused) {
+		select {
+		case <-deadline:
+			t.Fatal("source pause was not persisted")
+		case <-time.After(time.Millisecond):
+		}
 	}
 }
 
@@ -68,6 +82,41 @@ func TestClient_GateWithoutRunFailsClosed(t *testing.T) {
 	}
 }
 
+func TestClient_ForbiddenWithoutActivityFailsClosed(t *testing.T) {
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusForbidden) }))
+	defer s.Close()
+	c := NewWithBase(s.URL, "test", WithGate(sourcegate.NewMemory()), WithBackoffs())
+	_, _, err := c.Detail(sourcegate.WithRunID(context.Background(), 7), "1")
+	if err == nil || !strings.Contains(err.Error(), "missing activity context") {
+		t.Fatalf("error = %v", err)
+	}
+}
+
+func TestClient_RequestSlotWaitUsesRequestTimeout(t *testing.T) {
+	c := NewWithBase("https://example.invalid", "test", WithLimits(float64(rate.Inf), 1), WithBackoffs())
+	c.timeout = 5 * time.Millisecond
+	c.slots <- struct{}{}
+	ctx, cancel := context.WithTimeout(context.Background(), 80*time.Millisecond)
+	defer cancel()
+	_, _, err := c.Detail(ctx, "1")
+	if !errors.Is(err, context.DeadlineExceeded) || ctx.Err() != nil {
+		t.Fatalf("error = %v, parent context error = %v; want request timeout before parent", err, ctx.Err())
+	}
+}
+
+func TestClient_RetrySequenceHasDeadline(t *testing.T) {
+	c := NewWithBase("https://example.invalid", "test", WithLimits(float64(rate.Inf), 1), WithBackoffs(30*time.Millisecond))
+	c.timeout = 5 * time.Millisecond
+	c.requestBudget = 10 * time.Millisecond
+	c.slots <- struct{}{}
+	ctx, cancel := context.WithTimeout(context.Background(), 25*time.Millisecond)
+	defer cancel()
+	_, _, err := c.Detail(ctx, "1")
+	if !errors.Is(err, context.DeadlineExceeded) || ctx.Err() != nil {
+		t.Fatalf("error = %v, parent = %v", err, ctx.Err())
+	}
+}
+
 func TestAPI_FailureCauses(t *testing.T) {
 	for _, tc := range []struct {
 		status        int
@@ -83,7 +132,9 @@ func TestAPI_FailureCauses(t *testing.T) {
 			}))
 			defer s.Close()
 			c := testClient(s)
-			c.timeout = 5 * time.Millisecond
+			if tc.status == 0 {
+				c.timeout = 5 * time.Millisecond
+			}
 			_, _, err := c.Detail(context.Background(), "1")
 			var f *Failure
 			if !errors.As(err, &f) || f.Cause != tc.cause || f.Origin != tc.origin || f.HTTPStatus != tc.status || f.Endpoint != "doc/detail" {

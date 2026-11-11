@@ -103,8 +103,8 @@ func Load(getenv func(string) string) (Config, error) {
 		}
 		*setting.target = duration
 	}
-	if cfg.HeartbeatEvery >= cfg.HeartbeatTimeout {
-		return Config{}, fmt.Errorf("CORPUS_HEARTBEAT_EVERY (%s) must be below CORPUS_HEARTBEAT_TIMEOUT (%s)", cfg.HeartbeatEvery, cfg.HeartbeatTimeout)
+	if cfg.HeartbeatEvery > cfg.HeartbeatTimeout/4 {
+		return Config{}, fmt.Errorf("CORPUS_HEARTBEAT_EVERY (%s) must be at most one quarter of CORPUS_HEARTBEAT_TIMEOUT (%s)", cfg.HeartbeatEvery, cfg.HeartbeatTimeout)
 	}
 	return cfg, nil
 }
