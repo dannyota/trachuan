@@ -30,20 +30,38 @@ type fusedCandidate struct {
 }
 
 // Rank fuses candidate arms and ranks provision groups without a confidence gate.
-func Rank(arms Arms, recipe Recipe, limit int, mode ArmMode) (Ranking, error) {
+func Rank(arms Arms, recipe Recipe, limit int, mode ArmMode, overrides ...*CapOverride) (Ranking, error) {
 	if limit == 0 {
 		limit = 8
 	}
-	if limit < 1 || limit > 50 || (mode != "" && mode != "hybrid" && mode != "dense" && mode != "lexical") || recipe.RRF.K < 1 || recipe.HydrateMultiplier < 1 || recipe.DocumentCap < 1 {
+	cap := recipe.DocumentCap
+	if len(overrides) > 1 {
+		return Ranking{}, errors.New("invalid ranking options")
+	}
+	if len(overrides) == 1 {
+		var err error
+		cap, err = effectiveCap(overrides[0], cap, limit)
+		if err != nil {
+			return Ranking{}, err
+		}
+	}
+	return rankWithCap(arms, recipe, limit, mode, cap)
+}
+
+func rankWithCap(arms Arms, recipe Recipe, limit int, mode ArmMode, cap int) (Ranking, error) {
+	if limit == 0 {
+		limit = 8
+	}
+	if limit < 1 || limit > 50 || (mode != "" && mode != "hybrid" && mode != "dense" && mode != "lexical") || recipe.RRF.K < 1 || recipe.HydrateMultiplier < 1 || recipe.DocumentCap < 1 || cap < 1 {
 		return Ranking{}, errors.New("invalid ranking options")
 	}
 	if (mode != "lexical" && arms.Depths.Dense < recipe.DenseDepth) || (mode != "dense" && arms.Depths.Lexical < recipe.LexicalDepth) {
 		return Ranking{}, ErrCacheInsufficient
 	}
-	return rankGroup(arms.Primary, arms.Validation.Routed, recipe, limit, mode)
+	return rankGroup(arms.Primary, arms.Validation.Routed, recipe, limit, mode, cap)
 }
 
-func rankGroup(arm ArmGroup, routed bool, recipe Recipe, limit int, mode ArmMode) (Ranking, error) {
+func rankGroup(arm ArmGroup, routed bool, recipe Recipe, limit int, mode ArmMode, cap int) (Ranking, error) {
 	scores := map[int64]fusedCandidate{}
 	add := func(cs []Candidate, depth int, weight float64) {
 		for i, c := range cs {
@@ -120,7 +138,7 @@ func rankGroup(arm ArmGroup, routed bool, recipe Recipe, limit int, mode ArmMode
 	demoted := []Group{}
 	for _, g := range groups {
 		key := g.Identity.DocumentKey
-		if counts[key] < recipe.DocumentCap {
+		if counts[key] < cap {
 			selected = append(selected, g)
 			counts[key]++
 		} else {

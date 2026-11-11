@@ -73,6 +73,9 @@ type metricKey struct {
 
 // Run scores legacy, old-product and development cases with a frozen recipe.
 func Run(ctx context.Context, engine Engine, suite Suite, o Options) (Report, Cache, error) {
+	if _, err := json.Marshal(o.CapOverride); err != nil {
+		return Report{}, Cache{}, fmt.Errorf("invalid cap override: %w", err)
+	}
 	if err := validateSuite(suite); err != nil {
 		return Report{}, Cache{}, err
 	}
@@ -96,6 +99,7 @@ func Run(ctx context.Context, engine Engine, suite Suite, o Options) (Report, Ca
 	o = withReleaseRecipes(o, rel, modes)
 	recipe := rel.RetrievalRecipe
 	r := Report{Version: 1, Scorer: "agent-eval/1", Status: "complete", Country: rel.Country, Rel: rel.Rel, BuildArtifactSHA256: o.BuildArtifactSHA256, DumpSHA256: o.DumpSHA256, FixtureHashes: suite.Hashes, IdentityMapSHA256: suite.Hashes.IdentityMap, Recipes: o.Recipes, EvaluationDate: date, DatabaseInstanceKind: o.DatabaseInstanceKind, Software: o.Software, Calibration: o.Calibration, Cohorts: map[string]Cohort{"legacy": {}, "old_product": {}}, TimingsMS: map[string]any{}, CacheManifest: map[string]any{}, PreviousDiff: map[string]any{"reason": "no previous report"}, NotRun: map[string]string{"development": "not_run", "taxonomy": "out_of_scope", "filtered": "out_of_scope"}, Limitations: []string{"Small sample size; calibration fits the scored product cohorts.", "Legacy results use the product recipe and are not a reproduction of the legacy engine."}}
+	r.CapOverride = o.CapOverride
 	var previous *Report
 	if o.PreviousReport != "" {
 		b, err := os.ReadFile(o.PreviousReport)
@@ -112,7 +116,11 @@ func Run(ctx context.Context, engine Engine, suite Suite, o Options) (Report, Ca
 		if prior.Cohorts["development"].CaseCount > 0 && prior.FixtureHashes.Development != r.FixtureHashes.Development {
 			return Report{}, Cache{}, fmt.Errorf("incompatible previous development fixtures")
 		}
-		previous = &prior
+		if (prior.CapOverride == nil) != (o.CapOverride == nil) || (prior.CapOverride != nil && o.CapOverride != nil && *prior.CapOverride != *o.CapOverride) {
+			r.PreviousDiff = map[string]any{"reason": "incompatible cap override"}
+		} else {
+			previous = &prior
+		}
 	}
 	rejects := rejectionSet(suite)
 	entries := map[string]map[int]MapEntry{}
@@ -212,7 +220,7 @@ func Run(ctx context.Context, engine Engine, suite Suite, o Options) (Report, Ca
 				ar := ArmRow{Version: 1, CaseID: c.ID, Cohort: cohort, ReleaseHash: o.DumpSHA256, RecipeHashes: o.Recipes, EvaluationDate: date, Mode: mode, Depths: arms.Depths, Route: arms.Validation.Routed, EligibilityHash: eligibilityHash(date), Dense: cachedCandidates(arms.Primary.Dense, false), Lexical: cachedCandidates(arms.Primary.Lexical, true), RawANN: cachedCandidates(arms.Primary.RawANN, false), Fallback: arms.Primary.Fallback, Diagnostics: map[string]any{}}
 				for _, armMode := range []retrieval.ArmMode{"hybrid", "dense", "lexical"} {
 					for _, limit := range []int{8, 20} {
-						response, err := retrieval.Shape(arms, recipe, limit, armMode)
+						response, err := retrieval.ShapeWithCap(arms, recipe, limit, armMode, o.CapOverride)
 						if err != nil {
 							return Report{}, Cache{}, fmt.Errorf("shape case %s: %w", c.ID, err)
 						}
@@ -286,11 +294,18 @@ func Run(ctx context.Context, engine Engine, suite Suite, o Options) (Report, Ca
 						if cohort != "legacy" && len(o.Mapping[c.ID]) > 0 {
 							diagnosticEntries = nil
 						}
-						losses, gaps, err := caseDiagnostics(arms, recipe, limit, armMode, cohort, c.ExpectedCitations, diagnosticEntries, response)
+						diagnosticRecipe := recipe
+						if o.CapOverride != nil {
+							diagnosticRecipe.DocumentCap = int(*o.CapOverride)
+							if diagnosticRecipe.DocumentCap == 0 {
+								diagnosticRecipe.DocumentCap = limit
+							}
+						}
+						losses, gaps, err := caseDiagnostics(arms, diagnosticRecipe, limit, armMode, cohort, c.ExpectedCitations, diagnosticEntries, response)
 						if err != nil {
 							return Report{}, Cache{}, fmt.Errorf("diagnose case %s: %w", c.ID, err)
 						}
-						result := CaseResult{CaseID: c.ID, Cohort: cohort, Mode: mode, Arms: armMode, Limit: limit, Expected: len(ranks), Ranks: ranks, Matched: matchedCount(ranks), Mapped: caseMappings(entries[c.ID], len(ranks)), Abstain: response.Abstain, Reason: response.Reason, Gaps: gaps, Losses: losses, Characters: chars}
+						result := CaseResult{CapOverride: o.CapOverride, CaseID: c.ID, Cohort: cohort, Mode: mode, Arms: armMode, Limit: limit, Expected: len(ranks), Ranks: ranks, Matched: matchedCount(ranks), Mapped: caseMappings(entries[c.ID], len(ranks)), Abstain: response.Abstain, Reason: response.Reason, Gaps: gaps, Losses: losses, Characters: chars}
 						if cohort != "legacy" {
 							result.MappingIssues = o.Mapping[c.ID]
 						}

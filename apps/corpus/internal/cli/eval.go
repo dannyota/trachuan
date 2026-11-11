@@ -17,6 +17,7 @@ import (
 	"danny.vn/trachuan/apps/corpus/internal/stage/eval"
 	"danny.vn/trachuan/apps/corpus/internal/store"
 	"danny.vn/trachuan/apps/corpus/internal/worker"
+	"danny.vn/trachuan/internal/retrieval"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/sys/unix"
 )
@@ -70,44 +71,48 @@ func passingEvalFloors(floors []evaluation.Floor, allowNotRun bool) bool {
 }
 
 func runEval(ctx context.Context, args []string, _ io.Writer, stderr io.Writer) int {
+	return runEvalWith(ctx, args, stderr, prepareEval)
+}
+
+type evalRunner interface {
+	Evaluate(context.Context, stage.Env, stage.Run, *retrieval.CapOverride) (evaluation.Report, evaluation.Cache, error)
+}
+
+type evalTarget struct {
+	runner evalRunner
+	env    stage.Env
+	run    stage.Run
+	close  func()
+}
+
+func runEvalWith(ctx context.Context, args []string, stderr io.Writer, prepare func(context.Context, string, string, string) (evalTarget, error)) int {
 	fail := func(err error) int { _, _ = fmt.Fprintln(stderr, err); return 1 }
 	if len(args) < 2 {
-		return fail(fmt.Errorf("usage: corpus eval <cc> <rel> --out DIR [--previous FILE] [--require-floors]"))
+		return fail(fmt.Errorf("usage: corpus eval <cc> <rel> --out DIR [--previous FILE] [--require-floors] [--cap N|none]"))
 	}
-	opts, err := options(args[2:], map[string]bool{"--out": true, "--previous": true, "--require-floors": false})
+	opts, err := options(args[2:], map[string]bool{"--out": true, "--previous": true, "--require-floors": false, "--cap": true})
 	if err != nil {
 		return fail(err)
 	}
 	if opts["--out"] == "" {
 		return fail(fmt.Errorf("--out DIR is required"))
 	}
+	var capOverride *retrieval.CapOverride
+	if value, ok := opts["--cap"]; ok {
+		capOverride, err = retrieval.ParseCapOverride(value)
+		if err != nil {
+			return fail(fmt.Errorf("--cap: %w", err))
+		}
+	}
 	if err = checkEvaluationOutput(opts["--out"]); err != nil {
 		return fail(err)
 	}
-	cfg, err := config.Load(os.Getenv)
+	target, err := prepare(ctx, args[0], args[1], opts["--previous"])
 	if err != nil {
 		return fail(err)
 	}
-	deps, err := worker.IndexDeps(ctx, cfg)
-	if err != nil {
-		return fail(err)
-	}
-	deps.Eval.Previous = opts["--previous"]
-	db, err := openEvalDB(ctx, args[0], args[1], cfg.DatabaseURL)
-	if err != nil {
-		return fail(err)
-	}
-	defer db.Close()
-	row, err := store.New(db).GetRun(ctx, store.GetRunParams{Country: args[0], Rel: args[1]})
-	if err != nil {
-		return fail(fmt.Errorf("corpus eval %s/%s get run: %w", args[0], args[1], err))
-	}
-	var snapshot stage.Snapshot
-	if err = json.Unmarshal(row.Snapshot, &snapshot); err != nil {
-		return fail(fmt.Errorf("corpus eval %s/%s decode snapshot: %w", args[0], args[1], err))
-	}
-	run := stage.Run{ID: row.ID, Country: row.Country, Rel: row.Rel, Generation: int(row.Generation), Snapshot: snapshot}
-	report, cache, err := eval.New(deps.Eval).Evaluate(ctx, stage.Env{DB: db, Artifacts: artifact.Store{Root: cfg.Artifacts}}, run)
+	defer target.close()
+	report, cache, err := target.runner.Evaluate(ctx, target.env, target.run, capOverride)
 	if err != nil {
 		return fail(err)
 	}
@@ -115,6 +120,34 @@ func runEval(ctx context.Context, args []string, _ io.Writer, stderr io.Writer) 
 		return fail(err)
 	}
 	return evalExit(report, opts["--require-floors"] == "true")
+}
+
+func prepareEval(ctx context.Context, cc, rel, previous string) (evalTarget, error) {
+	cfg, err := config.Load(os.Getenv)
+	if err != nil {
+		return evalTarget{}, err
+	}
+	deps, err := worker.IndexDeps(ctx, cfg)
+	if err != nil {
+		return evalTarget{}, err
+	}
+	deps.Eval.Previous = previous
+	db, err := openEvalDB(ctx, cc, rel, cfg.DatabaseURL)
+	if err != nil {
+		return evalTarget{}, err
+	}
+	row, err := store.New(db).GetRun(ctx, store.GetRunParams{Country: cc, Rel: rel})
+	if err != nil {
+		db.Close()
+		return evalTarget{}, fmt.Errorf("corpus eval %s/%s get run: %w", cc, rel, err)
+	}
+	var snapshot stage.Snapshot
+	if err = json.Unmarshal(row.Snapshot, &snapshot); err != nil {
+		db.Close()
+		return evalTarget{}, fmt.Errorf("corpus eval %s/%s decode snapshot: %w", cc, rel, err)
+	}
+	run := stage.Run{ID: row.ID, Country: row.Country, Rel: row.Rel, Generation: int(row.Generation), Snapshot: snapshot}
+	return evalTarget{runner: eval.New(deps.Eval), env: stage.Env{DB: db, Artifacts: artifact.Store{Root: cfg.Artifacts}}, run: run, close: db.Close}, nil
 }
 
 type evaluationWriter interface{ WriteFiles(string) error }

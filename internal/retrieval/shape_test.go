@@ -558,3 +558,23 @@ func TestShapeHit_LeadsFillCapFallsBack(t *testing.T) {
 		t.Fatalf("hit: %+v", h)
 	}
 }
+
+func TestShapeWithCap_RecipeCapMatchesDefault(t *testing.T) {
+	arms, recipe := shapeFixture("Nội dung")
+	arms.IncludeNonCurrent = true
+	arms.NonCurrent = arms.Primary
+	cap := CapOverride(recipe.DocumentCap)
+	for _, limit := range []int{0, 1, 8} {
+		want, err := Shape(arms, recipe, limit, "hybrid")
+		if err != nil {
+			t.Fatal(err)
+		}
+		got, err := ShapeWithCap(arms, recipe, limit, "hybrid", &cap)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(got, want) {
+			t.Fatalf("limit %d: got %+v, want %+v", limit, got, want)
+		}
+	}
+}
