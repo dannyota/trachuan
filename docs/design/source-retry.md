@@ -102,6 +102,7 @@ most once:
   survived, and reads the source again.
 
 Acquisitions belong to one run, one stage and its frozen recipes; another run
-reads the source itself, as [sources](sources.md) requires. This freezes each
+reads the source itself, as [sources](sources.md) requires, within the
+[reuse rule for unchanged VBPL reads](fetch-reuse.md). This freezes each
 successful read separately; it does not promise one source snapshot time for the
 run. The run message records how many items adopted an acquisition.

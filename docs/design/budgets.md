@@ -73,6 +73,10 @@ no request rate limit, because the attachment CDN caps throughput per IP (about
 issues a document's four gateway calls concurrently and downloads its
 attachments concurrently within the file pool.
 
+[Fetch reuse](fetch-reuse.md): reuse age limit 30 days from the original network
+read; control divisor 20 (about 5% of documents re-read in full per run). Both
+are provisional until three runs report their control outcomes.
+
 Stage batches in flight: 8 by default (`CORPUS_BATCHES_IN_FLIGHT`); `fetch` runs
 16 (`CORPUS_FETCH_BATCHES_IN_FLIGHT`); `embed` runs at most 2, so one batch
 waits in the document embedder queue while the other runs on the GPU.
