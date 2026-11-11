@@ -55,9 +55,10 @@ if [[ ! -s "$test_dir/port" ]]; then
   exit 1
 fi
 server_port="$(cat "$test_dir/port")"
-if [[ "$server_port" == 28081 ]]; then google_port=28082; else google_port=28081; fi
+if [[ "$server_port" == 28081 ]]; then google_port=28083; else google_port=28081; fi
+if [[ "$server_port" == 28082 ]]; then test_embed_port=28084; else test_embed_port=28082; fi
 export E2E_TEST_PSQL_CALLED="$test_dir/psql-called"
-if PATH="$test_dir/bin:$PATH" E2E_SERVER_PORT="$server_port" E2E_GOOGLE_PORT="$google_port" \
+if PATH="$test_dir/bin:$PATH" E2E_SERVER_PORT="$server_port" E2E_GOOGLE_PORT="$google_port" E2E_EMBED_PORT="$test_embed_port" \
   CORPUS_TEST_ADMIN_URL='postgres://localhost/postgres' bash "$test_dir/scripts/e2e.sh" >"$test_dir/output" 2>&1; then
   echo "e2e-test: occupied port was accepted" >&2
   exit 1
@@ -71,6 +72,27 @@ if [[ -e "$E2E_TEST_PSQL_CALLED" ]]; then
   exit 1
 fi
 
+# The embedder port is checked before the harness touches PostgreSQL.
+embed_port="$server_port"
+server_port="$(python3 - <<'PYCODE'
+import socket
+with socket.socket() as listener:
+    listener.bind(("127.0.0.1", 0))
+    print(listener.getsockname()[1])
+PYCODE
+)"
+if [[ "$server_port" == "$google_port" ]]; then google_port=28083; fi
+if [[ "$embed_port" == "$google_port" ]]; then google_port=28084; fi
+if PATH="$test_dir/bin:$PATH" E2E_SERVER_PORT="$server_port" E2E_GOOGLE_PORT="$google_port" E2E_EMBED_PORT="$embed_port" \
+  CORPUS_TEST_ADMIN_URL='postgres://localhost/postgres' bash "$test_dir/scripts/e2e.sh" >"$test_dir/embed-output" 2>&1; then
+  echo "e2e-test: occupied embedder port was accepted" >&2
+  exit 1
+fi
+if ! grep -Fxq 'e2e: port in use' "$test_dir/embed-output" || [[ -e "$E2E_TEST_PSQL_CALLED" ]]; then
+  echo "e2e-test: embedder port check did not precede psql" >&2
+  exit 1
+fi
+
 kill "$listener_pid"
 wait "$listener_pid" 2>/dev/null || true
 listener_pid=""
@@ -81,7 +103,8 @@ with socket.socket() as listener:
     print(listener.getsockname()[1])
 PYCODE
 )"
-if [[ "$server_port" == 28081 ]]; then google_port=28082; else google_port=28081; fi
+if [[ "$server_port" == 28081 ]]; then google_port=28083; else google_port=28081; fi
+if [[ "$server_port" == 28082 ]]; then test_embed_port=28084; else test_embed_port=28082; fi
 cat > "$test_dir/bin/psql" <<'STUB'
 #!/usr/bin/env bash
 set -euo pipefail
@@ -115,7 +138,7 @@ esac
 STUB
 chmod +x "$test_dir/bin/psql"
 export E2E_RACE_DIR="$test_dir"
-if PATH="$test_dir/bin:$PATH" E2E_SERVER_PORT="$server_port" E2E_GOOGLE_PORT="$google_port" \
+if PATH="$test_dir/bin:$PATH" E2E_SERVER_PORT="$server_port" E2E_GOOGLE_PORT="$google_port" E2E_EMBED_PORT="$test_embed_port" \
   CORPUS_TEST_ADMIN_URL='postgres://localhost/postgres' bash "$test_dir/scripts/e2e.sh" >"$test_dir/race-output" 2>&1; then
   echo "e2e-test: raced port was accepted" >&2
   exit 1

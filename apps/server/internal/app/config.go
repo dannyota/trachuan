@@ -14,6 +14,7 @@ import (
 
 type config struct {
 	listen, authURL, corpusURL, embedderURL, audience, publicURL, googleID, googleSecret, googleIssuer string
+	strictDeployment                                                                                   bool
 	trustedProxies                                                                                     []netip.Prefix
 	oauthClients                                                                                       []oauth.Client
 }
@@ -36,6 +37,7 @@ func loadConfig() (config, error) {
 	if c.authURL == "" || !validCorpusURL(c.corpusURL) || !ok {
 		return config{}, errors.New("invalid or missing server configuration")
 	}
+	c.strictDeployment = loopbackDeployment(rawPublicURL, c.listen)
 	c.publicURL = origin
 	c.audience = origin + "/mcp"
 	c.oauthClients, err = oauth.LoadPreregistered(os.Getenv("SERVER_OAUTH_CLIENTS"))
@@ -108,7 +110,7 @@ func strictLoopback(host string) bool {
 	return err == nil && ip.IsLoopback() && ip.Zone() == "" && !ip.Is4In6()
 }
 
-func issuerAllowed(issuer, origin, listen string) bool {
+func loopbackDeployment(origin, listen string) bool {
 	public, err := url.Parse(origin)
 	if err != nil || !strictLoopback(public.Hostname()) {
 		return false
@@ -117,11 +119,18 @@ func issuerAllowed(issuer, origin, listen string) bool {
 	if err != nil || !strictLoopback(host) {
 		return false
 	}
+	return true
+}
+
+func issuerAllowed(issuer, origin, listen string) bool {
+	if !loopbackDeployment(origin, listen) {
+		return false
+	}
 	u, err := url.Parse(issuer)
 	if err != nil || u.Scheme != "http" || u.User != nil || u.Opaque != "" || u.Path != "" || u.RawPath != "" || strings.ContainsAny(issuer, "?#") || !strictLoopback(u.Hostname()) {
 		return false
 	}
-	host = u.Hostname()
+	host := u.Hostname()
 	ip, err := netip.ParseAddr(host)
 	if err == nil {
 		host = ip.String()

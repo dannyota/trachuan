@@ -36,6 +36,10 @@ type Resolver struct {
 	URLTemplate string
 	EmbedderFor func(queryRecipeHash string) retrieval.Embedder
 	Options     retrieval.Options
+	// AllowTestRecipe is true only for a strict-loopback deployment.
+	AllowTestRecipe bool
+	// OnTestRecipeRefused logs a fixed message when the test recipe is refused.
+	OnTestRecipeRefused func()
 	// QueryTimeout can shorten the two-second auth query deadline.
 	QueryTimeout time.Duration
 

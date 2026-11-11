@@ -16,13 +16,14 @@ fi
 export CORPUS_TEST_ADMIN_URL="${CORPUS_TEST_ADMIN_URL:-postgres://trachuan@127.0.0.1:25433/postgres}"
 server_port="${E2E_SERVER_PORT:-28080}"
 google_port="${E2E_GOOGLE_PORT:-28081}"
-for port in "$server_port" "$google_port"; do
+embed_port="${E2E_EMBED_PORT:-28082}"
+for port in "$server_port" "$google_port" "$embed_port"; do
   if [[ ! "$port" =~ ^[1-9][0-9]{0,4}$ ]] || (( port > 65535 )); then
     echo "e2e: invalid port" >&2
     exit 1
   fi
 done
-if [[ "$server_port" == "$google_port" ]]; then
+if [[ "$server_port" == "$google_port" || "$server_port" == "$embed_port" || "$google_port" == "$embed_port" ]]; then
   echo "e2e: ports must differ" >&2
   exit 1
 fi
@@ -69,6 +70,7 @@ require_available_port() {
 }
 require_available_port "$server_port"
 require_available_port "$google_port"
+require_available_port "$embed_port"
 if ! command -v lsof >/dev/null 2>&1; then
   echo "e2e: port not owned by child" >&2
   exit 1
@@ -76,11 +78,21 @@ fi
 tmp_dir="$(mktemp -d "${TMPDIR:-/tmp}/trachuan-e2e.XXXXXXXX")"
 server_pid=""
 google_pid=""
+embed_pid=""
+fixture_name=""
+fixture_key=""
 db_created=0
 cleanup() {
   local status=$?
   if [[ -n "$server_pid" ]]; then kill "$server_pid" 2>/dev/null || true; wait "$server_pid" 2>/dev/null || true; fi
   if [[ -n "$google_pid" ]]; then kill "$google_pid" 2>/dev/null || true; wait "$google_pid" 2>/dev/null || true; fi
+  if [[ -n "$embed_pid" ]]; then kill "$embed_pid" 2>/dev/null || true; wait "$embed_pid" 2>/dev/null || true; fi
+  if [[ -n "$fixture_name" && -n "$fixture_key" ]]; then
+    if ! "$tmp_dir/e2efixture" drop "$fixture_name" "$fixture_key"; then
+      echo "e2e: fixture cleanup failed" >&2
+      status=1
+    fi
+  fi
   if [[ "$db_created" == 1 && "$db_name" =~ ^trachuan_e2e_[0-9a-f]{12}$ ]]; then
     if ! printf 'DROP DATABASE IF EXISTS :"db" WITH (FORCE)\n' | psql -X "$CORPUS_TEST_ADMIN_URL" -v ON_ERROR_STOP=1 -v db="$db_name"; then
       echo "e2e: database cleanup failed" >&2
@@ -95,6 +107,8 @@ trap 'exit 1' INT TERM
 
 go build -o "$tmp_dir/server" ./apps/server/cmd/server
 go build -o "$tmp_dir/fakegoogle" ./apps/server/cmd/fakegoogle
+go build -o "$tmp_dir/fakeembed" ./apps/server/cmd/fakeembed
+go build -tags integration -o "$tmp_dir/e2efixture" ./apps/server/cmd/e2efixture
 # psql variable substitution is performed by the input parser.
 printf 'CREATE DATABASE :"db"\n' | psql -X "$CORPUS_TEST_ADMIN_URL" -v ON_ERROR_STOP=1 -v db="$db_name"
 db_created=1
@@ -103,17 +117,24 @@ export SERVER_AUTH_DATABASE_URL="$auth_url"
 export SERVER_CORPUS_DATABASE_URL="$corpus_url"
 export SERVER_LISTEN="127.0.0.1:$server_port"
 export SERVER_PUBLIC_URL="http://127.0.0.1:$server_port"
+export SERVER_QUERY_EMBEDDER_URL="http://127.0.0.1:$embed_port"
 export SERVER_GOOGLE_ISSUER="http://127.0.0.1:$google_port"
 export GOOGLE_CLIENT_ID=e2e-client
 export GOOGLE_CLIENT_SECRET=e2e-secret
 export E2E_SERVER_URL="$SERVER_PUBLIC_URL"
 export E2E_GOOGLE_URL="$SERVER_GOOGLE_ISSUER"
 "$tmp_dir/server" migrate
+read -r fixture_name fixture_key < <("$tmp_dir/e2efixture" create)
+if [[ ! "$fixture_name" =~ ^corpus_vn_2099[0-9]{4}(_[0-9]+)?$ || "$fixture_key" != "vn/${fixture_name#corpus_vn_}" ]]; then
+  echo "e2e: invalid fixture identity" >&2
+  exit 1
+fi
+printf "INSERT INTO corpus_release VALUES ('vn', :'db', now(), 'e2e')\n" | psql -X "$auth_url" -v ON_ERROR_STOP=1 -v db="$fixture_name"
 require_available_port "$google_port" "e2e: port not owned by child"
 "$tmp_dir/fakegoogle" -listen "127.0.0.1:$google_port" -client-id "$GOOGLE_CLIENT_ID" -client-secret "$GOOGLE_CLIENT_SECRET" -redirect-uri "$SERVER_PUBLIC_URL/api/v1/auth/google/callback" >"$tmp_dir/google.log" 2>&1 &
 google_pid=$!
 wait_for() {
-  local url="$1" pid="$2" port="$3" ready_line="${4:-}"
+  local url="$1" pid="$2" port="$3" ready_line="${4:-}" log_file="${5:-$tmp_dir/google.log}"
   local attempt=0 owners lsof_status
   while (( attempt < 60 )); do
     attempt=$((attempt + 1))
@@ -134,7 +155,7 @@ wait_for() {
         echo "e2e: port not owned by child" >&2
         return 1
       fi
-      if [[ -z "$ready_line" ]] || grep -Fxq "$ready_line" "$tmp_dir/google.log"; then
+      if [[ -z "$ready_line" ]] || grep -Fxq "$ready_line" "$log_file"; then
         return 0
       fi
     fi
@@ -144,6 +165,13 @@ wait_for() {
 }
 if ! wait_for "$SERVER_GOOGLE_ISSUER/.well-known/openid-configuration" "$google_pid" "$google_port" "fakegoogle listening on 127.0.0.1:$google_port"; then
   echo "e2e: fake Google did not start" >&2
+  exit 1
+fi
+require_available_port "$embed_port" "e2e: port not owned by child"
+"$tmp_dir/fakeembed" -listen "127.0.0.1:$embed_port" >"$tmp_dir/embed.log" 2>&1 &
+embed_pid=$!
+if ! wait_for "$SERVER_QUERY_EMBEDDER_URL/readyz" "$embed_pid" "$embed_port" "fakeembed listening on 127.0.0.1:$embed_port" "$tmp_dir/embed.log"; then
+  echo "e2e: fake embedder did not start" >&2
   exit 1
 fi
 require_available_port "$server_port" "e2e: port not owned by child"
