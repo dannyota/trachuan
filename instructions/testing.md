@@ -6,7 +6,7 @@
 |Unit|every push|`make test`|
 |Integration with PostgreSQL|every push|`make test-integration` (native PostgreSQL from `make services-up`)|
 |Corpus evaluation|before every `corpus release`|`make eval`: product suite gates (ADR 0010) current-law precision 0.99, abstention 0.95, rejections 3/3, and no regression of recall@20 or MRR@8 against the previous release; targets reported, not gates: recall@20 0.90, MRR@8 0.66, recall@8 as a diagnostic; filtered cases; diff against previous release|
-|Browser|every pull request|`make e2e` (`scripts/e2e.sh`): starts the local stack (a fresh auth database, `apps/server/cmd/fakegoogle`, the Go server with `SERVER_GOOGLE_ISSUER`; Nuxt from Plan 10), runs the Go flow tests (`-tags e2e`), then Playwright once it exists, and tears the stack down|
+|Browser|every pull request|`make e2e` (`scripts/e2e.sh`): starts the local stack (a fresh auth database, `apps/server/cmd/fakegoogle`, `apps/server/cmd/fakeembed` with a 2099 fixture release, the Go server with `SERVER_GOOGLE_ISSUER`; Nuxt from Plan 10), runs the Go flow tests (`-tags e2e`), then Playwright once it exists, and tears the stack down|
 
 Rules: write the failing test first; observe the failure before the fix. A report claims only checks that ran and shows failures with output. Reviewers read the primary's check output and the exact-commit CI run; they do not run checks. Never lower an evaluation gate or target, or edit golden cases, to admit a change; add a new case and record why.
 

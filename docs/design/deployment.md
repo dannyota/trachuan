@@ -48,10 +48,10 @@ signature bundle:
 [anonymous pulls are supported](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry).
 Keep public layers and metadata free of secrets and personal data. Images and
 the host bundle carry only production commands; test commands such as
-`apps/server/cmd/fakegoogle` are never built into them, and the release check
-lists the binaries in each image and fails on any other. Private images would
-need a rotating read-only host secret. The code manifest is separate from the
-corpus manifest below.
+`apps/server/cmd/fakegoogle`, `apps/server/cmd/fakeembed` and the fixture loader
+are never built into them, and the release check lists the binaries in each
+image and fails on any other. Private images would need a rotating read-only
+host secret. The code manifest is separate from the corpus manifest below.
 
 A systemd timer fetches the production artifact over HTTPS. Its tag is only a
 discovery hint; stage the manifest, bundle and images locally before checking
