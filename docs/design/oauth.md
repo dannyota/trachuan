@@ -113,9 +113,11 @@ defaults to `mcp:read`; any other value returns `invalid_scope`.
 `/oauth/authorize` validates the client, the redirect URI, `response_type`
 `code`, the PKCE `S256` challenge, `state`, resource and scope (sizes in
 budgets). Any error, before or after the redirect URI is known, renders a server
-page with the error and, when the redirect URI is valid, a button that returns
-to the client with `error`, `state` and `iss`; the server never redirects to a
-client without that click or a consent decision (RFC 9700 §4.11.2).
+page with the error and, when the redirect URI is valid, a link back to the
+client carrying `error`, `state` and `iss`; the server never redirects to a
+client without the user following that link or a consent decision (RFC 9700
+§4.11.2). A client whose effective grant set lacks `authorization_code` gets
+`unauthorized_client` on that page.
 
 A valid request is stored as a pending request under a random handle and bound
 to the browser: the response sets cookie `__Host-oauth` (`Path=/`, `Secure`,
@@ -134,9 +136,13 @@ identity is not verified. The form carries
 `HMAC-SHA256(session CSRF secret, "oauth-consent:" || handle)`, never the secret
 itself; `POST` is `application/x-www-form-urlencoded`, requires that value, an
 `Origin` equal to `<base>` and the browser cookie. Responses carry
-`Cache-Control: no-store`, `X-Frame-Options: DENY` and a CSP with
-`frame-ancestors 'none'` and `form-action` limited to `'self'` and the redirect
-origin.
+`Cache-Control: no-store`, `X-Frame-Options: DENY`,
+`Referrer-Policy: same-origin` (a stricter policy makes browsers send
+`Origin: null` on the form post) and a CSP of `default-src 'none'`, the page's
+stylesheet and `frame-ancestors 'none'`. The CSP sets no `form-action`: the
+decision posts to the server, which answers with a 303 to the client, and a
+source list cannot name every allowed loopback callback such as `[::1]`; the
+page has no scripts and all output is escaped.
 
 The decision claims the pending request in one statement (unexpired, unclaimed,
 matching browser) and binds it to the approving session's account. Approval
