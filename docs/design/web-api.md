@@ -49,6 +49,32 @@ value is at most 512 bytes. A rejected `next` becomes `/`. The redirect uses the
 validated raw value. The `hd` claim is not checked: any Google account may sign
 in.
 
+### Test identity provider
+
+Browser and end-to-end tests sign in through `apps/server/cmd/fakegoogle`, a
+test-only OpenID provider; it never ships (see
+[deployment](deployment.md#images-and-deploy)). It listens only on a loopback
+address and serves discovery, JWKS, an authorization page and the token
+endpoint. The authorization page is an HTML form (an email field and an "email
+verified" box, checked by default) whose submit issues a single-use code bound
+to the request's PKCE S256 challenge, redirect URI and nonce. It accepts only
+its configured client id and the exact configured redirect URI and answers
+anything else with 400, never a redirect. The subject is derived from the email
+(`fake-` plus the first 20 hex digits of its SHA-256), so one email is one
+account. ID tokens are RS256 with a key made at startup.
+
+The server takes the provider from `SERVER_GOOGLE_ISSUER`; unset or empty means
+`https://accounts.google.com`. Any other value is accepted only when all of
+these hold, and otherwise `serve` exits at startup with
+`SERVER_GOOGLE_ISSUER requires a loopback deployment`, never echoing values: the
+host of `SERVER_PUBLIC_URL` and of `SERVER_LISTEN` is loopback, and the issuer
+is exactly `http://<loopback host>:<port>` (explicit port 1 to 65535, no user
+info, path, query or fragment, and equal to its own normalized form). A loopback
+host is `localhost` in lowercase or an IP literal in 127.0.0.0/8 or `::1`, with
+no zone, no IPv4-mapped form and no trailing dot. When the override is active,
+`serve` writes one startup line saying so, and the callback accepts only that
+exact issuer.
+
 ## Sessions
 
 A successful callback creates a new `web_session` row and sets cookie

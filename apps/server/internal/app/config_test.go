@@ -151,3 +151,54 @@ func TestConfig_NormalizesPublicOrigin(t *testing.T) {
 		})
 	}
 }
+
+func TestConfig_GoogleIssuerLoopbackGuard(t *testing.T) {
+	t.Setenv("SERVER_AUTH_DATABASE_URL", "postgres://localhost/auth")
+	t.Setenv("SERVER_CORPUS_DATABASE_URL", "postgres://localhost/{database}")
+	cases := []struct {
+		name, issuer, public, listen string
+		valid                        bool
+	}{
+		{"ipv4", "http://127.0.0.1:28081", "http://127.0.0.1:8080", "127.0.0.1:8080", true},
+		{"localhost", "http://localhost:28081", "http://localhost:8080", "localhost:8080", true},
+		{"ipv6", "http://[::1]:28081", "http://[::1]:8080", "[::1]:8080", true},
+		{"default port is not canonical", "http://localhost:80", "http://localhost:8080", "127.0.0.1:8080", false},
+		{"google", "https://accounts.google.com", "https://trachuan.vn", "127.0.0.1:8080", false},
+		{"uppercase public", "http://localhost:28081", "http://LOCALHOST:8080", "127.0.0.1:8080", false},
+		{"remote public", "http://127.0.0.1:28081", "https://trachuan.vn", "127.0.0.1:8080", false},
+		{"all interfaces", "http://127.0.0.1:28081", "http://localhost:8080", ":8080", false},
+		{"wildcard", "http://127.0.0.1:28081", "http://localhost:8080", "0.0.0.0:8080", false},
+	}
+	for _, issuer := range []string{"http://localhost.:28081", "http://LOCALHOST:28081", "http://127.1:28081", "http://2130706433:28081", "http://[::ffff:127.0.0.1]:28081", "http://[fe80::1%25lo0]:28081", "http://0.0.0.0:28081", "http://127.0.0.1.nip.io:28081", "http://localhost:28081/", "http://user@localhost:28081", "http://localhost:28081?x=1", "http://localhost:28081#x", "http://localhost", "http://localhost:0", "http://localhost:028081", "http://localhost:65536", "https://localhost:28081", " http://localhost:28081", "http://localhost:28081 "} {
+		cases = append(cases, struct {
+			name, issuer, public, listen string
+			valid                        bool
+		}{issuer, issuer, "http://localhost:8080", "127.0.0.1:8080", false})
+	}
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("SERVER_GOOGLE_ISSUER", tt.issuer)
+			t.Setenv("SERVER_PUBLIC_URL", tt.public)
+			t.Setenv("SERVER_LISTEN", tt.listen)
+			_, err := loadConfig()
+			if tt.valid && err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if !tt.valid && (err == nil || err.Error() != "SERVER_GOOGLE_ISSUER requires a loopback deployment") {
+				t.Fatalf("unexpected error: %v", err)
+			}
+		})
+	}
+}
+
+func TestRun_RejectsIssuerBeforePool(t *testing.T) {
+	t.Setenv("SERVER_AUTH_DATABASE_URL", "://invalid")
+	t.Setenv("SERVER_CORPUS_DATABASE_URL", "postgres://localhost/{database}")
+	t.Setenv("SERVER_PUBLIC_URL", "https://trachuan.vn")
+	t.Setenv("SERVER_LISTEN", "127.0.0.1:8080")
+	t.Setenv("SERVER_GOOGLE_ISSUER", "http://localhost:28081")
+	err := run(context.Background(), []string{"serve"}, io.Discard, io.Discard)
+	if err == nil || err.Error() != "SERVER_GOOGLE_ISSUER requires a loopback deployment" {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
