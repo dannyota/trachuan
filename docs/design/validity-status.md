@@ -2,8 +2,8 @@
 
 This note owns how the build corrects document validity when the source is wrong
 or silent: automatic rules backed by the document text, a reviewed manual list,
-and the evidence both leave. [Build normalization](index.md#normalization) owns
-source status mapping and the consolidated derivation;
+and the evidence both leave. [Build normalization](normalization.md) owns source
+status mapping and the consolidated derivation;
 [retrieval](retrieval-recipe.md#validity-and-evidence) owns eligibility at query
 time. The changes ship in corpus schema version 3 per
 [scope adoption](scope-adoption.md).
@@ -193,7 +193,7 @@ the relation cap.
   and `manual_correction`; `document.validity_conflict boolean`; a
   `validity_decision` table. Schema version 3, per
   [scope adoption](scope-adoption.md).
-- [Build normalization](index.md#normalization): the consolidated derivation is
+- [Build normalization](normalization.md): the consolidated derivation is
   unchanged and still counts only source-supplied `in_force` or `partial`
   targets; derived and corrected targets do not count in this release.
   `validity_rules_version` (`validity/2`) joins the build recipe and the

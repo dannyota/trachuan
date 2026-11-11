@@ -154,8 +154,8 @@ service is added. Host latency and memory acceptance remain separate.
 | Provisional calibration threshold sentinels                                               | -1 (all finite cosines pass); 2 (all abstain)                                                              |
 
 Recipe behavior is in [retrieval recipe](retrieval-recipe.md); the threshold is
-derived by [calibration](evaluation.md#provisional-calibration), never assumed
-to be the historical Qwen threshold. Golden-set floors have one home in
+derived by [calibration](calibration.md), never assumed to be the historical
+Qwen threshold. Golden-set floors have one home in
 [testing](../../instructions/testing.md); taxonomy floors in
 [taxonomy](taxonomy.md).
 

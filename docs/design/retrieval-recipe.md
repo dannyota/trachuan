@@ -109,8 +109,8 @@ year and `/`, then a nonempty sequence of Latin letters/digits beginning with a
 Latin letter, optionally hyphen-separated segments of Latin letters/digits.
 Allow whitespace around separators only. This accepts `50/2024/TT-NHNN` and
 `21/VBHN-NHNN`, but not bare `2024`, `50/2024`, partial words or SQL wildcards.
-Normalize exactly as [build](index.md#normalization). Bound token length and
-reference count by budgets. Exceeding those limits returns `invalid_request`.
+Normalize exactly as [build](normalization.md). Bound token length and reference
+count by budgets. Exceeding those limits returns `invalid_request`.
 
 Validated grammar selects routed lexical weight, even if the number is unknown
 or ambiguous in this corpus; there is no document lookup needed for routing.
@@ -199,11 +199,11 @@ mode, including eligible missing-start cases with their gap. With an explicit
 historical date, use the dated determination below instead.
 
 Copy the document's `status_basis` into `Validity.StatusBasis` in both modes,
-including `derived_from_consolidated` when [build](index.md#normalization)
-derived its status. `Basis` continues to distinguish default status/date
-filtering from explicit historical date filtering; `StatusBasis` separately
-exposes the origin of the status. Return derivation gaps with the hit. Derived
-status is not independently adjudicated legal effect.
+including `derived_from_consolidated` when [build](normalization.md) derived its
+status. `Basis` continues to distinguish default status/date filtering from
+explicit historical date filtering; `StatusBasis` separately exposes the origin
+of the status. Return derivation gaps with the hit. Derived status is not
+independently adjudicated legal effect.
 
 With `as_of`, primary eligibility uses document dates only, independent of the
 latest source status. Missing start dates remain in primary results with a gap,
@@ -256,8 +256,7 @@ cosine strictly below the stored threshold. Equality passes. Low-confidence
 responses retain their hits and gaps, as evidence agents may inspect; metrics
 still score those returned hits and the abstention decision separately.
 Infrastructure failure returns an error, never a successful abstention.
-Threshold provenance and provisional status follow
-[evaluation](evaluation.md#provisional-calibration).
+Threshold provenance and provisional status follow [evaluation](calibration.md).
 
 ## Serialized recipe and checks
 
