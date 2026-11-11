@@ -154,11 +154,15 @@ evaluation, never a new ingest run; a missing file is an empty list. Each entry:
 or `false`) overrides `validity_conflict` in either direction. Optional
 `hold: true` suppresses rules A, B and C for that document as a target. An entry
 needs at least one of the three. The build rejects an entry whose key is absent
-from the run, whose number does not match the key, whose quote is not found in
-the named provision when an anchor is given (the provision of the corrected
-document, or of the document named by optional `evidence.key` when the evidence
-lives in another document, such as the replacing text), or which produces an
-invalid interval. Entries apply last and win. The build reports
+from the run, whose number does not match the key, whose evidence is neither of
+the two accepted forms, or which produces an invalid interval. Evidence has two
+forms. In-corpus evidence has `anchor` and `quote`, with optional `key` naming
+another present document (such as the replacing text); the build checks that the
+quote is a verbatim substring of that provision. External evidence, for an
+instrument the corpus does not hold, has `url` and `quote` and no anchor; the
+build cannot verify it, so the decision record marks it `external` and the
+review file lists it. A quote with neither an anchor nor a URL, or a key without
+an anchor, is rejected. Entries apply last and win. The build reports
 `correction_redundant` when the source or an automatic rule now gives the same
 result and `correction_conflict` when an automatic rule gives a different one.
 Reason: the source and our parser both fail in ways we cannot enumerate; a short
@@ -192,7 +196,7 @@ the relation cap.
 - [Build normalization](index.md#normalization): the consolidated derivation is
   unchanged and still counts only source-supplied `in_force` or `partial`
   targets; derived and corrected targets do not count in this release.
-  `validity_rules_version` (`validity/1`) joins the build recipe and the
+  `validity_rules_version` (`validity/2`) joins the build recipe and the
   corrections file hash joins the build input; the shared `normalizer_version`
   is not bumped, because chunk recipes depend on it, so a frozen run is never
   rebuilt under new rules.
