@@ -125,19 +125,20 @@ documents that have both a source tree and a transcription).
 Scopes. The main scope starts at the first article and closes at the first of: a
 recipient or signature block (`Nơi nhận:`, `TM.`, `KT.`, a signing title alone
 on a line, `XÁC THỰC VĂN BẢN HỢP NHẤT`), an appendix or form title (a line
-wholly in capitals that begins with `PHỤ LỤC` or `MẪU SỐ`, or `Phụ lục <number>`
-or `Mẫu số <number>` followed by the end of the line or by a title that does not
-end in sentence punctuation; `Phụ lục này là ...` is running text), or an
-instrument title: a line wholly in capitals that begins with `QUY CHẾ`,
-`QUY ĐỊNH` or `ĐIỀU LỆ` and is not the title line of the structure heading just
-before it (`Chương I` then `QUY ĐỊNH CHUNG` is a chapter title). Everything
-after it belongs to later scopes. An instrument title followed, with no article
-in between, by an article numbered 1 opens an instrument scope: a regulation
-"ban hành kèm theo", with anchors `kem-theo-<k>/dieu-<n>` and the label "Điều n
-(văn bản kèm theo k)"; its structure headings carry the same prefix
-(`kem-theo-<k>/chuong-i`). Structure headings before the first article belong to
-the main scope and are ancestors of its articles. Any other later scope
-(appendices, forms, footnotes, a restart at `Điều 1` without an instrument
+wholly in capitals that begins with `PHỤ LỤC` or `MẪU SỐ`, or
+`Phụ lục <number>`, `Phụ lục số <number>` or `Mẫu số <number>` (Arabic or Roman,
+letters allowed after it as in `01a`) followed by the end of the line or by a
+title that does not end in sentence punctuation; `Phụ lục này là ...` is running
+text), or an instrument title: a line wholly in capitals that begins with
+`QUY CHẾ`, `QUY ĐỊNH` or `ĐIỀU LỆ` and is not the title line of the structure
+heading just before it (`Chương I` then `QUY ĐỊNH CHUNG` is a chapter title).
+Everything after it belongs to later scopes. An instrument title followed, with
+no article in between, by an article numbered 1 opens an instrument scope: a
+regulation "ban hành kèm theo", with anchors `kem-theo-<k>/dieu-<n>` and the
+label "Điều n (văn bản kèm theo k)"; its structure headings carry the same
+prefix (`kem-theo-<k>/chuong-i`). Structure headings before the first article
+belong to the main scope and are ancestors of its articles. Any other later
+scope (appendices, forms, footnotes, a restart at `Điều 1` without an instrument
 title) is a tail scope and never asserts articles.
 
 Fail closed. The article-level reading is accepted for the main scope or an
