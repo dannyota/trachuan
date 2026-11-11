@@ -9,6 +9,7 @@ import (
 // FakeClient supplies deterministic responses without a credential or network.
 // Runner invokes clients serially, so this fake needs no synchronization.
 type FakeClient struct {
+	Counted                             []Request
 	Response                            Response
 	Tokens                              int64
 	DirectError, CreateError            error
@@ -19,7 +20,8 @@ type FakeClient struct {
 }
 
 // CountTokens returns the configured input count.
-func (f *FakeClient) CountTokens(context.Context, Request) (int64, error) {
+func (f *FakeClient) CountTokens(_ context.Context, r Request) (int64, error) {
+	f.Counted = append(f.Counted, r)
 	f.CountCalls++
 	return f.Tokens, nil
 }

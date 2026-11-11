@@ -92,7 +92,7 @@ func TestStore_EntriesImmutable(t *testing.T) {
 		t.Fatalf("checked lookup: %+v %v", entries, err)
 	}
 	check := entries[pdf].Check
-	want := fmt.Sprintf("%x", sha256.Sum256([]byte(`{"same_document":true,"pages":10,"pdf_pages":10,"items":[{"kind":"date","page":1,"ocr":"a","pdf":"b","note":"x"},{"kind":"amount","page":2,"ocr":"c","pdf":"d","note":"y"}],"verdict":"flagged"}`)))
+	want := fmt.Sprintf("%x", sha256.Sum256([]byte(`{"same_document":true,"pages":10,"pdf_pages":10,"items":[{"kind":"date","page":1,"ocr":"a","pdf":"b","note":"x"},{"kind":"amount","page":2,"ocr":"c","pdf":"d","note":"y"}],"verdict":"flagged","dropped_equal":0}`)))
 	if check.ResultSha256 != want || check.Flagged != 2 {
 		t.Fatalf("unexpected check: %+v", check)
 	}

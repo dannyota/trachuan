@@ -3,7 +3,6 @@ package ocrcheck
 import (
 	"context"
 	"encoding/json"
-	"os"
 	"strings"
 	"testing"
 
@@ -34,15 +33,14 @@ func (c *encodedBatchClient) CreateBatch(ctx context.Context, requests []Request
 }
 func TestCheck_BatchSplitsByEncodedSize(t *testing.T) {
 	r, _, fake, docs := fixture(t)
+	pages := fakePages(t, 10)
+	pages[0] = append(pages[0], make([]byte, 200_000)...)
+	r.Renderer = &fakeRenderer{pages: pages}
 	docs[0].Text = []byte(strings.Repeat("quote\" <tag> & newline\n", 4000))
 	second := docs[0]
 	second.Entry.ID = 2
 	docs = append(docs, second)
-	pdf, err := os.ReadFile(docs[0].PDFPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	request := Request{Model: options().Model, Effort: options().Effort, CustomID: strings.Repeat("a", 32) + "-9223372036854775807", PDF: pdf, Text: docs[0].Text}
+	request := Request{Model: options().Model, Effort: options().Effort, CustomID: strings.Repeat("a", 32) + "-9223372036854775807", Images: pages, Text: docs[0].Text}
 	one, err := json.Marshal(anthropic.MessageBatchNewParams{Requests: []anthropic.MessageBatchNewParamsRequest{batchRequest(request)}})
 	if err != nil {
 		t.Fatal(err)

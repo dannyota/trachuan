@@ -4,6 +4,7 @@ package ocrcheck
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"testing"
@@ -186,5 +187,84 @@ func TestCheck_DatabaseUncertainAndAbandonedChargesSurvive(t *testing.T) {
 	}
 	if _, err = store.New(db).GetOCRCheck(context.Background(), store.GetOCRCheckParams{OcrTextID: docs[0].Entry.ID, CheckerID: o.CheckerID()}); !errors.Is(err, pgx.ErrNoRows) {
 		t.Fatal("uncertain check was published")
+	}
+}
+
+func TestCheck_DatabaseVerifiableEvidence(t *testing.T) {
+	for _, tc := range []struct {
+		name, quote, pdf, reason string
+		dropped                  int
+	}{
+		{"unverifiable", "invented reading", "different", "ocr_quote_not_found", 0},
+		{"equal", "public OCR text", "public\nOCR text", "", 1},
+		{"different", "public OCR text", "different", "", 0},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			r, db, c, docs := databaseFixture(t)
+			body, _ := json.Marshal(map[string]any{"same_document": true, "pages": 10, "items": []map[string]any{{"kind": "amount", "page": 1, "ocr": tc.quote, "pdf": tc.pdf, "note": "difference"}}})
+			c.Response.Text = string(body)
+			if err := run(t, r, docs, options()); err != nil {
+				t.Fatal(err)
+			}
+			var reason string
+			if err := db.QueryRow(context.Background(), `SELECT reason FROM ocr_check_attempt WHERE ocr_text_id=$1`, docs[0].Entry.ID).Scan(&reason); err != nil {
+				t.Fatal(err)
+			}
+			if reason != tc.reason {
+				t.Fatalf("reason=%s", reason)
+			}
+			check, err := store.New(db).GetOCRCheck(context.Background(), store.GetOCRCheckParams{OcrTextID: docs[0].Entry.ID, CheckerID: options().CheckerID()})
+			if tc.reason != "" {
+				if !errors.Is(err, pgx.ErrNoRows) {
+					t.Fatal("failed quote published")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			result, err := ocrstore.DecodeCheck(check.Result)
+			if err != nil || result.DroppedEqual != tc.dropped || len(result.Items) != 1-tc.dropped {
+				t.Fatalf("result=%+v error=%v", result, err)
+			}
+		})
+	}
+}
+
+func TestCheck_DatabaseKeepsCheckerVersionsSeparate(t *testing.T) {
+	r, db, client, docs := databaseFixture(t)
+	source := ocrstore.Open(r.Repository.(*Database).root, db)
+	entry := docs[0].Entry
+	oldChecker := "claude-sonnet-5-5/medium/ocr-check-1"
+	newChecker := "claude-sonnet-5-5/medium/ocr-check-2"
+	legacy := []byte(`{"same_document":false,"pages":10,"pdf_pages":10,"items":[],"verdict":"rejected"}`)
+	if _, err := source.PutCheck(context.Background(), entry, oldChecker, legacy, 0, true); err != nil {
+		t.Fatal(err)
+	}
+	before, err := source.Lookup(context.Background(), []string{entry.PdfSha256}, []string{entry.EngineID}, newChecker)
+	if err != nil || before[entry.PdfSha256].Check != nil {
+		t.Fatalf("v1 satisfied v2 lookup: %v", err)
+	}
+	if err = run(t, r, docs, options()); err != nil {
+		t.Fatal(err)
+	}
+	if client.DirectCalls != 1 {
+		t.Fatal("v1 check suppressed v2 request")
+	}
+	ids := map[int64]bool{}
+	for _, tc := range []struct{ checker, verdict string }{{oldChecker, "rejected"}, {newChecker, "clean"}} {
+		entries, lookupErr := source.Lookup(context.Background(), []string{entry.PdfSha256}, []string{entry.EngineID}, tc.checker)
+		if lookupErr != nil {
+			t.Fatal(lookupErr)
+		}
+		check := entries[entry.PdfSha256].Check
+		if check == nil || check.CheckerID != tc.checker || ids[check.ID] {
+			t.Fatal("checker versions shared a row")
+		}
+		ids[check.ID] = true
+		result, decodeErr := ocrstore.DecodeCheck(check.Result)
+		if decodeErr != nil || result.Verdict != tc.verdict {
+			t.Fatalf("checker=%s verdict=%s error=%v", tc.checker, result.Verdict, decodeErr)
+		}
 	}
 }

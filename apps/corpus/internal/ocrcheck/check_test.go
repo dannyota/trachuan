@@ -3,6 +3,7 @@ package ocrcheck
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -26,7 +27,7 @@ func fixture(t *testing.T) (*Runner, *memoryRepository, *FakeClient, []Document)
 	entry := store.OcrText{ID: 1, PdfSha256: fmt.Sprintf("%x", sha256.Sum256(pdf))}
 	repo := &memoryRepository{checks: map[int64]ocrstore.CheckResult{}}
 	client := &FakeClient{Response: Response{FinalUsage: true, Stop: "end_turn", Text: `{"same_document":true,"pages":10,"items":[]}`, Usage: Usage{Input: 100, Output: 100}}, Tokens: 100}
-	runner := &Runner{Client: client, Repository: repo, CountPages: func(context.Context, []byte) (int, error) { return 10, nil }, Now: func() time.Time { return time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC) }}
+	runner := &Runner{Renderer: &fakeRenderer{pages: fakePages(t, 10)}, Client: client, Repository: repo, CountPages: func(context.Context, []byte) (int, error) { return 10, nil }, Now: func() time.Time { return time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC) }}
 	return runner, repo, client, []Document{{Entry: entry, PDFPath: path, Text: []byte("public OCR text")}}
 }
 func options() Options { return Options{Model: "claude-sonnet-5-5", Effort: "medium", MaxUSD: 10} }
@@ -38,6 +39,7 @@ func run(t *testing.T, r *Runner, docs []Document, o Options) error {
 
 func TestCheck_ParsesDisagreements(t *testing.T) {
 	r, s, c, d := fixture(t)
+	d[0].Text = []byte("public OCR text 1")
 	c.Response.Text = `{"same_document":true,"pages":10,"items":[{"kind":"amount","page":2,"ocr":"1","pdf":"2","note":"different amount"}]}`
 	if err := run(t, r, d, options()); err != nil {
 		t.Fatal(err)
@@ -69,8 +71,8 @@ func TestCheck_VerdictRules(t *testing.T) {
 func TestCheck_PartialOrMalformedIsIncomplete(t *testing.T) {
 	for _, tc := range []struct{ stop, body, reason string }{
 		{"refusal", "", "refusal"}, {"max_tokens", "", "max_tokens"}, {"model_context_window_exceeded", "", "context_window"},
-		{"end_turn", "{", "schema"}, {"end_turn", `{"same_document":true,"pages":10,"items":[],"extra":1}`, "schema"},
-		{"end_turn", `{"same_document":true,"pages":0,"items":[]}`, "schema"},
+		{"end_turn", "{", "schema:json"}, {"end_turn", `{"same_document":true,"pages":10,"items":[],"extra":1}`, "schema:unknown_field"},
+		{"end_turn", `{"same_document":true,"pages":0,"items":[]}`, "schema:pages"},
 	} {
 		t.Run(tc.reason+tc.body, func(t *testing.T) {
 			r, s, c, d := fixture(t)
@@ -115,7 +117,7 @@ func TestCheck_OverLimitPDF(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err = f.Truncate(30_000_001); err != nil {
+	if err = f.Truncate(50_000_001); err != nil {
 		t.Fatal(err)
 	}
 	if err = f.Close(); err != nil {
@@ -172,7 +174,7 @@ func TestCheck_StrictResultDecoding(t *testing.T) {
 			if err := run(t, r, d, options()); err != nil {
 				t.Fatal(err)
 			}
-			if len(s.checks) != 0 || s.attempts[0].Reason != "schema" {
+			if len(s.checks) != 0 || !strings.HasPrefix(s.attempts[0].Reason, "schema:") {
 				t.Fatal(s.attempts)
 			}
 		})
@@ -247,10 +249,16 @@ func TestClients_NoCredentialInLogsOrArtifacts(t *testing.T) {
 	secret := "fake-key-never-log"
 	text := "fake-document-never-log"
 	d[0].Text = []byte(text)
-	c.DirectError = errors.New(secret + text)
-	err := run(t, r, d, options())
+	imageBytes := append(pagePNG(t, 1, 1), []byte("fake-image-never-log")...)
+	pages := fakePages(t, 10)
+	pages[0] = imageBytes
+	r.Renderer = &fakeRenderer{pages: pages}
+	c.DirectError = errors.New(secret + text + string(imageBytes))
+	summary, err := r.Run(context.Background(), d, options())
 	data, _ := json.Marshal(s.attempts)
-	if strings.Contains(fmt.Sprint(err)+string(data), secret) || strings.Contains(fmt.Sprint(err)+string(data), text) {
+	metrics, _ := json.Marshal(summary)
+	safe := fmt.Sprint(err) + string(data) + string(metrics)
+	if strings.Contains(safe, secret) || strings.Contains(safe, text) || strings.Contains(safe, "fake-image-never-log") || strings.Contains(safe, base64.StdEncoding.EncodeToString(imageBytes)) {
 		t.Fatal("sensitive data escaped")
 	}
 }

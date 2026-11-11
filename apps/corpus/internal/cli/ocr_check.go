@@ -108,6 +108,7 @@ func runOCRCheck(ctx context.Context, args []string, stdout, stderr io.Writer) i
 	runner := ocrcheck.Runner{Client: client, Repository: ocrcheck.NewDatabase(env.db, env.root)}
 	summary, err := runner.Run(ctx, docs, o)
 	_, _ = fmt.Fprintf(stdout, "checker: %s\ncomplete: %d\nfailed: %d\nsubmitted: %d\npending: %d\nattached: %d\nabandoned: %d\nspend USD: %.6f\nestimated documents: %d\nworst-case estimate USD: %.6f\n", o.CheckerID(), summary.Complete, summary.Failed, summary.Submitted, summary.Pending, summary.Attached, summary.Abandoned, float64(summary.CostMicroUSD)/1e6, summary.Estimated, float64(summary.EstimateMicroUSD)/1e6)
+	printCheckDocuments(stdout, summary.Documents)
 	if err != nil {
 		_, _ = fmt.Fprintln(stderr, err)
 		if errors.Is(err, ocrcheck.ErrBudget) {
@@ -116,4 +117,10 @@ func runOCRCheck(ctx context.Context, args []string, stdout, stderr io.Writer) i
 		return 1
 	}
 	return 0
+}
+
+func printCheckDocuments(out io.Writer, documents []ocrcheck.DocumentSummary) {
+	for _, doc := range documents {
+		_, _ = fmt.Fprintf(out, "ocr_text_id=%d pages=%d input_tokens=%d output_tokens=%d cost_usd=%.6f outcome=%s\n", doc.EntryID, doc.Pages, doc.InputTokens, doc.OutputTokens, float64(doc.CostMicroUSD)/1e6, doc.Outcome)
+	}
 }
