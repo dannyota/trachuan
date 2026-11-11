@@ -230,7 +230,9 @@ fails closed by design.
 
 ## Acceptance
 
-Before the plan lands: Claude Code connects over CIMD and over DCR against a
-local server and runs the [MCP tools](mcp-results.md); refresh, revocation
-through the account routes and a blocked account behave as above. Claude.ai and
-ChatGPT connectors need a public HTTPS URL and run against the first deployment.
+The code merges after review and green CI; the plan is marked landed only after
+a live check with the owner's Google login: Claude Code connects over CIMD and
+over DCR against a local server and runs the [MCP tools](mcp-results.md);
+refresh, revocation through the account routes and a blocked account behave as
+above. Until then OAuth is not offered to users. Claude.ai and ChatGPT
+connectors need a public HTTPS URL and run against the first deployment.
