@@ -202,6 +202,10 @@ jobs:
     if: needs.preflight.outputs.web == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    # Browsers and their system libraries come with the pinned image (as aboutme's
+    # WEB_E2E_IMAGE), so the job never installs them through apt.
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.0-noble@sha256:bc72a8df40831ded821e3cbc79c318c21b44d6e51dff9fd89ace7a8249c5b462
     defaults:
       run:
         working-directory: apps/web
@@ -217,7 +221,6 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
-      - run: npx playwright install --with-deps chromium
       - run: npm run e2e
 
   docembed:
