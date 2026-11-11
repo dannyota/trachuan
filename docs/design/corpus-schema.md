@@ -102,11 +102,10 @@ from the verified fetched-file record, not a file suffix.
 `text text`, `anchor text`, `locator text?`. `locator` is NULL exactly for
 documents whose `text_source` is `source_tree` (build validates this); otherwise
 it is `block:<first>-<last>`, the HTML block ordinals of the provision's
-paragraphs, `page:<first>-<last>` for a PDF text layer
-([PDF text layer](pdf-text.md)), or `line:<first>-<last>` for OCR text
-([OCR store](ocr-store.md)). UNIQUE `(document_id,id)`, `(document_id,node_id)`,
-`(document_id,anchor)`, `(document_id,preorder)`, `(document_id,path)`.
-Composite FK `(document_id,parent_id)` to provision `(document_id,id)`; CHECK
+paragraphs, or `line:<first>-<last>` for OCR text ([OCR store](ocr-store.md)).
+UNIQUE `(document_id,id)`, `(document_id,node_id)`, `(document_id,anchor)`,
+`(document_id,preorder)`, `(document_id,path)`. Composite FK
+`(document_id,parent_id)` to provision `(document_id,id)`; CHECK
 `parent_id IS NULL OR parent_id <> id`. Indexes:
 `(document_id,parent_id,ordinal)`, GiST `(path)`. Build validates cycles, parent
 path prefix and preorder before publication; cross-row ancestry is not expressed
