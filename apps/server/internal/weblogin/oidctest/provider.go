@@ -35,14 +35,16 @@ type Claims struct {
 
 // Provider serves discovery, JWKS and single-use, PKCE-bound token exchange.
 type Provider struct {
-	URL      string
-	key      *rsa.PrivateKey
-	t        *testing.T
-	mu       sync.Mutex
-	codes    map[string]Claims
-	statuses map[string]int
-	counts   map[string]int
-	lastForm url.Values
+	URL             string
+	key             *rsa.PrivateKey
+	t               *testing.T
+	mu              sync.Mutex
+	codes           map[string]Claims
+	statuses        map[string]int
+	counts          map[string]int
+	lastForm        url.Values
+	discoveryIssuer string
+	brokenJWKS      bool
 }
 
 // New starts a provider and registers its cleanup with t.
@@ -73,6 +75,20 @@ func (p *Provider) SetStatus(path string, status int) {
 	p.statuses[path] = status
 }
 
+// SetIssuer overrides the issuer in discovery metadata.
+func (p *Provider) SetIssuer(issuer string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.discoveryIssuer = issuer
+}
+
+// SetBrokenJWKS makes the JWKS endpoint return structurally invalid JSON.
+func (p *Provider) SetBrokenJWKS(broken bool) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.brokenJWKS = broken
+}
+
 // Count returns how often path was requested.
 func (p *Provider) Count(path string) int {
 	p.mu.Lock()
@@ -95,6 +111,8 @@ func (p *Provider) serveHTTP(w http.ResponseWriter, r *http.Request) {
 	p.mu.Lock()
 	p.counts[r.URL.Path]++
 	status := p.statuses[r.URL.Path]
+	issuer := p.discoveryIssuer
+	broken := p.brokenJWKS
 	p.mu.Unlock()
 	if status != 0 {
 		p.writeJSON(w, status, map[string]any{"error": "server_error", "error_description": "provider-private-detail"})
@@ -102,11 +120,18 @@ func (p *Provider) serveHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	switch r.URL.Path {
 	case "/.well-known/openid-configuration":
+		if issuer == "" {
+			issuer = p.URL
+		}
 		p.writeJSON(w, http.StatusOK, map[string]any{
-			"issuer": p.URL, "authorization_endpoint": p.URL + "/authorize", "token_endpoint": p.URL + "/token", "jwks_uri": p.URL + "/jwks",
+			"issuer": issuer, "authorization_endpoint": p.URL + "/authorize", "token_endpoint": p.URL + "/token", "jwks_uri": p.URL + "/jwks",
 			"response_types_supported": []string{"code"}, "subject_types_supported": []string{"public"}, "id_token_signing_alg_values_supported": []string{"RS256"},
 		})
 	case "/jwks":
+		if broken {
+			p.writeJSON(w, http.StatusOK, map[string]any{"keys": "broken"})
+			return
+		}
 		p.writeJSON(w, http.StatusOK, map[string]any{"keys": []any{map[string]any{
 			"kty": "RSA", "kid": "test-key", "use": "sig", "alg": "RS256",
 			"n": base64.RawURLEncoding.EncodeToString(p.key.N.Bytes()), "e": base64.RawURLEncoding.EncodeToString(big.NewInt(int64(p.key.E)).Bytes()),

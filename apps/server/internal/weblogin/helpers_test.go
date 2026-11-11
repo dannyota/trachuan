@@ -73,22 +73,29 @@ func (s *fakeStore) UpsertGoogleAccount(_ context.Context, p UpsertGoogleAccount
 }
 
 type fakeSessions struct {
-	mu        sync.Mutex
-	accounts  []int64
-	presented []string
-	err       error
+	mu                       sync.Mutex
+	accounts                 []int64
+	presented                []string
+	revokeErr, createErr     error
+	revokeCalls, createCalls int
 }
 
 func (s *fakeSessions) CreateSession(_ context.Context, w http.ResponseWriter, r *http.Request, id int64) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.err != nil {
-		return s.err
-	}
-	s.accounts = append(s.accounts, id)
 	if c, err := r.Cookie("__Host-session"); err == nil {
+		s.revokeCalls++
+		if s.revokeErr != nil {
+			return s.revokeErr
+		}
 		s.presented = append(s.presented, c.Value)
 	}
+	s.createCalls++
+	if s.createErr != nil {
+		http.SetCookie(w, &http.Cookie{Name: "__Host-session", Value: "must-not-escape", Path: "/"})
+		return s.createErr
+	}
+	s.accounts = append(s.accounts, id)
 	http.SetCookie(w, &http.Cookie{Name: "__Host-session", Value: "new-test-session", Path: "/", Secure: true, HttpOnly: true, SameSite: http.SameSiteLaxMode, MaxAge: 2592000})
 	return nil
 }

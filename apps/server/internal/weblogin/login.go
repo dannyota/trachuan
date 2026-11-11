@@ -42,7 +42,7 @@ type Config struct {
 type Handler struct {
 	Start, Callback http.Handler
 	oauth           oauth2.Config
-	provider        *oidc.Provider
+	verifier        *oidc.IDTokenVerifier
 	issuer          string
 	store           Store
 	sessions        SessionCreator
@@ -85,11 +85,15 @@ func New(ctx context.Context, cfg Config) (*Handler, error) {
 	if err != nil {
 		return nil, discoveryError{cause: err}
 	}
+	verifier, err := newVerifier(ctx, provider, cfg.Issuer, cfg.ClientID, cfg.Clock, &client)
+	if err != nil {
+		return nil, fmt.Errorf("weblogin: configure provider verifier: %w", err)
+	}
 	endpoint := provider.Endpoint()
 	endpoint.AuthStyle = oauth2.AuthStyleInHeader
 	h := &Handler{
 		oauth:    oauth2.Config{ClientID: cfg.ClientID, ClientSecret: cfg.ClientSecret, Endpoint: endpoint, RedirectURL: strings.TrimSuffix(cfg.PublicURL, "/") + "/api/v1/auth/google/callback", Scopes: []string{oidc.ScopeOpenID, "email"}},
-		provider: provider, issuer: cfg.Issuer, store: cfg.Store, sessions: cfg.Sessions, clock: cfg.Clock, random: cfg.Rand, client: &client,
+		verifier: verifier, issuer: cfg.Issuer, store: cfg.Store, sessions: cfg.Sessions, clock: cfg.Clock, random: cfg.Rand, client: &client,
 	}
 	h.Start = http.HandlerFunc(h.start)
 	h.Callback = http.HandlerFunc(h.callback)

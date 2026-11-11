@@ -1,17 +1,12 @@
 package weblogin
 
 import (
-	"bytes"
 	"context"
 	"crypto/subtle"
 	"database/sql"
-	"encoding/json"
 	"errors"
-	"fmt"
-	"io"
 	"net/http"
 	"net/url"
-	"sync/atomic"
 
 	"github.com/coreos/go-oidc/v3/oidc"
 	"golang.org/x/oauth2"
@@ -40,8 +35,19 @@ func (h *Handler) callback(w http.ResponseWriter, r *http.Request) {
 	}
 	q, err := url.ParseQuery(r.URL.RawQuery)
 	states, codes := q["state"], q["code"]
-	if err != nil || len(states) != 1 || states[0] == "" || subtle.ConstantTimeCompare([]byte(states[0]), []byte(tx.State)) != 1 ||
-		q.Has("error") || len(codes) != 1 || codes[0] == "" {
+	if err != nil || len(states) != 1 || states[0] == "" || subtle.ConstantTimeCompare([]byte(states[0]), []byte(tx.State)) != 1 {
+		rejection(w, r, "login_failed")
+		return
+	}
+	if providerErrors, ok := q["error"]; ok {
+		if len(providerErrors) == 1 && (providerErrors[0] == "server_error" || providerErrors[0] == "temporarily_unavailable") {
+			unavailable(w)
+		} else {
+			rejection(w, r, "login_failed")
+		}
+		return
+	}
+	if len(codes) != 1 || codes[0] == "" {
 		rejection(w, r, "login_failed")
 		return
 	}
@@ -69,7 +75,7 @@ func (h *Handler) callback(w http.ResponseWriter, r *http.Request) {
 		unavailable(w)
 		return
 	}
-	if id == nil || id.Subject == "" || id.Issuer != h.issuer || !id.Expiry.After(h.clock()) || id.Nonce == "" ||
+	if id == nil || id.Subject == "" || (id.Issuer != h.issuer && (h.issuer != googleIssuer || id.Issuer != "accounts.google.com")) || !id.Expiry.After(h.clock()) || id.Nonce == "" ||
 		subtle.ConstantTimeCompare([]byte(id.Nonce), []byte(tx.Nonce)) != 1 {
 		rejection(w, r, "login_failed")
 		return
@@ -119,51 +125,16 @@ func rejectedExchange(err error) bool {
 }
 
 func (h *Handler) verify(ctx context.Context, raw string) (*oidc.IDToken, bool) {
-	// Each verification gets its own failure recorder, so concurrent callbacks
-	// cannot turn one another's signature rejection into an availability failure.
-	transport := h.client.Transport
-	if transport == nil {
-		transport = http.DefaultTransport
-	}
-	keys := &keyTransport{base: transport}
-	client := *h.client
-	client.Transport = keys
-	verifier := h.provider.VerifierContext(oidc.ClientContext(ctx, &client), &oidc.Config{ClientID: h.oauth.ClientID, Now: h.clock})
-	id, err := verifier.Verify(ctx, raw)
-	if keys.failed.Load() || ctx.Err() != nil {
+	unavailable := false
+	ctx = context.WithValue(ctx, keyFailureContextKey{}, &unavailable)
+	id, err := h.verifier.Verify(ctx, raw)
+	if unavailable || ctx.Err() != nil {
 		return nil, false
 	}
 	if err != nil {
 		return nil, true
 	}
 	return id, true
-}
-
-type keyTransport struct {
-	base   http.RoundTripper
-	failed atomic.Bool
-}
-
-func (t *keyTransport) RoundTrip(r *http.Request) (*http.Response, error) {
-	response, err := t.base.RoundTrip(r)
-	if err != nil {
-		t.failed.Store(true)
-		return nil, fmt.Errorf("fetch provider keys: %w", err)
-	}
-	if response.StatusCode != http.StatusOK {
-		t.failed.Store(true)
-		return response, nil
-	}
-	// Bound malformed endpoint responses and record read/JSON failures separately
-	// from invalid token signatures. go-oidc does not expose typed fetch errors.
-	data, readErr := io.ReadAll(io.LimitReader(response.Body, (1<<20)+1))
-	closeErr := response.Body.Close()
-	if readErr != nil || closeErr != nil || len(data) > 1<<20 || !json.Valid(data) {
-		t.failed.Store(true)
-		return nil, errors.New("provider keys unavailable")
-	}
-	response.Body = io.NopCloser(bytes.NewReader(data))
-	return response, nil
 }
 
 type sessionHeaders struct{ header http.Header }

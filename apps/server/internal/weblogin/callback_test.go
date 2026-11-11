@@ -143,9 +143,9 @@ func TestCallback_BlockedOrDeletedAccount(t *testing.T) {
 		t.Run(claimName(a.Blocked), func(t *testing.T) {
 			f := newFixture(t)
 			f.store.accounts["test-sub"] = a
-			attempt := f.begin(t, "/")
-			f.register(attempt, "test-code", nil)
-			assertRejected(t, f, f.callback(attempt, "test-code"), "account_blocked")
+			login := f.begin(t, "/")
+			f.register(login, "test-code", nil)
+			assertRejected(t, f, f.callback(login, "test-code"), "account_blocked")
 		})
 	}
 }
@@ -161,8 +161,10 @@ func TestCallback_DatabaseFailureIs503AtEachStep(t *testing.T) {
 				f.store.claimErr = privateFailure()
 			case "upsert":
 				f.store.upsertErr = privateFailure()
-			default:
-				f.sessions.err = privateFailure()
+			case "presented-session revoke":
+				f.sessions.revokeErr = privateFailure()
+			case "session create":
+				f.sessions.createErr = privateFailure()
 			}
 			w := f.callback(a, "test-code")
 			assertUnavailable(t, f, w)
@@ -171,7 +173,19 @@ func TestCallback_DatabaseFailureIs503AtEachStep(t *testing.T) {
 			}
 			f.store.claimErr = nil
 			f.store.upsertErr = nil
-			f.sessions.err = nil
+			if name == "presented-session revoke" && (f.sessions.revokeCalls != 1 || f.sessions.createCalls != 0) {
+				t.Error("revoke failure did not stop before create")
+			}
+			if name == "session create" && (f.sessions.revokeCalls != 1 || f.sessions.createCalls != 1) {
+				t.Error("create failure did not follow revoke")
+			}
+			for _, cookie := range w.Result().Cookies() {
+				if cookie.Name == "__Host-session" {
+					t.Error("session Set-Cookie on failure")
+				}
+			}
+			f.sessions.revokeErr = nil
+			f.sessions.createErr = nil
 			if name != "claim" {
 				assertRejected(t, f, f.callback(a, "test-code"), "login_expired")
 			}
