@@ -218,7 +218,7 @@ func TestReports_Contract(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cov := contracttest.NewCoverage(c, []string{"/api/v1/reports", "/api/v1/me/reports", "/api/v1/me/reports/{id}"})
+	cov := contracttest.NewCoverageForTag(c, "reports")
 	for _, method := range []string{"POST", "GET", "DELETE"} {
 		path, actual, body := "/api/v1/me/reports", "/api/v1/me/reports", ""
 		scenarios := []string{"success", "unauthenticated", "limit", "unavailable", "invalid"}

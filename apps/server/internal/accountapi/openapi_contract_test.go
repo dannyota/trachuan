@@ -115,13 +115,7 @@ func TestOpenAPIContract(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var paths []string
-	for path := range c.Paths {
-		if strings.HasPrefix(path, "/api/v1/me") {
-			paths = append(paths, path)
-		}
-	}
-	coverage := contracttest.NewCoverage(c, paths)
+	coverage := contracttest.NewCoverageForTag(c, "account")
 	t.Run("TestAccountContract", func(t *testing.T) { testAccountContract(t, coverage) })
 	t.Run("TestAccountContract_Guards", func(t *testing.T) { testAccountContract_Guards(t, coverage) })
 	t.Run("TestAccountContract_Errors", func(t *testing.T) { testAccountContract_Errors(t, coverage) })

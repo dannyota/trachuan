@@ -2,6 +2,8 @@ package contracttest
 
 import (
 	"net/http/httptest"
+	"strings"
+
 	"testing"
 )
 
@@ -111,5 +113,33 @@ func TestSchema_DateFormats(t *testing.T) {
 				t.Fatalf("valid=%v err=%v", tc.valid, err)
 			}
 		})
+	}
+}
+
+func TestOperationOwnership_CoversContract(t *testing.T) {
+	c, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for path, methods := range c.Paths {
+		for method, op := range methods {
+			if len(op.Tags) != 1 {
+				t.Errorf("%s %s has %d owners", method, path, len(op.Tags))
+				continue
+			}
+			switch op.Tags[0] {
+			case "weblogin":
+				if !strings.HasPrefix(path, "/api/v1/auth/google/") {
+					t.Errorf("%s %s is not covered by weblogin", method, path)
+				}
+			case "websession":
+				if path != "/api/v1/auth/logout" {
+					t.Errorf("%s %s is not covered by websession", method, path)
+				}
+			case "account", "web", "reports":
+			default:
+				t.Errorf("%s %s has unknown owner %q", method, path, op.Tags[0])
+			}
+		}
 	}
 }
