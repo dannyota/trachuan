@@ -24,7 +24,9 @@ type canonicalCorrectionSet struct {
 	EffTo       *string `json:"eff_to,omitempty"`
 }
 type canonicalCorrectionEvidence struct {
+	Key    string `json:"key,omitempty"`
 	Anchor string `json:"anchor,omitempty"`
+	URL    string `json:"url,omitempty"`
 	Quote  string `json:"quote"`
 }
 
@@ -36,7 +38,7 @@ func canonicalCorrections(entries []source.Correction) ([]byte, error) {
 		if i > 0 && ordered[i-1].Key == e.Key {
 			return nil, fmt.Errorf("correction %q: duplicate key", e.Key)
 		}
-		result = append(result, canonicalCorrection{Key: e.Key, Number: e.Number, Set: canonicalCorrectionSet{e.Set.StatusClass, e.Set.EffFrom, e.Set.EffTo}, Eligible: e.Eligible, Hold: e.Hold, Reason: e.Reason, Evidence: canonicalCorrectionEvidence{e.Evidence.Anchor, e.Evidence.Quote}, Reviewed: e.Reviewed})
+		result = append(result, canonicalCorrection{Key: e.Key, Number: e.Number, Set: canonicalCorrectionSet{e.Set.StatusClass, e.Set.EffFrom, e.Set.EffTo}, Eligible: e.Eligible, Hold: e.Hold, Reason: e.Reason, Evidence: canonicalCorrectionEvidence{Key: e.Evidence.Key, Anchor: e.Evidence.Anchor, URL: e.Evidence.URL, Quote: e.Evidence.Quote}, Reviewed: e.Reviewed})
 	}
 	data, err := json.Marshal(result)
 	if err != nil {

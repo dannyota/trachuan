@@ -115,6 +115,14 @@ func (e *validityEngine) events() []validityEvent {
 	})
 	return events
 }
+func articleMentions(r *validity.Result, number string) bool {
+	for _, item := range r.Items {
+		if item.Scope == "whole" && number != "" && retrieval.NormalizeNumber(item.Number) == number {
+			return true
+		}
+	}
+	return partialMentions(r, number)
+}
 func partialMentions(r *validity.Result, number string) bool {
 	if r == nil {
 		return false

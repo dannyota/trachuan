@@ -43,3 +43,14 @@ func (e *validityEngine) reviewItemTarget(kind string, d, target validityDocumen
 	e.review(kind, d, target.key, target.number, detail)
 	e.reviews[len(e.reviews)-1].sentences = []string{item.Sentence}
 }
+
+func (e *validityEngine) reviewReplacesUnverified(actor, target validityDocument, relationID int64) {
+	e.review("replaces_unverified", actor, target.key, target.number, "")
+	r := &e.reviews[len(e.reviews)-1]
+	r.relationID = relationID
+	r.sentences = nil
+	if actor.quote != "" {
+		r.sentences = []string{actor.quote}
+	}
+	r.proposed = &source.Correction{Key: target.key, Number: target.number}
+}

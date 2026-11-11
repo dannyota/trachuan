@@ -7,6 +7,7 @@ func addValidityCounts(counts map[string]int64, validity validityCounts) {
 	counts["rule_a_corrections"] = int64(validity.ruleA)
 	counts["rule_b_events"] = int64(validity.ruleB)
 	counts["rule_c_conflicts"] = int64(validity.ruleC)
+	counts["validity_review_replaces_unverified"] = 0
 	for kind, n := range validity.review {
 		counts["validity_review_"+kind] = int64(n)
 	}

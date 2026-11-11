@@ -65,9 +65,9 @@ func TestCorrections_RedundantAndConflictReports(t *testing.T) {
 
 func TestCorrections_IntervalValidatedAfterRules(t *testing.T) {
 	end := "2025-01-01"
-	c := source.Correction{Key: "a", Number: "1/2020/NĐ-CP", Set: source.CorrectionSet{EffTo: &end}, Reason: "source error", Evidence: source.CorrectionEvidence{Quote: "evidence"}, Reviewed: "2026-11-10"}
+	c := source.Correction{Key: "a", Number: "1/2020/NĐ-CP", Set: source.CorrectionSet{EffTo: &end}, Reason: "source error", Evidence: source.CorrectionEvidence{Anchor: "dieu-1", Quote: "evidence"}, Reviewed: "2026-11-10"}
 	from, _ := time.Parse("2006-01-02", "2027-07-01")
-	if _, err := validateCorrections([]source.Correction{c}, map[string]correctionDocument{"a": {number: c.Number, from: &from}}); err != nil {
+	if _, err := validateCorrections([]source.Correction{c}, map[string]correctionDocument{"a": {number: c.Number, from: &from, provisions: map[string]string{"dieu-1": "evidence"}}}); err != nil {
 		t.Fatal(err)
 	}
 	d := testDoc("a", c.Number, "2020-01-01", "2027-07-01")
@@ -81,5 +81,99 @@ func TestCorrections_IntervalValidatedAfterRules(t *testing.T) {
 	c.Set.EffTo = &bad
 	if _, err := runValidity([]validityDocument{d}, nil, map[string]source.Correction{"a": c}, "2026-11-10"); err == nil || !strings.Contains(err.Error(), "a") {
 		t.Fatalf("expected named invalid interval: %v", err)
+	}
+}
+
+func TestCorrections_EvidenceInOtherDocument(t *testing.T) {
+	data := []byte("- {key: a, number: A, hold: true, reason: why, evidence: {key: b, anchor: dieu-37/khoan-1, quote: 'verbatim quote'}, reviewed: '2026-11-10'}\n")
+	entries, err := source.ParseCorrections(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	docs := map[string]correctionDocument{
+		"a": {number: "A", provisions: map[string]string{"dieu-37/khoan-1": "different text"}},
+		"b": {number: "B", provisions: map[string]string{"dieu-37/khoan-1": "a verbatim quote here"}},
+	}
+	if _, err = validateCorrections(entries, docs); err != nil {
+		t.Fatal(err)
+	}
+	docs["b"] = correctionDocument{number: "B", provisions: map[string]string{"dieu-37/khoan-1": "different text"}}
+	if _, err = validateCorrections(entries, docs); err == nil {
+		t.Fatal("accepted quote absent from evidence document")
+	}
+}
+
+func TestCorrections_EvidenceKeyAbsentDocumentRejected(t *testing.T) {
+	data := []byte("- {key: a, number: A, hold: true, reason: why, evidence: {key: missing, anchor: dieu-1, quote: text}, reviewed: '2026-11-10'}\n")
+	entries, err := source.ParseCorrections(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = validateCorrections(entries, map[string]correctionDocument{"a": {number: "A"}}); err == nil {
+		t.Fatal("accepted absent evidence document")
+	}
+}
+
+func TestCorrections_QuoteWithoutAnchorOrURLRejected(t *testing.T) {
+	c := source.Correction{Key: "a", Number: "A", Hold: true, Reason: "why", Evidence: source.CorrectionEvidence{Quote: "text"}, Reviewed: "2026-11-10"}
+	if _, err := validateCorrections([]source.Correction{c}, map[string]correctionDocument{"a": {number: "A"}}); err == nil {
+		t.Fatal("accepted quote without location")
+	}
+}
+
+func TestCorrections_KeyWithoutAnchorRejected(t *testing.T) {
+	for _, evidence := range []string{"{key: b, quote: text}", "{key: b, url: 'https://example.org/law', quote: text}"} {
+		data := []byte("- {key: a, number: A, hold: true, reason: why, evidence: " + evidence + ", reviewed: '2026-11-10'}\n")
+		entries, err := source.ParseCorrections(data)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := validateCorrections(entries, map[string]correctionDocument{"a": {number: "A"}, "b": {number: "B"}}); err == nil {
+			t.Fatal("accepted key without anchor")
+		}
+	}
+}
+
+func TestCorrections_AnchorAndURLRejected(t *testing.T) {
+	data := []byte("- {key: a, number: A, hold: true, reason: why, evidence: {anchor: dieu-1, url: 'https://example.org/law', quote: text}, reviewed: '2026-11-10'}\n")
+	entries, err := source.ParseCorrections(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := validateCorrections(entries, map[string]correctionDocument{"a": {number: "A", provisions: map[string]string{"dieu-1": "text"}}}); err == nil {
+		t.Fatal("accepted anchor and URL")
+	}
+}
+
+func TestCorrections_ExternalEvidenceAcceptedAndListed(t *testing.T) {
+	data := []byte("- {key: a, number: 1/2020/NĐ-CP, eligible: false, reason: why, evidence: {url: 'https://example.org/law', quote: 'external text'}, reviewed: '2026-11-10'}\n")
+	entries, err := source.ParseCorrections(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	corrections, err := validateCorrections(entries, map[string]correctionDocument{"a": {number: "1/2020/NĐ-CP"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	canonical, err := canonicalCorrections(entries)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(canonical), `"url":"https://example.org/law"`) {
+		t.Fatalf("canonical = %s", canonical)
+	}
+	d := testDoc("a", "1/2020/NĐ-CP", "2020-01-01", "2020-01-01")
+	d.extractHash = "target-hash"
+	v := runTest(t, []validityDocument{d}, nil, corrections)
+	h := v.documents["a"].history
+	if len(h) != 2 || h[1].anchor != "external:https://example.org/law" || h[1].artifact != "" || h[1].before.Conflict || !h[1].after.Conflict {
+		t.Fatalf("history=%+v", h)
+	}
+	data, err = encodeValidityReview(v.reviews)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), `"kind":"correction_external"`) || !strings.Contains(string(data), `https://example.org/law`) || !strings.Contains(string(data), `external text`) {
+		t.Fatalf("reviews=%s", data)
 	}
 }

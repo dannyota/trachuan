@@ -131,6 +131,7 @@ func TestValidity_IncomingRelationBlocksRuleA(t *testing.T) {
 func TestRuleC_OnlyInForceTargetsWithoutPartialMention(t *testing.T) {
 	a := testDoc("a", "1/2020/NĐ-CP", "2020-01-01", "2020-01-01")
 	b := testDoc("b", "2/2021/NĐ-CP", "2021-01-01", "2021-02-01")
+	b.article = testArticle("1/2/2021", "")
 	rel := []validityRelation{{source: "b", target: "a", kind: "replaces", id: 3}}
 	v := runTest(t, []validityDocument{a, b}, rel, nil)
 	if !v.documents["a"].values.Conflict {
@@ -160,6 +161,7 @@ func TestCorrections_HoldSuppressesRules(t *testing.T) {
 func TestValidity_EligibleOverridesConflict(t *testing.T) {
 	a := testDoc("a", "1/2020/NĐ-CP", "2020-01-01", "2020-01-01")
 	b := testDoc("b", "2/2021/NĐ-CP", "2021-01-01", "2021-02-01")
+	b.article = testArticle("1/2/2021", "")
 	yes := true
 	v := runTest(t, []validityDocument{a, b}, []validityRelation{{source: "b", target: "a", kind: "replaces", id: 1}}, map[string]source.Correction{"a": {Eligible: &yes}})
 	if v.documents["a"].values.Conflict {
@@ -169,6 +171,7 @@ func TestValidity_EligibleOverridesConflict(t *testing.T) {
 func TestDecisions_HistoryOrderAndCap(t *testing.T) {
 	a := testDoc("a", "1/2020/NĐ-CP", "2020-01-01", "2020-01-01")
 	b := testDoc("b", "2/2021/NĐ-CP", "2021-01-01", "2021-02-01")
+	b.article = testArticle("1/2/2021", "")
 	rels := []validityRelation{}
 	for i := int64(1); i <= 8; i++ {
 		rels = append(rels, validityRelation{source: "b", target: "a", kind: "replaces", id: i})

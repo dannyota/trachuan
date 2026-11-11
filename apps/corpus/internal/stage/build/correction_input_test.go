@@ -98,3 +98,19 @@ func TestCorrections_SemanticInputHashes(t *testing.T) {
 		}
 	}
 }
+
+func TestCorrections_CanonicalIncludesEvidenceKey(t *testing.T) {
+	data := []byte("- {key: a, number: A, hold: true, reason: why, evidence: {key: b, anchor: dieu-37/khoan-1, quote: text}, reviewed: '2026-11-10'}\n")
+	entries, err := source.ParseCorrections(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := canonicalCorrections(entries)
+	if err != nil {
+		t.Fatal(err)
+	}
+	const want = `[{"key":"a","number":"A","set":{},"hold":true,"reason":"why","evidence":{"key":"b","anchor":"dieu-37/khoan-1","quote":"text"},"reviewed":"2026-11-10"}]`
+	if string(got) != want {
+		t.Fatalf("canonical = %s", got)
+	}
+}

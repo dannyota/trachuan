@@ -7,9 +7,7 @@ import (
 )
 
 func (e *validityEngine) apply(events []validityEvent) error {
-	confirmed := map[string]bool{}
 	for _, event := range events {
-		confirmed[event.actor+"\x00"+event.target] = true
 		o := e.outputs[event.target]
 		if o.values.To != nil && *o.values.To <= event.date {
 			continue
@@ -25,7 +23,7 @@ func (e *validityEngine) apply(events []validityEvent) error {
 				break
 			}
 		}
-		o.history = append(o.history, validityDecision{layer: "B", version: "validity/1", before: before, after: o.values, actor: event.actor, date: event.date, relationID: agreement, anchor: actor.anchor, quote: truncateQuote(event.item.Sentence), artifact: actor.extractHash})
+		o.history = append(o.history, validityDecision{layer: "B", version: "validity/2", before: before, after: o.values, actor: event.actor, date: event.date, relationID: agreement, anchor: actor.anchor, quote: truncateQuote(event.item.Sentence), artifact: actor.extractHash})
 		e.outputs[event.target] = o
 	}
 	for _, rel := range e.relations {
@@ -60,14 +58,21 @@ func (e *validityEngine) apply(events []validityEvent) error {
 		if e.corrections[target.key].Hold {
 			continue
 		}
-		if target.sourceClass != "in_force" || confirmed[actor.key+"\x00"+target.key] || partialMentions(actor.article, target.numberNorm) {
+		if target.sourceClass != "in_force" {
+			continue
+		}
+		if actor.article == nil || !actor.article.Usable {
+			e.reviewReplacesUnverified(actor, target, rel.id)
+			continue
+		}
+		if articleMentions(actor.article, target.numberNorm) {
 			continue
 		}
 		before := t
 		t.Conflict = true
 		o := e.outputs[target.key]
 		o.values = t
-		o.history = append(o.history, validityDecision{layer: "C", version: "validity/1", before: before, after: t, actor: actor.key, date: date, relationID: rel.id, anchor: actor.anchor, quote: truncateQuote(actor.quote), artifact: actor.extractHash})
+		o.history = append(o.history, validityDecision{layer: "C", version: "validity/2", before: before, after: t, actor: actor.key, date: date, relationID: rel.id, anchor: actor.anchor, quote: truncateQuote(actor.quote), artifact: actor.extractHash})
 		e.outputs[target.key] = o
 		e.counts.ruleC++
 		e.review("rule_c_conflict", actor, target.key, target.number, "")
@@ -77,6 +82,12 @@ func (e *validityEngine) apply(events []validityEvent) error {
 		o := e.outputs[key]
 		c, has := e.corrections[key]
 		if has {
+			if c.Evidence.URL != "" {
+				e.review("correction_external", doc, "", "", c.Evidence.URL)
+				r := &e.reviews[len(e.reviews)-1]
+				r.sentences = []string{c.Evidence.Quote}
+				r.proposed = &c
+			}
 			before := o.values
 			automatic := false
 			if len(o.history) > 0 {
@@ -88,7 +99,15 @@ func (e *validityEngine) apply(events []validityEvent) error {
 				e.review(report, doc, "", "", "")
 			}
 			if c.Set.StatusClass != nil || c.Set.EffFrom != nil || c.Set.EffTo != nil || c.Eligible != nil {
-				o.history = append(o.history, validityDecision{layer: "manual", version: "validity/1", before: before, after: after, anchor: c.Evidence.Anchor, quote: truncateQuote(c.Evidence.Quote), artifact: doc.extractHash})
+				artifact := doc.extractHash
+				anchor := c.Evidence.Anchor
+				if c.Evidence.URL != "" {
+					anchor = "external:" + c.Evidence.URL
+					artifact = ""
+				} else if c.Evidence.Key != "" {
+					artifact = e.docs[c.Evidence.Key].extractHash
+				}
+				o.history = append(o.history, validityDecision{layer: "manual", version: "validity/2", before: before, after: after, actor: c.Evidence.Key, anchor: anchor, quote: truncateQuote(c.Evidence.Quote), artifact: artifact})
 			}
 		}
 		if o.values.From != nil && o.values.To != nil && *o.values.To < *o.values.From {
@@ -96,7 +115,7 @@ func (e *validityEngine) apply(events []validityEvent) error {
 		}
 		if len(o.history) > 0 {
 			base := o.history[0].before
-			o.history = append([]validityDecision{{layer: "source", version: "validity/1", before: base, after: base}}, o.history...)
+			o.history = append([]validityDecision{{layer: "source", version: "validity/2", before: base, after: base}}, o.history...)
 		}
 		if len(o.history) > 8 {
 			return fmt.Errorf("validity %s: decision history exceeds 8", key)

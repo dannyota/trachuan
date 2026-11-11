@@ -24,6 +24,7 @@ type reviewArtifactEntry struct {
 	TargetStatusName  string               `json:"target_status_name"`
 	TargetRawFrom     string               `json:"target_raw_eff_from"`
 	TargetRawTo       string               `json:"target_raw_eff_to"`
+	RelationID        int64                `json:"relation_id,omitempty"`
 	Sentences         []string             `json:"sentences"`
 	FetchHash         string               `json:"fetch_sha256"`
 	ExtractHash       string               `json:"extract_sha256"`
@@ -35,7 +36,7 @@ type reviewArtifactEntry struct {
 func encodeValidityReview(reviews []validityReview) ([]byte, error) {
 	entries := make([]reviewArtifactEntry, 0, len(reviews))
 	for _, r := range reviews {
-		entry := reviewArtifactEntry{Kind: r.kind, Key: r.key, Number: r.number, TargetKey: r.targetKey, TargetNumber: r.targetNumber, Detail: r.detail, StatusCode: r.statusCode, StatusName: r.statusName, RawFrom: r.rawFrom, RawTo: r.rawTo, TargetStatusCode: r.targetStatusCode, TargetStatusName: r.targetStatusName, TargetRawFrom: r.targetRawFrom, TargetRawTo: r.targetRawTo, Sentences: append([]string{}, r.sentences...), FetchHash: r.fetchHash, ExtractHash: r.extractHash, TargetFetchHash: r.targetFetchHash, TargetExtractHash: r.targetExtractHash}
+		entry := reviewArtifactEntry{Kind: r.kind, Key: r.key, Number: r.number, TargetKey: r.targetKey, TargetNumber: r.targetNumber, Detail: r.detail, StatusCode: r.statusCode, StatusName: r.statusName, RawFrom: r.rawFrom, RawTo: r.rawTo, TargetStatusCode: r.targetStatusCode, TargetStatusName: r.targetStatusName, TargetRawFrom: r.targetRawFrom, TargetRawTo: r.targetRawTo, RelationID: r.relationID, Sentences: append([]string{}, r.sentences...), FetchHash: r.fetchHash, ExtractHash: r.extractHash, TargetFetchHash: r.targetFetchHash, TargetExtractHash: r.targetExtractHash}
 		if r.proposed != nil {
 			raw, err := canonicalCorrections([]source.Correction{*r.proposed})
 			if err != nil {

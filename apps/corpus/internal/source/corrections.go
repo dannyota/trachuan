@@ -30,7 +30,9 @@ type CorrectionSet struct {
 
 // CorrectionEvidence identifies the text reviewed for a correction.
 type CorrectionEvidence struct {
+	Key    string `yaml:"key"`
 	Anchor string `yaml:"anchor"`
+	URL    string `yaml:"url"`
 	Quote  string `yaml:"quote"`
 }
 

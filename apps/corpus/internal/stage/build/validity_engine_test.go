@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	"danny.vn/trachuan/apps/corpus/internal/source"
 	"danny.vn/trachuan/apps/corpus/internal/validity"
 )
 
@@ -46,5 +47,32 @@ func TestDecisions_ValuesUseSchemaKeys(t *testing.T) {
 	const want = `{"status_class":"in_force","is_current":true,"status_basis":"source_status","eff_from":null,"eff_to":null,"validity_conflict":false}`
 	if string(b) != want {
 		t.Fatalf("got %s", b)
+	}
+}
+
+func TestDecisions_ManualEvidenceKeyRecordedAsActor(t *testing.T) {
+	for _, tc := range []struct {
+		name, evidenceKey, actor, artifact string
+	}{
+		{"other document", "b", "b", "evidence-hash"},
+		{"same document default", "", "", "target-hash"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			a := testDoc("a", "1/2020/NĐ-CP", "2020-01-01", "2020-01-01")
+			a.extractHash = "target-hash"
+			b := testDoc("b", "2/2021/NĐ-CP", "2021-01-01", "2021-02-01")
+			b.extractHash = "evidence-hash"
+			eligible := false
+			correction := source.Correction{Eligible: &eligible, Evidence: source.CorrectionEvidence{Key: tc.evidenceKey, Anchor: "dieu-37/khoan-1", Quote: "evidence"}}
+			v := runTest(t, []validityDocument{a, b}, nil, map[string]source.Correction{"a": correction})
+			history := v.documents["a"].history
+			if len(history) != 2 {
+				t.Fatalf("history = %+v", history)
+			}
+			decision := history[1]
+			if decision.layer != "manual" || decision.actor != tc.actor || decision.artifact != tc.artifact || decision.anchor != "dieu-37/khoan-1" || decision.quote != "evidence" {
+				t.Fatalf("manual decision = %+v", decision)
+			}
+		})
 	}
 }

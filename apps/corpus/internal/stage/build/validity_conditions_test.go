@@ -265,6 +265,7 @@ func TestReview_RecordsBothDocumentsEvidence(t *testing.T) {
 	a.fetchHash = "target-hash"
 	b := testDoc("b", "2/2021/NĐ-CP", "2021-01-01", "2021-02-01")
 	b.fetchHash = "actor-hash"
+	b.article = testArticle("1/2/2021", "")
 	v := runTest(t, []validityDocument{a, b}, []validityRelation{{source: "b", target: "a", kind: "replaces", id: 1}}, nil)
 	for _, r := range v.reviews {
 		if r.kind == "rule_c_conflict" {
