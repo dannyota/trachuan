@@ -61,11 +61,14 @@ proxy sends `/api/*` to the Go server, which runs with
 
 ## Visual system
 
-Be Vietnam Pro for interface text, a serif for verbatim law, monospace for
-document numbers. The CSP is a static header with `script-src 'self'` (no
-`'unsafe-inline'`, no `'unsafe-eval'`) and the hydration payload externalized
-into a same-origin script; per-request nonces are not used because public HTML
-is cached for ten minutes and a cached page would replay an old nonce. Four
-validity inks: in force, partly in force, not yet in force, expired. Theme
-follows the device. Self-hosted fonts; CSP with no third-party host. Phase 2:
-dossiers, watch lists, exports.
+The product display name is "Tra Chuẩn" in both languages (header, page titles,
+login, legal pages, the OAuth consent page, agent guidance), matching the Google
+consent branding; code, routes, identifiers, the MCP server name and setup
+commands keep `trachuan`. Be Vietnam Pro for interface text, a serif for
+verbatim law, monospace for document numbers. The CSP is a static header with
+`script-src 'self'` (no `'unsafe-inline'`, no `'unsafe-eval'`) and the hydration
+payload externalized into a same-origin script; per-request nonces are not used
+because public HTML is cached for ten minutes and a cached page would replay an
+old nonce. Four validity inks: in force, partly in force, not yet in force,
+expired. Theme follows the device. Self-hosted fonts; CSP with no third-party
+host. Phase 2: dossiers, watch lists, exports.
