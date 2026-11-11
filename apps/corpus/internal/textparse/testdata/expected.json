@@ -143,9 +143,12 @@
       {
         "kind": "main",
         "accepted": false
+      },
+      {
+        "kind": "tail"
       }
     ],
     "gaps": ["structure_uncertain"],
-    "note": "Articles 1, 2, 3, 3a, 4, 5, 6, then \"Điều 4. Điều khoản thi hành\" again before PHỤ LỤC: a step back inside the open scope."
+    "note": "Articles 1, 2, 3, 3a, 4, 5, 6, then \"Điều 4. Điều khoản thi hành\" again before PHỤ LỤC: a step back inside the open scope. PHỤ LỤC at line 154 closes the failed main scope; the appendix is a tail scope."
   }
 }
