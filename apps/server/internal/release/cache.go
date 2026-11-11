@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 
+	"danny.vn/trachuan/internal/embedding"
 	"danny.vn/trachuan/internal/retrieval"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -139,6 +140,12 @@ func (r *Resolver) open(ctx context.Context, name string, entry *cacheEntry) (*r
 	if err != nil {
 		return nil, err
 	}
+	if !recipeAllowed(metadata.DenseRecipe.QueryHash, r.AllowTestRecipe) {
+		if r.OnTestRecipeRefused != nil {
+			r.OnTestRecipeRefused()
+		}
+		return nil, errors.New("test recipe refused")
+	}
 	embedder := r.EmbedderFor(metadata.DenseRecipe.QueryHash)
 	engine, err := retrieval.Open(ctx, entry.pool, embedder, options)
 	if err != nil {
@@ -174,4 +181,8 @@ func databaseGone(err error) bool {
 	}
 	var pgErr *pgconn.PgError
 	return errors.As(err, &pgErr) && (pgErr.Code == "3D000" || pgErr.Code == "57P01" || pgErr.Code == "57P04")
+}
+
+func recipeAllowed(hash string, loopback bool) bool {
+	return hash != embedding.TestRecipeHash || loopback
 }

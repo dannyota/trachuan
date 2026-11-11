@@ -114,7 +114,8 @@ func serve(ctx context.Context, cfg config, pool *pgxpool.Pool, queries *store.Q
 		EmbedderFor: func(hash string) retrieval.Embedder {
 			return &cachedQuery{query: embedding.Query{Client: client, RecipeHash: hash}, vectors: vectors}
 		},
-		OnActivate: caches.ActivateRelease}
+		OnActivate: caches.ActivateRelease, AllowTestRecipe: cfg.strictDeployment,
+		OnTestRecipeRefused: func() { _, _ = fmt.Fprintln(stderr, "test embedding recipe refused") }}
 	verifier := &credential.Verifier{Store: queries, Audience: cfg.audience}
 	limiter := limits.New(clock)
 	reportService := &reports.Service{Store: reports.PGXRunner{DB: pool}, Resolver: reports.ReleaseResolver{Resolver: resolver}, Clock: clock}

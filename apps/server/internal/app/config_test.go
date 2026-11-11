@@ -202,3 +202,21 @@ func TestRun_RejectsIssuerBeforePool(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
+
+func TestLoopbackDeployment_StrictHosts(t *testing.T) {
+	for _, tc := range []struct {
+		origin, listen string
+		want           bool
+	}{
+		{"http://localhost:8080", "127.0.0.1:8080", true},
+		{"http://127.0.0.2:8080", "[::1]:8080", true},
+		{"https://example.test", "127.0.0.1:8080", false},
+		{"http://LOCALHOST:8080", "127.0.0.1:8080", false},
+		{"http://localhost:8080", "0.0.0.0:8080", false},
+		{"http://[::ffff:127.0.0.1]:8080", "127.0.0.1:8080", false},
+	} {
+		if got := loopbackDeployment(tc.origin, tc.listen); got != tc.want {
+			t.Errorf("%s %s: got %t want %t", tc.origin, tc.listen, got, tc.want)
+		}
+	}
+}

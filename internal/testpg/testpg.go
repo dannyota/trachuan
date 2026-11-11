@@ -7,10 +7,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
-	"net"
 	"net/url"
-	"os"
-	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -34,38 +31,9 @@ func random(t *testing.T) string {
 
 func administrator(t *testing.T) (*pgx.Conn, *url.URL) {
 	t.Helper()
-	raw := os.Getenv("CORPUS_TEST_ADMIN_URL")
-	if raw == "" {
-		raw = "postgres://trachuan@127.0.0.1:25433/postgres"
-	}
-	parsed, err := url.Parse(raw)
-	if err != nil || (parsed.Scheme != "postgres" && parsed.Scheme != "postgresql") {
-		t.Fatal("invalid test database URL")
-	}
-	for _, key := range []string{"host", "hostaddr", "dbname", "user", "password"} {
-		if parsed.Query().Has(key) {
-			t.Fatal("test database URL must put connection identity in the URL authority and path")
-		}
-	}
-	cfg, err := pgx.ParseConfig(raw)
+	conn, parsed, err := OpenAdministrator(context.Background())
 	if err != nil {
-		t.Fatal("invalid test database configuration")
-	}
-	isLoopback := func(host string) bool {
-		ip := net.ParseIP(host)
-		return strings.EqualFold(host, "localhost") || (ip != nil && ip.IsLoopback())
-	}
-	if !isLoopback(cfg.Host) {
-		t.Fatal("test database administrator must use a loopback host")
-	}
-	for _, fallback := range cfg.Fallbacks {
-		if !isLoopback(fallback.Host) {
-			t.Fatal("test database administrator fallback must use a loopback host")
-		}
-	}
-	conn, err := pgx.ConnectConfig(context.Background(), cfg)
-	if err != nil {
-		t.Fatal("connect to test database administrator")
+		t.Fatal(err)
 	}
 	t.Cleanup(func() {
 		if err := conn.Close(context.Background()); err != nil {

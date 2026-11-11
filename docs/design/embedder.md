@@ -235,6 +235,27 @@ An opt-in Mac smoke with the pinned real bundle runs both services and checks
 token counts and query/document parity; the primary records its output. Fake
 results are not quality evidence.
 
+## Test embedder and fixture release
+
+Browser and end-to-end tests search a fixture release through
+`apps/server/cmd/fakeembed`, a test-only query embedder that listens only on a
+loopback address and serves the HTTP contract above with deterministic unit
+vectors derived from the text (SHA-256 seeded, normalized, of the schema's
+dimension). It reports the fixed test recipe in `internal/embedding` (model
+`trachuan-test-only`, runtime `fake`), whose hash cannot equal a real recipe's
+hash because the hash covers the recipe JSON. The server refuses to open a
+release whose query hash is the test hash unless `SERVER_PUBLIC_URL` and
+`SERVER_LISTEN` are strict loopback, the rule of
+[`SERVER_GOOGLE_ISSUER`](web-api.md#test-identity-provider); the release is then
+unavailable and the refusal is logged.
+
+A test-only loader builds the fixture release `corpus_vn_2099<mmdd>_<n>` through
+`internal/testpg`: a few documents numbered `<n>/2099/TT-TEST`, provision text
+written fresh for the fixture and never copied from real law, chunk embeddings
+from the same fake function, and valid release metadata. `scripts/e2e.sh`
+activates it in its own auth database and drops it with the marker-checked
+cleanup. Neither command ships ([deployment](deployment.md#images-and-deploy)).
+
 First-party references:
 [ONNX Runtime C API](https://onnxruntime.ai/docs/api/c/),
 [ONNX Runtime Go binding](https://github.com/microsoft/onnxruntime/tree/main/go),
