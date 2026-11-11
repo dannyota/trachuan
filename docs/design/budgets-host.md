@@ -102,6 +102,9 @@ Server caches, each a byte-capped least-recently-used map
 | Read items       | 512 MB   | release life, 24 h |
 | Document entries | 64 MB    | release life       |
 
+Each cache allows at most 4 concurrent fills; a value above one sixteenth of its
+cache's byte cap is not cached.
+
 Activation refuses to start below 2.5 GB free memory or 10 GB free disk.
 
 Acceptance gates before the first public release, each measured on the host:

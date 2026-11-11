@@ -18,9 +18,16 @@ the rules.
   release makes older entries unreachable; the server also drops them at once
   when the active database changes. Query vectors depend only on the query
   recipe and the text (see below).
-- Each cache is a least-recently-used map with a byte cap and a maximum age.
-  Entries above the cap are evicted oldest first; an entry older than its
-  maximum age is a miss.
+- Each cache is a least-recently-used map with a byte cap and a maximum age. An
+  entry's charged size is its key, its value and a fixed 128-byte overhead;
+  entries are evicted least recently used first until the total is under the
+  cap, and an entry older than its maximum age is a miss. A value larger than
+  one sixteenth of its cache's cap is never cached: the request computes it as
+  without a cache.
+- Concurrent misses on one key share a single fill. Fills that build a new value
+  run under a per-cache limit on concurrent fills (in host budgets); a request
+  that cannot start a fill before its deadline computes its answer without
+  caching it, so the limit bounds transient memory without changing results.
 - A hit still counts against the caller's per-account limit, keeps the
   credential checks, and returns exactly the bytes a miss would have produced.
 - Metrics report hits, misses, evictions and bytes per cache, with no key or
@@ -47,12 +54,18 @@ arms and presentation. Maximum age 1 hour.
 
 ## Read items
 
-The server caches the fixed unit and part sequence of a `read` item (the
-document entry, leads, provisions, outline entries or relations and their parts)
-under `sha256(release, canonical item JSON without next)`. Pages and `next`
-tokens are then cut from the cached sequence under the same call cap, so paging
-and continuation behave exactly as without the cache. Release content is
-immutable, so the maximum age is the life of the release, bounded at 24 hours.
+The server caches the immutable part of a `read` item's fixed unit and part
+sequence (the document entry without its status, leads, provisions, outline
+entries or relations and their parts). The key is
+`sha256(release, canonical original item JSON, mode)`. For an item given as
+`{next}`, the server first validates and decodes the token exactly as without a
+cache, then keys by the token's original item and mode; the token's position is
+applied only when paging. For every response the server computes the document
+status from the injected clock, adds it to the document entry, and only then
+sizes units, cuts pages under the call cap and issues `next` tokens, so paging,
+continuation and completeness behave exactly as without the cache. Release
+content is immutable, so the maximum age is the life of the release, bounded at
+24 hours.
 
 ## Document entries
 
