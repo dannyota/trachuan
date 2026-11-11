@@ -37,3 +37,4 @@ One line per item: date, area, finding, source.
 - 2026-11-11, corpus, `document.source_url` is NULL for all 2,721 primary documents in run 6.
 - 2026-11-11, corpus, 15/SL: stored article text belongs to another decree; check the source tree against the transcription and add a manual entry or an extractor fix.
 - 2026-11-11, corpus, 20/2025/QĐ-TTg lacks its attached data list (attachment not read); the amending act behind 48/VBHN-NHNN's 14-working-day deadline is not in the source list.
+- 2026-11-11, retrieval, `validHash` (`internal/retrieval/engine.go`) checks a fixed-length lowercase hex string with a regex; a length test plus a byte loop is simpler. Fold it into the next change that touches engine.go, coordinator note on PR #44.

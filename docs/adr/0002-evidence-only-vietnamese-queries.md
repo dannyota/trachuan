@@ -31,3 +31,7 @@ features.
   keys are digests of the query and request, values are vectors or responses,
   and nothing is written to disk, logs or backups; questions are still never
   stored ([caching](../design/caching.md)).
+- 2026-11-11: agent error reports carry structured fields only (handle, kind,
+  closed values, dates, document numbers checked against the corpus), never free
+  text or URLs; only a capped covert channel through the choice of values
+  remains ([error reports](../design/error-reports.md)).
