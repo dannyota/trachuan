@@ -165,7 +165,7 @@ func fixtureWithTrace(t *testing.T, trace *exactSettingsTrace) (*pgxpool.Pool, *
 		}
 		return string(b)
 	}
-	_, err = db.Exec(ctx, `INSERT INTO release VALUES (true,'vn','test',4,'v1',$1::jsonb,'{}',$2::jsonb,$3::jsonb,$4::jsonb,$5,$5,$5,'{}',now())`, marshal(dense), marshal(lexical.Recipe1()), marshal(recipe), marshal(stats.Summary(lexical.Recipe1(), nil)), hash)
+	_, err = db.Exec(ctx, `INSERT INTO release VALUES (true,'vn','test',$6,'v1',$1::jsonb,'{}',$2::jsonb,$3::jsonb,$4::jsonb,$5,$5,$5,'{}',now())`, marshal(dense), marshal(lexical.Recipe1()), marshal(recipe), marshal(stats.Summary(lexical.Recipe1(), nil)), hash, corpusdb.SchemaVersion)
 	if err != nil {
 		t.Fatal(err)
 	}

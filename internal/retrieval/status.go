@@ -35,6 +35,9 @@ func (e *Engine) Status(ctx context.Context) (CorpusStatus, error) {
 	if err != nil {
 		return result, databaseFailure("count corpus", err)
 	}
+	if e.release.SchemaVersion == 4 {
+		result.Nodes = 0
+	}
 	rows, err := tx.Query(ctx, `SELECT kind,count(*) FROM coverage_gap GROUP BY kind`)
 	if err != nil {
 		return result, databaseFailure("count gaps", err)

@@ -31,7 +31,7 @@ func schemaDB(t *testing.T) *pgx.Conn {
 	return conn
 }
 
-func TestApply_CreatesSchemaVersion4(t *testing.T) {
+func TestApply_CreatesSchemaVersion5(t *testing.T) {
 	conn := schemaDB(t)
 	ctx := context.Background()
 	for _, table := range []string{"document", "source_file", "provision", "provision_validity", "chunk", "lexical_df", "relation", "coverage_gap", "taxonomy_node", "taxonomy_assignment", "validity_decision", "release"} {
@@ -65,7 +65,7 @@ func TestApply_ConstraintsRejectBadRows(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = conn.Exec(ctx, `INSERT INTO release VALUES (true,'vn','r',4,'','{}','{}','{}','{}','{}',$1,$1,$1,'{}',now())`, hash)
+	_, err = conn.Exec(ctx, `INSERT INTO release VALUES (true,'vn','r',$2,'','{}','{}','{}','{}','{}',$1,$1,$1,'{}',now())`, hash, SchemaVersion)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -145,8 +145,33 @@ func TestSchema_PreviousConstraints(t *testing.T) {
 			t.Fatal(execErr)
 		}
 	}
-	_, err = conn.Exec(ctx, `INSERT INTO release VALUES(true,'vn','r',4,'','{}','{}','{}','{}','{}',$1,$1,$1,'{}',now())`, hash)
+	_, err = conn.Exec(ctx, `INSERT INTO release VALUES(true,'vn','r',$2,'','{}','{}','{}','{}','{}',$1,$1,$1,'{}',now())`, hash, SchemaVersion)
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestSchema_TaxonomyVersion5Constraints(t *testing.T) {
+	conn := schemaDB(t)
+	ctx := context.Background()
+	insert := `INSERT INTO taxonomy_node(id,country,parent_id,level,code,name,description,origin,status,path,ordinal,provision_count,document_count) VALUES(1,'vn',NULL,1,'one','','','custom','active','n1',1,0,0)`
+	if _, err := conn.Exec(ctx, insert); err != nil {
+		t.Fatal(err)
+	}
+	cases := map[string]string{
+		"ordinal zero": `UPDATE taxonomy_node SET ordinal=0`, "ordinal null": `UPDATE taxonomy_node SET ordinal=NULL`,
+		"provision count negative": `UPDATE taxonomy_node SET provision_count=-1`, "provision count null": `UPDATE taxonomy_node SET provision_count=NULL`,
+		"document count negative": `UPDATE taxonomy_node SET document_count=-1`, "document count null": `UPDATE taxonomy_node SET document_count=NULL`,
+		"duplicate root ordinal": `INSERT INTO taxonomy_node(id,country,parent_id,level,code,name,description,origin,status,path,ordinal,provision_count,document_count) VALUES(2,'vn',NULL,1,'two','','','custom','active','n2',1,0,0)`,
+		"release version 4":      `INSERT INTO release VALUES(true,'vn','r',4,'','{}','{}','{}','{}','{}',repeat('a',64),repeat('a',64),repeat('a',64),'{}',now())`,
+	}
+	for name, query := range cases {
+		t.Run(name, func(t *testing.T) {
+			_, err := conn.Exec(ctx, query)
+			var pgErr *pgconn.PgError
+			if !errors.As(err, &pgErr) || !strings.HasPrefix(pgErr.Code, "23") {
+				t.Fatalf("expected constraint error, got %v", err)
+			}
+		})
 	}
 }
