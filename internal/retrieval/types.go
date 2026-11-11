@@ -32,6 +32,8 @@ type Date struct {
 
 // Request describes a retrieval request.
 type Request struct {
+	// Instant fixes current-law eligibility for this request. Zero uses the engine clock.
+	Instant     time.Time `json:"-"`
 	Query       string
 	Limit       int
 	InForceOnly *bool
@@ -49,8 +51,10 @@ type Prepared struct {
 
 // Options supplies the clock and execution profile.
 type Options struct {
-	Now     func() time.Time
-	Profile Profile
+	Now       func() time.Time
+	Profile   Profile
+	Documents DocumentCache
+	Sequences SequenceCache
 }
 
 // Depths specifies the candidate count per arm.

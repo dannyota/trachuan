@@ -48,6 +48,9 @@ docembed-test: ## Run document embedder tests
 docembed-run: ## Start the document embedder on 127.0.0.1:8092 (MPS)
 	cd apps/docembed && uv run --frozen --group document python -m trachuan_docembed --model-dir $(abspath $(EMBEDDER_MODEL_DIR))
 
+server-run: ## Start the local server
+	go run ./apps/server/cmd/server serve
+
 test: ## Run unit tests
 	go test ./...
 
@@ -63,15 +66,19 @@ test-proof: ## Run proof tests (loads .env when present)
 	$(LOAD_ENV); go test -tags 'integration faultinject' -count=1 ./apps/corpus/test/proof/...
 
 generate: ## Generate the typed data layer when sqlc is configured
-	@if [ -f apps/corpus/sqlc.yaml ]; then cd apps/corpus && sqlc generate; fi
+	@for app in corpus server; do \
+	  if [ -f apps/$$app/sqlc.yaml ]; then (cd apps/$$app && sqlc generate) || exit $$?; fi; \
+	done
 
 sqlc-check: ## Fail when generated data layer files drift
-	@if [ -f apps/corpus/sqlc.yaml ]; then \
-	  cd apps/corpus && sqlc generate && \
-	  { [ -z "$$(git status --porcelain -- internal/store)" ] || \
-	    { echo "generated data layer drifts; run make generate" >&2; \
-	      git status --porcelain -- internal/store; exit 1; }; }; \
-	fi
+	@for app in corpus server; do \
+	  if [ -f apps/$$app/sqlc.yaml ]; then \
+	    (cd apps/$$app && sqlc generate && \
+	      { [ -z "$$(git status --porcelain -- internal/store)" ] || \
+	        { echo "generated data layer drifts; run make generate" >&2; \
+	          git status --porcelain -- internal/store; exit 1; }; }) || exit $$?; \
+	  fi; \
+	done
 
 db-up: ## Start native PostgreSQL 18 on 127.0.0.1:25433 (initializes ~/.local/share/trachuan-pg18 once)
 	bash deploy/local/postgres.sh up
@@ -88,4 +95,4 @@ services-down: ## Stop the local Temporal server and PostgreSQL, keep their data
 	bash deploy/local/temporal.sh down
 	bash deploy/local/postgres.sh down
 
-.PHONY: help hooks-install lengths-check pre-push docs-fmt queryembed-native queryembed-test-ort queryembed-run docembed-test docembed-run test test-integration test-proof generate sqlc-check db-up db-setup temporal-up services-up services-down
+.PHONY: server-run help hooks-install lengths-check pre-push docs-fmt queryembed-native queryembed-test-ort queryembed-run docembed-test docembed-run test test-integration test-proof generate sqlc-check db-up db-setup temporal-up services-up services-down

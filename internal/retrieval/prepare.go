@@ -55,21 +55,21 @@ func (e *Engine) prepare(ctx context.Context, req Request, legacy bool) (Prepare
 	}
 	vector, err := e.embedder.Embed(ctx, req.Query)
 	if err != nil {
-		return Prepared{}, errors.New("query embedding failed")
+		return Prepared{}, embedderFailure("query embedding failed", err)
 	}
 	if vector.RecipeHash != e.queryRecipe.Hash() || len(vector.Values) != e.queryRecipe.Dimensions || vector.TokenCount <= 0 || vector.TokenCount > e.queryRecipe.TokenCap {
-		return Prepared{}, errors.New("invalid query embedding")
+		return Prepared{}, classifiedFailure{message: "invalid query embedding", kind: ErrEmbedder}
 	}
 	var n float64
 	for _, x := range vector.Values {
 		f := float64(x)
 		if math.IsNaN(f) || math.IsInf(f, 0) {
-			return Prepared{}, errors.New("invalid query embedding")
+			return Prepared{}, classifiedFailure{message: "invalid query embedding", kind: ErrEmbedder}
 		}
 		n += f * f
 	}
 	if math.Abs(math.Sqrt(n)-1) > .001 {
-		return Prepared{}, errors.New("invalid query embedding")
+		return Prepared{}, classifiedFailure{message: "invalid query embedding", kind: ErrEmbedder}
 	}
 	p.Vector = &vector
 	return p, nil

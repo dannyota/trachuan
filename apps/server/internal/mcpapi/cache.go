@@ -1,0 +1,108 @@
+package mcpapi
+
+import (
+	"context"
+	"crypto/sha256"
+	"encoding/json"
+	"sync"
+	"time"
+
+	"danny.vn/trachuan/apps/server/internal/cache"
+	"danny.vn/trachuan/internal/retrieval"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
+)
+
+// Caches owns the release-scoped caches shared by MCP and retrieval engines.
+// Query vectors are separate because they survive release changes.
+type Caches struct {
+	mu        sync.Mutex
+	Search    *cache.Scoped[[]byte]
+	Documents *cache.Scoped[[]byte]
+	Sequences *cache.Scoped[[]byte]
+}
+
+// NewCaches creates caches with the host budgets. They remain disabled until
+// the resolver adapter calls ActivateRelease before lending its first lease.
+func NewCaches(clock func() time.Time) *Caches {
+	size := func(v []byte) int { return len(v) }
+	return &Caches{
+		Search:    cache.NewScoped(cache.New("search_responses", 1_024_000_000, time.Hour, clock, size)),
+		Documents: cache.NewScoped(cache.New("document_entries", 64_000_000, 0, clock, size)),
+		Sequences: cache.NewScoped(cache.New("read_items", 512_000_000, 24*time.Hour, clock, size)),
+	}
+}
+
+// ActivateRelease purges every corpus cache on a switch. The resolver adapter
+// must serialize switch notifications and call this before returning a lease.
+// Scope uses the observation generation carried by each lease.
+func (c *Caches) ActivateRelease(release string, generation uint64) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.Search.ActivateRelease(release, generation)
+	c.Documents.ActivateRelease(release, generation)
+	c.Sequences.ActivateRelease(release, generation)
+}
+
+// RequestCaches binds all corpus caches to one activation generation.
+type RequestCaches struct {
+	Search    cache.Handle[[]byte]
+	Documents cache.Handle[[]byte]
+	Sequences cache.Handle[[]byte]
+}
+
+// Scope binds handles to the resolver observation carried by the lease.
+func (c *Caches) Scope(release string, generation uint64) RequestCaches {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return RequestCaches{Search: c.Search.Scope(release, generation), Documents: c.Documents.Scope(release, generation), Sequences: c.Sequences.Scope(release, generation)}
+}
+
+func (cfg Config) cachedSearch(ctx context.Context, in searchInput, validate func(any) error) (*mcp.CallToolResult, any, error) {
+	req, detail, validation, err := prepareSearch(in)
+	if err != nil {
+		return nil, nil, err
+	}
+	lease, err := cfg.resolve(ctx, in.Country, in.Release)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer lease.Done()
+	rel := lease.Release
+	scope := cfg.Caches.Scope(rel, lease.Generation)
+	ctx = retrieval.WithCaches(ctx, scope.Documents, scope.Sequences)
+	req.Instant = cfg.requestInstant(ctx)
+	now := req.Instant.In(time.FixedZone("Asia/Ho_Chi_Minh", 7*60*60))
+	force := true
+	if in.InForceOnly != nil {
+		force = *in.InForceOnly
+	}
+	canonical := map[string]any{"country": in.Country, "query": in.Query, "as_of": in.AsOf, "in_force_only": force, "detail": detail, "limit": req.Limit, "release": rel}
+	raw, _ := json.Marshal([]any{rel, now.Format(time.DateOnly), canonical})
+	key := sha256.Sum256(raw)
+	if raw, ok := scope.Search.Get(rel, key); ok {
+		var data any
+		if err = json.Unmarshal(raw, &data); err != nil {
+			return nil, nil, err
+		}
+		return serializedResult(raw), data, nil
+	}
+	out, err := searchResolved(ctx, lease.Engine, rel, req, detail, validation)
+	if err != nil {
+		return nil, nil, err
+	}
+	result, data, err := encodeResult(out, false)
+	if err != nil {
+		return nil, nil, err
+	}
+	if err = validate(data); err != nil {
+		return nil, nil, err
+	}
+	if ctx.Err() == nil {
+		scope.Search.Put(rel, key, result.StructuredContent.(json.RawMessage))
+	}
+	return result, data, nil
+}
+
+func serializedResult(raw []byte) *mcp.CallToolResult {
+	return &mcp.CallToolResult{StructuredContent: json.RawMessage(raw), Content: []mcp.Content{&mcp.TextContent{Text: string(raw)}}}
+}

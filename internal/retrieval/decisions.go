@@ -2,7 +2,6 @@ package retrieval
 
 import (
 	"context"
-	"errors"
 	"time"
 )
 
@@ -26,7 +25,7 @@ func (e *Engine) LoadDecisions(ctx context.Context, groups ...[]Hit) error {
 	defer cancel()
 	rows, err := e.db.Query(ctx, `SELECT d.key,v.ordinal,v.layer,v.rule_version,v.before,v.after,v.actor_key,v.effect_date,v.relation_id,v.anchor,v.quote,v.artifact_sha256 FROM document d JOIN validity_decision v ON v.document_id=d.id WHERE d.key=ANY($1::text[]) ORDER BY d.key,v.ordinal`, keys)
 	if err != nil {
-		return errors.New("query validity decisions failed")
+		return databaseFailure("query validity decisions failed", err)
 	}
 	defer rows.Close()
 	decisions := map[string][]ValidityDecision{}
@@ -34,14 +33,14 @@ func (e *Engine) LoadDecisions(ctx context.Context, groups ...[]Hit) error {
 		var key string
 		var v ValidityDecision
 		var effect *time.Time
-		if err := rows.Scan(&key, &v.Ordinal, &v.Layer, &v.RuleVersion, &v.Before, &v.After, &v.ActorKey, &effect, &v.RelationID, &v.Anchor, &v.Quote, &v.ArtifactSHA256); err != nil {
-			return errors.New("read validity decision failed")
+		if err = rows.Scan(&key, &v.Ordinal, &v.Layer, &v.RuleVersion, &v.Before, &v.After, &v.ActorKey, &effect, &v.RelationID, &v.Anchor, &v.Quote, &v.ArtifactSHA256); err != nil {
+			return databaseFailure("read validity decision failed", err)
 		}
 		v.EffectDate = dateValue(effect)
 		decisions[key] = append(decisions[key], v)
 	}
-	if rows.Err() != nil {
-		return errors.New("read validity decisions failed")
+	if err = rows.Err(); err != nil {
+		return databaseFailure("read validity decisions failed", err)
 	}
 	for _, hits := range groups {
 		for i := range hits {

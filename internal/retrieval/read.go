@@ -41,26 +41,35 @@ func (e *Engine) Read(ctx context.Context, req ReadRequest) (ReadResult, error) 
 	defer cancel()
 	tx, err := e.db.BeginTx(ctx, pgx.TxOptions{AccessMode: pgx.ReadOnly, IsoLevel: pgx.RepeatableRead})
 	if err != nil {
-		return result, fmt.Errorf("begin read transaction: %w", err)
+		return result, databaseFailure("begin read transaction", err)
 	}
 	defer func() { _ = tx.Rollback(context.Background()) }()
 	if err = setLocal(ctx, tx, "statement_timeout", strconv.FormatInt(e.deadline().Milliseconds(), 10)); err != nil {
 		return result, fmt.Errorf("set read deadline: %w", err)
 	}
 	used := 0
+	var saves []func()
 	for i, c := range cursors {
 		if result.Items[i].Error != "" {
 			continue
 		}
-		page, cost, readErr := e.readItem(ctx, tx, c, req.Items[i].Next != "", ReadCallCap-used, i == 0)
+		page, cost, save, readErr := e.readItem(ctx, tx, c, req.Items[i].Next != "", ReadCallCap-used, i == 0)
 		if readErr != nil {
 			return ReadResult{}, fmt.Errorf("read item: %w", readErr)
 		}
 		used += cost
+		if save != nil {
+			saves = append(saves, save)
+		}
 		result.Items[i] = page
 	}
 	if err = tx.Commit(ctx); err != nil {
-		return ReadResult{}, fmt.Errorf("commit read transaction: %w", err)
+		return ReadResult{}, databaseFailure("commit read transaction", err)
+	}
+	if ctx.Err() == nil {
+		for _, save := range saves {
+			save()
+		}
 	}
 	return result, nil
 }
@@ -120,43 +129,69 @@ func readCursor(item ReadItem, release string) (cursor, string) {
 	return c, ""
 }
 
-func (e *Engine) readItem(ctx context.Context, tx pgx.Tx, c cursor, continued bool, budget int, first bool) (ItemResult, int, error) {
-	seq, code, err := e.readScope(ctx, tx, c)
+func (e *Engine) readItem(ctx context.Context, tx pgx.Tx, c cursor, continued bool, budget int, first bool) (ItemResult, int, func(), error) {
+	seq, code, hit, err := e.sequence(ctx, tx, c)
 	if err != nil {
-		return ItemResult{}, 0, err
+		return ItemResult{}, 0, nil, err
 	}
 	if code != "" {
 		if continued {
 			code = "invalid_next"
 		}
-		return ItemResult{Doc: seq.doc, Error: code}, 0, nil
+		return ItemResult{Doc: seq.doc, Error: code}, 0, nil, nil
+	}
+	if e.sequenceCache(ctx) != nil && seq.parts == nil {
+		seq.parts = make(map[int][]Unit)
 	}
 	local := c.Unit - seq.offset
 	emptyDocument := seq.document != nil && len(seq.units) == 0 && c.Unit == 0 && c.Part == 0
 	if continued && !emptyDocument {
 		if local < 0 || local >= len(seq.units) {
-			return ItemResult{Doc: seq.doc, Error: "invalid_next"}, 0, nil
+			return ItemResult{Doc: seq.doc, Error: "invalid_next"}, 0, nil, nil
 		}
-		parts, ok := unitParts(seq.units[local])
+		parts, ok := sequenceParts(seq, local)
 		if (ok && c.Part >= len(parts)) || (!ok && c.Part != 0) {
-			return ItemResult{Doc: seq.doc, Error: "invalid_next"}, 0, nil
+			return ItemResult{Doc: seq.doc, Error: "invalid_next"}, 0, nil, nil
 		}
 	}
-	return readPage(seq, c, budget, first)
+	if seq.document != nil {
+		e.statusDocument(seq.document, seq.source)
+	}
+	page, cost, err := readPage(seq, c, budget, first)
+	var save func()
+	if !hit && err == nil && page.Error == "" {
+		save = e.saveSequence(ctx, c, seq)
+	}
+	return page, cost, save, err
 }
 
 func readPage(seq readSequence, c cursor, budget int, first bool) (ItemResult, int, error) {
 	result := ItemResult{Doc: seq.doc, Gaps: seq.gaps}
 	used := 0
+	var firstParts []Unit
+	firstPartsChecked, firstPartsOK := false, false
 	if c.Unit == 0 && c.Part == 0 && seq.document != nil {
 		result.Document = seq.document
 		used = readSize(seq.document)
+		if used > ReadCallCap {
+			return ItemResult{Doc: seq.doc, Gaps: seq.gaps, Error: "unit_too_large"}, 0, nil
+		}
+		if len(seq.units) > 0 && used > ReadCallCap-PartSize {
+			firstParts, firstPartsOK = sequenceParts(seq, 0)
+			firstPartsChecked = true
+		}
+		if firstPartsOK && used+readSize(firstParts[0]) > ReadCallCap {
+			return ItemResult{Doc: seq.doc, Gaps: seq.gaps, Error: "unit_too_large"}, 0, nil
+		}
 		if used > budget && !first {
 			return ItemResult{Doc: seq.doc, NotRead: "call_cap", Next: encodeNext(c)}, 0, nil
 		}
 	}
 	for i := c.Unit - seq.offset; i < len(seq.units); i++ {
-		parts, ok := unitParts(seq.units[i])
+		parts, ok := firstParts, firstPartsOK
+		if i != 0 || !firstPartsChecked {
+			parts, ok = sequenceParts(seq, i)
+		}
 		if !ok {
 			result.Error = "unit_too_large"
 			return result, used, nil
@@ -193,7 +228,7 @@ func readPage(seq readSequence, c cursor, budget int, first bool) (ItemResult, i
 
 func (e *Engine) readScope(ctx context.Context, tx pgx.Tx, c cursor) (readSequence, string, error) {
 	item := c.Item
-	id, key, doc, code, err := e.readDocument(ctx, tx, item)
+	id, key, doc, source, code, err := e.readDocument(ctx, tx, item)
 	if err != nil || code != "" {
 		return readSequence{}, code, err
 	}
@@ -223,7 +258,7 @@ func (e *Engine) readScope(ctx context.Context, tx pgx.Tx, c cursor) (readSequen
 		seq.doc = key
 		return seq, "", err
 	}
-	seq := readSequence{doc: key, complete: true}
+	seq := readSequence{doc: key, source: source, complete: true}
 	if anchor == "" && item.From == "" {
 		seq.document = &doc
 		seq.units = readOutline(nodes)

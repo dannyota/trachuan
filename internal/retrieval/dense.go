@@ -2,7 +2,6 @@ package retrieval
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -30,26 +29,26 @@ func denseVector(v []float32) string {
 func denseQuery(ctx context.Context, tx pgx.Tx, query string, args ...any) ([]Candidate, error) {
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
-		return nil, errors.New("dense query failed")
+		return nil, databaseFailure("dense query failed", err)
 	}
 	defer rows.Close()
 	var result []Candidate
 	for rows.Next() {
 		var c Candidate
-		if rows.Scan(&c.ChunkID, &c.Cosine) != nil {
-			return nil, errors.New("read dense candidate failed")
+		if err = rows.Scan(&c.ChunkID, &c.Cosine); err != nil {
+			return nil, databaseFailure("read dense candidate failed", err)
 		}
 		c.Rank = len(result) + 1
 		result = append(result, c)
 	}
-	if rows.Err() != nil {
-		return nil, errors.New("read dense candidates failed")
+	if err = rows.Err(); err != nil {
+		return nil, databaseFailure("read dense candidates failed", err)
 	}
 	return result, nil
 }
 func setLocal(ctx context.Context, tx pgx.Tx, key, value string) error {
 	if _, err := tx.Exec(ctx, `SELECT set_config($1,$2,true)`, key, value); err != nil {
-		return fmt.Errorf("set retrieval transaction option: %w", errors.New("database setting failed"))
+		return fmt.Errorf("set retrieval transaction option: %w", databaseFailure("database setting failed", err))
 	}
 	return nil
 }

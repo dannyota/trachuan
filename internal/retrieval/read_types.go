@@ -56,9 +56,11 @@ type ReadResult struct {
 }
 
 type readSequence struct {
+	source   Document
 	doc      string
 	document *DocumentEntry
 	units    []Unit
+	parts    map[int][]Unit
 	gaps     []Gap
 	offset   int
 	more     bool

@@ -7,6 +7,17 @@ import (
 	"golang.org/x/text/unicode/norm"
 )
 
+func sequenceParts(seq readSequence, index int) ([]Unit, bool) {
+	if parts, ok := seq.parts[index]; ok {
+		return parts, true
+	}
+	parts, ok := unitParts(seq.units[index])
+	if ok && seq.parts != nil {
+		seq.parts[index] = parts
+	}
+	return parts, ok
+}
+
 func unitParts(u Unit) ([]Unit, bool) {
 	if readSize(u) <= PartSize {
 		return []Unit{u}, true

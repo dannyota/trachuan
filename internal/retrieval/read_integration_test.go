@@ -215,11 +215,23 @@ func TestRead_CallCapNotRead(t *testing.T) {
 }
 
 func TestRead_FirstItemAlwaysReturnsUnit(t *testing.T) {
+	_, e := readFixture(t)
+	r := readItems(t, e, ReadItem{Handle: "vn:1"}).Items[0]
+	cost := readSize(r.Document)
+	for _, unit := range r.Units {
+		cost += readSize(unit)
+	}
+	if r.Document == nil || len(r.Units) == 0 || r.NotRead != "" || cost > ReadCallCap {
+		t.Fatal("first item violated progress or the call cap")
+	}
+}
+
+func TestRead_OversizedDocumentTitleIsTerminal(t *testing.T) {
 	db, e := readFixture(t)
 	readExec(t, db, `UPDATE document SET title=$1 WHERE id=1`, strings.Repeat("x", ReadCallCap))
 	r := readItems(t, e, ReadItem{Handle: "vn:1"}).Items[0]
-	if r.Document == nil || len(r.Units) == 0 || r.NotRead != "" {
-		t.Fatal("first item made no progress")
+	if r.Error != "unit_too_large" || r.Next != "" || r.Document != nil || len(r.Units) != 0 || r.Complete {
+		t.Fatal("oversized document escaped the call cap")
 	}
 }
 

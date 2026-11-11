@@ -2,7 +2,6 @@ package retrieval
 
 import (
 	"context"
-	"errors"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -14,21 +13,21 @@ func hydrateTrees(ctx context.Context, tx pgx.Tx, ids []int64) (map[int64][]Prov
  ) SELECT t.group_id,t.id,t.parent_id,t.kind,t.label,t.heading,t.ordinal,t.preorder,t.text,t.anchor,t.node_id,d.country,d.key FROM tree t JOIN document d ON d.id=t.document_id ORDER BY t.group_id,t.preorder`
 	rows, err := tx.Query(ctx, treeSQL, ids)
 	if err != nil {
-		return nil, nil, errors.New("hydrate descendant provisions failed")
+		return nil, nil, databaseFailure("hydrate descendant provisions failed", err)
 	}
 	trees := map[int64][]Provision{}
 	for rows.Next() {
 		var id int64
 		var p Provision
-		if rows.Scan(&id, &p.ID, &p.ParentID, &p.Kind, &p.Label, &p.Heading, &p.Ordinal, &p.Preorder, &p.Text, &p.Identity.Anchor, &p.NodeID, &p.Identity.Country, &p.Identity.DocumentKey) != nil {
+		if err = rows.Scan(&id, &p.ID, &p.ParentID, &p.Kind, &p.Label, &p.Heading, &p.Ordinal, &p.Preorder, &p.Text, &p.Identity.Anchor, &p.NodeID, &p.Identity.Country, &p.Identity.DocumentKey); err != nil {
 			rows.Close()
-			return nil, nil, errors.New("read descendant provision failed")
+			return nil, nil, databaseFailure("read descendant provision failed", err)
 		}
 		trees[id] = append(trees[id], p)
 	}
-	if rows.Err() != nil {
+	if err = rows.Err(); err != nil {
 		rows.Close()
-		return nil, nil, errors.New("read descendant provisions failed")
+		return nil, nil, databaseFailure("read descendant provisions failed", err)
 	}
 	rows.Close()
 	const relationSQL = `WITH RECURSIVE tree AS (
@@ -41,22 +40,22 @@ func hydrateTrees(ctx context.Context, tx pgx.Tx, ids []int64) (map[int64][]Prov
  LEFT JOIN LATERAL (SELECT anchor FROM provision WHERE id=r.source_provision_id OFFSET 0) sp ON true LEFT JOIN LATERAL (SELECT anchor FROM provision WHERE id=r.target_provision_id OFFSET 0) tp ON true`
 	rows, err = tx.Query(ctx, relationSQL, ids)
 	if err != nil {
-		return nil, nil, errors.New("hydrate relations failed")
+		return nil, nil, databaseFailure("hydrate relations failed", err)
 	}
 	rels := map[int64][]SourceRelation{}
 	for rows.Next() {
 		var id int64
 		var r SourceRelation
 		v := &r.Value
-		if rows.Scan(&id, &v.SourceKey, &v.TargetKey, &v.SourceNumber, &v.TargetNumber, &v.SourceAnchor, &v.TargetAnchor, &v.Kind, &v.RawLabel, &v.Evidence, &v.Method, &v.SourceResolved, &v.TargetResolved, &v.SourceDocKey, &v.TargetDocKey, &r.ArtifactSHA256, &r.Ordinal, &r.SourceInHit, &r.TargetInHit) != nil {
+		if err = rows.Scan(&id, &v.SourceKey, &v.TargetKey, &v.SourceNumber, &v.TargetNumber, &v.SourceAnchor, &v.TargetAnchor, &v.Kind, &v.RawLabel, &v.Evidence, &v.Method, &v.SourceResolved, &v.TargetResolved, &v.SourceDocKey, &v.TargetDocKey, &r.ArtifactSHA256, &r.Ordinal, &r.SourceInHit, &r.TargetInHit); err != nil {
 			rows.Close()
-			return nil, nil, errors.New("read relation failed")
+			return nil, nil, databaseFailure("read relation failed", err)
 		}
 		rels[id] = append(rels[id], r)
 	}
-	if rows.Err() != nil {
+	if err = rows.Err(); err != nil {
 		rows.Close()
-		return nil, nil, errors.New("read relations failed")
+		return nil, nil, databaseFailure("read relations failed", err)
 	}
 	rows.Close()
 	return trees, rels, nil

@@ -2,7 +2,6 @@ package retrieval
 
 import (
 	"context"
-	"errors"
 	"strconv"
 	"strings"
 
@@ -29,20 +28,20 @@ func lexicalQuery(ctx context.Context, tx pgx.Tx, args ...any) ([]Candidate, err
 	sql := `SELECT c.id, -(c.sparse <#> $1::sparsevec) AS score FROM chunk c JOIN document d ON d.id=c.document_id WHERE ` + eligibility + contextScope + ` AND -(c.sparse <#> $1::sparsevec) > 0 ORDER BY score DESC,c.id LIMIT $5`
 	rows, err := tx.Query(ctx, sql, args...)
 	if err != nil {
-		return nil, errors.New("lexical query failed")
+		return nil, databaseFailure("lexical query failed", err)
 	}
 	defer rows.Close()
 	var result []Candidate
 	for rows.Next() {
 		var c Candidate
-		if rows.Scan(&c.ChunkID, &c.BM25) != nil {
-			return nil, errors.New("read lexical candidate failed")
+		if err = rows.Scan(&c.ChunkID, &c.BM25); err != nil {
+			return nil, databaseFailure("read lexical candidate failed", err)
 		}
 		c.Rank = len(result) + 1
 		result = append(result, c)
 	}
-	if rows.Err() != nil {
-		return nil, errors.New("read lexical candidates failed")
+	if err = rows.Err(); err != nil {
+		return nil, databaseFailure("read lexical candidates failed", err)
 	}
 	return result, nil
 }

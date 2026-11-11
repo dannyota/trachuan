@@ -22,17 +22,13 @@ func (e *Engine) Collect(ctx context.Context, p Prepared, depths Depths) (Arms, 
 	if err != nil {
 		return Arms{}, errors.New("encode lexical query failed")
 	}
-	date := e.options.Now().In(time.FixedZone("Vietnam", 7*60*60)).Format("2006-01-02")
+	date := e.searchDate(p.Request)
 	historical := p.Request.AsOf != nil
-	if historical {
-		d := p.Request.AsOf
-		date = time.Date(d.Year, d.Month, d.Day, 0, 0, 0, 0, time.UTC).Format("2006-01-02")
-	}
 	ctx, cancel := context.WithTimeout(ctx, e.deadline())
 	defer cancel()
 	tx, err := e.db.BeginTx(ctx, pgx.TxOptions{AccessMode: pgx.ReadOnly})
 	if err != nil {
-		return Arms{}, errors.New("begin retrieval failed")
+		return Arms{}, databaseFailure("begin retrieval failed", err)
 	}
 	defer func() { _ = tx.Rollback(context.Background()) }()
 	if err = setLocal(ctx, tx, "statement_timeout", strconv.FormatInt(e.deadline().Milliseconds(), 10)); err != nil {
@@ -112,7 +108,18 @@ func (e *Engine) Collect(ctx context.Context, p Prepared, depths Depths) (Arms, 
 		}
 	}
 	if err = tx.Commit(ctx); err != nil {
-		return Arms{}, errors.New("commit retrieval failed")
+		return Arms{}, databaseFailure("commit retrieval failed", err)
 	}
 	return result, nil
+}
+
+func (e *Engine) searchDate(req Request) string {
+	if req.AsOf != nil {
+		return req.AsOf.String()
+	}
+	instant := req.Instant
+	if instant.IsZero() {
+		instant = e.options.Now()
+	}
+	return instant.In(time.FixedZone("Asia/Ho_Chi_Minh", 7*60*60)).Format(time.DateOnly)
 }
