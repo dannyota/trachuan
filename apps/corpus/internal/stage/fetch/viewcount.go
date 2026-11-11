@@ -16,6 +16,8 @@ func removeViewCount(input []byte) ([]byte, error) {
 	}
 	dec := json.NewDecoder(bytes.NewReader(input))
 	_, _ = dec.Token()
+	var out []byte
+	cursor := 0
 	for dec.More() {
 		key, _ := dec.Token()
 		var value json.RawMessage
@@ -32,14 +34,16 @@ func removeViewCount(input []byte) ([]byte, error) {
 			return nil, fmt.Errorf("cut view count: %w", err)
 		}
 		if changed {
-			result := make([]byte, 0, len(input)-len(value)+len(cut))
-			result = append(result, input[:start]...)
-			result = append(result, cut...)
-			result = append(result, input[end:]...)
-			return removeViewCount(result)
+			out = append(out, input[cursor:start]...)
+			out = append(out, cut...)
+			cursor = end
 		}
 	}
-	return input, nil
+	if cursor == 0 {
+		return input, nil
+	}
+	out = append(out, input[cursor:]...)
+	return out, nil
 }
 
 func cutViewCount(data []byte) ([]byte, bool, error) {
@@ -48,6 +52,9 @@ func cutViewCount(data []byte) ([]byte, bool, error) {
 		return nil, false, fmt.Errorf("decode data object: %w", err)
 	}
 	before := int(dec.InputOffset())
+	cursor := 0
+	var out []byte
+	changed := false
 	for dec.More() {
 		key, err := dec.Token()
 		if err != nil {
@@ -58,40 +65,40 @@ func cutViewCount(data []byte) ([]byte, bool, error) {
 			return nil, false, fmt.Errorf("decode data value: %w", err)
 		}
 		end := int(dec.InputOffset())
-		if key != "viewCount" {
-			before = end
-			continue
+		if key == "viewCount" {
+			start := before
+			for start < len(data) && (isJSONSpace(data[start]) || data[start] == ',') {
+				start++
+			}
+			out = append(out, data[cursor:start]...)
+			next := end
+			for next < len(data) && isJSONSpace(data[next]) {
+				next++
+			}
+			if next < len(data) && data[next] == ',' {
+				cursor = next + 1
+			} else {
+				last := len(out) - 1
+				for last >= 0 && isJSONSpace(out[last]) {
+					last--
+				}
+				if last >= 0 && out[last] == ',' {
+					out = out[:last]
+				}
+				cursor = end
+			}
+			changed = true
 		}
-		start := before
-		for start < len(data) && isJSONSpace(data[start]) {
-			start++
-		}
-		comma := -1
-		if start < len(data) && data[start] == ',' {
-			comma = start
-			start++
-		}
-		for start < len(data) && isJSONSpace(data[start]) {
-			start++
-		}
-		next := end
-		for next < len(data) && isJSONSpace(data[next]) {
-			next++
-		}
-		if next < len(data) && data[next] == ',' {
-			end = next + 1
-		} else if comma >= 0 {
-			start = comma
-		}
-		result := make([]byte, 0, len(data)-(end-start))
-		result = append(result, data[:start]...)
-		result = append(result, data[end:]...)
-		return result, true, nil
+		before = end
 	}
 	if _, err := dec.Token(); err != nil {
 		return nil, false, fmt.Errorf("decode data object end: %w", err)
 	}
-	return data, false, nil
+	if !changed {
+		return data, false, nil
+	}
+	out = append(out, data[cursor:]...)
+	return out, true, nil
 }
 
 func isJSONSpace(b byte) bool {

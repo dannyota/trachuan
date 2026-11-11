@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"danny.vn/trachuan/apps/corpus/internal/stage"
@@ -81,6 +82,10 @@ func TestRemoveViewCount_ExactDeletedSpan(t *testing.T) {
 		{"last whitespace", "{\"data\":{\n  \"x\":0 \n ,\n  \"viewCount\":1 \n}}", "{\"data\":{\n  \"x\":0 \n  \n}}"},
 		{"sole whitespace", "{\"data\":{\n  \"viewCount\":1 \n}}", "{\"data\":{\n   \n}}"},
 		{"duplicate", `{"data":{"x":0,"viewCount":1 ,"viewCount":2}}`, `{"data":{"x":0}}`},
+		{"duplicates last", `{"data":{"x":0,"viewCount":1,"viewCount":2}}`, `{"data":{"x":0}}`},
+		{"duplicates sole", `{"data":{"viewCount":1,"viewCount":2}}`, `{"data":{}}`},
+		{"duplicates last whitespace", "{\"data\":{\"x\":0 \n , \n \"viewCount\":1 , \n \"viewCount\":2 \n}}", "{\"data\":{\"x\":0 \n  \n}}"},
+		{"duplicates sole whitespace", "{\"data\":{ \n \"viewCount\":1 , \n \"viewCount\":2 \n}}", "{\"data\":{ \n  \n  \n}}"},
 		{"escaped key", `{"data":{"view\u0043ount":1,"x":0}}`, `{"data":{"x":0}}`},
 		{"nested and string", `{"viewCount":1,"data":{"x":{"viewCount":2},"s":"viewCount","viewCount":3}}`, `{"viewCount":1,"data":{"x":{"viewCount":2},"s":"viewCount"}}`},
 		{"multiple data", `{"data":{"viewCount":1,"a":1},"data":null,"data":{"b":2,"viewCount":3}}`, `{"data":{"a":1},"data":null,"data":{"b":2}}`},
@@ -103,5 +108,16 @@ func TestCutViewCount_DecoderErrors(t *testing.T) {
 		if _, _, err := cutViewCount([]byte(input)); err == nil {
 			t.Errorf("accepted malformed object %q", input)
 		}
+	}
+}
+
+func TestRemoveViewCount_ManyDuplicates(t *testing.T) {
+	input := `{"data":{"x":0,` + strings.Repeat(`"viewCount":1,`, 100000) + `"y":2}}`
+	got, err := removeViewCount([]byte(input))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != `{"data":{"x":0,"y":2}}` {
+		t.Fatalf("got %q", got)
 	}
 }
