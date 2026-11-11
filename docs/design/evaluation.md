@@ -83,11 +83,13 @@ There is one mapping entry per original expectation, including absent documents.
 Resolved entries need at least one unique adjudicated identity; absent entries
 have no alternatives and are always misses. An absent entry names every
 original/alternate number searched and why no corpus identity is available.
-Ambiguous or missing entries are `mapping_incomplete`, not invented absences.
-Re-adjudicate, never auto-credit, when [presence](scope-adoption.md#presence)
-changes. A document appears when it has the searched number; for an expectation
-naming an article without relation credit, a document with no provision anchor
-stays in the reason. Never invent a key or anchor from a label.
+Ambiguous mappings or missing entries are `mapping_incomplete` for that case,
+not invented absences. If an absent document becomes present, or a resolved one
+stops being present ([presence](scope-adoption.md#presence)), require
+re-adjudication, never auto-credit it. A document appears when it has the
+searched number; for an expectation naming an article without relation credit, a
+document with no provision anchor stays in the reason. Do not invent a document
+key or provision anchor from a label.
 
 Validate every recorded identity against the run's present documents: document
 key and normalized number, provision anchor, both relation endpoints and their
@@ -244,8 +246,9 @@ versions; mismatches invalidate reuse.
 `not_run`, `limitations`, and the counts in
 [scope adoption](scope-adoption.md#readers-and-evaluation). Each metric stores
 counts as well as the value. `coverage` lists each missing original/alternate
-document number and affected case/citation, including the known omissions of the
-ingest research; never remove one because the source sweep did not find it.
+document number and affected case/citation, including the five known omissions
+in the ingest research. Never remove them because the source sweep did not find
+them.
 
 Only `status:"complete"` reports enter a successful stage artifact. Each cohort
 has `case_count`, `positive_count`, `negative_count`, `rejection_count`,

@@ -24,15 +24,15 @@ evaluation in `apps/corpus/internal/evaluation`. The stage uses the existing
 `Stage` interface; `Rows` does not create workshop vector or corpus tables.
 
 Plan one item keyed `<country>/<rel>`. Refuse planning while any predecessor
-item is pending or failed. Gap items are allowed for diagnostic builds; release
-still requires acceptance. Read one consistent workshop snapshot to produce the
-upstream inventory defined in [scope adoption](scope-adoption.md#inventory):
-every predecessor item through `embed`, expected keys, the source-list hash and
-gaps. Gap acceptance is a release gate, not a build input, so it is never
-hashed. `Process` recomputes the input hash from the inventory and pinned map
-and fails with non-retryable `inventory_changed` when it differs from the
-planned input hash. Do not hash workshop sequence IDs, mutable paths or
-generation numbers.
+item is pending or failed. Gap items are allowed for diagnostic builds and
+remain visible; release still requires acceptance. Read one consistent workshop
+snapshot to produce the upstream inventory defined in
+[scope adoption](scope-adoption.md#inventory): every predecessor item through
+`embed`, expected keys, the source-list hash and gaps. Gap acceptance is a
+release gate, not a build input, so it is never hashed. `Process` recomputes the
+input hash from the inventory and pinned map and fails with non-retryable
+`inventory_changed` when it differs from the planned input hash. Do not hash
+workshop sequence IDs, mutable paths or generation numbers.
 
 For inventory diagnostics, derive `identity_inventory_hash` from the identity
 projection in [scope adoption](scope-adoption.md#inventory). This hash does not
@@ -42,8 +42,9 @@ production, review and per-case identity validation. Recipe freezing follows the
 [pipeline snapshot](pipeline.md#shape); ingest can finish before index recipes
 are appended. The reviewed map is input data, not a recipe.
 
-Freeze the evaluation civil date from the first eight digits of `rel`; an
-invalid date is a configuration failure. It feeds calibration and eval.
+Freeze the evaluation civil date from the first eight digits of `rel`, parsed as
+a real calendar date; an invalid date is a configuration failure. The same date
+feeds calibration and eval, including retries after midnight.
 
 Build input hash is
 `stage.RecipeHash("build-input",label,country,rel, source_manifest_hash,decimal_schema_version,identity_map_sha256)`,
