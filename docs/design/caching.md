@@ -26,13 +26,13 @@ the rules.
   without a cache.
 - A cache never adds work, waits or new failure modes to a miss. A miss computes
   exactly as the server does without a cache, with the same allocations,
-  deadline and cancellation, and stores the value afterwards only if it fits. A
-  request whose key another request is already computing waits for that result
-  within its own deadline and cancellation; when the shared computation fails or
-  the waiting request ends, it gets the same error it would have got alone.
-  Memory used while computing is therefore the same as without a cache and is
-  bounded by the read path itself (per-account limits, admission, the read call
-  cap and item limits); the cache adds at most its byte cap of retained values.
+  deadline and cancellation, and stores the value afterwards only if it fits.
+  Concurrent misses on one key compute independently, each under its own
+  deadline and cancellation, and each may store its value; there is no shared
+  in-flight computation. Memory used while computing is therefore the same as
+  without a cache and is bounded by the read path itself (per-account limits,
+  admission, the read call cap and item limits); the cache adds at most its byte
+  cap of retained values.
 - A hit still counts against the caller's per-account limit, keeps the
   credential checks, and returns exactly the bytes a miss would have produced.
 - Metrics report hits, misses, evictions and bytes per cache, with no key or
