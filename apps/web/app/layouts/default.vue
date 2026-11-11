@@ -1,19 +1,21 @@
 <script setup lang="ts">
 import { messagesFor, type Language } from '../../i18n'
+import { loginUrl } from '../api/next'
+import { useSessionStore } from '../stores/session'
 
 const requestLanguage = useRequestHeader('x-trachuan-language')
 const language = useState<Language>('language', () => requestLanguage === 'en' ? 'en' : 'vi')
 const messages = computed(() => messagesFor(language.value))
 const route = useRoute()
-const signedIn = ref(false)
-const signIn = computed(() => `/api/v1/auth/google/start?next=${encodeURIComponent(route.path)}`)
+const session = useSessionStore()
+const api = useApi()
+const signIn = computed(() => loginUrl(route.fullPath))
 
 onMounted(async () => {
   try {
-    const response = await fetch('/api/v1/me', { credentials: 'same-origin' })
-    signedIn.value = response.ok
+    if (session.status === 'unknown') await api.loadSession()
   } catch {
-    signedIn.value = false
+    session.status = 'signed-out'
   }
 })
 function toggleLanguage() {
@@ -35,7 +37,7 @@ useHead(() => ({ htmlAttrs: { lang: language.value } }))
         <NuxtLink to="/sources">{{ messages.sources }}</NuxtLink>
       </nav>
       <button type="button" @click="toggleLanguage">{{ messages.language }}</button>
-      <NuxtLink v-if="signedIn" to="/account">{{ messages.account }}</NuxtLink>
+      <NuxtLink v-if="session.status === 'signed-in'" to="/account">{{ messages.account }}</NuxtLink>
       <a v-else :href="signIn">{{ messages.signIn }}</a>
     </header>
     <main><slot /></main>
