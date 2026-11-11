@@ -58,6 +58,11 @@ other ID must come from [registration](#registration). All clients are public.
 For a CIMD document the method is `none` when `token_endpoint_auth_method` is
 absent or `none` and `token_endpoint_auth_methods_supported`, when present,
 contains `none`; a client whose either field names any other method is rejected.
+A CIMD client's grant types are the intersection of its advertised `grant_types`
+(absent means `authorization_code`) with `authorization_code` and
+`refresh_token`; the client is rejected when the intersection is empty. Every
+client stores its effective grant set: authorize and code exchange require
+`authorization_code`, refresh requires `refresh_token`.
 
 CIMD fetching follows auth.md (HTTPS, DNS name, global unicast addresses only,
 validated dial, no redirects, `client_id` equal to the fetched URL) with the
