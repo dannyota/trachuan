@@ -199,11 +199,19 @@ Old-product floors are those in [testing](../../instructions/testing.md),
 checked independently for exact and serving ANN hybrid. Report each as `pass`,
 `fail`, or `unavailable` with numerator, denominator, value and floor. Any
 unavailable required metric cannot pass. Development floors use the same records
-and are `not_run` while the development case file is empty; taxonomy and
-filtered cases are `out_of_scope`, never passing. `quality_pass` means both
-hybrid modes meet all old-product floors, and development floors once
-development cases exist, and all three rejection checks pass; legacy has no
-gate. `release_eligible` is always false in this baseline, including when
+and are `not_run` while the development case file is empty. Taxonomy
+classification floors are `out_of_scope` until the LLM layer lands. Filtered
+cases run when the release serves nodes: each golden case whose expected
+citations all have effective nodes is searched again with `nodes` set to the
+deepest effective nodes of those citations (at most 20), and passes when its
+filtered recall@8 is at least its unfiltered recall@8 and every expected
+citation appears within the first 100 hits of the paged list
+([retrieval](retrieval.md#filter-contract)); the filter gate passes when every
+such case passes and is `out_of_scope` when the release serves no nodes.
+`quality_pass` means both hybrid modes meet all old-product floors, and
+development floors once development cases exist, the filter gate when the
+release serves nodes, and all three rejection checks pass; legacy has no gate.
+`release_eligible` is always false in this baseline, including when
 `quality_pass` is true. Measured failures leave the stage done and the run
 evaluated, with `quality_pass:false` and `release_eligible:false`. Per-case
 `mapping_incomplete` is a reported diagnostic, not a run failure. Malformed

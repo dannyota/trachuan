@@ -27,17 +27,28 @@ filtering and the separate non-current group follow
 [recipe 1](retrieval-recipe.md#validity-and-evidence). Provision-level repeal
 relations appear as warnings, never as a changed stamp.
 
-## Subject filter contract
+## Filter contract
 
-This contract lands with taxonomy. The index and evaluation work implements
-unfiltered search only and reports filtered evaluation as out of scope.
+Filters reorder, never hide. `nodes[]`, `doc_types[]`, `issuers[]` and
+`documents[]` form one predicate: a hit is inside when it matches every kind the
+request names, and a kind matches when any of its values does. A node matches
+when the hit provision has an effective assignment in that node's subtree
+([taxonomy](taxonomy.md#serving)); a node code that is not served is
+`invalid_request`. `doc_types` and `issuers` match the hit document's `type` and
+`issuer` after trimming and NFC normalization; `documents` match document keys.
+`corpus_status` lists the release's document types and issuers with counts, so
+callers pick values that exist.
 
-Retrieval always runs over the whole country corpus. The response carries one
-ranked list where each hit has `in_filter: true|false`. Hits inside the
-requested `nodes` come first in rank order, then outside hits in rank order, up
-to `limit`; `outside_filter_count` gives the total outside. A cursor pages
-through the rest, so every hit the unfiltered search would return stays
-reachable.
+Retrieval always runs over the whole country corpus. When any filter is given,
+the response carries one ranked list where each hit has `in_filter: true|false`:
+inside hits come first in rank order, then outside hits in rank order, up to
+`limit`; `outside_filter_count` gives the total outside. `next_cursor` pages
+through the rest of the same list, so every hit the unfiltered search would
+return stays reachable. The cursor is opaque and holds the release, the offset
+and a SHA-256 digest of the request without `cursor` and `limit`, never query
+text; a cursor whose digest or release does not match the request is
+`invalid_request` or `release_expired`. Without filters the list is the
+unfiltered ranking and the same cursor pages it.
 
 The filter changes order, so the recall guarantee is stated per case: for a
 golden case whose expected citations lie inside the selected nodes, filtered
@@ -58,8 +69,8 @@ error, never silently different text.
 | Tool            | Input                                                                                                                                      | Output                                                                                                                                                                                                                                                                                                                                                                                     |
 | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `guide`         | `country`                                                                                                                                  | Usage, Vietnamese rule, citation format, the reading flow in [search results](mcp-results.md#guide), suggested flow `taxonomy` then `search` with `nodes` then `read`                                                                                                                                                                                                                      |
-| `corpus_status` | `country`                                                                                                                                  | Release, counts of documents, provisions, nodes and gaps, newest source date                                                                                                                                                                                                                                                                                                               |
-| `taxonomy`      | `country`, `node` code or empty, `depth`, optional `q`                                                                                     | Subtree with `code`, `name`, `description`, provision and document counts; `q` searches names and descriptions                                                                                                                                                                                                                                                                             |
+| `corpus_status` | `country`                                                                                                                                  | Release, counts of documents, provisions, served nodes and gaps, newest source date, document types and issuers with counts                                                                                                                                                                                                                                                                |
+| `taxonomy`      | `country`, `node` code or empty, `depth`, optional `q`                                                                                     | Served subtree in sibling order with `code`, `name`, `description`, `level`, `origin`, provision and document counts, to `depth` levels below `node` (roots when empty); `q` instead returns served nodes whose name or description contains it, case and diacritics folded                                                                                                                |
 | `search`        | `country`, `query`, `nodes[]`, `as_of`, `in_force_only`, `doc_types[]`, `issuers[]`, `documents[]`, `detail`, `limit`, `cursor`, `release` | `documents` once per document with metadata, status and related pointers; ranked hits with handle, citation path, verbatim snippet and `complete`, nodes, warnings, `in_filter`; `detail:"full"` returns recipe text, fragments, score and relations instead of the snippet; plus `outside_filter_count`, `gaps[]`, `abstain`, `release`, `next_cursor` ([search results](mcp-results.md)) |
 | `read`          | `country`, `items[]` of `handle`, number, `from`/`to` range, `relations`, or `next` token; `release`                                       | Per item: a document's metadata and outline, a provision's verbatim text with ancestor lead-ins and warnings, or its relation list; a per-call cap with fixed parts and opaque `next` tokens, so every call makes progress ([search results](mcp-results.md#read))                                                                                                                         |
 | `quality_gaps`  | `country`, `kind`, `node`, `cursor`                                                                                                        | Paged gap list                                                                                                                                                                                                                                                                                                                                                                             |
@@ -69,7 +80,8 @@ RFC 9728 metadata at `/.well-known/oauth-protected-resource`.
 
 ## Web API
 
-`POST /api/v1/search`, `GET /api/v1/taxonomy`, `GET /api/v1/documents/{key}`,
-auth and account endpoints ([web API](web-api.md)). The OpenAPI document in
-`packages/schema` is the contract; the Nuxt client is generated from it and CI
-fails on drift. Limits are in [budgets](budgets.md).
+`POST /api/v1/search`, `GET /api/v1/public/taxonomy`,
+`GET /api/v1/documents/{key}`, auth and account endpoints
+([web API](web-api.md)). The OpenAPI document in `packages/schema` is the
+contract; the Nuxt client is generated from it and CI fails on drift. Limits are
+in [budgets](budgets.md).

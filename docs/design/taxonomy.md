@@ -25,6 +25,33 @@ level, and a code is never reused. A GUID missing from a later import marks its
 node `retired`. `taxonomy_version` is the hash of the mapping file, the custom
 file and the overrides file.
 
+## Inputs
+
+The package is an input artifact, never committed: `BoPhapDienDienTu.zip`,
+SHA-256 `dc2fc7d14e208b551e3e7667e911dcfd24d8f246a7e24d3d24ad7507cd4b5ff5`, from
+`github.com/definev/phapdien` `data/` at a pinned commit, fetched into
+`work/phapdien/` by a script that checks the hash. Tests use a small synthetic
+package with the same file shapes and freshly written text. Three files are
+committed under `taxonomy/`:
+
+- `mapping.yaml`: the package SHA-256, then one entry per package node with its
+  GUID, code, level, kind (`chude`, `demuc`, `phan`, `chuong`, `muc`), parent
+  code, sibling ordinal and status, and one entry per flattened node (a dropped
+  mục or a tiểu mục) naming the code it folds into. `corpus taxonomy import`
+  rewrites it from the package under the code rules above, deterministically,
+  and never reuses a code; a person reviews the diff and commits it.
+- `custom.yaml`: custom nodes, each with code, parent code, name and a
+  one-sentence description; empty until a subject needs one.
+- `overrides.yaml`: manual entries, each with document key, provision anchor,
+  node code, `exclude` and a reason; empty until reviewed.
+
+`taxonomy_version` is the SHA-256 of the three files' bytes, each prefixed with
+its length, in the order mapping, custom, overrides; it enters the build input
+hash. A build refuses a package whose hash differs from the one in
+`mapping.yaml`. Package nodes take their names from the package and have an
+empty description; custom nodes carry their own. Package article text and notes
+are read only to place articles and are never stored or served (ADR 0004).
+
 ## Classification layers
 
 Precedence and replacement within a node family are defined in [data](data.md)
@@ -32,7 +59,14 @@ under the corpus rules.
 
 1. Seed. An article whose VBPL ItemID and article anchor match a placed article
    in the package receives that node down to its deepest imported level,
-   `confidence = 1.0`.
+   `confidence = 1.0`. The ItemID is the one in the article's first source link;
+   it matches the release document whose key is `vn:vbpl:<ItemID>`, of any
+   class. The article number is the one after `Dieu_` in that link, else the
+   first `(Điều <n>` in the note, and matches the provision anchored `dieu-<n>`
+   in that document. An article listed twice yields one assignment. A document
+   that is not in the release is expected and yields nothing; a document found
+   without the article yields a coverage gap `seed_article_missing` naming the
+   document and the node. Number-only and consolidation matches are not seeds.
 2. LLM in batches over public legal text, after `chunk` and `embed` have run:
    - One request per document (title, scope article, table of contents, VBPL
      field) yields level-2 nodes.
@@ -45,6 +79,21 @@ under the corpus rules.
      calibrated on the labeled set to reach precision at least 0.85, then frozen
      in the release; below it, no assignment and a gap "unassigned".
 3. Manual overrides in `taxonomy/overrides.yaml`.
+
+## Serving
+
+A node is served when it is `active` and its subtree holds at least one
+assignment that survives precedence; any other code is unknown to every read
+path and filter. Assignments sit on the provision they name (seeds on articles);
+a provision's effective nodes are the surviving assignments on it and on its
+ancestors, so a clause inherits its article's nodes. Each node carries its
+sibling `ordinal` (package order, custom nodes after package siblings in file
+order) and the counts of distinct provisions with an effective assignment in its
+subtree and of their documents; the build computes them. A release whose
+assignments come only from seeds and overrides serves them without the
+classification floors below, which gate the LLM layer; it must still pass the
+subject filter contract in [retrieval](retrieval.md) on the evaluation suite
+([evaluation](evaluation.md)).
 
 ## Evaluation gate
 
