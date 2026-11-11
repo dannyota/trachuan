@@ -78,9 +78,9 @@ func TestResolver_DefaultOpenPinsReleaseQueryRecipe(t *testing.T) {
 		service := &recipeTransport{recipe: queryA}
 		client := embedding.NewClient("http://embedder.invalid", &http.Client{Transport: service})
 		var pins []string
-		r.EmbedderFor = func(hash string) retrieval.Embedder {
+		r.EmbedderFor = func(hash string, expected embedding.Recipe) retrieval.Embedder {
 			pins = append(pins, hash)
-			return embedding.Query{Client: client, RecipeHash: hash}
+			return embedding.Query{Client: client, RecipeHash: hash, ExpectedRecipe: &expected}
 		}
 		t.Cleanup(r.Close)
 		assertPrepared := func(lease *Lease, hash string) {
@@ -114,14 +114,14 @@ func TestResolver_DefaultOpenRejectedRecipeIsNotExpired(t *testing.T) {
 	setQueryRecipe(t, db, query)
 	service := &recipeTransport{recipe: embedding.QueryRecipe1()}
 	client := embedding.NewClient("http://embedder.invalid", &http.Client{Transport: service})
-	r.EmbedderFor = func(hash string) retrieval.Embedder {
-		return embedding.Query{Client: client, RecipeHash: hash}
+	r.EmbedderFor = func(hash string, expected embedding.Recipe) retrieval.Embedder {
+		return embedding.Query{Client: client, RecipeHash: hash, ExpectedRecipe: &expected}
 	}
 	lease, err := r.Resolve(context.Background(), "vn", "")
 	if lease != nil {
 		defer lease.Done()
 	}
-	if lease != nil || err == nil || errors.Is(err, ErrExpired) || !strings.Contains(err.Error(), "read embedder recipe failed") {
+	if lease != nil || err == nil || errors.Is(err, ErrExpired) || !strings.Contains(err.Error(), `read embedder recipe failed: query recipe mismatch: runtime_library: expected "release query runtime", running "onnxruntime 1.31.1"`) {
 		t.Fatalf("lease=%+v error=%v", lease, err)
 	}
 	if len(r.entries) != 0 {

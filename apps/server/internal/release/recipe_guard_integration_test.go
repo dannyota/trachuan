@@ -22,7 +22,7 @@ func TestResolver_TestRecipeRequiresLoopback(t *testing.T) {
 	if _, execErr := db.Exec(context.Background(), `UPDATE release SET dense_recipe=$1`, data); execErr != nil {
 		t.Fatal(execErr)
 	}
-	resolver.EmbedderFor = func(string) retrieval.Embedder { return recipeEmbedder{recipe: recipe} }
+	resolver.EmbedderFor = func(string, embedding.Recipe) retrieval.Embedder { return recipeEmbedder{recipe: recipe} }
 	refused := 0
 	resolver.OnTestRecipeRefused = func() { refused++ }
 	if _, resolveErr := resolver.Resolve(context.Background(), "vn", ""); resolveErr == nil {

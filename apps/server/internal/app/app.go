@@ -111,8 +111,8 @@ func serve(ctx context.Context, cfg config, pool *pgxpool.Pool, queries *store.Q
 	vectors := embedcache.NewVectors(clock)
 	client := embedding.NewClient(cfg.embedderURL, &http.Client{Timeout: 2 * time.Second})
 	resolver := &release.Resolver{Auth: activeStore{queries}, URLTemplate: cfg.corpusURL, Clock: clock,
-		EmbedderFor: func(hash string) retrieval.Embedder {
-			return &cachedQuery{query: embedding.Query{Client: client, RecipeHash: hash}, vectors: vectors}
+		EmbedderFor: func(hash string, expected embedding.Recipe) retrieval.Embedder {
+			return &cachedQuery{query: embedding.Query{Client: client, RecipeHash: hash, ExpectedRecipe: &expected}, vectors: vectors}
 		},
 		OnActivate: caches.ActivateRelease, AllowTestRecipe: cfg.strictDeployment,
 		OnTestRecipeRefused: func() { _, _ = fmt.Fprintln(stderr, "test embedding recipe refused") }}

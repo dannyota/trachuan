@@ -53,7 +53,7 @@ jobs:
                 apps/docembed/*|.github/workflows/*) docembed=true ;;
               esac
               case "$path" in
-                apps/queryembed/*|internal/embedding/*|go.mod|go.sum|scripts/queryembed-native.sh|.github/workflows/ci.yml) queryembed=true ;;
+                apps/queryembed/*|internal/embedding/*|go.mod|go.sum|Makefile|scripts/queryembed-native.sh|.github/workflows/ci.yml) queryembed=true ;;
               esac
               case "$path" in
                 apps/web/*|packages/schema/*|.tool-versions|.github/workflows/ci.yml) web=true ;;
@@ -254,6 +254,8 @@ jobs:
           go-version-file: go.mod
           cache: true
           cache-dependency-path: go.sum
+      # The query recipe pins the Go version; build with exactly that toolchain.
+      - run: echo "GOTOOLCHAIN=go$(awk '$1 == "go" { print $2; exit }' go.mod)" >> "$GITHUB_ENV"
       - run: bash scripts/queryembed-native.sh linux-arm64
       - run: go test -race -tags ort ./apps/queryembed/...
       - uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
