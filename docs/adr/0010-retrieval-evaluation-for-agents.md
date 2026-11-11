@@ -128,3 +128,10 @@ real token spend.
   classes with non-regression on both cohorts instead of a sealed paired
   interval, and calibration on old product and development together.
   `work/eval-sealed/` is not created.
+- 2026-11-11: the development cohort landed with 65 cases (50 positive, 15
+  negative, 110 expected citations) instead of the 40 planned, because the
+  authoring produced more usable scenarios than needed and more cases make the
+  measurement steadier; scenarios and queries were written by Claude subagents
+  without provision text, labels adjudicated against official text of run
+  vn/20261111_2, rechecked by a second model, 10 cases spot-checked by the
+  owner. The spot check turned one negative into a positive.

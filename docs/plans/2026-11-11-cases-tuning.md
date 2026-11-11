@@ -46,10 +46,10 @@
 
 ### Task 2: Cases
 
-- [ ] Scenarios: a subagent with only the run's document list (number, title, type, issuer, dates; no provision text) and the tag list writes scenarios `{id, subject, situation, intent, tags, negative}` in Vietnamese, about 50 positive and 15 negative so that drops still leave 30 and 10. A Codex worker on another model removes duplicates and scenarios that name an article or quote text, and records why.
-- [ ] Queries: a fresh subagent that sees only the scenarios writes the one query an agent would send to `search` for each.
-- [ ] Labels: a subagent with read access to the run's corpus database and official sources (VBPL, vanban.chinhphu.vn) labels each positive with expected citations `{doc_number, article?, clause?, point?, alt_doc_numbers?}` and evidence (`fetch_sha256`, node id, quoted span), or reclassifies it negative with a reason; current law at the evaluation date unless tagged `historical`. A Codex worker on another model rechecks every label against its evidence; the executing session settles disagreements from official text.
-- [ ] Show Danny 10 cases and apply his corrections; commit `development.json` and the identity entries.
+- [x] Scenarios: a subagent with only the run's document list (number, title, type, issuer, dates; no provision text) and the tag list writes scenarios `{id, subject, situation, intent, tags, negative}` in Vietnamese, about 50 positive and 15 negative so that drops still leave 30 and 10. A Codex worker on another model removes duplicates and scenarios that name an article or quote text, and records why.
+- [x] Queries: a fresh subagent that sees only the scenarios writes the one query an agent would send to `search` for each.
+- [x] Labels: a subagent with read access to the run's corpus database and official sources (VBPL, vanban.chinhphu.vn) labels each positive with expected citations `{doc_number, article?, clause?, point?, alt_doc_numbers?}` and evidence (`fetch_sha256`, node id, quoted span), or reclassifies it negative with a reason; current law at the evaluation date unless tagged `historical`. A Codex worker on another model rechecks every label against its evidence; the executing session settles disagreements from official text.
+- [x] Show Danny 10 cases and apply his corrections; commit `development.json` and the identity entries.
 - [ ] Rebuild the newest run so calibration fits on both cohorts (status `old-product+development`; eval never refits), then `make eval` on that build; this report is the baseline for Tasks 3 to 5; record development and old product results.
 
 ### Task 3: Per-document cap
