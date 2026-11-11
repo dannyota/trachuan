@@ -79,17 +79,18 @@ page.
 
 ## CSRF
 
-Every request with a method other than `GET`, `HEAD` or `OPTIONS` requires:
-`Origin` equal to the origin of `SERVER_PUBLIC_URL` (the `Referer` origin when
-`Origin` is absent; both absent fails); header `X-CSRF-Token` equal to the
-session's CSRF secret, compared in constant time; and
+Every request to `/api/v1` with a method other than `GET`, `HEAD` or `OPTIONS`
+requires: `Origin` equal to the origin of `SERVER_PUBLIC_URL` (the `Referer`
+origin when `Origin` is absent; both absent fails); header `X-CSRF-Token` equal
+to the session's CSRF secret, compared in constant time; and
 `Content-Type: application/json` when a body is sent. The secret is 32 random
 bytes created with the session and returned only in the body of
 `GET /api/v1/me`. Failures return 403 `csrf_rejected`. `GET` handlers change no
 account or corpus state; the only writes made by `GET` requests are the login
 start and callback (protected by the login transaction) and the session's own
 `last_seen_at` and `expires_at` maintenance. Search and read are `POST` and
-follow the same rule.
+follow the same rule. The OAuth consent form has its own rule in
+[OAuth](oauth.md#consent).
 
 ## Routes
 
@@ -105,6 +106,8 @@ follow the same rule.
 | `GET /api/v1/me/tokens`            | session        | read         | Own personal tokens: id, name, created, expires, last used, revoked |
 | `POST /api/v1/me/tokens`           | session + CSRF | read         | Create a personal token `{name, days}`; the token is returned once  |
 | `DELETE /api/v1/me/tokens/{id}`    | session + CSRF | read         | Revoke one own personal token                                       |
+| `GET /api/v1/me/grants`            | session        | read         | Own OAuth grants ([OAuth](oauth.md))                                |
+| `DELETE /api/v1/me/grants/{id}`    | session + CSRF | read         | Revoke one own OAuth grant and its tokens                           |
 | `POST /api/v1/search`              | session + CSRF | search       | The `search` tool's input and result                                |
 | `POST /api/v1/read`                | session + CSRF | read         | The `read` tool's input and result                                  |
 | `GET /api/v1/documents/{key}`      | session        | read         | Reader page: document entry, outline and text from `from`           |
