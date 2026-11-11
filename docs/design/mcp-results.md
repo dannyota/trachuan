@@ -135,8 +135,10 @@ field: `text` for leads and provisions, `heading` for outline entries,
 `evidence` for relations. Any unit whose serialized size exceeds the part size
 in budgets is split into parts by cutting only that field; every other field is
 copied to each part. If a part with an empty split field would already exceed
-the part size, the item ends with `unit_too_large` and no `next`. One rule cuts
-the split field: cut at the last whitespace at or before the part size; when the
+the part size, the item ends with `unit_too_large` and no `next`. If the
+document entry and the first unit or part of its item would together exceed the
+whole call cap, the item also ends with `unit_too_large`. One rule cuts the
+split field: cut at the last whitespace at or before the part size; when the
 remaining span has none, at the last code point at or before the part size that
 does not separate a combining mark from its base, or at the part size when no
 such code point exists, so every part is nonempty and the split field's parts
