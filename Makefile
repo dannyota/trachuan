@@ -48,6 +48,9 @@ docembed-test: ## Run document embedder tests
 docembed-run: ## Start the document embedder on 127.0.0.1:8092 (MPS)
 	cd apps/docembed && uv run --frozen --group document python -m trachuan_docembed --model-dir $(abspath $(EMBEDDER_MODEL_DIR))
 
+server-run: ## Start the local server
+	go run ./apps/server/cmd/server serve
+
 test: ## Run unit tests
 	go test ./...
 
@@ -92,4 +95,4 @@ services-down: ## Stop the local Temporal server and PostgreSQL, keep their data
 	bash deploy/local/temporal.sh down
 	bash deploy/local/postgres.sh down
 
-.PHONY: help hooks-install lengths-check pre-push docs-fmt queryembed-native queryembed-test-ort queryembed-run docembed-test docembed-run test test-integration test-proof generate sqlc-check db-up db-setup temporal-up services-up services-down
+.PHONY: server-run help hooks-install lengths-check pre-push docs-fmt queryembed-native queryembed-test-ort queryembed-run docembed-test docembed-run test test-integration test-proof generate sqlc-check db-up db-setup temporal-up services-up services-down

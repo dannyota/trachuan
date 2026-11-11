@@ -39,6 +39,14 @@ MacBook against native local services (`deploy/local`)
 Stages run in order `discover`, `fetch`, `extract`, `relate`, `chunk`, `embed`,
 `build`, `eval`. A completed evaluation leaves the run `evaluated`.
 
+## Server (`apps/server`)
+
+The server command serves authenticated MCP tools from the active corpus
+release. It holds an auth pool and lazily opens read-only corpus pools through
+its release resolver. The query client checks each release's query recipe and
+shares a vector cache across releases. Search, document and read caches follow
+the active release. See the [local runbook](runbooks/server-local.md).
+
 ## Embedding services
 
 | App               | Role                                                                                              |
