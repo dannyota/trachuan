@@ -49,9 +49,9 @@ Evaluation uses this exact response.
 ## Release pinning
 
 Every response carries `release`. `search` and `read` accept an optional
-`release`; the server keeps the previous release database for 7 days after
-activation so a follow-up read can pin it. A pinned release that is gone returns
-an explicit `release_expired` error, never silently different text.
+`release`. The server serves only the active release of each country, so a
+pinned release that is no longer active returns an explicit `release_expired`
+error, never silently different text.
 
 ## MCP tools
 

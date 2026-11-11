@@ -186,7 +186,8 @@ skipping steps 1 to 3 and verifying instead that the database exists and its
 3. `pg_restore --no-owner` as `restorer` into `corpus_<cc>_<rel>` with a
    dedicated `maintenance_work_mem`; the TOC is listed first and refused if it
    contains functions, extensions other than pgvector, or event triggers.
-4. Smoke queries: counts, one search, one document read.
+4. Prewarm the new database's chunk table and its indexes with `pg_prewarm`,
+   then run smoke queries: counts, one search, one read.
 5. In one transaction: compare-and-swap `auth.corpus_release.active_db` against
    the expected current value, insert the old active database into
    `retired_release` with `retain_until` seven days ahead, and append the
@@ -203,9 +204,8 @@ skipping steps 1 to 3 and verifying instead that the database exists and its
    in `new` mode and only when the guard holds; in `retained` mode it only
    closes the journal.
 
-Retained releases stay readable through `read`; `search` against a retained
-release whose `dense_recipe` or `lexical_recipe` differs from the running bundle
-returns `release_incompatible`. `lexical_recipe` identifies the algorithm
+The server serves only the active release; a retained database is a rollback
+target that the server never opens. `lexical_recipe` identifies the algorithm
 (tokenizer version, normalization, BM25 parameters) and must match the runtime;
 `lexical_stats` (vocabulary, document frequencies, length normalization) belongs
 to each release, changes with every corpus refresh, and is loaded for the
