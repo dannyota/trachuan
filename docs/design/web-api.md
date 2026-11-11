@@ -53,10 +53,13 @@ in.
 A successful callback creates a new `web_session` row and sets cookie
 `__Host-session` (`Path=/`, `Secure`, `HttpOnly`, `SameSite=Lax`, `Max-Age` 30
 days). The token is 32 random bytes, base64url, stored only as its SHA-256. A
+session lives at most 90 days after its creation, whatever its activity. A
 session cookie present at login is revoked first, so a session is never carried
 across a login. Expiry slides: a request on a session whose `last_seen_at` is
-more than one hour old sets `last_seen_at` to now and `expires_at` to now plus
-30 days and refreshes the cookie's `Max-Age`; other requests write nothing.
+more than one hour old sets `last_seen_at` to now and `expires_at` to the
+earlier of now plus 30 days and creation plus 90 days, and sets the cookie's
+`Max-Age` to the time left until that `expires_at`; the cookie set at login is
+clamped the same way. Other requests write nothing.
 
 Each request on `/api/v1` with a session verifies: the hash exists, `revoked_at`
 is null, `expires_at` is in the future, the account is not blocked and the
@@ -82,8 +85,11 @@ Every request with a method other than `GET`, `HEAD` or `OPTIONS` requires:
 session's CSRF secret, compared in constant time; and
 `Content-Type: application/json` when a body is sent. The secret is 32 random
 bytes created with the session and returned only in the body of
-`GET /api/v1/me`. Failures return 403 `csrf_rejected`. `GET` handlers never
-change state. Search and read are `POST` and follow the same rule.
+`GET /api/v1/me`. Failures return 403 `csrf_rejected`. `GET` handlers change no
+account or corpus state; the only writes made by `GET` requests are the login
+start and callback (protected by the login transaction) and the session's own
+`last_seen_at` and `expires_at` maintenance. Search and read are `POST` and
+follow the same rule.
 
 ## Routes
 
@@ -114,10 +120,11 @@ whole-document read: the `read` item `{handle: key, from: first, to: last}` of
 [budgets](budgets.md#request-limits): units (ancestor leads, provisions) and
 parts by the same cutting rule, a page cap of 2 MB of serialized units and a
 part size of 1 MB, so a long lead or provision is split into parts and every
-page makes progress. The first page also carries the document entry with its
-status and the outline (outline entries are units of the same page, split like
-any unit). The response is the `read` item result object; continuation is its
-`next` token, passed back as `next`.
+page makes progress. The unit sequence starts with the document entry with its
+status, then the outline entries, then the leads and provisions; outline entries
+are ordinary units of that sequence, so a long outline continues across pages
+through `next` like any other units. The response is the `read` item result
+object; continuation is its `next` token, passed back as `next`.
 
 Search, read and status take the same inputs and return the same objects as the
 MCP tools, and documents returns `read` item results with the web caps; all four

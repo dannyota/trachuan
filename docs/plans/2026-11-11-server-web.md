@@ -77,9 +77,9 @@
 
 ### Task 5: Search, read, documents and status
 
-**Files:** Create `apps/server/internal/webapi/{search.go,read.go,documents.go,status.go}` with tests; let `retrieval.ReadRequest` take the page cap and part size (defaults stay the MCP values) and an outline flag for the first page, with tests.
+**Files:** Create `apps/server/internal/webapi/{search.go,read.go,documents.go,status.go}` with tests; let `retrieval.ReadRequest` take the page cap and part size (defaults stay the MCP values) and a whole-document mode whose unit sequence is entry, outline entries, then leads and provisions, with tests.
 
-- [ ] **Step 1: Failing tests:** `TestWeb_SearchEqualsMCP` (same input gives the same JSON as the `search` tool, including cache hits); `TestWeb_ReadEqualsMCP`; `TestDocuments_IsReadWithWebCaps` (same units, parts and `next` as a `read` item over the whole document with a 2 MB page cap and 1 MB parts); `TestDocuments_OversizedLeadAndProvisionAdvance` (a lead or provision above 1 MB is split and every page advances; concatenated parts equal the source); `TestDocuments_FirstPageHasEntryAndOutline`; `TestDocuments_ReleaseExpired`; `TestWeb_StatusEqualsMCP`; `TestWeb_LimitsSharedWithMCP`.
+- [ ] **Step 1: Failing tests:** `TestWeb_SearchEqualsMCP` (same input gives the same JSON as the `search` tool, including cache hits); `TestWeb_ReadEqualsMCP`; `TestDocuments_IsReadWithWebCaps` (same units, parts and `next` as a `read` item over the whole document with a 2 MB page cap and 1 MB parts); `TestDocuments_OversizedLeadAndProvisionAdvance` (a lead or provision above 1 MB is split and every page advances; concatenated parts equal the source); `TestDocuments_EntryThenOutlineThenText` (sequence order); `TestDocuments_OutlineLongerThanPageContinues` (an outline above 2 MB spans pages through `next`); `TestDocuments_ReleaseExpired`; `TestWeb_StatusEqualsMCP`; `TestWeb_LimitsSharedWithMCP`.
 - [ ] **Step 2: Implement**; share the tool code with `mcpapi` through functions both call rather than duplicating it.
 - [ ] **Step 3: Run** unit and integration tests; commit `feat(server): web search, read, documents and status`.
 
