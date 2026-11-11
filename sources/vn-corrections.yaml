@@ -104,9 +104,9 @@
   reason: "whole replacement from 2008-04-01."
   evidence:
     key: vn:vbpl:40192
-    anchor: "dieu-1"
+    anchor: "dieu-2"
     quote: "thay thế Quyết định số 448/2000/QĐ-NHNN2"
-  reviewed: "2026-11-10"
+  reviewed: "2026-11-11"
 - key: vn:vbpl:166970
   number: "48/2024/NĐ-CP"
   set: {eff_to: "2025-04-10"}
