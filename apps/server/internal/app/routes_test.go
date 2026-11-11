@@ -64,6 +64,7 @@ func protectedRoutes() []routeCase {
 	return []routeCase{
 		{"POST", "/api/v1/auth/logout", limits.Read}, {"GET", "/api/v1/me", limits.Read}, {"DELETE", "/api/v1/me", limits.Read},
 		{"GET", "/api/v1/me/grants", limits.Read}, {"DELETE", "/api/v1/me/grants/1", limits.Read}, {"GET", "/api/v1/me/sessions", limits.Read}, {"DELETE", "/api/v1/me/sessions/1", limits.Read}, {"GET", "/api/v1/me/tokens", limits.Read}, {"POST", "/api/v1/me/tokens", limits.Read}, {"DELETE", "/api/v1/me/tokens/1", limits.Read},
+		{"POST", "/api/v1/reports", limits.Read}, {"GET", "/api/v1/me/reports", limits.Read}, {"DELETE", "/api/v1/me/reports/1", limits.Read},
 		{"POST", "/api/v1/search", limits.Search}, {"POST", "/api/v1/read", limits.Read}, {"GET", "/api/v1/documents/key", limits.Read}, {"GET", "/api/v1/status", limits.Read},
 	}
 }

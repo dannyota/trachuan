@@ -96,3 +96,25 @@ To revoke access, use the signed-in account API: `GET /api/v1/me/grants` lists
 clients and `DELETE /api/v1/me/grants/{id}` revokes one. Send the session
 cookie, matching `Origin` and CSRF token with the DELETE request. Removing the
 server from Claude Code alone does not revoke the grant.
+
+## Triage error reports
+
+Use the auth database role on the host. List groups and inspect a group before
+making a decision. Add `--accounts` to `show` only when account IDs are needed.
+
+```sh
+go run ./apps/server/cmd/server admin reports list --state open
+go run ./apps/server/cmd/server admin reports show GROUP_ID
+go run ./apps/server/cmd/server admin reports accept --by OPERATOR GROUP_ID
+go run ./apps/server/cmd/server admin reports reject --by OPERATOR GROUP_ID
+go run ./apps/server/cmd/server admin reports export --out DIR
+```
+
+Export prints the batch ID. Review the exported drafts against official text;
+accepting and exporting do not apply corrections. Export accepted reports within
+90 days. To recover an interrupted export, rerun with the batch ID and a fresh
+output directory or remove the incomplete destination after checking it:
+
+```sh
+go run ./apps/server/cmd/server admin reports export --batch BATCH_ID --out DIR
+```
