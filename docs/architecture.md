@@ -41,11 +41,14 @@ Stages run in order `discover`, `fetch`, `extract`, `relate`, `chunk`, `embed`,
 
 ## Server (`apps/server`)
 
-The server command serves authenticated MCP tools from the active corpus
-release. It holds an auth pool and lazily opens read-only corpus pools through
-its release resolver. The query client checks each release's query recipe and
-shares a vector cache across releases. Search, document and read caches follow
-the active release. See the [local runbook](runbooks/server-local.md).
+The server command serves authenticated MCP tools and the session-based web API
+from the active corpus release. Google login discovers its provider at startup.
+The server shares account limits and retrieval caches between both transports,
+and purges expired login transactions and deleted accounts hourly. It holds an
+auth pool and lazily opens read-only corpus pools through its release resolver.
+The query client checks each release's query recipe and shares a vector cache
+across releases. Search, document and read caches follow the active release. See
+the [local runbook](runbooks/server-local.md).
 
 ## Embedding services
 

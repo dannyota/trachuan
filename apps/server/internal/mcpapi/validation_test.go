@@ -154,12 +154,12 @@ func TestMCP_SearchSchemaAcceptsRecipeValues(t *testing.T) {
 	}
 }
 
-func TestMCP_QueryValidationKeepsEngineMessage(t *testing.T) {
+func TestMCP_QueryValidationFixedMessage(t *testing.T) {
 	h := newHarness(t, nil)
 	r := callTool(t, h, "search", map[string]any{"country": "vn", "query": ""})
 	wantError(t, r, "invalid_request")
 	out := resultJSON(t, r)
-	if out["error"].(map[string]any)["message"] != "invalid_request" {
-		t.Fatal("query validation changed engine's fixed message")
+	if out["error"].(map[string]any)["message"] != "Invalid request." {
+		t.Fatal("query validation returned the wrong fixed message")
 	}
 }

@@ -14,7 +14,10 @@ const blockAccount = `-- name: BlockAccount :one
 WITH blocked AS (
     UPDATE account SET blocked_at = COALESCE(blocked_at, now()),
         auth_epoch = auth_epoch + 1
-    WHERE id = $1 RETURNING id, google_sub, email, blocked_at, created_at, last_login_at, delete_requested_at, auth_epoch
+    WHERE account.id = $1 RETURNING id, google_sub, email, blocked_at, created_at, last_login_at, delete_requested_at, auth_epoch
+), revoked_sessions AS (
+    UPDATE web_session SET revoked_at = now()
+    WHERE account_id IN (SELECT id FROM blocked) AND revoked_at IS NULL
 ), revoked AS (
     UPDATE personal_token SET revoked_at = now()
     WHERE account_id IN (SELECT id FROM blocked) AND revoked_at IS NULL
@@ -80,6 +83,108 @@ SELECT id, google_sub, email, blocked_at, created_at, last_login_at, delete_requ
 
 func (q *Queries) GetAccount(ctx context.Context, id int64) (Account, error) {
 	row := q.db.QueryRow(ctx, getAccount, id)
+	var i Account
+	err := row.Scan(
+		&i.ID,
+		&i.GoogleSub,
+		&i.Email,
+		&i.BlockedAt,
+		&i.CreatedAt,
+		&i.LastLoginAt,
+		&i.DeleteRequestedAt,
+		&i.AuthEpoch,
+	)
+	return i, err
+}
+
+const lockCredentialAccount = `-- name: LockCredentialAccount :one
+SELECT id, google_sub, email, blocked_at, created_at, last_login_at, delete_requested_at, auth_epoch FROM account WHERE id = $1 FOR UPDATE
+`
+
+func (q *Queries) LockCredentialAccount(ctx context.Context, id int64) (Account, error) {
+	row := q.db.QueryRow(ctx, lockCredentialAccount, id)
+	var i Account
+	err := row.Scan(
+		&i.ID,
+		&i.GoogleSub,
+		&i.Email,
+		&i.BlockedAt,
+		&i.CreatedAt,
+		&i.LastLoginAt,
+		&i.DeleteRequestedAt,
+		&i.AuthEpoch,
+	)
+	return i, err
+}
+
+const purgeDeletedAccounts = `-- name: PurgeDeletedAccounts :execrows
+DELETE FROM account WHERE delete_requested_at < $1::timestamptz - interval '7 days'
+`
+
+func (q *Queries) PurgeDeletedAccounts(ctx context.Context, dollar_1 time.Time) (int64, error) {
+	result, err := q.db.Exec(ctx, purgeDeletedAccounts, dollar_1)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const requestDeletion = `-- name: RequestDeletion :one
+WITH blocked AS (
+    UPDATE account SET blocked_at = COALESCE(blocked_at, now()),
+        delete_requested_at = COALESCE(delete_requested_at, now()),
+        auth_epoch = auth_epoch + 1
+    WHERE account.id = $1 RETURNING id, google_sub, email, blocked_at, created_at, last_login_at, delete_requested_at, auth_epoch
+), revoked_sessions AS (
+    UPDATE web_session SET revoked_at = now()
+    WHERE account_id IN (SELECT id FROM blocked) AND revoked_at IS NULL
+), revoked_tokens AS (
+    UPDATE personal_token SET revoked_at = now()
+    WHERE account_id IN (SELECT id FROM blocked) AND revoked_at IS NULL
+)
+SELECT id, google_sub, email, blocked_at, created_at, last_login_at, delete_requested_at, auth_epoch FROM blocked
+`
+
+type RequestDeletionRow struct {
+	ID                int64
+	GoogleSub         string
+	Email             string
+	BlockedAt         *time.Time
+	CreatedAt         time.Time
+	LastLoginAt       *time.Time
+	DeleteRequestedAt *time.Time
+	AuthEpoch         int32
+}
+
+func (q *Queries) RequestDeletion(ctx context.Context, id int64) (RequestDeletionRow, error) {
+	row := q.db.QueryRow(ctx, requestDeletion, id)
+	var i RequestDeletionRow
+	err := row.Scan(
+		&i.ID,
+		&i.GoogleSub,
+		&i.Email,
+		&i.BlockedAt,
+		&i.CreatedAt,
+		&i.LastLoginAt,
+		&i.DeleteRequestedAt,
+		&i.AuthEpoch,
+	)
+	return i, err
+}
+
+const upsertGoogleAccount = `-- name: UpsertGoogleAccount :one
+INSERT INTO account (google_sub, email, last_login_at) VALUES ($1, $2, now())
+ON CONFLICT (google_sub) DO UPDATE SET email = EXCLUDED.email, last_login_at = now()
+RETURNING id, google_sub, email, blocked_at, created_at, last_login_at, delete_requested_at, auth_epoch
+`
+
+type UpsertGoogleAccountParams struct {
+	GoogleSub string
+	Email     string
+}
+
+func (q *Queries) UpsertGoogleAccount(ctx context.Context, arg UpsertGoogleAccountParams) (Account, error) {
+	row := q.db.QueryRow(ctx, upsertGoogleAccount, arg.GoogleSub, arg.Email)
 	var i Account
 	err := row.Scan(
 		&i.ID,

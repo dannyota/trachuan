@@ -9,10 +9,21 @@ import (
 // ErrTooManyItems rejects calls above the batch item budget.
 var ErrTooManyItems = errors.New("too many read items")
 
+// ErrInvalidReadLimits rejects inconsistent internal paging options.
+var ErrInvalidReadLimits = errors.New("invalid read limits")
+
 // ReadRequest selects scopes from one pinned release.
 type ReadRequest struct {
 	Release string     `json:"release"`
 	Items   []ReadItem `json:"items,omitempty"`
+	// PageCap and PartSize override MCP defaults. WholeDocument measures bytes;
+	// other modes measure Unicode code points of serialized units.
+	PageCap  int `json:"-"`
+	PartSize int `json:"-"`
+	// WholeDocument adds the outline and all text after the document entry.
+	WholeDocument bool `json:"-"`
+	// DocumentKey binds whole-document continuations to the reader route's key.
+	DocumentKey string `json:"-"`
 }
 
 // Unit is one lead, provision, outline entry or relation, or a fixed part of it.

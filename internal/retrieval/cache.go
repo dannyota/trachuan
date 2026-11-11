@@ -143,7 +143,7 @@ func sequenceKey(release string, item ReadItem) [32]byte {
 func (e *Engine) sequence(ctx context.Context, tx pgx.Tx, c cursor) (readSequence, string, bool, error) {
 	cache := e.sequenceCache(ctx)
 	if cache != nil {
-		if raw, ok := cache.Get(e.release.Rel, sequenceKey(e.release.Rel, c.Item)); ok {
+		if raw, ok := cache.Get(e.release.Rel, cursorSequenceKey(e.release.Rel, c)); ok {
 			var stored cachedSequence
 			// Relation scopes are already bounded SQL windows. Reuse a window only
 			// at its original offset; a miss must not load extra relation pages.
@@ -189,7 +189,7 @@ func (e *Engine) saveSequence(ctx context.Context, c cursor, seq readSequence) f
 		if err != nil || ctx.Err() != nil {
 			return
 		}
-		cache.Put(e.release.Rel, sequenceKey(e.release.Rel, c.Item), raw)
+		cache.Put(e.release.Rel, cursorSequenceKey(e.release.Rel, c), raw)
 	}
 }
 
@@ -197,4 +197,13 @@ func (e *Engine) statusDocument(doc *DocumentEntry, source Document) {
 	now := e.options.Now().In(time.FixedZone("Asia/Ho_Chi_Minh", 7*60*60))
 	validity, _ := stamp(source, Arms{Date: Date{Year: now.Year(), Month: now.Month(), Day: now.Day()}})
 	doc.Status = Status{Class: validity.StatusClass, Basis: validity.Basis, StatusBasis: validity.StatusBasis, Current: validity.Current}
+}
+
+func cursorSequenceKey(release string, c cursor) [32]byte {
+	key := sequenceKey(release, c.Item)
+	if c.PageCap == 0 && c.PartSize == 0 && !c.WholeDocument {
+		return key
+	}
+	raw, _ := json.Marshal([]any{key, c.pageCap(), c.partSize(), c.WholeDocument})
+	return sha256.Sum256(raw)
 }

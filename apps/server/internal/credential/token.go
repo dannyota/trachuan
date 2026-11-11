@@ -13,7 +13,11 @@ type failure string
 
 func (e failure) Error() string { return string(e) }
 
-const errEntropy failure = "random source unavailable"
+const (
+	errEntropy failure = "random source unavailable"
+	// ErrTokenLimit means the account already has twenty live personal tokens.
+	ErrTokenLimit failure = "token limit reached"
+)
 
 // Issue reads 32 random bytes and returns a token and its SHA-256 hex digest.
 // Only the digest may be persisted.

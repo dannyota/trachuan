@@ -12,7 +12,12 @@ import (
 
 const createPersonalToken = `-- name: CreatePersonalToken :one
 INSERT INTO personal_token (token_hash, account_id, name, expires_at, auth_epoch)
-VALUES ($1, $2, $3, $4, $5) RETURNING token_hash, account_id, name, created_at, expires_at, last_used_at, revoked_at, auth_epoch
+SELECT $1, $2, $3, $4, $5
+WHERE EXISTS (SELECT 1 FROM account WHERE id = $2 AND blocked_at IS NULL
+    AND delete_requested_at IS NULL AND auth_epoch = $5)
+    AND (SELECT count(*) FROM personal_token WHERE account_id = $2
+        AND revoked_at IS NULL AND expires_at > now()) < 20
+RETURNING token_hash, account_id, name, created_at, expires_at, last_used_at, revoked_at, auth_epoch, id
 `
 
 type CreatePersonalTokenParams struct {
@@ -41,6 +46,7 @@ func (q *Queries) CreatePersonalToken(ctx context.Context, arg CreatePersonalTok
 		&i.LastUsedAt,
 		&i.RevokedAt,
 		&i.AuthEpoch,
+		&i.ID,
 	)
 	return i, err
 }
@@ -73,6 +79,60 @@ func (q *Queries) GetCredential(ctx context.Context, tokenHash string) (GetCrede
 		&i.RevokedAt,
 	)
 	return i, err
+}
+
+const listTokens = `-- name: ListTokens :many
+SELECT token_hash, account_id, name, created_at, expires_at, last_used_at, revoked_at, auth_epoch, id FROM personal_token WHERE account_id = $1
+    AND LEAST(expires_at, revoked_at) >= now() - interval '7 days'
+ORDER BY created_at DESC, id DESC LIMIT 100
+`
+
+func (q *Queries) ListTokens(ctx context.Context, accountID int64) ([]PersonalToken, error) {
+	rows, err := q.db.Query(ctx, listTokens, accountID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []PersonalToken
+	for rows.Next() {
+		var i PersonalToken
+		if err := rows.Scan(
+			&i.TokenHash,
+			&i.AccountID,
+			&i.Name,
+			&i.CreatedAt,
+			&i.ExpiresAt,
+			&i.LastUsedAt,
+			&i.RevokedAt,
+			&i.AuthEpoch,
+			&i.ID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const revokeOwnToken = `-- name: RevokeOwnToken :one
+UPDATE personal_token SET revoked_at = now()
+WHERE account_id = $1 AND id = $2 AND revoked_at IS NULL
+RETURNING token_hash
+`
+
+type RevokeOwnTokenParams struct {
+	AccountID int64
+	ID        int64
+}
+
+func (q *Queries) RevokeOwnToken(ctx context.Context, arg RevokeOwnTokenParams) (string, error) {
+	row := q.db.QueryRow(ctx, revokeOwnToken, arg.AccountID, arg.ID)
+	var token_hash string
+	err := row.Scan(&token_hash)
+	return token_hash, err
 }
 
 const revokePersonalToken = `-- name: RevokePersonalToken :exec

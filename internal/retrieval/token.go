@@ -20,11 +20,14 @@ type ReadItem struct {
 }
 
 type cursor struct {
-	V       int
-	Release string
-	Item    ReadItem
-	Unit    int
-	Part    int
+	V             int
+	Release       string
+	Item          ReadItem
+	Unit          int
+	Part          int
+	PageCap       int  `json:",omitempty"`
+	PartSize      int  `json:",omitempty"`
+	WholeDocument bool `json:",omitempty"`
 }
 
 var errInvalidNext = errors.New("invalid next token")
@@ -48,7 +51,7 @@ func decodeNext(s string) (cursor, error) {
 	if err := dec.Decode(new(any)); err != io.EOF {
 		return cursor{}, errInvalidNext
 	}
-	if c.V != 1 || c.Unit < 0 || c.Part < 0 || c.Item.Next != "" || (c.Item.Handle != "" && c.Item.Number != "") {
+	if c.PageCap < 0 || c.PartSize < 0 || c.partSize() > c.pageCap() || c.V != 1 || c.Unit < 0 || c.Part < 0 || c.Item.Next != "" || (c.Item.Handle != "" && c.Item.Number != "") {
 		return cursor{}, errInvalidNext
 	}
 	return c, nil

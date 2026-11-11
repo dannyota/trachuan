@@ -26,6 +26,18 @@ type CorpusRelease struct {
 	ActivatedBy string
 }
 
+type LoginTransaction struct {
+	HandleHash   string
+	State        string
+	Nonce        string
+	PkceVerifier string
+	NextPath     string
+	RedirectUri  string
+	CreatedAt    time.Time
+	ExpiresAt    time.Time
+	ClaimedAt    *time.Time
+}
+
 type PersonalToken struct {
 	TokenHash  string
 	AccountID  int64
@@ -35,6 +47,7 @@ type PersonalToken struct {
 	LastUsedAt *time.Time
 	RevokedAt  *time.Time
 	AuthEpoch  int32
+	ID         int64
 }
 
 type ReleaseJournal struct {
@@ -53,4 +66,16 @@ type RetiredRelease struct {
 	RetiredAt   time.Time
 	RetainUntil time.Time
 	DroppedAt   *time.Time
+}
+
+type WebSession struct {
+	ID         int64
+	TokenHash  string
+	AccountID  int64
+	CsrfSecret string
+	AuthEpoch  int32
+	CreatedAt  time.Time
+	LastSeenAt time.Time
+	ExpiresAt  time.Time
+	RevokedAt  *time.Time
 }

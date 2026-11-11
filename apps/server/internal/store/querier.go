@@ -6,17 +6,34 @@ package store
 
 import (
 	"context"
+	"time"
 )
 
 type Querier interface {
 	BlockAccount(ctx context.Context, id int64) (BlockAccountRow, error)
+	ClaimLoginTransaction(ctx context.Context, handleHash string) (LoginTransaction, error)
 	CreateAccount(ctx context.Context, arg CreateAccountParams) (Account, error)
+	CreateLoginTransaction(ctx context.Context, arg CreateLoginTransactionParams) (LoginTransaction, error)
 	CreatePersonalToken(ctx context.Context, arg CreatePersonalTokenParams) (PersonalToken, error)
+	CreateSession(ctx context.Context, arg CreateSessionParams) (CreateSessionRow, error)
+	DeleteExpiredLoginTransactions(ctx context.Context) error
 	GetAccount(ctx context.Context, id int64) (Account, error)
 	GetActiveRelease(ctx context.Context, country string) (CorpusRelease, error)
 	GetCredential(ctx context.Context, tokenHash string) (GetCredentialRow, error)
+	GetSession(ctx context.Context, tokenHash string) (GetSessionRow, error)
+	ListSessions(ctx context.Context, accountID int64) ([]WebSession, error)
+	ListTokens(ctx context.Context, accountID int64) ([]PersonalToken, error)
+	LockCredentialAccount(ctx context.Context, id int64) (Account, error)
+	PurgeDeletedAccounts(ctx context.Context, dollar_1 time.Time) (int64, error)
+	PurgeEndedCredentials(ctx context.Context) (int64, error)
+	RequestDeletion(ctx context.Context, id int64) (RequestDeletionRow, error)
+	RevokeOwnSession(ctx context.Context, arg RevokeOwnSessionParams) (int64, error)
+	RevokeOwnToken(ctx context.Context, arg RevokeOwnTokenParams) (string, error)
 	RevokePersonalToken(ctx context.Context, tokenHash string) error
+	RevokeSession(ctx context.Context, tokenHash string) (int64, error)
 	TouchPersonalToken(ctx context.Context, tokenHash string) error
+	TouchSession(ctx context.Context, tokenHash string) (int64, error)
+	UpsertGoogleAccount(ctx context.Context, arg UpsertGoogleAccountParams) (Account, error)
 }
 
 var _ Querier = (*Queries)(nil)

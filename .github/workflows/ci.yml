@@ -17,6 +17,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     outputs:
+      schema: ${{ steps.paths.outputs.schema }}
       go: ${{ steps.paths.outputs.go }}
       docembed: ${{ steps.paths.outputs.docembed }}
       queryembed: ${{ steps.paths.outputs.queryembed }}
@@ -30,16 +31,21 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
+          schema=true
           go=true
           docembed=true
           queryembed=true
           if [ "$EVENT_NAME" = pull_request ]; then
             paths=$(mktemp)
             git diff --no-ext-diff --no-textconv --no-renames --name-only -z "$BASE_SHA...$HEAD_SHA" -- > "$paths"
+            schema=false
             go=false
             docembed=false
             queryembed=false
             while IFS= read -r -d '' path; do
+              case "$path" in
+                packages/schema/*|apps/server/internal/accountapi/*|apps/server/internal/webapi/*|apps/server/internal/weblogin/*|apps/server/internal/websession/*|apps/server/internal/apierror/*|apps/server/internal/contracttest/*|apps/server/internal/mcpapi/*|.github/workflows/ci.yml|.tool-versions|Makefile) schema=true ;;
+              esac
               case "$path" in
                 apps/docembed/*|.github/workflows/*) docembed=true ;;
               esac
@@ -54,9 +60,28 @@ jobs:
             done < "$paths"
             rm "$paths"
           fi
+          echo "schema=$schema" >> "$GITHUB_OUTPUT"
           echo "go=$go" >> "$GITHUB_OUTPUT"
           echo "docembed=$docembed" >> "$GITHUB_OUTPUT"
           echo "queryembed=$queryembed" >> "$GITHUB_OUTPUT"
+
+  schema:
+    needs: [preflight]
+    if: needs.preflight.outputs.schema == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .tool-versions
+          cache: npm
+          cache-dependency-path: packages/schema/package-lock.json
+      - run: npm ci
+        working-directory: packages/schema
+      - run: make schema-gen
+      - run: git diff --exit-code
+      - run: test -z "$(git status --porcelain -- packages/schema)"
 
   static:
     needs: [preflight]
@@ -178,10 +203,12 @@ jobs:
 
   ci:
     if: always()
-    needs: [preflight, static, integration, docembed, queryembed]
+    needs: [preflight, static, integration, docembed, queryembed, schema]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     env:
+      SCHEMA_NEEDED: ${{ needs.preflight.outputs.schema }}
+      SCHEMA: ${{ needs.schema.result }}
       PREFLIGHT: ${{ needs.preflight.result }}
       GO: ${{ needs.preflight.outputs.go }}
       STATIC: ${{ needs.static.result }}
@@ -193,6 +220,13 @@ jobs:
     steps:
       - run: |
           test "$PREFLIGHT" = success
+          if [ "$SCHEMA_NEEDED" = true ]; then
+            test "$SCHEMA" = success
+          elif [ "$SCHEMA_NEEDED" = false ]; then
+            test "$SCHEMA" = skipped
+          else
+            exit 1
+          fi
           if [ "$QUERYEMBED_NEEDED" = true ]; then
             test "$QUERYEMBED" = success
           elif [ "$QUERYEMBED_NEEDED" = false ]; then

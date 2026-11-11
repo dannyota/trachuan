@@ -70,6 +70,16 @@ generate: ## Generate the typed data layer when sqlc is configured
 	  if [ -f apps/$$app/sqlc.yaml ]; then (cd apps/$$app && sqlc generate) || exit $$?; fi; \
 	done
 
+schema-gen: ## Generate the web API client
+	bash packages/schema/scripts/gen.sh
+
+schema-check: ## Fail when the web API client drifts
+	@set -e; before="$$(shasum -a 256 packages/schema/gen/openapi.ts)"; \
+	  bash packages/schema/scripts/gen.sh; \
+	  after="$$(shasum -a 256 packages/schema/gen/openapi.ts)"; \
+	  [ "$$before" = "$$after" ] || { echo "generated schema drifts; run make schema-gen" >&2; exit 1; }; \
+	  awk '/TokenInput: \{/ {inside=1; next} inside && /^        };/ {exit} inside {print}' packages/schema/gen/openapi.ts | grep -Eq 'days\?: number \| null;'
+
 sqlc-check: ## Fail when generated data layer files drift
 	@for app in corpus server; do \
 	  if [ -f apps/$$app/sqlc.yaml ]; then \
@@ -95,4 +105,4 @@ services-down: ## Stop the local Temporal server and PostgreSQL, keep their data
 	bash deploy/local/temporal.sh down
 	bash deploy/local/postgres.sh down
 
-.PHONY: server-run help hooks-install lengths-check pre-push docs-fmt queryembed-native queryembed-test-ort queryembed-run docembed-test docembed-run test test-integration test-proof generate sqlc-check db-up db-setup temporal-up services-up services-down
+.PHONY: schema-gen schema-check server-run help hooks-install lengths-check pre-push docs-fmt queryembed-native queryembed-test-ort queryembed-run docembed-test docembed-run test test-integration test-proof generate sqlc-check db-up db-setup temporal-up services-up services-down

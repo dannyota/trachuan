@@ -18,6 +18,8 @@ import (
 	"danny.vn/trachuan/apps/server/internal/migrate"
 	"danny.vn/trachuan/apps/server/internal/release"
 	"danny.vn/trachuan/apps/server/internal/store"
+	"danny.vn/trachuan/apps/server/internal/weblogin"
+	"danny.vn/trachuan/apps/server/internal/websession"
 	"danny.vn/trachuan/internal/embedding"
 	"danny.vn/trachuan/internal/retrieval"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -48,18 +50,15 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 	if len(args) == 0 {
 		return errors.New("missing subcommand")
 	}
+	if args[0] == "migrate" || args[0] == "admin" {
+		return runNonServe(ctx, args, stdout)
+	}
 	cfg, err := loadConfig()
 	if err != nil {
 		return err
 	}
-	if args[0] == "migrate" {
-		if len(args) != 1 {
-			return errors.New("invalid migrate arguments")
-		}
-		if err = migrate.Up(ctx, cfg.authURL); err != nil {
-			return errors.New("migration failed")
-		}
-		return nil
+	if args[0] == "serve" && (cfg.googleID == "" || cfg.googleSecret == "") {
+		return errors.New("invalid or missing server configuration")
 	}
 	pool, err := pgxpool.New(ctx, cfg.authURL)
 	if err != nil {
@@ -69,7 +68,7 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 	queries := store.New(pool)
 	switch args[0] {
 	case "admin":
-		return runAdmin(ctx, args[1:], queries, stdout)
+		return runAdmin(ctx, args[1:], credentialStore{Queries: queries, db: pool}, stdout)
 	case "serve":
 		if len(args) != 1 {
 			return errors.New("invalid serve arguments")
@@ -112,9 +111,16 @@ func serve(ctx context.Context, cfg config, pool *pgxpool.Pool, queries *store.Q
 		},
 		OnActivate: caches.ActivateRelease}
 	verifier := &credential.Verifier{Store: queries, Audience: cfg.audience}
-	handler := mcpapi.New(mcpapi.Config{Resolver: mcpResolver{resolver}, Limiter: limits.New(clock), Logger: slog.New(slog.NewJSONHandler(stderr, nil)), Caches: caches})
-	mux := http.NewServeMux()
-	mux.Handle("/mcp", credential.Middleware(verifier, handler))
+	limiter := limits.New(clock)
+	tools := mcpapi.Config{Resolver: mcpResolver{resolver}, Limiter: limiter, Logger: slog.New(slog.NewJSONHandler(stderr, nil)), Caches: caches}
+	bounded := credentialStore{Queries: queries, db: pool}
+	sessions := &websession.Manager{Store: bounded, PublicURL: cfg.publicURL, Clock: clock}
+	login, err := weblogin.New(ctx, weblogin.Config{ClientID: cfg.googleID, ClientSecret: cfg.googleSecret, PublicURL: cfg.publicURL, Store: loginStore{queries}, Sessions: sessions})
+	if err != nil {
+		resolver.Close()
+		return errors.New("google provider discovery failed")
+	}
+	mux := newWebMux(webDeps{store: bounded, sessions: sessions, login: login, verifier: verifier, tools: tools, loginLimit: newLoginLimiter(clock, cfg.trustedProxies)})
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) })
 	mux.Handle("GET /readyz", readiness(ctx, func(ctx context.Context) error {
 		return readyCheck(ctx, pool.Ping, func(ctx context.Context) error {
@@ -126,6 +132,10 @@ func serve(ctx context.Context, cfg config, pool *pgxpool.Pool, queries *store.Q
 		})
 	}))
 	server := newHTTPServer(cfg.listen, mux)
+	purgeCtx, cancel := context.WithCancel(ctx)
+	done := make(chan struct{})
+	go func() { defer close(done); purgeLoop(purgeCtx, queries, clock, tools.Logger) }()
+	defer func() { cancel(); <-done }()
 	return runHTTP(ctx, server, resolver.Close)
 }
 
@@ -158,4 +168,26 @@ func runHTTP(ctx context.Context, server httpServer, closeResolver func()) error
 		}
 		return nil
 	}
+}
+
+func runNonServe(ctx context.Context, args []string, stdout io.Writer) error {
+	authURL := os.Getenv("SERVER_AUTH_DATABASE_URL")
+	if authURL == "" {
+		return errors.New("invalid or missing server configuration")
+	}
+	if args[0] == "migrate" {
+		if len(args) != 1 {
+			return errors.New("invalid migrate arguments")
+		}
+		if err := migrate.Up(ctx, authURL); err != nil {
+			return errors.New("migration failed")
+		}
+		return nil
+	}
+	pool, err := pgxpool.New(ctx, authURL)
+	if err != nil {
+		return errors.New("create auth pool failed")
+	}
+	defer pool.Close()
+	return runAdmin(ctx, args[1:], credentialStore{Queries: store.New(pool), db: pool}, stdout)
 }

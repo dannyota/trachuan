@@ -26,15 +26,16 @@ path; it is never taken from the request.
 `GET /api/v1/auth/google/callback` claims the transaction for the cookie's
 handle atomically and once, then requires: `state` equal to the stored value;
 the code exchanged with the stored verifier; an ID token verified for signature,
-issuer, audience (the client id) and expiry; `nonce` equal to the stored value;
-`email_verified` true. A rejected login (bad state, nonce, token or code, an
-unverified email, an expired or already claimed transaction, a blocked account)
-clears the cookie and redirects to `/login?error=<code>` with a fixed code
-(`login_failed`, `login_expired`, `account_blocked`). A failure of the auth
-database or of Google's endpoints at any step (claiming the transaction,
-upserting the account, revoking a presented session, creating the session) is
-503 `unavailable` and issues no session; the transaction stays claimed, so the
-user starts again. Provider error text is never shown or logged.
+issuer (`https://accounts.google.com`, or `accounts.google.com`, which Google
+also documents as valid), audience (the client id) and expiry; `nonce` equal to
+the stored value; `email_verified` true. A rejected login (bad state, nonce,
+token or code, an unverified email, an expired or already claimed transaction, a
+blocked account) clears the cookie and redirects to `/login?error=<code>` with a
+fixed code (`login_failed`, `login_expired`, `account_blocked`). A failure of
+the auth database or of Google's endpoints at any step (claiming the
+transaction, upserting the account, revoking a presented session, creating the
+session) is 503 `unavailable` and issues no session; the transaction stays
+claimed, so the user starts again. Provider error text is never shown or logged.
 
 The account is found by `google_sub` only, never by email. The first login
 creates it; every login stores the current email and `last_login_at`. A blocked
@@ -113,9 +114,11 @@ follow the same rule. The OAuth consent form has its own rule in
 | `GET /api/v1/documents/{key}`      | session        | read         | Reader page: document entry, outline and text from `from`           |
 | `GET /api/v1/status`               | session        | read         | The `corpus_status` tool's result                                   |
 
-Account routes act only on rows whose `account_id` is the caller's; an id that
-belongs to another account is 404, the same as an unknown id. Personal tokens
-created here follow [auth](auth.md): default 90 days, at most one year.
+Account routes list and create within the per-account credential bounds in
+[budgets](budgets.md#request-limits). Account routes act only on rows whose
+`account_id` is the caller's; an id that belongs to another account is 404, the
+same as an unknown id. Personal tokens created here follow [auth](auth.md):
+default 90 days, at most one year.
 
 `GET /api/v1/documents/{key}?release=<rel>&next=<token>` is the reader's
 whole-document read: the `read` item `{handle: key, from: first, to: last}` of
@@ -139,10 +142,14 @@ Errors are `{error:{code,message}}` with fixed messages: 400 `invalid_request`,
 401 `unauthenticated`, 403 `csrf_rejected` or `account_blocked`, 404
 `not_found`, 409 `release_expired`, 413 `body_too_large`, 415
 `unsupported_media_type`, 429 `rate_limited` with `Retry-After`, 503 `busy` or
-`unavailable`, 500 `internal`. Request bodies are at most 64 KB. The per-account
-`search` and `read` buckets are shared with `/mcp`; login routes use the per-IP
-limit in [budgets](budgets.md#request-limits). Logs carry account id, route,
-code and latency, never query text, returned text, tokens, cookies or email.
+`unavailable`, 500 `internal`. Request bodies are at most 64 KB. Per-IP limits
+use the client address: the connection peer, or, when the peer is in
+`SERVER_TRUSTED_PROXIES` (CIDRs, empty by default; Caddy on the host in
+production), the rightmost `X-Forwarded-For` address not in that list. The
+per-account `search` and `read` buckets are shared with `/mcp`; login routes use
+the per-IP limit in [budgets](budgets.md#request-limits). Logs carry account id,
+route, code and latency, never query text, returned text, tokens, cookies or
+email.
 
 ## Contract
 
