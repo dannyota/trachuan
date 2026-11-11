@@ -38,6 +38,80 @@ type LoginTransaction struct {
 	ClaimedAt    *time.Time
 }
 
+type OauthClient struct {
+	ID             int64
+	ClientID       string
+	Kind           string
+	Name           string
+	RedirectUris   []string
+	MetadataSha256 *string
+	CreatedAt      time.Time
+	LastUsedAt     time.Time
+	GrantTypes     []string
+}
+
+type OauthCode struct {
+	CodeHash      string
+	GrantID       int64
+	AccountID     int64
+	ClientID      string
+	RedirectUri   string
+	Resource      string
+	CodeChallenge string
+	Scope         string
+	AuthEpoch     int32
+	CreatedAt     time.Time
+	ExpiresAt     time.Time
+	ConsumedAt    *time.Time
+	RevokedAt     *time.Time
+}
+
+type OauthGrant struct {
+	ID               int64
+	AccountID        int64
+	ClientID         string
+	Scope            string
+	Resource         string
+	CreatedAt        time.Time
+	LastUsedAt       time.Time
+	RetirementAnchor time.Time
+	RevokedAt        *time.Time
+}
+
+type OauthRequest struct {
+	HandleHash    string
+	BrowserHash   string
+	ClientID      string
+	RedirectUri   string
+	State         string
+	CodeChallenge string
+	Resource      string
+	Scope         string
+	CreatedAt     time.Time
+	ExpiresAt     time.Time
+	ClaimedAt     *time.Time
+	AccountID     *int64
+}
+
+type OauthToken struct {
+	TokenHash       string
+	Kind            string
+	GrantID         int64
+	AccountID       int64
+	ClientID        string
+	FamilyID        string
+	RotatedFrom     *string
+	Resource        string
+	Scope           string
+	AuthEpoch       int32
+	CreatedAt       time.Time
+	ExpiresAt       time.Time
+	FamilyExpiresAt time.Time
+	RevokedAt       *time.Time
+	SupersededAt    *time.Time
+	LastUsedAt      *time.Time
+}
+
 type PersonalToken struct {
 	TokenHash  string
 	AccountID  int64

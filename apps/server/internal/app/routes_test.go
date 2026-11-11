@@ -63,7 +63,7 @@ type routeCase struct {
 func protectedRoutes() []routeCase {
 	return []routeCase{
 		{"POST", "/api/v1/auth/logout", limits.Read}, {"GET", "/api/v1/me", limits.Read}, {"DELETE", "/api/v1/me", limits.Read},
-		{"GET", "/api/v1/me/sessions", limits.Read}, {"DELETE", "/api/v1/me/sessions/1", limits.Read}, {"GET", "/api/v1/me/tokens", limits.Read}, {"POST", "/api/v1/me/tokens", limits.Read}, {"DELETE", "/api/v1/me/tokens/1", limits.Read},
+		{"GET", "/api/v1/me/grants", limits.Read}, {"DELETE", "/api/v1/me/grants/1", limits.Read}, {"GET", "/api/v1/me/sessions", limits.Read}, {"DELETE", "/api/v1/me/sessions/1", limits.Read}, {"GET", "/api/v1/me/tokens", limits.Read}, {"POST", "/api/v1/me/tokens", limits.Read}, {"DELETE", "/api/v1/me/tokens/1", limits.Read},
 		{"POST", "/api/v1/search", limits.Search}, {"POST", "/api/v1/read", limits.Read}, {"GET", "/api/v1/documents/key", limits.Read}, {"GET", "/api/v1/status", limits.Read},
 	}
 }
@@ -186,5 +186,103 @@ func TestRoutes_LoginSharesIPBudget(t *testing.T) {
 		if w.Code != want {
 			t.Fatalf("request %d status=%d, want %d", i+1, w.Code, want)
 		}
+	}
+}
+
+func TestRoutes_OAuthMounted(t *testing.T) {
+	for _, tt := range []struct{ method, path string }{
+		{"GET", "/.well-known/oauth-protected-resource"}, {"GET", "/.well-known/oauth-protected-resource/mcp"}, {"GET", "/.well-known/oauth-authorization-server"},
+		{"GET", "/oauth/authorize"}, {"GET", "/oauth/consent/invalid"}, {"POST", "/oauth/consent/invalid"}, {"POST", "/oauth/token"}, {"POST", "/oauth/register"}, {"POST", "/oauth/revoke"},
+		{"GET", "/api/v1/me/grants"}, {"DELETE", "/api/v1/me/grants/1"},
+	} {
+		t.Run(tt.method+tt.path, func(t *testing.T) {
+			mux, _, _ := routeFixture(t)
+			w := httptest.NewRecorder()
+			mux.ServeHTTP(w, httptest.NewRequest(tt.method, tt.path, nil))
+			if w.Code == http.StatusNotFound || w.Code == http.StatusMethodNotAllowed {
+				t.Fatalf("route missing: %d", w.Code)
+			}
+		})
+	}
+}
+
+func TestRoutes_OAuthSharesLoginBudget(t *testing.T) {
+	mux, _, _ := routeFixture(t)
+	for i := range 21 {
+		path := "/.well-known/oauth-authorization-server"
+		if i%2 == 0 {
+			path = "/api/v1/auth/google/start"
+		}
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, httptest.NewRequest("GET", path, nil))
+		if i == 20 && w.Code != http.StatusTooManyRequests {
+			t.Fatalf("request %d status=%d", i+1, w.Code)
+		}
+		if i < 20 && w.Code == http.StatusTooManyRequests {
+			t.Fatalf("request %d limited early", i+1)
+		}
+	}
+}
+
+func TestRoutes_OAuthCredentials(t *testing.T) {
+	for _, credential := range []string{"none", "session", "bearer"} {
+		t.Run(credential, func(t *testing.T) {
+			mux, _, _ := routeFixture(t)
+			r := httptest.NewRequest("POST", "/oauth/token", nil)
+			r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			if credential == "session" {
+				r.AddCookie(&http.Cookie{Name: "__Host-session", Value: strings.Repeat("A", 43)})
+			}
+			if credential == "bearer" {
+				r.Header.Set("Authorization", "Bearer trc_"+strings.Repeat("A", 43))
+			}
+			w := httptest.NewRecorder()
+			mux.ServeHTTP(w, r)
+			want := http.StatusBadRequest
+			if credential == "bearer" {
+				want = http.StatusUnauthorized
+			}
+			if w.Code != want {
+				t.Fatalf("status=%d want=%d", w.Code, want)
+			}
+		})
+	}
+}
+
+func TestRoutes_OAuthRateLimitJSON(t *testing.T) {
+	for _, path := range []string{"/oauth/token", "/oauth/register", "/oauth/revoke"} {
+		t.Run(path, func(t *testing.T) {
+			mux, _, _ := routeFixture(t)
+			for range 20 {
+				mux.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("GET", "/.well-known/oauth-authorization-server", nil))
+			}
+			w := httptest.NewRecorder()
+			mux.ServeHTTP(w, httptest.NewRequest("POST", path, nil))
+			if w.Code != 429 || w.Header().Get("Retry-After") != "3" || w.Header().Get("Content-Type") != "application/json" || strings.TrimSpace(w.Body.String()) != `{"error":"temporarily_unavailable"}` {
+				t.Fatalf("status=%d headers=%v body=%s", w.Code, w.Header(), w.Body.String())
+			}
+		})
+	}
+}
+
+func TestRoutes_OAuthRateLimitPage(t *testing.T) {
+	for _, tt := range []struct{ method, path, lang, message string }{
+		{"GET", "/oauth/authorize", "vi", "Dịch vụ tạm thời không khả dụng"},
+		{"GET", "/oauth/consent/handle?lang=en", "en", "The service is temporarily unavailable"},
+		{"POST", "/oauth/consent/handle", "vi", "Dịch vụ tạm thời không khả dụng"},
+	} {
+		t.Run(tt.method+tt.path, func(t *testing.T) {
+			mux, _, _ := routeFixture(t)
+			for range 20 {
+				mux.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("GET", "/.well-known/oauth-authorization-server", nil))
+			}
+			w := httptest.NewRecorder()
+			mux.ServeHTTP(w, httptest.NewRequest(tt.method, tt.path, nil))
+			h := w.Header()
+			body := w.Body.String()
+			if w.Code != 429 || h.Get("Retry-After") != "3" || h.Get("Content-Type") != "text/html; charset=utf-8" || h.Get("Cache-Control") != "no-store" || h.Get("X-Frame-Options") != "DENY" || h.Get("Referrer-Policy") != "same-origin" || !strings.Contains(h.Get("Content-Security-Policy"), "default-src 'none'; style-src 'self' 'sha256-") || !strings.Contains(h.Get("Content-Security-Policy"), "frame-ancestors 'none'") || !strings.Contains(body, `<html lang="`+tt.lang+`">`) || !strings.Contains(body, tt.message) || !strings.Contains(body, "temporarily_unavailable") || strings.Contains(body, "<a ") || h.Get("Location") != "" {
+				t.Fatalf("status=%d headers=%v body=%s", w.Code, h, body)
+			}
+		})
 	}
 }

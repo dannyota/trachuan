@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="{{.Lang}}">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{{.Title}}</title><style>{{.Style}}</style></head>
+<body>
+<main>
+<a href="{{.Toggle}}" lang="{{if eq .Lang "vi"}}en{{else}}vi{{end}}">{{.ToggleLabel}}</a>
+<h1>{{.Title}}</h1>
+<p>“{{.Name}}”</p>
+{{if .ClientHost}}<p>Client ID: <bdi>{{.ClientHost}}</bdi></p>{{end}}
+<p>{{.RedirectLabel}}: <bdi>{{.RedirectHost}}</bdi></p>
+{{if .DCRWarning}}<p role="note">{{.DCRWarning}}</p>{{end}}
+{{if .LoopbackWarning}}<p role="note">{{.LoopbackWarning}}</p>{{end}}
+<p>{{.ScopeLabel}}: <code>mcp:read</code></p>
+<p>{{.Prompt}}</p>
+<form method="post" action="{{.Action}}">
+<input type="hidden" name="csrf_token" value="{{.Token}}">
+<button type="submit" name="decision" value="approve">{{.Approve}}</button>
+<button type="submit" name="decision" value="deny">{{.Deny}}</button>
+</form>
+</main>
+</body>
+</html>

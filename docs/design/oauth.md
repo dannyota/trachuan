@@ -58,6 +58,11 @@ other ID must come from [registration](#registration). All clients are public.
 For a CIMD document the method is `none` when `token_endpoint_auth_method` is
 absent or `none` and `token_endpoint_auth_methods_supported`, when present,
 contains `none`; a client whose either field names any other method is rejected.
+A CIMD client's grant types are the intersection of its advertised `grant_types`
+(absent means `authorization_code`) with `authorization_code` and
+`refresh_token`; the client is rejected when the intersection is empty. Every
+client stores its effective grant set: authorize and code exchange require
+`authorization_code`, refresh requires `refresh_token`.
 
 CIMD fetching follows auth.md (HTTPS, DNS name, global unicast addresses only,
 validated dial, no redirects, `client_id` equal to the fetched URL) with the
@@ -108,9 +113,11 @@ defaults to `mcp:read`; any other value returns `invalid_scope`.
 `/oauth/authorize` validates the client, the redirect URI, `response_type`
 `code`, the PKCE `S256` challenge, `state`, resource and scope (sizes in
 budgets). Any error, before or after the redirect URI is known, renders a server
-page with the error and, when the redirect URI is valid, a button that returns
-to the client with `error`, `state` and `iss`; the server never redirects to a
-client without that click or a consent decision (RFC 9700 §4.11.2).
+page with the error and, when the redirect URI is valid, a link back to the
+client carrying `error`, `state` and `iss`; the server never redirects to a
+client without the user following that link or a consent decision (RFC 9700
+§4.11.2). A client whose effective grant set lacks `authorization_code` gets
+`unauthorized_client` on that page.
 
 A valid request is stored as a pending request under a random handle and bound
 to the browser: the response sets cookie `__Host-oauth` (`Path=/`, `Secure`,
@@ -129,9 +136,13 @@ identity is not verified. The form carries
 `HMAC-SHA256(session CSRF secret, "oauth-consent:" || handle)`, never the secret
 itself; `POST` is `application/x-www-form-urlencoded`, requires that value, an
 `Origin` equal to `<base>` and the browser cookie. Responses carry
-`Cache-Control: no-store`, `X-Frame-Options: DENY` and a CSP with
-`frame-ancestors 'none'` and `form-action` limited to `'self'` and the redirect
-origin.
+`Cache-Control: no-store`, `X-Frame-Options: DENY`,
+`Referrer-Policy: same-origin` (a stricter policy makes browsers send
+`Origin: null` on the form post) and a CSP of `default-src 'none'`, the page's
+stylesheet and `frame-ancestors 'none'`. The CSP sets no `form-action`: the
+decision posts to the server, which answers with a 303 to the client, and a
+source list cannot name every allowed loopback callback such as `[::1]`; the
+page has no scripts and all output is escaped.
 
 The decision claims the pending request in one statement (unexpired, unclaimed,
 matching browser) and binds it to the approving session's account. Approval
@@ -144,7 +155,14 @@ issues a code; denial returns `access_denied`. Both leave with a 303 carrying
 
 Both grants take `application/x-www-form-urlencoded`, ignore unknown parameters
 and reject a repeated parameter with `invalid_request`. `client_id` and
-`resource` are required in both.
+`resource` are required in both (a missing or empty `resource` is
+`invalid_target`). Clients are public: a request carrying an `Authorization`
+header, `client_secret`, `client_assertion` or `client_assertion_type` is
+refused with 401 `invalid_client` before any code or token is used; revocation
+applies the same rule. Code exchange needs `authorization_code` and refresh
+needs `refresh_token` in the client's grant set (`unauthorized_client`
+otherwise); a client without `refresh_token` gets no refresh token, and its
+family lives as long as the access token.
 
 - `authorization_code`: `code` and `code_verifier` required; `redirect_uri` is
   optional (OAuth 2.1) and, when present, must equal the code's. The code must
@@ -189,12 +207,15 @@ The process drops its cached credential entries at once. The account routes
 ## Retention
 
 A cleanup loop in the server deletes, in batches, at the interval in budgets:
-pending requests after expiry; codes after the replay retention in budgets (kept
-for replay detection until then); tokens after the same retention once their
-family expires or their grant is revoked; grants with no unexpired family and no
-pending code for the retirement period in budgets. Unexpired pending requests
-are capped in budgets; at the cap `/oauth/authorize` returns the 503 server
-page.
+pending requests after their `expires_at`; codes, consumed or not, once the
+replay retention in budgets has passed since their `expires_at` (kept for replay
+detection until then); tokens once the same retention has passed since their
+family's `family_expires_at` or their grant's `revoked_at`, whichever is
+earlier; grants that have no unexpired family and no unexpired code once the
+retirement period in budgets has passed since the latest of the grant's
+`created_at`, its families' `family_expires_at` and its codes' `expires_at`
+(deleting a grant deletes its codes and tokens). Unexpired pending requests are
+capped in budgets; at the cap `/oauth/authorize` returns the 503 server page.
 
 ## Errors
 
@@ -210,7 +231,9 @@ fails closed by design.
 
 ## Acceptance
 
-Before the plan lands: Claude Code connects over CIMD and over DCR against a
-local server and runs the [MCP tools](mcp-results.md); refresh, revocation
-through the account routes and a blocked account behave as above. Claude.ai and
-ChatGPT connectors need a public HTTPS URL and run against the first deployment.
+The code merges after review and green CI; the plan is marked landed only after
+a live check with the owner's Google login: Claude Code connects over CIMD and
+over DCR against a local server and runs the [MCP tools](mcp-results.md);
+refresh, revocation through the account routes and a blocked account behave as
+above. Until then OAuth is not offered to users. Claude.ai and ChatGPT
+connectors need a public HTTPS URL and run against the first deployment.

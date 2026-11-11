@@ -21,7 +21,7 @@ func Middleware(v *Verifier, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		headers := r.Header.Values("Authorization")
 		if len(headers) != 1 || len(headers[0]) < 7 || !strings.EqualFold(headers[0][:7], "Bearer ") {
-			unauthorized(w)
+			unauthorized(w, v.Audience, hasBearer(headers))
 			return
 		}
 		p, err := v.Verify(r.Context(), headers[0][7:])
@@ -29,15 +29,43 @@ func Middleware(v *Verifier, next http.Handler) http.Handler {
 			http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
 			return
 		}
+		if errors.Is(err, ErrInsufficientScope) {
+			InsufficientScope(w, v.Audience)
+			return
+		}
 		if err != nil {
-			unauthorized(w)
+			unauthorized(w, v.Audience, true)
 			return
 		}
 		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), principalKey{}, p)))
 	})
 }
 
-func unauthorized(w http.ResponseWriter) {
-	w.Header().Set("WWW-Authenticate", `Bearer error="invalid_token"`)
+func hasBearer(headers []string) bool {
+	for _, header := range headers {
+		if len(header) > 6 && strings.EqualFold(header[:6], "Bearer") && (header[6] == ' ' || header[6] == '\t') {
+			return true
+		}
+	}
+	return false
+}
+
+func unauthorized(w http.ResponseWriter, audience string, invalid bool) {
+	challenge := challengeValue(audience)
+	if invalid {
+		challenge += `, error="invalid_token"`
+	}
+	w.Header().Set("WWW-Authenticate", challenge)
 	http.Error(w, "Unauthorized", http.StatusUnauthorized)
+}
+
+// InsufficientScope writes the challenge for a valid credential lacking MCP scope.
+func InsufficientScope(w http.ResponseWriter, audience string) {
+	w.Header().Set("WWW-Authenticate", challengeValue(audience)+`, error="insufficient_scope"`)
+	http.Error(w, "Forbidden", http.StatusForbidden)
+}
+
+func challengeValue(audience string) string {
+	base := strings.TrimSuffix(audience, "/mcp")
+	return `Bearer resource_metadata="` + base + `/.well-known/oauth-protected-resource/mcp", scope="mcp:read"`
 }

@@ -489,6 +489,101 @@ paths:
         description: Used when Origin is absent.
         schema:
           type: string
+  /api/v1/me/grants:
+    get:
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GrantList'
+        '401':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+        '503':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/me/grants/{id}:
+    delete:
+      responses:
+        '204':
+          description: Success
+        '401':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+        '503':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          minimum: 1
+      - name: X-CSRF-Token
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: Origin
+        in: header
+        required: false
+        description: Required unless Referer supplies the same origin.
+        schema:
+          type: string
+      - name: Referer
+        in: header
+        required: false
+        description: Used when Origin is absent.
+        schema:
+          type: string
   /api/v1/search:
     post:
       responses:
@@ -834,6 +929,27 @@ components:
       - expires_at
       - last_used_at
       - revoked_at
+    Grant:
+      type: object
+      properties:
+        id: *id003
+        client_name: *id001
+        client_id_host:
+          type: string
+          description: HTTPS client ID hostname, or empty for other client IDs.
+        created_at: *id004
+        last_used_at: *id004
+      required:
+      - id
+      - client_name
+      - client_id_host
+      - created_at
+      - last_used_at
+    GrantList:
+      type: array
+      maxItems: 100
+      items:
+        $ref: '#/components/schemas/Grant'
     CreatedToken:
       type: object
       properties:

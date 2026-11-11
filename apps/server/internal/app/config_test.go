@@ -116,3 +116,38 @@ func TestConfig_WebRequiresGoogleAndPublicURL(t *testing.T) {
 		})
 	}
 }
+
+func TestConfig_PreregisteredFileOptional(t *testing.T) {
+	t.Setenv("SERVER_AUTH_DATABASE_URL", "postgres://localhost/auth")
+	t.Setenv("SERVER_CORPUS_DATABASE_URL", "postgres://localhost/{database}")
+	t.Setenv("SERVER_PUBLIC_URL", "http://localhost:8080")
+	t.Setenv("SERVER_OAUTH_CLIENTS", "")
+	if _, err := loadConfig(); err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range []string{"/", "../../../../docs/architecture.md"} {
+		t.Setenv("SERVER_OAUTH_CLIENTS", path)
+		if _, err := loadConfig(); err == nil || err.Error() != "invalid preregistered OAuth clients" {
+			t.Fatalf("error=%v", err)
+		}
+	}
+}
+
+func TestConfig_NormalizesPublicOrigin(t *testing.T) {
+	t.Setenv("SERVER_AUTH_DATABASE_URL", "postgres://localhost/auth")
+	t.Setenv("SERVER_CORPUS_DATABASE_URL", "postgres://localhost/{database}")
+	for _, tt := range []struct{ raw, origin string }{
+		{"HTTPS://TraChuan.VN:443/", "https://trachuan.vn"},
+		{"HTTP://LOCALHOST:80/", "http://localhost"},
+		{"HTTPS://EXAMPLE.TEST:8443/", "https://example.test:8443"},
+		{"http://[::1]:80/", "http://[::1]"},
+	} {
+		t.Run(tt.raw, func(t *testing.T) {
+			t.Setenv("SERVER_PUBLIC_URL", tt.raw)
+			cfg, err := loadConfig()
+			if err != nil || cfg.publicURL != tt.origin || cfg.audience != tt.origin+"/mcp" {
+				t.Fatalf("origin=%q audience=%q err=%v", cfg.publicURL, cfg.audience, err)
+			}
+		})
+	}
+}

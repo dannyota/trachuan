@@ -22,7 +22,7 @@
 - Secrets: handles, browser values, codes and tokens are 32 random bytes base64url without padding; access tokens `tra_` and refresh tokens `trr_` plus 43 characters; all stored only as SHA-256 hex. Consent form token is `HMAC-SHA256(session CSRF secret, "oauth-consent:" || handle)`.
 - Cookie `__Host-oauth` (`Path=/`, `Secure`, `HttpOnly`, `SameSite=Lax`, `Max-Age=600`), cleared on decision.
 - Resource is exactly `SERVER_PUBLIC_URL + "/mcp"`; scope only `mcp:read`; PKCE `S256` only; every client public (`none`).
-- Every redirect to a client is a 303 after a consent decision or a click on the error page, with `state` and `iss`.
+- A client is reached only by a 303 after a consent decision or by the user following the error page's link, both carrying `state` and `iss`.
 - Auth database errors: 503 `temporarily_unavailable` at OAuth endpoints, 503 `unavailable` at `/mcp`; unknown commit outcomes fail closed as the spec says.
 - Never log tokens, codes, handles, browser values, `state`, PKCE values, cookies or email. Go files at most 400 lines; Markdown at most 300 lines.
 

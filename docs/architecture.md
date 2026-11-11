@@ -50,6 +50,14 @@ The query client checks each release's query recipe and shares a vector cache
 across releases. Search, document and read caches follow the active release. See
 the [local runbook](runbooks/server-local.md).
 
+The `oauth` package serves authorization server and protected resource metadata
+under `/.well-known/`, and `/oauth/authorize`, `/oauth/consent/{handle}`,
+`/oauth/token`, `/oauth/register` and `/oauth/revoke`. OAuth and login endpoints
+share an IP limit. MCP accepts OAuth access tokens and personal tokens.
+Signed-in accounts list and revoke grants through `/api/v1/me/grants`. OAuth
+retention runs every ten minutes. The OAuth protocol helpers start from aboutme
+`oauthsrv` at commit `1b1ece3d`.
+
 ## Embedding services
 
 | App               | Role                                                                                              |

@@ -9,6 +9,7 @@ const maxEntries = 10000
 
 type cacheEntry struct {
 	hash      string
+	grantID   int64
 	principal Principal
 	expires   time.Time
 	until     time.Time
@@ -61,6 +62,11 @@ func (v *Verifier) finishLookup(flight *lookupFlight) {
 	for f := range v.flights {
 		oldest = min(oldest, f.generation)
 	}
+	for id, generation := range v.grantGenerations {
+		if generation <= oldest {
+			delete(v.grantGenerations, id)
+		}
+	}
 	for id, generation := range v.accountGenerations {
 		if generation <= oldest {
 			delete(v.accountGenerations, id)
@@ -71,7 +77,7 @@ func (v *Verifier) finishLookup(flight *lookupFlight) {
 func (v *Verifier) remember(entry cacheEntry, now time.Time, flight *lookupFlight) bool {
 	v.mu.Lock()
 	defer v.mu.Unlock()
-	if flight.revoked || v.accountGenerations[entry.principal.AccountID] > flight.generation {
+	if flight.revoked || v.accountGenerations[entry.principal.AccountID] > flight.generation || v.grantGenerations[entry.grantID] > flight.generation {
 		return false
 	}
 	if !entry.until.After(now) {

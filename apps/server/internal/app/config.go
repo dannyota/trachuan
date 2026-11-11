@@ -7,11 +7,14 @@ import (
 	"net/url"
 	"os"
 	"strings"
+
+	"danny.vn/trachuan/apps/server/internal/oauth"
 )
 
 type config struct {
 	listen, authURL, corpusURL, embedderURL, audience, publicURL, googleID, googleSecret string
 	trustedProxies                                                                       []netip.Prefix
+	oauthClients                                                                         []oauth.Client
 }
 
 func loadConfig() (config, error) {
@@ -22,12 +25,17 @@ func loadConfig() (config, error) {
 	if c.embedderURL == "" {
 		c.embedderURL = "http://127.0.0.1:8091"
 	}
-	audience, ok := publicAudience(os.Getenv("SERVER_PUBLIC_URL"))
+	var err error
+	origin, ok := publicOrigin(os.Getenv("SERVER_PUBLIC_URL"))
 	if c.authURL == "" || !validCorpusURL(c.corpusURL) || !ok {
 		return config{}, errors.New("invalid or missing server configuration")
 	}
-	c.audience = audience
-	c.publicURL = os.Getenv("SERVER_PUBLIC_URL")
+	c.publicURL = origin
+	c.audience = origin + "/mcp"
+	c.oauthClients, err = oauth.LoadPreregistered(os.Getenv("SERVER_OAUTH_CLIENTS"))
+	if err != nil {
+		return config{}, errors.New("invalid preregistered OAuth clients")
+	}
 	c.googleID = os.Getenv("GOOGLE_CLIENT_ID")
 	c.googleSecret = os.Getenv("GOOGLE_CLIENT_SECRET")
 	raw := strings.TrimSpace(os.Getenv("SERVER_TRUSTED_PROXIES"))
@@ -43,7 +51,7 @@ func loadConfig() (config, error) {
 	return c, nil
 }
 
-func publicAudience(base string) (string, bool) {
+func publicOrigin(base string) (string, bool) {
 	u, err := url.Parse(base)
 	if err != nil || u == nil || u.Host == "" || u.Hostname() == "" || u.User != nil || u.Opaque != "" || (u.Path != "" && u.Path != "/") || u.RawPath != "" || strings.ContainsAny(base, "?#") || strings.HasSuffix(u.Host, ":") {
 		return "", false
@@ -51,7 +59,17 @@ func publicAudience(base string) (string, bool) {
 	if u.Scheme != "https" && (u.Scheme != "http" || !loopback(u.Hostname())) {
 		return "", false
 	}
-	return u.Scheme + "://" + u.Host + "/mcp", true
+	host := strings.ToLower(u.Hostname())
+	port := u.Port()
+	if (u.Scheme == "https" && port == "443") || (u.Scheme == "http" && port == "80") {
+		port = ""
+	}
+	if port != "" {
+		host = net.JoinHostPort(host, port)
+	} else if strings.Contains(host, ":") {
+		host = "[" + host + "]"
+	}
+	return u.Scheme + "://" + host, true
 }
 func loopback(host string) bool {
 	if strings.EqualFold(host, "localhost") {

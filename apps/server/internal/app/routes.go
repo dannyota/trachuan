@@ -8,18 +8,22 @@ import (
 	"danny.vn/trachuan/apps/server/internal/credential"
 	"danny.vn/trachuan/apps/server/internal/limits"
 	"danny.vn/trachuan/apps/server/internal/mcpapi"
+	"danny.vn/trachuan/apps/server/internal/oauth"
 	"danny.vn/trachuan/apps/server/internal/webapi"
 	"danny.vn/trachuan/apps/server/internal/weblogin"
 	"danny.vn/trachuan/apps/server/internal/websession"
 )
 
 type webDeps struct {
-	store      accountapi.Store
-	sessions   *websession.Manager
-	login      *weblogin.Handler
-	verifier   *credential.Verifier
-	tools      mcpapi.Config
-	loginLimit *loginLimiter
+	store        accountapi.Store
+	sessions     *websession.Manager
+	login        *weblogin.Handler
+	verifier     *credential.Verifier
+	tools        mcpapi.Config
+	loginLimit   *loginLimiter
+	oauthDB      oauth.ClientDB
+	oauthClients []oauth.Client
+	publicURL    string
 }
 
 func newWebMux(d webDeps) *http.ServeMux {
@@ -35,6 +39,27 @@ func newWebMux(d webDeps) *http.ServeMux {
 		d.sessions.Logout(w, r)
 	})))
 	corpus := webapi.New(webapi.Config{Tools: d.tools, Sessions: d.sessions})
+	clients := oauth.NewClients(d.oauthDB, d.oauthClients, oauth.NewCIMDResolver())
+	for pattern, handler := range map[string]http.Handler{
+		"GET /.well-known/oauth-protected-resource":     oauth.ProtectedResourceMetadata(d.publicURL),
+		"GET /.well-known/oauth-protected-resource/mcp": oauth.ProtectedResourceMetadata(d.publicURL),
+		"GET /.well-known/oauth-authorization-server":   oauth.AuthorizationServerMetadata(d.publicURL),
+		"GET /oauth/authorize":                          oauth.NewAuthorizeHandler(d.publicURL, d.oauthDB, clients.Resolve),
+		"GET /oauth/consent/{handle}":                   oauth.NewConsentHandler(d.publicURL, d.oauthDB, d.sessions),
+		"POST /oauth/consent/{handle}":                  oauth.NewConsentHandler(d.publicURL, d.oauthDB, d.sessions),
+		"POST /oauth/token":                             oauth.NewTokenHandler(d.oauthDB, d.publicURL, d.verifier.EvictGrant),
+		"POST /oauth/register":                          oauth.NewRegisterHandler(clients.Register),
+		"POST /oauth/revoke":                            oauth.NewRevokeHandler(d.oauthDB, d.verifier.Evict, d.verifier.EvictGrant),
+	} {
+		switch pattern {
+		case "POST /oauth/token", "POST /oauth/register", "POST /oauth/revoke":
+			mux.Handle(pattern, d.loginLimit.oauthJSON(handler))
+		case "GET /oauth/authorize", "GET /oauth/consent/{handle}", "POST /oauth/consent/{handle}":
+			mux.Handle(pattern, d.loginLimit.oauthPage(handler))
+		default:
+			mux.Handle(pattern, d.loginLimit.middleware(handler))
+		}
+	}
 	mountRoutes(mux, d.loginLimit.middleware(d.login.Start), d.loginLimit.middleware(d.login.Callback), logout, account, corpus)
 	return mux
 }
@@ -47,6 +72,8 @@ func mountRoutes(mux *http.ServeMux, start, callback, logout, account, corpus ht
 	mux.Handle("DELETE /api/v1/me", account)
 	mux.Handle("GET /api/v1/me/sessions", account)
 	mux.Handle("DELETE /api/v1/me/sessions/{id}", account)
+	mux.Handle("GET /api/v1/me/grants", account)
+	mux.Handle("DELETE /api/v1/me/grants/{id}", account)
 	mux.Handle("GET /api/v1/me/tokens", account)
 	mux.Handle("POST /api/v1/me/tokens", account)
 	mux.Handle("DELETE /api/v1/me/tokens/{id}", account)
