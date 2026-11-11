@@ -21,10 +21,11 @@ Keep rootless Podman and `net.ipv4.ip_unprivileged_port_start=80`. Replace gp3
 with
 [Balanced OCI volumes](https://docs.oracle.com/en-us/iaas/Content/Block/Concepts/blockvolumeperformance.htm):
 a boot volume and a separate persistent data volume, sized in
-[budgets](budgets.md). Balanced performance scales with size, so validate
-restore and database I/O rather than assuming gp3-equivalent IOPS. Use one
-reserved public IPv4 address, no CDN or load balancer. Port the OpenTofu root to
-`deploy/oci/`; retain the Cloudflare provider and `deploy/host/` bundle.
+[host budgets](budgets-host.md#disk-budget-host-estimates). Balanced performance
+scales with size, so validate restore and database I/O rather than assuming
+gp3-equivalent IOPS. Use one reserved public IPv4 address, no CDN or load
+balancer. Port the OpenTofu root to `deploy/oci/`; retain the Cloudflare
+provider and `deploy/host/` bundle.
 
 ## Domain and DNS
 
@@ -182,7 +183,7 @@ skipping steps 1 to 3 and verifying instead that the database exists and its
 2. Refuse when `schema_version`, `dense_recipe` or `lexical_recipe` (the runtime
    algorithm identifier, not the per-release statistics) differ from what the
    running server and embedder report, or when free memory or disk is below the
-   thresholds in [budgets](budgets.md).
+   thresholds in [host budgets](budgets-host.md#host-memory-estimates).
 3. `pg_restore --no-owner` as `restorer` into `corpus_<cc>_<rel>` with a
    dedicated `maintenance_work_mem`; the TOC is listed first and refused if it
    contains functions, extensions other than pgvector, or event triggers.
@@ -252,8 +253,8 @@ Monitoring alarms replace CloudWatch:
   [`oci_compute_infrastructure_health.instance_status`](https://docs.oracle.com/en-us/iaas/Content/Compute/References/infrastructurehealthmetrics.htm),
   plus missing heartbeat/metrics; a stopped instance may emit no status value.
 
-Set thresholds from [budgets](budgets.md#host-alarms-proposed). Deliver OCI
-alarms through
+Set thresholds from [host budgets](budgets-host.md#host-alarms-proposed).
+Deliver OCI alarms through
 [Notifications](https://docs.oracle.com/en-us/iaas/Content/Notification/Concepts/notificationoverview.htm)
 email independently of the host. Retain the host timer's Telegram alerts and
 external uptime check; do not rely on the failed host to relay cloud alarms.
