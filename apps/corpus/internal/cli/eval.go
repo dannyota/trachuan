@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"danny.vn/trachuan/apps/corpus/internal/artifact"
@@ -75,7 +76,7 @@ func runEval(ctx context.Context, args []string, _ io.Writer, stderr io.Writer) 
 }
 
 type evalRunner interface {
-	Evaluate(context.Context, stage.Env, stage.Run, *retrieval.CapOverride) (evaluation.Report, evaluation.Cache, error)
+	Evaluate(context.Context, stage.Env, stage.Run, evaluation.Options) (evaluation.Report, evaluation.Cache, error)
 }
 
 type evalTarget struct {
@@ -88,9 +89,9 @@ type evalTarget struct {
 func runEvalWith(ctx context.Context, args []string, stderr io.Writer, prepare func(context.Context, string, string, string) (evalTarget, error)) int {
 	fail := func(err error) int { _, _ = fmt.Fprintln(stderr, err); return 1 }
 	if len(args) < 2 {
-		return fail(fmt.Errorf("usage: corpus eval <cc> <rel> --out DIR [--previous FILE] [--require-floors] [--cap N|none]"))
+		return fail(fmt.Errorf("usage: corpus eval <cc> <rel> --out DIR [--previous FILE] [--require-floors] [--cap N|none] [--historical-policy agent] [--non-current-tail N] [--not-yet-eligible]"))
 	}
-	opts, err := options(args[2:], map[string]bool{"--out": true, "--previous": true, "--require-floors": false, "--cap": true})
+	opts, err := options(args[2:], map[string]bool{"--out": true, "--previous": true, "--require-floors": false, "--cap": true, "--historical-policy": true, "--non-current-tail": true, "--not-yet-eligible": false})
 	if err != nil {
 		return fail(err)
 	}
@@ -104,6 +105,20 @@ func runEvalWith(ctx context.Context, args []string, stderr io.Writer, prepare f
 			return fail(fmt.Errorf("--cap: %w", err))
 		}
 	}
+	validity := evaluation.ValidityOverrides{NotYetEligible: opts["--not-yet-eligible"] == "true"}
+	if value, ok := opts["--historical-policy"]; ok {
+		if value != "agent" {
+			return fail(fmt.Errorf("invalid historical policy: expected agent"))
+		}
+		validity.HistoricalPolicy = &value
+	}
+	if value, ok := opts["--non-current-tail"]; ok {
+		n, parseErr := strconv.Atoi(value)
+		if parseErr != nil || n < 0 || n > 5 || strconv.Itoa(n) != value {
+			return fail(fmt.Errorf("invalid non-current tail: expected 0 to 5"))
+		}
+		validity.NonCurrentTail = &n
+	}
 	if err = checkEvaluationOutput(opts["--out"]); err != nil {
 		return fail(err)
 	}
@@ -112,7 +127,7 @@ func runEvalWith(ctx context.Context, args []string, stderr io.Writer, prepare f
 		return fail(err)
 	}
 	defer target.close()
-	report, cache, err := target.runner.Evaluate(ctx, target.env, target.run, capOverride)
+	report, cache, err := target.runner.Evaluate(ctx, target.env, target.run, evaluation.Options{CapOverride: capOverride, ValidityOverrides: validity})
 	if err != nil {
 		return fail(err)
 	}

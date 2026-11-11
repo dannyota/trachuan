@@ -194,8 +194,8 @@ func TestEvalStage_NoCapOverride(t *testing.T) {
 		return build.Database{}, artifact.Result{SHA256: "build"}, nil
 	}
 	s.evaluate = func(_ context.Context, _ stage.Env, _ stage.Run, _ build.Database, _ artifact.Result, opts evaluation.Options) (evaluation.Report, evaluation.Cache, error) {
-		if opts.CapOverride != nil {
-			t.Error("pipeline stage passed a cap override")
+		if opts.CapOverride != nil || opts.HistoricalPolicy != nil || opts.NonCurrentTail != nil || opts.NotYetEligible {
+			t.Error("pipeline stage passed a research override")
 		}
 		return evaluation.Report{}, evaluation.Cache{}, sentinel
 	}
@@ -222,12 +222,31 @@ func TestEvaluate_ForwardsCapOverride(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	report, _, err := s.Evaluate(context.Background(), stage.Env{}, stage.Run{}, cap)
+	report, _, err := s.Evaluate(context.Background(), stage.Env{}, stage.Run{}, evaluation.Options{CapOverride: cap})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if report.CapOverride == nil || *report.CapOverride != 4 {
 		t.Fatalf("cap = %v, want 4", report.CapOverride)
+	}
+}
+
+func TestEvaluate_ForwardsValidityOverrides(t *testing.T) {
+	s := New(Config{})
+	s.ensure = func(context.Context, stage.Env, stage.Run) (build.Database, artifact.Result, error) {
+		return build.Database{}, artifact.Result{}, nil
+	}
+	s.evaluate = func(_ context.Context, _ stage.Env, _ stage.Run, _ build.Database, _ artifact.Result, opts evaluation.Options) (evaluation.Report, evaluation.Cache, error) {
+		return evaluation.Report{ValidityOverrides: opts.ValidityOverrides}, evaluation.Cache{}, nil
+	}
+	history, tail := "agent", 3
+	policy := evaluation.ValidityOverrides{HistoricalPolicy: &history, NonCurrentTail: &tail, NotYetEligible: true}
+	report, _, err := s.Evaluate(context.Background(), stage.Env{}, stage.Run{}, evaluation.Options{ValidityOverrides: policy})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if report.HistoricalPolicy == nil || *report.HistoricalPolicy != "agent" || report.NonCurrentTail == nil || *report.NonCurrentTail != 3 || !report.NotYetEligible {
+		t.Fatalf("validity overrides: %+v", report.ValidityOverrides)
 	}
 }
 

@@ -151,6 +151,47 @@ func TestEvalCLI_CapFlag(t *testing.T) {
 	}
 }
 
+func TestEvalCLI_ValidityFlags(t *testing.T) {
+	out := t.TempDir()
+	if err := os.WriteFile(filepath.Join(out, "existing"), []byte("keep"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	for _, args := range [][]string{{"--historical-policy", "agent"}, {"--non-current-tail", "0"}, {"--non-current-tail", "5"}, {"--not-yet-eligible"}} {
+		var stderr bytes.Buffer
+		input := append([]string{"vn", "20261109", "--out", out}, args...)
+		if code := runEval(context.Background(), input, &stderr, &stderr); code != 1 || !strings.Contains(stderr.String(), "output directory is not empty") {
+			t.Errorf("args %v: code=%d error=%s", args, code, stderr.String())
+		}
+	}
+	for _, args := range [][]string{{"--historical-policy", "other"}, {"--non-current-tail", "-1"}, {"--non-current-tail", "6"}, {"--non-current-tail", "01"}} {
+		var stderr bytes.Buffer
+		input := append([]string{"vn", "20261109", "--out", out}, args...)
+		if code := runEval(context.Background(), input, &stderr, &stderr); code != 1 || strings.Contains(stderr.String(), "output directory is not empty") {
+			t.Errorf("invalid args %v: code=%d error=%s", args, code, stderr.String())
+		}
+	}
+	prepare := func(context.Context, string, string, string) (evalTarget, error) {
+		return evalTarget{runner: cliCapStage{}, close: func() {}}, nil
+	}
+	result := filepath.Join(t.TempDir(), "report")
+	var stderr bytes.Buffer
+	args := []string{"vn", "20261109", "--out", result, "--historical-policy", "agent", "--non-current-tail", "3", "--not-yet-eligible"}
+	if code := runEvalWith(context.Background(), args, &stderr, prepare); code != 0 {
+		t.Fatalf("exit %d: %s", code, stderr.String())
+	}
+	data, err := os.ReadFile(filepath.Join(result, "report.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var report map[string]any
+	if err = json.Unmarshal(data, &report); err != nil {
+		t.Fatal(err)
+	}
+	if report["historical_policy"] != "agent" || report["non_current_tail"] != float64(3) || report["not_yet_eligible"] != true {
+		t.Fatalf("validity overrides: %v", report)
+	}
+}
+
 type replaceOutputWithFile struct{ out string }
 
 func (w replaceOutputWithFile) WriteFiles(string) error {
@@ -256,17 +297,21 @@ func (e cliCapEngine) Collect(_ context.Context, p retrieval.Prepared, depths re
 	}
 	return retrieval.Arms{Validation: p.Validation, Depths: depths, Date: e.date, Primary: retrieval.ArmGroup{Dense: candidates, Lexical: candidates, Members: candidates}}, nil
 }
+func (e cliCapEngine) CollectWithNotYetEligible(ctx context.Context, p retrieval.Prepared, depths retrieval.Depths) (retrieval.Arms, error) {
+	return e.Collect(ctx, p, depths)
+}
 func (e cliCapEngine) Present(context.Context, retrieval.Response, retrieval.Detail) (retrieval.SearchResult, error) {
 	return retrieval.SearchResult{}, nil
 }
 
 type cliCapStage struct{}
 
-func (cliCapStage) Evaluate(ctx context.Context, _ stage.Env, _ stage.Run, cap *retrieval.CapOverride) (evaluation.Report, evaluation.Cache, error) {
+func (cliCapStage) Evaluate(ctx context.Context, _ stage.Env, _ stage.Run, opts evaluation.Options) (evaluation.Report, evaluation.Cache, error) {
 	cases := []evaluation.Case{{ID: "positive", Question: "Câu hỏi tốt", ExpectedCitations: []evaluation.Expectation{{DocNumber: "doc"}}}, {ID: "reject1", Question: "khong dau mot", ExpectedCitations: []evaluation.Expectation{{DocNumber: "doc"}}}, {ID: "reject2", Question: "khong dau hai", ExpectedCitations: []evaluation.Expectation{{DocNumber: "doc"}}}, {ID: "reject3", Question: "khong dau ba", ExpectedCitations: []evaluation.Expectation{{DocNumber: "doc"}}}}
 	suite := evaluation.Suite{Legacy: cases, Rejections: []string{"reject1", "reject2", "reject3"}, Hashes: evaluation.FixtureHashes{Legacy: "fixture"}, Map: evaluation.IdentityMap{Version: 1, LegacySHA256: "fixture"}}
 	date := retrieval.Date{Year: 2026, Month: time.November, Day: 9}
-	return evaluation.Run(ctx, cliCapEngine{date}, suite, evaluation.Options{EvaluationDate: date, Modes: []retrieval.Mode{"exact"}, CapOverride: cap})
+	opts.EvaluationDate, opts.Modes = date, []retrieval.Mode{"exact"}
+	return evaluation.Run(ctx, cliCapEngine{date}, suite, opts)
 }
 
 func TestEvalCLI_CapForwardedToResults(t *testing.T) {

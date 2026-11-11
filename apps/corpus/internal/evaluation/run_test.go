@@ -24,6 +24,96 @@ type fakeEngine struct {
 	compactText, fullText      string
 }
 
+type validityRequestEngine struct {
+	fakeEngine
+	requests map[string]bool
+}
+
+func (e *validityRequestEngine) Prepare(ctx context.Context, r retrieval.Request) (retrieval.Prepared, error) {
+	e.requests[r.Query] = r.InForceOnly != nil && *r.InForceOnly
+	return e.fakeEngine.Prepare(ctx, r)
+}
+
+func (e *validityRequestEngine) CollectWithNotYetEligible(ctx context.Context, p retrieval.Prepared, d retrieval.Depths) (retrieval.Arms, error) {
+	return e.Collect(ctx, p, d)
+}
+
+func TestValidityOverrides_ReportAndCacheIdentity(t *testing.T) {
+	date := retrieval.Date{Year: 2026, Month: time.November, Day: 9}
+	engine := &validityRequestEngine{fakeEngine: fakeEngine{date: date}, requests: map[string]bool{}}
+	opts := Options{EvaluationDate: date, Modes: []retrieval.Mode{"exact"}}
+	base, baseline, err := Run(context.Background(), engine, recordedSuite(), opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	historical, tail := "agent", 2
+	opts.ValidityOverrides = ValidityOverrides{HistoricalPolicy: &historical, NonCurrentTail: &tail, NotYetEligible: true}
+	report, _, err := Run(context.Background(), engine, recordedSuite(), opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if base.CacheManifest["cache_key"] == report.CacheManifest["cache_key"] {
+		t.Fatal("different collection policies share a cache key")
+	}
+	data, err := json.Marshal(report)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var root any
+	if err = json.Unmarshal(data, &root); err != nil {
+		t.Fatal(err)
+	}
+	var visit func(any)
+	visit = func(value any) {
+		switch v := value.(type) {
+		case []any:
+			for _, child := range v {
+				visit(child)
+			}
+		case map[string]any:
+			if _, ok := v["limit"]; ok {
+				if v["historical_policy"] != "agent" || v["non_current_tail"] != float64(2) || v["not_yet_eligible"] != true {
+					t.Errorf("limit record missing policies: %v", v)
+				}
+			}
+			for _, child := range v {
+				visit(child)
+			}
+		}
+	}
+	visit(root)
+	zero := 0
+	opts.ValidityOverrides = ValidityOverrides{NonCurrentTail: &zero}
+	zeroReport, zeroCache, err := Run(context.Background(), engine, recordedSuite(), opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(baseline.Arms, zeroCache.Arms) || base.CacheManifest["cache_key"] != zeroReport.CacheManifest["cache_key"] {
+		t.Fatal("zero tail changed cached arms")
+	}
+}
+
+func TestHistoricalPolicy_AgentSetsInForceOnlyFalseForTaggedCasesOnly(t *testing.T) {
+	date := retrieval.Date{Year: 2026, Month: time.November, Day: 9}
+	suite := recordedSuite()
+	suite.Legacy[0].Tags = []string{"historical"}
+	engine := &validityRequestEngine{fakeEngine: fakeEngine{date: date}, requests: map[string]bool{}}
+	var opts Options
+	if err := json.Unmarshal([]byte(`{"historical_policy":"agent"}`), &opts); err != nil {
+		t.Fatal(err)
+	}
+	opts.EvaluationDate, opts.Modes = date, []retrieval.Mode{"exact"}
+	if _, _, err := Run(context.Background(), engine, suite, opts); err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range suite.Legacy {
+		want := c.ID != suite.Legacy[0].ID
+		if engine.requests[c.Question] != want {
+			t.Errorf("case %s: in_force_only=%v, want %v", c.ID, engine.requests[c.Question], want)
+		}
+	}
+}
+
 func (f *fakeEngine) Present(_ context.Context, _ retrieval.Response, d retrieval.Detail) (retrieval.SearchResult, error) {
 	value := f.compactText
 	if d == retrieval.DetailFull {
@@ -564,6 +654,45 @@ func TestPreviousDiff_CapMismatchIncompatible(t *testing.T) {
 	}
 	if !reflect.DeepEqual(cache1.Arms, cache2.Arms) {
 		t.Fatal("cap changed cached arms")
+	}
+}
+
+func TestPreviousDiff_ValidityPolicyMismatchIncompatible(t *testing.T) {
+	date := retrieval.Date{Year: 2026, Month: time.November, Day: 9}
+	opts := Options{EvaluationDate: date, Modes: []retrieval.Mode{"exact"}}
+	base, _, err := Run(context.Background(), &fakeEngine{date: date}, recordedSuite(), opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	encoded, err := json.Marshal(base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		key   string
+		value any
+	}{{"historical_policy", "agent"}, {"non_current_tail", 0}, {"not_yet_eligible", true}} {
+		var previous map[string]any
+		if err := json.Unmarshal(encoded, &previous); err != nil {
+			t.Fatal(err)
+		}
+		previous[tc.key] = tc.value
+		data, err := json.Marshal(previous)
+		if err != nil {
+			t.Fatal(err)
+		}
+		path := filepath.Join(t.TempDir(), "previous.json")
+		if err = os.WriteFile(path, data, 0600); err != nil {
+			t.Fatal(err)
+		}
+		opts.PreviousReport = path
+		report, _, err := Run(context.Background(), &fakeEngine{date: date}, recordedSuite(), opts)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(fmt.Sprint(report.PreviousDiff), "incompatible") {
+			t.Errorf("%s: previous diff = %v", tc.key, report.PreviousDiff)
+		}
 	}
 }
 

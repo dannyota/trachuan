@@ -9,8 +9,16 @@ import (
 	"danny.vn/trachuan/internal/retrieval"
 )
 
+// ValidityOverrides describes research-only validity policies.
+type ValidityOverrides struct {
+	HistoricalPolicy *string `json:"historical_policy"`
+	NonCurrentTail   *int    `json:"non_current_tail"`
+	NotYetEligible   bool    `json:"not_yet_eligible"`
+}
+
 // Options identifies the inputs and environment of an evaluation.
 type Options struct {
+	ValidityOverrides
 	CapOverride          *retrieval.CapOverride
 	Mapping              ValidationReport
 	EvaluationDate       retrieval.Date
@@ -26,6 +34,7 @@ type Options struct {
 
 // Metric records a measured ratio with its counts.
 type Metric struct {
+	ValidityOverrides
 	CapOverride *retrieval.CapOverride `json:"cap_override"`
 	Mode        retrieval.Mode         `json:"mode"`
 	Arms        retrieval.ArmMode      `json:"arms"`
@@ -66,6 +75,7 @@ type Target struct {
 
 // NonRegression compares a metric with its previous value.
 type NonRegression struct {
+	ValidityOverrides
 	CapOverride   *retrieval.CapOverride `json:"cap_override"`
 	Mode          retrieval.Mode         `json:"mode"`
 	Arms          retrieval.ArmMode      `json:"arms"`
@@ -78,6 +88,7 @@ type NonRegression struct {
 
 // SizeSummary records nearest-rank evidence sizes.
 type SizeSummary struct {
+	ValidityOverrides
 	CapOverride *retrieval.CapOverride `json:"cap_override"`
 	Cohort      string                 `json:"cohort"`
 	Mode        retrieval.Mode         `json:"mode"`
@@ -90,6 +101,7 @@ type SizeSummary struct {
 
 // CaseResult contains the non-sensitive result of one response.
 type CaseResult struct {
+	ValidityOverrides
 	CapOverride   *retrieval.CapOverride `json:"cap_override"`
 	MappingIssues []MappingIssue         `json:"mapping_issues,omitempty"`
 	CaseID        string                 `json:"case_id"`
@@ -119,6 +131,7 @@ type Rejection struct {
 
 // PresentedSummary records matching and serialized response sizes.
 type PresentedSummary struct {
+	ValidityOverrides
 	CapOverride *retrieval.CapOverride `json:"cap_override"`
 	Cohort      string                 `json:"cohort"`
 	Mode        retrieval.Mode         `json:"mode"`
@@ -140,6 +153,7 @@ type CompactSizeGate struct {
 
 // Report is a completed diagnostic evaluation.
 type Report struct {
+	ValidityOverrides
 	CapOverride                   *retrieval.CapOverride    `json:"cap_override"`
 	Presented                     []PresentedSummary        `json:"presented"`
 	CompactSizeGate               CompactSizeGate           `json:"compact_size_gate"`
@@ -340,7 +354,7 @@ func addLegacyDirectMetrics(r *Report) {
 				}
 				add := func(name string, num float64, den int) {
 					v := num / float64(den)
-					cohort.Metrics = append(cohort.Metrics, Metric{Mode: mode, Arms: arm, Limit: limit, Name: name, Numerator: num, Denominator: den, Value: &v, CapOverride: r.CapOverride})
+					cohort.Metrics = append(cohort.Metrics, Metric{Mode: mode, Arms: arm, Limit: limit, Name: name, Numerator: num, Denominator: den, Value: &v, CapOverride: r.CapOverride, ValidityOverrides: r.ValidityOverrides})
 				}
 				add("direct_recall", float64(matched), total)
 				add("direct_macro_recall", macro, positive)

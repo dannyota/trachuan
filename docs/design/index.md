@@ -37,7 +37,7 @@ workshop sequence IDs, mutable paths or generation numbers.
 For inventory diagnostics, derive `identity_inventory_hash` from the identity
 projection in [scope adoption](scope-adoption.md#inventory). This hash does not
 bind the identity map or gate planning.
-[Evaluation](evaluation.md#fixtures-and-identity-adjudication) owns map
+[Evaluation](evaluation-fixtures.md) owns map
 production, review and per-case identity validation. Recipe freezing follows the
 [pipeline snapshot](pipeline.md#shape); ingest can finish before index recipes
 are appended. The reviewed map is input data, not a recipe.

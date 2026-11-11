@@ -148,6 +148,10 @@ func summarizeTiming(values []float64) timingSummary {
 }
 
 func cacheKey(c Cache, o Options, hashes FixtureHashes) string {
+	var policies any
+	if o.HistoricalPolicy != nil || o.NotYetEligible || (o.NonCurrentTail != nil && *o.NonCurrentTail > 0) {
+		policies = o.ValidityOverrides
+	}
 	value := struct {
 		Version  string
 		Dump     string
@@ -158,7 +162,8 @@ func cacheKey(c Cache, o Options, hashes FixtureHashes) string {
 		Software map[string]string
 		Index    []QueryIndex
 		Vectors  [][]float32
-	}{"agent-eval/2", o.DumpSHA256, hashes, o.EvaluationDate, o.Modes, o.Recipes, o.Software, c.Index, c.Vectors}
+		Policies any `json:",omitempty"`
+	}{"agent-eval/2", o.DumpSHA256, hashes, o.EvaluationDate, o.Modes, o.Recipes, o.Software, c.Index, c.Vectors, policies}
 	b, err := json.Marshal(value)
 	if err != nil {
 		return ""

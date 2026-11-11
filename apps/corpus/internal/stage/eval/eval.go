@@ -89,12 +89,12 @@ func (s *Stage) Plan(ctx context.Context, env stage.Env, run stage.Run) ([]stage
 }
 
 // Evaluate resolves the build and runs a diagnostic evaluation.
-func (s *Stage) Evaluate(ctx context.Context, env stage.Env, run stage.Run, capOverride *retrieval.CapOverride) (evaluation.Report, evaluation.Cache, error) {
+func (s *Stage) Evaluate(ctx context.Context, env stage.Env, run stage.Run, opts evaluation.Options) (evaluation.Report, evaluation.Cache, error) {
 	db, art, err := s.ensureBuild(ctx, env, run)
 	if err != nil {
 		return evaluation.Report{}, evaluation.Cache{}, fmt.Errorf("ensure build: %w", err)
 	}
-	return s.runBuild(ctx, env, run, db, art, evaluation.Options{CapOverride: capOverride})
+	return s.runBuild(ctx, env, run, db, art, opts)
 }
 
 func (s *Stage) runBuild(ctx context.Context, env stage.Env, run stage.Run, db build.Database, art artifact.Result, opts evaluation.Options) (evaluation.Report, evaluation.Cache, error) {
