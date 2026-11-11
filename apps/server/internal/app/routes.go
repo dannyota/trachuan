@@ -2,6 +2,7 @@ package app
 
 import (
 	"net/http"
+	"time"
 
 	"danny.vn/trachuan/apps/server/internal/accountapi"
 	"danny.vn/trachuan/apps/server/internal/apierror"
@@ -45,6 +46,9 @@ func newWebMux(d webDeps) *http.ServeMux {
 	mux.Handle("GET /api/v1/me/reports", reportHandler)
 	mux.Handle("DELETE /api/v1/me/reports/{id}", reportHandler)
 	corpus := webapi.New(webapi.Config{Tools: d.tools, Sessions: d.sessions})
+	publicLimit := newLoginLimiter(d.loginLimit.clock, d.loginLimit.proxies)
+	publicLimit.cost = time.Second
+	mux.Handle("GET /api/v1/public/status", publicLimit.middleware(webapi.NewPublicStatus(d.tools)))
 	clients := oauth.NewClients(d.oauthDB, d.oauthClients, oauth.NewCIMDResolver())
 	for pattern, handler := range map[string]http.Handler{
 		"GET /.well-known/oauth-protected-resource":     oauth.ProtectedResourceMetadata(d.publicURL),

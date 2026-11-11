@@ -23,10 +23,11 @@ type loginLimiter struct {
 	clock   func() time.Time
 	proxies []netip.Prefix
 	buckets map[string]loginBucket
+	cost    time.Duration
 }
 
 func newLoginLimiter(clock func() time.Time, proxies []netip.Prefix) *loginLimiter {
-	return &loginLimiter{clock: clock, proxies: proxies, buckets: make(map[string]loginBucket)}
+	return &loginLimiter{clock: clock, proxies: proxies, buckets: make(map[string]loginBucket), cost: 3 * time.Second}
 }
 func (l *loginLimiter) trusted(ip netip.Addr) bool {
 	for _, p := range l.proxies {
@@ -75,7 +76,7 @@ func (l *loginLimiter) allow(ip string) (bool, time.Duration) {
 				}
 			}
 			if len(l.buckets) >= 100000 {
-				return false, 3 * time.Second
+				return false, l.cost
 			}
 		}
 		b = loginBucket{credit: time.Minute, updated: now}
@@ -84,11 +85,11 @@ func (l *loginLimiter) allow(ip string) (bool, time.Duration) {
 		b.credit = min(time.Minute, b.credit+elapsed)
 		b.updated = now
 	}
-	if b.credit < 3*time.Second {
+	if b.credit < l.cost {
 		l.buckets[ip] = b
-		return false, 3*time.Second - b.credit
+		return false, l.cost - b.credit
 	}
-	b.credit -= 3 * time.Second
+	b.credit -= l.cost
 	l.buckets[ip] = b
 	return true, 0
 }

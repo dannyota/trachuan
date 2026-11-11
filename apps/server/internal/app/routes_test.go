@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/netip"
 	"strings"
 	"testing"
 	"time"
@@ -68,7 +69,7 @@ func protectedRoutes() []routeCase {
 		{"POST", "/api/v1/search", limits.Search}, {"POST", "/api/v1/read", limits.Read}, {"GET", "/api/v1/documents/key", limits.Read}, {"GET", "/api/v1/status", limits.Read},
 	}
 }
-func routeFixture(t *testing.T) (http.Handler, *routeLimiter, *routeLoginStore) {
+func routeFixture(t *testing.T, proxies ...netip.Prefix) (http.Handler, *routeLimiter, *routeLoginStore) {
 	t.Helper()
 	sessions := &websession.Manager{Store: routeSessionStore{}, PublicURL: "http://localhost"}
 	ls := &routeLoginStore{}
@@ -79,7 +80,7 @@ func routeFixture(t *testing.T) (http.Handler, *routeLimiter, *routeLoginStore) 
 	}
 	l := &routeLimiter{}
 	verifier := &credential.Verifier{Store: drainStore{}, Audience: "http://localhost/mcp"}
-	return newWebMux(webDeps{store: routeAccountStore{}, sessions: sessions, login: login, verifier: verifier, tools: mcpapi.Config{Limiter: l}, loginLimit: newLoginLimiter(time.Now, nil)}), l, ls
+	return newWebMux(webDeps{store: routeAccountStore{}, sessions: sessions, login: login, verifier: verifier, tools: mcpapi.Config{Limiter: l}, loginLimit: newLoginLimiter(time.Now, proxies)}), l, ls
 }
 func TestRoutes_CredentialsNeverCross(t *testing.T) {
 	mux, _, _ := routeFixture(t)
