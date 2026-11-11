@@ -37,6 +37,11 @@ renders nothing, and a rejection is a fixed plain-text 429 without a render.
 | `/vn/documents/{key}` | Reader: table of contents, text scrolled to the anchor, side rail with validity, relations, nodes, sources and hashes, release id                                                                                                                                                                |
 | `/account`            | Email, sessions, personal tokens (create, name, revoke), authorized MCP clients (revoke), delete account                                                                                                                                                                                         |
 
+A signed-out visit to a signed-in route starts Google login with `next` set to
+the path plus only allowlisted query parameters, today `release` on the reader;
+every other parameter is dropped, so a query or form state never reaches a URL
+([web API](web-api.md#google-login) states the `next` rules).
+
 ## Deferred to taxonomy
 
 The topics pages (`/vn/topics`, `/vn/topics/{code}`), the node filter, node

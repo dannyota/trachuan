@@ -12,3 +12,8 @@ export function languageFromCookie(cookie: string): Language {
 export function messagesFor(language: Language): typeof en {
   return language === 'en' ? en : vi
 }
+
+export function errorMessage(language: Language, code: string): string {
+  const errors = messagesFor(language).errors
+  return Object.hasOwn(errors, code) ? errors[code as keyof typeof errors] : errors.generic
+}
