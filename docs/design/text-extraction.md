@@ -37,19 +37,23 @@ Exactly one source supplies a document's text, chosen in this order:
    least 300 characters. `_content_origin`, `_body_content` and dated backups
    are never read: the inventory shows they add no document, and where the
    origin differs we take the published version.
-3. `pdf_text`: the text layer of one PDF, only when every condition holds: the
-   bundle has exactly one PDF, or exactly one marked `main`; every page has
-   text; at least 2% of its letters carry Vietnamese diacritics (the garbage
-   layers measured 0); and the document has no usable transcription. Anything
-   else is `needs_ocr`.
-4. `none`: no usable text; the document stays `no_tree` with a gap naming why
-   (`needs_ocr`, `no_text_source`, `file_format_unsupported` for `.doc` and
-   archives, `text_source_ambiguous` for several candidate PDFs).
+3. `ocr`: OCR text of the document's PDF under
+   [ADR 0014](../adr/0014-ocr-on-the-write-path.md). The PDF is the bundle's
+   only distinct PDF by SHA-256 (261 of the measured documents list one file
+   under several names), or the only one with OCR text; several distinct
+   candidates are `text_source_ambiguous`. OCR text comes from the OCR store,
+   keyed by the PDF's SHA-256: first banhmi's Google Vision output reused as
+   data (266 documents matched by hash), else a fresh Google Cloud Vision
+   request (48 documents, 1,342 pages measured).
+4. `none`: the document stays `no_tree` with a gap naming why (`needs_ocr` until
+   the OCR store holds its text, `no_text_source`, `file_format_unsupported` for
+   `.doc` and archives, `text_source_ambiguous`).
 
-DOCX is not read in this work: the inventory found no document it would recover.
-Reason for the order: the transcription is the publisher's own text; a PDF layer
-is only trusted when it is whole and plainly Vietnamese; a partial or doubtful
-source is worse than none, because the document would look complete.
+A PDF's own text layer is never read: 203 measured layers are garbage from an
+earlier non-Vietnamese OCR pass, and the 24 good ones go through OCR like the
+scans, so there is one PDF path and no PDF parser in the pipeline. DOCX is not
+read: it would recover no document. Reason for the order: the transcription is
+the publisher's own text; OCR is a machine reading and says so.
 
 ## Paragraphs
 
@@ -69,13 +73,19 @@ A provision's `text` holds its heading line and every paragraph under it up to
 the next heading of the same or a higher level, exactly once, the same shape the
 source tree gives; so an article's `text` is the whole article.
 
-Grammar, applied to paragraph starts only, outside quotation marks and footnote
-blocks:
+Grammar, applied to paragraph starts only:
 
 - `Phần <roman|word>`, `Chương <roman|number>`, `Mục <number>`: structure
   headings; the title is the rest of the line or the next line in capitals.
 - `Điều <n>.` or `Điều <n>` followed by a title: an article.
-- Under an article: `<n>.` a clause, `<letter>)` a point under a clause.
+
+Parsed and OCR text asserts articles only. Clauses and points stay inside their
+article's text and get no provision, anchor or citation of their own in this
+work: a missed clause heading would attach text to the wrong clause with no
+check able to catch it, while an article boundary is verified by the strict
+sequence below. The loss of granularity is recorded in the backlog, with the
+measurement that can lift it (clause and point parsing compared against
+documents that have both a source tree and a transcription).
 
 Instrument scopes. A document often carries a second instrument (a regulation
 "ban hành kèm theo"). A new scope starts at a paragraph that is a title line
@@ -86,16 +96,15 @@ second and later scopes carry the scope: anchor `kem-theo-<k>/dieu-<n>`, label
 ambiguity, below.
 
 Fail closed. The article-level reading is accepted for a scope only when its
-article numbers run 1, 2, 3, ... with no gap, repeat or step back, every clause
-sequence under an article starts at 1 and runs without a gap, and no quotation
-mark or footnote block is left open at a heading. If any check fails, that scope
-asserts no article, clause or point: its paragraphs are grouped into neutral
-provisions of kind `other`, anchor `doan-<n>` (a new one at each line that looks
-like a heading, else every 20 paragraphs), and the document gets the gap
-`structure_uncertain` with the failed check. Structure headings (`chuong`,
-`muc`) are kept in either case. Reason: a missed heading attaches text to the
-wrong article silently; a strict sequence check catches it, and a neutral anchor
-is a true citation where "Điều 5" might not be.
+article numbers run 1, 2, 3, ... with no gap, repeat or step back, and the last
+article is followed only by a signature or recipient block or by a new scope. If
+any check fails, that scope asserts no article, clause or point: its paragraphs
+are grouped into neutral provisions of kind `other`, anchor `doan-<n>` (a new
+one at each line that looks like a heading, else every 20 paragraphs), and the
+document gets the gap `structure_uncertain` with the failed check. Structure
+headings (`chuong`, `muc`) are kept in either case. Reason: a missed heading
+attaches text to the wrong article silently; a strict sequence check catches it,
+and a neutral anchor is a true citation where "Điều 5" might not be.
 
 A document with no article at all uses neutral provisions too, grouped by its
 numbered outline (`I.`, `1.`) when one exists. Text under 300 characters is
@@ -104,53 +113,53 @@ numbered outline (`I.`, `1.`) when one exists. Text under 300 characters is
 ## What is recorded
 
 - The extract artifact of a document without a source tree gains `text.json`:
-  `text_source`, the file name and SHA-256 read, the paragraphs with locators,
-  the scopes with their checks, and counts. The artifact of a source-tree
-  document is unchanged in every file and in its manifest, so its chunk and
-  embed artifacts are reused; a compatibility test pins the fetch, extract,
-  chunk and embed hashes of recorded documents.
-- Corpus: `document.text_source` (`source_tree`, `html_transcription`,
-  `pdf_text`, `ocr`, `none`) and `document.text_complete boolean`, false when
-  any gap of `structure_uncertain`, `table_text` (more than a tenth of the
-  characters in tables), `image_content` or `needs_ocr` applies; build derives
+  `text_source`, the file name and SHA-256 read, for OCR the engine, the store
+  entry's hash and its cross-check result, the paragraphs with locators, the
+  scopes with their checks, and counts. The artifact of a source-tree document
+  is unchanged in every file and in its manifest, so its chunk and embed
+  artifacts are reused; a compatibility test pins the fetch, extract, chunk and
+  embed hashes of recorded documents.
+- Generated node ids are
+  `tx:<first 16 hex of the SHA-256 of the provision's text>` with a `~n` suffix
+  on a repeat. The id changes whenever the text behind an anchor changes, so the
+  identity map's existing changed-identity check forces re-adjudication even
+  when anchor strings such as `doan-3` survive a refetch or a parser change.
+- Corpus: `document.text_source` (`source_tree`, `html_transcription`, `ocr`,
+  `none`) and `document.text_complete boolean`, false when any gap of
+  `structure_uncertain`, `table_text` (more than a tenth of the characters in
+  tables), `image_content`, `ocr_flagged` or `needs_ocr` applies; build derives
   `source_tree` for artifacts without `text.json`. Search and read results
   return both on the document entry, with each provision's locator. This is
   corpus schema version 4.
-- The identity map treats `tx:` node ids and `doan-`, `kem-theo-` anchors as
-  parser output: a parser recipe change that alters any anchor of a document
-  marks that document's map entries for re-adjudication.
 
 ## Validity rules
 
-Rules A, B and C of [validity corrections](validity-status.md) read an effect
-article only from a document whose text source is `source_tree`, or
-`html_transcription` with `text_complete` true and the article in an accepted
-scope. For every other document the effect article is review evidence only: it
-appears in `validity-review.json` with a proposed manual entry and changes
-nothing. Reason: a partial text can show a commencement sentence and hide its
-exception.
+Rules A, B and C of [validity corrections](validity-status.md) read effect
+articles only from documents whose text source is `source_tree`. For every other
+document the effect article is review evidence: it appears in
+`validity-review.json` with a proposed manual entry and changes nothing. Reason:
+nothing proves a transcription or an OCR reading is complete, and a partial text
+can show a commencement sentence and hide its exception; a reviewed manual entry
+is the safe way to use it.
 
 ## Limits and safety
 
-Attachments are untrusted. PDF text is read in a child process with a memory
-limit, a wall-clock limit and no network, killed on overrun; the limits (file
-size, pages, memory, seconds, output bytes, one document at a time per worker)
-live in [budgets](budgets.md#pipeline). The PDF reader is a pure-Go library
-chosen in the plan's first task by running candidates over the 24 documents with
-a text layer and the 299 without; a reader that crashes or exceeds limits on any
-of them is rejected. HTML is parsed with the tokenizer already used, with a
-paragraph and nesting cap. Any overrun is a gap for that document, never a
-failed run. Text from a signed PDF says nothing about its signature.
+Attachments are untrusted, and this work parses none of them: HTML is read with
+the tokenizer already used, under the paragraph and nesting caps in
+[budgets](budgets.md#pipeline); PDFs are only hashed and, for fresh OCR, sent to
+the OCR engine. OCR text from the store is plain text and goes through the same
+paragraph parser. Any overrun is a gap for that document, never a failed run.
+OCR text of a signed PDF says nothing about its signature.
 
 ## Acceptance
 
-The plan's first task commits the inventory note and recorded bundles as
-fixtures: one per stratum and structure (articles, outline, plain, tables,
-images, a second instrument, quoted amendments with footnotes, a good and a
-garbage PDF layer). Each has an expected provision list written by hand from the
-file, with exact anchors and text boundaries, and adverse fixtures that must
-fall back to neutral anchors. Before a run is accepted: counts of documents by
-text source and by gap; every accepted article-level scope checked against its
-article count in the file; the validity review queue and identity-map changes
-reviewed; and a real-output check on new evaluation cases that cite recovered
-documents.
+The plan's first task commits recorded bundles as fixtures: one per stratum and
+structure (articles, outline, plain, tables, images, a second instrument, quoted
+amendments with footnotes, an OCR text with page headers and broken lines). Each
+has an expected provision list written by hand from the file, with exact anchors
+and article boundaries, and adverse fixtures that must fall back to neutral
+anchors. Before a run is accepted: counts of documents by text source and by
+gap; every accepted article-level scope checked against the article count in its
+file; the validity review queue and identity-map changes reviewed; and a
+real-output check on evaluation cases that cite recovered documents
+(142/2026/NĐ-CP and the 35/VBHN-NHNN alternates among them).
