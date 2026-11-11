@@ -168,7 +168,7 @@ func (e *Engine) readItem(ctx context.Context, tx pgx.Tx, c cursor, continued bo
 }
 
 func readPage(seq readSequence, c cursor, budget int, first bool) (ItemResult, int, error) {
-	result := ItemResult{Doc: seq.doc, Gaps: seq.gaps}
+	result := ItemResult{Doc: seq.doc, Gaps: seq.gaps, FetchSHA256: seq.source.FetchSHA256}
 	used := 0
 	var firstParts []Unit
 	firstPartsChecked, firstPartsOK := false, false

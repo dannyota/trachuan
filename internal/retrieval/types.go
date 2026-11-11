@@ -87,6 +87,7 @@ type Provision struct {
 
 // Document holds source metadata for validity and evidence.
 type Document struct {
+	FetchSHA256      string
 	Number           string
 	Class            string
 	Source           string

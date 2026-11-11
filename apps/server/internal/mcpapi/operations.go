@@ -53,7 +53,16 @@ func (o *Operations) Document(ctx context.Context, key, release, next string) (j
 	if len(result.Items) != 1 {
 		return nil, retrieval.ErrUnavailable
 	}
-	encoded, _, err := encodeResult(result.Items[0], false)
+	readItem := result.Items[0]
+	page := struct {
+		Release     string               `json:"release"`
+		FetchSHA256 string               `json:"fetch_sha256,omitempty"`
+		Item        retrieval.ItemResult `json:"item"`
+	}{Release: result.Release, Item: readItem}
+	if readItem.Error == "" {
+		page.FetchSHA256 = readItem.FetchSHA256
+	}
+	encoded, _, err := encodeResult(page, false)
 	if err != nil {
 		return nil, err
 	}

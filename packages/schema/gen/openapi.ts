@@ -1379,7 +1379,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ItemResult"];
+                        "application/json": components["schemas"]["DocumentPage"];
                     };
                 };
                 /** @description Request failed */
@@ -1882,6 +1882,11 @@ export interface components {
             not_read?: string;
             error?: string;
             gaps?: components["schemas"]["Gap"][];
+        };
+        DocumentPage: {
+            release: string;
+            fetch_sha256?: string;
+            item: components["schemas"]["ItemResult"];
         };
         ReadResult: {
             release: string;

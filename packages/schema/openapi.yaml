@@ -954,7 +954,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ItemResult'
+                $ref: '#/components/schemas/DocumentPage'
         '401':
           description: Request failed
           content:
@@ -1670,6 +1670,20 @@ components:
             $ref: '#/components/schemas/Gap'
       required:
       - complete
+    DocumentPage:
+      type: object
+      properties:
+        release:
+          type: string
+        fetch_sha256:
+          type: string
+          pattern: '^[0-9a-f]{64}$'
+        item:
+          $ref: '#/components/schemas/ItemResult'
+      required:
+      - release
+      - item
+      additionalProperties: false
     ReadResult:
       type: object
       properties:

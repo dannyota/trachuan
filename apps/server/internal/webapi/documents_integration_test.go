@@ -102,15 +102,28 @@ func TestDocuments_IsReadWithWebCapsIntegration(t *testing.T) {
 				if w.Code != 200 {
 					t.Fatal(w.Code, w.Body.String())
 				}
-				var got retrieval.ItemResult
-				if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
+				var response struct {
+					Release     string               `json:"release"`
+					FetchSHA256 string               `json:"fetch_sha256"`
+					Item        retrieval.ItemResult `json:"item"`
+				}
+				if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
 					t.Fatal(err)
 				}
+				if response.Release != "20991110_1" || response.FetchSHA256 != strings.Repeat("a", 64) {
+					t.Fatal("missing release or fetch hash", response.Release, response.FetchSHA256)
+				}
+				got := response.Item
 				want, err := engine.Read(t.Context(), req)
 				if err != nil {
 					t.Fatal(err)
 				}
-				if !reflect.DeepEqual(got, want.Items[0]) {
+				wantJSON, _ := json.Marshal(want.Items[0])
+				var wantItem retrieval.ItemResult
+				if err := json.Unmarshal(wantJSON, &wantItem); err != nil {
+					t.Fatal(err)
+				}
+				if !reflect.DeepEqual(got, wantItem) {
 					t.Fatal("route changed read units, parts or next")
 				}
 				used := 0
@@ -168,6 +181,15 @@ func TestDocuments_IsReadWithWebCapsIntegration(t *testing.T) {
 					}
 					t.Errorf("anchor %q differs at byte offset %d (got %d bytes, want %d)", anchor, offset, len(actual), len(expected))
 				}
+			}
+			unknown := webCall(h, "GET", "/api/v1/documents/vn:999?release=20991110_1", "")
+			var missing map[string]json.RawMessage
+			if unknown.Code != 200 || json.Unmarshal(unknown.Body.Bytes(), &missing) != nil || missing["fetch_sha256"] != nil || !strings.Contains(string(missing["item"]), `"error":"not_found"`) {
+				t.Fatal(unknown.Code, unknown.Body.String())
+			}
+			mcp := mcpCall(t, h, "read", `{"country":"vn","release":"20991110_1","items":[{"handle":"vn:1"}]}`)
+			if strings.Contains(string(mcp), `"fetch_sha256"`) {
+				t.Fatal("hash leaked to MCP")
 			}
 			for anchor := range joined {
 				if _, ok := source[anchor]; !ok {

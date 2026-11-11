@@ -31,7 +31,7 @@ func (e *populatedEngine) Present(_ context.Context, _ retrieval.Response, detai
 func (e *populatedEngine) Read(_ context.Context, req retrieval.ReadRequest) (retrieval.ReadResult, error) {
 	doc := retrieval.DocumentEntry{Title: "Example", TextSource: "html_transcription", TextComplete: false, Status: retrieval.Status{Current: true}}
 	locator := "block:2-4"
-	item := retrieval.ItemResult{Doc: "vn:1", Document: &doc, Units: []retrieval.Unit{{Kind: "provision", Locator: &locator, Anchor: "a", Text: "source", Part: 1, Parts: 2, Relation: &retrieval.ListedRelation{Pointer: retrieval.Pointer{Dir: "in", Kind: "cites", InRelease: true}, Evidence: "evidence", EvidenceComplete: true}}}, Next: "continuation"}
+	item := retrieval.ItemResult{FetchSHA256: strings.Repeat("a", 64), Doc: "vn:1", Document: &doc, Units: []retrieval.Unit{{Kind: "provision", Locator: &locator, Anchor: "a", Text: "source", Part: 1, Parts: 2, Relation: &retrieval.ListedRelation{Pointer: retrieval.Pointer{Dir: "in", Kind: "cites", InRelease: true}, Evidence: "evidence", EvidenceComplete: true}}}, Next: "continuation"}
 	return retrieval.ReadResult{Release: req.Release, Items: []retrieval.ItemResult{item}}, nil
 }
 
@@ -54,5 +54,18 @@ func TestPopulatedContract_TextMetadataAndLocator(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestDocumentPage_FetchHashAndMCPIsolation(t *testing.T) {
+	h := newHarness(t)
+	h.resolver.engine = &populatedEngine{testEngine: h.engine}
+	w := webCall(h, "GET", "/api/v1/documents/vn:1?release=20991110_1", "")
+	if w.Code != 200 || !strings.Contains(w.Body.String(), `"fetch_sha256":"`+strings.Repeat("a", 64)+`"`) {
+		t.Fatal(w.Code, w.Body.String())
+	}
+	read := mcpCall(t, h, "read", `{"country":"vn","release":"20991110_1","items":[{"handle":"vn:1"}]}`)
+	if strings.Contains(string(read), `"fetch_sha256"`) {
+		t.Fatal("fetch hash leaked to MCP")
 	}
 }

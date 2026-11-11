@@ -51,14 +51,16 @@ type ListedRelation struct {
 
 // ItemResult is one page of a read item's chain.
 type ItemResult struct {
-	Doc      string         `json:"doc,omitempty"`
-	Document *DocumentEntry `json:"document,omitempty"`
-	Units    []Unit         `json:"units,omitempty"`
-	Complete bool           `json:"complete"`
-	Next     string         `json:"next,omitempty"`
-	NotRead  string         `json:"not_read,omitempty"`
-	Error    string         `json:"error,omitempty"`
-	Gaps     []Gap          `json:"gaps,omitempty"`
+	// FetchSHA256 is the source document hash, excluded from read output.
+	FetchSHA256 string         `json:"-"`
+	Doc         string         `json:"doc,omitempty"`
+	Document    *DocumentEntry `json:"document,omitempty"`
+	Units       []Unit         `json:"units,omitempty"`
+	Complete    bool           `json:"complete"`
+	Next        string         `json:"next,omitempty"`
+	NotRead     string         `json:"not_read,omitempty"`
+	Error       string         `json:"error,omitempty"`
+	Gaps        []Gap          `json:"gaps,omitempty"`
 }
 
 // ReadResult preserves request item order and identifies the pinned release.
