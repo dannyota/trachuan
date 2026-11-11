@@ -19,6 +19,7 @@ type Querier interface {
 	ClearRunSource(ctx context.Context, arg ClearRunSourceParams) (int64, error)
 	ClearSeeds(ctx context.Context, runID int64) error
 	CountAdoptedRunItems(ctx context.Context, arg CountAdoptedRunItemsParams) (int64, error)
+	CountFetchReads(ctx context.Context, arg CountFetchReadsParams) (CountFetchReadsRow, error)
 	CountIncompleteItems(ctx context.Context, runID int64) (int64, error)
 	CountPausedSources(ctx context.Context, runID int64) (int64, error)
 	CountRunAcquisitions(ctx context.Context, runID int64) (int64, error)

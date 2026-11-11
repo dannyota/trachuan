@@ -338,3 +338,24 @@ func TestReuseDecision_UnknownAliasTimeBlocksReuse(t *testing.T) {
 		t.Fatalf("decision %q", got)
 	}
 }
+
+func TestFetch_AmbiguousFreshFilesSkipCache(t *testing.T) {
+	a, b := entry("a", "a"), entry("a", "b")
+	for _, e := range []map[string]any{a, b} {
+		e["size"] = 3
+		e["updatedAt"] = "2026-04-14 14:41:19"
+	}
+	f := &fixtureServer{files: []map[string]any{a, b}, bodies: map[string]string{"a": "one", "b": "two"}}
+	s, env := setup(t, f)
+	s.WithCache(cacheFixture(t, "one"))
+	out := process(t, s, env)
+	if got := f.downloads.Load(); got != 2 {
+		t.Fatalf("downloads = %d, want 2", got)
+	}
+	for _, body := range []string{"one", "two"} {
+		data, err := os.ReadFile(filepath.Join(env.Artifacts.Abs(out.Artifact.Path), "files", digest([]byte(body))))
+		if err != nil || string(data) != body {
+			t.Fatalf("body %q: %q, %v", body, data, err)
+		}
+	}
+}

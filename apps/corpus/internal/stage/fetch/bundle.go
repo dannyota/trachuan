@@ -76,7 +76,7 @@ func (s *Stage) writeBundleWithBaseline(ctx context.Context, dir, id string, det
 				results[i] = fileResult{err: copyErr}
 				return nil
 			}
-			if !hit && decision != "age" && decision != "control" && !expired && entry.URL != "" {
+			if !hit && counts[fileIdentity{entry.Name, entry.Size}] == 1 && decision != "age" && decision != "control" && !expired && entry.URL != "" {
 				downloaded, hit = s.cachedFile(id, filesDir, entry)
 			}
 			var err error

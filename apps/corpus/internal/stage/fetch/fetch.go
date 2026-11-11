@@ -8,6 +8,8 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -142,10 +144,15 @@ func (s *Stage) processItem(ctx context.Context, env stage.Env, r stage.Run, ite
 		}
 	}
 	*result = evaluateBaseline(detail, base, now(), reuseAgeLimit)
+	wouldReuse := result.reason == "reused"
+	if controlSample(item.Key, r.Rel) {
+		result.reason = "control"
+	}
 	if result.reason == "reused" {
 		out, reuseErr := s.publishReuse(ctx, env, r, result.baseline, detail, diagram, times)
 		if reuseErr == nil {
 			slog.Info("fetch decision", "run", r.Country+"/"+r.Rel, "key", item.Key, "decision", result.reason)
+			out.Message = result.message()
 			return out, nil
 		}
 		if !errors.Is(reuseErr, errInvalidBaseline) {
@@ -190,9 +197,25 @@ func (s *Stage) processItem(ctx context.Context, env stage.Env, r stage.Run, ite
 	if err != nil {
 		return stage.Output{}, fmt.Errorf("publish fetch artifact: %w", err)
 	}
+	if result.reason == "control" && wouldReuse {
+		dir := env.Artifacts.Abs(art.Path)
+		filesJSON, readErr := os.ReadFile(filepath.Join(dir, "files.json"))
+		if readErr != nil {
+			return stage.Output{}, fmt.Errorf("read control files: %w", readErr)
+		}
+		reportJSON, readErr := os.ReadFile(filepath.Join(dir, "report.json"))
+		if readErr != nil {
+			return stage.Output{}, fmt.Errorf("read control report: %w", readErr)
+		}
+		var differs []string
+		result.outcome, differs = compareControl(base, tree, filesJSON, reportJSON)
+		if result.outcome == "changed" {
+			slog.Warn("fetch control changed", "document_key", item.Key, "files", differs)
+		}
+	}
 	slog.Info("fetch decision", "run", r.Country+"/"+r.Rel, "key", item.Key, "decision", result.reason)
 
-	return stage.Output{Artifact: &art, State: "done", Observations: observations}, nil
+	return stage.Output{Artifact: &art, State: "done", Message: result.message(), Observations: observations}, nil
 }
 func apiError(err error, id string, detail bool) (stage.Output, error) {
 	if errors.Is(err, vbpl.ErrTooLarge) {

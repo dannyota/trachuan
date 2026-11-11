@@ -50,3 +50,35 @@ func TestStatus_AdoptionCountDoesNotWaitForItemLocks(t *testing.T) {
 		t.Fatalf("adopted=%d, want 2", report.AdoptedItems)
 	}
 }
+
+func TestStatus_FetchReadCounts(t *testing.T) {
+	f := newAcquisitionFixture(t)
+	f.exec(`UPDATE run SET generation=2`)
+	f.exec(`INSERT INTO run_item(run_id,stage,item_key,state,batch,generation,message)
+ SELECT $1,stage,key,state,0,generation,message FROM (VALUES
+ ('fetch','vn:vbpl:1','done',2,'read=reused'),
+ ('fetch','vn:vbpl:2','done',2,'read=no_baseline'),
+ ('fetch','vn:vbpl:3','done',2,'read=invalid_baseline'),
+ ('fetch','vn:vbpl:4','done',2,'read=null_date'),
+ ('fetch','vn:vbpl:5','done',2,'read=date_changed'),
+ ('fetch','vn:vbpl:6','done',2,'read=missing_attachment'),
+ ('fetch','vn:vbpl:7','done',2,'read=age'),
+ ('fetch','vn:vbpl:8','done',2,'read=control'),
+ ('fetch','vn:vbpl:9','done',2,'read=control outcome=same'),
+ ('fetch','vn:vbpl:10','done',2,'read=control outcome=tree_ids_only'),
+ ('fetch','vn:vbpl:11','done',2,'read=control outcome=changed'),
+ ('fetch','vn:vbpl:12','done',1,'read=reused'),
+ ('fetch','vn:vbpl:13','gap',2,'read=reused'),
+ ('fetch','vn:chinhphu:14','done',2,'read=reused'),
+ ('expand','vn:vbpl:15','done',2,'read=reused'),
+ ('fetch','vn:vbpl:16','done',2,'acquisition reused')
+ ) v(stage,key,state,generation,message)`, f.run.ID)
+	report, err := run.Status(context.Background(), f.deps(), "vn", f.run.Rel)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := run.FetchReads{Reused: 1, NoBaseline: 1, InvalidBaseline: 1, NullDate: 1, DateChanged: 1, MissingAttachment: 1, Age: 1, Control: 4, ControlSame: 1, ControlTreeIDsOnly: 1, ControlChanged: 1}
+	if report.FetchReads != want {
+		t.Fatalf("fetch reads = %+v, want %+v", report.FetchReads, want)
+	}
+}

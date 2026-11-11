@@ -27,3 +27,20 @@ SELECT i.run_id, i.stage, i.item_key, i.artifact_id, i.generation
 FROM run_item i
 WHERE i.run_id = $1 AND i.stage IN ('expand', 'fetch') AND i.state = 'done' AND i.artifact_id IS NOT NULL
 ON CONFLICT (run_id, stage, document_key) DO NOTHING;
+
+-- name: CountFetchReads :one
+SELECT
+  count(*) FILTER (WHERE message = 'read=reused') AS reused,
+  count(*) FILTER (WHERE message = 'read=no_baseline') AS no_baseline,
+  count(*) FILTER (WHERE message = 'read=invalid_baseline') AS invalid_baseline,
+  count(*) FILTER (WHERE message = 'read=null_date') AS null_date,
+  count(*) FILTER (WHERE message = 'read=date_changed') AS date_changed,
+  count(*) FILTER (WHERE message = 'read=missing_attachment') AS missing_attachment,
+  count(*) FILTER (WHERE message = 'read=age') AS age,
+  count(*) FILTER (WHERE message = 'read=control' OR message LIKE 'read=control outcome=%') AS control,
+  count(*) FILTER (WHERE message = 'read=control outcome=same') AS control_same,
+  count(*) FILTER (WHERE message = 'read=control outcome=tree_ids_only') AS control_tree_ids_only,
+  count(*) FILTER (WHERE message = 'read=control outcome=changed') AS control_changed
+FROM run_item
+WHERE run_id = $1 AND generation = $2 AND stage = 'fetch' AND state = 'done'
+  AND item_key LIKE 'vn:vbpl:%';

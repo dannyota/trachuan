@@ -23,6 +23,7 @@ const reuseAgeLimit = 30 * 24 * time.Hour
 
 type readDecision struct {
 	reason   string
+	outcome  string
 	baseline *baseline
 	expired  bool
 }
