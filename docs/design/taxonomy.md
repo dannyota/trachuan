@@ -29,10 +29,11 @@ file and the overrides file.
 
 The package is an input artifact, never committed: `BoPhapDienDienTu.zip`,
 SHA-256 `dc2fc7d14e208b551e3e7667e911dcfd24d8f246a7e24d3d24ad7507cd4b5ff5`, from
-`github.com/definev/phapdien` `data/` at a pinned commit, fetched into
-`work/phapdien/` by a script that checks the hash. Tests use a small synthetic
-package with the same file shapes and freshly written text. Three files are
-committed under `taxonomy/`:
+`https://raw.githubusercontent.com/definev/phapdien/ef75c3edb63fa52d979ad55cec7cbe37d6944ced/data/BoPhapDienDienTu.zip`
+(33,893,115 bytes), fetched into `work/phapdien/` by a script that checks the
+hash; its HTML and JavaScript are read as data, never run. Tests use a small
+synthetic package with the same file shapes and freshly written text. Three
+files are committed under `taxonomy/`:
 
 - `mapping.yaml`: the package SHA-256, then one entry per package node with its
   GUID, code, level, kind (`chude`, `demuc`, `phan`, `chuong`, `muc`), parent
