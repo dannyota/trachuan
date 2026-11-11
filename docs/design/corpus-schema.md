@@ -7,9 +7,8 @@ migrated in place. [Data](data.md) owns the overview; [build](index.md) owns
 population and recovery. This template is not an applied migration. Version 3
 adds membership class and validity corrections per
 [scope adoption](scope-adoption.md); earlier dumps remain unchanged and require
-their compatible reader. The `pdf_text` value joined version 4 before any
-version 4 database was released, so it is not a new version. Version 4 adds the
-text source columns per [text extraction](text-extraction.md).
+their compatible reader. Version 4 adds the text source columns per
+[text extraction](text-extraction.md).
 
 ## Conventions and identity
 
@@ -66,7 +65,7 @@ rejects a mismatch. No server dimension constant.
   `validity_conflict boolean`, with decisions in `validity_decision` per
   [validity corrections](validity-status.md).
   [Build normalization](normalization.md) owns assignment and derivation gaps.
-- `text_source text NOT NULL CHECK(text_source IN ('source_tree','html_transcription','pdf_text','ocr','none'))`
+- `text_source text NOT NULL CHECK(text_source IN ('source_tree','html_transcription','ocr','none'))`
   and `text_complete boolean NOT NULL`, no defaults, assigned per
   [text extraction](text-extraction.md#what-is-recorded). CHECK `text_complete`
   is false when `text_source = 'none'`; build also sets it false for a document

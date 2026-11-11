@@ -72,5 +72,5 @@ serving path only.
   and allows OCR text as citable evidence.
 - 2026-11-11: the owner decided to prefer a PDF's own text layer and use OCR
   only when that text fails a gate ([PDF text layer](../design/pdf-text.md)); a
-  scan with an embedded text layer still goes to OCR. Measured: 16 of the 314
-  PDF-only documents pass.
+  scan with an embedded text layer still goes to OCR. Decided, scheduled after
+  the OCR path; at most 13 of the 314 PDF-only documents qualify.

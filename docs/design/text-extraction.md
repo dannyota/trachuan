@@ -52,9 +52,10 @@ Exactly one source supplies a document's text, chosen in this order:
    least 300 characters. `_content_origin`, `_body_content` and dated backups
    are never read: the inventory shows they add no document, and where the
    origin differs we take the published version.
-3. `pdf_text`: the PDF's own text layer when it passes the gate in
+3. `pdf_text`: the PDF's own text layer when it qualifies under
    [PDF text layer](pdf-text.md) (owner decision 2026-11-11: prefer the file's
-   text, OCR only when it fails). Measured: 16 documents.
+   text, OCR only when it fails; decided, not yet implemented, at most 13
+   documents measured).
 4. `ocr`: OCR text of the document's PDF under
    [ADR 0014](../adr/0014-ocr-on-the-write-path.md). The PDF is the bundle's
    only distinct PDF by SHA-256 (261 of the measured documents list one file
@@ -196,15 +197,16 @@ numbered outline (`I.`, `1.`) when one exists. Text under 300 characters is
   another anchor, or an anchor comes to hold other text, the old id no longer
   exists, and the identity map's node check forces re-adjudication even when
   anchor strings such as `doan-3` survive a refetch or a parser change.
-- Corpus: `document.text_source` (`source_tree`, `html_transcription`,
-  `pdf_text`, `ocr`, `none`) and `document.text_complete boolean`, false when
-  any gap of `tree_headings_only`, `structure_uncertain`, `table_text` (more
-  than a tenth of the characters inside provisions are in tables; letterhead and
-  signature tables outside any provision do not count), `image_content`,
-  `ocr_flagged`, `ocr_rejected` or `needs_ocr` applies; build derives
-  `source_tree` for artifacts without `text.json`. Search and read results
-  return both on the document entry, with each provision's locator (hits, read
-  units, ranges and continued parts alike). This is corpus schema version 4.
+- Corpus: `document.text_source` (`source_tree`, `html_transcription`, `ocr`,
+  `none`; `pdf_text` joins with schema version 5) and
+  `document.text_complete boolean`, false when any gap of `tree_headings_only`,
+  `structure_uncertain`, `table_text` (more than a tenth of the characters
+  inside provisions are in tables; letterhead and signature tables outside any
+  provision do not count), `image_content`, `ocr_flagged`, `ocr_rejected` or
+  `needs_ocr` applies; build derives `source_tree` for artifacts without
+  `text.json`. Search and read results return both on the document entry, with
+  each provision's locator (hits, read units, ranges and continued parts alike).
+  This is corpus schema version 4.
 
 ## Inputs and reuse
 
