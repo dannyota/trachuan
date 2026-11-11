@@ -1,6 +1,8 @@
 package build
 
 import (
+	"bytes"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -99,5 +101,87 @@ func TestCorrections_OwnAnchorMissingWithTextGapFails(t *testing.T) {
 	c.Evidence.Key = ""
 	if _, _, err := l.validateCorrectionGaps([]source.Correction{c}, map[string]correctionDocument{"a": {number: "A"}}); err == nil {
 		t.Fatal("accepted missing anchor")
+	}
+}
+
+func TestCorrections_HeldOrderIsDeterministic(t *testing.T) {
+	first := gapCorrection()
+	second := gapCorrection()
+	second.Key, second.Number = "c", "C"
+	orders := [][]source.Correction{{first, second}, {second, first}}
+	var hashes []string
+	var reviews [][]byte
+	var gaps [][]InventoryGap
+	var decisions [][]validityDecision
+	for _, corrections := range orders {
+		canonical, err := canonicalCorrections(corrections)
+		if err != nil {
+			t.Fatal(err)
+		}
+		hashes = append(hashes, withDevelopmentHash(inventoryInputHash("vn", "20990101", Inventory{Version: 2}, "identity", correctionInput{hash: hashBytes(canonical), nonempty: true}), "development"))
+		l := gapLoader()
+		l.members["c"] = membership.Entry{DocumentKey: "c", Disposition: "active"}
+		entries, held, err := l.validateCorrectionGaps(corrections, map[string]correctionDocument{"a": {number: "A"}, "c": {number: "C"}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		before := append([]heldCorrection(nil), held...)
+		result, err := runValidity([]validityDocument{testDoc("a", "A", "2099-01-01", "2099-01-01"), testDoc("c", "C", "2099-01-01", "2099-01-01")}, nil, entries, "2099-01-01")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err = l.recordCorrectionGaps(&result, held); err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(held, before) {
+			t.Fatal("mutated held entries")
+		}
+		review, err := encodeValidityReview(result.reviews)
+		if err != nil {
+			t.Fatal(err)
+		}
+		reviews = append(reviews, review)
+		gaps = append(gaps, l.gaps[1:])
+		decisions = append(decisions, append(result.documents["a"].history, result.documents["c"].history...))
+	}
+	if hashes[0] != hashes[1] {
+		t.Fatalf("hashes differ: %v", hashes)
+	}
+	if !bytes.Equal(reviews[0], reviews[1]) {
+		t.Errorf("reviews differ: %s / %s", reviews[0], reviews[1])
+	}
+	if !reflect.DeepEqual(gaps[0], gaps[1]) {
+		t.Errorf("gaps differ: %v / %v", gaps[0], gaps[1])
+	}
+	if !reflect.DeepEqual(decisions[0], decisions[1]) {
+		t.Errorf("decisions differ: %v / %v", decisions[0], decisions[1])
+	}
+}
+
+func TestCorrections_HeldFieldsDoNotApply(t *testing.T) {
+	c := gapCorrection()
+	c.Hold = true
+	eligible := true
+	c.Eligible = &eligible
+	from, to := "2099-04-01", "2099-05-01"
+	c.Set.EffFrom, c.Set.EffTo = &from, &to
+	l := gapLoader()
+	entries, held, err := l.validateCorrectionGaps([]source.Correction{c}, map[string]correctionDocument{"a": {number: "A"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	d := testDoc("a", "A", "2099-01-01", "2099-03-01")
+	d.sourceClass, d.statusCode = "not_yet", "CCHL"
+	d.article = testArticle("1/2/2099", "")
+	result, err := runValidity([]validityDocument{d}, nil, entries, "2099-03-01")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = l.recordCorrectionGaps(&result, held); err != nil {
+		t.Fatal(err)
+	}
+	got := result.documents["a"].values
+	if got.Class != "in_force" || !got.Current || got.Basis != "derived_from_text" || got.From == nil || *got.From != "2099-02-01" || got.To != nil || !got.Conflict {
+		t.Fatalf("values=%+v", got)
 	}
 }

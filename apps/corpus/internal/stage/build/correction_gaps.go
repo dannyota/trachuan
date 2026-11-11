@@ -3,6 +3,7 @@ package build
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 
 	"danny.vn/trachuan/apps/corpus/internal/source"
 )
@@ -91,7 +92,9 @@ func (l *loader) validateCorrectionGaps(corrections []source.Correction, docs ma
 }
 
 func (l *loader) recordCorrectionGaps(result *validityResult, held []heldCorrection) error {
-	for _, h := range held {
+	ordered := append([]heldCorrection(nil), held...)
+	sort.Slice(ordered, func(i, j int) bool { return ordered[i].entry.Key < ordered[j].entry.Key })
+	for _, h := range ordered {
 		detail, err := json.Marshal(struct {
 			EntryKey   string `json:"entry_key"`
 			MissingKey string `json:"missing_document_key"`
