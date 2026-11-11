@@ -11,6 +11,7 @@ import (
 	"unicode"
 
 	"danny.vn/trachuan/apps/server/internal/store"
+	"github.com/jackc/pgx/v5"
 )
 
 type reportIDDecider interface {
@@ -46,28 +47,118 @@ func findReportGroup(ctx context.Context, s triageStore, selector string, hash f
 	}
 	return selectReportGroup(groups, selector, hash)
 }
+
+type reportIDReader interface {
+	reportsByIDs(context.Context, []int64) ([]store.IssueReport, error)
+}
+
+func (s credentialStore) reportsByIDs(ctx context.Context, ids []int64) ([]store.IssueReport, error) {
+	tx, err := s.db.BeginTx(ctx, pgx.TxOptions{AccessMode: pgx.ReadOnly})
+	if err != nil {
+		return nil, fmt.Errorf("begin report lookup: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	rows, err := tx.Query(ctx, "SELECT id, account_id, release, state, suggestion, document_key, anchor, kind, target FROM issue_report WHERE id = ANY($1::bigint[]) ORDER BY id", ids)
+	if err != nil {
+		return nil, fmt.Errorf("find reports: %w", err)
+	}
+	defer rows.Close()
+	var result []store.IssueReport
+	for rows.Next() {
+		var row store.IssueReport
+		if err := rows.Scan(&row.ID, &row.AccountID, &row.Release, &row.State, &row.Suggestion, &row.DocumentKey, &row.Anchor, &row.Kind, &row.Target); err != nil {
+			return nil, fmt.Errorf("read reports: %w", err)
+		}
+		result = append(result, row)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("read reports: %w", err)
+	}
+	return result, nil
+}
+
 func showReports(ctx context.Context, s triageStore, args []string, out io.Writer, hash func(store.TriageGroupsRow) string) error {
-	if len(args) < 1 || len(args) > 2 || (len(args) == 2 && args[1] != "--accounts") {
+	var selector string
+	var ids []int64
+	accounts, idsFlag := false, false
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
+		case "--accounts":
+			if accounts {
+				return errors.New("invalid show flags")
+			}
+			accounts = true
+		case "--ids":
+			if idsFlag {
+				return errors.New("invalid show flags")
+			}
+			idsFlag = true
+			for i++; i < len(args) && !strings.HasPrefix(args[i], "--"); i++ {
+				for _, part := range strings.Split(args[i], ",") {
+					id, err := strconv.ParseInt(part, 10, 64)
+					if err != nil || id <= 0 {
+						return errors.New("invalid report id")
+					}
+					ids = append(ids, id)
+				}
+			}
+			i--
+		default:
+			if selector != "" || strings.HasPrefix(args[i], "--") {
+				return errors.New("invalid show flags")
+			}
+			selector = args[i]
+		}
+	}
+	if idsFlag && (len(ids) == 0 || selector != "") || !idsFlag && selector == "" {
 		return errors.New("invalid show flags")
 	}
-	d, ok := s.(reportDetails)
-	if !ok {
-		return errors.New("reports store unavailable")
-	}
-	g, err := findReportGroup(ctx, s, args[0], hash)
-	if err != nil {
-		return err
-	}
-	rows, err := d.TriageReports(ctx, store.TriageReportsParams{DocumentKey: g.DocumentKey, Anchor: g.Anchor, Kind: g.Kind, Target: g.Target})
-	if err != nil {
-		return fmt.Errorf("show reports: %w", err)
+	var rows []store.IssueReport
+	var g store.TriageGroupsRow
+	var err error
+	if idsFlag {
+		reader, ok := s.(reportIDReader)
+		if !ok {
+			return errors.New("reports store unavailable")
+		}
+		rows, err = reader.reportsByIDs(ctx, ids)
+		if err != nil {
+			return fmt.Errorf("show reports: %w", err)
+		}
+		found := make(map[int64]bool, len(rows))
+		for _, row := range rows {
+			found[row.ID] = true
+		}
+		for _, id := range ids {
+			if !found[id] {
+				return errors.New("unknown report id")
+			}
+		}
+	} else {
+		d, ok := s.(reportDetails)
+		if !ok {
+			return errors.New("reports store unavailable")
+		}
+		g, err = findReportGroup(ctx, s, selector, hash)
+		if err != nil {
+			return err
+		}
+		rows, err = d.TriageReports(ctx, store.TriageReportsParams{DocumentKey: g.DocumentKey, Anchor: g.Anchor, Kind: g.Kind, Target: g.Target})
+		if err != nil {
+			return fmt.Errorf("show reports: %w", err)
+		}
 	}
 	w := tabwriter.NewWriter(out, 0, 4, 2, ' ', 0)
-	if _, err = fmt.Fprintf(w, "GROUP\tDOCUMENT\tANCHOR\tKIND\tTARGET\tREPORTS\tACCOUNTS\tNEWEST\tSUGGESTIONS\n%s\t%s\t%s\t%s\t%s\t%d\t%d\t%s\t%s\n", groupID(g)[:12], g.DocumentKey, g.Anchor, g.Kind, g.Target, g.ReportCount, g.AccountCount, g.Newest.Format("2006-01-02T15:04:05Z07:00"), strings.Join(g.Suggestions, ", ")); err != nil {
-		return err
+	if !idsFlag {
+		if _, err = fmt.Fprintf(w, "GROUP\tDOCUMENT\tANCHOR\tKIND\tTARGET\tREPORTS\tACCOUNTS\tNEWEST\tSUGGESTIONS\n%s\t%s\t%s\t%s\t%s\t%d\t%d\t%s\t%s\n", groupID(g)[:12], g.DocumentKey, g.Anchor, g.Kind, g.Target, g.ReportCount, g.AccountCount, g.Newest.Format("2006-01-02T15:04:05Z07:00"), strings.Join(g.Suggestions, ", ")); err != nil {
+			return err
+		}
 	}
 	header := "ID\tRELEASE\tSTATE\tSUGGESTION"
-	if len(args) == 2 {
+	if idsFlag {
+		header += "\tDOCUMENT\tANCHOR\tKIND\tTARGET"
+	}
+	if accounts {
 		header += "\tACCOUNT"
 	}
 	if _, err = fmt.Fprintln(w, header); err != nil {
@@ -77,7 +168,12 @@ func showReports(ctx context.Context, s triageStore, args []string, out io.Write
 		if _, err = fmt.Fprintf(w, "%d\t%s\t%s\t%s", r.ID, r.Release, r.State, r.Suggestion); err != nil {
 			return err
 		}
-		if len(args) == 2 {
+		if idsFlag {
+			if _, err = fmt.Fprintf(w, "\t%s\t%s\t%s\t%s", r.DocumentKey, r.Anchor, r.Kind, r.Target); err != nil {
+				return err
+			}
+		}
+		if accounts {
 			if _, err = fmt.Fprintf(w, "\t%d", r.AccountID); err != nil {
 				return err
 			}

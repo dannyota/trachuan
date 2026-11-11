@@ -94,6 +94,9 @@ func (in *Input) UnmarshalJSON(data []byte) error {
 		if err != nil {
 			return err
 		}
+		if name == "handle" && value == "" {
+			return ErrInvalidRequest
+		}
 		*dst = value
 	}
 	*in = next
