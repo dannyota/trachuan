@@ -49,7 +49,7 @@ func TestFetch_PauseOwnerOutlivesRequestGroup(t *testing.T) {
 				} else {
 					_, _ = w.Write([]byte(`{"success":true,"data":[]}`))
 				}
-				if complete.Add(1) == 3 {
+				if complete.Add(1) == 1 {
 					close(others)
 				}
 			}))

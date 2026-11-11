@@ -7,9 +7,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
+	"danny.vn/trachuan/apps/corpus/internal/artifact"
 	"danny.vn/trachuan/apps/corpus/internal/chinhphu"
 	"danny.vn/trachuan/apps/corpus/internal/filecache"
 	"danny.vn/trachuan/apps/corpus/internal/sourcegate"
@@ -21,10 +23,11 @@ import (
 
 // Stage fetches documents and their attachments.
 type Stage struct {
-	client    *vbpl.Client
-	chinhphu  *chinhphu.Client
-	cache     *filecache.Cache
-	fileLimit int64
+	client       *vbpl.Client
+	chinhphu     *chinhphu.Client
+	cache        *filecache.Cache
+	fileLimit    int64
+	loadBaseline func(context.Context, stage.Env, stage.Run, stage.Item) (*baseline, bool, error)
 }
 
 // New constructs a fetch stage.
@@ -64,7 +67,12 @@ func (*Stage) Plan(ctx context.Context, env stage.Env, r stage.Run) ([]stage.Ite
 }
 
 // Process fetches the source responses and publishes a bundle.
-func (s *Stage) Process(ctx context.Context, env stage.Env, r stage.Run, item stage.Item) (output stage.Output, err error) {
+func (s *Stage) Process(ctx context.Context, env stage.Env, r stage.Run, item stage.Item) (stage.Output, error) {
+	var decision readDecision
+	return s.processItem(ctx, env, r, item, &decision)
+}
+
+func (s *Stage) processItem(ctx context.Context, env stage.Env, r stage.Run, item stage.Item, result *readDecision) (output stage.Output, err error) {
 	if strings.HasPrefix(item.Key, "vn:chinhphu:") {
 		out, processErr := s.processChinhphu(ctx, env, r, item)
 		out.Sources = []string{"chinhphu"}
@@ -99,16 +107,10 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, r stage.Run, item st
 		return nil
 	})
 	group.Go(func() error {
-		tree, errs[1] = s.client.RawTree(requestCtx, id)
-		times[1] = now().UTC().Truncate(time.Microsecond)
-		return nil
-	})
-	group.Go(func() error {
 		diagram, errs[2] = s.client.Diagram(requestCtx, id)
 		times[2] = now().UTC().Truncate(time.Microsecond)
 		return nil
 	})
-	group.Go(func() error { files, errs[3] = s.client.Files(requestCtx, id); return nil })
 	_ = group.Wait()
 	if errs[0] != nil {
 		return apiError(errs[0], id, true)
@@ -120,9 +122,47 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, r stage.Run, item st
 	if decoded.ID != id {
 		return stage.Output{State: "gap", Gaps: []stage.Gap{{Kind: "detail_id_mismatch", Detail: fmt.Sprintf("requested %q, received %q", id, decoded.ID)}}}, nil
 	}
-	for _, err := range errs[1:] {
-		if err != nil {
-			return apiError(err, id, false)
+	if errs[2] != nil {
+		return apiError(errs[2], id, false)
+	}
+	loader := s.loadBaseline
+	if loader == nil {
+		loader = loadBaseline
+	}
+	base, invalid, err := loader(ctx, env, r, item)
+	if err != nil {
+		return stage.Output{}, err
+	}
+	if invalid {
+		base = &baseline{invalid: true}
+	}
+	*result = readDecision{reason: reuseDecision(detail, base, now(), reuseAgeLimit), baseline: base}
+	if invalid {
+		result.baseline = nil
+	}
+	if result.reason == "reused" {
+		out, reuseErr := s.publishReuse(ctx, env, r, result.baseline, detail, diagram, times)
+		if reuseErr == nil {
+			slog.Info("fetch decision", "run", r.Country+"/"+r.Rel, "key", item.Key, "decision", result.reason)
+			return out, nil
+		}
+		if !errors.Is(reuseErr, errInvalidBaseline) {
+			return stage.Output{}, reuseErr
+		}
+		slog.Warn("invalid fetch baseline", "run", r.Country+"/"+r.Rel, "key", item.Key, "reason", reuseErr)
+		result.reason, result.baseline = "invalid_baseline", nil
+	}
+	group, requestCtx = errgroup.WithContext(ctx)
+	group.Go(func() error {
+		tree, errs[1] = s.client.RawTree(requestCtx, id)
+		times[1] = now().UTC().Truncate(time.Microsecond)
+		return nil
+	})
+	group.Go(func() error { files, errs[3] = s.client.Files(requestCtx, id); return nil })
+	_ = group.Wait()
+	for _, e := range []error{errs[1], errs[3]} {
+		if e != nil {
+			return apiError(e, id, false)
 		}
 	}
 	var observations []stage.FetchObservation
@@ -133,12 +173,23 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, r stage.Run, item st
 		key, _ := json.Marshal([3]any{payload.endpoint, nil, nil})
 		observations = append(observations, stage.FetchObservation{ResourceKey: string(key), Source: "vbpl", Path: payload.path, ContentSHA256: fmt.Sprintf("%x", sha256.Sum256(payload.data)), Size: int64(len(payload.data)), Acquisition: "network", FetchedAt: &times[i]})
 	}
-	art, err := env.Artifacts.PublishContent(ctx, s.Name(), s.Recipe(r.Snapshot), func(dir string) error {
-		return s.writeBundleObservations(ctx, dir, id, detail, tree, diagram, files, now, &observations)
-	})
+	publish := func(b *baseline, reason string) (artifact.Result, error) {
+		observations = observations[:3]
+		return env.Artifacts.PublishContent(ctx, s.Name(), s.Recipe(r.Snapshot), func(dir string) error {
+			return s.writeBundleWithBaseline(ctx, dir, id, detail, tree, diagram, files, now, &observations, b, reason)
+		})
+	}
+	art, err := publish(result.baseline, result.reason)
+	if errors.Is(err, errInvalidBaseline) {
+		slog.Warn("invalid fetch baseline", "run", r.Country+"/"+r.Rel, "key", item.Key, "reason", err)
+		result.reason = "invalid_baseline"
+		art, err = publish(nil, result.reason)
+	}
 	if err != nil {
 		return stage.Output{}, fmt.Errorf("publish fetch artifact: %w", err)
 	}
+	slog.Info("fetch decision", "run", r.Country+"/"+r.Rel, "key", item.Key, "decision", result.reason)
+
 	return stage.Output{Artifact: &art, State: "done", Observations: observations}, nil
 }
 func apiError(err error, id string, detail bool) (stage.Output, error) {
