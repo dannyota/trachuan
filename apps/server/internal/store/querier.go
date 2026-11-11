@@ -47,6 +47,7 @@ type Querier interface {
 	GetToken(ctx context.Context, tokenHash string) (GetTokenRow, error)
 	InsertReport(ctx context.Context, arg InsertReportParams) (IssueReport, error)
 	ListGrants(ctx context.Context, accountID int64) ([]ListGrantsRow, error)
+	ListLiveSessions(ctx context.Context, accountID int64) ([]WebSession, error)
 	ListOwnReports(ctx context.Context, arg ListOwnReportsParams) ([]IssueReport, error)
 	ListSessions(ctx context.Context, accountID int64) ([]WebSession, error)
 	ListTokens(ctx context.Context, accountID int64) ([]PersonalToken, error)

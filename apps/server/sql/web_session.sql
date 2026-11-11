@@ -38,6 +38,11 @@ SELECT * FROM web_session WHERE account_id = $1
     AND LEAST(expires_at, created_at + interval '90 days', revoked_at) >= now() - interval '7 days'
 ORDER BY created_at DESC, id DESC LIMIT 100;
 
+-- name: ListLiveSessions :many
+SELECT * FROM web_session WHERE account_id = $1 AND revoked_at IS NULL
+    AND expires_at > now() AND created_at + interval '90 days' > now()
+ORDER BY created_at DESC, id DESC LIMIT 100;
+
 -- name: RevokeOwnSession :execrows
 UPDATE web_session SET revoked_at = now()
 WHERE account_id = $1 AND id = $2 AND revoked_at IS NULL;
