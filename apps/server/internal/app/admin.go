@@ -17,6 +17,9 @@ func runAdmin(ctx context.Context, args []string, queries admin.Store, out io.Wr
 	if len(args) < 2 {
 		return errors.New("missing admin subcommand")
 	}
+	if args[0] == "reports" {
+		return runReports(ctx, args[1:], queries, out)
+	}
 	service := &admin.Service{Store: queries}
 	flags := flag.NewFlagSet("admin", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
