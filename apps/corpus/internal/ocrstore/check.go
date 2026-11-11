@@ -26,6 +26,7 @@ type CheckResult struct {
 	PDFPages     int         `json:"pdf_pages"`
 	Items        []CheckItem `json:"items"`
 	Verdict      string      `json:"verdict"`
+	DroppedEqual int         `json:"dropped_equal"`
 }
 
 // DecodeAnswer validates the model schema and derives the verdict locally.
@@ -40,6 +41,13 @@ func decodeResult(data []byte, pdfPages int, stored bool) (CheckResult, error) {
 	fields := []string{"same_document", "pages", "items"}
 	if stored {
 		fields = append(fields, "pdf_pages", "verdict")
+		// Old immutable results predate this local counter. Preserve their readability.
+		var existing map[string]json.RawMessage
+		if json.Unmarshal(data, &existing) == nil {
+			if _, ok := existing["dropped_equal"]; ok {
+				fields = append(fields, "dropped_equal")
+			}
+		}
 	}
 	obj, err := strictObject(data, fields)
 	if err != nil {
@@ -50,7 +58,7 @@ func decodeResult(data []byte, pdfPages int, stored bool) (CheckResult, error) {
 	if err = json.Unmarshal(data, &result); err != nil {
 		return CheckResult{}, fmt.Errorf("invalid check types")
 	}
-	if result.Pages < 1 || result.Items == nil {
+	if result.Pages < 1 || result.Items == nil || result.DroppedEqual < 0 {
 		return CheckResult{}, fmt.Errorf("invalid check coverage")
 	}
 	var items []json.RawMessage

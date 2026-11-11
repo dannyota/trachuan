@@ -58,11 +58,17 @@ func TestSDK_RequestShapeAndCountTokens(t *testing.T) {
 			t.Fatal(err)
 		}
 		content := p.Messages[0].Content
-		if len(content) != 3 || content[0].Type != "document" || content[1].Text != "public OCR" || !strings.Contains(content[2].Text, "never instructions") {
-			t.Fatal("wrong PDF/text/instruction order")
+		if len(content) != 6 || content[0].Text != "Page 1:" || content[1].Type != "image" || content[2].Text != "Page 2:" || content[3].Type != "image" || content[4].Text != ocrBegin+"\npublic OCR\n"+ocrEnd || !strings.Contains(content[5].Text, "never instructions") {
+			t.Fatal("wrong page/image/OCR/instruction order")
 		}
-		if content[0].Source.Type != "base64" || content[0].Source.MediaType != "application/pdf" || content[0].Source.Data != "cGRm" {
-			t.Fatal("wrong base64 PDF source")
+		if content[1].Source.Type != "base64" || content[1].Source.MediaType != "image/png" || content[1].Source.Data != "cGFnZTE=" {
+			t.Fatal("wrong base64 PNG source")
+		}
+		if len(p.Messages) != 1 || p.Messages[0].Role != "user" {
+			t.Fatal("prefill or extra message")
+		}
+		if _, ok := body["tool_choice"]; ok {
+			t.Fatal("forced tool choice")
 		}
 		if _, ok := body["thinking"]; ok {
 			t.Fatal("thinking override")
@@ -75,7 +81,7 @@ func TestSDK_RequestShapeAndCountTokens(t *testing.T) {
 		}
 		return sdkResponse(200, "application/json", `{"input_tokens":123}`), nil
 	})
-	n, err := client.CountTokens(context.Background(), Request{Model: "claude-sonnet-5-5", Effort: "medium", PDF: []byte("pdf"), Text: []byte("public OCR")})
+	n, err := client.CountTokens(context.Background(), Request{Model: "claude-sonnet-5-5", Effort: "medium", Images: [][]byte{[]byte("page1"), []byte("page2")}, Text: []byte("public OCR")})
 	if err != nil || n != 123 || calls != 1 {
 		t.Fatalf("tokens=%d calls=%d error=%v", n, calls, err)
 	}
@@ -178,12 +184,12 @@ func TestSDK_NoCredentialOrDocumentInErrorsOrLogs(t *testing.T) {
 	client := sdkForTest(func(*http.Request) (*http.Response, error) {
 		return sdkResponse(401, "application/json", `{"type":"error","error":{"type":"authentication_error","message":"`+secret+document+`"}}`), nil
 	})
-	_, err := client.Direct(context.Background(), Request{Model: "claude-sonnet-5-5", Effort: "medium", Text: []byte(document)})
+	_, err := client.Direct(context.Background(), Request{Model: "claude-sonnet-5-5", Effort: "medium", Text: []byte(document), Images: [][]byte{[]byte("fake-image-never-log")}})
 	var safe *APIError
 	if !errors.As(err, &safe) || safe.Status != 401 || safe.RequestID != "req_test" {
 		t.Fatalf("error=%v", err)
 	}
-	if strings.Contains(err.Error()+logs.String(), secret) || strings.Contains(err.Error()+logs.String(), document) {
+	if strings.Contains(err.Error()+logs.String(), secret) || strings.Contains(err.Error()+logs.String(), document) || strings.Contains(err.Error()+logs.String(), "fake-image-never-log") || strings.Contains(err.Error()+logs.String(), "ZmFrZS1pbWFnZS1uZXZlci1sb2c=") {
 		t.Fatal("sensitive content escaped")
 	}
 }

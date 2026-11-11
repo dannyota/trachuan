@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -32,14 +34,14 @@ func (r *Runner) prepare(ctx context.Context, doc Document, o Options) (p prepar
 	if err != nil || !info.Mode().IsRegular() {
 		return p, "pdf_missing"
 	}
-	if info.Size() > 30_000_000 {
+	if info.Size() > 50_000_000 {
 		return p, "over_check_limit"
 	}
-	data, err := io.ReadAll(io.LimitReader(f, 30_000_001))
+	data, err := io.ReadAll(io.LimitReader(f, 50_000_001))
 	if err != nil {
 		return p, "pdf_missing"
 	}
-	if len(data) > 30_000_000 {
+	if len(data) > 50_000_000 {
 		return p, "over_check_limit"
 	}
 	if fmt.Sprintf("%x", sha256.Sum256(data)) != doc.Entry.PdfSha256 {
@@ -51,7 +53,8 @@ func (r *Runner) prepare(ctx context.Context, doc Document, o Options) (p prepar
 	if countErr != nil || deadline.Err() != nil || pages < 1 {
 		return p, "page_count_unknown"
 	}
-	if pages > 600 {
+	p.pages = pages
+	if pages > maxPages {
 		return p, "over_check_limit"
 	}
 	if doc.Entry.Pages.Valid && pages != int(doc.Entry.Pages.Int32) {
@@ -62,11 +65,46 @@ func (r *Runner) prepare(ctx context.Context, doc Document, o Options) (p prepar
 		var textErr error
 		text, textErr = doc.ReadText()
 		if textErr != nil {
-			return p, "schema"
+			return p, "ocr_text_unreadable"
 		}
 	}
-	p.pages = pages
-	p.request = Request{Model: o.Model, Effort: o.Effort, PDF: data, Text: text}
+	if bytes.Contains(text, []byte(ocrBegin)) || bytes.Contains(text, []byte(ocrEnd)) {
+		return p, "ocr_marker_collision"
+	}
+	renderer := r.Renderer
+	if renderer == nil {
+		renderer = PopplerRenderer{}
+	}
+	rendered, renderErr := renderer.Render(ctx, data)
+	p.rendering = &rendered.Stats
+	if renderErr != nil {
+		if errors.Is(renderErr, renderLimit) {
+			return p, "over_check_limit"
+		}
+		return p, "render_failed"
+	}
+	if len(rendered.Pages) > maxPages {
+		return p, "over_check_limit"
+	}
+	if len(rendered.Pages) != pages {
+		return p, "page_count_mismatch"
+	}
+	total := len(text)
+	for _, page := range rendered.Pages {
+		if reason := validateImage(page); reason != "" {
+			return p, reason
+		}
+		total += ((len(page) + 2) / 3) * 4
+		if total >= maxRequestBytes {
+			return p, "over_check_limit"
+		}
+	}
+	p.request = Request{Model: o.Model, Effort: o.Effort, Images: rendered.Pages, Text: text}
+	encoded, encodeErr := json.Marshal(messageParams(p.request))
+	// Direct streams add the stream field; reserve it for both modes.
+	if encodeErr != nil || len(encoded)+len(`,"stream":true`) >= maxRequestBytes {
+		return p, "over_check_limit"
+	}
 	return p, ""
 }
 func recoverCount(ctx context.Context, count func(context.Context, []byte) (int, error), data []byte) (pages int, err error) {

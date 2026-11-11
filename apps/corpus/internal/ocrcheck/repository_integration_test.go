@@ -4,6 +4,7 @@ package ocrcheck
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"testing"
@@ -186,5 +187,46 @@ func TestCheck_DatabaseUncertainAndAbandonedChargesSurvive(t *testing.T) {
 	}
 	if _, err = store.New(db).GetOCRCheck(context.Background(), store.GetOCRCheckParams{OcrTextID: docs[0].Entry.ID, CheckerID: o.CheckerID()}); !errors.Is(err, pgx.ErrNoRows) {
 		t.Fatal("uncertain check was published")
+	}
+}
+
+func TestCheck_DatabaseVerifiableEvidence(t *testing.T) {
+	for _, tc := range []struct {
+		name, quote, pdf, reason string
+		dropped                  int
+	}{
+		{"unverifiable", "invented reading", "different", "ocr_quote_not_found", 0},
+		{"equal", "public OCR text", "public\nOCR text", "", 1},
+		{"different", "public OCR text", "different", "", 0},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			r, db, c, docs := databaseFixture(t)
+			body, _ := json.Marshal(map[string]any{"same_document": true, "pages": 10, "items": []map[string]any{{"kind": "amount", "page": 1, "ocr": tc.quote, "pdf": tc.pdf, "note": "difference"}}})
+			c.Response.Text = string(body)
+			if err := run(t, r, docs, options()); err != nil {
+				t.Fatal(err)
+			}
+			var reason string
+			if err := db.QueryRow(context.Background(), `SELECT reason FROM ocr_check_attempt WHERE ocr_text_id=$1`, docs[0].Entry.ID).Scan(&reason); err != nil {
+				t.Fatal(err)
+			}
+			if reason != tc.reason {
+				t.Fatalf("reason=%s", reason)
+			}
+			check, err := store.New(db).GetOCRCheck(context.Background(), store.GetOCRCheckParams{OcrTextID: docs[0].Entry.ID, CheckerID: options().CheckerID()})
+			if tc.reason != "" {
+				if !errors.Is(err, pgx.ErrNoRows) {
+					t.Fatal("failed quote published")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			result, err := ocrstore.DecodeCheck(check.Result)
+			if err != nil || result.DroppedEqual != tc.dropped || len(result.Items) != 1-tc.dropped {
+				t.Fatalf("result=%+v error=%v", result, err)
+			}
+		})
 	}
 }

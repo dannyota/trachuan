@@ -47,12 +47,16 @@ func (r *Runner) submit(ctx context.Context, group []prepared, o Options, s *Sum
 				}
 				s.CostMicroUSD -= a.Usage.charge()
 				s.Failed++
+				s.record(docs[i], group[i].pages, u, "api_error")
 			}
 			return apiErr
 		}
 		// The provider may have accepted a request whose response was lost.
 		if markErr := r.Repository.Uncertain(ctx, attempts[0].SubmissionID); markErr != nil {
 			return fmt.Errorf("record uncertain OCR batch: %w", markErr)
+		}
+		for i, a := range attempts {
+			s.record(docs[i], group[i].pages, Usage{Input: group[i].inputTokens, ReservationMicroUSD: a.Usage.ReservationMicroUSD}, "uncertain:api_error")
 		}
 		return safeError(err)
 	}
@@ -61,6 +65,9 @@ func (r *Runner) submit(ctx context.Context, group []prepared, o Options, s *Sum
 	}
 	if err = r.Repository.Submitted(ctx, attempts[0].SubmissionID, batch.ID); err != nil {
 		return fmt.Errorf("attach OCR batch identity: %w", err)
+	}
+	for i, a := range attempts {
+		s.record(docs[i], group[i].pages, Usage{Input: group[i].inputTokens, ReservationMicroUSD: a.Usage.ReservationMicroUSD}, "submitted")
 	}
 	s.Submitted += len(group)
 	return nil
@@ -93,6 +100,7 @@ func (r *Runner) resume(ctx context.Context, docs []Document, o Options, s *Summ
 	}
 	for _, a := range attempts {
 		if a.State == "uncertain" {
+			s.recordPending(a)
 			return true, fmt.Errorf("uncertain OCR submission %s blocks new work; use --reconcile", a.SubmissionID)
 		}
 	}
@@ -106,6 +114,7 @@ func (r *Runner) resume(ctx context.Context, docs []Document, o Options, s *Summ
 		if a.State == "preparing" {
 			pending = true
 			s.Pending++
+			s.recordPending(a)
 			continue
 		}
 		if a.Mode != "batch" || a.BatchID == "" {
@@ -121,6 +130,9 @@ func (r *Runner) resume(ctx context.Context, docs []Document, o Options, s *Summ
 		if !batch.Ended {
 			pending = true
 			s.Pending += len(group)
+			for _, a := range group {
+				s.recordPending(a)
+			}
 			continue
 		}
 		results, resultErr := r.Client.BatchResults(ctx, id)
@@ -159,6 +171,7 @@ func (r *Runner) resume(ctx context.Context, docs []Document, o Options, s *Summ
 				}
 				s.CostMicroUSD -= a.Usage.charge()
 				s.Failed++
+				s.record(doc, a.Usage.PDFPages, Usage{}, reason)
 				continue
 			}
 			if !result.Response.FinalUsage {
@@ -175,12 +188,13 @@ func (r *Runner) resume(ctx context.Context, docs []Document, o Options, s *Summ
 				}
 				s.CostMicroUSD += u.charge() - a.Usage.charge()
 				s.Failed++
+				s.record(doc, p.pages, u, reason)
 				if priceErr := u.priceError(); priceErr != nil {
 					return true, priceErr
 				}
 				continue
 			}
-			if err = r.finish(ctx, a, doc, p.pages, result.Response, nil, o, s); err != nil {
+			if err = r.finish(ctx, a, p, result.Response, nil, o, s); err != nil {
 				return true, err
 			}
 		}

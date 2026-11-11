@@ -1,6 +1,7 @@
 package ocrstore
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgtype"
@@ -43,5 +44,42 @@ func TestCheck_StrictResultDecoding(t *testing.T) {
 		if _, err := validateCheck([]byte(body), 0, pgtype.Int4{}); err == nil {
 			t.Fatal("accepted ambiguous result")
 		}
+	}
+}
+
+func TestCheck_DroppedEqualStoredContract(t *testing.T) {
+	for _, tc := range []struct {
+		value string
+		ok    bool
+	}{
+		{"0", true}, {"2", true}, {"-1", false}, {"null", false}, {`"2"`, false}, {"1.5", false},
+	} {
+		body := []byte(`{"same_document":true,"pages":10,"pdf_pages":10,"items":[],"verdict":"clean","dropped_equal":` + tc.value + `}`)
+		canonical, err := validateCheck(body, 0, pgtype.Int4{})
+		if (err == nil) != tc.ok {
+			t.Fatalf("value=%s error=%v", tc.value, err)
+		}
+		if tc.ok && !bytes.Contains(canonical, []byte(`"dropped_equal":`+tc.value)) {
+			t.Fatal("dropped count lost")
+		}
+	}
+}
+
+func TestCheck_LegacyResultRemainsReadable(t *testing.T) {
+	data := []byte(`{"same_document":true,"pages":10,"pdf_pages":10,"items":[],"verdict":"clean"}`)
+	result, err := DecodeCheck(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.DroppedEqual != 0 || result.Pages != 10 || result.Verdict != "clean" {
+		t.Fatalf("legacy result=%+v", result)
+	}
+	canonical, err := validateCheck(data, 0, pgtype.Int4{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []byte(`{"same_document":true,"pages":10,"pdf_pages":10,"items":[],"verdict":"clean","dropped_equal":0}`)
+	if !bytes.Equal(canonical, want) {
+		t.Fatalf("canonical result=%s", canonical)
 	}
 }

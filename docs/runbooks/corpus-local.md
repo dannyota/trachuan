@@ -20,6 +20,12 @@ retention. Every step is idempotent. `.env` must hold `POSTGRES_PASSWORD`,
 
 Checkpoints need `pg_dump` 18 or newer (`brew install postgresql@18`).
 
+The OCR cross-check renders PDF pages with `pdftoppm` from poppler
+(`brew install poppler`; 26.11.0 at the time of writing). Only
+`corpus ocr check` needs it; the worker does not. Set `CORPUS_OCR_STORE` to the
+OCR store directory for the `corpus ocr` commands and for a worker that should
+read checked OCR text.
+
 ```sh
 set -a; . ./.env; set +a
 export CORPUS_DATABASE_URL="postgres://pipeline:${PIPELINE_PASSWORD}@127.0.0.1:25433/workshop"

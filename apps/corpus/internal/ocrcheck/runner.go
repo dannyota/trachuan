@@ -57,7 +57,7 @@ type Options struct {
 }
 
 // CheckerID binds the model, effort, instruction and schema versions.
-func (o Options) CheckerID() string { return o.Model + "/" + o.Effort + "/ocr-check-1" }
+func (o Options) CheckerID() string { return o.Model + "/" + o.Effort + "/ocr-check-2" }
 
 // Validate rejects unsupported checker settings and recovery combinations.
 func (o Options) Validate() error {
@@ -83,11 +83,13 @@ type Summary struct {
 	Complete, Failed, Submitted, Estimated int
 	Pending, Attached, Abandoned           int
 	CostMicroUSD, EstimateMicroUSD         int64
+	Documents                              []DocumentSummary
 }
 
-// Runner applies checks serially, keeping direct concurrency below three.
+// Runner applies checks one request at a time.
 type Runner struct {
 	Client     Client
+	Renderer   Renderer
 	Repository Repository
 	CountPages func(context.Context, []byte) (int, error)
 	Now        func() time.Time
@@ -100,6 +102,7 @@ type prepared struct {
 	pages       int
 	worst       int64
 	inputTokens int64
+	rendering   *RenderStats
 }
 
 // Run collects earlier submissions before selecting any new paid work.
@@ -163,17 +166,22 @@ func (r *Runner) Run(ctx context.Context, docs []Document, o Options) (Summary, 
 		ready, reason := r.prepare(ctx, doc, o)
 		if reason != "" {
 			if !o.DryRun {
-				if err = r.failLocal(ctx, doc, o, reason); err != nil {
+				if err = r.failPrepared(ctx, ready, o, reason); err != nil {
 					return summary, err
 				}
 			}
 			summary.Failed++
+			summary.record(doc, ready.pages, Usage{}, reason)
 			continue
 		}
 		tokens, countErr := r.Client.CountTokens(ctx, ready.request)
 		if countErr != nil || tokens < 0 || tokens > 1_000_000_000 {
+			u := errorUsage(countErr)
+			u.Rendering = ready.rendering
+			u.PDFPages = ready.pages
+			summary.record(doc, ready.pages, u, errorReason(countErr))
 			if !o.DryRun {
-				if err = r.failAttempt(ctx, doc, o, errorReason(countErr), errorUsage(countErr)); err != nil {
+				if err = r.failAttempt(ctx, doc, o, errorReason(countErr), u); err != nil {
 					return summary, err
 				}
 				summary.Failed++
@@ -192,6 +200,7 @@ func (r *Runner) Run(ctx context.Context, docs []Document, o Options) (Summary, 
 			return summary, ErrBudget
 		}
 		if o.DryRun {
+			summary.record(doc, ready.pages, Usage{Input: tokens, CostMicroUSD: ready.worst}, "estimated")
 			summary.Estimated++
 			summary.EstimateMicroUSD += ready.worst
 			reserved += ready.worst
@@ -210,10 +219,11 @@ func (r *Runner) Run(ctx context.Context, docs []Document, o Options) (Summary, 
 			limit = r.batchBytes
 		}
 		if n+len(`{"requests":[]}`) > limit {
-			if err = r.failLocal(ctx, doc, o, "over_check_limit"); err != nil {
+			if err = r.failPrepared(ctx, ready, o, "over_check_limit"); err != nil {
 				return summary, err
 			}
 			summary.Failed++
+			summary.record(doc, ready.pages, Usage{}, "over_check_limit")
 			continue
 		}
 		if len(group) >= 100_000 || size+n+len(`{"requests":[]}`) > limit {

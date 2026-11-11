@@ -5,6 +5,8 @@ import (
 	"context"
 	"strings"
 	"testing"
+
+	"danny.vn/trachuan/apps/corpus/internal/ocrcheck"
 )
 
 func TestCheck_RequiresSpendBeforeOpeningDatabase(t *testing.T) {
@@ -29,5 +31,17 @@ func TestCheck_AbandonOption(t *testing.T) {
 	_, err := parseCheckOptions([]string{"--max-usd", "1", "--abandon", "0123456789abcdef0123456789abcdef"}, false)
 	if err != nil {
 		t.Fatalf("operator abandonment flag rejected: %v", err)
+	}
+}
+
+func TestCheck_PrintsPerDocumentMetrics(t *testing.T) {
+	var out bytes.Buffer
+	printCheckDocuments(&out, []ocrcheck.DocumentSummary{
+		{EntryID: 12, Pages: 10, InputTokens: 200, OutputTokens: 30, CostMicroUSD: 700, Outcome: "flagged"},
+		{EntryID: 13, Pages: 9, InputTokens: 100, OutputTokens: 10, CostMicroUSD: 300, Outcome: "schema:items[2].kind"},
+	})
+	want := "ocr_text_id=12 pages=10 input_tokens=200 output_tokens=30 cost_usd=0.000700 outcome=flagged\nocr_text_id=13 pages=9 input_tokens=100 output_tokens=10 cost_usd=0.000300 outcome=schema:items[2].kind\n"
+	if out.String() != want {
+		t.Fatalf("output=%q", out.String())
 	}
 }

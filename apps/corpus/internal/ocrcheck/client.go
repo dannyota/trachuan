@@ -10,7 +10,8 @@ import (
 // Request carries public legal evidence only. It must never be logged.
 type Request struct {
 	Model, Effort, CustomID string
-	PDF, Text               []byte
+	Images                  [][]byte
+	Text                    []byte
 }
 
 // Response contains the checker output and usage, including on failure.

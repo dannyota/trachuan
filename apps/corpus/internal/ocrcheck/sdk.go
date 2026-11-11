@@ -24,7 +24,7 @@ func NewSDKClient() (*SDKClient, error) {
 	return &SDKClient{client: anthropic.NewClient(option.WithMaxRetries(0), option.WithRequestTimeout(10*time.Minute))}, nil
 }
 
-// CountTokens counts the exact PDF, text, instruction and output schema.
+// CountTokens counts the exact images, text, instruction and output schema.
 func (s *SDKClient) CountTokens(ctx context.Context, r Request) (int64, error) {
 	p := messageParams(r)
 	v, err := s.client.Messages.CountTokens(ctx, anthropic.MessageCountTokensParams{Model: p.Model, Messages: p.Messages, OutputConfig: p.OutputConfig})

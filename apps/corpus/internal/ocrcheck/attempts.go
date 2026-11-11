@@ -30,7 +30,7 @@ func (r *Runner) begin(ctx context.Context, group []prepared, o Options) ([]Atte
 	}
 	intents := make([]Intent, len(group))
 	for i, p := range group {
-		u := Usage{Final: p.worst == 0, CountedInput: p.inputTokens, MaxOutput: maxOutputTokens, ReservationMicroUSD: p.worst}
+		u := Usage{Final: p.worst == 0, CountedInput: p.inputTokens, MaxOutput: maxOutputTokens, ReservationMicroUSD: p.worst, Rendering: p.rendering, PDFPages: p.pages}
 		intents[i] = Intent{Entry: p.doc.Entry, Usage: u}
 	}
 	mode := "direct"
@@ -43,8 +43,8 @@ func (r *Runner) begin(ctx context.Context, group []prepared, o Options) ([]Atte
 	}
 	return attempts, nil
 }
-func (r *Runner) failLocal(ctx context.Context, doc Document, o Options, reason string) error {
-	return r.failAttempt(ctx, doc, o, reason, Usage{})
+func (r *Runner) failPrepared(ctx context.Context, p prepared, o Options, reason string) error {
+	return r.failAttempt(ctx, p.doc, o, reason, Usage{Rendering: p.rendering, PDFPages: p.pages})
 }
 func (r *Runner) failAttempt(ctx context.Context, doc Document, o Options, reason string, u Usage) error {
 	attempts, err := r.begin(ctx, []prepared{{doc: doc}}, o)
@@ -69,7 +69,7 @@ func (r *Runner) direct(ctx context.Context, p prepared, o Options, s *Summary) 
 			return r.unknown(ctx, a, p.doc, response, callErr, o, s)
 		}
 	}
-	return r.finish(ctx, a, p.doc, p.pages, response, callErr, o, s)
+	return r.finish(ctx, a, p, response, callErr, o, s)
 }
 func preGenerationFailure(response Response, err error) bool {
 	var apiErr *APIError
@@ -88,9 +88,11 @@ func (r *Runner) unknown(ctx context.Context, a Attempt, doc Document, response 
 	}
 	s.CostMicroUSD += u.charge() - a.Usage.charge()
 	s.Pending++
+	s.record(doc, a.Usage.PDFPages, u, "uncertain:"+errorReason(callErr))
 	return fmt.Errorf("uncertain OCR submission %s: final usage did not arrive; worst-case charge retained and further spending blocked", a.SubmissionID)
 }
-func (r *Runner) finish(ctx context.Context, a Attempt, doc Document, pages int, response Response, callErr error, o Options, s *Summary) error {
+func (r *Runner) finish(ctx context.Context, a Attempt, ready prepared, response Response, callErr error, o Options, s *Summary) error {
+	doc := ready.doc
 	p, _ := modelPrice(o.Model, a.Mode == "batch")
 	u := response.Usage.withReservation(a.Usage)
 	u.Final = true
@@ -105,10 +107,10 @@ func (r *Runner) finish(ctx context.Context, a Attempt, doc Document, pages int,
 	} else {
 		switch response.Stop {
 		case "end_turn":
-			parsed, err := ocrstore.DecodeAnswer([]byte(response.Text), pages)
-			if err != nil {
-				reason = "schema"
-			} else if parsed.Pages != pages || (doc.Entry.Pages.Valid && parsed.Pages != int(doc.Entry.Pages.Int32)) {
+			parsed, invalid := decodeAnswer([]byte(response.Text), ready.pages, ready.request.Text)
+			if invalid != "" {
+				reason = invalid
+			} else if doc.Entry.Pages.Valid && parsed.Pages != int(doc.Entry.Pages.Int32) {
 				reason = "page_count_mismatch"
 			} else {
 				result = &parsed
@@ -120,13 +122,18 @@ func (r *Runner) finish(ctx context.Context, a Attempt, doc Document, pages int,
 		case "model_context_window_exceeded":
 			reason = "context_window"
 		default:
-			reason = "schema"
+			reason = "schema:stop_reason"
 		}
 	}
 	if err := r.Repository.Finish(ctx, a, doc.Entry, u, result, reason); err != nil {
 		return fmt.Errorf("finish OCR attempt: %w", err)
 	}
 	s.CostMicroUSD += u.charge() - a.Usage.charge()
+	outcome := reason
+	if result != nil {
+		outcome = result.Verdict
+	}
+	s.record(doc, ready.pages, u, outcome)
 	if result == nil {
 		s.Failed++
 	} else {
