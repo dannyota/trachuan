@@ -45,6 +45,14 @@ Stages run in order `discover`, `fetch`, `extract`, `relate`, `chunk`, `embed`,
 | ----------------- | ------------------------------------------------------------------------------------------------- |
 | `apps/queryembed` | Go query embedding service with verified local model bundle and native ONNX Runtime and tokenizer |
 
+## Shared retrieval (`internal/retrieval`)
+
+The engine serves recipe 1 over one corpus release database: `Search` ranks and
+shapes evidence, `Present` turns a response into compact or full results with
+document entries and relation pointers, and `Read` reads handles in batches with
+fixed parts and `next` tokens ([search results](design/mcp-results.md)).
+Presentation limits are constants in `limits.go`, outside the recipe hash.
+
 ## Local services
 
 Native PostgreSQL 18 with pgvector (`workshop` and `corpus_template`) and the

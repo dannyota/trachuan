@@ -14,6 +14,7 @@ type Engine interface {
 	Prepare(context.Context, retrieval.Request) (retrieval.Prepared, error)
 	PrepareLegacy(context.Context, retrieval.Request) (retrieval.Prepared, error)
 	Collect(context.Context, retrieval.Prepared, retrieval.Depths) (retrieval.Arms, error)
+	Present(context.Context, retrieval.Response, retrieval.Detail) (retrieval.SearchResult, error)
 	Release() retrieval.Release
 }
 

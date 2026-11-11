@@ -25,6 +25,7 @@ Intended behavior of trachuan. Decisions with alternatives are in the
 | [corpus schema](corpus-schema.md)          | Exact shared corpus template contract and schema version                                 |
 | [lexical](lexical.md)                      | Shared normalization, hashing, BM25 and statistics                                       |
 | [retrieval recipe](retrieval-recipe.md)    | Shared Go API, recipe 1, validity and evidence shaping                                   |
+| [search results](mcp-results.md)           | Compact search hits, snippets, related pointers, batch `read`, guide flow                |
 | [evaluation](evaluation.md)                | Cohorts, identity mapping, calibration, metrics and caches                               |
 
 Spikes done on 2026-11-09: OAuth clients

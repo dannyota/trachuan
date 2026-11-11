@@ -63,6 +63,10 @@ type Relation struct {
 	Method         string  `json:"method"`
 	SourceResolved bool    `json:"source_resolved"`
 	TargetResolved bool    `json:"target_resolved"`
+	SourceDocKey   string  `json:"-"`
+	TargetDocKey   string  `json:"-"`
+	SourceInHit    bool    `json:"-"`
+	TargetInHit    bool    `json:"-"`
 }
 
 // Gap is a coverage or validity gap reported with a response or a hit.
@@ -73,24 +77,35 @@ type Gap struct {
 	Message     string `json:"message"`
 }
 
+// PathNode identifies one provision in a hit's ancestry.
+type PathNode struct {
+	Identity Identity `json:"identity"`
+	Kind     string   `json:"kind"`
+	Label    string   `json:"label"`
+	Heading  string   `json:"heading,omitempty"`
+}
+
 // Hit is one provision returned by search.
 type Hit struct {
-	Identity   Identity   `json:"identity"`
-	Number     string     `json:"number"`
-	Class      string     `json:"class"`
-	Source     string     `json:"source"`
-	Citation   string     `json:"citation"`
-	Title      string     `json:"title"`
-	Text       string     `json:"text"`
-	Fragments  []Fragment `json:"fragments"`
-	Complete   bool       `json:"complete"`
-	NextPart   *int       `json:"next_part,omitempty"`
-	SourceURL  *string    `json:"source_url,omitempty"`
-	Score      float64    `json:"score"`
-	BestCosine float64    `json:"best_cosine"`
-	Stamp      Validity   `json:"stamp"`
-	Relations  []Relation `json:"relations"`
-	Gaps       []Gap      `json:"gaps"`
+	Identity      Identity   `json:"identity"`
+	Path          []PathNode `json:"path"`
+	BestMember    Identity   `json:"best_member"`
+	BestTextStart int        `json:"best_text_start"`
+	Number        string     `json:"number"`
+	Class         string     `json:"class"`
+	Source        string     `json:"source"`
+	Citation      string     `json:"citation"`
+	Title         string     `json:"title"`
+	Text          string     `json:"text"`
+	Fragments     []Fragment `json:"fragments"`
+	Complete      bool       `json:"complete"`
+	NextPart      *int       `json:"next_part,omitempty"`
+	SourceURL     *string    `json:"source_url,omitempty"`
+	Score         float64    `json:"score"`
+	BestCosine    float64    `json:"best_cosine"`
+	Stamp         Validity   `json:"stamp"`
+	Relations     []Relation `json:"relations"`
+	Gaps          []Gap      `json:"gaps"`
 }
 
 // Diagnostics describes how a response was produced; it never holds query text.

@@ -123,6 +123,8 @@ type SourceRelation struct {
 	Value          Relation
 	ArtifactSHA256 string
 	Ordinal        int
+	SourceInHit    bool
+	TargetInHit    bool
 }
 
 // ArmGroup holds candidates for one document eligibility group.

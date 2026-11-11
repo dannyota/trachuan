@@ -3,6 +3,7 @@ package retrieval
 import (
 	"context"
 	"errors"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -420,5 +421,140 @@ func TestValidity_UnknownStatusHistoricalDateIsCurrent(t *testing.T) {
 	}
 	if len(got.Hits) != 1 || !got.Hits[0].Stamp.Current || got.Hits[0].Stamp.Basis != "document_dates" {
 		t.Fatalf("historical primary hits: %+v", got.Hits)
+	}
+}
+
+func TestShapeHit_PathFromAncestors(t *testing.T) {
+	a, r := shapeFixture("body")
+	c := &a.Primary.Dense[0]
+	chapter := Provision{ID: 3, Kind: "chuong", Label: " Chương II ", Heading: " Quyền ", Identity: Identity{Country: "vn", DocumentKey: "vn:1", Anchor: "chapter"}}
+	c.Ancestors[0].Label, c.Ancestors[0].Heading = " Điều 5 ", " Yêu cầu "
+	c.Ancestors[1].Label = " Khoản 2 "
+	c.Ancestors = append([]Provision{chapter}, c.Ancestors...)
+	a.Primary.Members[0] = *c
+	got, err := Shape(a, r, 8, "hybrid")
+	if err != nil {
+		t.Fatal(err)
+	}
+	h := got.Hits[0]
+	want := []PathNode{{chapter.Identity, "chuong", "Chương II", "Quyền"}, {c.Ancestors[1].Identity, "dieu", "Điều 5", "Yêu cầu"}, {h.Identity, "khoan", "Khoản 2", ""}}
+	if !reflect.DeepEqual(h.Path, want) {
+		t.Fatalf("path: %+v, want %+v", h.Path, want)
+	}
+}
+
+func bestMemberFixture() (Arms, Recipe) {
+	a, r := shapeFixture("Điều 5\nKhoản 1 nội dung\nKhoản 2 nội dung")
+	c := &a.Primary.Dense[0]
+	article := c.Descendants[0]
+	article.Kind, article.Label = "dieu", "Điều 5"
+	article.Identity.Anchor = "article-5"
+	parent := article.ID
+	first := Provision{ID: 3, ParentID: &parent, NodeID: "first", Kind: "khoan", Identity: Identity{Country: "vn", DocumentKey: "vn:1", Anchor: "clause-1"}, Text: "Khoản 1 nội dung"}
+	second := Provision{ID: 4, ParentID: &parent, NodeID: "child", Kind: "khoan", Identity: Identity{Country: "vn", DocumentKey: "vn:1", Anchor: "clause-2"}, Text: "  Khoản 2 nội dung  ", Ordinal: 1}
+	c.Group, c.Ancestors, c.Descendants = article.Identity, []Provision{article}, []Provision{article, first, second}
+	c.Provision, c.Identity, c.ProvisionID = second, second.Identity, second.ID
+	c.Content = "Khoản 2 nội dung"
+	c.Spans = []byte(`[{"node_id":"child","start":10,"end":18,"content_start":8,"content_end":16,"role":"body"},{"node_id":"child","start":2,"end":10,"content_start":0,"content_end":8,"role":"body"}]`)
+	a.Primary.Members[0] = *c
+	return a, r
+}
+
+func TestShapeHit_BestTextStartCompleteHit(t *testing.T) {
+	a, r := bestMemberFixture()
+	got, err := Shape(a, r, 8, "hybrid")
+	if err != nil {
+		t.Fatal(err)
+	}
+	h := got.Hits[0]
+	if !h.Complete || h.BestTextStart <= 0 || !strings.HasPrefix(string([]rune(h.Text)[h.BestTextStart:]), "Khoản 2 nội dung") {
+		t.Fatalf("hit: %+v", h)
+	}
+}
+
+func TestShapeHit_BestTextStartTruncatedHit(t *testing.T) {
+	a, r := shapeFixture(strings.Repeat("á", 30))
+	r.EvidenceRuneCap = 20
+	c := &a.Primary.Dense[0]
+	c.Ancestors[0].Text = "dẫn đầu"
+	c.Content = "dẫn đầu\n" + c.Provision.Text
+	c.Spans = []byte(`[{"node_id":"a","start":0,"end":7,"content_start":0,"content_end":7,"role":"lead"},{"node_id":"c","start":0,"end":30,"content_start":8,"content_end":38,"role":"body"}]`)
+	a.Primary.Members[0] = *c
+	got, err := Shape(a, r, 8, "hybrid")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if h := got.Hits[0]; h.Complete || h.BestTextStart != 8 {
+		t.Fatalf("hit: %+v", h)
+	}
+}
+
+func TestShapeHit_BestTextStartWithoutLeads(t *testing.T) {
+	a, r := shapeFixture(strings.Repeat("á", 30))
+	r.EvidenceRuneCap = 20
+	c := &a.Primary.Dense[0]
+	c.Content = c.Provision.Text
+	c.Spans = []byte(`[{"node_id":"c","start":0,"end":30,"content_start":0,"content_end":30,"role":"body"}]`)
+	a.Primary.Members[0] = *c
+	got, err := Shape(a, r, 8, "hybrid")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if h := got.Hits[0]; h.Complete || h.BestTextStart != 0 {
+		t.Fatalf("hit: %+v", h)
+	}
+}
+
+func TestShapeHit_BestMemberIsBestChunkOwner(t *testing.T) {
+	a, r := bestMemberFixture()
+	got, err := Shape(a, r, 8, "hybrid")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if h := got.Hits[0]; h.BestMember != (Identity{Country: "vn", DocumentKey: "vn:1", Anchor: "clause-2"}) || h.BestMember == h.Identity {
+		t.Fatalf("hit: %+v", h)
+	}
+}
+
+func TestShapeHit_BestSpanUnlocatedFallsBackToOwnText(t *testing.T) {
+	a, r := shapeFixture("intro point point")
+	c := &a.Primary.Dense[0]
+	c.Ancestors[0].Text = "lead"
+	parent := c.GroupID
+	point := Provision{ID: 3, ParentID: &parent, NodeID: "point", Kind: "diem", Text: "point", Identity: Identity{Country: "vn", DocumentKey: "vn:1", Anchor: "point"}}
+	c.Descendants = append(c.Descendants, point)
+	c.Provision, c.Identity, c.ProvisionID = point, point.Identity, point.ID
+	c.Content = "lead\npoint"
+	c.Spans = []byte(`[{"node_id":"a","start":0,"end":4,"content_start":0,"content_end":4,"role":"lead"},{"node_id":"point","start":0,"end":5,"content_start":5,"content_end":10,"role":"body"}]`)
+	a.Primary.Members[0] = *c
+	got, err := Shape(a, r, 8, "hybrid")
+	if err != nil {
+		t.Fatal(err)
+	}
+	h := got.Hits[0]
+	if h.BestMember != h.Identity || h.BestTextStart != 5 || h.Text != "lead\nintro point point" {
+		t.Fatalf("hit: %+v", h)
+	}
+}
+
+func TestShapeHit_LeadsFillCapFallsBack(t *testing.T) {
+	a, r := shapeFixture("body")
+	r.EvidenceRuneCap = 4
+	c := &a.Primary.Dense[0]
+	c.Ancestors[0].Text = "long lead"
+	parent := c.GroupID
+	point := Provision{ID: 3, ParentID: &parent, NodeID: "point", Kind: "diem", Text: "body", Identity: Identity{Country: "vn", DocumentKey: "vn:1", Anchor: "point"}}
+	c.Descendants = append(c.Descendants, point)
+	c.Provision, c.Identity, c.ProvisionID = point, point.Identity, point.ID
+	c.Content = "long lead\nbody"
+	c.Spans = []byte(`[{"node_id":"a","start":0,"end":9,"content_start":0,"content_end":9,"role":"lead"},{"node_id":"point","start":0,"end":4,"content_start":10,"content_end":14,"role":"body"}]`)
+	a.Primary.Members[0] = *c
+	got, err := Shape(a, r, 8, "hybrid")
+	if err != nil {
+		t.Fatal(err)
+	}
+	h := got.Hits[0]
+	if h.BestMember != h.Identity || h.BestTextStart != 4 || h.Text != "long" {
+		t.Fatalf("hit: %+v", h)
 	}
 }

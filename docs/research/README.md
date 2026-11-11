@@ -25,3 +25,5 @@ Observations and experiments. Not project authority.
   evaluation run on vn/20261110_2.
 - [Query runtime: llama.cpp against ONNX Runtime](query-runtime-llamacpp-2026-11.md):
   A1 latency, recall and memory for GGUF variants and ONNX Runtime INT8.
+- [Compact search results](compact-results-2026-11.md): serialized response size
+  of compact and full presentation and the size gate.

@@ -51,6 +51,7 @@ func shapeRelations(source []SourceRelation, recipe Recipe, id Identity) ([]Rela
 			continue
 		}
 		r := e.Value
+		r.SourceInHit, r.TargetInHit = e.SourceInHit, e.TargetInHit
 		sum := sha256.Sum256([]byte(r.Evidence))
 		r.EvidenceSHA256 = hex.EncodeToString(sum[:])
 		chars := []rune(r.Evidence)

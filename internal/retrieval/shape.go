@@ -3,6 +3,7 @@ package retrieval
 import (
 	"errors"
 	"math"
+	"strings"
 )
 
 // Shape constructs a bounded evidence response from cached candidates.
@@ -68,14 +69,18 @@ func shapeHit(g Group, arms Arms, recipe Recipe) (Hit, error) {
 		gaps[i].DocumentKey = g.Identity.DocumentKey
 		gaps[i].Anchor = g.Identity.Anchor
 	}
-	text, fragments, complete, evidenceGaps, err := evidence(g, recipe.EvidenceRuneCap)
+	text, fragments, complete, evidenceGaps, bestMember, bestStart, err := evidence(g, recipe.EvidenceRuneCap)
 	if err != nil {
 		return Hit{}, err
 	}
 	gaps = append(gaps, evidenceGaps...)
 	rels, relationGaps := shapeRelations(c.Relations, recipe, g.Identity)
 	gaps = append(gaps, relationGaps...)
-	h := Hit{Identity: g.Identity, Number: c.Document.Number, Class: c.Document.Class, Source: c.Document.Source, Title: c.Document.Title, Citation: citation(c.Ancestors), Text: text, Fragments: fragments, Complete: complete, SourceURL: c.Document.SourceURL, Score: g.Score, BestCosine: g.BestCosine, Stamp: validity, Relations: rels, Gaps: gaps}
+	path := make([]PathNode, 0, len(c.Ancestors))
+	for _, p := range c.Ancestors {
+		path = append(path, PathNode{Identity: p.Identity, Kind: p.Kind, Label: strings.TrimSpace(p.Label), Heading: strings.TrimSpace(p.Heading)})
+	}
+	h := Hit{Identity: g.Identity, Path: path, BestMember: bestMember, BestTextStart: bestStart, Number: c.Document.Number, Class: c.Document.Class, Source: c.Document.Source, Title: c.Document.Title, Citation: citation(c.Ancestors), Text: text, Fragments: fragments, Complete: complete, SourceURL: c.Document.SourceURL, Score: g.Score, BestCosine: g.BestCosine, Stamp: validity, Relations: rels, Gaps: gaps}
 	if !complete {
 		v := 1
 		h.NextPart = &v
