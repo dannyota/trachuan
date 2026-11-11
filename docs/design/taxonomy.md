@@ -23,8 +23,11 @@ each package node GUID (`ID` in `jdAllTree`, `Value` in `jdChuDe` and `jdDeMuc`)
 to its code. A later import looks up the GUID first and keeps the code even when
 the position changed; a GUID not in the file receives the next free code at its
 level, and a code is never reused. A GUID missing from a later import marks its
-node `retired`. `taxonomy_version` is the hash of the mapping file, the custom
-file and the overrides file.
+node `retired`. A GUID that keeps a node changes only its level, parent and
+ordinal, never its code. A GUID whose node becomes flattened retires its code
+(kept, never reused) and is recorded as flattened; a flattened GUID that becomes
+a node receives a new code. `taxonomy_version` is the hash of the mapping file,
+the custom file and the overrides file.
 
 ## Inputs
 
