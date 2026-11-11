@@ -146,6 +146,7 @@ func testWebContract_Populated(t *testing.T, coverage *contracttest.Coverage) {
 		fields             []string
 	}{
 		{"POST", "/api/v1/search", `{"country":"vn","query":"ngân hàng","detail":"full"}`, []string{`"documents"`, `"fragments"`, `"relations"`}},
+		{"POST", "/api/v1/search", `{"country":"vn","query":"ngân hàng","detail":"compact"}`, []string{`"documents"`, `"snippet"`}},
 		{"POST", "/api/v1/read", `{"country":"vn","items":[{"handle":"vn:1"}]}`, []string{`"part"`, `"parts"`, `"next"`}},
 		{"GET", "/api/v1/documents/vn:1", "", []string{`"document"`, `"part"`, `"next"`}},
 	} {

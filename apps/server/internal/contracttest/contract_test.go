@@ -76,3 +76,40 @@ func TestCoverage_RejectsUndocumentedAndInvalidResponses(t *testing.T) {
 		t.Fatal("valid response was not counted")
 	}
 }
+
+func TestSchema_DateFormats(t *testing.T) {
+	c, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		name, schema, body string
+		valid              bool
+	}{
+		{"valid date", "SearchInput", `{"country":"vn","query":"law","as_of":"2024-02-29"}`, true},
+		{"invalid date", "SearchInput", `{"country":"vn","query":"law","as_of":"2023-02-29"}`, false},
+		{"wrong date format", "SearchInput", `{"country":"vn","query":"law","as_of":"2024-2-09"}`, false},
+		{"valid time", "Account", `{"id":1,"email":"x","created_at":"2024-02-29T12:30:59.123+07:00","csrf_token":"x"}`, true},
+		{"valid lowercase time", "Account", `{"id":1,"email":"x","created_at":"2024-02-29t12:30:59z","csrf_token":"x"}`, true},
+		{"valid leap second", "Account", `{"id":1,"email":"x","created_at":"2016-12-31T23:59:60Z","csrf_token":"x"}`, true},
+		{"valid leap second at month end", "Account", `{"id":1,"email":"x","created_at":"2024-03-31T23:59:60Z","csrf_token":"x"}`, true},
+		{"invalid leap second", "Account", `{"id":1,"email":"x","created_at":"2024-02-29T12:30:60Z","csrf_token":"x"}`, false},
+		{"invalid time", "Account", `{"id":1,"email":"x","created_at":"yesterday","csrf_token":"x"}`, false},
+		{"invalid offset", "Account", `{"id":1,"email":"x","created_at":"2024-02-29T12:30:59+24:00","csrf_token":"x"}`, false},
+		{"nested invalid date", "SearchResult", `{"abstain":false,"documents":{"vn:1":{"status":{"current":true},"issued":"2024-02-30"}}}`, false},
+		{"invalid time in array", "SessionList", `[{"id":1,"created_at":"2024-01-01T00:00:00Z","last_seen_at":"yesterday","current":true}]`, false},
+		{"invalid nullable time", "Token", `{"id":1,"name":"x","created_at":"2024-01-01T00:00:00Z","expires_at":"2024-02-01T00:00:00Z","last_used_at":"yesterday","revoked_at":null}`, false},
+		{"nullable time", "Token", `{"id":1,"name":"x","created_at":"2024-01-01T00:00:00Z","expires_at":"2024-02-01T00:00:00Z","last_used_at":null,"revoked_at":null}`, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			value, err := decodeJSON([]byte(tc.body))
+			if err != nil {
+				t.Fatal(err)
+			}
+			err = c.validate(map[string]any{"$ref": "#/components/schemas/" + tc.schema}, value)
+			if (err == nil) != tc.valid {
+				t.Fatalf("valid=%v err=%v", tc.valid, err)
+			}
+		})
+	}
+}

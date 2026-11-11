@@ -82,7 +82,7 @@ func (c *Contract) validate(schema map[string]any, value any) error {
 	if err = resolved.Validate(value); err != nil {
 		return fmt.Errorf("validate schema: %w", err)
 	}
-	return nil
+	return c.validateFormats(schema, value)
 }
 
 func decodeJSON(raw []byte) (any, error) {
