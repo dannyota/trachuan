@@ -203,26 +203,35 @@ derived rows, clear artifact/input references and attempt state, and set items
 pending. Rewind to the earliest affected stage, including an empty next stage;
 validate `--until` after choosing it.
 
-Later stages keep their items. Run `vn/20261111_1` showed why: eight expand
-items fail with HTTP 500 on every pass, so each restart rewound to expand,
-deleted about 3,800 finished fetch items and read every document from the source
-again for two hours, although nothing those items depend on had changed. A
-restart therefore deletes nothing in later stages up front. When a later stage
-is planned again it reconciles its items with the membership phase it reads:
+Clear later stage run items, derived rows and gaps so they replan.
 
-- an item whose document is still a member and whose planned input is unchanged
-  keeps its state, artifact and gaps; for fetch the input is the document key,
-  so a document this run already read is not read again;
-- an item whose planned input changed is reset like a retried item;
-- an item whose document is no longer a member is deleted with its gaps and
-  item-owned derived rows;
-- a new member gets a new pending item;
-- an item with a retry-eligible gap is reset, as in its own stage's retry.
+Replanning does not mean reading the source again. Run `vn/20261111_1` showed
+the cost: eight expand items fail with HTTP 500 on every pass, so each restart
+rewound to expand and fetch read about 3,800 documents again for two hours,
+although the run already held them. A run reads a document from the source at
+most once:
 
-The stage then runs only its pending items and closes as usual, so finalizers
-and later stages see one consistent set. Later-stage gaps that survive keep
-their acceptance; only reset or new items produce gaps that need fresh
-acceptance.
+- When a fetch or expand item commits a bundle it read from the source, the run
+  records an acquisition: run, stage, document key and the bundle artifact. The
+  record is not an item, carries no gap and no membership decision, and a
+  restart never deletes it.
+- When a later generation of the same run processes an item for a document key
+  that has an acquisition in that stage, it adopts the recorded artifact instead
+  of calling the source: the item commits with that artifact's manifest hash as
+  its input hash, exactly as if it had just downloaded it. Adoption writes no
+  source observation and leaves `fetched_file.fetched_at` unchanged; it is not a
+  download.
+- Everything that depends on membership is computed again as today: planned
+  skips (`withdrawn`, `scope_removed`), hand-over decisions and other finalizer
+  gaps, relate's target resolution, and every later item. Their artifacts are
+  reused by input hash where the inputs are unchanged, so extract, chunk and
+  embed do no new work for an unchanged bundle.
+- An item that ended as a gap has no acquisition and is read from the source
+  again, which is what a retry is for.
+
+Acquisitions belong to one run and its frozen recipes; another run reads the
+source itself, as [sources](sources.md) requires. The run message records how
+many items adopted an acquisition.
 
 Delete all membership evidence and seed observations produced at or after the
 rewind stage, including evidence from unselected items at that stage. Every
