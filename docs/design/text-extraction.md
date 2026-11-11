@@ -89,12 +89,16 @@ article, structure heading or scope close, so it is the whole article. A
 structure provision (`phan`, `chuong`, `muc`) holds only its label and title
 lines. Every paragraph of a scope therefore sits in exactly one provision.
 
-Quoted text. A paragraph that opens with an opening quotation mark starts quoted
-text, which runs through the first paragraph that ends with a closing quotation
-mark (a following `.`, `;` or `,` allowed). No heading and no scope boundary is
-recognized inside quoted text, so an amended article quoted over several
-paragraphs stays in the article that quotes it. Quoted text still open at the
-end of the document fails the check of the scope it started in.
+Quoted text is tracked by depth. Double quotation marks are counted through
+every paragraph in order: an opening mark (`“`, `«`) adds one, a closing mark
+(`”`, `»`) removes one, and a straight mark `"` toggles between zero and one
+when the depth is at most one; single marks are ignored. A paragraph that starts
+while the depth is above zero is inside quoted text. No heading and no scope
+boundary is recognized inside quoted text, so an amended article quoted over
+several paragraphs, with nested quotations, stays in the article that quotes it.
+A depth that goes below zero, or is above zero at the end of the document, fails
+the check of the scope where it happened or started: the marks are unbalanced
+and the reading cannot be trusted.
 
 Grammar, applied to paragraph starts outside quoted text:
 
@@ -108,11 +112,13 @@ Grammar, applied to paragraph starts outside quoted text:
   letter or the end of the line: an article. A line such as
   `Điều 6 của Luật ...` is running text wrapped by the source or the OCR, never
   a heading.
-- A heading candidate is a paragraph that starts with `Điều <n>` or
-  `Điều <n><letter>` followed by the end of the line, `.`, `:`, a dash or a
-  capital letter. A candidate that is not a heading by the rule above
-  (`Điều 2: ...`, `Điều 2 Phạm vi`) fails the check of its scope: it may be a
-  heading the grammar missed.
+- Every other paragraph that starts with `Điều`, spaces and a number is either
+  running text or a failed heading candidate. It is running text only when the
+  first character after the number (and an optional letter), spaces skipped, is
+  a lowercase letter, `,`, `;` or `)`, as in `Điều 6 của Luật ...`. Anything
+  else (`Điều 2: ...`, `Điều 2 : Phạm vi`, `Điều 2 Phạm vi`, `Điều 2.phạm vi`)
+  is a failed candidate and fails the check of its scope: it may be a heading
+  the grammar missed.
 
 Parsed and OCR text asserts articles only. Clauses and points stay inside their
 article's text and get no provision, anchor or citation of their own in this
@@ -127,19 +133,21 @@ recipient or signature block (`Nơi nhận:`, `TM.`, `KT.`, a signing title alon
 on a line, `XÁC THỰC VĂN BẢN HỢP NHẤT`), an appendix or form title (a line
 wholly in capitals that begins with `PHỤ LỤC` or `MẪU SỐ`, or
 `Phụ lục <number>`, `Phụ lục số <number>` or `Mẫu số <number>` (Arabic or Roman,
-letters allowed after it as in `01a`) followed by the end of the line or by a
-title that does not end in sentence punctuation; `Phụ lục này là ...` is running
-text), or an instrument title: a line wholly in capitals that begins with
-`QUY CHẾ`, `QUY ĐỊNH` or `ĐIỀU LỆ` and is not the title line of the structure
-heading just before it (`Chương I` then `QUY ĐỊNH CHUNG` is a chapter title).
-Everything after it belongs to later scopes. An instrument title followed, with
-no article in between, by an article numbered 1 opens an instrument scope: a
-regulation "ban hành kèm theo", with anchors `kem-theo-<k>/dieu-<n>` and the
-label "Điều n (văn bản kèm theo k)"; its structure headings carry the same
-prefix (`kem-theo-<k>/chuong-i`). Structure headings before the first article
-belong to the main scope and are ancestors of its articles. Any other later
-scope (appendices, forms, footnotes, a restart at `Điều 1` without an instrument
-title) is a tail scope and never asserts articles.
+letters allowed after it as in `01a`) as the whole paragraph, a closing `.` or
+`:` allowed; any longer mixed-case line such as `Phụ lục 1 của Thông tư này` is
+running text, and an appendix whose title has that shape is still cut off by the
+signature block before it), or an instrument title: a line wholly in capitals
+that begins with `QUY CHẾ`, `QUY ĐỊNH` or `ĐIỀU LỆ` and is not the title line of
+the structure heading just before it (`Chương I` then `QUY ĐỊNH CHUNG` is a
+chapter title). Everything after it belongs to later scopes. An instrument title
+followed, with no article in between, by an article numbered 1 opens an
+instrument scope: a regulation "ban hành kèm theo", with anchors
+`kem-theo-<k>/dieu-<n>` and the label "Điều n (văn bản kèm theo k)"; its
+structure headings carry the same prefix (`kem-theo-<k>/chuong-i`). Structure
+headings before the first article belong to the main scope and are ancestors of
+its articles. Any other later scope (appendices, forms, footnotes, a restart at
+`Điều 1` without an instrument title) is a tail scope and never asserts
+articles.
 
 Fail closed. The article-level reading is accepted for the main scope or an
 instrument scope only when its article numbers run 1, 2, 3, ... where an
