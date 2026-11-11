@@ -68,8 +68,10 @@ id. Flags: `--model`, `--effort`, `--limit-docs`, `--max-usd` (required),
 
 - Dry run: counts input tokens per document with the token counting endpoint and
   prints the estimate at the model's listed price. It writes nothing.
-- Direct mode sends one request per document, a few at a time. It is for the
-  pilot and for retries.
+- Direct mode sends one request per document, one at a time. It is for the pilot
+  and for retries. A request whose final usage never arrived (a dropped
+  connection after the request was sent, a cut stream) is `uncertain`: the
+  provider may have billed all of it.
 - Batch mode submits Message Batches (half price). A batch holds at most 200 MB
   of requests. Submission follows
   [external batch submissions](batch-submissions.md) in the form this command
@@ -81,16 +83,24 @@ id. Flags: `--model`, `--effort`, `--limit-docs`, `--max-usd` (required),
   the provider may hold a paid batch nobody recorded. Uncertain attempts block
   new attempts for their entries. `corpus ocr check --reconcile` lists the
   provider's batches created in that window and matches the `custom_id` prefix
-  in their results; a match attaches the batch id, and no match 24 hours after
-  the attempt marks it `abandoned`, which allows one new submission. A later
-  invocation collects the results of `submitted` attempts instead of submitting
-  again; an expired or errored item becomes a failed attempt that the next
-  invocation may resubmit. The records live in the workshop database only; if it
-  is lost, at most the batches then in flight are paid twice, bounded by
+  in their results; a match attaches the batch id. An empty or unmatched listing
+  proves nothing (another workspace's key lists other batches), so
+  reconciliation never abandons an attempt. Only the operator does, with
+  `corpus ocr check --abandon <submission id>` after looking at the provider's
+  console, and not within 24 hours of the attempt; that allows one new
+  submission. A later invocation collects the results of `submitted` attempts
+  instead of submitting again; an expired or errored item becomes a failed
+  attempt that the next invocation may resubmit. The records live in the
+  workshop database, which run checkpoints dump; losing it beyond the last
+  checkpoint loses the check rows and the spend written since, so that work is
+  paid again when it is repeated, each invocation still bounded by its
   `--max-usd`.
 - Spend: each attempt records the usage the API reported; the command adds the
   cost at the listed price and stops before a request or batch that could pass
-  `--max-usd`, counting the largest possible output.
+  `--max-usd`, counting the largest possible output. An `uncertain` or
+  `abandoned` attempt counts at its worst case (counted input plus the largest
+  output) until a result with real usage replaces it, and an `uncertain` attempt
+  stops all further spending by that command until the operator resolves it.
 - Every attempt is a row in `ocr_check_attempt` (entry, checker id, mode, batch
   id, state, reason, usage). The table is working state and may be updated; the
   `ocr_check` row it leads to is immutable.
