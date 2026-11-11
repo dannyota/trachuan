@@ -39,3 +39,5 @@ AuthPlane (fallbacks if the spike fails).
   stands: copy oauthsrv. ChatGPT and hosted Claude over CIMD remain acceptance
   tests for the server's OAuth
   ([research note](../research/oauth-clients-2026-11.md)).
+- 2026-11-11: aboutme `oauthsrv` at `1b1ece3d` reviewed against auth.md; the
+  import is a starting point and [OAuth](../design/oauth.md) closes its gaps.

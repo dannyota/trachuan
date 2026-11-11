@@ -20,6 +20,7 @@ Intended behavior of trachuan. Decisions with alternatives are in the
 | [source execution](source-execution.md)    | Shared source interfaces, finalization, retries and durable pauses                       |
 | [auth](auth.md)                            | Google login, OAuth for MCP, CIMD, revocation, account lifecycle                         |
 | [web API](web-api.md)                      | Google login flow, web sessions, CSRF, `/api/v1` routes, OpenAPI contract                |
+| [OAuth](oauth.md)                          | MCP authorization server: clients, consent, codes, tokens, aboutme import gaps           |
 | [web](web.md)                              | Routes, pages, visual system                                                             |
 | [deployment](deployment.md)                | Host, deploy, secrets, release activation, backups, observability                        |
 | [budgets](budgets.md)                      | Request, pipeline, indexing, retrieval and Temporal limits                               |

@@ -105,6 +105,8 @@ follow the same rule.
 | `GET /api/v1/me/tokens`            | session        | read         | Own personal tokens: id, name, created, expires, last used, revoked |
 | `POST /api/v1/me/tokens`           | session + CSRF | read         | Create a personal token `{name, days}`; the token is returned once  |
 | `DELETE /api/v1/me/tokens/{id}`    | session + CSRF | read         | Revoke one own personal token                                       |
+| `GET /api/v1/me/grants`            | session        | read         | Own OAuth grants ([OAuth](oauth.md))                                |
+| `DELETE /api/v1/me/grants/{id}`    | session + CSRF | read         | Revoke one own OAuth grant and its tokens                           |
 | `POST /api/v1/search`              | session + CSRF | search       | The `search` tool's input and result                                |
 | `POST /api/v1/read`                | session + CSRF | read         | The `read` tool's input and result                                  |
 | `GET /api/v1/documents/{key}`      | session        | read         | Reader page: document entry, outline and text from `from`           |
