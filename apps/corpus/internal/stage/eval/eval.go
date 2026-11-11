@@ -31,9 +31,10 @@ type Config struct {
 
 // Stage evaluates one built release.
 type Stage struct {
-	cfg    Config
-	lookup func(context.Context, stage.Env, stage.Run) (artifact.Result, error)
-	ensure func(context.Context, stage.Env, stage.Run) (build.Database, artifact.Result, error)
+	cfg      Config
+	lookup   func(context.Context, stage.Env, stage.Run) (artifact.Result, error)
+	ensure   func(context.Context, stage.Env, stage.Run) (build.Database, artifact.Result, error)
+	evaluate func(context.Context, stage.Env, stage.Run, build.Database, artifact.Result, evaluation.Options) (evaluation.Report, evaluation.Cache, error)
 }
 
 // New constructs an evaluation stage.
@@ -88,15 +89,22 @@ func (s *Stage) Plan(ctx context.Context, env stage.Env, run stage.Run) ([]stage
 }
 
 // Evaluate resolves the build and runs a diagnostic evaluation.
-func (s *Stage) Evaluate(ctx context.Context, env stage.Env, run stage.Run) (evaluation.Report, evaluation.Cache, error) {
+func (s *Stage) Evaluate(ctx context.Context, env stage.Env, run stage.Run, capOverride *retrieval.CapOverride) (evaluation.Report, evaluation.Cache, error) {
 	db, art, err := s.ensureBuild(ctx, env, run)
 	if err != nil {
 		return evaluation.Report{}, evaluation.Cache{}, fmt.Errorf("ensure build: %w", err)
 	}
-	return s.evaluateBuild(ctx, env, run, db, art)
+	return s.runBuild(ctx, env, run, db, art, evaluation.Options{CapOverride: capOverride})
 }
 
-func (s *Stage) evaluateBuild(ctx context.Context, env stage.Env, run stage.Run, db build.Database, art artifact.Result) (evaluation.Report, evaluation.Cache, error) {
+func (s *Stage) runBuild(ctx context.Context, env stage.Env, run stage.Run, db build.Database, art artifact.Result, opts evaluation.Options) (evaluation.Report, evaluation.Cache, error) {
+	if s.evaluate != nil {
+		return s.evaluate(ctx, env, run, db, art, opts)
+	}
+	return s.evaluateBuild(ctx, env, run, db, art, opts)
+}
+
+func (s *Stage) evaluateBuild(ctx context.Context, env stage.Env, run stage.Run, db build.Database, art artifact.Result, opts evaluation.Options) (evaluation.Report, evaluation.Cache, error) {
 	date, err := dateForRun(run)
 	if err != nil {
 		return evaluation.Report{}, evaluation.Cache{}, err
@@ -165,7 +173,15 @@ func (s *Stage) evaluateBuild(ctx context.Context, env stage.Env, run stage.Run,
 	if err != nil {
 		return evaluation.Report{}, evaluation.Cache{}, fmt.Errorf("validate evaluation mapping: %w", err)
 	}
-	report, cache, err := evaluation.Run(ctx, engine, suite, evaluation.Options{Mapping: mapping, EvaluationDate: retrieval.Date{Year: date.Year(), Month: date.Month(), Day: date.Day()}, PreviousReport: s.cfg.Previous, BuildArtifactSHA256: art.SHA256, DumpSHA256: db.Record.Dump.SHA256, DatabaseInstanceKind: db.Instance, Calibration: cal, Software: map[string]string{"postgresql": db.Record.PostgresVersion, "pgvector": db.Record.PGVectorVersion, "ltree": db.Record.LtreeVersion, "pg_dump": db.Record.PgDumpVersion, "worker": db.Record.WorkerVersion}})
+	opts.Mapping = mapping
+	opts.EvaluationDate = retrieval.Date{Year: date.Year(), Month: date.Month(), Day: date.Day()}
+	opts.PreviousReport = s.cfg.Previous
+	opts.BuildArtifactSHA256 = art.SHA256
+	opts.DumpSHA256 = db.Record.Dump.SHA256
+	opts.DatabaseInstanceKind = db.Instance
+	opts.Calibration = cal
+	opts.Software = map[string]string{"postgresql": db.Record.PostgresVersion, "pgvector": db.Record.PGVectorVersion, "ltree": db.Record.LtreeVersion, "pg_dump": db.Record.PgDumpVersion, "worker": db.Record.WorkerVersion}
+	report, cache, err := evaluation.Run(ctx, engine, suite, opts)
 	if err != nil {
 		return report, cache, fmt.Errorf("run evaluation: %w", err)
 	}
@@ -194,7 +210,7 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 	if err = s.checkInputHash(art, run, item.InputHash); err != nil {
 		return stage.Output{}, err
 	}
-	report, cache, err := s.evaluateBuild(ctx, env, run, db, art)
+	report, cache, err := s.runBuild(ctx, env, run, db, art, evaluation.Options{})
 	if err != nil {
 		return stage.Output{}, err
 	}

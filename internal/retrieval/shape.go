@@ -8,6 +8,10 @@ import (
 
 // Shape constructs a bounded evidence response from cached candidates.
 func Shape(arms Arms, recipe Recipe, limit int, mode ArmMode) (Response, error) {
+	return shapeWithCap(arms, recipe, limit, mode, recipe.DocumentCap)
+}
+
+func shapeWithCap(arms Arms, recipe Recipe, limit int, mode ArmMode, cap int) (Response, error) {
 	out := Response{Release: arms.Release, Hits: []Hit{}, NonCurrent: []Hit{}, Gaps: []Gap{}, Diagnostics: Diagnostics{DenseCount: len(arms.Primary.Dense), LexicalCount: len(arms.Primary.Lexical), RawANNCount: len(arms.Primary.RawANN), Fallback: arms.Primary.Fallback, QueryRecipeHash: arms.QueryRecipeHash, TimingsMS: map[string]int64{}}}
 	if !arms.Validation.Accepted {
 		out.Abstain = true
@@ -18,7 +22,7 @@ func Shape(arms Arms, recipe Recipe, limit int, mode ArmMode) (Response, error) 
 	if recipe.Abstention.Threshold == nil || math.IsNaN(*recipe.Abstention.Threshold) || math.IsInf(*recipe.Abstention.Threshold, 0) {
 		return Response{}, errors.New("uncalibrated retrieval recipe")
 	}
-	ranking, err := Rank(arms, recipe, limit, mode)
+	ranking, err := rankWithCap(arms, recipe, limit, mode, cap)
 	if err != nil {
 		return Response{}, err
 	}
@@ -37,7 +41,7 @@ func Shape(arms Arms, recipe Recipe, limit int, mode ArmMode) (Response, error) 
 		out.Hits = append(out.Hits, hit)
 	}
 	if arms.IncludeNonCurrent && len(out.Hits) < limit {
-		other, rankErr := rankGroup(arms.NonCurrent, arms.Validation.Routed, recipe, limit, mode)
+		other, rankErr := rankGroup(arms.NonCurrent, arms.Validation.Routed, recipe, limit, mode, cap)
 		if rankErr != nil {
 			return Response{}, rankErr
 		}

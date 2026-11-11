@@ -183,3 +183,29 @@ func TestEvalStage_DevelopmentHashInInput(t *testing.T) {
 		t.Fatal("development fixture omitted from evaluation input hash")
 	}
 }
+
+func TestEvalStage_NoCapOverride(t *testing.T) {
+	sentinel := errors.New("evaluation reached")
+	s := New(Config{})
+	s.lookup = func(context.Context, stage.Env, stage.Run) (artifact.Result, error) {
+		return artifact.Result{SHA256: "build"}, nil
+	}
+	s.ensure = func(context.Context, stage.Env, stage.Run) (build.Database, artifact.Result, error) {
+		return build.Database{}, artifact.Result{SHA256: "build"}, nil
+	}
+	s.evaluate = func(_ context.Context, _ stage.Env, _ stage.Run, _ build.Database, _ artifact.Result, opts evaluation.Options) (evaluation.Report, evaluation.Cache, error) {
+		if opts.CapOverride != nil {
+			t.Error("pipeline stage passed a cap override")
+		}
+		return evaluation.Report{}, evaluation.Cache{}, sentinel
+	}
+	run := stage.Run{Country: "vn", Rel: "20990101"}
+	items, err := s.Plan(context.Background(), stage.Env{}, run)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = s.Process(context.Background(), stage.Env{}, run, items[0])
+	if !errors.Is(err, sentinel) {
+		t.Fatalf("evaluation not reached: %v", err)
+	}
+}

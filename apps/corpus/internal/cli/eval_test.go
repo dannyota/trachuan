@@ -125,6 +125,27 @@ func TestEvalCLI_RejectsNonemptyOutputBeforeEvaluation(t *testing.T) {
 	}
 }
 
+func TestEvalCLI_CapFlag(t *testing.T) {
+	out := t.TempDir()
+	if err := os.WriteFile(filepath.Join(out, "existing"), []byte("keep"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	for _, cap := range []string{"1", "4", "50", "none"} {
+		var stderr bytes.Buffer
+		code := runEval(context.Background(), []string{"vn", "20261109", "--out", out, "--cap", cap}, &stderr, &stderr)
+		if code != 1 || !strings.Contains(stderr.String(), "output directory is not empty") {
+			t.Errorf("cap %s: code=%d error=%s", cap, code, stderr.String())
+		}
+	}
+	for _, cap := range []string{"0", "51", "-1", "NONE", "1.5", "04"} {
+		var stderr bytes.Buffer
+		code := runEval(context.Background(), []string{"vn", "20261109", "--out", out, "--cap", cap}, &stderr, &stderr)
+		if code != 1 || !strings.Contains(stderr.String(), "invalid cap") {
+			t.Errorf("cap %s: code=%d error=%s", cap, code, stderr.String())
+		}
+	}
+}
+
 type replaceOutputWithFile struct{ out string }
 
 func (w replaceOutputWithFile) WriteFiles(string) error {

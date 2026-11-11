@@ -104,7 +104,7 @@ func finishReport(r *Report, all map[metricKey]*Metrics, modes []retrieval.Mode)
 							v := num / float64(den)
 							value = &v
 						}
-						metric := Metric{mode, arms, limit, name, num, den, value, conf}
+						metric := Metric{Mode: mode, Arms: arms, Limit: limit, Name: name, Numerator: num, Denominator: den, Value: value, Confusion: conf, CapOverride: r.CapOverride}
 						stats.Metrics = append(stats.Metrics, metric)
 					}
 					add("recall", float64(matched), total, nil)
@@ -173,7 +173,7 @@ func finishQuality(r *Report, previous *Report) {
 	old.Floors, old.Targets, old.NonRegression = r.Floors, r.Targets, r.NonRegression
 	r.Cohorts["old_product"] = old
 	development := r.Cohorts["development"]
-	current := Report{Cohorts: map[string]Cohort{"old_product": development}, Rejections: r.Rejections}
+	current := Report{Cohorts: map[string]Cohort{"old_product": development}, Rejections: r.Rejections, CapOverride: r.CapOverride}
 	var prior *Report
 	if previous != nil && previous.Cohorts["development"].CaseCount > 0 {
 		prior = &Report{Cohorts: map[string]Cohort{"old_product": previous.Cohorts["development"]}}
@@ -241,7 +241,7 @@ func finishProductQuality(r *Report, previous *Report) {
 						status = "fail"
 					}
 				}
-				r.NonRegression = append(r.NonRegression, NonRegression{Mode: mode, Arms: "hybrid", Limit: spec.limit, Name: spec.name, Value: m.Value, PreviousValue: old, Status: status})
+				r.NonRegression = append(r.NonRegression, NonRegression{Mode: mode, Arms: "hybrid", Limit: spec.limit, Name: spec.name, Value: m.Value, PreviousValue: old, Status: status, CapOverride: r.CapOverride})
 			}
 		}
 	}
@@ -263,5 +263,5 @@ func findQualityMetric(r *Report, mode retrieval.Mode, name string, limit int) M
 			return m
 		}
 	}
-	return Metric{Mode: mode, Arms: "hybrid", Limit: limit, Name: name}
+	return Metric{Mode: mode, Arms: "hybrid", Limit: limit, Name: name, CapOverride: r.CapOverride}
 }

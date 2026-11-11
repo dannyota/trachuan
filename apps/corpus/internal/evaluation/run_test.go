@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -525,5 +526,82 @@ func TestRun_PreviousReportAffectsQuality(t *testing.T) {
 	}
 	if r.QualityPass || r.NonRegression[0].Status != "fail" || *r.NonRegression[0].PreviousValue != 1.1 {
 		t.Fatalf("regression %+v quality %v", r.NonRegression, r.QualityPass)
+	}
+}
+
+func TestPreviousDiff_CapMismatchIncompatible(t *testing.T) {
+	date := retrieval.Date{Year: 2026, Month: time.November, Day: 9}
+	cap4, err := retrieval.ParseCapOverride("4")
+	if err != nil {
+		t.Fatal(err)
+	}
+	cap5, err := retrieval.ParseCapOverride("5")
+	if err != nil {
+		t.Fatal(err)
+	}
+	opts := Options{EvaluationDate: date, Modes: []retrieval.Mode{"exact"}, CapOverride: cap4}
+	prior, cache1, err := Run(context.Background(), &fakeEngine{date: date}, recordedSuite(), opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, err := json.Marshal(prior)
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(t.TempDir(), "previous.json")
+	if err = os.WriteFile(path, data, 0600); err != nil {
+		t.Fatal(err)
+	}
+	opts.CapOverride, opts.PreviousReport = cap5, path
+	current, cache2, err := Run(context.Background(), &fakeEngine{date: date}, recordedSuite(), opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	diff, ok := current.PreviousDiff.(map[string]any)
+	if !ok || !strings.Contains(fmt.Sprint(diff["reason"]), "cap") {
+		t.Fatalf("diff = %v", current.PreviousDiff)
+	}
+	if !reflect.DeepEqual(cache1.Arms, cache2.Arms) {
+		t.Fatal("cap changed cached arms")
+	}
+}
+
+func TestRun_CapOverrideReport(t *testing.T) {
+	date := retrieval.Date{Year: 2026, Month: time.November, Day: 9}
+	for _, tc := range []struct{ cap, want string }{{"4", "4"}, {"none", `"none"`}} {
+		cap, err := retrieval.ParseCapOverride(tc.cap)
+		if err != nil {
+			t.Fatal(err)
+		}
+		report, _, err := Run(context.Background(), &fakeEngine{date: date}, recordedSuite(), Options{EvaluationDate: date, Modes: []retrieval.Mode{"exact"}, CapOverride: cap})
+		if err != nil {
+			t.Fatal(err)
+		}
+		data, err := json.Marshal(report)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var fields map[string]json.RawMessage
+		if err = json.Unmarshal(data, &fields); err != nil {
+			t.Fatal(err)
+		}
+		if string(fields["cap_override"]) != tc.want {
+			t.Errorf("cap %s: report %s", tc.cap, fields["cap_override"])
+		}
+		for _, cohort := range report.Cohorts {
+			for _, metric := range cohort.Metrics {
+				b, err := json.Marshal(metric)
+				if err != nil {
+					t.Fatal(err)
+				}
+				var m map[string]json.RawMessage
+				if err := json.Unmarshal(b, &m); err != nil {
+					t.Fatal(err)
+				}
+				if string(m["cap_override"]) != tc.want {
+					t.Errorf("metric cap = %s, want %s", m["cap_override"], tc.want)
+				}
+			}
+		}
 	}
 }

@@ -2,6 +2,7 @@ package retrieval
 
 import (
 	"errors"
+	"reflect"
 	"testing"
 )
 
@@ -129,5 +130,83 @@ func TestGroup_ArticleOwnedStaysArticle(t *testing.T) {
 	}
 	if len(got.Groups) != 2 || got.Groups[0].Identity.Anchor != "article" {
 		t.Fatalf("groups %+v", got.Groups)
+	}
+}
+
+func TestRank_CapOverrideNone(t *testing.T)  { testCapOverride(t, "none", 5) }
+func TestRank_CapOverrideValue(t *testing.T) { testCapOverride(t, "4", 4) }
+
+func testCapOverride(t *testing.T, value string, want int) {
+	t.Helper()
+	var candidates []Candidate
+	for i := int64(1); i <= 5; i++ {
+		candidates = append(candidates, rankCandidate(i, i, "a", .4))
+	}
+	for i := int64(6); i <= 10; i++ {
+		candidates = append(candidates, rankCandidate(i, i, "b", .4))
+	}
+	cap, err := ParseCapOverride(value)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := Rank(rankFixture(candidates, nil), Recipe1(), 5, "hybrid", cap)
+	if err != nil {
+		t.Fatal(err)
+	}
+	count := 0
+	for _, g := range got.Groups {
+		if g.Identity.DocumentKey == "a" {
+			count++
+		}
+	}
+	if count != want {
+		t.Fatalf("document hits = %d, want %d", count, want)
+	}
+}
+
+func TestCapOverride_EvalOnly(t *testing.T) {
+	recipe := Recipe1()
+	before := recipe.Hash()
+	cap, err := ParseCapOverride("none")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = Rank(rankFixture(nil, nil), recipe, 8, "hybrid", cap)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if recipe.Hash() != before || Recipe1().Hash() != before {
+		t.Fatal("recipe hash changed")
+	}
+	if _, ok := reflect.TypeOf(Request{}).FieldByName("CapOverride"); ok {
+		t.Fatal("serving request exposes cap override")
+	}
+}
+
+func TestShapeWithCap_AppliesOverride(t *testing.T) {
+	arms, recipe := shapeFixture("text")
+	base := arms.Primary.Dense[0]
+	arms.Primary = ArmGroup{}
+	for i := int64(1); i <= 10; i++ {
+		c := base
+		c.ChunkID, c.GroupID = i, i
+		c.Descendants = append([]Provision(nil), base.Descendants...)
+		c.Descendants[0].ID = i
+		if i > 5 {
+			c.Group.DocumentKey = "other"
+		}
+		arms.Primary.Dense = append(arms.Primary.Dense, c)
+		arms.Primary.Members = append(arms.Primary.Members, c)
+	}
+	cap, err := ParseCapOverride("4")
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := ShapeWithCap(arms, recipe, 5, "hybrid", cap)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Hits) != 5 || got.Hits[3].Identity.DocumentKey != "vn:1" || got.Hits[4].Identity.DocumentKey != "other" {
+		t.Fatalf("hits: %+v", got.Hits)
 	}
 }

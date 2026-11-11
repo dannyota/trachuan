@@ -17,6 +17,7 @@ import (
 	"danny.vn/trachuan/apps/corpus/internal/stage/eval"
 	"danny.vn/trachuan/apps/corpus/internal/store"
 	"danny.vn/trachuan/apps/corpus/internal/worker"
+	"danny.vn/trachuan/internal/retrieval"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/sys/unix"
 )
@@ -72,14 +73,21 @@ func passingEvalFloors(floors []evaluation.Floor, allowNotRun bool) bool {
 func runEval(ctx context.Context, args []string, _ io.Writer, stderr io.Writer) int {
 	fail := func(err error) int { _, _ = fmt.Fprintln(stderr, err); return 1 }
 	if len(args) < 2 {
-		return fail(fmt.Errorf("usage: corpus eval <cc> <rel> --out DIR [--previous FILE] [--require-floors]"))
+		return fail(fmt.Errorf("usage: corpus eval <cc> <rel> --out DIR [--previous FILE] [--require-floors] [--cap N|none]"))
 	}
-	opts, err := options(args[2:], map[string]bool{"--out": true, "--previous": true, "--require-floors": false})
+	opts, err := options(args[2:], map[string]bool{"--out": true, "--previous": true, "--require-floors": false, "--cap": true})
 	if err != nil {
 		return fail(err)
 	}
 	if opts["--out"] == "" {
 		return fail(fmt.Errorf("--out DIR is required"))
+	}
+	var capOverride *retrieval.CapOverride
+	if value, ok := opts["--cap"]; ok {
+		capOverride, err = retrieval.ParseCapOverride(value)
+		if err != nil {
+			return fail(fmt.Errorf("--cap: %w", err))
+		}
 	}
 	if err = checkEvaluationOutput(opts["--out"]); err != nil {
 		return fail(err)
@@ -107,7 +115,7 @@ func runEval(ctx context.Context, args []string, _ io.Writer, stderr io.Writer) 
 		return fail(fmt.Errorf("corpus eval %s/%s decode snapshot: %w", args[0], args[1], err))
 	}
 	run := stage.Run{ID: row.ID, Country: row.Country, Rel: row.Rel, Generation: int(row.Generation), Snapshot: snapshot}
-	report, cache, err := eval.New(deps.Eval).Evaluate(ctx, stage.Env{DB: db, Artifacts: artifact.Store{Root: cfg.Artifacts}}, run)
+	report, cache, err := eval.New(deps.Eval).Evaluate(ctx, stage.Env{DB: db, Artifacts: artifact.Store{Root: cfg.Artifacts}}, run, capOverride)
 	if err != nil {
 		return fail(err)
 	}

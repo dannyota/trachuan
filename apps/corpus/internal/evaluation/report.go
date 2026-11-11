@@ -11,6 +11,7 @@ import (
 
 // Options identifies the inputs and environment of an evaluation.
 type Options struct {
+	CapOverride          *retrieval.CapOverride
 	Mapping              ValidationReport
 	EvaluationDate       retrieval.Date
 	Modes                []retrieval.Mode
@@ -25,14 +26,15 @@ type Options struct {
 
 // Metric records a measured ratio with its counts.
 type Metric struct {
-	Mode        retrieval.Mode    `json:"mode"`
-	Arms        retrieval.ArmMode `json:"arms"`
-	Limit       int               `json:"limit"`
-	Name        string            `json:"name"`
-	Numerator   float64           `json:"numerator"`
-	Denominator int               `json:"denominator"`
-	Value       *float64          `json:"value"`
-	Confusion   *Confusion        `json:"confusion,omitempty"`
+	CapOverride *retrieval.CapOverride `json:"cap_override"`
+	Mode        retrieval.Mode         `json:"mode"`
+	Arms        retrieval.ArmMode      `json:"arms"`
+	Limit       int                    `json:"limit"`
+	Name        string                 `json:"name"`
+	Numerator   float64                `json:"numerator"`
+	Denominator int                    `json:"denominator"`
+	Value       *float64               `json:"value"`
+	Confusion   *Confusion             `json:"confusion,omitempty"`
 }
 
 // Cohort summarizes the cases and metrics for one scoring policy.
@@ -64,13 +66,14 @@ type Target struct {
 
 // NonRegression compares a metric with its previous value.
 type NonRegression struct {
-	Mode          retrieval.Mode    `json:"mode"`
-	Arms          retrieval.ArmMode `json:"arms"`
-	Limit         int               `json:"limit"`
-	Name          string            `json:"name"`
-	Value         *float64          `json:"value"`
-	PreviousValue *float64          `json:"previous_value"`
-	Status        string            `json:"status"`
+	CapOverride   *retrieval.CapOverride `json:"cap_override"`
+	Mode          retrieval.Mode         `json:"mode"`
+	Arms          retrieval.ArmMode      `json:"arms"`
+	Limit         int                    `json:"limit"`
+	Name          string                 `json:"name"`
+	Value         *float64               `json:"value"`
+	PreviousValue *float64               `json:"previous_value"`
+	Status        string                 `json:"status"`
 }
 
 // SizeSummary records nearest-rank evidence sizes.
@@ -134,6 +137,7 @@ type CompactSizeGate struct {
 
 // Report is a completed diagnostic evaluation.
 type Report struct {
+	CapOverride                   *retrieval.CapOverride    `json:"cap_override"`
 	Presented                     []PresentedSummary        `json:"presented"`
 	CompactSizeGate               CompactSizeGate           `json:"compact_size_gate"`
 	DocumentsByClass              map[string]int            `json:"documents_by_class"`
@@ -381,7 +385,7 @@ func addLegacyDirectMetrics(r *Report) {
 				}
 				add := func(name string, num float64, den int) {
 					v := num / float64(den)
-					cohort.Metrics = append(cohort.Metrics, Metric{Mode: mode, Arms: arm, Limit: limit, Name: name, Numerator: num, Denominator: den, Value: &v})
+					cohort.Metrics = append(cohort.Metrics, Metric{Mode: mode, Arms: arm, Limit: limit, Name: name, Numerator: num, Denominator: den, Value: &v, CapOverride: r.CapOverride})
 				}
 				add("direct_recall", float64(matched), total)
 				add("direct_macro_recall", macro, positive)
