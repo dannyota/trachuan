@@ -9,10 +9,19 @@ limits. The fresh OCR client for PDFs absent from the store is a later note.
 
 One check reads one PDF together with the stored OCR text of that PDF and
 answers one question: where does the OCR text disagree with the file. The
-checker is a hosted Claude model on the Claude API. It receives the PDF as a
-document block (the API reads each page as text and image, so the pipeline needs
-no PDF renderer), then the OCR text, then a fixed instruction. Nothing else is
-sent: no user question, no personal data, only public legal text.
+checker is a hosted Claude model on the Claude API. It receives the pages of the
+PDF as images, each after a `Page N:` label, then the OCR text between fixed
+markers, then a fixed instruction. Nothing else is sent: no user question, no
+personal data, only public legal text.
+
+The PDF itself is not sent. Version 1 sent it as a document block, and the API
+then gives the model each page's embedded text layer beside the page image. For
+most of these scans that layer is the garbage of an earlier OCR pass, and the
+first pilot (10 documents, 2026-11-11) showed the model taking it for the text
+under check: its "OCR" quotes were strings that do not occur in our OCR text at
+all. So the pipeline renders the pages itself and sends images only; the
+instruction also says that the images are the authority and that stamps,
+handwriting, received marks and signature blocks are not checked.
 
 The answer is structured output under a JSON schema:
 
@@ -24,6 +33,14 @@ The answer is structured output under a JSON schema:
   `article_label`, `amount`, `missing_text`, `extra_text`), `page`, `ocr` (the
   OCR reading), `pdf` (the file's reading) and a short `note`. Differences of
   spacing, line breaks, page headers and page numbers are not items.
+
+The answer must be verifiable against what the pipeline holds. Every item's
+`ocr` reading, when not empty, must occur in the stored OCR text after
+whitespace is collapsed; an answer with a quote that does not is a failed
+attempt (`ocr_quote_not_found`), because it shows the checker was not reading
+the text under check. An item whose `ocr` and `pdf` readings are equal after
+whitespace is collapsed is not a disagreement: the pipeline drops it and records
+how many it dropped.
 
 The checker never rewrites the stored text; its answer is evidence beside it.
 
@@ -53,11 +70,13 @@ with its reason. Reason: an unfinished check must never read as a clean one.
 ## Checker id
 
 `<model id>/<effort>/ocr-check-<n>`, for example
-`claude-sonnet-5-5/medium/ocr-check-1`. `n` versions the instruction and the
-schema together. The extract recipe names one checker id; changing the model,
-the effort, the instruction or the schema is a new id, new check rows and a
-rerun of extract for the affected documents. The id used for a release is chosen
-after the pilot and recorded here.
+`claude-sonnet-5-5/medium/ocr-check-2`. `n` versions the instruction, the
+schema, the input form and the rendering settings together (version 1: the PDF
+as a document block; version 2: page images at 150 dpi). The extract recipe
+names one checker id; changing the model, the effort, the instruction or the
+schema is a new id, new check rows and a rerun of extract for the affected
+documents. The id used for a release is chosen after the pilot and recorded
+here.
 
 ## Running checks
 
@@ -118,13 +137,29 @@ check command only, under the file size limit and a ten-second limit per file; a
 library error or panic is `page_count_unknown`. `extract` and the worker still
 parse no PDF.
 
-A request carries one PDF of at most 600 pages and 30 MB with its OCR text
-([PDF support](https://platform.claude.com/docs/en/build-with-claude/pdf-support),
-read 2026-11-11); a larger file is a failed attempt with reason
-`over_check_limit` and waits for a later design. The PDF's SHA-256 is verified
-against the store entry before it is sent. PDF and OCR text are untrusted
-content: the instruction tells the checker to treat them as data, and the
-structured answer is the only thing read back.
+Rendering. The check command renders pages with `pdftoppm` from poppler, run as
+a subprocess with no network, a working directory of its own, a limit of two
+minutes per document and of 3,000 pixels per side: 150 dpi, grayscale, PNG, one
+file per page. The number of rendered pages must equal the counted page total,
+else the attempt fails with `page_count_mismatch`. A missing renderer, a timeout
+or a nonzero exit is `render_failed`; the document stays `needs_ocr`. poppler is
+a tool of the write path on the MacBook and is named in the runbook; nothing on
+the host needs it. Two alternatives were set aside: removing the text layer from
+a copy of the PDF also removes the real text of the PDFs that were born digital,
+and a renderer bound to macOS frameworks would tie the pipeline to one platform.
+
+Cost of the input form. An image costs `ceil(width/28) x ceil(height/28)` tokens
+([vision](https://platform.claude.com/docs/en/build-with-claude/vision), read
+2026-11-11), about 2,800 for an A4 page at 150 dpi; the pilot measures the real
+figure.
+
+A request carries the pages of one PDF: at most 500 pages, each image under 10
+MB, the request under 100 MB (the API allows 600 images and 128 MB, and no side
+above 3,000 pixels once a request has more than 20 images); a larger document is
+a failed attempt with reason `over_check_limit` and waits for a later design.
+The PDF's SHA-256 is verified against the store entry before it is rendered. PDF
+and OCR text are untrusted content: the instruction tells the checker to treat
+them as data, and the structured answer is the only thing read back.
 
 ## Review file
 
@@ -135,7 +170,9 @@ under [validity corrections](validity-status.md) or accept the flag.
 
 ## Pilot
 
-Before the full pass the primary runs direct mode on 50 pages across 10
-documents with each candidate model, reads every item against the PDF, and
-records tokens, cost, true and false flags in a research note. The owner sees
-the measured cost for the full pass before it starts.
+Before the full pass the primary runs direct mode on 10 documents with each
+candidate model, reads every item against the PDF, and records tokens, cost,
+true and false flags in a research note. A failed attempt records which rule it
+broke (the field or rule name, never document content), so a failure can be
+diagnosed from the attempt row. The owner sees the measured cost for the full
+pass before it starts.
