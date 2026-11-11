@@ -15,14 +15,15 @@ request duration or HTTP `Date` header into a bundle. Preserve dates supplied as
 document content. Changed source bytes or attachment availability may still
 change the hash, even when legal text is unchanged.
 
-Keep the existing VBPL serialization unchanged. For new envelopes use compact
-UTF-8 JSON from fixed-field structs, explicit nulls and empty arrays, with no
-trailing newline. Pin field order and escaping in the fetch recipe. Sort file
-entries bytewise by `(name,url,sha256)` and evidence references by
-`(path,sha256)`; deduplicate exact entries. Preserve raw field occurrences in
-source order. Go's [JSON encoder](https://pkg.go.dev/encoding/json#Marshal)
-defines escaping and array encoding; fixture byte comparisons must pin the
-chosen representation.
+Keep the existing VBPL serialization unchanged, except for the view counter that
+[fetch reuse](fetch-reuse.md#stored-detail-drops-the-view-counter) removes from
+the stored detail. For new envelopes use compact UTF-8 JSON from fixed-field
+structs, explicit nulls and empty arrays, with no trailing newline. Pin field
+order and escaping in the fetch recipe. Sort file entries bytewise by
+`(name,url,sha256)` and evidence references by `(path,sha256)`; deduplicate
+exact entries. Preserve raw field occurrences in source order. Go's
+[JSON encoder](https://pkg.go.dev/encoding/json#Marshal) defines escaping and
+array encoding; fixture byte comparisons must pin the chosen representation.
 
 Redact secrets before hashing HTML under the
 [client prerequisites](#client-prerequisites). Never persist cookies or headers
