@@ -26,10 +26,12 @@ never reused. A new code is its parent's code, the kind letter and one more than
 the highest number of any code ever recorded in the mapping with exactly that
 prefix, whatever the status or current position of that code's node; a chủ đề or
 đề mục number follows the STT rule in the table, falling back to the same scan.
-A GUID missing from a later import marks its node `retired`. A GUID that keeps a
-node changes only its level, parent and ordinal, never its code. A GUID whose
-node becomes flattened retires its code (kept, never reused) and is recorded as
-flattened; a flattened GUID that becomes a node receives a new code.
+A GUID missing from a later import marks its node `retired`. A GUID that keeps
+an active node changes only its level, parent and ordinal, never its code. A
+GUID whose node becomes flattened retires its code and is recorded as flattened.
+A retired code never returns to service: a GUID whose node is active again after
+its code was retired, because it went missing, was flattened or was marked
+removed, receives a new code; a node that stays retired keeps its code.
 `taxonomy_version` is the hash of the mapping file, the custom file and the
 overrides file.
 
@@ -45,7 +47,8 @@ files are committed under `taxonomy/`:
 
 - `mapping.yaml`: the package SHA-256, then one entry per package node with its
   GUID, code, level, kind (`chude`, `demuc`, `phan`, `chuong`, `muc`), parent
-  code, name as last imported, sibling ordinal and status, and one entry per
+  code, name as last imported, status and, when active, its package ordinal
+  among its active siblings, and one entry per
   flattened node (a dropped mục or a tiểu mục) naming the code it folds into.
   `corpus taxonomy import` rewrites it from the package under the code rules
   above, deterministically, and never reuses a code; a person reviews the diff
