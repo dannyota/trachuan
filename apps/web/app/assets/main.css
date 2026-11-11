@@ -11,3 +11,15 @@ main { max-width: 72rem; margin: auto; padding: 2rem 1rem; }
 button { cursor: pointer; }
 :focus-visible { outline: 3px solid #178477; outline-offset: 3px; }
 @media (prefers-color-scheme: dark) { body { background: #182222; color: #f3f5f4; } }
+.search-form { display: grid; gap: .6rem; max-width: 42rem; margin: 1.5rem 0; }
+.search-form input[type='search'], .search-form input[type='date'] { padding: .6rem; border: 1px solid #777; border-radius: .25rem; }
+.search-form button { justify-self: start; }
+.search-summary { display: flex; flex-wrap: wrap; gap: 1rem; padding: 1rem 0; }
+.search-summary div { flex-basis: 100%; }
+.search-card { border-top: 1px solid #888; padding: 1rem 0; }
+.search-card h2 { font-size: 1.1rem; }
+.law-text { font-family: NotoSerif, serif; white-space: pre-wrap; }
+.stamp, .relation-chip { display: inline-block; padding: .15rem .5rem; border: 1px solid currentColor; border-radius: .3rem; }
+.relations { display: flex; flex-wrap: wrap; gap: .4rem; margin: .5rem 0; }
+.ink-in-force { color: #176142; } .ink-partial { color: #805000; } .ink-not-yet { color: #24558a; } .ink-expired { color: #963a38; } .ink-neutral { color: #555; }
+@media (prefers-color-scheme: dark) { .ink-in-force { color: #83d9aa; } .ink-partial { color: #f0c472; } .ink-not-yet { color: #9cc8fa; } .ink-expired { color: #ffaaa7; } .ink-neutral { color: #ccc; } }
