@@ -41,7 +41,7 @@ func (e *Engine) readDocument(ctx context.Context, tx pgx.Tx, item ReadItem) (in
 	var doc DocumentEntry
 	var issued, from, to *time.Time
 	var source Document
-	err := tx.QueryRow(ctx, `SELECT id,number,title,doc_type,issuer,issue_date,eff_from,eff_to,COALESCE(source_url,''),status_class,status_basis,is_current,validity_conflict,text_source,text_complete FROM document WHERE key=$1`, key).Scan(&id, &doc.Number, &doc.Title, &doc.Type, &doc.Issuer, &issued, &from, &to, &doc.SourceURL, &source.StatusClass, &source.StatusBasis, &source.IsCurrent, &source.ValidityConflict, &doc.TextSource, &doc.TextComplete)
+	err := tx.QueryRow(ctx, `SELECT id,number,title,doc_type,issuer,issue_date,eff_from,eff_to,COALESCE(source_url,''),status_class,status_basis,is_current,validity_conflict,text_source,text_complete,fetch_sha256 FROM document WHERE key=$1`, key).Scan(&id, &doc.Number, &doc.Title, &doc.Type, &doc.Issuer, &issued, &from, &to, &doc.SourceURL, &source.StatusClass, &source.StatusBasis, &source.IsCurrent, &source.ValidityConflict, &doc.TextSource, &doc.TextComplete, &source.FetchSHA256)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return 0, key, doc, Document{}, "not_found", nil
 	}

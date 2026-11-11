@@ -1,11 +1,14 @@
 package retrieval
 
 import (
+	"context"
 	"encoding/json"
 	"reflect"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/jackc/pgx/v5"
 )
 
 func webCursor() cursor {
@@ -129,14 +132,22 @@ func TestDocuments_OversizedEntryIsTerminal(t *testing.T) {
 	}
 }
 
+type documentHashTx struct{ readCacheTx }
+
+func (tx *documentHashTx) QueryRow(_ context.Context, _ string, _ ...any) pgx.Row {
+	tx.queries++
+	end := time.Date(2099, 1, 2, 0, 0, 0, 0, time.UTC)
+	return cacheRow{int64(1), "number", "title", "law", "issuer", nil, nil, &end, "", "in_force", "source", true, false, "source_tree", true, strings.Repeat("a", 64)}
+}
+
 func TestDocuments_WholeScopeAndCacheStaySeparateFromMCP(t *testing.T) {
 	now := func() time.Time { return time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC) }
 	cache := &memoryCache{}
 	e := &Engine{release: Release{Rel: "20991110_1", RetrievalRecipe: Recipe1()}, options: Options{Now: now, Sequences: cache}}
-	tx := &readCacheTx{}
+	tx := &documentHashTx{}
 	c := webCursor()
 	cold, _, save, err := e.readItem(t.Context(), tx, c, false, c.PageCap, true)
-	if err != nil || cold.Error != "" || cold.Document == nil || !cold.Document.Status.Current || len(cold.Units) != 2 || cold.Units[0].Kind != "outline" || cold.Units[1].Kind != "provision" || cold.Units[1].Text != strings.TrimSpace(strings.Repeat("điều luật ", 12000)) {
+	if err != nil || cold.FetchSHA256 != strings.Repeat("a", 64) || cold.Error != "" || cold.Document == nil || !cold.Document.Status.Current || len(cold.Units) != 2 || cold.Units[0].Kind != "outline" || cold.Units[1].Kind != "provision" || cold.Units[1].Text != strings.TrimSpace(strings.Repeat("điều luật ", 12000)) {
 		t.Fatal("whole document omitted or reordered text", err)
 	}
 	if save == nil {
@@ -147,6 +158,25 @@ func TestDocuments_WholeScopeAndCacheStaySeparateFromMCP(t *testing.T) {
 	warm, _, _, err := e.readItem(t.Context(), tx, c, false, c.PageCap, true)
 	if err != nil || !reflect.DeepEqual(cold, warm) || tx.queries != queries {
 		t.Fatal("cached whole document differs", err)
+	}
+	if warm.FetchSHA256 != cold.FetchSHA256 {
+		t.Fatal("cache lost fetch hash")
+	}
+	paged := c
+	paged.PageCap, paged.PartSize = 64_000, 32_000
+	first, _, savePage, err := e.readItem(t.Context(), tx, paged, false, paged.PageCap, true)
+	if err != nil || first.Next == "" || first.FetchSHA256 != cold.FetchSHA256 || savePage == nil {
+		t.Fatal("first page missing hash or continuation", err)
+	}
+	savePage()
+	continued, code := readCursor(ReadItem{Next: first.Next}, c.Release)
+	if code != "" {
+		t.Fatal(code)
+	}
+	queries = tx.queries
+	second, _, _, err := e.readItem(t.Context(), tx, continued, true, continued.PageCap, true)
+	if err != nil || second.FetchSHA256 != cold.FetchSHA256 || tx.queries != queries {
+		t.Fatal("cached continuation lost hash or queried the database", err)
 	}
 	// The same document handle remains outline-only with MCP's original budgets.
 	mcp := cursor{V: 1, Release: c.Release, Item: c.Item}

@@ -164,8 +164,11 @@ func TestDocuments_IsReadWithWebCaps(t *testing.T) {
 	if w.Code != 200 || r.PageCap != 2_000_000 || r.PartSize != 1_000_000 || !r.WholeDocument || r.DocumentKey != "vn:1" || r.Release != "20991110_1" || len(r.Items) != 1 || r.Items[0].Handle != "vn:1" {
 		t.Fatalf("document request %d: %+v", w.Code, r)
 	}
-	var item retrieval.ItemResult
-	if json.Unmarshal(w.Body.Bytes(), &item) != nil || item.Doc != "vn:1" || !item.Complete {
+	var page struct {
+		Release string               `json:"release"`
+		Item    retrieval.ItemResult `json:"item"`
+	}
+	if json.Unmarshal(w.Body.Bytes(), &page) != nil || page.Release != "20991110_1" || page.Item.Doc != "vn:1" || !page.Item.Complete {
 		t.Fatal(w.Body.String())
 	}
 }
