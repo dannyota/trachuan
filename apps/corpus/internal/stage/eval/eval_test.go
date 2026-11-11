@@ -6,6 +6,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -30,7 +31,7 @@ func TestInputHash_OmitsInventory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := stage.RecipeHash("eval-input", "1", "build", "legacy", "product", "map", "validity", "", "2099-01-01", "exact,ann")
+	want := stage.RecipeHash("eval-input", "2", "build", "legacy", "product", "map", "validity", "", "", "2099-01-01", "exact,ann")
 	if got != want {
 		t.Fatalf("input hash = %s, want %s", got, want)
 	}
@@ -136,5 +137,49 @@ func TestProcess_VerifiesBuildOnce(t *testing.T) {
 	_, err = s.Process(context.Background(), stage.Env{}, run, items[0])
 	if err == nil || calls != 1 || lookups != 0 {
 		t.Fatalf("ensures=%d lookups=%d error=%v", calls, lookups, err)
+	}
+}
+
+func TestEvalStage_DevelopmentFloorGaps(t *testing.T) {
+	r := evaluation.Report{
+		Floors: []evaluation.Floor{{Metric: evaluation.Metric{Mode: "exact", Name: "abstention"}, Status: "fail"}},
+		Cohorts: map[string]evaluation.Cohort{"development": {Floors: []evaluation.Floor{
+			{Metric: evaluation.Metric{Mode: "exact", Name: "abstention"}, Status: "fail"},
+			{Metric: evaluation.Metric{Mode: "ann", Name: "current_law_precision"}, Status: "unavailable"},
+			{Metric: evaluation.Metric{Mode: "exact", Name: "current_law_precision"}, Status: "pass"},
+		}}},
+	}
+	want := []stage.Gap{
+		{Kind: "eval_floor_failed", Detail: "exact:abstention"},
+		{Kind: "eval_floor_failed", Detail: "development:exact:abstention"},
+		{Kind: "eval_floor_failed", Detail: "development:ann:current_law_precision"},
+	}
+	got := reportGaps(r)
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("gaps = %+v, want %+v", got, want)
+	}
+}
+
+func TestEvalStage_NotRunDevelopmentNoGap(t *testing.T) {
+	r := evaluation.Report{Cohorts: map[string]evaluation.Cohort{"development": {Floors: []evaluation.Floor{{Status: "not_run"}, {Status: "not_run"}}}}}
+	if gaps := reportGaps(r); len(gaps) != 0 {
+		t.Fatalf("not_run gaps: %+v", gaps)
+	}
+}
+
+func TestEvalStage_DevelopmentHashInInput(t *testing.T) {
+	s := New(Config{Suite: evaluation.Suite{Hashes: evaluation.FixtureHashes{Development: "first"}}})
+	run := stage.Run{Rel: "20990101"}
+	first, err := s.inputHash(artifact.Result{SHA256: "build"}, run)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.cfg.Suite.Hashes.Development = "second"
+	second, err := s.inputHash(artifact.Result{SHA256: "build"}, run)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first == second {
+		t.Fatal("development fixture omitted from evaluation input hash")
 	}
 }

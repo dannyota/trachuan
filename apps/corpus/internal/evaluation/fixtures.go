@@ -34,6 +34,14 @@ func LoadSuiteFS(fsys fs.FS, dir string) (Suite, error) {
 	if err != nil {
 		return Suite{}, err
 	}
+	development, err := read("development.json")
+	if err != nil {
+		return Suite{}, err
+	}
+	developmentCases, err := LoadDevelopment(bytes.NewReader(development))
+	if err != nil {
+		return Suite{}, err
+	}
 	product, err := read("old-product.json")
 	if err != nil {
 		return Suite{}, err
@@ -58,12 +66,20 @@ func LoadSuiteFS(fsys fs.FS, dir string) (Suite, error) {
 		SourceRepository string `json:"source_repository"`
 		SourceCommit     string `json:"source_commit"`
 		Origin           string `json:"origin"`
+		Development      struct {
+			SHA256    string `json:"sha256"`
+			CaseCount *int   `json:"case_count"`
+			Origin    string `json:"origin"`
+		} `json:"development"`
 	}
 	if err = json.Unmarshal(fixture, &meta); err != nil {
 		return Suite{}, fmt.Errorf("decode fixture metadata: %w", err)
 	}
 	if meta.SHA256 != hash(legacy) || meta.CaseCount != len(cases) || meta.SourcePath == "" || meta.SourceRepository == "" || meta.SourceCommit == "" || meta.Origin == "" {
 		return Suite{}, fmt.Errorf("invalid fixture metadata")
+	}
+	if meta.Development.SHA256 != hash(development) || meta.Development.CaseCount == nil || *meta.Development.CaseCount != len(developmentCases) || meta.Development.Origin == "" {
+		return Suite{}, fmt.Errorf("invalid development fixture metadata")
 	}
 	var old struct {
 		LegacySHA256 string   `json:"legacy_sha256"`
@@ -86,7 +102,7 @@ func LoadSuiteFS(fsys fs.FS, dir string) (Suite, error) {
 	if err = validateValidityCases(validityCases); err != nil {
 		return Suite{}, err
 	}
-	s := Suite{ValidityCases: validityCases, ValidityBytes: append([]byte(nil), validity...), Legacy: cases, Map: m, MapBytes: append([]byte(nil), mapping...), Rejections: old.Rejections, Hashes: FixtureHashes{Legacy: hash(legacy), OldProduct: hash(product), IdentityMap: hash(mapping), ValidityCases: hash(validity)}}
+	s := Suite{Development: developmentCases, ValidityCases: validityCases, ValidityBytes: append([]byte(nil), validity...), Legacy: cases, Map: m, MapBytes: append([]byte(nil), mapping...), Rejections: old.Rejections, Hashes: FixtureHashes{Development: hash(development), Legacy: hash(legacy), OldProduct: hash(product), IdentityMap: hash(mapping), ValidityCases: hash(validity)}}
 	if err = validateSuite(s); err != nil {
 		return Suite{}, fmt.Errorf("validate suite: %w", err)
 	}

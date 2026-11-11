@@ -157,3 +157,37 @@ func TestEvalCLI_RejectsDuplicateGates(t *testing.T) {
 		t.Fatalf("duplicate gates exit %d", got)
 	}
 }
+
+func TestEvalCLI_RequireFloorsDevelopment(t *testing.T) {
+	floors := []evaluation.Floor{
+		{Metric: evaluation.Metric{Mode: "exact", Arms: "hybrid", Limit: 8, Name: "current_law_precision"}, Status: "pass"},
+		{Metric: evaluation.Metric{Mode: "exact", Arms: "hybrid", Limit: 8, Name: "abstention"}, Status: "pass"},
+		{Metric: evaluation.Metric{Mode: "ann", Arms: "hybrid", Limit: 8, Name: "current_law_precision"}, Status: "pass"},
+		{Metric: evaluation.Metric{Mode: "ann", Arms: "hybrid", Limit: 8, Name: "abstention"}, Status: "pass"},
+	}
+	for _, tc := range []struct {
+		name, status string
+		count, want  int
+	}{
+		{"pass", "pass", 2, 0}, {"fail", "fail", 2, 2}, {"unavailable", "unavailable", 2, 2},
+		{"empty", "not_run", 0, 0}, {"populated not_run", "not_run", 2, 2},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			development := append([]evaluation.Floor(nil), floors...)
+			for i := range development {
+				development[i].Status = tc.status
+			}
+			r := evaluation.Report{Status: "complete", QualityPass: true, Floors: floors, Cohorts: map[string]evaluation.Cohort{"development": {CaseCount: tc.count, Floors: development}}}
+			if got := evalExit(r, true); got != tc.want {
+				t.Fatalf("exit = %d, want %d", got, tc.want)
+			}
+			if got := evalExit(r, false); got != 0 {
+				t.Fatalf("diagnostic exit = %d", got)
+			}
+		})
+	}
+	r := evaluation.Report{Status: "complete", QualityPass: true, Floors: floors, Rejections: []evaluation.Rejection{{Passed: false}}}
+	if got := evalExit(r, true); got != 2 {
+		t.Fatalf("failed rejection exit = %d", got)
+	}
+}
