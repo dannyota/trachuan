@@ -29,11 +29,23 @@ outline, 35 plain text; 46 have more than two tables, 9 have images. Where
 314 have only a PDF (about 10,500 pages); the counts include the nine secondary
 documents and sum to 562.
 
+A second measurement on the run 6 corpus found source trees that hold headings
+only: in 974 documents (564 primary, 410 relation context) every article is a
+leaf whose text is its heading line, while the body sits in the bundle's
+transcription; 972 of them have a usable `<id>_content.html`. Search finds these
+documents by title only. Trees that hold part of the text (some articles bare,
+or far less text than the transcription) also exist and are not handled here;
+the backlog carries them with their counts.
+
 ## Text source per document
 
 Exactly one source supplies a document's text, chosen in this order:
 
-1. `source_tree`: the source's tree, as today.
+1. `source_tree`: the source's tree, as today, unless it is a heading-only tree:
+   it has at least one article, no article has a child, and every article's text
+   is only its heading line. A heading-only tree is used only when no later
+   source is usable; the document then keeps its provisions and gets the gap
+   `tree_headings_only`.
 2. `html_transcription`: `<id>_content.html` of the bundle when its text has at
    least 300 characters. `_content_origin`, `_body_content` and dated backups
    are never read: the inventory shows they add no document, and where the
@@ -145,12 +157,12 @@ numbered outline (`I.`, `1.`) when one exists. Text under 300 characters is
   anchor strings such as `doan-3` survive a refetch or a parser change.
 - Corpus: `document.text_source` (`source_tree`, `html_transcription`, `ocr`,
   `none`) and `document.text_complete boolean`, false when any gap of
-  `structure_uncertain`, `table_text` (more than a tenth of the characters
-  inside provisions are in tables; letterhead and signature tables outside any
-  provision do not count), `image_content`, `ocr_flagged` or `needs_ocr`
-  applies; build derives `source_tree` for artifacts without `text.json`. Search
-  and read results return both on the document entry, with each provision's
-  locator. This is corpus schema version 4.
+  `tree_headings_only`, `structure_uncertain`, `table_text` (more than a tenth
+  of the characters inside provisions are in tables; letterhead and signature
+  tables outside any provision do not count), `image_content`, `ocr_flagged` or
+  `needs_ocr` applies; build derives `source_tree` for artifacts without
+  `text.json`. Search and read results return both on the document entry, with
+  each provision's locator. This is corpus schema version 4.
 
 ## Inputs and reuse
 

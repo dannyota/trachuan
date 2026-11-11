@@ -39,6 +39,13 @@
 - [ ] Tests first: `TestSchema_Version4Constraints`, `TestOpen_RejectsSchemaVersion3`, `TestLoad_TextSourceAndComplete`, `TestValidity_ParsedTextIsReviewOnly`, `TestHit_DocumentEntryCarriesTextSource`, proof `TestProof_TranscriptionDocumentIsSearchable`.
 - [ ] Implement; whole-slice `gpt-6.1-sol` review; pull request A.
 
+### Task 4b: Heading-only source trees
+
+**Files:** `apps/corpus/internal/stage/extract/` (selection), build `text_complete`.
+
+- [ ] Tests first: `TestExtract_HeadingOnlyTreeUsesTranscription`, `TestExtract_HeadingOnlyTreeWithoutTextKeepsTreeWithGap`, `TestExtract_PartlyBareTreeStaysSourceTree`; the source-tree golden stays unchanged.
+- [ ] Implement; commit `feat(corpus): read the transcription when the source tree holds headings only`.
+
 ### Task 5: OCR store and banhmi import
 
 **Files:** primary: migration and SQL for `ocr_text` (PDF SHA-256, engine id, text hash, text path, origin, pages) and `ocr_check` (entry, checker id, result hash, state, flagged items); new `apps/corpus/internal/ocrstore/`; CLI `corpus ocr import-banhmi <dir>` (reads `<dir>/ocr/<sha256>.txt`, verifies the PDF hash exists in the run's fetch artifacts, never overwrites); extract's OCR source reads the store.
