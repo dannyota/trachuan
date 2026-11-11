@@ -47,7 +47,7 @@ func databaseFailure(message string, cause error) error {
 	kind := ErrUnavailable
 	var database *pgconn.PgError
 	if errors.Is(cause, ErrReleaseGone) || errors.Is(cause, puddle.ErrClosedPool) ||
-		(errors.As(cause, &database) && (database.Code == "3D000" || database.Code == "57P01")) {
+		(errors.As(cause, &database) && (database.Code == "3D000" || database.Code == "57P01" || database.Code == "57P04")) {
 		kind = ErrReleaseGone
 	}
 	return classifiedFailure{message: message, kind: kind}

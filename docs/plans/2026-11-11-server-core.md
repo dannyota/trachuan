@@ -31,7 +31,7 @@
 - A token revoked or an account blocked by the admin CLI (another process) keeps working for at most the 10 s cache window, never longer and never past `expires_at`: Task 2 `TestMiddleware_CacheNeverOutlivesExpiryOrWindow`.
 - Two first requests for the same release race to open two engines and pools: Task 3 `TestResolver_ConcurrentFirstUseOpensOnce`.
 - A JSON-RPC batch, an oversized body or a huge `items` array must fail before any database or embedder work: Task 5 `TestMCP_BodyCapAndBatchRejected`, and `read` keeps `ReadItemsMax`.
-- A pinned release that stopped being active between resolve and query must return `release_expired`, not a server error: Task 3 `TestResolver_PinnedNonActiveIsExpired` and `TestResolver_SwitchClosesOldPool`.
+- Activation boundary (decided 2026-11-11): the switch takes effect at resolve. A request that resolved before an activation finishes on its leased release and labels its response with that release; the old database stays because activation keeps it as the rollback target. A request that resolves after the switch, or pins the old release, gets `release_expired`; a database that disappears mid-request (`3D000`, `57P01`, `57P04`, closed pool) also maps to `release_expired`, never a server error: Task 3 `TestResolver_PinnedNonActiveIsExpired`, `TestResolver_SwitchClosesOldPool`, Task 5 error mapping tests.
 - An error path that formats the query or a token into a message or log line: Task 5 `TestMCP_NoQueryOrTokenInLogsOrErrors` with a capturing logger.
 
 ---

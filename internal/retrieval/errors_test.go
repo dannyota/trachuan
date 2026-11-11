@@ -60,6 +60,7 @@ func TestDatabaseFailures_ClassifiedAndSanitized(t *testing.T) {
 	}{
 		{"missing", &pgconn.PgError{Code: "3D000", Message: "private"}, ErrReleaseGone},
 		{"shutdown", &pgconn.PgError{Code: "57P01", Message: "private"}, ErrReleaseGone},
+		{"dropped", &pgconn.PgError{Code: "57P04", Message: "private"}, ErrReleaseGone},
 		{"closed", puddle.ErrClosedPool, ErrReleaseGone},
 		{"other", &pgconn.PgError{Code: "08006", Message: "private"}, ErrUnavailable},
 	} {
