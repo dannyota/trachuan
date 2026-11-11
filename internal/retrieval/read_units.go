@@ -7,19 +7,23 @@ import (
 	"golang.org/x/text/unicode/norm"
 )
 
-func sequenceParts(seq readSequence, index int) ([]Unit, bool) {
+func sequenceParts(seq readSequence, index int, options ...cursor) ([]Unit, bool) {
 	if parts, ok := seq.parts[index]; ok {
 		return parts, true
 	}
-	parts, ok := unitParts(seq.units[index])
+	parts, ok := unitParts(seq.units[index], options...)
 	if ok && seq.parts != nil {
 		seq.parts[index] = parts
 	}
 	return parts, ok
 }
 
-func unitParts(u Unit) ([]Unit, bool) {
-	if readSize(u) <= PartSize {
+func unitParts(u Unit, options ...cursor) ([]Unit, bool) {
+	var c cursor
+	if len(options) > 0 {
+		c = options[0]
+	}
+	if c.size(u) <= c.partSize() {
 		return []Unit{u}, true
 	}
 	text := unitSplitText(u)
@@ -30,7 +34,7 @@ func unitParts(u Unit) ([]Unit, bool) {
 	// so boundaries account for the counters actually serialized on each part.
 	total := 1
 	for {
-		parts, ok := splitUnitField(u, text, total)
+		parts, ok := splitUnitField(u, text, total, c)
 		if !ok {
 			return nil, false
 		}
@@ -71,19 +75,19 @@ func withUnitSplitText(u Unit, text string) Unit {
 	return u
 }
 
-func splitUnitField(u Unit, text string, total int) ([]Unit, bool) {
+func splitUnitField(u Unit, text string, total int, c cursor) ([]Unit, bool) {
 	var parts []Unit
 	for r := []rune(text); len(r) > 0; {
 		base := withUnitSplitText(u, "")
 		base.Part, base.Parts = len(parts)+1, total
-		if readSize(base) > PartSize {
+		if c.size(base) > c.partSize() {
 			return nil, false
 		}
 		// Find the largest encoded prefix that fits, then use the common cut rule.
-		lo, hi := 0, min(len(r), PartSize)
+		lo, hi := 0, min(len(r), c.partSize())
 		for lo < hi {
 			mid := (lo + hi + 1) / 2
-			if readSize(withUnitSplitText(base, string(r[:mid]))) <= PartSize {
+			if c.size(withUnitSplitText(base, string(r[:mid]))) <= c.partSize() {
 				lo = mid
 			} else {
 				hi = mid - 1
@@ -94,7 +98,7 @@ func splitUnitField(u Unit, text string, total int) ([]Unit, bool) {
 		}
 		end := cutAt(r, lo)
 		part := withUnitSplitText(base, string(r[:end]))
-		if readSize(part) > PartSize {
+		if c.size(part) > c.partSize() {
 			return nil, false
 		}
 		parts = append(parts, part)

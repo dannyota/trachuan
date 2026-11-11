@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strconv"
-	"strings"
 	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
@@ -13,6 +12,9 @@ import (
 // Read returns bounded pages of independent scopes from the engine's release.
 func (e *Engine) Read(ctx context.Context, req ReadRequest) (ReadResult, error) {
 	result := ReadResult{Release: e.release.Rel}
+	if req.PageCap < 0 || req.PartSize < 0 || (cursor{PageCap: req.PageCap, PartSize: req.PartSize}).partSize() > (cursor{PageCap: req.PageCap}).pageCap() {
+		return result, ErrInvalidReadLimits
+	}
 	if len(req.Items) > ReadItemsMax {
 		return result, ErrTooManyItems
 	}
@@ -29,7 +31,7 @@ func (e *Engine) Read(ctx context.Context, req ReadRequest) (ReadResult, error) 
 	result.Items = make([]ItemResult, len(req.Items))
 	pending := false
 	for i, item := range req.Items {
-		c, code := readCursor(item, e.release.Rel)
+		c, code := requestCursor(item, req)
 		cursors[i] = c
 		result.Items[i].Error = code
 		pending = pending || code == ""
@@ -53,7 +55,7 @@ func (e *Engine) Read(ctx context.Context, req ReadRequest) (ReadResult, error) 
 		if result.Items[i].Error != "" {
 			continue
 		}
-		page, cost, save, readErr := e.readItem(ctx, tx, c, req.Items[i].Next != "", ReadCallCap-used, i == 0)
+		page, cost, save, readErr := e.readItem(ctx, tx, c, req.Items[i].Next != "", c.pageCap()-used, i == 0)
 		if readErr != nil {
 			return ReadResult{}, fmt.Errorf("read item: %w", readErr)
 		}
@@ -149,7 +151,7 @@ func (e *Engine) readItem(ctx context.Context, tx pgx.Tx, c cursor, continued bo
 		if local < 0 || local >= len(seq.units) {
 			return ItemResult{Doc: seq.doc, Error: "invalid_next"}, 0, nil, nil
 		}
-		parts, ok := sequenceParts(seq, local)
+		parts, ok := sequenceParts(seq, local, c)
 		if (ok && c.Part >= len(parts)) || (!ok && c.Part != 0) {
 			return ItemResult{Doc: seq.doc, Error: "invalid_next"}, 0, nil, nil
 		}
@@ -172,15 +174,15 @@ func readPage(seq readSequence, c cursor, budget int, first bool) (ItemResult, i
 	firstPartsChecked, firstPartsOK := false, false
 	if c.Unit == 0 && c.Part == 0 && seq.document != nil {
 		result.Document = seq.document
-		used = readSize(seq.document)
-		if used > ReadCallCap {
+		used = c.size(seq.document)
+		if used > c.pageCap() {
 			return ItemResult{Doc: seq.doc, Gaps: seq.gaps, Error: "unit_too_large"}, 0, nil
 		}
-		if len(seq.units) > 0 && used > ReadCallCap-PartSize {
-			firstParts, firstPartsOK = sequenceParts(seq, 0)
+		if len(seq.units) > 0 && used > c.pageCap()-c.partSize() {
+			firstParts, firstPartsOK = sequenceParts(seq, 0, c)
 			firstPartsChecked = true
 		}
-		if firstPartsOK && used+readSize(firstParts[0]) > ReadCallCap {
+		if firstPartsOK && used+c.size(firstParts[0]) > c.pageCap() {
 			return ItemResult{Doc: seq.doc, Gaps: seq.gaps, Error: "unit_too_large"}, 0, nil
 		}
 		if used > budget && !first {
@@ -190,7 +192,7 @@ func readPage(seq readSequence, c cursor, budget int, first bool) (ItemResult, i
 	for i := c.Unit - seq.offset; i < len(seq.units); i++ {
 		parts, ok := firstParts, firstPartsOK
 		if i != 0 || !firstPartsChecked {
-			parts, ok = sequenceParts(seq, i)
+			parts, ok = sequenceParts(seq, i, c)
 		}
 		if !ok {
 			result.Error = "unit_too_large"
@@ -201,7 +203,7 @@ func readPage(seq readSequence, c cursor, budget int, first bool) (ItemResult, i
 			start = c.Part
 		}
 		for j := start; j < len(parts); j++ {
-			cost := readSize(parts[j])
+			cost := c.size(parts[j])
 			if used+cost > budget && (!first || len(result.Units) != 0) {
 				c.Unit, c.Part = i+seq.offset, j
 				result.Next = encodeNext(c)
@@ -224,77 +226,4 @@ func readPage(seq readSequence, c cursor, budget int, first bool) (ItemResult, i
 		result.Complete = seq.complete
 	}
 	return result, used, nil
-}
-
-func (e *Engine) readScope(ctx context.Context, tx pgx.Tx, c cursor) (readSequence, string, error) {
-	item := c.Item
-	id, key, doc, source, code, err := e.readDocument(ctx, tx, item)
-	if err != nil || code != "" {
-		return readSequence{}, code, err
-	}
-	_, anchor, _ := strings.Cut(item.Handle, "#")
-	nodes, err := readNodes(ctx, tx, id, key)
-	if err != nil {
-		return readSequence{}, "", err
-	}
-	target := -1
-	for i, p := range nodes {
-		if p.Identity.Anchor == anchor {
-			target = i
-			break
-		}
-	}
-	if anchor != "" && target < 0 {
-		return readSequence{doc: key}, "not_found", nil
-	}
-	if item.Relations {
-		ids := []int64{}
-		if target >= 0 {
-			for _, p := range readDescendants(nodes, nodes[target].ID) {
-				ids = append(ids, p.ID)
-			}
-		}
-		seq, err := readRelations(ctx, tx, key, ids, anchor != "", c.Unit, e.release.RetrievalRecipe.RelationEvidenceRuneCap)
-		seq.doc = key
-		return seq, "", err
-	}
-	seq := readSequence{doc: key, source: source, complete: true}
-	if anchor == "" && item.From == "" {
-		seq.document = &doc
-		seq.units = readOutline(nodes)
-		return seq, "", nil
-	}
-	if item.From != "" {
-		from, to := -1, -1
-		for i, p := range nodes {
-			if p.Identity.Anchor == item.From {
-				from = i
-			}
-			if p.Identity.Anchor == item.To {
-				to = i
-			}
-		}
-		if from < 0 || to < from {
-			return seq, "invalid_range", nil
-		}
-		seq.units, seq.gaps = readLeads(nodes, nodes[from])
-		for _, p := range nodes[from : to+1] {
-			text, gaps := readOwnText(nodes, p)
-			seq.gaps = append(seq.gaps, gaps...)
-			seq.units = append(seq.units, readTextUnit("provision", p, readAncestry(nodes, p), text))
-		}
-	} else {
-		seq.units, seq.gaps = readLeads(nodes, nodes[target])
-		subtree, err := readSubtree(ctx, tx, id, key, anchor)
-		if err != nil {
-			return seq, "", err
-		}
-		rendered := renderTree(subtree, nodes[target].ID)
-		seq.units = append(seq.units, readTextUnit("provision", nodes[target], readAncestry(nodes, nodes[target]), string(rendered.text)))
-		if rendered.ambiguous {
-			seq.gaps = append(seq.gaps, readAmbiguity(nodes[target]))
-		}
-	}
-	seq.complete = len(seq.gaps) == 0
-	return seq, "", nil
 }

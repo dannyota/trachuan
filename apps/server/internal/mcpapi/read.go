@@ -13,10 +13,14 @@ type readInput struct {
 }
 
 func (cfg Config) read(ctx context.Context, in readInput) (retrieval.ReadResult, error) {
-	if len(in.Items) > retrieval.ReadItemsMax {
+	return cfg.readRequest(ctx, in.Country, retrieval.ReadRequest{Release: in.Release, Items: in.Items})
+}
+
+func (cfg Config) readRequest(ctx context.Context, country string, req retrieval.ReadRequest) (retrieval.ReadResult, error) {
+	if len(req.Items) > retrieval.ReadItemsMax {
 		return retrieval.ReadResult{}, invalidRequest{}
 	}
-	lease, err := cfg.resolve(ctx, in.Country, in.Release)
+	lease, err := cfg.resolve(ctx, country, req.Release)
 	if err != nil {
 		return retrieval.ReadResult{}, err
 	}
@@ -25,5 +29,6 @@ func (cfg Config) read(ctx context.Context, in readInput) (retrieval.ReadResult,
 		scope := cfg.Caches.Scope(lease.Release, lease.Generation)
 		ctx = retrieval.WithCaches(ctx, scope.Documents, scope.Sequences)
 	}
-	return lease.Engine.Read(ctx, retrieval.ReadRequest{Release: lease.Release, Items: in.Items})
+	req.Release = lease.Release
+	return lease.Engine.Read(ctx, req)
 }

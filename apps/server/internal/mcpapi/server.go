@@ -3,7 +3,6 @@ package mcpapi
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"math"
 	"reflect"
@@ -88,35 +87,8 @@ func registerTools(s *mcp.Server, cfg Config) {
 
 // Raw handlers keep SDK schema diagnostics, which may quote input, off the wire.
 func register[In, Out any](s *mcp.Server, cfg Config, name, description string, run func(context.Context, In) (Out, error)) {
-	input := schemaFor[In]()
-	input.Properties["country"].Enum = []any{"vn"}
-	if name == "search" {
-		input.Properties["detail"].Enum = []any{"compact", "full"}
-		input.Properties["as_of"].MinLength = ptrInt(10)
-		input.Properties["as_of"].MaxLength = ptrInt(10)
-		input.Properties["limit"].Minimum = ptrFloat(1)
-		input.Properties["limit"].Maximum = ptrFloat(retrieval.MaxLimit)
-		input.Properties["limit"].Types = nil
-		input.Properties["limit"].Type = "integer"
-		input.Properties["in_force_only"].Types = nil
-		input.Properties["in_force_only"].Type = "boolean"
-	}
-	if name == "read" {
-		input.Properties["items"].MaxItems = ptrInt(retrieval.ReadItemsMax)
-		input.Properties["items"].Types = nil
-		input.Properties["items"].Type = "array"
-	}
-	resolved, err := input.Resolve(nil)
-	if err != nil {
-		panic("invalid tool input schema")
-	}
-	output := schemaFor[Out]()
-	optionalEmptyFields(output)
-	output = &jsonschema.Schema{Type: "object", AnyOf: []*jsonschema.Schema{output, schemaFor[errorResult]()}}
-	outputResolved, err := output.Resolve(nil)
-	if err != nil {
-		panic("invalid tool output schema")
-	}
+	input, output, call := toolCall(cfg, name, run)
+
 	s.AddTool(&mcp.Tool{Name: name, Description: description, InputSchema: input, OutputSchema: output,
 		Annotations: &mcp.ToolAnnotations{ReadOnlyHint: true, IdempotentHint: true}}, func(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		start := cfg.Clock()
@@ -144,34 +116,10 @@ func register[In, Out any](s *mcp.Server, cfg Config, name, description string, 
 			seconds := max(int64(1), int64(math.Ceil(retry.Seconds())))
 			return fail("rate_limited", fmt.Sprintf("Rate limited. Retry in %d seconds.", seconds))
 		}
-		raw := req.Params.Arguments
-		var value any
-		if len(raw) == 0 || json.Unmarshal(raw, &value) != nil || resolved.Validate(value) != nil {
-			return fail("invalid_request", "invalid_request")
-		}
-		var in In
-		if json.Unmarshal(raw, &in) != nil {
-			return fail("invalid_request", "invalid_request")
-		}
-		if name == "search" && cfg.Caches != nil {
-			result, data, err := cfg.cachedSearch(ctx, any(in).(searchInput), func(v any) error { return outputResolved.Validate(v) })
-			if err != nil {
-				c, message := errorMessage(err)
-				return fail(c, message)
-			}
-			if outputResolved.Validate(data) != nil {
-				return fail("unavailable", "Service unavailable.")
-			}
-			return result, nil
-		}
-		out, err := run(ctx, in)
+		result, err := call(ctx, req.Params.Arguments)
 		if err != nil {
 			c, message := errorMessage(err)
 			return fail(c, message)
-		}
-		result, data, err := encodeResult(out, false)
-		if err != nil || outputResolved.Validate(data) != nil {
-			return fail("unavailable", "Service unavailable.")
 		}
 		return result, nil
 	})

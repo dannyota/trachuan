@@ -22,7 +22,8 @@ type toolError struct {
 	Message string `json:"message"`
 }
 
-func errorMessage(err error) (string, string) {
+// ErrorMessage maps read-path failures to fixed public codes and messages.
+func ErrorMessage(err error) (string, string) {
 	var invalid invalidRequest
 	switch {
 	case errors.As(err, &invalid):
@@ -89,3 +90,5 @@ func omitEmpty(value any) {
 		}
 	}
 }
+
+func errorMessage(err error) (string, string) { return ErrorMessage(err) }
