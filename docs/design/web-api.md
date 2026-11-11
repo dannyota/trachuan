@@ -140,10 +140,14 @@ Errors are `{error:{code,message}}` with fixed messages: 400 `invalid_request`,
 401 `unauthenticated`, 403 `csrf_rejected` or `account_blocked`, 404
 `not_found`, 409 `release_expired`, 413 `body_too_large`, 415
 `unsupported_media_type`, 429 `rate_limited` with `Retry-After`, 503 `busy` or
-`unavailable`, 500 `internal`. Request bodies are at most 64 KB. The per-account
-`search` and `read` buckets are shared with `/mcp`; login routes use the per-IP
-limit in [budgets](budgets.md#request-limits). Logs carry account id, route,
-code and latency, never query text, returned text, tokens, cookies or email.
+`unavailable`, 500 `internal`. Request bodies are at most 64 KB. Per-IP limits
+use the client address: the connection peer, or, when the peer is in
+`SERVER_TRUSTED_PROXIES` (CIDRs, empty by default; Caddy on the host in
+production), the rightmost `X-Forwarded-For` address not in that list. The
+per-account `search` and `read` buckets are shared with `/mcp`; login routes use
+the per-IP limit in [budgets](budgets.md#request-limits). Logs carry account id,
+route, code and latency, never query text, returned text, tokens, cookies or
+email.
 
 ## Contract
 
