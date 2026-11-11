@@ -57,7 +57,7 @@ func (l *loader) loadValidity(ctx context.Context, corrections []source.Correcti
 	if err = l.readValidityProvisions(ctx, docs, validation); err != nil {
 		return validityResult{}, err
 	}
-	entries, err := validateCorrections(corrections, validation)
+	entries, held, err := l.validateCorrectionGaps(corrections, validation)
 	if err != nil {
 		return validityResult{}, fmt.Errorf("validate corrections: %w", err)
 	}
@@ -72,6 +72,9 @@ func (l *loader) loadValidity(ctx context.Context, corrections []source.Correcti
 	result, err := runValidity(values, relations, entries, asOf)
 	if err != nil {
 		return validityResult{}, fmt.Errorf("derive validity: %w", err)
+	}
+	if err = l.recordCorrectionGaps(&result, held); err != nil {
+		return validityResult{}, err
 	}
 	if err = l.writeValidity(ctx, result); err != nil {
 		return validityResult{}, err
