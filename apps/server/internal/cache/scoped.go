@@ -21,21 +21,21 @@ type Handle[V any] struct {
 // NewScoped creates a disabled cache; call ActivateRelease before taking scopes.
 func NewScoped[V any](lru *LRU[V]) *Scoped[V] { return &Scoped[V]{lru: lru} }
 
-// ActivateRelease purges values and advances the activation generation.
+// ActivateRelease purges values and stores the resolver observation generation.
 // The resolver must deliver activation notifications in pointer observation order.
-func (c *Scoped[V]) ActivateRelease(release string) {
+func (c *Scoped[V]) ActivateRelease(release string, generation uint64) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.lru.Purge()
 	c.active = release
-	c.generation++
+	c.generation = generation
 }
 
-// Scope captures the current generation immediately after acquiring a lease.
-func (c *Scoped[V]) Scope(release string) Handle[V] {
+// Scope binds access to the generation already carried by the lease.
+func (c *Scoped[V]) Scope(release string, generation uint64) Handle[V] {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	return Handle[V]{cache: c, release: release, generation: c.generation}
+	return Handle[V]{cache: c, release: release, generation: generation}
 }
 
 func (h Handle[V]) current(release string) bool {

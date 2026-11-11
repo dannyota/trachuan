@@ -16,14 +16,14 @@ func (cfg Config) read(ctx context.Context, in readInput) (retrieval.ReadResult,
 	if len(in.Items) > retrieval.ReadItemsMax {
 		return retrieval.ReadResult{}, invalidRequest{}
 	}
-	engine, rel, done, err := cfg.resolve(ctx, in.Country, in.Release)
+	lease, err := cfg.resolve(ctx, in.Country, in.Release)
 	if err != nil {
 		return retrieval.ReadResult{}, err
 	}
-	defer done()
+	defer lease.Done()
 	if cfg.Caches != nil {
-		scope := cfg.Caches.Scope(rel)
+		scope := cfg.Caches.Scope(lease.Release, lease.Generation)
 		ctx = retrieval.WithCaches(ctx, scope.Documents, scope.Sequences)
 	}
-	return engine.Read(ctx, retrieval.ReadRequest{Release: rel, Items: in.Items})
+	return lease.Engine.Read(ctx, retrieval.ReadRequest{Release: lease.Release, Items: in.Items})
 }

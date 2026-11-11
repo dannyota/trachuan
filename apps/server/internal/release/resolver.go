@@ -41,9 +41,10 @@ type Resolver struct {
 	// OnActivate reports the first pointer observation and each change, including
 	// an empty pointer. Calls run under the resolver lock before lending leases.
 	// The callback must not call resolver methods.
-	OnActivate func(release string)
+	OnActivate func(release string, generation uint64)
 
 	mu         sync.Mutex
+	generation uint64
 	entries    map[string]*cacheEntry
 	active     map[string]string
 	workCtx    context.Context
@@ -58,7 +59,7 @@ func (r *Resolver) Resolve(ctx context.Context, country, rel string) (*Lease, er
 	if country != "vn" {
 		return nil, ErrExpired
 	}
-	name, release, err := r.resolveName(ctx, country, rel)
+	name, _, _, err := r.resolveName(ctx, country, rel)
 	if err != nil {
 		return nil, err
 	}
@@ -78,12 +79,12 @@ func (r *Resolver) Resolve(ctx context.Context, country, rel string) (*Lease, er
 		case opened = <-result:
 		}
 		// Opening can outlive an activation even when no other request observes it.
-		current, currentRelease, err := r.resolveName(ctx, country, rel)
+		current, currentRelease, generation, err := r.resolveName(ctx, country, rel)
 		if err != nil {
 			return nil, err
 		}
 		if current != name {
-			name, release = current, currentRelease
+			name = current
 			continue
 		}
 		if opened.Err != nil {
@@ -102,7 +103,7 @@ func (r *Resolver) Resolve(ctx context.Context, country, rel string) (*Lease, er
 			continue
 		}
 		entry.leases++
-		lease := &Lease{Engine: entry.engine, Release: release, done: func() { r.finish(entry) }}
+		lease := &Lease{Engine: entry.engine, Release: currentRelease, Generation: generation, done: func() { r.finish(entry) }}
 		r.mu.Unlock()
 		return lease, nil
 	}
@@ -121,17 +122,17 @@ func (r *Resolver) workContext() (context.Context, context.CancelFunc, error) {
 	return ctx, cancel, nil
 }
 
-func (r *Resolver) resolveName(ctx context.Context, country, rel string) (string, string, error) {
+func (r *Resolver) resolveName(ctx context.Context, country, rel string) (string, string, uint64, error) {
 	if err := ctx.Err(); err != nil {
-		return "", "", err
+		return "", "", 0, err
 	}
 	if r.Auth == nil || r.Clock == nil {
-		return "", "", errors.New("missing release resolver dependencies")
+		return "", "", 0, errors.New("missing release resolver dependencies")
 	}
 	r.mu.Lock()
 	if r.closed {
 		r.mu.Unlock()
-		return "", "", ErrExpired
+		return "", "", 0, ErrExpired
 	}
 	active, err := r.Auth.GetActiveRelease(ctx, country)
 	if err == nil {
@@ -139,11 +140,11 @@ func (r *Resolver) resolveName(ctx context.Context, country, rel string) (string
 	}
 	if err != nil {
 		r.mu.Unlock()
-		return "", "", fmt.Errorf("get active release: %w", err)
+		return "", "", 0, fmt.Errorf("get active release: %w", err)
 	}
 	if active != "" && !validDBName(country, active) {
 		r.mu.Unlock()
-		return "", "", errors.New("invalid active database name")
+		return "", "", 0, errors.New("invalid active database name")
 	}
 	if r.active == nil {
 		r.active = make(map[string]string)
@@ -161,17 +162,20 @@ func (r *Resolver) resolveName(ctx context.Context, country, rel string) (string
 		}
 	}
 	if r.OnActivate != nil && (!observed || previous != active) {
-		r.OnActivate(strings.TrimPrefix(active, "corpus_"+country+"_"))
+		r.generation++
+		r.OnActivate(strings.TrimPrefix(active, "corpus_"+country+"_"), r.generation)
 	}
+	// Carry this observation through opening and lending; never resample it.
+	generation := r.generation
 	allowed := active != "" && (rel == "" || active == "corpus_"+country+"_"+rel)
 	r.mu.Unlock()
 	for _, entry := range retired {
 		entry.close()
 	}
 	if !allowed {
-		return "", "", ErrExpired
+		return "", "", 0, ErrExpired
 	}
-	return active, strings.TrimPrefix(active, "corpus_"+country+"_"), nil
+	return active, strings.TrimPrefix(active, "corpus_"+country+"_"), generation, nil
 }
 
 func validDBName(country, name string) bool {

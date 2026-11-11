@@ -15,7 +15,7 @@ import (
 func cachedHarness(t *testing.T, clock func() time.Time) (*harness, *Caches) {
 	t.Helper()
 	caches := NewCaches(clock)
-	caches.ActivateRelease("20991111")
+	caches.ActivateRelease("20991111", 1)
 	h := newHarness(t, func(c *Config) { c.Caches = caches; c.Clock = clock })
 	return h, caches
 }
@@ -57,7 +57,7 @@ func TestSearchCache_ReleaseSwitchDropsAndMisses(t *testing.T) {
 	if c.Search.Stats().Bytes == 0 {
 		t.Fatal("miss not stored using lease release")
 	}
-	c.ActivateRelease("20991112")
+	c.ActivateRelease("20991112", 2)
 	if c.Search.Stats().Bytes != 0 {
 		t.Fatal("switch retained search")
 	}
@@ -65,7 +65,8 @@ func TestSearchCache_ReleaseSwitchDropsAndMisses(t *testing.T) {
 	if c.Search.Stats().Bytes != 0 {
 		t.Fatal("old lease stored after switch")
 	}
-	c.ActivateRelease("20991111")
+	c.ActivateRelease("20991111", 3)
+	h.resolver.generation = 3
 	callTool(t, h, "search", searchArgs())
 	if h.engine.calls.Load() != 6 {
 		t.Fatal("old value survived activation")

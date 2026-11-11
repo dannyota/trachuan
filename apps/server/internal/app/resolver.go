@@ -22,10 +22,10 @@ func (s activeStore) GetActiveRelease(ctx context.Context, country string) (stri
 
 type mcpResolver struct{ resolver *release.Resolver }
 
-func (r mcpResolver) Resolve(ctx context.Context, country, rel string) (mcpapi.Engine, string, func(), error) {
+func (r mcpResolver) Resolve(ctx context.Context, country, rel string) (mcpapi.Lease, error) {
 	lease, err := r.resolver.Resolve(ctx, country, rel)
 	if err != nil {
-		return nil, "", nil, err
+		return mcpapi.Lease{}, err
 	}
-	return lease.Engine, lease.Release, lease.Done, nil
+	return mcpapi.Lease{Engine: lease.Engine, Release: lease.Release, Generation: lease.Generation, Done: lease.Done}, nil
 }

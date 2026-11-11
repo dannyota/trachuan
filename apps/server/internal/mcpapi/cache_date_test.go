@@ -30,8 +30,8 @@ func (e *dateEngine) Present(context.Context, retrieval.Response, retrieval.Deta
 
 type dateResolver struct{ engine *dateEngine }
 
-func (r dateResolver) Resolve(context.Context, string, string) (Engine, string, func(), error) {
-	return r.engine, "20990101", func() {}, nil
+func (r dateResolver) Resolve(context.Context, string, string) (Lease, error) {
+	return Lease{Engine: r.engine, Release: "20990101", Generation: 1, Done: func() {}}, nil
 }
 
 func TestSearchCache_OneInstantAcrossVietnamMidnight(t *testing.T) {
@@ -46,7 +46,7 @@ func TestSearchCache_OneInstantAcrossVietnamMidnight(t *testing.T) {
 	}
 	e := &dateEngine{clock: clock}
 	c := NewCaches(clock)
-	c.ActivateRelease("20990101")
+	c.ActivateRelease("20990101", 1)
 	cfg := Config{Resolver: dateResolver{e}, Caches: c, Clock: clock}
 	input := searchInput{Country: "vn", Query: "ngân hàng"}
 	miss, _, err := cfg.cachedSearch(context.Background(), input, func(any) error { return nil })

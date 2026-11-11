@@ -11,6 +11,8 @@ import (
 type Lease struct {
 	Engine  *retrieval.Engine
 	Release string
+	// Generation identifies the activation observation that lent this lease.
+	Generation uint64
 
 	once sync.Once
 	done func()

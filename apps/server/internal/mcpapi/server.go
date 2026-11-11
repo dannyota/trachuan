@@ -29,10 +29,18 @@ type Engine interface {
 	Gaps(context.Context, string, int64, int) ([]retrieval.Gap, int64, error)
 }
 
-// Resolver lends an active-release engine. A successful call supplies a non-nil
-// done function which the caller must invoke after all engine work finishes.
+// Lease carries the activation observation that lent its engine. Done must run
+// after all engine work finishes.
+type Lease struct {
+	Engine     Engine
+	Release    string
+	Generation uint64
+	Done       func()
+}
+
+// Resolver lends an active-release engine and its immutable observation generation.
 type Resolver interface {
-	Resolve(context.Context, string, string) (Engine, string, func(), error)
+	Resolve(context.Context, string, string) (Lease, error)
 }
 
 // Limiter enforces per-account tool budgets.

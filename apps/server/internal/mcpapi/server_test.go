@@ -73,15 +73,16 @@ type fakeResolver struct {
 	err          error
 	calls, done  atomic.Int64
 	country, rel string
+	generation   uint64
 }
 
-func (f *fakeResolver) Resolve(_ context.Context, country, rel string) (Engine, string, func(), error) {
+func (f *fakeResolver) Resolve(_ context.Context, country, rel string) (Lease, error) {
 	f.calls.Add(1)
 	f.country, f.rel = country, rel
 	if f.err != nil {
-		return nil, "", nil, f.err
+		return Lease{}, f.err
 	}
-	return f.engine, "20991111", func() { f.done.Add(1) }, nil
+	return Lease{Engine: f.engine, Release: "20991111", Generation: f.generation, Done: func() { f.done.Add(1) }}, nil
 }
 
 type authStore struct{}
@@ -110,7 +111,7 @@ type harness struct {
 func newHarness(t *testing.T, change func(*Config)) *harness {
 	t.Helper()
 	e := &fakeEngine{}
-	r := &fakeResolver{engine: e}
+	r := &fakeResolver{engine: e, generation: 1}
 	logs := &bytes.Buffer{}
 	cfg := Config{Resolver: r, Limiter: limits.New(time.Now), Logger: slog.New(slog.NewTextHandler(logs, nil)), Clock: time.Now}
 	if change != nil {

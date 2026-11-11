@@ -42,11 +42,11 @@ type drainResolver struct {
 	leased, closed, closedEarly bool
 }
 
-func (r *drainResolver) Resolve(context.Context, string, string) (mcpapi.Engine, string, func(), error) {
+func (r *drainResolver) Resolve(context.Context, string, string) (mcpapi.Lease, error) {
 	r.mu.Lock()
 	r.leased = true
 	r.mu.Unlock()
-	return r.engine, "20990101", func() { r.mu.Lock(); r.leased = false; r.mu.Unlock() }, nil
+	return mcpapi.Lease{Engine: r.engine, Release: "20990101", Done: func() { r.mu.Lock(); r.leased = false; r.mu.Unlock() }}, nil
 }
 func (r *drainResolver) close() {
 	r.mu.Lock()

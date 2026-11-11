@@ -14,10 +14,11 @@ import (
 
 type cachedEngine struct {
 	Engine
-	release string
-	calls   atomic.Int64
-	entered chan struct{}
-	unblock chan struct{}
+	release    string
+	generation uint64
+	calls      atomic.Int64
+	entered    chan struct{}
+	unblock    chan struct{}
 }
 
 func (e *cachedEngine) Search(ctx context.Context, _ retrieval.Request) (retrieval.Response, error) {
@@ -38,14 +39,18 @@ func (e *cachedEngine) Present(context.Context, retrieval.Response, retrieval.De
 
 type cachedResolver struct{ engine *cachedEngine }
 
-func (r cachedResolver) Resolve(context.Context, string, string) (Engine, string, func(), error) {
-	return r.engine, r.engine.release, func() {}, nil
+func (r cachedResolver) Resolve(context.Context, string, string) (Lease, error) {
+	generation := r.engine.generation
+	if generation == 0 {
+		generation = 1
+	}
+	return Lease{Engine: r.engine, Release: r.engine.release, Generation: generation, Done: func() {}}, nil
 }
 
 func TestSearchCache_ConcurrentMissesComputeIndependently(t *testing.T) {
 	e := &cachedEngine{release: "20990101", entered: make(chan struct{}, 2), unblock: make(chan struct{})}
 	c := NewCaches(time.Now)
-	c.ActivateRelease(e.release)
+	c.ActivateRelease(e.release, 1)
 	cfg := Config{Resolver: cachedResolver{e}, Caches: c, Clock: time.Now}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -82,7 +87,7 @@ func TestSearchCache_ConcurrentMissesComputeIndependently(t *testing.T) {
 func TestSearchCache_LeaseReleaseAndAllCachesPurged(t *testing.T) {
 	e := &cachedEngine{release: "20990101"}
 	c := NewCaches(time.Now)
-	c.ActivateRelease(e.release)
+	c.ActivateRelease(e.release, 1)
 	cfg := Config{Resolver: cachedResolver{e}, Caches: c, Clock: time.Now}
 	in := searchInput{Country: "vn", Query: "ngân hàng"}
 	run := func() string {
@@ -98,10 +103,11 @@ func TestSearchCache_LeaseReleaseAndAllCachesPurged(t *testing.T) {
 	if run() != e.release {
 		t.Fatal("wrong release")
 	}
-	c.Scope(e.release).Documents.Put(e.release, [32]byte{}, []byte("metadata"))
-	c.Scope(e.release).Sequences.Put(e.release, [32]byte{}, []byte("sequence"))
+	c.Scope(e.release, 1).Documents.Put(e.release, [32]byte{}, []byte("metadata"))
+	c.Scope(e.release, 1).Sequences.Put(e.release, [32]byte{}, []byte("sequence"))
 	e.release = "20990102"
-	c.ActivateRelease(e.release)
+	c.ActivateRelease(e.release, 2)
+	e.generation = 2
 	if c.Search.Stats().Bytes != 0 || c.Documents.Stats().Bytes != 0 || c.Sequences.Stats().Bytes != 0 {
 		t.Fatal("activation retained corpus data")
 	}
@@ -113,11 +119,11 @@ func TestSearchCache_LeaseReleaseAndAllCachesPurged(t *testing.T) {
 
 func TestCache_AllHandlesExpireAcrossRollback(t *testing.T) {
 	c := NewCaches(time.Now)
-	c.ActivateRelease("A")
-	old := c.Scope("A")
-	c.ActivateRelease("B")
-	c.ActivateRelease("A")
-	fresh := c.Scope("A")
+	c.ActivateRelease("A", 1)
+	old := c.Scope("A", 1)
+	c.ActivateRelease("B", 2)
+	c.ActivateRelease("A", 3)
+	fresh := c.Scope("A", 3)
 	oldHandles := []cache.Handle[[]byte]{old.Search, old.Documents, old.Sequences}
 	freshHandles := []cache.Handle[[]byte]{fresh.Search, fresh.Documents, fresh.Sequences}
 	for i, h := range freshHandles {

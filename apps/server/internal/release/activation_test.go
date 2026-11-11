@@ -15,7 +15,7 @@ import (
 func TestResolver_OnActivateOrdersSwitches(t *testing.T) {
 	r, s, _ := resolverFixture(t)
 	var observed []string
-	r.OnActivate = func(release string) { observed = append(observed, release) }
+	r.OnActivate = func(release string, _ uint64) { observed = append(observed, release) }
 	first := takeLease(t, r, "")
 	takeLease(t, r, "20990103").Done()
 	s.active = "corpus_vn_20990104"
@@ -44,7 +44,7 @@ func TestResolver_OnActivateNotifiesFailedOpen(t *testing.T) {
 		return engine, nil, nil
 	}
 	var observed []string
-	r.OnActivate = func(release string) { observed = append(observed, release) }
+	r.OnActivate = func(release string, _ uint64) { observed = append(observed, release) }
 	first := takeLease(t, r, "")
 	s.active = "corpus_vn_20990104"
 	for range 2 {
@@ -67,7 +67,7 @@ func TestResolver_OnActivateNotifiesEmptyPointer(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			r, s, _ := resolverFixture(t)
 			var observed []string
-			r.OnActivate = func(release string) { observed = append(observed, release) }
+			r.OnActivate = func(release string, _ uint64) { observed = append(observed, release) }
 			if initiallyActive {
 				takeLease(t, r, "")
 			}
@@ -92,7 +92,7 @@ func TestResolver_OnActivateCompletesBeforeNewLease(t *testing.T) {
 	r, s, _ := resolverFixture(t)
 	entered, proceed := make(chan struct{}), make(chan struct{})
 	var notified atomic.Bool
-	r.OnActivate = func(release string) {
+	r.OnActivate = func(release string, _ uint64) {
 		if release == "20990104" {
 			close(entered)
 			<-proceed
@@ -148,8 +148,10 @@ func TestResolver_OnActivateConcurrentObservationOrder(t *testing.T) {
 	r.Auth = s
 	var mu sync.Mutex
 	var observed []string
+	var generations []uint64
+	notifications := make(map[uint64]string)
 	var inCallback atomic.Int32
-	r.OnActivate = func(release string) {
+	r.OnActivate = func(release string, generation uint64) {
 		if inCallback.Add(1) != 1 {
 			t.Error("concurrent activation callbacks")
 		}
@@ -157,6 +159,8 @@ func TestResolver_OnActivateConcurrentObservationOrder(t *testing.T) {
 		runtime.Gosched()
 		mu.Lock()
 		observed = append(observed, release)
+		generations = append(generations, generation)
+		notifications[generation] = release
 		mu.Unlock()
 	}
 	start := make(chan struct{})
@@ -170,8 +174,19 @@ func TestResolver_OnActivateConcurrentObservationOrder(t *testing.T) {
 				s.active = "corpus_vn_20990104"
 			}
 			s.mu.Unlock()
-			if err := resolveAndFinish(context.Background(), r, ""); err != nil && !errors.Is(err, ErrExpired) {
-				t.Error(err)
+			lease, err := r.Resolve(context.Background(), "vn", "")
+			if err != nil {
+				if !errors.Is(err, ErrExpired) {
+					t.Error(err)
+				}
+				return
+			}
+			defer lease.Done()
+			mu.Lock()
+			notifiedRelease, ok := notifications[lease.Generation]
+			mu.Unlock()
+			if !ok || notifiedRelease != lease.Release {
+				t.Errorf("lease generation %d did not match its notification", lease.Generation)
 			}
 		})
 	}
@@ -185,6 +200,11 @@ func TestResolver_OnActivateConcurrentObservationOrder(t *testing.T) {
 		}
 		if len(want) == 0 || want[len(want)-1] != release {
 			want = append(want, release)
+		}
+	}
+	for i, generation := range generations {
+		if generation != uint64(i+1) {
+			t.Fatalf("notification %d generation=%d", i, generation)
 		}
 	}
 	if !slices.Equal(observed, want) {

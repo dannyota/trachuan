@@ -22,17 +22,17 @@ func (cfg Config) search(ctx context.Context, in searchInput) (retrieval.SearchR
 	if err != nil {
 		return retrieval.SearchResult{}, err
 	}
-	engine, rel, done, err := cfg.resolve(ctx, in.Country, in.Release)
+	lease, err := cfg.resolve(ctx, in.Country, in.Release)
 	if err != nil {
 		return retrieval.SearchResult{}, err
 	}
-	defer done()
+	defer lease.Done()
 	if cfg.Caches != nil {
-		scope := cfg.Caches.Scope(rel)
+		scope := cfg.Caches.Scope(lease.Release, lease.Generation)
 		ctx = retrieval.WithCaches(ctx, scope.Documents, scope.Sequences)
 	}
 	req.Instant = cfg.requestInstant(ctx)
-	return searchResolved(ctx, engine, rel, req, detail, validation)
+	return searchResolved(ctx, lease.Engine, lease.Release, req, detail, validation)
 }
 
 func prepareSearch(in searchInput) (retrieval.Request, retrieval.Detail, retrieval.Validation, error) {
@@ -68,24 +68,24 @@ func searchResolved(ctx context.Context, engine Engine, rel string, req retrieva
 	}
 	return engine.Present(ctx, response, detail)
 }
-func (cfg Config) resolve(ctx context.Context, country, rel string) (Engine, string, func(), error) {
+func (cfg Config) resolve(ctx context.Context, country, rel string) (Lease, error) {
 	if cfg.Resolver == nil {
-		return nil, "", nil, retrieval.ErrUnavailable
+		return Lease{}, retrieval.ErrUnavailable
 	}
-	engine, active, done, err := cfg.Resolver.Resolve(ctx, country, rel)
+	lease, err := cfg.Resolver.Resolve(ctx, country, rel)
 	if err != nil {
-		if done != nil {
-			done()
+		if lease.Done != nil {
+			lease.Done()
 		}
-		return nil, "", nil, err
+		return Lease{}, err
 	}
-	if engine == nil || done == nil || active == "" {
-		if done != nil {
-			done()
+	if lease.Engine == nil || lease.Done == nil || lease.Release == "" {
+		if lease.Done != nil {
+			lease.Done()
 		}
-		return nil, "", nil, retrieval.ErrUnavailable
+		return Lease{}, retrieval.ErrUnavailable
 	}
-	return engine, active, done, nil
+	return lease, nil
 }
 
 type requestInstantKey struct{}
