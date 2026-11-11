@@ -59,6 +59,7 @@ A compact hit has, in this order:
 | `nodes`     | Taxonomy node codes                                                                                                                                       |
 | `warnings`  | Provision-level relations whose endpoint is this provision or a descendant, as pointers, under the recipe's validity rule, in the recipe's relation order |
 | `gaps`      | The recipe's hit gaps                                                                                                                                     |
+| `locator`   | Where the hit text sits in the file it was read from (`block:` or `page:` range); absent when the text is the source's tree                               |
 
 A full hit has the same fields except `snippet`, then the recipe's `text`,
 `fragments`, `score` and complete `relations` with evidence; its `complete` is
