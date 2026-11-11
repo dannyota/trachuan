@@ -201,8 +201,28 @@ pending classification from evidence.
 In the generation-increment transaction, delete selected gaps and item-owned
 derived rows, clear artifact/input references and attempt state, and set items
 pending. Rewind to the earliest affected stage, including an empty next stage;
-validate `--until` after choosing it. Clear later stage run items, derived rows
-and gaps so they replan.
+validate `--until` after choosing it.
+
+Later stages keep their items. Run `vn/20261111_1` showed why: eight expand
+items fail with HTTP 500 on every pass, so each restart rewound to expand,
+deleted about 3,800 finished fetch items and read every document from the source
+again for two hours, although nothing those items depend on had changed. A
+restart therefore deletes nothing in later stages up front. When a later stage
+is planned again it reconciles its items with the membership phase it reads:
+
+- an item whose document is still a member and whose planned input is unchanged
+  keeps its state, artifact and gaps; for fetch the input is the document key,
+  so a document this run already read is not read again;
+- an item whose planned input changed is reset like a retried item;
+- an item whose document is no longer a member is deleted with its gaps and
+  item-owned derived rows;
+- a new member gets a new pending item;
+- an item with a retry-eligible gap is reset, as in its own stage's retry.
+
+The stage then runs only its pending items and closes as usual, so finalizers
+and later stages see one consistent set. Later-stage gaps that survive keep
+their acceptance; only reset or new items produce gaps that need fresh
+acceptance.
 
 Delete all membership evidence and seed observations produced at or after the
 rewind stage, including evidence from unselected items at that stage. Every
@@ -213,13 +233,15 @@ phase is invalidated. Clear the predecessor record with the seeds phase;
 discovery close then selects and freezes it again. Evidence from earlier stages
 survives. Finalizers rebuild the cleared phases from remaining artifacts and
 earlier-run membership under the [loss rules](membership.md). Keep immutable
-artifacts for reuse. Record counts and rewind stage in the run message;
-recomputed gaps require fresh acceptance.
+artifacts for reuse. Record counts and rewind stage in the run message, and for
+each later stage the number of items kept, reset, deleted and added; recomputed
+gaps require fresh acceptance.
 
 Do not clear source pauses or durable run failures. Still refuse changed frozen
 recipes, open workflows, evaluated/released runs or stage insertion into an old
 snapshot. The generation/attempt fence applies to reset and every later commit.
-Reason: retry transport failures without preserving stale downstream results.
+Reason: retry transport failures without preserving stale downstream results,
+and without repeating downstream work whose inputs did not change.
 
 A bounded non-JSON 200 from a JSON gateway endpoint, including raw tree, is
 retryable before source decoding. After bounded retries emit
