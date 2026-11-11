@@ -90,7 +90,7 @@ export function createApi(options: Options) {
         if (response.status === 403 && (await response.clone().json().catch(() => null))?.error?.code === 'csrf_rejected') throw new ApiError('csrf_rejected', 403)
       }
     }
-    if (response.status === 401) await options.onUnauthorized?.()
+    if (response.status === 401 && !input.signal.aborted) await options.onUnauthorized?.()
     return response
   }
   const client = createClient<paths>({ baseUrl: options.origin, fetch: async (input) => {

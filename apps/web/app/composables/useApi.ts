@@ -5,7 +5,7 @@ import { useSessionStore } from '../stores/session'
 
 const publicPaths = new Set(['/', '/connect', '/sources', '/privacy', '/terms', '/llms.txt'])
 
-export function useApi(options: { userAction?: boolean, route?: { path: string, fullPath: string, meta: Record<string, unknown> } } = {}) {
+export function useApi(options: { userAction?: boolean, localUnavailable?: boolean, route?: { path: string, fullPath: string, meta: Record<string, unknown> } } = {}) {
   const route = options.route || useRoute()
   const event = import.meta.server ? useRequestEvent() : undefined
   const publicRoute = import.meta.server && publicPaths.has(route.path)
@@ -18,7 +18,7 @@ export function useApi(options: { userAction?: boolean, route?: { path: string, 
     publicRoute,
     development: import.meta.dev,
     session: useSessionStore(),
-    onUnavailable: options.userAction || protectedRoute ? () => {
+    onUnavailable: !options.localUnavailable && (options.userAction || protectedRoute) ? () => {
       if (unavailable) unavailable.value = true
       if (event) setResponseStatus(event, 503)
     } : undefined,
