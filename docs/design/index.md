@@ -9,11 +9,11 @@ Proposed baseline implementation under ADRs
 [evaluation](evaluation.md). Limits have one home in [budgets](budgets.md).
 
 This work builds recipe 1 before tuning, on our document/provision identities.
-Taxonomy import, seeds, subject-filter ordering, new development cases,
-tuning experiments, signing, upload and activation remain separate work.
-Taxonomy tables are empty and `taxonomy_version` is empty. A build is local
-evidence, not permission to publish. The host work designs manifest production
-and verification together; no partial signed-manifest contract is introduced.
+Taxonomy import, seeds, subject-filter ordering, new development cases, tuning
+experiments, signing, upload and activation remain separate work. Taxonomy
+tables are empty and `taxonomy_version` is empty. A build is local evidence, not
+permission to publish. The host work designs manifest production and
+verification together; no partial signed-manifest contract is introduced.
 
 ## Build stage
 
