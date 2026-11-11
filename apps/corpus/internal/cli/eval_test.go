@@ -41,7 +41,16 @@ func TestEvalCLI_RequireFloorsRejectsFailedQuality(t *testing.T) {
 	r := evaluation.Report{Status: "complete", Floors: make([]evaluation.Floor, 4)}
 	for i := range r.Floors {
 		r.Floors[i].Status = "pass"
+		r.Floors[i].Mode = []retrieval.Mode{"exact", "exact", "ann", "ann"}[i]
+		r.Floors[i].Name = []string{"current_law_precision", "abstention", "current_law_precision", "abstention"}[i]
+		r.Floors[i].Arms = "hybrid"
+		r.Floors[i].Limit = 8
 	}
+	r.QualityPass = true
+	if got := evalExit(r, true); got != 0 {
+		t.Fatalf("passing quality: got %d, want 0", got)
+	}
+	r.QualityPass = false
 	if got := evalExit(r, true); got != 2 {
 		t.Fatalf("got %d, want 2", got)
 	}
