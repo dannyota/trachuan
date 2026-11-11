@@ -43,6 +43,24 @@ func TestExtract_SourceTreeArtifactBytesUnchanged(t *testing.T) {
 	if art.SHA256 != "2e31d021f019a91eba44056aff135c7a7d0f5239dda95727cca7a494d5696b5f" || chunkInput != "79bb4f26dbfed247351b30aef04eea9bb9572477ddb4649776131762ae844c5c" {
 		t.Fatalf("extract=%s chunk_input=%s", art.SHA256, chunkInput)
 	}
+	assertPinnedTreeChunk(t, store, art)
+}
+
+func assertPinnedTreeChunk(t *testing.T, store artifact.Store, art artifact.Result) {
+	t.Helper()
+	ctx := context.Background()
+	rowsData, err := os.ReadFile(filepath.Join(store.Abs(art.Path), "provisions.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rows []provision
+	if err = json.Unmarshal(rowsData, &rows); err != nil {
+		t.Fatal(err)
+	}
+	chunkInput := stage.RecipeHash("chunk-input", "1", "vn:vbpl:67878", strings.Repeat("a", 64), art.SHA256)
+	if chunkInput != "79bb4f26dbfed247351b30aef04eea9bb9572477ddb4649776131762ae844c5c" {
+		t.Fatalf("chunk input=%s", chunkInput)
+	}
 	bundle := t.TempDir()
 	detail, err := os.ReadFile(filepath.Join("..", "..", "vbpl", "testdata", "detail-67878.json"))
 	if err != nil {

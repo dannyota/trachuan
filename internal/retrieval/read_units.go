@@ -172,14 +172,14 @@ func readOutlineContext(ctx context.Context, nodes []Provision) ([]Unit, error) 
 		}
 		structural := p.Kind == "phan" || p.Kind == "chuong" || p.Kind == "muc" || p.Kind == "dieu"
 		if (articles && structural) || (!articles && p.ParentID == nil) {
-			units = append(units, Unit{Kind: "outline", Anchor: p.Identity.Anchor, Label: p.Label, Heading: p.Heading, Size: utf8.RuneCountInString(strings.TrimSpace(p.Text))})
+			units = append(units, Unit{Kind: "outline", Locator: p.Locator, Anchor: p.Identity.Anchor, Label: p.Label, Heading: p.Heading, Size: utf8.RuneCountInString(strings.TrimSpace(p.Text))})
 		}
 	}
 	return units, ctx.Err()
 }
 
 func readTextUnit(kind string, p Provision, ancestors []Provision, text string) Unit {
-	return Unit{Kind: kind, Anchor: p.Identity.Anchor, Citation: citation(ancestors), Label: p.Label, Heading: p.Heading, Text: text}
+	return Unit{Kind: kind, Locator: p.Locator, Anchor: p.Identity.Anchor, Citation: citation(ancestors), Label: p.Label, Heading: p.Heading, Text: text}
 }
 
 func readOwnText(nodes []Provision, p Provision) (string, []Gap) {

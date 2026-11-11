@@ -122,7 +122,7 @@ func readRangeContext(ctx context.Context, seq readSequence, nodes []Provision, 
 			seq.gaps = append(seq.gaps, readAmbiguity(n.provision))
 		}
 		p := n.provision
-		seq.units = append(seq.units, Unit{Kind: "provision", Anchor: p.Identity.Anchor, Citation: n.citation, Label: p.Label, Heading: p.Heading, Text: n.own})
+		seq.units = append(seq.units, Unit{Kind: "provision", Locator: p.Locator, Anchor: p.Identity.Anchor, Citation: n.citation, Label: p.Label, Heading: p.Heading, Text: n.own})
 	}
 	seq.complete = len(seq.gaps) == 0
 	return seq, nil

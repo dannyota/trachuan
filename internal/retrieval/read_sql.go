@@ -93,7 +93,7 @@ func (e *Engine) readDocument(ctx context.Context, tx pgx.Tx, item ReadItem) (in
 }
 
 func readNodes(ctx context.Context, tx pgx.Tx, id int64, key string) ([]Provision, error) {
-	rows, err := tx.Query(ctx, `SELECT id,parent_id,kind,label,heading,ordinal,preorder,text,anchor,node_id FROM provision WHERE document_id=$1 ORDER BY preorder`, id)
+	rows, err := tx.Query(ctx, `SELECT id,parent_id,kind,label,heading,ordinal,preorder,text,anchor,node_id,locator FROM provision WHERE document_id=$1 ORDER BY preorder`, id)
 	if err != nil {
 		return nil, databaseFailure("query read provisions", err)
 	}
@@ -105,7 +105,7 @@ func readSubtree(ctx context.Context, tx pgx.Tx, id int64, key, anchor string) (
  SELECT p.* FROM provision p WHERE document_id=$1 AND anchor=$2
  UNION ALL SELECT p.* FROM tree t JOIN LATERAL
  (SELECT * FROM provision WHERE parent_id=t.id AND document_id=t.document_id OFFSET 0) p ON true
- ) SELECT id,parent_id,kind,label,heading,ordinal,preorder,text,anchor,node_id FROM tree ORDER BY preorder`
+ ) SELECT id,parent_id,kind,label,heading,ordinal,preorder,text,anchor,node_id,locator FROM tree ORDER BY preorder`
 	rows, err := tx.Query(ctx, sql, id, anchor)
 	if err != nil {
 		return nil, databaseFailure("query read subtree", err)
@@ -118,7 +118,7 @@ func scanReadNodes(rows pgx.Rows, key string) ([]Provision, error) {
 	var nodes []Provision
 	for rows.Next() {
 		p := Provision{Identity: Identity{Country: "vn", DocumentKey: key}}
-		if err := rows.Scan(&p.ID, &p.ParentID, &p.Kind, &p.Label, &p.Heading, &p.Ordinal, &p.Preorder, &p.Text, &p.Identity.Anchor, &p.NodeID); err != nil {
+		if err := rows.Scan(&p.ID, &p.ParentID, &p.Kind, &p.Label, &p.Heading, &p.Ordinal, &p.Preorder, &p.Text, &p.Identity.Anchor, &p.NodeID, &p.Locator); err != nil {
 			return nil, databaseFailure("scan read provision", err)
 		}
 		nodes = append(nodes, p)

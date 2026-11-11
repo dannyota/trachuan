@@ -23,7 +23,7 @@ func (absentOCR) available(string) bool { return false }
 type selection struct {
 	source, gap, name, hash string
 	data                    []byte
-	tooLarge                bool
+	tooLarge, parseLimit    bool
 }
 
 // InputHash binds the fetch manifest and the selected text source.
@@ -66,7 +66,7 @@ func selectFiles(dir, id string, files []fetch.DocumentFile, ocr ocrSource) (sel
 			count += utf8.RuneCountInString(p.Text)
 		}
 		if count >= 300 || limit != nil {
-			return selection{source: "html_transcription", name: f.Name, hash: f.SHA256, data: data}, nil
+			return selection{source: "html_transcription", name: f.Name, hash: f.SHA256, data: data, parseLimit: limit != nil}, nil
 		}
 	}
 	pdfs := map[string]bool{}
@@ -127,7 +127,7 @@ func choose(ctx context.Context, dir, key string) (selection, []vbpl.Node, error
 			if selectErr != nil {
 				return selection{}, nil, selectErr
 			}
-			if selected.source != "none" {
+			if selected.source != "none" && !selected.tooLarge && !selected.parseLimit {
 				return selected, nil, nil
 			}
 			return selection{source: "source_tree", gap: "tree_headings_only"}, nodes, nil
@@ -150,16 +150,18 @@ func headingOnly(rows []provision) bool {
 	}
 	found := false
 	for _, row := range rows {
-		if row.Kind != "dieu" {
-			continue
+		if row.Kind == "dieu" {
+			found = true
 		}
-		found = true
-		if children[row.NodeID] {
+		if row.Kind == "dieu" && children[row.NodeID] {
 			return false
 		}
 		text := strings.Join(strings.Fields(row.Text), " ")
 		label := strings.Join(strings.Fields(row.Label), " ")
 		heading := strings.Join(strings.Fields(row.Heading), " ")
+		if text == "" && row.Kind != "dieu" {
+			continue
+		}
 		if text != label && text != label+"." && text != label+" "+heading && text != label+". "+heading {
 			return false
 		}

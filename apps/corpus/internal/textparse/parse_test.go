@@ -23,6 +23,7 @@ type fixture struct {
 	Gaps           []string `json:"gaps"`
 	GapsMayInclude []string `json:"gaps_may_include"`
 	NeutralOnly    bool     `json:"neutral_only"`
+	Boundaries     []string `json:"boundaries"`
 }
 
 func TestParse_Fixtures(t *testing.T) {
@@ -50,6 +51,20 @@ func TestParse_Fixtures(t *testing.T) {
 				t.Fatal(err)
 			}
 			got := Parse(p)
+			var boundaries []string
+			seen := map[string]bool{}
+			for _, v := range got.Provisions {
+				if seen[v.Anchor] {
+					t.Errorf("duplicate anchor %q", v.Anchor)
+				}
+				seen[v.Anchor] = true
+				h := sha256.Sum256([]byte(v.Text))
+				boundaries = append(boundaries, hex.EncodeToString(h[:]))
+			}
+			if !reflect.DeepEqual(nonNil(boundaries), nonNil(want.Boundaries)) {
+				encoded, _ := json.Marshal(boundaries)
+				t.Errorf("boundaries: %s", encoded)
+			}
 			if name == "empty.html" {
 				if !reflect.DeepEqual(got.Gaps, []string{"no_text"}) {
 					t.Fatalf("gaps: %v", got.Gaps)
@@ -287,9 +302,10 @@ func TestParse_SignatureTableExcludedFromGap(t *testing.T) {
 }
 
 func TestParse_QuotedHeadingsAreText(t *testing.T) {
-	for _, mark := range []string{"\"", "“", "‘", "«"} {
+	for _, pair := range [][2]string{{"\"", "\""}, {"“", "”"}, {"‘", "’"}, {"«", "»"}} {
+		mark := pair[0]
 		t.Run(mark, func(t *testing.T) {
-			r := Parse(paragraphs(long("Điều 1. Một\n" + mark + "Điều 9. Trích dẫn\nĐiều 2. Hai")))
+			r := Parse(paragraphs(long("Điều 1. Một\n" + mark + "Điều 9. Trích dẫn" + pair[1] + "\nĐiều 2. Hai")))
 			if len(r.Scopes) != 1 || !r.Scopes[0].Accepted {
 				t.Fatalf("%+v", r.Scopes)
 			}

@@ -36,7 +36,7 @@ func (e *testEngine) Present(context.Context, retrieval.Response, retrieval.Deta
 }
 func (e *testEngine) Read(_ context.Context, r retrieval.ReadRequest) (retrieval.ReadResult, error) {
 	e.read = r
-	return retrieval.ReadResult{Release: r.Release, Items: []retrieval.ItemResult{{Doc: "vn:1", Complete: true, Document: &retrieval.DocumentEntry{Title: "title"}, Units: []retrieval.Unit{{Kind: "outline", Anchor: "a"}, {Kind: "provision", Text: "source"}}}}}, e.err
+	return retrieval.ReadResult{Release: r.Release, Items: []retrieval.ItemResult{{Doc: "vn:1", Complete: true, Document: &retrieval.DocumentEntry{Title: "title", TextSource: "source_tree", TextComplete: true}, Units: []retrieval.Unit{{Kind: "outline", Anchor: "a"}, {Kind: "provision", Text: "source"}}}}}, e.err
 }
 func (e *testEngine) Status(context.Context) (retrieval.CorpusStatus, error) {
 	return retrieval.CorpusStatus{Documents: 9007199254740993, Provisions: 3}, e.err

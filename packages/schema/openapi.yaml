@@ -922,6 +922,10 @@ components:
         effective_to: *id008
         status:
           $ref: '#/components/schemas/StatusStamp'
+        text_source:
+          type: string
+          enum: [source_tree, html_transcription, ocr, none]
+        text_complete: *id007
         source_url: *id001
         related:
           type: array
@@ -932,6 +936,8 @@ components:
           additionalProperties: *id003
       required:
       - status
+      - text_source
+      - text_complete
     Gap:
       type: object
       properties:
@@ -995,6 +1001,7 @@ components:
         handle: *id001
         doc: *id001
         citation: *id001
+        locator: *id001
         path:
           type: array
           items:
@@ -1102,6 +1109,7 @@ components:
       properties:
         kind: *id001
         anchor: *id001
+        locator: *id001
         citation: *id001
         label: *id001
         heading: *id001

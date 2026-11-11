@@ -125,7 +125,7 @@ func TestExtract_Lineage(t *testing.T) {
 		name, body, input string
 		ok                bool
 	}{
-		{"legacy tree", "", fetchHash, true}, {"legacy empty", "", InputHash(fetchHash, "none"), true},
+		{"legacy tree", "", fetchHash, true}, {"missing non-tree record", "", InputHash(fetchHash, "none"), false},
 		{"html", `{"text_source":"html_transcription"}`, InputHash(fetchHash, "html_transcription"), true},
 		{"none", `{"text_source":"none"}`, InputHash(fetchHash, "none"), true},
 		{"mismatch", `{"text_source":"html_transcription"}`, fetchHash, false},

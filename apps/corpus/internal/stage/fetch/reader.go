@@ -91,7 +91,7 @@ func ExtractInputHash(fetchHash, source string) string {
 func CheckExtractLineage(dir, fetchHash, inputHash string) error {
 	data, err := os.ReadFile(filepath.Join(dir, "text.json"))
 	if errors.Is(err, os.ErrNotExist) {
-		if inputHash == fetchHash || inputHash == ExtractInputHash(fetchHash, "none") {
+		if inputHash == fetchHash {
 			return nil
 		}
 		return fmt.Errorf("artifact input hash mismatch")

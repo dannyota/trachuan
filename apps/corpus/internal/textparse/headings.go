@@ -22,12 +22,20 @@ func article(s string) (string, bool) {
 	return strings.ToLower(r[1]), true
 }
 func structure(s string) (string, string, bool) {
-	r := regexp.MustCompile(`^(Phần|Chương|Mục)\s+([\pL0-9]+)(?:[.\s]|$)`).FindStringSubmatch(s)
-	if r == nil {
-		return "", "", false
+	patterns := []struct{ kind, pattern string }{
+		{"phan", `^Phần\s+([IVXLCDMivxlcdm]+|thứ\s+(?:nhất|hai|ba|tư|bốn|năm|sáu|bảy|tám|chín|mười)(?:\s+(?:mươi|mốt|một|hai|ba|tư|bốn|lăm|sáu|bảy|tám|chín|lẻ|linh|trăm|nghìn))*)(?:$|[.:–—-])`},
+		{"chuong", `^Chương\s+([IVXLCDMivxlcdm]+|[0-9]+)(?:$|[.:–—-])`},
+		{"muc", `^Mục\s+([0-9]+)(?:$|[.:–—-])`},
 	}
-	kind := map[string]string{"Phần": "phan", "Chương": "chuong", "Mục": "muc"}[r[1]]
-	return kind, r[2], true
+	for _, p := range patterns {
+		if m := regexp.MustCompile(p.pattern).FindStringSubmatch(s); m != nil {
+			return p.kind, m[1], true
+		}
+	}
+	return "", "", false
+}
+func headingCandidate(s string) bool {
+	return regexp.MustCompile(`^Điều\s+[0-9]+[a-zA-Z]?(?:$|[.:–—-]|\s*\p{Lu})`).MatchString(s)
 }
 func capitals(s string) bool {
 	hasLetter := false
@@ -53,21 +61,31 @@ func instrument(s string) bool {
 	return false
 }
 func bareStructure(s string) bool {
-	return regexp.MustCompile(`^(Phần|Chương|Mục)\s+[\pL0-9]+\.?$`).MatchString(s)
+	_, _, ok := structure(s)
+	return ok && regexp.MustCompile(`^(?:Phần|Chương|Mục)\s+(?:[IVXLCDMivxlcdm]+|[0-9]+|thứ\s+[\pL\s]+)\.?$`).MatchString(s)
 }
 func signature(s string) bool {
 	u := strings.ToUpper(strings.TrimSpace(s))
 	return strings.HasPrefix(u, "NƠI NHẬN:") || strings.HasPrefix(u, "TM.") || strings.HasPrefix(u, "KT.") || u == "XÁC THỰC VĂN BẢN HỢP NHẤT" || u == "BỘ TRƯỞNG" || u == "THỦ TƯỚNG" || u == "CHỦ TỊCH" || u == "THỐNG ĐỐC"
 }
 func appendix(s string) bool {
-	u := strings.ToUpper(strings.TrimSpace(s))
-	return strings.HasPrefix(u, "PHỤ LỤC") || strings.HasPrefix(u, "MẪU SỐ")
+	s = strings.TrimSpace(s)
+	u := strings.ToUpper(s)
+	if capitals(s) && (strings.HasPrefix(u, "PHỤ LỤC") || strings.HasPrefix(u, "MẪU SỐ")) {
+		return true
+	}
+	if !regexp.MustCompile(`^(?:Phụ lục(?: số)?|Mẫu số)\s+(?:[0-9]+|[IVXLCDMivxlcdm]+)[a-zA-Z]*(?:$|[. :–—-])`).MatchString(s) {
+		return false
+	}
+	return !strings.ContainsAny(string([]rune(s)[len([]rune(s))-1:]), ".;:!?")
 }
 func instrumentAt(p []Paragraph, i int) bool {
 	return instrument(p[i].Text) && (i == 0 || !bareStructure(p[i-1].Text))
 }
 
-func outline(s string) bool { return regexp.MustCompile(`^(?:[IVXLCDM]+|[0-9]+)\.\s+`).MatchString(s) }
+func outline(s string) bool {
+	return regexp.MustCompile(`^(?:[IVXLCDM]+|[0-9]+)\.\s+`).MatchString(s)
+}
 func sequence(numbers []string) string {
 	prev, suffix := 0, byte(0)
 	for _, n := range numbers {

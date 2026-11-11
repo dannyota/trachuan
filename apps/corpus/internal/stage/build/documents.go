@@ -103,6 +103,9 @@ func (l *loader) loadDocuments(ctx context.Context) error {
 			if e = readArtifactJSON(p, "provisions.json", &raw); e != nil {
 				return e
 			}
+			if textSource == "none" && len(raw) > 0 {
+				return fmt.Errorf("text source none has provisions for %s", key)
+			}
 			nodes, e = preorder(raw)
 			if e != nil {
 				l.addGap("build", key, "invalid_ancestry", "")

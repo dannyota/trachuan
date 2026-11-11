@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -84,6 +85,7 @@ func (l *loader) readValidityProvisions(ctx context.Context, docs map[string]val
 		return fmt.Errorf("read validity provisions: %w", err)
 	}
 	labels := map[int64]string{}
+	articlePrefix := regexp.MustCompile(`^Điều\s+[0-9]+[a-zA-Z]?\.\s*`)
 	for rows.Next() {
 		var key, kind, label, heading, anchor, text string
 		var id int64
@@ -104,7 +106,11 @@ func (l *loader) readValidityProvisions(ctx context.Context, docs map[string]val
 		}
 		validation[key] = cd
 		d := docs[key]
-		if kind == "dieu" && validity.Select(heading) {
+		title := heading
+		if kind == "dieu" && d.textSource != "" && d.textSource != "source_tree" {
+			title = articlePrefix.ReplaceAllString(title, "")
+		}
+		if kind == "dieu" && validity.Select(title) {
 			if d.article != nil {
 				d.article = &validity.Result{Reasons: []validity.Reason{{Kind: "multiple_effect_articles"}}}
 			} else {

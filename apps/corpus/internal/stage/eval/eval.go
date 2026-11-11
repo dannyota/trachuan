@@ -44,7 +44,7 @@ func (*Stage) Name() string { return "eval" }
 
 // Recipe identifies the scoring and cache policies.
 func (s *Stage) Recipe(stage.Snapshot) string {
-	return stage.RecipeHash("eval", "agent-eval/1", "legacy-matcher/1", "product-matcher/1", "recall,mrr,current-law-precision,abstention,evidence,ann/1", strings.Join(s.cfg.Suite.Rejections, "\x00"), "diacritics_required:Vui lòng nhập câu hỏi tiếng Việt có dấu hoặc số hiệu văn bản.", "cache/1:200:100", "nearest-rank", "gates:0.99:0.95;targets:recall20=0.90,mrr8=0.66,recall8=0.90;nonregression:recall20,mrr8", "compact/1")
+	return stage.RecipeHash("eval", "agent-eval/1", "legacy-matcher/1", "product-matcher/1", "recall,mrr,current-law-precision,abstention,evidence,ann/1", strings.Join(s.cfg.Suite.Rejections, "\x00"), "diacritics_required:Vui lòng nhập câu hỏi tiếng Việt có dấu hoặc số hiệu văn bản.", "cache/1:200:100", "nearest-rank", "gates:0.99:0.95;targets:recall20=0.90,mrr8=0.66,recall8=0.90;nonregression:recall20,mrr8", "compact/1", "corpus-text-counts/1")
 }
 
 func dateForRun(run stage.Run) (time.Time, error) {
@@ -169,24 +169,8 @@ func (s *Stage) evaluateBuild(ctx context.Context, env stage.Env, run stage.Run,
 	if err != nil {
 		return report, cache, fmt.Errorf("run evaluation: %w", err)
 	}
-	report.DocumentsByClass = map[string]int{}
-	report.DocumentsBySource = map[string]int{}
-	rows, err := pool.Query(ctx, "SELECT class, source, count(*) FROM document GROUP BY class, source")
-	if err != nil {
-		return report, cache, fmt.Errorf("count documents: %w", err)
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var class, source string
-		var count int
-		if err = rows.Scan(&class, &source, &count); err != nil {
-			return report, cache, fmt.Errorf("scan document counts: %w", err)
-		}
-		report.DocumentsByClass[class] += count
-		report.DocumentsBySource[source] += count
-	}
-	if err = rows.Err(); err != nil {
-		return report, cache, fmt.Errorf("read document counts: %w", err)
+	if err = readDocumentCounts(ctx, pool, &report); err != nil {
+		return report, cache, err
 	}
 	for _, c := range suite.ValidityCases {
 		if c.Resolution != "" {

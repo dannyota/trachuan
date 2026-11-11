@@ -71,6 +71,7 @@ func TestSelection_HeadingOnlyDefinition(t *testing.T) {
 		{"nested article", `{"success":true,"data":[{"id":"c","level":"Chapter","title":"Chương I","children":[{"id":"a","level":"Article","title":"Điều 1. Phạm vi","content":{"content":"Điều 1. Phạm vi"}}]}]}`, true},
 		{"child", `{"success":true,"data":[{"id":"a","level":"Article","title":"Điều 1. Phạm vi","content":{"content":"Điều 1. Phạm vi"},"children":[{"id":"b","level":"Clause"}]}]}`, false},
 		{"body", `{"success":true,"data":[{"id":"a","level":"Article","title":"Điều 1. Phạm vi","content":{"content":"Điều 1. Phạm vi<br>Nội dung"}}]}`, false},
+		{"chapter body", `{"success":true,"data":[{"id":"c","level":"Chapter","title":"Chương I","content":{"content":"Chương I<br>Nội dung"},"children":[{"id":"a","level":"Article","title":"Điều 1. Phạm vi","content":{"content":"Điều 1. Phạm vi"}}]}]}`, false},
 		{"no article", `{"success":true,"data":[{"id":"a","level":"Chapter","title":"Chương I"}]}`, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -93,5 +94,25 @@ func TestSelection_GoldenTreeRemainsSourceTree(t *testing.T) {
 	s, _, err := choose(context.Background(), headingBundle(t, string(data), true), "vn:vbpl:1")
 	if err != nil || s.source != "source_tree" || s.gap != "" {
 		t.Fatalf("selection=%+v err=%v", s, err)
+	}
+}
+
+func TestExtract_HeadingOnlyTreeRejectsOverDepthTranscription(t *testing.T) {
+	dir := headingBundle(t, bareTree, false)
+	data := []byte(strings.Repeat("<div>", 70) + strings.Repeat("nội dung ", 60) + strings.Repeat("</div>", 70))
+	hash := fmt.Sprintf("%x", sha256.Sum256(data))
+	if err := os.Mkdir(filepath.Join(dir, "files"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "files", hash), data, 0600); err != nil {
+		t.Fatal(err)
+	}
+	files := fmt.Sprintf(`[{"name":"1_content.html","sha256":"%s","size":%d}]`, hash, len(data))
+	if err := os.WriteFile(filepath.Join(dir, "files.json"), []byte(files), 0600); err != nil {
+		t.Fatal(err)
+	}
+	s, nodes, err := choose(context.Background(), dir, "vn:vbpl:1")
+	if err != nil || s.source != "source_tree" || s.gap != "tree_headings_only" || len(nodes) != 1 {
+		t.Fatalf("selection=%+v nodes=%v err=%v", s, nodes, err)
 	}
 }

@@ -27,25 +27,44 @@ func Parse(paragraphs []Paragraph) Result {
 		r.Gaps = append(r.Gaps, "no_text")
 		return r
 	}
-	spans := scopes(paragraphs)
+	quoted, unclosed := quotedParagraphs(paragraphs)
+	spans := scopes(paragraphs, quoted)
 	if len(spans) == 0 {
-		r.Provisions = neutral(paragraphs, -1, 0)
+		r.Provisions = neutral(paragraphs, quoted, -1, 0)
 		numberNeutral(r.Provisions)
 		addContentGaps(&r, paragraphs)
 		return r
 	}
-	r.Provisions = append(r.Provisions, preamble(paragraphs[:spans[0].start])...)
+	r.Provisions = append(r.Provisions, preamble(paragraphs[:spans[0].start], quoted[:spans[0].start])...)
 	instrumentNumber := 0
 	for index, sp := range spans {
 		scope := Scope{Kind: sp.kind}
 		var nums []string
-		for _, p := range paragraphs[sp.start:sp.end] {
+		structures := map[string]bool{}
+		for i, p := range paragraphs[sp.start:sp.end] {
+			if quoted[sp.start+i] {
+				continue
+			}
 			if n, ok := article(p.Text); ok {
 				nums = append(nums, n)
+			} else if headingCandidate(p.Text) {
+				scope.FailedCheck = "invalid article heading"
+			}
+			if kind, number, ok := structure(p.Text); ok {
+				key := kind + "-" + strings.ToLower(number)
+				if structures[key] {
+					scope.FailedCheck = "duplicate structure anchor " + key
+				}
+				structures[key] = true
 			}
 		}
 		if sp.kind != "tail" {
-			scope.FailedCheck = sequence(nums)
+			if unclosed >= sp.start && unclosed < sp.end {
+				scope.FailedCheck = "unclosed quotation"
+			}
+			if scope.FailedCheck == "" {
+				scope.FailedCheck = sequence(nums)
+			}
 			scope.Accepted = scope.FailedCheck == ""
 			if !scope.Accepted {
 				r.Gaps = appendOnce(r.Gaps, "structure_uncertain")
@@ -60,9 +79,9 @@ func Parse(paragraphs []Paragraph) Result {
 			prefix = fmt.Sprintf("kem-theo-%d/", instrumentNumber)
 		}
 		if scope.Accepted {
-			r.Provisions = append(r.Provisions, accepted(paragraphs[sp.start:sp.end], index, prefix, instrumentNumber)...)
+			r.Provisions = append(r.Provisions, accepted(paragraphs[sp.start:sp.end], quoted[sp.start:sp.end], index, prefix, instrumentNumber)...)
 		} else {
-			r.Provisions = append(r.Provisions, neutral(paragraphs[sp.start:sp.end], index, sp.start)...)
+			r.Provisions = append(r.Provisions, neutral(paragraphs[sp.start:sp.end], quoted[sp.start:sp.end], index, sp.start)...)
 		}
 	}
 	numberNeutral(r.Provisions)
@@ -82,7 +101,7 @@ func numberNeutral(provisions []Provision) {
 		p.NodeID = fmt.Sprintf("tx:%x", sum[:8])
 	}
 }
-func preamble(p []Paragraph) []Provision {
+func preamble(p []Paragraph, quoted []bool) []Provision {
 	var out []Provision
 	n := 0
 	for start := 0; start < len(p); {
@@ -94,7 +113,7 @@ func preamble(p []Paragraph) []Provision {
 		for end < len(p) && !p[end].Table {
 			end++
 		}
-		for _, v := range neutral(p[start:end], -1, start) {
+		for _, v := range neutral(p[start:end], quoted[start:end], -1, start) {
 			if v.Kind == "other" {
 				n++
 				v.Anchor = fmt.Sprintf("doan-%d", n)
@@ -147,10 +166,10 @@ func appendOnce(s []string, v string) []string {
 	}
 	return append(s, v)
 }
-func scopes(p []Paragraph) []span {
+func scopes(p []Paragraph, quoted []bool) []span {
 	first := -1
 	for i := range p {
-		if _, ok := article(p[i].Text); ok {
+		if _, ok := article(p[i].Text); ok && !quoted[i] {
 			first = i
 			break
 		}
@@ -158,16 +177,29 @@ func scopes(p []Paragraph) []span {
 	if first < 0 {
 		return nil
 	}
-	spans := []span{{start: first, kind: "main"}}
+	mainStart := first
+	for i := 0; i < first; i++ {
+		if _, _, ok := structure(p[i].Text); ok && !quoted[i] {
+			mainStart = i
+			break
+		}
+	}
+	spans := []span{{start: mainStart, kind: "main"}}
 	active := true
 	seenArticle := false
 	for i := first; i < len(p); i++ {
 		s := p[i].Text
+		if quoted[i] {
+			continue
+		}
 		n, isArticle := article(s)
 		inst := instrumentAt(p, i)
 		if inst {
 			found := false
 			for j := i + 1; j < len(p); j++ {
+				if quoted[j] {
+					continue
+				}
 				if k, ok := article(p[j].Text); ok {
 					found = k == "1"
 					break
@@ -224,12 +256,16 @@ func makeProvision(p []Paragraph, kind, number, label, heading, anchor string, s
 	sum := sha256.Sum256([]byte(fmt.Sprintf("%d\n%s\n%s", scope, anchor, text)))
 	return Provision{Kind: kind, Number: number, Label: label, Heading: heading, Anchor: anchor, ScopeIndex: scope, Text: text, StartOrdinal: p[0].Ordinal, EndOrdinal: p[len(p)-1].Ordinal, NodeID: fmt.Sprintf("tx:%x", sum[:8])}
 }
-func accepted(p []Paragraph, scope int, prefix string, instrumentNumber int) []Provision {
+func accepted(p []Paragraph, quoted []bool, scope int, prefix string, instrumentNumber int) []Provision {
 	var out []Provision
 	n := 0
 	for start := 0; start < len(p); {
 		end := start + 1
 		for end < len(p) {
+			if quoted[end] {
+				end++
+				continue
+			}
 			_, a := article(p[end].Text)
 			_, _, h := structure(p[end].Text)
 			if a || h {
@@ -237,14 +273,14 @@ func accepted(p []Paragraph, scope int, prefix string, instrumentNumber int) []P
 			}
 			end++
 		}
-		if number, ok := article(p[start].Text); ok {
+		if number, ok := article(p[start].Text); ok && !quoted[start] {
 			label := "Điều " + number
 			if prefix != "" {
 				label = fmt.Sprintf("Điều %s (văn bản kèm theo %d)", number, instrumentNumber)
 			}
 			out = append(out, makeProvision(p[start:end], "dieu", number, label, p[start].Text, prefix+"dieu-"+number, scope))
-		} else if kind, number, ok := structure(p[start].Text); ok {
-			end = titleEnd(p, start)
+		} else if kind, number, ok := structure(p[start].Text); ok && !quoted[start] {
+			end = titleEnd(p, quoted, start)
 			out = append(out, makeProvision(p[start:end], kind, number, p[start].Text, p[start].Text, prefix+kind+"-"+strings.ToLower(number), scope))
 		} else {
 			n++
@@ -254,22 +290,16 @@ func accepted(p []Paragraph, scope int, prefix string, instrumentNumber int) []P
 	}
 	return out
 }
-func neutral(p []Paragraph, scope, offset int) []Provision {
+func neutral(p []Paragraph, quoted []bool, scope, offset int) []Provision {
 	_ = offset
 	var out []Provision
 	n := 0
 	for start := 0; start < len(p); {
-		if kind, number, ok := structure(p[start].Text); ok {
-			end := titleEnd(p, start)
-			out = append(out, makeProvision(p[start:end], kind, number, p[start].Text, p[start].Text, kind+"-"+strings.ToLower(number), scope))
-			start = end
-			continue
-		}
 		end := start + 1
 		for end < len(p) && end-start < 20 {
 			_, a := article(p[end].Text)
 			_, _, h := structure(p[end].Text)
-			if a || h || outline(p[end].Text) {
+			if !quoted[end] && (a || h || headingCandidate(p[end].Text) || outline(p[end].Text)) {
 				break
 			}
 			end++
@@ -280,9 +310,9 @@ func neutral(p []Paragraph, scope, offset int) []Provision {
 	}
 	return out
 }
-func titleEnd(p []Paragraph, start int) int {
+func titleEnd(p []Paragraph, quoted []bool, start int) int {
 	end := start + 1
-	if bareStructure(p[start].Text) && end < len(p) && capitals(p[end].Text) {
+	if bareStructure(p[start].Text) && end < len(p) && !quoted[end] && capitals(p[end].Text) {
 		end++
 	}
 	return end
