@@ -44,7 +44,7 @@ func loopback(host string) bool {
 	return ip != nil && ip.IsLoopback()
 }
 func validCorpusURL(template string) bool {
-	if strings.Count(template, "{database}") != 1 {
+	if strings.Count(template, "{database}") != 1 || (!strings.HasSuffix(template, "/{database}") && !strings.Contains(template, "/{database}?")) {
 		return false
 	}
 	u, err := url.Parse(template)

@@ -79,6 +79,7 @@ func TestConfig_CorpusURLTemplate(t *testing.T) {
 		{"nested", "postgres://localhost/prefix/{database}", false},
 		{"query only", "postgres://localhost/corpus?dbname={database}", false},
 		{"db override", "postgres://localhost/{database}?dbname=other", false},
+		{"escaped path, placeholder in query", "postgres://localhost/%7Bdatabase%7D?application_name={database}", false},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv("SERVER_CORPUS_DATABASE_URL", tt.template)
