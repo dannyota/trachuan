@@ -30,8 +30,13 @@ func (c fakeCorpus) AnchorExists(_ context.Context, key, anchor string) (bool, e
 func (c fakeCorpus) HasNumber(_ context.Context, number string) (bool, error) {
 	return number == "50/2024/TT-NHNN" || number == "196-HDBT" || number == c.number, c.err
 }
-func (c fakeCorpus) NumberSegments(context.Context) (map[string]struct{}, error) {
-	return map[string]struct{}{"TT": {}, "NHNN": {}, "QD": {}, "CP": {}, "50": {}, "2024": {}}, c.err
+func (c fakeCorpus) HasNumberSegment(_ context.Context, segment string) (bool, error) {
+	switch segment {
+	case "TT", "NHNN", "QD", "CP", "50", "2024":
+		return true, c.err
+	default:
+		return false, c.err
+	}
 }
 
 func suggestion(values map[string]string) map[string]json.RawMessage {

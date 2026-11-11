@@ -39,12 +39,12 @@ func validateNumber(ctx context.Context, corpus Corpus, kind, value string, now 
 	if len(segments) < 1 || len(segments) > 4 {
 		return "", ErrInvalidRequest
 	}
-	known, err := corpus.NumberSegments(ctx)
-	if err != nil {
-		return "", corpusFailure(err)
-	}
 	for _, segment := range segments {
-		if _, ok := known[segment]; !ok || segment == "" {
+		known, err := corpus.HasNumberSegment(ctx, segment)
+		if err != nil {
+			return "", corpusFailure(err)
+		}
+		if !known || segment == "" {
 			return "", ErrInvalidRequest
 		}
 	}

@@ -39,7 +39,7 @@ func (c EngineCorpus) HasNumber(ctx context.Context, number string) (bool, error
 	return c.Engine.HasNumber(ctx, number)
 }
 
-// NumberSegments returns the engine's cached document-number segments.
-func (c EngineCorpus) NumberSegments(ctx context.Context) (map[string]struct{}, error) {
-	return c.Engine.NumberSegments(ctx)
+// HasNumberSegment tests a segment against the engine's cached release set.
+func (c EngineCorpus) HasNumberSegment(ctx context.Context, segment string) (bool, error) {
+	return c.Engine.HasNumberSegment(ctx, segment)
 }

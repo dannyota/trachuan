@@ -3,9 +3,12 @@
 package retrieval
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
-	"reflect"
+	"io"
+	"log/slog"
 	"strings"
 	"sync"
 	"testing"
@@ -58,19 +61,63 @@ func TestReportLookups_CorpusIdentities(t *testing.T) {
 	var wg sync.WaitGroup
 	for range 8 {
 		wg.Go(func() {
-			got, segmentErr := e.NumberSegments(ctx)
-			if segmentErr != nil || !reflect.DeepEqual(got, want) {
-				t.Errorf("segments=%v err=%v", got, segmentErr)
+			for segment := range want {
+				found, segmentErr := e.HasNumberSegment(ctx, segment)
+				if segmentErr != nil || !found {
+					t.Errorf("segment=%q found=%v err=%v", segment, found, segmentErr)
+				}
 			}
 		})
 	}
 	wg.Wait()
+	if len(e.numberSegments) != len(want) {
+		t.Fatal("unexpected number segments")
+	}
 	if _, err = db.Exec(ctx, `UPDATE document SET number_norm='PRIVATE'`); err != nil {
 		t.Fatal(err)
 	}
-	got, err := e.NumberSegments(ctx)
-	if err != nil || !reflect.DeepEqual(got, want) {
-		t.Fatal("number segments not pinned to engine")
+	for segment := range want {
+		if found, segmentErr := e.HasNumberSegment(ctx, segment); segmentErr != nil || !found {
+			t.Fatal("number segments not pinned to engine", segmentErr)
+		}
+	}
+}
+
+func TestReportSegments_CorpusBudget(t *testing.T) {
+	db, _, embedder := fixture(t)
+	ctx := t.Context()
+	_, err := db.Exec(ctx, `UPDATE document SET number_norm=(SELECT string_agg('S'||lpad(i::text,5,'0'),'/') FROM generate_series(0,49999) AS i) || '/' || repeat('A',32) || '/' || repeat('B',33) WHERE id=1`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var logs bytes.Buffer
+	previous := slog.Default()
+	slog.SetDefault(slog.New(slog.NewJSONHandler(&logs, nil)))
+	defer slog.SetDefault(previous)
+	engine, err := Open(ctx, db, embedder, fixtureOptions())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(engine.numberSegments) != 50_000 {
+		t.Fatalf("count=%d", len(engine.numberSegments))
+	}
+	decoder := json.NewDecoder(&logs)
+	var event map[string]any
+	if err = decoder.Decode(&event); err != nil || event["msg"] != "report number segment limit reached" || event["release"] != "test" {
+		t.Fatalf("segment limit event=%v err=%v", event, err)
+	}
+	if err = decoder.Decode(&event); !errors.Is(err, io.EOF) {
+		t.Fatalf("unexpected additional segment event: %v", err)
+	}
+	for _, segment := range []string{strings.Repeat("A", 32), "S49998"} {
+		if ok, segmentErr := engine.HasNumberSegment(ctx, segment); !ok || segmentErr != nil {
+			t.Fatalf("missing allowed segment %q", segment)
+		}
+	}
+	for _, segment := range []string{strings.Repeat("B", 33), "S49999"} {
+		if ok, segmentErr := engine.HasNumberSegment(ctx, segment); ok || segmentErr != nil {
+			t.Fatalf("accepted over-budget segment %q", segment)
+		}
 	}
 }
 
@@ -148,7 +195,7 @@ func TestReportLookups_ServingDeadlineAndOneSegmentQuery(t *testing.T) {
 		t.Fatal(err)
 	}
 	for range 2 {
-		if _, err = e.NumberSegments(t.Context()); err != nil {
+		if _, err = e.HasNumberSegment(t.Context(), "n"); err != nil {
 			t.Fatal(err)
 		}
 	}

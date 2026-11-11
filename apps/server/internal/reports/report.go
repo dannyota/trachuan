@@ -161,9 +161,8 @@ type Corpus interface {
 	Document(context.Context, string) (Document, bool, error)
 	AnchorExists(context.Context, string, string) (bool, error)
 	HasNumber(context.Context, string) (bool, error)
-	// NumberSegments returns the cached segments of all normalized release numbers,
-	// split on slash and hyphen. Callers must not mutate the set.
-	NumberSegments(context.Context) (map[string]struct{}, error)
+	// HasNumberSegment tests the release's cached normalized number segments.
+	HasNumberSegment(context.Context, string) (bool, error)
 }
 
 // Document supplies the original corpus number for durable report identity.

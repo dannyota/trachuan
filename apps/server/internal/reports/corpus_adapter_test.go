@@ -45,7 +45,7 @@ func TestEngineCorpus_ForwardsCachedLookup(t *testing.T) {
 	c := EngineCorpus{Engine: &retrieval.Engine{}}
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
-	if _, err := c.NumberSegments(ctx); err == nil {
+	if _, err := c.HasNumberSegment(ctx, "TT"); err == nil {
 		t.Fatal("cancellation lost")
 	}
 }
