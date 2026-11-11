@@ -9,6 +9,8 @@ it('enables 401 navigation for signed-in route metadata and user actions', () =>
     options.push(value)
     return {} as ReturnType<typeof apiClient.createApi>
   })
+  const unavailable = { value: false }
+  vi.stubGlobal('useState', () => unavailable)
   vi.stubGlobal('window', { location: { origin: 'http://localhost' } })
   setActivePinia(createPinia())
   try {
@@ -16,6 +18,8 @@ it('enables 401 navigation for signed-in route metadata and user actions', () =>
     useApi({ route: { path: '/account', fullPath: '/account', meta: {} } })
     useApi({ userAction: true, route: { path: '/public', fullPath: '/public', meta: {} } })
     expect(options.map(option => typeof option.onUnauthorized)).toEqual(['function', 'undefined', 'function'])
+    options[0]?.onUnavailable?.()
+    expect(unavailable.value).toBe(true)
   } finally {
     spy.mockRestore()
     vi.unstubAllGlobals()

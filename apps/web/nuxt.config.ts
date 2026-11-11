@@ -10,7 +10,7 @@ export default defineNuxtConfig({
   features: { inlineStyles: false },
   experimental: { payloadExtraction: false, entryImportMap: false },
   vite: { plugins: [tailwindcss()] },
-  runtimeConfig: { trustedProxies: '', apiOrigin: 'http://127.0.0.1:8080' },
+  runtimeConfig: { trustedProxies: '', apiOrigin: 'http://127.0.0.1:8080', public: { siteOrigin: 'https://trachuan.vn' } },
   routeRules: {
     '/**': { headers: { 'Content-Security-Policy': APP_CSP } },
     '/': { cache },

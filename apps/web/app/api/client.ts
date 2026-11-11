@@ -11,6 +11,7 @@ type Options = {
   fetch?: typeof globalThis.fetch
   onSetCookie?: (cookie: string) => void
   onUnauthorized?: () => void | Promise<void>
+  onUnavailable?: () => void
   session?: Session
 }
 
@@ -25,7 +26,18 @@ export function createApi(options: Options) {
     const headers = new Headers(request.headers)
     headers.delete('cookie')
     if (options.cookie && !options.publicRoute) headers.set('cookie', options.cookie)
-    const response = await transport(new Request(request, { headers }))
+    let response: Response
+    try {
+      response = await transport(new Request(request, { headers }))
+      if (response.status >= 500) throw new Error('unavailable')
+      if (response.status !== 401 && response.status !== 204 && response.status !== 205) {
+        if (!response.headers.get('content-type')?.toLowerCase().includes('application/json')) throw new Error('unavailable')
+        await response.clone().json()
+      }
+    } catch {
+      options.onUnavailable?.()
+      throw new ApiError('unavailable', 503)
+    }
     if (!options.publicRoute && options.onSetCookie) {
       for (const cookie of response.headers.getSetCookie()) options.onSetCookie(cookie)
     }
@@ -81,6 +93,15 @@ export function createApi(options: Options) {
     if (response.status === 401) await options.onUnauthorized?.()
     return response
   }
-  const client = createClient<paths>({ baseUrl: options.origin, fetch: input => handle(input as Request) })
+  const client = createClient<paths>({ baseUrl: options.origin, fetch: async (input) => {
+    try {
+      return await handle(input as Request)
+    } catch (error) {
+      if (!(error instanceof ApiError) || error.code !== 'unavailable') throw error
+      return new Response(JSON.stringify({ error: { code: 'unavailable', message: 'unavailable' } }), {
+        status: 503, headers: { 'content-type': 'application/json' },
+      })
+    }
+  } })
   return { client, loadSession, session }
 }

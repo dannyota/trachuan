@@ -3,7 +3,7 @@ import { clientAddress } from './client-address'
 
 
 test('language and device theme control the layout', async ({ page }, testInfo) => {
-  await page.setExtraHTTPHeaders({ 'X-Forwarded-For': clientAddress({ ...testInfo, testIndex: 5 }) })
+  await page.setExtraHTTPHeaders({ 'X-Forwarded-For': clientAddress(testInfo) })
   await page.emulateMedia({ colorScheme: 'dark' })
   await page.goto('/')
   await expect(page.getByRole('button', { name: 'English' })).toBeVisible()

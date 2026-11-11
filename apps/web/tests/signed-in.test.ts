@@ -22,6 +22,7 @@ it('loads the session for protected routes and redirects a signed-out visitor', 
   const { vi } = await import('vitest')
   const session = { status: 'unknown' }
   let requested = ''
+  vi.stubGlobal('useState', () => ({ value: false }))
   vi.stubGlobal('defineNuxtRouteMiddleware', (handler: unknown) => handler)
   vi.stubGlobal('useApi', (options: { route: { fullPath: string } }) => {
     requested = options.route.fullPath
@@ -54,6 +55,7 @@ it('uses matched route metadata to decide whether to load a session', async () =
     ],
   })
   let loads = 0
+  vi.stubGlobal('useState', () => ({ value: false }))
   vi.stubGlobal('defineNuxtRouteMiddleware', (handler: unknown) => handler)
   vi.stubGlobal('useApi', () => ({ session: { status: 'unknown' }, loadSession: async () => { loads++ } }))
   try {

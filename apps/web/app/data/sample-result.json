@@ -1,0 +1,10 @@
+{
+  "release": "fixture",
+  "abstain": false,
+  "documents": {
+    "fixture": { "status": { "class": "in_force", "current": true }, "text_source": "source_tree", "text_complete": true }
+  },
+  "hits": [
+    { "doc": "fixture", "citation": "Điều 3", "text": "Văn bản mẫu.", "complete": true }
+  ]
+}
