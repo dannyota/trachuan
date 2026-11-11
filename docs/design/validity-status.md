@@ -168,6 +168,28 @@ result and `correction_conflict` when an automatic rule gives a different one.
 Reason: the source and our parser both fail in ways we cannot enumerate; a short
 reviewed list repairs them without widening the rules.
 
+Source gaps. The list is reviewed against documents the corpus held when each
+entry was written, and a later run can lose one of them to the source for a day
+(run `vn/20261111_1` lost an evidence document to an HTTP 500 and the whole
+build failed). When the entry's own document or its in-corpus evidence document
+is in the run's final membership but was not fetched because the source failed
+(a `source_unavailable` gap, which includes timeouts), the entry is unverifiable
+in this run, not wrong:
+
+- Target missing: the entry is not applied; there is no document to change.
+- Evidence document missing: the entry is not applied and its target is marked
+  `validity_conflict`, shown in results like every other conflict, so default
+  results do not present it as current law on the strength of a source status
+  the list says is wrong.
+
+Either case records the build gap `correction_evidence_unavailable` with the
+entry key and the missing document, and a line in the review file. The gap is
+unaccepted by default, so a release needs the owner to accept it or a later run
+to clear it. Every other absence stays a build error, because it means the entry
+is wrong or the corpus changed: a document that is not in final membership, a
+document missing for any other gap, a number mismatch, an anchor that the
+evidence document no longer has, and a quote that is absent from its provision.
+
 ## Review queue and evidence
 
 The build writes `validity-review.json` beside the build record: every
