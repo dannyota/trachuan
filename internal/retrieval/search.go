@@ -8,6 +8,9 @@ import (
 
 // Search validates, collects and shapes a request using the release recipe.
 func (e *Engine) Search(ctx context.Context, req Request) (Response, error) {
+	if _, readOnly := e.embedder.(readOnlyRuntime); readOnly {
+		return Response{}, ErrSearchUnavailable
+	}
 	recipe := e.release.RetrievalRecipe
 	if recipe.Abstention.Threshold == nil {
 		return Response{}, errors.New("uncalibrated retrieval recipe")
