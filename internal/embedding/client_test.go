@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -53,5 +54,43 @@ func TestQuery_RejectsChangedRecipe(t *testing.T) {
 	_, err := (Query{Client: client, RecipeHash: "wrong"}).Recipe(context.Background())
 	if err == nil {
 		t.Fatal("accepted changed recipe")
+	}
+}
+
+func TestQuery_ReportsRecipeDifferences(t *testing.T) {
+	expected := QueryRecipe1()
+	running := expected
+	running.Language = "go 1.27.4\nextra"
+	running.TokenCap = 128
+	client := NewClient("http://embedder", fakeClient(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_ = json.NewEncoder(w).Encode(Report{ProtocolVersion: 1, RecipeHash: running.Hash(), Recipe: running})
+	})))
+	_, err := (Query{Client: client, RecipeHash: expected.Hash(), ExpectedRecipe: &expected}).Recipe(context.Background())
+	for _, want := range []string{`language: expected "go 1.27.3", running "go 1.27.4\nextra"`, `token_cap: expected 256, running 128`} {
+		if err == nil || !strings.Contains(err.Error(), want) {
+			t.Errorf("error = %v, missing %s", err, want)
+		}
+	}
+	if err != nil && strings.Contains(err.Error(), "\n") {
+		t.Errorf("error spans lines: %q", err)
+	}
+}
+
+func TestQuery_ReportsHashesWithoutExpectedRecipe(t *testing.T) {
+	running := QueryRecipe1()
+	client := NewClient("http://embedder", fakeClient(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_ = json.NewEncoder(w).Encode(Report{ProtocolVersion: 1, RecipeHash: running.Hash(), Recipe: running})
+	})))
+	_, err := (Query{Client: client, RecipeHash: "expected-hash"}).Recipe(context.Background())
+	if err == nil || !strings.Contains(err.Error(), "expected-hash") || !strings.Contains(err.Error(), running.Hash()) {
+		t.Fatalf("missing hashes: %v", err)
+	}
+}
+
+func TestQuery_RejectsInconsistentExpectedRecipe(t *testing.T) {
+	expected := QueryRecipe1()
+	_, err := (Query{RecipeHash: "wrong", ExpectedRecipe: &expected}).Recipe(context.Background())
+	if err == nil || !strings.Contains(err.Error(), "query recipe mismatch") {
+		t.Fatalf("inconsistent expected recipe: %v", err)
 	}
 }

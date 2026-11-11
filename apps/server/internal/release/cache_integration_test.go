@@ -84,7 +84,7 @@ func corpusFixtureWithBuilder(t *testing.T, builder testpg.Builder) (*Resolver, 
 		t.Fatal(err)
 	}
 	now := time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC)
-	r := &Resolver{Auth: &fakeStore{active: name}, Clock: func() time.Time { return now }, URLTemplate: strings.Replace(builder.URL, "/postgres", "/{database}", 1), EmbedderFor: func(string) retrieval.Embedder { return recipeEmbedder{recipe: query} }}
+	r := &Resolver{Auth: &fakeStore{active: name}, Clock: func() time.Time { return now }, URLTemplate: strings.Replace(builder.URL, "/postgres", "/{database}", 1), EmbedderFor: func(string, embedding.Recipe) retrieval.Embedder { return recipeEmbedder{recipe: query} }}
 	t.Cleanup(r.Close)
 	return r, admin, db, rel
 }

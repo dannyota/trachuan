@@ -146,7 +146,7 @@ func (r *Resolver) open(ctx context.Context, name string, entry *cacheEntry) (*r
 		}
 		return nil, errors.New("test recipe refused")
 	}
-	embedder := r.EmbedderFor(metadata.DenseRecipe.QueryHash)
+	embedder := r.EmbedderFor(metadata.DenseRecipe.QueryHash, metadata.DenseRecipe.Query)
 	engine, err := retrieval.Open(ctx, entry.pool, embedder, options)
 	if err != nil {
 		return nil, err

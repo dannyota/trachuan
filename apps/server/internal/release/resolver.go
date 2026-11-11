@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"danny.vn/trachuan/internal/embedding"
 	"danny.vn/trachuan/internal/retrieval"
 	"golang.org/x/sync/singleflight"
 )
@@ -34,7 +35,7 @@ type Resolver struct {
 	Open        func(ctx context.Context, dbName string) (*retrieval.Engine, func(), error)
 	Clock       func() time.Time
 	URLTemplate string
-	EmbedderFor func(queryRecipeHash string) retrieval.Embedder
+	EmbedderFor func(queryRecipeHash string, expected embedding.Recipe) retrieval.Embedder
 	Options     retrieval.Options
 	// AllowTestRecipe is true only for a strict-loopback deployment.
 	AllowTestRecipe bool

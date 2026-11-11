@@ -43,8 +43,11 @@ go run ./apps/corpus/cmd/corpus status vn 20261109
 Apply workshop migrations with `go run ./apps/corpus/cmd/corpus migrate` after
 pulling new code and before restarting the worker; a missing table fails stage
 commits with `relation "chunk" does not exist`. Start `make queryembed-run` and
-`make docembed-run` in separate terminals before extending a paused run. Both
-use the model bundle in `EMBEDDER_MODEL_DIR`. Provision it with
+`make docembed-run` in separate terminals before extending a paused run.
+`make queryembed-run` builds the query service with the Go version pinned to its
+recipe (`GOTOOLCHAIN`), whatever `go` is on PATH; a service started another way
+with a different Go version reports a different recipe hash and build and search
+refuse it. Both use the model bundle in `EMBEDDER_MODEL_DIR`. Provision it with
 `uv run python scripts/make_bundle.py <dir> --model AITeamVN/Vietnamese_Embedding_v2 --revision 18b44161e041bf1d3a333ab5144b5b7b93f914d2`
 in `apps/docembed`; it writes the INT8 query model `onnx/model_int8.onnx` from
 `onnx/model.onnx` (about 12 seconds and 9.5 GB peak memory) before the manifest.

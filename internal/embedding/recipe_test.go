@@ -1,6 +1,10 @@
 package embedding
 
-import "testing"
+import (
+	"os/exec"
+	"regexp"
+	"testing"
+)
 
 func TestRecipe_HashMatchesService(t *testing.T) {
 	for _, tc := range []struct {
@@ -35,4 +39,21 @@ func TestRecipe_RejectsOldField(t *testing.T) {
 		}
 	}()
 	mustRecipe([]byte(`{"python_version":"3.14.10"}`))
+}
+
+func TestQueryToolchain_MatchesRecipe(t *testing.T) {
+	for _, target := range []string{"queryembed-run", "queryembed-test-ort"} {
+		t.Run(target, func(t *testing.T) {
+			cmd := exec.Command("make", "-n", target, "QUERYEMBED_GO_VERSION=0.0.0")
+			cmd.Dir = "../.."
+			output, err := cmd.CombinedOutput()
+			if err != nil {
+				t.Fatalf("make dry run: %v: %s", err, output)
+			}
+			match := regexp.MustCompile(`GOTOOLCHAIN=(go[0-9.]+)`).FindStringSubmatch(string(output))
+			if len(match) != 2 || "go "+match[1][2:] != QueryRecipe1().Language {
+				t.Fatalf("make toolchain does not match recipe %q: %s", QueryRecipe1().Language, output)
+			}
+		})
+	}
 }

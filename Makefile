@@ -17,6 +17,7 @@ docs-fmt: ## Format human-read Markdown with Prettier
 	npx prettier --write "**/*.md" "!**/AGENTS.md" "!**/CLAUDE.md" "!instructions/**" "!docs/plans/**" "!.claude/**" "!.codex/**" "!**/node_modules/**" "!**/.venv/**"
 
 EMBEDDER_MODEL_DIR ?= work/models/vi_v2-bundle
+override QUERYEMBED_GO_VERSION := $(shell awk '$$1 == "go" { print $$2; exit }' go.mod)
 
 queryembed-native: ## Install pinned native libraries for the host
 	@platform="$$(uname -s | tr '[:upper:]' '[:lower:]')-$$(uname -m)"; \
@@ -31,7 +32,7 @@ queryembed-test-ort: queryembed-native ## Run native query embedder tests with t
 	  *) echo "unsupported native platform: $$platform" >&2; exit 1 ;; esac; \
 	CGO_LDFLAGS="-L$(CURDIR)/work/native/$$platform $${CGO_LDFLAGS:-}" \
 	QUERYEMBED_ORT_LIB="$(CURDIR)/work/native/$$platform/$$library" \
-	go test -race -tags ort ./apps/queryembed/...
+	GOTOOLCHAIN=go$(QUERYEMBED_GO_VERSION) go test -race -tags ort ./apps/queryembed/...
 
 queryembed-run: ## Start the native query service on 127.0.0.1:8091
 	@platform="$$(uname -s | tr '[:upper:]' '[:lower:]')-$$(uname -m)"; \
@@ -39,7 +40,7 @@ queryembed-run: ## Start the native query service on 127.0.0.1:8091
 	  linux-arm64|linux-aarch64) platform=linux-arm64; library=libonnxruntime.so ;; \
 	  *) echo "unsupported native platform: $$platform" >&2; exit 1 ;; esac; \
 	CGO_LDFLAGS="-L$(CURDIR)/work/native/$$platform $${CGO_LDFLAGS:-}" \
-	go run -tags ort ./apps/queryembed/cmd/queryembed --model-dir "$(EMBEDDER_MODEL_DIR)" \
+	GOTOOLCHAIN=go$(QUERYEMBED_GO_VERSION) go run -tags ort ./apps/queryembed/cmd/queryembed --model-dir "$(EMBEDDER_MODEL_DIR)" \
 	  --ort-lib "$(CURDIR)/work/native/$$platform/$$library"
 
 docembed-test: ## Run document embedder tests

@@ -148,16 +148,24 @@ func (c *Client) Embed(ctx context.Context, hash string, texts []string) ([]Vect
 type Query struct {
 	Client     *Client
 	RecipeHash string
+	// ExpectedRecipe enables field-level diagnostics and must match RecipeHash when set.
+	ExpectedRecipe *Recipe
 }
 
 // Recipe verifies and returns the query service recipe.
 func (q Query) Recipe(ctx context.Context) (Recipe, error) {
+	if q.ExpectedRecipe != nil && q.ExpectedRecipe.Hash() != q.RecipeHash {
+		return Recipe{}, fmt.Errorf("query recipe mismatch: expected recipe hash %q, configured hash %q", q.ExpectedRecipe.Hash(), q.RecipeHash)
+	}
 	r, err := q.Client.Recipe(ctx)
 	if err != nil {
 		return Recipe{}, err
 	}
 	if r.RecipeHash != q.RecipeHash {
-		return Recipe{}, fmt.Errorf("query recipe mismatch")
+		if q.ExpectedRecipe != nil {
+			return Recipe{}, fmt.Errorf("query recipe mismatch: %s", recipeDifferences(*q.ExpectedRecipe, r.Recipe))
+		}
+		return Recipe{}, fmt.Errorf("query recipe mismatch: expected hash %q, running hash %q", q.RecipeHash, r.RecipeHash)
 	}
 	return r.Recipe, nil
 }

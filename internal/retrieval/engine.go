@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math"
 	"regexp"
 	"time"
@@ -56,7 +57,7 @@ func openEngine(ctx context.Context, db *pgxpool.Pool, embedder Embedder, r Rele
 	}
 	running, err := embedder.Recipe(ctx)
 	if err != nil {
-		return nil, errors.New("read embedder recipe failed")
+		return nil, fmt.Errorf("read embedder recipe failed: %w", err)
 	}
 	typmod, err := readEmbeddingDimensions(ctx, db)
 	if err != nil {
