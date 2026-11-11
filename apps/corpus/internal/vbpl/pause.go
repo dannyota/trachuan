@@ -3,13 +3,15 @@ package vbpl
 import (
 	"context"
 	"time"
+
+	"danny.vn/trachuan/apps/corpus/internal/sourcegate"
 )
 
 type pauseContextKey struct{}
 type pauseState struct {
-	done   chan struct{}
-	err    error
-	reason string
+	done    chan struct{}
+	reason  string
+	running bool
 }
 
 func withPauseParent(ctx context.Context) context.Context {
@@ -29,49 +31,60 @@ func pauseParent(ctx context.Context) context.Context {
 func (c *Client) awaitPause(ctx context.Context, id int64) error {
 	c.pauseMu.Lock()
 	state := c.pauses[id]
+	if state != nil && !state.running && pauseParent(ctx).Err() == nil {
+		state.running = true
+		go c.pauseOwner(pauseParent(ctx), id, state)
+	}
 	c.pauseMu.Unlock()
 	if state == nil {
 		return nil
 	}
 	select {
 	case <-state.done:
-		if state.err != nil {
-			return c.persistPause(pauseParent(ctx), id, state.reason)
-		}
-		return nil
+		return sourcegate.ErrSourcePaused
 	case <-ctx.Done():
 		return ctx.Err()
 	}
 }
 
-func (c *Client) persistPause(ctx context.Context, id int64, reason string) error {
+func (c *Client) startPause(ctx context.Context, id int64, reason string) {
 	c.pauseMu.Lock()
+	defer c.pauseMu.Unlock()
 	if c.pauses == nil {
 		c.pauses = make(map[int64]*pauseState)
 	}
-	if state := c.pauses[id]; state != nil {
-		select {
-		case <-state.done:
-			if state.err == nil {
-				c.pauseMu.Unlock()
-				return nil
-			}
-		default:
+	state := c.pauses[id]
+	if state == nil {
+		state = &pauseState{done: make(chan struct{}), reason: reason}
+		c.pauses[id] = state
+	}
+	if !state.running {
+		state.running = true
+		go c.pauseOwner(ctx, id, state)
+	}
+}
+
+func (c *Client) pauseOwner(ctx context.Context, id int64, state *pauseState) {
+	delay := 2 * time.Second
+	if len(c.backoffs) > 0 && c.backoffs[0] > 0 {
+		delay = c.backoffs[0]
+	}
+	for ctx.Err() == nil {
+		pauseCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+		err := c.gate.Pause(pauseCtx, id, "vbpl", state.reason, "")
+		cancel()
+		if err == nil {
+			c.pauseMu.Lock()
+			close(state.done)
+			delete(c.pauses, id)
 			c.pauseMu.Unlock()
-			return c.awaitPause(ctx, id)
+			return
+		}
+		if wait(ctx, delay) != nil {
+			break
 		}
 	}
-	state := &pauseState{done: make(chan struct{}), reason: reason}
-	c.pauses[id] = state
+	c.pauseMu.Lock()
+	state.running = false
 	c.pauseMu.Unlock()
-	pauseCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
-	defer cancel()
-	state.err = c.gate.Pause(pauseCtx, id, "vbpl", reason, "")
-	close(state.done)
-	if state.err == nil {
-		c.pauseMu.Lock()
-		delete(c.pauses, id)
-		c.pauseMu.Unlock()
-	}
-	return state.err
 }

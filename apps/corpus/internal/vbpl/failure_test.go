@@ -36,8 +36,21 @@ func TestClient_ForbiddenPausesSource(t *testing.T) {
 	c := NewWithBase(s.URL, "test", WithLimits(float64(rate.Inf), 8), WithBackoffs(time.Millisecond), WithGate(gate))
 	ctx := sourcegate.WithRunID(context.Background(), 7)
 	_, _, err := c.Detail(ctx, "1")
+	waitForPaused(t, ctx, gate, 7)
 	if !errors.Is(err, sourcegate.ErrSourcePaused) || attempts.Load() != 1 || !errors.Is(gate.Admit(ctx, 7, "vbpl"), sourcegate.ErrSourcePaused) {
 		t.Fatalf("err = %v, attempts = %d", err, attempts.Load())
+	}
+}
+
+func waitForPaused(t *testing.T, ctx context.Context, gate sourcegate.Gate, id int64) {
+	t.Helper()
+	deadline := time.After(90 * time.Millisecond)
+	for !errors.Is(gate.Admit(ctx, id, "vbpl"), sourcegate.ErrSourcePaused) {
+		select {
+		case <-deadline:
+			t.Fatal("source pause was not persisted")
+		case <-time.After(time.Millisecond):
+		}
 	}
 }
 

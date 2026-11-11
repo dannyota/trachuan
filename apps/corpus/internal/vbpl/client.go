@@ -175,9 +175,7 @@ func (c *Client) request(ctx context.Context, method, target string, body []byte
 	if resp.StatusCode == http.StatusForbidden && c.gate != nil {
 		id, _ := sourcegate.RunID(ctx)
 		reason := fmt.Sprintf("%s status 403", endpoint(target))
-		if err := c.persistPause(parent, id, reason); err != nil {
-			return resp.StatusCode, fmt.Errorf("pause source: %w", err)
-		}
+		c.startPause(parent, id, reason)
 		return resp.StatusCode, fmt.Errorf("%s: %w", reason, sourcegate.ErrSourcePaused)
 	}
 	if resp.StatusCode != http.StatusOK {
