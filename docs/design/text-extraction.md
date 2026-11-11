@@ -89,16 +89,18 @@ article, structure heading or scope close, so it is the whole article. A
 structure provision (`phan`, `chuong`, `muc`) holds only its label and title
 lines. Every paragraph of a scope therefore sits in exactly one provision.
 
-Quoted text is tracked by depth. Double quotation marks are counted through
-every paragraph in order: an opening mark (`“`, `«`) adds one, a closing mark
-(`”`, `»`) removes one, and a straight mark `"` toggles between zero and one
-when the depth is at most one; single marks are ignored. A paragraph that starts
-while the depth is above zero is inside quoted text. No heading and no scope
-boundary is recognized inside quoted text, so an amended article quoted over
-several paragraphs, with nested quotations, stays in the article that quotes it.
-A depth that goes below zero, or is above zero at the end of the document, fails
-the check of the scope where it happened or started: the marks are unbalanced
-and the reading cannot be trusted.
+Quoted text is tracked by two independent states, counted through every
+paragraph in order: a depth for directional double marks (an opening `“` or `«`
+adds one, a closing `”` or `»` removes one) and an open flag for the straight
+mark `"`, which each occurrence flips. Single marks are ignored. A paragraph
+that starts while the depth is above zero or the flag is set is inside quoted
+text. No heading and no scope boundary is recognized inside quoted text, so an
+amended article quoted over several paragraphs, with nested quotations, stays in
+the article that quotes it. A depth that goes below zero, or a depth above zero
+or a set flag at the end of the document, fails the check of the scope where it
+happened or started: the marks are unbalanced and the reading cannot be trusted.
+A paragraph records at most one such failure, and scope checks read the failures
+with one pass.
 
 Grammar, applied to paragraph starts outside quoted text:
 
@@ -112,13 +114,16 @@ Grammar, applied to paragraph starts outside quoted text:
   letter or the end of the line: an article. A line such as
   `Điều 6 của Luật ...` is running text wrapped by the source or the OCR, never
   a heading.
-- Every other paragraph that starts with `Điều`, spaces and a number is either
-  running text or a failed heading candidate. It is running text only when the
-  first character after the number (and an optional letter), spaces skipped, is
-  a lowercase letter, `,`, `;` or `)`, as in `Điều 6 của Luật ...`. Anything
-  else (`Điều 2: ...`, `Điều 2 : Phạm vi`, `Điều 2 Phạm vi`, `Điều 2.phạm vi`)
-  is a failed candidate and fails the check of its scope: it may be a heading
-  the grammar missed.
+- The number token is the digits, plus one lowercase letter only when that
+  letter is not followed by another letter (`3a.`, `3a `; in `2Phạm` and `2phạm`
+  the token is `2`).
+- Every other paragraph that starts with `Điều`, spaces and a number token is
+  either running text or a failed heading candidate. It is running text only
+  when the token is followed by at least one space and then a lowercase letter,
+  or directly or after spaces by `,`, `;` or `)`, as in `Điều 6 của Luật ...`.
+  Anything else (`Điều 2: ...`, `Điều 2 : Phạm vi`, `Điều 2 Phạm vi`,
+  `Điều 2.phạm vi`, `Điều 2Phạm vi`, `Điều 2phạm vi`) is a failed candidate and
+  fails the check of its scope: it may be a heading the grammar missed.
 
 Parsed and OCR text asserts articles only. Clauses and points stay inside their
 article's text and get no provision, anchor or citation of their own in this
