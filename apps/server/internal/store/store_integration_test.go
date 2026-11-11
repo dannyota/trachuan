@@ -41,7 +41,7 @@ func TestStore_CredentialJoin(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := conn.Exec(ctx, `UPDATE account SET blocked_at = now(), auth_epoch = 2 WHERE id = $1`, account.ID); err != nil {
+	if _, err = conn.Exec(ctx, `UPDATE account SET blocked_at = now(), auth_epoch = 2 WHERE id = $1`, account.ID); err != nil {
 		t.Fatal(err)
 	}
 	credential, err := q.GetCredential(ctx, hash)
@@ -59,6 +59,7 @@ func TestStore_BlockRevokesTokensAndBumpsEpoch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	webSession(t, ctx, conn, account.ID, strings.Repeat("c", 64))
 	for _, char := range []string{"a", "b"} {
 		_, err := q.CreatePersonalToken(ctx, store.CreatePersonalTokenParams{TokenHash: strings.Repeat(char, 64), AccountID: account.ID, Name: char, ExpiresAt: time.Now().Add(time.Hour), AuthEpoch: account.AuthEpoch})
 		if err != nil {
@@ -75,6 +76,10 @@ func TestStore_BlockRevokesTokensAndBumpsEpoch(t *testing.T) {
 	}
 	if epoch != 1 || blocked == nil || revoked != 2 {
 		t.Fatalf("epoch=%d blocked=%v revoked=%d", epoch, blocked, revoked)
+	}
+	var sessionRevoked bool
+	if err := conn.QueryRow(ctx, `SELECT revoked_at IS NOT NULL FROM web_session WHERE account_id = $1`, account.ID).Scan(&sessionRevoked); err != nil || !sessionRevoked {
+		t.Fatalf("session revoked=%v err=%v", sessionRevoked, err)
 	}
 }
 

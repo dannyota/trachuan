@@ -12,7 +12,7 @@ import (
 
 const createPersonalToken = `-- name: CreatePersonalToken :one
 INSERT INTO personal_token (token_hash, account_id, name, expires_at, auth_epoch)
-VALUES ($1, $2, $3, $4, $5) RETURNING token_hash, account_id, name, created_at, expires_at, last_used_at, revoked_at, auth_epoch
+VALUES ($1, $2, $3, $4, $5) RETURNING token_hash, account_id, name, created_at, expires_at, last_used_at, revoked_at, auth_epoch, id
 `
 
 type CreatePersonalTokenParams struct {
@@ -41,6 +41,7 @@ func (q *Queries) CreatePersonalToken(ctx context.Context, arg CreatePersonalTok
 		&i.LastUsedAt,
 		&i.RevokedAt,
 		&i.AuthEpoch,
+		&i.ID,
 	)
 	return i, err
 }
@@ -73,6 +74,58 @@ func (q *Queries) GetCredential(ctx context.Context, tokenHash string) (GetCrede
 		&i.RevokedAt,
 	)
 	return i, err
+}
+
+const listTokens = `-- name: ListTokens :many
+SELECT token_hash, account_id, name, created_at, expires_at, last_used_at, revoked_at, auth_epoch, id FROM personal_token WHERE account_id = $1 ORDER BY id
+`
+
+func (q *Queries) ListTokens(ctx context.Context, accountID int64) ([]PersonalToken, error) {
+	rows, err := q.db.Query(ctx, listTokens, accountID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []PersonalToken
+	for rows.Next() {
+		var i PersonalToken
+		if err := rows.Scan(
+			&i.TokenHash,
+			&i.AccountID,
+			&i.Name,
+			&i.CreatedAt,
+			&i.ExpiresAt,
+			&i.LastUsedAt,
+			&i.RevokedAt,
+			&i.AuthEpoch,
+			&i.ID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const revokeOwnToken = `-- name: RevokeOwnToken :execrows
+UPDATE personal_token SET revoked_at = now()
+WHERE account_id = $1 AND id = $2 AND revoked_at IS NULL
+`
+
+type RevokeOwnTokenParams struct {
+	AccountID int64
+	ID        int64
+}
+
+func (q *Queries) RevokeOwnToken(ctx context.Context, arg RevokeOwnTokenParams) (int64, error) {
+	result, err := q.db.Exec(ctx, revokeOwnToken, arg.AccountID, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const revokePersonalToken = `-- name: RevokePersonalToken :exec

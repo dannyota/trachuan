@@ -15,3 +15,10 @@ WHERE token_hash = $1 AND revoked_at IS NULL;
 -- name: TouchPersonalToken :exec
 UPDATE personal_token SET last_used_at = now()
 WHERE token_hash = $1 AND (last_used_at IS NULL OR last_used_at < now() - interval '1 minute');
+
+-- name: ListTokens :many
+SELECT * FROM personal_token WHERE account_id = $1 ORDER BY id;
+
+-- name: RevokeOwnToken :execrows
+UPDATE personal_token SET revoked_at = now()
+WHERE account_id = $1 AND id = $2 AND revoked_at IS NULL;
