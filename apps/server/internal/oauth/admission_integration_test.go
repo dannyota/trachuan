@@ -264,18 +264,21 @@ func TestAdmission_CIMDRefreshPersistsMetadata(t *testing.T) {
 	var version atomic.Int32
 	now := time.Date(2026, 11, 11, 0, 0, 0, 0, time.UTC)
 	f := tlsResolver(t, func(w http.ResponseWriter, _ *http.Request) {
-		name, redirect := "Old", "https://old.example/cb"
+		name, redirect, grant := "Old", "https://old.example/cb", "authorization_code"
 		if version.Load() != 0 {
-			name, redirect = "New", "https://new.example/cb"
+			name, redirect, grant = "New", "https://new.example/cb", "refresh_token"
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = fmt.Fprintf(w, `{"client_id":"https://example.com/client","client_name":%q,"redirect_uris":[%q]}`, name, redirect)
+		_, _ = fmt.Fprintf(w, `{"client_id":"https://example.com/client","client_name":%q,"redirect_uris":[%q],"grant_types":[%q]}`, name, redirect, grant)
 	})
 	f.clock = func() time.Time { return now }
 	clients := NewClients(pool, nil, f)
 	old, err := clients.Resolve(ctx, "https://example.com/client")
 	if err != nil {
 		t.Fatal(err)
+	}
+	if !old.Allows("authorization_code") || old.Allows("refresh_token") {
+		t.Fatal("initial grants differ")
 	}
 	row, err := store.New(pool).GetClient(ctx, old.ID)
 	if err != nil || row.MetadataSha256 == nil {
@@ -288,7 +291,7 @@ func TestAdmission_CIMDRefreshPersistsMetadata(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if updated.Name != "New" || !slices.Equal(updated.RedirectURIs, []string{"https://new.example/cb"}) {
+	if updated.Name != "New" || !slices.Equal(updated.RedirectURIs, []string{"https://new.example/cb"}) || updated.Allows("authorization_code") || !updated.Allows("refresh_token") {
 		t.Fatalf("resolved metadata: %v", updated)
 	}
 	tx := admissionTx(t, pool)

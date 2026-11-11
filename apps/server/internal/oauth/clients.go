@@ -25,6 +25,30 @@ type Client struct {
 	Name         string
 	RedirectURIs []string
 	CreatedAt    time.Time
+	grants       uint8
+}
+
+const (
+	grantAuthorizationCode uint8 = 1 << iota
+	grantRefreshToken
+)
+
+// Allows reports whether validated client metadata permits a grant. CIMD
+// clients must come from Resolve or Admit, since InUse reads no grant metadata.
+func (c Client) Allows(grant string) bool {
+	var flag uint8
+	switch grant {
+	case "authorization_code":
+		flag = grantAuthorizationCode
+	case "refresh_token":
+		flag = grantRefreshToken
+	default:
+		return false
+	}
+	if c.Kind == "dcr" || c.Kind == "preregistered" {
+		return true
+	}
+	return c.Kind == "cimd" && c.grants&flag != 0
 }
 
 // ClientDB is the auth database used to resolve and admit clients.

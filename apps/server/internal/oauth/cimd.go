@@ -158,23 +158,45 @@ func clientMetadata(fields map[string]json.RawMessage, cimd bool) (Client, strin
 			return bad("invalid_redirect_uri")
 		}
 	}
+	var grants uint8
+	if cimd {
+		grants = grantAuthorizationCode
+		if _, exists := fields["grant_types"]; exists {
+			values, valid := metadataList(fields, "grant_types")
+			if !valid {
+				return bad("invalid_client_metadata")
+			}
+			grants = 0
+			if slices.Contains(values, "authorization_code") {
+				grants |= grantAuthorizationCode
+			}
+			if slices.Contains(values, "refresh_token") {
+				grants |= grantRefreshToken
+			}
+			if grants == 0 {
+				return bad("invalid_client_metadata")
+			}
+		}
+	}
 	for _, key := range []string{"grant_types", "response_types"} {
 		if _, exists := fields[key]; !exists {
 			continue
 		}
+		if cimd && key == "grant_types" {
+			continue
+		}
 		values, valid := metadataList(fields, key)
-		if !valid || len(values) == 0 {
+		if !valid {
 			return bad("invalid_client_metadata")
 		}
 		if cimd {
-			required := "authorization_code"
-			if key == "response_types" {
-				required = "code"
-			}
-			if !slices.Contains(values, required) {
+			if grants&grantAuthorizationCode != 0 && !slices.Contains(values, "code") {
 				return bad("invalid_client_metadata")
 			}
 			continue
+		}
+		if len(values) == 0 {
+			return bad("invalid_client_metadata")
 		}
 		seen := map[string]bool{}
 		for _, v := range values {
@@ -188,7 +210,7 @@ func clientMetadata(fields map[string]json.RawMessage, cimd bool) (Client, strin
 	if _, ok := fields["scope"]; ok && (!metadataString(fields, "scope", &scope) || scope != "mcp:read") {
 		return bad("invalid_client_metadata")
 	}
-	return Client{Name: name, RedirectURIs: redirects}, ""
+	return Client{Name: name, RedirectURIs: redirects, grants: grants}, ""
 }
 
 func validClientRedirect(raw string) bool {

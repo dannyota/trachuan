@@ -3,6 +3,8 @@ package oauth
 import (
 	"context"
 	"errors"
+	"fmt"
+	"net/http"
 	"strings"
 	"testing"
 	"time"
@@ -136,6 +138,9 @@ type metadataUpdateTx struct {
 	updates int
 }
 
+func (tx *metadataUpdateTx) Commit(context.Context) error   { return nil }
+func (tx *metadataUpdateTx) Rollback(context.Context) error { return nil }
+
 func (tx *metadataUpdateTx) QueryRow(context.Context, string, ...any) pgx.Row {
 	return clientRow{row: tx.row}
 }
@@ -176,5 +181,85 @@ func TestAdmission_ExistingMetadataUpdates(t *testing.T) {
 				t.Fatalf("unchanged metadata updated %d times", tx.updates)
 			}
 		})
+	}
+}
+
+func TestClients_RegisteredGrants(t *testing.T) {
+	for _, kind := range []string{"dcr", "preregistered"} {
+		t.Run(kind, func(t *testing.T) {
+			client := clientFromRow(store.OauthClient{Kind: kind})
+			allows, ok := any(client).(interface{ Allows(string) bool })
+			if !ok {
+				t.Fatal("Client does not expose grant checks")
+			}
+			if !allows.Allows("authorization_code") || !allows.Allows("refresh_token") || allows.Allows("unsupported") {
+				t.Fatal("effective grants differ")
+			}
+		})
+	}
+}
+
+func TestAdmission_GrantChangeUpdatesDigest(t *testing.T) {
+	id := "https://example.com/client"
+	tx := &metadataUpdateTx{row: store.OauthClient{ClientID: id, Kind: "cimd", Name: "Fixture", RedirectUris: []string{"http://localhost/cb"}}}
+	first, err := parseCIMD([]byte(cimdFixture(id)), id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	admitted, err := Admit(t.Context(), tx, first)
+	if err != nil {
+		t.Fatal(err)
+	}
+	allows, ok := any(admitted).(interface{ Allows(string) bool })
+	if !ok || !allows.Allows("authorization_code") || allows.Allows("refresh_token") {
+		t.Fatal("admission lost initial grants")
+	}
+	if tx.row.MetadataSha256 == nil {
+		t.Fatal("missing digest")
+	}
+	digest := *tx.row.MetadataSha256
+	raw := strings.TrimSuffix(cimdFixture(id), "}") + `,"grant_types":["refresh_token"]}`
+	second, err := parseCIMD([]byte(raw), id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	admitted, err = Admit(t.Context(), tx, second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	allows, ok = any(admitted).(interface{ Allows(string) bool })
+	if !ok || allows.Allows("authorization_code") || !allows.Allows("refresh_token") {
+		t.Fatal("admission lost refreshed grants")
+	}
+	if tx.row.MetadataSha256 == nil || *tx.row.MetadataSha256 == digest {
+		t.Fatal("grant change did not update metadata digest")
+	}
+}
+
+func TestClients_ResolvePreservesCIMDGrants(t *testing.T) {
+	id := "https://example.com/client"
+	calls := 0
+	f := tlsResolver(t, func(w http.ResponseWriter, _ *http.Request) {
+		calls++
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = fmt.Fprint(w, strings.TrimSuffix(cimdFixture(id), "}")+`,"grant_types":["refresh_token","unknown"]}`)
+	})
+	tx := &metadataUpdateTx{row: store.OauthClient{ClientID: id, Kind: "cimd", Name: "Fixture", RedirectUris: []string{"http://localhost/cb"}}}
+	clients := NewClients(&clientDBFake{tx: tx}, nil, f)
+	for range 2 {
+		client, err := clients.Resolve(t.Context(), id)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if client.Allows("authorization_code") || !client.Allows("refresh_token") || client.Allows("unknown") {
+			t.Fatal("resolved grants differ")
+		}
+	}
+	if calls != 1 {
+		t.Fatalf("metadata fetches = %d", calls)
+	}
+	stored := clientFromRow(tx.row)
+	if stored.Allows("authorization_code") || stored.Allows("refresh_token") {
+		t.Fatal("stored CIMD row must not invent grants")
 	}
 }

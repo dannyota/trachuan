@@ -34,7 +34,8 @@ func Admit(ctx context.Context, tx pgx.Tx, client Client) (Client, error) {
 		raw, marshalErr := json.Marshal(struct {
 			Name      string
 			Redirects []string
-		}{client.Name, client.RedirectURIs})
+			Grants    uint8
+		}{client.Name, client.RedirectURIs, client.grants})
 		if marshalErr != nil {
 			return unavailable(marshalErr)
 		}
@@ -50,7 +51,9 @@ func Admit(ctx context.Context, tx pgx.Tx, client Client) (Client, error) {
 			}
 			existing.Kind, existing.Name, existing.RedirectUris, existing.MetadataSha256 = client.Kind, client.Name, client.RedirectURIs, digest
 		}
-		return clientFromRow(existing), nil
+		admitted := clientFromRow(existing)
+		admitted.grants = client.grants
+		return admitted, nil
 	}
 	if !errors.Is(err, pgx.ErrNoRows) {
 		return unavailable(err)
@@ -68,7 +71,9 @@ func Admit(ctx context.Context, tx pgx.Tx, client Client) (Client, error) {
 	if err != nil {
 		return unavailable(err)
 	}
-	return clientFromRow(row), nil
+	admitted := clientFromRow(row)
+	admitted.grants = client.grants
+	return admitted, nil
 }
 
 // InUse takes the shared clients lock, reads the client and touches its hourly

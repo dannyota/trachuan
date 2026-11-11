@@ -373,21 +373,36 @@ func (c *waitSignalContext) Done() <-chan struct{} {
 func TestCIMD_SupportedGrantAndResponseIntersection(t *testing.T) {
 	id := "https://example.com/client"
 	for _, tc := range []struct {
-		fields string
-		valid  bool
+		fields               string
+		valid, code, refresh bool
 	}{
-		{`,"grant_types":["authorization_code","urn:other","refresh_token"],"response_types":["code","token"]`, true},
-		{`,"grant_types":["refresh_token","urn:other"]`, false},
-		{`,"response_types":["token"]`, false},
-		{`,"grant_types":[]`, false},
-		{`,"response_types":null`, false},
-		{`,"grant_types":["authorization_code",null]`, false},
+		{``, true, true, false},
+		{`,"grant_types":["authorization_code","urn:other","refresh_token"],"response_types":["code","token"]`, true, true, true},
+		{`,"grant_types":["refresh_token","urn:other"]`, true, false, true},
+		{`,"grant_types":["refresh_token"],"response_types":["token"]`, true, false, true},
+		{`,"grant_types":["refresh_token"],"response_types":[]`, true, false, true},
+		{`,"grant_types":["authorization_code"],"response_types":["token"]`, false, false, false},
+		{`,"response_types":["token"]`, false, false, false},
+		{`,"grant_types":["urn:other"]`, false, false, false},
+		{`,"grant_types":[]`, false, false, false},
+		{`,"response_types":null`, false, false, false},
+		{`,"grant_types":["authorization_code",null]`, false, false, false},
 	} {
 		t.Run(tc.fields, func(t *testing.T) {
 			raw := strings.TrimSuffix(cimdFixture(id), "}") + tc.fields + "}"
-			_, err := parseCIMD([]byte(raw), id)
+			client, err := parseCIMD([]byte(raw), id)
 			if (err == nil) != tc.valid {
 				t.Fatalf("error = %v", err)
+			}
+			if err != nil {
+				return
+			}
+			allows, ok := any(client).(interface{ Allows(string) bool })
+			if !ok {
+				t.Fatal("Client does not expose grant checks")
+			}
+			if allows.Allows("authorization_code") != tc.code || allows.Allows("refresh_token") != tc.refresh || allows.Allows("urn:other") {
+				t.Fatal("effective grants differ")
 			}
 		})
 	}
