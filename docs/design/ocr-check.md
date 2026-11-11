@@ -159,9 +159,14 @@ bounded before it allocates anything:
   container or namespace sandbox elsewhere). When no sandbox can be enforced the
   command refuses to run: that is a configuration error, never a reason to
   render unconfined. Its environment holds no credentials.
-- Page sizes are read first (`pdfinfo`, in the same sandbox). A page whose
-  raster at 150 dpi would exceed 3,000 pixels on a side is rendered scaled down
-  to fit, never at full size.
+- Page sizes are read first (`pdfinfo`, in the same sandbox). The checker
+  renders the CropBox (`-cropbox`) and lowers the resolution from the larger of
+  the MediaBox and CropBox extents, with an explicit raster cap of 3,000 pixels
+  per side, so no page box can make the tool allocate a larger image.
+- The sandbox's read permissions are the tool binaries, the dynamic libraries
+  they link (resolved once, transitively), the font configuration and data
+  poppler reads, and metadata of the directories those libraries sit in; nothing
+  else under the package manager's tree or the user's home is readable.
 - Pages are rendered one at a time; each output is checked (dimensions, 10 MB),
   re-encoded and removed from scratch before the next page is rendered; scratch
   space stays under 256 MB and the request under 100 MB.

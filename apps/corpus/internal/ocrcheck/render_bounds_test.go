@@ -21,7 +21,7 @@ func TestRenderer_BoundsAndDeletesEachPage(t *testing.T) {
 				t.Fatal("page sizes read after raster allocation")
 			}
 			infoCalls++
-			_, _ = io.WriteString(out, "Pages: 2\nPage    1 size: 72000 x 720 pts\nPage    2 size: 72 x 72 pts\n")
+			_, _ = io.WriteString(out, "Pages: 2\nPage    1 size: 72000 x 720 pts\nPage    1 MediaBox: 0 0 72000 720\nPage    1 CropBox: 0 0 72000 720\nPage    2 size: 72 x 72 pts\nPage    2 MediaBox: 0 0 72 72\nPage    2 CropBox: 0 0 72 72\n")
 			return RenderStats{}, nil
 		}
 		if infoCalls != 1 {
@@ -31,11 +31,12 @@ func TestRenderer_BoundsAndDeletesEachPage(t *testing.T) {
 			t.Fatal("previous page not removed before next allocation")
 		}
 		rasterCalls++
-		want := []string{"-f", fmt.Sprint(rasterCalls), "-l", fmt.Sprint(rasterCalls), "-r", "150", "-gray", "-png", "-singlefile"}
+		dpi, cap := "150", "150"
 		if rasterCalls == 1 {
-			want = append(want, "-scale-to", "3000")
+			dpi = "3"
+			cap = "3000"
 		}
-		want = append(want, "input.pdf", "page")
+		want := []string{"-f", fmt.Sprint(rasterCalls), "-l", fmt.Sprint(rasterCalls), "-r", dpi, "-gray", "-png", "-singlefile", "-cropbox", "-scale-to", cap, "input.pdf", "page"}
 		if !reflect.DeepEqual(args, want) {
 			t.Fatalf("unbounded raster args=%v want=%v", args, want)
 		}
@@ -70,7 +71,7 @@ func TestRenderer_PageLimitBeforeRaster(t *testing.T) {
 func TestRenderer_ScratchLimit(t *testing.T) {
 	renderer := PopplerRenderer{tools: &popplerTools{info: "pdfinfo", raster: "pdftoppm"}, command: func(_ context.Context, dir, tool string, _ []string, out io.Writer) (RenderStats, error) {
 		if tool == "pdfinfo" {
-			_, _ = io.WriteString(out, "Pages: 1\nPage    1 size: 72 x 72 pts\n")
+			_, _ = io.WriteString(out, "Pages: 1\nPage    1 size: 72 x 72 pts\nPage    1 MediaBox: 0 0 72 72\nPage    1 CropBox: 0 0 72 72\n")
 			return RenderStats{}, nil
 		}
 		f, err := os.Create(filepath.Join(dir, "excess"))
@@ -96,7 +97,7 @@ func TestRenderer_RequestBudgetStopsBeforeNextRaster(t *testing.T) {
 	raster := 0
 	renderer := PopplerRenderer{tools: &popplerTools{info: "pdfinfo", raster: "pdftoppm"}, command: func(_ context.Context, dir, tool string, _ []string, out io.Writer) (RenderStats, error) {
 		if tool == "pdfinfo" {
-			_, _ = io.WriteString(out, "Pages: 2\nPage    1 size: 72 x 72 pts\nPage    2 size: 72 x 72 pts\n")
+			_, _ = io.WriteString(out, "Pages: 2\nPage    1 size: 72 x 72 pts\nPage    1 MediaBox: 0 0 72 72\nPage    1 CropBox: 0 0 72 72\nPage    2 size: 72 x 72 pts\nPage    2 MediaBox: 0 0 72 72\nPage    2 CropBox: 0 0 72 72\n")
 			return RenderStats{}, nil
 		}
 		raster++

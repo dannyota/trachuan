@@ -88,3 +88,12 @@ func TestRenderer_SandboxProfileRestrictions(t *testing.T) {
 		}
 	}
 }
+
+func TestRenderer_ProfileDoesNotReadUnrelatedPackages(t *testing.T) {
+	profile := sandboxProfile("/opt/homebrew/bin/pdfinfo", "/private/tmp/ocr-test")
+	for _, root := range []string{"/opt/homebrew/Cellar", "/opt/homebrew/opt", "/usr/local/Cellar", "/usr/local/opt", "/System/Library", "/usr/lib", "/usr/share"} {
+		if strings.Contains(profile, `(subpath "`+root+`")`) {
+			t.Fatalf("unrelated files readable through recursive root %s", root)
+		}
+	}
+}

@@ -129,12 +129,13 @@ func TestRenderer_StderrIsCountedOnly(t *testing.T) {
 		t.Fatalf("stats=%+v error=%v", result.Stats, err)
 	}
 }
-func smallPDF() []byte { return pdfWithPageBox("72 72") }
-func pdfWithPageBox(box string) []byte {
+func smallPDF() []byte                 { return pdfWithPageBox("72 72") }
+func pdfWithPageBox(box string) []byte { return pdfWithBoxes("0 0 "+box, "0 0 "+box) }
+func pdfWithBoxes(media, crop string) []byte {
 	var pdf bytes.Buffer
 	pdf.WriteString("%PDF-1.7\n")
 	offsets := []int{0}
-	for i, obj := range []string{"<< /Type /Catalog /Pages 2 0 R >>", "<< /Type /Pages /Kids [3 0 R] /Count 1 >>", "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 " + box + "] /Resources << >> >>"} {
+	for i, obj := range []string{"<< /Type /Catalog /Pages 2 0 R >>", "<< /Type /Pages /Kids [3 0 R] /Count 1 >>", "<< /Type /Page /Parent 2 0 R /MediaBox [" + media + "] /CropBox [" + crop + "] /Resources << >> >>"} {
 		offsets = append(offsets, pdf.Len())
 		fmt.Fprintf(&pdf, "%d 0 obj\n%s\nendobj\n", i+1, obj)
 	}
@@ -192,7 +193,7 @@ func TestRenderer_PageOrderAndCleanup(t *testing.T) {
 		if tool == "pdfinfo" {
 			_, _ = io.WriteString(out, "Pages: 12\n")
 			for page := 1; page <= 12; page++ {
-				_, _ = fmt.Fprintf(out, "Page %d size: 72 x 72 pts\n", page)
+				_, _ = fmt.Fprintf(out, "Page %d size: 72 x 72 pts\nPage %d MediaBox: 0 0 72 72\nPage %d CropBox: 0 0 72 72\n", page, page, page)
 			}
 			return RenderStats{}, nil
 		}

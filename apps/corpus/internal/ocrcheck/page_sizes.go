@@ -8,13 +8,13 @@ import (
 	"strings"
 )
 
-type pageSize struct{ width, height float64 }
+type pageSize struct{ width, height, cropWidth, cropHeight float64 }
 
 func parsePageSizes(data []byte) ([]pageSize, error) {
-	sizeLine := regexp.MustCompile(`^Page\s+(\d+)\s+size:\s+(\S+)\s+x\s+(\S+)\s+pts(?:\s|$)`)
+	boxLine := regexp.MustCompile(`^Page\s+(\d+)\s+(MediaBox|CropBox):\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s*$`)
 	count := 0
 	found := false
-	sizes := map[int]pageSize{}
+	boxes := map[string]map[int]pageSize{"MediaBox": {}, "CropBox": {}}
 	for _, line := range strings.Split(string(data), "\n") {
 		if strings.HasPrefix(line, "Pages:") {
 			if found {
@@ -30,7 +30,7 @@ func parsePageSizes(data []byte) ([]pageSize, error) {
 				return nil, renderLimit
 			}
 		}
-		match := sizeLine.FindStringSubmatch(line)
+		match := boxLine.FindStringSubmatch(line)
 		if match == nil {
 			continue
 		}
@@ -38,43 +38,54 @@ func parsePageSizes(data []byte) ([]pageSize, error) {
 		if n < 1 || n > maxPages {
 			return nil, renderFailed
 		}
+		sizes := boxes[match[2]]
 		if _, duplicate := sizes[n]; duplicate {
 			return nil, renderFailed
 		}
-		w, err := strconv.ParseFloat(match[2], 64)
-		if err != nil {
+		var coordinates [4]float64
+		for i := range coordinates {
+			v, err := strconv.ParseFloat(match[i+3], 64)
+			if err != nil || math.IsNaN(v) || math.IsInf(v, 0) {
+				return nil, renderFailed
+			}
+			coordinates[i] = v
+		}
+		w, h := coordinates[2]-coordinates[0], coordinates[3]-coordinates[1]
+		if w <= 0 || h <= 0 || math.IsInf(w, 0) || math.IsInf(h, 0) {
 			return nil, renderFailed
 		}
-		h, err := strconv.ParseFloat(match[3], 64)
-		if err != nil {
-			return nil, renderFailed
-		}
-		if w <= 0 || h <= 0 || math.IsNaN(w) || math.IsNaN(h) || math.IsInf(w, 0) || math.IsInf(h, 0) {
-			return nil, renderFailed
-		}
-		sizes[n] = pageSize{w, h}
+		sizes[n] = pageSize{width: w, height: h}
 	}
-	if !found || len(sizes) != count {
+	if !found || len(boxes["MediaBox"]) != count || len(boxes["CropBox"]) != count {
 		return nil, renderFailed
 	}
 	pages := make([]pageSize, count)
 	for i := range pages {
-		size, ok := sizes[i+1]
-		if !ok {
+		media, mediaOK := boxes["MediaBox"][i+1]
+		crop, cropOK := boxes["CropBox"][i+1]
+		if !mediaOK || !cropOK {
 			return nil, renderFailed
 		}
-		pages[i] = size
+		// Bound both interpretations before Poppler allocates the CropBox raster.
+		pages[i] = pageSize{width: math.Max(media.width, crop.width), height: math.Max(media.height, crop.height), cropWidth: crop.width, cropHeight: crop.height}
 	}
 	return pages, nil
 }
 
 func rasterArgs(page int, size pageSize) []string {
 	n := strconv.Itoa(page)
-	args := []string{"-f", n, "-l", n, "-r", "150", "-gray", "-png", "-singlefile"}
-	if math.Ceil(size.width*150/72) > maxImageSide || math.Ceil(size.height*150/72) > maxImageSide {
-		args = append(args, "-scale-to", "3000")
+	dpi := 150.0
+	extent := math.Max(size.width, size.height)
+	if math.Ceil(extent*dpi/72) > maxImageSide {
+		dpi = float64(maxImageSide) * 72 / extent
+		for math.Ceil(extent*dpi/72) > maxImageSide {
+			dpi = math.Nextafter(dpi, 0)
+		}
 	}
-	return append(args, "input.pdf", "page")
+	// An explicit cap also bounds Poppler's allocation independently of page units.
+	cropPixels := math.Ceil(math.Max(size.cropWidth, size.cropHeight) * dpi / 72)
+	cap := int(math.Max(1, math.Min(maxImageSide, cropPixels)))
+	return []string{"-f", n, "-l", n, "-r", strconv.FormatFloat(dpi, 'g', -1, 64), "-gray", "-png", "-singlefile", "-cropbox", "-scale-to", strconv.Itoa(cap), "input.pdf", "page"}
 }
 
 type metadataBuffer struct{ bytes.Buffer }

@@ -47,7 +47,7 @@ func TestRenderer_NativeSandboxDeniesOutsideWrites(t *testing.T) {
 	outside := filepath.Join(nativeScratch(t), "outside")
 	// touch needs no shell and no files beyond the system libraries the profile allows.
 	const touch = "/usr/bin/touch"
-	profile := sandboxProfile(touch, dir)
+	profile := sandboxProfile(touch, dir, r.tools.access)
 	if _, err := runCommand(context.Background(), dir, r.tools.sandbox, []string{"-p", profile, touch, filepath.Join(dir, "inside")}, io.Discard); err != nil {
 		t.Fatal("sandbox write control failed")
 	}
@@ -74,7 +74,7 @@ func TestRenderer_NativeSandboxDeniesNetwork(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	args := []string{"-z", "-w", "1", "127.0.0.1", port}
-	profile := sandboxProfile("/usr/bin/nc", dir)
+	profile := sandboxProfile("/usr/bin/nc", dir, r.tools.access)
 	control := strings.Replace(profile, "(deny network*)", "(allow network*)", 1)
 	if _, err = runCommand(ctx, dir, r.tools.sandbox, append([]string{"-p", control, "/usr/bin/nc"}, args...), io.Discard); err != nil {
 		t.Fatal("local connection control failed")
