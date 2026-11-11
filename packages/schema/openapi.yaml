@@ -584,6 +584,192 @@ paths:
         description: Used when Origin is absent.
         schema:
           type: string
+  /api/v1/reports:
+    post:
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportResult'
+        '400':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+        '503':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportInput'
+      parameters:
+      - name: X-CSRF-Token
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: Origin
+        in: header
+        required: false
+        description: Required unless Referer supplies the same origin.
+        schema:
+          type: string
+      - name: Referer
+        in: header
+        required: false
+        description: Used when Origin is absent.
+        schema:
+          type: string
+  /api/v1/me/reports:
+    get:
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportList'
+        '400':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+        '503':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      parameters:
+      - name: next
+        in: query
+        required: false
+        schema:
+          type: string
+  /api/v1/me/reports/{id}:
+    delete:
+      responses:
+        '204':
+          description: Success
+        '401':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+        '503':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          minimum: 1
+      - name: X-CSRF-Token
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: Origin
+        in: header
+        required: false
+        description: Required unless Referer supplies the same origin.
+        schema:
+          type: string
+      - name: Referer
+        in: header
+        required: false
+        description: Used when Origin is absent.
+        schema:
+          type: string
   /api/v1/search:
     post:
       responses:
@@ -847,6 +1033,179 @@ components:
       in: cookie
       name: __Host-login
   schemas:
+    ReportInput:
+      type: object
+      additionalProperties: false
+      required: [country, kind]
+      properties:
+        country:
+          type: string
+          enum: [vn]
+        kind:
+          $ref: '#/components/schemas/ReportKind'
+        handle:
+          type: string
+          minLength: 1
+          maxLength: 512
+        release:
+          type: string
+        suggestion:
+          type: object
+          properties:
+            status_class:
+              type: string
+              enum: [in_force, partial, expired, not_yet, suspended, unknown]
+            eff_from:
+              type: string
+              format: date
+            eff_to:
+              type: string
+              format: date
+            document_number:
+              type: string
+              minLength: 1
+              maxLength: 128
+            issue_date:
+              type: string
+              format: date
+      allOf:
+      - if:
+          properties:
+            kind:
+              const: wrong_text
+        then:
+          required: [handle]
+          properties:
+            suggestion:
+              type: object
+              additionalProperties: false
+      - if:
+          properties:
+            kind:
+              const: wrong_validity
+        then:
+          required: [handle]
+          properties:
+            suggestion:
+              type: object
+              additionalProperties: false
+              properties:
+                status_class:
+                  type: string
+                  enum: [in_force, partial, expired, not_yet, suspended, unknown]
+                eff_from:
+                  type: string
+                  format: date
+                eff_to:
+                  type: string
+                  format: date
+      - if:
+          properties:
+            kind:
+              const: broken_citation
+        then:
+          required: [handle]
+          properties:
+            suggestion:
+              type: object
+              additionalProperties: false
+              properties:
+                document_number:
+                  type: string
+                  minLength: 1
+                  maxLength: 128
+      - if:
+          properties:
+            kind:
+              const: missing_document
+        then:
+          required: [suggestion]
+          properties:
+            suggestion:
+              type: object
+              additionalProperties: false
+              required: [document_number]
+              properties:
+                document_number:
+                  type: string
+                  minLength: 1
+                  maxLength: 128
+                issue_date:
+                  type: string
+                  format: date
+    ReportKind:
+      type: string
+      enum: [wrong_text, wrong_validity, broken_citation, missing_document]
+    ReportResult:
+      type: object
+      additionalProperties: false
+      required: [report_id, state, deduplicated]
+      properties:
+        report_id:
+          type: integer
+          format: int64
+        state:
+          type: string
+          enum: [open]
+        deduplicated:
+          type: boolean
+    ReportList:
+      type: object
+      additionalProperties: false
+      required: [reports]
+      properties:
+        reports:
+          type: array
+          maxItems: 100
+          items:
+            $ref: '#/components/schemas/Report'
+        next:
+          type: string
+    Report:
+      type: object
+      additionalProperties: false
+      required: [report_id, kind, document_key, anchor, document_number, target, suggestion, state, created_at, changed_at]
+      properties:
+        report_id:
+          type: integer
+          format: int64
+        kind:
+          $ref: '#/components/schemas/ReportKind'
+        document_key:
+          type: string
+        anchor:
+          type: string
+        document_number:
+          type: string
+        target:
+          type: string
+        suggestion:
+          type: object
+          additionalProperties: false
+          properties:
+            status_class:
+              type: string
+              enum: [in_force, partial, expired, not_yet, suspended, unknown]
+            eff_from:
+              type: string
+              format: date
+            eff_to:
+              type: string
+              format: date
+            document_number:
+              type: string
+            issue_date:
+              type: string
+              format: date
+        state:
+          type: string
+          enum: [open, accepted, rejected, withdrawn]
+        created_at:
+          type: string
+          format: date-time
+        changed_at:
+          type: string
+          format: date-time
     Error:
       type: object
       properties:
