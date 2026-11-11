@@ -168,15 +168,30 @@ func (e *Engine) readItem(ctx context.Context, tx pgx.Tx, c cursor, continued bo
 func readPage(seq readSequence, c cursor, budget int, first bool) (ItemResult, int, error) {
 	result := ItemResult{Doc: seq.doc, Gaps: seq.gaps}
 	used := 0
+	var firstParts []Unit
+	firstPartsChecked, firstPartsOK := false, false
 	if c.Unit == 0 && c.Part == 0 && seq.document != nil {
 		result.Document = seq.document
 		used = readSize(seq.document)
+		if used > ReadCallCap {
+			return ItemResult{Doc: seq.doc, Gaps: seq.gaps, Error: "unit_too_large"}, 0, nil
+		}
+		if len(seq.units) > 0 && used > ReadCallCap-PartSize {
+			firstParts, firstPartsOK = sequenceParts(seq, 0)
+			firstPartsChecked = true
+		}
+		if firstPartsOK && used+readSize(firstParts[0]) > ReadCallCap {
+			return ItemResult{Doc: seq.doc, Gaps: seq.gaps, Error: "unit_too_large"}, 0, nil
+		}
 		if used > budget && !first {
 			return ItemResult{Doc: seq.doc, NotRead: "call_cap", Next: encodeNext(c)}, 0, nil
 		}
 	}
 	for i := c.Unit - seq.offset; i < len(seq.units); i++ {
-		parts, ok := sequenceParts(seq, i)
+		parts, ok := firstParts, firstPartsOK
+		if i != 0 || !firstPartsChecked {
+			parts, ok = sequenceParts(seq, i)
+		}
 		if !ok {
 			result.Error = "unit_too_large"
 			return result, used, nil

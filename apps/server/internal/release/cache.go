@@ -10,6 +10,7 @@ import (
 	"danny.vn/trachuan/internal/retrieval"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/puddle/v2"
 )
 
 type cacheEntry struct {
@@ -168,6 +169,9 @@ func poolConfig(template, name string) (*pgxpool.Config, error) {
 }
 
 func databaseGone(err error) bool {
+	if errors.Is(err, retrieval.ErrReleaseGone) || errors.Is(err, puddle.ErrClosedPool) {
+		return true
+	}
 	var pgErr *pgconn.PgError
 	return errors.As(err, &pgErr) && (pgErr.Code == "3D000" || pgErr.Code == "57P01" || pgErr.Code == "57P04")
 }

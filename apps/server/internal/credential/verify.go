@@ -13,7 +13,8 @@ import (
 )
 
 const (
-	maxCacheTTL = 10 * time.Second
+	maxCacheTTL       = 10 * time.Second
+	authQueryDeadline = 2 * time.Second
 
 	// ErrUnauthorized means the credential is missing, invalid or no longer valid.
 	ErrUnauthorized failure = "unauthorized"
@@ -41,6 +42,8 @@ type Verifier struct {
 	Clock    func() time.Time
 	CacheTTL time.Duration
 	Audience string
+	// QueryTimeout can shorten the two-second auth database deadline.
+	QueryTimeout time.Duration
 
 	mu      sync.Mutex
 	entries map[string]*list.Element
@@ -66,8 +69,17 @@ func (v *Verifier) Verify(ctx context.Context, bearer string) (Principal, error)
 		}
 		return entry.principal, nil
 	}
+	timeout := v.QueryTimeout
+	if timeout <= 0 || timeout > authQueryDeadline {
+		timeout = authQueryDeadline
+	}
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
 	started := v.now()
 	row, err := v.Store.GetCredential(ctx, hash)
+	if ctx.Err() != nil {
+		return Principal{}, fmt.Errorf("verify credential: %w", ErrUnavailable)
+	}
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Principal{}, ErrUnauthorized
 	}
@@ -82,6 +94,9 @@ func (v *Verifier) Verify(ctx context.Context, bearer string) (Principal, error)
 		if err := v.Store.TouchPersonalToken(ctx, hash); err != nil {
 			return Principal{}, fmt.Errorf("touch credential: %w", ErrUnavailable)
 		}
+	}
+	if ctx.Err() != nil {
+		return Principal{}, fmt.Errorf("verify credential: %w", ErrUnavailable)
 	}
 	now := v.now()
 	if !row.ExpiresAt.After(now) {

@@ -23,6 +23,15 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+const (
+	httpReadHeaderTimeout = 5 * time.Second
+	httpMaxHeaderBytes    = 16 << 10
+	httpReadTimeout       = 10 * time.Second
+	httpWriteTimeout      = 30 * time.Second
+	httpIdleTimeout       = 120 * time.Second
+	authQueryDeadline     = 2 * time.Second
+)
+
 // Run executes a server subcommand and returns its exit status.
 func Run(ctx context.Context, args []string, stderr io.Writer) int {
 	return exitCode(run(ctx, args, os.Stdout, stderr), stderr)
@@ -80,7 +89,13 @@ func readiness(runCtx context.Context, check func(context.Context) error) http.H
 	})
 }
 func readyCheck(ctx context.Context, auth, activeRelease func(context.Context) error) error {
-	if err := auth(ctx); err != nil {
+	authCtx, cancel := context.WithTimeout(ctx, authQueryDeadline)
+	err := auth(authCtx)
+	if err == nil {
+		err = authCtx.Err()
+	}
+	cancel()
+	if err != nil {
 		return err
 	}
 	return activeRelease(ctx)
@@ -110,8 +125,12 @@ func serve(ctx context.Context, cfg config, pool *pgxpool.Pool, queries *store.Q
 			return err
 		})
 	}))
-	server := &http.Server{Addr: cfg.listen, Handler: mux, ReadHeaderTimeout: 5 * time.Second}
+	server := newHTTPServer(cfg.listen, mux)
 	return runHTTP(ctx, server, resolver.Close)
+}
+
+func newHTTPServer(addr string, handler http.Handler) *http.Server {
+	return &http.Server{Addr: addr, Handler: handler, ReadHeaderTimeout: httpReadHeaderTimeout, MaxHeaderBytes: httpMaxHeaderBytes, ReadTimeout: httpReadTimeout, WriteTimeout: httpWriteTimeout, IdleTimeout: httpIdleTimeout}
 }
 
 type httpServer interface {

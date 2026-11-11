@@ -217,12 +217,20 @@ func TestResolver_CachedPoolFailureDoesNotReturnEngine(t *testing.T) {
 	}
 	pool.Close()
 	r.entries["corpus_vn_20990103"].pool = pool
-	if lease, resolveErr := r.Resolve(context.Background(), "vn", ""); resolveErr == nil || lease != nil {
+	lease, resolveErr := r.Resolve(context.Background(), "vn", "")
+	if resolveErr == nil || lease != nil {
 		if lease != nil {
 			lease.Done()
 		}
 		t.Fatalf("lease=%+v error=%v", lease, resolveErr)
 	}
+	if !errors.Is(resolveErr, ErrExpired) {
+		t.Fatal("closed cached pool was not classified as expired", resolveErr)
+	}
+	if _, retained := r.entries["corpus_vn_20990103"]; retained {
+		t.Fatal("closed cached pool remained reusable")
+	}
+
 }
 
 func TestResolver_SwitchPreservesInFlightWork(t *testing.T) {

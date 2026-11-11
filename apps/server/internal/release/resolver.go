@@ -4,7 +4,6 @@ package release
 import (
 	"context"
 	"errors"
-	"fmt"
 	"regexp"
 	"strings"
 	"sync"
@@ -37,20 +36,23 @@ type Resolver struct {
 	URLTemplate string
 	EmbedderFor func(queryRecipeHash string) retrieval.Embedder
 	Options     retrieval.Options
+	// QueryTimeout can shorten the two-second auth query deadline.
+	QueryTimeout time.Duration
 
 	// OnActivate reports the first pointer observation and each change, including
-	// an empty pointer. Calls run under the resolver lock before lending leases.
+	// an empty pointer. Calls run under the observation semaphore before lending leases.
 	// The callback must not call resolver methods.
 	OnActivate func(release string, generation uint64)
 
-	mu         sync.Mutex
-	generation uint64
-	entries    map[string]*cacheEntry
-	active     map[string]string
-	workCtx    context.Context
-	cancelWork context.CancelFunc
-	flight     singleflight.Group
-	closed     bool
+	mu          sync.Mutex
+	generation  uint64
+	observation chan struct{}
+	entries     map[string]*cacheEntry
+	active      map[string]string
+	workCtx     context.Context
+	cancelWork  context.CancelFunc
+	flight      singleflight.Group
+	closed      bool
 }
 
 // Resolve leases the active engine for one request. A nonempty rel must match
@@ -120,62 +122,6 @@ func (r *Resolver) workContext() (context.Context, context.CancelFunc, error) {
 	}
 	ctx, cancel := context.WithTimeout(r.workCtx, 10*time.Second)
 	return ctx, cancel, nil
-}
-
-func (r *Resolver) resolveName(ctx context.Context, country, rel string) (string, string, uint64, error) {
-	if err := ctx.Err(); err != nil {
-		return "", "", 0, err
-	}
-	if r.Auth == nil || r.Clock == nil {
-		return "", "", 0, errors.New("missing release resolver dependencies")
-	}
-	r.mu.Lock()
-	if r.closed {
-		r.mu.Unlock()
-		return "", "", 0, ErrExpired
-	}
-	active, err := r.Auth.GetActiveRelease(ctx, country)
-	if err == nil {
-		err = ctx.Err()
-	}
-	if err != nil {
-		r.mu.Unlock()
-		return "", "", 0, fmt.Errorf("get active release: %w", err)
-	}
-	if active != "" && !validDBName(country, active) {
-		r.mu.Unlock()
-		return "", "", 0, errors.New("invalid active database name")
-	}
-	if r.active == nil {
-		r.active = make(map[string]string)
-	}
-	previous, observed := r.active[country]
-	r.active[country] = active
-	var retired []*cacheEntry
-	for name, entry := range r.entries {
-		if entry.country == country && name != active {
-			delete(r.entries, name)
-			entry.retired = true
-			if !entry.opening && entry.leases == 0 {
-				retired = append(retired, entry)
-			}
-		}
-	}
-	if r.OnActivate != nil && (!observed || previous != active) {
-		r.generation++
-		r.OnActivate(strings.TrimPrefix(active, "corpus_"+country+"_"), r.generation)
-	}
-	// Carry this observation through opening and lending; never resample it.
-	generation := r.generation
-	allowed := active != "" && (rel == "" || active == "corpus_"+country+"_"+rel)
-	r.mu.Unlock()
-	for _, entry := range retired {
-		entry.close()
-	}
-	if !allowed {
-		return "", "", 0, ErrExpired
-	}
-	return active, strings.TrimPrefix(active, "corpus_"+country+"_"), generation, nil
 }
 
 func validDBName(country, name string) bool {

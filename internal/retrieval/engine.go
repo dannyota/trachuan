@@ -10,6 +10,7 @@ import (
 
 	"danny.vn/trachuan/internal/corpusdb"
 	"danny.vn/trachuan/internal/retrieval/lexical"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -17,6 +18,11 @@ import (
 func Open(ctx context.Context, db *pgxpool.Pool, embedder Embedder, options Options) (*Engine, error) {
 	r, err := ReadRelease(ctx, db)
 	if err != nil {
+		// Keep validation errors such as an unsupported schema version; only a
+		// vanished database is reclassified.
+		if gone := databaseFailure("read release failed", err); errors.Is(gone, ErrReleaseGone) {
+			return nil, gone
+		}
 		return nil, err
 	}
 	return openEngine(ctx, db, embedder, r, options, false)
@@ -52,16 +58,29 @@ func openEngine(ctx context.Context, db *pgxpool.Pool, embedder Embedder, r Rele
 	if err != nil {
 		return nil, errors.New("read embedder recipe failed")
 	}
-	var typmod int
-	err = db.QueryRow(ctx, `SELECT atttypmod FROM pg_attribute WHERE attrelid = 'public.chunk'::regclass AND attname = 'embedding' AND NOT attisdropped`).Scan(&typmod)
+	typmod, err := readEmbeddingDimensions(ctx, db)
 	if err != nil {
-		return nil, errors.New("read embedding dimensions failed")
+		return nil, err
 	}
 	if err = validateDenseRecipe(r.DenseRecipe, running, typmod); err != nil {
 		return nil, err
 	}
 	return &Engine{db: db, embedder: embedder, queryRecipe: running, release: r, options: options}, nil
 }
+
+type dimensionReader interface {
+	QueryRow(context.Context, string, ...any) pgx.Row
+}
+
+func readEmbeddingDimensions(ctx context.Context, db dimensionReader) (int, error) {
+	var typmod int
+	err := db.QueryRow(ctx, `SELECT atttypmod FROM pg_attribute WHERE attrelid = 'public.chunk'::regclass AND attname = 'embedding' AND NOT attisdropped`).Scan(&typmod)
+	if err != nil {
+		return 0, databaseFailure("read embedding dimensions failed", err)
+	}
+	return typmod, nil
+}
+
 func validHash(s string) bool { return regexp.MustCompile(`^[0-9a-f]{64}$`).MatchString(s) }
 func validObject(b []byte) bool {
 	var v map[string]json.RawMessage

@@ -52,7 +52,7 @@ func TestReadRelease_PreservesDatabaseError(t *testing.T) {
 	if _, err := ReadRelease(ctx, db); !errors.Is(err, puddle.ErrClosedPool) {
 		t.Fatalf("read error=%v", err)
 	}
-	if _, err := Open(ctx, db, nil, Options{}); !errors.Is(err, puddle.ErrClosedPool) {
+	if _, err := Open(ctx, db, nil, Options{}); !errors.Is(err, ErrReleaseGone) || errors.Is(err, puddle.ErrClosedPool) || err.Error() != "read release failed" {
 		t.Fatalf("open error=%v", err)
 	}
 }
