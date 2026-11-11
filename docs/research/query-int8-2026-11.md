@@ -88,8 +88,20 @@ with two clients (799 requests, all 200); model load still peaks at about 2.4 GB
 (VmHWM 2,424,064 kB) for under 5 seconds before ready. Raw files are kept
 outside the repository.
 
+## Go service in a full run (2026-11-11)
+
+Release vn/20261110_5 was built and evaluated with the Go service; vn/20261110_4
+used the Python INT8 query mode on the same model file. All 181 query vectors
+match (cosine 1.000000), and the dense scores of chunks present in both releases
+differ by at most 3.8e-07. Every case that returned different identities or
+abstained differently traces to corpus changes made between the runs: context
+documents left the candidate set, 28 documents changed validity, and the
+abstention threshold was recalibrated. Legacy recall at exact hybrid limit 8
+went from 72 to 77 of 96 for those reasons, so the A1 study (75/96 against
+76/96) stays the only estimate of the INT8 effect against FP32.
+
 ## Not measured
 
 Full-corpus recall for the Harrier models, Go service latency with PostgreSQL
-under load at the same time, static or calibrated INT8, and evaluation on the
-trachuan corpus through the eval stage.
+under load at the same time, static or calibrated INT8, and the INT8 effect
+against FP32 on the trachuan corpus through the eval stage.

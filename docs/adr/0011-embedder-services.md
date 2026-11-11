@@ -105,3 +105,7 @@ Retain prior artifacts for rollback.
   ids for 103 texts (92 golden questions, 11 edge texts) and minimum cosine 1.0;
   the Python query mode was deleted and the Python service became
   `apps/docembed`.
+- 2026-11-11: release vn/20261110_5, built and evaluated with the Go service,
+  matches vn/20261110_4 (Python INT8) on all 181 query vectors; every case
+  difference traces to corpus changes
+  ([research](../research/query-int8-2026-11.md)).
