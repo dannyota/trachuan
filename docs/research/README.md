@@ -27,3 +27,5 @@ Observations and experiments. Not project authority.
   A1 latency, recall and memory for GGUF variants and ONNX Runtime INT8.
 - [Compact search results](compact-results-2026-11.md): serialized response size
   of compact and full presentation and the size gate.
+- [Text inventory](vn-text-inventory-2026-11.md): what text the 562 documents
+  without a tree carry in their fetch bundles, and the OCR workload.

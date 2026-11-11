@@ -1,120 +1,156 @@
 # Text extraction for documents without a source tree
 
-This note owns how `extract` builds a provision tree when the source supplies
-none: from the source's own HTML transcription, from attached files, and later
-from OCR. [Pipeline](pipeline.md) owns the stage; [chunk](chunk.md) owns
-splitting; [fetch bundles](fetch-bundles.md) owns the artifacts read here;
-[corpus schema](corpus-schema.md) owns the columns.
+This note owns how `extract` builds provisions when the source supplies no tree.
+[Pipeline](pipeline.md) owns the stage; [chunk](chunk.md) owns splitting;
+[fetch bundles](fetch-bundles.md) owns the artifacts read here;
+[corpus schema](corpus-schema.md) owns the columns. OCR is a separate later
+note; this one reserves its names only.
 
-## Problem
+## Evidence
 
-Run `vn/20261110_4` fetched 3,833 documents; 562 have no VBPL tree and so no
-provisions or chunks, and the 9 secondary documents are metadata only. They
-cannot be found by search. 361 of the 562 are consolidated texts (Văn bản hợp
-nhất), which are the current reading of amended law. Measured on that run's
-fetch artifacts:
+Run `vn/20261110_5` fetched 3,832 documents; 562 have no tree (553 VBPL, 9
+secondary) and so cannot be found by search; 361 of the VBPL ones are
+consolidated texts. An inventory of their fetch artifacts
+(`docs/research/vn-text-inventory-2026-11.md`) gives the first usable text
+source per document:
 
-| Evidence already in the bundle                          | Documents |
-| ------------------------------------------------------- | --------- |
-| `<id>_content.html` with text, two or more `Điều` lines | 73        |
-| `<id>_content.html` with text, numbered outline         | 80        |
-| `<id>_content.html` with text, plain                    | 35        |
-| `<id>_content.html` empty (under 300 characters)        | 356       |
-| at least one PDF attachment                             | 387       |
-| at least one DOC or DOCX attachment                     | 98        |
+| Text source                                               | Documents |
+| --------------------------------------------------------- | --------- |
+| HTML transcription `<id>_content.html` with text          | 188       |
+| PDF with a Unicode Vietnamese text layer                  | 24        |
+| PDF whose text layer is garbage from a non-Vietnamese OCR | 203       |
+| Scanned PDF, no text layer                                | 96        |
+| No attachment, or only `.doc` or `.rar`                   | 60        |
 
-Secondary documents hold a signed PDF each. How many PDFs carry a text layer is
-not measured yet; the first plan task measures it.
+Of the 188 transcriptions, 73 have two or more `Điều` lines, 80 a numbered
+outline, 35 plain text; 46 have more than two tables, 9 have images. Where
+`_content.html` and `_content_origin.html` both hold text, 98 are identical and
+49 differ; none has text only in the origin. So this work recovers 212 documents
+with no model, and 299 (about 10,500 pages) wait for OCR.
 
-## Sources of text, in order
+## Text source per document
 
-For a document whose source tree is empty, `extract` takes the first source that
-yields text, and records which one:
+Exactly one source supplies a document's text, chosen in this order:
 
-1. `html_transcription`: the bundle's `<id>_content.html` (never a backup copy
-   such as `_content_bk_*`, `_content_origin` or `_body_content`).
-2. `file_text`: the text layer of the main attachment, DOCX before PDF. The main
-   attachment is the one the bundle marks `main`, else the only DOCX, else the
-   only PDF; several candidates with different text are a gap, not a choice.
-3. `ocr`: later work; this note reserves the name and nothing else.
+1. `source_tree`: the source's tree, as today.
+2. `html_transcription`: `<id>_content.html` of the bundle when its text has at
+   least 300 characters. `_content_origin`, `_body_content` and dated backups
+   are never read: the inventory shows they add no document, and where the
+   origin differs we take the published version.
+3. `pdf_text`: the text layer of one PDF, only when every condition holds: the
+   bundle has exactly one PDF, or exactly one marked `main`; every page has
+   text; at least 2% of its letters carry Vietnamese diacritics (the garbage
+   layers measured 0); and the document has no usable transcription. Anything
+   else is `needs_ocr`.
+4. `none`: no usable text; the document stays `no_tree` with a gap naming why
+   (`needs_ocr`, `no_text_source`, `file_format_unsupported` for `.doc` and
+   archives, `text_source_ambiguous` for several candidate PDFs).
 
-A document with a source tree keeps it (`source_tree`); its extract artifact
-stays byte-identical, so its chunk and embed artifacts are reused. Reason: the
-transcription is the publisher's own text and needs no model; attachments need
-format parsers and can disagree; OCR is lossy and costly, so it comes last and
-separately.
+DOCX is not read in this work: the inventory found no document it would recover.
+Reason for the order: the transcription is the publisher's own text; a PDF layer
+is only trusted when it is whole and plainly Vietnamese; a partial or doubtful
+source is worse than none, because the document would look complete.
 
-## From text to a tree
+## Paragraphs
 
-One parser serves every text source. Input is an ordered list of paragraphs
-(HTML block elements, DOCX paragraphs, PDF lines joined into paragraphs), each
-NFC with whitespace collapsed; table cells become paragraphs in reading order
-and are marked `table`.
+Every text source becomes an ordered list of paragraphs, each NFC with
+whitespace collapsed and a locator: the HTML block's ordinal, or the PDF page
+and line range. Table cells become paragraphs in reading order, marked `table`;
+images and formulas leave a marker paragraph `[hình]`, never invented text.
 
-- Heading lines: `Phần <roman or word>`, `Chương <roman>`, `Mục <number>`,
-  `Điều <number>[.]`, then `<n>.` clauses and `<letter>)` points under an
-  article. A heading's title is the rest of its line, or the next line when the
-  heading line holds only the label (`Chương I` then `QUY ĐỊNH CHUNG`).
-- Anchors use the existing form (`chuong-1/muc-2`, `dieu-5/khoan-2/diem-a`), so
-  citations, the identity map and validity rules treat these provisions like
-  source trees.
-- Text before the first heading is one `preamble` provision; text after the last
-  article that matches a signature or recipient block is dropped from provisions
-  and kept in the artifact as `tail`.
-- A document with no `Điều` uses its numbered outline: top-level `I.`/`1.` items
-  become provisions of kind `muc` with anchors `muc-<n>`.
-- A document with neither is one provision of kind `toan-van`, anchor
-  `toan-van`, when it has at least 300 characters; shorter text is `no_text`.
+## From paragraphs to provisions
 
-Fail closed on structure, never on text: article numbers that repeat or go
-backwards keep the text, mark the document `article_sequence` (the existing gap)
-and number the anchors by position with a suffix (`dieu-5-2`), so nothing is
-dropped and nothing is cited under a wrong number. Consolidated texts repeat
-footnote numbers and quoted amendments; a line inside quotation marks or a
-footnote block never opens a heading. Every provision keeps the exact source
-paragraphs it came from, with paragraph ordinals, so a reader can check it
-against the file.
+Provision kinds stay those the schema has (`phan`, `chuong`, `muc`, `dieu`,
+`khoan`, `diem`, `other`). Generated `node_id` values are `tx:<ordinal>` (the
+first paragraph's ordinal), a namespace no source id uses, so a source relation
+endpoint can never resolve to one by accident.
+
+A provision's `text` holds its heading line and every paragraph under it up to
+the next heading of the same or a higher level, exactly once, the same shape the
+source tree gives; so an article's `text` is the whole article.
+
+Grammar, applied to paragraph starts only, outside quotation marks and footnote
+blocks:
+
+- `Phần <roman|word>`, `Chương <roman|number>`, `Mục <number>`: structure
+  headings; the title is the rest of the line or the next line in capitals.
+- `Điều <n>.` or `Điều <n>` followed by a title: an article.
+- Under an article: `<n>.` a clause, `<letter>)` a point under a clause.
+
+Instrument scopes. A document often carries a second instrument (a regulation
+"ban hành kèm theo"). A new scope starts at a paragraph that is a title line
+(`QUY CHẾ`, `QUY ĐỊNH`, `ĐIỀU LỆ`, `PHỤ LỤC` and their variants) followed, with
+no article in between, by an article numbered 1. Anchors and citations in the
+second and later scopes carry the scope: anchor `kem-theo-<k>/dieu-<n>`, label
+"Điều n (văn bản kèm theo k)". A restart at `Điều 1` without such a title is
+ambiguity, below.
+
+Fail closed. The article-level reading is accepted for a scope only when its
+article numbers run 1, 2, 3, ... with no gap, repeat or step back, every clause
+sequence under an article starts at 1 and runs without a gap, and no quotation
+mark or footnote block is left open at a heading. If any check fails, that scope
+asserts no article, clause or point: its paragraphs are grouped into neutral
+provisions of kind `other`, anchor `doan-<n>` (a new one at each line that looks
+like a heading, else every 20 paragraphs), and the document gets the gap
+`structure_uncertain` with the failed check. Structure headings (`chuong`,
+`muc`) are kept in either case. Reason: a missed heading attaches text to the
+wrong article silently; a strict sequence check catches it, and a neutral anchor
+is a true citation where "Điều 5" might not be.
+
+A document with no article at all uses neutral provisions too, grouped by its
+numbered outline (`I.`, `1.`) when one exists. Text under 300 characters is
+`no_text`.
 
 ## What is recorded
 
-- Extract artifact: `text_source`, the file name and SHA-256 the text came from,
-  the paragraph list, the tree, `tail`, and counts (paragraphs, tables,
-  characters, headings by kind).
-- `document.text_source` in the corpus (`source_tree`, `html_transcription`,
-  `file_text`, `ocr`) and `content_state` as today (`indexed`, `no_tree`,
-  `no_chunks`). Hits return `text_source`, so an agent can tell a publisher tree
-  from a parsed transcription. This is corpus schema version 4.
-- Gaps: `no_tree` only when no source yields text; `no_text` for text under the
-  minimum; `text_source_conflict` when candidates disagree; `table_text` when
-  more than a tenth of the characters sit in tables (formulas and forms are
-  often images or tables and stay incomplete); `article_sequence` as above.
+- The extract artifact of a document without a source tree gains `text.json`:
+  `text_source`, the file name and SHA-256 read, the paragraphs with locators,
+  the scopes with their checks, and counts. The artifact of a source-tree
+  document is unchanged in every file and in its manifest, so its chunk and
+  embed artifacts are reused; a compatibility test pins the fetch, extract,
+  chunk and embed hashes of recorded documents.
+- Corpus: `document.text_source` (`source_tree`, `html_transcription`,
+  `pdf_text`, `ocr`, `none`) and `document.text_complete boolean`, false when
+  any gap of `structure_uncertain`, `table_text` (more than a tenth of the
+  characters in tables), `image_content` or `needs_ocr` applies; build derives
+  `source_tree` for artifacts without `text.json`. Search and read results
+  return both on the document entry, with each provision's locator. This is
+  corpus schema version 4.
+- The identity map treats `tx:` node ids and `doan-`, `kem-theo-` anchors as
+  parser output: a parser recipe change that alters any anchor of a document
+  marks that document's map entries for re-adjudication.
 
-## Files and safety
+## Validity rules
 
-Attachments are untrusted. Parsers run in-process in Go with no shell, no
-macros, no external entity resolution and no network; DOCX is read as a zip with
-the per-file and expansion limits in [budgets](budgets.md) (50 MB per file, 5
-minutes per document); legacy `.doc` is not parsed in this work and is a
-`file_format_unsupported` gap. PDF text comes from a pure-Go reader chosen by
-the first plan task's measurement; a PDF without a text layer is `needs_ocr`,
-never guessed. Text from a signed PDF says nothing about the signature;
-signature validation stays out of scope.
+Rules A, B and C of [validity corrections](validity-status.md) read an effect
+article only from a document whose text source is `source_tree`, or
+`html_transcription` with `text_complete` true and the article in an accepted
+scope. For every other document the effect article is review evidence only: it
+appears in `validity-review.json` with a proposed manual entry and changes
+nothing. Reason: a partial text can show a commencement sentence and hide its
+exception.
 
-## Recipes and reruns
+## Limits and safety
 
-The extract recipe changes, so every extract item reruns; source-tree documents
-must reproduce their artifact bytes (a golden test pins this) so only documents
-that gain text flow on to chunk and embed. The build recipe changes with schema
-version 4. Validity rules then see effect articles of documents that had no
-tree, so the review queue and automatic corrections can change; measure both
-before accepting a run.
+Attachments are untrusted. PDF text is read in a child process with a memory
+limit, a wall-clock limit and no network, killed on overrun; the limits (file
+size, pages, memory, seconds, output bytes, one document at a time per worker)
+live in [budgets](budgets.md#pipeline). The PDF reader is a pure-Go library
+chosen in the plan's first task by running candidates over the 24 documents with
+a text layer and the 299 without; a reader that crashes or exceeds limits on any
+of them is rejected. HTML is parsed with the tokenizer already used, with a
+paragraph and nesting cap. Any overrun is a gap for that document, never a
+failed run. Text from a signed PDF says nothing about its signature.
 
-## Tests and measurement
+## Acceptance
 
-Parser tests use recorded bundles from the run: a consolidated circular with
-chapters and articles, a directive with a numbered outline, a plain decision, a
-document with quoted amendments and footnotes, an empty transcription, a DOCX
-and a PDF with and without a text layer. Each plan task reports how many of the
-562 documents moved from `no_tree` to `indexed`, by text source, and a manual
-spot check of 20 parsed documents against their files before the run is
-accepted.
+The plan's first task commits the inventory note and recorded bundles as
+fixtures: one per stratum and structure (articles, outline, plain, tables,
+images, a second instrument, quoted amendments with footnotes, a good and a
+garbage PDF layer). Each has an expected provision list written by hand from the
+file, with exact anchors and text boundaries, and adverse fixtures that must
+fall back to neutral anchors. Before a run is accepted: counts of documents by
+text source and by gap; every accepted article-level scope checked against its
+article count in the file; the validity review queue and identity-map changes
+reviewed; and a real-output check on new evaluation cases that cite recovered
+documents.
