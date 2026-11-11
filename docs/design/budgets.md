@@ -75,6 +75,9 @@ issues a document's detail and diagram calls concurrently; a full read under
 [fetch reuse](fetch-reuse.md#read-rule) then issues the tree and file list calls
 concurrently and downloads its attachments concurrently within the file pool.
 
+[Fresh OCR requests](ocr-vision.md): 4 Vision requests in flight, at most 300 a
+minute, 500 pages per document; provisional.
+
 [Fetch reuse](fetch-reuse.md): reuse age limit 30 days from the original network
 read; control divisor 20 (about 5% of documents re-read in full per run). Both
 are provisional until three runs report their control outcomes.
