@@ -7,8 +7,8 @@ import (
 	"image"
 	"image/color"
 	"image/png"
+	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -21,7 +21,8 @@ type fakeRenderer struct {
 	calls int
 }
 
-func (f *fakeRenderer) Render(context.Context, []byte) (Rendered, error) {
+func (f *fakeRenderer) Preflight(context.Context) error { return nil }
+func (f *fakeRenderer) Render(context.Context, []byte, int) (Rendered, error) {
 	f.calls++
 	return Rendered{Pages: f.pages, Stats: RenderStats{ExitCode: 0, StderrBytes: 17}}, f.err
 }
@@ -97,7 +98,7 @@ func TestRenderer_TimeoutAndNonzeroExit(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			var dir string
-			renderer := PopplerRenderer{run: func(ctx context.Context, work string) (RenderStats, error) {
+			renderer := PopplerRenderer{tools: &popplerTools{}, command: func(ctx context.Context, work, _ string, _ []string, _ io.Writer) (RenderStats, error) {
 				dir = work
 				deadline, ok := ctx.Deadline()
 				if !ok || time.Until(deadline) > 2*time.Minute || time.Until(deadline) < 119*time.Second {
@@ -105,7 +106,7 @@ func TestRenderer_TimeoutAndNonzeroExit(t *testing.T) {
 				}
 				return RenderStats{ExitCode: tc.code, StderrBytes: 19}, tc.err
 			}}
-			result, err := renderer.Render(context.Background(), []byte("private PDF"))
+			result, err := renderer.Render(context.Background(), []byte("private PDF"), maxRequestBytes)
 			if err == nil || strings.Contains(err.Error(), "untrusted") || result.Stats.ExitCode != tc.code || result.Stats.StderrBytes != 19 {
 				t.Fatal("unsafe or missing render diagnostics")
 			}
@@ -122,16 +123,18 @@ func TestRenderer_StderrIsCountedOnly(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Setenv("PATH", dir)
-	result, err := (PopplerRenderer{}).Render(context.Background(), []byte("private PDF"))
+	stats, err := (&popplerTools{sandbox: binary}).command(context.Background(), dir, "ignored", nil, io.Discard)
+	result := Rendered{Stats: stats}
 	if err == nil || strings.Contains(err.Error(), "sensitive") || result.Stats.ExitCode != 7 || result.Stats.StderrBytes != 23 {
 		t.Fatalf("stats=%+v error=%v", result.Stats, err)
 	}
 }
-func smallPDF() []byte {
+func smallPDF() []byte { return pdfWithPageBox("72 72") }
+func pdfWithPageBox(box string) []byte {
 	var pdf bytes.Buffer
 	pdf.WriteString("%PDF-1.7\n")
 	offsets := []int{0}
-	for i, obj := range []string{"<< /Type /Catalog /Pages 2 0 R >>", "<< /Type /Pages /Kids [3 0 R] /Count 1 >>", "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 72 72] /Resources << >> >>"} {
+	for i, obj := range []string{"<< /Type /Catalog /Pages 2 0 R >>", "<< /Type /Pages /Kids [3 0 R] /Count 1 >>", "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 " + box + "] /Resources << >> >>"} {
 		offsets = append(offsets, pdf.Len())
 		fmt.Fprintf(&pdf, "%d 0 obj\n%s\nendobj\n", i+1, obj)
 	}
@@ -144,10 +147,8 @@ func smallPDF() []byte {
 	return pdf.Bytes()
 }
 func TestRenderer_RealPoppler(t *testing.T) {
-	if _, err := exec.LookPath("pdftoppm"); err != nil {
-		t.Skip("pdftoppm absent; install poppler to run the local rendering check")
-	}
-	result, err := (PopplerRenderer{}).Render(context.Background(), smallPDF())
+	renderer := nativeSandbox(t)
+	result, err := renderer.Render(context.Background(), smallPDF(), maxRequestBytes)
 	if err != nil || len(result.Pages) != 1 {
 		t.Fatalf("pages=%d error=%v", len(result.Pages), err)
 	}
@@ -159,15 +160,15 @@ func TestRenderer_RealPoppler(t *testing.T) {
 
 func TestRenderer_MissingBinary(t *testing.T) {
 	t.Setenv("PATH", t.TempDir())
-	result, err := (PopplerRenderer{}).Render(context.Background(), smallPDF())
-	if err == nil || err.Error() != "render_failed" || result.Stats.ExitCode != -1 {
+	result, err := (PopplerRenderer{}).Render(context.Background(), smallPDF(), maxRequestBytes)
+	if err == nil || !strings.Contains(err.Error(), "configuration") || result.Stats.ExitCode != -1 {
 		t.Fatalf("stats=%+v error=%v", result.Stats, err)
 	}
 }
 func TestRenderer_CanceledContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	_, err := (PopplerRenderer{}).Render(ctx, smallPDF())
+	_, err := (PopplerRenderer{tools: &popplerTools{}}).Render(ctx, smallPDF(), maxRequestBytes)
 	if err == nil || err.Error() != "render_failed" {
 		t.Fatal("canceled render accepted")
 	}
@@ -186,22 +187,31 @@ func TestCheck_RenderFailureRecordsSafeMetadata(t *testing.T) {
 
 func TestRenderer_PageOrderAndCleanup(t *testing.T) {
 	var dir string
-	renderer := PopplerRenderer{run: func(_ context.Context, work string) (RenderStats, error) {
+	renderer := PopplerRenderer{tools: &popplerTools{info: "pdfinfo", raster: "pdftoppm"}, command: func(_ context.Context, work, tool string, args []string, out io.Writer) (RenderStats, error) {
 		dir = work
-		for page := 12; page >= 1; page-- {
-			img := image.NewGray(image.Rect(0, 0, 1, 1))
-			img.SetGray(0, 0, color.Gray{Y: uint8(page)})
-			var data bytes.Buffer
-			if err := png.Encode(&data, img); err != nil {
-				t.Fatal(err)
+		if tool == "pdfinfo" {
+			_, _ = io.WriteString(out, "Pages: 12\n")
+			for page := 1; page <= 12; page++ {
+				_, _ = fmt.Fprintf(out, "Page %d size: 72 x 72 pts\n", page)
 			}
-			if err := os.WriteFile(filepath.Join(work, fmt.Sprintf("page-%d.png", page)), data.Bytes(), 0600); err != nil {
-				t.Fatal(err)
-			}
+			return RenderStats{}, nil
+		}
+		page := 0
+		if _, err := fmt.Sscan(args[1], &page); err != nil {
+			t.Fatal(err)
+		}
+		img := image.NewGray(image.Rect(0, 0, 1, 1))
+		img.SetGray(0, 0, color.Gray{Y: uint8(page)})
+		var data bytes.Buffer
+		if err := png.Encode(&data, img); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(work, "page.png"), data.Bytes(), 0600); err != nil {
+			t.Fatal(err)
 		}
 		return RenderStats{}, nil
 	}}
-	result, err := renderer.Render(context.Background(), smallPDF())
+	result, err := renderer.Render(context.Background(), smallPDF(), maxRequestBytes)
 	if err != nil || len(result.Pages) != 12 {
 		t.Fatalf("pages=%d error=%v", len(result.Pages), err)
 	}

@@ -230,3 +230,41 @@ func TestCheck_DatabaseVerifiableEvidence(t *testing.T) {
 		})
 	}
 }
+
+func TestCheck_DatabaseKeepsCheckerVersionsSeparate(t *testing.T) {
+	r, db, client, docs := databaseFixture(t)
+	source := ocrstore.Open(r.Repository.(*Database).root, db)
+	entry := docs[0].Entry
+	oldChecker := "claude-sonnet-5-5/medium/ocr-check-1"
+	newChecker := "claude-sonnet-5-5/medium/ocr-check-2"
+	legacy := []byte(`{"same_document":false,"pages":10,"pdf_pages":10,"items":[],"verdict":"rejected"}`)
+	if _, err := source.PutCheck(context.Background(), entry, oldChecker, legacy, 0, true); err != nil {
+		t.Fatal(err)
+	}
+	before, err := source.Lookup(context.Background(), []string{entry.PdfSha256}, []string{entry.EngineID}, newChecker)
+	if err != nil || before[entry.PdfSha256].Check != nil {
+		t.Fatalf("v1 satisfied v2 lookup: %v", err)
+	}
+	if err = run(t, r, docs, options()); err != nil {
+		t.Fatal(err)
+	}
+	if client.DirectCalls != 1 {
+		t.Fatal("v1 check suppressed v2 request")
+	}
+	ids := map[int64]bool{}
+	for _, tc := range []struct{ checker, verdict string }{{oldChecker, "rejected"}, {newChecker, "clean"}} {
+		entries, lookupErr := source.Lookup(context.Background(), []string{entry.PdfSha256}, []string{entry.EngineID}, tc.checker)
+		if lookupErr != nil {
+			t.Fatal(lookupErr)
+		}
+		check := entries[entry.PdfSha256].Check
+		if check == nil || check.CheckerID != tc.checker || ids[check.ID] {
+			t.Fatal("checker versions shared a row")
+		}
+		ids[check.ID] = true
+		result, decodeErr := ocrstore.DecodeCheck(check.Result)
+		if decodeErr != nil || result.Verdict != tc.verdict {
+			t.Fatalf("checker=%s verdict=%s error=%v", tc.checker, result.Verdict, decodeErr)
+		}
+	}
+}

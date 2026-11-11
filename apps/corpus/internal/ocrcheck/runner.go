@@ -111,6 +111,14 @@ func (r *Runner) Run(ctx context.Context, docs []Document, o Options) (Summary, 
 	if err := o.Validate(); err != nil {
 		return summary, err
 	}
+	if !o.Reconcile && o.Abandon == "" {
+		if r.Renderer == nil {
+			r.Renderer = &PopplerRenderer{}
+		}
+		if err := r.Renderer.Preflight(ctx); err != nil {
+			return summary, err
+		}
+	}
 	if r.Now == nil {
 		r.Now = time.Now
 	}

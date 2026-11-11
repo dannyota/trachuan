@@ -73,10 +73,21 @@ func decodeAnswer(data []byte, pages int, text []byte) (ocrstore.CheckResult, st
 	for _, item := range decoded {
 		// Validate every quote, even if the item would subsequently be dropped.
 		quote := collapsed(item.OCR)
-		if item.OCR != "" && !strings.Contains(source, quote) {
+		reading := collapsed(item.PDF)
+		valid := quote != "" && reading != ""
+		switch item.Kind {
+		case "extra_text":
+			valid = quote != "" && reading == ""
+		case "missing_text":
+			valid = quote == "" && reading != ""
+		}
+		if !valid {
+			return empty, "item_readings"
+		}
+		if quote != "" && !strings.Contains(source, quote) {
 			return empty, "ocr_quote_not_found"
 		}
-		if quote == collapsed(item.PDF) {
+		if item.Kind != "missing_text" && quote == reading {
 			dropped++
 			continue
 		}

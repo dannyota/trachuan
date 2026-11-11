@@ -3,25 +3,27 @@ package ocrcheck
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"image"
 	"image/draw"
 	"image/png"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"sort"
-	"strconv"
-	"strings"
 	"time"
+
+	"github.com/anthropics/anthropic-sdk-go/v2"
 )
 
 const (
-	maxPages        = 500
-	maxImageBytes   = 10_000_000
-	maxRequestBytes = 100_000_000
-	maxImageSide    = 3000
+	maxPages              = 500
+	maxImageBytes         = 10_000_000
+	maxRequestBytes       = 100_000_000
+	maxImageSide          = 3000
+	maxScratchBytes int64 = 256_000_000
 )
 
 // RenderStats contains only subprocess metadata, never stderr content.
@@ -36,14 +38,18 @@ type Rendered struct {
 	Stats RenderStats
 }
 
-// Renderer renders a verified PDF without consulting its embedded text layer.
+// Renderer renders verified PDF bytes within the remaining encoded request budget.
 type Renderer interface {
-	Render(context.Context, []byte) (Rendered, error)
+	Preflight(context.Context) error
+	Render(context.Context, []byte, int) (Rendered, error)
 }
 
-// PopplerRenderer renders 150 dpi grayscale PNG pages in an isolated directory.
+type renderCommand func(context.Context, string, string, []string, io.Writer) (RenderStats, error)
+
+// PopplerRenderer renders bounded 150 dpi grayscale PNG pages in a macOS sandbox.
 type PopplerRenderer struct {
-	run func(context.Context, string) (RenderStats, error)
+	tools   *popplerTools
+	command renderCommand
 }
 
 type renderError string
@@ -53,112 +59,135 @@ func (e renderError) Error() string { return string(e) }
 const renderLimit renderError = "over_check_limit"
 const renderFailed renderError = "render_failed"
 
-// Render removes all intermediate files, including after cancellation or failure.
-func (p PopplerRenderer) Render(ctx context.Context, pdf []byte) (Rendered, error) {
-	result := Rendered{Stats: RenderStats{ExitCode: -1}}
+// Render removes every page before allocating the next and always removes scratch.
+func (p PopplerRenderer) Render(ctx context.Context, pdf []byte, allowance int) (result Rendered, renderErr error) {
+	result.Stats.ExitCode = -1
+	if err := p.Preflight(ctx); err != nil {
+		return result, err
+	}
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+	defer cancel()
 	dir, err := os.MkdirTemp("", "trachuan-ocr-render-")
 	if err != nil {
 		return result, renderFailed
 	}
-	defer func() { _ = os.RemoveAll(dir) }()
+	// Resolve /var and /tmp aliases for sandbox path matching.
+	realDir, err := filepath.EvalSymlinks(dir)
+	if err != nil {
+		_ = os.RemoveAll(dir)
+		return result, renderFailed
+	}
+	dir = realDir
+	defer func() {
+		if removeErr := os.RemoveAll(dir); removeErr != nil {
+			result.Pages = nil
+			renderErr = renderFailed
+		}
+	}()
+	if len(pdf) > 50_000_000 {
+		return result, renderLimit
+	}
 	if err = os.WriteFile(filepath.Join(dir, "input.pdf"), pdf, 0600); err != nil {
 		return result, renderFailed
 	}
-	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
-	defer cancel()
-	run := p.run
-	if run == nil {
-		run = runPoppler
+	command := p.command
+	if command == nil {
+		command = p.tools.command
 	}
-	result.Stats, err = run(ctx, dir)
-	if err != nil || ctx.Err() != nil || result.Stats.ExitCode != 0 {
-		return result, renderFailed
+	run := func(tool string, args []string, out io.Writer) error {
+		if ctx.Err() != nil {
+			return renderFailed
+		}
+		if limitErr := checkScratch(dir); limitErr != nil {
+			return limitErr
+		}
+		stats, runErr := command(ctx, dir, tool, args, out)
+		result.Stats.ExitCode = stats.ExitCode
+		result.Stats.StderrBytes += stats.StderrBytes
+		if limitErr := checkScratch(dir); limitErr != nil {
+			return limitErr
+		}
+		if runErr != nil {
+			if errors.Is(runErr, renderLimit) {
+				return renderLimit
+			}
+			return renderFailed
+		}
+		if ctx.Err() != nil || stats.ExitCode != 0 {
+			return renderFailed
+		}
+		return nil
 	}
-	files, err := filepath.Glob(filepath.Join(dir, "page-*.png"))
-	if err != nil || len(files) == 0 {
-		return result, renderFailed
+	var metadata metadataBuffer
+	if err = run(p.tools.info, []string{"-f", "1", "-l", "500", "-box", "input.pdf"}, &metadata); err != nil {
+		return result, err
 	}
-	if len(files) > maxPages {
-		return result, renderLimit
+	sizes, err := parsePageSizes(metadata.Bytes())
+	if err != nil {
+		return result, err
 	}
-	// Sort by page number even when a renderer does not zero-pad names.
-	number := func(path string) int {
-		v, _ := strconv.Atoi(strings.TrimSuffix(strings.TrimPrefix(filepath.Base(path), "page-"), ".png"))
-		return v
-	}
-	sort.Slice(files, func(i, j int) bool { return number(files[i]) < number(files[j]) })
 	total := 0
-	for i, path := range files {
-		if ctx.Err() != nil {
-			return result, renderFailed
+	for i, size := range sizes {
+		if err = run(p.tools.raster, rasterArgs(i+1, size), io.Discard); err != nil {
+			return result, err
 		}
-		if number(path) != i+1 {
-			return result, renderFailed
-		}
-		f, openErr := os.Open(path)
-		if openErr != nil {
-			return result, renderFailed
-		}
-		data, readErr := io.ReadAll(io.LimitReader(f, maxImageBytes))
-		_ = f.Close()
+		page, readErr := readRenderedPage(filepath.Join(dir, "page.png"))
 		if readErr != nil {
-			return result, renderFailed
+			return result, readErr
 		}
-		if len(data) >= maxImageBytes {
-			return result, renderLimit
-		}
-		if reason := validateImage(data); reason != "" {
-			return result, renderError(reason)
-		}
-		// Poppler can encode -gray PNG output as RGB. Fix the actual PNG color type.
-		decoded, decodeErr := png.Decode(bytes.NewReader(data))
-		if decodeErr != nil {
-			return result, renderFailed
-		}
-		gray := image.NewGray(decoded.Bounds())
-		draw.Draw(gray, gray.Bounds(), decoded, decoded.Bounds().Min, draw.Src)
-		var encoded bytes.Buffer
-		if encodeErr := png.Encode(&encoded, gray); encodeErr != nil {
-			return result, renderFailed
-		}
-		data = encoded.Bytes()
 		if ctx.Err() != nil {
 			return result, renderFailed
 		}
-		total += ((len(data) + 2) / 3) * 4
-		if total >= maxRequestBytes {
+		total += encodedPageSize(i+1, page)
+		if total >= allowance {
 			return result, renderLimit
 		}
-		if reason := validateImage(data); reason != "" {
-			return result, renderError(reason)
-		}
-		result.Pages = append(result.Pages, data)
+		result.Pages = append(result.Pages, page)
 	}
 	return result, nil
 }
 
-type byteCounter struct{ n int64 }
-
-func (b *byteCounter) Write(p []byte) (int, error) { b.n += int64(len(p)); return len(p), nil }
-
-func runPoppler(ctx context.Context, dir string) (RenderStats, error) {
-	// Local filenames and a minimal environment keep credentials out of the child.
-	// pdftoppm resolves no URLs and needs no network service.
-	cmd := exec.CommandContext(ctx, "pdftoppm", "-r", "150", "-gray", "-png", "input.pdf", "page")
-	cmd.Dir = dir
-	cmd.Env = []string{"LC_ALL=C", "HOME=" + dir}
-	var stderr byteCounter
-	cmd.Stderr = &stderr
-	cmd.Stdout = io.Discard
-	err := cmd.Run()
-	stats := RenderStats{ExitCode: -1, StderrBytes: stderr.n}
-	if cmd.ProcessState != nil {
-		stats.ExitCode = cmd.ProcessState.ExitCode()
-	}
+func readRenderedPage(path string) ([]byte, error) {
+	f, err := os.Open(path)
 	if err != nil {
-		return stats, fmt.Errorf("render subprocess: %w", renderFailed)
+		return nil, renderFailed
 	}
-	return stats, nil
+	data, err := io.ReadAll(io.LimitReader(f, maxImageBytes))
+	_ = f.Close()
+	if err != nil {
+		return nil, renderFailed
+	}
+	if reason := validateImage(data); reason != "" {
+		return nil, renderError(reason)
+	}
+	decoded, err := png.Decode(bytes.NewReader(data))
+	if err != nil {
+		return nil, renderFailed
+	}
+	// Poppler may encode -gray output as RGB; force grayscale PNG encoding.
+	gray := image.NewGray(decoded.Bounds())
+	draw.Draw(gray, gray.Bounds(), decoded, decoded.Bounds().Min, draw.Src)
+	var encoded bytes.Buffer
+	if err = png.Encode(&encoded, gray); err != nil {
+		return nil, renderFailed
+	}
+	if reason := validateImage(encoded.Bytes()); reason != "" {
+		return nil, renderError(reason)
+	}
+	if err = os.Remove(path); err != nil {
+		return nil, renderFailed
+	}
+	return encoded.Bytes(), nil
+}
+
+func encodedPageSize(n int, page []byte) int {
+	blocks := []anthropic.ContentBlockParamUnion{anthropic.NewTextBlock(fmt.Sprintf("Page %d:", n)), anthropic.NewImageBlockBase64("image/png", base64.StdEncoding.EncodeToString(page))}
+	data, err := json.Marshal(blocks)
+	if err != nil {
+		return maxRequestBytes
+	}
+	// Each pair adds its two blocks and two commas to the existing content array.
+	return len(data) - 1
 }
 
 func validateImage(data []byte) string {
@@ -174,3 +203,7 @@ func validateImage(data []byte) string {
 	}
 	return ""
 }
+
+type byteCounter struct{ n int64 }
+
+func (b *byteCounter) Write(p []byte) (int, error) { b.n += int64(len(p)); return len(p), nil }

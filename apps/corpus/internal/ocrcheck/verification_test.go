@@ -34,7 +34,7 @@ func TestCheck_QuoteMustOccurInOCRText(t *testing.T) {
 func TestCheck_EqualReadingsDropped(t *testing.T) {
 	r, s, c, d := fixture(t)
 	d[0].Text = []byte("Điều một")
-	c.Response.Text = `{"same_document":true,"pages":10,"items":[{"kind":"missing_text","page":1,"ocr":"Điều một","pdf":"Điều\nmột","note":"equal"},{"kind":"missing_text","page":2,"ocr":"","pdf":"","note":"empty"}]}`
+	c.Response.Text = `{"same_document":true,"pages":10,"items":[{"kind":"article_label","page":1,"ocr":"Điều một","pdf":"Điều\nmột","note":"equal"},{"kind":"article_label","page":2,"ocr":"Điều một","pdf":"Điều một","note":"equal"}]}`
 	if err := run(t, r, d, options()); err != nil {
 		t.Fatal(err)
 	}

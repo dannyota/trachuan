@@ -71,11 +71,20 @@ func (r *Runner) prepare(ctx context.Context, doc Document, o Options) (p prepar
 	if bytes.Contains(text, []byte(ocrBegin)) || bytes.Contains(text, []byte(ocrEnd)) {
 		return p, "ocr_marker_collision"
 	}
+	p.request = Request{Model: o.Model, Effort: o.Effort, Text: text}
+	base, encodeErr := json.Marshal(messageParams(p.request))
+	if encodeErr != nil {
+		return p, "over_check_limit"
+	}
+	allowance := maxRequestBytes - len(base) - len(`,"stream":true`)
+	if allowance <= 0 {
+		return p, "over_check_limit"
+	}
 	renderer := r.Renderer
 	if renderer == nil {
-		renderer = PopplerRenderer{}
+		renderer = &PopplerRenderer{}
 	}
-	rendered, renderErr := renderer.Render(ctx, data)
+	rendered, renderErr := renderer.Render(ctx, data, allowance)
 	p.rendering = &rendered.Stats
 	if renderErr != nil {
 		if errors.Is(renderErr, renderLimit) {
@@ -99,7 +108,7 @@ func (r *Runner) prepare(ctx context.Context, doc Document, o Options) (p prepar
 			return p, "over_check_limit"
 		}
 	}
-	p.request = Request{Model: o.Model, Effort: o.Effort, Images: rendered.Pages, Text: text}
+	p.request.Images = rendered.Pages
 	encoded, encodeErr := json.Marshal(messageParams(p.request))
 	// Direct streams add the stream field; reserve it for both modes.
 	if encodeErr != nil || len(encoded)+len(`,"stream":true`) >= maxRequestBytes {
