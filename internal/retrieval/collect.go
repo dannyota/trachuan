@@ -52,6 +52,7 @@ func (e *Engine) Collect(ctx context.Context, p Prepared, depths Depths) (Arms, 
 		groups = append(groups, &result.NonCurrent)
 		flags = append(flags, false)
 	}
+	refs := append([]string{}, p.Validation.References...)
 	vec := denseVector(p.Vector.Values)
 	sv := sparseVector(sparse, e.release.LexicalRecipe.Dimensions)
 	exact := p.Request.Mode == "exact"
@@ -65,7 +66,7 @@ func (e *Engine) Collect(ctx context.Context, p Prepared, depths Depths) (Arms, 
 		return Arms{}, err
 	}
 	for i, g := range groups {
-		args := []any{vec, date, historical, flags[i], depths.Dense}
+		args := []any{vec, date, historical, flags[i], depths.Dense, refs}
 		if exact {
 			g.Dense, err = denseQuery(ctx, tx, exactSQL, args...)
 		} else {
@@ -75,7 +76,7 @@ func (e *Engine) Collect(ctx context.Context, p Prepared, depths Depths) (Arms, 
 		if err != nil {
 			return Arms{}, err
 		}
-		g.Lexical, err = lexicalQuery(ctx, tx, sv, date, historical, flags[i], depths.Lexical)
+		g.Lexical, err = lexicalQuery(ctx, tx, sv, date, historical, flags[i], depths.Lexical, refs)
 		if err != nil {
 			return Arms{}, err
 		}
@@ -94,7 +95,7 @@ func (e *Engine) Collect(ctx context.Context, p Prepared, depths Depths) (Arms, 
 			for i, g := range groups {
 				if len(g.RawANN) < depths.Dense {
 					g.Fallback = true
-					g.Dense, err = denseQuery(ctx, tx, exactSQL, vec, date, historical, flags[i], depths.Dense)
+					g.Dense, err = denseQuery(ctx, tx, exactSQL, vec, date, historical, flags[i], depths.Dense, refs)
 					if err != nil {
 						return Arms{}, err
 					}

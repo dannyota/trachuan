@@ -55,7 +55,7 @@ func TestCollect_ValidityConflictNotInPrimaryGroup(t *testing.T) {
 func TestHit_CarriesClassSourceAndDecisions(t *testing.T) {
 	db, e, _ := fixture(t)
 	ctx := context.Background()
-	_, err := db.Exec(ctx, `UPDATE document SET class='relation_context',source='chinhphu',validity_conflict=true WHERE id=1;
+	_, err := db.Exec(ctx, `UPDATE document SET class='secondary',source='chinhphu',validity_conflict=true WHERE id=1;
  INSERT INTO validity_decision(document_id,ordinal,layer,rule_version,before,after) VALUES (1,2,'manual','2','{"status_class":"in_force","is_current":true,"status_basis":"source_status","eff_from":null,"eff_to":null,"validity_conflict":false}','{"status_class":"in_force","is_current":true,"status_basis":"source_status","eff_from":null,"eff_to":null,"validity_conflict":false}'),(1,1,'source','1','{"status_class":"in_force","is_current":true,"status_basis":"source_status","eff_from":null,"eff_to":null,"validity_conflict":false}','{"status_class":"in_force","is_current":true,"status_basis":"source_status","eff_from":null,"eff_to":null,"validity_conflict":false}')`)
 	if err != nil {
 		t.Fatal(err)
@@ -71,7 +71,7 @@ func TestHit_CarriesClassSourceAndDecisions(t *testing.T) {
 			for _, hit := range hits {
 				if hit.Identity.DocumentKey == "vn:1" {
 					found = true
-					if hit.Class != "relation_context" || hit.Source != "chinhphu" || len(hit.Stamp.Decisions) != 2 || hit.Stamp.Decisions[0].Ordinal != 1 || hit.Stamp.Decisions[1].Ordinal != 2 || hit.Stamp.Unresolved != (date == nil) {
+					if hit.Class != "secondary" || hit.Source != "chinhphu" || len(hit.Stamp.Decisions) != 2 || hit.Stamp.Decisions[0].Ordinal != 1 || hit.Stamp.Decisions[1].Ordinal != 2 || hit.Stamp.Unresolved != (date == nil) {
 						t.Fatalf("hit: %+v", hit)
 					}
 				}
@@ -81,6 +81,22 @@ func TestHit_CarriesClassSourceAndDecisions(t *testing.T) {
 			t.Fatal("missing hit")
 		}
 	}
+	if _, updateErr := db.Exec(ctx, `UPDATE document SET class='relation_context',number_norm='50/2024/TT-NHNN' WHERE id=1`); updateErr != nil {
+		t.Fatal(updateErr)
+	}
+	result, searchErr := e.Search(ctx, Request{Query: "ngân hàng 50/2024/TT-NHNN", Mode: "exact", InForceOnly: &no})
+	if searchErr != nil {
+		t.Fatal(searchErr)
+	}
+	for _, hit := range result.NonCurrent {
+		if hit.Identity.DocumentKey == "vn:1" {
+			if hit.Class != "relation_context" {
+				t.Fatalf("routed hit class = %q", hit.Class)
+			}
+			return
+		}
+	}
+	t.Fatal("missing routed context hit")
 }
 
 func TestLoadDecisions_ShapedHits(t *testing.T) {

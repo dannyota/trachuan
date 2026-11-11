@@ -174,6 +174,17 @@ unbounded related hits. Use the same processing for dense and lexical controls.
 
 ## Validity and evidence
 
+Documents of class `relation_context` are not candidates in either arm unless a
+validated number reference in the query equals the document's normalized number;
+then they compete like any other document. They stay in the corpus as resolved
+relation targets with metadata, text and validity. The recipe field is
+`context_scope:"number-routed/1"`. Reason: on run `vn/20261110_4` they took 82
+of 736 legacy hit slots at limit 8, matched none of the 96 expected citations,
+and three out-of-scope negatives found a context document as their best hit,
+which raised the abstention threshold from 0.4812 to 0.5595 and made 14 answered
+positives abstain. One-hop context covers a topic by accident, so serving it as
+primary evidence misleads on topics the scope never claimed.
+
 Without explicit `as_of`, primary eligibility requires stored `is_current` and
 the known date interval containing the caller's civil date in Vietnam. The
 engine clock is injected; eval freezes that date. Missing start dates pass the
@@ -255,14 +266,16 @@ Threshold provenance and provisional status follow
 `rrf:{k,dense_weight, lexical_weight,routed_lexical_weight}`, `ties:"score-id"`,
 `routing:"vn-number/1"`, `group:"nearest-khoan"`, `reducer:"max"`,
 `hydrate_multiplier`, `document_cap`, `backfill:"demoted-order"`,
-`family_collapse`, `validity:"document-dates/3"`, `default_in_force_only:true`,
+`family_collapse`, `context_scope:"number-routed/1"`,
+`validity:"document-dates/3"`, `default_in_force_only:true`,
 `query_gate:"vn-marks/1"`, `evidence:"source-spans/1"`, `evidence_rune_cap`,
 `relation_cap`, `relation_evidence_rune_cap`,
 `abstention:{statistic:"first-group-best-member-cosine",threshold, status:"provisional-old-product",calibration_sha256}`.
 Hash compact fixed-field JSON. Serving does not accept arbitrary recipe
 overrides.
 
-Any eligibility semantics change bumps `validity`, even if the response shape is
+Any status or date eligibility change bumps `validity`, and any class
+eligibility change bumps `context_scope`, even if the response shape is
 unchanged. Version 2 records exclusive `eff_to` and the consolidated-status
 eligibility rule above. Rebuild and re-evaluate under the new recipe; do not
 reuse version 1 eligibility caches or relabel an old release.
