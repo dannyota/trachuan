@@ -90,6 +90,19 @@ func TestLoad_HeartbeatEveryMustBeBelowTimeout(t *testing.T) {
 	}
 }
 
+func TestLoad_HeartbeatQuarterTimeout(t *testing.T) {
+	for _, tc := range []struct {
+		every string
+		valid bool
+	}{{"30s", true}, {"31s", false}} {
+		env := map[string]string{"CORPUS_DATABASE_URL": "db", "CORPUS_HEARTBEAT_EVERY": tc.every, "CORPUS_HEARTBEAT_TIMEOUT": "2m"}
+		_, err := Load(func(k string) string { return env[k] })
+		if (err == nil) != tc.valid {
+			t.Errorf("interval %s: error = %v", tc.every, err)
+		}
+	}
+}
+
 func TestConfig_EmbedderAndBuilderSettings(t *testing.T) {
 	cfg, err := Load(func(key string) string {
 		if key == "CORPUS_DATABASE_URL" {

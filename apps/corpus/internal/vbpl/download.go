@@ -16,6 +16,8 @@ import (
 
 // Download saves a bounded attachment and returns its content hash.
 func (c *Client) Download(ctx context.Context, id string, f File, dir string, limit int64) (Downloaded, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.requestBudget)
+	defer cancel()
 	if limit < 0 {
 		return Downloaded{}, fmt.Errorf("negative download limit")
 	}

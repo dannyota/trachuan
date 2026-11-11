@@ -35,6 +35,8 @@ type Client struct {
 	slots           chan struct{}
 	fileSlots       chan struct{}
 	timeout         time.Duration
+	requestBudget   time.Duration
+	slowThreshold   time.Duration
 	backoffs        []time.Duration
 	fileHosts       []string
 	allowTestHTTP   bool
@@ -50,6 +52,8 @@ func New(version string) *Client {
 // NewWithBase creates a client for the supplied gateway URL.
 func NewWithBase(base, version string, options ...Option) *Client {
 	c := &Client{lookupPageSize: 1000, base: base, userAgent: "trachuan/" + version + " (+https://github.com/dannyota/trachuan)", http: &http.Client{}, limiter: rate.NewLimiter(16, 1), slots: make(chan struct{}, 16), fileSlots: make(chan struct{}, 8), timeout: 30 * time.Second, fileHosts: []string{"s3-han02.fptcloud.com"}, backoffs: []time.Duration{2 * time.Second, 8 * time.Second, 30 * time.Second}}
+	c.requestBudget = 200 * time.Second
+	c.slowThreshold = 10 * time.Second
 	for _, option := range options {
 		option(c)
 	}
@@ -103,7 +107,13 @@ type response struct {
 }
 
 // request holds a concurrency slot and timeout until the response body is consumed.
-func (c *Client) request(ctx context.Context, method, target string, body []byte, file bool, consume func(io.Reader) error) (int, error) {
+func (c *Client) request(ctx context.Context, method, target string, body []byte, file bool, consume func(io.Reader) error) (status int, err error) {
+	started := time.Now()
+	defer func() {
+		sourcegate.LogSlow(ctx, "vbpl", endpoint(target), time.Since(started), c.slowThreshold, status, err)
+	}()
+	ctx, cancel := context.WithTimeout(ctx, c.timeout)
+	defer cancel()
 	slots, client := c.slots, c.http
 	if file {
 		slots, client = c.fileSlots, c.fileHTTP
@@ -115,8 +125,8 @@ func (c *Client) request(ctx context.Context, method, target string, body []byte
 	}
 	defer func() { <-slots }()
 	if !file {
-		if err := c.limiter.Wait(ctx); err != nil {
-			return 0, fmt.Errorf("wait for rate limit: %w", err)
+		if waitErr := c.limiter.Wait(ctx); waitErr != nil {
+			return 0, fmt.Errorf("wait for rate limit: %w", waitErr)
 		}
 	}
 	if c.gate != nil {
@@ -124,13 +134,11 @@ func (c *Client) request(ctx context.Context, method, target string, body []byte
 		if !ok {
 			return 0, fmt.Errorf("source admission: missing run id")
 		}
-		if err := c.gate.Admit(ctx, id, "vbpl"); err != nil {
-			return 0, fmt.Errorf("source admission: %w", err)
+		if admitErr := c.gate.Admit(ctx, id, "vbpl"); admitErr != nil {
+			return 0, fmt.Errorf("source admission: %w", admitErr)
 		}
 	}
-	reqCtx, cancel := context.WithTimeout(ctx, c.timeout)
-	defer cancel()
-	req, err := http.NewRequestWithContext(reqCtx, method, target, bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, method, target, bytes.NewReader(body))
 	if err != nil {
 		return 0, fmt.Errorf("create request: %w", safeError(err))
 	}
@@ -184,6 +192,8 @@ func wait(ctx context.Context, d time.Duration) error {
 	}
 }
 func (c *Client) apiRaw(ctx context.Context, method, path string, body []byte) (json.RawMessage, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.requestBudget)
+	defer cancel()
 	for attempt := 0; ; attempt++ {
 		if attempt > 0 {
 			if err := wait(ctx, c.backoffs[attempt-1]); err != nil {

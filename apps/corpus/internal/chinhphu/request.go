@@ -161,32 +161,7 @@ func (c *Client) request(ctx context.Context, method, target string, form url.Va
 }
 func (c *Client) attempt(ctx context.Context, method, target string, form url.Values, file bool, timeout time.Duration, consume func(io.Reader, http.Header) error) (int, time.Duration, error) {
 	for redirects := 0; ; redirects++ {
-		select {
-		case c.slots <- struct{}{}:
-		case <-ctx.Done():
-			return 0, 0, ctx.Err()
-		}
-		if e := c.limiter.Wait(ctx); e != nil {
-			<-c.slots
-			return 0, 0, e
-		}
-		if e := c.admit(ctx); e != nil {
-			<-c.slots
-			return 0, 0, e
-		}
-		requestCtx, cancel := context.WithTimeout(ctx, timeout)
-		if e := c.checkURL(requestCtx, target, file); e != nil {
-			cancel()
-			<-c.slots
-			return 0, 0, e
-		}
-		limit := c.limits.HTMLBytes
-		if file {
-			limit = c.limits.FileBytes
-		}
-		status, loc, after, err := c.one(requestCtx, method, target, form, timeout, limit, consume)
-		cancel()
-		<-c.slots
+		status, loc, after, err := c.hop(ctx, method, target, form, file, timeout, consume)
 		if err != nil {
 			return status, after, err
 		}
@@ -210,6 +185,36 @@ func (c *Client) attempt(ctx context.Context, method, target string, form url.Va
 			form = nil
 		}
 	}
+}
+func (c *Client) hop(ctx context.Context, method, target string, form url.Values, file bool, timeout time.Duration, consume func(io.Reader, http.Header) error) (status int, location string, delay time.Duration, err error) {
+	started := time.Now()
+	name := "page"
+	if file {
+		name = "attachment"
+	}
+	defer func() { sourcegate.LogSlow(ctx, "chinhphu", name, time.Since(started), 10*time.Second, status, err) }()
+	select {
+	case c.slots <- struct{}{}:
+	case <-ctx.Done():
+		return 0, "", 0, ctx.Err()
+	}
+	defer func() { <-c.slots }()
+	if err = c.limiter.Wait(ctx); err != nil {
+		return 0, "", 0, err
+	}
+	if err = c.admit(ctx); err != nil {
+		return 0, "", 0, err
+	}
+	requestCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+	if err = c.checkURL(requestCtx, target, file); err != nil {
+		return 0, "", 0, err
+	}
+	limit := c.limits.HTMLBytes
+	if file {
+		limit = c.limits.FileBytes
+	}
+	return c.one(requestCtx, method, target, form, timeout, limit, consume)
 }
 func (c *Client) one(ctx context.Context, method, target string, form url.Values, timeout time.Duration, limit int64, consume func(io.Reader, http.Header) error) (int, string, time.Duration, error) {
 	reqctx, cancel := context.WithTimeout(ctx, timeout)

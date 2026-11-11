@@ -68,6 +68,31 @@ func TestClient_GateWithoutRunFailsClosed(t *testing.T) {
 	}
 }
 
+func TestClient_RequestSlotWaitUsesRequestTimeout(t *testing.T) {
+	c := NewWithBase("https://example.invalid", "test", WithLimits(float64(rate.Inf), 1), WithBackoffs())
+	c.timeout = 5 * time.Millisecond
+	c.slots <- struct{}{}
+	ctx, cancel := context.WithTimeout(context.Background(), 80*time.Millisecond)
+	defer cancel()
+	_, _, err := c.Detail(ctx, "1")
+	if !errors.Is(err, context.DeadlineExceeded) || ctx.Err() != nil {
+		t.Fatalf("error = %v, parent context error = %v; want request timeout before parent", err, ctx.Err())
+	}
+}
+
+func TestClient_RetrySequenceHasDeadline(t *testing.T) {
+	c := NewWithBase("https://example.invalid", "test", WithLimits(float64(rate.Inf), 1), WithBackoffs(30*time.Millisecond))
+	c.timeout = 5 * time.Millisecond
+	c.requestBudget = 10 * time.Millisecond
+	c.slots <- struct{}{}
+	ctx, cancel := context.WithTimeout(context.Background(), 25*time.Millisecond)
+	defer cancel()
+	_, _, err := c.Detail(ctx, "1")
+	if !errors.Is(err, context.DeadlineExceeded) || ctx.Err() != nil {
+		t.Fatalf("error = %v, parent = %v", err, ctx.Err())
+	}
+}
+
 func TestAPI_FailureCauses(t *testing.T) {
 	for _, tc := range []struct {
 		status        int
