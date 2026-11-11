@@ -96,7 +96,11 @@ under the corpus rules.
      may receive several nodes in different families. The threshold per level is
      calibrated on the labeled set to reach precision at least 0.85, then frozen
      in the release; below it, no assignment and a gap "unassigned".
-3. Manual overrides in `taxonomy/overrides.yaml`.
+3. Manual overrides in `taxonomy/overrides.yaml`. An override names an active
+   package node at level 2 or deeper or a custom node; any other code fails
+   `corpus taxonomy check` and the build. An override whose document or anchor
+   is not in the release yields a coverage gap `override_target_missing` naming
+   the document and the node, and nothing else.
 
 ## Serving
 
