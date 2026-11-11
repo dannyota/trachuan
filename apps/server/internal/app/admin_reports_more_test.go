@@ -16,9 +16,12 @@ import (
 
 type reportsFixture struct {
 	triageFixture
-	decided   int
-	decisions []store.DecideReportsParams
-	batches   map[string]store.BatchSnapshotRow
+	decided      int
+	decisions    []store.DecideReportsParams
+	batches      map[string]store.BatchSnapshotRow
+	snapshotErr  error
+	snapshotData json.RawMessage
+	writeErr     error
 }
 
 func (s *reportsFixture) TriageReports(context.Context, store.TriageReportsParams) ([]store.IssueReport, error) {
@@ -45,10 +48,25 @@ func (s *reportsFixture) createReportsBatch(_ context.Context, id string) error 
 		s.batches = map[string]store.BatchSnapshotRow{}
 	}
 	s.batches[id] = store.BatchSnapshotRow{Reports: json.RawMessage(`[{"account_id":987654,"email":"identity@example.invalid","report_id":12,"created_at":"2026-11-11T00:00:00Z","document_key":"vn:1","anchor":"","document_number":"1/2024/QH15","release":"20261111","kind":"wrong_validity","target":"","suggestion":{"status_class":"in_force"}}]`)}
+	if s.snapshotData != nil {
+		s.batches[id] = store.BatchSnapshotRow{Reports: s.snapshotData}
+	}
 	return nil
 }
 func (s *reportsFixture) reportsSnapshot(_ context.Context, id string) (store.BatchSnapshotRow, error) {
+	if s.snapshotErr != nil {
+		return store.BatchSnapshotRow{}, s.snapshotErr
+	}
 	return s.batches[id], nil
+}
+func (s *reportsFixture) writeReports(dir, id string, rows []exportReport) error {
+	if s.writeErr != nil {
+		if err := os.WriteFile(filepath.Join(dir, "partial"), []byte("partial"), 0600); err != nil {
+			return err
+		}
+		return s.writeErr
+	}
+	return writeReportExport(dir, id, rows)
 }
 func runFixture(s *reportsFixture, args ...string) (string, error) {
 	var b bytes.Buffer
@@ -152,6 +170,68 @@ func TestExport_NoAccountData(t *testing.T) {
 	}
 }
 func TestExport_BatchRecovery(t *testing.T) {
+	for _, mode := range []string{"after commit", "during write"} {
+		t.Run(mode, func(t *testing.T) {
+			s := &reportsFixture{snapshotData: json.RawMessage(`[
+{"report_id":12,"created_at":"2026-11-11T00:00:00Z","document_key":"vn:valid","document_number":"1/2024/QH15","kind":"wrong_validity","suggestion":{"status_class":"in_force"}},
+{"report_id":13,"created_at":"2026-11-11T00:00:00Z","document_key":"vn:provision","anchor":"dieu-1","kind":"wrong_validity","suggestion":{}},
+{"report_id":14,"created_at":"2026-11-11T00:00:00Z","document_key":"vn:text","kind":"wrong_text","suggestion":{}},
+{"report_id":15,"created_at":"2026-11-11T00:00:00Z","document_key":"vn:citation","kind":"broken_citation","target":"2/2024/QH15","suggestion":{}}
+]`)}
+			dir := t.TempDir()
+			injected := errors.New("injected failure")
+			if mode == "after commit" {
+				s.snapshotErr = injected
+			} else {
+				s.writeErr = injected
+			}
+			out, err := runFixture(s, "export", "--out", dir)
+			id := strings.TrimSpace(out)
+			if !errors.Is(err, injected) || id == "" || len(s.batches) != 1 {
+				t.Fatalf("failure not observed: id=%q err=%v", id, err)
+			}
+			entries, err := os.ReadDir(dir)
+			if err != nil || len(entries) != 0 {
+				t.Fatalf("partial export: %v %v", entries, err)
+			}
+			s.snapshotErr = nil
+			s.writeErr = nil
+			if _, err = runFixture(s, "export", "--out", dir, "--batch", id); err != nil {
+				t.Fatal(err)
+			}
+			reference := t.TempDir()
+			if _, err = runFixture(s, "export", "--out", reference, "--batch", id); err != nil {
+				t.Fatal(err)
+			}
+			for _, name := range []string{"corrections-draft.yaml", "validity-review.jsonl", "text-issues.jsonl", "citation-review.jsonl", "manifest.json"} {
+				got, e1 := os.ReadFile(filepath.Join(dir, id, name))
+				want, e2 := os.ReadFile(filepath.Join(reference, id, name))
+				if e1 != nil || e2 != nil || !bytes.Equal(got, want) {
+					t.Fatalf("recovery %s: %v %v", name, e1, e2)
+				}
+			}
+			manifest, err := os.ReadFile(filepath.Join(dir, id, "manifest.json"))
+			var decoded struct {
+				BatchID   string  `json:"batch_id"`
+				ReportIDs []int64 `json:"report_ids"`
+			}
+			if err != nil || json.Unmarshal(manifest, &decoded) != nil || decoded.BatchID != id || len(decoded.ReportIDs) != 4 {
+				t.Fatalf("manifest missing snapshot: %s %v", manifest, err)
+			}
+			for i, want := range []int64{12, 13, 14, 15} {
+				if decoded.ReportIDs[i] != want {
+					t.Fatalf("snapshot ids: %v", decoded.ReportIDs)
+				}
+			}
+			for name, value := range map[string]string{"corrections-draft.yaml": "vn:valid", "validity-review.jsonl": "vn:provision", "text-issues.jsonl": "vn:text", "citation-review.jsonl": "vn:citation"} {
+				data, readErr := os.ReadFile(filepath.Join(dir, id, name))
+				if readErr != nil || !bytes.Contains(data, []byte(value)) {
+					t.Fatalf("snapshot missing from %s: %v", name, readErr)
+				}
+			}
+
+		})
+	}
 	s, dir, id := exportFixture(t)
 	if _, e := runFixture(s, "export", "--out", dir, "--batch", id); e == nil {
 		t.Fatal("existing directory accepted")
@@ -226,5 +306,22 @@ func TestTriage_ShowIncludesGroup(t *testing.T) {
 	out, err := runFixture(s, "show", groupID(gs[0])[:12])
 	if err != nil || !strings.Contains(out, "1/2024/ND-CP") || !strings.Contains(out, "broken_citation") {
 		t.Fatalf("show group missing: %q %v", out, err)
+	}
+}
+
+func TestExport_ExplicitEmptyBatchRefused(t *testing.T) {
+	for _, args := range [][]string{{"--batch", ""}, {"--batch="}} {
+		t.Run(strings.Join(args, " "), func(t *testing.T) {
+			s := &reportsFixture{}
+			dir := t.TempDir()
+			out, err := runFixture(s, append([]string{"export", "--out", dir}, args...)...)
+			if err == nil || err.Error() != "invalid batch id" {
+				t.Fatalf("error = %v", err)
+			}
+			entries, readErr := os.ReadDir(dir)
+			if readErr != nil || out != "" || len(s.batches) != 0 || len(entries) != 0 {
+				t.Fatalf("empty batch changed state: output=%q batches=%d entries=%d err=%v", out, len(s.batches), len(entries), readErr)
+			}
+		})
 	}
 }

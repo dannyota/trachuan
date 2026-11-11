@@ -19,6 +19,10 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
+type reportExportWriter interface {
+	writeReports(string, string, []exportReport) error
+}
+
 type reportExporter interface {
 	createReportsBatch(context.Context, string) error
 	reportsSnapshot(context.Context, string) (store.BatchSnapshotRow, error)
@@ -67,6 +71,15 @@ func exportReports(ctx context.Context, base admin.Store, args []string, out io.
 	if f.Parse(args) != nil || f.NArg() != 0 || *dir == "" {
 		return errors.New("invalid export flags")
 	}
+	batchProvided := false
+	f.Visit(func(v *flag.Flag) {
+		if v.Name == "batch" {
+			batchProvided = true
+		}
+	})
+	if batchProvided && *batch == "" {
+		return errors.New("invalid batch id")
+	}
 	s, ok := base.(reportExporter)
 	if !ok {
 		return errors.New("reports store unavailable")
@@ -112,7 +125,11 @@ func exportReports(ctx context.Context, base admin.Store, args []string, out io.
 		return fmt.Errorf("create temporary directory: %w", err)
 	}
 	defer func() { _ = os.RemoveAll(tmp) }()
-	if err = writeReportExport(tmp, *batch, rows); err != nil {
+	write := writeReportExport
+	if writer, ok := base.(reportExportWriter); ok {
+		write = writer.writeReports
+	}
+	if err = write(tmp, *batch, rows); err != nil {
 		return err
 	}
 	if err = renameReportDirectory(tmp, target); err != nil {

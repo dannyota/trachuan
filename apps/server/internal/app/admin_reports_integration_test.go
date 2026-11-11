@@ -110,3 +110,61 @@ func TestDecide_DatabaseUnknownIDRollsBack(t *testing.T) {
 		t.Fatalf("state %q: %v", state, err)
 	}
 }
+
+func TestDecide_DatabaseSelectors(t *testing.T) {
+	for _, mode := range []string{"group", "ids"} {
+		t.Run(mode, func(t *testing.T) {
+			ctx, pool, s, account := boundsFixture(t)
+			other, err := s.CreateAccount(ctx, store.CreateAccountParams{GoogleSub: "selector-other", Email: "selector@example.invalid"})
+			if err != nil {
+				t.Fatal(err)
+			}
+			insert := func(accountID int64, key, state string) int64 {
+				t.Helper()
+				r, err := s.InsertReport(ctx, store.InsertReportParams{AccountID: accountID, Release: "20990101", DocumentKey: key, Kind: "wrong_text", Suggestion: json.RawMessage(`{}`)})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if state != "open" {
+					if _, err = pool.Exec(ctx, "UPDATE issue_report SET state=$1 WHERE id=$2", state, r.ID); err != nil {
+						t.Fatal(err)
+					}
+				}
+				return r.ID
+			}
+			selectedOpen := insert(account, "vn:selected", "open")
+			selectedClosed := insert(other.ID, "vn:selected", "accepted")
+			otherOpen := insert(account, "vn:other", "open")
+			otherClosed := insert(other.ID, "vn:other", "rejected")
+			var args []string
+			wantSelected := "accepted"
+			if mode == "group" {
+				wantSelected = "rejected"
+				id := groupID(store.TriageGroupsRow{DocumentKey: "vn:selected", Kind: "wrong_text"})
+				args = []string{"reports", "reject", id[:12], "--by", "operator"}
+			} else {
+				args = []string{"reports", "accept", "--ids", fmt.Sprintf("%d,%d", selectedOpen, otherClosed), "--by", "operator"}
+			}
+			if err = runAdmin(ctx, args, s, &bytes.Buffer{}); err != nil {
+				t.Fatal(err)
+			}
+			for id, want := range map[int64]string{selectedOpen: wantSelected, selectedClosed: "accepted", otherOpen: "open", otherClosed: "rejected"} {
+				var state string
+				var by *string
+				if err = pool.QueryRow(ctx, "SELECT state, decided_by FROM issue_report WHERE id=$1", id).Scan(&state, &by); err != nil {
+					t.Fatal(err)
+				}
+				if state != want {
+					t.Errorf("report %d state = %q, want %q", id, state, want)
+				}
+				if id == selectedOpen {
+					if by == nil || *by != "operator" {
+						t.Errorf("report %d operator not recorded", id)
+					}
+				} else if by != nil {
+					t.Errorf("unselected or closed report %d was changed", id)
+				}
+			}
+		})
+	}
+}
