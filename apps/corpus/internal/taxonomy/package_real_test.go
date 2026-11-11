@@ -82,3 +82,36 @@ func TestReadPackage_RealArticleNotes(t *testing.T) {
 		t.Errorf("articles with notes = %d, want 86388", count)
 	}
 }
+
+func TestArticleResolver_Real(t *testing.T) {
+	path := os.Getenv("PHAPDIEN_PACKAGE")
+	if path == "" {
+		t.Fatal("PHAPDIEN_PACKAGE is required")
+	}
+	pkg, err := ReadPackage(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mapping, err := Import(pkg, Mapping{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	resolver := NewArticleResolver(pkg, mapping)
+	retired := map[string]bool{}
+	for _, d := range pkg.DeMuc {
+		retired[d.GUID] = d.Removed
+	}
+	resolved, unresolved := 0, 0
+	for _, a := range pkg.Articles {
+		_, ok := resolver.Code(a)
+		if ok {
+			resolved++
+		} else {
+			unresolved++
+		}
+		if ok == retired[a.DeMucGUID] {
+			t.Errorf("article resolution does not match section status")
+		}
+	}
+	t.Logf("resolved %d, unresolved %d", resolved, unresolved)
+}

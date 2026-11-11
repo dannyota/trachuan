@@ -7,23 +7,37 @@ source: [research note](../research/phap-dien-2026-11-08.md).
 
 ## Import mapping from the 2023 codification package
 
-| Package element                | Level                                            | Code form               | Rule                                                                                                                                                                                                             |
-| ------------------------------ | ------------------------------------------------ | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| chủ đề (`jdChuDe`, 45)         | 1                                                | `22`                    | STT as code                                                                                                                                                                                                      |
-| đề mục (`jdDeMuc`)             | 2                                                | `22.3`                  | chủ đề STT plus đề mục STT; when that code is taken, the next free number; entries marked "loại bỏ" import as `retired`; a đề mục with no placed article is imported but not served until it holds an assignment |
-| phần, when the đề mục has phần | 3                                                | `22.3.p1`               | MAPC order                                                                                                                                                                                                       |
-| chương                         | 3, or 4 under a phần                             | `22.3.c2`, `22.3.p1.c2` | MAPC order                                                                                                                                                                                                       |
-| mục inside a chương            | 4, or dropped when the chương is already level 4 | `22.3.c2.m1`            | a dropped mục is recorded in the mapping file as flattened into its chương                                                                                                                                       |
-| tiểu mục inside a mục          | never a node                                     | none                    | flattened into its mục; recorded in the mapping file                                                                                                                                                             |
-| custom node                    | 3 or 4                                           | `22.3.x1`               | declared in `taxonomy/custom.yaml` with name and one-sentence description                                                                                                                                        |
+| Package element                                  | Level                                            | Code form               | Rule                                                                                                                                                                                                             |
+| ------------------------------------------------ | ------------------------------------------------ | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| chủ đề (`jdChuDe`, 45)                           | 1                                                | `22`                    | STT as code                                                                                                                                                                                                      |
+| đề mục (`jdDeMuc`)                               | 2                                                | `22.3`                  | chủ đề STT plus đề mục STT; when that code is taken, the next free number; entries marked "loại bỏ" import as `retired`; a đề mục with no placed article is imported but not served until it holds an assignment |
+| phần, when the đề mục has phần                   | 3                                                | `22.3.p1`               | MAPC order                                                                                                                                                                                                       |
+| chương                                           | 3, or 4 under a phần                             | `22.3.c2`, `22.3.p1.c2` | MAPC order                                                                                                                                                                                                       |
+| mục inside a chương                              | 4, or dropped when the chương is already level 4 | `22.3.c2.m1`            | a dropped mục is recorded in the mapping file as flattened into its chương                                                                                                                                       |
+| tiểu mục inside a mục                            | never a node                                     | none                    | flattened into its mục; recorded in the mapping file                                                                                                                                                             |
+| mục or tiểu mục without a chương or mục above it | never a node                                     | none                    | folded into its nearest coded ancestor (the đề mục or a phần); recorded in the mapping file                                                                                                                      |
+| custom node                                      | 3 or 4                                           | `22.3.x1`               | declared in `taxonomy/custom.yaml` with name and one-sentence description                                                                                                                                        |
 
 Codes are stable identifiers, not display paths. `taxonomy/mapping.yaml` maps
 each package node GUID (`ID` in `jdAllTree`, `Value` in `jdChuDe` and `jdDeMuc`)
 to its code. A later import looks up the GUID first and keeps the code even when
-the position changed; a GUID not in the file receives the next free code at its
-level, and a code is never reused. A GUID missing from a later import marks its
-node `retired`. `taxonomy_version` is the hash of the mapping file, the custom
-file and the overrides file.
+the position changed; a GUID not in the file receives a new code, and a code is
+never reused. A new code is its parent's code, the kind letter and one more than
+the highest number of any code ever recorded in the mapping with exactly that
+prefix, whatever the status or current position of that code's node; a chủ đề or
+đề mục number follows the STT rule in the table, falling back to the same scan.
+A GUID missing from a later import marks its node `retired`. A GUID that keeps
+an active node changes only its level, parent and ordinal, never its code. A
+GUID whose node becomes flattened retires its code and is recorded as flattened.
+A retired code never returns to service: a GUID whose node is active again after
+its code was retired, because it went missing, was flattened or was marked
+removed, receives a new code. A retired entry is history: the import that
+retires it records it a last time and later imports never change it, so a GUID
+holds at most one active code and any number of retired ones. A đề mục marked
+removed that holds no active code is recorded once as retired; the nodes inside
+it are neither coded nor flattened, so codes they held retire.
+`taxonomy_version` is the hash of the mapping file, the custom file and the
+overrides file.
 
 ## Inputs
 
@@ -37,11 +51,11 @@ files are committed under `taxonomy/`:
 
 - `mapping.yaml`: the package SHA-256, then one entry per package node with its
   GUID, code, level, kind (`chude`, `demuc`, `phan`, `chuong`, `muc`), parent
-  code, name as last imported, sibling ordinal and status, and one entry per
-  flattened node (a dropped mục or a tiểu mục) naming the code it folds into.
-  `corpus taxonomy import` rewrites it from the package under the code rules
-  above, deterministically, and never reuses a code; a person reviews the diff
-  and commits it.
+  code, name as last imported, status and, when active, its package ordinal
+  among its active siblings, and one entry per flattened node (a dropped mục or
+  a tiểu mục) naming the code it folds into. `corpus taxonomy import` rewrites
+  it from the package under the code rules above, deterministically, and never
+  reuses a code; a person reviews the diff and commits it.
 - `custom.yaml`: custom nodes, each with code, parent code, name and a
   one-sentence description; empty until a subject needs one.
 - `overrides.yaml`: manual entries, each with document key, provision anchor,
@@ -100,8 +114,10 @@ hits, filters and counts alike.
 Each node carries its sibling `ordinal`: active package siblings in package
 order, then custom siblings in file order, then retired siblings in code order;
 and the counts of distinct provisions with an effective node in its subtree and
-of their documents. The build computes both. A release whose assignments come
-only from seeds and overrides serves them without the classification floors
+of their documents. The build computes both. It places a retired node under its
+recorded parent at the parent's level plus one, and leaves out a retired node
+that would fall below level 4, with its descendants. A release whose assignments
+come only from seeds and overrides serves them without the classification floors
 below, which gate the LLM layer; it must still pass the filter gate in
 [evaluation](evaluation.md). The LLM layer's candidate text for a node is,
 versioned with the classification recipe, the names of its ancestors and itself

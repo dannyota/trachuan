@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func appendArticles(out []Article, data []byte, section string, tree map[string]string) []Article {
+func appendArticles(out []Article, data []byte, section string, tree map[treeKey]string) []Article {
 	article := regexp.MustCompile(`(?s)<p class='pDieu'><a name='([^']+)'></a>.*?</p>(?:\s*<p class='pGhiChu'>(.*?)</p>)?`)
 	link := regexp.MustCompile(`(?s)<a\s+[^>]*href='([^']*)'`)
 	item := regexp.MustCompile(`(?:[?&])ItemID=([0-9]+)(?:[&#]|$)`)
@@ -14,7 +14,7 @@ func appendArticles(out []Article, data []byte, section string, tree map[string]
 	noteNumber := regexp.MustCompile(`\(Điều\s+([0-9]+)(?:[^0-9A-Za-z_]|$)`)
 	tags := regexp.MustCompile(`<[^>]*>`)
 	for _, m := range article.FindAllSubmatch(data, -1) {
-		a := Article{DeMucGUID: section, MAPC: string(m[1]), Seq: len(out) + 1, TreeGUID: tree[string(m[1])]}
+		a := Article{DeMucGUID: section, MAPC: string(m[1]), Seq: len(out) + 1, TreeGUID: tree[treeKey{section, string(m[1])}]}
 		note := string(m[2])
 		for _, href := range link.FindAllStringSubmatch(note, -1) {
 			url := html.UnescapeString(href[1])

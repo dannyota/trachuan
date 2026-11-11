@@ -66,6 +66,8 @@ type Article struct {
 	ItemID, Number, TreeGUID string
 }
 
+type treeKey struct{ section, code string }
+
 const maxEntry = 64 << 20
 
 // ReadPackage reads a zip package without extracting its contents.
@@ -101,10 +103,11 @@ func ReadPackage(zipPath string) (Package, error) {
 	if err = parseJSON(raw, &p); err != nil {
 		return Package{}, err
 	}
-	first := make(map[string]string, len(p.Tree))
+	first := make(map[treeKey]string, len(p.Tree))
 	for _, n := range p.Tree {
-		if _, ok := first[n.MAPC]; !ok {
-			first[n.MAPC] = n.GUID
+		key := treeKey{n.DeMucGUID, n.MAPC}
+		if _, ok := first[key]; !ok {
+			first[key] = n.GUID
 		}
 	}
 	names := make([]string, 0, len(files))
@@ -205,21 +208,20 @@ func nodeKind(name string) (NodeKind, error) {
 	return "", fmt.Errorf("unknown node kind in %q", name)
 }
 func setParentsAndOrder(nodes []TreeNode) {
-	type key struct{ section, code string }
-	first := make(map[key]string, len(nodes))
+	first := make(map[treeKey]string, len(nodes))
 	for _, n := range nodes {
-		k := key{n.DeMucGUID, n.MAPC}
+		k := treeKey{n.DeMucGUID, n.MAPC}
 		if _, ok := first[k]; !ok {
 			first[k] = n.GUID
 		}
 	}
-	groups := map[key][]int{}
+	groups := map[treeKey][]int{}
 	for i := range nodes {
 		n := &nodes[i]
 		if len(n.MAPC) > 20 {
-			n.ParentGUID = first[key{n.DeMucGUID, n.MAPC[:len(n.MAPC)-20]}]
+			n.ParentGUID = first[treeKey{n.DeMucGUID, n.MAPC[:len(n.MAPC)-20]}]
 		}
-		k := key{n.DeMucGUID, n.ParentGUID}
+		k := treeKey{n.DeMucGUID, n.ParentGUID}
 		groups[k] = append(groups[k], i)
 	}
 	for _, idx := range groups {

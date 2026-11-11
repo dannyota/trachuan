@@ -171,3 +171,45 @@ func TestReadPackage_FirstSourceLink(t *testing.T) {
 		t.Fatalf("got ItemID %q, Number %q; want 42, 17", a.ItemID, a.Number)
 	}
 }
+
+func TestReadPackage_ArticleTreeScopedBySection(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "package.zip")
+	f, err := os.Create(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	z := zip.NewWriter(f)
+	files := []struct{ name, body string }{
+		{"jsonData.js", `var jdChuDe = [{"Value":"subject","STT":"1","Text":"Subject"}]; var jdDeMuc = [{"Value":"one","ChuDe":"subject","STT":"1","Text":"One"},{"Value":"two","ChuDe":"subject","STT":"2","Text":"Two"}]; var jdAllTree = [{"ID":"first","MAPC":"same","DeMucID":"one","TEN":"Điều one"},{"ID":"duplicate","MAPC":"same","DeMucID":"one","TEN":"Điều duplicate"},{"ID":"second","MAPC":"same","DeMucID":"two","TEN":"Điều two"}];`},
+		{"demuc/one.html", `<p class='pDieu'><a name='same'></a>Synthetic one</p>`},
+		{"demuc/two.html", `<p class='pDieu'><a name='same'></a>Synthetic two</p>`},
+	}
+	for _, file := range files {
+		w, createErr := z.Create(file.name)
+		if createErr != nil {
+			t.Fatal(createErr)
+		}
+		if _, err = w.Write([]byte(file.body)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err = z.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err = f.Close(); err != nil {
+		t.Fatal(err)
+	}
+	p, err := ReadPackage(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(p.Articles) != 2 {
+		t.Fatalf("got %d articles", len(p.Articles))
+	}
+	for _, a := range p.Articles {
+		want := map[string]string{"one": "first", "two": "second"}[a.DeMucGUID]
+		if a.TreeGUID != want {
+			t.Errorf("section %s tree GUID = %q, want %q", a.DeMucGUID, a.TreeGUID, want)
+		}
+	}
+}
