@@ -100,15 +100,18 @@ minutes; embedder RSS at most 2.0 GB after a 5-minute stress at full admission
 disk under 70% after activation with the previous release kept for rollback.
 
 Embedder measurements on the host: 0.83 GB in a direct ONNX Runtime run (INT8,
-2026-11-10). The Go query service (2026-11-11, at e25b097) passes the embedder
-gate: 1.21 to 1.28 GB through and after the 5-minute stress at full admission
-and a 60-second burst of 10 clients. RSS was 2.35 GB right after startup and
-peaked at 2.51 GB in the first minutes, above the 2,000 MB row, while the Go
-runtime still held the verified 570 MB model buffer; the service now returns it
-with `debug.FreeOSMemory` after warmup, to be re-measured. Over loopback HTTP:
-92 short questions one at a time p50 83 ms and p95 131 ms; a 217-token text p50
-485 ms; two clients without pause p50 160 ms, p95 233 ms, p99 273 ms at 12.2
-requests per second; the burst got 429 at once and no 504. Details are in the
+2026-11-10). The Go query service (2026-11-11) passes the embedder gate. At
+e25b097 it held 1.21 to 1.28 GB through and after the 5-minute stress at full
+admission and a 60-second burst of 10 clients, but RSS was 2.35 GB right after
+startup and peaked at 2.51 GB in the first minutes while the Go runtime still
+held the verified 570 MB model buffer. With `debug.FreeOSMemory` after warmup
+(d2e74cb), steady RSS is 1.1 to 1.3 GB: 1.07 GB at ready and for the next
+minute, 1.17 GB after a 60-second stress with two clients (799 requests, all
+200). Model load still peaks at about 2.4 GB (VmHWM 2,424,064 kB) for under 5
+seconds before ready, above the 2,000 MB row. Over loopback HTTP: 92 short
+questions one at a time p50 83 ms and p95 131 ms; a 217-token text p50 485 ms;
+two clients without pause p50 160 ms, p95 233 ms, p99 273 ms at 12.2 requests
+per second; the burst got 429 at once and no 504. Details are in the
 [INT8 study](../research/query-int8-2026-11.md#go-service-on-the-a1-host-2026-11-11).
 
 Owner-supplied host measurements from 2026-11-09, across three runs with

@@ -82,8 +82,11 @@ once. Through HTTP the service is about 20 ms slower than direct ONNX Runtime
 2.51 GB (VmHWM) after the sequential run, fell to 1.81 GB a minute later and
 then stayed between 1.21 and 1.28 GB through the stress and the burst, under the
 2.0 GB gate. The early peak is the verified 570 MB model buffer kept until the
-Go runtime returned it; the service now calls `debug.FreeOSMemory` after warmup,
-not yet re-measured on the host. Raw files are kept outside the repository.
+Go runtime returned it. With `debug.FreeOSMemory` after warmup (d2e74cb) RSS is
+1.07 GB at ready and for the next minute and 1.17 GB after a 60-second stress
+with two clients (799 requests, all 200); model load still peaks at about 2.4 GB
+(VmHWM 2,424,064 kB) for under 5 seconds before ready. Raw files are kept
+outside the repository.
 
 ## Not measured
 
