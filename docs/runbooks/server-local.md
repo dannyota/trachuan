@@ -85,7 +85,7 @@ Add the local server using the
 [Claude Code MCP command](https://code.claude.com/docs/en/mcp):
 
 ```sh
-claude mcp add --transport http trachuan "$SERVER_PUBLIC_URL/mcp"
+claude mcp add --transport http trachuan "${SERVER_PUBLIC_URL%/}/mcp"
 ```
 
 In Claude Code, open `/mcp`, select trachuan and follow the browser login. Sign
