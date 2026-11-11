@@ -59,11 +59,13 @@ The deleted span is exact:
   byte of the value.
 
 A key matches when its decoded string equals `viewCount`, so an escaped spelling
-matches too. Every matching member of `data` is removed, each by the rules
-above. A `viewCount` anywhere else, a detail without the member and a `data`
-that is not an object leave the bytes unchanged. Malformed JSON is a source data
-error, as today. The observation hash and size describe the stored bytes. The
-VBPL part of the fetch recipe becomes `vbpl-fetch/2`.
+matches too. Matching members of `data` are removed one at a time, leftmost
+first, each by the rules above applied to the bytes left by the previous
+removal: `{"data":{"x":0,"viewCount":1 ,"viewCount":2}}` becomes
+`{"data":{"x":0}}`. A `viewCount` anywhere else, a detail without the member and
+a `data` that is not an object leave the bytes unchanged. Malformed JSON is a
+source data error, as today. The observation hash and size describe the stored
+bytes. The VBPL part of the fetch recipe becomes `vbpl-fetch/2`.
 
 Cost, once: every VBPL fetch manifest changes, so the next run repeats extract,
 chunk and embed for all documents. This ships first, as its own change, and the
@@ -190,8 +192,8 @@ The primary runs these; they are requirements, not results.
 
 - `viewCount`: two details that differ only in the counter give identical stored
   bytes and manifest; expected-byte fixtures for the member first, in the
-  middle, last and alone, with and without whitespace, duplicated and with an
-  escaped key; a detail without the member is unchanged.
+  middle, last and alone, with and without whitespace, duplicated (the case
+  above) and with an escaped key; a detail without the member is unchanged.
 - Reuse: with an equal `updatedDate` the fake source sees exactly two calls and
   no download, and the bundle equals the full-read bundle byte for byte.
 - Each blocking condition alone forces the full read: no baseline, null date on
