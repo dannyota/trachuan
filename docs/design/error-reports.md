@@ -74,21 +74,25 @@ with `deduplicated: true` and changes nothing. Admission runs in one
 transaction: it locks the account row (rejecting a blocked or deletion-requested
 account), takes the reports advisory lock for the global counts, then checks the
 per-account daily, open and retained caps and the global retained cap in budgets
-before inserting; at a cap the call is `rate_limited`. Withdrawn and closed
-reports keep counting against the retained caps until deleted, so submitting and
-withdrawing cannot exceed them.
+before inserting; at a cap the call is `rate_limited`. The global retained cap
+counts report rows and export snapshot rows together, and batch creation takes
+the same lock and is refused at the cap with a fixed message. Withdrawn and
+closed reports keep counting against the retained caps until deleted, so
+submitting and withdrawing cannot exceed them.
 
 ## Triage
 
-`reports list` shows groups by group key, each with a group id (the first 12
-hexadecimal characters of the SHA-256 of the key), the report count, the
+`reports list` shows groups by group key, each with a group id (the SHA-256 of
+the key, shown as its first 12 hexadecimal characters), the report count, the
 distinct-account count, the newest time and the distinct suggestion values; it
 never shows account identities. `reports show <group id>` adds report ids,
 releases and states; account ids appear only with `--accounts`, and email or
 Google subject never. The CLI runs only on the host with the auth database role;
-there is no web triage and no user sees another account's reports. `accept` and
-`reject` act on a group id or on report ids and record the operator name given
-on the command line. Accepting applies nothing.
+there is no web triage and no user sees another account's reports. `show`,
+`accept` and `reject` take a group id or a prefix of at least 12 characters that
+matches exactly one group, or report ids; an ambiguous or unknown selector is
+refused without any change. `accept` and `reject` act and record the operator
+name given on the command line. Accepting applies nothing.
 
 ## Export
 

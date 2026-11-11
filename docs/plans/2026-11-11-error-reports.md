@@ -41,7 +41,7 @@
 
 **Interfaces:** Table per data.md with a partial unique index on (account, document_key, anchor, kind, target) where `state = 'open'`, `ON DELETE CASCADE` from account, indexes for retention and triage grouping. Queries: `CreateReport` (used inside the admission transaction after the account row lock and the reports advisory lock: inserts unless an open duplicate exists and the daily, open and retained caps allow; returns the row and a deduplicated flag or a cap marker), `ListOwnReports` (cursor pages of 100), `WithdrawOwnReport`, `TriageGroups`, `TriageReports`, `DecideReports`, `CreateExportBatch` (one transaction assigning a batch id to accepted reports without one and copying their snapshot rows into `issue_report_export`), `BatchSnapshot`, retention of snapshots, `DeleteClosedReports` (batch limit and retention parameters).
 
-- [ ] **Step 1: Failing tests** (integration): `TestMigrate_00004RoundTrip`; `TestStore_DedupeAndCapsUnderRace` (concurrent identical reports on separate connections; caps at their boundaries); `TestStore_OwnRowsOnly`; `TestStore_ExportBatchSnapshotSurvivesDeletion`; `TestStore_RetentionDeletesClosed`.
+- [ ] **Step 1: Failing tests** (integration): `TestMigrate_00004RoundTrip`; `TestStore_DedupeAndCapsUnderRace` (concurrent identical reports on separate connections; caps at their boundaries); `TestStore_OwnRowsOnly`; `TestStore_ExportBatchSnapshotSurvivesDeletion`; `TestStore_SnapshotsCountTowardRetainedCap` (export, delete and readmit cycles); `TestStore_RetentionDeletesClosed`.
 - [ ] **Step 2: Implement**; run `make generate` and `make sqlc-check`; commit `feat(server): error report schema`.
 
 ### Task 2: Validation, dedupe and limits
@@ -73,7 +73,7 @@
 
 **Interfaces:** `server admin reports list [--kind K] [--state S]`, `show <group id> [--accounts]`, `accept|reject (<group id>|--ids ...) --by NAME`, `export --out DIR [--batch ID]`.
 
-- [ ] **Step 1: Failing tests:** `TestTriage_GroupsAndCounts` (two targets cited from one provision are two groups); `TestTriage_NoIdentityWithoutFlag`; `TestDecide_GroupAndIDs`; `TestExport_DraftFormats` (corrections draft parses as the corrections YAML shape with TODO evidence, only document-level groups with one agreed non-empty set; others in validity-review.jsonl); `TestExport_NoAccountData`; `TestExport_BatchRecovery` (a crash after the transaction or during writing is repaired by `--batch` into a fresh directory; an existing batch directory is refused; an expired snapshot fails with a fixed message; membership unchanged after account deletion); `TestExport_OnlyUnbatchedReports`.
+- [ ] **Step 1: Failing tests:** `TestTriage_GroupsAndCounts` (two targets cited from one provision are two groups); `TestTriage_AmbiguousSelectorRefused` (a forced prefix collision changes nothing); `TestTriage_NoIdentityWithoutFlag`; `TestDecide_GroupAndIDs`; `TestExport_DraftFormats` (corrections draft parses as the corrections YAML shape with TODO evidence, only document-level groups with one agreed non-empty set; others in validity-review.jsonl); `TestExport_NoAccountData`; `TestExport_BatchRecovery` (a crash after the transaction or during writing is repaired by `--batch` into a fresh directory; an existing batch directory is refused; an expired snapshot fails with a fixed message; membership unchanged after account deletion); `TestExport_OnlyUnbatchedReports`.
 - [ ] **Step 2: Implement**; commit `feat(server): error report triage and export`.
 
 ### Task 6: Wiring, retention and runbook
