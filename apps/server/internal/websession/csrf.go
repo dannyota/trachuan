@@ -8,6 +8,8 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+
+	"danny.vn/trachuan/apps/server/internal/apierror"
 )
 
 // CSRF checks origin, session secret and JSON media type on unsafe web requests.
@@ -21,7 +23,7 @@ func (m *Manager) CSRF(next http.Handler) http.Handler {
 		p, ok := FromContext(r.Context())
 		token, tokenOK := singleHeader(r.Header, "X-CSRF-Token")
 		if !ok || !tokenOK || !validValue(p.CSRFSecret) || subtle.ConstantTimeCompare([]byte(token), []byte(p.CSRFSecret)) != 1 || !m.originAllowed(r) || hasBody(r) && !jsonBody(r.Header) {
-			writeError(w, 403, "csrf_rejected", "CSRF validation failed")
+			apierror.Write(w, 403, "csrf_rejected")
 			return
 		}
 		next.ServeHTTP(w, r)

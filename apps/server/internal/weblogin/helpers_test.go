@@ -199,7 +199,7 @@ func assertRejected(t *testing.T, f *fixture, w *httptest.ResponseRecorder, code
 }
 func assertUnavailable(t *testing.T, f *fixture, w *httptest.ResponseRecorder) {
 	t.Helper()
-	if w.Code != 503 || w.Header().Get("Content-Type") != "application/json" || w.Body.String() != "{\"error\":{\"code\":\"unavailable\",\"message\":\"Service unavailable\"}}\n" || w.Header().Get("Location") != "" {
+	if w.Code != 503 || w.Header().Get("Content-Type") != "application/json" || w.Body.String() != "{\"error\":{\"code\":\"unavailable\",\"message\":\"Service unavailable.\"}}\n" || w.Header().Get("Location") != "" {
 		t.Errorf("response=%d %v %s", w.Code, w.Header(), w.Body.String())
 	}
 	assertNoSession(t, f, w)

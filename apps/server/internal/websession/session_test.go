@@ -118,7 +118,7 @@ func TestSession_RejectsRevokedExpiredBlockedEpoch(t *testing.T) {
 			editRow(s, raw, f)
 			w := serve(m, request(raw))
 			assertStatus(t, w, 401)
-			if w.Body.String() != "{\"error\":{\"code\":\"unauthenticated\",\"message\":\"Unauthenticated\"}}\n" {
+			if w.Body.String() != "{\"error\":{\"code\":\"unauthenticated\",\"message\":\"Authentication required.\"}}\n" {
 				t.Fatalf("error=%s", w.Body.String())
 			}
 			if s.touches != 0 {

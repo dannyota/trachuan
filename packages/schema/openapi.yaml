@@ -1,0 +1,1115 @@
+openapi: 3.1.0
+info:
+  title: trachuan web API
+  version: 1.0.0
+  description: Session API. Unsafe methods require a matching Origin or Referer and X-CSRF-Token. JSON
+    bodies are limited to 64 KiB.
+security:
+- session: []
+paths:
+  /api/v1/auth/google/start:
+    get:
+      responses:
+        '302':
+          description: Redirect
+          headers:
+            Location:
+              schema: &id001
+                type: string
+            Set-Cookie:
+              schema: *id001
+          content:
+            text/html:
+              schema:
+                type: string
+        '503':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security: []
+      parameters:
+      - name: next
+        in: query
+        required: false
+        schema: *id001
+  /api/v1/auth/google/callback:
+    get:
+      responses:
+        '302':
+          description: Redirect
+          headers:
+            Location:
+              schema: *id001
+            Set-Cookie:
+              schema: *id001
+          content:
+            text/html:
+              schema:
+                type: string
+        '503':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+      - login: []
+      parameters:
+      - name: state
+        in: query
+        required: false
+        schema: *id001
+      - name: code
+        in: query
+        required: false
+        schema: *id001
+      - name: error
+        in: query
+        required: false
+        schema: *id001
+  /api/v1/auth/logout:
+    post:
+      responses:
+        '204':
+          description: Success
+        '401':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      parameters:
+      - name: X-CSRF-Token
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: Origin
+        in: header
+        required: false
+        description: Required unless Referer supplies the same origin.
+        schema:
+          type: string
+      - name: Referer
+        in: header
+        required: false
+        description: Used when Origin is absent.
+        schema:
+          type: string
+  /api/v1/me:
+    get:
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+        '401':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+        '503':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      responses:
+        '204':
+          description: Success
+        '401':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+        '503':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      parameters:
+      - name: X-CSRF-Token
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: Origin
+        in: header
+        required: false
+        description: Required unless Referer supplies the same origin.
+        schema:
+          type: string
+      - name: Referer
+        in: header
+        required: false
+        description: Used when Origin is absent.
+        schema:
+          type: string
+  /api/v1/me/sessions:
+    get:
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionList'
+        '401':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+        '503':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/me/sessions/{id}:
+    delete:
+      responses:
+        '204':
+          description: Success
+        '401':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+        '503':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          minimum: 1
+      - name: X-CSRF-Token
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: Origin
+        in: header
+        required: false
+        description: Required unless Referer supplies the same origin.
+        schema:
+          type: string
+      - name: Referer
+        in: header
+        required: false
+        description: Used when Origin is absent.
+        schema:
+          type: string
+  /api/v1/me/tokens:
+    get:
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenList'
+        '401':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+        '503':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      responses:
+        '201':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreatedToken'
+        '401':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+        '503':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '400':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenInput'
+      parameters:
+      - name: X-CSRF-Token
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: Origin
+        in: header
+        required: false
+        description: Required unless Referer supplies the same origin.
+        schema:
+          type: string
+      - name: Referer
+        in: header
+        required: false
+        description: Used when Origin is absent.
+        schema:
+          type: string
+  /api/v1/me/tokens/{id}:
+    delete:
+      responses:
+        '204':
+          description: Success
+        '401':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+        '503':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          minimum: 1
+      - name: X-CSRF-Token
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: Origin
+        in: header
+        required: false
+        description: Required unless Referer supplies the same origin.
+        schema:
+          type: string
+      - name: Referer
+        in: header
+        required: false
+        description: Used when Origin is absent.
+        schema:
+          type: string
+  /api/v1/search:
+    post:
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResult'
+        '401':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+        '503':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '400':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SearchInput'
+      parameters:
+      - name: X-CSRF-Token
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: Origin
+        in: header
+        required: false
+        description: Required unless Referer supplies the same origin.
+        schema:
+          type: string
+      - name: Referer
+        in: header
+        required: false
+        description: Used when Origin is absent.
+        schema:
+          type: string
+  /api/v1/read:
+    post:
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadResult'
+        '401':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+        '503':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '400':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReadInput'
+      parameters:
+      - name: X-CSRF-Token
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: Origin
+        in: header
+        required: false
+        description: Required unless Referer supplies the same origin.
+        schema:
+          type: string
+      - name: Referer
+        in: header
+        required: false
+        description: Used when Origin is absent.
+        schema:
+          type: string
+  /api/v1/documents/{key}:
+    get:
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemResult'
+        '401':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+        '503':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '400':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409': &id002
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      parameters:
+      - name: key
+        in: path
+        required: true
+        schema: *id001
+      - name: release
+        in: query
+        required: false
+        schema: *id001
+      - name: next
+        in: query
+        required: false
+        schema: *id001
+  /api/v1/status:
+    get:
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CorpusStatus'
+        '401':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+        '503':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '400':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409': *id002
+components:
+  securitySchemes:
+    session:
+      type: apiKey
+      in: cookie
+      name: __Host-session
+    login:
+      type: apiKey
+      in: cookie
+      name: __Host-login
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              enum:
+              - invalid_request
+              - unauthenticated
+              - csrf_rejected
+              - account_blocked
+              - not_found
+              - release_expired
+              - body_too_large
+              - unsupported_media_type
+              - rate_limited
+              - busy
+              - unavailable
+              - inference_failed
+              - internal
+            message: *id001
+          required:
+          - code
+          - message
+      required:
+      - error
+    Account:
+      type: object
+      properties:
+        id: &id003
+          type: integer
+          format: int64
+        email: *id001
+        created_at: &id004
+          type: string
+          format: date-time
+        csrf_token: *id001
+      required:
+      - id
+      - email
+      - created_at
+      - csrf_token
+    Session:
+      type: object
+      properties:
+        id: *id003
+        created_at: *id004
+        last_seen_at: *id004
+        current: &id007
+          type: boolean
+      required:
+      - id
+      - created_at
+      - last_seen_at
+      - current
+    Token:
+      type: object
+      properties:
+        id: *id003
+        name: *id001
+        created_at: *id004
+        expires_at: *id004
+        last_used_at: &id005
+          type:
+          - string
+          - 'null'
+          format: date-time
+        revoked_at: &id006
+          type:
+          - string
+          - 'null'
+          format: date-time
+      required:
+      - id
+      - name
+      - created_at
+      - expires_at
+      - last_used_at
+      - revoked_at
+    CreatedToken:
+      type: object
+      properties:
+        id: *id003
+        name: *id001
+        created_at: *id004
+        expires_at: *id004
+        last_used_at: *id005
+        revoked_at: *id006
+        token: *id001
+      required:
+      - id
+      - name
+      - created_at
+      - expires_at
+      - last_used_at
+      - revoked_at
+      - token
+    TokenInput:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 64
+        days:
+          type: integer
+          minimum: 1
+          maximum: 365
+          default: 90
+      required:
+      - name
+      additionalProperties: false
+    SessionList:
+      type: array
+      items:
+        $ref: '#/components/schemas/Session'
+    TokenList:
+      type: array
+      items:
+        $ref: '#/components/schemas/Token'
+    StatusStamp:
+      type: object
+      properties:
+        class: *id001
+        basis: *id001
+        status_basis: *id001
+        current: *id007
+      required:
+      - current
+    Pointer:
+      type: object
+      properties:
+        dir: *id001
+        kind: *id001
+        key: *id001
+        number: *id001
+        in_release: *id007
+      required:
+      - in_release
+    ListedRelation:
+      type: object
+      properties:
+        dir: *id001
+        kind: *id001
+        key: *id001
+        number: *id001
+        in_release: *id007
+        raw_label: *id001
+        evidence: *id001
+        evidence_complete: *id007
+      required:
+      - in_release
+      - evidence_complete
+    Document:
+      type: object
+      properties:
+        number: *id001
+        title: *id001
+        type: *id001
+        issuer: *id001
+        issued: &id008
+          type: string
+          format: date
+        effective_from: *id008
+        effective_to: *id008
+        status:
+          $ref: '#/components/schemas/StatusStamp'
+        source_url: *id001
+        related:
+          type: array
+          items:
+            $ref: '#/components/schemas/Pointer'
+        related_counts:
+          type: object
+          additionalProperties: *id003
+      required:
+      - status
+    Gap:
+      type: object
+      properties:
+        kind: *id001
+        document_key: *id001
+        anchor: *id001
+        message: *id001
+    PathNode:
+      type: object
+      properties:
+        label: *id001
+        heading: *id001
+        anchor: *id001
+    Identity:
+      type: object
+      properties:
+        country: *id001
+        document_key: *id001
+        anchor: *id001
+    Fragment:
+      type: object
+      properties:
+        identity:
+          $ref: '#/components/schemas/Identity'
+        start: *id003
+        end: *id003
+        text_start: *id003
+        text_end: *id003
+        role: *id001
+        complete: *id007
+      required:
+      - start
+      - end
+      - text_start
+      - text_end
+      - complete
+    Relation:
+      type: object
+      properties:
+        source_key: *id001
+        target_key: *id001
+        source_number: *id001
+        target_number: *id001
+        source_anchor: *id001
+        target_anchor: *id001
+        kind: *id001
+        raw_label: *id001
+        evidence: *id001
+        evidence_sha256: *id001
+        method: *id001
+        complete: *id007
+        source_resolved: *id007
+        target_resolved: *id007
+      required:
+      - complete
+      - source_resolved
+      - target_resolved
+    Hit:
+      type: object
+      properties:
+        handle: *id001
+        doc: *id001
+        citation: *id001
+        path:
+          type: array
+          items:
+            $ref: '#/components/schemas/PathNode'
+        snippet: *id001
+        complete: *id007
+        warnings:
+          type: array
+          items:
+            $ref: '#/components/schemas/Pointer'
+        gaps:
+          type: array
+          items:
+            $ref: '#/components/schemas/Gap'
+        text: *id001
+        fragments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Fragment'
+        score:
+          type: number
+        relations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Relation'
+        next: *id001
+      required:
+      - complete
+    SearchResult:
+      type: object
+      properties:
+        release: *id001
+        abstain: *id007
+        reason: *id001
+        message: *id001
+        documents:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/Document'
+        hits:
+          type: array
+          items:
+            $ref: '#/components/schemas/Hit'
+        non_current:
+          type: array
+          items:
+            $ref: '#/components/schemas/Hit'
+        gaps:
+          type: array
+          items:
+            $ref: '#/components/schemas/Gap'
+      required:
+      - abstain
+    SearchInput:
+      type: object
+      properties:
+        country: *id001
+        query: *id001
+        as_of: *id008
+        in_force_only: *id007
+        detail:
+          type: string
+          enum:
+          - compact
+          - full
+        limit:
+          type: integer
+        release: *id001
+      required:
+      - country
+      - query
+      additionalProperties: false
+    ReadItem:
+      type: object
+      properties:
+        handle: *id001
+        number: *id001
+        from: *id001
+        to: *id001
+        relations: *id007
+        next: *id001
+      additionalProperties: false
+    ReadInput:
+      type: object
+      properties:
+        country: *id001
+        release: *id001
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReadItem'
+      required:
+      - country
+      - items
+      additionalProperties: false
+    Unit:
+      type: object
+      properties:
+        kind: *id001
+        anchor: *id001
+        citation: *id001
+        label: *id001
+        heading: *id001
+        text: *id001
+        size: *id003
+        relation:
+          $ref: '#/components/schemas/ListedRelation'
+        part: *id003
+        parts: *id003
+    ItemResult:
+      type: object
+      properties:
+        doc: *id001
+        document:
+          $ref: '#/components/schemas/Document'
+        units:
+          type: array
+          items:
+            $ref: '#/components/schemas/Unit'
+        complete: *id007
+        next: *id001
+        not_read: *id001
+        error: *id001
+        gaps:
+          type: array
+          items:
+            $ref: '#/components/schemas/Gap'
+      required:
+      - complete
+    ReadResult:
+      type: object
+      properties:
+        release: *id001
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ItemResult'
+      required:
+      - release
+    CorpusStatus:
+      type: object
+      properties:
+        release: *id001
+        documents: *id003
+        provisions: *id003
+        nodes: *id003
+        gaps:
+          type: object
+          additionalProperties: *id003
+        newest_source_date: *id008
+      required:
+      - release
+      - documents
+      - provisions
+      - nodes

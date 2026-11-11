@@ -3,11 +3,10 @@ package webapi
 
 import (
 	"encoding/json"
-	"math"
 	"net/http"
-	"strconv"
 	"time"
 
+	"danny.vn/trachuan/apps/server/internal/apierror"
 	"danny.vn/trachuan/apps/server/internal/limits"
 	"danny.vn/trachuan/apps/server/internal/mcpapi"
 	"danny.vn/trachuan/apps/server/internal/websession"
@@ -31,7 +30,7 @@ type endpoint func(*http.Request) (json.RawMessage, error)
 func New(cfg Config) http.Handler {
 	if cfg.Sessions == nil {
 		return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-			writeError(w, 503, "unavailable", "Service unavailable.")
+			apierror.Write(w, 503, "unavailable")
 		})
 	}
 	a := &api{cfg: cfg, operations: mcpapi.NewOperations(cfg.Tools)}
@@ -53,25 +52,24 @@ func (a *api) route(name string, class limits.Class, run endpoint) http.Handler 
 				a.cfg.Tools.Logger.Info("web request", "account_id", p.AccountID, "route", name, "code", code, "latency", time.Since(start))
 			}
 		}()
-		fail := func(status int, c, message string) { code = c; writeError(w, status, c, message) }
+		fail := func(status int, c string) { code = c; apierror.Write(w, status, c) }
 		if !ok || p.AccountID <= 0 {
-			fail(401, "unauthenticated", "Unauthenticated.")
+			fail(401, "unauthenticated")
 			return
 		}
 		if a.cfg.Tools.Limiter == nil {
-			fail(503, "unavailable", "Service unavailable.")
+			fail(503, "unavailable")
 			return
 		}
 		if allowed, retry := a.cfg.Tools.Limiter.Allow(p.AccountID, class); !allowed {
-			seconds := max(int64(1), int64(math.Ceil(retry.Seconds())))
-			w.Header().Set("Retry-After", strconv.FormatInt(seconds, 10))
-			fail(429, "rate_limited", "Rate limited.")
+			code = "rate_limited"
+			apierror.RateLimited(w, retry)
 			return
 		}
 		raw, err := run(r)
 		if err != nil {
-			status, c, message := httpError(err)
-			fail(status, c, message)
+			status, c := httpError(err)
+			fail(status, c)
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")

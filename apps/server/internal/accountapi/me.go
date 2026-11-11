@@ -7,12 +7,12 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"math"
 	"net/http"
 	"strconv"
 	"sync"
 	"time"
 
+	"danny.vn/trachuan/apps/server/internal/apierror"
 	"danny.vn/trachuan/apps/server/internal/limits"
 	"danny.vn/trachuan/apps/server/internal/store"
 	"danny.vn/trachuan/apps/server/internal/websession"
@@ -80,16 +80,15 @@ func New(cfg Config) *Handler {
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	p, ok := websession.FromContext(r.Context())
 	if !ok {
-		writeError(w, 401, "unauthenticated", "Unauthenticated")
+		apierror.Write(w, 401, "unauthenticated")
 		return
 	}
 	if h.cfg.Store == nil || h.cfg.Sessions == nil || h.cfg.Verifier == nil || h.cfg.Limiter == nil {
-		writeError(w, 503, "unavailable", "Service unavailable")
+		apierror.Write(w, 503, "unavailable")
 		return
 	}
 	if ok, wait := h.cfg.Limiter.Allow(p.AccountID, limits.Read); !ok {
-		w.Header().Set("Retry-After", strconv.Itoa(max(1, int(math.Ceil(wait.Seconds())))))
-		writeError(w, 429, "rate_limited", "Rate limit exceeded")
+		apierror.RateLimited(w, wait)
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
@@ -116,12 +115,9 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(v)
 }
-func writeError(w http.ResponseWriter, status int, code, message string) {
-	writeJSON(w, status, map[string]any{"error": map[string]string{"code": code, "message": message}})
-}
-func unavailable(w http.ResponseWriter) { writeError(w, 503, "unavailable", "Service unavailable") }
-func notFound(w http.ResponseWriter)    { writeError(w, 404, "not_found", "Not found") }
-func invalid(w http.ResponseWriter)     { writeError(w, 400, "invalid_request", "Invalid request") }
+func unavailable(w http.ResponseWriter) { apierror.Write(w, 503, "unavailable") }
+func notFound(w http.ResponseWriter)    { apierror.Write(w, 404, "not_found") }
+func invalid(w http.ResponseWriter)     { apierror.Write(w, 400, "invalid_request") }
 func idParam(r *http.Request) (int64, bool) {
 	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
 	return id, err == nil && id > 0

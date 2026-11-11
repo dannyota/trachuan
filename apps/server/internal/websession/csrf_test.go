@@ -123,7 +123,7 @@ func TestCSRF_Matrix(t *testing.T) {
 
 func assertCSRFError(t *testing.T, w *httptest.ResponseRecorder) {
 	t.Helper()
-	if w.Body.String() != "{\"error\":{\"code\":\"csrf_rejected\",\"message\":\"CSRF validation failed\"}}\n" {
+	if w.Body.String() != "{\"error\":{\"code\":\"csrf_rejected\",\"message\":\"CSRF check failed.\"}}\n" {
 		t.Fatalf("error=%s", w.Body.String())
 	}
 }

@@ -10,6 +10,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"danny.vn/trachuan/apps/server/internal/apierror"
 	"danny.vn/trachuan/apps/server/internal/credential"
 	"danny.vn/trachuan/apps/server/internal/store"
 	"danny.vn/trachuan/apps/server/internal/websession"
@@ -61,7 +62,7 @@ func (h *Handler) createToken(w http.ResponseWriter, r *http.Request) {
 	}
 	var tooBig *http.MaxBytesError
 	if errors.As(err, &tooBig) {
-		writeError(w, 413, "body_too_large", "Request body too large")
+		apierror.Write(w, 413, "body_too_large")
 		return
 	}
 	if err != nil {

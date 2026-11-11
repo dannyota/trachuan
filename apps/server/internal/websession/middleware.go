@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"time"
 
+	"danny.vn/trachuan/apps/server/internal/apierror"
 	"danny.vn/trachuan/apps/server/internal/store"
 	"github.com/jackc/pgx/v5"
 )
@@ -26,15 +26,15 @@ func (m *Manager) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		raw, ok := sessionToken(r)
 		if !ok {
-			writeError(w, 401, "unauthenticated", "Unauthenticated")
+			apierror.Write(w, 401, "unauthenticated")
 			return
 		}
 		row, renew, err := m.lookup(r.Context(), raw)
 		if err != nil {
 			if errors.Is(err, errUnavailable) {
-				writeError(w, 503, "unavailable", "Service unavailable")
+				apierror.Write(w, 503, "unavailable")
 			} else {
-				writeError(w, 401, "unauthenticated", "Unauthenticated")
+				apierror.Write(w, 401, "unauthenticated")
 			}
 			return
 		}
@@ -160,13 +160,4 @@ func (m *Manager) lookup(ctx context.Context, raw string) (store.GetSessionRow, 
 
 func validSession(row store.GetSessionRow, now time.Time) bool {
 	return row.RevokedAt == nil && row.BlockedAt == nil && row.DeleteRequestedAt == nil && row.SessionAuthEpoch == row.AccountAuthEpoch && row.ExpiresAt.After(now) && row.CreatedAt.Add(absoluteLifetime).After(now)
-}
-
-func writeError(w http.ResponseWriter, status int, code, message string) {
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Cache-Control", "no-store")
-	w.WriteHeader(status)
-	// Callers supply fixed literals only, so database errors and credentials never
-	// enter an HTTP error response.
-	_, _ = io.WriteString(w, `{"error":{"code":"`+code+`","message":"`+message+`"}}`+"\n")
 }

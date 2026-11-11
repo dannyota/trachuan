@@ -12,6 +12,8 @@ import (
 	"sync"
 	"time"
 
+	"danny.vn/trachuan/apps/server/internal/apierror"
+
 	"github.com/coreos/go-oidc/v3/oidc"
 	"golang.org/x/oauth2"
 )
@@ -125,9 +127,7 @@ func setLoginCookie(w http.ResponseWriter, value string, maxAge int) {
 }
 
 func unavailable(w http.ResponseWriter) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusServiceUnavailable)
-	_, _ = io.WriteString(w, "{\"error\":{\"code\":\"unavailable\",\"message\":\"Service unavailable\"}}\n")
+	apierror.Write(w, http.StatusServiceUnavailable, "unavailable")
 }
 
 func getOnly(w http.ResponseWriter, r *http.Request) bool {

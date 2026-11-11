@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 
+	"danny.vn/trachuan/apps/server/internal/apierror"
 	"danny.vn/trachuan/apps/server/internal/release"
 	"danny.vn/trachuan/internal/retrieval"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -27,15 +28,15 @@ func ErrorMessage(err error) (string, string) {
 	var invalid invalidRequest
 	switch {
 	case errors.As(err, &invalid):
-		return "invalid_request", "invalid_request"
+		return "invalid_request", apierror.Message("invalid_request")
 	case errors.Is(err, release.ErrExpired), errors.Is(err, retrieval.ErrReleaseGone):
-		return "release_expired", "Release expired."
+		return "release_expired", apierror.Message("release_expired")
 	case errors.Is(err, retrieval.ErrEmbedderBusy):
-		return "busy", "Query embedder busy."
+		return "busy", apierror.Message("busy")
 	case errors.Is(err, retrieval.ErrEmbedder):
-		return "inference_failed", "Query inference failed."
+		return "inference_failed", apierror.Message("inference_failed")
 	default:
-		return "unavailable", "Service unavailable."
+		return "unavailable", apierror.Message("unavailable")
 	}
 }
 func toolFailure(code, message string) *mcp.CallToolResult {

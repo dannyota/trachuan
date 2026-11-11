@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"danny.vn/trachuan/apps/server/internal/apierror"
 	"danny.vn/trachuan/apps/server/internal/store"
 )
 
@@ -56,11 +57,11 @@ func (m *Manager) Logout(w http.ResponseWriter, r *http.Request) {
 	}
 	raw, ok := sessionToken(r)
 	if !ok {
-		writeError(w, 401, "unauthenticated", "Unauthenticated")
+		apierror.Write(w, 401, "unauthenticated")
 		return
 	}
 	if err := m.RevokeSession(r.Context(), raw); err != nil {
-		writeError(w, 503, "unavailable", "Service unavailable")
+		apierror.Write(w, 503, "unavailable")
 		return
 	}
 	writeCookie(w, "", -1)
