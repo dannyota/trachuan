@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"danny.vn/trachuan/apps/server/internal/limits"
 	"danny.vn/trachuan/internal/retrieval"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -16,7 +17,7 @@ func cachedHarness(t *testing.T, clock func() time.Time) (*harness, *Caches) {
 	t.Helper()
 	caches := NewCaches(clock)
 	caches.ActivateRelease("20991111", 1)
-	h := newHarness(t, func(c *Config) { c.Caches = caches; c.Clock = clock })
+	h := newHarness(t, func(c *Config) { c.Caches = caches; c.Clock = clock; c.Limiter = limits.New(clock) })
 	return h, caches
 }
 func searchArgs() map[string]any { return map[string]any{"country": "vn", "query": "ngân hàng"} }
@@ -73,7 +74,7 @@ func TestSearchCache_ReleaseSwitchDropsAndMisses(t *testing.T) {
 	}
 }
 func TestCache_HitChargesLimitsAndChecksCredentials(t *testing.T) {
-	h, c := cachedHarness(t, time.Now)
+	h, c := cachedHarness(t, func() time.Time { return time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC) })
 	callTool(t, h, "search", searchArgs())
 	// All sixty calls, including cache hits, consume the search bucket.
 	for i := 1; i < 60; i++ {
