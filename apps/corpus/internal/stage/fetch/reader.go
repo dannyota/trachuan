@@ -76,9 +76,15 @@ func ReadDocument(dir, key string) (Document, error) {
 }
 
 // ExtractInputHash binds the fetch manifest and selected text source.
-func ExtractInputHash(fetchHash, source string) string {
+func ExtractInputHash(fetchHash, source string, details ...string) string {
 	if source == "source_tree" {
 		return fetchHash
+	}
+	if source == "ocr" && len(details) == 2 {
+		return stage.RecipeHash("extract-input", "1", fetchHash, source, details[0], details[1])
+	}
+	if source == "none" && len(details) == 1 {
+		return stage.RecipeHash("extract-input", "1", fetchHash, source, "absent", details[0])
 	}
 	if source == "none" || source == "ocr" {
 		return stage.RecipeHash("extract-input", "1", fetchHash, source, "absent")
@@ -100,17 +106,35 @@ func CheckExtractLineage(dir, fetchHash, inputHash string) error {
 		return fmt.Errorf("read extract text record: %w", err)
 	}
 	var record struct {
-		TextSource string `json:"text_source"`
+		TextSource   string `json:"text_source"`
+		TextSHA256   string `json:"text_sha256"`
+		ResultSHA256 string `json:"result_sha256"`
+		Gap          string `json:"gap"`
 	}
 	if err = json.Unmarshal(data, &record); err != nil {
 		return fmt.Errorf("decode extract text record: %w", err)
 	}
 	switch record.TextSource {
-	case "none", "html_transcription", "source_tree":
+	case "none", "html_transcription", "source_tree", "ocr":
 	default:
 		return fmt.Errorf("invalid text source %q", record.TextSource)
 	}
-	if ExtractInputHash(fetchHash, record.TextSource) != inputHash {
+	expected := ExtractInputHash(fetchHash, record.TextSource)
+	if record.TextSource == "none" {
+		switch record.Gap {
+		case "needs_ocr", "text_source_ambiguous", "file_format_unsupported", "no_text_source":
+		default:
+			return fmt.Errorf("invalid absent text gap %q", record.Gap)
+		}
+		expected = ExtractInputHash(fetchHash, "none", record.Gap)
+	}
+	if record.TextSource == "ocr" {
+		if len(record.TextSHA256) != 64 || len(record.ResultSHA256) != 64 || strings.Trim(record.TextSHA256+record.ResultSHA256, "0123456789abcdef") != "" {
+			return fmt.Errorf("invalid OCR lineage hashes")
+		}
+		expected = ExtractInputHash(fetchHash, "ocr", record.TextSHA256, record.ResultSHA256)
+	}
+	if expected != inputHash {
 		return fmt.Errorf("artifact input hash mismatch")
 	}
 	return nil

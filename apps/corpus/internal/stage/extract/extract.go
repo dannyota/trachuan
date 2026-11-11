@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"danny.vn/trachuan/apps/corpus/internal/artifact"
+	"danny.vn/trachuan/apps/corpus/internal/ocrstore"
 	"danny.vn/trachuan/apps/corpus/internal/stage"
 	"danny.vn/trachuan/apps/corpus/internal/stage/membership"
 	"danny.vn/trachuan/apps/corpus/internal/store"
@@ -19,21 +20,40 @@ import (
 )
 
 // Stage extracts provisions from fetch artifacts.
-type Stage struct{}
+type Stage struct {
+	ocr     ocrReader
+	engines []string
+	checker string
+}
 
 // New constructs an extract stage.
-func New() *Stage { return &Stage{} }
+func New() *Stage { return &Stage{engines: []string{"vision-ocr/builtin-latest"}} }
+
+// WithOCR configures the store, ordered engines and completed-check identity.
+func (s *Stage) WithOCR(store *ocrstore.Store, engines []string, checker string) *Stage {
+	if store != nil {
+		s.ocr = store
+	} else {
+		s.ocr = nil
+	}
+	if engines != nil {
+		s.engines = append([]string{}, engines...)
+	}
+	s.checker = checker
+	return s
+}
 
 // Name returns the stage name.
 func (*Stage) Name() string { return "extract" }
 
 // Recipe returns the extract recipe hash.
-func (*Stage) Recipe(stage.Snapshot) string {
-	return stage.RecipeHash("extract", "tree/1", "html-transcription/1", "textparse/2", "ocr-absent/1")
+func (s *Stage) Recipe(stage.Snapshot) string {
+	parts := append([]string{"html-transcription/1", "textparse/2", "ocr-store/1", s.checker}, s.engines...)
+	return stage.RecipeHash("extract", "tree/1", parts...)
 }
 
 // Plan selects completed fetch artifacts for this run.
-func (*Stage) Plan(ctx context.Context, env stage.Env, run stage.Run) ([]stage.Item, error) {
+func (s *Stage) Plan(ctx context.Context, env stage.Env, run stage.Run) ([]stage.Item, error) {
 	q := store.New(env.DB)
 	active, err := membership.FinalActiveKeys(ctx, q, run)
 	if err != nil {
@@ -52,7 +72,7 @@ func (*Stage) Plan(ctx context.Context, env stage.Env, run stage.Run) ([]stage.I
 		if getErr != nil {
 			return nil, fmt.Errorf("load fetch artifact: %w", getErr)
 		}
-		selected, _, selectErr := choose(ctx, env.Artifacts.Abs(entry.Path), input.ItemKey)
+		selected, _, selectErr := chooseWithOCR(ctx, env.Artifacts.Abs(entry.Path), input.ItemKey, s.ocr, s.engines, s.checker)
 		if errors.Is(selectErr, vbpl.ErrTreeTooLarge) {
 			selected.source = "source_tree"
 			selectErr = nil
@@ -60,7 +80,7 @@ func (*Stage) Plan(ctx context.Context, env stage.Env, run stage.Run) ([]stage.I
 		if selectErr != nil {
 			return nil, fmt.Errorf("select text source: %w", selectErr)
 		}
-		items = append(items, stage.Item{Key: input.ItemKey, InputHash: selectionHash(input.Sha256, selected.source)})
+		items = append(items, stage.Item{Key: input.ItemKey, InputHash: selectionInputHash(input.Sha256, selected)})
 	}
 	return items, nil
 }
@@ -76,14 +96,14 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 	if verifyErr := verifyFetch(env.Artifacts.Abs(input.Path), input.Sha256); verifyErr != nil {
 		return stage.Output{}, verifyErr
 	}
-	selected, nodes, err := choose(ctx, env.Artifacts.Abs(input.Path), item.Key)
+	selected, nodes, err := chooseWithOCR(ctx, env.Artifacts.Abs(input.Path), item.Key, s.ocr, s.engines, s.checker)
 	if errors.Is(err, vbpl.ErrTreeTooLarge) {
 		return stage.Output{State: "gap", Gaps: []stage.Gap{{Kind: "tree_too_large"}}}, nil
 	}
 	if err != nil {
 		return stage.Output{}, fmt.Errorf("select text source: %w", err)
 	}
-	if selectionHash(input.Sha256, selected.source) != item.InputHash {
+	if selectionInputHash(input.Sha256, selected) != item.InputHash {
 		return stage.Output{}, stage.Retryable(fmt.Errorf("text selection changed for %q", item.Key))
 	}
 	var rows []provision
@@ -106,10 +126,16 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 		} else {
 			rows, gaps, record = parseTranscription(selected.data, selected.name, selected.hash)
 		}
+	case "ocr":
+		data, readErr := s.ocr.ReadText(selected.entry.Text)
+		if readErr != nil {
+			return stage.Output{}, fmt.Errorf("read OCR text: %w", readErr)
+		}
+		rows, gaps, record = parseOCR(selected, data)
 	default:
 		rows = []provision{}
 		gaps = []stage.Gap{{Kind: "no_tree"}, {Kind: selected.gap}}
-		record = &textRecord{TextSource: "none"}
+		record = &textRecord{TextSource: "none", Gap: selected.gap}
 	}
 
 	art, err := env.Artifacts.Publish(ctx, s.Name(), item.InputHash, s.Recipe(run.Snapshot), func(dir string) error {

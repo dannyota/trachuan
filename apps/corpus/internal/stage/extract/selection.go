@@ -10,6 +10,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"danny.vn/trachuan/apps/corpus/internal/ocrstore"
 	"danny.vn/trachuan/apps/corpus/internal/stage/fetch"
 	"danny.vn/trachuan/apps/corpus/internal/textparse"
 	"danny.vn/trachuan/apps/corpus/internal/vbpl"
@@ -24,10 +25,13 @@ type selection struct {
 	source, gap, name, hash string
 	data                    []byte
 	tooLarge, parseLimit    bool
+	entry                   *ocrstore.Entry
 }
 
 // InputHash binds the fetch manifest and the selected text source.
-func InputHash(fetchHash, source string) string { return fetch.ExtractInputHash(fetchHash, source) }
+func InputHash(fetchHash, source string, details ...string) string {
+	return fetch.ExtractInputHash(fetchHash, source, details...)
+}
 
 func selectionHash(hash, source string) string { return InputHash(hash, source) }
 
@@ -98,6 +102,10 @@ func selectFiles(dir, id string, files []fetch.DocumentFile, ocr ocrSource) (sel
 	return selection{source: "none", gap: gap}, nil
 }
 func choose(ctx context.Context, dir, key string) (selection, []vbpl.Node, error) {
+	return chooseWithOCR(ctx, dir, key, nil, nil, "")
+}
+
+func chooseWithOCR(ctx context.Context, dir, key string, ocr ocrReader, engines []string, checker string) (selection, []vbpl.Node, error) {
 	parts := strings.SplitN(key, ":", 3)
 	if len(parts) != 3 {
 		return selection{}, nil, fmt.Errorf("invalid document key")
@@ -123,9 +131,18 @@ func choose(ctx context.Context, dir, key string) (selection, []vbpl.Node, error
 			if readErr != nil {
 				return selection{}, nil, fmt.Errorf("read fetch document: %w", readErr)
 			}
-			selected, selectErr := selectFiles(dir, parts[2], doc.Files, absentOCR{})
+			selected, selectErr := selectOCRFiles(ctx, dir, parts[2], doc.Files, ocr, engines, checker)
 			if selectErr != nil {
 				return selection{}, nil, selectErr
+			}
+			if selected.source == "ocr" {
+				data, readErr := ocr.ReadText(selected.entry.Text)
+				if readErr == nil {
+					paragraphs, parseErr := textparse.ParagraphsFromText(string(data))
+					if parseErr != nil || len(textparse.Parse(paragraphs).Provisions) == 0 {
+						selected.parseLimit = true
+					}
+				}
 			}
 			if selected.source != "none" && !selected.tooLarge && !selected.parseLimit {
 				return selected, nil, nil
@@ -137,7 +154,7 @@ func choose(ctx context.Context, dir, key string) (selection, []vbpl.Node, error
 	if err != nil {
 		return selection{}, nil, fmt.Errorf("read fetch document: %w", err)
 	}
-	s, err := selectFiles(dir, parts[2], doc.Files, absentOCR{})
+	s, err := selectOCRFiles(ctx, dir, parts[2], doc.Files, ocr, engines, checker)
 	return s, nil, err
 }
 

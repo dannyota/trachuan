@@ -46,8 +46,8 @@ func TestLoad_RejectsProvisionsForNoneSource(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			store = artifact.Store{Root: t.TempDir()}
 			f := publish("fetch", strings.Repeat("b", 64), map[string]string{"detail.json": `{"data":{"id":"1"}}`, "files.json": `[]`})
-			input := fetch.ExtractInputHash(f.SHA256, "none")
-			e := publish("extract", input, map[string]string{"text.json": `{"text_source":"none","provisions":` + tc.entries + `}`, "provisions.json": `[{"node_id":"tx:1","kind":"dieu","label":"Điều 1","ordinal":1,"path":"dieu-1","text":"Nội dung"}]`})
+			input := fetch.ExtractInputHash(f.SHA256, "none", "no_text_source")
+			e := publish("extract", input, map[string]string{"text.json": `{"text_source":"none","gap":"no_text_source","provisions":` + tc.entries + `}`, "provisions.json": `[{"node_id":"tx:1","kind":"dieu","label":"Điều 1","ordinal":1,"path":"dieu-1","text":"Nội dung"}]`})
 			key := "vn:vbpl:1"
 			tx := &noneTx{}
 			l := loader{tx: tx, inv: Inventory{Country: "vn", ExpectedKeys: []string{key}}, artifacts: store, present: map[string]bool{key: true}, docs: map[string]*loadedDocument{}, items: map[string]map[string]InventoryItem{

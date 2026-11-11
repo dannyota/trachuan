@@ -35,3 +35,15 @@ func TestTextMetadata_LocatorFromRecord(t *testing.T) {
 		t.Fatalf("source=%s locators=%v err=%v", source, locators, err)
 	}
 }
+
+func TestLoad_OCRLocators(t *testing.T) {
+	dir := t.TempDir()
+	data := []byte(`{"text_source":"ocr","provisions":[{"NodeID":"tx:1","StartOrdinal":2,"EndOrdinal":4,"StartLine":3,"EndLine":8}]}`)
+	if err := os.WriteFile(filepath.Join(dir, "text.json"), data, 0600); err != nil {
+		t.Fatal(err)
+	}
+	_, locators, err := readTextMetadata(dir)
+	if err != nil || locators["tx:1"] != "line:3-8" {
+		t.Fatalf("locators=%v err=%v", locators, err)
+	}
+}

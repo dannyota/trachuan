@@ -13,6 +13,7 @@ type Provision struct {
 	ScopeIndex                           int
 	Text                                 string
 	StartOrdinal, EndOrdinal             int
+	StartLine, EndLine                   int `json:",omitempty"`
 	NodeID                               string
 }
 

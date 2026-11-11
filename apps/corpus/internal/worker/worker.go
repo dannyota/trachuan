@@ -112,6 +112,7 @@ func Run(ctx context.Context, cfg config.Config) error {
 	index.VBPL = vb
 	index.Chinhphu = cp
 	registry := workflow.Default(index)
+	configureOCR(registry, db)
 	stages := registry.Stages()
 	for _, st := range stages {
 		if f, ok := st.(*fetch.Stage); ok {
