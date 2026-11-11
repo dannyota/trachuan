@@ -66,7 +66,7 @@ type consentDB struct {
 }
 
 func newConsentDB() *consentDB {
-	return &consentDB{client: store.OauthClient{ClientID: "fixture", Kind: "dcr", Name: `Client <script>alert(1)</script>`, RedirectUris: []string{"http://localhost/cb"}}}
+	return &consentDB{client: store.OauthClient{ClientID: "fixture", Kind: "dcr", Name: `Client <script>alert(1)</script>`, RedirectUris: []string{"http://localhost/cb"}, GrantTypes: []string{"authorization_code", "refresh_token"}}}
 }
 func (d *consentDB) Begin(context.Context) (pgx.Tx, error) {
 	d.mu.Lock()
@@ -191,7 +191,7 @@ func authorizeValues() url.Values {
 func authorizeFor(t *testing.T, d *consentDB, v url.Values) *httptest.ResponseRecorder {
 	t.Helper()
 	h := NewAuthorizeHandler(consentBase, d, func(context.Context, string) (Client, error) {
-		if v.Get("client_id") != "fixture" {
+		if v.Get("client_id") != d.client.ClientID {
 			return Client{}, ErrInvalidClient
 		}
 		return clientFromRow(d.client), nil
@@ -218,6 +218,10 @@ func consentRequest(path, method string, cookie *http.Cookie, session bool, form
 	}
 	if method == "POST" {
 		r.Header.Set("Origin", consentBase)
+		r.Header.Set("Referer", consentBase+strings.Split(path, "?")[0])
+		r.Header.Set("Sec-Fetch-Site", "same-origin")
+		r.Header.Set("Sec-Fetch-Mode", "navigate")
+		r.Header.Set("Sec-Fetch-Dest", "document")
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	}
 	return r

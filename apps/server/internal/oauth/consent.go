@@ -24,8 +24,9 @@ type consentFailure string
 func (e consentFailure) Error() string { return string(e) }
 
 const (
-	consentInvalid    consentFailure = "invalid_request"
-	consentGrantLimit consentFailure = "grant_limit"
+	consentInvalid      consentFailure = "invalid_request"
+	consentGrantLimit   consentFailure = "grant_limit"
+	consentUnauthorized consentFailure = "unauthorized_client"
 )
 
 // NewConsentHandler serves the consent page and its browser-bound decision.
@@ -57,7 +58,7 @@ func NewConsentHandler(base string, db ClientDB, sessions *websession.Manager) h
 		authenticated, status := consentSession(w, r, sessions)
 		if status != 0 {
 			if status == 401 {
-				consentHeaders(w, "")
+				consentHeaders(w)
 				w.Header().Set("Location", "/api/v1/auth/google/start?next="+url.QueryEscape("/oauth/consent/"+handle))
 				w.WriteHeader(http.StatusSeeOther)
 			} else {
@@ -99,6 +100,9 @@ func NewConsentHandler(base string, db ClientDB, sessions *websession.Manager) h
 			if errors.Is(err, consentGrantLimit) {
 				errorCode = "grant_limit"
 			}
+			if errors.Is(err, consentUnauthorized) {
+				errorCode = "unauthorized_client"
+			}
 			pages.failure(w, r, oauthPageStatus(errorCode), errorCode, row.RedirectUri, row.State)
 			return
 		}
@@ -106,7 +110,7 @@ func NewConsentHandler(base string, db ClientDB, sessions *websession.Manager) h
 		if decision == "deny" {
 			resultError = "access_denied"
 		}
-		consentHeaders(w, row.RedirectUri)
+		consentHeaders(w)
 		http.SetCookie(w, oauthBrowserCookie("", -1))
 		w.Header().Set("Location", consentResultURL(row.RedirectUri, base, code, resultError, row.State))
 		w.WriteHeader(http.StatusSeeOther)
@@ -197,8 +201,12 @@ func decideConsent(ctx context.Context, db ClientDB, pending store.OauthRequest,
 		return "", fmt.Errorf("begin consent decision: %w", err)
 	}
 	defer consentRollback(tx)
-	if _, err = InUse(ctx, tx, pending.ClientID); err != nil {
+	client, err := InUse(ctx, tx, pending.ClientID)
+	if err != nil {
 		return "", fmt.Errorf("protect consent client: %w", err)
+	}
+	if decision == "approve" && !client.Allows("authorization_code") {
+		return "", consentUnauthorized
 	}
 	q := store.New(tx)
 	// All grant issuers serialize on the account before counting the live grants.

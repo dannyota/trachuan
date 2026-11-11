@@ -9,6 +9,8 @@ import (
 	"strings"
 	"sync"
 	"testing"
+
+	"golang.org/x/net/html"
 )
 
 func ioBody(s string) io.ReadCloser { return io.NopCloser(strings.NewReader(s)) }
@@ -27,7 +29,7 @@ func TestConsent_RequiresSessionAndRoundTripsLogin(t *testing.T) {
 	}
 }
 func TestConsent_BrowserBindingAndForgery(t *testing.T) {
-	for _, tc := range []string{"no cookie", "other cookie", "duplicate cookie", "no token", "wrong token", "no origin", "wrong origin", "duplicate origin", "wrong type", "repeat token", "query token", "bad decision", "expired", "claimed", "other handle"} {
+	for _, tc := range []string{"no cookie", "other cookie", "duplicate cookie", "no token", "wrong token", "no origin", "null origin", "wrong origin", "duplicate origin", "wrong type", "repeat token", "query token", "bad decision", "expired", "claimed", "other handle"} {
 		t.Run(tc, func(t *testing.T) {
 			d := newConsentDB()
 			path, cookie := pendingConsent(t, d)
@@ -49,6 +51,8 @@ func TestConsent_BrowserBindingAndForgery(t *testing.T) {
 				f.Set("csrf_token", "bad")
 			case "no origin":
 				r.Header.Del("Origin")
+			case "null origin":
+				r.Header.Set("Origin", "null")
 			case "wrong origin":
 				r.Header.Set("Origin", "https://attacker.example")
 			case "duplicate origin":
@@ -119,13 +123,16 @@ func TestConsent_HeadersAndCSP(t *testing.T) {
 	path, cookie := pendingConsent(t, d)
 	w := consentResponse(d, consentRequest(path, "GET", cookie, true, nil))
 	h := w.Header()
-	if h.Get("Cache-Control") != "no-store" || h.Get("X-Frame-Options") != "DENY" || h.Get("Referrer-Policy") != "no-referrer" {
+	if h.Get("Cache-Control") != "no-store" || h.Get("X-Frame-Options") != "DENY" || h.Get("Referrer-Policy") != "same-origin" {
 		t.Fatal("security headers")
 	}
-	for _, part := range []string{"default-src 'none'", "style-src 'self'", "frame-ancestors 'none'", "form-action 'self' http://localhost"} {
+	for _, part := range []string{"default-src 'none'", "style-src 'self'", "frame-ancestors 'none'"} {
 		if !strings.Contains(h.Get("Content-Security-Policy"), part) {
 			t.Errorf("missing CSP %s", part)
 		}
+	}
+	if strings.Contains(h.Get("Content-Security-Policy"), "form-action") {
+		t.Fatal("CSP must allow the decision redirect")
 	}
 	if strings.Contains(w.Body.String(), "<script") {
 		t.Fatal("inline scripts")
@@ -262,5 +269,134 @@ func TestConsent_StaleCachedSessionCannotMintCurrentEpochCode(t *testing.T) {
 func TestConsent_FormTokenUsesScopedHMAC(t *testing.T) {
 	if got := consentFormToken("session-secret-fixture", strings.Repeat("A", 43)); got != "TjtYok-lzkyyv_N8qJ_pftE7D4Y1OFdcSElfUDVN33c" {
 		t.Fatal("wrong form HMAC")
+	}
+}
+
+func TestConsent_BrowserDecisionAndLoopbackReturns(t *testing.T) {
+	for _, host := range []string{"127.0.0.1", "[::1]", "localhost"} {
+		for _, decision := range []string{"approve", "deny", "error"} {
+			t.Run(host+"/"+decision, func(t *testing.T) {
+				d := newConsentDB()
+				redirect := "http://" + host + ":43123/callback?existing=value"
+				d.client.RedirectUris = []string{redirect}
+				v := authorizeValues()
+				v.Set("redirect_uri", redirect)
+				if decision == "error" {
+					v.Set("scope", "invalid")
+					w := authorizeFor(t, d, v)
+					if w.Code != 400 || w.Header().Get("Location") != "" || strings.Contains(w.Header().Get("Content-Security-Policy"), "form-action") {
+						t.Fatalf("error page status %d", w.Code)
+					}
+					u := errorReturnLink(t, w.Body.String())
+					if u.Host != host+":43123" || u.Query().Get("existing") != "value" || u.Query().Get("error") != "invalid_scope" || u.Query().Get("state") != "opaque & state" || u.Query().Get("iss") != consentBase {
+						t.Fatal("invalid error link")
+					}
+					return
+				}
+				start := authorizeFor(t, d, v)
+				if start.Code != 303 {
+					t.Fatalf("authorize %d", start.Code)
+				}
+				path := start.Header().Get("Location")
+				cookie := start.Result().Cookies()[0]
+				page := consentResponse(d, consentRequest(path, "GET", cookie, true, nil))
+				if page.Code != 200 {
+					t.Fatalf("page %d", page.Code)
+				}
+				if strings.Contains(page.Header().Get("Content-Security-Policy"), "form-action") {
+					t.Fatal("CSP blocks loopback decisions")
+				}
+				post := consentRequest(path, "POST", cookie, true, url.Values{"decision": {decision}, "csrf_token": {pageFormToken(t, page.Body.String())}})
+				switch page.Header().Get("Referrer-Policy") {
+				case "same-origin":
+					post.Header.Set("Origin", consentBase)
+					post.Header.Set("Referer", consentBase+path)
+				case "no-referrer":
+					post.Header.Set("Origin", "null")
+					post.Header.Del("Referer")
+				default:
+					t.Fatal("unexpected referrer policy")
+				}
+				response := consentResponse(d, post)
+				if response.Code != 303 || strings.Contains(response.Header().Get("Content-Security-Policy"), "form-action") {
+					t.Fatalf("browser decision status %d", response.Code)
+				}
+				u, err := url.Parse(response.Header().Get("Location"))
+				if err != nil {
+					t.Fatal(err)
+				}
+				if u.Host != host+":43123" || u.Query().Get("existing") != "value" || u.Query().Get("state") != "opaque & state" || u.Query().Get("iss") != consentBase {
+					t.Fatal("invalid decision return")
+				}
+				if decision == "approve" && u.Query().Get("code") == "" {
+					t.Fatal("missing code")
+				}
+				if decision == "deny" && u.Query().Get("error") != "access_denied" {
+					t.Fatal("missing denial")
+				}
+			})
+		}
+	}
+}
+
+func pageFormToken(t *testing.T, body string) string {
+	t.Helper()
+	root, err := html.Parse(strings.NewReader(body))
+	if err != nil {
+		t.Fatal(err)
+	}
+	token := ""
+	var walk func(*html.Node)
+	walk = func(n *html.Node) {
+		if n.Type == html.ElementNode && n.Data == "input" {
+			attrs := map[string]string{}
+			for _, a := range n.Attr {
+				attrs[a.Key] = a.Val
+			}
+			if attrs["name"] == "csrf_token" {
+				token = attrs["value"]
+			}
+		}
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			walk(c)
+		}
+	}
+	walk(root)
+	if token == "" {
+		t.Fatal("missing consent token")
+	}
+	return token
+}
+
+func TestConsent_RejectsChangedClientGrantOnApproval(t *testing.T) {
+	d := newConsentDB()
+	d.client.ClientID = "https://client.example/metadata"
+	d.client.Kind = "cimd"
+	v := authorizeValues()
+	v.Set("client_id", d.client.ClientID)
+	start := authorizeFor(t, d, v)
+	if start.Code != 303 {
+		t.Fatalf("authorize status %d", start.Code)
+	}
+	path, cookie := start.Header().Get("Location"), start.Result().Cookies()[0]
+	d.client.GrantTypes = []string{"refresh_token"}
+	w := consentResponse(d, consentRequest(path, "POST", cookie, true, formFor(path, "approve")))
+	if w.Code != 400 || !strings.Contains(w.Body.String(), "unauthorized_client") || w.Header().Get("Location") != "" || d.claimed || d.grants != 0 || d.code.CodeHash != "" {
+		t.Fatalf("refresh-only approval: %d", w.Code)
+	}
+}
+
+func TestConsent_BrowserOriginTracksReferrerPolicy(t *testing.T) {
+	d := newConsentDB()
+	path, cookie := pendingConsent(t, d)
+	page := consentResponse(d, consentRequest(path, "GET", cookie, true, nil))
+	request := consentRequest(path, "POST", cookie, true, url.Values{"decision": {"approve"}, "csrf_token": {pageFormToken(t, page.Body.String())}})
+	if page.Header().Get("Referrer-Policy") == "no-referrer" {
+		request.Header.Set("Origin", "null")
+		request.Header.Del("Referer")
+	}
+	w := consentResponse(d, request)
+	if w.Code != 303 {
+		t.Fatalf("browser form with %q policy returned %d", page.Header().Get("Referrer-Policy"), w.Code)
 	}
 }

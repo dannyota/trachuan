@@ -48,10 +48,13 @@ func NewAuthorizeHandler(base string, db ClientDB, resolve func(context.Context,
 			if errors.Is(err, ErrInvalidClient) {
 				code = "invalid_client"
 			}
+			if errors.Is(err, consentUnauthorized) {
+				code = "unauthorized_client"
+			}
 			pages.failure(w, r, oauthPageStatus(code), code, target, row.State)
 			return
 		}
-		consentHeaders(w, "")
+		consentHeaders(w)
 		http.SetCookie(w, oauthBrowserCookie(browser, 600))
 		w.Header().Set("Location", "/oauth/consent/"+handle)
 		w.WriteHeader(http.StatusSeeOther)
@@ -79,6 +82,9 @@ func authorizeRequest(ctx context.Context, base string, v url.Values, parseErr e
 	}
 	if target == "" {
 		return row, "invalid_request", ""
+	}
+	if !client.Allows("authorization_code") {
+		return row, "unauthorized_client", target
 	}
 	if parseErr != nil {
 		return row, "invalid_request", target
@@ -133,8 +139,12 @@ func storeConsentRequest(ctx context.Context, db ClientDB, row store.OauthReques
 		return fmt.Errorf("begin pending consent: %w", err)
 	}
 	defer consentRollback(tx)
-	if _, err = InUse(ctx, tx, row.ClientID); err != nil {
+	client, err := InUse(ctx, tx, row.ClientID)
+	if err != nil {
 		return fmt.Errorf("protect pending consent client: %w", err)
+	}
+	if !client.Allows("authorization_code") {
+		return consentUnauthorized
 	}
 	// Serialize count and insert across processes without excluding client reads.
 	if _, err = tx.Exec(ctx, `SELECT pg_advisory_xact_lock($1)`, ClientsLockKey+1); err != nil {

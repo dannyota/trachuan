@@ -28,13 +28,10 @@ func newConsentPages(base string) *consentPages {
 //go:embed templates/consent.html templates/error.html
 var consentTemplates embed.FS
 
-type consentReturnField struct{ Name, Value string }
-
 type consentPageData struct {
 	Lang, Title, Name, ClientHost, RedirectHost, Token, Action, Toggle, ToggleLabel string
 	ScopeLabel, Prompt, Approve, Deny, DCRWarning, LoopbackWarning                  string
 	Error, Message, Return                                                          string
-	ReturnFields                                                                    []consentReturnField
 	Style                                                                           template.CSS
 	RedirectLabel                                                                   string
 }
@@ -74,7 +71,7 @@ func (p *consentPages) consent(w http.ResponseWriter, r *http.Request, client Cl
 			data.LoopbackWarning = "An application on this computer will receive access. Its identity is not verified."
 		}
 	}
-	p.render(w, 200, "consent.html", data, row.RedirectUri)
+	p.render(w, 200, "consent.html", data)
 }
 func (p *consentPages) failure(w http.ResponseWriter, r *http.Request, status int, code, redirect, state string) {
 	en := r.URL.Query().Get("lang") == "en"
@@ -103,19 +100,12 @@ func (p *consentPages) failure(w http.ResponseWriter, r *http.Request, status in
 		}
 	}
 	if redirect != "" {
-		target, _ := url.Parse(consentResultURL(redirect, p.base, "", callbackCode, state))
-		for key, values := range target.Query() {
-			for _, value := range values {
-				data.ReturnFields = append(data.ReturnFields, consentReturnField{key, value})
-			}
-		}
-		target.RawQuery = ""
-		data.Action = target.String()
+		data.Action = consentResultURL(redirect, p.base, "", callbackCode, state)
 	}
-	p.render(w, status, "error.html", data, redirect)
+	p.render(w, status, "error.html", data)
 }
-func (p *consentPages) render(w http.ResponseWriter, status int, name string, data consentPageData, redirect string) {
-	consentHeaders(w, redirect)
+func (p *consentPages) render(w http.ResponseWriter, status int, name string, data consentPageData) {
+	consentHeaders(w)
 	data.Style = template.CSS(consentStyles)
 	var body bytes.Buffer
 	if err := p.templates.ExecuteTemplate(&body, name, data); err != nil {
@@ -126,14 +116,10 @@ func (p *consentPages) render(w http.ResponseWriter, status int, name string, da
 	w.WriteHeader(status)
 	_, _ = w.Write(body.Bytes())
 }
-func consentHeaders(w http.ResponseWriter, redirect string) {
+func consentHeaders(w http.ResponseWriter) {
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("X-Frame-Options", "DENY")
-	w.Header().Set("Referrer-Policy", "no-referrer")
-	formAction := "'self'"
-	if u, ok := redirectURI(redirect); ok {
-		formAction += " " + u.Scheme + "://" + u.Host
-	}
+	w.Header().Set("Referrer-Policy", "same-origin")
 	digest := sha256.Sum256([]byte(consentStyles))
-	w.Header().Set("Content-Security-Policy", "default-src 'none'; style-src 'self' 'sha256-"+base64.StdEncoding.EncodeToString(digest[:])+"'; frame-ancestors 'none'; form-action "+formAction)
+	w.Header().Set("Content-Security-Policy", "default-src 'none'; style-src 'self' 'sha256-"+base64.StdEncoding.EncodeToString(digest[:])+"'; frame-ancestors 'none'")
 }

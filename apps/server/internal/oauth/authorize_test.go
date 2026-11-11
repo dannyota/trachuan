@@ -1,6 +1,8 @@
 package oauth
 
 import (
+	"context"
+	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
@@ -51,13 +53,13 @@ func TestAuthorize_ErrorsStayOnServerPage(t *testing.T) {
 	if w.Header().Get("Location") != "" || w.Code != 400 {
 		t.Fatal("automatic redirect")
 	}
-	u := submittedErrorForm(t, w.Body.String())
+	u := errorReturnLink(t, w.Body.String())
 	if u.Host != "localhost" || u.Query().Get("error") != "invalid_scope" || u.Query().Get("state") != v.Get("state") || u.Query().Get("iss") != consentBase {
 		t.Fatalf("return action %q", u)
 	}
 	v.Set("redirect_uri", "https://attacker.example/cb")
 	w = authorizeFor(t, newConsentDB(), v)
-	if strings.Contains(w.Body.String(), "<form") {
+	if strings.Contains(w.Body.String(), "<a ") {
 		t.Fatal("untrusted return button")
 	}
 }
@@ -70,14 +72,14 @@ func TestAuthorize_PendingCap503(t *testing.T) {
 	}
 }
 
-func submittedErrorForm(t *testing.T, body string) *url.URL {
+func errorReturnLink(t *testing.T, body string) *url.URL {
 	t.Helper()
 	root, err := html.Parse(strings.NewReader(body))
 	if err != nil {
 		t.Fatal(err)
 	}
-	var action string
-	fields := url.Values{}
+	var href string
+	var form bool
 	var walk func(*html.Node)
 	walk = func(n *html.Node) {
 		if n.Type == html.ElementNode {
@@ -86,10 +88,10 @@ func submittedErrorForm(t *testing.T, body string) *url.URL {
 				attrs[a.Key] = a.Val
 			}
 			if n.Data == "form" {
-				action = attrs["action"]
+				form = true
 			}
-			if n.Data == "input" && attrs["type"] == "hidden" {
-				fields.Add(attrs["name"], attrs["value"])
+			if n.Data == "a" {
+				href = attrs["href"]
 			}
 		}
 		for c := n.FirstChild; c != nil; c = c.NextSibling {
@@ -97,14 +99,13 @@ func submittedErrorForm(t *testing.T, body string) *url.URL {
 		}
 	}
 	walk(root)
-	if action == "" {
-		t.Fatal("missing return button")
+	if href == "" || form {
+		t.Fatal("error page must have a link and no form")
 	}
-	u, err := url.Parse(action)
+	u, err := url.Parse(href)
 	if err != nil {
 		t.Fatal(err)
 	}
-	u.RawQuery = fields.Encode()
 	return u
 }
 
@@ -114,8 +115,43 @@ func TestAuthorize_ErrorStateIsBounded(t *testing.T) {
 	v.Add("scope", "bad")
 	v.Add("scope", "bad")
 	w := authorizeFor(t, newConsentDB(), v)
-	u := submittedErrorForm(t, w.Body.String())
+	u := errorReturnLink(t, w.Body.String())
 	if len(u.Query().Get("state")) > 512 {
 		t.Fatal("oversize state reflected in return button")
+	}
+}
+
+func TestAuthorize_RejectsRefreshOnlyClient(t *testing.T) {
+	d := newConsentDB()
+	d.client.ClientID = "https://client.example/metadata"
+	d.client.Kind = "cimd"
+	d.client.GrantTypes = []string{"refresh_token"}
+	v := authorizeValues()
+	v.Set("client_id", d.client.ClientID)
+	w := authorizeFor(t, d, v)
+	if w.Code != 400 || !strings.Contains(w.Body.String(), "unauthorized_client") || w.Header().Get("Location") != "" || d.pending.HandleHash != "" {
+		t.Fatalf("refresh-only client: status %d", w.Code)
+	}
+	u := errorReturnLink(t, w.Body.String())
+	if u.Query().Get("error") != "unauthorized_client" || u.Query().Get("state") != "opaque & state" || u.Query().Get("iss") != consentBase {
+		t.Fatal("error link does not carry the authorization response")
+	}
+}
+
+func TestAuthorize_RechecksGrantBeforeStoring(t *testing.T) {
+	d := newConsentDB()
+	d.client.ClientID = "https://client.example/metadata"
+	d.client.Kind = "cimd"
+	resolve := func(_ context.Context, _ string) (Client, error) {
+		client := clientFromRow(d.client)
+		d.client.GrantTypes = []string{"refresh_token"}
+		return client, nil
+	}
+	w := httptest.NewRecorder()
+	v := authorizeValues()
+	v.Set("client_id", d.client.ClientID)
+	NewAuthorizeHandler(consentBase, d, resolve).ServeHTTP(w, httptest.NewRequest("GET", "/oauth/authorize?"+v.Encode(), nil))
+	if w.Code != 400 || !strings.Contains(w.Body.String(), "unauthorized_client") || d.pending.HandleHash != "" || len(w.Result().Cookies()) != 0 {
+		t.Fatalf("changed grants: status %d", w.Code)
 	}
 }

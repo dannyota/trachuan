@@ -6,7 +6,7 @@
 <h1>{{.Title}}</h1>
 <p><code>{{.Error}}</code></p>
 <p>{{.Message}}</p>
-{{if .Action}}<form method="get" action="{{.Action}}">{{range .ReturnFields}}<input type="hidden" name="{{.Name}}" value="{{.Value}}">{{end}}<button type="submit">{{.Return}}</button></form>{{end}}
+{{if .Action}}<a href="{{.Action}}">{{.Return}}</a>{{end}}
 </main>
 </body>
 </html>

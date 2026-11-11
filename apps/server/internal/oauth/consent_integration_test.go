@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync"
 	"testing"
 
@@ -233,5 +234,43 @@ func TestConsent_StaleCachedSession_Postgres(t *testing.T) {
 				t.Fatalf("codes %d error %v", codes, err)
 			}
 		})
+	}
+}
+
+func TestConsent_RefreshOnlyClientAfterPending_Postgres(t *testing.T) {
+	db := consentPostgres(t)
+	const clientID = "https://client.example/metadata"
+	q := store.New(db)
+	_, err := q.CreateClient(t.Context(), store.CreateClientParams{ClientID: clientID, Kind: "cimd", Name: "Fixture", RedirectUris: []string{"http://localhost/cb"}, GrantTypes: []string{"authorization_code", "refresh_token"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	resolve := func(ctx context.Context, id string) (Client, error) {
+		row, err := q.GetClient(ctx, id)
+		return clientFromRow(row), err
+	}
+	v := authorizeValues()
+	v.Set("client_id", clientID)
+	start := httptest.NewRecorder()
+	NewAuthorizeHandler(consentBase, db, resolve).ServeHTTP(start, httptest.NewRequest("GET", "/oauth/authorize?"+v.Encode(), nil))
+	if start.Code != 303 {
+		t.Fatalf("authorize status %d", start.Code)
+	}
+	path, cookie := start.Header().Get("Location"), start.Result().Cookies()[0]
+	if _, err := db.Exec(t.Context(), `UPDATE oauth_client SET grant_types=ARRAY['refresh_token'] WHERE client_id=$1`, clientID); err != nil {
+		t.Fatal(err)
+	}
+	w := httptest.NewRecorder()
+	NewConsentHandler(consentBase, db, consentSessionManager()).ServeHTTP(w, consentRequest(path, "POST", cookie, true, formFor(path, "approve")))
+	if w.Code != 400 || !strings.Contains(w.Body.String(), "unauthorized_client") || w.Header().Get("Location") != "" {
+		t.Fatalf("approval status %d", w.Code)
+	}
+	var claimed bool
+	if err := db.QueryRow(t.Context(), `SELECT claimed_at IS NOT NULL FROM oauth_request`).Scan(&claimed); err != nil || claimed {
+		t.Fatalf("pending request claimed: %v", err)
+	}
+	var grants, codes int
+	if err := db.QueryRow(t.Context(), `SELECT (SELECT count(*) FROM oauth_grant),(SELECT count(*) FROM oauth_code)`).Scan(&grants, &codes); err != nil || grants != 0 || codes != 0 {
+		t.Fatalf("grants %d codes %d: %v", grants, codes, err)
 	}
 }
