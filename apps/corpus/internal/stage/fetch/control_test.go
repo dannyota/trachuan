@@ -110,3 +110,50 @@ func TestControl_LargeNumericChange(t *testing.T) {
 		t.Fatalf("outcome = %q, want changed", got)
 	}
 }
+
+func TestControl_DuplicateMembers(t *testing.T) {
+	for _, tc := range []struct{ name, old, fresh, clean string }{
+		{"content", `{"nodes":[{"content":{"content":"old"},"content":null}]}`, `{"nodes":[{"content":{"content":"new"},"content":null}]}`, `{"nodes":[{"content":null}]}`},
+		{"id", `{"nodes":[{"id":1,"id":2,"content":"same"}]}`, `{"nodes":[{"id":3,"id":4,"content":"same"}]}`, `{"nodes":[{"id":3,"content":"same"}]}`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			base := &baseline{tree: []byte(tc.old), filesJSON: []byte(`[]`), reportJSON: []byte(`{}`)}
+			for _, trees := range [][2]string{{tc.old, tc.fresh}, {tc.fresh, tc.old}, {tc.old, tc.clean}, {tc.clean, tc.old}} {
+				base.tree = []byte(trees[0])
+				got, _ := compareControl(base, []byte(trees[1]), []byte(`[]`), []byte(`{}`))
+				if got != "changed" {
+					t.Errorf("outcome = %q, want changed", got)
+				}
+			}
+			base.tree = []byte(tc.old)
+			if got, _ := compareControl(base, base.tree, []byte(`[]`), []byte(`{}`)); got != "same" {
+				t.Errorf("byte-identical duplicate tree outcome = %q, want same", got)
+			}
+		})
+	}
+}
+
+func TestControl_SampleVectors(t *testing.T) {
+	for _, tc := range []struct {
+		selected bool
+		key, rel string
+		value    uint64
+	}{
+		{true, "vn:vbpl:23", "20991231_1", 12501301687787916840},
+		{true, "vn:vbpl:80", "20991231_1", 12590743725912110760},
+		{true, "vn:vbpl:92", "20991231_1", 4441375655630521140},
+		{true, "vn:vbpl:137", "20991231_1", 13051873285897622240},
+		{true, "vn:vbpl:148", "20991231_1", 3641843231899981880},
+		{true, "vn:vbpl:166", "20991231_1", 6872200615586940240},
+		{false, "vn:vbpl:1", "20991231_1", 14254937873770969170},
+		{false, "vn:vbpl:2", "20991231_1", 5295518100236277615},
+		{false, "vn:vbpl:3", "20991231_1", 8333941370689866955},
+		{false, "vn:vbpl:4", "20991231_1", 16960999972632145524},
+	} {
+		t.Run(tc.key, func(t *testing.T) {
+			if got := controlSample(tc.key, tc.rel); got != tc.selected {
+				t.Errorf("selection = %t, want %t (hash value %d)", got, tc.selected, tc.value)
+			}
+		})
+	}
+}

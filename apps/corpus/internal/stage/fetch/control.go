@@ -41,6 +41,11 @@ func compareControl(b *baseline, tree, files, report []byte) (string, []string) 
 	if len(b.tree) > responseLimit || len(tree) > responseLimit || !json.Valid(b.tree) || !json.Valid(tree) {
 		return "changed", differs
 	}
+	// Map decoding keeps one of several members with the same name, so a
+	// tree with duplicates cannot be proven equal apart from its ids.
+	if duplicateMembers(b.tree) || duplicateMembers(tree) {
+		return "changed", differs
+	}
 	var old, fresh any
 	oldDecoder := json.NewDecoder(bytes.NewReader(b.tree))
 	freshDecoder := json.NewDecoder(bytes.NewReader(tree))
