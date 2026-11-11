@@ -18,8 +18,6 @@ import (
 	"time"
 
 	"danny.vn/trachuan/apps/corpus/internal/artifact"
-	"danny.vn/trachuan/apps/corpus/internal/store"
-	"github.com/jackc/pgx/v5"
 )
 
 // Config contains checkpoint paths and retention settings.
@@ -28,17 +26,17 @@ type Config struct {
 	Keep                                    int
 }
 
-// Dumper writes a consistent workshop dump.
+// Dumper writes the workshop using the exported transaction snapshot.
 type Dumper interface {
-	Dump(ctx context.Context, databaseURL, path string) error
+	Dump(ctx context.Context, databaseURL, path, snapshot string) error
 }
 
 // Taker saves a stage boundary.
 type Taker struct {
-	Config     Config
-	Dumper     Dumper
-	Now        func() time.Time
-	referenced func(context.Context, string, string) (bool, error)
+	Config        Config
+	Dumper        Dumper
+	Now           func() time.Time
+	beginSnapshot func(context.Context, string) (workshopSnapshot, error)
 }
 type metadata struct {
 	Stage      string    `json:"stage"`
@@ -63,9 +61,18 @@ func (t Taker) Take(ctx context.Context, runKey string, generation int, stage st
 	if dumper == nil {
 		dumper = PgDump{Path: t.Config.PgDump}
 	}
+	beginSnapshot := t.beginSnapshot
+	if beginSnapshot == nil {
+		beginSnapshot = openWorkshopSnapshot
+	}
+	snapshot, err := beginSnapshot(ctx, t.Config.DatabaseURL)
+	if err != nil {
+		return "", err
+	}
+	defer snapshot.close(context.WithoutCancel(ctx))
 	dump := filepath.Join(dir, "workshop.dump")
-	if err := dumper.Dump(ctx, t.Config.DatabaseURL, dump); err != nil {
-		return "", fmt.Errorf("dump workshop: %w", err)
+	if dumpErr := dumper.Dump(ctx, t.Config.DatabaseURL, dump, snapshot.snapshotID()); dumpErr != nil {
+		return "", fmt.Errorf("dump workshop: %w", dumpErr)
 	}
 	f, err := os.Open(dump)
 	if err != nil {
@@ -80,7 +87,7 @@ func (t Taker) Take(ctx context.Context, runKey string, generation int, stage st
 	if closeErr != nil {
 		return "", fmt.Errorf("close dump: %w", closeErr)
 	}
-	if copyErr := t.copyArtifacts(ctx, t.Config.ArtifactsRoot, filepath.Join(t.Config.Dir, "artifacts")); copyErr != nil {
+	if copyErr := t.copyArtifacts(ctx, t.Config.ArtifactsRoot, filepath.Join(t.Config.Dir, "artifacts"), snapshot); copyErr != nil {
 		return "", copyErr
 	}
 	now := time.Now
@@ -120,7 +127,7 @@ func safeName(s string) bool {
 	return s != "" && s != "." && s != ".." && !strings.ContainsAny(s, `/\\`)
 }
 
-func (t Taker) copyArtifacts(ctx context.Context, root, dest string) error {
+func (t Taker) copyArtifacts(ctx context.Context, root, dest string, snapshot workshopSnapshot) error {
 	if err := os.MkdirAll(dest, 0700); err != nil {
 		return fmt.Errorf("create artifact destination: %w", err)
 	}
@@ -156,11 +163,7 @@ func (t Taker) copyArtifacts(ctx context.Context, root, dest string) error {
 				return fmt.Errorf("inspect artifact copy: %w", statErr)
 			}
 			if _, verifyErr := artifact.Verify(src); verifyErr != nil {
-				referenced := t.referenced
-				if referenced == nil {
-					referenced = t.artifactReferenced
-				}
-				used, queryErr := referenced(ctx, root, rel)
+				used, queryErr := snapshot.artifactReferenced(ctx, root, rel)
 				if queryErr != nil {
 					return fmt.Errorf("check artifact reference: %w", queryErr)
 				}
@@ -184,21 +187,6 @@ func artifactName(name string) bool {
 	_, firstErr := hex.DecodeString(name[:64])
 	_, secondErr := hex.DecodeString(name[65:])
 	return firstErr == nil && secondErr == nil
-}
-
-func (t Taker) artifactReferenced(ctx context.Context, root, rel string) (bool, error) {
-	// Historical artifact rows and acquisition-only references are reuse hints.
-	// Only current item references make corrupt bytes fatal to the checkpoint.
-	conn, err := pgx.Connect(ctx, t.Config.DatabaseURL)
-	if err != nil {
-		return false, fmt.Errorf("connect workshop: %w", err)
-	}
-	defer func() { _ = conn.Close(ctx) }()
-	used, err := store.New(conn).ArtifactPathReferenced(ctx, store.ArtifactPathReferencedParams{RelativePath: rel, AbsolutePath: filepath.Join(root, rel)})
-	if err != nil {
-		return false, fmt.Errorf("query artifact reference: %w", err)
-	}
-	return used, nil
 }
 
 func copyArtifact(src, target string) error {

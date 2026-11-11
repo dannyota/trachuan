@@ -42,7 +42,7 @@ func corruptArtifact(t *testing.T, taker Taker) string {
 func TestTake_LogsUnreferencedCorruptOrphan(t *testing.T) {
 	taker := setup(t)
 	rel := corruptArtifact(t, taker)
-	taker.referenced = func(context.Context, string, string) (bool, error) { return false, nil }
+	taker.beginSnapshot = snapshotWithReference(func(context.Context, string, string) (bool, error) { return false, nil })
 	var logs bytes.Buffer
 	old := slog.Default()
 	slog.SetDefault(slog.New(slog.NewTextHandler(&logs, nil)))
@@ -60,9 +60,9 @@ func TestTake_LogsUnreferencedCorruptOrphan(t *testing.T) {
 func TestTake_FailsOnReferencedCorruptArtifact(t *testing.T) {
 	taker := setup(t)
 	rel := corruptArtifact(t, taker)
-	taker.referenced = func(_ context.Context, root, path string) (bool, error) {
+	taker.beginSnapshot = snapshotWithReference(func(_ context.Context, root, path string) (bool, error) {
 		return root == taker.Config.ArtifactsRoot && path == rel, nil
-	}
+	})
 	if _, err := taker.Take(context.Background(), "run", 1, "fetch"); err == nil {
 		t.Fatal("accepted corrupt referenced artifact")
 	}
@@ -74,7 +74,7 @@ func TestTake_FailsOnReferencedCorruptArtifact(t *testing.T) {
 func TestTake_DoesNotReverifyCopiedArtifacts(t *testing.T) {
 	taker := setup(t)
 	rel := publish(t, taker.Config.ArtifactsRoot, "copied")
-	taker.referenced = func(context.Context, string, string) (bool, error) { return true, nil }
+	taker.beginSnapshot = snapshotWithReference(func(context.Context, string, string) (bool, error) { return true, nil })
 	if _, err := taker.Take(context.Background(), "run", 1, "fetch"); err != nil {
 		t.Fatal(err)
 	}

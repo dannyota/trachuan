@@ -13,9 +13,10 @@ import (
 // PgDump invokes PostgreSQL's custom-format dump tool.
 type PgDump struct{ Path string }
 
-// Dump writes a custom-format dump without logging the database URL.
-func (p PgDump) Dump(ctx context.Context, databaseURL, path string) error {
-	command, err := p.command(ctx, databaseURL, path)
+// Dump writes the exported snapshot without logging the database URL.
+// The exporting transaction must remain open until Dump returns.
+func (p PgDump) Dump(ctx context.Context, databaseURL, path, snapshot string) error {
+	command, err := p.command(ctx, databaseURL, path, snapshot)
 	if err != nil {
 		return err
 	}
@@ -25,7 +26,10 @@ func (p PgDump) Dump(ctx context.Context, databaseURL, path string) error {
 	return nil
 }
 
-func (p PgDump) command(ctx context.Context, databaseURL, path string) (*exec.Cmd, error) {
+func (p PgDump) command(ctx context.Context, databaseURL, path, snapshot string) (*exec.Cmd, error) {
+	if snapshot == "" {
+		return nil, fmt.Errorf("dump requires an exported snapshot")
+	}
 	u, err := url.Parse(databaseURL)
 	if err != nil {
 		return nil, fmt.Errorf("invalid database URL")
@@ -50,7 +54,7 @@ func (p PgDump) command(ctx context.Context, databaseURL, path string) (*exec.Cm
 		query.Del("password")
 		u.RawQuery = query.Encode()
 	}
-	cmd := exec.CommandContext(ctx, p.Path, "-Fc", "--file", path, u.String())
+	cmd := exec.CommandContext(ctx, p.Path, "-Fc", "--snapshot="+snapshot, "--file", path, u.String())
 	if hasPassword {
 		cmd.Env = append(os.Environ(), "PGPASSWORD="+password)
 	}

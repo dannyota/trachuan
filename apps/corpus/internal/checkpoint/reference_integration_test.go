@@ -22,6 +22,7 @@ func TestTake_ChecksWorkshopArtifactReferences(t *testing.T) {
 	}
 	defer db.Close()
 	taker := setup(t)
+	taker.beginSnapshot = nil
 	taker.Config.DatabaseURL = url
 	rel := corruptArtifact(t, taker)
 	if _, takeErr := taker.Take(ctx, "run", 1, "fetch"); takeErr != nil {
