@@ -209,3 +209,24 @@ func TestEvalStage_NoCapOverride(t *testing.T) {
 		t.Fatalf("evaluation not reached: %v", err)
 	}
 }
+
+func TestEvaluate_ForwardsCapOverride(t *testing.T) {
+	s := New(Config{})
+	s.ensure = func(context.Context, stage.Env, stage.Run) (build.Database, artifact.Result, error) {
+		return build.Database{}, artifact.Result{}, nil
+	}
+	s.evaluate = func(_ context.Context, _ stage.Env, _ stage.Run, _ build.Database, _ artifact.Result, opts evaluation.Options) (evaluation.Report, evaluation.Cache, error) {
+		return evaluation.Report{CapOverride: opts.CapOverride}, evaluation.Cache{}, nil
+	}
+	cap, err := retrieval.ParseCapOverride("4")
+	if err != nil {
+		t.Fatal(err)
+	}
+	report, _, err := s.Evaluate(context.Background(), stage.Env{}, stage.Run{}, cap)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if report.CapOverride == nil || *report.CapOverride != 4 {
+		t.Fatalf("cap = %v, want 4", report.CapOverride)
+	}
+}

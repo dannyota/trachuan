@@ -605,3 +605,121 @@ func TestRun_CapOverrideReport(t *testing.T) {
 		}
 	}
 }
+
+func TestReport_LimitRecordsIncludeCapOverride(t *testing.T) {
+	date := retrieval.Date{Year: 2026, Month: time.November, Day: 9}
+	for _, tc := range []struct {
+		value string
+		want  any
+	}{{"", nil}, {"4", float64(4)}, {"none", "none"}} {
+		var cap *retrieval.CapOverride
+		if tc.value != "" {
+			var err error
+			cap, err = retrieval.ParseCapOverride(tc.value)
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
+		r, _, err := Run(context.Background(), &fakeEngine{date: date}, recordedSuite(), Options{EvaluationDate: date, Modes: []retrieval.Mode{"exact"}, CapOverride: cap})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(r.Cases) == 0 || len(r.Cases[0].Ranks) == 0 {
+			t.Fatal("expected a scored case")
+		}
+		prior := r.Cases[0]
+		prior.Ranks = []int{1}
+		diffs := compareCases([]CaseResult{prior}, r.Cases[:1])
+		if len(diffs) != 1 {
+			t.Fatal("expected case difference")
+		}
+		r.ANNResults = map[string]ANNLoss{"legacy": {Differences: diffs}}
+		b, err := json.Marshal(r)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var root any
+		if err = json.Unmarshal(b, &root); err != nil {
+			t.Fatal(err)
+		}
+		var visit func(any)
+		visit = func(v any) {
+			switch x := v.(type) {
+			case []any:
+				for _, item := range x {
+					visit(item)
+				}
+			case map[string]any:
+				if _, ok := x["limit"]; ok {
+					got, present := x["cap_override"]
+					if !present || got != tc.want {
+						t.Errorf("cap %q: record %v has override %v (present %v)", tc.value, x, got, present)
+					}
+				}
+				for _, item := range x {
+					visit(item)
+				}
+			}
+		}
+		visit(root)
+		dir := t.TempDir()
+		if err = r.WriteFiles(dir); err != nil {
+			t.Fatal(err)
+		}
+		file, err := os.Open(filepath.Join(dir, "cases.jsonl"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		decoder := json.NewDecoder(file)
+		for decoder.More() {
+			var row any
+			if err = decoder.Decode(&row); err != nil {
+				_ = file.Close()
+				t.Fatal(err)
+			}
+			visit(row)
+		}
+		if err = file.Close(); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+type populatedCapEngine struct{ fakeEngine }
+
+func (e *populatedCapEngine) Collect(_ context.Context, p retrieval.Prepared, d retrieval.Depths) (retrieval.Arms, error) {
+	var candidates []retrieval.Candidate
+	for i := int64(1); i <= 10; i++ {
+		doc := "other"
+		if i <= 5 {
+			doc = "doc"
+		}
+		candidates = append(candidates, lossCandidate(i, doc, fmt.Sprint(i)))
+	}
+	return retrieval.Arms{Validation: p.Validation, Depths: d, Date: e.date, Primary: retrieval.ArmGroup{Dense: candidates, Lexical: candidates, Members: candidates}}, nil
+}
+
+func TestRun_CapChangesResultsNotCachedGroups(t *testing.T) {
+	date := retrieval.Date{Year: 2026, Month: time.November, Day: 9}
+	base, baseCache, err := Run(context.Background(), &populatedCapEngine{fakeEngine{date: date}}, recordedSuite(), Options{EvaluationDate: date, Modes: []retrieval.Mode{"exact"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	cap, err := retrieval.ParseCapOverride("none")
+	if err != nil {
+		t.Fatal(err)
+	}
+	trial, trialCache, err := Run(context.Background(), &populatedCapEngine{fakeEngine{date: date}}, recordedSuite(), Options{EvaluationDate: date, Modes: []retrieval.Mode{"exact"}, CapOverride: cap})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(base.Cases) == 0 || len(trial.Cases) == 0 || len(base.Cases[0].Returned) != 8 || len(trial.Cases[0].Returned) != 8 {
+		t.Fatal("expected populated results")
+	}
+	if base.Cases[0].Returned[3].DocumentKey != "other" || trial.Cases[0].Returned[3].DocumentKey != "doc" {
+		t.Fatalf("baseline %v trial %v", base.Cases[0].Returned, trial.Cases[0].Returned)
+	}
+	if len(baseCache.Arms) == 0 || len(baseCache.Arms[0].Groups) == 0 || !reflect.DeepEqual(baseCache.Arms, trialCache.Arms) {
+		t.Fatal("cached arms or groups changed")
+	}
+}

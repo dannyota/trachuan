@@ -38,7 +38,7 @@ func finishPresented(r *Report, all map[presentedKey]*presentedSamples, modes []
 						continue
 					}
 					sort.Float64s(s.sizes)
-					r.Presented = append(r.Presented, PresentedSummary{cohort, mode, detail, limit, s.cases, s.expected, s.found, Quantile(s.sizes, .5), Quantile(s.sizes, .95)})
+					r.Presented = append(r.Presented, PresentedSummary{CapOverride: r.CapOverride, Cohort: cohort, Mode: mode, Detail: detail, Limit: limit, Cases: s.cases, Expected: s.expected, Found: s.found, SizeP50: Quantile(s.sizes, .5), SizeP95: Quantile(s.sizes, .95)})
 				}
 			}
 		}
@@ -144,7 +144,7 @@ func finishReport(r *Report, all map[metricKey]*Metrics, modes []retrieval.Mode)
 					add("positive_answer_rate", float64(conf.TN), conf.TN+conf.FP, nil)
 					sizes := m.EvidenceCharacters()
 					sort.Float64s(sizes)
-					r.EvidenceCharacters = append(r.EvidenceCharacters, SizeSummary{cohort, mode, arms, limit, len(sizes), Quantile(sizes, .5), Quantile(sizes, .95)})
+					r.EvidenceCharacters = append(r.EvidenceCharacters, SizeSummary{CapOverride: r.CapOverride, Cohort: cohort, Mode: mode, Arms: arms, Limit: limit, N: len(sizes), P50: Quantile(sizes, .5), P95: Quantile(sizes, .95)})
 				}
 			}
 		}

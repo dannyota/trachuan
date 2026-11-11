@@ -3,14 +3,19 @@ package cli
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"danny.vn/trachuan/apps/corpus/internal/artifact"
 	"danny.vn/trachuan/apps/corpus/internal/evaluation"
+	"danny.vn/trachuan/apps/corpus/internal/stage"
+	"danny.vn/trachuan/internal/embedding"
 	"danny.vn/trachuan/internal/retrieval"
 )
 
@@ -210,5 +215,94 @@ func TestEvalCLI_RequireFloorsDevelopment(t *testing.T) {
 	r := evaluation.Report{Status: "complete", QualityPass: true, Floors: floors, Rejections: []evaluation.Rejection{{Passed: false}}}
 	if got := evalExit(r, true); got != 2 {
 		t.Fatalf("failed rejection exit = %d", got)
+	}
+}
+
+type cliCapEngine struct{ date retrieval.Date }
+
+func (e cliCapEngine) Release() retrieval.Release {
+	r := retrieval.Recipe1()
+	threshold := 0.0
+	r.Abstention.Threshold = &threshold
+	return retrieval.Release{Country: "vn", Rel: "test", RetrievalRecipe: r}
+}
+func (e cliCapEngine) Prepare(_ context.Context, req retrieval.Request) (retrieval.Prepared, error) {
+	v, err := retrieval.ValidateQuery(req.Query)
+	if err != nil {
+		return retrieval.Prepared{}, err
+	}
+	p := retrieval.Prepared{Request: req, Validation: v}
+	if v.Accepted {
+		p.Vector = &embedding.Vector{Values: []float32{1}, TokenCount: 1, RecipeHash: "query"}
+	}
+	return p, nil
+}
+func (e cliCapEngine) PrepareLegacy(ctx context.Context, req retrieval.Request) (retrieval.Prepared, error) {
+	p, err := e.Prepare(ctx, req)
+	if err == nil && !p.Validation.Accepted {
+		p.Validation.Accepted = true
+		p.Vector = &embedding.Vector{Values: []float32{1}, TokenCount: 1, RecipeHash: "query"}
+	}
+	return p, err
+}
+func (e cliCapEngine) Collect(_ context.Context, p retrieval.Prepared, depths retrieval.Depths) (retrieval.Arms, error) {
+	var candidates []retrieval.Candidate
+	for i := int64(1); i <= 10; i++ {
+		doc := "other"
+		if i <= 5 {
+			doc = "doc"
+		}
+		id := retrieval.Identity{Country: "vn", DocumentKey: doc, Anchor: fmt.Sprint(i)}
+		provision := retrieval.Provision{ID: i, Identity: id, NodeID: fmt.Sprint(i), Kind: "khoan", Text: "text"}
+		candidates = append(candidates, retrieval.Candidate{ChunkID: i, GroupID: i, ProvisionID: i, Identity: id, Group: id, Cosine: .9, Provision: provision, Ancestors: []retrieval.Provision{provision}, Descendants: []retrieval.Provision{provision}, Document: retrieval.Document{Number: doc, StatusClass: "in_force", IsCurrent: true}})
+	}
+	return retrieval.Arms{Validation: p.Validation, Depths: depths, Date: e.date, Primary: retrieval.ArmGroup{Dense: candidates, Lexical: candidates, Members: candidates}}, nil
+}
+func (e cliCapEngine) Present(context.Context, retrieval.Response, retrieval.Detail) (retrieval.SearchResult, error) {
+	return retrieval.SearchResult{}, nil
+}
+
+type cliCapStage struct{}
+
+func (cliCapStage) Evaluate(ctx context.Context, _ stage.Env, _ stage.Run, cap *retrieval.CapOverride) (evaluation.Report, evaluation.Cache, error) {
+	cases := []evaluation.Case{{ID: "positive", Question: "Câu hỏi tốt", ExpectedCitations: []evaluation.Expectation{{DocNumber: "doc"}}}, {ID: "reject1", Question: "khong dau mot", ExpectedCitations: []evaluation.Expectation{{DocNumber: "doc"}}}, {ID: "reject2", Question: "khong dau hai", ExpectedCitations: []evaluation.Expectation{{DocNumber: "doc"}}}, {ID: "reject3", Question: "khong dau ba", ExpectedCitations: []evaluation.Expectation{{DocNumber: "doc"}}}}
+	suite := evaluation.Suite{Legacy: cases, Rejections: []string{"reject1", "reject2", "reject3"}, Hashes: evaluation.FixtureHashes{Legacy: "fixture"}, Map: evaluation.IdentityMap{Version: 1, LegacySHA256: "fixture"}}
+	date := retrieval.Date{Year: 2026, Month: time.November, Day: 9}
+	return evaluation.Run(ctx, cliCapEngine{date}, suite, evaluation.Options{EvaluationDate: date, Modes: []retrieval.Mode{"exact"}, CapOverride: cap})
+}
+
+func TestEvalCLI_CapForwardedToResults(t *testing.T) {
+	prepare := func(context.Context, string, string, string) (evalTarget, error) {
+		return evalTarget{runner: cliCapStage{}, close: func() {}}, nil
+	}
+	var results []evaluation.Report
+	for _, value := range []string{"3", "none"} {
+		out := filepath.Join(t.TempDir(), "report")
+		var stderr bytes.Buffer
+		code := runEvalWith(context.Background(), []string{"vn", "20261109", "--out", out, "--cap", value}, &stderr, prepare)
+		if code != 0 {
+			t.Fatalf("cap %s: exit %d: %s", value, code, stderr.String())
+		}
+		b, err := os.ReadFile(filepath.Join(out, "report.json"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var report evaluation.Report
+		if err = json.Unmarshal(b, &report); err != nil {
+			t.Fatal(err)
+		}
+		if report.CapOverride == nil {
+			t.Fatal("report omitted cap")
+		}
+		results = append(results, report)
+	}
+	if *results[0].CapOverride != 3 || *results[1].CapOverride != 0 {
+		t.Fatalf("caps: %v, %v", results[0].CapOverride, results[1].CapOverride)
+	}
+	if len(results[0].Cases) == 0 || len(results[1].Cases) == 0 || len(results[0].Cases[0].Returned) < 4 || len(results[1].Cases[0].Returned) < 4 {
+		t.Fatal("missing returned hits")
+	}
+	if results[0].Cases[0].Returned[3].DocumentKey != "other" || results[1].Cases[0].Returned[3].DocumentKey != "doc" {
+		t.Fatalf("baseline %v trial %v", results[0].Cases[0].Returned, results[1].Cases[0].Returned)
 	}
 }

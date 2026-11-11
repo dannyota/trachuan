@@ -305,7 +305,7 @@ func Run(ctx context.Context, engine Engine, suite Suite, o Options) (Report, Ca
 						if err != nil {
 							return Report{}, Cache{}, fmt.Errorf("diagnose case %s: %w", c.ID, err)
 						}
-						result := CaseResult{CaseID: c.ID, Cohort: cohort, Mode: mode, Arms: armMode, Limit: limit, Expected: len(ranks), Ranks: ranks, Matched: matchedCount(ranks), Mapped: caseMappings(entries[c.ID], len(ranks)), Abstain: response.Abstain, Reason: response.Reason, Gaps: gaps, Losses: losses, Characters: chars}
+						result := CaseResult{CapOverride: o.CapOverride, CaseID: c.ID, Cohort: cohort, Mode: mode, Arms: armMode, Limit: limit, Expected: len(ranks), Ranks: ranks, Matched: matchedCount(ranks), Mapped: caseMappings(entries[c.ID], len(ranks)), Abstain: response.Abstain, Reason: response.Reason, Gaps: gaps, Losses: losses, Characters: chars}
 						if cohort != "legacy" {
 							result.MappingIssues = o.Mapping[c.ID]
 						}

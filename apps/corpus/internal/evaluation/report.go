@@ -78,34 +78,36 @@ type NonRegression struct {
 
 // SizeSummary records nearest-rank evidence sizes.
 type SizeSummary struct {
-	Cohort string            `json:"cohort"`
-	Mode   retrieval.Mode    `json:"mode"`
-	Arms   retrieval.ArmMode `json:"arms"`
-	Limit  int               `json:"limit"`
-	N      int               `json:"n"`
-	P50    *float64          `json:"p50"`
-	P95    *float64          `json:"p95"`
+	CapOverride *retrieval.CapOverride `json:"cap_override"`
+	Cohort      string                 `json:"cohort"`
+	Mode        retrieval.Mode         `json:"mode"`
+	Arms        retrieval.ArmMode      `json:"arms"`
+	Limit       int                    `json:"limit"`
+	N           int                    `json:"n"`
+	P50         *float64               `json:"p50"`
+	P95         *float64               `json:"p95"`
 }
 
 // CaseResult contains the non-sensitive result of one response.
 type CaseResult struct {
-	MappingIssues []MappingIssue       `json:"mapping_issues,omitempty"`
-	CaseID        string               `json:"case_id"`
-	Cohort        string               `json:"cohort"`
-	Mode          retrieval.Mode       `json:"mode"`
-	Arms          retrieval.ArmMode    `json:"arms"`
-	Limit         int                  `json:"limit"`
-	Expected      int                  `json:"expected"`
-	Ranks         []int                `json:"ranks"`
-	DirectRanks   []int                `json:"direct_ranks,omitempty"`
-	Returned      []retrieval.Identity `json:"returned"`
-	Mapped        [][]Alternative      `json:"mapped_identities"`
-	Matched       int                  `json:"matched"`
-	Losses        []CitationLoss       `json:"losses"`
-	Abstain       bool                 `json:"abstain"`
-	Reason        string               `json:"reason,omitempty"`
-	Gaps          []retrieval.Gap      `json:"gaps"`
-	Characters    int                  `json:"characters"`
+	CapOverride   *retrieval.CapOverride `json:"cap_override"`
+	MappingIssues []MappingIssue         `json:"mapping_issues,omitempty"`
+	CaseID        string                 `json:"case_id"`
+	Cohort        string                 `json:"cohort"`
+	Mode          retrieval.Mode         `json:"mode"`
+	Arms          retrieval.ArmMode      `json:"arms"`
+	Limit         int                    `json:"limit"`
+	Expected      int                    `json:"expected"`
+	Ranks         []int                  `json:"ranks"`
+	DirectRanks   []int                  `json:"direct_ranks,omitempty"`
+	Returned      []retrieval.Identity   `json:"returned"`
+	Mapped        [][]Alternative        `json:"mapped_identities"`
+	Matched       int                    `json:"matched"`
+	Losses        []CitationLoss         `json:"losses"`
+	Abstain       bool                   `json:"abstain"`
+	Reason        string                 `json:"reason,omitempty"`
+	Gaps          []retrieval.Gap        `json:"gaps"`
+	Characters    int                    `json:"characters"`
 }
 
 // Rejection records a product input gate check.
@@ -117,15 +119,16 @@ type Rejection struct {
 
 // PresentedSummary records matching and serialized response sizes.
 type PresentedSummary struct {
-	Cohort   string           `json:"cohort"`
-	Mode     retrieval.Mode   `json:"mode"`
-	Detail   retrieval.Detail `json:"detail"`
-	Limit    int              `json:"limit"`
-	Cases    int              `json:"cases"`
-	Expected int              `json:"expected"`
-	Found    int              `json:"found"`
-	SizeP50  *float64         `json:"size_p50"`
-	SizeP95  *float64         `json:"size_p95"`
+	CapOverride *retrieval.CapOverride `json:"cap_override"`
+	Cohort      string                 `json:"cohort"`
+	Mode        retrieval.Mode         `json:"mode"`
+	Detail      retrieval.Detail       `json:"detail"`
+	Limit       int                    `json:"limit"`
+	Cases       int                    `json:"cases"`
+	Expected    int                    `json:"expected"`
+	Found       int                    `json:"found"`
+	SizeP50     *float64               `json:"size_p50"`
+	SizeP95     *float64               `json:"size_p95"`
 }
 
 // CompactSizeGate compares compact and full response sizes.
@@ -233,54 +236,6 @@ func writeJSONLines[T any](path string, rows []T) error {
 		return fmt.Errorf("close %s: %w", filepath.Base(path), err)
 	}
 	return nil
-}
-
-// CaseDifference lists changed citation matches and abstention decisions.
-type CaseDifference struct {
-	CaseID          string            `json:"case_id"`
-	Cohort          string            `json:"cohort"`
-	Mode            retrieval.Mode    `json:"mode"`
-	Arms            retrieval.ArmMode `json:"arms"`
-	Limit           int               `json:"limit"`
-	Gained          []int             `json:"gained"`
-	Lost            []int             `json:"lost"`
-	PreviousAbstain bool              `json:"previous_abstain"`
-	Abstain         bool              `json:"abstain"`
-}
-
-func compareCases(previous, current []CaseResult) []CaseDifference {
-	type key struct {
-		id, cohort string
-		mode       retrieval.Mode
-		arms       retrieval.ArmMode
-		limit      int
-	}
-	old := map[key]CaseResult{}
-	for _, c := range previous {
-		old[key{c.CaseID, c.Cohort, c.Mode, c.Arms, c.Limit}] = c
-	}
-	changes := []CaseDifference{}
-	for _, c := range current {
-		p, ok := old[key{c.CaseID, c.Cohort, c.Mode, c.Arms, c.Limit}]
-		if !ok {
-			continue
-		}
-		d := CaseDifference{CaseID: c.CaseID, Cohort: c.Cohort, Mode: c.Mode, Arms: c.Arms, Limit: c.Limit, PreviousAbstain: p.Abstain, Abstain: c.Abstain}
-		for i := 0; i < max(len(p.Ranks), len(c.Ranks)); i++ {
-			before := i < len(p.Ranks) && p.Ranks[i] > 0
-			after := i < len(c.Ranks) && c.Ranks[i] > 0
-			if after && !before {
-				d.Gained = append(d.Gained, i)
-			}
-			if before && !after {
-				d.Lost = append(d.Lost, i)
-			}
-		}
-		if len(d.Gained) > 0 || len(d.Lost) > 0 || d.PreviousAbstain != d.Abstain {
-			changes = append(changes, d)
-		}
-	}
-	return changes
 }
 
 // ANNLoss summarizes candidate overlap and hybrid score differences.
