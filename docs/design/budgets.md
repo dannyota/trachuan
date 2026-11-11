@@ -33,7 +33,10 @@ by measurement before the first release.
 
 ## Pipeline
 
-Parser limits: 50 MB per file, 5 minutes per document. Text extraction: 50,000
+Parser limits: 50 MB per file, 5 minutes per document. PDF tool subprocesses
+(planned, [PDF text layer](pdf-text.md)): 1 GiB memory, 256 MB scratch space, 50
+MB stdout, 64 KB stderr, 60 seconds per call, 2 subprocesses at a time, and the
+document limit above for all calls on one PDF. Text extraction: 50,000
 paragraphs and nesting depth 64 per HTML transcription or OCR text; fresh OCR at
 most 2,000 pages per document and 20,000 pages per run, above which the run
 stops for the owner.

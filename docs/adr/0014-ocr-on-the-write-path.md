@@ -64,9 +64,13 @@ serving path only.
   machine, but unmeasured accuracy on Vietnamese legal scans; the owner chose
   the engine banhmi already proved on these files.
 - Reading PDF text layers: 203 measured layers are garbage and only 23 are good;
-  not worth a second parser.
+  not worth a second parser. Superseded on 2026-11-11, see History.
 
 ## History
 
 - 2026-11-11: accepted. The owner trusts Google OCR checked by a second model
   and allows OCR text as citable evidence.
+- 2026-11-11: the owner decided to prefer a PDF's own text layer and use OCR
+  only when that text fails a gate ([PDF text layer](../design/pdf-text.md)); a
+  scan with an embedded text layer still goes to OCR. Decided, scheduled after
+  the OCR path; at most 13 of the 314 PDF-only documents qualify.
