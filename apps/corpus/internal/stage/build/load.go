@@ -3,6 +3,7 @@ package build
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"danny.vn/trachuan/apps/corpus/internal/artifact"
 	"danny.vn/trachuan/apps/corpus/internal/source"
@@ -41,7 +42,11 @@ type loader struct {
 }
 
 // Load inserts a frozen inventory into an already initialized corpus database.
-func Load(ctx context.Context, conn *pgx.Conn, inv Inventory, artifacts artifact.Store, recipes Recipes, codes map[string]source.StatusCode, corrections []source.Correction, asOf string) (Counts, error) {
+func Load(ctx context.Context, conn *pgx.Conn, inv Inventory, artifacts artifact.Store, recipes Recipes, codes map[string]source.StatusCode, corrections []source.Correction, asOf string, durations ...map[string]int64) (Counts, error) {
+	timings := phases{}
+	if len(durations) > 0 {
+		timings = durations[0]
+	}
 	if conn == nil {
 		return Counts{}, fmt.Errorf("corpus connection is nil")
 	}
@@ -74,29 +79,39 @@ func Load(ctx context.Context, conn *pgx.Conn, inv Inventory, artifacts artifact
 	if err = l.reconcileInventory(); err != nil {
 		return Counts{}, err
 	}
+	phaseStart := time.Now()
 	if err = l.loadDocuments(ctx); err != nil {
 		return Counts{}, err
 	}
+	timings.observe("load_documents", phaseStart)
 	if _, err = tx.Exec(ctx, `CREATE TEMP TABLE build_chunk ON COMMIT DROP AS SELECT id,document_id,provision_id,ordinal,context_prefix,content,spans,input_sha256,token_count,embedding FROM chunk WITH NO DATA; CREATE UNIQUE INDEX ON build_chunk(id)`); err != nil {
 		return Counts{}, fmt.Errorf("create chunk staging table: %w", err)
 	}
+	phaseStart = time.Now()
 	if err = l.loadChunks(ctx); err != nil {
 		return Counts{}, err
 	}
+	timings.observe("load_chunks", phaseStart)
+	phaseStart = time.Now()
 	l.counts.LexicalStats, err = loadLexical(ctx, tx, recipes.Lexical)
 	if err != nil {
 		return Counts{}, err
 	}
+	timings.observe("load_lexical", phaseStart)
+	phaseStart = time.Now()
 	if err = l.loadRelations(ctx); err != nil {
 		return Counts{}, err
 	}
+	timings.observe("load_relations", phaseStart)
 	if err = l.deriveConsolidated(ctx); err != nil {
 		return Counts{}, err
 	}
+	phaseStart = time.Now()
 	l.counts.validity, err = l.loadValidity(ctx, corrections, asOf)
 	if err != nil {
 		return Counts{}, err
 	}
+	timings.observe("load_validity", phaseStart)
 	if err = l.loadGaps(ctx); err != nil {
 		return Counts{}, err
 	}

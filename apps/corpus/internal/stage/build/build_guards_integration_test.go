@@ -148,7 +148,8 @@ func TestBuild_DumpMatchesBuildRecord(t *testing.T) {
 		t.Fatal(err)
 	}
 	var record struct {
-		Dump struct {
+		DurationsMS map[string]int64 `json:"durations_ms"`
+		Dump        struct {
 			SHA256 string `json:"sha256"`
 			Bytes  int64  `json:"bytes"`
 			Format string `json:"format"`
@@ -156,6 +157,19 @@ func TestBuild_DumpMatchesBuildRecord(t *testing.T) {
 	}
 	if err = json.Unmarshal(data, &record); err != nil {
 		t.Fatal(err)
+	}
+	var sum int64
+	for _, key := range []string{"plan", "prepare", "load", "indexes", "analyze", "calibrate", "metrics", "dump", "dump_hash", "load_documents", "load_chunks", "load_lexical", "load_relations", "load_validity", "total"} {
+		value, ok := record.DurationsMS[key]
+		if !ok || value < 0 {
+			t.Fatalf("duration %q = %d, present = %v", key, value, ok)
+		}
+	}
+	for _, key := range []string{"plan", "prepare", "load", "indexes", "analyze", "calibrate", "metrics", "dump", "dump_hash"} {
+		sum += record.DurationsMS[key]
+	}
+	if sum > record.DurationsMS["total"] {
+		t.Fatalf("phase sum = %d, total = %d", sum, record.DurationsMS["total"])
 	}
 	dump, err := os.Open(filepath.Join(dir, "corpus.dump"))
 	if err != nil {
