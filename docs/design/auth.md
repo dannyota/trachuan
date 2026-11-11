@@ -32,8 +32,8 @@ loopback, link-local, multicast, unspecified, IPv4-mapped IPv6 and other
 transition forms), then dial the validated address; no redirects; metadata
 `client_id` must equal the fetched URL. Timeouts, body size, concurrent fetches,
 cache size and total client storage are in [budgets](budgets.md); when the
-client table is full, the least recently used client without a live grant is
-evicted.
+client table is full, the least recently used client not in use is evicted
+([OAuth](oauth.md#clients)).
 
 Personal tokens for CLI clients are random, shown once, stored hashed with an
 expiry chosen at creation (default 90 days, at most one year), and pass the same

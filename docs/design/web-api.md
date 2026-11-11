@@ -79,17 +79,18 @@ page.
 
 ## CSRF
 
-Every request with a method other than `GET`, `HEAD` or `OPTIONS` requires:
-`Origin` equal to the origin of `SERVER_PUBLIC_URL` (the `Referer` origin when
-`Origin` is absent; both absent fails); header `X-CSRF-Token` equal to the
-session's CSRF secret, compared in constant time; and
+Every request to `/api/v1` with a method other than `GET`, `HEAD` or `OPTIONS`
+requires: `Origin` equal to the origin of `SERVER_PUBLIC_URL` (the `Referer`
+origin when `Origin` is absent; both absent fails); header `X-CSRF-Token` equal
+to the session's CSRF secret, compared in constant time; and
 `Content-Type: application/json` when a body is sent. The secret is 32 random
 bytes created with the session and returned only in the body of
 `GET /api/v1/me`. Failures return 403 `csrf_rejected`. `GET` handlers change no
 account or corpus state; the only writes made by `GET` requests are the login
 start and callback (protected by the login transaction) and the session's own
 `last_seen_at` and `expires_at` maintenance. Search and read are `POST` and
-follow the same rule.
+follow the same rule. The OAuth consent form has its own rule in
+[OAuth](oauth.md#consent).
 
 ## Routes
 
