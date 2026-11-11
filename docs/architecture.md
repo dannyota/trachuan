@@ -50,6 +50,8 @@ The query client checks each release's query recipe and shares a vector cache
 across releases. Search, document and read caches follow the active release. See
 the [local runbook](runbooks/server-local.md).
 
+The OAuth protocol helpers start from aboutme `oauthsrv` at commit `1b1ece3d`.
+
 ## Embedding services
 
 | App               | Role                                                                                              |

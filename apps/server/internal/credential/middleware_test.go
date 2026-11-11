@@ -72,7 +72,10 @@ func TestMiddleware_HeadersAndStatus(t *testing.T) {
 			}
 			challenge := ""
 			if status == http.StatusUnauthorized {
-				challenge = `Bearer error="invalid_token"`
+				challenge = `Bearer resource_metadata="https://example.invalid/.well-known/oauth-protected-resource/mcp", scope="mcp:read"`
+				if name != "missing" {
+					challenge += `, error="invalid_token"`
+				}
 			}
 			if w.Header().Get("WWW-Authenticate") != challenge {
 				t.Fatal("incorrect authentication challenge")
