@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"math"
 	"regexp"
 	"time"
@@ -16,25 +15,9 @@ import (
 
 // Open reads and validates the release in a corpus database.
 func Open(ctx context.Context, db *pgxpool.Pool, embedder Embedder, options Options) (*Engine, error) {
-	if db == nil {
-		return nil, errors.New("missing database")
-	}
-	var r Release
-	var dense, lex, retrieval, stats []byte
-	err := db.QueryRow(ctx, `SELECT country, rel, schema_version, taxonomy_version, dense_recipe, chunk_recipe, lexical_recipe, retrieval_recipe, lexical_stats, source_manifest_hash, build_input_hash, build_recipe_hash, evaluation_summary, built_at FROM release WHERE singleton`).Scan(&r.Country, &r.Rel, &r.SchemaVersion, &r.TaxonomyVersion, &dense, &r.ChunkRecipe, &lex, &retrieval, &stats, &r.SourceManifestHash, &r.BuildInputHash, &r.BuildRecipeHash, &r.EvaluationSummary, &r.BuiltAt)
+	r, err := ReadRelease(ctx, db)
 	if err != nil {
-		return nil, errors.New("read release failed")
-	}
-	if r.SchemaVersion != corpusdb.SchemaVersion {
-		return nil, fmt.Errorf("corpus schema version %d, supported version %d", r.SchemaVersion, corpusdb.SchemaVersion)
-	}
-	for _, v := range []struct {
-		raw []byte
-		out any
-	}{{dense, &r.DenseRecipe}, {lex, &r.LexicalRecipe}, {retrieval, &r.RetrievalRecipe}, {stats, &r.LexicalStats}} {
-		if json.Unmarshal(v.raw, v.out) != nil {
-			return nil, errors.New("invalid release metadata")
-		}
+		return nil, err
 	}
 	return openEngine(ctx, db, embedder, r, options, false)
 }

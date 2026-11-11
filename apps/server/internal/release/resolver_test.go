@@ -32,7 +32,7 @@ func resolverFixture(t *testing.T) (*Resolver, *fakeStore, *retrieval.Engine) {
 	now := time.Date(2099, 1, 3, 0, 0, 0, 0, time.UTC)
 	store := &fakeStore{active: "corpus_vn_20990103"}
 	engine := &retrieval.Engine{}
-	r := &Resolver{Auth: store, Clock: func() time.Time { return now }, Open: func(context.Context, string) (*retrieval.Engine, error) { return engine, nil }}
+	r := &Resolver{Auth: store, Clock: func() time.Time { return now }, Open: func(context.Context, string) (*retrieval.Engine, func(), error) { return engine, nil, nil }}
 	t.Cleanup(r.Close)
 	return r, store, engine
 }
@@ -50,7 +50,10 @@ func takeLease(t *testing.T, r *Resolver, rel string) *Lease {
 func TestResolver_ActiveByDefault(t *testing.T) {
 	r, _, want := resolverFixture(t)
 	var name string
-	r.Open = func(_ context.Context, db string) (*retrieval.Engine, error) { name = db; return want, nil }
+	r.Open = func(_ context.Context, db string) (*retrieval.Engine, func(), error) {
+		name = db
+		return want, nil, nil
+	}
 	got := takeLease(t, r, "")
 	if got.Engine != want || got.Release != "20990103" || name != "corpus_vn_20990103" {
 		t.Fatalf("lease=%+v db=%q", got, name)
@@ -69,9 +72,9 @@ func TestResolver_PinnedNonActiveIsExpired(t *testing.T) {
 	for _, rel := range []string{"20990102", "20990101", "unknown", "corpus_vn_20990103", "../20990103"} {
 		t.Run(rel, func(t *testing.T) {
 			r, _, _ := resolverFixture(t)
-			r.Open = func(context.Context, string) (*retrieval.Engine, error) {
+			r.Open = func(context.Context, string) (*retrieval.Engine, func(), error) {
 				t.Error("opened non-active database")
-				return nil, nil
+				return nil, nil, nil
 			}
 			got, err := r.Resolve(context.Background(), "vn", rel)
 			if !errors.Is(err, ErrExpired) || got != nil {
@@ -85,12 +88,12 @@ func TestResolver_ConcurrentFirstUseOpensOnce(t *testing.T) {
 	r, _, engine := resolverFixture(t)
 	var count atomic.Int32
 	entered, proceed := make(chan struct{}), make(chan struct{})
-	r.Open = func(context.Context, string) (*retrieval.Engine, error) {
+	r.Open = func(context.Context, string) (*retrieval.Engine, func(), error) {
 		if count.Add(1) == 1 {
 			close(entered)
 		}
 		<-proceed
-		return engine, nil
+		return engine, nil, nil
 	}
 	const clients = 24
 	var wg sync.WaitGroup
@@ -118,12 +121,12 @@ func TestResolver_ConcurrentFirstUseOpensOnce(t *testing.T) {
 func TestResolver_FailedOpenIsRetried(t *testing.T) {
 	r, _, engine := resolverFixture(t)
 	attempts := 0
-	r.Open = func(context.Context, string) (*retrieval.Engine, error) {
+	r.Open = func(context.Context, string) (*retrieval.Engine, func(), error) {
 		attempts++
 		if attempts == 1 {
-			return nil, errors.New("temporary")
+			return nil, nil, errors.New("temporary")
 		}
-		return engine, nil
+		return engine, nil, nil
 	}
 	if _, err := r.Resolve(context.Background(), "vn", ""); err == nil {
 		t.Fatal("accepted failed open")
@@ -139,9 +142,9 @@ func TestResolver_RejectsUntrustedDatabaseNames(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			r, s, _ := resolverFixture(t)
 			s.active = name
-			r.Open = func(context.Context, string) (*retrieval.Engine, error) {
+			r.Open = func(context.Context, string) (*retrieval.Engine, func(), error) {
 				t.Fatal("opened untrusted name")
-				return nil, nil
+				return nil, nil, nil
 			}
 			if _, err := r.Resolve(context.Background(), "vn", ""); err == nil {
 				t.Fatal("accepted name")
@@ -162,7 +165,9 @@ func TestResolver_AuthFailureDoesNotServeCachedRelease(t *testing.T) {
 func TestResolver_OpenFailureIsPreserved(t *testing.T) {
 	r, _, _ := resolverFixture(t)
 	failure := errors.New("invalid dense recipe")
-	r.Open = func(context.Context, string) (*retrieval.Engine, error) { return nil, fmt.Errorf("open: %w", failure) }
+	r.Open = func(context.Context, string) (*retrieval.Engine, func(), error) {
+		return nil, nil, fmt.Errorf("open: %w", failure)
+	}
 	if _, err := r.Resolve(context.Background(), "vn", "20990103"); !errors.Is(err, failure) {
 		t.Fatalf("open failure=%v", err)
 	}

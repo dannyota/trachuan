@@ -44,9 +44,6 @@ func (r *Resolver) load(ctx context.Context, country, name string) (*cacheEntry,
 	if entry == nil {
 		entry = &cacheEntry{country: country}
 		r.entries[name] = entry
-		if r.CloseDatabase != nil {
-			entry.closePool = func() { r.CloseDatabase(name) }
-		}
 	}
 	engine := entry.engine
 	entry.opening = true
@@ -99,7 +96,14 @@ func (r *Resolver) load(ctx context.Context, country, name string) (*cacheEntry,
 
 func (r *Resolver) open(ctx context.Context, name string, entry *cacheEntry) (*retrieval.Engine, error) {
 	if r.Open != nil {
-		return r.Open(ctx, name)
+		engine, closePool, err := r.Open(ctx, name)
+		r.mu.Lock()
+		entry.closePool = closePool
+		r.mu.Unlock()
+		return engine, err
+	}
+	if r.EmbedderFor == nil {
+		return nil, errors.New("missing release embedder factory")
 	}
 	if entry.pool == nil {
 		cfg, err := poolConfig(r.URLTemplate, name)
@@ -127,20 +131,19 @@ func (r *Resolver) open(ctx context.Context, name string, entry *cacheEntry) (*r
 	if options.Profile == "" {
 		options.Profile = "serving"
 	}
-	// Preserve a typed missing-database error before Open's legacy error paths.
 	if err := entry.pool.Ping(ctx); err != nil {
 		return nil, fmt.Errorf("connect corpus: %w", err)
 	}
-	engine, err := retrieval.Open(ctx, entry.pool, r.Embedder, options)
+	metadata, err := retrieval.ReadRelease(ctx, entry.pool)
 	if err != nil {
-		if err.Error() == "read release failed" {
-			if pingErr := entry.pool.Ping(ctx); databaseGone(pingErr) {
-				return nil, pingErr
-			}
-		}
 		return nil, err
 	}
-	metadata := engine.Release()
+	embedder := r.EmbedderFor(metadata.DenseRecipe.QueryHash)
+	engine, err := retrieval.Open(ctx, entry.pool, embedder, options)
+	if err != nil {
+		return nil, err
+	}
+	metadata = engine.Release()
 	if metadata.Country != entry.country || "corpus_"+metadata.Country+"_"+metadata.Rel != name {
 		return nil, errors.New("corpus release identity differs from database name")
 	}

@@ -12,6 +12,14 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+func withPoolCloser(r *Resolver, closePool func(string)) {
+	open := r.Open
+	r.Open = func(ctx context.Context, name string) (*retrieval.Engine, func(), error) {
+		engine, _, err := open(ctx, name)
+		return engine, func() { closePool(name) }, err
+	}
+}
+
 func resolveAndFinish(ctx context.Context, r *Resolver, rel string) error {
 	lease, err := r.Resolve(ctx, "vn", rel)
 	if lease != nil {
@@ -23,11 +31,11 @@ func resolveAndFinish(ctx context.Context, r *Resolver, rel string) error {
 func TestResolver_SwitchClosesOldPool(t *testing.T) {
 	r, s, _ := resolverFixture(t)
 	var opened, closed []string
-	r.Open = func(_ context.Context, name string) (*retrieval.Engine, error) {
+	r.Open = func(_ context.Context, name string) (*retrieval.Engine, func(), error) {
 		opened = append(opened, name)
-		return &retrieval.Engine{}, nil
+		return &retrieval.Engine{}, nil, nil
 	}
-	r.CloseDatabase = func(name string) { closed = append(closed, name) }
+	withPoolCloser(r, func(name string) { closed = append(closed, name) })
 	takeLease(t, r, "").Done()
 	s.active = "corpus_vn_20990104"
 	lease := takeLease(t, r, "")
@@ -56,16 +64,16 @@ func TestResolver_SwitchClosesOldPool(t *testing.T) {
 func TestResolver_EvictionDuringOpenClosesAndRejectsEngine(t *testing.T) {
 	r, s, engine := resolverFixture(t)
 	entered, proceed := make(chan struct{}), make(chan struct{})
-	r.Open = func(_ context.Context, name string) (*retrieval.Engine, error) {
+	r.Open = func(_ context.Context, name string) (*retrieval.Engine, func(), error) {
 		if name == "corpus_vn_20990103" {
 			close(entered)
 			<-proceed
 		}
-		return engine, nil
+		return engine, nil, nil
 	}
 	var mu sync.Mutex
 	var closed []string
-	r.CloseDatabase = func(name string) { mu.Lock(); defer mu.Unlock(); closed = append(closed, name) }
+	withPoolCloser(r, func(name string) { mu.Lock(); defer mu.Unlock(); closed = append(closed, name) })
 	result := make(chan error, 1)
 	go func() { err := resolveAndFinish(context.Background(), r, "20990103"); result <- err }()
 	<-entered
@@ -104,15 +112,15 @@ func TestResolver_CloseWaitsForPendingOpenerToFinish(t *testing.T) {
 	entered, proceed := make(chan struct{}), make(chan struct{})
 	var mu sync.Mutex
 	opened, closed, premature := false, false, false
-	r.Open = func(context.Context, string) (*retrieval.Engine, error) {
+	r.Open = func(context.Context, string) (*retrieval.Engine, func(), error) {
 		close(entered)
 		<-proceed
 		mu.Lock()
 		opened = true
 		mu.Unlock()
-		return engine, nil
+		return engine, nil, nil
 	}
-	r.CloseDatabase = func(string) { mu.Lock(); defer mu.Unlock(); premature = !opened; closed = true }
+	withPoolCloser(r, func(string) { mu.Lock(); defer mu.Unlock(); premature = !opened; closed = true })
 	result := make(chan error, 1)
 	go func() { err := resolveAndFinish(context.Background(), r, ""); result <- err }()
 	<-entered
@@ -130,10 +138,10 @@ func TestResolver_CloseWaitsForPendingOpenerToFinish(t *testing.T) {
 func TestResolver_CanceledWaiterDoesNotCancelOtherOpen(t *testing.T) {
 	r, _, engine := resolverFixture(t)
 	entered, proceed := make(chan struct{}), make(chan struct{})
-	r.Open = func(context.Context, string) (*retrieval.Engine, error) {
+	r.Open = func(context.Context, string) (*retrieval.Engine, func(), error) {
 		close(entered)
 		<-proceed
-		return engine, nil
+		return engine, nil, nil
 	}
 	result := make(chan error, 1)
 	go func() { err := resolveAndFinish(context.Background(), r, ""); result <- err }()
@@ -220,7 +228,7 @@ func TestResolver_CachedPoolFailureDoesNotReturnEngine(t *testing.T) {
 func TestResolver_SwitchPreservesInFlightWork(t *testing.T) {
 	r, s, engine := resolverFixture(t)
 	var closed []string
-	r.CloseDatabase = func(name string) { closed = append(closed, name) }
+	withPoolCloser(r, func(name string) { closed = append(closed, name) })
 	first := takeLease(t, r, "20990103")
 	second := takeLease(t, r, "20990103")
 	s.active = "corpus_vn_20990104"
@@ -251,11 +259,11 @@ func TestResolver_SwitchPreservesInFlightWork(t *testing.T) {
 
 func TestResolver_PointerChangesDuringOpenWithoutAnotherResolve(t *testing.T) {
 	r, s, engine := resolverFixture(t)
-	r.Open = func(context.Context, string) (*retrieval.Engine, error) {
+	r.Open = func(context.Context, string) (*retrieval.Engine, func(), error) {
 		s.mu.Lock()
 		s.active = "corpus_vn_20990104"
 		s.mu.Unlock()
-		return engine, nil
+		return engine, nil, nil
 	}
 	got, err := r.Resolve(context.Background(), "vn", "20990103")
 	if got != nil {
@@ -280,10 +288,10 @@ func (ctx *waitingContext) Done() <-chan struct{} {
 func TestResolver_CanceledInitiatorDoesNotCancelSharedOpen(t *testing.T) {
 	r, _, engine := resolverFixture(t)
 	entered, proceed := make(chan struct{}), make(chan struct{})
-	r.Open = func(ctx context.Context, _ string) (*retrieval.Engine, error) {
+	r.Open = func(ctx context.Context, _ string) (*retrieval.Engine, func(), error) {
 		close(entered)
 		<-proceed
-		return engine, ctx.Err()
+		return engine, nil, ctx.Err()
 	}
 	initiator, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -316,14 +324,14 @@ func TestResolver_CanceledInitiatorDoesNotCancelSharedOpen(t *testing.T) {
 func TestResolver_UnpinnedPointerChangeDuringOpenUsesNewRelease(t *testing.T) {
 	r, s, _ := resolverFixture(t)
 	var opened []string
-	r.Open = func(_ context.Context, name string) (*retrieval.Engine, error) {
+	r.Open = func(_ context.Context, name string) (*retrieval.Engine, func(), error) {
 		opened = append(opened, name)
 		if name == "corpus_vn_20990103" {
 			s.mu.Lock()
 			s.active = "corpus_vn_20990104"
 			s.mu.Unlock()
 		}
-		return &retrieval.Engine{}, nil
+		return &retrieval.Engine{}, nil, nil
 	}
 	lease := takeLease(t, r, "")
 	if lease.Release != "20990104" || len(opened) != 2 || opened[1] != "corpus_vn_20990104" {
@@ -334,11 +342,11 @@ func TestResolver_UnpinnedPointerChangeDuringOpenUsesNewRelease(t *testing.T) {
 func TestResolver_AuthFailureAfterOpenDoesNotLeaseEngine(t *testing.T) {
 	r, s, engine := resolverFixture(t)
 	failure := errors.New("auth down")
-	r.Open = func(context.Context, string) (*retrieval.Engine, error) {
+	r.Open = func(context.Context, string) (*retrieval.Engine, func(), error) {
 		s.mu.Lock()
 		s.err = failure
 		s.mu.Unlock()
-		return engine, nil
+		return engine, nil, nil
 	}
 	lease, err := r.Resolve(context.Background(), "vn", "20990103")
 	if lease != nil {
@@ -351,13 +359,13 @@ func TestResolver_AuthFailureAfterOpenDoesNotLeaseEngine(t *testing.T) {
 
 func TestResolver_SharedOpenHasTenSecondBound(t *testing.T) {
 	r, _, engine := resolverFixture(t)
-	r.Open = func(ctx context.Context, _ string) (*retrieval.Engine, error) {
+	r.Open = func(ctx context.Context, _ string) (*retrieval.Engine, func(), error) {
 		deadline, ok := ctx.Deadline()
 		remaining := time.Until(deadline)
 		if !ok || remaining <= 0 || remaining > 10*time.Second {
-			return nil, errors.New("shared open has no ten-second bound")
+			return nil, nil, errors.New("shared open has no ten-second bound")
 		}
-		return engine, nil
+		return engine, nil, nil
 	}
 	takeLease(t, r, "")
 }
@@ -365,10 +373,10 @@ func TestResolver_SharedOpenHasTenSecondBound(t *testing.T) {
 func TestResolver_CloseCancelsSharedOpen(t *testing.T) {
 	r, _, _ := resolverFixture(t)
 	entered := make(chan struct{})
-	r.Open = func(ctx context.Context, _ string) (*retrieval.Engine, error) {
+	r.Open = func(ctx context.Context, _ string) (*retrieval.Engine, func(), error) {
 		close(entered)
 		<-ctx.Done()
-		return nil, ctx.Err()
+		return nil, nil, ctx.Err()
 	}
 	result := make(chan error, 1)
 	go func() { result <- resolveAndFinish(context.Background(), r, "") }()
@@ -382,7 +390,7 @@ func TestResolver_CloseCancelsSharedOpen(t *testing.T) {
 func TestResolver_CloseDefersPoolUntilLeaseEnds(t *testing.T) {
 	r, _, _ := resolverFixture(t)
 	closed := 0
-	r.CloseDatabase = func(string) { closed++ }
+	withPoolCloser(r, func(string) { closed++ })
 	lease := takeLease(t, r, "")
 	r.Close()
 	if closed != 0 {

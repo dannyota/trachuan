@@ -30,8 +30,12 @@ func (recipeEmbedder) Embed(context.Context, string) (embedding.Vector, error) {
 
 func corpusFixture(t *testing.T) (*Resolver, *pgx.Conn, *pgxpool.Pool, string) {
 	t.Helper()
+	return corpusFixtureWithBuilder(t, testpg.NewBuilder(t))
+}
+
+func corpusFixtureWithBuilder(t *testing.T, builder testpg.Builder) (*Resolver, *pgx.Conn, *pgxpool.Pool, string) {
+	t.Helper()
 	ctx := context.Background()
-	builder := testpg.NewBuilder(t)
 	admin, err := pgx.Connect(ctx, builder.URL)
 	if err != nil {
 		t.Fatal("connect test builder")
@@ -80,7 +84,7 @@ func corpusFixture(t *testing.T) (*Resolver, *pgx.Conn, *pgxpool.Pool, string) {
 		t.Fatal(err)
 	}
 	now := time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC)
-	r := &Resolver{Auth: &fakeStore{active: name}, Clock: func() time.Time { return now }, URLTemplate: strings.Replace(builder.URL, "/postgres", "/{database}", 1), Embedder: recipeEmbedder{recipe: query}}
+	r := &Resolver{Auth: &fakeStore{active: name}, Clock: func() time.Time { return now }, URLTemplate: strings.Replace(builder.URL, "/postgres", "/{database}", 1), EmbedderFor: func(string) retrieval.Embedder { return recipeEmbedder{recipe: query} }}
 	t.Cleanup(r.Close)
 	return r, admin, db, rel
 }
@@ -99,7 +103,7 @@ func TestResolver_DefaultOpenSharesPoolAndChecksIdentity(t *testing.T) {
 	search.Done()
 	r.Close()
 	// A new resolver must reject a corpus whose row claims another release.
-	r2 := &Resolver{Auth: r.Auth, Clock: r.Clock, URLTemplate: r.URLTemplate, Embedder: r.Embedder}
+	r2 := &Resolver{Auth: r.Auth, Clock: r.Clock, URLTemplate: r.URLTemplate, EmbedderFor: r.EmbedderFor}
 	t.Cleanup(r2.Close)
 	if _, updateErr := db.Exec(ctx, `UPDATE release SET rel='20990101_invalid'`); updateErr != nil {
 		t.Fatal(updateErr)
@@ -161,9 +165,9 @@ INSERT INTO retired_release VALUES ('vn','corpus_vn_20990102',now(),now()+interv
 	}
 	r, _, _ := resolverFixture(t)
 	r.Auth = authStore{queries: store.New(db)}
-	r.Open = func(context.Context, string) (*retrieval.Engine, error) {
+	r.Open = func(context.Context, string) (*retrieval.Engine, func(), error) {
 		t.Error("opened non-active database")
-		return nil, nil
+		return nil, nil, nil
 	}
 	t.Cleanup(r.Close)
 	got, err := r.Resolve(ctx, "vn", "20990102")

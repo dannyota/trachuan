@@ -25,19 +25,18 @@ type Store interface {
 }
 
 // Resolver caches engines and pools by trusted corpus database name.
-// Configure either URLTemplate and Embedder, or Open.
+// Configure URLTemplate and EmbedderFor. Open overrides the opener for tests.
 // URLTemplate contains exactly one {database} placeholder in its database name.
-// Injected openers honor their context, supply one pool per name and use
-// CloseDatabase to retire it.
+// Injected openers honor their context and return a closer for that exact pool,
+// including when opening fails. They must not close pools by database name.
 // Configure fields before the first Resolve and do not modify them concurrently.
 type Resolver struct {
-	Auth          Store
-	Open          func(ctx context.Context, dbName string) (*retrieval.Engine, error)
-	Clock         func() time.Time
-	URLTemplate   string
-	Embedder      retrieval.Embedder
-	Options       retrieval.Options
-	CloseDatabase func(dbName string)
+	Auth        Store
+	Open        func(ctx context.Context, dbName string) (*retrieval.Engine, func(), error)
+	Clock       func() time.Time
+	URLTemplate string
+	EmbedderFor func(queryRecipeHash string) retrieval.Embedder
+	Options     retrieval.Options
 
 	mu         sync.Mutex
 	entries    map[string]*cacheEntry
