@@ -3,6 +3,7 @@ import { loginUrl, safeNext } from '../app/api/next'
 
 describe('login destination', () => {
   it('keeps only a valid document release', () => {
+    expect(safeNext('/vn/documents/vn:1?release=20990101&q=x')).toBe('/vn/documents/vn:1?release=20990101')
     expect(safeNext('/vn/search?q=x')).toBe('/vn/search')
     expect(safeNext('/vn/documents/vn:1?release=20261111_2&q=x')).toBe('/vn/documents/vn:1?release=20261111_2')
     expect(safeNext('/vn/documents/vn:1?release=bad')).toBe('/vn/documents/vn:1')

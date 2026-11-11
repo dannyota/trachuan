@@ -12,3 +12,10 @@ it('offers the current release when the requested release expired', async () => 
   expect(wrapper.text()).toContain('expired')
   expect(wrapper.find('a[href="/vn/documents/vn:vbpl:1"]').exists()).toBe(true)
 })
+
+it('requests an unsuffixed release', async () => {
+  const calls = setupReader([{ data: { release: '20990101', item: { complete: true } } }], { release: '20990101' })
+  mount(Reader, { global: { stubs: ['NuxtLink'] } })
+  await flushPromises()
+  expect(calls[0]).toMatchObject({ params: { query: { release: '20990101' } } })
+})

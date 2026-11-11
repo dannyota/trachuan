@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-const query = 'private-query-for-search'
+const query = 'private-query-for-search\nsecond-line'
 const account = { id: 1, email: 'test@example.invalid', created_at: '2026-01-01T00:00:00Z', csrf_token: 'token' }
 
 test('search sends private form values only in POST bodies', async ({ page }) => {
@@ -13,7 +13,7 @@ test('search sends private form values only in POST bodies', async ({ page }) =>
   await page.goto('/')
   await expect(page.getByRole('link', { name: /account|tài khoản/i })).toBeVisible()
   await page.evaluate(() => (document.querySelector('#__nuxt') as unknown as { __vue_app__: { config: { globalProperties: { $router: { push: (path: string) => Promise<void> } } } } }).__vue_app__.config.globalProperties.$router.push('/vn/search'))
-  const input = page.locator('input[autocomplete="off"][type=search]')
+  const input = page.locator('#search-query')
   await expect(input).toBeVisible()
   const before = await page.evaluate(() => history.length)
   await input.fill('   ')

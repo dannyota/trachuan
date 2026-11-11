@@ -1,4 +1,4 @@
 import { defineConfig } from 'vitest/config'
 import vue from '@vitejs/plugin-vue'
 
-export default defineConfig({ plugins: [vue()], test: { exclude: ['e2e/**', 'node_modules/**', '.nuxt/**'] } })
+export default defineConfig({ plugins: [vue()], test: { exclude: ['e2e/**', 'e2e-stack/**', 'node_modules/**', '.nuxt/**'] } })

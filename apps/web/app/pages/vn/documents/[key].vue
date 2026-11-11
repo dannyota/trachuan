@@ -52,7 +52,7 @@ function scrollReader(version: number, signal: AbortSignal, target?: HTMLElement
 
 function requestedRelease() {
   const value = route.query.release
-  return typeof value === 'string' && /^[0-9]{8}_[0-9]+$/.test(value) ? value : undefined
+  return typeof value === 'string' && /^[0-9]{8}(?:_[0-9]+)?$/.test(value) ? value : undefined
 }
 function load(): Promise<void> {
   if (disposed || controller.signal.aborted) return Promise.resolve()
