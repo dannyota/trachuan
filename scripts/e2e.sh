@@ -63,12 +63,16 @@ PYCODE
 }
 require_available_port() {
   if ! port_available "$1"; then
-    echo "e2e: port in use" >&2
+    echo "${2:-e2e: port in use}" >&2
     exit 1
   fi
 }
 require_available_port "$server_port"
 require_available_port "$google_port"
+if ! command -v lsof >/dev/null 2>&1; then
+  echo "e2e: port not owned by child" >&2
+  exit 1
+fi
 tmp_dir="$(mktemp -d "${TMPDIR:-/tmp}/trachuan-e2e.XXXXXXXX")"
 server_pid=""
 google_pid=""
@@ -94,6 +98,7 @@ go build -o "$tmp_dir/fakegoogle" ./apps/server/cmd/fakegoogle
 # psql variable substitution is performed by the input parser.
 printf 'CREATE DATABASE :"db"\n' | psql -X "$CORPUS_TEST_ADMIN_URL" -v ON_ERROR_STOP=1 -v db="$db_name"
 db_created=1
+require_available_port "$server_port" "e2e: port not owned by child"
 export SERVER_AUTH_DATABASE_URL="$auth_url"
 export SERVER_CORPUS_DATABASE_URL="$corpus_url"
 export SERVER_LISTEN="127.0.0.1:$server_port"
@@ -104,33 +109,47 @@ export GOOGLE_CLIENT_SECRET=e2e-secret
 export E2E_SERVER_URL="$SERVER_PUBLIC_URL"
 export E2E_GOOGLE_URL="$SERVER_GOOGLE_ISSUER"
 "$tmp_dir/server" migrate
-require_available_port "$google_port"
+require_available_port "$google_port" "e2e: port not owned by child"
 "$tmp_dir/fakegoogle" -listen "127.0.0.1:$google_port" -client-id "$GOOGLE_CLIENT_ID" -client-secret "$GOOGLE_CLIENT_SECRET" -redirect-uri "$SERVER_PUBLIC_URL/api/v1/auth/google/callback" >"$tmp_dir/google.log" 2>&1 &
 google_pid=$!
 wait_for() {
-  local url="$1" pid="$2" ready_line="${3:-}"
-  local attempt=0
+  local url="$1" pid="$2" port="$3" ready_line="${4:-}"
+  local attempt=0 owners lsof_status
   while (( attempt < 60 )); do
     attempt=$((attempt + 1))
-    if ! kill -0 "$pid" 2>/dev/null; then return 1; fi
+    if ! kill -0 "$pid" 2>/dev/null; then
+      echo "e2e: port not owned by child" >&2
+      return 1
+    fi
+    lsof_status=0
+    owners="$(lsof -nP -iTCP:"$port" -sTCP:LISTEN -t 2>/dev/null)" || lsof_status=$?
+    if (( lsof_status > 1 )) || { (( lsof_status != 0 )) && [[ -n "$owners" ]]; } || [[ -n "$owners" && "$owners" != "$pid" ]]; then
+      echo "e2e: port not owned by child" >&2
+      return 1
+    fi
     if curl -fsS "$url" >/dev/null 2>&1; then
-      if [[ -z "$ready_line" ]] || grep -Fxq "$ready_line" "$tmp_dir/google.log"; then
-        if kill -0 "$pid" 2>/dev/null; then return 0; fi
+      lsof_status=0
+      owners="$(lsof -nP -iTCP:"$port" -sTCP:LISTEN -t 2>/dev/null)" || lsof_status=$?
+      if (( lsof_status != 0 )) || [[ "$owners" != "$pid" ]] || ! kill -0 "$pid" 2>/dev/null; then
+        echo "e2e: port not owned by child" >&2
         return 1
+      fi
+      if [[ -z "$ready_line" ]] || grep -Fxq "$ready_line" "$tmp_dir/google.log"; then
+        return 0
       fi
     fi
     sleep 0.5
   done
   return 1
 }
-if ! wait_for "$SERVER_GOOGLE_ISSUER/.well-known/openid-configuration" "$google_pid" "fakegoogle listening on 127.0.0.1:$google_port"; then
+if ! wait_for "$SERVER_GOOGLE_ISSUER/.well-known/openid-configuration" "$google_pid" "$google_port" "fakegoogle listening on 127.0.0.1:$google_port"; then
   echo "e2e: fake Google did not start" >&2
   exit 1
 fi
-require_available_port "$server_port"
+require_available_port "$server_port" "e2e: port not owned by child"
 "$tmp_dir/server" serve >"$tmp_dir/server.log" 2>&1 &
 server_pid=$!
-if ! wait_for "$SERVER_PUBLIC_URL/healthz" "$server_pid"; then
+if ! wait_for "$SERVER_PUBLIC_URL/healthz" "$server_pid" "$server_port"; then
   echo "e2e: server did not start" >&2
   exit 1
 fi
