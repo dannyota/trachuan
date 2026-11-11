@@ -1,11 +1,9 @@
 import { createAdmission } from '../utils/public-admission'
-import { publicPath } from '../utils/public-path'
 
 export default defineNitroPlugin((nitro) => {
   const admission = createAdmission(Date.now)
   const renders = new WeakMap<object, () => void>()
   nitro.hooks.hook('render:before', (context) => {
-    if (!publicPath(context.event.path)) return
     const release = admission.render()
     if (!release) {
       context.response = {

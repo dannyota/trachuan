@@ -84,3 +84,16 @@ it('revalidates public routes only by ETag', async () => {
     }
   }
 })
+
+it('uses case-sensitive strict matching for client navigation', async () => {
+  const { createMemoryHistory, createRouter } = await import('vue-router')
+  const options = (await import('../app/router.options')).default
+  const router = createRouter({
+    ...options,
+    history: createMemoryHistory(),
+    routes: [{ path: '/connect', component: {} }],
+  })
+  expect(router.resolve('/connect').matched).toHaveLength(1)
+  expect(router.resolve('/CONNECT').matched).toHaveLength(0)
+  expect(router.resolve('/connect/').matched).toHaveLength(0)
+})

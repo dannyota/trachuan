@@ -1,10 +1,11 @@
 import { APP_CSP } from '../../app/utils/csp'
-import { publicPath } from '../utils/public-path'
+import { matchPage } from '../utils/page-route'
+import { admitPage } from '../utils/page-admission'
 
 export default defineNitroPlugin((nitro) => {
   nitro.hooks.hook('request', (event) => {
     const response = event.node.res
-    const isPublic = publicPath(event.node.req.url ?? '') !== null
+    const isPublic = matchPage(event.node.req.url ?? '')?.public === true
     const finalize = () => {
       if (response.headersSent) return
       response.setHeader('Content-Security-Policy', APP_CSP)
@@ -38,5 +39,6 @@ export default defineNitroPlugin((nitro) => {
         return Reflect.apply(target, receiver, args)
       },
     })
+    admitPage(event)
   })
 })
