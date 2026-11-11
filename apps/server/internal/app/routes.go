@@ -51,9 +51,12 @@ func newWebMux(d webDeps) *http.ServeMux {
 		"POST /oauth/register":                          oauth.NewRegisterHandler(clients.Register),
 		"POST /oauth/revoke":                            oauth.NewRevokeHandler(d.oauthDB, d.verifier.Evict, d.verifier.EvictGrant),
 	} {
-		if pattern == "POST /oauth/token" || pattern == "POST /oauth/register" || pattern == "POST /oauth/revoke" {
+		switch pattern {
+		case "POST /oauth/token", "POST /oauth/register", "POST /oauth/revoke":
 			mux.Handle(pattern, d.loginLimit.oauthJSON(handler))
-		} else {
+		case "GET /oauth/authorize", "GET /oauth/consent/{handle}", "POST /oauth/consent/{handle}":
+			mux.Handle(pattern, d.loginLimit.oauthPage(handler))
+		default:
 			mux.Handle(pattern, d.loginLimit.middleware(handler))
 		}
 	}

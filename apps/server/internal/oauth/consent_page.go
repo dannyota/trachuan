@@ -6,14 +6,24 @@ import (
 	"embed"
 	"encoding/base64"
 	"html/template"
+	"math"
 	"net/http"
 	"net/url"
+	"strconv"
+	"time"
 
 	"danny.vn/trachuan/apps/server/internal/store"
 )
 
 // The fixed stylesheet is the only trusted CSS value used by the templates.
 const consentStyles = "body{font:1rem/1.6 system-ui,sans-serif;margin:2rem auto;padding:0 1rem;max-width:38rem;color:#18212b;background:#fff}main{overflow-wrap:anywhere}button{font:inherit;padding:.5rem 1rem;margin:.5rem .5rem .5rem 0;cursor:pointer}a{color:#174ca4}bdi,code{font-size:1em}"
+
+// WriteRateLimitedPage renders the consent error page with a retry delay.
+func WriteRateLimitedPage(w http.ResponseWriter, r *http.Request, retryAfter time.Duration) {
+	seconds := max(1, int64(math.Ceil(retryAfter.Seconds())))
+	w.Header().Set("Retry-After", strconv.FormatInt(seconds, 10))
+	newConsentPages("").failure(w, r, http.StatusTooManyRequests, "temporarily_unavailable", "", "")
+}
 
 type consentPages struct {
 	base      string

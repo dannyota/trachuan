@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"danny.vn/trachuan/apps/server/internal/apierror"
+	"danny.vn/trachuan/apps/server/internal/oauth"
 )
 
 type loginBucket struct {
@@ -110,6 +111,16 @@ func (l *loginLimiter) oauthJSON(next http.Handler) http.Handler {
 			w.Header().Set("Pragma", "no-cache")
 			w.WriteHeader(http.StatusTooManyRequests)
 			_, _ = w.Write([]byte(`{"error":"temporarily_unavailable"}`))
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func (l *loginLimiter) oauthPage(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if ok, wait := l.allow(l.clientIP(r)); !ok {
+			oauth.WriteRateLimitedPage(w, r, wait)
 			return
 		}
 		next.ServeHTTP(w, r)

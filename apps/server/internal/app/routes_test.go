@@ -264,3 +264,25 @@ func TestRoutes_OAuthRateLimitJSON(t *testing.T) {
 		})
 	}
 }
+
+func TestRoutes_OAuthRateLimitPage(t *testing.T) {
+	for _, tt := range []struct{ method, path, lang, message string }{
+		{"GET", "/oauth/authorize", "vi", "Dịch vụ tạm thời không khả dụng"},
+		{"GET", "/oauth/consent/handle?lang=en", "en", "The service is temporarily unavailable"},
+		{"POST", "/oauth/consent/handle", "vi", "Dịch vụ tạm thời không khả dụng"},
+	} {
+		t.Run(tt.method+tt.path, func(t *testing.T) {
+			mux, _, _ := routeFixture(t)
+			for range 20 {
+				mux.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("GET", "/.well-known/oauth-authorization-server", nil))
+			}
+			w := httptest.NewRecorder()
+			mux.ServeHTTP(w, httptest.NewRequest(tt.method, tt.path, nil))
+			h := w.Header()
+			body := w.Body.String()
+			if w.Code != 429 || h.Get("Retry-After") != "3" || h.Get("Content-Type") != "text/html; charset=utf-8" || h.Get("Cache-Control") != "no-store" || h.Get("X-Frame-Options") != "DENY" || h.Get("Referrer-Policy") != "same-origin" || !strings.Contains(h.Get("Content-Security-Policy"), "default-src 'none'; style-src 'self' 'sha256-") || !strings.Contains(h.Get("Content-Security-Policy"), "frame-ancestors 'none'") || !strings.Contains(body, `<html lang="`+tt.lang+`">`) || !strings.Contains(body, tt.message) || !strings.Contains(body, "temporarily_unavailable") || strings.Contains(body, "<a ") || h.Get("Location") != "" {
+				t.Fatalf("status=%d headers=%v body=%s", w.Code, h, body)
+			}
+		})
+	}
+}
