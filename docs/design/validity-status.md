@@ -155,12 +155,14 @@ or `false`) overrides `validity_conflict` in either direction. Optional
 `hold: true` suppresses rules A, B and C for that document as a target. An entry
 needs at least one of the three. The build rejects an entry whose key is absent
 from the run, whose number does not match the key, whose quote is not found in
-the named provision when an anchor is given, or which produces an invalid
-interval. Entries apply last and win. The build reports `correction_redundant`
-when the source or an automatic rule now gives the same result and
-`correction_conflict` when an automatic rule gives a different one. Reason: the
-source and our parser both fail in ways we cannot enumerate; a short reviewed
-list repairs them without widening the rules.
+the named provision when an anchor is given (the provision of the corrected
+document, or of the document named by optional `evidence.key` when the evidence
+lives in another document, such as the replacing text), or which produces an
+invalid interval. Entries apply last and win. The build reports
+`correction_redundant` when the source or an automatic rule now gives the same
+result and `correction_conflict` when an automatic rule gives a different one.
+Reason: the source and our parser both fail in ways we cannot enumerate; a short
+reviewed list repairs them without widening the rules.
 
 ## Review queue and evidence
 

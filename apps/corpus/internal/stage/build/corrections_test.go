@@ -83,3 +83,33 @@ func TestCorrections_IntervalValidatedAfterRules(t *testing.T) {
 		t.Fatalf("expected named invalid interval: %v", err)
 	}
 }
+
+func TestCorrections_EvidenceInOtherDocument(t *testing.T) {
+	data := []byte("- {key: a, number: A, hold: true, reason: why, evidence: {key: b, anchor: dieu-37/khoan-1, quote: 'verbatim quote'}, reviewed: '2026-11-10'}\n")
+	entries, err := source.ParseCorrections(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	docs := map[string]correctionDocument{
+		"a": {number: "A", provisions: map[string]string{"dieu-37/khoan-1": "different text"}},
+		"b": {number: "B", provisions: map[string]string{"dieu-37/khoan-1": "a verbatim quote here"}},
+	}
+	if _, err = validateCorrections(entries, docs); err != nil {
+		t.Fatal(err)
+	}
+	docs["b"] = correctionDocument{number: "B", provisions: map[string]string{"dieu-37/khoan-1": "different text"}}
+	if _, err = validateCorrections(entries, docs); err == nil {
+		t.Fatal("accepted quote absent from evidence document")
+	}
+}
+
+func TestCorrections_EvidenceKeyAbsentDocumentRejected(t *testing.T) {
+	data := []byte("- {key: a, number: A, hold: true, reason: why, evidence: {key: missing, quote: text}, reviewed: '2026-11-10'}\n")
+	entries, err := source.ParseCorrections(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = validateCorrections(entries, map[string]correctionDocument{"a": {number: "A"}}); err == nil {
+		t.Fatal("accepted absent evidence document")
+	}
+}

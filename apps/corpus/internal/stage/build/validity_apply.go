@@ -93,7 +93,11 @@ func (e *validityEngine) apply(events []validityEvent) error {
 				e.review(report, doc, "", "", "")
 			}
 			if c.Set.StatusClass != nil || c.Set.EffFrom != nil || c.Set.EffTo != nil || c.Eligible != nil {
-				o.history = append(o.history, validityDecision{layer: "manual", version: "validity/2", before: before, after: after, anchor: c.Evidence.Anchor, quote: truncateQuote(c.Evidence.Quote), artifact: doc.extractHash})
+				artifact := doc.extractHash
+				if c.Evidence.Key != "" {
+					artifact = e.docs[c.Evidence.Key].extractHash
+				}
+				o.history = append(o.history, validityDecision{layer: "manual", version: "validity/2", before: before, after: after, actor: c.Evidence.Key, anchor: c.Evidence.Anchor, quote: truncateQuote(c.Evidence.Quote), artifact: artifact})
 			}
 		}
 		if o.values.From != nil && o.values.To != nil && *o.values.To < *o.values.From {
