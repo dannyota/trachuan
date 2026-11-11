@@ -124,11 +124,11 @@ func (h *Handler) revokeToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	n, err := h.cfg.Store.RevokeOwnToken(r.Context(), store.RevokeOwnTokenParams{AccountID: p.AccountID, ID: id})
+	h.cfg.Verifier.Evict(hash)
 	if err != nil || r.Context().Err() != nil {
 		unavailable(w)
 		return
 	}
-	h.cfg.Verifier.Evict(hash)
 	if n == 0 {
 		notFound(w)
 		return

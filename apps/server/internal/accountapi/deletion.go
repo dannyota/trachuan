@@ -37,6 +37,15 @@ func (h *Handler) deleteAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	_, err = h.cfg.Store.RequestDeletion(r.Context(), p.AccountID)
+	for _, token := range tokens {
+		h.cfg.Verifier.Evict(token.TokenHash)
+	}
+	failed := false
+	for _, session := range sessions {
+		if _, revokeErr := h.cfg.Sessions.RevokeOwnSession(r.Context(), p.AccountID, session.ID); revokeErr != nil {
+			failed = true
+		}
+	}
 	if err != nil || r.Context().Err() != nil {
 		if err != nil {
 			storeError(w, err)
@@ -44,15 +53,6 @@ func (h *Handler) deleteAccount(w http.ResponseWriter, r *http.Request) {
 			unavailable(w)
 		}
 		return
-	}
-	for _, token := range tokens {
-		h.cfg.Verifier.Evict(token.TokenHash)
-	}
-	failed := false
-	for _, session := range sessions {
-		if _, err := h.cfg.Sessions.RevokeOwnSession(r.Context(), p.AccountID, session.ID); err != nil {
-			failed = true
-		}
 	}
 	if failed {
 		unavailable(w)
