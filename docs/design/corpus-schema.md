@@ -231,7 +231,7 @@ rules.
 ## Release row
 
 `release`: `singleton boolean PRIMARY KEY CHECK(singleton)`, `country text`
-CHECK country='vn', `rel text UNIQUE`, `schema_version integer CHECK(=4)`,
+CHECK country='vn', `rel text UNIQUE`, `schema_version integer CHECK(=5)`,
 `taxonomy_version text`, `dense_recipe jsonb`, `chunk_recipe jsonb`,
 `lexical_recipe jsonb`, `retrieval_recipe jsonb`, `lexical_stats jsonb`,
 `source_manifest_hash text`, `build_input_hash text`, `build_recipe_hash text`,
@@ -264,7 +264,10 @@ validity decisions. Version 4 adds `document.text_source`,
 tables and adds `taxonomy_node.ordinal`, `provision_count` and `document_count`.
 Always rebuild from preserved source artifacts, never backfill an old release
 with an assumed value. Readers must support version 5 before activation; earlier
-dumps remain unchanged.
+dumps remain unchanged. The server reads versions 4 and 5, and a version-4
+release serves no nodes, so a version-5 server keeps serving the previous
+release until a version-5 release is activated, and rolling back is activating
+the previous release.
 
 The host restore policy currently permits only pgvector extensions, while the
 existing data design already requires ltree. This work uses both locally; host

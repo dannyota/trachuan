@@ -58,7 +58,7 @@ A compact hit has, in this order:
 | `path`      | Ancestors from the top structural level down to and including the hit: `label`, `heading` when the source has one, `anchor` (read as `<doc>#<anchor>`)    |
 | `snippet`   | Verbatim text under the snippet rule                                                                                                                      |
 | `complete`  | True only when `snippet` is the whole hit text and the recipe marked the hit complete                                                                     |
-| `in_filter` | Subject filter result, only when `nodes` were requested                                                                                                   |
+| `in_filter` | Filter result, only when a filter (`nodes`, `doc_types`, `issuers` or `documents`) was requested                                                          |
 | `nodes`     | The hit provision's effective node codes ([taxonomy](taxonomy.md#serving)), deepest first                                                                 |
 | `warnings`  | Provision-level relations whose endpoint is this provision or a descendant, as pointers, under the recipe's validity rule, in the recipe's relation order |
 | `gaps`      | The recipe's hit gaps                                                                                                                                     |
@@ -125,6 +125,9 @@ access. An item is one of:
   `from` and `to`, both inclusive, in preorder.
 - `{handle, relations:true}`: the relation list of that document or provision.
 - `{next}`: a continuation token copied from an earlier result.
+
+The result carries a top-level `nodes` object, like search's, naming every node
+code its document entries carry.
 
 Units of text never overlap. A provision handle returns the provision with its
 descendants by [chunk rendering](chunk.md#tree-rendering), preceded by its

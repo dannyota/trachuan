@@ -29,26 +29,30 @@ relations appear as warnings, never as a changed stamp.
 
 ## Filter contract
 
-Filters reorder, never hide. `nodes[]`, `doc_types[]`, `issuers[]` and
-`documents[]` form one predicate: a hit is inside when it matches every kind the
-request names, and a kind matches when any of its values does. A node matches
-when the hit provision has an effective assignment in that node's subtree
-([taxonomy](taxonomy.md#serving)); a node code that is not served is
-`invalid_request`. `doc_types` and `issuers` match the hit document's `type` and
-`issuer` after trimming and NFC normalization; `documents` match document keys.
-`corpus_status` lists the release's document types and issuers with counts, so
-callers pick values that exist.
+Filters reorder, never hide; `nodes[]`, `doc_types[]`, `issuers[]` and
+`documents[]` are ordering preferences. Together they form one predicate: a hit
+is inside when it matches every kind the request names, and a kind matches when
+any of its values does. A node matches when the hit provision has an effective
+node in that node's subtree ([taxonomy](taxonomy.md#serving)); a node code that
+is not served is `invalid_request`. `doc_types` and `issuers` match the hit
+document's `type` and `issuer` after trimming and NFC normalization; `documents`
+match document keys. `corpus_status` lists the release's document types and
+issuers with counts, so callers pick values that exist.
 
-Retrieval always runs over the whole country corpus. When any filter is given,
-the response carries one ranked list where each hit has `in_filter: true|false`:
-inside hits come first in rank order, then outside hits in rank order, up to
-`limit`; `outside_filter_count` gives the total outside. `next_cursor` pages
-through the rest of the same list, so every hit the unfiltered search would
-return stays reachable. The cursor is opaque and holds the release, the offset
-and a SHA-256 digest of the request without `cursor` and `limit`, never query
-text; a cursor whose digest or release does not match the request is
-`invalid_request` or `release_expired`. Without filters the list is the
-unfiltered ranking and the same cursor pages it.
+Retrieval always runs over the whole country corpus. A search builds one list:
+the recipe's shaping at the list cap of 100 hits, with its `hits` group and its
+`non_current` group. When any filter is given, each group is ordered inside hits
+first in rank order, then outside hits in rank order, every hit carries
+`in_filter: true|false`, and `outside_filter_count` counts outside hits in both
+groups. A page of size `limit` is the next `limit` hits of the `hits` group;
+`non_current` comes whole on the first page and is absent from later pages.
+`next_cursor` continues while hits remain, so every hit the unfiltered search
+would return stays reachable. The cursor is opaque and holds the release, the
+offset, the resolved `as_of` date and a SHA-256 digest of the request without
+`cursor` and `limit`, never query text; later pages use the cursor's date, and a
+cursor whose digest or release does not match is `invalid_request` or
+`release_expired`. Without filters the list is the unfiltered ranking, its first
+page equals today's response of the same size, and the same cursor pages it.
 
 The filter changes order, so the recall guarantee is stated per case: for a
 golden case whose expected citations lie inside the selected nodes, filtered

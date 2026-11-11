@@ -36,10 +36,11 @@ committed under `taxonomy/`:
 
 - `mapping.yaml`: the package SHA-256, then one entry per package node with its
   GUID, code, level, kind (`chude`, `demuc`, `phan`, `chuong`, `muc`), parent
-  code, sibling ordinal and status, and one entry per flattened node (a dropped
-  mục or a tiểu mục) naming the code it folds into. `corpus taxonomy import`
-  rewrites it from the package under the code rules above, deterministically,
-  and never reuses a code; a person reviews the diff and commits it.
+  code, name as last imported, sibling ordinal and status, and one entry per
+  flattened node (a dropped mục or a tiểu mục) naming the code it folds into.
+  `corpus taxonomy import` rewrites it from the package under the code rules
+  above, deterministically, and never reuses a code; a person reviews the diff
+  and commits it.
 - `custom.yaml`: custom nodes, each with code, parent code, name and a
   one-sentence description; empty until a subject needs one.
 - `overrides.yaml`: manual entries, each with document key, provision anchor,
@@ -48,9 +49,10 @@ committed under `taxonomy/`:
 `taxonomy_version` is the SHA-256 of the three files' bytes, each prefixed with
 its length, in the order mapping, custom, overrides; it enters the build input
 hash. A build refuses a package whose hash differs from the one in
-`mapping.yaml`. Package nodes take their names from the package and have an
-empty description; custom nodes carry their own. Package article text and notes
-are read only to place articles and are never stored or served (ADR 0004).
+`mapping.yaml`. Package nodes take their names from the package as recorded in
+`mapping.yaml`, so a retired node keeps its last name, and have an empty
+description; custom nodes carry their own. Package article text and notes are
+read only to place articles and are never stored or served (ADR 0004).
 
 ## Classification layers
 
@@ -83,17 +85,25 @@ under the corpus rules.
 ## Serving
 
 A node is served when it is `active` and its subtree holds at least one
-assignment that survives precedence; any other code is unknown to every read
-path and filter. Assignments sit on the provision they name (seeds on articles);
-a provision's effective nodes are the surviving assignments on it and on its
-ancestors, so a clause inherits its article's nodes. Each node carries its
-sibling `ordinal` (package order, custom nodes after package siblings in file
-order) and the counts of distinct provisions with an effective assignment in its
-subtree and of their documents; the build computes them. A release whose
-assignments come only from seeds and overrides serves them without the
-classification floors below, which gate the LLM layer; it must still pass the
-subject filter contract in [retrieval](retrieval.md) on the evaluation suite
-([evaluation](evaluation.md)).
+effective assignment; any other code is unknown to every read path and filter.
+Assignments sit on the provision they name (seeds on articles). A provision's
+effective nodes are resolved per family along its ancestry: in each family, the
+nearest provision, itself first and then each ancestor, that holds any entry in
+that family decides, applying the [data](data.md) precedence at that provision;
+an `exclude` there removes the family. So a clause inherits its article's nodes
+unless the clause itself carries an entry in that family, and a manual entry or
+exclusion on a clause wins over a seed on its article. Effective nodes drive
+hits, filters and counts alike.
+
+Each node carries its sibling `ordinal`: active package siblings in package
+order, then custom siblings in file order, then retired siblings in code order;
+and the counts of distinct provisions with an effective node in its subtree and
+of their documents. The build computes both. A release whose assignments come
+only from seeds and overrides serves them without the classification floors
+below, which gate the LLM layer; it must still pass the filter gate in
+[evaluation](evaluation.md). The LLM layer's candidate text for a node is,
+versioned with the classification recipe, the names of its ancestors and itself
+joined from the root, followed by its description when it has one.
 
 ## Evaluation gate
 

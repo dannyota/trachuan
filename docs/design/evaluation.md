@@ -201,13 +201,21 @@ checked independently for exact and serving ANN hybrid. Report each as `pass`,
 unavailable required metric cannot pass. Development floors use the same records
 and are `not_run` while the development case file is empty. Taxonomy
 classification floors are `out_of_scope` until the LLM layer lands. Filtered
-cases run when the release serves nodes: each golden case whose expected
-citations all have effective nodes is searched again with `nodes` set to the
-deepest effective nodes of those citations (at most 20), and passes when its
-filtered recall@8 is at least its unfiltered recall@8 and every expected
-citation appears within the first 100 hits of the paged list
-([retrieval](retrieval.md#filter-contract)); the filter gate passes when every
-such case passes and is `out_of_scope` when the release serves no nodes.
+cases run when the release serves nodes, in three cohorts per golden case and
+mode. Inside: every expected citation has effective nodes; the filter is their
+deepest effective nodes, or their families when those exceed 20, and the case
+passes when filtered recall@8 is at least unfiltered recall@8 and every expected
+citation is within the first 100 hits of the paged list. Partial: some but not
+all expected citations have effective nodes; the filter is the seeded citations'
+nodes chosen the same way, and the case passes when every expected citation is
+within the first 100 paged hits and the seeded citations' recall@8 is at least
+their unfiltered recall@8. Outside: the filter is the served family with the
+lowest code that holds none of the expected citations, and the case passes when
+every expected citation is within the first 100 paged hits. A case whose
+families still exceed 20 is skipped and counted. The filter gate passes when
+every case in every cohort passes and the inside cohort has at least one case;
+with no inside case it is `unavailable`, and it is `out_of_scope` when the
+release serves no nodes ([retrieval](retrieval.md#filter-contract)).
 `quality_pass` means both hybrid modes meet all old-product floors, and
 development floors once development cases exist, the filter gate when the
 release serves nodes, and all three rejection checks pass; legacy has no gate.
