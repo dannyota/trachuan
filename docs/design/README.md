@@ -12,6 +12,8 @@ Intended behavior of trachuan. Decisions with alternatives are in the
 | [taxonomy](taxonomy.md)                    | Subject tree import, classification layers, evaluation gate                              |
 | [pipeline](pipeline.md)                    | Write path on Temporal, stages, batch submissions, release artifact                      |
 | [sources](sources.md)                      | Vietnam discovery, relation context, secondary source and loss approval                  |
+| [normalization](normalization.md)          | Dates, numbers, source status mapping and consolidated status derivation                 |
+| [calibration](calibration.md)              | Provisional abstention threshold                                                         |
 | [scope adoption](scope-adoption.md)        | Schema version 3, inventory version 2, build loading by final membership                 |
 | [validity corrections](validity-status.md) | Text rules, manual corrections and review queue for wrong or missing source validity     |
 | [membership](membership.md)                | Support supersession, retention, withdrawal, fetch drift and removal lifetime            |

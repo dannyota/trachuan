@@ -27,8 +27,8 @@ JSON. JSON fields are `version`, `rough_count`, `body_limit`, `minimum_runes`,
 Values are the algorithms below and the limits in budgets. Serialize a
 fixed-field Go struct without whitespace; never hash map iteration.
 `date_normalizer` records the shared build normalizer's `normalizer_version`
-from [normalization](index.md#normalization). Hash that version in this recipe;
-a normalizer change requires re-chunking and re-embedding affected inputs.
+from [normalization](normalization.md). Hash that version in this recipe; a
+normalizer change requires re-chunking and re-embedding affected inputs.
 
 Artifact files: `chunks.json`, `coverage.json`, `MANIFEST.sha256`. JSON uses
 UTF-8, snake_case, no timestamps. `chunks.json` is:
@@ -163,11 +163,11 @@ artifact.
 Join nonempty fields with `\n` in this order: trimmed document number; title;
 nearest `chuong` ancestor's label plus heading; nearest `muc` ancestor's label
 plus heading; `Hiệu lực: YYYY-MM-DD`, else `Ban hành: YYYY-MM-DD` using the
-[date normalizer](index.md#normalization), the same implementation build uses,
-not a separate parser or layout list. Collapse whitespace inside fields. Cap
-title and each heading separately by Unicode code points; cap the number
-separately. Cut at that boundary with no ellipsis. No issuer, taxonomy, article
-text, query instruction or inferred dates enter the prefix.
+[date normalizer](normalization.md), the same implementation build uses, not a
+separate parser or layout list. Collapse whitespace inside fields. Cap title and
+each heading separately by Unicode code points; cap the number separately. Cut
+at that boundary with no ellipsis. No issuer, taxonomy, article text, query
+instruction or inferred dates enter the prefix.
 
 Only retrieval input uses the prefix. Evidence is read from provision text and
 source spans, never by stripping a guessed prefix from chunk text. The

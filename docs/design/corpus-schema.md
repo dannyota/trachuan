@@ -63,8 +63,8 @@ rejects a mismatch. No server dimension constant.
   `source_status,derived_from_consolidated,derived_from_text,manual_correction`;
   `validity_conflict boolean`, with decisions in `validity_decision` per
   [validity corrections](validity-status.md).
-  [Build normalization](index.md#normalization) owns assignment and derivation
-  gaps. `status_code` and `status_name` retain the raw source values.
+  [Build normalization](normalization.md) owns assignment and derivation gaps.
+  `status_code` and `status_name` retain the raw source values.
 - `is_consolidated boolean`; `content_state text` in
   (`indexed`,`no_tree`,`no_chunks`,`embedding_gap`); `fetch_sha256 text`;
   `extract_sha256 text?`; `source_url text?`.

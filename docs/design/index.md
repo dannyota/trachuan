@@ -24,15 +24,15 @@ evaluation in `apps/corpus/internal/evaluation`. The stage uses the existing
 `Stage` interface; `Rows` does not create workshop vector or corpus tables.
 
 Plan one item keyed `<country>/<rel>`. Refuse planning while any predecessor
-item is pending or failed. Gap items are allowed for diagnostic builds; release
-still requires acceptance. Read one consistent workshop snapshot to produce the
-upstream inventory defined in [scope adoption](scope-adoption.md#inventory):
-every predecessor item through `embed`, expected keys, the source-list hash and
-gaps. Gap acceptance is a release gate, not a build input, so it is never
-hashed. `Process` recomputes the input hash from the inventory and pinned map
-and fails with non-retryable `inventory_changed` when it differs from the
-planned input hash. Do not hash workshop sequence IDs, mutable paths or
-generation numbers.
+item is pending or failed. Gap items are allowed for diagnostic builds and
+remain visible; release still requires acceptance. Read one consistent workshop
+snapshot to produce the upstream inventory defined in
+[scope adoption](scope-adoption.md#inventory): every predecessor item through
+`embed`, expected keys, the source-list hash and gaps. Gap acceptance is a
+release gate, not a build input, so it is never hashed. `Process` recomputes the
+input hash from the inventory and pinned map and fails with non-retryable
+`inventory_changed` when it differs from the planned input hash. Do not hash
+workshop sequence IDs, mutable paths or generation numbers.
 
 For inventory diagnostics, derive `identity_inventory_hash` from the identity
 projection in [scope adoption](scope-adoption.md#inventory). This hash does not
@@ -42,8 +42,9 @@ production, review and per-case identity validation. Recipe freezing follows the
 [pipeline snapshot](pipeline.md#shape); ingest can finish before index recipes
 are appended. The reviewed map is input data, not a recipe.
 
-Freeze the evaluation civil date from the first eight digits of `rel`; an
-invalid date is a configuration failure. It feeds calibration and eval.
+Freeze the evaluation civil date from the first eight digits of `rel`, parsed as
+a real calendar date; an invalid date is a configuration failure. The same date
+feeds calibration and eval, including retries after midnight.
 
 Build input hash is
 `stage.RecipeHash("build-input",label,country,rel, source_manifest_hash,decimal_schema_version,identity_map_sha256)`,
@@ -106,80 +107,6 @@ This favors honest coverage over inflated searchable counts. Reports list
 excluded keys, missing citation numbers and rejected ordinals. Nothing from the
 workshop is deleted when a corpus excludes it.
 
-## Normalization
-
-The single date normalizer accepts trimmed `YYYY-MM-DD`, `DD/MM/YYYY`,
-offset-free `YYYY-MM-DDTHH:MM:SS` at any valid time of day, or RFC3339
-timestamps with an explicit offset. Date-only and offset-free values retain
-their civil date; timestamps with an offset convert to Asia/Ho_Chi_Minh before
-taking the date. Reject invalid calendar dates, year zero, invalid times and
-other formats. `normalizer_version` is `corpus-normalizer/3`; a date or number
-normalization change bumps it in the build recipe. Empty becomes null; invalid
-values become null plus `invalid_date` naming the field. Raw strings remain
-stored. If the parsed end precedes the start, clear both effective dates,
-preserve raw values and add `invalid_validity_interval`.
-
-`eff_to` is the first excluded civil date, so eligibility is
-`eff_from <= date AND (eff_to IS NULL OR date < eff_to)`. A same-day interval is
-empty, not automatically extended. Missing `eff_from` stays eligible for the
-date test with `missing_effective_date`. No issue-date fallback for legal
-validity; issue dates serve prefixes and consolidation ordering only. Source
-boundary semantics need the primary's official-source check before a release;
-this convention is explicitly reported as source-date interpretation, not
-independently adjudicated legal effect.
-
-Evidence supplied by the primary: live run `vn/20261109`, database
-`corpus_vn_20261109`, read 2026-11-10. Offset-free `effFrom` times included T17
-(319), T07 (243) and T01 (31); `effTo` included T17 (178), and `issueDate` T01
-(31). T07 effective dates equal issue dates in 242/243 documents. Of T17 starts,
-12.5% fall on a month's first day and 1.6% on its last; T17 ends have 41
-first-day and 4 last-day values. These distributions support retaining the date
-part, not advancing T17 to the next day. T01 texts state the same civil date,
-including 446-TC/LB, 01-01-1971. In 770/865 T00 replaces/repeals pairs, the old
-end equals the new start, supporting the exclusive-end interpretation. These are
-supplied observations, not an independent live-source verification.
-
-Trim and uppercase status code; look up its `class` and `current` in the frozen
-`sources/vn.yaml` map. Reject an inconsistent map at startup. Before
-[validity corrections](validity-status.md), unmapped/empty codes become
-`unknown,false` plus `unknown_status`, except for the consolidated derivation
-below. Never infer status from a translated name or title. Preserve raw status
-code and name. Status and dated eligibility remain separate; a contradiction
-produces a warning.
-
-After loading resolved `consolidates` relations, derive status only for a
-consolidated document whose source supplies no status. Never replace a supplied
-status, even if unrecognized. Apply the first matching branch in this release:
-
-| Condition                                                                         | `status_class,is_current` | `status_basis`              | Derivation gap                   |
-| --------------------------------------------------------------------------------- | ------------------------- | --------------------------- | -------------------------------- |
-| Source status present                                                             | Source mapping            | `source_status`             | None                             |
-| Unordered competition below                                                       | `unknown,false`           | `derived_from_consolidated` | `consolidated_status_unordered`  |
-| No resolved target                                                                | `unknown,false`           | `derived_from_consolidated` | `consolidated_status_unresolved` |
-| A current target and no newer consolidation of any shared target                  | `in_force,true`           | `derived_from_consolidated` | None                             |
-| Resolved targets, but none current, or a newer consolidation of any shared target | `expired,false`           | `derived_from_consolidated` | None                             |
-
-Ordering fails closed symmetrically. Any pair of consolidated documents sharing
-a target is unordered if either lacks a normalized issue date or both dates are
-equal. Every document participating in such a pair takes the unordered branch
-when deriving status, even if it also has an ordered competitor. This check
-precedes and overrides both current and expired derivation. With no competitor,
-a missing issue date alone does not prevent derivation. A strictly later issue
-date identifies a newer consolidation; one for any shared target makes the older
-document non-current even if another target is current.
-
-A target counts as current only through its own source-supplied `in_force` or
-`partial` status. A status-less consolidated target never counts as current;
-derivation never recurses, including through cycles. The table lists every
-derivation gap; preserve other date, relation and provenance gaps and raw-source
-evidence. Derivation does not establish provision equivalence or alter
-historical date filtering.
-
-Number normalization follows
-[data](data.md#official-number-normalization-proposed-extension). Source URLs
-are copied only when present and verified as HTTP(S); otherwise use null plus a
-provenance gap. Do not make up a URL from an opaque source id.
-
 ## Database lifecycle
 
 Final name is `corpus_<cc>_<rel>` using the existing two-lowercase-letter
@@ -215,10 +142,10 @@ ANALYZE, and validate counts and constraints. Use a transaction-local staging
 table for chunks until sparse encoding is ready; final NOT NULL constraints must
 never require dummy vectors or a weakened shared schema. Calibrate the
 provisional threshold using the shared evaluation helper on this temporary
-database as specified in [evaluation](evaluation.md#provisional-calibration).
-The helper takes explicit recipes and does not require a published release row.
-Insert the final release row with that threshold; then prohibit further writes.
-Dump before renaming, using subprocess arguments, not a shell:
+database as specified in [evaluation](calibration.md). The helper takes explicit
+recipes and does not require a published release row. Insert the final release
+row with that threshold; then prohibit further writes. Dump before renaming,
+using subprocess arguments, not a shell:
 `pg_dump -Fc --no-owner --no-privileges --no-comments --dbname <temporary-db>`;
 the corpus schema carries no comments, and dropping them keeps extension
 comments, which a nonsuperuser cannot restore, out of the dump. Database
