@@ -14,7 +14,10 @@ import (
 )
 
 // SchemaVersion is the version of the corpus schema.
-const SchemaVersion = 4
+const SchemaVersion = 5
+
+// SupportedSchemaVersions returns the corpus versions supported by the server.
+func SupportedSchemaVersions() []int { return []int{4, 5} }
 
 // SparseDimensions is the dimension count of lexical recipe 1.
 const SparseDimensions = 1048576

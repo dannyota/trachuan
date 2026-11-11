@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math"
 	"regexp"
+	"slices"
 	"time"
 
 	"danny.vn/trachuan/internal/corpusdb"
@@ -52,7 +53,7 @@ func openEngine(ctx context.Context, db *pgxpool.Pool, embedder Embedder, r Rele
 		recipe.Abstention.CalibrationSHA256 = ""
 	}
 	s := r.LexicalStats
-	if r.Country != "vn" || r.Rel == "" || r.SchemaVersion != corpusdb.SchemaVersion || recipe != base || r.LexicalRecipe != lexical.Recipe1() || !validObject(r.ChunkRecipe) || !validObject(r.EvaluationSummary) || !validHash(r.SourceManifestHash) || !validHash(r.BuildInputHash) || !validHash(r.BuildRecipeHash) || r.BuiltAt.IsZero() || s.Version != 1 || s.N < 0 || s.TotalTokens < 0 || s.AvgDL <= 0 || math.IsNaN(s.AvgDL) || math.IsInf(s.AvgDL, 0) || !validHash(s.VocabularySHA256) || !validHash(s.DFSHA256) || s.DistinctTerms < 0 || s.OccupiedDimensions < 0 || s.CollisionTerms != s.DistinctTerms-s.OccupiedDimensions {
+	if r.Country != "vn" || r.Rel == "" || !slices.Contains(corpusdb.SupportedSchemaVersions(), r.SchemaVersion) || recipe != base || r.LexicalRecipe != lexical.Recipe1() || !validObject(r.ChunkRecipe) || !validObject(r.EvaluationSummary) || !validHash(r.SourceManifestHash) || !validHash(r.BuildInputHash) || !validHash(r.BuildRecipeHash) || r.BuiltAt.IsZero() || s.Version != 1 || s.N < 0 || s.TotalTokens < 0 || s.AvgDL <= 0 || math.IsNaN(s.AvgDL) || math.IsInf(s.AvgDL, 0) || !validHash(s.VocabularySHA256) || !validHash(s.DFSHA256) || s.DistinctTerms < 0 || s.OccupiedDimensions < 0 || s.CollisionTerms != s.DistinctTerms-s.OccupiedDimensions {
 		return nil, errors.New("invalid release metadata")
 	}
 	running, err := embedder.Recipe(ctx)

@@ -120,6 +120,10 @@ CREATE TABLE taxonomy_node (
  code text COLLATE "C" NOT NULL UNIQUE, name text NOT NULL, description text NOT NULL,
  origin text NOT NULL CHECK (origin IN ('phapdien','custom')),
  status text NOT NULL CHECK (status IN ('active','retired')), path ltree NOT NULL UNIQUE,
+ ordinal integer NOT NULL CHECK (ordinal >= 1),
+ provision_count integer NOT NULL CHECK (provision_count >= 0),
+ document_count integer NOT NULL CHECK (document_count >= 0),
+ UNIQUE NULLS NOT DISTINCT (parent_id,ordinal),
  CHECK (parent_id IS NULL OR parent_id <> id)
 );
 CREATE INDEX ON taxonomy_node (parent_id,code);
@@ -149,7 +153,7 @@ CREATE INDEX ON taxonomy_assignment (provision_id,family_id);
 
 CREATE TABLE release (
  singleton boolean PRIMARY KEY CHECK (singleton), country text COLLATE "C" NOT NULL CHECK (country = 'vn'),
- rel text COLLATE "C" NOT NULL UNIQUE, schema_version integer NOT NULL CHECK (schema_version = 4),
+ rel text COLLATE "C" NOT NULL UNIQUE, schema_version integer NOT NULL CHECK (schema_version = 5),
  taxonomy_version text COLLATE "C" NOT NULL,
  dense_recipe jsonb NOT NULL CHECK (jsonb_typeof(dense_recipe) = 'object'),
  chunk_recipe jsonb NOT NULL CHECK (jsonb_typeof(chunk_recipe) = 'object'),
