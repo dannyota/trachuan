@@ -189,12 +189,15 @@ The process drops its cached credential entries at once. The account routes
 ## Retention
 
 A cleanup loop in the server deletes, in batches, at the interval in budgets:
-pending requests after expiry; codes after the replay retention in budgets (kept
-for replay detection until then); tokens after the same retention once their
-family expires or their grant is revoked; grants with no unexpired family and no
-pending code for the retirement period in budgets. Unexpired pending requests
-are capped in budgets; at the cap `/oauth/authorize` returns the 503 server
-page.
+pending requests after their `expires_at`; codes, consumed or not, once the
+replay retention in budgets has passed since their `expires_at` (kept for replay
+detection until then); tokens once the same retention has passed since their
+family's `family_expires_at` or their grant's `revoked_at`, whichever is
+earlier; grants that have no unexpired family and no unexpired code once the
+retirement period in budgets has passed since the latest of the grant's
+`created_at`, its families' `family_expires_at` and its codes' `expires_at`
+(deleting a grant deletes its codes and tokens). Unexpired pending requests are
+capped in budgets; at the cap `/oauth/authorize` returns the 503 server page.
 
 ## Errors
 
