@@ -69,7 +69,12 @@ func (t Taker) Take(ctx context.Context, runKey string, generation int, stage st
 	if err != nil {
 		return "", err
 	}
-	defer snapshot.close(context.WithoutCancel(ctx))
+	defer func() {
+		// Cleanup outlives a cancelled activity but never waits on a stalled server.
+		closeCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
+		defer cancel()
+		snapshot.close(closeCtx)
+	}()
 	dump := filepath.Join(dir, "workshop.dump")
 	if dumpErr := dumper.Dump(ctx, t.Config.DatabaseURL, dump, snapshot.snapshotID()); dumpErr != nil {
 		return "", fmt.Errorf("dump workshop: %w", dumpErr)
