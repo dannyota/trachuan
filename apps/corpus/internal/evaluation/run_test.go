@@ -275,8 +275,8 @@ func TestRun_MissingModeFloorsUnavailable(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(report.Floors) != 8 {
-		t.Fatalf("floors = %d, want 8", len(report.Floors))
+	if len(report.Floors) != 4 {
+		t.Fatalf("floors = %d, want 4", len(report.Floors))
 	}
 	count := 0
 	for _, f := range report.Floors {
@@ -284,7 +284,7 @@ func TestRun_MissingModeFloorsUnavailable(t *testing.T) {
 			count++
 		}
 	}
-	if count != 4 {
+	if count != 2 {
 		t.Fatalf("unavailable ANN floors = %d", count)
 	}
 }
@@ -386,9 +386,144 @@ func TestRun_MappingIncompleteScoresOtherCases(t *testing.T) {
 	if !found {
 		t.Fatal("missing per-case issue")
 	}
-	for _, floor := range report.Floors {
-		if floor.Name == "recall" && floor.Status != "unavailable" {
-			t.Fatalf("recall status = %s", floor.Status)
+	if report.QualityPass {
+		t.Fatal("incomplete mapping passed quality")
+	}
+	for _, target := range report.Targets {
+		if target.Status != "unavailable" {
+			t.Fatalf("target: %+v", target)
 		}
+	}
+	for _, regression := range report.NonRegression {
+		if regression.Status != "unavailable" {
+			t.Fatalf("regression: %+v", regression)
+		}
+	}
+}
+
+func TestRun_ReportsTargetsAndNonRegression(t *testing.T) {
+	date := retrieval.Date{Year: 2026, Month: time.November, Day: 9}
+	r, _, err := Run(context.Background(), &recordedEngine{fakeEngine: fakeEngine{date: date}}, recordedSuite(), Options{EvaluationDate: date})
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := json.Marshal(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var result struct {
+		Targets []struct {
+			Status string `json:"status"`
+		} `json:"targets"`
+		NonRegression []struct {
+			Status string `json:"status"`
+		} `json:"non_regression"`
+	}
+	if err := json.Unmarshal(b, &result); err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Targets) != 6 || len(result.NonRegression) != 4 {
+		t.Fatalf("targets %d non-regression %d", len(result.Targets), len(result.NonRegression))
+	}
+	for _, target := range result.Targets {
+		if target.Status != "met" {
+			t.Fatalf("target status %s", target.Status)
+		}
+	}
+	for _, regression := range result.NonRegression {
+		if regression.Status != "no_previous" {
+			t.Fatalf("regression status %s", regression.Status)
+		}
+	}
+}
+
+func TestQuality_TargetsGatesAndRegression(t *testing.T) {
+	metric := func(mode retrieval.Mode, name string, limit int, value *float64) Metric {
+		return Metric{Mode: mode, Arms: "hybrid", Name: name, Limit: limit, Value: value}
+	}
+	makeReport := func(recall, mrr, precision, abstention *float64) Report {
+		r := Report{Cohorts: map[string]Cohort{}, Rejections: []Rejection{{Passed: true}, {Passed: true}, {Passed: true}}}
+		var metrics []Metric
+		for _, mode := range []retrieval.Mode{"exact", "ann"} {
+			metrics = append(metrics, metric(mode, "recall", 20, recall), metric(mode, "recall", 8, recall), metric(mode, "mrr", 8, mrr), metric(mode, "current_law_precision", 8, precision), metric(mode, "abstention", 8, abstention))
+		}
+		r.Cohorts["old_product"] = Cohort{Metrics: metrics}
+		return r
+	}
+	for _, tc := range []struct {
+		name               string
+		value, prior       *float64
+		target, regression string
+		quality            bool
+	}{
+		{"below target", floatPtr(.5), nil, "below", "no_previous", true},
+		{"met equal", floatPtr(.9), floatPtr(.9), "met", "pass", true},
+		{"regression", floatPtr(.8), floatPtr(.9), "below", "fail", false},
+		{"missing current", nil, floatPtr(.9), "unavailable", "unavailable", false},
+		{"missing previous metric", floatPtr(.9), nil, "met", "no_previous", true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			r := makeReport(tc.value, floatPtr(.7), floatPtr(1), floatPtr(1))
+			prev := makeReport(tc.prior, floatPtr(.7), floatPtr(1), floatPtr(1))
+			finishQuality(&r, &prev)
+			if r.Targets[0].Status != tc.target || r.NonRegression[0].Status != tc.regression || r.QualityPass != tc.quality {
+				t.Fatalf("target %s regression %+v quality %v", r.Targets[0].Status, r.NonRegression[0], r.QualityPass)
+			}
+			if !reflect.DeepEqual(r.NonRegression[0].Value, tc.value) || !reflect.DeepEqual(r.NonRegression[0].PreviousValue, tc.prior) {
+				t.Fatalf("comparison values %+v", r.NonRegression[0])
+			}
+		})
+	}
+	for _, tc := range []struct {
+		name    string
+		value   *float64
+		status  string
+		quality bool
+	}{{"pass", floatPtr(.99), "pass", true}, {"fail", floatPtr(.98), "fail", false}, {"unavailable", nil, "unavailable", false}} {
+		t.Run(tc.name, func(t *testing.T) {
+			r := makeReport(floatPtr(1), floatPtr(1), tc.value, floatPtr(1))
+			finishQuality(&r, nil)
+			if r.Floors[0].Status != tc.status || r.QualityPass != tc.quality {
+				t.Fatalf("gate %+v quality %v", r.Floors[0], r.QualityPass)
+			}
+		})
+	}
+	r := makeReport(floatPtr(1), floatPtr(1), floatPtr(1), floatPtr(1))
+	markMappingUnavailable(&r)
+	finishQuality(&r, nil)
+	if r.QualityPass || r.Targets[0].Status != "unavailable" || r.NonRegression[0].Status != "unavailable" {
+		t.Fatalf("mapping: %+v", r)
+	}
+}
+
+func TestRun_PreviousReportAffectsQuality(t *testing.T) {
+	date := retrieval.Date{Year: 2026, Month: time.November, Day: 9}
+	opts := Options{EvaluationDate: date}
+	engine := &recordedEngine{fakeEngine: fakeEngine{date: date}}
+	prior, _, err := Run(context.Background(), engine, recordedSuite(), opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := range prior.Cohorts["old_product"].Metrics {
+		m := &prior.Cohorts["old_product"].Metrics[i]
+		if m.Name == "recall" && m.Limit == 20 && m.Arms == "hybrid" {
+			m.Value = floatPtr(1.1)
+		}
+	}
+	b, err := json.Marshal(prior)
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(t.TempDir(), "previous.json")
+	if err = os.WriteFile(path, b, 0600); err != nil {
+		t.Fatal(err)
+	}
+	opts.PreviousReport = path
+	r, _, err := Run(context.Background(), engine, recordedSuite(), opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r.QualityPass || r.NonRegression[0].Status != "fail" || *r.NonRegression[0].PreviousValue != 1.1 {
+		t.Fatalf("regression %+v quality %v", r.NonRegression, r.QualityPass)
 	}
 }

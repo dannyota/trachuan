@@ -106,19 +106,6 @@ func finishReport(r *Report, all map[metricKey]*Metrics, modes []retrieval.Mode)
 						}
 						metric := Metric{mode, arms, limit, name, num, den, value, conf}
 						stats.Metrics = append(stats.Metrics, metric)
-						if cohort == "old_product" && arms == "hybrid" && limit == 8 {
-							floors := map[string]float64{"recall": .90, "mrr": .66, "current_law_precision": .99, "abstention": .95}
-							if floor, ok := floors[name]; ok {
-								status := "unavailable"
-								if value != nil {
-									status = "fail"
-									if *value >= floor {
-										status = "pass"
-									}
-								}
-								r.Floors = append(r.Floors, Floor{metric, floor, status})
-							}
-						}
 					}
 					add("recall", float64(matched), total, nil)
 					add("macro_recall", macro, positive, nil)
@@ -163,14 +150,6 @@ func finishReport(r *Report, all map[metricKey]*Metrics, modes []retrieval.Mode)
 		}
 		r.Cohorts[cohort] = stats
 	}
-	addUnavailableFloors(r)
-	r.QualityPass = len(r.Floors) == 8 && len(r.Rejections) == 3
-	for _, f := range r.Floors {
-		r.QualityPass = r.QualityPass && f.Status == "pass"
-	}
-	for _, v := range r.Rejections {
-		r.QualityPass = r.QualityPass && v.Passed
-	}
 }
 
 func markMappingUnavailable(r *Report) {
@@ -182,12 +161,74 @@ func markMappingUnavailable(r *Report) {
 		}
 	}
 	r.Cohorts["old_product"] = stats
-	for i := range r.Floors {
-		f := &r.Floors[i]
-		if f.Name == "recall" || f.Name == "mrr" {
-			f.Value = nil
-			f.Status = "unavailable"
+}
+
+func finishQuality(r *Report, previous *Report) {
+	for _, mode := range []retrieval.Mode{"exact", "ann"} {
+		for _, spec := range []struct {
+			name          string
+			limit         int
+			threshold     float64
+			gate, compare bool
+		}{
+			{"current_law_precision", 8, .99, true, false}, {"abstention", 8, .95, true, false},
+			{"recall", 20, .90, false, true}, {"mrr", 8, .66, false, true}, {"recall", 8, .90, false, false},
+		} {
+			m := findQualityMetric(r, mode, spec.name, spec.limit)
+			if spec.gate {
+				status := "unavailable"
+				if m.Value != nil {
+					status = "fail"
+					if *m.Value >= spec.threshold {
+						status = "pass"
+					}
+				}
+				r.Floors = append(r.Floors, Floor{Metric: m, Floor: spec.threshold, Status: status})
+				continue
+			}
+			status := "unavailable"
+			if m.Value != nil {
+				status = "below"
+				if *m.Value >= spec.threshold {
+					status = "met"
+				}
+			}
+			r.Targets = append(r.Targets, Target{Metric: m, Target: spec.threshold, Status: status})
+			if spec.compare {
+				var old *float64
+				if previous != nil {
+					old = findQualityMetric(previous, mode, spec.name, spec.limit).Value
+				}
+				status = "no_previous"
+				if m.Value == nil {
+					status = "unavailable"
+				} else if old != nil {
+					status = "pass"
+					if *m.Value < *old {
+						status = "fail"
+					}
+				}
+				r.NonRegression = append(r.NonRegression, NonRegression{Mode: mode, Arms: "hybrid", Limit: spec.limit, Name: spec.name, Value: m.Value, PreviousValue: old, Status: status})
+			}
 		}
 	}
-	r.QualityPass = false
+	r.QualityPass = len(r.Floors) == 4 && len(r.Rejections) == 3
+	for _, gate := range r.Floors {
+		r.QualityPass = r.QualityPass && gate.Status == "pass"
+	}
+	for _, rejection := range r.Rejections {
+		r.QualityPass = r.QualityPass && rejection.Passed
+	}
+	for _, comparison := range r.NonRegression {
+		r.QualityPass = r.QualityPass && comparison.Status != "fail" && comparison.Status != "unavailable"
+	}
+}
+
+func findQualityMetric(r *Report, mode retrieval.Mode, name string, limit int) Metric {
+	for _, m := range r.Cohorts["old_product"].Metrics {
+		if m.Mode == mode && m.Arms == "hybrid" && m.Limit == limit && m.Name == name {
+			return m
+		}
+	}
+	return Metric{Mode: mode, Arms: "hybrid", Limit: limit, Name: name}
 }

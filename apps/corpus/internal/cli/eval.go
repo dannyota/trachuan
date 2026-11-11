@@ -26,13 +26,19 @@ func evalExit(r evaluation.Report, require bool) int {
 		return 1
 	}
 	if require {
-		if !r.QualityPass || len(r.Floors) != 8 {
+		if !r.QualityPass || len(r.Floors) != 4 {
 			return 2
 		}
+		seen := make(map[string]bool)
 		for _, f := range r.Floors {
-			if f.Status != "pass" {
+			if f.Status != "pass" || f.Arms != "hybrid" || f.Limit != 8 || (f.Mode != "exact" && f.Mode != "ann") || (f.Name != "current_law_precision" && f.Name != "abstention") {
 				return 2
 			}
+			key := string(f.Mode) + ":" + f.Name
+			if seen[key] {
+				return 2
+			}
+			seen[key] = true
 		}
 	}
 	return 0

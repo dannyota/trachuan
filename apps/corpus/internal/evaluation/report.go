@@ -52,6 +52,24 @@ type Floor struct {
 	Status string  `json:"status"`
 }
 
+// Target records a goal that does not affect quality.
+type Target struct {
+	Metric
+	Target float64 `json:"target"`
+	Status string  `json:"status"`
+}
+
+// NonRegression compares a metric with its previous value.
+type NonRegression struct {
+	Mode          retrieval.Mode    `json:"mode"`
+	Arms          retrieval.ArmMode `json:"arms"`
+	Limit         int               `json:"limit"`
+	Name          string            `json:"name"`
+	Value         *float64          `json:"value"`
+	PreviousValue *float64          `json:"previous_value"`
+	Status        string            `json:"status"`
+}
+
 // SizeSummary records nearest-rank evidence sizes.
 type SizeSummary struct {
 	Cohort string            `json:"cohort"`
@@ -139,6 +157,8 @@ type Report struct {
 	Software             map[string]string   `json:"software"`
 	Calibration          any                 `json:"calibration"`
 	Cohorts              map[string]Cohort   `json:"cohorts"`
+	Targets              []Target            `json:"targets"`
+	NonRegression        []NonRegression     `json:"non_regression"`
 	Floors               []Floor             `json:"floors"`
 	Rejections           []Rejection         `json:"rejections"`
 	Coverage             []Coverage          `json:"coverage"`
@@ -327,26 +347,6 @@ func summarizeANN(r Report, cohort string) ANNLoss {
 	}
 	out.Differences = compareCases(exact, ann)
 	return out
-}
-
-func addUnavailableFloors(r *Report) {
-	for _, mode := range []retrieval.Mode{"exact", "ann"} {
-		for _, f := range []struct {
-			name  string
-			floor float64
-		}{{"recall", .90}, {"mrr", .66}, {"current_law_precision", .99}, {"abstention", .95}} {
-			found := false
-			for _, old := range r.Floors {
-				if old.Mode == mode && old.Name == f.name {
-					found = true
-					break
-				}
-			}
-			if !found {
-				r.Floors = append(r.Floors, Floor{Metric: Metric{Mode: mode, Arms: "hybrid", Limit: 8, Name: f.name}, Floor: f.floor, Status: "unavailable"})
-			}
-		}
-	}
 }
 
 func addLegacyDirectMetrics(r *Report) {
