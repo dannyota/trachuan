@@ -24,3 +24,10 @@ func TestCheck_Options(t *testing.T) {
 		t.Fatalf("options=%+v err=%v", got, err)
 	}
 }
+
+func TestCheck_AbandonOption(t *testing.T) {
+	_, err := parseCheckOptions([]string{"--max-usd", "1", "--abandon", "0123456789abcdef0123456789abcdef"}, false)
+	if err != nil {
+		t.Fatalf("operator abandonment flag rejected: %v", err)
+	}
+}

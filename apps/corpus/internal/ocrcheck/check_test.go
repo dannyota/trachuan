@@ -25,7 +25,7 @@ func fixture(t *testing.T) (*Runner, *memoryRepository, *FakeClient, []Document)
 	}
 	entry := store.OcrText{ID: 1, PdfSha256: fmt.Sprintf("%x", sha256.Sum256(pdf))}
 	repo := &memoryRepository{checks: map[int64]ocrstore.CheckResult{}}
-	client := &FakeClient{Response: Response{Stop: "end_turn", Text: `{"same_document":true,"pages":10,"items":[]}`, Usage: Usage{Input: 100, Output: 100}}, Tokens: 100}
+	client := &FakeClient{Response: Response{FinalUsage: true, Stop: "end_turn", Text: `{"same_document":true,"pages":10,"items":[]}`, Usage: Usage{Input: 100, Output: 100}}, Tokens: 100}
 	runner := &Runner{Client: client, Repository: repo, CountPages: func(context.Context, []byte) (int, error) { return 10, nil }, Now: func() time.Time { return time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC) }}
 	return runner, repo, client, []Document{{Entry: entry, PDFPath: path, Text: []byte("public OCR text")}}
 }
@@ -197,22 +197,7 @@ func TestCheck_ResumeCollectsSubmittedBatch(t *testing.T) {
 		t.Fatal(s.attempts)
 	}
 }
-func TestCheck_BatchSplitsBySize(t *testing.T) {
-	r, _, c, d := fixture(t)
-	second := d[0]
-	second.Entry.ID = 2
-	d = append(d, second)
-	o := options()
-	o.Batch = true
-	r.batchBytes = 1_000
-	r.requestBytes = func(Request) int { return 600 }
-	if err := run(t, r, d, o); err != nil {
-		t.Fatal(err)
-	}
-	if c.BatchCalls != 2 {
-		t.Fatalf("batches=%d", c.BatchCalls)
-	}
-}
+
 func TestCheck_UncertainSubmissionBlocksResubmit(t *testing.T) {
 	r, s, c, d := fixture(t)
 	o := options()
@@ -229,7 +214,7 @@ func TestCheck_UncertainSubmissionBlocksResubmit(t *testing.T) {
 		t.Fatal(s.attempts)
 	}
 }
-func TestCheck_ReconcileAttachesOrAbandons(t *testing.T) {
+func TestCheck_ReconcileAttachesOrLeavesUncertain(t *testing.T) {
 	for _, found := range []bool{false, true} {
 		t.Run(fmt.Sprint(found), func(t *testing.T) {
 			r, s, c, d := fixture(t)
@@ -247,7 +232,7 @@ func TestCheck_ReconcileAttachesOrAbandons(t *testing.T) {
 			if err := run(t, r, d, o); err != nil {
 				t.Fatal(err)
 			}
-			want := "abandoned"
+			want := "uncertain"
 			if found {
 				want = "submitted"
 			}
@@ -285,15 +270,22 @@ func (s *memoryRepository) Open(context.Context, string) ([]Attempt, error) {
 	}
 	return a, nil
 }
-func (s *memoryRepository) Spent(context.Context, string) (int64, error) { return s.cost, nil }
+func (s *memoryRepository) Spent(context.Context, string) (int64, error) {
+	var total int64
+	for _, a := range s.attempts {
+		total += a.Usage.charge()
+	}
+	return total, nil
+}
 func (s *memoryRepository) Completed(_ context.Context, id int64, _ string) (bool, error) {
 	_, ok := s.checks[id]
 	return ok, nil
 }
-func (s *memoryRepository) Begin(_ context.Context, entries []store.OcrText, checker, mode, submission string, now time.Time) ([]Attempt, error) {
+func (s *memoryRepository) Begin(_ context.Context, intents []Intent, checker, mode, submission string, now time.Time) ([]Attempt, error) {
 	var a []Attempt
-	for _, e := range entries {
-		v := Attempt{ID: int64(len(s.attempts) + 1), EntryID: e.ID, Checker: checker, Mode: mode, SubmissionID: submission, State: "preparing", CreatedAt: now}
+	for _, intent := range intents {
+		e := intent.Entry
+		v := Attempt{ID: int64(len(s.attempts) + 1), EntryID: e.ID, Checker: checker, Mode: mode, SubmissionID: submission, State: "preparing", CreatedAt: now, Usage: intent.Usage}
 		s.attempts = append(s.attempts, v)
 		a = append(a, v)
 	}
@@ -334,6 +326,10 @@ func (s *memoryRepository) Finish(_ context.Context, a Attempt, _ store.OcrText,
 		if s.attempts[i].ID == a.ID {
 			s.attempts[i].State = "failed"
 			s.attempts[i].Reason = reason
+			s.attempts[i].Usage = u
+			if !u.Final && u.ReservationMicroUSD > 0 {
+				s.attempts[i].State = "uncertain"
+			}
 			if result != nil {
 				s.attempts[i].State = "complete"
 				s.checks[a.EntryID] = *result

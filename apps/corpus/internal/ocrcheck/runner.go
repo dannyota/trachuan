@@ -2,8 +2,6 @@ package ocrcheck
 
 import (
 	"context"
-	"crypto/rand"
-	"errors"
 	"fmt"
 	"math"
 	"time"
@@ -34,6 +32,7 @@ type Attempt struct {
 	ID, EntryID                                         int64
 	Checker, Mode, SubmissionID, BatchID, State, Reason string
 	CreatedAt                                           time.Time
+	Usage                                               Usage
 }
 
 // Repository persists attempts and completed checks atomically.
@@ -41,7 +40,7 @@ type Repository interface {
 	Open(context.Context, string) ([]Attempt, error)
 	Spent(context.Context, string) (int64, error)
 	Completed(context.Context, int64, string) (bool, error)
-	Begin(context.Context, []store.OcrText, string, string, string, time.Time) ([]Attempt, error)
+	Begin(context.Context, []Intent, string, string, string, time.Time) ([]Attempt, error)
 	Submitted(context.Context, string, string) error
 	Uncertain(context.Context, string) error
 	Abandon(context.Context, string) error
@@ -54,11 +53,14 @@ type Options struct {
 	LimitDocs                int
 	MaxUSD                   float64
 	Batch, DryRun, Reconcile bool
+	Abandon                  string
 }
 
 // CheckerID binds the model, effort, instruction and schema versions.
 func (o Options) CheckerID() string { return o.Model + "/" + o.Effort + "/ocr-check-1" }
-func (o Options) validate() error {
+
+// Validate rejects unsupported checker settings and recovery combinations.
+func (o Options) Validate() error {
 	if _, err := modelPrice(o.Model, o.Batch); err != nil {
 		return err
 	}
@@ -70,8 +72,8 @@ func (o Options) validate() error {
 	if o.LimitDocs < 0 || o.MaxUSD <= 0 || math.IsNaN(o.MaxUSD) || math.IsInf(o.MaxUSD, 0) || o.MaxUSD > 1e9 {
 		return fmt.Errorf("a positive finite --max-usd is required; --limit-docs must be nonnegative")
 	}
-	if o.Reconcile && o.DryRun {
-		return fmt.Errorf("--reconcile and --dry-run cannot be combined")
+	if err := validateRecoveryOptions(o); err != nil {
+		return err
 	}
 	return nil
 }
@@ -85,25 +87,25 @@ type Summary struct {
 
 // Runner applies checks serially, keeping direct concurrency below three.
 type Runner struct {
-	Client       Client
-	Repository   Repository
-	CountPages   func(context.Context, []byte) (int, error)
-	Now          func() time.Time
-	batchBytes   int
-	requestBytes func(Request) int
+	Client     Client
+	Repository Repository
+	CountPages func(context.Context, []byte) (int, error)
+	Now        func() time.Time
+	batchBytes int
 }
 
 type prepared struct {
-	doc     Document
-	request Request
-	pages   int
-	worst   int64
+	doc         Document
+	request     Request
+	pages       int
+	worst       int64
+	inputTokens int64
 }
 
 // Run collects earlier submissions before selecting any new paid work.
 func (r *Runner) Run(ctx context.Context, docs []Document, o Options) (Summary, error) {
 	var summary Summary
-	if err := o.validate(); err != nil {
+	if err := o.Validate(); err != nil {
 		return summary, err
 	}
 	if r.Now == nil {
@@ -121,7 +123,7 @@ func (r *Runner) Run(ctx context.Context, docs []Document, o Options) (Summary, 
 	skip := map[int64]bool{}
 	if !o.DryRun {
 		pending, resumeErr := r.resume(ctx, docs, o, &summary, skip)
-		if resumeErr != nil || pending || o.Reconcile {
+		if resumeErr != nil || pending || o.Reconcile || o.Abandon != "" {
 			return summary, resumeErr
 		}
 	}
@@ -181,6 +183,7 @@ func (r *Runner) Run(ctx context.Context, docs []Document, o Options) (Summary, 
 			}
 			continue
 		}
+		ready.inputTokens = tokens
 		ready.worst = p.cost(Usage{Input: tokens, Output: maxOutputTokens})
 		if ready.worst > ceiling-reserved {
 			if err = flush(); err != nil {
@@ -202,9 +205,6 @@ func (r *Runner) Run(ctx context.Context, docs []Document, o Options) (Summary, 
 			continue
 		}
 		n := requestSize(ready.request)
-		if r.requestBytes != nil {
-			n = r.requestBytes(ready.request)
-		}
 		limit := 200_000_000
 		if r.batchBytes > 0 {
 			limit = r.batchBytes
@@ -226,121 +226,4 @@ func (r *Runner) Run(ctx context.Context, docs []Document, o Options) (Summary, 
 		reserved += ready.worst
 	}
 	return summary, flush()
-}
-
-func newSubmission() (string, error) {
-	var id [16]byte
-	if _, err := rand.Read(id[:]); err != nil {
-		return "", fmt.Errorf("create OCR submission identity: %w", err)
-	}
-	return fmt.Sprintf("%x", id), nil
-}
-func (r *Runner) begin(ctx context.Context, docs []Document, o Options) ([]Attempt, error) {
-	id, err := newSubmission()
-	if err != nil {
-		return nil, err
-	}
-	entries := make([]store.OcrText, len(docs))
-	for i, d := range docs {
-		entries[i] = d.Entry
-	}
-	mode := "direct"
-	if o.Batch {
-		mode = "batch"
-	}
-	a, err := r.Repository.Begin(ctx, entries, o.CheckerID(), mode, id, r.Now())
-	if err != nil {
-		return nil, fmt.Errorf("record OCR submission intent: %w", err)
-	}
-	return a, nil
-}
-func (r *Runner) failLocal(ctx context.Context, doc Document, o Options, reason string) error {
-	return r.failAttempt(ctx, doc, o, reason, Usage{})
-}
-func (r *Runner) failAttempt(ctx context.Context, doc Document, o Options, reason string, usage Usage) error {
-	a, err := r.begin(ctx, []Document{doc}, o)
-	if err != nil {
-		return err
-	}
-	return r.Repository.Finish(ctx, a[0], doc.Entry, usage, nil, reason)
-}
-func (r *Runner) direct(ctx context.Context, p prepared, o Options, s *Summary) error {
-	a, err := r.begin(ctx, []Document{p.doc}, o)
-	if err != nil {
-		return err
-	}
-	response, callErr := r.Client.Direct(ctx, p.request)
-	return r.finish(ctx, a[0], p.doc, p.pages, response, callErr, o, s)
-}
-func (r *Runner) finish(ctx context.Context, a Attempt, doc Document, pages int, response Response, callErr error, o Options, s *Summary) error {
-	price, _ := modelPrice(o.Model, a.Mode == "batch")
-	response.Usage.CostMicroUSD = price.cost(response.Usage)
-	var result *ocrstore.CheckResult
-	reason := ""
-	if callErr != nil {
-		reason = errorReason(callErr)
-		var apiErr *APIError
-		if errors.As(safeError(callErr), &apiErr) {
-			response.Usage.APIStatus = apiErr.Status
-			response.Usage.RequestID = apiErr.RequestID
-		}
-	} else {
-		switch response.Stop {
-		case "end_turn":
-			parsed, err := ocrstore.DecodeAnswer([]byte(response.Text), pages)
-			if err != nil {
-				reason = "schema"
-			} else if parsed.Pages != pages || (doc.Entry.Pages.Valid && parsed.Pages != int(doc.Entry.Pages.Int32)) {
-				reason = "page_count_mismatch"
-			} else {
-				result = &parsed
-			}
-		case "refusal":
-			reason = "refusal"
-		case "max_tokens":
-			reason = "max_tokens"
-		case "model_context_window_exceeded":
-			reason = "context_window"
-		default:
-			reason = "schema"
-		}
-	}
-	if err := r.Repository.Finish(ctx, a, doc.Entry, response.Usage, result, reason); err != nil {
-		return fmt.Errorf("finish OCR attempt: %w", err)
-	}
-	s.CostMicroUSD += response.Usage.CostMicroUSD
-	if result == nil {
-		s.Failed++
-	} else {
-		s.Complete++
-	}
-	return response.Usage.priceError()
-}
-func errorReason(err error) string {
-	var e *APIError
-	if errors.As(err, &e) && e.Reason == "timeout" {
-		return "timeout"
-	}
-	if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
-		return "timeout"
-	}
-	return "api_error"
-}
-func safeError(err error) error {
-	if err == nil {
-		return &APIError{Reason: "api_error"}
-	}
-	var e *APIError
-	if errors.As(err, &e) {
-		return e
-	}
-	return &APIError{Reason: errorReason(err)}
-}
-
-func errorUsage(err error) Usage {
-	var apiErr *APIError
-	if errors.As(safeError(err), &apiErr) {
-		return Usage{APIStatus: apiErr.Status, RequestID: apiErr.RequestID}
-	}
-	return Usage{}
 }

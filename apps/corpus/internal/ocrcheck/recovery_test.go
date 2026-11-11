@@ -16,7 +16,7 @@ func TestCheck_StaleBatchIntentMarkedOnce(t *testing.T) {
 	next.Entry.ID = 2
 	d = append(d, next)
 	// Simulate a crash after atomic intent, before the provider was called.
-	if _, err := r.begin(context.Background(), d, o); err != nil {
+	if _, err := r.begin(context.Background(), []prepared{{doc: d[0], worst: 160100, inputTokens: 100}, {doc: d[1], worst: 160100, inputTokens: 100}}, o); err != nil {
 		t.Fatal(err)
 	}
 	r.Now = func() time.Time { return s.attempts[0].CreatedAt.Add(11 * time.Minute) }
@@ -38,8 +38,8 @@ func TestCheck_StaleBatchIntentMarkedOnce(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, a := range s.attempts {
-		if a.State != "abandoned" {
-			t.Fatal("stale batch did not reconcile")
+		if a.State != "uncertain" {
+			t.Fatal("reconciliation released a stale batch")
 		}
 	}
 }

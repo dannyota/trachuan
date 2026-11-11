@@ -34,6 +34,12 @@ func (d *Database) Open(ctx context.Context, checker string) ([]Attempt, error) 
 		if v.BatchID != nil {
 			a.BatchID = *v.BatchID
 		}
+		if err = json.Unmarshal(v.Usage, &a.Usage); err != nil {
+			return nil, fmt.Errorf("invalid OCR intent usage")
+		}
+		if !a.Usage.Final && a.Usage.ReservationMicroUSD <= 0 {
+			return nil, fmt.Errorf("open OCR attempt has no durable reservation; operator resolution required")
+		}
 		result[i] = a
 	}
 	return result, nil
@@ -54,7 +60,17 @@ func (d *Database) Spent(ctx context.Context, checker string) (int64, error) {
 		if err = u.priceError(); err != nil {
 			return 0, err
 		}
-		total += u.CostMicroUSD
+		total += u.charge()
+	}
+	// The existing aggregate excludes submitted attempts; include their holds.
+	open, err := d.Open(ctx, checker)
+	if err != nil {
+		return 0, err
+	}
+	for _, a := range open {
+		if a.State == "submitted" {
+			total += a.Usage.charge()
+		}
 	}
 	return total, nil
 }
@@ -72,20 +88,29 @@ func (d *Database) Completed(ctx context.Context, id int64, checker string) (boo
 }
 
 // Begin records every batch item atomically before the provider is called.
-func (d *Database) Begin(ctx context.Context, entries []store.OcrText, checker, mode, submission string, _ time.Time) ([]Attempt, error) {
+func (d *Database) Begin(ctx context.Context, intents []Intent, checker, mode, submission string, now time.Time) ([]Attempt, error) {
 	tx, err := d.pool.Begin(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("begin OCR intent: %w", err)
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 	q := store.New(tx)
-	attempts := make([]Attempt, 0, len(entries))
-	for _, entry := range entries {
+	attempts := make([]Attempt, 0, len(intents))
+	for _, intent := range intents {
+		entry := intent.Entry
 		id, insertErr := q.InsertOCRCheckAttempt(ctx, store.InsertOCRCheckAttemptParams{OcrTextID: entry.ID, CheckerID: checker, Mode: mode, SubmissionID: submission})
 		if insertErr != nil {
 			return nil, fmt.Errorf("insert OCR intent: %w", insertErr)
 		}
-		attempts = append(attempts, Attempt{ID: id, EntryID: entry.ID, Checker: checker, Mode: mode, SubmissionID: submission, State: "preparing"})
+		usage, encodeErr := json.Marshal(intent.Usage)
+		if encodeErr != nil {
+			return nil, fmt.Errorf("encode OCR reservation: %w", encodeErr)
+		}
+		n, updateErr := q.FinishOCRCheckAttempt(ctx, store.FinishOCRCheckAttemptParams{ID: id, State: "preparing", Usage: usage})
+		if updateErr = changed(n, updateErr); updateErr != nil {
+			return nil, updateErr
+		}
+		attempts = append(attempts, Attempt{ID: id, EntryID: entry.ID, Checker: checker, Mode: mode, SubmissionID: submission, State: "preparing", CreatedAt: now, Usage: intent.Usage})
 	}
 	if err = tx.Commit(ctx); err != nil {
 		return nil, fmt.Errorf("commit OCR intent: %w", err)
@@ -109,7 +134,7 @@ func (d *Database) Uncertain(ctx context.Context, submission string) error {
 	return changed(n, err)
 }
 
-// Abandon releases an uncertain submission after exhaustive reconciliation.
+// Abandon records the operator decision without changing the usage reservation.
 func (d *Database) Abandon(ctx context.Context, submission string) error {
 	n, err := store.New(d.pool).AbandonOCRCheckAttempts(ctx, submission)
 	return changed(n, err)
@@ -126,7 +151,13 @@ func (d *Database) Finish(ctx context.Context, a Attempt, entry store.OcrText, u
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 	state := "failed"
+	if !u.Final && u.ReservationMicroUSD > 0 {
+		state = "uncertain"
+	}
 	if result != nil {
+		if !u.Final {
+			return fmt.Errorf("completed check requires final usage")
+		}
 		data, encodeErr := json.Marshal(result)
 		if encodeErr != nil {
 			return fmt.Errorf("encode OCR result: %w", encodeErr)

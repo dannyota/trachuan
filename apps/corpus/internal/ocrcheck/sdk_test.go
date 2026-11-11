@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -184,5 +185,51 @@ func TestSDK_NoCredentialOrDocumentInErrorsOrLogs(t *testing.T) {
 	}
 	if strings.Contains(err.Error()+logs.String(), secret) || strings.Contains(err.Error()+logs.String(), document) {
 		t.Fatal("sensitive content escaped")
+	}
+}
+
+func TestSDK_DistinguishesFinalUsageFromPartialStream(t *testing.T) {
+	for _, tc := range []struct {
+		name, body string
+		final      bool
+	}{
+		{"complete", streamMessage(true), true},
+		{"final usage before cut", streamMessage(false), true},
+		{"partial usage only", strings.Split(streamMessage(true), "event: message_delta")[0], false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			client := sdkForTest(func(*http.Request) (*http.Response, error) {
+				return sdkResponse(200, "text/event-stream", tc.body), nil
+			})
+			result, _ := client.Direct(context.Background(), Request{Model: "claude-sonnet-5-5", Effort: "medium"})
+			if result.FinalUsage != tc.final {
+				t.Fatalf("final billing=%v want=%v", result.FinalUsage, tc.final)
+			}
+		})
+	}
+}
+
+func TestSDK_ProductionClientNeverRetries(t *testing.T) {
+	t.Setenv("ANTHROPIC_API_KEY", "fake-key-never-log")
+	t.Setenv("ANTHROPIC_AUTH_TOKEN", "")
+	for _, status := range []int{429, 529} {
+		t.Run(fmt.Sprint(status), func(t *testing.T) {
+			client, err := NewSDKClient()
+			if err != nil {
+				t.Fatal(err)
+			}
+			calls := 0
+			transport := transportFunc(func(*http.Request) (*http.Response, error) {
+				calls++
+				response := sdkResponse(status, "application/json", `{"type":"error","error":{"type":"overloaded_error","message":"retryable"}}`)
+				response.Header.Set("Retry-After-Ms", "1")
+				return response, nil
+			})
+			client.client.Messages.Options = append(client.client.Messages.Options, option.WithHTTPClient(&http.Client{Transport: transport}))
+			_, err = client.Direct(context.Background(), Request{Model: "claude-sonnet-5-5", Effort: "medium"})
+			if err == nil || calls != 1 {
+				t.Fatalf("retryable status %d made %d requests", status, calls)
+			}
+		})
 	}
 }

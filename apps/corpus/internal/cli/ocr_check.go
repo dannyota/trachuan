@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"os"
 	"strconv"
 
 	"danny.vn/trachuan/apps/corpus/internal/ocrcheck"
@@ -14,7 +15,7 @@ import (
 func parseCheckOptions(args []string, review bool) (ocrcheck.Options, error) {
 	allowed := map[string]bool{"--model": true, "--effort": true}
 	if !review {
-		for k, v := range map[string]bool{"--limit-docs": true, "--max-usd": true, "--batch": false, "--dry-run": false, "--reconcile": false} {
+		for k, v := range map[string]bool{"--limit-docs": true, "--max-usd": true, "--batch": false, "--dry-run": false, "--reconcile": false, "--abandon": true} {
 			allowed[k] = v
 		}
 	}
@@ -22,7 +23,7 @@ func parseCheckOptions(args []string, review bool) (ocrcheck.Options, error) {
 	if err != nil {
 		return ocrcheck.Options{}, err
 	}
-	o := ocrcheck.Options{Model: "claude-sonnet-5-5", Effort: "medium", Batch: flags["--batch"] != "", DryRun: flags["--dry-run"] != "", Reconcile: flags["--reconcile"] != ""}
+	o := ocrcheck.Options{Abandon: flags["--abandon"], Model: "claude-sonnet-5-5", Effort: "medium", Batch: flags["--batch"] != "", DryRun: flags["--dry-run"] != "", Reconcile: flags["--reconcile"] != ""}
 	if flags["--model"] != "" {
 		o.Model = flags["--model"]
 	}
@@ -53,12 +54,15 @@ func parseCheckOptions(args []string, review bool) (ocrcheck.Options, error) {
 	if o.Reconcile && o.DryRun {
 		return o, fmt.Errorf("--reconcile and --dry-run cannot be combined")
 	}
+	if err = o.Validate(); err != nil {
+		return o, err
+	}
 	return o, nil
 }
 
 func runOCRCheck(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	if len(args) < 2 {
-		_, _ = fmt.Fprintln(stderr, "usage: corpus ocr check <cc> <rel> --max-usd USD [--model MODEL] [--effort EFFORT] [--limit-docs N] [--batch] [--dry-run] [--reconcile]")
+		_, _ = fmt.Fprintln(stderr, "usage: corpus ocr check <cc> <rel> --max-usd USD [--model MODEL] [--effort EFFORT] [--limit-docs N] [--batch] [--dry-run] [--reconcile] [--abandon SUBMISSION_ID]")
 		return 2
 	}
 	o, err := parseCheckOptions(args[2:], false)
@@ -66,32 +70,40 @@ func runOCRCheck(ctx context.Context, args []string, stdout, stderr io.Writer) i
 		_, _ = fmt.Fprintln(stderr, err)
 		return 2
 	}
-	env, err := openCheckRun(ctx, args[0], args[1])
-	if err != nil {
-		_, _ = fmt.Fprintln(stderr, err)
+	root := os.Getenv("CORPUS_OCR_STORE")
+	if root == "" {
+		_, _ = fmt.Fprintln(stderr, "CORPUS_OCR_STORE is required")
 		return 1
 	}
-	defer env.db.Close()
 	if !o.DryRun {
-		unlock, lockErr := lockOCRStore(env.root)
+		unlock, lockErr := lockOCRStore(root)
 		if lockErr != nil {
 			_, _ = fmt.Fprintln(stderr, lockErr)
 			return 1
 		}
 		defer unlock()
 	}
+	env, err := openCheckRun(ctx, args[0], args[1])
+	if err != nil {
+		_, _ = fmt.Fprintln(stderr, err)
+		return 1
+	}
+	defer env.db.Close()
 	var docs []ocrcheck.Document
-	if !o.Reconcile {
+	if !o.Reconcile && o.Abandon == "" {
 		docs, err = env.documents(ctx, o.CheckerID())
 		if err != nil {
 			_, _ = fmt.Fprintln(stderr, err)
 			return 1
 		}
 	}
-	client, err := ocrcheck.NewSDKClient()
-	if err != nil {
-		_, _ = fmt.Fprintln(stderr, err)
-		return 1
+	var client ocrcheck.Client
+	if o.Abandon == "" {
+		client, err = ocrcheck.NewSDKClient()
+		if err != nil {
+			_, _ = fmt.Fprintln(stderr, err)
+			return 1
+		}
 	}
 	runner := ocrcheck.Runner{Client: client, Repository: ocrcheck.NewDatabase(env.db, env.root)}
 	summary, err := runner.Run(ctx, docs, o)

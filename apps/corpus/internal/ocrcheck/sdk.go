@@ -40,26 +40,31 @@ func (s *SDKClient) Direct(ctx context.Context, r Request) (Response, error) {
 	defer func() { _ = stream.Close() }()
 	var message anthropic.Message
 	ended := false
+	finalUsage := false
+	response := func() Response { v := fromMessage(message); v.FinalUsage = finalUsage; return v }
 	for stream.Next() {
 		event := stream.Current()
 		if err := message.Accumulate(event); err != nil {
-			return fromMessage(message), sanitizeSDKError(err)
+			return response(), sanitizeSDKError(err)
+		}
+		if event.Type == "message_delta" && event.Delta.StopReason != "" && event.Usage.JSON.OutputTokens.Valid() {
+			finalUsage = true
 		}
 		if event.Type == "message_stop" {
 			ended = true
 		}
 	}
-	response := fromMessage(message)
+	result := response()
 	if err := stream.Err(); err != nil {
-		return response, sanitizeSDKError(err)
+		return result, sanitizeSDKError(err)
 	}
 	if !ended {
-		return response, &APIError{Reason: "api_error"}
+		return result, &APIError{Reason: "api_error"}
 	}
-	return response, nil
+	return result, nil
 }
 func fromMessage(m anthropic.Message) Response {
-	r := Response{Stop: string(m.StopReason), Usage: Usage{Input: m.Usage.InputTokens, Output: m.Usage.OutputTokens, CacheRead: m.Usage.CacheReadInputTokens, CacheCreation: m.Usage.CacheCreationInputTokens}}
+	r := Response{FinalUsage: m.Usage.JSON.InputTokens.Valid() && m.Usage.JSON.OutputTokens.Valid(), Stop: string(m.StopReason), Usage: Usage{Input: m.Usage.InputTokens, Output: m.Usage.OutputTokens, CacheRead: m.Usage.CacheReadInputTokens, CacheCreation: m.Usage.CacheCreationInputTokens}}
 	for _, c := range m.Content {
 		if c.Type == "text" {
 			r.Text += c.Text

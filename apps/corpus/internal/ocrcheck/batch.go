@@ -24,9 +24,12 @@ func (r *Runner) submit(ctx context.Context, group []prepared, o Options, s *Sum
 	for i, p := range group {
 		docs[i] = p.doc
 	}
-	attempts, err := r.begin(ctx, docs, o)
+	attempts, err := r.begin(ctx, group, o)
 	if err != nil {
 		return err
+	}
+	for _, a := range attempts {
+		s.CostMicroUSD += a.Usage.charge()
 	}
 	requests := make([]Request, len(group))
 	for i, p := range group {
@@ -36,12 +39,13 @@ func (r *Runner) submit(ctx context.Context, group []prepared, o Options, s *Sum
 	batch, err := r.Client.CreateBatch(ctx, requests)
 	if err != nil {
 		var apiErr *APIError
-		if errors.As(safeError(err), &apiErr) && apiErr.Status >= 400 && apiErr.Status < 500 && apiErr.Status != 408 {
+		if errors.As(safeError(err), &apiErr) && apiErr.Status >= 400 && apiErr.Status < 500 && apiErr.Status != 408 && apiErr.RequestID != "" {
 			for i, a := range attempts {
-				u := Usage{APIStatus: apiErr.Status, RequestID: apiErr.RequestID}
+				u := Usage{Final: true, APIStatus: apiErr.Status, RequestID: apiErr.RequestID}.withReservation(a.Usage)
 				if finishErr := r.Repository.Finish(ctx, a, docs[i].Entry, u, nil, "api_error"); finishErr != nil {
 					return fmt.Errorf("record rejected OCR batch: %w", finishErr)
 				}
+				s.CostMicroUSD -= a.Usage.charge()
 				s.Failed++
 			}
 			return apiErr
@@ -80,6 +84,9 @@ func (r *Runner) resume(ctx context.Context, docs []Document, o Options, s *Summ
 			}
 			attempts[i].State = "uncertain"
 		}
+	}
+	if o.Abandon != "" {
+		return false, r.abandon(ctx, attempts, o.Abandon, s)
 	}
 	if o.Reconcile {
 		return false, r.reconcile(ctx, attempts, s)
@@ -147,21 +154,26 @@ func (r *Runner) resume(ctx context.Context, docs []Document, o Options, s *Summ
 				case "canceled":
 					reason = "canceled"
 				}
-				if err = r.Repository.Finish(ctx, a, doc.Entry, result.Response.Usage, nil, reason); err != nil {
+				if err = r.Repository.Finish(ctx, a, doc.Entry, Usage{Final: true, RequestID: result.Response.Usage.RequestID}.withReservation(a.Usage), nil, reason); err != nil {
 					return true, fmt.Errorf("finish OCR batch failure: %w", err)
 				}
+				s.CostMicroUSD -= a.Usage.charge()
 				s.Failed++
 				continue
+			}
+			if !result.Response.FinalUsage {
+				return true, r.unknown(ctx, a, doc, result.Response, nil, o, s)
 			}
 			p, reason := r.prepare(ctx, doc, o)
 			if reason != "" {
 				price, _ := modelPrice(o.Model, true)
-				u := result.Response.Usage
+				u := result.Response.Usage.withReservation(a.Usage)
+				u.Final = true
 				u.CostMicroUSD = price.cost(u)
 				if err = r.Repository.Finish(ctx, a, doc.Entry, u, nil, reason); err != nil {
 					return true, fmt.Errorf("finish OCR batch validation: %w", err)
 				}
-				s.CostMicroUSD += u.CostMicroUSD
+				s.CostMicroUSD += u.charge() - a.Usage.charge()
 				s.Failed++
 				if priceErr := u.priceError(); priceErr != nil {
 					return true, priceErr
@@ -174,63 +186,4 @@ func (r *Runner) resume(ctx context.Context, docs []Document, o Options, s *Summ
 		}
 	}
 	return pending, nil
-}
-
-func (r *Runner) reconcile(ctx context.Context, attempts []Attempt, s *Summary) error {
-	groups := map[string][]Attempt{}
-	for _, a := range attempts {
-		if a.State == "uncertain" {
-			groups[a.SubmissionID] = append(groups[a.SubmissionID], a)
-		}
-	}
-	for submission, group := range groups {
-		first := group[0]
-		if first.Mode != "batch" {
-			return fmt.Errorf("uncertain direct OCR submission %s needs operator resolution; provider batch reconciliation cannot prove its spend", submission)
-		}
-		batches, err := r.Client.ListBatches(ctx, first.CreatedAt.Add(-time.Minute), first.CreatedAt.Add(10*time.Minute))
-		if err != nil {
-			return safeError(err)
-		}
-		found := ""
-		pending := false
-		for _, batch := range batches {
-			if !batch.Ended {
-				pending = true
-				continue
-			}
-			results, resultErr := r.Client.BatchResults(ctx, batch.ID)
-			if resultErr != nil {
-				return safeError(resultErr)
-			}
-			match := false
-			for _, v := range results {
-				if strings.HasPrefix(v.CustomID, submission+"-") {
-					match = true
-				}
-			}
-			if match {
-				if found != "" && found != batch.ID {
-					return fmt.Errorf("multiple provider batches match OCR submission %s", submission)
-				}
-				found = batch.ID
-			}
-		}
-		if found != "" {
-			if err = r.Repository.Submitted(ctx, submission, found); err != nil {
-				return fmt.Errorf("reconcile OCR batch: %w", err)
-			}
-			s.Attached += len(group)
-			continue
-		}
-		if !pending && r.Now().Sub(first.CreatedAt) >= 24*time.Hour {
-			if err = r.Repository.Abandon(ctx, submission); err != nil {
-				return fmt.Errorf("abandon OCR submission: %w", err)
-			}
-			s.Abandoned += len(group)
-		} else {
-			s.Pending += len(group)
-		}
-	}
-	return nil
 }

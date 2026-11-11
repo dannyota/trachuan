@@ -8,13 +8,17 @@ const maxOutputTokens int64 = 32000
 // No caching is requested. Unexpected cache usage blocks further work because
 // the verified price table covers uncached requests only.
 type Usage struct {
-	APIStatus     int    `json:"api_status,omitempty"`
-	RequestID     string `json:"request_id,omitempty"`
-	Input         int64  `json:"input_tokens"`
-	Output        int64  `json:"output_tokens"`
-	CacheRead     int64  `json:"cache_read_input_tokens"`
-	CacheCreation int64  `json:"cache_creation_input_tokens"`
-	CostMicroUSD  int64  `json:"cost_micro_usd"`
+	Final               bool   `json:"final_usage"`
+	CountedInput        int64  `json:"counted_input_tokens,omitempty"`
+	MaxOutput           int64  `json:"max_output_tokens,omitempty"`
+	ReservationMicroUSD int64  `json:"reservation_micro_usd,omitempty"`
+	APIStatus           int    `json:"api_status,omitempty"`
+	RequestID           string `json:"request_id,omitempty"`
+	Input               int64  `json:"input_tokens"`
+	Output              int64  `json:"output_tokens"`
+	CacheRead           int64  `json:"cache_read_input_tokens"`
+	CacheCreation       int64  `json:"cache_creation_input_tokens"`
+	CostMicroUSD        int64  `json:"cost_micro_usd"`
 }
 
 type price struct{ input, output int64 }
@@ -48,4 +52,17 @@ func (u Usage) priceError() error {
 		return fmt.Errorf("unexpected cache usage: charge is incomplete; verify cache prices before further OCR work")
 	}
 	return nil
+}
+
+func (u Usage) charge() int64 {
+	if !u.Final && u.ReservationMicroUSD > u.CostMicroUSD {
+		return u.ReservationMicroUSD
+	}
+	return u.CostMicroUSD
+}
+func (u Usage) withReservation(intent Usage) Usage {
+	u.CountedInput = intent.CountedInput
+	u.MaxOutput = intent.MaxOutput
+	u.ReservationMicroUSD = intent.ReservationMicroUSD
+	return u
 }

@@ -13,9 +13,11 @@ type Request struct {
 	PDF, Text               []byte
 }
 
-// Response contains the checker output and billed usage, including on failure.
+// Response contains the checker output and usage, including on failure.
+// FinalUsage is true only after authoritative final token totals arrive.
 type Response struct {
 	Stop, Text string
+	FinalUsage bool
 	Usage      Usage
 }
 
