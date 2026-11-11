@@ -162,7 +162,7 @@ func TestDatabaseRows_ClassifiedAndSanitized(t *testing.T) {
 					return err
 				},
 				"number": func(tx pgx.Tx) error {
-					_, _, _, _, err := (&Engine{}).readDocument(context.Background(), tx, ReadItem{Number: "1/2099/QH1"})
+					_, _, _, _, _, err := (&Engine{}).readDocument(context.Background(), tx, ReadItem{Number: "1/2099/QH1"})
 					return err
 				},
 			} {

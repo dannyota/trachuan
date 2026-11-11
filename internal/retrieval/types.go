@@ -49,8 +49,10 @@ type Prepared struct {
 
 // Options supplies the clock and execution profile.
 type Options struct {
-	Now     func() time.Time
-	Profile Profile
+	Now       func() time.Time
+	Profile   Profile
+	Documents DocumentCache
+	Sequences SequenceCache
 }
 
 // Depths specifies the candidate count per arm.

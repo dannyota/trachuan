@@ -18,6 +18,19 @@ type searchInput struct {
 }
 
 func (cfg Config) search(ctx context.Context, in searchInput) (retrieval.SearchResult, error) {
+	req, detail, validation, err := prepareSearch(in)
+	if err != nil {
+		return retrieval.SearchResult{}, err
+	}
+	engine, rel, done, err := cfg.resolve(ctx, in.Country, in.Release)
+	if err != nil {
+		return retrieval.SearchResult{}, err
+	}
+	defer done()
+	return searchResolved(ctx, engine, rel, req, detail, validation)
+}
+
+func prepareSearch(in searchInput) (retrieval.Request, retrieval.Detail, retrieval.Validation, error) {
 	detail := in.Detail
 	if detail == "" {
 		detail = retrieval.DetailCompact
@@ -29,19 +42,18 @@ func (cfg Config) search(ctx context.Context, in searchInput) (retrieval.SearchR
 	if in.AsOf != "" {
 		date, err := time.Parse(time.DateOnly, in.AsOf)
 		if err != nil || date.Year() < 1 {
-			return retrieval.SearchResult{}, invalidRequest{}
+			return retrieval.Request{}, "", retrieval.Validation{}, invalidRequest{}
 		}
 		req.AsOf = &retrieval.Date{Year: date.Year(), Month: date.Month(), Day: date.Day()}
 	}
 	validation, err := retrieval.ValidateQuery(in.Query)
 	if err != nil {
-		return retrieval.SearchResult{}, invalidRequest{}
+		return retrieval.Request{}, "", retrieval.Validation{}, invalidRequest{}
 	}
-	engine, rel, done, err := cfg.resolve(ctx, in.Country, in.Release)
-	if err != nil {
-		return retrieval.SearchResult{}, err
-	}
-	defer done()
+	return req, detail, validation, nil
+}
+
+func searchResolved(ctx context.Context, engine Engine, rel string, req retrieval.Request, detail retrieval.Detail, validation retrieval.Validation) (retrieval.SearchResult, error) {
 	if !validation.Accepted {
 		return retrieval.SearchResult{Release: rel, Abstain: true, Reason: validation.Reason, Message: validation.Message}, nil
 	}

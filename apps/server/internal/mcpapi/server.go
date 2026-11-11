@@ -46,6 +46,7 @@ type Config struct {
 	Limiter  Limiter
 	Logger   *slog.Logger
 	Clock    func() time.Time
+	Caches   *Caches
 }
 
 // New constructs a stateless JSON Streamable HTTP endpoint behind credential.Middleware.
@@ -141,6 +142,17 @@ func register[In, Out any](s *mcp.Server, cfg Config, name, description string, 
 		var in In
 		if json.Unmarshal(raw, &in) != nil {
 			return fail("invalid_request", "invalid_request")
+		}
+		if name == "search" && cfg.Caches != nil {
+			result, data, err := cfg.cachedSearch(ctx, any(in).(searchInput), func(v any) error { return outputResolved.Validate(v) })
+			if err != nil {
+				c, message := errorMessage(err)
+				return fail(c, message)
+			}
+			if outputResolved.Validate(data) != nil {
+				return fail("unavailable", "Service unavailable.")
+			}
+			return result, nil
 		}
 		out, err := run(ctx, in)
 		if err != nil {

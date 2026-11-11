@@ -8,32 +8,32 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-func (e *Engine) readDocument(ctx context.Context, tx pgx.Tx, item ReadItem) (int64, string, DocumentEntry, string, error) {
+func (e *Engine) readDocument(ctx context.Context, tx pgx.Tx, item ReadItem) (int64, string, DocumentEntry, Document, string, error) {
 	key, _, _ := ParseHandle(item.Handle)
 	if item.Number != "" {
 		rows, err := tx.Query(ctx, `SELECT key FROM document WHERE number_norm=$1 ORDER BY key LIMIT 2`, NormalizeNumber(item.Number))
 		if err != nil {
-			return 0, "", DocumentEntry{}, "", databaseFailure("query read number", err)
+			return 0, "", DocumentEntry{}, Document{}, "", databaseFailure("query read number", err)
 		}
 		var keys []string
 		for rows.Next() {
 			var k string
 			if err = rows.Scan(&k); err != nil {
 				rows.Close()
-				return 0, "", DocumentEntry{}, "", databaseFailure("scan read number", err)
+				return 0, "", DocumentEntry{}, Document{}, "", databaseFailure("scan read number", err)
 			}
 			keys = append(keys, k)
 		}
 		err = rows.Err()
 		rows.Close()
 		if err != nil {
-			return 0, "", DocumentEntry{}, "", databaseFailure("read number", err)
+			return 0, "", DocumentEntry{}, Document{}, "", databaseFailure("read number", err)
 		}
 		if len(keys) == 0 {
-			return 0, "", DocumentEntry{}, "not_found", nil
+			return 0, "", DocumentEntry{}, Document{}, "not_found", nil
 		}
 		if len(keys) > 1 {
-			return 0, "", DocumentEntry{}, "ambiguous_number", nil
+			return 0, "", DocumentEntry{}, Document{}, "ambiguous_number", nil
 		}
 		key = keys[0]
 	}
@@ -43,26 +43,23 @@ func (e *Engine) readDocument(ctx context.Context, tx pgx.Tx, item ReadItem) (in
 	var source Document
 	err := tx.QueryRow(ctx, `SELECT id,number,title,doc_type,issuer,issue_date,eff_from,eff_to,COALESCE(source_url,''),status_class,status_basis,is_current,validity_conflict FROM document WHERE key=$1`, key).Scan(&id, &doc.Number, &doc.Title, &doc.Type, &doc.Issuer, &issued, &from, &to, &doc.SourceURL, &source.StatusClass, &source.StatusBasis, &source.IsCurrent, &source.ValidityConflict)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return 0, key, doc, "not_found", nil
+		return 0, key, doc, Document{}, "not_found", nil
 	}
 	if err != nil {
-		return 0, key, doc, "", databaseFailure("query read document", err)
+		return 0, key, doc, Document{}, "", databaseFailure("query read document", err)
 	}
 	doc.Issued, doc.EffectiveFrom, doc.EffectiveTo = dateValue(issued), dateValue(from), dateValue(to)
 	source.EffectiveFrom, source.EffectiveTo = from, to
-	now := e.options.Now().In(time.FixedZone("Vietnam", 7*60*60))
-	validity, _ := stamp(source, Arms{Date: Date{Year: now.Year(), Month: now.Month(), Day: now.Day()}})
-	doc.Status = Status{Class: validity.StatusClass, Basis: validity.Basis, StatusBasis: validity.StatusBasis, Current: validity.Current}
 	rows, err := tx.Query(ctx, documentCountsSQL, []string{key})
 	if err != nil {
-		return 0, key, doc, "", databaseFailure("query read relation counts", err)
+		return 0, key, doc, Document{}, "", databaseFailure("query read relation counts", err)
 	}
 	for rows.Next() {
 		var docKey, dir, kind string
 		var count int
 		if err = rows.Scan(&docKey, &dir, &kind, &count); err != nil {
 			rows.Close()
-			return 0, key, doc, "", databaseFailure("scan read relation count", err)
+			return 0, key, doc, Document{}, "", databaseFailure("scan read relation count", err)
 		}
 		if doc.RelatedCounts == nil {
 			doc.RelatedCounts = make(map[string]int)
@@ -72,27 +69,27 @@ func (e *Engine) readDocument(ctx context.Context, tx pgx.Tx, item ReadItem) (in
 	err = rows.Err()
 	rows.Close()
 	if err != nil {
-		return 0, key, doc, "", databaseFailure("read relation counts", err)
+		return 0, key, doc, Document{}, "", databaseFailure("read relation counts", err)
 	}
 	rows, err = tx.Query(ctx, documentPointersSQL, []string{key}, pointerKinds(), PointersPerDocument)
 	if err != nil {
-		return 0, key, doc, "", databaseFailure("query read pointers", err)
+		return 0, key, doc, Document{}, "", databaseFailure("query read pointers", err)
 	}
 	for rows.Next() {
 		var docKey string
 		var p Pointer
 		if err = rows.Scan(&docKey, &p.Dir, &p.Kind, &p.Key, &p.Number, &p.InRelease); err != nil {
 			rows.Close()
-			return 0, key, doc, "", databaseFailure("scan read pointer", err)
+			return 0, key, doc, Document{}, "", databaseFailure("scan read pointer", err)
 		}
 		doc.Related = append(doc.Related, p)
 	}
 	err = rows.Err()
 	rows.Close()
 	if err != nil {
-		return 0, key, doc, "", databaseFailure("read pointers", err)
+		return 0, key, doc, Document{}, "", databaseFailure("read pointers", err)
 	}
-	return id, key, doc, "", nil
+	return id, key, doc, source, "", nil
 }
 
 func readNodes(ctx context.Context, tx pgx.Tx, id int64, key string) ([]Provision, error) {

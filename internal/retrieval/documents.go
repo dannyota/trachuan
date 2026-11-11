@@ -32,8 +32,7 @@ type DocumentEntry struct {
 	RelatedCounts map[string]int `json:"related_counts,omitempty"`
 }
 
-// Documents loads metadata and relation pointers for known document keys.
-func (e *Engine) Documents(ctx context.Context, keys []string) (map[string]DocumentEntry, error) {
+func (e *Engine) loadDocuments(ctx context.Context, keys []string) (map[string]DocumentEntry, error) {
 	ctx, cancel := context.WithTimeout(ctx, e.deadline())
 	defer cancel()
 	tx, err := e.db.BeginTx(ctx, pgx.TxOptions{AccessMode: pgx.ReadOnly, IsoLevel: pgx.RepeatableRead})
