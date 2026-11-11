@@ -93,6 +93,41 @@ type Listing struct {
 	Payload  json.RawMessage
 }
 
+type OcrCheck struct {
+	ID           int64
+	OcrTextID    int64
+	CheckerID    string
+	ResultSha256 string
+	Result       json.RawMessage
+	Flagged      int32
+	CreatedAt    time.Time
+}
+
+type OcrCheckAttempt struct {
+	ID           int64
+	OcrTextID    int64
+	CheckerID    string
+	Mode         string
+	SubmissionID string
+	BatchID      *string
+	State        string
+	Reason       string
+	Usage        json.RawMessage
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+}
+
+type OcrText struct {
+	ID         int64
+	PdfSha256  string
+	EngineID   string
+	TextSha256 string
+	Bytes      int64
+	Origin     string
+	Pages      pgtype.Int4
+	CreatedAt  time.Time
+}
+
 type Provision struct {
 	ArtifactID   int64
 	NodeID       string
@@ -202,6 +237,15 @@ type RunMembershipEvidence struct {
 	ArtifactHash   string
 	EvidencePath   string
 	SupportState   string
+}
+
+type RunOcrSelection struct {
+	RunID      int64
+	ItemKey    string
+	Gap        string
+	PdfSha256  *string
+	OcrTextID  *int64
+	OcrCheckID *int64
 }
 
 type RunScope struct {

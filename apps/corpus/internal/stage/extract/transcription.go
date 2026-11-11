@@ -9,20 +9,29 @@ import (
 )
 
 type textRecord struct {
-	TextSource string                `json:"text_source"`
-	FileName   string                `json:"file_name"`
-	SHA256     string                `json:"sha256"`
-	Paragraphs []textparse.Paragraph `json:"paragraphs"`
-	Scopes     []textparse.Scope     `json:"scopes"`
-	Counts     textparse.Counts      `json:"counts"`
-	Provisions []textparse.Provision `json:"provisions"`
+	TextSource   string                `json:"text_source"`
+	Gap          string                `json:"gap,omitempty"`
+	FileName     string                `json:"file_name"`
+	SHA256       string                `json:"sha256"`
+	Paragraphs   []textparse.Paragraph `json:"paragraphs"`
+	Scopes       []textparse.Scope     `json:"scopes"`
+	Counts       textparse.Counts      `json:"counts"`
+	Provisions   []textparse.Provision `json:"provisions"`
+	EngineID     string                `json:"engine_id,omitempty"`
+	TextSHA256   string                `json:"text_sha256,omitempty"`
+	CheckerID    string                `json:"checker_id,omitempty"`
+	ResultSHA256 string                `json:"result_sha256,omitempty"`
+	Flagged      *int32                `json:"flagged,omitempty"`
 }
 
 func parseTranscription(data []byte, name, hash string) ([]provision, []stage.Gap, *textRecord) {
+	paragraphs, err := textparse.ParagraphsFromHTML(data)
+	return parseParagraphs(paragraphs, err, &textRecord{TextSource: "html_transcription", FileName: name, SHA256: hash, Paragraphs: paragraphs})
+}
+
+func parseParagraphs(paragraphs []textparse.Paragraph, err error, record *textRecord) ([]provision, []stage.Gap, *textRecord) {
 	rows := []provision{}
 	gaps := []stage.Gap{}
-	paragraphs, err := textparse.ParagraphsFromHTML(data)
-	record := &textRecord{TextSource: "html_transcription", FileName: name, SHA256: hash, Paragraphs: paragraphs}
 	if err != nil {
 		var limit *textparse.LimitError
 		if errors.As(err, &limit) {

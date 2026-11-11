@@ -127,7 +127,9 @@ func TestExtract_Lineage(t *testing.T) {
 	}{
 		{"legacy tree", "", fetchHash, true}, {"missing non-tree record", "", InputHash(fetchHash, "none"), false},
 		{"html", `{"text_source":"html_transcription"}`, InputHash(fetchHash, "html_transcription"), true},
-		{"none", `{"text_source":"none"}`, InputHash(fetchHash, "none"), true},
+		{"none", `{"text_source":"none","gap":"needs_ocr"}`, InputHash(fetchHash, "none", "needs_ocr"), true},
+		{"missing gap", `{"text_source":"none"}`, InputHash(fetchHash, "none"), false},
+		{"wrong gap", `{"text_source":"none","gap":"no_text_source"}`, InputHash(fetchHash, "none", "needs_ocr"), false},
 		{"mismatch", `{"text_source":"html_transcription"}`, fetchHash, false},
 		{"invalid", `{"text_source":"unexpected"}`, fetchHash, false},
 		{"malformed", `{`, fetchHash, false},
@@ -144,5 +146,25 @@ func TestExtract_Lineage(t *testing.T) {
 				t.Fatalf("error=%v", err)
 			}
 		})
+	}
+}
+
+func TestExtract_AbsentLineageBindsGap(t *testing.T) {
+	fetchHash := strings.Repeat("a", 64)
+	gaps := []string{"needs_ocr", "text_source_ambiguous", "file_format_unsupported", "no_text_source", "ocr_rejected"}
+	seen := map[string]bool{}
+	for _, gap := range gaps {
+		hash := InputHash(fetchHash, "none", gap)
+		if seen[hash] {
+			t.Fatal("different gaps shared an input hash")
+		}
+		seen[hash] = true
+		dir := t.TempDir()
+		if err := os.WriteFile(filepath.Join(dir, "text.json"), []byte(`{"text_source":"none","gap":"`+gap+`"}`), 0600); err != nil {
+			t.Fatal(err)
+		}
+		if err := fetch.CheckExtractLineage(dir, fetchHash, hash); err != nil {
+			t.Fatalf("gap %s: %v", gap, err)
+		}
 	}
 }

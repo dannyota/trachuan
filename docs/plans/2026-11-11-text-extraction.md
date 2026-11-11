@@ -50,8 +50,8 @@
 
 **Files:** primary: migration and SQL for `ocr_text` (PDF SHA-256, engine id, text hash, text path, origin, pages) and `ocr_check` (entry, checker id, result hash, state, flagged items); new `apps/corpus/internal/ocrstore/`; CLI `corpus ocr import-banhmi <dir>` (reads `<dir>/ocr/<sha256>.txt`, verifies the PDF hash exists in the run's fetch artifacts, never overwrites); extract's OCR source reads the store.
 
-- [ ] Tests first: `TestStore_EntriesImmutable`, `TestImport_OnlyMatchingHashes`, `TestExtract_OCRNeedsCompletedCheck`, `TestExtract_SinglePDFSelection`, `TestExtract_AmbiguousPDFsGap`.
-- [ ] Implement; commit `feat(corpus): OCR store and import of existing Google Vision output`.
+- [x] Tests first: `TestStore_EntriesImmutable`, `TestImport_OnlyMatchingHashes`, `TestExtract_OCRNeedsCompletedCheck`, `TestExtract_SinglePDFSelection`, `TestExtract_AmbiguousPDFsGap`.
+- [x] Implement; commit `feat(corpus): OCR store and import of existing Google Vision output`.
 
 ### Task 6: Cross-check and fresh OCR clients (hard route)
 

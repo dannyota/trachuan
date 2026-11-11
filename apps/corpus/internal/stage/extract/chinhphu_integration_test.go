@@ -47,7 +47,7 @@ func TestExtract_ChinhphuNoTree(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	out, err := New().Process(ctx, stage.Env{DB: db, Artifacts: artifacts}, stage.Run{ID: runID}, stage.Item{Key: "vn:chinhphu:1", InputHash: InputHash(art.SHA256, "none")})
+	out, err := New().Process(ctx, stage.Env{DB: db, Artifacts: artifacts}, stage.Run{ID: runID}, stage.Item{Key: "vn:chinhphu:1", InputHash: InputHash(art.SHA256, "none", "no_text_source")})
 	if err != nil {
 		t.Fatal(err)
 	}

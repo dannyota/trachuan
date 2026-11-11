@@ -87,7 +87,7 @@ func (q *Queries) GetBatchRunState(ctx context.Context, id int64) (string, error
 }
 
 const getControlRunForUpdate = `-- name: GetControlRunForUpdate :one
-SELECT id, country, rel, generation, state, next_stage, until_stage, workflow_id, snapshot, message, created_at, updated_at FROM run WHERE id = $1 FOR UPDATE
+SELECT id, country, rel, generation, state, next_stage, until_stage, workflow_id, snapshot, message, created_at, updated_at FROM run WHERE id = $1 FOR NO KEY UPDATE
 `
 
 func (q *Queries) GetControlRunForUpdate(ctx context.Context, id int64) (Run, error) {

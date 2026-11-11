@@ -21,6 +21,7 @@ func readTextMetadata(dir string) (string, map[string]string, error) {
 		Provisions []struct {
 			NodeID                   string
 			StartOrdinal, EndOrdinal int
+			StartLine, EndLine       int
 		} `json:"provisions"`
 	}
 	if err = json.Unmarshal(b, &r); err != nil {
@@ -28,7 +29,11 @@ func readTextMetadata(dir string) (string, map[string]string, error) {
 	}
 	locators := make(map[string]string, len(r.Provisions))
 	for _, p := range r.Provisions {
-		locators[p.NodeID] = fmt.Sprintf("block:%d-%d", p.StartOrdinal, p.EndOrdinal)
+		if r.TextSource == "ocr" {
+			locators[p.NodeID] = fmt.Sprintf("line:%d-%d", p.StartLine, p.EndLine)
+		} else {
+			locators[p.NodeID] = fmt.Sprintf("block:%d-%d", p.StartOrdinal, p.EndOrdinal)
+		}
 	}
 	return r.TextSource, locators, nil
 }
@@ -41,7 +46,7 @@ func textComplete(n int, key string, gaps []InventoryGap) bool {
 			continue
 		}
 		switch g.Kind {
-		case "tree_headings_only", "structure_uncertain", "table_text", "image_content", "ocr_flagged", "needs_ocr", "text_limit", "no_text":
+		case "tree_headings_only", "structure_uncertain", "table_text", "image_content", "ocr_flagged", "ocr_rejected", "needs_ocr", "text_limit", "no_text":
 			return false
 		}
 	}

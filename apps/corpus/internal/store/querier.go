@@ -10,6 +10,7 @@ import (
 )
 
 type Querier interface {
+	AbandonOCRCheckAttempts(ctx context.Context, submissionID string) (int64, error)
 	AcceptRunGaps(ctx context.Context, arg AcceptRunGapsParams) (int64, error)
 	AdvanceRunStage(ctx context.Context, arg AdvanceRunStageParams) error
 	ArtifactPathReferenced(ctx context.Context, arg ArtifactPathReferencedParams) (bool, error)
@@ -33,6 +34,7 @@ type Querier interface {
 	DeleteUnsupportedRunDocuments(ctx context.Context, runID int64) (int64, error)
 	EnsureRunScope(ctx context.Context, runID int64) error
 	EnsureRunSource(ctx context.Context, arg EnsureRunSourceParams) error
+	FinishOCRCheckAttempt(ctx context.Context, arg FinishOCRCheckAttemptParams) (int64, error)
 	GetArtifactID(ctx context.Context, arg GetArtifactIDParams) (int64, error)
 	GetBatchRun(ctx context.Context, id int64) (Run, error)
 	GetBatchRunState(ctx context.Context, id int64) (string, error)
@@ -45,12 +47,15 @@ type Querier interface {
 	GetEmbedInput(ctx context.Context, arg GetEmbedInputParams) (GetEmbedInputRow, error)
 	GetExtractArtifactByHash(ctx context.Context, arg GetExtractArtifactByHashParams) (int64, error)
 	GetExtractInput(ctx context.Context, arg GetExtractInputParams) (GetExtractInputRow, error)
+	GetOCRCheck(ctx context.Context, arg GetOCRCheckParams) (OcrCheck, error)
+	GetOCRText(ctx context.Context, arg GetOCRTextParams) (OcrText, error)
 	GetRun(ctx context.Context, arg GetRunParams) (Run, error)
 	GetRunForUpdate(ctx context.Context, arg GetRunForUpdateParams) (Run, error)
 	GetRunGeneration(ctx context.Context, id int64) (int32, error)
 	GetRunGenerationForShare(ctx context.Context, id int64) (int32, error)
 	GetRunItemArtifact(ctx context.Context, arg GetRunItemArtifactParams) (GetRunItemArtifactRow, error)
 	GetRunItemCommitted(ctx context.Context, arg GetRunItemCommittedParams) (GetRunItemCommittedRow, error)
+	GetRunOCRSelection(ctx context.Context, arg GetRunOCRSelectionParams) (GetRunOCRSelectionRow, error)
 	GetRunScope(ctx context.Context, runID int64) (RunScope, error)
 	GetRunSourceForShare(ctx context.Context, arg GetRunSourceForShareParams) (RunSource, error)
 	GetRunSourceForUpdate(ctx context.Context, arg GetRunSourceForUpdateParams) (RunSource, error)
@@ -61,11 +66,15 @@ type Querier interface {
 	InsertFetchedFile(ctx context.Context, arg InsertFetchedFileParams) error
 	InsertGap(ctx context.Context, arg InsertGapParams) error
 	InsertMembershipEvidence(ctx context.Context, arg InsertMembershipEvidenceParams) error
+	InsertOCRCheck(ctx context.Context, arg InsertOCRCheckParams) (int64, error)
+	InsertOCRCheckAttempt(ctx context.Context, arg InsertOCRCheckAttemptParams) (int64, error)
+	InsertOCRText(ctx context.Context, arg InsertOCRTextParams) (int64, error)
 	InsertPlannedItem(ctx context.Context, arg InsertPlannedItemParams) error
 	InsertProvision(ctx context.Context, arg InsertProvisionParams) error
 	InsertRelation(ctx context.Context, arg InsertRelationParams) error
 	InsertRunFailure(ctx context.Context, arg InsertRunFailureParams) error
 	InsertRunItem(ctx context.Context, arg InsertRunItemParams) error
+	InsertRunOCRSelection(ctx context.Context, arg InsertRunOCRSelectionParams) error
 	InsertRunSourceEvent(ctx context.Context, arg InsertRunSourceEventParams) error
 	ListAcceptedRemovalGaps(ctx context.Context, runID int64) ([]ListAcceptedRemovalGapsRow, error)
 	ListBlockingRunFailureCodes(ctx context.Context, arg ListBlockingRunFailureCodesParams) ([]string, error)
@@ -81,6 +90,9 @@ type Querier interface {
 	ListLegacyExpectedKeys(ctx context.Context, runID int64) ([]string, error)
 	ListLegacyListingSupports(ctx context.Context, runID int64) ([]ListLegacyListingSupportsRow, error)
 	ListMembershipEvidence(ctx context.Context, runID int64) ([]RunMembershipEvidence, error)
+	ListOCRChecks(ctx context.Context, arg ListOCRChecksParams) ([]ListOCRChecksRow, error)
+	ListOCRTextByPDF(ctx context.Context, pdfSha256s []string) ([]OcrText, error)
+	ListOpenOCRCheckAttempts(ctx context.Context, checkerID string) ([]OcrCheckAttempt, error)
 	ListPendingBatchItems(ctx context.Context, arg ListPendingBatchItemsParams) ([]RunItem, error)
 	ListPendingStageBatches(ctx context.Context, arg ListPendingStageBatchesParams) ([]int32, error)
 	ListReleaseBlockingFailureCodes(ctx context.Context, arg ListReleaseBlockingFailureCodesParams) ([]string, error)
@@ -90,10 +102,13 @@ type Querier interface {
 	ListRunGapsByRun(ctx context.Context, runID int64) ([]Gap, error)
 	ListRunItemCounts(ctx context.Context, runID int64) ([]ListRunItemCountsRow, error)
 	ListRunListings(ctx context.Context, runID int64) ([]ListRunListingsRow, error)
+	ListRunOCRSelections(ctx context.Context, runID int64) ([]ListRunOCRSelectionsRow, error)
 	ListRunSources(ctx context.Context, runID int64) ([]RunSource, error)
 	ListSeedObservations(ctx context.Context, runID int64) ([]RunSeedObservation, error)
 	ListStageItemArtifacts(ctx context.Context, arg ListStageItemArtifactsParams) ([]ListStageItemArtifactsRow, error)
 	ListUnacceptedGapCounts(ctx context.Context, runID int64) ([]ListUnacceptedGapCountsRow, error)
+	MarkOCRCheckAttemptsSubmitted(ctx context.Context, arg MarkOCRCheckAttemptsSubmittedParams) (int64, error)
+	MarkOCRCheckAttemptsUncertain(ctx context.Context, arg MarkOCRCheckAttemptsUncertainParams) (int64, error)
 	MarkRunFromStates(ctx context.Context, arg MarkRunFromStatesParams) (int64, error)
 	PauseRunSource(ctx context.Context, arg PauseRunSourceParams) (int64, error)
 	PublishExpanded(ctx context.Context, arg PublishExpandedParams) (int64, error)
@@ -109,6 +124,7 @@ type Querier interface {
 	SetRunMessage(ctx context.Context, arg SetRunMessageParams) error
 	SetRunState(ctx context.Context, arg SetRunStateParams) error
 	StartRun(ctx context.Context, arg StartRunParams) error
+	SumOCRCheckUsage(ctx context.Context, checkerID string) ([]json.RawMessage, error)
 	UpdateRunItemFenced(ctx context.Context, arg UpdateRunItemFencedParams) (int64, error)
 	UpsertListing(ctx context.Context, arg UpsertListingParams) error
 	UpsertRunDocument(ctx context.Context, arg UpsertRunDocumentParams) error
