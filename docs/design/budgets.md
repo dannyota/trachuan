@@ -77,13 +77,15 @@ release manifest.
 ## Host memory (estimates)
 
 For the [host selected in ADR 0006](../adr/0006-single-host-oci-podman.md), the
-rows total 5,450 MB, leaving about 18 GB for the OS, page cache and margin; this
-is not measured peak use. The owner accepted the embedder row (ADR 0009, 0011).
+rows total 8,950 MB (estimates, not measured peak use), leaving about 14 GB for
+the OS, page cache and margin. PostgreSQL uses `shared_buffers` 4 GiB and
+`effective_cache_size` 16 GiB so the active corpus (2.9 GB for vn/20261110_4)
+stays in memory. The owner accepted the embedder row (ADR 0009, 0011).
 
 | Process                                        | RSS MB |
 | ---------------------------------------------- | ------ |
 | embedder (ONNX INT8, Vietnamese_Embedding_v2)  | 2,000  |
-| postgres                                       | 1,000  |
+| postgres, shared_buffers 4 GiB                 | 4,500  |
 | web (Node)                                     | 250    |
 | server (Go)                                    | 150    |
 | caddy                                          | 50     |
@@ -92,19 +94,16 @@ is not measured peak use. The owner accepted the embedder row (ADR 0009, 0011).
 Activation refuses to start below 2.5 GB free memory or 10 GB free disk.
 
 Acceptance gates before the first public release, each measured on the host:
-search p95 at most 1 s and p99 at most 2 s at 2 requests per second for 30
-minutes; embedder RSS at most 2.0 GB after a 30-minute soak (Go service: 1.7 GB
-on the Mac); activation peak memory within the headroom row; disk under 70%
-after activation with two retained releases.
+search p95 at most 1 s and p99 at most 2 s at 2 requests per second for 5
+minutes; embedder RSS at most 2.0 GB after a 5-minute stress at full admission
+(Go service: 1.7 GB on the Mac); activation peak memory within the headroom row;
+disk under 70% after activation with the previous release kept for rollback.
 
-Owner-supplied host measurements from 2026-11-09, across three runs with
-four-thread FP32: short-query p50 207–267 ms; long 217-token query p50 1.2–1.7
-s. These are direct ONNX Runtime timings, not end-to-end search latency or
-full-load acceptance. The earlier
-[research note](../research/host-oci-a1-2026-11.md) records one of those runs.
-Keep the existing deadlines and release gates; measure contention with the
-thread limits below and two active embedding requests. Current INT8 measurements
+FP32 host timings from 2026-11-09 are in the
+[research note](../research/host-oci-a1-2026-11.md); current INT8 measurements
 and their limits are in [ADR 0009](../adr/0009-dense-embedding-recipe.md).
+Measure contention with the thread limits below and two active embedding
+requests.
 
 ## Host alarms (proposed)
 
