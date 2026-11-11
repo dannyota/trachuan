@@ -118,7 +118,7 @@ func parseRevokeForm(r *http.Request) (url.Values, string) {
 		return nil, "invalid_request"
 	}
 	form, err := url.ParseQuery(string(raw))
-	if _, ok := form["client_secret"]; ok {
+	if hasClientAuthenticationParameter(form) {
 		return nil, "invalid_client"
 	}
 	if err != nil {

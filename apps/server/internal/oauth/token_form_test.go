@@ -151,3 +151,37 @@ func TestToken_RejectsClientAuthentication(t *testing.T) {
 		}
 	}
 }
+
+func TestTokenForm_RejectsClientAuthenticationParameters(t *testing.T) {
+	for _, grant := range []string{"authorization_code", "refresh_token"} {
+		for _, parameter := range []string{"client_secret", "client_assertion", "client_assertion_type"} {
+			for _, values := range [][]string{{"example"}, {""}, {"first", "second"}} {
+				t.Run(fmt.Sprintf("%s/%s/%q", grant, parameter, values), func(t *testing.T) {
+					m := newTokenMemory()
+					form := codeForm()
+					var raw string
+					if grant == "refresh_token" {
+						raw = seedRefresh(t, m)
+						form = refreshForm(raw)
+					}
+					form[parameter] = values
+					commits, rollbacks := m.commits, m.rollbacks
+					w := requestToken(m.handler(), form)
+					if (grant == "authorization_code" && m.code.ConsumedAt != nil) || m.revoked || m.tokens[tokenDigest(raw)].SupersededAt != nil {
+						t.Error("authentication attempt consumed a credential or revoked the grant")
+					}
+					if m.commits != commits || m.rollbacks != rollbacks {
+						t.Error("authentication attempt opened a token transaction")
+					}
+					if grant == "authorization_code" && len(m.tokens) != 0 {
+						t.Error("authentication attempt issued tokens")
+					}
+					tokenJSON(t, w, 401, "invalid_client")
+					if w.Header().Get("WWW-Authenticate") != `Basic realm="trachuan"` {
+						t.Fatal("missing basic challenge")
+					}
+				})
+			}
+		}
+	}
+}

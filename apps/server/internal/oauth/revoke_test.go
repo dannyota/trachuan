@@ -3,6 +3,7 @@ package oauth
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -178,6 +179,44 @@ func TestRevoke_PublicClientAndFormBounds(t *testing.T) {
 		tokenJSON(t, w, tc.status, tc.code)
 		if m.commits != 0 {
 			t.Fatal("invalid request committed")
+		}
+	}
+}
+
+func TestRevoke_RejectsClientAuthentication(t *testing.T) {
+	for _, parameter := range []string{"client_secret", "client_assertion", "client_assertion_type", "Authorization"} {
+		values := [][]string{{"example"}, {""}, {"first", "second"}}
+		if parameter == "Authorization" {
+			values = [][]string{{"Basic Zm9vOmJhcg=="}, {"Bearer example"}, {""}}
+		}
+		for _, value := range values {
+			for _, kind := range []string{"access", "refresh"} {
+				t.Run(fmt.Sprintf("%s/%s/%q", kind, parameter, value), func(t *testing.T) {
+					m, access, refresh := revokeFixture()
+					raw := access
+					if kind == "refresh" {
+						raw = refresh
+					}
+					form := url.Values{"token": {raw}, "client_id": {"client"}}
+					if parameter != "Authorization" {
+						form[parameter] = value
+					}
+					r := httptest.NewRequest("POST", "/oauth/revoke", strings.NewReader(form.Encode()))
+					r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+					if parameter == "Authorization" {
+						r.Header[parameter] = value
+					}
+					w := httptest.NewRecorder()
+					NewRevokeHandler(revokeDB{m}, func(string) { t.Error("evicted token") }, func(int64) { t.Error("evicted grant") }).ServeHTTP(w, r)
+					if m.commits != 0 || m.rollbacks != 0 || m.revoked || m.tokens[tokenDigest(access)].RevokedAt != nil || m.tokens[tokenDigest(refresh)].RevokedAt != nil {
+						t.Error("authentication attempt revoked a token or grant")
+					}
+					tokenJSON(t, w, 401, "invalid_client")
+					if w.Header().Get("WWW-Authenticate") != `Basic realm="trachuan"` {
+						t.Fatal("missing basic challenge")
+					}
+				})
+			}
 		}
 	}
 }

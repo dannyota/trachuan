@@ -17,7 +17,7 @@ func parseTokenForm(r *http.Request, resource string) (url.Values, string) {
 		return nil, "invalid_request"
 	}
 	form, err := url.ParseQuery(string(raw))
-	if _, ok := form["client_secret"]; ok {
+	if hasClientAuthenticationParameter(form) {
 		return nil, "invalid_client"
 	}
 	if err != nil {
@@ -52,4 +52,13 @@ func parseTokenForm(r *http.Request, resource string) (url.Values, string) {
 		return nil, "invalid_target"
 	}
 	return form, ""
+}
+
+func hasClientAuthenticationParameter(form url.Values) bool {
+	for _, key := range []string{"client_secret", "client_assertion", "client_assertion_type"} {
+		if _, ok := form[key]; ok {
+			return true
+		}
+	}
+	return false
 }

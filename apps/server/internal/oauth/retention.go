@@ -24,6 +24,7 @@ func RunRetention(ctx context.Context, queries *store.Queries, logger *slog.Logg
 }
 
 func retentionPass(ctx context.Context, queries *store.Queries, now time.Time, logger *slog.Logger) {
+	const batchLimit = 1000
 	day := pgtype.Interval{Microseconds: int64(24 * time.Hour / time.Microsecond), Valid: true}
 	month := pgtype.Interval{Microseconds: int64(30 * 24 * time.Hour / time.Microsecond), Valid: true}
 	steps := []struct {
@@ -31,27 +32,35 @@ func retentionPass(ctx context.Context, queries *store.Queries, now time.Time, l
 		run  func(context.Context) (int64, error)
 	}{
 		{"requests", func(ctx context.Context) (int64, error) {
-			return queries.DeleteExpiredOAuthRequests(ctx, store.DeleteExpiredOAuthRequestsParams{AsOf: now, Retention: day, BatchLimit: 1000})
+			return queries.DeleteExpiredOAuthRequests(ctx, store.DeleteExpiredOAuthRequestsParams{AsOf: now, Retention: day, BatchLimit: batchLimit})
 		}},
 		{"codes", func(ctx context.Context) (int64, error) {
-			return queries.DeleteExpiredOAuthCodes(ctx, store.DeleteExpiredOAuthCodesParams{AsOf: now, Retention: day, BatchLimit: 1000})
+			return queries.DeleteExpiredOAuthCodes(ctx, store.DeleteExpiredOAuthCodesParams{AsOf: now, Retention: day, BatchLimit: batchLimit})
 		}},
 		{"tokens", func(ctx context.Context) (int64, error) {
-			return queries.DeleteExpiredOAuthTokens(ctx, store.DeleteExpiredOAuthTokensParams{AsOf: now, Retention: day, BatchLimit: 1000})
+			return queries.DeleteExpiredOAuthTokens(ctx, store.DeleteExpiredOAuthTokensParams{AsOf: now, Retention: day, BatchLimit: batchLimit})
 		}},
 		{"grants", func(ctx context.Context) (int64, error) {
-			return queries.DeleteRetiredOAuthGrants(ctx, store.DeleteRetiredOAuthGrantsParams{AsOf: now, Retention: month, BatchLimit: 1000})
+			return queries.DeleteRetiredOAuthGrants(ctx, store.DeleteRetiredOAuthGrantsParams{AsOf: now, Retention: month, BatchLimit: batchLimit})
 		}},
 	}
 	for _, step := range steps {
-		if ctx.Err() != nil {
-			return
-		}
-		queryCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
-		_, err := step.run(queryCtx)
-		cancel()
-		if err != nil && ctx.Err() == nil {
-			logger.Error("oauth retention failed", "step", step.name)
+		for range 50 {
+			if ctx.Err() != nil {
+				return
+			}
+			queryCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+			deleted, err := step.run(queryCtx)
+			cancel()
+			if err != nil {
+				if ctx.Err() == nil {
+					logger.Error("oauth retention failed", "step", step.name)
+				}
+				break
+			}
+			if deleted < batchLimit {
+				break
+			}
 		}
 	}
 }

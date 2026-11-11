@@ -53,3 +53,24 @@ func TestRetention_DeletesByRule(t *testing.T) {
 		t.Fatalf("retired grant exists=%t err=%v", retired, err)
 	}
 }
+
+func TestRetention_PostgreSQLDrainsMultipleBatches(t *testing.T) {
+	db := consentPostgres(t)
+	ctx := t.Context()
+	now := time.Now().UTC()
+	if _, err := db.Exec(ctx, `
+ INSERT INTO oauth_request(handle_hash,browser_hash,client_id,redirect_uri,state,code_challenge,resource,scope,expires_at)
+ SELECT lpad(i::text,64,'0'),repeat('f',64),'fixture','http://localhost/cb','','challenge','resource','mcp:read',
+ CASE WHEN i <= 2501 THEN $1::timestamptz - interval '1 second' ELSE $1::timestamptz + interval '1 hour' END
+ FROM generate_series(1,2502) i`, now); err != nil {
+		t.Fatal(err)
+	}
+	retentionPass(ctx, store.New(db), now, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	var expired, live int
+	if err := db.QueryRow(ctx, `SELECT count(*) FILTER (WHERE expires_at <= $1), count(*) FILTER (WHERE expires_at > $1) FROM oauth_request`, now).Scan(&expired, &live); err != nil {
+		t.Fatal(err)
+	}
+	if expired != 0 || live != 1 {
+		t.Fatalf("expired requests = %d, live requests = %d; want 0, 1", expired, live)
+	}
+}
