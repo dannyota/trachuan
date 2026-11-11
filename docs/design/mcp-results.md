@@ -40,8 +40,10 @@ object keyed by document key and holds every document that a hit in `hits` or
 
 A document entry has `number`, `title`, `type`, `issuer`, `issued`,
 `effective_from`, `effective_to`, `status` (the document part of the recipe
-validity stamp: class, current flag, basis, status basis), `source_url`,
-`related` and `related_counts`.
+validity stamp: class, current flag, basis, status basis), `text_source` and
+`text_complete` ([text extraction](text-extraction.md): whether the text is the
+source's tree, a parsed transcription, PDF text or OCR, and whether it is known
+complete), `source_url`, `related` and `related_counts`.
 
 A compact hit has, in this order:
 

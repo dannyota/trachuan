@@ -31,7 +31,10 @@ by measurement before the first release.
 
 ## Pipeline
 
-Parser limits: 50 MB per file, 5 minutes per document, 500 OCR pages.
+Parser limits: 50 MB per file, 5 minutes per document. Text extraction: 50,000
+paragraphs and nesting depth 64 per HTML transcription or OCR text; fresh OCR at
+most 2,000 pages per document and 20,000 pages per run, above which the run
+stops for the owner.
 
 Activity batch 100 items; a heartbeat every 20 seconds while a batch runs. Batch
 start-to-close timeout 1 hour; heartbeat timeout 2 minutes. At most 5 attempts,
