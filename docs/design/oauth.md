@@ -157,11 +157,12 @@ Both grants take `application/x-www-form-urlencoded`, ignore unknown parameters
 and reject a repeated parameter with `invalid_request`. `client_id` and
 `resource` are required in both (a missing or empty `resource` is
 `invalid_target`). Clients are public: a request carrying an `Authorization`
-header or `client_secret` is refused with 401 `invalid_client` before any code
-or token is used. Code exchange needs `authorization_code` and refresh needs
-`refresh_token` in the client's grant set (`unauthorized_client` otherwise); a
-client without `refresh_token` gets no refresh token, and its family lives as
-long as the access token.
+header, `client_secret`, `client_assertion` or `client_assertion_type` is
+refused with 401 `invalid_client` before any code or token is used; revocation
+applies the same rule. Code exchange needs `authorization_code` and refresh
+needs `refresh_token` in the client's grant set (`unauthorized_client`
+otherwise); a client without `refresh_token` gets no refresh token, and its
+family lives as long as the access token.
 
 - `authorization_code`: `code` and `code_verifier` required; `redirect_uri` is
   optional (OAuth 2.1) and, when present, must equal the code's. The code must
