@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"sync"
 	"syscall"
 	"time"
 
@@ -42,6 +43,8 @@ type Client struct {
 	allowTestHTTP   bool
 	gate            sourcegate.Gate
 	lookupPageSize  int
+	pauseMu         sync.Mutex
+	pauses          map[int64]*pauseState
 }
 
 // New creates a client identifying this release by version.
@@ -101,6 +104,11 @@ func WithTestHTTP() Option {
 	return func(c *Client) { c.allowTestHTTP = true }
 }
 
+// WithTestTimeouts sets short request deadlines for offline tests.
+func WithTestTimeouts(attempt, sequence time.Duration) Option {
+	return func(c *Client) { c.timeout, c.requestBudget = attempt, sequence }
+}
+
 type response struct {
 	Success bool            `json:"success"`
 	Data    json.RawMessage `json:"data"`
@@ -112,6 +120,7 @@ func (c *Client) request(ctx context.Context, method, target string, body []byte
 	defer func() {
 		sourcegate.LogSlow(ctx, "vbpl", endpoint(target), time.Since(started), c.slowThreshold, status, err)
 	}()
+	parent := pauseParent(ctx)
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 	slots, client := c.slots, c.http
@@ -126,6 +135,9 @@ func (c *Client) request(ctx context.Context, method, target string, body []byte
 	defer func() { <-slots }()
 	if !file {
 		if waitErr := c.limiter.Wait(ctx); waitErr != nil {
+			if ctx.Err() == nil {
+				waitErr = fmt.Errorf("%w: %v", context.DeadlineExceeded, waitErr)
+			}
 			return 0, fmt.Errorf("wait for rate limit: %w", waitErr)
 		}
 	}
@@ -134,8 +146,14 @@ func (c *Client) request(ctx context.Context, method, target string, body []byte
 		if !ok {
 			return 0, fmt.Errorf("source admission: missing run id")
 		}
+		if pauseErr := c.awaitPause(ctx, id); pauseErr != nil {
+			return 0, pauseErr
+		}
 		if admitErr := c.gate.Admit(ctx, id, "vbpl"); admitErr != nil {
 			return 0, fmt.Errorf("source admission: %w", admitErr)
+		}
+		if pauseErr := c.awaitPause(ctx, id); pauseErr != nil {
+			return 0, pauseErr
 		}
 	}
 	req, err := http.NewRequestWithContext(ctx, method, target, bytes.NewReader(body))
@@ -157,7 +175,7 @@ func (c *Client) request(ctx context.Context, method, target string, body []byte
 	if resp.StatusCode == http.StatusForbidden && c.gate != nil {
 		id, _ := sourcegate.RunID(ctx)
 		reason := fmt.Sprintf("%s status 403", endpoint(target))
-		if err := c.gate.Pause(ctx, id, "vbpl", reason, ""); err != nil {
+		if err := c.persistPause(parent, id, reason); err != nil {
 			return resp.StatusCode, fmt.Errorf("pause source: %w", err)
 		}
 		return resp.StatusCode, fmt.Errorf("%s: %w", reason, sourcegate.ErrSourcePaused)
@@ -192,12 +210,17 @@ func wait(ctx context.Context, d time.Duration) error {
 	}
 }
 func (c *Client) apiRaw(ctx context.Context, method, path string, body []byte) (json.RawMessage, error) {
+	ctx = withPauseParent(ctx)
+	activityCtx := pauseParent(ctx)
 	ctx, cancel := context.WithTimeout(ctx, c.requestBudget)
 	defer cancel()
 	for attempt := 0; ; attempt++ {
 		if attempt > 0 {
 			if err := wait(ctx, c.backoffs[attempt-1]); err != nil {
-				return nil, fmt.Errorf("retry: %w", err)
+				if activityCtx.Err() != nil {
+					return nil, activityCtx.Err()
+				}
+				return nil, fmt.Errorf("retry: %w", classify(err, endpoint(path), 0))
 			}
 		}
 		var raw []byte
@@ -212,6 +235,9 @@ func (c *Client) apiRaw(ctx context.Context, method, path string, body []byte) (
 			}
 			return nil
 		})
+		if activityCtx.Err() != nil {
+			return nil, activityCtx.Err()
+		}
 		if err == nil && status == http.StatusOK && !objectFramed(raw) {
 			err = &Failure{Origin: "gateway", Cause: "non_json_200", Endpoint: endpoint(path), HTTPStatus: status}
 		}

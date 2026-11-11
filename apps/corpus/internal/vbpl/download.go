@@ -16,6 +16,8 @@ import (
 
 // Download saves a bounded attachment and returns its content hash.
 func (c *Client) Download(ctx context.Context, id string, f File, dir string, limit int64) (Downloaded, error) {
+	ctx = withPauseParent(ctx)
+	activityCtx := pauseParent(ctx)
 	ctx, cancel := context.WithTimeout(ctx, c.requestBudget)
 	defer cancel()
 	if limit < 0 {
@@ -28,7 +30,10 @@ func (c *Client) Download(ctx context.Context, id string, f File, dir string, li
 	for attempt := 0; ; attempt++ {
 		if attempt > 0 {
 			if err := wait(ctx, c.backoffs[attempt-1]); err != nil {
-				return Downloaded{}, fmt.Errorf("retry download: %w", err)
+				if activityCtx.Err() != nil {
+					return Downloaded{}, activityCtx.Err()
+				}
+				return Downloaded{}, fmt.Errorf("retry download: %w", classify(err, "attachment", 0))
 			}
 		}
 		if f.URL == "" {
@@ -55,6 +60,9 @@ func (c *Client) Download(ctx context.Context, id string, f File, dir string, li
 			return nil
 		})
 		closeErr := tmp.Close()
+		if activityCtx.Err() != nil {
+			reqErr = activityCtx.Err()
+		}
 		if status == http.StatusOK && reqErr == nil && closeErr == nil && f.Size > 0 && size != f.Size {
 			reqErr = fmt.Errorf("download size %d does not match expected %d", size, f.Size)
 		}
@@ -72,6 +80,9 @@ func (c *Client) Download(ctx context.Context, id string, f File, dir string, li
 		}
 		if closeErr != nil {
 			return Downloaded{}, fmt.Errorf("close download: %w", closeErr)
+		}
+		if activityCtx.Err() != nil {
+			return Downloaded{}, activityCtx.Err()
 		}
 		if status == http.StatusForbidden && reqErr == nil && !refreshed {
 			refreshed = true
@@ -97,7 +108,7 @@ func (c *Client) Download(ctx context.Context, id string, f File, dir string, li
 			continue
 		}
 		if reqErr != nil {
-			return Downloaded{}, fmt.Errorf("download: %w", reqErr)
+			return Downloaded{}, fmt.Errorf("download: %w", classify(reqErr, "attachment", status))
 		}
 		if status == http.StatusNotFound {
 			return Downloaded{}, ErrNotFound
