@@ -14,6 +14,8 @@ import (
 
 type cacheEntry struct {
 	opening   bool
+	retired   bool
+	leases    int
 	country   string
 	engine    *retrieval.Engine
 	pool      *pgxpool.Pool
@@ -29,11 +31,11 @@ func (entry *cacheEntry) close() {
 	})
 }
 
-func (r *Resolver) load(ctx context.Context, country, name string) error {
+func (r *Resolver) load(ctx context.Context, country, name string) (*cacheEntry, error) {
 	r.mu.Lock()
 	if r.closed || r.active[country] != name {
 		r.mu.Unlock()
-		return ErrExpired
+		return nil, ErrExpired
 	}
 	if r.entries == nil {
 		r.entries = make(map[string]*cacheEntry)
@@ -57,38 +59,47 @@ func (r *Resolver) load(ctx context.Context, country, name string) error {
 	} else {
 		engine, err = r.open(ctx, name, entry)
 	}
+	if err == nil {
+		err = ctx.Err()
+	}
 	if err == nil && engine == nil {
 		err = errors.New("opener returned no engine")
 	}
 	r.mu.Lock()
 	entry.opening = false
-	if r.closed || r.entries[name] != entry || r.active[country] != name {
+	if r.closed || entry.retired || r.entries[name] != entry || r.active[country] != name {
+		entry.retired = true
+		closePool := entry.leases == 0
 		r.mu.Unlock()
-		entry.close()
-		return ErrExpired
+		if closePool {
+			entry.close()
+		}
+		return nil, ErrExpired
 	}
 	if err != nil {
 		empty := entry.engine == nil || databaseGone(err)
 		if empty {
 			delete(r.entries, name)
+			entry.retired = true
 		}
+		closePool := entry.leases == 0
 		r.mu.Unlock()
-		if empty {
+		if empty && closePool {
 			entry.close()
 		}
 		if databaseGone(err) {
-			return ErrExpired
+			return nil, ErrExpired
 		}
-		return fmt.Errorf("open corpus engine: %w", err)
+		return nil, fmt.Errorf("open corpus engine: %w", err)
 	}
 	entry.engine = engine
 	r.mu.Unlock()
-	return nil
+	return entry, nil
 }
 
 func (r *Resolver) open(ctx context.Context, name string, entry *cacheEntry) (*retrieval.Engine, error) {
 	if r.Open != nil {
-		return r.Open(name)
+		return r.Open(ctx, name)
 	}
 	if entry.pool == nil {
 		cfg, err := poolConfig(r.URLTemplate, name)

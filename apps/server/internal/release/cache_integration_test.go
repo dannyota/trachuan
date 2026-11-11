@@ -88,19 +88,15 @@ func corpusFixture(t *testing.T) (*Resolver, *pgx.Conn, *pgxpool.Pool, string) {
 func TestResolver_DefaultOpenSharesPoolAndChecksIdentity(t *testing.T) {
 	r, _, db, rel := corpusFixture(t)
 	ctx := context.Background()
-	read, _, err := r.Resolve(ctx, "vn", "")
-	if err != nil {
-		t.Fatal(err)
-	}
+	read := takeLease(t, r, "")
 	name := "corpus_vn_" + rel
 	pool := r.entries[name].pool
-	search, _, err := r.Resolve(ctx, "vn", rel)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if search != read || search.Release().Rel != rel || r.entries[name].pool != pool || pool.Config().MaxConns != 4 {
+	search := takeLease(t, r, rel)
+	if search.Engine != read.Engine || search.Release != rel || r.entries[name].pool != pool || pool.Config().MaxConns != 4 {
 		t.Fatal("release or pool not pinned")
 	}
+	read.Done()
+	search.Done()
 	r.Close()
 	// A new resolver must reject a corpus whose row claims another release.
 	r2 := &Resolver{Auth: r.Auth, Clock: r.Clock, URLTemplate: r.URLTemplate, Embedder: r.Embedder}
@@ -108,7 +104,7 @@ func TestResolver_DefaultOpenSharesPoolAndChecksIdentity(t *testing.T) {
 	if _, updateErr := db.Exec(ctx, `UPDATE release SET rel='20990101_invalid'`); updateErr != nil {
 		t.Fatal(updateErr)
 	}
-	if _, _, resolveErr := r2.Resolve(ctx, "vn", ""); resolveErr == nil {
+	if _, resolveErr := r2.Resolve(ctx, "vn", ""); resolveErr == nil {
 		t.Fatal("accepted mismatched release identity")
 	}
 }
@@ -117,7 +113,7 @@ func TestResolver_DefaultOpenMissingDatabaseIsExpired(t *testing.T) {
 		t.Run(map[bool]string{false: "first_open", true: "cached"}[cached], func(t *testing.T) {
 			r, admin, db, rel := corpusFixture(t)
 			if cached {
-				if _, _, err := r.Resolve(context.Background(), "vn", rel); err != nil {
+				if err := resolveAndFinish(context.Background(), r, rel); err != nil {
 					t.Fatal(err)
 				}
 			}
@@ -125,7 +121,7 @@ func TestResolver_DefaultOpenMissingDatabaseIsExpired(t *testing.T) {
 			if !testpg.DropCorpusDatabase(t, admin, "corpus_vn_"+rel, "vn/"+rel) {
 				t.Fatal("failed marker-checked removal")
 			}
-			_, _, err := r.Resolve(context.Background(), "vn", rel)
+			_, err := r.Resolve(context.Background(), "vn", rel)
 			if !errors.Is(err, ErrExpired) {
 				t.Fatalf("missing database error=%v", err)
 			}
@@ -163,57 +159,43 @@ func TestResolver_PinnedRetiredRowIsExpired(t *testing.T) {
 INSERT INTO retired_release VALUES ('vn','corpus_vn_20990102',now(),now()+interval '7 days',NULL)`); err != nil {
 		t.Fatal(err)
 	}
-	r, _, _ := resolverFixture()
+	r, _, _ := resolverFixture(t)
 	r.Auth = authStore{queries: store.New(db)}
-	r.Open = func(string) (*retrieval.Engine, error) {
+	r.Open = func(context.Context, string) (*retrieval.Engine, error) {
 		t.Error("opened non-active database")
 		return nil, nil
 	}
 	t.Cleanup(r.Close)
-	got, rel, err := r.Resolve(ctx, "vn", "20990102")
-	if !errors.Is(err, ErrExpired) || got != nil || rel != "" {
-		t.Fatalf("engine=%p release=%q error=%v", got, rel, err)
+	got, err := r.Resolve(ctx, "vn", "20990102")
+	if got != nil {
+		defer got.Done()
+	}
+	if !errors.Is(err, ErrExpired) || got != nil {
+		t.Fatalf("lease=%+v error=%v", got, err)
 	}
 }
 
 func TestResolver_RemovingActiveDrainsPool(t *testing.T) {
 	r, _, _, rel := corpusFixture(t)
 	ctx := context.Background()
-	if _, _, err := r.Resolve(ctx, "vn", rel); err != nil {
-		t.Fatal(err)
-	}
-	entry := r.entries["corpus_vn_"+rel]
-	conn, err := entry.pool.Acquire(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer conn.Release()
-	closing := make(chan struct{})
-	entry.closePool = func() {
-		close(closing)
-		entry.pool.Close()
-	}
+	lease := takeLease(t, r, rel)
+	pool := r.entries["corpus_vn_"+rel].pool
 	s := r.Auth.(*fakeStore)
 	s.mu.Lock()
 	s.active = ""
 	s.mu.Unlock()
-	result := make(chan error, 1)
-	go func() { _, _, err := r.Resolve(ctx, "vn", rel); result <- err }()
-	<-closing
-	select {
-	case err := <-result:
-		t.Fatalf("closed with an in-flight connection: %v", err)
-	default:
-	}
-	if _, err := conn.Exec(ctx, "SELECT 1"); err != nil {
-		t.Fatalf("in-flight connection failed: %v", err)
-	}
-	conn.Release()
-	if err := <-result; !errors.Is(err, ErrExpired) {
+	if _, err := r.Resolve(ctx, "vn", rel); !errors.Is(err, ErrExpired) {
 		t.Fatalf("removed active release error=%v", err)
 	}
-	if unexpected, err := entry.pool.Acquire(ctx); err == nil {
+	// No connection is held between queries. The lease protects the whole request.
+	for range 2 {
+		if _, err := lease.Engine.Status(ctx); err != nil {
+			t.Fatalf("in-flight request lost its pool: %v", err)
+		}
+	}
+	lease.Done()
+	if unexpected, err := pool.Acquire(ctx); err == nil {
 		unexpected.Release()
-		t.Fatal("old pool still accepts connections")
+		t.Fatal("old pool still accepts connections after Done")
 	}
 }

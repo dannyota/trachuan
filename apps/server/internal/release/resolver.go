@@ -27,78 +27,112 @@ type Store interface {
 // Resolver caches engines and pools by trusted corpus database name.
 // Configure either URLTemplate and Embedder, or Open.
 // URLTemplate contains exactly one {database} placeholder in its database name.
-// Injected openers supply one pool per name and CloseDatabase to retire it.
+// Injected openers honor their context, supply one pool per name and use
+// CloseDatabase to retire it.
 // Configure fields before the first Resolve and do not modify them concurrently.
 type Resolver struct {
 	Auth          Store
-	Open          func(dbName string) (*retrieval.Engine, error)
+	Open          func(ctx context.Context, dbName string) (*retrieval.Engine, error)
 	Clock         func() time.Time
 	URLTemplate   string
 	Embedder      retrieval.Embedder
 	Options       retrieval.Options
 	CloseDatabase func(dbName string)
 
-	mu      sync.Mutex
-	entries map[string]*cacheEntry
-	active  map[string]string
-	flight  singleflight.Group
-	closed  bool
+	mu         sync.Mutex
+	entries    map[string]*cacheEntry
+	active     map[string]string
+	workCtx    context.Context
+	cancelWork context.CancelFunc
+	flight     singleflight.Group
+	closed     bool
 }
 
-// Resolve returns an engine and its release identifier, resolving an empty rel
-// to the active pointer. Every call checks the auth store before using the cache.
-func (r *Resolver) Resolve(ctx context.Context, country, rel string) (*retrieval.Engine, string, error) {
+// Resolve leases the active engine for one request. A nonempty rel must match
+// the active pointer. The caller must call Done when the request ends.
+func (r *Resolver) Resolve(ctx context.Context, country, rel string) (*Lease, error) {
 	if country != "vn" {
-		return nil, "", ErrExpired
+		return nil, ErrExpired
 	}
 	name, release, err := r.resolveName(ctx, country, rel)
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
-
 	for {
 		result := r.flight.DoChan(name, func() (any, error) {
-			return nil, r.load(ctx, country, name)
+			workCtx, cancel, err := r.workContext()
+			if err != nil {
+				return nil, err
+			}
+			defer cancel()
+			return r.load(workCtx, country, name)
 		})
-		var openErr error
+		var opened singleflight.Result
 		select {
 		case <-ctx.Done():
-			return nil, "", ctx.Err()
-		case opened := <-result:
-			openErr = opened.Err
+			return nil, ctx.Err()
+		case opened = <-result:
 		}
+		// Opening can outlive an activation even when no other request observes it.
+		current, currentRelease, err := r.resolveName(ctx, country, rel)
+		if err != nil {
+			return nil, err
+		}
+		if current != name {
+			name, release = current, currentRelease
+			continue
+		}
+		if opened.Err != nil {
+			return nil, opened.Err
+		}
+		entry := opened.Val.(*cacheEntry)
 		r.mu.Lock()
-		entry := r.entries[name]
-		if r.closed || r.active[country] != name {
+		if r.closed {
 			r.mu.Unlock()
-			return nil, "", ErrExpired
+			return nil, ErrExpired
 		}
-		var engine *retrieval.Engine
-		if entry != nil {
-			engine = entry.engine
+		if entry.retired || r.entries[name] != entry {
+			r.mu.Unlock()
+			// An activation and rollback can retire this entry while preserving
+			// the same database name. Lease only the replacement entry.
+			continue
 		}
+		entry.leases++
+		lease := &Lease{Engine: entry.engine, Release: release, done: func() { r.finish(entry) }}
 		r.mu.Unlock()
-		if openErr != nil {
-			return nil, "", openErr
-		}
-		if engine != nil {
-			return engine, release, nil
-		}
-		// An activation can evict and reauthorize this name before the caller
-		// consumes the open result. Retry against the current cache entry.
+		return lease, nil
 	}
 }
 
+func (r *Resolver) workContext() (context.Context, context.CancelFunc, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.closed {
+		return nil, nil, ErrExpired
+	}
+	if r.workCtx == nil {
+		r.workCtx, r.cancelWork = context.WithCancel(context.Background())
+	}
+	ctx, cancel := context.WithTimeout(r.workCtx, 10*time.Second)
+	return ctx, cancel, nil
+}
+
 func (r *Resolver) resolveName(ctx context.Context, country, rel string) (string, string, error) {
+	if err := ctx.Err(); err != nil {
+		return "", "", err
+	}
 	if r.Auth == nil || r.Clock == nil {
 		return "", "", errors.New("missing release resolver dependencies")
 	}
 	r.mu.Lock()
 	if r.closed {
 		r.mu.Unlock()
-		return "", "", errors.New("release resolver closed")
+		return "", "", ErrExpired
 	}
 	active, err := r.Auth.GetActiveRelease(ctx, country)
+	if err == nil {
+		err = ctx.Err()
+	}
 	if err != nil {
 		r.mu.Unlock()
 		return "", "", fmt.Errorf("get active release: %w", err)
@@ -115,7 +149,8 @@ func (r *Resolver) resolveName(ctx context.Context, country, rel string) (string
 	for name, entry := range r.entries {
 		if entry.country == country && name != active {
 			delete(r.entries, name)
-			if !entry.opening {
+			entry.retired = true
+			if !entry.opening && entry.leases == 0 {
 				retired = append(retired, entry)
 			}
 		}
@@ -135,19 +170,24 @@ func validDBName(country, name string) bool {
 	return regexp.MustCompile(`^corpus_[a-z]{2}_[0-9]{8}(_[0-9]+)?$`).MatchString(name) && strings.HasPrefix(name, "corpus_"+country+"_")
 }
 
-// Close releases cached pools and prevents future resolves.
-// A pending opener closes its pool as soon as it finishes.
+// Close cancels shared work and prevents future resolves. Pools close after
+// their last lease ends and any pending opener finishes.
 func (r *Resolver) Close() {
 	r.mu.Lock()
 	r.closed = true
+	cancel := r.cancelWork
 	var entries []*cacheEntry
 	for _, entry := range r.entries {
-		if !entry.opening {
+		entry.retired = true
+		if !entry.opening && entry.leases == 0 {
 			entries = append(entries, entry)
 		}
 	}
 	r.entries = nil
 	r.mu.Unlock()
+	if cancel != nil {
+		cancel()
+	}
 	for _, entry := range entries {
 		entry.close()
 	}

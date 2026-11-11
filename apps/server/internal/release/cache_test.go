@@ -6,25 +6,33 @@ import (
 	"net"
 	"sync"
 	"testing"
+	"time"
 
 	"danny.vn/trachuan/internal/retrieval"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+func resolveAndFinish(ctx context.Context, r *Resolver, rel string) error {
+	lease, err := r.Resolve(ctx, "vn", rel)
+	if lease != nil {
+		lease.Done()
+	}
+	return err
+}
+
 func TestResolver_SwitchClosesOldPool(t *testing.T) {
-	r, s, _ := resolverFixture()
+	r, s, _ := resolverFixture(t)
 	var opened, closed []string
-	r.Open = func(name string) (*retrieval.Engine, error) {
+	r.Open = func(_ context.Context, name string) (*retrieval.Engine, error) {
 		opened = append(opened, name)
 		return &retrieval.Engine{}, nil
 	}
 	r.CloseDatabase = func(name string) { closed = append(closed, name) }
-	if _, _, err := r.Resolve(context.Background(), "vn", ""); err != nil {
-		t.Fatal(err)
-	}
+	takeLease(t, r, "").Done()
 	s.active = "corpus_vn_20990104"
-	if _, rel, err := r.Resolve(context.Background(), "vn", ""); err != nil || rel != "20990104" {
-		t.Fatalf("release=%q error=%v", rel, err)
+	lease := takeLease(t, r, "")
+	if lease.Release != "20990104" {
+		t.Fatalf("release=%q", lease.Release)
 	}
 	if len(opened) != 2 || opened[0] != "corpus_vn_20990103" || opened[1] != "corpus_vn_20990104" {
 		t.Fatalf("opened=%v", opened)
@@ -32,22 +40,23 @@ func TestResolver_SwitchClosesOldPool(t *testing.T) {
 	if len(closed) != 1 || closed[0] != "corpus_vn_20990103" {
 		t.Fatalf("closed=%v", closed)
 	}
-	if _, _, err := r.Resolve(context.Background(), "vn", "20990103"); !errors.Is(err, ErrExpired) {
+	if _, err := r.Resolve(context.Background(), "vn", "20990103"); !errors.Is(err, ErrExpired) {
 		t.Fatalf("old release error=%v", err)
 	}
+	lease.Done()
 	r.Close()
 	r.Close()
 	if len(closed) != 2 || closed[1] != "corpus_vn_20990104" {
 		t.Fatalf("closed=%v", closed)
 	}
-	if _, _, err := r.Resolve(context.Background(), "vn", ""); err == nil {
+	if _, err := r.Resolve(context.Background(), "vn", ""); err == nil {
 		t.Fatal("resolved after close")
 	}
 }
 func TestResolver_EvictionDuringOpenClosesAndRejectsEngine(t *testing.T) {
-	r, s, engine := resolverFixture()
+	r, s, engine := resolverFixture(t)
 	entered, proceed := make(chan struct{}), make(chan struct{})
-	r.Open = func(name string) (*retrieval.Engine, error) {
+	r.Open = func(_ context.Context, name string) (*retrieval.Engine, error) {
 		if name == "corpus_vn_20990103" {
 			close(entered)
 			<-proceed
@@ -58,12 +67,12 @@ func TestResolver_EvictionDuringOpenClosesAndRejectsEngine(t *testing.T) {
 	var closed []string
 	r.CloseDatabase = func(name string) { mu.Lock(); defer mu.Unlock(); closed = append(closed, name) }
 	result := make(chan error, 1)
-	go func() { _, _, err := r.Resolve(context.Background(), "vn", "20990103"); result <- err }()
+	go func() { err := resolveAndFinish(context.Background(), r, "20990103"); result <- err }()
 	<-entered
 	s.mu.Lock()
 	s.active = "corpus_vn_20990104"
 	s.mu.Unlock()
-	if _, _, err := r.Resolve(context.Background(), "vn", ""); err != nil {
+	if err := resolveAndFinish(context.Background(), r, ""); err != nil {
 		t.Fatal(err)
 	}
 	close(proceed)
@@ -91,11 +100,11 @@ func TestPoolConfig_RestrictsDatabaseAndConnections(t *testing.T) {
 	}
 }
 func TestResolver_CloseWaitsForPendingOpenerToFinish(t *testing.T) {
-	r, _, engine := resolverFixture()
+	r, _, engine := resolverFixture(t)
 	entered, proceed := make(chan struct{}), make(chan struct{})
 	var mu sync.Mutex
 	opened, closed, premature := false, false, false
-	r.Open = func(string) (*retrieval.Engine, error) {
+	r.Open = func(context.Context, string) (*retrieval.Engine, error) {
 		close(entered)
 		<-proceed
 		mu.Lock()
@@ -105,7 +114,7 @@ func TestResolver_CloseWaitsForPendingOpenerToFinish(t *testing.T) {
 	}
 	r.CloseDatabase = func(string) { mu.Lock(); defer mu.Unlock(); premature = !opened; closed = true }
 	result := make(chan error, 1)
-	go func() { _, _, err := r.Resolve(context.Background(), "vn", ""); result <- err }()
+	go func() { err := resolveAndFinish(context.Background(), r, ""); result <- err }()
 	<-entered
 	r.Close()
 	close(proceed)
@@ -119,15 +128,19 @@ func TestResolver_CloseWaitsForPendingOpenerToFinish(t *testing.T) {
 	}
 }
 func TestResolver_CanceledWaiterDoesNotCancelOtherOpen(t *testing.T) {
-	r, _, engine := resolverFixture()
+	r, _, engine := resolverFixture(t)
 	entered, proceed := make(chan struct{}), make(chan struct{})
-	r.Open = func(string) (*retrieval.Engine, error) { close(entered); <-proceed; return engine, nil }
+	r.Open = func(context.Context, string) (*retrieval.Engine, error) {
+		close(entered)
+		<-proceed
+		return engine, nil
+	}
 	result := make(chan error, 1)
-	go func() { _, _, err := r.Resolve(context.Background(), "vn", ""); result <- err }()
+	go func() { err := resolveAndFinish(context.Background(), r, ""); result <- err }()
 	<-entered
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	if _, _, err := r.Resolve(ctx, "vn", ""); !errors.Is(err, context.Canceled) {
+	if err := resolveAndFinish(ctx, r, ""); !errors.Is(err, context.Canceled) {
 		t.Fatalf("waiter error %v", err)
 	}
 	close(proceed)
@@ -148,7 +161,7 @@ func (ctx *beforeWaitContext) Done() <-chan struct{} {
 }
 
 func TestResolver_ActivationChangesBeforeOpenResultIsConsumed(t *testing.T) {
-	r, s, engine := resolverFixture()
+	r, s, engine := resolverFixture(t)
 	ctx := &beforeWaitContext{Context: context.Background()}
 	ctx.beforeWait = func() {
 		// Schedule two activations after the original open finishes but before its
@@ -157,25 +170,29 @@ func TestResolver_ActivationChangesBeforeOpenResultIsConsumed(t *testing.T) {
 		s.mu.Lock()
 		s.active = "corpus_vn_20990104"
 		s.mu.Unlock()
-		if _, _, err := r.Resolve(context.Background(), "vn", ""); err != nil {
+		if err := resolveAndFinish(context.Background(), r, ""); err != nil {
 			t.Fatal(err)
 		}
 		s.mu.Lock()
 		s.active = "corpus_vn_20990103"
 		s.mu.Unlock()
-		if _, _, err := r.Resolve(context.Background(), "vn", "unknown"); !errors.Is(err, ErrExpired) {
+		if err := resolveAndFinish(context.Background(), r, "unknown"); !errors.Is(err, ErrExpired) {
 			t.Fatal(err)
 		}
 	}
-	got, rel, err := r.Resolve(ctx, "vn", "")
-	if err != nil || got != engine || rel != "20990103" {
-		t.Fatalf("engine=%p release=%q error=%v", got, rel, err)
+	got, err := r.Resolve(ctx, "vn", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer got.Done()
+	if got.Engine != engine || got.Release != "20990103" {
+		t.Fatalf("lease=%+v", got)
 	}
 }
 
 func TestResolver_CachedPoolFailureDoesNotReturnEngine(t *testing.T) {
-	r, _, _ := resolverFixture()
-	if _, _, err := r.Resolve(context.Background(), "vn", ""); err != nil {
+	r, _, _ := resolverFixture(t)
+	if err := resolveAndFinish(context.Background(), r, ""); err != nil {
 		t.Fatal(err)
 	}
 	cfg, err := poolConfig("postgres://reader@localhost/{database}?sslmode=disable", "corpus_vn_20990103")
@@ -192,7 +209,188 @@ func TestResolver_CachedPoolFailureDoesNotReturnEngine(t *testing.T) {
 	}
 	pool.Close()
 	r.entries["corpus_vn_20990103"].pool = pool
-	if engine, _, resolveErr := r.Resolve(context.Background(), "vn", ""); resolveErr == nil || engine != nil {
-		t.Fatalf("engine=%p error=%v", engine, resolveErr)
+	if lease, resolveErr := r.Resolve(context.Background(), "vn", ""); resolveErr == nil || lease != nil {
+		if lease != nil {
+			lease.Done()
+		}
+		t.Fatalf("lease=%+v error=%v", lease, resolveErr)
+	}
+}
+
+func TestResolver_SwitchPreservesInFlightWork(t *testing.T) {
+	r, s, engine := resolverFixture(t)
+	var closed []string
+	r.CloseDatabase = func(name string) { closed = append(closed, name) }
+	first := takeLease(t, r, "20990103")
+	second := takeLease(t, r, "20990103")
+	s.active = "corpus_vn_20990104"
+	current := takeLease(t, r, "")
+	if current.Release != "20990104" || first.Engine != engine || first.Release != "20990103" {
+		t.Fatalf("original=%+v current=%+v", first, current)
+	}
+	if len(closed) != 0 {
+		t.Fatalf("closed with two requests in flight: %v", closed)
+	}
+	if _, err := r.Resolve(context.Background(), "vn", "20990103"); !errors.Is(err, ErrExpired) {
+		t.Fatalf("new lease on old release: %v", err)
+	}
+	first.Done()
+	first.Done()
+	if len(closed) != 0 {
+		t.Fatalf("closed before last lease ended: %v", closed)
+	}
+	var wg sync.WaitGroup
+	for range 16 {
+		wg.Go(second.Done)
+	}
+	wg.Wait()
+	if len(closed) != 1 || closed[0] != "corpus_vn_20990103" {
+		t.Fatalf("closed=%v", closed)
+	}
+}
+
+func TestResolver_PointerChangesDuringOpenWithoutAnotherResolve(t *testing.T) {
+	r, s, engine := resolverFixture(t)
+	r.Open = func(context.Context, string) (*retrieval.Engine, error) {
+		s.mu.Lock()
+		s.active = "corpus_vn_20990104"
+		s.mu.Unlock()
+		return engine, nil
+	}
+	got, err := r.Resolve(context.Background(), "vn", "20990103")
+	if got != nil {
+		defer got.Done()
+	}
+	if !errors.Is(err, ErrExpired) || got != nil {
+		t.Fatalf("lease=%+v error=%v, want release expired", got, err)
+	}
+}
+
+type waitingContext struct {
+	context.Context
+	waiting chan struct{}
+	once    sync.Once
+}
+
+func (ctx *waitingContext) Done() <-chan struct{} {
+	ctx.once.Do(func() { close(ctx.waiting) })
+	return ctx.Context.Done()
+}
+
+func TestResolver_CanceledInitiatorDoesNotCancelSharedOpen(t *testing.T) {
+	r, _, engine := resolverFixture(t)
+	entered, proceed := make(chan struct{}), make(chan struct{})
+	r.Open = func(ctx context.Context, _ string) (*retrieval.Engine, error) {
+		close(entered)
+		<-proceed
+		return engine, ctx.Err()
+	}
+	initiator, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	first := make(chan error, 1)
+	go func() { err := resolveAndFinish(initiator, r, ""); first <- err }()
+	<-entered
+	waiter := &waitingContext{Context: context.Background(), waiting: make(chan struct{})}
+	second := make(chan error, 1)
+	go func() {
+		got, err := r.Resolve(waiter, "vn", "")
+		if got != nil {
+			defer got.Done()
+			if got.Engine != engine {
+				err = errors.New("wrong engine")
+			}
+		}
+		second <- err
+	}()
+	<-waiter.waiting
+	cancel()
+	if err := <-first; !errors.Is(err, context.Canceled) {
+		t.Fatalf("initiator error=%v", err)
+	}
+	close(proceed)
+	if err := <-second; err != nil {
+		t.Fatalf("other caller lost shared open: %v", err)
+	}
+}
+
+func TestResolver_UnpinnedPointerChangeDuringOpenUsesNewRelease(t *testing.T) {
+	r, s, _ := resolverFixture(t)
+	var opened []string
+	r.Open = func(_ context.Context, name string) (*retrieval.Engine, error) {
+		opened = append(opened, name)
+		if name == "corpus_vn_20990103" {
+			s.mu.Lock()
+			s.active = "corpus_vn_20990104"
+			s.mu.Unlock()
+		}
+		return &retrieval.Engine{}, nil
+	}
+	lease := takeLease(t, r, "")
+	if lease.Release != "20990104" || len(opened) != 2 || opened[1] != "corpus_vn_20990104" {
+		t.Fatalf("release=%q opened=%v", lease.Release, opened)
+	}
+}
+
+func TestResolver_AuthFailureAfterOpenDoesNotLeaseEngine(t *testing.T) {
+	r, s, engine := resolverFixture(t)
+	failure := errors.New("auth down")
+	r.Open = func(context.Context, string) (*retrieval.Engine, error) {
+		s.mu.Lock()
+		s.err = failure
+		s.mu.Unlock()
+		return engine, nil
+	}
+	lease, err := r.Resolve(context.Background(), "vn", "20990103")
+	if lease != nil {
+		defer lease.Done()
+	}
+	if lease != nil || !errors.Is(err, failure) {
+		t.Fatalf("lease=%+v error=%v", lease, err)
+	}
+}
+
+func TestResolver_SharedOpenHasTenSecondBound(t *testing.T) {
+	r, _, engine := resolverFixture(t)
+	r.Open = func(ctx context.Context, _ string) (*retrieval.Engine, error) {
+		deadline, ok := ctx.Deadline()
+		remaining := time.Until(deadline)
+		if !ok || remaining <= 0 || remaining > 10*time.Second {
+			return nil, errors.New("shared open has no ten-second bound")
+		}
+		return engine, nil
+	}
+	takeLease(t, r, "")
+}
+
+func TestResolver_CloseCancelsSharedOpen(t *testing.T) {
+	r, _, _ := resolverFixture(t)
+	entered := make(chan struct{})
+	r.Open = func(ctx context.Context, _ string) (*retrieval.Engine, error) {
+		close(entered)
+		<-ctx.Done()
+		return nil, ctx.Err()
+	}
+	result := make(chan error, 1)
+	go func() { result <- resolveAndFinish(context.Background(), r, "") }()
+	<-entered
+	r.Close()
+	if err := <-result; !errors.Is(err, ErrExpired) {
+		t.Fatalf("resolve after shutdown: %v", err)
+	}
+}
+
+func TestResolver_CloseDefersPoolUntilLeaseEnds(t *testing.T) {
+	r, _, _ := resolverFixture(t)
+	closed := 0
+	r.CloseDatabase = func(string) { closed++ }
+	lease := takeLease(t, r, "")
+	r.Close()
+	if closed != 0 {
+		t.Fatal("shutdown closed a leased pool")
+	}
+	lease.Done()
+	lease.Done()
+	if closed != 1 {
+		t.Fatalf("closed=%d", closed)
 	}
 }
