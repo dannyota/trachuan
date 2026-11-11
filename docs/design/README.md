@@ -15,6 +15,7 @@ Intended behavior of trachuan. Decisions with alternatives are in the
 | [normalization](normalization.md)          | Dates, numbers, source status mapping and consolidated status derivation                 |
 | [calibration](calibration.md)              | Provisional abstention threshold                                                         |
 | [text extraction](text-extraction.md)      | Provision trees from HTML transcriptions and attached files when the source has no tree  |
+| [OCR store](ocr-store.md)                  | Stored OCR text and cross-check records, the banhmi import and how extract reads them    |
 | [batch submissions](batch-submissions.md)  | Submission intent log and recovery for external batch services                           |
 | [scope adoption](scope-adoption.md)        | Schema version 3, inventory version 2, build loading by final membership                 |
 | [validity corrections](validity-status.md) | Text rules, manual corrections and review queue for wrong or missing source validity     |

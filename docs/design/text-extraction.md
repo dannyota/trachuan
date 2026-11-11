@@ -3,8 +3,8 @@
 This note owns how `extract` builds provisions when the source supplies no tree.
 [Pipeline](pipeline.md) owns the stage; [chunk](chunk.md) owns splitting;
 [fetch bundles](fetch-bundles.md) owns the artifacts read here;
-[corpus schema](corpus-schema.md) owns the columns. OCR is a separate later
-note; this one reserves its names only.
+[corpus schema](corpus-schema.md) owns the columns; [OCR store](ocr-store.md)
+owns the OCR records.
 
 ## Evidence
 
@@ -73,8 +73,8 @@ the publisher's own text; OCR is a machine reading and says so.
 ## Paragraphs
 
 Every text source becomes an ordered list of paragraphs, each NFC with
-whitespace collapsed and a locator: the HTML block's ordinal, or the PDF page
-and line range. Table cells become paragraphs in reading order, marked `table`;
+whitespace collapsed and a locator: the HTML block's ordinal, or the line of the
+stored OCR text. Table cells become paragraphs in reading order, marked `table`;
 images and formulas leave a marker paragraph `[hình]`, never invented text.
 
 ## From paragraphs to provisions

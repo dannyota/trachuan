@@ -45,6 +45,8 @@ type Querier interface {
 	GetEmbedInput(ctx context.Context, arg GetEmbedInputParams) (GetEmbedInputRow, error)
 	GetExtractArtifactByHash(ctx context.Context, arg GetExtractArtifactByHashParams) (int64, error)
 	GetExtractInput(ctx context.Context, arg GetExtractInputParams) (GetExtractInputRow, error)
+	GetOCRCheck(ctx context.Context, arg GetOCRCheckParams) (OcrCheck, error)
+	GetOCRText(ctx context.Context, arg GetOCRTextParams) (OcrText, error)
 	GetRun(ctx context.Context, arg GetRunParams) (Run, error)
 	GetRunForUpdate(ctx context.Context, arg GetRunForUpdateParams) (Run, error)
 	GetRunGeneration(ctx context.Context, id int64) (int32, error)
@@ -61,6 +63,8 @@ type Querier interface {
 	InsertFetchedFile(ctx context.Context, arg InsertFetchedFileParams) error
 	InsertGap(ctx context.Context, arg InsertGapParams) error
 	InsertMembershipEvidence(ctx context.Context, arg InsertMembershipEvidenceParams) error
+	InsertOCRCheck(ctx context.Context, arg InsertOCRCheckParams) (int64, error)
+	InsertOCRText(ctx context.Context, arg InsertOCRTextParams) (int64, error)
 	InsertPlannedItem(ctx context.Context, arg InsertPlannedItemParams) error
 	InsertProvision(ctx context.Context, arg InsertProvisionParams) error
 	InsertRelation(ctx context.Context, arg InsertRelationParams) error
@@ -81,6 +85,7 @@ type Querier interface {
 	ListLegacyExpectedKeys(ctx context.Context, runID int64) ([]string, error)
 	ListLegacyListingSupports(ctx context.Context, runID int64) ([]ListLegacyListingSupportsRow, error)
 	ListMembershipEvidence(ctx context.Context, runID int64) ([]RunMembershipEvidence, error)
+	ListOCRTextByPDF(ctx context.Context, pdfSha256s []string) ([]OcrText, error)
 	ListPendingBatchItems(ctx context.Context, arg ListPendingBatchItemsParams) ([]RunItem, error)
 	ListPendingStageBatches(ctx context.Context, arg ListPendingStageBatchesParams) ([]int32, error)
 	ListReleaseBlockingFailureCodes(ctx context.Context, arg ListReleaseBlockingFailureCodesParams) ([]string, error)
