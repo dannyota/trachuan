@@ -4,15 +4,18 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/json"
+	"sync"
 	"time"
 
 	"danny.vn/trachuan/apps/server/internal/cache"
+	"danny.vn/trachuan/internal/retrieval"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 // Caches owns the release-scoped caches shared by MCP and retrieval engines.
 // Query vectors are separate because they survive release changes.
 type Caches struct {
+	mu        sync.Mutex
 	Search    *cache.Scoped[[]byte]
 	Documents *cache.Scoped[[]byte]
 	Sequences *cache.Scoped[[]byte]
@@ -31,11 +34,27 @@ func NewCaches(clock func() time.Time) *Caches {
 
 // ActivateRelease purges every corpus cache on a switch. The resolver adapter
 // must serialize switch notifications and call this before returning a lease.
-// Pass Documents and Sequences to retrieval.Options when opening engines.
+// Request handlers capture a Scope immediately after receiving their lease.
 func (c *Caches) ActivateRelease(release string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	c.Search.ActivateRelease(release)
 	c.Documents.ActivateRelease(release)
 	c.Sequences.ActivateRelease(release)
+}
+
+// RequestCaches binds all corpus caches to one activation generation.
+type RequestCaches struct {
+	Search    cache.Handle[[]byte]
+	Documents cache.Handle[[]byte]
+	Sequences cache.Handle[[]byte]
+}
+
+// Scope captures cache handles immediately after the resolver lends a lease.
+func (c *Caches) Scope(release string) RequestCaches {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return RequestCaches{Search: c.Search.Scope(release), Documents: c.Documents.Scope(release), Sequences: c.Sequences.Scope(release)}
 }
 
 func (cfg Config) cachedSearch(ctx context.Context, in searchInput, validate func(any) error) (*mcp.CallToolResult, any, error) {
@@ -48,7 +67,10 @@ func (cfg Config) cachedSearch(ctx context.Context, in searchInput, validate fun
 		return nil, nil, err
 	}
 	defer done()
-	now := cfg.Clock().In(time.FixedZone("Asia/Ho_Chi_Minh", 7*60*60))
+	scope := cfg.Caches.Scope(rel)
+	ctx = retrieval.WithCaches(ctx, scope.Documents, scope.Sequences)
+	req.Instant = cfg.requestInstant(ctx)
+	now := req.Instant.In(time.FixedZone("Asia/Ho_Chi_Minh", 7*60*60))
 	force := true
 	if in.InForceOnly != nil {
 		force = *in.InForceOnly
@@ -56,7 +78,7 @@ func (cfg Config) cachedSearch(ctx context.Context, in searchInput, validate fun
 	canonical := map[string]any{"country": in.Country, "query": in.Query, "as_of": in.AsOf, "in_force_only": force, "detail": detail, "limit": req.Limit, "release": rel}
 	raw, _ := json.Marshal([]any{rel, now.Format(time.DateOnly), canonical})
 	key := sha256.Sum256(raw)
-	if raw, ok := cfg.Caches.Search.Get(rel, key); ok {
+	if raw, ok := scope.Search.Get(rel, key); ok {
 		var data any
 		if err = json.Unmarshal(raw, &data); err != nil {
 			return nil, nil, err
@@ -75,7 +97,7 @@ func (cfg Config) cachedSearch(ctx context.Context, in searchInput, validate fun
 		return nil, nil, err
 	}
 	if ctx.Err() == nil {
-		cfg.Caches.Search.Put(rel, key, result.StructuredContent.(json.RawMessage))
+		scope.Search.Put(rel, key, result.StructuredContent.(json.RawMessage))
 	}
 	return result, data, nil
 }

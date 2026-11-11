@@ -27,6 +27,11 @@ func (cfg Config) search(ctx context.Context, in searchInput) (retrieval.SearchR
 		return retrieval.SearchResult{}, err
 	}
 	defer done()
+	if cfg.Caches != nil {
+		scope := cfg.Caches.Scope(rel)
+		ctx = retrieval.WithCaches(ctx, scope.Documents, scope.Sequences)
+	}
+	req.Instant = cfg.requestInstant(ctx)
 	return searchResolved(ctx, engine, rel, req, detail, validation)
 }
 
@@ -81,4 +86,13 @@ func (cfg Config) resolve(ctx context.Context, country, rel string) (Engine, str
 		return nil, "", nil, retrieval.ErrUnavailable
 	}
 	return engine, active, done, nil
+}
+
+type requestInstantKey struct{}
+
+func (cfg Config) requestInstant(ctx context.Context) time.Time {
+	if instant, ok := ctx.Value(requestInstantKey{}).(time.Time); ok {
+		return instant
+	}
+	return cfg.Clock()
 }

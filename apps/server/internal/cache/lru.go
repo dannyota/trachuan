@@ -106,3 +106,6 @@ func (c *LRU[V]) recordMiss() {
 	defer c.mu.Unlock()
 	c.stats.Misses++
 }
+
+// MaxValueBytes is the largest value that fits both the oversized and byte caps.
+func (c *LRU[V]) MaxValueBytes() int64 { return max(int64(0), min(c.capBytes/16, c.capBytes-160)) }

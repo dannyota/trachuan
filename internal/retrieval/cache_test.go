@@ -17,6 +17,8 @@ type memoryCache struct {
 	puts   int
 }
 
+func (c *memoryCache) MaxValueBytes() int64 { return 32_000_000 }
+
 func (c *memoryCache) Get(_ string, k [32]byte) ([]byte, bool) {
 	v, ok := c.values[k]
 	if ok {
@@ -36,7 +38,7 @@ func TestDocumentCache_StatusNeverCached(t *testing.T) {
 	cache := &memoryCache{}
 	e := &Engine{release: Release{Rel: "20990101"}, options: Options{Documents: cache}}
 	original := DocumentEntry{Title: "title", RelatedCounts: map[string]int{"in:implements": 1}, Status: Status{Class: "in_force", Current: true}}
-	e.cacheDocument("vn:1", original)
+	e.cacheDocument(context.Background(), "vn:1", original)
 	for _, raw := range cache.values {
 		if strings.Contains(string(raw), `"status"`) {
 			t.Fatal("status retained")

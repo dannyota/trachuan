@@ -112,11 +112,13 @@ func register[In, Out any](s *mcp.Server, cfg Config, name, description string, 
 	s.AddTool(&mcp.Tool{Name: name, Description: description, InputSchema: input, OutputSchema: output,
 		Annotations: &mcp.ToolAnnotations{ReadOnlyHint: true, IdempotentHint: true}}, func(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		start := cfg.Clock()
+		latencyStart := time.Now()
+		ctx = context.WithValue(ctx, requestInstantKey{}, start)
 		principal, ok := credential.FromContext(ctx)
 		code := ""
 		defer func() {
 			if cfg.Logger != nil {
-				cfg.Logger.Info("mcp tool", "account_id", principal.AccountID, "tool", name, "code", code, "latency", cfg.Clock().Sub(start))
+				cfg.Logger.Info("mcp tool", "account_id", principal.AccountID, "tool", name, "code", code, "latency", time.Since(latencyStart))
 			}
 		}()
 		fail := func(c, message string) (*mcp.CallToolResult, error) { code = c; return toolFailure(c, message), nil }

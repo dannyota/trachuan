@@ -10,17 +10,44 @@ import (
 )
 
 // DocumentCache retains serialized immutable metadata by release and digest.
-// Implementations must reject inactive-release reads and writes.
+// Implementations must bind reads and writes to the request activation.
 type DocumentCache interface {
 	Get(release string, key [32]byte) ([]byte, bool)
 	Put(release string, key [32]byte, value []byte)
 }
 
 // SequenceCache retains serialized read scopes by release and digest.
-// Implementations must reject inactive-release reads and writes.
+// Implementations must bind reads and writes to the request activation.
 type SequenceCache interface {
+	// MaxValueBytes returns the oversized limit, or zero for an expired handle.
+	MaxValueBytes() int64
 	Get(release string, key [32]byte) ([]byte, bool)
 	Put(release string, key [32]byte, value []byte)
+}
+
+type cacheContextKey struct{}
+type requestCaches struct {
+	documents DocumentCache
+	sequences SequenceCache
+}
+
+// WithCaches binds immutable cache handles to this request. These override the
+// engine defaults so an old lease cannot acquire a new activation's handles.
+func WithCaches(ctx context.Context, documents DocumentCache, sequences SequenceCache) context.Context {
+	return context.WithValue(ctx, cacheContextKey{}, requestCaches{documents: documents, sequences: sequences})
+}
+
+func (e *Engine) documentCache(ctx context.Context) DocumentCache {
+	if caches, ok := ctx.Value(cacheContextKey{}).(requestCaches); ok {
+		return caches.documents
+	}
+	return e.options.Documents
+}
+func (e *Engine) sequenceCache(ctx context.Context) SequenceCache {
+	if caches, ok := ctx.Value(cacheContextKey{}).(requestCaches); ok {
+		return caches.sequences
+	}
+	return e.options.Sequences
 }
 
 func documentKey(release, key string) [32]byte {
@@ -37,14 +64,15 @@ func metadataJSON(doc DocumentEntry) []byte {
 	return raw
 }
 
-func (e *Engine) cacheDocument(key string, doc DocumentEntry) {
-	e.options.Documents.Put(e.release.Rel, documentKey(e.release.Rel, key), metadataJSON(doc))
+func (e *Engine) cacheDocument(ctx context.Context, key string, doc DocumentEntry) {
+	e.documentCache(ctx).Put(e.release.Rel, documentKey(e.release.Rel, key), metadataJSON(doc))
 }
 
 // Documents loads cached metadata and queries only missing keys. Status is
 // applied by presentation from each response's validity stamp.
 func (e *Engine) Documents(ctx context.Context, keys []string) (map[string]DocumentEntry, error) {
-	if e.options.Documents == nil {
+	cache := e.documentCache(ctx)
+	if cache == nil {
 		return e.loadDocuments(ctx, keys)
 	}
 	docs := make(map[string]DocumentEntry, len(keys))
@@ -55,7 +83,7 @@ func (e *Engine) Documents(ctx context.Context, keys []string) (map[string]Docum
 			continue
 		}
 		seen[key] = true
-		raw, ok := e.options.Documents.Get(e.release.Rel, documentKey(e.release.Rel, key))
+		raw, ok := cache.Get(e.release.Rel, documentKey(e.release.Rel, key))
 		var doc DocumentEntry
 		if ok && json.Unmarshal(raw, &doc) == nil {
 			doc.Status = Status{}
@@ -74,7 +102,7 @@ func (e *Engine) Documents(ctx context.Context, keys []string) (map[string]Docum
 	for key, doc := range loaded {
 		docs[key] = doc
 		if ctx.Err() == nil {
-			e.cacheDocument(key, doc)
+			e.cacheDocument(ctx, key, doc)
 		}
 	}
 	return docs, nil
@@ -113,8 +141,9 @@ func sequenceKey(release string, item ReadItem) [32]byte {
 }
 
 func (e *Engine) sequence(ctx context.Context, tx pgx.Tx, c cursor) (readSequence, string, bool, error) {
-	if e.options.Sequences != nil {
-		if raw, ok := e.options.Sequences.Get(e.release.Rel, sequenceKey(e.release.Rel, c.Item)); ok {
+	cache := e.sequenceCache(ctx)
+	if cache != nil {
+		if raw, ok := cache.Get(e.release.Rel, sequenceKey(e.release.Rel, c.Item)); ok {
 			var stored cachedSequence
 			// Relation scopes are already bounded SQL windows. Reuse a window only
 			// at its original offset; a miss must not load extra relation pages.
@@ -139,20 +168,29 @@ func (e *Engine) uncachedSequence(ctx context.Context, tx pgx.Tx, c cursor) (rea
 	return seq, code, false, err
 }
 
-func (e *Engine) saveSequence(c cursor, seq readSequence) func() {
-	if e.options.Sequences == nil {
+func (e *Engine) saveSequence(ctx context.Context, c cursor, seq readSequence) func() {
+	cache := e.sequenceCache(ctx)
+	if cache == nil {
 		return nil
 	}
-	stored := cachedSequence{Doc: seq.doc, Source: seq.source, Units: seq.units, Parts: seq.parts, Gaps: seq.gaps, Offset: seq.offset, More: seq.more, Complete: seq.complete}
-	if seq.document != nil {
-		stored.Document = metadataJSON(*seq.document)
+	return func() {
+		if ctx.Err() != nil {
+			return
+		}
+		limit := cache.MaxValueBytes()
+		if limit <= 0 || sequenceSize(seq, limit) > limit || ctx.Err() != nil {
+			return
+		}
+		stored := cachedSequence{Doc: seq.doc, Source: seq.source, Units: seq.units, Parts: seq.parts, Gaps: seq.gaps, Offset: seq.offset, More: seq.more, Complete: seq.complete}
+		if seq.document != nil {
+			stored.Document = metadataJSON(*seq.document)
+		}
+		raw, err := json.Marshal(stored)
+		if err != nil || ctx.Err() != nil {
+			return
+		}
+		cache.Put(e.release.Rel, sequenceKey(e.release.Rel, c.Item), raw)
 	}
-	raw, err := json.Marshal(stored)
-	if err != nil {
-		return nil
-	}
-	key := sequenceKey(e.release.Rel, c.Item)
-	return func() { e.options.Sequences.Put(e.release.Rel, key, raw) }
 }
 
 func (e *Engine) statusDocument(doc *DocumentEntry, source Document) {

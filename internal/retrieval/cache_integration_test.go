@@ -76,3 +76,42 @@ func TestDocumentCache_EngineMetadataAndReadStatus(t *testing.T) {
 		t.Fatal("read status survived midnight")
 	}
 }
+
+func TestCollect_InstantPinsEligibilityAcrossMidnight(t *testing.T) {
+	db, e, _ := fixture(t)
+	readExec(t, db, `UPDATE document SET eff_to='2099-01-02' WHERE id=1`)
+	before := time.Date(2099, 1, 1, 16, 59, 59, 0, time.UTC)
+	clockCalls := 0
+	e.options.Now = func() time.Time { clockCalls++; return before.Add(time.Second) }
+	p, err := e.Prepare(context.Background(), Request{Query: "ngân hàng", Mode: "exact", Instant: before})
+	if err != nil {
+		t.Fatal(err)
+	}
+	pinned, err := e.Collect(context.Background(), p, Depths{Dense: 8, Lexical: 8})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if pinned.Date.String() != "2099-01-01" || clockCalls != 0 {
+		t.Fatal("Collect resampled the request date")
+	}
+	found := false
+	for _, candidate := range pinned.Primary.Dense {
+		found = found || candidate.Identity.DocumentKey == "vn:1"
+	}
+	if !found {
+		t.Fatal("document effective on the pinned date disappeared")
+	}
+	p.Request.Instant = time.Time{}
+	current, err := e.Collect(context.Background(), p, Depths{Dense: 8, Lexical: 8})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if current.Date.String() != "2099-01-02" || clockCalls != 1 {
+		t.Fatal("zero instant lost clock fallback")
+	}
+	for _, candidate := range current.Primary.Dense {
+		if candidate.Identity.DocumentKey == "vn:1" {
+			t.Fatal("expired document remained eligible")
+		}
+	}
+}

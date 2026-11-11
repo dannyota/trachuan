@@ -140,7 +140,7 @@ func (e *Engine) readItem(ctx context.Context, tx pgx.Tx, c cursor, continued bo
 		}
 		return ItemResult{Doc: seq.doc, Error: code}, 0, nil, nil
 	}
-	if e.options.Sequences != nil && seq.parts == nil {
+	if e.sequenceCache(ctx) != nil && seq.parts == nil {
 		seq.parts = make(map[int][]Unit)
 	}
 	local := c.Unit - seq.offset
@@ -160,7 +160,7 @@ func (e *Engine) readItem(ctx context.Context, tx pgx.Tx, c cursor, continued bo
 	page, cost, err := readPage(seq, c, budget, first)
 	var save func()
 	if !hit && err == nil && page.Error == "" {
-		save = e.saveSequence(c, seq)
+		save = e.saveSequence(ctx, c, seq)
 	}
 	return page, cost, save, err
 }

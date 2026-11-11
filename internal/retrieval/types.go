@@ -32,6 +32,8 @@ type Date struct {
 
 // Request describes a retrieval request.
 type Request struct {
+	// Instant fixes current-law eligibility for this request. Zero uses the engine clock.
+	Instant     time.Time `json:"-"`
 	Query       string
 	Limit       int
 	InForceOnly *bool

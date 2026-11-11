@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"danny.vn/trachuan/apps/server/internal/cache"
 	"danny.vn/trachuan/internal/retrieval"
 )
 
@@ -97,8 +98,8 @@ func TestSearchCache_LeaseReleaseAndAllCachesPurged(t *testing.T) {
 	if run() != e.release {
 		t.Fatal("wrong release")
 	}
-	c.Documents.Put(e.release, [32]byte{}, []byte("metadata"))
-	c.Sequences.Put(e.release, [32]byte{}, []byte("sequence"))
+	c.Scope(e.release).Documents.Put(e.release, [32]byte{}, []byte("metadata"))
+	c.Scope(e.release).Sequences.Put(e.release, [32]byte{}, []byte("sequence"))
 	e.release = "20990102"
 	c.ActivateRelease(e.release)
 	if c.Search.Stats().Bytes != 0 || c.Documents.Stats().Bytes != 0 || c.Sequences.Stats().Bytes != 0 {
@@ -107,5 +108,29 @@ func TestSearchCache_LeaseReleaseAndAllCachesPurged(t *testing.T) {
 	miss, hit := run(), run()
 	if miss != e.release || hit != e.release || e.calls.Load() != 2 {
 		t.Fatal("new lease missed or returned old bytes")
+	}
+}
+
+func TestCache_AllHandlesExpireAcrossRollback(t *testing.T) {
+	c := NewCaches(time.Now)
+	c.ActivateRelease("A")
+	old := c.Scope("A")
+	c.ActivateRelease("B")
+	c.ActivateRelease("A")
+	fresh := c.Scope("A")
+	oldHandles := []cache.Handle[[]byte]{old.Search, old.Documents, old.Sequences}
+	freshHandles := []cache.Handle[[]byte]{fresh.Search, fresh.Documents, fresh.Sequences}
+	for i, h := range freshHandles {
+		h.Put("A", [32]byte{}, []byte("fresh"))
+		if _, ok := oldHandles[i].Get("A", [32]byte{}); ok {
+			t.Fatal("old lease read a new activation")
+		}
+		oldHandles[i].Put("A", [32]byte{}, []byte("old"))
+		if oldHandles[i].MaxValueBytes() != 0 {
+			t.Fatal("old handle admits cache preparation")
+		}
+		if got, ok := h.Get("A", [32]byte{}); !ok || string(got) != "fresh" {
+			t.Fatal("rollback handle did not use the cache normally")
+		}
 	}
 }
