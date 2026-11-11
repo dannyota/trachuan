@@ -42,9 +42,8 @@ under the corpus rules.
      recipe, searched across the whole tree.
    - Output is JSON with a set of codes and a confidence per code; an article
      may receive several nodes in different families. The threshold per level is
-     calibrated on the labeled set to reach precision
-     at least 0.85, then frozen in the release; below it, no assignment and a
-     gap "unassigned".
+     calibrated on the labeled set to reach precision at least 0.85, then frozen
+     in the release; below it, no assignment and a gap "unassigned".
 3. Manual overrides in `taxonomy/overrides.yaml`.
 
 ## Evaluation gate
@@ -53,8 +52,8 @@ Before a release may publish assignments, `corpus eval` measures on a labeled
 set of seeded articles:
 
 Labels are sets, so every metric is micro precision and recall over (article,
-node) pairs. The same set tunes prompts and thresholds and gates the release; every
-prompt or threshold change reruns it.
+node) pairs. The same set tunes prompts and thresholds and gates the release;
+every prompt or threshold change reruns it.
 
 | Slice                                            | Metric                                              | Floor |
 | ------------------------------------------------ | --------------------------------------------------- | ----- |

@@ -1,10 +1,9 @@
 # Retrieval evaluation harness
 
-Implementation of
-[ADR 0010](../adr/0010-retrieval-evaluation-for-agents.md). It measures the
-legacy, old product and development cohorts; development is `not_run` while its
-case file is empty. A low score is a result, not grounds to remove cases or
-lower a floor.
+Implementation of [ADR 0010](../adr/0010-retrieval-evaluation-for-agents.md). It
+measures the legacy, old product and development cohorts; development is
+`not_run` while its case file is empty. A low score is a result, not grounds to
+remove cases or lower a floor.
 
 ## Package, command and stage
 
@@ -31,8 +30,8 @@ the diagnostic run completed, including measured floor failures. Exit 1 means
 invalid inputs, infrastructure failure or incomplete scoring. Optional
 `--require-floors` exits 2 for failed or unavailable old-product or development
 floors or a failed rejection check (development floors that are `not_run`
-because the file is empty do not count), for future automation; it cannot turn an incomplete run
-into a passing report.
+because the file is empty do not count), for future automation; it cannot turn
+an incomplete run into a passing report.
 
 Stage key is `<cc>/<rel>`, one item after a done build. Input hash combines
 verified build artifact hash, fixture and mapping hashes, previous report hash
@@ -199,17 +198,18 @@ under identical eligibility and response processing; only hybrid gates apply.
 Old-product floors are those in [testing](../../instructions/testing.md),
 checked independently for exact and serving ANN hybrid. Report each as `pass`,
 `fail`, or `unavailable` with numerator, denominator, value and floor. Any
-unavailable required metric cannot pass. Development floors use the same
-records and are `not_run` while the development case file is empty; taxonomy and
+unavailable required metric cannot pass. Development floors use the same records
+and are `not_run` while the development case file is empty; taxonomy and
 filtered cases are `out_of_scope`, never passing. `quality_pass` means both
 hybrid modes meet all old-product floors, and development floors once
-development cases exist, and all three rejection checks pass; legacy has no gate. `release_eligible` is always false in this
-baseline, including when `quality_pass` is true. Measured failures leave the
-stage done and the run evaluated, with `quality_pass:false` and
-`release_eligible:false`. Per-case `mapping_incomplete` is a reported
-diagnostic, not a run failure. Malformed fixture/map files, incomplete case
-execution or infrastructure failure fail the stage. CLI and status must
-distinguish completed evaluation from passed quality gates.
+development cases exist, and all three rejection checks pass; legacy has no
+gate. `release_eligible` is always false in this baseline, including when
+`quality_pass` is true. Measured failures leave the stage done and the run
+evaluated, with `quality_pass:false` and `release_eligible:false`. Per-case
+`mapping_incomplete` is a reported diagnostic, not a run failure. Malformed
+fixture/map files, incomplete case execution or infrastructure failure fail the
+stage. CLI and status must distinguish completed evaluation from passed quality
+gates.
 
 ## Cache and report format
 
@@ -247,9 +247,9 @@ versions; mismatches invalidate reuse.
 `country`, `rel`, `build_artifact_sha256`, `dump_sha256`, `fixture_hashes`,
 `identity_map_sha256`, `recipes`, `evaluation_date`, `request_as_of`,
 `database_instance_kind`, `software`, `calibration`,
-`cohorts:{legacy,old_product,development}`, `floors`, `rejections`, `coverage`, `ann_loss`,
-`timings_ms`, `evidence_characters`, `cache_manifest`, `previous_diff`,
-`not_run`, `limitations`, and the counts in
+`cohorts:{legacy,old_product,development}`, `floors`, `rejections`, `coverage`,
+`ann_loss`, `timings_ms`, `evidence_characters`, `cache_manifest`,
+`previous_diff`, `not_run`, `limitations`, and the counts in
 [scope adoption](scope-adoption.md#readers-and-evaluation). Each metric stores
 counts as well as the value. `coverage` lists each missing original/alternate
 document number and affected case/citation, including the five known omissions

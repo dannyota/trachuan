@@ -29,22 +29,22 @@ choice, and three of them send unaccented queries that ADR 0002 rejects.
 2. Product scoring matches exact document and provision identities, with
    alternates adjudicated from official text; no substring credit. Product
    current-law precision counts every returned primary hit.
-3. New cases: about 40 development cases, 30 positive and 10 negative,
-   committed and readable by everyone who works on search. Each scenario is
-   written from a legal subject, not from provision text; an agent that has not
-   seen the provision writes the query it would send to `search`; a second pass
-   adjudicates labels against official text; the owner spot-checks 10 cases.
-   The same cases score later recipe, corpus and model changes. Cases are added
-   from agent error reports and owner findings and are never removed to raise a
+3. New cases: about 40 development cases, 30 positive and 10 negative, committed
+   and readable by everyone who works on search. Each scenario is written from a
+   legal subject, not from provision text; an agent that has not seen the
+   provision writes the query it would send to `search`; a second pass
+   adjudicates labels against official text; the owner spot-checks 10 cases. The
+   same cases score later recipe, corpus and model changes. Cases are added from
+   agent error reports and owner findings and are never removed to raise a
    score.
 4. Change rule: a recipe or model change targets a named failure class seen in
    case results, such as a per-document cap that drops expected provisions,
    never a parameter grid. It ships when every gate passes on the old product
    and development cohorts, the net count of matched expected citations within
    20 hits rises on at least one cohort (same fixtures and scoring modes before
-   and after), and recall@20 and MRR@8 fall on neither cohort;
-   otherwise the current recipe stays. Recall@20 counts because 20 compact hits
-   are what an agent receives by default
+   and after), and recall@20 and MRR@8 fall on neither cohort; otherwise the
+   current recipe stays. Recall@20 counts because 20 compact hits are what an
+   agent receives by default
    ([ADR 0013](0013-compact-search-and-batch-read.md)). Current-law precision,
    abstention and the rejection checks are hard gates. Recall and MRR have
    targets that every report states, but a target is not a gate: a release ships
@@ -70,12 +70,12 @@ cases in all, with low statistical power stated in every report. No result
 proves a recipe better on unseen questions; the guards are that changes target
 named failure classes and must not fall on the old product cohort, which the
 model choice already used. Case authoring stays small enough to repeat as the
-corpus grows. The three unaccented legacy cases count as
-rejection checks in the old product cohort and as written in legacy parity. The
-index plan takes its chunk, lexical and retrieval recipes from the experiments
-this protocol scores. Gates and targets change only with a History line. These
-metrics measure retrieval and response size, not the quality of an agent's final
-answer or its real token spend.
+corpus grows. The three unaccented legacy cases count as rejection checks in the
+old product cohort and as written in legacy parity. The index plan takes its
+chunk, lexical and retrieval recipes from the experiments this protocol scores.
+Gates and targets change only with a History line. These metrics measure
+retrieval and response size, not the quality of an agent's final answer or its
+real token spend.
 
 ## Alternatives rejected
 
