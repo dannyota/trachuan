@@ -47,11 +47,12 @@
     "scopes": [
       {
         "kind": "main",
-        "accepted": false
+        "accepted": true,
+        "articles": ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
       }
     ],
-    "gaps": ["structure_uncertain"],
-    "note": "An amending circular quotes replaced articles (Điều 9, Điều 10) inside its own Điều 3 and 4; the sequence steps, so no article is asserted."
+    "gaps": [],
+    "note": "An amending circular: its own articles run 1 to 10; the replaced articles it quotes (Điều 9, Điều 10) open with a quotation mark and are text of Điều 3 and Điều 4, not headings."
   },
   "outline.html": {
     "text_source": "html_transcription",

@@ -70,11 +70,13 @@ Provision kinds stay those the schema has (`phan`, `chuong`, `muc`, `dieu`,
 defined under "What is recorded", which no source id uses, so a source relation
 endpoint can never resolve to one by accident.
 
-A provision's `text` holds its heading line and every paragraph under it up to
-the next heading of the same or a higher level, exactly once, the same shape the
-source tree gives; so an article's `text` is the whole article.
+An article's `text` holds its heading line and every paragraph up to the next
+article, structure heading or scope close, so it is the whole article. A
+structure provision (`phan`, `chuong`, `muc`) holds only its label and title
+lines. Every paragraph of a scope therefore sits in exactly one provision.
 
-Grammar, applied to paragraph starts only:
+Grammar, applied to paragraph starts only (a paragraph that opens with a
+quotation mark is quoted text, never a heading):
 
 - `Phần <roman|word>`, `Chương <roman|number>`, `Mục <number>`: structure
   headings; the title is the rest of the line or the next line in capitals.
@@ -95,13 +97,15 @@ documents that have both a source tree and a transcription).
 Scopes. The main scope starts at the first article and closes at the first of: a
 recipient or signature block (`Nơi nhận:`, `TM.`, `KT.`, a signing title alone
 on a line, `XÁC THỰC VĂN BẢN HỢP NHẤT`), an appendix or form title (`PHỤ LỤC`,
-`Phụ lục <n>`, `Mẫu số`), or an instrument title (`QUY CHẾ`, `QUY ĐỊNH`,
-`ĐIỀU LỆ` in capitals alone on a line). Everything after it belongs to later
-scopes. An instrument title followed, with no article in between, by an article
-numbered 1 opens an instrument scope: a regulation "ban hành kèm theo", with
-anchors `kem-theo-<k>/dieu-<n>` and the label "Điều n (văn bản kèm theo k)". Any
-other later scope (appendices, forms, footnotes, a restart at `Điều 1` without
-an instrument title) is a tail scope and never asserts articles.
+`Phụ lục <n>`, `Mẫu số`), or an instrument title: a line wholly in capitals that
+begins with `QUY CHẾ`, `QUY ĐỊNH` or `ĐIỀU LỆ` and is not the title line of the
+structure heading just before it (`Chương I` then `QUY ĐỊNH CHUNG` is a chapter
+title). Everything after it belongs to later scopes. An instrument title
+followed, with no article in between, by an article numbered 1 opens an
+instrument scope: a regulation "ban hành kèm theo", with anchors
+`kem-theo-<k>/dieu-<n>` and the label "Điều n (văn bản kèm theo k)". Any other
+later scope (appendices, forms, footnotes, a restart at `Điều 1` without an
+instrument title) is a tail scope and never asserts articles.
 
 Fail closed. The article-level reading is accepted for the main scope or an
 instrument scope only when its article numbers run 1, 2, 3, ... where an
@@ -140,11 +144,12 @@ numbered outline (`I.`, `1.`) when one exists. Text under 300 characters is
   anchor strings such as `doan-3` survive a refetch or a parser change.
 - Corpus: `document.text_source` (`source_tree`, `html_transcription`, `ocr`,
   `none`) and `document.text_complete boolean`, false when any gap of
-  `structure_uncertain`, `table_text` (more than a tenth of the characters in
-  tables), `image_content`, `ocr_flagged` or `needs_ocr` applies; build derives
-  `source_tree` for artifacts without `text.json`. Search and read results
-  return both on the document entry, with each provision's locator. This is
-  corpus schema version 4.
+  `structure_uncertain`, `table_text` (more than a tenth of the characters
+  inside provisions are in tables; letterhead and signature tables outside any
+  provision do not count), `image_content`, `ocr_flagged` or `needs_ocr`
+  applies; build derives `source_tree` for artifacts without `text.json`. Search
+  and read results return both on the document entry, with each provision's
+  locator. This is corpus schema version 4.
 
 ## Inputs and reuse
 
