@@ -1,8 +1,11 @@
 import { readFile, writeFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
+import { resolve } from 'node:path'
 
-const root = new URL('../', import.meta.url)
-const cases = JSON.parse(await readFile(new URL('../../corpus/internal/evaluation/testdata/vn/legacy.json', root), 'utf8'))
+const repoRoot = new URL('../../../', import.meta.url)
+const defaultOutput = fileURLToPath(new URL('../app/data/', import.meta.url))
+const output = resolve(process.env.TRACHUAN_SAMPLE_DIR || defaultOutput)
+const cases = JSON.parse(await readFile(new URL('apps/corpus/internal/evaluation/testdata/vn/legacy.json', repoRoot), 'utf8'))
 const chosen = cases.find(item => item.id === 'atttt-50-2024')
 const base = process.env.TRACHUAN_URL
 const token = process.env.TRACHUAN_TOKEN
@@ -32,5 +35,5 @@ const result = await send({ jsonrpc: '2.0', id: 2, method: 'tools/call', params:
 const sample = result.structuredContent
 if (!sample || typeof sample.release !== 'string' || !sample.release || !Array.isArray(sample.hits) || sample.hits.length === 0) throw new Error('Search returned no sample')
 const meta = { release: sample.release, case_id: chosen.id, generated_at: new Date().toISOString() }
-await writeFile(fileURLToPath(new URL('app/data/sample-result.json', root)), `${JSON.stringify(sample, null, 2)}\n`)
-await writeFile(fileURLToPath(new URL('app/data/sample-result.meta.json', root)), `${JSON.stringify(meta, null, 2)}\n`)
+await writeFile(resolve(output, 'sample-result.json'), `${JSON.stringify(sample, null, 2)}\n`)
+await writeFile(resolve(output, 'sample-result.meta.json'), `${JSON.stringify(meta, null, 2)}\n`)
