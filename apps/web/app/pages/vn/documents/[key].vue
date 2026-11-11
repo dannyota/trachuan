@@ -142,7 +142,7 @@ async function seekAnchor(initial = false) {
     return
   }
   if (target) scrollReader(seekGeneration, signal, target)
-  else if (initial) scrollReader(seekGeneration, signal)
+  else scrollReader(seekGeneration, signal)
   seeking = false
   void fillVisible(seekGeneration, signal)
 }

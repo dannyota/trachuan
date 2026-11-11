@@ -114,7 +114,7 @@ it('does not scroll when the router has left the reader before unmount', async (
   wrapper.unmount()
 })
 
-it('does not scroll to the top for an unknown anchor visited after initial load', async () => {
+it('scrolls to the top for an unknown anchor visited after initial load', async () => {
   setupReader([{ data: { release: '20261111_1', item: { complete: true, units: [] } } }])
   const { reactive } = await import('vue')
   const route = reactive({ params: { key: 'vn:vbpl:1' }, query: {}, hash: '' })
@@ -125,6 +125,6 @@ it('does not scroll to the top for an unknown anchor visited after initial load'
   scroll.mockClear()
   route.hash = '#missing'
   await flushPromises()
-  expect(scroll).not.toHaveBeenCalled()
+  expect(scroll).toHaveBeenCalledWith(0, 0)
   wrapper.unmount()
 })
