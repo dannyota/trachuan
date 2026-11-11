@@ -104,16 +104,17 @@ type OcrCheck struct {
 }
 
 type OcrCheckAttempt struct {
-	ID        int64
-	OcrTextID int64
-	CheckerID string
-	Mode      string
-	BatchID   *string
-	State     string
-	Reason    string
-	Usage     json.RawMessage
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID           int64
+	OcrTextID    int64
+	CheckerID    string
+	Mode         string
+	SubmissionID string
+	BatchID      *string
+	State        string
+	Reason       string
+	Usage        json.RawMessage
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
 }
 
 type OcrText struct {

@@ -17,7 +17,9 @@ sent: no user question, no personal data, only public legal text.
 The answer is structured output under a JSON schema:
 
 - `same_document`: whether the OCR text is a reading of this PDF at all.
-- `pages`: the number of pages the checker read.
+- `pages`: the number of pages the checker read. The pipeline counts the PDF's
+  pages itself before sending and stores that count with the result as
+  `pdf_pages`; the two must be equal.
 - `items`: disagreements, each with `kind` (`document_number`, `date`,
   `article_label`, `amount`, `missing_text`, `extra_text`), `page`, `ocr` (the
   OCR reading), `pdf` (the file's reading) and a short `note`. Differences of
@@ -28,7 +30,12 @@ The checker never rewrites the stored text; its answer is evidence beside it.
 ## Verdicts
 
 A check is complete only when the request ended normally (`end_turn`), the
-answer parses under the schema and `pages` is at least one. Then:
+answer parses under the schema with no unknown, repeated or differently cased
+field, and `pages` equals the page count the pipeline established for the PDF. A
+PDF whose pages cannot be counted is never checked (`page_count_unknown`), and
+an answer that reports another number is a failed attempt
+(`page_count_mismatch`). The stored result is the validated answer serialized
+again by the pipeline, never the bytes the checker sent. Then:
 
 - `rejected`: `same_document` is false, or `missing_text` items cover more than
   a tenth of the pages. The text must not be indexed; the document gets the gap
@@ -64,10 +71,23 @@ id. Flags: `--model`, `--effort`, `--limit-docs`, `--max-usd` (required),
 - Direct mode sends one request per document, a few at a time. It is for the
   pilot and for retries.
 - Batch mode submits Message Batches (half price). A batch holds at most 200 MB
-  of requests; each request's `custom_id` is the `ocr_text` row id. Submitted
-  batches are recorded, so a later invocation collects results instead of
-  submitting again, and an expired or errored item becomes a failed attempt that
-  the next invocation may resubmit.
+  of requests. Submission follows
+  [external batch submissions](batch-submissions.md) in the form this command
+  needs: before the network call every attempt of the batch is written in state
+  `preparing` with a new 128-bit submission id, and each request's `custom_id`
+  is `<submission id>-<ocr_text row id>`. The batch id is written to those rows
+  (`submitted`) before anything else happens. A `preparing` attempt older than
+  ten minutes, or a create call that failed without a response, is `uncertain`:
+  the provider may hold a paid batch nobody recorded. Uncertain attempts block
+  new attempts for their entries. `corpus ocr check --reconcile` lists the
+  provider's batches created in that window and matches the `custom_id` prefix
+  in their results; a match attaches the batch id, and no match 24 hours after
+  the attempt marks it `abandoned`, which allows one new submission. A later
+  invocation collects the results of `submitted` attempts instead of submitting
+  again; an expired or errored item becomes a failed attempt that the next
+  invocation may resubmit. The records live in the workshop database only; if it
+  is lost, at most the batches then in flight are paid twice, bounded by
+  `--max-usd`.
 - Spend: each attempt records the usage the API reported; the command adds the
   cost at the listed price and stops before a request or batch that could pass
   `--max-usd`, counting the largest possible output.
@@ -82,6 +102,11 @@ request id only. The API stores batch inputs and results for 29 days
 read 2026-11-11); this is why only public legal text may be sent.
 
 ## Limits
+
+The page count comes from the PDF's page tree, read by a PDF library inside the
+check command only, under the file size limit and a ten-second limit per file; a
+library error or panic is `page_count_unknown`. `extract` and the worker still
+parse no PDF.
 
 A request carries one PDF of at most 600 pages and 30 MB with its OCR text
 ([PDF support](https://platform.claude.com/docs/en/build-with-claude/pdf-support),

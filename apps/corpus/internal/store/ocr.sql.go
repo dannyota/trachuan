@@ -13,10 +13,24 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const abandonOCRCheckAttempts = `-- name: AbandonOCRCheckAttempts :execrows
+UPDATE ocr_check_attempt
+SET state = 'abandoned', updated_at = now()
+WHERE submission_id = $1 AND state = 'uncertain'
+`
+
+func (q *Queries) AbandonOCRCheckAttempts(ctx context.Context, submissionID string) (int64, error) {
+	result, err := q.db.Exec(ctx, abandonOCRCheckAttempts, submissionID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const finishOCRCheckAttempt = `-- name: FinishOCRCheckAttempt :execrows
 UPDATE ocr_check_attempt
 SET state = $2, reason = $3, usage = $4, updated_at = now()
-WHERE id = $1 AND state = 'submitted'
+WHERE id = $1 AND state IN ('preparing', 'submitted')
 `
 
 type FinishOCRCheckAttemptParams struct {
@@ -166,19 +180,16 @@ func (q *Queries) InsertOCRCheck(ctx context.Context, arg InsertOCRCheckParams) 
 }
 
 const insertOCRCheckAttempt = `-- name: InsertOCRCheckAttempt :one
-INSERT INTO ocr_check_attempt (ocr_text_id, checker_id, mode, batch_id, state, reason, usage)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
+INSERT INTO ocr_check_attempt (ocr_text_id, checker_id, mode, submission_id, state)
+VALUES ($1, $2, $3, $4, 'preparing')
 RETURNING id
 `
 
 type InsertOCRCheckAttemptParams struct {
-	OcrTextID int64
-	CheckerID string
-	Mode      string
-	BatchID   *string
-	State     string
-	Reason    string
-	Usage     json.RawMessage
+	OcrTextID    int64
+	CheckerID    string
+	Mode         string
+	SubmissionID string
 }
 
 func (q *Queries) InsertOCRCheckAttempt(ctx context.Context, arg InsertOCRCheckAttemptParams) (int64, error) {
@@ -186,10 +197,7 @@ func (q *Queries) InsertOCRCheckAttempt(ctx context.Context, arg InsertOCRCheckA
 		arg.OcrTextID,
 		arg.CheckerID,
 		arg.Mode,
-		arg.BatchID,
-		arg.State,
-		arg.Reason,
-		arg.Usage,
+		arg.SubmissionID,
 	)
 	var id int64
 	err := row.Scan(&id)
@@ -342,6 +350,45 @@ func (q *Queries) ListOCRTextByPDF(ctx context.Context, pdfSha256s []string) ([]
 	return items, nil
 }
 
+const listOpenOCRCheckAttempts = `-- name: ListOpenOCRCheckAttempts :many
+SELECT id, ocr_text_id, checker_id, mode, submission_id, batch_id, state, reason, usage, created_at, updated_at
+FROM ocr_check_attempt
+WHERE checker_id = $1 AND state IN ('preparing', 'submitted', 'uncertain')
+ORDER BY id
+`
+
+func (q *Queries) ListOpenOCRCheckAttempts(ctx context.Context, checkerID string) ([]OcrCheckAttempt, error) {
+	rows, err := q.db.Query(ctx, listOpenOCRCheckAttempts, checkerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []OcrCheckAttempt
+	for rows.Next() {
+		var i OcrCheckAttempt
+		if err := rows.Scan(
+			&i.ID,
+			&i.OcrTextID,
+			&i.CheckerID,
+			&i.Mode,
+			&i.SubmissionID,
+			&i.BatchID,
+			&i.State,
+			&i.Reason,
+			&i.Usage,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listRunOCRSelections = `-- name: ListRunOCRSelections :many
 SELECT s.run_id, s.item_key, s.gap, s.pdf_sha256, s.ocr_text_id, s.ocr_check_id,
        t.engine_id, t.text_sha256, c.checker_id, c.result_sha256, c.flagged
@@ -398,42 +445,44 @@ func (q *Queries) ListRunOCRSelections(ctx context.Context, runID int64) ([]List
 	return items, nil
 }
 
-const listSubmittedOCRCheckAttempts = `-- name: ListSubmittedOCRCheckAttempts :many
-SELECT id, ocr_text_id, checker_id, mode, batch_id, state, reason, usage, created_at, updated_at
-FROM ocr_check_attempt
-WHERE checker_id = $1 AND state = 'submitted'
-ORDER BY id
+const markOCRCheckAttemptsSubmitted = `-- name: MarkOCRCheckAttemptsSubmitted :execrows
+UPDATE ocr_check_attempt
+SET state = 'submitted', batch_id = $1, updated_at = now()
+WHERE submission_id = $2 AND state IN ('preparing', 'uncertain')
 `
 
-func (q *Queries) ListSubmittedOCRCheckAttempts(ctx context.Context, checkerID string) ([]OcrCheckAttempt, error) {
-	rows, err := q.db.Query(ctx, listSubmittedOCRCheckAttempts, checkerID)
+type MarkOCRCheckAttemptsSubmittedParams struct {
+	BatchID      *string
+	SubmissionID string
+}
+
+func (q *Queries) MarkOCRCheckAttemptsSubmitted(ctx context.Context, arg MarkOCRCheckAttemptsSubmittedParams) (int64, error) {
+	result, err := q.db.Exec(ctx, markOCRCheckAttemptsSubmitted, arg.BatchID, arg.SubmissionID)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
-	defer rows.Close()
-	var items []OcrCheckAttempt
-	for rows.Next() {
-		var i OcrCheckAttempt
-		if err := rows.Scan(
-			&i.ID,
-			&i.OcrTextID,
-			&i.CheckerID,
-			&i.Mode,
-			&i.BatchID,
-			&i.State,
-			&i.Reason,
-			&i.Usage,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
+	return result.RowsAffected(), nil
+}
+
+const markOCRCheckAttemptsUncertain = `-- name: MarkOCRCheckAttemptsUncertain :execrows
+UPDATE ocr_check_attempt
+SET state = 'uncertain', reason = $1, updated_at = now()
+WHERE state = 'preparing'
+  AND (submission_id = $2 OR ($2::text IS NULL AND created_at < $3))
+`
+
+type MarkOCRCheckAttemptsUncertainParams struct {
+	Reason       string
+	SubmissionID *string
+	Before       time.Time
+}
+
+func (q *Queries) MarkOCRCheckAttemptsUncertain(ctx context.Context, arg MarkOCRCheckAttemptsUncertainParams) (int64, error) {
+	result, err := q.db.Exec(ctx, markOCRCheckAttemptsUncertain, arg.Reason, arg.SubmissionID, arg.Before)
+	if err != nil {
+		return 0, err
 	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+	return result.RowsAffected(), nil
 }
 
 const sumOCRCheckUsage = `-- name: SumOCRCheckUsage :many

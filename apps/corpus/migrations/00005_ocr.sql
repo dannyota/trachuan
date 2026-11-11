@@ -27,16 +27,18 @@ CREATE TABLE ocr_check_attempt (
     ocr_text_id bigint NOT NULL REFERENCES ocr_text (id),
     checker_id text NOT NULL CHECK (checker_id <> ''),
     mode text NOT NULL CHECK (mode IN ('direct', 'batch')),
+    submission_id text NOT NULL CHECK (submission_id ~ '^[0-9a-f]{32}$'),
     batch_id text,
-    state text NOT NULL CHECK (state IN ('submitted', 'complete', 'failed')),
+    state text NOT NULL CHECK (state IN ('preparing', 'submitted', 'uncertain', 'abandoned', 'complete', 'failed')),
     reason text NOT NULL DEFAULT '',
     usage jsonb NOT NULL DEFAULT '{}' CHECK (jsonb_typeof(usage) = 'object'),
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now(),
-    CHECK ((mode = 'batch') = (batch_id IS NOT NULL))
+    CHECK (batch_id IS NULL OR mode = 'batch'),
+    CHECK (state NOT IN ('submitted') OR mode = 'direct' OR batch_id IS NOT NULL)
 );
 CREATE INDEX ON ocr_check_attempt (ocr_text_id, checker_id);
-CREATE UNIQUE INDEX ON ocr_check_attempt (ocr_text_id, checker_id) WHERE state = 'submitted';
+CREATE UNIQUE INDEX ON ocr_check_attempt (ocr_text_id, checker_id) WHERE state IN ('preparing', 'submitted', 'uncertain');
 
 CREATE TABLE run_ocr_selection (
     run_id bigint NOT NULL REFERENCES run (id),

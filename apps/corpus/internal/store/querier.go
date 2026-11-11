@@ -10,6 +10,7 @@ import (
 )
 
 type Querier interface {
+	AbandonOCRCheckAttempts(ctx context.Context, submissionID string) (int64, error)
 	AcceptRunGaps(ctx context.Context, arg AcceptRunGapsParams) (int64, error)
 	AdvanceRunStage(ctx context.Context, arg AdvanceRunStageParams) error
 	ArtifactPathReferenced(ctx context.Context, arg ArtifactPathReferencedParams) (bool, error)
@@ -91,6 +92,7 @@ type Querier interface {
 	ListMembershipEvidence(ctx context.Context, runID int64) ([]RunMembershipEvidence, error)
 	ListOCRChecks(ctx context.Context, arg ListOCRChecksParams) ([]ListOCRChecksRow, error)
 	ListOCRTextByPDF(ctx context.Context, pdfSha256s []string) ([]OcrText, error)
+	ListOpenOCRCheckAttempts(ctx context.Context, checkerID string) ([]OcrCheckAttempt, error)
 	ListPendingBatchItems(ctx context.Context, arg ListPendingBatchItemsParams) ([]RunItem, error)
 	ListPendingStageBatches(ctx context.Context, arg ListPendingStageBatchesParams) ([]int32, error)
 	ListReleaseBlockingFailureCodes(ctx context.Context, arg ListReleaseBlockingFailureCodesParams) ([]string, error)
@@ -104,8 +106,9 @@ type Querier interface {
 	ListRunSources(ctx context.Context, runID int64) ([]RunSource, error)
 	ListSeedObservations(ctx context.Context, runID int64) ([]RunSeedObservation, error)
 	ListStageItemArtifacts(ctx context.Context, arg ListStageItemArtifactsParams) ([]ListStageItemArtifactsRow, error)
-	ListSubmittedOCRCheckAttempts(ctx context.Context, checkerID string) ([]OcrCheckAttempt, error)
 	ListUnacceptedGapCounts(ctx context.Context, runID int64) ([]ListUnacceptedGapCountsRow, error)
+	MarkOCRCheckAttemptsSubmitted(ctx context.Context, arg MarkOCRCheckAttemptsSubmittedParams) (int64, error)
+	MarkOCRCheckAttemptsUncertain(ctx context.Context, arg MarkOCRCheckAttemptsUncertainParams) (int64, error)
 	MarkRunFromStates(ctx context.Context, arg MarkRunFromStatesParams) (int64, error)
 	PauseRunSource(ctx context.Context, arg PauseRunSourceParams) (int64, error)
 	PublishExpanded(ctx context.Context, arg PublishExpandedParams) (int64, error)
