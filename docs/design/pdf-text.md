@@ -51,15 +51,18 @@ decodes correctly, covers the page or reads in order (two paragraphs swapped
 between articles keep every statistic and can keep the article sequence). So an
 eligible PDF is used only with an approval: an entry in a reviewed list, keyed
 by the PDF's SHA-256 and the SHA-256 of the extracted text, written after a
-person compared the extracted text with the rendered pages. A new extractor
-version changes the text hash and needs a new approval. Without one the document
-goes to `ocr`. The candidate set is small enough for this to be the whole
-control.
+person compared the extracted text with the rendered pages on every page:
+coverage, decoding and reading order. The approval must reject text that
+originates from a scan, including tiled or partial scans that pass the per-image
+threshold above. Changed extracted text needs a new approval. Without one the
+document goes to `ocr`. The candidate set is small enough for this to be the
+whole control.
 
 `pdf_text` documents are `text_complete` false by default: plain extracted text
 carries no table, formula or image signals, so a flattened table cannot be
-detected. The approval may state that the file has none, which makes it
-complete.
+detected. The approval may state that the file has none; that permits
+`text_complete` true only when the shared extraction and build rules report no
+incompleteness gap. An approval never overrides those rules.
 
 ## Measured
 
@@ -98,13 +101,14 @@ stays a separate program, and cross-check version 2 renders pages with its
 The PDFs are untrusted and this is the one place the worker hands them to a
 parser, so limits are not enough: each subprocess runs in an enforced sandbox
 with no network, no credentials in its environment, read access to the verified
-PDF and the tool's runtime files only, bounded scratch space and memory, bounded
-stdout and stderr, a 60-second limit per call and a total limit per document
-from [budgets](budgets.md), and cancellation that kills and reaps the process
-tree. A missing tool, an unsupported version or an unavailable sandbox is a
-worker configuration error that stops the stage; it is never a reason to select
-OCR for a document. A timeout or nonzero exit on one PDF is `file_unreadable`
-for that PDF.
+PDF and the tool's runtime files only, the numeric limits in
+[budgets](budgets.md#pipeline) (memory, scratch space, stdout, stderr,
+concurrent subprocesses, time per call and per document), and cancellation that
+kills and reaps the process tree. The worker refuses a configuration that cannot
+enforce them. A missing tool, an unsupported version or an unavailable sandbox
+is a worker configuration error that stops the stage; it is never a reason to
+select OCR for a document. A timeout or nonzero exit on one PDF is
+`file_unreadable` for that PDF.
 
 Where it runs: `extract`, on the write path only. Nothing on the serving host
 reads a PDF or needs poppler. A worker container installs a pinned poppler
@@ -118,11 +122,13 @@ Planning freezes the selection as it does for OCR: an immutable record per
 document holding the candidate PDF hashes, the selected PDF or the failure
 reason, the per-page classes with their Vietnamese letter share and image
 coverage, the extracted text hash, the approval used, and the OCR selection it
-falls back to. Processing consumes that record and never selects again. The
-extract recipe binds the poppler version, the arguments, the gate version and
-the parser version; a change invalidates every selection that consulted the
-gate, failures included, and a runtime version that differs from the recipe
-refuses to process.
+falls back to. Planning stores the extracted text and the page record immutably
+and binds their hashes, the selection outcome and the approval to the frozen
+input. Processing verifies those bytes, fails the item when they are absent or
+differ, and never selects or extracts again. The extract recipe binds the
+poppler version, the arguments, the gate version and the parser version; a
+change invalidates every selection that consulted the gate, failures included,
+and a runtime version that differs from the recipe refuses to process.
 
 Candidates are deduplicated by SHA-256 and counted only after full extraction,
 the 300-character minimum and the parsing limits. Exactly one usable candidate
