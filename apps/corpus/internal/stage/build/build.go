@@ -66,18 +66,14 @@ func (s *Stage) Plan(ctx context.Context, env stage.Env, run stage.Run) ([]stage
 	if err != nil {
 		return nil, fmt.Errorf("load identity inventory: %w", err)
 	}
-	mapping, err := s.cfg.Suite.PinnedMap()
-	if err != nil {
-		return nil, fmt.Errorf("verify identity map: %w", err)
-	}
-	if _, err = mapping.Validate(s.cfg.Suite.Legacy, s.cfg.Suite.Hashes.Legacy, identities); err != nil {
-		return nil, fmt.Errorf("validate identity map: %w", err)
+	if _, err = s.validateMappings(identities); err != nil {
+		return nil, err
 	}
 	_, correction, err := s.cfg.Corrections.pinned()
 	if err != nil {
 		return nil, fmt.Errorf("verify corrections: %w", err)
 	}
-	hash := inventoryInputHash(run.Country, run.Rel, inv, s.cfg.Suite.Hashes.IdentityMap, correction)
+	hash := s.inputHash(run.Country, run.Rel, inv, correction)
 	return []stage.Item{{Key: run.Country + "/" + run.Rel, InputHash: hash}}, nil
 }
 
@@ -107,4 +103,24 @@ func buildHash(country, rel string, inv Inventory, identityMap, provenance strin
 		args = append(args, c.hash)
 	}
 	return stage.RecipeHash("build-input", "2", args...)
+}
+
+func (s *Stage) validateMappings(identities evaluation.IdentityInventory) (evaluation.ValidationReport, error) {
+	mapping, err := s.cfg.Suite.PinnedMap()
+	if err != nil {
+		return nil, fmt.Errorf("verify identity map: %w", err)
+	}
+	report, err := mapping.Validate(append(append([]evaluation.Case{}, s.cfg.Suite.Legacy...), s.cfg.Suite.Development...), s.cfg.Suite.Hashes.Legacy, identities)
+	if err != nil {
+		return nil, fmt.Errorf("validate identity map: %w", err)
+	}
+	return report, nil
+}
+
+func (s *Stage) inputHash(country, rel string, inv Inventory, correction correctionInput) string {
+	return withDevelopmentHash(inventoryInputHash(country, rel, inv, s.cfg.Suite.Hashes.IdentityMap, correction), s.cfg.Suite.Hashes.Development)
+}
+
+func withDevelopmentHash(inputHash, development string) string {
+	return stage.RecipeHash("build-input", "4", inputHash, development)
 }

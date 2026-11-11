@@ -37,15 +37,18 @@ type Metric struct {
 
 // Cohort summarizes the cases and metrics for one scoring policy.
 type Cohort struct {
-	CaseCount         int      `json:"case_count"`
-	PositiveCount     int      `json:"positive_count"`
-	NegativeCount     int      `json:"negative_count"`
-	RejectionCount    int      `json:"rejection_count"`
-	ExpectedCitations int      `json:"expected_citations"`
-	Metrics           []Metric `json:"metrics"`
+	Floors            []Floor         `json:"floors,omitempty"`
+	Targets           []Target        `json:"targets,omitempty"`
+	NonRegression     []NonRegression `json:"non_regression,omitempty"`
+	CaseCount         int             `json:"case_count"`
+	PositiveCount     int             `json:"positive_count"`
+	NegativeCount     int             `json:"negative_count"`
+	RejectionCount    int             `json:"rejection_count"`
+	ExpectedCitations int             `json:"expected_citations"`
+	Metrics           []Metric        `json:"metrics"`
 }
 
-// Floor records an old-product quality gate.
+// Floor records a product-cohort quality gate.
 type Floor struct {
 	Metric
 	Floor  float64 `json:"floor"`

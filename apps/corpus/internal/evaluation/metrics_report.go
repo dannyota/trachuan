@@ -29,7 +29,7 @@ func compactHits(hits []retrieval.Hit) []retrieval.Hit {
 }
 
 func finishPresented(r *Report, all map[presentedKey]*presentedSamples, modes []retrieval.Mode) {
-	for _, cohort := range []string{"legacy", "old_product"} {
+	for _, cohort := range reportCohorts(r) {
 		for _, mode := range modes {
 			for _, detail := range []retrieval.Detail{retrieval.DetailCompact, retrieval.DetailFull} {
 				for _, limit := range []int{8, 20} {
@@ -64,7 +64,7 @@ func setCompactSizeGate(r *Report) {
 }
 
 func finishReport(r *Report, all map[metricKey]*Metrics, modes []retrieval.Mode) {
-	for _, cohort := range []string{"legacy", "old_product"} {
+	for _, cohort := range reportCohorts(r) {
 		stats := r.Cohorts[cohort]
 		for _, mode := range modes {
 			for _, arms := range []retrieval.ArmMode{"hybrid", "dense", "lexical"} {
@@ -153,17 +153,50 @@ func finishReport(r *Report, all map[metricKey]*Metrics, modes []retrieval.Mode)
 }
 
 func markMappingUnavailable(r *Report) {
-	stats := r.Cohorts["old_product"]
+	markCohortMappingUnavailable(r, "old_product")
+}
+
+func markCohortMappingUnavailable(r *Report, cohort string) {
+	stats := r.Cohorts[cohort]
 	for i := range stats.Metrics {
 		m := &stats.Metrics[i]
 		if m.Name == "recall" || m.Name == "macro_recall" || m.Name == "mrr" {
 			m.Value = nil
 		}
 	}
-	r.Cohorts["old_product"] = stats
+	r.Cohorts[cohort] = stats
 }
 
 func finishQuality(r *Report, previous *Report) {
+	finishProductQuality(r, previous)
+	old := r.Cohorts["old_product"]
+	old.Floors, old.Targets, old.NonRegression = r.Floors, r.Targets, r.NonRegression
+	r.Cohorts["old_product"] = old
+	development := r.Cohorts["development"]
+	current := Report{Cohorts: map[string]Cohort{"old_product": development}, Rejections: r.Rejections}
+	var prior *Report
+	if previous != nil && previous.Cohorts["development"].CaseCount > 0 {
+		prior = &Report{Cohorts: map[string]Cohort{"old_product": previous.Cohorts["development"]}}
+	}
+	finishProductQuality(&current, prior)
+	if development.CaseCount == 0 {
+		for i := range current.Floors {
+			current.Floors[i].Status = "not_run"
+		}
+		for i := range current.Targets {
+			current.Targets[i].Status = "not_run"
+		}
+		for i := range current.NonRegression {
+			current.NonRegression[i].Status = "not_run"
+		}
+	} else {
+		r.QualityPass = r.QualityPass && current.QualityPass
+	}
+	development.Floors, development.Targets, development.NonRegression = current.Floors, current.Targets, current.NonRegression
+	r.Cohorts["development"] = development
+}
+
+func finishProductQuality(r *Report, previous *Report) {
 	for _, mode := range []retrieval.Mode{"exact", "ann"} {
 		for _, spec := range []struct {
 			name          string

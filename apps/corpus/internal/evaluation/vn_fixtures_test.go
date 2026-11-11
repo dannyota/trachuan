@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -56,6 +57,16 @@ func TestVNFixtures_Validate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	development, err := LoadDevelopment(strings.NewReader(string(read("development.json"))))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = checkVNFixtureMappings(cases, development, m, hash); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func checkVNFixtureMappings(cases, development []Case, m IdentityMap, hash string) error {
 	expectations, negatives := 0, 0
 	for _, c := range cases {
 		expectations += len(c.ExpectedCitations)
@@ -63,16 +74,38 @@ func TestVNFixtures_Validate(t *testing.T) {
 			negatives++
 		}
 	}
-	if len(cases) != 92 || expectations != 96 || negatives != 5 || len(m.Entries) != 96 {
-		t.Fatalf("counts: cases=%d expectations=%d negatives=%d entries=%d", len(cases), expectations, negatives, len(m.Entries))
+	legacyIDs, developmentIDs := map[string]bool{}, map[string]bool{}
+	for _, c := range cases {
+		legacyIDs[c.ID] = true
 	}
-	report, err := m.Validate(cases, hash, IdentityInventory{})
+	developmentExpectations := 0
+	for _, c := range development {
+		developmentIDs[c.ID] = true
+		developmentExpectations += len(c.ExpectedCitations)
+	}
+	legacyEntries, developmentEntries := 0, 0
+	for _, entry := range m.Entries {
+		if legacyIDs[entry.CaseID] {
+			legacyEntries++
+		}
+		if developmentIDs[entry.CaseID] {
+			developmentEntries++
+		}
+	}
+	if len(cases) != 92 || expectations != 96 || negatives != 5 || legacyEntries != 96 {
+		return fmt.Errorf("legacy counts: cases=%d expectations=%d negatives=%d entries=%d", len(cases), expectations, negatives, legacyEntries)
+	}
+	if developmentEntries != developmentExpectations {
+		return fmt.Errorf("development counts: expectations=%d entries=%d", developmentExpectations, developmentEntries)
+	}
+	report, err := m.Validate(append(append([]Case{}, cases...), development...), hash, IdentityInventory{})
 	if err != nil {
-		t.Fatal(err)
+		return err
 	}
 	if len(report) == 0 {
-		t.Fatal("missing inventory should report incomplete mappings")
+		return fmt.Errorf("missing inventory should report incomplete mappings")
 	}
+	return nil
 }
 
 func TestVNIdentityMap_ResolvedRecordsComplete(t *testing.T) {
@@ -106,5 +139,22 @@ func TestVNIdentityMap_ResolvedRecordsComplete(t *testing.T) {
 				t.Errorf("%s/%d: incomplete relation identity", entry.CaseID, entry.CitationIndex)
 			}
 		}
+	}
+}
+
+func TestVNFixtures_DevelopmentMappingPassesGuard(t *testing.T) {
+	suite, err := VNSuite()
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := Case{ID: "synthetic-development", Question: "123/2026/TT", Tags: []string{"identifier"}, ExpectedCitations: []Expectation{{DocNumber: "123/2026/TT"}}}
+	suite.Development = append(suite.Development, c)
+	suite.Map.Entries = append(suite.Map.Entries, MapEntry{CaseID: c.ID, State: "absent", ExpectedNumber: "123/2026/TT", Reason: "123/2026/TT absent from synthetic inventory", ReviewedAt: "2026-11-11"})
+	if err = checkVNFixtureMappings(suite.Legacy, suite.Development, suite.Map, suite.Hashes.Legacy); err != nil {
+		t.Fatal(err)
+	}
+	suite.Map.Entries = suite.Map.Entries[:len(suite.Map.Entries)-1]
+	if err = checkVNFixtureMappings(suite.Legacy, suite.Development, suite.Map, suite.Hashes.Legacy); err == nil {
+		t.Fatal("missing development mapping passed the guard")
 	}
 }

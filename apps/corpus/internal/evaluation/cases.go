@@ -20,6 +20,7 @@ type Expectation struct {
 
 // Case describes an authored evaluation case.
 type Case struct {
+	Tags              []string      `json:"tags,omitempty"`
 	ID                string        `json:"id"`
 	Question          string        `json:"question"`
 	ExpectedCitations []Expectation `json:"expected_citations,omitempty"`
@@ -34,11 +35,13 @@ type FixtureHashes struct {
 	IdentityMap   string
 	OldProduct    string
 	ValidityCases string
+	Development   string
 }
 
 // Suite holds the cases and adjudications for evaluation.
 type Suite struct {
 	Legacy        []Case
+	Development   []Case
 	ValidityCases []ValidityCase
 	ValidityBytes []byte
 	Map           IdentityMap
@@ -49,6 +52,10 @@ type Suite struct {
 
 // LoadLegacy decodes and validates the authored cases.
 func LoadLegacy(r io.Reader) ([]Case, error) {
+	return loadCases(r, false)
+}
+
+func loadCases(r io.Reader, allowEmpty bool) ([]Case, error) {
 	var cases []Case
 	dec := json.NewDecoder(r)
 	if err := dec.Decode(&cases); err != nil {
@@ -61,7 +68,7 @@ func LoadLegacy(r io.Reader) ([]Case, error) {
 		}
 		return nil, fmt.Errorf("decode legacy cases: %w", err)
 	}
-	if len(cases) == 0 {
+	if cases == nil || (!allowEmpty && len(cases) == 0) {
 		return nil, fmt.Errorf("legacy cases: empty suite")
 	}
 	seen := make(map[string]bool)
@@ -82,6 +89,32 @@ func LoadLegacy(r io.Reader) ([]Case, error) {
 					return nil, fmt.Errorf("legacy case %q: empty alternate number", c.ID)
 				}
 			}
+		}
+	}
+	return cases, nil
+}
+
+// LoadDevelopment decodes cases with diagnostic tags.
+func LoadDevelopment(r io.Reader) ([]Case, error) {
+	cases, err := loadCases(r, true)
+	if err != nil {
+		return nil, err
+	}
+	for _, c := range cases {
+		if len(c.Tags) == 0 {
+			return nil, fmt.Errorf("case %q: tags required", c.ID)
+		}
+		seen := map[string]bool{}
+		for _, tag := range c.Tags {
+			switch tag {
+			case "identifier", "clause", "multi_document", "abbreviation", "missing_date", "historical", "out_of_domain", "negative":
+			default:
+				return nil, fmt.Errorf("case %q: invalid tag", c.ID)
+			}
+			if seen[tag] {
+				return nil, fmt.Errorf("case %q: duplicate tag", c.ID)
+			}
+			seen[tag] = true
 		}
 	}
 	return cases, nil

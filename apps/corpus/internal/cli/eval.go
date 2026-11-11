@@ -26,23 +26,49 @@ func evalExit(r evaluation.Report, require bool) int {
 		return 1
 	}
 	if require {
-		if !r.QualityPass || len(r.Floors) != 4 {
+		if !r.QualityPass || !passingEvalFloors(r.Floors, false) {
 			return 2
 		}
-		seen := make(map[string]bool)
-		for _, f := range r.Floors {
-			if f.Status != "pass" || f.Arms != "hybrid" || f.Limit != 8 || (f.Mode != "exact" && f.Mode != "ann") || (f.Name != "current_law_precision" && f.Name != "abstention") {
+		development := r.Cohorts["development"]
+		if !passingEvalFloors(development.Floors, development.CaseCount == 0) {
+			return 2
+		}
+		for _, rejection := range r.Rejections {
+			if !rejection.Passed {
 				return 2
 			}
-			key := string(f.Mode) + ":" + f.Name
-			if seen[key] {
-				return 2
-			}
-			seen[key] = true
 		}
 	}
+
 	return 0
 }
+func passingEvalFloors(floors []evaluation.Floor, allowNotRun bool) bool {
+	if allowNotRun {
+		notRun := true
+		for _, f := range floors {
+			notRun = notRun && f.Status == "not_run"
+		}
+		if notRun {
+			return true
+		}
+	}
+	if len(floors) != 4 {
+		return false
+	}
+	seen := make(map[string]bool)
+	for _, f := range floors {
+		if f.Status != "pass" || f.Arms != "hybrid" || f.Limit != 8 || (f.Mode != "exact" && f.Mode != "ann") || (f.Name != "current_law_precision" && f.Name != "abstention") {
+			return false
+		}
+		key := string(f.Mode) + ":" + f.Name
+		if seen[key] {
+			return false
+		}
+		seen[key] = true
+	}
+	return true
+}
+
 func runEval(ctx context.Context, args []string, _ io.Writer, stderr io.Writer) int {
 	fail := func(err error) int { _, _ = fmt.Fprintln(stderr, err); return 1 }
 	if len(args) < 2 {

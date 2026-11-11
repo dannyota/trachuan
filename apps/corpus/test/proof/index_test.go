@@ -117,7 +117,14 @@ func (h *harness) indexSetup() {
 	if err = os.WriteFile(filepath.Join(dir, "legacy.json"), legacy, 0600); err != nil {
 		h.t.Fatal(err)
 	}
-	write("fixtures.json", map[string]any{"sha256": hash, "case_count": len(cases), "source_path": "test", "source_repository": "test", "source_commit": "test", "origin": "test"})
+	development := []byte("[]\n")
+	if err = os.WriteFile(filepath.Join(dir, "development.json"), development, 0600); err != nil {
+		h.t.Fatal(err)
+	}
+	write("fixtures.json", map[string]any{
+		"sha256": hash, "case_count": len(cases), "source_path": "test", "source_repository": "test", "source_commit": "test", "origin": "test",
+		"development": map[string]any{"sha256": fmt.Sprintf("%x", sha256.Sum256(development)), "case_count": 0, "origin": "test"},
+	})
 	write("old-product.json", map[string]any{"legacy_sha256": hash, "rejection_ids": []string{"reject1", "reject2", "reject3"}})
 	write("identity-map.json", m)
 	write("validity-cases.json", []map[string]any{{"number": "1/2099/TT-TEST", "issue_date": "2099-01-01", "current": true, "anchor": "Điều 1", "quote": "test"}})

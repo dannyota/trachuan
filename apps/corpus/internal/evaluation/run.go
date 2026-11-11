@@ -36,6 +36,15 @@ func validateSuite(s Suite) error {
 	for _, c := range s.Legacy {
 		ids[c.ID] = true
 	}
+	development, err := json.Marshal(s.Development)
+	if err != nil {
+		return fmt.Errorf("encode development: %w", err)
+	}
+	if s.Development != nil {
+		if _, err = LoadDevelopment(bytes.NewReader(development)); err != nil {
+			return fmt.Errorf("validate development: %w", err)
+		}
+	}
 	seen := map[string]bool{}
 	if len(s.Rejections) != 3 {
 		return fmt.Errorf("expected three rejection checks")
@@ -45,6 +54,12 @@ func validateSuite(s Suite) error {
 			return fmt.Errorf("invalid rejection ID")
 		}
 		seen[id] = true
+	}
+	for _, c := range s.Development {
+		if ids[c.ID] {
+			return fmt.Errorf("duplicate case ID across cohorts")
+		}
+		ids[c.ID] = true
 	}
 	return nil
 }
@@ -56,7 +71,7 @@ type metricKey struct {
 	limit  int
 }
 
-// Run scores the old-product and legacy cohorts with a frozen release recipe.
+// Run scores legacy, old-product and development cases with a frozen recipe.
 func Run(ctx context.Context, engine Engine, suite Suite, o Options) (Report, Cache, error) {
 	if err := validateSuite(suite); err != nil {
 		return Report{}, Cache{}, err
@@ -80,7 +95,7 @@ func Run(ctx context.Context, engine Engine, suite Suite, o Options) (Report, Ca
 	rel := engine.Release()
 	o = withReleaseRecipes(o, rel, modes)
 	recipe := rel.RetrievalRecipe
-	r := Report{Version: 1, Scorer: "agent-eval/1", Status: "complete", Country: rel.Country, Rel: rel.Rel, BuildArtifactSHA256: o.BuildArtifactSHA256, DumpSHA256: o.DumpSHA256, FixtureHashes: suite.Hashes, IdentityMapSHA256: suite.Hashes.IdentityMap, Recipes: o.Recipes, EvaluationDate: date, DatabaseInstanceKind: o.DatabaseInstanceKind, Software: o.Software, Calibration: o.Calibration, Cohorts: map[string]Cohort{"legacy": {}, "old_product": {}}, TimingsMS: map[string]any{}, CacheManifest: map[string]any{}, PreviousDiff: map[string]any{"reason": "no previous report"}, NotRun: map[string]string{"sealed": "not_run", "development": "not_run", "taxonomy": "out_of_scope", "filtered": "out_of_scope"}, Limitations: []string{"Small sample size; old-product cases were reused for provisional calibration.", "Legacy results use the product recipe and are not a reproduction of the legacy engine."}}
+	r := Report{Version: 1, Scorer: "agent-eval/1", Status: "complete", Country: rel.Country, Rel: rel.Rel, BuildArtifactSHA256: o.BuildArtifactSHA256, DumpSHA256: o.DumpSHA256, FixtureHashes: suite.Hashes, IdentityMapSHA256: suite.Hashes.IdentityMap, Recipes: o.Recipes, EvaluationDate: date, DatabaseInstanceKind: o.DatabaseInstanceKind, Software: o.Software, Calibration: o.Calibration, Cohorts: map[string]Cohort{"legacy": {}, "old_product": {}}, TimingsMS: map[string]any{}, CacheManifest: map[string]any{}, PreviousDiff: map[string]any{"reason": "no previous report"}, NotRun: map[string]string{"development": "not_run", "taxonomy": "out_of_scope", "filtered": "out_of_scope"}, Limitations: []string{"Small sample size; calibration fits the scored product cohorts.", "Legacy results use the product recipe and are not a reproduction of the legacy engine."}}
 	var previous *Report
 	if o.PreviousReport != "" {
 		b, err := os.ReadFile(o.PreviousReport)
@@ -94,6 +109,9 @@ func Run(ctx context.Context, engine Engine, suite Suite, o Options) (Report, Ca
 		if prior.Version != 1 || prior.Scorer != r.Scorer || prior.FixtureHashes.Legacy != r.FixtureHashes.Legacy || prior.FixtureHashes.OldProduct != r.FixtureHashes.OldProduct {
 			return Report{}, Cache{}, fmt.Errorf("incompatible previous scorer or fixtures")
 		}
+		if prior.Cohorts["development"].CaseCount > 0 && prior.FixtureHashes.Development != r.FixtureHashes.Development {
+			return Report{}, Cache{}, fmt.Errorf("incompatible previous development fixtures")
+		}
 		previous = &prior
 	}
 	rejects := rejectionSet(suite)
@@ -104,7 +122,7 @@ func Run(ctx context.Context, engine Engine, suite Suite, o Options) (Report, Ca
 		}
 		entries[e.CaseID][e.CitationIndex] = e
 		if e.State == "absent" {
-			for _, c := range suite.Legacy {
+			for _, c := range append(append([]Case{}, suite.Legacy...), suite.Development...) {
 				if c.ID == e.CaseID && e.CitationIndex >= 0 && e.CitationIndex < len(c.ExpectedCitations) {
 					x := c.ExpectedCitations[e.CitationIndex]
 					r.Coverage = append(r.Coverage, Coverage{c.ID, e.CitationIndex, append([]string{x.DocNumber}, x.AltDocNumbers...)})
@@ -112,12 +130,14 @@ func Run(ctx context.Context, engine Engine, suite Suite, o Options) (Report, Ca
 			}
 		}
 	}
+	inputs := cohortInputs(suite, &r)
 	cache := Cache{}
 	metrics := map[metricKey]*Metrics{}
 	presented := map[presentedKey]*presentedSamples{}
 	timings := map[string][]float64{}
 	vectorRows := map[string]int{}
-	for _, c := range suite.Legacy {
+	for _, input := range inputs {
+		c := input.c
 		force := true
 		request := retrieval.Request{Query: c.Question, Limit: 8, Mode: "exact", Arms: "hybrid", InForceOnly: &force}
 		product, err := engine.Prepare(ctx, request)
@@ -125,22 +145,22 @@ func Run(ctx context.Context, engine Engine, suite Suite, o Options) (Report, Ca
 			return Report{}, Cache{}, fmt.Errorf("prepare case %s: %w", c.ID, err)
 		}
 		legacy := product
-		if !product.Validation.Accepted {
+		if input.legacy && !product.Validation.Accepted {
 			legacy, err = engine.PrepareLegacy(ctx, request)
 			if err != nil {
 				return Report{}, Cache{}, fmt.Errorf("prepare legacy case %s: %w", c.ID, err)
 			}
 		}
-		if !legacy.Validation.Accepted || legacy.Vector == nil {
+		if input.legacy && (!legacy.Validation.Accepted || legacy.Vector == nil) {
 			return Report{}, Cache{}, fmt.Errorf("legacy case %s rejected", c.ID)
 		}
-		if rejects[c.ID] {
+		if input.legacy && rejects[c.ID] {
 			v := product.Validation
 			r.Rejections = append(r.Rejections, Rejection{c.ID, v.Reason, !v.Accepted && product.Vector == nil && v.Reason == "diacritics_required" && v.Message == "Vui lòng nhập câu hỏi tiếng Việt có dấu hoặc số hiệu văn bản."})
 		} else if !product.Validation.Accepted || product.Vector == nil {
 			return Report{}, Cache{}, fmt.Errorf("product case %s unexpectedly rejected", c.ID)
 		}
-		for _, cohort := range []string{"legacy", "old_product"} {
+		for _, cohort := range input.cohorts {
 			stats := r.Cohorts[cohort]
 			stats.CaseCount++
 			if cohort == "old_product" && rejects[c.ID] {
@@ -263,7 +283,7 @@ func Run(ctx context.Context, engine Engine, suite Suite, o Options) (Report, Ca
 						metrics[key].Cases = append(metrics[key].Cases, score)
 						chars := int((Metrics{Cases: []CaseScore{score}}).EvidenceCharacters()[0])
 						diagnosticEntries := entries[c.ID]
-						if cohort == "old_product" && len(o.Mapping[c.ID]) > 0 {
+						if cohort != "legacy" && len(o.Mapping[c.ID]) > 0 {
 							diagnosticEntries = nil
 						}
 						losses, gaps, err := caseDiagnostics(arms, recipe, limit, armMode, cohort, c.ExpectedCitations, diagnosticEntries, response)
@@ -271,7 +291,7 @@ func Run(ctx context.Context, engine Engine, suite Suite, o Options) (Report, Ca
 							return Report{}, Cache{}, fmt.Errorf("diagnose case %s: %w", c.ID, err)
 						}
 						result := CaseResult{CaseID: c.ID, Cohort: cohort, Mode: mode, Arms: armMode, Limit: limit, Expected: len(ranks), Ranks: ranks, Matched: matchedCount(ranks), Mapped: caseMappings(entries[c.ID], len(ranks)), Abstain: response.Abstain, Reason: response.Reason, Gaps: gaps, Losses: losses, Characters: chars}
-						if cohort == "old_product" {
+						if cohort != "legacy" {
 							result.MappingIssues = o.Mapping[c.ID]
 						}
 						if cohort == "legacy" {
@@ -297,16 +317,19 @@ func Run(ctx context.Context, engine Engine, suite Suite, o Options) (Report, Ca
 	}
 	finishReport(&r, metrics, modes)
 	finishPresented(&r, presented, modes)
-	for _, c := range suite.Legacy {
-		if !rejects[c.ID] && len(c.ExpectedCitations) > 0 && len(o.Mapping[c.ID]) > 0 {
-			markMappingUnavailable(&r)
-			break
+	for _, input := range inputs {
+		if !rejects[input.c.ID] && len(input.c.ExpectedCitations) > 0 && len(o.Mapping[input.c.ID]) > 0 {
+			for _, cohort := range input.cohorts {
+				if cohort != "legacy" {
+					markCohortMappingUnavailable(&r, cohort)
+				}
+			}
 		}
 	}
 	finishQuality(&r, previous)
 	addLegacyDirectMetrics(&r)
 	r.ANNResults = map[string]ANNLoss{}
-	for _, cohort := range []string{"legacy", "old_product"} {
+	for _, cohort := range reportCohorts(&r) {
 		subset := r
 		subset.ANN = nil
 		for _, item := range r.ANN {

@@ -48,13 +48,16 @@ feeds calibration and eval, including retries after midnight.
 
 Build input hash is
 `stage.RecipeHash("build-input",label,country,rel, source_manifest_hash,decimal_schema_version,identity_map_sha256)`,
-label per inventory version. Pin the reviewed map bytes at planning and verify
-their SHA-256 before use. Changing the map changes build input and invalidates
-dependent evaluation, without changing a frozen build recipe. Never read changed
-map bytes under the planned input hash. Verify all referenced artifact hashes
-and safe paths before decoding payloads; check byte sizes where declared, and
-before decoding stat each artifact file against the per-file cap in
-[budgets](budgets.md#indexing); a file above it fails the item. Artifacts are
+label per inventory version. The final input hash wraps it as
+`stage.RecipeHash("build-input","4",inner_hash,development_cases_sha256)`; the
+development case bytes also enter the build recipe beside the legacy cases,
+because calibration reads both. Pin the reviewed map bytes at planning and
+verify their SHA-256 before use. Changing the map changes build input and
+invalidates dependent evaluation, without changing a frozen build recipe. Never
+read changed map bytes under the planned input hash. Verify all referenced
+artifact hashes and safe paths before decoding payloads; check byte sizes where
+declared, and before decoding stat each artifact file against the per-file cap
+in [budgets](budgets.md#indexing); a file above it fails the item. Artifacts are
 immutable, content addressed and written by our own stages, so a file growing
 between the size check and the read is outside the threat model; the manifest
 hash still guards the bytes decoded. Never use the workshop's latest row for a
@@ -158,12 +161,12 @@ Publish `corpus.dump`, `build.json`, `inputs.json`, `calibration.json`,
 artifact writer. `inputs.json` is the upstream inventory. `build.json` fields:
 `version`, `country`, `rel`, `database_name`, `schema_version`,
 `build_input_hash`, `build_recipe_hash`, `source_manifest_hash`,
-`identity_inventory_hash`, `identity_map_sha256`, all four recipes,
-`lexical_stats`, `taxonomy_version`, `counts` per table and exclusion reason,
-`dump:{sha256,bytes,format:"custom"}`, `postgres_version`, `pgvector_version`,
-`ltree_version`, `pg_dump_version`, `worker_version`, `built_at`,
-`durations_ms`, `relation_bytes`, `index_bytes`. No credentials, file system
-paths, user questions or host signatures.
+`identity_inventory_hash`, `identity_map_sha256`, `development_cases_sha256`,
+all four recipes, `lexical_stats`, `taxonomy_version`, `counts` per table and
+exclusion reason, `dump:{sha256,bytes,format:"custom"}`, `postgres_version`,
+`pgvector_version`, `ltree_version`, `pg_dump_version`, `worker_version`,
+`built_at`, `durations_ms`, `relation_bytes`, `index_bytes`. No credentials,
+file system paths, user questions or host signatures.
 
 `calibration.json` holds the reproducible scores and selected threshold, linked
 to fixture hashes. It uses case IDs only, not question text. The dump and build

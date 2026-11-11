@@ -71,7 +71,7 @@ func (s *Stage) inputHash(art artifact.Result, run stage.Run) (string, error) {
 		previous = fmt.Sprintf("%x", sha256.Sum256(b))
 	}
 	h := s.cfg.Suite.Hashes
-	return stage.RecipeHash("eval-input", "1", art.SHA256, h.Legacy, h.OldProduct, h.IdentityMap, h.ValidityCases, previous, d.Format("2006-01-02"), "exact,ann"), nil
+	return stage.RecipeHash("eval-input", "2", art.SHA256, h.Legacy, h.OldProduct, h.IdentityMap, h.ValidityCases, h.Development, previous, d.Format("2006-01-02"), "exact,ann"), nil
 }
 
 // Plan resolves the build and selects its single evaluation item.
@@ -161,7 +161,7 @@ func (s *Stage) evaluateBuild(ctx context.Context, env stage.Env, run stage.Run,
 		return evaluation.Report{}, evaluation.Cache{}, fmt.Errorf("read validity identities: %w", err)
 	}
 	evaluation.ResolveValidityCases(suite.ValidityCases, validityDocuments)
-	mapping, err := suite.Map.Validate(suite.Legacy, suite.Hashes.Legacy, identities)
+	mapping, err := suite.Map.Validate(append(append([]evaluation.Case{}, suite.Legacy...), suite.Development...), suite.Hashes.Legacy, identities)
 	if err != nil {
 		return evaluation.Report{}, evaluation.Cache{}, fmt.Errorf("validate evaluation mapping: %w", err)
 	}
@@ -258,6 +258,11 @@ func reportGaps(r evaluation.Report) []stage.Gap {
 	for _, f := range r.Floors {
 		if f.Status == "fail" || f.Status == "unavailable" {
 			gaps = append(gaps, stage.Gap{Kind: "eval_floor_failed", Detail: strings.Join([]string{string(f.Mode), f.Name}, ":")})
+		}
+	}
+	for _, f := range r.Cohorts["development"].Floors {
+		if f.Status == "fail" || f.Status == "unavailable" {
+			gaps = append(gaps, stage.Gap{Kind: "eval_floor_failed", Detail: strings.Join([]string{"development", string(f.Mode), f.Name}, ":")})
 		}
 	}
 	for _, v := range r.Rejections {

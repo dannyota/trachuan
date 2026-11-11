@@ -27,7 +27,7 @@ type CalibrationCandidate struct {
 	FN        int     `json:"fn"`
 }
 
-// Calibration records the provisional threshold and its evidence.
+// Calibration records the fitted threshold and its evidence.
 type Calibration struct {
 	Status         string                   `json:"status"`
 	Threshold      float64                  `json:"threshold"`
@@ -97,7 +97,7 @@ func calibrationThreshold(scores []calibrationScore) (float64, []CalibrationCand
 	return best, candidates
 }
 
-// Calibrate fits the provisional old-product threshold using exact retrieval.
+// Calibrate fits both product cohorts using exact retrieval.
 func Calibrate(ctx context.Context, engine Engine, suite Suite) (Calibration, error) {
 	if err := validateSuite(suite); err != nil {
 		return Calibration{}, err
@@ -106,9 +106,12 @@ func Calibrate(ctx context.Context, engine Engine, suite Suite) (Calibration, er
 	recipe.Abstention.Threshold = nil
 	recipe.Abstention.CalibrationSHA256 = ""
 	out := Calibration{Status: "provisional-old-product", FixtureHashes: suite.Hashes, RecipeHash: recipe.Hash()}
+	if len(suite.Development) > 0 {
+		out.Status = "old-product+development"
+	}
 	rejects := rejectionSet(suite)
 	scores := []calibrationScore{}
-	for _, c := range suite.Legacy {
+	for _, c := range append(append([]Case{}, suite.Legacy...), suite.Development...) {
 		if rejects[c.ID] {
 			continue
 		}
