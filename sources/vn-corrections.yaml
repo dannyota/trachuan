@@ -1,1 +1,204 @@
-[]
+# Manual validity corrections (docs/design/validity-status.md). Reviewed input data: each entry
+# names its evidence. Drafted from run vn/20261110_4 and public sources; reviewed 2026-11-10 and 2026-11-11.
+- key: vn:vbpl:69ba65c0-8a56-11f1-878c-399a87bcb3eb
+  number: "134/2025/QH15"
+  set: {status_class: "in_force", eff_from: "2026-03-01"}
+  reason: "VBPL gives no status code. Điều 34 sets 2026-03-01; its exception (Điều 35) only grants systems already operating before that date 12 or 18 months to comply, so the law is in force."
+  evidence:
+    anchor: "dieu-34"
+    quote: "Luật này có hiệu lực thi hành từ ngày 01 tháng 3 năm 2026"
+  reviewed: "2026-11-10"
+- key: vn:vbpl:109261
+  number: "106/2012/TTLT-BTC-NHNN"
+  set: {eff_to: "2016-08-15"}
+  reason: "whole replacement from 92/2016/TTLT-BTC-NHNN's effective date."
+  evidence:
+    key: vn:vbpl:111146
+    anchor: "dieu-33/khoan-2"
+    quote: "Thông tư này thay thế Thông tư số 106/2012/TTLT-BTC-NHNN"
+  reviewed: "2026-11-10"
+- key: vn:vbpl:95654
+  number: "137/2015/NĐ-CP"
+  set: {eff_to: "2024-07-01"}
+  reason: "whole document ends when 70/2024/NĐ-CP takes effect (2024-07-01)."
+  evidence:
+    key: vn:vbpl:168344
+    anchor: "dieu-37/khoan-2"
+    quote: "hết hiệu lực kể từ ngày Nghị định này có hiệu lực thi hành"
+  reviewed: "2026-11-10"
+- key: vn:vbpl:145179
+  number: "16/2020/TT-NHNN"
+  set: {eff_to: "2024-10-01"}
+  reason: "ends with 23/2014/TT-NHNN; the excepted articles ran to 2024-09-30, so the first excluded day is 2024-10-01."
+  evidence:
+    key: vn:vbpl:168124
+    anchor: "dieu-23/khoan-6"
+    quote: "hết hiệu lực kể từ ngày Thông tư này có hiệu lực thi hành, trừ các Điều 12, 13, 13a, 14 và Điều 14a có hiệu lực đến hết ngày 30 tháng 9 năm 2024"
+  reviewed: "2026-11-10"
+- key: vn:vbpl:9860
+  number: "181/QĐ-NH1"
+  set: {eff_to: "1997-07-01"}
+  reason: "197/QĐ-NH1 Điều 3 ends 181/QĐ-NH1 from 1997-07-01."
+  evidence:
+    key: vn:vbpl:8447
+    anchor: "dieu-3"
+    quote: "Quyết định số 181/QĐ - NH1 ngày 29 tháng 06 năm 1995"
+  reviewed: "2026-11-10"
+- key: vn:vbpl:6422
+  number: "191/1999/QĐ-NHNNl"
+  set: {eff_to: "2003-08-01"}
+  reason: "581/2003/QĐ-NHNN replaces the whole decision (listed with 51/1999) from its effective date."
+  evidence:
+    key: vn:vbpl:19835
+    anchor: "dieu-3"
+    quote: "Quyết định này thay thế Quyết định số 51/1999/QĐ-NHNN1"
+  reviewed: "2026-11-10"
+- key: vn:vbpl:2145
+  number: "196-HĐBT"
+  set: {eff_to: "1993-03-02"}
+  reason: "whole replacement by 15-CP, effective on issue (1993-03-02)."
+  evidence:
+    key: vn:vbpl:10761
+    anchor: "dieu-20"
+    quote: "Nghị định này thay thế Nghị định số 196-HĐBT ngày 11 tháng 12 năm 1989 và có hiệu lực kể từ ngày ban hành"
+  reviewed: "2026-11-10"
+- key: vn:vbpl:9100
+  number: "225/QĐ-NH1"
+  set: {eff_to: "1996-10-01"}
+  reason: "225/QĐ-NH1 contains only the ceilings (Điều 1) and execution articles, so replacing its ceilings ends it."
+  evidence:
+    key: vn:vbpl:9030
+    anchor: "dieu-2"
+    quote: "thay thế mức trần lãi suất cho vay quy định tại Quyết định số 225/QĐ-NH1"
+  reviewed: "2026-11-10"
+- key: vn:vbpl:139072
+  number: "23/2019/TT-NHNN"
+  set: {eff_to: "2024-10-01"}
+  reason: "ends with 39/2014/TT-NHNN from 2024-07-17; the last excepted provisions ran to 2024-09-30."
+  evidence:
+    key: vn:vbpl:168578
+    anchor: "dieu-52/khoan-6/diem-b"
+    quote: "đã được sửa đổi, bổ sung theo Thông tư số 23/2019/TT-NHNN có hiệu lực thi hành đến hết ngày 30 tháng 9 năm 2024"
+  reviewed: "2026-11-10"
+- key: vn:vbpl:132957
+  number: "24/2018/QH14"
+  set: {eff_to: "2026-07-01"}
+  reason: "whole law ends when 116/2025/QH15 takes effect (2026-07-01); until then it stays current."
+  evidence:
+    key: vn:vbpl:187039
+    anchor: "dieu-44/khoan-2"
+    quote: "Luật An ninh mạng số 24/2018/QH14 hết hiệu lực kể từ ngày Luật này có hiệu lực thi hành"
+  reviewed: "2026-11-10"
+- key: vn:vbpl:141824
+  number: "29/2018/QH14"
+  set: {eff_to: "2026-03-01"}
+  reason: "whole law ends on 2026-03-01; Điều 28 keeps only decisions issued under it."
+  evidence:
+    key: vn:vbpl:187038
+    anchor: "dieu-27/khoan-2"
+    quote: "Luật Bảo vệ bí mật nhà nước số 29/2018/QH14 đã được sửa đổi, bổ sung một số điều theo Luật số 81/2025/QH15 hết hiệu lực kể từ ngày Luật này có hiệu lực thi hành"
+  reviewed: "2026-11-10"
+- key: vn:vbpl:5711
+  number: "448/2000/QĐ-NHNN2"
+  set: {eff_to: "2008-04-01"}
+  reason: "whole replacement from 2008-04-01."
+  evidence:
+    key: vn:vbpl:40192
+    anchor: "dieu-1"
+    quote: "thay thế Quyết định số 448/2000/QĐ-NHNN2"
+  reviewed: "2026-11-10"
+- key: vn:vbpl:166970
+  number: "48/2024/NĐ-CP"
+  set: {eff_to: "2025-04-10"}
+  reason: "whole document ends 2025-04-10; Điều 47 of 23/2025/NĐ-CP is transitional for cases already in progress."
+  evidence:
+    key: vn:vbpl:175484
+    anchor: "dieu-46/khoan-2"
+    quote: "hết hiệu lực kể từ ngày Nghị định này có hiệu lực thi hành, trừ trường hợp quy định tại Điều 47 của Nghị định này"
+  reviewed: "2026-11-10"
+- key: vn:vbpl:110342
+  number: "51/1999/TTLT/BTC-BCA-NHNN"
+  set: {eff_to: "2016-10-24"}
+  reason: "listed among documents that end when 26/2016/TT-NHNN takes effect."
+  evidence:
+    key: vn:vbpl:114595
+    anchor: "dieu-11/khoan-2/diem-a"
+    quote: "a) Thông tư liên tịch số 51/1999/TTLT/BTC-BCA-NHNN"
+  reviewed: "2026-11-10"
+- key: vn:vbpl:6677
+  number: "52/1999/QĐ-NHNN1"
+  set: {eff_to: "1999-06-01"}
+  reason: "whole replacement from 1999-06-01."
+  evidence:
+    key: vn:vbpl:6422
+    anchor: "dieu-6"
+    quote: "Quyết định này thay thế Quyết định số 52/1999/QĐ-NHNN1"
+  reviewed: "2026-11-10"
+- key: vn:vbpl:22647
+  number: "652/2001/QĐ-NHNN"
+  set: {eff_to: "2018-01-01"}
+  reason: "listed among documents that end when 14/2017/TT-NHNN takes effect (Điều 9, heading not matched by the effect-article selector)."
+  evidence:
+    key: vn:vbpl:125249
+    anchor: "dieu-9/khoan-2/diem-a"
+    quote: "a) Quyết định số 652/2001/QĐ-NHNN ngày 17 tháng 5 năm 2001"
+  reviewed: "2026-11-10"
+- key: vn:vbpl:104304
+  number: "67/2016/TT-BTC"
+  set: {eff_to: "2021-12-31"}
+  reason: "ends when 128/2021/TT-BTC takes effect."
+  evidence:
+    key: vn:vbpl:153025
+    anchor: "dieu-14/khoan-2"
+    quote: "Thông tư số 67/2016/TT-BTC ngày 29/4/2016"
+  reviewed: "2026-11-10"
+- key: vn:vbpl:45344
+  number: "73/2008/TT-BTC"
+  set: {eff_to: "2017-04-01"}
+  reason: "whole document ends 2017-04-01."
+  evidence:
+    key: vn:vbpl:118865
+    anchor: "dieu-6/khoan-2"
+    quote: "hết hiệu lực thi hành toàn bộ từ ngày Thông tư này có hiệu lực thi hành"
+  reviewed: "2026-11-10"
+- key: vn:vbpl:57250
+  number: "87/2013/TT-BTC"
+  set: {eff_to: "2018-03-01"}
+  reason: "whole replacement; the stored text leaves the day blank, so the date is 134/2017/TT-BTC's metadata effective date."
+  evidence:
+    key: vn:vbpl:127395
+    anchor: "dieu-19"
+    quote: "thay thế Thông tư số 87/2013/TT-BTC"
+  reviewed: "2026-11-10"
+- key: vn:vbpl:914f2b30-7ab5-11f1-9e84-897d9939f4f2
+  number: "248/2026/NĐ-CP"
+  set: {status_class: "in_force", eff_from: "2026-07-01"}
+  reason: "VBPL gives no status code; Điều 52 khoản 1 sets 2026-07-01 (khoản 2 delays only seller identity checks to 2027-01-01); no replacing relation in the corpus"
+  evidence:
+    anchor: "dieu-52/khoan-1"
+    quote: "Nghị định này có hiệu lực thi hành từ ngày 01 tháng 7 năm 2026"
+  reviewed: "2026-11-10"
+- key: vn:vbpl:0a41bfe0-80f5-11f1-9da2-4f5ad591bf79
+  number: "37/2026/NĐ-CP"
+  set: {status_class: "in_force", eff_from: "2026-01-23"}
+  reason: "VBPL gives no status code; Điều 97 makes it effective on signing (metadata 2026-01-23); no replacing relation in the corpus"
+  evidence:
+    anchor: "dieu-97"
+    quote: "Nghị định này có hiệu lực thi hành kể từ ngày ký ban hành"
+  reviewed: "2026-11-10"
+- key: vn:vbpl:9030
+  number: "266/QĐ-NH1"
+  set: {status_class: "expired", eff_to: "2015-10-16"}
+  reason: "repealed by 2039/QĐ-NHNN of 2015-10-16 (item 100; also entry 68 of the expired list published with 211/QĐ-NHNN of 2019-01-31, per gpt-6.1-sol's reading of the gazette PDF; the primary confirmed the repealing decision's title and dates only)"
+  evidence:
+    url: https://congbao.chinhphu.vn/van-ban/quyet-dinh-so-2039-qd-nhnn-17968/12606.htm
+    quote: "về việc bãi bỏ một số văn bản quy phạm pháp luật do Thống đốc Ngân hàng Nhà nước Việt Nam ban hành"
+  reviewed: "2026-11-11"
+- key: vn:vbpl:31046
+  number: "388-HĐBT"
+  set: {status_class: "expired", eff_to: "1996-08-28"}
+  reason: "replaced by Nghị định 50/CP of 1996-08-28, Điều 18 khoản 1 (secondary source, read by the primary)"
+  evidence:
+    url: https://luatvietnam.vn/doanh-nghiep/nghi-dinh-50-cp-chinh-phu-4082-d1.html
+    quote: "Nghị định này có hiệu lực kể từ ngày ký ban hành và thay thế Nghị định số 388/HĐBT"
+  reviewed: "2026-11-11"
