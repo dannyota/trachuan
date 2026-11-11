@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	"danny.vn/trachuan/internal/corpusdb"
@@ -54,8 +55,8 @@ func ReadRelease(ctx context.Context, db *pgxpool.Pool) (Release, error) {
 	if err != nil {
 		return Release{}, fmt.Errorf("read release failed: %w", err)
 	}
-	if r.SchemaVersion != corpusdb.SchemaVersion {
-		return Release{}, fmt.Errorf("corpus schema version %d, supported version %d", r.SchemaVersion, corpusdb.SchemaVersion)
+	if !slices.Contains(corpusdb.SupportedSchemaVersions(), r.SchemaVersion) {
+		return Release{}, fmt.Errorf("corpus schema version %d, supported versions %v", r.SchemaVersion, corpusdb.SupportedSchemaVersions())
 	}
 	for _, v := range []struct {
 		raw []byte
