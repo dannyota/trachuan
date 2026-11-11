@@ -44,7 +44,7 @@ func (*Stage) Name() string { return "fetch" }
 
 // Recipe returns the fetch recipe hash.
 func (*Stage) Recipe(stage.Snapshot) string {
-	return stage.RecipeHash("fetch", "vbpl-fetch/1", "chinhphu-fetch/2", "json:encoding/json:compact:no-newline",
+	return stage.RecipeHash("fetch", "vbpl-fetch/2", "chinhphu-fetch/2", "json:encoding/json:compact:no-newline",
 		"metadata:version,source_id,source_url,occurrences,attachments;occurrence:name,value,cells,ambiguous;attachment:name,label,url",
 		"document:version,document;fields:key,country,source,source_id,number,title,doc_type,issuer,raw_issue_date,raw_eff_from,raw_eff_to,status_code,status_name,is_consolidated,has_content,source_url,identity_evidence",
 		"files:version,files;file:source,name,sha256,size,path,url,role;report:version,missing,too_large;outcome:name,url;evidence:path,sha256")
@@ -112,6 +112,10 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, r stage.Run, item st
 	_ = group.Wait()
 	if errs[0] != nil {
 		return apiError(errs[0], id, true)
+	}
+	detail, err = removeViewCount(detail)
+	if err != nil {
+		return apiError(err, id, true)
 	}
 	if decoded.ID != id {
 		return stage.Output{State: "gap", Gaps: []stage.Gap{{Kind: "detail_id_mismatch", Detail: fmt.Sprintf("requested %q, received %q", id, decoded.ID)}}}, nil

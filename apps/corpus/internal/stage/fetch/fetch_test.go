@@ -34,6 +34,7 @@ type fixtureServer struct {
 	oversized       bool
 	treeBody        string
 	detailID        string
+	detailBody      string
 	barrier         int32
 	arrived         atomic.Int32
 	released        chan struct{}
@@ -75,6 +76,10 @@ func setup(t *testing.T, f *fixtureServer) (*Stage, stage.Env) {
 			}
 			if f.missing {
 				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+			if f.detailBody != "" {
+				_, _ = w.Write([]byte(f.detailBody))
 				return
 			}
 			if f.detailID != "" {
@@ -463,6 +468,10 @@ func TestFetch_ParallelRequestsPreserveBundle(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	detail, err = removeViewCount(detail)
+	if err != nil {
+		t.Fatal(err)
+	}
 	tree, err := s.client.RawTree(ctx, "66518")
 	if err != nil {
 		t.Fatal(err)
@@ -500,6 +509,9 @@ func TestFetch_ParallelRequestsPreserveBundle(t *testing.T) {
 		data, readErr := os.ReadFile(filepath.Join("..", "..", "vbpl", "testdata", name+"-66518.json"))
 		if readErr != nil {
 			t.Fatal(readErr)
+		}
+		if name == "detail" {
+			data = detail
 		}
 		want[name+".json"] = string(data)
 	}
