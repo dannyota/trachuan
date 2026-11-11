@@ -18,6 +18,7 @@ Intended behavior of trachuan. Decisions with alternatives are in the
 | [PDF text layer](pdf-text.md)              | When extract reads a PDF's own text instead of OCR: gate, measured counts, extractor          |
 | [OCR store](ocr-store.md)                  | Stored OCR text and cross-check records, the banhmi import and how extract reads them         |
 | [OCR cross-check](ocr-check.md)            | How a hosted model checks stored OCR text against its PDF, verdicts, batches and spend limits |
+| [fresh OCR requests](ocr-vision.md)        | Google Cloud Vision requests for PDFs the OCR store lacks: page images, limits, command       |
 | [batch submissions](batch-submissions.md)  | Submission intent log and recovery for external batch services                                |
 | [scope adoption](scope-adoption.md)        | Schema version 3, inventory version 2, build loading by final membership                      |
 | [validity corrections](validity-status.md) | Text rules, manual corrections and review queue for wrong or missing source validity          |
