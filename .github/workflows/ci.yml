@@ -21,6 +21,7 @@ jobs:
       go: ${{ steps.paths.outputs.go }}
       docembed: ${{ steps.paths.outputs.docembed }}
       queryembed: ${{ steps.paths.outputs.queryembed }}
+      web: ${{ steps.paths.outputs.web }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -35,6 +36,7 @@ jobs:
           go=true
           docembed=true
           queryembed=true
+          web=true
           if [ "$EVENT_NAME" = pull_request ]; then
             paths=$(mktemp)
             git diff --no-ext-diff --no-textconv --no-renames --name-only -z "$BASE_SHA...$HEAD_SHA" -- > "$paths"
@@ -42,6 +44,7 @@ jobs:
             go=false
             docembed=false
             queryembed=false
+            web=false
             while IFS= read -r -d '' path; do
               case "$path" in
                 packages/schema/*|apps/server/internal/accountapi/*|apps/server/internal/webapi/*|apps/server/internal/weblogin/*|apps/server/internal/websession/*|apps/server/internal/apierror/*|apps/server/internal/contracttest/*|apps/server/internal/mcpapi/*|.github/workflows/ci.yml|.tool-versions|Makefile) schema=true ;;
@@ -53,7 +56,11 @@ jobs:
                 apps/queryembed/*|internal/embedding/*|go.mod|go.sum|scripts/queryembed-native.sh|.github/workflows/ci.yml) queryembed=true ;;
               esac
               case "$path" in
+                apps/web/*|packages/schema/*|.tool-versions|.github/workflows/ci.yml) web=true ;;
+              esac
+              case "$path" in
                 docs/*.md) ;;
+                apps/web/*) ;;
                 *.md) [[ "$path" != */* ]] || go=true ;;
                 *) go=true ;;
               esac
@@ -64,6 +71,7 @@ jobs:
           echo "go=$go" >> "$GITHUB_OUTPUT"
           echo "docembed=$docembed" >> "$GITHUB_OUTPUT"
           echo "queryembed=$queryembed" >> "$GITHUB_OUTPUT"
+          echo "web=$web" >> "$GITHUB_OUTPUT"
 
   schema:
     needs: [preflight]
@@ -189,6 +197,32 @@ jobs:
           cache-dependency-path: go.sum
       - run: make e2e
 
+  web:
+    needs: [preflight]
+    if: needs.preflight.outputs.web == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    # Browsers and their system libraries come with the pinned image (as aboutme's
+    # WEB_E2E_IMAGE), so the job never installs them through apt.
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.0-noble@sha256:bc72a8df40831ded821e3cbc79c318c21b44d6e51dff9fd89ace7a8249c5b462
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .tool-versions
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - run: npm run e2e
+
   docembed:
     needs: [preflight]
     if: needs.preflight.outputs.docembed == 'true'
@@ -230,7 +264,7 @@ jobs:
 
   ci:
     if: always()
-    needs: [preflight, static, integration, e2e, docembed, queryembed, schema]
+    needs: [preflight, static, integration, e2e, docembed, queryembed, schema, web]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     env:
@@ -245,6 +279,8 @@ jobs:
       DOCEMBED: ${{ needs.docembed.result }}
       QUERYEMBED_NEEDED: ${{ needs.preflight.outputs.queryembed }}
       QUERYEMBED: ${{ needs.queryembed.result }}
+      WEB_NEEDED: ${{ needs.preflight.outputs.web }}
+      WEB: ${{ needs.web.result }}
     steps:
       - run: |
           test "$PREFLIGHT" = success
@@ -259,6 +295,13 @@ jobs:
             test "$QUERYEMBED" = success
           elif [ "$QUERYEMBED_NEEDED" = false ]; then
             test "$QUERYEMBED" = skipped
+          else
+            exit 1
+          fi
+          if [ "$WEB_NEEDED" = true ]; then
+            test "$WEB" = success
+          elif [ "$WEB_NEEDED" = false ]; then
+            test "$WEB" = skipped
           else
             exit 1
           fi

@@ -15,7 +15,19 @@ text is never translated.
 | `/privacy`, `/terms`, `/llms.txt` | Legal pages ("evidence, not legal advice"; account email stored in Singapore; Google is the identity provider; no questions stored) and agent guidance |
 
 Public pages are rendered from release data at build or cached by Nitro route
-rules with a 10-minute window; they make no per-visitor corpus query.
+rules with a 10-minute window; they make no per-visitor corpus query. Only Nitro
+holds that copy. Browsers revalidate public responses by ETag only: every
+response, 304 included, carries `Cache-Control: no-cache` and `Vary: Cookie` and
+no `Last-Modified`, and Nitro ignores `If-Modified-Since` on these routes, so a
+copy in one language never revalidates as the other.
+
+Nitro serves only known routes, matched exactly (case-sensitive, no trailing
+slash): a known path with a trailing slash or repeated slashes is a 308 to the
+canonical path without the query, and any other unknown path is a fixed
+plain-text 404 without a render. Admission covers every page request, not only
+public ones (static assets excepted): 120 per minute per client address, and at
+most 4 concurrent server renders of any page, error pages included; a cache hit
+renders nothing, and a rejection is a fixed plain-text 429 without a render.
 
 ## Signed in
 
