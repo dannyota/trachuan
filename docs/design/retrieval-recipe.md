@@ -274,7 +274,8 @@ Threshold provenance and provisional status follow
 Hash compact fixed-field JSON. Serving does not accept arbitrary recipe
 overrides.
 
-Any eligibility semantics change bumps `validity`, even if the response shape is
+Any status or date eligibility change bumps `validity`, and any class
+eligibility change bumps `context_scope`, even if the response shape is
 unchanged. Version 2 records exclusive `eff_to` and the consolidated-status
 eligibility rule above. Rebuild and re-evaluate under the new recipe; do not
 reuse version 1 eligibility caches or relabel an old release.

@@ -94,3 +94,13 @@ spend.
   threshold is calibrated on old product only as a provisional exception to item
   6, labeled until development cases exist; no superiority claim follows. New
   cohorts, tuning, taxonomy, signing, upload and activation remain separate.
+- 2026-11-11: baseline scope correction, not a tuning trial. Recipe 1 admits
+  `relation_context` documents only by number reference
+  (`context_scope:"number-routed/1"`). Corpus scope added one-hop context
+  documents after the 2026-11-09 baseline; searching them as primary evidence
+  took 82 of 736 legacy hit slots on run `vn/20261110_4`, matched no expected
+  citation and raised the provisional abstention threshold through three
+  out-of-scope negatives. The correction restores the candidate set the baseline
+  measured (documents selected as scope). Promotion still needs development and
+  sealed cohorts under items 4 to 6, and the threshold stays labeled
+  provisional.
