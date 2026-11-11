@@ -223,3 +223,13 @@ func TestToken_ReplayRevocationFailures(t *testing.T) {
 		}
 	}
 }
+
+func TestRefresh_ClientWithoutGrantRejected(t *testing.T) {
+	m := newTokenMemory()
+	raw := seedRefresh(t, m)
+	m.grants = []string{"authorization_code"}
+	tokenJSON(t, requestToken(m.handler(), refreshForm(raw)), 400, "unauthorized_client")
+	if m.tokens[tokenDigest(raw)].SupersededAt != nil || m.revoked {
+		t.Fatal("unauthorized client consumed refresh token")
+	}
+}

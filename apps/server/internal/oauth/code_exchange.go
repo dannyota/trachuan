@@ -12,7 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-func (h *tokenHandler) exchangeCode(ctx context.Context, tx pgx.Tx, form url.Values) (tokenResponse, int64, string, error) {
+func (h *tokenHandler) exchangeCode(ctx context.Context, tx pgx.Tx, form url.Values, issueRefresh bool) (tokenResponse, int64, string, error) {
 	hash := fmt.Sprintf("%x", sha256.Sum256([]byte(form.Get("code"))))
 	var accountID, grantID int64
 	err := tx.QueryRow(ctx, `/* token code identity */
@@ -62,7 +62,7 @@ WHERE grant_id=$1 AND family_id IN (SELECT family_id FROM excess)`, grantID)
 	if err != nil {
 		return tokenResponse{}, 0, "", fmt.Errorf("create token family: %w", err)
 	}
-	response, err := issueTokenPair(ctx, tx, store.CreateTokenFamilyParams{GrantID: grantID, FamilyID: fmt.Sprintf("%x", familyHash), Resource: row.Resource, Scope: row.Scope, AuthEpoch: row.AuthEpoch, FamilyExpiresAt: time.Now().Add(30 * 24 * time.Hour)})
+	response, err := issueTokenPair(ctx, tx, store.CreateTokenFamilyParams{GrantID: grantID, FamilyID: fmt.Sprintf("%x", familyHash), Resource: row.Resource, Scope: row.Scope, AuthEpoch: row.AuthEpoch, FamilyExpiresAt: time.Now().Add(30 * 24 * time.Hour)}, issueRefresh)
 	if pruned.RowsAffected() > 0 {
 		return response, grantID, "", err
 	}

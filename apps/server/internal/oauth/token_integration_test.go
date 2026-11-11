@@ -38,7 +38,7 @@ func newTokenPG(t *testing.T) tokenPG {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = q.CreateClient(t.Context(), store.CreateClientParams{ClientID: "client", Kind: "dcr", Name: "Fixture", RedirectUris: []string{"http://localhost/cb"}})
+	_, err = q.CreateClient(t.Context(), store.CreateClientParams{ClientID: "client", Kind: "dcr", Name: "Fixture", RedirectUris: []string{"http://localhost/cb"}, GrantTypes: []string{"authorization_code", "refresh_token"}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -188,4 +188,53 @@ func TestToken_PostgreSQLBlockedAndEpoch(t *testing.T) {
 			})
 		}
 	}
+}
+
+func TestToken_PostgreSQLGrantRestrictions(t *testing.T) {
+	t.Run("code grant denied", func(t *testing.T) {
+		p := newTokenPG(t)
+		p.code(t, "fixture-code")
+		if _, err := p.pool.Exec(t.Context(), `UPDATE oauth_client SET grant_types=ARRAY['refresh_token'] WHERE client_id='client'`); err != nil {
+			t.Fatal(err)
+		}
+		tokenJSON(t, requestToken(p.handler, codeForm()), 400, "unauthorized_client")
+		var consumed bool
+		if err := p.pool.QueryRow(t.Context(), `SELECT consumed_at IS NOT NULL FROM oauth_code WHERE code_hash=$1`, tokenDigest("fixture-code")).Scan(&consumed); err != nil || consumed {
+			t.Fatalf("code consumed %v: %v", consumed, err)
+		}
+	})
+	t.Run("refresh grant denied", func(t *testing.T) {
+		p := newTokenPG(t)
+		got := p.exchange(t, "fixture-code")
+		raw := got["refresh_token"].(string)
+		if _, err := p.pool.Exec(t.Context(), `UPDATE oauth_client SET grant_types=ARRAY['authorization_code'] WHERE client_id='client'`); err != nil {
+			t.Fatal(err)
+		}
+		tokenJSON(t, requestToken(p.handler, refreshForm(raw)), 400, "unauthorized_client")
+		row, err := store.New(p.pool).GetToken(t.Context(), tokenDigest(raw))
+		if err != nil || row.SupersededAt != nil {
+			t.Fatalf("refresh consumed: %v", err)
+		}
+	})
+	t.Run("access only", func(t *testing.T) {
+		p := newTokenPG(t)
+		p.code(t, "fixture-code")
+		if _, err := p.pool.Exec(t.Context(), `UPDATE oauth_client SET grant_types=ARRAY['authorization_code'] WHERE client_id='client'`); err != nil {
+			t.Fatal(err)
+		}
+		before := time.Now()
+		got := tokenJSON(t, requestToken(p.handler, codeForm()), 200, "")
+		after := time.Now()
+		if _, ok := got["refresh_token"]; ok {
+			t.Fatal("refresh token returned")
+		}
+		row, err := store.New(p.pool).GetToken(t.Context(), tokenDigest(got["access_token"].(string)))
+		if err != nil || !row.ExpiresAt.Equal(row.FamilyExpiresAt) || row.ExpiresAt.Before(before.Add(time.Hour-time.Millisecond)) || row.ExpiresAt.After(after.Add(time.Hour+time.Millisecond)) {
+			t.Fatalf("access family expiry: %v", err)
+		}
+		var count int
+		if err = p.pool.QueryRow(t.Context(), `SELECT count(*) FROM oauth_token WHERE family_id=$1`, row.FamilyID).Scan(&count); err != nil || count != 1 {
+			t.Fatalf("family has %d tokens: %v", count, err)
+		}
+	})
 }

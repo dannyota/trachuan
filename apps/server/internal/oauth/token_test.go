@@ -70,6 +70,7 @@ type tokenMemory struct {
 	account             store.Account
 	code                store.ConsumeCodeRow
 	tokens              map[string]store.GetTokenRow
+	grants              []string
 	revoked             bool
 	beginErr, commitErr error
 	fail                string
@@ -79,7 +80,7 @@ type tokenMemory struct {
 
 func newTokenMemory() *tokenMemory {
 	now := time.Now()
-	return &tokenMemory{account: store.Account{ID: 1, AuthEpoch: 7}, code: store.ConsumeCodeRow{CodeHash: tokenDigest("fixture-code"), GrantID: 2, AccountID: 1, ClientID: "client", RedirectUri: "http://localhost/cb", Resource: tokenTestBase + "/mcp", CodeChallenge: tokenChallenge(), Scope: "mcp:read", AuthEpoch: 7, ExpiresAt: now.Add(time.Minute)}, tokens: map[string]store.GetTokenRow{}}
+	return &tokenMemory{account: store.Account{ID: 1, AuthEpoch: 7}, code: store.ConsumeCodeRow{CodeHash: tokenDigest("fixture-code"), GrantID: 2, AccountID: 1, ClientID: "client", RedirectUri: "http://localhost/cb", Resource: tokenTestBase + "/mcp", CodeChallenge: tokenChallenge(), Scope: "mcp:read", AuthEpoch: 7, ExpiresAt: now.Add(time.Minute)}, tokens: map[string]store.GetTokenRow{}, grants: []string{"authorization_code", "refresh_token"}}
 }
 func (m *tokenMemory) handler() http.Handler {
 	return NewTokenHandler(m, tokenTestBase, func(int64) { m.invalidations++ })
@@ -204,7 +205,7 @@ func (tx *tokenMemoryTx) QueryRow(ctx context.Context, sql string, args ...any) 
 		if args[0] != "client" && args[0] != "other" {
 			return tokenScan{err: pgx.ErrNoRows}
 		}
-		return tokenStructRow(store.OauthClient{ClientID: args[0].(string)})
+		return tokenStructRow(store.OauthClient{ClientID: args[0].(string), GrantTypes: tx.m.grants})
 	case strings.Contains(sql, "name: TouchClient"):
 		return tokenStructRow(store.OauthClient{ClientID: args[0].(string)})
 	case strings.Contains(sql, "token code identity"):

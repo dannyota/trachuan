@@ -133,3 +133,37 @@ func TestFamilies_EvictsCachedCredentials(t *testing.T) {
 		t.Fatalf("cache invalidations %d, want 1", m.invalidations)
 	}
 }
+
+func TestCode_ClientWithoutGrantRejected(t *testing.T) {
+	m := newTokenMemory()
+	m.grants = []string{"refresh_token"}
+	tokenJSON(t, requestToken(m.handler(), codeForm()), 400, "unauthorized_client")
+	if m.code.ConsumedAt != nil || len(m.tokens) != 0 {
+		t.Fatal("unauthorized client consumed code")
+	}
+}
+
+func TestCode_ClientWithoutRefreshGetsAccessOnly(t *testing.T) {
+	m := newTokenMemory()
+	m.grants = []string{"authorization_code"}
+	before := time.Now()
+	got := tokenJSON(t, requestToken(m.handler(), codeForm()), 200, "")
+	after := time.Now()
+	if _, ok := got["refresh_token"]; ok {
+		t.Fatal("refresh token returned to client without refresh grant")
+	}
+	access, ok := got["access_token"].(string)
+	if !ok || !strings.HasPrefix(access, "tra_") || len(access) != 47 {
+		t.Fatal("invalid access token")
+	}
+	if got["expires_in"] != float64(3600) || got["token_type"] != "Bearer" || got["scope"] != "mcp:read" {
+		t.Fatal("invalid access response")
+	}
+	if len(m.tokens) != 1 {
+		t.Fatalf("got %d tokens, want one", len(m.tokens))
+	}
+	row, ok := m.tokens[tokenDigest(access)]
+	if !ok || row.Kind != "access" || !row.ExpiresAt.Equal(row.FamilyExpiresAt) || row.ExpiresAt.Before(before.Add(time.Hour)) || row.ExpiresAt.After(after.Add(time.Hour)) {
+		t.Fatal("access-only family has wrong lifetime")
+	}
+}

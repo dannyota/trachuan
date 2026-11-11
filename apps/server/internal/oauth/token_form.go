@@ -17,6 +17,9 @@ func parseTokenForm(r *http.Request, resource string) (url.Values, string) {
 		return nil, "invalid_request"
 	}
 	form, err := url.ParseQuery(string(raw))
+	if _, ok := form["client_secret"]; ok {
+		return nil, "invalid_client"
+	}
 	if err != nil {
 		return nil, "invalid_request"
 	}
@@ -25,7 +28,7 @@ func parseTokenForm(r *http.Request, resource string) (url.Values, string) {
 			return nil, "invalid_request"
 		}
 	}
-	for _, key := range []string{"grant_type", "client_id", "resource"} {
+	for _, key := range []string{"grant_type", "client_id"} {
 		if form.Get(key) == "" {
 			return nil, "invalid_request"
 		}

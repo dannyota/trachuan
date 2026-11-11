@@ -43,6 +43,6 @@ func (h *tokenHandler) refresh(ctx context.Context, tx pgx.Tx, form url.Values) 
 	if row.RevokedAt != nil || !row.ExpiresAt.After(now) || !row.FamilyExpiresAt.After(now) {
 		return tokenResponse{}, 0, "invalid_grant", nil
 	}
-	response, err := issueTokenPair(ctx, tx, store.CreateTokenFamilyParams{GrantID: row.GrantID, FamilyID: row.FamilyID, RotatedFrom: &hash, Resource: row.Resource, Scope: row.Scope, AuthEpoch: row.AuthEpoch, FamilyExpiresAt: row.FamilyExpiresAt})
+	response, err := issueTokenPair(ctx, tx, store.CreateTokenFamilyParams{GrantID: row.GrantID, FamilyID: row.FamilyID, RotatedFrom: &hash, Resource: row.Resource, Scope: row.Scope, AuthEpoch: row.AuthEpoch, FamilyExpiresAt: row.FamilyExpiresAt}, true)
 	return response, 0, "", err
 }

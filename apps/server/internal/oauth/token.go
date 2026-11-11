@@ -28,7 +28,7 @@ type tokenResponse struct {
 	AccessToken  string `json:"access_token"`
 	TokenType    string `json:"token_type"`
 	ExpiresIn    int64  `json:"expires_in"`
-	RefreshToken string `json:"refresh_token"`
+	RefreshToken string `json:"refresh_token,omitempty"`
 	Scope        string `json:"scope"`
 }
 
@@ -41,6 +41,10 @@ func NewTokenHandler(db TokenDB, base string, invalidateGrant func(int64)) http.
 }
 
 func (h *tokenHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if len(r.Header.Values("Authorization")) != 0 {
+		writeTokenClientAuthError(w)
+		return
+	}
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", "POST")
 		writeTokenError(w, 405, "invalid_request")
@@ -48,6 +52,10 @@ func (h *tokenHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	form, code := parseTokenForm(r, h.resource)
 	if code != "" {
+		if code == "invalid_client" {
+			writeTokenClientAuthError(w)
+			return
+		}
 		writeTokenError(w, 400, code)
 		return
 	}
@@ -63,7 +71,8 @@ func (h *tokenHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		defer rollbackCancel()
 		_ = tx.Rollback(rollbackCtx)
 	}()
-	if _, err = InUse(ctx, tx, form.Get("client_id")); err != nil {
+	client, err := InUse(ctx, tx, form.Get("client_id"))
+	if err != nil {
 		if errors.Is(err, ErrInvalidClient) {
 			writeTokenError(w, 400, "invalid_client")
 		} else {
@@ -71,10 +80,14 @@ func (h *tokenHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+	if !client.Allows(form.Get("grant_type")) {
+		writeTokenError(w, 400, "unauthorized_client")
+		return
+	}
 	var response tokenResponse
 	var invalidateID int64
 	if form.Get("grant_type") == "authorization_code" {
-		response, invalidateID, code, err = h.exchangeCode(ctx, tx, form)
+		response, invalidateID, code, err = h.exchangeCode(ctx, tx, form, client.Allows("refresh_token"))
 	} else {
 		response, invalidateID, code, err = h.refresh(ctx, tx, form)
 	}
@@ -101,6 +114,11 @@ func (h *tokenHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	tokenHeaders(w)
 	_ = json.NewEncoder(w).Encode(response)
+}
+
+func writeTokenClientAuthError(w http.ResponseWriter) {
+	w.Header().Set("WWW-Authenticate", `Basic realm="trachuan"`)
+	writeTokenError(w, http.StatusUnauthorized, "invalid_client")
 }
 
 func tokenHeaders(w http.ResponseWriter) {
@@ -150,17 +168,16 @@ func tokenStateError(err error) (string, error) {
 	return "", err
 }
 
-func issueTokenPair(ctx context.Context, tx pgx.Tx, params store.CreateTokenFamilyParams) (tokenResponse, error) {
+func issueTokenPair(ctx context.Context, tx pgx.Tx, params store.CreateTokenFamilyParams, issueRefresh bool) (tokenResponse, error) {
 	access, accessHash, err := NewSecret(rand.Reader, "tra_")
 	if err != nil {
 		return tokenResponse{}, fmt.Errorf("create access token: %w", err)
 	}
-	refresh, refreshHash, err := NewSecret(rand.Reader, "trr_")
-	if err != nil {
-		return tokenResponse{}, fmt.Errorf("create refresh token: %w", err)
-	}
 	now := time.Now()
 	accessExpiry := now.Add(time.Hour)
+	if !issueRefresh {
+		params.FamilyExpiresAt = accessExpiry
+	}
 	if params.FamilyExpiresAt.Before(accessExpiry) {
 		accessExpiry = params.FamilyExpiresAt
 	}
@@ -173,6 +190,14 @@ func issueTokenPair(ctx context.Context, tx pgx.Tx, params store.CreateTokenFami
 	if _, err = store.New(tx).CreateTokenFamily(ctx, params); err != nil {
 		return tokenResponse{}, fmt.Errorf("store access token: %w", err)
 	}
+	response := tokenResponse{AccessToken: access, TokenType: "Bearer", ExpiresIn: int64(accessExpiry.Sub(now) / time.Second), Scope: params.Scope}
+	if !issueRefresh {
+		return response, nil
+	}
+	refresh, refreshHash, err := NewSecret(rand.Reader, "trr_")
+	if err != nil {
+		return tokenResponse{}, fmt.Errorf("create refresh token: %w", err)
+	}
 	params.TokenHash = fmt.Sprintf("%x", refreshHash)
 	params.Kind = "refresh"
 	params.ExpiresAt = params.FamilyExpiresAt
@@ -180,5 +205,6 @@ func issueTokenPair(ctx context.Context, tx pgx.Tx, params store.CreateTokenFami
 	if _, err = store.New(tx).CreateTokenFamily(ctx, params); err != nil {
 		return tokenResponse{}, fmt.Errorf("store refresh token: %w", err)
 	}
-	return tokenResponse{AccessToken: access, TokenType: "Bearer", ExpiresIn: int64(accessExpiry.Sub(now) / time.Second), RefreshToken: refresh, Scope: params.Scope}, nil
+	response.RefreshToken = refresh
+	return response, nil
 }
