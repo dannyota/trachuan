@@ -34,13 +34,25 @@ The answer is structured output under a JSON schema:
   OCR reading), `pdf` (the file's reading) and a short `note`. Differences of
   spacing, line breaks, page headers and page numbers are not items.
 
-The answer must be verifiable against what the pipeline holds. Every item's
-`ocr` reading, when not empty, must occur in the stored OCR text after
+The answer must be verifiable against what the pipeline holds. A reading is
+empty when nothing is left after whitespace is collapsed. Each kind fixes which
+readings an item carries, and an item that breaks its rule fails the attempt
+(`item_readings`):
+
+- `document_number`, `date`, `article_label`, `amount`: both readings present.
+- `extra_text`: `ocr` present, `pdf` empty.
+- `missing_text`: `ocr` empty, `pdf` present.
+
+Every `ocr` reading that is present must occur in the stored OCR text after
 whitespace is collapsed; an answer with a quote that does not is a failed
 attempt (`ocr_quote_not_found`), because it shows the checker was not reading
-the text under check. An item whose `ocr` and `pdf` readings are equal after
-whitespace is collapsed is not a disagreement: the pipeline drops it and records
-how many it dropped.
+the text under check. The check proves only that the quote exists in the text,
+not that it sits on the named page. A `missing_text` item cannot be verified by
+the pipeline, which holds no reading of the page: it is a claim for the
+reviewer, and it can only make a verdict stricter (flagged or rejected), never
+cleaner. An item whose `ocr` and `pdf` readings are equal after whitespace is
+collapsed is not a disagreement: the pipeline drops it and records how many it
+dropped.
 
 The checker never rewrites the stored text; its answer is evidence beside it.
 
@@ -137,16 +149,33 @@ check command only, under the file size limit and a ten-second limit per file; a
 library error or panic is `page_count_unknown`. `extract` and the worker still
 parse no PDF.
 
-Rendering. The check command renders pages with `pdftoppm` from poppler, run as
-a subprocess with no network, a working directory of its own, a limit of two
-minutes per document and of 3,000 pixels per side: 150 dpi, grayscale, PNG, one
-file per page. The number of rendered pages must equal the counted page total,
-else the attempt fails with `page_count_mismatch`. A missing renderer, a timeout
-or a nonzero exit is `render_failed`; the document stays `needs_ocr`. poppler is
-a tool of the write path on the MacBook and is named in the runbook; nothing on
-the host needs it. Two alternatives were set aside: removing the text layer from
-a copy of the PDF also removes the real text of the PDFs that were born digital,
-and a renderer bound to macOS frameworks would tie the pipeline to one platform.
+Rendering. The check command renders pages with `pdftoppm` from poppler at 150
+dpi, grayscale, PNG. The PDF is untrusted, so the renderer is contained and
+bounded before it allocates anything:
+
+- It runs inside an operating-system sandbox that denies all network access and
+  allows writing only in a scratch directory of its own and reading only the PDF
+  and the tool's runtime files (`sandbox-exec` with a fixed profile on macOS; a
+  container or namespace sandbox elsewhere). When no sandbox can be enforced the
+  command refuses to run: that is a configuration error, never a reason to
+  render unconfined. Its environment holds no credentials.
+- Page sizes are read first (`pdfinfo`, in the same sandbox). A page whose
+  raster at 150 dpi would exceed 3,000 pixels on a side is rendered scaled down
+  to fit, never at full size.
+- Pages are rendered one at a time; each output is checked (dimensions, 10 MB),
+  re-encoded and removed from scratch before the next page is rendered; scratch
+  space stays under 256 MB and the request under 100 MB.
+- The limit is two minutes per document. On cancellation or timeout the whole
+  process group is killed and reaped and its pipes are closed after a short
+  wait, so no descendant survives and the scratch directory is always removed.
+  The number of rendered pages must equal the counted page total, else the
+  attempt fails with `page_count_mismatch`. A missing renderer, a timeout or a
+  nonzero exit is `render_failed`; the document stays `needs_ocr`. poppler is a
+  tool of the write path on the MacBook and is named in the runbook; nothing on
+  the host needs it. Two alternatives were set aside: removing the text layer
+  from a copy of the PDF also removes the real text of the PDFs that were born
+  digital, and a renderer bound to macOS frameworks would tie the pipeline to
+  one platform.
 
 Cost of the input form. An image costs `ceil(width/28) x ceil(height/28)` tokens
 ([vision](https://platform.claude.com/docs/en/build-with-claude/vision), read
