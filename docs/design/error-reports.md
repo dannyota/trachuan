@@ -26,10 +26,13 @@ A report is structured data only. It has no free-text field and no URL.
 | `missing_document` | `document_number` (required), `issue_date`                                                  |
 
 Any other member, or a member of another kind, is `invalid_request`. Dates are
-ISO `YYYY-MM-DD` between 1945-09-02 and today, and `eff_from` is not after
-`eff_to`. A `document_number` is normalized as the corpus `number_norm`
-([data](data.md)); for `broken_citation` it must equal a document number of the
-release. For `missing_document` it must have the form `<1 to 4 digits>/<year>/`
+ISO `YYYY-MM-DD`: `issue_date` between 1945-09-02 and today, `eff_from` and
+`eff_to` between 1945-09-02 and ten years after today (a `not_yet` document
+starts in the future), and `eff_from` is not after `eff_to`. A `document_number`
+is normalized as the corpus `number_norm` ([data](data.md)). For
+`broken_citation` it must equal the `number_norm` of a document of the release;
+no grammar applies, so older numbers without a slash (such as `196-HĐBT`) are
+accepted. For `missing_document` it must have the form `<1 to 4 digits>/<year>/`
 followed by one to four segments, each of which already appears as a segment of
 some document number in the release (document types and issuers), and the year
 lies between 1945 and the current year. The handle must resolve in the release:
@@ -77,24 +80,30 @@ withdrawing cannot exceed them.
 
 ## Triage
 
-`reports list` shows groups by group key with the report count, the
+`reports list` shows groups by group key, each with a group id (the first 12
+hexadecimal characters of the SHA-256 of the key), the report count, the
 distinct-account count, the newest time and the distinct suggestion values; it
-never shows account identities. `reports show <group>` adds report ids, releases
-and states; account ids appear only with `--accounts`, and email or Google
-subject never. The CLI runs only on the host with the auth database role; there
-is no web triage and no user sees another account's reports. `accept` and
-`reject` act on a group or on report ids and record the operator name given on
-the command line. Accepting applies nothing.
+never shows account identities. `reports show <group id>` adds report ids,
+releases and states; account ids appear only with `--accounts`, and email or
+Google subject never. The CLI runs only on the host with the auth database role;
+there is no web triage and no user sees another account's reports. `accept` and
+`reject` act on a group id or on report ids and record the operator name given
+on the command line. Accepting applies nothing.
 
 ## Export
 
-`reports export --out DIR` creates a batch: one transaction assigns a new batch
-id to every accepted report not yet in a batch; the files are then written from
-the database into `DIR/<batch id>/` (a new directory; the command refuses an
-existing one) through temporary names and renames, with a manifest of report
-ids. `reports export --batch ID --out DIR` rewrites an existing batch, so a
-crash after the transaction is repaired by rerunning it. Files carry no account
-data:
+`reports export --out DIR` creates a batch in one transaction: it assigns a new
+batch id to every accepted report not yet in a batch and copies each one's group
+key, document number, release, kind, target and suggestion, without account
+data, into `issue_report_export` ([data](data.md)). That snapshot is the batch's
+fixed membership: later account deletion or report retention does not change it.
+The files are written from the snapshot into a fresh temporary directory beside
+`DIR/<batch id>/`, with a manifest of report ids, and the directory is renamed
+into place once complete; an existing `DIR/<batch id>/` is refused.
+`reports export --batch ID --out DIR` writes the same batch again from its
+snapshot into a fresh directory, so a crash at any point is repaired by
+rerunning it; a batch whose snapshot has been deleted by retention fails with a
+fixed message. The files are:
 
 - `corrections-draft.yaml`: one entry per `wrong_validity` group whose anchor is
   empty and whose accepted reports agree on one non-empty set of suggestion
@@ -115,7 +124,8 @@ sources or the identity map; nothing is applied automatically.
 Open reports stay until decided or withdrawn. Every other report is deleted once
 the period in budgets has passed since its last state change (accepted,
 rejected, withdrawn or exported), so accepted reports must be exported within
-that period. Account deletion deletes the account's reports; batches already
+that period; batch snapshots are deleted after the same period from their
+creation. Account deletion deletes the account's reports; batches already
 exported carry no account data. The purge runs in the server's hourly loop.
 
 ## Alternatives rejected

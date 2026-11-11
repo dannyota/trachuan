@@ -39,9 +39,9 @@
 
 **Files:** Create `apps/server/migrations/00004_reports.sql`, `apps/server/sql/issue_report.sql`, regenerated store, integration tests.
 
-**Interfaces:** Table per data.md with a partial unique index on (account, document_key, anchor, kind, target) where `state = 'open'`, `ON DELETE CASCADE` from account, indexes for retention and triage grouping. Queries: `CreateReport` (used inside the admission transaction after the account row lock and the reports advisory lock: inserts unless an open duplicate exists and the daily, open and retained caps allow; returns the row and a deduplicated flag or a cap marker), `ListOwnReports` (cursor pages of 100), `WithdrawOwnReport`, `TriageGroups`, `TriageReports`, `DecideReports`, `AssignExportBatch` (one statement assigning a batch id to accepted reports without one), `BatchReports`, `DeleteClosedReports` (batch limit and retention parameters).
+**Interfaces:** Table per data.md with a partial unique index on (account, document_key, anchor, kind, target) where `state = 'open'`, `ON DELETE CASCADE` from account, indexes for retention and triage grouping. Queries: `CreateReport` (used inside the admission transaction after the account row lock and the reports advisory lock: inserts unless an open duplicate exists and the daily, open and retained caps allow; returns the row and a deduplicated flag or a cap marker), `ListOwnReports` (cursor pages of 100), `WithdrawOwnReport`, `TriageGroups`, `TriageReports`, `DecideReports`, `CreateExportBatch` (one transaction assigning a batch id to accepted reports without one and copying their snapshot rows into `issue_report_export`), `BatchSnapshot`, retention of snapshots, `DeleteClosedReports` (batch limit and retention parameters).
 
-- [ ] **Step 1: Failing tests** (integration): `TestMigrate_00004RoundTrip`; `TestStore_DedupeAndCapsUnderRace` (concurrent identical reports on separate connections; caps at their boundaries); `TestStore_OwnRowsOnly`; `TestStore_ExportBatchAssignOnce`; `TestStore_RetentionDeletesClosed`.
+- [ ] **Step 1: Failing tests** (integration): `TestMigrate_00004RoundTrip`; `TestStore_DedupeAndCapsUnderRace` (concurrent identical reports on separate connections; caps at their boundaries); `TestStore_OwnRowsOnly`; `TestStore_ExportBatchSnapshotSurvivesDeletion`; `TestStore_RetentionDeletesClosed`.
 - [ ] **Step 2: Implement**; run `make generate` and `make sqlc-check`; commit `feat(server): error report schema`.
 
 ### Task 2: Validation, dedupe and limits
@@ -50,8 +50,8 @@
 
 **Interfaces:** `reports.Input{Country, Kind, Handle, Release string; Suggestion map[string]json.RawMessage}`; `reports.Service{Store; Resolver (release lease, engine lookup of a document, anchor and document number, and the set of number segments of the release); Clock}` with `Submit(ctx, accountID, Input) (Result, error)` returning `{ReportID int64; State string; Deduplicated bool}`; typed errors mapping to `invalid_request`, `rate_limited`, `release_expired`, `unavailable`.
 
-- [ ] **Step 1: Failing tests:** `TestValidate_KindSuggestionMatrix`; `TestValidate_NoFreeTextChannel` (unknown members, `source_url`, numbers whose segments are not in the release, numbers outside the grammar or year range, long values); `TestValidate_Dates`; `TestValidate_HandleResolves` (unknown document, unknown anchor, retired release); `TestSubmit_DedupeAndCaps`; `TestSubmit_BlockedAccount`.
-- [ ] **Step 2: Implement**; document numbers use the corpus normalizer and the reference parser's grammar; commit `feat(server): error report validation`.
+- [ ] **Step 1: Failing tests:** `TestValidate_KindSuggestionMatrix`; `TestValidate_NoFreeTextChannel` (unknown members, `source_url`, numbers whose segments are not in the release, numbers outside the grammar or year range, long values); `TestValidate_Dates` (future effective dates up to ten years, issue dates not in the future); `TestValidate_LegacyNumberCitation` (`196-HĐBT`); `TestValidate_HandleResolves` (unknown document, unknown anchor, retired release); `TestSubmit_DedupeAndCaps`; `TestSubmit_BlockedAccount`.
+- [ ] **Step 2: Implement**; document numbers use the corpus normalizer; `broken_citation` requires membership in the release's `number_norm` set, `missing_document` the structural form and release segments; commit `feat(server): error report validation`.
 
 ### Task 3: MCP tool
 
@@ -71,9 +71,9 @@
 
 **Files:** Modify `apps/server/internal/app/admin.go` (or a new `admin_reports.go`), tests.
 
-**Interfaces:** `server admin reports list [--kind K] [--state S]`, `show <document_key> <anchor> <kind> [--accounts]`, `accept|reject (<group>|--ids ...) --by NAME`, `export --out DIR [--batch ID]`.
+**Interfaces:** `server admin reports list [--kind K] [--state S]`, `show <group id> [--accounts]`, `accept|reject (<group id>|--ids ...) --by NAME`, `export --out DIR [--batch ID]`.
 
-- [ ] **Step 1: Failing tests:** `TestTriage_GroupsAndCounts`; `TestTriage_NoIdentityWithoutFlag`; `TestDecide_GroupAndIDs`; `TestExport_DraftFormats` (corrections draft parses as the corrections YAML shape with TODO evidence, only document-level groups with one agreed non-empty set; others in validity-review.jsonl); `TestExport_NoAccountData`; `TestExport_BatchRecovery` (a failure after the batch transaction is repaired by `--batch`; an existing directory is refused); `TestExport_OnlyUnbatchedReports`.
+- [ ] **Step 1: Failing tests:** `TestTriage_GroupsAndCounts` (two targets cited from one provision are two groups); `TestTriage_NoIdentityWithoutFlag`; `TestDecide_GroupAndIDs`; `TestExport_DraftFormats` (corrections draft parses as the corrections YAML shape with TODO evidence, only document-level groups with one agreed non-empty set; others in validity-review.jsonl); `TestExport_NoAccountData`; `TestExport_BatchRecovery` (a crash after the transaction or during writing is repaired by `--batch` into a fresh directory; an existing batch directory is refused; an expired snapshot fails with a fixed message; membership unchanged after account deletion); `TestExport_OnlyUnbatchedReports`.
 - [ ] **Step 2: Implement**; commit `feat(server): error report triage and export`.
 
 ### Task 6: Wiring, retention and runbook
