@@ -70,6 +70,6 @@ RFC 9728 metadata at `/.well-known/oauth-protected-resource`.
 ## Web API
 
 `POST /api/v1/search`, `GET /api/v1/taxonomy`, `GET /api/v1/documents/{key}`,
-auth and account endpoints. The OpenAPI document in `packages/schema` is the
-contract; the Nuxt client is generated from it and CI fails on drift. Limits are
-in [budgets](budgets.md).
+auth and account endpoints ([web API](web-api.md)). The OpenAPI document in
+`packages/schema` is the contract; the Nuxt client is generated from it and CI
+fails on drift. Limits are in [budgets](budgets.md).
