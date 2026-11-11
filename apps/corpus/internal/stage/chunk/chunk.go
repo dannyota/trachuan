@@ -78,7 +78,7 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 	if err != nil {
 		return stage.Output{}, fmt.Errorf("load chunk input: %w", err)
 	}
-	if in.FetchKey != item.Key || in.ExtractKey != item.Key || in.ExtractInputHash != in.FetchSha256 {
+	if in.FetchKey != item.Key || in.ExtractKey != item.Key {
 		return stage.Output{}, fmt.Errorf("chunk input lineage mismatch for %q", item.Key)
 	}
 	if inputHash(item.Key, in.FetchSha256, in.ExtractSha256) != item.InputHash {
@@ -89,6 +89,10 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 			return stage.Output{}, err
 		}
 	}
+	if err = checkExtractLineage(env.Artifacts.Abs(in.ExtractPath), in.FetchSha256, in.ExtractInputHash); err != nil {
+		return stage.Output{}, fmt.Errorf("chunk input lineage: %w", err)
+	}
+
 	file, coverage, err := chunkInputs(env.Artifacts.Abs(in.FetchPath), env.Artifacts.Abs(in.ExtractPath), item.Key)
 	if err != nil {
 		return stage.Output{}, err
@@ -125,4 +129,8 @@ func chunkInputs(fetchDir, extractDir, key string) (File, Coverage, error) {
 		return File{}, Coverage{}, err
 	}
 	return Split(nodes, Meta{Key: key, Number: doc.Number, Title: doc.Title, EffFrom: doc.EffFrom, IssueDate: doc.IssueDate}, Recipe1())
+}
+
+func checkExtractLineage(dir, fetchHash, inputHash string) error {
+	return fetch.CheckExtractLineage(dir, fetchHash, inputHash)
 }

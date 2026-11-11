@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -65,5 +66,35 @@ func TestChunk_SecondaryDocumentNoTreeNoChunks(t *testing.T) {
 	}
 	if len(file.Chunks) != 0 || len(coverage.Gaps) != 1 || coverage.Gaps[0].Kind != "no_tree" {
 		t.Fatalf("chunks=%+v coverage=%+v", file.Chunks, coverage)
+	}
+}
+
+func TestChunk_GeneratedProvisionsChunked(t *testing.T) {
+	chapter := "tx:chapter"
+	nodes := []Node{
+		{NodeID: chapter, Kind: "chuong", Label: "Chương I", Heading: "Quy định chung", Ordinal: 1, Path: "kem-theo-1/chuong-i", Text: "Chương I\nQuy định chung"},
+		{NodeID: "tx:article", ParentNodeID: &chapter, Kind: "dieu", Label: "Điều 1", Ordinal: 2, Path: "kem-theo-1/dieu-1", Text: "Điều 1. Nội dung của quy định có đủ chữ để lập một đoạn văn bản."},
+		{NodeID: "tx:neutral", Kind: "other", Ordinal: 3, Path: "doan-1", Text: "Một đoạn văn bản trung lập có đủ nội dung để tạo thành đoạn trích."},
+	}
+	file, _, err := Split(nodes, Meta{Key: "vn:vbpl:1", Number: "123", Title: "Văn bản"}, Recipe1())
+	if err != nil {
+		t.Fatal(err)
+	}
+	seen := map[string]bool{}
+	for _, c := range file.Chunks {
+		seen[c.Anchor] = true
+		if c.Anchor == "kem-theo-1/dieu-1" && !strings.Contains(c.ContextPrefix, "Chương I Quy định chung") {
+			t.Fatalf("prefix %q", c.ContextPrefix)
+		}
+	}
+	if !seen["kem-theo-1/dieu-1"] || !seen["doan-1"] {
+		t.Fatalf("chunks=%+v", file.Chunks)
+	}
+}
+
+func TestChunk_MissingTextRecordIsAccepted(t *testing.T) {
+	fetchHash := strings.Repeat("a", 64)
+	if err := checkExtractLineage(t.TempDir(), fetchHash, fetchHash); err != nil {
+		t.Fatalf("missing record: %v", err)
 	}
 }

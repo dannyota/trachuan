@@ -78,28 +78,20 @@ func (l *loader) loadDocuments(ctx context.Context) error {
 			}
 			return files[i].SHA256 < files[j].SHA256
 		})
-		if strings.HasPrefix(key, "vn:chinhphu:") {
-			hasGap := false
-			for _, gap := range l.gaps {
-				if gap.ItemKey == key && gap.Kind == "no_tree" {
-					hasGap = true
-					break
-				}
-			}
-			if !hasGap {
-				l.addGap("build", key, "no_tree", "")
-			}
-		}
+
 		var nodes []treeNode
 		var extractHash *string
 		ext, exists := l.items["extract"][key]
-		if exists && ext.State == "done" && !strings.HasPrefix(key, "vn:chinhphu:") {
-			if err = checkInputHash(ext, *item.ArtifactSHA256); err != nil {
-				return err
-			}
+		if exists && ext.State == "done" {
 			p, e := artifactDir(l.artifacts, ext)
 			if e != nil {
 				return fmt.Errorf("extract artifact: %w", e)
+			}
+			if ext.InputHash == nil {
+				return fmt.Errorf("missing extract input hash")
+			}
+			if e = fetch.CheckExtractLineage(p, *item.ArtifactSHA256, *ext.InputHash); e != nil {
+				return fmt.Errorf("extract lineage: %w", e)
 			}
 			var raw []chunk.Node
 			if e = readArtifactJSON(p, "provisions.json", &raw); e != nil {
@@ -111,6 +103,18 @@ func (l *loader) loadDocuments(ctx context.Context) error {
 				nodes = nil
 			}
 			extractHash = ext.ArtifactSHA256
+		}
+		if strings.HasPrefix(key, "vn:chinhphu:") && len(nodes) == 0 {
+			hasGap := false
+			for _, gap := range l.gaps {
+				if gap.ItemKey == key && gap.Kind == "no_tree" {
+					hasGap = true
+					break
+				}
+			}
+			if !hasGap {
+				l.addGap("build", key, "no_tree", "")
+			}
 		}
 		if l.counts.Provisions+int64(len(nodes)) > 2000000 {
 			return fmt.Errorf("provision limit exceeded")

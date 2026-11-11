@@ -314,3 +314,20 @@ func TestParse_PreamblePreservesNonTableText(t *testing.T) {
 	}
 	t.Fatal("missing preamble text")
 }
+
+func TestParse_NeutralAnchorsAcrossScopes(t *testing.T) {
+	r := Parse(paragraphs("Lời mở đầu\nĐiều 1. Một\nĐiều 3. Ba\nPHỤ LỤC\n" + strings.Repeat("phụ lục ", 50)))
+	var anchors []string
+	for _, p := range r.Provisions {
+		if p.Kind == "other" {
+			anchors = append(anchors, p.Anchor)
+			h := sha256.Sum256([]byte(fmt.Sprintf("%d\n%s\n%s", p.ScopeIndex, p.Anchor, p.Text)))
+			if p.NodeID != "tx:"+hex.EncodeToString(h[:])[:16] {
+				t.Fatalf("node id %s", p.NodeID)
+			}
+		}
+	}
+	if !reflect.DeepEqual(anchors, []string{"doan-1", "doan-2", "doan-3", "doan-4"}) {
+		t.Fatalf("anchors: %v", anchors)
+	}
+}

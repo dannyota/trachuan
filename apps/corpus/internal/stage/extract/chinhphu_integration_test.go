@@ -4,6 +4,8 @@ package extract
 
 import (
 	"context"
+	"crypto/sha256"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -27,7 +29,7 @@ func TestExtract_ChinhphuNoTree(t *testing.T) {
 	defer db.Close()
 	artifacts := artifact.Store{Root: t.TempDir()}
 	art, err := artifacts.PublishContent(ctx, "fetch", strings.Repeat("b", 64), func(dir string) error {
-		return os.WriteFile(filepath.Join(dir, "document.json"), []byte(`{"version":2}`), 0600)
+		return writeSecondaryFixture(dir, "1")
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -45,7 +47,7 @@ func TestExtract_ChinhphuNoTree(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	out, err := New().Process(ctx, stage.Env{DB: db, Artifacts: artifacts}, stage.Run{ID: runID}, stage.Item{Key: "vn:chinhphu:1", InputHash: art.SHA256})
+	out, err := New().Process(ctx, stage.Env{DB: db, Artifacts: artifacts}, stage.Run{ID: runID}, stage.Item{Key: "vn:chinhphu:1", InputHash: InputHash(art.SHA256, "none")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -53,7 +55,7 @@ func TestExtract_ChinhphuNoTree(t *testing.T) {
 		t.Fatalf("output %+v", out)
 	}
 	resolution, err := New().Resolve(ctx, stage.Env{Artifacts: artifacts}, stage.Run{}, stage.Item{}, *out.Artifact)
-	if err != nil || len(resolution.Gaps) != 1 || resolution.Gaps[0].Kind != "no_tree" {
+	if err != nil || len(resolution.Gaps) != 2 || resolution.Gaps[0].Kind != "no_tree" || resolution.Gaps[1].Kind != "no_text_source" {
 		t.Fatalf("resolution %+v: %v", resolution, err)
 	}
 	rows, err := os.ReadFile(filepath.Join(artifacts.Abs(out.Artifact.Path), "provisions.json"))
@@ -73,9 +75,19 @@ func TestPlan_FinalMembershipFiltersFetchedItems(t *testing.T) {
 	if err = db.QueryRow(ctx, `INSERT INTO run (country,rel,state,snapshot) VALUES ('vn','20990102','running','{}') RETURNING id`).Scan(&id); err != nil {
 		t.Fatal(err)
 	}
+	artifacts := artifact.Store{Root: t.TempDir()}
 	for _, key := range []string{"vn:vbpl:1", "vn:chinhphu:2"} {
+		bundle, publishErr := artifacts.PublishContent(ctx, "fetch", strings.Repeat("a", 64), func(dir string) error {
+			if key == "vn:chinhphu:2" {
+				return writeSecondaryFixture(dir, "2")
+			}
+			return os.WriteFile(filepath.Join(dir, "tree.json"), []byte(`{"success":true,"data":[{"id":"1","level":"Article","title":"Điều 1"}]}`), 0600)
+		})
+		if publishErr != nil {
+			t.Fatal(publishErr)
+		}
 		var art int64
-		if err = db.QueryRow(ctx, `INSERT INTO artifact (stage,item_key,input_hash,recipe_hash,path,sha256) VALUES ('fetch',$1,$1,$1,$1,$1) RETURNING id`, key).Scan(&art); err != nil {
+		if err = db.QueryRow(ctx, `INSERT INTO artifact (stage,item_key,input_hash,recipe_hash,path,sha256) VALUES ('fetch',$1,$2,$3,$4,$5) RETURNING id`, key, bundle.InputHash, strings.Repeat("a", 64), bundle.Path, bundle.SHA256).Scan(&art); err != nil {
 			t.Fatal(err)
 		}
 		if _, err = db.Exec(ctx, `INSERT INTO run_item (run_id,stage,item_key,state,batch,artifact_id) VALUES ($1,'fetch',$2,'done',0,$3)`, id, key, art); err != nil {
@@ -87,24 +99,24 @@ func TestPlan_FinalMembershipFiltersFetchedItems(t *testing.T) {
 		t.Fatal(err)
 	}
 	run := stage.Run{ID: id, Snapshot: stage.Snapshot{SourceList: []byte(`{"vbpl":{"selection_version":1}}`)}}
-	items, err := New().Plan(ctx, stage.Env{DB: db}, run)
+	items, err := New().Plan(ctx, stage.Env{DB: db, Artifacts: artifacts}, run)
 	if err != nil || len(items) != 1 || items[0].Key != "vn:vbpl:1" {
 		t.Fatalf("items=%+v err=%v", items, err)
 	}
-	related, err := relate.New().Plan(ctx, stage.Env{DB: db}, run)
+	related, err := relate.New().Plan(ctx, stage.Env{DB: db, Artifacts: artifacts}, run)
 	if err != nil || len(related) != 1 || related[0].Key != "vn:vbpl:1" {
 		t.Fatalf("related=%+v err=%v", related, err)
 	}
 	legacy := run
 	legacy.Snapshot.SourceList = []byte(`{"vbpl":{"selection_version":0}}`)
-	items, err = New().Plan(ctx, stage.Env{DB: db}, legacy)
+	items, err = New().Plan(ctx, stage.Env{DB: db, Artifacts: artifacts}, legacy)
 	if err != nil || len(items) != 2 {
 		t.Fatalf("legacy items=%+v err=%v", items, err)
 	}
 	if _, err = db.Exec(ctx, `UPDATE run_scope SET final_hash='invalid' WHERE run_id=$1`, id); err != nil {
 		t.Fatal(err)
 	}
-	if _, err = New().Plan(ctx, stage.Env{DB: db}, run); err == nil {
+	if _, err = New().Plan(ctx, stage.Env{DB: db, Artifacts: artifacts}, run); err == nil {
 		t.Fatal("corrupt final phase accepted")
 	}
 }
@@ -141,3 +153,16 @@ func TestPlan_SelectionOneWithoutFinalMembershipFails(t *testing.T) {
 }
 
 func ptr(s string) *string { return &s }
+
+func writeSecondaryFixture(dir, id string) error {
+	meta := fmt.Sprintf(`{"version":1,"source_id":"%s","source_url":"https://example.test/%s","occurrences":[],"attachments":[]}`, id, id)
+	html := "fixture"
+	hash := func(s string) string { return fmt.Sprintf("%x", sha256.Sum256([]byte(s))) }
+	doc := fmt.Sprintf(`{"version":2,"document":{"key":"vn:chinhphu:%s","country":"vn","source":"chinhphu","source_id":"%s","source_url":"https://example.test/%s","identity_evidence":[{"path":"detail.html","sha256":"%s"},{"path":"metadata.json","sha256":"%s"}]}}`, id, id, id, hash(html), hash(meta))
+	for name, body := range map[string]string{"document.json": doc, "metadata.json": meta, "detail.html": html, "files.json": `{"version":2,"files":[]}`} {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0600); err != nil {
+			return err
+		}
+	}
+	return nil
+}

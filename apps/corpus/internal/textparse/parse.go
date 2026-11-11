@@ -30,6 +30,7 @@ func Parse(paragraphs []Paragraph) Result {
 	spans := scopes(paragraphs)
 	if len(spans) == 0 {
 		r.Provisions = neutral(paragraphs, -1, 0)
+		numberNeutral(r.Provisions)
 		addContentGaps(&r, paragraphs)
 		return r
 	}
@@ -64,8 +65,22 @@ func Parse(paragraphs []Paragraph) Result {
 			r.Provisions = append(r.Provisions, neutral(paragraphs[sp.start:sp.end], index, sp.start)...)
 		}
 	}
+	numberNeutral(r.Provisions)
 	addContentGaps(&r, paragraphs)
 	return r
+}
+func numberNeutral(provisions []Provision) {
+	n := 0
+	for i := range provisions {
+		p := &provisions[i]
+		if p.Kind != "other" {
+			continue
+		}
+		n++
+		p.Anchor = fmt.Sprintf("doan-%d", n)
+		sum := sha256.Sum256([]byte(fmt.Sprintf("%d\n%s\n%s", p.ScopeIndex, p.Anchor, p.Text)))
+		p.NodeID = fmt.Sprintf("tx:%x", sum[:8])
+	}
 }
 func preamble(p []Paragraph) []Provision {
 	var out []Provision
