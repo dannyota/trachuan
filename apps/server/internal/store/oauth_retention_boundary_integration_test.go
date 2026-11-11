@@ -51,7 +51,7 @@ func TestStore_OAuthRetentionDeduplicatesTokenBatch(t *testing.T) {
 	for _, char := range []string{"c", "d", "e", "f"} {
 		oauthToken(t, ctx, q, otherGrant.ID, strings.Repeat(char, 64), now.Add(24*time.Hour))
 	}
-	if _, err := conn.Exec(ctx, `UPDATE oauth_grant SET revoked_at = CASE WHEN id = $1 THEN $3 ELSE $4 END WHERE id IN ($1, $2)`, grant, otherGrant.ID, now.Add(-72*time.Hour), now.Add(-48*time.Hour)); err != nil {
+	if _, err := conn.Exec(ctx, `UPDATE oauth_grant SET revoked_at = CASE WHEN id = $1 THEN $3::timestamptz ELSE $4::timestamptz END WHERE id IN ($1, $2)`, grant, otherGrant.ID, now.Add(-72*time.Hour), now.Add(-48*time.Hour)); err != nil {
 		t.Fatal(err)
 	}
 	args := store.DeleteExpiredOAuthTokensParams{AsOf: now, Retention: pgtype.Interval{Microseconds: int64(24 * time.Hour / time.Microsecond), Valid: true}, BatchLimit: 4}
