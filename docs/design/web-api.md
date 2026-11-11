@@ -121,28 +121,30 @@ follow the same rule. The OAuth consent form has its own rule in
 
 ## Routes
 
-| Method and path                    | Credential     | Limit bucket  | Purpose                                                                                                                                                                             |
-| ---------------------------------- | -------------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `GET /api/v1/auth/google/start`    | none           | login per IP  | Start Google login                                                                                                                                                                  |
-| `GET /api/v1/auth/google/callback` | login cookie   | login per IP  | Finish Google login                                                                                                                                                                 |
-| `POST /api/v1/auth/logout`         | session + CSRF | read          | Revoke this session                                                                                                                                                                 |
-| `GET /api/v1/me`                   | session        | read          | Account id, email, created date, CSRF token                                                                                                                                         |
-| `DELETE /api/v1/me`                | session + CSRF | read          | Request deletion: block now, remove after 7 days ([auth](auth.md))                                                                                                                  |
-| `GET /api/v1/me/sessions`          | session        | read          | Own live sessions (not revoked, not expired): id, created, last seen, current flag                                                                                                  |
-| `DELETE /api/v1/me/sessions/{id}`  | session + CSRF | read          | Revoke one own session                                                                                                                                                              |
-| `GET /api/v1/me/tokens`            | session        | read          | Own personal tokens: id, name, created, expires, last used, revoked                                                                                                                 |
-| `POST /api/v1/me/tokens`           | session + CSRF | read          | Create a personal token `{name, days}`; the token is returned once                                                                                                                  |
-| `DELETE /api/v1/me/tokens/{id}`    | session + CSRF | read          | Revoke one own personal token                                                                                                                                                       |
-| `GET /api/v1/me/grants`            | session        | read          | Own OAuth grants ([OAuth](oauth.md))                                                                                                                                                |
-| `DELETE /api/v1/me/grants/{id}`    | session + CSRF | read          | Revoke one own OAuth grant and its tokens                                                                                                                                           |
-| `POST /api/v1/reports`             | session + CSRF | read          | Report a corpus defect ([error reports](error-reports.md))                                                                                                                          |
-| `GET /api/v1/me/reports`           | session        | read          | Own error reports                                                                                                                                                                   |
-| `DELETE /api/v1/me/reports/{id}`   | session + CSRF | read          | Withdraw an own open report                                                                                                                                                         |
-| `POST /api/v1/search`              | session + CSRF | search        | The `search` tool's input and result                                                                                                                                                |
-| `POST /api/v1/read`                | session + CSRF | read          | The `read` tool's input and result                                                                                                                                                  |
-| `GET /api/v1/documents/{key}`      | session        | read          | Reader page: document entry, outline and text from `from`                                                                                                                           |
-| `GET /api/v1/status`               | session        | read          | The `corpus_status` tool's result                                                                                                                                                   |
-| `GET /api/v1/public/status`        | none           | public per IP | Release, counts, newest source date and gap counts for the public pages; same fields as `corpus_status`, never provision text or account data; `Cache-Control: public, max-age=600` |
+| Method and path                      | Credential     | Limit bucket  | Purpose                                                                                                                                                                             |
+| ------------------------------------ | -------------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /api/v1/auth/google/start`      | none           | login per IP  | Start Google login                                                                                                                                                                  |
+| `GET /api/v1/auth/google/callback`   | login cookie   | login per IP  | Finish Google login                                                                                                                                                                 |
+| `POST /api/v1/auth/logout`           | session + CSRF | read          | Revoke this session                                                                                                                                                                 |
+| `GET /api/v1/me`                     | session        | read          | Account id, email, created date, CSRF token                                                                                                                                         |
+| `DELETE /api/v1/me`                  | session + CSRF | read          | Request deletion: block now, remove after 7 days ([auth](auth.md))                                                                                                                  |
+| `GET /api/v1/me/sessions`            | session        | read          | Own live sessions (not revoked, not expired): id, created, last seen, current flag                                                                                                  |
+| `DELETE /api/v1/me/sessions/{id}`    | session + CSRF | read          | Revoke one own session                                                                                                                                                              |
+| `GET /api/v1/me/tokens`              | session        | read          | Own personal tokens: id, name, created, expires, last used, revoked                                                                                                                 |
+| `POST /api/v1/me/tokens`             | session + CSRF | read          | Create a personal token `{name, days}`; the token is returned once                                                                                                                  |
+| `DELETE /api/v1/me/tokens/{id}`      | session + CSRF | read          | Revoke one own personal token                                                                                                                                                       |
+| `GET /api/v1/me/grants`              | session        | read          | Own OAuth grants ([OAuth](oauth.md))                                                                                                                                                |
+| `DELETE /api/v1/me/grants/{id}`      | session + CSRF | read          | Revoke one own OAuth grant and its tokens                                                                                                                                           |
+| `POST /api/v1/reports`               | session + CSRF | read          | Report a corpus defect ([error reports](error-reports.md))                                                                                                                          |
+| `GET /api/v1/me/reports`             | session        | read          | Own error reports                                                                                                                                                                   |
+| `DELETE /api/v1/me/reports/{id}`     | session + CSRF | read          | Withdraw an own open report                                                                                                                                                         |
+| `POST /api/v1/search`                | session + CSRF | search        | The `search` tool's input and result                                                                                                                                                |
+| `POST /api/v1/read`                  | session + CSRF | read          | The `read` tool's input and result                                                                                                                                                  |
+| `GET /api/v1/documents/{key}`        | session        | read          | Reader page: document entry, outline and text from `from`                                                                                                                           |
+| `GET /api/v1/status`                 | session        | read          | The `corpus_status` tool's result                                                                                                                                                   |
+| `GET /api/v1/public/status`          | none           | public per IP | Release, counts, newest source date and gap counts for the public pages; same fields as `corpus_status`, never provision text or account data; `Cache-Control: public, max-age=600` |
+| `GET /api/v1/public/taxonomy`        | none           | public per IP | The `taxonomy` tool without `q`: `node` and `depth` as query parameters; same result; `Cache-Control: public, max-age=600`; typed lookup text never goes to this route              |
+| `GET /api/v1/public/taxonomy/{code}` | none           | public per IP | A served node with its path, children and its 20 documents with the most effective assignments in the subtree (number, title, type, status); never provision text; cacheable 600 s  |
 
 Account routes list and create within the per-account credential bounds in
 [budgets](budgets.md#request-limits). Account routes act only on rows whose
@@ -160,15 +162,15 @@ page makes progress. The unit sequence starts with the document entry with its
 status, then the outline entries, then the leads and provisions; outline entries
 are ordinary units of that sequence, so a long outline continues across pages
 through `next` like any other units. The response is
-`{release, fetch_sha256, item}`: `release` is the release the page was read
-from, `item` is the `read` item result object, and `fetch_sha256` is the
+`{release, fetch_sha256, item, nodes}`: `release` is the release the page was
+read from, `item` is the `read` item result object, and `fetch_sha256` is the
 document's fetch hash in that release, read with the item from the same release
 (directly or through the release-keyed read cache). It is present on every page
 that carries the document, first or continuation, and absent when `item.error`
-is set. Continuation is `item.next`, passed back as `next`. The website links
-search results to the reader with `?release=`, so the reader shows the release
-the result came from; the reader shows the document's single `source_url` only
-when present.
+is set. `nodes` names (`name`, `level`) every node code in `item`. Continuation
+is `item.next`, passed back as `next`. The website links search results to the
+reader with `?release=`, so the reader shows the release the result came from;
+the reader shows the document's single `source_url` only when present.
 
 Search, read and status take the same inputs and return the same objects as the
 MCP tools. Documents wraps one `read` item result with the web caps in the

@@ -34,16 +34,19 @@ Input adds `detail`: `compact` (default) or `full`. The default `limit` depends
 on `detail`.
 
 Top level: `release`, `abstain`, `reason`, `message`, `documents`, `hits`,
-`non_current`, `gaps`, `outside_filter_count`, `next_cursor`. `documents` is an
-object keyed by document key and holds every document that a hit in `hits` or
-`non_current` names, once.
+`non_current`, `gaps`, `outside_filter_count`, `next_cursor`, `nodes`.
+`documents` is an object keyed by document key and holds every document that a
+hit in `hits` or `non_current` names, once; `nodes` is an object keyed by node
+code with `name` and `level` for every code a hit or document entry names.
 
 A document entry has `number`, `title`, `type`, `issuer`, `issued`,
 `effective_from`, `effective_to`, `status` (the document part of the recipe
 validity stamp: class, current flag, basis, status basis), `text_source` and
 `text_complete` ([text extraction](text-extraction.md): whether the text is the
 source's tree, a parsed transcription, PDF text or OCR, and whether it is known
-complete), `source_url`, `related` and `related_counts`.
+complete), `source_url`, `related`, `related_counts` and `nodes`: up to 10
+served node codes with the most effective assignments in the document, most
+first.
 
 A compact hit has, in this order:
 
@@ -55,8 +58,8 @@ A compact hit has, in this order:
 | `path`      | Ancestors from the top structural level down to and including the hit: `label`, `heading` when the source has one, `anchor` (read as `<doc>#<anchor>`)    |
 | `snippet`   | Verbatim text under the snippet rule                                                                                                                      |
 | `complete`  | True only when `snippet` is the whole hit text and the recipe marked the hit complete                                                                     |
-| `in_filter` | Subject filter result, only when `nodes` were requested                                                                                                   |
-| `nodes`     | Taxonomy node codes                                                                                                                                       |
+| `in_filter` | Filter result, only when a filter (`nodes`, `doc_types`, `issuers` or `documents`) was requested                                                          |
+| `nodes`     | The hit provision's effective node codes ([taxonomy](taxonomy.md#serving)), deepest first                                                                 |
 | `warnings`  | Provision-level relations whose endpoint is this provision or a descendant, as pointers, under the recipe's validity rule, in the recipe's relation order |
 | `gaps`      | The recipe's hit gaps                                                                                                                                     |
 | `locator`   | Where the hit text sits in the file it was read from (`block:` or `line:` range); absent when the text is the source's tree                               |
@@ -122,6 +125,9 @@ access. An item is one of:
   `from` and `to`, both inclusive, in preorder.
 - `{handle, relations:true}`: the relation list of that document or provision.
 - `{next}`: a continuation token copied from an earlier result.
+
+The result carries a top-level `nodes` object, like search's, naming every node
+code its document entries carry.
 
 Units of text never overlap. A provision handle returns the provision with its
 descendants by [chunk rendering](chunk.md#tree-rendering), preceded by its

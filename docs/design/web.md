@@ -6,13 +6,13 @@ text is never translated.
 
 ## Public, no account
 
-| Route                             | Content                                                                                                                                                |
-| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `/`                               | Purpose, one real pre-rendered sample result, coverage facts from `GET /api/v1/public/status`, Google sign-in, connect link                            |
-| `/vn/topics`, `/vn/topics/{code}` | Subject tree: name, description, counts, main documents per node; no provision text                                                                    |
-| `/connect`                        | Setup for Claude.ai, ChatGPT, Claude Code, Cursor; no secrets                                                                                          |
-| `/sources`                        | Sources, current release, known gaps (from `GET /api/v1/public/status`)                                                                                |
-| `/privacy`, `/terms`, `/llms.txt` | Legal pages ("evidence, not legal advice"; account email stored in Singapore; Google is the identity provider; no questions stored) and agent guidance |
+| Route                             | Content                                                                                                                                                                                     |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/`                               | Purpose, one real pre-rendered sample result, coverage facts from `GET /api/v1/public/status`, Google sign-in, connect link                                                                 |
+| `/vn/topics`, `/vn/topics/{code}` | Subject tree from `GET /api/v1/public/taxonomy`: served nodes in sibling order with name, description and counts; a node page with its path, children and main documents; no provision text |
+| `/connect`                        | Setup for Claude.ai, ChatGPT, Claude Code, Cursor; no secrets                                                                                                                               |
+| `/sources`                        | Sources, current release, known gaps (from `GET /api/v1/public/status`)                                                                                                                     |
+| `/privacy`, `/terms`, `/llms.txt` | Legal pages ("evidence, not legal advice"; account email stored in Singapore; Google is the identity provider; no questions stored) and agent guidance                                      |
 
 Public pages are rendered from release data at build or cached by Nitro route
 rules with a 10-minute window; they make no per-visitor corpus query. Only Nitro
@@ -38,8 +38,9 @@ renders nothing, and a rejection is a fixed plain-text 429 without a render.
 | `/account`            | Email, sessions, personal tokens (create, name, revoke), authorized MCP clients (revoke), delete account                                                                                                                                                                                         |
 
 A signed-out visit to a signed-in route starts Google login with `next` set to
-the path plus only allowlisted query parameters, today `release` on the reader;
-every other parameter is dropped, so a query or form state never reaches a URL
+the path plus only allowlisted query parameters: `release` on the reader and
+`node` (a served node code, from a topic page link) on search; every other
+parameter is dropped, so a query or form state never reaches a URL
 ([web API](web-api.md#google-login) states the `next` rules).
 
 ## Deferred to taxonomy

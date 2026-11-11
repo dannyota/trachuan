@@ -1,4 +1,4 @@
-# Corpus schema version 4
+# Corpus schema version 5
 
 Proposed exact template contract for `internal/corpusdb/schema.sql`, embedded by
 `schema.go` in root module `danny.vn/trachuan`. The workshop keeps goose
@@ -8,7 +8,8 @@ population and recovery. This template is not an applied migration. Version 3
 adds membership class and validity corrections per
 [scope adoption](scope-adoption.md); earlier dumps remain unchanged and require
 their compatible reader. Version 4 adds the text source columns per
-[text extraction](text-extraction.md).
+[text extraction](text-extraction.md). Version 5 fills the taxonomy tables and
+adds node ordinals and counts per [taxonomy](taxonomy.md).
 
 ## Conventions and identity
 
@@ -32,7 +33,7 @@ ancestry index, not the public extraction anchor. This avoids interpreting
 slashes or Vietnamese letters as ltree syntax. Taxonomy ltree labels are `n<id>`
 along its parent chain.
 
-`schema.go` exports `SchemaVersion = 3` and
+`schema.go` exports `SchemaVersion = 5` and
 `Apply(ctx context.Context, db DB, dimensions int) error`; DB exposes
 `Exec(context.Context,string,...any)`. Its return values are
 `(pgconn.CommandTag,error)`, matching pgx connections and transactions. The only
@@ -180,18 +181,24 @@ indexes `(kind,id)`, `document_id`, `node_id`. Missing documents are represented
 by `document_key`, not fake document rows. `node_id` here means taxonomy node,
 not a VBPL source node. Global gaps may have neither document nor taxonomy node.
 
-## Empty taxonomy tables
+## Taxonomy tables
 
-Create these tables but insert no rows. `release.taxonomy_version` is the empty
-string. Classification, seeds and subject filtering belong to later work.
+The build fills these tables from the taxonomy inputs ([taxonomy](taxonomy.md));
+without inputs they stay empty and `release.taxonomy_version` is the empty
+string. Seeds and manual entries are the only methods until the LLM layer lands.
 
 `taxonomy_node`: `id bigint PRIMARY KEY`, `country text CHECK(country='vn')`,
 `parent_id bigint?` FK taxonomy_node,
 `level integer CHECK(level BETWEEN 1 AND 4)`, `code text UNIQUE`, `name text`,
 `description text`, `origin text` in (`phapdien`,`custom`), `status text` in
-(`active`,`retired`), `path ltree UNIQUE`. CHECK parent differs from id; indexes
-`(parent_id,code)`, GiST `(path)`. Parent level/path and country are validated
-on future import. Retired codes are retained; the import never reuses them.
+(`active`,`retired`), `path ltree UNIQUE`,
+`ordinal integer CHECK(ordinal >= 1)`,
+`provision_count integer CHECK(provision_count >= 0)`,
+`document_count integer CHECK(document_count >= 0)`. UNIQUE NULLS NOT DISTINCT
+`(parent_id,ordinal)`. CHECK parent differs from id; indexes `(parent_id,code)`,
+GiST `(path)`. The build validates parent level, path and country, and computes
+the counts over the subtree's effective assignments. Retired codes are retained;
+the import never reuses them.
 
 `taxonomy_assignment`: `provision_id bigint` FK provision, `node_id bigint` FK
 taxonomy_node, `family_id bigint` FK taxonomy_node, `method text` in
@@ -199,10 +206,10 @@ taxonomy_node, `family_id bigint` FK taxonomy_node, `method text` in
 `confidence double precision CHECK(confidence BETWEEN 0 AND 1)`,
 `taxonomy_version text CHECK(taxonomy_version <> '')`. PK
 `(provision_id,node_id)`; CHECK `NOT exclude OR method='manual'`; index
-`(node_id,provision_id)`, `(provision_id,family_id)`. Future importer must
-enforce the family precedence in [data](data.md) in one transaction and validate
-family_id as the node's level-2 ancestor. Empty tables do not claim that
-precedence is implemented or that taxonomy gates passed.
+`(node_id,provision_id)`, `(provision_id,family_id)`. The build enforces the
+family precedence in [data](data.md) in one transaction and validates family_id
+as the node's level-2 ancestor. `coverage_gap` kind `seed_article_missing` names
+a document found without a seeded article.
 
 ## Validity decisions
 
@@ -224,7 +231,7 @@ rules.
 ## Release row
 
 `release`: `singleton boolean PRIMARY KEY CHECK(singleton)`, `country text`
-CHECK country='vn', `rel text UNIQUE`, `schema_version integer CHECK(=4)`,
+CHECK country='vn', `rel text UNIQUE`, `schema_version integer CHECK(=5)`,
 `taxonomy_version text`, `dense_recipe jsonb`, `chunk_recipe jsonb`,
 `lexical_recipe jsonb`, `retrieval_recipe jsonb`, `lexical_stats jsonb`,
 `source_manifest_hash text`, `build_input_hash text`, `build_recipe_hash text`,
@@ -253,10 +260,14 @@ adding the chunk projection must not rewrite ingest rows. A schema change
 rebuilds a new corpus database; retain old artifacts for diagnosis and rollback.
 Version 2 added `document.status_basis`. Version 3 adds class, source and
 validity decisions. Version 4 adds `document.text_source`,
-`document.text_complete` and `provision.locator`. Always rebuild from preserved
-source artifacts, never backfill an old release with an assumed value. Readers
-must support version 4 before activation; version 1, 2 and 3 dumps remain
-unchanged.
+`document.text_complete` and `provision.locator`. Version 5 fills the taxonomy
+tables and adds `taxonomy_node.ordinal`, `provision_count` and `document_count`.
+Always rebuild from preserved source artifacts, never backfill an old release
+with an assumed value. Readers must support version 5 before activation; earlier
+dumps remain unchanged. The server reads versions 4 and 5, and a version-4
+release serves no nodes, so a version-5 server keeps serving the previous
+release until a version-5 release is activated, and rolling back is activating
+the previous release.
 
 The host restore policy currently permits only pgvector extensions, while the
 existing data design already requires ltree. This work uses both locally; host
