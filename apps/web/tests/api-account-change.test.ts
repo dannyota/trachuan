@@ -49,3 +49,18 @@ it('does not start an action for a changed account when the CSRF token is missin
   expect(methods).toEqual(['GET'])
   expect(session.account?.id).toBe(2)
 })
+
+it('sends the captured token when the store token changes before submission', async () => {
+  const session: { account: ReturnType<typeof account> | null, csrfToken: string | null, status: 'unknown' | 'signed-in' | 'signed-out' } = { account: account(1), csrfToken: 'old', status: 'signed-in' }
+  const tokens: (string | null)[] = []
+  const api = createApi({ origin: 'http://localhost', session, fetch: async input => {
+    const request = input as Request
+    if (request.method === 'GET') return json({ ...account(1), csrf_token: 'new' })
+    tokens.push(request.headers.get('x-csrf-token'))
+    return tokens.length === 1 ? json({ error: { code: 'csrf_rejected' } }, 403) : new Response(null, { status: 204 })
+  } })
+  const actions = accountActions(api.forAction(api.captureAction()))
+  session.csrfToken = 'new'
+  await actions.deleteAccount()
+  expect(tokens).toEqual(['old', 'new'])
+})

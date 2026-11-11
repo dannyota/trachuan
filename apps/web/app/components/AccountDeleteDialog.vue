@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { messagesFor, errorMessage, type Language } from '../../i18n'
 import { accountActions } from '../api/account-actions'
+import type { Action } from '../api/client'
 import { useSessionStore } from '../stores/session'
 
-const props = defineProps<{ email: string }>()
+const props = defineProps<{ email: string, action: Action }>()
 const emit = defineEmits<{ close: [] }>()
 const language = useState<Language>('language', () => 'vi')
 const messages = computed(() => messagesFor(language.value))
@@ -14,12 +15,13 @@ const error = ref('')
 const busy = ref(false)
 const accountChanged = ref(false)
 const api = useApi({ userAction: true })
+const actions = accountActions(api.forAction(props.action))
 const session = useSessionStore()
 async function remove() {
   if (confirmation.value !== props.email || busy.value || accountChanged.value) return
   busy.value = true
   try {
-    const result = await accountActions(api.client).deleteAccount()
+    const result = await actions.deleteAccount()
     if (result.error) {
       const code = result.error.error.code as string
       if (code === 'account_changed') { confirmation.value = ''; accountChanged.value = true }

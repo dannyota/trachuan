@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { components } from '@trachuan/schema/gen/openapi'
 import { accountActions } from '../api/account-actions'
+import type { Action } from '../api/client'
 import { useSessionStore } from '../stores/session'
 import { errorMessage, messagesFor, type Language } from '../../i18n'
 
@@ -19,9 +20,16 @@ const grants = ref<Grant[]>([])
 const error = ref('')
 const creating = ref(false)
 const deleting = ref(false)
+const tokenAction = ref<Action | null>(null)
+const deletionAction = ref<Action | null>(null)
+function openToken() {
+  tokenAction.value = api.captureAction()
+  creating.value = true
+}
 const deletionEmail = ref('')
 function openDeletion() {
   if (!session.account) return
+  deletionAction.value = api.captureAction()
   deletionEmail.value = session.account.email
   deleting.value = true
 }
@@ -83,7 +91,7 @@ async function tokenCreated() { try { await loadTokens() } catch { showError() }
         <button type="button" :disabled="busy" @click="revokeSession(item)">{{ item.current ? messages.signOut : messages.revoke }}</button>
       </article>
     </section>
-    <section><h2>{{ messages.personalTokens }}</h2><button type="button" @click="creating = true">{{ messages.createToken }}</button>
+    <section><h2>{{ messages.personalTokens }}</h2><button type="button" @click="openToken">{{ messages.createToken }}</button>
       <article v-for="item in tokens" :key="item.id" class="account-row">
         <h3>{{ item.name }}</h3><p>{{ messages.accountCreated }}: {{ date(item.created_at) }}</p><p>{{ messages.expires }}: {{ date(item.expires_at) }}</p>
         <p>{{ messages.lastUsed }}: {{ date(item.last_used_at) }}</p><p>{{ messages.revoked }}: {{ date(item.revoked_at) }}</p>
@@ -98,7 +106,7 @@ async function tokenCreated() { try { await loadTokens() } catch { showError() }
       </article>
     </section>
     <section><h2>{{ messages.deleteAccount }}</h2><button type="button" @click="openDeletion">{{ messages.deleteAccount }}</button></section>
-    <TokenCreateDialog v-if="creating" @close="creating = false" @created="tokenCreated" />
-    <AccountDeleteDialog v-if="deleting" :email="deletionEmail" @close="deleting = false" />
+    <TokenCreateDialog v-if="creating && tokenAction" :action="tokenAction" @close="creating = false" @created="tokenCreated" />
+    <AccountDeleteDialog v-if="deleting && deletionAction" :email="deletionEmail" :action="deletionAction" @close="deleting = false" />
   </div>
 </template>

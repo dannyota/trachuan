@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { onBeforeRouteLeave } from 'vue-router'
 import { accountActions } from '../api/account-actions'
+import type { Action } from '../api/client'
 import { errorMessage, messagesFor, type Language } from '../../i18n'
 
+const props = defineProps<{ action: Action }>()
 const emit = defineEmits<{ close: [], created: [] }>()
 const language = useState<Language>('language', () => 'vi')
 const messages = computed(() => messagesFor(language.value))
@@ -13,6 +15,7 @@ onMounted(() => {
   window.addEventListener('pageshow', restored)
 })
 const api = useApi({ userAction: true })
+const actions = accountActions(api.forAction(props.action))
 const name = ref('')
 const days = ref(90)
 const token = ref('')
@@ -33,7 +36,7 @@ async function create() {
   busy.value = true
   error.value = ''
   try {
-    const result = await accountActions(api.client).createToken(name.value, days.value)
+    const result = await actions.createToken(name.value, days.value)
     if (!active) return
     if (result.data) { token.value = result.data.token; emit('created') }
     else error.value = errorMessage(language.value, result.error?.error.code || 'generic')

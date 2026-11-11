@@ -7,6 +7,7 @@ import TokenCreateDialog from '../app/components/TokenCreateDialog.vue'
 import AccountDeleteDialog from '../app/components/AccountDeleteDialog.vue'
 
 vi.mock('vue-router', () => ({ onBeforeRouteLeave: vi.fn() }))
+const action = { accountId: 1, csrfToken: 'csrf', bound: false }
 
 beforeEach(() => {
   setActivePinia(createPinia())
@@ -15,21 +16,21 @@ beforeEach(() => {
   vi.stubGlobal('ref', ref)
   vi.stubGlobal('onMounted', onMounted)
   vi.stubGlobal('onBeforeUnmount', onBeforeUnmount)
-  vi.stubGlobal('useApi', () => ({ client: { POST: async () => ({ data: { token: 'fixture-secret' } }) } }))
+  vi.stubGlobal('useApi', () => ({ forAction: () => ({ POST: async () => ({ data: { token: 'fixture-secret' } }) }) }))
 })
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals() })
 
 it('opens both account dialogs as modals', () => {
   const showModal = vi.spyOn(HTMLDialogElement.prototype, 'showModal')
-  const token = mount(TokenCreateDialog)
-  const deletion = mount(AccountDeleteDialog, { props: { email: 'test@example.invalid' } })
+  const token = mount(TokenCreateDialog, { props: { action } })
+  const deletion = mount(AccountDeleteDialog, { props: { email: 'test@example.invalid', action } })
   expect(showModal).toHaveBeenCalledTimes(2)
   token.unmount()
   deletion.unmount()
 })
 
 it('clears the created token when the dialog is cancelled', async () => {
-  const wrapper = mount(TokenCreateDialog)
+  const wrapper = mount(TokenCreateDialog, { props: { action } })
   await wrapper.get('input').setValue('test')
   await wrapper.get('form').trigger('submit')
   await flushPromises()
@@ -41,7 +42,7 @@ it('clears the created token when the dialog is cancelled', async () => {
 })
 
 it('clears a token when the page is hidden', async () => {
-  const wrapper = mount(TokenCreateDialog)
+  const wrapper = mount(TokenCreateDialog, { props: { action } })
   await wrapper.get('input').setValue('test')
   await wrapper.get('form').trigger('submit')
   await flushPromises()
@@ -54,8 +55,8 @@ it('clears a token when the page is hidden', async () => {
 
 it('ignores a pending token creation after the page is hidden', async () => {
   let resolve!: (value: { data: { token: string } }) => void
-  vi.stubGlobal('useApi', () => ({ client: { POST: () => new Promise((done) => { resolve = done }) } }))
-  const wrapper = mount(TokenCreateDialog)
+  vi.stubGlobal('useApi', () => ({ forAction: () => ({ POST: () => new Promise((done) => { resolve = done }) }) }))
+  const wrapper = mount(TokenCreateDialog, { props: { action } })
   await wrapper.get('input').setValue('test')
   await wrapper.get('form').trigger('submit')
   window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: true }))
@@ -67,7 +68,7 @@ it('ignores a pending token creation after the page is hidden', async () => {
 })
 
 it('clears a token on a persisted page restoration', async () => {
-  const wrapper = mount(TokenCreateDialog)
+  const wrapper = mount(TokenCreateDialog, { props: { action } })
   await wrapper.get('input').setValue('test')
   await wrapper.get('form').trigger('submit')
   await flushPromises()
@@ -80,8 +81,8 @@ it('clears a token on a persisted page restoration', async () => {
 })
 
 it('requires email confirmation again when the account changes', async () => {
-  vi.stubGlobal('useApi', () => ({ client: { DELETE: async () => ({ error: { error: { code: 'account_changed' } } }) } }))
-  const wrapper = mount(AccountDeleteDialog, { props: { email: 'test@example.invalid' } })
+  vi.stubGlobal('useApi', () => ({ forAction: () => ({ DELETE: async () => ({ error: { error: { code: 'account_changed' } } }) }) }))
+  const wrapper = mount(AccountDeleteDialog, { props: { email: 'test@example.invalid', action } })
   await wrapper.get('input').setValue('test@example.invalid')
   await wrapper.get('form').trigger('submit')
   await flushPromises()

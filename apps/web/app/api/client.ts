@@ -2,6 +2,7 @@ import createClient from 'openapi-fetch'
 import type { components, paths } from '@trachuan/schema/gen/openapi'
 
 type Account = components['schemas']['Account']
+export type Action = { accountId: number | null, csrfToken: string | null, bound: boolean }
 type Session = { account: Omit<Account, 'csrf_token'> | null, csrfToken: string | null, status: 'unknown' | 'signed-in' | 'signed-out' }
 type Options = {
   origin: string
@@ -64,49 +65,69 @@ export function createApi(options: Options) {
   function accountChanged(): Response {
     return new Response(JSON.stringify({ error: { code: 'account_changed', message: 'Account changed' } }), { status: 409, headers: { 'content-type': 'application/json' } })
   }
-  async function handle(input: Request): Promise<Response> {
+  function captureAction(): Action {
+    return { accountId: session.account?.id ?? null, csrfToken: session.csrfToken, bound: false }
+  }
+  async function handle(input: Request, action: Action): Promise<Response> {
     if (options.publicRoute && new URL(input.url).pathname === '/api/v1/me') {
       if (options.development) throw new Error('Session lookup on cached public SSR')
       return new Response(JSON.stringify({ error: { code: 'unauthenticated', message: 'Session lookup unavailable' } }), { status: 401, headers: { 'content-type': 'application/json' } })
     }
-    const unsafe = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(input.method)
-    const startedAccount = session.account?.id
-    if (unsafe && !session.csrfToken) {
+    const unsafe = !['GET', 'HEAD', 'OPTIONS'].includes(input.method)
+    let { accountId, csrfToken } = action
+    if (unsafe && ((action.bound && accountId === null) || accountId !== (session.account?.id ?? null))) return accountChanged()
+    if (unsafe && !csrfToken) {
       await loadSession()
-      if (startedAccount !== undefined && startedAccount !== session.account?.id) return accountChanged()
+      if (accountId !== null && accountId !== session.account?.id) return accountChanged()
+      accountId = session.account?.id ?? null
+      csrfToken = session.csrfToken
     }
-    if (unsafe && !session.csrfToken) {
+    if (unsafe && !csrfToken) {
       await options.onUnauthorized?.()
       throw new ApiError('unauthenticated', 401)
     }
-    const accountId = session.account?.id
-    const makeRequest = () => {
+    const makeRequest = (token: string | null) => {
       const headers = new Headers(input.headers)
-      if (unsafe && session.csrfToken) headers.set('X-CSRF-Token', session.csrfToken)
+      if (unsafe && token) headers.set('X-CSRF-Token', token)
       return new Request(input.clone(), { headers })
     }
-    let response = await send(makeRequest())
+    let response = await send(makeRequest(csrfToken))
     if (unsafe && response.status === 403) {
       const error = await response.clone().json().catch(() => null)
       if (error?.error?.code === 'csrf_rejected') {
         await loadSession()
-        if (accountId === undefined || accountId !== session.account?.id || !session.csrfToken) return accountChanged()
-        response = await send(makeRequest())
+        if (accountId === null || accountId !== session.account?.id || !session.csrfToken) return accountChanged()
+        csrfToken = session.csrfToken
+        response = await send(makeRequest(csrfToken))
         if (response.status === 403 && (await response.clone().json().catch(() => null))?.error?.code === 'csrf_rejected') throw new ApiError('csrf_rejected', 403)
       }
     }
     if (response.status === 401 && !input.signal.aborted) await options.onUnauthorized?.()
     return response
   }
-  const client = createClient<paths>({ baseUrl: options.origin, fetch: async (input) => {
-    try {
-      return await handle(input as Request)
-    } catch (error) {
-      if (!(error instanceof ApiError) || error.code !== 'unavailable') throw error
-      return new Response(JSON.stringify({ error: { code: 'unavailable', message: 'unavailable' } }), {
-        status: 503, headers: { 'content-type': 'application/json' },
-      })
-    }
-  } })
-  return { client, loadSession, session }
+  function createActionClient(action: Action) {
+    return createClient<paths>({ baseUrl: options.origin, fetch: async (input) => {
+      try {
+        return await handle(input as Request, action)
+      } catch (error) {
+        if (!(error instanceof ApiError) || error.code !== 'unavailable') throw error
+        return new Response(JSON.stringify({ error: { code: 'unavailable', message: 'unavailable' } }), {
+          status: 503, headers: { 'content-type': 'application/json' },
+        })
+      }
+    } })
+  }
+  const base = createActionClient(captureAction())
+  const client = new Proxy(base, {
+    get(target, property, receiver) {
+      if (typeof property === 'string' && ['POST', 'PUT', 'PATCH', 'DELETE', 'TRACE', 'request'].includes(property)) {
+        return (...args: unknown[]) => {
+          const scoped = createActionClient(captureAction())
+          return Reflect.apply(Reflect.get(scoped, property), scoped, args)
+        }
+      }
+      return Reflect.get(target, property, receiver)
+    },
+  })
+  return { client, captureAction, forAction: (action: Action) => createActionClient({ ...action, bound: true }), loadSession, session }
 }
