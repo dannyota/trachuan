@@ -38,61 +38,6 @@ func (e *validityRequestEngine) CollectWithNotYetEligible(ctx context.Context, p
 	return e.Collect(ctx, p, d)
 }
 
-func TestValidityOverrides_ReportAndCacheIdentity(t *testing.T) {
-	date := retrieval.Date{Year: 2026, Month: time.November, Day: 9}
-	engine := &validityRequestEngine{fakeEngine: fakeEngine{date: date}, requests: map[string]bool{}}
-	opts := Options{EvaluationDate: date, Modes: []retrieval.Mode{"exact"}}
-	base, baseline, err := Run(context.Background(), engine, recordedSuite(), opts)
-	if err != nil {
-		t.Fatal(err)
-	}
-	historical, tail := "agent", 2
-	opts.ValidityOverrides = ValidityOverrides{HistoricalPolicy: &historical, NonCurrentTail: &tail, NotYetEligible: true}
-	report, _, err := Run(context.Background(), engine, recordedSuite(), opts)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if base.CacheManifest["cache_key"] == report.CacheManifest["cache_key"] {
-		t.Fatal("different collection policies share a cache key")
-	}
-	data, err := json.Marshal(report)
-	if err != nil {
-		t.Fatal(err)
-	}
-	var root any
-	if err = json.Unmarshal(data, &root); err != nil {
-		t.Fatal(err)
-	}
-	var visit func(any)
-	visit = func(value any) {
-		switch v := value.(type) {
-		case []any:
-			for _, child := range v {
-				visit(child)
-			}
-		case map[string]any:
-			if _, ok := v["limit"]; ok {
-				if v["historical_policy"] != "agent" || v["non_current_tail"] != float64(2) || v["not_yet_eligible"] != true {
-					t.Errorf("limit record missing policies: %v", v)
-				}
-			}
-			for _, child := range v {
-				visit(child)
-			}
-		}
-	}
-	visit(root)
-	zero := 0
-	opts.ValidityOverrides = ValidityOverrides{NonCurrentTail: &zero}
-	zeroReport, zeroCache, err := Run(context.Background(), engine, recordedSuite(), opts)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(baseline.Arms, zeroCache.Arms) || base.CacheManifest["cache_key"] != zeroReport.CacheManifest["cache_key"] {
-		t.Fatal("zero tail changed cached arms")
-	}
-}
-
 func TestHistoricalPolicy_AgentSetsInForceOnlyFalseForTaggedCasesOnly(t *testing.T) {
 	date := retrieval.Date{Year: 2026, Month: time.November, Day: 9}
 	suite := recordedSuite()

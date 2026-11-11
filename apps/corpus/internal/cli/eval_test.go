@@ -170,25 +170,46 @@ func TestEvalCLI_ValidityFlags(t *testing.T) {
 			t.Errorf("invalid args %v: code=%d error=%s", args, code, stderr.String())
 		}
 	}
-	prepare := func(context.Context, string, string, string) (evalTarget, error) {
-		return evalTarget{runner: cliCapStage{}, close: func() {}}, nil
-	}
-	result := filepath.Join(t.TempDir(), "report")
-	var stderr bytes.Buffer
-	args := []string{"vn", "20261109", "--out", result, "--historical-policy", "agent", "--non-current-tail", "3", "--not-yet-eligible"}
-	if code := runEvalWith(context.Background(), args, &stderr, prepare); code != 0 {
-		t.Fatalf("exit %d: %s", code, stderr.String())
-	}
-	data, err := os.ReadFile(filepath.Join(result, "report.json"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	var report map[string]any
-	if err = json.Unmarshal(data, &report); err != nil {
-		t.Fatal(err)
-	}
-	if report["historical_policy"] != "agent" || report["non_current_tail"] != float64(3) || report["not_yet_eligible"] != true {
-		t.Fatalf("validity overrides: %v", report)
+	for _, tc := range []struct {
+		name  string
+		flags []string
+		rank  int
+	}{
+		{"historical", []string{"--historical-policy", "agent"}, 8},
+		{"tail", []string{"--non-current-tail", "1"}, 8},
+		{"not_yet", []string{"--not-yet-eligible"}, 1},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			prepare := func(context.Context, string, string, string) (evalTarget, error) {
+				return evalTarget{runner: cliValidityStage{kind: tc.name}, close: func() {}}, nil
+			}
+			result := filepath.Join(t.TempDir(), "report")
+			var stderr bytes.Buffer
+			args := append([]string{"vn", "20261109", "--out", result}, tc.flags...)
+			if code := runEvalWith(context.Background(), args, &stderr, prepare); code != 0 {
+				t.Fatalf("exit %d: %s", code, stderr.String())
+			}
+			data, err := os.ReadFile(filepath.Join(result, "report.json"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			var report evaluation.Report
+			if err = json.Unmarshal(data, &report); err != nil {
+				t.Fatal(err)
+			}
+			if (tc.name == "historical" && (report.HistoricalPolicy == nil || *report.HistoricalPolicy != "agent")) || (tc.name == "tail" && (report.NonCurrentTail == nil || *report.NonCurrentTail != 1)) || (tc.name == "not_yet" && !report.NotYetEligible) {
+				t.Fatalf("report policy %+v", report.ValidityOverrides)
+			}
+			for _, row := range report.Cases {
+				if row.CaseID == "positive" && row.Cohort == "legacy" && row.Arms == "hybrid" && row.Limit == 8 {
+					if len(row.Ranks) != 1 || row.Ranks[0] != tc.rank || row.Matched != 1 || len(row.Returned) < tc.rank || row.Returned[tc.rank-1].DocumentKey != "target" {
+						t.Fatalf("row %+v", row)
+					}
+					return
+				}
+			}
+			t.Fatal("case missing")
+		})
 	}
 }
 
@@ -305,6 +326,60 @@ func (e cliCapEngine) Present(context.Context, retrieval.Response, retrieval.Det
 }
 
 type cliCapStage struct{}
+
+type cliValidityEngine struct {
+	cliCapEngine
+	kind string
+}
+
+func (e cliValidityEngine) collect(p retrieval.Prepared, d retrieval.Depths, notYet bool) retrieval.Arms {
+	arms := retrieval.Arms{Validation: p.Validation, Depths: d, Date: e.date}
+	if p.Request.Query != "Câu hỏi tốt" {
+		return arms
+	}
+	count := 7
+	if e.kind == "tail" {
+		count = 8
+	}
+	var current []retrieval.Candidate
+	for i := 1; i <= count; i++ {
+		current = append(current, cliValidityCandidate(int64(i), fmt.Sprintf("current-%d", i), "in_force"))
+	}
+	other := cliValidityCandidate(50, "target", "expired")
+	if notYet {
+		other.Document.StatusClass = "not_yet"
+		current = append([]retrieval.Candidate{other}, current...)
+	}
+	arms.Primary = retrieval.ArmGroup{Dense: current, Lexical: current, Members: current}
+	if p.Request.InForceOnly != nil && !*p.Request.InForceOnly {
+		arms.IncludeNonCurrent = true
+		if !notYet {
+			arms.NonCurrent = retrieval.ArmGroup{Dense: []retrieval.Candidate{other}, Lexical: []retrieval.Candidate{other}, Members: []retrieval.Candidate{other}}
+		}
+	}
+	return arms
+}
+func cliValidityCandidate(id int64, doc, status string) retrieval.Candidate {
+	identity := retrieval.Identity{Country: "vn", DocumentKey: doc, Anchor: "one"}
+	p := retrieval.Provision{ID: id, Identity: identity, NodeID: fmt.Sprint(id), Kind: "khoan", Text: "text"}
+	return retrieval.Candidate{ChunkID: id, GroupID: id, ProvisionID: id, Identity: identity, Group: identity, Cosine: .9, Provision: p, Ancestors: []retrieval.Provision{p}, Descendants: []retrieval.Provision{p}, Document: retrieval.Document{Number: doc, StatusClass: status, IsCurrent: status == "in_force"}}
+}
+func (e cliValidityEngine) Collect(_ context.Context, p retrieval.Prepared, d retrieval.Depths) (retrieval.Arms, error) {
+	return e.collect(p, d, false), nil
+}
+func (e cliValidityEngine) CollectWithNotYetEligible(_ context.Context, p retrieval.Prepared, d retrieval.Depths) (retrieval.Arms, error) {
+	return e.collect(p, d, true), nil
+}
+
+type cliValidityStage struct{ kind string }
+
+func (s cliValidityStage) Evaluate(ctx context.Context, _ stage.Env, _ stage.Run, opts evaluation.Options) (evaluation.Report, evaluation.Cache, error) {
+	cases := []evaluation.Case{{ID: "positive", Question: "Câu hỏi tốt", Tags: []string{"historical"}, ExpectedCitations: []evaluation.Expectation{{DocNumber: "target"}}}, {ID: "reject1", Question: "khong dau mot", ExpectedCitations: []evaluation.Expectation{{DocNumber: "target"}}}, {ID: "reject2", Question: "khong dau hai", ExpectedCitations: []evaluation.Expectation{{DocNumber: "target"}}}, {ID: "reject3", Question: "khong dau ba", ExpectedCitations: []evaluation.Expectation{{DocNumber: "target"}}}}
+	suite := evaluation.Suite{Legacy: cases, Rejections: []string{"reject1", "reject2", "reject3"}, Hashes: evaluation.FixtureHashes{Legacy: "fixture"}, Map: evaluation.IdentityMap{Version: 1, LegacySHA256: "fixture"}}
+	date := retrieval.Date{Year: 2026, Month: time.November, Day: 9}
+	opts.EvaluationDate, opts.Modes = date, []retrieval.Mode{"exact"}
+	return evaluation.Run(ctx, cliValidityEngine{cliCapEngine{date}, s.kind}, suite, opts)
+}
 
 func (cliCapStage) Evaluate(ctx context.Context, _ stage.Env, _ stage.Run, opts evaluation.Options) (evaluation.Report, evaluation.Cache, error) {
 	cases := []evaluation.Case{{ID: "positive", Question: "Câu hỏi tốt", ExpectedCitations: []evaluation.Expectation{{DocNumber: "doc"}}}, {ID: "reject1", Question: "khong dau mot", ExpectedCitations: []evaluation.Expectation{{DocNumber: "doc"}}}, {ID: "reject2", Question: "khong dau hai", ExpectedCitations: []evaluation.Expectation{{DocNumber: "doc"}}}, {ID: "reject3", Question: "khong dau ba", ExpectedCitations: []evaluation.Expectation{{DocNumber: "doc"}}}}

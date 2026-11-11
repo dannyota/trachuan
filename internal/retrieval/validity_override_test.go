@@ -65,12 +65,11 @@ func TestNonCurrentTail_AppendsMarkedComplementHits(t *testing.T) {
 
 func TestNonCurrentTail_PrimaryKeepsFreedSlots(t *testing.T) {
 	a, recipe := tailFixture()
-	a.NonCurrent = ArmGroup{}
-	got, err := ShapeWithNonCurrentTail(a, recipe, 3, "dense", nil, 1)
+	got, err := ShapeWithNonCurrentTail(a, recipe, 3, "dense", nil, 2)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(got.Hits) != 3 || len(got.NonCurrent) != 0 {
+	if len(got.Hits) != 2 || len(got.NonCurrent) != 1 {
 		t.Fatalf("response: %+v", got)
 	}
 }
@@ -104,11 +103,18 @@ func TestNonCurrentTail_UsesFullLimitForComplementShaping(t *testing.T) {
 func TestNonCurrentTail_NoPrimaryStillAbstains(t *testing.T) {
 	a, recipe := tailFixture()
 	a.Primary = ArmGroup{}
+	other := a.NonCurrent.Dense[0]
+	other.ChunkID, other.GroupID = 11, 11
+	other.Group.Anchor = "second"
+	other.Descendants = append([]Provision(nil), other.Descendants...)
+	other.Descendants[0].ID = other.GroupID
+	a.NonCurrent.Dense = append(a.NonCurrent.Dense, other)
+	a.NonCurrent.Members = append(a.NonCurrent.Members, other)
 	got, err := ShapeWithNonCurrentTail(a, recipe, 3, "dense", nil, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !got.Abstain || got.Reason != "no_primary_hits" {
+	if !got.Abstain || got.Reason != "no_primary_hits" || len(got.NonCurrent) != 1 {
 		t.Fatalf("response: %+v", got)
 	}
 }

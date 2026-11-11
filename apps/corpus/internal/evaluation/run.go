@@ -315,7 +315,11 @@ func Run(ctx context.Context, engine Engine, suite Suite, o Options) (Report, Ca
 								diagnosticRecipe.DocumentCap = limit
 							}
 						}
-						losses, gaps, err := caseDiagnostics(arms, diagnosticRecipe, limit, armMode, cohort, c.ExpectedCitations, diagnosticEntries, response)
+						var diagnosticTail *int
+						if force {
+							diagnosticTail = o.NonCurrentTail
+						}
+						losses, gaps, err := caseDiagnostics(arms, diagnosticRecipe, limit, armMode, cohort, c.ExpectedCitations, diagnosticEntries, response, diagnosticTail)
 						if err != nil {
 							return Report{}, Cache{}, fmt.Errorf("diagnose case %s: %w", c.ID, err)
 						}
