@@ -59,7 +59,7 @@ func (s *Stage) publishReuse(ctx context.Context, env stage.Env, r stage.Run, b 
 	}{{"doc/detail", "detail.json", detail, times[0]}, {"doc/diagram", "diagram.json", diagram, times[2]}} {
 		observations = append(observations, networkObservation(p.endpoint, p.path, p.data, p.at))
 	}
-	tree := b.origin("tree.json", digest(b.tree))
+	tree := b.index.tree
 	observations = append(observations, adopted(tree))
 	art, err := env.Artifacts.PublishContent(ctx, s.Name(), s.Recipe(r.Snapshot), func(dir string) error {
 		filesDir := filepath.Join(dir, "files")
@@ -67,19 +67,30 @@ func (s *Stage) publishReuse(ctx context.Context, env stage.Env, r stage.Run, b 
 			return fmt.Errorf("create files directory: %w", e)
 		}
 		seen := map[string]bool{}
+		seenFiles := map[originIdentity]bool{}
 		for _, f := range b.files {
+			if e := ctx.Err(); e != nil {
+				return fmt.Errorf("copy baseline files: %w", e)
+			}
 			if _, e := copyBaseline(filepath.Join(b.dir, "files", f.SHA256), filesDir, f.SHA256, f.Size); e != nil {
 				return e
 			}
-			for i := range b.observations {
-				o := &b.observations[i]
-				a := adopted(o)
-				if o.Path == "files/"+f.SHA256 && o.ContentSha256 == f.SHA256 && a.Name != nil && *a.Name == f.Name && !seen[o.ResourceKey] {
-					observations = append(observations, a)
+			key := originIdentity{path: "files/" + f.SHA256, hash: f.SHA256, size: f.Size, name: f.Name}
+			if seenFiles[key] {
+				continue
+			}
+			seenFiles[key] = true
+			for _, o := range b.originsFor(f) {
+				if e := ctx.Err(); e != nil {
+					return fmt.Errorf("copy baseline observations: %w", e)
+				}
+				if !seen[o.ResourceKey] {
+					observations = append(observations, adopted(o))
 					seen[o.ResourceKey] = true
 				}
 			}
 		}
+
 		for _, p := range []struct {
 			name string
 			data []byte
@@ -100,20 +111,23 @@ func (b *baseline) copyMatching(entry vbpl.File, dir string, now time.Time, limi
 	if entry.UpdatedAt.IsZero() || entry.Size < 0 || entry.Size > 50_000_000 {
 		return vbpl.Downloaded{}, nil, nil
 	}
-	for _, f := range b.files {
-		if f.Name != entry.Name || f.Size != entry.Size {
-			continue
-		}
-		o := b.fileOrigin(f)
-		if o == nil || o.FetchedAt == nil || o.FetchedAt.Before(entry.UpdatedAt) || o.FetchedAt.Before(now.Add(-limit)) {
-			continue
-		}
-		d, err := copyBaseline(filepath.Join(b.dir, "files", f.SHA256), dir, f.SHA256, f.Size)
-		if err != nil {
-			return vbpl.Downloaded{}, nil, err
-		}
-		obs := adopted(o)
-		return d, &obs, nil
+	files := b.index.files[fileIdentity{name: entry.Name, size: entry.Size}]
+	if len(files) != 1 {
+		return vbpl.Downloaded{}, nil, nil
 	}
-	return vbpl.Downloaded{}, nil, nil
+	f := files[0]
+	origins := b.originsFor(f)
+	if len(origins) == 0 {
+		return vbpl.Downloaded{}, nil, nil
+	}
+	o := origins[0]
+	if o.FetchedAt == nil || o.FetchedAt.Before(entry.UpdatedAt) || o.FetchedAt.Before(now.Add(-limit)) {
+		return vbpl.Downloaded{}, nil, nil
+	}
+	d, err := copyBaseline(filepath.Join(b.dir, "files", f.SHA256), dir, f.SHA256, f.Size)
+	if err != nil {
+		return vbpl.Downloaded{}, nil, err
+	}
+	obs := adopted(o)
+	return d, &obs, nil
 }

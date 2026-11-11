@@ -43,6 +43,9 @@ func TestReuseDecision_Conditions(t *testing.T) {
 			if tc.unknown {
 				b.observations[0].FetchedAt = nil
 			}
+			if err := b.indexOrigins(context.Background()); err != nil {
+				t.Fatal(err)
+			}
 			if got := reuseDecision([]byte(tc.fresh), b, now, 30*24*time.Hour); got != tc.reason {
 				t.Fatalf("got %q, want %q", got, tc.reason)
 			}
@@ -328,6 +331,9 @@ func TestReuseDecision_UnknownAliasTimeBlocksReuse(t *testing.T) {
 		{Path: "files/" + hash, ContentSha256: hash, Size: 3, ResourceKey: `["attachment","a","one"]`, FetchedAt: &now},
 		{Path: "files/" + hash, ContentSha256: hash, Size: 3, ResourceKey: `["attachment","a","two"]`},
 	}}
+	if err := b.indexOrigins(context.Background()); err != nil {
+		t.Fatal(err)
+	}
 	if got := reuseDecision(b.detail, b, now, reuseAgeLimit); got != "age" {
 		t.Fatalf("decision %q", got)
 	}

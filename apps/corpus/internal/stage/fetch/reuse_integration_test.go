@@ -6,10 +6,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
+	"danny.vn/trachuan/apps/corpus/internal/artifact"
+	"danny.vn/trachuan/apps/corpus/internal/checkpoint"
 	"danny.vn/trachuan/apps/corpus/internal/stage"
 	"danny.vn/trachuan/apps/corpus/internal/testdb"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -17,11 +22,12 @@ import (
 
 func TestFetch_BaselineUsesLatestCommittedObservations(t *testing.T) {
 	ctx := context.Background()
-	db, err := pgxpool.New(ctx, testdb.New(t))
+	dbURL := testdb.New(t)
+	db, err := pgxpool.New(ctx, dbURL)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.Close()
+	t.Cleanup(db.Close)
 	f := &fixtureServer{files: []map[string]any{entry("a", "a")}, bodies: map[string]string{"a": "one"}}
 	s, env := setup(t, f)
 	env.DB = db
@@ -70,6 +76,32 @@ func TestFetch_BaselineUsesLatestCommittedObservations(t *testing.T) {
 		t.Fatal("bundles differ")
 	}
 	commit(secondRun, second)
+	dumpTool := os.Getenv("CORPUS_PG_DUMP")
+	if dumpTool == "" {
+		dumpTool = "pg_dump"
+	}
+	dumpTool, err = exec.LookPath(dumpTool)
+	if err != nil {
+		t.Fatal("locate pg_dump:", err)
+	}
+	checkpointDir := t.TempDir()
+	taker := checkpoint.Taker{Config: checkpoint.Config{Dir: checkpointDir, ArtifactsRoot: env.Artifacts.Root, DatabaseURL: dbURL, PgDump: dumpTool}}
+	saved, err := taker.Take(ctx, "vn-20990102", 1, "fetch")
+	if err != nil {
+		t.Fatal(err)
+	}
+	restoredURL := testdb.NewEmpty(t)
+	cmd := exec.CommandContext(ctx, filepath.Join(filepath.Dir(dumpTool), "pg_restore"), "--exit-on-error", "--dbname", restoredURL, filepath.Join(saved, "workshop.dump"))
+	if err = cmd.Run(); err != nil {
+		t.Fatal("restore workshop:", err)
+	}
+	db, err = pgxpool.New(ctx, restoredURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(db.Close)
+	env.DB = db
+	env.Artifacts = artifact.Store{Root: filepath.Join(checkpointDir, "artifacts")}
 	now = now.Add(time.Hour)
 	thirdRun := makeRun(3)
 	f.requests.Store(0)
@@ -81,19 +113,28 @@ func TestFetch_BaselineUsesLatestCommittedObservations(t *testing.T) {
 	if f.requests.Load() != 2 || f.downloads.Load() != 0 {
 		t.Fatalf("calls %d downloads %d", f.requests.Load(), f.downloads.Load())
 	}
+	adoptedCount := 0
 	for _, o := range third.Observations {
 		if o.Acquisition != "adopted" {
 			continue
 		}
+		adoptedCount++
 		var ref []any
 		if o.FetchedAt == nil || !o.FetchedAt.Equal(now.Add(-time.Hour)) || o.OriginRef == nil {
 			t.Fatalf("origin: %+v", o)
 		}
-		if decodeErr := json.Unmarshal([]byte(*o.OriginRef), &ref); decodeErr != nil || ref[0] != float64(secondRun.ID) {
+		if decodeErr := json.Unmarshal([]byte(*o.OriginRef), &ref); decodeErr != nil || len(ref) != 5 || ref[0] != float64(secondRun.ID) || ref[1] != item.Key || ref[2] != float64(1) || ref[3] != float64(1) || ref[4] != o.ResourceKey {
 			t.Fatalf("ref %s", *o.OriginRef)
 		}
 	}
+	if adoptedCount != 2 {
+		t.Fatalf("adopted observations = %d", adoptedCount)
+	}
 	commit(thirdRun, third)
+	var committedCount int
+	if err = db.QueryRow(ctx, `SELECT count(*) FROM run_fetch_observation WHERE run_id=$1 AND acquisition='adopted' AND origin_ref IS NOT NULL`, thirdRun.ID).Scan(&committedCount); err != nil || committedCount != 2 {
+		t.Fatalf("committed adopted observations = %d: %v", committedCount, err)
+	}
 	otherRun := makeRun(4)
 	otherRun.Snapshot.Recipes["fetch"] = strings.Repeat("a", 64)
 	f.requests.Store(0)

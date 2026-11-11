@@ -24,9 +24,11 @@ const reuseAgeLimit = 30 * 24 * time.Hour
 type readDecision struct {
 	reason   string
 	baseline *baseline
+	expired  bool
 }
 
 type baseline struct {
+	index                               *baselineIndex
 	invalid                             bool
 	row                                 store.GetFetchBaselineRow
 	dir                                 string
@@ -53,79 +55,40 @@ func updatedDate(data []byte) json.RawMessage {
 	return value
 }
 
-func (b *baseline) origin(path, hash string) *store.RunFetchObservation {
-	for i := range b.observations {
-		o := &b.observations[i]
-		if o.Path == path && o.ContentSha256 == hash {
-			return o
-		}
-	}
-	return nil
-}
-
-func (b *baseline) fileOrigin(f file) *store.RunFetchObservation {
-	for i := range b.observations {
-		o := &b.observations[i]
-		if o.Path != "files/"+f.SHA256 || o.ContentSha256 != f.SHA256 || o.Size != f.Size {
-			continue
-		}
-		a := adopted(o)
-		if a.Name != nil && *a.Name == f.Name {
-			return o
-		}
-	}
-	return nil
-}
-
 func (b *baseline) expired(now time.Time, limit time.Duration) bool {
-	tree := b.origin("tree.json", digest(b.tree))
-	if tree == nil || tree.FetchedAt == nil || tree.FetchedAt.Before(now.Add(-limit)) {
-		return true
-	}
-	for _, f := range b.files {
-		found := false
-		for i := range b.observations {
-			o := &b.observations[i]
-			if o.Path != "files/"+f.SHA256 || o.ContentSha256 != f.SHA256 || o.Size != f.Size {
-				continue
-			}
-			obs := adopted(o)
-			if obs.Name == nil || *obs.Name != f.Name {
-				continue
-			}
-			found = true
-			if o.FetchedAt == nil || o.FetchedAt.Before(now.Add(-limit)) {
-				return true
-			}
-		}
-		if !found {
-			return true
-		}
-	}
-	return false
+	return b.index.unknown || b.index.oldest.Before(now.Add(-limit))
 }
 
 func reuseDecision(fresh []byte, b *baseline, now time.Time, limit time.Duration) string {
+	return evaluateBaseline(fresh, b, now, limit).reason
+}
+
+func evaluateBaseline(fresh []byte, b *baseline, now time.Time, limit time.Duration) readDecision {
+	result := readDecision{baseline: b}
 	if b == nil {
-		return "no_baseline"
+		result.reason = "no_baseline"
+		return result
 	}
 	if b.invalid {
-		return "invalid_baseline"
+		result.reason = "invalid_baseline"
+		result.baseline = nil
+		return result
 	}
+	result.expired = b.expired(now, limit)
 	a, old := updatedDate(fresh), updatedDate(b.detail)
-	if a == nil || old == nil {
-		return "null_date"
+	switch {
+	case a == nil || old == nil:
+		result.reason = "null_date"
+	case !bytes.Equal(a, old):
+		result.reason = "date_changed"
+	case len(b.report.Missing) > 0:
+		result.reason = "missing_attachment"
+	case result.expired:
+		result.reason = "age"
+	default:
+		result.reason = "reused"
 	}
-	if !bytes.Equal(a, old) {
-		return "date_changed"
-	}
-	if len(b.report.Missing) > 0 {
-		return "missing_attachment"
-	}
-	if b.expired(now, limit) {
-		return "age"
-	}
-	return "reused"
+	return result
 }
 
 func loadBaseline(ctx context.Context, env stage.Env, r stage.Run, item stage.Item) (*baseline, bool, error) {
@@ -170,6 +133,9 @@ func loadBaseline(ctx context.Context, env stage.Env, r stage.Run, item stage.It
 		return miss("invalid identity or bundle metadata")
 	}
 	for _, f := range b.files {
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return nil, false, fmt.Errorf("inspect baseline files: %w", ctxErr)
+		}
 		if len(f.SHA256) != 64 || f.Size < 0 || f.Size > 50_000_000 {
 			return miss("invalid attachment metadata")
 		}
@@ -190,6 +156,9 @@ func loadBaseline(ctx context.Context, env stage.Env, r stage.Run, item stage.It
 	b.observations, err = q.ListItemFetchObservations(ctx, store.ListItemFetchObservationsParams{RunID: row.RunID, ItemKey: row.ItemKey, Generation: row.Generation, Attempt: row.Attempt})
 	if err != nil {
 		return nil, false, fmt.Errorf("read baseline observations: %w", err)
+	}
+	if err = b.indexOrigins(ctx); err != nil {
+		return nil, false, err
 	}
 	return b, false, nil
 }

@@ -136,10 +136,12 @@ func (s *Stage) processItem(ctx context.Context, env stage.Env, r stage.Run, ite
 	if invalid {
 		base = &baseline{invalid: true}
 	}
-	*result = readDecision{reason: reuseDecision(detail, base, now(), reuseAgeLimit), baseline: base}
-	if invalid {
-		result.baseline = nil
+	if base != nil && !base.invalid && base.index == nil {
+		if err = base.indexOrigins(ctx); err != nil {
+			return stage.Output{}, err
+		}
 	}
+	*result = evaluateBaseline(detail, base, now(), reuseAgeLimit)
 	if result.reason == "reused" {
 		out, reuseErr := s.publishReuse(ctx, env, r, result.baseline, detail, diagram, times)
 		if reuseErr == nil {
@@ -176,7 +178,7 @@ func (s *Stage) processItem(ctx context.Context, env stage.Env, r stage.Run, ite
 	publish := func(b *baseline, reason string) (artifact.Result, error) {
 		observations = observations[:3]
 		return env.Artifacts.PublishContent(ctx, s.Name(), s.Recipe(r.Snapshot), func(dir string) error {
-			return s.writeBundleWithBaseline(ctx, dir, id, detail, tree, diagram, files, now, &observations, b, reason)
+			return s.writeBundleWithBaseline(ctx, dir, id, detail, tree, diagram, files, now, &observations, b, reason, result.expired)
 		})
 	}
 	art, err := publish(result.baseline, result.reason)
