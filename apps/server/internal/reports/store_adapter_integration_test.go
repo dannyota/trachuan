@@ -121,7 +121,7 @@ func TestPGXRunner_RollbackKeepsDatabaseUnchanged(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = tx.Rollback(context.Background()) })
-	if _, err = tx.InsertReport(ctx, InsertReportParams{AccountID: account.ID, Report: Report{GroupKey: GroupKey{Kind: "wrong_text", DocumentKey: testKey}, Release: "20991111"}}); err != nil {
+	if _, err = tx.InsertReport(ctx, InsertReportParams{AccountID: account.ID, CreatedAt: time.Now(), Report: Report{GroupKey: GroupKey{Kind: "wrong_text", DocumentKey: testKey}, Release: "20991111"}}); err != nil {
 		t.Fatal(err)
 	}
 	if err = tx.Rollback(ctx); err != nil {
@@ -130,5 +130,51 @@ func TestPGXRunner_RollbackKeepsDatabaseUnchanged(t *testing.T) {
 	count, err := q.CountRetainedReports(ctx)
 	if err != nil || count != 0 {
 		t.Fatalf("rolled back rows=%d err=%v", count, err)
+	}
+}
+
+func TestPGXRunner_RollingWindowUsesServiceClock(t *testing.T) {
+	ctx := t.Context()
+	url := testpg.NewDatabase(t)
+	if err := migrate.Up(ctx, url); err != nil {
+		t.Fatal(err)
+	}
+	db, err := pgxpool.New(ctx, url)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(db.Close)
+	account, err := store.New(db).CreateAccount(ctx, store.CreateAccountParams{GoogleSub: "report-window", Email: "report-window@example.invalid"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	start := time.Date(2035, 6, 1, 0, 0, 0, 0, time.UTC)
+	now := start
+	svc := Service{Store: PGXRunner{DB: db}, Resolver: admissionResolver{}, Clock: func() time.Time { return now }}
+	input := func(n int) Input {
+		in := validInput("missing_document")
+		in.Suggestion = suggestion(map[string]string{"document_number": fmt.Sprintf("%d/2025/TT", n)})
+		return in
+	}
+	var first Result
+	for i := 1; i <= 20; i++ {
+		result, submitErr := svc.Submit(ctx, account.ID, input(i))
+		if submitErr != nil {
+			t.Fatal(submitErr)
+		}
+		if i == 1 {
+			first = result
+		}
+	}
+	var created time.Time
+	if err = db.QueryRow(ctx, `SELECT created_at FROM issue_report WHERE id=$1`, first.ReportID).Scan(&created); err != nil || !created.Equal(start) {
+		t.Fatalf("created_at=%v want=%v err=%v", created, start, err)
+	}
+	now = start.Add(24 * time.Hour)
+	_, err = svc.Submit(ctx, account.ID, input(21))
+	requireCode(t, err, ErrRateLimited)
+	now = now.Add(time.Microsecond)
+	if _, err = svc.Submit(ctx, account.ID, input(21)); err != nil {
+		t.Fatalf("expired window rejected report: %v", err)
 	}
 }

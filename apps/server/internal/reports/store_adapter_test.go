@@ -90,6 +90,9 @@ func TestQueryStore_MapsAdmission(t *testing.T) {
 				t.Fatal(args)
 			}
 		case strings.Contains(sql, "name: InsertReport"):
+			if len(args) != 9 || args[8] != now {
+				t.Fatalf("insert did not receive admission time: %v", args)
+			}
 			if !reflect.DeepEqual(args[:7], []any{int64(7), "20261111", testKey, "dieu-1", "50/2024/TT-NHNN", "broken_citation", "196-HDBT"}) {
 				t.Fatal(args)
 			}

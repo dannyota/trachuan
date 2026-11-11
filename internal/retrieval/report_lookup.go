@@ -18,7 +18,7 @@ func (e *Engine) LookupDocument(ctx context.Context, key string) (Document, bool
 	}
 	defer func() { _ = tx.Rollback(context.Background()) }()
 	var doc Document
-	err = tx.QueryRow(ctx, `SELECT number FROM document WHERE key=$1`).Scan(&doc.Number)
+	err = tx.QueryRow(ctx, `SELECT number FROM document WHERE key=$1`, key).Scan(&doc.Number)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Document{}, false, nil
 	}

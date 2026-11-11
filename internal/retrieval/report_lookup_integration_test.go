@@ -76,6 +76,10 @@ func TestReportLookups_CorpusIdentities(t *testing.T) {
 
 func TestReportLookups_CanceledAndDatabaseFailure(t *testing.T) {
 	db, e, _ := fixture(t)
+	_, _, lookupErr := e.LookupDocument(t.Context(), "vn:\x00PRIVATE")
+	if lookupErr == nil || strings.Contains(lookupErr.Error(), "PRIVATE") || !errors.Is(lookupErr, ErrUnavailable) {
+		t.Fatal("unsafe document lookup failure", lookupErr)
+	}
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
 	if _, _, err := e.LookupDocument(ctx, "vn:1"); err == nil {

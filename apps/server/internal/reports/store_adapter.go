@@ -106,15 +106,14 @@ func (s QueryStore) FindOpenReport(ctx context.Context, p FindOpenReportParams) 
 	return Result{ReportID: row.ID, State: row.State}, true, nil
 }
 
-// InsertReport stores only the canonical report fields. The generated query
-// uses the database transaction time for created_at and changed_at.
+// InsertReport stores the canonical report fields and admission time.
 func (s QueryStore) InsertReport(ctx context.Context, p InsertReportParams) (Result, error) {
 	suggestion, err := json.Marshal(p.Report.Suggestion)
 	if err != nil {
 		return Result{}, fmt.Errorf("encode report suggestion: %w", err)
 	}
 	r := p.Report
-	row, err := s.Queries.InsertReport(ctx, store.InsertReportParams{AccountID: p.AccountID, Release: r.Release, DocumentKey: r.DocumentKey, Anchor: r.Anchor, DocumentNumber: r.DocumentNumber, Kind: r.Kind, Target: r.Target, Suggestion: suggestion})
+	row, err := s.Queries.InsertReport(ctx, store.InsertReportParams{AccountID: p.AccountID, Release: r.Release, DocumentKey: r.DocumentKey, Anchor: r.Anchor, DocumentNumber: r.DocumentNumber, Kind: r.Kind, Target: r.Target, Suggestion: suggestion, CreatedAt: p.CreatedAt})
 	if err != nil {
 		return Result{}, fmt.Errorf("insert report: %w", err)
 	}

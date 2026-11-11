@@ -202,8 +202,8 @@ func (q *Queries) FindOpenReport(ctx context.Context, arg FindOpenReportParams) 
 }
 
 const insertReport = `-- name: InsertReport :one
-INSERT INTO issue_report (account_id, release, document_key, anchor, document_number, kind, target, suggestion)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, account_id, release, document_key, anchor, document_number, kind, target, suggestion, state, created_at, changed_at, decided_by, export_batch
+INSERT INTO issue_report (account_id, release, document_key, anchor, document_number, kind, target, suggestion, created_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id, account_id, release, document_key, anchor, document_number, kind, target, suggestion, state, created_at, changed_at, decided_by, export_batch
 `
 
 type InsertReportParams struct {
@@ -215,6 +215,7 @@ type InsertReportParams struct {
 	Kind           string
 	Target         string
 	Suggestion     json.RawMessage
+	CreatedAt      time.Time
 }
 
 func (q *Queries) InsertReport(ctx context.Context, arg InsertReportParams) (IssueReport, error) {
@@ -227,6 +228,7 @@ func (q *Queries) InsertReport(ctx context.Context, arg InsertReportParams) (Iss
 		arg.Kind,
 		arg.Target,
 		arg.Suggestion,
+		arg.CreatedAt,
 	)
 	var i IssueReport
 	err := row.Scan(

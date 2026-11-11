@@ -17,8 +17,8 @@ SELECT count(*) AS retained FROM (SELECT id FROM issue_report UNION ALL SELECT r
 SELECT * FROM issue_report WHERE account_id = $1 AND document_key = $2 AND anchor = $3 AND kind = $4 AND target = $5 AND state = 'open';
 
 -- name: InsertReport :one
-INSERT INTO issue_report (account_id, release, document_key, anchor, document_number, kind, target, suggestion)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *;
+INSERT INTO issue_report (account_id, release, document_key, anchor, document_number, kind, target, suggestion, created_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *;
 
 -- name: ListOwnReports :many
 SELECT * FROM issue_report WHERE account_id = sqlc.arg(account_id)
