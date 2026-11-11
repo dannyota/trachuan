@@ -10,7 +10,7 @@ import (
 )
 
 type Querier interface {
-	BatchSnapshot(ctx context.Context, batchID string) ([]IssueReportExport, error)
+	BatchSnapshot(ctx context.Context, arg BatchSnapshotParams) (BatchSnapshotRow, error)
 	BlockAccount(ctx context.Context, id int64) (BlockAccountRow, error)
 	ClaimLoginTransaction(ctx context.Context, handleHash string) (LoginTransaction, error)
 	ClaimRequest(ctx context.Context, arg ClaimRequestParams) (OauthRequest, error)

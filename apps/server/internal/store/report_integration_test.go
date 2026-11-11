@@ -4,6 +4,7 @@ package store_test
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"testing"
 	"time"
@@ -54,9 +55,19 @@ func TestStore_ExportBatchSnapshotSurvivesDeletion(t *testing.T) {
 	if _, err := conn.Exec(ctx, `DELETE FROM account WHERE id = $1`, account); err != nil {
 		t.Fatal(err)
 	}
-	rows, err := q.BatchSnapshot(ctx, "batch")
-	if err != nil || len(rows) != 1 || rows[0].ReportID != r.ID || rows[0].DocumentKey != r.DocumentKey {
-		t.Fatalf("snapshot count=%d err=%v", len(rows), err)
+	snapshot, err := q.BatchSnapshot(ctx, store.BatchSnapshotParams{BatchID: "batch", Before: time.Now().Add(-90 * 24 * time.Hour)})
+	var rows []struct {
+		ReportID    int64  `json:"report_id"`
+		DocumentKey string `json:"document_key"`
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(snapshot.Reports, &rows); err != nil {
+		t.Fatal(err)
+	}
+	if snapshot.Expired || len(rows) != 1 || rows[0].ReportID != r.ID || rows[0].DocumentKey != r.DocumentKey {
+		t.Fatalf("snapshot expired=%v count=%d", snapshot.Expired, len(rows))
 	}
 }
 

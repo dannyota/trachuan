@@ -11,39 +11,28 @@ import (
 	"time"
 )
 
-const batchSnapshot = `-- name: BatchSnapshot :many
-SELECT batch_id, report_id, created_at, document_key, anchor, document_number, release, kind, target, suggestion FROM issue_report_export WHERE batch_id = $1 ORDER BY report_id
+const batchSnapshot = `-- name: BatchSnapshot :one
+SELECT COALESCE(bool_or(created_at < $1::timestamptz), false)::boolean AS expired,
+       CASE WHEN COALESCE(bool_or(created_at < $1::timestamptz), false) THEN '[]'::jsonb
+            ELSE COALESCE(jsonb_agg(to_jsonb(issue_report_export) ORDER BY report_id), '[]'::jsonb) END::jsonb AS reports
+FROM issue_report_export WHERE batch_id = $2
 `
 
-func (q *Queries) BatchSnapshot(ctx context.Context, batchID string) ([]IssueReportExport, error) {
-	rows, err := q.db.Query(ctx, batchSnapshot, batchID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []IssueReportExport
-	for rows.Next() {
-		var i IssueReportExport
-		if err := rows.Scan(
-			&i.BatchID,
-			&i.ReportID,
-			&i.CreatedAt,
-			&i.DocumentKey,
-			&i.Anchor,
-			&i.DocumentNumber,
-			&i.Release,
-			&i.Kind,
-			&i.Target,
-			&i.Suggestion,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+type BatchSnapshotParams struct {
+	Before  time.Time
+	BatchID string
+}
+
+type BatchSnapshotRow struct {
+	Expired bool
+	Reports json.RawMessage
+}
+
+func (q *Queries) BatchSnapshot(ctx context.Context, arg BatchSnapshotParams) (BatchSnapshotRow, error) {
+	row := q.db.QueryRow(ctx, batchSnapshot, arg.Before, arg.BatchID)
+	var i BatchSnapshotRow
+	err := row.Scan(&i.Expired, &i.Reports)
+	return i, err
 }
 
 const countAccountReports = `-- name: CountAccountReports :one
@@ -133,9 +122,9 @@ func (q *Queries) DecideReports(ctx context.Context, arg DecideReportsParams) (i
 }
 
 const deleteExpiredReports = `-- name: DeleteExpiredReports :execrows
-DELETE FROM issue_report WHERE id IN (
+DELETE FROM issue_report WHERE state <> 'open' AND changed_at < $1::timestamptz AND id IN (
     SELECT id FROM issue_report WHERE state <> 'open' AND changed_at < $1::timestamptz
-    ORDER BY changed_at, id LIMIT $2
+    ORDER BY changed_at, id LIMIT $2 FOR UPDATE SKIP LOCKED
 )
 `
 

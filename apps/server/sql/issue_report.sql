@@ -56,13 +56,16 @@ WITH assigned AS (
 INSERT INTO issue_report_export (batch_id, report_id, document_key, anchor, document_number, release, kind, target, suggestion)
 SELECT sqlc.arg(batch_id), id, document_key, anchor, document_number, release, kind, target, suggestion FROM assigned;
 
--- name: BatchSnapshot :many
-SELECT * FROM issue_report_export WHERE batch_id = $1 ORDER BY report_id;
+-- name: BatchSnapshot :one
+SELECT COALESCE(bool_or(created_at < sqlc.arg(before)::timestamptz), false)::boolean AS expired,
+       CASE WHEN COALESCE(bool_or(created_at < sqlc.arg(before)::timestamptz), false) THEN '[]'::jsonb
+            ELSE COALESCE(jsonb_agg(to_jsonb(issue_report_export) ORDER BY report_id), '[]'::jsonb) END::jsonb AS reports
+FROM issue_report_export WHERE batch_id = sqlc.arg(batch_id);
 
 -- name: DeleteExpiredReports :execrows
-DELETE FROM issue_report WHERE id IN (
+DELETE FROM issue_report WHERE state <> 'open' AND changed_at < sqlc.arg(before)::timestamptz AND id IN (
     SELECT id FROM issue_report WHERE state <> 'open' AND changed_at < sqlc.arg(before)::timestamptz
-    ORDER BY changed_at, id LIMIT sqlc.arg(batch_limit)
+    ORDER BY changed_at, id LIMIT sqlc.arg(batch_limit) FOR UPDATE SKIP LOCKED
 );
 
 -- name: DeleteExpiredSnapshots :execrows
