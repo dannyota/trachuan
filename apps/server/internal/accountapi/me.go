@@ -1,0 +1,135 @@
+// Package accountapi serves account management endpoints for web sessions.
+package accountapi
+
+import (
+	"context"
+	"crypto/rand"
+	"encoding/json"
+	"errors"
+	"io"
+	"math"
+	"net/http"
+	"strconv"
+	"sync"
+	"time"
+
+	"danny.vn/trachuan/apps/server/internal/limits"
+	"danny.vn/trachuan/apps/server/internal/store"
+	"danny.vn/trachuan/apps/server/internal/websession"
+	"github.com/jackc/pgx/v5"
+)
+
+// Store supplies account and personal token state.
+type Store interface {
+	GetAccount(context.Context, int64) (store.Account, error)
+	ListSessions(context.Context, int64) ([]store.WebSession, error)
+	ListTokens(context.Context, int64) ([]store.PersonalToken, error)
+	CreatePersonalToken(context.Context, store.CreatePersonalTokenParams) (store.PersonalToken, error)
+	RevokeOwnToken(context.Context, store.RevokeOwnTokenParams) (int64, error)
+	RequestDeletion(context.Context, int64) (store.RequestDeletionRow, error)
+}
+
+// Sessions revokes sessions through the shared session manager.
+type Sessions interface {
+	RevokeOwnSession(context.Context, int64, int64) (int64, error)
+}
+
+// Verifier evicts cached personal credentials.
+type Verifier interface{ Evict(string) }
+
+// Limiter consumes the shared per-account request budget.
+type Limiter interface {
+	Allow(int64, limits.Class) (bool, time.Duration)
+}
+
+// Config supplies shared account dependencies. Configure before serving requests.
+type Config struct {
+	Store    Store
+	Sessions Sessions
+	Verifier Verifier
+	Limiter  Limiter
+	Clock    func() time.Time
+	Rand     io.Reader
+}
+
+// Handler serves account routes. Install session and CSRF middleware outside it.
+type Handler struct {
+	cfg      Config
+	mux      *http.ServeMux
+	randomMu sync.Mutex
+}
+
+// New creates an account handler.
+func New(cfg Config) *Handler {
+	if cfg.Clock == nil {
+		cfg.Clock = time.Now
+	}
+	if cfg.Rand == nil {
+		cfg.Rand = rand.Reader
+	}
+	h := &Handler{cfg: cfg, mux: http.NewServeMux()}
+	h.mux.HandleFunc("GET /api/v1/me", h.me)
+	h.mux.HandleFunc("DELETE /api/v1/me", h.deleteAccount)
+	h.mux.HandleFunc("GET /api/v1/me/sessions", h.listSessions)
+	h.mux.HandleFunc("DELETE /api/v1/me/sessions/{id}", h.revokeSession)
+	h.mux.HandleFunc("GET /api/v1/me/tokens", h.listTokens)
+	h.mux.HandleFunc("POST /api/v1/me/tokens", h.createToken)
+	h.mux.HandleFunc("DELETE /api/v1/me/tokens/{id}", h.revokeToken)
+	return h
+}
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	p, ok := websession.FromContext(r.Context())
+	if !ok {
+		writeError(w, 401, "unauthenticated", "Unauthenticated")
+		return
+	}
+	if h.cfg.Store == nil || h.cfg.Sessions == nil || h.cfg.Verifier == nil || h.cfg.Limiter == nil {
+		writeError(w, 503, "unavailable", "Service unavailable")
+		return
+	}
+	if ok, wait := h.cfg.Limiter.Allow(p.AccountID, limits.Read); !ok {
+		w.Header().Set("Retry-After", strconv.Itoa(max(1, int(math.Ceil(wait.Seconds())))))
+		writeError(w, 429, "rate_limited", "Rate limit exceeded")
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+	defer cancel()
+	h.mux.ServeHTTP(w, r.WithContext(ctx))
+}
+func (h *Handler) me(w http.ResponseWriter, r *http.Request) {
+	p, _ := websession.FromContext(r.Context())
+	a, err := h.cfg.Store.GetAccount(r.Context(), p.AccountID)
+	if err != nil || r.Context().Err() != nil {
+		unavailable(w)
+		return
+	}
+	writeJSON(w, 200, struct {
+		ID        int64     `json:"id"`
+		Email     string    `json:"email"`
+		CreatedAt time.Time `json:"created_at"`
+		CSRFToken string    `json:"csrf_token"`
+	}{a.ID, a.Email, a.CreatedAt, p.CSRFSecret})
+}
+func writeJSON(w http.ResponseWriter, status int, v any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(v)
+}
+func writeError(w http.ResponseWriter, status int, code, message string) {
+	writeJSON(w, status, map[string]any{"error": map[string]string{"code": code, "message": message}})
+}
+func unavailable(w http.ResponseWriter) { writeError(w, 503, "unavailable", "Service unavailable") }
+func notFound(w http.ResponseWriter)    { writeError(w, 404, "not_found", "Not found") }
+func invalid(w http.ResponseWriter)     { writeError(w, 400, "invalid_request", "Invalid request") }
+func idParam(r *http.Request) (int64, bool) {
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	return id, err == nil && id > 0
+}
+func storeError(w http.ResponseWriter, err error) {
+	if errors.Is(err, pgx.ErrNoRows) {
+		notFound(w)
+	} else {
+		unavailable(w)
+	}
+}

@@ -50,6 +50,7 @@ type Verifier struct {
 	oldest  list.List
 	touches map[string]time.Time
 	used    list.List
+	flights map[*lookupFlight]struct{}
 }
 
 // Verify authenticates a raw personal token without the Bearer scheme.
@@ -61,7 +62,8 @@ func (v *Verifier) Verify(ctx context.Context, bearer string) (Principal, error)
 		return Principal{}, ErrUnavailable
 	}
 	hash := tokenHash(bearer)
-	if entry, ok := v.cached(hash, v.now()); ok {
+	entry, flight, ok := v.startLookup(hash, v.now())
+	if ok {
 		// Cached hits skip availability checks and touches because the lookup is
 		// cached by design: docs/design/auth.md, "Token checks and revocation".
 		if !entry.expires.After(v.now()) {
@@ -69,6 +71,7 @@ func (v *Verifier) Verify(ctx context.Context, bearer string) (Principal, error)
 		}
 		return entry.principal, nil
 	}
+	defer v.finishLookup(flight)
 	timeout := v.QueryTimeout
 	if timeout <= 0 || timeout > authQueryDeadline {
 		timeout = authQueryDeadline
@@ -111,13 +114,15 @@ func (v *Verifier) Verify(ctx context.Context, bearer string) (Principal, error)
 	if now.Sub(started) > freshness {
 		return Principal{}, fmt.Errorf("verify credential freshness: %w", ErrUnavailable)
 	}
-	entry := cacheEntry{
+	entry = cacheEntry{
 		hash:      hash,
 		principal: Principal{AccountID: row.AccountID, Scope: "mcp:read", Audience: v.Audience},
 		expires:   row.ExpiresAt,
 		until:     minTime(started.Add(ttl), row.ExpiresAt),
 	}
-	v.remember(entry, now)
+	if !v.remember(entry, now, flight) {
+		return Principal{}, ErrUnauthorized
+	}
 	return entry.principal, nil
 }
 
