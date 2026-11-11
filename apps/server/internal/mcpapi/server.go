@@ -3,20 +3,18 @@ package mcpapi
 
 import (
 	"context"
-	"fmt"
-	"math"
-	"reflect"
-
 	"log/slog"
+	"math"
 	"net/http"
+	"reflect"
 	"time"
 
+	"danny.vn/trachuan/apps/server/internal/apierror"
 	"danny.vn/trachuan/apps/server/internal/credential"
-	"github.com/google/jsonschema-go/jsonschema"
-	"github.com/modelcontextprotocol/go-sdk/mcp"
-
 	"danny.vn/trachuan/apps/server/internal/limits"
 	"danny.vn/trachuan/internal/retrieval"
+	"github.com/google/jsonschema-go/jsonschema"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 // Engine is the read-only corpus view consumed by the tools.
@@ -103,10 +101,10 @@ func register[In, Out any](s *mcp.Server, cfg Config, name, description string, 
 		}()
 		fail := func(c, message string) (*mcp.CallToolResult, error) { code = c; return toolFailure(c, message), nil }
 		if !ok || principal.AccountID <= 0 || principal.Scope != "mcp:read" {
-			return fail("unavailable", "Service unavailable.")
+			return fail("unavailable", apierror.Message("unavailable"))
 		}
 		if cfg.Limiter == nil {
-			return fail("unavailable", "Service unavailable.")
+			return fail("unavailable", apierror.Message("unavailable"))
 		}
 		class := limits.Read
 		if name == "search" {
@@ -114,7 +112,7 @@ func register[In, Out any](s *mcp.Server, cfg Config, name, description string, 
 		}
 		if allowed, retry := cfg.Limiter.Allow(principal.AccountID, class); !allowed {
 			seconds := max(int64(1), int64(math.Ceil(retry.Seconds())))
-			return fail("rate_limited", fmt.Sprintf("Rate limited. Retry in %d seconds.", seconds))
+			return fail("rate_limited", apierror.RetryMessage(int(seconds)))
 		}
 		result, err := call(ctx, req.Params.Arguments)
 		if err != nil {

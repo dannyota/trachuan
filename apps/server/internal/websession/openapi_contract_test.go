@@ -1,133 +1,15 @@
 package websession
 
 import (
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"strconv"
-	"strings"
 	"testing"
 
-	"gopkg.in/yaml.v3"
+	"danny.vn/trachuan/apps/server/internal/contracttest"
 )
 
-func checkContract(t *testing.T, method, path string, w *httptest.ResponseRecorder) {
-	t.Helper()
-	raw, err := os.ReadFile("../../../../packages/schema/openapi.yaml")
-	if err != nil {
-		t.Fatal(err)
-	}
-	var doc struct {
-		Components struct {
-			Schemas map[string]map[string]any `yaml:"schemas"`
-		} `yaml:"components"`
-		Paths map[string]map[string]struct {
-			Responses map[string]struct {
-				Content map[string]struct {
-					Schema struct {
-						Ref string `yaml:"$ref"`
-					} `yaml:"schema"`
-				} `yaml:"content"`
-			} `yaml:"responses"`
-		} `yaml:"paths"`
-	}
-	if err := yaml.Unmarshal(raw, &doc); err != nil {
-		t.Fatal(err)
-	}
-	op, ok := doc.Paths[path][strings.ToLower(method)]
-	if !ok {
-		t.Fatalf("missing operation %s %s", method, path)
-	}
-	response, ok := op.Responses[strconv.Itoa(w.Code)]
-	if !ok {
-		t.Fatalf("undocumented %s %s status %d: %s", method, path, w.Code, w.Body.String())
-	}
-	if len(w.Body.Bytes()) == 0 {
-		if len(response.Content) != 0 {
-			t.Fatalf("documented content for empty response")
-		}
-		return
-	}
-	media := strings.Split(w.Header().Get("Content-Type"), ";")[0]
-	content, ok := response.Content[media]
-	if !ok {
-		t.Fatalf("undocumented media %s", media)
-	}
-	if media == "application/json" {
-		var payload any
-		if err := json.Unmarshal(w.Body.Bytes(), &payload); err != nil {
-			t.Fatal(err)
-		}
-		if content.Schema.Ref == "" {
-			t.Fatal("missing schema reference")
-		}
-		validateShape(t, doc.Components.Schemas, map[string]any{"$ref": content.Schema.Ref}, payload)
-	}
-}
-func validateShape(t *testing.T, schemas map[string]map[string]any, schema map[string]any, value any) {
-	t.Helper()
-	if ref, ok := schema["$ref"].(string); ok {
-		schema = schemas[strings.TrimPrefix(ref, "#/components/schemas/")]
-		if schema == nil {
-			t.Fatalf("unknown schema %s", ref)
-		}
-	}
-	if value == nil {
-		if types, ok := schema["type"].([]any); ok {
-			for _, typ := range types {
-				if typ == "null" {
-					return
-				}
-			}
-		}
-		t.Fatal("unexpected null")
-	}
-	switch schema["type"] {
-	case "object":
-		object, ok := value.(map[string]any)
-		if !ok {
-			t.Fatalf("want object, got %T", value)
-		}
-		if required, ok := schema["required"].([]any); ok {
-			for _, key := range required {
-				if _, exists := object[key.(string)]; !exists {
-					t.Fatalf("missing %s", key)
-				}
-			}
-		}
-		properties, _ := schema["properties"].(map[string]any)
-		for key, item := range object {
-			if prop, ok := properties[key].(map[string]any); ok {
-				validateShape(t, schemas, prop, item)
-			} else if extra, ok := schema["additionalProperties"].(map[string]any); ok {
-				validateShape(t, schemas, extra, item)
-			}
-		}
-	case "array":
-		items, ok := value.([]any)
-		if !ok {
-			t.Fatalf("want array, got %T", value)
-		}
-		child, _ := schema["items"].(map[string]any)
-		for _, item := range items {
-			validateShape(t, schemas, child, item)
-		}
-	case "string":
-		if _, ok := value.(string); !ok {
-			t.Fatalf("want string, got %T", value)
-		}
-	case "integer", "number":
-		if _, ok := value.(float64); !ok {
-			t.Fatalf("want number, got %T", value)
-		}
-	case "boolean":
-		if _, ok := value.(bool); !ok {
-			t.Fatalf("want bool, got %T", value)
-		}
-	}
-}
-func TestLogoutContract(t *testing.T) {
+func testLogoutContract(t *testing.T, coverage *contracttest.Coverage) {
 	m, _, raw := harness()
 	r := request(raw)
 	r.Method = "POST"
@@ -138,10 +20,10 @@ func TestLogoutContract(t *testing.T) {
 	if w.Code != 204 {
 		t.Fatalf("status %d", w.Code)
 	}
-	checkContract(t, "POST", "/api/v1/auth/logout", w)
+	coverage.Check(t, "POST", "/api/v1/auth/logout", w)
 }
 
-func TestLogoutContract_Errors(t *testing.T) {
+func testLogoutContract_Errors(t *testing.T, coverage *contracttest.Coverage) {
 	for _, status := range []int{401, 403, 503} {
 		t.Run(strconv.Itoa(status), func(t *testing.T) {
 			m, s, raw := harness()
@@ -163,7 +45,26 @@ func TestLogoutContract_Errors(t *testing.T) {
 			if w.Code != status {
 				t.Fatalf("status %d", w.Code)
 			}
-			checkContract(t, "POST", "/api/v1/auth/logout", w)
+			coverage.Check(t, "POST", "/api/v1/auth/logout", w)
 		})
+	}
+}
+
+func TestOpenAPIContract(t *testing.T) {
+	c, err := contracttest.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var paths []string
+	for path := range c.Paths {
+		if path == "/api/v1/auth/logout" {
+			paths = append(paths, path)
+		}
+	}
+	coverage := contracttest.NewCoverage(c, paths)
+	t.Run("TestLogoutContract", func(t *testing.T) { testLogoutContract(t, coverage) })
+	t.Run("TestLogoutContract_Errors", func(t *testing.T) { testLogoutContract_Errors(t, coverage) })
+	if missing := coverage.Missing(); len(missing) > 0 {
+		t.Errorf("unexercised responses: %v", missing)
 	}
 }

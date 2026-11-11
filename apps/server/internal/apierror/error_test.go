@@ -31,3 +31,9 @@ func TestRateLimited_RoundsUp(t *testing.T) {
 		t.Fatalf("unexpected response: %d %v", w.Code, w.Header())
 	}
 }
+
+func TestRetryMessage_IncludesSeconds(t *testing.T) {
+	if got := RetryMessage(2); got != "Rate limited. Retry in 2 seconds." {
+		t.Fatalf("message %q", got)
+	}
+}

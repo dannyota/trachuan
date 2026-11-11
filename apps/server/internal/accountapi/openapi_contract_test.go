@@ -1,135 +1,16 @@
 package accountapi
 
 import (
-	"encoding/json"
-	"net/http/httptest"
-	"os"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
 
-	"danny.vn/trachuan/apps/server/internal/websession"
+	"danny.vn/trachuan/apps/server/internal/contracttest"
 
-	"gopkg.in/yaml.v3"
+	"danny.vn/trachuan/apps/server/internal/websession"
 )
 
-func checkContract(t *testing.T, method, path string, w *httptest.ResponseRecorder) {
-	t.Helper()
-	raw, err := os.ReadFile("../../../../packages/schema/openapi.yaml")
-	if err != nil {
-		t.Fatal(err)
-	}
-	var doc struct {
-		Components struct {
-			Schemas map[string]map[string]any `yaml:"schemas"`
-		} `yaml:"components"`
-		Paths map[string]map[string]struct {
-			Responses map[string]struct {
-				Content map[string]struct {
-					Schema struct {
-						Ref string `yaml:"$ref"`
-					} `yaml:"schema"`
-				} `yaml:"content"`
-			} `yaml:"responses"`
-		} `yaml:"paths"`
-	}
-	if err := yaml.Unmarshal(raw, &doc); err != nil {
-		t.Fatal(err)
-	}
-	op, ok := doc.Paths[path][strings.ToLower(method)]
-	if !ok {
-		t.Fatalf("missing operation %s %s", method, path)
-	}
-	response, ok := op.Responses[strconv.Itoa(w.Code)]
-	if !ok {
-		t.Fatalf("undocumented %s %s status %d: %s", method, path, w.Code, w.Body.String())
-	}
-	if len(w.Body.Bytes()) == 0 {
-		if len(response.Content) != 0 {
-			t.Fatalf("documented content for empty response")
-		}
-		return
-	}
-	media := strings.Split(w.Header().Get("Content-Type"), ";")[0]
-	content, ok := response.Content[media]
-	if !ok {
-		t.Fatalf("undocumented media %s", media)
-	}
-	if media == "application/json" {
-		var payload any
-		if err := json.Unmarshal(w.Body.Bytes(), &payload); err != nil {
-			t.Fatal(err)
-		}
-		if content.Schema.Ref == "" {
-			t.Fatal("missing schema reference")
-		}
-		validateShape(t, doc.Components.Schemas, map[string]any{"$ref": content.Schema.Ref}, payload)
-	}
-}
-func validateShape(t *testing.T, schemas map[string]map[string]any, schema map[string]any, value any) {
-	t.Helper()
-	if ref, ok := schema["$ref"].(string); ok {
-		schema = schemas[strings.TrimPrefix(ref, "#/components/schemas/")]
-		if schema == nil {
-			t.Fatalf("unknown schema %s", ref)
-		}
-	}
-	if value == nil {
-		if types, ok := schema["type"].([]any); ok {
-			for _, typ := range types {
-				if typ == "null" {
-					return
-				}
-			}
-		}
-		t.Fatal("unexpected null")
-	}
-	switch schema["type"] {
-	case "object":
-		object, ok := value.(map[string]any)
-		if !ok {
-			t.Fatalf("want object, got %T", value)
-		}
-		if required, ok := schema["required"].([]any); ok {
-			for _, key := range required {
-				if _, exists := object[key.(string)]; !exists {
-					t.Fatalf("missing %s", key)
-				}
-			}
-		}
-		properties, _ := schema["properties"].(map[string]any)
-		for key, item := range object {
-			if prop, ok := properties[key].(map[string]any); ok {
-				validateShape(t, schemas, prop, item)
-			} else if extra, ok := schema["additionalProperties"].(map[string]any); ok {
-				validateShape(t, schemas, extra, item)
-			}
-		}
-	case "array":
-		items, ok := value.([]any)
-		if !ok {
-			t.Fatalf("want array, got %T", value)
-		}
-		child, _ := schema["items"].(map[string]any)
-		for _, item := range items {
-			validateShape(t, schemas, child, item)
-		}
-	case "string":
-		if _, ok := value.(string); !ok {
-			t.Fatalf("want string, got %T", value)
-		}
-	case "integer", "number":
-		if _, ok := value.(float64); !ok {
-			t.Fatalf("want number, got %T", value)
-		}
-	case "boolean":
-		if _, ok := value.(bool); !ok {
-			t.Fatalf("want bool, got %T", value)
-		}
-	}
-}
-func TestAccountContract(t *testing.T) {
+func testAccountContract(t *testing.T, coverage *contracttest.Coverage) {
 	cases := []struct{ method, path, actual, body string }{
 		{"GET", "/api/v1/me", "/api/v1/me", ""}, {"DELETE", "/api/v1/me", "/api/v1/me", ""},
 		{"GET", "/api/v1/me/sessions", "/api/v1/me/sessions", ""}, {"DELETE", "/api/v1/me/sessions/{id}", "/api/v1/me/sessions/1", ""},
@@ -142,12 +23,12 @@ func TestAccountContract(t *testing.T) {
 			if w.Code != want {
 				t.Fatalf("status %d, want %d", w.Code, want)
 			}
-			checkContract(t, tc.method, tc.path, w)
+			coverage.Check(t, tc.method, tc.path, w)
 		})
 	}
 }
 
-func TestAccountContract_Guards(t *testing.T) {
+func testAccountContract_Guards(t *testing.T, coverage *contracttest.Coverage) {
 	cases := []struct{ method, path, actual string }{
 		{"GET", "/api/v1/me", "/api/v1/me"}, {"DELETE", "/api/v1/me", "/api/v1/me"},
 		{"GET", "/api/v1/me/sessions", "/api/v1/me/sessions"}, {"DELETE", "/api/v1/me/sessions/{id}", "/api/v1/me/sessions/1"},
@@ -160,19 +41,19 @@ func TestAccountContract_Guards(t *testing.T) {
 			if w.Code != 401 {
 				t.Fatalf("status %d", w.Code)
 			}
-			checkContract(t, tc.method, tc.path, w)
+			coverage.Check(t, tc.method, tc.path, w)
 			if tc.method != "GET" {
 				w = call(h, raw, "invalid", tc.method, tc.actual, "")
 				if w.Code != 403 {
 					t.Fatalf("status %d", w.Code)
 				}
-				checkContract(t, tc.method, tc.path, w)
+				coverage.Check(t, tc.method, tc.path, w)
 			}
 		})
 	}
 }
 
-func TestAccountContract_Errors(t *testing.T) {
+func testAccountContract_Errors(t *testing.T, coverage *contracttest.Coverage) {
 	cases := []struct{ method, path, actual, body string }{
 		{"GET", "/api/v1/me", "/api/v1/me", ""}, {"DELETE", "/api/v1/me", "/api/v1/me", ""},
 		{"GET", "/api/v1/me/sessions", "/api/v1/me/sessions", ""}, {"DELETE", "/api/v1/me/sessions/{id}", "/api/v1/me/sessions/1", ""},
@@ -191,14 +72,14 @@ func TestAccountContract_Errors(t *testing.T) {
 			if w.Code != 429 || w.Header().Get("Retry-After") == "" {
 				t.Fatalf("status %d", w.Code)
 			}
-			checkContract(t, tc.method, tc.path, w)
+			coverage.Check(t, tc.method, tc.path, w)
 			m := &websession.Manager{Store: s, Clock: func() time.Time { return s.now }, PublicURL: "https://example.invalid"}
 			bad := m.Middleware(m.CSRF(New(Config{})))
 			w = call(bad, raw, secret, tc.method, tc.actual, tc.body)
 			if w.Code != 503 {
 				t.Fatalf("status %d", w.Code)
 			}
-			checkContract(t, tc.method, tc.path, w)
+			coverage.Check(t, tc.method, tc.path, w)
 		})
 	}
 	for _, tc := range []struct{ path, actual string }{{"/api/v1/me/sessions/{id}", "/api/v1/me/sessions/99"}, {"/api/v1/me/tokens/{id}", "/api/v1/me/tokens/99"}} {
@@ -207,7 +88,7 @@ func TestAccountContract_Errors(t *testing.T) {
 		if w.Code != 404 {
 			t.Fatal(w.Code)
 		}
-		checkContract(t, "DELETE", tc.path, w)
+		coverage.Check(t, "DELETE", tc.path, w)
 	}
 	for _, tc := range []struct {
 		body   string
@@ -218,7 +99,7 @@ func TestAccountContract_Errors(t *testing.T) {
 		if w.Code != tc.status {
 			t.Fatal(w.Code)
 		}
-		checkContract(t, "POST", "/api/v1/me/tokens", w)
+		coverage.Check(t, "POST", "/api/v1/me/tokens", w)
 	}
 	h, _, _, raw, secret := setup(t)
 	call(h, raw, secret, "POST", "/api/v1/me/tokens", `{"name":"test"}`)
@@ -226,5 +107,26 @@ func TestAccountContract_Errors(t *testing.T) {
 	if w.Code != 204 {
 		t.Fatal(w.Code)
 	}
-	checkContract(t, "DELETE", "/api/v1/me/tokens/{id}", w)
+	coverage.Check(t, "DELETE", "/api/v1/me/tokens/{id}", w)
+}
+
+func TestOpenAPIContract(t *testing.T) {
+	c, err := contracttest.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var paths []string
+	for path := range c.Paths {
+		if strings.HasPrefix(path, "/api/v1/me") {
+			paths = append(paths, path)
+		}
+	}
+	coverage := contracttest.NewCoverage(c, paths)
+	t.Run("TestAccountContract", func(t *testing.T) { testAccountContract(t, coverage) })
+	t.Run("TestAccountContract_Guards", func(t *testing.T) { testAccountContract_Guards(t, coverage) })
+	t.Run("TestAccountContract_Errors", func(t *testing.T) { testAccountContract_Errors(t, coverage) })
+	t.Run("request boundaries", func(t *testing.T) { testTokenRequestContractDays(t, c) })
+	if missing := coverage.Missing(); len(missing) > 0 {
+		t.Errorf("unexercised responses: %v", missing)
+	}
 }

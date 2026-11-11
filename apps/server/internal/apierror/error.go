@@ -3,6 +3,7 @@ package apierror
 
 import (
 	"encoding/json"
+	"fmt"
 	"math"
 	"net/http"
 	"strconv"
@@ -35,4 +36,9 @@ func RateLimited(w http.ResponseWriter, retryAfter time.Duration) {
 	seconds := max(1, int64(math.Ceil(retryAfter.Seconds())))
 	w.Header().Set("Retry-After", strconv.FormatInt(seconds, 10))
 	Write(w, http.StatusTooManyRequests, "rate_limited")
+}
+
+// RetryMessage returns the MCP rate limit message with the retry delay.
+func RetryMessage(seconds int) string {
+	return fmt.Sprintf("%s Retry in %d seconds.", Message("rate_limited"), seconds)
 }

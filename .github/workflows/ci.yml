@@ -44,7 +44,7 @@ jobs:
             queryembed=false
             while IFS= read -r -d '' path; do
               case "$path" in
-                packages/schema/*|apps/server/internal/accountapi/*|apps/server/internal/webapi/*|apps/server/internal/weblogin/*|apps/server/internal/websession/*|apps/server/internal/apierror/*|apps/server/internal/mcpapi/*|.github/workflows/ci.yml|Makefile) schema=true ;;
+                packages/schema/*|apps/server/internal/accountapi/*|apps/server/internal/webapi/*|apps/server/internal/weblogin/*|apps/server/internal/websession/*|apps/server/internal/apierror/*|apps/server/internal/contracttest/*|apps/server/internal/mcpapi/*|.github/workflows/ci.yml|.tool-versions|Makefile) schema=true ;;
               esac
               case "$path" in
                 apps/docembed/*|.github/workflows/*) docembed=true ;;
@@ -81,6 +81,7 @@ jobs:
         working-directory: packages/schema
       - run: make schema-gen
       - run: git diff --exit-code
+      - run: test -z "$(git status --porcelain -- packages/schema)"
 
   static:
     needs: [preflight]

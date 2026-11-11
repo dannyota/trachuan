@@ -1117,8 +1117,8 @@ export interface components {
         };
         TokenInput: {
             name: string;
-            /** @default 90 */
-            days: number;
+            /** @description Defaults to 90 days when omitted or null. */
+            days?: number | null;
         };
         SessionList: components["schemas"]["Session"][];
         TokenList: components["schemas"]["Token"][];
@@ -1236,7 +1236,8 @@ export interface components {
             gaps?: components["schemas"]["Gap"][];
         };
         SearchInput: {
-            country: string;
+            /** @enum {string} */
+            country: "vn";
             query: string;
             /** Format: date */
             as_of?: string;
@@ -1255,7 +1256,8 @@ export interface components {
             next?: string;
         };
         ReadInput: {
-            country: string;
+            /** @enum {string} */
+            country: "vn";
             release?: string;
             items: components["schemas"]["ReadItem"][];
         };
