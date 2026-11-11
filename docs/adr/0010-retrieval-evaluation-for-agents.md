@@ -23,7 +23,7 @@ choice, and three of them send unaccented queries that ADR 0002 rejects.
    unaccented cases become rejection checks that must all return the ADR 0002
    diacritics message and sit outside the recall, MRR and abstention
    denominators; the other 89 keep their expectations. **Development** and
-   **sealed**: the new cases below. The floors in
+   **sealed**: the new cases below. The targets and gates in
    [testing](../../instructions/testing.md) apply to the old product and sealed
    cohorts, each on its own.
 2. Product scoring matches exact document and provision identities, with
@@ -40,11 +40,16 @@ choice, and three of them send unaccented queries that ADR 0002 rejects.
    file, prompt or tuning context may contain sealed queries or labels; the
    scoring script reads them and prints aggregates only.
 4. Promotion order: every gate passes on the old product and sealed cohorts;
-   then sealed product micro-recall@8 decides, and its paired 95% interval for
-   finalist minus baseline must lie above zero; recall@8 must not fall on the
-   old product cohort, and MRR@8 and recall@20 must not fall on either cohort.
-   Otherwise the baseline stays. Current-law precision and abstention are hard
-   gates.
+   then sealed product micro-recall@20 decides, because 20 compact hits are what
+   an agent receives by default
+   ([ADR 0013](0013-compact-search-and-batch-read.md)), and its paired 95%
+   interval for finalist minus baseline must lie above zero; recall@20 must not
+   fall on the old product cohort, and MRR@8 and recall@8 must not fall on
+   either cohort. Otherwise the baseline stays. Current-law precision,
+   abstention and the rejection checks are hard gates. Recall and MRR have
+   targets that every report states, but a target is not a gate: a release ships
+   when the gates pass and recall@20 and MRR@8 do not fall against the previous
+   release.
 5. Every trial reports returned evidence characters per response (p50, p95).
    Size breaks ties only on the development cohort, between configurations of
    the same model with identical matched-citation counts and abstention
@@ -66,9 +71,9 @@ About 80 new labeled cases before any superiority claim, with low statistical
 power stated in every report. The three unaccented legacy cases count as
 rejection checks in the old product cohort and as written in legacy parity. The
 index plan takes its chunk, lexical and retrieval recipes from the experiments
-this protocol scores. Floors do not change. These metrics measure retrieval and
-response size, not the quality of an agent's final answer or its real token
-spend.
+this protocol scores. Gates and targets change only with a History line. These
+metrics measure retrieval and response size, not the quality of an agent's final
+answer or its real token spend.
 
 ## Alternatives rejected
 
@@ -104,3 +109,8 @@ spend.
   measured (documents selected as scope). Promotion still needs development and
   sealed cohorts under items 4 to 6, and the threshold stays labeled
   provisional.
+- 2026-11-11: the owner set recall and MRR as targets, not gates ("dont try to
+  be 0.9, that is number, we do our best") and left the cut-off to the primary,
+  who chose recall@20, the compact default agents receive. Gates are current-law
+  precision, abstention, rejections and no regression of recall@20 or MRR@8
+  against the previous release; recall@8 stays a reported diagnostic.
