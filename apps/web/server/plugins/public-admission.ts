@@ -1,17 +1,19 @@
-import { APP_CSP } from '../../app/utils/csp'
 import { createAdmission } from '../utils/public-admission'
-
-const publicPaths = new Set(['/', '/connect', '/sources', '/privacy', '/terms', '/llms.txt'])
+import { publicPath } from '../utils/public-path'
 
 export default defineNitroPlugin((nitro) => {
   const admission = createAdmission(Date.now)
   const renders = new WeakMap<object, () => void>()
   nitro.hooks.hook('render:before', (context) => {
-    if (!publicPaths.has(context.event.path.split('?')[0] ?? '')) return
+    if (!publicPath(context.event.path)) return
     const release = admission.render()
     if (!release) {
-      context.event.context.admissionResponse?.setHeader('Retry-After', '1')
-      throw createError({ statusCode: 429, statusMessage: 'Too Many Requests' })
+      context.response = {
+        statusCode: 429,
+        headers: { 'Retry-After': '1', 'Content-Type': 'text/plain; charset=utf-8' },
+        body: 'Too Many Requests\n',
+      }
+      return
     }
     renders.set(context.event.context, release)
   })
@@ -23,18 +25,6 @@ export default defineNitroPlugin((nitro) => {
     if (context.event) {
       renders.get(context.event.context)?.()
       renders.delete(context.event.context)
-    }
-  })
-  nitro.hooks.hook('beforeResponse', (event) => {
-    setResponseHeader(event, 'Content-Security-Policy', APP_CSP)
-    const path = event.path.split('?')[0] ?? ''
-    if (publicPaths.has(path)) {
-      setResponseHeader(event, 'Cache-Control', 'no-cache')
-    } else if (path === '/__nuxt_error') {
-      const original = getQuery(event).url
-      if (typeof original === 'string' && (original.split('?')[0] === '/account' || original.startsWith('/vn/'))) {
-        setResponseHeader(event, 'Cache-Control', 'no-store')
-      }
     }
   })
 })

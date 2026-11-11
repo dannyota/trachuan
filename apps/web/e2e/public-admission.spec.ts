@@ -41,6 +41,15 @@ test('public responses revalidate while private routes are not stored', async ({
     expect(miss.headers().etag, path).toBeTruthy()
     expect(hit.headers().etag, path).toBe(miss.headers().etag)
   }
+  for (const path of ['/connect', '/sources', '/privacy', '/terms', '/llms.txt']) {
+    const alias = await request.get(`${path}/?query=ignored`, { headers, maxRedirects: 0 })
+    expect(alias.status(), path).toBe(308)
+    expect(alias.headers().location, path).toBe(path)
+  }
+  const asset = await request.get('/csp-bootstrap.js', { headers })
+  expect(asset.status()).toBe(200)
+  expect(asset.headers()['cache-control']).toBe('no-store')
+  expect(asset.headers()['content-security-policy']).toContain("script-src 'self'")
   for (const path of ['/login', '/account', '/vn/x']) {
     const response = await request.get(path, { headers })
     expect(response.headers()['cache-control'], path).toBe('no-store')
