@@ -1,0 +1,45 @@
+{
+  "name": "@trachuan/web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "nuxt dev",
+    "build": "nuxt build",
+    "preview": "node .output/server/index.mjs",
+    "lint": "eslint .",
+    "typecheck": "vue-tsc --noEmit",
+    "test": "vitest run",
+    "e2e": "playwright test -c e2e/playwright.config.ts",
+    "postinstall": "nuxt prepare"
+  },
+  "dependencies": {
+    "@lucide/vue": "1.69.0",
+    "@pinia/nuxt": "1.0.3",
+    "@vueuse/core": "15.0.0",
+    "class-variance-authority": "0.7.1",
+    "clsx": "2.1.1",
+    "nuxt": "4.6.4",
+    "openapi-fetch": "0.17.0",
+    "pinia": "4.1.0",
+    "reka-ui": "2.11.0",
+    "tailwind-merge": "3.7.0",
+    "vue": "3.5.45",
+    "vue-router": "5.4.0"
+  },
+  "devDependencies": {
+    "@nuxt/eslint": "1.17.0",
+    "@nuxt/test-utils": "4.3.4",
+    "@playwright/test": "1.64.0",
+    "@tailwindcss/vite": "4.3.4",
+    "@vue/test-utils": "2.5.1",
+    "eslint": "10.14.0",
+    "happy-dom": "21.0.4",
+    "tailwindcss": "4.3.4",
+    "typescript": "6.0.3",
+    "vitest": "4.1.12",
+    "vue-tsc": "3.3.14"
+  },
+  "engines": {
+    "node": "24.22.2"
+  }
+}
