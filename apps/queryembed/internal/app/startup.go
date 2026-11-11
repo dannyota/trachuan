@@ -7,6 +7,7 @@ import (
 	"io"
 	"math"
 	"path/filepath"
+	"runtime/debug"
 	"strings"
 
 	"danny.vn/trachuan/apps/queryembed/internal/bundle"
@@ -69,6 +70,9 @@ func startup(ctx context.Context, dir, lib string, n Natives, stderr io.Writer) 
 		closeAll()
 		return nil, nil, errors.New("warmup failed")
 	}
+	// Return the released model buffer to the OS before serving; on the A1 host
+	// it otherwise held RSS above 2 GB for about a minute after startup.
+	debug.FreeOSMemory()
 	versions, err := n.Versions()
 	if err != nil {
 		closeAll()

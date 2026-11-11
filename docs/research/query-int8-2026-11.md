@@ -60,8 +60,36 @@ On the screening corpus Vietnamese_Embedding_v2 INT8 per-channel scores the same
   for Vietnamese_Embedding_v2 on MPS FP16 and five or more times longer for
   Qwen-family models.
 
+## Go service on the A1 host (2026-11-11)
+
+The Go query service (`apps/queryembed` at e25b097, ONNX Runtime 1.31.1, INT8
+per-channel, 4 intra-op threads, arena off, admission 2 active and 8 queued) on
+the same `VM.Standard.A1.Flex` (4 Neoverse-N1 CPUs, Oracle Linux 9.8, kernel
+6.12, Go 1.27.3), measured over loopback HTTP with nothing else running. The
+host build passes the `ort` tests and reports the pinned recipe `63ac35af…`;
+startup to ready takes 4.6 s.
+
+| Load                                      | Requests                | p50    | p95    | p99    | Max    |
+| ----------------------------------------- | ----------------------- | ------ | ------ | ------ | ------ |
+| 92 golden questions, one at a time        | 92, all 200             | 83 ms  | 131 ms | 155 ms | 155 ms |
+| 217-token text, seven runs                | 7, all 200              | 485 ms |        |        | 607 ms |
+| 2 clients without pause, 300 s            | 3,669 (12.2/s), all 200 | 160 ms | 233 ms | 273 ms | 346 ms |
+| 10 clients without pause, 60 s (200 only) | 736 × 200, 1,237 × 429  | 389 ms | 472 ms | 504 ms | 537 ms |
+
+The burst produced no 504 and no other status: admission rejected the excess at
+once. Through HTTP the service is about 20 ms slower than direct ONNX Runtime
+(64 ms short, 373 ms long). RSS was 2.35 GB right after startup and peaked at
+2.51 GB (VmHWM) after the sequential run, fell to 1.81 GB a minute later and
+then stayed between 1.21 and 1.28 GB through the stress and the burst, under the
+2.0 GB gate. The early peak is the verified 570 MB model buffer kept until the
+Go runtime returned it. With `debug.FreeOSMemory` after warmup (d2e74cb) RSS is
+1.07 GB at ready and for the next minute and 1.17 GB after a 60-second stress
+with two clients (799 requests, all 200); model load still peaks at about 2.4 GB
+(VmHWM 2,424,064 kB) for under 5 seconds before ready. Raw files are kept
+outside the repository.
+
 ## Not measured
 
-Full-corpus recall for the Harrier models, latency under concurrent load or
-through the Go service, static or calibrated INT8, and evaluation on the
+Full-corpus recall for the Harrier models, Go service latency with PostgreSQL
+under load at the same time, static or calibrated INT8, and evaluation on the
 trachuan corpus through the eval stage.
