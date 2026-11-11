@@ -33,10 +33,10 @@ func (s *fakeStore) GetAccount(_ context.Context, id int64) (store.Account, erro
 	}
 	return s.account, nil
 }
-func (s *fakeStore) ListSessions(_ context.Context, id int64) ([]store.WebSession, error) {
+func (s *fakeStore) ListLiveSessions(_ context.Context, id int64) ([]store.WebSession, error) {
 	var rows []store.WebSession
 	for _, r := range s.sessions {
-		if r.AccountID == id {
+		if r.AccountID == id && r.RevokedAt == nil && r.ExpiresAt.After(s.now) && r.CreatedAt.Add(90*24*time.Hour).After(s.now) {
 			rows = append(rows, r)
 		}
 	}

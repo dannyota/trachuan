@@ -16,7 +16,7 @@ type sessionResponse struct {
 
 func (h *Handler) listSessions(w http.ResponseWriter, r *http.Request) {
 	p, _ := websession.FromContext(r.Context())
-	rows, err := h.cfg.Store.ListSessions(r.Context(), p.AccountID)
+	rows, err := h.cfg.Store.ListLiveSessions(r.Context(), p.AccountID)
 	if err != nil || r.Context().Err() != nil {
 		unavailable(w)
 		return

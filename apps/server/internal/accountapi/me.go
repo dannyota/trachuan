@@ -23,7 +23,7 @@ import (
 // credential.ErrTokenLimit when the account has twenty live tokens.
 type Store interface {
 	GetAccount(context.Context, int64) (store.Account, error)
-	ListSessions(context.Context, int64) ([]store.WebSession, error)
+	ListLiveSessions(context.Context, int64) ([]store.WebSession, error)
 	ListTokens(context.Context, int64) ([]store.PersonalToken, error)
 	CreatePersonalToken(context.Context, store.CreatePersonalTokenParams) (store.PersonalToken, error)
 	RevokeOwnToken(context.Context, store.RevokeOwnTokenParams) (string, error)
