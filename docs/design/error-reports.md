@@ -8,104 +8,123 @@ are never stored). Limits: [budgets](budgets.md). Table: [data](data.md).
 
 ## Report
 
-A report is structured data only. It has no free-text field.
+A report is structured data only. It has no free-text field and no URL.
 
-| Field        | Rule                                                                                                                                                                     |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `country`    | `vn`                                                                                                                                                                     |
-| `kind`       | `wrong_text`, `wrong_validity`, `broken_citation` or `missing_document`                                                                                                  |
-| `handle`     | A document or provision handle from [search results](mcp-results.md#handles); required except for `missing_document`, where it is the citing provision when there is one |
-| `release`    | Optional; defaults to the active release; a retired release is `release_expired`                                                                                         |
-| `suggestion` | Optional object whose allowed members depend on `kind` (below); every member typed and validated                                                                         |
+| Field        | Rule                                                                                                                                                          |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `country`    | `vn`                                                                                                                                                          |
+| `kind`       | `wrong_text`, `wrong_validity`, `broken_citation` or `missing_document`                                                                                       |
+| `handle`     | A document or provision handle from [search results](mcp-results.md#handles); required except for `missing_document`, where it is the citing provision if any |
+| `release`    | Optional; defaults to the active release; a release that is not active is `release_expired`                                                                   |
+| `suggestion` | Optional object whose allowed members depend on `kind` (below)                                                                                                |
 
-Suggestion members by kind; any other member, or a member of another kind, is
-`invalid_request`:
+| Kind               | Suggestion members                                                                          |
+| ------------------ | ------------------------------------------------------------------------------------------- |
+| `wrong_text`       | none                                                                                        |
+| `wrong_validity`   | `status_class` (the closed list of [corpus schema](corpus-schema.md)), `eff_from`, `eff_to` |
+| `broken_citation`  | `document_number`: the intended target, which must be a document of the release             |
+| `missing_document` | `document_number` (required), `issue_date`                                                  |
 
-| Kind               | Members                                                                                                   |
-| ------------------ | --------------------------------------------------------------------------------------------------------- |
-| `wrong_text`       | `source_url`                                                                                              |
-| `wrong_validity`   | `status_class` (the closed list of [corpus schema](corpus-schema.md)), `eff_from`, `eff_to`, `source_url` |
-| `broken_citation`  | `document_number` (the intended target), `source_url`                                                     |
-| `missing_document` | `document_number` (required for this kind), `issue_date`, `source_url`                                    |
+Any other member, or a member of another kind, is `invalid_request`. Dates are
+ISO `YYYY-MM-DD` between 1945-09-02 and today, and `eff_from` is not after
+`eff_to`. A `document_number` is normalized as the corpus `number_norm`
+([data](data.md)); for `broken_citation` it must equal a document number of the
+release. For `missing_document` it must have the form `<1 to 4 digits>/<year>/`
+followed by one to four segments, each of which already appears as a segment of
+some document number in the release (document types and issuers), and the year
+lies between 1945 and the current year. The handle must resolve in the release:
+an unknown document or anchor is `invalid_request`.
 
-Dates are ISO `YYYY-MM-DD` and `eff_from` is not after `eff_to`.
-`document_number` is stored in the corpus normalized form ([data](data.md),
-number normalization) and must match the document-number grammar the reference
-parser accepts. `source_url` is `https://` on an allowlisted official host
-(`vbpl.vn`, `vanban.chinhphu.vn`, `datafiles.chinhphu.vn`,
-`congbao.chinhphu.vn`), at most 512 bytes, without user info, port or fragment.
-So that no field can carry free text, its path holds only ASCII letters, digits
-and `/._-` (no percent-encoding), and a query is allowed only on `vbpl.vn` with
-`ItemID` and `dvid` holding digits. The server stores it and never fetches it.
-The handle must resolve in the named release: an unknown document or anchor is
-`invalid_request`.
+These rules leave no field where a sentence fits. A client that wants to leak
+information can still choose handles, kinds and values to encode a few bits per
+report; the per-account and global caps bound that channel, and the operator
+sees only corpus identifiers and closed values.
+
+## Stored identity
+
+A report row keeps the corpus identity it was checked against: `release`,
+`document_key`, `anchor` (empty for a whole document or a `missing_document`
+without handle), the document's `document_number` and the normalized `target`
+number (`broken_citation` and `missing_document`; empty otherwise), so triage
+and export work after the release is retired. The dedupe and group key is
+(document_key, anchor, kind, target), the same across releases because document
+keys and anchors are stable; the report keeps the release it was made against.
 
 ## Interfaces
 
-- MCP tool `report_issue` with the fields above. Result
-  `{report_id, state, deduplicated}`; errors use the
-  [search results](mcp-results.md) error shape. It shares the `read` per-account
-  bucket and the report limits in budgets. `guide` gains one paragraph on when
-  to report and that only structured fields are accepted.
+- MCP tool `report_issue` with the fields above, annotated
+  `readOnlyHint: false`, `destructiveHint: false`, `idempotentHint: true`,
+  `openWorldHint: false`. Result `{report_id, state, deduplicated}`; errors use
+  the [search results](mcp-results.md) error shape. It shares the `read`
+  per-account bucket. `guide` gains one paragraph on when to report and that
+  only structured fields are accepted.
 - Web: `POST /api/v1/reports` (session and CSRF, same body and result),
-  `GET /api/v1/me/reports` (own reports, newest first, at most 100) and
-  `DELETE /api/v1/me/reports/{id}` (withdraw an own open report), with the
-  [web API](web-api.md) rules for account routes.
+  `GET /api/v1/me/reports` (own reports, newest first, pages of 100 with a
+  `next` cursor) and `DELETE /api/v1/me/reports/{id}` (withdraw an own open
+  report), with the [web API](web-api.md) rules for account routes.
 - Admin CLI on the host: `server admin reports list|show|accept|reject|export`.
 
-## Dedupe and limits
+## Admission and limits
 
-One open report per (account, document, anchor, kind): a repeat returns the
-existing report with `deduplicated: true` and changes nothing, so retries are
-safe. Reports of the same (document, anchor, kind) from different accounts are
-separate rows; triage groups them and shows the number of distinct accounts,
-which ranks the queue and resists one-account spam. Per-account daily and open
-caps and a global open cap are in budgets; at a cap the call is `rate_limited`.
-A blocked account cannot report.
+One open report per (account, group key): a repeat returns the existing report
+with `deduplicated: true` and changes nothing. Admission runs in one
+transaction: it locks the account row (rejecting a blocked or deletion-requested
+account), takes the reports advisory lock for the global counts, then checks the
+per-account daily, open and retained caps and the global retained cap in budgets
+before inserting; at a cap the call is `rate_limited`. Withdrawn and closed
+reports keep counting against the retained caps until deleted, so submitting and
+withdrawing cannot exceed them.
 
 ## Triage
 
-`reports list` shows groups by (document, anchor, kind) with the report count,
-the distinct-account count, the newest time and the suggestions' distinct
-values; it never shows account identities. `reports show <group>` adds report
-ids and states; account ids appear only with `--accounts`, and email or Google
+`reports list` shows groups by group key with the report count, the
+distinct-account count, the newest time and the distinct suggestion values; it
+never shows account identities. `reports show <group>` adds report ids, releases
+and states; account ids appear only with `--accounts`, and email or Google
 subject never. The CLI runs only on the host with the auth database role; there
-is no web triage and no user ever sees another account's reports.
-
-`accept` and `reject` act on a group or on report ids, set `decided_at` and
-state, and record the operator name given on the command line. A rejected or
-withdrawn report closes; accepting does not apply anything.
+is no web triage and no user sees another account's reports. `accept` and
+`reject` act on a group or on report ids and record the operator name given on
+the command line. Accepting applies nothing.
 
 ## Export
 
-`reports export --out <dir>` writes reviewable drafts of accepted reports
-without account data:
+`reports export --out DIR` creates a batch: one transaction assigns a new batch
+id to every accepted report not yet in a batch; the files are then written from
+the database into `DIR/<batch id>/` (a new directory; the command refuses an
+existing one) through temporary names and renames, with a manifest of report
+ids. `reports export --batch ID --out DIR` rewrites an existing batch, so a
+crash after the transaction is repaired by rerunning it. Files carry no account
+data:
 
-- `corrections-draft.yaml`: one entry per accepted `wrong_validity` group in the
-  format of `sources/vn-corrections.yaml` (key, number, `set` from the agreed
-  suggestion values), with `reason` and `evidence` left as `TODO` and
-  `reviewed: ""`; it is never merged into that file automatically;
+- `corrections-draft.yaml`: one entry per `wrong_validity` group whose anchor is
+  empty and whose accepted reports agree on one non-empty set of suggestion
+  values, in the format of `sources/vn-corrections.yaml` (key, number, `set`),
+  with `reason` and `evidence` left as `TODO` and `reviewed: ""`;
+- `validity-review.jsonl`: every other accepted `wrong_validity` group
+  (provision-level, conflicting or empty suggestions), never a draft;
 - `text-issues.jsonl`: accepted `wrong_text` groups for extraction and OCR
   review;
 - `citation-review.jsonl`: accepted `broken_citation` and `missing_document`
   groups for identity-map review and source discovery.
 
 A person reviews each draft against official text before copying it into the
-sources or the identity map; the export marks the exported groups so the next
-export lists only new ones.
+sources or the identity map; nothing is applied automatically.
 
 ## Retention
 
-Open reports stay until decided or withdrawn. Rejected, withdrawn and duplicate
-reports are deleted after the period in budgets; accepted reports after their
-export plus the same period. Account deletion deletes the account's reports
-(exports carry no account data). The purge runs in the server's hourly loop.
+Open reports stay until decided or withdrawn. Every other report is deleted once
+the period in budgets has passed since its last state change (accepted,
+rejected, withdrawn or exported), so accepted reports must be exported within
+that period. Account deletion deletes the account's reports; batches already
+exported carry no account data. The purge runs in the server's hourly loop.
 
 ## Alternatives rejected
 
 - A free-text note. Pattern rules cannot reliably keep a user's question or
   personal details out of free text, and ADR 0002 forbids storing questions;
   every useful hint has a typed field instead.
+- A source URL. Its path and query can carry text, and the reviewer finds the
+  official source from the document anyway.
 - Anonymous reports: no abuse control or dedupe.
 - Applying corrections automatically: every fix needs reviewed evidence.
 - Storing reports in the release database: release databases are immutable and

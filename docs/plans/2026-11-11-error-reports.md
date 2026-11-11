@@ -18,18 +18,18 @@
 
 ## Global Constraints
 
-- No free-text field anywhere: unknown members are `invalid_request`; every string is a handle, a closed-list value, an ISO date, a normalized document number or a `source_url` under the design's character and host rules.
+- No free-text field and no URL anywhere: unknown members are `invalid_request`; every string is a handle, a closed-list value, an ISO date or a normalized document number checked against the release as the design says.
 - Kinds `wrong_text`, `wrong_validity`, `broken_citation`, `missing_document`; suggestion members exactly as the design's table; `eff_from` not after `eff_to`.
-- Limits from budgets: 20 reports per account per day, 200 open per account, 100,000 open in total; closed reports deleted 90 days after closing or export. Calls share the `read` per-account bucket.
-- One open report per (account, document, anchor, kind); a repeat returns the existing report with `deduplicated: true`.
+- Limits from budgets: 20 reports per account per day, 200 open and 1,000 retained per account, 100,000 retained in total; non-open reports deleted 90 days after their last state change. Admission locks the account row and takes the reports advisory lock before counting. Calls share the `read` per-account bucket.
+- One open report per (account, group key) with group key (document_key, anchor, kind, target); a repeat returns the existing report with `deduplicated: true`. `report_issue` is annotated `readOnlyHint: false`, `idempotentHint: true`.
 - Triage never shows email or Google subject; account ids only with `--accounts`. Exports carry no account data and never write into `sources/` or the identity map.
 - Errors: MCP and web error shapes as now; auth database errors 503. Never log report contents beyond kind and report id. Go files at most 400 lines; Markdown at most 300 lines.
 
 ## Review Focus
 
-- Free text smuggled through a typed field (a `source_url` path or query, a document number, a handle anchor): Task 2 `TestValidate_NoFreeTextChannel`.
+- Free text smuggled through a typed field (a document number such as `1/CAN-I-DISMISS-MY-EMPLOYEE`, a handle anchor, dates outside range): Task 2 `TestValidate_NoFreeTextChannel`.
 - A report against a document or anchor that is not in the release, or against a retired release: Task 2 `TestValidate_HandleResolves`.
-- Concurrent duplicate reports creating two open rows or exceeding the caps: Task 1 `TestStore_DedupeAndCapsUnderRace`.
+- Concurrent duplicate or distinct reports exceeding a cap, and submit-withdraw cycles across accounts exceeding the retained caps: Task 1 `TestStore_DedupeAndCapsUnderRace`.
 - An account reading or withdrawing another account's report: Task 4 `TestReports_OwnOnly`.
 - Triage or export leaking account identity: Task 5 `TestTriage_NoIdentityWithoutFlag` and `TestExport_NoAccountData`.
 
@@ -39,41 +39,41 @@
 
 **Files:** Create `apps/server/migrations/00004_reports.sql`, `apps/server/sql/issue_report.sql`, regenerated store, integration tests.
 
-**Interfaces:** Table per data.md with a partial unique index on (account, document_key, anchor, kind) where `state = 'open'`, `ON DELETE CASCADE` from account, indexes for retention and triage grouping. Queries: `CreateReport` (single statement: inserts unless an open duplicate exists, enforcing the account daily, account open and global open caps; returns the row and a deduplicated flag or a cap marker), `ListOwnReports`, `WithdrawOwnReport`, `TriageGroups`, `TriageReports`, `DecideReports`, `ExportAccepted` (marks `exported_at`), `DeleteClosedReports` (batch limit and retention parameters).
+**Interfaces:** Table per data.md with a partial unique index on (account, document_key, anchor, kind, target) where `state = 'open'`, `ON DELETE CASCADE` from account, indexes for retention and triage grouping. Queries: `CreateReport` (used inside the admission transaction after the account row lock and the reports advisory lock: inserts unless an open duplicate exists and the daily, open and retained caps allow; returns the row and a deduplicated flag or a cap marker), `ListOwnReports` (cursor pages of 100), `WithdrawOwnReport`, `TriageGroups`, `TriageReports`, `DecideReports`, `AssignExportBatch` (one statement assigning a batch id to accepted reports without one), `BatchReports`, `DeleteClosedReports` (batch limit and retention parameters).
 
-- [ ] **Step 1: Failing tests** (integration): `TestMigrate_00004RoundTrip`; `TestStore_DedupeAndCapsUnderRace` (concurrent identical reports on separate connections; caps at their boundaries); `TestStore_OwnRowsOnly`; `TestStore_ExportMarksOnce`; `TestStore_RetentionDeletesClosed`.
+- [ ] **Step 1: Failing tests** (integration): `TestMigrate_00004RoundTrip`; `TestStore_DedupeAndCapsUnderRace` (concurrent identical reports on separate connections; caps at their boundaries); `TestStore_OwnRowsOnly`; `TestStore_ExportBatchAssignOnce`; `TestStore_RetentionDeletesClosed`.
 - [ ] **Step 2: Implement**; run `make generate` and `make sqlc-check`; commit `feat(server): error report schema`.
 
 ### Task 2: Validation, dedupe and limits
 
-**Files:** Create `apps/server/internal/reports/{report.go,validate.go,source_url.go,service.go}` with tests.
+**Files:** Create `apps/server/internal/reports/{report.go,validate.go,number.go,service.go}` with tests; the release's number segment set comes from one query over `document.number_norm`, cached with the engine.
 
-**Interfaces:** `reports.Input{Country, Kind, Handle, Release string; Suggestion map[string]json.RawMessage}`; `reports.Service{Store; Resolver (release lease and engine lookup of a document and anchor); Clock}` with `Submit(ctx, accountID, Input) (Result, error)` returning `{ReportID int64; State string; Deduplicated bool}`; typed errors mapping to `invalid_request`, `rate_limited`, `release_expired`, `unavailable`.
+**Interfaces:** `reports.Input{Country, Kind, Handle, Release string; Suggestion map[string]json.RawMessage}`; `reports.Service{Store; Resolver (release lease, engine lookup of a document, anchor and document number, and the set of number segments of the release); Clock}` with `Submit(ctx, accountID, Input) (Result, error)` returning `{ReportID int64; State string; Deduplicated bool}`; typed errors mapping to `invalid_request`, `rate_limited`, `release_expired`, `unavailable`.
 
-- [ ] **Step 1: Failing tests:** `TestValidate_KindSuggestionMatrix`; `TestValidate_NoFreeTextChannel` (percent-encoding, spaces, non-ASCII, extra query keys, other hosts, user info, ports, fragments, long values, document numbers outside the grammar); `TestValidate_Dates`; `TestValidate_HandleResolves` (unknown document, unknown anchor, retired release); `TestSubmit_DedupeAndCaps`; `TestSubmit_BlockedAccount`.
+- [ ] **Step 1: Failing tests:** `TestValidate_KindSuggestionMatrix`; `TestValidate_NoFreeTextChannel` (unknown members, `source_url`, numbers whose segments are not in the release, numbers outside the grammar or year range, long values); `TestValidate_Dates`; `TestValidate_HandleResolves` (unknown document, unknown anchor, retired release); `TestSubmit_DedupeAndCaps`; `TestSubmit_BlockedAccount`.
 - [ ] **Step 2: Implement**; document numbers use the corpus normalizer and the reference parser's grammar; commit `feat(server): error report validation`.
 
 ### Task 3: MCP tool
 
 **Files:** Modify `apps/server/internal/mcpapi` (register `report_issue`, schema with enums and per-kind suggestion members, `read` bucket), the `guide` text; tests.
 
-- [ ] **Step 1: Failing tests:** `TestReportIssue_SchemaHasNoFreeText`; `TestReportIssue_ResultShapeAndDedupe`; `TestReportIssue_ErrorsAndLimits`; `TestGuide_MentionsReporting`.
+- [ ] **Step 1: Failing tests:** `TestReportIssue_SchemaHasNoFreeText`; `TestReportIssue_Annotations` (through `tools/list`); `TestReportIssue_ResultShapeAndDedupe`; `TestReportIssue_ErrorsAndLimits`; `TestGuide_MentionsReporting`.
 - [ ] **Step 2: Implement**; commit `feat(server): report_issue MCP tool`.
 
 ### Task 4: Web routes and contract
 
 **Files:** Modify `apps/server/internal/accountapi` (or a new `reportsapi` package if accountapi would pass 400 lines per file), `packages/schema/openapi.yaml`, regenerated client, contract tests.
 
-- [ ] **Step 1: Failing tests:** `TestReports_SubmitEqualsMCP`; `TestReports_OwnOnly`; `TestReports_WithdrawOpenOnly`; contract tests for the three routes.
+- [ ] **Step 1: Failing tests:** `TestReports_SubmitEqualsMCP`; `TestReports_OwnOnly`; `TestReports_WithdrawOpenOnly`; `TestReports_OwnListPagination` (reach and withdraw a report beyond the first page); contract tests for the three routes.
 - [ ] **Step 2: Implement**; `make schema-gen`; commit `feat(server): error report web routes`.
 
 ### Task 5: Triage CLI and export
 
 **Files:** Modify `apps/server/internal/app/admin.go` (or a new `admin_reports.go`), tests.
 
-**Interfaces:** `server admin reports list [--kind K] [--state S]`, `show <document_key> <anchor> <kind> [--accounts]`, `accept|reject (<group>|--ids ...) --by NAME`, `export --out DIR`.
+**Interfaces:** `server admin reports list [--kind K] [--state S]`, `show <document_key> <anchor> <kind> [--accounts]`, `accept|reject (<group>|--ids ...) --by NAME`, `export --out DIR [--batch ID]`.
 
-- [ ] **Step 1: Failing tests:** `TestTriage_GroupsAndCounts`; `TestTriage_NoIdentityWithoutFlag`; `TestDecide_GroupAndIDs`; `TestExport_DraftFormats` (corrections draft parses as the corrections YAML shape with TODO evidence; JSONL lines); `TestExport_NoAccountData`; `TestExport_OnlyNewGroups`.
+- [ ] **Step 1: Failing tests:** `TestTriage_GroupsAndCounts`; `TestTriage_NoIdentityWithoutFlag`; `TestDecide_GroupAndIDs`; `TestExport_DraftFormats` (corrections draft parses as the corrections YAML shape with TODO evidence, only document-level groups with one agreed non-empty set; others in validity-review.jsonl); `TestExport_NoAccountData`; `TestExport_BatchRecovery` (a failure after the batch transaction is repaired by `--batch`; an existing directory is refused); `TestExport_OnlyUnbatchedReports`.
 - [ ] **Step 2: Implement**; commit `feat(server): error report triage and export`.
 
 ### Task 6: Wiring, retention and runbook
