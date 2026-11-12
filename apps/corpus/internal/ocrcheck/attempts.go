@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"strconv"
 
 	"danny.vn/trachuan/apps/corpus/internal/ocrstore"
 	"danny.vn/trachuan/apps/corpus/internal/store"
@@ -28,9 +29,19 @@ func (r *Runner) begin(ctx context.Context, group []prepared, o Options) ([]Atte
 	if err != nil {
 		return nil, err
 	}
+	batchBytes := len(`{"requests":[]}`) - 1
+	if o.Batch {
+		for _, p := range group {
+			batchBytes += p.batchSize - len("-9223372036854775807") + 1 + len(strconv.FormatInt(p.doc.Entry.ID, 10))
+		}
+	}
 	intents := make([]Intent, len(group))
 	for i, p := range group {
 		u := Usage{Final: p.worst == 0, CountedInput: p.inputTokens, MaxOutput: maxOutputTokens, ReservationMicroUSD: p.worst, Rendering: p.rendering, PDFPages: p.pages}
+		u.RequestBytes = p.requestBytes
+		if o.Batch && p.batchSize > 0 {
+			u.RequestBytes = batchBytes
+		}
 		intents[i] = Intent{Entry: p.doc.Entry, Usage: u}
 	}
 	mode := "direct"
@@ -64,7 +75,9 @@ func (r *Runner) direct(ctx context.Context, p prepared, o Options, s *Summary) 
 	response, callErr := r.Client.Direct(ctx, p.request)
 	if !response.FinalUsage {
 		if preGenerationFailure(response, callErr) {
-			response.Usage = errorUsage(callErr)
+			metadata := errorUsage(callErr)
+			metadata.ResponseEvents = response.Usage.ResponseEvents
+			response.Usage = metadata
 		} else {
 			return r.unknown(ctx, a, p.doc, response, callErr, o, s)
 		}
@@ -83,6 +96,8 @@ func (r *Runner) unknown(ctx context.Context, a Attempt, doc Document, response 
 	metadata := errorUsage(callErr)
 	u.APIStatus = metadata.APIStatus
 	u.RequestID = metadata.RequestID
+	u.ErrorClass = metadata.ErrorClass
+	u.ErrorType = metadata.ErrorType
 	if err := r.Repository.Finish(ctx, a, doc.Entry, u, nil, errorReason(callErr)); err != nil {
 		return fmt.Errorf("record uncertain OCR billing: %w", err)
 	}
@@ -104,6 +119,8 @@ func (r *Runner) finish(ctx context.Context, a Attempt, ready prepared, response
 		metadata := errorUsage(callErr)
 		u.APIStatus = metadata.APIStatus
 		u.RequestID = metadata.RequestID
+		u.ErrorClass = metadata.ErrorClass
+		u.ErrorType = metadata.ErrorType
 	} else {
 		switch response.Stop {
 		case "end_turn":
@@ -166,12 +183,14 @@ func safeError(err error) error {
 	if errors.As(err, &e) {
 		return e
 	}
-	return &APIError{Reason: errorReason(err)}
+	safe := sanitizeSDKError(err).(*APIError)
+	safe.Reason = errorReason(err)
+	return safe
 }
 func errorUsage(err error) Usage {
 	var e *APIError
 	if errors.As(safeError(err), &e) {
-		return Usage{APIStatus: e.Status, RequestID: e.RequestID}
+		return Usage{APIStatus: e.Status, RequestID: e.RequestID, ErrorClass: e.Class, ErrorType: e.Type}
 	}
 	return Usage{}
 }

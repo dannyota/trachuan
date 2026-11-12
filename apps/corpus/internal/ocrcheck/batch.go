@@ -41,7 +41,8 @@ func (r *Runner) submit(ctx context.Context, group []prepared, o Options, s *Sum
 		var apiErr *APIError
 		if errors.As(safeError(err), &apiErr) && apiErr.Status >= 400 && apiErr.Status < 500 && apiErr.Status != 408 && apiErr.RequestID != "" {
 			for i, a := range attempts {
-				u := Usage{Final: true, APIStatus: apiErr.Status, RequestID: apiErr.RequestID}.withReservation(a.Usage)
+				u := errorUsage(err).withReservation(a.Usage)
+				u.Final = true
 				if finishErr := r.Repository.Finish(ctx, a, docs[i].Entry, u, nil, "api_error"); finishErr != nil {
 					return fmt.Errorf("record rejected OCR batch: %w", finishErr)
 				}
@@ -52,7 +53,7 @@ func (r *Runner) submit(ctx context.Context, group []prepared, o Options, s *Sum
 			return apiErr
 		}
 		// The provider may have accepted a request whose response was lost.
-		if markErr := r.Repository.Uncertain(ctx, attempts[0].SubmissionID); markErr != nil {
+		if markErr := r.Repository.UncertainWithError(ctx, attempts, errorUsage(err)); markErr != nil {
 			return fmt.Errorf("record uncertain OCR batch: %w", markErr)
 		}
 		for i, a := range attempts {

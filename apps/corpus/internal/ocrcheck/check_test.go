@@ -343,6 +343,18 @@ func (s *memoryRepository) Uncertain(_ context.Context, submission string) error
 	}
 	return nil
 }
+func (s *memoryRepository) UncertainWithError(ctx context.Context, attempts []Attempt, metadata Usage) error {
+	if err := s.Uncertain(ctx, attempts[0].SubmissionID); err != nil {
+		return err
+	}
+	for i := range s.attempts {
+		if s.attempts[i].SubmissionID == attempts[0].SubmissionID {
+			u := &s.attempts[i].Usage
+			u.ErrorClass, u.ErrorType = metadata.ErrorClass, metadata.ErrorType
+		}
+	}
+	return nil
+}
 func (s *memoryRepository) Abandon(_ context.Context, submission string) error {
 	for i := range s.attempts {
 		if s.attempts[i].SubmissionID == submission {

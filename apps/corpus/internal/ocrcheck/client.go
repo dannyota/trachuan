@@ -51,8 +51,8 @@ type Client interface {
 
 // APIError keeps only safe provider metadata, never the SDK request or body.
 type APIError struct {
-	Status            int
-	RequestID, Reason string
+	Status                         int
+	RequestID, Reason, Class, Type string
 }
 
 // Error returns status and request identity without the provider body.

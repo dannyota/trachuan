@@ -160,6 +160,32 @@ func (d *Database) Uncertain(ctx context.Context, submission string) error {
 	return changed(n, err)
 }
 
+// UncertainWithError records safe error metadata atomically for a failed batch submission.
+func (d *Database) UncertainWithError(ctx context.Context, attempts []Attempt, metadata Usage) error {
+	tx, err := d.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin uncertain OCR batch: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	q := store.New(tx)
+	for _, a := range attempts {
+		u := a.Usage
+		u.ErrorClass, u.ErrorType = metadata.ErrorClass, metadata.ErrorType
+		data, encodeErr := json.Marshal(u)
+		if encodeErr != nil {
+			return fmt.Errorf("encode uncertain OCR usage: %w", encodeErr)
+		}
+		n, updateErr := q.FinishOCRCheckAttempt(ctx, store.FinishOCRCheckAttemptParams{ID: a.ID, State: "uncertain", Reason: "api_error", Usage: data})
+		if updateErr = changed(n, updateErr); updateErr != nil {
+			return updateErr
+		}
+	}
+	if err = tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit uncertain OCR batch: %w", err)
+	}
+	return nil
+}
+
 // Abandon records the operator decision without changing the usage reservation.
 func (d *Database) Abandon(ctx context.Context, submission string) error {
 	n, err := store.New(d.pool).AbandonOCRCheckAttempts(ctx, submission)

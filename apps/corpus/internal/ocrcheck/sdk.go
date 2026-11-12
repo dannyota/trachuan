@@ -2,14 +2,19 @@ package ocrcheck
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
+	"io"
 	"net"
+	"net/http"
 	"os"
+	"syscall"
 	"time"
 
 	"github.com/anthropics/anthropic-sdk-go/v2"
 	"github.com/anthropics/anthropic-sdk-go/v2/option"
+	"golang.org/x/net/http2"
 )
 
 // SDKClient uses only the official Claude SDK and never returns its raw errors.
@@ -36,12 +41,24 @@ func (s *SDKClient) CountTokens(ctx context.Context, r Request) (int64, error) {
 
 // Direct streams long requests and keeps partial usage on all error paths.
 func (s *SDKClient) Direct(ctx context.Context, r Request) (Response, error) {
-	stream := s.client.Messages.NewStreaming(ctx, messageParams(r))
+	events := 0
+	stream := s.client.Messages.NewStreaming(ctx, messageParams(r), option.WithMiddleware(func(req *http.Request, next option.MiddlewareNext) (*http.Response, error) {
+		resp, err := next(req)
+		if err == nil && resp != nil && resp.Body != nil {
+			resp.Body = countingStreamBody{ReadCloser: resp.Body, events: &events}
+		}
+		return resp, err
+	}))
 	defer func() { _ = stream.Close() }()
 	var message anthropic.Message
 	ended := false
 	finalUsage := false
-	response := func() Response { v := fromMessage(message); v.FinalUsage = finalUsage; return v }
+	response := func() Response {
+		v := fromMessage(message)
+		v.FinalUsage = finalUsage
+		v.Usage.ResponseEvents = events
+		return v
+	}
 	for stream.Next() {
 		event := stream.Current()
 		if err := message.Accumulate(event); err != nil {
@@ -59,7 +76,7 @@ func (s *SDKClient) Direct(ctx context.Context, r Request) (Response, error) {
 		return result, sanitizeSDKError(err)
 	}
 	if !ended {
-		return result, &APIError{Reason: "api_error"}
+		return result, &APIError{Reason: "api_error", Class: "incomplete_stream"}
 	}
 	return result, nil
 }
@@ -140,13 +157,62 @@ func sanitizeSDKError(err error) error {
 	if err == nil {
 		return nil
 	}
+	reason := "api_error"
 	var apiErr *anthropic.Error
-	if errors.As(err, &apiErr) {
-		return &APIError{Status: apiErr.StatusCode, RequestID: apiErr.RequestID, Reason: "api_error"}
-	}
 	var timeout net.Error
-	if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) || (errors.As(err, &timeout) && timeout.Timeout()) {
-		return &APIError{Reason: "timeout"}
+	if !errors.As(err, &apiErr) && (errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) || (errors.As(err, &timeout) && timeout.Timeout())) {
+		reason = "timeout"
 	}
-	return &APIError{Reason: "api_error"}
+	result := &APIError{Reason: reason, Class: errorClass(err)}
+	if apiErr != nil {
+		result.Status = apiErr.StatusCode
+		result.RequestID = apiErr.RequestID
+	}
+	inner := err
+	for {
+		next := errors.Unwrap(inner)
+		if next == nil {
+			break
+		}
+		inner = next
+	}
+	result.Type = fmt.Sprintf("%T", inner)
+	return result
+}
+
+func errorClass(err error) string {
+	var api *anthropic.Error
+	var timeout net.Error
+	var stream http2.StreamError
+	var streamPtr *http2.StreamError
+	var goaway http2.GoAwayError     //nolint:staticcheck // The SDK transport can still return this deprecated type.
+	var goawayPtr *http2.GoAwayError //nolint:staticcheck // The SDK transport can still return this deprecated type.
+	var record *tls.RecordHeaderError
+	var alert tls.AlertError
+	var cert *tls.CertificateVerificationError
+	var dns *net.DNSError
+	switch {
+	case errors.As(err, &api):
+		return "http_status"
+	case errors.Is(err, context.DeadlineExceeded):
+		return "timeout"
+	case errors.Is(err, context.Canceled):
+		return "canceled"
+	case errors.As(err, &timeout) && timeout.Timeout():
+		return "timeout"
+	case errors.Is(err, io.EOF), errors.Is(err, io.ErrUnexpectedEOF):
+		return "eof"
+	case errors.Is(err, syscall.ECONNRESET):
+		return "connection_reset"
+	case errors.Is(err, syscall.EPIPE):
+		return "broken_pipe"
+	case errors.As(err, &stream), errors.As(err, &streamPtr), errors.As(err, &goaway), errors.As(err, &goawayPtr):
+		return "http2_stream"
+	case errors.As(err, &record), errors.As(err, &alert), errors.As(err, &cert):
+		return "tls"
+	case errors.As(err, &dns):
+		return "dns"
+	default:
+		return "other"
+	}
 }
