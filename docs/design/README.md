@@ -12,6 +12,7 @@ Intended behavior of trachuan. Decisions with alternatives are in the
 | [taxonomy](taxonomy.md)                             | Subject tree import, classification layers, evaluation gate                                   |
 | [pipeline](pipeline.md)                             | Write path on Temporal, stages, batch submissions, release artifact                           |
 | [sources](sources.md)                               | Vietnam discovery, relation context, secondary source and loss approval                       |
+| [relations from text](relations-text.md)            | Provision-level amend, repeal and suspend relations parsed from article text, fail closed     |
 | [normalization](normalization.md)                   | Dates, numbers, source status mapping and consolidated status derivation                      |
 | [calibration](calibration.md)                       | Provisional abstention threshold                                                              |
 | [text extraction](text-extraction.md)               | Provision trees from HTML transcriptions and attached files when the source has no tree       |
