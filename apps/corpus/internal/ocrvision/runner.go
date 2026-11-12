@@ -2,10 +2,10 @@ package ocrvision
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
-	"sync"
 
 	"danny.vn/trachuan/apps/corpus/internal/ocrcheck"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -16,7 +16,7 @@ type textStore interface {
 }
 type renderer interface {
 	Preflight(context.Context) error
-	RenderDPI(context.Context, []byte, int, int) (ocrcheck.Rendered, error)
+	RenderLimited(context.Context, []byte, ocrcheck.RenderLimits) (ocrcheck.Rendered, error)
 }
 
 // Runner processes documents serially and pages with at most four workers.
@@ -25,6 +25,7 @@ type Runner struct {
 	Store      textStore
 	Renderer   renderer
 	CountPages func(context.Context, []byte) (int, error)
+	textLimit  int
 }
 
 // Document names a PDF listed in a verified fetch bundle.
@@ -133,7 +134,11 @@ func (r *Runner) document(ctx context.Context, doc Document, o Options, b *budge
 		res.outcome = "skipped_limit"
 		return res
 	}
-	images, err := r.Renderer.RenderDPI(ctx, data, int(^uint(0)>>1), 200)
+	images, err := r.Renderer.RenderLimited(ctx, data, ocrcheck.RenderLimits{DPI: 200, PageBytes: 7_000_000, TotalBytes: 512_000_000})
+	if errors.Is(err, ocrcheck.PageTooLarge) {
+		res.outcome = "page_too_large"
+		return res
+	}
 	if err != nil || len(images.Pages) != pages {
 		res.outcome = "render_failed"
 		return res
@@ -162,32 +167,4 @@ func (r *Runner) document(ctx context.Context, doc Document, o Options, b *budge
 		res.outcome = "present"
 	}
 	return res
-}
-
-func (r *Runner) pages(ctx context.Context, images [][]byte, b *budget) ([]string, bool) {
-	texts := make([]string, len(images))
-	jobs := make(chan int)
-	var wg sync.WaitGroup
-	var mu sync.Mutex
-	success := true
-	for range min(4, len(images)) {
-		wg.Go(func() {
-			for i := range jobs {
-				text, err := r.Client.recognize(ctx, images[i], b)
-				if err != nil {
-					mu.Lock()
-					success = false
-					mu.Unlock()
-				} else {
-					texts[i] = text
-				}
-			}
-		})
-	}
-	for i := range images {
-		jobs <- i
-	}
-	close(jobs)
-	wg.Wait()
-	return texts, success
 }

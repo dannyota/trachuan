@@ -42,9 +42,9 @@ type memoryRenderer struct {
 }
 
 func (r *memoryRenderer) Preflight(context.Context) error { return nil }
-func (r *memoryRenderer) RenderDPI(_ context.Context, _ []byte, _ int, dpi int) (ocrcheck.Rendered, error) {
+func (r *memoryRenderer) RenderLimited(_ context.Context, _ []byte, limits ocrcheck.RenderLimits) (ocrcheck.Rendered, error) {
 	r.calls++
-	if dpi != 200 {
+	if limits.DPI != 200 {
 		return ocrcheck.Rendered{}, fmt.Errorf("wrong dpi")
 	}
 	return ocrcheck.Rendered{Pages: r.pages}, r.err

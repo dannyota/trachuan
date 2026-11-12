@@ -22,12 +22,13 @@ const EngineID = "vision-ocr/builtin-latest/poppler-200"
 
 // Config supplies authentication and test seams. Production uses the fixed URL.
 type Config struct {
-	Project     string
-	TokenSource oauth2.TokenSource
-	BaseURL     string
-	HTTP        *http.Client
-	Sleep       func(context.Context, time.Duration) error
-	Wait        func(context.Context) error
+	Project      string
+	TokenSource  oauth2.TokenSource
+	BaseURL      string
+	HTTP         *http.Client
+	Sleep        func(context.Context, time.Duration) error
+	Wait         func(context.Context) error
+	TokenTimeout time.Duration
 }
 
 // Client sends one page per request without logging request or response content.
@@ -37,6 +38,7 @@ type Client struct {
 	http             *http.Client
 	sleep            func(context.Context, time.Duration) error
 	wait             func(context.Context) error
+	tokenTimeout     time.Duration
 }
 
 // NewClient constructs an invocation-scoped client with a 300 request/minute cap.
@@ -44,19 +46,14 @@ func NewClient(cfg Config) *Client {
 	if cfg.BaseURL == "" {
 		cfg.BaseURL = visionURL
 	}
-	if cfg.HTTP == nil {
-		cfg.HTTP = &http.Client{}
-	}
-	transport := *cfg.HTTP
-	// Redirects must not carry the project or bearer token to another endpoint.
-	transport.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
+	transport := directHTTPClient(cfg.HTTP)
 	if cfg.Sleep == nil {
 		cfg.Sleep = sleep
 	}
 	if cfg.Wait == nil {
 		cfg.Wait = rate.NewLimiter(rate.Every(time.Minute/300), 1).Wait
 	}
-	return &Client{project: cfg.Project, baseURL: cfg.BaseURL, tokens: cfg.TokenSource, http: &transport, sleep: cfg.Sleep, wait: cfg.Wait}
+	return &Client{project: cfg.Project, baseURL: cfg.BaseURL, tokens: cfg.TokenSource, http: transport, sleep: cfg.Sleep, wait: cfg.Wait, tokenTimeout: cfg.TokenTimeout}
 }
 
 func sleep(ctx context.Context, d time.Duration) error {
@@ -78,7 +75,7 @@ func (c *Client) Preflight(ctx context.Context) error {
 	if err := ctx.Err(); err != nil {
 		return fmt.Errorf("vision authentication canceled: %w", err)
 	}
-	token, err := c.tokens.Token()
+	token, err := c.token(ctx)
 	if err != nil || token == nil || !token.Valid() {
 		return fmt.Errorf("GOOGLE_APPLICATION_CREDENTIALS must provide usable credentials; GOOGLE_CLOUD_PROJECT is required")
 	}
@@ -143,7 +140,7 @@ func (c *Client) attempt(ctx context.Context, png []byte, b *budget) (string, er
 	if err := c.wait(ctx); err != nil {
 		return "", requestError{}
 	}
-	token, err := c.tokens.Token()
+	token, err := c.token(ctx)
 	if err != nil || token == nil || !token.Valid() {
 		return "", requestError{}
 	}
@@ -160,6 +157,8 @@ func (c *Client) attempt(ctx context.Context, png []byte, b *budget) (string, er
 	if err != nil {
 		return "", requestError{}
 	}
+	// The HTTP/2 transport must return refusals to our budgeted retry loop.
+	req.GetBody = nil
 	req.Header.Set("Authorization", "Bearer "+token.AccessToken)
 	req.Header.Set("x-goog-user-project", c.project)
 	req.Header.Set("Content-Type", "application/json")

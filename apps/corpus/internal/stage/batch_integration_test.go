@@ -4,6 +4,7 @@ package stage
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -55,6 +56,11 @@ func (*batchStage) Resolve(_ context.Context, _ Env, _ Run, it Item, _ artifact.
 func batchSetup(t *testing.T) (Env, int64, *batchStage) {
 	t.Helper()
 	pool, id := setup(t)
+	snapshot, err := json.Marshal(Snapshot{Recipes: map[string]string{"fetch": (&batchStage{}).Recipe(Snapshot{})}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	batchExec(t, pool, `UPDATE run SET snapshot=$2 WHERE id=$1`, id, snapshot)
 	return Env{DB: pool, Artifacts: artifact.Store{Root: t.TempDir()}}, id, &batchStage{}
 }
 func batchRun(env Env, id int64, s *batchStage, attempt int, heartbeat func(...any)) (BatchResult, error) {

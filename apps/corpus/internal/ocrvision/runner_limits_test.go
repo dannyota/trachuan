@@ -161,7 +161,7 @@ func TestRunner_SameBytesAreRendered(t *testing.T) {
 type checkingRenderer struct{ t *testing.T }
 
 func (checkingRenderer) Preflight(context.Context) error { return nil }
-func (r checkingRenderer) RenderDPI(_ context.Context, data []byte, _, _ int) (ocrcheck.Rendered, error) {
+func (r checkingRenderer) RenderLimited(_ context.Context, data []byte, _ ocrcheck.RenderLimits) (ocrcheck.Rendered, error) {
 	if string(data) != "verified PDF" {
 		r.t.Error("rendered replacement bytes")
 	}
