@@ -2,7 +2,8 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { components } from '@trachuan/schema/gen/openapi'
 import ReaderRail from '../../../components/ReaderRail.vue'
-import { joinedUnits } from '../../../utils/reader-units'
+import { joinedUnits, targetWarnings } from '../../../utils/reader-units'
+import { warningLink, warningTarget, warningVerb } from '../../../utils/search-results'
 import { errorMessage, messagesFor, type Language } from '../../../../i18n'
 
 definePageMeta({ signedIn: true })
@@ -205,11 +206,12 @@ watch(() => route.hash, () => { void seekAnchor() })
     <section ref="content" class="reader-content">
       <article v-for="(unit, index) in textUnits" :key="index" :data-anchor="unit.anchor">
         <h2 v-if="unit.label || unit.heading">{{ unit.label }} {{ unit.heading }}</h2>
+        <div v-if="targetWarnings(unit, key).length" class="warnings"><p v-for="(warning, i) in targetWarnings(unit, key)" :key="i"><NuxtLink v-if="warningLink(warning, release)" :to="warningLink(warning, release)!">{{ warning.number || warning.key }}</NuxtLink><span v-else>{{ warning.number || warning.key }}</span> {{ warningVerb(warning.kind, messages) }} <code v-if="warningTarget(warning).raw">{{ warningTarget(warning).text }}</code><template v-else>{{ warningTarget(warning).text }}</template><template v-if="!warning.exact"> {{ ' ' + messages.warningMissing }}</template><template v-if="warning.basis === 'vbpl_reference'"> {{ ' ' + messages.warningReference }}</template>.</p></div>
         <p class="law-text">{{ unit.text }}</p>
       </article>
       <p v-if="error" role="alert">{{ errorMessage(language, error) }} <a v-if="error === 'release_expired'" :href="`/vn/documents/${key}`">{{ messages.readerCurrent }}</a></p>
       <button v-if="next && !error" ref="sentinel" type="button" :disabled="loading" @click="load">{{ messages.readerMore }}</button>
     </section>
-    <ReaderRail v-if="release" :document="documentEntry" :nodes="nodes" :gaps="gaps" :release="release" :hash="hash" />
+    <ReaderRail v-if="release" :document="documentEntry" :nodes="nodes" :gaps="gaps" :release="release" :hash="hash" :units="textUnits" :document-key="key" />
   </div>
 </template>

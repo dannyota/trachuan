@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { components } from '@trachuan/schema/gen/openapi'
 import { messagesFor, statusMessage, type Language } from '../../i18n'
-import { readerLink, resultHits, validityInk } from '../utils/search-results'
+import { readerLink, resultHits, validityInk, warningLink, warningTarget, warningVerb } from '../utils/search-results'
 
 const props = defineProps<{ result: components['schemas']['SearchResult'] }>()
 const language = useState<Language>('language', () => 'vi')
@@ -54,10 +54,14 @@ function label(status: string | undefined) {
         </div>
         <h2>{{ hit.citation }}</h2>
         <span :class="`stamp ink-${validityInk(hit.doc ? result.documents?.[hit.doc]?.status.class : undefined)}`">{{ label(hit.doc ? result.documents?.[hit.doc]?.status.class : undefined) }}</span>
+        <div v-if="hit.warnings?.length || hit.warnings_omitted" class="warnings">
+          <p v-for="(warning, i) in hit.warnings" :key="i"><NuxtLink v-if="result.release && warningLink(warning, result.release)" :to="warningLink(warning, result.release)!">{{ warning.number || warning.key }}</NuxtLink><span v-else>{{ warning.number || warning.key }}</span> {{ warningVerb(warning.kind, messages) }} <code v-if="warningTarget(warning).raw">{{ warningTarget(warning).text }}</code><template v-else>{{ warningTarget(warning).text }}</template><template v-if="!warning.exact"> {{ ' ' + messages.warningMissing }}</template><template v-if="warning.basis === 'vbpl_reference'"> {{ ' ' + messages.warningReference }}</template>.</p>
+          <NuxtLink v-if="hit.warnings_omitted && result.release && readerLink(hit, result.release)" :to="readerLink(hit, result.release)!">{{ messages.warningMore.replace('{n}', String(hit.warnings_omitted)) }}</NuxtLink><span v-else-if="hit.warnings_omitted">{{ messages.warningMore.replace('{n}', String(hit.warnings_omitted)) }}</span>
+        </div>
         <ul v-if="hit.gaps?.length" class="hit-gaps"><li v-for="(gap, i) in hit.gaps" :key="i">{{ gapLabel(gap.kind) }}</li></ul>
         <p class="law-text">{{ hit.text ?? hit.snippet }}</p>
         <div class="relations">
-          <span v-for="(relation, i) in [...(hit.warnings || []), ...(result.documents?.[hit.doc || '']?.related || []), ...(hit.relations || [])]" :key="i" class="relation-chip">{{ 'dir' in relation ? relation.dir : '' }} {{ relation.kind }} {{ 'number' in relation ? relation.number : '' }}</span>
+          <span v-for="(relation, i) in [...(result.documents?.[hit.doc || '']?.related || []), ...(hit.relations || [])]" :key="i" class="relation-chip">{{ 'dir' in relation ? relation.dir : '' }} {{ relation.kind }} {{ 'number' in relation ? relation.number : '' }}</span>
         </div>
         <div class="nodes"><template v-for="code in hit.nodes" :key="code"><NuxtLink v-if="result.nodes?.[code]?.name" class="relation-chip" :to="`/vn/topics/${code}`">{{ result.nodes[code]?.name }}</NuxtLink></template></div>
         <NuxtLink v-if="hit.doc && result.release && readerLink(hit, result.release)" :to="readerLink(hit, result.release)!">{{ messages.searchRead }}</NuxtLink>

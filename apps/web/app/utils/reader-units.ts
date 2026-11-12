@@ -22,3 +22,8 @@ export function joinedUnits(units: Unit[]): Unit[] {
   }
   return result
 }
+
+
+export function targetWarnings(unit: Unit, key: string): NonNullable<Unit['warnings']> {
+  return (unit.warnings || []).filter(warning => warning.target === `${key}#${unit.anchor}`)
+}
