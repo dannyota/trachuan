@@ -19,6 +19,7 @@ const release = ref('')
 const hash = ref('')
 const documentEntry = ref<Document>()
 const gaps = ref<Gap[]>([])
+const nodes = ref<components['schemas']['NodeIndex']>({})
 const rawUnits = ref<Unit[]>([])
 const units = computed(() => joinedUnits(rawUnits.value))
 const outline = computed(() => units.value.filter(unit => unit.kind === 'outline'))
@@ -86,6 +87,7 @@ async function requestPage(version: number, signal: AbortSignal) {
       hash.value = page.fetch_sha256 || ''
       documentEntry.value = page.item.document
     }
+    Object.assign(nodes.value, page.nodes || {})
     rawUnits.value.push(...(page.item.units || []))
     gaps.value.push(...(page.item.gaps || []))
     next.value = page.item.next || ''
@@ -178,6 +180,7 @@ watch([key, () => route.query.release], async () => {
   hash.value = ''
   documentEntry.value = undefined
   gaps.value = []
+  nodes.value = {}
   rawUnits.value = []
   next.value = ''
   error.value = ''
@@ -207,6 +210,6 @@ watch(() => route.hash, () => { void seekAnchor() })
       <p v-if="error" role="alert">{{ errorMessage(language, error) }} <a v-if="error === 'release_expired'" :href="`/vn/documents/${key}`">{{ messages.readerCurrent }}</a></p>
       <button v-if="next && !error" ref="sentinel" type="button" :disabled="loading" @click="load">{{ messages.readerMore }}</button>
     </section>
-    <ReaderRail v-if="release" :document="documentEntry" :gaps="gaps" :release="release" :hash="hash" />
+    <ReaderRail v-if="release" :document="documentEntry" :nodes="nodes" :gaps="gaps" :release="release" :hash="hash" />
   </div>
 </template>

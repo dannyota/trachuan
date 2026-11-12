@@ -11,14 +11,14 @@ test('shows the retry delay on rate limiting', async ({ page }) => {
   await expect(page.getByRole('alert')).toContainText('17')
 })
 
-test('restarts an expired pinned search without the release', async ({ page }) => {
-  const bodies: { release?: string, limit: number }[] = []
+test('stops paging when the pinned release expires', async ({ page }) => {
+  const bodies: { release?: string, cursor?: string, limit: number }[] = []
   await page.route('**/api/v1/me', route => route.fulfill({ json: { id: 1, email: 'test@example.invalid', created_at: '2026-01-01T00:00:00Z', csrf_token: 'token' } }))
   await page.route('**/api/v1/search', route => {
     const body = route.request().postDataJSON()
     bodies.push(body)
     if (body.release) return route.fulfill({ status: 409, json: { error: { code: 'release_expired', message: 'expired' } } })
-    return route.fulfill({ json: { release: bodies.length === 1 ? 'r1' : 'r2', abstain: false, hits: [{ handle: 'vn:vbpl:1', doc: 'vn:vbpl:1', citation: 'Citation', complete: true }], documents: { 'vn:vbpl:1': { status: { current: true }, text_source: 'source_tree', text_complete: true } } } })
+    return route.fulfill({ json: { release: 'r1', next_cursor: 'cursor-1', abstain: false, hits: [{ handle: 'vn:vbpl:1', doc: 'vn:vbpl:1', citation: 'Citation', complete: true }], documents: { 'vn:vbpl:1': { status: { current: true }, text_source: 'source_tree', text_complete: true } } } })
   })
   await page.goto('/')
   await expect(page.getByRole('link', { name: /account|tài khoản/i })).toBeVisible()
@@ -26,9 +26,10 @@ test('restarts an expired pinned search without the release', async ({ page }) =
   await page.locator('#search-query').fill('query')
   await page.locator('form').evaluate(form => (form as HTMLFormElement).requestSubmit())
   await page.getByRole('button', { name: /show more|xem thêm/i }).click()
-  await expect.poll(() => bodies.length).toBe(3)
-  expect(bodies.map(({ limit, release }) => ({ limit, release }))).toEqual([{ limit: 20, release: undefined }, { limit: 50, release: 'r1' }, { limit: 50, release: undefined }])
-  await expect(page.getByRole('link', { name: /read document|đọc văn bản/i })).toHaveAttribute('href', /release=r2/)
+  await expect(page.getByRole('alert')).toContainText(/the release has expired|phiên bản đã hết hạn/i)
+  await expect(page.getByRole('button', { name: /show more|xem thêm/i })).toHaveCount(0)
+  expect(bodies.map(({ limit, release, cursor }) => ({ limit, release, cursor }))).toEqual([{ limit: 20, release: undefined, cursor: undefined }, { limit: 20, release: 'r1', cursor: 'cursor-1' }])
+  await expect(page.getByRole('link', { name: /read document|đọc văn bản/i })).toHaveAttribute('href', /release=r1/)
 })
 
 test('renders compact and full evidence as text and shows gaps and abstention', async ({ page }) => {

@@ -75,3 +75,8 @@ it('uses matched route metadata to decide whether to load a session', async () =
     vi.unstubAllGlobals()
   }
 })
+
+it('keeps only valid topic codes in search login destinations', () => {
+  expect(safeNext('/vn/search?node=12.3.c4.m5&q=private')).toBe('/vn/search?node=12.3.c4.m5')
+  for (const code of ['0', '01', '1.2.m3', '1.2.c0', '1.2.c3.p4']) expect(safeNext(`/vn/search?node=${code}`)).toBe('/vn/search')
+})
