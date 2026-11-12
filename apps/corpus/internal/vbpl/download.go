@@ -56,7 +56,7 @@ func (c *Client) Download(ctx context.Context, _ string, f File, dir string, lim
 			return nil
 		})
 		closeErr := tmp.Close()
-		contextErr := sourcegate.OutcomeContextError(ctx, status, reqErr)
+		contextErr := sourcegate.OutcomeContextError(ctx, status, http.StatusOK, reqErr)
 		if contextErr != nil {
 			reqErr = contextErr
 		}
@@ -90,7 +90,7 @@ func (c *Client) Download(ctx context.Context, _ string, f File, dir string, lim
 		}
 		if retry && ctx.Err() == nil {
 			if e := c.sleep(ctx, delay); e != nil {
-				if contextErr := sourcegate.OutcomeContextError(ctx, status, e); contextErr != nil {
+				if contextErr := sourcegate.OutcomeContextError(ctx, status, http.StatusOK, e); contextErr != nil {
 					return Downloaded{}, contextErr
 				}
 				if ctx.Err() == nil {
@@ -118,7 +118,7 @@ func (c *Client) ETag(ctx context.Context, target string) (string, error) {
 	}
 	var headers http.Header
 	status, err := c.request(ctx, http.MethodGet, target, nil, true, requestOptions{ranged: true, headers: &headers}, func(r io.Reader) error { _, e := io.Copy(io.Discard, io.LimitReader(r, 1)); return e })
-	if contextErr := sourcegate.OutcomeContextError(ctx, status, err); contextErr != nil {
+	if contextErr := sourcegate.OutcomeContextError(ctx, status, http.StatusPartialContent, err); contextErr != nil {
 		return "", contextErr
 	}
 	if errors.Is(err, sourcegate.ErrSourcePaused) {

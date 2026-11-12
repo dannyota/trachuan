@@ -1,22 +1,25 @@
 package sourcegate
 
 import (
-	"bufio"
+	"bytes"
 	"context"
 	"io"
 	"time"
 )
 
-// ResponsePrefix returns at most 4096 bytes for inspection and a reader that
-// replays the full body, including any terminal read error after the prefix.
-// Inspection takes at most five seconds or the remaining request deadline.
-// Expiry closes the response body to unblock its read.
-func ResponsePrefix(ctx context.Context, body io.Reader, closer io.Closer) ([]byte, io.Reader) {
+// ResponsePrefix inspects at most 4096 bytes and replays the full body and error.
+// A success response uses only its request deadline. Other statuses get at most
+// five seconds of inspection; expiry closes their body. A recognized challenge
+// ends inspection as soon as its bytes arrive.
+func ResponsePrefix(ctx context.Context, body io.Reader, closer io.Closer, status, success int, challenge func([]byte) bool) ([]byte, io.Reader) {
+	if status == success {
+		prefix, err := readResponsePrefix(body, challenge)
+		return replayResponsePrefix(prefix, body, err)
+	}
 	inspection, cancel := context.WithTimeout(ctx, 5*time.Second)
 	done := make(chan struct{})
 	stop := context.AfterFunc(inspection, func() { _ = closer.Close(); close(done) })
-	reader := bufio.NewReaderSize(body, 4096)
-	prefix, err := reader.Peek(4096)
+	prefix, err := readResponsePrefix(body, challenge)
 	if !stop() {
 		<-done
 	}
@@ -24,11 +27,32 @@ func ResponsePrefix(ctx context.Context, body io.Reader, closer io.Closer) ([]by
 		err = inspection.Err()
 	}
 	cancel()
-	if err == nil {
-		return prefix, reader
+	return replayResponsePrefix(prefix, body, err)
+}
+
+func readResponsePrefix(body io.Reader, challenge func([]byte) bool) ([]byte, error) {
+	prefix := make([]byte, 4096)
+	size := 0
+	for size < len(prefix) {
+		n, err := body.Read(prefix[size:])
+		size += n
+		if err != nil {
+			return prefix[:size], err
+		}
+		if challenge != nil && challenge(prefix[:size]) {
+			return prefix[:size], nil
+		}
+		if n == 0 {
+			return prefix[:size], io.ErrNoProgress
+		}
 	}
-	// Peek clears its read error, so replay it after the buffered bytes.
-	return prefix, io.MultiReader(io.LimitReader(reader, int64(len(prefix))), responseReadError{err})
+	return prefix, nil
+}
+func replayResponsePrefix(prefix []byte, body io.Reader, err error) ([]byte, io.Reader) {
+	if err != nil {
+		body = responseReadError{err}
+	}
+	return prefix, io.MultiReader(bytes.NewReader(prefix), body)
 }
 
 type responseReadError struct{ err error }

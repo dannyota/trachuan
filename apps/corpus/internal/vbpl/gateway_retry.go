@@ -27,7 +27,7 @@ func (c *Client) apiRaw(ctx context.Context, method, path string, body []byte) (
 			}
 			return nil
 		})
-		if contextErr := sourcegate.OutcomeContextError(ctx, status, err); contextErr != nil {
+		if contextErr := sourcegate.OutcomeContextError(ctx, status, http.StatusOK, err); contextErr != nil {
 			return nil, contextErr
 		}
 		if errors.Is(err, sourcegate.ErrSourcePaused) {
@@ -42,7 +42,7 @@ func (c *Client) apiRaw(ctx context.Context, method, path string, body []byte) (
 		}
 		if retry && ctx.Err() == nil {
 			if e := c.sleep(ctx, delay); e != nil {
-				if contextErr := sourcegate.OutcomeContextError(ctx, status, e); contextErr != nil {
+				if contextErr := sourcegate.OutcomeContextError(ctx, status, http.StatusOK, e); contextErr != nil {
 					return nil, contextErr
 				}
 				if ctx.Err() == nil {

@@ -122,7 +122,7 @@ func (c *Client) request(ctx context.Context, method, target string, form url.Va
 		attemptCtx, cancel := context.WithTimeout(ctx, timeout)
 		status, after, err := c.attempt(attemptCtx, method, target, form, file, timeout, consume)
 		cancel()
-		if contextErr := sourcegate.OutcomeContextError(ctx, status, err); contextErr != nil {
+		if contextErr := sourcegate.OutcomeContextError(ctx, status, http.StatusOK, err); contextErr != nil {
 			return contextErr
 		}
 		var local *localDownloadError
@@ -143,7 +143,7 @@ func (c *Client) request(ctx context.Context, method, target string, form url.Va
 		}
 		if retry && ctx.Err() == nil {
 			if e := c.sleep(ctx, delay); e != nil {
-				if contextErr := sourcegate.OutcomeContextError(ctx, status, e); contextErr != nil {
+				if contextErr := sourcegate.OutcomeContextError(ctx, status, http.StatusOK, e); contextErr != nil {
 					return contextErr
 				}
 				if ctx.Err() == nil {
@@ -248,9 +248,8 @@ func (c *Client) one(ctx context.Context, method, target string, form url.Values
 	defer func() { _ = resp.Body.Close() }()
 	status := resp.StatusCode
 	after := retryDelay(resp.Header.Get("Retry-After"), c.now())
-	prefix, r := sourcegate.ResponsePrefix(ctx, budgetReader{c, resp.Body}, resp.Body)
-	node, _ := parseHTML(prefix)
-	if isChallenge(node, prefix) {
+	prefix, r := sourcegate.ResponsePrefix(ctx, budgetReader{c, resp.Body}, resp.Body, status, http.StatusOK, responseChallenge)
+	if responseChallenge(prefix) {
 		return status, "", after, c.pause(ctx, "challenge")
 	}
 	if status == 403 {
@@ -264,6 +263,11 @@ func (c *Client) one(ctx context.Context, method, target string, form url.Values
 	}
 	e = consume(r, resp.Header)
 	return status, "", after, e
+}
+
+func responseChallenge(prefix []byte) bool {
+	node, _ := parseHTML(prefix)
+	return isChallenge(node, prefix)
 }
 
 func statusCause(status int) string {

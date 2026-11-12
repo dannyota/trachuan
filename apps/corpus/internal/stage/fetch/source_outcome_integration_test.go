@@ -14,7 +14,7 @@ import (
 )
 
 func TestRunBatch_SourceEvidenceAndLoadOutcomes(t *testing.T) {
-	for _, name := range []string{"conflict", "page 429", "PDF 429", "stalled page 429", "stalled PDF 429"} {
+	for _, name := range []string{"conflict", "page 429", "PDF 429", "stalled page 429", "stalled PDF 429", "unexpected page 206"} {
 		t.Run(name, func(t *testing.T) {
 			var s *Stage
 			var env stage.Env
@@ -27,6 +27,8 @@ func TestRunBatch_SourceEvidenceAndLoadOutcomes(t *testing.T) {
 				key = "vn:vbpl:66518"
 			case "stalled page 429", "stalled PDF 429":
 				s, env, calls, waits = stalled429Fixture(t, name == "stalled PDF 429", time.Millisecond)
+			case "unexpected page 206":
+				s, env, calls = unexpected206Fixture(t, time.Millisecond)
 			default:
 				s, env = broken429Fixture(t, name == "PDF 429")
 			}
@@ -49,20 +51,27 @@ func TestRunBatch_SourceEvidenceAndLoadOutcomes(t *testing.T) {
 				t.Fatal(err)
 			}
 			result, err := stage.RunBatch(ctx, env, s, stage.BatchInput{RunID: id, Generation: 1, Stage: "fetch"}, 5, stage.BatchConfig{HeartbeatEvery: time.Second, MaxAttempts: 5}, func(...any) {})
-			if calls != nil && (*calls != 4 || len(*waits) != 3) {
+			if waits != nil && (*calls != 4 || len(*waits) != 3) {
 				t.Fatalf("calls=%d waits=%v", *calls, *waits)
 			}
 			var state string
 			var gaps int
-			if e := db.QueryRow(ctx, `SELECT state,(SELECT count(*) FROM gap WHERE run_id=$1 AND kind='missing_attachment') FROM run_item WHERE run_id=$1`, id).Scan(&state, &gaps); e != nil {
+			if e := db.QueryRow(ctx, `SELECT state,(SELECT count(*) FROM gap WHERE run_id=$1 AND kind IN ('missing_attachment','source_unavailable')) FROM run_item WHERE run_id=$1`, id).Scan(&state, &gaps); e != nil {
 				t.Fatal(e)
 			}
-			if name == "conflict" {
+			switch name {
+			case "unexpected page 206":
+				if err != nil || *calls != 1 || state != "gap" || result.Gap != 1 || result.Failed != 0 || result.Pending != 0 || gaps != 1 {
+					t.Fatalf("result=%+v state=%s gaps=%d calls=%d error=%v", result, state, gaps, *calls, err)
+				}
+			case "conflict":
 				if err != nil || state != "done" || result.Done != 1 || gaps != 1 {
 					t.Fatalf("result=%+v state=%s gaps=%d error=%v", result, state, gaps, err)
 				}
-			} else if err == nil || state != "pending" || result.Pending != 1 || result.Failed != 0 || gaps != 0 {
-				t.Fatalf("result=%+v state=%s gaps=%d error=%v", result, state, gaps, err)
+			default:
+				if err == nil || state != "pending" || result.Pending != 1 || result.Failed != 0 || gaps != 0 {
+					t.Fatalf("result=%+v state=%s gaps=%d error=%v", result, state, gaps, err)
+				}
 			}
 		})
 	}

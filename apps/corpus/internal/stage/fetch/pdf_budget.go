@@ -3,6 +3,7 @@ package fetch
 import (
 	"context"
 	"errors"
+	"net/http"
 	"time"
 
 	"danny.vn/trachuan/apps/corpus/internal/chinhphu"
@@ -38,7 +39,7 @@ func (b pdfBudget) download(ctx context.Context, s *Stage, dir, url string) (chi
 	if errors.As(err, &failure) {
 		status = failure.HTTPStatus
 	}
-	if contextErr := sourcegate.OutcomeContextError(ctx, status, err); contextErr != nil {
+	if contextErr := sourcegate.OutcomeContextError(ctx, status, http.StatusOK, err); contextErr != nil {
 		return chinhphu.FileInfo{}, contextErr
 	}
 	if errors.Is(err, context.DeadlineExceeded) && (downloadCtx.Err() != nil || !b.now().Before(b.deadline)) {

@@ -197,14 +197,18 @@ func (c *Client) request(ctx context.Context, method, target string, body []byte
 	if opts.headers != nil {
 		*opts.headers = resp.Header.Clone()
 	}
-	head, reader := sourcegate.ResponsePrefix(ctx, responseBody{reader: resp.Body, endpoint: endpoint(target), status: resp.StatusCode}, resp.Body)
+	successStatus := http.StatusOK
+	if opts.ranged {
+		successStatus = http.StatusPartialContent
+	}
+	head, reader := sourcegate.ResponsePrefix(ctx, responseBody{reader: resp.Body, endpoint: endpoint(target), status: resp.StatusCode}, resp.Body, resp.StatusCode, successStatus, challenge)
 	if challenge(head) {
 		return resp.StatusCode, c.deny(ctx, endpoint(target)+" challenge")
 	}
 	if resp.StatusCode == http.StatusForbidden {
 		return resp.StatusCode, c.deny(ctx, endpoint(target)+" status 403")
 	}
-	if resp.StatusCode != http.StatusOK && (!opts.ranged || resp.StatusCode != http.StatusPartialContent) {
+	if resp.StatusCode != successStatus {
 		return resp.StatusCode, nil
 	}
 	if err := consume(reader); err != nil {
