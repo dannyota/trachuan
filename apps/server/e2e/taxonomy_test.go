@@ -65,8 +65,9 @@ func TestTaxonomy_Flow(t *testing.T) {
 	}
 	closeBody(response)
 	input := map[string]any{"country": "vn", "query": "Văn bản thử nghiệm\nMẫu phân loại giả lập số 1.", "nodes": []string{"90.1"}, "limit": 20}
-	var previous string
-	for page := 0; page < 2; page++ {
+	seen := make(map[string]bool)
+	const maxPages = 10
+	for page := 0; page < maxPages; page++ {
 		body, err := json.Marshal(input)
 		if err != nil {
 			t.Fatal(err)
@@ -85,14 +86,16 @@ func TestTaxonomy_Flow(t *testing.T) {
 		if response.StatusCode != http.StatusOK {
 			t.Fatalf("search page %d status %d", page, response.StatusCode)
 		}
+		type hit struct {
+			Handle   string `json:"handle"`
+			InFilter *bool  `json:"in_filter"`
+		}
 		var result struct {
-			Hits []struct {
-				Handle   string `json:"handle"`
-				InFilter *bool  `json:"in_filter"`
-			} `json:"hits"`
-			Outside *int   `json:"outside_filter_count"`
-			Cursor  string `json:"next_cursor"`
-			Release string `json:"release"`
+			Hits       []hit  `json:"hits"`
+			NonCurrent []hit  `json:"non_current"`
+			Outside    *int   `json:"outside_filter_count"`
+			Cursor     string `json:"next_cursor"`
+			Release    string `json:"release"`
 		}
 		if err := json.NewDecoder(response.Body).Decode(&result); err != nil {
 			t.Fatal(err)
@@ -101,20 +104,29 @@ func TestTaxonomy_Flow(t *testing.T) {
 		if len(result.Hits) == 0 || result.Outside == nil || *result.Outside == 0 {
 			t.Fatalf("search page %d: %+v", page, result)
 		}
-		for _, hit := range result.Hits {
-			if hit.InFilter == nil || hit.Handle == previous {
-				t.Fatalf("invalid hit: %+v", hit)
+		for _, hits := range [][]hit{result.Hits, result.NonCurrent} {
+			for _, item := range hits {
+				if item.InFilter == nil || item.Handle == "" || seen[item.Handle] {
+					t.Fatalf("invalid or repeated hit: %+v", item)
+				}
+				seen[item.Handle] = true
 			}
-			previous = hit.Handle
 		}
 		if page == 0 {
 			if result.Cursor == "" || !*result.Hits[0].InFilter {
 				t.Fatal("missing cursor or inside hit")
 			}
-			input["cursor"] = result.Cursor
 			input["release"] = result.Release
 		}
+		if result.Cursor == "" {
+			if len(seen) != 36 {
+				t.Fatalf("got %d distinct hits, want 36", len(seen))
+			}
+			return
+		}
+		input["cursor"] = result.Cursor
 	}
+	t.Fatalf("search exceeded %d pages", maxPages)
 }
 
 func taxonomyToken(t *testing.T, c *http.Client, server string) string {
