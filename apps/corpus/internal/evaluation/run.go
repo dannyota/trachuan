@@ -14,7 +14,8 @@ import (
 	"danny.vn/trachuan/internal/retrieval"
 )
 
-const scorerVersion = "agent-eval/3"
+// ScorerVersion identifies the scoring policy used by reports and artifacts.
+const ScorerVersion = "agent-eval/3"
 
 func rejectionSet(s Suite) map[string]bool {
 	out := map[string]bool{}
@@ -103,7 +104,7 @@ func Run(ctx context.Context, engine Engine, suite Suite, o Options) (Report, Ca
 	rel := engine.Release()
 	o = withReleaseRecipes(o, rel, modes)
 	recipe := rel.RetrievalRecipe
-	r := Report{Version: 1, Scorer: scorerVersion, Status: "complete", Country: rel.Country, Rel: rel.Rel, BuildArtifactSHA256: o.BuildArtifactSHA256, DumpSHA256: o.DumpSHA256, FixtureHashes: suite.Hashes, IdentityMapSHA256: suite.Hashes.IdentityMap, Recipes: o.Recipes, EvaluationDate: date, DatabaseInstanceKind: o.DatabaseInstanceKind, Software: o.Software, Calibration: o.Calibration, Cohorts: map[string]Cohort{"legacy": {}, "old_product": {}}, TimingsMS: map[string]any{}, CacheManifest: map[string]any{}, PreviousDiff: map[string]any{"reason": "no previous report"}, NotRun: map[string]string{"development": "not_run", "taxonomy": "out_of_scope", "filtered": "out_of_scope"}, Limitations: []string{"Small sample size; calibration fits the scored product cohorts.", "Legacy results use the product recipe and are not a reproduction of the legacy engine."}}
+	r := Report{Version: 1, Scorer: ScorerVersion, Status: "complete", Country: rel.Country, Rel: rel.Rel, BuildArtifactSHA256: o.BuildArtifactSHA256, DumpSHA256: o.DumpSHA256, FixtureHashes: suite.Hashes, IdentityMapSHA256: suite.Hashes.IdentityMap, Recipes: o.Recipes, EvaluationDate: date, DatabaseInstanceKind: o.DatabaseInstanceKind, Software: o.Software, Calibration: o.Calibration, Cohorts: map[string]Cohort{"legacy": {}, "old_product": {}}, TimingsMS: map[string]any{}, CacheManifest: map[string]any{}, PreviousDiff: map[string]any{"reason": "no previous report"}, NotRun: map[string]string{"development": "not_run", "taxonomy": "out_of_scope", "filtered": "out_of_scope"}, Limitations: []string{"Small sample size; calibration fits the scored product cohorts.", "Legacy results use the product recipe and are not a reproduction of the legacy engine."}}
 	r.CapOverride = o.CapOverride
 	r.ValidityOverrides = o.ValidityOverrides
 	var previous *Report

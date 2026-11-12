@@ -163,7 +163,7 @@ func cacheKey(c Cache, o Options, hashes FixtureHashes) string {
 		Index    []QueryIndex
 		Vectors  [][]float32
 		Policies any `json:",omitempty"`
-	}{scorerVersion, o.DumpSHA256, hashes, o.EvaluationDate, o.Modes, o.Recipes, o.Software, c.Index, c.Vectors, policies}
+	}{ScorerVersion, o.DumpSHA256, hashes, o.EvaluationDate, o.Modes, o.Recipes, o.Software, c.Index, c.Vectors, policies}
 	b, err := json.Marshal(value)
 	if err != nil {
 		return ""
