@@ -48,7 +48,6 @@ the MD5 of the stored copy; 42 have S3 multipart form and all equal the
 multipart ETag computed from the stored copy, 39 with 16 MiB parts and 3 with 5
 MiB parts; 1 ranged request failed. Multipart ETags start near 7.5 MB; 742
 stored files are larger than 5 MB.
-<!-- corpus-wide counts: filled from the full probe -->
 
 An earlier version of this note reused attachments only while their first
 network read was younger than an age limit, and treated an unknown origin time
@@ -204,7 +203,10 @@ not change.
 
 ## Effect
 
-<!-- filled from the full probe and run vn/20261112_2 -->
+A run on unchanged sources makes two gateway calls per reused document, four
+plus one ETag request per file for a full read, and downloads only files whose
+hash differs. The first live run after the change reports the counts and the
+fetch stage time in the research note.
 
 Known cost left in place: a diagram-only change (37 documents in the measured
 day) changes the fetch manifest, and [chunk](chunk.md#stage-and-artifact) binds

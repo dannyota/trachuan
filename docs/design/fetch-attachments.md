@@ -61,18 +61,25 @@ Owner rule (2026-11-12): a source error costs at most one fast retry, then a
 gap. One document or one file never holds or fails a stage. The rule covers
 every source the pipeline reads, VBPL and chinhphu, with one table:
 
-| What the source did                                                  | Retry             | Then                                                                            |
-| -------------------------------------------------------------------- | ----------------- | ------------------------------------------------------------------------------- |
-| Timeout, transport error, HTTP 5xx, non-JSON 200 from a JSON call    | once, after 2 s   | gateway or page call: gap `source_unavailable`; attachment: listed in `missing` |
-| Any other unexpected status, a body whose size differs from the list | none              | the same gap or `missing`                                                       |
-| HTTP 404 on an attachment                                            | none              | listed in `missing`, as today                                                   |
-| HTTP 429                                                             | waits, as budgets | stays retryable at the batch level: it is a load signal                         |
-| HTTP 403 or a challenge                                              | none              | [source pause](source-execution.md#source-pause)                                |
-| Valid JSON with invalid fields, oversize response                    | none              | `invalid_source_data`, `response_too_large`, as today                           |
+| What the source did                                                  | Retry           | Then                                                                            |
+| -------------------------------------------------------------------- | --------------- | ------------------------------------------------------------------------------- |
+| Timeout, transport error, HTTP 5xx, non-JSON 200 from a JSON call    | once, after 2 s | gateway or page call: gap `source_unavailable`; attachment: listed in `missing` |
+| Any other unexpected status, a body whose size differs from the list | none            | the same gap or `missing`                                                       |
+| HTTP 404 on an attachment                                            | none            | listed in `missing`, as today                                                   |
+| HTTP 429                                                             | see below       | the item stays pending and its batch retries: a load signal                     |
+| HTTP 403 or a challenge                                              | none            | [source pause](source-execution.md#source-pause): the item fails, the run stops |
+| Valid JSON with invalid fields, oversize response                    | none            | `invalid_source_data`, `response_too_large`, as today                           |
+| A body that is not the declared kind (an invalid PDF, a wrong type)  | none            | the existing source-data gap of [fetch bundles](fetch-bundles.md), not missing  |
 
-Only an error of our own side (disk, database, a cancelled activity) leaves an
-item `failed` or retries a batch. A source outcome not listed here is treated as
-the second row, so no new source behaviour can reach the batch retry.
+An item ends `failed` or retries its batch only for an error of our own side
+(disk, database, a cancelled activity), for HTTP 429 and for a source pause. Any
+other source outcome not listed here is treated as the second row, so no new
+source behaviour can reach the batch retry.
+
+HTTP 429, every client: wait `Retry-After` when the header is present, else 2, 8
+and 30 seconds, at most 3 retries within the request's 200-second sequence
+limit; a `Retry-After` above 10 minutes, or a fourth 429, returns the item to
+its batch.
 
 - Deadline per download attempt: 30 seconds plus the listed size at 250 kB/s, so
   20 MB gets 110 seconds and the 50 MB file limit 230 seconds; an unknown size
@@ -113,6 +120,6 @@ The primary runs these; they are requirements, not results.
   stated number of tries; a download that fails twice records `missing`, a
   `missing_attachment` gap and a done item holding the other files, and the same
   gap is produced again on adoption; no source outcome leaves an item `failed`
-  or retries a batch except HTTP 429.
+  or retries a batch except HTTP 429 and a source pause.
 - A live run on unchanged sources downloads no attachment whose ETag has MD5 or
   multipart form, and reports the count and size of files of other forms.
