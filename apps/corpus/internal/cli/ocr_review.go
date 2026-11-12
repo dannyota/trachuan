@@ -12,7 +12,7 @@ import (
 
 func runOCRReview(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	if len(args) < 2 {
-		_, _ = fmt.Fprintln(stderr, "usage: corpus ocr review <cc> <rel> [--model MODEL] [--effort EFFORT]")
+		_, _ = fmt.Fprintln(stderr, "usage: corpus ocr review <cc> <rel> [--model MODEL] [--effort EFFORT] [--check-version 2|3|4]")
 		return 2
 	}
 	o, err := parseCheckOptions(args[2:], true)
@@ -26,7 +26,7 @@ func runOCRReview(ctx context.Context, args []string, stdout, stderr io.Writer) 
 		return 1
 	}
 	defer env.db.Close()
-	docs, err := env.review(ctx, o.CheckerID())
+	docs, err := env.review(ctx, o.CheckerID(), o.CheckVersion >= 3)
 	if err == nil {
 		err = ocrcheck.WriteReview("ocr-review.json", docs)
 	}
@@ -37,10 +37,10 @@ func runOCRReview(ctx context.Context, args []string, stdout, stderr io.Writer) 
 	_, _ = fmt.Fprintf(stdout, "ocr-review.json: %d documents (%s)\n", len(docs), o.CheckerID())
 	return 0
 }
-func (e *checkRun) review(ctx context.Context, checker string) ([]ocrcheck.ReviewDocument, error) {
+func (e *checkRun) review(ctx context.Context, checker string, allEntries bool) ([]ocrcheck.ReviewDocument, error) {
 	q := store.New(e.db)
 	source := ocrstore.Open(e.root, e.db)
-	docs, err := e.documents(ctx, checker)
+	docs, err := e.checkDocuments(ctx, checker, allEntries)
 	if err != nil {
 		return nil, err
 	}
