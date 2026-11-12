@@ -55,8 +55,10 @@ type NodePage struct {
 	Documents []NodeDocument `json:"documents"`
 }
 
+var taxonomyCodePattern = regexp.MustCompile(`^[1-9][0-9]{0,2}(\.[1-9][0-9]{0,3}(\.[pcx][1-9][0-9]{0,3}(\.[cmx][1-9][0-9]{0,3})?)?)?$`)
+
 func validTaxonomyCode(code string) bool {
-	return regexp.MustCompile(`^[1-9][0-9]{0,2}(\.[1-9][0-9]{0,3}(\.[pcx][1-9][0-9]{0,3}(\.[cmx][1-9][0-9]{0,3})?)?)?$`).MatchString(code)
+	return taxonomyCodePattern.MatchString(code)
 }
 func foldTaxonomy(s string) string {
 	var b strings.Builder

@@ -32,10 +32,13 @@ func loadTaxonomy(ctx context.Context, tx pgx.Tx) ([]taxonomyRow, error) {
 
 func taxonomyDocuments(ctx context.Context, tx pgx.Tx, id int64) ([]NodeDocument, error) {
 	rows, err := tx.Query(ctx, `WITH RECURSIVE subtree AS (
- SELECT id FROM taxonomy_node WHERE id=$1 AND status='active' AND provision_count>0
- UNION ALL SELECT n.id FROM taxonomy_node n JOIN subtree s ON n.parent_id=s.id WHERE n.status='active' AND n.provision_count>0
+ SELECT id,level FROM taxonomy_node WHERE id=$1 AND status='active' AND provision_count>0
+ UNION ALL SELECT n.id,n.level FROM taxonomy_node n JOIN subtree s ON n.parent_id=s.id WHERE n.status='active' AND n.provision_count>0
+ ), families AS (
+ SELECT id FROM subtree WHERE level=2
+ UNION SELECT f.id FROM taxonomy_node f JOIN taxonomy_node target ON target.id=$1 AND f.level=2 AND f.path @> target.path
  ), expanded AS (
- SELECT a.provision_id,a.node_id,a.family_id,a.exclude,0 AS distance FROM taxonomy_assignment a
+ SELECT a.provision_id,a.node_id,a.family_id,a.exclude,0 AS distance FROM taxonomy_assignment a JOIN families f ON f.id=a.family_id
  UNION ALL SELECT p.id,e.node_id,e.family_id,e.exclude,e.distance+1 FROM expanded e JOIN provision p ON p.parent_id=e.provision_id
  ), nearest AS (
  SELECT provision_id,family_id,min(distance) AS distance FROM expanded GROUP BY provision_id,family_id

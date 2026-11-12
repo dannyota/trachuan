@@ -149,3 +149,18 @@ func TestTaxonomyNode_DocumentLimitAndTies(t *testing.T) {
 		t.Fatalf("documents: %+v", got.Documents)
 	}
 }
+
+func TestTaxonomyNode_OtherFamilyDoesNotOverride(t *testing.T) {
+	e := taxonomyFixture(t)
+	ctx := context.Background()
+	_, err := e.db.Exec(ctx, `INSERT INTO taxonomy_assignment(provision_id,node_id,family_id,method,exclude,confidence,taxonomy_version) VALUES (11,6,6,'manual',true,1,'v1')`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, code := range []string{"1", "1.1", "1.1.c1"} {
+		got, err := e.TaxonomyNode(ctx, code)
+		if err != nil || len(got.Documents) != 1 || got.Documents[0].Key != "vn:1" || got.Documents[0].Provisions != 1 {
+			t.Fatalf("node %s: %+v, error %v", code, got.Documents, err)
+		}
+	}
+}
