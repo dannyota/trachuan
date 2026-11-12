@@ -8,7 +8,7 @@ import (
 
 func TestRecipe_TextParserVersion(t *testing.T) {
 	got := New().Recipe(stage.Snapshot{})
-	want := stage.RecipeHash("extract", "tree/1", "html-transcription/1", "textparse/2", "ocr-store/1", "", "vision-ocr/builtin-latest", "vision-ocr/builtin-latest/poppler-200")
+	want := stage.RecipeHash("extract", "tree/1", "html-transcription/1", "textparse/2", "ocr-store/1", "", "vision-ocr/builtin-latest", "vision-ocr/builtin-latest/poppler-200", "vision-ocr/builtin-latest/poppler-200-jpeg")
 	old := stage.RecipeHash("extract", "tree/1", "html-transcription/1", "textparse/1", "ocr-absent/1")
 	if got != want || got == old {
 		t.Fatalf("recipe %s want %s", got, want)

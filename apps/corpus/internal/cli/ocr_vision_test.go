@@ -72,3 +72,20 @@ func TestVision_Selection(t *testing.T) {
 		t.Fatal("fresh entry not marked present")
 	}
 }
+
+func TestVision_SelectionAllAcceptedEngines(t *testing.T) {
+	for _, engine := range []string{"vision-ocr/builtin-latest", "vision-ocr/builtin-latest/poppler-200", "vision-ocr/builtin-latest/poppler-200-jpeg"} {
+		t.Run(engine, func(t *testing.T) {
+			source := &visionLookup{entries: map[string]ocrstore.Entry{"hash": {Text: store.OcrText{EngineID: engine}}}}
+			docs := []ocrvision.Document{{Hash: "hash"}}
+			got, err := filterVisionEntries(context.Background(), source, docs, false)
+			if err != nil || len(got) != 0 {
+				t.Fatalf("default=%v err=%v", got, err)
+			}
+			got, err = filterVisionEntries(context.Background(), source, docs, true)
+			if err != nil || len(got) != 1 || got[0].Present != (engine == "vision-ocr/builtin-latest/poppler-200-jpeg") {
+				t.Fatalf("explicit=%v err=%v", got, err)
+			}
+		})
+	}
+}

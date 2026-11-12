@@ -30,9 +30,10 @@ The client sends page images, one page per request, for every PDF:
   rendered and named in the store entry. A mismatch fails the document before
   any request.
 - Pages are rendered in the cross-check's [sandbox](ocr-check.md#limits) as
-  JPEG: 200 dpi, grayscale, quality 90, one file per page in the scratch
-  directory. PNG encoding was the cost of the first run
-  ([measured](#rendering-cost)).
+  JPEG: 200 dpi, quality 90, rendered with `-gray`, one file per page in the
+  scratch directory. Poppler may still write three colour components for gray
+  content (version 26 does), so the colour model of the file is not a check. PNG
+  encoding was the cost of the first run ([measured](#rendering-cost)).
 - Render arguments are computed per page from its size, as the cross-check does,
   so the raster cap holds for every page. Consecutive pages with identical
   arguments form a group, and each group is one `pdftoppm` process (`-f`, `-l`).
@@ -146,8 +147,8 @@ extract.
 The primary runs these; they are requirements, not results.
 
 - Rendering: a real 12-page PDF yields files for pages 1 to 12 from one process,
-  in numeric order, each decodable and grayscale; a PDF whose pages have
-  different MediaBox and CropBox sizes is rendered in groups and every page
+  in numeric order, each decodable and within the raster cap; a PDF whose pages
+  have different MediaBox and CropBox sizes is rendered in groups and every page
   stays within the raster cap; a missing file, an extra file, a truncated JPEG
   and a non-zero exit each fail the document; a render that passes the scratch
   ceiling is stopped before its process ends and fails with `render_too_large`;

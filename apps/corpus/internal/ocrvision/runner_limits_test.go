@@ -11,14 +11,12 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
-
-	"danny.vn/trachuan/apps/corpus/internal/ocrcheck"
 )
 
-func TestRunner_FourConcurrentPages(t *testing.T) {
+func TestRunner_EightConcurrentPages(t *testing.T) {
 	started := make(chan struct{}, 8)
 	release := make(chan struct{})
-	var active, maxActive atomic.Int64
+	var active, maxActive, loaded atomic.Int64
 	c := fakeClient(t, func(w http.ResponseWriter, r *http.Request) {
 		n := active.Add(1)
 		for old := maxActive.Load(); old < n; old = maxActive.Load() {
@@ -34,23 +32,27 @@ func TestRunner_FourConcurrentPages(t *testing.T) {
 		active.Add(-1)
 		_, _ = io.WriteString(w, `{"responses":[{"fullTextAnnotation":{"text":"ok"}}]}`)
 	})
-	render := &memoryRenderer{pages: make([][]byte, 8)}
-	runner := Runner{Client: c, Store: &memoryStore{}, Renderer: render, CountPages: func(context.Context, []byte) (int, error) { return 8, nil }}
+	render := &memoryRenderer{pages: make([][]byte, 12)}
+	runner := Runner{Client: c, Store: &memoryStore{}, Renderer: render, CountPages: func(context.Context, []byte) (int, error) { return 12, nil }}
+	runner.readPage = func(path string) ([]byte, error) { loaded.Add(1); return os.ReadFile(path) }
 	done := make(chan error, 1)
 	go func() {
-		_, err := runner.Run(context.Background(), []Document{document(t)}, Options{MaxPages: 8}, io.Discard)
+		_, err := runner.Run(context.Background(), []Document{document(t)}, Options{MaxPages: 12}, io.Discard)
 		done <- err
 	}()
-	for range 4 {
+	for range 8 {
 		<-started
 	}
 	select {
 	case <-started:
-		t.Error("more than four pages in flight")
+		t.Error("more than eight pages in flight")
 	default:
 	}
+	if loaded.Load() != 8 {
+		t.Errorf("loaded %d pages while senders blocked", loaded.Load())
+	}
 	close(release)
-	if err := <-done; err != nil || maxActive.Load() != 4 {
+	if err := <-done; err != nil || maxActive.Load() != 8 {
 		t.Fatalf("max=%d err=%v", maxActive.Load(), err)
 	}
 }
@@ -161,11 +163,11 @@ func TestRunner_SameBytesAreRendered(t *testing.T) {
 type checkingRenderer struct{ t *testing.T }
 
 func (checkingRenderer) Preflight(context.Context) error { return nil }
-func (r checkingRenderer) RenderLimited(_ context.Context, data []byte, _ ocrcheck.RenderLimits) (ocrcheck.Rendered, error) {
+func (r checkingRenderer) RenderJPEG(ctx context.Context, data []byte, pages int) ([]string, func(), error) {
 	if string(data) != "verified PDF" {
 		r.t.Error("rendered replacement bytes")
 	}
-	return ocrcheck.Rendered{Pages: [][]byte{{1}}}, nil
+	return (&memoryRenderer{pages: [][]byte{{1}}}).RenderJPEG(ctx, data, pages)
 }
 
 func TestRunner_NoSecretsInOutputOrLogs(t *testing.T) {

@@ -23,7 +23,9 @@ serving path only.
    in an OCR store keyed by the PDF's SHA-256 with engine, version and request
    time. banhmi's stored Google Vision output is imported into the store as data
    when the file hash matches (engine `vision-ocr/builtin-latest`, origin
-   `banhmi`); only PDFs absent from the store are sent to the service.
+   `banhmi`); only PDFs absent from the store are sent to the service, except a
+   run PDF the operator names to compare engines
+   ([fresh OCR requests](../design/ocr-vision.md#command)).
 3. Every OCR text gets a cross-check before it is used: a hosted language model
    (Claude or an OpenAI model, chosen by the owner) reads the page images with
    the OCR text and reports disagreements in document numbers, dates, article
@@ -74,3 +76,7 @@ serving path only.
   only when that text fails a gate ([PDF text layer](../design/pdf-text.md)); a
   scan with an embedded text layer still goes to OCR. Decided, scheduled after
   the OCR path; at most 13 of the 314 PDF-only documents qualify.
+- 2026-11-12: the fresh client may re-read a named run PDF that already has
+  imported text, to compare engines; the new reading is stored under its own
+  engine id and replaces nothing. Recorded with the client design; the first
+  comparison read three PDFs.

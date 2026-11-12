@@ -18,7 +18,7 @@ import (
 const visionURL = "https://vision.googleapis.com"
 
 // EngineID identifies the fresh engine and its rendering settings.
-const EngineID = "vision-ocr/builtin-latest/poppler-200"
+const EngineID = "vision-ocr/builtin-latest/poppler-200-jpeg"
 
 // Config supplies authentication and test seams. Production uses the fixed URL.
 type Config struct {
@@ -51,7 +51,7 @@ func NewClient(cfg Config) *Client {
 		cfg.Sleep = sleep
 	}
 	if cfg.Wait == nil {
-		cfg.Wait = rate.NewLimiter(rate.Every(time.Minute/300), 1).Wait
+		cfg.Wait = rate.NewLimiter(rate.Every(time.Minute/600), 1).Wait
 	}
 	return &Client{project: cfg.Project, baseURL: cfg.BaseURL, tokens: cfg.TokenSource, http: transport, sleep: cfg.Sleep, wait: cfg.Wait, tokenTimeout: cfg.TokenTimeout}
 }
