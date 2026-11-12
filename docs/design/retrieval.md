@@ -49,24 +49,25 @@ the rest of the recipe's hits of that group shaped at the list cap of 100, in
 rank order, without those already listed. Each page holds at most `limit` hits,
 split into `hits` and `non_current` by group. Without filters the first page is
 exactly today's response of that `limit`. Every other page fills from what
-remains of each sequence: with `in_force_only` true, up to the effective
-non-current tail ([retrieval recipe](retrieval-recipe.md)) from the non-current
-group and the rest from primary; with `in_force_only` false, primary first; in
-both modes non-current hits then take any slots primary cannot fill. When any
-filter is given, each sequence is reordered stably, inside hits first, then
-outside hits; the filtered first page takes as many hits from each group as
-today's first page does and fills any slots left by the same rule, so every
-inside hit of today's first page stays on it; every hit carries
-`in_filter: true|false`; and `outside_filter_count` counts outside hits over
-both groups. Every page carries the first page's `abstain`, `reason` and
-`message`; filters and paging never change them. `next_cursor` continues while
-either sequence has hits left, so every hit the unfiltered search would return
-stays reachable exactly once. The cursor is opaque and holds the release, the
-first page's `limit`, the number of hits taken so far from each sequence, the
-resolved `as_of` date and a SHA-256 digest of the request without `cursor` and
-`limit`, never query text; later pages use the cursor's date and rebuild the
-sequences from it, and a cursor whose digest or release does not match is
-`invalid_request` or `release_expired`.
+remains of each sequence: up to the reserved non-current count from the
+non-current group, the effective non-current tail with `in_force_only` true and
+half of `limit` rounded down with `in_force_only` false
+([retrieval recipe](retrieval-recipe.md)), and the rest from primary; in both
+modes either group then takes the slots the other cannot fill. When any filter
+is given, each sequence is reordered stably, inside hits first, then outside
+hits; the filtered first page takes as many hits from each group as today's
+first page does and fills any slots left by the same rule, so every inside hit
+of today's first page stays on it; every hit carries `in_filter: true|false`;
+and `outside_filter_count` counts outside hits over both groups. Every page
+carries the first page's `abstain`, `reason` and `message`; filters and paging
+never change them. `next_cursor` continues while either sequence has hits left,
+so every hit the unfiltered search would return stays reachable exactly once.
+The cursor is opaque and holds the release, the first page's `limit`, the number
+of hits taken so far from each sequence, the resolved `as_of` date and a SHA-256
+digest of the request without `cursor` and `limit`, never query text; later
+pages use the cursor's date and rebuild the sequences from it, and a cursor
+whose digest or release does not match is `invalid_request` or
+`release_expired`.
 
 The filter changes order, so the recall guarantee is stated per case: for a
 golden case whose expected citations lie inside the selected nodes, filtered
