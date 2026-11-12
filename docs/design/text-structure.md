@@ -152,9 +152,9 @@ points.
   under [text extraction](text-extraction.md#validity-rules). Document status is
   unchanged for clause-owned hits. Relation warnings keep the rule of
   [results](mcp-results.md): a hit owned by a clause carries a warning whose
-  target is that clause, an ancestor of it or, for an exact warning, a provision
-  inside it; a warning on clause 1 does not reach a hit owned by clause 2, and
-  an inexact warning on the article reaches no clause.
+  target is that clause or a provision inside it, and an exact warning whose
+  target is an ancestor of it; a warning on clause 1 does not reach a hit owned
+  by clause 2, and an inexact warning on the article reaches no clause.
 - Identity map and manual corrections: existing anchors and article ids keep
   their meaning; new child ids carry no entries.
 
