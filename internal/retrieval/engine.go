@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"regexp"
 	"slices"
 	"time"
 
@@ -88,9 +87,18 @@ func readEmbeddingDimensions(ctx context.Context, db dimensionReader) (int, erro
 	return typmod, nil
 }
 
-var hashPattern = regexp.MustCompile(`^[0-9a-f]{64}$`)
-
-func validHash(s string) bool { return hashPattern.MatchString(s) }
+func validHash(s string) bool {
+	if len(s) != 64 {
+		return false
+	}
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if (c < '0' || c > '9') && (c < 'a' || c > 'f') {
+			return false
+		}
+	}
+	return true
+}
 func validObject(b []byte) bool {
 	var v map[string]json.RawMessage
 	return json.Unmarshal(b, &v) == nil && v != nil
