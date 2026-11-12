@@ -2,10 +2,13 @@ package ocrcheck
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/base64"
 	"errors"
+	"fmt"
 	"io"
 	"os"
+
+	"github.com/anthropics/anthropic-sdk-go/v2"
 )
 
 // JPEGRenderer returns validated page files in numeric page order.
@@ -15,6 +18,11 @@ type JPEGRenderer interface {
 }
 
 func (r *Runner) prepareJPEG(ctx context.Context, p prepared, data []byte, dpi int) (prepared, string) {
+	tail := finishContent(nil, p.request.Text)
+	p.request.content = tail
+	if size, err := jpegRequestSize(p.request); err != nil || size > maxRequestBytes {
+		return p, "over_check_limit"
+	}
 	paths, cleanup, err := r.JPEGRenderer.RenderJPEGDPI(ctx, data, p.pages, dpi)
 	if cleanup != nil {
 		defer cleanup()
@@ -28,18 +36,22 @@ func (r *Runner) prepareJPEG(ctx context.Context, p prepared, data []byte, dpi i
 	if len(paths) != p.pages {
 		return p, "page_count_mismatch"
 	}
+	read := r.readJPEG
+	if read == nil {
+		read = readJPEGPage
+	}
+	encode := r.encodeJPEG
+	if encode == nil {
+		encode = base64.StdEncoding.EncodeToString
+	}
+	content := make([]anthropic.ContentBlockParamUnion, 0, 2*len(paths)+2)
 	total := len(p.request.Text)
-	for _, path := range paths {
+	for i, path := range paths {
 		if ctx.Err() != nil {
 			return p, "render_failed"
 		}
-		f, openErr := os.Open(path)
-		if openErr != nil {
-			return p, "render_failed"
-		}
-		page, readErr := io.ReadAll(io.LimitReader(f, 7_000_001))
-		closeErr := f.Close()
-		if readErr != nil || closeErr != nil {
+		page, readErr := read(path)
+		if readErr != nil {
 			return p, "render_failed"
 		}
 		if len(page) > 7_000_000 {
@@ -49,11 +61,27 @@ func (r *Runner) prepareJPEG(ctx context.Context, p prepared, data []byte, dpi i
 		if total > maxRequestBytes {
 			return p, "over_check_limit"
 		}
-		p.request.Images = append(p.request.Images, page)
+		content = append(content, anthropic.NewTextBlock(fmt.Sprintf("Page %d:", i+1)), anthropic.NewImageBlockBase64(p.request.MediaType, encode(page)))
 	}
-	encoded, err := json.Marshal(messageParams(p.request))
-	if err != nil || len(encoded)+len(`,"stream":true`) > maxRequestBytes {
+	p.request.content = append(content, tail...)
+	if size, err := jpegRequestSize(p.request); err != nil || size > maxRequestBytes {
 		return p, "over_check_limit"
 	}
 	return p, ""
+}
+
+func readJPEGPage(path string) ([]byte, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("open JPEG page: %w", err)
+	}
+	page, readErr := io.ReadAll(io.LimitReader(f, 7_000_001))
+	closeErr := f.Close()
+	if readErr != nil {
+		return nil, fmt.Errorf("read JPEG page: %w", readErr)
+	}
+	if closeErr != nil {
+		return nil, fmt.Errorf("close JPEG page: %w", closeErr)
+	}
+	return page, nil
 }

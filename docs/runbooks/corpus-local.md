@@ -171,14 +171,20 @@ can use it; imported text keeps priority when both entries exist.
 
 ## OCR cross-check pass
 
-Pass the Claude key in each command's environment, never export it for the
-session. Start the version 3 pass with ten documents:
+Start the version 3 pass with ten documents:
 
 ```sh
-ANTHROPIC_API_KEY='<key for this command>' corpus ocr check vn 20990101 \
-  --model claude-opus-5-5 --effort high --check-version 3 \
-  --limit-docs 10 --max-usd 10
+(
+  set +a
+  . "$HOME/.config/claude-api-keys.env" || exit
+  ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY_DANNY2" corpus ocr check vn 20990101 \
+    --model claude-opus-5-5 --effort high --check-version 3 \
+    --limit-docs 10 --max-usd 10
+)
 ```
+
+The key file is outside the repository; its variables are set only inside the
+subshell, never exported in the session and never printed.
 
 Use the intended run's country and release. Version 3 sends JPEG pages at 200
 dpi with eight documents in flight. Review the cost and verdict lines before

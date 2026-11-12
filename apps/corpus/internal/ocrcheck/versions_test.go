@@ -2,14 +2,16 @@ package ocrcheck
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/anthropics/anthropic-sdk-go/v2"
 )
 
 func TestVersion_Settings(t *testing.T) {
@@ -99,14 +101,7 @@ func TestVersion_JPEGRequest(t *testing.T) {
 				t.Fatal(f.dpi)
 			}
 			got := messageParams(c.Counted[0])
-			png := c.Counted[0]
-			png.MediaType = ""
-			old := messageParams(png)
-			g, _ := json.Marshal(got.OutputConfig)
-			w, _ := json.Marshal(old.OutputConfig)
-			if string(g) != string(w) || !reflect.DeepEqual(got.Messages[0].OfUser.Content[20:], old.Messages[0].OfUser.Content[20:]) {
-				t.Fatal("instruction or schema changed")
-			}
+			assertPinnedContract(t, got)
 			b, _ := json.Marshal(got)
 			last := -1
 			for i := 0; i < 10; i++ {
@@ -189,5 +184,26 @@ func TestVersion_RenderFailureCleanup(t *testing.T) {
 		if !f.cleaned || c.CountCalls != 0 || c.DirectCalls != 0 || repo.attempts[0].Reason != tc.reason {
 			t.Fatalf("cleanup=%v attempts=%+v", f.cleaned, repo.attempts)
 		}
+	}
+}
+
+func TestVersion_TwoPinnedContract(t *testing.T) {
+	r := Request{Model: "claude-sonnet-5-5", Effort: "medium", Images: [][]byte{[]byte("page")}, Text: []byte("public OCR")}
+	assertPinnedContract(t, messageParams(r))
+}
+
+func assertPinnedContract(t *testing.T, p anthropic.MessageNewParams) {
+	t.Helper()
+	const instructionHash = "c0257d29b73a34c87150df80cbc8d3c77481ba384fe4cc9be6d5d589e3294b2e"
+	const schemaHash = "eed38c00094691a333b94ff0aa0bf11d0fd38258d32414fdae7461aecf071b52"
+	content := p.Messages[0].OfUser.Content
+	gotInstruction := fmt.Sprintf("%x", sha256.Sum256([]byte(content[len(content)-1].OfText.Text)))
+	schemaJSON, err := json.Marshal(p.OutputConfig.Format.Schema)
+	if err != nil {
+		t.Fatal(err)
+	}
+	gotSchema := fmt.Sprintf("%x", sha256.Sum256(schemaJSON))
+	if gotInstruction != instructionHash || gotSchema != schemaHash {
+		t.Fatalf("version 2 contract changed: instruction=%s schema=%s", gotInstruction, gotSchema)
 	}
 }

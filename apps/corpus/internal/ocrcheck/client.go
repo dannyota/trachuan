@@ -5,6 +5,8 @@ import (
 	"context"
 	"fmt"
 	"time"
+
+	"github.com/anthropics/anthropic-sdk-go/v2"
 )
 
 // Request carries public legal evidence only. It must never be logged.
@@ -13,6 +15,7 @@ type Request struct {
 	MediaType               string
 	Images                  [][]byte
 	Text                    []byte
+	content                 []anthropic.ContentBlockParamUnion
 }
 
 // Response contains the checker output and usage, including on failure.

@@ -98,6 +98,10 @@ func (r *Runner) prepare(ctx context.Context, doc Document, o Options) (p prepar
 		return p, "ocr_marker_collision"
 	}
 	p.request = Request{Model: o.Model, Effort: o.Effort, Text: text}
+	if v, _ := o.version(); v.directOnly {
+		p.request.MediaType = v.mediaType
+		return r.prepareJPEG(ctx, p, data, v.dpi)
+	}
 	base, encodeErr := json.Marshal(messageParams(p.request))
 	if encodeErr != nil {
 		return p, "over_check_limit"
@@ -105,10 +109,6 @@ func (r *Runner) prepare(ctx context.Context, doc Document, o Options) (p prepar
 	allowance := maxRequestBytes - len(base) - len(`,"stream":true`)
 	if allowance <= 0 {
 		return p, "over_check_limit"
-	}
-	if v, _ := o.version(); v.directOnly {
-		p.request.MediaType = v.mediaType
-		return r.prepareJPEG(ctx, p, data, v.dpi)
 	}
 	renderer := r.Renderer
 	if renderer == nil {

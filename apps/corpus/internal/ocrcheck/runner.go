@@ -111,6 +111,8 @@ type Runner struct {
 	LoadDocuments func(context.Context) ([]Document, error)
 	Now           func() time.Time
 	batchBytes    int
+	readJPEG      func(string) ([]byte, error)
+	encodeJPEG    func([]byte) string
 }
 
 type prepared struct {
