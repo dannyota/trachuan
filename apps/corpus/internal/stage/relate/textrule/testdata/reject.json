@@ -143,5 +143,25 @@
     "name": "quoted number in tail",
     "text": "Bãi bỏ Điều 3 của Thông tư 39/2016/TT-NHNN theo “01/2020/TT-NHNN”.",
     "want": "relation_text_multi_target"
+  },
+  {
+    "name": "attached decimal suffix",
+    "text": "Bãi bỏ Điều 3 của Thông tư 39/2016/TT-NHNN.1.",
+    "want": "relation_text_local_number"
+  },
+  {
+    "name": "attached underscore suffix",
+    "text": "Bãi bỏ Điều 3 của Thông tư 39/2016/TT-NHNN_UBND.",
+    "want": "relation_text_local_number"
+  },
+  {
+    "name": "attached letter suffix",
+    "text": "Bãi bỏ Điều 3 của Thông tư 39/2016/TT-NHNNx.",
+    "want": "relation_text_local_number"
+  },
+  {
+    "name": "roman II is not a point letter",
+    "text": "Bãi bỏ điểm II Điều 3 của Thông tư 39/2016/TT-NHNN.",
+    "want": "relation_text_grammar"
   }
 ]

@@ -95,16 +95,20 @@ func (c *cursor) dateRange() bool {
 
 func (c *cursor) tail() (*string, string) {
 	// Inspect the whole tail first so extra targets cannot hide behind bad dates.
-	for i := c.pos; i < len(c.tokens); i++ {
-		word := c.tokens[i].word
+	for _, token := range c.tokens[c.pos:] {
+		word := token.word
 		if word == "điều" || word == "khoản" || word == "điểm" {
 			return nil, "relation_text_multi_target"
 		}
-		probe := *c
-		probe.pos = i
-		if _, ok := probe.number(); ok {
+	}
+	probe := *c
+	for probe.pos < len(probe.tokens) {
+		_, end, ok := probe.numberCandidate()
+		if ok {
 			return nil, "relation_text_multi_target"
 		}
+		// Failed candidates must not be retried from a numeric suffix.
+		probe.pos = end
 	}
 	var stated *string
 	for c.pos < len(c.tokens) {

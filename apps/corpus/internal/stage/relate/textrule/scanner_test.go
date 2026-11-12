@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 )
 
 func testCursor(text string) cursor {
@@ -156,5 +157,31 @@ func TestDate_SharedSourceFormats(t *testing.T) {
 				t.Fatalf("date = %q, %v; want %q", date, ok, tc.want)
 			}
 		})
+	}
+}
+
+func TestParse_LongMalformedTail(t *testing.T) {
+	const fragments = 8000
+	text := "Bãi bỏ Điều 3 của Thông tư 39/2016/TT-NHNN về " + strings.Repeat("1/", fragments) + "1."
+	start := time.Now()
+	matches, gaps := Parse(text, testIssuers())
+	elapsed := time.Since(start)
+	if len(matches) != 1 || len(gaps) != 0 {
+		t.Fatalf("got %d matches and %d gaps; want one match and no gaps", len(matches), len(gaps))
+	}
+	if matches[0].Targets[0].Number != "39/2016/TT-NHNN" || matches[0].Sentence != text {
+		t.Fatal("malformed tail changed the target or evidence")
+	}
+	if elapsed >= 100*time.Millisecond {
+		t.Fatalf("parsing %d malformed fragments took %s; want under 100 ms", fragments, elapsed)
+	}
+	t.Logf("parsed %d malformed fragments in %s", fragments, elapsed)
+}
+
+func TestTail_DoesNotRetryMalformedNumberSuffix(t *testing.T) {
+	c := testCursor("1/1/39/2016/TT-NHNN")
+	date, gap := c.tail()
+	if date != nil || gap != "" {
+		t.Fatalf("date = %v, gap = %q; malformed token must not yield a suffix number", date, gap)
 	}
 }

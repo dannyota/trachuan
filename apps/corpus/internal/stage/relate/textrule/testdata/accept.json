@@ -470,5 +470,24 @@
         ]
       }
     ]
+  },
+  {
+    "name": "single I is a point letter",
+    "text": "Bãi bỏ điểm I Điều 3 của Thông tư 39/2016/TT-NHNN.",
+    "want": [
+      {
+        "Kind": "repeals",
+        "VerbPhrase": "bãi bỏ",
+        "Sentence": "Bãi bỏ điểm I Điều 3 của Thông tư 39/2016/TT-NHNN.",
+        "Targets": [
+          {
+            "Anchor": "dieu-3/diem-i",
+            "Number": "39/2016/TT-NHNN",
+            "IssuerCode": "NHNN",
+            "StatedIssueDate": null
+          }
+        ]
+      }
+    ]
   }
 ]

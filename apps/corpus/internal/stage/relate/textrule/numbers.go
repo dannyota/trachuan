@@ -19,39 +19,58 @@ func numberWord(word string) bool {
 	return true
 }
 
-// number consumes a complete slash/hyphen token, retaining its raw spelling.
+// number consumes a complete number candidate, retaining its raw spelling.
 func (c *cursor) number() (string, bool) {
+	raw, end, ok := c.numberCandidate()
+	if ok {
+		c.pos = end
+	}
+	return raw, ok
+}
+
+// numberCandidate returns the whole candidate's end even when its shape fails.
+func (c *cursor) numberCandidate() (string, int, bool) {
 	start := c.pos
-	i := start
-	if i >= len(c.tokens) || !digits(c.tokens[i].word) {
-		return "", false
+	if start >= len(c.tokens) || !digits(c.tokens[start].word) {
+		return "", start + 1, false
 	}
-	i++
-	// Dots within a serial are not sentence boundaries or terminal punctuation.
-	for i+1 < len(c.tokens) && c.tokens[i].word == "." && digits(c.tokens[i+1].word) && c.tokens[i-1].end == c.tokens[i].start && c.tokens[i].end == c.tokens[i+1].start {
-		i += 2
-	}
-	if i >= len(c.tokens) || c.tokens[i].word != "/" {
-		return "", false
-	}
-	for i < len(c.tokens) && (c.tokens[i].word == "/" || c.tokens[i].word == "-") {
-		i++
-		if i >= len(c.tokens) || !numberWord(c.tokens[i].word) {
-			return "", false
-		}
-		i++
-	}
-	raw := c.raw(start, i)
+	end := c.numberEnd(start)
+	raw := c.raw(start, end)
 	parts := strings.Split(retrieval.NormalizeNumber(raw), "/")
 	if len(parts) < 2 || len(parts) > 3 {
-		return "", false
+		return "", end, false
 	}
 	suffix := parts[len(parts)-1]
 	if suffix == "" || !unicode.IsLetter([]rune(suffix)[0]) {
-		return "", false
+		return "", end, false
 	}
-	c.pos = i
-	return raw, true
+	for _, segment := range strings.Split(suffix, "-") {
+		if segment == "" {
+			return "", end, false
+		}
+	}
+	return raw, end, true
+}
+
+func (c *cursor) numberEnd(start int) int {
+	end := start + 1
+	for end < len(c.tokens) {
+		previous, next := c.tokens[end-1], c.tokens[end]
+		switch next.word {
+		case ",", ";", ")":
+			return end
+		case ".":
+			if next.end == len(c.text) || c.text[next.end] == ' ' {
+				return end
+			}
+		}
+		// Official number normalization allows whitespace around these separators.
+		if previous.end < next.start && previous.word != "/" && previous.word != "-" && next.word != "/" && next.word != "-" {
+			return end
+		}
+		end++
+	}
+	return end
 }
 
 func (c *cursor) documentType() string {
@@ -79,6 +98,16 @@ func checkNumber(raw, docType string, issuers map[string]string) (issuer, gap st
 	parts := strings.Split(retrieval.NormalizeNumber(raw), "/")
 	if len(parts) != 3 || len(parts[1]) != 4 || !digits(parts[1]) {
 		return "", "relation_text_yearless_number"
+	}
+	for _, segment := range strings.Split(parts[0], ".") {
+		if !digits(segment) {
+			return "", "relation_text_local_number"
+		}
+	}
+	for _, segment := range strings.Split(parts[2], "-") {
+		if !numberWord(segment) {
+			return "", "relation_text_local_number"
+		}
 	}
 	suffix := strings.SplitN(parts[2], "-", 2)
 	if len(suffix) == 1 {
