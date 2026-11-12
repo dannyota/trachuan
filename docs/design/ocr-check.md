@@ -77,7 +77,8 @@ A complete check writes the `ocr_check` row with the verdict inside the result.
 Anything else (a refusal, a cut-off answer, a timeout, a transport or API error,
 an answer that fails the schema, a PDF over the API's page or size limit) writes
 no `ocr_check` row: the document stays `needs_ocr`, and the attempt is recorded
-with its reason. Reason: an unfinished check must never read as a clean one.
+with its reason. A NUL in any answer string fails the schema (`schema:nul`).
+Reason: an unfinished check must never read as a clean one.
 
 ## Checker id
 

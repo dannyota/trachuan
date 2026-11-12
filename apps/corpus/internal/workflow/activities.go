@@ -35,6 +35,10 @@ func activityError(err error) error {
 	if errors.Is(err, stage.ErrSuperseded) {
 		return temporal.NewNonRetryableApplicationError("superseded", "superseded", err)
 	}
+	var recipe *stage.RecipeError
+	if errors.As(err, &recipe) {
+		return temporal.NewNonRetryableApplicationError(recipe.Error(), "recipe_mismatch", err)
+	}
 	return err
 }
 

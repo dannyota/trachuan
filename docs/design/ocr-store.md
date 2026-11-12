@@ -3,8 +3,8 @@
 This note owns where OCR text and its cross-checks are kept and how `extract`
 reads them. [ADR 0014](../adr/0014-ocr-on-the-write-path.md) owns the decision;
 [text extraction](text-extraction.md) owns source selection and parsing. The
-cross-check and fresh OCR clients have their own later note; this one fixes the
-records they write.
+[cross-check](ocr-check.md) and the [fresh OCR client](ocr-vision.md) have their
+own notes; this one fixes the records they write.
 
 ## Records
 
@@ -32,10 +32,10 @@ new checker (model or prompt) is a new id and so a new row; a release can always
 name the reading it was built from.
 
 Ids. An engine id names the engine and version as its operator names them:
-`vision-ocr/builtin-latest` for banhmi's stored Google Vision output, and the
-fresh client's id when it exists. A checker id names the model and the prompt
-version. The extract recipe carries the ordered list of accepted engine ids and
-the one checker id, so changing either reruns extract.
+`vision-ocr/builtin-latest` for banhmi's stored Google Vision output, and
+`vision-ocr/builtin-latest/poppler-200` for the fresh client. A checker id names
+the model and the prompt version. The extract recipe carries the ordered list of
+accepted engine ids and the one checker id, so changing either reruns extract.
 
 Writing an entry: the text file is written and synced, linked to its final name,
 and its directory synced, before the row is inserted; a row therefore never

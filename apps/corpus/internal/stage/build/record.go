@@ -75,6 +75,14 @@ func verifyBuildArtifact(store artifact.Store, art artifact.Result, run stage.Ru
 	if record.DevelopmentCasesSHA256 == nil {
 		return record, "", fmt.Errorf("build predates development fixture binding and must be rebuilt")
 	}
+	if _, ok := record.DurationsMS["total"]; !ok {
+		return record, "", fmt.Errorf("build duration total missing")
+	}
+	for _, duration := range record.DurationsMS {
+		if duration < 0 {
+			return record, "", fmt.Errorf("negative build duration")
+		}
+	}
 	if err = verifyValidityReview(dir); err != nil {
 		return record, "", err
 	}

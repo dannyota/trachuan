@@ -79,7 +79,7 @@ func (e *checkRun) documents(ctx context.Context, checker string) ([]ocrcheck.Do
 		if hash != item.Sha256 || hash != input.Sha256 {
 			return nil, fmt.Errorf("check bundle hash mismatch")
 		}
-		selected, selectErr := extract.SelectCheckSource(ctx, dir, input.ItemKey, source, []string{"vision-ocr/builtin-latest"}, checker)
+		selected, selectErr := extract.SelectCheckSource(ctx, dir, input.ItemKey, source, extract.AcceptedEngines(), checker)
 		if selectErr != nil {
 			return nil, fmt.Errorf("select OCR check source: %w", selectErr)
 		}

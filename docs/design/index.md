@@ -165,7 +165,10 @@ all four recipes, `lexical_stats`, `taxonomy_version`, `counts` per table and
 exclusion reason, `dump:{sha256,bytes,format:"custom"}`, `postgres_version`,
 `pgvector_version`, `ltree_version`, `pg_dump_version`, `worker_version`,
 `built_at`, `durations_ms`, `relation_bytes`, `index_bytes`. No credentials,
-file system paths, user questions or host signatures.
+file system paths, user questions or host signatures. `durations_ms` contains
+`total`, `plan`, `prepare`, `load`, `load_documents`, `load_chunks`,
+`load_lexical`, `load_relations`, `load_validity`, `indexes`, `analyze`,
+`calibrate`, `metrics`, `dump` and `dump_hash`.
 
 `calibration.json` holds the reproducible scores and selected threshold, linked
 to fixture hashes. It uses case IDs only, not question text. The dump and build

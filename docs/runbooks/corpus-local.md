@@ -139,3 +139,26 @@ Run `make queryembed-native` to install the pinned native libraries, then run
 
 The binary accepts `--model-dir DIR`, `--ort-lib FILE`, and `--listen ADDR`. The
 first two flags are required; `--listen` defaults to `127.0.0.1:8091`.
+
+## Fresh OCR
+
+Install trusted Poppler tools as described in the OCR cross-check section. Set
+`CORPUS_OCR_STORE`, `GOOGLE_APPLICATION_CREDENTIALS` (an ADC credentials file
+outside the repository) and `GOOGLE_CLOUD_PROJECT` (the billing project). Use
+the workshop database and artifact variables above. Credentials come only from
+the named readable regular file. Vision and token requests ignore proxy
+variables and refuse redirects. Token acquisition stops on cancellation or after
+30 seconds.
+
+```sh
+corpus ocr vision <cc> <rel> --max-pages 100 --dry-run
+corpus ocr vision <cc> <rel> --max-pages 100 --limit-docs 5
+```
+
+Dry run counts verified PDFs without rendering or credentials. The live command
+sends one grayscale PNG page at 200 dpi per request to Google Cloud Vision, with
+language hint `vi`. Only PDFs in verified fetch bundles of the run are sent. The
+request limit includes retries. Rendering retains at most 512 MB of PNG data;
+each page is at most 7 MB and joined text is at most 50 MB. Use `--pdf SHA256`
+for a comparison beside imported text. Fresh text still needs `corpus ocr check`
+before extract can use it; imported text keeps priority when both entries exist.

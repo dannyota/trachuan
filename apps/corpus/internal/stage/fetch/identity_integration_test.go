@@ -4,6 +4,7 @@ package fetch
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 	"testing"
 	"time"
@@ -39,6 +40,13 @@ func TestResolve_IdentityMismatchCommitsNoRows(t *testing.T) {
 	}
 	_, err = db.Exec(ctx, `INSERT INTO run_item(run_id,stage,item_key,state,batch,generation,attempt) VALUES ($1,'fetch','vn:chinhphu:1','pending',0,0,0)`, id)
 	if err != nil {
+		t.Fatal(err)
+	}
+	raw, err := json.Marshal(stage.Snapshot{Recipes: map[string]string{"fetch": actual.Recipe(stage.Snapshot{})}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = db.Exec(ctx, `UPDATE run SET snapshot=$2 WHERE id=$1`, id, raw); err != nil {
 		t.Fatal(err)
 	}
 	result, err := stage.RunBatch(ctx, env, replaySecondary{actual, out}, stage.BatchInput{RunID: id, Generation: 2, Stage: "fetch", Batch: 0}, 1, stage.BatchConfig{HeartbeatEvery: time.Second, MaxAttempts: 1}, func(...any) {})

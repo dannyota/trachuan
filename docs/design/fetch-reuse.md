@@ -76,14 +76,15 @@ baseline rule below starts from bundles written under the new recipe.
 The baseline of a document is its most recently committed VBPL fetch bundle
 under the same fetch recipe hash, from any run of the same country.
 
-- A workshop table keyed by `(document_key, fetch_recipe_hash)` references the
-  artifact and the commit that produced it: run, item key, generation and
-  attempt. That tuple selects one observation set, because identical bundles
-  from several runs share an artifact but not their observations. The successful
-  done-item commit of a VBPL fetch item writes it in the same transaction, after
-  the generation, attempt and source-pause checks; the last commit wins. An item
-  that adopted its own run's acquisition writes nothing. A gap or failure writes
-  nothing and keeps the older baseline.
+- The workshop table `fetch_baseline`, keyed by
+  `(document_key, fetch_recipe_hash)`, references the artifact and the commit
+  that produced it: run, item key, generation and attempt. That tuple selects
+  one observation set, because identical bundles from several runs share an
+  artifact but not their observations. The successful done-item commit of a VBPL
+  fetch item writes it in the same transaction, after the generation, attempt
+  and source-pause checks; the last commit wins. An item that adopted its own
+  run's acquisition writes nothing. A gap or failure writes nothing and keeps
+  the older baseline.
 - The table travels in the workshop dump. A missing row means a full read.
 - A baseline is never inferred from a directory without a committed item.
 

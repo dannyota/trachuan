@@ -27,6 +27,7 @@ import (
 // Process builds and dumps a corpus from the planned inventory.
 func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item stage.Item) (output stage.Output, resultErr error) {
 	started := time.Now()
+	timings := phases{}
 	ctx, cancel := context.WithTimeout(ctx, 50*time.Minute)
 	defer cancel()
 	if s.cfg.Now == nil {
@@ -53,6 +54,7 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 	if err != nil {
 		return stage.Output{}, temporal.NewNonRetryableApplicationError("inventory_changed", "inventory_changed", err)
 	}
+	phaseStart := time.Now()
 	planned, err := s.Plan(ctx, env, run)
 	if err != nil {
 		return stage.Output{}, err
@@ -67,6 +69,7 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 	if s.inputHash(run.Country, run.Rel, inv, correction) != item.InputHash {
 		return stage.Output{}, temporal.NewNonRetryableApplicationError("inventory_changed", "inventory_changed", nil)
 	}
+	timings.observe("plan", phaseStart)
 	recipeHash := s.Recipe(run.Snapshot)
 	if len(item.InputHash) != 64 || len(recipeHash) != 64 {
 		return stage.Output{}, fmt.Errorf("invalid build hashes")
@@ -76,6 +79,7 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 	if err != nil {
 		return stage.Output{}, err
 	}
+	phaseStart = time.Now()
 	if err = s.cfg.checkDisks(env.Artifacts.Root, s.cfg.beforeBytes()); err != nil {
 		return stage.Output{}, err
 	}
@@ -112,30 +116,39 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 	if err = corpusdb.ApplyTables(ctx, conn.Conn(), 1024); err != nil {
 		return stage.Output{}, err
 	}
+	timings.observe("prepare", phaseStart)
 	codes, err := source.Parse(run.Snapshot.SourceList)
 	if err != nil {
 		return stage.Output{}, fmt.Errorf("parse sources: %w", err)
 	}
-	counts, err := Load(ctx, conn.Conn(), inv, env.Artifacts, Recipes{Dense: embedding.DocumentRecipe1(), Lexical: lexical.Recipe1()}, codes.StatusCodes, entries, run.Rel[:4]+"-"+run.Rel[4:6]+"-"+run.Rel[6:8])
+	phaseStart = time.Now()
+	counts, err := Load(ctx, conn.Conn(), inv, env.Artifacts, Recipes{Dense: embedding.DocumentRecipe1(), Lexical: lexical.Recipe1()}, codes.StatusCodes, entries, run.Rel[:4]+"-"+run.Rel[4:6]+"-"+run.Rel[6:8], timings)
 	if err != nil {
 		return stage.Output{}, err
 	}
+	timings.observe("load", phaseStart)
 	if _, err = conn.Exec(ctx, `SET maintenance_work_mem = '512MB'; SET max_parallel_maintenance_workers = 0`); err != nil {
 		return stage.Output{}, fmt.Errorf("set index limits: %w", err)
 	}
+	phaseStart = time.Now()
 	if err = corpusdb.ApplyIndexes(ctx, conn.Conn()); err != nil {
 		return stage.Output{}, err
 	}
+	timings.observe("indexes", phaseStart)
+	phaseStart = time.Now()
 	if _, err = conn.Exec(ctx, `ANALYZE`); err != nil {
 		return stage.Output{}, fmt.Errorf("analyze corpus: %w", err)
 	}
+	timings.observe("analyze", phaseStart)
 	chunkJSON, _ := json.Marshal(chunk.Recipe1())
 	doc, query := embedding.DocumentRecipe1(), embedding.QueryRecipe1()
 	release := retrieval.Release{Country: run.Country, Rel: run.Rel, SchemaVersion: corpusdb.SchemaVersion, DenseRecipe: retrieval.DenseRecipe{Version: 1, Model: doc.Model, Dimensions: doc.Dimensions, Document: doc, DocumentHash: doc.Hash(), Query: query, QueryHash: query.Hash()}, ChunkRecipe: chunkJSON, LexicalRecipe: lexical.Recipe1(), RetrievalRecipe: retrieval.Recipe1(), LexicalStats: counts.LexicalStats, SourceManifestHash: inv.SourceManifestHash(), BuildInputHash: item.InputHash, BuildRecipeHash: recipeHash, EvaluationSummary: initialEvaluationSummary(), BuiltAt: s.cfg.Now().UTC().Truncate(time.Microsecond)}
+	phaseStart = time.Now()
 	cal, err := calibrate(ctx, s.cfg, pool, release)
 	if err != nil {
 		return stage.Output{}, err
 	}
+	timings.observe("calibrate", phaseStart)
 	calJSON, err := json.Marshal(cal)
 	if err != nil {
 		return stage.Output{}, fmt.Errorf("encode calibration: %w", err)
@@ -145,10 +158,12 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 	if err = insertRelease(ctx, conn.Conn(), release); err != nil {
 		return stage.Output{}, err
 	}
+	phaseStart = time.Now()
 	tableCounts, relationBytes, indexBytes, err := databaseMetrics(ctx, conn.Conn(), counts)
 	if err != nil {
 		return stage.Output{}, err
 	}
+	timings.observe("metrics", phaseStart)
 	addValidityCounts(tableCounts, counts.validity.counts)
 	for reason, count := range exclusionCounts(inv) {
 		tableCounts[reason] = count
@@ -162,9 +177,12 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 	}
 	art, err := env.Artifacts.Publish(ctx, "build", item.InputHash, recipeHash, func(dir string) error {
 		dumpPath := filepath.Join(dir, "corpus.dump")
+		phaseStart = time.Now()
 		if dumpErr := pgDump(ctx, s.cfg, name, dumpPath); dumpErr != nil {
 			return dumpErr
 		}
+		timings.observe("dump", phaseStart)
+		phaseStart = time.Now()
 		dumpFile, openErr := os.Open(dumpPath)
 		if openErr != nil {
 			return fmt.Errorf("open dump: %w", openErr)
@@ -178,7 +196,9 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 		if closeErr != nil {
 			return fmt.Errorf("close dump: %w", closeErr)
 		}
-		record := map[string]any{"version": 1, "country": run.Country, "rel": run.Rel, "database_name": final, "schema_version": corpusdb.SchemaVersion, "build_input_hash": item.InputHash, "build_recipe_hash": recipeHash, "source_manifest_hash": inv.SourceManifestHash(), "identity_inventory_hash": inv.IdentityHash(), "identity_map_sha256": s.cfg.Suite.Hashes.IdentityMap, "development_cases_sha256": s.cfg.Suite.Hashes.Development, "dense_recipe": release.DenseRecipe, "chunk_recipe": release.ChunkRecipe, "lexical_recipe": release.LexicalRecipe, "retrieval_recipe": release.RetrievalRecipe, "lexical_stats": release.LexicalStats, "taxonomy_version": "", "counts": tableCounts, "postgres_version": s.cfg.Versions.PostgreSQLMajor, "pgvector_version": s.cfg.Versions.PGVector, "ltree_version": s.cfg.Versions.Ltree, "pg_dump_version": s.cfg.Versions.PgDump, "worker_version": run.Snapshot.WorkerVersion, "durations_ms": map[string]int64{"total": time.Since(started).Milliseconds()}, "relation_bytes": relationBytes, "index_bytes": indexBytes, "dump": map[string]any{"sha256": fmt.Sprintf("%x", hasher.Sum(nil)), "bytes": size, "format": "custom"}, "built_at": release.BuiltAt}
+		timings.observe("dump_hash", phaseStart)
+		timings["total"] = time.Since(started).Milliseconds()
+		record := map[string]any{"version": 1, "country": run.Country, "rel": run.Rel, "database_name": final, "schema_version": corpusdb.SchemaVersion, "build_input_hash": item.InputHash, "build_recipe_hash": recipeHash, "source_manifest_hash": inv.SourceManifestHash(), "identity_inventory_hash": inv.IdentityHash(), "identity_map_sha256": s.cfg.Suite.Hashes.IdentityMap, "development_cases_sha256": s.cfg.Suite.Hashes.Development, "dense_recipe": release.DenseRecipe, "chunk_recipe": release.ChunkRecipe, "lexical_recipe": release.LexicalRecipe, "retrieval_recipe": release.RetrievalRecipe, "lexical_stats": release.LexicalStats, "taxonomy_version": "", "counts": tableCounts, "postgres_version": s.cfg.Versions.PostgreSQLMajor, "pgvector_version": s.cfg.Versions.PGVector, "ltree_version": s.cfg.Versions.Ltree, "pg_dump_version": s.cfg.Versions.PgDump, "worker_version": run.Snapshot.WorkerVersion, "durations_ms": timings, "relation_bytes": relationBytes, "index_bytes": indexBytes, "dump": map[string]any{"sha256": fmt.Sprintf("%x", hasher.Sum(nil)), "bytes": size, "format": "custom"}, "built_at": release.BuiltAt}
 		if inv.Version == 2 || correction.nonempty {
 			record["corrections_sha256"] = correction.hash
 		}
