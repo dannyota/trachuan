@@ -34,3 +34,5 @@ Observations and experiments. Not project authority.
   item read against its page.
 - [relationSQL at production size](relation-sql-explain-2026-11.md): plans and
   row counts for hit relation hydration on vn/20261111_4.
+- [Clause and point parsing](vn-clause-parsing-2026-11.md): the clause and point
+  grammar measured against source trees on vn/20261111_4.

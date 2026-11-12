@@ -125,7 +125,9 @@ endpoint can never resolve to one by accident.
 An article's `text` holds its heading line and every paragraph up to the next
 article, structure heading or scope close, so it is the whole article. A
 structure provision (`phan`, `chuong`, `muc`) holds only its label and title
-lines. Every paragraph of a scope therefore sits in exactly one provision.
+lines. Every paragraph of a scope therefore sits in exactly one article or
+structure provision; [clauses and points](text-structure.md) are descendants
+whose text is contained in their article.
 
 Quoted text is tracked by two independent states, counted through every
 paragraph in order: a depth for directional double marks (an opening `“` or `«`

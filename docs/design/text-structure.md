@@ -11,43 +11,28 @@ hold headings only, then older article heading shapes.
 
 ## Evidence
 
-Measured on release `vn/20261111_4` (57,176 articles) with a prototype of the
-grammar below, run on each article's stored text line by line:
+A prototype of the grammar and checks below ran over release `vn/20261111_4`
+(57,176 articles); method, tables and the cases read by hand are in
+[clause and point parsing](../research/vn-clause-parsing-2026-11.md). The
+prototype reads each article's stored text and starts the quoted-text state at
+the article; the parser keeps that state across the document.
 
-| Articles without child provisions                   | Count  |
-| --------------------------------------------------- | ------ |
-| Parsed text (`html_transcription`), all             | 14,711 |
-| of those, clauses or points accepted by the grammar | 10,692 |
-| of those, no clause or point lines                  | 3,790  |
-| of those, rejected by a check below                 | 229    |
-| Source tree, all                                    | 15,112 |
-| of those, the text is the heading line only         | 7,324  |
-| of those, clauses or points accepted by the grammar | 49     |
-
-The 10,692 parsed articles gain 40,710 clauses and 26,674 points. Source trees
-are left alone: 49 articles do not justify changing source-tree artifacts, which
-stay byte-identical across this change, so their chunk and embed work is reused.
-
-Validation set: 21,223 source-tree articles whose `khoan` children are each
-contained in the article text, in order. The grammar, run on the article text
-alone, was compared with the tree:
-
-| Result                                             | Articles |
-| -------------------------------------------------- | -------- |
-| Accepted, clause starts equal the tree             | 20,590   |
-| of those, point counts also equal                  | 20,443   |
-| Accepted, clause starts differ                     | 122      |
-| Rejected by a check (the article would stay whole) | 511      |
-
-Of 79,270 clause spans in accepted articles with equal clause starts, 79,213
-equal the tree's clause text including its points, after whitespace collapse.
-Sixteen differing articles were read by hand: in 12 the tree is wrong (a clause
-or point node missing, points recorded as clauses, a continuation paragraph
-recorded as a clause, a clause whose stored text stops early); one used the old
-dash style, which the grammar below accepts; one is quoted amendment text, which
-the grammar correctly does not read as structure; one is `c1)` to `c3)` that the
-tree nests under `c)`; one is an uppercase point letter `C)` that the prototype
-missed, now a failed candidate below.
+- Parsed text (`html_transcription`): 14,711 articles, all without children.
+  10,676 split, adding 40,651 clauses and 26,608 points before the two checks
+  below that remove points or whole articles (308 parents, 6 articles); 3,778
+  hold no clause or point paragraph; 257 are rejected.
+- Source trees: 15,112 articles without children. 7,324 (in 686 documents) hold
+  their heading line only, 7,648 hold unnumbered text, 46 would split. Source
+  trees are left alone: 46 articles do not justify changing source-tree
+  artifacts, which stay byte-identical, so their chunk and embed work is reused.
+- Validation on 21,223 source-tree articles whose clause children each occur in
+  the article text in order: 20,553 accepted, of which 20,436 have the tree's
+  clause starts; 78,505 of 78,556 clause spans and 54,498 of 54,500 point spans
+  equal the tree's text. Of 28 differing articles read by hand, 23 are tree
+  errors (missing clauses or points, continuation paragraphs or points recorded
+  as clauses, article text that stops early); the other five changed the grammar
+  to what this note states (old `1-` style, uppercase `C)`, sub-numbered `2.1.`)
+  or confirm it (quoted amendment points, `c1)` as siblings).
 
 ## Where it applies
 
@@ -63,20 +48,23 @@ scopes, not structure provisions.
 
 Lines are the article's paragraphs after its heading paragraph. A paragraph
 inside quoted text (the document-wide state of text extraction) never starts a
-clause or a point.
+clause or a point and is never a failed candidate.
 
-- Clause start: the number token (digits, then at most one inserted letter as in
-  `2a`) followed by `.` and then whitespace, the end of the paragraph, an
-  uppercase letter or a footnote marker `[<digits>]`; or followed by `-` and
-  whitespace (older documents write `1-` then a space). A paragraph starting
-  `<digits>.` and another digit (`1.1.`) is running text of the current clause.
+- Clause start: one to three digits, at most one inserted letter (`2a`), then
+  `.` followed by whitespace, the end of the paragraph, an uppercase letter or a
+  footnote marker `[<digits>]`; or `-` followed by whitespace (older documents).
 - Point start: one letter of the Vietnamese order
-  `a b c d đ e g h i k l m n o p q r s t u v x y`, optionally followed by one or
-  two digits for an inserted point (`a1`), then `)`, or `.` or `-` followed by
-  whitespace.
-- Failed candidates: a paragraph that starts with digits and `)`, or with digits
-  and `.` followed by anything not listed above, or with one uppercase letter
-  and `)`.
+  `a b c d đ e g h i k l m n o p q r s t u v x y`, at most two digits for an
+  inserted point (`a1`), then `)`, or `.` or `-` followed by whitespace.
+- Sub-item: a paragraph starting with `-`, `+`, `•` or `–`. It belongs to the
+  clause or point before it.
+- Failed candidate, outside quoted text: any other paragraph that starts with
+  digits (and an optional letter) followed, after optional spaces, by `.`, `)`,
+  `-` or `:`, including sub-numbering (`2.1.`) and `2a)`; any other paragraph
+  that starts with a lowercase letter (and optional digits) followed by `)`,
+  `.`, `-` or `:` (`c.Nội dung`); one uppercase letter (and optional digits)
+  followed by `)`. A heading the grammar does not read can therefore never hide
+  inside the clause or point before it.
 
 ## Checks
 
@@ -84,35 +72,53 @@ An article is split only when every check passes; otherwise it stays one
 provision, as today, and the reason is counted.
 
 - Clause numbers run 1, 2, 3, ... with an inserted `n<letter>` allowed after `n`
-  or after the previous letter, at least two clauses, no gap, repeat or step
-  back. A lone `1.` is not split: it is more often a list item than a clause (17
-  such parsed articles in the measured release).
+  or after the previous letter in the Vietnamese order, at least two clauses, no
+  gap, repeat or step back. A lone `1.` is not split: it is more often a list
+  item than a clause.
 - Point letters inside one clause, or directly inside the article when it has no
   clauses, run from `a` in the Vietnamese order with inserted `a1`, `a2` after
   their letter; at least two points when they sit directly in the article.
 - One clause style (`.` or `-`) per article and one point style per parent.
 - No failed candidate in the article, and no points before the first clause of
   an article that has clauses.
+- Unique containment: each clause text occurs exactly once in the article text
+  and each point text exactly once in its parent's text. Otherwise the article
+  stays whole, because chunk would read the tree as ambiguous.
+
+One check removes points without failing the article: when the last point of a
+parent is followed by a paragraph that is not a sub-item, that paragraph may
+speak for the whole clause, so the parent keeps its text and gets no point
+children (308 parents in the measured release). Source trees put such a
+paragraph in the last point (974 of 974 cases), but a citation of that point
+would then claim prose that may belong to the clause.
 
 Reasons counted: `clause_sequence`, `clause_style`, `clause_candidate`,
-`point_sequence`, `point_style`, `points_before_clauses`, `single_clause`.
+`point_sequence`, `point_style`, `point_candidate`, `points_before_clauses`,
+`single_clause`, `containment`; and `point_tail` for parents left without
+points.
 
 ## What is recorded
 
 - A clause holds the paragraphs from its start through the paragraph before the
   next clause start or the end of the article; a point holds its paragraphs up
-  to the next point start, the next clause start or the end of its clause. The
-  article's lead (paragraphs before the first clause) stays in the article only.
-  Text after the last point belongs to the last point, as in source trees.
-- The article's `text` is unchanged and still holds the whole article. Each
-  child's `text` is its paragraphs joined exactly as the article joins them, so
-  the article contains each child once and in order, which is the containment
-  shape [chunk](chunk.md#tree-rendering) maps onto the parent.
+  to the next point start or the end of its parent. The article's lead
+  (paragraphs before the first clause) stays in the article only. Text after the
+  last clause belongs to the last clause, as in source trees (the clause spans
+  above).
+- The article's `text` is unchanged and still holds the whole article; each
+  child's `text` is its paragraphs joined exactly as the article joins them.
+  Every paragraph still sits in exactly one article or structure provision;
+  clauses and points are descendants whose text is contained in it.
+- Parent links: each parsed provision records its parent's anchor, and extract
+  sets `parent_node_id` of a clause to its article and of a point to its clause,
+  or to the article for a point directly in it. Chunk follows these links, not
+  the anchor's slashes; structure ancestors of the article are unchanged.
 - Kinds `khoan` and `diem`; anchors `<article anchor>/khoan-<token>` and
   `.../diem-<token>` (`dieu-5/khoan-2a/diem-đ`, `dieu-3/diem-a` for points
   directly in an article, `kem-theo-1/dieu-4/khoan-2` in an instrument scope);
   labels `Khoản <token>` and `Điểm <token>`; empty heading; ordinals by
-  position; locators from the paragraphs.
+  position; locators from the paragraphs. The checks reject repeats, so `~k`
+  suffixes never arise here.
 - The anchor segment is the kind, `-` and the lowercased token. One function,
   `anchor.Segment(kind, token)` in a new package `apps/corpus/internal/anchor`,
   composes it for source trees (today inline in `titleParts`,
@@ -121,26 +127,31 @@ Reasons counted: `clause_sequence`, `clause_style`, `clause_candidate`,
   and `/diem-` plus the lowercased word in `textrule/locators.go`), so one label
   gives one anchor everywhere. Source-tree anchors do not change.
 - Node ids follow the existing `tx:` rule (scope index, anchor and text), so a
-  clause whose text changes gets a new id.
+  clause whose text changes gets a new id. Article ids do not change.
 - `text.json` counts per document: articles split, clauses, points, and articles
-  left whole by reason. No gap: an article left whole is still a true citation.
+  or parents left whole by reason. No gap: an article left whole is still a true
+  citation.
 - The text parser version becomes `textparse/7` and the extract recipe changes
   with it.
 
 ## Effects
 
-- Extract, chunk and embed repeat for documents read from parsed text (1,070 in
-  the measured release); source-tree documents keep their artifacts.
+- Extract, relate, chunk and embed repeat for documents read from parsed text
+  (1,070 in the measured release): relate binds the extract manifest hash, so it
+  replans even where its relation rows stay equal. Source-tree documents keep
+  every artifact.
 - Chunk: an article that fits stays one article-owned chunk. A larger article
-  now splits at its clauses and points instead of at lines, and those chunks
-  cite the clause.
+  splits at its clauses and points instead of at lines, and each chunk cites the
+  clause or point that owns it.
 - Relations from text ([relations text](relations-text.md)): an anchor such as
   `dieu-5/khoan-2` in a parsed document now resolves where it named a clause;
   build counts the change in `relation_clause_unresolved`.
 - Validity: unchanged. Effect articles of parsed documents stay review evidence
-  under [text extraction](text-extraction.md#validity-rules).
-- Identity map and manual corrections: existing anchors keep their meaning; new
-  child ids carry no entries.
+  under [text extraction](text-extraction.md#validity-rules). A clause-owned hit
+  must report its article's status and warnings, as an article-owned hit did
+  (acceptance below).
+- Identity map and manual corrections: existing anchors and article ids keep
+  their meaning; new child ids carry no entries.
 
 ## Source trees with heading-only articles
 
@@ -178,17 +189,27 @@ it is accepted.
 
 The primary runs these; they are requirements, not results.
 
-- Fixtures with expected provision lists for: clauses with points, inserted
-  clauses and points (`2a`, `a1`, `đ`), old dash style, footnote markers after
-  the clause number, `1.1.` running text, points directly in an article, a
-  single `1.`, quoted amended clauses, and each rejection reason.
-- The containment property holds for every split article of the recorded
-  fixtures: each child text occurs once, in order, inside the article text.
+- Fixtures with expected provision lists, parents included, for: clauses with
+  points, inserted clauses and points (`2a`, `a1`, `đ`), old dash style,
+  footnote markers after the clause number, sub-items, points directly in an
+  article, an instrument scope, a lone `1.`, quoted amended clauses, a last
+  point followed by clause prose (`point_tail`), a clause that quotes an earlier
+  clause verbatim (`containment`), and each rejection reason, including a failed
+  candidate after the last clause (`2a)`) and after the last point
+  (`c.Nội dung`).
+- An integration fixture through extract, chunk and build: clause and point
+  provisions have the stated parents and paths; a large article chunks at its
+  clauses; a relation text naming `khoản 2 Điều 5` resolves to the clause, and
+  one naming a missing point resolves to the deepest node with
+  `relation_clause_unresolved`; a clause-owned hit carries its article's status
+  and warnings.
 - A comparison test over recorded source-tree bundles that also carry a
   transcription: clause starts read from the transcription equal the tree's
   clause anchors, with each difference listed.
 - Source-tree and OCR documents produce byte-identical extract artifacts before
-  and after the change; the compatibility test pins them.
+  and after the change; for parsed documents, article node ids, validity
+  outcomes, manual-correction evidence and identity-map validation are
+  unchanged.
 - For every clause and point label form in the fixtures, the anchor that
   relations from text produce equals the anchor extract produces.
 - The live run is gated by the change rule of
