@@ -52,7 +52,7 @@ func rankWithCap(arms Arms, recipe Recipe, limit int, mode ArmMode, cap int) (Ra
 	if limit == 0 {
 		limit = 8
 	}
-	if limit < 1 || limit > 50 || (mode != "" && mode != "hybrid" && mode != "dense" && mode != "lexical") || recipe.RRF.K < 1 || recipe.HydrateMultiplier < 1 || recipe.DocumentCap < 1 || cap < 1 {
+	if limit < 1 || limit > 50 || (mode != "" && mode != "hybrid" && mode != "dense" && mode != "lexical") || recipe.RRF.K < 1 || recipe.HydrateMultiplier < 1 || recipe.DocumentCap < 1 || recipe.NonCurrentTail < 0 || recipe.NonCurrentTail > 5 || cap < 1 {
 		return Ranking{}, errors.New("invalid ranking options")
 	}
 	if (mode != "lexical" && arms.Depths.Dense < recipe.DenseDepth) || (mode != "dense" && arms.Depths.Lexical < recipe.LexicalDepth) {

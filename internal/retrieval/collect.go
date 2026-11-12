@@ -46,12 +46,8 @@ func (e *Engine) collect(ctx context.Context, p Prepared, depths Depths, notYet 
 	result.Date = Date{Year: parsedDate.Year(), Month: parsedDate.Month(), Day: parsedDate.Day()}
 	result.AsOf = p.Request.AsOf
 	result.IncludeNonCurrent = p.Request.InForceOnly != nil && !*p.Request.InForceOnly
-	groups := []*ArmGroup{&result.Primary}
-	flags := []bool{true}
-	if p.Request.InForceOnly != nil && !*p.Request.InForceOnly {
-		groups = append(groups, &result.NonCurrent)
-		flags = append(flags, false)
-	}
+	groups := []*ArmGroup{&result.Primary, &result.NonCurrent}
+	flags := []bool{true, false}
 	refs := append([]string{}, p.Validation.References...)
 	vec := denseVector(p.Vector.Values)
 	sv := sparseVector(sparse, e.release.LexicalRecipe.Dimensions)

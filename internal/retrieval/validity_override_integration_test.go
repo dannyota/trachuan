@@ -35,6 +35,19 @@ func TestNotYetEligible_PrimaryWithCurrentFalse(t *testing.T) {
 			t.Fatal("default eligibility returned the not-yet document")
 		}
 	}
+	baselineResponse, err := Shape(baseline, recipe, 8, "dense")
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, hit := range baselineResponse.NonCurrent {
+		if hit.Identity.DocumentKey == "vn:not-yet" && !hit.Stamp.Current && hit.Stamp.StatusClass == "not_yet" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("default tail missing not-yet document")
+	}
 	arms, err := engine.CollectWithNotYetEligible(ctx, prepared, Depths{Dense: recipe.DenseDepth, Lexical: recipe.LexicalDepth})
 	if err != nil {
 		t.Fatal(err)

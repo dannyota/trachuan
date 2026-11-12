@@ -74,5 +74,5 @@ func ShapeWithCap(arms Arms, recipe Recipe, limit int, mode ArmMode, cap *CapOve
 	if err != nil {
 		return Response{}, err
 	}
-	return shapeWithCap(arms, recipe, limit, mode, value)
+	return shapeWithPolicy(arms, recipe, limit, mode, value, recipe.NonCurrentTail)
 }

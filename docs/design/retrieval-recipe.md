@@ -1,4 +1,4 @@
-# Shared retrieval recipe 1
+# Shared retrieval recipe
 
 Proposed root package `internal/retrieval`, imported by `apps/corpus` and the
 future `apps/server`. It returns provisions from one pinned corpus database. No
@@ -159,13 +159,17 @@ it explicitly; do not substitute RRF score or the cosine of another group. Clamp
 finite cosine values to [-1,1] in both calibration and serving; reject
 non-finite values as infrastructure failures.
 
-Consolidation collapse is `off-unverified-alignment` in recipe 1. Imported
-`consolidates` edges support family diagnostics, but do not establish provision
-equivalence or renumbering. The historical family+label collapse could discard
-different amendment articles. Keep both until a later adjudicated mapping
-supports collapse. Caching family components for such trials is deferred to the
-tuning plan, which derives them from the immutable dump.
+Consolidation collapse is `off-unverified-alignment` in the current recipe.
+Imported `consolidates` edges support family diagnostics, but do not establish
+provision equivalence or renumbering. The historical family+label collapse could
+discard different amendment articles. Keep both until a later adjudicated
+mapping supports collapse. Caching family components for such trials is deferred
+to the tuning plan, which derives them from the immutable dump.
 
+Recipe 2 raises the per-document cap from 3 to 5: on run vn/20261111_4 cap 5
+took old product recall@20 from 80 to 82 and development from 68 to 75 of 113
+with MRR@8 up on both cohorts and compact p95 at 20 hits down; no cap gained 3
+more development citations but lowered development MRR@8, so it stays unadopted.
 Apply the per-document cap in rank order: take capped hits while collecting
 excess hits into a demoted list; if fewer than `limit` remain, append demoted
 hits in original order until full. This is a diversity preference, not a hard
@@ -212,12 +216,29 @@ start and no known end is an open interval, not a missing-end gap. Every such
 response says historical filtering uses document dates, not reconstructed
 provision history or past suspension status.
 
-`in_force_only` defaults true. False runs the same arms on the complement as a
-separate group, with its own depths and shaping, and returns primary hits first,
-then `NonCurrent` using only remaining response slots. Primary failures are not
-rescued by that group: no primary hits means abstain. Evidence size includes
-both groups. `as_of` never silently swaps expired and primary law based on
-score.
+`in_force_only` defaults true. In that default mode the complement (expired and
+not-yet documents) still runs the same arms as a separate group with its own
+depths and shaping, and the response reserves `non_current_tail` slots (2 in
+recipe 2, [budgets](budgets.md#retrieval)) for it: primary hits are shaped to
+`limit` minus the effective tail, then up to that many complement hits follow in
+`NonCurrent`, marked non-current with their status; when the complement has
+fewer hits, primary keeps the freed slots. The effective tail is the smaller of
+`non_current_tail` and half of `limit` rounded down, so primary always keeps at
+least half of the slots (limit 1: no tail; limit 2 or 3: one; limit 4 and up:
+two). Abstention and confidence are judged on the primary group alone, as
+before; complement hits never make a response answer. Not-yet documents never
+enter the primary group, since current-law precision counts every primary hit.
+With `in_force_only` false the complement competes for the remaining response
+slots after primary, as before; on this corpus primary fills the limit, so that
+request changes nothing today (backlog: reserve slots when the caller asks
+explicitly). Primary failures are not rescued by the complement: no primary hits
+means abstain. Evidence size includes both groups. `as_of` never silently swaps
+expired and primary law based on score. Measured on run vn/20261111_4 (cap 5
+with tail 0, 2, 3, 4): old product recall@20 82, 85, 85, 86 and recall@8 77, 77,
+75, 73; development recall@20 75, 83, 85, 85 and recall@8 73, 76, 72, 67;
+against cap 5 alone, tail 2 raises recall@20 on both cohorts and recall@8 and
+MRR@8 on development, and leaves old product recall@8 and MRR@8 unchanged;
+against the cap-3 baseline every one of those numbers rises.
 
 Build `Citation` from the group's actual ancestry: join nonempty article, clause
 and point labels in ancestor order with a comma and a space; otherwise use its
@@ -260,30 +281,5 @@ Threshold provenance and provisional status follow [evaluation](calibration.md).
 
 ## Serialized recipe and checks
 
-`retrieval_recipe` contains `version:1`, `dense_depth`, `lexical_depth`,
-`ann:{pool_min,pool_multiplier,ef_max,iterative_scan,plan_cache_mode, max_scan_tuples,scan_mem_multiplier,fallback}`,
-`rrf:{k,dense_weight, lexical_weight,routed_lexical_weight}`, `ties:"score-id"`,
-`routing:"vn-number/1"`, `group:"nearest-khoan"`, `reducer:"max"`,
-`hydrate_multiplier`, `document_cap`, `backfill:"demoted-order"`,
-`family_collapse`, `context_scope:"number-routed/1"`,
-`validity:"document-dates/3"`, `default_in_force_only:true`,
-`query_gate:"vn-marks/1"`, `evidence:"source-spans/1"`, `evidence_rune_cap`,
-`relation_cap`, `relation_evidence_rune_cap`,
-`abstention:{statistic:"first-group-best-member-cosine",threshold, status:"provisional-old-product"|"old-product+development",calibration_sha256}`.
-Hash compact fixed-field JSON. Serving does not accept arbitrary recipe
-overrides.
-
-Any status or date eligibility change bumps `validity`, and any class
-eligibility change bumps `context_scope`, even if the response shape is
-unchanged. Version 2 records exclusive `eff_to` and the consolidated-status
-eligibility rule above. Rebuild and re-evaluate under the new recipe; do not
-reuse version 1 eligibility caches or relabel an old release.
-
-Required checks: diacritics/rejection message, document-number boundaries,
-ambiguous/unknown references, raw dense bytes, both validity modes, missing
-dates, lexical-only top hit cosine, equal-score ties, roll-up and cap/backfill,
-bounded evidence, expired separation, exact plan, ANN loss/fallback and pooled
-connection settings restored after errors. First-party algorithm references:
-[RRF](https://cormack.uwaterloo.ca/cormacksigir09-rrf.pdf) and
-[pgvector indexing](https://github.com/pgvector/pgvector#indexing), cited in the
-local study; no new external measurements or optimality claim.
+The serialized recipe, its hash and its checks are specified in
+[serialized recipe](retrieval-recipe-serialized.md).

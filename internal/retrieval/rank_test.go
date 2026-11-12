@@ -65,13 +65,14 @@ func TestGroup_MaxReducerNeverSums(t *testing.T) {
 	}
 }
 
-func TestCap_ThreePerDocumentWithDemotedBackfill(t *testing.T) {
-	a := rankFixture([]Candidate{rankCandidate(1, 1, "a", .4), rankCandidate(2, 2, "a", .4), rankCandidate(3, 3, "a", .4), rankCandidate(4, 4, "a", .4), rankCandidate(5, 5, "b", .4)}, nil)
-	got, err := Rank(a, Recipe1(), 5, "hybrid")
+func TestCap_FivePerDocumentWithDemotedBackfill(t *testing.T) {
+	// Recipe 2 raises the diversity cap to five.
+	a := rankFixture([]Candidate{rankCandidate(1, 1, "a", .4), rankCandidate(2, 2, "a", .4), rankCandidate(3, 3, "a", .4), rankCandidate(4, 4, "a", .4), rankCandidate(5, 5, "a", .4), rankCandidate(6, 6, "a", .4), rankCandidate(7, 7, "b", .4)}, nil)
+	got, err := Rank(a, Recipe1(), 7, "hybrid")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(got.Groups) != 5 || got.Groups[3].Best.ChunkID != 5 || got.Groups[4].Best.ChunkID != 4 {
+	if len(got.Groups) != 7 || got.Groups[5].Best.ChunkID != 7 || got.Groups[6].Best.ChunkID != 6 {
 		t.Fatalf("groups: %+v", got.Groups)
 	}
 }

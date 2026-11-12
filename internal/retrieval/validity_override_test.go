@@ -77,6 +77,8 @@ func TestNonCurrentTail_PrimaryKeepsFreedSlots(t *testing.T) {
 func TestNonCurrentTail_UsesFullLimitForComplementShaping(t *testing.T) {
 	a, recipe := tailFixture()
 	recipe.HydrateMultiplier = 1
+	// Keep this diversity check independent of the recipe 2 cap of five.
+	recipe.DocumentCap = 3
 	other := a.NonCurrent.Dense[0]
 	a.NonCurrent = ArmGroup{}
 	for i := int64(1); i <= 5; i++ {

@@ -159,3 +159,12 @@ accuracy on either cohort.
   a signal, not a refusal; a gate on it blocked releases for no evidence lost.
   Balanced accuracy on the same scores reaches about 0.86 at threshold 0.53
   (positives answered 111 of 134, negatives flagged 18 of 20).
+- 2026-11-12: recipe 2 under item 4, measured on run vn/20261111_4 with the
+  research overrides of Plan 5: per-document cap 5 and a default non-current
+  tail of 2. Old product recall@20 80 to 85 of 93, recall@8 73 to 77, MRR@8
+  0.692 to 0.705; development recall@20 68 to 83 of 113, recall@8 64 to 76,
+  MRR@8 0.653 to 0.667; current-law precision 1.0 on both; compact p95 at 20
+  hits 32.8k to 32.3k and 34.6k to 35.0k characters. Rejected: not-yet documents
+  as primary hits (precision 0.952 and 0.935) and the agent-side
+  `in_force_only:false` for historical questions (no change, the complement only
+  gets leftover slots).

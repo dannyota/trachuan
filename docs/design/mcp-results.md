@@ -4,8 +4,8 @@
 parts the agent chooses, several per call. The decision and its trade-offs are
 in [ADR 0013](../adr/0013-compact-search-and-batch-read.md). Ranking,
 abstention, validity and hit text come from
-[retrieval recipe 1](retrieval-recipe.md); this note owns how they are shaped
-for `/mcp` and the matching web API. Numbers are in [budgets](budgets.md).
+[retrieval recipe](retrieval-recipe.md); this note owns how they are shaped for
+`/mcp` and the matching web API. Numbers are in [budgets](budgets.md).
 
 ## Format
 
