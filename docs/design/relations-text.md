@@ -22,22 +22,29 @@ run, and the relate stage reports them per kind and per gap.
 
 ## One fail-closed rule
 
-A text relation exists only when every part of the sentence is accounted for by
-the grammar, the target document is a diagram target of the same source
-document, the target article is unambiguous and the requested provision exists.
-Every other outcome is a counted gap, never a relation and never a guess.
+A text relation row exists only when every part of the sentence is accounted for
+by the grammar and the target document is a diagram or references target of the
+same source document whose stated type, year and date agree with it. Its
+provision endpoint is set only when the requested anchor resolves unambiguously
+in the target's tree; otherwise the endpoint is null or the enclosing article,
+with a named gap. Every other outcome is a counted gap, never a row and never a
+guess.
 
 ## Inputs and identity
 
 - The relate item for a document reads two artifacts: the fetch artifact
   (diagram and references, as today) and the extract artifact (the document's
   own provisions). Its input hash becomes
-  `sha256("fetch:<fetch sha256>\nextract:<extract sha256>")`; `Plan` selects
-  documents whose fetch and extract items are done, and build checks the same
-  pair. The relate recipe gains `text_rules:"vn-targets/1"`. Recipes freeze when
-  a run first includes the stage ([pipeline](pipeline.md)), so the change
-  applies to new runs only; an existing run keeps its frozen relate recipe and
-  input identity.
+  `sha256("fetch:<fetch sha256>\nextract:<extract sha256 or ->")`. `Plan`
+  selects documents whose fetch item is done and whose extract item is done or
+  ended as a gap without an artifact (`tree_too_large`, a source gap); the
+  second case writes `-` and the item imports the diagram only, so diagram
+  import never depends on extraction. Relate processing, the build relation
+  reader and the build identity-inventory reader validate the same pair with one
+  shared function ([pipeline](pipeline.md#items-artifacts-and-gaps)). The relate
+  recipe gains `text_rules:"vn-targets/1"`. Recipes freeze when a run first
+  includes the stage, so the change applies to new runs only; an existing run
+  keeps its frozen relate recipe and input identity.
 - The artifact stays run independent: it records what the sentence says and the
   diagram target's VBPL id, never a resolved provision of another document.
   Resolution against the run (membership, `unknown_target`) stays in `Resolve`;
@@ -45,16 +52,21 @@ Every other outcome is a counted gap, never a relation and never a guess.
 
 ## Grammar
 
-Text comes from the source document's extract artifact. For each `dieu`
-provision whose text is not empty, the parser normalizes the text (NFC,
-whitespace collapsed to one space, ASCII digits, letters compared
-case-insensitively) and splits it into sentences at a full stop followed by a
-space or the end; a full stop inside a number token (`39/2016/TT-NHNN.` only at
-the end) does not split. Quotation marks (`"`, `“ ”`, `« »`, `'`) are tracked
-across the provision: text inside a quotation is never a candidate, and a
-provision with unbalanced quotation marks yields nothing with gap
-`relation_text_unbalanced_quote`. The parser is a hand-written scanner over
-tokens; no pattern language.
+Text comes from the source document's extract artifact. A source document whose
+extract evidence makes `text_complete` false
+([text extraction](text-extraction.md#what-is-recorded): `tree_headings_only`,
+`structure_uncertain`, `table_text`, `image_content`, `ocr_flagged`,
+`ocr_rejected`, `ocr_label_flagged` or `needs_ocr`) yields no text relations and
+gets gap `relation_text_source_incomplete`; an incorrectly read sentence must
+not create a relation. For each `dieu` provision whose text is not empty, the
+parser normalizes the text (NFC, whitespace collapsed to one space, ASCII
+digits, letters compared case-insensitively) and splits it into sentences at a
+full stop followed by a space or the end; a full stop inside a number token
+(`39/2016/TT-NHNN.` only at the end) does not split. Quotation marks (`"`,
+`“ ”`, `« »`, `'`) are tracked across the provision: text inside a quotation is
+never a candidate, and a provision with unbalanced quotation marks yields
+nothing with gap `relation_text_unbalanced_quote`. The parser is a hand-written
+scanner over tokens; no pattern language.
 
 A candidate sentence has, in order:
 
@@ -67,23 +79,38 @@ A candidate sentence has, in order:
    normalizer ([index](index.md#normalization)).
 4. One or more target groups. A group is a list of locators joined by `,`, `và`
    or `;` and closed by an `Điều N` locator:
-   `(điểm <x>)* (khoản <N>)* Điều <N>`. A trailing `Điều N` scopes every clause
-   before it, and a clause scopes every point before it;
+   `(điểm <x>)* (khoản <N>)* Điều <N>`. Scoping is left to right: a run of
+   points is consumed by the first clause (or, with no clause, the closing
+   article) that follows it; a clause with no unconsumed points before it is a
+   whole-clause target; every clause is scoped by the closing article.
    `điểm a, điểm b khoản 2 Điều 5` yields `dieu-5/khoan-2/diem-a` and
-   `dieu-5/khoan-2/diem-b`; `khoản 8, khoản 9 và khoản 10 Điều 8` yields three
-   clause anchors; `điểm a Điều 5` yields `dieu-5/diem-a`; `Điều 3 và Điều 4`
-   yields two article anchors. A group without a closing article, or a point
-   after a clause-less article, rejects the sentence with gap
+   `dieu-5/khoan-2/diem-b`; `điểm a khoản 1 và khoản 2 Điều 5` yields
+   `dieu-5/khoan-1/diem-a` and `dieu-5/khoan-2`;
+   `khoản 8, khoản 9 và khoản 10 Điều 8` yields three clause anchors;
+   `điểm a Điều 5` yields `dieu-5/diem-a`; `Điều 3 và Điều 4` yields two article
+   anchors. A group without a closing article rejects the sentence with gap
    `relation_text_grammar`.
 5. `của` or `tại`, then the document type (`Luật`, `Pháp lệnh`, `Nghị quyết`,
    `Nghị định`, `Quyết định`, `Thông tư`, `Thông tư liên tịch`), optional `số`,
    then exactly one number token under
    [official number normalization](data.md#official-number-normalization-proposed-extension).
+   The token must contain a four-digit year segment (a yearless number such as
+   `01/QĐ-UBND` rejects the sentence with gap `relation_text_yearless_number`),
+   and its type suffix must agree with the type word (`TT` Thông tư, `TTLT`
+   Thông tư liên tịch, `NĐ` Nghị định, `QĐ` Quyết định, `NQ` Nghị quyết, `QH`
+   Luật, `UBTVQH` Pháp lệnh); disagreement rejects with gap
+   `relation_text_type_mismatch`.
 6. An optional tail (the usual `ngày ... của <issuer> <title>`), which must
    contain no further locator keyword (`điều`, `khoản`, `điểm`) and no further
    number token; otherwise the sentence names several target documents or
    provisions beyond the grammar and is rejected with gap
-   `relation_text_multi_target`.
+   `relation_text_multi_target`. A date in the tail (`ngày D tháng M năm Y` or
+   `ngày D/M/Y`) is normalized and recorded on the row as `stated_issue_date`;
+   build compares it with the target document's issue date and drops the row
+   with gap `relation_text_identity_conflict` on a mismatch. The issuer phrase
+   is not compared: tails name officeholders
+   (`của Thống đốc Ngân hàng Nhà nước`), not the issuer record, and identity
+   rests on the diagram link, the year, the type and the date.
 
 Anything that does not fit this order rejects the sentence silently when no verb
 from the table starts it, and with gap `relation_text_grammar` when a verb
@@ -116,31 +143,36 @@ kind: a diagram `amends_supplements` row may anchor a text `suspends` relation.
 Each emitted row has `method:"text_rule/1"`, `raw_code:"text"`, `raw_label` set
 to the normalized verb phrase, `kind` from the table, `target_vbpl_id` and
 `target_number` copied from the matched diagram row, `source_node_id` of the
-article, `target_anchor` as the requested path (`dieu-8/khoan-9`), and
-`evidence` set to the matched sentence. Rows with equal (`source_node_id`,
-`target_vbpl_id`, `target_anchor`, `kind`) collapse to one, keeping the first
-sentence. Diagram rows are unchanged; both coexist and the diagram keeps
-document-level credit.
+article, `target_anchor` as the requested path (`dieu-8/khoan-9`),
+`stated_issue_date` (null when the tail names none), and `evidence` set to the
+matched sentence. Rows with equal (`source_node_id`, `target_vbpl_id`,
+`target_anchor`, `kind`) collapse to one, keeping the first sentence. Diagram
+rows are unchanged; both coexist and the diagram keeps document-level credit.
 
 ## Resolution in build
 
-Build maps `target_anchor` against the target document's loaded tree by path.
-Extraction gives a repeated article label the path `dieu-5~2` and keeps `dieu-5`
-for the first; an article is ambiguous when any `dieu-N~k` sibling exists.
+Build maps `target_anchor` against the target document's loaded tree by path,
+one component at a time. Extraction gives a repeated label at any level the path
+suffix `~k` (`dieu-5~2`, `dieu-5/khoan-1~2`) and keeps the unsuffixed path for
+the first; a component is ambiguous when any `~k` sibling of it exists. Build
+walks the requested path from the article down and stops at the first component
+that is missing or ambiguous.
 
-| Case                                         | `target_provision_id` | Gap                                |
-| -------------------------------------------- | --------------------- | ---------------------------------- |
-| Anchor exists                                | that provision        | none                               |
-| Clause or point missing, article exists once | the article           | `relation_clause_unresolved`       |
-| Article missing                              | null                  | `relation_article_unresolved`      |
-| Article ambiguous (`dieu-N~k` exists)        | null                  | `relation_article_ambiguous`       |
-| Target document not in the build             | null                  | existing `unknown_target` handling |
+| Case                                                     | `target_provision_id`     | Gap                                |
+| -------------------------------------------------------- | ------------------------- | ---------------------------------- |
+| Every component exists once                              | that provision            | none                               |
+| A clause or point component is missing, all above unique | the deepest resolved node | `relation_clause_unresolved`       |
+| Any component ambiguous (`~k` sibling)                   | null                      | `relation_anchor_ambiguous`        |
+| Article missing                                          | null                      | `relation_article_unresolved`      |
+| Stated issue date differs from the target's              | row dropped               | `relation_text_identity_conflict`  |
+| Target document not in the build                         | null                      | existing `unknown_target` handling |
 
-The row is inserted in every case because the target document identity is
-verified; the requested anchor stays in `target_node_id` so the reader can show
-what the act named even when the clause node is missing (29,900 of 57,176
-articles on run vn/20261111_4 have no clause nodes; the text-structure work in
-Plan 7 adds them and later builds resolve more anchors without a relate rerun).
+Except for the identity conflict, the row is inserted because the target
+document identity is verified; the requested anchor stays in `target_node_id` so
+the reader can show what the act named even when the clause node is missing
+(29,900 of 57,176 articles on run vn/20261111_4 have no clause nodes; the
+text-structure work in Plan 7 adds them and later builds resolve more anchors
+without a relate rerun).
 
 ## What this does not do
 
@@ -158,6 +190,10 @@ Acceptance fixtures in the parser's test data cover: the three-clause
 suspension, a point list under one clause, two articles, `sửa đổi, bổ sung` with
 a title tail, a date range; rejection fixtures cover: a quoted replacement
 article, a missing `của`, two document numbers, mixed verbs, an unlinked number.
-The development case dev-004 stays an honest retrieval miss until
-39/2016/TT-NHNN Article 8 has clause nodes; the relation makes the suspension
-visible on that article's hits.
+The development case dev-004 stays an honest retrieval miss: on run
+vn/20261111_4 the diagram does not link 10/2023/TT-NHNN to 39/2016/TT-NHNN, so
+its sentence is an `relation_text_unlinked_target` gap, and 39/2016/TT-NHNN
+Article 8 has no clause nodes. The suspension becomes visible only when VBPL
+adds the link or a managed manual relation entry supplies the verified pair
+(owned by the corrections list, not this rule), and resolves to the clause only
+when the clause nodes exist.
