@@ -137,18 +137,3 @@ func (r relationReport) resolveGaps(rows []relation, expected map[string]bool) [
 	}
 	return gaps
 }
-
-// runGapDetailRunes bounds the text copied into a run gap row. The gap table
-// indexes detail, so a whole sentence or provision cannot go there; the full
-// text stays in the artifact report.
-const runGapDetailRunes = 200
-
-// runGapDetail is the bounded run-gap form of a text gap: its position in the
-// artifact report (unique per item), the source node and the start of the text.
-func runGapDetail(index int, gap textGap) string {
-	text := []rune(gap.Detail)
-	if len(text) > runGapDetailRunes {
-		text = text[:runGapDetailRunes]
-	}
-	return fmt.Sprintf("%d:%s:%s", index, gap.SourceNodeID, string(text))
-}

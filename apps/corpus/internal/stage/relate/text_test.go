@@ -220,3 +220,26 @@ func TestRelationReport_RunGapDetailIsBoundedAndUnique(t *testing.T) {
 		t.Fatalf("detail=%q", gaps[0].Detail)
 	}
 }
+
+func TestGapDetail_BoundsLongIDsAndFourByteRunes(t *testing.T) {
+	node := strings.Repeat("n", 2000)
+	text := strings.Repeat("\U0001F600", 5000) // four-byte runes
+	got := runGapDetail(7, textGap{Detail: text, SourceNodeID: node})
+	if len(got) > 1024 || !utf8.ValidString(got) || !strings.HasPrefix(got, "7:nnn") {
+		t.Fatalf("bytes=%d valid=%v", len(got), utf8.ValidString(got))
+	}
+	a, b := strings.Repeat("Đ", 400)+"a", strings.Repeat("Đ", 400)+"b"
+	if x, y := boundedDetail(a, gapDetailBytes), boundedDetail(b, gapDetailBytes); len(x) > gapDetailBytes || !utf8.ValidString(x) || x == y {
+		t.Fatalf("x=%d bytes valid=%v distinct=%v", len(x), utf8.ValidString(x), x != y)
+	}
+	if boundedDetail("12566", gapDetailBytes) != "12566" {
+		t.Fatal("short detail changed")
+	}
+	long := strings.Repeat("9", 3000)
+	gaps := resolveGaps([]relation{{TargetVBPLID: long}}, []string{long}, map[string]bool{})
+	for _, gap := range gaps {
+		if len(gap.Detail) > gapDetailBytes {
+			t.Fatalf("%s detail bytes=%d", gap.Kind, len(gap.Detail))
+		}
+	}
+}

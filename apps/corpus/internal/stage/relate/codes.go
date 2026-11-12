@@ -137,7 +137,7 @@ func documentNumber(name string) string {
 func resolveGaps(rows []relation, unmapped []string, expected map[string]bool) []stage.Gap {
 	var gaps []stage.Gap
 	for _, code := range unmapped {
-		gaps = append(gaps, stage.Gap{Kind: "unknown_relation_code", Detail: code})
+		gaps = append(gaps, stage.Gap{Kind: "unknown_relation_code", Detail: boundedDetail(code, gapDetailBytes)})
 	}
 	for _, row := range rows {
 		if row.TargetVBPLID == "" || !expected["vn:vbpl:"+row.TargetVBPLID] {
@@ -145,7 +145,7 @@ func resolveGaps(rows []relation, unmapped []string, expected map[string]bool) [
 			if detail == "" {
 				detail = row.TargetNumber
 			}
-			gaps = append(gaps, stage.Gap{Kind: "unknown_target", Detail: detail})
+			gaps = append(gaps, stage.Gap{Kind: "unknown_target", Detail: boundedDetail(detail, gapDetailBytes)})
 		}
 	}
 	return gaps
