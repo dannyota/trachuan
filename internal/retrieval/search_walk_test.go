@@ -80,7 +80,7 @@ func TestSearch_NoFilterUnchanged(t *testing.T) {
 }
 
 func TestPaging_PrimaryThenNonCurrent(t *testing.T) {
-	testPagingGroups(t, true, [][2]int{{4, 4}, {6, 2}, {0, 8}})
+	testPagingGroups(t, true, [][2]int{{4, 4}, {4, 4}, {2, 6}})
 }
 func TestPaging_TailMode(t *testing.T) { testPagingGroups(t, false, [][2]int{{6, 2}, {4, 4}, {0, 8}}) }
 func testPagingGroups(t *testing.T, include bool, counts [][2]int) {
@@ -125,6 +125,7 @@ func testPagingGroups(t *testing.T, include bool, counts [][2]int) {
 
 func TestPaging_ChangingLimit(t *testing.T) {
 	a, r := pagingFixture(30, 70)
+	a.IncludeNonCurrent = true
 	c := searchCursor{FirstLimit: 3}
 	seen := map[Identity]bool{}
 	for page := 0; ; page++ {
@@ -147,6 +148,54 @@ func TestPaging_ChangingLimit(t *testing.T) {
 	}
 	if len(seen) != 100 {
 		t.Fatalf("walked %d", len(seen))
+	}
+}
+
+func TestPaging_ExplicitReservation(t *testing.T) {
+	for _, tc := range []struct {
+		name                     string
+		primary, other           int
+		takenPrimary, takenOther int
+		wantPrimary, wantOther   int
+	}{
+		{"both available", 20, 20, 4, 4, 4, 4},
+		{"non-current short", 20, 6, 4, 4, 6, 2},
+		{"primary short", 6, 20, 4, 4, 2, 6},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			a, r := pagingFixture(tc.primary, tc.other)
+			a.IncludeNonCurrent = true
+			req := Request{Limit: 8, Arms: "dense", Cursor: "later"}
+			c := searchCursor{FirstLimit: 8, TakenPrimary: tc.takenPrimary, TakenNonCurrent: tc.takenOther}
+			out := walkPage(t, a, r, req, c)
+			if len(out.Hits) != tc.wantPrimary || len(out.NonCurrent) != tc.wantOther {
+				t.Fatalf("hits=%d noncurrent=%d", len(out.Hits), len(out.NonCurrent))
+			}
+		})
+	}
+}
+
+func TestPaging_FilteredFirstExplicitFillsVacancies(t *testing.T) {
+	a, r := pagingFixture(20, 20)
+	a.IncludeNonCurrent = true
+	w, err := buildSearchWalk(a, r, 8, "dense")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Model a first-page shaping window with one hit in each group.
+	w.first.primary = w.first.primary[:1]
+	w.first.nonCurrent = w.first.nonCurrent[:1]
+	req := Request{Limit: 8, Arms: "dense", Documents: []string{a.Primary.Dense[0].Group.DocumentKey, a.NonCurrent.Dense[0].Group.DocumentKey}}
+	w.filter(req, nil, nil)
+	out, err := w.page(a, r, req, searchCursor{FirstLimit: 8})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(out.Hits) != 4 || len(out.NonCurrent) != 4 {
+		t.Fatalf("hits=%d noncurrent=%d", len(out.Hits), len(out.NonCurrent))
+	}
+	if !*out.Hits[0].InFilter || !*out.NonCurrent[0].InFilter {
+		t.Fatal("lost inside first-page hits")
 	}
 }
 
