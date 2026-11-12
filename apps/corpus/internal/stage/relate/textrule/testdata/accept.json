@@ -376,5 +376,99 @@
         ]
       }
     ]
+  },
+  {
+    "name": "law legislature suffix",
+    "text": "Bãi bỏ Điều 3 của Luật số 12/2017/QH14.",
+    "want": [
+      {
+        "Kind": "repeals",
+        "VerbPhrase": "bãi bỏ",
+        "Sentence": "Bãi bỏ Điều 3 của Luật số 12/2017/QH14.",
+        "Targets": [
+          {
+            "Anchor": "dieu-3",
+            "Number": "12/2017/QH14",
+            "IssuerCode": "QH",
+            "StatedIssueDate": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "ordinance legislature suffix",
+    "text": "Bãi bỏ Điều 3 của Pháp lệnh số 02/2022/UBTVQH15.",
+    "want": [
+      {
+        "Kind": "repeals",
+        "VerbPhrase": "bãi bỏ",
+        "Sentence": "Bãi bỏ Điều 3 của Pháp lệnh số 02/2022/UBTVQH15.",
+        "Targets": [
+          {
+            "Anchor": "dieu-3",
+            "Number": "02/2022/UBTVQH15",
+            "IssuerCode": "UBTVQH",
+            "StatedIssueDate": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "two clause groups",
+    "text": "Bãi bỏ khoản 1 Điều 3, khoản 2 Điều 4 của Thông tư 39/2016/TT-NHNN.",
+    "want": [
+      {
+        "Kind": "repeals",
+        "VerbPhrase": "bãi bỏ",
+        "Sentence": "Bãi bỏ khoản 1 Điều 3, khoản 2 Điều 4 của Thông tư 39/2016/TT-NHNN.",
+        "Targets": [
+          {
+            "Anchor": "dieu-3/khoan-1",
+            "Number": "39/2016/TT-NHNN",
+            "IssuerCode": "NHNN",
+            "StatedIssueDate": null
+          },
+          {
+            "Anchor": "dieu-4/khoan-2",
+            "Number": "39/2016/TT-NHNN",
+            "IssuerCode": "NHNN",
+            "StatedIssueDate": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "clause group then article",
+    "text": "Bãi bỏ khoản 1, khoản 2 Điều 3 và Điều 4 của Thông tư 39/2016/TT-NHNN.",
+    "want": [
+      {
+        "Kind": "repeals",
+        "VerbPhrase": "bãi bỏ",
+        "Sentence": "Bãi bỏ khoản 1, khoản 2 Điều 3 và Điều 4 của Thông tư 39/2016/TT-NHNN.",
+        "Targets": [
+          {
+            "Anchor": "dieu-3/khoan-1",
+            "Number": "39/2016/TT-NHNN",
+            "IssuerCode": "NHNN",
+            "StatedIssueDate": null
+          },
+          {
+            "Anchor": "dieu-3/khoan-2",
+            "Number": "39/2016/TT-NHNN",
+            "IssuerCode": "NHNN",
+            "StatedIssueDate": null
+          },
+          {
+            "Anchor": "dieu-4",
+            "Number": "39/2016/TT-NHNN",
+            "IssuerCode": "NHNN",
+            "StatedIssueDate": null
+          }
+        ]
+      }
+    ]
   }
 ]

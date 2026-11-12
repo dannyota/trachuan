@@ -130,9 +130,9 @@
     "want": "relation_text_grammar"
   },
   {
-    "name": "legislature suffix",
-    "text": "Bãi bỏ Điều 3 của Luật 01/2020/QH14.",
-    "want": "relation_text_type_mismatch"
+    "name": "digits on nonlegislature issuer",
+    "text": "Bãi bỏ Điều 3 của Thông tư số 39/2016/TT-NHNN2.",
+    "want": "relation_text_local_number"
   },
   {
     "name": "joint issuers",

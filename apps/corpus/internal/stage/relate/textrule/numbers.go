@@ -81,14 +81,22 @@ func checkNumber(raw, docType string, issuers map[string]string) (issuer, gap st
 		return "", "relation_text_yearless_number"
 	}
 	suffix := strings.SplitN(parts[2], "-", 2)
+	if len(suffix) == 1 {
+		code := legislatureCode(suffix[0])
+		if code == "QH" || code == "UBTVQH" {
+			// Legislature suffixes carry both the document type and issuer.
+			suffix = []string{code, code}
+		}
+	}
 	if suffix[0] != docType {
 		return "", "relation_text_type_mismatch"
 	}
 	if len(suffix) != 2 {
 		return "", "relation_text_local_number"
 	}
+	issuerSegment := legislatureCode(suffix[1])
 	for key := range issuers {
-		if retrieval.NormalizeNumber(key) != suffix[1] {
+		if retrieval.NormalizeNumber(key) != issuerSegment {
 			continue
 		}
 		// A malformed caller table must not make the result depend on map order.
@@ -101,4 +109,12 @@ func checkNumber(raw, docType string, issuers map[string]string) (issuer, gap st
 		return "", "relation_text_local_number"
 	}
 	return issuer, ""
+}
+
+func legislatureCode(segment string) string {
+	code := strings.TrimRight(segment, "0123456789")
+	if code == "QH" || code == "UBTVQH" {
+		return code
+	}
+	return segment
 }
