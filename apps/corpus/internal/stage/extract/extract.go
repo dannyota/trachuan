@@ -19,6 +19,9 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
+// ReleaseChecker identifies the completed OCR checks used for releases.
+const ReleaseChecker = "claude-opus-5-5/medium/ocr-check-2"
+
 // Stage extracts provisions from fetch artifacts.
 type Stage struct {
 	ocr     ocrReader
@@ -27,14 +30,15 @@ type Stage struct {
 }
 
 // New constructs an extract stage.
-func New() *Stage { return &Stage{engines: AcceptedEngines()} }
+func New() *Stage { return &Stage{engines: AcceptedEngines(), checker: ReleaseChecker} }
 
 // AcceptedEngines returns the recipe's engine preference in a new slice.
 func AcceptedEngines() []string {
 	return []string{"vision-ocr/builtin-latest", "vision-ocr/builtin-latest/poppler-200", "vision-ocr/builtin-latest/poppler-200-jpeg"}
 }
 
-// WithOCR configures the store, ordered engines and completed-check identity.
+// WithOCR configures the store and ordered engines. An empty checker keeps the
+// current completed-check identity.
 func (s *Stage) WithOCR(store *ocrstore.Store, engines []string, checker string) *Stage {
 	if store != nil {
 		s.ocr = store
@@ -44,7 +48,9 @@ func (s *Stage) WithOCR(store *ocrstore.Store, engines []string, checker string)
 	if engines != nil {
 		s.engines = append([]string{}, engines...)
 	}
-	s.checker = checker
+	if checker != "" {
+		s.checker = checker
+	}
 	return s
 }
 
