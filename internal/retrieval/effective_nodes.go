@@ -14,14 +14,15 @@ type NodeRef struct {
 
 // Resolve nearest entries before discarding exclusions or unserved nodes: either
 // still blocks inheritance from a more distant provision in the same family.
+// Lateral lookups keep the recursive step bounded by each work-table row.
 func effectiveNodesCTE(seeds string) string {
 	return `WITH RECURSIVE ancestry AS (
- SELECT p.id AS origin,p.id,p.parent_id,0 AS distance FROM provision p WHERE ` + seeds + `
- UNION ALL SELECT a.origin,p.id,p.parent_id,a.distance+1 FROM ancestry a JOIN provision p ON p.id=a.parent_id
+ SELECT p.id AS origin,p.id,p.parent_id,0 AS distance FROM (` + seeds + `) p
+ UNION ALL SELECT a.origin,p.id,p.parent_id,a.distance+1 FROM ancestry a JOIN LATERAL (SELECT id,parent_id FROM provision WHERE id=a.parent_id OFFSET 0) p ON true
  ), ranked AS (
  SELECT a.origin,t.node_id,t.family_id,t.exclude,dense_rank() OVER (
  PARTITION BY a.origin,t.family_id ORDER BY a.distance,CASE t.method WHEN 'manual' THEN 0 WHEN 'phapdien_seed' THEN 1 ELSE 2 END) AS choice
- FROM ancestry a JOIN taxonomy_assignment t ON t.provision_id=a.id
+ FROM ancestry a JOIN LATERAL (SELECT * FROM taxonomy_assignment WHERE provision_id=a.id OFFSET 0) t ON true
  ), decided AS (
  SELECT *,bool_or(exclude) OVER (PARTITION BY origin,family_id) AS excluded FROM ranked WHERE choice=1
  ), effective AS (
@@ -35,7 +36,7 @@ func (e *Engine) loadEffectiveNodes(ctx context.Context, tx pgx.Tx, ids []int64)
 	if e.release.SchemaVersion < 5 || len(ids) == 0 {
 		return nodes, refs, nil
 	}
-	rows, err := tx.Query(ctx, effectiveNodesCTE(`p.id=ANY($1::bigint[])`)+`SELECT origin,code,name,level FROM effective ORDER BY origin,level DESC,code COLLATE "C"`, ids)
+	rows, err := tx.Query(ctx, effectiveNodesCTE(`SELECT id,parent_id FROM provision WHERE id=ANY($1::bigint[])`)+`SELECT origin,code,name,level FROM effective ORDER BY origin,level DESC,code COLLATE "C"`, ids)
 	if err != nil {
 		return nil, nil, databaseFailure("query effective nodes", err)
 	}
@@ -61,8 +62,8 @@ func (e *Engine) loadDocumentNodes(ctx context.Context, tx pgx.Tx, keys []string
 	if e.release.SchemaVersion < 5 || len(keys) == 0 {
 		return nodes, nil
 	}
-	rows, err := tx.Query(ctx, effectiveNodesCTE(`p.document_id IN (SELECT id FROM document WHERE key=ANY($1::text[]))`)+`, counts AS (
- SELECT d.key,e.code,count(DISTINCT e.origin) AS provisions FROM effective e JOIN provision p ON p.id=e.origin JOIN document d ON d.id=p.document_id GROUP BY d.key,e.code
+	rows, err := tx.Query(ctx, effectiveNodesCTE(`SELECT p.id,p.parent_id FROM document d JOIN LATERAL (SELECT id,parent_id FROM provision WHERE document_id=d.id OFFSET 0) p ON true WHERE d.key=ANY($1::text[])`)+`, counts AS (
+ SELECT d.key,e.code,count(DISTINCT e.origin) AS provisions FROM effective e JOIN LATERAL (SELECT document_id FROM provision WHERE id=e.origin OFFSET 0) p ON true JOIN document d ON d.id=p.document_id GROUP BY d.key,e.code
  ), numbered AS (
  SELECT *,row_number() OVER (PARTITION BY key ORDER BY provisions DESC,code COLLATE "C") AS position FROM counts
  ) SELECT key,code FROM numbered WHERE position<=10 ORDER BY key,position`, keys)

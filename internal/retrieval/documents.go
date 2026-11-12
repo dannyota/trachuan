@@ -32,7 +32,7 @@ type DocumentEntry struct {
 	SourceURL     string         `json:"source_url,omitempty"`
 	Related       []Pointer      `json:"related,omitempty"`
 	RelatedCounts map[string]int `json:"related_counts,omitempty"`
-	Nodes         []string       `json:"nodes"`
+	Nodes         []string       `json:"nodes,omitempty"`
 }
 
 func (e *Engine) loadDocuments(ctx context.Context, keys []string) (map[string]DocumentEntry, error) {
@@ -118,7 +118,7 @@ func (e *Engine) loadDocuments(ctx context.Context, keys []string) (map[string]D
 		return nil, err
 	}
 	for key, doc := range docs {
-		doc.Nodes = append([]string{}, nodes[key]...)
+		doc.Nodes = append([]string(nil), nodes[key]...)
 		docs[key] = doc
 	}
 	if err = tx.Commit(ctx); err != nil {

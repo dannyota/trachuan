@@ -93,7 +93,7 @@ func (e *Engine) readDocument(ctx context.Context, tx pgx.Tx, item ReadItem) (in
 	if err != nil {
 		return 0, key, doc, Document{}, "", err
 	}
-	doc.Nodes = append([]string{}, nodes[key]...)
+	doc.Nodes = append([]string(nil), nodes[key]...)
 	return id, key, doc, source, "", nil
 }
 

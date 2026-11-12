@@ -46,6 +46,30 @@ func TestNodes_MetadataCache(t *testing.T) {
 	}
 }
 
+func TestDocumentEntry_EmptyNodesOmitted(t *testing.T) {
+	for _, nodes := range [][]string{nil, {}, {"1.1.c1"}} {
+		raw, err := json.Marshal(DocumentEntry{Nodes: nodes})
+		if err != nil {
+			t.Fatal(err)
+		}
+		var fields map[string]json.RawMessage
+		if err := json.Unmarshal(raw, &fields); err != nil {
+			t.Fatal(err)
+		}
+		_, present := fields["nodes"]
+		if present != (len(nodes) > 0) {
+			t.Fatalf("nodes %v: emitted nodes = %t", nodes, present)
+		}
+		var decoded DocumentEntry
+		if err := json.Unmarshal(raw, &decoded); err != nil {
+			t.Fatal(err)
+		}
+		if len(nodes) > 0 && !reflect.DeepEqual(decoded.Nodes, nodes) {
+			t.Fatal("document node codes changed", decoded.Nodes)
+		}
+	}
+}
+
 func TestNodes_Presentation(t *testing.T) {
 	a, r := shapeFixture("Nội dung")
 	out, err := Shape(a, r, 8, "dense")
