@@ -157,3 +157,10 @@ func TestClient_RetriesFailedPauseBeforeRequest(t *testing.T) {
 		t.Fatalf("error = %v, requests = %d, pause writes = %d", err, calls.Load(), gate.writes.Load())
 	}
 }
+
+func TestGateway_DefaultAttemptDeadline(t *testing.T) {
+	c := NewWithBase("http://example.invalid", "test")
+	if c.timeout != 40*time.Second || c.requestBudget != 200*time.Second {
+		t.Fatalf("attempt = %s, sequence = %s; want 40s and 200s", c.timeout, c.requestBudget)
+	}
+}

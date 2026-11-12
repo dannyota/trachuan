@@ -151,7 +151,7 @@ func RunBatch(ctx context.Context, env Env, st Stage, in BatchInput, attempt int
 						return result, err
 					}
 					var retryable *RetryableError
-					if !errors.Is(err, sourcegate.ErrSourcePaused) && errors.As(err, &retryable) && attempt < cfg.MaxAttempts {
+					if !errors.Is(err, sourcegate.ErrSourcePaused) && errors.As(err, &retryable) && attempt < cfg.MaxAttempts && !repeatedSourceTimeout(in.Stage, attempt, retryable) {
 						result.Pending++
 						last.Store(int64(i))
 						continue

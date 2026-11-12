@@ -27,6 +27,9 @@ var ErrTooLarge = errors.New("vbpl: response too large")
 
 const apiLimit int64 = 20_000_000
 
+// gatewayAttemptTimeout allows the gateway's 30-second 504 to arrive. See docs/design/budgets.md.
+const gatewayAttemptTimeout = 40 * time.Second
+
 // Client limits gateway requests and downloads.
 type Client struct {
 	base, userAgent string
@@ -36,6 +39,7 @@ type Client struct {
 	slots           chan struct{}
 	fileSlots       chan struct{}
 	timeout         time.Duration
+	fileTimeout     time.Duration
 	requestBudget   time.Duration
 	slowThreshold   time.Duration
 	backoffs        []time.Duration
@@ -54,7 +58,7 @@ func New(version string) *Client {
 
 // NewWithBase creates a client for the supplied gateway URL.
 func NewWithBase(base, version string, options ...Option) *Client {
-	c := &Client{lookupPageSize: 1000, base: base, userAgent: "trachuan/" + version + " (+https://github.com/dannyota/trachuan)", http: &http.Client{}, limiter: rate.NewLimiter(16, 1), slots: make(chan struct{}, 16), fileSlots: make(chan struct{}, 8), timeout: 30 * time.Second, fileHosts: []string{"s3-han02.fptcloud.com"}, backoffs: []time.Duration{2 * time.Second, 8 * time.Second, 30 * time.Second}}
+	c := &Client{lookupPageSize: 1000, base: base, userAgent: "trachuan/" + version + " (+https://github.com/dannyota/trachuan)", http: &http.Client{}, limiter: rate.NewLimiter(16, 1), slots: make(chan struct{}, 16), fileSlots: make(chan struct{}, 8), timeout: gatewayAttemptTimeout, fileTimeout: 30 * time.Second, fileHosts: []string{"s3-han02.fptcloud.com"}, backoffs: []time.Duration{2 * time.Second, 8 * time.Second, 30 * time.Second}}
 	c.requestBudget = 200 * time.Second
 	c.slowThreshold = 10 * time.Second
 	for _, option := range options {
@@ -106,7 +110,7 @@ func WithTestHTTP() Option {
 
 // WithTestTimeouts sets short request deadlines for offline tests.
 func WithTestTimeouts(attempt, sequence time.Duration) Option {
-	return func(c *Client) { c.timeout, c.requestBudget = attempt, sequence }
+	return func(c *Client) { c.timeout, c.fileTimeout, c.requestBudget = attempt, attempt, sequence }
 }
 
 type response struct {
@@ -120,7 +124,11 @@ func (c *Client) request(ctx context.Context, method, target string, body []byte
 	defer func() {
 		sourcegate.LogSlow(ctx, "vbpl", endpoint(target), time.Since(started), c.slowThreshold, status, err)
 	}()
-	ctx, cancel := context.WithTimeout(ctx, c.timeout)
+	timeout := c.timeout
+	if file {
+		timeout = c.fileTimeout
+	}
+	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	slots, client := c.slots, c.http
 	if file {
