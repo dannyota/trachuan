@@ -16,16 +16,17 @@ type textStore interface {
 }
 type renderer interface {
 	Preflight(context.Context) error
-	RenderLimited(context.Context, []byte, ocrcheck.RenderLimits) (ocrcheck.Rendered, error)
+	RenderJPEG(context.Context, []byte, int) ([]string, func(), error)
 }
 
-// Runner processes documents serially and pages with at most four workers.
+// Runner processes documents serially and pages with at most eight workers.
 type Runner struct {
 	Client     *Client
 	Store      textStore
 	Renderer   renderer
 	CountPages func(context.Context, []byte) (int, error)
 	textLimit  int
+	readPage   func(string) ([]byte, error)
 }
 
 // Document names a PDF listed in a verified fetch bundle.
@@ -134,23 +135,25 @@ func (r *Runner) document(ctx context.Context, doc Document, o Options, b *budge
 		res.outcome = "skipped_limit"
 		return res
 	}
-	images, err := r.Renderer.RenderLimited(ctx, data, ocrcheck.RenderLimits{DPI: 200, PageBytes: 7_000_000, TotalBytes: 512_000_000})
+	images, cleanup, err := r.Renderer.RenderJPEG(ctx, data, pages)
+	if cleanup != nil {
+		defer cleanup()
+	}
 	if errors.Is(err, ocrcheck.PageTooLarge) {
 		res.outcome = "page_too_large"
 		return res
 	}
-	if err != nil || len(images.Pages) != pages {
+	if errors.Is(err, ocrcheck.RenderTooLarge) {
+		res.outcome = "render_too_large"
+		return res
+	}
+	if err != nil || cleanup == nil || len(images) != pages {
 		res.outcome = "render_failed"
 		return res
 	}
-	for _, page := range images.Pages {
-		if len(page) > 7_000_000 {
-			res.outcome = "page_too_large"
-			return res
-		}
-	}
-	texts, ok := r.pages(ctx, images.Pages, b)
-	if !ok {
+	texts, outcome := r.pages(ctx, images, b)
+	if outcome != "" {
+		res.outcome = outcome
 		return res
 	}
 	text := strings.Join(texts, "\n\n")

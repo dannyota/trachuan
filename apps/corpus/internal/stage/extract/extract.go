@@ -31,7 +31,7 @@ func New() *Stage { return &Stage{engines: AcceptedEngines()} }
 
 // AcceptedEngines returns the recipe's engine preference in a new slice.
 func AcceptedEngines() []string {
-	return []string{"vision-ocr/builtin-latest", "vision-ocr/builtin-latest/poppler-200"}
+	return []string{"vision-ocr/builtin-latest", "vision-ocr/builtin-latest/poppler-200", "vision-ocr/builtin-latest/poppler-200-jpeg"}
 }
 
 // WithOCR configures the store, ordered engines and completed-check identity.

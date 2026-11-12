@@ -2,12 +2,13 @@ package ocrvision
 
 import (
 	"context"
+	"os"
 	"sync"
 )
 
 const maxTextBytes = 50_000_000
 
-func (r *Runner) pages(ctx context.Context, images [][]byte, b *budget) ([]string, bool) {
+func (r *Runner) pages(ctx context.Context, images []string, b *budget) ([]string, string) {
 	limit := r.textLimit
 	if limit <= 0 || limit > maxTextBytes {
 		limit = maxTextBytes
@@ -15,7 +16,7 @@ func (r *Runner) pages(ctx context.Context, images [][]byte, b *budget) ([]strin
 	// Reserve the separators before accepting any page text.
 	size := max(0, 2*(len(images)-1))
 	if size > limit {
-		return nil, false
+		return nil, "failed"
 	}
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -23,16 +24,40 @@ func (r *Runner) pages(ctx context.Context, images [][]byte, b *budget) ([]strin
 	jobs := make(chan int)
 	var wg sync.WaitGroup
 	var mu sync.Mutex
-	success := true
-	for range min(4, len(images)) {
+	outcome := ""
+	for range min(8, len(images)) {
 		wg.Go(func() {
 			for i := range jobs {
-				text, err := r.Client.recognize(ctx, images[i], b)
+				var text string
+				info, err := os.Stat(images[i])
+				reason := ""
+				if err != nil || !info.Mode().IsRegular() {
+					reason = "render_failed"
+				} else if info.Size() > 7_000_000 {
+					reason = "page_too_large"
+				} else {
+					var data []byte
+					read := r.readPage
+					if read == nil {
+						read = os.ReadFile
+					}
+					data, err = read(images[i])
+					if err != nil {
+						reason = "render_failed"
+					} else if len(data) > 7_000_000 {
+						reason = "page_too_large"
+					} else {
+						text, err = r.Client.recognize(ctx, data, b)
+					}
+				}
 				mu.Lock()
-				if err != nil {
-					success = false
+				if reason != "" {
+					outcome = reason
+					cancel()
+				} else if err != nil && outcome == "" {
+					outcome = "failed"
 				} else if len(text) > limit-size {
-					success = false
+					outcome = "failed"
 					cancel()
 				} else if ctx.Err() == nil {
 					size += len(text)
@@ -52,5 +77,8 @@ send:
 	}
 	close(jobs)
 	wg.Wait()
-	return texts, success && ctx.Err() == nil
+	if ctx.Err() != nil && outcome == "" {
+		outcome = "failed"
+	}
+	return texts, outcome
 }

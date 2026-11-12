@@ -156,9 +156,10 @@ corpus ocr vision <cc> <rel> --max-pages 100 --limit-docs 5
 ```
 
 Dry run counts verified PDFs without rendering or credentials. The live command
-sends one grayscale PNG page at 200 dpi per request to Google Cloud Vision, with
-language hint `vi`. Only PDFs in verified fetch bundles of the run are sent. The
-request limit includes retries. Rendering retains at most 512 MB of PNG data;
-each page is at most 7 MB and joined text is at most 50 MB. Use `--pdf SHA256`
-for a comparison beside imported text. Fresh text still needs `corpus ocr check`
-before extract can use it; imported text keeps priority when both entries exist.
+sends one grayscale JPEG page at 200 dpi and quality 90 per request to Google
+Cloud Vision, with language hint `vi`. Only PDFs in verified fetch bundles of
+the run are sent. The request limit includes retries. Rendering uses at most 256
+MB of scratch space; each page is at most 7 MB. At most eight page requests run
+at once; joined text is at most 50 MB. Use `--pdf SHA256` for a comparison
+beside imported text. Fresh text still needs `corpus ocr check` before extract
+can use it; imported text keeps priority when both entries exist.

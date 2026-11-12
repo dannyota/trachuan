@@ -42,12 +42,26 @@ type memoryRenderer struct {
 }
 
 func (r *memoryRenderer) Preflight(context.Context) error { return nil }
-func (r *memoryRenderer) RenderLimited(_ context.Context, _ []byte, limits ocrcheck.RenderLimits) (ocrcheck.Rendered, error) {
+func (r *memoryRenderer) RenderJPEG(_ context.Context, _ []byte, _ int) ([]string, func(), error) {
 	r.calls++
-	if limits.DPI != 200 {
-		return ocrcheck.Rendered{}, fmt.Errorf("wrong dpi")
+	if r.err != nil {
+		return nil, nil, r.err
 	}
-	return ocrcheck.Rendered{Pages: r.pages}, r.err
+	dir, err := os.MkdirTemp("", "vision-test-")
+	if err != nil {
+		return nil, nil, err
+	}
+	cleanup := func() { _ = os.RemoveAll(dir) }
+	var paths []string
+	for i, page := range r.pages {
+		path := filepath.Join(dir, fmt.Sprint(i))
+		if err := os.WriteFile(path, page, 0600); err != nil {
+			cleanup()
+			return nil, nil, err
+		}
+		paths = append(paths, path)
+	}
+	return paths, cleanup, nil
 }
 func document(t *testing.T) Document {
 	t.Helper()
@@ -66,6 +80,7 @@ func TestRunner_DocumentOutcomes(t *testing.T) {
 		response                          string
 		large, hashMismatch, present, dry bool
 		requests                          int
+		renderErr                         error
 		text                              string
 	}{
 		{name: "joined", outcome: "stored", count: 3, rendered: 3, budget: 3, response: `{"responses":[{"fullTextAnnotation":{"text":"text"}}]}`, requests: 3, text: "text\n\ntext\n\ntext"},
@@ -77,6 +92,7 @@ func TestRunner_DocumentOutcomes(t *testing.T) {
 		{name: "limit", outcome: "skipped_limit", count: 3, rendered: 3, budget: 2},
 		{name: "retry budget", outcome: "failed", count: 1, rendered: 1, budget: 1, response: `{"responses":[{"error":{"code":14}}]}`, requests: 1},
 		{name: "too many", outcome: "too_many_pages", count: 501, rendered: 1, budget: 1000},
+		{name: "scratch limit", outcome: "render_too_large", count: 1, rendered: 1, budget: 1, renderErr: ocrcheck.RenderTooLarge},
 		{name: "large page", outcome: "page_too_large", count: 1, rendered: 1, budget: 1, large: true},
 		{name: "mismatch", outcome: "hash_mismatch", count: 1, rendered: 1, budget: 1, hashMismatch: true},
 		{name: "render count", outcome: "render_failed", count: 3, rendered: 2, budget: 3},
@@ -107,7 +123,7 @@ func TestRunner_DocumentOutcomes(t *testing.T) {
 				_, _ = io.WriteString(w, body)
 			})
 			s := &memoryStore{present: tc.present}
-			render := &memoryRenderer{}
+			render := &memoryRenderer{err: tc.renderErr}
 			for i := range tc.rendered {
 				render.pages = append(render.pages, []byte{byte(i + 1)})
 			}
@@ -146,7 +162,7 @@ func TestRunner_DocumentOutcomes(t *testing.T) {
 				t.Fatal("output leaked credentials")
 			}
 			if tc.text != "" {
-				if s.calls != 1 || string(s.text) != tc.text || s.engine != EngineID || s.origin != "vision" || !s.pages.Valid || int(s.pages.Int32) != tc.count || s.hash != d.Hash {
+				if s.calls != 1 || string(s.text) != tc.text || s.engine != "vision-ocr/builtin-latest/poppler-200-jpeg" || s.origin != "vision" || !s.pages.Valid || int(s.pages.Int32) != tc.count || s.hash != d.Hash {
 					t.Fatalf("store=%+v", s)
 				}
 			} else if s.calls != 0 {
