@@ -16,6 +16,16 @@ func TestSelection_TranscriptionNumber(t *testing.T) {
 		consolidated                            bool
 	}{
 		{"186164", "1", "Số: 47/2025/TT-BKHCN THÔNG TƯ QUY ĐỊNH VỀ THIẾT BỊ ĐO LƯỜNG", "50/2025/TT-BKHCN", "Thông tư số 50/2025/TT-BKHCN ban hành quy chuẩn kỹ thuật quốc gia về an toàn bức xạ", "header 47/2025/TT-BKHCN metadata 50/2025/TT-BKHCN", false},
+		{"uppercase colon", "1", "SỐ: 47/2025/TT-BKHCN THÔNG TƯ QUY ĐỊNH VỀ THIẾT BỊ ĐO LƯỜNG", "50/2025/TT-BKHCN", "Thông tư số 50/2025/TT-BKHCN an toàn bức xạ", "header 47/2025/TT-BKHCN metadata 50/2025/TT-BKHCN", false},
+		{"space before colon", "1", "Số :47/2025/TT-BKHCN THÔNG TƯ QUY ĐỊNH VỀ THIẾT BỊ ĐO LƯỜNG", "50/2025/TT-BKHCN", "Thông tư số 50/2025/TT-BKHCN an toàn bức xạ", "header 47/2025/TT-BKHCN metadata 50/2025/TT-BKHCN", false},
+		{"space before slash", "1", "Số: 47 /2025/TT-BKHCN THÔNG TƯ QUY ĐỊNH VỀ THIẾT BỊ ĐO LƯỜNG", "50/2025/TT-BKHCN", "Thông tư số 50/2025/TT-BKHCN an toàn bức xạ", "header 47 /2025/TT-BKHCN metadata 50/2025/TT-BKHCN", false},
+		{"space after slash", "1", "Số: 47/ 2025/TT-BKHCN THÔNG TƯ QUY ĐỊNH VỀ THIẾT BỊ ĐO LƯỜNG", "50/2025/TT-BKHCN", "Thông tư số 50/2025/TT-BKHCN an toàn bức xạ", "header 47/ 2025/TT-BKHCN metadata 50/2025/TT-BKHCN", false},
+		{"title longer number", "1", "Số: 47/2025/TT-BKHCN THÔNG TƯ QUY ĐỊNH VỀ THIẾT BỊ ĐO LƯỜNG", "50/2025/TT-BKHCN", "Thông tư số 50/2025/TT-BKHCN an toàn bức xạ theo 147/2025/TT-BKHCN", "header 47/2025/TT-BKHCN metadata 50/2025/TT-BKHCN", false},
+		{"title exact number", "1", "Số: 47/2025/TT-BKHCN THÔNG TƯ QUY ĐỊNH VỀ THIẾT BỊ ĐO LƯỜNG", "50/2025/TT-BKHCN", "Thông tư số 50/2025/TT-BKHCN an toàn bức xạ theo 47/2025/TT-BKHCN", "", false},
+		{"correction 1860", "1", "QUYẾT ĐỊNH Về việc đính chính Thông tư số 14/2015/TT-NHNN", "1860/QĐ-NHNN", "Quyết định số 1860/QĐ-NHNN điều chỉnh ngân hàng", "", false},
+		{"circular 10", "1", "Số: 10-NH5 THÔNG TƯ SỐ 10-NH5 đã ký quyết định số 107/QĐ-NH5", "10/TT-NH5", "Thông tư số 10/TT-NH5 điều chỉnh ngân hàng", "", false},
+		{"decree reference", "1", "THÔNG TƯ Nghị định số 196-HĐBT", "15-BTC/TT", "Thông tư số 15-BTC/TT điều chỉnh tài chính", "", false},
+		{"mixed case without colon", "1", "Số 47/2025/TT-BKHCN THÔNG TƯ QUY ĐỊNH VỀ THIẾT BỊ ĐO LƯỜNG", "50/2025/TT-BKHCN", "Thông tư số 50/2025/TT-BKHCN an toàn bức xạ", "", false},
 		{"7402", "1", "Số: 08/1998 THÔNG TƯ HƯỚNG DẪN QUẢN LÝ NGÂN SÁCH NHÀ NƯỚC", "06/1998", "Thông tư số 06/1998 hướng dẫn quản lý ngân sách nhà nước", "", false},
 		{"14151", "1", "Số: 04/2006 QUYẾT ĐỊNH BAN HÀNH QUY CHẾ QUẢN LÝ TÀI CHÍNH", "49/2007", "Quyết định số 49/2007 ban hành quy chế quản lý tài chính", "", false},
 		{"8443", "1", "Số: 1 THÔNG TƯ HƯỚNG DẪN THỰC HIỆN QUY ĐỊNH", "02/TT-NH7", "Thông tư số 02/TT-NH7 nội dung khác", "", false},

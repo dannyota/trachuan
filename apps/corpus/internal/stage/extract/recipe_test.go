@@ -12,7 +12,7 @@ func TestRecipe_ReleaseChecker(t *testing.T) {
 	if ReleaseChecker != releaseChecker {
 		t.Fatalf("release checker %q want %q", ReleaseChecker, releaseChecker)
 	}
-	want := stage.RecipeHash("extract", "tree/1", "html-transcription/1", "textparse/4", "ocr-store/2", releaseChecker, "vision-ocr/builtin-latest", "vision-ocr/builtin-latest/poppler-200", "vision-ocr/builtin-latest/poppler-200-jpeg", "vn:vbpl:1200", "holds Sắc lệnh 14/SL of 1951-05-01; VBPL record error; checked 2026-11-12")
+	want := stage.RecipeHash("extract", "tree/1", "html-transcription/1", "textparse/5", "ocr-store/2", releaseChecker, "vision-ocr/builtin-latest", "vision-ocr/builtin-latest/poppler-200", "vision-ocr/builtin-latest/poppler-200-jpeg", "vn:vbpl:1200", "holds Sắc lệnh 14/SL of 1951-05-01; VBPL record error; checked 2026-11-12")
 	store := ocrstore.Open(t.TempDir(), nil)
 	for _, tc := range []struct {
 		name  string
@@ -39,7 +39,7 @@ func TestRecipe_ReleaseChecker(t *testing.T) {
 
 func TestRecipe_TextParserVersion(t *testing.T) {
 	got := New().Recipe(stage.Snapshot{})
-	want := stage.RecipeHash("extract", "tree/1", "html-transcription/1", "textparse/4", "ocr-store/2", ReleaseChecker, "vision-ocr/builtin-latest", "vision-ocr/builtin-latest/poppler-200", "vision-ocr/builtin-latest/poppler-200-jpeg", "vn:vbpl:1200", "holds Sắc lệnh 14/SL of 1951-05-01; VBPL record error; checked 2026-11-12")
+	want := stage.RecipeHash("extract", "tree/1", "html-transcription/1", "textparse/5", "ocr-store/2", ReleaseChecker, "vision-ocr/builtin-latest", "vision-ocr/builtin-latest/poppler-200", "vision-ocr/builtin-latest/poppler-200-jpeg", "vn:vbpl:1200", "holds Sắc lệnh 14/SL of 1951-05-01; VBPL record error; checked 2026-11-12")
 	old := stage.RecipeHash("extract", "tree/1", "html-transcription/1", "textparse/2", "ocr-store/1", ReleaseChecker, "vision-ocr/builtin-latest", "vision-ocr/builtin-latest/poppler-200", "vision-ocr/builtin-latest/poppler-200-jpeg")
 	older := stage.RecipeHash("extract", "tree/1", "html-transcription/1", "textparse/1", "ocr-absent/1")
 	if got != want || got == old || got == older {

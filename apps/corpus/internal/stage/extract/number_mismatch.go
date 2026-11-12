@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"unicode"
 
@@ -106,7 +105,7 @@ func transcriptionMismatch(dir, id string, doc fetch.Document) (string, error) {
 				header = header[:i]
 			}
 		}
-		matches := regexp.MustCompile(`(?:Số\s*:\s*|SỐ\s+)([0-9]+[^\s]*)`).FindAllStringSubmatch(header, -1)
+		matches := headerNumbers(header)
 		digits := func(s string) string {
 			i := 0
 			for i < len(s) && s[i] >= '0' && s[i] <= '9' {
@@ -121,9 +120,8 @@ func transcriptionMismatch(dir, id string, doc fetch.Document) (string, error) {
 			}
 			return n
 		}
-		for _, match := range matches {
-			token := match[1]
-			if !strings.ContainsAny(token, "/-") || digits(token) == digits(doc.Number) || strings.Contains(normalizeNumber(doc.Title), normalizeNumber(token)) {
+		for _, token := range matches {
+			if !strings.ContainsAny(token, "/-") || digits(token) == digits(doc.Number) || titleHasNumber(doc.Title, token) {
 				continue
 			}
 			if subjectMismatch(header, doc.Title) {
