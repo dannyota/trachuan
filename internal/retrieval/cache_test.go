@@ -101,7 +101,7 @@ func (tx *readCacheTx) Query(_ context.Context, sql string, args ...any) (pgx.Ro
 	if strings.Contains(sql, "SELECT id,parent_id,kind") {
 		r.values = [][]any{{int64(1), nil, "dieu", "Điều 1", "heading", 1, 1, strings.Repeat("điều luật ", 12000), "p1", nil}}
 	}
-	if strings.Contains(sql, "count(*) OVER ()") {
+	if sql == readRelationsSQL {
 		offset := args[5].(int)
 		total := tx.relationCount
 		if total == 0 {

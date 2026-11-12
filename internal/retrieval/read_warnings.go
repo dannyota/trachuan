@@ -23,12 +23,13 @@ func attachReadWarnings(ctx context.Context, tx pgx.Tx, nodes []Provision, units
 	if len(ids) == 0 {
 		return nil
 	}
-	_, relations, err := hydrateTrees(ctx, tx, ids)
+	warnings, err := loadWarnings(ctx, tx, ids)
 	if err != nil {
 		return err
 	}
 	for i := range units {
-		units[i].Warnings, units[i].WarningsOmitted = shapeWarnings(relations[byAnchor[units[i].Anchor]])
+		set := warnings[byAnchor[units[i].Anchor]]
+		units[i].Warnings, units[i].WarningsOmitted = set.warnings, set.omitted
 	}
 	return nil
 }

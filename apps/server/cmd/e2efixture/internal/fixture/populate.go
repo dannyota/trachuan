@@ -138,7 +138,7 @@ func populate(ctx context.Context, db *pgxpool.Pool, rel string) error {
 	_, err = db.Exec(ctx, `INSERT INTO relation (id,source_document_id,target_document_id,source_provision_id,target_provision_id,source_key,target_key,source_number,target_number,kind,raw_code,raw_label,target_node_id,evidence,method,artifact_sha256,ordinal) VALUES
  (2,28,1,2801,111,'vn:fixture:warnings','vn:fixture:1','28/2099/TT-TEST','1/2099/TT-TEST','amends_supplements','','','article-1','exact evidence','text_rule/1',$1,1),
  (3,28,1,2801,111,'vn:fixture:warnings','vn:fixture:1','28/2099/TT-TEST','1/2099/TT-TEST','repeals','','','article-1/khoan-9','inexact evidence','text_rule/1',$1,2),
- (4,28,1,2801,111,'vn:fixture:warnings','vn:fixture:1','28/2099/TT-TEST','1/2099/TT-TEST','replaces','','','vbpl-node','reference evidence','vbpl_references,vbpl_diagram',$1,3),
+ (4,28,1,2801,111,'vn:fixture:warnings','vn:fixture:1','28/2099/TT-TEST','1/2099/TT-TEST','replaces','','','article-1','reference evidence','vbpl_references,vbpl_diagram',$1,3),
  (5,28,1,2801,111,'vn:fixture:warnings','vn:fixture:1','28/2099/TT-TEST','1/2099/TT-TEST','suspends','','','article-1','diagram evidence','vbpl_diagram',$1,4)`, hash)
 	if err != nil {
 		return fmt.Errorf("insert fixture warning relations: %w", err)

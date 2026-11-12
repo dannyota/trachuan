@@ -120,7 +120,12 @@ func hydrate(ctx context.Context, tx pgx.Tx, g *ArmGroup, vec string) error {
 	if err != nil {
 		return err
 	}
+	warnings, err := loadWarnings(ctx, tx, gids)
+	if err != nil {
+		return err
+	}
 	for id, c := range byID {
+		c.Warnings, c.WarningsOmitted = warnings[c.GroupID].warnings, warnings[c.GroupID].omitted
 		c.Descendants = descendants[c.GroupID]
 		c.Relations = relations[c.GroupID]
 		c.Ancestors = ancestors[c.GroupID]

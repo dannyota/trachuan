@@ -5,6 +5,7 @@ package retrieval
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -52,6 +53,20 @@ func TestWarnings_AttachmentAndRecovery(t *testing.T) {
 	point, omitted := shapeWarnings(rels[13])
 	if len(point) != 10 || omitted != 15 {
 		t.Fatalf("point warnings %+v omitted %d", point, omitted)
+	}
+	bounded, err := loadWarnings(ctx, tx, []int64{11, 12, 13})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		id      int64
+		want    []Warning
+		omitted int
+	}{{11, article, 16}, {12, clause, 15}, {13, point, 15}} {
+		got := bounded[tc.id]
+		if !reflect.DeepEqual(got.warnings, tc.want) || got.omitted != tc.omitted {
+			t.Fatalf("unit %d bounded warnings: %+v", tc.id, got)
+		}
 	}
 	nodes, err := readNodes(ctx, tx, 1, "vn:1")
 	if err != nil {

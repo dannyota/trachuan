@@ -59,4 +59,12 @@ func TestCreateAndDrop_Fixture(t *testing.T) {
 	if count == 0 {
 		t.Fatal("fixture has no documents")
 	}
+	rows.Close()
+	var matches bool
+	if err := db.QueryRow(ctx, `SELECT r.target_node_id = p.node_id FROM relation r JOIN provision p ON p.id=r.target_provision_id WHERE r.method='vbpl_references,vbpl_diagram'`).Scan(&matches); err != nil {
+		t.Fatal(err)
+	}
+	if !matches {
+		t.Fatal("reference target node does not match the resolved provision")
+	}
 }
