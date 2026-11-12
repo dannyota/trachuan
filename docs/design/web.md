@@ -45,6 +45,22 @@ the path plus only allowlisted query parameters: `release` on the reader and
 parameter is dropped, so a query or form state never reaches a URL
 ([web API](web-api.md#google-login) states the `next` rules).
 
+## Warnings
+
+Provision-level warnings ([search results](mcp-results.md#warnings)) render as
+one sentence each with the acting document as subject, never as a stamp:
+Vietnamese `{number} {verb} {named}` with the verbs `bãi bỏ`, `thay thế`,
+`ngưng hiệu lực` and `sửa đổi, bổ sung`, English `{number} {verb} {named}` with
+repeals, replaces, suspends, amends or supplements. `named` renders the act's
+path from the deepest part up with fixed words (`dieu-8/khoan-9` as
+`khoản 9 Điều 8`, English `Article 8 clause 9`); an inexact warning adds "(khoản
+hoặc điểm này chưa có trong văn bản đã tải)" / "(this clause or point is not in
+the loaded text)". The number links to the acting provision in the reader when
+it is in the release. On search cards the warning lines sit under the stamp and
+document-level relations stay chips; in the reader each warning sits beside its
+target provision's label and the rail lists them under "Cảnh báo" / "Warnings",
+grouped by target in document order.
+
 ## Routing
 
 The website and the API share one origin, because the session cookie is

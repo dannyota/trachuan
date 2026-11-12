@@ -50,19 +50,19 @@ first.
 
 A compact hit has, in this order:
 
-| Field       | Meaning                                                                                                                                                   |
-| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `handle`    | The hit's provision                                                                                                                                       |
-| `doc`       | Key into `documents`                                                                                                                                      |
-| `citation`  | Canonical citation from the recipe, number excluded                                                                                                       |
-| `path`      | Ancestors from the top structural level down to and including the hit: `label`, `heading` when the source has one, `anchor` (read as `<doc>#<anchor>`)    |
-| `snippet`   | Verbatim text under the snippet rule                                                                                                                      |
-| `complete`  | True only when `snippet` is the whole hit text and the recipe marked the hit complete                                                                     |
-| `in_filter` | Filter result, only when a filter (`nodes`, `doc_types`, `issuers` or `documents`) was requested                                                          |
-| `nodes`     | The hit provision's effective node codes ([taxonomy](taxonomy.md#serving)), deepest first                                                                 |
-| `warnings`  | Provision-level relations whose endpoint is this provision or a descendant, as pointers, under the recipe's validity rule, in the recipe's relation order |
-| `gaps`      | The recipe's hit gaps                                                                                                                                     |
-| `locator`   | Where the hit text sits in the file it was read from (`block:` or `line:` range); absent when the text is the source's tree                               |
+| Field       | Meaning                                                                                                                                                |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `handle`    | The hit's provision                                                                                                                                    |
+| `doc`       | Key into `documents`                                                                                                                                   |
+| `citation`  | Canonical citation from the recipe, number excluded                                                                                                    |
+| `path`      | Ancestors from the top structural level down to and including the hit: `label`, `heading` when the source has one, `anchor` (read as `<doc>#<anchor>`) |
+| `snippet`   | Verbatim text under the snippet rule                                                                                                                   |
+| `complete`  | True only when `snippet` is the whole hit text and the recipe marked the hit complete                                                                  |
+| `in_filter` | Filter result, only when a filter (`nodes`, `doc_types`, `issuers` or `documents`) was requested                                                       |
+| `nodes`     | The hit provision's effective node codes ([taxonomy](taxonomy.md#serving)), deepest first                                                              |
+| `warnings`  | Provision-level warnings attached to this provision ([Warnings](#warnings)), in the recipe's relation order                                            |
+| `gaps`      | The recipe's hit gaps                                                                                                                                  |
+| `locator`   | Where the hit text sits in the file it was read from (`block:` or `line:` range); absent when the text is the source's tree                            |
 
 A full hit has the same fields except `snippet`, then the recipe's `text`,
 `fragments`, `score` and complete `relations` with evidence; its `complete` is
@@ -93,6 +93,25 @@ member's first body span begins.
 Count code points after the marker is inserted. `complete` is false whenever any
 marker appears or the recipe marked the hit incomplete, including a cut or
 missing lead.
+
+## Warnings
+
+A warning is a provision-level `repeals`, `replaces`, `suspends` or
+`amends_supplements` relation ([relations from text](relations-text.md)) whose
+target document is in this release. It has the pointer fields (`dir:"in"`,
+`kind`, and the acting document's `key`, `number` and `in_release`) and adds
+`source`, the acting provision's handle when it is in the release; `named`, the
+target path the act names as stored (`dieu-8/khoan-9`); `target`, the handle the
+relation resolved to; and `exact`, true when `target` is the named provision and
+false when it is the deepest resolved ancestor because a named clause or point
+is not a node in this release. A hit or a read unit carries a warning when its
+provision is `target` or contains `target`; an exact warning also attaches to
+every provision inside `target`; an inexact one attaches to no other descendant
+of `target`, because the act named only part of it. `named` is what the act
+says, never a citation of the target tree (citations still come from actual
+ancestry). A warning never changes the stamp, `status` or eligibility, states no
+effective date and is not a legal conclusion; the act's sentence is the evidence
+in full hits' `relations` and in a `relations` read.
 
 ## Related pointers
 
