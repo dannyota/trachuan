@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+	"unicode/utf8"
 
 	"danny.vn/trachuan/apps/corpus/internal/stage"
 	"danny.vn/trachuan/apps/corpus/internal/stage/chunk"
@@ -115,7 +117,7 @@ func TestRelationReport_ResolveTextGapsAndUnknownTargets(t *testing.T) {
 	report.Text.addGap("relation_text_unlinked_target", "40/2016/TT-NHNN", "a")
 	rows := []relation{{Method: "text_rule/1", TargetVBPLID: "42"}}
 	gaps := report.resolveGaps(rows, map[string]bool{})
-	if len(gaps) != 3 || gaps[0].Kind != "unknown_relation_code" || gaps[1] != (stage.Gap{Kind: "unknown_target", Detail: "42"}) || gaps[2] != (stage.Gap{Kind: "relation_text_unlinked_target", Detail: "40/2016/TT-NHNN"}) {
+	if len(gaps) != 3 || gaps[0].Kind != "unknown_relation_code" || gaps[1] != (stage.Gap{Kind: "unknown_target", Detail: "42"}) || gaps[2] != (stage.Gap{Kind: "relation_text_unlinked_target", Detail: "0:a:40/2016/TT-NHNN"}) {
 		t.Fatalf("gaps=%+v", gaps)
 	}
 	gaps = report.resolveGaps(rows, map[string]bool{"vn:vbpl:42": true})
@@ -193,5 +195,28 @@ func TestTextRelations_DeterministicOrder(t *testing.T) {
 		}
 		previous = string(b)
 		articles[0], articles[1] = articles[1], articles[0]
+	}
+}
+
+func TestRelationReport_RunGapDetailIsBoundedAndUnique(t *testing.T) {
+	long := strings.Repeat("Điều khoản sửa đổi ", 600) // over 10,000 characters
+	report := relationReport{Text: newTextReport()}
+	report.Text.addGap("relation_text_grammar", long, "dieu-1")
+	report.Text.addGap("relation_text_grammar", long, "dieu-1")
+	report.Text.addGap("relation_text_unbalanced_quote", long, "dieu-2")
+	gaps := report.resolveGaps(nil, map[string]bool{})
+	if len(gaps) != 3 {
+		t.Fatalf("gaps=%d", len(gaps))
+	}
+	seen := map[string]bool{}
+	for _, gap := range gaps {
+		// The workshop gap table indexes detail; a btree entry holds at most 2704 bytes.
+		if len(gap.Detail) > 1024 || !utf8.ValidString(gap.Detail) || seen[gap.Kind+gap.Detail] {
+			t.Fatalf("detail bytes=%d valid=%v duplicate=%v", len(gap.Detail), utf8.ValidString(gap.Detail), seen[gap.Kind+gap.Detail])
+		}
+		seen[gap.Kind+gap.Detail] = true
+	}
+	if !strings.HasPrefix(gaps[0].Detail, "0:dieu-1:Điều khoản") || report.Text.GapDetails[0].Detail != long {
+		t.Fatalf("detail=%q", gaps[0].Detail)
 	}
 }
