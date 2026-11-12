@@ -158,7 +158,7 @@ func TestDatabaseRows_ClassifiedAndSanitized(t *testing.T) {
 				"trees": func(tx pgx.Tx) error { _, _, err := hydrateTrees(context.Background(), tx, []int64{1}); return err },
 				"nodes": func(tx pgx.Tx) error { _, err := readNodes(context.Background(), tx, 1, ""); return err },
 				"relations": func(tx pgx.Tx) error {
-					_, err := readRelations(context.Background(), tx, "", nil, false, 0, 10)
+					_, err := readRelations(context.Background(), tx, "", nil, nil, false, 0, 10)
 					return err
 				},
 				"number": func(tx pgx.Tx) error {

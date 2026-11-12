@@ -28,17 +28,19 @@ type ReadRequest struct {
 
 // Unit is one lead, provision, outline entry or relation, or a fixed part of it.
 type Unit struct {
-	Kind     string          `json:"kind"`
-	Locator  *string         `json:"locator,omitempty"`
-	Anchor   string          `json:"anchor,omitempty"`
-	Citation string          `json:"citation,omitempty"`
-	Label    string          `json:"label,omitempty"`
-	Heading  string          `json:"heading,omitempty"`
-	Text     string          `json:"text,omitempty"`
-	Size     int             `json:"size,omitempty"`
-	Relation *ListedRelation `json:"relation,omitempty"`
-	Part     int             `json:"part,omitempty"`
-	Parts    int             `json:"parts,omitempty"`
+	Kind            string          `json:"kind"`
+	Warnings        []Warning       `json:"warnings,omitempty"`
+	WarningsOmitted int             `json:"warnings_omitted,omitempty"`
+	Locator         *string         `json:"locator,omitempty"`
+	Anchor          string          `json:"anchor,omitempty"`
+	Citation        string          `json:"citation,omitempty"`
+	Label           string          `json:"label,omitempty"`
+	Heading         string          `json:"heading,omitempty"`
+	Text            string          `json:"text,omitempty"`
+	Size            int             `json:"size,omitempty"`
+	Relation        *ListedRelation `json:"relation,omitempty"`
+	Part            int             `json:"part,omitempty"`
+	Parts           int             `json:"parts,omitempty"`
 }
 
 // ListedRelation adds source evidence to a stored relation pointer.

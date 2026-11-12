@@ -1540,6 +1540,26 @@ components:
         in_release: *id007
       required:
       - in_release
+    Warning:
+      type: object
+      properties:
+        dir: *id001
+        kind: *id001
+        key: *id001
+        number: *id001
+        in_release: *id007
+        source: *id001
+        basis: *id001
+        target: *id001
+        citation: *id001
+        exact: *id007
+        named: *id001
+      required:
+      - in_release
+      - basis
+      - target
+      - citation
+      - exact
     ListedRelation:
       type: object
       properties:
@@ -1728,7 +1748,8 @@ components:
         warnings:
           type: array
           items:
-            $ref: '#/components/schemas/Pointer'
+            $ref: '#/components/schemas/Warning'
+        warnings_omitted: *id003
         gaps:
           type: array
           items:
@@ -1852,6 +1873,11 @@ components:
     Unit:
       type: object
       properties:
+        warnings:
+          type: array
+          items:
+            $ref: '#/components/schemas/Warning'
+        warnings_omitted: *id003
         kind: *id001
         anchor: *id001
         locator: *id001

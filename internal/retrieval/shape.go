@@ -149,6 +149,7 @@ func shapeHit(g Group, arms Arms, recipe Recipe) (Hit, error) {
 	}
 	gaps = append(gaps, evidenceGaps...)
 	rels, relationGaps := shapeRelations(c.Relations, recipe, g.Identity)
+	warnings, warningsOmitted := shapeWarnings(c.Relations)
 	gaps = append(gaps, relationGaps...)
 	path := make([]PathNode, 0, len(c.Ancestors))
 	for _, p := range c.Ancestors {
@@ -162,7 +163,7 @@ func shapeHit(g Group, arms Arms, recipe Recipe) (Hit, error) {
 		}
 	}
 	nodes := append([]string{}, arms.EffectiveNodes[c.GroupID]...)
-	h := Hit{Nodes: nodes, Locator: locator, Identity: g.Identity, Path: path, BestMember: bestMember, BestTextStart: bestStart, Number: c.Document.Number, Class: c.Document.Class, Source: c.Document.Source, Title: c.Document.Title, Citation: citation(c.Ancestors), Text: text, Fragments: fragments, Complete: complete, SourceURL: c.Document.SourceURL, Score: g.Score, BestCosine: g.BestCosine, Stamp: validity, Relations: rels, Gaps: gaps}
+	h := Hit{Nodes: nodes, Locator: locator, Identity: g.Identity, Path: path, BestMember: bestMember, BestTextStart: bestStart, Number: c.Document.Number, Class: c.Document.Class, Source: c.Document.Source, Title: c.Document.Title, Citation: citation(c.Ancestors), Text: text, Fragments: fragments, Complete: complete, SourceURL: c.Document.SourceURL, Score: g.Score, BestCosine: g.BestCosine, Stamp: validity, Relations: rels, Warnings: warnings, WarningsOmitted: warningsOmitted, Gaps: gaps}
 	if !complete {
 		v := 1
 		h.NextPart = &v
