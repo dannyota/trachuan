@@ -95,6 +95,7 @@ type Querier interface {
 	ListLegacyExpectedKeys(ctx context.Context, runID int64) ([]string, error)
 	ListLegacyListingSupports(ctx context.Context, runID int64) ([]ListLegacyListingSupportsRow, error)
 	ListMembershipEvidence(ctx context.Context, runID int64) ([]RunMembershipEvidence, error)
+	ListOCRCheckAttemptHistory(ctx context.Context, arg ListOCRCheckAttemptHistoryParams) ([]ListOCRCheckAttemptHistoryRow, error)
 	ListOCRChecks(ctx context.Context, arg ListOCRChecksParams) ([]ListOCRChecksRow, error)
 	ListOCRTextByPDF(ctx context.Context, pdfSha256s []string) ([]OcrText, error)
 	ListOpenOCRCheckAttempts(ctx context.Context, checkerID string) ([]OcrCheckAttempt, error)

@@ -100,7 +100,14 @@ pass support this choice: all 49 spot-read items were correct.
 `corpus ocr check <cc> <rel>` selects the run's documents whose text source
 would be `ocr`, that have a store entry and no `ocr_check` row for the checker
 id. Flags: `--model`, `--effort`, `--limit-docs`, `--max-usd` (required),
-`--batch`, `--dry-run`.
+`--batch`, `--dry-run`, `--retry-failed`.
+
+An ordinary invocation skips a document after two billed failed attempts for the
+checker id, or when its latest attempt failed before a request with no recorded
+cost or input tokens; the tool version is not recorded, so the latter rule uses
+the failure reason alone. `--retry-failed` allows one more attempt per skipped
+document per invocation, and repeating the flag repeats the attempt at the
+operator's choice.
 
 - Dry run: counts input tokens per document with the token counting endpoint and
   prints the estimate at the model's listed price. It writes nothing.
@@ -126,10 +133,10 @@ id. Flags: `--model`, `--effort`, `--limit-docs`, `--max-usd` (required),
   console, and not within 24 hours of the attempt; that allows one new
   submission. A later invocation collects the results of `submitted` attempts
   instead of submitting again; an expired or errored item becomes a failed
-  attempt that the next invocation may resubmit. The records live in the
-  workshop database, which run checkpoints dump; losing it beyond the last
-  checkpoint loses the check rows and the spend written since, so that work is
-  paid again when it is repeated, each invocation still bounded by its
+  attempt that a later invocation may resubmit under the retry rule. The records
+  live in the workshop database, which run checkpoints dump; losing it beyond
+  the last checkpoint loses the check rows and the spend written since, so that
+  work is paid again when it is repeated, each invocation still bounded by its
   `--max-usd`.
 - Spend: each attempt records the usage the API reported; the command adds the
   cost at the listed price and stops before a request or batch that could pass

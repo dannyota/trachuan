@@ -87,6 +87,32 @@ func (d *Database) Completed(ctx context.Context, id int64, checker string) (boo
 	return true, nil
 }
 
+// RetryState counts billed failures and identifies a latest unbilled failure.
+func (d *Database) RetryState(ctx context.Context, id int64, checker string) (int, bool, error) {
+	rows, err := store.New(d.pool).ListOCRCheckAttemptHistory(ctx, store.ListOCRCheckAttemptHistoryParams{OcrTextID: id, CheckerID: checker})
+	if err != nil {
+		return 0, false, fmt.Errorf("read OCR attempt history: %w", err)
+	}
+	count := 0
+	latestUnbilled := false
+	for i, row := range rows {
+		if row.State != "failed" {
+			continue
+		}
+		var usage Usage
+		if err = json.Unmarshal(row.Usage, &usage); err != nil {
+			return 0, false, fmt.Errorf("invalid stored OCR usage: %w", err)
+		}
+		billed := usage.CostMicroUSD > 0 || usage.Input > 0
+		if billed {
+			count++
+		} else if i == 0 && preRequestFailure(row.Reason) {
+			latestUnbilled = true
+		}
+	}
+	return count, latestUnbilled, nil
+}
+
 // Begin records every batch item atomically before the provider is called.
 func (d *Database) Begin(ctx context.Context, intents []Intent, checker, mode, submission string, now time.Time) ([]Attempt, error) {
 	tx, err := d.pool.Begin(ctx)

@@ -45,3 +45,22 @@ func TestCheck_PrintsPerDocumentMetrics(t *testing.T) {
 		t.Fatalf("output=%q", out.String())
 	}
 }
+
+func TestCheck_RetryFailedOptions(t *testing.T) {
+	for _, flags := range [][]string{
+		{"--max-usd", "1", "--retry-failed", "--batch", "--limit-docs", "1"},
+		{"--max-usd", "1", "--retry-failed", "--dry-run"},
+	} {
+		if _, err := parseCheckOptions(flags, false); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, flags := range [][]string{
+		{"--max-usd", "1", "--retry-failed", "--reconcile"},
+		{"--max-usd", "1", "--retry-failed", "--abandon", "0123456789abcdef0123456789abcdef"},
+	} {
+		if _, err := parseCheckOptions(flags, false); err == nil {
+			t.Fatalf("accepted %v", flags)
+		}
+	}
+}

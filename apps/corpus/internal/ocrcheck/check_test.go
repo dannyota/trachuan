@@ -269,6 +269,7 @@ type memoryRepository struct {
 	cost     int64
 }
 
+func (s *memoryRepository) Lock(context.Context, string) (func(), error) { return func() {}, nil }
 func (s *memoryRepository) Open(context.Context, string) ([]Attempt, error) {
 	var a []Attempt
 	for _, v := range s.attempts {
@@ -288,6 +289,27 @@ func (s *memoryRepository) Spent(context.Context, string) (int64, error) {
 func (s *memoryRepository) Completed(_ context.Context, id int64, _ string) (bool, error) {
 	_, ok := s.checks[id]
 	return ok, nil
+}
+func (s *memoryRepository) RetryState(_ context.Context, id int64, checker string) (int, bool, error) {
+	count := 0
+	latestUnbilled := false
+	latest := true
+	for i := len(s.attempts) - 1; i >= 0; i-- {
+		a := s.attempts[i]
+		if a.EntryID != id || a.Checker != checker {
+			continue
+		}
+		if a.State == "failed" {
+			billed := a.Usage.CostMicroUSD > 0 || a.Usage.Input > 0
+			if billed {
+				count++
+			} else if latest && preRequestFailure(a.Reason) {
+				latestUnbilled = true
+			}
+		}
+		latest = false
+	}
+	return count, latestUnbilled, nil
 }
 func (s *memoryRepository) Begin(_ context.Context, intents []Intent, checker, mode, submission string, now time.Time) ([]Attempt, error) {
 	var a []Attempt

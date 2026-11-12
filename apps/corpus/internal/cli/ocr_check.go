@@ -15,7 +15,7 @@ import (
 func parseCheckOptions(args []string, review bool) (ocrcheck.Options, error) {
 	allowed := map[string]bool{"--model": true, "--effort": true}
 	if !review {
-		for k, v := range map[string]bool{"--limit-docs": true, "--max-usd": true, "--batch": false, "--dry-run": false, "--reconcile": false, "--abandon": true} {
+		for k, v := range map[string]bool{"--limit-docs": true, "--max-usd": true, "--batch": false, "--dry-run": false, "--reconcile": false, "--retry-failed": false, "--abandon": true} {
 			allowed[k] = v
 		}
 	}
@@ -23,7 +23,7 @@ func parseCheckOptions(args []string, review bool) (ocrcheck.Options, error) {
 	if err != nil {
 		return ocrcheck.Options{}, err
 	}
-	o := ocrcheck.Options{Abandon: flags["--abandon"], Model: "claude-sonnet-5-5", Effort: "medium", Batch: flags["--batch"] != "", DryRun: flags["--dry-run"] != "", Reconcile: flags["--reconcile"] != ""}
+	o := ocrcheck.Options{Abandon: flags["--abandon"], Model: "claude-sonnet-5-5", Effort: "medium", Batch: flags["--batch"] != "", DryRun: flags["--dry-run"] != "", Reconcile: flags["--reconcile"] != "", RetryFailed: flags["--retry-failed"] != ""}
 	if flags["--model"] != "" {
 		o.Model = flags["--model"]
 	}
@@ -62,7 +62,7 @@ func parseCheckOptions(args []string, review bool) (ocrcheck.Options, error) {
 
 func runOCRCheck(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	if len(args) < 2 {
-		_, _ = fmt.Fprintln(stderr, "usage: corpus ocr check <cc> <rel> --max-usd USD [--model MODEL] [--effort EFFORT] [--limit-docs N] [--batch] [--dry-run] [--reconcile] [--abandon SUBMISSION_ID]")
+		_, _ = fmt.Fprintln(stderr, "usage: corpus ocr check <cc> <rel> --max-usd USD [--model MODEL] [--effort EFFORT] [--limit-docs N] [--batch] [--dry-run] [--reconcile] [--retry-failed] [--abandon SUBMISSION_ID]")
 		return 2
 	}
 	o, err := parseCheckOptions(args[2:], false)
@@ -89,14 +89,6 @@ func runOCRCheck(ctx context.Context, args []string, stdout, stderr io.Writer) i
 		return 1
 	}
 	defer env.db.Close()
-	var docs []ocrcheck.Document
-	if !o.Reconcile && o.Abandon == "" {
-		docs, err = env.documents(ctx, o.CheckerID())
-		if err != nil {
-			_, _ = fmt.Fprintln(stderr, err)
-			return 1
-		}
-	}
 	var client ocrcheck.Client
 	if o.Abandon == "" {
 		client, err = ocrcheck.NewSDKClient()
@@ -105,9 +97,11 @@ func runOCRCheck(ctx context.Context, args []string, stdout, stderr io.Writer) i
 			return 1
 		}
 	}
-	runner := ocrcheck.Runner{Client: client, Repository: ocrcheck.NewDatabase(env.db, env.root)}
-	summary, err := runner.Run(ctx, docs, o)
-	_, _ = fmt.Fprintf(stdout, "checker: %s\ncomplete: %d\nfailed: %d\nsubmitted: %d\npending: %d\nattached: %d\nabandoned: %d\nspend USD: %.6f\nestimated documents: %d\nworst-case estimate USD: %.6f\n", o.CheckerID(), summary.Complete, summary.Failed, summary.Submitted, summary.Pending, summary.Attached, summary.Abandoned, float64(summary.CostMicroUSD)/1e6, summary.Estimated, float64(summary.EstimateMicroUSD)/1e6)
+	runner := ocrcheck.Runner{Client: client, Repository: ocrcheck.NewDatabase(env.db, env.root), LoadDocuments: func(ctx context.Context) ([]ocrcheck.Document, error) {
+		return env.documents(ctx, o.CheckerID())
+	}}
+	summary, err := runner.Run(ctx, nil, o)
+	_, _ = fmt.Fprintf(stdout, "checker: %s\ncomplete: %d\nfailed: %d\nskipped_retry_limit: %d\nsubmitted: %d\npending: %d\nattached: %d\nabandoned: %d\nspend USD: %.6f\nestimated documents: %d\nworst-case estimate USD: %.6f\n", o.CheckerID(), summary.Complete, summary.Failed, summary.SkippedRetryLimit, summary.Submitted, summary.Pending, summary.Attached, summary.Abandoned, float64(summary.CostMicroUSD)/1e6, summary.Estimated, float64(summary.EstimateMicroUSD)/1e6)
 	printCheckDocuments(stdout, summary.Documents)
 	if err != nil {
 		_, _ = fmt.Fprintln(stderr, err)
