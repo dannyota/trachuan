@@ -53,6 +53,8 @@ export const en: Catalog = {
   searchDate: 'Applies on',
   searchInForce: 'In force only',
   searchSubmit: 'Search',
+  filtersUnavailable: 'Filters unavailable.',
+  retry: 'Retry',
   searchNodes: 'Topics',
   searchNodeLookup: 'Find topics',
   searchTypes: 'Document types',

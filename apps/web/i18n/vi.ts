@@ -50,6 +50,8 @@ export const vi = {
   searchDate: 'Áp dụng vào ngày',
   searchInForce: 'Chỉ còn hiệu lực',
   searchSubmit: 'Tra cứu',
+  filtersUnavailable: 'Không thể tải bộ lọc.',
+  retry: 'Thử lại',
   searchNodes: 'Chủ đề',
   searchNodeLookup: 'Tìm chủ đề',
   searchTypes: 'Loại văn bản',

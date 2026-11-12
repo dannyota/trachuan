@@ -10,12 +10,14 @@ type SearchResult = components['schemas']['SearchResult']
 const language = useState<Language>('language', () => 'vi')
 const messages = computed(() => messagesFor(language.value))
 const api = useApi({ userAction: true })
+const filterApi = useApi({ localUnavailable: true })
 const route = useRoute()
 const initialNode = typeof route.query.node === 'string' && isNodeCode(route.query.node) ? route.query.node : ''
 const nodes = ref<string[]>(initialNode ? [initialNode] : [])
 const docTypes = ref<string[]>([])
 const issuers = ref<string[]>([])
 const facets = ref<components['schemas']['CorpusStatus'] | null>(null)
+const facetsFailed = ref(false)
 const query = ref('')
 const asOf = ref('')
 const inForce = ref(true)
@@ -24,12 +26,15 @@ const submitted = ref<SearchInput | null>(null)
 const error = ref('')
 const retryAfter = ref('')
 const loading = ref(false)
-onMounted(async () => {
+async function loadFacets() {
   try {
-    const response = await api.client.GET('/api/v1/status')
-    if (response.data) facets.value = response.data
-  } catch { /* Search remains available without facets. */ }
-})
+    const response = await filterApi.client.GET('/api/v1/status')
+    if (!response.data) throw new Error('unavailable')
+    facets.value = response.data
+    facetsFailed.value = false
+  } catch { facetsFailed.value = true }
+}
+onMounted(loadFacets)
 let action: Action | null = null
 let controller: AbortController | null = null
 onBeforeUnmount(() => controller?.abort())
@@ -93,6 +98,7 @@ async function search(more = false) {
       <input id="search-date" v-model="asOf" type="date" autocomplete="off">
       <label><input v-model="inForce" type="checkbox" autocomplete="off"> {{ messages.searchInForce }}</label>
       <SearchNodePicker v-model="nodes" />
+      <p v-if="facetsFailed" role="status">{{ messages.filtersUnavailable }} <button type="button" @click="loadFacets">{{ messages.retry }}</button></p>
       <label>{{ messages.searchTypes }} <select v-model="docTypes" name="types" multiple @change="docTypes = docTypes.slice(0, 10)"><option v-for="facet in facets?.doc_types" :key="facet.value" :value="facet.value">{{ facet.value }} ({{ facet.count }})</option></select></label>
       <label>{{ messages.searchIssuers }} <select v-model="issuers" name="issuers" multiple @change="issuers = issuers.slice(0, 10)"><option v-for="facet in facets?.issuers" :key="facet.value" :value="facet.value">{{ facet.value }} ({{ facet.count }})</option></select></label>
       <button type="submit" :disabled="loading">{{ messages.searchSubmit }}</button>

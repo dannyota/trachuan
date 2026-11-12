@@ -7,12 +7,13 @@ const props = defineProps<{ modelValue: string[] }>()
 const emit = defineEmits<{ 'update:modelValue': [value: string[]] }>()
 const language = useState<Language>('language', () => 'vi')
 const messages = computed(() => messagesFor(language.value))
-const api = useApi()
+const api = useApi({ localUnavailable: true })
 const lookup = ref('')
 const nodes = ref<Node[]>([])
 const expanded = ref<Record<string, boolean>>({})
 const loaded = ref<Record<string, boolean>>({})
 const failed = ref(false)
+const failedNode = ref('')
 function flatten(entries: Node[]): Node[] {
   return entries.flatMap(node => [node, ...flatten(node.children || [])])
 }
@@ -26,7 +27,7 @@ const matches = computed(() => {
       const code = node.code || ''
       if (code.split('.').slice(0, -1).join('.') !== parent || !code) continue
       ordered.push(node)
-      if (lookup.value || code.split('.').length === 1 || expanded.value[code]) visit(code)
+      if (lookup.value || expanded.value[code]) visit(code)
     }
   }
   visit('')
@@ -47,23 +48,34 @@ async function expand(code: string) {
       nodes.value.push(...flatten(response.data.nodes || []).filter(node => !existing.has(node.code)))
       loaded.value[code] = true
       failed.value = false
-    } catch { failed.value = true; return }
+    } catch { failed.value = true; failedNode.value = code; return }
   }
   expanded.value[code] = true
 }
-onMounted(async () => {
+async function loadRoots() {
   try {
     const response = await api.client.GET('/api/v1/public/taxonomy', { params: { query: { depth: 2 } } })
     if (!response.data) throw new Error('unavailable')
-    nodes.value = flatten(response.data.nodes || [])
-  } catch { failed.value = true }
-})
+    const roots = response.data.nodes || []
+    nodes.value = flatten(roots)
+    for (const node of roots) if (node.code) {
+      expanded.value[node.code] = true
+      loaded.value[node.code] = true
+    }
+    failed.value = false
+  } catch { failed.value = true; failedNode.value = '' }
+}
+function retry() {
+  if (failedNode.value) return expand(failedNode.value)
+  return loadRoots()
+}
+onMounted(loadRoots)
 </script>
 <template>
   <fieldset>
     <legend>{{ messages.searchNodes }}</legend>
     <label>{{ messages.searchNodeLookup }} <input v-model="lookup" type="search" autocomplete="off"></label>
-    <p v-if="failed" role="status">{{ messages.errors.unavailable }}</p>
+    <p v-if="failed" role="status">{{ messages.filtersUnavailable }} <button type="button" @click="retry">{{ messages.retry }}</button></p>
     <div><button v-for="code in modelValue" :key="code" type="button" @click="toggleSelection(code)">{{ nodes.find(node => node.code === code)?.name || code }} ×</button></div>
     <ul><li v-for="node in matches" :key="node.code">
       <label><input type="checkbox" :checked="modelValue.includes(node.code || '')" :disabled="!modelValue.includes(node.code || '') && modelValue.length >= 20" @change="node.code && toggleSelection(node.code)"> {{ node.name }}</label>
