@@ -19,7 +19,9 @@ rules with a 10-minute window; they make no per-visitor corpus query. Only Nitro
 holds that copy. Browsers revalidate public responses by ETag only: every
 response, 304 included, carries `Cache-Control: no-cache` and `Vary: Cookie` and
 no `Last-Modified`, and Nitro ignores `If-Modified-Since` on these routes, so a
-copy in one language never revalidates as the other.
+copy in one language never revalidates as the other. Error responses (the fixed
+404 and the unavailable page) are never cached, carry no `ETag` and are never
+answered with 304.
 
 Nitro serves only known routes, matched exactly (case-sensitive, no trailing
 slash): a known path with a trailing slash or repeated slashes is a 308 to the
