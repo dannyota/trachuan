@@ -96,22 +96,25 @@ missing lead.
 
 ## Warnings
 
-A warning is a provision-level `repeals`, `replaces`, `suspends` or
-`amends_supplements` relation ([relations from text](relations-text.md)) whose
-target document is in this release. It has the pointer fields (`dir:"in"`,
-`kind`, and the acting document's `key`, `number` and `in_release`) and adds
-`source`, the acting provision's handle when it is in the release; `named`, the
-target path the act names as stored (`dieu-8/khoan-9`); `target`, the handle the
-relation resolved to; and `exact`, true when `target` is the named provision and
-false when it is the deepest resolved ancestor because a named clause or point
-is not a node in this release. A hit or a read unit carries a warning when its
-provision is `target` or contains `target`; an exact warning also attaches to
-every provision inside `target`; an inexact one attaches to no other descendant
-of `target`, because the act named only part of it. `named` is what the act
-says, never a citation of the target tree (citations still come from actual
-ancestry). A warning never changes the stamp, `status` or eligibility, states no
-effective date and is not a legal conclusion; the act's sentence is the evidence
-in full hits' `relations` and in a `relations` read.
+A warning is a `repeals`, `replaces`, `suspends` or `amends_supplements`
+relation row whose `method` is `text_rule/1` or `vbpl_references`, that carries
+a `target_node_id` and whose `target_provision_id` is set, with its target
+document in this release; diagram rows (`vbpl_diagram`) and rows with a null
+`target_provision_id` never become warnings and stay document-level pointers. It
+has the pointer fields (`dir:"in"`, `kind`, and the acting document's `key`,
+`number` and `in_release`) and adds `source`, the acting provision's handle when
+it is in the release; `named`, the row's `target_node_id` (`dieu-8/khoan-9`);
+`target`, the handle of `target_provision_id`; and `exact`, true exactly when
+`target_node_id` equals the anchor of `target_provision_id` (false when it
+resolved to the deepest ancestor because a named clause or point is not a node
+in this release). A hit or a read unit carries a warning when its provision is
+`target` or contains `target`; an exact warning also attaches to every provision
+inside `target`; an inexact one attaches to no other descendant of `target`,
+because the act named only part of it. `named` is what the act says, never a
+citation of the target tree (citations still come from actual ancestry). A
+warning never changes the stamp, `status` or eligibility, states no effective
+date and is not a legal conclusion; the act's sentence is the evidence in full
+hits' `relations` and in a `relations` read.
 
 ## Related pointers
 
