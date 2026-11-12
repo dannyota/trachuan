@@ -49,9 +49,13 @@ func (*Stage) Rows(_ context.Context, env stage.Env, art artifact.Result) (func(
 		return nil, fmt.Errorf("decode files: %w", err)
 	}
 	d := detail.Data
+	var sourceURL *string
+	if url := vbplSourceURL(d.ID); url != "" {
+		sourceURL = &url
+	}
 	return func(ctx context.Context, tx pgx.Tx, artifactID int64) error {
 		q := store.New(tx)
-		err := q.InsertDocument(ctx, store.InsertDocumentParams{ArtifactID: artifactID, Key: "vn:vbpl:" + d.ID, Country: "vn", Source: "vbpl", SourceID: d.ID, VbplID: &d.ID, Number: d.DocNum, Title: d.Title, DocType: d.DocType.Name, Issuer: d.AgencyName, IssueDate: d.IssueDate, EffFrom: d.EffFrom, EffTo: d.EffTo, StatusCode: d.EffStatus.Code, StatusName: d.EffStatus.Name, IsConsolidated: d.IsConsolidatedDocument, HasContent: d.HasContent || d.DocumentContent.Content != ""})
+		err := q.InsertDocument(ctx, store.InsertDocumentParams{ArtifactID: artifactID, Key: "vn:vbpl:" + d.ID, Country: "vn", Source: "vbpl", SourceID: d.ID, VbplID: &d.ID, SourceUrl: sourceURL, Number: d.DocNum, Title: d.Title, DocType: d.DocType.Name, Issuer: d.AgencyName, IssueDate: d.IssueDate, EffFrom: d.EffFrom, EffTo: d.EffTo, StatusCode: d.EffStatus.Code, StatusName: d.EffStatus.Name, IsConsolidated: d.IsConsolidatedDocument, HasContent: d.HasContent || d.DocumentContent.Content != ""})
 		if err != nil {
 			return fmt.Errorf("insert document: %w", err)
 		}
