@@ -3,7 +3,8 @@
 This note owns the serialized form of the retrieval recipe and its checks; it
 was split from [retrieval recipe](retrieval-recipe.md).
 
-`retrieval_recipe` contains `version:1`, `dense_depth`, `lexical_depth`,
+`retrieval_recipe` contains `version:2` (recipe 2; version 1 had cap 3 and no
+tail), `dense_depth`, `lexical_depth`,
 `ann:{pool_min,pool_multiplier,ef_max,iterative_scan,plan_cache_mode, max_scan_tuples,scan_mem_multiplier,fallback}`,
 `rrf:{k,dense_weight, lexical_weight,routed_lexical_weight}`, `ties:"score-id"`,
 `routing:"vn-number/1"`, `group:"nearest-khoan"`, `reducer:"max"`,
