@@ -350,15 +350,7 @@ func Run(ctx context.Context, engine Engine, suite Suite, o Options) (Report, Ca
 	}
 	finishReport(&r, metrics, modes)
 	finishPresented(&r, presented, modes)
-	for _, input := range inputs {
-		if !rejects[input.c.ID] && len(input.c.ExpectedCitations) > 0 && len(o.Mapping[input.c.ID]) > 0 {
-			for _, cohort := range input.cohorts {
-				if cohort != "legacy" {
-					markCohortMappingUnavailable(&r, cohort)
-				}
-			}
-		}
-	}
+	finishMappingReport(&r, inputs, rejects, o.Mapping)
 	finishQuality(&r, previous)
 	addLegacyDirectMetrics(&r)
 	r.ANNResults = map[string]ANNLoss{}
