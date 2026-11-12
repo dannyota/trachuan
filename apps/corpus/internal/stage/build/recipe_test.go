@@ -3,6 +3,7 @@ package build
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"testing"
@@ -135,5 +136,16 @@ func TestBuildInput_RecordMatchesCorrectionsHash(t *testing.T) {
 		if got != want {
 			t.Fatalf("version %d: got %s want %s", tc.version, got, want)
 		}
+	}
+}
+
+func TestBuildRecipe_Version3(t *testing.T) {
+	r := buildRecipe{}
+	b, err := json.Marshal(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := r.hash(), stage.RecipeHash("build", "corpus/3", string(b)); got != want {
+		t.Fatalf("hash = %s, want %s", got, want)
 	}
 }

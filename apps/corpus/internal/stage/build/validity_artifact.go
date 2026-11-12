@@ -33,7 +33,7 @@ type reviewArtifactEntry struct {
 	Proposed          *canonicalCorrection `json:"proposed"`
 }
 
-func encodeValidityReview(reviews []validityReview) ([]byte, error) {
+func encodeValidityReview(reviews []validityReview, partial ...[]partialDocument) ([]byte, error) {
 	entries := make([]reviewArtifactEntry, 0, len(reviews))
 	for _, r := range reviews {
 		entry := reviewArtifactEntry{Kind: r.kind, Key: r.key, Number: r.number, TargetKey: r.targetKey, TargetNumber: r.targetNumber, Detail: r.detail, StatusCode: r.statusCode, StatusName: r.statusName, RawFrom: r.rawFrom, RawTo: r.rawTo, TargetStatusCode: r.targetStatusCode, TargetStatusName: r.targetStatusName, TargetRawFrom: r.targetRawFrom, TargetRawTo: r.targetRawTo, RelationID: r.relationID, Sentences: append([]string{}, r.sentences...), FetchHash: r.fetchHash, ExtractHash: r.extractHash, TargetFetchHash: r.targetFetchHash, TargetExtractHash: r.targetExtractHash}
@@ -50,10 +50,15 @@ func encodeValidityReview(reviews []validityReview) ([]byte, error) {
 		}
 		entries = append(entries, entry)
 	}
+	documents := []partialDocument{}
+	if len(partial) > 0 && partial[0] != nil {
+		documents = partial[0]
+	}
 	data, err := json.Marshal(struct {
-		Version int                   `json:"version"`
-		Entries []reviewArtifactEntry `json:"entries"`
-	}{1, entries})
+		PartialDocuments []partialDocument     `json:"partial_documents"`
+		Version          int                   `json:"version"`
+		Entries          []reviewArtifactEntry `json:"entries"`
+	}{documents, 1, entries})
 	if err != nil {
 		return nil, fmt.Errorf("encode validity review: %w", err)
 	}

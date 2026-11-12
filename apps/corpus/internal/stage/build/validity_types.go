@@ -6,7 +6,7 @@ import (
 )
 
 type validityDocument struct {
-	key, number, numberNorm, docType, issuer, issue          string
+	key, number, class, numberNorm, docType, issuer, issue   string
 	statusCode, statusName, sourceClass, initialClass, basis string
 	rawFrom, rawTo, from, to                                 string
 	dateGap, consolidated                                    bool
@@ -44,7 +44,8 @@ type validityCounts struct {
 	review              map[string]int
 }
 type validityResult struct {
-	documents map[string]validityOutputDocument
-	reviews   []validityReview
-	counts    validityCounts
+	partialDocuments []partialDocument
+	documents        map[string]validityOutputDocument
+	reviews          []validityReview
+	counts           validityCounts
 }
