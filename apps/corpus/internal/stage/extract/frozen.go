@@ -56,7 +56,7 @@ func selectionFromRow(row store.GetRunOCRSelectionRow) (selection, error) {
 		switch row.Gap {
 		case "tree_headings_only":
 			return selection{source: "source_tree", gap: row.Gap, consulted: true}, nil
-		case "needs_ocr", "text_source_ambiguous", "file_format_unsupported", "no_text_source", "ocr_rejected", "ocr_label_flagged":
+		case "needs_ocr", "text_source_ambiguous", "file_format_unsupported", "no_text_source", "ocr_rejected", "ocr_label_flagged", "text_number_mismatch":
 			selected := selection{source: "none", gap: row.Gap, consulted: true}
 			switch row.Gap {
 			case "ocr_rejected":
@@ -77,6 +77,17 @@ func selectionFromRow(row store.GetRunOCRSelectionRow) (selection, error) {
 }
 
 func materializeFrozen(ctx context.Context, dir, key string, selected selection) (selection, []vbpl.Node, error) {
+	if selected.gap == "text_number_mismatch" {
+		current, _, err := choose(ctx, dir, key)
+		if err != nil {
+			return selection{}, nil, err
+		}
+		if current.gap != selected.gap {
+			return selection{}, nil, fmt.Errorf("invalid frozen number mismatch")
+		}
+		selected.reason = current.reason
+		return selected, nil, nil
+	}
 	if selected.gap == "tree_headings_only" {
 		fallback, nodes, err := choose(ctx, dir, key)
 		if err != nil {

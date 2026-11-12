@@ -117,6 +117,20 @@ func chooseForCheck(ctx context.Context, dir, key string, ocr ocrReader, engines
 		return selection{}, nil, fmt.Errorf("invalid document key")
 	}
 	if parts[1] == "vbpl" {
+		if reason := manualMismatches()[key]; reason != "" {
+			return selection{source: "none", gap: "text_number_mismatch", reason: reason, consulted: true}, nil, nil
+		}
+		doc, err := fetch.ReadDocument(dir, key)
+		if err != nil {
+			return selection{}, nil, fmt.Errorf("read fetch document: %w", err)
+		}
+		reason, err := transcriptionMismatch(dir, parts[2], doc)
+		if err != nil {
+			return selection{}, nil, err
+		}
+		if reason != "" {
+			return selection{source: "none", gap: "text_number_mismatch", reason: reason, consulted: true}, nil, nil
+		}
 		b, err := os.ReadFile(filepath.Join(dir, "tree.json"))
 		if err != nil {
 			return selection{}, nil, fmt.Errorf("read tree: %w", err)

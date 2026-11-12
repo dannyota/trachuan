@@ -58,3 +58,13 @@ func TestFrozenSelection_LabelFlagged(t *testing.T) {
 		t.Fatalf("selection=%+v err=%v", got, err)
 	}
 }
+
+func TestFrozenSelection_NumberMismatch(t *testing.T) {
+	q := &frozenDB{rows: map[store.GetRunOCRSelectionParams]store.GetRunOCRSelectionRow{}}
+	got, err := planFrozenSelection(context.Background(), q, 1, "doc", func() (selection, error) {
+		return selection{source: "none", gap: "text_number_mismatch", consulted: true}, nil
+	})
+	if err != nil || got.gap != "text_number_mismatch" || !got.consulted {
+		t.Fatalf("selection=%+v err=%v", got, err)
+	}
+}
