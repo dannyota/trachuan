@@ -96,7 +96,16 @@ func taxonomyIntegrationEngine(t *testing.T) *retrieval.Engine {
 	recipe.Abstention.Threshold = &threshold
 	recipe.Abstention.CalibrationSHA256 = hash
 	rel := retrieval.Release{Country: "vn", Rel: "20991110_1", SchemaVersion: corpusdb.SchemaVersion, RetrievalRecipe: recipe, LexicalRecipe: lexical.Recipe1(), ChunkRecipe: json.RawMessage(`{}`), EvaluationSummary: json.RawMessage(`{}`), SourceManifestHash: hash, BuildInputHash: hash, BuildRecipeHash: hash, BuiltAt: now(), LexicalStats: stats.Summary(lexical.Recipe1(), nil), DenseRecipe: retrieval.DenseRecipe{Version: 1, Model: q.Model, Dimensions: q.Dimensions, Document: d, DocumentHash: d.Hash(), Query: q, QueryHash: q.Hash()}}
-	engine, err := retrieval.OpenDraft(ctx, db, taxonomyEmbedder{}, rel, retrieval.Options{Now: now, Profile: "evaluation"})
+	marshal := func(value any) string {
+		t.Helper()
+		raw, marshalErr := json.Marshal(value)
+		if marshalErr != nil {
+			t.Fatal(marshalErr)
+		}
+		return string(raw)
+	}
+	exec(`INSERT INTO release VALUES (true,'vn',$1,$2,'v1',$3::jsonb,'{}',$4::jsonb,$5::jsonb,$6::jsonb,$7,$7,$7,'{}',$8)`, rel.Rel, rel.SchemaVersion, marshal(rel.DenseRecipe), marshal(rel.LexicalRecipe), marshal(rel.RetrievalRecipe), marshal(rel.LexicalStats), hash, rel.BuiltAt)
+	engine, err := retrieval.Open(ctx, db, taxonomyEmbedder{}, retrieval.Options{Now: now, Profile: "evaluation"})
 	if err != nil {
 		t.Fatal(err)
 	}
