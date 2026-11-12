@@ -726,3 +726,44 @@ func TestDetail_CanonicalURLExcludesTracking(t *testing.T) {
 		t.Fatalf("URL %q", d.URL)
 	}
 }
+
+func TestClient_UserAgentAllRequests(t *testing.T) {
+	const want = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
+	seen := map[string]bool{}
+	c, base := clientFor(t, func(w http.ResponseWriter, r *http.Request) {
+		kind := r.Method + " " + r.URL.Path
+		if r.URL.Query().Get("docid") != "" {
+			kind = "detail"
+		}
+		seen[kind] = true
+		if got := r.Header.Get("User-Agent"); got != want {
+			t.Errorf("%s: User-Agent = %q", kind, got)
+		}
+		switch kind {
+		case "GET /":
+			_, _ = w.Write(fixture(t, "home.html"))
+		case "POST /":
+			_, _ = w.Write(fixture(t, "search-empty.html"))
+		case "detail":
+			_, _ = w.Write(fixture(t, "detail-218029.html"))
+		case "GET /file":
+			w.Header().Set("Content-Type", "application/pdf")
+			_, _ = w.Write(fixture(t, "pdf-142-head.bin"))
+		default:
+			http.NotFound(w, r)
+		}
+	})
+	ctx := context.Background()
+	if _, _, err := c.Search(ctx, "nothing"); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := c.Detail(ctx, 218029); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := c.Download(ctx, base+"/file", io.Discard, 2000); err != nil {
+		t.Fatal(err)
+	}
+	if len(seen) != 4 {
+		t.Fatalf("requests seen: %v", seen)
+	}
+}

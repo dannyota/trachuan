@@ -57,7 +57,6 @@ type Client struct {
 	now          func() time.Time
 	sleep        func(context.Context, time.Duration) error
 	resolve      func(context.Context, string) ([]net.IPAddr, error)
-	userAgent    string
 }
 
 // Option configures a client.
@@ -66,7 +65,7 @@ type Option func(*Client)
 // New creates a client with the source budgets.
 func New(opts ...Option) *Client {
 	jar, _ := cookiejar.New(nil)
-	c := &Client{page: "https://vanban.chinhphu.vn", file: "https://datafiles.chinhphu.vn", testHosts: map[string]bool{}, http: &http.Client{Jar: jar}, limits: Limits{RequestsPerSecond: 1, Burst: 1, InFlight: 1, Pages: 100, HTMLBytes: 5000000, FileBytes: 50000000, Redirects: 3}, backoffs: []time.Duration{2 * time.Second, 8 * time.Second, 30 * time.Second}, budget: 1000000000, now: time.Now, sleep: wait, resolve: net.DefaultResolver.LookupIPAddr, userAgent: "trachuan/0.0"}
+	c := &Client{page: "https://vanban.chinhphu.vn", file: "https://datafiles.chinhphu.vn", testHosts: map[string]bool{}, http: &http.Client{Jar: jar}, limits: Limits{RequestsPerSecond: 1, Burst: 1, InFlight: 1, Pages: 100, HTMLBytes: 5000000, FileBytes: 50000000, Redirects: 3}, backoffs: []time.Duration{2 * time.Second, 8 * time.Second, 30 * time.Second}, budget: 1000000000, now: time.Now, sleep: wait, resolve: net.DefaultResolver.LookupIPAddr}
 	for _, o := range opts {
 		o(c)
 	}
@@ -143,10 +142,6 @@ func WithClock(now func() time.Time, sleep func(context.Context, time.Duration) 
 	return func(c *Client) { c.now = now; c.sleep = sleep }
 }
 
-// WithUserAgent sets the release version used in the named user agent.
-func WithUserAgent(version string) Option {
-	return func(c *Client) { c.userAgent = "trachuan/" + version }
-}
 func wait(ctx context.Context, d time.Duration) error {
 	timer := time.NewTimer(d)
 	defer timer.Stop()

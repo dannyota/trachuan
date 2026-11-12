@@ -32,33 +32,33 @@ const gatewayAttemptTimeout = 40 * time.Second
 
 // Client limits gateway requests and downloads.
 type Client struct {
-	base, userAgent string
-	http            *http.Client
-	fileHTTP        *http.Client
-	limiter         *rate.Limiter
-	slots           chan struct{}
-	fileSlots       chan struct{}
-	timeout         time.Duration
-	fileTimeout     time.Duration
-	requestBudget   time.Duration
-	slowThreshold   time.Duration
-	backoffs        []time.Duration
-	fileHosts       []string
-	allowTestHTTP   bool
-	gate            sourcegate.Gate
-	lookupPageSize  int
-	pauseMu         sync.Mutex
-	pauses          map[int64]*pauseState
+	base           string
+	http           *http.Client
+	fileHTTP       *http.Client
+	limiter        *rate.Limiter
+	slots          chan struct{}
+	fileSlots      chan struct{}
+	timeout        time.Duration
+	fileTimeout    time.Duration
+	requestBudget  time.Duration
+	slowThreshold  time.Duration
+	backoffs       []time.Duration
+	fileHosts      []string
+	allowTestHTTP  bool
+	gate           sourcegate.Gate
+	lookupPageSize int
+	pauseMu        sync.Mutex
+	pauses         map[int64]*pauseState
 }
 
-// New creates a client identifying this release by version.
+// New creates a client. The version argument is retained for compatibility.
 func New(version string) *Client {
 	return NewWithBase("https://vbpl-bientap-gateway.moj.gov.vn/api/qtdc/public", version)
 }
 
-// NewWithBase creates a client for the supplied gateway URL.
-func NewWithBase(base, version string, options ...Option) *Client {
-	c := &Client{lookupPageSize: 1000, base: base, userAgent: "trachuan/" + version + " (+https://github.com/dannyota/trachuan)", http: &http.Client{}, limiter: rate.NewLimiter(16, 1), slots: make(chan struct{}, 16), fileSlots: make(chan struct{}, 8), timeout: gatewayAttemptTimeout, fileTimeout: 30 * time.Second, fileHosts: []string{"s3-han02.fptcloud.com"}, backoffs: []time.Duration{2 * time.Second, 8 * time.Second, 30 * time.Second}}
+// NewWithBase creates a client for the supplied gateway URL. The version argument is ignored.
+func NewWithBase(base, _ string, options ...Option) *Client {
+	c := &Client{lookupPageSize: 1000, base: base, http: &http.Client{}, limiter: rate.NewLimiter(16, 1), slots: make(chan struct{}, 16), fileSlots: make(chan struct{}, 8), timeout: gatewayAttemptTimeout, fileTimeout: 30 * time.Second, fileHosts: []string{"s3-han02.fptcloud.com"}, backoffs: []time.Duration{2 * time.Second, 8 * time.Second, 30 * time.Second}}
 	c.requestBudget = 200 * time.Second
 	c.slowThreshold = 10 * time.Second
 	for _, option := range options {
@@ -169,7 +169,7 @@ func (c *Client) request(ctx context.Context, method, target string, body []byte
 	}
 	req.Header.Set("Origin", "https://vbpl.vn")
 	req.Header.Set("Referer", "https://vbpl.vn/")
-	req.Header.Set("User-Agent", c.userAgent)
+	req.Header.Set("User-Agent", sourcegate.UserAgent)
 	req.Header.Set("Accept", "application/json")
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")

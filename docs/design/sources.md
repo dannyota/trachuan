@@ -245,12 +245,13 @@ size limits, and use content hashes rather than source paths as local filenames.
 Reason: public source content is untrusted input to the worker.
 
 Keep ASP.NET cookies and hidden postback tokens only in memory. Artifacts and
-fixtures retain placeholders, never cookie or token values. Use a named user
-agent, source-wide throttling, bounded retries and `Retry-After` handling from
-[budgets](budgets.md#pipeline). A challenge or access denial pauses the source
-through the durable [source pause](source-execution.md#source-pause) contract;
-do not bypass it. Reason: unattended work must remain polite across concurrent
-batches and worker restarts.
+fixtures retain placeholders, never cookie or token values. Use an ordinary
+desktop browser User-Agent, source-wide throttling, bounded retries and
+`Retry-After` handling from [budgets](budgets.md#pipeline). A challenge or
+access denial pauses the source through the durable
+[source pause](source-execution.md#source-pause) contract; do not bypass it.
+Reason: unattended work must remain polite across concurrent batches and worker
+restarts.
 
 A client enforces rate, burst and in-flight limits for every request it makes,
 including attempts, retries and redirects across page and file hosts. The worker
