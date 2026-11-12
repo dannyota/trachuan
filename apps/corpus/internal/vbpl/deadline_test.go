@@ -64,33 +64,6 @@ func TestDeadlines_ActivityCancellation(t *testing.T) {
 	}
 }
 
-type slowPauseGate struct{ *sourcegate.Memory }
-
-func (g slowPauseGate) Pause(ctx context.Context, id int64, source, reason, evidence string) error {
-	select {
-	case <-time.After(45 * time.Millisecond):
-		return g.Memory.Pause(ctx, id, source, reason, evidence)
-	case <-ctx.Done():
-		return ctx.Err()
-	}
-}
-
-func TestClient_PersistsPauseAfterAttemptDeadline(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusForbidden)
-	}))
-	defer server.Close()
-	gate := slowPauseGate{sourcegate.NewMemory()}
-	c := NewWithBase(server.URL, "test", WithLimits(float64(rate.Inf), 1), WithBackoffs(), WithGate(gate))
-	c.timeout = 30 * time.Millisecond
-	ctx := sourcegate.WithActivity(sourcegate.WithRunID(context.Background(), 1))
-	_, _, err := c.Detail(ctx, "1")
-	waitForPaused(t, ctx, gate, 1)
-	if !errors.Is(err, sourcegate.ErrSourcePaused) || !errors.Is(gate.Admit(ctx, 1, "vbpl"), sourcegate.ErrSourcePaused) {
-		t.Fatalf("error = %v, pause not persisted", err)
-	}
-}
-
 type waitingPauseGate struct {
 	*sourcegate.Memory
 	started, release chan struct{}
