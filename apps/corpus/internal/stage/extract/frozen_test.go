@@ -47,3 +47,14 @@ func TestFrozenSelection_StoreChangesAndCrashReplay(t *testing.T) {
 		t.Fatalf("new run=%+v err=%v", next, err)
 	}
 }
+
+func TestFrozenSelection_LabelFlagged(t *testing.T) {
+	q := &frozenDB{rows: map[store.GetRunOCRSelectionParams]store.GetRunOCRSelectionRow{}}
+	choose := func() (selection, error) {
+		return selection{source: "none", gap: "ocr_label_flagged", reason: "checker flagged an article label or document number", consulted: true}, nil
+	}
+	got, err := planFrozenSelection(context.Background(), q, 1, "doc", choose)
+	if err != nil || got.source != "none" || got.gap != "ocr_label_flagged" || got.reason != "checker flagged an article label or document number" || !got.consulted {
+		t.Fatalf("selection=%+v err=%v", got, err)
+	}
+}

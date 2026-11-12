@@ -69,8 +69,9 @@ again by the pipeline, never the bytes the checker sent. Then:
 - `rejected`: `same_document` is false, or `missing_text` items cover more than
   a tenth of the pages. The text must not be indexed; the document gets the gap
   `ocr_rejected` with the reason.
-- `flagged`: one or more items. The text is indexed with the gap `ocr_flagged`
-  and the items go to the review file.
+- `flagged`: one or more items. An `article_label` or `document_number` item
+  makes OCR unusable with the gap `ocr_label_flagged`; otherwise the text is
+  indexed with `ocr_flagged`. The items go to the review file.
 - `clean`: no item.
 
 A complete check writes the `ocr_check` row with the verdict inside the result.
