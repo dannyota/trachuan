@@ -168,3 +168,12 @@ accuracy on either cohort.
   as primary hits (precision 0.952 and 0.935) and the agent-side
   `in_force_only:false` for historical questions (no change, the complement only
   gets leftover slots).
+- 2026-11-12: the filter gate joins `quality_pass` for releases that serve
+  taxonomy nodes ([evaluation](../design/evaluation.md)): per old product case
+  and mode, an inside or partial cohort and an outside cohort; filtered recall@8
+  is not lower than unfiltered recall@8 for the seeded citations, and every
+  expected citation is within the first 100 paged hits at `limit` 8. Its status
+  uses the floor vocabulary: `pass`, `fail`, `unavailable` with no inside case,
+  `out_of_scope` without served nodes, and `not_run` under a research override.
+  Subject filters only reorder, so the gate guards that a filter never costs an
+  expected citation.
