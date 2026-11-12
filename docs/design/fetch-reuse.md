@@ -136,43 +136,64 @@ nothing else uses them.
 
 ## Attachments by content hash
 
-A file's identity is its name in the file list and the MD5 of its content. In a
-full read, for each listed file with a URL and a listed size within the file
-limit:
+A file's identity is its name in the file list and its content, which the source
+states as an ETag. In a full read, for each listed file with a URL and a listed
+size within the file limit:
 
 1. Ask the source for its ETag: one `GET` of the presigned URL with
    `Range: bytes=0-0`, in the attachment pool (its in-flight limit and attempt
-   deadline in [budgets](budgets.md)). The body is one byte and is discarded.
-2. The ETag is a content hash only when, without its surrounding quotes, it is
-   exactly 32 lowercase hexadecimal characters. A missing ETag, any other form
-   (an S3 multipart ETag ends in `-<parts>`), a status other than 206, or a
-   failed request means the file is downloaded.
-3. Candidates are the baseline bundle's file with the same name and the local
+   deadline in [budgets](budgets.md)). The body is one byte and is discarded. A
+   missing ETag, a status other than 206 or a failed request means the file is
+   downloaded.
+2. Candidates are the baseline bundle's file with the same name and the local
    cache's entry for the same document id and name, in that order. A name that
    occurs more than once in the file list or in the baseline has no candidate. A
    candidate whose size differs from the listed size is skipped.
-4. A candidate whose MD5 equals the ETag is copied once its SHA-256 verifies, as
-   today. Otherwise the file is downloaded. After a download, the file's MD5 is
-   compared with an MD5-form ETag; a difference is counted as
-   `etag_download_differs` and the downloaded bytes are kept.
+3. The first rule that matches a candidate decides; the ETag is compared without
+   its surrounding quotes:
+   1. Recorded: `source_etag` holds this document, name and exact ETag string,
+      in any form, for the candidate's SHA-256. Copy.
+   2. MD5 form, exactly 32 lowercase hexadecimal characters: the candidate's MD5
+      equals it. Copy and record the ETag.
+   3. Multipart form, 32 lowercase hexadecimal characters, `-` and a part count
+      `n`: for each part size of 5, 8, 16, 32 and 64 MiB that splits the
+      candidate's size into exactly `n` parts, the S3 multipart ETag of the
+      candidate (the MD5 of the concatenated binary MD5s of its parts, then
+      `-n`) equals it. Copy and record the ETag.
+   4. Otherwise download the file and record the ETag of that download.
+4. A copy happens only after the candidate's SHA-256 verifies, as today.
+
+Recording binds an ETag to bytes, never to a guess. The workshop table
+`source_etag` (`document_key`, `name`, `etag`, `sha256`; primary key on the
+first three) gets a row after a match under rule 2 or 3, or from the `ETag`
+header of the download response whose bytes were stored, when that header is an
+MD5 equal to the bytes' MD5 or any other form. The ranged response's ETag alone
+is never recorded, because the file can change between that request and a
+download; an MD5-form download ETag that differs from the bytes' MD5 records
+nothing and is counted as `etag_download_differs`. Rows are never updated: a new
+ETag for the same name is a new row, so a file that changes back to an earlier
+version matches its earlier row. With these rows, a file whose ETag is neither
+MD5 nor a known multipart shape costs one download, once, and is copied in every
+later run.
 
 MD5s of stored files live in the workshop table `file_md5` (`sha256` primary
-key, `md5`), which travels in the workshop dump. Every download and every cache
-or baseline copy computes MD5 and SHA-256 in the same pass over the bytes and
-writes the row. A stored file without a row is read once when it is first a
-candidate, computing both digests; its SHA-256 must equal its name, and then the
-row is written. No separate backfill is needed: the first run after the change
-fills the rows for the files it compares, about 5.4 GB of reading once.
+key, `md5`). Every download and every cache or baseline copy computes MD5 and
+SHA-256 in the same pass over the bytes and writes the row. A stored file
+without a row is read once when it is first a candidate, computing both digests;
+its SHA-256 must equal its name, and then the row is written. No separate
+backfill is needed: the first run after the change fills the rows for the files
+it compares, about 5.4 GB of reading once. Both tables travel in the workshop
+dump.
 
 Copied files keep today's observations: `adopted` with `origin_ref` from the
 baseline, `cache` from the local cache. The file list's `updatedAt` no longer
 decides anything; the content hash does.
 
-Trust: the ETag is the source's own statement about bytes it serves, and MD5 is
-not collision resistant. A source able to craft collisions could make fetch keep
-older bytes under an unchanged name; the same source can serve any bytes on a
-download, so this adds no new trust, only the residual risk of a forged
-collision, which is accepted.
+Trust: the ETag is the source's own statement about bytes it serves, and MD5
+(plain or multipart) is not collision resistant. A source able to craft
+collisions could make fetch keep older bytes under an unchanged name; the same
+source can serve any bytes on a download, so this adds no new trust, only the
+residual risk of a forged collision, which is accepted.
 
 ## Control
 
@@ -190,21 +211,22 @@ outcome:
 | `tree_ids_only` | Trees equal after removing node `key` and `id`; rest identical         |
 | `changed`       | Anything else, including a file whose ETag differs from the stored MD5 |
 
-Per file it counts `control_file_same` (ETag equals the stored MD5),
-`control_file_changed` (it differs) and `control_file_unverified` (no usable
-ETag). Every `changed` outcome is logged at WARN with the document key and the
-files that differ. A `changed` outcome does not fail the run; the primary reads
-the document and decides whether the reuse rule must narrow.
+Per file it counts `control_file_same` (the ETag matches the stored file under
+the rules above), `control_file_changed` (it differs) and
+`control_file_unverified` (no usable ETag). Every `changed` outcome is logged at
+WARN with the document key and the files that differ. A `changed` outcome does
+not fail the run; the primary reads the document and decides whether the reuse
+rule must narrow.
 
 ## Counts
 
 The run message carries `fetch_reads`: reused; full reads by reason
 (`no_baseline`, `invalid_baseline`, `null_date`, `date_changed`,
 `missing_attachment`, `control`); the control outcomes and per-file control
-counts; and per attachment of a full read: copied from the baseline, copied from
-the cache, and downloaded by reason (`no_candidate`, `etag_differs`,
-`etag_missing`, `etag_not_md5`, `etag_request_failed`, `candidate_unverified`),
-with `etag_download_differs`.
+counts; and per attachment of a full read: copied by rule (`etag_recorded`,
+`etag_md5`, `etag_multipart`) and from where (baseline, cache), and downloaded
+by reason (`no_candidate`, `etag_differs`, `etag_other_form`, `etag_missing`,
+`etag_request_failed`, `candidate_unverified`), with `etag_download_differs`.
 
 ## Observations and times
 
@@ -247,11 +269,17 @@ The primary runs these; they are requirements, not results.
 - Each blocking condition alone forces the full read: no baseline, null date on
   either side, moved date, nonempty `missing`, corrupted baseline file, other
   recipe hash, control sample.
-- Attachments in a full read: an ETag equal to the baseline's MD5 copies it with
-  no download; equal to the cache's MD5 copies from the cache; a different ETag,
-  a missing ETag, a multipart ETag, a non-206 answer and a failed ranged request
-  each download, and each is counted; a size mismatch and a duplicate name
-  download; a candidate whose SHA-256 fails downloads.
+- Attachments in a full read, one fixture per rule: a recorded ETag of any form
+  copies; an MD5 ETag equal to the baseline's or the cache's MD5 copies and
+  records; a multipart ETag computed from the candidate at each listed part size
+  copies and records, and one with no consistent part size downloads; any other
+  ETag downloads once, records the download's ETag and copies in the next run; a
+  missing ETag, a non-206 answer and a failed ranged request download without a
+  row; a size mismatch, a duplicate name and a candidate whose SHA-256 fails
+  download; each is counted.
+- `source_etag`: never written from the ranged response alone; an MD5 download
+  ETag that differs from the bytes records nothing; a changed-then-reverted file
+  matches its earlier row; survives checkpoint and restore.
 - `file_md5`: written by downloads and copies, filled on first comparison for a
   stored file without a row, survives checkpoint and restore.
 - Control: the sample is stable for a `(key, rel)` pair; a prepared baseline
