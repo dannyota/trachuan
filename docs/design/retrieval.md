@@ -7,15 +7,16 @@ token) and `/mcp` for agents (bearer token). Same functions, rules and limits.
 
 Accept Vietnamese text with diacritics or a document-number pattern such as
 `50/2024/TT-NHNN`. The exact character gate, bounded number grammar and
-rejection message are in [recipe 1](retrieval-recipe.md#validation-and-routing).
-A character gate does not establish the language or subject of a question;
-evidence-based abstention handles unsupported accepted text. Never translate.
+rejection message are in the
+[retrieval recipe](retrieval-recipe.md#validation-and-routing). A character gate
+does not establish the language or subject of a question; evidence-based
+abstention handles unsupported accepted text. Never translate.
 
 ## Ranking
 
-The shared Go engine implements [retrieval recipe 1](retrieval-recipe.md): dense
-cosine and BM25, weighted reciprocal rank fusion, provision grouping, document
-diversity and explicit abstention. [Budgets](budgets.md#retrieval) owns
+The shared Go engine implements the [retrieval recipe](retrieval-recipe.md):
+dense cosine and BM25, weighted reciprocal rank fusion, provision grouping,
+document diversity and explicit abstention. [Budgets](budgets.md#retrieval) owns
 parameters; [evaluation](evaluation.md) owns calibration and measurement. The
 first recipe is a baseline, with a provisional old-product threshold; the
 development cohort precedes recipe changes under ADR 0010 item 4.
@@ -23,9 +24,9 @@ development cohort precedes recipe changes under ADR 0010 item 4.
 ## Validity
 
 `in_force_only` defaults to true. Document dates, missing-date gaps, historical
-filtering and the separate non-current group follow
-[recipe 1](retrieval-recipe.md#validity-and-evidence). Provision-level repeal
-relations appear as warnings, never as a changed stamp.
+filtering and the separate non-current group follow the
+[retrieval recipe](retrieval-recipe.md#validity-and-evidence). Provision-level
+repeal relations appear as warnings, never as a changed stamp.
 
 ## Filter contract
 

@@ -159,12 +159,12 @@ it explicitly; do not substitute RRF score or the cosine of another group. Clamp
 finite cosine values to [-1,1] in both calibration and serving; reject
 non-finite values as infrastructure failures.
 
-Consolidation collapse is `off-unverified-alignment` in recipe 1. Imported
-`consolidates` edges support family diagnostics, but do not establish provision
-equivalence or renumbering. The historical family+label collapse could discard
-different amendment articles. Keep both until a later adjudicated mapping
-supports collapse. Caching family components for such trials is deferred to the
-tuning plan, which derives them from the immutable dump.
+Consolidation collapse is `off-unverified-alignment` in the current recipe.
+Imported `consolidates` edges support family diagnostics, but do not establish
+provision equivalence or renumbering. The historical family+label collapse could
+discard different amendment articles. Keep both until a later adjudicated
+mapping supports collapse. Caching family components for such trials is deferred
+to the tuning plan, which derives them from the immutable dump.
 
 Recipe 2 raises the per-document cap from 3 to 5: on run vn/20261111_4 cap 5
 took old product recall@20 from 80 to 82 and development from 68 to 75 of 113
@@ -220,19 +220,25 @@ provision history or past suspension status.
 not-yet documents) still runs the same arms as a separate group with its own
 depths and shaping, and the response reserves `non_current_tail` slots (2 in
 recipe 2, [budgets](budgets.md#retrieval)) for it: primary hits are shaped to
-`limit` minus the tail, then up to that many complement hits follow in
+`limit` minus the effective tail, then up to that many complement hits follow in
 `NonCurrent`, marked non-current with their status; when the complement has
-fewer hits, primary keeps the freed slots. Not-yet documents never enter the
-primary group, since current-law precision counts every primary hit. With
-`in_force_only` false the complement competes for the remaining response slots
-after primary, as before; on this corpus primary fills the limit, so that
+fewer hits, primary keeps the freed slots. The effective tail is the smaller of
+`non_current_tail` and half of `limit` rounded down, so primary always keeps at
+least half of the slots (limit 1: no tail; limit 2 or 3: one; limit 4 and up:
+two). Abstention and confidence are judged on the primary group alone, as
+before; complement hits never make a response answer. Not-yet documents never
+enter the primary group, since current-law precision counts every primary hit.
+With `in_force_only` false the complement competes for the remaining response
+slots after primary, as before; on this corpus primary fills the limit, so that
 request changes nothing today (backlog: reserve slots when the caller asks
 explicitly). Primary failures are not rescued by the complement: no primary hits
 means abstain. Evidence size includes both groups. `as_of` never silently swaps
 expired and primary law based on score. Measured on run vn/20261111_4 (cap 5
 with tail 0, 2, 3, 4): old product recall@20 82, 85, 85, 86 and recall@8 77, 77,
-75, 73; development recall@20 75, 83, 85, 85 and recall@8 73, 76, 72, 67; tail 2
-raises every recall and MRR@8 on both cohorts.
+75, 73; development recall@20 75, 83, 85, 85 and recall@8 73, 76, 72, 67;
+against cap 5 alone, tail 2 raises recall@20 on both cohorts and recall@8 and
+MRR@8 on development, and leaves old product recall@8 and MRR@8 unchanged;
+against the cap-3 baseline every one of those numbers rises.
 
 Build `Citation` from the group's actual ancestry: join nonempty article, clause
 and point labels in ancestor order with a comma and a space; otherwise use its
