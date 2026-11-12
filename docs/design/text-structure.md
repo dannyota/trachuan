@@ -6,8 +6,8 @@ citation such as `khoản 2 Điều 5` cannot resolve in a document read from it
 transcription, and a large article is chunked by lines instead of by clause.
 This note adds clause (`khoan`) and point (`diem`) provisions inside accepted
 articles of parsed text. It also records two neighbouring defects, with their
-counts, that later changes handle: older article heading shapes and source trees
-whose articles hold headings only.
+counts, that later changes handle in this order: source trees whose articles
+hold headings only, then older article heading shapes.
 
 ## Evidence
 
@@ -55,7 +55,9 @@ Inside every accepted article of the main scope or an instrument scope of a
 document whose text source is `html_transcription` or, when it lands,
 `pdf_text`. Not OCR text: there is no validation set for it, and a misread
 number can move text between clauses in a way the checks below do not always
-catch. Not source trees, not neutral or tail scopes, not structure provisions.
+catch. OCR is revisited once the version 3 cross-check results exist: a text
+whose check found no item could qualify. Not source trees, not neutral or tail
+scopes, not structure provisions.
 
 ## Grammar
 
@@ -111,6 +113,13 @@ Reasons counted: `clause_sequence`, `clause_style`, `clause_candidate`,
   directly in an article, `kem-theo-1/dieu-4/khoan-2` in an instrument scope);
   labels `Khoản <token>` and `Điểm <token>`; empty heading; ordinals by
   position; locators from the paragraphs.
+- The anchor segment is the kind, `-` and the lowercased token. One function,
+  `anchor.Segment(kind, token)` in a new package `apps/corpus/internal/anchor`,
+  composes it for source trees (today inline in `titleParts`,
+  `apps/corpus/internal/stage/extract/labels.go`), for the text parser (today
+  inline in `textparse/parse.go`) and for relations from text (today `/khoan-`
+  and `/diem-` plus the lowercased word in `textrule/locators.go`), so one label
+  gives one anchor everywhere. Source-tree anchors do not change.
 - Node ids follow the existing `tx:` rule (scope index, anchor and text), so a
   clause whose text changes gets a new id.
 - `text.json` counts per document: articles split, clauses, points, and articles
@@ -133,6 +142,19 @@ Reasons counted: `clause_sequence`, `clause_style`, `clause_candidate`,
 - Identity map and manual corrections: existing anchors keep their meaning; new
   child ids carry no entries.
 
+## Source trees with heading-only articles
+
+7,324 source-tree articles in 686 documents hold their heading line only, while
+other articles of the same tree hold text; the body sits in the bundle's
+transcription. Text extraction already switches a document to its transcription
+when every article is heading-only. For a partial tree the candidate rule is:
+when the transcription's article reading is accepted and its article numbers
+equal the tree's, read the whole document from the transcription; otherwise keep
+the tree and mark the document incomplete. It needs its own measurement (how
+many of the 686 pass the number match, and whether the texts of articles that do
+hold text agree) before it becomes a rule. It comes next after this note, ahead
+of the heading grammar below: these documents lose text, not only structure.
+
 ## Older article headings
 
 Of 159 documents with `structure_uncertain` in the measured release, 74 fail on
@@ -152,18 +174,6 @@ This is a separate change to the article grammar of text extraction, measured
 with the real parser on the recorded fixtures and on these 159 documents before
 it is accepted.
 
-## Source trees with heading-only articles
-
-7,324 source-tree articles in 686 documents hold their heading line only, while
-other articles of the same tree hold text; the body sits in the bundle's
-transcription. Text extraction already switches a document to its transcription
-when every article is heading-only. For a partial tree the candidate rule is:
-when the transcription's article reading is accepted and its article numbers
-equal the tree's, read the whole document from the transcription; otherwise keep
-the tree and mark the document incomplete. It needs its own measurement (how
-many of the 686 pass the number match, and whether the texts of articles that do
-hold text agree) before it becomes a rule.
-
 ## Acceptance
 
 The primary runs these; they are requirements, not results.
@@ -179,6 +189,14 @@ The primary runs these; they are requirements, not results.
   clause anchors, with each difference listed.
 - Source-tree and OCR documents produce byte-identical extract artifacts before
   and after the change; the compatibility test pins them.
-- A live run reports, beside the release, the split counts and reasons, the
-  change in `relation_clause_unresolved`, and evaluation results against the
-  previous release.
+- For every clause and point label form in the fixtures, the anchor that
+  relations from text produce equals the anchor extract produces.
+- The live run is gated by the change rule of
+  [ADR 0010](../adr/0010-retrieval-evaluation-for-agents.md) (item 4), because
+  chunks and vectors change for the parsed documents: every gate passes on the
+  old product and development cohorts, the net count of matched expected
+  citations within 20 hits rises on at least one cohort, and recall@20 and MRR@8
+  fall on neither; otherwise the extract change is reverted. A clause-owned hit
+  satisfies an article expectation through the scorer's ancestor credit
+  (`agent-eval/3`, [evaluation](evaluation.md)). The run also reports the split
+  counts and reasons and the change in `relation_clause_unresolved`.
