@@ -269,6 +269,7 @@ type memoryRepository struct {
 	cost     int64
 }
 
+func (s *memoryRepository) Lock(context.Context, string) (func(), error) { return func() {}, nil }
 func (s *memoryRepository) Open(context.Context, string) ([]Attempt, error) {
 	var a []Attempt
 	for _, v := range s.attempts {
@@ -302,7 +303,7 @@ func (s *memoryRepository) RetryState(_ context.Context, id int64, checker strin
 			billed := a.Usage.CostMicroUSD > 0 || a.Usage.Input > 0
 			if billed {
 				count++
-			} else if latest {
+			} else if latest && preRequestFailure(a.Reason) {
 				latestUnbilled = true
 			}
 		}

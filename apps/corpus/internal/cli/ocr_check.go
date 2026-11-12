@@ -89,14 +89,6 @@ func runOCRCheck(ctx context.Context, args []string, stdout, stderr io.Writer) i
 		return 1
 	}
 	defer env.db.Close()
-	var docs []ocrcheck.Document
-	if !o.Reconcile && o.Abandon == "" {
-		docs, err = env.documents(ctx, o.CheckerID())
-		if err != nil {
-			_, _ = fmt.Fprintln(stderr, err)
-			return 1
-		}
-	}
 	var client ocrcheck.Client
 	if o.Abandon == "" {
 		client, err = ocrcheck.NewSDKClient()
@@ -105,8 +97,10 @@ func runOCRCheck(ctx context.Context, args []string, stdout, stderr io.Writer) i
 			return 1
 		}
 	}
-	runner := ocrcheck.Runner{Client: client, Repository: ocrcheck.NewDatabase(env.db, env.root)}
-	summary, err := runner.Run(ctx, docs, o)
+	runner := ocrcheck.Runner{Client: client, Repository: ocrcheck.NewDatabase(env.db, env.root), LoadDocuments: func(ctx context.Context) ([]ocrcheck.Document, error) {
+		return env.documents(ctx, o.CheckerID())
+	}}
+	summary, err := runner.Run(ctx, nil, o)
 	_, _ = fmt.Fprintf(stdout, "checker: %s\ncomplete: %d\nfailed: %d\nskipped_retry_limit: %d\nsubmitted: %d\npending: %d\nattached: %d\nabandoned: %d\nspend USD: %.6f\nestimated documents: %d\nworst-case estimate USD: %.6f\n", o.CheckerID(), summary.Complete, summary.Failed, summary.SkippedRetryLimit, summary.Submitted, summary.Pending, summary.Attached, summary.Abandoned, float64(summary.CostMicroUSD)/1e6, summary.Estimated, float64(summary.EstimateMicroUSD)/1e6)
 	printCheckDocuments(stdout, summary.Documents)
 	if err != nil {

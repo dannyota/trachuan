@@ -103,9 +103,11 @@ id. Flags: `--model`, `--effort`, `--limit-docs`, `--max-usd` (required),
 `--batch`, `--dry-run`, `--retry-failed`.
 
 An ordinary invocation skips a document after two billed failed attempts for the
-checker id, or when its latest attempt failed before a request; the tool version
-is not recorded, so the latter rule uses the failure alone. `--retry-failed`
-allows one more attempt per skipped document in that invocation.
+checker id, or when its latest attempt failed before a request with no recorded
+cost or input tokens; the tool version is not recorded, so the latter rule uses
+the failure reason alone. `--retry-failed` allows one more attempt per skipped
+document per invocation, and repeating the flag repeats the attempt at the
+operator's choice.
 
 - Dry run: counts input tokens per document with the token counting endpoint and
   prints the estimate at the model's listed price. It writes nothing.

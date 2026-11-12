@@ -106,7 +106,7 @@ func (d *Database) RetryState(ctx context.Context, id int64, checker string) (in
 		billed := usage.CostMicroUSD > 0 || usage.Input > 0
 		if billed {
 			count++
-		} else if i == 0 {
+		} else if i == 0 && preRequestFailure(row.Reason) {
 			latestUnbilled = true
 		}
 	}

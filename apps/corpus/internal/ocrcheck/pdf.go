@@ -38,6 +38,16 @@ func CountPages(ctx context.Context, data []byte) (int, error) {
 	return pages, nil
 }
 
+// preRequestFailure identifies reasons produced while preparing a request.
+func preRequestFailure(reason string) bool {
+	switch reason {
+	case "pdf_missing", "pdf_hash_mismatch", "over_check_limit", "page_count_unknown", "page_count_mismatch", "ocr_text_unreadable", "ocr_marker_collision", "render_failed":
+		return true
+	default:
+		return false
+	}
+}
+
 func (r *Runner) prepare(ctx context.Context, doc Document, o Options) (p prepared, reason string) {
 	p = prepared{doc: doc}
 	fd, err := unix.Open(doc.PDFPath, unix.O_RDONLY|unix.O_NOFOLLOW|unix.O_NONBLOCK|unix.O_CLOEXEC, 0)

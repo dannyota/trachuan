@@ -99,3 +99,44 @@ func TestCheck_DryRunDoesNotEstimateSubmitted(t *testing.T) {
 		t.Fatalf("summary=%+v err=%v", s, err)
 	}
 }
+
+func TestCheck_ExpiredBatchIsEligibleAgain(t *testing.T) {
+	r, repo, client, docs := fixture(t)
+	o := options()
+	client.Response.Text = `{"same_document":true,"pages":0,"items":[]}`
+	if err := run(t, r, docs, o); err != nil {
+		t.Fatal(err)
+	}
+	o.Batch = true
+	if err := run(t, r, docs, o); err != nil {
+		t.Fatal(err)
+	}
+	a := repo.attempts[1]
+	client.BatchEnded = true
+	client.Results = []BatchResult{{CustomID: a.SubmissionID + "-1", Type: "expired"}}
+	if err := run(t, r, docs, o); err != nil {
+		t.Fatal(err)
+	}
+	if repo.attempts[1].Reason != "expired" {
+		t.Fatalf("attempts=%+v", repo.attempts)
+	}
+	s, err := r.Run(context.Background(), docs, o)
+	if err != nil || client.BatchCalls != 2 || s.Submitted != 1 {
+		t.Fatalf("calls=%d summary=%+v err=%v", client.BatchCalls, s, err)
+	}
+}
+
+func TestCheck_RenderFailureIsSkipped(t *testing.T) {
+	r, repo, _, docs := fixture(t)
+	r.Renderer = &fakeRenderer{err: renderFailed}
+	if err := run(t, r, docs, options()); err != nil {
+		t.Fatal(err)
+	}
+	if repo.attempts[0].Reason != "render_failed" {
+		t.Fatalf("attempts=%+v", repo.attempts)
+	}
+	s, err := r.Run(context.Background(), docs, options())
+	if err != nil || s.SkippedRetryLimit != 1 || len(repo.attempts) != 1 {
+		t.Fatalf("summary=%+v err=%v", s, err)
+	}
+}

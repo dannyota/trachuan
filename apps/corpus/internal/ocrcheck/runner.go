@@ -40,6 +40,7 @@ type Attempt struct {
 
 // Repository persists attempts and completed checks atomically.
 type Repository interface {
+	Lock(context.Context, string) (func(), error)
 	Open(context.Context, string) ([]Attempt, error)
 	Spent(context.Context, string) (int64, error)
 	Completed(context.Context, int64, string) (bool, error)
@@ -92,12 +93,13 @@ type Summary struct {
 
 // Runner applies checks one request at a time.
 type Runner struct {
-	Client     Client
-	Renderer   Renderer
-	Repository Repository
-	CountPages func(context.Context, []byte) (int, error)
-	Now        func() time.Time
-	batchBytes int
+	Client        Client
+	Renderer      Renderer
+	Repository    Repository
+	CountPages    func(context.Context, []byte) (int, error)
+	LoadDocuments func(context.Context) ([]Document, error)
+	Now           func() time.Time
+	batchBytes    int
 }
 
 type prepared struct {
@@ -115,12 +117,23 @@ func (r *Runner) Run(ctx context.Context, docs []Document, o Options) (Summary, 
 	if err := o.Validate(); err != nil {
 		return summary, err
 	}
+	unlock, err := r.Repository.Lock(ctx, o.CheckerID())
+	if err != nil {
+		return summary, err
+	}
+	defer unlock()
+	if r.LoadDocuments != nil && !o.Reconcile && o.Abandon == "" {
+		docs, err = r.LoadDocuments(ctx)
+		if err != nil {
+			return summary, fmt.Errorf("select OCR documents: %w", err)
+		}
+	}
 	if !o.Reconcile && o.Abandon == "" {
 		if r.Renderer == nil {
 			r.Renderer = &PopplerRenderer{}
 		}
-		if err := r.Renderer.Preflight(ctx); err != nil {
-			return summary, err
+		if preflightErr := r.Renderer.Preflight(ctx); preflightErr != nil {
+			return summary, preflightErr
 		}
 	}
 	if r.Now == nil {

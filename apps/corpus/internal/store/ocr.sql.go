@@ -262,7 +262,7 @@ func (q *Queries) InsertRunOCRSelection(ctx context.Context, arg InsertRunOCRSel
 }
 
 const listOCRCheckAttemptHistory = `-- name: ListOCRCheckAttemptHistory :many
-SELECT state, usage FROM ocr_check_attempt
+SELECT state, reason, usage FROM ocr_check_attempt
 WHERE ocr_text_id = $1 AND checker_id = $2
 ORDER BY id DESC
 `
@@ -273,8 +273,9 @@ type ListOCRCheckAttemptHistoryParams struct {
 }
 
 type ListOCRCheckAttemptHistoryRow struct {
-	State string
-	Usage json.RawMessage
+	State  string
+	Reason string
+	Usage  json.RawMessage
 }
 
 func (q *Queries) ListOCRCheckAttemptHistory(ctx context.Context, arg ListOCRCheckAttemptHistoryParams) ([]ListOCRCheckAttemptHistoryRow, error) {
@@ -286,7 +287,7 @@ func (q *Queries) ListOCRCheckAttemptHistory(ctx context.Context, arg ListOCRChe
 	var items []ListOCRCheckAttemptHistoryRow
 	for rows.Next() {
 		var i ListOCRCheckAttemptHistoryRow
-		if err := rows.Scan(&i.State, &i.Usage); err != nil {
+		if err := rows.Scan(&i.State, &i.Reason, &i.Usage); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

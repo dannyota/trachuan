@@ -87,6 +87,6 @@ WHERE s.run_id = $1
 ORDER BY s.item_key;
 
 -- name: ListOCRCheckAttemptHistory :many
-SELECT state, usage FROM ocr_check_attempt
+SELECT state, reason, usage FROM ocr_check_attempt
 WHERE ocr_text_id = $1 AND checker_id = $2
 ORDER BY id DESC;
