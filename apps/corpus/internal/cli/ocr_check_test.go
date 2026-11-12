@@ -3,6 +3,7 @@ package cli
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"strings"
 	"testing"
 
@@ -61,6 +62,22 @@ func TestCheck_RetryFailedOptions(t *testing.T) {
 	} {
 		if _, err := parseCheckOptions(flags, false); err == nil {
 			t.Fatalf("accepted %v", flags)
+		}
+	}
+}
+
+func TestCheck_EntriesOption(t *testing.T) {
+	o, err := parseCheckOptions([]string{"--max-usd", "1", "--entries", "111,328,273"}, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, err := json.Marshal(o)
+	if err != nil || !strings.Contains(string(data), `"Entries":[111,328,273]`) {
+		t.Fatalf("options=%s err=%v", data, err)
+	}
+	for _, value := range []string{"", "0", "-1", "1,", "1,1", "abc"} {
+		if _, err := parseCheckOptions([]string{"--max-usd", "1", "--entries", value}, false); err == nil {
+			t.Fatalf("accepted entries %q", value)
 		}
 	}
 }

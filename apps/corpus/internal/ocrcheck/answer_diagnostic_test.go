@@ -62,3 +62,44 @@ func TestCheck_AnswerDiagnosticUsage(t *testing.T) {
 		})
 	}
 }
+
+func TestCheck_InvalidItemDiagnostics(t *testing.T) {
+	cases := []struct {
+		name, body, want string
+	}{
+		{"zero and unicode", `{"same_document":true,"pages":2,"items":[{"kind":"missing_text","page":0,"ocr":"","pdf":"bí mật","note":"ghi chú"}]}`, `[{"kind":"missing_text","ocr_chars":0,"pdf_chars":6,"note_chars":7}]`},
+		{"unknown and nonstrings", `{"same_document":true,"pages":2,"items":[{"kind":"private-kind","page":"1","ocr":null,"pdf":5}]}`, `[{"kind":"other","ocr_chars":null,"pdf_chars":null,"note_chars":null}]`},
+		{"missing and above", `{"same_document":true,"pages":2,"items":[{"page":1},{"kind":"date","ocr":"secret"},{"kind":"amount","page":3,"pdf":"hidden"}]}`, `[{"kind":"date","ocr_chars":6,"pdf_chars":null,"note_chars":null},{"kind":"amount","ocr_chars":null,"pdf_chars":6,"note_chars":null}]`},
+		{"limit", `{"same_document":true,"pages":2,"items":[` + strings.Repeat(`{"page":0},`, 10) + `{"page":0}]}`, `[` + strings.Repeat(`{"kind":"other","ocr_chars":null,"pdf_chars":null,"note_chars":null},`, 9) + `{"kind":"other","ocr_chars":null,"pdf_chars":null,"note_chars":null}]`},
+		{"valid", `{"same_document":true,"pages":10,"items":[]}`, `null`},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			r, repo, client, docs := fixture(t)
+			client.Response.Text = tc.body
+			if err := run(t, r, docs, options()); err != nil {
+				t.Fatal(err)
+			}
+			data, err := json.Marshal(repo.attempts[0].Usage)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, secret := range []string{"bí mật", "ghi chú", "private-kind", "secret", "hidden"} {
+				if strings.Contains(string(data), secret) {
+					t.Fatalf("usage contains answer content: %q", secret)
+				}
+			}
+			var usage map[string]json.RawMessage
+			if err := json.Unmarshal(data, &usage); err != nil {
+				t.Fatal(err)
+			}
+			got := usage["answer_invalid_items"]
+			if len(got) == 0 {
+				got = json.RawMessage("null")
+			}
+			if string(got) != tc.want {
+				t.Fatalf("invalid items=%s want=%s", got, tc.want)
+			}
+		})
+	}
+}
