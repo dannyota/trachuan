@@ -105,8 +105,10 @@ A candidate sentence has, in order:
    normalized name (`CP`, `TTg`, `QH`, `UBTVQH`, `NHNN`, `BTC`, `BTP`, `BCA`,
    `BQP`, `BKHĐT`, `BCT`, `BGTVT`, `BXD`, `BTNMT`, `BTTTT`, `BLĐTBXH`, `BYT`,
    `BGDĐT`, `BKHCN`, `BNV`, `BNG`, `BNNPTNT`, `BVHTTDL`, `UBDT`, `TTCP`, `VPCP`,
-   `KTNN`); the table's hash is part of the relate recipe. Any other segment,
-   including `UBND` and `HĐND`, rejects the sentence with gap
+   `KTNN`); the table's hash is part of the relate recipe. For `QH` and `UBTVQH`
+   the segment carries the legislature number (`QH15`, `UBTVQH14`): the trailing
+   digits are dropped before the table lookup and kept in the recorded number.
+   Any other segment, including `UBND` and `HĐND`, rejects the sentence with gap
    `relation_text_local_number`. Build then verifies the target: the target
    document's issuer from its own frozen fetch metadata, normalized under
    [identity comparison](data.md#identity-comparison), must equal the table's
