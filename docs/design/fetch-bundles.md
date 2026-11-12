@@ -136,8 +136,9 @@ redacted bytes. Unstored responses have no observation, including VBPL's
 attachment-list response that only feeds generated `files.json`. Generated JSON
 envelopes have no download time of their own. Record a cache or artifact
 adoption as such, never as a network download. Reusing an attachment requires
-the existing [cache-validity rule](pipeline.md#source-ingest-rules); hash
-equality alone does not authorize skipping a fresh source read.
+the [cache-validity rule](pipeline.md#source-ingest-rules) or the
+[reuse rule](fetch-reuse.md#read-rule); hash equality alone does not authorize
+skipping a fresh source read.
 
 The fenced item transaction writes `run_fetch_observation` only when writing a
 new committed item result with a retained artifact, even when its directory and

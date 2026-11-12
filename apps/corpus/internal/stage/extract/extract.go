@@ -27,7 +27,12 @@ type Stage struct {
 }
 
 // New constructs an extract stage.
-func New() *Stage { return &Stage{engines: []string{"vision-ocr/builtin-latest"}} }
+func New() *Stage { return &Stage{engines: AcceptedEngines()} }
+
+// AcceptedEngines returns the recipe's engine preference in a new slice.
+func AcceptedEngines() []string {
+	return []string{"vision-ocr/builtin-latest", "vision-ocr/builtin-latest/poppler-200"}
+}
 
 // WithOCR configures the store, ordered engines and completed-check identity.
 func (s *Stage) WithOCR(store *ocrstore.Store, engines []string, checker string) *Stage {

@@ -61,6 +61,38 @@ const renderFailed renderError = "render_failed"
 
 // Render removes every page before allocating the next and always removes scratch.
 func (p PopplerRenderer) Render(ctx context.Context, pdf []byte, allowance int) (result Rendered, renderErr error) {
+	return p.RenderDPI(ctx, pdf, allowance, 150)
+}
+
+// RenderLimits bounds raw PNG payloads for callers that send pages separately.
+type RenderLimits struct {
+	DPI, PageBytes, TotalBytes int
+}
+
+// PageTooLarge reports a page that exceeds the caller's raw PNG limit.
+const PageTooLarge renderError = "page_too_large"
+
+// RenderLimited checks each page as produced and caps retained PNG bytes.
+func (p PopplerRenderer) RenderLimited(ctx context.Context, pdf []byte, limits RenderLimits) (Rendered, error) {
+	if limits.PageBytes < 1 || limits.TotalBytes < 1 {
+		return Rendered{}, renderFailed
+	}
+	result, err := p.render(ctx, pdf, 0, limits.DPI, limits.PageBytes, limits.TotalBytes)
+	if err != nil {
+		result.Pages = nil
+	}
+	return result, err
+}
+
+// RenderDPI uses the contained renderer at the requested resolution and raster cap.
+func (p PopplerRenderer) RenderDPI(ctx context.Context, pdf []byte, allowance, dpi int) (Rendered, error) {
+	return p.render(ctx, pdf, allowance, dpi, 0, 0)
+}
+
+func (p PopplerRenderer) render(ctx context.Context, pdf []byte, allowance, dpi, pageLimit, totalLimit int) (result Rendered, renderErr error) {
+	if dpi < 1 || dpi > 200 {
+		return result, renderFailed
+	}
 	result.Stats.ExitCode = -1
 	if err := p.Preflight(ctx); err != nil {
 		return result, err
@@ -128,34 +160,48 @@ func (p PopplerRenderer) Render(ctx context.Context, pdf []byte, allowance int) 
 	}
 	total := 0
 	for i, size := range sizes {
-		if err = run(p.tools.raster, rasterArgs(i+1, size), io.Discard); err != nil {
+		if err = run(p.tools.raster, rasterArgsDPI(i+1, size, dpi), io.Discard); err != nil {
 			return result, err
 		}
-		page, readErr := readRenderedPage(filepath.Join(dir, "page.png"))
+		page, readErr := readRenderedPageLimit(filepath.Join(dir, "page.png"), pageLimit)
 		if readErr != nil {
 			return result, readErr
 		}
 		if ctx.Err() != nil {
 			return result, renderFailed
 		}
-		total += encodedPageSize(i+1, page)
-		if total >= allowance {
-			return result, renderLimit
+		if totalLimit > 0 {
+			if len(page) > totalLimit-total {
+				return result, renderLimit
+			}
+			total += len(page)
+		} else {
+			total += encodedPageSize(i+1, page)
+			if total >= allowance {
+				return result, renderLimit
+			}
 		}
 		result.Pages = append(result.Pages, page)
 	}
 	return result, nil
 }
 
-func readRenderedPage(path string) ([]byte, error) {
+func readRenderedPageLimit(path string, pageLimit int) ([]byte, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, renderFailed
 	}
-	data, err := io.ReadAll(io.LimitReader(f, maxImageBytes))
+	readLimit := int64(maxImageBytes)
+	if pageLimit > 0 && pageLimit < maxImageBytes {
+		readLimit = int64(pageLimit) + 1
+	}
+	data, err := io.ReadAll(io.LimitReader(f, readLimit))
 	_ = f.Close()
 	if err != nil {
 		return nil, renderFailed
+	}
+	if pageLimit > 0 && len(data) > pageLimit {
+		return nil, PageTooLarge
 	}
 	if reason := validateImage(data); reason != "" {
 		return nil, renderError(reason)
@@ -170,6 +216,9 @@ func readRenderedPage(path string) ([]byte, error) {
 	var encoded bytes.Buffer
 	if err = png.Encode(&encoded, gray); err != nil {
 		return nil, renderFailed
+	}
+	if pageLimit > 0 && encoded.Len() > pageLimit {
+		return nil, PageTooLarge
 	}
 	if reason := validateImage(encoded.Bytes()); reason != "" {
 		return nil, renderError(reason)

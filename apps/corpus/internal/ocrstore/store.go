@@ -15,10 +15,14 @@ import (
 
 	"danny.vn/trachuan/apps/corpus/internal/store"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const maxText = 50_000_000
+
+// ErrCheckRejected identifies an insert rejected for invalid encoded text.
+const ErrCheckRejected checkError = "OCR check rejected by store"
 
 // Store indexes text files in the workshop database.
 type Store struct {
@@ -171,6 +175,10 @@ func (s *Store) PutCheck(ctx context.Context, entry store.OcrText, checker strin
 		return true, nil
 	}
 	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && (pgErr.Code == "22P05" || pgErr.Code == "22021") {
+			return false, fmt.Errorf("insert OCR check: %w: %w", ErrCheckRejected, err)
+		}
 		return false, fmt.Errorf("insert OCR check: %w", err)
 	}
 	return false, nil

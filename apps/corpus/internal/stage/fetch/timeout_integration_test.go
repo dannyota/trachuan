@@ -4,6 +4,7 @@ package fetch
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -42,7 +43,15 @@ func TestRunBatch_HungVBPLRequest(t *testing.T) {
 	}
 	c := vbpl.NewWithBase(server.URL, "test", vbpl.WithLimits(float64(rate.Inf), 16), vbpl.WithBackoffs(40*time.Millisecond), vbpl.WithTestTimeouts(5*time.Millisecond, 15*time.Millisecond))
 	env := stage.Env{DB: db, Artifacts: artifact.Store{Root: t.TempDir()}}
-	result, err := stage.RunBatch(ctx, env, New(c), stage.BatchInput{RunID: id, Generation: 2, Stage: "fetch"}, 5, stage.BatchConfig{HeartbeatEvery: time.Second, MaxAttempts: 5}, func(...any) {})
+	extractor := New(c)
+	raw, err := json.Marshal(stage.Snapshot{Recipes: map[string]string{"fetch": extractor.Recipe(stage.Snapshot{})}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = db.Exec(ctx, `UPDATE run SET snapshot=$2 WHERE id=$1`, id, raw); err != nil {
+		t.Fatal(err)
+	}
+	result, err := stage.RunBatch(ctx, env, extractor, stage.BatchInput{RunID: id, Generation: 2, Stage: "fetch"}, 5, stage.BatchConfig{HeartbeatEvery: time.Second, MaxAttempts: 5}, func(...any) {})
 	if err != nil || result.Gap != 2 {
 		t.Fatalf("result = %+v, error = %v", result, err)
 	}

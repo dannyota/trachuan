@@ -126,7 +126,14 @@ func (r *Runner) finish(ctx context.Context, a Attempt, ready prepared, response
 		}
 	}
 	if err := r.Repository.Finish(ctx, a, doc.Entry, u, result, reason); err != nil {
-		return fmt.Errorf("finish OCR attempt: %w", err)
+		if result == nil || !errors.Is(err, ocrstore.ErrCheckRejected) {
+			return fmt.Errorf("finish OCR attempt: %w", err)
+		}
+		result = nil
+		reason = "store_rejected"
+		if err = r.Repository.Finish(ctx, a, doc.Entry, u, nil, reason); err != nil {
+			return fmt.Errorf("finish rejected OCR attempt: %w", err)
+		}
 	}
 	s.CostMicroUSD += u.charge() - a.Usage.charge()
 	outcome := reason

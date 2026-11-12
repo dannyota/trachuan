@@ -73,8 +73,12 @@ func parsePageSizes(data []byte) ([]pageSize, error) {
 }
 
 func rasterArgs(page int, size pageSize) []string {
+	return rasterArgsDPI(page, size, 150)
+}
+
+func rasterArgsDPI(page int, size pageSize, resolution int) []string {
 	n := strconv.Itoa(page)
-	dpi := 150.0
+	dpi := float64(resolution)
 	extent := math.Max(size.width, size.height)
 	if math.Ceil(extent*dpi/72) > maxImageSide {
 		dpi = float64(maxImageSide) * 72 / extent

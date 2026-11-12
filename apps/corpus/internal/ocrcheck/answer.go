@@ -3,6 +3,7 @@ package ocrcheck
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"slices"
@@ -17,6 +18,9 @@ func collapsed(s string) string { return strings.Join(strings.Fields(norm.NFC.St
 // decodeAnswer reports only fixed rule names and known schema paths.
 func decodeAnswer(data []byte, pages int, text []byte) (ocrstore.CheckResult, string) {
 	var empty ocrstore.CheckResult
+	if _, err := ocrstore.DecodeAnswer(data, pages); errors.Is(err, ocrstore.ErrNUL) {
+		return empty, "schema:nul"
+	}
 	root, reason := answerObject(data, "", []string{"same_document", "pages", "items"})
 	if reason != "" {
 		return empty, reason

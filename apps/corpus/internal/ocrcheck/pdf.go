@@ -22,6 +22,22 @@ func countPages(ctx context.Context, data []byte) (int, error) {
 	conf.Offline = true
 	return api.PageCount(ctx, bytes.NewReader(data), conf)
 }
+
+// CountPages counts verified PDF bytes with offline parsing and a ten-second limit.
+// Parser panics become errors, as they do in the cross-check.
+func CountPages(ctx context.Context, data []byte) (int, error) {
+	deadline, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	pages, err := recoverCount(deadline, countPages, data)
+	if err != nil {
+		return 0, fmt.Errorf("count PDF pages: %w", err)
+	}
+	if err = deadline.Err(); err != nil {
+		return 0, fmt.Errorf("count PDF pages: %w", err)
+	}
+	return pages, nil
+}
+
 func (r *Runner) prepare(ctx context.Context, doc Document, o Options) (p prepared, reason string) {
 	p = prepared{doc: doc}
 	fd, err := unix.Open(doc.PDFPath, unix.O_RDONLY|unix.O_NOFOLLOW|unix.O_NONBLOCK|unix.O_CLOEXEC, 0)
