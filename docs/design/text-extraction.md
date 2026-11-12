@@ -79,9 +79,17 @@ differ from the detail's `docNum`, the number does not occur in the detail title
 (a title that names an amended act), and the document is not a consolidated
 text, the document gets the gap `text_number_mismatch` (detail: both numbers)
 and no provisions from any source, the source tree included. A header without a
-number is not checked. Measured on 3,832 VBPL bundles (2026-11-12): two hits,
-both real: 15/SL holds 14/SL and 50/2025/TT-BKHCN holds 47/2025/TT-BKHCN, in the
-tree and the transcription alike.
+number is not checked. Measured on 3,832 VBPL bundles of run vn/20261111_4
+(2026-11-12): 2,106 transcription headers carry a number, 2,060 match the
+docNum, the others are title-named acts or consolidated texts, and two are real
+mismatches: 15/SL holds 14/SL and 50/2025/TT-BKHCN holds 47/2025/TT-BKHCN, in
+the tree, the transcription and the DOCX alike. The gap is a coverage gap like
+the other `none` gaps: it counts in build coverage and appears in the evaluation
+report's gap list. The scanned PDF in the 50/2025/TT-BKHCN bundle is the real
+document (QCVN 137:2025/BKHCN, page 1 checked), with a text layer that holds
+only the signature stamp: reading it needs the OCR path, and the OCR text's own
+header check against the docNum, which is a later change; until then the
+document has no text.
 
 A PDF's text layer is read only through that gate: most measured layers are
 garbage from an earlier non-Vietnamese OCR pass, and a scan with an embedded
