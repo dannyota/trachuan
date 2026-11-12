@@ -26,9 +26,9 @@ A text relation row exists only when every part of the sentence is accounted for
 by the grammar and the target document is a diagram or references target of the
 same source document whose stated type, year and date agree with it. Its
 provision endpoint is set only when the requested anchor resolves unambiguously
-in the target's tree; otherwise the endpoint is null or the enclosing article,
-with a named gap. Every other outcome is a counted gap, never a row and never a
-guess.
+in the target's tree; otherwise the endpoint is null or the deepest resolved
+ancestor on the requested path, with a named gap. Every other outcome is a
+counted gap, never a row and never a guess.
 
 ## Inputs and identity
 
@@ -99,7 +99,12 @@ A candidate sentence has, in order:
    and its type suffix must agree with the type word (`TT` Thông tư, `TTLT`
    Thông tư liên tịch, `NĐ` Nghị định, `QĐ` Quyết định, `NQ` Nghị quyết, `QH`
    Luật, `UBTVQH` Pháp lệnh); disagreement rejects with gap
-   `relation_text_type_mismatch`.
+   `relation_text_type_mismatch`. Only numbers whose issuer segment names a
+   central body are accepted (a number is unique nationwide only then); a
+   segment containing `UBND` or `HĐND`, or any number whose diagram target is
+   not a central document, rejects the sentence with gap
+   `relation_text_local_number`. Provincial documents therefore get no text
+   relations in version 1; the issuer must be verified before that changes.
 6. An optional tail (the usual `ngày ... của <issuer> <title>`), which must
    contain no further locator keyword (`điều`, `khoản`, `điểm`) and no further
    number token; otherwise the sentence names several target documents or
@@ -110,7 +115,8 @@ A candidate sentence has, in order:
    with gap `relation_text_identity_conflict` on a mismatch. The issuer phrase
    is not compared: tails name officeholders
    (`của Thống đốc Ngân hàng Nhà nước`), not the issuer record, and identity
-   rests on the diagram link, the year, the type and the date.
+   rests on the diagram link, the central-body restriction, the year, the type
+   and the date.
 
 Anything that does not fit this order rejects the sentence silently when no verb
 from the table starts it, and with gap `relation_text_grammar` when a verb
@@ -194,6 +200,7 @@ The development case dev-004 stays an honest retrieval miss: on run
 vn/20261111_4 the diagram does not link 10/2023/TT-NHNN to 39/2016/TT-NHNN, so
 its sentence is an `relation_text_unlinked_target` gap, and 39/2016/TT-NHNN
 Article 8 has no clause nodes. The suspension becomes visible only when VBPL
-adds the link or a managed manual relation entry supplies the verified pair
-(owned by the corrections list, not this rule), and resolves to the clause only
-when the clause nodes exist.
+adds the link, or when a future manual relation contract (not defined by
+[validity status](validity-status.md), which covers validity corrections only)
+supplies the verified pair; it resolves to the clause only when the clause nodes
+exist.
