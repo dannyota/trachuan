@@ -63,7 +63,7 @@
 
 ### Task 5: Remaining misses
 
-- [ ] Read the per-case rows of every miss within 20 on both cohorts after Tasks 3 and 4; group them by cause (missing text, validity, lexical, dense, label); add one backlog line per cause with its case count. A fix for a cause is its own change under item 4.
+- [x] Read the per-case rows of every miss within 20 on both cohorts after Tasks 3 and 4; group them by cause (missing text, validity, lexical, dense, label); add one backlog line per cause with its case count. A fix for a cause is its own change under item 4.
 
 ### Task 6: Record
 

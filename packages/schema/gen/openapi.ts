@@ -1502,6 +1502,175 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/public/taxonomy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    node?: string;
+                    depth?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        "Cache-Control"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TaxonomyResult"];
+                    };
+                };
+                /** @description Request failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request failed */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request failed */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request failed */
+                429: {
+                    headers: {
+                        "Retry-After"?: number;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request failed */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/taxonomy/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    code: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        "Cache-Control"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["NodePage"];
+                    };
+                };
+                /** @description Request failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request failed */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request failed */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request failed */
+                429: {
+                    headers: {
+                        "Retry-After"?: number;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request failed */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/status": {
         parameters: {
             query?: never;
@@ -1738,6 +1907,7 @@ export interface components {
             evidence_complete: boolean;
         };
         Document: {
+            nodes?: string[];
             number?: string;
             title?: string;
             type?: string;
@@ -1803,7 +1973,56 @@ export interface components {
             source_resolved: boolean;
             target_resolved: boolean;
         };
+        NodeRef: {
+            name?: string;
+            /** Format: int64 */
+            level?: number;
+        };
+        NodeIndex: {
+            [key: string]: components["schemas"]["NodeRef"];
+        };
+        NodeEntry: {
+            code?: string;
+            name?: string;
+            description?: string;
+            /** Format: int64 */
+            level?: number;
+            origin?: string;
+            /** Format: int64 */
+            provisions?: number;
+            /** Format: int64 */
+            documents?: number;
+            children?: components["schemas"]["NodeEntry"][];
+        };
+        TaxonomyResult: {
+            release?: string;
+            nodes?: components["schemas"]["NodeEntry"][];
+            truncated: boolean;
+        };
+        NodeDocument: {
+            key?: string;
+            number?: string;
+            title?: string;
+            type?: string;
+            status_class?: string;
+            is_current: boolean;
+            /** Format: int64 */
+            provisions?: number;
+        };
+        NodePage: {
+            release?: string;
+            node?: components["schemas"]["NodeEntry"];
+            path?: components["schemas"]["NodeEntry"][];
+            documents?: components["schemas"]["NodeDocument"][];
+        };
+        Facet: {
+            value?: string;
+            /** Format: int64 */
+            count: number;
+        };
         Hit: {
+            in_filter?: boolean;
+            nodes?: string[];
             handle?: string;
             doc?: string;
             citation?: string;
@@ -1820,6 +2039,10 @@ export interface components {
             next?: string;
         };
         SearchResult: {
+            /** Format: int64 */
+            outside_filter_count?: number;
+            next_cursor?: string;
+            nodes?: components["schemas"]["NodeIndex"];
             release?: string;
             abstain: boolean;
             reason?: string;
@@ -1842,6 +2065,16 @@ export interface components {
             detail?: "compact" | "full";
             limit?: number;
             release?: string;
+            /** @description Ordering preference that never hides hits. */
+            nodes?: string[];
+            /** @description Ordering preference that never hides hits. */
+            doc_types?: string[];
+            /** @description Ordering preference that never hides hits. */
+            issuers?: string[];
+            /** @description Ordering preference that never hides hits. */
+            documents?: string[];
+            /** @description At most 2048 UTF-8 bytes. */
+            cursor?: string;
         };
         ReadItem: {
             handle?: string;
@@ -1884,15 +2117,19 @@ export interface components {
             gaps?: components["schemas"]["Gap"][];
         };
         DocumentPage: {
+            nodes?: components["schemas"]["NodeIndex"];
             release: string;
             fetch_sha256?: string;
             item: components["schemas"]["ItemResult"];
         };
         ReadResult: {
+            nodes?: components["schemas"]["NodeIndex"];
             release: string;
             items?: components["schemas"]["ItemResult"][];
         };
         CorpusStatus: {
+            doc_types?: components["schemas"]["Facet"][];
+            issuers?: components["schemas"]["Facet"][];
             release: string;
             /** Format: int64 */
             documents: number;

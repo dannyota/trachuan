@@ -40,9 +40,11 @@ func ErrorMessage(err error) (string, string) {
 		}
 	}
 	switch {
-	case errors.As(err, &invalid):
+	case errors.As(err, &invalid), errors.Is(err, retrieval.ErrInvalidRequest):
 		return "invalid_request", apierror.Message("invalid_request")
-	case errors.Is(err, release.ErrExpired), errors.Is(err, retrieval.ErrReleaseGone):
+	case errors.Is(err, retrieval.ErrNotFound):
+		return "not_found", apierror.Message("not_found")
+	case errors.Is(err, release.ErrExpired), errors.Is(err, retrieval.ErrReleaseGone), errors.Is(err, retrieval.ErrReleaseExpired):
 		return "release_expired", apierror.Message("release_expired")
 	case errors.Is(err, retrieval.ErrEmbedderBusy):
 		return "busy", apierror.Message("busy")
