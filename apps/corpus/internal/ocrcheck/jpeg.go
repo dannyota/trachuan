@@ -139,7 +139,7 @@ func jpegPages(dir string, pages int) ([]string, error) {
 			return nil, renderFailed
 		}
 		config, configErr := jpeg.DecodeConfig(f)
-		// Poppler 26 writes three components even with -gray, so the colour model is not checked.
+		// Poppler 26 writes three components even with -gray, so the color model is not checked.
 		if configErr != nil || config.Width > maxImageSide || config.Height > maxImageSide {
 			_ = f.Close()
 			return nil, renderFailed
