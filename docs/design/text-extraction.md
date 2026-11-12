@@ -163,13 +163,12 @@ Grammar, applied to paragraph starts outside quoted text:
   `Điều 2.phạm vi`, `Điều 2Phạm vi`, `Điều 2phạm vi`) is a failed candidate and
   fails the check of its scope: it may be a heading the grammar missed.
 
-Parsed and OCR text asserts articles only. Clauses and points stay inside their
-article's text and get no provision, anchor or citation of their own in this
-work: a missed clause heading would attach text to the wrong clause with no
-check able to catch it, while an article boundary is verified by the strict
-sequence below. The loss of granularity is recorded in the backlog, with the
-measurement that can lift it (clause and point parsing compared against
-documents that have both a source tree and a transcription).
+Parsed and OCR text asserts articles here. Clauses and points of parsed text
+other than OCR follow [clauses and points](text-structure.md), which measured
+its grammar against source trees; in OCR text they stay inside their article's
+text with no provision, anchor or citation of their own, because a misread
+clause number can move text between clauses unseen, while an article boundary is
+verified by the strict sequence below.
 
 Scopes. The main scope starts at the first article and closes at the first of: a
 recipient or signature block (`Nơi nhận:`, `TM.`, `KT.`, a signing title alone
