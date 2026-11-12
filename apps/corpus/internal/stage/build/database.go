@@ -79,7 +79,7 @@ func recreateTemporary(ctx context.Context, admin *pgx.Conn, cfg Config, name, m
 		if active {
 			return fmt.Errorf("temporary database has active sessions")
 		}
-		if err = pgdrop.Drop(ctx, admin, name); err != nil {
+		if err = pgdrop.DropOnly(ctx, admin, name); err != nil {
 			return fmt.Errorf("drop temporary database: %w", err)
 		}
 	}

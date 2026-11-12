@@ -11,11 +11,35 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
+type executor interface {
+	Exec(context.Context, string, ...any) (pgconn.CommandTag, error)
+}
+
 // Drop terminates the current role's client sessions and drops the database.
 func Drop(ctx context.Context, conn *pgx.Conn, name string) error {
 	if _, err := conn.Exec(ctx, `SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname=$1 AND usesysid IS NOT NULL AND usename=current_user AND pid<>pg_backend_pid()`, name); err != nil {
 		return fmt.Errorf("disconnect database sessions: %w", err)
 	}
+	return DropOnly(ctx, conn, name)
+}
+
+// DropOnly drops the database without terminating client sessions.
+func DropOnly(ctx context.Context, conn executor, name string) error {
+	return dropOnly(ctx, conn, name, waitRetry)
+}
+
+func waitRetry(ctx context.Context) error {
+	timer := time.NewTimer(100 * time.Millisecond)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-timer.C:
+		return nil
+	}
+}
+
+func dropOnly(ctx context.Context, conn executor, name string, wait func(context.Context) error) error {
 	bounded, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	var busy error
@@ -26,16 +50,7 @@ func Drop(ctx context.Context, conn *pgx.Conn, name string) error {
 			busy = err
 		}
 		return err
-	}, func(ctx context.Context) error {
-		timer := time.NewTimer(100 * time.Millisecond)
-		defer timer.Stop()
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-timer.C:
-			return nil
-		}
-	})
+	}, wait)
 	if err != nil {
 		if ctx.Err() != nil {
 			err = ctx.Err()

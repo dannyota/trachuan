@@ -101,7 +101,7 @@ func EnsureDatabase(ctx context.Context, cfg Config, artifacts artifact.Store, a
 				if active {
 					return Database{}, fmt.Errorf("temporary database has active sessions")
 				}
-				if err = pgdrop.Drop(ctx, admin, temporary); err != nil {
+				if err = pgdrop.DropOnly(ctx, admin, temporary); err != nil {
 					return Database{}, fmt.Errorf("drop temporary database: %w", err)
 				}
 			}
