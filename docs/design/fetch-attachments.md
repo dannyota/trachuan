@@ -57,27 +57,39 @@ rule adds no trust in the source beyond what a download already has.
 
 ## Download deadline and failures
 
-Owner rule (2026-11-12): a source error costs one fast retry, then a gap. One
-file never holds or fails a stage.
+Owner rule (2026-11-12): a source error costs at most one fast retry, then a
+gap. One document or one file never holds or fails a stage. The rule covers
+every source the pipeline reads, VBPL and chinhphu, with one table:
+
+| What the source did                                                  | Retry             | Then                                                                            |
+| -------------------------------------------------------------------- | ----------------- | ------------------------------------------------------------------------------- |
+| Timeout, transport error, HTTP 5xx, non-JSON 200 from a JSON call    | once, after 2 s   | gateway or page call: gap `source_unavailable`; attachment: listed in `missing` |
+| Any other unexpected status, a body whose size differs from the list | none              | the same gap or `missing`                                                       |
+| HTTP 404 on an attachment                                            | none              | listed in `missing`, as today                                                   |
+| HTTP 429                                                             | waits, as budgets | stays retryable at the batch level: it is a load signal                         |
+| HTTP 403 or a challenge                                              | none              | [source pause](source-execution.md#source-pause)                                |
+| Valid JSON with invalid fields, oversize response                    | none              | `invalid_source_data`, `response_too_large`, as today                           |
+
+Only an error of our own side (disk, database, a cancelled activity) leaves an
+item `failed` or retries a batch. A source outcome not listed here is treated as
+the second row, so no new source behaviour can reach the batch retry.
 
 - Deadline per download attempt: 30 seconds plus the listed size at 250 kB/s, so
   20 MB gets 110 seconds and the 50 MB file limit 230 seconds; an unknown size
   counts as the limit. Eight downloads at 250 kB/s are 2 MB/s together, half the
   4 MB/s per address the file host allows. The fixed 30 seconds this replaces
   failed four PDFs of 15 to 21 MB five times each in run `vn/20261112_2`.
-- A timeout, a transport error or an HTTP 5xx gets one retry after 2 seconds,
-  from the first byte.
-- If the retry fails, the file's name goes into `report.json` `missing`, the
-  document gets gap `missing_attachment` with the file name and cause
-  (`timeout`, `transport` or `http_<status>`) in its detail, and the item
-  commits done with its other files. It is never `failed` and gets no batch
-  retry. The nonempty `missing` list makes the next run read the document in
-  full. A 404 is `missing` at once, as today.
-- HTTP 429 may wait, and a 403 or a challenge pauses the source, as for any
-  request.
+  chinhphu downloads use the same formula in place of their fixed 120 seconds.
+- A retry starts from the first byte.
+- A file listed in `missing` gives the document gap `missing_attachment` with
+  the file name as its detail, exactly as a 404 does today, and the item commits
+  done with its other files. The nonempty `missing` list makes the next run read
+  the document in full.
+- The cause of a failure (`timeout`, `transport`, `http_<status>`, `size`) is
+  counted in `fetch_reads` and logged with the document key and file name. It is
+  not stored in the bundle or the gap, so `report.json`, the fetch recipe and
+  the gaps that adoption and rewind rebuild from the bundle do not change.
 - A failed ETag request is not retried: the file is downloaded.
-- The cause stays out of the bundle, so `report.json` and the fetch recipe do
-  not change.
 
 ## Checks
 
@@ -96,8 +108,11 @@ The primary runs these; they are requirements, not results.
   downloaded.
 - An ETag request answered 403 pauses the source with the gate on.
 - Deadline and failures: a 20 MB fixture served at 250 kB/s finishes inside its
-  deadline; a download that fails twice records `missing`, a
-  `missing_attachment` gap with its cause and a done item holding the other
-  files; no attachment failure leaves an item `failed` or retries a batch.
+  deadline; one fixture per row of the table, for a VBPL gateway call, a VBPL
+  attachment and a chinhphu page and PDF, ends in the stated outcome after the
+  stated number of tries; a download that fails twice records `missing`, a
+  `missing_attachment` gap and a done item holding the other files, and the same
+  gap is produced again on adoption; no source outcome leaves an item `failed`
+  or retries a batch except HTTP 429.
 - A live run on unchanged sources downloads no attachment whose ETag has MD5 or
   multipart form, and reports the count and size of files of other forms.

@@ -44,12 +44,14 @@ snapshot. The generation/attempt fence applies to reset and every later commit.
 Reason: retry transport failures without preserving stale downstream results,
 and without repeating downstream work whose inputs did not change.
 
-A bounded non-JSON 200 from a JSON gateway endpoint, including raw tree, is
-retryable before source decoding. After bounded retries emit
-`source_unavailable` with structured endpoint, status and cause, not body text.
-Oversize responses stay `response_too_large`; valid JSON with invalid fields
-stays `invalid_source_data`. Recognized challenges take the source-pause path
-first. Reason: a gateway error page is not a permanent legal-data defect.
+A bounded non-JSON 200 from a JSON gateway endpoint, including raw tree, gets
+the one retry of the
+[source error table](fetch-attachments.md#download-deadline-and-failures) before
+source decoding, then `source_unavailable` with structured endpoint, status and
+cause, not body text. Oversize responses stay `response_too_large`; valid JSON
+with invalid fields stays `invalid_source_data`. Recognized challenges take the
+source-pause path first. Reason: a gateway error page is not a permanent
+legal-data defect.
 
 ## Acquisitions
 

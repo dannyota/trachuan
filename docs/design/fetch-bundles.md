@@ -89,7 +89,7 @@ deduplicate exact entries. Keep different URLs even when their bytes match.
 Every inventory `(name,url)` must occur in either files or one report outcome,
 never silently disappear. Failed downloads never produce a partial PDF file. An
 attachment whose download times out, breaks or answers HTTP 5xx after its one
-retry is listed in `missing` with its cause in the gap detail, under
+retry is listed in `missing`, under
 [attachments by content hash](fetch-attachments.md#download-deadline-and-failures);
 invalid PDFs and access denials follow [source execution](source-execution.md)
 and are never labelled missing.

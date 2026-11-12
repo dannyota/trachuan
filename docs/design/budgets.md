@@ -107,8 +107,8 @@ default `s3-han02.fptcloud.com`.
 | chinhphu requests        | 1 request/s, burst 1, 1 in flight across page and file hosts                                                          |
 | chinhphu response        | 5 MB per HTML response; existing 50 MB attachment cap                                                                 |
 | chinhphu total downloads | 1 GB per client lifetime (one worker process), retries and rejected bodies included; no durable per-run cap yet       |
-| chinhphu deadlines       | 30 s page request; 120 s PDF request; 5 min per item; at most 3 redirects, each revalidated                           |
-| chinhphu retries         | 3 after 2, 8 and 30 s for 429, 5xx or transport timeout; wait at least `Retry-After`, above 10 min defer with a gap   |
+| chinhphu deadlines       | 30 s page request; PDF request 30 s plus size at 250 kB/s; 5 min per item; at most 3 redirects, each revalidated      |
+| chinhphu retries         | 1 after 2 s for 5xx, timeout or transport error, then a gap; 429 waits at least `Retry-After`, above 10 min a gap     |
 
 These are worker-wide source limits, not per-activity allowances. Honor the
 later of retry backoff and `Retry-After` within the item deadline; exhaustion is
