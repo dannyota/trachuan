@@ -123,7 +123,7 @@ func TestRelate_ProcessTextArtifact(t *testing.T) {
 			for _, gap := range resolution.Gaps {
 				if gap.Kind == "relation_text_source_incomplete" {
 					found = true
-					if gap.Detail != tc.gap {
+					if gap.Detail != "0::"+tc.gap {
 						t.Fatalf("gap=%+v", gap)
 					}
 				}
