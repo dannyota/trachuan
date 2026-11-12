@@ -42,23 +42,28 @@ issuers, normalized the same way, with their document counts over the classes
 search ranks by default (all but `relation_context`), so callers pick values
 that exist.
 
-Retrieval always runs over the whole country corpus. Paging walks one list: the
-recipe's primary hits shaped at the list cap of 100, then its `non_current` hits
-shaped at the list cap of 100, as the recipe fills a response (primary first,
-`non_current` only in remaining slots). Each page holds at most `limit` hits,
-split into `hits` and `non_current` by group. Without filters the first page is
-exactly today's response of that `limit`, and later pages are the list without
-the hits already shown, in list order. When any filter is given, each group of
-the list is ordered inside hits first in rank order, then outside hits in rank
-order; pages are consecutive slices from the first; every hit carries
-`in_filter: true|false`; and `outside_filter_count` counts outside hits over the
-whole list. `next_cursor` continues while hits remain, so every hit the
-unfiltered search would return stays reachable. The cursor is opaque and holds
-the release, the first page's `limit`, the offset, the resolved `as_of` date and
-a SHA-256 digest of the request without `cursor` and `limit`, never query text;
-later pages use the cursor's date and recompute earlier pages from it, and a
-cursor whose digest or release does not match is `invalid_request` or
-`release_expired`.
+Retrieval always runs over the whole country corpus. Paging walks one list in
+two groups: the recipe's primary hits shaped at the list cap of 100 and its
+non-current hits shaped at the list cap of 100. Each page holds at most `limit`
+hits, split into `hits` and `non_current` by group. Without filters the first
+page is exactly today's response of that `limit`. Every other page, later
+unfiltered pages and all filtered pages, fills from what remains of each group:
+with `in_force_only` true, up to the effective non-current tail
+([retrieval recipe](retrieval-recipe.md)) from the non-current group and the
+rest from primary; with `in_force_only` false, primary first; in both modes
+non-current hits then take any slots primary cannot fill. Later unfiltered pages
+skip the hits the first page showed, in list order. When any filter is given,
+each group is ordered inside hits first in rank order, then outside hits in rank
+order, and pages fill from the start of the reordered groups; every hit carries
+`in_filter: true|false`; and `outside_filter_count` counts outside hits over
+both groups. `next_cursor` continues while either group has hits left, so every
+hit the unfiltered search would return stays reachable. The cursor is opaque and
+holds the release, the first page's `limit`, the number of hits taken so far
+from each group (beyond the recomputed first page when unfiltered), the resolved
+`as_of` date and a SHA-256 digest of the request without `cursor` and `limit`,
+never query text; later pages use the cursor's date and recompute the first page
+from it, and a cursor whose digest or release does not match is
+`invalid_request` or `release_expired`.
 
 The filter changes order, so the recall guarantee is stated per case: for a
 golden case whose expected citations lie inside the selected nodes, filtered
