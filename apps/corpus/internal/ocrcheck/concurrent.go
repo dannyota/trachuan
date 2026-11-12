@@ -147,7 +147,10 @@ func (r *Runner) runConcurrent(ctx context.Context, docs []Document, o Options, 
 			mu.Unlock()
 		}
 	}
-	workers := 8
+	workers := o.InFlight
+	if workers == 0 {
+		workers = 8
+	}
 	if o.DryRun {
 		workers = 1
 	}

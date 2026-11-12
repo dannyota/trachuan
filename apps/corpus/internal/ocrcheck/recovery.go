@@ -35,7 +35,7 @@ func (r *Runner) abandon(ctx context.Context, attempts []Attempt, id string, s *
 		if a.State != "uncertain" {
 			return fmt.Errorf("only uncertain OCR submissions can be abandoned")
 		}
-		if r.Now().Before(a.CreatedAt.Add(24 * time.Hour)) {
+		if a.Mode == "batch" && r.Now().Before(a.CreatedAt.Add(24*time.Hour)) {
 			return fmt.Errorf("cannot abandon OCR submission within 24 hours of its attempt")
 		}
 		group = append(group, a)

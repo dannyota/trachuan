@@ -247,3 +247,35 @@ func TestConcurrent_DryRunAndRetryOverride(t *testing.T) {
 		t.Fatalf("summary=%+v calls=%d err=%v", s, c.calls, err)
 	}
 }
+
+func TestConcurrent_ConfiguredInFlight(t *testing.T) {
+	for _, version := range []int{3, 4} {
+		r, _, c, docs := concurrentFixture(t, 12)
+		release := make(chan struct{})
+		var mu sync.Mutex
+		entered := 0
+		c.call = func(ctx context.Context, _ Request) (Response, error) {
+			mu.Lock()
+			entered++
+			if entered == 4 {
+				close(release)
+			}
+			mu.Unlock()
+			select {
+			case <-release:
+				return c.response, nil
+			case <-ctx.Done():
+				return Response{}, ctx.Err()
+			}
+		}
+		o := jpegOptions()
+		o.CheckVersion = version
+		o.InFlight = 4
+		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+		summary, err := r.Run(ctx, docs, o)
+		cancel()
+		if err != nil || summary.Complete != 12 || c.peak != 4 {
+			t.Fatalf("version=%d peak=%d summary=%+v err=%v", version, c.peak, summary, err)
+		}
+	}
+}

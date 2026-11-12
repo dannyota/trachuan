@@ -138,9 +138,9 @@ reading, quickly, and keep the version 2 results beside the new ones.
   what direct mode has today, for each of them and whatever key the next
   invocation uses: they block new work for their entries, become `uncertain`
   after ten minutes, cannot be reconciled (there is no batch to list), are never
-  sent again automatically, and only the operator's `--abandon` after 24 hours
-  frees the entry; the reserved charge stays counted. The lost answers are not
-  recovered.
+  sent again automatically, and only the operator's `--abandon` (at once for
+  these direct attempts) frees the entry; the reserved charge stays counted. The
+  lost answers are not recovered.
 - Scope. From version 3 on the check selects every store entry of the run's OCR
   documents under any accepted engine id, not only the entry the engine order
   prefers, so a comparison text stored beside an imported one is checked too
@@ -196,7 +196,10 @@ operator's choice.
   proves nothing (another workspace's key lists other batches), so
   reconciliation never abandons an attempt. Only the operator does, with
   `corpus ocr check --abandon <submission id>` after looking at the provider's
-  console, and not within 24 hours of the attempt; that allows one new
+  console, and for a batch not within 24 hours of the attempt, because a batch
+  can still complete and bill up to 24 hours later. A direct attempt cannot:
+  once its connection is gone no later result exists, so it may be abandoned at
+  once; its worst-case charge stays counted against the cap; that allows one new
   submission. A later invocation collects the results of `submitted` attempts
   instead of submitting again; an expired or errored item becomes a failed
   attempt that a later invocation may resubmit under the retry rule. The records

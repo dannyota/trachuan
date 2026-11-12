@@ -15,7 +15,7 @@ import (
 func parseCheckOptions(args []string, review bool) (ocrcheck.Options, error) {
 	allowed := map[string]bool{"--model": true, "--effort": true, "--check-version": true}
 	if !review {
-		for k, v := range map[string]bool{"--limit-docs": true, "--max-usd": true, "--batch": false, "--dry-run": false, "--reconcile": false, "--retry-failed": false, "--abandon": true} {
+		for k, v := range map[string]bool{"--in-flight": true, "--limit-docs": true, "--max-usd": true, "--batch": false, "--dry-run": false, "--reconcile": false, "--retry-failed": false, "--abandon": true} {
 			allowed[k] = v
 		}
 	}
@@ -60,6 +60,12 @@ func parseCheckOptions(args []string, review bool) (ocrcheck.Options, error) {
 			return o, fmt.Errorf("--limit-docs must be nonnegative")
 		}
 	}
+	if value, ok := flags["--in-flight"]; ok {
+		o.InFlight, err = strconv.Atoi(value)
+		if err != nil || o.InFlight < 1 || o.InFlight > 8 || o.CheckVersion < 3 {
+			return o, fmt.Errorf("--in-flight requires check version 3 or 4 and a value from 1 to 8")
+		}
+	}
 	if o.Reconcile && o.DryRun {
 		return o, fmt.Errorf("--reconcile and --dry-run cannot be combined")
 	}
@@ -71,7 +77,7 @@ func parseCheckOptions(args []string, review bool) (ocrcheck.Options, error) {
 
 func runOCRCheck(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	if len(args) < 2 {
-		_, _ = fmt.Fprintln(stderr, "usage: corpus ocr check <cc> <rel> --max-usd USD [--model MODEL] [--effort EFFORT] [--check-version 2|3|4] [--limit-docs N] [--batch] [--dry-run] [--reconcile] [--retry-failed] [--abandon SUBMISSION_ID]")
+		_, _ = fmt.Fprintln(stderr, "usage: corpus ocr check <cc> <rel> --max-usd USD [--model MODEL] [--effort EFFORT] [--check-version 2|3|4] [--limit-docs N] [--in-flight N] [--batch] [--dry-run] [--reconcile] [--retry-failed] [--abandon SUBMISSION_ID]")
 		return 2
 	}
 	o, err := parseCheckOptions(args[2:], false)
