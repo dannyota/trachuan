@@ -46,10 +46,13 @@ func (c *Client) admit(ctx context.Context) error {
 	if !ok {
 		return errors.New("source admission: missing run id")
 	}
+	if e := c.pauses.Await(ctx, c.gate, id, "chinhphu", 2*time.Second); e != nil {
+		return e
+	}
 	if e := c.gate.Admit(ctx, id, "chinhphu"); e != nil {
 		return &clientError{fmt.Errorf("source admission: %w", e)}
 	}
-	return nil
+	return c.pauses.Await(ctx, c.gate, id, "chinhphu", 2*time.Second)
 }
 func (c *Client) pause(ctx context.Context, reason string) error {
 	if c.gate != nil {
@@ -57,8 +60,11 @@ func (c *Client) pause(ctx context.Context, reason string) error {
 		if !ok {
 			return errors.New("source pause: missing run id")
 		}
-		if e := c.gate.Pause(ctx, id, "chinhphu", reason, ""); e != nil {
-			return &clientError{fmt.Errorf("source pause: %w", e)}
+		if e := c.pauses.Start(ctx, c.gate, id, "chinhphu", reason, 2*time.Second); !errors.Is(e, sourcegate.ErrSourcePaused) {
+			return e
+		}
+		if e := c.pauses.Await(ctx, c.gate, id, "chinhphu", 2*time.Second); e != nil {
+			return e
 		}
 	}
 	return fmt.Errorf("source denied access: %w", sourcegate.ErrSourcePaused)
@@ -103,6 +109,7 @@ func classified(err error, endpoint string, status int) error {
 	return &Failure{Origin: origin, Cause: cause, Endpoint: endpoint, HTTPStatus: status, Err: safe}
 }
 func (c *Client) request(ctx context.Context, method, target string, form url.Values, file bool, consume func(io.Reader, http.Header) error) error {
+	ctx = sourcegate.EnsureActivity(ctx)
 	endpoint := "page"
 	timeout := c.limits.PageTimeout
 	if file {
@@ -115,8 +122,8 @@ func (c *Client) request(ctx context.Context, method, target string, form url.Va
 		attemptCtx, cancel := context.WithTimeout(ctx, timeout)
 		status, after, err := c.attempt(attemptCtx, method, target, form, file, timeout, consume)
 		cancel()
-		if ctx.Err() != nil {
-			return ctx.Err()
+		if contextErr := sourcegate.OutcomeContextError(ctx, status, err); contextErr != nil {
+			return contextErr
 		}
 		var local *localDownloadError
 		var own *clientError
@@ -134,11 +141,17 @@ func (c *Client) request(ctx context.Context, method, target string, form url.Va
 		if deferred {
 			return &Failure{Origin: "gateway", Cause: "unknown", Endpoint: endpoint, HTTPStatus: status, Err: ErrDeferred}
 		}
-		if retry {
+		if retry && ctx.Err() == nil {
 			if e := c.sleep(ctx, delay); e != nil {
-				return e
+				if contextErr := sourcegate.OutcomeContextError(ctx, status, e); contextErr != nil {
+					return contextErr
+				}
+				if ctx.Err() == nil {
+					return e
+				}
+			} else {
+				continue
 			}
-			continue
 		}
 		if status == 429 {
 			return &Failure{Origin: "gateway", Cause: "http_429", Endpoint: endpoint, HTTPStatus: status}
@@ -207,13 +220,9 @@ func (c *Client) hop(ctx context.Context, method, target string, form url.Values
 	if err = c.checkURL(requestCtx, target, file); err != nil {
 		return 0, "", 0, err
 	}
-	limit := c.limits.HTMLBytes
-	if file {
-		limit = c.limits.FileBytes
-	}
-	return c.one(requestCtx, method, target, form, timeout, limit, consume)
+	return c.one(requestCtx, method, target, form, timeout, consume)
 }
-func (c *Client) one(ctx context.Context, method, target string, form url.Values, timeout time.Duration, limit int64, consume func(io.Reader, http.Header) error) (int, string, time.Duration, error) {
+func (c *Client) one(ctx context.Context, method, target string, form url.Values, timeout time.Duration, consume func(io.Reader, http.Header) error) (int, string, time.Duration, error) {
 	reqctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	var body io.Reader
@@ -237,9 +246,9 @@ func (c *Client) one(ctx context.Context, method, target string, form url.Values
 		return 0, "", 0, classifiedTransport(e)
 	}
 	defer func() { _ = resp.Body.Close() }()
-	prefix, r := sourcegate.ResponsePrefix(budgetReader{c, resp.Body})
 	status := resp.StatusCode
 	after := retryDelay(resp.Header.Get("Retry-After"), c.now())
+	prefix, r := sourcegate.ResponsePrefix(ctx, budgetReader{c, resp.Body}, resp.Body)
 	node, _ := parseHTML(prefix)
 	if isChallenge(node, prefix) {
 		return status, "", after, c.pause(ctx, "challenge")
@@ -251,13 +260,6 @@ func (c *Client) one(ctx context.Context, method, target string, form url.Values
 		return status, "", after, nil
 	}
 	if status != 200 {
-		n, readErr := io.Copy(io.Discard, io.LimitReader(r, limit+1))
-		if readErr != nil {
-			return status, "", after, readErr
-		}
-		if n > limit {
-			return status, "", after, ErrTooLarge
-		}
 		return status, resp.Header.Get("Location"), after, nil
 	}
 	e = consume(r, resp.Header)

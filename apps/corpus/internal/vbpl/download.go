@@ -56,8 +56,9 @@ func (c *Client) Download(ctx context.Context, _ string, f File, dir string, lim
 			return nil
 		})
 		closeErr := tmp.Close()
-		if ctx.Err() != nil {
-			reqErr = ctx.Err()
+		contextErr := sourcegate.OutcomeContextError(ctx, status, reqErr)
+		if contextErr != nil {
+			reqErr = contextErr
 		}
 		if status == 200 && reqErr == nil && f.Size >= 0 && size != f.Size {
 			reqErr = &Failure{Origin: "gateway", Cause: "size", Endpoint: "attachment", HTTPStatus: status}
@@ -77,18 +78,27 @@ func (c *Client) Download(ctx context.Context, _ string, f File, dir string, lim
 		if closeErr != nil {
 			return Downloaded{}, fmt.Errorf("close download: %w", closeErr)
 		}
-		if ctx.Err() != nil {
-			return Downloaded{}, ctx.Err()
+		if contextErr != nil {
+			return Downloaded{}, contextErr
+		}
+		if errors.Is(reqErr, sourcegate.ErrSourcePaused) {
+			return Downloaded{}, reqErr
 		}
 		delay, retry, deferred := policy.Next(status, retryable(status, reqErr), sourcegate.RetryAfter(headers.Get("Retry-After"), c.now()))
 		if deferred {
 			return Downloaded{}, &Failure{Origin: "gateway", Cause: "unknown", Err: ErrDeferred, Endpoint: "attachment", HTTPStatus: status}
 		}
-		if retry {
+		if retry && ctx.Err() == nil {
 			if e := c.sleep(ctx, delay); e != nil {
-				return Downloaded{}, e
+				if contextErr := sourcegate.OutcomeContextError(ctx, status, e); contextErr != nil {
+					return Downloaded{}, contextErr
+				}
+				if ctx.Err() == nil {
+					return Downloaded{}, e
+				}
+			} else {
+				continue
 			}
-			continue
 		}
 		if reqErr != nil {
 			return Downloaded{}, fmt.Errorf("download: %w", classify(reqErr, "attachment", status))
@@ -108,8 +118,8 @@ func (c *Client) ETag(ctx context.Context, target string) (string, error) {
 	}
 	var headers http.Header
 	status, err := c.request(ctx, http.MethodGet, target, nil, true, requestOptions{ranged: true, headers: &headers}, func(r io.Reader) error { _, e := io.Copy(io.Discard, io.LimitReader(r, 1)); return e })
-	if ctx.Err() != nil {
-		return "", ctx.Err()
+	if contextErr := sourcegate.OutcomeContextError(ctx, status, err); contextErr != nil {
+		return "", contextErr
 	}
 	if errors.Is(err, sourcegate.ErrSourcePaused) {
 		return "", err

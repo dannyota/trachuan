@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"danny.vn/trachuan/apps/corpus/internal/chinhphu"
+	"danny.vn/trachuan/apps/corpus/internal/sourcegate"
 )
 
 // The document-wide PDF ceiling is set in docs/design/budgets.md.
@@ -32,8 +33,13 @@ func (b pdfBudget) download(ctx context.Context, s *Stage, dir, url string) (chi
 	downloadCtx, cancel := context.WithTimeout(ctx, remaining)
 	defer cancel()
 	info, err := s.downloadChinhphu(downloadCtx, dir, url)
-	if ctx.Err() != nil {
-		return chinhphu.FileInfo{}, ctx.Err()
+	status := 0
+	var failure *chinhphu.Failure
+	if errors.As(err, &failure) {
+		status = failure.HTTPStatus
+	}
+	if contextErr := sourcegate.OutcomeContextError(ctx, status, err); contextErr != nil {
+		return chinhphu.FileInfo{}, contextErr
 	}
 	if errors.Is(err, context.DeadlineExceeded) && (downloadCtx.Err() != nil || !b.now().Before(b.deadline)) {
 		return chinhphu.FileInfo{}, errPDFDeadline

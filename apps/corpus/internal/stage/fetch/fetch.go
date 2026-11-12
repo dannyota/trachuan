@@ -201,10 +201,6 @@ func (s *Stage) processItem(ctx context.Context, env stage.Env, r stage.Run, ite
 		art, err = publish(nil)
 	}
 	if err != nil {
-		var conflict *attachmentConflict
-		if errors.As(err, &conflict) {
-			return stage.Output{State: "done", Message: result.message(), Gaps: []stage.Gap{{Kind: "invalid_source_data", Detail: conflict.name, Source: "vbpl", Origin: stage.OriginSourceData, Cause: stage.CauseInvalidPayload, Endpoint: "attachment"}}}, nil
-		}
 		var failure *vbpl.Failure
 		if errors.As(err, &failure) || errors.Is(err, sourcegate.ErrSourcePaused) {
 			return apiError(err, id, false)

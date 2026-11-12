@@ -3,6 +3,7 @@ package vbpl
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -26,8 +27,11 @@ func (c *Client) apiRaw(ctx context.Context, method, path string, body []byte) (
 			}
 			return nil
 		})
-		if ctx.Err() != nil {
-			return nil, ctx.Err()
+		if contextErr := sourcegate.OutcomeContextError(ctx, status, err); contextErr != nil {
+			return nil, contextErr
+		}
+		if errors.Is(err, sourcegate.ErrSourcePaused) {
+			return nil, err
 		}
 		if err == nil && status == 200 && !json.Valid(raw) {
 			err = &Failure{Origin: "gateway", Cause: "non_json_200", Endpoint: endpoint(path), HTTPStatus: status}
@@ -36,11 +40,17 @@ func (c *Client) apiRaw(ctx context.Context, method, path string, body []byte) (
 		if deferred {
 			return nil, &Failure{Origin: "gateway", Cause: "unknown", Err: ErrDeferred, Endpoint: endpoint(path), HTTPStatus: status}
 		}
-		if retry {
+		if retry && ctx.Err() == nil {
 			if e := c.sleep(ctx, delay); e != nil {
-				return nil, e
+				if contextErr := sourcegate.OutcomeContextError(ctx, status, e); contextErr != nil {
+					return nil, contextErr
+				}
+				if ctx.Err() == nil {
+					return nil, e
+				}
+			} else {
+				continue
 			}
-			continue
 		}
 		if err != nil {
 			return nil, fmt.Errorf("gateway request: %w", classify(err, endpoint(path), status))

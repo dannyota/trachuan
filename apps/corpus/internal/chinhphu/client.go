@@ -46,6 +46,7 @@ type Client struct {
 	page, file   string
 	testHosts    map[string]bool
 	gate         Gate
+	pauses       sourcegate.Pauses
 	http         *http.Client
 	transport    http.RoundTripper
 	limits       Limits

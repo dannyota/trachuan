@@ -276,7 +276,8 @@ func TestClient_DownloadBudgetCountsRejectedBodies(t *testing.T) {
 		_, _ = io.WriteString(w, "12345678")
 	}, WithBackoffs(0), WithDownloadBudget(10))
 	_, _, e := c.Search(context.Background(), "x")
-	if !errors.Is(e, ErrBudget) || n.Load() != 2 {
+	var f *Failure
+	if !errors.As(e, &f) || f.Cause != "http_5xx" || n.Load() != 2 || c.used != 10 {
 		t.Fatalf("requests=%d error=%v", n.Load(), e)
 	}
 }
@@ -411,7 +412,7 @@ func TestClient_ExactBudgetAccepted(t *testing.T) {
 	}
 }
 
-func TestClient_BudgetStopsRetriesImmediately(t *testing.T) {
+func TestClient_BudgetDoesNotOverride5xx(t *testing.T) {
 	var n atomic.Int32
 	c, _ := clientFor(t, func(w http.ResponseWriter, r *http.Request) {
 		n.Add(1)
@@ -419,7 +420,8 @@ func TestClient_BudgetStopsRetriesImmediately(t *testing.T) {
 		_, _ = io.WriteString(w, "12345678")
 	}, WithBackoffs(0, 0, 0), WithDownloadBudget(3))
 	_, _, e := c.Search(context.Background(), "x")
-	if !errors.Is(e, ErrBudget) || n.Load() != 1 {
+	var f *Failure
+	if !errors.As(e, &f) || f.Cause != "http_5xx" || n.Load() != 2 {
 		t.Fatalf("requests=%d err=%v", n.Load(), e)
 	}
 }
@@ -519,7 +521,7 @@ func TestClient_RetryAfter503Uses5xxCause(t *testing.T) {
 		t.Fatalf("%v", e)
 	}
 }
-func TestClient_OversizeErrorBodyStopsRetry(t *testing.T) {
+func TestClient_OversizeErrorBodyDoesNotOverride5xx(t *testing.T) {
 	var n atomic.Int32
 	c, _ := clientFor(t, func(w http.ResponseWriter, r *http.Request) {
 		n.Add(1)
@@ -527,7 +529,8 @@ func TestClient_OversizeErrorBodyStopsRetry(t *testing.T) {
 		_, _ = io.WriteString(w, strings.Repeat("x", 30))
 	}, WithBackoffs(0, 0), WithLimits(Limits{RequestsPerSecond: 100000, Burst: 1, InFlight: 1, Pages: 100, HTMLBytes: 10, FileBytes: 100, Redirects: 3}))
 	_, _, e := c.Detail(context.Background(), 1)
-	if !errors.Is(e, ErrTooLarge) || n.Load() != 1 {
+	var f *Failure
+	if !errors.As(e, &f) || f.Cause != "http_5xx" || n.Load() != 2 {
 		t.Fatalf("requests=%d err=%v", n.Load(), e)
 	}
 }

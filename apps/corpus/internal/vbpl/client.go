@@ -11,7 +11,6 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"sync"
 	"syscall"
 	"time"
 
@@ -52,8 +51,7 @@ type Client struct {
 	allowTestHTTP  bool
 	gate           sourcegate.Gate
 	lookupPageSize int
-	pauseMu        sync.Mutex
-	pauses         map[int64]*pauseState
+	pauses         sourcegate.Pauses
 }
 
 // New creates a client. The version argument is retained for compatibility.
@@ -199,7 +197,7 @@ func (c *Client) request(ctx context.Context, method, target string, body []byte
 	if opts.headers != nil {
 		*opts.headers = resp.Header.Clone()
 	}
-	head, reader := sourcegate.ResponsePrefix(responseBody{reader: resp.Body, endpoint: endpoint(target), status: resp.StatusCode})
+	head, reader := sourcegate.ResponsePrefix(ctx, responseBody{reader: resp.Body, endpoint: endpoint(target), status: resp.StatusCode}, resp.Body)
 	if challenge(head) {
 		return resp.StatusCode, c.deny(ctx, endpoint(target)+" challenge")
 	}

@@ -15,6 +15,7 @@ import (
 
 	"danny.vn/trachuan/apps/corpus/internal/chinhphu"
 	"danny.vn/trachuan/apps/corpus/internal/source"
+	"danny.vn/trachuan/apps/corpus/internal/sourcegate"
 	"danny.vn/trachuan/apps/corpus/internal/stage"
 	"danny.vn/trachuan/internal/retrieval"
 )
@@ -24,6 +25,7 @@ func (s *Stage) writeChinhphu(ctx context.Context, dir, id string, detail chinhp
 }
 
 func (s *Stage) writeChinhphuEvidence(ctx context.Context, dir, id string, detail chinhphu.Detail, html []byte, observations *[]stage.FetchObservation, counts *readDecision, q hashStore, now func() time.Time) error {
+	ctx = sourcegate.EnsureActivity(ctx)
 	meta := secondaryMetadata{Version: 1, SourceID: id, SourceURL: detail.URL, Occurrences: []secondaryOccurrence{}, Attachments: []secondaryAttachment{}}
 	for _, field := range detail.Occurrences {
 		cells := append([]string{}, field.Cells...)

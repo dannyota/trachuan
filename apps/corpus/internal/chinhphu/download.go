@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"danny.vn/trachuan/apps/corpus/internal/filecache"
+	"danny.vn/trachuan/apps/corpus/internal/sourcegate"
 )
 
 // FileInfo describes the bytes actually fetched from an attachment URL.
@@ -27,6 +28,7 @@ type FileInfo struct {
 
 // Download streams a validated PDF into dst within the given byte limit.
 func (c *Client) Download(ctx context.Context, target string, dst io.Writer, max int64) (FileInfo, error) {
+	ctx = sourcegate.EnsureActivity(ctx)
 	if max <= 0 {
 		return FileInfo{}, errors.New("invalid download limit")
 	}

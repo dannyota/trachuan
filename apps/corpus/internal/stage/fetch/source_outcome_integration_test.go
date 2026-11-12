@@ -14,15 +14,20 @@ import (
 )
 
 func TestRunBatch_SourceEvidenceAndLoadOutcomes(t *testing.T) {
-	for _, name := range []string{"conflict", "page 429", "PDF 429"} {
+	for _, name := range []string{"conflict", "page 429", "PDF 429", "stalled page 429", "stalled PDF 429"} {
 		t.Run(name, func(t *testing.T) {
 			var s *Stage
 			var env stage.Env
+			var calls *int
+			var waits *[]time.Duration
 			key := "vn:chinhphu:218029"
-			if name == "conflict" {
+			switch name {
+			case "conflict":
 				s, env = conflictingAttachmentFixture(t)
 				key = "vn:vbpl:66518"
-			} else {
+			case "stalled page 429", "stalled PDF 429":
+				s, env, calls, waits = stalled429Fixture(t, name == "stalled PDF 429", time.Millisecond)
+			default:
 				s, env = broken429Fixture(t, name == "PDF 429")
 			}
 			ctx := context.Background()
@@ -43,10 +48,13 @@ func TestRunBatch_SourceEvidenceAndLoadOutcomes(t *testing.T) {
 			if _, err = db.Exec(ctx, `INSERT INTO run_item(run_id,stage,item_key,state,batch) VALUES ($1,'fetch',$2,'pending',0)`, id, key); err != nil {
 				t.Fatal(err)
 			}
-			result, err := stage.RunBatch(ctx, env, s, stage.BatchInput{RunID: id, Generation: 1, Stage: "fetch"}, 1, stage.BatchConfig{HeartbeatEvery: time.Second, MaxAttempts: 5}, func(...any) {})
+			result, err := stage.RunBatch(ctx, env, s, stage.BatchInput{RunID: id, Generation: 1, Stage: "fetch"}, 5, stage.BatchConfig{HeartbeatEvery: time.Second, MaxAttempts: 5}, func(...any) {})
+			if calls != nil && (*calls != 4 || len(*waits) != 3) {
+				t.Fatalf("calls=%d waits=%v", *calls, *waits)
+			}
 			var state string
 			var gaps int
-			if e := db.QueryRow(ctx, `SELECT state,(SELECT count(*) FROM gap WHERE run_id=$1 AND kind='invalid_source_data') FROM run_item WHERE run_id=$1`, id).Scan(&state, &gaps); e != nil {
+			if e := db.QueryRow(ctx, `SELECT state,(SELECT count(*) FROM gap WHERE run_id=$1 AND kind='missing_attachment') FROM run_item WHERE run_id=$1`, id).Scan(&state, &gaps); e != nil {
 				t.Fatal(e)
 			}
 			if name == "conflict" {

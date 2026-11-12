@@ -43,13 +43,6 @@ func (s *Stage) writeBundleWithBaseline(ctx context.Context, dir, id string, det
 	}
 	files := make([]file, 0, len(entries))
 	result := report{Missing: []string{}, TooLarge: []string{}}
-	type fileResult struct {
-		downloaded vbpl.Downloaded
-		adopted    *stage.FetchObservation
-		reason     string
-		completed  time.Time
-		err        error
-	}
 	results := make([]fileResult, len(entries))
 	counts := make(map[string]int, len(entries))
 	for _, entry := range entries {
@@ -71,6 +64,8 @@ func (s *Stage) writeBundleWithBaseline(ctx context.Context, dir, id string, det
 		})
 	}
 	_ = group.Wait()
+	conflicts := conflictingAttachments(entries, results)
+	recordedConflicts := map[string]bool{}
 	hits := 0
 	seen := make(map[string]stage.FetchObservation)
 	for i, entry := range entries {
@@ -83,6 +78,23 @@ func (s *Stage) writeBundleWithBaseline(ctx context.Context, dir, id string, det
 		}
 		if countsOut != nil && item.reason != "" {
 			countsOut.count(item.reason)
+		}
+		if conflicts[entry.Name] {
+			if errors.Is(item.err, errInvalidBaseline) {
+				return item.err
+			}
+			if item.err != nil && !missingFailure(item.err) && !errors.Is(item.err, vbpl.ErrTooLarge) {
+				return stage.Retryable(fmt.Errorf("download attachment %q: %w", entry.Name, item.err))
+			}
+			if !recordedConflicts[entry.Name] {
+				recordedConflicts[entry.Name] = true
+				result.Missing = append(result.Missing, entry.Name)
+				if countsOut != nil {
+					countsOut.count("failure_conflict")
+				}
+				slog.Warn("attachment missing", "document_key", "vn:vbpl:"+id, "file_name", entry.Name, "cause", "conflict")
+			}
+			continue
 		}
 		if item.err != nil {
 			if errors.Is(item.err, errInvalidBaseline) {
@@ -114,8 +126,7 @@ func (s *Stage) writeBundleWithBaseline(ctx context.Context, dir, id string, det
 			if entry.URL != "" {
 				resourceURL = &entry.URL
 			}
-			key, _ := json.Marshal([3]any{"attachment", name, resourceURL})
-			o := stage.FetchObservation{ResourceKey: string(key), Source: "vbpl", Name: &name, URL: resourceURL, Path: "files/" + item.downloaded.SHA256, ContentSHA256: item.downloaded.SHA256, Size: item.downloaded.Size, Acquisition: "network", FetchedAt: &item.completed}
+			o := stage.FetchObservation{ResourceKey: attachmentKey(entry), Source: "vbpl", Name: &name, URL: resourceURL, Path: "files/" + item.downloaded.SHA256, ContentSHA256: item.downloaded.SHA256, Size: item.downloaded.Size, Acquisition: "network", FetchedAt: &item.completed}
 			if item.adopted != nil {
 				o.Acquisition = "adopted"
 				o.FetchedAt = item.adopted.FetchedAt
@@ -124,17 +135,16 @@ func (s *Stage) writeBundleWithBaseline(ctx context.Context, dir, id string, det
 				o.Acquisition = "cache"
 				o.FetchedAt = nil
 			}
-			if prior, ok := seen[o.ResourceKey]; ok {
-				if prior.ContentSHA256 != o.ContentSHA256 || prior.Size != o.Size || prior.Acquisition != o.Acquisition {
-					return &attachmentConflict{name: entry.Name}
-				}
-			} else {
+			if _, ok := seen[o.ResourceKey]; !ok {
 				seen[o.ResourceKey] = o
 				if observations != nil {
 					*observations = append(*observations, o)
 				}
 			}
 		}
+	}
+	if err := removeConflictingBytes(entries, results, files, conflicts); err != nil {
+		return err
 	}
 	if hits > 0 {
 		slog.Info("attachment cache hits", "document_key", "vn:vbpl:"+id, "count", hits)
