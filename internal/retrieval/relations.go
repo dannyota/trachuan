@@ -6,7 +6,7 @@ import (
 	"sort"
 )
 
-func shapeRelations(source []SourceRelation, recipe Recipe, id Identity) ([]Relation, []Gap) {
+func orderedRelations(source []SourceRelation) []SourceRelation {
 	edges := append([]SourceRelation(nil), source...)
 	sort.Slice(edges, func(i, j int) bool {
 		a, b := edges[i], edges[j]
@@ -31,6 +31,11 @@ func shapeRelations(source []SourceRelation, recipe Recipe, id Identity) ([]Rela
 		}
 		return a.Ordinal < b.Ordinal
 	})
+	return edges
+}
+
+func shapeRelations(source []SourceRelation, recipe Recipe, id Identity) ([]Relation, []Gap) {
+	edges := orderedRelations(source)
 	result := []Relation{}
 	// An edge is identified by its source key, artifact hash and ordinal:
 	// two documents can have byte-identical relation artifacts.

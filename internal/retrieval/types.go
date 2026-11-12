@@ -110,23 +110,25 @@ type Document struct {
 
 // Candidate is an ordered candidate and its hydrated source metadata.
 type Candidate struct {
-	ChunkID       int64
-	Ordinal       int
-	Identity      Identity
-	Group         Identity
-	Rank          int
-	Cosine        float64
-	BM25          float64
-	ProvisionID   int64
-	GroupID       int64
-	Content       string
-	ContextPrefix string
-	Spans         []byte
-	Provision     Provision
-	Document      Document
-	Ancestors     []Provision
-	Descendants   []Provision
-	Relations     []SourceRelation
+	ChunkID         int64
+	Ordinal         int
+	Identity        Identity
+	Group           Identity
+	Rank            int
+	Cosine          float64
+	BM25            float64
+	ProvisionID     int64
+	GroupID         int64
+	Content         string
+	ContextPrefix   string
+	Spans           []byte
+	Provision       Provision
+	Document        Document
+	Ancestors       []Provision
+	Descendants     []Provision
+	Relations       []SourceRelation
+	Warnings        []Warning
+	WarningsOmitted int
 }
 
 // SourceRelation associates a source edge with its stable artifact identity.

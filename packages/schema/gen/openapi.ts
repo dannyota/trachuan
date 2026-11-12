@@ -1896,6 +1896,19 @@ export interface components {
             number?: string;
             in_release: boolean;
         };
+        Warning: {
+            dir?: string;
+            kind?: string;
+            key?: string;
+            number?: string;
+            in_release: boolean;
+            source?: string;
+            basis: string;
+            target: string;
+            citation: string;
+            exact: boolean;
+            named?: string;
+        };
         ListedRelation: {
             dir?: string;
             kind?: string;
@@ -2030,7 +2043,9 @@ export interface components {
             path?: components["schemas"]["PathNode"][];
             snippet?: string;
             complete: boolean;
-            warnings?: components["schemas"]["Pointer"][];
+            warnings?: components["schemas"]["Warning"][];
+            /** Format: int64 */
+            warnings_omitted?: number;
             gaps?: components["schemas"]["Gap"][];
             text?: string;
             fragments?: components["schemas"]["Fragment"][];
@@ -2091,6 +2106,9 @@ export interface components {
             items: components["schemas"]["ReadItem"][];
         };
         Unit: {
+            warnings?: components["schemas"]["Warning"][];
+            /** Format: int64 */
+            warnings_omitted?: number;
             kind?: string;
             anchor?: string;
             locator?: string;

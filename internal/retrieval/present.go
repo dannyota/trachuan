@@ -60,7 +60,7 @@ func present(resp Response, docs map[string]DocumentEntry, d Detail) SearchResul
 					result.Documents[key] = doc
 				}
 			}
-			p := PresentedHit{InFilter: h.InFilter, Nodes: append([]string{}, h.Nodes...), Handle: Handle(h.Identity), Doc: key, Citation: h.Citation, Gaps: h.Gaps, Locator: h.Locator, Warnings: warningPointers(h)}
+			p := PresentedHit{InFilter: h.InFilter, Nodes: append([]string{}, h.Nodes...), Handle: Handle(h.Identity), Doc: key, Citation: h.Citation, Gaps: h.Gaps, Locator: h.Locator, Warnings: h.Warnings, WarningsOmitted: h.WarningsOmitted}
 			for _, node := range h.Path {
 				p.Path = append(p.Path, PresentedPathNode{Label: node.Label, Heading: node.Heading, Anchor: node.Identity.Anchor})
 			}
@@ -81,33 +81,4 @@ func present(resp Response, docs map[string]DocumentEntry, d Detail) SearchResul
 	result.Hits = convert(resp.Hits)
 	result.NonCurrent = convert(resp.NonCurrent)
 	return result
-}
-
-func warningPointers(h Hit) []Pointer {
-	var warnings []Pointer
-	for _, r := range h.Relations {
-		switch r.Kind {
-		case "repeals", "replaces", "suspends", "amends_supplements":
-		default:
-			continue
-		}
-		if r.TargetInHit {
-			p := Pointer{Dir: "in", Kind: r.Kind, Key: r.SourceKey, Number: r.SourceNumber, InRelease: r.SourceResolved}
-			if p.InRelease {
-				p.Key = r.SourceDocKey
-			}
-			warnings = append(warnings, p)
-		}
-		if r.SourceInHit {
-			p := Pointer{Dir: "out", Kind: r.Kind, Number: r.TargetNumber, InRelease: r.TargetResolved}
-			if r.TargetKey != nil {
-				p.Key = *r.TargetKey
-			}
-			if p.InRelease {
-				p.Key = r.TargetDocKey
-			}
-			warnings = append(warnings, p)
-		}
-	}
-	return warnings
 }

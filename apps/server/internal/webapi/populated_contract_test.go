@@ -16,7 +16,7 @@ func (e *populatedEngine) Present(_ context.Context, _ retrieval.Response, detai
 	doc := retrieval.DocumentEntry{Title: "Example", TextSource: "html_transcription", TextComplete: false, Status: retrieval.Status{Current: true}, Related: []retrieval.Pointer{{Dir: "in", Kind: "amends_supplements", Key: "vn:2", InRelease: true}}, RelatedCounts: map[string]int{"in:amends_supplements": 1}}
 	hit := retrieval.PresentedHit{Locator: &locator, Handle: "vn:1#a", Doc: "vn:1", Citation: "Article 1", Path: []retrieval.PresentedPathNode{{Anchor: "a", Label: "Article 1"}}, Text: "source", Complete: true, Score: &score,
 		Fragments: []retrieval.Fragment{{Identity: retrieval.Identity{Country: "vn", DocumentKey: "vn:1", Anchor: "a"}, Start: 1, End: 2, TextStart: 1, TextEnd: 2, Role: "body", Complete: true}},
-		Relations: []retrieval.Relation{{SourceKey: "vn:1", Kind: "cites", Evidence: "evidence", Complete: true, SourceResolved: true}}, Warnings: doc.Related,
+		Relations: []retrieval.Relation{{SourceKey: "vn:1", Kind: "cites", Evidence: "evidence", Complete: true, SourceResolved: true}}, Warnings: []retrieval.Warning{{Pointer: doc.Related[0], Basis: "text", Target: "vn:1#a", Citation: "Article 1", Exact: true}}, WarningsOmitted: 1,
 	}
 	if detail == retrieval.DetailCompact {
 		hit.Snippet = "source"
@@ -31,7 +31,7 @@ func (e *populatedEngine) Present(_ context.Context, _ retrieval.Response, detai
 func (e *populatedEngine) Read(_ context.Context, req retrieval.ReadRequest) (retrieval.ReadResult, error) {
 	doc := retrieval.DocumentEntry{Title: "Example", TextSource: "html_transcription", TextComplete: false, Status: retrieval.Status{Current: true}}
 	locator := "block:2-4"
-	item := retrieval.ItemResult{FetchSHA256: strings.Repeat("a", 64), Doc: "vn:1", Document: &doc, Units: []retrieval.Unit{{Kind: "provision", Locator: &locator, Anchor: "a", Text: "source", Part: 1, Parts: 2, Relation: &retrieval.ListedRelation{Pointer: retrieval.Pointer{Dir: "in", Kind: "cites", InRelease: true}, Evidence: "evidence", EvidenceComplete: true}}}, Next: "continuation"}
+	item := retrieval.ItemResult{FetchSHA256: strings.Repeat("a", 64), Doc: "vn:1", Document: &doc, Units: []retrieval.Unit{{Kind: "provision", Locator: &locator, Anchor: "a", Text: "source", Warnings: []retrieval.Warning{{Pointer: retrieval.Pointer{InRelease: true}, Basis: "text", Target: "vn:1#a", Citation: "Article 1", Exact: true}}, WarningsOmitted: 1, Part: 1, Parts: 2, Relation: &retrieval.ListedRelation{Pointer: retrieval.Pointer{Dir: "in", Kind: "cites", InRelease: true}, Evidence: "evidence", EvidenceComplete: true}}}, Next: "continuation"}
 	return retrieval.ReadResult{Release: req.Release, Items: []retrieval.ItemResult{item}}, nil
 }
 

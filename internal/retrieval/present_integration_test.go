@@ -59,26 +59,3 @@ func TestPresent_HydratesIntraDocumentEndpoints(t *testing.T) {
 		}
 	}
 }
-
-func TestPresent_WarningResolvedByNumber(t *testing.T) {
-	db, _, _ := fixture(t)
-	ctx := context.Background()
-	tx, err := db.Begin(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() { _ = tx.Rollback(ctx) }()
-	_, err = tx.Exec(ctx, `INSERT INTO relation (id,source_document_id,target_document_id,source_provision_id,source_key,target_key,source_number,target_number,kind,raw_code,raw_label,evidence,method,artifact_sha256,ordinal) VALUES (1,1,2,11,'vn:1',NULL,'one','two','repeals','','','','',$1,0)`, strings.Repeat("a", 64))
-	if err != nil {
-		t.Fatal(err)
-	}
-	_, rels, err := hydrateTrees(ctx, tx, []int64{11})
-	if err != nil {
-		t.Fatal(err)
-	}
-	shaped, _ := shapeRelations(rels[11], Recipe1(), Identity{})
-	warnings := warningPointers(Hit{Relations: shaped})
-	if len(warnings) != 1 || warnings[0].Key != "vn:2" || !warnings[0].InRelease {
-		t.Fatalf("warnings: %+v", warnings)
-	}
-}

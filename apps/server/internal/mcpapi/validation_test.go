@@ -138,7 +138,7 @@ func TestMCP_SearchSchemaAcceptsRecipeValues(t *testing.T) {
 			Number: "1/2099/QH1", Issued: &retrieval.Date{Year: 2099, Month: 11, Day: 11},
 			Status: retrieval.Status{Current: false}, Related: []retrieval.Pointer{{Dir: "in", Kind: "repeals", InRelease: false}},
 		}},
-		Hits: []retrieval.PresentedHit{{Handle: "vn:test#a", Doc: "vn:test", Complete: false, Text: "verbatim", Next: "opaque", Relations: []retrieval.Relation{{SourceResolved: false, TargetResolved: false}}}},
+		Hits: []retrieval.PresentedHit{{Handle: "vn:test#a", Doc: "vn:test", Complete: false, Text: "verbatim", Next: "opaque", Warnings: []retrieval.Warning{{Pointer: retrieval.Pointer{InRelease: true}, Basis: "text", Target: "vn:test#a", Citation: "Article 1", Exact: false, Named: "a/b"}}, WarningsOmitted: 2, Relations: []retrieval.Relation{{SourceResolved: false, TargetResolved: false}}}},
 	}
 	r := callTool(t, h, "search", map[string]any{"country": "vn", "query": "ngân hàng", "detail": "full"})
 	out := resultJSON(t, r)

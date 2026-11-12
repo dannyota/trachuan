@@ -40,7 +40,13 @@ func (e *Engine) readScope(ctx context.Context, tx pgx.Tx, c cursor) (readSequen
 				ids = append(ids, p.ID)
 			}
 		}
-		relations, readErr := readRelations(ctx, tx, key, ids, anchor != "", c.Unit, e.release.RetrievalRecipe.RelationEvidenceRuneCap)
+		ancestors := []int64{}
+		if target >= 0 {
+			for _, p := range readAncestry(nodes, nodes[target]) {
+				ancestors = append(ancestors, p.ID)
+			}
+		}
+		relations, readErr := readRelations(ctx, tx, key, ids, ancestors, anchor != "", c.Unit, e.release.RetrievalRecipe.RelationEvidenceRuneCap)
 		relations.doc = key
 		return relations, "", readErr
 	}
@@ -57,9 +63,7 @@ func (e *Engine) readScope(ctx context.Context, tx pgx.Tx, c cursor) (readSequen
 				return readSequence{}, "", err
 			}
 		}
-		return seq, "", nil
-	}
-	if item.From != "" {
+	} else if item.From != "" {
 		from, to := -1, -1
 		for i, p := range nodes {
 			if i%128 == 0 {
@@ -83,15 +87,18 @@ func (e *Engine) readScope(ctx context.Context, tx pgx.Tx, c cursor) (readSequen
 		}
 	} else {
 		seq.units, seq.gaps = readLeads(nodes, nodes[target])
-		subtree, err := readSubtree(ctx, tx, id, key, anchor)
-		if err != nil {
-			return seq, "", err
+		subtree, subtreeErr := readSubtree(ctx, tx, id, key, anchor)
+		if subtreeErr != nil {
+			return seq, "", subtreeErr
 		}
 		rendered := renderTree(subtree, nodes[target].ID)
 		seq.units = append(seq.units, readTextUnit("provision", nodes[target], readAncestry(nodes, nodes[target]), string(rendered.text)))
 		if rendered.ambiguous {
 			seq.gaps = append(seq.gaps, readAmbiguity(nodes[target]))
 		}
+	}
+	if err = attachReadWarnings(ctx, tx, nodes, seq.units); err != nil {
+		return readSequence{}, "", err
 	}
 	seq.complete = len(seq.gaps) == 0
 	return seq, "", nil
