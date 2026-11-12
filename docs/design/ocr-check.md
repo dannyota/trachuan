@@ -85,11 +85,13 @@ Reason: an unfinished check must never read as a clean one.
 `<model id>/<effort>/ocr-check-<n>`, for example
 `claude-sonnet-5-5/medium/ocr-check-2`. `n` versions the instruction, the
 schema, the input form and the rendering settings together (version 1: the PDF
-as a document block; version 2: page images at 150 dpi). The extract recipe
-names one checker id; changing the model, the effort, the instruction or the
-schema is a new id, new check rows and a rerun of extract for the affected
-documents. The id used for a release is chosen after the pilot and recorded
-here.
+as a document block; version 2: page images at 150 dpi, grayscale PNG, one
+render process per page). A later version may take JPEG pages, which render
+about ten times faster ([measured](ocr-vision.md#rendering-cost)); that is a new
+version and id, never a change inside a pass. The extract recipe names one
+checker id; changing the model, the effort, the instruction or the schema is a
+new id, new check rows and a rerun of extract for the affected documents. The id
+used for a release is chosen after the pilot and recorded here.
 
 ## Running checks
 
