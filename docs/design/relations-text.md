@@ -228,12 +228,11 @@ a title tail, a date range; rejection fixtures cover: a quoted replacement
 article, a missing `của`, two document numbers, mixed verbs, an unlinked number.
 The development case dev-004 stays an honest retrieval miss: on run
 vn/20261111_4 the diagram does not link 10/2023/TT-NHNN to 39/2016/TT-NHNN, and
-39/2016/TT-NHNN Article 8 has no clause nodes. Version 1 rejects its sentence
-earlier, as `relation_text_multi_target` (run vn/20261112_2), because the tail
-holds a parenthetical naming 06/2023/TT-NHNN; version 2 reads that parenthetical
-([tails](relations-text-scoped.md#tails)), so the sentence reaches the target
-check and becomes a `relation_text_unlinked_target` gap. The suspension becomes
-visible only when VBPL adds the link, or when a future manual relation contract
-(not defined by [validity status](validity-status.md), which covers validity
-corrections only) supplies the verified pair; it resolves to the clause only
-when the clause nodes exist.
+39/2016/TT-NHNN Article 8 has no clause nodes. Its sentence never reaches the
+target check: the tail holds a parenthetical naming 06/2023/TT-NHNN, so it is a
+`relation_text_multi_target` gap (run vn/20261112_2), and
+[version 2](relations-text-scoped.md#not-in-version-2) keeps that. The
+suspension becomes visible only when VBPL adds the link, or when a future manual
+relation contract (not defined by [validity status](validity-status.md), which
+covers validity corrections only) supplies the verified pair; it resolves to the
+clause only when the clause nodes exist.
