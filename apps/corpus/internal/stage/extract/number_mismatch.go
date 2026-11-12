@@ -99,7 +99,7 @@ func transcriptionMismatch(dir, id string, doc fetch.Document) (string, error) {
 		for _, p := range paragraphs {
 			blocks = append(blocks, p.Text)
 		}
-		header := strings.Join(blocks, " ")
+		header := headerPrefix(strings.Join(blocks, " "))
 		for _, marker := range []string{"Căn cứ", "CĂN CỨ", "Chiểu", "CHIỂU", "Theo đề nghị", "Xét đề nghị", "Điều 1"} {
 			if i := strings.Index(header, marker); i >= 0 {
 				header = header[:i]

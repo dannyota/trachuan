@@ -2,6 +2,7 @@ package extract
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -45,5 +46,18 @@ func TestTitleHasNumber_WholeToken(t *testing.T) {
 				t.Fatalf("got %v want %v", got, tc.want)
 			}
 		})
+	}
+}
+
+func TestHeaderNumbers_Bounds(t *testing.T) {
+	header := strings.Repeat("SỐ 47/SL ", 10000)
+	if got := headerNumbers(header); len(got) != 50 {
+		t.Fatalf("got %d candidates, want 50", len(got))
+	}
+	if got := headerNumbers(strings.Repeat("ả", 4000) + " SỐ 47/SL"); len(got) != 0 {
+		t.Fatalf("number beyond header limit: %q", got)
+	}
+	if got := headerNumbers(strings.Repeat("SỐ 1 ", 50) + "SỐ 47/SL"); len(got) != 0 {
+		t.Fatalf("number beyond marker limit: %q", got)
 	}
 }
