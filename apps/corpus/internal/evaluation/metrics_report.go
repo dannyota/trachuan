@@ -159,18 +159,63 @@ func finishReport(r *Report, all map[metricKey]*Metrics, modes []retrieval.Mode)
 }
 
 func markMappingUnavailable(r *Report) {
-	markCohortMappingUnavailable(r, "old_product")
+	markCohortMappingUnavailable(r, "old_product", 0)
 }
 
-func markCohortMappingUnavailable(r *Report, cohort string) {
+func markCohortMappingUnavailable(r *Report, cohort string, count int) {
 	stats := r.Cohorts[cohort]
 	for i := range stats.Metrics {
 		m := &stats.Metrics[i]
 		if m.Name == "recall" || m.Name == "macro_recall" || m.Name == "mrr" {
+			if m.Value != nil && count > 0 {
+				m.Reason, m.MappingIncompleteCount = "mapping_incomplete", count
+			}
 			m.Value = nil
 		}
 	}
 	r.Cohorts[cohort] = stats
+}
+
+func finishMappingReport(r *Report, inputs []cohortInput, rejects map[string]bool, mapping ValidationReport) {
+	r.MappingIncomplete = []MappingIncomplete{}
+	counts := map[string]int{}
+	for _, input := range inputs {
+		if rejects[input.c.ID] || len(input.c.ExpectedCitations) == 0 {
+			continue
+		}
+		for _, cohort := range input.cohorts {
+			if cohort == "legacy" {
+				continue
+			}
+			found := false
+			for _, issue := range mapping[input.c.ID] {
+				if issue.Kind != "mapping_incomplete" {
+					continue
+				}
+				found = true
+				r.MappingIncomplete = append(r.MappingIncomplete, MappingIncomplete{input.c.ID, cohort, issue.CitationIndex, issue.Detail})
+			}
+			if found {
+				counts[cohort]++
+			}
+		}
+	}
+	sort.Slice(r.MappingIncomplete, func(i, j int) bool {
+		a, b := r.MappingIncomplete[i], r.MappingIncomplete[j]
+		if a.Cohort != b.Cohort {
+			return a.Cohort < b.Cohort
+		}
+		if a.CaseID != b.CaseID {
+			return a.CaseID < b.CaseID
+		}
+		if a.CitationIndex != b.CitationIndex {
+			return a.CitationIndex < b.CitationIndex
+		}
+		return a.Detail < b.Detail
+	})
+	for cohort, count := range counts {
+		markCohortMappingUnavailable(r, cohort, count)
+	}
 }
 
 func finishQuality(r *Report, previous *Report) {
@@ -247,7 +292,7 @@ func finishProductQuality(r *Report, previous *Report) {
 						status = "fail"
 					}
 				}
-				r.NonRegression = append(r.NonRegression, NonRegression{Mode: mode, Arms: "hybrid", Limit: spec.limit, Name: spec.name, Value: m.Value, PreviousValue: old, Status: status, ValidityOverrides: r.ValidityOverrides, CapOverride: r.CapOverride})
+				r.NonRegression = append(r.NonRegression, NonRegression{Mode: mode, Arms: "hybrid", Limit: spec.limit, Name: spec.name, Value: m.Value, PreviousValue: old, Status: status, ValidityOverrides: r.ValidityOverrides, CapOverride: r.CapOverride, Reason: m.Reason, MappingIncompleteCount: m.MappingIncompleteCount})
 			}
 		}
 	}
