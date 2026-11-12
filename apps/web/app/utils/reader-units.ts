@@ -22,3 +22,20 @@ export function joinedUnits(units: Unit[]): Unit[] {
   }
   return result
 }
+
+
+export function warningsByTarget(units: Unit[]): Map<string, NonNullable<Unit['warnings']>> {
+  const groups = new Map<string, NonNullable<Unit['warnings']>>()
+  const seen = new Set<string>()
+  for (const unit of units) {
+    for (const warning of unit.warnings || []) {
+      const identity = JSON.stringify([warning.kind, warning.key, warning.source, warning.target, warning.named, warning.exact, warning.basis])
+      if (seen.has(identity)) continue
+      seen.add(identity)
+      const group = groups.get(warning.target) || []
+      group.push(warning)
+      groups.set(warning.target, group)
+    }
+  }
+  return groups
+}
