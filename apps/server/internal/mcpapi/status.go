@@ -9,12 +9,14 @@ import (
 )
 
 type statusResult struct {
-	Release          string           `json:"release"`
-	Documents        int64            `json:"documents"`
-	Provisions       int64            `json:"provisions"`
-	Nodes            int64            `json:"nodes"`
-	Gaps             map[string]int64 `json:"gaps,omitempty"`
-	NewestSourceDate string           `json:"newest_source_date,omitempty"`
+	Release          string            `json:"release"`
+	Documents        int64             `json:"documents"`
+	Provisions       int64             `json:"provisions"`
+	Nodes            int64             `json:"nodes"`
+	DocTypes         []retrieval.Facet `json:"doc_types"`
+	Issuers          []retrieval.Facet `json:"issuers"`
+	Gaps             map[string]int64  `json:"gaps,omitempty"`
+	NewestSourceDate string            `json:"newest_source_date,omitempty"`
 }
 
 func (cfg Config) status(ctx context.Context, in countryInput) (statusResult, error) {
@@ -27,7 +29,7 @@ func (cfg Config) status(ctx context.Context, in countryInput) (statusResult, er
 	if err != nil {
 		return statusResult{}, err
 	}
-	result := statusResult{Release: lease.Release, Documents: status.Documents, Provisions: status.Provisions, Nodes: status.Nodes, Gaps: status.Gaps}
+	result := statusResult{Release: lease.Release, Documents: status.Documents, Provisions: status.Provisions, Nodes: status.Nodes, DocTypes: status.DocTypes, Issuers: status.Issuers, Gaps: status.Gaps}
 	if status.NewestSourceDate != nil {
 		result.NewestSourceDate = status.NewestSourceDate.Format(time.DateOnly)
 	}

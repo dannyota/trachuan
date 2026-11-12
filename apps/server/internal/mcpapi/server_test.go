@@ -173,7 +173,7 @@ func TestMCP_ToolsListedWithSchemas(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(r.Tools) != 6 {
+	if len(r.Tools) != 7 {
 		t.Fatalf("tools %d", len(r.Tools))
 	}
 	names := map[string]bool{}
@@ -183,7 +183,7 @@ func TestMCP_ToolsListedWithSchemas(t *testing.T) {
 			t.Fatal("missing schema")
 		}
 	}
-	for _, name := range []string{"guide", "corpus_status", "search", "read", "quality_gaps", "report_issue"} {
+	for _, name := range []string{"guide", "corpus_status", "taxonomy", "search", "read", "quality_gaps", "report_issue"} {
 		if !names[name] {
 			t.Fatal("missing " + name)
 		}
@@ -218,7 +218,7 @@ func TestMCP_SearchFullDetail(t *testing.T) {
 }
 func TestMCP_SearchRejectsUnknownFieldsAndBadLimit(t *testing.T) {
 	h := newHarness(t, nil)
-	for _, extra := range []string{`"limit":51`, `"limit":0`, `"limit":-1`, `"limit":1.5`, `"nodes":[]`, `"detail":"other"`, `"as_of":"2020-02-30"`, `"as_of":"0000-01-01"`, `"country":"us"`, `"query":""`, `"query":null`, `"limit":null`, `"Query":"private"`} {
+	for _, extra := range []string{`"limit":51`, `"limit":0`, `"limit":-1`, `"limit":1.5`, `"detail":"other"`, `"as_of":"2020-02-30"`, `"as_of":"0000-01-01"`, `"country":"us"`, `"query":""`, `"query":null`, `"limit":null`, `"Query":"private"`} {
 		args := json.RawMessage(`{"country":"vn","query":"ngân hàng",` + extra + `}`)
 		wantError(t, callTool(t, h, "search", args), "invalid_request")
 	}

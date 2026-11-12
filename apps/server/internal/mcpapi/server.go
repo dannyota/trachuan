@@ -84,6 +84,7 @@ func registerTools(s *mcp.Server, cfg Config) {
 	register(s, cfg, "guide", "How to search, read and cite Vietnamese law.", func(_ context.Context, _ countryInput) (guideResult, error) {
 		return guideResult{Guide: guideText}, nil
 	})
+	register(s, cfg, "taxonomy", "Find served taxonomy node codes.", cfg.taxonomy)
 	register(s, cfg, "corpus_status", "Counts and coverage of the active corpus.", cfg.status)
 	register(s, cfg, "quality_gaps", "Page through recorded corpus quality gaps.", cfg.gaps)
 	register(s, cfg, "search", "Search Vietnamese law; compact hits by default.", cfg.search)

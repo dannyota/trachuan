@@ -49,6 +49,9 @@ func newWebMux(d webDeps) *http.ServeMux {
 	publicLimit := newLoginLimiter(d.loginLimit.clock, d.loginLimit.proxies)
 	publicLimit.cost = time.Second
 	mux.Handle("GET /api/v1/public/status", publicLimit.middleware(webapi.NewPublicStatus(d.tools)))
+	taxonomy := publicLimit.middleware(webapi.NewPublicTaxonomy(d.tools))
+	mux.Handle("GET /api/v1/public/taxonomy", taxonomy)
+	mux.Handle("GET /api/v1/public/taxonomy/{code}", taxonomy)
 	clients := oauth.NewClients(d.oauthDB, d.oauthClients, oauth.NewCIMDResolver())
 	for pattern, handler := range map[string]http.Handler{
 		"GET /.well-known/oauth-protected-resource":     oauth.ProtectedResourceMetadata(d.publicURL),

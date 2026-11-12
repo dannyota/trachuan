@@ -24,6 +24,8 @@ func httpError(err error) (int, string) {
 	switch code {
 	case "invalid_request":
 		return 400, code
+	case "not_found":
+		return 404, code
 	case "release_expired":
 		return 409, code
 	case "busy":
