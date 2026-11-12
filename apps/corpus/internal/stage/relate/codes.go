@@ -12,16 +12,19 @@ import (
 )
 
 type relation struct {
-	Ordinal      int     `json:"ordinal"`
-	Kind         string  `json:"kind"`
-	RawCode      string  `json:"raw_code"`
-	RawLabel     string  `json:"raw_label"`
-	Method       string  `json:"method"`
-	Evidence     string  `json:"evidence"`
-	TargetVBPLID string  `json:"target_vbpl_id"`
-	TargetNumber string  `json:"target_number"`
-	SourceNodeID *string `json:"source_node_id"`
-	TargetNodeID *string `json:"target_node_id"`
+	Ordinal         int     `json:"ordinal"`
+	Kind            string  `json:"kind"`
+	RawCode         string  `json:"raw_code"`
+	RawLabel        string  `json:"raw_label"`
+	Method          string  `json:"method"`
+	Evidence        string  `json:"evidence"`
+	TargetVBPLID    string  `json:"target_vbpl_id"`
+	TargetNumber    string  `json:"target_number"`
+	SourceNodeID    *string `json:"source_node_id"`
+	TargetNodeID    *string `json:"target_node_id"`
+	TargetAnchor    string  `json:"target_anchor,omitempty"`
+	IssuerCode      string  `json:"issuer_code,omitempty"`
+	StatedIssueDate *string `json:"stated_issue_date,omitempty"`
 }
 
 type identifier string
@@ -105,16 +108,7 @@ func relations(detail, diagram []byte, codes map[string]source.RelationCode) ([]
 			add(relation{RawCode: code, Method: "vbpl_diagram", Evidence: doc.Name, TargetVBPLID: string(doc.ID), TargetNumber: documentNumber(doc.Name)})
 		}
 	}
-	sort.Slice(rows, func(i, j int) bool {
-		a, b := rows[i], rows[j]
-		if a.RawCode != b.RawCode {
-			return a.RawCode < b.RawCode
-		}
-		if a.TargetVBPLID != b.TargetVBPLID {
-			return a.TargetVBPLID < b.TargetVBPLID
-		}
-		return a.TargetNumber < b.TargetNumber
-	})
+	sortRelations(rows)
 	missing := make(map[string]bool)
 	for i := range rows {
 		rows[i].Ordinal = i
@@ -155,4 +149,36 @@ func resolveGaps(rows []relation, unmapped []string, expected map[string]bool) [
 		}
 	}
 	return gaps
+}
+
+func sortRelations(rows []relation) {
+	sort.Slice(rows, func(i, j int) bool {
+		a, b := rows[i], rows[j]
+		left, right := []string{a.RawCode, a.TargetVBPLID, a.TargetNumber, nodeValue(a.SourceNodeID), a.TargetAnchor, a.Kind}, []string{b.RawCode, b.TargetVBPLID, b.TargetNumber, nodeValue(b.SourceNodeID), b.TargetAnchor, b.Kind}
+		for k := range left {
+			if left[k] != right[k] {
+				return left[k] < right[k]
+			}
+		}
+		return false
+	})
+}
+
+func nodeValue(node *string) string {
+	if node == nil {
+		return ""
+	}
+	return *node
+}
+
+// MarshalJSON preserves diagram rows and records absent text dates as null.
+func (r relation) MarshalJSON() ([]byte, error) {
+	type row relation
+	if r.Method == "text_rule/1" {
+		return json.Marshal(struct {
+			row
+			StatedIssueDate *string `json:"stated_issue_date"`
+		}{row(r), r.StatedIssueDate})
+	}
+	return json.Marshal(row(r))
 }

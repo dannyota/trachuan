@@ -6,22 +6,26 @@ import (
 	"sort"
 	"strings"
 
+	"danny.vn/trachuan/apps/corpus/internal/source"
 	"danny.vn/trachuan/apps/corpus/internal/stage/fetch"
 	"danny.vn/trachuan/apps/corpus/internal/stage/relate"
 	"danny.vn/trachuan/internal/retrieval"
 )
 
 type relationRow struct {
-	Ordinal      int     `json:"ordinal"`
-	Kind         string  `json:"kind"`
-	RawCode      string  `json:"raw_code"`
-	RawLabel     string  `json:"raw_label"`
-	Method       string  `json:"method"`
-	Evidence     string  `json:"evidence"`
-	TargetID     string  `json:"target_vbpl_id"`
-	TargetNumber string  `json:"target_number"`
-	SourceNode   *string `json:"source_node_id"`
-	TargetNode   *string `json:"target_node_id"`
+	Ordinal         int     `json:"ordinal"`
+	Kind            string  `json:"kind"`
+	RawCode         string  `json:"raw_code"`
+	RawLabel        string  `json:"raw_label"`
+	Method          string  `json:"method"`
+	Evidence        string  `json:"evidence"`
+	TargetID        string  `json:"target_vbpl_id"`
+	TargetNumber    string  `json:"target_number"`
+	SourceNode      *string `json:"source_node_id"`
+	TargetNode      *string `json:"target_node_id"`
+	TargetAnchor    string  `json:"target_anchor,omitempty"`
+	IssuerCode      string  `json:"issuer_code,omitempty"`
+	StatedIssueDate *string `json:"stated_issue_date,omitempty"`
 }
 type pendingRelation struct {
 	key, hash string
@@ -61,7 +65,7 @@ func nodeID(d *loadedDocument, n *string) any {
 	}
 	return id
 }
-func (l *loader) loadRelations(ctx context.Context) error {
+func (l *loader) loadRelations(ctx context.Context, issuers map[string]string) error {
 	var entries []pendingRelation
 	for key, item := range l.items["relate"] {
 		if item.State != "done" || (l.inv.Version == 2 && (!l.present[key] || strings.HasPrefix(key, "vn:chinhphu:"))) {
@@ -99,6 +103,7 @@ func (l *loader) loadRelations(ctx context.Context) error {
 		return entries[i].row.Ordinal < entries[j].row.Ordinal
 	})
 	numbers := l.documentNumbers()
+	identities := map[string]fetch.Document{}
 	for _, entry := range entries {
 		r := entry.row
 		source := l.docs[entry.key]
@@ -111,6 +116,29 @@ func (l *loader) loadRelations(ctx context.Context) error {
 		} else if key := resolveNumber(numbers, r.TargetNumber); key != "" {
 			targetKey = key
 			target = l.docs[key]
+		}
+		detail := fmt.Sprintf("%s:%d", entry.hash, r.Ordinal)
+		if r.TargetAnchor != "" && target != nil {
+			if retrieval.NormalizeNumber(target.number) != retrieval.NormalizeNumber(r.TargetNumber) {
+				l.addGap("build", entry.key, "relation_text_identity_conflict", detail+":number")
+				continue
+			}
+			identity, found := identities[target.key]
+			if !found {
+				dir, err := artifactDir(l.artifacts, l.items["fetch"][target.key])
+				if err != nil {
+					return fmt.Errorf("relation target artifact: %w", err)
+				}
+				identity, err = fetch.ReadDocument(dir, target.key)
+				if err != nil {
+					return fmt.Errorf("decode relation target: %w", err)
+				}
+				identities[target.key] = identity
+			}
+			if !textRelationIdentity(r, identity, issuers) {
+				l.addGap("build", entry.key, "relation_text_identity_conflict", detail)
+				continue
+			}
 		}
 		srcNumber := ""
 		if source != nil {
@@ -128,10 +156,22 @@ func (l *loader) loadRelations(ctx context.Context) error {
 		} else {
 			l.addGap("build", entry.key, "source_provenance_missing", "relation source number")
 		}
+
 		srcNode, dstNode := nodeID(source, r.SourceNode), nodeID(target, r.TargetNode)
-		if (r.SourceNode != nil && srcNode == nil) || (r.TargetNode != nil && dstNode == nil) {
-			l.addGap("build", entry.key, "unresolved_provision_relation", fmt.Sprintf("%s:%d", entry.hash, r.Ordinal))
+		if r.SourceNode != nil && srcNode == nil {
+			l.addGap("build", entry.key, "unresolved_provision_relation", detail)
 		}
+		if r.TargetAnchor != "" {
+			r.TargetNode = &r.TargetAnchor
+			var gap string
+			dstNode, gap = relationAnchor(target, r.TargetAnchor)
+			if gap != "" {
+				l.addGap("build", entry.key, gap, detail)
+			}
+		} else if r.TargetNode != nil && dstNode == nil && (r.SourceNode == nil || srcNode != nil) {
+			l.addGap("build", entry.key, "unresolved_provision_relation", detail)
+		}
+
 		_, err := l.tx.Exec(ctx, `INSERT INTO relation(id,source_document_id,target_document_id,source_key,target_key,source_number,target_number,kind,raw_code,raw_label,source_provision_id,target_provision_id,source_node_id,target_node_id,evidence,method,artifact_sha256,ordinal) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)`, l.counts.Relations+1, docID(source), docID(target), entry.key, targetKey, srcNumber, r.TargetNumber, r.Kind, r.RawCode, r.RawLabel, srcNode, dstNode, r.SourceNode, r.TargetNode, r.Evidence, r.Method, entry.hash, r.Ordinal)
 		if err != nil {
 			return fmt.Errorf("insert relation: %w", err)
@@ -157,4 +197,65 @@ func (l *loader) documentNumbers() map[string][]string {
 		}
 	}
 	return numbers
+}
+
+func relationAnchor(target *loadedDocument, anchor string) (any, string) {
+	if target == nil {
+		return nil, ""
+	}
+	var resolved any
+	path := ""
+	for i, component := range strings.Split(anchor, "/") {
+		if i > 0 {
+			path += "/"
+		}
+		path += component
+		var found any
+		for node, candidate := range target.anchors {
+			if candidate == path {
+				found = target.nodes[node]
+			}
+			if suffix, ok := strings.CutPrefix(candidate, path+"~"); ok && anchorSuffix(suffix) {
+				return nil, "relation_anchor_ambiguous"
+			}
+		}
+		if found == nil {
+			if i == 0 {
+				return nil, "relation_article_unresolved"
+			}
+			return resolved, "relation_clause_unresolved"
+		}
+		resolved = found
+	}
+	return resolved, ""
+}
+
+func anchorSuffix(s string) bool {
+	if s == "" {
+		return false
+	}
+	for _, c := range s {
+		if c < '0' || c > '9' {
+			return false
+		}
+	}
+	return true
+}
+
+func textRelationIdentity(row relationRow, target fetch.Document, issuers map[string]string) bool {
+	expected := issuers[row.IssuerCode]
+	if expected == "" || source.NormalizeIssuer(target.Issuer) != expected {
+		return false
+	}
+	if row.StatedIssueDate != nil {
+		stated, err := ParseDate(*row.StatedIssueDate)
+		if err != nil || stated == nil {
+			return false
+		}
+		actual, err := ParseDate(target.IssueDate)
+		if err != nil || actual == nil || !stated.Equal(*actual) {
+			return false
+		}
+	}
+	return true
 }
