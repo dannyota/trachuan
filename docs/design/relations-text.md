@@ -232,7 +232,8 @@ vn/20261111_4 the diagram does not link 10/2023/TT-NHNN to 39/2016/TT-NHNN, and
 target check: the tail holds a parenthetical naming 06/2023/TT-NHNN, so it is a
 `relation_text_multi_target` gap (run vn/20261112_2), and
 [version 2](relations-text-scoped.md#not-in-version-2) keeps that. The
-suspension becomes visible only when VBPL adds the link, or when a future manual
-relation contract (not defined by [validity status](validity-status.md), which
-covers validity corrections only) supplies the verified pair; it resolves to the
-clause only when the clause nodes exist.
+suspension becomes visible through the text rule only when VBPL adds the link
+and a later version reads amendment-history parentheticals, or when a future
+manual relation contract (not defined by [validity status](validity-status.md),
+which covers validity corrections only) supplies the verified pair; it resolves
+to the clause only when the clause nodes exist.

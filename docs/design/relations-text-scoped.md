@@ -26,73 +26,82 @@ leads in 287 documents with 3,295 list items: 1,730 name an article, 361 name
 only a clause or point, 369 insert new provisions, 195 change a phrase, 425 name
 a document of their own, 89 an annex or form, 62 a chapter or section, 36 a
 title and 28 none of these. These are heuristic candidate counts from a pattern
-scan, not parser output; one item can yield several rows. In 679 of the items
-the article's own text holds no item line and the items sit only in clause nodes
-(Article 1 of the act above holds its heading, its four items are clause nodes);
-version 1 reads only article text and never saw them.
+scan, not parser output; one item can yield several rows. For 679 of the items
+the scan found no item line in the article's text and took them from descendant
+nodes instead (Article 1 of the act above holds only its heading; its four items
+are clause nodes).
 
-## Reading the article
+## One fail-closed reading rule
 
-Version 2 reads an article as one stream: the article's text, then each
-descendant `khoan` and `diem` node in preorder, skipping a node whose normalized
-text is contained in the article's or an already read ancestor's normalized
-text. Quotation state carries across the whole stream: text inside a quotation
-is never a candidate, a quotation inside a candidate is one opaque token, and a
-stream that ends inside a quotation yields nothing for the article
-(`relation_text_unbalanced_quote`).
+Version 2 reads an article only when its structure is unambiguous, and an
+article it cannot read yields no text row at all. Three conditions make it
+unambiguous; each failure is one counted gap for the article:
 
-A line break ends a sentence only when the next line starts with a list marker
-(`N.` or `x)`), an article label or a quotation mark; any other line continues
-the sentence, joined by one space. Within a line the version 1 full-stop rule
-splits.
+1. **Source order.** Either the article's text contains the normalized text of
+   every descendant node, and the article's text alone is read; or the article
+   has descendants, its text is only its label and lead, and it contains none of
+   theirs, and the lead is read, then each direct `khoan` child's subtree by the
+   same rule. Anything else (partial containment, own text besides the lead next
+   to separate children) gives `relation_text_source_order`.
+2. **Quoted wording.** A sentence ending in `như sau` (optionally `:`) after an
+   item introduces new wording, which must be exactly one quotation opening
+   right after it; the quotation's text never yields a row. An item's `như sau`
+   followed by anything else gives `relation_text_unquoted_wording`. A
+   scope-list lead's `như sau` introduces its item list instead. Quotation state
+   carries across the article's read units; a quotation still open at the end of
+   an item's unit, or of the article, gives `relation_text_unbalanced_quote`.
+3. **Sentence ends.** A line break ends a sentence only before a line that
+   starts with a list marker (`N.` or `x)`) or a quotation mark; every other
+   line continues the sentence, joined by one space, so `Điều 5.` on its own
+   line belongs to the locator before it. A sentence other than the article's
+   first must end with `.`, `;`, `:` or the end of its unit; one that breaks
+   before a marker line without them gives `relation_text_grammar`.
 
-After a sentence that ends with `như sau` (optionally `:`), every following
-sentence up to the next sentence at that sentence's list level or higher is the
-new wording it introduces, quoted or not, and never yields a row. These rules
-apply to version 1 sentences as well.
+These rules apply to version 1 sentences as well, since version 2 replaces how
+an article is read. A scan of run vn/20261112_2 with the scope-list leads below
+found 494 such articles: 410 read their text alone, 75 read a heading-only lead
+and its clause nodes, and 9 fail source order. Of 2,313 numbered items in them,
+1,616 end in `như sau` followed by a quotation, 440 have no `như sau`, and 257
+have unquoted new wording, which drops their articles.
 
 ## Scope lead
 
 The article's first sentence, after the label `Điều N.`, is a scope lead when it
 reads, in order:
 
-1. One or more verbs of the table joined by `,` or `và`.
-2. An object, either a scope list (optional `một số` or `các`, then nouns from
-   the closed list `điều`, `điều khoản`, `khoản`, `điểm`, `nội dung`,
-   `quy định`, `cụm từ`, `từ`, `từ ngữ`, `mẫu`, `mẫu biểu`, `biểu mẫu`,
-   `phụ lục`, joined by `,` or `và`; about 480 of the 563 leads) or one version
-   1 target group closing in one article (`khoản 2 Điều 8`; about 20 leads).
+1. One or more verbs of the table joined by `,` or `và`. Kinds may differ, since
+   a lead emits no row.
+2. A scope list: optional `một số` or `các`, then nouns from the closed list
+   `điều`, `điều khoản`, `khoản`, `điểm`, `nội dung`, `quy định`, `cụm từ`,
+   `từ`, `từ ngữ`, `mẫu`, `mẫu biểu`, `biểu mẫu`, `phụ lục`, joined by `,` or
+   `và` (about 480 of the 563 leads).
 3. `của` or `tại`, then version 1 items 5 and 6 unchanged: type, number, issuer
    table, tail, stated date.
 
-Opening a scope and emitting a row are separate. The scope opens when the lead's
-target passes the version 1 identity rule; that target is the scope document,
-and a target-group object makes its article the scope article. The lead emits a
-row of its own only when its object is a target group and its verbs map to one
-kind (version 1); a target group with mixed verbs opens the scope and gets
-`relation_text_mixed_verbs` for itself. A lead that fails identity keeps its
-version 1 gap (`relation_text_unlinked_target` for a number without a diagram
-link), and each item under it yields gap `relation_text_scope_rejected` and no
-row. A lead that starts with a verb but fits neither object form gets
-`relation_text_grammar` and opens no scope.
+The scope opens when the lead's target passes the version 1 identity rule; that
+target is the scope document. A lead that fails identity keeps its version 1 gap
+(`relation_text_unlinked_target` for a number without a diagram link), and each
+item under it yields gap `relation_text_scope_rejected` and no row. A lead whose
+object is a target group (`Sửa đổi Điều 8 của ...`) is a version 1 sentence and
+opens no scope, because its `như sau` cannot tell an item list from the
+article's new wording. A lead that starts with a verb but fits neither gets
+`relation_text_grammar`.
 
 ## Items
 
 An item is a top-level entry of the scope: in the article's text, a sentence
-that starts a line with marker `N.`; in the tree, the first sentence of a direct
-`khoan` child of the article. It starts, after the marker, with a verb of the
-table or with a phrase starter of the special forms, and names no document (no
-type word followed by a number token). It reads version 1 items 1 to 4 (marker,
-verb phrase of one kind, date range, target groups), then optionally `như sau`
-and `:`, and nothing else. A target group may lack its closing article only when
-a scope article exists, and then closes on it. A candidate that names a document
-is a version 1 sentence with its own target, never an item.
+that starts a line with marker `N.`; in a direct `khoan` child, the child's
+first sentence. It starts, after the marker, with a verb of the table or with a
+phrase starter of the special forms, and names no document (no type word
+followed by a number token). It reads version 1 items 1 to 4 (marker, verb
+phrase of one kind, date range, target groups, each group closed by an article),
+then optionally `như sau` and `:`, and nothing else. A candidate that names a
+document is a version 1 sentence with its own target, never an item.
 
 Every other sentence in a scope that starts with a verb outside a quotation (a
 point line `x)`, a sentence in a `diem` node or deeper, the second sentence of
-an item, unquoted new wording after `như sau`) is a nested instruction: gap
-`relation_text_nested_scope`, no row. Version 2 never carries the scope's
-article or document below the top level.
+an item) is a nested instruction: gap `relation_text_nested_scope`, no row. The
+scope document is never carried below the top level.
 
 An item row is a version 1 row whose `target_vbpl_id`, `target_number` and
 `stated_issue_date` come from the lead and whose `target_anchor` comes from the
@@ -122,19 +131,23 @@ phrase form; it is not a verb of the table.
 ## Checks
 
 - Accept fixtures: both articles of 19/2018/TT-NHNN's amending act above (items
-  in the article text and in clause nodes); a lead with a target group and an
-  item `Bãi bỏ khoản 3.` (rows `dieu-8` and `dieu-8/khoan-3`); a mixed-verb
-  target-group lead whose items still emit; each special form in the table; an
-  item continued on the next line with its own document (`1. Bãi bỏ Điều 5` /
-  `của Thông tư số 39/2016/TT-NHNN.`, a version 1 row on 39/2016/TT-NHNN).
+  in the article text, read alone; items in clause nodes after a heading-only
+  article); a scope-list lead ending in `như sau:` followed by items; an item
+  whose `như sau:` opens a quotation that spans its point nodes; each special
+  form in the table; a locator continued on the next line (`1. Bãi bỏ khoản 2` /
+  `Điều 5.`, anchor `dieu-5/khoan-2`); an item continued with its own document
+  (`1. Bãi bỏ Điều 5` / `của Thông tư số 39/2016/TT-NHNN.`, a version 1 row on
+  39/2016/TT-NHNN).
 - Reject fixtures: items under a lead whose number has no diagram link
   (`relation_text_scope_rejected`); a lead whose tail names a second number;
   `Bãi bỏ cụm từ ... tại khoản 2 Điều 5` emitting `repeals`;
-  `Bãi bỏ tên Điều 18`; an annex item; a new article; a clause item without a
-  scope article; a point instruction under `Sửa đổi khoản 2 như sau:`
-  (`relation_text_nested_scope`, not `dieu-8/diem-b`); a quotation opened in a
-  clause node and closed in a later point node, with an unquoted directive
-  between them; new wording after `như sau` without quotation marks.
+  `Bãi bỏ tên Điều 18`; an annex item; a new article; a clause item without its
+  article; a target-group lead with clause items (no scope); a point instruction
+  (`relation_text_nested_scope`); an item `Sửa đổi khoản 2 Điều 8 như sau:`
+  followed by an unquoted `2. Bãi bỏ Điều 5.` (`relation_text_unquoted_wording`,
+  no repeal); an article whose own text holds one item while another item is a
+  separate clause node (`relation_text_source_order`); a quotation opened in one
+  clause and closed in the next.
 - On the next evaluated run the relate report counts rows per kind and gaps per
   name. The primary reads 50 item rows drawn at random against the source
   article; a wrong document or anchor blocks the recipe until a fixture covers
@@ -144,7 +157,8 @@ phrase form; it is not a verb of the table.
 ## Not in version 2
 
 Chapter or section headings as leads (the 11/2026/TT-NHNN Chapter VIII case);
-nested instructions (counted as `relation_text_nested_scope`); amendment-history
+leads naming one article with clause items; unquoted new wording; nested
+instructions (counted as `relation_text_nested_scope`); amendment-history
 parentheticals in a tail (`(đã được bổ sung theo ...)`, which hold another
 document number and keep version 1's `relation_text_multi_target`; 87 rejected
 sentences on run vn/20261112_2, among them dev-004's); annex anchors; and
