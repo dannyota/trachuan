@@ -33,9 +33,11 @@ name the reading it was built from.
 
 Ids. An engine id names the engine and version as its operator names them:
 `vision-ocr/builtin-latest` for banhmi's stored Google Vision output, and
-`vision-ocr/builtin-latest/poppler-200` for the fresh client. A checker id names
-the model and the prompt version. The extract recipe carries the ordered list of
-accepted engine ids and the one checker id, so changing either reruns extract.
+`vision-ocr/builtin-latest/poppler-200` and
+`vision-ocr/builtin-latest/poppler-200-jpeg` for the fresh client reading PNG
+and JPEG pages. A checker id names the model and the prompt version. The extract
+recipe carries the ordered list of accepted engine ids and the one checker id,
+so changing either reruns extract.
 
 Writing an entry: the text file is written and synced, linked to its final name,
 and its directory synced, before the row is inserted; a row therefore never

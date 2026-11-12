@@ -29,15 +29,18 @@ The client sends page images, one page per request, for every PDF:
   must equal the hash the bundle lists; the same bytes are then counted,
   rendered and named in the store entry. A mismatch fails the document before
   any request.
-- Pages are rendered by the cross-check's
-  [contained renderer](ocr-check.md#limits): `pdftoppm` in the sandbox, page by
-  page, grayscale PNG, at 200 dpi with the same raster cap. The page count read
-  with pdfcpu must equal the number of pages rendered; otherwise the document
-  fails and nothing is stored.
+- Pages are rendered in the cross-check's [sandbox](ocr-check.md#limits) with
+  its page size checks and raster cap, but as JPEG: one `pdftoppm` process per
+  document, 200 dpi, grayscale, quality 90, one file per page in the scratch
+  directory. PNG encoding was the cost of the first run
+  ([measured](#rendering-cost)). Page files are read and sent one at a time, so
+  memory holds the pages in flight, not the document. The render bound is 30
+  seconds plus 2 seconds per page. The page count read with pdfcpu must equal
+  the number of page files; otherwise the document fails and nothing is stored.
 - One `images:annotate` request per page: feature `DOCUMENT_TEXT_DETECTION`,
-  model `builtin/latest`, language hint `vi`, the PNG bytes inline. One page per
-  request keeps a failed page from discarding its neighbours and matches how the
-  imported texts were made.
+  model `builtin/latest`, language hint `vi`, the JPEG bytes inline. One page
+  per request keeps a failed page from discarding its neighbours and matches how
+  the imported texts were made.
 - The text of a page is the response's `fullTextAnnotation.text`, empty when the
   response has none. A response that carries an error status fails the page.
   Transient failures (unavailable, deadline, resource exhausted, internal) are
@@ -46,8 +49,10 @@ The client sends page images, one page per request, for every PDF:
   with one blank line, in page order, as the imported texts are. A document
   whose joined text is empty fails with outcome `empty_text`; the store holds no
   empty entry. The entry records origin `vision`, the page count and the engine
-  id `vision-ocr/builtin-latest/poppler-200`. A failed document stores nothing
-  and is tried again by the next invocation.
+  id `vision-ocr/builtin-latest/poppler-200-jpeg`. The 43 entries read from PNG
+  pages on 2026-11-12 keep their id `vision-ocr/builtin-latest/poppler-200`; the
+  image form is part of the reading, so it is part of the id. A failed document
+  stores nothing and is tried again by the next invocation.
 - Requests in flight and requests per minute are in [budgets](budgets.md).
 
 The client posts JSON to `https://vision.googleapis.com/v1/images:annotate`
@@ -59,6 +64,31 @@ Go client library was set aside: it adds about twenty modules and raises the
 gRPC and network library versions of the whole module for one JSON call. Neither
 value is logged or written to an artifact. Only PDFs listed in a fetch bundle of
 the run are sent: public legal text.
+
+## Rendering cost
+
+Measured 2026-11-12. The first run read 40 documents, 967 pages, in 19.2
+minutes: 1.19 seconds per page, with each document rendered in full before its
+first request. One 24-page A4 scan at 200 dpi, on a loaded machine (the ratios
+matter, not the absolute values):
+
+| Renderer                                             | Seconds | Per page |
+| ---------------------------------------------------- | ------- | -------- |
+| Contained renderer, PNG, one process per page        | 23.9    | 0.99     |
+| Plain `pdftoppm`, PNG, one process per page          | 20.6    | 0.86     |
+| Plain `pdftoppm`, PNG, one process for the document  | 20.6    | 0.86     |
+| Plain `pdftoppm`, JPEG, one process for the document | 1.62    | 0.07     |
+
+Rasterizing costs about 0.07 seconds a page and PNG compression about 0.8; the
+sandbox and process starts cost little. A JPEG page is about 0.5 MB against 1.9
+MB. Five documents of the first run failed with `render_failed` under the old
+2-minute bound while the machine was overloaded.
+
+Pages are sent after the document's render ends, not while it runs: at 0.07
+seconds a page a 300-page document renders in about 20 seconds, and watching the
+scratch directory for finished files would add a failure mode for a few seconds.
+Rendering several documents in parallel, and MuPDF as the renderer, are the next
+levers if a 300-page document still takes more than about a minute.
 
 ## Command
 
@@ -90,14 +120,21 @@ cross-check command selects entries as `extract` does: for each PDF, the row of
 the first engine id in the recipe's accepted list that exists. A PDF with only a
 fresh entry is therefore checked; a comparison entry written with `--pdf` beside
 an imported one is selected by neither `extract` nor the check, and exists only
-to be compared. The extract recipe's list of accepted engine ids gains the new
-id after the imported one; that changes the recipe, so it ships together with
-the checker id change, as one recipe change and one rerun of extract.
+to be compared. The extract recipe's list of accepted engine ids is the imported
+id, then `vision-ocr/builtin-latest/poppler-200`, then
+`vision-ocr/builtin-latest/poppler-200-jpeg`; that changes the recipe, so it
+ships together with the checker id change, as one recipe change and one rerun of
+extract.
 
 ## Checks
 
 The primary runs these; they are requirements, not results.
 
+- Rendering: a real three-page PDF yields three JPEG files from one process,
+  each decodable and grayscale; a page over the size limit fails the document;
+  the render bound grows with the page count; memory never holds more page
+  images than requests in flight (a fake sender blocks and the test counts
+  loaded pages).
 - With a fake Vision service: a three-page PDF stores one entry with the joined
   text, page count 3, origin and engine id; a page error stores nothing; a
   transient error is retried and succeeds; a page with no text contributes an
