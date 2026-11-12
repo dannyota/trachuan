@@ -5,6 +5,7 @@ package worker
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -92,6 +93,99 @@ func TestWorker_ConfiguresOCRStore(t *testing.T) {
 			}
 			if !found {
 				t.Fatalf("want gap %s, got %v", tc.gap, resolved.Gaps)
+			}
+		})
+	}
+}
+
+func TestWorker_UsesReleaseChecker(t *testing.T) {
+	for _, tc := range []struct {
+		name, checker string
+		wantOCR       bool
+	}{
+		{"release check", extract.ReleaseChecker, true},
+		{"other check", "other-checker", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
+			db, err := pgxpool.New(ctx, testdb.New(t))
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer db.Close()
+			pdf := fmt.Sprintf("%x", sha256.Sum256([]byte("pdf")))
+			root := t.TempDir()
+			t.Setenv("CORPUS_OCR_STORE", root)
+			ocr := ocrstore.Open(root, db)
+			data := []byte("Điều 1. Quy định chung\n" + strings.Repeat("nội dung quy định ", 50))
+			if _, err = ocr.Put(ctx, pdf, "vision-ocr/builtin-latest", "banhmi", pgtype.Int4{}, data); err != nil {
+				t.Fatal(err)
+			}
+			entries, err := ocr.Lookup(ctx, []string{pdf}, extract.AcceptedEngines(), "")
+			if err != nil {
+				t.Fatal(err)
+			}
+			result := json.RawMessage(`{"same_document":true,"pages":1,"pdf_pages":1,"items":[],"verdict":"clean"}`)
+			if _, err = ocr.PutCheck(ctx, entries[pdf].Text, tc.checker, result, 0, true); err != nil {
+				t.Fatal(err)
+			}
+			artifacts := artifact.Store{Root: t.TempDir()}
+			art, err := artifacts.PublishContent(ctx, "fetch", strings.Repeat("a", 64), func(dir string) error {
+				for name, body := range map[string]string{"tree.json": `{"success":true,"data":[]}`, "detail.json": `{"data":{"id":"1"}}`, "files.json": fmt.Sprintf(`[{"name":"source.pdf","sha256":"%s","size":3}]`, pdf)} {
+					if writeErr := os.WriteFile(filepath.Join(dir, name), []byte(body), 0600); writeErr != nil {
+						return writeErr
+					}
+				}
+				return nil
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			var runID, artID int64
+			if err = db.QueryRow(ctx, `INSERT INTO run(country,rel,state,snapshot) VALUES ('vn','20990105','running','{}') RETURNING id`).Scan(&runID); err != nil {
+				t.Fatal(err)
+			}
+			if err = db.QueryRow(ctx, `INSERT INTO artifact(stage,item_key,input_hash,recipe_hash,path,sha256) VALUES ('fetch','vn:vbpl:1',$1,$2,$3,$4) RETURNING id`, art.InputHash, strings.Repeat("a", 64), art.Path, art.SHA256).Scan(&artID); err != nil {
+				t.Fatal(err)
+			}
+			if _, err = db.Exec(ctx, `INSERT INTO run_item(run_id,stage,item_key,state,batch,artifact_id) VALUES ($1,'fetch','vn:vbpl:1','done',0,$2)`, runID, artID); err != nil {
+				t.Fatal(err)
+			}
+			run := stage.Run{ID: runID, Snapshot: stage.Snapshot{SourceList: []byte(`{"vbpl":{"selection_version":0}}`)}}
+			env := stage.Env{DB: db, Artifacts: artifacts}
+			extractor := extract.New()
+			configureOCR(workflow.NewRegistry(extractor), db)
+			items, err := extractor.Plan(ctx, env, run)
+			if err != nil || len(items) != 1 {
+				t.Fatalf("plan: %v %v", items, err)
+			}
+			out, err := extractor.Process(ctx, env, run, items[0])
+			if err != nil {
+				t.Fatal(err)
+			}
+			if tc.wantOCR {
+				data, readErr := os.ReadFile(filepath.Join(artifacts.Abs(out.Artifact.Path), "text.json"))
+				if readErr != nil {
+					t.Fatal(readErr)
+				}
+				var record struct {
+					TextSource string `json:"text_source"`
+					CheckerID  string `json:"checker_id"`
+				}
+				if err = json.Unmarshal(data, &record); err != nil || record.TextSource != "ocr" || record.CheckerID != tc.checker {
+					t.Fatalf("record=%+v err=%v", record, err)
+				}
+			} else {
+				resolved, resolveErr := extractor.Resolve(ctx, env, run, items[0], *out.Artifact)
+				if resolveErr != nil {
+					t.Fatal(resolveErr)
+				}
+				for _, gap := range resolved.Gaps {
+					if gap.Kind == "needs_ocr" {
+						return
+					}
+				}
+				t.Fatalf("want needs_ocr, got %v", resolved.Gaps)
 			}
 		})
 	}

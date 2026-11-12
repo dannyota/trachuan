@@ -90,8 +90,9 @@ render process per page). A later version may take JPEG pages, which render
 about ten times faster ([measured](ocr-vision.md#rendering-cost)); that is a new
 version and id, never a change inside a pass. The extract recipe names one
 checker id; changing the model, the effort, the instruction or the schema is a
-new id, new check rows and a rerun of extract for the affected documents. The id
-used for a release is chosen after the pilot and recorded here.
+new id, new check rows and a rerun of extract for the affected documents. The
+release checker id is `claude-opus-5-5/medium/ocr-check-2`. The pilot and full
+pass support this choice: all 49 spot-read items were correct.
 
 ## Running checks
 
