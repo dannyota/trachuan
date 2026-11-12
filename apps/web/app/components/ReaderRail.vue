@@ -4,7 +4,7 @@ import { messagesFor, statusMessage, type Language } from '../../i18n'
 import { isDocumentKey } from '../utils/document-key'
 import { validityInk } from '../utils/search-results'
 
-defineProps<{ document?: components['schemas']['Document'], gaps: components['schemas']['Gap'][], release: string, hash?: string }>()
+defineProps<{ document?: components['schemas']['Document'], gaps: components['schemas']['Gap'][], release: string, hash?: string, nodes?: components['schemas']['NodeIndex'] }>()
 const language = useState<Language>('language', () => 'vi')
 const messages = computed(() => messagesFor(language.value))
 function safeSource(value?: string) {
@@ -41,6 +41,7 @@ function gapLabel(kind?: string) {
           <span v-else>{{ relation.number || relation.key }}</span>
         </li>
       </ul>
+      <div><template v-for="code in document.nodes" :key="code"><NuxtLink v-if="nodes?.[code]?.name" class="relation-chip" :to="`/vn/topics/${code}`">{{ nodes[code]?.name }}</NuxtLink></template></div>
       <p v-if="document.source_url"><a v-if="safeSource(document.source_url)" :href="safeSource(document.source_url)" rel="noopener noreferrer">{{ document.source_url }}</a><span v-else>{{ document.source_url }}</span></p>
     </template>
     <div v-if="gaps.length"><h2>{{ messages.gaps }}</h2><ul><li v-for="(gap, index) in gaps" :key="index">{{ gapLabel(gap.kind) }}</li></ul></div>

@@ -37,3 +37,11 @@ it('identifies laws with identical citations and omits invalid links', () => {
   expect(cards[2]!.text()).toContain('../bad')
   expect(cards[2]!.find('nuxt-link-stub').exists()).toBe(false)
 })
+
+it('groups filtered hits and names only indexed nodes', () => {
+  const wrapper = mount(SearchResults, { props: { result: { abstain: false, outside_filter_count: 9, nodes: { '1': { name: 'Ngân hàng' } }, hits: [{ citation: 'outside', complete: true, in_filter: false }, { citation: 'inside', complete: true, in_filter: true, nodes: ['1', '2'] }] } }, global: { stubs: { NuxtLink: { template: '<a><slot /></a>' } } } })
+  expect(wrapper.text().indexOf('inside')).toBeLessThan(wrapper.text().indexOf('outside'))
+  expect(wrapper.text()).toContain('9')
+  expect(wrapper.text()).toContain('Ngân hàng')
+  expect(wrapper.findAll('.nodes a')).toHaveLength(1)
+})
