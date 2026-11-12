@@ -107,6 +107,8 @@ type Hit struct {
 	Relations     []Relation `json:"relations"`
 	Gaps          []Gap      `json:"gaps"`
 	Locator       *string    `json:"locator,omitempty"`
+	InFilter      *bool      `json:"in_filter,omitempty"`
+	Nodes         []string   `json:"nodes"`
 }
 
 // Diagnostics describes how a response was produced; it never holds query text.
@@ -123,14 +125,17 @@ type Diagnostics struct {
 // Response is the result of one search: primary hits first, then non-current
 // hits when requested.
 type Response struct {
-	Release     string      `json:"release"`
-	Hits        []Hit       `json:"hits"`
-	NonCurrent  []Hit       `json:"non_current"`
-	Abstain     bool        `json:"abstain"`
-	Reason      string      `json:"reason,omitempty"`
-	Message     string      `json:"message,omitempty"`
-	Gaps        []Gap       `json:"gaps"`
-	Diagnostics Diagnostics `json:"diagnostics"`
+	Release            string             `json:"release"`
+	Hits               []Hit              `json:"hits"`
+	NonCurrent         []Hit              `json:"non_current"`
+	Abstain            bool               `json:"abstain"`
+	Reason             string             `json:"reason,omitempty"`
+	Message            string             `json:"message,omitempty"`
+	Gaps               []Gap              `json:"gaps"`
+	Diagnostics        Diagnostics        `json:"diagnostics"`
+	OutsideFilterCount *int               `json:"outside_filter_count,omitempty"`
+	NextCursor         string             `json:"next_cursor,omitempty"`
+	Nodes              map[string]NodeRef `json:"nodes"`
 }
 
 // String formats the date as YYYY-MM-DD.

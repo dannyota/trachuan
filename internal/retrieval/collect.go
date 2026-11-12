@@ -111,6 +111,20 @@ func (e *Engine) collect(ctx context.Context, p Prepared, depths Depths, notYet 
 			return Arms{}, err
 		}
 	}
+	var groupIDs []int64
+	seenGroups := map[int64]bool{}
+	for _, g := range groups {
+		for _, c := range g.Members {
+			if !seenGroups[c.GroupID] {
+				seenGroups[c.GroupID] = true
+				groupIDs = append(groupIDs, c.GroupID)
+			}
+		}
+	}
+	result.EffectiveNodes, result.Nodes, err = e.loadEffectiveNodes(ctx, tx, groupIDs)
+	if err != nil {
+		return Arms{}, err
+	}
 	if err = tx.Commit(ctx); err != nil {
 		return Arms{}, databaseFailure("commit retrieval failed", err)
 	}

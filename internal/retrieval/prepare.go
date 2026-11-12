@@ -41,6 +41,19 @@ func (e *Engine) prepare(ctx context.Context, req Request, legacy bool) (Prepare
 			return Prepared{}, errors.New("invalid_request")
 		}
 	}
+	req, err := normalizeFilters(req)
+	if err != nil {
+		return Prepared{}, err
+	}
+	if len(req.Nodes) > 0 {
+		refs, loadErr := e.nodeIndex(ctx, req.Nodes)
+		if loadErr != nil {
+			return Prepared{}, loadErr
+		}
+		if err = validateServedFilters(req, refs); err != nil {
+			return Prepared{}, err
+		}
+	}
 	v, err := ValidateQuery(req.Query)
 	if err != nil {
 		return Prepared{}, err

@@ -346,7 +346,7 @@ func TestSearch_ValidationRejectionRetainsRelease(t *testing.T) {
 	r := Recipe1()
 	threshold := .5
 	r.Abstention.Threshold = &threshold
-	e := Engine{release: Release{Rel: "release-1", RetrievalRecipe: r}}
+	e := Engine{release: Release{Rel: "release-1", RetrievalRecipe: r}, options: Options{Now: func() time.Time { return time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC) }}}
 	got, err := e.Search(context.Background(), Request{Query: "ngan hang"})
 	if err != nil {
 		t.Fatal(err)

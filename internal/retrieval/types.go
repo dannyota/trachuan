@@ -40,6 +40,11 @@ type Request struct {
 	AsOf        *Date
 	Mode        Mode
 	Arms        ArmMode
+	Nodes       []string
+	DocTypes    []string
+	Issuers     []string
+	Documents   []string
+	Cursor      string
 }
 
 // Prepared holds a validated request and its single query vector.
@@ -152,6 +157,8 @@ type Arms struct {
 	Date              Date
 	AsOf              *Date
 	IncludeNonCurrent bool
+	EffectiveNodes    map[int64][]string
+	Nodes             map[string]NodeRef
 	Primary           ArmGroup
 	NonCurrent        ArmGroup
 }
