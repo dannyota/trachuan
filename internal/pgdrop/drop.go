@@ -1,4 +1,5 @@
 // Package pgdrop drops databases without terminating foreign sessions.
+// Cancelling a DROP DATABASE statement can leave the database invalid, so statements use an independent timeout.
 package pgdrop
 
 import (
@@ -16,7 +17,10 @@ type executor interface {
 }
 
 // Drop terminates the current role's client sessions and drops the database.
-func Drop(ctx context.Context, conn *pgx.Conn, name string) error {
+func Drop(ctx context.Context, conn executor, name string) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	if _, err := conn.Exec(ctx, `SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname=$1 AND usesysid IS NOT NULL AND usename=current_user AND pid<>pg_backend_pid()`, name); err != nil {
 		return fmt.Errorf("disconnect database sessions: %w", err)
 	}
@@ -44,7 +48,9 @@ func dropOnly(ctx context.Context, conn executor, name string, wait func(context
 	defer cancel()
 	var busy error
 	err := retry(bounded, func() error {
-		_, err := conn.Exec(bounded, "DROP DATABASE "+pgx.Identifier{name}.Sanitize())
+		statement, stop := context.WithTimeout(context.WithoutCancel(ctx), 60*time.Second)
+		defer stop()
+		_, err := conn.Exec(statement, "DROP DATABASE "+pgx.Identifier{name}.Sanitize())
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "55006" {
 			busy = err
