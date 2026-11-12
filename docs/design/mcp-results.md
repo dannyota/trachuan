@@ -103,18 +103,28 @@ document in this release; diagram rows (`vbpl_diagram`) and rows with a null
 `target_provision_id` never become warnings and stay document-level pointers. It
 has the pointer fields (`dir:"in"`, `kind`, and the acting document's `key`,
 `number` and `in_release`) and adds `source`, the acting provision's handle when
-it is in the release; `named`, the row's `target_node_id` (`dieu-8/khoan-9`);
-`target`, the handle of `target_provision_id`; and `exact`, true exactly when
-`target_node_id` equals the anchor of `target_provision_id` (false when it
-resolved to the deepest ancestor because a named clause or point is not a node
-in this release). A hit or a read unit carries a warning when its provision is
-`target` or contains `target`; an exact warning also attaches to every provision
-inside `target`; an inexact one attaches to no other descendant of `target`,
-because the act named only part of it. `named` is what the act says, never a
-citation of the target tree (citations still come from actual ancestry). A
-warning never changes the stamp, `status` or eligibility, states no effective
-date and is not a legal conclusion; the act's sentence is the evidence in full
-hits' `relations` and in a `relations` read.
+it is in the release; `basis`, `text` for a `text_rule/1` row (its evidence is
+the act's operative sentence) or `vbpl_reference` for a `vbpl_references` row
+(its stored evidence is only VBPL's reference title); `target`, the handle of
+`target_provision_id`; `exact`; and `named`. For a text row `target_node_id` is
+the requested path, `exact` is true exactly when it equals the anchor of
+`target_provision_id`, and an inexact warning (the deepest resolved ancestor,
+because a named clause or point is not a node in this release) carries `named`,
+the requested path (`dieu-8/khoan-9`). For a reference row `target_node_id` is
+VBPL's node id, which build resolved to `target_provision_id`, so `exact` is
+always true and there is no `named`. `named` is what the act says, never a
+citation of the target tree.
+
+A hit or a read unit carries a warning when its provision is `target` or an
+ancestor of `target`, or, for an exact warning, a provision inside `target`; an
+inexact warning attaches to no other descendant of `target`, because the act
+named only part of it. Each hit or unit carries at most 10 warnings
+([budgets](budgets.md)), chosen from the warning rows alone in the recipe's
+relation order and never displaced by other relations; when more apply,
+`warnings_omitted` gives the count and a `relations` read of `target` returns
+them all. A warning never changes the stamp, `status` or eligibility, states no
+effective date and is not a legal conclusion; its evidence is in full hits'
+`relations` and in a `relations` read.
 
 ## Related pointers
 

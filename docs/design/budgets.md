@@ -178,6 +178,7 @@ service is added. Host latency and memory acceptance remain separate.
 | Default response limit compact; full; maximum                                             | 20; 8; 50                                                                                                  |
 | Evidence text per full hit; compact snippet                                               | 14,000 Unicode code points, then source spans and read pointer; 600 code points including omission markers |
 | Relations per full hit or read item; evidence per relation; related pointers per document | 20; 1,000 Unicode code points, omissions explicit; 5                                                       |
+| Warnings per hit or read unit                                                             | 10, omissions counted                                                                                      |
 | Document-reference parser                                                                 | At most 8 references, 128 runes per reference                                                              |
 | Serving database statement deadline                                                       | 2 s; no unbounded exact fallback                                                                           |
 | Evaluation exact arm cache depth                                                          | Dense 200; lexical 100                                                                                     |

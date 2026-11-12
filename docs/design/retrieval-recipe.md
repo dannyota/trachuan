@@ -268,14 +268,17 @@ its own text and an ambiguity gap without child credit. Do not attach a second
 full enclosing article to every hit.
 
 Attach incident relations whose provision endpoint is null, the group itself, or
-its descendant. Preserve source direction; sort by kind, source key, target key,
-artifact hash and ordinal. Apply the relation count/text caps in budgets, mark
-omissions with `relations_omitted` and a document-read pointer, and mark cut
-evidence incomplete. `EvidenceSHA256` hashes the full stored UTF-8 evidence;
-product relation credit requires complete returned evidence and a mapped edge.
-Deduplicate edges by source key, artifact hash and ordinal per hit, not across
-different hits; two documents can have byte-identical relation artifacts. The
-response is bounded and its actual evidence size is scored.
+its descendant, and the warning rows ([search results](mcp-results.md#warnings))
+whose exact target is an ancestor of the group, so a clause hit carries the
+evidence of an exact warning on its article. Preserve source direction; sort by
+kind, source key, target key, artifact hash and ordinal. Apply the relation
+count/text caps in budgets, mark omissions with `relations_omitted` and a
+document-read pointer, and mark cut evidence incomplete. `EvidenceSHA256` hashes
+the full stored UTF-8 evidence; product relation credit requires complete
+returned evidence and a mapped edge. Deduplicate edges by source key, artifact
+hash and ordinal per hit, not across different hits; two documents can have
+byte-identical relation artifacts. The response is bounded and its actual
+evidence size is scored.
 
 Abstain on validation rejection, no eligible primary hits, or first-group best
 cosine strictly below the stored threshold. Equality passes. Low-confidence
