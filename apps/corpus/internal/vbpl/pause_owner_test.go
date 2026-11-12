@@ -58,7 +58,7 @@ func TestPause_WaitersRespectOwnDeadline(t *testing.T) {
 	for range 2 {
 		select {
 		case err := <-results:
-			if !errors.Is(err, context.DeadlineExceeded) {
+			if !errors.Is(err, sourcegate.ErrSourcePaused) || errors.Is(err, context.DeadlineExceeded) {
 				t.Errorf("error = %v", err)
 			}
 		case <-time.After(25 * time.Millisecond):
@@ -84,8 +84,7 @@ func TestPause_RequestDeadlineIncludesSlotWait(t *testing.T) {
 	go func() { time.Sleep(20 * time.Millisecond); <-c.slots }()
 	started := time.Now()
 	_, _, err := c.Detail(ctx, "2")
-	var failure *Failure
-	if !errors.As(err, &failure) || failure.Cause != "timeout" || time.Since(started) > 75*time.Millisecond {
+	if !errors.Is(err, sourcegate.ErrSourcePaused) || time.Since(started) > 75*time.Millisecond {
 		t.Fatalf("error = %v, elapsed = %v", err, time.Since(started))
 	}
 }
