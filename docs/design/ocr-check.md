@@ -215,11 +215,12 @@ operator's choice.
   stops all further spending by that command until the operator resolves it.
 - Every attempt is a row in `ocr_check_attempt` (entry, checker id, mode, batch
   id, state, reason, usage). The table is working state and may be updated; the
-  `ocr_check` row it leads to is immutable.
+  `ocr_check` row it leads to is immutable. Usage records prepared request body
+  bytes, response event counts and safe error class and type without error text.
 
 Credentials come from `ANTHROPIC_API_KEY` in the environment. The key, request
-bodies and document text are never logged; errors keep the status and the
-request id only. The API stores batch inputs and results for 29 days
+bodies, document text and provider error text are never logged. The API stores
+batch inputs and results for 29 days
 ([batch processing](https://platform.claude.com/docs/en/build-with-claude/batch-processing),
 read 2026-11-11); this is why only public legal text may be sent.
 

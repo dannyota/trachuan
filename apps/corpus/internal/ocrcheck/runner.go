@@ -48,6 +48,7 @@ type Repository interface {
 	Begin(context.Context, []Intent, string, string, string, time.Time) ([]Attempt, error)
 	Submitted(context.Context, string, string) error
 	Uncertain(context.Context, string) error
+	UncertainWithError(context.Context, []Attempt, Usage) error
 	Abandon(context.Context, string) error
 	Finish(context.Context, Attempt, store.OcrText, Usage, *ocrstore.CheckResult, string) error
 }
@@ -119,12 +120,14 @@ type Runner struct {
 }
 
 type prepared struct {
-	doc         Document
-	request     Request
-	pages       int
-	worst       int64
-	inputTokens int64
-	rendering   *RenderStats
+	doc          Document
+	request      Request
+	pages        int
+	worst        int64
+	inputTokens  int64
+	rendering    *RenderStats
+	requestBytes int
+	batchSize    int
 }
 
 // Run collects earlier submissions before selecting any new paid work.
@@ -254,6 +257,7 @@ func (r *Runner) Run(ctx context.Context, docs []Document, o Options) (Summary, 
 			u := errorUsage(countErr)
 			u.Rendering = ready.rendering
 			u.PDFPages = ready.pages
+			u.RequestBytes = ready.requestBytes
 			summary.record(doc, ready.pages, u, errorReason(countErr))
 			if !o.DryRun {
 				if err = r.failAttempt(ctx, doc, o, errorReason(countErr), u); err != nil {
@@ -306,6 +310,7 @@ func (r *Runner) Run(ctx context.Context, docs []Document, o Options) (Summary, 
 				return summary, err
 			}
 		}
+		ready.batchSize = n
 		group = append(group, ready)
 		size += n
 		reserved += ready.worst

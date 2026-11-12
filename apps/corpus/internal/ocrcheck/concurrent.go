@@ -60,6 +60,7 @@ func (r *Runner) runConcurrent(ctx context.Context, docs []Document, o Options, 
 		}
 	}
 	failed := func(p prepared, reason string, u Usage) {
+		u.RequestBytes = p.requestBytes
 		mu.Lock()
 		defer mu.Unlock()
 		if !o.DryRun {
@@ -140,7 +141,9 @@ func (r *Runner) runConcurrent(ctx context.Context, docs []Document, o Options, 
 				stop(r.unknown(ctx, a, doc, response, callErr, o, s))
 			} else {
 				if !response.FinalUsage {
-					response.Usage = errorUsage(callErr)
+					metadata := errorUsage(callErr)
+					metadata.ResponseEvents = response.Usage.ResponseEvents
+					response.Usage = metadata
 				}
 				stop(r.finish(ctx, a, ready, response, callErr, o, s))
 			}

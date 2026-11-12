@@ -64,7 +64,9 @@ func (r *Runner) prepareJPEG(ctx context.Context, p prepared, data []byte, dpi i
 		content = append(content, anthropic.NewTextBlock(fmt.Sprintf("Page %d:", i+1)), anthropic.NewImageBlockBase64(p.request.MediaType, encode(page)))
 	}
 	p.request.content = append(content, tail...)
-	if size, err := jpegRequestSize(p.request); err != nil || size > maxRequestBytes {
+	size, err := jpegRequestSize(p.request)
+	p.requestBytes = size
+	if err != nil || size > maxRequestBytes {
 		return p, "over_check_limit"
 	}
 	return p, ""

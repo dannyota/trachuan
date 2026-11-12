@@ -140,6 +140,7 @@ func (r *Runner) prepare(ctx context.Context, doc Document, o Options) (p prepar
 	}
 	p.request.Images = rendered.Pages
 	encoded, encodeErr := json.Marshal(messageParams(p.request))
+	p.requestBytes = len(encoded) + len(`,"stream":true`)
 	// Direct streams add the stream field; reserve it for both modes.
 	if encodeErr != nil || len(encoded)+len(`,"stream":true`) >= maxRequestBytes {
 		return p, "over_check_limit"

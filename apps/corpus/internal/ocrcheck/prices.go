@@ -8,6 +8,10 @@ const maxOutputTokens int64 = 32000
 // No caching is requested. Unexpected cache usage blocks further work because
 // the verified price table covers uncached requests only.
 type Usage struct {
+	RequestBytes        int          `json:"request_bytes"`
+	ResponseEvents      int          `json:"response_events"`
+	ErrorClass          string       `json:"error_class,omitempty"`
+	ErrorType           string       `json:"error_type,omitempty"`
 	PDFPages            int          `json:"pdf_pages,omitempty"`
 	Rendering           *RenderStats `json:"rendering,omitempty"`
 	Final               bool         `json:"final_usage"`
@@ -63,6 +67,7 @@ func (u Usage) charge() int64 {
 	return u.CostMicroUSD
 }
 func (u Usage) withReservation(intent Usage) Usage {
+	u.RequestBytes = intent.RequestBytes
 	u.PDFPages = intent.PDFPages
 	u.Rendering = intent.Rendering
 	u.CountedInput = intent.CountedInput
