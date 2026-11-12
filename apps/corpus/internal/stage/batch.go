@@ -60,6 +60,9 @@ func RunBatch(ctx context.Context, env Env, st Stage, in BatchInput, attempt int
 	}
 	run := Run{ID: runRow.ID, Country: runRow.Country, Rel: runRow.Rel, Generation: int(runRow.Generation), Snapshot: snapshot}
 	recipe := st.Recipe(snapshot)
+	if err = checkRecipe(snapshot, in.Stage, recipe); err != nil {
+		return result, err
+	}
 	if cfg.HeartbeatEvery <= 0 {
 		return result, fmt.Errorf("heartbeat interval must be positive")
 	}

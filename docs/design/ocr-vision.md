@@ -50,11 +50,15 @@ The client sends page images, one page per request, for every PDF:
   and is tried again by the next invocation.
 - Requests in flight and requests per minute are in [budgets](budgets.md).
 
-The official Go client (`cloud.google.com/go/vision/v2`) makes the calls with
-Application Default Credentials from `GOOGLE_APPLICATION_CREDENTIALS` and the
-project in `GOOGLE_CLOUD_PROJECT`. Neither value is logged or written to an
-artifact. Only PDFs listed in a fetch bundle of the run are sent: public legal
-text.
+The client posts JSON to `https://vision.googleapis.com/v1/images:annotate`
+([request format](https://docs.cloud.google.com/vision/docs/request)) with a
+token from Application Default Credentials (`golang.org/x/oauth2/google`, scope
+`cloud-vision`, credentials file in `GOOGLE_APPLICATION_CREDENTIALS`) and the
+project in `GOOGLE_CLOUD_PROJECT` as the `x-goog-user-project` header. Google's
+Go client library was set aside: it adds about twenty modules and raises the
+gRPC and network library versions of the whole module for one JSON call. Neither
+value is logged or written to an artifact. Only PDFs listed in a fetch bundle of
+the run are sent: public legal text.
 
 ## Command
 

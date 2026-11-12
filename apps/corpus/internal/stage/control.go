@@ -62,12 +62,12 @@ func PlanStage(ctx context.Context, env Env, st Stage, in StageInput, compiled m
 	if decodeErr := json.Unmarshal(row.Snapshot, &snapshot); decodeErr != nil {
 		return result, fmt.Errorf("decode run snapshot: %w", decodeErr)
 	}
-	if _, ok := snapshot.Recipes[in.Stage]; !ok {
-		return result, fmt.Errorf("missing frozen recipe for stage %s", in.Stage)
+	if err = checkRecipe(snapshot, in.Stage, st.Recipe(snapshot)); err != nil {
+		return result, err
 	}
 	for name, recipe := range compiled {
 		if frozen, ok := snapshot.Recipes[name]; ok && frozen != recipe {
-			return result, fmt.Errorf("recipe mismatch for stage %s", name)
+			return result, &RecipeError{Stage: name}
 		}
 	}
 	run := Run{ID: row.ID, Country: row.Country, Rel: row.Rel, Generation: int(row.Generation), Snapshot: snapshot}
