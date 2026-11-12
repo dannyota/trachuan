@@ -221,10 +221,10 @@ document number and affected case/citation, including the five known omissions
 in the ingest research. Never remove them because the source sweep did not find
 them.
 
-`mapping_incomplete` lists each validation issue by case, cohort, citation index
-and detail, sorted in that order; affected unavailable recall and MRR metrics,
-targets and non-regression records carry `reason: mapping_incomplete` and
-`mapping_incomplete_count` of distinct affected cases.
+`mapping_incomplete` lists each validation issue by cohort, case ID, citation
+index and detail, sorted in that order; affected unavailable recall and MRR
+metrics, targets and non-regression records carry `reason: mapping_incomplete`
+and `mapping_incomplete_count` of distinct affected cases.
 
 Only `status:"complete"` reports enter a successful stage artifact. Each cohort
 has `case_count`, `positive_count`, `negative_count`, `rejection_count`,

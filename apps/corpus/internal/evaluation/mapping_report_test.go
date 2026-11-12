@@ -67,6 +67,22 @@ func TestReport_MappingIncompleteListed(t *testing.T) {
 	}
 }
 
+func TestReport_RejectionMappingIssueListedWithoutAffectingMetrics(t *testing.T) {
+	issues := ValidationReport{"reject1": {{CitationIndex: 0, Kind: "mapping_incomplete", Field: "entry", Detail: "entry: missing"}}}
+	got := mappingReportForTest(t, issues)
+	want := []mappingEntryJSON{{"reject1", "old_product", 0, "entry: missing"}}
+	if !reflect.DeepEqual(got.Mapping, want) {
+		t.Errorf("mapping = %+v, want %+v", got.Mapping, want)
+	}
+	baseline := mappingReportForTest(t, nil)
+	if !reflect.DeepEqual(got.Cohorts["old_product"], baseline.Cohorts["old_product"]) {
+		t.Error("rejection mapping changed old product metrics or quality records")
+	}
+	if !reflect.DeepEqual(got.Floors, baseline.Floors) {
+		t.Error("rejection mapping changed floors")
+	}
+}
+
 func TestMetric_UnavailableNamesMappingReason(t *testing.T) {
 	issues := ValidationReport{"positive": {{CitationIndex: 0, Kind: "mapping_incomplete", Detail: "first"}, {CitationIndex: 0, Kind: "mapping_incomplete", Detail: "second"}}}
 	report := mappingReportForTest(t, issues)

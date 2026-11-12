@@ -180,7 +180,7 @@ func finishMappingReport(r *Report, inputs []cohortInput, rejects map[string]boo
 	r.MappingIncomplete = []MappingIncomplete{}
 	counts := map[string]int{}
 	for _, input := range inputs {
-		if rejects[input.c.ID] || len(input.c.ExpectedCitations) == 0 {
+		if len(input.c.ExpectedCitations) == 0 {
 			continue
 		}
 		for _, cohort := range input.cohorts {
@@ -195,7 +195,7 @@ func finishMappingReport(r *Report, inputs []cohortInput, rejects map[string]boo
 				found = true
 				r.MappingIncomplete = append(r.MappingIncomplete, MappingIncomplete{input.c.ID, cohort, issue.CitationIndex, issue.Detail})
 			}
-			if found {
+			if found && !rejects[input.c.ID] {
 				counts[cohort]++
 			}
 		}
