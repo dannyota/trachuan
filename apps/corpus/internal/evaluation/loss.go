@@ -117,8 +117,7 @@ func diagnoseLoss(arms retrieval.Arms, recipe retrieval.Recipe, limit int, mode 
 	if tail != nil {
 		effectiveTail = min(*tail, limit/2)
 	}
-	reserveTail := tail != nil || !arms.IncludeNonCurrent
-	includeComplement := (!reserveTail && arms.IncludeNonCurrent) || (reserveTail && effectiveTail > 0)
+	includeComplement := (tail == nil && arms.IncludeNonCurrent) || effectiveTail > 0
 	deep := append(append([]retrieval.Candidate{}, arms.Primary.Dense...), arms.Primary.Lexical...)
 	if includeComplement {
 		deep = append(deep, arms.NonCurrent.Dense...)
@@ -128,10 +127,7 @@ func diagnoseLoss(arms retrieval.Arms, recipe retrieval.Recipe, limit int, mode 
 		return "candidate", nil
 	}
 	items := fusedItems(arms, recipe, mode)
-	primaryLimit := limit
-	if reserveTail {
-		primaryLimit -= len(response.NonCurrent)
-	}
+	primaryLimit := limit - len(response.NonCurrent)
 	items = items[:min(len(items), recipe.HydrateMultiplier*primaryLimit)]
 	primaryCount := len(items)
 	if includeComplement {

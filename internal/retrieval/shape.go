@@ -60,20 +60,27 @@ func planWithPolicy(arms Arms, recipe Recipe, limit int, mode ArmMode, cap, tail
 		limit = 8
 	}
 	tail = min(tail, max(0, limit/2))
-	if arms.IncludeNonCurrent || tail == 0 || !arms.Validation.Accepted {
+	if arms.IncludeNonCurrent {
+		tail = limit / 2
+	}
+	if (tail == 0 && !arms.IncludeNonCurrent) || !arms.Validation.Accepted {
 		return planWithCap(arms, recipe, limit, mode, cap)
 	}
 	// Validate and rank primary before ranking the complement.
-	if _, err := rankWithCap(arms, recipe, limit, mode, cap); err != nil {
+	primary, err := rankWithCap(arms, recipe, limit, mode, cap)
+	if err != nil {
 		return responsePlan{}, err
 	}
 	other, err := rankGroup(arms.NonCurrent, arms.Validation.Routed, recipe, limit, mode, cap)
 	if err != nil {
 		return responsePlan{}, err
 	}
+	if arms.IncludeNonCurrent {
+		tail = max(tail, limit-len(primary.Groups))
+	}
 	count := min(tail, len(other.Groups))
 	primaryLimit := limit - count
-	out, err := planWithCap(arms, recipe, primaryLimit, mode, cap)
+	out, err := planWithCap(arms, recipe, max(1, primaryLimit), mode, cap)
 	if err != nil {
 		return responsePlan{}, err
 	}
@@ -96,21 +103,11 @@ func planWithCap(arms Arms, recipe Recipe, limit int, mode ArmMode, cap int) (re
 	if err != nil {
 		return responsePlan{}, err
 	}
-	if limit == 0 {
-		limit = 8
-	}
 	out.response.Diagnostics.EligibleCount = len(ranking.Groups)
 	if arms.AsOf != nil {
 		out.response.Gaps = append(out.response.Gaps, Gap{Kind: "historical_document_dates", Message: "Historical filtering uses document dates, not provision history or past suspension status."})
 	}
 	out.primary = ranking.Groups
-	if arms.IncludeNonCurrent && len(out.primary) < limit {
-		other, rankErr := rankGroup(arms.NonCurrent, arms.Validation.Routed, recipe, limit, mode, cap)
-		if rankErr != nil {
-			return responsePlan{}, rankErr
-		}
-		out.nonCurrent = other.Groups[:min(limit-len(out.primary), len(other.Groups))]
-	}
 	if ranking.FirstBestCosine == nil {
 		out.response.Abstain = true
 		out.response.Reason = "no_primary_hits"

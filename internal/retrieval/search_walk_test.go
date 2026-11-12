@@ -80,7 +80,7 @@ func TestSearch_NoFilterUnchanged(t *testing.T) {
 }
 
 func TestPaging_PrimaryThenNonCurrent(t *testing.T) {
-	testPagingGroups(t, true, [][2]int{{8, 0}, {2, 6}, {0, 8}})
+	testPagingGroups(t, true, [][2]int{{4, 4}, {6, 2}, {0, 8}})
 }
 func TestPaging_TailMode(t *testing.T) { testPagingGroups(t, false, [][2]int{{6, 2}, {4, 4}, {0, 8}}) }
 func testPagingGroups(t *testing.T, include bool, counts [][2]int) {

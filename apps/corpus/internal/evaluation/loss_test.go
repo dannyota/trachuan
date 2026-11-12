@@ -208,14 +208,14 @@ func TestLossDiagnostics_HistoricalComplementBeyondLimit(t *testing.T) {
 	threshold := 0.0
 	recipe.Abstention.Threshold = &threshold
 	primary := []retrieval.Candidate{lossCandidate(1, "a", "a"), lossCandidate(2, "b", "b")}
-	other := lossCandidate(3, "c", "c")
-	arms := retrieval.Arms{Validation: retrieval.Validation{Accepted: true}, Depths: retrieval.Depths{Dense: 200, Lexical: 100}, Primary: retrieval.ArmGroup{Dense: primary, Members: primary}, NonCurrent: retrieval.ArmGroup{Dense: []retrieval.Candidate{other}, Members: []retrieval.Candidate{other}}, IncludeNonCurrent: true}
+	other := []retrieval.Candidate{lossCandidate(3, "c", "c"), lossCandidate(4, "d", "d")}
+	arms := retrieval.Arms{Validation: retrieval.Validation{Accepted: true}, Depths: retrieval.Depths{Dense: 200, Lexical: 100}, Primary: retrieval.ArmGroup{Dense: primary, Members: primary}, NonCurrent: retrieval.ArmGroup{Dense: other, Members: other}, IncludeNonCurrent: true}
 	response, err := retrieval.Shape(arms, recipe, 2, "dense")
 	if err != nil {
 		t.Fatal(err)
 	}
-	anchor := "c"
-	entry := MapEntry{State: "resolved", Alternatives: []Alternative{{Country: "vn", DocumentKey: "c", Anchor: &anchor, Kind: "provision"}}}
+	anchor := "d"
+	entry := MapEntry{State: "resolved", Alternatives: []Alternative{{Country: "vn", DocumentKey: "d", Anchor: &anchor, Kind: "provision"}}}
 	stage, err := diagnoseLoss(arms, recipe, 2, "dense", "old_product", Expectation{}, entry, response, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -290,7 +290,7 @@ func TestLossDiagnostics_PrimaryHydrationUsesTailQuota(t *testing.T) {
 		name, want string
 		otherCount int
 		explicit   bool
-	}{{"reserved", "fusion", 2, false}, {"freed", "rank_limit", 1, false}, {"explicit_false", "rank_limit", 2, true}} {
+	}{{"reserved", "fusion", 2, false}, {"freed", "rank_limit", 1, false}, {"explicit_false", "fusion", 2, true}} {
 		t.Run(tc.name, func(t *testing.T) {
 			trial := arms
 			trial.IncludeNonCurrent = tc.explicit
