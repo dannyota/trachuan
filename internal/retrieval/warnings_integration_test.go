@@ -5,7 +5,6 @@ package retrieval
 import (
 	"context"
 	"fmt"
-	"reflect"
 	"strings"
 	"testing"
 )
@@ -32,11 +31,11 @@ func TestWarnings_AttachmentAndRecovery(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, rels, err := hydrateTrees(ctx, tx, []int64{11, 12, 13})
+	bounded, err := loadWarnings(ctx, tx, []int64{11, 12, 13})
 	if err != nil {
 		t.Fatal(err)
 	}
-	article, omitted := shapeWarnings(rels[11])
+	article, omitted := bounded[11].warnings, bounded[11].omitted
 	if len(article) != 10 || omitted != 16 || article[0].Target != "vn:1#p12" || article[0].Citation != "p11, p12" {
 		t.Fatalf("article warnings %+v omitted %d", article, omitted)
 	}
@@ -46,27 +45,13 @@ func TestWarnings_AttachmentAndRecovery(t *testing.T) {
 	if presented.Warnings[0].Target != "vn:1#p12" || presented.Warnings[0].Citation != "p11, p12" {
 		t.Fatalf("article hit warnings %+v", presented.Warnings)
 	}
-	clause, omitted := shapeWarnings(rels[12])
+	clause, omitted := bounded[12].warnings, bounded[12].omitted
 	if len(clause) != 10 || omitted != 15 {
 		t.Fatalf("clause warnings %+v omitted %d", clause, omitted)
 	}
-	point, omitted := shapeWarnings(rels[13])
-	if len(point) != 10 || omitted != 11 {
+	point, omitted := bounded[13].warnings, bounded[13].omitted
+	if len(point) != 10 || omitted != 15 {
 		t.Fatalf("point warnings %+v omitted %d", point, omitted)
-	}
-	bounded, err := loadWarnings(ctx, tx, []int64{11, 12, 13})
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, tc := range []struct {
-		id      int64
-		want    []Warning
-		omitted int
-	}{{11, article, 16}, {12, clause, 15}, {13, point, 15}} {
-		got := bounded[tc.id]
-		if !reflect.DeepEqual(got.warnings, tc.want) || got.omitted != tc.omitted {
-			t.Fatalf("unit %d bounded warnings: %+v", tc.id, got)
-		}
 	}
 	nodes, err := readNodes(ctx, tx, 1, "vn:1")
 	if err != nil {

@@ -36,8 +36,11 @@ func hydrateTrees(ctx context.Context, tx pgx.Tx, ids []int64) (map[int64][]Prov
  ), endpoints AS (SELECT group_id,document_id,array_agg(id) AS ids FROM tree GROUP BY group_id,document_id)
  SELECT e.group_id,r.source_key,r.target_key,r.source_number,r.target_number,sp.anchor,tp.anchor,r.kind,r.raw_label,r.evidence,r.method,r.source_document_id IS NOT NULL,r.target_document_id IS NOT NULL,COALESCE(sd.key,''),COALESCE(td.key,''),r.artifact_sha256,r.ordinal,r.target_node_id, ARRAY(SELECT a.kind FROM (SELECT kind,preorder FROM provision WHERE document_id=tp.document_id AND path @> tp.path OFFSET 0) a ORDER BY a.preorder), ARRAY(SELECT a.label FROM (SELECT label,preorder FROM provision WHERE document_id=tp.document_id AND path @> tp.path OFFSET 0) a ORDER BY a.preorder),COALESCE(r.source_document_id=e.document_id AND r.source_provision_id=ANY(e.ids),false),COALESCE(r.target_document_id=e.document_id AND (r.target_provision_id=ANY(e.ids) OR (gp.path <@ tp.path AND r.kind IN ('repeals','replaces','suspends','amends_supplements') AND r.target_node_id IS NOT NULL AND ('vbpl_references'=ANY(string_to_array(r.method,',')) OR ('text_rule/1'=ANY(string_to_array(r.method,',')) AND r.target_node_id=tp.anchor)))),false)
  FROM endpoints e JOIN LATERAL (
-  SELECT id FROM relation WHERE (source_document_id=e.document_id AND (source_provision_id IS NULL OR source_provision_id=ANY(e.ids)))
-   OR (target_document_id=e.document_id AND (target_provision_id IS NULL OR target_provision_id=ANY(e.ids)))
+  SELECT incident.id FROM (
+   SELECT id FROM relation WHERE (source_document_id=e.document_id AND (source_provision_id IS NULL OR source_provision_id=ANY(e.ids)))
+    OR (target_document_id=e.document_id AND (target_provision_id IS NULL OR target_provision_id=ANY(e.ids)))
+   ORDER BY kind COLLATE "C",source_key COLLATE "C",COALESCE(target_key,'') COLLATE "C",artifact_sha256 COLLATE "C",ordinal LIMIT $2
+  ) incident
   UNION ALL
   SELECT inherited.id FROM (
    SELECT r.id FROM LATERAL (SELECT path FROM provision WHERE id=e.group_id OFFSET 0) g
