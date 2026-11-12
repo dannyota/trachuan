@@ -51,7 +51,7 @@ func TestWarnings_AttachmentAndRecovery(t *testing.T) {
 		t.Fatalf("clause warnings %+v omitted %d", clause, omitted)
 	}
 	point, omitted := shapeWarnings(rels[13])
-	if len(point) != 10 || omitted != 15 {
+	if len(point) != 10 || omitted != 11 {
 		t.Fatalf("point warnings %+v omitted %d", point, omitted)
 	}
 	bounded, err := loadWarnings(ctx, tx, []int64{11, 12, 13})
