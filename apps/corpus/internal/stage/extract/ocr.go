@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"danny.vn/trachuan/apps/corpus/internal/ocrstore"
@@ -72,6 +73,11 @@ func selectOCRFilesMode(ctx context.Context, dir, id string, files []fetch.Docum
 	}
 	if result.Verdict == "rejected" {
 		return selection{source: "none", gap: "ocr_rejected", reason: "checker rejected OCR text", consulted: true}, nil
+	}
+	for _, item := range result.Items {
+		if slices.Contains([]string{"article_label", "document_number"}, item.Kind) {
+			return selection{source: "none", gap: "ocr_label_flagged", reason: "checker flagged an article label or document number", consulted: true}, nil
+		}
 	}
 	if result.Verdict != "clean" && result.Verdict != "flagged" {
 		return selection{}, fmt.Errorf("invalid stored OCR verdict")

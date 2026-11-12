@@ -66,7 +66,9 @@ row of the first accepted engine id that exists. It is usable only when
 - Usable: the input hash freezes the fetch hash, `ocr`, the text SHA-256 and the
   check result SHA-256. `text.json` records the PDF name and SHA-256, engine id,
   text SHA-256, checker id, result SHA-256 and flagged count. One or more
-  flagged items add the gap `ocr_flagged`; the text is still indexed.
+  flagged items of other kinds add the gap `ocr_flagged`; the text is indexed.
+  An `article_label` or `document_number` item makes OCR unusable and gives
+  `ocr_label_flagged`, with no provisions from OCR.
 - No entry, or no completed check: the input hash freezes `absent` and the gap
   the selection ends with (`needs_ocr`, `text_source_ambiguous`,
   `file_format_unsupported` or `no_text_source`), so a store change that moves a
@@ -85,9 +87,10 @@ selects from the live store. A frozen run therefore processes exactly what it
 planned, and a new run sees the store as it is then. A heading-only tree kept
 because no OCR text was usable is such a document too: its row carries the gap
 `tree_headings_only` and its input hash stays the fetch hash. A check with
-verdict `rejected` gives the gap `ocr_rejected` instead of `needs_ocr`, so the
-reason is frozen with the selection and the artifact is not shared with the
-unchecked state.
+verdict `rejected` gives the gap `ocr_rejected`, even when a label is flagged.
+Both unusable OCR gaps freeze the absent input with the gap, so the reason is
+frozen with the selection and the artifact is not shared with the unchecked
+state.
 
 `extract` verifies the text file against its SHA-256 before parsing and fails
 the item, never the run, on a mismatch or a missing file. Without

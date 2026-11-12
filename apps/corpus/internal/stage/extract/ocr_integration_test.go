@@ -218,11 +218,14 @@ func TestExtract_UncheckedEntryReplansArtifact(t *testing.T) {
 
 func TestExtract_FrozenHeadingAndRejected(t *testing.T) {
 	for _, tc := range []struct {
-		name, tree, result, initialGap, newGap string
-		preexisting                            bool
+		name, tree, result, initialGap, newGap, reason string
+		flagged                                        int32
+		preexisting                                    bool
 	}{
-		{"heading", bareTree, `{"same_document":true,"pages":1,"pdf_pages":1,"items":[],"verdict":"clean"}`, "tree_headings_only", "", false},
-		{"rejected", `{"success":true,"data":[]}`, `{"same_document":false,"pages":1,"pdf_pages":1,"items":[],"verdict":"rejected"}`, "needs_ocr", "ocr_rejected", true},
+		{"heading", bareTree, `{"same_document":true,"pages":1,"pdf_pages":1,"items":[],"verdict":"clean"}`, "tree_headings_only", "", "", 0, false},
+		{"rejected", `{"success":true,"data":[]}`, `{"same_document":false,"pages":1,"pdf_pages":1,"items":[],"verdict":"rejected"}`, "needs_ocr", "ocr_rejected", "checker rejected OCR text", 0, true},
+		{"article label", `{"success":true,"data":[]}`, `{"same_document":true,"pages":1,"pdf_pages":1,"items":[{"kind":"article_label","page":1,"ocr":"1","pdf":"2","note":"x"}],"verdict":"flagged"}`, "needs_ocr", "ocr_label_flagged", "checker flagged an article label or document number", 1, true},
+		{"document number", `{"success":true,"data":[]}`, `{"same_document":true,"pages":1,"pdf_pages":1,"items":[{"kind":"document_number","page":1,"ocr":"1","pdf":"2","note":"x"}],"verdict":"flagged"}`, "needs_ocr", "ocr_label_flagged", "checker flagged an article label or document number", 1, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := context.Background()
@@ -287,7 +290,7 @@ func TestExtract_FrozenHeadingAndRejected(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if _, err = ocr.PutCheck(ctx, entries[pdf].Text, "checker", json.RawMessage(tc.result), 0, true); err != nil {
+			if _, err = ocr.PutCheck(ctx, entries[pdf].Text, "checker", json.RawMessage(tc.result), tc.flagged, true); err != nil {
 				t.Fatal(err)
 			}
 			replay, err := extractor.Plan(ctx, env, run)
@@ -315,7 +318,16 @@ func TestExtract_FrozenHeadingAndRejected(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if tc.newGap != "" && (!hasGap(resolved.Gaps, tc.newGap, "checker rejected OCR text") || !hasGap(resolved.Gaps, "no_tree", "")) {
+			if tc.newGap == "ocr_label_flagged" {
+				data, readErr := os.ReadFile(filepath.Join(artifacts.Abs(out.Artifact.Path), "provisions.json"))
+				if readErr != nil || string(data) != "[]" {
+					t.Fatalf("provisions=%s err=%v", data, readErr)
+				}
+				if err = fetch.CheckExtractLineage(artifacts.Abs(out.Artifact.Path), art.SHA256, next[0].InputHash); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if tc.newGap != "" && (!hasGap(resolved.Gaps, tc.newGap, tc.reason) || !hasGap(resolved.Gaps, "no_tree", "")) {
 				t.Fatalf("new gap: %v", resolved.Gaps)
 			}
 		})

@@ -66,7 +66,9 @@ Exactly one source supplies a document's text, chosen in this order:
    request (48 documents, 1,342 pages measured).
 5. `none`: the document stays `no_tree` with a gap naming why (`needs_ocr` until
    the OCR store holds its text with a completed cross-check, `no_text_source`,
-   `file_format_unsupported` for `.doc` and archives, `text_source_ambiguous`).
+   `file_format_unsupported` for `.doc` and archives, `text_source_ambiguous`,
+   `ocr_rejected` or `ocr_label_flagged` as defined in the
+   [OCR store](ocr-store.md)).
 
 A PDF's text layer is read only through that gate: most measured layers are
 garbage from an earlier non-Vietnamese OCR pass, and a scan with an embedded
@@ -202,11 +204,11 @@ numbered outline (`I.`, `1.`) when one exists. Text under 300 characters is
   `document.text_complete boolean`, false when any gap of `tree_headings_only`,
   `structure_uncertain`, `table_text` (more than a tenth of the characters
   inside provisions are in tables; letterhead and signature tables outside any
-  provision do not count), `image_content`, `ocr_flagged`, `ocr_rejected` or
-  `needs_ocr` applies; build derives `source_tree` for artifacts without
-  `text.json`. Search and read results return both on the document entry, with
-  each provision's locator (hits, read units, ranges and continued parts alike).
-  This is corpus schema version 4.
+  provision do not count), `image_content`, `ocr_flagged`, `ocr_rejected`,
+  `ocr_label_flagged` or `needs_ocr` applies; build derives `source_tree` for
+  artifacts without `text.json`. Search and read results return both on the
+  document entry, with each provision's locator (hits, read units, ranges and
+  continued parts alike). This is corpus schema version 4.
 
 ## Inputs and reuse
 

@@ -56,10 +56,13 @@ func selectionFromRow(row store.GetRunOCRSelectionRow) (selection, error) {
 		switch row.Gap {
 		case "tree_headings_only":
 			return selection{source: "source_tree", gap: row.Gap, consulted: true}, nil
-		case "needs_ocr", "text_source_ambiguous", "file_format_unsupported", "no_text_source", "ocr_rejected":
+		case "needs_ocr", "text_source_ambiguous", "file_format_unsupported", "no_text_source", "ocr_rejected", "ocr_label_flagged":
 			selected := selection{source: "none", gap: row.Gap, consulted: true}
-			if row.Gap == "ocr_rejected" {
+			switch row.Gap {
+			case "ocr_rejected":
 				selected.reason = "checker rejected OCR text"
+			case "ocr_label_flagged":
+				selected.reason = "checker flagged an article label or document number"
 			}
 			return selected, nil
 		default:

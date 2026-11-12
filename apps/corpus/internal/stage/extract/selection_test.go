@@ -151,7 +151,7 @@ func TestExtract_Lineage(t *testing.T) {
 
 func TestExtract_AbsentLineageBindsGap(t *testing.T) {
 	fetchHash := strings.Repeat("a", 64)
-	gaps := []string{"needs_ocr", "text_source_ambiguous", "file_format_unsupported", "no_text_source", "ocr_rejected"}
+	gaps := []string{"needs_ocr", "text_source_ambiguous", "file_format_unsupported", "no_text_source", "ocr_rejected", "ocr_label_flagged"}
 	seen := map[string]bool{}
 	for _, gap := range gaps {
 		hash := InputHash(fetchHash, "none", gap)

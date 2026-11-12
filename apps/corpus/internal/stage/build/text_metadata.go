@@ -46,7 +46,7 @@ func textComplete(n int, key string, gaps []InventoryGap) bool {
 			continue
 		}
 		switch g.Kind {
-		case "tree_headings_only", "structure_uncertain", "table_text", "image_content", "ocr_flagged", "ocr_rejected", "needs_ocr", "text_limit", "no_text":
+		case "tree_headings_only", "structure_uncertain", "table_text", "image_content", "ocr_flagged", "ocr_rejected", "ocr_label_flagged", "needs_ocr", "text_limit", "no_text":
 			return false
 		}
 	}

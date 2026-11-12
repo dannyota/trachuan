@@ -235,3 +235,77 @@ func TestExtract_RejectsFailedCheck(t *testing.T) {
 		t.Fatalf("selection=%+v err=%v", selected, err)
 	}
 }
+
+func TestExtract_CheckItemSelection(t *testing.T) {
+	for _, tc := range []struct{ name, kind, verdict, source, gap string }{
+		{"article", "article_label", "flagged", "none", "ocr_label_flagged"},
+		{"number", "document_number", "flagged", "none", "ocr_label_flagged"},
+		{"missing", "missing_text", "flagged", "ocr", "ocr_flagged"},
+		{"extra", "extra_text", "flagged", "ocr", "ocr_flagged"},
+		{"amount", "amount", "flagged", "ocr", "ocr_flagged"},
+		{"date", "date", "flagged", "ocr", "ocr_flagged"},
+		{"rejected", "article_label", "rejected", "none", "ocr_rejected"},
+		{"clean", "", "clean", "ocr", ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			src := ocrFixture(t, true, 0)
+			hash := strings.Repeat("a", 64)
+			entry := src.entries[hash]
+			result := ocrstore.CheckResult{SameDocument: tc.verdict != "rejected", Pages: 20, PDFPages: 20, Items: []ocrstore.CheckItem{}, Verdict: tc.verdict}
+			if tc.kind != "" {
+				result.Items = append(result.Items, ocrstore.CheckItem{Kind: tc.kind, Page: 1, OCR: "1", PDF: "2", Note: "x"})
+			}
+			var err error
+			entry.Check.Result, err = json.Marshal(result)
+			if err != nil {
+				t.Fatal(err)
+			}
+			entry.Check.Flagged = int32(len(result.Items))
+			src.entries[hash] = entry
+			selected, err := selectOCRFiles(context.Background(), t.TempDir(), "1", []fetch.DocumentFile{{Name: "a.pdf", SHA256: hash}}, src, []string{"vision-ocr/builtin-latest"}, "checker")
+			if err != nil || selected.source != tc.source || !selected.consulted {
+				t.Fatalf("selection=%+v err=%v", selected, err)
+			}
+			if tc.source == "none" {
+				if selected.gap != tc.gap || (tc.gap == "ocr_label_flagged" && selected.reason != "checker flagged an article label or document number") {
+					t.Fatalf("selection=%+v", selected)
+				}
+			} else {
+				rows, gaps, _ := parseOCR(selected, src.data)
+				if len(rows) == 0 || (tc.gap != "" && !hasGap(gaps, tc.gap, "")) || (tc.gap == "" && hasGap(gaps, "ocr_flagged", "")) {
+					t.Fatalf("rows=%d gaps=%v", len(rows), gaps)
+				}
+			}
+		})
+	}
+}
+
+func TestExtract_OCRSelectionHashesDiffer(t *testing.T) {
+	src := ocrFixture(t, true, 1)
+	entry := src.entries[strings.Repeat("a", 64)]
+	states := []selection{{source: "none", gap: "needs_ocr"}, {source: "ocr", entry: &entry}, {source: "none", gap: "ocr_label_flagged"}}
+	seen := map[string]bool{}
+	for _, state := range states {
+		hash := selectionInputHash("fetch", state)
+		if seen[hash] {
+			t.Fatal("selection hashes collide")
+		}
+		seen[hash] = true
+	}
+}
+
+func TestExtract_HeadingOnlyWithLabelFlag(t *testing.T) {
+	dir := headingBundle(t, bareTree, false)
+	hash := strings.Repeat("a", 64)
+	if err := os.WriteFile(filepath.Join(dir, "files.json"), []byte(`[{"name":"scan.pdf","sha256":"`+hash+`","size":1}]`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	src := ocrFixture(t, true, 1)
+	entry := src.entries[hash]
+	entry.Check.Result = []byte(`{"same_document":true,"pages":1,"pdf_pages":1,"items":[{"kind":"article_label","page":1,"ocr":"1","pdf":"2","note":"x"}],"verdict":"flagged"}`)
+	src.entries[hash] = entry
+	selected, nodes, err := chooseWithOCR(context.Background(), dir, "vn:vbpl:1", src, []string{"vision-ocr/builtin-latest"}, "checker")
+	if err != nil || selected.source != "source_tree" || selected.gap != "tree_headings_only" || !selected.consulted || len(nodes) == 0 {
+		t.Fatalf("selection=%+v nodes=%d err=%v", selected, len(nodes), err)
+	}
+}
