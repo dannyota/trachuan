@@ -35,3 +35,19 @@ undercounts omitted warnings and lets earlier kinds (`cites`, `guided_by`,
 [search results](../design/mcp-results.md#warnings) forbids. The change was
 dropped. Bounding this branch needs warning rows selected and counted on their
 own, as read units already do; the backlog records it.
+
+## Bounded incident branch
+
+Search hits and read units already take `warnings` and `warnings_omitted` from
+the evidence-free bounded warning query, so the incident branch now orders by
+the recipe relation order and keeps at most `RelationCap+1` (21) rows per group,
+like the inherited branch. Same release and id sets, three runs each:
+
+| Id set                                            | Before        | After       | `relation_pkey` lookups after |
+| ------------------------------------------------- | ------------- | ----------- | ----------------------------- |
+| 20 articles of the most related document          | 111 to 123 ms | 15 to 19 ms | 21 (was 18,860)               |
+| one article from each of the 20 most related ones | 46 to 53 ms   | 10 to 15 ms | 330 (was 5,261)               |
+
+Each group's incident branch now returns 21 rows (`Limit` over the same
+BitmapOr); a full hit still keeps the first 20 merged relations in recipe order
+with the `relations_omitted` gap.
