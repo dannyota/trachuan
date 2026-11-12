@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"regexp"
 
+	"danny.vn/trachuan/internal/pgdrop"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -72,13 +73,13 @@ func recreateTemporary(ctx context.Context, admin *pgx.Conn, cfg Config, name, m
 			return fmt.Errorf("temporary database ownership mismatch")
 		}
 		var active bool
-		if err = admin.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE datname=$1)`, name).Scan(&active); err != nil {
+		if err = admin.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE datname=$1 AND usesysid IS NOT NULL)`, name).Scan(&active); err != nil {
 			return fmt.Errorf("inspect database sessions: %w", err)
 		}
 		if active {
 			return fmt.Errorf("temporary database has active sessions")
 		}
-		if _, err = admin.Exec(ctx, `DROP DATABASE `+id); err != nil {
+		if err = pgdrop.DropOnly(ctx, admin, name); err != nil {
 			return fmt.Errorf("drop temporary database: %w", err)
 		}
 	}
@@ -96,13 +97,13 @@ func renameToFinal(ctx context.Context, admin *pgx.Conn, temporary, final string
 		return fmt.Errorf("invalid database name")
 	}
 	var foreign bool
-	if err := admin.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE datname=$1 AND usename<>current_user)`, temporary).Scan(&foreign); err != nil {
+	if err := admin.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE datname=$1 AND usesysid IS NOT NULL AND usename<>current_user)`, temporary).Scan(&foreign); err != nil {
 		return fmt.Errorf("inspect sessions: %w", err)
 	}
 	if foreign {
 		return fmt.Errorf("temporary database has foreign sessions")
 	}
-	if _, err := admin.Exec(ctx, `SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname=$1 AND usename=current_user AND pid<>pg_backend_pid()`, temporary); err != nil {
+	if _, err := admin.Exec(ctx, `SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname=$1 AND usesysid IS NOT NULL AND usename=current_user AND pid<>pg_backend_pid()`, temporary); err != nil {
 		return fmt.Errorf("disconnect builder sessions: %w", err)
 	}
 	if _, err := admin.Exec(ctx, `ALTER DATABASE `+pgx.Identifier{temporary}.Sanitize()+` RENAME TO `+pgx.Identifier{final}.Sanitize()); err != nil {

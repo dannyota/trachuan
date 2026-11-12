@@ -20,6 +20,7 @@ import (
 	"danny.vn/trachuan/apps/corpus/internal/stage"
 	"danny.vn/trachuan/apps/corpus/internal/stage/build"
 	"danny.vn/trachuan/apps/corpus/internal/store"
+	"danny.vn/trachuan/apps/corpus/internal/testactivity"
 	"danny.vn/trachuan/internal/embedding"
 	"danny.vn/trachuan/internal/testpg"
 	"github.com/jackc/pgx/v5"
@@ -338,7 +339,9 @@ func (h *harness) registerIndexCleanup(builderURL string) {
 			return
 		}
 		for _, name := range names {
-			testpg.DropCorpusDatabase(h.t, conn, name, "vn/"+h.rel)
+			if !testpg.DropCorpusDatabase(h.t, conn, name, "vn/"+h.rel) {
+				testactivity.Log(h.t, conn, name)
+			}
 		}
 	})
 }

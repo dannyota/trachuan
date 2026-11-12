@@ -13,6 +13,7 @@ import (
 	"danny.vn/trachuan/apps/corpus/internal/evaluation"
 	"danny.vn/trachuan/apps/corpus/internal/stage"
 	"danny.vn/trachuan/apps/corpus/internal/store"
+	"danny.vn/trachuan/apps/corpus/internal/testactivity"
 	"danny.vn/trachuan/internal/testpg"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -61,11 +62,16 @@ func recoverySetup(t *testing.T) recoveryFixture {
 	temp := "corpus_tmp_vn_" + items[0].InputHash[:24]
 	final := "corpus_vn_" + f.run.Rel
 	t.Cleanup(func() {
-		testpg.DropCorpusDatabase(t, admin, temp, "vn/"+f.run.Rel)
-		testpg.DropCorpusDatabase(t, admin, final, "vn/"+f.run.Rel)
+		if !testpg.DropCorpusDatabase(t, admin, temp, "vn/"+f.run.Rel) {
+			testactivity.Log(t, admin, temp)
+		}
+		if !testpg.DropCorpusDatabase(t, admin, final, "vn/"+f.run.Rel) {
+			testactivity.Log(t, admin, final)
+		}
 	})
 	output, err := st.Process(ctx, env, f.run, items[0])
 	if err != nil || output.Artifact == nil {
+		testactivity.Log(t, admin, temp)
 		t.Fatalf("build: %v", err)
 	}
 	return recoveryFixture{cfg: cfg, env: env, run: f.run, item: items[0], art: *output.Artifact, admin: admin}
@@ -89,6 +95,7 @@ func TestResolve_RestoresLostDatabaseFromDump(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !testpg.DropCorpusDatabase(t, f.admin, built.Name, "vn/"+f.run.Rel) {
+		testactivity.Log(t, f.admin, built.Name)
 		t.Fatal("database was not dropped")
 	}
 	restored, err := EnsureDatabase(ctx, f.cfg, f.env.Artifacts, f.art, f.run)
@@ -146,6 +153,7 @@ func TestResolve_CrashBeforeRenameRecreatesOnlyOwnedTemporary(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := EnsureDatabase(ctx, f.cfg, f.env.Artifacts, f.art, f.run); err != nil {
+		testactivity.Log(t, f.admin, temp)
 		t.Fatal(err)
 	}
 }

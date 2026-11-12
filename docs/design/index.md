@@ -135,8 +135,12 @@ connection releases the lock and fails the operation. Check run generation
 before expensive work and before publication. A stale attempt may leave an
 orphan database but cannot commit its run item. A retry adopts a valid existing
 build artifact first. Without an artifact, recreate only a temporary database
-bearing this exact ownership marker and no foreign connections. A mismatched
-final database is an error, never an automatic drop.
+bearing this exact ownership marker and no foreign connections. Only sessions
+that belong to a role count (`usesysid` is set): an autovacuum worker has none,
+the builder role may not stop it, and PostgreSQL ends it itself when the
+database is dropped. The builder cannot see another role's `backend_type`, so
+that column is not the test. A mismatched final database is an error, never an
+automatic drop.
 
 Populate template tables, normalize, copy rows in stable order, train BM25 in
 two streaming passes, build HNSW with `max_parallel_maintenance_workers=0`,

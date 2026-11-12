@@ -7,10 +7,13 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"net/url"
 	"testing"
 
+	"danny.vn/trachuan/internal/pgdrop"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 // Builder holds a test builder login and its extension template.
@@ -75,7 +78,7 @@ func NewDatabase(t *testing.T, extensions ...string) string {
 	admin, base := administrator(t)
 	name := "test_" + random(t)
 	t.Cleanup(func() {
-		if _, err := admin.Exec(ctx, "DROP DATABASE IF EXISTS "+pgx.Identifier{name}.Sanitize()+" WITH (FORCE)"); err != nil {
+		if err := dropIfExists(ctx, admin, name); err != nil {
 			t.Errorf("drop test database: %v", err)
 		}
 	})
@@ -101,7 +104,7 @@ func NewBuilder(t *testing.T) Builder {
 				t.Errorf("clear template flag: %v", err)
 			}
 		}
-		if _, err := admin.Exec(ctx, "DROP DATABASE IF EXISTS "+pgx.Identifier{template}.Sanitize()+" WITH (FORCE)"); err != nil {
+		if err := dropIfExists(ctx, admin, template); err != nil {
 			t.Errorf("drop test template: %v", err)
 		}
 		if _, err := admin.Exec(ctx, `SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE usename=$1 AND pid <> pg_backend_pid()`, role); err != nil {
@@ -125,4 +128,13 @@ func NewBuilder(t *testing.T) Builder {
 	builderURL.User = url.UserPassword(role, password)
 	builderURL.Path = "/postgres"
 	return Builder{URL: builderURL.String(), Role: role, Template: template}
+}
+
+func dropIfExists(ctx context.Context, conn *pgx.Conn, name string) error {
+	err := pgdrop.Drop(ctx, conn, name)
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && pgErr.Code == "3D000" {
+		return nil
+	}
+	return err
 }

@@ -10,6 +10,7 @@ import (
 	"danny.vn/trachuan/apps/corpus/internal/artifact"
 	"danny.vn/trachuan/apps/corpus/internal/stage"
 	"danny.vn/trachuan/apps/corpus/internal/store"
+	"danny.vn/trachuan/internal/pgdrop"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -94,13 +95,13 @@ func EnsureDatabase(ctx context.Context, cfg Config, artifacts artifact.Store, a
 					return Database{}, err
 				}
 				var active bool
-				if err = admin.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE datname=$1)`, temporary).Scan(&active); err != nil {
+				if err = admin.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE datname=$1 AND usesysid IS NOT NULL)`, temporary).Scan(&active); err != nil {
 					return Database{}, fmt.Errorf("inspect database sessions: %w", err)
 				}
 				if active {
 					return Database{}, fmt.Errorf("temporary database has active sessions")
 				}
-				if _, err = admin.Exec(ctx, `DROP DATABASE `+pgx.Identifier{temporary}.Sanitize()); err != nil {
+				if err = pgdrop.DropOnly(ctx, admin, temporary); err != nil {
 					return Database{}, fmt.Errorf("drop temporary database: %w", err)
 				}
 			}
