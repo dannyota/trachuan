@@ -2,6 +2,8 @@ package vbpl
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -52,9 +54,26 @@ func TestClient_UsesConfiguredBackoffs(t *testing.T) {
 	}))
 	defer s.Close()
 	c := NewWithBase(s.URL, "test", WithLimits(float64(rate.Inf), 8), WithBackoffs(time.Millisecond, time.Millisecond))
-	_, _, err := c.Detail(context.Background(), "1")
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	_, _, err := c.Detail(ctx, "1")
 	if err == nil || errors.Is(err, context.DeadlineExceeded) || attempts.Load() != 3 {
 		t.Fatalf("error = %v, attempts = %d", err, attempts.Load())
+	}
+}
+func TestClient_LimitsRate(t *testing.T) {
+	b := fixture(t, "detail-67878.json")
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(b) }))
+	defer s.Close()
+	c := NewWithBase(s.URL, "test", WithLimits(50, 8))
+	start := time.Now()
+	for i := 0; i < 11; i++ {
+		if _, _, err := c.Detail(context.Background(), "67878"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if elapsed := time.Since(start); elapsed < 190*time.Millisecond || elapsed > 2*time.Second {
+		t.Fatalf("11 requests took %v, want 190ms to 2s", elapsed)
 	}
 }
 func TestClient_ResponseOverLimit(t *testing.T) {
@@ -113,6 +132,27 @@ func TestDownload_RefreshesExpiredURL(t *testing.T) {
 	got, err := testClient(s).Download(context.Background(), "1", File{FullPath: "a", URL: s.URL + "/old"}, t.TempDir(), 100)
 	if err != nil || got.Size != 8 || lists.Load() != 1 {
 		t.Fatalf("got %+v lists %d err %v", got, lists.Load(), err)
+	}
+}
+func TestDownload_TimeoutAfterPartialBodyRetriesFresh(t *testing.T) {
+	var n atomic.Int32
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if n.Add(1) == 1 {
+			_, _ = w.Write([]byte("part"))
+			w.(http.Flusher).Flush()
+			<-r.Context().Done()
+			return
+		}
+		_, _ = w.Write([]byte("complete"))
+	}))
+	defer s.Close()
+	c := NewWithBase(s.URL, "test", WithTestHTTP(), WithLimits(float64(rate.Inf), 8), WithBackoffs(time.Millisecond, time.Millisecond, time.Millisecond), WithTestTimeouts(5*time.Millisecond, 50*time.Millisecond))
+	ctx, cancel := context.WithTimeout(context.Background(), 80*time.Millisecond)
+	defer cancel()
+	got, err := c.Download(ctx, "1", File{URL: s.URL}, t.TempDir(), 100)
+	sum := sha256.Sum256([]byte("complete"))
+	if err != nil || got.SHA256 != hex.EncodeToString(sum[:]) {
+		t.Fatalf("got %+v err %v", got, err)
 	}
 }
 func TestDownload_OverLimit(t *testing.T) {
@@ -313,7 +353,9 @@ func TestClient_DownloadDoesNotBlockGateway(t *testing.T) {
 		done <- err
 	}()
 	<-started
-	_, _, err := c.Detail(context.Background(), "1")
+	ctx, cancel := context.WithTimeout(context.Background(), 80*time.Millisecond)
+	defer cancel()
+	_, _, err := c.Detail(ctx, "1")
 	close(release)
 	if downloadErr := <-done; downloadErr != nil {
 		t.Fatal(downloadErr)

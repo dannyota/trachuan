@@ -1,5 +1,3 @@
-//go:build integration
-
 package vbpl
 
 import (
@@ -24,20 +22,18 @@ type failingPauseGate struct {
 
 func (g *failingPauseGate) Pause(ctx context.Context, id int64, source, reason, evidence string) error {
 	g.writes.Add(1)
-	var err error
-	select {
-	case <-g.allow:
-		err = g.Memory.Pause(ctx, id, source, reason, evidence)
-	case <-ctx.Done():
-		err = ctx.Err()
-	default:
-		err = errors.New("pause write failed")
-	}
 	select {
 	case g.called <- struct{}{}:
 	default:
 	}
-	return err
+	select {
+	case <-g.allow:
+		return g.Memory.Pause(ctx, id, source, reason, evidence)
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+		return errors.New("pause write failed")
+	}
 }
 
 func TestPause_WaitersRespectOwnDeadline(t *testing.T) {
@@ -45,7 +41,7 @@ func TestPause_WaitersRespectOwnDeadline(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusForbidden) }))
 	defer server.Close()
 	c := NewWithBase(server.URL, "test", WithLimits(float64(rate.Inf), 2), WithBackoffs(time.Millisecond), WithGate(g))
-	parent, cancel := context.WithCancel(context.Background())
+	parent, cancel := context.WithTimeout(context.Background(), 60*time.Millisecond)
 	defer cancel()
 	parent = sourcegate.WithActivity(sourcegate.WithRunID(parent, 1))
 	if _, _, err := c.Detail(parent, "1"); !errors.Is(err, sourcegate.ErrSourcePaused) {
@@ -54,7 +50,7 @@ func TestPause_WaitersRespectOwnDeadline(t *testing.T) {
 	results := make(chan error, 2)
 	for range 2 {
 		go func() {
-			ctx, stop := context.WithTimeout(parent, 30*time.Millisecond)
+			ctx, stop := context.WithTimeout(parent, 5*time.Millisecond)
 			defer stop()
 			results <- c.awaitPause(ctx, 1)
 		}()
@@ -65,7 +61,7 @@ func TestPause_WaitersRespectOwnDeadline(t *testing.T) {
 			if !errors.Is(err, sourcegate.ErrSourcePaused) || errors.Is(err, context.DeadlineExceeded) {
 				t.Errorf("error = %v", err)
 			}
-		case <-time.After(5 * time.Second):
+		case <-time.After(25 * time.Millisecond):
 			t.Fatal("waiter exceeded its deadline")
 		}
 	}
@@ -76,7 +72,7 @@ func TestPause_RequestDeadlineIncludesSlotWait(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusForbidden) }))
 	defer server.Close()
 	c := NewWithBase(server.URL, "test", WithLimits(float64(rate.Inf), 1), WithBackoffs(), WithGate(g))
-	c.timeout, c.requestBudget = time.Second, 5*time.Second
+	c.timeout, c.requestBudget = 30*time.Millisecond, 80*time.Millisecond
 	ctx, cancel := context.WithCancel(sourcegate.WithRunID(context.Background(), 1))
 	defer cancel()
 	ctx = sourcegate.WithActivity(ctx)
@@ -85,10 +81,10 @@ func TestPause_RequestDeadlineIncludesSlotWait(t *testing.T) {
 	}
 	<-g.called
 	c.slots <- struct{}{}
-	go func() { time.Sleep(700 * time.Millisecond); <-c.slots }()
+	go func() { time.Sleep(20 * time.Millisecond); <-c.slots }()
 	started := time.Now()
 	_, _, err := c.Detail(ctx, "2")
-	if !errors.Is(err, sourcegate.ErrSourcePaused) || time.Since(started) > 1500*time.Millisecond {
+	if !errors.Is(err, sourcegate.ErrSourcePaused) || time.Since(started) > 75*time.Millisecond {
 		t.Fatalf("error = %v, elapsed = %v", err, time.Since(started))
 	}
 }
@@ -111,22 +107,22 @@ func TestPause_OwnerRetriesAndStops(t *testing.T) {
 				if !errors.Is(err, sourcegate.ErrSourcePaused) {
 					t.Fatalf("error = %v", err)
 				}
-			case <-time.After(5 * time.Second):
+			case <-time.After(20 * time.Millisecond):
 				t.Fatal("403 request waited for pause")
 			}
 			select {
 			case <-g.called:
-			case <-time.After(5 * time.Second):
+			case <-time.After(20 * time.Millisecond):
 				t.Fatal("owner did not try pause")
 			}
 			if succeed {
 				close(g.allow)
 				select {
 				case <-g.called:
-				case <-time.After(5 * time.Second):
+				case <-time.After(30 * time.Millisecond):
 					t.Fatal("owner did not retry")
 				}
-				waitCtx, stop := context.WithTimeout(ctx, 5*time.Second)
+				waitCtx, stop := context.WithTimeout(ctx, 40*time.Millisecond)
 				defer stop()
 				if err := c.awaitPause(waitCtx, 1); err != nil && !errors.Is(err, sourcegate.ErrSourcePaused) {
 					t.Fatalf("await: %v", err)
@@ -138,13 +134,14 @@ func TestPause_OwnerRetriesAndStops(t *testing.T) {
 					t.Fatalf("later error = %v, requests = %d", err, requests.Load())
 				}
 			} else {
-				c.pauseMu.Lock()
-				done := c.pauses[1].ownerDone
-				c.pauseMu.Unlock()
 				cancel()
 				select {
-				case <-done:
-				case <-time.After(5 * time.Second):
+				case <-g.called:
+				default:
+				}
+				before := g.writes.Load()
+				time.Sleep(10 * time.Millisecond)
+				if g.writes.Load() != before {
 					t.Fatal("owner continued after cancellation")
 				}
 			}
@@ -170,7 +167,7 @@ func TestPause_OwnerGoroutineStopsWithActivity(t *testing.T) {
 	cancel()
 	select {
 	case <-done:
-	case <-time.After(5 * time.Second):
+	case <-time.After(50 * time.Millisecond):
 		t.Fatal("pause owner goroutine did not stop")
 	}
 }

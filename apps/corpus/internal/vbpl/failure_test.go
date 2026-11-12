@@ -37,26 +37,21 @@ func TestClient_ForbiddenPausesSource(t *testing.T) {
 	c := NewWithBase(s.URL, "test", WithLimits(float64(rate.Inf), 8), WithBackoffs(time.Millisecond), WithGate(gate))
 	ctx := sourcegate.WithActivity(sourcegate.WithRunID(context.Background(), 7))
 	_, _, err := c.Detail(ctx, "1")
-	waitForPaused(t, ctx, c, 7)
+	waitForPaused(t, ctx, gate, 7)
 	if !errors.Is(err, sourcegate.ErrSourcePaused) || attempts.Load() != 1 || !errors.Is(gate.Admit(ctx, 7, "vbpl"), sourcegate.ErrSourcePaused) {
 		t.Fatalf("err = %v, attempts = %d", err, attempts.Load())
 	}
 }
 
-func waitForPaused(t *testing.T, ctx context.Context, c *Client, id int64) {
+func waitForPaused(t *testing.T, ctx context.Context, gate sourcegate.Gate, id int64) {
 	t.Helper()
-	c.pauseMu.Lock()
-	state := c.pauses[id]
-	c.pauseMu.Unlock()
-	if state != nil {
+	deadline := time.After(90 * time.Millisecond)
+	for !errors.Is(gate.Admit(ctx, id, "vbpl"), sourcegate.ErrSourcePaused) {
 		select {
-		case <-state.done:
-		case <-ctx.Done():
-			t.Fatalf("source pause was not persisted: %v", ctx.Err())
+		case <-deadline:
+			t.Fatal("source pause was not persisted")
+		case <-time.After(time.Millisecond):
 		}
-	}
-	if err := c.gate.Admit(ctx, id, "vbpl"); !errors.Is(err, sourcegate.ErrSourcePaused) {
-		t.Fatalf("source pause was not persisted: %v", err)
 	}
 }
 
@@ -101,7 +96,7 @@ func TestClient_RequestSlotWaitUsesRequestTimeout(t *testing.T) {
 	c := NewWithBase("https://example.invalid", "test", WithLimits(float64(rate.Inf), 1), WithBackoffs())
 	c.timeout = 5 * time.Millisecond
 	c.slots <- struct{}{}
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), 80*time.Millisecond)
 	defer cancel()
 	_, _, err := c.Detail(ctx, "1")
 	if !errors.Is(err, context.DeadlineExceeded) || ctx.Err() != nil {
@@ -114,7 +109,7 @@ func TestClient_RetrySequenceHasDeadline(t *testing.T) {
 	c.timeout = 5 * time.Millisecond
 	c.requestBudget = 10 * time.Millisecond
 	c.slots <- struct{}{}
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), 25*time.Millisecond)
 	defer cancel()
 	_, _, err := c.Detail(ctx, "1")
 	if !errors.Is(err, context.DeadlineExceeded) || ctx.Err() != nil {
