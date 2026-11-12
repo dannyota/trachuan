@@ -127,11 +127,19 @@ func populate(ctx context.Context, db *pgxpool.Pool, rel string) error {
 	if err != nil {
 		return fmt.Errorf("insert fixture relation: %w", err)
 	}
+	_, err = db.Exec(ctx, `INSERT INTO document (id,country,key,number,number_norm,title,doc_type,issuer,class,source,validity_conflict,eff_from,raw_issue_date,raw_eff_from,raw_eff_to,status_code,status_name,status_class,status_basis,is_current,is_consolidated,content_state,fetch_sha256,text_source,text_complete) VALUES (28,'vn','vn:fixture:warnings','28/2099/TT-TEST','28/2099/TT-TEST','Văn bản cảnh báo giả lập','test','Cơ quan giả lập','relation_context','vbpl',false,'2000-01-01','','','','','','in_force','source_status',true,false,'no_chunks',$1,'source_tree',true)`, hash)
+	if err != nil {
+		return fmt.Errorf("insert warning fixture document: %w", err)
+	}
+	_, err = db.Exec(ctx, `INSERT INTO provision (id,document_id,node_id,kind,label,heading,ordinal,preorder,path,text,anchor) VALUES (2801,28,'article-1','dieu','Điều 1','',1,1,'a1','Nội dung giả lập.','article-1')`)
+	if err != nil {
+		return fmt.Errorf("insert warning fixture provision: %w", err)
+	}
 	_, err = db.Exec(ctx, `INSERT INTO relation (id,source_document_id,target_document_id,source_provision_id,target_provision_id,source_key,target_key,source_number,target_number,kind,raw_code,raw_label,target_node_id,evidence,method,artifact_sha256,ordinal) VALUES
- (2,2,1,211,111,'vn:fixture:2','vn:fixture:1','2/2099/TT-TEST','1/2099/TT-TEST','amends_supplements','','','article-1','exact evidence','text_rule/1',$1,1),
- (3,2,1,211,111,'vn:fixture:2','vn:fixture:1','2/2099/TT-TEST','1/2099/TT-TEST','repeals','','','article-1/khoan-9','inexact evidence','text_rule/1',$1,2),
- (4,2,1,211,111,'vn:fixture:2','vn:fixture:1','2/2099/TT-TEST','1/2099/TT-TEST','replaces','','','vbpl-node','reference evidence','vbpl_references,vbpl_diagram',$1,3),
- (5,2,1,211,111,'vn:fixture:2','vn:fixture:1','2/2099/TT-TEST','1/2099/TT-TEST','suspends','','','article-1','diagram evidence','vbpl_diagram',$1,4)`, hash)
+ (2,28,1,2801,111,'vn:fixture:warnings','vn:fixture:1','28/2099/TT-TEST','1/2099/TT-TEST','amends_supplements','','','article-1','exact evidence','text_rule/1',$1,1),
+ (3,28,1,2801,111,'vn:fixture:warnings','vn:fixture:1','28/2099/TT-TEST','1/2099/TT-TEST','repeals','','','article-1/khoan-9','inexact evidence','text_rule/1',$1,2),
+ (4,28,1,2801,111,'vn:fixture:warnings','vn:fixture:1','28/2099/TT-TEST','1/2099/TT-TEST','replaces','','','vbpl-node','reference evidence','vbpl_references,vbpl_diagram',$1,3),
+ (5,28,1,2801,111,'vn:fixture:warnings','vn:fixture:1','28/2099/TT-TEST','1/2099/TT-TEST','suspends','','','article-1','diagram evidence','vbpl_diagram',$1,4)`, hash)
 	if err != nil {
 		return fmt.Errorf("insert fixture warning relations: %w", err)
 	}

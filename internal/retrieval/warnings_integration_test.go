@@ -22,7 +22,7 @@ func TestWarnings_AttachmentAndRecovery(t *testing.T) {
 		if i%2 == 0 {
 			target, named = 12, "p12"
 		}
-		_, err = tx.Exec(ctx, `INSERT INTO relation(id,source_document_id,target_document_id,source_provision_id,target_provision_id,source_key,target_key,source_number,target_number,kind,raw_code,raw_label,target_node_id,evidence,method,artifact_sha256,ordinal) VALUES($1,2,1,21,$2,'vn:2','vn:1','n','n','repeals','','',$3,$4,'text_rule/1',$5,$1)`, i+1, target, named, fmt.Sprintf("evidence-%d", i), strings.Repeat("a", 64))
+		_, err = tx.Exec(ctx, `INSERT INTO relation(id,source_document_id,target_document_id,source_provision_id,target_provision_id,source_key,target_key,source_number,target_number,kind,raw_code,raw_label,target_node_id,evidence,method,artifact_sha256,ordinal) VALUES($1::bigint,2,1,21,$2,'vn:2','vn:1','n','n','repeals','','',$3,$4,'text_rule/1',$5,($1::bigint)::integer)`, i+1, target, named, fmt.Sprintf("evidence-%d", i), strings.Repeat("a", 64))
 		if err != nil {
 			t.Fatal(err)
 		}
