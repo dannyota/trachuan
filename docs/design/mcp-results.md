@@ -108,14 +108,16 @@ and adds `source`, the acting provision's handle when it is in the release;
 `basis`, `text` for a `text_rule/1` row (its evidence is the act's operative
 sentence) or `vbpl_reference` for a row whose method set includes
 `vbpl_references` (its stored evidence is only VBPL's reference title);
-`target`, the handle of `target_provision_id`; `exact`; and `named`. For a text
-row `target_node_id` is the requested path, `exact` is true exactly when it
-equals the anchor of `target_provision_id`, and an inexact warning (the deepest
-resolved ancestor, because a named clause or point is not a node in this
-release) carries `named`, the requested path (`dieu-8/khoan-9`). For a reference
-row `target_node_id` is VBPL's node id, which build resolved to
-`target_provision_id`, so `exact` is always true and there is no `named`.
-`named` is what the act says, never a citation of the target tree.
+`target`, the handle of `target_provision_id`; `citation`, the target
+provision's citation built like a hit citation from its actual ancestry, number
+excluded; `exact`; and `named`. For a text row `target_node_id` is the requested
+path, `exact` is true exactly when it equals the anchor of
+`target_provision_id`, and an inexact warning (the deepest resolved ancestor,
+because a named clause or point is not a node in this release) carries `named`,
+the requested path (`dieu-8/khoan-9`). For a reference row `target_node_id` is
+VBPL's node id, which build resolved to `target_provision_id`, so `exact` is
+always true and there is no `named`. `named` is what the act says, never a
+citation of the target tree.
 
 A hit or a read unit carries a warning when its provision is `target` or an
 ancestor of `target`, or, for an exact warning, a provision inside `target`; an
