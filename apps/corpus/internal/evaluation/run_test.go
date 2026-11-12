@@ -24,6 +24,13 @@ type fakeEngine struct {
 	compactText, fullText      string
 }
 
+func (f *fakeEngine) Taxonomy(context.Context, retrieval.TaxonomyRequest) (retrieval.TaxonomyResult, error) {
+	return retrieval.TaxonomyResult{}, nil
+}
+func (f *fakeEngine) AnchorNodes(context.Context, []retrieval.AnchorRef) (map[retrieval.AnchorRef][]string, error) {
+	return nil, nil
+}
+
 type validityRequestEngine struct {
 	fakeEngine
 	requests map[string]bool

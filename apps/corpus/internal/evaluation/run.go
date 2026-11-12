@@ -1,7 +1,6 @@
 package evaluation
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -13,56 +12,6 @@ import (
 
 	"danny.vn/trachuan/internal/retrieval"
 )
-
-func rejectionSet(s Suite) map[string]bool {
-	out := map[string]bool{}
-	for _, id := range s.Rejections {
-		out[id] = true
-	}
-	return out
-}
-func validateSuite(s Suite) error {
-	b, err := json.Marshal(s.Legacy)
-	if err != nil {
-		return fmt.Errorf("encode suite: %w", err)
-	}
-	if _, err = LoadLegacy(bytes.NewReader(b)); err != nil {
-		return fmt.Errorf("validate suite: %w", err)
-	}
-	if (s.Map.Version != 1 && s.Map.Version != 2) || s.Map.LegacySHA256 != s.Hashes.Legacy {
-		return fmt.Errorf("invalid map version or legacy hash")
-	}
-	ids := map[string]bool{}
-	for _, c := range s.Legacy {
-		ids[c.ID] = true
-	}
-	development, err := json.Marshal(s.Development)
-	if err != nil {
-		return fmt.Errorf("encode development: %w", err)
-	}
-	if s.Development != nil {
-		if _, err = LoadDevelopment(bytes.NewReader(development)); err != nil {
-			return fmt.Errorf("validate development: %w", err)
-		}
-	}
-	seen := map[string]bool{}
-	if len(s.Rejections) != 3 {
-		return fmt.Errorf("expected three rejection checks")
-	}
-	for _, id := range s.Rejections {
-		if !ids[id] || seen[id] {
-			return fmt.Errorf("invalid rejection ID")
-		}
-		seen[id] = true
-	}
-	for _, c := range s.Development {
-		if ids[c.ID] {
-			return fmt.Errorf("duplicate case ID across cohorts")
-		}
-		ids[c.ID] = true
-	}
-	return nil
-}
 
 type metricKey struct {
 	cohort string
@@ -146,6 +95,15 @@ func Run(ctx context.Context, engine Engine, suite Suite, o Options) (Report, Ca
 			}
 		}
 	}
+	filter, err := newFilterState(ctx, engine, suite, o)
+	if err != nil {
+		return Report{}, Cache{}, err
+	}
+	if filter.active {
+		delete(r.NotRun, "filtered")
+	} else if filter.gate.Reason != "" {
+		r.NotRun["filtered"] = filter.gate.Reason
+	}
 	inputs := cohortInputs(suite, &r)
 	cache := Cache{}
 	metrics := map[metricKey]*Metrics{}
@@ -223,6 +181,11 @@ func Run(ctx context.Context, engine Engine, suite Suite, o Options) (Report, Ca
 				}
 				if arms.Date != date || arms.AsOf != nil {
 					return Report{}, Cache{}, fmt.Errorf("evaluation date mismatch for case %s", c.ID)
+				}
+				if cohort == "old_product" && len(o.Mapping[c.ID]) == 0 {
+					if err = filter.addCase(c, entries[c.ID], arms, recipe, p.Request); err != nil {
+						return Report{}, Cache{}, err
+					}
 				}
 				collected[mode] = arms
 				eligibility := validityEligibilityHash(date, force, o.ValidityOverrides, arms)
@@ -360,6 +323,13 @@ func Run(ctx context.Context, engine Engine, suite Suite, o Options) (Report, Ca
 		}
 	}
 	finishQuality(&r, previous)
+	filter.finish(modes)
+	r.FilterGate = filter.gate
+	if filter.active {
+		for _, gate := range r.FilterGate.Modes {
+			r.QualityPass = r.QualityPass && gate.Status == "pass"
+		}
+	}
 	addLegacyDirectMetrics(&r)
 	r.ANNResults = map[string]ANNLoss{}
 	for _, cohort := range reportCohorts(&r) {
