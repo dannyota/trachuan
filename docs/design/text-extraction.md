@@ -70,6 +70,38 @@ Exactly one source supplies a document's text, chosen in this order:
    `ocr_rejected` or `ocr_label_flagged` as defined in the
    [OCR store](ocr-store.md)).
 
+Wrong record, before any source is chosen: a record that holds another
+document's text indexes nothing. Two ways decide it, both checked before the
+text source is chosen:
+
+- Automatic. The header is the transcription text before the first preamble
+  marker (`Căn cứ`, `Chiểu`, `Theo đề nghị`, `Xét đề nghị`, `Điều 1`). A header
+  number is a `Số:` or upper-case `SỐ` token that starts with digits and
+  contains `/` or `-`. The rule fires when some header number's leading digits
+  differ from the detail's `docNum`, that number does not occur in the detail
+  title (a title that names an amended act), the document is not a consolidated
+  text, and the header's subject line (the words after the document type,
+  `THÔNG TƯ` and the like) shares less than half of its significant words with
+  the detail title after its type and number. A header number with a matching
+  subject is a typing error in the header, not another document.
+- Manual. A reviewed list in the extract recipe names records known to hold
+  another document's text where the header gives no subject line to compare;
+  each entry has the key, what the record holds and the date checked.
+
+Either gives the gap `text_number_mismatch` (detail: both numbers, or the list
+entry) and no provisions from any source, the source tree included; it counts in
+build coverage and in the evaluation report's gap list like the other `none`
+gaps. Measured on 3,832 VBPL bundles of run vn/20261111_4 (2026-11-12): seven
+records have a differing header number outside the title; five have subject
+overlaps of 0.69 to 1.0 (header typos, same document), one has 0.1:
+50/2025/TT-BKHCN holds 47/2025/TT-BKHCN in the tree, the transcription and the
+DOCX. The seventh, 15/SL, holds 14/SL; VBPL stamped a header "Số: 15/SL" above
+the original and the old decree has no subject line, so it is the first manual
+entry. The scanned PDF in the 50/2025/TT-BKHCN bundle is the real document (QCVN
+137:2025/BKHCN, page 1 checked), with a text layer that holds only the signature
+stamp: reading it needs the OCR path and a header check on the OCR text, which
+is a later change; until then the document has no text.
+
 A PDF's text layer is read only through that gate: most measured layers are
 garbage from an earlier non-Vietnamese OCR pass, and a scan with an embedded
 layer goes to OCR however fluent the layer looks. DOCX is not read: it would

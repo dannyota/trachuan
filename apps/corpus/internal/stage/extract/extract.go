@@ -59,7 +59,8 @@ func (*Stage) Name() string { return "extract" }
 
 // Recipe returns the extract recipe hash.
 func (s *Stage) Recipe(stage.Snapshot) string {
-	parts := append([]string{"html-transcription/1", "textparse/2", "ocr-store/2", s.checker}, s.engines...)
+	parts := append([]string{"html-transcription/1", "textparse/6", "ocr-store/2", s.checker}, s.engines...)
+	parts = append(parts, manualMismatchRecipe()...)
 	return stage.RecipeHash("extract", "tree/1", parts...)
 }
 
@@ -93,6 +94,15 @@ func (s *Stage) Plan(ctx context.Context, env stage.Env, run stage.Run) ([]stage
 		if selectErr != nil {
 			return nil, fmt.Errorf("select text source: %w", selectErr)
 		}
+		if selected.consulted && selected.gap != "text_number_mismatch" {
+			mismatch, checkErr := frozenMismatch(env.Artifacts.Abs(entry.Path), input.ItemKey)
+			if checkErr != nil {
+				return nil, fmt.Errorf("check frozen selection: %w", checkErr)
+			}
+			if mismatch.gap != "" {
+				selected = mismatch
+			}
+		}
 		items = append(items, stage.Item{Key: input.ItemKey, InputHash: selectionInputHash(input.Sha256, selected)})
 	}
 	return items, nil
@@ -115,6 +125,13 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 	var nodes []vbpl.Node
 	if lookupErr == nil {
 		selected, err = selectionFromRow(row)
+		if err == nil && selected.gap != "text_number_mismatch" {
+			var mismatch selection
+			mismatch, err = frozenMismatch(env.Artifacts.Abs(input.Path), item.Key)
+			if mismatch.gap != "" {
+				selected = mismatch
+			}
+		}
 		if err == nil {
 			selected, nodes, err = materializeFrozen(ctx, env.Artifacts.Abs(input.Path), item.Key, selected)
 		}

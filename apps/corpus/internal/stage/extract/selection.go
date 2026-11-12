@@ -117,6 +117,13 @@ func chooseForCheck(ctx context.Context, dir, key string, ocr ocrReader, engines
 		return selection{}, nil, fmt.Errorf("invalid document key")
 	}
 	if parts[1] == "vbpl" {
+		mismatch, err := frozenMismatch(dir, key)
+		if err != nil {
+			return selection{}, nil, err
+		}
+		if mismatch.gap != "" {
+			return mismatch, nil, nil
+		}
 		b, err := os.ReadFile(filepath.Join(dir, "tree.json"))
 		if err != nil {
 			return selection{}, nil, fmt.Errorf("read tree: %w", err)
