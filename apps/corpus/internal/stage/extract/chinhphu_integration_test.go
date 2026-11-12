@@ -103,6 +103,10 @@ func TestPlan_FinalMembershipFiltersFetchedItems(t *testing.T) {
 	if err != nil || len(items) != 1 || items[0].Key != "vn:vbpl:1" {
 		t.Fatalf("items=%+v err=%v", items, err)
 	}
+	// relate plans a document only once its extract item is terminal; a gap without an artifact pairs as "-".
+	if _, err = db.Exec(ctx, `INSERT INTO run_item (run_id,stage,item_key,state,batch) VALUES ($1,'extract','vn:vbpl:1','gap',0)`, id); err != nil {
+		t.Fatal(err)
+	}
 	related, err := relate.New().Plan(ctx, stage.Env{DB: db, Artifacts: artifacts}, run)
 	if err != nil || len(related) != 1 || related[0].Key != "vn:vbpl:1" {
 		t.Fatalf("related=%+v err=%v", related, err)

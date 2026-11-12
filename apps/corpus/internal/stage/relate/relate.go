@@ -3,7 +3,10 @@ package relate
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -30,7 +33,42 @@ func (*Stage) Name() string { return "relate" }
 // Recipe returns the recipe hash for the frozen relation code table.
 func (*Stage) Recipe(snapshot stage.Snapshot) string {
 	list, _ := source.Parse(snapshot.SourceList)
-	return stage.RecipeHash("relate", "vbpl-relations/1", "chinhphu-empty/1", list.RelationCodesHash())
+	return stage.RecipeHash("relate", "vbpl-relations/1", "chinhphu-empty/1", list.RelationCodesHash(), "text_rules:vn-targets/1", list.CentralIssuersHash())
+}
+
+// PairInputHash binds a relate item to its fetch and extract artifacts.
+func PairInputHash(fetch, extract string) string {
+	if extract == "" {
+		extract = "-"
+	}
+	sum := sha256.Sum256([]byte("fetch:" + fetch + "\nextract:" + extract))
+	return hex.EncodeToString(sum[:])
+}
+
+func extractHash(row store.GetRunItemCommittedRow) (string, bool) {
+	switch row.State {
+	case "done":
+		if row.ArtifactSha256 != nil {
+			return *row.ArtifactSha256, true
+		}
+	case "gap", "failed":
+		if row.ArtifactSha256 == nil {
+			return "-", true
+		}
+	}
+	return "", false
+}
+
+func getExtractHash(ctx context.Context, q *store.Queries, runID int64, key string) (string, bool, error) {
+	row, err := q.GetRunItemCommitted(ctx, store.GetRunItemCommittedParams{RunID: runID, Stage: "extract", ItemKey: key})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", false, nil
+	}
+	if err != nil {
+		return "", false, fmt.Errorf("load extract item: %w", err)
+	}
+	hash, finished := extractHash(row)
+	return hash, finished, nil
 }
 
 // Plan selects completed fetch artifacts for this run.
@@ -49,21 +87,33 @@ func (*Stage) Plan(ctx context.Context, env stage.Env, run stage.Run) ([]stage.I
 		if active != nil && !active[input.ItemKey] {
 			continue
 		}
-		items = append(items, stage.Item{Key: input.ItemKey, InputHash: input.Sha256})
+		// The extract item state records completion, just as ListExtractInputs selects done fetch items.
+		extract, finished, getErr := getExtractHash(ctx, q, run.ID, input.ItemKey)
+		if getErr != nil {
+			return nil, getErr
+		}
+		if finished {
+			items = append(items, stage.Item{Key: input.ItemKey, InputHash: PairInputHash(input.Sha256, extract)})
+		}
 	}
 	return items, nil
 }
 
 // Process publishes relations and unmapped codes from a fetch artifact.
 func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item stage.Item) (stage.Output, error) {
-	input, err := store.New(env.DB).GetExtractInput(ctx, store.GetExtractInputParams{RunID: run.ID, ItemKey: item.Key})
+	q := store.New(env.DB)
+	input, err := q.GetExtractInput(ctx, store.GetExtractInputParams{RunID: run.ID, ItemKey: item.Key})
 	if err != nil {
 		return stage.Output{}, fmt.Errorf("load fetch artifact: %w", err)
 	}
-	if input.Sha256 != item.InputHash {
-		return stage.Output{}, stage.Retryable(fmt.Errorf("fetch artifact hash changed for %q", item.Key))
+	extract, finished, err := getExtractHash(ctx, q, run.ID, item.Key)
+	if err != nil {
+		return stage.Output{}, err
 	}
-	if verifyErr := verifyFetch(env.Artifacts.Abs(input.Path), item.InputHash); verifyErr != nil {
+	if !finished || PairInputHash(input.Sha256, extract) != item.InputHash {
+		return stage.Output{}, stage.Retryable(fmt.Errorf("relate input hash changed for %q", item.Key))
+	}
+	if verifyErr := verifyFetch(env.Artifacts.Abs(input.Path), input.Sha256); verifyErr != nil {
 		return stage.Output{}, verifyErr
 	}
 	rows := []relation{}

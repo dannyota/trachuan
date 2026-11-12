@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"unicode"
 
 	"golang.org/x/text/unicode/norm"
 	"gopkg.in/yaml.v3"
@@ -15,11 +16,12 @@ import (
 
 // List holds the sources and code tables for a country.
 type List struct {
-	Country       string                  `yaml:"country" json:"country"`
-	Chinhphu      ChinhphuSources         `yaml:"chinhphu" json:"chinhphu,omitempty"`
-	VBPL          VBPLSources             `yaml:"vbpl" json:"vbpl"`
-	RelationCodes map[string]RelationCode `yaml:"relation_codes" json:"relation_codes"`
-	StatusCodes   map[string]StatusCode   `yaml:"status_codes" json:"status_codes"`
+	Country        string                  `yaml:"country" json:"country"`
+	Chinhphu       ChinhphuSources         `yaml:"chinhphu" json:"chinhphu,omitempty"`
+	VBPL           VBPLSources             `yaml:"vbpl" json:"vbpl"`
+	RelationCodes  map[string]RelationCode `yaml:"relation_codes" json:"relation_codes"`
+	CentralIssuers map[string]string       `yaml:"central_issuers" json:"central_issuers,omitempty"`
+	StatusCodes    map[string]StatusCode   `yaml:"status_codes" json:"status_codes"`
 }
 
 // VBPLSources defines the discovery queries.
@@ -91,6 +93,16 @@ func Parse(data []byte) (List, error) {
 	if err := yaml.Unmarshal(data, &list); err != nil {
 		return List{}, fmt.Errorf("parse source list: %w", err)
 	}
+	if list.CentralIssuers != nil {
+		if len(list.CentralIssuers) == 0 {
+			return List{}, fmt.Errorf("empty central issuers")
+		}
+		for code, name := range list.CentralIssuers {
+			if code == "" || strings.IndexFunc(code, unicode.IsSpace) >= 0 || strings.TrimSpace(name) == "" {
+				return List{}, fmt.Errorf("invalid central issuer %q", code)
+			}
+		}
+	}
 	for _, entries := range [][]string{list.VBPL.NamedNumbers, list.Chinhphu.NamedNumbers} {
 		for _, entry := range entries {
 			if _, err := ParseNamedNumber(entry); err != nil {
@@ -129,6 +141,16 @@ func NormalizeIssuer(value string) string {
 // RelationCodesHash returns the hash of the canonical relation code JSON.
 func (l List) RelationCodesHash() string {
 	data, _ := json.Marshal(l.RelationCodes)
+	sum := sha256.Sum256(data)
+	return hex.EncodeToString(sum[:])
+}
+
+// CentralIssuersHash returns the hash of the canonical issuer table JSON.
+func (l List) CentralIssuersHash() string {
+	var data []byte
+	if l.CentralIssuers != nil {
+		data, _ = json.Marshal(l.CentralIssuers)
+	}
 	sum := sha256.Sum256(data)
 	return hex.EncodeToString(sum[:])
 }

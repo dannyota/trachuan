@@ -79,7 +79,7 @@ func TestRelations_ReplacedSecondaryNeverResolvesNumber(t *testing.T) {
 	_ = secondaryFetchFixture(t, f, secondary)
 	source := "vn:vbpl:2"
 	art := f.fetch(t, source)
-	f.addArtifact(t, "relate", source, map[string]any{"relations.json": []any{map[string]any{"ordinal": 0, "kind": "references", "target_number": "SECONDARY-1"}}}, art.SHA256)
+	f.addArtifact(t, "relate", source, map[string]any{"relations.json": []any{map[string]any{"ordinal": 0, "kind": "references", "target_number": "SECONDARY-1"}}}, f.relateInput(t, source, art.SHA256))
 	inv := f.inventory(t)
 	inv.Version = 2
 	replacement := source
