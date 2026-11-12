@@ -359,6 +359,10 @@ func TestCollect_EligibilityCurrentDefaultAndAsOf(t *testing.T) {
 	if len(a.Primary.Dense) != 4 || len(a.NonCurrent.Dense) != 1 {
 		t.Fatalf("%+v", a)
 	}
+	a = collectFixture(t, e, Request{Query: "ngân hàng", Mode: "exact"}, Depths{10, 10})
+	if a.IncludeNonCurrent || len(a.Primary.Dense) != 4 || len(a.NonCurrent.Dense) != 1 {
+		t.Fatalf("default groups: %+v", a)
+	}
 	a = collectFixture(t, e, Request{Query: "ngân hàng", Mode: "exact", AsOf: &Date{2020, time.June, 1}}, Depths{10, 10})
 	if len(a.Primary.Dense) != 5 {
 		t.Fatalf("%+v", a.Primary.Dense)

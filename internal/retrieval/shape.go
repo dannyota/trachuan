@@ -8,7 +8,44 @@ import (
 
 // Shape constructs a bounded evidence response from cached candidates.
 func Shape(arms Arms, recipe Recipe, limit int, mode ArmMode) (Response, error) {
-	return shapeWithCap(arms, recipe, limit, mode, recipe.DocumentCap)
+	return shapeWithPolicy(arms, recipe, limit, mode, recipe.DocumentCap, recipe.NonCurrentTail)
+}
+
+func shapeWithPolicy(arms Arms, recipe Recipe, limit int, mode ArmMode, cap, tail int) (Response, error) {
+	if tail < 0 || tail > 5 {
+		return Response{}, errors.New("invalid non-current tail")
+	}
+	if limit == 0 {
+		limit = 8
+	}
+	if arms.IncludeNonCurrent || tail == 0 || !arms.Validation.Accepted {
+		return shapeWithCap(arms, recipe, limit, mode, cap)
+	}
+	// Validate and rank primary before ranking the complement.
+	if _, err := rankWithCap(arms, recipe, limit, mode, cap); err != nil {
+		return Response{}, err
+	}
+	other, err := rankGroup(arms.NonCurrent, arms.Validation.Routed, recipe, limit, mode, cap)
+	if err != nil {
+		return Response{}, err
+	}
+	count := min(tail, len(other.Groups), limit)
+	primaryLimit := limit - count
+	out, err := shapeWithCap(arms, recipe, max(1, primaryLimit), mode, cap)
+	if err != nil {
+		return Response{}, err
+	}
+	if primaryLimit == 0 {
+		out.Hits = out.Hits[:0]
+	}
+	for _, group := range other.Groups[:count] {
+		hit, shapeErr := shapeHit(group, arms, recipe)
+		if shapeErr != nil {
+			return Response{}, shapeErr
+		}
+		out.NonCurrent = append(out.NonCurrent, hit)
+	}
+	return out, nil
 }
 
 func shapeWithCap(arms Arms, recipe Recipe, limit int, mode ArmMode, cap int) (Response, error) {

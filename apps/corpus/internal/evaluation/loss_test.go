@@ -252,3 +252,25 @@ func tailLossTest(t *testing.T, complement bool) {
 		t.Fatalf("stage = %q, want rank_limit", stage)
 	}
 }
+
+func TestLossDiagnostics_DefaultTailIncludesComplement(t *testing.T) {
+	recipe := retrieval.Recipe1()
+	threshold := 0.0
+	recipe.Abstention.Threshold = &threshold
+	primary := []retrieval.Candidate{lossCandidate(1, "a", "a"), lossCandidate(2, "b", "b"), lossCandidate(3, "c", "c")}
+	other := []retrieval.Candidate{lossCandidate(4, "d", "d"), lossCandidate(5, "e", "e"), lossCandidate(6, "f", "f")}
+	arms := retrieval.Arms{Validation: retrieval.Validation{Accepted: true}, Depths: retrieval.Depths{Dense: 200, Lexical: 100}, Primary: retrieval.ArmGroup{Dense: primary, Members: primary}, NonCurrent: retrieval.ArmGroup{Dense: other, Members: other}}
+	response, err := retrieval.Shape(arms, recipe, 3, "dense")
+	if err != nil {
+		t.Fatal(err)
+	}
+	anchor := "f"
+	entry := MapEntry{State: "resolved", Alternatives: []Alternative{{Country: "vn", DocumentKey: "f", Anchor: &anchor, Kind: "provision"}}}
+	stage, err := diagnoseLoss(arms, recipe, 3, "dense", "old_product", Expectation{}, entry, response, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stage != "rank_limit" {
+		t.Fatalf("stage = %q, want rank_limit", stage)
+	}
+}

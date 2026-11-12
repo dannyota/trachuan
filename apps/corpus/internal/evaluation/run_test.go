@@ -766,7 +766,8 @@ func (e *populatedCapEngine) Collect(_ context.Context, p retrieval.Prepared, d 
 	var candidates []retrieval.Candidate
 	for i := int64(1); i <= 10; i++ {
 		doc := "other"
-		if i <= 5 {
+		// Recipe 2 caps a document at five, so six hits exercise demotion.
+		if i <= 6 {
 			doc = "doc"
 		}
 		candidates = append(candidates, lossCandidate(i, doc, fmt.Sprint(i)))
@@ -791,7 +792,7 @@ func TestRun_CapChangesResultsNotCachedGroups(t *testing.T) {
 	if len(base.Cases) == 0 || len(trial.Cases) == 0 || len(base.Cases[0].Returned) != 8 || len(trial.Cases[0].Returned) != 8 {
 		t.Fatal("expected populated results")
 	}
-	if base.Cases[0].Returned[3].DocumentKey != "other" || trial.Cases[0].Returned[3].DocumentKey != "doc" {
+	if base.Cases[0].Returned[5].DocumentKey != "other" || trial.Cases[0].Returned[5].DocumentKey != "doc" {
 		t.Fatalf("baseline %v trial %v", base.Cases[0].Returned, trial.Cases[0].Returned)
 	}
 	if len(baseCache.Arms) == 0 || len(baseCache.Arms[0].Groups) == 0 || !reflect.DeepEqual(baseCache.Arms, trialCache.Arms) {

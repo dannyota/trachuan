@@ -101,6 +101,7 @@ func groupMatches(arms retrieval.Arms, recipe retrieval.Recipe, candidate retrie
 	probe := arms
 	probe.Primary = group
 	probe.IncludeNonCurrent = false
+	recipe.NonCurrentTail = 0
 	recipe.DenseDepth = 1
 	recipe.LexicalDepth = 1
 	response, err := retrieval.Shape(probe, recipe, 1, "dense")
@@ -112,8 +113,12 @@ func groupMatches(arms retrieval.Arms, recipe retrieval.Recipe, candidate retrie
 func diagnoseLoss(arms retrieval.Arms, recipe retrieval.Recipe, limit int, mode retrieval.ArmMode, cohort string, e Expectation, entry MapEntry, response retrieval.Response, tail *int) (string, error) {
 	hits := append(append([]retrieval.Hit{}, response.Hits...), response.NonCurrent...)
 	rank := diagnosticRank(cohort, e, entry, hits)
+	includeComplement := arms.IncludeNonCurrent || recipe.NonCurrentTail > 0
+	if tail != nil {
+		includeComplement = *tail > 0
+	}
 	deep := append(append([]retrieval.Candidate{}, arms.Primary.Dense...), arms.Primary.Lexical...)
-	if arms.IncludeNonCurrent {
+	if includeComplement {
 		deep = append(deep, arms.NonCurrent.Dense...)
 		deep = append(deep, arms.NonCurrent.Lexical...)
 	}
@@ -123,7 +128,7 @@ func diagnoseLoss(arms retrieval.Arms, recipe retrieval.Recipe, limit int, mode 
 	items := fusedItems(arms, recipe, mode)
 	items = items[:min(len(items), recipe.HydrateMultiplier*limit)]
 	primaryCount := len(items)
-	if arms.IncludeNonCurrent {
+	if includeComplement {
 		other := arms
 		other.Primary = arms.NonCurrent
 		complement := fusedItems(other, recipe, mode)
