@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"danny.vn/trachuan/apps/corpus/internal/chinhphu"
+	"danny.vn/trachuan/apps/corpus/internal/stage"
 	"danny.vn/trachuan/apps/corpus/internal/vbpl"
 )
 
@@ -51,3 +52,10 @@ func failureCause(err error) string {
 	}
 	return "transport"
 }
+
+type attachmentConflict struct{ name string }
+
+func (e *attachmentConflict) Error() string {
+	return fmt.Sprintf("conflicting attachment evidence for %q", e.name)
+}
+func (e *attachmentConflict) Unwrap() error { return stage.ErrSourceData }

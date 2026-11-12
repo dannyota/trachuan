@@ -20,10 +20,10 @@ import (
 )
 
 func (s *Stage) writeChinhphu(ctx context.Context, dir, id string, detail chinhphu.Detail, html []byte, observations *[]stage.FetchObservation) error {
-	return s.writeChinhphuEvidence(ctx, dir, id, detail, html, observations, nil, nil)
+	return s.writeChinhphuEvidence(ctx, dir, id, detail, html, observations, nil, nil, time.Now)
 }
 
-func (s *Stage) writeChinhphuEvidence(ctx context.Context, dir, id string, detail chinhphu.Detail, html []byte, observations *[]stage.FetchObservation, counts *readDecision, q hashStore) error {
+func (s *Stage) writeChinhphuEvidence(ctx context.Context, dir, id string, detail chinhphu.Detail, html []byte, observations *[]stage.FetchObservation, counts *readDecision, q hashStore, now func() time.Time) error {
 	meta := secondaryMetadata{Version: 1, SourceID: id, SourceURL: detail.URL, Occurrences: []secondaryOccurrence{}, Attachments: []secondaryAttachment{}}
 	for _, field := range detail.Occurrences {
 		cells := append([]string{}, field.Cells...)
@@ -68,6 +68,9 @@ func (s *Stage) writeChinhphuEvidence(ctx context.Context, dir, id string, detai
 	if err = os.Mkdir(filepath.Join(dir, "files"), 0700); err != nil {
 		return fmt.Errorf("create files: %w", err)
 	}
+	pdfCtx, cancelPDFs := context.WithTimeout(ctx, pdfDownloadLimit)
+	defer cancelPDFs()
+	budget := newPDFBudget(now)
 	seen := map[secondaryOutcome]bool{}
 	for _, a := range meta.Attachments {
 		outcome := secondaryOutcome{Name: a.Name, URL: a.URL}
@@ -75,16 +78,29 @@ func (s *Stage) writeChinhphuEvidence(ctx context.Context, dir, id string, detai
 			continue
 		}
 		seen[outcome] = true
-		info, e := s.downloadChinhphu(ctx, dir, a.URL)
+		var info chinhphu.FileInfo
+		var e error
+		if errors.Is(pdfCtx.Err(), context.DeadlineExceeded) {
+			e = errPDFDeadline
+		} else {
+			info, e = budget.download(pdfCtx, s, dir, a.URL)
+		}
+		if errors.Is(e, context.DeadlineExceeded) && errors.Is(pdfCtx.Err(), context.DeadlineExceeded) {
+			e = errPDFDeadline
+		}
 		if e != nil {
 			if ctx.Err() != nil {
 				return ctx.Err()
 			}
-			if missingFailure(e) {
-				if counts != nil {
-					counts.count("failure_" + failureCause(e))
+			if missingFailure(e) || errors.Is(e, errPDFDeadline) {
+				cause := failureCause(e)
+				if errors.Is(e, errPDFDeadline) {
+					cause = "deadline"
 				}
-				slog.Warn("attachment missing", "document_key", "vn:chinhphu:"+id, "file_name", a.Name, "cause", failureCause(e))
+				if counts != nil {
+					counts.count("failure_" + cause)
+				}
+				slog.Warn("attachment missing", "document_key", "vn:chinhphu:"+id, "file_name", a.Name, "cause", cause)
 				report.Missing = append(report.Missing, outcome)
 				continue
 			}

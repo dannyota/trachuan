@@ -1,7 +1,6 @@
 package vbpl
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"crypto/tls"
@@ -200,16 +199,15 @@ func (c *Client) request(ctx context.Context, method, target string, body []byte
 	if opts.headers != nil {
 		*opts.headers = resp.Header.Clone()
 	}
+	head, reader := sourcegate.ResponsePrefix(responseBody{reader: resp.Body, endpoint: endpoint(target), status: resp.StatusCode})
+	if challenge(head) {
+		return resp.StatusCode, c.deny(ctx, endpoint(target)+" challenge")
+	}
 	if resp.StatusCode == http.StatusForbidden {
 		return resp.StatusCode, c.deny(ctx, endpoint(target)+" status 403")
 	}
 	if resp.StatusCode != http.StatusOK && (!opts.ranged || resp.StatusCode != http.StatusPartialContent) {
 		return resp.StatusCode, nil
-	}
-	reader := bufio.NewReader(responseBody{reader: resp.Body, endpoint: endpoint(target), status: resp.StatusCode})
-	head, _ := reader.Peek(512)
-	if challenge(head) {
-		return resp.StatusCode, c.deny(ctx, endpoint(target)+" challenge")
 	}
 	if err := consume(reader); err != nil {
 		return resp.StatusCode, fmt.Errorf("read response: %w", safeError(err))

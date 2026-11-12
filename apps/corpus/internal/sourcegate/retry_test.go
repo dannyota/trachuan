@@ -49,7 +49,7 @@ func TestDownloadTimeout(t *testing.T) {
 	for _, tc := range []struct {
 		size int64
 		want time.Duration
-	}{{20_000_000, 110 * time.Second}, {50_000_000, 230 * time.Second}, {-1, 230 * time.Second}, {0, 230 * time.Second}} {
+	}{{20_000_000, 110 * time.Second}, {50_000_000, 230 * time.Second}, {-1, 230 * time.Second}, {0, 30 * time.Second}} {
 		if got := DownloadTimeout(tc.size); got != tc.want {
 			t.Fatalf("size=%d deadline=%s", tc.size, got)
 		}

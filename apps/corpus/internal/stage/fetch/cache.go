@@ -123,40 +123,38 @@ func (s *Stage) attachment(ctx context.Context, id, dir string, f vbpl.File, b *
 		d, e := s.client.Download(ctx, id, f, dir, s.fileLimit)
 		return d, nil, "no_candidate", e
 	}
-	if f.Size == 0 {
-		d, err := writeEmptyFile(ctx, dir, q)
-		return d, nil, "empty_file", err
-	}
-	etag, err := s.client.ETag(ctx, f.URL)
-	if err != nil {
-		return vbpl.Downloaded{}, nil, "", err
-	}
 	reason := "no_candidate"
-	candidates := s.candidates(id, f, b)
-	if !unique {
-		candidates = nil
+	var candidates []candidate
+	if unique && f.Size != 0 {
+		candidates = s.candidates(id, f, b)
 	}
-	switch {
-	case etag == "":
-		reason = "etag_unavailable"
-	case etagForm(etag) == "":
-		reason = "etag_other_form"
-	case len(candidates) > 0:
-		for _, c := range candidates {
-			d, why, e := copyCandidate(ctx, c, dir, etag, q)
-			if e != nil {
-				return d, nil, "", e
-			}
-			reason = why
-			if d.Path == "" && d.Hashes.SHA256 != "" {
-				break
-			}
-			if d.Path != "" {
-				origin := c.origin
-				if origin == nil && c.source == "baseline" {
-					origin = &stage.FetchObservation{Acquisition: "adopted"}
+	if len(candidates) > 0 {
+		etag, err := s.client.ETag(ctx, f.URL)
+		if err != nil {
+			return vbpl.Downloaded{}, nil, "", err
+		}
+		switch {
+		case etag == "":
+			reason = "etag_unavailable"
+		case etagForm(etag) == "":
+			reason = "etag_other_form"
+		default:
+			for _, c := range candidates {
+				d, why, e := copyCandidate(ctx, c, dir, etag, q)
+				if e != nil {
+					return d, nil, "", e
 				}
-				return d, origin, why, nil
+				reason = why
+				if d.Path == "" && d.Hashes.SHA256 != "" {
+					break
+				}
+				if d.Path != "" {
+					origin := c.origin
+					if origin == nil && c.source == "baseline" {
+						origin = &stage.FetchObservation{Acquisition: "adopted"}
+					}
+					return d, origin, why, nil
+				}
 			}
 		}
 	}

@@ -45,7 +45,7 @@ func (s *Stage) processChinhphu(ctx context.Context, env stage.Env, run stage.Ru
 		q = store.New(env.DB)
 	}
 	art, err := env.Artifacts.PublishContent(ctx, s.Name(), s.Recipe(run.Snapshot), func(dir string) error {
-		return s.writeChinhphuEvidence(ctx, dir, idstr, detail, body, &observations, &decision, q)
+		return s.writeChinhphuEvidence(ctx, dir, idstr, detail, body, &observations, &decision, q, now)
 	})
 	if err != nil {
 		var failure *chinhphu.Failure

@@ -3,8 +3,10 @@ package filecache
 import (
 	"crypto/md5"
 	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"hash"
+	"strings"
 )
 
 // Hashes identifies bytes independently of source and collection time.
@@ -73,6 +75,11 @@ func (h *Hasher) Hashes() Hashes {
 func (h Hashes) Match(etag string) string {
 	if etag == h.MD5 && len(etag) == 32 {
 		return "etag_md5"
+	}
+	if strings.HasSuffix(etag, "-1") {
+		if binary, err := hex.DecodeString(h.MD5); err == nil && len(binary) == md5.Size && etag == fmt.Sprintf("%x-1", md5.Sum(binary)) {
+			return "etag_multipart"
+		}
 	}
 	if etag != "" && (etag == h.ETag16 || etag == h.ETag5) {
 		return "etag_multipart"

@@ -59,7 +59,7 @@ func (c *Client) Download(ctx context.Context, _ string, f File, dir string, lim
 		if ctx.Err() != nil {
 			reqErr = ctx.Err()
 		}
-		if status == 200 && reqErr == nil && f.Size > 0 && size != f.Size {
+		if status == 200 && reqErr == nil && f.Size >= 0 && size != f.Size {
 			reqErr = &Failure{Origin: "gateway", Cause: "size", Endpoint: "attachment", HTTPStatus: status}
 		}
 		if status == 200 && reqErr == nil && closeErr == nil {

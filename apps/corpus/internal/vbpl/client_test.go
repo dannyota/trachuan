@@ -121,7 +121,7 @@ func TestDownload_ForbiddenPausesWithoutRefreshing(t *testing.T) {
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(403) }))
 	defer s.Close()
 	c := NewWithBase(s.URL, "test", WithTestHTTP(), WithBackoffs())
-	_, err := c.Download(context.Background(), "1", File{URL: s.URL + "/file"}, t.TempDir(), 100)
+	_, err := c.Download(context.Background(), "1", File{Size: -1, URL: s.URL + "/file"}, t.TempDir(), 100)
 	if !errors.Is(err, sourcegate.ErrSourcePaused) {
 		t.Fatal(err)
 	}
@@ -148,7 +148,7 @@ func TestDownload_TimeoutAfterPartialBodyRetriesFresh(t *testing.T) {
 		}
 		return &http.Response{StatusCode: 200, Header: http.Header{}, Body: io.NopCloser(body)}, nil
 	})
-	got, err := c.Download(context.Background(), "1", File{URL: "http://127.0.0.1/file"}, t.TempDir(), 100)
+	got, err := c.Download(context.Background(), "1", File{Size: -1, URL: "http://127.0.0.1/file"}, t.TempDir(), 100)
 	sum := sha256.Sum256([]byte("complete"))
 	if err != nil || calls != 2 || got.SHA256 != hex.EncodeToString(sum[:]) {
 		t.Fatalf("calls=%d output=%+v error=%v", calls, got, err)
@@ -159,7 +159,7 @@ func TestDownload_OverLimit(t *testing.T) {
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write([]byte("12345")) }))
 	defer s.Close()
 	dir := t.TempDir()
-	_, err := testClient(s).Download(context.Background(), "1", File{URL: s.URL}, dir, 4)
+	_, err := testClient(s).Download(context.Background(), "1", File{Size: -1, URL: s.URL}, dir, 4)
 	entries, e := os.ReadDir(dir)
 	if !errors.Is(err, ErrTooLarge) || e != nil || len(entries) != 0 {
 		t.Fatalf("err=%v entries=%v read=%v", err, entries, e)
@@ -167,7 +167,7 @@ func TestDownload_OverLimit(t *testing.T) {
 }
 func TestClient_NeverLogsSignedQuery(t *testing.T) {
 	c := New("test")
-	_, err := c.Download(context.Background(), "1", File{URL: "http://127.0.0.1:1/file?secret=token"}, t.TempDir(), 10)
+	_, err := c.Download(context.Background(), "1", File{Size: -1, URL: "http://127.0.0.1:1/file?secret=token"}, t.TempDir(), 10)
 	if err == nil || strings.Contains(err.Error(), "secret") || strings.Contains(err.Error(), "token") {
 		t.Fatalf("error %v", err)
 	}
@@ -284,7 +284,7 @@ func TestDownload_RefusesForeignHost(t *testing.T) {
 	defer s.Close()
 	c := NewWithBase("https://gateway.example", "test")
 	c.http.Transport = s.Client().Transport
-	_, err := c.Download(context.Background(), "1", File{URL: s.URL}, t.TempDir(), 10)
+	_, err := c.Download(context.Background(), "1", File{Size: -1, URL: s.URL}, t.TempDir(), 10)
 	if err == nil || errors.Is(err, ErrNotFound) || reached.Load() {
 		t.Fatalf("error = %v, reached = %v", err, reached.Load())
 	}
@@ -292,7 +292,7 @@ func TestDownload_RefusesForeignHost(t *testing.T) {
 
 func TestDownload_EmptyURLIsNotFound(t *testing.T) {
 	c := NewWithBase("https://gateway.example", "test")
-	_, err := c.Download(context.Background(), "1", File{URL: ""}, t.TempDir(), 10)
+	_, err := c.Download(context.Background(), "1", File{Size: -1, URL: ""}, t.TempDir(), 10)
 	if !errors.Is(err, ErrNotFound) {
 		t.Fatalf("error = %v, want ErrNotFound", err)
 	}
@@ -303,7 +303,7 @@ func TestDownload_RefusesPlainHTTP(t *testing.T) {
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { reached.Store(true) }))
 	defer s.Close()
 	c := NewWithBase(s.URL, "test")
-	_, err := c.Download(context.Background(), "1", File{URL: s.URL}, t.TempDir(), 10)
+	_, err := c.Download(context.Background(), "1", File{Size: -1, URL: s.URL}, t.TempDir(), 10)
 	if err == nil || reached.Load() {
 		t.Fatalf("error = %v, reached = %v", err, reached.Load())
 	}
@@ -349,7 +349,7 @@ func TestClient_DownloadDoesNotBlockGateway(t *testing.T) {
 	done := make(chan error, 1)
 	dir := t.TempDir()
 	go func() {
-		_, err := c.Download(context.Background(), "1", File{URL: fileServer.URL}, dir, 100)
+		_, err := c.Download(context.Background(), "1", File{Size: -1, URL: fileServer.URL}, dir, 100)
 		done <- err
 	}()
 	<-started
@@ -403,7 +403,7 @@ func TestClient_UserAgentAllRequests(t *testing.T) {
 	if _, err := c.Files(ctx, "67878"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := c.Download(ctx, "67878", File{URL: s.URL + "/file"}, t.TempDir(), 100); err != nil {
+	if _, err := c.Download(ctx, "67878", File{Size: -1, URL: s.URL + "/file"}, t.TempDir(), 100); err != nil {
 		t.Fatal(err)
 	}
 	if len(seen) != len(paths)+1 {

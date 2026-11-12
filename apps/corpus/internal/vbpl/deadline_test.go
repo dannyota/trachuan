@@ -36,7 +36,7 @@ func TestDeadlines_ClassifiedTimeout(t *testing.T) {
 				_, _, err = c.Detail(sourcegate.WithRunID(context.Background(), 1), "1")
 			case "download":
 				c.fileSlots <- struct{}{}
-				_, err = c.Download(context.Background(), "1", File{URL: "https://example.invalid/file"}, t.TempDir(), 10)
+				_, err = c.Download(context.Background(), "1", File{Size: -1, URL: "https://example.invalid/file"}, t.TempDir(), 10)
 			}
 			var failure *Failure
 			if !errors.As(err, &failure) || failure.Origin != "transport" || failure.Cause != "timeout" || !errors.Is(err, context.DeadlineExceeded) {

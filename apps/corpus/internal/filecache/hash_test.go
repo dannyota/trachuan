@@ -45,3 +45,16 @@ func TestHashes_MD5AndMultipart(t *testing.T) {
 		})
 	}
 }
+
+func TestHashes_SinglePartMultipartMatch(t *testing.T) {
+	h := NewHasher()
+	_, _ = h.Write([]byte("abc"))
+	got := h.Hashes()
+	if got.ETag16 != "" || got.ETag5 != "" {
+		t.Fatalf("single-part cache columns must stay null: %+v", got)
+	}
+	const expected = "af5da9f45af7a300e3aded972f8ff687-1"
+	if form := got.Match(expected); form != "etag_multipart" {
+		t.Fatalf("form=%q expected multipart ETag %s", form, expected)
+	}
+}

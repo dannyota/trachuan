@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -118,5 +119,65 @@ func TestSourceRule_BrokenBodyRetriesOnce(t *testing.T) {
 	var failure *Failure
 	if !errors.As(err, &failure) || calls != 2 {
 		t.Fatalf("calls=%d error=%v", calls, err)
+	}
+}
+
+func TestSourceRule_Broken429BodyKeepsLoadSignal(t *testing.T) {
+	for _, file := range []bool{false, true} {
+		t.Run(fmt.Sprint(file), func(t *testing.T) {
+			calls := 0
+			tr := roundTripFunc(func(*http.Request) (*http.Response, error) {
+				calls++
+				return &http.Response{StatusCode: 429, Header: http.Header{}, Body: io.NopCloser(brokenBody{})}, nil
+			})
+			c := New(WithBaseURLs("http://127.0.0.1", "http://127.0.0.1"), WithTransport(tr), WithBackoffs(0, 0, 0), WithLimits(Limits{RequestsPerSecond: 100000}))
+			var err error
+			if file {
+				_, err = c.Download(context.Background(), "http://127.0.0.1/a", io.Discard, 100)
+			} else {
+				_, _, err = c.fetchPage(context.Background(), http.MethodGet, "http://127.0.0.1", nil)
+			}
+			var f *Failure
+			if calls != 4 || !errors.As(err, &f) || f.Cause != "http_429" || f.HTTPStatus != 429 {
+				t.Fatalf("calls=%d failure=%+v error=%v", calls, f, err)
+			}
+		})
+	}
+}
+func TestSourceRule_ChallengeOnAnyStatusPauses(t *testing.T) {
+	for _, status := range []int{200, 206, 302, 404, 429, 503} {
+		t.Run(fmt.Sprint(status), func(t *testing.T) {
+			c, base := clientFor(t, func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(status)
+				_, _ = w.Write([]byte(`<html><div>captcha challenge-platform</div></html>`))
+			}, WithBackoffs(0, 0, 0))
+			_, _, err := c.fetchPage(context.Background(), http.MethodGet, base, nil)
+			if !errors.Is(err, sourcegate.ErrSourcePaused) {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
+func TestSourceRule_429BodyLimitKeepsLoadSignal(t *testing.T) {
+	for _, file := range []bool{false, true} {
+		t.Run(fmt.Sprint(file), func(t *testing.T) {
+			calls := 0
+			tr := roundTripFunc(func(*http.Request) (*http.Response, error) {
+				calls++
+				return &http.Response{StatusCode: 429, Header: http.Header{}, Body: io.NopCloser(strings.NewReader(strings.Repeat("x", 100)))}, nil
+			})
+			c := New(WithBaseURLs("http://127.0.0.1", "http://127.0.0.1"), WithTransport(tr), WithBackoffs(0, 0, 0), WithLimits(Limits{RequestsPerSecond: 100000, HTMLBytes: 10, FileBytes: 10}))
+			var err error
+			if file {
+				_, err = c.Download(context.Background(), "http://127.0.0.1/a", io.Discard, 10)
+			} else {
+				_, _, err = c.fetchPage(context.Background(), http.MethodGet, "http://127.0.0.1", nil)
+			}
+			var failure *Failure
+			if calls != 4 || !errors.As(err, &failure) || failure.Cause != "http_429" {
+				t.Fatalf("calls=%d failure=%+v error=%v", calls, failure, err)
+			}
+		})
 	}
 }

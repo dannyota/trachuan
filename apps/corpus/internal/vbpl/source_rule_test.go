@@ -95,7 +95,7 @@ func TestSourceRule_ChallengePauses(t *testing.T) {
 			c := NewWithBase(srv.URL, "test", WithTestHTTP(), WithBackoffs(0))
 			var err error
 			if file {
-				_, err = c.Download(context.Background(), "1", File{Name: "a", URL: srv.URL}, t.TempDir(), 1000)
+				_, err = c.Download(context.Background(), "1", File{Size: -1, Name: "a", URL: srv.URL}, t.TempDir(), 1000)
 			} else {
 				_, err = c.Diagram(context.Background(), "1")
 			}
@@ -174,9 +174,28 @@ func TestSourceRule_BrokenBodyRetriesOnce(t *testing.T) {
 		calls++
 		return &http.Response{StatusCode: 200, Header: http.Header{}, Body: io.NopCloser(brokenBody{})}, nil
 	})
-	_, err := c.Download(context.Background(), "1", File{URL: "http://127.0.0.1/a"}, t.TempDir(), 100)
+	_, err := c.Download(context.Background(), "1", File{Size: -1, URL: "http://127.0.0.1/a"}, t.TempDir(), 100)
 	var failure *Failure
 	if !errors.As(err, &failure) || calls != 2 {
 		t.Fatalf("calls=%d error=%v", calls, err)
+	}
+}
+
+func TestETag_503ChallengePauses(t *testing.T) {
+	var calls atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls.Add(1)
+		if r.Header.Get("Range") != "bytes=0-0" {
+			t.Error("not ranged")
+		}
+		w.WriteHeader(503)
+		_, _ = w.Write([]byte(`<html><div id="cf-chl-widget">Verify you are human</div></html>`))
+	}))
+	defer srv.Close()
+	c := NewWithBase(srv.URL, "test", WithTestHTTP(), WithGate(sourcegate.NewMemory()), WithBackoffs(0, 0, 0))
+	ctx := sourcegate.WithActivity(sourcegate.WithRunID(context.Background(), 1))
+	_, err := c.ETag(ctx, srv.URL)
+	if !errors.Is(err, sourcegate.ErrSourcePaused) || calls.Load() != 1 {
+		t.Fatalf("calls=%d error=%v", calls.Load(), err)
 	}
 }

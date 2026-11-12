@@ -108,7 +108,7 @@ func (s *Stage) writeBundleWithBaseline(ctx context.Context, dir, id string, det
 			continue
 		}
 		files = append(files, file{Name: entry.Name, SHA256: item.downloaded.SHA256, Size: item.downloaded.Size})
-		if observations != nil {
+		{
 			name := entry.Name
 			var resourceURL *string
 			if entry.URL != "" {
@@ -120,17 +120,19 @@ func (s *Stage) writeBundleWithBaseline(ctx context.Context, dir, id string, det
 				o.Acquisition = "adopted"
 				o.FetchedAt = item.adopted.FetchedAt
 				o.OriginRef = item.adopted.OriginRef
-			} else if strings.HasSuffix(item.reason, "_cache") || item.reason == "empty_file" {
+			} else if strings.HasSuffix(item.reason, "_cache") {
 				o.Acquisition = "cache"
 				o.FetchedAt = nil
 			}
 			if prior, ok := seen[o.ResourceKey]; ok {
 				if prior.ContentSHA256 != o.ContentSHA256 || prior.Size != o.Size || prior.Acquisition != o.Acquisition {
-					return stage.Retryable(fmt.Errorf("duplicate attachment resource has conflicting content"))
+					return &attachmentConflict{name: entry.Name}
 				}
 			} else {
 				seen[o.ResourceKey] = o
-				*observations = append(*observations, o)
+				if observations != nil {
+					*observations = append(*observations, o)
+				}
 			}
 		}
 	}

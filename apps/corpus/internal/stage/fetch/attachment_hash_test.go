@@ -24,6 +24,7 @@ func TestAttachment_HashOutcomes(t *testing.T) {
 		status                               int
 		cache, duplicate, wrongSize, corrupt bool
 	}{
+		{name: "single-part multipart", etag: "f9b4018028d097c99d5827f9fd8a6557-1", reason: "etag_multipart_baseline", status: 206},
 		{name: "baseline MD5", reason: "etag_md5_baseline", status: 206},
 		{name: "cache MD5", reason: "etag_md5_cache", status: 206, cache: true},
 		{name: "different", etag: strings.Repeat("0", 32), reason: "etag_differs", status: 206},
@@ -85,10 +86,14 @@ func TestAttachment_HashOutcomes(t *testing.T) {
 			}
 			d, _, reason, err := s.attachment(context.Background(), "66518", t.TempDir(), vbpl.File{Name: "a", Size: 3, URL: srv.URL + "/a"}, b, !tc.duplicate, nil)
 			want := int32(1)
-			if strings.HasPrefix(tc.reason, "etag_md5_") {
+			if strings.HasSuffix(tc.reason, "_baseline") || strings.HasSuffix(tc.reason, "_cache") {
 				want = 0
 			}
-			if err != nil || reason != tc.reason || downloads.Load() != want || ranges.Load() != 1 || d.SHA256 != digest([]byte(body)) {
+			wantRanges := int32(1)
+			if tc.reason == "no_candidate" {
+				wantRanges = 0
+			}
+			if err != nil || reason != tc.reason || downloads.Load() != want || ranges.Load() != wantRanges || d.SHA256 != digest([]byte(body)) {
 				t.Fatalf("reason=%s downloads=%d ranges=%d output=%+v err=%v", reason, downloads.Load(), ranges.Load(), d, err)
 			}
 		})

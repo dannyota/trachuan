@@ -140,6 +140,9 @@ func (c *Client) request(ctx context.Context, method, target string, form url.Va
 			}
 			continue
 		}
+		if status == 429 {
+			return &Failure{Origin: "gateway", Cause: "http_429", Endpoint: endpoint, HTTPStatus: status}
+		}
 		if err != nil {
 			return classified(err, endpoint, status)
 		}
@@ -234,11 +237,18 @@ func (c *Client) one(ctx context.Context, method, target string, form url.Values
 		return 0, "", 0, classifiedTransport(e)
 	}
 	defer func() { _ = resp.Body.Close() }()
-	r := budgetReader{c, resp.Body}
+	prefix, r := sourcegate.ResponsePrefix(budgetReader{c, resp.Body})
 	status := resp.StatusCode
 	after := retryDelay(resp.Header.Get("Retry-After"), c.now())
+	node, _ := parseHTML(prefix)
+	if isChallenge(node, prefix) {
+		return status, "", after, c.pause(ctx, "challenge")
+	}
 	if status == 403 {
 		return status, "", after, c.pause(ctx, "http 403")
+	}
+	if status == 429 {
+		return status, "", after, nil
 	}
 	if status != 200 {
 		n, readErr := io.Copy(io.Discard, io.LimitReader(r, limit+1))

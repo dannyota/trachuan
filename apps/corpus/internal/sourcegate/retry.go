@@ -71,7 +71,7 @@ func (r *Retry) Next(status int, transient bool, after time.Duration) (delay tim
 
 // DownloadTimeout allows at least 250 kB/s, with time for connection setup.
 func DownloadTimeout(size int64) time.Duration {
-	if size <= 0 || size > 50_000_000 {
+	if size < 0 || size > 50_000_000 {
 		size = 50_000_000
 	}
 	return 30*time.Second + time.Duration(size)*time.Second/250_000
