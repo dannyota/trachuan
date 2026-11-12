@@ -4,6 +4,7 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { afterEach, expect, it, vi } from 'vitest'
 import SearchResults from '../app/components/SearchResults.vue'
 import Reader from '../app/pages/vn/documents/[key].vue'
+import { warningsByTarget } from '../app/utils/reader-units'
 import { setupReader } from './reader-setup'
 
 afterEach(() => vi.unstubAllGlobals())
@@ -85,4 +86,27 @@ it('uses citations to distinguish target groups with repeated labels', async () 
   const wrapper = mount(Reader, { global: { stubs: { NuxtLink: link } } })
   await flushPromises()
   expect(wrapper.findAll('.reader-rail .warnings h3').map(heading => heading.text())).toEqual(['Khoản 1 Điều 1', 'Khoản 1 Điều 2'])
+})
+
+
+it('renders both missing clauses at their shared target in the reader and rail', async () => {
+  const first = { ...warning, citation: 'Điều 8', exact: false, named: 'dieu-8/khoan-9' }
+  const second = { ...first, named: 'dieu-8/khoan-10' }
+  setupReader([{ data: { release: '20990101', item: { complete: true, units: [
+    { kind: 'provision', anchor: 'dieu-8', label: 'Điều 8', warnings: [first, second] },
+  ] } } }])
+  const wrapper = mount(Reader, { global: { stubs: { NuxtLink: link } } })
+  await flushPromises()
+  for (const section of [wrapper.find('.reader-content article'), wrapper.find('.reader-rail .warnings')]) {
+    expect(section.text()).toContain('2/2024 repeals Điều 8, khoản 9 (this clause or point is not in the loaded text)')
+    expect(section.text()).toContain('2/2024 repeals Điều 8, khoản 10 (this clause or point is not in the loaded text)')
+  }
+})
+
+it.each([
+  ['exact', { ...warning, exact: false }],
+  ['basis', { ...warning, basis: 'vbpl_reference' }],
+])('keeps warnings distinct when %s differs', (_field, other) => {
+  const groups = warningsByTarget([{ kind: 'provision', warnings: [warning, other, warning] }])
+  expect(groups.get(warning.target)).toHaveLength(2)
 })
