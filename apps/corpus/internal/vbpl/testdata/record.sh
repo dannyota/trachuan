@@ -1,6 +1,7 @@
 #!/bin/sh
 set -eu
 
+user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36'
 base=https://vbpl-bientap-gateway.moj.gov.vn/api/qtdc/public
 cd "$(dirname "$0")"
 fetch() {
@@ -9,7 +10,7 @@ fetch() {
   curl --fail --silent --show-error \
     -H 'Origin: https://vbpl.vn' \
     -H 'Referer: https://vbpl.vn/' \
-    -H 'User-Agent: trachuan/0.0 (+https://github.com/dannyota/trachuan)' \
+    -H "User-Agent: $user_agent" \
     "$@" > "$output"
   sleep 1
 }

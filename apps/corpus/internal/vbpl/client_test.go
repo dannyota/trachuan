@@ -177,7 +177,7 @@ func TestClient_ListAndFiles(t *testing.T) {
 	listing := fixture(t, "list-agencies-62-908-page1.json")
 	files := fixture(t, "files-67878.json")
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("Origin") != "https://vbpl.vn" || r.Header.Get("Referer") != "https://vbpl.vn/" || r.Header.Get("User-Agent") != "trachuan/test (+https://github.com/dannyota/trachuan)" {
+		if r.Header.Get("Origin") != "https://vbpl.vn" || r.Header.Get("Referer") != "https://vbpl.vn/" || r.Header.Get("User-Agent") != "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36" {
 			t.Error("missing gateway headers")
 		}
 		switch r.URL.Path {
@@ -362,5 +362,51 @@ func TestClient_DownloadDoesNotBlockGateway(t *testing.T) {
 	}
 	if err != nil {
 		t.Fatalf("gateway blocked by download: %v", err)
+	}
+}
+
+func TestClient_UserAgentAllRequests(t *testing.T) {
+	const want = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
+	paths := map[string]string{"/doc/all": "list-agencies-62-908-page1.json", "/doc/67878": "detail-67878.json", "/doc/provision/tree/67878": "tree-67878.json", "/doc/67878/diagram": "diagram-67878.json", "/doc/minio/buckets/vbpl/folders/67878/files": "files-67878.json"}
+	seen := map[string]bool{}
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		seen[r.URL.Path] = true
+		if got := r.Header.Get("User-Agent"); got != want {
+			t.Errorf("%s: User-Agent = %q", r.URL.Path, got)
+		}
+		if r.URL.Path == "/file" {
+			_, _ = w.Write([]byte("file"))
+			return
+		}
+		name, ok := paths[r.URL.Path]
+		if !ok {
+			http.NotFound(w, r)
+			return
+		}
+		_, _ = w.Write(fixture(t, name))
+	}))
+	defer s.Close()
+	c := testClient(s)
+	ctx := context.Background()
+	if _, err := c.List(ctx, ListQuery{Page: 1}); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := c.Detail(ctx, "67878"); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := c.Tree(ctx, "67878"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := c.Diagram(ctx, "67878"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := c.Files(ctx, "67878"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := c.Download(ctx, "67878", File{URL: s.URL + "/file"}, t.TempDir(), 100); err != nil {
+		t.Fatal(err)
+	}
+	if len(seen) != len(paths)+1 {
+		t.Fatalf("requests seen: %v", seen)
 	}
 }

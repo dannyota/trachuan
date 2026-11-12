@@ -16,7 +16,7 @@ func sourceClients(cfg config.Config, gate sourcegate.Gate) (*vbpl.Client, *chin
 	if cfg.VBPLLoopbackHTTP {
 		vbOptions = append(vbOptions, vbpl.WithTestHTTP())
 	}
-	cpOptions := []chinhphu.Option{chinhphu.WithGate(gate), chinhphu.WithLimits(chinhphu.Limits{RequestsPerSecond: cfg.ChinhphuRate, Burst: 1, InFlight: cfg.ChinhphuInFlight, Redirects: 3}), chinhphu.WithUserAgent(workerVersion())}
+	cpOptions := []chinhphu.Option{chinhphu.WithGate(gate), chinhphu.WithLimits(chinhphu.Limits{RequestsPerSecond: cfg.ChinhphuRate, Burst: 1, InFlight: cfg.ChinhphuInFlight, Redirects: 3})}
 	if cfg.ChinhphuLoopbackHTTP {
 		for _, raw := range []string{cfg.ChinhphuURL, cfg.ChinhphuFileURL} {
 			u, err := url.Parse(raw)

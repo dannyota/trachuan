@@ -1,5 +1,7 @@
 # vanban.chinhphu.vn fixtures recorded 2026-11-09 (primary, 1 request per second)
 
+The recording scripts use an ordinary desktop browser User-Agent.
+
 `record.sh` recorded these with User-Agent trachuan/0.0. Cookies
 (`ASP.NET_SessionId`, `l`) stayed in memory. Saved pages replace the values of
 `__VIEWSTATE`, `__EVENTVALIDATION` and `__VIEWSTATEGENERATOR` with

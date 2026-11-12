@@ -227,7 +227,7 @@ func (c *Client) one(ctx context.Context, method, target string, form url.Values
 	if e != nil {
 		return 0, "", 0, errors.New("invalid request")
 	}
-	req.Header.Set("User-Agent", c.userAgent)
+	req.Header.Set("User-Agent", sourcegate.UserAgent)
 	if form != nil {
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	}

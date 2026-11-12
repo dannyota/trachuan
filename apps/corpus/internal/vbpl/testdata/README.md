@@ -1,5 +1,7 @@
 # VBPL fixtures recorded 2026-11-09 (primary, curl at 1 request per second)
 
+The recording scripts use an ordinary desktop browser User-Agent.
+
 Headers: `Origin: https://vbpl.vn`, `Referer: https://vbpl.vn/`, User-Agent
 trachuan/0.0. Presigned query strings removed from files-\*.json.
 

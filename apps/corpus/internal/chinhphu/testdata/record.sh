@@ -15,7 +15,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-UA = "trachuan/0.0 (+https://github.com/dannyota/trachuan)"
+UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
 SITE = "https://vanban.chinhphu.vn/"
 TOKENS = ("__VIEWSTATE", "__EVENTVALIDATION", "__VIEWSTATEGENERATOR")
 last = [0.0]
