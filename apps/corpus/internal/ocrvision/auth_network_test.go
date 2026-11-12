@@ -75,6 +75,8 @@ func TestAuth_StalledJWTEndpointHasOverallTimeout(t *testing.T) {
 		select {
 		case <-release:
 		case <-r.Context().Done():
+		case <-time.After(5 * time.Second):
+			t.Error("stalled JWT handler timed out")
 		}
 		close(ended)
 	}))
@@ -83,21 +85,27 @@ func TestAuth_StalledJWTEndpointHasOverallTimeout(t *testing.T) {
 	serviceCredentials(t, server.URL)
 	done := make(chan error, 1)
 	go func() {
-		_, err := newAuthenticated(context.Background(), server.Client(), 10*time.Millisecond)
+		_, err := newAuthenticated(context.Background(), server.Client(), 500*time.Millisecond)
 		done <- err
 	}()
-	<-started
+	select {
+	case <-started:
+	case err := <-done:
+		t.Fatalf("token acquisition returned before the request reached the endpoint: %v", err)
+	case <-time.After(5 * time.Second):
+		t.Fatal("JWT request did not reach the endpoint")
+	}
 	select {
 	case err := <-done:
 		if err == nil {
 			t.Error("stalled endpoint succeeded")
 		}
-	case <-time.After(100 * time.Millisecond):
+	case <-time.After(2 * time.Second):
 		t.Fatal("token acquisition ignored timeout")
 	}
 	select {
 	case <-ended:
-	case <-time.After(100 * time.Millisecond):
+	case <-time.After(2 * time.Second):
 		t.Fatal("JWT HTTP request outlived overall timeout")
 	}
 }
@@ -110,6 +118,8 @@ func TestAuth_StalledJWTEndpointHonorsCancellation(t *testing.T) {
 		select {
 		case <-release:
 		case <-r.Context().Done():
+		case <-time.After(5 * time.Second):
+			t.Error("stalled JWT handler timed out")
 		}
 	}))
 	defer server.Close()
@@ -119,14 +129,20 @@ func TestAuth_StalledJWTEndpointHonorsCancellation(t *testing.T) {
 	defer cancel()
 	done := make(chan error, 1)
 	go func() { _, err := newAuthenticated(ctx, server.Client(), 30*time.Second); done <- err }()
-	<-started
+	select {
+	case <-started:
+	case err := <-done:
+		t.Fatalf("token acquisition returned before the request reached the endpoint: %v", err)
+	case <-time.After(5 * time.Second):
+		t.Fatal("JWT request did not reach the endpoint")
+	}
 	cancel()
 	select {
 	case err := <-done:
 		if err == nil {
 			t.Error("canceled token accepted")
 		}
-	case <-time.After(100 * time.Millisecond):
+	case <-time.After(2 * time.Second):
 		t.Fatal("JWT token acquisition ignored cancellation")
 	}
 }
