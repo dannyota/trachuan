@@ -99,12 +99,20 @@ A candidate sentence has, in order:
    and its type suffix must agree with the type word (`TT` Thông tư, `TTLT`
    Thông tư liên tịch, `NĐ` Nghị định, `QĐ` Quyết định, `NQ` Nghị quyết, `QH`
    Luật, `UBTVQH` Pháp lệnh); disagreement rejects with gap
-   `relation_text_type_mismatch`. Only numbers whose issuer segment names a
-   central body are accepted (a number is unique nationwide only then); a
-   segment containing `UBND` or `HĐND`, or any number whose diagram target is
-   not a central document, rejects the sentence with gap
-   `relation_text_local_number`. Provincial documents therefore get no text
-   relations in version 1; the issuer must be verified before that changes.
+   `relation_text_type_mismatch`. The issuer segment (the part after the type,
+   `NHNN` in `TT-NHNN`, `CP` in `NĐ-CP`) must be a key of the closed table
+   `central_issuers` in `sources/vn.yaml`, which maps each code to the issuer's
+   normalized name (`CP`, `TTg`, `QH`, `UBTVQH`, `NHNN`, `BTC`, `BTP`, `BCA`,
+   `BQP`, `BKHĐT`, `BCT`, `BGTVT`, `BXD`, `BTNMT`, `BTTTT`, `BLĐTBXH`, `BYT`,
+   `BGDĐT`, `BKHCN`, `BNV`, `BNG`, `BNNPTNT`, `BVHTTDL`, `UBDT`, `TTCP`, `VPCP`,
+   `KTNN`); the table's hash is part of the relate recipe. Any other segment,
+   including `UBND` and `HĐND`, rejects the sentence with gap
+   `relation_text_local_number`. Build then verifies the target: the target
+   document's issuer from its own frozen fetch metadata, normalized under
+   [identity comparison](data.md#identity-comparison), must equal the table's
+   name for the code; a different, missing or unparsable issuer drops the row
+   with gap `relation_text_identity_conflict`. Provincial documents therefore
+   get no text relations in version 1.
 6. An optional tail (the usual `ngày ... của <issuer> <title>`), which must
    contain no further locator keyword (`điều`, `khoản`, `điểm`) and no further
    number token; otherwise the sentence names several target documents or
