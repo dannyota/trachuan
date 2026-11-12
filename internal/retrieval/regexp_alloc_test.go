@@ -19,3 +19,10 @@ func TestValidHash_Allocations(t *testing.T) {
 		t.Fatalf("validHash allocated %.0f times, want at most 2", allocs)
 	}
 }
+
+func TestValidTaxonomyCode_Allocations(t *testing.T) {
+	allocs := testing.AllocsPerRun(100, func() { _ = validTaxonomyCode("1.12.c3") })
+	if allocs > 2 {
+		t.Fatalf("validTaxonomyCode allocated %.0f times, want at most 2", allocs)
+	}
+}
