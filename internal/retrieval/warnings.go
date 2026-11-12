@@ -54,35 +54,3 @@ func warning(r Relation) (Warning, bool) {
 	}
 	return w, true
 }
-
-func shapeWarnings(source []SourceRelation) ([]Warning, int) {
-	var warnings []Warning
-	seen := map[struct {
-		source, hash string
-		ordinal      int
-	}]bool{}
-	omitted := 0
-	for _, e := range orderedRelations(source) {
-		if !e.TargetInHit {
-			continue
-		}
-		w, ok := warning(e.Value)
-		if !ok {
-			continue
-		}
-		id := struct {
-			source, hash string
-			ordinal      int
-		}{e.Value.SourceKey, e.ArtifactSHA256, e.Ordinal}
-		if seen[id] {
-			continue
-		}
-		seen[id] = true
-		if len(warnings) == 10 {
-			omitted++
-			continue
-		}
-		warnings = append(warnings, w)
-	}
-	return warnings, omitted
-}

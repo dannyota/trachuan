@@ -9,6 +9,32 @@ import (
 	"testing"
 )
 
+func TestLoadWarnings_RelationOrder(t *testing.T) {
+	db, _, _ := fixture(t)
+	ctx := context.Background()
+	_, err := db.Exec(ctx, `INSERT INTO relation (id,target_document_id,target_provision_id,source_key,target_key,source_number,target_number,kind,raw_code,raw_label,target_node_id,evidence,method,artifact_sha256,ordinal) VALUES
+ (1,1,11,'vn:z','vn:1','n','n','suspends','','','p11','','text_rule/1',repeat('a',64),1),
+ (2,1,11,'vn:a','vn:1','n','n','cites','','','p11','','text_rule/1',repeat('a',64),2),
+ (3,1,11,'vn:b','vn:1','n','n','repeals','','','p11','','text_rule/1',repeat('a',64),3),
+ (4,1,11,'vn:a','vn:1','n','n','repeals','','','p11','','text_rule/1',repeat('a',64),4)`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx, err := db.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	sets, err := loadWarnings(ctx, tx, []int64{11})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := sets[11]
+	if got.omitted != 0 || len(got.warnings) != 3 || got.warnings[0].Key != "vn:a" || got.warnings[1].Key != "vn:b" || got.warnings[2].Kind != "suspends" {
+		t.Fatalf("warnings: %+v", got)
+	}
+}
+
 func TestWarnings_AttachmentAndRecovery(t *testing.T) {
 	db, engine, _ := fixture(t)
 	ctx := context.Background()
