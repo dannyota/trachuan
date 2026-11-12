@@ -30,7 +30,7 @@ func TestCheck_AllEntriesAndReview(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	one, err := env.documents(ctx, checker)
+	one, err := env.checkDocuments(ctx, checker, false)
 	if err != nil || len(one) != 1 || one[0].Entry.EngineID != engines[0] {
 		t.Fatalf("preferred=%+v err=%v", one, err)
 	}

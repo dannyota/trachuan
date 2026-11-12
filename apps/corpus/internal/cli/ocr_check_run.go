@@ -51,10 +51,6 @@ func openCheckRun(ctx context.Context, cc, rel string) (*checkRun, error) {
 	}
 	return &checkRun{db: db, root: root, artifacts: artifact.Store{Root: cfg.Artifacts}, run: stage.Run{ID: row.ID, Country: cc, Rel: rel, Snapshot: snapshot}}, nil
 }
-func (e *checkRun) documents(ctx context.Context, checker string) ([]ocrcheck.Document, error) {
-	return e.checkDocuments(ctx, checker, false)
-}
-
 func (e *checkRun) checkDocuments(ctx context.Context, checker string, allEntries bool) ([]ocrcheck.Document, error) {
 	q := store.New(e.db)
 	active, err := membership.FinalActiveKeys(ctx, q, e.run)
