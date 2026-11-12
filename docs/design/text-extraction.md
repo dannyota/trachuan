@@ -70,6 +70,19 @@ Exactly one source supplies a document's text, chosen in this order:
    `ocr_rejected` or `ocr_label_flagged` as defined in the
    [OCR store](ocr-store.md)).
 
+Wrong record, before any source is chosen: when the transcription's header names
+another document, the record holds another document's text and nothing is
+indexed. The header is the transcription text before the first preamble marker
+(`Căn cứ`, `Chiểu`, `Theo đề nghị`, `Xét đề nghị`, `Điều 1`); its number is the
+first `Số:` or upper-case `SỐ` token there. When that number's leading digits
+differ from the detail's `docNum`, the number does not occur in the detail title
+(a title that names an amended act), and the document is not a consolidated
+text, the document gets the gap `text_number_mismatch` (detail: both numbers)
+and no provisions from any source, the source tree included. A header without a
+number is not checked. Measured on 3,832 VBPL bundles (2026-11-12): two hits,
+both real: 15/SL holds 14/SL and 50/2025/TT-BKHCN holds 47/2025/TT-BKHCN, in the
+tree and the transcription alike.
+
 A PDF's text layer is read only through that gate: most measured layers are
 garbage from an earlier non-Vietnamese OCR pass, and a scan with an embedded
 layer goes to OCR however fluent the layer looks. DOCX is not read: it would
