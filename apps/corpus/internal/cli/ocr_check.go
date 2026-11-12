@@ -8,6 +8,7 @@ import (
 	"math"
 	"os"
 	"strconv"
+	"strings"
 
 	"danny.vn/trachuan/apps/corpus/internal/ocrcheck"
 )
@@ -15,7 +16,7 @@ import (
 func parseCheckOptions(args []string, review bool) (ocrcheck.Options, error) {
 	allowed := map[string]bool{"--model": true, "--effort": true, "--check-version": true}
 	if !review {
-		for k, v := range map[string]bool{"--in-flight": true, "--limit-docs": true, "--max-usd": true, "--batch": false, "--dry-run": false, "--reconcile": false, "--retry-failed": false, "--abandon": true} {
+		for k, v := range map[string]bool{"--entries": true, "--in-flight": true, "--limit-docs": true, "--max-usd": true, "--batch": false, "--dry-run": false, "--reconcile": false, "--retry-failed": false, "--abandon": true} {
 			allowed[k] = v
 		}
 	}
@@ -54,6 +55,17 @@ func parseCheckOptions(args []string, review bool) (ocrcheck.Options, error) {
 	if err != nil || o.MaxUSD <= 0 || math.IsNaN(o.MaxUSD) || math.IsInf(o.MaxUSD, 0) || o.MaxUSD > 1e9 {
 		return o, fmt.Errorf("a positive finite --max-usd is required")
 	}
+	if value, ok := flags["--entries"]; ok {
+		seen := map[int64]bool{}
+		for _, part := range strings.Split(value, ",") {
+			id, parseErr := strconv.ParseInt(part, 10, 64)
+			if parseErr != nil || id < 1 || seen[id] {
+				return o, fmt.Errorf("--entries requires distinct positive comma-separated OCR text ids")
+			}
+			seen[id] = true
+			o.Entries = append(o.Entries, id)
+		}
+	}
 	if value, ok := flags["--limit-docs"]; ok {
 		o.LimitDocs, err = strconv.Atoi(value)
 		if err != nil || o.LimitDocs < 0 {
@@ -77,7 +89,7 @@ func parseCheckOptions(args []string, review bool) (ocrcheck.Options, error) {
 
 func runOCRCheck(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	if len(args) < 2 {
-		_, _ = fmt.Fprintln(stderr, "usage: corpus ocr check <cc> <rel> --max-usd USD [--model MODEL] [--effort EFFORT] [--check-version 2|3|4] [--limit-docs N] [--in-flight N] [--batch] [--dry-run] [--reconcile] [--retry-failed] [--abandon SUBMISSION_ID]")
+		_, _ = fmt.Fprintln(stderr, "usage: corpus ocr check <cc> <rel> --max-usd USD [--model MODEL] [--effort EFFORT] [--check-version 2|3|4] [--limit-docs N] [--entries ID[,ID...]] [--in-flight N] [--batch] [--dry-run] [--reconcile] [--retry-failed] [--abandon SUBMISSION_ID]")
 		return 2
 	}
 	o, err := parseCheckOptions(args[2:], false)

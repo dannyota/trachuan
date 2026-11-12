@@ -55,6 +55,7 @@ type Repository interface {
 
 // Options identifies the versioned checker and authorized spend.
 type Options struct {
+	Entries                               []int64
 	Model, Effort                         string
 	LimitDocs, InFlight                   int
 	CheckVersion                          int
@@ -132,6 +133,23 @@ type prepared struct {
 
 // Run collects earlier submissions before selecting any new paid work.
 func (r *Runner) Run(ctx context.Context, docs []Document, o Options) (Summary, error) {
+	summary, err := r.run(ctx, docs, o)
+	if len(o.Entries) > 0 {
+		reported := make(map[int64]bool, len(summary.Documents))
+		for _, doc := range summary.Documents {
+			reported[doc.EntryID] = true
+		}
+		for _, id := range o.Entries {
+			if !reported[id] {
+				summary.Documents = append(summary.Documents, DocumentSummary{EntryID: id, Outcome: "not_selected"})
+				reported[id] = true
+			}
+		}
+	}
+	return summary, err
+}
+
+func (r *Runner) run(ctx context.Context, docs []Document, o Options) (Summary, error) {
 	var summary Summary
 	if err := o.Validate(); err != nil {
 		return summary, err
@@ -193,6 +211,7 @@ func (r *Runner) Run(ctx context.Context, docs []Document, o Options) (Summary, 
 			return summary, resumeErr
 		}
 	}
+	docs = selectEntries(docs, o.Entries)
 	ceiling := int64(math.Floor(o.MaxUSD * 1e6))
 	if v, _ := o.version(); v.directOnly {
 		err = r.runConcurrent(ctx, docs, o, &summary, skip, ceiling)

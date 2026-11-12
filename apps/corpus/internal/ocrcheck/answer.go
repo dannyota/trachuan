@@ -8,6 +8,7 @@ import (
 	"io"
 	"slices"
 	"strings"
+	"unicode/utf8"
 
 	"danny.vn/trachuan/apps/corpus/internal/ocrstore"
 	"golang.org/x/text/unicode/norm"
@@ -167,7 +168,7 @@ func answerObject(data []byte, path string, fields []string) (map[string]json.Ra
 	return values, ""
 }
 
-// answerDiagnostic records only safe scalar facts from a complete JSON object.
+// answerDiagnostic records only safe facts from a complete JSON object.
 func answerDiagnostic(data []byte, u *Usage) {
 	var root map[string]json.RawMessage
 	if err := json.Unmarshal(data, &root); err != nil || root == nil {
@@ -214,19 +215,39 @@ func answerDiagnostic(data []byte, u *Usage) {
 			for _, item := range items {
 				var fields map[string]json.RawMessage
 				var page int
-				if json.Unmarshal(item, &fields) != nil || fields == nil || len(fields["page"]) == 0 || bytes.Equal(bytes.TrimSpace(fields["page"]), []byte("null")) || json.Unmarshal(fields["page"], &page) != nil {
-					invalid++
-					continue
-				}
-				if u.AnswerItemPageMax == nil || page > *u.AnswerItemPageMax {
+				validPage := json.Unmarshal(item, &fields) == nil && fields != nil && len(fields["page"]) != 0 && !bytes.Equal(bytes.TrimSpace(fields["page"]), []byte("null")) && json.Unmarshal(fields["page"], &page) == nil
+				if validPage && (u.AnswerItemPageMax == nil || page > *u.AnswerItemPageMax) {
 					value := page
 					u.AnswerItemPageMax = &value
 				}
-				if page < 1 || (u.AnswerPages != nil && page > *u.AnswerPages) {
+				if !validPage || page < 1 || (u.AnswerPages != nil && page > *u.AnswerPages) {
 					invalid++
+					if len(u.AnswerInvalidItems) < 10 {
+						u.AnswerInvalidItems = append(u.AnswerInvalidItems, invalidItemDiagnostic(fields))
+					}
 				}
 			}
 			u.AnswerItemPageInvalid = &invalid
 		}
 	}
+}
+
+func invalidItemDiagnostic(fields map[string]json.RawMessage) InvalidItemDiagnostic {
+	kind := "other"
+	var value string
+	if json.Unmarshal(fields["kind"], &value) == nil {
+		switch value {
+		case "document_number", "date", "article_label", "amount", "missing_text", "extra_text":
+			kind = value
+		}
+	}
+	chars := func(name string) *int {
+		var text *string
+		if json.Unmarshal(fields[name], &text) != nil || text == nil {
+			return nil
+		}
+		n := utf8.RuneCountInString(*text)
+		return &n
+	}
+	return InvalidItemDiagnostic{Kind: kind, OCRChars: chars("ocr"), PDFChars: chars("pdf"), NoteChars: chars("note")}
 }
