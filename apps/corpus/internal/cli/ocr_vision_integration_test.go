@@ -107,7 +107,7 @@ func TestVision_SelectionQueriesAndCheckEngineOrder(t *testing.T) {
 	if err != nil || len(explicit) != 1 || !explicit[0].Present {
 		t.Fatal("fresh comparison not present")
 	}
-	checked, err := env.documents(ctx, "checker")
+	checked, err := env.checkDocuments(ctx, "checker", false)
 	if err != nil || len(checked) != 2 {
 		t.Fatalf("check=%+v err=%v", checked, err)
 	}
