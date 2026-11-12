@@ -4,8 +4,12 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/json"
+	"slices"
+	"strings"
 	"sync"
 	"time"
+
+	"golang.org/x/text/unicode/norm"
 
 	"danny.vn/trachuan/apps/server/internal/cache"
 	"danny.vn/trachuan/internal/retrieval"
@@ -76,7 +80,7 @@ func (cfg Config) cachedSearch(ctx context.Context, in searchInput, validate fun
 	if in.InForceOnly != nil {
 		force = *in.InForceOnly
 	}
-	canonical := map[string]any{"country": in.Country, "query": in.Query, "as_of": in.AsOf, "in_force_only": force, "detail": detail, "limit": req.Limit, "release": rel}
+	canonical := map[string]any{"country": in.Country, "query": in.Query, "as_of": in.AsOf, "in_force_only": force, "detail": detail, "limit": req.Limit, "release": rel, "nodes": canonicalFilter(in.Nodes), "doc_types": canonicalFilter(in.DocTypes), "issuers": canonicalFilter(in.Issuers), "documents": canonicalFilter(in.Documents), "document_keys": exactDocumentFilter(in.Documents), "cursor": in.Cursor}
 	raw, _ := json.Marshal([]any{rel, now.Format(time.DateOnly), canonical})
 	key := sha256.Sum256(raw)
 	if raw, ok := scope.Search.Get(rel, key); ok {
@@ -105,4 +109,22 @@ func (cfg Config) cachedSearch(ctx context.Context, in searchInput, validate fun
 
 func serializedResult(raw []byte) *mcp.CallToolResult {
 	return &mcp.CallToolResult{StructuredContent: json.RawMessage(raw), Content: []mcp.Content{&mcp.TextContent{Text: string(raw)}}}
+}
+
+func canonicalFilter(values []string) []string {
+	out := make([]string, 0, len(values))
+	for _, v := range values {
+		out = append(out, norm.NFC.String(strings.TrimSpace(v)))
+	}
+	slices.Sort(out)
+	return slices.Compact(out)
+}
+
+func exactDocumentFilter(values []string) []string {
+	out := make([]string, 0, len(values))
+	for _, v := range values {
+		out = append(out, strings.TrimSpace(v))
+	}
+	slices.Sort(out)
+	return slices.Compact(out)
 }

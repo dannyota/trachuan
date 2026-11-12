@@ -15,6 +15,11 @@ type searchInput struct {
 	Detail      retrieval.Detail `json:"detail,omitempty"`
 	Limit       *int             `json:"limit,omitempty"`
 	Release     string           `json:"release,omitempty"`
+	Nodes       []string         `json:"nodes,omitempty"`
+	DocTypes    []string         `json:"doc_types,omitempty"`
+	Issuers     []string         `json:"issuers,omitempty"`
+	Documents   []string         `json:"documents,omitempty"`
+	Cursor      string           `json:"cursor,omitempty"`
 }
 
 func (cfg Config) search(ctx context.Context, in searchInput) (retrieval.SearchResult, error) {
@@ -36,11 +41,14 @@ func (cfg Config) search(ctx context.Context, in searchInput) (retrieval.SearchR
 }
 
 func prepareSearch(in searchInput) (retrieval.Request, retrieval.Detail, retrieval.Validation, error) {
+	if len(in.Cursor) > 2048 {
+		return retrieval.Request{}, "", retrieval.Validation{}, invalidRequest{}
+	}
 	detail := in.Detail
 	if detail == "" {
 		detail = retrieval.DetailCompact
 	}
-	req := retrieval.Request{Query: in.Query, Limit: retrieval.DefaultLimit(detail), InForceOnly: in.InForceOnly}
+	req := retrieval.Request{Query: in.Query, Limit: retrieval.DefaultLimit(detail), InForceOnly: in.InForceOnly, Nodes: in.Nodes, DocTypes: in.DocTypes, Issuers: in.Issuers, Documents: in.Documents, Cursor: in.Cursor}
 	if in.Limit != nil {
 		req.Limit = *in.Limit
 	}
@@ -59,7 +67,7 @@ func prepareSearch(in searchInput) (retrieval.Request, retrieval.Detail, retriev
 }
 
 func searchResolved(ctx context.Context, engine Engine, rel string, req retrieval.Request, detail retrieval.Detail, validation retrieval.Validation) (retrieval.SearchResult, error) {
-	if !validation.Accepted {
+	if !validation.Accepted && len(req.Nodes)+len(req.DocTypes)+len(req.Issuers)+len(req.Documents) == 0 && req.Cursor == "" {
 		return retrieval.SearchResult{Release: rel, Abstain: true, Reason: validation.Reason, Message: validation.Message}, nil
 	}
 	response, err := engine.Search(ctx, req)

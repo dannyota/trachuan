@@ -1039,6 +1039,121 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /api/v1/public/taxonomy:
+    get:
+      tags: [web]
+      security: []
+      parameters:
+      - name: node
+        in: query
+        schema:
+          type: string
+      - name: depth
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 3
+      responses:
+        '200':
+          description: Success
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaxonomyResult'
+        '400':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Request failed
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/public/taxonomy/{code}:
+    get:
+      tags: [web]
+      security: []
+      parameters:
+      - name: code
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NodePage'
+        '400':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Request failed
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /api/v1/status:
     get:
       tags: [web]
@@ -1442,6 +1557,9 @@ components:
     Document:
       type: object
       properties:
+        nodes:
+          type: array
+          items: {type: string}
         number: *id001
         title: *id001
         type: *id001
@@ -1526,9 +1644,77 @@ components:
       - complete
       - source_resolved
       - target_resolved
+    NodeRef:
+      type: object
+      properties:
+        name: {type: string}
+        level: {type: integer, format: int64}
+    NodeIndex:
+      type: object
+      additionalProperties:
+        $ref: '#/components/schemas/NodeRef'
+    NodeEntry:
+      type: object
+      properties:
+        code: {type: string}
+        name: {type: string}
+        description: {type: string}
+        level: {type: integer, format: int64}
+        origin: {type: string}
+        provisions: {type: integer, format: int64}
+        documents: {type: integer, format: int64}
+        children:
+          type: array
+          items:
+            $ref: '#/components/schemas/NodeEntry'
+    TaxonomyResult:
+      type: object
+      properties:
+        release: {type: string}
+        nodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/NodeEntry'
+        truncated: {type: boolean}
+      required: [truncated]
+    NodeDocument:
+      type: object
+      properties:
+        key: {type: string}
+        number: {type: string}
+        title: {type: string}
+        type: {type: string}
+        status_class: {type: string}
+        is_current: {type: boolean}
+        provisions: {type: integer, format: int64}
+      required: [is_current]
+    NodePage:
+      type: object
+      properties:
+        release: {type: string}
+        node:
+          $ref: '#/components/schemas/NodeEntry'
+        path:
+          type: array
+          items:
+            $ref: '#/components/schemas/NodeEntry'
+        documents:
+          type: array
+          items:
+            $ref: '#/components/schemas/NodeDocument'
+    Facet:
+      type: object
+      properties:
+        value: {type: string}
+        count: {type: integer, format: int64}
+      required: [count]
     Hit:
       type: object
       properties:
+        in_filter: {type: boolean}
+        nodes:
+          type: array
+          items: {type: string}
         handle: *id001
         doc: *id001
         citation: *id001
@@ -1564,6 +1750,10 @@ components:
     SearchResult:
       type: object
       properties:
+        outside_filter_count: {type: integer, format: int64}
+        next_cursor: {type: string}
+        nodes:
+          $ref: '#/components/schemas/NodeIndex'
         release: *id001
         abstain: *id007
         reason: *id001
@@ -1605,6 +1795,30 @@ components:
           minimum: 1
           maximum: 50
         release: *id001
+        nodes:
+          type: array
+          maxItems: 20
+          description: Ordering preference that never hides hits.
+          items: {type: string}
+        doc_types:
+          type: array
+          maxItems: 10
+          description: Ordering preference that never hides hits.
+          items: {type: string}
+        issuers:
+          type: array
+          maxItems: 10
+          description: Ordering preference that never hides hits.
+          items: {type: string}
+        documents:
+          type: array
+          maxItems: 20
+          description: Ordering preference that never hides hits.
+          items: {type: string}
+        cursor:
+          type: string
+          description: At most 2048 UTF-8 bytes.
+          maxLength: 2048
       required:
       - country
       - query
@@ -1673,6 +1887,8 @@ components:
     DocumentPage:
       type: object
       properties:
+        nodes:
+          $ref: '#/components/schemas/NodeIndex'
         release:
           type: string
         fetch_sha256:
@@ -1687,6 +1903,8 @@ components:
     ReadResult:
       type: object
       properties:
+        nodes:
+          $ref: '#/components/schemas/NodeIndex'
         release: *id001
         items:
           type: array
@@ -1697,6 +1915,14 @@ components:
     CorpusStatus:
       type: object
       properties:
+        doc_types:
+          type: array
+          items:
+            $ref: '#/components/schemas/Facet'
+        issuers:
+          type: array
+          items:
+            $ref: '#/components/schemas/Facet'
         release: *id001
         documents: *id003
         provisions: *id003
