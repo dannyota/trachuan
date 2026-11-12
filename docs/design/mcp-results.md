@@ -50,19 +50,19 @@ first.
 
 A compact hit has, in this order:
 
-| Field       | Meaning                                                                                                                                                   |
-| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `handle`    | The hit's provision                                                                                                                                       |
-| `doc`       | Key into `documents`                                                                                                                                      |
-| `citation`  | Canonical citation from the recipe, number excluded                                                                                                       |
-| `path`      | Ancestors from the top structural level down to and including the hit: `label`, `heading` when the source has one, `anchor` (read as `<doc>#<anchor>`)    |
-| `snippet`   | Verbatim text under the snippet rule                                                                                                                      |
-| `complete`  | True only when `snippet` is the whole hit text and the recipe marked the hit complete                                                                     |
-| `in_filter` | Filter result, only when a filter (`nodes`, `doc_types`, `issuers` or `documents`) was requested                                                          |
-| `nodes`     | The hit provision's effective node codes ([taxonomy](taxonomy.md#serving)), deepest first                                                                 |
-| `warnings`  | Provision-level relations whose endpoint is this provision or a descendant, as pointers, under the recipe's validity rule, in the recipe's relation order |
-| `gaps`      | The recipe's hit gaps                                                                                                                                     |
-| `locator`   | Where the hit text sits in the file it was read from (`block:` or `line:` range); absent when the text is the source's tree                               |
+| Field       | Meaning                                                                                                                                                |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `handle`    | The hit's provision                                                                                                                                    |
+| `doc`       | Key into `documents`                                                                                                                                   |
+| `citation`  | Canonical citation from the recipe, number excluded                                                                                                    |
+| `path`      | Ancestors from the top structural level down to and including the hit: `label`, `heading` when the source has one, `anchor` (read as `<doc>#<anchor>`) |
+| `snippet`   | Verbatim text under the snippet rule                                                                                                                   |
+| `complete`  | True only when `snippet` is the whole hit text and the recipe marked the hit complete                                                                  |
+| `in_filter` | Filter result, only when a filter (`nodes`, `doc_types`, `issuers` or `documents`) was requested                                                       |
+| `nodes`     | The hit provision's effective node codes ([taxonomy](taxonomy.md#serving)), deepest first                                                              |
+| `warnings`  | Provision-level warnings attached to this provision ([Warnings](#warnings)), in the recipe's relation order                                            |
+| `gaps`      | The recipe's hit gaps                                                                                                                                  |
+| `locator`   | Where the hit text sits in the file it was read from (`block:` or `line:` range); absent when the text is the source's tree                            |
 
 A full hit has the same fields except `snippet`, then the recipe's `text`,
 `fragments`, `score` and complete `relations` with evidence; its `complete` is
@@ -93,6 +93,42 @@ member's first body span begins.
 Count code points after the marker is inserted. `complete` is false whenever any
 marker appears or the recipe marked the hit incomplete, including a cut or
 missing lead.
+
+## Warnings
+
+A warning is a `repeals`, `replaces`, `suspends` or `amends_supplements`
+relation row whose `method`, read as a comma-separated set, includes
+`text_rule/1` or `vbpl_references` (so a merged `vbpl_references,vbpl_diagram`
+row counts), that carries a `target_node_id` and whose `target_provision_id` is
+set, with its target document in this release; diagram-only rows
+(`vbpl_diagram`) and rows with a null `target_provision_id` never become
+warnings and stay document-level pointers. It has the pointer fields
+(`dir:"in"`, `kind`, and the acting document's `key`, `number` and `in_release`)
+and adds `source`, the acting provision's handle when it is in the release;
+`basis`, `text` for a `text_rule/1` row (its evidence is the act's operative
+sentence) or `vbpl_reference` for a row whose method set includes
+`vbpl_references` (its stored evidence is only VBPL's reference title);
+`target`, the handle of `target_provision_id`; `exact`; and `named`. For a text
+row `target_node_id` is the requested path, `exact` is true exactly when it
+equals the anchor of `target_provision_id`, and an inexact warning (the deepest
+resolved ancestor, because a named clause or point is not a node in this
+release) carries `named`, the requested path (`dieu-8/khoan-9`). For a reference
+row `target_node_id` is VBPL's node id, which build resolved to
+`target_provision_id`, so `exact` is always true and there is no `named`.
+`named` is what the act says, never a citation of the target tree.
+
+A hit or a read unit carries a warning when its provision is `target` or an
+ancestor of `target`, or, for an exact warning, a provision inside `target`; an
+inexact warning attaches to no other descendant of `target`, because the act
+named only part of it. Each hit or unit carries at most 10 warnings
+([budgets](budgets.md)), chosen from the warning rows alone in the recipe's
+relation order and never displaced by other relations; when more apply,
+`warnings_omitted` gives the count. A `relations` read of a provision returns,
+paged by `next`, every relation the hit rule attaches to it, inherited warnings
+included, so a `relations` read of the hit's or unit's own handle recovers every
+omitted warning. A warning never changes the stamp, `status` or eligibility,
+states no effective date and is not a legal conclusion; its evidence is in full
+hits' `relations` and in a `relations` read.
 
 ## Related pointers
 

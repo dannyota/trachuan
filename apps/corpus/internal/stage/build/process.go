@@ -220,7 +220,7 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 			}
 			record["provenance_sha256"] = hashBytes(provenanceBytes)
 		}
-		reviewJSON, e := encodeValidityReview(counts.validity.reviews)
+		reviewJSON, e := encodeValidityReview(counts.validity.reviews, counts.validity.partialDocuments)
 		if e != nil {
 			return e
 		}

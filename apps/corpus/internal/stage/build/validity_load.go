@@ -21,7 +21,7 @@ func dateString(t *time.Time) string {
 }
 
 func (l *loader) loadValidity(ctx context.Context, corrections []source.Correction, asOf string) (validityResult, error) {
-	rows, err := l.tx.Query(ctx, `SELECT key,number,number_norm,doc_type,issuer,issue_date,status_code,status_name,status_class,status_basis,raw_eff_from,raw_eff_to,eff_from,eff_to,is_consolidated,fetch_sha256,extract_sha256,text_source FROM document ORDER BY key`)
+	rows, err := l.tx.Query(ctx, `SELECT key,number,class,number_norm,doc_type,issuer,issue_date,status_code,status_name,status_class,status_basis,raw_eff_from,raw_eff_to,eff_from,eff_to,is_consolidated,fetch_sha256,extract_sha256,text_source FROM document ORDER BY key`)
 	if err != nil {
 		return validityResult{}, fmt.Errorf("read validity documents: %w", err)
 	}
@@ -31,7 +31,7 @@ func (l *loader) loadValidity(ctx context.Context, corrections []source.Correcti
 		var d validityDocument
 		var issue, from, to *time.Time
 		var extract *string
-		if err = rows.Scan(&d.key, &d.number, &d.numberNorm, &d.docType, &d.issuer, &issue, &d.statusCode, &d.statusName, &d.initialClass, &d.basis, &d.rawFrom, &d.rawTo, &from, &to, &d.consolidated, &d.fetchHash, &extract, &d.textSource); err != nil {
+		if err = rows.Scan(&d.key, &d.number, &d.class, &d.numberNorm, &d.docType, &d.issuer, &issue, &d.statusCode, &d.statusName, &d.initialClass, &d.basis, &d.rawFrom, &d.rawTo, &from, &to, &d.consolidated, &d.fetchHash, &extract, &d.textSource); err != nil {
 			rows.Close()
 			return validityResult{}, fmt.Errorf("scan validity document: %w", err)
 		}
@@ -72,6 +72,12 @@ func (l *loader) loadValidity(ctx context.Context, corrections []source.Correcti
 	result, err := runValidity(values, relations, entries, asOf)
 	if err != nil {
 		return validityResult{}, fmt.Errorf("derive validity: %w", err)
+	}
+	result.partialDocuments = partialDocuments(docs, relations)
+	for _, d := range result.partialDocuments {
+		if len(d.Acting) == 0 {
+			l.addGap("build", d.Key, "partial_status_unexplained", d.StatusCode)
+		}
 	}
 	if err = l.recordCorrectionGaps(&result, held); err != nil {
 		return validityResult{}, err
