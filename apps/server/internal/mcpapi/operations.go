@@ -55,10 +55,11 @@ func (o *Operations) Document(ctx context.Context, key, release, next string) (j
 	}
 	readItem := result.Items[0]
 	page := struct {
-		Release     string               `json:"release"`
-		FetchSHA256 string               `json:"fetch_sha256,omitempty"`
-		Item        retrieval.ItemResult `json:"item"`
-	}{Release: result.Release, Item: readItem}
+		Release     string                       `json:"release"`
+		FetchSHA256 string                       `json:"fetch_sha256,omitempty"`
+		Item        retrieval.ItemResult         `json:"item"`
+		Nodes       map[string]retrieval.NodeRef `json:"nodes"`
+	}{Release: result.Release, Item: readItem, Nodes: result.Nodes}
 	if readItem.Error == "" {
 		page.FetchSHA256 = readItem.FetchSHA256
 	}

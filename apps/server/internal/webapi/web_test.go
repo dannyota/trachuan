@@ -36,7 +36,7 @@ func (e *testEngine) Present(context.Context, retrieval.Response, retrieval.Deta
 }
 func (e *testEngine) Read(_ context.Context, r retrieval.ReadRequest) (retrieval.ReadResult, error) {
 	e.read = r
-	return retrieval.ReadResult{Release: r.Release, Items: []retrieval.ItemResult{{Doc: "vn:1", Complete: true, Document: &retrieval.DocumentEntry{Title: "title", TextSource: "source_tree", TextComplete: true}, Units: []retrieval.Unit{{Kind: "outline", Anchor: "a"}, {Kind: "provision", Text: "source"}}}}}, e.err
+	return retrieval.ReadResult{Release: r.Release, Nodes: map[string]retrieval.NodeRef{"1": {Name: "Name", Level: 1}}, Items: []retrieval.ItemResult{{Doc: "vn:1", Complete: true, Document: &retrieval.DocumentEntry{Title: "title", TextSource: "source_tree", TextComplete: true}, Units: []retrieval.Unit{{Kind: "outline", Anchor: "a"}, {Kind: "provision", Text: "source"}}}}}, e.err
 }
 func (e *testEngine) Status(context.Context) (retrieval.CorpusStatus, error) {
 	return retrieval.CorpusStatus{Documents: 9007199254740993, Provisions: 3}, e.err
@@ -167,6 +167,9 @@ func TestDocuments_IsReadWithWebCaps(t *testing.T) {
 	var page struct {
 		Release string               `json:"release"`
 		Item    retrieval.ItemResult `json:"item"`
+	}
+	if !strings.Contains(w.Body.String(), `"nodes":{"1":{"level":1,"name":"Name"}}`) {
+		t.Fatal(w.Body.String())
 	}
 	if json.Unmarshal(w.Body.Bytes(), &page) != nil || page.Release != "20991110_1" || page.Item.Doc != "vn:1" || !page.Item.Complete {
 		t.Fatal(w.Body.String())
