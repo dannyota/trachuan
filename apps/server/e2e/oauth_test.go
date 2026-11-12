@@ -265,22 +265,25 @@ func oauthWaitRevoked(t *testing.T, c *http.Client, server, token string) {
 	}
 }
 
-func oauthDeleteGrant(t *testing.T, c *http.Client, server string) {
+type oauthGrant struct {
+	ID   int64  `json:"id"`
+	Name string `json:"client_name"`
+}
+
+func oauthGrants(t *testing.T, c *http.Client, server string) []oauthGrant {
 	t.Helper()
-	var account struct {
-		CSRF string `json:"csrf_token"`
-	}
-	oauthJSON(t, get(t, c, server+"/api/v1/me"), http.StatusOK, &account)
-	if account.CSRF == "" {
-		t.Fatal("missing account CSRF token")
-	}
-	var grants []struct {
-		ID   int64  `json:"id"`
-		Name string `json:"client_name"`
-	}
+	var grants []oauthGrant
 	oauthJSON(t, get(t, c, server+"/api/v1/me/grants"), http.StatusOK, &grants)
+	if grants == nil {
+		t.Fatal("invalid grants response")
+	}
+	return grants
+}
+
+func oauthGrantID(t *testing.T, c *http.Client, server string) int64 {
+	t.Helper()
 	var id int64
-	for _, grant := range grants {
+	for _, grant := range oauthGrants(t, c, server) {
 		if grant.Name == oauthClientName {
 			if id != 0 || grant.ID <= 0 {
 				t.Fatal("ambiguous grant")
@@ -291,6 +294,19 @@ func oauthDeleteGrant(t *testing.T, c *http.Client, server string) {
 	if id == 0 {
 		t.Fatal("missing grant")
 	}
+	return id
+}
+
+func oauthDeleteGrant(t *testing.T, c *http.Client, server string) {
+	t.Helper()
+	var account struct {
+		CSRF string `json:"csrf_token"`
+	}
+	oauthJSON(t, get(t, c, server+"/api/v1/me"), http.StatusOK, &account)
+	if account.CSRF == "" {
+		t.Fatal("missing account CSRF token")
+	}
+	id := oauthGrantID(t, c, server)
 	req, err := http.NewRequest(http.MethodDelete, fmt.Sprintf("%s/api/v1/me/grants/%d", server, id), nil)
 	if err != nil {
 		t.Fatal("delete request failed")
@@ -315,6 +331,7 @@ func TestOAuth_MCPFlow(t *testing.T) {
 	id := oauthRegister(t, c, server)
 	first := oauthAuthorize(t, c, server, id, true)
 	oauthMCPWorks(t, c, server, first.Access)
+	grantID := oauthGrantID(t, c, server)
 	refresh := url.Values{"grant_type": {"refresh_token"}, "client_id": {id}, "resource": {server + "/mcp"}, "refresh_token": {first.Refresh}}
 	rotated := oauthToken(t, c, server, refresh)
 	if rotated.Access == first.Access || rotated.Refresh == first.Refresh {
@@ -327,6 +344,11 @@ func TestOAuth_MCPFlow(t *testing.T) {
 	oauthJSON(t, oauthPostForm(t, c, server+"/oauth/token", refresh), http.StatusBadRequest, &replay)
 	if replay.Error != "invalid_grant" {
 		t.Fatal("refresh replay not rejected")
+	}
+	for _, grant := range oauthGrants(t, c, server) {
+		if grant.ID == grantID {
+			t.Fatal("refresh replay did not revoke the grant")
+		}
 	}
 	oauthWaitRevoked(t, c, server, rotated.Access)
 	second := oauthAuthorize(t, c, server, id, false)
