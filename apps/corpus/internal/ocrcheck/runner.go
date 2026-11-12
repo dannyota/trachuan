@@ -257,6 +257,7 @@ func (r *Runner) Run(ctx context.Context, docs []Document, o Options) (Summary, 
 			u := errorUsage(countErr)
 			u.Rendering = ready.rendering
 			u.PDFPages = ready.pages
+			u.RequestBytes = ready.requestBytes
 			summary.record(doc, ready.pages, u, errorReason(countErr))
 			if !o.DryRun {
 				if err = r.failAttempt(ctx, doc, o, errorReason(countErr), u); err != nil {

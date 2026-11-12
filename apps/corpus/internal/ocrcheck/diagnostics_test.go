@@ -41,7 +41,7 @@ func TestDiagnostics_ErrorClasses(t *testing.T) {
 		{"http2_stream", http2.StreamError{StreamID: 1, Code: http2.ErrCodeCancel}},
 		{"http2_stream", &http2.StreamError{StreamID: 1, Code: http2.ErrCodeCancel}},
 		{"http2_stream", http2.GoAwayError{}}, //nolint:staticcheck // The transport may still return this type.
-		{"tls", &tls.RecordHeaderError{}},
+		{"tls", &tls.RecordHeaderError{}}, {"tls", tls.RecordHeaderError{}},
 		{"tls", tls.AlertError(42)}, {"tls", &tls.CertificateVerificationError{}},
 		{"dns", &net.DNSError{Err: "sentinel-private-message"}}, {"other", errors.New("sentinel-private-message")},
 	}
@@ -215,5 +215,73 @@ func TestDiagnostics_UncertainAttemptKeepsStreamDiagnostics(t *testing.T) {
 	}
 	if strings.Contains(fmt.Sprint(m), "sentinel-private-message") {
 		t.Fatal("error message escaped")
+	}
+}
+
+func TestDiagnostics_PreparationFailureKeepsPreparedSize(t *testing.T) {
+	r, repo, _, docs := fixture(t)
+	p := prepared{doc: docs[0], requestBytes: 12345, pages: 10}
+	if err := r.failPrepared(context.Background(), p, options(), "over_check_limit"); err != nil {
+		t.Fatal(err)
+	}
+	if got := repo.attempts[0].Usage.RequestBytes; got != p.requestBytes {
+		t.Fatalf("request bytes=%d want=%d", got, p.requestBytes)
+	}
+}
+
+type failedCountClient struct{ Client }
+
+func (c failedCountClient) CountTokens(context.Context, Request) (int64, error) {
+	return 0, errors.New("count failed")
+}
+
+func TestDiagnostics_CountFailureKeepsPreparedSize(t *testing.T) {
+	for _, concurrent := range []bool{false, true} {
+		t.Run(fmt.Sprint(concurrent), func(t *testing.T) {
+			var r *Runner
+			var repo *memoryRepository
+			var docs []Document
+			var o Options
+			if concurrent {
+				r, repo, _, docs = concurrentFixture(t, 1)
+				o = jpegOptions()
+			} else {
+				r, repo, _, docs = fixture(t)
+				o = options()
+			}
+			p, reason := r.prepare(context.Background(), docs[0], o)
+			if reason != "" {
+				t.Fatal(reason)
+			}
+			if p.requestBytes == 0 {
+				t.Fatal("request size not prepared")
+			}
+			r.Client = failedCountClient{Client: r.Client}
+			if err := run(t, r, docs, o); err != nil {
+				t.Fatal(err)
+			}
+			if got := repo.attempts[0].Usage.RequestBytes; got != p.requestBytes {
+				t.Fatalf("request bytes=%d want=%d", got, p.requestBytes)
+			}
+		})
+	}
+}
+
+func TestDiagnostics_ContextLimitKeepsPreparedSize(t *testing.T) {
+	r, repo, c, docs := concurrentFixture(t, 1)
+	o := jpegOptions()
+	p, reason := r.prepare(context.Background(), docs[0], o)
+	if reason != "" {
+		t.Fatal(reason)
+	}
+	c.tokens = 1_000_000
+	if err := run(t, r, docs, o); err != nil {
+		t.Fatal(err)
+	}
+	if repo.attempts[0].Reason != "over_check_limit" {
+		t.Fatalf("reason=%s", repo.attempts[0].Reason)
+	}
+	if got := repo.attempts[0].Usage.RequestBytes; got != p.requestBytes {
+		t.Fatalf("request bytes=%d want=%d", got, p.requestBytes)
 	}
 }

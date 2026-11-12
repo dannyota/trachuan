@@ -215,8 +215,8 @@ operator's choice.
   stops all further spending by that command until the operator resolves it.
 - Every attempt is a row in `ocr_check_attempt` (entry, checker id, mode, batch
   id, state, reason, usage). The table is working state and may be updated; the
-  `ocr_check` row it leads to is immutable. Usage records request body bytes,
-  response event counts and safe error class and type without error text.
+  `ocr_check` row it leads to is immutable. Usage records prepared request body
+  bytes, response event counts and safe error class and type without error text.
 
 Credentials come from `ANTHROPIC_API_KEY` in the environment. The key, request
 bodies, document text and provider error text are never logged. The API stores

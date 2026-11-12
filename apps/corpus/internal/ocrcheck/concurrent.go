@@ -60,6 +60,7 @@ func (r *Runner) runConcurrent(ctx context.Context, docs []Document, o Options, 
 		}
 	}
 	failed := func(p prepared, reason string, u Usage) {
+		u.RequestBytes = p.requestBytes
 		mu.Lock()
 		defer mu.Unlock()
 		if !o.DryRun {

@@ -55,7 +55,7 @@ func (r *Runner) begin(ctx context.Context, group []prepared, o Options) ([]Atte
 	return attempts, nil
 }
 func (r *Runner) failPrepared(ctx context.Context, p prepared, o Options, reason string) error {
-	return r.failAttempt(ctx, p.doc, o, reason, Usage{Rendering: p.rendering, PDFPages: p.pages})
+	return r.failAttempt(ctx, p.doc, o, reason, Usage{Rendering: p.rendering, PDFPages: p.pages, RequestBytes: p.requestBytes})
 }
 func (r *Runner) failAttempt(ctx context.Context, doc Document, o Options, reason string, u Usage) error {
 	attempts, err := r.begin(ctx, []prepared{{doc: doc}}, o)

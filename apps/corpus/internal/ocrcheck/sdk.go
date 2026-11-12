@@ -187,7 +187,8 @@ func errorClass(err error) string {
 	var streamPtr *http2.StreamError
 	var goaway http2.GoAwayError     //nolint:staticcheck // The SDK transport can still return this deprecated type.
 	var goawayPtr *http2.GoAwayError //nolint:staticcheck // The SDK transport can still return this deprecated type.
-	var record *tls.RecordHeaderError
+	var record tls.RecordHeaderError
+	var recordPtr *tls.RecordHeaderError
 	var alert tls.AlertError
 	var cert *tls.CertificateVerificationError
 	var dns *net.DNSError
@@ -208,7 +209,7 @@ func errorClass(err error) string {
 		return "broken_pipe"
 	case errors.As(err, &stream), errors.As(err, &streamPtr), errors.As(err, &goaway), errors.As(err, &goawayPtr):
 		return "http2_stream"
-	case errors.As(err, &record), errors.As(err, &alert), errors.As(err, &cert):
+	case errors.As(err, &record), errors.As(err, &recordPtr), errors.As(err, &alert), errors.As(err, &cert):
 		return "tls"
 	case errors.As(err, &dns):
 		return "dns"
