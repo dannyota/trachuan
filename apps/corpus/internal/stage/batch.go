@@ -151,10 +151,32 @@ func RunBatch(ctx context.Context, env Env, st Stage, in BatchInput, attempt int
 						return result, err
 					}
 					var retryable *RetryableError
-					if !errors.Is(err, sourcegate.ErrSourcePaused) && errors.As(err, &retryable) && attempt < cfg.MaxAttempts {
-						result.Pending++
-						last.Store(int64(i))
-						continue
+					var pendingPause interface{ PausePending() bool }
+					pausePending := errors.As(err, &pendingPause) && pendingPause.PausePending()
+					if errors.As(err, &retryable) && (!errors.Is(err, sourcegate.ErrSourcePaused) || pausePending) {
+						sourceStage := in.Stage == "fetch" || in.Stage == "expand"
+						gap := false
+						if sourceStage && (attempt < cfg.MaxAttempts || retryable.Cause.Cause == CauseTimeout || pausePending) {
+							var applied bool
+							var recordErr error
+							gap, applied, recordErr = recordRetry(ctx, env.DB, commit, retryable)
+							if recordErr != nil {
+								return result, fmt.Errorf("record retry for %q: %w", item.Key, recordErr)
+							}
+							if !applied {
+								return result, ErrSuperseded
+							}
+						}
+						if !gap && (attempt < cfg.MaxAttempts || pausePending) {
+							result.Pending++
+							last.Store(int64(i))
+							continue
+						}
+						if sourceStage && !gap && retryable.GapKind == "source_unavailable" && retryable.Cause.Cause == CauseTimeout {
+							copyRetry := *retryable
+							copyRetry.GapKind = ""
+							retryable = &copyRetry
+						}
 					}
 					sources := output.Sources
 					output = processFailure(err, retryable)

@@ -27,6 +27,9 @@ var ErrTooLarge = errors.New("vbpl: response too large")
 
 const apiLimit int64 = 20_000_000
 
+// gatewayAttemptTimeout allows the gateway's 30-second 504 to arrive. See docs/design/budgets.md.
+const gatewayAttemptTimeout = 40 * time.Second
+
 // Client limits gateway requests and downloads.
 type Client struct {
 	base, userAgent string
@@ -36,6 +39,7 @@ type Client struct {
 	slots           chan struct{}
 	fileSlots       chan struct{}
 	timeout         time.Duration
+	fileTimeout     time.Duration
 	requestBudget   time.Duration
 	slowThreshold   time.Duration
 	backoffs        []time.Duration
@@ -54,7 +58,7 @@ func New(version string) *Client {
 
 // NewWithBase creates a client for the supplied gateway URL.
 func NewWithBase(base, version string, options ...Option) *Client {
-	c := &Client{lookupPageSize: 1000, base: base, userAgent: "trachuan/" + version + " (+https://github.com/dannyota/trachuan)", http: &http.Client{}, limiter: rate.NewLimiter(16, 1), slots: make(chan struct{}, 16), fileSlots: make(chan struct{}, 8), timeout: 30 * time.Second, fileHosts: []string{"s3-han02.fptcloud.com"}, backoffs: []time.Duration{2 * time.Second, 8 * time.Second, 30 * time.Second}}
+	c := &Client{lookupPageSize: 1000, base: base, userAgent: "trachuan/" + version + " (+https://github.com/dannyota/trachuan)", http: &http.Client{}, limiter: rate.NewLimiter(16, 1), slots: make(chan struct{}, 16), fileSlots: make(chan struct{}, 8), timeout: gatewayAttemptTimeout, fileTimeout: 30 * time.Second, fileHosts: []string{"s3-han02.fptcloud.com"}, backoffs: []time.Duration{2 * time.Second, 8 * time.Second, 30 * time.Second}}
 	c.requestBudget = 200 * time.Second
 	c.slowThreshold = 10 * time.Second
 	for _, option := range options {
@@ -106,7 +110,7 @@ func WithTestHTTP() Option {
 
 // WithTestTimeouts sets short request deadlines for offline tests.
 func WithTestTimeouts(attempt, sequence time.Duration) Option {
-	return func(c *Client) { c.timeout, c.requestBudget = attempt, sequence }
+	return func(c *Client) { c.timeout, c.fileTimeout, c.requestBudget = attempt, attempt, sequence }
 }
 
 type response struct {
@@ -120,7 +124,11 @@ func (c *Client) request(ctx context.Context, method, target string, body []byte
 	defer func() {
 		sourcegate.LogSlow(ctx, "vbpl", endpoint(target), time.Since(started), c.slowThreshold, status, err)
 	}()
-	ctx, cancel := context.WithTimeout(ctx, c.timeout)
+	timeout := c.timeout
+	if file {
+		timeout = c.fileTimeout
+	}
+	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	slots, client := c.slots, c.http
 	if file {
@@ -179,7 +187,7 @@ func (c *Client) request(ctx context.Context, method, target string, body []byte
 			return resp.StatusCode, errors.New("source pause: missing activity context")
 		}
 		c.startPause(activity, id, reason)
-		return resp.StatusCode, fmt.Errorf("%s: %w", reason, sourcegate.ErrSourcePaused)
+		return resp.StatusCode, fmt.Errorf("%s: %w", reason, pausePending{})
 	}
 	if resp.StatusCode != http.StatusOK {
 		return resp.StatusCode, nil
@@ -208,56 +216,6 @@ func wait(ctx context.Context, d time.Duration) error {
 		return ctx.Err()
 	case <-timer.C:
 		return nil
-	}
-}
-func (c *Client) apiRaw(ctx context.Context, method, path string, body []byte) (json.RawMessage, error) {
-	activityCtx := ctx
-	ctx, cancel := context.WithTimeout(ctx, c.requestBudget)
-	defer cancel()
-	for attempt := 0; ; attempt++ {
-		if attempt > 0 {
-			if err := wait(ctx, c.backoffs[attempt-1]); err != nil {
-				if activityCtx.Err() != nil {
-					return nil, activityCtx.Err()
-				}
-				return nil, fmt.Errorf("retry: %w", classify(err, endpoint(path), 0))
-			}
-		}
-		var raw []byte
-		status, err := c.request(ctx, method, c.base+path, body, false, func(r io.Reader) error {
-			var e error
-			raw, e = io.ReadAll(io.LimitReader(r, apiLimit+1))
-			if e != nil {
-				return e
-			}
-			if int64(len(raw)) > apiLimit {
-				return ErrTooLarge
-			}
-			return nil
-		})
-		if activityCtx.Err() != nil {
-			return nil, activityCtx.Err()
-		}
-		if err == nil && status == http.StatusOK && !objectFramed(raw) {
-			err = &Failure{Origin: "gateway", Cause: "non_json_200", Endpoint: endpoint(path), HTTPStatus: status}
-		}
-		if (retryable(status, err) || isNonJSON(err)) && attempt < len(c.backoffs) {
-			continue
-		}
-		if err != nil {
-			return nil, fmt.Errorf("gateway request: %w", classify(err, endpoint(path), status))
-		}
-		if status == 404 {
-			return nil, ErrNotFound
-		}
-		if status != 200 {
-			statusErr := &StatusError{Code: status, Endpoint: endpoint(path)}
-			if status == 429 || status >= 500 {
-				return nil, &Failure{Origin: "gateway", Cause: statusCause(status), Endpoint: endpoint(path), HTTPStatus: status, Err: statusErr}
-			}
-			return nil, statusErr
-		}
-		return raw, nil
 	}
 }
 

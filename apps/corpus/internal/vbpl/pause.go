@@ -36,7 +36,7 @@ func (c *Client) awaitPause(ctx context.Context, id int64) error {
 	case <-state.done:
 		return sourcegate.ErrSourcePaused
 	case <-ctx.Done():
-		return ctx.Err()
+		return pausePending{}
 	}
 }
 
@@ -83,3 +83,10 @@ func (c *Client) pauseOwner(ctx context.Context, id int64, state *pauseState, do
 	state.running = false
 	c.pauseMu.Unlock()
 }
+
+// pausePending keeps an unpersisted source pause distinct from a request timeout.
+type pausePending struct{}
+
+func (pausePending) Error() string      { return "source pause persistence pending" }
+func (pausePending) Unwrap() error      { return sourcegate.ErrSourcePaused }
+func (pausePending) PausePending() bool { return true }

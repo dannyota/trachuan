@@ -146,9 +146,10 @@ func TestDownload_TimeoutAfterPartialBodyRetriesFresh(t *testing.T) {
 		_, _ = w.Write([]byte("complete"))
 	}))
 	defer s.Close()
-	c := testClient(s)
-	c.timeout = 50 * time.Millisecond
-	got, err := c.Download(context.Background(), "1", File{URL: s.URL}, t.TempDir(), 100)
+	c := NewWithBase(s.URL, "test", WithTestHTTP(), WithLimits(float64(rate.Inf), 8), WithBackoffs(time.Millisecond, time.Millisecond, time.Millisecond), WithTestTimeouts(5*time.Millisecond, 50*time.Millisecond))
+	ctx, cancel := context.WithTimeout(context.Background(), 80*time.Millisecond)
+	defer cancel()
+	got, err := c.Download(ctx, "1", File{URL: s.URL}, t.TempDir(), 100)
 	sum := sha256.Sum256([]byte("complete"))
 	if err != nil || got.SHA256 != hex.EncodeToString(sum[:]) {
 		t.Fatalf("got %+v err %v", got, err)
