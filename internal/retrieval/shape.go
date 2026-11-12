@@ -84,6 +84,24 @@ func planWithPolicy(arms Arms, recipe Recipe, limit int, mode ArmMode, cap, tail
 	if err != nil {
 		return responsePlan{}, err
 	}
+	if len(out.primary) < primaryLimit {
+		seen := map[int64]bool{}
+		for _, group := range out.primary {
+			seen[group.Best.GroupID] = true
+		}
+		for _, group := range primary.Groups {
+			if len(out.primary) == primaryLimit {
+				break
+			}
+			if !seen[group.Best.GroupID] {
+				out.primary = append(out.primary, group)
+			}
+		}
+		out.response.Diagnostics.EligibleCount = len(out.primary)
+	}
+	if arms.IncludeNonCurrent {
+		count = min(len(other.Groups), limit-len(out.primary))
+	}
 	out.nonCurrent = append(out.nonCurrent, other.Groups[:count]...)
 	return out, nil
 }

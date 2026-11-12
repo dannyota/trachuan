@@ -72,3 +72,58 @@ func TestShape_ExplicitFalseSmallLimits(t *testing.T) {
 		}
 	}
 }
+
+func TestShape_GroupedPrimaryVacancies(t *testing.T) {
+	for _, tc := range []struct {
+		name           string
+		explicit       bool
+		grouped        int
+		wantPrimary    int
+		wantComplement int
+	}{
+		{"explicit", true, 32, 4, 4},
+		{"default", false, 48, 5, 2},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			a, r := explicitFixture(tc.grouped+4, 8)
+			a.IncludeNonCurrent = tc.explicit
+			r.HydrateMultiplier = 8
+			r.DenseDepth, a.Depths.Dense = 100, 100
+			first := a.Primary.Dense[0]
+			for i := 1; i < tc.grouped; i++ {
+				for _, candidates := range [][]Candidate{a.Primary.Dense, a.Primary.Members} {
+					candidates[i].GroupID = first.GroupID
+					candidates[i].Group = first.Group
+					candidates[i].Descendants[0].ID = first.GroupID
+				}
+			}
+			got, err := Shape(a, r, 8, "dense")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(got.Hits) != tc.wantPrimary || len(got.NonCurrent) != tc.wantComplement {
+				t.Fatalf("hits=%d noncurrent=%d", len(got.Hits), len(got.NonCurrent))
+			}
+		})
+	}
+}
+
+func TestShape_ExplicitFalseGroupedPrimaryBackfills(t *testing.T) {
+	a, r := explicitFixture(36, 5)
+	r.HydrateMultiplier = 8
+	first := a.Primary.Dense[0]
+	for i := 1; i < 32; i++ {
+		for _, candidates := range [][]Candidate{a.Primary.Dense, a.Primary.Members} {
+			candidates[i].GroupID = first.GroupID
+			candidates[i].Group = first.Group
+			candidates[i].Descendants[0].ID = first.GroupID
+		}
+	}
+	got, err := Shape(a, r, 8, "dense")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Hits) != 4 || len(got.NonCurrent) != 4 {
+		t.Fatalf("hits=%d noncurrent=%d", len(got.Hits), len(got.NonCurrent))
+	}
+}
