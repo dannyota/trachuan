@@ -63,23 +63,27 @@ ends after 200 seconds at the latest (four attempts and their waits take 200).
 The gateway itself answers HTTP 504 after 30 seconds for a request it cannot
 serve (measured 2026-11-12: two diagrams, every time); the client's 40 seconds
 let that 504 arrive and count as 5xx, where a 30-second deadline cut it a moment
-earlier and made it a retryable timeout that stalled the run. A document whose
-gateway calls still return HTTP 5xx after those retries becomes a
-`source_unavailable` gap in the same attempt: the stage does not retry it, so a
-document the source keeps refusing never holds a batch or the stage close; the
-next run fetches it again. HTTP 429 and timeouts that outlast the client retries
-stay retryable at the batch level, because they signal load, not a broken
-document, but only once: an item whose source calls time out again in the next
-attempt of its batch becomes a `source_unavailable` gap with cause timeout in
-that attempt, so a document the source never answers cannot fail the run; the
-next run asks again. Measured 2026-11-09: 10.5 requests per second at
-concurrency 8, p50 636 ms, no errors; measured 2026-11-10: 0.11 to 0.36 s per
-request. The 16 defaults are provisional until a live run records their error
-rate. Attachment downloads use a separate pool of 8 in flight
-(`CORPUS_VBPL_FILE_IN_FLIGHT`) with no request rate limit, because the
-attachment CDN caps throughput per IP (about 4 MB/s, measured by banhmi); a slow
-download never holds a gateway slot. Fetch issues a document's detail and
-diagram calls concurrently; a full read under
+earlier and made it a retryable timeout that stalled the run. The same diagrams
+later answered HTTP 500 "Lỗi cơ sở dữ liệu" in under a second and after 25
+seconds, a source database error with varying latency, so a call whose retry
+sequence saw any HTTP 5xx counts as 5xx even if its last try timed out; HTTP 429
+anywhere in the sequence keeps it a load signal. A document whose gateway calls
+still return HTTP 5xx after those retries becomes a `source_unavailable` gap in
+the same attempt: the stage does not retry it, so a document the source keeps
+refusing never holds a batch or the stage close; the next run fetches it again.
+HTTP 429 and timeouts that outlast the client retries stay retryable at the
+batch level, because they signal load, not a broken document, but only once: an
+item whose source calls time out again in the next attempt of its batch (its own
+previous retryable cause, kept on its pending row, was a timeout too) becomes a
+`source_unavailable` gap with cause timeout in that attempt, so a document the
+source never answers cannot fail the run; the next run asks again. Measured
+2026-11-09: 10.5 requests per second at concurrency 8, p50 636 ms, no errors;
+measured 2026-11-10: 0.11 to 0.36 s per request. The 16 defaults are provisional
+until a live run records their error rate. Attachment downloads use a separate
+pool of 8 in flight (`CORPUS_VBPL_FILE_IN_FLIGHT`) with no request rate limit,
+because the attachment CDN caps throughput per IP (about 4 MB/s, measured by
+banhmi); a slow download never holds a gateway slot. Fetch issues a document's
+detail and diagram calls concurrently; a full read under
 [fetch reuse](fetch-reuse.md#read-rule) then issues the tree and file list calls
 concurrently and downloads its attachments concurrently within the file pool.
 
