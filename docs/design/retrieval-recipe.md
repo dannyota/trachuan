@@ -225,19 +225,22 @@ recipe 2, [budgets](budgets.md#retrieval)) for it: primary hits are shaped to
 fewer hits, primary keeps the freed slots. The effective tail is the smaller of
 `non_current_tail` and half of `limit` rounded down, so primary always keeps at
 least half of the slots (limit 1: no tail; limit 2 or 3: one; limit 4 and up:
-two). Abstention and confidence are judged on the primary group alone, as
-before; complement hits never make a response answer. Not-yet documents never
-enter the primary group, since current-law precision counts every primary hit.
-With `in_force_only` false the caller asked for non-current law, so the response
-reserves half of `limit` (rounded down) for the complement: primary is shaped to
-the other half, the complement fills its half in score order, and either group's
-unused slots return to the other. Measured on run vn/20261111_4, the earlier
-rule (complement only in leftover slots) changed nothing because primary always
-filled the limit. Primary failures are not rescued by the complement: no primary
-hits means abstain. Evidence size includes both groups. `as_of` never silently
-swaps expired and primary law based on score. Measured on run vn/20261111_4 (cap
-5 with tail 0, 2, 3, 4): old product recall@20 82, 85, 85, 86 and recall@8 77,
-77, 75, 73; development recall@20 75, 83, 85, 85 and recall@8 73, 76, 72, 67;
+two). In both modes a slot a group cannot fill from its shaped hits is filled
+from that group's wider ranking first, then by the other group; the complement
+never exceeds its reserved count in default mode. Abstention and confidence are
+judged on the primary group alone, as before; complement hits never make a
+response answer. Not-yet documents never enter the primary group, since
+current-law precision counts every primary hit. With `in_force_only` false the
+caller asked for non-current law, so the response reserves half of `limit`
+(rounded down) for the complement: primary is shaped to the other half, the
+complement fills its half in score order, and either group's unused slots return
+to the other. Measured on run vn/20261111_4, the earlier rule (complement only
+in leftover slots) changed nothing because primary always filled the limit.
+Primary failures are not rescued by the complement: no primary hits means
+abstain. Evidence size includes both groups. `as_of` never silently swaps
+expired and primary law based on score. Measured on run vn/20261111_4 (cap 5
+with tail 0, 2, 3, 4): old product recall@20 82, 85, 85, 86 and recall@8 77, 77,
+75, 73; development recall@20 75, 83, 85, 85 and recall@8 73, 76, 72, 67;
 against cap 5 alone, tail 2 raises recall@20 on both cohorts and recall@8 and
 MRR@8 on development, and leaves old product recall@8 and MRR@8 unchanged;
 against the cap-3 baseline every one of those numbers rises.
