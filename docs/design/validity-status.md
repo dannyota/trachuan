@@ -197,9 +197,16 @@ unresolved effect article of any non-consolidated document; every date conflict
 from pass 1; every skipped rule B item with its identity or timing failure;
 every rule A candidate blocked by a relation, date gap or status name; every
 rule C conflict; every `repeals` pair with both sides current; every document
-left `unknown`; every correction report. Each entry has keys, numbers, raw
-status and dates, the sentences read, artifact hashes and, where the parser has
-a reading, a proposed manual entry.
+left `unknown`; every correction report; and every document whose source status
+class is `partial`, with the documents that act on it by an inbound `repeals`,
+`replaces`, `suspends` or `amends_supplements` relation (key, number, kind). A
+`partial` document with none of these gets the build coverage gap
+`partial_status_unexplained` (detail: the raw status code), primary and relation
+context alike; it counts with the other build gaps that release acceptance
+requires and changes neither `is_current` nor ranking (228 primary `partial`
+documents in `corpus_vn_20261111_4`, 22 without such a relation). Each entry has
+keys, numbers, raw status and dates, the sentences read, artifact hashes and,
+where the parser has a reading, a proposed manual entry.
 
 Each affected document stores a decision history of at most 8 records, in
 application order, the last one deciding: layer (`source`, `A`, `B`, `C`,
