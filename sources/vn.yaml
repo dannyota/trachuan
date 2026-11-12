@@ -68,6 +68,7 @@ relation_codes:
   "8": {kind: "guided_by", label: "guided_by", amending: false, superseding: false}
   "9": {kind: "implements", label: "implements", amending: false, superseding: false}
   "10": {kind: "amends_supplements", label: "amends_supplements", amending: true, superseding: false}
+  "11": {kind: "suspends", label: "suspends_part", amending: true, superseding: false}
   "12": {kind: "replaces", label: "replaces", amending: true, superseding: true}
   "14": {kind: "references", label: "references", amending: false, superseding: false}
 status_codes:
