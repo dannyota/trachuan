@@ -9,6 +9,9 @@ import (
 )
 
 func validateRecoveryOptions(o Options) error {
+	if o.RetryFailed && (o.Reconcile || o.Abandon != "") {
+		return fmt.Errorf("--retry-failed cannot be combined with --reconcile or --abandon")
+	}
 	if o.Reconcile && o.DryRun {
 		return fmt.Errorf("--reconcile and --dry-run cannot be combined")
 	}

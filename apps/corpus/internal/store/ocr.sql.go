@@ -261,6 +261,42 @@ func (q *Queries) InsertRunOCRSelection(ctx context.Context, arg InsertRunOCRSel
 	return err
 }
 
+const listOCRCheckAttemptHistory = `-- name: ListOCRCheckAttemptHistory :many
+SELECT state, usage FROM ocr_check_attempt
+WHERE ocr_text_id = $1 AND checker_id = $2
+ORDER BY id DESC
+`
+
+type ListOCRCheckAttemptHistoryParams struct {
+	OcrTextID int64
+	CheckerID string
+}
+
+type ListOCRCheckAttemptHistoryRow struct {
+	State string
+	Usage json.RawMessage
+}
+
+func (q *Queries) ListOCRCheckAttemptHistory(ctx context.Context, arg ListOCRCheckAttemptHistoryParams) ([]ListOCRCheckAttemptHistoryRow, error) {
+	rows, err := q.db.Query(ctx, listOCRCheckAttemptHistory, arg.OcrTextID, arg.CheckerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListOCRCheckAttemptHistoryRow
+	for rows.Next() {
+		var i ListOCRCheckAttemptHistoryRow
+		if err := rows.Scan(&i.State, &i.Usage); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listOCRChecks = `-- name: ListOCRChecks :many
 SELECT c.id, c.ocr_text_id, c.checker_id, c.result_sha256, c.result, c.flagged, c.created_at, t.pdf_sha256, t.engine_id
 FROM ocr_check c JOIN ocr_text t ON t.id = c.ocr_text_id

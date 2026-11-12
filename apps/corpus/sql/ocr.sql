@@ -85,3 +85,8 @@ LEFT JOIN ocr_text t ON t.id = s.ocr_text_id
 LEFT JOIN ocr_check c ON c.id = s.ocr_check_id
 WHERE s.run_id = $1
 ORDER BY s.item_key;
+
+-- name: ListOCRCheckAttemptHistory :many
+SELECT state, usage FROM ocr_check_attempt
+WHERE ocr_text_id = $1 AND checker_id = $2
+ORDER BY id DESC;

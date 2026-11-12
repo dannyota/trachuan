@@ -13,6 +13,9 @@ import (
 // ErrBudget means no further paid request fits the authorized ceiling.
 const ErrBudget budgetError = "OCR check would exceed --max-usd; stopped before sending"
 
+// maxBilledFailures implements the retry rule in docs/design/ocr-check.md, Running checks.
+const maxBilledFailures = 2
+
 type budgetError string
 
 // Error reports that the next request exceeds the spend ceiling.
@@ -40,6 +43,7 @@ type Repository interface {
 	Open(context.Context, string) ([]Attempt, error)
 	Spent(context.Context, string) (int64, error)
 	Completed(context.Context, int64, string) (bool, error)
+	RetryState(context.Context, int64, string) (int, bool, error)
 	Begin(context.Context, []Intent, string, string, string, time.Time) ([]Attempt, error)
 	Submitted(context.Context, string, string) error
 	Uncertain(context.Context, string) error
@@ -49,11 +53,11 @@ type Repository interface {
 
 // Options identifies the versioned checker and authorized spend.
 type Options struct {
-	Model, Effort            string
-	LimitDocs                int
-	MaxUSD                   float64
-	Batch, DryRun, Reconcile bool
-	Abandon                  string
+	Model, Effort                         string
+	LimitDocs                             int
+	MaxUSD                                float64
+	Batch, DryRun, Reconcile, RetryFailed bool
+	Abandon                               string
 }
 
 // CheckerID binds the model, effort, instruction and schema versions.
@@ -80,10 +84,10 @@ func (o Options) Validate() error {
 
 // Summary counts completed, failed and submitted work and its estimated cost.
 type Summary struct {
-	Complete, Failed, Submitted, Estimated int
-	Pending, Attached, Abandoned           int
-	CostMicroUSD, EstimateMicroUSD         int64
-	Documents                              []DocumentSummary
+	Complete, Failed, Submitted, Estimated          int
+	Pending, Attached, Abandoned, SkippedRetryLimit int
+	CostMicroUSD, EstimateMicroUSD                  int64
+	Documents                                       []DocumentSummary
 }
 
 // Runner applies checks one request at a time.
@@ -132,7 +136,17 @@ func (r *Runner) Run(ctx context.Context, docs []Document, o Options) (Summary, 
 	}
 	summary.CostMicroUSD = spent
 	skip := map[int64]bool{}
-	if !o.DryRun {
+	if o.DryRun {
+		open, openErr := r.Repository.Open(ctx, o.CheckerID())
+		if openErr != nil {
+			return summary, fmt.Errorf("read open OCR attempts: %w", openErr)
+		}
+		for _, a := range open {
+			skip[a.EntryID] = true
+			summary.Pending++
+			summary.recordPending(a)
+		}
+	} else {
 		pending, resumeErr := r.resume(ctx, docs, o, &summary, skip)
 		if resumeErr != nil || pending || o.Reconcile || o.Abandon != "" {
 			return summary, resumeErr
@@ -166,6 +180,17 @@ func (r *Runner) Run(ctx context.Context, docs []Document, o Options) (Summary, 
 		}
 		if complete {
 			continue
+		}
+		if !o.RetryFailed {
+			count, preRequest, retryErr := r.Repository.RetryState(ctx, doc.Entry.ID, o.CheckerID())
+			if retryErr != nil {
+				return summary, fmt.Errorf("read OCR retry state: %w", retryErr)
+			}
+			if count >= maxBilledFailures || preRequest {
+				summary.SkippedRetryLimit++
+				summary.record(doc, 0, Usage{}, "retry_limit")
+				continue
+			}
 		}
 		if o.LimitDocs > 0 && selected >= o.LimitDocs {
 			break
