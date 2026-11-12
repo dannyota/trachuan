@@ -1,3 +1,5 @@
+import { isNodeCode } from '../utils/node-code'
+
 function valid(value: string): boolean {
   if (!value.startsWith('/') || value.startsWith('//') || [...value].some(char => char === '\\' || char.charCodeAt(0) < 32 || char.charCodeAt(0) === 127)) return false
   return !value.split('?')[0]!.split('/').some(segment => segment === '.' || segment === '..')
@@ -6,6 +8,10 @@ function valid(value: string): boolean {
 export function safeNext(input: string): string {
   const [path, query = ''] = input.split('#', 1)[0]!.split('?', 2)
   let result = path || ''
+  if (result === '/vn/search') {
+    const node = new URLSearchParams(query).get('node')
+    if (node && isNodeCode(node)) result += `?node=${node}`
+  }
   if (/^\/vn\/documents\/[^/]+$/.test(result)) {
     const release = new URLSearchParams(query).get('release')
     if (release && /^[0-9]{8}(?:_[0-9]+)?$/.test(release)) result += `?release=${release}`

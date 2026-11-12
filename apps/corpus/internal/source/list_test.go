@@ -21,7 +21,7 @@ func TestParseVN(t *testing.T) {
 	if list.VBPL.SelectionVersion != 1 || !reflect.DeepEqual(list.VBPL.NamedNumbers, wantVBPL) || !reflect.DeepEqual(list.Chinhphu, wantChinhphu) {
 		t.Fatalf("unexpected named rules: %+v %+v", list.VBPL, list.Chinhphu)
 	}
-	if list.Country != "vn" || len(list.VBPL.SweepAgencies) != 2 || len(list.VBPL.KeywordAgencies) != 0 || len(list.VBPL.Keywords) != 32 || len(list.RelationCodes) != 11 || len(list.StatusCodes) != 8 {
+	if list.Country != "vn" || len(list.VBPL.SweepAgencies) != 2 || len(list.VBPL.KeywordAgencies) != 0 || len(list.VBPL.Keywords) != 32 || len(list.RelationCodes) != 12 || list.RelationCodes["11"].Kind != "suspends" || len(list.StatusCodes) != 8 {
 		t.Fatalf("unexpected source list: %+v", list)
 	}
 }

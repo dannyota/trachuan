@@ -1,7 +1,6 @@
 package evaluation
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -14,55 +13,8 @@ import (
 	"danny.vn/trachuan/internal/retrieval"
 )
 
-func rejectionSet(s Suite) map[string]bool {
-	out := map[string]bool{}
-	for _, id := range s.Rejections {
-		out[id] = true
-	}
-	return out
-}
-func validateSuite(s Suite) error {
-	b, err := json.Marshal(s.Legacy)
-	if err != nil {
-		return fmt.Errorf("encode suite: %w", err)
-	}
-	if _, err = LoadLegacy(bytes.NewReader(b)); err != nil {
-		return fmt.Errorf("validate suite: %w", err)
-	}
-	if (s.Map.Version != 1 && s.Map.Version != 2) || s.Map.LegacySHA256 != s.Hashes.Legacy {
-		return fmt.Errorf("invalid map version or legacy hash")
-	}
-	ids := map[string]bool{}
-	for _, c := range s.Legacy {
-		ids[c.ID] = true
-	}
-	development, err := json.Marshal(s.Development)
-	if err != nil {
-		return fmt.Errorf("encode development: %w", err)
-	}
-	if s.Development != nil {
-		if _, err = LoadDevelopment(bytes.NewReader(development)); err != nil {
-			return fmt.Errorf("validate development: %w", err)
-		}
-	}
-	seen := map[string]bool{}
-	if len(s.Rejections) != 3 {
-		return fmt.Errorf("expected three rejection checks")
-	}
-	for _, id := range s.Rejections {
-		if !ids[id] || seen[id] {
-			return fmt.Errorf("invalid rejection ID")
-		}
-		seen[id] = true
-	}
-	for _, c := range s.Development {
-		if ids[c.ID] {
-			return fmt.Errorf("duplicate case ID across cohorts")
-		}
-		ids[c.ID] = true
-	}
-	return nil
-}
+// ScorerVersion identifies the scoring policy used by reports and artifacts.
+const ScorerVersion = "agent-eval/3"
 
 type metricKey struct {
 	cohort string
@@ -101,7 +53,7 @@ func Run(ctx context.Context, engine Engine, suite Suite, o Options) (Report, Ca
 	rel := engine.Release()
 	o = withReleaseRecipes(o, rel, modes)
 	recipe := rel.RetrievalRecipe
-	r := Report{Version: 1, Scorer: "agent-eval/2", Status: "complete", Country: rel.Country, Rel: rel.Rel, BuildArtifactSHA256: o.BuildArtifactSHA256, DumpSHA256: o.DumpSHA256, FixtureHashes: suite.Hashes, IdentityMapSHA256: suite.Hashes.IdentityMap, Recipes: o.Recipes, EvaluationDate: date, DatabaseInstanceKind: o.DatabaseInstanceKind, Software: o.Software, Calibration: o.Calibration, Cohorts: map[string]Cohort{"legacy": {}, "old_product": {}}, TimingsMS: map[string]any{}, CacheManifest: map[string]any{}, PreviousDiff: map[string]any{"reason": "no previous report"}, NotRun: map[string]string{"development": "not_run", "taxonomy": "out_of_scope", "filtered": "out_of_scope"}, Limitations: []string{"Small sample size; calibration fits the scored product cohorts.", "Legacy results use the product recipe and are not a reproduction of the legacy engine."}}
+	r := Report{Version: 1, Scorer: ScorerVersion, Status: "complete", Country: rel.Country, Rel: rel.Rel, BuildArtifactSHA256: o.BuildArtifactSHA256, DumpSHA256: o.DumpSHA256, FixtureHashes: suite.Hashes, IdentityMapSHA256: suite.Hashes.IdentityMap, Recipes: o.Recipes, EvaluationDate: date, DatabaseInstanceKind: o.DatabaseInstanceKind, Software: o.Software, Calibration: o.Calibration, Cohorts: map[string]Cohort{"legacy": {}, "old_product": {}}, TimingsMS: map[string]any{}, CacheManifest: map[string]any{}, PreviousDiff: map[string]any{"reason": "no previous report"}, NotRun: map[string]string{"development": "not_run", "taxonomy": "out_of_scope", "filtered": "out_of_scope"}, Limitations: []string{"Small sample size; calibration fits the scored product cohorts.", "Legacy results use the product recipe and are not a reproduction of the legacy engine."}}
 	r.CapOverride = o.CapOverride
 	r.ValidityOverrides = o.ValidityOverrides
 	var previous *Report
@@ -114,14 +66,14 @@ func Run(ctx context.Context, engine Engine, suite Suite, o Options) (Report, Ca
 		if err = json.Unmarshal(b, &prior); err != nil {
 			return Report{}, Cache{}, fmt.Errorf("decode previous report: %w", err)
 		}
-		if prior.Version != 1 || (prior.Scorer != r.Scorer && prior.Scorer != "agent-eval/1") || prior.FixtureHashes.Legacy != r.FixtureHashes.Legacy || prior.FixtureHashes.OldProduct != r.FixtureHashes.OldProduct {
+		if prior.Version != 1 || (prior.Scorer != r.Scorer && prior.Scorer != "agent-eval/1" && prior.Scorer != "agent-eval/2") || prior.FixtureHashes.Legacy != r.FixtureHashes.Legacy || prior.FixtureHashes.OldProduct != r.FixtureHashes.OldProduct {
 			return Report{}, Cache{}, fmt.Errorf("incompatible previous scorer or fixtures")
 		}
 		if prior.Cohorts["development"].CaseCount > 0 && prior.FixtureHashes.Development != r.FixtureHashes.Development {
 			return Report{}, Cache{}, fmt.Errorf("incompatible previous development fixtures")
 		}
 		if prior.Scorer != r.Scorer {
-			r.PreviousDiff = map[string]any{"reason": "incompatible abstention policy scorer"}
+			r.PreviousDiff = map[string]any{"reason": "incompatible scorer version"}
 		} else if (prior.CapOverride == nil) != (o.CapOverride == nil) || (prior.CapOverride != nil && o.CapOverride != nil && *prior.CapOverride != *o.CapOverride) {
 			r.PreviousDiff = map[string]any{"reason": "incompatible cap override"}
 		} else if !sameValidityOverrides(prior.ValidityOverrides, o.ValidityOverrides) {
@@ -145,6 +97,15 @@ func Run(ctx context.Context, engine Engine, suite Suite, o Options) (Report, Ca
 				}
 			}
 		}
+	}
+	filter, err := newFilterState(ctx, engine, suite, o)
+	if err != nil {
+		return Report{}, Cache{}, err
+	}
+	if filter.active {
+		delete(r.NotRun, "filtered")
+	} else if filter.gate.Reason != "" {
+		r.NotRun["filtered"] = filter.gate.Reason
 	}
 	inputs := cohortInputs(suite, &r)
 	cache := Cache{}
@@ -223,6 +184,11 @@ func Run(ctx context.Context, engine Engine, suite Suite, o Options) (Report, Ca
 				}
 				if arms.Date != date || arms.AsOf != nil {
 					return Report{}, Cache{}, fmt.Errorf("evaluation date mismatch for case %s", c.ID)
+				}
+				if cohort == "old_product" && len(o.Mapping[c.ID]) == 0 {
+					if err = filter.addCase(c, entries[c.ID], arms, recipe, p.Request); err != nil {
+						return Report{}, Cache{}, err
+					}
 				}
 				collected[mode] = arms
 				eligibility := validityEligibilityHash(date, force, o.ValidityOverrides, arms)
@@ -350,16 +316,15 @@ func Run(ctx context.Context, engine Engine, suite Suite, o Options) (Report, Ca
 	}
 	finishReport(&r, metrics, modes)
 	finishPresented(&r, presented, modes)
-	for _, input := range inputs {
-		if !rejects[input.c.ID] && len(input.c.ExpectedCitations) > 0 && len(o.Mapping[input.c.ID]) > 0 {
-			for _, cohort := range input.cohorts {
-				if cohort != "legacy" {
-					markCohortMappingUnavailable(&r, cohort)
-				}
-			}
+	finishMappingReport(&r, inputs, rejects, o.Mapping)
+	finishQuality(&r, previous)
+	filter.finish(modes)
+	r.FilterGate = filter.gate
+	if filter.active {
+		for _, gate := range r.FilterGate.Modes {
+			r.QualityPass = r.QualityPass && gate.Status == "pass"
 		}
 	}
-	finishQuality(&r, previous)
 	addLegacyDirectMetrics(&r)
 	r.ANNResults = map[string]ANNLoss{}
 	for _, cohort := range reportCohorts(&r) {

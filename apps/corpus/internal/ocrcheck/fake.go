@@ -7,7 +7,7 @@ import (
 )
 
 // FakeClient supplies deterministic responses without a credential or network.
-// Runner invokes clients serially, so this fake needs no synchronization.
+// This fake is for sequential tests; concurrent tests supply a synchronized client.
 type FakeClient struct {
 	Counted                             []Request
 	Response                            Response

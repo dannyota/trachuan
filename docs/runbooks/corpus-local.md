@@ -168,3 +168,33 @@ MB of scratch space; each page is at most 7 MB. At most eight page requests run
 at once; joined text is at most 50 MB. Use `--pdf SHA256` for a comparison
 beside imported text. Fresh text still needs `corpus ocr check` before extract
 can use it; imported text keeps priority when both entries exist.
+
+## OCR cross-check pass
+
+Start the version 3 pass with ten documents:
+
+```sh
+(
+  set +a
+  . "$HOME/.config/claude-api-keys.env" || exit
+  ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY_DANNY2" corpus ocr check vn 20990101 \
+    --model claude-opus-5-5 --effort high --check-version 3 \
+    --limit-docs 10 --max-usd 10
+)
+```
+
+The key file is outside the repository; its variables are set only inside the
+subshell, never exported in the session and never printed.
+
+Use the intended run's country and release. Version 3 sends JPEG pages at 200
+dpi with eight documents in flight. Review the cost and verdict lines before
+continuing with a higher cumulative `--max-usd` under the same checker id.
+`--dry-run` renders and counts tokens but sends no generation request and writes
+nothing. Versions 3 and 4 refuse `--batch`. If the owner chooses the 150 dpi
+fallback, use `--check-version 4` for the entire pass; each version keeps its
+own results and cumulative spend.
+
+```sh
+corpus ocr review vn 20990101 --model claude-opus-5-5 --effort high \
+  --check-version 3
+```

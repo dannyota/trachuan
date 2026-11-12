@@ -35,15 +35,17 @@ type Options struct {
 // Metric records a measured ratio with its counts.
 type Metric struct {
 	ValidityOverrides
-	CapOverride *retrieval.CapOverride `json:"cap_override"`
-	Mode        retrieval.Mode         `json:"mode"`
-	Arms        retrieval.ArmMode      `json:"arms"`
-	Limit       int                    `json:"limit"`
-	Name        string                 `json:"name"`
-	Numerator   float64                `json:"numerator"`
-	Denominator int                    `json:"denominator"`
-	Value       *float64               `json:"value"`
-	Confusion   *Confusion             `json:"confusion,omitempty"`
+	CapOverride            *retrieval.CapOverride `json:"cap_override"`
+	Mode                   retrieval.Mode         `json:"mode"`
+	Arms                   retrieval.ArmMode      `json:"arms"`
+	Limit                  int                    `json:"limit"`
+	Name                   string                 `json:"name"`
+	Numerator              float64                `json:"numerator"`
+	Denominator            int                    `json:"denominator"`
+	Value                  *float64               `json:"value"`
+	Confusion              *Confusion             `json:"confusion,omitempty"`
+	Reason                 string                 `json:"reason,omitempty"`
+	MappingIncompleteCount int                    `json:"mapping_incomplete_count,omitempty"`
 }
 
 // Cohort summarizes the cases and metrics for one scoring policy.
@@ -76,14 +78,24 @@ type Target struct {
 // NonRegression compares a metric with its previous value.
 type NonRegression struct {
 	ValidityOverrides
-	CapOverride   *retrieval.CapOverride `json:"cap_override"`
-	Mode          retrieval.Mode         `json:"mode"`
-	Arms          retrieval.ArmMode      `json:"arms"`
-	Limit         int                    `json:"limit"`
-	Name          string                 `json:"name"`
-	Value         *float64               `json:"value"`
-	PreviousValue *float64               `json:"previous_value"`
-	Status        string                 `json:"status"`
+	CapOverride            *retrieval.CapOverride `json:"cap_override"`
+	Mode                   retrieval.Mode         `json:"mode"`
+	Arms                   retrieval.ArmMode      `json:"arms"`
+	Limit                  int                    `json:"limit"`
+	Name                   string                 `json:"name"`
+	Value                  *float64               `json:"value"`
+	PreviousValue          *float64               `json:"previous_value"`
+	Status                 string                 `json:"status"`
+	Reason                 string                 `json:"reason,omitempty"`
+	MappingIncompleteCount int                    `json:"mapping_incomplete_count,omitempty"`
+}
+
+// MappingIncomplete identifies one incomplete citation mapping.
+type MappingIncomplete struct {
+	CaseID        string `json:"case_id"`
+	Cohort        string `json:"cohort"`
+	CitationIndex int    `json:"citation_index"`
+	Detail        string `json:"detail"`
 }
 
 // SizeSummary records nearest-rank evidence sizes.
@@ -186,9 +198,11 @@ type Report struct {
 	Cohorts                       map[string]Cohort         `json:"cohorts"`
 	Targets                       []Target                  `json:"targets"`
 	NonRegression                 []NonRegression           `json:"non_regression"`
+	FilterGate                    FilterGate                `json:"filter_gate"`
 	Floors                        []Floor                   `json:"floors"`
 	Rejections                    []Rejection               `json:"rejections"`
 	Coverage                      []Coverage                `json:"coverage"`
+	MappingIncomplete             []MappingIncomplete       `json:"mapping_incomplete"`
 	ANN                           []ANNMeasure              `json:"-"`
 	ANNResults                    map[string]ANNLoss        `json:"ann_loss"`
 	TimingsMS                     map[string]any            `json:"timings_ms"`

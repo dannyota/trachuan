@@ -7,6 +7,9 @@ const props = defineProps<{ result: components['schemas']['SearchResult'] }>()
 const language = useState<Language>('language', () => 'vi')
 const messages = computed(() => messagesFor(language.value))
 const hits = computed(() => resultHits(props.result))
+const inside = computed(() => hits.value.filter(hit => hit.in_filter !== false))
+const outside = computed(() => hits.value.filter(hit => hit.in_filter === false))
+const display = computed(() => [...inside.value, ...outside.value])
 const inks = ['in-force', 'partial', 'not-yet', 'expired', 'neutral'] as const
 const counts = computed(() => Object.fromEntries(inks.map(ink => [ink, hits.value.filter(hit => validityInk(hit.doc ? props.result.documents?.[hit.doc]?.status.class : undefined) === ink).length])))
 const hitGapCounts = computed(() => {
@@ -41,7 +44,9 @@ function label(status: string | undefined) {
     </div>
     <p v-if="result.abstain">{{ messages.searchAbstain }}</p>
     <template v-else>
-      <article v-for="(hit, index) in hits" :key="`${hit.handle}-${index}`" class="search-card">
+      <template v-for="(hit, index) in display" :key="`${hit.handle}-${index}`">
+      <p v-if="hit.in_filter === false && index === inside.length">{{ messages.searchOutside }}: {{ result.outside_filter_count }}</p>
+      <article class="search-card">
         <div v-if="hit.doc" class="document-identity">
           <span v-if="result.documents?.[hit.doc]?.number" class="document-number">{{ result.documents[hit.doc]?.number }}</span>
           <span v-if="result.documents?.[hit.doc]?.title">{{ result.documents[hit.doc]?.title }}</span>
@@ -54,8 +59,10 @@ function label(status: string | undefined) {
         <div class="relations">
           <span v-for="(relation, i) in [...(hit.warnings || []), ...(result.documents?.[hit.doc || '']?.related || []), ...(hit.relations || [])]" :key="i" class="relation-chip">{{ 'dir' in relation ? relation.dir : '' }} {{ relation.kind }} {{ 'number' in relation ? relation.number : '' }}</span>
         </div>
+        <div class="nodes"><template v-for="code in hit.nodes" :key="code"><NuxtLink v-if="result.nodes?.[code]?.name" class="relation-chip" :to="`/vn/topics/${code}`">{{ result.nodes[code]?.name }}</NuxtLink></template></div>
         <NuxtLink v-if="hit.doc && result.release && readerLink(hit, result.release)" :to="readerLink(hit, result.release)!">{{ messages.searchRead }}</NuxtLink>
       </article>
+      </template>
       <p v-if="!hits.length">{{ messages.searchEmpty }}</p>
     </template>
   </section>

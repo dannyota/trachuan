@@ -39,7 +39,7 @@ func TestInputHash_OmitsInventory(t *testing.T) {
 
 func TestRecipe_IncludesCompact(t *testing.T) {
 	s := New(Config{})
-	want := stage.RecipeHash("eval", "agent-eval/2", "legacy-matcher/1", "product-matcher/1", "recall,mrr,current-law-precision,abstention,evidence,ann/1", "", "diacritics_required:Vui lòng nhập câu hỏi tiếng Việt có dấu hoặc số hiệu văn bản.", "cache/1:200:100", "nearest-rank", "gates:0.99;targets:recall20=0.90,mrr8=0.66,recall8=0.90,abstention-balanced=0.85;nonregression:recall20,mrr8,abstention-balanced", "compact/1", "corpus-text-counts/1")
+	want := stage.RecipeHash("eval", evaluation.ScorerVersion, "legacy-matcher/1", "product-matcher/1", "recall,mrr,current-law-precision,abstention,evidence,ann/1", "", "diacritics_required:Vui lòng nhập câu hỏi tiếng Việt có dấu hoặc số hiệu văn bản.", "cache/1:200:100", "nearest-rank", "gates:0.99;targets:recall20=0.90,mrr8=0.66,recall8=0.90,abstention-balanced=0.85;nonregression:recall20,mrr8,abstention-balanced", "compact/1", "corpus-text-counts/1", "filter-gate/1")
 	if got := s.Recipe(stage.Snapshot{}); got != want {
 		t.Fatalf("recipe = %s, want %s", got, want)
 	}
@@ -254,5 +254,24 @@ func TestEvalStage_NoAbstentionGap(t *testing.T) {
 	r := evaluation.Report{Targets: []evaluation.Target{{Metric: evaluation.Metric{Name: "abstention_balanced_accuracy"}, Status: "below"}}, Floors: []evaluation.Floor{{Metric: evaluation.Metric{Name: "current_law_precision", Mode: "exact"}, Status: "pass"}}}
 	if gaps := reportGaps(r); len(gaps) != 0 {
 		t.Fatalf("gaps = %+v", gaps)
+	}
+}
+
+func TestRecipe_DoesNotReuseOldScorerArtifact(t *testing.T) {
+	oldRecipe := stage.RecipeHash("eval", "agent-eval/2", "legacy-matcher/1", "product-matcher/1", "recall,mrr,current-law-precision,abstention,evidence,ann/1", "", "diacritics_required:Vui lòng nhập câu hỏi tiếng Việt có dấu hoặc số hiệu văn bản.", "cache/1:200:100", "nearest-rank", "gates:0.99;targets:recall20=0.90,mrr8=0.66,recall8=0.90,abstention-balanced=0.85;nonregression:recall20,mrr8,abstention-balanced", "compact/1", "corpus-text-counts/1")
+	store := artifact.Store{Root: t.TempDir()}
+	input := strings.Repeat("a", 64)
+	_, err := store.Publish(context.Background(), "eval", input, oldRecipe, func(dir string) error {
+		return os.WriteFile(filepath.Join(dir, "report.json"), []byte(`{"scorer":"agent-eval/2"}`), 0600)
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, found, err := store.Open("eval", input, New(Config{}).Recipe(stage.Snapshot{}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if found {
+		t.Fatal("reused artifact scored with agent-eval/2")
 	}
 }

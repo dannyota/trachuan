@@ -20,12 +20,23 @@ func schema() map[string]any {
 		}}}}}
 }
 func messageParams(r Request) anthropic.MessageNewParams {
-	content := make([]anthropic.ContentBlockParamUnion, 0, 2*len(r.Images)+2)
-	for i, page := range r.Images {
-		content = append(content, anthropic.NewTextBlock(fmt.Sprintf("Page %d:", i+1)), anthropic.NewImageBlockBase64("image/png", base64.StdEncoding.EncodeToString(page)))
+	mediaType := r.MediaType
+	if mediaType == "" {
+		mediaType = "image/png"
 	}
-	content = append(content, anthropic.NewTextBlock(ocrBegin+"\n"+string(r.Text)+"\n"+ocrEnd), anthropic.NewTextBlock(instruction))
+	content := r.content
+	if content == nil {
+		content = make([]anthropic.ContentBlockParamUnion, 0, 2*len(r.Images)+2)
+		for i, page := range r.Images {
+			content = append(content, anthropic.NewTextBlock(fmt.Sprintf("Page %d:", i+1)), anthropic.NewImageBlockBase64(mediaType, base64.StdEncoding.EncodeToString(page)))
+		}
+		content = finishContent(content, r.Text)
+	}
 	return anthropic.MessageNewParams{Model: anthropic.Model(r.Model), MaxTokens: maxOutputTokens,
 		Messages:     []anthropic.MessageParam{anthropic.NewUserMessage(content...)},
 		OutputConfig: anthropic.OutputConfigParam{Effort: anthropic.OutputConfigEffort(r.Effort), Format: anthropic.JSONOutputFormatParam{Schema: schema()}}}
+}
+
+func finishContent(content []anthropic.ContentBlockParamUnion, text []byte) []anthropic.ContentBlockParamUnion {
+	return append(content, anthropic.NewTextBlock(ocrBegin+"\n"+string(text)+"\n"+ocrEnd), anthropic.NewTextBlock(instruction))
 }

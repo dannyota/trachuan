@@ -5,6 +5,7 @@ package testpg
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -39,7 +40,7 @@ func TestDropDatabase_ClientSessions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() { _ = own.Close(ctx) }()
+	defer func(c *pgx.Conn) { _ = c.Close(ctx) }(own)
 	observer, base, err := OpenAdministrator(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -63,22 +64,46 @@ func TestDropDatabase_ClientSessions(t *testing.T) {
 	if err = own.Ping(ctx); err == nil {
 		t.Fatal("own client survived drop attempt")
 	}
-	_ = conn.Close(ctx)
-	reconnected, err := pgx.Connect(ctx, builder.URL)
-	if err != nil {
-		t.Fatal(err)
+	assertConnectable := func() {
+		t.Helper()
+		var exists bool
+		if queryErr := conn.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM pg_database WHERE datname=$1)`, name).Scan(&exists); queryErr != nil || !exists {
+			t.Fatalf("database exists=%v error=%v", exists, queryErr)
+		}
+		probe, connectErr := pgx.ConnectConfig(ctx, ownCfg)
+		if connectErr != nil {
+			t.Fatalf("connect to database: %v", connectErr)
+		}
+		if closeErr := probe.Close(ctx); closeErr != nil {
+			t.Fatal(closeErr)
+		}
 	}
-	conn = reconnected
-	cancelConn, err := pgx.Connect(ctx, builder.URL)
+	alreadyCancelled, cancelAlready := context.WithCancel(ctx)
+	cancelAlready()
+	if err = pgdrop.DropOnly(alreadyCancelled, conn, name); !errors.Is(err, context.Canceled) {
+		t.Fatalf("already cancelled drop: %v", err)
+	}
+	assertConnectable()
+	cancelCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	tracer := &dropWaitTracer{cancel: cancel}
+	cancelCfg := conn.Config().Copy()
+	cancelCfg.Tracer = tracer
+	cancelConn, err := pgx.ConnectConfig(ctx, cancelCfg)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer func() { _ = cancelConn.Close(ctx) }()
-	cancelCtx, cancel := context.WithTimeout(ctx, 200*time.Millisecond)
-	defer cancel()
-	if err = pgdrop.Drop(cancelCtx, cancelConn, name); !errors.Is(err, context.DeadlineExceeded) {
+	if err = pgdrop.DropOnly(cancelCtx, cancelConn, name); !errors.Is(err, context.Canceled) {
 		t.Fatalf("cancelled drop: %v", err)
 	}
+	if tracer.cancelled.IsZero() {
+		t.Fatal("drop did not reach a busy response")
+	}
+	if elapsed := time.Since(tracer.cancelled); elapsed > time.Second {
+		t.Fatalf("cancellation took %v", elapsed)
+	}
+	assertConnectable()
 	if err = foreign.Close(ctx); err != nil {
 		t.Fatal(err)
 	}
@@ -86,11 +111,30 @@ func TestDropDatabase_ClientSessions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() { _ = own.Close(ctx) }()
+	defer func(c *pgx.Conn) { _ = c.Close(ctx) }(own)
 	if err = pgdrop.Drop(ctx, conn, name); err != nil {
 		t.Fatalf("drop with own client: %v", err)
 	}
 	if err = own.Ping(ctx); err == nil {
 		t.Fatal("own client survived drop")
+	}
+}
+
+type dropWaitTracer struct {
+	cancel    context.CancelFunc
+	cancelled time.Time
+	drop      bool
+}
+
+func (tracer *dropWaitTracer) TraceQueryStart(ctx context.Context, _ *pgx.Conn, data pgx.TraceQueryStartData) context.Context {
+	tracer.drop = strings.HasPrefix(data.SQL, "DROP DATABASE ")
+	return ctx
+}
+
+func (tracer *dropWaitTracer) TraceQueryEnd(_ context.Context, _ *pgx.Conn, data pgx.TraceQueryEndData) {
+	var pgErr *pgconn.PgError
+	if tracer.drop && errors.As(data.Err, &pgErr) && pgErr.Code == "55006" {
+		tracer.cancelled = time.Now()
+		tracer.cancel()
 	}
 }

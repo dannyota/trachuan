@@ -93,12 +93,15 @@ Product matching is exact country/key/anchor membership in the adjudicated
 alternatives. A document-level expectation accepts any returned provision of
 that exact document. A parent hit earns child credit only when a fragment names
 the exact child identity with `Complete:true`; a truncated parent holding part
-of a child earns nothing for that child. A child hit does not automatically
-satisfy a parent expectation. A relation-backed alternative requires the
-explicit mapped edge and evidence hash in the response. Count each expectation
-at most once, at its first matching rank; two hits or alternates never increase
-its denominator. No number substring, article-label-only or family membership
-credit.
+of a child earns nothing for that child. A hit whose identity lies inside the
+expected provision (the expected anchor is an ancestor on the hit's path)
+satisfies a provision expectation: the agent received the expected article or
+clause as the hit's citation. The reverse does not hold: a parent hit satisfies
+a child expectation only through a complete fragment, as above. A
+relation-backed alternative requires the explicit mapped edge and evidence hash
+in the response. Count each expectation at most once, at its first matching
+rank; two hits or alternates never increase its denominator. No number
+substring, article-label-only or family membership credit.
 
 ## Metrics
 
@@ -149,32 +152,34 @@ unavailable required metric cannot pass. Development floors use the same records
 and are `not_run` while the development case file is empty. Taxonomy
 classification floors are `out_of_scope` until the LLM layer lands. Filtered
 cases run when the release serves nodes, in three cohorts per golden case and
-mode. Inside: every expected citation has effective nodes; the filter is their
-deepest effective nodes, or their families when those exceed 20, and the case
-passes when filtered recall@8 is at least unfiltered recall@8 and every expected
-citation is within the first 100 paged hits (pages of `limit` 8,
-[retrieval](retrieval.md#filter-contract)). Partial: some but not all expected
-citations have effective nodes; the filter is the seeded citations' nodes chosen
-the same way, and the case passes when every expected citation is within the
-first 100 paged hits and the seeded citations' recall@8 is at least their
-unfiltered recall@8. Outside: the filter is the served family with the lowest
-code that holds none of the expected citations, and the case passes when every
-expected citation is within the first 100 paged hits; with no such family the
-case is skipped with reason `no_outside_family`. A case whose families still
-exceed 20 is skipped with reason `too_many_families`; skipped cases are counted
-by reason. The filter gate passes when every case in every cohort passes and the
-inside cohort has at least one case; with no inside case it is `unavailable`,
-and it is `out_of_scope` when the release serves no nodes
-([retrieval](retrieval.md#filter-contract)). `quality_pass` means both hybrid
-modes meet all old-product floors, and development floors once development cases
-exist, the filter gate when the release serves nodes, and all three rejection
-checks pass; legacy has no gate. `release_eligible` is always false in this
-baseline, including when `quality_pass` is true. Measured failures leave the
-stage done and the run evaluated, with `quality_pass:false` and
-`release_eligible:false`. Per-case `mapping_incomplete` is a reported
-diagnostic, not a run failure. Malformed fixture/map files, incomplete case
-execution or infrastructure failure fail the stage. CLI and status must
-distinguish completed evaluation from passed quality gates.
+mode. A citation's nodes are the effective nodes of its provision alternatives;
+document and relation alternatives have none. Inside: every expected citation
+has effective nodes; the filter is their deepest effective nodes, or their
+families when those exceed 20, and the case passes when filtered recall@8 is at
+least unfiltered recall@8 and every expected citation is within the first 100
+paged hits (pages of `limit` 8, [retrieval](retrieval.md#filter-contract)).
+Partial: some but not all expected citations have effective nodes; the filter is
+the seeded citations' nodes chosen the same way, and the case passes when every
+expected citation is within the first 100 paged hits and the seeded citations'
+recall@8 is at least their unfiltered recall@8. Outside: the filter is the
+served family with the lowest code that holds none of the expected citations,
+and the case passes when every expected citation is within the first 100 paged
+hits; with no such family the case is skipped with reason `no_outside_family`. A
+case whose families still exceed 20 is skipped with reason `too_many_families`;
+skipped cases are counted by reason. The filter gate passes when every case in
+every cohort passes and the inside cohort has at least one case; with no inside
+case it is `unavailable`, it is `out_of_scope` when the release serves no nodes
+([retrieval](retrieval.md#filter-contract)), and `not_run` when a research
+override is set. `quality_pass` means both hybrid modes meet all old-product
+floors, and development floors once development cases exist, the filter gate
+when the release serves nodes, and all three rejection checks pass; legacy has
+no gate. `release_eligible` is always false in this baseline, including when
+`quality_pass` is true. Measured failures leave the stage done and the run
+evaluated, with `quality_pass:false` and `release_eligible:false`. Per-case
+`mapping_incomplete` is a reported diagnostic, not a run failure. Malformed
+fixture/map files, incomplete case execution or infrastructure failure fail the
+stage. CLI and status must distinguish completed evaluation from passed quality
+gates.
 
 ## Cache and report format
 
@@ -220,6 +225,11 @@ counts as well as the value. `coverage` lists each missing original/alternate
 document number and affected case/citation, including the five known omissions
 in the ingest research. Never remove them because the source sweep did not find
 them.
+
+`mapping_incomplete` lists each validation issue by cohort, case ID, citation
+index and detail, sorted in that order; affected unavailable recall and MRR
+metrics, targets and non-regression records carry `reason: mapping_incomplete`
+and `mapping_incomplete_count` of distinct affected cases.
 
 Only `status:"complete"` reports enter a successful stage artifact. Each cohort
 has `case_count`, `positive_count`, `negative_count`, `rejection_count`,

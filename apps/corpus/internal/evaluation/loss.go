@@ -30,12 +30,14 @@ func diagnosticRank(cohort string, e Expectation, entry MapEntry, hits []retriev
 }
 func candidateHit(c retrieval.Candidate) retrieval.Hit {
 	labels := []string{}
+	path := []retrieval.PathNode{}
 	for _, p := range c.Ancestors {
+		path = append(path, retrieval.PathNode{Identity: p.Identity, Kind: p.Kind, Label: p.Label})
 		if p.Label != "" {
 			labels = append(labels, strings.TrimSpace(p.Label))
 		}
 	}
-	h := retrieval.Hit{Identity: c.Identity, Number: c.Document.Number, Citation: strings.Join(labels, ", ")}
+	h := retrieval.Hit{Identity: c.Identity, Path: path, Number: c.Document.Number, Citation: strings.Join(labels, ", ")}
 	for _, p := range c.Descendants {
 		h.Fragments = append(h.Fragments, retrieval.Fragment{Identity: p.Identity, Complete: true})
 	}
@@ -117,8 +119,7 @@ func diagnoseLoss(arms retrieval.Arms, recipe retrieval.Recipe, limit int, mode 
 	if tail != nil {
 		effectiveTail = min(*tail, limit/2)
 	}
-	reserveTail := tail != nil || !arms.IncludeNonCurrent
-	includeComplement := (!reserveTail && arms.IncludeNonCurrent) || (reserveTail && effectiveTail > 0)
+	includeComplement := (tail == nil && arms.IncludeNonCurrent) || effectiveTail > 0
 	deep := append(append([]retrieval.Candidate{}, arms.Primary.Dense...), arms.Primary.Lexical...)
 	if includeComplement {
 		deep = append(deep, arms.NonCurrent.Dense...)
@@ -128,9 +129,21 @@ func diagnoseLoss(arms retrieval.Arms, recipe retrieval.Recipe, limit int, mode 
 		return "candidate", nil
 	}
 	items := fusedItems(arms, recipe, mode)
-	primaryLimit := limit
-	if reserveTail {
-		primaryLimit -= len(response.NonCurrent)
+	primaryLimit := limit - len(response.NonCurrent)
+	if tail == nil && arms.IncludeNonCurrent {
+		primary, err := retrieval.Rank(arms, recipe, limit, mode)
+		if err != nil {
+			return "", fmt.Errorf("rank diagnostic primary: %w", err)
+		}
+		reserved := max(limit/2, limit-len(primary.Groups))
+		primaryLimit = limit - min(reserved, len(response.NonCurrent))
+	}
+	shaped, rankErr := retrieval.Rank(arms, recipe, max(1, primaryLimit), mode)
+	if rankErr != nil {
+		return "", fmt.Errorf("rank diagnostic shaped primary: %w", rankErr)
+	}
+	if len(response.Hits) > len(shaped.Groups) {
+		primaryLimit = limit
 	}
 	items = items[:min(len(items), recipe.HydrateMultiplier*primaryLimit)]
 	primaryCount := len(items)

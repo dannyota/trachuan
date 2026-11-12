@@ -60,7 +60,7 @@ func TestTemporaryDatabase_ClientSessions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() { _ = own.Close(ctx) }()
+	defer func(c *pgx.Conn) { _ = c.Close(ctx) }(own)
 	if err = recreateTemporary(ctx, admin, cfg, temp, marker); err == nil || !strings.Contains(err.Error(), "active sessions") {
 		t.Fatalf("same-role client was not refused: %v", err)
 	}
@@ -86,7 +86,7 @@ func TestTemporaryDatabase_ClientSessions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() { _ = own.Close(ctx) }()
+	defer func(c *pgx.Conn) { _ = c.Close(ctx) }(own)
 	if err = renameToFinal(ctx, admin, temp, final); err == nil || !strings.Contains(err.Error(), "foreign sessions") {
 		t.Fatalf("foreign client was not refused on rename: %v", err)
 	}

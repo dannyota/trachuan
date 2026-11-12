@@ -22,7 +22,12 @@ func jpegRenderTimeout(pages int) time.Duration {
 
 // RenderJPEG renders ordered grayscale JPEG files and returns a scratch cleanup function.
 func (p PopplerRenderer) RenderJPEG(ctx context.Context, pdf []byte, pages int) (paths []string, cleanup func(), resultErr error) {
-	if pages < 1 || pages > maxPages || len(pdf) > 50_000_000 {
+	return p.RenderJPEGDPI(ctx, pdf, pages, 200)
+}
+
+// RenderJPEGDPI renders ordered JPEG page files at the requested resolution.
+func (p PopplerRenderer) RenderJPEGDPI(ctx context.Context, pdf []byte, pages, dpi int) (paths []string, cleanup func(), resultErr error) {
+	if pages < 1 || pages > maxPages || len(pdf) > 50_000_000 || dpi < 1 || dpi > 200 {
 		return nil, nil, renderFailed
 	}
 	if err := p.Preflight(ctx); err != nil {
@@ -83,9 +88,9 @@ func (p PopplerRenderer) RenderJPEG(ctx context.Context, pdf []byte, pages int) 
 		return nil, cleanup, renderFailed
 	}
 	for first := 0; first < pages; {
-		base := rasterArgsDPI(1, sizes[first], 200)
+		base := rasterArgsDPI(1, sizes[first], dpi)
 		last := first + 1
-		for last < pages && reflect.DeepEqual(base[4:], rasterArgsDPI(1, sizes[last], 200)[4:]) {
+		for last < pages && reflect.DeepEqual(base[4:], rasterArgsDPI(1, sizes[last], dpi)[4:]) {
 			last++
 		}
 		args := []string{"-jpeg", "-jpegopt", "quality=90", "-gray", "-f", strconv.Itoa(first + 1), "-l", strconv.Itoa(last), "-r", base[5], "-cropbox", "-scale-to", base[11], "input.pdf", "page"}

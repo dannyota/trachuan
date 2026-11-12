@@ -13,3 +13,11 @@ it.each(['javascript:alert(1)', 'http://example.test', 'https://example.test/doc
   expect(wrapper.text()).toContain('abc123')
   expect(wrapper.find(`a[href="${source_url}"]`).exists()).toBe(source_url.startsWith('https:'))
 })
+
+it('shows indexed document nodes when opened directly', async () => {
+  setupReader([{ data: { release: '20261111_1', nodes: { '1': { name: 'Ngân hàng' } }, item: { complete: true, document: { nodes: ['1', '2'], status: { current: true }, text_source: 'source_tree', text_complete: true }, units: [] } } }])
+  const wrapper = mount(Reader, { global: { stubs: { NuxtLink: { template: '<a><slot /></a>' } } } })
+  await flushPromises()
+  expect(wrapper.text()).toContain('Ngân hàng')
+  expect(wrapper.findAll('a')).toHaveLength(1)
+})

@@ -1,23 +1,25 @@
 // @vitest-environment happy-dom
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, expect, it, vi } from 'vitest'
-import { computed, onBeforeUnmount, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import Search from '../app/pages/vn/search.vue'
 import { createApi } from '../app/api/client'
 
 const json = (value: unknown, status = 200) => new Response(JSON.stringify(value), { status, headers: { 'content-type': 'application/json' } })
-const page = { release: '20261111_1', abstain: false, hits: [{ doc: 'vn:vbpl:1' }] }
+const page = { release: '20261111_1', next_cursor: 'cursor-a', abstain: false, hits: [{ doc: 'vn:vbpl:1' }] }
 const expired = () => json({ error: { code: 'release_expired', message: 'expired' } }, 409)
-function setup(fetch: typeof globalThis.fetch) {
+function setup(fetch: typeof globalThis.fetch, route: { query: Record<string, string> } = { query: {} }) {
   const session = { account: { id: 1, email: 'test@example.invalid', created_at: '2026-01-01T00:00:00Z' }, csrfToken: 'token-a', status: 'signed-in' as const }
-  const api = createApi({ origin: 'http://localhost', session, fetch })
+  const api = createApi({ origin: 'http://localhost', session, fetch: input => (input as Request).url.endsWith('/api/v1/status') ? Promise.resolve(json({ doc_types: [{ value: 'Type fixture', count: 2 }], issuers: [{ value: 'Issuer fixture', count: 1 }] })) : fetch(input) })
   vi.stubGlobal('definePageMeta', () => {})
   vi.stubGlobal('useState', () => ref('en'))
   vi.stubGlobal('computed', computed)
   vi.stubGlobal('ref', ref)
   vi.stubGlobal('onBeforeUnmount', onBeforeUnmount)
+  vi.stubGlobal('useRoute', () => route)
+  vi.stubGlobal('onMounted', onMounted)
   vi.stubGlobal('useApi', () => api)
-  const wrapper = mount(Search, { global: { stubs: { SearchResults: true } } })
+  const wrapper = mount(Search, { global: { stubs: { SearchResults: { props: ['result'], template: '<div class="result-stub">{{ result.hits?.length }}</div>' }, SearchNodePicker: true } } })
   return { wrapper, session }
 }
 async function submit(wrapper: ReturnType<typeof mount>) {
@@ -66,7 +68,7 @@ it('aborts a pending search on unmount and drops a late expiration response', as
   await flushPromises()
   expect(calls).toHaveLength(2)
 })
-it('restarts an expired pinned search once using the original capture', async () => {
+it('stops an expired cursor without restarting the search', async () => {
   const calls: { body: Record<string, unknown>, csrf: string | null }[] = []
   const { wrapper, session } = setup(async input => {
     const request = input as Request
@@ -76,10 +78,24 @@ it('restarts an expired pinned search once using the original capture', async ()
   await submit(wrapper)
   session.csrfToken = 'new-token'
   await more(wrapper)
-  expect(calls).toHaveLength(3)
-  expect(calls.map(call => call.csrf)).toEqual(['token-a', 'token-a', 'token-a'])
-  expect(calls[1]!.body.release).toBe('20261111_1')
-  expect(calls[2]!.body.release).toBeUndefined()
+  expect(calls).toHaveLength(2)
+  expect(calls.map(call => call.csrf)).toEqual(['token-a', 'token-a'])
+  expect(calls[1]!.body).toMatchObject({ release: '20261111_1', cursor: 'cursor-a', limit: 20 })
+  expect(wrapper.findAll('button').some(button => button.text() === 'Show more')).toBe(false)
+  wrapper.unmount()
+})
+
+it('appends cursor pages and stops at the end', async () => {
+  const calls: Record<string, unknown>[] = []
+  const { wrapper } = setup(async input => {
+    calls.push(await (input as Request).json())
+    return json(calls.length === 1 ? page : { release: '20261111_1', abstain: false, hits: [{ doc: 'vn:vbpl:2' }] })
+  })
+  await submit(wrapper)
+  await more(wrapper)
+  expect(calls[1]).toMatchObject({ cursor: 'cursor-a', release: '20261111_1', limit: 20 })
+  expect(wrapper.get('.result-stub').text()).toBe('2')
+  expect(wrapper.findAll('button').some(button => button.text() === 'Show more')).toBe(false)
   wrapper.unmount()
 })
 
@@ -95,4 +111,69 @@ it('does not refresh CSRF or retry after unmount during a pending request', asyn
   finish(json({ error: { code: 'csrf_rejected', message: 'rejected' } }, 403))
   await flushPromises()
   expect(calls).toHaveLength(1)
+})
+
+it('loads facets and sends selected filters without writing them to browser state', async () => {
+  const calls: { url: string, body?: Record<string, unknown> }[] = []
+  const { wrapper } = setup(async input => {
+    const request = input as Request
+    calls.push({ url: request.url, ...(request.method === 'POST' ? { body: await request.json() } : {}) })
+    return request.url.endsWith('/api/v1/status') ? json({ doc_types: [{ value: 'Type fixture', count: 2 }], issuers: [{ value: 'Issuer fixture', count: 1 }] }) : json(page)
+  })
+  await flushPromises()
+  await wrapper.get('select[name="types"]').setValue(['Type fixture'])
+  await wrapper.get('select[name="issuers"]').setValue(['Issuer fixture'])
+  await submit(wrapper)
+  expect(calls.find(call => call.body)?.body).toMatchObject({ doc_types: ['Type fixture'], issuers: ['Issuer fixture'] })
+  expect([location.href, JSON.stringify(history.state), JSON.stringify(localStorage), JSON.stringify(sessionStorage), document.title].join(' ')).not.toMatch(/Type fixture|Issuer fixture/)
+  wrapper.unmount()
+})
+
+it('reads a valid topic node once without persisting form state', async () => {
+  const route = { query: { node: '1.2' } }
+  const calls: Record<string, unknown>[] = []
+  const { wrapper } = setup(async input => { calls.push(await (input as Request).json()); return json(page) }, route)
+  route.query.node = '3.4'
+  await submit(wrapper)
+  expect(calls[0]?.nodes).toEqual(['1.2'])
+  expect([location.href, JSON.stringify(history.state), JSON.stringify(localStorage), JSON.stringify(sessionStorage), document.title].join(' ')).not.toContain('3.4')
+  wrapper.unmount()
+})
+
+it('keeps paging available after a temporary error', async () => {
+  let count = 0
+  const { wrapper } = setup(async () => ++count === 1 ? json(page) : json({ error: { code: 'invalid_request', message: 'error' } }, 400))
+  await submit(wrapper)
+  await more(wrapper)
+  expect(wrapper.findAll('button').some(button => button.text() === 'Show more')).toBe(true)
+  wrapper.unmount()
+})
+
+it('limits each facet selection to ten values', async () => {
+  const facets = Array.from({ length: 11 }, (_, i) => ({ value: `facet-${i}`, count: 1 }))
+  const session = { account: { id: 1, email: 'test@example.invalid', created_at: '2026-01-01T00:00:00Z' }, csrfToken: 'token', status: 'signed-in' as const }
+  const bodies: Record<string, unknown>[] = []
+  const api = createApi({ origin: 'http://localhost', session, fetch: async input => {
+    const request = input as Request
+    if (request.method === 'GET') return json({ doc_types: facets, issuers: facets })
+    bodies.push(await request.json())
+    return json(page)
+  } })
+  vi.stubGlobal('definePageMeta', () => {})
+  vi.stubGlobal('useState', () => ref('en'))
+  vi.stubGlobal('computed', computed)
+  vi.stubGlobal('ref', ref)
+  vi.stubGlobal('onBeforeUnmount', onBeforeUnmount)
+  vi.stubGlobal('onMounted', onMounted)
+  vi.stubGlobal('useRoute', () => ({ query: {} }))
+  vi.stubGlobal('useApi', () => api)
+  const wrapper = mount(Search, { global: { stubs: { SearchResults: true, SearchNodePicker: true } } })
+  await flushPromises()
+  const values = facets.map(facet => facet.value)
+  await wrapper.get('select[name="types"]').setValue(values)
+  await wrapper.get('select[name="issuers"]').setValue(values)
+  await submit(wrapper)
+  expect(bodies[0]?.doc_types).toHaveLength(10)
+  expect(bodies[0]?.issuers).toHaveLength(10)
+  wrapper.unmount()
 })
