@@ -48,3 +48,17 @@ func TestValidityReview_RejectsMissingOrInvalidArtifact(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestValidityReview_EmptyPartialDocuments(t *testing.T) {
+	data, err := encodeValidityReview(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var report map[string]json.RawMessage
+	if err := json.Unmarshal(data, &report); err != nil {
+		t.Fatal(err)
+	}
+	if string(report["partial_documents"]) != "[]" {
+		t.Fatalf("partial_documents = %s, want []", report["partial_documents"])
+	}
+}
