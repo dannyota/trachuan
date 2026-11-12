@@ -22,9 +22,11 @@ the article; the parser keeps that state across the document.
   below that remove points or whole articles (308 parents, 6 articles); 3,778
   hold no clause or point paragraph; 257 are rejected.
 - Source trees: 15,112 articles without children. 7,324 (in 686 documents) hold
-  their heading line only, 7,648 hold unnumbered text, 46 would split. Source
-  trees are left alone: 46 articles do not justify changing source-tree
-  artifacts, which stay byte-identical, so their chunk and embed work is reused.
+  a single line under 200 characters, by a heuristic that does not compare it
+  with the heading, so these are heading-only candidates; 7,648 hold unnumbered
+  text, 46 would split. Source trees are left alone: 46 articles do not justify
+  changing source-tree artifacts, which stay byte-identical, so their chunk and
+  embed work is reused.
 - Validation on 21,223 source-tree articles whose clause children each occur in
   the article text in order: 20,553 accepted, of which 20,436 have the tree's
   clause starts; 78,505 of 78,556 clause spans and 54,498 of 54,500 point spans
@@ -147,16 +149,20 @@ points.
   `dieu-5/khoan-2` in a parsed document now resolves where it named a clause;
   build counts the change in `relation_clause_unresolved`.
 - Validity: unchanged. Effect articles of parsed documents stay review evidence
-  under [text extraction](text-extraction.md#validity-rules). A clause-owned hit
-  must report its article's status and warnings, as an article-owned hit did
-  (acceptance below).
+  under [text extraction](text-extraction.md#validity-rules). Document status is
+  unchanged for clause-owned hits. Relation warnings keep the rule of
+  [results](mcp-results.md): a hit owned by a clause carries a warning whose
+  target is that clause, an ancestor of it or, for an exact warning, a provision
+  inside it; a warning on clause 1 does not reach a hit owned by clause 2, and
+  an inexact warning on the article reaches no clause.
 - Identity map and manual corrections: existing anchors and article ids keep
   their meaning; new child ids carry no entries.
 
 ## Source trees with heading-only articles
 
-7,324 source-tree articles in 686 documents hold their heading line only, while
-other articles of the same tree hold text; the body sits in the bundle's
+7,324 source-tree articles in 686 documents hold a single short line (a
+heuristic count of heading-only candidates, not yet compared with each heading),
+while other articles of the same tree hold text; the body sits in the bundle's
 transcription. Text extraction already switches a document to its transcription
 when every article is heading-only. For a partial tree the candidate rule is:
 when the transcription's article reading is accepted and its article numbers
@@ -201,8 +207,9 @@ The primary runs these; they are requirements, not results.
   provisions have the stated parents and paths; a large article chunks at its
   clauses; a relation text naming `khoản 2 Điều 5` resolves to the clause, and
   one naming a missing point resolves to the deepest node with
-  `relation_clause_unresolved`; a clause-owned hit carries its article's status
-  and warnings.
+  `relation_clause_unresolved`; a clause-owned hit keeps its document's status,
+  carries an exact warning on its article or on itself, and carries no warning
+  that targets a sibling clause or an inexact warning on the article.
 - A comparison test over recorded source-tree bundles that also carry a
   transcription: clause starts read from the transcription equal the tree's
   clause anchors, with each difference listed.

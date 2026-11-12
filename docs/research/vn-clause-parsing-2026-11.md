@@ -25,20 +25,20 @@ descendants, then point counts, then point spans, all after whitespace collapse.
 
 ## Leaf articles
 
-| Text source and result                              | Articles |
-| --------------------------------------------------- | -------- |
-| Parsed text, split                                  | 10,676   |
-| Parsed text, no clause or point paragraph           | 3,778    |
-| Parsed text, rejected `point_sequence`              | 101      |
-| Parsed text, rejected `clause_sequence`             | 75       |
-| Parsed text, rejected `clause_candidate`            | 44       |
-| Parsed text, rejected `point_candidate`             | 18       |
-| Parsed text, rejected `single_clause`               | 15       |
-| Parsed text, rejected `clause_style`, `point_style` | 4        |
-| Source tree, heading line only (686 documents)      | 7,324    |
-| Source tree, no clause or point paragraph           | 7,648    |
-| Source tree, split                                  | 46       |
-| Source tree, rejected                               | 94       |
+| Text source and result                                                                                                | Articles |
+| --------------------------------------------------------------------------------------------------------------------- | -------- |
+| Parsed text, split                                                                                                    | 10,676   |
+| Parsed text, no clause or point paragraph                                                                             | 3,778    |
+| Parsed text, rejected `point_sequence`                                                                                | 101      |
+| Parsed text, rejected `clause_sequence`                                                                               | 75       |
+| Parsed text, rejected `clause_candidate`                                                                              | 44       |
+| Parsed text, rejected `point_candidate`                                                                               | 18       |
+| Parsed text, rejected `single_clause`                                                                                 | 15       |
+| Parsed text, rejected `clause_style`, `point_style`                                                                   | 4        |
+| Source tree, single line under 200 characters (686 documents; heading-only candidates, not compared with the heading) | 7,324    |
+| Source tree, no clause or point paragraph                                                                             | 7,648    |
+| Source tree, split                                                                                                    | 46       |
+| Source tree, rejected                                                                                                 | 94       |
 
 The 10,676 split parsed articles hold 40,651 clauses and 26,608 points. Six of
 them fail unique containment (a child text occurs twice in its parent); in 308
