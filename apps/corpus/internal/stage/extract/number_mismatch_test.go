@@ -92,3 +92,59 @@ func TestSubjectMismatch_Overlap(t *testing.T) {
 		})
 	}
 }
+
+func TestSelection_NoTranscriptionDoesNotReadDetail(t *testing.T) {
+	for _, files := range []struct {
+		name, content string
+		present       bool
+	}{
+		{"no file list", "", false},
+		{"empty file list", `[]`, true},
+		{"other file", `[{"name":"1_content_origin.html"}]`, true},
+	} {
+		t.Run(files.name, func(t *testing.T) {
+			dir := t.TempDir()
+			tree := `{"success":true,"data":[{"id":"a","level":"Article","title":"Điều 1. Phạm vi","content":{"content":"Điều 1. Phạm vi<br>Nội dung"}}]}`
+			if err := os.WriteFile(filepath.Join(dir, "tree.json"), []byte(tree), 0600); err != nil {
+				t.Fatal(err)
+			}
+			if files.present {
+				if err := os.WriteFile(filepath.Join(dir, "files.json"), []byte(files.content), 0600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			selected, nodes, err := choose(context.Background(), dir, "vn:vbpl:1")
+			if err != nil || selected.source != "source_tree" || len(nodes) != 1 {
+				t.Fatalf("selection=%+v nodes=%v err=%v", selected, nodes, err)
+			}
+			mismatch, err := frozenMismatch(dir, "vn:vbpl:1")
+			if err != nil || mismatch.gap != "" {
+				t.Fatalf("mismatch=%+v err=%v", mismatch, err)
+			}
+		})
+	}
+}
+
+func TestSelection_ManualMismatchWithoutBundle(t *testing.T) {
+	dir := t.TempDir()
+	selected, nodes, err := choose(context.Background(), dir, "vn:vbpl:1200")
+	if err != nil || selected.gap != "text_number_mismatch" || selected.reason != manualMismatch1200Detail || len(nodes) != 0 {
+		t.Fatalf("selection=%+v nodes=%v err=%v", selected, nodes, err)
+	}
+	mismatch, err := frozenMismatch(dir, "vn:vbpl:1200")
+	if err != nil || mismatch.gap != selected.gap || mismatch.reason != selected.reason {
+		t.Fatalf("mismatch=%+v err=%v", mismatch, err)
+	}
+}
+
+func TestSelection_TreeFixtureWithoutMetadata(t *testing.T) {
+	dir := t.TempDir()
+	tree := `{"success":true,"data":[{"id":"1","level":"Article","title":"Điều 1"}]}`
+	if err := os.WriteFile(filepath.Join(dir, "tree.json"), []byte(tree), 0600); err != nil {
+		t.Fatal(err)
+	}
+	selected, _, err := choose(context.Background(), dir, "vn:vbpl:1")
+	if err != nil || selected.source != "source_tree" {
+		t.Fatalf("selection=%+v err=%v", selected, err)
+	}
+}

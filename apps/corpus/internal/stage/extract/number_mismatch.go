@@ -2,6 +2,7 @@ package extract
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -21,6 +22,27 @@ func frozenMismatch(dir, key string) (selection, error) {
 	}
 	parts := strings.SplitN(key, ":", 3)
 	if len(parts) != 3 || parts[1] != "vbpl" {
+		return selection{}, nil
+	}
+	data, err := os.ReadFile(filepath.Join(dir, "files.json"))
+	if errors.Is(err, os.ErrNotExist) {
+		return selection{}, nil
+	}
+	if err != nil {
+		return selection{}, fmt.Errorf("read file list: %w", err)
+	}
+	var files []fetch.DocumentFile
+	if err = json.Unmarshal(data, &files); err != nil {
+		return selection{}, fmt.Errorf("decode file list: %w", err)
+	}
+	found := false
+	for _, file := range files {
+		if file.Name == parts[2]+"_content.html" {
+			found = true
+			break
+		}
+	}
+	if !found {
 		return selection{}, nil
 	}
 	doc, err := fetch.ReadDocument(dir, key)
