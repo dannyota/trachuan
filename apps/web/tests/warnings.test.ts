@@ -49,3 +49,40 @@ it('places warnings at their target and groups the rail in document order', asyn
   expect(rail).toContain('Warnings')
   expect(rail.indexOf('2/2024 repeals Điều 1')).toBeLessThan(rail.indexOf('2/2024 repeals Điều 2'))
 })
+
+it('recovers an inherited warning displaced from a capped target and deduplicates it', async () => {
+  const article = { ...warning, target: 'vn:vbpl:1#dieu-1', citation: 'Điều 1' }
+  const capped = Array.from({ length: 10 }, (_, i) => ({ ...warning, target: `vn:vbpl:1#dieu-1/khoan-${i + 1}`, citation: `Khoản ${i + 1} Điều 1` }))
+  setupReader([{ data: { release: '20990101', item: { complete: true, units: [
+    { kind: 'provision', anchor: 'dieu-1', label: 'Điều 1', warnings: capped, warnings_omitted: 1 },
+    { kind: 'provision', anchor: 'dieu-1/khoan-1', label: '1.', warnings: [capped[0], article] },
+    { kind: 'provision', anchor: 'dieu-1/khoan-2', label: '2.', warnings: [capped[1], article] },
+  ] } } }])
+  const wrapper = mount(Reader, { global: { stubs: { NuxtLink: link } } })
+  await flushPromises()
+  const articles = wrapper.findAll('.reader-content article')
+  expect(articles[0]!.text().match(/2\/2024 repeals Điều 1/g)).toHaveLength(1)
+  expect(articles[1]!.text()).not.toContain('2/2024 repeals Điều 1')
+  expect(wrapper.find('.reader-rail').text().match(/2\/2024 repeals Điều 1/g)).toHaveLength(1)
+})
+
+it.each([['en', 'and 3 more warnings'], ['vi', 'và 3 cảnh báo khác']])('shows omitted counts on the unit and rail in %s', async (language, notice) => {
+  setupReader([{ data: { release: '20990101', item: { complete: true, units: [{ kind: 'provision', anchor: 'dieu-1', label: 'Điều 1', citation: 'Điều 1', warnings_omitted: 3 }] } } }])
+  vi.stubGlobal('useState', () => ref(language))
+  const wrapper = mount(Reader, { global: { stubs: { NuxtLink: link } } })
+  await flushPromises()
+  expect(wrapper.find('.reader-content article').text()).toContain(notice)
+  expect(wrapper.find('.reader-rail').text()).toContain(notice)
+})
+
+it('uses citations to distinguish target groups with repeated labels', async () => {
+  const first = { ...warning, target: 'vn:vbpl:1#dieu-1/khoan-1', citation: 'Khoản 1 Điều 1' }
+  const second = { ...warning, target: 'vn:vbpl:1#dieu-2/khoan-1', citation: 'Khoản 1 Điều 2' }
+  setupReader([{ data: { release: '20990101', item: { complete: true, units: [
+    { kind: 'provision', anchor: 'dieu-1/khoan-1', label: '1.', citation: 'Khoản 1 Điều 1', warnings: [first] },
+    { kind: 'provision', anchor: 'dieu-2/khoan-1', label: '1.', citation: 'Khoản 1 Điều 2', warnings: [second] },
+  ] } } }])
+  const wrapper = mount(Reader, { global: { stubs: { NuxtLink: link } } })
+  await flushPromises()
+  expect(wrapper.findAll('.reader-rail .warnings h3').map(heading => heading.text())).toEqual(['Khoản 1 Điều 1', 'Khoản 1 Điều 2'])
+})
