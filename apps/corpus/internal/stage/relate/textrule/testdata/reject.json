@@ -1,0 +1,147 @@
+[
+  {
+    "name": "quoted replacement article",
+    "text": "“Thay thế Điều 3 của Thông tư 39/2016/TT-NHNN.”",
+    "want": ""
+  },
+  {
+    "name": "unbalanced quote",
+    "text": "Bãi bỏ Điều 3 của Thông tư 39/2016/TT-NHNN. “Nội dung mới.",
+    "want": "relation_text_unbalanced_quote"
+  },
+  {
+    "name": "missing connector",
+    "text": "Bãi bỏ Điều 8 Thông tư 39/2016/TT-NHNN.",
+    "want": "relation_text_grammar"
+  },
+  {
+    "name": "two documents",
+    "text": "Bãi bỏ Điều 3 của Thông tư 39/2016/TT-NHNN và Thông tư 01/2020/TT-NHNN.",
+    "want": "relation_text_multi_target"
+  },
+  {
+    "name": "mixed verbs",
+    "text": "Sửa đổi, bãi bỏ Điều 3 của Thông tư 39/2016/TT-NHNN.",
+    "want": "relation_text_mixed_verbs"
+  },
+  {
+    "name": "yearless number",
+    "text": "Bãi bỏ Điều 3 của Quyết định số 01/QĐ-UBND.",
+    "want": "relation_text_yearless_number"
+  },
+  {
+    "name": "local issuer",
+    "text": "Bãi bỏ Điều 3 của Quyết định số 01/2020/QĐ-UBND.",
+    "want": "relation_text_local_number"
+  },
+  {
+    "name": "type mismatch",
+    "text": "Bãi bỏ Điều 3 của Nghị định số 39/2016/TT-NHNN.",
+    "want": "relation_text_type_mismatch"
+  },
+  {
+    "name": "locator in tail",
+    "text": "Bãi bỏ Điều 3 của Thông tư 39/2016/TT-NHNN về Điều 4.",
+    "want": "relation_text_multi_target"
+  },
+  {
+    "name": "clause without article",
+    "text": "Bãi bỏ khoản 2 của Thông tư 39/2016/TT-NHNN.",
+    "want": "relation_text_grammar"
+  },
+  {
+    "name": "invalid leap date",
+    "text": "Ngưng hiệu lực từ ngày 29/2/2023 Điều 8 của Thông tư 39/2016/TT-NHNN.",
+    "want": "relation_text_grammar"
+  },
+  {
+    "name": "invalid tail date",
+    "text": "Bãi bỏ Điều 3 của Thông tư 39/2016/TT-NHNN ngày 31 tháng 4 năm 2016.",
+    "want": "relation_text_grammar"
+  },
+  {
+    "name": "year zero",
+    "text": "Bãi bỏ Điều 3 của Thông tư 39/2016/TT-NHNN ngày 1/1/0000.",
+    "want": "relation_text_grammar"
+  },
+  {
+    "name": "unknown verb",
+    "text": "Đính chính Điều 3 của Thông tư 39/2016/TT-NHNN.",
+    "want": ""
+  },
+  {
+    "name": "verb substring",
+    "text": "Bãi bỏng Điều 3 của Thông tư 39/2016/TT-NHNN.",
+    "want": ""
+  },
+  {
+    "name": "locator substring",
+    "text": "Bãi bỏ Điềukhoản 3 của Thông tư 39/2016/TT-NHNN.",
+    "want": "relation_text_grammar"
+  },
+  {
+    "name": "trailing locator separator",
+    "text": "Bãi bỏ Điều 3 và của Thông tư 39/2016/TT-NHNN.",
+    "want": "relation_text_grammar"
+  },
+  {
+    "name": "missing separator between articles",
+    "text": "Bãi bỏ Điều 3 Điều 4 của Thông tư 39/2016/TT-NHNN.",
+    "want": "relation_text_grammar"
+  },
+  {
+    "name": "dangling point after clause",
+    "text": "Bãi bỏ khoản 1 điểm a Điều 3 của Thông tư 39/2016/TT-NHNN.",
+    "want": "relation_text_grammar"
+  },
+  {
+    "name": "second yearless number",
+    "text": "Bãi bỏ Điều 3 của Thông tư 39/2016/TT-NHNN và Quyết định 01/QĐ-UBND.",
+    "want": "relation_text_multi_target"
+  },
+  {
+    "name": "two issue dates",
+    "text": "Bãi bỏ Điều 3 của Thông tư 39/2016/TT-NHNN ngày 1/1/2016 ngày 2/1/2016.",
+    "want": "relation_text_grammar"
+  },
+  {
+    "name": "quoted operative target",
+    "text": "Bãi bỏ “Điều 3 của Thông tư 39/2016/TT-NHNN”.",
+    "want": "relation_text_grammar"
+  },
+  {
+    "name": "malformed number",
+    "text": "Bãi bỏ Điều 3 của Thông tư 39//2016/TT-NHNN.",
+    "want": "relation_text_grammar"
+  },
+  {
+    "name": "adjacent points",
+    "text": "Bãi bỏ điểm a điểm b khoản 2 Điều 5 của Thông tư 39/2016/TT-NHNN.",
+    "want": "relation_text_grammar"
+  },
+  {
+    "name": "adjacent clauses",
+    "text": "Bãi bỏ khoản 1 khoản 2 Điều 5 của Thông tư 39/2016/TT-NHNN.",
+    "want": "relation_text_grammar"
+  },
+  {
+    "name": "separator before scope",
+    "text": "Bãi bỏ khoản 1 và Điều 5 của Thông tư 39/2016/TT-NHNN.",
+    "want": "relation_text_grammar"
+  },
+  {
+    "name": "legislature suffix",
+    "text": "Bãi bỏ Điều 3 của Luật 01/2020/QH14.",
+    "want": "relation_text_type_mismatch"
+  },
+  {
+    "name": "joint issuers",
+    "text": "Bãi bỏ Điều 3 của Thông tư liên tịch 01/2020/TTLT-BTP-CP.",
+    "want": "relation_text_local_number"
+  },
+  {
+    "name": "quoted number in tail",
+    "text": "Bãi bỏ Điều 3 của Thông tư 39/2016/TT-NHNN theo “01/2020/TT-NHNN”.",
+    "want": "relation_text_multi_target"
+  }
+]
