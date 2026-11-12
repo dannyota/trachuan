@@ -29,14 +29,26 @@ The client sends page images, one page per request, for every PDF:
   must equal the hash the bundle lists; the same bytes are then counted,
   rendered and named in the store entry. A mismatch fails the document before
   any request.
-- Pages are rendered in the cross-check's [sandbox](ocr-check.md#limits) with
-  its page size checks and raster cap, but as JPEG: one `pdftoppm` process per
-  document, 200 dpi, grayscale, quality 90, one file per page in the scratch
+- Pages are rendered in the cross-check's [sandbox](ocr-check.md#limits) as
+  JPEG: 200 dpi, grayscale, quality 90, one file per page in the scratch
   directory. PNG encoding was the cost of the first run
-  ([measured](#rendering-cost)). Page files are read and sent one at a time, so
-  memory holds the pages in flight, not the document. The render bound is 30
-  seconds plus 2 seconds per page. The page count read with pdfcpu must equal
-  the number of page files; otherwise the document fails and nothing is stored.
+  ([measured](#rendering-cost)).
+- Render arguments are computed per page from its size, as the cross-check does,
+  so the raster cap holds for every page. Consecutive pages with identical
+  arguments form a group, and each group is one `pdftoppm` process (`-f`, `-l`).
+  A document whose pages share one size, the usual case, is one process; a
+  document of mixed sizes is a few. Nothing is rendered with another page's
+  arguments.
+- A render is complete only when every process exited with status 0 and the
+  scratch directory holds exactly one file for each page number 1 to N, no other
+  page file, each a JPEG that decodes in full. Page numbers are parsed as
+  numbers, so zero padding does not affect order. N is the page count read with
+  pdfcpu. Anything else fails the document and nothing is stored.
+- Bounds: the render bound is 30 seconds plus 2 seconds per page for the
+  document. The scratch directory may hold the input and at most 500 MB of page
+  files, checked after every process; beyond it the document fails with outcome
+  `render_too_large`. Page files are read and sent one at a time, so memory
+  holds only the pages in flight.
 - One `images:annotate` request per page: feature `DOCUMENT_TEXT_DETECTION`,
   model `builtin/latest`, language hint `vi`, the JPEG bytes inline. One page
   per request keeps a failed page from discarding its neighbours and matches how
@@ -130,11 +142,14 @@ extract.
 
 The primary runs these; they are requirements, not results.
 
-- Rendering: a real three-page PDF yields three JPEG files from one process,
-  each decodable and grayscale; a page over the size limit fails the document;
-  the render bound grows with the page count; memory never holds more page
-  images than requests in flight (a fake sender blocks and the test counts
-  loaded pages).
+- Rendering: a real 12-page PDF yields files for pages 1 to 12 from one process,
+  in numeric order, each decodable and grayscale; a PDF whose pages have
+  different MediaBox and CropBox sizes is rendered in groups and every page
+  stays within the raster cap; a missing file, an extra file, a truncated JPEG
+  and a non-zero exit each fail the document; the scratch ceiling fails it with
+  `render_too_large` at the boundary; the render bound grows with the page
+  count; memory never holds more page images than requests in flight (a fake
+  sender blocks and the test counts loaded pages).
 - With a fake Vision service: a three-page PDF stores one entry with the joined
   text, page count 3, origin and engine id; a page error stores nothing; a
   transient error is retried and succeeds; a page with no text contributes an
