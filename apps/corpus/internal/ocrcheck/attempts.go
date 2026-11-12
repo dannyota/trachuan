@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"danny.vn/trachuan/apps/corpus/internal/ocrstore"
 	"danny.vn/trachuan/apps/corpus/internal/store"
@@ -127,6 +128,9 @@ func (r *Runner) finish(ctx context.Context, a Attempt, ready prepared, response
 			parsed, invalid := decodeAnswer([]byte(response.Text), ready.pages, ready.request.Text)
 			if invalid != "" {
 				reason = invalid
+				if strings.HasPrefix(invalid, "schema:") && invalid != "schema:json" && invalid != "schema:stop_reason" {
+					answerDiagnostic([]byte(response.Text), &u)
+				}
 			} else if doc.Entry.Pages.Valid && parsed.Pages != int(doc.Entry.Pages.Int32) {
 				reason = "page_count_mismatch"
 			} else {

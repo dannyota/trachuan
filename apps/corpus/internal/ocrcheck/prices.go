@@ -8,23 +8,29 @@ const maxOutputTokens int64 = 32000
 // No caching is requested. Unexpected cache usage blocks further work because
 // the verified price table covers uncached requests only.
 type Usage struct {
-	RequestBytes        int          `json:"request_bytes"`
-	ResponseEvents      int          `json:"response_events"`
-	ErrorClass          string       `json:"error_class,omitempty"`
-	ErrorType           string       `json:"error_type,omitempty"`
-	PDFPages            int          `json:"pdf_pages,omitempty"`
-	Rendering           *RenderStats `json:"rendering,omitempty"`
-	Final               bool         `json:"final_usage"`
-	CountedInput        int64        `json:"counted_input_tokens,omitempty"`
-	MaxOutput           int64        `json:"max_output_tokens,omitempty"`
-	ReservationMicroUSD int64        `json:"reservation_micro_usd,omitempty"`
-	APIStatus           int          `json:"api_status,omitempty"`
-	RequestID           string       `json:"request_id,omitempty"`
-	Input               int64        `json:"input_tokens"`
-	Output              int64        `json:"output_tokens"`
-	CacheRead           int64        `json:"cache_read_input_tokens"`
-	CacheCreation       int64        `json:"cache_creation_input_tokens"`
-	CostMicroUSD        int64        `json:"cost_micro_usd"`
+	AnswerItemPageMax     *int         `json:"answer_item_page_max,omitempty"`
+	AnswerItemPageInvalid *int         `json:"answer_item_page_invalid,omitempty"`
+	AnswerPages           *int         `json:"answer_pages,omitempty"`
+	AnswerPagesKind       string       `json:"answer_pages_kind,omitempty"`
+	AnswerSameDocument    *bool        `json:"answer_same_document,omitempty"`
+	AnswerItems           *int         `json:"answer_items,omitempty"`
+	RequestBytes          int          `json:"request_bytes"`
+	ResponseEvents        int          `json:"response_events"`
+	ErrorClass            string       `json:"error_class,omitempty"`
+	ErrorType             string       `json:"error_type,omitempty"`
+	PDFPages              int          `json:"pdf_pages,omitempty"`
+	Rendering             *RenderStats `json:"rendering,omitempty"`
+	Final                 bool         `json:"final_usage"`
+	CountedInput          int64        `json:"counted_input_tokens,omitempty"`
+	MaxOutput             int64        `json:"max_output_tokens,omitempty"`
+	ReservationMicroUSD   int64        `json:"reservation_micro_usd,omitempty"`
+	APIStatus             int          `json:"api_status,omitempty"`
+	RequestID             string       `json:"request_id,omitempty"`
+	Input                 int64        `json:"input_tokens"`
+	Output                int64        `json:"output_tokens"`
+	CacheRead             int64        `json:"cache_read_input_tokens"`
+	CacheCreation         int64        `json:"cache_creation_input_tokens"`
+	CostMicroUSD          int64        `json:"cost_micro_usd"`
 }
 
 type price struct{ input, output int64 }

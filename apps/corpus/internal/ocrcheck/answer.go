@@ -166,3 +166,67 @@ func answerObject(data []byte, path string, fields []string) (map[string]json.Ra
 	}
 	return values, ""
 }
+
+// answerDiagnostic records only safe scalar facts from a complete JSON object.
+func answerDiagnostic(data []byte, u *Usage) {
+	var root map[string]json.RawMessage
+	if err := json.Unmarshal(data, &root); err != nil || root == nil {
+		return
+	}
+	if raw, ok := root["pages"]; ok {
+		var value any
+		d := json.NewDecoder(bytes.NewReader(raw))
+		d.UseNumber()
+		if d.Decode(&value) == nil {
+			switch value.(type) {
+			case json.Number:
+				var n int
+				if json.Unmarshal(raw, &n) == nil {
+					u.AnswerPages = &n
+				} else {
+					u.AnswerPagesKind = "number"
+				}
+			case string:
+				u.AnswerPagesKind = "string"
+			case []any:
+				u.AnswerPagesKind = "array"
+			case map[string]any:
+				u.AnswerPagesKind = "object"
+			case bool:
+				u.AnswerPagesKind = "bool"
+			case nil:
+				u.AnswerPagesKind = "null"
+			}
+		}
+	}
+	if raw, ok := root["same_document"]; ok && !bytes.Equal(bytes.TrimSpace(raw), []byte("null")) {
+		var same bool
+		if json.Unmarshal(raw, &same) == nil {
+			u.AnswerSameDocument = &same
+		}
+	}
+	if raw, ok := root["items"]; ok {
+		var items []json.RawMessage
+		if json.Unmarshal(raw, &items) == nil && items != nil {
+			n := len(items)
+			u.AnswerItems = &n
+			invalid := 0
+			for _, item := range items {
+				var fields map[string]json.RawMessage
+				var page int
+				if json.Unmarshal(item, &fields) != nil || fields == nil || len(fields["page"]) == 0 || bytes.Equal(bytes.TrimSpace(fields["page"]), []byte("null")) || json.Unmarshal(fields["page"], &page) != nil {
+					invalid++
+					continue
+				}
+				if u.AnswerItemPageMax == nil || page > *u.AnswerItemPageMax {
+					value := page
+					u.AnswerItemPageMax = &value
+				}
+				if page < 1 || (u.AnswerPages != nil && page > *u.AnswerPages) {
+					invalid++
+				}
+			}
+			u.AnswerItemPageInvalid = &invalid
+		}
+	}
+}
