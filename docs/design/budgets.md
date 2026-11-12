@@ -91,9 +91,10 @@ concurrently and downloads its attachments concurrently within the file pool.
 minute, 500 pages per document, render bound 30 seconds plus 2 per page, scratch
 ceiling 256 MB per document as for the cross-check; provisional.
 
-[Fetch reuse](fetch-reuse.md): reuse age limit 30 days from the original network
-read; control divisor 20 (about 5% of documents re-read in full per run). Both
-are provisional until three runs report their control outcomes.
+[Fetch reuse](fetch-reuse.md): control divisor 20 (about 5% of documents re-read
+in full per run), provisional until three runs report their control outcomes.
+ETag requests run in the attachment pool: 8 in flight, the file attempt deadline
+of 30 seconds, no retry (a failure means a download).
 
 Stage batches in flight: 8 by default (`CORPUS_BATCHES_IN_FLIGHT`); `fetch` runs
 16 (`CORPUS_FETCH_BATCHES_IN_FLIGHT`); `embed` runs at most 2, so one batch
