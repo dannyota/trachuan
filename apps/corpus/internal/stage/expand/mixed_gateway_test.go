@@ -2,17 +2,22 @@ package expand
 
 import (
 	"context"
+	"io"
 	"net/http"
-	"net/http/httptest"
 	"strings"
 	"sync/atomic"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"danny.vn/trachuan/apps/corpus/internal/stage"
 	"danny.vn/trachuan/apps/corpus/internal/vbpl"
 	"golang.org/x/time/rate"
 )
+
+type mixedGatewayTransport func(*http.Request) (*http.Response, error)
+
+func (f mixedGatewayTransport) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
 
 func TestExpand_MixedGatewayRetryFailures(t *testing.T) {
 	for _, tc := range []struct {
@@ -28,33 +33,33 @@ func TestExpand_MixedGatewayRetryFailures(t *testing.T) {
 		{"429 then 5xx and timeouts", []int{429, 500}, stage.CauseTimeout, 0, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			var calls atomic.Int32
-			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				if !strings.HasSuffix(r.URL.Path, "/diagram") {
-					_, _ = w.Write([]byte(`{"success":true,"data":{"id":"1"}}`))
-					return
+			synctest.Test(t, func(t *testing.T) {
+				var calls atomic.Int32
+				transport := mixedGatewayTransport(func(r *http.Request) (*http.Response, error) {
+					if !strings.HasSuffix(r.URL.Path, "/diagram") {
+						return &http.Response{StatusCode: 200, Header: http.Header{}, Body: io.NopCloser(strings.NewReader(`{"success":true,"data":{"id":"1"}}`))}, nil
+					}
+					i := int(calls.Add(1)) - 1
+					if i < len(tc.statuses) {
+						return &http.Response{StatusCode: tc.statuses[i], Header: http.Header{}, Body: io.NopCloser(strings.NewReader(""))}, nil
+					}
+					<-r.Context().Done()
+					return nil, r.Context().Err()
+				})
+				client := vbpl.NewWithBase("http://127.0.0.1", "test", vbpl.WithTransport(transport), vbpl.WithLimits(float64(rate.Inf), 8), vbpl.WithBackoffs(time.Millisecond, time.Millisecond, time.Millisecond), vbpl.WithTestTimeouts(5*time.Millisecond, 60*time.Millisecond))
+				out, err := New(client).Process(context.Background(), stage.Env{}, stage.Run{Country: "vn"}, stage.Item{Key: "vn:vbpl:1"})
+				wantCalls := int32(2)
+				if tc.statuses[0] == 429 {
+					wantCalls = 3
 				}
-				i := int(calls.Add(1)) - 1
-				if i < len(tc.statuses) {
-					w.WriteHeader(tc.statuses[i])
-					return
+				if calls.Load() != wantCalls {
+					t.Fatalf("calls = %d", calls.Load())
 				}
-				<-r.Context().Done()
-			}))
-			defer server.Close()
-			client := vbpl.NewWithBase(server.URL, "test", vbpl.WithLimits(float64(rate.Inf), 8), vbpl.WithBackoffs(time.Millisecond, time.Millisecond, time.Millisecond), vbpl.WithTestTimeouts(5*time.Millisecond, 60*time.Millisecond))
-			out, err := New(client).Process(context.Background(), stage.Env{}, stage.Run{Country: "vn"}, stage.Item{Key: "vn:vbpl:1"})
-			wantCalls := int32(2)
-			if tc.statuses[0] == 429 {
-				wantCalls = 3
-			}
-			if calls.Load() != wantCalls {
-				t.Fatalf("calls = %d", calls.Load())
-			}
 
-			if err != nil || out.State != "gap" || len(out.Gaps) != 1 || out.Gaps[0].Kind != "source_unavailable" || out.Gaps[0].Cause != tc.wantCause || out.Gaps[0].Endpoint != "doc/diagram" || (tc.wantStatus == 0 && out.Gaps[0].HTTPStatus != nil) || (tc.wantStatus != 0 && (out.Gaps[0].HTTPStatus == nil || *out.Gaps[0].HTTPStatus != tc.wantStatus)) {
-				t.Fatalf("out=%+v err=%v", out, err)
-			}
+				if err != nil || out.State != "gap" || len(out.Gaps) != 1 || out.Gaps[0].Kind != "source_unavailable" || out.Gaps[0].Cause != tc.wantCause || out.Gaps[0].Endpoint != "doc/diagram" || (tc.wantStatus == 0 && out.Gaps[0].HTTPStatus != nil) || (tc.wantStatus != 0 && (out.Gaps[0].HTTPStatus == nil || *out.Gaps[0].HTTPStatus != tc.wantStatus)) {
+					t.Fatalf("out=%+v err=%v", out, err)
+				}
+			})
 		})
 	}
 }

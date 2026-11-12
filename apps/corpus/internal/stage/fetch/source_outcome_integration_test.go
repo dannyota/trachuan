@@ -50,7 +50,11 @@ func TestRunBatch_SourceEvidenceAndLoadOutcomes(t *testing.T) {
 			if _, err = db.Exec(ctx, `INSERT INTO run_item(run_id,stage,item_key,state,batch) VALUES ($1,'fetch',$2,'pending',0)`, id, key); err != nil {
 				t.Fatal(err)
 			}
-			result, err := stage.RunBatch(ctx, env, s, stage.BatchInput{RunID: id, Generation: 1, Stage: "fetch"}, 5, stage.BatchConfig{HeartbeatEvery: time.Second, MaxAttempts: 5}, func(...any) {})
+			var processor stage.Stage = s
+			if calls != nil {
+				processor = clockedSourceStage{Stage: s, test: t}
+			}
+			result, err := stage.RunBatch(ctx, env, processor, stage.BatchInput{RunID: id, Generation: 1, Stage: "fetch"}, 5, stage.BatchConfig{HeartbeatEvery: time.Second, MaxAttempts: 5}, func(...any) {})
 			if waits != nil && (*calls != 4 || len(*waits) != 3) {
 				t.Fatalf("calls=%d waits=%v", *calls, *waits)
 			}

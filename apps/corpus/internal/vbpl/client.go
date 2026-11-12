@@ -37,6 +37,7 @@ type Client struct {
 	base           string
 	http           *http.Client
 	fileHTTP       *http.Client
+	transport      http.RoundTripper
 	limiter        *rate.Limiter
 	slots          chan struct{}
 	fileSlots      chan struct{}
@@ -75,11 +76,19 @@ func NewWithBase(base, _ string, options ...Option) *Client {
 	c.http.Transport = transport(cap(c.slots))
 	c.http.CheckRedirect = redirect
 	c.fileHTTP = &http.Client{Transport: transport(cap(c.fileSlots)), CheckRedirect: redirect}
+	if c.transport != nil {
+		c.http.Transport, c.fileHTTP.Transport = c.transport, c.transport
+	}
 	return c
 }
 
 // Option configures a client.
 type Option func(*Client)
+
+// WithTransport supplies the transport for gateway and attachment requests.
+func WithTransport(transport http.RoundTripper) Option {
+	return func(c *Client) { c.transport = transport }
+}
 
 // WithGate enables source admission for every request.
 func WithGate(g sourcegate.Gate) Option { return func(c *Client) { c.gate = g } }

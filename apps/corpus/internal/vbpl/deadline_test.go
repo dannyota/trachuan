@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"sync/atomic"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"danny.vn/trachuan/apps/corpus/internal/sourcegate"
@@ -16,32 +17,34 @@ import (
 func TestDeadlines_ClassifiedTimeout(t *testing.T) {
 	for _, tc := range []string{"rate", "slot", "gate", "backoff", "download"} {
 		t.Run(tc, func(t *testing.T) {
-			c := NewWithBase("https://example.invalid", "test", WithLimits(0.01, 1), WithFileInFlight(1), WithBackoffs(30*time.Millisecond))
-			c.timeout, c.fileTimeout, c.requestBudget = 5*time.Millisecond, 5*time.Millisecond, 12*time.Millisecond
-			var err error
-			switch tc {
-			case "rate":
-				c.limiter.Allow()
-				_, _, err = c.Detail(context.Background(), "1")
-			case "backoff":
-				c.slots <- struct{}{}
-				_, _, err = c.Detail(context.Background(), "1")
-			case "slot":
-				c.backoffs = nil
-				c.slots <- struct{}{}
-				_, _, err = c.Detail(context.Background(), "1")
-			case "gate":
-				c.backoffs = nil
-				c.gate = blockedAdmission{sourcegate.NewMemory()}
-				_, _, err = c.Detail(sourcegate.WithRunID(context.Background(), 1), "1")
-			case "download":
-				c.fileSlots <- struct{}{}
-				_, err = c.Download(context.Background(), "1", File{Size: -1, URL: "https://example.invalid/file"}, t.TempDir(), 10)
-			}
-			var failure *Failure
-			if !errors.As(err, &failure) || failure.Origin != "transport" || failure.Cause != "timeout" || !errors.Is(err, context.DeadlineExceeded) {
-				t.Fatalf("failure = %+v, error = %v", failure, err)
-			}
+			synctest.Test(t, func(t *testing.T) {
+				c := NewWithBase("https://example.invalid", "test", WithLimits(0.01, 1), WithFileInFlight(1), WithBackoffs(30*time.Millisecond))
+				c.timeout, c.fileTimeout, c.requestBudget = 5*time.Millisecond, 5*time.Millisecond, 12*time.Millisecond
+				var err error
+				switch tc {
+				case "rate":
+					c.limiter.Allow()
+					_, _, err = c.Detail(context.Background(), "1")
+				case "backoff":
+					c.slots <- struct{}{}
+					_, _, err = c.Detail(context.Background(), "1")
+				case "slot":
+					c.backoffs = nil
+					c.slots <- struct{}{}
+					_, _, err = c.Detail(context.Background(), "1")
+				case "gate":
+					c.backoffs = nil
+					c.gate = blockedAdmission{sourcegate.NewMemory()}
+					_, _, err = c.Detail(sourcegate.WithRunID(context.Background(), 1), "1")
+				case "download":
+					c.fileSlots <- struct{}{}
+					_, err = c.Download(context.Background(), "1", File{Size: -1, URL: "https://example.invalid/file"}, t.TempDir(), 10)
+				}
+				var failure *Failure
+				if !errors.As(err, &failure) || failure.Origin != "transport" || failure.Cause != "timeout" || !errors.Is(err, context.DeadlineExceeded) {
+					t.Fatalf("failure = %+v, error = %v", failure, err)
+				}
+			})
 		})
 	}
 }

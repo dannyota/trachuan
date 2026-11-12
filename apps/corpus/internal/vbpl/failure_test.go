@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
+	"testing/synctest"
 
 	"danny.vn/trachuan/apps/corpus/internal/sourcegate"
 	"golang.org/x/time/rate"
@@ -105,16 +106,18 @@ func TestClient_RequestSlotWaitUsesRequestTimeout(t *testing.T) {
 }
 
 func TestClient_RetryWaitBudgetDoesNotLimitAttempt(t *testing.T) {
-	c := NewWithBase("http://127.0.0.1", "test", WithLimits(float64(rate.Inf), 1), WithBackoffs())
-	c.timeout = 5 * time.Millisecond
-	c.requestBudget = time.Millisecond
-	c.slots <- struct{}{}
-	ctx, cancel := context.WithTimeout(context.Background(), 80*time.Millisecond)
-	defer cancel()
-	_, _, err := c.Detail(ctx, "1")
-	if !errors.Is(err, context.DeadlineExceeded) || ctx.Err() != nil {
-		t.Fatalf("%v parent=%v", err, ctx.Err())
-	}
+	synctest.Test(t, func(t *testing.T) {
+		c := NewWithBase("http://127.0.0.1", "test", WithLimits(float64(rate.Inf), 1), WithBackoffs())
+		c.timeout = 5 * time.Millisecond
+		c.requestBudget = time.Millisecond
+		c.slots <- struct{}{}
+		ctx, cancel := context.WithTimeout(context.Background(), 80*time.Millisecond)
+		defer cancel()
+		_, _, err := c.Detail(ctx, "1")
+		if !errors.Is(err, context.DeadlineExceeded) || ctx.Err() != nil {
+			t.Fatalf("%v parent=%v", err, ctx.Err())
+		}
+	})
 }
 
 func TestAPI_FailureCauses(t *testing.T) {
