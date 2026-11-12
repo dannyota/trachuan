@@ -133,9 +133,12 @@ Qualify explicit outward targets in the seed's `references.targetDocument` and
 `implements`, `guided_by`, `amends_supplements`, `replaces`, `repeals`,
 `suspends`, `consolidates`, `cites`, `references`. Direction means the seed's
 source record points to that target; preserve the kind's meaning, including
-`guided_by`. Do not reverse edges or search for inbound documents. Reason: even
-citations supply useful legal context, but inferred inbound edges would widen
-scope without source evidence.
+`guided_by`. VBPL code 11 (suspension of part of a document, three outward pairs
+measured 2026-11-12, for example 03/2023/TT-NHNN to 16/2021/TT-NHNN) maps to
+`suspends` like code 5; code 6 (correction decisions) and code 13 stay unmapped
+until the schema has a kind for them. Do not reverse edges or search for inbound
+documents. Reason: even citations supply useful legal context, but inferred
+inbound edges would widen scope without source evidence.
 
 Only an explicit VBPL id that passes the
 [observation contract](data.md#expand-observation-artifact) adds a target.
