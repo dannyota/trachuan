@@ -93,8 +93,9 @@ recipe names one checker id; changing the model, the effort, the instruction or
 the schema is a new id, new check rows and a rerun of extract for the affected
 documents. The release checker id is `claude-opus-5-5/medium/ocr-check-2`. The
 pilot and full pass support this choice: all 49 spot-read items were correct. It
-stays the release id until version 3 has covered the store; a recipe change then
-names `claude-opus-5-5/high/ocr-check-3`.
+stays the release id until the new pass has covered the store under one version,
+3 or its 150 dpi fallback 4; a recipe change then names the checker id that
+completed the pass.
 
 ## Version 3
 
