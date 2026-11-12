@@ -1,4 +1,4 @@
-# Shared retrieval recipe 1
+# Shared retrieval recipe
 
 Proposed root package `internal/retrieval`, imported by `apps/corpus` and the
 future `apps/server`. It returns provisions from one pinned corpus database. No

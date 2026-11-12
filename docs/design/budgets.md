@@ -161,7 +161,7 @@ service is added. Host latency and memory acceptance remain separate.
 
 ## Retrieval
 
-| Recipe 1 parameter                                                                        | Value                                                                                                      |
+| Recipe parameter                                                                          | Value                                                                                                      |
 | ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
 | Dense / lexical candidate depths                                                          | 50 / 50                                                                                                    |
 | RRF k; dense / lexical weights                                                            | 60; 1 / 0.5                                                                                                |
