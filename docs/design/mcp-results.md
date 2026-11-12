@@ -68,7 +68,8 @@ A full hit has the same fields except `snippet`, then the recipe's `text`,
 `fragments`, `score` and complete `relations` with evidence; its `complete` is
 the recipe's `Complete`, and an incomplete full hit carries a `next` read item
 (see Read). Rank order, the document cap and the `non_current` group follow the
-recipe in both modes.
+recipe in both modes on an unfiltered first page; filtered and later pages fill
+by the [filter and paging contract](retrieval.md#filter-contract).
 
 ## Snippet rule
 

@@ -43,34 +43,38 @@ search ranks by default (all but `relation_context`), so callers pick values
 that exist.
 
 Retrieval always runs over the whole country corpus. Paging walks one list in
-two groups: the recipe's primary hits shaped at the list cap of 100 and its
-non-current hits shaped at the list cap of 100. Each page holds at most `limit`
-hits, split into `hits` and `non_current` by group. Without filters the first
-page is exactly today's response of that `limit`. Every other page, later
-unfiltered pages and all filtered pages, fills from what remains of each group:
-with `in_force_only` true, up to the effective non-current tail
-([retrieval recipe](retrieval-recipe.md)) from the non-current group and the
-rest from primary; with `in_force_only` false, primary first; in both modes
-non-current hits then take any slots primary cannot fill. Later unfiltered pages
-skip the hits the first page showed, in list order. When any filter is given,
-each group is ordered inside hits first in rank order, then outside hits in rank
-order, and pages fill from the start of the reordered groups; every hit carries
+two groups, primary and non-current. Each group's sequence is the unfiltered
+walk: that group's hits on today's response of the first page's `limit`, then
+the rest of the recipe's hits of that group shaped at the list cap of 100, in
+rank order, without those already listed. Each page holds at most `limit` hits,
+split into `hits` and `non_current` by group. Without filters the first page is
+exactly today's response of that `limit`. Every other page fills from what
+remains of each sequence: with `in_force_only` true, up to the effective
+non-current tail ([retrieval recipe](retrieval-recipe.md)) from the non-current
+group and the rest from primary; with `in_force_only` false, primary first; in
+both modes non-current hits then take any slots primary cannot fill. When any
+filter is given, each sequence is reordered stably, inside hits first, then
+outside hits; the filtered first page takes as many hits from each group as
+today's first page does and fills any slots left by the same rule, so every
+inside hit of today's first page stays on it; every hit carries
 `in_filter: true|false`; and `outside_filter_count` counts outside hits over
-both groups. `next_cursor` continues while either group has hits left, so every
-hit the unfiltered search would return stays reachable. The cursor is opaque and
-holds the release, the first page's `limit`, the number of hits taken so far
-from each group (beyond the recomputed first page when unfiltered), the resolved
-`as_of` date and a SHA-256 digest of the request without `cursor` and `limit`,
-never query text; later pages use the cursor's date and recompute the first page
-from it, and a cursor whose digest or release does not match is
+both groups. Every page carries the first page's `abstain`, `reason` and
+`message`; filters and paging never change them. `next_cursor` continues while
+either sequence has hits left, so every hit the unfiltered search would return
+stays reachable exactly once. The cursor is opaque and holds the release, the
+first page's `limit`, the number of hits taken so far from each sequence, the
+resolved `as_of` date and a SHA-256 digest of the request without `cursor` and
+`limit`, never query text; later pages use the cursor's date and rebuild the
+sequences from it, and a cursor whose digest or release does not match is
 `invalid_request` or `release_expired`.
 
 The filter changes order, so the recall guarantee is stated per case: for a
 golden case whose expected citations lie inside the selected nodes, filtered
 recall@8 must be at least the unfiltered recall@8 of that case; for every other
-case, every expected citation must appear in the paged list within the first 100
-hits. Unfiltered recall@8 on the full golden set is unchanged by the feature.
-Evaluation uses this exact response.
+case, every expected citation must appear within the first 100 paged hits: the
+hits of successive pages of `limit` 8 from the first, each page's `hits` before
+its `non_current`. Unfiltered recall@8 on the full golden set is unchanged by
+the feature. Evaluation uses this exact response.
 
 ## Release pinning
 
