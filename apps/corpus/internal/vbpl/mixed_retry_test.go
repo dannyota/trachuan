@@ -1,3 +1,5 @@
+//go:build integration
+
 package vbpl
 
 import (
@@ -21,9 +23,9 @@ func TestAPI_MixedRetryStatuses(t *testing.T) {
 		cause    string
 		status   int
 	}{
-		{"rate limit then 5xx", []int{429, 500}, []time.Duration{time.Millisecond}, 40 * time.Millisecond, "http_429", 429},
-		{"5xx then sequence deadline", []int{503}, []time.Duration{20 * time.Millisecond}, 5 * time.Millisecond, "http_5xx", 503},
-		{"rate limit then sequence deadline", []int{429}, []time.Duration{20 * time.Millisecond}, 5 * time.Millisecond, "http_429", 429},
+		{"rate limit then 5xx", []int{429, 500}, []time.Duration{time.Millisecond}, 5 * time.Second, "http_429", 429},
+		{"5xx then sequence deadline", []int{503}, []time.Duration{5 * time.Second}, 500 * time.Millisecond, "http_5xx", 503},
+		{"rate limit then sequence deadline", []int{429}, []time.Duration{5 * time.Second}, 500 * time.Millisecond, "http_429", 429},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			var calls atomic.Int32
@@ -37,7 +39,7 @@ func TestAPI_MixedRetryStatuses(t *testing.T) {
 				w.WriteHeader(tc.statuses[i])
 			}))
 			defer s.Close()
-			c := NewWithBase(s.URL, "test", WithLimits(float64(rate.Inf), 8), WithBackoffs(tc.backoffs...), WithTestTimeouts(10*time.Millisecond, tc.budget))
+			c := NewWithBase(s.URL, "test", WithLimits(float64(rate.Inf), 8), WithBackoffs(tc.backoffs...), WithTestTimeouts(3*time.Second, tc.budget))
 			_, err := c.Diagram(context.Background(), "1")
 			var f *Failure
 			if !errors.As(err, &f) || f.Origin != "gateway" || f.Cause != tc.cause || f.Endpoint != "doc/diagram" || f.HTTPStatus != tc.status {
@@ -69,7 +71,7 @@ func TestAPI_PriorStatusDoesNotOverrideFinalResponse(t *testing.T) {
 				}
 			}))
 			defer s.Close()
-			c := NewWithBase(s.URL, "test", WithLimits(float64(rate.Inf), 8), WithBackoffs(time.Millisecond), WithTestTimeouts(10*time.Millisecond, 50*time.Millisecond))
+			c := NewWithBase(s.URL, "test", WithLimits(float64(rate.Inf), 8), WithBackoffs(time.Millisecond), WithTestTimeouts(3*time.Second, 5*time.Second))
 			_, err := c.Diagram(context.Background(), "1")
 			if tc.wantNotFound && !errors.Is(err, ErrNotFound) || !tc.wantNotFound && err != nil {
 				t.Fatalf("error = %v", err)

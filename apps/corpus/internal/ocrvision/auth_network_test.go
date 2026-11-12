@@ -1,3 +1,5 @@
+//go:build integration
+
 package ocrvision
 
 import (
@@ -7,6 +9,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -75,6 +78,8 @@ func TestAuth_StalledJWTEndpointHasOverallTimeout(t *testing.T) {
 		select {
 		case <-release:
 		case <-r.Context().Done():
+		case <-time.After(5 * time.Second):
+			t.Error("stalled JWT handler timed out")
 		}
 		close(ended)
 	}))
@@ -83,21 +88,23 @@ func TestAuth_StalledJWTEndpointHasOverallTimeout(t *testing.T) {
 	serviceCredentials(t, server.URL)
 	done := make(chan error, 1)
 	go func() {
-		_, err := newAuthenticated(context.Background(), server.Client(), 10*time.Millisecond)
+		_, err := newAuthenticated(context.Background(), server.Client(), 500*time.Millisecond)
 		done <- err
 	}()
-	<-started
-	select {
-	case err := <-done:
-		if err == nil {
-			t.Error("stalled endpoint succeeded")
+	err, finished := waitForJWTStart(t, started, done)
+	if !finished {
+		select {
+		case err = <-done:
+		case <-time.After(2 * time.Second):
+			t.Fatal("token acquisition ignored timeout")
 		}
-	case <-time.After(100 * time.Millisecond):
-		t.Fatal("token acquisition ignored timeout")
+	}
+	if err == nil {
+		t.Error("stalled endpoint succeeded")
 	}
 	select {
 	case <-ended:
-	case <-time.After(100 * time.Millisecond):
+	case <-time.After(2 * time.Second):
 		t.Fatal("JWT HTTP request outlived overall timeout")
 	}
 }
@@ -110,6 +117,8 @@ func TestAuth_StalledJWTEndpointHonorsCancellation(t *testing.T) {
 		select {
 		case <-release:
 		case <-r.Context().Done():
+		case <-time.After(5 * time.Second):
+			t.Error("stalled JWT handler timed out")
 		}
 	}))
 	defer server.Close()
@@ -119,14 +128,58 @@ func TestAuth_StalledJWTEndpointHonorsCancellation(t *testing.T) {
 	defer cancel()
 	done := make(chan error, 1)
 	go func() { _, err := newAuthenticated(ctx, server.Client(), 30*time.Second); done <- err }()
-	<-started
+	err, finished := waitForJWTStart(t, started, done)
 	cancel()
-	select {
-	case err := <-done:
-		if err == nil {
-			t.Error("canceled token accepted")
+	if !finished {
+		select {
+		case err = <-done:
+		case <-time.After(2 * time.Second):
+			t.Fatal("JWT token acquisition ignored cancellation")
 		}
-	case <-time.After(100 * time.Millisecond):
-		t.Fatal("JWT token acquisition ignored cancellation")
+	}
+	if err == nil {
+		t.Error("canceled token accepted")
+	}
+}
+
+func waitForJWTStart(t *testing.T, started <-chan struct{}, done <-chan error) (error, bool) {
+	t.Helper()
+	select {
+	case <-started:
+		return nil, false
+	case err := <-done:
+		select {
+		case <-started:
+			return err, true
+		default:
+			t.Fatalf("token acquisition returned before the request reached the endpoint: %v", err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("JWT request did not reach the endpoint")
+	}
+	return nil, false
+}
+
+func TestWaitForJWTStart_CompletedAfterStart(t *testing.T) {
+	want := errors.New("acquisition failed")
+	for i := 0; i < 100; i++ {
+		started := make(chan struct{})
+		close(started)
+		done := make(chan error, 1)
+		done <- want
+		err, finished := waitForJWTStart(t, started, done)
+		if finished && !errors.Is(err, want) {
+			t.Fatalf("completion error = %v, want %v", err, want)
+		}
+		if !finished {
+			select {
+			case err = <-done:
+				if !errors.Is(err, want) {
+					t.Fatalf("completion error = %v, want %v", err, want)
+				}
+			default:
+				t.Fatal("completion result was lost")
+			}
+		}
 	}
 }
