@@ -126,7 +126,7 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 		return stage.Output{}, temporal.NewNonRetryableApplicationError("inventory_changed", "inventory_changed", err)
 	}
 	phaseStart = time.Now()
-	counts, err := Load(ctx, conn.Conn(), inv, env.Artifacts, Recipes{Dense: embedding.DocumentRecipe1(), Lexical: lexical.Recipe1()}, codes.StatusCodes, entries, run.Rel[:4]+"-"+run.Rel[4:6]+"-"+run.Rel[6:8], LoadOptions{Taxonomy: s.cfg.Taxonomy, Durations: timings})
+	counts, err := Load(ctx, conn.Conn(), inv, env.Artifacts, Recipes{Dense: embedding.DocumentRecipe1(), Lexical: lexical.Recipe1()}, codes.StatusCodes, entries, run.Rel[:4]+"-"+run.Rel[4:6]+"-"+run.Rel[6:8], LoadOptions{CentralIssuers: codes.CentralIssuers, Taxonomy: s.cfg.Taxonomy, Durations: timings})
 	if err != nil {
 		return stage.Output{}, err
 	}

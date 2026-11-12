@@ -57,6 +57,10 @@ func TestRelate_ChinhphuEmptySet(t *testing.T) {
 	if err != nil || string(rows) != "[]" {
 		t.Fatalf("relations %s: %v", rows, err)
 	}
+	report, err := os.ReadFile(filepath.Join(artifacts.Abs(out.Artifact.Path), "report.json"))
+	if err != nil || string(report) != `{"unmapped":[]}` {
+		t.Fatalf("report %s: %v", report, err)
+	}
 	evidence, err := os.ReadFile(filepath.Join(artifacts.Abs(out.Artifact.Path), "evidence.json"))
 	if err != nil || !strings.Contains(string(evidence), "not_parsed") {
 		t.Fatalf("evidence %s: %v", evidence, err)

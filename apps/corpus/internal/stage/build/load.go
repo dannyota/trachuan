@@ -42,10 +42,11 @@ type loader struct {
 	counts          Counts
 }
 
-// LoadOptions carries the optional taxonomy input and the phase timing sink.
+// LoadOptions carries frozen issuer identities, taxonomy input and phase timings.
 type LoadOptions struct {
-	Taxonomy  TaxonomyInput
-	Durations map[string]int64
+	CentralIssuers map[string]string
+	Taxonomy       TaxonomyInput
+	Durations      map[string]int64
 }
 
 // Load inserts a frozen inventory into an already initialized corpus database.
@@ -110,7 +111,7 @@ func Load(ctx context.Context, conn *pgx.Conn, inv Inventory, artifacts artifact
 	}
 	timings.observe("load_lexical", phaseStart)
 	phaseStart = time.Now()
-	if err = l.loadRelations(ctx); err != nil {
+	if err = l.loadRelations(ctx, opts.CentralIssuers); err != nil {
 		return Counts{}, err
 	}
 	timings.observe("load_relations", phaseStart)

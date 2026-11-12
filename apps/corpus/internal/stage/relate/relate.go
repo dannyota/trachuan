@@ -16,12 +16,13 @@ import (
 	"danny.vn/trachuan/apps/corpus/internal/source"
 	"danny.vn/trachuan/apps/corpus/internal/stage"
 	"danny.vn/trachuan/apps/corpus/internal/stage/discover"
+	"danny.vn/trachuan/apps/corpus/internal/stage/fetch"
 	"danny.vn/trachuan/apps/corpus/internal/stage/membership"
 	"danny.vn/trachuan/apps/corpus/internal/store"
 	"github.com/jackc/pgx/v5"
 )
 
-// Stage extracts and resolves document relations.
+// Stage extracts and resolves relations.
 type Stage struct{}
 
 // New constructs a relate stage.
@@ -99,7 +100,7 @@ func (*Stage) Plan(ctx context.Context, env stage.Env, run stage.Run) ([]stage.I
 	return items, nil
 }
 
-// Process publishes relations and unmapped codes from a fetch artifact.
+// Process publishes diagram and text relations from paired fetch and extract artifacts.
 func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item stage.Item) (stage.Output, error) {
 	q := store.New(env.DB)
 	input, err := q.GetExtractInput(ctx, store.GetExtractInputParams{RunID: run.ID, ItemKey: item.Key})
@@ -117,9 +118,10 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 		return stage.Output{}, verifyErr
 	}
 	rows := []relation{}
-	unmapped := []string{}
+	report := relationReport{Unmapped: []string{}}
 	secondary := strings.HasPrefix(item.Key, "vn:chinhphu:")
 	if !secondary {
+		report.Text = newTextReport()
 		detail, readErr := os.ReadFile(filepath.Join(env.Artifacts.Abs(input.Path), "detail.json"))
 		if readErr != nil {
 			return stage.Output{}, fmt.Errorf("read detail: %w", readErr)
@@ -132,9 +134,19 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 		if parseErr != nil {
 			return stage.Output{}, fmt.Errorf("parse source list: %w", parseErr)
 		}
-		rows, unmapped, err = relations(detail, diagram, list.RelationCodes)
+		rows, report.Unmapped, err = relations(detail, diagram, list.RelationCodes)
 		if err != nil {
 			return stage.Output{}, fmt.Errorf("extract relations: %w", err)
+		}
+		document, readErr := fetch.ReadDocument(env.Artifacts.Abs(input.Path), item.Key)
+		if readErr != nil {
+			return stage.Output{}, fmt.Errorf("read relation document: %w", readErr)
+		}
+		if extract != "-" && !document.IsConsolidated {
+			rows, report.Text, err = processText(ctx, env, run, item, extract, rows, list.CentralIssuers)
+			if err != nil {
+				return stage.Output{}, err
+			}
 		}
 	}
 
@@ -142,7 +154,7 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 		for _, file := range []struct {
 			name  string
 			value any
-		}{{"relations.json", rows}, {"report.json", unmapped}} {
+		}{{"relations.json", rows}, {"report.json", report}} {
 			b, marshalErr := json.Marshal(file.value)
 			if marshalErr != nil {
 				return fmt.Errorf("encode %s: %w", file.name, marshalErr)
@@ -200,8 +212,8 @@ func (*Stage) Resolve(ctx context.Context, env stage.Env, run stage.Run, _ stage
 	if err := readJSON(filepath.Join(env.Artifacts.Abs(art.Path), "relations.json"), &rows); err != nil {
 		return stage.Resolution{}, err
 	}
-	var unmapped []string
-	if err := readJSON(filepath.Join(env.Artifacts.Abs(art.Path), "report.json"), &unmapped); err != nil {
+	var report relationReport
+	if err := readJSON(filepath.Join(env.Artifacts.Abs(art.Path), "report.json"), &report); err != nil {
 		return stage.Resolution{}, err
 	}
 	entries, err := discover.ExpectedSet(ctx, env.DB, run)
@@ -212,7 +224,7 @@ func (*Stage) Resolve(ctx context.Context, env stage.Env, run stage.Run, _ stage
 	for _, entry := range entries {
 		expected[entry.Key] = true
 	}
-	return stage.Resolution{Gaps: resolveGaps(rows, unmapped, expected)}, nil
+	return stage.Resolution{Gaps: report.resolveGaps(rows, expected)}, nil
 }
 
 func verifyFetch(path, expected string) error {

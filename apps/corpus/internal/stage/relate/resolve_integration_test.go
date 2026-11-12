@@ -40,7 +40,7 @@ func TestRelate_ResolveReusedArtifact(t *testing.T) {
 		t.Fatal(err)
 	}
 	dir := t.TempDir()
-	for name, content := range map[string]string{"relations.json": `[{"target_vbpl_id":"42"}]`, "report.json": `[]`} {
+	for name, content := range map[string]string{"relations.json": `[{"target_vbpl_id":"42","method":"text_rule/1","target_anchor":"dieu-8/khoan-9"}]`, "report.json": `{"unmapped":[],"text":{"emitted":{"suspends":1},"gaps":{"relation_text_grammar":1},"gap_details":[{"name":"relation_text_grammar","detail":"bad sentence","source_node_id":"a"}]}}`} {
 		if err = os.WriteFile(filepath.Join(dir, name), []byte(content), 0600); err != nil {
 			t.Fatal(err)
 		}
@@ -51,7 +51,10 @@ func TestRelate_ResolveReusedArtifact(t *testing.T) {
 		if resolveErr != nil {
 			t.Fatal(resolveErr)
 		}
-		if (i == 0 && (len(got.Gaps) != 1 || got.Gaps[0] != (stage.Gap{Kind: "unknown_target", Detail: "42"}))) || (i == 1 && len(got.Gaps) != 0) {
+		if got.Gaps[len(got.Gaps)-1] != (stage.Gap{Kind: "relation_text_grammar", Detail: "bad sentence"}) {
+			t.Fatalf("text gaps: %+v", got.Gaps)
+		}
+		if (i == 0 && (len(got.Gaps) != 2 || got.Gaps[0] != (stage.Gap{Kind: "unknown_target", Detail: "42"}))) || (i == 1 && len(got.Gaps) != 1) {
 			t.Fatalf("run %d: %+v", i, got.Gaps)
 		}
 	}
