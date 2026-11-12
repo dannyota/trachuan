@@ -59,6 +59,8 @@ func decodeList(data []byte, dst any) error {
 // Validate checks relationships among mapping, custom nodes and overrides.
 func Validate(m Mapping, custom []CustomNode, overrides []Override) error {
 	codes := map[string]int{}
+	parents := map[string]string{}
+	allowed := map[string]bool{}
 	activeGUIDs := map[string]bool{}
 	for _, n := range m.Nodes {
 		if n.GUID == "" || n.Code == "" || (n.Status == "active" && activeGUIDs[n.GUID]) || codes[n.Code] != 0 || n.Level < 1 || n.Level > 4 || (n.Status != "active" && n.Status != "retired") {
@@ -68,6 +70,8 @@ func Validate(m Mapping, custom []CustomNode, overrides []Override) error {
 			activeGUIDs[n.GUID] = true
 		}
 		codes[n.Code] = n.Level
+		parents[n.Code] = n.ParentCode
+		allowed[n.Code] = n.Status == "active" && n.Level >= 2
 	}
 	ordinals := map[string]map[int]bool{}
 	for _, n := range m.Nodes {
@@ -117,24 +121,65 @@ func Validate(m Mapping, custom []CustomNode, overrides []Override) error {
 				next = append(next, n)
 				continue
 			}
+			if !allowed[n.ParentCode] {
+				return fmt.Errorf("invalid custom parent %s", n.ParentCode)
+			}
 			suffix := strings.TrimPrefix(n.Code, n.ParentCode+".")
 			desc := strings.TrimSpace(n.Description)
 			if level < 3 || level > 4 || suffix == n.Code || !re.MatchString(suffix) || strings.TrimSpace(n.Name) == "" || desc == "" || strings.Count(desc, ".")+strings.Count(desc, "!")+strings.Count(desc, "?") != 1 || !strings.ContainsAny(desc[len(desc)-1:], ".!?") {
 				return fmt.Errorf("invalid custom node %s", n.Code)
 			}
 			codes[n.Code] = level
+			parents[n.Code] = n.ParentCode
+			allowed[n.Code] = true
 		}
 		if len(next) == len(pending) {
 			return fmt.Errorf("custom parent missing")
 		}
 		pending = next
 	}
+	for code := range codes {
+		current := code
+		rooted := false
+		for steps := 0; steps <= 4; steps++ {
+			level, ok := codes[current]
+			if !ok {
+				return fmt.Errorf("invalid parent chain for %s", code)
+			}
+			if parents[current] == "" {
+				if level != 1 {
+					return fmt.Errorf("invalid parent chain for %s", code)
+				}
+				rooted = true
+				break
+			}
+			current = parents[current]
+		}
+		if !rooted {
+			return fmt.Errorf("invalid parent chain for %s", code)
+		}
+	}
 	seen := map[string]bool{}
+	families := map[string]bool{}
+	familySeen := map[string]bool{}
 	for _, o := range overrides {
 		key := o.DocumentKey + "\x00" + o.Anchor + "\x00" + o.Code
-		if strings.TrimSpace(o.DocumentKey) == "" || strings.TrimSpace(o.Anchor) == "" || strings.TrimSpace(o.Reason) == "" || codes[o.Code] == 0 || seen[key] {
+		if strings.TrimSpace(o.DocumentKey) == "" || strings.TrimSpace(o.Anchor) == "" || strings.TrimSpace(o.Reason) == "" || !allowed[o.Code] || seen[key] {
 			return fmt.Errorf("invalid override %s", o.Code)
 		}
+		family := o.Code
+		for steps := 0; codes[family] > 2 && steps < 4; steps++ {
+			family = parents[family]
+		}
+		if codes[family] != 2 {
+			return fmt.Errorf("invalid override family %s", o.Code)
+		}
+		familyKey := o.DocumentKey + "\x00" + o.Anchor + "\x00" + family
+		if familySeen[familyKey] && families[familyKey] != o.Exclude {
+			return fmt.Errorf("conflicting overrides in family %s", family)
+		}
+		familySeen[familyKey] = true
+		families[familyKey] = o.Exclude
 		seen[key] = true
 	}
 	return nil

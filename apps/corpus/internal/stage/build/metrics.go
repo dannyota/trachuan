@@ -17,7 +17,7 @@ func databaseMetrics(ctx context.Context, conn *pgx.Conn, loaded Counts) (map[st
 		}
 		counts[table] = n
 	}
-	if counts["document"] != loaded.Documents || counts["source_file"] != loaded.SourceFiles || counts["provision"] != loaded.Provisions || counts["chunk"] != loaded.Chunks || counts["relation"] != loaded.Relations || counts["coverage_gap"] != loaded.Gaps || loaded.Chunks != loaded.DenseVectors || counts["taxonomy_node"] != 0 || counts["taxonomy_assignment"] != 0 || counts["release"] != 1 {
+	if counts["document"] != loaded.Documents || counts["source_file"] != loaded.SourceFiles || counts["provision"] != loaded.Provisions || counts["chunk"] != loaded.Chunks || counts["relation"] != loaded.Relations || counts["coverage_gap"] != loaded.Gaps || loaded.Chunks != loaded.DenseVectors || counts["taxonomy_node"] != loaded.Taxonomy.Nodes || counts["taxonomy_assignment"] != loaded.Taxonomy.Seeds+loaded.Taxonomy.Overrides+loaded.Taxonomy.Excluded || counts["release"] != 1 {
 		return nil, 0, 0, fmt.Errorf("corpus row counts differ")
 	}
 	counts["rejected"] = loaded.Rejected

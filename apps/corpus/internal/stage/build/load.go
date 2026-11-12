@@ -23,6 +23,7 @@ type Recipes struct {
 type Counts struct {
 	Documents, SourceFiles, Provisions, Chunks, DenseVectors, Rejected, UnavailableArtifacts, Relations, Gaps int64
 	LexicalStats                                                                                              lexical.StatsSummary
+	Taxonomy                                                                                                  TaxonomyStats
 	validity                                                                                                  validityResult
 }
 
@@ -41,11 +42,21 @@ type loader struct {
 	counts          Counts
 }
 
+// LoadOptions carries the optional taxonomy input and the phase timing sink.
+type LoadOptions struct {
+	Taxonomy  TaxonomyInput
+	Durations map[string]int64
+}
+
 // Load inserts a frozen inventory into an already initialized corpus database.
-func Load(ctx context.Context, conn *pgx.Conn, inv Inventory, artifacts artifact.Store, recipes Recipes, codes map[string]source.StatusCode, corrections []source.Correction, asOf string, durations ...map[string]int64) (Counts, error) {
+func Load(ctx context.Context, conn *pgx.Conn, inv Inventory, artifacts artifact.Store, recipes Recipes, codes map[string]source.StatusCode, corrections []source.Correction, asOf string, options ...LoadOptions) (Counts, error) {
+	opts := LoadOptions{}
+	if len(options) > 0 {
+		opts = options[0]
+	}
 	timings := phases{}
-	if len(durations) > 0 {
-		timings = durations[0]
+	if opts.Durations != nil {
+		timings = opts.Durations
 	}
 	if conn == nil {
 		return Counts{}, fmt.Errorf("corpus connection is nil")
@@ -112,6 +123,11 @@ func Load(ctx context.Context, conn *pgx.Conn, inv Inventory, artifacts artifact
 		return Counts{}, err
 	}
 	timings.observe("load_validity", phaseStart)
+	phaseStart = time.Now()
+	if err = l.loadTaxonomy(ctx, opts.Taxonomy); err != nil {
+		return Counts{}, err
+	}
+	timings.observe("load_taxonomy", phaseStart)
 	if err = l.loadGaps(ctx); err != nil {
 		return Counts{}, err
 	}

@@ -16,7 +16,7 @@ source: [research note](../research/phap-dien-2026-11-08.md).
 | mục inside a chương                              | 4, or dropped when the chương is already level 4 | `22.3.c2.m1`            | a dropped mục is recorded in the mapping file as flattened into its chương                                                                                                                                       |
 | tiểu mục inside a mục                            | never a node                                     | none                    | flattened into its mục; recorded in the mapping file                                                                                                                                                             |
 | mục or tiểu mục without a chương or mục above it | never a node                                     | none                    | folded into its nearest coded ancestor (the đề mục or a phần); recorded in the mapping file                                                                                                                      |
-| custom node                                      | 3 or 4                                           | `22.3.x1`               | declared in `taxonomy/custom.yaml` with name and one-sentence description                                                                                                                                        |
+| custom node                                      | 3 or 4                                           | `22.3.x1`               | declared in `taxonomy/custom.yaml` with name and one-sentence description, under an active package node or another custom node                                                                                   |
 
 Codes are stable identifiers, not display paths. `taxonomy/mapping.yaml` maps
 each package node GUID (`ID` in `jdAllTree`, `Value` in `jdChuDe` and `jdDeMuc`)
@@ -96,7 +96,11 @@ under the corpus rules.
      may receive several nodes in different families. The threshold per level is
      calibrated on the labeled set to reach precision at least 0.85, then frozen
      in the release; below it, no assignment and a gap "unassigned".
-3. Manual overrides in `taxonomy/overrides.yaml`.
+3. Manual overrides in `taxonomy/overrides.yaml`. An override names an active
+   package node at level 2 or deeper or a custom node; any other code fails
+   `corpus taxonomy check` and the build. An override whose document or anchor
+   is not in the release yields a coverage gap `override_target_missing` naming
+   the document and the node, and nothing else.
 
 ## Serving
 
@@ -115,9 +119,11 @@ Each node carries its sibling `ordinal`: active package siblings in package
 order, then custom siblings in file order, then retired siblings in code order;
 and the counts of distinct provisions with an effective node in its subtree and
 of their documents. The build computes both. It places a retired node under its
-recorded parent at the parent's level plus one, and leaves out a retired node
-that would fall below level 4, with its descendants. A release whose assignments
-come only from seeds and overrides serves them without the classification floors
+recorded parent at the parent's level plus one and leaves out a retired node
+that would fall below level 4. Every mapping and custom node reaches a chủ đề
+through its parents in at most four steps; any other chain, including a cycle,
+fails `corpus taxonomy check` and the build. A release whose assignments come
+only from seeds and overrides serves them without the classification floors
 below, which gate the LLM layer; it must still pass the filter gate in
 [evaluation](evaluation.md). The LLM layer's candidate text for a node is,
 versioned with the classification recipe, the names of its ancestors and itself

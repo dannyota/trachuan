@@ -13,6 +13,7 @@ import (
 type Config struct {
 	EmbedderURL, QueryEmbedderURL                                                  string
 	BuilderDatabaseURL, BuilderTemplate, PgRestore, DatabaseDiskPath, EvalFixtures string
+	PhapdienPackage                                                                string
 	DatabaseURL                                                                    string
 	TemporalAddress                                                                string
 	Namespace                                                                      string
@@ -49,6 +50,7 @@ func Load(getenv func(string) string) (Config, error) {
 		PgRestore:            defaultValue(getenv("CORPUS_PG_RESTORE"), "pg_restore"),
 		DatabaseDiskPath:     getenv("CORPUS_DATABASE_DISK_PATH"),
 		EvalFixtures:         getenv("CORPUS_EVAL_FIXTURES"),
+		PhapdienPackage:      getenv("CORPUS_PHAPDIEN_PACKAGE"),
 		DatabaseURL:          getenv("CORPUS_DATABASE_URL"),
 		TemporalAddress:      defaultValue(getenv("CORPUS_TEMPORAL_ADDRESS"), "127.0.0.1:27233"),
 		Namespace:            defaultValue(getenv("CORPUS_TEMPORAL_NAMESPACE"), "corpus"),

@@ -34,11 +34,16 @@ export CORPUS_PG_DUMP=/opt/homebrew/opt/postgresql@18/bin/pg_dump
 export CORPUS_PG_RESTORE=/opt/homebrew/opt/postgresql@18/bin/pg_restore
 export CORPUS_BUILDER_DATABASE_URL="postgres://corpus_builder:${BUILDER_PASSWORD}@127.0.0.1:25433/postgres"
 export CORPUS_DATABASE_DISK_PATH=work
+export CORPUS_PHAPDIEN_PACKAGE=work/phapdien/BoPhapDienDienTu.zip
 go run ./apps/corpus/cmd/corpus migrate
 go run ./apps/corpus/cmd/corpus worker &
 go run ./apps/corpus/cmd/corpus start vn 20261109 --until relate
 go run ./apps/corpus/cmd/corpus status vn 20261109
 ```
+
+Fetch the Pháp điển package with `scripts/phapdien-fetch.sh` once; the worker
+reads `taxonomy/` and refuses to start when the package is missing or its hash
+differs from `taxonomy/mapping.yaml`.
 
 Apply workshop migrations with `go run ./apps/corpus/cmd/corpus migrate` after
 pulling new code and before restarting the worker; a missing table fails stage

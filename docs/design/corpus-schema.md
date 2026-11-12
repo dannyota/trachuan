@@ -209,7 +209,8 @@ taxonomy_node, `family_id bigint` FK taxonomy_node, `method text` in
 `(node_id,provision_id)`, `(provision_id,family_id)`. The build enforces the
 family precedence in [data](data.md) in one transaction and validates family_id
 as the node's level-2 ancestor. `coverage_gap` kind `seed_article_missing` names
-a document found without a seeded article.
+a document found without a seeded article, and `override_target_missing` a
+manual entry whose document or anchor is not in the release; both set `node_id`.
 
 ## Validity decisions
 

@@ -28,6 +28,7 @@ type InventoryItem struct {
 
 // InventoryGap records an upstream coverage gap.
 type InventoryGap struct {
+	NodeID      *int64  `json:"-"`
 	Stage       string  `json:"stage"`
 	ItemKey     string  `json:"item_key"`
 	Kind        string  `json:"kind"`
