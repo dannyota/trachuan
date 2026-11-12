@@ -36,7 +36,7 @@ func (e *Engine) Search(ctx context.Context, req Request) (Response, error) {
 				keys = append(keys, g.Identity.DocumentKey)
 			}
 		}
-		docs, err = e.Documents(ctx, keys)
+		docs, err = e.filterDocuments(ctx, keys)
 		if err != nil {
 			return Response{}, fmt.Errorf("load filter documents: %w", err)
 		}
