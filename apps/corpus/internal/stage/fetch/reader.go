@@ -69,6 +69,9 @@ func ReadDocument(dir, key string) (Document, error) {
 		return Document{}, fmt.Errorf("fetch identity mismatch")
 	}
 	out := Document{Key: key, Number: d.DocNum, Title: d.Title, DocType: d.DocType.Name, Issuer: d.AgencyName, IssueDate: d.IssueDate, EffFrom: d.EffFrom, EffTo: d.EffTo, StatusCode: d.EffStatus.Code, StatusName: d.EffStatus.Name, IsConsolidated: d.IsConsolidatedDocument}
+	if url := vbplSourceURL(d.ID); url != "" {
+		out.SourceURL = &url
+	}
 	for _, f := range files {
 		out.Files = append(out.Files, DocumentFile(f))
 	}

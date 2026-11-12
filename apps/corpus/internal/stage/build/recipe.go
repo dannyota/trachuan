@@ -39,7 +39,7 @@ type buildRecipe struct {
 
 func (r buildRecipe) hash() string {
 	b, _ := json.Marshal(r)
-	return stage.RecipeHash("build", "corpus/1", string(b))
+	return stage.RecipeHash("build", "corpus/2", string(b))
 }
 
 // Versions identifies the database and command versions pinned to a build.

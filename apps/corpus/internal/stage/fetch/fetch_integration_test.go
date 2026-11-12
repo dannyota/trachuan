@@ -41,10 +41,14 @@ func TestFetch_WritesBundleAndRows(t *testing.T) {
 		t.Fatal(err)
 	}
 	var key, number, status, name, hash, path, source, role string
+	var sourceURL *string
 	var size int64
-	err = tx.QueryRow(ctx, `SELECT key,number,status_code FROM document WHERE artifact_id=$1`, id).Scan(&key, &number, &status)
+	err = tx.QueryRow(ctx, `SELECT key,number,status_code,source_url FROM document WHERE artifact_id=$1`, id).Scan(&key, &number, &status, &sourceURL)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if sourceURL == nil || *sourceURL != "https://vbpl.vn/van-ban/chi-tiet/66518" {
+		t.Fatalf("source_url = %v", sourceURL)
 	}
 	if key != "vn:vbpl:66518" || number != "04/VBHN-NHNN" || status != "" {
 		t.Fatalf("document: %q %q %q", key, number, status)
