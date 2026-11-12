@@ -39,12 +39,16 @@ listing has an `updatedDate` key, null in all 463,684 stored listing items. The
 detail call is the only place to read it.
 
 Attachments do carry a content hash (probed 2026-11-12). The file list gives
-each file a presigned GET URL on `s3-han02.fptcloud.com`, valid 24 hours
-(`X-Amz-Expires=86400`). A `GET` of that URL with `Range: bytes=0-0` answers 206
-with `ETag` and `Last-Modified`; `HEAD` answers 403, because the signature
-covers `GET` only. The list's own `etag` field is null. For `vn:vbpl:171687` the
-ETags of all 8 files equal the MD5 of the stored copies, the 8.5 MB original PDF
-included. <!-- corpus-wide counts: filled from the full probe -->
+each file a presigned GET URL on `s3-han02.fptcloud.com`, valid 24 hours. A
+`GET` of that URL with `Range: bytes=0-0` answers 206 with `ETag`; `HEAD`
+answers 403, because the signature covers `GET` only. The list's own `etag`
+field is null. Sample of 78 files, the 45 largest stored attachments, 25 of 4 to
+9 MB and the 8 files of `vn:vbpl:171687`: 35 ETags have MD5 form and all equal
+the MD5 of the stored copy; 42 have S3 multipart form and all equal the
+multipart ETag computed from the stored copy, 39 with 16 MiB parts and 3 with 5
+MiB parts; 1 ranged request failed. Multipart ETags start near 7.5 MB; 742
+stored files are larger than 5 MB.
+<!-- corpus-wide counts: filled from the full probe -->
 
 An earlier version of this note reused attachments only while their first
 network read was younger than an age limit, and treated an unknown origin time
@@ -154,7 +158,7 @@ Each run re-reads a deterministic sample in full: the items where the first 8
 bytes of `sha256(document_key || 0x00 || rel)`, read as an unsigned integer, are
 divisible by the control divisor in [budgets](budgets.md). The sampled item
 makes the full read above, with an ETag request for every file, so it downloads
-only files whose hash differs or cannot be verified. When the item would
+only files whose hash differs or cannot be compared. When the item would
 otherwise have reused its baseline, fetch compares the two and records one
 outcome:
 
@@ -164,22 +168,20 @@ outcome:
 | `tree_ids_only` | Trees equal after removing node `key` and `id`; rest identical                                                                |
 | `changed`       | Anything else, including a file that does not match its stored copy under [attachments by content hash](fetch-attachments.md) |
 
-Per file it counts `control_file_same` (the ETag matches the stored file under
-[attachments by content hash](fetch-attachments.md)), `control_file_changed` (it
-differs) and `control_file_unverified` (no usable ETag). Every `changed` outcome
-is logged at WARN with the document key and the files that differ. A `changed`
-outcome does not fail the run; the primary reads the document and decides
-whether the reuse rule must narrow.
+A file of a sampled document that is downloaded because its hash differs is
+counted `control_file_changed`. Every `changed` outcome is logged at WARN with
+the document key and the files that differ. A `changed` outcome does not fail
+the run; the primary reads the document and decides whether the reuse rule must
+narrow.
 
 ## Counts
 
 The run message carries `fetch_reads`: reused; full reads by reason
 (`no_baseline`, `invalid_baseline`, `null_date`, `date_changed`,
-`missing_attachment`, `control`); the control outcomes and per-file control
-counts; and per attachment of a full read: copied by rule (`etag_recorded`,
-`etag_md5`, `etag_multipart`) and from where (baseline, cache), and downloaded
-by reason (`no_candidate`, `etag_differs`, `etag_other_form`, `etag_missing`,
-`etag_request_failed`, `candidate_unverified`), with `etag_download_differs`.
+`missing_attachment`, `control`); the control outcomes; and per attachment of a
+full read: copied (`etag_md5`, `etag_multipart`, each from baseline or cache)
+and downloaded by reason (`no_candidate`, `etag_differs`, `etag_other_form`,
+`etag_unavailable`, `candidate_unverified`).
 
 ## Observations and times
 
@@ -196,9 +198,9 @@ are audit evidence only. Bundles carry no time, so reuse cannot change a hash.
 Neither the read rule nor the file rule is a fetch recipe input
 (`apps/corpus/internal/stage/fetch/fetch.go`, `Recipe`). `files.json` stays the
 array of `{name,sha256,size}` and the file sits at `files/<sha256>` whether it
-was copied or downloaded; presigned URLs and ETags live only in observations and
-workshop tables, never in the bundle. So bundles keep their bytes and today's
-baselines stay valid. The fetch recipe does not change.
+was copied or downloaded; presigned URLs and ETags are never in the bundle. So
+bundles keep their bytes and today's baselines stay valid. The fetch recipe does
+not change.
 
 ## Effect
 
