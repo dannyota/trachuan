@@ -66,8 +66,8 @@ clause or a point.
 - Clause start: the number token (digits, then at most one inserted letter as in
   `2a`) followed by `.` and then whitespace, the end of the paragraph, an
   uppercase letter or a footnote marker `[<digits>]`; or followed by `-` and
-  whitespace (older documents write `1- `). A paragraph starting `<digits>.` and
-  another digit (`1.1.`) is running text of the current clause.
+  whitespace (older documents write `1-` then a space). A paragraph starting
+  `<digits>.` and another digit (`1.1.`) is running text of the current clause.
 - Point start: one letter of the Vietnamese order
   `a b c d đ e g h i k l m n o p q r s t u v x y`, optionally followed by one or
   two digits for an inserted point (`a1`), then `)`, or `.` or `-` followed by
@@ -164,7 +164,7 @@ the tree and mark the document incomplete. It needs its own measurement (how
 many of the 686 pass the number match, and whether the texts of articles that do
 hold text agree) before it becomes a rule.
 
-## Checks
+## Acceptance
 
 The primary runs these; they are requirements, not results.
 
