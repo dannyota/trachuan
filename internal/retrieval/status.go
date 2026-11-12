@@ -3,12 +3,20 @@ package retrieval
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"golang.org/x/text/unicode/norm"
 )
+
+// Facet counts documents with the same normalized value.
+type Facet struct {
+	Value string `json:"value"`
+	Count int    `json:"count"`
+}
 
 // CorpusStatus summarizes the evidence stored in one release.
 // NewestSourceDate is the latest valid document raw_issue_date, as a civil date.
@@ -17,13 +25,15 @@ type CorpusStatus struct {
 	Documents        int64            `json:"documents"`
 	Provisions       int64            `json:"provisions"`
 	Nodes            int64            `json:"nodes"`
+	DocTypes         []Facet          `json:"doc_types"`
+	Issuers          []Facet          `json:"issuers"`
 	Gaps             map[string]int64 `json:"gaps"`
 	NewestSourceDate *time.Time       `json:"newest_source_date"`
 }
 
 // Status counts the pinned corpus in one consistent read-only snapshot.
 func (e *Engine) Status(ctx context.Context) (CorpusStatus, error) {
-	result := CorpusStatus{Release: e.release.Rel, Gaps: make(map[string]int64)}
+	result := CorpusStatus{Release: e.release.Rel, Gaps: make(map[string]int64), DocTypes: []Facet{}, Issuers: []Facet{}}
 	ctx, cancel := context.WithTimeout(ctx, e.deadline())
 	defer cancel()
 	tx, err := e.metadataTx(ctx)
@@ -31,13 +41,43 @@ func (e *Engine) Status(ctx context.Context) (CorpusStatus, error) {
 		return result, err
 	}
 	defer func() { _ = tx.Rollback(context.Background()) }()
-	err = tx.QueryRow(ctx, `SELECT (SELECT count(*) FROM document),(SELECT count(*) FROM provision),(SELECT count(*) FROM taxonomy_node)`).Scan(&result.Documents, &result.Provisions, &result.Nodes)
+	err = tx.QueryRow(ctx, `SELECT (SELECT count(*) FROM document),(SELECT count(*) FROM provision),0`).Scan(&result.Documents, &result.Provisions, &result.Nodes)
 	if err != nil {
 		return result, databaseFailure("count corpus", err)
 	}
-	if e.release.SchemaVersion == 4 {
-		result.Nodes = 0
+	if e.release.SchemaVersion != 4 {
+		if err = tx.QueryRow(ctx, `SELECT count(*) FROM taxonomy_node WHERE status='active' AND provision_count>0`).Scan(&result.Nodes); err != nil {
+			return result, databaseFailure("count taxonomy", err)
+		}
 	}
+	facetRows, err := tx.Query(ctx, `SELECT doc_type,issuer FROM document WHERE class <> 'relation_context'`)
+	if err != nil {
+		return result, databaseFailure("query facets", err)
+	}
+	types, issuers := map[string]int{}, map[string]int{}
+	for facetRows.Next() {
+		var typ, issuer string
+		if err = facetRows.Scan(&typ, &issuer); err != nil {
+			facetRows.Close()
+			return result, databaseFailure("scan facets", err)
+		}
+		for _, v := range []struct {
+			value  string
+			counts map[string]int
+		}{{typ, types}, {issuer, issuers}} {
+			value := norm.NFC.String(strings.TrimSpace(v.value))
+			if value != "" {
+				v.counts[value]++
+			}
+		}
+	}
+	err = facetRows.Err()
+	facetRows.Close()
+	if err != nil {
+		return result, databaseFailure("read facets", err)
+	}
+	result.DocTypes = sortedFacets(types)
+	result.Issuers = sortedFacets(issuers)
 	rows, err := tx.Query(ctx, `SELECT kind,count(*) FROM coverage_gap GROUP BY kind`)
 	if err != nil {
 		return result, databaseFailure("count gaps", err)
@@ -118,4 +158,18 @@ func sourceDate(raw string) *time.Time {
 		return &civil
 	}
 	return nil
+}
+
+func sortedFacets(counts map[string]int) []Facet {
+	result := make([]Facet, 0, len(counts))
+	for value, count := range counts {
+		result = append(result, Facet{Value: value, Count: count})
+	}
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].Count != result[j].Count {
+			return result[i].Count > result[j].Count
+		}
+		return result[i].Value < result[j].Value
+	})
+	return result
 }

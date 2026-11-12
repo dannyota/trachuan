@@ -14,6 +14,10 @@ type failure string
 func (f failure) Error() string { return string(f) }
 
 const (
+	// ErrInvalidRequest means a request failed validation.
+	ErrInvalidRequest failure = "invalid_request"
+	// ErrNotFound means the requested item is not served.
+	ErrNotFound failure = "not_found"
 	// ErrEmbedderBusy means the query embedder refused admission.
 	ErrEmbedderBusy failure = "embedder busy"
 	// ErrEmbedder means the query embedder failed.
