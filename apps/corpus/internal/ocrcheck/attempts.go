@@ -128,7 +128,7 @@ func (r *Runner) finish(ctx context.Context, a Attempt, ready prepared, response
 			parsed, invalid := decodeAnswer([]byte(response.Text), ready.pages, ready.request.Text)
 			if invalid != "" {
 				reason = invalid
-				if strings.HasPrefix(invalid, "schema:") && invalid != "schema:json" && invalid != "schema:nul" && invalid != "schema:stop_reason" {
+				if strings.HasPrefix(invalid, "schema:") && invalid != "schema:json" && invalid != "schema:stop_reason" {
 					answerDiagnostic([]byte(response.Text), &u)
 				}
 			} else if doc.Entry.Pages.Valid && parsed.Pages != int(doc.Entry.Pages.Int32) {

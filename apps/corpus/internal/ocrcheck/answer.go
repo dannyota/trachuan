@@ -222,7 +222,7 @@ func answerDiagnostic(data []byte, u *Usage) {
 					value := page
 					u.AnswerItemPageMax = &value
 				}
-				if page < 1 || (u.AnswerPages != nil && *u.AnswerPages > 0 && page > *u.AnswerPages) {
+				if page < 1 || (u.AnswerPages != nil && page > *u.AnswerPages) {
 					invalid++
 				}
 			}
