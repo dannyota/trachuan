@@ -45,13 +45,6 @@ the path plus only allowlisted query parameters: `release` on the reader and
 parameter is dropped, so a query or form state never reaches a URL
 ([web API](web-api.md#google-login) states the `next` rules).
 
-## Deferred to taxonomy
-
-The topics pages (`/vn/topics`, `/vn/topics/{code}`), the node filter, node
-chips, outside-filter hits and the type and issuer filters need the taxonomy API
-and arrive with it ([plans](../plans/README.md), Plan 6). Until then search
-offers the query, the applies-on date and the in-force switch.
-
 ## Routing
 
 The website and the API share one origin, because the session cookie is
