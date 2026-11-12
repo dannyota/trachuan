@@ -48,8 +48,9 @@ type renderCommand func(context.Context, string, string, []string, io.Writer) (R
 
 // PopplerRenderer renders bounded 150 dpi grayscale PNG pages in a macOS sandbox.
 type PopplerRenderer struct {
-	tools   *popplerTools
-	command renderCommand
+	tools        *popplerTools
+	command      renderCommand
+	validateJPEG func(string) error
 }
 
 type renderError string

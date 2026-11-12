@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"image"
+	"image/color"
 	"image/jpeg"
 	"io"
 	"os"
@@ -27,7 +28,13 @@ func TestJPEGRender_Completion(t *testing.T) {
 				}
 				calls++
 				var b bytes.Buffer
-				if err := jpeg.Encode(&b, image.NewGray(image.Rect(0, 0, 2, 2)), nil); err != nil {
+				img := image.NewGray(image.Rect(0, 0, 64, 64))
+				for y := 0; y < 64; y++ {
+					for x := 0; x < 64; x++ {
+						img.SetGray(x, y, color.Gray{Y: uint8((x*x + y*37) % 256)})
+					}
+				}
+				if err := jpeg.Encode(&b, img, nil); err != nil {
 					t.Fatal(err)
 				}
 				for i := 1; i <= 2; i++ {
@@ -36,7 +43,13 @@ func TestJPEGRender_Completion(t *testing.T) {
 					}
 					data := b.Bytes()
 					if mode == "truncated" && i == 2 {
-						data = data[:len(data)/2]
+						data = data[:len(data)*4/5]
+						if _, err := jpeg.DecodeConfig(bytes.NewReader(data)); err != nil {
+							t.Fatalf("truncated header: %v", err)
+						}
+						if _, err := jpeg.Decode(bytes.NewReader(data)); err == nil {
+							t.Fatal("truncated image fully decodes")
+						}
 					}
 					if err := os.WriteFile(filepath.Join(dir, fmt.Sprintf("page-%02d.jpg", i)), data, 0600); err != nil {
 						t.Fatal(err)
@@ -150,7 +163,7 @@ func TestJPEGPages_OrderAndComponents(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	paths, err := jpegPages(dir, 12)
+	paths, err := jpegPages(context.Background(), dir, 12, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -164,7 +177,70 @@ func TestJPEGPages_OrderAndComponents(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Poppler writes three components for gray content; such a page is valid.
-	if _, err := jpegPages(dir, 12); err != nil {
+	if _, err := jpegPages(context.Background(), dir, 12, nil); err != nil {
 		t.Fatalf("rejected three-component JPEG: %v", err)
+	}
+}
+
+func TestJPEGRender_InterruptedValidation(t *testing.T) {
+	for _, mode := range []string{"cancel", "deadline"} {
+		for _, pages := range []int{1, 2} {
+			t.Run(fmt.Sprintf("%s/%d", mode, pages), func(t *testing.T) {
+				var ctx context.Context
+				var cancel context.CancelFunc
+				if mode == "deadline" {
+					ctx, cancel = context.WithTimeout(context.Background(), 10*time.Millisecond)
+				} else {
+					ctx, cancel = context.WithCancel(context.Background())
+				}
+				defer cancel()
+				var dir string
+				validations := 0
+				r := PopplerRenderer{tools: &popplerTools{info: "info", raster: "raster"}}
+				r.command = func(_ context.Context, work, tool string, _ []string, out io.Writer) (RenderStats, error) {
+					dir = work
+					if tool == "info" {
+						_, _ = fmt.Fprintf(out, "Pages: %d\n", pages)
+						for n := 1; n <= pages; n++ {
+							_, _ = fmt.Fprintf(out, "Page %d MediaBox: 0 0 72 72\nPage %d CropBox: 0 0 72 72\n", n, n)
+						}
+						return RenderStats{}, nil
+					}
+					var b bytes.Buffer
+					if err := jpeg.Encode(&b, image.NewGray(image.Rect(0, 0, 2, 2)), nil); err != nil {
+						t.Fatal(err)
+					}
+					for n := 1; n <= pages; n++ {
+						if err := os.WriteFile(filepath.Join(work, fmt.Sprintf("page-%d.jpg", n)), b.Bytes(), 0600); err != nil {
+							t.Fatal(err)
+						}
+					}
+					return RenderStats{}, nil
+				}
+				r.validateJPEG = func(path string) error {
+					validations++
+					if mode == "cancel" {
+						cancel()
+					} else {
+						<-ctx.Done()
+					}
+					return validateJPEG(path)
+				}
+				paths, cleanup, err := r.RenderJPEG(ctx, smallPDF(), pages)
+				if cleanup != nil {
+					defer cleanup()
+				}
+				if err == nil || err.Error() != "render_failed" || len(paths) != 0 {
+					t.Fatalf("paths=%v err=%v", paths, err)
+				}
+				// Under load the 10 ms deadline can pass before validation starts.
+				if validations > 1 || mode == "cancel" && validations != 1 {
+					t.Fatalf("validated %d pages after interruption", validations)
+				}
+				if _, err := os.Stat(dir); !os.IsNotExist(err) {
+					t.Fatal("scratch retained")
+				}
+			})
+		}
 	}
 }

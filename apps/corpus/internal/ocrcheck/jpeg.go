@@ -94,20 +94,29 @@ func (p PopplerRenderer) RenderJPEG(ctx context.Context, pdf []byte, pages int) 
 		}
 		first = last
 	}
-	paths, err = jpegPages(dir, pages)
+	paths, err = jpegPages(ctx, dir, pages, p.validateJPEG)
 	if err != nil {
 		return nil, cleanup, err
+	}
+	if ctx.Err() != nil {
+		return nil, cleanup, renderFailed
 	}
 	return paths, cleanup, nil
 }
 
-func jpegPages(dir string, pages int) ([]string, error) {
+func jpegPages(ctx context.Context, dir string, pages int, validate func(string) error) ([]string, error) {
+	if validate == nil {
+		validate = validateJPEG
+	}
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, renderFailed
 	}
 	paths := make([]string, pages)
 	for _, entry := range entries {
+		if ctx.Err() != nil {
+			return nil, renderFailed
+		}
 		name := entry.Name()
 		if !strings.HasPrefix(name, "page") {
 			continue
@@ -126,32 +135,12 @@ func jpegPages(dir string, pages int) ([]string, error) {
 			return nil, renderFailed
 		}
 		path := filepath.Join(dir, name)
-		f, err := os.Open(path)
-		if err != nil {
+		validationErr := validate(path)
+		if ctx.Err() != nil {
 			return nil, renderFailed
 		}
-		info, statErr := f.Stat()
-		if statErr != nil || info.Size() > 7_000_000 {
-			_ = f.Close()
-			if statErr == nil {
-				return nil, PageTooLarge
-			}
-			return nil, renderFailed
-		}
-		config, configErr := jpeg.DecodeConfig(f)
-		// Poppler 26 writes three components even with -gray, so the color model is not checked.
-		if configErr != nil || config.Width > maxImageSide || config.Height > maxImageSide {
-			_ = f.Close()
-			return nil, renderFailed
-		}
-		if _, seekErr := f.Seek(0, io.SeekStart); seekErr != nil {
-			_ = f.Close()
-			return nil, renderFailed
-		}
-		_, decodeErr := jpeg.Decode(f)
-		closeErr := f.Close()
-		if decodeErr != nil || closeErr != nil {
-			return nil, renderFailed
+		if validationErr != nil {
+			return nil, validationErr
 		}
 		paths[n-1] = path
 	}
@@ -160,5 +149,39 @@ func jpegPages(dir string, pages int) ([]string, error) {
 			return nil, renderFailed
 		}
 	}
+	if ctx.Err() != nil {
+		return nil, renderFailed
+	}
 	return paths, nil
+}
+
+func validateJPEG(path string) error {
+	f, err := os.Open(path)
+	if err != nil {
+		return renderFailed
+	}
+	info, statErr := f.Stat()
+	if statErr != nil || info.Size() > 7_000_000 {
+		_ = f.Close()
+		if statErr == nil {
+			return PageTooLarge
+		}
+		return renderFailed
+	}
+	config, configErr := jpeg.DecodeConfig(f)
+	// Poppler 26 writes three components even with -gray, so the color model is not checked.
+	if configErr != nil || config.Width > maxImageSide || config.Height > maxImageSide {
+		_ = f.Close()
+		return renderFailed
+	}
+	if _, seekErr := f.Seek(0, io.SeekStart); seekErr != nil {
+		_ = f.Close()
+		return renderFailed
+	}
+	_, decodeErr := jpeg.Decode(f)
+	closeErr := f.Close()
+	if decodeErr != nil || closeErr != nil {
+		return renderFailed
+	}
+	return nil
 }
