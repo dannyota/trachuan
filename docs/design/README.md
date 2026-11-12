@@ -28,6 +28,7 @@ Intended behavior of trachuan. Decisions with alternatives are in the
 | [source execution](source-execution.md)             | Shared source interfaces, finalization, retries and durable pauses                            |
 | [retry of source gaps](source-retry.md)             | What a restart retries, rewinds and clears, and the reuse of a run's own acquisitions         |
 | [fetch reuse](fetch-reuse.md)                       | What a new run keeps from the previous VBPL read when `updatedDate` is unchanged              |
+| [attachments by content hash](fetch-attachments.md) | Copy or download each VBPL attachment by its source ETag, fail closed                         |
 | [auth](auth.md)                                     | Google login, OAuth for MCP, CIMD, revocation, account lifecycle                              |
 | [web API](web-api.md)                               | Google login flow, web sessions, CSRF, `/api/v1` routes, OpenAPI contract                     |
 | [OAuth](oauth.md)                                   | MCP authorization server: clients, consent, codes, tokens, aboutme import gaps                |

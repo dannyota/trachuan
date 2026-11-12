@@ -57,33 +57,22 @@ nodes; at most 3 listing passes per query.
 VBPL gateway: at most 16 requests per second and 16 in flight by default
 (`CORPUS_VBPL_RPS`, `CORPUS_VBPL_IN_FLIGHT`); request timeout 40 seconds,
 counted from the moment the request asks for a slot, so waits for the slot, the
-rate limit and the source gate are inside it. Retry HTTP 429, HTTP 5xx and
-timeouts 3 times, after 2, 8 and 30 seconds; the whole sequence for one request
-ends after 200 seconds at the latest (four attempts and their waits take 200).
-The gateway itself answers HTTP 504 after 30 seconds for a request it cannot
-serve (measured 2026-11-12: two diagrams, every time); the client's 40 seconds
-let that 504 arrive and count as 5xx, where a 30-second deadline cut it a moment
-earlier and made it a retryable timeout that stalled the run. The same diagrams
-later answered HTTP 500 "Lỗi cơ sở dữ liệu" in under a second and after 25
-seconds, a source database error with varying latency, so a call whose retry
-sequence saw any HTTP 5xx counts as 5xx even if its last try timed out; HTTP 429
-anywhere in the sequence keeps it a load signal. A document whose gateway calls
-still return HTTP 5xx after those retries becomes a `source_unavailable` gap in
-the same attempt: the stage does not retry it, so a document the source keeps
-refusing never holds a batch or the stage close; the next run fetches it again.
-HTTP 429 and timeouts that outlast the client retries stay retryable at the
-batch level, because they signal load, not a broken document, but only once: an
-item whose source calls time out again in the next attempt of its batch (its own
-previous retryable cause, kept on its pending row, was a timeout too) becomes a
-`source_unavailable` gap with cause timeout in that attempt, so a document the
-source never answers cannot fail the run; the next run asks again. Measured
-2026-11-09: 10.5 requests per second at concurrency 8, p50 636 ms, no errors;
-measured 2026-11-10: 0.11 to 0.36 s per request. The 16 defaults are provisional
-until a live run records their error rate. Attachment downloads use a separate
-pool of 8 in flight (`CORPUS_VBPL_FILE_IN_FLIGHT`) with no request rate limit,
-because the attachment CDN caps throughput per IP (about 4 MB/s, measured by
-banhmi); a slow download never holds a gateway slot. Fetch issues a document's
-detail and diagram calls concurrently; a full read under
+rate limit and the source gate are inside it. The 40 seconds exceed the
+gateway's own 30-second cut, so its HTTP 504 arrives and counts as 5xx. HTTP
+5xx, a timeout or a transport error gets one retry after 2 seconds; if that
+fails the document becomes a `source_unavailable` gap with the cause in the same
+attempt, and the next run asks again (owner rule 2026-11-12: one fast retry,
+then a gap; measured the same day, two diagrams answered 504 or 500 for hours
+and stalled a run for 22 minutes under the earlier three retries and batch
+backoff). HTTP 429 is a load signal: 3 retries after 2, 8 and 30 seconds, and it
+alone stays retryable at the batch level. Measured 2026-11-09: 10.5 requests per
+second at concurrency 8, p50 636 ms, no errors; measured 2026-11-10: 0.11 to
+0.36 s per request. The 16 defaults are provisional until a live run records
+their error rate. Attachment downloads use a separate pool of 8 in flight
+(`CORPUS_VBPL_FILE_IN_FLIGHT`) with no request rate limit, because the
+attachment CDN caps throughput per IP (about 4 MB/s, measured by banhmi); a slow
+download never holds a gateway slot. Fetch issues a document's detail and
+diagram calls concurrently; a full read under
 [fetch reuse](fetch-reuse.md#read-rule) then issues the tree and file list calls
 concurrently and downloads its attachments concurrently within the file pool.
 
@@ -91,9 +80,13 @@ concurrently and downloads its attachments concurrently within the file pool.
 minute, 500 pages per document, render bound 30 seconds plus 2 per page, scratch
 ceiling 256 MB per document as for the cross-check; provisional.
 
-[Fetch reuse](fetch-reuse.md): reuse age limit 30 days from the original network
-read; control divisor 20 (about 5% of documents re-read in full per run). Both
-are provisional until three runs report their control outcomes.
+[Fetch reuse](fetch-reuse.md): control divisor 20 (about 5% of documents re-read
+in full per run), provisional until three runs report their control outcomes.
+ETag requests run in the attachment pool: 8 in flight, a 30-second deadline, no
+retry (a failure means a download). Attachment downloads: 30 seconds plus the
+listed size at 250 kB/s per attempt, one retry after 2 seconds, then `missing`
+with a `missing_attachment` gap
+([attachments](fetch-attachments.md#download-deadline-and-failures)).
 
 Stage batches in flight: 8 by default (`CORPUS_BATCHES_IN_FLIGHT`); `fetch` runs
 16 (`CORPUS_FETCH_BATCHES_IN_FLIGHT`); `embed` runs at most 2, so one batch
@@ -104,23 +97,24 @@ default `s3-han02.fptcloud.com`.
 
 ### Corpus scope ceilings (proposed, pending measurement)
 
-| Limit                    | Value                                                                                                                 |
-| ------------------------ | --------------------------------------------------------------------------------------------------------------------- |
-| Relation expansion       | 1 hop; 5,000 distinct added context ids per run                                                                       |
-| Discovery result bound   | 100,000 ids per query; 3 complete passes maximum                                                                      |
-| Central listing          | Page size 1,000; measured 2026-11-09: 57,951 ids, 58 requests and 86 MB per pass, 129 s for two passes at 1 request/s |
-| chinhphu candidates      | 100 unique docids per run, before VBPL exclusion                                                                      |
-| chinhphu search          | Request cap 500; 100 pages per query per pass; 3 passes maximum                                                       |
-| chinhphu requests        | 1 request/s, burst 1, 1 in flight across page and file hosts                                                          |
-| chinhphu response        | 5 MB per HTML response; existing 50 MB attachment cap                                                                 |
-| chinhphu total downloads | 1 GB per client lifetime (one worker process), retries and rejected bodies included; no durable per-run cap yet       |
-| chinhphu deadlines       | 30 s page request; 120 s PDF request; 5 min per item; at most 3 redirects, each revalidated                           |
-| chinhphu retries         | 3 after 2, 8 and 30 s for 429, 5xx or transport timeout; wait at least `Retry-After`, above 10 min defer with a gap   |
+| Limit                    | Value                                                                                                                                             |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Relation expansion       | 1 hop; 5,000 distinct added context ids per run                                                                                                   |
+| Discovery result bound   | 100,000 ids per query; 3 complete passes maximum                                                                                                  |
+| Central listing          | Page size 1,000; measured 2026-11-09: 57,951 ids, 58 requests and 86 MB per pass, 129 s for two passes at 1 request/s                             |
+| chinhphu candidates      | 100 unique docids per run, before VBPL exclusion                                                                                                  |
+| chinhphu search          | Request cap 500; 100 pages per query per pass; 3 passes maximum                                                                                   |
+| chinhphu requests        | 1 request/s, burst 1, 1 in flight across page and file hosts                                                                                      |
+| chinhphu response        | 5 MB per HTML response; existing 50 MB attachment cap                                                                                             |
+| chinhphu total downloads | 1 GB per client lifetime (one worker process), retries and rejected bodies included; no durable per-run cap yet                                   |
+| chinhphu deadlines       | 30 s page request; PDF request 30 s plus size at 250 kB/s; 5 min per item; at most 3 redirects, each revalidated                                  |
+| chinhphu retries         | 1 after 2 s for 5xx, timeout or transport error, then a gap; 429 as the [source error table](fetch-attachments.md#download-deadline-and-failures) |
 
-These are worker-wide source limits, not per-activity allowances. Honor the
-later of retry backoff and `Retry-After` within the item deadline; exhaustion is
-a retryable source gap and access denials pause the source. All attempts consume
-request and byte budgets; record count, bytes and time in run evidence.
+These are worker-wide source limits, not per-activity allowances. Retries, HTTP
+429 waits and their exhaustion follow the
+[source error table](fetch-attachments.md#download-deadline-and-failures);
+access denials pause the source. All attempts consume request and byte budgets;
+record count, bytes and time in run evidence.
 
 Exceeding a count or byte ceiling fails that scope stage explicitly; never
 truncate a listing, expansion or attachment inventory and mark it complete. The

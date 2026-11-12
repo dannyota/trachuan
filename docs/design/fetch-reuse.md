@@ -2,8 +2,9 @@
 
 Proposed. A new run reads every VBPL document in full although almost nothing
 changed since the previous run. This note lets fetch keep the tree, the file
-list and the attachments of a document whose `updatedDate` did not move. It
-extends [fetch bundles](fetch-bundles.md) and the
+list and the attachments of a document whose `updatedDate` did not move, and
+copies any attachment whose name and content hash equal a stored copy instead of
+downloading it again. It extends [fetch bundles](fetch-bundles.md) and the
 [cache rule](pipeline.md#source-ingest-rules); [retry](source-retry.md) still
 owns reuse inside one run. Only VBPL is covered; chinhphu fetch is unchanged.
 
@@ -36,6 +37,32 @@ responses carry `cache-control: no-cache, no-store`, no `ETag` and no
 `Last-Modified` (probed 2026-11-12), so conditional requests do not exist. The
 listing has an `updatedDate` key, null in all 463,684 stored listing items. The
 detail call is the only place to read it.
+
+Attachments do carry a content hash (probed 2026-11-12). The file list gives
+each file a presigned GET URL on `s3-han02.fptcloud.com`, valid 24 hours. A
+`GET` of that URL with `Range: bytes=0-0` answers 206 with `ETag`; `HEAD`
+answers 403, because the signature covers `GET` only. The list's own `etag`
+field is null. Sample of 78 files, the 45 largest stored attachments, 25 of 4 to
+9 MB and the 8 files of `vn:vbpl:171687`: 35 ETags have MD5 form and all equal
+the MD5 of the stored copy; 42 have S3 multipart form and all equal the
+multipart ETag computed from the stored copy, 39 with 16 MiB parts and 3 with 5
+MiB parts; 1 ranged request failed. Multipart ETags start near 7.5 MB; 742
+stored files are larger than 5 MB.
+
+An earlier version of this note reused attachments only while their first
+network read was younger than an age limit, and treated an unknown origin time
+as expired. Run `vn/20261112_1` copied 2,391 attachments of 1,383 documents from
+the local cache, which records no origin time, so the next run, `vn/20261112_2`,
+had read 803 of its first 3,094 documents in full for age and downloaded 7,592
+attachments (3.6 GB) again. Content hashes replace that rule. Across every
+stored VBPL fetch bundle (11,224 bundles of 4,577 documents written 2026-11-09
+to 11-12, `fetched_file` joined to `artifact`, distinct SHA-256 per item and
+file name), 32,794 files appear in two or more bundles under the same document
+and name, and exactly one changed content: `vn:vbpl:13205` `13205.xml`, 3,298 to
+3,380 bytes on 2026-11-11; no PDF, Word or original-text file changed. The
+16,863 attachments (8.65 GB) that runs `vn/20261112_1` and `_2` downloaded for
+age include none whose bytes differ from a stored copy of the same document and
+name. The age rule never detected a change and cost about 5 GB a run.
 
 One day and two runs is a small sample. The [control](#control) exists because
 of that.
@@ -99,88 +126,87 @@ For each VBPL item that reads the source:
 1. Read detail and diagram, two gateway calls, as today. Identity checks and
    error handling are unchanged.
 2. Reuse the baseline's `tree.json`, `files.json`, `report.json` and attachment
-   files when every condition holds. Otherwise make the full read of today.
-3. Publish the bundle from the fresh detail and diagram and the reused or fresh
+   files when every condition holds:
+   - the whole baseline bundle verifies against its manifest, and its
+     `detail.json` names the same document;
+   - the fresh `data.updatedDate` is a non-null string and equals the baseline's
+     byte for byte (null on either side is a full read);
+   - the baseline `report.json` has an empty `missing` list, so a late
+     attachment is found (`too_large` entries do not block reuse);
+   - the item is not in this run's control sample.
+3. Otherwise make a full read: tree and file list, two more gateway calls, then
+   each listed attachment by the rule below.
+4. Publish the bundle from the fresh detail and diagram and the reused or fresh
    remainder. Equal bytes give the equal manifest hash and the existing
    artifact.
 
-Conditions for reuse, all required:
-
-- The whole baseline bundle verifies against its manifest, and its `detail.json`
-  names the same document.
-- The fresh `data.updatedDate` is a non-null string and equals the baseline's
-  byte for byte. Null on either side is a full read.
-- The baseline `report.json` has an empty `missing` list, so a late attachment
-  is found. `too_large` entries do not block reuse.
-- The oldest origin time among the reused files is known and not older than the
-  reuse age limit in [budgets](budgets.md).
-- The item is not in this run's control sample.
-
 A failed verification is logged with run, key and reason and becomes a full
-read; storage that cannot be read at all stays an infrastructure error.
+read; storage that cannot be read at all stays an infrastructure error. No
+condition reads a time: origin times stay recorded in the observations and
+nothing else uses them.
 
-In a full read for any reason other than the control sample or the age limit,
-the existing attachment cache rule also accepts the baseline bundle as a cache:
-an attachment whose document id, name and size match a baseline file with a
-known origin time no earlier than the gateway's `updatedAt` for that file is
-copied once its sha256 verifies. Documents with a null `updatedDate` then cost
-four gateway calls and no download. A file whose baseline origin time is unknown
-or older than the age limit is never copied, from the baseline or from the local
-cache: an expired document downloads every attachment again.
+## Attachments by content hash
 
-What stays fresh in every run: the detail, with status, dates and `effTo`, and
-the diagram, with all relations. What can be stale: a tree, file list or
-attachment that the source changed without moving `updatedDate`. The age limit
-bounds that, and the control measures it.
+In a full read every listed attachment is copied from a stored copy or
+downloaded under [attachments by content hash](fetch-attachments.md): the
+source's ETag, read with a one-byte ranged request, decides; no time does.
 
 ## Control
 
-Each run re-reads a deterministic sample in full, with real downloads: the items
-where the first 8 bytes of `sha256(document_key || 0x00 || rel)`, read as an
-unsigned integer, are divisible by the control divisor in [budgets](budgets.md).
-The full read is the item's result. When the item would otherwise have reused
-its baseline, fetch compares the two and records one outcome:
+Each run re-reads a deterministic sample in full: the items where the first 8
+bytes of `sha256(document_key || 0x00 || rel)`, read as an unsigned integer, are
+divisible by the control divisor in [budgets](budgets.md). The sampled item
+makes the full read above, with an ETag request for every file, so it downloads
+only files whose hash differs or cannot be compared. When the item would
+otherwise have reused its baseline, fetch compares the two and records one
+outcome:
 
-| Outcome         | Meaning                                                        |
-| --------------- | -------------------------------------------------------------- |
-| `same`          | `tree.json`, `files.json` and `report.json` byte-identical     |
-| `tree_ids_only` | Trees equal after removing node `key` and `id`; rest identical |
-| `changed`       | Anything else: the rule would have kept stale content          |
+| Outcome         | Meaning                                                                                                                       |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `same`          | `tree.json`, `files.json` and `report.json` byte-identical                                                                    |
+| `tree_ids_only` | Trees equal after removing node `key` and `id`; rest identical                                                                |
+| `changed`       | Anything else, including a file that does not match its stored copy under [attachments by content hash](fetch-attachments.md) |
 
-Every `changed` outcome is logged at WARN with the document key and the files
-that differ. The run message carries the fetch counts: reused, full reads by
-reason (`no_baseline`, `null_date`, `date_changed`, `missing_attachment`, `age`,
-`invalid_baseline`, `control`) and the three control outcomes. A `changed`
-outcome does not fail the run; the primary reads the document and decides
-whether the rule must narrow. The age limit makes every document a full read at
-least once per limit, whatever the sample chose.
+A file of a sampled document that is downloaded because its hash differs is
+counted `control_file_changed`. Every `changed` outcome is logged at WARN with
+the document key and the files that differ. A `changed` outcome does not fail
+the run; the primary reads the document and decides whether the reuse rule must
+narrow.
+
+## Counts
+
+The run message carries `fetch_reads`: reused; full reads by reason
+(`no_baseline`, `invalid_baseline`, `null_date`, `date_changed`,
+`missing_attachment`, `control`); the control outcomes; and per attachment of a
+full read: copied (`etag_md5`, `etag_multipart`, each from baseline or cache)
+and downloaded by reason (`no_candidate`, `etag_differs`, `etag_other_form`,
+`etag_unavailable`, `candidate_unverified`).
 
 ## Observations and times
 
 Detail and diagram observations are `network`, as today. A reused tree or
-attachment is recorded with acquisition `adopted`. Its origin is the observation
-with the same path and content hash in the baseline's producing commit: the new
-row copies that observation's time and points `origin_ref` at it. Chains keep
-the first network time, so the age limit counts from the real read. An unknown
-origin time stays null and fails the age condition. `fetched_file.fetched_at`
-follows the existing rule in
-[fetch bundles](fetch-bundles.md#observation-commit-and-recovery). Bundles still
-carry no time, so reuse cannot change a hash.
+attachment is recorded with acquisition `adopted`; its origin is the observation
+with the same path and content hash in the baseline's producing commit, whose
+time it copies, with `origin_ref` pointing at it. A cache copy keeps a null
+time. `fetched_file.fetched_at` follows
+[fetch bundles](fetch-bundles.md#observation-commit-and-recovery). These times
+are audit evidence only. Bundles carry no time, so reuse cannot change a hash.
+
+## Recipe
+
+Neither the read rule nor the file rule is a fetch recipe input
+(`apps/corpus/internal/stage/fetch/fetch.go`, `Recipe`). `files.json` stays the
+array of `{name,sha256,size}` and the file sits at `files/<sha256>` whether it
+was copied or downloaded; presigned URLs and ETags are never in the bundle. So
+bundles keep their bytes and today's baselines stay valid. The fetch recipe does
+not change.
 
 ## Effect
 
-Expected for a run one day after its baseline, from the counts above (3,832 VBPL
-documents, divisor 20):
-
-| Group                               | Documents | Gateway calls | Downloads |
-| ----------------------------------- | --------- | ------------- | --------- |
-| Reused                              | ~3,440    | 2 each        | 0         |
-| Null `updatedDate`, date moved, gap | ~200      | 4 each        | few       |
-| Control sample                      | ~190      | 4 each        | ~1,450    |
-| Total                               | 3,832     | ~8,450        | ~1,500    |
-
-About 55% of today's gateway calls and 5% of today's downloads. The first run
-under a new fetch recipe, and the first run after the age limit, is a full pass.
+A run on unchanged sources makes two gateway calls per reused document, four
+plus one ETag request per file for a full read, and downloads only files whose
+hash differs or cannot be compared. The first live run after the change reports
+the counts and the fetch stage time in the research note.
 
 Known cost left in place: a diagram-only change (37 documents in the measured
 day) changes the fetch manifest, and [chunk](chunk.md#stage-and-artifact) binds
@@ -193,26 +219,25 @@ The primary runs these; they are requirements, not results.
 
 - `viewCount`: two details that differ only in the counter give identical stored
   bytes and manifest; expected-byte fixtures for the member first, in the
-  middle, last and alone, with and without whitespace, duplicated (the case
-  above) and with an escaped key; a detail without the member is unchanged.
+  middle, last and alone, with and without whitespace, duplicated and with an
+  escaped key; a detail without the member is unchanged.
 - Reuse: with an equal `updatedDate` the fake source sees exactly two calls and
-  no download, and the bundle equals the full-read bundle byte for byte.
+  no download, and the bundle equals the full-read bundle byte for byte; an old
+  baseline (any age, unknown origin times included) is reused.
 - Each blocking condition alone forces the full read: no baseline, null date on
-  either side, moved date, nonempty `missing`, age over the limit, unknown
-  origin time, corrupted baseline file, other recipe hash.
-- A full read with a null date takes matching attachments from the baseline and
-  downloads one whose gateway `updatedAt` is later than its origin time.
-- A document past the age limit downloads every attachment: the fake source
-  serves new bytes under an unchanged name, size and `updatedAt`, and the bundle
-  holds the new bytes.
-- Two runs commit byte-identical bundles at different times; a third run that
-  reuses takes time and `origin_ref` from the later producing commit, also after
-  checkpoint and restore.
-- Control: the sample is stable for a `(key, rel)` pair, makes real downloads,
-  and reports `same`, `tree_ids_only` and `changed` for prepared baselines.
+  either side, moved date, nonempty `missing`, corrupted baseline file, other
+  recipe hash, control sample.
+- Control: the sample is stable for a `(key, rel)` pair; a prepared baseline
+  gives `same`, `tree_ids_only` and `changed`, and a file the fake source
+  changed without moving `updatedDate` gives `control_file_changed` and is
+  downloaded.
 - Baseline row: written only by a committed done item that read the source; a
   gap, a failure, a stale attempt and an adopted acquisition leave it unchanged;
   it survives checkpoint and restore.
 - Restart of a run still adopts its own acquisitions with no source call.
+- The fetch recipe hash and the bytes of recorded bundles are unchanged, and a
+  copied attachment and a downloaded one give byte-identical `files.json`.
 - A live run after a baseline run reports its counts in the research note,
-  beside the fetch stage time.
+  beside the fetch stage time and the ETag pass time.
+- Attachment checks are listed in
+  [attachments by content hash](fetch-attachments.md#checks).
