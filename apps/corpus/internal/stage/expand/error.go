@@ -34,15 +34,18 @@ func apiError(err error, id string, detail bool) (stage.Output, error) {
 			status := int32(failure.HTTPStatus)
 			cause.HTTPStatus = &status
 		}
-		if cause.Cause == stage.CauseHTTP5xx {
+		if cause.Cause != stage.CauseHTTP429 {
 			return unavailableNow(wrapped, cause), nil
 		}
 		return stage.Output{}, &stage.RetryableError{Err: wrapped, GapKind: "source_unavailable", Cause: cause}
 	}
 	var status *vbpl.StatusError
-	if errors.As(err, &status) && (status.Code == 429 || status.Code >= 500 && status.Code <= 599) {
+	if errors.As(err, &status) {
 		code := int32(status.Code)
-		cause := stage.GapCause{Source: "vbpl", Origin: stage.OriginGateway, Cause: stage.CauseHTTP5xx, Endpoint: status.Endpoint, HTTPStatus: &code}
+		cause := stage.GapCause{Source: "vbpl", Origin: stage.OriginGateway, Cause: stage.CauseUnknown, Endpoint: status.Endpoint, HTTPStatus: &code}
+		if code >= 500 && code <= 599 {
+			cause.Cause = stage.CauseHTTP5xx
+		}
 		if code == 429 {
 			cause.Cause = stage.CauseHTTP429
 			return stage.Output{}, &stage.RetryableError{Err: wrapped, GapKind: "source_unavailable", Cause: cause}
@@ -53,9 +56,7 @@ func apiError(err error, id string, detail bool) (stage.Output, error) {
 	return stage.Output{}, stage.Retryable(wrapped)
 }
 
-// unavailableNow turns a gateway 5xx that survived the client retries into a
-// source_unavailable gap in this attempt, as fetch does, keeping its
-// structured cause so a later start can retry the seed.
+// unavailableNow records an exhausted source request without a batch retry.
 func unavailableNow(err error, c stage.GapCause) stage.Output {
 	detail := []rune(err.Error())
 	if len(detail) > 200 {

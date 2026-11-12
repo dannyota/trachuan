@@ -36,3 +36,5 @@ Observations and experiments. Not project authority.
   row counts for hit relation hydration on vn/20261111_4.
 - [Clause and point parsing](vn-clause-parsing-2026-11.md): the clause and point
   grammar measured against source trees on vn/20261111_4.
+- [VBPL attachment ETags](vbpl-etag-2026-11.md): ETag forms of every VBPL
+  attachment and how they match stored copies, 2026-11-12.

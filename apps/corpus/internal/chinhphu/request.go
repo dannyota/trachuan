@@ -8,7 +8,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"strconv"
+	"os"
 	"strings"
 	"syscall"
 	"time"
@@ -33,6 +33,9 @@ func (b budgetReader) Read(p []byte) (int, error) {
 	}
 	n, e := b.r.Read(p)
 	b.c.used += int64(n)
+	if e != nil && !errors.Is(e, io.EOF) {
+		e = classifiedTransport(e)
+	}
 	return n, e
 }
 func (c *Client) admit(ctx context.Context) error {
@@ -43,10 +46,13 @@ func (c *Client) admit(ctx context.Context) error {
 	if !ok {
 		return errors.New("source admission: missing run id")
 	}
-	if e := c.gate.Admit(ctx, id, "chinhphu"); e != nil {
-		return fmt.Errorf("source admission: %w", e)
+	if e := c.pauses.Await(ctx, c.gate, id, "chinhphu", 2*time.Second); e != nil {
+		return e
 	}
-	return nil
+	if e := c.gate.Admit(ctx, id, "chinhphu"); e != nil {
+		return &clientError{fmt.Errorf("source admission: %w", e)}
+	}
+	return c.pauses.Await(ctx, c.gate, id, "chinhphu", 2*time.Second)
 }
 func (c *Client) pause(ctx context.Context, reason string) error {
 	if c.gate != nil {
@@ -54,32 +60,30 @@ func (c *Client) pause(ctx context.Context, reason string) error {
 		if !ok {
 			return errors.New("source pause: missing run id")
 		}
-		if e := c.gate.Pause(ctx, id, "chinhphu", reason, ""); e != nil {
-			return fmt.Errorf("source pause: %w", e)
+		if e := c.pauses.Start(ctx, c.gate, id, "chinhphu", reason, 2*time.Second); !errors.Is(e, sourcegate.ErrSourcePaused) {
+			return e
+		}
+		if e := c.pauses.Await(ctx, c.gate, id, "chinhphu", 2*time.Second); e != nil {
+			return e
 		}
 	}
 	return fmt.Errorf("source denied access: %w", sourcegate.ErrSourcePaused)
 }
-func retryDelay(h string, now time.Time) time.Duration {
-	if h == "" {
-		return 0
-	}
-	value := strings.TrimSpace(h)
-	if value != "" && strings.Trim(value, "0123456789") == "" {
-		n, e := strconv.ParseUint(value, 10, 64)
-		if e != nil || n > 600 {
-			return 601 * time.Second
-		}
-		return time.Duration(n) * time.Second
-	}
-	if t, e := http.ParseTime(h); e == nil && t.After(now) {
-		return t.Sub(now)
-	}
-	return 0
-}
+func retryDelay(h string, now time.Time) time.Duration { return sourcegate.RetryAfter(h, now) }
 func classified(err error, endpoint string, status int) error {
 	if err == nil {
 		return nil
+	}
+	var prior *Failure
+	if errors.As(err, &prior) {
+		copyFailure := *prior
+		if copyFailure.Endpoint == "" {
+			copyFailure.Endpoint = endpoint
+		}
+		if copyFailure.HTTPStatus == 0 {
+			copyFailure.HTTPStatus = status
+		}
+		return &copyFailure
 	}
 	if errors.Is(err, sourcegate.ErrSourcePaused) {
 		return err
@@ -105,41 +109,52 @@ func classified(err error, endpoint string, status int) error {
 	return &Failure{Origin: origin, Cause: cause, Endpoint: endpoint, HTTPStatus: status, Err: safe}
 }
 func (c *Client) request(ctx context.Context, method, target string, form url.Values, file bool, consume func(io.Reader, http.Header) error) error {
+	ctx = sourcegate.EnsureActivity(ctx)
 	endpoint := "page"
 	timeout := c.limits.PageTimeout
 	if file {
 		endpoint = "attachment"
 		timeout = c.limits.FileTimeout
 	}
-	for attempt := 0; ; attempt++ {
-		status, after, err := c.attempt(ctx, method, target, form, file, timeout, consume)
-		if err != nil && errors.Is(err, sourcegate.ErrSourcePaused) {
+
+	policy := sourcegate.Retry{Backoffs: c.backoffs}
+	for {
+		attemptCtx, cancel := context.WithTimeout(ctx, timeout)
+		status, after, err := c.attempt(attemptCtx, method, target, form, file, timeout, consume)
+		cancel()
+		if contextErr := sourcegate.OutcomeContextError(ctx, status, http.StatusOK, err); contextErr != nil {
+			return contextErr
+		}
+		var local *localDownloadError
+		var own *clientError
+		var disk *os.PathError
+		if errors.As(err, &own) || errors.As(err, &local) || errors.As(err, &disk) || errors.Is(err, sourcegate.ErrSourcePaused) {
 			return err
 		}
-		if errors.Is(err, ErrBudget) || errors.Is(err, ErrTooLarge) {
+		if errors.Is(err, ErrBudget) || errors.Is(err, ErrTooLarge) || errors.Is(err, errInvalidPayload) {
 			return classified(err, endpoint, status)
 		}
 		var ne net.Error
-		var partial *partialDownload
-		retry := status == 429 || status >= 500 || errors.Is(err, context.DeadlineExceeded) || (errors.As(err, &ne) && ne.Timeout())
-		if errors.As(err, &partial) {
-			retry = false
+		var failure *Failure
+		transient := errors.As(err, &failure) && failure.Origin == "transport" || status >= 500 && status <= 599 || errors.Is(err, context.DeadlineExceeded) || errors.As(err, &ne) || errors.Is(err, io.ErrUnexpectedEOF)
+		delay, retry, deferred := policy.Next(status, transient, after)
+		if deferred {
+			return &Failure{Origin: "gateway", Cause: "unknown", Endpoint: endpoint, HTTPStatus: status, Err: ErrDeferred}
 		}
-		if retry && attempt < len(c.backoffs) {
-			delay := c.backoffs[attempt]
-			if after > delay {
-				delay = after
-			}
-			if delay > 10*time.Minute {
-				return &Failure{Origin: "gateway", Cause: statusCause(status), Endpoint: endpoint, HTTPStatus: status, Err: ErrDeferred}
-			}
+		if retry && ctx.Err() == nil {
 			if e := c.sleep(ctx, delay); e != nil {
-				return classified(e, endpoint, status)
+				if contextErr := sourcegate.OutcomeContextError(ctx, status, http.StatusOK, e); contextErr != nil {
+					return contextErr
+				}
+				if ctx.Err() == nil {
+					return e
+				}
+			} else {
+				continue
 			}
-			continue
 		}
-		if retry && after > 10*time.Minute {
-			return &Failure{Origin: "gateway", Cause: statusCause(status), Endpoint: endpoint, HTTPStatus: status, Err: ErrDeferred}
+		if status == 429 {
+			return &Failure{Origin: "gateway", Cause: "http_429", Endpoint: endpoint, HTTPStatus: status}
 		}
 		if err != nil {
 			return classified(err, endpoint, status)
@@ -148,17 +163,12 @@ func (c *Client) request(ctx context.Context, method, target string, form url.Va
 			return ErrNotFound
 		}
 		if status != 200 {
-			cause := "unknown"
-			if status == 429 {
-				cause = "http_429"
-			} else if status >= 500 {
-				cause = "http_5xx"
-			}
-			return &Failure{Origin: "gateway", Cause: cause, Endpoint: endpoint, HTTPStatus: status}
+			return &Failure{Origin: "gateway", Cause: statusCause(status), Endpoint: endpoint, HTTPStatus: status}
 		}
 		return nil
 	}
 }
+
 func (c *Client) attempt(ctx context.Context, method, target string, form url.Values, file bool, timeout time.Duration, consume func(io.Reader, http.Header) error) (int, time.Duration, error) {
 	for redirects := 0; ; redirects++ {
 		status, loc, after, err := c.hop(ctx, method, target, form, file, timeout, consume)
@@ -210,13 +220,9 @@ func (c *Client) hop(ctx context.Context, method, target string, form url.Values
 	if err = c.checkURL(requestCtx, target, file); err != nil {
 		return 0, "", 0, err
 	}
-	limit := c.limits.HTMLBytes
-	if file {
-		limit = c.limits.FileBytes
-	}
-	return c.one(requestCtx, method, target, form, timeout, limit, consume)
+	return c.one(requestCtx, method, target, form, timeout, consume)
 }
-func (c *Client) one(ctx context.Context, method, target string, form url.Values, timeout time.Duration, limit int64, consume func(io.Reader, http.Header) error) (int, string, time.Duration, error) {
+func (c *Client) one(ctx context.Context, method, target string, form url.Values, timeout time.Duration, consume func(io.Reader, http.Header) error) (int, string, time.Duration, error) {
 	reqctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	var body io.Reader
@@ -237,35 +243,59 @@ func (c *Client) one(ctx context.Context, method, target string, form url.Values
 		if errors.As(e, &ue) {
 			e = ue.Err
 		}
-		return 0, "", 0, e
+		return 0, "", 0, classifiedTransport(e)
 	}
 	defer func() { _ = resp.Body.Close() }()
-	r := budgetReader{c, resp.Body}
 	status := resp.StatusCode
 	after := retryDelay(resp.Header.Get("Retry-After"), c.now())
+	prefix, r := sourcegate.ResponsePrefix(ctx, budgetReader{c, resp.Body}, resp.Body, status, http.StatusOK, responseChallenge)
+	if responseChallenge(prefix) {
+		return status, "", after, c.pause(ctx, "challenge")
+	}
 	if status == 403 {
 		return status, "", after, c.pause(ctx, "http 403")
 	}
+	if status == 429 {
+		return status, "", after, nil
+	}
 	if status != 200 {
-		n, readErr := io.Copy(io.Discard, io.LimitReader(r, limit+1))
-		if readErr != nil {
-			return status, "", after, readErr
-		}
-		if n > limit {
-			return status, "", after, ErrTooLarge
-		}
 		return status, resp.Header.Get("Location"), after, nil
 	}
 	e = consume(r, resp.Header)
 	return status, "", after, e
 }
 
+func responseChallenge(prefix []byte) bool {
+	node, _ := parseHTML(prefix)
+	return isChallenge(node, prefix)
+}
+
 func statusCause(status int) string {
 	if status == 429 {
 		return "http_429"
 	}
-	if status >= 500 {
+	if status >= 500 && status <= 599 {
 		return "http_5xx"
 	}
 	return "unknown"
 }
+
+func classifiedTransport(err error) error {
+	var n net.Error
+	cause := "connection_error"
+	if errors.Is(err, context.DeadlineExceeded) || errors.As(err, &n) && n.Timeout() {
+		cause = "timeout"
+	}
+	var safe error
+	if errors.Is(err, context.Canceled) {
+		safe = context.Canceled
+	} else if errors.Is(err, context.DeadlineExceeded) {
+		safe = context.DeadlineExceeded
+	}
+	return &Failure{Origin: "transport", Cause: cause, Err: safe}
+}
+
+type clientError struct{ err error }
+
+func (e *clientError) Error() string { return e.err.Error() }
+func (e *clientError) Unwrap() error { return e.err }

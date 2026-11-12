@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"danny.vn/trachuan/apps/corpus/internal/sourcegate"
 	"golang.org/x/time/rate"
 )
 
@@ -45,6 +46,7 @@ type Client struct {
 	page, file   string
 	testHosts    map[string]bool
 	gate         Gate
+	pauses       sourcegate.Pauses
 	http         *http.Client
 	transport    http.RoundTripper
 	limits       Limits
@@ -91,7 +93,7 @@ func New(opts ...Option) *Client {
 		c.limits.PageTimeout = 30 * time.Second
 	}
 	if c.limits.FileTimeout <= 0 {
-		c.limits.FileTimeout = 120 * time.Second
+		c.limits.FileTimeout = sourcegate.DownloadTimeout(-1)
 	}
 	if c.limits.ItemTimeout <= 0 {
 		c.limits.ItemTimeout = 5 * time.Minute
@@ -107,7 +109,7 @@ func New(opts ...Option) *Client {
 	return c
 }
 
-// ItemTimeout returns the configured timeout for one item.
+// ItemTimeout returns the configured timeout for page and lookup work.
 func (c *Client) ItemTimeout() time.Duration { return c.limits.ItemTimeout }
 
 // WithBaseURLs sets local test endpoints and permits their exact origins.

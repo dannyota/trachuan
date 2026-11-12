@@ -8,6 +8,8 @@ import (
 	"path"
 	"strings"
 
+	"danny.vn/trachuan/apps/corpus/internal/sourcegate"
+
 	xhtml "golang.org/x/net/html"
 )
 
@@ -31,6 +33,7 @@ type Detail struct {
 
 // Detail retrieves a document's displayed metadata and redacted HTML.
 func (c *Client) Detail(ctx context.Context, id int) (Detail, []byte, error) {
+	ctx = sourcegate.EnsureActivity(ctx)
 	ctx, cancel := context.WithTimeout(ctx, c.limits.ItemTimeout)
 	defer cancel()
 	if id <= 0 {

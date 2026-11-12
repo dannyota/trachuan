@@ -28,7 +28,7 @@ func TestFetchBaselineMigration_UpAndDown(t *testing.T) {
 	if _, err = provider.UpTo(ctx, 6); err != nil {
 		t.Fatal(err)
 	}
-	if _, err = provider.Up(ctx); err != nil {
+	if _, err = provider.UpTo(ctx, 7); err != nil {
 		t.Fatal(err)
 	}
 	var exists bool

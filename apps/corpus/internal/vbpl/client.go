@@ -11,7 +11,6 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"sync"
 	"syscall"
 	"time"
 
@@ -21,6 +20,9 @@ import (
 
 // ErrNotFound means the gateway did not find the requested document.
 var ErrNotFound = errors.New("vbpl: not found")
+
+// ErrDeferred means Retry-After exceeds ten minutes.
+var ErrDeferred = errors.New("vbpl: retry deferred")
 
 // ErrTooLarge means a response exceeds its size limit.
 var ErrTooLarge = errors.New("vbpl: response too large")
@@ -35,20 +37,22 @@ type Client struct {
 	base           string
 	http           *http.Client
 	fileHTTP       *http.Client
+	transport      http.RoundTripper
 	limiter        *rate.Limiter
 	slots          chan struct{}
 	fileSlots      chan struct{}
 	timeout        time.Duration
 	fileTimeout    time.Duration
 	requestBudget  time.Duration
+	now            func() time.Time
+	sleep          func(context.Context, time.Duration) error
 	slowThreshold  time.Duration
 	backoffs       []time.Duration
 	fileHosts      []string
 	allowTestHTTP  bool
 	gate           sourcegate.Gate
 	lookupPageSize int
-	pauseMu        sync.Mutex
-	pauses         map[int64]*pauseState
+	pauses         sourcegate.Pauses
 }
 
 // New creates a client. The version argument is retained for compatibility.
@@ -60,6 +64,7 @@ func New(version string) *Client {
 func NewWithBase(base, _ string, options ...Option) *Client {
 	c := &Client{lookupPageSize: 1000, base: base, http: &http.Client{}, limiter: rate.NewLimiter(16, 1), slots: make(chan struct{}, 16), fileSlots: make(chan struct{}, 8), timeout: gatewayAttemptTimeout, fileTimeout: 30 * time.Second, fileHosts: []string{"s3-han02.fptcloud.com"}, backoffs: []time.Duration{2 * time.Second, 8 * time.Second, 30 * time.Second}}
 	c.requestBudget = 200 * time.Second
+	c.now, c.sleep = time.Now, wait
 	c.slowThreshold = 10 * time.Second
 	for _, option := range options {
 		option(c)
@@ -71,11 +76,19 @@ func NewWithBase(base, _ string, options ...Option) *Client {
 	c.http.Transport = transport(cap(c.slots))
 	c.http.CheckRedirect = redirect
 	c.fileHTTP = &http.Client{Transport: transport(cap(c.fileSlots)), CheckRedirect: redirect}
+	if c.transport != nil {
+		c.http.Transport, c.fileHTTP.Transport = c.transport, c.transport
+	}
 	return c
 }
 
 // Option configures a client.
 type Option func(*Client)
+
+// WithTransport supplies the transport for gateway and attachment requests.
+func WithTransport(transport http.RoundTripper) Option {
+	return func(c *Client) { c.transport = transport }
+}
 
 // WithGate enables source admission for every request.
 func WithGate(g sourcegate.Gate) Option { return func(c *Client) { c.gate = g } }
@@ -119,7 +132,7 @@ type response struct {
 }
 
 // request holds a concurrency slot and timeout until the response body is consumed.
-func (c *Client) request(ctx context.Context, method, target string, body []byte, file bool, consume func(io.Reader) error) (status int, err error) {
+func (c *Client) request(ctx context.Context, method, target string, body []byte, file bool, opts requestOptions, consume func(io.Reader) error) (status int, err error) {
 	started := time.Now()
 	defer func() {
 		sourcegate.LogSlow(ctx, "vbpl", endpoint(target), time.Since(started), c.slowThreshold, status, err)
@@ -127,6 +140,9 @@ func (c *Client) request(ctx context.Context, method, target string, body []byte
 	timeout := c.timeout
 	if file {
 		timeout = c.fileTimeout
+	}
+	if opts.timeout > 0 {
+		timeout = opts.timeout
 	}
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
@@ -174,25 +190,37 @@ func (c *Client) request(ctx context.Context, method, target string, body []byte
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
+	if opts.ranged {
+		req.Header.Set("Range", "bytes=0-0")
+	}
 	resp, err := client.Do(req)
 	if err != nil {
-		return 0, fmt.Errorf("request: %w", safeError(err))
+		classified := classify(safeError(err), endpoint(target), 0)
+		var failure *Failure
+		if errors.As(classified, &failure) {
+			return 0, classified
+		}
+		return 0, &Failure{Origin: "transport", Cause: "connection_error", Endpoint: endpoint(target), Err: safeError(err)}
 	}
 	defer func() { _ = resp.Body.Close() }()
-	if resp.StatusCode == http.StatusForbidden && c.gate != nil {
-		id, _ := sourcegate.RunID(ctx)
-		reason := fmt.Sprintf("%s status 403", endpoint(target))
-		activity, ok := sourcegate.Activity(ctx)
-		if !ok {
-			return resp.StatusCode, errors.New("source pause: missing activity context")
-		}
-		c.startPause(activity, id, reason)
-		return resp.StatusCode, fmt.Errorf("%s: %w", reason, pausePending{})
+	if opts.headers != nil {
+		*opts.headers = resp.Header.Clone()
 	}
-	if resp.StatusCode != http.StatusOK {
+	successStatus := http.StatusOK
+	if opts.ranged {
+		successStatus = http.StatusPartialContent
+	}
+	head, reader := sourcegate.ResponsePrefix(ctx, responseBody{reader: resp.Body, endpoint: endpoint(target), status: resp.StatusCode}, resp.Body, resp.StatusCode, successStatus, challenge)
+	if challenge(head) {
+		return resp.StatusCode, c.deny(ctx, endpoint(target)+" challenge")
+	}
+	if resp.StatusCode == http.StatusForbidden {
+		return resp.StatusCode, c.deny(ctx, endpoint(target)+" status 403")
+	}
+	if resp.StatusCode != successStatus {
 		return resp.StatusCode, nil
 	}
-	if err := consume(resp.Body); err != nil {
+	if err := consume(reader); err != nil {
 		return resp.StatusCode, fmt.Errorf("read response: %w", safeError(err))
 	}
 	return resp.StatusCode, nil
@@ -206,7 +234,8 @@ func safeError(err error) error {
 }
 func retryable(status int, err error) bool {
 	var n net.Error
-	return status == 429 || status >= 500 || errors.Is(err, context.DeadlineExceeded) || errors.Is(err, io.ErrUnexpectedEOF) || errors.Is(err, syscall.ECONNRESET) || (errors.As(err, &n) && n.Timeout())
+	var f *Failure
+	return errors.As(err, &f) && f.Origin == "transport" || status == 429 || status >= 500 && status <= 599 || errors.Is(err, context.DeadlineExceeded) || errors.Is(err, io.ErrUnexpectedEOF) || errors.Is(err, syscall.ECONNRESET) || (errors.As(err, &n) && n.Timeout())
 }
 func wait(ctx context.Context, d time.Duration) error {
 	timer := time.NewTimer(d)
@@ -239,7 +268,7 @@ func (c *Client) api(ctx context.Context, method, path string, body []byte) (jso
 		return nil, fmt.Errorf("decode gateway response: %w", err)
 	}
 	if !envelope.Success {
-		return nil, ErrNotFound
+		return nil, &Failure{Origin: "gateway", Cause: "unknown", Endpoint: endpoint(path), HTTPStatus: 200, Err: ErrNotFound}
 	}
 	return raw, nil
 }
@@ -341,4 +370,15 @@ func (c *Client) Files(ctx context.Context, id string) ([]File, error) {
 		files = append(files, File{Name: e.FileName, FullPath: e.FullPath, Size: e.Size, URL: e.PresignedURL, UpdatedAt: updated})
 	}
 	return files, nil
+}
+
+type requestOptions struct {
+	timeout time.Duration
+	ranged  bool
+	headers *http.Header
+}
+
+// WithClock sets the retry clock and cancellable wait for offline tests.
+func WithClock(now func() time.Time, sleep func(context.Context, time.Duration) error) Option {
+	return func(c *Client) { c.now, c.sleep = now, sleep }
 }

@@ -27,8 +27,8 @@ func TestReuseDecision_Conditions(t *testing.T) {
 		{"baseline null", `{"data":{"updatedDate":"x"}}`, `{"data":{}}`, "null_date", false, false, false},
 		{"changed", `{"data":{"updatedDate":"y"}}`, `{"data":{"updatedDate":"x"}}`, "date_changed", false, false, false},
 		{"missing", `{"data":{"updatedDate":"x"}}`, `{"data":{"updatedDate":"x"}}`, "missing_attachment", true, false, false},
-		{"old", `{"data":{"updatedDate":"x"}}`, `{"data":{"updatedDate":"x"}}`, "age", false, true, false},
-		{"unknown", `{"data":{"updatedDate":"x"}}`, `{"data":{"updatedDate":"x"}}`, "age", false, false, true},
+		{"old", `{"data":{"updatedDate":"x"}}`, `{"data":{"updatedDate":"x"}}`, "reused", false, true, false},
+		{"unknown", `{"data":{"updatedDate":"x"}}`, `{"data":{"updatedDate":"x"}}`, "reused", false, false, true},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -46,15 +46,15 @@ func TestReuseDecision_Conditions(t *testing.T) {
 			if err := b.indexOrigins(context.Background()); err != nil {
 				t.Fatal(err)
 			}
-			if got := reuseDecision([]byte(tc.fresh), b, now, 30*24*time.Hour); got != tc.reason {
+			if got := reuseDecision([]byte(tc.fresh), b); got != tc.reason {
 				t.Fatalf("got %q, want %q", got, tc.reason)
 			}
 		})
 	}
-	if got := reuseDecision(nil, &baseline{invalid: true}, now, time.Hour); got != "invalid_baseline" {
+	if got := reuseDecision(nil, &baseline{invalid: true}); got != "invalid_baseline" {
 		t.Fatalf("invalid: %q", got)
 	}
-	if got := reuseDecision(nil, nil, now, time.Hour); got != "no_baseline" {
+	if got := reuseDecision(nil, nil); got != "no_baseline" {
 		t.Fatalf("got %q", got)
 	}
 }
@@ -114,7 +114,7 @@ func TestFetch_ReusesBundleAndOrigin(t *testing.T) {
 	}
 }
 
-func TestFetch_AgeDownloadsChangedBytes(t *testing.T) {
+func TestFetch_OldBaselineRemainsReusable(t *testing.T) {
 	e := entry("a", "a")
 	e["size"] = 3
 	e["updatedAt"] = "2026-04-14 14:41:19"
@@ -127,17 +127,13 @@ func TestFetch_AgeDownloadsChangedBytes(t *testing.T) {
 	s.WithCache(cacheFixture(t, "one"))
 	s.loadBaseline = func(context.Context, stage.Env, stage.Run, stage.Item) (*baseline, bool, error) { return b, false, nil }
 	now = now.Add(31 * 24 * time.Hour)
-	f.bodies["a"] = "two"
 	f.requests.Store(0)
 	f.downloads.Store(0)
 	out := process(t, s, env)
-	if f.requests.Load() != 4 || f.downloads.Load() != 1 {
-		t.Fatalf("calls %d, downloads %d", f.requests.Load(), f.downloads.Load())
+	if f.requests.Load() != 2 || f.downloads.Load() != 0 || out.Artifact.SHA256 != first.Artifact.SHA256 {
+		t.Fatalf("calls %d downloads %d", f.requests.Load(), f.downloads.Load())
 	}
-	data, err := os.ReadFile(filepath.Join(env.Artifacts.Abs(out.Artifact.Path), "files", digest([]byte("two"))))
-	if err != nil || string(data) != "two" {
-		t.Fatalf("new bytes %q, error %v", data, err)
-	}
+
 }
 
 func baselineFromOutput(t *testing.T, env stage.Env, out stage.Output) *baseline {
@@ -178,7 +174,7 @@ func TestFetch_NullDateCopiesOnlyCurrentAttachments(t *testing.T) {
 		return base, false, nil
 	}
 	f.detailBody = `{"success":true,"data":{"id":"66518","updatedDate":null}}`
-	b["updatedAt"] = "2099-01-02 12:00:00"
+	f.bodies["b"] = "new"
 	f.requests.Store(0)
 	f.downloads.Store(0)
 	out := process(t, s, env)
@@ -252,7 +248,7 @@ func TestFetch_UsesLaterProducerObservations(t *testing.T) {
 }
 
 func TestFetch_BlockingConditionsReadTreeAndFiles(t *testing.T) {
-	for _, condition := range []string{"no_baseline", "invalid_baseline", "fresh_null", "baseline_null", "date_changed", "missing_attachment", "age", "unknown_time"} {
+	for _, condition := range []string{"no_baseline", "invalid_baseline", "fresh_null", "baseline_null", "date_changed", "missing_attachment"} {
 		t.Run(condition, func(t *testing.T) {
 			f := &fixtureServer{files: []map[string]any{entry("a", "a")}, bodies: map[string]string{"a": "one"}}
 			s, env := setup(t, f)
@@ -271,14 +267,6 @@ func TestFetch_BlockingConditionsReadTreeAndFiles(t *testing.T) {
 				base.detail = []byte(`{"data":{"updatedDate":"different"}}`)
 			case "missing_attachment":
 				base.report.Missing = []string{"late"}
-			case "age":
-				now = now.Add(31 * 24 * time.Hour)
-			case "unknown_time":
-				for i := range base.observations {
-					if base.observations[i].Path == "tree.json" {
-						base.observations[i].FetchedAt = nil
-					}
-				}
 			}
 			s.loadBaseline = func(context.Context, stage.Env, stage.Run, stage.Item) (*baseline, bool, error) {
 				return base, condition == "invalid_baseline", nil
@@ -290,7 +278,7 @@ func TestFetch_BlockingConditionsReadTreeAndFiles(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			want := map[string]string{"no_baseline": "no_baseline", "invalid_baseline": "invalid_baseline", "fresh_null": "null_date", "baseline_null": "null_date", "date_changed": "date_changed", "missing_attachment": "missing_attachment", "age": "age", "unknown_time": "age"}[condition]
+			want := map[string]string{"no_baseline": "no_baseline", "invalid_baseline": "invalid_baseline", "fresh_null": "null_date", "baseline_null": "null_date", "date_changed": "date_changed", "missing_attachment": "missing_attachment"}[condition]
 			if result.reason != want {
 				t.Fatalf("decision %q, want %q", result.reason, want)
 			}
@@ -323,7 +311,7 @@ func TestFetch_NullDateEmptyURLRemainsMissing(t *testing.T) {
 	}
 }
 
-func TestReuseDecision_UnknownAliasTimeBlocksReuse(t *testing.T) {
+func TestReuseDecision_UnknownAliasTimeIsReusable(t *testing.T) {
 	now := time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC)
 	hash := digest([]byte("one"))
 	b := &baseline{detail: []byte(`{"data":{"updatedDate":"x"}}`), tree: []byte("tree"), files: []file{{Name: "a", SHA256: hash, Size: 3}}, observations: []store.RunFetchObservation{
@@ -334,7 +322,7 @@ func TestReuseDecision_UnknownAliasTimeBlocksReuse(t *testing.T) {
 	if err := b.indexOrigins(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	if got := reuseDecision(b.detail, b, now, reuseAgeLimit); got != "age" {
+	if got := reuseDecision(b.detail, b); got != "reused" {
 		t.Fatalf("decision %q", got)
 	}
 }
@@ -356,6 +344,26 @@ func TestFetch_AmbiguousFreshFilesSkipCache(t *testing.T) {
 		data, err := os.ReadFile(filepath.Join(env.Artifacts.Abs(out.Artifact.Path), "files", digest([]byte(body))))
 		if err != nil || string(data) != body {
 			t.Fatalf("body %q: %q, %v", body, data, err)
+		}
+	}
+}
+
+func TestFetch_UnknownOriginsReuseWithTwoCalls(t *testing.T) {
+	f := &fixtureServer{files: []map[string]any{reviewEntry("a", "a", 3)}, bodies: map[string]string{"a": "one"}}
+	s, env := setup(t, f)
+	first := process(t, s, env)
+	b := baselineFromOutput(t, env, first)
+	b.observations = nil
+	s.loadBaseline = func(context.Context, stage.Env, stage.Run, stage.Item) (*baseline, bool, error) { return b, false, nil }
+	f.requests.Store(0)
+	f.downloads.Store(0)
+	out := process(t, s, env)
+	if out.Artifact.SHA256 != first.Artifact.SHA256 || f.requests.Load() != 2 || f.downloads.Load() != 0 {
+		t.Fatalf("calls=%d downloads=%d", f.requests.Load(), f.downloads.Load())
+	}
+	for _, o := range out.Observations {
+		if o.Acquisition == "adopted" && (o.FetchedAt != nil || o.OriginRef != nil) {
+			t.Fatalf("invented origin: %+v", o)
 		}
 	}
 }

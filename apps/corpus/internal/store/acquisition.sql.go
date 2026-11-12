@@ -31,17 +31,16 @@ func (q *Queries) CountAdoptedRunItems(ctx context.Context, arg CountAdoptedRunI
 
 const countFetchReads = `-- name: CountFetchReads :one
 SELECT
-  count(*) FILTER (WHERE message = 'read=reused') AS reused,
-  count(*) FILTER (WHERE message = 'read=no_baseline') AS no_baseline,
-  count(*) FILTER (WHERE message = 'read=invalid_baseline') AS invalid_baseline,
-  count(*) FILTER (WHERE message = 'read=null_date') AS null_date,
-  count(*) FILTER (WHERE message = 'read=date_changed') AS date_changed,
-  count(*) FILTER (WHERE message = 'read=missing_attachment') AS missing_attachment,
-  count(*) FILTER (WHERE message = 'read=age') AS age,
-  count(*) FILTER (WHERE message = 'read=control' OR message LIKE 'read=control outcome=%') AS control,
-  count(*) FILTER (WHERE message = 'read=control outcome=same') AS control_same,
-  count(*) FILTER (WHERE message = 'read=control outcome=tree_ids_only') AS control_tree_ids_only,
-  count(*) FILTER (WHERE message = 'read=control outcome=changed') AS control_changed
+  count(*) FILTER (WHERE split_part(message, ' ', 1) = 'read=reused') AS reused,
+  count(*) FILTER (WHERE split_part(message, ' ', 1) = 'read=no_baseline') AS no_baseline,
+  count(*) FILTER (WHERE split_part(message, ' ', 1) = 'read=invalid_baseline') AS invalid_baseline,
+  count(*) FILTER (WHERE split_part(message, ' ', 1) = 'read=null_date') AS null_date,
+  count(*) FILTER (WHERE split_part(message, ' ', 1) = 'read=date_changed') AS date_changed,
+  count(*) FILTER (WHERE split_part(message, ' ', 1) = 'read=missing_attachment') AS missing_attachment,
+  count(*) FILTER (WHERE split_part(message, ' ', 1) = 'read=control' OR message LIKE 'read=control outcome=%') AS control,
+  count(*) FILTER (WHERE message LIKE 'read=control outcome=same%') AS control_same,
+  count(*) FILTER (WHERE message LIKE 'read=control outcome=tree_ids_only%') AS control_tree_ids_only,
+  count(*) FILTER (WHERE message LIKE 'read=control outcome=changed%') AS control_changed
 FROM run_item
 WHERE run_id = $1 AND generation = $2 AND stage = 'fetch' AND state = 'done'
   AND item_key LIKE 'vn:vbpl:%'
@@ -59,7 +58,6 @@ type CountFetchReadsRow struct {
 	NullDate           int64
 	DateChanged        int64
 	MissingAttachment  int64
-	Age                int64
 	Control            int64
 	ControlSame        int64
 	ControlTreeIdsOnly int64
@@ -76,7 +74,6 @@ func (q *Queries) CountFetchReads(ctx context.Context, arg CountFetchReadsParams
 		&i.NullDate,
 		&i.DateChanged,
 		&i.MissingAttachment,
-		&i.Age,
 		&i.Control,
 		&i.ControlSame,
 		&i.ControlTreeIdsOnly,
@@ -140,6 +137,37 @@ func (q *Queries) GetRunAcquisition(ctx context.Context, arg GetRunAcquisitionPa
 		&i.Sha256,
 	)
 	return i, err
+}
+
+const listFetchReadMessages = `-- name: ListFetchReadMessages :many
+SELECT coalesce(message, '')::text AS message FROM run_item
+WHERE run_id = $1 AND generation = $2 AND stage = 'fetch'
+  AND state IN ('done', 'gap')
+`
+
+type ListFetchReadMessagesParams struct {
+	RunID      int64
+	Generation int32
+}
+
+func (q *Queries) ListFetchReadMessages(ctx context.Context, arg ListFetchReadMessagesParams) ([]string, error) {
+	rows, err := q.db.Query(ctx, listFetchReadMessages, arg.RunID, arg.Generation)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var message string
+		if err := rows.Scan(&message); err != nil {
+			return nil, err
+		}
+		items = append(items, message)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const seedRunAcquisitions = `-- name: SeedRunAcquisitions :execrows

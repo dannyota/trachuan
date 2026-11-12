@@ -276,7 +276,8 @@ func TestClient_DownloadBudgetCountsRejectedBodies(t *testing.T) {
 		_, _ = io.WriteString(w, "12345678")
 	}, WithBackoffs(0), WithDownloadBudget(10))
 	_, _, e := c.Search(context.Background(), "x")
-	if !errors.Is(e, ErrBudget) || n.Load() != 2 {
+	var f *Failure
+	if !errors.As(e, &f) || f.Cause != "http_5xx" || n.Load() != 2 || c.used != 10 {
 		t.Fatalf("requests=%d error=%v", n.Load(), e)
 	}
 }
@@ -385,7 +386,7 @@ type timeoutErr struct{}
 func (timeoutErr) Error() string   { return "timeout" }
 func (timeoutErr) Timeout() bool   { return true }
 func (timeoutErr) Temporary() bool { return true }
-func TestDownload_PartialTimeoutDoesNotRetryIntoWriter(t *testing.T) {
+func TestDownload_PartialTimeoutRetriesWithoutPartialOutput(t *testing.T) {
 	var n int
 	tr := roundTripFunc(func(*http.Request) (*http.Response, error) {
 		n++
@@ -394,7 +395,7 @@ func TestDownload_PartialTimeoutDoesNotRetryIntoWriter(t *testing.T) {
 	c := New(WithBaseURLs("http://127.0.0.1:1234", "http://127.0.0.1:1234"), WithTransport(tr), WithBackoffs(0), WithLimits(Limits{RequestsPerSecond: 100000, Burst: 1, InFlight: 1, Pages: 100, HTMLBytes: 5000000, FileBytes: 50000000, Redirects: 3}))
 	var dst bytes.Buffer
 	_, e := c.Download(context.Background(), "http://127.0.0.1:1234/a", &dst, 100)
-	if e == nil || n != 1 || dst.String() != "%PDF-abc" {
+	if e == nil || n != 2 || dst.Len() != 0 {
 		t.Fatalf("requests=%d bytes=%q err=%v", n, dst.String(), e)
 	}
 }
@@ -411,7 +412,7 @@ func TestClient_ExactBudgetAccepted(t *testing.T) {
 	}
 }
 
-func TestClient_BudgetStopsRetriesImmediately(t *testing.T) {
+func TestClient_BudgetDoesNotOverride5xx(t *testing.T) {
 	var n atomic.Int32
 	c, _ := clientFor(t, func(w http.ResponseWriter, r *http.Request) {
 		n.Add(1)
@@ -419,7 +420,8 @@ func TestClient_BudgetStopsRetriesImmediately(t *testing.T) {
 		_, _ = io.WriteString(w, "12345678")
 	}, WithBackoffs(0, 0, 0), WithDownloadBudget(3))
 	_, _, e := c.Search(context.Background(), "x")
-	if !errors.Is(e, ErrBudget) || n.Load() != 1 {
+	var f *Failure
+	if !errors.As(e, &f) || f.Cause != "http_5xx" || n.Load() != 2 {
 		t.Fatalf("requests=%d err=%v", n.Load(), e)
 	}
 }
@@ -515,11 +517,11 @@ func TestClient_RetryAfter503Uses5xxCause(t *testing.T) {
 	c, _ := clientFor(t, func(w http.ResponseWriter, r *http.Request) { w.Header().Set("Retry-After", "601"); w.WriteHeader(503) }, WithBackoffs(0))
 	_, _, e := c.Detail(context.Background(), 1)
 	var f *Failure
-	if !errors.As(e, &f) || f.Cause != "http_5xx" || !errors.Is(e, ErrDeferred) {
+	if !errors.As(e, &f) || f.Cause != "http_5xx" || errors.Is(e, ErrDeferred) {
 		t.Fatalf("%v", e)
 	}
 }
-func TestClient_OversizeErrorBodyStopsRetry(t *testing.T) {
+func TestClient_OversizeErrorBodyDoesNotOverride5xx(t *testing.T) {
 	var n atomic.Int32
 	c, _ := clientFor(t, func(w http.ResponseWriter, r *http.Request) {
 		n.Add(1)
@@ -527,7 +529,8 @@ func TestClient_OversizeErrorBodyStopsRetry(t *testing.T) {
 		_, _ = io.WriteString(w, strings.Repeat("x", 30))
 	}, WithBackoffs(0, 0), WithLimits(Limits{RequestsPerSecond: 100000, Burst: 1, InFlight: 1, Pages: 100, HTMLBytes: 10, FileBytes: 100, Redirects: 3}))
 	_, _, e := c.Detail(context.Background(), 1)
-	if !errors.Is(e, ErrTooLarge) || n.Load() != 1 {
+	var f *Failure
+	if !errors.As(e, &f) || f.Cause != "http_5xx" || n.Load() != 2 {
 		t.Fatalf("requests=%d err=%v", n.Load(), e)
 	}
 }
@@ -561,7 +564,7 @@ func TestClient_EncodedTokenRedacted(t *testing.T) {
 	}
 }
 
-func TestDownload_TimeoutAfterLimitDoesNotRetry(t *testing.T) {
+func TestDownload_TimeoutAfterLimitRetriesWithoutPartialOutput(t *testing.T) {
 	var n int
 	tr := roundTripFunc(func(*http.Request) (*http.Response, error) {
 		n++
@@ -570,7 +573,7 @@ func TestDownload_TimeoutAfterLimitDoesNotRetry(t *testing.T) {
 	c := New(WithBaseURLs("http://127.0.0.1:1234", "http://127.0.0.1:1234"), WithTransport(tr), WithBackoffs(0), WithLimits(Limits{RequestsPerSecond: 100000, Burst: 1, InFlight: 1, Pages: 100, HTMLBytes: 5000000, FileBytes: 50000000, Redirects: 3}))
 	var dst bytes.Buffer
 	_, e := c.Download(context.Background(), "http://127.0.0.1:1234/a", &dst, 8)
-	if e == nil || n != 1 || dst.String() != "%PDF-abc" {
+	if e == nil || n != 2 || dst.Len() != 0 {
 		t.Fatalf("requests=%d bytes=%q err=%v", n, dst.String(), e)
 	}
 }

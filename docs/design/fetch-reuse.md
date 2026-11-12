@@ -42,12 +42,13 @@ Attachments do carry a content hash (probed 2026-11-12). The file list gives
 each file a presigned GET URL on `s3-han02.fptcloud.com`, valid 24 hours. A
 `GET` of that URL with `Range: bytes=0-0` answers 206 with `ETag`; `HEAD`
 answers 403, because the signature covers `GET` only. The list's own `etag`
-field is null. Sample of 78 files, the 45 largest stored attachments, 25 of 4 to
-9 MB and the 8 files of `vn:vbpl:171687`: 35 ETags have MD5 form and all equal
-the MD5 of the stored copy; 42 have S3 multipart form and all equal the
-multipart ETag computed from the stored copy, 39 with 16 MiB parts and 3 with 5
-MiB parts; 1 ranged request failed. Multipart ETags start near 7.5 MB; 742
-stored files are larger than 5 MB.
+field is null. Over every VBPL document of `vn/20261112_2` (4,259 documents,
+36,541 listed files; [ETag probe](../research/vbpl-etag-2026-11.md)): 36,413
+ETags have MD5 form, 95 multipart form, 33 none (30 files without a URL, 3 empty
+files that answer 416), 0 another form. Of 32,787 stored copies, 32,701 equal
+their MD5 ETag and 0 differ; 83 multipart ETags equal the value computed from
+the stored copy, 68 with 16 MiB parts and 15 with 5 MiB parts, and 0 are
+unexplained. The ETag pass took 580 seconds at 8 in flight.
 
 An earlier version of this note reused attachments only while their first
 network read was younger than an age limit, and treated an unknown origin time

@@ -83,12 +83,12 @@ func TestControl_FullRead(t *testing.T) {
 	}
 	f.downloads.Store(0)
 	out, err := s.Process(context.Background(), env, stage.Run{Country: "vn", Rel: rel}, stage.Item{Key: "vn:vbpl:66518"})
-	if err != nil || f.downloads.Load() != 1 || out.Message != "read=control outcome=same" {
+	if err != nil || f.downloads.Load() != 0 || !strings.HasPrefix(out.Message, "read=control outcome=same") {
 		t.Fatalf("downloads=%d message=%q err=%v", f.downloads.Load(), out.Message, err)
 	}
 	f.detailBody = `{"success":true,"data":{"id":"66518","updatedDate":null}}`
 	out, err = s.Process(context.Background(), env, stage.Run{Country: "vn", Rel: rel}, stage.Item{Key: "vn:vbpl:66518"})
-	if err != nil || out.Message != "read=control" {
+	if err != nil || !strings.HasPrefix(out.Message, "read=control") {
 		t.Fatalf("message=%q err=%v", out.Message, err)
 	}
 }
@@ -155,5 +155,32 @@ func TestControl_SampleVectors(t *testing.T) {
 				t.Errorf("selection = %t, want %t (hash value %d)", got, tc.selected, tc.value)
 			}
 		})
+	}
+}
+
+func TestControl_ChangedFileDownloadsAndCounts(t *testing.T) {
+	e := entry("a", "a")
+	e["size"] = 3
+	f := &fixtureServer{files: []map[string]any{e}, bodies: map[string]string{"a": "one"}}
+	s, env := setup(t, f)
+	first := process(t, s, env)
+	base := baselineFromOutput(t, env, first)
+	s.loadBaseline = func(context.Context, stage.Env, stage.Run, stage.Item) (*baseline, bool, error) {
+		return base, false, nil
+	}
+	rel := ""
+	for i := 1; i < 1000; i++ {
+		candidate := fmt.Sprintf("20991231_%d", i)
+		if controlSample("vn:vbpl:66518", candidate) {
+			rel = candidate
+			break
+		}
+	}
+	f.bodies["a"] = "two"
+	f.downloads.Store(0)
+	out, err := s.Process(context.Background(), env, stage.Run{Country: "vn", Rel: rel}, stage.Item{Key: "vn:vbpl:66518"})
+	d := parseReadMessage(out.Message)
+	if err != nil || f.downloads.Load() != 1 || d.outcome != "changed" || d.counts["control_file_changed"] != 1 {
+		t.Fatalf("%+v downloads=%d %v", d, f.downloads.Load(), err)
 	}
 }

@@ -2,8 +2,7 @@ package fetch
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -11,7 +10,9 @@ import (
 	"path/filepath"
 	"time"
 
+	"danny.vn/trachuan/apps/corpus/internal/filecache"
 	"danny.vn/trachuan/apps/corpus/internal/stage"
+	"danny.vn/trachuan/apps/corpus/internal/store"
 	"danny.vn/trachuan/apps/corpus/internal/vbpl"
 )
 
@@ -31,7 +32,7 @@ func copyBaseline(src, dir, hash string, size int64) (vbpl.Downloaded, error) {
 		return vbpl.Downloaded{}, fmt.Errorf("create attachment: %w", err)
 	}
 	defer func() { _ = os.Remove(out.Name()) }()
-	h := sha256.New()
+	h := filecache.NewHasher()
 	n, err := io.Copy(io.MultiWriter(out, h), io.LimitReader(in, size+1))
 	closeErr := out.Close()
 	if err != nil {
@@ -40,14 +41,14 @@ func copyBaseline(src, dir, hash string, size int64) (vbpl.Downloaded, error) {
 	if closeErr != nil {
 		return vbpl.Downloaded{}, fmt.Errorf("close attachment: %w", closeErr)
 	}
-	if n != size || hex.EncodeToString(h.Sum(nil)) != hash {
+	if n != size || h.Hashes().SHA256 != hash {
 		return vbpl.Downloaded{}, fmt.Errorf("%w: attachment hash or size mismatch", errInvalidBaseline)
 	}
 	dest := filepath.Join(dir, hash)
 	if err := os.Rename(out.Name(), dest); err != nil {
 		return vbpl.Downloaded{}, fmt.Errorf("publish attachment: %w", err)
 	}
-	return vbpl.Downloaded{Path: dest, SHA256: hash, Size: n}, nil
+	return vbpl.Downloaded{Path: dest, SHA256: hash, Size: n, Hashes: h.Hashes()}, nil
 }
 
 func (s *Stage) publishReuse(ctx context.Context, env stage.Env, r stage.Run, b *baseline, detail, diagram []byte, times [3]time.Time) (stage.Output, error) {
@@ -60,7 +61,11 @@ func (s *Stage) publishReuse(ctx context.Context, env stage.Env, r stage.Run, b 
 		observations = append(observations, networkObservation(p.endpoint, p.path, p.data, p.at))
 	}
 	tree := b.index.tree
-	observations = append(observations, adopted(tree))
+	if tree != nil {
+		observations = append(observations, adopted(tree))
+	} else {
+		observations = append(observations, stage.FetchObservation{ResourceKey: `["doc/provision/tree",null,null]`, Source: "vbpl", Path: "tree.json", ContentSHA256: digest(b.tree), Size: int64(len(b.tree)), Acquisition: "adopted"})
+	}
 	art, err := env.Artifacts.PublishContent(ctx, s.Name(), s.Recipe(r.Snapshot), func(dir string) error {
 		filesDir := filepath.Join(dir, "files")
 		if e := os.Mkdir(filesDir, 0700); e != nil {
@@ -72,7 +77,15 @@ func (s *Stage) publishReuse(ctx context.Context, env stage.Env, r stage.Run, b 
 			if e := ctx.Err(); e != nil {
 				return fmt.Errorf("copy baseline files: %w", e)
 			}
-			if _, e := copyBaseline(filepath.Join(b.dir, "files", f.SHA256), filesDir, f.SHA256, f.Size); e != nil {
+			d, e := copyBaseline(filepath.Join(b.dir, "files", f.SHA256), filesDir, f.SHA256, f.Size)
+			if e != nil {
+				return e
+			}
+			var q hashStore
+			if env.DB != nil {
+				q = store.New(env.DB)
+			}
+			if e = writeHashes(ctx, q, d.Hashes); e != nil {
 				return e
 			}
 			key := originIdentity{path: "files/" + f.SHA256, hash: f.SHA256, size: f.Size, name: f.Name}
@@ -80,7 +93,13 @@ func (s *Stage) publishReuse(ctx context.Context, env stage.Env, r stage.Run, b 
 				continue
 			}
 			seenFiles[key] = true
-			for _, o := range b.originsFor(f) {
+			origins := b.originsFor(f)
+			if len(origins) == 0 {
+				name := f.Name
+				key, _ := json.Marshal([3]any{"attachment", name, nil})
+				observations = append(observations, stage.FetchObservation{ResourceKey: string(key), Source: "vbpl", Name: &name, Path: "files/" + f.SHA256, ContentSHA256: f.SHA256, Size: f.Size, Acquisition: "adopted"})
+			}
+			for _, o := range origins {
 				if e := ctx.Err(); e != nil {
 					return fmt.Errorf("copy baseline observations: %w", e)
 				}
@@ -105,29 +124,4 @@ func (s *Stage) publishReuse(ctx context.Context, env stage.Env, r stage.Run, b 
 		return stage.Output{}, fmt.Errorf("publish reused fetch artifact: %w", err)
 	}
 	return stage.Output{Artifact: &art, State: "done", Observations: observations}, nil
-}
-
-func (b *baseline) copyMatching(entry vbpl.File, dir string, now time.Time, limit time.Duration) (vbpl.Downloaded, *stage.FetchObservation, error) {
-	if entry.UpdatedAt.IsZero() || entry.Size < 0 || entry.Size > 50_000_000 {
-		return vbpl.Downloaded{}, nil, nil
-	}
-	files := b.index.files[fileIdentity{name: entry.Name, size: entry.Size}]
-	if len(files) != 1 {
-		return vbpl.Downloaded{}, nil, nil
-	}
-	f := files[0]
-	origins := b.originsFor(f)
-	if len(origins) == 0 {
-		return vbpl.Downloaded{}, nil, nil
-	}
-	o := origins[0]
-	if o.FetchedAt == nil || o.FetchedAt.Before(entry.UpdatedAt) || o.FetchedAt.Before(now.Add(-limit)) {
-		return vbpl.Downloaded{}, nil, nil
-	}
-	d, err := copyBaseline(filepath.Join(b.dir, "files", f.SHA256), dir, f.SHA256, f.Size)
-	if err != nil {
-		return vbpl.Downloaded{}, nil, err
-	}
-	obs := adopted(o)
-	return d, &obs, nil
 }

@@ -15,6 +15,7 @@ import (
 
 	"danny.vn/trachuan/apps/corpus/internal/lookup"
 	"danny.vn/trachuan/apps/corpus/internal/source"
+	"danny.vn/trachuan/apps/corpus/internal/sourcegate"
 	xhtml "golang.org/x/net/html"
 )
 
@@ -48,6 +49,7 @@ func (c *Client) fetchPage(ctx context.Context, method, target string, form url.
 
 // Search returns all observed keyword matches and redacted page evidence.
 func (c *Client) Search(ctx context.Context, keyword string) (lookup.Result, [][]byte, error) {
+	ctx = sourcegate.EnsureActivity(ctx)
 	ctx, cancel := context.WithTimeout(ctx, c.limits.ItemTimeout)
 	defer cancel()
 	select {

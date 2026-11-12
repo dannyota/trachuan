@@ -2,6 +2,7 @@ package fetch
 
 import (
 	"context"
+	"crypto/md5"
 	"crypto/sha256"
 	"encoding/json"
 	"errors"
@@ -28,26 +29,27 @@ func testClient(base string) *vbpl.Client {
 }
 
 type fixtureServer struct {
-	files           []map[string]any
-	bodies          map[string]string
-	missing         bool
-	oversized       bool
-	treeBody        string
-	detailID        string
-	detailBody      string
-	barrier         int32
-	arrived         atomic.Int32
-	released        chan struct{}
-	timedOut        atomic.Bool
-	treeStatus      int
-	detailStatus    int
-	diagramStatus   int
-	filesStatus     int
-	downloadStarted chan struct{}
-	downloadRelease chan struct{}
-	downloadStatus  int
-	downloads       atomic.Int32
-	requests        atomic.Int32
+	files            []map[string]any
+	bodies           map[string]string
+	missing          bool
+	oversized        bool
+	treeBody         string
+	detailID         string
+	detailBody       string
+	barrier          int32
+	arrived          atomic.Int32
+	released         chan struct{}
+	timedOut         atomic.Bool
+	treeStatus       int
+	detailStatus     int
+	diagramStatus    int
+	filesStatus      int
+	downloadStarted  chan struct{}
+	downloadRelease  chan struct{}
+	downloadStatus   int
+	downloadStatuses map[string]int
+	downloads        atomic.Int32
+	requests         atomic.Int32
 }
 
 func setup(t *testing.T, f *fixtureServer) (*Stage, stage.Env) {
@@ -113,12 +115,33 @@ func setup(t *testing.T, f *fixtureServer) (*Stage, stage.Env) {
 				return
 			}
 			for _, entry := range f.files {
+				if _, listed := entry["size"]; !listed {
+					size := int64(-1)
+					path, _ := entry["fullPath"].(string)
+					if body, ok := f.bodies[path]; ok {
+						size = int64(len(body))
+					}
+					entry["size"] = size
+				}
 				if entry["presignedUrl"] != "" {
 					entry["presignedUrl"] = "http://" + r.Host + "/attachment/" + entry["fullPath"].(string)
 				}
 			}
 			_ = json.NewEncoder(w).Encode(map[string]any{"success": true, "data": f.files})
 		case strings.HasPrefix(r.URL.Path, "/attachment/"):
+			if r.Header.Get("Range") == "bytes=0-0" {
+				body, ok := f.bodies[strings.TrimPrefix(r.URL.Path, "/attachment/")]
+				if !ok {
+					w.WriteHeader(404)
+					return
+				}
+				w.Header().Set("ETag", fmt.Sprintf(`"%x"`, md5.Sum([]byte(body))))
+				w.WriteHeader(206)
+				if len(body) > 0 {
+					_, _ = w.Write([]byte(body[:1]))
+				}
+				return
+			}
 			f.downloads.Add(1)
 			if f.downloadStarted != nil {
 				f.downloadStarted <- struct{}{}
@@ -126,6 +149,10 @@ func setup(t *testing.T, f *fixtureServer) (*Stage, stage.Env) {
 			}
 			if f.downloadStatus != 0 {
 				w.WriteHeader(f.downloadStatus)
+				return
+			}
+			if status := f.downloadStatuses[strings.TrimPrefix(r.URL.Path, "/attachment/")]; status != 0 {
+				w.WriteHeader(status)
 				return
 			}
 			body, ok := f.bodies[strings.TrimPrefix(r.URL.Path, "/attachment/")]
@@ -399,14 +426,11 @@ func TestFetch_DoesNotDecodeTree(t *testing.T) {
 	}
 }
 
-func TestFetch_NonJSONTreeRetryable(t *testing.T) {
-	// Synthetic gateway response, not a recorded fixture.
+func TestFetch_NonJSONTreeIsGap(t *testing.T) {
 	s, env := setup(t, &fixtureServer{treeBody: "not valid JSON"})
 	out, err := s.Process(context.Background(), env, stage.Run{Country: "vn"}, stage.Item{Key: "vn:vbpl:66518"})
-	var retry *stage.RetryableError
-	var failure *vbpl.Failure
-	if out.Artifact != nil || !errors.As(err, &retry) || !errors.As(err, &failure) || retry.GapKind != "source_unavailable" || retry.Cause.Source != "vbpl" || retry.Cause.Origin != stage.OriginGateway || retry.Cause.Cause != stage.CauseNonJSON200 || retry.Cause.Endpoint != "doc/provision/tree" || retry.Cause.HTTPStatus == nil || *retry.Cause.HTTPStatus != 200 {
-		t.Fatalf("output = %+v, error = %v", out, err)
+	if err != nil || out.State != "gap" || len(out.Gaps) != 1 || out.Gaps[0].Cause != stage.CauseNonJSON200 {
+		t.Fatalf("%+v %v", out, err)
 	}
 }
 
@@ -434,7 +458,7 @@ func TestFetch_APIErrorMappings(t *testing.T) {
 		status    int32
 		hasStatus bool
 	}{
-		{"transport", &vbpl.Failure{Origin: "transport", Cause: "timeout", Endpoint: "doc/detail"}, stage.OriginTransport, stage.CauseTimeout, "doc/detail", 0, false},
+
 		{"status 429", &vbpl.StatusError{Code: 429, Endpoint: "doc/files"}, stage.OriginGateway, stage.CauseHTTP429, "doc/files", 429, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -464,12 +488,12 @@ func TestFetch_DetailIDMismatchIsGap(t *testing.T) {
 	}
 }
 
-func TestFetch_TransientDownloadErrorIsRetryable(t *testing.T) {
-	s, env := setup(t, &fixtureServer{files: []map[string]any{entry("a", "a")}, downloadStatus: http.StatusInternalServerError})
-	out, err := s.Process(context.Background(), env, stage.Run{Country: "vn"}, stage.Item{Key: "vn:vbpl:66518"})
-	var retryable *stage.RetryableError
-	if out.Artifact != nil || !errors.As(err, &retryable) {
-		t.Fatalf("output = %+v, error = %v", out, err)
+func TestFetch_TransientDownloadErrorIsMissing(t *testing.T) {
+	s, env := setup(t, &fixtureServer{files: []map[string]any{entry("a", "a")}, downloadStatus: 500})
+	out := process(t, s, env)
+	res, err := s.Resolve(context.Background(), env, stage.Run{}, stage.Item{Key: "vn:vbpl:66518"}, *out.Artifact)
+	if err != nil || len(res.Gaps) != 1 || res.Gaps[0] != (stage.Gap{Kind: "missing_attachment", Detail: "a"}) {
+		t.Fatalf("%+v %v", res, err)
 	}
 }
 

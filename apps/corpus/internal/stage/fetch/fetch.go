@@ -19,6 +19,7 @@ import (
 	"danny.vn/trachuan/apps/corpus/internal/sourcegate"
 	"danny.vn/trachuan/apps/corpus/internal/stage"
 	"danny.vn/trachuan/apps/corpus/internal/stage/discover"
+	"danny.vn/trachuan/apps/corpus/internal/store"
 	"danny.vn/trachuan/apps/corpus/internal/vbpl"
 	"golang.org/x/sync/errgroup"
 )
@@ -143,7 +144,7 @@ func (s *Stage) processItem(ctx context.Context, env stage.Env, r stage.Run, ite
 			return stage.Output{}, err
 		}
 	}
-	*result = evaluateBaseline(detail, base, now(), reuseAgeLimit)
+	*result = evaluateBaseline(detail, base)
 	wouldReuse := result.reason == "reused"
 	if controlSample(item.Key, r.Rel) {
 		result.reason = "control"
@@ -182,19 +183,28 @@ func (s *Stage) processItem(ctx context.Context, env stage.Env, r stage.Run, ite
 		key, _ := json.Marshal([3]any{payload.endpoint, nil, nil})
 		observations = append(observations, stage.FetchObservation{ResourceKey: string(key), Source: "vbpl", Path: payload.path, ContentSHA256: fmt.Sprintf("%x", sha256.Sum256(payload.data)), Size: int64(len(payload.data)), Acquisition: "network", FetchedAt: &times[i]})
 	}
-	publish := func(b *baseline, reason string) (artifact.Result, error) {
+	publish := func(b *baseline) (artifact.Result, error) {
 		observations = observations[:3]
 		return env.Artifacts.PublishContent(ctx, s.Name(), s.Recipe(r.Snapshot), func(dir string) error {
-			return s.writeBundleWithBaseline(ctx, dir, id, detail, tree, diagram, files, now, &observations, b, reason, result.expired)
+			var q hashStore
+			if env.DB != nil {
+				q = store.New(env.DB)
+			}
+			result.counts = nil
+			return s.writeBundleWithBaseline(ctx, dir, id, detail, tree, diagram, files, now, &observations, b, result, q)
 		})
 	}
-	art, err := publish(result.baseline, result.reason)
+	art, err := publish(result.baseline)
 	if errors.Is(err, errInvalidBaseline) {
 		slog.Warn("invalid fetch baseline", "run", r.Country+"/"+r.Rel, "key", item.Key, "reason", err)
 		result.reason = "invalid_baseline"
-		art, err = publish(nil, result.reason)
+		art, err = publish(nil)
 	}
 	if err != nil {
+		var failure *vbpl.Failure
+		if errors.As(err, &failure) || errors.Is(err, sourcegate.ErrSourcePaused) {
+			return apiError(err, id, false)
+		}
 		return stage.Output{}, fmt.Errorf("publish fetch artifact: %w", err)
 	}
 	if result.reason == "control" && wouldReuse {
@@ -209,6 +219,9 @@ func (s *Stage) processItem(ctx context.Context, env stage.Env, r stage.Run, ite
 		}
 		var differs []string
 		result.outcome, differs = compareControl(base, tree, filesJSON, reportJSON)
+		if n := result.counts["etag_differs"]; n > 0 {
+			result.counts["control_file_changed"] += n
+		}
 		if result.outcome == "changed" {
 			slog.Warn("fetch control changed", "document_key", item.Key, "files", differs)
 		}
@@ -240,32 +253,38 @@ func apiError(err error, id string, detail bool) (stage.Output, error) {
 			status := int32(failure.HTTPStatus)
 			cause.HTTPStatus = &status
 		}
-		if cause.Cause == stage.CauseHTTP5xx {
-			return unavailableNow(wrapped, cause), nil
+		if cause.Cause != stage.CauseHTTP429 {
+			return unavailableNow(id, cause), nil
 		}
 		return stage.Output{}, &stage.RetryableError{Err: wrapped, GapKind: "source_unavailable", Cause: cause}
 	}
 	var status *vbpl.StatusError
-	if errors.As(err, &status) && (status.Code == 429 || status.Code >= 500 && status.Code <= 599) {
+	if errors.As(err, &status) {
 		code := int32(status.Code)
-		cause := stage.GapCause{Source: "vbpl", Origin: stage.OriginGateway, Cause: stage.CauseHTTP5xx, Endpoint: status.Endpoint, HTTPStatus: &code}
+		cause := stage.GapCause{Source: "vbpl", Origin: stage.OriginGateway, Cause: stage.CauseUnknown, Endpoint: status.Endpoint, HTTPStatus: &code}
+		if code >= 500 && code <= 599 {
+			cause.Cause = stage.CauseHTTP5xx
+		}
 		if code == 429 {
 			cause.Cause = stage.CauseHTTP429
 			return stage.Output{}, &stage.RetryableError{Err: wrapped, GapKind: "source_unavailable", Cause: cause}
 		}
-		return unavailableNow(wrapped, cause), nil
+		return unavailableNow(id, cause), nil
 	}
 
 	return stage.Output{}, stage.Retryable(wrapped)
 }
 
-// unavailableNow turns a gateway 5xx that survived the client retries into a
-// source_unavailable gap in this attempt, without a batch retry, keeping its
-// structured cause so a later start can retry it.
-func unavailableNow(err error, c stage.GapCause) stage.Output {
-	detail := []rune(err.Error())
-	if len(detail) > 200 {
-		detail = detail[:200]
+// unavailableNow records an exhausted source request without another batch retry.
+func unavailableNow(id string, c stage.GapCause) stage.Output {
+	var decision readDecision
+	reason := string(c.Cause)
+	if c.HTTPStatus != nil && *c.HTTPStatus != 200 {
+		reason = fmt.Sprintf("http_%d", *c.HTTPStatus)
+	} else if c.Cause == stage.CauseConnectionError {
+		reason = "transport"
 	}
-	return stage.Output{State: "gap", Gaps: []stage.Gap{{Kind: "source_unavailable", Detail: string(detail), Source: c.Source, Origin: c.Origin, Cause: c.Cause, Endpoint: c.Endpoint, HTTPStatus: c.HTTPStatus, EvidenceRef: c.EvidenceRef}}}
+	decision.count("failure_" + reason)
+	slog.Warn("source unavailable", "document_key", "vn:"+c.Source+":"+id, "file_name", "", "cause", reason, "endpoint", c.Endpoint)
+	return stage.Output{State: "gap", Message: decision.message(), Gaps: []stage.Gap{{Kind: "source_unavailable", Detail: id, Source: c.Source, Origin: c.Origin, Cause: c.Cause, Endpoint: c.Endpoint, HTTPStatus: c.HTTPStatus, EvidenceRef: c.EvidenceRef}}}
 }

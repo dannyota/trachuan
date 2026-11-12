@@ -114,7 +114,7 @@ func TestRunBatch_HungItemDoesNotBlockNext(t *testing.T) {
 		return Output{State: "gap", Gaps: []Gap{{Kind: "missing", Detail: it.Key}}}, nil
 	}
 	result, err := batchRun(env, id, s, 1, func(...any) {})
-	if err == nil || result.Pending != 1 || result.Gap != 1 || s.calls != 2 {
+	if err != nil || result.Pending != 0 || result.Gap != 2 || s.calls != 2 {
 		t.Fatalf("result=%+v calls=%d error=%v", result, s.calls, err)
 	}
 }
@@ -270,12 +270,12 @@ func TestRunBatch_ItemTimeoutDoesNotAbortBatch(t *testing.T) {
 	}
 }
 
-func TestRunBatch_PersistentSourceErrorBecomesGapOnLastAttempt(t *testing.T) {
+func TestRunBatch_PersistentSourceErrorBecomesGapImmediately(t *testing.T) {
 	env, id, s := batchSetup(t)
 	s.process = func(context.Context, Env, Run, Item) (Output, error) {
 		return Output{}, RetryableGap(errors.New("gateway status 500"), "source_unavailable")
 	}
-	result, err := batchRun(env, id, s, 5, func(...any) {})
+	result, err := batchRun(env, id, s, 1, func(...any) {})
 	state, _ := batchState(t, env.DB, id)
 	var gaps int
 	if queryErr := env.DB.QueryRow(context.Background(), `SELECT count(*) FROM gap WHERE run_id=$1 AND kind='source_unavailable'`, id).Scan(&gaps); queryErr != nil {

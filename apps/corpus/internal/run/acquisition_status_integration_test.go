@@ -4,6 +4,7 @@ package run_test
 
 import (
 	"context"
+	"reflect"
 	"testing"
 	"time"
 
@@ -57,18 +58,17 @@ func TestStatus_FetchReadCounts(t *testing.T) {
 	f.exec(`INSERT INTO run_item(run_id,stage,item_key,state,batch,generation,message)
  SELECT $1,stage,key,state,0,generation,message FROM (VALUES
  ('fetch','vn:vbpl:1','done',2,'read=reused'),
- ('fetch','vn:vbpl:2','done',2,'read=no_baseline'),
+ ('fetch','vn:vbpl:2','done',2,'read=no_baseline files={"etag_md5_cache":1,"no_candidate":2}'),
  ('fetch','vn:vbpl:3','done',2,'read=invalid_baseline'),
  ('fetch','vn:vbpl:4','done',2,'read=null_date'),
  ('fetch','vn:vbpl:5','done',2,'read=date_changed'),
  ('fetch','vn:vbpl:6','done',2,'read=missing_attachment'),
- ('fetch','vn:vbpl:7','done',2,'read=age'),
  ('fetch','vn:vbpl:8','done',2,'read=control'),
  ('fetch','vn:vbpl:9','done',2,'read=control outcome=same'),
  ('fetch','vn:vbpl:10','done',2,'read=control outcome=tree_ids_only'),
  ('fetch','vn:vbpl:11','done',2,'read=control outcome=changed'),
- ('fetch','vn:vbpl:12','done',1,'read=reused'),
- ('fetch','vn:vbpl:13','gap',2,'read=reused'),
+ ('fetch','vn:vbpl:12','done',1,'read=reused files={"no_candidate":99}'),
+ ('fetch','vn:vbpl:13','gap',2,'read= files={"failure_timeout":1}'),
  ('fetch','vn:chinhphu:14','done',2,'read=reused'),
  ('expand','vn:vbpl:15','done',2,'read=reused'),
  ('fetch','vn:vbpl:16','done',2,'acquisition reused')
@@ -77,8 +77,8 @@ func TestStatus_FetchReadCounts(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := run.FetchReads{Reused: 1, NoBaseline: 1, InvalidBaseline: 1, NullDate: 1, DateChanged: 1, MissingAttachment: 1, Age: 1, Control: 4, ControlSame: 1, ControlTreeIDsOnly: 1, ControlChanged: 1}
-	if report.FetchReads != want {
+	want := run.FetchReads{Attachments: map[string]int64{"etag_md5_cache": 1, "no_candidate": 2, "failure_timeout": 1}, Reused: 1, NoBaseline: 1, InvalidBaseline: 1, NullDate: 1, DateChanged: 1, MissingAttachment: 1, Control: 4, ControlSame: 1, ControlTreeIDsOnly: 1, ControlChanged: 1}
+	if !reflect.DeepEqual(report.FetchReads, want) {
 		t.Fatalf("fetch reads = %+v, want %+v", report.FetchReads, want)
 	}
 }

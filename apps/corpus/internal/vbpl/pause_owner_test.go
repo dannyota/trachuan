@@ -148,26 +148,3 @@ func TestPause_OwnerRetriesAndStops(t *testing.T) {
 		})
 	}
 }
-
-func TestPause_OwnerGoroutineStopsWithActivity(t *testing.T) {
-	g := &failingPauseGate{Memory: sourcegate.NewMemory(), called: make(chan struct{}, 10), allow: make(chan struct{})}
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusForbidden) }))
-	defer server.Close()
-	c := NewWithBase(server.URL, "test", WithLimits(float64(rate.Inf), 1), WithBackoffs(time.Millisecond), WithGate(g))
-	ctx, cancel := context.WithCancel(sourcegate.WithRunID(context.Background(), 1))
-	ctx = sourcegate.WithActivity(ctx)
-	_, _, err := c.Detail(ctx, "1")
-	if !errors.Is(err, sourcegate.ErrSourcePaused) {
-		cancel()
-		t.Fatalf("error = %v", err)
-	}
-	c.pauseMu.Lock()
-	done := c.pauses[1].ownerDone
-	c.pauseMu.Unlock()
-	cancel()
-	select {
-	case <-done:
-	case <-time.After(50 * time.Millisecond):
-		t.Fatal("pause owner goroutine did not stop")
-	}
-}

@@ -11,6 +11,14 @@ func WithActivity(ctx context.Context) context.Context {
 	return context.WithValue(ctx, activityKey{}, ctx)
 }
 
+// EnsureActivity preserves an attached lifetime or uses the caller's lifetime.
+func EnsureActivity(ctx context.Context) context.Context {
+	if _, ok := Activity(ctx); ok {
+		return ctx
+	}
+	return WithActivity(ctx)
+}
+
 // Activity returns the activity lifetime attached to a context.
 func Activity(ctx context.Context) (context.Context, bool) {
 	activity, ok := ctx.Value(activityKey{}).(context.Context)

@@ -5,8 +5,8 @@ package fetch
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
-	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
@@ -20,18 +20,16 @@ import (
 )
 
 func TestRunBatch_HungVBPLRequest(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	transport := sourceTransport(func(r *http.Request) (*http.Response, error) {
 		if strings.Contains(r.URL.Path, "/1") {
-			<-r.Context().Done()
-			return
+			return nil, context.DeadlineExceeded
 		}
+		status := http.StatusNotFound
 		if strings.Contains(r.URL.Path, "/3") {
-			w.WriteHeader(http.StatusTooManyRequests)
-			return
+			status = http.StatusTooManyRequests
 		}
-		w.WriteHeader(http.StatusNotFound)
-	}))
-	defer server.Close()
+		return &http.Response{StatusCode: status, Header: http.Header{}, Body: io.NopCloser(strings.NewReader(""))}, nil
+	})
 	ctx := context.Background()
 	db, err := pgxpool.New(ctx, testdb.New(t))
 	if err != nil {
@@ -45,7 +43,7 @@ func TestRunBatch_HungVBPLRequest(t *testing.T) {
 	if _, err = db.Exec(ctx, `INSERT INTO run_item(run_id,stage,item_key,state,batch,generation,attempt) VALUES ($1,'fetch','vn:vbpl:1','pending',0,0,0),($1,'fetch','vn:vbpl:2','pending',0,0,0),($1,'fetch','vn:vbpl:3','pending',0,0,0)`, id); err != nil {
 		t.Fatal(err)
 	}
-	c := vbpl.NewWithBase(server.URL, "test", vbpl.WithLimits(float64(rate.Inf), 16), vbpl.WithBackoffs(), vbpl.WithTestTimeouts(5*time.Millisecond, 15*time.Millisecond))
+	c := vbpl.NewWithBase("http://127.0.0.1", "test", vbpl.WithTransport(transport), vbpl.WithLimits(float64(rate.Inf), 16), vbpl.WithBackoffs())
 	env := stage.Env{DB: db, Artifacts: artifact.Store{Root: t.TempDir()}}
 	extractor := New(c)
 	raw, err := json.Marshal(stage.Snapshot{Recipes: map[string]string{"fetch": extractor.Recipe(stage.Snapshot{})}})
@@ -57,11 +55,11 @@ func TestRunBatch_HungVBPLRequest(t *testing.T) {
 	}
 	in := stage.BatchInput{RunID: id, Generation: 2, Stage: "fetch"}
 	result, err := stage.RunBatch(ctx, env, extractor, in, 1, stage.BatchConfig{HeartbeatEvery: time.Second, MaxAttempts: 5}, func(...any) {})
-	if err == nil || result.Pending != 2 || result.Gap != 1 {
+	if err == nil || result.Pending != 1 || result.Gap != 2 {
 		t.Fatalf("attempt 1: result = %+v, error = %v", result, err)
 	}
 	result, err = stage.RunBatch(ctx, env, extractor, in, 2, stage.BatchConfig{HeartbeatEvery: time.Second, MaxAttempts: 5}, func(...any) {})
-	if err == nil || result.Pending != 1 || result.Gap != 1 {
+	if err == nil || result.Pending != 1 || result.Gap != 0 {
 		t.Fatalf("result = %+v, error = %v", result, err)
 	}
 	var kind, origin, cause string

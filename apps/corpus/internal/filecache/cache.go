@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"time"
 )
 
 type key struct {
@@ -19,7 +18,6 @@ type key struct {
 }
 type entry struct {
 	path, hash string
-	collected  time.Time
 }
 
 // Cache holds the attachment index in memory.
@@ -52,26 +50,23 @@ func Load(dir string) (*Cache, error) {
 			return nil, fmt.Errorf("read cache index: %w", readErr)
 		}
 		size, sizeErr := strconv.ParseInt(row[2], 10, 64)
-		collected, dateErr := time.Parse(time.RFC3339, row[5])
 		digest, hashErr := hex.DecodeString(row[3])
-		if sizeErr != nil || size < 0 || dateErr != nil || hashErr != nil || len(digest) != 32 || row[3] != strings.ToLower(row[3]) || row[4] == "" || strings.ContainsAny(row[4], "/\\") || row[4] == "." || row[4] == ".." {
+		if sizeErr != nil || size < 0 || hashErr != nil || len(digest) != 32 || row[3] != strings.ToLower(row[3]) || row[4] == "" || strings.ContainsAny(row[4], "/\\") || row[4] == "." || row[4] == ".." {
 			return nil, fmt.Errorf("invalid cache index entry")
 		}
 		k := key{row[0], row[1], size}
-		c.entries[k] = append(c.entries[k], entry{filepath.Join(dir, "files", row[3]+"."+row[4]), row[3], collected})
+		c.entries[k] = append(c.entries[k], entry{filepath.Join(dir, "files", row[3]+"."+row[4]), row[3]})
 	}
 	return c, nil
 }
 
-// Lookup returns a matching cache entry collected no earlier than updatedAt.
-func (c *Cache) Lookup(vbplID, name string, size int64, updatedAt time.Time) (path, sha256 string, ok bool) {
-	if c == nil || updatedAt.IsZero() {
+// Lookup returns a size-checked entry for a document and file name.
+func (c *Cache) Lookup(vbplID, name string, size int64) (path, sha256 string, ok bool) {
+	if c == nil {
 		return "", "", false
 	}
 	for _, e := range c.entries[key{vbplID, name, size}] {
-		if !e.collected.Before(updatedAt) {
-			return e.path, e.hash, true
-		}
+		return e.path, e.hash, true
 	}
 	return "", "", false
 }

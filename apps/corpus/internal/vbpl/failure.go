@@ -1,7 +1,6 @@
 package vbpl
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -27,10 +26,6 @@ func (e *Failure) Error() string {
 // Unwrap returns the underlying error, when present.
 func (e *Failure) Unwrap() error { return e.Err }
 
-func objectFramed(raw []byte) bool {
-	b := bytes.TrimSpace(raw)
-	return len(b) > 0 && b[0] == '{'
-}
 func isNonJSON(err error) bool {
 	var f *Failure
 	return errors.As(err, &f) && f.Cause == "non_json_200"
@@ -42,7 +37,8 @@ func statusCause(status int) string {
 	return "http_5xx"
 }
 func classify(err error, name string, status int) error {
-	if err == nil || isNonJSON(err) || errors.Is(err, ErrTooLarge) {
+	var prior *Failure
+	if err == nil || errors.As(err, &prior) || isNonJSON(err) || errors.Is(err, ErrTooLarge) {
 		return err
 	}
 	var n net.Error
