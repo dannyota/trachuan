@@ -32,3 +32,5 @@ Observations and experiments. Not project authority.
 - [OCR cross-check pilot](vn-ocr-check-2026-11.md): cost and findings of
   checking stored OCR text against PDF pages with Sonnet 5.5 and Opus 5.5, every
   item read against its page.
+- [relationSQL at production size](relation-sql-explain-2026-11.md): plans and
+  row counts for hit relation hydration on vn/20261111_4.
