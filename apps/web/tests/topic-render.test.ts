@@ -86,3 +86,39 @@ it('does not cache an unavailable topic tree', () => {
     expect(result.body).toContain('Dịch vụ chưa sẵn sàng.')
   }
 })
+
+it('does not revalidate topic errors against any ETag', () => {
+  const script = `
+    import { Server } from 'node:http';
+    Server.prototype.listen = function () { return this };
+    process.env.NITRO_SHUTDOWN_DISABLED = '1';
+    globalThis.fetch = async request => {
+      const missing = new URL(request.url).pathname.endsWith('/9');
+      return new Response(JSON.stringify({error:{code:missing?'not_found':'unavailable',message:'error'}}), {status:missing?404:503,headers:{'content-type':'application/json'}});
+    };
+    const app = (await import('./.output/server/chunks/nitro/nitro.mjs')).g();
+    const results = [];
+    for (const path of ['/vn/topics/9', '/vn/topics/8', '/vn/topics']) {
+      const first = await app.localFetch(path);
+      const etag = first.headers.get('etag');
+      const attempts = [first];
+      for (const value of ['*', '"guessed"', ...(etag ? [etag] : [])]) attempts.push(await app.localFetch(path, {headers:{'if-none-match':value}}));
+      const responses = [];
+      for (const res of attempts) responses.push({status:res.status,headers:Object.fromEntries(res.headers),body:await res.text()});
+      results.push({path,responses});
+    }
+    console.log(JSON.stringify(results));
+  `
+  const results = JSON.parse(execFileSync(process.execPath, ['--input-type=module', '-e', script], { encoding: 'utf8' }))
+  for (const { path, responses } of results) {
+    for (const response of responses) {
+      expect(response.status, path).toBe(path.endsWith('/9') ? 404 : 503)
+      expect(response.headers.etag, path).toBeUndefined()
+      expect(response.headers['last-modified'], path).toBeUndefined()
+      expect(response.headers['cache-control'], path).toBe('no-cache')
+      expect(response.headers.vary.toLowerCase(), path).toContain('cookie')
+      if (path.endsWith('/9')) expect(response.body).toBe('Not Found\n')
+      else expect(response.body).toContain('Dịch vụ chưa sẵn sàng.')
+    }
+  }
+})
