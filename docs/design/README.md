@@ -13,6 +13,7 @@ Intended behavior of trachuan. Decisions with alternatives are in the
 | [pipeline](pipeline.md)                             | Write path on Temporal, stages, batch submissions, release artifact                           |
 | [sources](sources.md)                               | Vietnam discovery, relation context, secondary source and loss approval                       |
 | [relations from text](relations-text.md)            | Provision-level amend, repeal and suspend relations parsed from article text, fail closed     |
+| [scoped amendment lists](relations-text-scoped.md)  | Version 2 of relations from text: an article lead names the target, its items name provisions |
 | [normalization](normalization.md)                   | Dates, numbers, source status mapping and consolidated status derivation                      |
 | [calibration](calibration.md)                       | Provisional abstention threshold                                                              |
 | [text extraction](text-extraction.md)               | Provision trees from HTML transcriptions and attached files when the source has no tree       |

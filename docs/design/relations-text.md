@@ -42,9 +42,10 @@ counted gap, never a row and never a guess.
   import never depends on extraction. Relate processing, the build relation
   reader and the build identity-inventory reader validate the same pair with one
   shared function ([pipeline](pipeline.md#items-artifacts-and-gaps)). The relate
-  recipe gains `text_rules:"vn-targets/1"`. Recipes freeze when a run first
-  includes the stage, so the change applies to new runs only; an existing run
-  keeps its frozen relate recipe and input identity.
+  recipe gains `text_rules:"vn-targets/1"` (`vn-targets/2` with
+  [scoped amendment lists](relations-text-scoped.md)). Recipes freeze when a run
+  first includes the stage, so the change applies to new runs only; an existing
+  run keeps its frozen relate recipe and input identity.
 - The artifact stays run independent: it records what the sentence says and the
   diagram target's VBPL id, never a resolved provision of another document.
   Resolution against the run (membership, `unknown_target`) stays in `Resolve`;
@@ -208,11 +209,15 @@ Known gap, measured 2026-11-12: 11/2026/TT-NHNN amends 47/2025/TT-NHNN (its
 Chapter VIII heading reads "SỬA ĐỔI, BỔ SUNG MỘT SỐ ĐIỀU CỦA THÔNG TƯ SỐ
 47/2025/TT-NHNN" and changes Article 6 clause 2 from 28 days to 14 working
 days), yet neither VBPL diagram links the two documents; only the consolidated
-text 48/VBHN-NHNN names the amendment. Version 1 therefore emits nothing for it
-(gap `relation_text_unlinked_target`), and 47/2025/TT-NHNN serves its old
-wording as current. The unlinked-target gap count is the measure of how many
-such cases exist; version 2 decides whether a heading-named target with a
-verified number, type, year and issuer may stand without a diagram link.
+text 48/VBHN-NHNN names the amendment. Version 1 therefore emits nothing for it,
+and 47/2025/TT-NHNN serves its old wording as current. Run vn/20261112_2 records
+no `relation_text_unlinked_target` gap at all: version 1 never reads a chapter
+heading, and it rejects article leads such as `một số điều của` as grammar
+before the target check. [Scoped amendment lists](relations-text-scoped.md)
+(version 2) read article leads, so their unlinked count measures how often the
+diagram misses an amended document; version 3 decides from it whether a
+heading-named target with a verified number, type, year and issuer may stand
+without a diagram link.
 
 ## Evaluation
 
@@ -222,10 +227,13 @@ suspension, a point list under one clause, two articles, `sửa đổi, bổ sun
 a title tail, a date range; rejection fixtures cover: a quoted replacement
 article, a missing `của`, two document numbers, mixed verbs, an unlinked number.
 The development case dev-004 stays an honest retrieval miss: on run
-vn/20261111_4 the diagram does not link 10/2023/TT-NHNN to 39/2016/TT-NHNN, so
-its sentence is an `relation_text_unlinked_target` gap, and 39/2016/TT-NHNN
-Article 8 has no clause nodes. The suspension becomes visible only when VBPL
-adds the link, or when a future manual relation contract (not defined by
-[validity status](validity-status.md), which covers validity corrections only)
-supplies the verified pair; it resolves to the clause only when the clause nodes
-exist.
+vn/20261111_4 the diagram does not link 10/2023/TT-NHNN to 39/2016/TT-NHNN, and
+39/2016/TT-NHNN Article 8 has no clause nodes. Version 1 rejects its sentence
+earlier, as `relation_text_multi_target` (run vn/20261112_2), because the tail
+holds a parenthetical naming 06/2023/TT-NHNN; version 2 reads that parenthetical
+([tails](relations-text-scoped.md#tails)), so the sentence reaches the target
+check and becomes a `relation_text_unlinked_target` gap. The suspension becomes
+visible only when VBPL adds the link, or when a future manual relation contract
+(not defined by [validity status](validity-status.md), which covers validity
+corrections only) supplies the verified pair; it resolves to the clause only
+when the clause nodes exist.
