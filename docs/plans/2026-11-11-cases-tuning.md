@@ -41,8 +41,8 @@
 
 **Interfaces:** Development cases use the legacy case format plus `tags` (from `identifier`, `clause`, `multi_document`, `abbreviation`, `missing_date`, `historical`, `out_of_domain`, `negative`); their identity entries live in `identity-map.json` like old product entries. The report gains `cohorts.development` with the same records and floors as old product; development is `not_run` while the file is empty; the report has no sealed entry. Calibration fits on old product and development together and labels itself `provisional-old-product` or `old-product+development`.
 
-- [ ] Tests: `TestDevelopment_ScoredSeparately`; `TestDevelopment_NotRunWhenEmpty`; `TestDevelopment_FloorsApply`; `TestCalibrate_UsesOldProductAndDevelopment`; `TestReport_NoSealedEntry`.
-- [ ] Implement, run unit and integration tests, commit `feat(eval): development cohort`.
+- [x] Tests: `TestDevelopment_ScoredSeparately`; `TestDevelopment_NotRunWhenEmpty`; `TestDevelopment_FloorsApply`; `TestCalibrate_UsesOldProductAndDevelopment`; `TestReport_NoSealedEntry`.
+- [x] Implement, run unit and integration tests, commit `feat(eval): development cohort`.
 
 ### Task 2: Cases
 
@@ -50,16 +50,16 @@
 - [x] Queries: a fresh subagent that sees only the scenarios writes the one query an agent would send to `search` for each.
 - [x] Labels: a subagent with read access to the run's corpus database and official sources (VBPL, vanban.chinhphu.vn) labels each positive with expected citations `{doc_number, article?, clause?, point?, alt_doc_numbers?}` and evidence (`fetch_sha256`, node id, quoted span), or reclassifies it negative with a reason; current law at the evaluation date unless tagged `historical`. A Codex worker on another model rechecks every label against its evidence; the executing session settles disagreements from official text.
 - [x] Show Danny 10 cases and apply his corrections; commit `development.json` and the identity entries.
-- [ ] Rebuild the newest run so calibration fits on both cohorts (status `old-product+development`; eval never refits), then `make eval` on that build; this report is the baseline for Tasks 3 to 5; record development and old product results.
+- [x] Rebuild the newest run so calibration fits on both cohorts (status `old-product+development`; eval never refits), then `make eval` on that build; this report is the baseline for Tasks 3 to 5; record development and old product results.
 
 ### Task 3: Per-document cap
 
-- [ ] A research-only per-document cap override in ranking (`internal/retrieval`, bounded like `Depths`), set only by `corpus eval --cap N|none`; it never changes the build recipe, calibration or serving search, and the report records it. Test `TestCapOverride_EvalOnly`.
-- [ ] Run the current cap and 4, 5 and none on both cohorts; keep a value only under ADR 0010 item 4 and compact p95 within the ADR 0013 size gate; record the numbers and change `docs/design/budgets.md` and the recipe if one wins.
+- [x] A research-only per-document cap override in ranking (`internal/retrieval`, bounded like `Depths`), set only by `corpus eval --cap N|none`; it never changes the build recipe, calibration or serving search, and the report records it. Test `TestCapOverride_EvalOnly`.
+- [x] Run the current cap and 4, 5 and none on both cohorts; keep a value only under ADR 0010 item 4 and compact p95 within the ADR 0013 size gate; record the numbers and change `docs/design/budgets.md` and the recipe if one wins.
 
 ### Task 4: History-question policy
 
-- [ ] On cases tagged `historical` (development and old product), compare (a) default search returns up to 3 non-current hits after the current ones, clearly marked, and (b) agents pass `in_force_only:false` themselves as `guide` instructs; measure recall@20, current-law precision of primary hits and compact size; write the decision into `docs/design/retrieval.md` with the numbers, or keep (b) if (a) costs precision.
+- [x] On cases tagged `historical` (development and old product), compare (a) default search returns up to 3 non-current hits after the current ones, clearly marked, and (b) agents pass `in_force_only:false` themselves as `guide` instructs; measure recall@20, current-law precision of primary hits and compact size; write the decision into `docs/design/retrieval.md` with the numbers, or keep (b) if (a) costs precision.
 
 ### Task 5: Remaining misses
 

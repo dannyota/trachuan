@@ -169,7 +169,7 @@ service is added. Host latency and memory acceptance remain separate.
 | ANN pool; ef_search                                                                       | max(400, 24 times dense depth); min(pool, 1,000)                                                           |
 | ANN scan settings                                                                         | strict_order; force_custom_plan; max_scan_tuples=20,000; scan_mem_multiplier=1                             |
 | Hydration pool                                                                            | First min(union size, 8 times response limit) fused chunks                                                 |
-| Per-document cap; backfill                                                                | 3; demoted hits in rank order until response full                                                          |
+| Per-document cap; backfill; non-current tail                                              | 5; demoted hits in rank order until response full; 2 slots for the non-current group in default mode       |
 | Default response limit compact; full; maximum                                             | 20; 8; 50                                                                                                  |
 | Evidence text per full hit; compact snippet                                               | 14,000 Unicode code points, then source spans and read pointer; 600 code points including omission markers |
 | Relations per full hit or read item; evidence per relation; related pointers per document | 20; 1,000 Unicode code points, omissions explicit; 5                                                       |
