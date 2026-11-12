@@ -4,6 +4,7 @@ import "danny.vn/trachuan/internal/retrieval"
 
 // CaseDifference lists changed citation matches and abstention decisions.
 type CaseDifference struct {
+	ValidityOverrides
 	CapOverride     *retrieval.CapOverride `json:"cap_override"`
 	CaseID          string                 `json:"case_id"`
 	Cohort          string                 `json:"cohort"`
@@ -33,7 +34,7 @@ func compareCases(previous, current []CaseResult) []CaseDifference {
 		if !ok {
 			continue
 		}
-		d := CaseDifference{CapOverride: c.CapOverride, CaseID: c.CaseID, Cohort: c.Cohort, Mode: c.Mode, Arms: c.Arms, Limit: c.Limit, PreviousAbstain: p.Abstain, Abstain: c.Abstain}
+		d := CaseDifference{CapOverride: c.CapOverride, ValidityOverrides: c.ValidityOverrides, CaseID: c.CaseID, Cohort: c.Cohort, Mode: c.Mode, Arms: c.Arms, Limit: c.Limit, PreviousAbstain: p.Abstain, Abstain: c.Abstain}
 		for i := 0; i < max(len(p.Ranks), len(c.Ranks)); i++ {
 			before := i < len(p.Ranks) && p.Ranks[i] > 0
 			after := i < len(c.Ranks) && c.Ranks[i] > 0

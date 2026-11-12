@@ -12,6 +12,10 @@ import (
 
 // Collect caches both candidate arms without calling the embedder.
 func (e *Engine) Collect(ctx context.Context, p Prepared, depths Depths) (Arms, error) {
+	return e.collect(ctx, p, depths, false)
+}
+
+func (e *Engine) collect(ctx context.Context, p Prepared, depths Depths, notYet bool) (Arms, error) {
 	if !p.Validation.Accepted {
 		return Arms{Release: e.release.Rel, RecipeHash: e.release.RetrievalRecipe.Hash(), QueryRecipeHash: e.queryRecipe.Hash(), Validation: p.Validation}, nil
 	}
@@ -64,15 +68,19 @@ func (e *Engine) Collect(ctx context.Context, p Prepared, depths Depths) (Arms, 
 	for i, g := range groups {
 		args := []any{vec, date, historical, flags[i], depths.Dense, refs}
 		if exact {
-			g.Dense, err = denseQuery(ctx, tx, exactSQL, args...)
+			g.Dense, err = denseQuery(ctx, tx, validitySQL(exactSQL, notYet), args...)
 		} else {
-			g.RawANN, err = denseQuery(ctx, tx, annSQL, append(args, pool)...)
+			g.RawANN, err = denseQuery(ctx, tx, validitySQL(annSQL, notYet), append(args, pool)...)
 			g.Dense = g.RawANN
 		}
 		if err != nil {
 			return Arms{}, err
 		}
-		g.Lexical, err = lexicalQuery(ctx, tx, sv, date, historical, flags[i], depths.Lexical, refs)
+		if notYet {
+			g.Lexical, err = lexicalQueryWithValidity(ctx, tx, true, sv, date, historical, flags[i], depths.Lexical, refs)
+		} else {
+			g.Lexical, err = lexicalQuery(ctx, tx, sv, date, historical, flags[i], depths.Lexical, refs)
+		}
 		if err != nil {
 			return Arms{}, err
 		}
@@ -91,7 +99,7 @@ func (e *Engine) Collect(ctx context.Context, p Prepared, depths Depths) (Arms, 
 			for i, g := range groups {
 				if len(g.RawANN) < depths.Dense {
 					g.Fallback = true
-					g.Dense, err = denseQuery(ctx, tx, exactSQL, vec, date, historical, flags[i], depths.Dense, refs)
+					g.Dense, err = denseQuery(ctx, tx, validitySQL(exactSQL, notYet), vec, date, historical, flags[i], depths.Dense, refs)
 					if err != nil {
 						return Arms{}, err
 					}

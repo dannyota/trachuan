@@ -63,7 +63,7 @@ func TestLossDiagnostics_Stages(t *testing.T) {
 			}
 			anchor := tt.expected.Identity.Anchor
 			entry := MapEntry{State: "resolved", Alternatives: []Alternative{{Country: "vn", DocumentKey: tt.expected.Identity.DocumentKey, Anchor: &anchor, Kind: "provision"}}}
-			got, err := diagnoseLoss(arms, rr, tt.limit, "hybrid", "old_product", Expectation{}, entry, response)
+			got, err := diagnoseLoss(arms, rr, tt.limit, "hybrid", "old_product", Expectation{}, entry, response, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -88,7 +88,7 @@ func TestCaseLosses_StoredWithHitGaps(t *testing.T) {
 	}
 	anchor := "one"
 	entry := MapEntry{State: "resolved", Alternatives: []Alternative{{Country: "vn", DocumentKey: "doc", Anchor: &anchor, Kind: "provision"}}}
-	losses, gaps, err := caseDiagnostics(arms, recipe, 8, "hybrid", "old_product", []Expectation{{DocNumber: "doc"}}, map[int]MapEntry{0: entry}, response)
+	losses, gaps, err := caseDiagnostics(arms, recipe, 8, "hybrid", "old_product", []Expectation{{DocNumber: "doc"}}, map[int]MapEntry{0: entry}, response, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -126,7 +126,7 @@ func TestLossDiagnostics_CapDemotesReturnedCitation(t *testing.T) {
 	if rank := MatchProduct(entry, response.Hits); rank != 3 {
 		t.Fatalf("rank = %d", rank)
 	}
-	stage, err := diagnoseLoss(arms, recipe, 3, "hybrid", "old_product", Expectation{}, entry, response)
+	stage, err := diagnoseLoss(arms, recipe, 3, "hybrid", "old_product", Expectation{}, entry, response, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -148,11 +148,107 @@ func TestLossDiagnostics_RecordsLateNaturalRank(t *testing.T) {
 	}
 	anchor := "b"
 	entry := MapEntry{State: "resolved", Alternatives: []Alternative{{Country: "vn", DocumentKey: "second", Anchor: &anchor, Kind: "provision"}}}
-	stage, err := diagnoseLoss(arms, recipe, 8, "hybrid", "old_product", Expectation{}, entry, response)
+	stage, err := diagnoseLoss(arms, recipe, 8, "hybrid", "old_product", Expectation{}, entry, response, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if stage != "ranked" {
 		t.Fatalf("stage = %q", stage)
+	}
+}
+
+func TestLossDiagnostics_FirstAlternativeAcrossGroups(t *testing.T) {
+	recipe := retrieval.Recipe1()
+	threshold := 0.0
+	recipe.Abstention.Threshold = &threshold
+	recipe.DocumentCap = 1
+	primary := []retrieval.Candidate{lossCandidate(1, "primary-first", "a"), lossCandidate(2, "primary-target", "b")}
+	other := []retrieval.Candidate{lossCandidate(3, "historic-target", "a"), lossCandidate(4, "historic-target", "b"), lossCandidate(5, "historic-other", "a")}
+	arms := retrieval.Arms{Validation: retrieval.Validation{Accepted: true}, Depths: retrieval.Depths{Dense: 200, Lexical: 100}, Primary: retrieval.ArmGroup{Dense: primary, Members: primary}, NonCurrent: retrieval.ArmGroup{Dense: other, Members: other}, IncludeNonCurrent: true}
+	entry := MapEntry{State: "resolved", Alternatives: []Alternative{{Country: "vn", DocumentKey: "primary-target", Kind: "document"}, {Country: "vn", DocumentKey: "historic-target", Anchor: &other[1].Identity.Anchor, Kind: "provision"}}}
+	for _, useTail := range []bool{false, true} {
+		t.Run(fmt.Sprintf("tail_%t", useTail), func(t *testing.T) {
+			var response retrieval.Response
+			var tail *int
+			var err error
+			if useTail {
+				v := 3
+				tail = &v
+				response, err = retrieval.ShapeWithNonCurrentTail(arms, recipe, 5, "dense", nil, v)
+			} else {
+				response, err = retrieval.Shape(arms, recipe, 5, "dense")
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if diagnosticRank("old_product", Expectation{}, entry, response.Hits) != 2 || diagnosticRank("old_product", Expectation{}, entry, response.NonCurrent) != 3 {
+				t.Fatalf("unexpected response: %+v", response)
+			}
+			stage, err := diagnoseLoss(arms, recipe, 5, "dense", "old_product", Expectation{}, entry, response, tail)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if stage != "ranked" {
+				t.Fatalf("stage = %q, want ranked", stage)
+			}
+		})
+	}
+}
+
+func TestLossDiagnostics_TailReservationIsRankLimit(t *testing.T) {
+	tailLossTest(t, false)
+}
+
+func TestLossDiagnostics_ComplementBeyondTailIsRankLimit(t *testing.T) {
+	tailLossTest(t, true)
+}
+
+func TestLossDiagnostics_HistoricalComplementBeyondLimit(t *testing.T) {
+	recipe := retrieval.Recipe1()
+	threshold := 0.0
+	recipe.Abstention.Threshold = &threshold
+	primary := []retrieval.Candidate{lossCandidate(1, "a", "a"), lossCandidate(2, "b", "b")}
+	other := lossCandidate(3, "c", "c")
+	arms := retrieval.Arms{Validation: retrieval.Validation{Accepted: true}, Depths: retrieval.Depths{Dense: 200, Lexical: 100}, Primary: retrieval.ArmGroup{Dense: primary, Members: primary}, NonCurrent: retrieval.ArmGroup{Dense: []retrieval.Candidate{other}, Members: []retrieval.Candidate{other}}, IncludeNonCurrent: true}
+	response, err := retrieval.Shape(arms, recipe, 2, "dense")
+	if err != nil {
+		t.Fatal(err)
+	}
+	anchor := "c"
+	entry := MapEntry{State: "resolved", Alternatives: []Alternative{{Country: "vn", DocumentKey: "c", Anchor: &anchor, Kind: "provision"}}}
+	stage, err := diagnoseLoss(arms, recipe, 2, "dense", "old_product", Expectation{}, entry, response, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stage != "rank_limit" {
+		t.Fatalf("stage = %q, want rank_limit", stage)
+	}
+}
+
+func tailLossTest(t *testing.T, complement bool) {
+	t.Helper()
+	recipe := retrieval.Recipe1()
+	threshold := 0.0
+	recipe.Abstention.Threshold = &threshold
+	primary := []retrieval.Candidate{lossCandidate(1, "a", "a"), lossCandidate(2, "b", "b"), lossCandidate(3, "c", "c")}
+	other := []retrieval.Candidate{lossCandidate(4, "d", "d"), lossCandidate(5, "e", "e")}
+	arms := retrieval.Arms{Validation: retrieval.Validation{Accepted: true}, Depths: retrieval.Depths{Dense: 200, Lexical: 100}, Primary: retrieval.ArmGroup{Dense: primary, Members: primary}, NonCurrent: retrieval.ArmGroup{Dense: other, Members: other}, IncludeNonCurrent: true}
+	response, err := retrieval.ShapeWithNonCurrentTail(arms, recipe, 3, "dense", nil, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	target := primary[2]
+	if complement {
+		target = other[1]
+	}
+	anchor := target.Identity.Anchor
+	entry := MapEntry{State: "resolved", Alternatives: []Alternative{{Country: "vn", DocumentKey: target.Identity.DocumentKey, Anchor: &anchor, Kind: "provision"}}}
+	tail := 1
+	stage, err := diagnoseLoss(arms, recipe, 3, "dense", "old_product", Expectation{}, entry, response, &tail)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stage != "rank_limit" {
+		t.Fatalf("stage = %q, want rank_limit", stage)
 	}
 }

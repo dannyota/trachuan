@@ -109,15 +109,26 @@ func groupMatches(arms retrieval.Arms, recipe retrieval.Recipe, candidate retrie
 	}
 	return diagnosticRank(cohort, e, entry, response.Hits) > 0, nil
 }
-func diagnoseLoss(arms retrieval.Arms, recipe retrieval.Recipe, limit int, mode retrieval.ArmMode, cohort string, e Expectation, entry MapEntry, response retrieval.Response) (string, error) {
+func diagnoseLoss(arms retrieval.Arms, recipe retrieval.Recipe, limit int, mode retrieval.ArmMode, cohort string, e Expectation, entry MapEntry, response retrieval.Response, tail *int) (string, error) {
 	hits := append(append([]retrieval.Hit{}, response.Hits...), response.NonCurrent...)
 	rank := diagnosticRank(cohort, e, entry, hits)
 	deep := append(append([]retrieval.Candidate{}, arms.Primary.Dense...), arms.Primary.Lexical...)
+	if arms.IncludeNonCurrent {
+		deep = append(deep, arms.NonCurrent.Dense...)
+		deep = append(deep, arms.NonCurrent.Lexical...)
+	}
 	if !matchingCandidate(cohort, e, entry, deep) && rank == 0 {
 		return "candidate", nil
 	}
 	items := fusedItems(arms, recipe, mode)
 	items = items[:min(len(items), recipe.HydrateMultiplier*limit)]
+	primaryCount := len(items)
+	if arms.IncludeNonCurrent {
+		other := arms
+		other.Primary = arms.NonCurrent
+		complement := fusedItems(other, recipe, mode)
+		items = append(items, complement[:min(len(complement), recipe.HydrateMultiplier*limit)]...)
+	}
 	candidates := make([]retrieval.Candidate, 0, len(items))
 	for _, v := range items {
 		candidates = append(candidates, v.candidate)
@@ -125,15 +136,22 @@ func diagnoseLoss(arms retrieval.Arms, recipe retrieval.Recipe, limit int, mode 
 	if !matchingCandidate(cohort, e, entry, candidates) && rank == 0 {
 		return "fusion", nil
 	}
-	groups := map[int64]bool{}
+	groups := map[[2]int64]bool{}
 	groupMatch := false
-	for _, item := range items {
+	for i, item := range items {
 		c := item.candidate
-		if groups[c.GroupID] {
+		group := int64(0)
+		probe := arms
+		if i >= primaryCount {
+			group = 1
+			probe.Primary = arms.NonCurrent
+		}
+		key := [2]int64{group, c.GroupID}
+		if groups[key] {
 			continue
 		}
-		groups[c.GroupID] = true
-		match, err := groupMatches(arms, recipe, c, cohort, e, entry)
+		groups[key] = true
+		match, err := groupMatches(probe, recipe, c, cohort, e, entry)
 		if err != nil {
 			return "", err
 		}
@@ -144,11 +162,18 @@ func diagnoseLoss(arms retrieval.Arms, recipe retrieval.Recipe, limit int, mode 
 	}
 	uncapped := recipe
 	uncapped.DocumentCap = limit + len(items)
-	alternate, err := retrieval.Shape(arms, uncapped, limit, mode)
+	var alternate retrieval.Response
+	var err error
+	if tail != nil {
+		alternate, err = retrieval.ShapeWithNonCurrentTail(arms, uncapped, limit, mode, nil, *tail)
+	} else {
+		alternate, err = retrieval.Shape(arms, uncapped, limit, mode)
+	}
 	if err != nil {
 		return "", fmt.Errorf("shape uncapped diagnostics: %w", err)
 	}
-	altRank := diagnosticRank(cohort, e, entry, append(alternate.Hits, alternate.NonCurrent...))
+	altHits := append(append([]retrieval.Hit{}, alternate.Hits...), alternate.NonCurrent...)
+	altRank := diagnosticRank(cohort, e, entry, altHits)
 	if altRank > 0 && (rank == 0 || altRank < rank) {
 		return "cap", nil
 	}
@@ -164,7 +189,7 @@ func diagnoseLoss(arms retrieval.Arms, recipe retrieval.Recipe, limit int, mode 
 	return "", nil
 }
 
-func caseDiagnostics(arms retrieval.Arms, recipe retrieval.Recipe, limit int, mode retrieval.ArmMode, cohort string, expectations []Expectation, entries map[int]MapEntry, response retrieval.Response) ([]CitationLoss, []retrieval.Gap, error) {
+func caseDiagnostics(arms retrieval.Arms, recipe retrieval.Recipe, limit int, mode retrieval.ArmMode, cohort string, expectations []Expectation, entries map[int]MapEntry, response retrieval.Response, tail *int) ([]CitationLoss, []retrieval.Gap, error) {
 	hits := append(append([]retrieval.Hit{}, response.Hits...), response.NonCurrent...)
 	gaps := append([]retrieval.Gap{}, response.Gaps...)
 	for _, h := range hits {
@@ -176,7 +201,7 @@ func caseDiagnostics(arms retrieval.Arms, recipe retrieval.Recipe, limit int, mo
 		if rank == 1 && !response.Abstain {
 			continue
 		}
-		stage, err := diagnoseLoss(arms, recipe, limit, mode, cohort, e, entries[i], response)
+		stage, err := diagnoseLoss(arms, recipe, limit, mode, cohort, e, entries[i], response, tail)
 		if err != nil {
 			return nil, nil, fmt.Errorf("diagnose citation %d: %w", i, err)
 		}
