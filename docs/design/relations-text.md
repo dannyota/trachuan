@@ -197,6 +197,16 @@ target's hits and an input for [validity status](validity-status.md). It does
 not add relation kinds; code 6 (`corrects`) and code 13 stay
 `unknown_relation_code` gaps until a schema change adds a kind.
 
+Known gap, measured 2026-11-12: 11/2026/TT-NHNN amends 47/2025/TT-NHNN (its
+Chapter VIII heading reads "SỬA ĐỔI, BỔ SUNG MỘT SỐ ĐIỀU CỦA THÔNG TƯ SỐ
+47/2025/TT-NHNN" and changes Article 6 clause 2 from 28 days to 14 working
+days), yet neither VBPL diagram links the two documents; only the consolidated
+text 48/VBHN-NHNN names the amendment. Version 1 therefore emits nothing for it
+(gap `relation_text_unlinked_target`), and 47/2025/TT-NHNN serves its old
+wording as current. The unlinked-target gap count is the measure of how many
+such cases exist; version 2 decides whether a heading-named target with a
+verified number, type, year and issuer may stand without a diagram link.
+
 ## Evaluation
 
 The relate stage report counts emitted rows per kind and gaps per name.

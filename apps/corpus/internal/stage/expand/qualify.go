@@ -5,11 +5,11 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"regexp"
 	"sort"
 	"strings"
 
 	"danny.vn/trachuan/apps/corpus/internal/source"
+	"danny.vn/trachuan/apps/corpus/internal/vbpl"
 )
 
 // Target records one outward relation and the response that established it.
@@ -88,7 +88,6 @@ func Qualify(seedKey string, detail, diagram []byte, codes map[string]source.Rel
 	}
 	out := Observation{Version: 1, SeedKey: seedKey, Targets: []Target{}, NumberOnly: []NumberOnly{}, UnknownCodes: []string{}}
 	unknown := map[string]bool{}
-	validID := regexp.MustCompile(`^[0-9A-Za-z][0-9A-Za-z_-]{0,63}$`)
 	country, seed, ok := strings.Cut(seedKey, ":vbpl:")
 	if !ok || country == "" || seed == "" {
 		return Observation{}, fmt.Errorf("invalid seed key %q", seedKey)
@@ -120,7 +119,7 @@ func Qualify(seedKey string, detail, diagram []byte, codes map[string]source.Rel
 		default:
 			return
 		}
-		if !validID.MatchString(id) || strings.HasPrefix(strings.ToLower(id), "vbpqta_") || id == seed {
+		if !vbpl.ValidDocumentID(id) || id == seed {
 			return
 		}
 		key := prefix + id

@@ -1,4 +1,5 @@
-import { expect, test, type Locator, type Page } from '@playwright/test'
+import { expect, test, type Locator, type Page, type Response } from '@playwright/test'
+import type { components } from '@trachuan/schema/gen/openapi'
 import { freshEmail, signIn } from './identity'
 
 test.use({ extraHTTPHeaders: { 'X-Forwarded-For': '192.0.2.10' } })
@@ -7,7 +8,8 @@ async function keyboard(page: Page) {
   const controls = page.locator('a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])')
   const expected = []
   for (const control of await controls.elementHandles()) {
-    if (await control.evaluate(element => {
+    if (await control.evaluate(node => {
+      const element = node as HTMLElement
       const style = getComputedStyle(element)
       return style.visibility !== 'hidden' && element.getClientRects().length > 0 && !element.closest('[inert]')
     })) expected.push(control)
@@ -24,7 +26,8 @@ async function keyboard(page: Page) {
     }
     expect(changed, 'Tab must leave the previous control within five presses').toBe(true)
     expect(await control.evaluate(element => element === document.activeElement)).toBe(true)
-    const indicator = await control.evaluate(element => {
+    const indicator = await control.evaluate(node => {
+      const element = node as HTMLElement
       const style = getComputedStyle(element)
       return element.matches(':focus-visible') && ((style.outlineStyle !== 'none' && parseFloat(style.outlineWidth) > 0) || style.boxShadow !== 'none')
     })
@@ -33,6 +36,27 @@ async function keyboard(page: Page) {
     previous = await page.evaluateHandle(() => document.activeElement)
   }
   await previous.dispose()
+}
+
+async function searchFilters(page: Page, taxonomy: Response, facets: Response) {
+  const picker = page.locator('fieldset')
+  if (taxonomy.ok()) {
+    const body = await taxonomy.json() as components['schemas']['TaxonomyResult']
+    if (body.nodes?.some(node => node.code && !node.code.includes('.'))) {
+      await expect(picker.getByRole('checkbox').first()).toBeVisible()
+    } else {
+      await expect(picker.locator('ul > li')).toHaveCount(0)
+    }
+  } else {
+    await expect(picker.getByRole('status')).toBeVisible()
+  }
+  if (facets.ok()) {
+    const body = await facets.json() as components['schemas']['CorpusStatus']
+    await expect(page.locator('select[name="types"] option')).toHaveCount(body.doc_types?.length || 0)
+    await expect(page.locator('select[name="issuers"] option')).toHaveCount(body.issuers?.length || 0)
+  } else {
+    await expect(page.locator('.search-form > [role="status"]')).toBeVisible()
+  }
 }
 
 async function modalKeyboard(page: Page, dialog: Locator, controls: Locator[]) {
@@ -92,11 +116,16 @@ test('keyboard focus and validity contrast on the website', async ({ page }) => 
   await page.keyboard.press('Escape')
   await expect(deletion).toHaveCount(0)
   await expect(openDeletion).toBeFocused()
+  const taxonomyResponse = page.waitForResponse(response => response.request().method() === 'GET' && new URL(response.url()).pathname === '/api/v1/public/taxonomy')
+  const facetsResponse = page.waitForResponse(response => response.request().method() === 'GET' && new URL(response.url()).pathname === '/api/v1/status')
   await page.goto('/vn/search')
+  const [taxonomy, facets] = await Promise.all([taxonomyResponse, facetsResponse])
+  await searchFilters(page, taxonomy, facets)
   await keyboard(page)
   await page.getByLabel('Câu hỏi tiếng Việt').fill('Văn bản thử nghiệm\nMẫu giả lập vườn thử nghiệm xanh')
   await page.getByRole('button', { name: 'Tra cứu', exact: true }).click()
   await expect(page.locator('.search-card').first()).toBeVisible()
+  await searchFilters(page, taxonomy, facets)
   await keyboard(page)
   for (const colorScheme of ['light', 'dark'] as const) {
     await page.emulateMedia({ colorScheme })

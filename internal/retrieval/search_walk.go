@@ -89,12 +89,14 @@ func (w searchWalk) page(arms Arms, recipe Recipe, req Request, c searchCursor) 
 	}
 	if !first || hasFilters(req) {
 		free := limit - pc - nc
+		reserved := limit / 2
 		if !arms.IncludeNonCurrent {
-			extra := min(max(0, min(recipe.NonCurrentTail, limit/2)-nc), len(n)-nc, free)
-			nc += extra
-			free -= extra
+			reserved = min(recipe.NonCurrentTail, reserved)
 		}
-		extra := min(len(p)-pc, free)
+		extra := min(max(0, reserved-nc), len(n)-nc, free)
+		nc += extra
+		free -= extra
+		extra = min(len(p)-pc, free)
 		pc += extra
 		free -= extra
 		nc += min(len(n)-nc, free)

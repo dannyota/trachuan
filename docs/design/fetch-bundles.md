@@ -43,8 +43,13 @@ VBPL keeps `detail.json`, `tree.json`, `diagram.json`, the unversioned
 `too_large` name arrays, and attachments at `files/<sha256>`. Do not add
 `document.json`, wrap its file array or re-encode its raw JSON on scope
 adoption. The common reader decodes the known VBPL format into the projections
-in data; absent URL and role stay null and `unknown`. An attachment path follows
-its verified hash. Existing metadata and identity come from `detail.json`.
+in data. A VBPL document's `source_url` is `https://vbpl.vn/van-ban/chi-tiet/`
+followed by its source id: every one of 579,588 stored listing items carries
+exactly that `document_url`, numeric and UUID ids alike, and the page answers
+for both (checked 2026-11-12). It is derived by the reader, not stored in the
+bundle, so no bundle changes. Attachment URL and role stay null and `unknown`.
+An attachment path follows its verified hash. Existing metadata and identity
+come from `detail.json`.
 
 Chinhphu uses `{version:2,document:{...}}` in `document.json` and
 `{version:2,files:[...]}` in `files.json`. Document fields are the common

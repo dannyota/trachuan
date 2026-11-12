@@ -154,9 +154,13 @@ func TestLoad_IncludesMetadataForNoTree(t *testing.T) {
 		t.Fatalf("counts: %+v", counts)
 	}
 	var state, class, source string
+	var sourceURL *string
 	var conflict bool
-	if err = f.corpus.QueryRow(context.Background(), `SELECT content_state,class,source,validity_conflict FROM document`).Scan(&state, &class, &source, &conflict); err != nil || state != "no_tree" || class != "primary" || source != "vbpl" || conflict {
+	if err = f.corpus.QueryRow(context.Background(), `SELECT content_state,class,source,validity_conflict,source_url FROM document`).Scan(&state, &class, &source, &conflict, &sourceURL); err != nil || state != "no_tree" || class != "primary" || source != "vbpl" || conflict {
 		t.Fatalf("state %q class %q source %q conflict %v: %v", state, class, source, conflict, err)
+	}
+	if sourceURL == nil || *sourceURL != "https://vbpl.vn/van-ban/chi-tiet/1" {
+		t.Fatalf("source_url = %v", sourceURL)
 	}
 }
 func TestLoad_ExcludesWithdrawnAndFetchGaps(t *testing.T) {
