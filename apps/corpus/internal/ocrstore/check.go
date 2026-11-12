@@ -6,9 +6,17 @@ import (
 	"fmt"
 	"io"
 	"slices"
+	"strings"
 
 	"github.com/jackc/pgx/v5/pgtype"
 )
+
+// ErrNUL identifies a NUL in an answer string.
+const ErrNUL checkError = "invalid check NUL"
+
+type checkError string
+
+func (e checkError) Error() string { return string(e) }
 
 // CheckItem is one disagreement with a PDF page.
 type CheckItem struct {
@@ -38,6 +46,9 @@ func DecodeAnswer(data []byte, pdfPages int) (CheckResult, error) {
 func DecodeCheck(data []byte) (CheckResult, error) { return decodeResult(data, 0, true) }
 
 func decodeResult(data []byte, pdfPages int, stored bool) (CheckResult, error) {
+	if containsNUL(data) {
+		return CheckResult{}, ErrNUL
+	}
 	fields := []string{"same_document", "pages", "items"}
 	if stored {
 		fields = append(fields, "pdf_pages", "verdict")
@@ -97,6 +108,23 @@ func decodeResult(data []byte, pdfPages int, stored bool) (CheckResult, error) {
 		result.Verdict = verdict
 	}
 	return result, nil
+}
+
+func containsNUL(data []byte) bool {
+	if bytes.IndexByte(data, 0) >= 0 {
+		return true
+	}
+	d := json.NewDecoder(bytes.NewReader(data))
+	d.UseNumber()
+	for {
+		token, err := d.Token()
+		if err != nil {
+			return false
+		}
+		if value, ok := token.(string); ok && strings.ContainsRune(value, 0) {
+			return true
+		}
+	}
 }
 
 func strictObject(data []byte, fields []string) (map[string]json.RawMessage, error) {

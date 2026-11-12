@@ -83,3 +83,35 @@ func TestCheck_LegacyResultRemainsReadable(t *testing.T) {
 		t.Fatalf("canonical result=%s", canonical)
 	}
 }
+
+func TestDecodeAnswer_RejectsNULInStrings(t *testing.T) {
+	for _, tc := range []struct {
+		name, body string
+		wantNUL    bool
+	}{
+		{"quote", `{"same_document":true,"pages":1,"items":[{"kind":"date","page":1,"ocr":"a\u0000b","pdf":"b","note":"x"}]}`, true},
+		{"nested", `{"same_document":true,"pages":1,"items":[{"extra":[{"value":"\u0000"}]}]}`, true},
+		{"key", `{"same_document":true,"pages":1,"items":[],"bad\u0000key":1}`, true},
+		{"literal NUL", "{\"same_document\":true,\"pages\":1,\"items\":[],\"bad\x00key\":1}", true},
+		{"large number before NUL", `{"same_document":true,"pages":1e400,"items":[],"bad\u0000key":1}`, true},
+		{"control", `{"same_document":true,"pages":1,"items":[{"kind":"date","page":1,"ocr":"a\u0001b","pdf":"b","note":"x"}]}`, false},
+		{"literal escape", `{"same_document":true,"pages":1,"items":[{"kind":"date","page":1,"ocr":"a\\u0000b","pdf":"b","note":"x"}]}`, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := DecodeAnswer([]byte(tc.body), 1)
+			if tc.wantNUL && (err == nil || err.Error() != "invalid check NUL") {
+				t.Fatalf("expected NUL error, got %v", err)
+			}
+			if !tc.wantNUL && err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
+func TestCheck_StoredResultRejectsNUL(t *testing.T) {
+	body := []byte(`{"same_document":true,"pages":1,"pdf_pages":1,"items":[{"kind":"date","page":1,"ocr":"a","pdf":"b","note":"\u0000"}],"verdict":"flagged"}`)
+	if _, err := validateCheck(body, 1, pgtype.Int4{}); err != ErrNUL {
+		t.Fatalf("expected NUL error, got %v", err)
+	}
+}
