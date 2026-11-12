@@ -904,3 +904,30 @@ func TestReport_AbstentionCountsAndRatesSerialized(t *testing.T) {
 	}
 	t.Fatal("missing abstention metric")
 }
+
+func TestPreviousDiff_ScorerVersionIncompatible(t *testing.T) {
+	date := retrieval.Date{Year: 2026, Month: 11, Day: 9}
+	opts := Options{EvaluationDate: date, Modes: []retrieval.Mode{"exact"}}
+	prior, _, err := Run(context.Background(), &fakeEngine{date: date}, recordedSuite(), opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prior.Scorer = "agent-eval/2"
+	data, err := json.Marshal(prior)
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(t.TempDir(), "previous.json")
+	if err = os.WriteFile(path, data, 0600); err != nil {
+		t.Fatal(err)
+	}
+	opts.PreviousReport = path
+	current, _, err := Run(context.Background(), &fakeEngine{date: date}, recordedSuite(), opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	diff, ok := current.PreviousDiff.(map[string]any)
+	if !ok || !strings.Contains(fmt.Sprint(diff["reason"]), "incompatible") {
+		t.Fatalf("diff = %v", current.PreviousDiff)
+	}
+}
