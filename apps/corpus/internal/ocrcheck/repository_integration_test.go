@@ -268,3 +268,47 @@ func TestCheck_DatabaseKeepsCheckerVersionsSeparate(t *testing.T) {
 		}
 	}
 }
+
+func TestCheck_DatabaseInsertRejection(t *testing.T) {
+	for _, tc := range []struct {
+		code     string
+		rejected bool
+	}{{"22P05", true}, {"22021", true}, {"23514", false}} {
+		t.Run(tc.code, func(t *testing.T) {
+			r, db, _, docs := databaseFixture(t)
+			ctx := context.Background()
+			_, err := db.Exec(ctx, `CREATE FUNCTION reject_check() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'forced insert failure' USING ERRCODE = '`+tc.code+`'; END $$`)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err = db.Exec(ctx, `CREATE TRIGGER reject_check BEFORE INSERT ON ocr_check FOR EACH ROW EXECUTE FUNCTION reject_check()`); err != nil {
+				t.Fatal(err)
+			}
+			summary, err := r.Run(ctx, docs, options())
+			if !tc.rejected {
+				if err == nil {
+					t.Fatal("unexpected success")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			var state, reason string
+			var data []byte
+			if err = db.QueryRow(ctx, `SELECT state, reason, usage FROM ocr_check_attempt WHERE ocr_text_id=$1`, docs[0].Entry.ID).Scan(&state, &reason, &data); err != nil {
+				t.Fatal(err)
+			}
+			var usage Usage
+			if err = json.Unmarshal(data, &usage); err != nil {
+				t.Fatal(err)
+			}
+			if state != "failed" || reason != "store_rejected" || !usage.Final || usage.Input != 100 || usage.Output != 100 || usage.CostMicroUSD != 1200 || summary.Failed != 1 || summary.Complete != 0 {
+				t.Fatalf("state=%s reason=%s usage=%+v summary=%+v", state, reason, usage, summary)
+			}
+			if _, err = store.New(db).GetOCRCheck(ctx, store.GetOCRCheckParams{OcrTextID: docs[0].Entry.ID, CheckerID: options().CheckerID()}); !errors.Is(err, pgx.ErrNoRows) {
+				t.Fatalf("check error=%v", err)
+			}
+		})
+	}
+}
