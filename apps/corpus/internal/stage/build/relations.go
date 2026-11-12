@@ -119,6 +119,10 @@ func (l *loader) loadRelations(ctx context.Context, issuers map[string]string) e
 		}
 		detail := fmt.Sprintf("%s:%d", entry.hash, r.Ordinal)
 		if r.TargetAnchor != "" && target != nil {
+			if retrieval.NormalizeNumber(target.number) != retrieval.NormalizeNumber(r.TargetNumber) {
+				l.addGap("build", entry.key, "relation_text_identity_conflict", detail+":number")
+				continue
+			}
 			identity, found := identities[target.key]
 			if !found {
 				dir, err := artifactDir(l.artifacts, l.items["fetch"][target.key])
