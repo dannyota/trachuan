@@ -18,6 +18,7 @@ import (
 	"danny.vn/trachuan/apps/corpus/internal/stage"
 	"danny.vn/trachuan/apps/corpus/internal/stage/membership"
 	"danny.vn/trachuan/apps/corpus/internal/store"
+	"danny.vn/trachuan/apps/corpus/internal/testactivity"
 	"danny.vn/trachuan/internal/testpg"
 	"github.com/jackc/pgx/v5"
 )
@@ -247,6 +248,7 @@ func TestBuild_ChangedCorrectionsFileIsInventoryChanged(t *testing.T) {
 			t.Cleanup(func() { testpg.DropCorpusDatabase(t, f.admin, temp, f.run.Country+"/"+f.run.Rel) })
 			unchanged, err := st.Process(ctx, f.env, f.run, items[0])
 			if err != nil || unchanged.Artifact == nil {
+				testactivity.Log(t, f.admin, temp)
 				t.Fatalf("comment-only change failed build: %v", err)
 			}
 			content := []byte("- key: vn:vbpl:1\n  number: example\n  hold: true\n  reason: review\n  evidence: {quote: text}\n  reviewed: '2026-11-10'\n")

@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"testing"
 
+	"danny.vn/trachuan/internal/pgdrop"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -69,7 +70,7 @@ func TestNewBuilder_NonSuperuserClonesTemplate(t *testing.T) {
 	if _, err := conn.Exec(ctx, "CREATE DATABASE "+pgx.Identifier{name}.Sanitize()+" TEMPLATE "+pgx.Identifier{b.Template}.Sanitize()); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := conn.Exec(ctx, "DROP DATABASE "+pgx.Identifier{name}.Sanitize()+" WITH (FORCE)"); err != nil {
+	if err := pgdrop.Drop(ctx, conn, name); err != nil {
 		t.Fatal(err)
 	}
 }

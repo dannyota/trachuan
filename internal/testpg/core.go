@@ -12,6 +12,7 @@ import (
 	"os"
 	"strings"
 
+	"danny.vn/trachuan/internal/pgdrop"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -89,7 +90,7 @@ func DropMarkedCorpus(ctx context.Context, conn *pgx.Conn, name, runKey string) 
 	if raw == nil || json.Unmarshal([]byte(*raw), &marker) != nil || marker.RunKey != runKey {
 		return false, nil
 	}
-	if _, err := conn.Exec(ctx, "DROP DATABASE "+pgx.Identifier{name}.Sanitize()+" WITH (FORCE)"); err != nil {
+	if err := pgdrop.Drop(ctx, conn, name); err != nil {
 		return false, fmt.Errorf("drop marked corpus: %w", err)
 	}
 	return true, nil

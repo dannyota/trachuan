@@ -8,6 +8,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io/fs"
 	"net/url"
@@ -16,7 +17,9 @@ import (
 
 	"danny.vn/trachuan/apps/corpus/internal/migrate"
 	"danny.vn/trachuan/apps/corpus/migrations"
+	"danny.vn/trachuan/internal/pgdrop"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 // New creates an isolated database cloned from the migrated template.
@@ -46,7 +49,7 @@ func create(t *testing.T, migrated bool) string {
 		t.Fatal("connect to test database administrator")
 	}
 	t.Cleanup(func() {
-		if _, err := admin.Exec(ctx, "DROP DATABASE IF EXISTS "+pgx.Identifier{name}.Sanitize()+" WITH (FORCE)"); err != nil {
+		if err := dropIfExists(ctx, admin, name); err != nil {
 			t.Errorf("drop test database: %v", err)
 		}
 		if err := admin.Close(ctx); err != nil {
@@ -104,7 +107,7 @@ func ensureTemplate(ctx context.Context, t *testing.T, admin *pgx.Conn, adminURL
 	if ready {
 		return name, nil
 	}
-	if _, err := admin.Exec(ctx, "DROP DATABASE IF EXISTS "+pgx.Identifier{name}.Sanitize()+" WITH (FORCE)"); err != nil {
+	if err := dropIfExists(ctx, admin, name); err != nil {
 		return "", fmt.Errorf("drop incomplete template: %w", err)
 	}
 	if _, err := admin.Exec(ctx, "CREATE DATABASE "+pgx.Identifier{name}.Sanitize()); err != nil {
@@ -113,7 +116,7 @@ func ensureTemplate(ctx context.Context, t *testing.T, admin *pgx.Conn, adminURL
 	templateURL := *adminURL
 	templateURL.Path = "/" + name
 	if err := migrate.Up(ctx, templateURL.String()); err != nil {
-		if _, dropErr := admin.Exec(ctx, "DROP DATABASE "+pgx.Identifier{name}.Sanitize()+" WITH (FORCE)"); dropErr != nil {
+		if dropErr := pgdrop.Drop(ctx, admin, name); dropErr != nil {
 			return "", fmt.Errorf("migrate template: %w; drop template: %v", err, dropErr)
 		}
 		return "", fmt.Errorf("migrate template: %w", err)
@@ -130,4 +133,13 @@ func templateReady(ctx context.Context, admin *pgx.Conn, name string) (bool, err
 		return false, fmt.Errorf("find template: %w", err)
 	}
 	return ready, nil
+}
+
+func dropIfExists(ctx context.Context, admin *pgx.Conn, name string) error {
+	err := pgdrop.Drop(ctx, admin, name)
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && pgErr.Code == "3D000" {
+		return nil
+	}
+	return err
 }
