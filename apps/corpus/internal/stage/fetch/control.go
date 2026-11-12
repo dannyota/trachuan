@@ -82,12 +82,19 @@ func (d readDecision) message() string {
 	if d.outcome != "" {
 		result += " outcome=" + d.outcome
 	}
+	if len(d.counts) > 0 {
+		data, _ := json.Marshal(d.counts)
+		result += " files=" + string(data)
+	}
 	return result
 }
 
 func parseReadMessage(message string) readDecision {
 	var d readDecision
 	for _, part := range strings.Fields(message) {
+		if strings.HasPrefix(part, "files=") {
+			_ = json.Unmarshal([]byte(strings.TrimPrefix(part, "files=")), &d.counts)
+		}
 		if strings.HasPrefix(part, "read=") {
 			d.reason = strings.TrimPrefix(part, "read=")
 		}
@@ -96,4 +103,11 @@ func parseReadMessage(message string) readDecision {
 		}
 	}
 	return d
+}
+
+func (d *readDecision) count(reason string) {
+	if d.counts == nil {
+		d.counts = map[string]int64{}
+	}
+	d.counts[reason]++
 }

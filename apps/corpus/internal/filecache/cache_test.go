@@ -24,10 +24,10 @@ func TestLookup_HitAndMisses(t *testing.T) {
 		date           time.Time
 		hit            bool
 	}{
-		{"hit", "42", "a.pdf", 3, date, true}, {"id", "43", "a.pdf", 3, date, false}, {"name", "42", "b.pdf", 3, date, false}, {"size", "42", "a.pdf", 4, date, false}, {"newer", "42", "a.pdf", 3, date.Add(48 * time.Hour), false}, {"missing date", "42", "a.pdf", 3, time.Time{}, false},
+		{"hit", "42", "a.pdf", 3, date, true}, {"id", "43", "a.pdf", 3, date, false}, {"name", "42", "b.pdf", 3, date, false}, {"size", "42", "a.pdf", 4, date, false}, {"newer", "42", "a.pdf", 3, date.Add(48 * time.Hour), true}, {"missing date", "42", "a.pdf", 3, time.Time{}, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			path, hash, ok := c.Lookup(tc.id, tc.file, tc.size, tc.date)
+			path, hash, ok := c.Lookup(tc.id, tc.file, tc.size)
 			if ok != tc.hit {
 				t.Fatalf("hit = %v", ok)
 			}

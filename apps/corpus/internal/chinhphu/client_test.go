@@ -385,7 +385,7 @@ type timeoutErr struct{}
 func (timeoutErr) Error() string   { return "timeout" }
 func (timeoutErr) Timeout() bool   { return true }
 func (timeoutErr) Temporary() bool { return true }
-func TestDownload_PartialTimeoutDoesNotRetryIntoWriter(t *testing.T) {
+func TestDownload_PartialTimeoutRetriesWithoutPartialOutput(t *testing.T) {
 	var n int
 	tr := roundTripFunc(func(*http.Request) (*http.Response, error) {
 		n++
@@ -394,7 +394,7 @@ func TestDownload_PartialTimeoutDoesNotRetryIntoWriter(t *testing.T) {
 	c := New(WithBaseURLs("http://127.0.0.1:1234", "http://127.0.0.1:1234"), WithTransport(tr), WithBackoffs(0), WithLimits(Limits{RequestsPerSecond: 100000, Burst: 1, InFlight: 1, Pages: 100, HTMLBytes: 5000000, FileBytes: 50000000, Redirects: 3}))
 	var dst bytes.Buffer
 	_, e := c.Download(context.Background(), "http://127.0.0.1:1234/a", &dst, 100)
-	if e == nil || n != 1 || dst.String() != "%PDF-abc" {
+	if e == nil || n != 2 || dst.Len() != 0 {
 		t.Fatalf("requests=%d bytes=%q err=%v", n, dst.String(), e)
 	}
 }
@@ -515,7 +515,7 @@ func TestClient_RetryAfter503Uses5xxCause(t *testing.T) {
 	c, _ := clientFor(t, func(w http.ResponseWriter, r *http.Request) { w.Header().Set("Retry-After", "601"); w.WriteHeader(503) }, WithBackoffs(0))
 	_, _, e := c.Detail(context.Background(), 1)
 	var f *Failure
-	if !errors.As(e, &f) || f.Cause != "http_5xx" || !errors.Is(e, ErrDeferred) {
+	if !errors.As(e, &f) || f.Cause != "http_5xx" || errors.Is(e, ErrDeferred) {
 		t.Fatalf("%v", e)
 	}
 }
@@ -561,7 +561,7 @@ func TestClient_EncodedTokenRedacted(t *testing.T) {
 	}
 }
 
-func TestDownload_TimeoutAfterLimitDoesNotRetry(t *testing.T) {
+func TestDownload_TimeoutAfterLimitRetriesWithoutPartialOutput(t *testing.T) {
 	var n int
 	tr := roundTripFunc(func(*http.Request) (*http.Response, error) {
 		n++
@@ -570,7 +570,7 @@ func TestDownload_TimeoutAfterLimitDoesNotRetry(t *testing.T) {
 	c := New(WithBaseURLs("http://127.0.0.1:1234", "http://127.0.0.1:1234"), WithTransport(tr), WithBackoffs(0), WithLimits(Limits{RequestsPerSecond: 100000, Burst: 1, InFlight: 1, Pages: 100, HTMLBytes: 5000000, FileBytes: 50000000, Redirects: 3}))
 	var dst bytes.Buffer
 	_, e := c.Download(context.Background(), "http://127.0.0.1:1234/a", &dst, 8)
-	if e == nil || n != 1 || dst.String() != "%PDF-abc" {
+	if e == nil || n != 2 || dst.Len() != 0 {
 		t.Fatalf("requests=%d bytes=%q err=%v", n, dst.String(), e)
 	}
 }

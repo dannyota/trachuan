@@ -3,6 +3,7 @@ package vbpl
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	"danny.vn/trachuan/apps/corpus/internal/sourcegate"
@@ -90,3 +91,27 @@ type pausePending struct{}
 func (pausePending) Error() string      { return "source pause persistence pending" }
 func (pausePending) Unwrap() error      { return sourcegate.ErrSourcePaused }
 func (pausePending) PausePending() bool { return true }
+
+func (c *Client) deny(ctx context.Context, reason string) error {
+	if c.gate == nil {
+		return sourcegate.ErrSourcePaused
+	}
+	id, ok := sourcegate.RunID(ctx)
+	if !ok {
+		return errors.New("source pause: missing run id")
+	}
+	activity, ok := sourcegate.Activity(ctx)
+	if !ok {
+		return errors.New("source pause: missing activity context")
+	}
+	c.startPause(activity, id, reason)
+	return pausePending{}
+}
+
+func challenge(head []byte) bool {
+	text := strings.ToLower(string(head))
+	if !strings.Contains(text, "<html") && !strings.Contains(text, "<script") && !strings.Contains(text, "<!doctype html") {
+		return false
+	}
+	return strings.Contains(text, "cf-chl-") || strings.Contains(text, "captcha") || strings.Contains(text, "verify you are human") || strings.Contains(text, "just a moment")
+}

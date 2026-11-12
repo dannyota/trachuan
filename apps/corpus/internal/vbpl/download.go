@@ -2,8 +2,6 @@ package vbpl
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -12,44 +10,43 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
+
+	"danny.vn/trachuan/apps/corpus/internal/filecache"
+	"danny.vn/trachuan/apps/corpus/internal/sourcegate"
 )
 
-// Download saves a bounded attachment and returns its content hash.
-func (c *Client) Download(ctx context.Context, id string, f File, dir string, limit int64) (Downloaded, error) {
-	activityCtx := ctx
-	ctx, cancel := context.WithTimeout(ctx, c.requestBudget)
-	defer cancel()
+// Download saves a bounded attachment and returns its content hashes.
+func (c *Client) Download(ctx context.Context, _ string, f File, dir string, limit int64) (Downloaded, error) {
 	if limit < 0 {
 		return Downloaded{}, fmt.Errorf("negative download limit")
 	}
-	if limit > 50_000_000 {
-		limit = 50_000_000
+	limit = min(limit, 50_000_000)
+	if f.URL == "" {
+		return Downloaded{}, ErrNotFound
 	}
-	refreshed := false
-	for attempt := 0; ; attempt++ {
-		if attempt > 0 {
-			if err := wait(ctx, c.backoffs[attempt-1]); err != nil {
-				if activityCtx.Err() != nil {
-					return Downloaded{}, activityCtx.Err()
-				}
-				return Downloaded{}, fmt.Errorf("retry download: %w", classify(err, "attachment", 0))
-			}
-		}
-		if f.URL == "" {
-			return Downloaded{}, ErrNotFound
-		}
-		if err := c.checkDownloadURL(f.URL); err != nil {
-			return Downloaded{}, err
-		}
+	if f.Size > limit {
+		return Downloaded{}, ErrTooLarge
+	}
+	if err := c.checkDownloadURL(f.URL); err != nil {
+		return Downloaded{}, &Failure{Origin: "gateway", Cause: "unknown", Endpoint: "attachment", Err: err}
+	}
+	policy := sourcegate.Retry{Backoffs: c.backoffs, WaitLimit: c.requestBudget}
+	for {
 		tmp, err := os.CreateTemp(dir, ".vbpl-*")
 		if err != nil {
 			return Downloaded{}, fmt.Errorf("create download: %w", err)
 		}
-		hash := sha256.New()
+		h := filecache.NewHasher()
 		var size int64
-		status, reqErr := c.request(ctx, http.MethodGet, f.URL, nil, true, func(r io.Reader) error {
+		var headers http.Header
+		timeout := sourcegate.DownloadTimeout(f.Size)
+		if c.fileTimeout != 30*time.Second {
+			timeout = c.fileTimeout
+		}
+		status, reqErr := c.request(ctx, http.MethodGet, f.URL, nil, true, requestOptions{timeout: timeout, headers: &headers}, func(r io.Reader) error {
 			var e error
-			size, e = io.Copy(io.MultiWriter(tmp, hash), io.LimitReader(r, limit+1))
+			size, e = io.Copy(io.MultiWriter(tmp, h), io.LimitReader(r, limit+1))
 			if e != nil {
 				return e
 			}
@@ -59,61 +56,75 @@ func (c *Client) Download(ctx context.Context, id string, f File, dir string, li
 			return nil
 		})
 		closeErr := tmp.Close()
-		if activityCtx.Err() != nil {
-			reqErr = activityCtx.Err()
+		if ctx.Err() != nil {
+			reqErr = ctx.Err()
 		}
-		if status == http.StatusOK && reqErr == nil && closeErr == nil && f.Size > 0 && size != f.Size {
-			reqErr = fmt.Errorf("download size %d does not match expected %d", size, f.Size)
+		if status == 200 && reqErr == nil && f.Size > 0 && size != f.Size {
+			reqErr = &Failure{Origin: "gateway", Cause: "size", Endpoint: "attachment", HTTPStatus: status}
 		}
-		if status == http.StatusOK && reqErr == nil && closeErr == nil {
-			digest := hex.EncodeToString(hash.Sum(nil))
-			path := filepath.Join(dir, digest)
-			if err := os.Rename(tmp.Name(), path); err != nil {
+		if status == 200 && reqErr == nil && closeErr == nil {
+			hashes := h.Hashes()
+			dest := filepath.Join(dir, hashes.SHA256)
+			if e := os.Rename(tmp.Name(), dest); e != nil {
 				_ = os.Remove(tmp.Name())
-				return Downloaded{}, fmt.Errorf("save download: %w", err)
+				return Downloaded{}, fmt.Errorf("save download: %w", e)
 			}
-			return Downloaded{Path: path, SHA256: digest, Size: size}, nil
+			return Downloaded{Path: dest, SHA256: hashes.SHA256, Size: size, Hashes: hashes}, nil
 		}
-		if err := os.Remove(tmp.Name()); err != nil && !errors.Is(err, os.ErrNotExist) {
-			return Downloaded{}, fmt.Errorf("remove partial download: %w", err)
+		if e := os.Remove(tmp.Name()); e != nil && !errors.Is(e, os.ErrNotExist) {
+			return Downloaded{}, fmt.Errorf("remove partial download: %w", e)
 		}
 		if closeErr != nil {
 			return Downloaded{}, fmt.Errorf("close download: %w", closeErr)
 		}
-		if activityCtx.Err() != nil {
-			return Downloaded{}, activityCtx.Err()
+		if ctx.Err() != nil {
+			return Downloaded{}, ctx.Err()
 		}
-		if status == http.StatusForbidden && reqErr == nil && !refreshed {
-			refreshed = true
-			files, err := c.Files(ctx, id)
-			if err != nil {
-				return Downloaded{}, fmt.Errorf("refresh files: %w", err)
-			}
-			found := false
-			for _, entry := range files {
-				if entry.FullPath == f.FullPath {
-					f = entry
-					found = true
-					break
-				}
-			}
-			if !found {
-				return Downloaded{}, ErrNotFound
-			}
-			attempt--
-			continue
+		delay, retry, deferred := policy.Next(status, retryable(status, reqErr), sourcegate.RetryAfter(headers.Get("Retry-After"), c.now()))
+		if deferred {
+			return Downloaded{}, &Failure{Origin: "gateway", Cause: "unknown", Err: ErrDeferred, Endpoint: "attachment", HTTPStatus: status}
 		}
-		if retryable(status, reqErr) && attempt < len(c.backoffs) {
+		if retry {
+			if e := c.sleep(ctx, delay); e != nil {
+				return Downloaded{}, e
+			}
 			continue
 		}
 		if reqErr != nil {
 			return Downloaded{}, fmt.Errorf("download: %w", classify(reqErr, "attachment", status))
 		}
-		if status == http.StatusNotFound {
+		if status == 404 {
 			return Downloaded{}, ErrNotFound
 		}
-		return Downloaded{}, fmt.Errorf("download status %d", status)
+		return Downloaded{}, statusFailure(status, "attachment")
 	}
+}
+
+// ETag asks for one byte through the same admission and file pool as downloads.
+// A source failure means no comparable ETag; pauses and our own errors propagate.
+func (c *Client) ETag(ctx context.Context, target string) (string, error) {
+	if err := c.checkDownloadURL(target); err != nil {
+		return "", nil
+	}
+	var headers http.Header
+	status, err := c.request(ctx, http.MethodGet, target, nil, true, requestOptions{ranged: true, headers: &headers}, func(r io.Reader) error { _, e := io.Copy(io.Discard, io.LimitReader(r, 1)); return e })
+	if ctx.Err() != nil {
+		return "", ctx.Err()
+	}
+	if errors.Is(err, sourcegate.ErrSourcePaused) {
+		return "", err
+	}
+	if err != nil {
+		var failure *Failure
+		if errors.As(classify(err, "attachment", status), &failure) {
+			return "", nil
+		}
+		return "", err
+	}
+	if status != 206 {
+		return "", nil
+	}
+	return strings.Trim(headers.Get("ETag"), "\""), nil
 }
 
 func (c *Client) checkDownloadURL(raw string) error {

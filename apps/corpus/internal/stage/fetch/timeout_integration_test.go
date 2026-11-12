@@ -57,11 +57,11 @@ func TestRunBatch_HungVBPLRequest(t *testing.T) {
 	}
 	in := stage.BatchInput{RunID: id, Generation: 2, Stage: "fetch"}
 	result, err := stage.RunBatch(ctx, env, extractor, in, 1, stage.BatchConfig{HeartbeatEvery: time.Second, MaxAttempts: 5}, func(...any) {})
-	if err == nil || result.Pending != 2 || result.Gap != 1 {
+	if err == nil || result.Pending != 1 || result.Gap != 2 {
 		t.Fatalf("attempt 1: result = %+v, error = %v", result, err)
 	}
 	result, err = stage.RunBatch(ctx, env, extractor, in, 2, stage.BatchConfig{HeartbeatEvery: time.Second, MaxAttempts: 5}, func(...any) {})
-	if err == nil || result.Pending != 1 || result.Gap != 1 {
+	if err == nil || result.Pending != 1 || result.Gap != 0 {
 		t.Fatalf("result = %+v, error = %v", result, err)
 	}
 	var kind, origin, cause string

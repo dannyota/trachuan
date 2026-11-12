@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -15,6 +16,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"danny.vn/trachuan/apps/corpus/internal/sourcegate"
 
 	"golang.org/x/time/rate"
 )
@@ -57,7 +60,7 @@ func TestClient_UsesConfiguredBackoffs(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	_, _, err := c.Detail(ctx, "1")
-	if err == nil || errors.Is(err, context.DeadlineExceeded) || attempts.Load() != 3 {
+	if err == nil || errors.Is(err, context.DeadlineExceeded) || attempts.Load() != 2 {
 		t.Fatalf("error = %v, attempts = %d", err, attempts.Load())
 	}
 }
@@ -114,47 +117,44 @@ func TestDecodeTree_NestedNodes(t *testing.T) {
 		t.Fatalf("counts %v", counts)
 	}
 }
-func TestDownload_RefreshesExpiredURL(t *testing.T) {
-	var s *httptest.Server
-	var lists atomic.Int32
-	s = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case "/old":
-			w.WriteHeader(403)
-		case "/new":
-			_, _ = w.Write([]byte("complete"))
-		default:
-			lists.Add(1)
-			_, _ = fmt.Fprintf(w, `{"success":true,"data":[{"fullPath":"a","presignedUrl":%q}]}`, s.URL+"/new")
-		}
-	}))
+func TestDownload_ForbiddenPausesWithoutRefreshing(t *testing.T) {
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(403) }))
 	defer s.Close()
-	got, err := testClient(s).Download(context.Background(), "1", File{FullPath: "a", URL: s.URL + "/old"}, t.TempDir(), 100)
-	if err != nil || got.Size != 8 || lists.Load() != 1 {
-		t.Fatalf("got %+v lists %d err %v", got, lists.Load(), err)
+	c := NewWithBase(s.URL, "test", WithTestHTTP(), WithBackoffs())
+	_, err := c.Download(context.Background(), "1", File{URL: s.URL + "/file"}, t.TempDir(), 100)
+	if !errors.Is(err, sourcegate.ErrSourcePaused) {
+		t.Fatal(err)
 	}
 }
+
+type cutTimeoutBody struct{ sent bool }
+
+func (b *cutTimeoutBody) Read(p []byte) (int, error) {
+	if !b.sent {
+		b.sent = true
+		return copy(p, "part"), nil
+	}
+	return 0, context.DeadlineExceeded
+}
+
 func TestDownload_TimeoutAfterPartialBodyRetriesFresh(t *testing.T) {
-	var n atomic.Int32
-	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if n.Add(1) == 1 {
-			_, _ = w.Write([]byte("part"))
-			w.(http.Flusher).Flush()
-			<-r.Context().Done()
-			return
+	c := NewWithBase("http://127.0.0.1", "test", WithTestHTTP(), WithBackoffs(0))
+	calls := 0
+	c.fileHTTP.Transport = deadlineRoundTrip(func(*http.Request) (*http.Response, error) {
+		calls++
+		var body io.Reader = strings.NewReader("complete")
+		if calls == 1 {
+			body = &cutTimeoutBody{}
 		}
-		_, _ = w.Write([]byte("complete"))
-	}))
-	defer s.Close()
-	c := NewWithBase(s.URL, "test", WithTestHTTP(), WithLimits(float64(rate.Inf), 8), WithBackoffs(time.Millisecond, time.Millisecond, time.Millisecond), WithTestTimeouts(5*time.Millisecond, 50*time.Millisecond))
-	ctx, cancel := context.WithTimeout(context.Background(), 80*time.Millisecond)
-	defer cancel()
-	got, err := c.Download(ctx, "1", File{URL: s.URL}, t.TempDir(), 100)
+		return &http.Response{StatusCode: 200, Header: http.Header{}, Body: io.NopCloser(body)}, nil
+	})
+	got, err := c.Download(context.Background(), "1", File{URL: "http://127.0.0.1/file"}, t.TempDir(), 100)
 	sum := sha256.Sum256([]byte("complete"))
-	if err != nil || got.SHA256 != hex.EncodeToString(sum[:]) {
-		t.Fatalf("got %+v err %v", got, err)
+	if err != nil || calls != 2 || got.SHA256 != hex.EncodeToString(sum[:]) {
+		t.Fatalf("calls=%d output=%+v error=%v", calls, got, err)
 	}
 }
+
 func TestDownload_OverLimit(t *testing.T) {
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write([]byte("12345")) }))
 	defer s.Close()

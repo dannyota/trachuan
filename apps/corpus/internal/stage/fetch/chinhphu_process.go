@@ -13,6 +13,7 @@ import (
 	"danny.vn/trachuan/apps/corpus/internal/chinhphu"
 	"danny.vn/trachuan/apps/corpus/internal/sourcegate"
 	"danny.vn/trachuan/apps/corpus/internal/stage"
+	"danny.vn/trachuan/apps/corpus/internal/store"
 )
 
 func (s *Stage) processChinhphu(ctx context.Context, env stage.Env, run stage.Run, item stage.Item) (stage.Output, error) {
@@ -24,8 +25,6 @@ func (s *Stage) processChinhphu(ctx context.Context, env stage.Env, run stage.Ru
 	if s.chinhphu == nil {
 		return stage.Output{}, fmt.Errorf("chinhphu client is required")
 	}
-	ctx, cancel := context.WithTimeout(ctx, s.chinhphu.ItemTimeout())
-	defer cancel()
 	detail, body, err := s.chinhphu.Detail(ctx, id)
 	if err != nil {
 		return chinhphuError(err, idstr, true)
@@ -40,7 +39,14 @@ func (s *Stage) processChinhphu(ctx context.Context, env stage.Env, run stage.Ru
 	fetched := now().UTC().Truncate(time.Microsecond)
 	key, _ := json.Marshal([3]any{"detail", nil, detail.URL})
 	observations := []stage.FetchObservation{{ResourceKey: string(key), Source: "chinhphu", URL: &detail.URL, Path: "detail.html", ContentSHA256: fmt.Sprintf("%x", sha256.Sum256(body)), Size: int64(len(body)), Acquisition: "network", FetchedAt: &fetched}}
-	art, err := env.Artifacts.PublishContent(ctx, s.Name(), s.Recipe(run.Snapshot), func(dir string) error { return s.writeChinhphu(ctx, dir, idstr, detail, body, &observations) })
+	var decision readDecision
+	var q hashStore
+	if env.DB != nil {
+		q = store.New(env.DB)
+	}
+	art, err := env.Artifacts.PublishContent(ctx, s.Name(), s.Recipe(run.Snapshot), func(dir string) error {
+		return s.writeChinhphuEvidence(ctx, dir, idstr, detail, body, &observations, &decision, q)
+	})
 	if err != nil {
 		var failure *chinhphu.Failure
 		if errors.As(err, &failure) || errors.Is(err, sourcegate.ErrSourcePaused) {
@@ -48,7 +54,7 @@ func (s *Stage) processChinhphu(ctx context.Context, env stage.Env, run stage.Ru
 		}
 		return stage.Output{}, fmt.Errorf("publish chinhphu bundle: %w", err)
 	}
-	return stage.Output{Artifact: &art, State: "done", Observations: observations}, nil
+	return stage.Output{Artifact: &art, State: "done", Message: decision.message(), Observations: observations}, nil
 }
 func chinhphuError(err error, id string, detail bool) (stage.Output, error) {
 	if detail && errors.Is(err, chinhphu.ErrNotFound) {
@@ -71,7 +77,10 @@ func chinhphuError(err error, id string, detail bool) (stage.Output, error) {
 			v := int32(f.HTTPStatus)
 			cause.HTTPStatus = &v
 		}
-		return stage.Output{}, &stage.RetryableError{Err: wrapped, GapKind: "source_unavailable", Cause: cause}
+		if cause.Cause == stage.CauseHTTP429 {
+			return stage.Output{}, &stage.RetryableError{Err: wrapped, GapKind: "source_unavailable", Cause: cause}
+		}
+		return unavailableNow(id, cause), nil
 	}
 	return stage.Output{}, stage.Retryable(wrapped)
 }

@@ -18,14 +18,11 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// The limit is set in docs/design/budgets.md.
-const reuseAgeLimit = 30 * 24 * time.Hour
-
 type readDecision struct {
 	reason   string
 	outcome  string
+	counts   map[string]int64
 	baseline *baseline
-	expired  bool
 }
 
 type baseline struct {
@@ -56,15 +53,11 @@ func updatedDate(data []byte) json.RawMessage {
 	return value
 }
 
-func (b *baseline) expired(now time.Time, limit time.Duration) bool {
-	return b.index.unknown || b.index.oldest.Before(now.Add(-limit))
+func reuseDecision(fresh []byte, b *baseline) string {
+	return evaluateBaseline(fresh, b).reason
 }
 
-func reuseDecision(fresh []byte, b *baseline, now time.Time, limit time.Duration) string {
-	return evaluateBaseline(fresh, b, now, limit).reason
-}
-
-func evaluateBaseline(fresh []byte, b *baseline, now time.Time, limit time.Duration) readDecision {
+func evaluateBaseline(fresh []byte, b *baseline) readDecision {
 	result := readDecision{baseline: b}
 	if b == nil {
 		result.reason = "no_baseline"
@@ -75,7 +68,6 @@ func evaluateBaseline(fresh []byte, b *baseline, now time.Time, limit time.Durat
 		result.baseline = nil
 		return result
 	}
-	result.expired = b.expired(now, limit)
 	a, old := updatedDate(fresh), updatedDate(b.detail)
 	switch {
 	case a == nil || old == nil:
@@ -84,8 +76,6 @@ func evaluateBaseline(fresh []byte, b *baseline, now time.Time, limit time.Durat
 		result.reason = "date_changed"
 	case len(b.report.Missing) > 0:
 		result.reason = "missing_attachment"
-	case result.expired:
-		result.reason = "age"
 	default:
 		result.reason = "reused"
 	}

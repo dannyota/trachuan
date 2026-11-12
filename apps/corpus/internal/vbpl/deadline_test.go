@@ -17,7 +17,7 @@ func TestDeadlines_ClassifiedTimeout(t *testing.T) {
 	for _, tc := range []string{"rate", "slot", "gate", "backoff", "download"} {
 		t.Run(tc, func(t *testing.T) {
 			c := NewWithBase("https://example.invalid", "test", WithLimits(0.01, 1), WithFileInFlight(1), WithBackoffs(30*time.Millisecond))
-			c.timeout, c.requestBudget = 5*time.Millisecond, 12*time.Millisecond
+			c.timeout, c.fileTimeout, c.requestBudget = 5*time.Millisecond, 5*time.Millisecond, 12*time.Millisecond
 			var err error
 			switch tc {
 			case "rate":

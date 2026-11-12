@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"sort"
@@ -19,6 +20,10 @@ import (
 )
 
 func (s *Stage) writeChinhphu(ctx context.Context, dir, id string, detail chinhphu.Detail, html []byte, observations *[]stage.FetchObservation) error {
+	return s.writeChinhphuEvidence(ctx, dir, id, detail, html, observations, nil, nil)
+}
+
+func (s *Stage) writeChinhphuEvidence(ctx context.Context, dir, id string, detail chinhphu.Detail, html []byte, observations *[]stage.FetchObservation, counts *readDecision, q hashStore) error {
 	meta := secondaryMetadata{Version: 1, SourceID: id, SourceURL: detail.URL, Occurrences: []secondaryOccurrence{}, Attachments: []secondaryAttachment{}}
 	for _, field := range detail.Occurrences {
 		cells := append([]string{}, field.Cells...)
@@ -72,7 +77,14 @@ func (s *Stage) writeChinhphu(ctx context.Context, dir, id string, detail chinhp
 		seen[outcome] = true
 		info, e := s.downloadChinhphu(ctx, dir, a.URL)
 		if e != nil {
-			if errors.Is(e, chinhphu.ErrNotFound) {
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
+			if missingFailure(e) {
+				if counts != nil {
+					counts.count("failure_" + failureCause(e))
+				}
+				slog.Warn("attachment missing", "document_key", "vn:chinhphu:"+id, "file_name", a.Name, "cause", failureCause(e))
 				report.Missing = append(report.Missing, outcome)
 				continue
 			}
@@ -81,6 +93,9 @@ func (s *Stage) writeChinhphu(ctx context.Context, dir, id string, detail chinhp
 				continue
 			}
 			return fmt.Errorf("download attachment: %w", e)
+		}
+		if e = writeHashes(ctx, q, info.Hashes); e != nil {
+			return e
 		}
 		u := a.URL
 		name := a.Name

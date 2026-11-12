@@ -4,6 +4,8 @@ package vbpl
 import (
 	"encoding/json"
 	"time"
+
+	"danny.vn/trachuan/apps/corpus/internal/filecache"
 )
 
 // ListQuery identifies a page of a gateway listing.
@@ -61,6 +63,7 @@ type File struct {
 
 // Downloaded identifies a completed local attachment.
 type Downloaded struct {
+	Hashes       filecache.Hashes
 	Path, SHA256 string
 	Size         int64
 }

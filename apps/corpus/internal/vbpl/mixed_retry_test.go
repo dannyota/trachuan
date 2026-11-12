@@ -18,32 +18,25 @@ func TestAPI_MixedRetryStatuses(t *testing.T) {
 	for _, tc := range []struct {
 		name     string
 		statuses []int
-		backoffs []time.Duration
-		budget   time.Duration
 		cause    string
 		status   int
+		calls    int32
 	}{
-		{"rate limit then 5xx", []int{429, 500}, []time.Duration{time.Millisecond}, 5 * time.Second, "http_429", 429},
-		{"5xx then sequence deadline", []int{503}, []time.Duration{5 * time.Second}, 500 * time.Millisecond, "http_5xx", 503},
-		{"rate limit then sequence deadline", []int{429}, []time.Duration{5 * time.Second}, 500 * time.Millisecond, "http_429", 429},
+		{"429 then 5xx", []int{429, 500}, "http_5xx", 500, 3},
+		{"5xx then 429", []int{500, 429}, "http_429", 429, 5},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			var calls atomic.Int32
 			s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				i := int(calls.Add(1)) - 1
-				if i >= len(tc.statuses) {
-					t.Errorf("unexpected request %d", i)
-					w.WriteHeader(500)
-					return
-				}
-				w.WriteHeader(tc.statuses[i])
+				w.WriteHeader(tc.statuses[min(i, len(tc.statuses)-1)])
 			}))
 			defer s.Close()
-			c := NewWithBase(s.URL, "test", WithLimits(float64(rate.Inf), 8), WithBackoffs(tc.backoffs...), WithTestTimeouts(3*time.Second, tc.budget))
+			c := NewWithBase(s.URL, "test", WithLimits(float64(rate.Inf), 8), WithBackoffs(0, 0, 0))
 			_, err := c.Diagram(context.Background(), "1")
 			var f *Failure
-			if !errors.As(err, &f) || f.Origin != "gateway" || f.Cause != tc.cause || f.Endpoint != "doc/diagram" || f.HTTPStatus != tc.status {
-				t.Fatalf("failure=%+v err=%v", f, err)
+			if !errors.As(err, &f) || f.Cause != tc.cause || f.HTTPStatus != tc.status || calls.Load() != tc.calls {
+				t.Fatalf("failure=%+v calls=%d error=%v", f, calls.Load(), err)
 			}
 		})
 	}

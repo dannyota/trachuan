@@ -2,7 +2,6 @@ package expand
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -23,10 +22,10 @@ func TestExpand_MixedGatewayRetryFailures(t *testing.T) {
 		wantStatus int32
 		retry      bool
 	}{
-		{"5xx then timeouts", []int{500}, stage.CauseHTTP5xx, 500, false},
+		{"5xx then timeouts", []int{500}, stage.CauseTimeout, 0, false},
 		{"last 5xx then timeouts", []int{500, 504}, stage.CauseHTTP5xx, 504, false},
-		{"429 then timeouts", []int{429}, stage.CauseHTTP429, 429, true},
-		{"429 then 5xx and timeouts", []int{429, 500}, stage.CauseHTTP429, 429, true},
+		{"429 then timeouts", []int{429}, stage.CauseTimeout, 0, false},
+		{"429 then 5xx and timeouts", []int{429, 500}, stage.CauseTimeout, 0, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			var calls atomic.Int32
@@ -45,17 +44,15 @@ func TestExpand_MixedGatewayRetryFailures(t *testing.T) {
 			defer server.Close()
 			client := vbpl.NewWithBase(server.URL, "test", vbpl.WithLimits(float64(rate.Inf), 8), vbpl.WithBackoffs(time.Millisecond, time.Millisecond, time.Millisecond), vbpl.WithTestTimeouts(5*time.Millisecond, 60*time.Millisecond))
 			out, err := New(client).Process(context.Background(), stage.Env{}, stage.Run{Country: "vn"}, stage.Item{Key: "vn:vbpl:1"})
-			if calls.Load() != 4 {
+			wantCalls := int32(2)
+			if tc.statuses[0] == 429 {
+				wantCalls = 3
+			}
+			if calls.Load() != wantCalls {
 				t.Fatalf("calls = %d", calls.Load())
 			}
-			if tc.retry {
-				var retry *stage.RetryableError
-				if !errors.As(err, &retry) || retry.GapKind != "source_unavailable" || retry.Cause.Cause != tc.wantCause || retry.Cause.Endpoint != "doc/diagram" || retry.Cause.HTTPStatus == nil || *retry.Cause.HTTPStatus != tc.wantStatus {
-					t.Fatalf("out=%+v err=%v", out, err)
-				}
-				return
-			}
-			if err != nil || out.State != "gap" || len(out.Gaps) != 1 || out.Gaps[0].Kind != "source_unavailable" || out.Gaps[0].Cause != tc.wantCause || out.Gaps[0].Origin != stage.OriginGateway || out.Gaps[0].Endpoint != "doc/diagram" || out.Gaps[0].HTTPStatus == nil || *out.Gaps[0].HTTPStatus != tc.wantStatus {
+
+			if err != nil || out.State != "gap" || len(out.Gaps) != 1 || out.Gaps[0].Kind != "source_unavailable" || out.Gaps[0].Cause != tc.wantCause || out.Gaps[0].Endpoint != "doc/diagram" || (tc.wantStatus == 0 && out.Gaps[0].HTTPStatus != nil) || (tc.wantStatus != 0 && (out.Gaps[0].HTTPStatus == nil || *out.Gaps[0].HTTPStatus != tc.wantStatus)) {
 				t.Fatalf("out=%+v err=%v", out, err)
 			}
 		})

@@ -97,18 +97,18 @@ default `s3-han02.fptcloud.com`.
 
 ### Corpus scope ceilings (proposed, pending measurement)
 
-| Limit                    | Value                                                                                                                                             |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Relation expansion       | 1 hop; 5,000 distinct added context ids per run                                                                                                   |
-| Discovery result bound   | 100,000 ids per query; 3 complete passes maximum                                                                                                  |
-| Central listing          | Page size 1,000; measured 2026-11-09: 57,951 ids, 58 requests and 86 MB per pass, 129 s for two passes at 1 request/s                             |
-| chinhphu candidates      | 100 unique docids per run, before VBPL exclusion                                                                                                  |
-| chinhphu search          | Request cap 500; 100 pages per query per pass; 3 passes maximum                                                                                   |
-| chinhphu requests        | 1 request/s, burst 1, 1 in flight across page and file hosts                                                                                      |
-| chinhphu response        | 5 MB per HTML response; existing 50 MB attachment cap                                                                                             |
-| chinhphu total downloads | 1 GB per client lifetime (one worker process), retries and rejected bodies included; no durable per-run cap yet                                   |
-| chinhphu deadlines       | 30 s page request; PDF request 30 s plus size at 250 kB/s; 5 min per item; at most 3 redirects, each revalidated                                  |
-| chinhphu retries         | 1 after 2 s for 5xx, timeout or transport error, then a gap; 429 as the [source error table](fetch-attachments.md#download-deadline-and-failures) |
+| Limit                    | Value                                                                                                                                                                                                           |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Relation expansion       | 1 hop; 5,000 distinct added context ids per run                                                                                                                                                                 |
+| Discovery result bound   | 100,000 ids per query; 3 complete passes maximum                                                                                                                                                                |
+| Central listing          | Page size 1,000; measured 2026-11-09: 57,951 ids, 58 requests and 86 MB per pass, 129 s for two passes at 1 request/s                                                                                           |
+| chinhphu candidates      | 100 unique docids per run, before VBPL exclusion                                                                                                                                                                |
+| chinhphu search          | Request cap 500; 100 pages per query per pass; 3 passes maximum                                                                                                                                                 |
+| chinhphu requests        | 1 request/s, burst 1, 1 in flight across page and file hosts                                                                                                                                                    |
+| chinhphu response        | 5 MB per HTML response; existing 50 MB attachment cap                                                                                                                                                           |
+| chinhphu total downloads | 1 GB per client lifetime (one worker process), retries and rejected bodies included; no durable per-run cap yet                                                                                                 |
+| chinhphu deadlines       | 30 s page request; PDF request 30 s plus size at 250 kB/s; 5 min per item for page and lookup work, PDF downloads bounded by their own deadline and one retry outside it; at most 3 redirects, each revalidated |
+| chinhphu retries         | 1 after 2 s for 5xx, timeout or transport error, then a gap; 429 as the [source error table](fetch-attachments.md#download-deadline-and-failures)                                                               |
 
 These are worker-wide source limits, not per-activity allowances. Retries, HTTP
 429 waits and their exhaustion follow the

@@ -35,6 +35,7 @@ func TestRecover_CheckpointOwnsAcquisitionHistory(t *testing.T) {
 	}
 	f.batch(f.expand)
 	f.batch(f.fetch)
+	f.exec(`INSERT INTO file_hash(sha256,md5,etag_16,etag_5) VALUES ('sha','md5','16-2','5-3')`)
 	after, err := taker.Take(ctx, "vn-"+f.run.Rel, 1, "fetch")
 	if err != nil {
 		t.Fatal(err)
@@ -65,6 +66,9 @@ func TestRecover_CheckpointOwnsAcquisitionHistory(t *testing.T) {
 			wantBaselines := 0
 			if tc.name == "after" {
 				wantBaselines = 1
+			}
+			if n := f.scalar(`SELECT count(*) FROM file_hash`); n != wantBaselines {
+				t.Fatalf("restored file hashes=%d want=%d", n, wantBaselines)
 			}
 			if n := f.scalar(`SELECT count(*) FROM fetch_baseline`); n != wantBaselines {
 				t.Fatalf("restored baselines=%d, want %d", n, wantBaselines)

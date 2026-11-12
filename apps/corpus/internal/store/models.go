@@ -79,6 +79,13 @@ type FetchedFile struct {
 	FetchedAt  *time.Time
 }
 
+type FileHash struct {
+	Sha256 string
+	Md5    string
+	Etag16 *string
+	Etag5  *string
+}
+
 type Gap struct {
 	ID          int64
 	RunID       int64

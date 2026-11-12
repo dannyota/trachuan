@@ -51,6 +51,7 @@ type Querier interface {
 	GetExtractArtifactByHash(ctx context.Context, arg GetExtractArtifactByHashParams) (int64, error)
 	GetExtractInput(ctx context.Context, arg GetExtractInputParams) (GetExtractInputRow, error)
 	GetFetchBaseline(ctx context.Context, arg GetFetchBaselineParams) (GetFetchBaselineRow, error)
+	GetFileHash(ctx context.Context, sha256 string) (FileHash, error)
 	GetOCRCheck(ctx context.Context, arg GetOCRCheckParams) (OcrCheck, error)
 	GetOCRText(ctx context.Context, arg GetOCRTextParams) (OcrText, error)
 	GetRun(ctx context.Context, arg GetRunParams) (Run, error)
@@ -91,6 +92,7 @@ type Querier interface {
 	ListEarlierRuns(ctx context.Context, arg ListEarlierRunsParams) ([]ListEarlierRunsRow, error)
 	ListEmbedInputs(ctx context.Context, runID int64) ([]ListEmbedInputsRow, error)
 	ListExtractInputs(ctx context.Context, runID int64) ([]ListExtractInputsRow, error)
+	ListFetchReadMessages(ctx context.Context, arg ListFetchReadMessagesParams) ([]string, error)
 	ListItemFetchObservations(ctx context.Context, arg ListItemFetchObservationsParams) ([]RunFetchObservation, error)
 	ListLegacyExpectedKeys(ctx context.Context, runID int64) ([]string, error)
 	ListLegacyListingSupports(ctx context.Context, runID int64) ([]ListLegacyListingSupportsRow, error)
@@ -137,6 +139,7 @@ type Querier interface {
 	SumOCRCheckUsage(ctx context.Context, checkerID string) ([]json.RawMessage, error)
 	UpdateRunItemFenced(ctx context.Context, arg UpdateRunItemFencedParams) (int64, error)
 	UpsertFetchBaseline(ctx context.Context, arg UpsertFetchBaselineParams) error
+	UpsertFileHash(ctx context.Context, arg UpsertFileHashParams) error
 	UpsertListing(ctx context.Context, arg UpsertListingParams) error
 	UpsertRunAcquisition(ctx context.Context, arg UpsertRunAcquisitionParams) error
 	UpsertRunDocument(ctx context.Context, arg UpsertRunDocumentParams) error

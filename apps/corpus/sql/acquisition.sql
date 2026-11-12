@@ -30,17 +30,21 @@ ON CONFLICT (run_id, stage, document_key) DO NOTHING;
 
 -- name: CountFetchReads :one
 SELECT
-  count(*) FILTER (WHERE message = 'read=reused') AS reused,
-  count(*) FILTER (WHERE message = 'read=no_baseline') AS no_baseline,
-  count(*) FILTER (WHERE message = 'read=invalid_baseline') AS invalid_baseline,
-  count(*) FILTER (WHERE message = 'read=null_date') AS null_date,
-  count(*) FILTER (WHERE message = 'read=date_changed') AS date_changed,
-  count(*) FILTER (WHERE message = 'read=missing_attachment') AS missing_attachment,
-  count(*) FILTER (WHERE message = 'read=age') AS age,
-  count(*) FILTER (WHERE message = 'read=control' OR message LIKE 'read=control outcome=%') AS control,
-  count(*) FILTER (WHERE message = 'read=control outcome=same') AS control_same,
-  count(*) FILTER (WHERE message = 'read=control outcome=tree_ids_only') AS control_tree_ids_only,
-  count(*) FILTER (WHERE message = 'read=control outcome=changed') AS control_changed
+  count(*) FILTER (WHERE split_part(message, ' ', 1) = 'read=reused') AS reused,
+  count(*) FILTER (WHERE split_part(message, ' ', 1) = 'read=no_baseline') AS no_baseline,
+  count(*) FILTER (WHERE split_part(message, ' ', 1) = 'read=invalid_baseline') AS invalid_baseline,
+  count(*) FILTER (WHERE split_part(message, ' ', 1) = 'read=null_date') AS null_date,
+  count(*) FILTER (WHERE split_part(message, ' ', 1) = 'read=date_changed') AS date_changed,
+  count(*) FILTER (WHERE split_part(message, ' ', 1) = 'read=missing_attachment') AS missing_attachment,
+  count(*) FILTER (WHERE split_part(message, ' ', 1) = 'read=control' OR message LIKE 'read=control outcome=%') AS control,
+  count(*) FILTER (WHERE message LIKE 'read=control outcome=same%') AS control_same,
+  count(*) FILTER (WHERE message LIKE 'read=control outcome=tree_ids_only%') AS control_tree_ids_only,
+  count(*) FILTER (WHERE message LIKE 'read=control outcome=changed%') AS control_changed
 FROM run_item
 WHERE run_id = $1 AND generation = $2 AND stage = 'fetch' AND state = 'done'
   AND item_key LIKE 'vn:vbpl:%';
+
+-- name: ListFetchReadMessages :many
+SELECT coalesce(message, '')::text AS message FROM run_item
+WHERE run_id = $1 AND generation = $2 AND stage = 'fetch'
+  AND state IN ('done', 'gap');

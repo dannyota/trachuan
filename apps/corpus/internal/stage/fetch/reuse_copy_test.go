@@ -109,7 +109,7 @@ func TestFetch_FullReadUsesFreshAttachmentIdentity(t *testing.T) {
 			networkCount++
 		}
 	}
-	if adoptedCount != 1 || networkCount != 1 {
+	if adoptedCount != 0 || networkCount != 2 {
 		t.Fatalf("adopted %d network %d", adoptedCount, networkCount)
 	}
 }
@@ -132,14 +132,14 @@ func TestReuseDecision_ManyFiles(t *testing.T) {
 			t.Fatalf("missing indexed file %s", f.Name)
 		}
 	}
-	if got := reuseDecision(b.detail, b, now, reuseAgeLimit); got != "reused" {
+	if got := reuseDecision(b.detail, b); got != "reused" {
 		t.Fatalf("decision %s", got)
 	}
 	b.observations[len(b.observations)-1].FetchedAt = nil
 	if err := b.indexOrigins(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	if got := reuseDecision(b.detail, b, now, reuseAgeLimit); got != "age" {
+	if got := reuseDecision(b.detail, b); got != "reused" {
 		t.Fatalf("decision %s", got)
 	}
 }
@@ -153,7 +153,7 @@ func TestBaselineIndex_Canceled(t *testing.T) {
 	}
 }
 
-func TestReuseDecision_ZeroOriginIsOld(t *testing.T) {
+func TestReuseDecision_ZeroOriginIsReusable(t *testing.T) {
 	now := time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC)
 	zero := time.Time{}
 	hash := digest([]byte("a"))
@@ -164,7 +164,7 @@ func TestReuseDecision_ZeroOriginIsOld(t *testing.T) {
 	if err := b.indexOrigins(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	if got := reuseDecision(b.detail, b, now, reuseAgeLimit); got != "age" {
+	if got := reuseDecision(b.detail, b); got != "reused" {
 		t.Fatalf("decision %q", got)
 	}
 }

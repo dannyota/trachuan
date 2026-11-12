@@ -24,8 +24,8 @@ func TestAPI_NonJSON200Retryable(t *testing.T) {
 	defer server.Close()
 	_, _, err := testClient(server).Detail(context.Background(), "1")
 	var failure *Failure
-	if !errors.As(err, &failure) || failure.Origin != "gateway" || failure.Cause != "non_json_200" || failure.Endpoint != "doc/detail" || failure.HTTPStatus != 200 || attempts.Load() != 4 {
-		t.Fatalf("error = %v, attempts = %d, want classified error and 4 attempts", err, attempts.Load())
+	if !errors.As(err, &failure) || failure.Origin != "gateway" || failure.Cause != "non_json_200" || failure.Endpoint != "doc/detail" || failure.HTTPStatus != 200 || attempts.Load() != 2 {
+		t.Fatalf("error = %v, attempts = %d, want classified error and 2 attempts", err, attempts.Load())
 	}
 }
 
@@ -104,16 +104,16 @@ func TestClient_RequestSlotWaitUsesRequestTimeout(t *testing.T) {
 	}
 }
 
-func TestClient_RetrySequenceHasDeadline(t *testing.T) {
-	c := NewWithBase("https://example.invalid", "test", WithLimits(float64(rate.Inf), 1), WithBackoffs(30*time.Millisecond))
+func TestClient_RetryWaitBudgetDoesNotLimitAttempt(t *testing.T) {
+	c := NewWithBase("http://127.0.0.1", "test", WithLimits(float64(rate.Inf), 1), WithBackoffs())
 	c.timeout = 5 * time.Millisecond
-	c.requestBudget = 10 * time.Millisecond
+	c.requestBudget = time.Millisecond
 	c.slots <- struct{}{}
-	ctx, cancel := context.WithTimeout(context.Background(), 25*time.Millisecond)
+	ctx, cancel := context.WithTimeout(context.Background(), 80*time.Millisecond)
 	defer cancel()
 	_, _, err := c.Detail(ctx, "1")
 	if !errors.Is(err, context.DeadlineExceeded) || ctx.Err() != nil {
-		t.Fatalf("error = %v, parent = %v", err, ctx.Err())
+		t.Fatalf("%v parent=%v", err, ctx.Err())
 	}
 }
 

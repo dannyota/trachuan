@@ -39,7 +39,7 @@ func TestRunBatch_PausePersistenceFailure(t *testing.T) {
 	if err = db.QueryRow(ctx, `INSERT INTO run(country,rel,state,generation,snapshot) VALUES ('vn','20990102','running',2,'{}') RETURNING id`).Scan(&id); err != nil {
 		t.Fatal(err)
 	}
-	if _, err = db.Exec(ctx, `INSERT INTO run_item(run_id,stage,item_key,state,batch,generation,attempt,message) VALUES ($1,'fetch','vn:vbpl:1','pending',0,2,1,'retry:{"cause":"timeout","endpoint":"doc/diagram"}')`, id); err != nil {
+	if _, err = db.Exec(ctx, `INSERT INTO run_item(run_id,stage,item_key,state,batch,generation,attempt,message) VALUES ($1,'fetch','vn:vbpl:1','pending',0,2,1,NULL)`, id); err != nil {
 		t.Fatal(err)
 	}
 	gate := &failedPauseGate{Memory: sourcegate.NewMemory()}
