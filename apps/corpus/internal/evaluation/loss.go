@@ -113,10 +113,12 @@ func groupMatches(arms retrieval.Arms, recipe retrieval.Recipe, candidate retrie
 func diagnoseLoss(arms retrieval.Arms, recipe retrieval.Recipe, limit int, mode retrieval.ArmMode, cohort string, e Expectation, entry MapEntry, response retrieval.Response, tail *int) (string, error) {
 	hits := append(append([]retrieval.Hit{}, response.Hits...), response.NonCurrent...)
 	rank := diagnosticRank(cohort, e, entry, hits)
-	includeComplement := arms.IncludeNonCurrent || recipe.NonCurrentTail > 0
+	effectiveTail := min(recipe.NonCurrentTail, limit/2)
 	if tail != nil {
-		includeComplement = *tail > 0
+		effectiveTail = min(*tail, limit/2)
 	}
+	reserveTail := tail != nil || !arms.IncludeNonCurrent
+	includeComplement := (!reserveTail && arms.IncludeNonCurrent) || (reserveTail && effectiveTail > 0)
 	deep := append(append([]retrieval.Candidate{}, arms.Primary.Dense...), arms.Primary.Lexical...)
 	if includeComplement {
 		deep = append(deep, arms.NonCurrent.Dense...)
@@ -126,7 +128,11 @@ func diagnoseLoss(arms retrieval.Arms, recipe retrieval.Recipe, limit int, mode 
 		return "candidate", nil
 	}
 	items := fusedItems(arms, recipe, mode)
-	items = items[:min(len(items), recipe.HydrateMultiplier*limit)]
+	primaryLimit := limit
+	if reserveTail {
+		primaryLimit -= len(response.NonCurrent)
+	}
+	items = items[:min(len(items), recipe.HydrateMultiplier*primaryLimit)]
 	primaryCount := len(items)
 	if includeComplement {
 		other := arms

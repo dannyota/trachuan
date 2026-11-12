@@ -41,16 +41,20 @@ func (f *badRecipeEmbedder) Recipe(context.Context) (embedding.Recipe, error) {
 }
 
 type exactSettingsTrace struct {
+	observations []exactSettingsObservation
+}
+
+type exactSettingsObservation struct {
 	indexScan, bitmapScan string
 	pid                   int32
 	err                   error
-	calls                 int
 }
 
 func (trace *exactSettingsTrace) TraceQueryStart(ctx context.Context, conn *pgx.Conn, data pgx.TraceQueryStartData) context.Context {
 	if data.SQL == exactSQL {
-		trace.calls++
-		trace.err = conn.QueryRow(ctx, `SELECT current_setting('enable_indexscan'), current_setting('enable_bitmapscan'), pg_backend_pid()`).Scan(&trace.indexScan, &trace.bitmapScan, &trace.pid)
+		var observation exactSettingsObservation
+		observation.err = conn.QueryRow(ctx, `SELECT current_setting('enable_indexscan'), current_setting('enable_bitmapscan'), pg_backend_pid()`).Scan(&observation.indexScan, &observation.bitmapScan, &observation.pid)
+		trace.observations = append(trace.observations, observation)
 	}
 	return ctx
 }
@@ -374,7 +378,7 @@ func TestCollect_ExactSettingsRestoredOnPooledConnection(t *testing.T) {
 	ctx := context.Background()
 	check := func(wantCalls int) {
 		t.Helper()
-		if trace.calls != wantCalls || trace.err != nil || trace.indexScan != "off" || trace.bitmapScan != "off" {
+		if len(trace.observations) != wantCalls {
 			t.Fatalf("during exact query: %+v", trace)
 		}
 		var indexScan, bitmapScan string
@@ -382,14 +386,22 @@ func TestCollect_ExactSettingsRestoredOnPooledConnection(t *testing.T) {
 		if err := db.QueryRow(ctx, `SELECT current_setting('enable_indexscan'), current_setting('enable_bitmapscan'), pg_backend_pid()`).Scan(&indexScan, &bitmapScan, &pid); err != nil {
 			t.Fatal(err)
 		}
-		if indexScan != "on" || bitmapScan != "on" || pid != trace.pid {
-			t.Fatalf("after collect: index=%s bitmap=%s pid=%d, exact pid=%d", indexScan, bitmapScan, pid, trace.pid)
+		for _, observation := range trace.observations {
+			if observation.err != nil || observation.indexScan != "off" || observation.bitmapScan != "off" || observation.pid != pid {
+				t.Fatalf("during exact query: %+v, pooled pid=%d", observation, pid)
+			}
+		}
+		if indexScan != "on" || bitmapScan != "on" {
+			t.Fatalf("after collect: index=%s bitmap=%s pid=%d", indexScan, bitmapScan, pid)
 		}
 	}
 	collectFixture(t, e, Request{Query: "ngân hàng", Mode: "exact"}, Depths{4, 4})
-	check(1)
-	collectFixture(t, e, Request{Query: "ngân hàng"}, Depths{4, 4})
-	check(1)
+	check(2)
+	arms := collectFixture(t, e, Request{Query: "ngân hàng"}, Depths{4, 4})
+	if arms.Primary.Fallback || !arms.NonCurrent.Fallback {
+		t.Fatalf("unexpected fallbacks: primary=%t non-current=%t", arms.Primary.Fallback, arms.NonCurrent.Fallback)
+	}
+	check(3)
 	if _, err := db.Exec(ctx, `DROP TABLE chunk CASCADE`); err != nil {
 		t.Fatal(err)
 	}
@@ -400,7 +412,7 @@ func TestCollect_ExactSettingsRestoredOnPooledConnection(t *testing.T) {
 	if _, err = e.Collect(ctx, p, Depths{4, 4}); err == nil {
 		t.Fatal("expected database error")
 	}
-	check(2)
+	check(4)
 }
 func TestCollect_HydratesUnionWithMemberCosines(t *testing.T) {
 	_, e, _ := fixture(t)

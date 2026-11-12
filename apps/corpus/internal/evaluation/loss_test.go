@@ -174,9 +174,9 @@ func TestLossDiagnostics_FirstAlternativeAcrossGroups(t *testing.T) {
 			if useTail {
 				v := 3
 				tail = &v
-				response, err = retrieval.ShapeWithNonCurrentTail(arms, recipe, 5, "dense", nil, v)
+				response, err = retrieval.ShapeWithNonCurrentTail(arms, recipe, 6, "dense", nil, v)
 			} else {
-				response, err = retrieval.Shape(arms, recipe, 5, "dense")
+				response, err = retrieval.Shape(arms, recipe, 6, "dense")
 			}
 			if err != nil {
 				t.Fatal(err)
@@ -184,7 +184,7 @@ func TestLossDiagnostics_FirstAlternativeAcrossGroups(t *testing.T) {
 			if diagnosticRank("old_product", Expectation{}, entry, response.Hits) != 2 || diagnosticRank("old_product", Expectation{}, entry, response.NonCurrent) != 3 {
 				t.Fatalf("unexpected response: %+v", response)
 			}
-			stage, err := diagnoseLoss(arms, recipe, 5, "dense", "old_product", Expectation{}, entry, response, tail)
+			stage, err := diagnoseLoss(arms, recipe, 6, "dense", "old_product", Expectation{}, entry, response, tail)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -272,5 +272,37 @@ func TestLossDiagnostics_DefaultTailIncludesComplement(t *testing.T) {
 	}
 	if stage != "rank_limit" {
 		t.Fatalf("stage = %q, want rank_limit", stage)
+	}
+}
+
+func TestLossDiagnostics_PrimaryHydrationUsesTailQuota(t *testing.T) {
+	recipe := retrieval.Recipe1()
+	threshold := 0.0
+	recipe.Abstention.Threshold = &threshold
+	var primary []retrieval.Candidate
+	for i := int64(1); i <= 49; i++ {
+		primary = append(primary, lossCandidate(i, fmt.Sprintf("doc-%d", i), "a"))
+	}
+	other := []retrieval.Candidate{lossCandidate(100, "old-a", "a"), lossCandidate(101, "old-b", "a")}
+	arms := retrieval.Arms{Validation: retrieval.Validation{Accepted: true}, Depths: retrieval.Depths{Dense: 200, Lexical: 100}, Primary: retrieval.ArmGroup{Dense: primary, Members: primary}, NonCurrent: retrieval.ArmGroup{Dense: other, Members: other}}
+	entry := MapEntry{State: "resolved", Alternatives: []Alternative{{Country: "vn", DocumentKey: "doc-49", Kind: "document"}}}
+	for _, tc := range []struct {
+		name, want string
+		otherCount int
+		explicit   bool
+	}{{"reserved", "fusion", 2, false}, {"freed", "rank_limit", 1, false}, {"explicit_false", "rank_limit", 2, true}} {
+		t.Run(tc.name, func(t *testing.T) {
+			trial := arms
+			trial.IncludeNonCurrent = tc.explicit
+			trial.NonCurrent = retrieval.ArmGroup{Dense: other[:tc.otherCount], Members: other[:tc.otherCount]}
+			response, err := retrieval.Shape(trial, recipe, 8, "dense")
+			if err != nil {
+				t.Fatal(err)
+			}
+			stage, err := diagnoseLoss(trial, recipe, 8, "dense", "old_product", Expectation{}, entry, response, nil)
+			if err != nil || stage != tc.want {
+				t.Fatalf("stage = %q, want %q, error %v", stage, tc.want, err)
+			}
+		})
 	}
 }

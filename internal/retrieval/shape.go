@@ -18,6 +18,7 @@ func shapeWithPolicy(arms Arms, recipe Recipe, limit int, mode ArmMode, cap, tai
 	if limit == 0 {
 		limit = 8
 	}
+	tail = min(tail, max(0, limit/2))
 	if arms.IncludeNonCurrent || tail == 0 || !arms.Validation.Accepted {
 		return shapeWithCap(arms, recipe, limit, mode, cap)
 	}
@@ -29,14 +30,11 @@ func shapeWithPolicy(arms Arms, recipe Recipe, limit int, mode ArmMode, cap, tai
 	if err != nil {
 		return Response{}, err
 	}
-	count := min(tail, len(other.Groups), limit)
+	count := min(tail, len(other.Groups))
 	primaryLimit := limit - count
-	out, err := shapeWithCap(arms, recipe, max(1, primaryLimit), mode, cap)
+	out, err := shapeWithCap(arms, recipe, primaryLimit, mode, cap)
 	if err != nil {
 		return Response{}, err
-	}
-	if primaryLimit == 0 {
-		out.Hits = out.Hits[:0]
 	}
 	for _, group := range other.Groups[:count] {
 		hit, shapeErr := shapeHit(group, arms, recipe)
