@@ -10,6 +10,7 @@ import (
 // Request carries public legal evidence only. It must never be logged.
 type Request struct {
 	Model, Effort, CustomID string
+	MediaType               string
 	Images                  [][]byte
 	Text                    []byte
 }

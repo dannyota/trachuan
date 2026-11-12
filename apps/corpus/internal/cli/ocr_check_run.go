@@ -52,6 +52,10 @@ func openCheckRun(ctx context.Context, cc, rel string) (*checkRun, error) {
 	return &checkRun{db: db, root: root, artifacts: artifact.Store{Root: cfg.Artifacts}, run: stage.Run{ID: row.ID, Country: cc, Rel: rel, Snapshot: snapshot}}, nil
 }
 func (e *checkRun) documents(ctx context.Context, checker string) ([]ocrcheck.Document, error) {
+	return e.checkDocuments(ctx, checker, false)
+}
+
+func (e *checkRun) checkDocuments(ctx context.Context, checker string, allEntries bool) ([]ocrcheck.Document, error) {
 	q := store.New(e.db)
 	active, err := membership.FinalActiveKeys(ctx, q, e.run)
 	if err != nil {
@@ -79,15 +83,24 @@ func (e *checkRun) documents(ctx context.Context, checker string) ([]ocrcheck.Do
 		if hash != item.Sha256 || hash != input.Sha256 {
 			return nil, fmt.Errorf("check bundle hash mismatch")
 		}
-		selected, selectErr := extract.SelectCheckSource(ctx, dir, input.ItemKey, source, extract.AcceptedEngines(), checker)
+		var selected []extract.CheckSource
+		var selectErr error
+		if allEntries {
+			selected, selectErr = extract.SelectCheckSources(ctx, dir, input.ItemKey, source, extract.AcceptedEngines(), checker)
+		} else {
+			var one *extract.CheckSource
+			one, selectErr = extract.SelectCheckSource(ctx, dir, input.ItemKey, source, extract.AcceptedEngines(), checker)
+			if one != nil {
+				selected = append(selected, *one)
+			}
+		}
 		if selectErr != nil {
 			return nil, fmt.Errorf("select OCR check source: %w", selectErr)
 		}
-		if selected == nil {
-			continue
+		for _, chosen := range selected {
+			entry := chosen.Entry
+			docs = append(docs, ocrcheck.Document{Key: input.ItemKey, PDFName: chosen.PDFName, Entry: entry, PDFPath: filepath.Join(dir, "files", entry.PdfSha256), ReadText: func() ([]byte, error) { return source.ReadText(entry) }})
 		}
-		entry := selected.Entry
-		docs = append(docs, ocrcheck.Document{Key: input.ItemKey, PDFName: selected.PDFName, Entry: entry, PDFPath: filepath.Join(dir, "files", entry.PdfSha256), ReadText: func() ([]byte, error) { return source.ReadText(entry) }})
 	}
 	return docs, nil
 }

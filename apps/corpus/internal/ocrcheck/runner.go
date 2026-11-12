@@ -56,16 +56,26 @@ type Repository interface {
 type Options struct {
 	Model, Effort                         string
 	LimitDocs                             int
+	CheckVersion                          int
 	MaxUSD                                float64
 	Batch, DryRun, Reconcile, RetryFailed bool
 	Abandon                               string
 }
 
 // CheckerID binds the model, effort, instruction and schema versions.
-func (o Options) CheckerID() string { return o.Model + "/" + o.Effort + "/ocr-check-2" }
+func (o Options) CheckerID() string {
+	n := o.CheckVersion
+	if n == 0 {
+		n = 2
+	}
+	return fmt.Sprintf("%s/%s/ocr-check-%d", o.Model, o.Effort, n)
+}
 
 // Validate rejects unsupported checker settings and recovery combinations.
 func (o Options) Validate() error {
+	if err := o.ValidateVersion(); err != nil {
+		return err
+	}
 	if _, err := modelPrice(o.Model, o.Batch); err != nil {
 		return err
 	}
@@ -91,10 +101,11 @@ type Summary struct {
 	Documents                                       []DocumentSummary
 }
 
-// Runner applies checks one request at a time.
+// Runner applies versioned checks within the durable spend ceiling.
 type Runner struct {
 	Client        Client
 	Renderer      Renderer
+	JPEGRenderer  JPEGRenderer
 	Repository    Repository
 	CountPages    func(context.Context, []byte) (int, error)
 	LoadDocuments func(context.Context) ([]Document, error)
@@ -129,10 +140,19 @@ func (r *Runner) Run(ctx context.Context, docs []Document, o Options) (Summary, 
 		}
 	}
 	if !o.Reconcile && o.Abandon == "" {
-		if r.Renderer == nil {
-			r.Renderer = &PopplerRenderer{}
+		var preflightErr error
+		if v, _ := o.version(); v.directOnly {
+			if r.JPEGRenderer == nil {
+				r.JPEGRenderer = &PopplerRenderer{}
+			}
+			preflightErr = r.JPEGRenderer.Preflight(ctx)
+		} else {
+			if r.Renderer == nil {
+				r.Renderer = &PopplerRenderer{}
+			}
+			preflightErr = r.Renderer.Preflight(ctx)
 		}
-		if preflightErr := r.Renderer.Preflight(ctx); preflightErr != nil {
+		if preflightErr != nil {
 			return summary, preflightErr
 		}
 	}
@@ -166,6 +186,10 @@ func (r *Runner) Run(ctx context.Context, docs []Document, o Options) (Summary, 
 		}
 	}
 	ceiling := int64(math.Floor(o.MaxUSD * 1e6))
+	if v, _ := o.version(); v.directOnly {
+		err = r.runConcurrent(ctx, docs, o, &summary, skip, ceiling)
+		return summary, err
+	}
 	reserved := summary.CostMicroUSD
 	var group []prepared
 	var size int

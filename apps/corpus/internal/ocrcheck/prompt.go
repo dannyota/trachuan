@@ -20,9 +20,13 @@ func schema() map[string]any {
 		}}}}}
 }
 func messageParams(r Request) anthropic.MessageNewParams {
+	mediaType := r.MediaType
+	if mediaType == "" {
+		mediaType = "image/png"
+	}
 	content := make([]anthropic.ContentBlockParamUnion, 0, 2*len(r.Images)+2)
 	for i, page := range r.Images {
-		content = append(content, anthropic.NewTextBlock(fmt.Sprintf("Page %d:", i+1)), anthropic.NewImageBlockBase64("image/png", base64.StdEncoding.EncodeToString(page)))
+		content = append(content, anthropic.NewTextBlock(fmt.Sprintf("Page %d:", i+1)), anthropic.NewImageBlockBase64(mediaType, base64.StdEncoding.EncodeToString(page)))
 	}
 	content = append(content, anthropic.NewTextBlock(ocrBegin+"\n"+string(r.Text)+"\n"+ocrEnd), anthropic.NewTextBlock(instruction))
 	return anthropic.MessageNewParams{Model: anthropic.Model(r.Model), MaxTokens: maxOutputTokens,

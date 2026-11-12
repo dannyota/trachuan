@@ -106,6 +106,10 @@ func (r *Runner) prepare(ctx context.Context, doc Document, o Options) (p prepar
 	if allowance <= 0 {
 		return p, "over_check_limit"
 	}
+	if v, _ := o.version(); v.directOnly {
+		p.request.MediaType = v.mediaType
+		return r.prepareJPEG(ctx, p, data, v.dpi)
+	}
 	renderer := r.Renderer
 	if renderer == nil {
 		renderer = &PopplerRenderer{}
