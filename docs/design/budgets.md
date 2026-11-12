@@ -76,8 +76,8 @@ issues a document's detail and diagram calls concurrently; a full read under
 concurrently and downloads its attachments concurrently within the file pool.
 
 [Fresh OCR requests](ocr-vision.md): 8 Vision requests in flight, at most 600 a
-minute, 500 pages per document, render bound 30 seconds plus 2 per page;
-provisional.
+minute, 500 pages per document, render bound 30 seconds plus 2 per page, scratch
+ceiling 256 MB per document as for the cross-check; provisional.
 
 [Fetch reuse](fetch-reuse.md): reuse age limit 30 days from the original network
 read; control divisor 20 (about 5% of documents re-read in full per run). Both

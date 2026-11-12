@@ -45,10 +45,13 @@ The client sends page images, one page per request, for every PDF:
   numbers, so zero padding does not affect order. N is the page count read with
   pdfcpu. Anything else fails the document and nothing is stored.
 - Bounds: the render bound is 30 seconds plus 2 seconds per page for the
-  document. The scratch directory may hold the input and at most 500 MB of page
-  files, checked after every process; beyond it the document fails with outcome
-  `render_too_large`. Page files are read and sent one at a time, so memory
-  holds only the pages in flight.
+  document. The scratch directory keeps the cross-check's 256 MB ceiling for
+  everything in it (the input, page files, anything else), enforced by the same
+  monitor while a render process runs: the process is stopped when the ceiling
+  is passed, and the document fails with outcome `render_too_large`. At about
+  0.5 MB a page that admits roughly 400 pages of an ordinary scan, below the
+  500-page limit; a larger document fails closed. Page files are read and sent
+  one at a time, so memory holds only the pages in flight.
 - One `images:annotate` request per page: feature `DOCUMENT_TEXT_DETECTION`,
   model `builtin/latest`, language hint `vi`, the JPEG bytes inline. One page
   per request keeps a failed page from discarding its neighbours and matches how
@@ -146,10 +149,11 @@ The primary runs these; they are requirements, not results.
   in numeric order, each decodable and grayscale; a PDF whose pages have
   different MediaBox and CropBox sizes is rendered in groups and every page
   stays within the raster cap; a missing file, an extra file, a truncated JPEG
-  and a non-zero exit each fail the document; the scratch ceiling fails it with
-  `render_too_large` at the boundary; the render bound grows with the page
-  count; memory never holds more page images than requests in flight (a fake
-  sender blocks and the test counts loaded pages).
+  and a non-zero exit each fail the document; a render that passes the scratch
+  ceiling is stopped before its process ends and fails with `render_too_large`;
+  the render bound grows with the page count; memory never holds more page
+  images than requests in flight (a fake sender blocks and the test counts
+  loaded pages).
 - With a fake Vision service: a three-page PDF stores one entry with the joined
   text, page count 3, origin and engine id; a page error stores nothing; a
   transient error is retried and succeeds; a page with no text contributes an
