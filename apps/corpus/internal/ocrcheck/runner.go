@@ -55,7 +55,7 @@ type Repository interface {
 // Options identifies the versioned checker and authorized spend.
 type Options struct {
 	Model, Effort                         string
-	LimitDocs                             int
+	LimitDocs, InFlight                   int
 	CheckVersion                          int
 	MaxUSD                                float64
 	Batch, DryRun, Reconcile, RetryFailed bool
@@ -86,6 +86,9 @@ func (o Options) Validate() error {
 	}
 	if o.LimitDocs < 0 || o.MaxUSD <= 0 || math.IsNaN(o.MaxUSD) || math.IsInf(o.MaxUSD, 0) || o.MaxUSD > 1e9 {
 		return fmt.Errorf("a positive finite --max-usd is required; --limit-docs must be nonnegative")
+	}
+	if o.InFlight < 0 || o.InFlight > 8 || (o.InFlight != 0 && o.CheckVersion < 3) {
+		return fmt.Errorf("--in-flight requires check version 3 or 4 and a value from 1 to 8")
 	}
 	if err := validateRecoveryOptions(o); err != nil {
 		return err

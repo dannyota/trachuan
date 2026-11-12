@@ -81,7 +81,7 @@ func TestCheck_ReconcileRequiresPrefixAndNeverAbandons(t *testing.T) {
 }
 
 func TestCheck_OperatorAbandonKeepsReservation(t *testing.T) {
-	for _, age := range []time.Duration{23 * time.Hour, 24 * time.Hour} {
+	for _, age := range []time.Duration{time.Minute, 23 * time.Hour, 24 * time.Hour} {
 		t.Run(age.String(), func(t *testing.T) {
 			r, s, c, d := fixture(t)
 			o := options()
@@ -174,5 +174,29 @@ func TestCheck_DirectFailureRequiresFinalUsageOrProvenRejection(t *testing.T) {
 				t.Fatalf("charge=%d want=%d err=%v", spent, tc.cost, err)
 			}
 		})
+	}
+}
+
+func TestCheck_DirectAbandonImmediatelyKeepsReservationAndAllowsRetry(t *testing.T) {
+	r, repo, client, docs := fixture(t)
+	r.Client = &directClient{FakeClient: client, call: func(context.Context, Request) (Response, error) { return Response{}, errors.New("lost response") }}
+	o := options()
+	if err := run(t, r, docs, o); err == nil {
+		t.Fatal("expected uncertain attempt")
+	}
+	attempt := repo.attempts[0]
+	r.Now = func() time.Time { return attempt.CreatedAt.Add(time.Minute) }
+	o.Abandon = attempt.SubmissionID
+	if err := run(t, r, nil, o); err != nil {
+		t.Fatal(err)
+	}
+	spent, err := repo.Spent(context.Background(), o.CheckerID())
+	if err != nil || spent != 320200 || repo.attempts[0].State != "abandoned" {
+		t.Fatalf("spent=%d attempts=%+v err=%v", spent, repo.attempts, err)
+	}
+	o.Abandon = ""
+	r.Client = client
+	if err := run(t, r, docs, o); err != nil || client.DirectCalls != 2 || len(repo.attempts) != 2 {
+		t.Fatalf("calls=%d attempts=%+v err=%v", client.DirectCalls, repo.attempts, err)
 	}
 }

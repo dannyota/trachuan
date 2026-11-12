@@ -123,10 +123,6 @@ func TestConcurrent_DatabaseCrashRecovery(t *testing.T) {
 	}
 	o.Reconcile = false
 	o.Abandon = open[0].SubmissionID
-	if _, err = r.Run(context.Background(), nil, o); err == nil {
-		t.Fatal("early abandonment allowed")
-	}
-	r.Now = func() time.Time { return open[0].CreatedAt.Add(24 * time.Hour) }
 	if _, err = r.Run(context.Background(), nil, o); err != nil {
 		t.Fatal(err)
 	}

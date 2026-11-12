@@ -187,7 +187,8 @@ The key file is outside the repository; its variables are set only inside the
 subshell, never exported in the session and never printed.
 
 Use the intended run's country and release. Version 3 sends JPEG pages at 200
-dpi with eight documents in flight. Review the cost and verdict lines before
+dpi with eight documents in flight by default. Use `--in-flight N` (1 to 8) to
+set the limit for version 3 or 4. Review the cost and verdict lines before
 continuing with a higher cumulative `--max-usd` under the same checker id.
 `--dry-run` renders and counts tokens but sends no generation request and writes
 nothing. Versions 3 and 4 refuse `--batch`. If the owner chooses the 150 dpi
