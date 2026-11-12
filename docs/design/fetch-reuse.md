@@ -150,11 +150,11 @@ only files whose hash differs or cannot be verified. When the item would
 otherwise have reused its baseline, fetch compares the two and records one
 outcome:
 
-| Outcome         | Meaning                                                                |
-| --------------- | ---------------------------------------------------------------------- |
-| `same`          | `tree.json`, `files.json` and `report.json` byte-identical             |
-| `tree_ids_only` | Trees equal after removing node `key` and `id`; rest identical         |
-| `changed`       | Anything else, including a file whose ETag differs from the stored MD5 |
+| Outcome         | Meaning                                                                                                                       |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `same`          | `tree.json`, `files.json` and `report.json` byte-identical                                                                    |
+| `tree_ids_only` | Trees equal after removing node `key` and `id`; rest identical                                                                |
+| `changed`       | Anything else, including a file that does not match its stored copy under [attachments by content hash](fetch-attachments.md) |
 
 Per file it counts `control_file_same` (the ETag matches the stored file under
 [attachments by content hash](fetch-attachments.md)), `control_file_changed` (it

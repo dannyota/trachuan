@@ -87,9 +87,12 @@ carry `{name,label,url}`: original filename from the linked URL, raw displayed
 link label and validated absolute URL. Sort by `(name,url,label)` and
 deduplicate exact entries. Keep different URLs even when their bytes match.
 Every inventory `(name,url)` must occur in either files or one report outcome,
-never silently disappear. Failed downloads never produce a partial PDF file.
-Other failures follow [source execution](source-execution.md); do not label
-timeouts, invalid PDFs or access denials as missing attachments.
+never silently disappear. Failed downloads never produce a partial PDF file. An
+attachment whose download times out, breaks or answers HTTP 5xx after its one
+retry is listed in `missing` with its cause in the gap detail, under
+[attachments by content hash](fetch-attachments.md#download-deadline-and-failures);
+invalid PDFs and access denials follow [source execution](source-execution.md)
+and are never labelled missing.
 
 For identical `(name,sha256)` under different URLs, workshop and corpus file
 rows use the byte-smallest URL and its matching observation. Keep every alias in
