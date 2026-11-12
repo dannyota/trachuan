@@ -15,7 +15,7 @@ func TestLoad_PartialReviewAndGaps(t *testing.T) {
 	addValidityFixture(t, f, "1", "1", "HHL1P", "2020-01-01", "2020-01-01", "")
 	addValidityFixture(t, f, "2", "2", "HHL1P", "2020-01-01", "2020-01-01", "")
 	hash := addValidityFixture(t, f, "3", "3", "CHL", "2020-01-01", "2020-01-01", "")
-	f.addArtifact(t, "relate", "vn:vbpl:3", map[string]any{"relations.json": []map[string]any{{"ordinal": 0, "kind": "amends_supplements", "target_vbpl_id": "1"}}}, hash)
+	f.addArtifact(t, "relate", "vn:vbpl:3", map[string]any{"relations.json": []map[string]any{{"ordinal": 0, "kind": "amends_supplements", "target_vbpl_id": "1"}}}, f.relateInput(t, "vn:vbpl:3", hash))
 	inv := f.inventory(t)
 	inv.Version = 2
 	inv.Membership.Entries = []membership.Entry{{DocumentKey: "vn:vbpl:1", Disposition: "active", Class: "relation_context", Source: "vbpl"}, {DocumentKey: "vn:vbpl:2", Disposition: "active", Class: "primary", Source: "vbpl"}, {DocumentKey: "vn:vbpl:3", Disposition: "active", Class: "primary", Source: "vbpl"}}
