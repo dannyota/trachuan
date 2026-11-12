@@ -5,10 +5,35 @@ package retrieval
 import (
 	"context"
 	"fmt"
-	"reflect"
 	"strings"
 	"testing"
 )
+
+func TestLoadWarnings_RelationOrder(t *testing.T) {
+	db, _, _ := fixture(t)
+	ctx := context.Background()
+	_, err := db.Exec(ctx, `INSERT INTO relation (id,target_document_id,target_provision_id,source_key,target_key,source_number,target_number,kind,raw_code,raw_label,target_node_id,evidence,method,artifact_sha256,ordinal) VALUES
+ (1,1,11,'vn:z','vn:1','n','n','suspends','','','p11','','text_rule/1',repeat('a',64),1),
+ (2,1,11,'vn:a','vn:1','n','n','cites','','','p11','','text_rule/1',repeat('a',64),2),
+ (3,1,11,'vn:b','vn:1','n','n','repeals','','','p11','','text_rule/1',repeat('a',64),3),
+ (4,1,11,'vn:a','vn:1','n','n','repeals','','','p11','','text_rule/1',repeat('a',64),4)`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx, err := db.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	sets, err := loadWarnings(ctx, tx, []int64{11})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := sets[11]
+	if got.omitted != 0 || len(got.warnings) != 3 || got.warnings[0].Key != "vn:a" || got.warnings[1].Key != "vn:b" || got.warnings[2].Kind != "suspends" {
+		t.Fatalf("warnings: %+v", got)
+	}
+}
 
 func TestWarnings_AttachmentAndRecovery(t *testing.T) {
 	db, engine, _ := fixture(t)
@@ -32,11 +57,11 @@ func TestWarnings_AttachmentAndRecovery(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, rels, err := hydrateTrees(ctx, tx, []int64{11, 12, 13})
+	bounded, err := loadWarnings(ctx, tx, []int64{11, 12, 13})
 	if err != nil {
 		t.Fatal(err)
 	}
-	article, omitted := shapeWarnings(rels[11])
+	article, omitted := bounded[11].warnings, bounded[11].omitted
 	if len(article) != 10 || omitted != 16 || article[0].Target != "vn:1#p12" || article[0].Citation != "p11, p12" {
 		t.Fatalf("article warnings %+v omitted %d", article, omitted)
 	}
@@ -46,27 +71,13 @@ func TestWarnings_AttachmentAndRecovery(t *testing.T) {
 	if presented.Warnings[0].Target != "vn:1#p12" || presented.Warnings[0].Citation != "p11, p12" {
 		t.Fatalf("article hit warnings %+v", presented.Warnings)
 	}
-	clause, omitted := shapeWarnings(rels[12])
+	clause, omitted := bounded[12].warnings, bounded[12].omitted
 	if len(clause) != 10 || omitted != 15 {
 		t.Fatalf("clause warnings %+v omitted %d", clause, omitted)
 	}
-	point, omitted := shapeWarnings(rels[13])
-	if len(point) != 10 || omitted != 11 {
+	point, omitted := bounded[13].warnings, bounded[13].omitted
+	if len(point) != 10 || omitted != 15 {
 		t.Fatalf("point warnings %+v omitted %d", point, omitted)
-	}
-	bounded, err := loadWarnings(ctx, tx, []int64{11, 12, 13})
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, tc := range []struct {
-		id      int64
-		want    []Warning
-		omitted int
-	}{{11, article, 16}, {12, clause, 15}, {13, point, 15}} {
-		got := bounded[tc.id]
-		if !reflect.DeepEqual(got.warnings, tc.want) || got.omitted != tc.omitted {
-			t.Fatalf("unit %d bounded warnings: %+v", tc.id, got)
-		}
 	}
 	nodes, err := readNodes(ctx, tx, 1, "vn:1")
 	if err != nil {
