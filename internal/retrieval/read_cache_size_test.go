@@ -12,7 +12,7 @@ func TestReadCache_SizeEstimateMatchesJSON(t *testing.T) {
 	when := time.Date(2099, 5, 1, 12, 0, 1, 120000000, time.FixedZone("Vietnam", 7*60*60))
 	date := &Date{Year: 2099, Month: time.May, Day: 1}
 	for _, text := range []string{"", "ordinary", "\x00\b\f\n\r\t\"\\<&đ\u2028\u2029", strings.Repeat("đ ", 200), string([]byte{0xff, 0xc0}), "�"} {
-		for _, doc := range []*DocumentEntry{nil, {}, {Title: text, Issued: date, EffectiveFrom: date, RelatedCounts: map[string]int{"in:implements": 123}, Related: []Pointer{{Dir: "in", InRelease: true}}, Status: Status{Class: "in_force", Current: true}}} {
+		for _, doc := range []*DocumentEntry{nil, {}, {Title: text, Nodes: []string{"1.1.c1", "2.1"}, Issued: date, EffectiveFrom: date, RelatedCounts: map[string]int{"in:implements": 123}, Related: []Pointer{{Dir: "in", InRelease: true}}, Status: Status{Class: "in_force", Current: true}}} {
 			seq := readSequence{doc: "vn:1", document: doc, source: Document{EffectiveFrom: &when}, units: []Unit{{Kind: "provision", Text: text, Size: 23}, {Kind: "relation", Relation: &ListedRelation{Pointer: Pointer{Dir: "in", InRelease: true}, EvidenceComplete: true, Evidence: text}}}, parts: map[int][]Unit{0: {{Kind: "provision", Part: 1, Parts: 2, Text: text}}}, gaps: []Gap{{Kind: "gap", Message: text}}, offset: 12, more: true, complete: true}
 			stored := cachedSequence{Doc: seq.doc, Source: seq.source, Units: seq.units, Parts: seq.parts, Gaps: seq.gaps, Offset: seq.offset, More: seq.more, Complete: seq.complete}
 			if doc != nil {

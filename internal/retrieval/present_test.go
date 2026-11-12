@@ -140,7 +140,7 @@ func TestPresent_JSONOmitsEmptyKeepsBooleans(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := `{"release":"r","abstain":false,"documents":{"vn:1":{"status":{"current":false},"text_source":"","text_complete":false}},"hits":[{"handle":"vn:1#a","doc":"vn:1","citation":"Điều 1","complete":false}]}`
+	want := `{"release":"r","abstain":false,"documents":{"vn:1":{"status":{"current":false},"text_source":"","text_complete":false}},"hits":[{"handle":"vn:1#a","doc":"vn:1","citation":"Điều 1","complete":false,"nodes":[]}],"nodes":{}}`
 	if string(b) != want {
 		t.Fatalf("JSON: %s\nwant: %s", b, want)
 	}

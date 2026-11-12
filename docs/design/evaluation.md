@@ -152,14 +152,15 @@ cases run when the release serves nodes, in three cohorts per golden case and
 mode. Inside: every expected citation has effective nodes; the filter is their
 deepest effective nodes, or their families when those exceed 20, and the case
 passes when filtered recall@8 is at least unfiltered recall@8 and every expected
-citation is within the first 100 hits of the paged list. Partial: some but not
-all expected citations have effective nodes; the filter is the seeded citations'
-nodes chosen the same way, and the case passes when every expected citation is
-within the first 100 paged hits and the seeded citations' recall@8 is at least
-their unfiltered recall@8. Outside: the filter is the served family with the
-lowest code that holds none of the expected citations, and the case passes when
-every expected citation is within the first 100 paged hits; with no such family
-the case is skipped with reason `no_outside_family`. A case whose families still
+citation is within the first 100 paged hits (pages of `limit` 8,
+[retrieval](retrieval.md#filter-contract)). Partial: some but not all expected
+citations have effective nodes; the filter is the seeded citations' nodes chosen
+the same way, and the case passes when every expected citation is within the
+first 100 paged hits and the seeded citations' recall@8 is at least their
+unfiltered recall@8. Outside: the filter is the served family with the lowest
+code that holds none of the expected citations, and the case passes when every
+expected citation is within the first 100 paged hits; with no such family the
+case is skipped with reason `no_outside_family`. A case whose families still
 exceed 20 is skipped with reason `too_many_families`; skipped cases are counted
 by reason. The filter gate passes when every case in every cohort passes and the
 inside cohort has at least one case; with no inside case it is `unavailable`,

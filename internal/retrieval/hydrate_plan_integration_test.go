@@ -109,6 +109,13 @@ func TestHydrate_StatementsAvoidFullScans(t *testing.T) {
 			if len(a.Primary.Dense) == 0 || a.Primary.Dense[0].Identity.DocumentKey != "vn:1" {
 				t.Fatalf("candidate was not hydrated: %+v", a.Primary.Dense)
 			}
+			docs, err := e.Documents(ctx, []string{"vn:1"})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, ok := docs["vn:1"]; !ok {
+				t.Fatal("document metadata was not loaded")
+			}
 			if trace.count < 5 || trace.relations == 0 {
 				t.Fatalf("explained %d hydration statements, including %d relation statements", trace.count, trace.relations)
 			}

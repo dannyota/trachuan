@@ -29,11 +29,22 @@ func (e *Engine) Present(ctx context.Context, resp Response, d Detail) (SearchRe
 	if err != nil {
 		return SearchResult{}, fmt.Errorf("load presentation documents: %w", err)
 	}
-	return present(resp, docs, d), nil
+	refs, err := e.nodeIndex(ctx, documentNodeCodes(docs))
+	if err != nil {
+		return SearchResult{}, fmt.Errorf("load presentation nodes: %w", err)
+	}
+	result := present(resp, docs, d)
+	for code, ref := range refs {
+		result.Nodes[code] = ref
+	}
+	return result, nil
 }
 
 func present(resp Response, docs map[string]DocumentEntry, d Detail) SearchResult {
-	result := SearchResult{Release: resp.Release, Abstain: resp.Abstain, Reason: resp.Reason, Message: resp.Message, Gaps: resp.Gaps, Documents: make(map[string]DocumentEntry)}
+	result := SearchResult{OutsideFilterCount: resp.OutsideFilterCount, NextCursor: resp.NextCursor, Nodes: map[string]NodeRef{}, Release: resp.Release, Abstain: resp.Abstain, Reason: resp.Reason, Message: resp.Message, Gaps: resp.Gaps, Documents: make(map[string]DocumentEntry)}
+	for code, ref := range resp.Nodes {
+		result.Nodes[code] = ref
+	}
 	seen := make(map[string]bool)
 	convert := func(hits []Hit) []PresentedHit {
 		var presented []PresentedHit
@@ -42,11 +53,14 @@ func present(resp Response, docs map[string]DocumentEntry, d Detail) SearchResul
 			if !seen[key] {
 				seen[key] = true
 				if doc, ok := docs[key]; ok {
+					if doc.Nodes == nil {
+						doc.Nodes = []string{}
+					}
 					doc.Status = Status{Class: h.Stamp.StatusClass, Basis: h.Stamp.Basis, StatusBasis: h.Stamp.StatusBasis, Current: h.Stamp.Current}
 					result.Documents[key] = doc
 				}
 			}
-			p := PresentedHit{Handle: Handle(h.Identity), Doc: key, Citation: h.Citation, Gaps: h.Gaps, Locator: h.Locator, Warnings: warningPointers(h)}
+			p := PresentedHit{InFilter: h.InFilter, Nodes: append([]string{}, h.Nodes...), Handle: Handle(h.Identity), Doc: key, Citation: h.Citation, Gaps: h.Gaps, Locator: h.Locator, Warnings: warningPointers(h)}
 			for _, node := range h.Path {
 				p.Path = append(p.Path, PresentedPathNode{Label: node.Label, Heading: node.Heading, Anchor: node.Identity.Anchor})
 			}

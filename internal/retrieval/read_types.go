@@ -65,8 +65,9 @@ type ItemResult struct {
 
 // ReadResult preserves request item order and identifies the pinned release.
 type ReadResult struct {
-	Release string       `json:"release"`
-	Items   []ItemResult `json:"items,omitempty"`
+	Release string             `json:"release"`
+	Items   []ItemResult       `json:"items,omitempty"`
+	Nodes   map[string]NodeRef `json:"nodes"`
 }
 
 type readSequence struct {

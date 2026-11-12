@@ -25,6 +25,8 @@ type PresentedHit struct {
 	Path      []PresentedPathNode `json:"path,omitempty"`
 	Snippet   string              `json:"snippet,omitempty"`
 	Complete  bool                `json:"complete"`
+	InFilter  *bool               `json:"in_filter,omitempty"`
+	Nodes     []string            `json:"nodes"`
 	Warnings  []Pointer           `json:"warnings,omitempty"`
 	Gaps      []Gap               `json:"gaps,omitempty"`
 	Locator   *string             `json:"locator,omitempty"`
@@ -37,12 +39,15 @@ type PresentedHit struct {
 
 // SearchResult contains presented hits and their shared document metadata.
 type SearchResult struct {
-	Release    string                   `json:"release,omitempty"`
-	Abstain    bool                     `json:"abstain"`
-	Reason     string                   `json:"reason,omitempty"`
-	Message    string                   `json:"message,omitempty"`
-	Documents  map[string]DocumentEntry `json:"documents,omitempty"`
-	Hits       []PresentedHit           `json:"hits,omitempty"`
-	NonCurrent []PresentedHit           `json:"non_current,omitempty"`
-	Gaps       []Gap                    `json:"gaps,omitempty"`
+	Release            string                   `json:"release,omitempty"`
+	Abstain            bool                     `json:"abstain"`
+	Reason             string                   `json:"reason,omitempty"`
+	Message            string                   `json:"message,omitempty"`
+	Documents          map[string]DocumentEntry `json:"documents,omitempty"`
+	Hits               []PresentedHit           `json:"hits,omitempty"`
+	NonCurrent         []PresentedHit           `json:"non_current,omitempty"`
+	Gaps               []Gap                    `json:"gaps,omitempty"`
+	OutsideFilterCount *int                     `json:"outside_filter_count,omitempty"`
+	NextCursor         string                   `json:"next_cursor,omitempty"`
+	Nodes              map[string]NodeRef       `json:"nodes"`
 }

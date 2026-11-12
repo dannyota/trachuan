@@ -11,7 +11,7 @@ import (
 
 // Read returns bounded pages of independent scopes from the engine's release.
 func (e *Engine) Read(ctx context.Context, req ReadRequest) (ReadResult, error) {
-	result := ReadResult{Release: e.release.Rel}
+	result := ReadResult{Release: e.release.Rel, Nodes: map[string]NodeRef{}}
 	if req.PageCap < 0 || req.PartSize < 0 || (cursor{PageCap: req.PageCap, PartSize: req.PartSize}).partSize() > (cursor{PageCap: req.PageCap}).pageCap() {
 		return result, ErrInvalidReadLimits
 	}
@@ -64,6 +64,16 @@ func (e *Engine) Read(ctx context.Context, req ReadRequest) (ReadResult, error) 
 			saves = append(saves, save)
 		}
 		result.Items[i] = page
+	}
+	var codes []string
+	for _, item := range result.Items {
+		if item.Document != nil {
+			codes = append(codes, item.Document.Nodes...)
+		}
+	}
+	result.Nodes, err = e.loadNodeIndex(ctx, tx, codes)
+	if err != nil {
+		return ReadResult{}, err
 	}
 	if err = tx.Commit(ctx); err != nil {
 		return ReadResult{}, databaseFailure("commit read transaction", err)

@@ -16,6 +16,8 @@ func (f failure) Error() string { return string(f) }
 const (
 	// ErrInvalidRequest means a request failed validation.
 	ErrInvalidRequest failure = "invalid_request"
+	// ErrReleaseExpired means a search cursor names another release.
+	ErrReleaseExpired failure = "release_expired"
 	// ErrNotFound means the requested item is not served.
 	ErrNotFound failure = "not_found"
 	// ErrEmbedderBusy means the query embedder refused admission.
