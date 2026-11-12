@@ -51,7 +51,15 @@ network read was younger than an age limit, and treated an unknown origin time
 as expired. Run `vn/20261112_1` copied 2,391 attachments of 1,383 documents from
 the local cache, which records no origin time, so the next run, `vn/20261112_2`,
 had read 803 of its first 3,094 documents in full for age and downloaded 7,592
-attachments (3.6 GB) again. Content hashes replace that rule.
+attachments (3.6 GB) again. Content hashes replace that rule. Across every
+stored VBPL fetch bundle (11,224 bundles of 4,577 documents written 2026-11-09
+to 11-12, `fetched_file` joined to `artifact`, distinct SHA-256 per item and
+file name), 32,794 files appear in two or more bundles under the same document
+and name, and exactly one changed content: `vn:vbpl:13205` `13205.xml`, 3,298 to
+3,380 bytes on 2026-11-11; no PDF, Word or original-text file changed. The
+16,863 attachments (8.65 GB) that runs `vn/20261112_1` and `_2` downloaded for
+age include none whose bytes differ from a stored copy of the same document and
+name. The age rule never detected a change and cost about 5 GB a run.
 
 One day and two runs is a small sample. The [control](#control) exists because
 of that.

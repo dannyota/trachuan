@@ -93,8 +93,9 @@ file never holds or fails a stage.
 
 - Deadline per download attempt: 30 seconds plus the listed size at 250 kB/s
   (250,000 bytes a second), so a 20 MB PDF gets 110 seconds and the 50 MB file
-  limit 230 seconds; an unknown size counts as the limit. The CDN gave about 4
-  MB/s per address shared by 8 downloads, so 250 kB/s is half a fair share.
+  limit 230 seconds; an unknown size counts as the limit. The rate assumes the
+  attachment pool is full: 8 downloads at 250 kB/s is 2 MB/s together, half of
+  the about 4 MB/s per address the CDN gave banhmi.
 - On a timeout, a transport error or an HTTP 5xx, one retry after 2 seconds.
   When the first response carried `Accept-Ranges: bytes` and an ETag, the retry
   asks `Range: bytes=<received>-` with `If-Range: <ETag>` and continues the same
