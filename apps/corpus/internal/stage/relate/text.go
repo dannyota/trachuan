@@ -131,8 +131,8 @@ func textRelations(dir string, rows []relation, issuers map[string]string) ([]re
 func (r relationReport) resolveGaps(rows []relation, expected map[string]bool) []stage.Gap {
 	gaps := resolveGaps(rows, r.Unmapped, expected)
 	if r.Text != nil {
-		for _, gap := range r.Text.GapDetails {
-			gaps = append(gaps, stage.Gap{Kind: gap.Name, Detail: gap.Detail})
+		for i, gap := range r.Text.GapDetails {
+			gaps = append(gaps, stage.Gap{Kind: gap.Name, Detail: runGapDetail(i, gap)})
 		}
 	}
 	return gaps

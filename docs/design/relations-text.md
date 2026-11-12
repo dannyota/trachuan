@@ -165,6 +165,11 @@ matched sentence. Rows with equal (`source_node_id`, `target_vbpl_id`,
 `target_anchor`, `kind`) collapse to one, keeping the first sentence. Diagram
 rows are unchanged; both coexist and the diagram keeps document-level credit.
 
+Run gap rows for text gaps carry a bounded detail,
+`<index in the report>:<source node id>:<first 200 characters of the sentence>`,
+because the gap table indexes detail; the full sentence stays in the artifact
+report's `gap_details`.
+
 ## Resolution in build
 
 Build maps `target_anchor` against the target document's loaded tree by path,

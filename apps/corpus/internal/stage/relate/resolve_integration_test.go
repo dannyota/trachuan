@@ -51,7 +51,7 @@ func TestRelate_ResolveReusedArtifact(t *testing.T) {
 		if resolveErr != nil {
 			t.Fatal(resolveErr)
 		}
-		if got.Gaps[len(got.Gaps)-1] != (stage.Gap{Kind: "relation_text_grammar", Detail: "bad sentence"}) {
+		if got.Gaps[len(got.Gaps)-1] != (stage.Gap{Kind: "relation_text_grammar", Detail: "0:a:bad sentence"}) {
 			t.Fatalf("text gaps: %+v", got.Gaps)
 		}
 		if (i == 0 && (len(got.Gaps) != 2 || got.Gaps[0] != (stage.Gap{Kind: "unknown_target", Detail: "42"}))) || (i == 1 && len(got.Gaps) != 1) {
