@@ -56,6 +56,11 @@ func productMatch(a Alternative, h retrieval.Hit) bool {
 	if h.Identity.Anchor == *a.Anchor {
 		return true
 	}
+	for _, p := range h.Path {
+		if p.Identity.Country == a.Country && p.Identity.DocumentKey == a.DocumentKey && p.Identity.Anchor == *a.Anchor {
+			return true
+		}
+	}
 	for _, f := range h.Fragments {
 		if f.Complete && f.Identity.Country == a.Country && f.Identity.DocumentKey == a.DocumentKey && f.Identity.Anchor == *a.Anchor {
 			return true

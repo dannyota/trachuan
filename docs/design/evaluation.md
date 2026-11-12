@@ -93,12 +93,15 @@ Product matching is exact country/key/anchor membership in the adjudicated
 alternatives. A document-level expectation accepts any returned provision of
 that exact document. A parent hit earns child credit only when a fragment names
 the exact child identity with `Complete:true`; a truncated parent holding part
-of a child earns nothing for that child. A child hit does not automatically
-satisfy a parent expectation. A relation-backed alternative requires the
-explicit mapped edge and evidence hash in the response. Count each expectation
-at most once, at its first matching rank; two hits or alternates never increase
-its denominator. No number substring, article-label-only or family membership
-credit.
+of a child earns nothing for that child. A hit whose identity lies inside the
+expected provision (the expected anchor is an ancestor on the hit's path)
+satisfies a provision expectation: the agent received the expected article or
+clause as the hit's citation. The reverse does not hold: a parent hit satisfies
+a child expectation only through a complete fragment, as above. A
+relation-backed alternative requires the explicit mapped edge and evidence hash
+in the response. Count each expectation at most once, at its first matching
+rank; two hits or alternates never increase its denominator. No number
+substring, article-label-only or family membership credit.
 
 ## Metrics
 

@@ -13,6 +13,9 @@ import (
 	"danny.vn/trachuan/internal/retrieval"
 )
 
+// ScorerVersion identifies the scoring policy used by reports and artifacts.
+const ScorerVersion = "agent-eval/3"
+
 type metricKey struct {
 	cohort string
 	mode   retrieval.Mode
@@ -50,7 +53,7 @@ func Run(ctx context.Context, engine Engine, suite Suite, o Options) (Report, Ca
 	rel := engine.Release()
 	o = withReleaseRecipes(o, rel, modes)
 	recipe := rel.RetrievalRecipe
-	r := Report{Version: 1, Scorer: "agent-eval/2", Status: "complete", Country: rel.Country, Rel: rel.Rel, BuildArtifactSHA256: o.BuildArtifactSHA256, DumpSHA256: o.DumpSHA256, FixtureHashes: suite.Hashes, IdentityMapSHA256: suite.Hashes.IdentityMap, Recipes: o.Recipes, EvaluationDate: date, DatabaseInstanceKind: o.DatabaseInstanceKind, Software: o.Software, Calibration: o.Calibration, Cohorts: map[string]Cohort{"legacy": {}, "old_product": {}}, TimingsMS: map[string]any{}, CacheManifest: map[string]any{}, PreviousDiff: map[string]any{"reason": "no previous report"}, NotRun: map[string]string{"development": "not_run", "taxonomy": "out_of_scope", "filtered": "out_of_scope"}, Limitations: []string{"Small sample size; calibration fits the scored product cohorts.", "Legacy results use the product recipe and are not a reproduction of the legacy engine."}}
+	r := Report{Version: 1, Scorer: ScorerVersion, Status: "complete", Country: rel.Country, Rel: rel.Rel, BuildArtifactSHA256: o.BuildArtifactSHA256, DumpSHA256: o.DumpSHA256, FixtureHashes: suite.Hashes, IdentityMapSHA256: suite.Hashes.IdentityMap, Recipes: o.Recipes, EvaluationDate: date, DatabaseInstanceKind: o.DatabaseInstanceKind, Software: o.Software, Calibration: o.Calibration, Cohorts: map[string]Cohort{"legacy": {}, "old_product": {}}, TimingsMS: map[string]any{}, CacheManifest: map[string]any{}, PreviousDiff: map[string]any{"reason": "no previous report"}, NotRun: map[string]string{"development": "not_run", "taxonomy": "out_of_scope", "filtered": "out_of_scope"}, Limitations: []string{"Small sample size; calibration fits the scored product cohorts.", "Legacy results use the product recipe and are not a reproduction of the legacy engine."}}
 	r.CapOverride = o.CapOverride
 	r.ValidityOverrides = o.ValidityOverrides
 	var previous *Report
@@ -63,14 +66,14 @@ func Run(ctx context.Context, engine Engine, suite Suite, o Options) (Report, Ca
 		if err = json.Unmarshal(b, &prior); err != nil {
 			return Report{}, Cache{}, fmt.Errorf("decode previous report: %w", err)
 		}
-		if prior.Version != 1 || (prior.Scorer != r.Scorer && prior.Scorer != "agent-eval/1") || prior.FixtureHashes.Legacy != r.FixtureHashes.Legacy || prior.FixtureHashes.OldProduct != r.FixtureHashes.OldProduct {
+		if prior.Version != 1 || (prior.Scorer != r.Scorer && prior.Scorer != "agent-eval/1" && prior.Scorer != "agent-eval/2") || prior.FixtureHashes.Legacy != r.FixtureHashes.Legacy || prior.FixtureHashes.OldProduct != r.FixtureHashes.OldProduct {
 			return Report{}, Cache{}, fmt.Errorf("incompatible previous scorer or fixtures")
 		}
 		if prior.Cohorts["development"].CaseCount > 0 && prior.FixtureHashes.Development != r.FixtureHashes.Development {
 			return Report{}, Cache{}, fmt.Errorf("incompatible previous development fixtures")
 		}
 		if prior.Scorer != r.Scorer {
-			r.PreviousDiff = map[string]any{"reason": "incompatible abstention policy scorer"}
+			r.PreviousDiff = map[string]any{"reason": "incompatible scorer version"}
 		} else if (prior.CapOverride == nil) != (o.CapOverride == nil) || (prior.CapOverride != nil && o.CapOverride != nil && *prior.CapOverride != *o.CapOverride) {
 			r.PreviousDiff = map[string]any{"reason": "incompatible cap override"}
 		} else if !sameValidityOverrides(prior.ValidityOverrides, o.ValidityOverrides) {

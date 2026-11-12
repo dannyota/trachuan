@@ -30,12 +30,14 @@ func diagnosticRank(cohort string, e Expectation, entry MapEntry, hits []retriev
 }
 func candidateHit(c retrieval.Candidate) retrieval.Hit {
 	labels := []string{}
+	path := []retrieval.PathNode{}
 	for _, p := range c.Ancestors {
+		path = append(path, retrieval.PathNode{Identity: p.Identity, Kind: p.Kind, Label: p.Label})
 		if p.Label != "" {
 			labels = append(labels, strings.TrimSpace(p.Label))
 		}
 	}
-	h := retrieval.Hit{Identity: c.Identity, Number: c.Document.Number, Citation: strings.Join(labels, ", ")}
+	h := retrieval.Hit{Identity: c.Identity, Path: path, Number: c.Document.Number, Citation: strings.Join(labels, ", ")}
 	for _, p := range c.Descendants {
 		h.Fragments = append(h.Fragments, retrieval.Fragment{Identity: p.Identity, Complete: true})
 	}

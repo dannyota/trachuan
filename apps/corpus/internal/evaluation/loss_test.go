@@ -307,6 +307,16 @@ func TestLossDiagnostics_PrimaryHydrationUsesTailQuota(t *testing.T) {
 	}
 }
 
+func TestCandidateHit_AncestorInArms(t *testing.T) {
+	c := lossCandidate(1, "doc", "dieu-10/khoan-1")
+	article := retrieval.Identity{Country: "vn", DocumentKey: "doc", Anchor: "dieu-10"}
+	c.Ancestors = append([]retrieval.Provision{{Identity: article}}, c.Ancestors...)
+	entry := MapEntry{State: "resolved", Alternatives: []Alternative{{Kind: "provision", Country: "vn", DocumentKey: "doc", Anchor: &article.Anchor}}}
+	if !matchingCandidate("old_product", Expectation{}, entry, []retrieval.Candidate{c}) {
+		t.Fatal("ancestor in candidate arms was missed")
+	}
+}
+
 func TestLossDiagnostics_ExplicitFalseGroupedPrimaryHydration(t *testing.T) {
 	recipe := retrieval.Recipe1()
 	threshold := 0.0
