@@ -37,6 +37,9 @@ func TestHydrate_IncidentRelationsBoundedAndWarningsComplete(t *testing.T) {
 			t.Fatalf("group %d fetched %d relations, want at most %d", id, len(relations[id]), maxRows)
 		}
 	}
+	if err = tx.Rollback(ctx); err != nil {
+		t.Fatal(err)
+	}
 	recipe := engine.Release().RetrievalRecipe
 	arms := collectFixture(t, engine, Request{Query: "ngân hàng", Mode: "exact"}, Depths{recipe.DenseDepth, recipe.LexicalDepth})
 	response, err := Shape(arms, recipe, 8, "hybrid")
