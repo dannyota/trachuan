@@ -84,7 +84,9 @@ func TestDropDatabase_ClientSessions(t *testing.T) {
 		t.Fatalf("already cancelled drop: %v", err)
 	}
 	assertConnectable()
-	tracer := &dropWaitTracer{busy: make(chan struct{}, 1)}
+	cancelCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	tracer := &dropWaitTracer{cancel: cancel}
 	cancelCfg := conn.Config().Copy()
 	cancelCfg.Tracer = tracer
 	cancelConn, err := pgx.ConnectConfig(ctx, cancelCfg)
@@ -92,27 +94,13 @@ func TestDropDatabase_ClientSessions(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = cancelConn.Close(ctx) }()
-	cancelCtx, cancel := context.WithCancel(ctx)
-	defer cancel()
-	cancelledAt := make(chan time.Time, 1)
-	go func() {
-		select {
-		case <-tracer.busy:
-			timer := time.NewTimer(10 * time.Millisecond)
-			defer timer.Stop()
-			select {
-			case <-timer.C:
-				cancel()
-				cancelledAt <- time.Now()
-			case <-cancelCtx.Done():
-			}
-		case <-cancelCtx.Done():
-		}
-	}()
 	if err = pgdrop.DropOnly(cancelCtx, cancelConn, name); !errors.Is(err, context.Canceled) {
 		t.Fatalf("cancelled drop: %v", err)
 	}
-	if elapsed := time.Since(<-cancelledAt); elapsed > time.Second {
+	if tracer.cancelled.IsZero() {
+		t.Fatal("drop did not reach a busy response")
+	}
+	if elapsed := time.Since(tracer.cancelled); elapsed > time.Second {
 		t.Fatalf("cancellation took %v", elapsed)
 	}
 	assertConnectable()
@@ -133,8 +121,9 @@ func TestDropDatabase_ClientSessions(t *testing.T) {
 }
 
 type dropWaitTracer struct {
-	busy chan struct{}
-	drop bool
+	cancel    context.CancelFunc
+	cancelled time.Time
+	drop      bool
 }
 
 func (tracer *dropWaitTracer) TraceQueryStart(ctx context.Context, _ *pgx.Conn, data pgx.TraceQueryStartData) context.Context {
@@ -145,9 +134,7 @@ func (tracer *dropWaitTracer) TraceQueryStart(ctx context.Context, _ *pgx.Conn, 
 func (tracer *dropWaitTracer) TraceQueryEnd(_ context.Context, _ *pgx.Conn, data pgx.TraceQueryEndData) {
 	var pgErr *pgconn.PgError
 	if tracer.drop && errors.As(data.Err, &pgErr) && pgErr.Code == "55006" {
-		select {
-		case tracer.busy <- struct{}{}:
-		default:
-		}
+		tracer.cancelled = time.Now()
+		tracer.cancel()
 	}
 }

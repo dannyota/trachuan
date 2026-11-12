@@ -1,5 +1,6 @@
 // Package pgdrop drops databases without terminating foreign sessions.
-// Cancelling a DROP DATABASE statement can leave the database invalid, so statements use an independent timeout.
+// A DROP in flight is not interrupted by caller cancellation and may take up to 60 seconds after cancellation.
+// If the last-resort statement timeout interrupts a DROP, PostgreSQL may leave the database invalid; the error advises dropping it again.
 package pgdrop
 
 import (
@@ -46,11 +47,18 @@ func waitRetry(ctx context.Context) error {
 func dropOnly(ctx context.Context, conn executor, name string, wait func(context.Context) error) error {
 	bounded, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
+	return dropOnlyBounded(ctx, bounded, conn, name, wait)
+}
+
+func dropOnlyBounded(ctx, bounded context.Context, conn executor, name string, wait func(context.Context) error) error {
 	var busy error
-	err := retry(bounded, func() error {
+	err, between := retry(bounded, func() error {
 		statement, stop := context.WithTimeout(context.WithoutCancel(ctx), 60*time.Second)
 		defer stop()
 		_, err := conn.Exec(statement, "DROP DATABASE "+pgx.Identifier{name}.Sanitize())
+		if err != nil && (errors.Is(statement.Err(), context.DeadlineExceeded) || errors.Is(err, context.DeadlineExceeded)) {
+			return fmt.Errorf("database %q may be invalid; drop it again: %w", name, err)
+		}
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "55006" {
 			busy = err
@@ -58,9 +66,9 @@ func dropOnly(ctx context.Context, conn executor, name string, wait func(context
 		return err
 	}, wait)
 	if err != nil {
-		if ctx.Err() != nil {
+		if between && ctx.Err() != nil {
 			err = ctx.Err()
-		} else if bounded.Err() != nil && busy != nil {
+		} else if between && bounded.Err() != nil && busy != nil {
 			err = busy
 		}
 		return fmt.Errorf("drop database: %w", err)
@@ -68,21 +76,21 @@ func dropOnly(ctx context.Context, conn executor, name string, wait func(context
 	return nil
 }
 
-func retry(ctx context.Context, operation func() error, wait func(context.Context) error) error {
+func retry(ctx context.Context, operation func() error, wait func(context.Context) error) (error, bool) {
 	for {
 		if err := ctx.Err(); err != nil {
-			return err
+			return err, true
 		}
 		err := operation()
 		if err == nil {
-			return nil
+			return nil, false
 		}
 		var pgErr *pgconn.PgError
 		if !errors.As(err, &pgErr) || pgErr.Code != "55006" {
-			return err
+			return err, false
 		}
 		if waitErr := wait(ctx); waitErr != nil {
-			return waitErr
+			return waitErr, true
 		}
 	}
 }
