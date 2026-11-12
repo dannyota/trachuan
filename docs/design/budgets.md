@@ -110,10 +110,11 @@ default `s3-han02.fptcloud.com`.
 | chinhphu deadlines       | 30 s page request; PDF request 30 s plus size at 250 kB/s; 5 min per item; at most 3 redirects, each revalidated                                  |
 | chinhphu retries         | 1 after 2 s for 5xx, timeout or transport error, then a gap; 429 as the [source error table](fetch-attachments.md#download-deadline-and-failures) |
 
-These are worker-wide source limits, not per-activity allowances. Honor the
-later of retry backoff and `Retry-After` within the item deadline; exhaustion is
-a retryable source gap and access denials pause the source. All attempts consume
-request and byte budgets; record count, bytes and time in run evidence.
+These are worker-wide source limits, not per-activity allowances. Retries, HTTP
+429 waits and their exhaustion follow the
+[source error table](fetch-attachments.md#download-deadline-and-failures);
+access denials pause the source. All attempts consume request and byte budgets;
+record count, bytes and time in run evidence.
 
 Exceeding a count or byte ceiling fails that scope stage explicitly; never
 truncate a listing, expansion or attachment inventory and mark it complete. The

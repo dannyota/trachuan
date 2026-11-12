@@ -205,8 +205,8 @@ not change.
 
 A run on unchanged sources makes two gateway calls per reused document, four
 plus one ETag request per file for a full read, and downloads only files whose
-hash differs. The first live run after the change reports the counts and the
-fetch stage time in the research note.
+hash differs or cannot be compared. The first live run after the change reports
+the counts and the fetch stage time in the research note.
 
 Known cost left in place: a diagram-only change (37 documents in the measured
 day) changes the fetch manifest, and [chunk](chunk.md#stage-and-artifact) binds

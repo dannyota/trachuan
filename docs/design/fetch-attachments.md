@@ -76,10 +76,14 @@ An item ends `failed` or retries its batch only for an error of our own side
 other source outcome not listed here is treated as the second row, so no new
 source behaviour can reach the batch retry.
 
-HTTP 429, every client: wait `Retry-After` when the header is present, else 2, 8
-and 30 seconds, at most 3 retries within the request's 200-second sequence
-limit; a `Retry-After` above 10 minutes, or a fourth 429, returns the item to
-its batch.
+HTTP 429, every client: before each retry wait the later of the scheduled
+backoff (2, 8, then 30 seconds) and a valid `Retry-After`; at most 3 retries.
+The waits of one request sum to at most 200 seconds, and each attempt keeps its
+own deadline, the size formula below for a download. When the next wait does not
+fit in what is left of the 200 seconds, or the third retry answers 429 again,
+the item returns pending to its batch; it never becomes a gap or a timeout for
+that reason. A `Retry-After` above 10 minutes is a `source_unavailable` gap, as
+today.
 
 - Deadline per download attempt: 30 seconds plus the listed size at 250 kB/s, so
   20 MB gets 110 seconds and the 50 MB file limit 230 seconds; an unknown size
