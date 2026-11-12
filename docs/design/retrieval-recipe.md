@@ -170,11 +170,13 @@ Recipe 2 raises the per-document cap from 3 to 5: on run vn/20261111_4 cap 5
 took old product recall@20 from 80 to 82 and development from 68 to 75 of 113
 with MRR@8 up on both cohorts and compact p95 at 20 hits down; no cap gained 3
 more development citations but lowered development MRR@8, so it stays unadopted.
-Apply the per-document cap in rank order: take capped hits while collecting
-excess hits into a demoted list; if fewer than `limit` remain, append demoted
-hits in original order until full. This is a diversity preference, not a hard
-loss of evidence. Do not aggregate articles, promote sibling counts or append
-unbounded related hits. Use the same processing for dense and lexical controls.
+Recipe 2 is the release-1 recipe; its first build's results are in
+[ADR 0010](../adr/0010-retrieval-evaluation-for-agents.md) History. Apply the
+per-document cap in rank order: take capped hits while collecting excess hits
+into a demoted list; if fewer than `limit` remain, append demoted hits in
+original order until full. This is a diversity preference, not a hard loss of
+evidence. Do not aggregate articles, promote sibling counts or append unbounded
+related hits. Use the same processing for dense and lexical controls.
 
 ## Validity and evidence
 

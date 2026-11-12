@@ -177,3 +177,14 @@ accuracy on either cohort.
   `out_of_scope` without served nodes, and `not_run` under a research override.
   Subject filters only reorder, so the gate guards that a filter never costs an
   expected citation.
+- 2026-11-12: recipe 2 is the release-1 recipe. Its first build, run
+  vn/20261112_2, also carries relations from text and the extraction fixes made
+  after vn/20261111_4, so the change against release vn/20261111_4 is not the
+  recipe's alone. Old product recall@20 80 to 86 of 93, recall@8 73 to 78, MRR@8
+  0.692 to 0.718; development recall@20 68 to 83 of 113, recall@8 64 to 74,
+  MRR@8 0.6530 to 0.6533; current-law precision 534 of 534 and 390 of 390;
+  rejections 3 of 3; filter gate 83 of 83; exact and ANN equal. Calibration on
+  both cohorts chose threshold 0.530 (balanced accuracy 0.864; old product
+  0.911, development 0.853). Compact p95 at 20 hits 33.8k characters, full p95
+  at 8 hits 84.3k; the size gate passes. Development recall@8 and MRR@8 stay
+  below the trial's 76 and 0.667; the cause is not examined.
