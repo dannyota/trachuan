@@ -22,6 +22,8 @@ export default defineNuxtConfig({
     '/llms.txt': { cache },
     '/login': { headers: { 'Cache-Control': 'no-store' } },
     '/account': { headers: { 'Cache-Control': 'no-store' } },
+    '/vn/topics': { cache, headers: { 'Cache-Control': 'public, max-age=600' } },
+    '/vn/topics/**': { cache, headers: { 'Cache-Control': 'public, max-age=600' } },
     '/vn/**': { headers: { 'Cache-Control': 'no-store' } },
   },
   nitro: { devProxy: { '/api/': { target: 'http://127.0.0.1:8080/api/', changeOrigin: true } } },

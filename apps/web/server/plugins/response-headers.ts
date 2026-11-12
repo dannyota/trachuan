@@ -12,6 +12,7 @@ export default defineNitroPlugin((nitro) => {
       response.setHeader('Cache-Control', isPublic ? 'no-cache' : 'no-store')
       if (!isPublic) return
       response.removeHeader('Last-Modified')
+      if (response.statusCode >= 400) response.removeHeader('ETag')
       const vary = response.getHeader('Vary')
       const values = (Array.isArray(vary) ? vary.join(',') : String(vary ?? ''))
         .split(',').map(value => value.trim()).filter(Boolean)
