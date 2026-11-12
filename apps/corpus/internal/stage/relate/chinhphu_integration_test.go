@@ -42,7 +42,11 @@ func TestRelate_ChinhphuEmptySet(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	out, err := New().Process(ctx, stage.Env{DB: db, Artifacts: artifacts}, stage.Run{ID: runID}, stage.Item{Key: "vn:chinhphu:1", InputHash: art.SHA256})
+	_, err = db.Exec(ctx, `INSERT INTO run_item (run_id,stage,item_key,state,batch) VALUES ($1,'extract','vn:chinhphu:1','gap',0)`, runID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out, err := New().Process(ctx, stage.Env{DB: db, Artifacts: artifacts}, stage.Run{ID: runID}, stage.Item{Key: "vn:chinhphu:1", InputHash: PairInputHash(art.SHA256, "-")})
 	if err != nil {
 		t.Fatal(err)
 	}

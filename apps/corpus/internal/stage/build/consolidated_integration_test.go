@@ -40,7 +40,7 @@ func TestLoad_ConsolidatedStatus(t *testing.T) {
 	}
 	for sourceID, targetID := range map[int]int{1: 2, 3: 4, 5: 2, 6: 2, 9: 8, 10: 8, 11: 4, 12: 4, 13: 14, 15: 16, 17: 18, 19: 20, 21: 20} {
 		key := fmt.Sprintf("vn:vbpl:%d", sourceID)
-		f.addArtifact(t, "relate", key, map[string]any{"relations.json": []map[string]any{{"ordinal": 0, "kind": "consolidates", "target_vbpl_id": fmt.Sprint(targetID)}}}, fetches[sourceID])
+		f.addArtifact(t, "relate", key, map[string]any{"relations.json": []map[string]any{{"ordinal": 0, "kind": "consolidates", "target_vbpl_id": fmt.Sprint(targetID)}}}, f.relateInput(t, key, fetches[sourceID]))
 	}
 	codes := map[string]source.StatusCode{"A": {Class: "in_force", Current: true}, "X": {Class: "expired"}}
 	if _, err := Load(context.Background(), f.corpus, f.inventory(t), f.artifacts, f.recipes, codes, nil, f.asOf()); err != nil {

@@ -19,6 +19,7 @@ import (
 	"danny.vn/trachuan/apps/corpus/internal/stage"
 	"danny.vn/trachuan/apps/corpus/internal/stage/chunk"
 	"danny.vn/trachuan/apps/corpus/internal/stage/embed"
+	"danny.vn/trachuan/apps/corpus/internal/stage/relate"
 	"danny.vn/trachuan/apps/corpus/internal/store"
 	"danny.vn/trachuan/apps/corpus/internal/testdb"
 	"danny.vn/trachuan/internal/corpusdb"
@@ -102,6 +103,28 @@ func (f *loadFixture) addArtifact(t *testing.T, name, key string, files map[stri
 func (f *loadFixture) fetch(t *testing.T, key string) artifact.Result {
 	t.Helper()
 	return f.addArtifact(t, "fetch", key, map[string]any{"detail.json": map[string]any{"data": map[string]any{"id": strings.TrimPrefix(key, "vn:vbpl:"), "docNum": "01/2024/TT", "effFrom": "2024-01-01"}}, "files.json": []any{}})
+}
+
+func (f *loadFixture) relateInput(t *testing.T, key, fetchHash string) string {
+	t.Helper()
+	ctx := context.Background()
+	_, err := f.workshop.Exec(ctx, `INSERT INTO run_item(run_id,stage,item_key,state,batch) VALUES($1,'extract',$2,'gap',0) ON CONFLICT (run_id,stage,item_key) DO NOTHING`, f.run.ID, key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var state string
+	var hash *string
+	err = f.workshop.QueryRow(ctx, `SELECT i.state,a.sha256 FROM run_item i LEFT JOIN artifact a ON a.id=i.artifact_id WHERE i.run_id=$1 AND i.stage='extract' AND i.item_key=$2`, f.run.ID, key).Scan(&state, &hash)
+	if err != nil {
+		t.Fatal(err)
+	}
+	extract := "-"
+	if state == "done" && hash != nil {
+		extract = *hash
+	} else if (state != "gap" && state != "failed") || hash != nil {
+		t.Fatalf("invalid extract fixture state %s", state)
+	}
+	return relate.PairInputHash(fetchHash, extract)
 }
 func (f *loadFixture) inventory(t *testing.T) Inventory {
 	t.Helper()
@@ -316,7 +339,7 @@ func TestLoad_UnresolvedRelationsKept(t *testing.T) {
 	f := fixture(t)
 	key := "vn:vbpl:1"
 	fetch := f.fetch(t, key)
-	f.addArtifact(t, "relate", key, map[string]any{"relations.json": []relationRow{{Ordinal: 0, Kind: "cites", TargetID: "999", TargetNumber: "99/2024"}}}, fetch.SHA256)
+	f.addArtifact(t, "relate", key, map[string]any{"relations.json": []relationRow{{Ordinal: 0, Kind: "cites", TargetID: "999", TargetNumber: "99/2024"}}}, f.relateInput(t, key, fetch.SHA256))
 	c, err := f.load(t)
 	if err != nil {
 		t.Fatal(err)
@@ -345,7 +368,7 @@ func TestLoad_IdenticalRelationArtifactsOfTwoDocuments(t *testing.T) {
 	var hashes []string
 	for _, key := range []string{"vn:vbpl:2", "vn:vbpl:1"} {
 		fetch := f.fetch(t, key)
-		hashes = append(hashes, f.addArtifact(t, "relate", key, map[string]any{"relations.json": rows}, fetch.SHA256).SHA256)
+		hashes = append(hashes, f.addArtifact(t, "relate", key, map[string]any{"relations.json": rows}, f.relateInput(t, key, fetch.SHA256)).SHA256)
 	}
 	if hashes[0] != hashes[1] {
 		t.Fatalf("fixture needs byte-identical relation artifacts: %v", hashes)

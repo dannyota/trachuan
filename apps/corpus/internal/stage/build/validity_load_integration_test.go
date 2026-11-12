@@ -44,7 +44,7 @@ func addReplacementFixture(t *testing.T, f *loadFixture, body string) {
 	t.Helper()
 	addValidityFixture(t, f, "1", "1/2020/NĐ-CP", "CHL", "2020-01-01", "2020-01-01", "")
 	hash := addValidityFixture(t, f, "2", "2/2021/NĐ-CP", "CHL", "2021-01-01", "2021-02-01", body)
-	f.addArtifact(t, "relate", "vn:vbpl:2", map[string]any{"relations.json": []map[string]any{{"ordinal": 0, "kind": "replaces", "target_vbpl_id": "1"}}}, hash)
+	f.addArtifact(t, "relate", "vn:vbpl:2", map[string]any{"relations.json": []map[string]any{{"ordinal": 0, "kind": "replaces", "target_vbpl_id": "1"}}}, f.relateInput(t, "vn:vbpl:2", hash))
 }
 func TestLoad_ValidityRuleBSetsPredecessorEnd(t *testing.T) {
 	f := fixture(t)
@@ -109,7 +109,7 @@ func TestLoad_FutureActorNotStartedAtReleaseDate(t *testing.T) {
 	f := fixture(t)
 	addValidityFixture(t, f, "1", "1/2020/NĐ-CP", "CHL", "2020-01-01", "2020-01-01", "")
 	hash := addValidityFixture(t, f, "2", "2/2100/NĐ-CP", "CHL", "2100-01-01", "2100-02-01", "")
-	f.addArtifact(t, "relate", "vn:vbpl:2", map[string]any{"relations.json": []map[string]any{{"ordinal": 0, "kind": "replaces", "target_vbpl_id": "1"}}}, hash)
+	f.addArtifact(t, "relate", "vn:vbpl:2", map[string]any{"relations.json": []map[string]any{{"ordinal": 0, "kind": "replaces", "target_vbpl_id": "1"}}}, f.relateInput(t, "vn:vbpl:2", hash))
 	if err := loadValidityFixture(t, f, nil); err != nil {
 		t.Fatal(err)
 	}

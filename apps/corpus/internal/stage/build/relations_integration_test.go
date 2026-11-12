@@ -22,7 +22,7 @@ func TestLoad_RelationNumberResolutionExcludesAbsent(t *testing.T) {
 	if _, err := f.workshop.Exec(context.Background(), `INSERT INTO gap(run_id,stage,item_key,kind,detail) VALUES($1,'fetch','vn:vbpl:3','withdrawn',''),($1,'fetch','vn:vbpl:5','withdrawn','')`, f.run.ID); err != nil {
 		t.Fatal(err)
 	}
-	f.addArtifact(t, "relate", "vn:vbpl:1", map[string]any{"relations.json": []map[string]any{{"ordinal": 0, "kind": "references", "target_number": "01/2024/TT"}, {"ordinal": 1, "kind": "references", "target_number": "02/2024/TT"}, {"ordinal": 2, "kind": "references", "target_number": "03/2024/TT"}}}, fetches[1])
+	f.addArtifact(t, "relate", "vn:vbpl:1", map[string]any{"relations.json": []map[string]any{{"ordinal": 0, "kind": "references", "target_number": "01/2024/TT"}, {"ordinal": 1, "kind": "references", "target_number": "02/2024/TT"}, {"ordinal": 2, "kind": "references", "target_number": "03/2024/TT"}}}, f.relateInput(t, "vn:vbpl:1", fetches[1]))
 	if _, err := f.load(t); err != nil {
 		t.Fatal(err)
 	}

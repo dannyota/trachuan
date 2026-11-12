@@ -24,6 +24,9 @@ func TestParseVN(t *testing.T) {
 	if list.Country != "vn" || len(list.VBPL.SweepAgencies) != 2 || len(list.VBPL.KeywordAgencies) != 0 || len(list.VBPL.Keywords) != 32 || len(list.RelationCodes) != 12 || list.RelationCodes["11"].Kind != "suspends" || len(list.StatusCodes) != 8 {
 		t.Fatalf("unexpected source list: %+v", list)
 	}
+	if len(list.CentralIssuers) != 27 || list.CentralIssuers["CP"] != "CHÍNH PHỦ" || list.CentralIssuers["NHNN"] != "NGÂN HÀNG NHÀ NƯỚC VIỆT NAM" {
+		t.Fatalf("unexpected central issuers: %+v", list.CentralIssuers)
+	}
 }
 
 func TestParse_JSONSnapshot(t *testing.T) {
@@ -36,11 +39,42 @@ func TestParse_JSONSnapshot(t *testing.T) {
 	}
 }
 
+func TestParse_CentralIssuersValidation(t *testing.T) {
+	for _, tc := range []struct {
+		name, input string
+		valid       bool
+	}{
+		{"absent", "{}", true},
+		{"empty map", "central_issuers: {}", false},
+		{"empty name", "central_issuers: {CP: ' '} ", false},
+		{"whitespace in key", "central_issuers: {'C P': CHINH PHU}", false},
+		{"valid", "central_issuers: {CP: CHINH PHU}", true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := Parse([]byte(tc.input))
+			if (err == nil) != tc.valid {
+				t.Fatalf("error = %v, valid = %v", err, tc.valid)
+			}
+		})
+	}
+}
+
 func TestRelationCodesHash_OrderIndependent(t *testing.T) {
 	a := List{RelationCodes: map[string]RelationCode{"1": {Kind: "one"}, "2": {Kind: "two"}}}
 	b := List{RelationCodes: map[string]RelationCode{"2": {Kind: "two"}, "1": {Kind: "one"}}}
 	if a.RelationCodesHash() != b.RelationCodesHash() {
 		t.Fatal("hash depends on map order")
+	}
+}
+
+func TestCentralIssuersHash_CanonicalAndAbsent(t *testing.T) {
+	a := List{CentralIssuers: map[string]string{"CP": "CHÍNH PHỦ", "BTC": "BỘ TÀI CHÍNH"}}
+	b := List{CentralIssuers: map[string]string{"BTC": "BỘ TÀI CHÍNH", "CP": "CHÍNH PHỦ"}}
+	if a.CentralIssuersHash() != b.CentralIssuersHash() || a.CentralIssuersHash() == (List{}).CentralIssuersHash() {
+		t.Fatal("issuer hash does not identify the canonical table")
+	}
+	if got := (List{}).CentralIssuersHash(); got != "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" {
+		t.Fatalf("absent hash = %s", got)
 	}
 }
 

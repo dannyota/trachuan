@@ -8,7 +8,39 @@ import (
 
 	"danny.vn/trachuan/apps/corpus/internal/source"
 	"danny.vn/trachuan/apps/corpus/internal/stage"
+	"danny.vn/trachuan/apps/corpus/internal/store"
 )
+
+func TestPairInputHash_Vectors(t *testing.T) {
+	for _, tc := range []struct{ extract, want string }{
+		{"def", "713c06e158bcfff763fd126d63e0dc3fee018ac10e0cae28ed882b97e21bb5a0"},
+		{"-", "8c2b9340dcb652dc6767e2d9b319ea3ea12984afe94a5e310acc07e5da2a342b"},
+	} {
+		if got := PairInputHash("abc", tc.extract); got != tc.want {
+			t.Errorf("extract %q: got %s, want %s", tc.extract, got, tc.want)
+		}
+	}
+}
+
+func TestExtractHash_TerminalStates(t *testing.T) {
+	hash := "extract"
+	for _, tc := range []struct {
+		state    string
+		artifact *string
+		want     string
+		finished bool
+	}{
+		{"done", &hash, hash, true}, {"gap", nil, "-", true}, {"failed", nil, "-", true},
+		{"pending", nil, "", false}, {"running", nil, "", false}, {"done", nil, "", false},
+	} {
+		t.Run(tc.state, func(t *testing.T) {
+			got, finished := extractHash(store.GetRunItemCommittedRow{State: tc.state, ArtifactSha256: tc.artifact})
+			if got != tc.want || finished != tc.finished {
+				t.Fatalf("got %q, %v", got, finished)
+			}
+		})
+	}
+}
 
 func testRelations(t *testing.T, detail, diagram string, codes map[string]source.RelationCode) ([]relation, []string) {
 	t.Helper()
@@ -69,6 +101,26 @@ func TestRelate_CodeTableChangeChangesRecipe(t *testing.T) {
 	b := stage.Snapshot{SourceList: json.RawMessage(`{"relation_codes":{"10":{"kind":"replaces"}}}`)}
 	if New().Recipe(a) == New().Recipe(b) {
 		t.Fatal("recipe did not change")
+	}
+}
+
+func TestRelate_IssuerTableChangesRecipe(t *testing.T) {
+	a := stage.Snapshot{SourceList: json.RawMessage(`{"central_issuers":{"CP":"CHÍNH PHỦ"}}`)}
+	b := stage.Snapshot{SourceList: json.RawMessage(`{"central_issuers":{"CP":"OTHER"}}`)}
+	if New().Recipe(a) == New().Recipe(b) {
+		t.Fatal("recipe did not change")
+	}
+}
+
+func TestRelate_RecipeForSnapshotWithoutIssuerTable(t *testing.T) {
+	snapshot := stage.Snapshot{SourceList: json.RawMessage(`{"relation_codes":{"10":{"kind":"amends_supplements"}}}`)}
+	list, err := source.Parse(snapshot.SourceList)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := stage.RecipeHash("relate", "vbpl-relations/1", "chinhphu-empty/1", list.RelationCodesHash(), "text_rules:vn-targets/1", list.CentralIssuersHash())
+	if got := New().Recipe(snapshot); got != want {
+		t.Fatalf("recipe = %s, want %s", got, want)
 	}
 }
 

@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"danny.vn/trachuan/apps/corpus/internal/stage/fetch"
+	"danny.vn/trachuan/apps/corpus/internal/stage/relate"
 	"danny.vn/trachuan/internal/retrieval"
 )
 
@@ -25,6 +26,23 @@ type relationRow struct {
 type pendingRelation struct {
 	key, hash string
 	row       relationRow
+}
+
+func checkRelationInput(item, fetchItem, extractItem InventoryItem, found bool) error {
+	if fetchItem.ArtifactSHA256 == nil {
+		return fmt.Errorf("missing relation fetch artifact")
+	}
+	if !found {
+		return fmt.Errorf("missing relation extract item")
+	}
+	extract := "-"
+	if extractItem.State == "done" && extractItem.ArtifactSHA256 != nil {
+		extract = *extractItem.ArtifactSHA256
+	} else if (extractItem.State != "gap" && extractItem.State != "failed") || extractItem.ArtifactSHA256 != nil {
+		return fmt.Errorf("unfinished or invalid relation extract item")
+	}
+	// A worker refuses runs with a different frozen relate recipe, so build only sees pair hashes.
+	return checkInputHash(item, relate.PairInputHash(*fetchItem.ArtifactSHA256, extract))
 }
 
 func docID(d *loadedDocument) any {
@@ -53,7 +71,8 @@ func (l *loader) loadRelations(ctx context.Context) error {
 		if !ok || fetch.ArtifactSHA256 == nil {
 			return fmt.Errorf("missing relation source")
 		}
-		if err := checkInputHash(item, *fetch.ArtifactSHA256); err != nil {
+		extract, found := l.items["extract"][key]
+		if err := checkRelationInput(item, fetch, extract, found); err != nil {
 			return err
 		}
 		dir, err := artifactDir(l.artifacts, item)

@@ -1,4 +1,32 @@
 country: vn
+central_issuers:
+  CP: CHÍNH PHỦ
+  TTg: THỦ TƯỚNG CHÍNH PHỦ
+  QH: QUỐC HỘI
+  UBTVQH: ỦY BAN THƯỜNG VỤ QUỐC HỘI
+  NHNN: NGÂN HÀNG NHÀ NƯỚC VIỆT NAM
+  BTC: BỘ TÀI CHÍNH
+  BTP: BỘ TƯ PHÁP
+  BCA: BỘ CÔNG AN
+  BQP: BỘ QUỐC PHÒNG
+  BKHĐT: BỘ KẾ HOẠCH VÀ ĐẦU TƯ
+  BCT: BỘ CÔNG THƯƠNG
+  BGTVT: BỘ GIAO THÔNG VẬN TẢI
+  BXD: BỘ XÂY DỰNG
+  BTNMT: BỘ TÀI NGUYÊN VÀ MÔI TRƯỜNG
+  BTTTT: BỘ THÔNG TIN VÀ TRUYỀN THÔNG
+  BLĐTBXH: BỘ LAO ĐỘNG - THƯƠNG BINH VÀ XÃ HỘI
+  BYT: BỘ Y TẾ
+  BGDĐT: BỘ GIÁO DỤC VÀ ĐÀO TẠO
+  BKHCN: BỘ KHOA HỌC VÀ CÔNG NGHỆ
+  BNV: BỘ NỘI VỤ
+  BNG: BỘ NGOẠI GIAO
+  BNNPTNT: BỘ NÔNG NGHIỆP VÀ PHÁT TRIỂN NÔNG THÔN
+  BVHTTDL: BỘ VĂN HÓA, THỂ THAO VÀ DU LỊCH
+  UBDT: ỦY BAN DÂN TỘC
+  TTCP: THANH TRA CHÍNH PHỦ
+  VPCP: VĂN PHÒNG CHÍNH PHỦ
+  KTNN: KIỂM TOÁN NHÀ NƯỚC
 vbpl:
   selection_version: 1
   sweep_agencies: ["62", "908"]
