@@ -93,7 +93,11 @@ func TestRoutes_CredentialsNeverCross(t *testing.T) {
 				}
 				w := httptest.NewRecorder()
 				mux.ServeHTTP(w, r)
-				if w.Code != 401 {
+				want := http.StatusUnauthorized
+				if tt.method == http.MethodGet && tt.path == "/api/v1/me" {
+					want = http.StatusNoContent
+				}
+				if w.Code != want {
 					t.Fatalf("bearer=%t status=%d", bearer, w.Code)
 				}
 			}

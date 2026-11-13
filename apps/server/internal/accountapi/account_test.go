@@ -160,6 +160,43 @@ func TestMe_ReturnsAccountAndCSRF(t *testing.T) {
 		t.Fatal("account or csrf missing")
 	}
 }
+func TestMe_NoCookie(t *testing.T) {
+	h, _, _, _, _ := setup(t)
+	r := httptest.NewRequest(http.MethodGet, "https://example.invalid/api/v1/me", nil)
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	expect(t, w, 204)
+	if w.Body.Len() != 0 || w.Header().Get("Cache-Control") != "no-store" || len(w.Result().Cookies()) != 0 {
+		t.Fatalf("unexpected response: headers=%v body=%q", w.Header(), w.Body.String())
+	}
+}
+func TestMe_InvalidCookies(t *testing.T) {
+	for _, tc := range []struct{ name, cookie string }{
+		{"empty", "__Host-session="},
+		{"malformed", "__Host-session=\"bad value\""},
+		{"duplicate", "__Host-session=bad; __Host-session=bad"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			h, _, _, _, _ := setup(t)
+			r := httptest.NewRequest(http.MethodGet, "https://example.invalid/api/v1/me", nil)
+			r.Header.Set("Cookie", tc.cookie)
+			w := httptest.NewRecorder()
+			h.ServeHTTP(w, r)
+			expect(t, w, 401)
+		})
+	}
+	for _, state := range []string{"expired", "revoked"} {
+		t.Run(state, func(t *testing.T) {
+			h, s, _, raw, secret := setup(t)
+			if state == "expired" {
+				s.sessions[0].ExpiresAt = s.now
+			} else {
+				s.sessions[0].RevokedAt = &s.now
+			}
+			expect(t, call(h, raw, secret, "GET", "/api/v1/me", ""), 401)
+		})
+	}
+}
 func TestSessions_ListAndRevokeOwn(t *testing.T) {
 	h, _, _, r, c := setup(t)
 	expect(t, call(h, r, c, "GET", "/api/v1/me/sessions", ""), 200)

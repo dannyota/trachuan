@@ -27,7 +27,7 @@ for (const language of ['vi', 'en']) {
 }
 
 test('login errors use fixed messages and never echo the query', async ({ page }) => {
-  await page.route('**/api/v1/me', route => route.fulfill({ status: 401 }))
+  await page.route('**/api/v1/me', route => route.fulfill({ status: 204 }))
   for (const [code, expected] of [
     ['login_failed', 'Đăng nhập không thành công'],
     ['login_expired', 'Phiên đăng nhập đã hết hạn'],

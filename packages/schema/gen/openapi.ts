@@ -223,6 +223,13 @@ export interface paths {
                         "application/json": components["schemas"]["Account"];
                     };
                 };
+                /** @description No session cookie */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
                 /** @description Request failed */
                 401: {
                     headers: {

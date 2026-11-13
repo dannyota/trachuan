@@ -153,6 +153,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Account'
+        '204':
+          description: No session cookie
         '401':
           description: Request failed
           content:
