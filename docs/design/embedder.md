@@ -211,6 +211,21 @@ components, and L2 norm within the tolerance in budgets. Manifest verification
 precedes decoding. `Rows` is a no-op; `Resolve` regenerates the gaps. Valid rows
 survive when another chunk is too long; the item is done with explicit gaps.
 
+Rows are reused per chunk input. The workshop table `embed_row` maps
+`(recipe_hash, input_sha256)` to the `artifact_id`, `row` and `token_count` of a
+verified embed artifact; the stage's `Rows` writes an item's rows at its commit,
+so only verified artifacts fill it, and a one-time backfill indexes the existing
+verified artifacts of the current recipe. Before tokenizing, the stage looks up
+each input under its own recipe hash. A hit reopens the referenced artifact with
+manifest verification and copies that row's float32 bytes and token count; a
+failed verification, a missing file or a row outside the artifact is a miss,
+logged. Misses are tokenized and embedded as above, in ordinal order and the
+same batch limits. The document service is deterministic per input: on
+2026-11-13, 1,572 re-embedded rows, alone, in the stage's batches and in mixed
+batches, were byte-identical to the stored rows, so an artifact assembled from
+hits equals a fresh one and its manifest hash does not change. The recipe hash
+does not change either.
+
 Recipe mismatch is an infrastructure failure of the batch, never an accepted
 data gap. Timeout, 429, 503 and transport failure retry through the existing
 stage policy with no nested retry loop. HTTP 400/409/415, malformed output or
