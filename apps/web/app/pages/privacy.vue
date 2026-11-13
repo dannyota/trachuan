@@ -3,4 +3,4 @@ import { messagesFor, type Language } from '../../i18n'
 const language = useState<Language>('language', () => 'vi')
 const messages = computed(() => messagesFor(language.value))
 </script>
-<template><div><h1>{{ messages.privacy }}</h1><LegalFacts /></div></template>
+<template><div class="container page-content legal-page"><h1>{{ messages.privacy }}</h1><LegalFacts /></div></template>

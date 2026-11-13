@@ -27,7 +27,8 @@ it('renders public coverage anonymously, caches it, and omits query and account 
     expect(page.text).not.toContain('private-account')
     expect(page.headers['cache-control']).toContain('no-cache')
   }
-  expect(result.results[2].text).toContain('20260101_1')
-  expect(result.results[2].text).toContain('missing: 3')
+  expect(result.results[2].text).toContain('01/01/2026')
+  expect(result.results[2].text).toContain('3 trường hợp')
+  expect(result.results[2].text).not.toContain('missing: 3')
   expect(result.results[6].headers['content-type']).toContain('text/plain')
 })

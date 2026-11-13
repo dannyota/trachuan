@@ -1,0 +1,63 @@
+.page-content { padding-block: 48px 64px; display: flex; flex-direction: column; gap: 32px; }
+.page-content h1 { margin: 0; font-size: 36px; line-height: 1.2; letter-spacing: -.01em; }
+.page-intro { max-width: 760px; display: flex; flex-direction: column; gap: 12px; }
+.page-intro p { margin: 0; color: var(--color-ink-soft); font-size: 17px; line-height: 1.65; }
+.page-section { margin-top: 32px; }
+.page-section h2, .connect-tools h2 { font-size: 20px; margin: 0 0 16px; }
+.server-address { max-width: 760px; }
+.server-address h2 { font-size: 14px; margin: 0 0 8px; }
+.page-code { display: flex; align-items: flex-start; gap: 12px; min-width: 0; padding: 12px; border: 1px solid var(--color-line-strong); border-radius: var(--radius-md); background: var(--color-surface); }
+.page-code pre { flex: 1; min-width: 0; margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; }
+.server-address .page-code { background: var(--color-card); align-items: center; }
+.connect-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.connect-card { min-width: 0; padding: 24px; }
+.connect-card h2 { font-size: 20px; margin: 0 0 12px; }
+.connect-card p, .connect-card ol { font-size: 15px; color: var(--color-ink-soft); margin: 0 0 16px; }
+.connect-card ol { padding-left: 22px; margin-bottom: 0; }
+.connect-card li + li { margin-top: 8px; }
+.connect-tools { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+.connect-tools h2 { grid-column: 1 / -1; margin: 0; }
+.connect-tools code { font-weight: 600; font-size: 14px; }
+.connect-tools p { margin: 4px 0 0; color: var(--color-ink-soft); font-size: 14px; }
+.coverage-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-block: 1px solid var(--color-line); margin: 0; }
+.coverage-stats div { padding: 20px 16px; border-right: 1px solid var(--color-line); }
+.coverage-stats div:first-child { padding-left: 0; }
+.coverage-stats div:last-child { border-right: 0; }
+.coverage-stats dt { color: var(--color-muted); font-size: 14px; }
+.coverage-stats dd { margin: 4px 0 0; font-size: 24px; font-weight: 700; }
+.coverage-release { color: var(--color-muted); font-size: 14px; }
+.source-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.source-list h3, .gap-list h3 { font-size: 16px; margin: 0; }
+.source-list p, .gap-list p { margin: 4px 0 0; color: var(--color-ink-soft); }
+.gap-list { list-style: none; padding: 0; display: grid; gap: 16px; }
+.legal-page { max-width: 768px; }
+.legal-facts { display: grid; gap: 24px; }
+.legal-facts h2 { font-size: 20px; margin: 0 0 8px; }
+.legal-facts p { margin: 0; color: var(--color-ink-soft); }
+.legal-updated { font-size: 14px; }
+.login-page { display: flex; justify-content: center; padding-block: 64px; }
+.login-card { width: 100%; max-width: 480px; padding: 32px; text-align: center; }
+.login-card svg { margin: 0 auto; }
+.login-card h1 { font-size: 28px; line-height: 1.25; margin: 20px 0 12px; }
+.login-card p { color: var(--color-ink-soft); }
+.login-card .btn { width: 100%; margin-top: 16px; }
+.topic-page { display: flex; flex-direction: column; align-items: flex-start; gap: 24px; }
+.topic-page .page-section { align-self: stretch; margin: 0; }
+.topic-tree { list-style: none; padding: 0; margin: 0; }
+.topic-tree .topic-tree { padding-left: 28px; border-left: 1px solid var(--color-line); }
+.topic-tree li { padding: 14px 0; border-bottom: 1px solid var(--color-line); }
+.topic-tree p { margin: 4px 0; color: var(--color-muted); }
+.topic-tree button { padding: 4px 8px; border: 1px solid var(--color-line-strong); border-radius: var(--radius-sm); color: var(--color-ink); background: var(--color-card); }
+.topic-counts { font-size: 14px; }
+.topic-documents { list-style: none; padding: 0; margin: 0; }
+.topic-documents li { display: flex; align-items: center; gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--color-line); }
+.topic-documents li > a { flex: 1; }
+@media (max-width: 767px) {
+  .page-content { padding-block: 32px 48px; gap: 24px; }
+  .page-content h1 { font-size: 28px; }
+  .connect-grid, .connect-tools, .coverage-stats, .source-list { grid-template-columns: 1fr; }
+  .coverage-stats div, .coverage-stats div:first-child { padding: 12px 0; border-right: 0; border-bottom: 1px solid var(--color-line); }
+  .coverage-stats div:last-child { border-bottom: 0; }
+  .page-code { flex-direction: column; }
+  .topic-documents li { align-items: flex-start; flex-direction: column; gap: 8px; }
+}

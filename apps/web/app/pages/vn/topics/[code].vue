@@ -22,4 +22,4 @@ const { data } = await useAsyncData(`topic-${code}`, async () => {
   return response.data
 })
 </script>
-<template><TopicNode v-if="data" :page="data" /><p v-else>{{ messages.errors.unavailable }}</p></template>
+<template><div class="container page-content"><TopicNode v-if="data" :page="data" /><p v-else role="status">{{ messages.errors.unavailable }}</p></div></template>
