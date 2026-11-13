@@ -85,7 +85,7 @@ it('retries an initial taxonomy network failure without losing a selected node',
   const wrapper = mount(SearchNodePicker, { props: { modelValue: ['1'] } })
   await flushPromises()
   expect(wrapper.text()).toContain('Filters unavailable')
-  expect(wrapper.text()).toContain('1 ×')
+  expect(wrapper.text()).toContain('Topics ×')
   await wrapper.findAll('button').find(button => button.text() === 'Retry')!.trigger('click')
   await flushPromises()
   expect(wrapper.text()).not.toContain('Filters unavailable')

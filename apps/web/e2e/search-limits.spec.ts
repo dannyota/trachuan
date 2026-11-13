@@ -29,7 +29,7 @@ test('stops paging when the pinned release expires', async ({ page }) => {
   await expect(page.getByRole('alert')).toContainText(/the release has expired|phiên bản đã hết hạn/i)
   await expect(page.getByRole('button', { name: /show more|xem thêm/i })).toHaveCount(0)
   expect(bodies.map(({ limit, release, cursor }) => ({ limit, release, cursor }))).toEqual([{ limit: 20, release: undefined, cursor: undefined }, { limit: 20, release: 'r1', cursor: 'cursor-1' }])
-  await expect(page.getByRole('link', { name: /read document|đọc văn bản/i })).toHaveAttribute('href', /release=r1/)
+  await expect(page.getByRole('link', { name: /read in document|đọc trong văn bản/i })).toHaveAttribute('href', /release=r1/)
 })
 
 test('renders compact and full evidence as text and shows gaps and abstention', async ({ page }) => {
@@ -39,7 +39,7 @@ test('renders compact and full evidence as text and shows gaps and abstention', 
     call++
     const base = { release: 'r1', documents: { 'vn:vbpl:1': { status: { class: 'future_status', current: false }, text_source: 'source_tree', text_complete: true } }, gaps: [{ kind: 'missing', message: 'Gap detail' }] }
     const hit = { handle: 'vn:vbpl:1#dieu-1', doc: 'vn:vbpl:1', citation: 'Citation', complete: true }
-    const result = call === 3 ? { ...base, abstain: true, hits: [hit] } : { ...base, abstain: false, hits: [{ ...hit, ...(call === 1 ? { snippet: '<compact>' } : { text: '<full>' }) }] }
+    const result = call === 3 ? { ...base, abstain: true, reason: 'low_confidence', hits: [hit] } : { ...base, abstain: false, hits: [{ ...hit, ...(call === 1 ? { snippet: '<compact>' } : { text: '<full>' }) }] }
     return route.fulfill({ json: result })
   })
   await page.goto('/')
@@ -49,13 +49,13 @@ test('renders compact and full evidence as text and shows gaps and abstention', 
   const submit = () => page.locator('form').evaluate(form => (form as HTMLFormElement).requestSubmit())
   await submit()
   await expect(page.locator('.law-text')).toHaveText('<compact>')
-  await expect(page.locator('.stamp')).toHaveClass(/ink-neutral/)
-  await expect(page.locator('.stamp')).toHaveText('future_status')
-  await expect(page.getByText('Gap detail')).toBeVisible()
+  await expect(page.locator('.stamp')).toHaveClass(/stamp--unknown/)
+  await expect(page.locator('.stamp')).toHaveText(/unknown|chưa rõ/i)
+  await expect(page.getByText(/other|khác/i)).toBeVisible()
   await submit()
   await expect(page.locator('.law-text')).toHaveText('<full>')
   await submit()
-  await expect(page.locator('.search-card')).toHaveCount(0)
-  await expect(page.getByText('Gap detail')).toBeVisible()
-  await expect(page.getByText(/no evidence found|không tìm thấy bằng chứng/i)).toBeVisible()
+  await expect(page.locator('.result-card')).toHaveCount(1)
+  await expect(page.getByText(/other|khác/i)).toBeVisible()
+  await expect(page.getByText(/weak evidence|bằng chứng yếu/i)).toBeVisible()
 })

@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { computed, ref } from 'vue'
+import { computed, onUnmounted, ref } from 'vue'
 import { mount, flushPromises } from '@vue/test-utils'
 import { afterEach, expect, it, vi } from 'vitest'
 import SearchResults from '../app/components/SearchResults.vue'
@@ -17,22 +17,27 @@ it.each([
 ])('renders each warning kind in %s on cards', (language, verbs) => {
   vi.stubGlobal('useState', () => ref(language))
   vi.stubGlobal('computed', computed)
+  vi.stubGlobal('ref', ref)
+  vi.stubGlobal('onUnmounted', onUnmounted)
   const warnings = ['repeals', 'replaces', 'suspends', 'amends_supplements'].map(kind => ({ ...warning, kind }))
   const wrapper = mount(SearchResults, { props: { result: { release: '20990101', hits: [{ doc: 'vn:vbpl:1', handle: 'vn:vbpl:1#dieu-8', complete: true, warnings, warnings_omitted: 2 }], documents: { 'vn:vbpl:1': { status: { current: true }, text_source: 'source_tree', text_complete: true, related: [{ kind: 'cites', number: '3/2024', in_release: false }] } } } }, global: { stubs: { NuxtLink: link } } })
-  const card = wrapper.find('.search-card')
+  const card = wrapper.find('.result-card')
   for (const verb of verbs) expect(card.text()).toContain(`2/2024 ${verb} Khoản 2 Điều 8`)
   expect(card.text()).toContain(language === 'en' ? 'and 2 more warnings' : 'và 2 cảnh báo khác')
-  expect(card.find('.relation-chip').text()).toContain('3/2024')
+  expect(card.text()).not.toContain('3/2024')
   expect(card.find('a[href="/vn/documents/vn:vbpl:2?release=20990101#dieu-1"]').exists()).toBe(true)
 })
 
 it('renders named paths and reference notes without guessing unknown shapes', () => {
   vi.stubGlobal('useState', () => ref('en'))
   vi.stubGlobal('computed', computed)
+  vi.stubGlobal('ref', ref)
+  vi.stubGlobal('onUnmounted', onUnmounted)
   const warnings = [{ ...warning, exact: false, named: 'dieu-8/khoan-9/diem-a' }, { ...warning, exact: false, named: 'article-1/khoan-9' }, { ...warning, basis: 'vbpl_reference' }]
   const wrapper = mount(SearchResults, { props: { result: { hits: [{ complete: true, warnings }] } }, global: { stubs: { NuxtLink: link } } })
-  expect(wrapper.text()).toContain('Điều 8, khoản 9, điểm a (this clause or point is not in the loaded text)')
-  expect(wrapper.find('code').text()).toBe('article-1/khoan-9')
+  expect(wrapper.text()).toContain('Điều 8, Khoản 9, Điểm a (this clause or point is not in the loaded text)')
+  expect(wrapper.text()).not.toContain('article-1/khoan-9')
+  expect(wrapper.text()).toContain('part of this document')
   expect(wrapper.text()).toContain('Khoản 2 Điều 8 (per a VBPL link)')
 })
 

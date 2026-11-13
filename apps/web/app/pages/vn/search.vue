@@ -2,18 +2,30 @@
 import type { components } from '@trachuan/schema/gen/openapi'
 import { ApiError, type Action } from '../../api/client'
 import { isNodeCode } from '../../utils/node-code'
+import { appendSearchPage } from '../../utils/search-results'
 import { errorMessage, messagesFor, type Language } from '../../../i18n'
+import { searchMessages } from '../../../i18n/search'
+import { formatDate } from '../../content'
+import { useSearchDraftStore } from '../../stores/search-draft'
+import SearchFilters from '../../components/SearchFilters.vue'
+import SearchResults from '../../components/SearchResults.vue'
 
-definePageMeta({ signedIn: true })
+definePageMeta({ signedIn: true, layout: false })
 type SearchInput = components['schemas']['SearchInput']
 type SearchResult = components['schemas']['SearchResult']
 const language = useState<Language>('language', () => 'vi')
 const messages = computed(() => messagesFor(language.value))
+const labels = computed(() => searchMessages(language.value))
+const draft = useSearchDraftStore()
+const dialog = ref<HTMLDialogElement | null>(null)
+const filterButton = ref<HTMLButtonElement | null>(null)
+const dialogOpen = ref(false)
 const api = useApi({ userAction: true })
 const filterApi = useApi({ localUnavailable: true })
 const route = useRoute()
 const initialNode = typeof route.query.node === 'string' && isNodeCode(route.query.node) ? route.query.node : ''
 const nodes = ref<string[]>(initialNode ? [initialNode] : [])
+const nodeLabels = ref<Record<string, string>>({})
 const docTypes = ref<string[]>([])
 const issuers = ref<string[]>([])
 const facets = ref<components['schemas']['CorpusStatus'] | null>(null)
@@ -25,7 +37,9 @@ const result = ref<SearchResult | null>(null)
 const submitted = ref<SearchInput | null>(null)
 const error = ref('')
 const retryAfter = ref('')
+const rateLimited = ref(false)
 const loading = ref(false)
+const loadingMore = ref(false)
 async function loadFacets() {
   try {
     const response = await filterApi.client.GET('/api/v1/status')
@@ -34,7 +48,25 @@ async function loadFacets() {
     facetsFailed.value = false
   } catch { facetsFailed.value = true }
 }
-onMounted(loadFacets)
+onMounted(() => {
+  loadFacets()
+  if (draft.draft) {
+    query.value = draft.draft.query
+    inForce.value = draft.draft.inForceOnly
+    draft.draft = null
+    search()
+  }
+})
+const activeCount = computed(() => Number(inForce.value) + Number(!!asOf.value) + nodes.value.length + docTypes.value.length + issuers.value.length)
+async function openFilters() {
+  dialogOpen.value = true
+  await nextTick()
+  dialog.value?.showModal()
+}
+function closeFilters() { dialog.value?.close() }
+function dialogClosed() { dialogOpen.value = false; filterButton.value?.focus() }
+function fillExample(value: string) { query.value = value }
+
 let action: Action | null = null
 let controller: AbortController | null = null
 onBeforeUnmount(() => controller?.abort())
@@ -46,22 +78,18 @@ async function request(input: SearchInput, captured: Action, signal: AbortSignal
     if (api.session.account?.id !== captured.accountId) { error.value = 'account_changed'; result.value = null; return }
     if (response.data) {
       if (more && result.value) {
-        const previous = result.value
-        result.value = { ...previous, ...response.data,
-          next_cursor: response.data.next_cursor,
-          documents: { ...previous.documents, ...response.data.documents },
-          nodes: { ...previous.nodes, ...response.data.nodes },
-          hits: [...(previous.hits || []), ...(previous.non_current || []), ...(response.data.hits || []), ...(response.data.non_current || [])], non_current: [],
-        }
+        result.value = appendSearchPage(result.value, response.data)
       } else result.value = response.data
       return
     }
+    if (!more) result.value = null
     const code = response.error?.error?.code || 'generic'
     if (more && code === 'release_expired' && result.value) result.value.next_cursor = undefined
     error.value = code
-    if (response.response.status === 429) retryAfter.value = response.response.headers.get('Retry-After') || ''
+    if (response.response.status === 429) { rateLimited.value = true; retryAfter.value = response.response.headers.get('Retry-After') || '' }
   } catch (cause) {
     if (signal.aborted) return
+    if (!more) result.value = null
     error.value = cause instanceof ApiError ? cause.code : 'generic'
   }
 }
@@ -73,14 +101,15 @@ async function search(more = false) {
     controller = new AbortController()
     action = api.captureAction()
     submitted.value = { country: 'vn', query: query.value, ...(asOf.value ? { as_of: asOf.value } : {}), in_force_only: inForce.value, detail: 'full', limit: 20, ...(nodes.value.length ? { nodes: [...nodes.value] } : {}), ...(docTypes.value.length ? { doc_types: [...docTypes.value] } : {}), ...(issuers.value.length ? { issuers: [...issuers.value] } : {}) }
-    result.value = null
   }
   if (!submitted.value || !action || !controller) return
   if (more && !result.value?.next_cursor) return
   const input: SearchInput = more ? { ...submitted.value, cursor: result.value!.next_cursor, release: result.value!.release } : submitted.value
   loading.value = true
+  loadingMore.value = more
   error.value = ''
   retryAfter.value = ''
+  rateLimited.value = false
   const signal = controller.signal
   await request(input, action, signal, more)
   if (signal.aborted) return
@@ -89,22 +118,37 @@ async function search(more = false) {
 </script>
 
 <template>
-  <div>
-    <h1>{{ messages.searchTitle }}</h1>
-    <form class="search-form" @submit.prevent="search()">
-      <label for="search-query">{{ messages.searchQuery }}</label>
-      <textarea id="search-query" v-model="query" autocomplete="off" />
-      <label for="search-date">{{ messages.searchDate }}</label>
-      <input id="search-date" v-model="asOf" type="date" autocomplete="off">
-      <label><input v-model="inForce" type="checkbox" autocomplete="off"> {{ messages.searchInForce }}</label>
-      <SearchNodePicker v-model="nodes" />
-      <p v-if="facetsFailed" role="status">{{ messages.filtersUnavailable }} <button type="button" @click="loadFacets">{{ messages.retry }}</button></p>
-      <label>{{ messages.searchTypes }} <select v-model="docTypes" name="types" multiple @change="docTypes = docTypes.slice(0, 10)"><option v-for="facet in facets?.doc_types" :key="facet.value" :value="facet.value">{{ facet.value }} ({{ facet.count }})</option></select></label>
-      <label>{{ messages.searchIssuers }} <select v-model="issuers" name="issuers" multiple @change="issuers = issuers.slice(0, 10)"><option v-for="facet in facets?.issuers" :key="facet.value" :value="facet.value">{{ facet.value }} ({{ facet.count }})</option></select></label>
-      <button type="submit" :disabled="loading">{{ messages.searchSubmit }}</button>
-    </form>
-    <p v-if="error" role="alert">{{ errorMessage(language, error) }} <span v-if="retryAfter">{{ messages.searchRetry }} {{ retryAfter }} {{ messages.searchSeconds }}</span></p>
-    <SearchResults v-if="result" :result="result" />
-    <button v-if="result?.next_cursor" type="button" :disabled="loading" @click="search(true)">{{ messages.searchMore }}</button>
-  </div>
+  <NuxtLayout name="search">
+    <template #header>
+      <div class="search-header">
+        <form class="search-box" @submit.prevent="search()">
+          <label for="search-query" class="visually-hidden">{{ messages.searchQuery }}</label>
+          <textarea id="search-query" v-model="query" class="input" rows="1" autocomplete="off" :placeholder="messages.searchQuery" />
+          <button class="btn btn-primary" type="submit" :disabled="loading">{{ messages.searchSubmit }}</button>
+        </form>
+        <div class="search-mobile-chips">
+          <button ref="filterButton" class="chip" type="button" @click="openFilters">{{ labels.filters }} · {{ activeCount }}</button>
+          <button v-if="inForce" type="button" class="chip" @click="inForce = false">{{ messages.searchInForce }} ×</button>
+          <button v-if="asOf" type="button" class="chip" @click="asOf = ''">{{ formatDate(asOf, language) }} ×</button>
+          <button v-for="type in docTypes" :key="type" type="button" class="chip" @click="docTypes = docTypes.filter(item => item !== type)">{{ type }} ×</button>
+          <button v-for="issuer in issuers" :key="issuer" type="button" class="chip" @click="issuers = issuers.filter(item => item !== issuer)">{{ issuer }} ×</button>
+          <button v-for="node in nodes" :key="node" type="button" class="chip" @click="nodes = nodes.filter(item => item !== node)">{{ nodeLabels[node] || messages.searchNodes }} ×</button>
+        </div>
+      </div>
+    </template>
+    <div class="search-page">
+      <aside class="search-rail" :aria-label="labels.filters"><SearchFilters v-model:in-force="inForce" v-model:as-of="asOf" v-model:nodes="nodes" v-model:doc-types="docTypes" v-model:issuers="issuers" :facets="facets" :failed="facetsFailed" @retry="loadFacets" @labels="nodeLabels = { ...nodeLabels, ...$event }" /></aside>
+      <dialog v-if="dialogOpen" ref="dialog" class="search-dialog" :aria-label="labels.filters" @close="dialogClosed">
+        <button type="button" class="btn btn-secondary search-dialog-close" @click="closeFilters">{{ labels.close }}</button>
+        <SearchFilters v-model:in-force="inForce" v-model:as-of="asOf" v-model:nodes="nodes" v-model:doc-types="docTypes" v-model:issuers="issuers" :facets="facets" :failed="facetsFailed" @retry="loadFacets" @labels="nodeLabels = { ...nodeLabels, ...$event }" />
+      </dialog>
+      <div class="search-main" aria-live="polite">
+        <div v-if="loading" class="search-loading" role="status"><span class="search-spinner" aria-hidden="true" />{{ labels.loading }}</div>
+        <div v-if="error" class="notice search-state" role="alert"><strong v-if="rateLimited">{{ labels.rate }}</strong><span v-else>{{ errorMessage(language, error) }}</span><span v-if="retryAfter">{{ messages.searchRetry }} {{ retryAfter }} {{ messages.searchSeconds }}</span></div>
+        <div v-if="result" :class="{ 'search-results-pending': loading && !loadingMore }"><SearchResults :result="result" :query="submitted?.query" /></div>
+        <div v-else-if="!loading && !error" class="search-idle"><h1>{{ messages.searchTitle }}</h1><p>{{ labels.idle }}</p><p>{{ labels.examples }}</p><button type="button" class="chip" @click="fillExample(labels.example1)">{{ labels.example1 }}</button> <button type="button" class="chip" @click="fillExample(labels.example2)">{{ labels.example2 }}</button></div>
+        <button v-if="result?.next_cursor" type="button" class="btn btn-secondary search-more" :disabled="loading" @click="search(true)">{{ labels.more }}</button>
+      </div>
+    </div>
+  </NuxtLayout>
 </template>

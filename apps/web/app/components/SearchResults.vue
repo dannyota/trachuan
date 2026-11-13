@@ -1,73 +1,43 @@
 <script setup lang="ts">
 import type { components } from '@trachuan/schema/gen/openapi'
+import { formatNumber, gapCategory } from '../content'
+import { resultHits, validityInk } from '../utils/search-results'
 import { messagesFor, statusMessage, type Language } from '../../i18n'
-import { readerLink, resultHits, validityInk, warningLink, warningTarget, warningVerb } from '../utils/search-results'
+import { searchMessages } from '../../i18n/search'
+import ResultCard from './ResultCard.vue'
 
-const props = defineProps<{ result: components['schemas']['SearchResult'] }>()
+const props = defineProps<{ result: components['schemas']['SearchResult'], query?: string }>()
 const language = useState<Language>('language', () => 'vi')
-const messages = computed(() => messagesFor(language.value))
+const messages = computed(() => searchMessages(language.value))
+const oldMessages = computed(() => messagesFor(language.value))
 const hits = computed(() => resultHits(props.result))
-const inside = computed(() => hits.value.filter(hit => hit.in_filter !== false))
-const outside = computed(() => hits.value.filter(hit => hit.in_filter === false))
-const display = computed(() => [...inside.value, ...outside.value])
-const inks = ['in-force', 'partial', 'not-yet', 'expired', 'neutral'] as const
-const counts = computed(() => Object.fromEntries(inks.map(ink => [ink, hits.value.filter(hit => validityInk(hit.doc ? props.result.documents?.[hit.doc]?.status.class : undefined) === ink).length])))
-const hitGapCounts = computed(() => {
-  const counts: Record<string, number> = Object.create(null)
-  for (const hit of hits.value) for (const gap of hit.gaps || []) {
-    const kind = gap.kind || ''
-    counts[kind] = (counts[kind] || 0) + 1
-  }
-  return counts
-})
-function gapLabel(kind: string | undefined) {
-  switch (kind) {
-    case 'validity_conflict': return messages.value.gapValidityConflict
-    case 'missing_effective_date': return messages.value.gapMissingEffectiveDate
-    case 'consolidated_status_unordered': return messages.value.gapConsolidatedUnordered
-    case 'consolidated_status_unresolved': return messages.value.gapConsolidatedUnresolved
-    case 'ambiguous_tree_text': return messages.value.gapAmbiguousText
-    default: return kind || messages.value.statusUnknown
-  }
-}
-function label(status: string | undefined) {
-  return validityInk(status) === 'neutral' && status ? status : statusMessage(language.value, status)
-}
+const inside = computed(() => (props.result.hits || []).filter(hit => hit.in_filter !== false))
+const outside = computed(() => (props.result.hits || []).filter(hit => hit.in_filter === false))
+const statuses = ['in_force', 'partial', 'not_yet', 'expired', 'suspended', 'unknown'] as const
+const counts = computed(() => statuses.map(status => ({ status, count: hits.value.filter(hit => {
+  const actual = props.result.documents?.[hit.doc || '']?.status.class
+  return status === 'unknown' ? !actual || !statuses.includes(actual as typeof statuses[number]) : actual === status
+}).length })).filter(item => item.count))
 </script>
 
 <template>
   <section class="search-results" aria-live="polite">
-    <div class="search-summary">
-      <span v-for="(status, index) in ['in_force', 'partial', 'not_yet', 'expired', 'unknown']" :key="status" :class="`ink-${inks[index]}`">{{ label(status) }}: {{ counts[inks[index]!] }}</span>
-      <div v-if="Object.keys(hitGapCounts).length"><strong>{{ messages.gaps }}: {{ Object.values(hitGapCounts).reduce((total, count) => total + count, 0) }}</strong> <span v-for="(count, kind) in hitGapCounts" :key="kind">{{ gapLabel(kind) }}: {{ count }}; </span></div>
-      <div v-if="result.gaps?.length"><strong>{{ messages.gaps }}:</strong> <span v-for="(gap, index) in result.gaps" :key="index">{{ gap.message || gap.kind }}{{ index < result.gaps.length - 1 ? '; ' : '' }}</span></div>
+    <div v-if="hits.length" class="search-summary">
+      <h1>{{ formatNumber(hits.length, language) }} {{ messages.results }}</h1>
+      <div class="search-legend"><span v-for="item in counts" :key="item.status" :class="`ink-${validityInk(item.status)}`">{{ statusMessage(language, item.status) }} {{ formatNumber(item.count, language) }}</span></div>
     </div>
-    <p v-if="result.abstain">{{ messages.searchAbstain }}</p>
-    <template v-else>
-      <template v-for="(hit, index) in display" :key="`${hit.handle}-${index}`">
-      <p v-if="hit.in_filter === false && index === inside.length">{{ messages.searchOutside }}: {{ result.outside_filter_count }}</p>
-      <article class="search-card">
-        <div v-if="hit.doc" class="document-identity">
-          <span v-if="result.documents?.[hit.doc]?.number" class="document-number">{{ result.documents[hit.doc]?.number }}</span>
-          <span v-if="result.documents?.[hit.doc]?.title">{{ result.documents[hit.doc]?.title }}</span>
-          <span v-if="!result.documents?.[hit.doc]">{{ hit.doc }}</span>
-        </div>
-        <h2>{{ hit.citation }}</h2>
-        <span :class="`stamp ink-${validityInk(hit.doc ? result.documents?.[hit.doc]?.status.class : undefined)}`">{{ label(hit.doc ? result.documents?.[hit.doc]?.status.class : undefined) }}</span>
-        <div v-if="hit.warnings?.length || hit.warnings_omitted" class="warnings">
-          <p v-for="(warning, i) in hit.warnings" :key="i"><NuxtLink v-if="result.release && warningLink(warning, result.release)" :to="warningLink(warning, result.release)!">{{ warning.number || warning.key }}</NuxtLink><span v-else>{{ warning.number || warning.key }}</span> {{ warningVerb(warning.kind, messages) }} <code v-if="warningTarget(warning).raw">{{ warningTarget(warning).text }}</code><template v-else>{{ warningTarget(warning).text }}</template><template v-if="!warning.exact"> {{ ' ' + messages.warningMissing }}</template><template v-if="warning.basis === 'vbpl_reference'"> {{ ' ' + messages.warningReference }}</template>.</p>
-          <NuxtLink v-if="hit.warnings_omitted && result.release && readerLink(hit, result.release)" :to="readerLink(hit, result.release)!">{{ messages.warningMore.replace('{n}', String(hit.warnings_omitted)) }}</NuxtLink><span v-else-if="hit.warnings_omitted">{{ messages.warningMore.replace('{n}', String(hit.warnings_omitted)) }}</span>
-        </div>
-        <ul v-if="hit.gaps?.length" class="hit-gaps"><li v-for="(gap, i) in hit.gaps" :key="i">{{ gapLabel(gap.kind) }}</li></ul>
-        <p class="law-text">{{ hit.text ?? hit.snippet }}</p>
-        <div class="relations">
-          <span v-for="(relation, i) in [...(result.documents?.[hit.doc || '']?.related || []), ...(hit.relations || [])]" :key="i" class="relation-chip">{{ 'dir' in relation ? relation.dir : '' }} {{ relation.kind }} {{ 'number' in relation ? relation.number : '' }}</span>
-        </div>
-        <div class="nodes"><template v-for="code in hit.nodes" :key="code"><NuxtLink v-if="result.nodes?.[code]?.name" class="relation-chip" :to="`/vn/topics/${code}`">{{ result.nodes[code]?.name }}</NuxtLink></template></div>
-        <NuxtLink v-if="hit.doc && result.release && readerLink(hit, result.release)" :to="readerLink(hit, result.release)!">{{ messages.searchRead }}</NuxtLink>
-      </article>
-      </template>
-      <p v-if="!hits.length">{{ messages.searchEmpty }}</p>
+    <div v-if="result.abstain && !hits.length" class="notice search-state" role="status"><strong>{{ messages.noEvidence }}</strong><p>{{ messages.noEvidenceDetail }}</p></div>
+    <div v-else-if="result.abstain && result.reason === 'low_confidence'" class="notice notice--warn search-state" role="status"><strong>{{ messages.weak }}</strong><p>{{ messages.weakDetail }}</p></div>
+    <p v-if="!hits.length && !result.abstain">{{ oldMessages.searchEmpty }}</p>
+    <p v-if="result.gaps?.length" class="search-gaps">{{ result.gaps.map(gap => gapCategory(gap.kind, language).name).join('; ') }}</p>
+    <ResultCard v-for="(hit, index) in inside" :key="`inside-${hit.handle}-${index}`" :hit="hit" :documents="result.documents" :nodes="result.nodes" :release="result.release" :query="query" :rank="index + 1" />
+    <template v-if="outside.length">
+      <p class="search-divider">{{ messages.outside }}: {{ formatNumber(result.outside_filter_count ?? outside.length, language) }}</p>
+      <ResultCard v-for="(hit, index) in outside" :key="`outside-${hit.handle}-${index}`" :hit="hit" :documents="result.documents" :nodes="result.nodes" :release="result.release" :query="query" :rank="inside.length + index + 1" />
+    </template>
+    <template v-if="result.non_current?.length">
+      <p class="search-divider">{{ messages.nonCurrent }}: {{ formatNumber(result.non_current.length, language) }} {{ messages.results }}</p>
+      <details class="search-noncurrent"><summary>{{ messages.showNonCurrent }}</summary><ResultCard v-for="(hit, index) in result.non_current" :key="`past-${hit.handle}-${index}`" :hit="hit" :documents="result.documents" :nodes="result.nodes" :release="result.release" :query="query" :rank="inside.length + outside.length + index + 1" /></details>
     </template>
   </section>
 </template>

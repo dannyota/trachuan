@@ -1,10 +1,11 @@
 <script setup lang="ts">
+import { watchEffect } from 'vue'
 import type { components } from '@trachuan/schema/gen/openapi'
 import { messagesFor, type Language } from '../../i18n'
 
 type Node = components['schemas']['NodeEntry']
 const props = defineProps<{ modelValue: string[] }>()
-const emit = defineEmits<{ 'update:modelValue': [value: string[]] }>()
+const emit = defineEmits<{ 'update:modelValue': [value: string[]], labels: [value: Record<string, string>] }>()
 const language = useState<Language>('language', () => 'vi')
 const messages = computed(() => messagesFor(language.value))
 const api = useApi({ localUnavailable: true })
@@ -14,6 +15,7 @@ const expanded = ref<Record<string, boolean>>({})
 const loaded = ref<Record<string, boolean>>({})
 const failed = ref(false)
 const failedNode = ref('')
+watchEffect(() => emit('labels', Object.fromEntries(nodes.value.filter(node => node.code && node.name).map(node => [node.code!, node.name!]))))
 function flatten(entries: Node[]): Node[] {
   return entries.flatMap(node => [node, ...flatten(node.children || [])])
 }
@@ -72,11 +74,11 @@ function retry() {
 onMounted(loadRoots)
 </script>
 <template>
-  <fieldset>
+  <fieldset class="node-picker">
     <legend>{{ messages.searchNodes }}</legend>
-    <label>{{ messages.searchNodeLookup }} <input v-model="lookup" type="search" autocomplete="off"></label>
+    <label>{{ messages.searchNodeLookup }} <input v-model="lookup" class="input" type="search" autocomplete="off"></label>
     <p v-if="failed" role="status">{{ messages.filtersUnavailable }} <button type="button" @click="retry">{{ messages.retry }}</button></p>
-    <div><button v-for="code in modelValue" :key="code" type="button" @click="toggleSelection(code)">{{ nodes.find(node => node.code === code)?.name || code }} ×</button></div>
+    <div class="node-selected"><button v-for="code in modelValue" :key="code" class="chip" type="button" @click="toggleSelection(code)">{{ nodes.find(node => node.code === code)?.name || messages.searchNodes }} ×</button></div>
     <ul><li v-for="node in matches" :key="node.code">
       <label><input type="checkbox" :checked="modelValue.includes(node.code || '')" :disabled="!modelValue.includes(node.code || '') && modelValue.length >= 20" @change="node.code && toggleSelection(node.code)"> {{ node.name }}</label>
       <button v-if="node.code" type="button" :aria-expanded="!!expanded[node.code]" @click="expand(node.code)">{{ expanded[node.code] ? messages.topicCollapse : messages.topicExpand }}</button>
