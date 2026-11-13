@@ -3,7 +3,6 @@ package fetch
 
 import (
 	"context"
-	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -31,6 +30,7 @@ type Stage struct {
 	cache        *filecache.Cache
 	fileLimit    int64
 	loadBaseline func(context.Context, stage.Env, stage.Run, stage.Item) (*baseline, bool, error)
+	loadExpand   func(context.Context, stage.Env, stage.Run, stage.Item) ([]byte, []byte, bool, error)
 }
 
 // New constructs a fetch stage.
@@ -103,18 +103,39 @@ func (s *Stage) processItem(ctx context.Context, env stage.Env, r stage.Run, ite
 	if now == nil {
 		now = time.Now
 	}
-	group, requestCtx := errgroup.WithContext(ctx)
-	group.Go(func() error {
-		detail, decoded, errs[0] = s.client.Detail(requestCtx, id)
-		times[0] = now().UTC().Truncate(time.Microsecond)
-		return nil
-	})
-	group.Go(func() error {
-		diagram, errs[2] = s.client.Diagram(requestCtx, id)
-		times[2] = now().UTC().Truncate(time.Microsecond)
-		return nil
-	})
-	_ = group.Wait()
+	var fromExpand bool
+	if !controlSample(item.Key, r.Rel) {
+		loader := s.loadExpand
+		if loader == nil {
+			loader = loadExpand
+		}
+		detail, diagram, fromExpand, err = loader(ctx, env, r, item)
+		if err != nil {
+			return stage.Output{}, err
+		}
+	}
+	var group *errgroup.Group
+	var requestCtx context.Context
+	if fromExpand {
+		var envelope detailEnvelope
+		if err = json.Unmarshal(detail, &envelope); err != nil {
+			return apiError(err, id, true)
+		}
+		decoded.ID = envelope.Data.ID
+	} else {
+		group, requestCtx = errgroup.WithContext(ctx)
+		group.Go(func() error {
+			detail, decoded, errs[0] = s.client.Detail(requestCtx, id)
+			times[0] = now().UTC().Truncate(time.Microsecond)
+			return nil
+		})
+		group.Go(func() error {
+			diagram, errs[2] = s.client.Diagram(requestCtx, id)
+			times[2] = now().UTC().Truncate(time.Microsecond)
+			return nil
+		})
+		_ = group.Wait()
+	}
 	if errs[0] != nil {
 		return apiError(errs[0], id, true)
 	}
@@ -150,7 +171,7 @@ func (s *Stage) processItem(ctx context.Context, env stage.Env, r stage.Run, ite
 		result.reason = "control"
 	}
 	if result.reason == "reused" {
-		out, reuseErr := s.publishReuse(ctx, env, r, result.baseline, detail, diagram, times)
+		out, reuseErr := s.publishReuse(ctx, env, r, result.baseline, detail, diagram, times, fromExpand)
 		if reuseErr == nil {
 			slog.Info("fetch decision", "run", r.Country+"/"+r.Rel, "key", item.Key, "decision", result.reason)
 			out.Message = result.message()
@@ -180,8 +201,7 @@ func (s *Stage) processItem(ctx context.Context, env stage.Env, r stage.Run, ite
 		endpoint, path string
 		data           []byte
 	}{{"doc/detail", "detail.json", detail}, {"doc/provision/tree", "tree.json", tree}, {"doc/diagram", "diagram.json", diagram}} {
-		key, _ := json.Marshal([3]any{payload.endpoint, nil, nil})
-		observations = append(observations, stage.FetchObservation{ResourceKey: string(key), Source: "vbpl", Path: payload.path, ContentSHA256: fmt.Sprintf("%x", sha256.Sum256(payload.data)), Size: int64(len(payload.data)), Acquisition: "network", FetchedAt: &times[i]})
+		observations = append(observations, sourceObservation(payload.endpoint, payload.path, payload.data, times[i], fromExpand && i != 1))
 	}
 	publish := func(b *baseline) (artifact.Result, error) {
 		observations = observations[:3]

@@ -51,14 +51,14 @@ func copyBaseline(src, dir, hash string, size int64) (vbpl.Downloaded, error) {
 	return vbpl.Downloaded{Path: dest, SHA256: hash, Size: n, Hashes: h.Hashes()}, nil
 }
 
-func (s *Stage) publishReuse(ctx context.Context, env stage.Env, r stage.Run, b *baseline, detail, diagram []byte, times [3]time.Time) (stage.Output, error) {
+func (s *Stage) publishReuse(ctx context.Context, env stage.Env, r stage.Run, b *baseline, detail, diagram []byte, times [3]time.Time, fromExpand bool) (stage.Output, error) {
 	observations := []stage.FetchObservation{}
 	for _, p := range []struct {
 		endpoint, path string
 		data           []byte
 		at             time.Time
 	}{{"doc/detail", "detail.json", detail, times[0]}, {"doc/diagram", "diagram.json", diagram, times[2]}} {
-		observations = append(observations, networkObservation(p.endpoint, p.path, p.data, p.at))
+		observations = append(observations, sourceObservation(p.endpoint, p.path, p.data, p.at, fromExpand))
 	}
 	tree := b.index.tree
 	if tree != nil {
