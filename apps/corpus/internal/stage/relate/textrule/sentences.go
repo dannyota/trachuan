@@ -1,6 +1,6 @@
 package textrule
 
-import "strings"
+import "unicode/utf8"
 
 // quoteMask marks quoted bytes, including delimiters, across the whole provision.
 func quoteMask(text string) ([]bool, bool) {
@@ -29,34 +29,36 @@ func quoteMask(text string) ([]bool, bool) {
 			stack = stack[:len(stack)-1]
 			inside = true
 		}
-		mask[i] = inside
+		for j := i; j < i+utf8.RuneLen(r); j++ {
+			mask[j] = inside
+		}
 	}
 	return mask, len(stack) == 0
 }
 
-func sentences(text string, mask []bool) []cursor {
-	var out []cursor
-	start := 0
-	add := func(end int) {
-		for start < end && text[start] == ' ' {
-			start++
+func quotationEnd(text string, start int) int {
+	var stack []rune
+	for offset, r := range text[start:] {
+		switch r {
+		case '"', '\'':
+			if len(stack) > 0 && stack[len(stack)-1] == r {
+				stack = stack[:len(stack)-1]
+			} else {
+				stack = append(stack, r)
+			}
+		case '“':
+			stack = append(stack, '”')
+		case '«':
+			stack = append(stack, '»')
+		case '”', '»':
+			if len(stack) == 0 || stack[len(stack)-1] != r {
+				return -1
+			}
+			stack = stack[:len(stack)-1]
 		}
-		if start < end {
-			part := text[start:end]
-			out = append(out, cursor{text: part, tokens: tokenize(part, mask[start:end])})
+		if len(stack) == 0 {
+			return start + offset + utf8.RuneLen(r)
 		}
-		start = end
 	}
-	for i := 0; i < len(text); i++ {
-		if text[i] != '.' || (i+1 < len(text) && text[i+1] != ' ') {
-			continue
-		}
-		// A leading numeric list marker belongs to its operative sentence.
-		if digits(strings.TrimSpace(text[start:i])) && !mask[i] {
-			continue
-		}
-		add(i + 1)
-	}
-	add(len(text))
-	return out
+	return -1
 }

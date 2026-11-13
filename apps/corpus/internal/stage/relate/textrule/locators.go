@@ -1,8 +1,15 @@
 package textrule
 
-import "danny.vn/trachuan/apps/corpus/internal/anchor"
+import (
+	"unicode"
+
+	"danny.vn/trachuan/apps/corpus/internal/anchor"
+)
 
 func (c *cursor) separator() bool {
+	if c.at(";") && c.pos+1 == len(c.tokens) {
+		return false
+	}
 	return c.take(",") || c.take("và") || c.take(";")
 }
 
@@ -11,7 +18,7 @@ func (c *cursor) label(point bool) (string, bool) {
 		return "", false
 	}
 	word := c.tokens[c.pos].word
-	if (point && !letter(word)) || (!point && !digits(word)) {
+	if (point && !pointLabel(word)) || (!point && !numberLabel(word)) {
 		return "", false
 	}
 	c.pos++
@@ -84,4 +91,17 @@ func (c *cursor) locators() ([]string, bool) {
 			return anchors, true
 		}
 	}
+}
+
+func numberLabel(word string) bool {
+	runes := []rune(word)
+	if len(runes) > 0 && unicode.IsLetter(runes[len(runes)-1]) {
+		runes = runes[:len(runes)-1]
+	}
+	return digits(string(runes))
+}
+
+func pointLabel(word string) bool {
+	runes := []rune(word)
+	return len(runes) > 0 && len(runes) <= 3 && unicode.IsLetter(runes[0]) && (len(runes) == 1 || digits(string(runes[1:])))
 }

@@ -1,0 +1,793 @@
+[
+  {
+    "name": "article text amendment list",
+    "text": "Điều 2. Thay thế, bãi bỏ một số cụm từ, điểm, khoản, Điều, Phụ lục của Thông tư số 19/2018/TT-NHNN ngày 28 tháng 8 năm 2018\n1. Bãi bỏ Điều 5.\n2. Bãi bỏ điểm b khoản 1 Điều 6.",
+    "anchors": [
+      "dieu-5",
+      "dieu-6/khoan-1/diem-b"
+    ],
+    "kind": "repeals",
+    "gaps": [],
+    "evidence": "",
+    "number": "19/2018/TT-NHNN",
+    "date": "2018-08-28"
+  },
+  {
+    "name": "lead introduces list",
+    "text": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư 19/2018/TT-NHNN như sau:\n1. Bãi bỏ Điều 5.",
+    "anchors": [
+      "dieu-5"
+    ],
+    "kind": "repeals",
+    "gaps": [],
+    "evidence": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư 19/2018/TT-NHNN như sau:\n1. Bãi bỏ Điều 5."
+  },
+  {
+    "name": "insert after",
+    "text": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư 19/2018/TT-NHNN như sau:\n1. Bổ sung khoản 4 và khoản 5 vào sau khoản 3 Điều 113.",
+    "anchors": [
+      "dieu-113"
+    ],
+    "kind": "amends_supplements",
+    "gaps": [],
+    "evidence": ""
+  },
+  {
+    "name": "insert after explicit document",
+    "text": "Bổ sung khoản 4 và khoản 5 vào sau khoản 3 Điều 113 của Thông tư 19/2018/TT-NHNN.",
+    "anchors": [
+      "dieu-113"
+    ],
+    "kind": "amends_supplements",
+    "gaps": [],
+    "evidence": ""
+  },
+  {
+    "name": "insert before",
+    "text": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư 19/2018/TT-NHNN như sau:\n1. Bổ sung khoản 2a vào trước khoản 3 Điều 113.",
+    "anchors": [
+      "dieu-113"
+    ],
+    "kind": "amends_supplements",
+    "gaps": [],
+    "evidence": ""
+  },
+  {
+    "name": "insert before explicit document",
+    "text": "Bổ sung khoản 2a vào trước khoản 3 Điều 113 của Thông tư 19/2018/TT-NHNN.",
+    "anchors": [
+      "dieu-113"
+    ],
+    "kind": "amends_supplements",
+    "gaps": [],
+    "evidence": ""
+  },
+  {
+    "name": "insert into",
+    "text": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư 19/2018/TT-NHNN như sau:\n1. Bổ sung điểm đ vào khoản 2 Điều 5.",
+    "anchors": [
+      "dieu-5/khoan-2"
+    ],
+    "kind": "amends_supplements",
+    "gaps": [],
+    "evidence": ""
+  },
+  {
+    "name": "insert into explicit document",
+    "text": "Bổ sung điểm đ vào khoản 2 Điều 5 của Thông tư 19/2018/TT-NHNN.",
+    "anchors": [
+      "dieu-5/khoan-2"
+    ],
+    "kind": "amends_supplements",
+    "gaps": [],
+    "evidence": ""
+  },
+  {
+    "name": "insert at end",
+    "text": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư 19/2018/TT-NHNN như sau:\n1. Bổ sung điểm a1 vào cuối khoản 2 Điều 5.",
+    "anchors": [
+      "dieu-5/khoan-2"
+    ],
+    "kind": "amends_supplements",
+    "gaps": [],
+    "evidence": ""
+  },
+  {
+    "name": "insert at end explicit document",
+    "text": "Bổ sung điểm a1 vào cuối khoản 2 Điều 5 của Thông tư 19/2018/TT-NHNN.",
+    "anchors": [
+      "dieu-5/khoan-2"
+    ],
+    "kind": "amends_supplements",
+    "gaps": [],
+    "evidence": ""
+  },
+  {
+    "name": "phrase replace",
+    "text": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư 19/2018/TT-NHNN như sau:\n1. Thay thế cụm từ \"cũ\" bằng cụm từ \"mới\" tại tên Điều 18 và tại khoản 2 Điều 18.",
+    "anchors": [
+      "dieu-18",
+      "dieu-18/khoan-2"
+    ],
+    "kind": "amends_supplements",
+    "gaps": [],
+    "evidence": ""
+  },
+  {
+    "name": "phrase replace explicit document",
+    "text": "Thay thế cụm từ \"cũ\" bằng cụm từ \"mới\" tại tên Điều 18 và tại khoản 2 Điều 18 của Thông tư 19/2018/TT-NHNN.",
+    "anchors": [
+      "dieu-18",
+      "dieu-18/khoan-2"
+    ],
+    "kind": "amends_supplements",
+    "gaps": [],
+    "evidence": ""
+  },
+  {
+    "name": "phrase repeal changes wording",
+    "text": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư 19/2018/TT-NHNN như sau:\n1. Bãi bỏ cụm từ \"cũ\" tại khoản 2 Điều 5.",
+    "anchors": [
+      "dieu-5/khoan-2"
+    ],
+    "kind": "amends_supplements",
+    "gaps": [],
+    "evidence": ""
+  },
+  {
+    "name": "phrase repeal changes wording explicit document",
+    "text": "Bãi bỏ cụm từ \"cũ\" tại khoản 2 Điều 5 của Thông tư 19/2018/TT-NHNN.",
+    "anchors": [
+      "dieu-5/khoan-2"
+    ],
+    "kind": "amends_supplements",
+    "gaps": [],
+    "evidence": ""
+  },
+  {
+    "name": "phrase remove",
+    "text": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư 19/2018/TT-NHNN như sau:\n1. Bỏ từ \"cũ\" tại Điều 5.",
+    "anchors": [
+      "dieu-5"
+    ],
+    "kind": "amends_supplements",
+    "gaps": [],
+    "evidence": ""
+  },
+  {
+    "name": "phrase remove explicit document",
+    "text": "Bỏ từ \"cũ\" tại Điều 5 của Thông tư 19/2018/TT-NHNN.",
+    "anchors": [
+      "dieu-5"
+    ],
+    "kind": "amends_supplements",
+    "gaps": [],
+    "evidence": ""
+  },
+  {
+    "name": "title amend",
+    "text": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư 19/2018/TT-NHNN như sau:\n1. Sửa đổi tên của Điều 18 như sau:\n“Tiêu đề mới”",
+    "anchors": [
+      "dieu-18"
+    ],
+    "kind": "amends_supplements",
+    "gaps": [],
+    "evidence": ""
+  },
+  {
+    "name": "title amend explicit document",
+    "text": "Sửa đổi tên của Điều 18 của Thông tư 19/2018/TT-NHNN như sau:\n“Tiêu đề mới”",
+    "anchors": [
+      "dieu-18"
+    ],
+    "kind": "amends_supplements",
+    "gaps": [],
+    "evidence": ""
+  },
+  {
+    "name": "title supplement",
+    "text": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư 19/2018/TT-NHNN như sau:\n1. Bổ sung tên Điều 18.",
+    "anchors": [
+      "dieu-18"
+    ],
+    "kind": "amends_supplements",
+    "gaps": [],
+    "evidence": ""
+  },
+  {
+    "name": "title supplement explicit document",
+    "text": "Bổ sung tên Điều 18 của Thông tư 19/2018/TT-NHNN.",
+    "anchors": [
+      "dieu-18"
+    ],
+    "kind": "amends_supplements",
+    "gaps": [],
+    "evidence": ""
+  },
+  {
+    "name": "title replace",
+    "text": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư 19/2018/TT-NHNN như sau:\n1. Thay thế tên Điều 18.",
+    "anchors": [
+      "dieu-18"
+    ],
+    "kind": "amends_supplements",
+    "gaps": [],
+    "evidence": ""
+  },
+  {
+    "name": "title replace explicit document",
+    "text": "Thay thế tên Điều 18 của Thông tư 19/2018/TT-NHNN.",
+    "anchors": [
+      "dieu-18"
+    ],
+    "kind": "amends_supplements",
+    "gaps": [],
+    "evidence": ""
+  },
+  {
+    "name": "continued locator",
+    "text": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư 19/2018/TT-NHNN như sau:\n1. Bãi bỏ khoản 2\nĐiều 5.",
+    "anchors": [
+      "dieu-5/khoan-2"
+    ],
+    "kind": "repeals",
+    "gaps": [],
+    "evidence": ""
+  },
+  {
+    "name": "continued locator explicit document",
+    "text": "Bãi bỏ khoản 2\nĐiều 5 của Thông tư 19/2018/TT-NHNN.",
+    "anchors": [
+      "dieu-5/khoan-2"
+    ],
+    "kind": "repeals",
+    "gaps": [],
+    "evidence": ""
+  },
+  {
+    "name": "inserted labels",
+    "text": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư 19/2018/TT-NHNN như sau:\n1. Bãi bỏ khoản 2a Điều 8a.",
+    "anchors": [
+      "dieu-8a/khoan-2a"
+    ],
+    "kind": "repeals",
+    "gaps": [],
+    "evidence": ""
+  },
+  {
+    "name": "inserted labels explicit document",
+    "text": "Bãi bỏ khoản 2a Điều 8a của Thông tư 19/2018/TT-NHNN.",
+    "anchors": [
+      "dieu-8a/khoan-2a"
+    ],
+    "kind": "repeals",
+    "gaps": [],
+    "evidence": ""
+  },
+  {
+    "name": "inserted point",
+    "text": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư 19/2018/TT-NHNN như sau:\n1. Bãi bỏ điểm a12 khoản 2đ Điều 8a.",
+    "anchors": [
+      "dieu-8a/khoan-2đ/diem-a12"
+    ],
+    "kind": "repeals",
+    "gaps": [],
+    "evidence": ""
+  },
+  {
+    "name": "inserted point explicit document",
+    "text": "Bãi bỏ điểm a12 khoản 2đ Điều 8a của Thông tư 19/2018/TT-NHNN.",
+    "anchors": [
+      "dieu-8a/khoan-2đ/diem-a12"
+    ],
+    "kind": "repeals",
+    "gaps": [],
+    "evidence": ""
+  },
+  {
+    "name": "continued own document",
+    "text": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư 19/2018/TT-NHNN như sau:\n1. Bãi bỏ Điều 5\ncủa Thông tư số 39/2016/TT-NHNN.",
+    "anchors": [
+      "dieu-5"
+    ],
+    "kind": "repeals",
+    "gaps": [],
+    "evidence": "1. Bãi bỏ Điều 5 của Thông tư số 39/2016/TT-NHNN.",
+    "number": "39/2016/TT-NHNN"
+  },
+  {
+    "name": "title repeal",
+    "text": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư 19/2018/TT-NHNN như sau:\n1. Bãi bỏ tên Điều 18.",
+    "anchors": [],
+    "kind": "repeals",
+    "gaps": [
+      "relation_text_grammar"
+    ],
+    "evidence": ""
+  },
+  {
+    "name": "annex",
+    "text": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư 19/2018/TT-NHNN như sau:\n1. Bãi bỏ Phụ lục số 01.",
+    "anchors": [],
+    "kind": "repeals",
+    "gaps": [
+      "relation_text_unsupported_locator"
+    ],
+    "evidence": ""
+  },
+  {
+    "name": "form",
+    "text": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư 19/2018/TT-NHNN như sau:\n1. Bãi bỏ mẫu 01.",
+    "anchors": [],
+    "kind": "repeals",
+    "gaps": [
+      "relation_text_unsupported_locator"
+    ],
+    "evidence": ""
+  },
+  {
+    "name": "chapter",
+    "text": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư 19/2018/TT-NHNN như sau:\n1. Bãi bỏ chương II.",
+    "anchors": [],
+    "kind": "repeals",
+    "gaps": [
+      "relation_text_unsupported_locator"
+    ],
+    "evidence": ""
+  },
+  {
+    "name": "section",
+    "text": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư 19/2018/TT-NHNN như sau:\n1. Bãi bỏ mục 2.",
+    "anchors": [],
+    "kind": "repeals",
+    "gaps": [
+      "relation_text_unsupported_locator"
+    ],
+    "evidence": ""
+  },
+  {
+    "name": "part",
+    "text": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư 19/2018/TT-NHNN như sau:\n1. Bãi bỏ phần 2.",
+    "anchors": [],
+    "kind": "repeals",
+    "gaps": [
+      "relation_text_unsupported_locator"
+    ],
+    "evidence": ""
+  },
+  {
+    "name": "new article",
+    "text": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư 19/2018/TT-NHNN như sau:\n1. Bổ sung Điều 5a vào sau Điều 5.",
+    "anchors": [],
+    "kind": "repeals",
+    "gaps": [
+      "relation_text_document_level"
+    ],
+    "evidence": ""
+  },
+  {
+    "name": "clause without article",
+    "text": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư 19/2018/TT-NHNN như sau:\n1. Bãi bỏ khoản 2.",
+    "anchors": [],
+    "kind": "repeals",
+    "gaps": [
+      "relation_text_grammar"
+    ],
+    "evidence": ""
+  },
+  {
+    "name": "nested point",
+    "text": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư 19/2018/TT-NHNN như sau:\na) Bãi bỏ Điều 5.",
+    "anchors": [],
+    "kind": "repeals",
+    "gaps": [
+      "relation_text_nested_scope"
+    ],
+    "evidence": ""
+  },
+  {
+    "name": "nested own document",
+    "text": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư 19/2018/TT-NHNN như sau:\na) Bãi bỏ Điều 5 của Thông tư 39/2016/TT-NHNN.",
+    "anchors": [],
+    "kind": "repeals",
+    "gaps": [
+      "relation_text_nested_scope"
+    ],
+    "evidence": ""
+  },
+  {
+    "name": "unquoted wording",
+    "text": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư 19/2018/TT-NHNN như sau:\n1. Sửa đổi khoản 2 Điều 8 như sau:\n2. Bãi bỏ Điều 5.",
+    "anchors": [],
+    "kind": "repeals",
+    "gaps": [
+      "relation_text_unquoted_wording"
+    ],
+    "evidence": ""
+  },
+  {
+    "name": "two wording quotations",
+    "text": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư 19/2018/TT-NHNN như sau:\n1. Sửa đổi Điều 8 như sau:\n“một” “hai”",
+    "anchors": [],
+    "kind": "repeals",
+    "gaps": [
+      "relation_text_unquoted_wording"
+    ],
+    "evidence": ""
+  },
+  {
+    "name": "missing sentence end",
+    "text": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư 19/2018/TT-NHNN như sau:\n1. Bãi bỏ Điều 8\n2. Bãi bỏ Điều 5.",
+    "anchors": [],
+    "kind": "repeals",
+    "gaps": [
+      "relation_text_grammar"
+    ],
+    "evidence": ""
+  },
+  {
+    "name": "second sentence nested",
+    "text": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư 19/2018/TT-NHNN như sau:\n1. Bãi bỏ Điều 5. Bãi bỏ Điều 6.",
+    "anchors": [
+      "dieu-5"
+    ],
+    "kind": "repeals",
+    "gaps": [
+      "relation_text_nested_scope"
+    ],
+    "evidence": ""
+  },
+  {
+    "name": "scope tail second number",
+    "text": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư 19/2018/TT-NHNN và Thông tư 39/2016/TT-NHNN.\n1. Bãi bỏ Điều 5.",
+    "anchors": [],
+    "kind": "repeals",
+    "gaps": [
+      "relation_text_multi_target",
+      "relation_text_scope_rejected"
+    ],
+    "evidence": ""
+  },
+  {
+    "name": "target group does not open scope",
+    "text": "Điều 1. Sửa đổi Điều 8 của Thông tư 19/2018/TT-NHNN như sau:\n1. Bãi bỏ khoản 2 Điều 5.",
+    "anchors": [],
+    "kind": "repeals",
+    "gaps": [
+      "relation_text_unquoted_wording"
+    ],
+    "evidence": ""
+  },
+  {
+    "name": "unscoped unquoted wording",
+    "text": "Sửa đổi Điều 8 của Thông tư 19/2018/TT-NHNN như sau:\n2. Bãi bỏ Điều 5a của Thông tư 19/2018/TT-NHNN.",
+    "anchors": [],
+    "kind": "repeals",
+    "gaps": [
+      "relation_text_unquoted_wording"
+    ],
+    "evidence": ""
+  },
+  {
+    "name": "bare bo skipped",
+    "text": "Bỏ Điều 5 của Thông tư 19/2018/TT-NHNN.",
+    "anchors": [],
+    "kind": "repeals",
+    "gaps": [],
+    "evidence": ""
+  },
+  {
+    "name": "unquoted prose wording",
+    "text": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư 19/2018/TT-NHNN như sau:\n1. Sửa đổi Điều 8 như sau:\nNội dung mới.",
+    "anchors": [],
+    "kind": "",
+    "gaps": [
+      "relation_text_unquoted_wording"
+    ],
+    "evidence": ""
+  },
+  {
+    "name": "unquoted same line wording",
+    "text": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư 19/2018/TT-NHNN như sau:\n1. Sửa đổi Điều 8 như sau: Nội dung mới.",
+    "anchors": [],
+    "kind": "",
+    "gaps": [
+      "relation_text_unquoted_wording"
+    ],
+    "evidence": ""
+  },
+  {
+    "name": "adjacent wording quotations",
+    "text": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư 19/2018/TT-NHNN như sau:\n1. Sửa đổi Điều 8 như sau: “một”“hai”",
+    "anchors": [],
+    "kind": "",
+    "gaps": [
+      "relation_text_unquoted_wording"
+    ],
+    "evidence": ""
+  },
+  {
+    "name": "clause node items",
+    "units": [
+      {
+        "Text": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư 19/2018/TT-NHNN như sau:",
+        "Close": true,
+        "Kind": "dieu"
+      },
+      {
+        "Text": "1. Bãi bỏ Điều 5.",
+        "FirstItem": true,
+        "Close": true,
+        "Kind": "khoan"
+      },
+      {
+        "Text": "2. Bãi bỏ điểm b khoản 1 Điều 6.",
+        "FirstItem": true,
+        "Close": true,
+        "Kind": "khoan"
+      }
+    ],
+    "anchors": [
+      "dieu-5",
+      "dieu-6/khoan-1/diem-b"
+    ],
+    "kind": "repeals",
+    "gaps": []
+  },
+  {
+    "name": "quotation spans point units",
+    "units": [
+      {
+        "Text": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư 19/2018/TT-NHNN như sau:",
+        "Close": true,
+        "Kind": "dieu"
+      },
+      {
+        "Text": "1. Sửa đổi Điều 5 như sau:",
+        "FirstItem": true,
+        "Kind": "khoan"
+      },
+      {
+        "Text": "“a) Nội dung.",
+        "Kind": "diem"
+      },
+      {
+        "Text": "b) Bãi bỏ Điều 6.”",
+        "Close": true,
+        "Kind": "diem"
+      }
+    ],
+    "anchors": [
+      "dieu-5"
+    ],
+    "kind": "amends_supplements",
+    "gaps": []
+  },
+  {
+    "name": "quotation crosses clause boundaries",
+    "units": [
+      {
+        "Text": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư 19/2018/TT-NHNN như sau:",
+        "Close": true,
+        "Kind": "dieu"
+      },
+      {
+        "Text": "1. Sửa đổi Điều 5 như sau: “nội dung",
+        "FirstItem": true,
+        "Close": true,
+        "Kind": "khoan"
+      },
+      {
+        "Text": "2. Bãi bỏ Điều 6.”",
+        "FirstItem": true,
+        "Close": true,
+        "Kind": "khoan"
+      }
+    ],
+    "anchors": [],
+    "kind": "",
+    "gaps": [
+      "relation_text_unbalanced_quote"
+    ]
+  },
+  {
+    "name": "unlinked scope",
+    "text": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư 19/2018/TT-NHNN như sau:\n1. Bãi bỏ Điều 5.\n2. Bãi bỏ Điều 6.",
+    "links": [],
+    "anchors": [],
+    "kind": "",
+    "gaps": [
+      "relation_text_unlinked_target",
+      "relation_text_scope_rejected",
+      "relation_text_scope_rejected"
+    ]
+  },
+  {
+    "name": "title verb spacing",
+    "text": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư 19/2018/TT-NHNN như sau:\n1. Sửa đổi , bổ sung tên Điều 18.",
+    "anchors": [
+      "dieu-18"
+    ],
+    "kind": "amends_supplements",
+    "gaps": []
+  },
+  {
+    "name": "unsupported locator lookalike",
+    "text": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư 19/2018/TT-NHNN như sau:\n1. Bãi bỏ phụ trách Điều 18.",
+    "anchors": [],
+    "kind": "",
+    "gaps": [
+      "relation_text_grammar"
+    ]
+  },
+  {
+    "name": "numbered second sentence in clause",
+    "units": [
+      {
+        "Text": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư 19/2018/TT-NHNN như sau:",
+        "Kind": "dieu",
+        "Close": true
+      },
+      {
+        "Text": "1. Bãi bỏ Điều 5.\n2. Bãi bỏ Điều 6.",
+        "Kind": "khoan",
+        "FirstItem": true,
+        "Close": true
+      }
+    ],
+    "anchors": [
+      "dieu-5"
+    ],
+    "kind": "repeals",
+    "gaps": [
+      "relation_text_nested_scope"
+    ]
+  },
+  {
+    "name": "numbered point with own document",
+    "units": [
+      {
+        "Text": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư 19/2018/TT-NHNN như sau:",
+        "Kind": "dieu",
+        "Close": true
+      },
+      {
+        "Text": "1. Bãi bỏ Điều 5.",
+        "Kind": "khoan",
+        "FirstItem": true
+      },
+      {
+        "Text": "2. Bãi bỏ Điều 6 của Thông tư 39/2016/TT-NHNN.",
+        "Kind": "diem",
+        "Close": true
+      }
+    ],
+    "anchors": [
+      "dieu-5"
+    ],
+    "kind": "repeals",
+    "gaps": [
+      "relation_text_nested_scope"
+    ]
+  },
+  {
+    "name": "ordinary terminal semicolons",
+    "text": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư 19/2018/TT-NHNN như sau:\n1. Bãi bỏ Điều 5;\n2. Bãi bỏ Điều 6;",
+    "anchors": [
+      "dieu-5",
+      "dieu-6"
+    ],
+    "kind": "repeals",
+    "gaps": []
+  },
+  {
+    "name": "phrase terminal semicolons",
+    "text": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư 19/2018/TT-NHNN như sau:\n1. Bãi bỏ cụm từ \"cũ\" tại Điều 5;\n2. Bỏ từ \"cũ\" tại Điều 6;",
+    "anchors": [
+      "dieu-5",
+      "dieu-6"
+    ],
+    "kind": "amends_supplements",
+    "gaps": []
+  },
+  {
+    "name": "ordinary inline semicolon separates groups",
+    "text": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư 19/2018/TT-NHNN như sau:\n1. Bãi bỏ Điều 5; khoản 2 Điều 6.",
+    "anchors": [
+      "dieu-5",
+      "dieu-6/khoan-2"
+    ],
+    "kind": "repeals",
+    "gaps": []
+  },
+  {
+    "name": "phrase inline semicolon separates groups",
+    "text": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư 19/2018/TT-NHNN như sau:\n1. Bãi bỏ cụm từ \"cũ\" tại Điều 5; tại khoản 2 Điều 6.",
+    "anchors": [
+      "dieu-5",
+      "dieu-6/khoan-2"
+    ],
+    "kind": "amends_supplements",
+    "gaps": []
+  },
+  {
+    "name": "ordinary semicolon ends line",
+    "text": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư 19/2018/TT-NHNN như sau:\n1. Bãi bỏ Điều 5;\nĐiều 6.",
+    "anchors": [
+      "dieu-5",
+      "dieu-6"
+    ],
+    "kind": "repeals",
+    "gaps": [],
+    "matchCount": 1,
+    "evidence": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư 19/2018/TT-NHNN như sau:\n1. Bãi bỏ Điều 5; Điều 6."
+  },
+  {
+    "name": "phrase semicolon ends line",
+    "text": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư 19/2018/TT-NHNN như sau:\n1. Bãi bỏ cụm từ \"cũ\" tại Điều 5;\nĐiều 6.",
+    "anchors": [
+      "dieu-5",
+      "dieu-6"
+    ],
+    "kind": "amends_supplements",
+    "gaps": [],
+    "matchCount": 1,
+    "evidence": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư 19/2018/TT-NHNN như sau:\n1. Bãi bỏ cụm từ \"cũ\" tại Điều 5; Điều 6."
+  },
+  {
+    "name": "long numeric locators",
+    "text": "Bãi bỏ khoản 1234 Điều 5678 của Thông tư 39/2016/TT-NHNN.",
+    "anchors": [
+      "dieu-5678/khoan-1234"
+    ],
+    "kind": "repeals",
+    "gaps": []
+  },
+  {
+    "name": "long inserted numeric locators",
+    "text": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư 19/2018/TT-NHNN như sau:\n1. Bãi bỏ khoản 1234a Điều 5678đ.",
+    "anchors": [
+      "dieu-5678đ/khoan-1234a"
+    ],
+    "kind": "repeals",
+    "gaps": []
+  },
+  {
+    "name": "semicolon continuation names own document",
+    "text": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư 19/2018/TT-NHNN như sau:\n1. Bãi bỏ Điều 5;\nĐiều 6 của Thông tư 39/2016/TT-NHNN.",
+    "anchors": [
+      "dieu-5",
+      "dieu-6"
+    ],
+    "kind": "repeals",
+    "gaps": [],
+    "number": "39/2016/TT-NHNN",
+    "matchCount": 1,
+    "evidence": "1. Bãi bỏ Điều 5; Điều 6 của Thông tư 39/2016/TT-NHNN."
+  },
+  {
+    "name": "semicolon before numbered line ends item",
+    "text": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư 19/2018/TT-NHNN như sau:\n1. Bãi bỏ Điều 5;\n2. Bãi bỏ Điều 6.",
+    "anchors": [
+      "dieu-5",
+      "dieu-6"
+    ],
+    "kind": "repeals",
+    "gaps": [],
+    "number": "19/2018/TT-NHNN",
+    "matchCount": 2
+  },
+  {
+    "name": "phrase semicolon continuation names own document",
+    "text": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư 19/2018/TT-NHNN như sau:\n1. Bãi bỏ cụm từ \"cũ\" tại Điều 5;\nĐiều 6 của Thông tư 39/2016/TT-NHNN.",
+    "anchors": [
+      "dieu-5",
+      "dieu-6"
+    ],
+    "kind": "amends_supplements",
+    "gaps": [],
+    "number": "39/2016/TT-NHNN",
+    "matchCount": 1,
+    "evidence": "1. Bãi bỏ cụm từ \"cũ\" tại Điều 5; Điều 6 của Thông tư 39/2016/TT-NHNN."
+  }
+]

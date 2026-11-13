@@ -85,9 +85,10 @@ func letter(s string) bool {
 }
 
 type cursor struct {
-	text   string
-	tokens []token
-	pos    int
+	text        string
+	tokens      []token
+	pos         int
+	top, broken bool
 }
 
 func (c *cursor) at(word string) bool {
@@ -119,3 +120,6 @@ func (c *cursor) listMarker() {
 		c.pos += 2
 	}
 }
+
+// CanonicalText normalizes source text for descendant containment checks.
+func CanonicalText(text string) string { return strings.ToLower(normalize(text)) }

@@ -80,3 +80,59 @@ func TestParse_IssuerTableIsClosed(t *testing.T) {
 		}
 	}
 }
+
+func TestParse_ScopedFixtures(t *testing.T) {
+	for _, f := range readFixtures[struct {
+		Name, Text, Kind, Evidence, Number, Date string
+		Units                                    []Unit
+		Links                                    *[]string
+		MatchCount                               *int
+		Anchors, Gaps                            []string
+	}](t, "testdata/scoped.json") {
+		t.Run(f.Name, func(t *testing.T) {
+			units := f.Units
+			if units == nil {
+				units = []Unit{{Text: f.Text, Kind: "dieu", Close: true}}
+			}
+			var identity func(string) string
+			if f.Links != nil {
+				identity = func(number string) string {
+					for _, linked := range *f.Links {
+						if linked == number {
+							return ""
+						}
+					}
+					return "relation_text_unlinked_target"
+				}
+			}
+			matches, gaps := ParseUnits(units, testIssuers(), identity)
+			if f.MatchCount != nil && len(matches) != *f.MatchCount {
+				t.Errorf("matches=%d, want %d", len(matches), *f.MatchCount)
+			}
+			var anchors, names []string
+			for _, m := range matches {
+				if m.Kind != f.Kind {
+					t.Errorf("kind=%s, want %s", m.Kind, f.Kind)
+				}
+				if f.Evidence != "" && m.Sentence != f.Evidence {
+					t.Errorf("evidence=%q, want %q", m.Sentence, f.Evidence)
+				}
+				for _, target := range m.Targets {
+					anchors = append(anchors, target.Anchor)
+					if f.Number != "" && target.Number != f.Number {
+						t.Errorf("number=%q, want %q", target.Number, f.Number)
+					}
+					if f.Date != "" && (target.StatedIssueDate == nil || *target.StatedIssueDate != f.Date) {
+						t.Errorf("date=%v, want %s", target.StatedIssueDate, f.Date)
+					}
+				}
+			}
+			for _, gap := range gaps {
+				names = append(names, gap.Name)
+			}
+			if !reflect.DeepEqual(append([]string{}, anchors...), f.Anchors) || !reflect.DeepEqual(append([]string{}, names...), f.Gaps) {
+				t.Fatalf("anchors=%v gaps=%v; want %v %v", anchors, names, f.Anchors, f.Gaps)
+			}
+		})
+	}
+}

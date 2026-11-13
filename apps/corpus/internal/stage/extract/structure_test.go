@@ -113,7 +113,7 @@ func TestExtract_DirectPointAnchors(t *testing.T) {
 	}
 }
 
-func TestExtract_InsertedAnchorsRemainUnsupportedByRelations(t *testing.T) {
+func TestExtract_InsertedAnchorsMatchRelations(t *testing.T) {
 	data := []byte("<p>" + strings.Repeat("Lời mở đầu. ", 30) + "</p><p>Điều 1. Nội dung</p><p>1. Một</p><p>2. Hai</p><p>a) A</p><p>a1) A1</p><p>b) B</p><p>2a. Thêm</p><p>2b. Thêm nữa</p><p>2c. Thêm nữa</p><p>2d. Thêm nữa</p><p>2đ. Thêm nữa</p><p>3. Ba</p><p>Điều 1a. Bổ sung</p><p>a) A</p><p>a1) A1</p><p>b) B</p>")
 	rows, gaps, _ := parseTranscription(data, "1_content.html", "fixture")
 	if len(gaps) != 0 {
@@ -123,7 +123,6 @@ func TestExtract_InsertedAnchorsRemainUnsupportedByRelations(t *testing.T) {
 	for _, p := range rows {
 		paths[p.Path] = p
 	}
-	// Relations-text version 2 adds inserted labels with its own recipe change.
 	for _, tc := range []struct{ path, label, locator string }{
 		{"dieu-1/khoan-2a", "Khoản 2a", "khoản 2a Điều 1"},
 		{"dieu-1/khoan-2đ", "Khoản 2đ", "khoản 2đ Điều 1"},
@@ -136,7 +135,7 @@ func TestExtract_InsertedAnchorsRemainUnsupportedByRelations(t *testing.T) {
 			t.Errorf("extract %s: %+v", tc.path, p)
 		}
 		matches, rejected := textrule.Parse("Bãi bỏ "+tc.locator+" của Thông tư 39/2016/TT-NHNN.", map[string]string{"NHNN": "NGÂN HÀNG NHÀ NƯỚC VIỆT NAM"})
-		if len(matches) != 0 || len(rejected) != 1 || rejected[0].Name != "relation_text_grammar" {
+		if len(matches) != 1 || len(rejected) != 0 || len(matches[0].Targets) != 1 || matches[0].Targets[0].Anchor != p.Path {
 			t.Errorf("%s matches=%+v gaps=%+v", tc.path, matches, rejected)
 		}
 	}

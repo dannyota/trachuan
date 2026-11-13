@@ -13,7 +13,7 @@ import (
 	"danny.vn/trachuan/apps/corpus/internal/stage/relate/textrule"
 )
 
-func TestTextRelations_FixtureArtifactBytesUnchanged(t *testing.T) {
+func TestTextRelations_FixtureArtifactBytes(t *testing.T) {
 	type fixture struct {
 		Name, Text string
 		Want       json.RawMessage
@@ -45,7 +45,7 @@ func TestTextRelations_FixtureArtifactBytesUnchanged(t *testing.T) {
 			cases = append(cases, f)
 		}
 	}
-	// Relations-text version 2 adds these forms with its own recipe change.
+	// Inserted labels are accepted under the scoped text recipe.
 	for _, locator := range []string{"khoản 2a Điều 5", "điểm a1 Điều 5", "điểm a Điều 5a"} {
 		cases = append(cases, fixture{Name: "inserted/" + locator, Text: "Bãi bỏ " + locator + " của Thông tư 39/2016/TT-NHNN."})
 	}
@@ -93,10 +93,10 @@ func TestTextRelations_FixtureArtifactBytesUnchanged(t *testing.T) {
 		t.Fatal(err)
 	}
 	got := fmt.Sprintf("%x", sha256.Sum256(data))
-	// Captured with the original locator parser, before anchor.Segment composition.
-	const want = "d84aa18b567c80798243903813ca00e36cc9587a32879098f4e2261bffbf5ce6"
+	// Captured after the three inserted-label cases changed from gaps to rows.
+	const want = "954a9d69525669bfdd36c5298cf5b7e3d5dca524f38158ae65e02e7a51657f7b"
 	if got != want {
 		t.Fatalf("%d fixture outputs: SHA-256=%s want %s", len(cases), got, want)
 	}
-	t.Logf("%d fixture outputs and gap projections are byte-identical: %s", len(cases), got)
+	t.Logf("%d fixture outputs and gap projections match the digest: %s", len(cases), got)
 }

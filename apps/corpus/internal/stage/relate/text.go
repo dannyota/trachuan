@@ -88,6 +88,12 @@ func textRelations(dir string, rows []relation, issuers map[string]string) ([]re
 			targets[number] = append(targets[number], row)
 		}
 	}
+	children := map[string][]chunk.Node{}
+	for _, node := range provisions {
+		if node.ParentNodeID != nil {
+			children[*node.ParentNodeID] = append(children[*node.ParentNodeID], node)
+		}
+	}
 	type identity struct{ node, target, anchor, kind string }
 	seen := map[identity]bool{}
 	emitted := []relation{}
@@ -95,7 +101,14 @@ func textRelations(dir string, rows []relation, issuers map[string]string) ([]re
 		if article.Kind != "dieu" || strings.TrimSpace(article.Text) == "" {
 			continue
 		}
-		matches, parseGaps := textrule.Parse(article.Text, issuers)
+		units, ordered := articleReading(article, children)
+		if !ordered {
+			report.addGap("relation_text_source_order", article.Text, article.NodeID)
+			continue
+		}
+		matches, parseGaps := textrule.ParseUnits(units, issuers, func(number string) string {
+			return targetGap(targets[retrieval.NormalizeNumber(number)])
+		})
 		for _, gap := range parseGaps {
 			report.addGap(gap.Name, gap.Detail, article.NodeID)
 		}
@@ -136,4 +149,102 @@ func (r relationReport) resolveGaps(rows []relation, expected map[string]bool) [
 		}
 	}
 	return gaps
+}
+
+func targetGap(linked []relation) string {
+	if len(linked) == 0 {
+		return "relation_text_unlinked_target"
+	}
+	if len(linked) > 1 {
+		return "relation_text_ambiguous_target"
+	}
+	return ""
+}
+
+func articleReading(article chunk.Node, children map[string][]chunk.Node) ([]textrule.Unit, bool) {
+	scoped, _ := textrule.ScopeLayout(article.Text)
+	if !scoped {
+		return []textrule.Unit{{Text: article.Text, Kind: article.Kind, Close: true}}, true
+	}
+	units, ok := readTextNode(article, children, map[string]bool{})
+	if !ok {
+		return nil, false
+	}
+	if len(units) > 0 {
+		units[len(units)-1].Close = true
+	}
+	return units, true
+}
+
+func readTextNode(node chunk.Node, children map[string][]chunk.Node, active map[string]bool) ([]textrule.Unit, bool) {
+	if active[node.NodeID] {
+		return nil, false
+	}
+	active[node.NodeID] = true
+	defer delete(active, node.NodeID)
+	descendants, ok := descendantTexts(node.NodeID, children, map[string]bool{})
+	if !ok {
+		return nil, false
+	}
+	text := textrule.CanonicalText(node.Text)
+	contained := 0
+	for _, desc := range descendants {
+		if strings.Contains(text, desc) {
+			contained++
+		}
+	}
+	if len(descendants) == 0 || contained == len(descendants) {
+		return []textrule.Unit{{Text: node.Text, Kind: node.Kind, Close: node.Kind == "dieu"}}, true
+	}
+	if contained != 0 {
+		return nil, false
+	}
+	next := "diem"
+	if node.Kind == "dieu" {
+		_, leadOnly := textrule.ScopeLayout(node.Text)
+		if !leadOnly {
+			return nil, false
+		}
+		next = "khoan"
+	} else if node.Kind != "khoan" {
+		return nil, false
+	}
+	direct := append([]chunk.Node(nil), children[node.NodeID]...)
+	sort.Slice(direct, func(i, j int) bool { return direct[i].Ordinal < direct[j].Ordinal })
+	units := []textrule.Unit{{Text: node.Text, Kind: node.Kind, Close: node.Kind == "dieu"}}
+	for i, child := range direct {
+		if child.Kind != next || (i > 0 && direct[i-1].Ordinal == child.Ordinal) {
+			return nil, false
+		}
+		part, valid := readTextNode(child, children, active)
+		if !valid {
+			return nil, false
+		}
+		if node.Kind == "dieu" && len(part) > 0 {
+			part[0].FirstItem = true
+			part[len(part)-1].Close = true
+		}
+		units = append(units, part...)
+	}
+	return units, true
+}
+
+func descendantTexts(id string, children map[string][]chunk.Node, active map[string]bool) ([]string, bool) {
+	if active[id] {
+		return nil, false
+	}
+	active[id] = true
+	defer delete(active, id)
+	var out []string
+	for _, child := range children[id] {
+		if text := textrule.CanonicalText(child.Text); text != "" {
+			out = append(out, text)
+		}
+		more, ok := descendantTexts(child.NodeID, children, active)
+		if !ok {
+			return nil, false
+		}
+		out = append(out, more...)
+	}
+	return out, true
 }
