@@ -119,16 +119,11 @@ Options:
    activation the server loads every chunk's sparse vector into postings by term
    (about 16 million entries, about 130 MB) with each chunk's document; per
    request it accumulates scores for the query's terms, applies the same
-   eligibility over the release's documents and keeps the top 50 per arm. To
-   return the same rows, the score must be bit-identical to pgvector's `<#>`:
-   float32 products summed in ascending index order, widened to float64
-   ([pgvector 0.8.7](https://github.com/pgvector/pgvector/blob/v0.8.7/src/sparsevec.c)),
-   and FMA used exactly when the host's pgvector build uses it. Before it ships,
-   a check on the host compares every chunk's score against the production
-   pgvector binary for the evaluation cases and a random query sample; any
-   difference blocks it. Expected under 10 ms for both arms instead of about 540
-   ms, an estimate to measure. Memory goes into the server row of
-   [host budgets](budgets-host.md#host-memory-estimates).
+   eligibility over the release's documents, picks a candidate set that provably
+   contains each arm's top 50, and lets SQL `<#>` score only that set
+   ([sparse postings](sparse-postings.md)). Expected under 10 ms for both arms
+   instead of about 540 ms, an estimate to measure. Memory goes into the server
+   row of [host budgets](budgets-host.md#host-memory-estimates).
 4. HNSW on `sparsevec` (recipe change). Every chunk fits the 1,000 non-zero
    limit, but results are approximate, the same eligible-pool problem as dense
    applies, and the recipe says no sparse HNSW. Rejected.
@@ -253,8 +248,8 @@ The primary runs these; they are requirements, not results.
 - Every identical-row change compares the full search responses (both arms,
   `detail:"full"`) before and after on the evaluation cases and 200 sampled
   queries, byte for byte.
-- The in-memory sparse arm compares every chunk's score bit for bit with the
-  host's pgvector `<#>` on those queries.
+- The in-memory sparse arm runs the parity checks in
+  [sparse postings](sparse-postings.md#checks).
 - `auto_explain` over a fixed request set (unfiltered, filtered, MCP compact,
   topic page) before and after each change, reporting statement time and shared
   blocks; on the host after deploy, the same set through the public routes.
