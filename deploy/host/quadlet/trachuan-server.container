@@ -1,0 +1,37 @@
+[Unit]
+Description=trachuan API, MCP and OAuth
+Requires=trachuan-migrate.service trachuan-queryembed.service
+After=trachuan-migrate.service trachuan-queryembed.service
+
+[Container]
+Image=@SERVER_IMAGE@
+ContainerName=trachuan-server
+Network=host
+User=65532:65532
+DropCapability=ALL
+NoNewPrivileges=true
+ReadOnly=true
+EnvironmentFile=/srv/trachuan/host/server.env
+Secret=google_client_secret,type=env,target=GOOGLE_CLIENT_SECRET
+Secret=server_auth_database_url,type=env,target=SERVER_AUTH_DATABASE_URL
+Secret=server_corpus_database_url,type=env,target=SERVER_CORPUS_DATABASE_URL
+Exec=serve
+PodmanArgs=--cpus=4 --memory=2500m --memory-reservation=2000m
+HealthCmd=["/app/healthcheck", "http://127.0.0.1:8080/healthz"]
+HealthInterval=30s
+HealthTimeout=3s
+HealthRetries=3
+HealthStartPeriod=30s
+HealthOnFailure=kill
+LogDriver=journald
+
+[Service]
+ExecStartPre=/srv/trachuan/host/check-signup.sh /srv/trachuan/host/server.env
+ExecStartPre=/srv/trachuan/host/wait-healthy.sh trachuan-queryembed
+Restart=on-failure
+RestartSec=5
+TimeoutStartSec=180
+LimitCORE=0
+
+[Install]
+WantedBy=default.target

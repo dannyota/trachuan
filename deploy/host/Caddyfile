@@ -1,0 +1,52 @@
+{
+	admin off
+	acme_ca https://acme-v02.api.letsencrypt.org/directory
+	# Avoid recording OAuth URLs, user addresses or cookies in runtime errors.
+	log default {
+		level ERROR
+		format filter {
+			wrap json
+			request delete
+		}
+	}
+}
+
+(tls_policy) {
+	bind 0.0.0.0
+	tls {
+		issuer acme {
+			dir https://acme-v02.api.letsencrypt.org/directory
+		}
+	}
+	header Strict-Transport-Security "max-age=31536000"
+}
+
+www.trachuan.vn {
+	import tls_policy
+	redir https://trachuan.vn{uri} permanent
+}
+
+trachuan.vn {
+	import tls_policy
+	import /etc/caddy/proof/*.caddy
+	encode zstd gzip
+	@server path /api/v1/* /mcp /mcp/* /oauth/* /.well-known/oauth-*
+	handle @server {
+		reverse_proxy 127.0.0.1:8080 {
+			header_up -Forwarded
+			header_up -X-Real-IP
+		}
+	}
+	handle {
+		reverse_proxy 127.0.0.1:3000 {
+			header_up -Forwarded
+			header_up -X-Real-IP
+		}
+	}
+}
+
+# The local health check does not require DNS or a certificate.
+http://127.0.0.1:8081 {
+	bind 127.0.0.1
+	respond /healthz 200
+}

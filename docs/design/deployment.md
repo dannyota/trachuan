@@ -124,16 +124,18 @@ key. The host's
 [instance principal](https://docs.oracle.com/en-us/iaas/Content/Identity/Tasks/callingservicesfrominstances.htm)
 fetches
 [secret bundles](https://docs.oracle.com/en-us/iaas/Content/secret-management/Tasks/get-secrets-contents.htm)
-at deploy into Podman secrets: Google client secret, token signing keys,
-database passwords, the corpus manifest public key and backup credentials. Scope
-the dynamic group to this instance and `read secret-bundles` to named secrets;
-no secret management or tenancy-wide grants. Decode through a pipe or private
-runtime file, never logs, command arguments, images or OpenTofu state. Recreate
-affected containers after secret replacement. Instance identity is a host-wide
-privilege: block application-container access to instance metadata; a
-compromised host can still obtain its allowed secrets. Keep an owner recovery
-copy outside the host. Signing keys rotate; the server verifies with all current
-keys and signs with the newest.
+at deploy into Podman secrets: Google client secret, database passwords, the
+corpus manifest public key and backup credentials. Scope the dynamic group to
+this instance and `read secret-bundles` to named secrets; no secret management
+or tenancy-wide grants. Decode through a pipe or private runtime file, never
+logs, command arguments, images or OpenTofu state. Recreate affected containers
+after secret replacement. Instance identity is a host-wide privilege: block
+application-container access to instance metadata; a compromised host can still
+obtain its allowed secrets. Keep an owner recovery copy outside the host. The
+server holds no token signing key: access and refresh tokens are opaque database
+rows, and the consent form is bound to the session's CSRF secret. In the first
+production phase the owner enters the secrets as Podman secrets over SSH
+([host runbook](../runbooks/host.md)).
 
 ## Object Storage
 

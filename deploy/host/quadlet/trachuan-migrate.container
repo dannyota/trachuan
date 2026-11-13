@@ -1,0 +1,28 @@
+[Unit]
+Description=trachuan auth migrations
+Requires=trachuan-postgres.service
+After=trachuan-postgres.service
+
+[Container]
+Image=@SERVER_IMAGE@
+ContainerName=trachuan-migrate
+Network=host
+User=65532:65532
+DropCapability=ALL
+NoNewPrivileges=true
+ReadOnly=true
+Secret=server_auth_database_url,type=env,target=SERVER_AUTH_DATABASE_URL
+Exec=migrate
+HealthCmd=none
+PodmanArgs=--cpus=4 --memory=512m
+LogDriver=journald
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStartPre=/srv/trachuan/host/wait-healthy.sh trachuan-postgres
+ExecStartPre=/srv/trachuan/host/check-postgres-auth.sh
+Restart=on-failure
+RestartSec=5
+TimeoutStartSec=180
+LimitCORE=0

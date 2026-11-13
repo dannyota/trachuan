@@ -27,13 +27,13 @@ Phase 1 (this plan) serves the site to the owner only. Phase 2 must land before 
 ## Task 2: Host bundle
 
 - [ ] `deploy/host/install.sh` (idempotent, run as `opc` with sudo): Podman and container-selinux from the OL9 repositories, user `trachuan` with lingering and subordinate IDs, `net.ipv4.ip_unprivileged_port_start=80`, firewalld HTTP, HTTPS and HTTP/3, data directories with SELinux labels. Verifies the Podman version and cgroup v2 the design requires.
-- [ ] Quadlet units under `deploy/host/quadlet/`: one network, PostgreSQL with a named volume, queryembed, server, web, Caddy; images by digest from one env file; secrets by Podman secret name only (`google_client_secret`, `postgres_password`, `auth_db_password`, `corpus_reader_password`, token signing keys as the server requires).
-- [ ] `deploy/host/Caddyfile`: apex only, `www` redirects to the apex; `/api/v1/*`, `/mcp*`, OAuth routes and `/.well-known/*` to the server, the rest to web; Let's Encrypt as the only issuer; `SERVER_TRUSTED_PROXIES` set to the Caddy network.
+- [ ] Quadlet units under `deploy/host/quadlet/`: host networking with every service on 127.0.0.1 except Caddy, PostgreSQL with a named volume, queryembed, server, web, Caddy; images by digest from one env file; secrets by Podman secret name only (`google_client_secret`, `postgres_password`, `auth_db_password`, `corpus_reader_password`, no token signing key (the server uses none)).
+- [ ] `deploy/host/Caddyfile`: apex only, `www` redirects to the apex; `/api/v1/*`, `/mcp`, `/mcp/*`, `/oauth/*` and `/.well-known/oauth-*` to the server, the rest to web; `/healthz` and `/readyz` are checked on the host, not at the edge; Let's Encrypt as the only issuer; `SERVER_TRUSTED_PROXIES` and `NUXT_TRUSTED_PROXIES` set to `127.0.0.1/32`, since rootless bridge port forwarding would hide client addresses.
 - [ ] `docs/runbooks/host.md`: install, owner secret creation (commands that read the value from the owner's terminal, never from arguments or files in the repository), first start, pulling a new digest, corpus release restore and activation, health checks.
 
 ## Task 3: Install and start (primary)
 
-- [ ] Run `install.sh` over SSH; owner creates the Podman secrets; pull images by digest; apply auth migrations; start; `curl https://trachuan.vn/healthz` and `/readyz`; TLS certificate from Let's Encrypt.
+- [ ] Run `install.sh` over SSH; owner creates the Podman secrets; pull images by digest; apply auth migrations; start; health checks on 127.0.0.1 on the host; outside smoke on `https://trachuan.vn` (home page, public status, OAuth metadata, `/mcp` 401); TLS certificate from Let's Encrypt.
 
 ## Task 4: Corpus release (primary)
 
