@@ -34,11 +34,13 @@ OAuth endpoints and `/.well-known/*` all live on the apex; `www.trachuan.vn`
 redirects to it in Caddy. DNS is a Cloudflare zone on the Free plan used for DNS
 only, as for aboutme.vn and danny.vn: every record has `proxied = false`, so
 browsers and MCP clients reach Caddy directly and Caddy obtains the TLS
-certificates. OpenTofu owns the records with the `cloudflare` provider,
-following aboutme's `deploy/vn/dns`: A records for the apex and `www` pointing
-at the reserved public IP, and CAA records that allow only the certificate
-authority Caddy uses. The zone and the registrar's name servers are set up by
-the owner before the host plan.
+certificates. The records are managed with Cloudflare's official
+[`cf` CLI](https://developers.cloudflare.com/cf/) (owner decision, 2026-11-13):
+A records for the apex and `www` pointing at the reserved public IP
+`129.221.172.197`, and CAA records `0 issue "letsencrypt.org"` and
+`0 issuewild ";"`, because Caddy is configured with Let's Encrypt as its only
+issuer. Universal SSL is disabled on the zone, since no record is proxied;
+otherwise Cloudflare adds CAA records for its own certificate authorities.
 
 ## Images and deploy
 
@@ -280,10 +282,13 @@ Singapore. Never send application personal data to alerts or CI artifacts.
 
 After independent review confirms the revision: provision/import infrastructure,
 configure secrets and the host pull policy, then prove upload/restore, rollback
-and off-host alarms before changing DNS. Reuse the measurement instance only
-after inventory and OpenTofu import; do not destroy it to recreate capacity. If
-AWS data exists, stop writes for a final backup, verify the copied objects and
-restore in OCI, then cut over. Keep old data and decryption keys until OCI
-restore proof and the retention period finish. Do not run two auth writers or
-roll back to a stale auth database after accepting new writes; reconcile those
-writes and apply the existing auth restore epoch rule first.
+and off-host alarms before any account other than the owner's signs in. DNS
+already points at the host: the first production phase serves only the owner,
+with images pulled by digest over SSH and secrets entered as Podman secrets.
+Reuse the measurement instance only after inventory and OpenTofu import; do not
+destroy it to recreate capacity. If AWS data exists, stop writes for a final
+backup, verify the copied objects and restore in OCI, then cut over. Keep old
+data and decryption keys until OCI restore proof and the retention period
+finish. Do not run two auth writers or roll back to a stale auth database after
+accepting new writes; reconcile those writes and apply the existing auth restore
+epoch rule first.
