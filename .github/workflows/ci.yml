@@ -239,7 +239,7 @@ jobs:
           cache-dependency-path: apps/web/package-lock.json
       - run: npm ci
         working-directory: apps/web
-      # The runner image already has Chrome's system libraries; only the browser download is needed.
+      # ubuntu-24.04 ships Chrome and its libraries (actions/runner-images Ubuntu2404-Readme.md), so only the Playwright browser download is needed.
       - run: npx playwright install chromium
         working-directory: apps/web
       - run: make e2e
@@ -267,7 +267,7 @@ jobs:
           cache: npm
           cache-dependency-path: apps/web/package-lock.json
       - run: npm ci
-      # The runner image already has Chrome's system libraries; only the browser download is needed.
+      # ubuntu-24.04 ships Chrome and its libraries (actions/runner-images Ubuntu2404-Readme.md), so only the Playwright browser download is needed.
       - run: npx playwright install chromium
       - run: npm run lint
       - run: npm run typecheck
