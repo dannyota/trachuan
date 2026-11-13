@@ -79,13 +79,16 @@ Options:
    `context`. Partial HNSW indexes cover `current` and `other`; `context` has
    none. The current arm takes its pool from the `current` index; the
    non-current arm from `other`, plus an exact pass over the few `current`
-   documents outside today's validity window; historical (`as_of`) searches
-   merge both pools; named context documents are scored exactly through
-   `chunk(document_id, …)`. Pools become almost all eligible, so the fallback
-   becomes rare, and the indexed set falls from 221,114 to about 110,700 chunks
-   (HNSW about 0.85 GB instead of 1.73 GB, a better fit in the buffer cache).
-   Results change wherever ANN loss changes, so this is a recipe candidate
-   measured under item 4, with ANN loss and cost reported under item 7.
+   documents outside the validity window of the resolved collection date (the
+   request date, or the date a cursor pins); historical (`as_of`) searches merge
+   both pools and apply date-only eligibility to both, conflict documents
+   included; named context documents are scored exactly through
+   `chunk(document_id, …)` and join their arm before its depth cap. Pools become
+   almost all eligible, so the fallback becomes rare, and the indexed set falls
+   from 221,114 to about 110,700 chunks (HNSW about 0.85 GB instead of 1.73 GB,
+   a better fit in the buffer cache). Results change wherever ANN loss changes,
+   so this is a recipe candidate measured under item 4, with ANN loss and cost
+   reported under item 7.
 2. Narrow vector storage (identical rows). Move `embedding` to its own table
    with `STORAGE PLAIN`, reached through the eligible documents. That replaces
    the nine TOAST blocks per chunk with one heap block, but the exact pass still
@@ -106,7 +109,9 @@ Options:
    `ALTER TABLE chunk ALTER COLUMN sparse SET STORAGE MAIN`, so TOAST moves
    `content` and `spans` out first. Measured on a copy of the release's chunk
    columns: 0 of 221,114 vectors out of line instead of 42,882, and one arm scan
-   took 66 to 75 ms instead of 95 to 111 ms (−30%).
+   took 66 to 75 ms instead of 95 to 111 ms (−30%). `MAIN` still allows out of
+   line storage as a last resort, so build reports how many vectors stay out of
+   line.
 2. One scan for both arms in SQL. Measured on the same copy, a single scan that
    ranks each arm with `row_number()` took 181 to 321 ms, slower than two
    parallel top-N scans. Rejected.
@@ -116,9 +121,11 @@ Options:
    request it accumulates scores for the query's terms, applies the same
    eligibility over the release's documents and keeps the top 50 per arm. To
    return the same rows, the score must be bit-identical to pgvector's `<#>`:
-   float32 products summed in ascending index order, and FMA used exactly when
-   the host's pgvector build uses it. A check compares every score on the
-   evaluation cases and a random query sample before it ships, and any
+   float32 products summed in ascending index order, widened to float64
+   ([pgvector 0.8.7](https://github.com/pgvector/pgvector/blob/v0.8.7/src/sparsevec.c)),
+   and FMA used exactly when the host's pgvector build uses it. Before it ships,
+   a check on the host compares every chunk's score against the production
+   pgvector binary for the evaluation cases and a random query sample; any
    difference blocks it. Expected under 10 ms for both arms instead of about 540
    ms, an estimate to measure. Memory goes into the server row of
    [host budgets](budgets-host.md#host-memory-estimates).
@@ -141,11 +148,15 @@ Options:
    Saves one HNSW scan: 30 to 70 ms warm, up to about 1.8 s cold.
 2. Prewarm at activation with `pg_prewarm` (contrib, in the official postgres
    image the pgvector image builds on) for the HNSW index, the chunk heap and
-   its TOAST table, within the 4 GiB buffer cache. Removes the cold first search
-   (0.9 s on the host).
+   its TOAST table, within the 4 GiB buffer cache. Expected to cut the cold
+   first search (0.9 s on the host); prewarmed pages have no eviction
+   protection, so activation records the prewarm time and the first-search
+   latency ([pg_prewarm](https://www.postgresql.org/docs/18/pgprewarm.html)).
 
-Recommendation: option 1, plus option 2 at activation; both return identical
-rows. Partitioned pools (above) later shrink this cost again.
+Recommendation: option 1, plus option 2 at activation (step 4 of
+[deployment](deployment.md) already requires it; the manual
+[host runbook](../runbooks/host.md) gains it); both return identical rows.
+Partitioned pools (above) later shrink this cost again.
 
 ## Topic page
 
@@ -153,8 +164,8 @@ The documents query for node `1` takes 200 to 470 ms because of the `parent_id`
 join. Carrying `document_id` through the recursion and joining with
 `provision WHERE document_id = … AND parent_id = …` uses
 `provision_document_id_parent_id_ordinal_idx`. Measured on the release: 8 to 11
-ms instead of 250 to 330 ms, and identical rows for every active level-1 and
-level-2 node (708 rows).
+ms instead of 250 to 330 ms; over all 1,211 served nodes the query output was
+identical (5,378 rows) and took 2.7 s in total instead of 214.7 s.
 
 Recommendation: that rewrite, and a cache of the node page per release and code
 (the page depends on nothing else) under the [server caches](caching.md) rules.
@@ -182,10 +193,12 @@ depend on filters, detail or limit.
 Options:
 
 1. Cache collected arms (candidates, hydration and diagnostics, no query text)
-   by release, date, query recipe hash, query text digest, `as_of` and
-   `in_force_only`. Adding a filter or switching detail after a search then
-   skips both arms and hydration and reshapes only. Size per entry is bounded by
-   the depths; the cap goes into host budgets.
+   by release, resolved collection date (after cursor validation), query recipe
+   hash, query text digest, `as_of`, `in_force_only`, dense mode and both
+   depths. A hit still validates the request in full. Adding a filter or
+   switching detail after a search then skips both arms and hydration and
+   reshapes only. Size per entry is bounded by the depths; the cap goes into
+   host budgets.
 2. Longer response cache lifetime. It helps only identical repeats.
 
 Recommendation: option 1, with the topic page cache above.
@@ -209,25 +222,29 @@ Options:
 3. Shorten paths or snippets. Snippets are the evidence; path headings are small
    per hit. Not worth the loss.
 
-Recommendation: option 1, shipped under item 5 and kept only if the
-agent-in-the-loop check in [MCP results](mcp-results.md#evaluation) shows no
-fall in cited provisions.
+Recommendation: option 1, which needs a revision of
+[ADR 0013](../adr/0013-compact-search-and-batch-read.md) item 2 (bounded
+pointers with counts) and matching [MCP results](mcp-results.md) and guide
+changes first; it ships under item 5 and stays only if the agent-in-the-loop
+check in [MCP results](mcp-results.md#evaluation) shows no fall in cited
+provisions and lower total input tokens.
 
 ## Order and expected effect
 
 1. Topic query rewrite and node page cache: page SQL from 200 to 470 ms to about
    10 ms, then a cache hit.
 2. Dense pool once per search, prewarm at activation, `sparse` stored in the
-   heap (needs the next build): about −100 to −250 ms per search, no cold first
-   search.
+   heap (build storage, needs the next build): about −100 to −250 ms per search,
+   and a shorter cold first search.
 3. In-memory sparse postings: about −500 ms per search on the host.
 4. Arm cache: filter and detail changes after a search are about 10 ms.
-5. Compact `related` removal: about −20% compact size.
+5. Compact `related` removal after the ADR 0013 revision: about −20% compact
+   size.
 6. Partitioned ANN pools, as a recipe candidate: most exact fallbacks (140 to
    770 ms) removed.
 
-Items 1 to 5 return identical rows; item 6 changes the recipe and ships only
-under ADR 0010.
+Items 1 to 4 return identical rows; item 5 changes the MCP contract; item 6
+changes the recipe and ships only under ADR 0010.
 
 ## Checks
 
@@ -236,8 +253,8 @@ The primary runs these; they are requirements, not results.
 - Every identical-row change compares the full search responses (both arms,
   `detail:"full"`) before and after on the evaluation cases and 200 sampled
   queries, byte for byte.
-- The in-memory sparse arm compares every score bit for bit with pgvector's
-  `<#>` on those queries.
+- The in-memory sparse arm compares every chunk's score bit for bit with the
+  host's pgvector `<#>` on those queries.
 - `auto_explain` over a fixed request set (unfiltered, filtered, MCP compact,
   topic page) before and after each change, reporting statement time and shared
   blocks; on the host after deploy, the same set through the public routes.
