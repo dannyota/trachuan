@@ -75,7 +75,7 @@ func TestE2E_WebLoginTokensAndLogout(t *testing.T) {
 		t.Fatal("session cookie not cleared")
 	}
 	f.status(r, 204)
-	f.status(f.request(first, "GET", "/api/v1/me", "", "", "", ""), 401)
+	f.status(f.request(first, "GET", "/api/v1/me", "", "", "", ""), 204)
 	replay := f.client()
 	replay.Jar.SetCookies(base, []*http.Cookie{session})
 	f.status(f.request(replay, "GET", "/api/v1/me", "", "", "", ""), 401)

@@ -140,7 +140,7 @@ func me(t *testing.T, c *http.Client) (int, account) {
 }
 func TestLogin_Flow(t *testing.T) {
 	first := client(t)
-	if status, _ := me(t, first); status != 401 {
+	if status, _ := me(t, first); status != 204 {
 		t.Fatalf("signed out: %d", status)
 	}
 	if loc := login(t, first, "first@example.invalid", true); loc != "/account" {
@@ -162,7 +162,7 @@ func TestLogin_Flow(t *testing.T) {
 	if loc := login(t, unverified, "third@example.invalid", false); loc != "/login?error=login_failed" {
 		t.Fatalf("destination %q", loc)
 	}
-	if status, _ := me(t, unverified); status != 401 {
+	if status, _ := me(t, unverified); status != 204 {
 		t.Fatalf("unverified account: %d", status)
 	}
 }

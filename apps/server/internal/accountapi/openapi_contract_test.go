@@ -1,6 +1,8 @@
 package accountapi
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
@@ -11,6 +13,13 @@ import (
 )
 
 func testAccountContract(t *testing.T, coverage *contracttest.Coverage) {
+	h, _, _, _, _ := setup(t)
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "https://example.invalid/api/v1/me", nil))
+	if w.Code != http.StatusNoContent {
+		t.Fatalf("status %d", w.Code)
+	}
+	coverage.Check(t, "GET", "/api/v1/me", w)
 	cases := []struct{ method, path, actual, body string }{
 		{"GET", "/api/v1/me", "/api/v1/me", ""}, {"DELETE", "/api/v1/me", "/api/v1/me", ""},
 		{"GET", "/api/v1/me/sessions", "/api/v1/me/sessions", ""}, {"DELETE", "/api/v1/me/sessions/{id}", "/api/v1/me/sessions/1", ""},

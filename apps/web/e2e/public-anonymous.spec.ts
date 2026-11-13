@@ -19,7 +19,7 @@ test('personal data never enters the public HTML cache', async ({ browser }, tes
   }
   const context = await browser.newContext({ extraHTTPHeaders: { 'X-Forwarded-For': address } })
   const page = await context.newPage()
-  await page.route('**/api/v1/me', route => route.fulfill({ status: 401 }))
+  await page.route('**/api/v1/me', route => route.fulfill({ status: 204 }))
   const response = await page.goto('/')
   const html = await response!.text()
   expect(html).not.toContain('private0@example.test')

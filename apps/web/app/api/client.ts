@@ -53,7 +53,7 @@ export function createApi(options: Options) {
     signal?.throwIfAborted()
     const response = await send(new Request(new URL('/api/v1/me', options.origin), { signal }))
     signal?.throwIfAborted()
-    if (response.status === 401) {
+    if (response.status === 204 || response.status === 401) {
       session.account = null
       session.csrfToken = null
       session.status = 'signed-out'

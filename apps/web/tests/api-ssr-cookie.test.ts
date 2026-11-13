@@ -1,6 +1,19 @@
 import { expect, it } from 'vitest'
 import { createApi } from '../app/api/client'
 
+it.each([204, 401])('treats a %i session response as signed out', async (status) => {
+  const session = { account: { id: 1, email: 'test@example.invalid', created_at: '2026-01-01T00:00:00Z' }, csrfToken: 'token', status: 'signed-in' as const }
+  const api = createApi({ origin: 'http://localhost', session, fetch: async () => new Response(null, { status }) })
+  await api.loadSession()
+  expect(session).toEqual({ account: null, csrfToken: null, status: 'signed-out' })
+})
+
+it('loads an account and CSRF token from a 200 session response', async () => {
+  const api = createApi({ origin: 'http://localhost', fetch: async () => new Response(JSON.stringify({ id: 1, email: 'test@example.invalid', created_at: '2026-01-01T00:00:00Z', csrf_token: 'token' }), { headers: { 'content-type': 'application/json' } }) })
+  await api.loadSession()
+  expect(api.session).toEqual({ account: { id: 1, email: 'test@example.invalid', created_at: '2026-01-01T00:00:00Z' }, csrfToken: 'token', status: 'signed-in' })
+})
+
 it('forwards only the cookie and appends renewal cookies on private SSR', async () => {
   const received: Headers[] = []
   const cookies: string[] = []

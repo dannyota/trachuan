@@ -25,7 +25,7 @@ test('signed-in home search submits its draft without putting the question in a 
 
 test('home keeps the sample current, public and usable on mobile', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
-  await page.route('**/api/v1/me', route => route.fulfill({ status: 401 }))
+  await page.route('**/api/v1/me', route => route.fulfill({ status: 204 }))
   await page.goto('/')
   await expect(page.getByText('Cần đăng nhập Google để tra cứu.')).toBeVisible()
   const sample = page.locator('.home-sample .result-card')

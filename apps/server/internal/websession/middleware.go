@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"danny.vn/trachuan/apps/server/internal/apierror"
@@ -14,18 +15,20 @@ import (
 
 type principalKey struct{}
 
-// FromContext returns the web principal attached by Middleware.
 func FromContext(ctx context.Context) (Principal, bool) {
 	p, ok := ctx.Value(principalKey{}).(Principal)
 	return p, ok
 }
 
-// Middleware requires exactly one session cookie. Bearer headers never authorize
-// web requests. Use CSRF inside this middleware on web mutation routes.
 func (m *Manager) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		raw, ok := sessionToken(r)
 		if !ok {
+			if r.Method == http.MethodGet && r.URL.Path == "/api/v1/me" && !hasSessionCookie(r) {
+				w.Header().Set("Cache-Control", "no-store")
+				w.WriteHeader(http.StatusNoContent)
+				return
+			}
 			apierror.Write(w, 401, "unauthenticated")
 			return
 		}
@@ -44,6 +47,18 @@ func (m *Manager) Middleware(next http.Handler) http.Handler {
 		p := Principal{AccountID: row.AccountID, SessionID: row.ID, CSRFSecret: row.CsrfSecret}
 		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), principalKey{}, p)))
 	})
+}
+
+func hasSessionCookie(r *http.Request) bool {
+	for _, header := range r.Header.Values("Cookie") {
+		for _, part := range strings.Split(header, ";") {
+			name, _, _ := strings.Cut(strings.TrimSpace(part), "=")
+			if strings.TrimSpace(name) == sessionCookieName {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 type cacheEntry struct {
@@ -75,7 +90,6 @@ func (m *Manager) lookup(ctx context.Context, raw string) (store.GetSessionRow, 
 	defer func() {
 		m.mu.Lock()
 		delete(m.flights, fence)
-		// Retire fences as old lookups finish, even when traffic never becomes idle.
 		oldest := m.generation
 		for f := range m.flights {
 			oldest = min(oldest, f.generation)
@@ -112,8 +126,6 @@ func (m *Manager) lookup(ctx context.Context, raw string) (store.GetSessionRow, 
 			return row, false, fmt.Errorf("touch session: %w", errUnavailable)
 		}
 		if count > 0 {
-			// Touch returns a count. Read the database timestamps rather than guessing
-			// from the application clock, including when the absolute cap is near.
 			row, err = m.Store.GetSession(ctx, hash)
 			if ctx.Err() != nil {
 				return row, false, errUnavailable
@@ -144,8 +156,6 @@ func (m *Manager) lookup(ctx context.Context, raw string) (store.GetSessionRow, 
 		return row, false, errUnavailable
 	}
 	until := minTime(started.Add(m.ttl()), minTime(row.ExpiresAt, row.CreatedAt.Add(absoluteLifetime)))
-	// Keep revocation marks until each lookup finishes, so a database snapshot
-	// taken before a local revoke cannot authorize or repopulate the cache.
 	if m.accountGenerations[row.AccountID] > fence.generation {
 		return row, false, errUnauthenticated
 	}

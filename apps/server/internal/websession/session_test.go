@@ -126,7 +126,8 @@ func TestSession_RejectsRevokedExpiredBlockedEpoch(t *testing.T) {
 			}
 		})
 	}
-	for _, raw := range []string{"", "bad", rawValue(8)} {
+	assertStatus(t, serve(&Manager{}, request("")), 204)
+	for _, raw := range []string{"bad", rawValue(8)} {
 		m, _, _ := harness()
 		assertStatus(t, serve(m, request(raw)), 401)
 	}
@@ -305,7 +306,7 @@ func TestBearerNeverAuthorizesWeb(t *testing.T) {
 	m, s, raw := harness()
 	r := request("")
 	r.Header.Set("Authorization", "Bearer "+raw)
-	assertStatus(t, serve(m, r), 401)
+	assertStatus(t, serve(m, r), 204)
 	if s.reads != 0 {
 		t.Fatal("bearer queried session")
 	}
