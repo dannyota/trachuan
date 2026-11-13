@@ -315,7 +315,7 @@ func TestCollect_ExactPlanAvoidsHNSW(t *testing.T) {
 	if !strings.Contains(control, "Index Scan using chunk_embedding_hnsw") {
 		t.Fatalf("control does not use HNSW index:\n%s", control)
 	}
-	ann := explain(annSQL, append(args, 400)...)
+	ann := explain(annSQL, denseVector(v), "2025-01-01", false, []string{}, 400)
 	if !strings.Contains(ann, "Index Scan using chunk_embedding_hnsw") {
 		t.Fatalf("ANN plan does not use HNSW index:\n%s", ann)
 	}
@@ -336,8 +336,6 @@ func TestCollect_ANNFallsBackToExactOnShortfall(t *testing.T) {
 	if !a.Primary.Fallback || len(a.Primary.RawANN) != 4 || len(a.Primary.Dense) != 4 {
 		t.Fatalf("%+v", a.Primary)
 	}
-	// Raw ANN candidates stay hydrated after the fallback replaces the dense
-	// list, so evaluation can report ANN loss by identity.
 	for _, c := range a.Primary.RawANN {
 		if c.Identity.DocumentKey == "" || c.Identity.Anchor == "" || c.Group.Anchor == "" {
 			t.Fatalf("raw ANN candidate %d is not hydrated: %+v", c.ChunkID, c.Identity)

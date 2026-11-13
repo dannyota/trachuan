@@ -10,7 +10,6 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// Collect caches both candidate arms without calling the embedder.
 func (e *Engine) Collect(ctx context.Context, p Prepared, depths Depths) (Arms, error) {
 	return e.collect(ctx, p, depths, false)
 }
@@ -65,12 +64,16 @@ func (e *Engine) collectWithLexical(ctx context.Context, p Prepared, depths Dept
 	if err != nil {
 		return Arms{}, err
 	}
+	if !exact {
+		if err = annQuery(ctx, tx, groups, depths.Dense, validitySQL(annSQL, notYet), vec, date, historical, refs, pool); err != nil {
+			return Arms{}, err
+		}
+	}
 	for i, g := range groups {
 		args := []any{vec, date, historical, flags[i], depths.Dense, refs}
 		if exact {
 			g.Dense, err = denseQuery(ctx, tx, validitySQL(exactSQL, notYet), args...)
 		} else {
-			g.RawANN, err = denseQuery(ctx, tx, validitySQL(annSQL, notYet), append(args, pool)...)
 			g.Dense = g.RawANN
 		}
 		if err != nil {
