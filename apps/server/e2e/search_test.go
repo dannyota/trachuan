@@ -60,7 +60,7 @@ func TestSearch_FixtureAndDocument(t *testing.T) {
 		closeBody(response)
 		t.Fatalf("search status %d", response.StatusCode)
 	}
-	if err := json.NewDecoder(response.Body).Decode(&result); err != nil {
+	if err = json.NewDecoder(response.Body).Decode(&result); err != nil {
 		closeBody(response)
 		t.Fatal(err)
 	}

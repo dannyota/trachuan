@@ -188,3 +188,12 @@ accuracy on either cohort.
   0.911, development 0.853). Compact p95 at 20 hits 33.8k characters, full p95
   at 8 hits 84.3k; the size gate passes. Development recall@8 and MRR@8 stay
   below the trial's 76 and 0.667; the cause is not examined.
+- 2026-11-13: recipe 3 adopts the
+  [sibling clause merge](../design/retrieval-siblings.md). Research override on
+  run vn/20261113_1 against release vn/20261112_2, reproduced after rebase: old
+  product recall@20 86 of 93 unchanged, MRR@8 0.7182 to 0.7247, recall@8 78 to
+  81; development recall@20 83 to 84 of 113, MRR@8 0.6533 to 0.6616, recall@8 74
+  to 81; current-law precision 534 of 534 and 390 of 390; abstention 0.911 and
+  0.853; compact p95 at 20 hits 35,519 characters, so the size gate passes. Item
+  4 passes. Serving accepts recipes 2 and 3; the first recipe-3 build
+  recalibrates.

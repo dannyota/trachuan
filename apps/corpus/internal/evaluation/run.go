@@ -61,7 +61,9 @@ func run(ctx context.Context, engine Engine, suite Suite, o Options, limit int) 
 	o = withReleaseRecipes(o, rel, modes)
 	recipe := rel.RetrievalRecipe
 	r := Report{Version: 1, Scorer: ScorerVersion, Status: "complete", Country: rel.Country, Rel: rel.Rel, BuildArtifactSHA256: o.BuildArtifactSHA256, DumpSHA256: o.DumpSHA256, FixtureHashes: suite.Hashes, IdentityMapSHA256: suite.Hashes.IdentityMap, Recipes: o.Recipes, EvaluationDate: date, DatabaseInstanceKind: o.DatabaseInstanceKind, Software: o.Software, Calibration: o.Calibration, Cohorts: map[string]Cohort{"legacy": {}, "old_product": {}}, TimingsMS: map[string]any{}, CacheManifest: map[string]any{}, PreviousDiff: map[string]any{"reason": "no previous report"}, NotRun: map[string]string{"development": "not_run", "taxonomy": "out_of_scope", "filtered": "out_of_scope"}, Limitations: []string{"Small sample size; calibration fits the scored product cohorts.", "Legacy results use the product recipe and are not a reproduction of the legacy engine."}}
-	r.MergeSiblings = o.MergeSiblings
+	if recipe.Version != 2 {
+		r.RetrievalRecipeVersion = recipe.Version
+	}
 	r.CapOverride = o.CapOverride
 	r.ArticleCapOverride = o.ArticleCapOverride
 	r.ValidityOverrides = o.ValidityOverrides
@@ -71,9 +73,9 @@ func run(ctx context.Context, engine Engine, suite Suite, o Options, limit int) 
 		if err != nil {
 			return Report{}, Cache{}, fmt.Errorf("read previous report: %w", err)
 		}
-		var prior Report
-		if err = json.Unmarshal(b, &prior); err != nil {
-			return Report{}, Cache{}, fmt.Errorf("decode previous report: %w", err)
+		prior, err := decodePreviousReport(b)
+		if err != nil {
+			return Report{}, Cache{}, err
 		}
 		if prior.Version != 1 || (prior.Scorer != r.Scorer && prior.Scorer != "agent-eval/1" && prior.Scorer != "agent-eval/2") || prior.FixtureHashes.Legacy != r.FixtureHashes.Legacy || prior.FixtureHashes.OldProduct != r.FixtureHashes.OldProduct {
 			return Report{}, Cache{}, fmt.Errorf("incompatible previous scorer or fixtures")
@@ -87,8 +89,6 @@ func run(ctx context.Context, engine Engine, suite Suite, o Options, limit int) 
 			r.PreviousDiff = map[string]any{"reason": "incompatible cap override"}
 		} else if (prior.ArticleCapOverride == nil) != (o.ArticleCapOverride == nil) || (prior.ArticleCapOverride != nil && o.ArticleCapOverride != nil && *prior.ArticleCapOverride != *o.ArticleCapOverride) {
 			r.PreviousDiff = map[string]any{"reason": "incompatible article cap override"}
-		} else if prior.MergeSiblings != o.MergeSiblings {
-			r.PreviousDiff = map[string]any{"reason": "incompatible sibling merge override"}
 		} else if !sameValidityOverrides(prior.ValidityOverrides, o.ValidityOverrides) {
 			r.PreviousDiff = map[string]any{"reason": "incompatible validity policy"}
 		} else {
@@ -200,29 +200,18 @@ func run(ctx context.Context, engine Engine, suite Suite, o Options, limit int) 
 						return Report{}, Cache{}, err
 					}
 				}
-				var merge *retrieval.SiblingMerge
-				if o.MergeSiblings {
-					merge, err = hydrateSiblingMerge(ctx, engine, arms)
-					if err != nil {
-						return Report{}, Cache{}, fmt.Errorf("hydrate sibling articles for case %s: %w", c.ID, err)
-					}
-				}
 				collected[mode] = arms
 				eligibility := validityEligibilityHash(date, force, o.ValidityOverrides, arms)
 				ar := ArmRow{Version: 1, CaseID: c.ID, Cohort: cohort, ReleaseHash: o.DumpSHA256, RecipeHashes: o.Recipes, EvaluationDate: date, Mode: mode, Depths: arms.Depths, Route: arms.Validation.Routed, EligibilityHash: eligibility, Dense: cachedCandidates(arms.Primary.Dense, false), Lexical: cachedCandidates(arms.Primary.Lexical, true), RawANN: cachedCandidates(arms.Primary.RawANN, false), Fallback: arms.Primary.Fallback, Diagnostics: map[string]any{}}
 				for _, armMode := range []retrieval.ArmMode{"hybrid", "dense", "lexical"} {
 					for _, limit := range []int{8, 20} {
 						var response retrieval.Response
-						if o.MergeSiblings || o.ArticleCapOverride != nil {
+						if o.ArticleCapOverride != nil {
 							var tail *int
 							if force {
 								tail = o.NonCurrentTail
 							}
-							if o.MergeSiblings {
-								response, err = merge.ShapeWithArticleCap(arms, recipe, limit, armMode, o.CapOverride, tail, o.ArticleCapOverride)
-							} else {
-								response, err = retrieval.ShapeWithArticleCap(arms, recipe, limit, armMode, o.CapOverride, tail, o.ArticleCapOverride)
-							}
+							response, err = retrieval.ShapeWithArticleCap(arms, recipe, limit, armMode, o.CapOverride, tail, o.ArticleCapOverride)
 						} else if force && o.NonCurrentTail != nil {
 							response, err = retrieval.ShapeWithNonCurrentTail(arms, recipe, limit, armMode, o.CapOverride, *o.NonCurrentTail)
 						} else {
@@ -312,11 +301,11 @@ func run(ctx context.Context, engine Engine, suite Suite, o Options, limit int) 
 						if force {
 							diagnosticTail = o.NonCurrentTail
 						}
-						losses, gaps, err := caseDiagnostics(arms, diagnosticRecipe, limit, armMode, cohort, c.ExpectedCitations, diagnosticEntries, response, diagnosticTail, o.ArticleCapOverride, merge)
+						losses, gaps, err := caseDiagnostics(arms, diagnosticRecipe, limit, armMode, cohort, c.ExpectedCitations, diagnosticEntries, response, diagnosticTail, o.ArticleCapOverride)
 						if err != nil {
 							return Report{}, Cache{}, fmt.Errorf("diagnose case %s: %w", c.ID, err)
 						}
-						result := CaseResult{ValidityOverrides: o.ValidityOverrides, MergeSiblings: o.MergeSiblings, CapOverride: o.CapOverride, ArticleCapOverride: o.ArticleCapOverride, CaseID: c.ID, Cohort: cohort, Mode: mode, Arms: armMode, Limit: limit, Expected: len(ranks), Ranks: ranks, Matched: matchedCount(ranks), Mapped: caseMappings(entries[c.ID], len(ranks)), Abstain: response.Abstain, Reason: response.Reason, Gaps: gaps, Losses: losses, Characters: chars}
+						result := CaseResult{ValidityOverrides: o.ValidityOverrides, CapOverride: o.CapOverride, ArticleCapOverride: o.ArticleCapOverride, CaseID: c.ID, Cohort: cohort, Mode: mode, Arms: armMode, Limit: limit, Expected: len(ranks), Ranks: ranks, Matched: matchedCount(ranks), Mapped: caseMappings(entries[c.ID], len(ranks)), Abstain: response.Abstain, Reason: response.Reason, Gaps: gaps, Losses: losses, Characters: chars}
 						if cohort != "legacy" {
 							result.MappingIssues = o.Mapping[c.ID]
 						}
@@ -365,7 +354,15 @@ func run(ctx context.Context, engine Engine, suite Suite, o Options, limit int) 
 		r.ANNResults[cohort] = summarizeANN(subset, cohort)
 	}
 	if previous != nil {
-		r.PreviousDiff = map[string]any{"label": "corpus changes are coverage changes", "cases": compareCases(previous.Cases, r.Cases)}
+		diff := map[string]any{"label": "corpus changes are coverage changes", "cases": compareCases(previous.Cases, r.Cases)}
+		priorVersion := previous.RetrievalRecipeVersion
+		if priorVersion == 0 {
+			priorVersion = 2
+		}
+		if priorVersion != recipe.Version {
+			diff["previous_recipe_version"], diff["recipe_version"] = priorVersion, recipe.Version
+		}
+		r.PreviousDiff = diff
 	}
 	r.CacheManifest = map[string]any{"arm_rows": len(cache.Arms), "query_rows": len(cache.Vectors), "query_index_entries": len(cache.Index), "cache_key": cacheKey(cache, o, suite.Hashes)}
 	return r, cache, nil

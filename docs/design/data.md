@@ -51,7 +51,7 @@ Rules:
   dense recipe (model, dimensions, pooling, prompt, quantization), lexical
   recipe (tokenizer version, normalization, BM25 parameters), lexical stats,
   chunk recipe, retrieval recipe, taxonomy version, source manifest, evaluation.
-  Recipe 1 retrieval includes provisional threshold provenance. The immutable
+  The retrieval recipe includes provisional threshold provenance. The immutable
   build dump starts with evaluation `not_run`; [eval](evaluation.md) produces a
   hash-linked sidecar. The host plan must bind that sidecar in its signed
   manifest. The server holds no corpus configuration except the release pointer.

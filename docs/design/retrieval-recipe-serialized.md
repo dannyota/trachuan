@@ -3,8 +3,9 @@
 This note owns the serialized form of the retrieval recipe and its checks; it
 was split from [retrieval recipe](retrieval-recipe.md).
 
-`retrieval_recipe` contains `version:2` (recipe 2; version 1 had cap 3 and no
-tail), `dense_depth`, `lexical_depth`,
+`retrieval_recipe` contains `version:2` or `version:3` (version 1 had cap 3 and
+no tail; version 3 is version 2 plus the sibling merge), `dense_depth`,
+`lexical_depth`,
 `ann:{pool_min,pool_multiplier,ef_max,iterative_scan,plan_cache_mode, max_scan_tuples,scan_mem_multiplier,fallback}`,
 `rrf:{k,dense_weight, lexical_weight,routed_lexical_weight}`, `ties:"score-id"`,
 `routing:"vn-number/1"`, `group:"nearest-khoan"`, `reducer:"max"`,
@@ -15,8 +16,14 @@ tail), `dense_depth`, `lexical_depth`,
 `evidence:"source-spans/1"`, `evidence_rune_cap`, `relation_cap`,
 `relation_evidence_rune_cap`,
 `abstention:{statistic:"first-group-best-member-cosine",threshold, status:"provisional-old-product"|"old-product+development",calibration_sha256}`.
-Hash compact fixed-field JSON. Serving does not accept arbitrary recipe
-overrides.
+Version 3 adds the fixed field `sibling_merge:"article-clauses/1"` after
+`family_collapse`; version 2 has no such field. Hash compact fixed-field JSON.
+Serving does not accept arbitrary recipe overrides.
+
+Serving accepts exactly versions 2 and 3 and follows each release's own recipe
+for grouping, shaping and hydration; any other version is refused. Builds and
+calibration write version 3. Drop version 2 once no retained release uses it;
+never relabel an old release.
 
 Any status or date eligibility change bumps `validity`, and any class
 eligibility change bumps `context_scope`, even if the response shape is

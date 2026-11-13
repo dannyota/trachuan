@@ -13,7 +13,11 @@ import (
 func main() {
 	ctx := context.Background()
 	if len(os.Args) == 2 && os.Args[1] == "create" {
-		name, key, err := fixture.Create(ctx)
+		create := fixture.Create
+		if os.Getenv("E2E_RECIPE3") == "1" {
+			create = fixture.CreateRecipe3
+		}
+		name, key, err := create(ctx)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "fixture create failed:", err)
 			if name != "" {

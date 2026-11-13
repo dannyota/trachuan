@@ -119,7 +119,7 @@ func TestReadCache_NextDecodedFirstAndPagingIdentical(t *testing.T) {
 		t.Run(item.Handle+item.From+map[bool]string{true: "relations"}[item.Relations], func(t *testing.T) {
 			now := time.Date(2099, 1, 1, 16, 59, 59, 0, time.UTC)
 			cache := &memoryCache{}
-			e := &Engine{release: Release{Rel: "20990101", RetrievalRecipe: Recipe1()}, options: Options{Now: func() time.Time { return now }, Sequences: cache}}
+			e := &Engine{release: Release{Rel: "20990101", RetrievalRecipe: Recipe2()}, options: Options{Now: func() time.Time { return now }, Sequences: cache}}
 			tx := &readCacheTx{}
 			chain := func(cached bool) []string {
 				t.Helper()
@@ -187,7 +187,7 @@ func TestReadCache_NextDecodedFirstAndPagingIdentical(t *testing.T) {
 }
 
 func TestReadCache_RelationWindowsStayBounded(t *testing.T) {
-	e := &Engine{release: Release{Rel: "20990101", RetrievalRecipe: Recipe1()}, options: Options{Now: time.Now}}
+	e := &Engine{release: Release{Rel: "20990101", RetrievalRecipe: Recipe2()}, options: Options{Now: time.Now}}
 	tx := &readCacheTx{relationCount: 45}
 	c := cursor{V: 1, Release: e.release.Rel, Item: ReadItem{Handle: "vn:1", Relations: true}}
 	cache := &memoryCache{}

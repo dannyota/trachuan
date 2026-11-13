@@ -1,14 +1,13 @@
 package retrieval
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"reflect"
 	"testing"
 )
 
-func siblingFixture(t *testing.T) (Arms, Recipe, *SiblingMerge) {
+func siblingFixture(t *testing.T) (Arms, Recipe, map[int64]Candidate) {
 	t.Helper()
 	a, r := shapeFixture("first clause")
 	article := a.Primary.Dense[0].Ancestors[0]
@@ -28,7 +27,9 @@ func siblingFixture(t *testing.T) (Arms, Recipe, *SiblingMerge) {
 	c1 := makeClause(2, "clause-1", "first clause", 1)
 	a.Primary = ArmGroup{Dense: []Candidate{c2, c1}, Members: []Candidate{c2, c1}}
 	ac := Candidate{GroupID: article.ID, Group: article.Identity, Identity: article.Identity, Document: c1.Document, Ancestors: []Provision{article}, Descendants: []Provision{article, c1.Provision, c2.Provision}}
-	return a, r, &SiblingMerge{Articles: map[int64]Candidate{article.ID: ac}}
+	r.Version, r.SiblingMerge = 3, "article-clauses/1"
+	a.Articles = map[int64]Candidate{article.ID: ac}
+	return a, r, a.Articles
 }
 
 func TestSiblingMerge_RankingRules(t *testing.T) {
@@ -56,7 +57,7 @@ func TestSiblingMerge_RankingRules(t *testing.T) {
 			if tc.limit == 1 {
 				r.HydrateMultiplier = 1
 			}
-			got, err := RankWithSiblingMerge(a, r, tc.limit, "dense", nil)
+			got, err := Rank(a, r, tc.limit, "dense")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -75,7 +76,7 @@ func TestSiblingMerge_ScoreCosineAndCap(t *testing.T) {
 	a.Primary.Members = append(a.Primary.Members, extra)
 	r.DocumentCap = 1
 	wantScore := r.RRF.DenseWeight / float64(r.RRF.K+1)
-	got, err := RankWithSiblingMerge(a, r, 8, "dense", nil)
+	got, err := Rank(a, r, 8, "dense")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -103,11 +104,11 @@ func TestSiblingMerge_TextAndCoverage(t *testing.T) {
 			a, r, m := siblingFixture(t)
 			r.EvidenceRuneCap = tc.cap
 			if tc.extra {
-				ac := m.Articles[1]
+				ac := m[1]
 				ac.Descendants = append(ac.Descendants, Provision{ID: 4, ParentID: &ac.GroupID, Kind: "khoan", Identity: Identity{Anchor: "other"}, Text: "other"})
-				m.Articles[1] = ac
+				m[1] = ac
 			}
-			out, err := m.Shape(a, r, 8, "dense", nil, nil)
+			out, err := Shape(a, r, 8, "dense")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -128,7 +129,7 @@ func TestSiblingMerge_TextAndCoverage(t *testing.T) {
 }
 
 func TestSiblingMerge_PointBestAndAbsentBody(t *testing.T) {
-	a, r, m := siblingFixture(t)
+	a, r, _ := siblingFixture(t)
 	c := a.Primary.Dense[0]
 	point := Provision{ID: 8, ParentID: &c.GroupID, Identity: Identity{Country: "vn", DocumentKey: "vn:1", Anchor: "point"}, NodeID: "point", Kind: "diem", Text: "second clause"}
 	c.Identity = point.Identity
@@ -137,7 +138,7 @@ func TestSiblingMerge_PointBestAndAbsentBody(t *testing.T) {
 	c.Spans = []byte(`[{"node_id":"a","start":0,"end":4,"content_start":0,"content_end":4,"role":"lead"},{"node_id":"point","start":0,"end":13,"content_start":5,"content_end":18,"role":"body"}]`)
 	a.Primary.Dense[0] = c
 	a.Primary.Members[0] = c
-	out, err := m.Shape(a, r, 8, "dense", nil, nil)
+	out, err := Shape(a, r, 8, "dense")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -147,7 +148,7 @@ func TestSiblingMerge_PointBestAndAbsentBody(t *testing.T) {
 	c.Spans = nil
 	a.Primary.Dense[0] = c
 	a.Primary.Members[0] = c
-	out, err = m.Shape(a, r, 8, "dense", nil, nil)
+	out, err = Shape(a, r, 8, "dense")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -157,11 +158,11 @@ func TestSiblingMerge_PointBestAndAbsentBody(t *testing.T) {
 }
 
 func TestSiblingMerge_PartitionsAndFrozenWindow(t *testing.T) {
-	a, r, m := siblingFixture(t)
+	a, r, _ := siblingFixture(t)
 	a.NonCurrent = a.Primary
 	r.HydrateMultiplier = 1
 	// The full limit admits both clauses; reserving a tail must not shrink that window.
-	out, err := m.Shape(a, r, 2, "dense", nil, nil)
+	out, err := Shape(a, r, 2, "dense")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -169,7 +170,7 @@ func TestSiblingMerge_PartitionsAndFrozenWindow(t *testing.T) {
 		t.Fatalf("response %+v", out)
 	}
 	// A later clause cached for the article must never join a one-chunk window.
-	out, err = m.Shape(a, r, 1, "dense", nil, nil)
+	out, err = Shape(a, r, 1, "dense")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -180,12 +181,12 @@ func TestSiblingMerge_PartitionsAndFrozenWindow(t *testing.T) {
 
 func TestSiblingMerge_ArticleAttachments(t *testing.T) {
 	a, r, m := siblingFixture(t)
-	ac := m.Articles[1]
+	ac := m[1]
 	ac.Warnings = []Warning{{Kind: "repeals"}}
 	ac.WarningsOmitted = 2
 	ac.Relations = []SourceRelation{{Value: Relation{Kind: "repeals", Evidence: "article relation"}}}
-	m.Articles[1] = ac
-	out, err := m.Shape(a, r, 8, "dense", nil, nil)
+	m[1] = ac
+	out, err := Shape(a, r, 8, "dense")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -195,8 +196,9 @@ func TestSiblingMerge_ArticleAttachments(t *testing.T) {
 	}
 }
 
-func TestSiblingMerge_DefaultParity(t *testing.T) {
+func TestRecipe2_DefaultParity(t *testing.T) {
 	a, r, _ := siblingFixture(t)
+	r.Version, r.SiblingMerge = 2, ""
 	before, _ := json.Marshal(r)
 	recipeHash := r.Hash()
 	for _, mode := range []ArmMode{"hybrid", "dense", "lexical"} {
@@ -245,7 +247,7 @@ func TestSiblingMerge_FrozenMembershipAndBackfill(t *testing.T) {
 	a.Primary.Dense = append(a.Primary.Dense, third)
 	a.Primary.Members = append(a.Primary.Members, third)
 	r.HydrateMultiplier = 1
-	got, err := RankWithSiblingMerge(a, r, 2, "dense", nil)
+	got, err := Rank(a, r, 2, "dense")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -253,12 +255,12 @@ func TestSiblingMerge_FrozenMembershipAndBackfill(t *testing.T) {
 		t.Fatalf("late clause joined %+v", got)
 	}
 	// A cached article-owned group outside the window must not veto the merge.
-	article := m.Articles[1]
+	article := m[1]
 	article.ChunkID = 8
 	article.Cosine = .5
 	a.Primary.Dense[2] = article
 	a.Primary.Members = append(a.Primary.Members, article)
-	got, err = RankWithSiblingMerge(a, r, 2, "dense", nil)
+	got, err = Rank(a, r, 2, "dense")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -278,7 +280,7 @@ func TestSiblingMerge_FrozenMembershipAndBackfill(t *testing.T) {
 	other.Group.DocumentKey = "other"
 	a.Primary.Dense = append(a.Primary.Dense, own, other)
 	a.Primary.Members = append(a.Primary.Members, own, other)
-	got, err = RankWithSiblingMerge(a, r, 3, "dense", nil)
+	got, err = Rank(a, r, 3, "dense")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -288,7 +290,7 @@ func TestSiblingMerge_FrozenMembershipAndBackfill(t *testing.T) {
 }
 
 func TestSiblingMerge_ConfidenceUsesFirstResultBeforeCap(t *testing.T) {
-	a, r, m := siblingFixture(t)
+	a, r, _ := siblingFixture(t)
 	later := a.Primary.Dense[0]
 	later.ChunkID, later.GroupID = 20, 20
 	later.Group.Anchor = "later"
@@ -300,14 +302,14 @@ func TestSiblingMerge_ConfidenceUsesFirstResultBeforeCap(t *testing.T) {
 	a.Primary.Members = append(a.Primary.Members, later)
 	threshold := .6
 	r.Abstention.Threshold = &threshold
-	got, err := RankWithSiblingMerge(a, r, 8, "dense", nil)
+	got, err := Rank(a, r, 8, "dense")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if *got.FirstBestCosine != .5 {
 		t.Fatalf("statistic %+v", got)
 	}
-	out, err := m.Shape(a, r, 8, "dense", nil, nil)
+	out, err := Shape(a, r, 8, "dense")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -329,17 +331,17 @@ func TestSiblingMerge_ArticleSubstantiveCoverage(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			a, r, m := siblingFixture(t)
-			ac := m.Articles[1]
+			ac := m[1]
 			ac.Descendants = append([]Provision(nil), ac.Descendants...)
 			ac.Descendants[0].Text = tc.articleText
-			m.Articles[1] = ac
+			m[1] = ac
 			if !tc.lead {
 				for i := range a.Primary.Dense {
 					a.Primary.Dense[i].Spans = nil
 				}
 				a.Primary.Members = append([]Candidate(nil), a.Primary.Dense...)
 			}
-			out, err := m.Shape(a, r, 8, "dense", nil, nil)
+			out, err := Shape(a, r, 8, "dense")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -351,13 +353,13 @@ func TestSiblingMerge_ArticleSubstantiveCoverage(t *testing.T) {
 }
 
 func TestSiblingMerge_UnselectedNestedClauseNeverEarnsCredit(t *testing.T) {
-	a, r, m := siblingFixture(t)
+	a, r, _ := siblingFixture(t)
 	c := a.Primary.Dense[0]
 	nested := Provision{ID: 9, ParentID: &c.GroupID, Identity: Identity{Country: "vn", DocumentKey: "vn:1", Anchor: "unselected"}, NodeID: "nested", Kind: "khoan", Text: "nested clause"}
 	c.Descendants = append(append([]Provision(nil), c.Descendants...), nested)
 	a.Primary.Dense[0] = c
 	a.Primary.Members[0] = c
-	out, err := m.Shape(a, r, 8, "dense", nil, nil)
+	out, err := Shape(a, r, 8, "dense")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -368,18 +370,10 @@ func TestSiblingMerge_UnselectedNestedClauseNeverEarnsCredit(t *testing.T) {
 	}
 }
 
-func TestSiblingMerge_HydrationAndCacheGuards(t *testing.T) {
-	if _, err := (&Engine{}).HydrateSiblingMerge(context.Background(), Arms{}); err == nil {
-		t.Fatal("serving engine accepted override")
-	}
+func TestSiblingMerge_CacheGuard(t *testing.T) {
 	a, r, _ := siblingFixture(t)
-	if _, err := (&SiblingMerge{}).Shape(a, r, 8, "dense", nil, nil); !errors.Is(err, ErrCacheInsufficient) {
+	a.Articles = nil
+	if _, err := Shape(a, r, 8, "dense"); !errors.Is(err, ErrCacheInsufficient) {
 		t.Fatalf("missing article: %v", err)
-	}
-	if _, ok := reflect.TypeOf(Request{}).FieldByName("MergeSiblings"); ok {
-		t.Fatal("serving exposes override")
-	}
-	if _, ok := reflect.TypeOf(Recipe{}).FieldByName("MergeSiblings"); ok {
-		t.Fatal("recipe exposes override")
 	}
 }

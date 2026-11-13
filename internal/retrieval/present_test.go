@@ -77,9 +77,9 @@ func TestPresent_FullHitFields(t *testing.T) {
 
 func TestPresent_RelationFlagsDoNotChangeJSON(t *testing.T) {
 	r := Relation{SourceKey: "vn:1", Kind: "repeals"}
-	without, _ := shapeRelations([]SourceRelation{{Value: r}}, Recipe1(), Identity{})
+	without, _ := shapeRelations([]SourceRelation{{Value: r}}, Recipe2(), Identity{})
 	r.SourceDocKey, r.TargetDocKey = "vn:1", "vn:2"
-	with, _ := shapeRelations([]SourceRelation{{Value: r, SourceInHit: true, TargetInHit: true}}, Recipe1(), Identity{})
+	with, _ := shapeRelations([]SourceRelation{{Value: r, SourceInHit: true, TargetInHit: true}}, Recipe2(), Identity{})
 	if len(with) != 1 || !with[0].SourceInHit || !with[0].TargetInHit {
 		t.Fatalf("shaped flags: %+v", with)
 	}

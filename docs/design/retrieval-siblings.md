@@ -1,6 +1,7 @@
 # Sibling clause merge
 
-A candidate rule for retrieval recipe 3, measured first as a research override.
+The sibling clause merge of retrieval recipe 3, adopted on 2026-11-13 after ADR
+0010 item 4 passed; the numbers are in ADR 0010 History.
 [Retrieval recipe](retrieval-recipe.md) owns grouping, capping and hit text;
 this note owns only the merge of sibling clause groups.
 
@@ -54,10 +55,22 @@ use the merged groups as they are and never add members later.
 - The document cap and the non-current tail count a merged group once. Relations
   and warnings attach as for the article group, so a member keeps the warnings
   whose target is the member or its ancestor.
+- Hydration: for recipe 3, `Collect` also hydrates, in the same read-only
+  transaction, everything a merged hit needs for every `dieu` that is the
+  nearest article of two or more clause groups among the hydrated candidates:
+  the article provision, its lead spans, its relations and its warnings. Shaping
+  and paging then stay cache-only.
+- Paging ([retrieval](retrieval.md)) compares by constituent clause. In the
+  continuation shaped at the list cap, a group whose constituents were all
+  listed is skipped. A merged group with some constituents listed is replaced,
+  at its position, by its unlisted constituents as single clause hits in member
+  rank order. Any other group is listed as before. No clause appears twice and
+  none is lost when the wider window merges differently from the first page.
 
 ## Measurement
 
-The research override `corpus eval --merge-siblings` applies the rule in eval
-only. It is adopted as recipe 3 only under ADR 0010 item 4 against the release
-vn/20261112_2 on both cohorts, with the compact size gate passing. Record the
-numbers in ADR 0010 History and move the rule into the retrieval recipe then.
+The rule was measured with the research override `corpus eval --merge-siblings`
+against release vn/20261112_2 on both cohorts, with the compact size gate. It
+passed ADR 0010 item 4 and became recipe 3. The release recipe now decides: the
+override is rejected with a message naming the release recipe, while
+`--article-cap` stays a research tool on both recipes.

@@ -56,7 +56,7 @@ func hydrateTrees(ctx context.Context, tx pgx.Tx, ids []int64) (map[int64][]Prov
  ) selected ON true JOIN LATERAL (SELECT * FROM relation WHERE id=selected.id OFFSET 0) r ON true
  LEFT JOIN document sd ON sd.id=r.source_document_id LEFT JOIN document td ON td.id=r.target_document_id
  LEFT JOIN LATERAL (SELECT anchor FROM provision WHERE id=r.source_provision_id OFFSET 0) sp ON true LEFT JOIN LATERAL (SELECT path FROM provision WHERE id=e.group_id OFFSET 0) gp ON true LEFT JOIN LATERAL (SELECT * FROM provision WHERE id=r.target_provision_id OFFSET 0) tp ON true`
-	rows, err = tx.Query(ctx, relationSQL, ids, Recipe1().RelationCap+1)
+	rows, err = tx.Query(ctx, relationSQL, ids, Recipe2().RelationCap+1)
 	if err != nil {
 		return nil, nil, databaseFailure("hydrate relations failed", err)
 	}

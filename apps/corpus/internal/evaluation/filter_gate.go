@@ -57,7 +57,7 @@ type filterState struct {
 func newFilterState(ctx context.Context, engine Engine, suite Suite, o Options) (filterState, error) {
 	s := filterState{gate: FilterGate{Cohorts: map[string]map[string]FilterCohort{}, Cases: []FilterCase{}}}
 	status := "out_of_scope"
-	if o.MergeSiblings || o.CapOverride != nil || o.ArticleCapOverride != nil || o.NonCurrentTail != nil || o.HistoricalPolicy != nil || o.NotYetEligible {
+	if o.CapOverride != nil || o.ArticleCapOverride != nil || o.NonCurrentTail != nil || o.HistoricalPolicy != nil || o.NotYetEligible {
 		status = "not_run"
 		s.gate.Reason = "research_override"
 	} else {
@@ -99,7 +99,7 @@ func newFilterState(ctx context.Context, engine Engine, suite Suite, o Options) 
 		}
 	}
 	for _, mode := range []retrieval.Mode{"exact", "ann"} {
-		s.gate.Modes = append(s.gate.Modes, Floor{Metric: Metric{Mode: mode, Arms: "hybrid", Limit: 8, Name: "filter_gate", ValidityOverrides: o.ValidityOverrides, MergeSiblings: o.MergeSiblings, CapOverride: o.CapOverride, ArticleCapOverride: o.ArticleCapOverride}, Floor: 1, Status: status})
+		s.gate.Modes = append(s.gate.Modes, Floor{Metric: Metric{Mode: mode, Arms: "hybrid", Limit: 8, Name: "filter_gate", ValidityOverrides: o.ValidityOverrides, CapOverride: o.CapOverride, ArticleCapOverride: o.ArticleCapOverride}, Floor: 1, Status: status})
 		s.gate.Cohorts[string(mode)] = map[string]FilterCohort{}
 		for _, name := range []string{"inside", "partial", "outside"} {
 			s.gate.Cohorts[string(mode)][name] = FilterCohort{Skipped: map[string]int{}}

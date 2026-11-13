@@ -281,7 +281,7 @@ func TestEvalCLI_RequireFloorsDevelopment(t *testing.T) {
 type cliCapEngine struct{ date retrieval.Date }
 
 func (e cliCapEngine) Release() retrieval.Release {
-	r := retrieval.Recipe1()
+	r := retrieval.Recipe2()
 	threshold := 0.0
 	r.Abstention.Threshold = &threshold
 	return retrieval.Release{Country: "vn", Rel: "test", RetrievalRecipe: r}
@@ -471,36 +471,25 @@ func TestEvalCLI_ArticleCapForwarded(t *testing.T) {
 	}
 }
 
-func TestEvalCLI_MergeSiblingsRecorded(t *testing.T) {
-	prepare := func(context.Context, string, string, string) (evalTarget, error) {
-		return evalTarget{runner: cliMergeStage{}, close: func() {}}, nil
+func TestEvalCLI_MergeSiblingsRejectedBeforeWork(t *testing.T) {
+	for _, version := range []int{2, 3} {
+		prepared := false
+		prepare := func(context.Context, string, string, string) (evalTarget, error) {
+			prepared = true
+			return evalTarget{}, nil
+		}
+		lookup := func(context.Context, string, string) (int, error) { return version, nil }
+		var stderr bytes.Buffer
+		out := filepath.Join(t.TempDir(), "report")
+		code := runEvalWith(context.Background(), []string{"vn", "20990101", "--out", out, "--merge-siblings"}, &stderr, prepare, lookup)
+		want := fmt.Sprintf("--merge-siblings is no longer an override; release vn/20990101 uses retrieval recipe %d, and recipe 3 merges siblings by default", version)
+		if code != 1 || prepared || !strings.Contains(stderr.String(), want) {
+			t.Fatalf("exit %d prepared %t error %s", code, prepared, stderr.String())
+		}
+		if _, err := os.Stat(out); !os.IsNotExist(err) {
+			t.Fatalf("output exists: %v", err)
+		}
 	}
-	out := filepath.Join(t.TempDir(), "report")
-	var stderr bytes.Buffer
-	if code := runEvalWith(context.Background(), []string{"vn", "20990101", "--out", out, "--merge-siblings"}, &stderr, prepare); code != 0 {
-		t.Fatalf("exit %d: %s", code, stderr.String())
-	}
-	b, err := os.ReadFile(filepath.Join(out, "report.json"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	var r evaluation.Report
-	if err = json.Unmarshal(b, &r); err != nil {
-		t.Fatal(err)
-	}
-	if !r.MergeSiblings {
-		t.Fatal("merge override not recorded")
-	}
-}
-
-type cliMergeStage struct{}
-
-func (cliMergeStage) Evaluate(_ context.Context, _ stage.Env, _ stage.Run, o evaluation.Options) (evaluation.Report, evaluation.Cache, error) {
-	return evaluation.Report{Status: "complete", MergeSiblings: o.MergeSiblings, EvaluationDate: retrieval.Date{Year: 2099, Month: 1, Day: 1}}, evaluation.Cache{}, nil
-}
-
-func (e cliCapEngine) HydrateSiblingMerge(context.Context, retrieval.Arms) (*retrieval.SiblingMerge, error) {
-	return &retrieval.SiblingMerge{}, nil
 }
 
 func TestEvalCLI_CombinedResearchOverrides(t *testing.T) {
@@ -509,7 +498,7 @@ func TestEvalCLI_CombinedResearchOverrides(t *testing.T) {
 	}
 	out := filepath.Join(t.TempDir(), "report")
 	var stderr bytes.Buffer
-	if code := runEvalWith(context.Background(), []string{"vn", "20990101", "--out", out, "--cap", "2", "--article-cap", "1", "--merge-siblings"}, &stderr, prepare); code != 0 {
+	if code := runEvalWith(context.Background(), []string{"vn", "20990101", "--out", out, "--cap", "2", "--article-cap", "1"}, &stderr, prepare); code != 0 {
 		t.Fatalf("exit %d: %s", code, stderr.String())
 	}
 	data, err := os.ReadFile(filepath.Join(out, "report.json"))
@@ -520,31 +509,32 @@ func TestEvalCLI_CombinedResearchOverrides(t *testing.T) {
 	if err = json.Unmarshal(data, &r); err != nil {
 		t.Fatal(err)
 	}
-	if !r.MergeSiblings || r.CapOverride == nil || *r.CapOverride != 2 || r.ArticleCapOverride == nil || *r.ArticleCapOverride != 1 {
+	if r.CapOverride == nil || *r.CapOverride != 2 || r.ArticleCapOverride == nil || *r.ArticleCapOverride != 1 {
 		t.Fatalf("report overrides %+v", r)
 	}
 	if r.FilterGate.Reason != "research_override" || r.FilterGate.Modes[0].Status != "not_run" {
 		t.Fatalf("filter gate %+v", r.FilterGate)
 	}
 	for _, c := range r.Cases {
-		if !c.MergeSiblings || c.CapOverride == nil || *c.CapOverride != 2 || c.ArticleCapOverride == nil || *c.ArticleCapOverride != 1 {
+		if c.CapOverride == nil || *c.CapOverride != 2 || c.ArticleCapOverride == nil || *c.ArticleCapOverride != 1 {
 			t.Fatalf("case overrides %+v", c)
 		}
 	}
 	for _, cohort := range r.Cohorts {
 		for _, metric := range cohort.Metrics {
-			if !metric.MergeSiblings || metric.ArticleCapOverride == nil || *metric.ArticleCapOverride != 1 {
+			if metric.ArticleCapOverride == nil || *metric.ArticleCapOverride != 1 {
 				t.Fatalf("metric overrides %+v", metric)
 			}
 		}
 	}
 }
 
-func combinedCapsFixture() (retrieval.Arms, retrieval.Recipe, *retrieval.SiblingMerge) {
+func combinedCapsFixture() (retrieval.Arms, retrieval.Recipe) {
 	engine := cliCapEngine{retrieval.Date{Year: 2099, Month: 1, Day: 1}}
 	recipe := engine.Release().RetrievalRecipe
 	recipe.NonCurrentTail = 0
-	merge := &retrieval.SiblingMerge{Articles: map[int64]retrieval.Candidate{}}
+	articles := map[int64]retrieval.Candidate{}
+	recipe.Version, recipe.SiblingMerge = 3, "article-clauses/1"
 	candidates := []retrieval.Candidate{}
 	for i, articleID := range []int64{100, 100, 100, 200, 300, 400, 500} {
 		doc := "doc"
@@ -560,19 +550,20 @@ func combinedCapsFixture() (retrieval.Arms, retrieval.Recipe, *retrieval.Sibling
 		p := retrieval.Provision{ID: id, ParentID: &article.ID, Kind: kind, Ordinal: i, Preorder: i, Identity: retrieval.Identity{Country: "vn", DocumentKey: doc, Anchor: fmt.Sprintf("node-%d", id)}, Text: fmt.Sprintf("text %d", id)}
 		c := retrieval.Candidate{ChunkID: id, GroupID: id, ProvisionID: id, Identity: p.Identity, Group: p.Identity, Cosine: .9, Ancestors: []retrieval.Provision{article, p}, Descendants: []retrieval.Provision{p}, Document: retrieval.Document{Number: doc, IsCurrent: true, StatusClass: "in_force"}}
 		candidates = append(candidates, c)
-		ac, exists := merge.Articles[articleID]
+		ac, exists := articles[articleID]
 		if !exists {
 			ac = retrieval.Candidate{GroupID: articleID, Group: article.Identity, Identity: article.Identity, Ancestors: []retrieval.Provision{article}, Descendants: []retrieval.Provision{article}, Document: c.Document}
 		}
 		ac.Descendants = append(ac.Descendants, p)
-		merge.Articles[articleID] = ac
+		articles[articleID] = ac
 	}
 	arms := retrieval.Arms{Validation: retrieval.Validation{Accepted: true}, Depths: retrieval.Depths{Dense: 50, Lexical: 50}, Date: engine.date, Primary: retrieval.ArmGroup{Dense: candidates, Lexical: candidates, Members: candidates}}
-	return arms, recipe, merge
+	arms.Articles = articles
+	return arms, recipe
 }
 
 func TestEvalCombinedCaps_MergeBeforeBothCaps(t *testing.T) {
-	arms, recipe, merge := combinedCapsFixture()
+	arms, recipe := combinedCapsFixture()
 	document := retrieval.CapOverride(2)
 	article := retrieval.ArticleCapOverride(1)
 	for _, mode := range []retrieval.ArmMode{"dense", "lexical", "hybrid"} {
@@ -580,11 +571,11 @@ func TestEvalCombinedCaps_MergeBeforeBothCaps(t *testing.T) {
 			t.Run(fmt.Sprintf("%s/%d", mode, limit), func(t *testing.T) {
 				want := []string{"article-100", "node-4", "node-6", "node-7", "node-3", "node-5"}
 				want = want[:limit]
-				ranking, err := retrieval.RankWithSiblingAndArticleCap(arms, recipe, limit, mode, &document, &article)
+				ranking, err := retrieval.RankWithArticleCap(arms, recipe, limit, mode, &document, &article)
 				if err != nil {
 					t.Fatal(err)
 				}
-				response, err := merge.ShapeWithArticleCap(arms, recipe, limit, mode, &document, nil, &article)
+				response, err := retrieval.ShapeWithArticleCap(arms, recipe, limit, mode, &document, nil, &article)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -610,7 +601,7 @@ func TestEvalCombinedCaps_MergeBeforeBothCaps(t *testing.T) {
 	}
 	arms.NonCurrent = arms.Primary
 	tail := 1
-	response, err := merge.ShapeWithArticleCap(arms, recipe, 4, "hybrid", &document, &tail, &article)
+	response, err := retrieval.ShapeWithArticleCap(arms, recipe, 4, "hybrid", &document, &tail, &article)
 	if err != nil {
 		t.Fatal(err)
 	}

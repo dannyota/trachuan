@@ -149,7 +149,9 @@ nearest `khoan` ancestor; otherwise use its owning provision. Article-owned
 chunks stay articles, and non-article chunks stay their owner. Use actual parent
 links, not labels. Group score is maximum member fused score, never a sum.
 Retain the best member tie key and all included member identities for
-provenance.
+provenance. Recipe 3 then merges sibling clause groups of one article inside
+this window, per partition and in `Rank` and `Shape` alike, before the document
+cap, by the [sibling clause merge](retrieval-siblings.md); recipe 2 does not.
 
 Compute exact cosine for every chunk mapped to each hydrated group, including
 members absent from the dense pool and lexical-only hits. Group best cosine is
@@ -175,8 +177,9 @@ Recipe 2 is the release-1 recipe; its first build's results are in
 per-document cap in rank order: take capped hits while collecting excess hits
 into a demoted list; if fewer than `limit` remain, append demoted hits in
 original order until full. This is a diversity preference, not a hard loss of
-evidence. Do not aggregate articles, promote sibling counts or append unbounded
-related hits. Use the same processing for dense and lexical controls.
+evidence. Beyond the recipe 3 sibling merge, do not aggregate articles, promote
+sibling counts or append unbounded related hits. Use the same processing for
+dense and lexical controls.
 
 ## Validity and evidence
 

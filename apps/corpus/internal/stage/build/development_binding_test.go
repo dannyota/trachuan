@@ -13,9 +13,12 @@ import (
 	"danny.vn/trachuan/apps/corpus/internal/evaluation"
 	"danny.vn/trachuan/apps/corpus/internal/stage"
 	"danny.vn/trachuan/internal/corpusdb"
+	"danny.vn/trachuan/internal/retrieval"
 )
 
 type bindingOptions struct {
+	recipe    *retrieval.Recipe
+	recipe2   bool
 	durations map[string]int64
 	taxonomy  *TaxonomyStats
 }
@@ -31,6 +34,9 @@ func bindingArtifact(t *testing.T, binding *string, oldRecipe bool, options ...b
 	inv := Inventory{Country: "vn", SourceListHash: "sources"}
 	input := New(cfg).inputHash(run.Country, run.Rel, inv, correctionInput{})
 	recipe := New(cfg).Recipe(run.Snapshot)
+	if opts.recipe2 {
+		recipe = New(cfg).recipeForRetrieval(run.Snapshot, retrieval.Recipe2())
+	}
 	rowRecipe := recipe
 	if oldRecipe {
 		rowRecipe = strings.Repeat("b", 64)
@@ -41,10 +47,20 @@ func bindingArtifact(t *testing.T, binding *string, oldRecipe bool, options ...b
 		"taxonomy": TaxonomyStats{}, "version": 1, "country": run.Country, "rel": run.Rel, "database_name": "corpus_vn_20990101", "schema_version": corpusdb.SchemaVersion,
 		"build_input_hash": input, "build_recipe_hash": rowRecipe, "source_manifest_hash": inv.SourceManifestHash(), "identity_inventory_hash": inv.IdentityHash(), "identity_map_sha256": "map",
 		"worker_version": "worker", "built_at": time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC),
-		"durations_ms":     map[string]int64{"total": 1},
-		"dump":             map[string]any{"sha256": hashBytes(dump), "bytes": len(dump), "format": "custom"},
-		"retrieval_recipe": map[string]any{"abstention": map[string]any{"threshold": 0, "calibration_sha256": hashBytes(calibration)}},
+		"durations_ms": map[string]int64{"total": 1},
+		"dump":         map[string]any{"sha256": hashBytes(dump), "bytes": len(dump), "format": "custom"},
 	}
+	policy := retrieval.Recipe3()
+	if opts.recipe2 {
+		policy = retrieval.Recipe2()
+	}
+	if opts.recipe != nil {
+		policy = *opts.recipe
+	}
+	threshold := 0.0
+	policy.Abstention.Threshold = &threshold
+	policy.Abstention.CalibrationSHA256 = hashBytes(calibration)
+	record["retrieval_recipe"] = policy
 	if opts.durations != nil {
 		record["durations_ms"] = opts.durations
 	}
@@ -178,5 +194,24 @@ func TestVerifyBuildArtifact_PopulatedTaxonomy(t *testing.T) {
 	}
 	if record.Taxonomy == nil || *record.Taxonomy != stats || record.TaxonomyVersion != "fixture-version" {
 		t.Fatalf("taxonomy=%+v version=%q", record.Taxonomy, record.TaxonomyVersion)
+	}
+}
+
+func TestVerifyForRun_Recipe2ArtifactAndCommittedHash(t *testing.T) {
+	binding := "current-fixture"
+	artifacts, art, run, cfg, recipe := bindingArtifact(t, &binding, false, bindingOptions{recipe2: true})
+	for _, mismatch := range []bool{false, true} {
+		row := recipe
+		if mismatch {
+			row = New(cfg).Recipe(run.Snapshot)
+		}
+		raw, err := json.Marshal(map[string]any{"items": []any{map[string]any{"stage": "build", "item_key": "vn/20990101", "state": "done", "path": art.Path, "input_hash": art.InputHash, "recipe_hash": row, "artifact_sha256": art.SHA256}}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = VerifyForRun(context.Background(), cfg, inventoryQueryStub{raw: raw}, artifacts, run)
+		if (err != nil) != mismatch {
+			t.Fatalf("mismatch %t error %v", mismatch, err)
+		}
 	}
 }

@@ -34,11 +34,14 @@ func (it *textIterator) Next(context.Context) (string, bool, error) {
 	return text, true, nil
 }
 
-func populate(ctx context.Context, db *pgxpool.Pool, rel string) error {
+func populateWithRecipe(ctx context.Context, db *pgxpool.Pool, rel string, recipe3 bool) error {
 	hash := strings.Repeat("a", 64)
 	texts := []string{"Mẫu giả lập vườn thử nghiệm xanh", "Mẫu giả lập về chiếc thuyền giấy màu tím.", "Mẫu giả lập về ngọn đèn bằng gỗ.", "Mẫu giả lập về bản đồ các vì sao.", "Mẫu giả lập về chiếc hộp màu cam.", "Mẫu giả lập về cây bút làm bằng mây.", "Mẫu giả lập về bức tranh con mèo.", "Mẫu giả lập về con đường lát kẹo.", "Mẫu giả lập về hồ nước bằng giấy.", "Mẫu giả lập về đồng hồ mặt trăng.", "Mẫu giả lập về đàn chim bằng vải.", "Mẫu giả lập về quả bóng bằng lá."}
 	for i := 1; i <= 24; i++ {
 		texts = append(texts, fmt.Sprintf("Mẫu phân loại giả lập số %d.", i))
+	}
+	if recipe3 {
+		texts = append(texts, siblingTexts()...)
 	}
 	lex := lexical.Recipe1()
 	lexicalTexts := make([]string, len(texts))
@@ -143,11 +146,21 @@ func populate(ctx context.Context, db *pgxpool.Pool, rel string) error {
 	if err != nil {
 		return fmt.Errorf("insert fixture warning relations: %w", err)
 	}
+	if recipe3 {
+		extraNNZ, siblingErr := populateSiblings(ctx, db, stats, lex)
+		if siblingErr != nil {
+			return siblingErr
+		}
+		nnz = append(nnz, extraNNZ...)
+	}
 	q := embedding.TestRecipe()
 	document := q
 	document.Runtime = "fake-document"
 	dense := retrieval.DenseRecipe{Version: 1, Model: q.Model, Dimensions: q.Dimensions, Document: document, DocumentHash: document.Hash(), Query: q, QueryHash: q.Hash()}
-	recipe := retrieval.Recipe1()
+	recipe := retrieval.Recipe2()
+	if recipe3 {
+		recipe = retrieval.Recipe3()
+	}
 	threshold := 0.1
 	recipe.Abstention.Threshold = &threshold
 	recipe.Abstention.CalibrationSHA256 = hash

@@ -133,11 +133,12 @@ stops being present, and when a resolved secondary key has disposition
 
 - `corpusdb.SchemaVersion = 3`; retrieval `Open` rejects other versions with an
   error naming both.
-- Retrieval returns `class` and `source` on every hit; recipe 1 does not rank by
-  them, and admits `relation_context` documents only by number reference
-  ([retrieval](retrieval-recipe.md#validity-and-evidence)). Eligibility adds
-  "not `validity_conflict`" under the bumped validity policy. "Primary hits" in
-  metrics means the primary response group, whatever the membership class.
+- Retrieval returns `class` and `source` on every hit; the retrieval recipe does
+  not rank by them, and admits `relation_context` documents only by number
+  reference ([retrieval](retrieval-recipe.md#validity-and-evidence)).
+  Eligibility adds "not `validity_conflict`" under the bumped validity policy.
+  "Primary hits" in metrics means the primary response group, whatever the
+  membership class.
 - The identity map stays version 2: entries bind to per-document identity
   records, validated against present documents.
 - `report.json` adds `documents_by_class`, `documents_by_source`,

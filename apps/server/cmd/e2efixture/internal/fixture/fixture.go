@@ -14,7 +14,12 @@ import (
 )
 
 // Create builds a marked fixture corpus and returns its database name and run key.
-func Create(ctx context.Context) (name, key string, resultErr error) {
+func Create(ctx context.Context) (name, key string, resultErr error) { return create(ctx, false) }
+
+// CreateRecipe3 builds a recipe-3 corpus with a partial merged article.
+func CreateRecipe3(ctx context.Context) (name, key string, resultErr error) { return create(ctx, true) }
+
+func create(ctx context.Context, recipe3 bool) (name, key string, resultErr error) {
 	admin, base, err := testpg.OpenAdministrator(ctx)
 	if err != nil {
 		return "", "", err
@@ -48,7 +53,7 @@ func Create(ctx context.Context) (name, key string, resultErr error) {
 	if err := corpusdb.Apply(ctx, db, 1024); err != nil {
 		return name, key, fmt.Errorf("apply fixture schema: %w", err)
 	}
-	if err := populate(ctx, db, key[3:]); err != nil {
+	if err := populateWithRecipe(ctx, db, key[3:], recipe3); err != nil {
 		return name, key, fmt.Errorf("populate fixture: %w", err)
 	}
 	return name, key, nil

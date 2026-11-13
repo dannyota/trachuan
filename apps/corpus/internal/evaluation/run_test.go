@@ -180,7 +180,7 @@ func TestRun_CompactSizeGate(t *testing.T) {
 
 func (f *fakeEngine) Release() retrieval.Release {
 	threshold := 0.0
-	recipe := retrieval.Recipe1()
+	recipe := retrieval.Recipe2()
 	recipe.Abstention.Threshold = &threshold
 	return retrieval.Release{Country: "vn", Rel: "test", RetrievalRecipe: recipe}
 }

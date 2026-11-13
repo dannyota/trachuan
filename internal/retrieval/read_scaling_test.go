@@ -65,7 +65,7 @@ func (tx *manyNodesTx) Query(ctx context.Context, sql string, args ...any) (pgx.
 
 func TestReadRange_CancellationStopsRendering(t *testing.T) {
 	ctx := &cancelAfterChecks{Context: context.Background(), after: 4}
-	e := &Engine{release: Release{Rel: "20991110_1", RetrievalRecipe: Recipe1()}}
+	e := &Engine{release: Release{Rel: "20991110_1", RetrievalRecipe: Recipe2()}}
 	_, _, err := e.readScope(ctx, &manyNodesTx{nodes: 1000}, cursor{Item: ReadItem{Handle: "vn:1"}, WholeDocument: true})
 	if !errors.Is(err, context.Canceled) {
 		t.Fatalf("readScope error=%v, checks=%d; want cancellation", err, ctx.checks)

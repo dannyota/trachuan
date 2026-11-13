@@ -72,7 +72,7 @@ func passingEvalFloors(floors []evaluation.Floor, allowNotRun bool) bool {
 }
 
 func runEval(ctx context.Context, args []string, _ io.Writer, stderr io.Writer) int {
-	return runEvalWith(ctx, args, stderr, prepareEval)
+	return runEvalWith(ctx, args, stderr, prepareEval, readEvalRecipeVersion)
 }
 
 type evalRunner interface {
@@ -86,7 +86,7 @@ type evalTarget struct {
 	close  func()
 }
 
-func runEvalWith(ctx context.Context, args []string, stderr io.Writer, prepare func(context.Context, string, string, string) (evalTarget, error)) int {
+func runEvalWith(ctx context.Context, args []string, stderr io.Writer, prepare func(context.Context, string, string, string) (evalTarget, error), versions ...func(context.Context, string, string) (int, error)) int {
 	fail := func(err error) int { _, _ = fmt.Fprintln(stderr, err); return 1 }
 	if len(args) < 2 {
 		return fail(fmt.Errorf("usage: corpus eval <cc> <rel> --out DIR [--previous FILE] [--require-floors] [--cap N|none] [--article-cap N|none] [--merge-siblings] [--historical-policy agent] [--non-current-tail N] [--not-yet-eligible]"))
@@ -94,6 +94,16 @@ func runEvalWith(ctx context.Context, args []string, stderr io.Writer, prepare f
 	opts, err := options(args[2:], map[string]bool{"--out": true, "--previous": true, "--require-floors": false, "--cap": true, "--article-cap": true, "--merge-siblings": false, "--historical-policy": true, "--non-current-tail": true, "--not-yet-eligible": false})
 	if err != nil {
 		return fail(err)
+	}
+	if opts["--merge-siblings"] == "true" {
+		if len(versions) != 1 {
+			return fail(fmt.Errorf("--merge-siblings: release recipe lookup unavailable"))
+		}
+		version, readErr := versions[0](ctx, args[0], args[1])
+		if readErr != nil {
+			return fail(readErr)
+		}
+		return fail(fmt.Errorf("--merge-siblings is no longer an override; release %s/%s uses retrieval recipe %d, and recipe 3 merges siblings by default", args[0], args[1], version))
 	}
 	if opts["--out"] == "" {
 		return fail(fmt.Errorf("--out DIR is required"))
@@ -134,7 +144,7 @@ func runEvalWith(ctx context.Context, args []string, stderr io.Writer, prepare f
 		return fail(err)
 	}
 	defer target.close()
-	report, cache, err := target.runner.Evaluate(ctx, target.env, target.run, evaluation.Options{MergeSiblings: opts["--merge-siblings"] == "true", CapOverride: capOverride, ArticleCapOverride: articleCapOverride, ValidityOverrides: validity})
+	report, cache, err := target.runner.Evaluate(ctx, target.env, target.run, evaluation.Options{CapOverride: capOverride, ArticleCapOverride: articleCapOverride, ValidityOverrides: validity})
 	if err != nil {
 		return fail(err)
 	}

@@ -53,6 +53,10 @@ func (p responsePlan) shape(arms Arms, recipe Recipe) (Response, error) {
 }
 
 func planWithPolicy(arms Arms, recipe Recipe, limit int, mode ArmMode, cap, tail int, article ...*ArticleCapOverride) (responsePlan, error) {
+	if recipe.SiblingMerge == "article-clauses/1" && arms.Validation.Accepted {
+		return siblingPlan(arms, recipe, limit, mode, cap, tail, article...)
+	}
+
 	if tail < 0 || tail > 5 {
 		return responsePlan{}, errors.New("invalid non-current tail")
 	}
@@ -137,6 +141,14 @@ func planWithCap(arms Arms, recipe Recipe, limit int, mode ArmMode, cap int, art
 }
 
 func shapeHit(g Group, arms Arms, recipe Recipe) (Hit, error) {
+	if len(g.siblings) > 0 {
+		article, _ := groupArticle(g)
+		c, ok := arms.Articles[article.ID]
+		if !ok {
+			return Hit{}, ErrCacheInsufficient
+		}
+		g.article = &c
+	}
 	c := g.Best
 	if g.article != nil {
 		c = *g.article

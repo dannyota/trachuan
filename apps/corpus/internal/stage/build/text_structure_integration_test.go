@@ -170,7 +170,7 @@ func assertStructureHit(t *testing.T, f *loadFixture, counts Counts) {
 		t.Fatal(err)
 	}
 	hash := strings.Repeat("a", 64)
-	release := retrieval.Release{Country: "vn", Rel: f.run.Rel, SchemaVersion: corpusdb.SchemaVersion, DenseRecipe: retrieval.DenseRecipe{Version: 1, Model: query.Model, Dimensions: query.Dimensions, Document: document, DocumentHash: document.Hash(), Query: query, QueryHash: query.Hash()}, ChunkRecipe: json.RawMessage(`{}`), LexicalRecipe: f.recipes.Lexical, RetrievalRecipe: retrieval.Recipe1(), LexicalStats: counts.LexicalStats, SourceManifestHash: hash, BuildInputHash: hash, BuildRecipeHash: hash, EvaluationSummary: json.RawMessage(`{}`), BuiltAt: now}
+	release := retrieval.Release{Country: "vn", Rel: f.run.Rel, SchemaVersion: corpusdb.SchemaVersion, DenseRecipe: retrieval.DenseRecipe{Version: 1, Model: query.Model, Dimensions: query.Dimensions, Document: document, DocumentHash: document.Hash(), Query: query, QueryHash: query.Hash()}, ChunkRecipe: json.RawMessage(`{}`), LexicalRecipe: f.recipes.Lexical, RetrievalRecipe: retrieval.Recipe2(), LexicalStats: counts.LexicalStats, SourceManifestHash: hash, BuildInputHash: hash, BuildRecipeHash: hash, EvaluationSummary: json.RawMessage(`{}`), BuiltAt: now}
 	calibration := evaluation.Calibration{Threshold: 0.1}
 	calibrationJSON, err := json.Marshal(calibration)
 	if err != nil {

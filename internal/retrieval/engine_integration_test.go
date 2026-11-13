@@ -64,7 +64,7 @@ func fixture(t *testing.T) (*pgxpool.Pool, *Engine, *fakeEmbedder) {
 	t.Helper()
 	return fixtureWithTrace(t, nil)
 }
-func fixtureWithTrace(t *testing.T, trace *exactSettingsTrace) (*pgxpool.Pool, *Engine, *fakeEmbedder) {
+func fixtureWithTrace(t *testing.T, trace pgx.QueryTracer) (*pgxpool.Pool, *Engine, *fakeEmbedder) {
 	t.Helper()
 	ctx := context.Background()
 	url := testpg.NewDatabase(t, "vector", "ltree")
@@ -158,7 +158,7 @@ func fixtureWithTrace(t *testing.T, trace *exactSettingsTrace) (*pgxpool.Pool, *
 
 	q, d := embedding.QueryRecipe1(), embedding.DocumentRecipe1()
 	dense := DenseRecipe{1, q.Model, q.Dimensions, d, d.Hash(), q, q.Hash()}
-	recipe := Recipe1()
+	recipe := Recipe2()
 	threshold := 0.1
 	recipe.Abstention.Threshold = &threshold
 	recipe.Abstention.CalibrationSHA256 = hash

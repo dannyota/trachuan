@@ -19,7 +19,6 @@ type ValidityOverrides struct {
 // Options identifies the inputs and environment of an evaluation.
 type Options struct {
 	ValidityOverrides
-	MergeSiblings        bool
 	CapOverride          *retrieval.CapOverride
 	ArticleCapOverride   *retrieval.ArticleCapOverride
 	Mapping              ValidationReport
@@ -37,7 +36,6 @@ type Options struct {
 // Metric records a measured ratio with its counts.
 type Metric struct {
 	ValidityOverrides
-	MergeSiblings          bool                          `json:"merge_siblings,omitempty"`
 	CapOverride            *retrieval.CapOverride        `json:"cap_override"`
 	ArticleCapOverride     *retrieval.ArticleCapOverride `json:"article_cap_override,omitempty"`
 	Mode                   retrieval.Mode                `json:"mode"`
@@ -82,7 +80,6 @@ type Target struct {
 // NonRegression compares a metric with its previous value.
 type NonRegression struct {
 	ValidityOverrides
-	MergeSiblings          bool                          `json:"merge_siblings,omitempty"`
 	CapOverride            *retrieval.CapOverride        `json:"cap_override"`
 	ArticleCapOverride     *retrieval.ArticleCapOverride `json:"article_cap_override,omitempty"`
 	Mode                   retrieval.Mode                `json:"mode"`
@@ -107,7 +104,6 @@ type MappingIncomplete struct {
 // SizeSummary records nearest-rank evidence sizes.
 type SizeSummary struct {
 	ValidityOverrides
-	MergeSiblings      bool                          `json:"merge_siblings,omitempty"`
 	CapOverride        *retrieval.CapOverride        `json:"cap_override"`
 	ArticleCapOverride *retrieval.ArticleCapOverride `json:"article_cap_override,omitempty"`
 	Cohort             string                        `json:"cohort"`
@@ -122,7 +118,6 @@ type SizeSummary struct {
 // CaseResult contains the non-sensitive result of one response.
 type CaseResult struct {
 	ValidityOverrides
-	MergeSiblings      bool                          `json:"merge_siblings,omitempty"`
 	CapOverride        *retrieval.CapOverride        `json:"cap_override"`
 	ArticleCapOverride *retrieval.ArticleCapOverride `json:"article_cap_override,omitempty"`
 	MappingIssues      []MappingIssue                `json:"mapping_issues,omitempty"`
@@ -154,7 +149,6 @@ type Rejection struct {
 // PresentedSummary records matching and serialized response sizes.
 type PresentedSummary struct {
 	ValidityOverrides
-	MergeSiblings      bool                          `json:"merge_siblings,omitempty"`
 	CapOverride        *retrieval.CapOverride        `json:"cap_override"`
 	ArticleCapOverride *retrieval.ArticleCapOverride `json:"article_cap_override,omitempty"`
 	Cohort             string                        `json:"cohort"`
@@ -177,8 +171,8 @@ type CompactSizeGate struct {
 
 // Report is a completed diagnostic evaluation.
 type Report struct {
+	RetrievalRecipeVersion int `json:"retrieval_recipe_version,omitempty"`
 	ValidityOverrides
-	MergeSiblings                 bool                          `json:"merge_siblings,omitempty"`
 	CapOverride                   *retrieval.CapOverride        `json:"cap_override"`
 	ArticleCapOverride            *retrieval.ArticleCapOverride `json:"article_cap_override,omitempty"`
 	Presented                     []PresentedSummary            `json:"presented"`
@@ -382,7 +376,7 @@ func addLegacyDirectMetrics(r *Report) {
 				}
 				add := func(name string, num float64, den int) {
 					v := num / float64(den)
-					cohort.Metrics = append(cohort.Metrics, Metric{Mode: mode, Arms: arm, Limit: limit, Name: name, Numerator: num, Denominator: den, Value: &v, MergeSiblings: r.MergeSiblings, CapOverride: r.CapOverride, ArticleCapOverride: r.ArticleCapOverride, ValidityOverrides: r.ValidityOverrides})
+					cohort.Metrics = append(cohort.Metrics, Metric{Mode: mode, Arms: arm, Limit: limit, Name: name, Numerator: num, Denominator: den, Value: &v, CapOverride: r.CapOverride, ArticleCapOverride: r.ArticleCapOverride, ValidityOverrides: r.ValidityOverrides})
 				}
 				add("direct_recall", float64(matched), total)
 				add("direct_macro_recall", macro, positive)
