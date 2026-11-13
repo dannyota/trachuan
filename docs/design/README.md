@@ -55,6 +55,7 @@ Intended behavior of trachuan. Decisions with alternatives are in the
 | [evaluation](evaluation.md)                         | Cohorts, identity mapping, calibration, metrics and caches                                     |
 | [evaluation fixtures](evaluation-fixtures.md)       | Authored case fixtures, the identity map and identity validation                               |
 | [serialized recipe](retrieval-recipe-serialized.md) | Serialized retrieval recipe, hash and checks                                                   |
+| [retrieval performance](retrieval-performance.md)   | Measured statement costs per search and topic page; one change per cost                        |
 
 Spikes done on 2026-11-09: OAuth clients
 ([note](../research/oauth-clients-2026-11.md)), the dense model
