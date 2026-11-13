@@ -208,8 +208,9 @@ exact UTF-8 input. `report.json` has the gaps and counts, not copies of text.
 Every chunk ordinal occurs exactly once in rows or rejected; no unknown ordinal
 is allowed. Check byte size equals rows times dimensions times four, finite
 components, and L2 norm within the tolerance in budgets. Manifest verification
-precedes decoding. `Rows` is a no-op; `Resolve` regenerates the gaps. Valid rows
-survive when another chunk is too long; the item is done with explicit gaps.
+precedes decoding. `Rows` indexes the item's rows in `embed_row` (below);
+`Resolve` regenerates the gaps. Valid rows survive when another chunk is too
+long; the item is done with explicit gaps.
 
 Rows are reused per chunk input. The workshop table `embed_row` maps
 `(recipe_hash, input_sha256)` to the `artifact_id`, `row` and `token_count` of a
