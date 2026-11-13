@@ -47,12 +47,12 @@ func TestCentralPass_EightPagesInFlight(t *testing.T) {
 			for old := peak.Load(); n > old && !peak.CompareAndSwap(old, n); old = peak.Load() {
 			}
 			if q.Page > 9 {
-				return &http.Response{StatusCode: 200, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(`{"success":true,"data":{"total":9,"items":[]}}`)), Request: r}, nil
+				return &http.Response{StatusCode: 200, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(`{"success":true,"data":{"total":9000,"items":[]}}`)), Request: r}, nil
 			}
 			if q.Page > 1 {
 				<-release[q.Page]
 			}
-			body := fmt.Sprintf(`{"success":true,"data":{"total":9,"items":[{"id":"%d"}]}}`, q.Page)
+			body := fmt.Sprintf(`{"success":true,"data":{"total":9000,"items":[{"id":"%d"}]}}`, q.Page)
 			return &http.Response{StatusCode: 200, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(body)), Request: r}, nil
 		})
 		client := vbpl.NewWithBase("https://example.test", "test", vbpl.WithTransport(transport), vbpl.WithLimits(float64(rate.Inf), 16))
@@ -124,7 +124,7 @@ func TestCentralPass_LowerFailureWinsAndCancelsHigher(t *testing.T) {
 			if q.Page == 5 {
 				status = 400
 			}
-			body := fmt.Sprintf(`{"success":true,"data":{"total":9,"items":[{"id":"%d"}]}}`, q.Page)
+			body := fmt.Sprintf(`{"success":true,"data":{"total":9000,"items":[{"id":"%d"}]}}`, q.Page)
 			return &http.Response{StatusCode: status, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(body)), Request: r}, nil
 		})
 		client := vbpl.NewWithBase("https://example.test", "test", vbpl.WithTransport(transport), vbpl.WithLimits(float64(rate.Inf), 16))
@@ -253,9 +253,9 @@ func TestCentralPass_RateLimitBackoffDoesNotBlockOtherPages(t *testing.T) {
 				others.Add(1)
 				<-release
 			}
-			body := fmt.Sprintf(`{"success":true,"data":{"total":9,"items":[{"id":"%d"}]}}`, q.Page)
+			body := fmt.Sprintf(`{"success":true,"data":{"total":9000,"items":[{"id":"%d"}]}}`, q.Page)
 			if q.Page > 9 {
-				body = `{"success":true,"data":{"total":9,"items":[]}}`
+				body = `{"success":true,"data":{"total":9000,"items":[]}}`
 			}
 			return &http.Response{StatusCode: status, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(body)), Request: r}, nil
 		})
@@ -303,7 +303,7 @@ func TestCentralPass_PauseCancelsAllPages(t *testing.T) {
 					return nil, r.Context().Err()
 				}
 			}
-			body := fmt.Sprintf(`{"success":true,"data":{"total":9,"items":[{"id":"%d"}]}}`, q.Page)
+			body := fmt.Sprintf(`{"success":true,"data":{"total":9000,"items":[{"id":"%d"}]}}`, q.Page)
 			return &http.Response{StatusCode: status, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(body)), Request: r}, nil
 		})
 		client := vbpl.NewWithBase("https://example.test", "test", vbpl.WithTransport(transport), vbpl.WithLimits(float64(rate.Inf), 16), vbpl.WithGate(sourcegate.NewMemory()))

@@ -66,6 +66,18 @@ func Endpoint(ctx context.Context) string {
 // WithBodyValidation lets a client classify a body after parsing it.
 func WithBodyValidation(ctx context.Context) (context.Context, func(bool)) {
 	scope := &validationScope{index: -1}
+	return bodyValidation(ctx, scope)
+}
+
+// EnsureBodyValidation retains a caller's response validation scope.
+func EnsureBodyValidation(ctx context.Context) (context.Context, func(bool)) {
+	if scope, ok := ctx.Value(validationKey{}).(*validationScope); ok {
+		return bodyValidation(ctx, scope)
+	}
+	return WithBodyValidation(ctx)
+}
+
+func bodyValidation(ctx context.Context, scope *validationScope) (context.Context, func(bool)) {
 	t, _ := ctx.Value(telemetryKey{}).(*Telemetry)
 	finish := func(invalid bool) {
 		if !invalid || t == nil {

@@ -353,7 +353,7 @@ func (c *Client) Tree(ctx context.Context, id string) (json.RawMessage, []Node, 
 
 // Diagram requests the raw relation diagram.
 func (c *Client) Diagram(ctx context.Context, id string) (raw json.RawMessage, err error) {
-	ctx, finish := sourcegate.WithBodyValidation(ctx)
+	ctx, finish := sourcegate.EnsureBodyValidation(ctx)
 	defer func() { finish(invalidJSONFields(err)) }()
 	return c.api(ctx, http.MethodGet, docPath(id)+"/diagram", nil)
 }

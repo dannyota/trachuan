@@ -242,6 +242,10 @@ func (c *Client) one(ctx context.Context, method, target string, form url.Values
 	started := time.Now()
 	defer func() {
 		observedErr := err
+		var failure *Failure
+		if errors.As(err, &failure) && failure.Origin == "transport" && failure.Cause == "timeout" {
+			observedErr = context.DeadlineExceeded
+		}
 		if status >= 200 && status < 300 && (errors.Is(err, errInvalidPayload) || errors.Is(err, ErrTooLarge)) {
 			observedErr = sourcegate.ErrInvalidBody
 		}

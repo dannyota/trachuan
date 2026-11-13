@@ -136,3 +136,28 @@ func TestExpand_DetailFailureCancelsDiagram(t *testing.T) {
 		}
 	})
 }
+
+func TestExpand_InvalidDiagramMarksItsAttempt(t *testing.T) {
+	transport := concurrentTransport(func(r *http.Request) (*http.Response, error) {
+		body := `{"success":true,"data":{"id":"1"}}`
+		if strings.HasSuffix(r.URL.Path, "/diagram") {
+			body = `{"success":true,"data":[]}`
+		}
+		return &http.Response{StatusCode: 200, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(body)), Request: r}, nil
+	})
+	client := vbpl.NewWithBase("https://example.test", "test", vbpl.WithTransport(transport), vbpl.WithLimits(float64(rate.Inf), 8))
+	ctx, telemetry := sourcegate.WithTelemetry(context.Background())
+	_, err := New(client).Process(ctx, stage.Env{}, stage.Run{Country: "vn", Snapshot: stage.Snapshot{SourceList: []byte(`{"country":"vn"}`)}}, stage.Item{Key: "vn:vbpl:1"})
+	if !errors.Is(err, stage.ErrSourceData) {
+		t.Fatalf("error = %v", err)
+	}
+	rows := telemetry.Records()
+	seen := map[string]sourcegate.RequestRecord{}
+	for _, row := range rows {
+		seen[row.Endpoint] = row
+	}
+	diagram, ok := seen["diagram"]
+	if !ok || diagram.Outcome != "invalid_body" || diagram.Status == nil || *diagram.Status != 200 || seen["detail"].Outcome != "ok" {
+		t.Fatalf("rows=%+v", rows)
+	}
+}

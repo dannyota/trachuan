@@ -81,6 +81,7 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, r stage.Run, item st
 	defer cancelDetail()
 	diagramCtx, cancelDiagram := context.WithCancel(ctx)
 	defer cancelDiagram()
+	diagramCtx, finishDiagram := sourcegate.WithBodyValidation(diagramCtx)
 	results := make(chan result, 2)
 	go func() {
 		raw, decoded, callErr := s.client.Detail(detailCtx, id)
@@ -123,6 +124,8 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, r stage.Run, item st
 	}
 	observation, err := Qualify(item.Key, detail, diagram, list.RelationCodes)
 	if err != nil {
+		var diagramErr *diagramDecodeError
+		finishDiagram(errors.As(err, &diagramErr))
 		return out, stage.SourceData(err)
 	}
 	data, err := json.Marshal(observation)

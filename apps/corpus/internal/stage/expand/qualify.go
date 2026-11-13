@@ -39,6 +39,11 @@ type Observation struct {
 
 type identifier string
 
+type diagramDecodeError struct{ err error }
+
+func (e *diagramDecodeError) Error() string { return fmt.Sprintf("decode diagram: %v", e.err) }
+func (e *diagramDecodeError) Unwrap() error { return e.err }
+
 func (i *identifier) UnmarshalJSON(b []byte) error {
 	if string(b) == "null" {
 		return nil
@@ -84,7 +89,7 @@ func Qualify(seedKey string, detail, diagram []byte, codes map[string]source.Rel
 		return Observation{}, fmt.Errorf("decode detail: %w", err)
 	}
 	if err := json.Unmarshal(diagram, &g); err != nil {
-		return Observation{}, fmt.Errorf("decode diagram: %w", err)
+		return Observation{}, &diagramDecodeError{err: err}
 	}
 	out := Observation{Version: 1, SeedKey: seedKey, Targets: []Target{}, NumberOnly: []NumberOnly{}, UnknownCodes: []string{}}
 	unknown := map[string]bool{}

@@ -2,6 +2,7 @@ package chinhphu
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"testing"
 	"time"
@@ -81,6 +82,23 @@ func TestTelemetry_InvalidSearchPage(t *testing.T) {
 	}
 	rows := telemetry.Records()
 	if len(rows) != 2 || rows[0].Endpoint != "home" || rows[0].Outcome != "ok" || rows[1].Endpoint != "search" || rows[1].Outcome != "invalid_body" {
+		t.Fatalf("rows=%+v", rows)
+	}
+}
+
+func TestTelemetry_TransportTimeoutWithoutDeadline(t *testing.T) {
+	transport := roundTripFunc(func(*http.Request) (*http.Response, error) { return nil, timeoutErr{} })
+	base := "http://127.0.0.1:1234"
+	client := New(WithBaseURLs(base, base), WithTransport(transport), WithBackoffs(), WithLimits(Limits{RequestsPerSecond: 100000, InFlight: 1, Burst: 1}))
+	ctx, telemetry := sourcegate.WithTelemetry(context.Background())
+	ctx = sourcegate.WithEndpoint(ctx, "home")
+	_, _, err := client.fetchPage(ctx, http.MethodGet, base, nil)
+	var failure *Failure
+	if !errors.As(err, &failure) || failure.Cause != "timeout" {
+		t.Fatalf("error=%v", err)
+	}
+	rows := telemetry.Records()
+	if len(rows) != 1 || rows[0].Outcome != "timeout" || rows[0].Status != nil {
 		t.Fatalf("rows=%+v", rows)
 	}
 }

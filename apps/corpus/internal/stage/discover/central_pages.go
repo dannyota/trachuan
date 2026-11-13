@@ -28,6 +28,7 @@ type centralPages struct {
 	mu          sync.Mutex
 	cancels     map[int]context.CancelFunc
 	cancelAfter int
+	bound       int
 }
 
 func newCentralPages(ctx context.Context, client *vbpl.Client) *centralPages {
@@ -91,9 +92,9 @@ func (p *centralPages) get(page int) (vbpl.ListPage, error) {
 	if p.paused != nil {
 		return vbpl.ListPage{}, p.paused
 	}
-	end := page + 7
-	if page == 1 {
-		end = 1
+	end := page
+	if p.bound > 0 && page <= p.bound {
+		end = min(page+7, p.bound)
 	}
 	if end > 100001 {
 		end = 100001
@@ -111,6 +112,12 @@ func (p *centralPages) get(page int) (vbpl.ListPage, error) {
 			return res.data, res.err
 		}
 		p.receive()
+	}
+}
+
+func (p *centralPages) setTotal(total *int) {
+	if total != nil && *total > 0 {
+		p.bound = (*total-1)/1000 + 1
 	}
 }
 

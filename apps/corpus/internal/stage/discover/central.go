@@ -134,6 +134,9 @@ func (s *Stage) centralPass(ctx context.Context, dir string, pass int, identity 
 			return lookup.Result{}, nil, fmt.Errorf("decode total: %w", err)
 		}
 		total := envelope.Data.Total
+		if page == 1 {
+			pages.setTotal(total)
+		}
 		if total == nil {
 			b.Uncertain = true
 		} else if *total > 100000 {

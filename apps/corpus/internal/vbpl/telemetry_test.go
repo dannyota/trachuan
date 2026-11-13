@@ -2,6 +2,7 @@ package vbpl
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net/http"
 	"strings"
@@ -108,6 +109,27 @@ func TestTelemetry_UnexpectedSuccessStatus(t *testing.T) {
 	}
 	rows := telemetry.Records()
 	if len(rows) != 1 || rows[0].Status == nil || *rows[0].Status != 204 || rows[0].Outcome != "http_error" {
+		t.Fatalf("rows=%+v", rows)
+	}
+}
+
+type bareTimeout struct{}
+
+func (bareTimeout) Error() string   { return "timeout" }
+func (bareTimeout) Timeout() bool   { return true }
+func (bareTimeout) Temporary() bool { return true }
+
+func TestTelemetry_TransportTimeoutWithoutDeadline(t *testing.T) {
+	transport := deadlineRoundTrip(func(*http.Request) (*http.Response, error) { return nil, bareTimeout{} })
+	client := NewWithBase("https://example.test", "test", WithTransport(transport), WithLimits(float64(rate.Inf), 8), WithBackoffs())
+	ctx, telemetry := sourcegate.WithTelemetry(context.Background())
+	_, err := client.Diagram(ctx, "sentinel")
+	var failure *Failure
+	if !errors.As(err, &failure) || failure.Cause != "timeout" {
+		t.Fatalf("error=%v", err)
+	}
+	rows := telemetry.Records()
+	if len(rows) != 1 || rows[0].Outcome != "timeout" || rows[0].Status != nil {
 		t.Fatalf("rows=%+v", rows)
 	}
 }
