@@ -1,3 +1,5 @@
+import hashlib
+import json
 import runpy
 import sys
 import types
@@ -6,7 +8,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 
-SCRIPT = Path(__file__).resolve().parents[3] / "scripts/instance_fonts.py"
+SCRIPT = Path(__file__).resolve().parent / "instance_fonts.py"
 
 
 class Axis:
@@ -29,6 +31,9 @@ class Font:
     def getGlyphOrder(self):
         return self.glyphs
 
+    def getBestCmap(self):
+        return self.tables[0].cmap
+
     def save(self, path):
         self.saved = True
 
@@ -47,7 +52,11 @@ class InstanceTests(unittest.TestCase):
                    "fontTools.varLib": types.ModuleType("fontTools.varLib"),
                    "fontTools.varLib.instancer": instancer}
         with patch.dict(sys.modules, modules):
-            runpy.run_path(str(SCRIPT))
+            namespace = runpy.run_path(str(SCRIPT))
+            main = namespace["main"]
+            expected = hashlib.sha256(json.dumps([[97, "a"]]).encode("utf-8")).hexdigest()
+            main.__globals__["FINGERPRINTS"] = {"test-font": (2, expected)}
+            main()
 
     def test_rejects_changed_glyph_count(self):
         result = Font([Axis("wght", 400, 700)], [".notdef"])
@@ -77,6 +86,16 @@ class InstanceTests(unittest.TestCase):
         result = Font([Axis("wght", 400, 700)])
         self.run_helper(Font(), result)
         self.assertTrue(result.saved)
+
+    def test_rejects_already_instanced_missing_glyph(self):
+        source = Font([Axis("wght", 400, 700)], [".notdef"])
+        with self.assertRaises(ValueError):
+            self.run_helper(source, Font())
+
+    def test_rejects_already_instanced_changed_cmap(self):
+        source = Font([Axis("wght", 400, 700)], cmap={97: "other"})
+        with self.assertRaises(ValueError):
+            self.run_helper(source, Font())
 
     def test_already_instanced_is_accepted_without_save(self):
         source = Font([Axis("wght", 400, 700)])
