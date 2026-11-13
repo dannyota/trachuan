@@ -41,13 +41,11 @@ the backlog carries them with their counts.
 
 Exactly one source supplies a document's text, chosen in this order:
 
-1. `source_tree`: the source's tree, as today, unless it is a heading-only tree:
-   it has at least one article, no article has a child, and every node's text is
-   only its own label and heading (an article's heading line, a structure node's
-   label and title), so no node anywhere holds body text. A heading-only tree is
-   used only when no later source is usable, and a later source that exceeds a
-   parsing limit is not usable; the document then keeps its provisions and gets
-   the gap `tree_headings_only`.
+1. `source_tree`: the source's tree, as today, unless some of its articles hold
+   only their heading line: then [heading-only trees](heading-only-trees.md)
+   decides, article by article, whether the transcription replaces the tree; a
+   tree kept despite heading-only articles gets `tree_headings_only` (all
+   articles) or `tree_headings_partial` (some).
 2. `html_transcription`: `<id>_content.html` of the bundle when its text has at
    least 300 characters. `_content_origin`, `_body_content` and dated backups
    are never read: the inventory shows they add no document, and where the

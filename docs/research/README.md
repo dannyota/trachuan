@@ -38,3 +38,6 @@ Observations and experiments. Not project authority.
   grammar measured against source trees on vn/20261111_4.
 - [VBPL attachment ETags](vbpl-etag-2026-11.md): ETag forms of every VBPL
   attachment and how they match stored copies, 2026-11-12.
+- [Source trees with heading-only articles](vn-heading-only-trees-2026-11.md):
+  707 trees with heading-only articles against their transcriptions on
+  vn/20261112_2.
