@@ -138,6 +138,9 @@ func planWithCap(arms Arms, recipe Recipe, limit int, mode ArmMode, cap int, art
 
 func shapeHit(g Group, arms Arms, recipe Recipe) (Hit, error) {
 	c := g.Best
+	if g.article != nil {
+		c = *g.article
+	}
 	validity, gaps := stamp(c.Document, arms)
 	for i := range gaps {
 		gaps[i].DocumentKey = g.Identity.DocumentKey

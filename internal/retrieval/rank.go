@@ -16,6 +16,8 @@ type Group struct {
 	Best       Candidate
 	Members    []Candidate
 	BestCosine float64
+	siblings   []Group
+	article    *Candidate
 }
 
 // Ranking holds ranked provision groups and the first group's confidence.
@@ -51,7 +53,24 @@ func Rank(arms Arms, recipe Recipe, limit int, mode ArmMode, overrides ...*CapOv
 	return rankWithCap(arms, recipe, limit, mode, cap)
 }
 
+type rankPolicy struct {
+	merge, allGroups bool
+	article          *ArticleCapOverride
+}
+
 func rankWithCap(arms Arms, recipe Recipe, limit int, mode ArmMode, cap int, article ...*ArticleCapOverride) (Ranking, error) {
+	policy := rankPolicy{}
+	if len(article) > 0 {
+		policy.article = article[0]
+	}
+	return rankWithPolicy(arms, recipe, limit, mode, cap, policy)
+}
+
+func rankWithSiblingPolicy(arms Arms, recipe Recipe, limit int, mode ArmMode, cap int, merge bool, allGroups ...bool) (Ranking, error) {
+	return rankWithPolicy(arms, recipe, limit, mode, cap, rankPolicy{merge: merge, allGroups: len(allGroups) > 0 && allGroups[0]})
+}
+
+func rankWithPolicy(arms Arms, recipe Recipe, limit int, mode ArmMode, cap int, policy rankPolicy) (Ranking, error) {
 	if limit == 0 {
 		limit = 8
 	}
@@ -61,10 +80,22 @@ func rankWithCap(arms Arms, recipe Recipe, limit int, mode ArmMode, cap int, art
 	if (mode != "lexical" && arms.Depths.Dense < recipe.DenseDepth) || (mode != "dense" && arms.Depths.Lexical < recipe.LexicalDepth) {
 		return Ranking{}, ErrCacheInsufficient
 	}
-	return rankGroup(arms.Primary, arms.Validation.Routed, recipe, limit, mode, cap, article...)
+	return rankGroupWithPolicy(arms.Primary, arms.Validation.Routed, recipe, limit, mode, cap, policy)
 }
 
 func rankGroup(arm ArmGroup, routed bool, recipe Recipe, limit int, mode ArmMode, cap int, article ...*ArticleCapOverride) (Ranking, error) {
+	policy := rankPolicy{}
+	if len(article) > 0 {
+		policy.article = article[0]
+	}
+	return rankGroupWithPolicy(arm, routed, recipe, limit, mode, cap, policy)
+}
+
+func rankGroupWithSiblingPolicy(arm ArmGroup, routed bool, recipe Recipe, limit int, mode ArmMode, cap int, merge bool, allGroups ...bool) (Ranking, error) {
+	return rankGroupWithPolicy(arm, routed, recipe, limit, mode, cap, rankPolicy{merge: merge, allGroups: len(allGroups) > 0 && allGroups[0]})
+}
+
+func rankGroupWithPolicy(arm ArmGroup, routed bool, recipe Recipe, limit int, mode ArmMode, cap int, policy rankPolicy) (Ranking, error) {
 	scores := map[int64]fusedCandidate{}
 	add := func(cs []Candidate, depth int, weight float64) {
 		for i, c := range cs {
@@ -131,10 +162,16 @@ func rankGroup(arm ArmGroup, routed bool, recipe Recipe, limit int, mode ArmMode
 			return Ranking{}, ErrCacheInsufficient
 		}
 	}
+	if policy.merge {
+		groups = mergeSiblingGroups(groups)
+	}
 	var first *float64
 	if len(groups) > 0 {
 		v := groups[0].BestCosine
 		first = &v
+	}
+	if policy.allGroups {
+		return Ranking{Groups: groups, FirstBestCosine: first}, nil
 	}
 	counts := map[string]int{}
 	articleCounts := map[Identity]int{}
@@ -144,7 +181,7 @@ func rankGroup(arm ArmGroup, routed bool, recipe Recipe, limit int, mode ArmMode
 		key := g.Identity.DocumentKey
 		var articleKey Identity
 		hasArticle := false
-		if len(article) > 0 && article[0] != nil && *article[0] > 0 {
+		if policy.article != nil && *policy.article > 0 {
 			for i := len(g.Best.Ancestors) - 1; i >= 0; i-- {
 				p := g.Best.Ancestors[i]
 				if p.Kind == "dieu" {
@@ -153,7 +190,7 @@ func rankGroup(arm ArmGroup, routed bool, recipe Recipe, limit int, mode ArmMode
 				}
 			}
 		}
-		if counts[key] < cap && (!hasArticle || articleCounts[articleKey] < int(*article[0])) {
+		if counts[key] < cap && (!hasArticle || articleCounts[articleKey] < int(*policy.article)) {
 			selected = append(selected, g)
 			counts[key]++
 			if hasArticle {
@@ -166,4 +203,86 @@ func rankGroup(arm ArmGroup, routed bool, recipe Recipe, limit int, mode ArmMode
 	selected = append(selected, demoted...)
 	selected = selected[:min(limit, len(selected))]
 	return Ranking{Groups: selected, FirstBestCosine: first}, nil
+}
+
+// RankWithSiblingAndArticleCap applies the sibling merge and both research caps.
+func RankWithSiblingAndArticleCap(arms Arms, recipe Recipe, limit int, mode ArmMode, document *CapOverride, article *ArticleCapOverride) (Ranking, error) {
+	if limit == 0 {
+		limit = 8
+	}
+	cap, err := effectiveCap(document, recipe.DocumentCap, limit)
+	if err != nil {
+		return Ranking{}, err
+	}
+	if err = validateArticleCap(article); err != nil {
+		return Ranking{}, err
+	}
+	return rankWithPolicy(arms, recipe, limit, mode, cap, rankPolicy{merge: true, article: article})
+}
+
+// ShapeWithArticleCap applies both research caps after freezing sibling membership.
+func (m *SiblingMerge) ShapeWithArticleCap(arms Arms, recipe Recipe, limit int, mode ArmMode, capOverride *CapOverride, tailOverride *int, article *ArticleCapOverride) (Response, error) {
+	if err := validateArticleCap(article); err != nil {
+		return Response{}, err
+	}
+	if article == nil || *article == 0 {
+		return m.Shape(arms, recipe, limit, mode, capOverride, tailOverride)
+	}
+	if limit == 0 {
+		limit = 8
+	}
+	if !arms.Validation.Accepted {
+		return ShapeWithCap(arms, recipe, limit, mode, capOverride)
+	}
+	if recipe.Abstention.Threshold == nil || math.IsNaN(*recipe.Abstention.Threshold) || math.IsInf(*recipe.Abstention.Threshold, 0) {
+		return Response{}, errors.New("uncalibrated retrieval recipe")
+	}
+	cap, err := effectiveCap(capOverride, recipe.DocumentCap, limit)
+	if err != nil {
+		return Response{}, err
+	}
+	primary, err := rankWithPolicy(arms, recipe, limit, mode, cap, rankPolicy{merge: true, article: article})
+	if err != nil {
+		return Response{}, err
+	}
+	tail := recipe.NonCurrentTail
+	if tailOverride != nil {
+		tail = *tailOverride
+		arms.IncludeNonCurrent = false
+	}
+	if tail < 0 || tail > 5 {
+		return Response{}, errors.New("invalid non-current tail")
+	}
+	tail = min(tail, limit/2)
+	if arms.IncludeNonCurrent {
+		tail = limit / 2
+	}
+	other := Ranking{}
+	if tail > 0 || arms.IncludeNonCurrent {
+		other, err = rankGroupWithPolicy(arms.NonCurrent, arms.Validation.Routed, recipe, limit, mode, cap, rankPolicy{merge: true, article: article})
+		if err != nil {
+			return Response{}, err
+		}
+	}
+	if arms.IncludeNonCurrent {
+		tail = max(tail, limit-len(primary.Groups))
+	}
+	count := min(tail, len(other.Groups))
+	primaryCount := min(len(primary.Groups), limit-count)
+	if arms.IncludeNonCurrent {
+		count = min(len(other.Groups), limit-primaryCount)
+	}
+	out := Response{Release: arms.Release, Hits: []Hit{}, NonCurrent: []Hit{}, Gaps: []Gap{}, Diagnostics: Diagnostics{DenseCount: len(arms.Primary.Dense), LexicalCount: len(arms.Primary.Lexical), RawANNCount: len(arms.Primary.RawANN), Fallback: arms.Primary.Fallback, QueryRecipeHash: arms.QueryRecipeHash, TimingsMS: map[string]int64{}, EligibleCount: primaryCount}}
+	if arms.AsOf != nil {
+		out.Gaps = append(out.Gaps, Gap{Kind: "historical_document_dates", Message: "Historical filtering uses document dates, not provision history or past suspension status."})
+	}
+	if primary.FirstBestCosine == nil {
+		out.Abstain = true
+		out.Reason = "no_primary_hits"
+	} else if *primary.FirstBestCosine < *recipe.Abstention.Threshold {
+		out.Abstain = true
+		out.Reason = "low_confidence"
+	}
+	plan := responsePlan{response: out, primary: primary.Groups[:primaryCount], nonCurrent: other.Groups[:count]}
+	return m.shapePlan(arms, recipe, plan)
 }
