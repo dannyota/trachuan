@@ -176,14 +176,14 @@ deadline automatically to finish its candidate loop.
 
 Every admitted secondary candidate and every proven VBPL seed from its probe
 records `secondary_probe` under the
-[typed tuple contract](data.md#scope-workshop-contracts). Set `rule_value` to
-`<chinhphu item key>|<docid>`, using the candidate's decimal chinhphu docid, for
-example `chinhphu:named:367/QĐ-TTg@2026-02-28|218029`. Use this value for both
-the secondary key and a VBPL seed proven by that probe. Produce the tuple at
-`discover` / the compound item key. Each configured query supplies independent
-support: supersession applies per query and docid, so fresh support from one
-query never supersedes another query's tuple. Retention applies per tuple under
-[membership](membership.md), without lineage metadata.
+[typed tuple contract](workshop-data.md#scope-workshop-contracts). Set
+`rule_value` to `<chinhphu item key>|<docid>`, using the candidate's decimal
+chinhphu docid, for example `chinhphu:named:367/QĐ-TTg@2026-02-28|218029`. Use
+this value for both the secondary key and a VBPL seed proven by that probe.
+Produce the tuple at `discover` / the compound item key. Each configured query
+supplies independent support: supersession applies per query and docid, so fresh
+support from one query never supersedes another query's tuple. Retention applies
+per tuple under [membership](membership.md), without lineage metadata.
 
 The tuple evidence's `query_identity` is the hash of the frozen item definition:
 source, item key, kind, keyword or number, date qualifier and cap. It identifies

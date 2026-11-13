@@ -2,7 +2,7 @@
 
 Proposed shared prerequisite for [source scope](sources.md). Implement these
 interfaces, artifact envelopes and fenced transactions before source-specific
-stages. [Data](data.md#scope-workshop-contracts) owns persisted fields;
+stages. [Data](workshop-data.md#scope-workshop-contracts) owns persisted fields;
 [index](index.md#build-stage) owns inventory hashes and compatibility. This
 keeps adapters from inventing competing membership and failure contracts.
 
@@ -54,9 +54,9 @@ transport failures retain their structured cause and retry outcome.
 
 Replace VBPL-specific expected entries with `MembershipEntry`: document key,
 source, source id, class, disposition and all typed support tuples defined in
-[data](data.md#scope-workshop-contracts). Shared readers take run and phase
-(`seeds`, `expanded`, `final`) and return sorted entries plus the phase hash.
-They expose active and retained-removal views explicitly, never derive
+[data](workshop-data.md#scope-workshop-contracts). Shared readers take run and
+phase (`seeds`, `expanded`, `final`) and return sorted entries plus the phase
+hash. They expose active and retained-removal views explicitly, never derive
 membership from fetch items. Planning and finalization use transaction-bound
 readers under the run lock.
 
@@ -66,14 +66,15 @@ snapshot hash in `run_scope`, atomically with freezing seeds. Expand and fetch
 close read that record and verify the hash before using earlier membership. Once
 seeds are frozen, no finalizer reselects the predecessor, including when the
 recorded choice is none. The required workshop schema addition lives in
-[data](data.md#scope-workshop-contracts).
+[data](workshop-data.md#scope-workshop-contracts).
 
 Discover emits lookup envelopes; expand emits the
-[seed observation](data.md#expand-observation-artifact) envelope. Fetch uses the
-[source-specific bundle formats](fetch-bundles.md#bundle-formats): retain VBPL
-files and use version 2 envelopes for chinhphu. `Rows` decodes the common
-content projection only from verified bundle files. Item commit separately
-persists [fetch observations](fetch-bundles.md#observation-commit-and-recovery),
+[seed observation](workshop-data.md#expand-observation-artifact) envelope. Fetch
+uses the [source-specific bundle formats](fetch-bundles.md#bundle-formats):
+retain VBPL files and use version 2 envelopes for chinhphu. `Rows` decodes the
+common content projection only from verified bundle files. Item commit
+separately persists
+[fetch observations](fetch-bundles.md#observation-commit-and-recovery),
 including when an artifact already exists. `Resolve` writes run membership
 evidence and gaps. No artifact embeds observation times, final class or
 precedence decisions.

@@ -7,7 +7,8 @@ Intended behavior of trachuan. Decisions with alternatives are in the
 | Note                                                | Owns                                                                                           |
 | --------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
 | [system](system.md)                                 | Success criteria, components, database roles, repository layout                                |
-| [data](data.md)                                     | Corpus, auth and workshop data models                                                          |
+| [data](data.md)                                     | Corpus and auth data models                                                                    |
+| [workshop data](workshop-data.md)                   | Workshop tables, scope contracts, relation support and expand observations                     |
 | [retrieval](retrieval.md)                           | Query validation, ranking, validity, subject filter, release pinning, MCP tools, web API       |
 | [taxonomy](taxonomy.md)                             | Subject tree import, classification layers, evaluation gate                                    |
 | [pipeline](pipeline.md)                             | Write path on Temporal, stages, batch submissions, release artifact                            |
@@ -29,6 +30,7 @@ Intended behavior of trachuan. Decisions with alternatives are in the
 | [scope adoption](scope-adoption.md)                 | Schema version 3, inventory version 2, build loading by final membership                       |
 | [validity corrections](validity-status.md)          | Text rules, manual corrections and review queue for wrong or missing source validity           |
 | [membership](membership.md)                         | Support supersession, retention, withdrawal, fetch drift and removal lifetime                  |
+| [pinned documents](pinned-documents.md)             | Keep a document the source deleted, read from verified payloads the source list pins           |
 | [source execution](source-execution.md)             | Shared source interfaces, finalization, retries and durable pauses                             |
 | [retry of source gaps](source-retry.md)             | What a restart retries, rewinds and clears, and the reuse of a run's own acquisitions          |
 | [fetch reuse](fetch-reuse.md)                       | What a new run keeps from the previous VBPL read when `updatedDate` is unchanged               |

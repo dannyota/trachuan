@@ -1,6 +1,6 @@
 # Membership retention and loss
 
-Reconcile the [support tuples](data.md#scope-workshop-contracts) before
+Reconcile the [support tuples](workshop-data.md#scope-workshop-contracts) before
 assigning a member's disposition. [Sources](sources.md) owns selection and
 relation qualification; [pipeline](pipeline.md#source-ingest-rules) owns stable
 listing passes. A removed tuple is audit evidence, not active support.
@@ -31,8 +31,9 @@ runs keep their original evidence unchanged.
 
 ## Direct discovery
 
-VBPL seeds come from direct tuples `agency`, `term` and `named`. Once secondary
-discovery exists, `secondary_probe` also seeds a proven VBPL match under the
+VBPL seeds come from direct tuples `agency`, `term`, `named` and `pinned`
+([pinned documents](pinned-documents.md)). Once secondary discovery exists,
+`secondary_probe` also seeds a proven VBPL match under the
 [hand-over contract](sources.md#secondary-discovery-and-hand-over). Relation
 tuples never seed. A relation-context member from an earlier run needs current
 or retained direct support to become a primary seed.
@@ -61,6 +62,9 @@ Then, for a member with neither a current nor a retained tuple:
    central listings, mark `withdrawn`.
 3. Otherwise, including first absence or incomplete or missing listing evidence,
    retain every earlier tuple of that member and keep it active for fetch.
+
+A key the source list pins stays active from its verified payloads instead of
+becoming `withdrawn` ([pinned documents](pinned-documents.md)).
 
 This member-level fallback is the exception to per-tuple removal. It protects
 against a single catalog disappearance. Selection loss is not catalog absence;

@@ -41,9 +41,9 @@ Select a listing item when `agencyIds` intersects `{62, 908}` or its title
 matches an approved term below. Normalize title and term with NFC, lowercase and
 whitespace collapse, then require a contiguous phrase. Exclude `vbpqta_`
 renditions. Record every matching rule using the
-[typed support tuple](data.md#scope-workshop-contracts). A direct hit stays
-class `primary`, including a qualified named lookup or secondary probe. Freeze
-agencies, terms and normalization version in the source list and discover
+[typed support tuple](workshop-data.md#scope-workshop-contracts). A direct hit
+stays class `primary`, including a qualified named lookup or secondary probe.
+Freeze agencies, terms and normalization version in the source list and discover
 recipe; changes require a new run.
 
 Reason: local selection retains prior hits and adds relevant central documents,
@@ -143,12 +143,12 @@ documents. Reason: even citations supply useful legal context, but inferred
 inbound edges would widen scope without source evidence.
 
 Only an explicit VBPL id that passes the
-[observation contract](data.md#expand-observation-artifact) adds a target.
-Number-only records are audit input for later named-list review; they do not add
-targets. Unknown codes remain gaps and add no targets. Central or local targets
-may qualify by id without opening local title sweeps. Reason: the source's
-specific link supplies scope, while guessing a number match or jurisdiction
-would hide identity errors.
+[observation contract](workshop-data.md#expand-observation-artifact) adds a
+target. Number-only records are audit input for later named-list review; they do
+not add targets. Unknown codes remain gaps and add no targets. Central or local
+targets may qualify by id without opening local title sweeps. Reason: the
+source's specific link supplies scope, while guessing a number match or
+jurisdiction would hide identity errors.
 
 Union and deduplicate targets as class `relation_context`; a direct seed always
 wins class `primary`. Retain every seed, raw code and evidence hash that caused
