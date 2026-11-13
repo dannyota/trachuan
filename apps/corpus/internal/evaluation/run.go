@@ -14,7 +14,7 @@ import (
 )
 
 // ScorerVersion identifies the scoring policy used by reports and artifacts.
-const ScorerVersion = "agent-eval/3"
+const ScorerVersion = "agent-eval/4"
 
 type metricKey struct {
 	cohort string

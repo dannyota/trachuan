@@ -87,7 +87,6 @@ func siblingEvidence(g Group, capRunes int) (string, []Fragment, bool, []Gap, Id
 	}
 	complete := len(full.text) <= capRunes && siblingArticleCovered(*g.article, leads, source)
 	if len(full.text) > capRunes {
-		// The cap gives evidence to the highest ranked members first.
 		full = rendered{}
 		appendRendered(&full, leads)
 		for _, p := range parts {
@@ -95,7 +94,6 @@ func siblingEvidence(g Group, capRunes int) (string, []Fragment, bool, []Gap, Id
 		}
 	}
 	full = clipSiblingText(full, capRunes)
-	// A clause fragment earns credit only when its whole representation survived.
 	for _, p := range parts {
 		start, ok := renderedOffset(full, p.tree)
 		memberComplete := ok && start+len(p.tree.text) <= len(full.text) && !p.tree.ambiguous
@@ -107,11 +105,15 @@ func siblingEvidence(g Group, capRunes int) (string, []Fragment, bool, []Gap, Id
 				found = true
 			}
 		}
-		// A clause with text only in its children still needs its own provenance.
 		if !found && memberComplete {
 			full.fragments = append(full.fragments, Fragment{Identity: p.group.Identity, TextStart: start, TextEnd: start, Role: "body", Complete: true})
 		}
 	}
+	candidates := []Candidate{*g.article}
+	for _, member := range g.siblings {
+		candidates = append(candidates, member.Best)
+	}
+	setFragmentCitations(full.fragments, candidates)
 	bestMember := g.Identity
 	bestStart := min(len(leads.text)+1, len(full.text))
 	if len(leads.text) == 0 {
@@ -165,7 +167,6 @@ func clipSiblingText(full rendered, capRunes int) rendered {
 	return full
 }
 
-// renderedOffset uses source aliases, never a text occurrence guessed from labels.
 func renderedOffset(outer, inner rendered) (int, bool) {
 	for _, i := range inner.fragments {
 		for _, o := range outer.fragments {
@@ -212,7 +213,6 @@ func siblingArticleCovered(article Candidate, leads rendered, parts []siblingPar
 		if p.Kind == "khoan" && !members[p.ID] {
 			return false
 		}
-		// A source's label-only lines are not substantive article text.
 		for _, f := range expected.fragments {
 			if f.Identity == p.Identity {
 				offset := f.Start
