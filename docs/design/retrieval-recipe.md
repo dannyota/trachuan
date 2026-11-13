@@ -134,7 +134,8 @@ settings are errors, not a silent older-version fallback.
 If eligible ANN results are below requested dense depth, run exact over the full
 eligible set; report the raw ANN list and fallback separately. A full ANN pool
 is not proof of recall. Sparse SQL scans positive inner products exactly:
-`-(sparse <#> $1::sparsevec)`, descending score then chunk id. No sparse HNSW.
+`-(sparse <#> $1::sparsevec)`, descending score then chunk id; the server may
+return the same rows from [sparse postings](sparse-postings.md). No sparse HNSW.
 Bind vectors, dates, limits and status values; schema/table names are fixed.
 Statement deadlines and context cancellation bound every scan. Do not log SQL
 arguments, query text, vectors or returned evidence, including on database
