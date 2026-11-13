@@ -19,7 +19,7 @@
 .footer-source { margin-left: auto; }
 @media (max-width: 767px) {
   .site-main { padding: 24px 16px; }
-  .menu-button { display: block; margin-left: auto; padding: 8px; }
+  .menu-button { display: flex; justify-content: center; align-items: center; min-width: 44px; min-height: 44px; margin-left: auto; padding: 8px; }
   .header-menu { display: none; flex-basis: 100%; align-items: stretch; flex-direction: column; }
   .header-menu--open { display: flex; }
   .site-nav, .header-actions { align-items: stretch; flex-direction: column; }

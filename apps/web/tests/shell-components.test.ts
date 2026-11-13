@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { flushPromises, mount } from '@vue/test-utils'
+import { readFileSync } from 'node:fs'
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, expect, it, vi } from 'vitest'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
@@ -42,6 +43,10 @@ it('closes the mobile menu on Escape and outside click and returns focus', async
   vi.stubGlobal('useRoute', () => ({ path: '/', fullPath: '/' }))
   const wrapper = mount(SiteHeader, { attachTo: document.body, global: { stubs: { NuxtLink: { template: '<a><slot /></a>' }, SealLogo: true } } })
   const button = wrapper.get('button[aria-controls]')
+  expect(button.attributes('aria-label')).toBeTruthy()
+  const icon = button.get('svg')
+  expect(icon.attributes()).toMatchObject({ width: '22', height: '22', 'aria-hidden': 'true', stroke: 'currentColor' })
+  expect(icon.findAll('line')).toHaveLength(3)
   await button.trigger('click')
   expect(button.attributes('aria-expanded')).toBe('true')
   document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
@@ -62,4 +67,14 @@ it('uses the approved seal geometry', () => {
   expect(seal.findAll('circle').map(circle => [circle.attributes('cx'), circle.attributes('cy'), circle.attributes('r'), circle.attributes('stroke-width')])).toEqual([['60', '60', '52', '6'], ['60', '60', '40', '2']])
   expect(seal.get('text').attributes()).toMatchObject({ x: '60', y: '74', 'font-size': '40', 'font-weight': '700' })
   expect(seal.get('text').text()).toBe('TC')
+})
+
+it('gives the mobile menu button a centered 44px target', () => {
+  const css = readFileSync('app/assets/shell.css', 'utf8')
+  const mobile = css.split('@media (max-width: 767px)')[1]!
+  const button = mobile.match(/\.menu-button\s*\{([^}]*)\}/)?.[1]
+  expect(button).toMatch(/min-width:\s*44px/)
+  expect(button).toMatch(/min-height:\s*44px/)
+  expect(button).toMatch(/justify-content:\s*center/)
+  expect(button).toMatch(/align-items:\s*center/)
 })

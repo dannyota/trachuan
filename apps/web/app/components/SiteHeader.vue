@@ -33,7 +33,7 @@ onUnmounted(() => { document.removeEventListener('keydown', onKey); document.rem
     <div class="container header-inner">
       <NuxtLink class="site-logo" to="/"><SealLogo /><span>Tra Chuẩn</span></NuxtLink>
       <slot />
-      <button ref="button" class="menu-button" type="button" :aria-label="messages.menu" :aria-expanded="open" aria-controls="site-menu" @click="open = !open">☰</button>
+      <button ref="button" class="menu-button" type="button" :aria-label="messages.menu" :aria-expanded="open" aria-controls="site-menu" @click="open = !open"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="5" x2="19" y2="5" /><line x1="3" y1="11" x2="19" y2="11" /><line x1="3" y1="17" x2="19" y2="17" /></svg></button>
       <div id="site-menu" class="header-menu" :class="{ 'header-menu--open': open }">
         <nav class="site-nav" :aria-label="messages.menu">
           <NuxtLink v-for="link in links" :key="link.path" :to="link.path" :class="{ 'site-nav--active': route.path === link.path || route.path.startsWith(link.path + '/') }">{{ compact && link.path === '/connect' ? messages.connectShort : link.label }}</NuxtLink>
