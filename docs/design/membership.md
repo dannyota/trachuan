@@ -62,6 +62,9 @@ Then, for a member with neither a current nor a retained tuple:
 3. Otherwise, including first absence or incomplete or missing listing evidence,
    retain every earlier tuple of that member and keep it active for fetch.
 
+A member the source list names keeps its last verified acquisition instead of
+becoming `withdrawn` under [source withdrawal](source-withdrawal.md).
+
 This member-level fallback is the exception to per-tuple removal. It protects
 against a single catalog disappearance. Selection loss is not catalog absence;
 losing one agency or term never removes another rule's support. Search back for

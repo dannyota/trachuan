@@ -85,9 +85,10 @@ recipe hashes; never read a newly edited fixture under an old frozen hash.
   chunks were omitted or rejected.
 - Exclude `withdrawn`, `scope_removed`, `source_replaced` and fetch-gap
   documents from searchable documents. Preserve keys and gap details in
-  `coverage_gap`; do not carry stale text from a previous run. English
-  renditions never enter the expected set. References to excluded documents
-  remain unresolved.
+  `coverage_gap`; do not carry stale text from a previous run, except a retained
+  document under [source withdrawal](source-withdrawal.md). English renditions
+  never enter the expected set. References to excluded documents remain
+  unresolved.
 - Insert only chunks with a matching successful vector and verified input hash.
   Require `chunk count = embedded count + rejected count` before exclusions.
   Require inserted chunk count equals inserted dense vector count, with one
