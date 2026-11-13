@@ -158,10 +158,12 @@ on this temporary database as specified in [evaluation](calibration.md). The
 helper takes explicit recipes and does not require a published release row.
 Insert the final release row with that threshold; then prohibit further writes.
 Dump before renaming, using subprocess arguments, not a shell:
-`pg_dump -Fc --no-owner --no-privileges --no-comments --dbname <temporary-db>`;
+`pg_dump -Fc -Z zstd:1 --no-owner --no-privileges --no-comments --dbname <temporary-db>`;
 the corpus schema carries no comments, and dropping them keeps extension
-comments, which a nonsuperuser cannot restore, out of the dump. Database
-identity never comes from a request body or a dump's embedded name.
+comments, which a nonsuperuser cannot restore, out of the dump. zstd level 1
+replaced the default gzip: for vn/20261112_2 it dumped in 10 s instead of 121 s,
+at 1,290 MB instead of 1,343 MB. Database identity never comes from a request
+body or a dump's embedded name.
 
 ## Build artifact and resolve
 

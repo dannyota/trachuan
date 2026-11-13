@@ -192,7 +192,9 @@ skipping steps 1 to 3 and verifying instead that the database exists and its
    thresholds in [host budgets](budgets-host.md#host-memory-estimates).
 3. `pg_restore --no-owner` as `restorer` into `corpus_<cc>_<rel>` with a
    dedicated `maintenance_work_mem`; the TOC is listed first and refused if it
-   contains functions, extensions other than pgvector, or event triggers.
+   contains functions, extensions other than pgvector, or event triggers. Dumps
+   are zstd-compressed (`-Z zstd:1`), so the host `pg_restore` must be built
+   with zstd.
 4. Prewarm the new database's chunk table and its indexes with `pg_prewarm`,
    then run smoke queries: counts, one search, one read.
 5. In one transaction: compare-and-swap `auth.corpus_release.active_db` against
