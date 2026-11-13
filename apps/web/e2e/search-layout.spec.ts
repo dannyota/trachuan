@@ -1,0 +1,62 @@
+import { expect, test } from '@playwright/test'
+
+test('opens mobile filters without a reactive loop and restores focus on Escape', async ({ page }) => {
+  const errors: string[] = []
+  page.on('pageerror', error => errors.push(error.message))
+  await page.route('**/api/v1/me', route => route.fulfill({ json: { id: 1, email: 'test@example.invalid', created_at: '2099-01-01T00:00:00Z', csrf_token: 'fixture' } }))
+  await page.route('**/api/v1/public/taxonomy**', route => route.fulfill({ json: { nodes: [{ code: '1', name: 'Fixture topic' }], truncated: false } }))
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/')
+  await expect(page.getByRole('link', { name: /account|tài khoản/i })).toBeVisible()
+  await page.evaluate(() => (document.querySelector('#__nuxt') as unknown as { __vue_app__: { config: { globalProperties: { $router: { push: (path: string) => Promise<void> } } } } }).__vue_app__.config.globalProperties.$router.push('/vn/search'))
+  const open = page.getByRole('button', { name: /bộ lọc ·|filters ·/i })
+  await open.click()
+  const dialog = page.getByRole('dialog')
+  await expect(dialog).toBeVisible()
+  await expect(dialog.getByText('Fixture topic')).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(dialog).toHaveCount(0)
+  await expect(open).toBeFocused()
+  expect(errors).toEqual([])
+})
+
+test('keeps compact navigation on one row and exposes the full menu', async ({ page }) => {
+  await page.route('**/api/v1/me', route => route.fulfill({ json: { id: 1, email: 'test@example.invalid', created_at: '2099-01-01T00:00:00Z', csrf_token: 'fixture' } }))
+  await page.setViewportSize({ width: 1280, height: 800 })
+  await page.goto('/')
+  await expect(page.getByRole('link', { name: /account|tài khoản/i })).toBeVisible()
+  await page.evaluate(() => (document.querySelector('#__nuxt') as unknown as { __vue_app__: { config: { globalProperties: { $router: { push: (path: string) => Promise<void> } } } } }).__vue_app__.config.globalProperties.$router.push('/vn/search'))
+  const header = page.getByRole('banner')
+  const nav = header.locator('.site-nav')
+  await expect(nav.getByRole('link', { name: /chủ đề|topics/i })).toBeVisible()
+  await expect(nav.getByRole('link', { name: /kết nối ai|connect ai/i })).toBeVisible()
+  await expect(nav.getByRole('link', { name: /nguồn dữ liệu|sources/i })).toBeHidden()
+  const tops = await header.locator('.site-logo, .search-box, .site-nav, .menu-button').evaluateAll(items => items.map(item => Math.round(item.getBoundingClientRect().top)))
+  expect(Math.max(...tops) - Math.min(...tops)).toBeLessThan(25)
+  await header.getByRole('button', { name: /menu/i }).click()
+  await expect(nav.getByRole('link', { name: /nguồn dữ liệu|sources/i })).toBeVisible()
+  await expect(nav.getByRole('link', { name: /tra cứu|search/i })).toBeVisible()
+})
+
+test('shows the text toggle only when the result is clamped', async ({ page }) => {
+  let searchCount = 0
+  await page.route('**/api/v1/me', route => route.fulfill({ json: { id: 1, email: 'test@example.invalid', created_at: '2099-01-01T00:00:00Z', csrf_token: 'fixture' } }))
+  await page.route('**/api/v1/search', route => {
+    searchCount++
+    return route.fulfill({ json: { release: '20990101', abstain: false, hits: [{ citation: 'Điều 1', complete: true, text: searchCount === 1 ? 'Nội dung ngắn.' : 'Nội dung giả lập dài. '.repeat(100) }] } })
+  })
+  await page.goto('/')
+  await expect(page.getByRole('link', { name: /account|tài khoản/i })).toBeVisible()
+  await page.evaluate(() => (document.querySelector('#__nuxt') as unknown as { __vue_app__: { config: { globalProperties: { $router: { push: (path: string) => Promise<void> } } } } }).__vue_app__.config.globalProperties.$router.push('/vn/search'))
+  await page.locator('#search-query').fill('Nội dung giả lập')
+  await page.locator('.search-box').evaluate(form => (form as HTMLFormElement).requestSubmit())
+  await expect(page.locator('.law-text')).toHaveText('Nội dung ngắn.')
+  await expect(page.locator('.result-toggle')).toHaveCount(0)
+  await page.locator('.search-box').evaluate(form => (form as HTMLFormElement).requestSubmit())
+  const toggle = page.locator('.result-toggle')
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+  await toggle.click()
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true')
+  await toggle.click()
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+})

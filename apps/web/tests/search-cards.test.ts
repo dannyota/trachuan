@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { computed, ref } from 'vue'
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import SearchResults from '../app/components/SearchResults.vue'
 
@@ -56,10 +56,6 @@ it('shows matched fragments, highlighting, warnings, and safe document actions',
   expect(wrapper.find('a[href$="#dieu-1/khoan-2"]').text()).toContain('Khoản 2')
   expect(wrapper.text()).toContain('Check the repealing act before citing.')
   expect(wrapper.get('a[href="https://vbpl.vn/test"]').attributes('rel')).toBe('noopener noreferrer')
-  const toggle = wrapper.get('.result-toggle')
-  expect(toggle.attributes('aria-expanded')).toBe('false')
-  await toggle.trigger('click')
-  expect(toggle.attributes('aria-expanded')).toBe('true')
 })
 
 it('keeps non-current results in a separate details group on a low-confidence response', () => {
@@ -68,4 +64,39 @@ it('keeps non-current results in a separate details group on a low-confidence re
   expect(wrapper.text().indexOf('Current')).toBeLessThan(wrapper.text().indexOf('Outside'))
   expect(wrapper.get('details').text()).toContain('Past')
   expect(wrapper.get('details').attributes('open')).toBeUndefined()
+})
+
+it('links distinct clause labels to their own anchors despite nested and repeated fragments', () => {
+  const fragment = (anchor: string) => ({ identity: { document_key: 'vn:vbpl:1', anchor }, role: 'body', start: 0, end: 1, text_start: 0, text_end: 1, complete: true })
+  const result = { release: '20990101', abstain: false, hits: [{ doc: 'vn:vbpl:1', handle: 'vn:vbpl:1#dieu-1', citation: 'Điều 1', complete: false, fragments: [fragment('dieu-1/khoan-1'), fragment('dieu-1/khoan-1/diem-a'), fragment('dieu-1/khoan-1'), fragment('dieu-1/khoan-2')] }] }
+  const link = { template: '<a :href="to"><slot /></a>', props: ['to'] }
+  const wrapper = mount(SearchResults, { props: { result }, global: { stubs: { NuxtLink: link } } })
+  const links = wrapper.findAll('.result-members a')
+  expect(links.map(link => link.text().replace(/^,\s*/, ''))).toEqual(['Điều 1, Khoản 1', 'Điều 1, Khoản 2'])
+  expect(links.map(link => link.attributes('href'))).toEqual(['/vn/documents/vn:vbpl:1?release=20990101#dieu-1/khoan-1', '/vn/documents/vn:vbpl:1?release=20990101#dieu-1/khoan-2'])
+})
+
+it('counts explicit and unrecognised unknown validity values together', () => {
+  const doc = (status: string) => ({ status: { class: status, current: false }, text_source: 'source_tree' as const, text_complete: true })
+  const wrapper = mount(SearchResults, { props: { result: { abstain: false, documents: { a: doc('unknown'), b: doc('future'), c: doc('in_force') }, hits: [{ doc: 'a', complete: true }, { doc: 'b', complete: true }, { doc: 'c', complete: true }] } }, global: { stubs: { NuxtLink: true } } })
+  expect(wrapper.get('.search-legend').text()).toContain('Unknown 2')
+  expect(wrapper.get('.search-legend').text()).toContain('In force 1')
+})
+
+it('offers expansion only when the rendered text overflows four lines', async () => {
+  vi.stubGlobal('onUnmounted', () => {})
+  const height = vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(80)
+  const scroll = vi.spyOn(HTMLElement.prototype, 'scrollHeight', 'get').mockReturnValue(80)
+  const wrapper = mount(SearchResults, { props: { result: { abstain: false, hits: [{ text: 'Short text', complete: true }] } }, global: { stubs: { NuxtLink: true } } })
+  await wrapper.vm.$nextTick()
+  expect(wrapper.find('.result-toggle').exists()).toBe(false)
+  scroll.mockReturnValue(160)
+  await wrapper.setProps({ result: { abstain: false, hits: [{ text: 'Longer text', complete: true }] } })
+  await flushPromises()
+  expect(wrapper.get('.result-toggle').attributes('aria-expanded')).toBe('false')
+  await wrapper.get('.result-toggle').trigger('click')
+  expect(wrapper.get('.result-toggle').attributes('aria-expanded')).toBe('true')
+  wrapper.unmount()
+  height.mockRestore()
+  scroll.mockRestore()
 })

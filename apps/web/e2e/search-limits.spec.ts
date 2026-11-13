@@ -50,7 +50,7 @@ test('renders compact and full evidence as text and shows gaps and abstention', 
   await submit()
   await expect(page.locator('.law-text')).toHaveText('<compact>')
   await expect(page.locator('.stamp')).toHaveClass(/stamp--unknown/)
-  await expect(page.locator('.stamp')).toHaveText(/unknown|chưa rõ/i)
+  await expect(page.locator('.stamp')).toHaveText(/unknown|không rõ/i)
   await expect(page.getByText(/other|khác/i)).toBeVisible()
   await submit()
   await expect(page.locator('.law-text')).toHaveText('<full>')

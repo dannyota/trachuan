@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { watchEffect } from 'vue'
+import { watch } from 'vue'
 import type { components } from '@trachuan/schema/gen/openapi'
 import { messagesFor, type Language } from '../../i18n'
 
@@ -15,7 +15,7 @@ const expanded = ref<Record<string, boolean>>({})
 const loaded = ref<Record<string, boolean>>({})
 const failed = ref(false)
 const failedNode = ref('')
-watchEffect(() => emit('labels', Object.fromEntries(nodes.value.filter(node => node.code && node.name).map(node => [node.code!, node.name!]))))
+watch(() => nodes.value.flatMap(node => node.code && node.name ? [[node.code, node.name]] : []), labels => emit('labels', Object.fromEntries(labels)), { immediate: true })
 function flatten(entries: Node[]): Node[] {
   return entries.flatMap(node => [node, ...flatten(node.children || [])])
 }

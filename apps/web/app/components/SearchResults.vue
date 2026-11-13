@@ -16,7 +16,7 @@ const outside = computed(() => (props.result.hits || []).filter(hit => hit.in_fi
 const statuses = ['in_force', 'partial', 'not_yet', 'expired', 'suspended', 'unknown'] as const
 const counts = computed(() => statuses.map(status => ({ status, count: hits.value.filter(hit => {
   const actual = props.result.documents?.[hit.doc || '']?.status.class
-  return status === 'unknown' ? !actual || !statuses.includes(actual as typeof statuses[number]) : actual === status
+  return status === 'unknown' ? !actual || actual === 'unknown' || !statuses.includes(actual as typeof statuses[number]) : actual === status
 }).length })).filter(item => item.count))
 </script>
 
