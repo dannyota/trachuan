@@ -15,10 +15,21 @@ type Provision struct {
 	StartOrdinal, EndOrdinal             int
 	StartLine, EndLine                   int `json:",omitempty"`
 	NodeID                               string
+	ParentAnchor                         string `json:",omitempty"`
+	Ordinal                              int    `json:",omitempty"`
 }
 
-// Counts summarizes the input paragraphs.
-type Counts struct{ Paragraphs, Characters, ProvisionCharacters, TableCharacters, Images int }
+// Counts summarizes input coverage and accepted child structure.
+type Counts struct {
+	Paragraphs, Characters, ProvisionCharacters, TableCharacters, Images int
+	Structure                                                            *StructureCounts `json:",omitempty"`
+}
+
+// StructureCounts records accepted child spans and conservative rejections.
+type StructureCounts struct {
+	ArticlesSplit, Clauses, Points int
+	Reasons                        map[string]int
+}
 
 // Result contains the provisions, scope checks, counts and quality gaps.
 type Result struct {
