@@ -45,9 +45,10 @@ compared after trimming and lowercasing. Then a Google subject with no account
 is admitted only when its verified email is in the list; otherwise the callback
 redirects with `signup_closed` and writes no account, session or login time (the
 login transaction stays claimed). An existing account signs in whatever the list
-says. A variable that is present but empty, or holds an entry without `@`, stops
-the server at startup. A blocked account, or one whose deletion was requested,
-cannot log in.
+says. A variable that is present but empty, or holds an entry that is not a
+plain address (a non-empty local part, `@`, a DNS domain with a dot and no
+`[...]` literal, no whitespace and no display name), stops the server at
+startup. A blocked account, or one whose deletion was requested, cannot log in.
 
 `next` is validated twice, on the raw value and after decoding percent-escapes
 once (a malformed escape rejects it). Both forms must start with exactly one
