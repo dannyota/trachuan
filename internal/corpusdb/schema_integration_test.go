@@ -57,6 +57,17 @@ func TestApply_CreatesSchemaVersion5(t *testing.T) {
 	}
 }
 
+func TestApply_SparseStorageMain(t *testing.T) {
+	conn := schemaDB(t)
+	var storage string
+	if err := conn.QueryRow(context.Background(), `SELECT attstorage::text FROM pg_attribute WHERE attrelid='chunk'::regclass AND attname='sparse'`).Scan(&storage); err != nil {
+		t.Fatal(err)
+	}
+	if storage != "m" {
+		t.Fatalf("sparse storage = %q, want m", storage)
+	}
+}
+
 func TestApply_ConstraintsRejectBadRows(t *testing.T) {
 	conn := schemaDB(t)
 	ctx := context.Background()
