@@ -12,6 +12,8 @@ export async function openAccount(page: Page, stubReports = true) {
     ? route.fulfill({ status: 201, json: { id: 1, name: 'test', created_at: '2026-01-01T00:00:00Z', expires_at: '2026-04-01T00:00:00Z', last_used_at: null, revoked_at: null, token: secret } })
     : route.fulfill({ json: [] }))
   await page.goto('/')
+  const menu = page.locator('button[aria-controls="site-menu"]')
+  if (await menu.isVisible()) await menu.click()
   await expect(page.getByRole('link', { name: 'Account', exact: true })).toBeVisible()
   await page.getByRole('link', { name: 'Account', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Account', exact: true })).toBeVisible()
