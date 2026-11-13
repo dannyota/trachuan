@@ -1,0 +1,29 @@
+:root { color-scheme: light dark; font-family: var(--font-sans); }
+body { margin: 0; background: var(--color-page); color: var(--color-ink); font-size: 16px; line-height: 1.6; }
+h1, h2, h3, h4, h5, h6 { font-family: var(--font-sans); font-weight: 700; }
+a { color: var(--color-primary); }
+button { cursor: pointer; }
+:focus-visible { outline: 3px solid var(--color-primary); outline-offset: 2px; }
+code, pre, kbd, samp { font-family: var(--font-mono); font-variant-ligatures: none; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 16px; border: 1px solid transparent; border-radius: var(--radius-md); font-weight: 600; text-decoration: none; }
+.btn-primary { background: var(--color-primary-fill); color: #fff; }
+.btn-secondary { background: var(--color-card); border-color: var(--color-line-strong); color: var(--color-ink); }
+.btn-danger { background: var(--color-danger-bg); border-color: var(--color-danger-line); color: var(--color-danger); }
+.input { padding: 10px 12px; border: 1px solid var(--color-line-strong); border-radius: var(--radius-md); background: var(--color-card); color: var(--color-ink); }
+.card { background: var(--color-card); border: 1px solid var(--color-line); border-radius: var(--radius-lg); }
+.chip { display: inline-flex; padding: 5px 10px; border: 1px solid var(--color-line-strong); border-radius: var(--radius-pill); background: var(--color-card); }
+.stamp { display: inline-flex; align-items: center; padding: 4px 10px; border: 1.5px solid currentColor; border-radius: var(--radius-sm); font-size: 12.5px; font-weight: 700; letter-spacing: .02em; text-transform: uppercase; }
+.stamp--in-force { color: var(--color-ink-in-force); background: var(--color-stamp-in-force-bg); }
+.stamp--partial { color: var(--color-ink-partial); background: var(--color-stamp-partial-bg); }
+.stamp--not-yet { color: var(--color-ink-not-yet); background: var(--color-stamp-not-yet-bg); }
+.stamp--expired, .stamp--suspended { color: var(--color-ink-expired); background: var(--color-stamp-expired-bg); border-color: var(--color-stamp-neutral-border); }
+.stamp--expired { text-decoration: line-through; text-decoration-thickness: 1.5px; }
+.stamp--unknown { color: var(--color-ink-neutral); background: var(--color-page); border-color: var(--color-stamp-neutral-border); border-style: dashed; }
+.relation-chip { display: inline-block; padding: .15rem .5rem; border: 1px solid currentColor; border-radius: var(--radius-stamp); }
+.law-text { font-family: var(--font-serif); font-size: 17px; line-height: 1.8; white-space: pre-wrap; }
+.num, .document-number, .token-value { font-family: var(--font-mono); font-weight: 500; font-variant-ligatures: none; }
+.container { width: 100%; max-width: 1248px; margin-inline: auto; padding-inline: 24px; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.notice { padding: 10px 12px; border-radius: var(--radius-md); background: var(--color-note); }
+.notice--warn { background: var(--color-note-warn); }
+@media (max-width: 767px) { .container { padding-inline: 16px; } }

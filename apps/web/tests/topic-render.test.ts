@@ -22,15 +22,17 @@ it('renders and caches anonymous topic pages, rejects unknown nodes and retries 
       const res = await app.localFetch(path, {headers:{cookie:'session=private'}});
       results.push({status:res.status,headers:Object.fromEntries(res.headers),body:await res.text()});
     }
+    const missingEn = await app.localFetch('/vn/topics/9', {headers:{cookie:'lang=en'}});
+    const missingEnBody = await missingEn.text();
     const en = await app.localFetch('/vn/topics', {headers:{cookie:'lang=en'}});
     const nodeEn = await app.localFetch('/vn/topics/1', {headers:{cookie:'lang=en'}});
     const nodeVi = await app.localFetch('/vn/topics/1', {headers:{'if-none-match':nodeEn.headers.get('etag'),'if-modified-since':'Wed, 01 Jan 3000 00:00:00 GMT'}});
     const nodeMatch = await app.localFetch('/vn/topics/1', {headers:{'if-none-match':results[2].headers.etag}});
     const vi = await app.localFetch('/vn/topics', {headers:{'if-none-match':en.headers.get('etag'),'if-modified-since':'Wed, 01 Jan 3000 00:00:00 GMT'}});
     const matched = await app.localFetch('/vn/topics', {headers:{'if-none-match':results[0].headers.etag}});
-    console.log(JSON.stringify({results,calls,en:{body:await en.text(),headers:Object.fromEntries(en.headers)},nodeEn:{body:await nodeEn.text()},nodeVi:nodeVi.status,nodeMatch:{status:nodeMatch.status,headers:Object.fromEntries(nodeMatch.headers)},vi:vi.status,matched:{status:matched.status,headers:Object.fromEntries(matched.headers)}}));
+    console.log(JSON.stringify({results,calls,missingEnBody,en:{body:await en.text(),headers:Object.fromEntries(en.headers)},nodeEn:{body:await nodeEn.text()},nodeVi:nodeVi.status,nodeMatch:{status:nodeMatch.status,headers:Object.fromEntries(nodeMatch.headers)},vi:vi.status,matched:{status:matched.status,headers:Object.fromEntries(matched.headers)}}));
   `
-  const { results, calls, en, vi, matched, nodeEn, nodeVi, nodeMatch } = JSON.parse(execFileSync(process.execPath, ['--input-type=module', '-e', script], { encoding: 'utf8' }))
+  const { results, calls, missingEnBody, en, vi, matched, nodeEn, nodeVi, nodeMatch } = JSON.parse(execFileSync(process.execPath, ['--input-type=module', '-e', script], { encoding: 'utf8' }))
   expect(results[0].status).toBe(200)
   expect(results[0].body.indexOf('First')).toBeLessThan(results[0].body.indexOf('Second'))
   expect(results[0].body).toContain('Description')
@@ -47,13 +49,14 @@ it('renders and caches anonymous topic pages, rejects unknown nodes and retries 
     expect(result.headers.vary.toLowerCase()).toContain('cookie')
     expect(result.headers['last-modified']).toBeUndefined()
   }
-  expect(results.slice(4, 6).map((r: { status: number, body: string }) => [r.status, r.body])).toEqual([[404, 'Not Found\n'], [404, 'Not Found\n']])
+  for (const result of results.slice(4, 6)) { expect(result.status).toBe(404); expect(result.body).toContain('Không tìm thấy trang') }
+  expect(missingEnBody).toContain('Page not found')
   expect(results.slice(6).map((r: { status: number }) => r.status)).toEqual([503, 503])
   expect(results[6].body).toContain('Dịch vụ chưa sẵn sàng.')
   expect(calls.filter((call: { path: string }) => call.path.endsWith('/1'))).toHaveLength(2)
   expect(calls.filter((call: { path: string, query: string }) => call.path.endsWith('/taxonomy') && call.query === '?depth=1')).toHaveLength(2)
   expect(calls.every((call: { cookie: string | null }) => call.cookie === null)).toBe(true)
-  expect(calls.filter((call: { path: string }) => call.path.endsWith('/9'))).toHaveLength(2)
+  expect(calls.filter((call: { path: string }) => call.path.endsWith('/9'))).toHaveLength(3)
   expect(calls.filter((call: { path: string }) => call.path.endsWith('/8'))).toHaveLength(2)
   expect(en.body).not.toBe(results[0].body)
   expect(vi).toBe(200)
@@ -117,7 +120,7 @@ it('does not revalidate topic errors against any ETag', () => {
       expect(response.headers['last-modified'], path).toBeUndefined()
       expect(response.headers['cache-control'], path).toBe('no-cache')
       expect(response.headers.vary.toLowerCase(), path).toContain('cookie')
-      if (path.endsWith('/9')) expect(response.body).toBe('Not Found\n')
+      if (path.endsWith('/9')) expect(response.body).toContain('Không tìm thấy trang')
       else expect(response.body).toContain('Dịch vụ chưa sẵn sàng.')
     }
   }

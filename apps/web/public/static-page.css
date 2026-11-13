@@ -1,0 +1,12 @@
+@font-face { font-family: BeVietnam; src: url('/fonts/be-vietnam-pro-var.woff2') format('woff2'); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: NotoSerif; src: url('/fonts/noto-serif-var.woff2') format('woff2'); font-weight: 100 900; font-display: swap; }
+:root { --color-page: #FFFFFF; --color-ink: #14171C; --color-muted: #59606B; --color-primary: #1E3A8A; --color-seal: #B42318; --font-sans: BeVietnam, sans-serif; --font-serif: NotoSerif, serif; }
+body { margin: 0; background: var(--color-page); color: var(--color-ink); font: 16px/1.6 var(--font-sans); }
+main { max-width: 720px; padding: 48px 24px; margin: auto; }
+a { color: var(--color-primary); }
+.logo { display: flex; align-items: center; gap: 10px; color: var(--color-ink); font-size: 19px; font-weight: 700; text-decoration: none; }
+.seal { color: var(--color-seal); }
+h1 { margin-top: 64px; }
+p { color: var(--color-muted); }
+nav { display: flex; flex-wrap: wrap; gap: 24px; }
+:focus-visible { outline: 3px solid var(--color-primary); outline-offset: 2px; }

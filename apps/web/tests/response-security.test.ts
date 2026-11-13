@@ -130,7 +130,9 @@ it('rejects unknown and encoded paths without rendering', () => {
   `) as { responses: Array<{ status: number, body: string, type: string }>, renders: number }
   expect(result.renders).toBe(0)
   for (const response of result.responses) {
-    expect(response).toEqual({ status: 404, body: 'Not Found\n', type: 'text/plain; charset=utf-8' })
+    expect(response.status).toBe(404)
+    expect(response.type).toBe('text/html; charset=utf-8')
+    expect(response.body).toContain('Không tìm thấy trang')
   }
 })
 
@@ -216,4 +218,25 @@ it('exempts existing static assets from page admission', () => {
   `) as { codes: number[], page: number }
   expect(result.codes).toEqual(Array(121).fill(200))
   expect(result.page).toBe(200)
+})
+
+it('serves localized unknown pages without caching or rendering', () => {
+  const result = runServer(`
+    let renders = 0;
+    app.hooks.hook('render:before', () => { renders++; });
+    const responses = [];
+    for (const cookie of ['', 'lang=en']) {
+      const res = await app.localFetch('/missing', {headers:{cookie,'if-none-match':'*'}});
+      responses.push({status:res.status, headers:Object.fromEntries(res.headers), body:await res.text()});
+    }
+    console.log(JSON.stringify({renders,responses}));
+  `) as { renders: number, responses: Array<{ status: number, headers: Record<string, string>, body: string }> }
+  expect(result.renders).toBe(0)
+  for (const [index, response] of result.responses.entries()) {
+    expect(response.status).toBe(404)
+    expect(response.headers['content-type']).toBe('text/html; charset=utf-8')
+    expect(response.headers['cache-control']).toBe('no-store')
+    expect(response.headers.etag).toBeUndefined()
+    expect(response.body).toContain(index ? 'Page not found' : 'Không tìm thấy trang')
+  }
 })

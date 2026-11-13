@@ -1,0 +1,36 @@
+@theme static {
+  --font-sans: BeVietnam, sans-serif;
+  --font-serif: NotoSerif, serif;
+  --font-mono: RobotoMono, monospace;
+  --color-page: #FFFFFF; --color-surface: #F6F7F9; --color-card: #FFFFFF;
+  --color-ink: #14171C; --color-ink-soft: #444B55; --color-muted: #59606B;
+  --color-line: #E3E6EA; --color-line-strong: #C6CBD2;
+  --color-primary: #1E3A8A; --color-primary-fill: #1E3A8A;
+  --color-seal: #B42318; --color-highlight: #FFF1A8; --color-highlight-ink: #14171C;
+  --color-note: #F1F4FA; --color-note-warn: #FDF6E9;
+  --color-danger: #B42318; --color-danger-line: #F3C7C1; --color-danger-bg: #FEF3F2;
+  --color-ink-in-force: #0B6E63; --color-stamp-in-force-bg: #E3F4F0;
+  --color-ink-partial: #8A4B08; --color-stamp-partial-bg: #FDF1DC;
+  --color-ink-not-yet: #1D4ED8; --color-stamp-not-yet-bg: #E4ECFE;
+  --color-ink-expired: #4A5160; --color-stamp-expired-bg: #ECEEF1;
+  --color-ink-neutral: #4A5160; --color-stamp-neutral-border: #6B7280;
+  --radius-sm: 6px; --radius-md: 8px; --radius-lg: 12px; --radius-pill: 999px;
+  --color-border: var(--color-line-strong); --color-input-border: var(--color-line-strong);
+  --radius-input: var(--radius-md); --radius-stamp: var(--radius-sm);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-page: #111418; --color-surface: #181C22; --color-card: #161A20;
+    --color-ink: #E6E8EB; --color-ink-soft: #C4C9D1; --color-muted: #A0A7B2;
+    --color-line: #2C323B; --color-line-strong: #3A414C;
+    --color-primary: #9DB4F5; --color-primary-fill: #3451B2;
+    --color-seal: #E5604F; --color-highlight: #4A3F12; --color-highlight-ink: #F5ECC0;
+    --color-note: #19213A; --color-note-warn: #2B2110;
+    --color-danger: #E5604F; --color-danger-line: #5A2620; --color-danger-bg: #2A1412;
+    --color-ink-in-force: #5ED0BD; --color-stamp-in-force-bg: #0F2C28;
+    --color-ink-partial: #F0B565; --color-stamp-partial-bg: #33230B;
+    --color-ink-not-yet: #9DB8FF; --color-stamp-not-yet-bg: #16224A;
+    --color-ink-expired: #B3B9C4; --color-stamp-expired-bg: #23272E;
+    --color-ink-neutral: #B3B9C4;
+  }
+}
