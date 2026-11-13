@@ -66,6 +66,11 @@ async function openFilters() {
 function closeFilters() { dialog.value?.close() }
 function dialogClosed() { dialogOpen.value = false; filterButton.value?.focus() }
 function fillExample(value: string) { query.value = value }
+function onQueryKeydown(event: KeyboardEvent) {
+  if (event.key !== 'Enter' || event.shiftKey || event.ctrlKey || event.altKey || event.metaKey || event.isComposing) return
+  event.preventDefault()
+  search()
+}
 
 let action: Action | null = null
 let controller: AbortController | null = null
@@ -123,7 +128,7 @@ async function search(more = false) {
       <div class="search-header">
         <form class="search-box" @submit.prevent="search()">
           <label for="search-query" class="visually-hidden">{{ messages.searchQuery }}</label>
-          <textarea id="search-query" v-model="query" class="input" rows="1" autocomplete="off" :placeholder="messages.searchQuery" />
+          <textarea id="search-query" v-model="query" class="input" rows="1" autocomplete="off" :placeholder="messages.searchQuery" @keydown="onQueryKeydown" />
           <button class="btn btn-primary" type="submit" :disabled="loading">{{ messages.searchSubmit }}</button>
         </form>
         <div class="search-mobile-chips">

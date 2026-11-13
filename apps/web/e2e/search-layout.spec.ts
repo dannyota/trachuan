@@ -23,7 +23,7 @@ test('opens mobile filters without a reactive loop and restores focus on Escape'
   expect(errors).toEqual([])
 })
 
-test('keeps compact navigation on one row and exposes the full menu', async ({ page }) => {
+test('keeps desktop navigation and account controls visible on one row', async ({ page }) => {
   await page.route('**/api/v1/me', route => route.fulfill({ json: { id: 1, email: 'test@example.invalid', created_at: '2099-01-01T00:00:00Z', csrf_token: 'fixture' } }))
   await page.setViewportSize({ width: 1280, height: 800 })
   await page.goto('/')
@@ -33,12 +33,17 @@ test('keeps compact navigation on one row and exposes the full menu', async ({ p
   const nav = header.locator('.site-nav')
   await expect(nav.getByRole('link', { name: /chủ đề|topics/i })).toBeVisible()
   await expect(nav.getByRole('link', { name: /kết nối ai|connect ai/i })).toBeVisible()
-  await expect(nav.getByRole('link', { name: /nguồn dữ liệu|sources/i })).toBeHidden()
-  const tops = await header.locator('.site-logo, .search-box, .site-nav, .menu-button').evaluateAll(items => items.map(item => Math.round(item.getBoundingClientRect().top)))
-  expect(Math.max(...tops) - Math.min(...tops)).toBeLessThan(25)
-  await header.getByRole('button', { name: /menu/i }).click()
   await expect(nav.getByRole('link', { name: /nguồn dữ liệu|sources/i })).toBeVisible()
   await expect(nav.getByRole('link', { name: /tra cứu|search/i })).toBeVisible()
+  await expect(header.locator('.account-link')).toBeVisible()
+  await expect(header.locator('.menu-button')).toBeHidden()
+  const tops = await header.locator('.site-logo, .search-box, .site-nav, .account-link').evaluateAll(items => items.map(item => Math.round(item.getBoundingClientRect().top)))
+  expect(Math.max(...tops) - Math.min(...tops)).toBeLessThan(25)
+  const query = page.locator('#search-query')
+  await expect(query).toHaveCSS('resize', 'none')
+  const box = await query.boundingBox()
+  expect(box!.height).toBeGreaterThanOrEqual(44)
+  expect(box!.height).toBeLessThanOrEqual(48)
 })
 
 test('shows the text toggle only when the result is clamped', async ({ page }) => {

@@ -42,7 +42,7 @@ it.each(['status', 'taxonomy'])('keeps search state after %s fails and retries l
   await wrapper.findAll('input[type="checkbox"]').find(input => input.element.parentElement?.textContent?.includes('Parent'))!.setValue(true)
   await wrapper.get('form').trigger('submit')
   await flushPromises()
-  if (failing === 'taxonomy') await wrapper.findAll('button').find(button => button.text() === 'Show children' && button.element.parentElement?.textContent?.includes('Parent'))!.trigger('click')
+  if (failing === 'taxonomy') await wrapper.findAll('button').find(button => button.attributes('aria-label') === 'Show children' && button.element.parentElement?.textContent?.includes('Parent'))!.trigger('click')
   finish(json({ error: { code: 'unavailable' } }, 503))
   await flushPromises()
   expect(unavailable.value).toBe(false)

@@ -226,3 +226,19 @@ it('keeps the previous result area while a new search loads', async () => {
   expect(wrapper.find('.search-results-pending').exists()).toBe(false)
   wrapper.unmount()
 })
+
+it('submits on Enter but not Shift+Enter or during text composition', async () => {
+  const calls: Record<string, unknown>[] = []
+  const { wrapper } = setup(async input => { calls.push(await (input as Request).json()); return json(page) })
+  const field = wrapper.get('textarea')
+  await field.setValue('fixture question')
+  await field.trigger('keydown', { key: 'Enter', shiftKey: true })
+  await field.trigger('keydown', { key: 'Enter', isComposing: true })
+  await flushPromises()
+  expect(calls).toHaveLength(0)
+  await field.trigger('keydown', { key: 'Enter' })
+  await flushPromises()
+  expect(calls).toHaveLength(1)
+  expect(calls[0]?.query).toBe('fixture question')
+  wrapper.unmount()
+})
