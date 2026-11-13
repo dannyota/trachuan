@@ -7,7 +7,8 @@ Intended behavior of trachuan. Decisions with alternatives are in the
 | Note                                                | Owns                                                                                           |
 | --------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
 | [system](system.md)                                 | Success criteria, components, database roles, repository layout                                |
-| [data](data.md)                                     | Corpus, auth and workshop data models                                                          |
+| [data](data.md)                                     | Corpus and auth data models                                                                    |
+| [workshop data](workshop-data.md)                   | Workshop tables, scope contracts, relation support and expand observations                     |
 | [retrieval](retrieval.md)                           | Query validation, ranking, validity, subject filter, release pinning, MCP tools, web API       |
 | [taxonomy](taxonomy.md)                             | Subject tree import, classification layers, evaluation gate                                    |
 | [pipeline](pipeline.md)                             | Write path on Temporal, stages, batch submissions, release artifact                            |

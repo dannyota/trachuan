@@ -1,6 +1,6 @@
 # Membership retention and loss
 
-Reconcile the [support tuples](data.md#scope-workshop-contracts) before
+Reconcile the [support tuples](workshop-data.md#scope-workshop-contracts) before
 assigning a member's disposition. [Sources](sources.md) owns selection and
 relation qualification; [pipeline](pipeline.md#source-ingest-rules) owns stable
 listing passes. A removed tuple is audit evidence, not active support.

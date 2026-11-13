@@ -3,8 +3,8 @@
 Proposed execution refinement under
 [ADR 0012](../adr/0012-vietnam-corpus-sources.md). Keep fetch content
 independent of collection time. Retain the existing VBPL format; use version 2
-envelopes for chinhphu. [Data](data.md#scope-workshop-contracts) owns workshop
-fields; this note owns bundle bytes and observation handling.
+envelopes for chinhphu. [Data](workshop-data.md#scope-workshop-contracts) owns
+workshop fields; this note owns bundle bytes and observation handling.
 
 ## Byte stability
 

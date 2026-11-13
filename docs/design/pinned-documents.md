@@ -58,13 +58,16 @@ the key while the pin stands, and no state is carried to a later run.
 Expand writes the key's observation from the stored `detail.json` and
 `diagram.json` of the pinned expand artifact, under the run's frozen expand
 recipe. Fetch publishes the stored `detail.json`, `diagram.json`, `tree.json`,
-`files.json` and `files/` of the pinned fetch artifact as the key's bundle, with
-acquisition origin `pinned` and the pin's `rel` as provenance. For the pinned
-key neither stage makes a source request, selects a baseline, probes ETags or
-takes a control sample. Stored detail lacks `viewCount`, as every stored detail
-does. Later stages, the key's one-hop context, the secondary hand-over and
-validity then follow the ordinary rules; context documents the source still
-serves are read fresh.
+`files.json`, `files/` and `report.json` of the pinned fetch artifact as the
+key's bundle, so its `missing` and `too_large` attachment gaps recur. Each
+observation row has acquisition `pinned`, `origin_ref` to the matching
+observation of the producing run, and that row's `fetched_at` or null
+([data](workshop-data.md#scope-workshop-contracts)). For the pinned key neither
+stage makes a source request, selects a baseline, probes ETags or takes a
+control sample. Stored detail lacks `viewCount`, as every stored detail does.
+Later stages, the key's one-hop context, the secondary hand-over and validity
+then follow the ordinary rules; context documents the source still serves are
+read fresh.
 
 Discover also records two outcomes from the listings it makes anyway:
 
@@ -118,7 +121,8 @@ VBPL never returns.
 - Source list: `vbpl.pinned` as above; the discover recipe changes once for the
   new support kind.
 - `run_membership_evidence` gains the kind `pinned`, and `run_failure` the codes
-  `pin_invalid` and `pin_conflict` ([data](data.md#scope-workshop-contracts)).
+  `pin_invalid` and `pin_conflict`
+  ([data](workshop-data.md#scope-workshop-contracts)).
 - Coverage gap kinds gain `source_withdrawn_retained`; `source_pin_live` is kept
   in the discover report and shown by status, never in `gap`.
 - The release `document` row gains nullable `source_withdrawn_since` and
