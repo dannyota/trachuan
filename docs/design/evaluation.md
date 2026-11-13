@@ -49,16 +49,16 @@ an incomplete run into a passing report.
 Stage key is `<cc>/<rel>`, one item after a done build. Input hash combines
 verified build artifact hash, fixture and mapping hashes, previous report hash
 or empty string, frozen date, and mode list in fixed order. Recipe hash covers
-scorer version `agent-eval/1`, legacy matcher version, product matcher version,
-metric definitions, rejection IDs/message, cache schema/depths, quantile rule,
-and floors. It reads but never changes the dump or singleton release row.
-Artifact files: `report.json`, `cases.jsonl`, `arms.jsonl`, `queries.f32`,
-`query-index.json`, `MANIFEST.sha256`. `Rows` is a no-op; `Resolve` exposes the
-report status and regenerates evaluation gaps: one `eval_floor_failed` per
-failed or unavailable old-product floor (detail `<mode>:<metric>`) or
-development floor (detail `development:<mode>:<metric>`) and one
-`eval_rejection_failed` per failed rejection check (detail the case ID). The
-owner may accept them; release stays blocked by `release_eligible`. No
+scorer version (now `agent-eval/4`), legacy matcher version, product matcher
+version, metric definitions, rejection IDs/message, cache schema/depths,
+quantile rule, and floors. It reads but never changes the dump or singleton
+release row. Artifact files: `report.json`, `cases.jsonl`, `arms.jsonl`,
+`queries.f32`, `query-index.json`, `MANIFEST.sha256`. `Rows` is a no-op;
+`Resolve` exposes the report status and regenerates evaluation gaps: one
+`eval_floor_failed` per failed or unavailable old-product floor (detail
+`<mode>:<metric>`) or development floor (detail `development:<mode>:<metric>`)
+and one `eval_rejection_failed` per failed rejection check (detail the case ID).
+The owner may accept them; release stays blocked by `release_eligible`. No
 production queries enter these artifacts.
 
 ## Fixtures and identity adjudication
@@ -76,8 +76,13 @@ Citation matching splits on commas/Unicode whitespace; case-insensitive tokens
 `điều`, `khoản`, `điểm` must be followed by the expected value after removing
 edge parentheses and periods. Document-only `relation_ok` also matches a
 returned confirmed relation's other document number. No relation credit when
-article/clause/point is specified. Report direct-only scores alongside legacy
-relation credit. Guard fixtures against empty expected numbers.
+article/clause/point is specified. A fragment with `Complete:true` also matches
+when the hit's number matches and the fragment's own citation, built from the
+fragment provision's ancestry like a hit citation, satisfies the citation rule;
+a truncated fragment earns nothing, as in product matching. A recipe-3 merged
+article hit therefore earns legacy credit for its complete member clauses
+(`agent-eval/4`). Report direct-only scores alongside legacy relation credit.
+Guard fixtures against empty expected numbers.
 
 Legacy evaluation bypasses only the product diacritics rejection through
 `Engine.PrepareLegacy(ctx,request)` followed by `Engine.Collect`; it still
