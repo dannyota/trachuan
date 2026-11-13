@@ -205,5 +205,5 @@ accuracy on either cohort.
   credited the same complete fragment. The number and citation rules stay
   banhmi's and also apply to each complete fragment's own citation, in a
   recipe-2 parent hit as in a merged hit, as product matching already does; a
-  truncated fragment earns nothing. Legacy parity stays comparable with
-  banhmi's numbers, where those clauses were separate hits.
+  truncated fragment earns nothing. Legacy parity stays comparable with banhmi's
+  numbers, where those clauses were separate hits.
