@@ -90,3 +90,11 @@ credentials; published image layers and release metadata are public.
 - 2026-11-10: local development runs natively (PostgreSQL 18 and the Temporal
   development server on the MacBook); `deploy/compose.yml` is removed.
   Production keeps rootless Podman Quadlet on the host.
+- 2026-11-13: the owner made the measurement instance `trachuan-host` the
+  production host with no test environment ("we are new, so we dont need uat
+  env"), so Google login is tested on `trachuan.vn` directly. DNS records are
+  managed with Cloudflare's official `cf` CLI instead of OpenTofu, still DNS
+  only. Production starts in two phases: the site first serves the owner; signed
+  pull deployment, Vault secrets, backups with a restore proof, alarms and the
+  OpenTofu import must land before any other account signs in
+  ([deployment](../design/deployment.md#domain-and-dns)).
