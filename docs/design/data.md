@@ -164,8 +164,9 @@ per-adapter additions. Interface and transaction rules live in
 - `run_membership_evidence`: run, document key, producing stage/item, support
   state (`current`, `retained`, `removed`) and typed support tuple
   `(rule_kind, rule_value, evidence_reference)`. Kinds and values: `agency` with
-  agency id; `term` with term; `named` with the named entry; `secondary_probe`
-  with `<chinhphu item key>|<docid>` under the
+  agency id; `term` with term; `named` with the named entry; `pinned` with the
+  pinned key ([pinned documents](pinned-documents.md)); `secondary_probe` with
+  `<chinhphu item key>|<docid>` under the
   [secondary support contract](secondary-discovery.md#support-and-retention-evidence);
   `relation` under the [relation evidence contract](#relation-support-evidence).
   The evidence reference carries listing or lookup query identity and page when
@@ -245,10 +246,10 @@ The independent `source_unavailable` kind remains retry-eligible. Reason:
 restart decisions must distinguish gateway failures from invalid legal data.
 
 `run_failure`, keyed by run and failure identity, stores non-acceptable code,
-producing stage/item, reason and evidence references. Codes are `scope_changed`
-and
-[`secondary_candidate_ceiling`](secondary-discovery.md#candidate-ceiling-and-close).
-Both are durable: start, gap acceptance and release refuse the run; only a new
+producing stage/item, reason and evidence references. Codes are `scope_changed`,
+[`secondary_candidate_ceiling`](secondary-discovery.md#candidate-ceiling-and-close),
+and `pin_invalid` and `pin_conflict` ([pinned documents](pinned-documents.md)).
+All are durable: start, gap acceptance and release refuse the run; only a new
 run under the failure's recovery rule clears it. This record is separate from
 `gap`.
 

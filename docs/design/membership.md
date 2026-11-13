@@ -31,8 +31,9 @@ runs keep their original evidence unchanged.
 
 ## Direct discovery
 
-VBPL seeds come from direct tuples `agency`, `term` and `named`. Once secondary
-discovery exists, `secondary_probe` also seeds a proven VBPL match under the
+VBPL seeds come from direct tuples `agency`, `term`, `named` and `pinned`
+([pinned documents](pinned-documents.md)). Once secondary discovery exists,
+`secondary_probe` also seeds a proven VBPL match under the
 [hand-over contract](sources.md#secondary-discovery-and-hand-over). Relation
 tuples never seed. A relation-context member from an earlier run needs current
 or retained direct support to become a primary seed.
