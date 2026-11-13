@@ -88,6 +88,7 @@ type NonRegression struct {
 	Name                   string                        `json:"name"`
 	Value                  *float64                      `json:"value"`
 	PreviousValue          *float64                      `json:"previous_value"`
+	Gating                 bool                          `json:"gating"`
 	Status                 string                        `json:"status"`
 	Reason                 string                        `json:"reason,omitempty"`
 	MappingIncompleteCount int                           `json:"mapping_incomplete_count,omitempty"`
