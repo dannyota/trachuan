@@ -37,7 +37,14 @@ func (s loginStore) ClaimLoginTransaction(ctx context.Context, p weblogin.ClaimL
 func (s loginStore) UpsertGoogleAccount(ctx context.Context, p weblogin.UpsertGoogleAccountParams) (weblogin.GoogleAccount, error) {
 	ctx, cancel := context.WithTimeout(ctx, authQueryDeadline)
 	defer cancel()
-	row, err := s.queries.UpsertGoogleAccount(ctx, store.UpsertGoogleAccountParams{GoogleSub: p.Sub, Email: p.Email})
+	var row store.Account
+	var err error
+	if p.RejectSignup {
+		// An unlisted email can update an existing subject, never insert one.
+		row, err = s.queries.UpdateGoogleAccount(ctx, store.UpdateGoogleAccountParams{GoogleSub: p.Sub, Email: p.Email})
+	} else {
+		row, err = s.queries.UpsertGoogleAccount(ctx, store.UpsertGoogleAccountParams{GoogleSub: p.Sub, Email: p.Email})
+	}
 	if ctx.Err() != nil {
 		err = ctx.Err()
 	}

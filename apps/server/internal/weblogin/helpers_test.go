@@ -65,6 +65,9 @@ func (s *fakeStore) UpsertGoogleAccount(_ context.Context, p UpsertGoogleAccount
 	}
 	a, ok := s.accounts[p.Sub]
 	if !ok {
+		if p.RejectSignup {
+			return GoogleAccount{}, sql.ErrNoRows
+		}
 		a = GoogleAccount{ID: int64(len(s.accounts) + 1)}
 	}
 	s.accounts[p.Sub] = a
@@ -109,11 +112,15 @@ type fixture struct {
 	now      time.Time
 }
 
-func newFixture(t *testing.T) *fixture {
+func newFixture(t *testing.T, signupEmails ...[]string) *fixture {
 	t.Helper()
 	f := &fixture{p: oidctest.New(t), store: newFakeStore(), sessions: &fakeSessions{}, now: time.Now().Truncate(time.Second)}
 	var err error
-	f.h, err = New(t.Context(), Config{ClientID: oidctest.ClientID, ClientSecret: "test-client-secret", PublicURL: publicURL, Issuer: f.p.URL, Store: f.store, Sessions: f.sessions, Clock: func() time.Time { return f.now }})
+	var emails []string
+	if len(signupEmails) > 0 {
+		emails = signupEmails[0]
+	}
+	f.h, err = New(t.Context(), Config{ClientID: oidctest.ClientID, ClientSecret: "test-client-secret", PublicURL: publicURL, Issuer: f.p.URL, Store: f.store, Sessions: f.sessions, Clock: func() time.Time { return f.now }, SignupEmails: emails})
 	if err != nil {
 		t.Fatal(err)
 	}

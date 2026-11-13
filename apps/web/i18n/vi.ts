@@ -38,6 +38,7 @@ export const vi = {
   loginFailed: 'Đăng nhập không thành công. Vui lòng thử lại.',
   loginExpired: 'Phiên đăng nhập đã hết hạn. Vui lòng thử lại.',
   loginBlocked: 'Tài khoản đã bị khóa.',
+  signupClosed: 'Tra Chuẩn chưa mở đăng ký tài khoản mới.',
   loginGeneric: 'Không thể hoàn tất đăng nhập. Vui lòng thử lại.',
   statusInForce: 'Còn hiệu lực',
   statusPartial: 'Còn hiệu lực một phần',

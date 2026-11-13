@@ -7,6 +7,8 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	"slices"
+	"strings"
 
 	"github.com/coreos/go-oidc/v3/oidc"
 	"golang.org/x/oauth2"
@@ -88,7 +90,12 @@ func (h *Handler) callback(w http.ResponseWriter, r *http.Request) {
 		rejection(w, r, "login_failed")
 		return
 	}
-	account, err := h.store.UpsertGoogleAccount(ctx, UpsertGoogleAccountParams{Sub: id.Subject, Email: claims.Email})
+	rejectSignup := h.signupEmails != nil && !slices.Contains(h.signupEmails, strings.ToLower(strings.TrimSpace(claims.Email)))
+	account, err := h.store.UpsertGoogleAccount(ctx, UpsertGoogleAccountParams{Sub: id.Subject, Email: claims.Email, RejectSignup: rejectSignup})
+	if errors.Is(err, sql.ErrNoRows) && rejectSignup {
+		rejection(w, r, "signup_closed")
+		return
+	}
 	if err != nil {
 		unavailable(w)
 		return

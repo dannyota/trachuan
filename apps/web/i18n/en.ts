@@ -41,6 +41,7 @@ export const en: Catalog = {
   loginFailed: 'Sign-in failed. Please try again.',
   loginExpired: 'Sign-in expired. Please try again.',
   loginBlocked: 'The account is blocked.',
+  signupClosed: 'Tra Chuẩn is not open to new accounts yet.',
   loginGeneric: 'Sign-in could not be completed. Please try again.',
   statusInForce: 'In force',
   statusPartial: 'Partly in force',

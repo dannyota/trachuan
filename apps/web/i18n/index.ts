@@ -24,6 +24,7 @@ export function loginError(language: Language, code: unknown): string {
     case 'login_failed': return messages.loginFailed
     case 'login_expired': return messages.loginExpired
     case 'account_blocked': return messages.loginBlocked
+    case 'signup_closed': return messages.signupClosed
     default: return messages.loginGeneric
   }
 }

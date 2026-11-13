@@ -17,6 +17,7 @@ type config struct {
 	strictDeployment                                                                                   bool
 	trustedProxies                                                                                     []netip.Prefix
 	oauthClients                                                                                       []oauth.Client
+	signupEmails                                                                                       []string
 }
 
 func loadConfig() (config, error) {
@@ -36,6 +37,15 @@ func loadConfig() (config, error) {
 	}
 	if c.authURL == "" || !validCorpusURL(c.corpusURL) || !ok {
 		return config{}, errors.New("invalid or missing server configuration")
+	}
+	if raw, present := os.LookupEnv("SERVER_SIGNUP_EMAILS"); present {
+		for _, part := range strings.Split(raw, ",") {
+			email := strings.ToLower(strings.TrimSpace(part))
+			if !strings.Contains(email, "@") {
+				return config{}, errors.New("invalid or missing server configuration")
+			}
+			c.signupEmails = append(c.signupEmails, email)
+		}
 	}
 	c.strictDeployment = loopbackDeployment(rawPublicURL, c.listen)
 	c.publicURL = origin
