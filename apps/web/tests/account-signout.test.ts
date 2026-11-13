@@ -39,3 +39,20 @@ it('clears the session and returns home after signing out', async () => {
   expect(session.$state).toEqual({ account: null, csrfToken: null, status: 'signed-out' })
   expect(navigate).toHaveBeenCalledWith('/')
 })
+
+it('shows the current session before other sessions', async () => {
+  setActivePinia(createPinia())
+  vi.stubGlobal('definePageMeta', () => {})
+  vi.stubGlobal('useState', () => ref('en'))
+  vi.stubGlobal('useApi', () => ({ client: { GET: async (path: string) => ({ data: path.endsWith('/sessions') ? [
+    { id: 2, current: false, created_at: '2026-01-01T00:00:00Z', last_seen_at: '2026-01-01T00:00:00Z' },
+    { id: 1, current: true, created_at: '2026-01-01T00:00:00Z', last_seen_at: '2026-01-01T00:00:00Z' },
+  ] : path.endsWith('/reports') ? { reports: [] } : [] }) } }))
+  vi.stubGlobal('computed', computed)
+  vi.stubGlobal('ref', ref)
+  vi.stubGlobal('onMounted', onMounted)
+  const wrapper = mount(Account)
+  await flushPromises()
+  expect(wrapper.findAll('.account-row')[0]!.text()).toContain('This browser')
+  wrapper.unmount()
+})

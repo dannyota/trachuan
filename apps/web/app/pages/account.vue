@@ -5,6 +5,8 @@ import { accountActions } from '../api/account-actions'
 import type { Action } from '../api/client'
 import { useSessionStore } from '../stores/session'
 import { errorMessage, messagesFor, type Language } from '../../i18n'
+import { accountMessages } from '../../i18n/account'
+import { formatDate, formatDateTime } from '../content'
 
 definePageMeta({ signedIn: true })
 type Session = components['schemas']['Session']
@@ -12,6 +14,7 @@ type Token = components['schemas']['Token']
 type Grant = components['schemas']['Grant']
 const language = useState<Language>('language', () => 'vi')
 const messages = computed(() => messagesFor(language.value))
+const labels = computed(() => accountMessages(language.value))
 const session = useSessionStore()
 const api = useApi({ userAction: true })
 const actions = accountActions(api.client)
@@ -35,7 +38,10 @@ function openDeletion() {
   deleting.value = true
 }
 const busy = ref(false)
-function date(value: string | null) { return value ? new Intl.DateTimeFormat(language.value, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value)) : messages.value.none }
+const loading = ref(true)
+const orderedSessions = computed(() => [...sessions.value].sort((a, b) => Number(b.current) - Number(a.current)))
+const currentSession = computed(() => sessions.value.find(item => item.current))
+function date(value: string | null) { return value ? formatDateTime(value, language.value) : messages.value.none }
 function showError(code?: string) { error.value = errorMessage(language.value, code || 'generic') }
 async function loadSessions() {
   const result = await api.client.GET('/api/v1/me/sessions')
@@ -55,6 +61,7 @@ async function loadGrants() {
 onMounted(async () => {
   try { await Promise.all([loadSessions(), loadTokens(), loadGrants()]) }
   catch { showError() }
+  finally { loading.value = false }
 })
 async function revokeSession(item: Session) {
   if (busy.value) return
@@ -81,33 +88,38 @@ async function revokeGrant(id: number) {
 async function tokenCreated() { try { await loadTokens() } catch { showError() } }
 </script>
 <template>
-  <div>
-    <h1>{{ messages.account }}</h1>
-    <div v-if="session.account"><p>{{ session.account.email }}</p><p>{{ messages.accountCreated }}: {{ date(session.account.created_at) }}</p></div>
-    <p v-if="error" role="alert">{{ error }}</p>
-    <section><h2>{{ messages.sessions }}</h2>
-      <article v-for="item in sessions" :key="item.id" class="account-row">
-        <p>{{ messages.accountCreated }}: {{ date(item.created_at) }}</p><p>{{ messages.lastSeen }}: {{ date(item.last_seen_at) }}</p>
-        <p v-if="item.current">{{ messages.currentSession }}</p>
-        <button type="button" :disabled="busy" @click="revokeSession(item)">{{ item.current ? messages.signOut : messages.revoke }}</button>
+  <div class="account-page">
+    <div class="account-heading">
+      <div><h1>{{ labels.title }}</h1><p v-if="session.account">{{ session.account.email }} · {{ labels.created }} {{ formatDate(session.account.created_at.slice(0, 10), language) }}</p></div>
+      <button class="btn btn-secondary" type="button" :disabled="busy || !currentSession" @click="currentSession && revokeSession(currentSession)">{{ labels.signOut }}</button>
+    </div>
+    <p v-if="error" class="notice" role="alert" aria-live="assertive">{{ error }}</p>
+    <section class="card account-card"><div class="account-card-head"><div><h2>{{ labels.sessions }}</h2><p>{{ labels.sessionsDescription }}</p></div></div>
+      <div v-if="loading" class="account-skeleton" role="status"><span class="visually-hidden">{{ labels.loading }}</span></div>
+      <p v-else-if="!orderedSessions.length && !error" class="account-empty">{{ labels.sessionsEmpty }}</p>
+      <article v-for="item in orderedSessions" :key="item.id" class="account-row">
+        <div class="account-row-label"><strong>{{ item.current ? labels.thisBrowser : labels.otherSession }}</strong><span v-if="item.current" class="account-current">{{ labels.current }}</span></div>
+        <p class="account-meta">{{ labels.signedIn }} {{ date(item.created_at) }} · {{ labels.lastSeen }} {{ date(item.last_seen_at) }}</p>
+        <button class="btn btn-secondary" type="button" :disabled="busy" @click="revokeSession(item)">{{ item.current ? labels.signOut : labels.revoke }}</button>
       </article>
     </section>
-    <section><h2>{{ messages.personalTokens }}</h2><button type="button" @click="openToken">{{ messages.createToken }}</button>
-      <article v-for="item in tokens" :key="item.id" class="account-row">
-        <h3>{{ item.name }}</h3><p>{{ messages.accountCreated }}: {{ date(item.created_at) }}</p><p>{{ messages.expires }}: {{ date(item.expires_at) }}</p>
-        <p>{{ messages.lastUsed }}: {{ date(item.last_used_at) }}</p><p>{{ messages.revoked }}: {{ date(item.revoked_at) }}</p>
-        <button v-if="!item.revoked_at" type="button" :disabled="busy" @click="revokeToken(item.id)">{{ messages.revoke }}</button>
+    <section class="card account-card"><div class="account-card-head"><div><h2>{{ labels.tokens }}</h2><p>{{ labels.tokensDescription }}</p></div><button class="btn btn-primary" type="button" :disabled="busy" @click="openToken">{{ labels.createToken }}</button></div>
+      <div v-if="loading" class="account-skeleton" role="status"><span class="visually-hidden">{{ labels.loading }}</span></div>
+      <p v-else-if="!tokens.length && !error" class="account-empty">{{ labels.tokensEmpty }}</p>
+      <article v-for="item in tokens" :key="item.id" class="account-row"><div class="account-row-label"><h3>{{ item.name }}</h3><span v-if="item.revoked_at" class="account-revoked">{{ labels.revoked }}</span></div>
+        <p class="account-meta">{{ labels.created }} {{ date(item.created_at) }} · {{ labels.expires }} {{ date(item.expires_at) }} · {{ labels.lastUsed }} {{ date(item.last_used_at) }}<template v-if="item.revoked_at"> · {{ labels.revoked }} {{ date(item.revoked_at) }}</template></p>
+        <button v-if="!item.revoked_at" class="btn btn-secondary" type="button" :disabled="busy" @click="revokeToken(item.id)">{{ labels.revoke }}</button>
       </article>
     </section>
-    <section><h2>{{ messages.clients }}</h2>
-      <article v-for="item in grants" :key="item.id" class="account-row">
-        <h3>{{ item.client_name || item.client_id_host || item.id }}</h3><p v-if="item.client_name && item.client_id_host">{{ item.client_id_host }}</p>
-        <p>{{ messages.accountCreated }}: {{ date(item.created_at) }}</p><p>{{ messages.lastUsed }}: {{ date(item.last_used_at) }}</p>
-        <button type="button" :disabled="busy" @click="revokeGrant(item.id)">{{ messages.revoke }}</button>
+    <section class="card account-card"><div class="account-card-head"><div><h2>{{ labels.grants }}</h2><p>{{ labels.grantsDescription }}</p></div></div>
+      <div v-if="loading" class="account-skeleton" role="status"><span class="visually-hidden">{{ labels.loading }}</span></div>
+      <p v-else-if="!grants.length && !error" class="account-empty">{{ labels.grantsEmpty }}</p>
+      <article v-for="item in grants" :key="item.id" class="account-row"><div class="account-row-label"><h3>{{ item.client_name || item.client_id_host || messages.none }}</h3><span v-if="item.client_name && item.client_id_host" class="account-host">{{ item.client_id_host }}</span></div>
+        <p class="account-meta">{{ labels.granted }} {{ date(item.created_at) }} · {{ labels.lastUsed }} {{ date(item.last_used_at) }}</p><button class="btn btn-secondary" type="button" :disabled="busy" @click="revokeGrant(item.id)">{{ labels.revokeGrant }}</button>
       </article>
     </section>
     <ReportsSection />
-    <section><h2>{{ messages.deleteAccount }}</h2><button type="button" @click="openDeletion">{{ messages.deleteAccount }}</button></section>
+    <section class="card account-danger"><div><h2>{{ labels.deleteAccount }}</h2><p>{{ labels.deleteDescription }}</p></div><button class="btn btn-danger" type="button" :disabled="busy" @click="openDeletion">{{ labels.deleteButton }}</button></section>
     <TokenCreateDialog v-if="creating && tokenAction" :action="tokenAction" @close="creating = false" @created="tokenCreated" />
     <AccountDeleteDialog v-if="deleting && deletionAction" :email="deletionEmail" :action="deletionAction" @close="deleting = false" />
   </div>

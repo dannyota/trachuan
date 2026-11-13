@@ -3,7 +3,7 @@ import { email, openAccount } from './account-fixture'
 
 test('deletion requires the exact email', async ({ page }) => {
   await openAccount(page)
-  await page.getByRole('button', { name: 'Delete account', exact: true }).click()
+  await page.getByRole('button', { name: 'Delete account…', exact: true }).click()
   const dialog = page.getByRole('dialog')
   await expect(page.locator('dialog:modal')).toHaveCount(1)
   await expect(dialog.getByLabel('Email')).toBeFocused()

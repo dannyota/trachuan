@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onBeforeRouteLeave } from 'vue-router'
 import { nextTick } from 'vue'
+import CopyButton from './CopyButton.vue'
 import { wrapDialogFocus } from '../utils/dialog-focus'
 import { accountActions } from '../api/account-actions'
 import type { Action } from '../api/client'
@@ -11,7 +12,7 @@ const emit = defineEmits<{ close: [], created: [] }>()
 const language = useState<Language>('language', () => 'vi')
 const messages = computed(() => messagesFor(language.value))
 const dialog = ref<HTMLDialogElement | null>(null)
-const copyButton = ref<HTMLButtonElement | null>(null)
+const copyArea = ref<HTMLElement | null>(null)
 let opener: HTMLElement | null = null
 onMounted(() => {
   opener = document.activeElement instanceof HTMLElement ? document.activeElement : null
@@ -43,25 +44,21 @@ async function create() {
   try {
     const result = await actions.createToken(name.value, days.value)
     if (!active) return
-    if (result.data) { token.value = result.data.token; emit('created'); await nextTick(); if (active) copyButton.value?.focus() }
+    if (result.data) { token.value = result.data.token; emit('created'); await nextTick(); if (active) copyArea.value?.querySelector('button')?.focus() }
     else error.value = errorMessage(language.value, result.error?.error.code || 'generic')
   } catch { if (active) error.value = errorMessage(language.value, 'generic') }
   finally { busy.value = false }
 }
-async function copy() {
-  try { await navigator.clipboard.writeText(token.value) } catch { error.value = errorMessage(language.value, 'generic') }
-}
 </script>
 <template>
-  <dialog ref="dialog" @cancel.prevent="close" @keydown="wrapDialogFocus">
+  <dialog ref="dialog" class="card account-dialog" @cancel.prevent="close" @keydown="wrapDialogFocus">
     <h2>{{ messages.createToken }}</h2>
     <form v-if="!token" @submit.prevent="create">
-      <label>{{ messages.name }} <input v-model="name" required maxlength="64"></label>
-      <label>{{ messages.days }} <input v-model.number="days" type="number" min="1" max="365" required></label>
-      <button type="submit" :disabled="busy">{{ messages.create }}</button>
+      <label>{{ messages.name }} <input v-model="name" class="input" required maxlength="64"></label>
+      <label>{{ messages.days }} <input v-model.number="days" class="input" type="number" min="1" max="365" required></label>
+      <p v-if="error" class="notice" role="alert" aria-live="assertive">{{ error }}</p>
+      <div class="account-dialog-actions"><button class="btn btn-primary" type="submit" :disabled="busy">{{ messages.create }}</button><button class="btn btn-secondary" type="button" @click="close">{{ messages.close }}</button></div>
     </form>
-    <div v-else><p>{{ messages.tokenOnce }}</p><p class="token-value">{{ token }}</p><button ref="copyButton" type="button" @click="copy">{{ messages.copy }}</button></div>
-    <p v-if="error" role="alert">{{ error }}</p>
-    <button type="button" @click="close">{{ messages.close }}</button>
+    <div v-else><p>{{ messages.tokenOnce }}</p><p class="token-value">{{ token }}</p><div ref="copyArea" class="account-dialog-actions"><CopyButton :text="token" :label="messages.copy" /><button class="btn btn-secondary" type="button" @click="close">{{ messages.close }}</button></div></div>
   </dialog>
 </template>

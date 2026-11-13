@@ -1,25 +1,28 @@
 <script setup lang="ts">
 import type { components } from '@trachuan/schema/gen/openapi'
 import { errorMessage, messagesFor, statusMessage, type Language } from '../../i18n'
+import { accountMessages } from '../../i18n/account'
+import { citationFromAnchor, formatDate, formatDateTime } from '../content'
 import { isDocumentKey } from '../utils/document-key'
 
 type Report = components['schemas']['Report']
 const language = useState<Language>('language', () => 'vi')
 const messages = computed(() => messagesFor(language.value))
+const labels = computed(() => accountMessages(language.value))
 const api = useApi({ userAction: true })
 const reports = ref<Report[]>([])
 const next = ref<string | undefined>()
 const loaded = ref(false)
 const busy = ref(false)
 const error = ref('')
-function date(value: string) { return new Intl.DateTimeFormat(language.value, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value)) }
+function date(value: string) { return formatDateTime(value, language.value) }
 function kind(value: string) {
   const labels: Record<string, string> = { wrong_text: messages.value.reportWrongText, wrong_validity: messages.value.reportWrongValidity, broken_citation: messages.value.reportBrokenCitation, missing_document: messages.value.reportMissingDocument }
-  return Object.hasOwn(labels, value) ? labels[value]! : value
+  return Object.hasOwn(labels, value) ? labels[value]! : messages.value.none
 }
 function state(value: string) {
   const labels: Record<string, string> = { open: messages.value.reportOpen, accepted: messages.value.reportAccepted, rejected: messages.value.reportRejected, withdrawn: messages.value.reportWithdrawn }
-  return Object.hasOwn(labels, value) ? labels[value]! : value
+  return Object.hasOwn(labels, value) ? labels[value]! : messages.value.none
 }
 function link(item: Report) {
   return isDocumentKey(item.document_key) ? `/vn/documents/${item.document_key}${item.anchor ? `#${encodeURIComponent(item.anchor)}` : ''}` : ''
@@ -53,28 +56,29 @@ async function withdraw(item: Report) {
 onMounted(() => load())
 </script>
 <template>
-  <section>
-    <h2>{{ messages.reports }}</h2>
-    <p v-if="error" role="alert">{{ error }}</p>
-    <p v-if="loaded && !reports.length">{{ messages.reportsEmpty }}</p>
-    <article v-for="item in reports" :key="item.report_id" class="account-row">
+  <section class="card account-card">
+    <div class="account-card-head"><div><h2>{{ labels.reports }}</h2><p>{{ labels.reportsDescription }}</p></div></div>
+    <p v-if="error" class="notice" role="alert" aria-live="assertive">{{ error }}</p>
+    <div v-if="!loaded && !error" class="account-skeleton" role="status"><span class="visually-hidden">{{ labels.loading }}</span></div>
+    <p v-if="loaded && !reports.length" class="account-empty">{{ labels.reportsEmpty }}</p>
+    <article v-for="item in reports" :key="item.report_id" class="account-report">
       <p>{{ messages.reportKind }}: {{ kind(item.kind) }}</p>
       <p>{{ messages.reportDocument }}: <a v-if="link(item)" :href="link(item)" class="document-number">{{ item.document_number || item.document_key }}</a><span v-else class="document-number">{{ item.document_number || item.document_key || messages.none }}</span></p>
-      <p>{{ messages.reportAnchor }}: {{ item.anchor || messages.none }}</p>
+      <p>{{ messages.reportAnchor }}: {{ citationFromAnchor(item.anchor) || messages.none }}</p>
       <p>{{ messages.reportTarget }}: {{ item.target || messages.none }}</p>
       <p>{{ messages.reportState }}: <span>{{ state(item.state) }}</span></p>
       <p>{{ messages.accountCreated }}: {{ date(item.created_at) }}</p>
       <p>{{ messages.reportChanged }}: {{ date(item.changed_at) }}</p>
       <div><p>{{ messages.reportSuggestion }}:</p>
         <p v-if="item.suggestion.status_class">{{ messages.reportStatus }}: {{ statusMessage(language, item.suggestion.status_class) }}</p>
-        <p v-if="item.suggestion.eff_from">{{ messages.readerEffectiveFrom }}: {{ item.suggestion.eff_from }}</p>
-        <p v-if="item.suggestion.eff_to">{{ messages.readerEffectiveTo }}: {{ item.suggestion.eff_to }}</p>
+        <p v-if="item.suggestion.eff_from">{{ messages.readerEffectiveFrom }}: {{ formatDate(item.suggestion.eff_from, language) }}</p>
+        <p v-if="item.suggestion.eff_to">{{ messages.readerEffectiveTo }}: {{ formatDate(item.suggestion.eff_to, language) }}</p>
         <p v-if="item.suggestion.document_number">{{ messages.reportDocument }}: {{ item.suggestion.document_number }}</p>
-        <p v-if="item.suggestion.issue_date">{{ messages.reportIssueDate }}: {{ item.suggestion.issue_date }}</p>
+        <p v-if="item.suggestion.issue_date">{{ messages.reportIssueDate }}: {{ formatDate(item.suggestion.issue_date, language) }}</p>
         <p v-if="!Object.keys(item.suggestion).length">{{ messages.none }}</p>
       </div>
-      <button v-if="item.state === 'open'" type="button" :disabled="busy" @click="withdraw(item)">{{ messages.reportWithdraw }}</button>
+      <button v-if="item.state === 'open'" class="btn btn-secondary" type="button" :disabled="busy" @click="withdraw(item)">{{ messages.reportWithdraw }}</button>
     </article>
-    <button v-if="next" class="reports-more" type="button" :disabled="busy" @click="more">{{ messages.reportsMore }}</button>
+    <button v-if="next" class="btn btn-secondary reports-more" type="button" :disabled="busy" @click="more">{{ messages.reportsMore }}</button>
   </section>
 </template>
