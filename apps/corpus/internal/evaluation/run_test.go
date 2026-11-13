@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 	"unicode/utf8"
@@ -18,6 +19,7 @@ import (
 )
 
 type fakeEngine struct {
+	mu                         sync.Mutex
 	prepares, legacy, collects int
 	fail                       bool
 	date                       retrieval.Date
@@ -37,7 +39,9 @@ type validityRequestEngine struct {
 }
 
 func (e *validityRequestEngine) Prepare(ctx context.Context, r retrieval.Request) (retrieval.Prepared, error) {
+	e.mu.Lock()
 	e.requests[r.Query] = r.InForceOnly != nil && *r.InForceOnly
+	e.mu.Unlock()
 	return e.fakeEngine.Prepare(ctx, r)
 }
 
@@ -181,7 +185,9 @@ func (f *fakeEngine) Release() retrieval.Release {
 	return retrieval.Release{Country: "vn", Rel: "test", RetrievalRecipe: recipe}
 }
 func (f *fakeEngine) Prepare(_ context.Context, r retrieval.Request) (retrieval.Prepared, error) {
+	f.mu.Lock()
 	f.prepares++
+	f.mu.Unlock()
 	v, err := retrieval.ValidateQuery(r.Query)
 	if err != nil {
 		return retrieval.Prepared{}, err
@@ -193,7 +199,9 @@ func (f *fakeEngine) Prepare(_ context.Context, r retrieval.Request) (retrieval.
 	return p, nil
 }
 func (f *fakeEngine) PrepareLegacy(ctx context.Context, r retrieval.Request) (retrieval.Prepared, error) {
+	f.mu.Lock()
 	f.legacy++
+	f.mu.Unlock()
 	p, err := f.Prepare(ctx, r)
 	if err == nil && !p.Validation.Accepted {
 		p.Validation.Accepted = true
@@ -204,7 +212,9 @@ func (f *fakeEngine) PrepareLegacy(ctx context.Context, r retrieval.Request) (re
 	return p, err
 }
 func (f *fakeEngine) Collect(_ context.Context, p retrieval.Prepared, d retrieval.Depths) (retrieval.Arms, error) {
+	f.mu.Lock()
 	f.collects++
+	f.mu.Unlock()
 	if f.fail {
 		return retrieval.Arms{}, errors.New("offline failure")
 	}

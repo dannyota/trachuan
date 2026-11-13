@@ -25,6 +25,10 @@ type metricKey struct {
 
 // Run scores legacy, old-product and development cases with a frozen recipe.
 func Run(ctx context.Context, engine Engine, suite Suite, o Options) (Report, Cache, error) {
+	return run(ctx, engine, suite, o, caseConcurrency)
+}
+
+func run(ctx context.Context, engine Engine, suite Suite, o Options, limit int) (Report, Cache, error) {
 	if err := validateValidityOverrides(o.ValidityOverrides); err != nil {
 		return Report{}, Cache{}, err
 	}
@@ -113,20 +117,21 @@ func Run(ctx context.Context, engine Engine, suite Suite, o Options) (Report, Ca
 	presented := map[presentedKey]*presentedSamples{}
 	timings := map[string][]float64{}
 	vectorRows := map[string]int{}
-	for _, input := range inputs {
+	pool := newOrderedPool(ctx, len(inputs), limit, func(ctx context.Context, i int) casePrefetch {
+		return prefetchCase(ctx, engine, inputs[i], rejects, modes, recipe, o.ValidityOverrides)
+	})
+	defer pool.stop()
+	for index, input := range inputs {
+		prefetched := pool.take(index)
 		c := input.c
 		force := inForceForCase(c, o.ValidityOverrides)
-		request := retrieval.Request{Query: c.Question, Limit: 8, Mode: "exact", Arms: "hybrid", InForceOnly: &force}
-		product, err := engine.Prepare(ctx, request)
+		product, err := prefetched.product, prefetched.prepareErr
 		if err != nil {
 			return Report{}, Cache{}, fmt.Errorf("prepare case %s: %w", c.ID, err)
 		}
-		legacy := product
-		if input.legacy && !product.Validation.Accepted {
-			legacy, err = engine.PrepareLegacy(ctx, request)
-			if err != nil {
-				return Report{}, Cache{}, fmt.Errorf("prepare legacy case %s: %w", c.ID, err)
-			}
+		legacy, err := prefetched.legacy, prefetched.legacyErr
+		if err != nil {
+			return Report{}, Cache{}, fmt.Errorf("prepare legacy case %s: %w", c.ID, err)
 		}
 		if input.legacy && (!legacy.Validation.Accepted || legacy.Vector == nil) {
 			return Report{}, Cache{}, fmt.Errorf("legacy case %s rejected", c.ID)
@@ -171,14 +176,10 @@ func Run(ctx context.Context, engine Engine, suite Suite, o Options) (Report, Ca
 			collected := map[retrieval.Mode]retrieval.Arms{}
 			for _, mode := range modes {
 				p.Request.Mode = mode
-				depths := retrieval.Depths{Dense: recipe.DenseDepth, Lexical: recipe.LexicalDepth}
-				if mode == "exact" {
-					depths = retrieval.Depths{Dense: 200, Lexical: 100}
-				}
-				started := time.Now()
-				arms, err := collectEvaluation(ctx, engine, p, depths, force, o.ValidityOverrides)
+				result := prefetched.collects[cohort][mode]
+				arms, err := result.arms, result.err
 				timingKey := cohort + "/" + string(mode)
-				timings[timingKey] = append(timings[timingKey], float64(time.Since(started))/float64(time.Millisecond))
+				timings[timingKey] = append(timings[timingKey], result.elapsed)
 				if err != nil {
 					return Report{}, Cache{}, fmt.Errorf("collect case %s: %w", c.ID, err)
 				}

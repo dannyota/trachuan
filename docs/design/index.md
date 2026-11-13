@@ -143,19 +143,27 @@ that column is not the test. A mismatched final database is an error, never an
 automatic drop.
 
 Populate template tables, normalize, copy rows in stable order, train BM25 in
-two streaming passes, build HNSW with `max_parallel_maintenance_workers=0`,
-ANALYZE, and validate counts and constraints. Use a transaction-local staging
-table for chunks until sparse encoding is ready; final NOT NULL constraints must
-never require dummy vectors or a weakened shared schema. Calibrate the
-provisional threshold using the shared evaluation helper on this temporary
-database as specified in [evaluation](calibration.md). The helper takes explicit
-recipes and does not require a published release row. Insert the final release
-row with that threshold; then prohibit further writes. Dump before renaming,
-using subprocess arguments, not a shell:
-`pg_dump -Fc --no-owner --no-privileges --no-comments --dbname <temporary-db>`;
+two streaming passes, build HNSW with `maintenance_work_mem` 2 GiB and
+`max_parallel_maintenance_workers=4`, ANALYZE, and validate counts and
+constraints. The HNSW graph must fit in `maintenance_work_mem`: for
+vn/20261112_2 (221,114 chunks) it needs about 1.05 GB, and at 512 MiB the build
+spilled to disk after 111,431 tuples and took 663 s. At 2 GiB it took 249 s
+serial and 57 s with four workers; with fewer free workers PostgreSQL builds
+with what it can launch, down to the 249 s serial build. Every build draws new
+HNSW levels at random, so ANN results hold only for the evaluated index. Use a
+transaction-local staging table for chunks until sparse encoding is ready; final
+NOT NULL constraints must never require dummy vectors or a weakened shared
+schema. Calibrate the provisional threshold using the shared evaluation helper
+on this temporary database as specified in [evaluation](calibration.md). The
+helper takes explicit recipes and does not require a published release row.
+Insert the final release row with that threshold; then prohibit further writes.
+Dump before renaming, using subprocess arguments, not a shell:
+`pg_dump -Fc -Z zstd:1 --no-owner --no-privileges --no-comments --dbname <temporary-db>`;
 the corpus schema carries no comments, and dropping them keeps extension
-comments, which a nonsuperuser cannot restore, out of the dump. Database
-identity never comes from a request body or a dump's embedded name.
+comments, which a nonsuperuser cannot restore, out of the dump. zstd level 1
+replaced the default gzip: for vn/20261112_2 it dumped in 10 s instead of 121 s,
+at 1,290 MB instead of 1,343 MB. Database identity never comes from a request
+body or a dump's embedded name.
 
 ## Build artifact and resolve
 
