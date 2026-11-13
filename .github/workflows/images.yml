@@ -1,0 +1,137 @@
+name: Images
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: images-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  images:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    outputs:
+      server: ${{ steps.push.outputs.server }}
+      web: ${{ steps.push.outputs.web }}
+      queryembed: ${{ steps.push.outputs.queryembed }}
+    env:
+      COMMIT: ${{ github.sha }}
+      REF: ${{ github.ref }}
+      REF_PROTECTED: ${{ github.ref_protected }}
+      EVENT: ${{ github.event_name }}
+    steps:
+      - name: Check source ref
+        run: |
+          if [[ $EVENT == push ]]; then
+            [[ $REF == refs/tags/v* && $REF_PROTECTED == true ]] ||
+              { echo 'Release tags must be protected' >&2; exit 1; }
+          else
+            [[ $REF == refs/heads/main ]] ||
+              { echo 'Dispatch images from main' >&2; exit 1; }
+          fi
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check release helpers
+        run: |
+          bash deploy/host/render-units-test.sh
+          PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s deploy/images -p '*_test.py'
+          PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s deploy/host -p '*_test.py'
+      - name: Build and inspect production images
+        run: |
+          for name in server web queryembed; do
+            image="ghcr.io/dannyota/trachuan-$name:sha-$COMMIT"
+            docker build --platform linux/arm64 --file "deploy/images/$name.Containerfile" \
+              --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" \
+              --label "org.opencontainers.image.revision=$COMMIT" --tag "$image" .
+            [[ $(docker inspect --format '{{.Architecture}}' "$image") == arm64 ]]
+            [[ $(docker inspect --format '{{.Config.User}}' "$image") == 65532:65532 ]]
+            python3 deploy/images/check-image.py "$image" "$name"
+          done
+          [[ $(docker run --rm "ghcr.io/dannyota/trachuan-web:sha-$COMMIT" --version) == v24.22.2 ]]
+          # Check that the dynamic binary starts without model weights or secrets.
+          if output=$(docker run --rm "ghcr.io/dannyota/trachuan-queryembed:sha-$COMMIT" --invalid 2>&1); then
+            echo 'queryembed accepted an invalid invocation' >&2; exit 1
+          else
+            [[ $? == 1 && $output == 'queryembed: invalid startup configuration (--model-dir, --ort-lib, --listen)' ]]
+          fi
+      - name: Verify Nitro image listener defaults
+        run: |
+          container=trachuan-nitro-listener-check
+          trap 'docker rm -f "$container" >/dev/null 2>&1 || true' EXIT
+          docker run --detach --name "$container" "ghcr.io/dannyota/trachuan-web:sha-$COMMIT" >/dev/null
+          ready=false
+          for ((attempt=0; attempt<30; attempt++)); do
+            if docker exec "$container" /usr/local/bin/node -e '
+              const fs = require("node:fs");
+              if (process.env.NITRO_HOST !== "127.0.0.1" || process.env.NITRO_PORT !== "3000") process.exit(1);
+              const listeners = ["/proc/net/tcp", "/proc/net/tcp6"]
+                .flatMap(file => fs.existsSync(file) ? fs.readFileSync(file, "utf8").trim().split("\n").slice(1) : [])
+                .map(line => line.trim().split(/\s+/))
+                .filter(fields => fields[3] === "0A" && fields[1].endsWith(":0BB8"));
+              if (listeners.length !== 1 || listeners[0][1] !== "0100007F:0BB8") process.exit(1);
+            '; then
+              ready=true
+              break
+            fi
+            sleep 1
+          done
+          [[ $ready == true ]] || { echo 'Nitro must listen only on 127.0.0.1:3000 by default' >&2; exit 1; }
+      - name: Push images and collect digests
+        id: push
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          printf '%s' "$GHCR_TOKEN" | docker login ghcr.io --username "$ACTOR" --password-stdin
+          for name in server web queryembed; do
+            repository="ghcr.io/dannyota/trachuan-$name"
+            image="$repository:sha-$COMMIT"
+            docker push "$image"
+            reference=$(docker inspect --format '{{index .RepoDigests 0}}' "$image")
+            [[ $reference == "$repository"@sha256:* ]]
+            digest=${reference#*@}
+            [[ $digest =~ ^sha256:[0-9a-f]{64}$ ]]
+            echo "$name=$digest" >>"$GITHUB_OUTPUT"
+          done
+          docker logout ghcr.io
+      - name: Attest server
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ghcr.io/dannyota/trachuan-server
+          subject-digest: ${{ steps.push.outputs.server }}
+          push-to-registry: true
+      - name: Attest web
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ghcr.io/dannyota/trachuan-web
+          subject-digest: ${{ steps.push.outputs.web }}
+          push-to-registry: true
+      - name: Attest queryembed
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ghcr.io/dannyota/trachuan-queryembed
+          subject-digest: ${{ steps.push.outputs.queryembed }}
+          push-to-registry: true
+      - name: Record image references
+        env:
+          SERVER: ${{ steps.push.outputs.server }}
+          WEB: ${{ steps.push.outputs.web }}
+          QUERYEMBED: ${{ steps.push.outputs.queryembed }}
+        run: |
+          {
+            echo "ghcr.io/dannyota/trachuan-server@$SERVER"
+            echo "ghcr.io/dannyota/trachuan-web@$WEB"
+            echo "ghcr.io/dannyota/trachuan-queryembed@$QUERYEMBED"
+          } >>"$GITHUB_STEP_SUMMARY"

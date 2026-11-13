@@ -1,0 +1,37 @@
+[Unit]
+Description=trachuan HTTPS edge
+Requires=trachuan-web.service
+After=trachuan-web.service
+
+[Container]
+Image=@CADDY_IMAGE@
+ContainerName=trachuan-caddy
+Network=host
+User=65532:65532
+DropCapability=ALL
+NoNewPrivileges=true
+ReadOnly=true
+Volume=trachuan-caddy-data.volume:/data:Z,U
+Volume=trachuan-caddy-config.volume:/config:Z,U
+Volume=%t/trachuan-caddy-proof:/etc/caddy/proof:ro,z
+Volume=%t/trachuan-caddy-proof-logs:/var/log/caddy-proof:Z,U
+Volume=/srv/trachuan/host/Caddyfile:/etc/caddy/Caddyfile:ro,z
+PodmanArgs=--cpus=4 --memory=128m --memory-reservation=50m
+HealthCmd=wget -q -O /dev/null http://127.0.0.1:8081/healthz
+HealthInterval=30s
+HealthTimeout=3s
+HealthRetries=3
+HealthStartPeriod=30s
+HealthOnFailure=kill
+LogDriver=journald
+
+[Service]
+ExecStartPre=/srv/trachuan/host/client-address-log.sh prepare
+ExecStartPre=/srv/trachuan/host/wait-healthy.sh trachuan-web
+Restart=on-failure
+RestartSec=5
+TimeoutStartSec=180
+LimitCORE=0
+
+[Install]
+WantedBy=default.target

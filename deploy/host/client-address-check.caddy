@@ -1,0 +1,20 @@
+# Log only the address probe. Never record headers or query-bearing URIs.
+log client_address_check {
+	level INFO
+	output file /var/log/caddy-proof/client-address-check.json {
+		roll_size 1MiB
+		roll_keep 1
+		roll_keep_for 24h
+	}
+	format filter {
+		wrap json
+		request>headers delete
+		request>uri delete
+		request>remote_port delete
+		request>client_ip delete
+		request>tls delete
+		resp_headers delete
+	}
+}
+@not_address_probe not path /__client-address-check
+log_skip @not_address_probe

@@ -1,0 +1,32 @@
+[Unit]
+Description=trachuan Nuxt Nitro
+Requires=trachuan-server.service
+After=trachuan-server.service
+
+[Container]
+Image=@WEB_IMAGE@
+ContainerName=trachuan-web
+Network=host
+User=65532:65532
+DropCapability=ALL
+NoNewPrivileges=true
+ReadOnly=true
+EnvironmentFile=/srv/trachuan/host/web.env
+PodmanArgs=--cpus=4 --memory=384m --memory-reservation=250m
+HealthCmd=["/usr/local/bin/node", "-e", "const s=require('node:net').connect(3000,'127.0.0.1',()=>{s.end();process.exit(0)});s.on('error',()=>process.exit(1));s.setTimeout(2000,()=>process.exit(1))"]
+HealthInterval=30s
+HealthTimeout=3s
+HealthRetries=3
+HealthStartPeriod=30s
+HealthOnFailure=kill
+LogDriver=journald
+
+[Service]
+ExecStartPre=/srv/trachuan/host/wait-healthy.sh trachuan-server
+Restart=on-failure
+RestartSec=5
+TimeoutStartSec=180
+LimitCORE=0
+
+[Install]
+WantedBy=default.target

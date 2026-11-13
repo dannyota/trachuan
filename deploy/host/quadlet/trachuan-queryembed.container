@@ -1,0 +1,32 @@
+[Unit]
+Description=trachuan query embedder
+
+[Container]
+Image=@QUERYEMBED_IMAGE@
+ContainerName=trachuan-queryembed
+Network=host
+User=65532:65532
+DropCapability=ALL
+NoNewPrivileges=true
+ReadOnly=true
+Environment=GOMAXPROCS=4
+# Allow the measured startup peak above the steady 2000 MB estimate.
+PodmanArgs=--cpus=4 --memory=3g --memory-reservation=2000m
+Volume=/srv/trachuan/models/vi_v2-bundle:/models:ro,Z
+Exec=--model-dir /models --ort-lib /opt/native/libonnxruntime.so --listen 127.0.0.1:8091
+HealthCmd=["/app/healthcheck", "http://127.0.0.1:8091/healthz"]
+HealthInterval=30s
+HealthTimeout=3s
+HealthRetries=3
+HealthStartPeriod=120s
+HealthOnFailure=kill
+LogDriver=journald
+
+[Service]
+Restart=on-failure
+RestartSec=5
+TimeoutStartSec=180
+LimitCORE=0
+
+[Install]
+WantedBy=default.target
