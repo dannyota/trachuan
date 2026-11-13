@@ -69,6 +69,9 @@ Structured outputs enforce types and required fields but no numeric bounds
   stored: a check with unread pages is not complete.
 - Review file. `ocr-review.json` carries `coverage_note` on the document's entry
   when it is nonempty, beside the items.
+- Extract reads the stored verdict, not the item count: a `flagged` check with
+  no item (a note only) gives the document the gap `ocr_flagged` like any
+  flagged check, and its text is indexed with that gap.
 - Verdicts, the readings rules, the quote check and the retry rule are those of
   the cross-check note.
 
@@ -99,8 +102,8 @@ The primary runs these; they are requirements, not results.
   (`clean`); empty items with a nonempty note (`flagged`, never `clean`).
 - Store fixtures: a version 5 result round-trips with `coverage_note`; version 2
   and 3 results decode unchanged; `coverage_note` on a version 3 result is
-  rejected; extract reads results of every version; the review file shows a
-  nonempty note.
+  rejected; extract reads results of every version; a note-only `flagged` result
+  gives `ocr_flagged` in extract; the review file shows a nonempty note.
 - The failure diagnostic records `coverage` facts (counts and lengths only) for
   schema failures, as it does for items.
 - Version 3 results and their checker id are untouched; the extract recipe
