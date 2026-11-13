@@ -448,7 +448,9 @@ func TestConsent_Seal(t *testing.T) {
 					`<circle cx="60" cy="60" r="52" fill="none" stroke="currentColor" stroke-width="6"`,
 					`<circle cx="60" cy="60" r="40" fill="none" stroke="currentColor" stroke-width="2"`,
 					`<text x="60" y="74" text-anchor="middle" font-family="NotoSerif, Georgia, serif" font-size="40" font-weight="700" fill="currentColor">TC</text></svg>Tra Chuẩn</span>`,
-					`--seal:#B42318`, `--seal:#E5604F`, `color:var(--seal)`,
+					`--seal:#B42318`, `--seal:#E5604F`,
+					`.brand{display:inline-flex;align-items:center;gap:.5rem;font-weight:700;color:var(--ink)}`,
+					`.brand svg{color:var(--seal)}`,
 				} {
 					if !strings.Contains(body, want) {
 						t.Errorf("missing %q", want)
