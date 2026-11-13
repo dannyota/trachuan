@@ -5,7 +5,7 @@ import { chromium } from '@playwright/test'
 const publicDir = fileURLToPath(new URL('../public/', import.meta.url))
 const font = (await readFile(`${publicDir}fonts/noto-serif-var.woff2`)).toString('base64')
 const sans = (await readFile(`${publicDir}fonts/be-vietnam-pro-var.woff2`)).toString('base64')
-const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><style>circle{fill:#B42318}@media (prefers-color-scheme:dark){circle{fill:#D9473A}}</style><circle cx="16" cy="16" r="14.5"/><text x="16" y="21.5" text-anchor="middle" font-family="Noto Serif, Georgia, serif" font-size="15" font-weight="700" fill="#FFFFFF">TC</text></svg>'
+const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="14.5" fill="#B42318"/><text x="16" y="21.5" text-anchor="middle" font-family="Noto Serif, Georgia, serif" font-size="15" font-weight="700" fill="#FFFFFF">TC</text></svg>'
 await writeFile(`${publicDir}icon.svg`, svg)
 const browser = await chromium.launch({ headless: true })
 const page = await browser.newPage({ deviceScaleFactor: 1 })

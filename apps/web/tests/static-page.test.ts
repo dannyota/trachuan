@@ -36,3 +36,9 @@ it('keeps static page fonts equal to the light tokens', () => {
     expect(css.match(pattern)?.[1]).toBe(tokens.match(pattern)?.[1])
   }
 })
+
+it('keeps the SVG icon free of inline styles', () => {
+  const svg = readFileSync('public/icon.svg', 'utf8')
+  expect(svg).not.toMatch(/<style\b/i)
+  expect(svg).not.toMatch(/\sstyle\s*=/i)
+})
