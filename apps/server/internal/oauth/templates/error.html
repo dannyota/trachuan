@@ -3,10 +3,11 @@
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{{.Title}}</title><style>{{.Style}}</style></head>
 <body>
 <main>
-<h1>{{.Title}}</h1>
-<p><code>{{.Error}}</code></p>
+<div class="top"><span class="brand">Tra Chuẩn</span></div>
+<h1>{{.Heading}}</h1>
 <p>{{.Message}}</p>
-{{if .Action}}<a href="{{.Action}}">{{.Return}}</a>{{end}}
+<p class="error-code"><code>{{.Error}}</code></p>
+{{if .Action}}<a class="button primary" href="{{.Action}}">{{.Return}}</a>{{end}}
 </main>
 </body>
 </html>

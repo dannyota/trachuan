@@ -10,15 +10,18 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"danny.vn/trachuan/apps/server/internal/store"
 )
 
-// The fixed stylesheet is the only trusted CSS value used by the templates.
-const consentStyles = "body{font:1rem/1.6 system-ui,sans-serif;margin:2rem auto;padding:0 1rem;max-width:38rem;color:#18212b;background:#fff}main{overflow-wrap:anywhere}button{font:inherit;padding:.5rem 1rem;margin:.5rem .5rem .5rem 0;cursor:pointer}a{color:#174ca4}bdi,code{font-size:1em}"
+const consentStyles = `@font-face{font-family:"Be Vietnam Pro";src:url("/fonts/be-vietnam-pro-var.woff2") format("woff2");font-weight:100 900;font-display:swap}
+@font-face{font-family:"Roboto Mono";src:url("/fonts/roboto-mono-var.woff2") format("woff2");font-weight:100 900;font-display:swap}
+:root{--page:#FFFFFF;--surface:#F6F7F9;--card:#FFFFFF;--ink:#14171C;--ink-soft:#444B55;--muted:#59606B;--line:#E3E6EA;--line-strong:#C6CBD2;--primary:#1E3A8A;--primary-fill:#1E3A8A;--danger:#B42318;--danger-line:#F3C7C1;--danger-bg:#FEF3F2;--note:#F1F4FA;--note-warn:#FDF6E9;--highlight:#FFF1A8;--highlight-ink:#14171C}
+@media (prefers-color-scheme: dark){:root{--page:#111418;--surface:#181C22;--card:#161A20;--ink:#E6E8EB;--ink-soft:#C4C9D1;--muted:#A0A7B2;--line:#2C323B;--line-strong:#3A414C;--primary:#9DB4F5;--primary-fill:#3451B2;--danger:#E5604F;--danger-line:#5A2620;--danger-bg:#2A1412;--note:#19213A;--note-warn:#2B2110;--highlight:#4A3F12;--highlight-ink:#F5ECC0}}
+*{box-sizing:border-box}html{background:var(--surface)}body{margin:0;min-height:100vh;padding:2rem 1rem;background:var(--surface);color:var(--ink);font:16px/1.6 "Be Vietnam Pro",system-ui,sans-serif}main{max-width:34rem;margin:0 auto;padding:2rem;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow-wrap:anywhere}.top{display:flex;justify-content:space-between;align-items:center;gap:1rem;margin-bottom:2rem}.brand{font-weight:700;color:var(--primary)}.toggle{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;font-size:14px}a{color:var(--primary)}h1{font-size:1.625rem;line-height:1.3;font-weight:700;margin:0 0 1rem}dl{margin:1.5rem 0}dt{font-size:14px;color:var(--muted)}dd{margin:0 0 1rem}dd bdi,code{font-family:"Roboto Mono",ui-monospace,monospace;font-variant-ligatures:none;overflow-wrap:anywhere}.note{border:1px solid var(--line);border-radius:8px;background:var(--note-warn);color:var(--ink-soft);padding:.75rem 1rem;margin:1rem 0}.note strong{display:block;font-size:14px}.scope{display:inline-block;background:var(--highlight);color:var(--highlight-ink);border-radius:6px;padding:.15rem .5rem}.scope-label,.error-code{font-size:14px;color:var(--muted)}.actions{display:flex;gap:.75rem;margin-top:1.5rem}button,.button{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:.6rem 1.25rem;border:1px solid var(--primary-fill);border-radius:8px;font:inherit;font-weight:600;text-decoration:none;cursor:pointer}.primary{background:var(--primary-fill);color:#FFFFFF}.secondary{background:var(--card);border-color:var(--line-strong);color:var(--ink)}a:focus-visible,button:focus-visible{outline:3px solid var(--primary);outline-offset:3px}@media(max-width:390px){body{padding:1rem}main{padding:1.25rem}.actions{flex-direction:column}.actions button{width:100%}}`
 
-// WriteRateLimitedPage renders the consent error page with a retry delay.
 func WriteRateLimitedPage(w http.ResponseWriter, r *http.Request, retryAfter time.Duration) {
 	seconds := max(1, int64(math.Ceil(retryAfter.Seconds())))
 	w.Header().Set("Retry-After", strconv.FormatInt(seconds, 10))
@@ -31,7 +34,6 @@ type consentPages struct {
 }
 
 func newConsentPages(base string) *consentPages {
-	// Each handler owns its parsed templates. The embedded files are read only.
 	return &consentPages{base: base, templates: template.Must(template.ParseFS(consentTemplates, "templates/*.html"))}
 }
 
@@ -40,15 +42,15 @@ var consentTemplates embed.FS
 
 type consentPageData struct {
 	Lang, Title, Name, ClientHost, RedirectHost, Token, Action, Toggle, ToggleLabel string
-	ScopeLabel, Prompt, Approve, Deny, DCRWarning, LoopbackWarning                  string
+	ScopeLabel, Prompt, Approve, Deny, DCRWarning, LoopbackWarning, NoteLabel       string
 	Error, Message, Return                                                          string
 	Style                                                                           template.CSS
-	RedirectLabel                                                                   string
+	RedirectLabel, Heading                                                          string
 }
 
 func (p *consentPages) consent(w http.ResponseWriter, r *http.Request, client Client, row store.OauthRequest, handle, token string) {
 	en := r.URL.Query().Get("lang") == "en"
-	data := consentPageData{Lang: "vi", Title: "Cho phép truy cập · Tra Chuẩn", Name: client.Name, Token: token, Action: "/oauth/consent/" + handle, Toggle: "?lang=en", ToggleLabel: "English", RedirectLabel: "Máy chủ nhận quyền", ScopeLabel: "Quyền truy cập", Prompt: "Cho phép ứng dụng truy cập tài khoản Tra Chuẩn của bạn?", Approve: "Cho phép", Deny: "Từ chối"}
+	data := consentPageData{Lang: "vi", Title: "Cho phép truy cập · Tra Chuẩn", Name: client.Name, Token: token, Action: "/oauth/consent/" + handle, Toggle: "?lang=en", ToggleLabel: "English", RedirectLabel: "Máy chủ nhận quyền", ScopeLabel: "Quyền truy cập", NoteLabel: "Lưu ý", Prompt: "Cho phép ứng dụng truy cập tài khoản Tra Chuẩn của bạn?", Approve: "Cho phép", Deny: "Từ chối"}
 	if en {
 		data.Lang = "en"
 		data.Title = "Authorize access · Tra Chuẩn"
@@ -56,6 +58,7 @@ func (p *consentPages) consent(w http.ResponseWriter, r *http.Request, client Cl
 		data.ToggleLabel = "Tiếng Việt"
 		data.RedirectLabel = "Redirect host"
 		data.ScopeLabel = "Scope"
+		data.NoteLabel = "Note"
 		data.Prompt = "Allow this app to access your Tra Chuẩn account?"
 		data.Approve = "Allow"
 		data.Deny = "Deny"
@@ -117,6 +120,7 @@ func (p *consentPages) failure(w http.ResponseWriter, r *http.Request, status in
 func (p *consentPages) render(w http.ResponseWriter, status int, name string, data consentPageData) {
 	consentHeaders(w)
 	data.Style = template.CSS(consentStyles)
+	data.Heading = strings.TrimSuffix(data.Title, " · Tra Chuẩn")
 	var body bytes.Buffer
 	if err := p.templates.ExecuteTemplate(&body, name, data); err != nil {
 		w.WriteHeader(503)
@@ -131,5 +135,5 @@ func consentHeaders(w http.ResponseWriter) {
 	w.Header().Set("X-Frame-Options", "DENY")
 	w.Header().Set("Referrer-Policy", "same-origin")
 	digest := sha256.Sum256([]byte(consentStyles))
-	w.Header().Set("Content-Security-Policy", "default-src 'none'; style-src 'self' 'sha256-"+base64.StdEncoding.EncodeToString(digest[:])+"'; frame-ancestors 'none'")
+	w.Header().Set("Content-Security-Policy", "default-src 'none'; style-src 'self' 'sha256-"+base64.StdEncoding.EncodeToString(digest[:])+"'; font-src 'self'; frame-ancestors 'none'")
 }

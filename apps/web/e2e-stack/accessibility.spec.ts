@@ -145,7 +145,7 @@ test('keyboard focus and validity contrast on the website', async ({ page }) => 
     }
   }
   await page.locator('.search-card').first().getByRole('link', { name: 'Đọc văn bản' }).click()
-  await expect(page.locator('[data-anchor="article-1"]')).toBeVisible()
+  await expect(page.locator('[data-anchor="dieu-1"]')).toBeVisible()
   await expect(page.locator('.reader-rail').getByRole('link', { name: '2/2099/TT-TEST', exact: true })).toBeVisible()
   await keyboard(page)
 })

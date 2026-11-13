@@ -39,7 +39,7 @@ func TestSearch_Recipe3MergedArticle(t *testing.T) {
 	call("search", map[string]any{"country": "vn", "query": query, "detail": "full", "limit": 20}, &full)
 	var hit *retrieval.PresentedHit
 	for i := range full.Hits {
-		if full.Hits[i].Handle == "vn:fixture:siblings#article-1" {
+		if full.Hits[i].Handle == "vn:fixture:siblings#dieu-1" {
 			hit = &full.Hits[i]
 		}
 	}

@@ -62,7 +62,7 @@ func TestCreateRecipe3_MergedSearchAndArticleRead(t *testing.T) {
 			merged = &response.Hits[i]
 		}
 	}
-	if merged == nil || merged.Identity.Anchor != "article-1" || merged.Complete || merged.BestMember.Anchor != "clause-2" || len(merged.Fragments) != 3 {
+	if merged == nil || merged.Identity.Anchor != "dieu-1" || merged.Complete || merged.BestMember.Anchor != "clause-2" || len(merged.Fragments) != 3 {
 		t.Fatalf("merged hit %+v", merged)
 	}
 	snippet, _ := retrieval.Snippet(*merged, retrieval.SnippetCap)
