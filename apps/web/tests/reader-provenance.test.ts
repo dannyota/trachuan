@@ -9,7 +9,7 @@ it.each(['javascript:alert(1)', 'http://example.test', 'https://example.test/doc
   setupReader([{ data: { release: '20261111_1', fetch_sha256: 'abc123', item: { complete: true, document: { status: { class: 'in_force', current: true }, text_source: 'source_tree', text_complete: true, source_url }, units: [] } } }])
   const wrapper = mount(Reader)
   await flushPromises()
-  expect(wrapper.text()).toContain('20261111_1')
+  expect(wrapper.text()).toContain('11 Nov 2026 (build 1)')
   expect(wrapper.text()).toContain('abc123')
   expect(wrapper.find(`a[href="${source_url}"]`).exists()).toBe(source_url.startsWith('https:'))
 })

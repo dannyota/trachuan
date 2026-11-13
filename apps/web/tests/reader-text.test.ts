@@ -12,3 +12,10 @@ it('renders legal text literally', async () => {
   expect(wrapper.text()).toContain('<Điều 1> & text')
   expect(wrapper.find('điều').exists()).toBe(false)
 })
+it('indents lettered points while preserving the legal text', async () => {
+  setupReader([{ data: { release: '20990101_1', item: { complete: true, units: [{ kind: 'provision', anchor: 'dieu-1', text: '1. Clause\na) Point text' }] } } }])
+  const wrapper = mount(Reader)
+  await flushPromises()
+  const point = wrapper.findAll('.law-text').find(element => element.text() === 'a) Point text')
+  expect(point?.classes()).toContain('reader-point')
+})
