@@ -32,7 +32,9 @@ func TestRetry_AdoptsAcquisitionsWithoutDownloadsOrObservations(t *testing.T) {
 		f.plan("fetch")
 		f.batch(f.expand)
 		f.batch(f.fetch)
-		f.assertRequests("/doc/1", 2)
+		// Expand reads once; fetch and its retries reuse acquired bytes.
+		f.assertRequests("/doc/1", 1)
+		f.assertRequests("/doc/1/diagram", 1)
 		f.assertRequests("/doc/2", failed+2)
 		if n := f.scalar(`SELECT count(*) FROM run_fetch_observation`); n != observations {
 			t.Fatalf("observations=%d, want %d", n, observations)
@@ -56,7 +58,9 @@ func TestRetry_AdoptsAcquisitionsWithoutDownloadsOrObservations(t *testing.T) {
 	f.plan("fetch")
 	f.batch(f.expand)
 	f.batch(f.fetch)
-	f.assertRequests("/doc/1", 2)
+	// Expand reads once; the discovery rewind adopts both acquisitions.
+	f.assertRequests("/doc/1", 1)
+	f.assertRequests("/doc/1/diagram", 1)
 }
 
 func TestRetry_SeedsOlderWorkerBeforeDeletingItems(t *testing.T) {
@@ -73,7 +77,9 @@ func TestRetry_SeedsOlderWorkerBeforeDeletingItems(t *testing.T) {
 	f.plan("fetch")
 	f.batch(f.expand)
 	f.batch(f.fetch)
-	f.assertRequests("/doc/1", 2)
+	// Expand reads once; the seeded acquisitions avoid later source reads.
+	f.assertRequests("/doc/1", 1)
+	f.assertRequests("/doc/1/diagram", 1)
 	// A partially populated table is not seeded again.
 	f.exec(`DELETE FROM run_acquisition WHERE stage='expand'`)
 	f.rewind()
@@ -92,7 +98,9 @@ func TestRetry_PlannedSkipWinsOverAcquisition(t *testing.T) {
 	f.plan("fetch")
 	f.exec(`UPDATE run_item SET message='{"skip":{"kind":"scope_removed","detail":"removed"}}' WHERE stage='fetch' AND item_key='vn:vbpl:1'`)
 	f.batch(f.fetch)
-	f.assertRequests("/doc/1", 2)
+	// Expand reads once; fetch reuses expand and the planned skip reads nothing.
+	f.assertRequests("/doc/1", 1)
+	f.assertRequests("/doc/1/diagram", 1)
 	if n := f.scalar(`SELECT count(*) FROM run_item WHERE stage='fetch' AND item_key='vn:vbpl:1' AND state='gap' AND artifact_id IS NULL`); n != 1 {
 		t.Fatalf("skipped items=%d", n)
 	}
@@ -149,7 +157,9 @@ func TestRetry_InvalidBundleFallsBackAndReplacesAcquisition(t *testing.T) {
 			f.rewind()
 			f.plan("fetch")
 			f.batch(f.fetch)
-			f.assertRequests("/doc/1", 3)
+			// Expand reads once; both fetch reads use its detail and diagram.
+			f.assertRequests("/doc/1", 1)
+			f.assertRequests("/doc/1/diagram", 1)
 			got := f.acquired("fetch", "vn:vbpl:1")
 			if got.Generation != int32(f.run.Generation) || got.ArtifactID == old.ArtifactID {
 				t.Fatalf("acquisition not replaced: %+v", got)
@@ -171,7 +181,9 @@ func TestAcquisition_UncommittedDirectoryIsNotAdopted(t *testing.T) {
 	f.exec(`UPDATE run SET generation=2`)
 	f.plan("fetch")
 	f.batch(f.fetch)
+	// Two fetch reads contact the source because neither has an expand item.
 	f.assertRequests("/doc/1", 2)
+	f.assertRequests("/doc/1/diagram", 2)
 	if n := f.scalar(`SELECT count(*) FROM run_fetch_observation WHERE item_key='vn:vbpl:1'`); n != 4 {
 		t.Fatalf("observations=%d, want 4 fresh downloads", n)
 	}
@@ -188,7 +200,9 @@ func TestAcquisition_AnotherRunReadsSource(t *testing.T) {
 	f.run.Generation = 2
 	f.plan("fetch")
 	f.batch(f.fetch)
+	// Each run fetches from the source without an expand item.
 	f.assertRequests("/doc/1", 2)
+	f.assertRequests("/doc/1/diagram", 2)
 	if _, err = store.New(f.env.DB).GetRunAcquisition(context.Background(), store.GetRunAcquisitionParams{RunID: f.run.ID, Stage: "fetch", DocumentKey: "vn:vbpl:1"}); err != nil {
 		t.Fatal(err)
 	}
@@ -205,7 +219,9 @@ func TestRetry_AdoptionRechecksSourcePause(t *testing.T) {
 	f.plan("fetch")
 	f.exec(`UPDATE run_source SET state='source_paused',pause_reason='challenge' WHERE run_id=$1 AND source='vbpl'`, f.run.ID)
 	f.batch(f.fetch)
-	f.assertRequests("/doc/1", 2)
+	// Expand reads once; fetch reuses expand and the paused retry reads nothing.
+	f.assertRequests("/doc/1", 1)
+	f.assertRequests("/doc/1/diagram", 1)
 	if n := f.scalar(`SELECT count(*) FROM run_item WHERE stage='fetch' AND item_key='vn:vbpl:1' AND state='failed' AND message='source_paused' AND artifact_id IS NULL`); n != 1 {
 		t.Fatalf("paused items=%d", n)
 	}
@@ -234,7 +250,9 @@ func TestRetry_UnreadableStorageStopsBeforeSourceFallback(t *testing.T) {
 	if err == nil {
 		t.Fatal("unreadable storage became a source fallback")
 	}
-	f.assertRequests("/doc/1", 2)
+	// Expand reads once; fetch reuses expand and the storage error stops retry.
+	f.assertRequests("/doc/1", 1)
+	f.assertRequests("/doc/1/diagram", 1)
 	if n := f.scalar(`SELECT count(*) FROM run_item WHERE stage='fetch' AND state='pending'`); n != 2 {
 		t.Fatalf("pending=%d", n)
 	}
