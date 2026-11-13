@@ -32,12 +32,16 @@ type chunkText struct {
 }
 type textIterator struct {
 	tx    pgx.Tx
+	batch *loadBatch
 	after int64
 	page  []chunkText
 	done  bool
 }
 
 func (it *textIterator) fill(ctx context.Context) error {
+	if err := it.batch.flush(ctx); err != nil {
+		return err
+	}
 	rows, err := it.tx.Query(ctx, `SELECT id, content || ' ' || context_prefix FROM build_chunk WHERE id > $1 ORDER BY id LIMIT 2000`, it.after)
 	if err != nil {
 		return fmt.Errorf("query lexical chunks: %w", err)
@@ -74,8 +78,8 @@ func (it *textIterator) Next(ctx context.Context) (string, bool, error) {
 	return row.text, true, nil
 }
 
-func loadLexical(ctx context.Context, tx pgx.Tx, recipe lexical.Recipe) (lexical.StatsSummary, error) {
-	stats, err := lexical.Train(ctx, &textIterator{tx: tx}, recipe)
+func loadLexical(ctx context.Context, tx pgx.Tx, batch *loadBatch, recipe lexical.Recipe) (lexical.StatsSummary, error) {
+	stats, err := lexical.Train(ctx, &textIterator{tx: tx, batch: batch}, recipe)
 	if err != nil {
 		return lexical.StatsSummary{}, fmt.Errorf("train lexical index: %w", err)
 	}
@@ -97,7 +101,7 @@ func loadLexical(ctx context.Context, tx pgx.Tx, recipe lexical.Recipe) (lexical
 			return lexical.StatsSummary{}, fmt.Errorf("insert lexical frequencies: %w", err)
 		}
 	}
-	it := &textIterator{tx: tx}
+	it := &textIterator{tx: tx, batch: batch}
 	nnz := make([]int, 0, int(stats.N))
 	for !it.done {
 		if err = it.fill(ctx); err != nil {

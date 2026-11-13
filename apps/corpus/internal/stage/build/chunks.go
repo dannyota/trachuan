@@ -42,6 +42,9 @@ func (d *loadedDocument) owner(c chunk.Chunk) (int64, error) {
 	return id, nil
 }
 func (l *loader) setState(ctx context.Context, id int64, state string) error {
+	if err := l.batch.flush(ctx); err != nil {
+		return err
+	}
 	_, err := l.tx.Exec(ctx, `UPDATE document SET content_state=$2 WHERE id=$1`, id, state)
 	if err != nil {
 		return fmt.Errorf("update content state: %w", err)
@@ -155,10 +158,10 @@ func (l *loader) loadChunks(ctx context.Context) error {
 				_ = vr.Close()
 				return fmt.Errorf("encode spans: %w", e)
 			}
-			_, e = l.tx.Exec(ctx, `INSERT INTO build_chunk(id,document_id,provision_id,ordinal,context_prefix,content,spans,input_sha256,token_count,embedding) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::vector)`, l.counts.Chunks+1, doc.id, pid, c.Ordinal, c.ContextPrefix, c.Content, spans, row.InputSHA256, row.TokenCount, denseText(vector))
+			e = l.batch.queue(ctx, "insert chunk", `INSERT INTO build_chunk(id,document_id,provision_id,ordinal,context_prefix,content,spans,input_sha256,token_count,embedding) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::vector)`, l.counts.Chunks+1, doc.id, pid, c.Ordinal, c.ContextPrefix, c.Content, spans, row.InputSHA256, row.TokenCount, denseText(vector))
 			if e != nil {
 				_ = vr.Close()
-				return fmt.Errorf("insert chunk: %w", e)
+				return e
 			}
 			l.counts.Chunks++
 			l.counts.DenseVectors++

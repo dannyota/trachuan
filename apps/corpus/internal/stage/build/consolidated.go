@@ -32,6 +32,9 @@ func consolidatedStatus(issue *time.Time, current bool, targets int, competitors
 }
 
 func (l *loader) deriveConsolidated(ctx context.Context) error {
+	if err := l.batch.flush(ctx); err != nil {
+		return err
+	}
 	rows, err := l.tx.Query(ctx, `SELECT id,key,status_class,status_basis,issue_date,is_consolidated FROM document`)
 	if err != nil {
 		return fmt.Errorf("read consolidated documents: %w", err)

@@ -21,6 +21,9 @@ func dateString(t *time.Time) string {
 }
 
 func (l *loader) loadValidity(ctx context.Context, corrections []source.Correction, asOf string) (validityResult, error) {
+	if err := l.batch.flush(ctx); err != nil {
+		return validityResult{}, err
+	}
 	rows, err := l.tx.Query(ctx, `SELECT key,number,class,number_norm,doc_type,issuer,issue_date,status_code,status_name,status_class,status_basis,raw_eff_from,raw_eff_to,eff_from,eff_to,is_consolidated,fetch_sha256,extract_sha256,text_source FROM document ORDER BY key`)
 	if err != nil {
 		return validityResult{}, fmt.Errorf("read validity documents: %w", err)

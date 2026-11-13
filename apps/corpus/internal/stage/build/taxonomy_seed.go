@@ -90,6 +90,9 @@ func (l *loader) loadTaxonomy(ctx context.Context, input TaxonomyInput) error {
 			return fmt.Errorf("insert override: %w", err)
 		}
 	}
+	if err = l.batch.flush(ctx); err != nil {
+		return err
+	}
 	if _, err = l.tx.Exec(ctx, taxonomyCountsSQL); err != nil {
 		return fmt.Errorf("count effective taxonomy: %w", err)
 	}

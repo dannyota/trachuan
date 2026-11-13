@@ -29,6 +29,7 @@ type Counts struct {
 
 type loader struct {
 	tx              pgx.Tx
+	batch           *loadBatch
 	inv             Inventory
 	artifacts       artifact.Store
 	recipes         Recipes
@@ -51,6 +52,13 @@ type LoadOptions struct {
 
 // Load inserts a frozen inventory into an already initialized corpus database.
 func Load(ctx context.Context, conn *pgx.Conn, inv Inventory, artifacts artifact.Store, recipes Recipes, codes map[string]source.StatusCode, corrections []source.Correction, asOf string, options ...LoadOptions) (Counts, error) {
+	return loadWithBatchLimit(ctx, conn, inv, artifacts, recipes, codes, corrections, asOf, 2000, options...)
+}
+
+func loadWithBatchLimit(ctx context.Context, conn *pgx.Conn, inv Inventory, artifacts artifact.Store, recipes Recipes, codes map[string]source.StatusCode, corrections []source.Correction, asOf string, limit int, options ...LoadOptions) (counts Counts, loadErr error) {
+	if limit < 1 || limit > 2000 {
+		return Counts{}, fmt.Errorf("invalid load batch limit")
+	}
 	opts := LoadOptions{}
 	if len(options) > 0 {
 		opts = options[0]
@@ -77,7 +85,14 @@ func Load(ctx context.Context, conn *pgx.Conn, inv Inventory, artifacts artifact
 		return Counts{}, fmt.Errorf("begin corpus load: %w", err)
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
-	l := loader{tx: tx, inv: inv.sorted(), artifacts: artifacts, recipes: recipes, codes: codes, items: make(map[string]map[string]InventoryItem), docs: make(map[string]*loadedDocument), present: inv.Presence(), members: map[string]membership.Entry{}, provenanceFiles: map[string][]provenanceFile{}, gaps: append([]InventoryGap{}, inv.Gaps...)}
+	l := loader{tx: tx, batch: &loadBatch{tx: tx, limit: limit}, inv: inv.sorted(), artifacts: artifacts, recipes: recipes, codes: codes, items: make(map[string]map[string]InventoryItem), docs: make(map[string]*loadedDocument), present: inv.Presence(), members: map[string]membership.Entry{}, provenanceFiles: map[string][]provenanceFile{}, gaps: append([]InventoryGap{}, inv.Gaps...)}
+	defer func() {
+		if loadErr != nil {
+			if flushErr := l.batch.flush(ctx); flushErr != nil {
+				loadErr = flushErr
+			}
+		}
+	}()
 	for _, item := range l.inv.Items {
 		if l.items[item.Stage] == nil {
 			l.items[item.Stage] = make(map[string]InventoryItem)
@@ -95,6 +110,9 @@ func Load(ctx context.Context, conn *pgx.Conn, inv Inventory, artifacts artifact
 	if err = l.loadDocuments(ctx); err != nil {
 		return Counts{}, err
 	}
+	if err = l.batch.flush(ctx); err != nil {
+		return Counts{}, err
+	}
 	timings.observe("load_documents", phaseStart)
 	if _, err = tx.Exec(ctx, `CREATE TEMP TABLE build_chunk ON COMMIT DROP AS SELECT id,document_id,provision_id,ordinal,context_prefix,content,spans,input_sha256,token_count,embedding FROM chunk WITH NO DATA; CREATE UNIQUE INDEX ON build_chunk(id)`); err != nil {
 		return Counts{}, fmt.Errorf("create chunk staging table: %w", err)
@@ -103,15 +121,24 @@ func Load(ctx context.Context, conn *pgx.Conn, inv Inventory, artifacts artifact
 	if err = l.loadChunks(ctx); err != nil {
 		return Counts{}, err
 	}
+	if err = l.batch.flush(ctx); err != nil {
+		return Counts{}, err
+	}
 	timings.observe("load_chunks", phaseStart)
 	phaseStart = time.Now()
-	l.counts.LexicalStats, err = loadLexical(ctx, tx, recipes.Lexical)
+	l.counts.LexicalStats, err = loadLexical(ctx, tx, l.batch, recipes.Lexical)
 	if err != nil {
+		return Counts{}, err
+	}
+	if err = l.batch.flush(ctx); err != nil {
 		return Counts{}, err
 	}
 	timings.observe("load_lexical", phaseStart)
 	phaseStart = time.Now()
 	if err = l.loadRelations(ctx, opts.CentralIssuers); err != nil {
+		return Counts{}, err
+	}
+	if err = l.batch.flush(ctx); err != nil {
 		return Counts{}, err
 	}
 	timings.observe("load_relations", phaseStart)
@@ -123,13 +150,22 @@ func Load(ctx context.Context, conn *pgx.Conn, inv Inventory, artifacts artifact
 	if err != nil {
 		return Counts{}, err
 	}
+	if err = l.batch.flush(ctx); err != nil {
+		return Counts{}, err
+	}
 	timings.observe("load_validity", phaseStart)
 	phaseStart = time.Now()
 	if err = l.loadTaxonomy(ctx, opts.Taxonomy); err != nil {
 		return Counts{}, err
 	}
+	if err = l.batch.flush(ctx); err != nil {
+		return Counts{}, err
+	}
 	timings.observe("load_taxonomy", phaseStart)
 	if err = l.loadGaps(ctx); err != nil {
+		return Counts{}, err
+	}
+	if err = l.batch.flush(ctx); err != nil {
 		return Counts{}, err
 	}
 	if err = tx.Commit(ctx); err != nil {
