@@ -30,10 +30,12 @@ First-party entry points supplied by that evidence:
 ## Direct discovery
 
 List the full central catalog once per run through `POST /doc/all`, with
-`agencyLevel: TRUNG_UONG`, no agency filter and no keyword. Use the page size in
-[budgets](budgets.md#pipeline) and the stable-listing rule in
-[pipeline](pipeline.md#source-ingest-rules). Replace server-side title searches
-and the separate State Bank sweep with local selection over this listing.
+`agencyLevel: TRUNG_UONG`, no agency filter and no keyword. Use the page size
+and pages in flight in [budgets](budgets.md#pipeline) and the stable-listing
+rule in [pipeline](pipeline.md#source-ingest-rules); a pass assembles its pages
+by page index, and passes run one after another. Replace server-side title
+searches and the separate State Bank sweep with local selection over this
+listing.
 
 Select a listing item when `agencyIds` intersects `{62, 908}` or its title
 matches an approved term below. Normalize title and term with NFC, lowercase and
