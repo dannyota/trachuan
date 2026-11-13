@@ -61,6 +61,7 @@ One line per item: date, area, finding, source.
 - 2026-11-14, web, a stat card with no value shows "-" (home and sources "Nguồn mới nhất" when `newest_source_date` is absent); hide the card instead.
 - 2026-11-14, web, the home sample (`apps/web/app/data/sample-result.json`, `scripts/make-sample.mjs`) is stored from one release and its stamp states that release's date; refresh it whenever a release is activated so the date stays current.
 - 2026-11-14, mcp, define an Origin policy for `/mcp` now that the SDK's localhost Host check is replaced (#189 review finding R-01): which browser origins may call it, and the response for others.
-- 2026-11-14, search latency and payload on production: a filtered web search took 1.5 s and 165 KB for 20 hits; a compact MCP search 1.27 s and 77.7 KB; the sparse arm is a sequential scan of about 221k chunks at about 270 ms, run twice per search; the topic node page takes 2.7 s. Measure each stage and set budgets before tuning.
+- 2026-11-14, search latency and payload: measured per statement in docs/design/retrieval-performance.md; implement its changes in the order there once the note is accepted.
 - 2026-11-14, web, every page logs a console 401 from `GET /api/v1/me` for a signed-out visitor; probe the session without an error response (for example a 204 when signed out) or skip the call when no session cookie can exist.
 - 2026-11-14, auth, owner decision: after release add username and password sign-in with TOTP and email sign-up, as in aboutme; needs an ADR before any work.
+- 2026-11-14, oauth, the consent and error pages show "Tra Chuẩn" as text with no seal; an inline SVG seal would match the site header without a CSP change.
