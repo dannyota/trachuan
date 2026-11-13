@@ -5,8 +5,10 @@ package e2e
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"testing"
 
@@ -119,8 +121,29 @@ func TestTaxonomy_Flow(t *testing.T) {
 			input["release"] = result.Release
 		}
 		if result.Cursor == "" {
-			if len(seen) != 36 {
-				t.Fatalf("got %d distinct hits, want 36", len(seen))
+			expected := make(map[string]bool)
+			// Every original fixture article stays reachable when optional documents exist.
+			for document := 1; document <= 27; document++ {
+				articles := 1
+				if document <= 3 {
+					articles = 4
+				}
+				for article := 1; article <= articles; article++ {
+					handle := fmt.Sprintf("vn:fixture:%d#article-%d", document, article)
+					expected[handle] = true
+					if !seen[handle] {
+						t.Fatalf("missing fixture hit %s", handle)
+					}
+				}
+			}
+			allowSiblings := os.Getenv("E2E_RECIPE3") == "1"
+			for handle := range seen {
+				if expected[handle] {
+					continue
+				}
+				if !allowSiblings || !strings.HasPrefix(handle, "vn:fixture:siblings#") {
+					t.Fatalf("unexpected fixture hit %s", handle)
+				}
 			}
 			return
 		}
