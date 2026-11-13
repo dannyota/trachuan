@@ -80,8 +80,10 @@ For the [host selected in ADR 0006](../adr/0006-single-host-oci-podman.md), the
 rows total 10,800 MB (estimates, not measured peak use), leaving about 12 GB for
 the OS, page cache and margin. The server row includes its [caches](caching.md).
 PostgreSQL uses `shared_buffers` 4 GiB and `effective_cache_size` 16 GiB so the
-active corpus (2.9 GB for vn/20261110_4) stays in memory. The owner accepted the
-embedder row (ADR 0009, 0011).
+active corpus (2.9 GB for vn/20261110_4) stays in memory. JIT is off: on the A1
+host it spent 1.2 s compiling the reader's relation query, which runs in 8 ms
+without it (measured 2026-11-14). The owner accepted the embedder row (ADR 0009,
+0011).
 
 | Process                                        | RSS MB |
 | ---------------------------------------------- | ------ |
