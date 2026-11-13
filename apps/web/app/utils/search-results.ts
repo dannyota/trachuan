@@ -15,7 +15,17 @@ export function validityInk(status: string | undefined): string {
 }
 
 export function resultHits(result: Result): Hit[] {
-  return result.abstain ? [] : [...(result.hits || []), ...(result.non_current || [])]
+  return [...(result.hits || []), ...(result.non_current || [])]
+}
+
+export function appendSearchPage(previous: Result, page: Result): Result {
+  return { ...previous, ...page,
+    next_cursor: page.next_cursor,
+    documents: { ...previous.documents, ...page.documents },
+    nodes: { ...previous.nodes, ...page.nodes },
+    hits: [...(previous.hits || []), ...(page.hits || [])],
+    non_current: [...(previous.non_current || []), ...(page.non_current || [])],
+  }
 }
 
 export function readerLink(hit: Hit, release: string): string | null {

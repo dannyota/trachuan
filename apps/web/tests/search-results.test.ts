@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { describe, expect, it } from 'vitest'
-import { validityInk, readerLink, resultHits } from '../app/utils/search-results'
+import { validityInk, readerLink, resultHits, appendSearchPage } from '../app/utils/search-results'
 
 const require = createRequire(import.meta.url)
 const Ajv = require('ajv')
@@ -22,7 +22,7 @@ describe('search results', () => {
   })
   it('keeps both groups and pins reader links', () => {
     expect(resultHits({ ...compact, non_current: [hit] })).toHaveLength(2)
-    expect(resultHits({ ...compact, abstain: true })).toHaveLength(0)
+    expect(resultHits({ ...compact, abstain: true, reason: 'low_confidence' })).toHaveLength(1)
     expect(readerLink(hit, 'r1')).toBe('/vn/documents/vn:vbpl:1?release=r1#dieu-1')
     expect(readerLink({ ...hit, handle: 'vn:vbpl:1' }, 'r1')).toBe('/vn/documents/vn:vbpl:1?release=r1')
   })
@@ -55,4 +55,13 @@ it('takes a generated reader link directly to the signed-in guard', async () => 
   `
   const output = execFileSync(process.execPath, ['--input-type=module', '-e', script, link!], { encoding: 'utf8' })
   expect(JSON.parse(output)).toMatchObject({ status: 302, location: expect.stringContaining('/api/v1/auth/google/start?next=') })
+})
+
+it('appends each page to its own group and merges reference maps', () => {
+  const old = { ...compact, hits: [hit], non_current: [{ ...hit, citation: 'Old' }] }
+  const page = { ...compact, hits: [{ ...hit, citation: 'Next' }], non_current: [{ ...hit, citation: 'Past' }], nodes: { topic: { name: 'Topic', level: 1 } } }
+  const merged = appendSearchPage(old, page)
+  expect(merged.hits?.map(item => item.citation)).toEqual(['Điều 1', 'Next'])
+  expect(merged.non_current?.map(item => item.citation)).toEqual(['Old', 'Past'])
+  expect(merged.nodes?.topic?.name).toBe('Topic')
 })

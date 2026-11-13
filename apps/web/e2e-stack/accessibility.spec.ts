@@ -39,7 +39,7 @@ async function keyboard(page: Page) {
 }
 
 async function searchFilters(page: Page, taxonomy: Response, facets: Response) {
-  const picker = page.locator('fieldset')
+  const picker = page.locator('.search-rail .node-picker')
   if (taxonomy.ok()) {
     const body = await taxonomy.json() as components['schemas']['TaxonomyResult']
     if (body.nodes?.some(node => node.code && !node.code.includes('.'))) {
@@ -52,10 +52,20 @@ async function searchFilters(page: Page, taxonomy: Response, facets: Response) {
   }
   if (facets.ok()) {
     const body = await facets.json() as components['schemas']['CorpusStatus']
-    await expect(page.locator('select[name="types"] option')).toHaveCount(body.doc_types?.length || 0)
-    await expect(page.locator('select[name="issuers"] option')).toHaveCount(body.issuers?.length || 0)
+    for (const [name, facets] of [['Loại văn bản', body.doc_types || []], ['Cơ quan ban hành', body.issuers || []]] as const) {
+      const group = page.locator('.search-rail fieldset').filter({ has: page.locator('legend', { hasText: name }) })
+      await expect(group.locator('.facet-option')).toHaveCount(Math.min(facets.length, 6))
+      if (facets.length > 6) await group.getByRole('button', { name: 'Xem tất cả' }).click()
+      await expect(group.locator('.facet-option')).toHaveCount(facets.length)
+      for (const [index, facet] of facets.entries()) {
+        const option = group.locator('.facet-option').nth(index)
+        await expect(option).toContainText(facet.value || '')
+        await expect(option.getByRole('checkbox')).toBeVisible()
+      }
+      if (facets.length > 6) await group.getByRole('button', { name: 'Thu gọn' }).click()
+    }
   } else {
-    await expect(page.locator('.search-form > [role="status"]')).toBeVisible()
+    await expect(page.locator('.search-rail .search-filters > [role="status"]')).toBeVisible()
   }
 }
 
@@ -124,13 +134,18 @@ test('keyboard focus and validity contrast on the website', async ({ page }) => 
   await keyboard(page)
   await page.getByLabel('Câu hỏi tiếng Việt').fill('Văn bản thử nghiệm\nMẫu giả lập vườn thử nghiệm xanh')
   await page.getByRole('button', { name: 'Tra cứu', exact: true }).click()
-  await expect(page.locator('.search-card').first()).toBeVisible()
+  await expect(page.locator('.result-card').first()).toBeVisible()
   await searchFilters(page, taxonomy, facets)
   await keyboard(page)
   for (const colorScheme of ['light', 'dark'] as const) {
     await page.emulateMedia({ colorScheme })
+    const legend = page.locator('.search-legend span')
+    expect(await legend.count()).toBeGreaterThan(0)
     for (const ink of ['in-force', 'partial', 'not-yet', 'expired']) {
-      const ratio = await page.locator(`.search-summary .ink-${ink}`).evaluate(element => {
+      const ratio = await page.locator('.search-legend').evaluate((legend, ink) => {
+        const element = document.createElement('span')
+        element.className = `ink-${ink}`
+        legend.append(element)
         const rgb = (value: string) => value.match(/[\d.]+/g)!.slice(0, 3).map(Number)
         const luminance = (value: string) => rgb(value).map(channel => {
           const c = channel / 255
@@ -138,13 +153,14 @@ test('keyboard focus and validity contrast on the website', async ({ page }) => 
         }).reduce((sum, c, i) => sum + c * [0.2126, 0.7152, 0.0722][i]!, 0)
         const foreground = luminance(getComputedStyle(element).color)
         const background = luminance(getComputedStyle(document.body).backgroundColor)
+        element.remove()
         return (Math.max(foreground, background) + 0.05) / (Math.min(foreground, background) + 0.05)
-      })
+      }, ink)
       expect(ratio, `${colorScheme} ${ink}`).toBeGreaterThanOrEqual(4.5)
       console.log(`contrast ${colorScheme} ${ink}: ${ratio.toFixed(2)}:1`)
     }
   }
-  await page.locator('.search-card').first().getByRole('link', { name: 'Đọc văn bản' }).click()
+  await page.locator('.result-card').first().getByRole('link', { name: 'Đọc trong văn bản' }).click()
   await expect(page.locator('[data-anchor="dieu-1"]')).toBeVisible()
   await expect(page.locator('.reader-rail').getByRole('link', { name: '2/2099/TT-TEST', exact: true })).toBeVisible()
   await keyboard(page)

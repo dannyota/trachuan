@@ -3,6 +3,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, expect, it, vi } from 'vitest'
 import { computed, defineComponent, h, onBeforeUnmount, onMounted, ref } from 'vue'
 import { createApi } from '../app/api/client'
+import { createPinia, setActivePinia } from 'pinia'
 import Search from '../app/pages/vn/search.vue'
 import SearchNodePicker from '../app/components/SearchNodePicker.vue'
 
@@ -33,14 +34,15 @@ it.each(['status', 'taxonomy'])('keeps search state after %s fails and retries l
   vi.stubGlobal('useRoute', () => ({ query: {}, meta: { signedIn: true }, path: '/vn/search', fullPath: '/vn/search' }))
   vi.stubGlobal('useApi', (options: { localUnavailable?: boolean } = {}) => createApi({ origin: 'http://localhost', session, fetch: fetcher, onUnavailable: options.localUnavailable ? undefined : () => { unavailable.value = true } }))
   const Shell = defineComponent({ setup: () => () => unavailable.value ? h('p', 'global unavailable') : h(Search) })
-  const wrapper = mount(Shell, { global: { components: { SearchNodePicker }, stubs: { SearchResults: { props: ['result'], template: '<div>{{ result.hits[0].citation }}</div>' } } } })
+  setActivePinia(createPinia())
+  const wrapper = mount(Shell, { global: { components: { SearchNodePicker }, stubs: { NuxtLayout: { template: '<div><slot name="header" /><slot /></div>' }, SearchResults: { props: ['result'], template: '<div>{{ result.hits[0].citation }}</div>' } } } })
   await flushPromises()
   await wrapper.get('textarea').setValue('fixture query')
   await wrapper.get('input[type="date"]').setValue('2024-01-01')
   await wrapper.findAll('input[type="checkbox"]').find(input => input.element.parentElement?.textContent?.includes('Parent'))!.setValue(true)
   await wrapper.get('form').trigger('submit')
   await flushPromises()
-  if (failing === 'taxonomy') await wrapper.findAll('button').find(button => button.text() === 'Show children' && button.element.parentElement?.textContent?.includes('Parent'))!.trigger('click')
+  if (failing === 'taxonomy') await wrapper.findAll('button').find(button => button.attributes('aria-label') === 'Show children' && button.element.parentElement?.textContent?.includes('Parent'))!.trigger('click')
   finish(json({ error: { code: 'unavailable' } }, 503))
   await flushPromises()
   expect(unavailable.value).toBe(false)

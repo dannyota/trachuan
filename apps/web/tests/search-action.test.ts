@@ -4,6 +4,8 @@ import { afterEach, expect, it, vi } from 'vitest'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import Search from '../app/pages/vn/search.vue'
 import { createApi } from '../app/api/client'
+import { createPinia, setActivePinia } from 'pinia'
+import { useSearchDraftStore } from '../app/stores/search-draft'
 
 const json = (value: unknown, status = 200) => new Response(JSON.stringify(value), { status, headers: { 'content-type': 'application/json' } })
 const page = { release: '20261111_1', next_cursor: 'cursor-a', abstain: false, hits: [{ doc: 'vn:vbpl:1' }] }
@@ -19,7 +21,8 @@ function setup(fetch: typeof globalThis.fetch, route: { query: Record<string, st
   vi.stubGlobal('useRoute', () => route)
   vi.stubGlobal('onMounted', onMounted)
   vi.stubGlobal('useApi', () => api)
-  const wrapper = mount(Search, { global: { stubs: { SearchResults: { props: ['result'], template: '<div class="result-stub">{{ result.hits?.length }}</div>' }, SearchNodePicker: true } } })
+  setActivePinia(createPinia())
+  const wrapper = mount(Search, { global: { stubs: { NuxtLayout: { template: '<div><slot name="header" /><slot /></div>' }, SearchResults: { props: ['result'], template: '<div class="result-stub">{{ result.hits?.length }}</div>' }, SearchNodePicker: true } } })
   return { wrapper, session }
 }
 async function submit(wrapper: ReturnType<typeof mount>) {
@@ -28,7 +31,7 @@ async function submit(wrapper: ReturnType<typeof mount>) {
   await flushPromises()
 }
 async function more(wrapper: ReturnType<typeof mount>) {
-  await wrapper.findAll('button').find(button => button.text() === 'Show more')!.trigger('click')
+  await wrapper.findAll('button').find(button => button.text() === 'Show more results')!.trigger('click')
   await flushPromises()
 }
 afterEach(() => vi.unstubAllGlobals())
@@ -81,7 +84,7 @@ it('stops an expired cursor without restarting the search', async () => {
   expect(calls).toHaveLength(2)
   expect(calls.map(call => call.csrf)).toEqual(['token-a', 'token-a'])
   expect(calls[1]!.body).toMatchObject({ release: '20261111_1', cursor: 'cursor-a', limit: 20 })
-  expect(wrapper.findAll('button').some(button => button.text() === 'Show more')).toBe(false)
+  expect(wrapper.findAll('button').some(button => button.text() === 'Show more results')).toBe(false)
   wrapper.unmount()
 })
 
@@ -95,7 +98,7 @@ it('appends cursor pages and stops at the end', async () => {
   await more(wrapper)
   expect(calls[1]).toMatchObject({ cursor: 'cursor-a', release: '20261111_1', limit: 20 })
   expect(wrapper.get('.result-stub').text()).toBe('2')
-  expect(wrapper.findAll('button').some(button => button.text() === 'Show more')).toBe(false)
+  expect(wrapper.findAll('button').some(button => button.text() === 'Show more results')).toBe(false)
   wrapper.unmount()
 })
 
@@ -121,8 +124,8 @@ it('loads facets and sends selected filters without writing them to browser stat
     return request.url.endsWith('/api/v1/status') ? json({ doc_types: [{ value: 'Type fixture', count: 2 }], issuers: [{ value: 'Issuer fixture', count: 1 }] }) : json(page)
   })
   await flushPromises()
-  await wrapper.get('select[name="types"]').setValue(['Type fixture'])
-  await wrapper.get('select[name="issuers"]').setValue(['Issuer fixture'])
+  await wrapper.findAll('.facet-option').find(label => label.text().includes('Type fixture'))!.get('input').setValue(true)
+  await wrapper.findAll('.facet-option').find(label => label.text().includes('Issuer fixture'))!.get('input').setValue(true)
   await submit(wrapper)
   expect(calls.find(call => call.body)?.body).toMatchObject({ doc_types: ['Type fixture'], issuers: ['Issuer fixture'] })
   expect([location.href, JSON.stringify(history.state), JSON.stringify(localStorage), JSON.stringify(sessionStorage), document.title].join(' ')).not.toMatch(/Type fixture|Issuer fixture/)
@@ -145,7 +148,7 @@ it('keeps paging available after a temporary error', async () => {
   const { wrapper } = setup(async () => ++count === 1 ? json(page) : json({ error: { code: 'invalid_request', message: 'error' } }, 400))
   await submit(wrapper)
   await more(wrapper)
-  expect(wrapper.findAll('button').some(button => button.text() === 'Show more')).toBe(true)
+  expect(wrapper.findAll('button').some(button => button.text() === 'Show more results')).toBe(true)
   wrapper.unmount()
 })
 
@@ -167,13 +170,75 @@ it('limits each facet selection to ten values', async () => {
   vi.stubGlobal('onMounted', onMounted)
   vi.stubGlobal('useRoute', () => ({ query: {} }))
   vi.stubGlobal('useApi', () => api)
-  const wrapper = mount(Search, { global: { stubs: { SearchResults: true, SearchNodePicker: true } } })
+  setActivePinia(createPinia())
+  const wrapper = mount(Search, { global: { stubs: { NuxtLayout: { template: '<div><slot name="header" /><slot /></div>' }, SearchResults: true, SearchNodePicker: true } } })
   await flushPromises()
-  const values = facets.map(facet => facet.value)
-  await wrapper.get('select[name="types"]').setValue(values)
-  await wrapper.get('select[name="issuers"]').setValue(values)
+  for (const button of wrapper.findAll('.filter-more')) await button.trigger('click')
+  const fieldsets = wrapper.findAll('.search-filters > fieldset')
+  for (const fieldset of fieldsets.slice(1, 3)) {
+    const checkboxes = fieldset.findAll('input[type="checkbox"]')
+    for (const checkbox of checkboxes.slice(0, 10)) await checkbox.setValue(true)
+    expect(checkboxes[10]!.attributes('disabled')).toBeDefined()
+  }
   await submit(wrapper)
   expect(bodies[0]?.doc_types).toHaveLength(10)
   expect(bodies[0]?.issuers).toHaveLength(10)
+  wrapper.unmount()
+})
+
+it('consumes a home draft once and submits its filter without persisting the query', async () => {
+  const calls: Record<string, unknown>[] = []
+  const { wrapper } = setup(async input => { calls.push(await (input as Request).json()); return json(page) })
+  wrapper.unmount()
+  const pinia = createPinia()
+  setActivePinia(pinia)
+  useSearchDraftStore().draft = { query: 'draft fixture', inForceOnly: false }
+  const mounted = mount(Search, { global: { plugins: [pinia], stubs: { NuxtLayout: { template: '<div><slot name="header" /><slot /></div>' }, SearchResults: true, SearchNodePicker: true } } })
+  await flushPromises()
+  expect(calls).toHaveLength(1)
+  expect(calls[0]).toMatchObject({ query: 'draft fixture', in_force_only: false })
+  expect(useSearchDraftStore().draft).toBeNull()
+  expect([location.href, JSON.stringify(history.state), JSON.stringify(localStorage), JSON.stringify(sessionStorage)].join(' ')).not.toContain('draft fixture')
+  mounted.unmount()
+})
+
+it('keeps filter changes local until the next submission', async () => {
+  const calls: Record<string, unknown>[] = []
+  const { wrapper } = setup(async input => { calls.push(await (input as Request).json()); return json(page) })
+  await flushPromises()
+  await wrapper.findAll('.facet-option').find(label => label.text().includes('Type fixture'))!.get('input').setValue(true)
+  expect(calls).toHaveLength(0)
+  await submit(wrapper)
+  expect(calls[0]?.doc_types).toEqual(['Type fixture'])
+  wrapper.unmount()
+})
+
+it('keeps the previous result area while a new search loads', async () => {
+  let count = 0
+  let finish!: (response: Response) => void
+  const { wrapper } = setup(async () => ++count === 1 ? json(page) : new Promise(resolve => { finish = resolve }))
+  await submit(wrapper)
+  await wrapper.get('form').trigger('submit')
+  expect(wrapper.find('.search-results-pending').exists()).toBe(true)
+  expect(wrapper.get('button[type="submit"]').attributes('disabled')).toBeDefined()
+  finish(json({ release: '20990101', abstain: false, hits: [] }))
+  await flushPromises()
+  expect(wrapper.find('.search-results-pending').exists()).toBe(false)
+  wrapper.unmount()
+})
+
+it('submits on Enter but not Shift+Enter or during text composition', async () => {
+  const calls: Record<string, unknown>[] = []
+  const { wrapper } = setup(async input => { calls.push(await (input as Request).json()); return json(page) })
+  const field = wrapper.get('textarea')
+  await field.setValue('fixture question')
+  await field.trigger('keydown', { key: 'Enter', shiftKey: true })
+  await field.trigger('keydown', { key: 'Enter', isComposing: true })
+  await flushPromises()
+  expect(calls).toHaveLength(0)
+  await field.trigger('keydown', { key: 'Enter' })
+  await flushPromises()
+  expect(calls).toHaveLength(1)
+  expect(calls[0]?.query).toBe('fixture question')
   wrapper.unmount()
 })

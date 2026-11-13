@@ -29,9 +29,9 @@ it('serves only the form on signed-in SSR', async () => {
 it('preserves line breaks in the search field', async () => {
   const { Window } = await import('happy-dom')
   const source = readFileSync('app/pages/vn/search.vue', 'utf8')
-  const template = source.slice(source.indexOf('<template>'))
+  const template = source.slice(source.indexOf('<form'), source.indexOf('</form>') + 7)
   const document = new Window().document
-  document.body.innerHTML = template.replace('<template>', '').replace('</template>', '')
+  document.body.innerHTML = template
   const field = document.querySelector<HTMLInputElement | HTMLTextAreaElement>('#search-query')!
   field.value = 'first\nsecond'
   expect(field.value).toBe('first\nsecond')

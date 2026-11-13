@@ -8,7 +8,6 @@ const text = `${lead}\n${first}\n${second}`
 const release = '20990101_3'
 const doc = 'vn:fixture:siblings'
 
-// The API fixture represents a recipe-3 hit with two complete constituents.
 test('renders merged text and snippet and opens the article reader', async ({ page }) => {
   let searches = 0
   await page.route('**/api/v1/me', route => route.fulfill({ json: { id: 1, email: 'test@example.invalid', created_at: '2099-01-01T00:00:00Z', csrf_token: 'token' } }))
@@ -34,8 +33,8 @@ test('renders merged text and snippet and opens the article reader', async ({ pa
   await expect(page.locator('.law-text')).toHaveText(`${lead} […] ${second}`)
   await submit()
   await expect(page.locator('.law-text')).toHaveText(text)
-  await expect(page.locator('.search-card')).toHaveCount(1)
-  const reader = page.getByRole('link', { name: /read document|đọc văn bản/i })
+  await expect(page.locator('.result-card')).toHaveCount(1)
+  const reader = page.getByRole('link', { name: /read in document|đọc trong văn bản/i })
   await expect(reader).toHaveAttribute('href', new RegExp(`release=${release}#article-1$`))
   await reader.click()
   await expect(page.getByText(third, { exact: true })).toBeVisible()
