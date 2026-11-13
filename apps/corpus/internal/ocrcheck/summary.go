@@ -10,9 +10,16 @@ type DocumentSummary struct {
 }
 
 func (s *Summary) record(doc Document, pages int, u Usage, outcome string) {
+	if u.APIErrorType != "" && (outcome == "api_error" || outcome == "uncertain:api_error") {
+		outcome += ":" + u.APIErrorType
+	}
 	s.Documents = append(s.Documents, DocumentSummary{EntryID: doc.Entry.ID, Pages: pages, InputTokens: u.Input, OutputTokens: u.Output, CostMicroUSD: u.charge(), Outcome: outcome})
 }
 
 func (s *Summary) recordPending(a Attempt) {
-	s.Documents = append(s.Documents, DocumentSummary{EntryID: a.EntryID, Pages: a.Usage.PDFPages, InputTokens: a.Usage.CountedInput, OutputTokens: a.Usage.Output, CostMicroUSD: a.Usage.charge(), Outcome: a.State})
+	outcome := a.State
+	if a.State == "uncertain" && a.Usage.APIErrorType != "" {
+		outcome += ":api_error:" + a.Usage.APIErrorType
+	}
+	s.Documents = append(s.Documents, DocumentSummary{EntryID: a.EntryID, Pages: a.Usage.PDFPages, InputTokens: a.Usage.CountedInput, OutputTokens: a.Usage.Output, CostMicroUSD: a.Usage.charge(), Outcome: outcome})
 }

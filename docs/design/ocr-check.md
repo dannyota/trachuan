@@ -162,12 +162,13 @@ operator's choice.
 - Every attempt is a row in `ocr_check_attempt` (entry, checker id, mode, batch
   id, state, reason, usage). The table is working state and may be updated; the
   `ocr_check` row it leads to is immutable. Usage records prepared request body
-  bytes, response event counts and safe error class and type without error text.
-  Schema failures also record the answer page count or its JSON type, the
-  same-document boolean, item count, maximum integer item page and invalid item
-  page count when available. For up to 10 items with invalid pages, usage also
-  records the schema kind or `other` and the character lengths of `ocr`, `pdf`
-  and `note` (null for missing or non-string fields), without readings.
+  bytes, response event counts, safe error class and type, and the allowlisted
+  provider `api_error_type` without error text. Schema failures also record the
+  answer page count or its JSON type, the same-document boolean, item count,
+  maximum integer item page and invalid item page count when available. For up
+  to 10 items with invalid pages, usage also records the schema kind or `other`
+  and the character lengths of `ocr`, `pdf` and `note` (null for missing or
+  non-string fields), without readings.
 
 Credentials come from `ANTHROPIC_API_KEY` in the environment. The key, request
 bodies, document text and provider error text are never logged. The API stores

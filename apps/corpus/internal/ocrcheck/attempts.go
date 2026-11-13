@@ -95,6 +95,7 @@ func (r *Runner) unknown(ctx context.Context, a Attempt, doc Document, response 
 	u.Final = false
 	u.CostMicroUSD = p.cost(u)
 	metadata := errorUsage(callErr)
+	u.APIErrorType = metadata.APIErrorType
 	u.APIStatus = metadata.APIStatus
 	u.RequestID = metadata.RequestID
 	u.ErrorClass = metadata.ErrorClass
@@ -118,6 +119,7 @@ func (r *Runner) finish(ctx context.Context, a Attempt, ready prepared, response
 	if callErr != nil {
 		reason = errorReason(callErr)
 		metadata := errorUsage(callErr)
+		u.APIErrorType = metadata.APIErrorType
 		u.APIStatus = metadata.APIStatus
 		u.RequestID = metadata.RequestID
 		u.ErrorClass = metadata.ErrorClass
@@ -194,7 +196,7 @@ func safeError(err error) error {
 func errorUsage(err error) Usage {
 	var e *APIError
 	if errors.As(safeError(err), &e) {
-		return Usage{APIStatus: e.Status, RequestID: e.RequestID, ErrorClass: e.Class, ErrorType: e.Type}
+		return Usage{APIErrorType: e.ProviderType, APIStatus: e.Status, RequestID: e.RequestID, ErrorClass: e.Class, ErrorType: e.Type}
 	}
 	return Usage{}
 }

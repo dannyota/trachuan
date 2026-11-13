@@ -33,6 +33,7 @@ type Usage struct {
 	CountedInput          int64                   `json:"counted_input_tokens,omitempty"`
 	MaxOutput             int64                   `json:"max_output_tokens,omitempty"`
 	ReservationMicroUSD   int64                   `json:"reservation_micro_usd,omitempty"`
+	APIErrorType          string                  `json:"api_error_type,omitempty"`
 	APIStatus             int                     `json:"api_status,omitempty"`
 	RequestID             string                  `json:"request_id,omitempty"`
 	Input                 int64                   `json:"input_tokens"`

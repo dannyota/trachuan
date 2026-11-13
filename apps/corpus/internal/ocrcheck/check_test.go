@@ -350,7 +350,7 @@ func (s *memoryRepository) UncertainWithError(ctx context.Context, attempts []At
 	for i := range s.attempts {
 		if s.attempts[i].SubmissionID == attempts[0].SubmissionID {
 			u := &s.attempts[i].Usage
-			u.ErrorClass, u.ErrorType = metadata.ErrorClass, metadata.ErrorType
+			u.ErrorClass, u.ErrorType, u.APIErrorType = metadata.ErrorClass, metadata.ErrorType, metadata.APIErrorType
 		}
 	}
 	return nil

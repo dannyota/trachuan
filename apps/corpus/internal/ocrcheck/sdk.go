@@ -3,6 +3,7 @@ package ocrcheck
 import (
 	"context"
 	"crypto/tls"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -126,6 +127,9 @@ func (s *SDKClient) BatchResults(ctx context.Context, id string) ([]BatchResult,
 		response := fromMessage(v.Result.Message)
 		if v.Result.Type != "succeeded" {
 			response = Response{Usage: Usage{RequestID: v.Result.Error.RequestID}}
+			if v.Result.Type == "errored" {
+				response.Usage.APIErrorType = providerErrorType(v.Result.Error.RawJSON())
+			}
 		}
 		results = append(results, BatchResult{CustomID: v.CustomID, Type: v.Result.Type, Response: response})
 	}
@@ -167,6 +171,7 @@ func sanitizeSDKError(err error) error {
 	if apiErr != nil {
 		result.Status = apiErr.StatusCode
 		result.RequestID = apiErr.RequestID
+		result.ProviderType = providerErrorType(apiErr.RawJSON())
 	}
 	inner := err
 	for {
@@ -216,4 +221,24 @@ func errorClass(err error) string {
 	default:
 		return "other"
 	}
+}
+
+func providerErrorType(body string) string {
+	var envelope struct {
+		Error struct {
+			Type json.RawMessage `json:"type"`
+		} `json:"error"`
+	}
+	if json.Unmarshal([]byte(body), &envelope) != nil || len(envelope.Error.Type) == 0 {
+		return ""
+	}
+	var value string
+	if json.Unmarshal(envelope.Error.Type, &value) == nil {
+		switch value {
+		case "invalid_request_error", "authentication_error", "permission_error", "not_found_error",
+			"request_too_large", "rate_limit_error", "api_error", "overloaded_error", "billing_error", "timeout_error":
+			return value
+		}
+	}
+	return "other"
 }

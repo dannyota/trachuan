@@ -40,8 +40,9 @@ func TestCheck_PrintsPerDocumentMetrics(t *testing.T) {
 	printCheckDocuments(&out, []ocrcheck.DocumentSummary{
 		{EntryID: 12, Pages: 10, InputTokens: 200, OutputTokens: 30, CostMicroUSD: 700, Outcome: "flagged"},
 		{EntryID: 13, Pages: 9, InputTokens: 100, OutputTokens: 10, CostMicroUSD: 300, Outcome: "schema:items[2].kind"},
+		{EntryID: 14, Outcome: "api_error:invalid_request_error"},
 	})
-	want := "ocr_text_id=12 pages=10 input_tokens=200 output_tokens=30 cost_usd=0.000700 outcome=flagged\nocr_text_id=13 pages=9 input_tokens=100 output_tokens=10 cost_usd=0.000300 outcome=schema:items[2].kind\n"
+	want := "ocr_text_id=12 pages=10 input_tokens=200 output_tokens=30 cost_usd=0.000700 outcome=flagged\nocr_text_id=13 pages=9 input_tokens=100 output_tokens=10 cost_usd=0.000300 outcome=schema:items[2].kind\nocr_text_id=14 pages=0 input_tokens=0 output_tokens=0 cost_usd=0.000000 outcome=api_error:invalid_request_error\n"
 	if out.String() != want {
 		t.Fatalf("output=%q", out.String())
 	}
