@@ -5,9 +5,8 @@ body sits in the bundle's HTML transcription. This note decides, per document,
 when `extract` reads such a document from its transcription instead of its tree,
 and how a document that keeps a partial tree is marked.
 [Text extraction](text-extraction.md#text-source-per-document) owns text source
-selection and the existing whole-tree rule;
-[clauses and points](text-structure.md) owns the structure parsed text gains.
-Evidence:
+selection; [clauses and points](text-structure.md) owns the structure parsed
+text gains. Evidence:
 [source trees with heading-only articles](../research/vn-heading-only-trees-2026-11.md).
 
 ## Measured
@@ -15,18 +14,19 @@ Evidence:
 On release `vn/20261112_2`, 707 of 2,396 source-tree documents have at least one
 heading-only article: 642 have some (3,909 of their 11,344 articles), 65 have
 all. The 65 still read from the tree because today's whole-tree test also
-inspects structure nodes, whose titles sit in their text (59 documents). In 413
-of the 707 the parser accepts the transcription and its articles have exactly
-the tree's anchors in order; in 405 of those, every tree article that holds text
-agrees with the transcription. Reading those 405 from the transcription adds
-about 2.0 million characters of article text that search does not see today.
+inspects structure nodes, whose titles sit in their text. Under the rule below,
+339 of the 707 are read from their transcription (267 primary, 72 relation
+context), adding about 1.9 million characters of article text that search does
+not see today; 368 keep their tree.
 
 ## Rule
 
 An article is heading-only when it has no child provision and its text, after
-whitespace collapse, is its label, the label and a period, or the label and its
-heading joined by a space or by a period and a space. Structure provisions
-(`phan`, `chuong`, `muc`) are not tested: their title is not body text.
+whitespace collapse, is its label, the label and a period, the label and its
+heading joined by a space, or the label, a period, a space and its heading; text
+that is the label alone (with or without a period) is not heading-only when the
+heading is nonempty. This is the test `headingOnly` in `extract` applies to a
+whole tree today, applied to one article.
 
 A source-tree document with at least one heading-only article is read from its
 transcription when all of these hold:
@@ -34,58 +34,81 @@ transcription when all of these hold:
 1. The transcription is the bundle's `<id>_content.html`, selected and limited
    as text extraction already selects it, and the parser accepts its main scope.
 2. The accepted scopes' article anchors equal the tree's article anchors, in
-   order. A tree anchor with a `~k` suffix never matches: duplicate articles are
-   not resolved here.
-3. Every tree article that holds text and has no child provision agrees with the
-   transcription's article of the same anchor: equal or contained after
-   whitespace collapse, or a sequence ratio of at least 0.9. Articles with child
-   provisions are not compared (their tree text is the lead only).
+   order. A tree anchor with a `~k` suffix never matches.
+3. Every tree article that is not heading-only agrees with the transcription's
+   article of the same anchor: the tree article's full text (its own text and
+   its descendants, joined as chunk renders a subtree) occurs, after whitespace
+   collapse, exactly as a contiguous part of the transcription's article text.
+   The transcription may add text; it may not change any. Any other difference,
+   a changed number or a dropped word included, keeps the tree.
+4. Every clause and point anchor of the tree occurs among the transcription's
+   clause and point anchors (with [clauses and points](text-structure.md)).
+5. The text of every other tree provision (parts, chapters, sections, `other`)
+   occurs in the transcription's text after whitespace collapse.
+6. Every manual correction on the document whose quote occurs in the tree text
+   still occurs in the transcription text under the same anchor.
 
-Then the document's text source is `html_transcription`; the parsed text gains
-clauses and points as [clauses and points](text-structure.md) says, and
-`text.json` records that the tree was consulted and why it was set aside (the
-counts of heading-only and agreeing articles).
+Then the document's text source is `html_transcription`, and `text.json` records
+that the tree was consulted and set aside, with the counts behind each rule.
 
-Otherwise the tree stays. A document whose every article is heading-only keeps
-the gap `tree_headings_only`; one with some gets the new gap
-`tree_headings_partial`, with the count of heading-only articles as detail, and
-`text_complete` false. Both are reasons a search hit may lack text.
+Otherwise the tree stays. Then:
 
-Reason: the anchor check keeps citations stable (an article cited as `dieu-5`
-before is `dieu-5` after), and the text check refuses a transcription that
-disagrees with what the tree does hold. On the measured release the rule reads
-405 documents from their transcription; the other 302 keep their tree with one
-of the two gaps.
+- When every article is heading-only, the existing order of later sources
+  applies unchanged: the transcription when it is usable, then `pdf_text` and
+  checked OCR as text extraction orders them, and only when none is usable the
+  tree with the gap `tree_headings_only`. Frozen selection replays the same
+  choice.
+- When some articles hold text, later sources are not used: they cannot be
+  checked against the tree's text. The tree stays with the new gap
+  `tree_headings_partial` (detail: the count of heading-only articles and the
+  first rule that failed).
+
+`tree_headings_partial` joins every list that `tree_headings_only` is on: the
+gaps that set `text_complete` false
+([text extraction](text-extraction.md#what-is-recorded)), and the gaps for which
+relations from text are not read ([relations text](relations-text.md)). Like
+`tree_headings_only` it is a coverage gap that release acceptance reports and
+that the owner may accept.
 
 ## Effects
 
-- Extract repeats for the documents whose selection changes; its recipe changes
-  with the selection rule. It joins the run that carries `textparse/7`.
-- Validity: a document read from its transcription has its effect articles as
-  review evidence, not rule input
-  ([text extraction](text-extraction.md#validity-rules)). The run reports, for
-  the 405 documents, every validity decision that changes against the previous
-  release, and each change is read before the release is accepted.
-- Identity map and manual corrections: anchors are unchanged by rule 2, node ids
-  change (`tx:` ids replace source ids), so the identity map's node check
-  re-adjudicates entries on these documents; the run lists them.
-- Relations from text: articles that were heading-only now hold text, so more
-  relations can be read; relate repeats for these documents.
+- Extract: the 339 switched documents change source; the 368 kept documents gain
+  a gap, which changes their extract manifest too. So extract, relate and chunk
+  repeat for all 707 documents, and embed for the switched ones. The extract
+  recipe changes; this joins the run that carries `textparse/7`. Source-tree
+  documents without a heading-only article keep byte-identical artifacts.
+- Citations: article anchors are unchanged by rule 2 and clause anchors by
+  rule 4. Structure anchors may change (a source `chuong-i/muc-1` can become a
+  parsed `muc-1`); node ids change from source ids to `tx:` ids. The run lists
+  both, and the identity map's node check re-adjudicates entries on these
+  documents.
+- Validity: effect articles of a switched document become review evidence, not
+  rule input ([text extraction](text-extraction.md#validity-rules)). That
+  withdraws its automatic effects on other documents as well. The run therefore
+  diffs every validity value and decision across the whole corpus against the
+  previous release, not only on the switched documents, and each change is read
+  before the release is accepted.
+- Relations from text: switched documents' articles that were heading-only now
+  hold text, so more relations can be read; kept documents with
+  `tree_headings_partial` stop yielding text relations.
 
 ## Checks
 
 The primary runs these; they are requirements, not results.
 
-- Fixtures from recorded bundles: a partial tree whose transcription matches
-  (read from the transcription, anchors equal, clauses present); anchors that
-  differ; a tree anchor with `~k`; a transcription the parser rejects; a text
-  disagreement on one article; each keeps the tree with `tree_headings_partial`.
-- A tree whose every article is heading-only but whose sections hold titles in
-  their text is now recognized and read from a matching transcription.
-- Source-tree documents without heading-only articles keep byte-identical
-  extract artifacts.
-- The live run reports documents switched, kept partial and kept whole, the
-  characters gained, validity decisions changed and identity-map entries
-  re-adjudicated, and is gated by
-  [ADR 0010](../adr/0010-retrieval-evaluation-for-agents.md) item 4 like any
-  change to chunks.
+- Fixtures from recorded bundles, one per rule: a matching partial tree (read
+  from the transcription); anchors that differ; a `~k` anchor; a rejected
+  transcription; a changed number, a dropped word and a reordered clause in an
+  article that holds text; a tree clause anchor the transcription lacks; a
+  section title missing from the transcription; a correction quote lost; each
+  kept with `tree_headings_partial`.
+- A tree whose every article is heading-only and whose sections hold titles:
+  read from a matching transcription; with no usable transcription, falls to
+  `pdf_text` or checked OCR as today; replay of a frozen selection.
+- `tree_headings_partial` sets `text_complete` false in build, suppresses text
+  relations in relate, appears in coverage and status, and blocks release until
+  accepted.
+- The live run reports switched and kept documents by rule, characters gained,
+  changed structure anchors and node ids, identity-map entries re-adjudicated,
+  and the corpus-wide validity diff, and is gated by
+  [ADR 0010](../adr/0010-retrieval-evaluation-for-agents.md) item 4.

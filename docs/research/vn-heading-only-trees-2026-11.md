@@ -8,11 +8,14 @@ article). Evidence for [heading-only trees](../design/heading-only-trees.md).
 
 An article is heading-only when it has no child provision and its text, after
 whitespace collapse, is its label, the label and a period, or the label followed
-(after a space, or after a period and a space) by its heading: the test
-`headingOnly` in `apps/corpus/internal/stage/extract/selection.go` applies to a
-whole tree, here applied per article. Every source-tree document with at least
-one such article was compared with its stored transcription (`<id>_content.html`
-in the fetch bundle of `vn/20261112_2`), parsed by the production parser
+(after a space, or after a period and a space) by its heading, and text that is
+the label alone is not heading-only when the heading is nonempty: exactly the
+per-row test of `headingOnly` in
+`apps/corpus/internal/stage/extract/selection.go`, which applies it to a whole
+tree, here applied per article (the measurement script implements the same two
+conditions). Every source-tree document with at least one such article was
+compared with its stored transcription (`<id>_content.html` in the fetch bundle
+of `vn/20261112_2`), parsed by the production parser
 (`textparse.ParagraphsFromHTML` and `Parse` at main 3cd06ed, run from an
 uncommitted scratch test). The comparison takes the accepted scopes' articles:
 their anchors in order against the tree's article anchors in order, and, for
@@ -56,3 +59,27 @@ A per-article test with the anchor and text checks reads 405 of the 707
 documents from their transcription (the 413 less the 8 with a real text
 difference), about 2.0 million characters that search does not see today. The
 other 302 keep their tree and need a gap that says text is missing.
+
+## Strict rule
+
+A second pass applied the rule
+[heading-only trees](../design/heading-only-trees.md) adopts after review: the
+tree article's full text with its clauses must occur unchanged inside the
+transcription's article (no similarity ratio), every tree clause and point
+anchor must occur among the transcription's (parsed with the clause-aware parser
+of PR #146, head 73d19cc), every structure and `other` text must occur in the
+transcription, and manual-correction quotes found in the tree must survive.
+
+| Result for the 707 documents                   | Documents |
+| ---------------------------------------------- | --------- |
+| Read from the transcription                    | 339       |
+| Kept: transcription not accepted by the parser | 195       |
+| Kept: article anchors differ                   | 99        |
+| Kept: a tree clause or point anchor missing    | 50        |
+| Kept: article text differs                     | 24        |
+
+The 339 are 267 primary and 72 relation context documents and gain 1,913,537
+characters. No document failed the structure-text rule. Three switched documents
+carry manual corrections: one quote survives; the other two (vn:vbpl:9100 and
+vn:vbpl:6677) occur verbatim neither in the tree nor in the transcription, so
+the switch does not change them.
