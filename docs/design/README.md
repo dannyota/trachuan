@@ -29,7 +29,7 @@ Intended behavior of trachuan. Decisions with alternatives are in the
 | [scope adoption](scope-adoption.md)                 | Schema version 3, inventory version 2, build loading by final membership                       |
 | [validity corrections](validity-status.md)          | Text rules, manual corrections and review queue for wrong or missing source validity           |
 | [membership](membership.md)                         | Support supersession, retention, withdrawal, fetch drift and removal lifetime                  |
-| [source withdrawal](source-withdrawal.md)           | Keep a named document from its last verified acquisition when the source deletes its record    |
+| [pinned documents](pinned-documents.md)             | Keep a document the source deleted, read from verified payloads the source list pins           |
 | [source execution](source-execution.md)             | Shared source interfaces, finalization, retries and durable pauses                             |
 | [retry of source gaps](source-retry.md)             | What a restart retries, rewinds and clears, and the reuse of a run's own acquisitions          |
 | [fetch reuse](fetch-reuse.md)                       | What a new run keeps from the previous VBPL read when `updatedDate` is unchanged               |
