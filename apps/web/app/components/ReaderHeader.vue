@@ -6,7 +6,6 @@ import type { Language } from '../../i18n'
 import { isDocumentKey } from '../utils/document-key'
 import ValidityStamp from './ValidityStamp.vue'
 import CopyButton from './CopyButton.vue'
-import ReaderBack from './ReaderBack.vue'
 
 const props = defineProps<{ document: components['schemas']['Document'], release: string }>()
 const language = useState<Language>('language', () => 'vi')
@@ -18,7 +17,6 @@ const citation = computed(() => [props.document.type, props.document.number].fil
 <template>
   <header class="reader-identity">
     <div class="container reader-identity-inner">
-      <ReaderBack class="reader-back-mobile" />
       <div class="reader-identity-line">
         <ValidityStamp :status="document.status?.class" />
         <span v-if="statusBasisLabel(document.status, document.source_url, language)">{{ statusBasisLabel(document.status, document.source_url, language) }}</span>

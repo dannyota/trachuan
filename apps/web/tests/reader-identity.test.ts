@@ -18,7 +18,7 @@ it('offers the search return link before the document stamp', async () => {
   const wrapper = mount(Reader)
   await flushPromises()
   const band = wrapper.get('.reader-identity')
-  const link = band.get('a[href="/vn/search"]')
+  const link = wrapper.get('.reader-back-mobile a[href="/vn/search"]')
   expect(link.text()).toContain('Back to results')
   expect(link.element.compareDocumentPosition(band.get('.stamp').element) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
 })

@@ -4,6 +4,7 @@ import type { components } from '@trachuan/schema/gen/openapi'
 import ReaderRail from '../../../components/ReaderRail.vue'
 import { joinedUnits, warningsByTarget } from '../../../utils/reader-units'
 import ReaderHeader from '../../../components/ReaderHeader.vue'
+import ReaderBack from '../../../components/ReaderBack.vue'
 import ReaderToc from '../../../components/ReaderToc.vue'
 import ReaderUnit from '../../../components/ReaderUnit.vue'
 import { readerMessages } from '../../../../i18n/reader'
@@ -225,6 +226,7 @@ watch(textUnits, async () => {
 
 <template>
   <div>
+    <div class="reader-back-mobile container"><ReaderBack /></div>
     <ReaderHeader v-if="documentEntry" :document="documentEntry" :release="release" />
     <div v-else-if="loading && !pages" class="reader-identity reader-skeleton" role="status"><div class="container"><span class="visually-hidden">{{ readerMessagesText.loading }}</span><span class="reader-skeleton-line reader-skeleton-short" /><span class="reader-skeleton-line reader-skeleton-title" /><span class="reader-skeleton-line" /></div></div>
     <div class="container reader">

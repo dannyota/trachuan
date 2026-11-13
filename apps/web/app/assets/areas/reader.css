@@ -53,7 +53,8 @@
 }
 @media (max-width: 767px) {
   .reader-back-header { display: none; }
-  .reader-back-mobile { display: inline; align-self: flex-start; }
+  .reader-back-mobile { display: block; padding-block: 20px 0; background: var(--color-surface); }
+  .reader-identity-inner { padding-top: 12px; }
   .reader-identity h1 { font-size: 24px; }
 }
 @media (prefers-color-scheme: dark) { .reader { --reader-target-surface: var(--color-surface); } }

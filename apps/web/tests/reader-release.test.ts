@@ -19,3 +19,14 @@ it('requests an unsuffixed release', async () => {
   await flushPromises()
   expect(calls[0]).toMatchObject({ params: { query: { release: '20990101' } } })
 })
+it('keeps the search return link while the first request is pending or fails', async () => {
+  setupReader([])
+  let finish!: (value: unknown) => void
+  vi.stubGlobal('useApi', () => ({ client: { GET: () => new Promise(resolve => { finish = resolve }) } }))
+  const wrapper = mount(Reader)
+  expect(wrapper.find('.reader-back-mobile a[href="/vn/search"]').exists()).toBe(true)
+  finish({ error: { error: { code: 'unavailable' } } })
+  await flushPromises()
+  expect(wrapper.get('[role="alert"]').text()).toContain('unavailable')
+  expect(wrapper.find('.reader-back-mobile a[href="/vn/search"]').exists()).toBe(true)
+})
