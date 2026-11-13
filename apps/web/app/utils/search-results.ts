@@ -28,10 +28,10 @@ export function appendSearchPage(previous: Result, page: Result): Result {
   }
 }
 
-export function readerLink(hit: Hit, release: string): string | null {
+export function readerLink(hit: Hit, release?: string): string | null {
   if (!hit.doc || !isDocumentKey(hit.doc)) return null
   const anchor = hit.handle?.split('#', 2)[1]
-  return `/vn/documents/${hit.doc}?release=${encodeURIComponent(release)}${anchor ? `#${encodeURI(anchor)}` : ''}`
+  return `/vn/documents/${hit.doc}${release !== undefined ? `?release=${encodeURIComponent(release)}` : ''}${anchor ? `#${encodeURI(anchor)}` : ''}`
 }
 
 
@@ -56,9 +56,9 @@ export function warningTarget(warning: Warning): { text: string, raw: boolean } 
   return { text: [`Điều ${match[1]}`, ...(match[2] ? [`khoản ${match[2]}`] : []), ...(match[3] ? [`điểm ${match[3]}`] : [])].join(', '), raw: false }
 }
 
-export function warningLink(warning: Warning, release: string): string | null {
+export function warningLink(warning: Warning, release?: string): string | null {
   if (!warning.in_release || !warning.key || !isDocumentKey(warning.key)) return null
   const prefix = `${warning.key}#`
   const anchor = warning.source?.startsWith(prefix) ? warning.source.slice(prefix.length) : ''
-  return `/vn/documents/${warning.key}?release=${encodeURIComponent(release)}${anchor ? `#${encodeURI(anchor)}` : ''}`
+  return `/vn/documents/${warning.key}${release !== undefined ? `?release=${encodeURIComponent(release)}` : ''}${anchor ? `#${encodeURI(anchor)}` : ''}`
 }
