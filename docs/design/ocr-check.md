@@ -88,7 +88,9 @@ Reason: an unfinished check must never read as a clean one.
 schema, the input form and the rendering settings together (version 1: the PDF
 as a document block; version 2: page images at 150 dpi, grayscale PNG, one
 render process per page). Version 3 takes JPEG pages at 200 dpi and is described
-[in its own note](ocr-check-v3.md). A version is never changed inside a pass.
+[in its own note](ocr-check-v3.md); version 5, proposed for later passes,
+changes the instruction, schema and validator
+[in its own note](ocr-check-v5.md). A version is never changed inside a pass.
 The extract recipe names one checker id; changing the model, the effort, the
 instruction or the schema is a new id, new check rows and a rerun of extract for
 the affected documents. The release checker id is
