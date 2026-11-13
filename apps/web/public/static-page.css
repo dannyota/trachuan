@@ -1,5 +1,5 @@
-@font-face { font-family: BeVietnam; src: url('/fonts/be-vietnam-pro-var.woff2') format('woff2'); font-weight: 100 900; font-display: swap; }
-@font-face { font-family: NotoSerif; src: url('/fonts/noto-serif-var.woff2') format('woff2'); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: BeVietnam; src: url('/fonts/be-vietnam-pro-var.woff2') format('woff2'); font-weight: 400 700; font-display: swap; }
+@font-face { font-family: NotoSerif; src: url('/fonts/noto-serif-var.woff2') format('woff2'); font-weight: 400 700; font-display: swap; }
 :root { --color-page: #FFFFFF; --color-ink: #14171C; --color-muted: #59606B; --color-primary: #1E3A8A; --color-seal: #B42318; --font-sans: BeVietnam, sans-serif; --font-serif: NotoSerif, serif; }
 @media (prefers-color-scheme: dark) {
   :root { --color-page: #111418; --color-ink: #E6E8EB; --color-muted: #A0A7B2; --color-primary: #9DB4F5; --color-seal: #E5604F; }
