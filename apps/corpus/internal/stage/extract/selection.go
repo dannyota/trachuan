@@ -138,47 +138,48 @@ func chooseForCheck(ctx context.Context, dir, key string, ocr ocrReader, engines
 			if extractErr != nil {
 				return selection{}, nil, extractErr
 			}
-			_, headings := headingArticles(rows)
-			if len(headings) == 0 {
+			headingCount := sourceHeadingCount(rows, nodes)
+			if headingCount == 0 {
 				return selection{source: "source_tree"}, nodes, nil
 			}
 			doc, readErr := fetch.ReadDocument(dir, key)
 			if readErr != nil {
 				return selection{}, nil, fmt.Errorf("read fetch document: %w", readErr)
 			}
+			if headingOnly(rows) {
+				selected, selectErr := selectOCRFilesMode(ctx, dir, parts[2], doc.Files, ocr, engines, checker, unchecked)
+				if selectErr != nil {
+					return selection{}, nil, selectErr
+				}
+				if selected.source == "ocr" {
+					data, readErr := ocr.ReadText(selected.entry.Text)
+					if readErr == nil {
+						paragraphs, parseErr := textparse.ParagraphsFromText(string(data))
+						if parseErr != nil || len(textparse.Parse(paragraphs).Provisions) == 0 {
+							selected.parseLimit = true
+						}
+					}
+				}
+				if selected.source != "none" && !selected.tooLarge && !selected.parseLimit {
+					return selected, nil, nil
+				}
+				return selection{source: "source_tree", gap: "tree_headings_only", consulted: selected.consulted || selected.source == "none"}, nodes, nil
+			}
 			transcription, selectErr := selectFiles(dir, parts[2], doc.Files, absentOCR{})
 			if selectErr != nil {
 				return selection{}, nil, selectErr
 			}
 			comparison := compareTree(rows, transcription)
+			comparison.HeadingOnlyArticles = headingCount
 			if comparison.SetAside {
 				transcription.tree = comparison
 				return transcription, nil, nil
 			}
-			if !headingOnly(rows) {
-				gap := "tree_headings_partial"
-				if comparison.Articles == comparison.HeadingOnlyArticles {
-					gap = "tree_headings_only"
-				}
-				return selection{source: "source_tree", gap: gap, reason: comparison.detail()}, nodes, nil
+			gap := "tree_headings_partial"
+			if comparison.Articles == comparison.HeadingOnlyArticles {
+				gap = "tree_headings_only"
 			}
-			selected, selectErr := selectOCRFilesMode(ctx, dir, parts[2], doc.Files, ocr, engines, checker, unchecked)
-			if selectErr != nil {
-				return selection{}, nil, selectErr
-			}
-			if selected.source == "ocr" {
-				data, readErr := ocr.ReadText(selected.entry.Text)
-				if readErr == nil {
-					paragraphs, parseErr := textparse.ParagraphsFromText(string(data))
-					if parseErr != nil || len(textparse.Parse(paragraphs).Provisions) == 0 {
-						selected.parseLimit = true
-					}
-				}
-			}
-			if selected.source != "none" && !selected.tooLarge && !selected.parseLimit {
-				return selected, nil, nil
-			}
-			return selection{source: "source_tree", gap: "tree_headings_only", consulted: selected.consulted || selected.source == "none"}, nodes, nil
+			return selection{source: "source_tree", gap: gap, reason: comparison.detail()}, nodes, nil
 		}
 	}
 	doc, err := fetch.ReadDocument(dir, key)

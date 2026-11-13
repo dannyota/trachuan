@@ -68,3 +68,11 @@ func TestHeadingCorrections_RecordedCrossDocumentCorrection(t *testing.T) {
 		t.Fatalf("checks=%+v err=%v", checks, err)
 	}
 }
+
+func TestHeadingCorrections_ExternalEvidenceSkipsSelection(t *testing.T) {
+	entry := source.Correction{Key: "vn:vbpl:1", Evidence: source.CorrectionEvidence{URL: "https://example.org/evidence", Quote: "external evidence"}}
+	checks, err := CheckHeadingCorrections(context.Background(), []source.Correction{entry}, map[string]string{entry.Key: t.TempDir()})
+	if err != nil || len(checks) != 0 {
+		t.Fatalf("checks=%+v err=%v", checks, err)
+	}
+}

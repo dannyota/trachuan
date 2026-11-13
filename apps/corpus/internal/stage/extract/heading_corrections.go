@@ -27,6 +27,9 @@ func CheckHeadingCorrections(ctx context.Context, entries []source.Correction, b
 	}
 	cached := make(map[string]evidenceText)
 	for _, entry := range entries {
+		if entry.Evidence.URL != "" {
+			continue
+		}
 		if err := ctx.Err(); err != nil {
 			return nil, err
 		}

@@ -29,8 +29,16 @@ that is the label alone (with or without a period) is not heading-only when the
 heading is nonempty. This is the test `headingOnly` in `extract` applies to a
 whole tree today, applied to one article.
 
-A source-tree document with at least one heading-only article is read from its
-transcription when all of these hold:
+A tree that passes today's whole-tree test (every node, structure nodes
+included, holds only its label and heading) keeps today's selection and
+artifacts, with no record of the rules below: the transcription when it is
+usable, then `pdf_text` and checked OCR as text extraction orders them, and only
+when none is usable the tree with the gap `tree_headings_only`. Frozen selection
+replays the same choice. On the measured release no source-tree document is in
+this case: such trees were already read from a later source.
+
+Any other source-tree document with at least one heading-only article is read
+from its transcription when all of these hold:
 
 1. The transcription is the bundle's `<id>_content.html`, selected and limited
    as text extraction already selects it, and the parser accepts its main scope.
@@ -41,7 +49,9 @@ transcription when all of these hold:
    its descendants, joined as chunk renders a subtree) occurs, after whitespace
    collapse, exactly as a contiguous part of the transcription's article text.
    The transcription may add text; it may not change any. Any other difference,
-   a changed number or a dropped word included, keeps the tree.
+   a changed number or a dropped word included, keeps the tree. A tree whose
+   node ids are empty or repeated, or name a parent it lacks, fails this rule
+   before any rendering: chunk cannot render it either.
 4. Every clause and point anchor of the tree occurs among the transcription's
    clause and point anchors (with [clauses and points](text-structure.md)).
 5. The text of every other tree provision (parts, chapters, sections, `other`)
@@ -54,13 +64,6 @@ that the tree was consulted and set aside, with the counts behind each rule.
 
 Otherwise the tree stays. Then:
 
-- When the tree passes today's whole-tree test (every node, structure nodes
-  included, holds only its label and heading), the existing order of later
-  sources applies unchanged: the transcription when it is usable, then
-  `pdf_text` and checked OCR as text extraction orders them, and only when none
-  is usable the tree with the gap `tree_headings_only`. Frozen selection replays
-  the same choice. On the measured release no document is in this case: such
-  trees were already read from a later source.
 - When every article is heading-only but the tree fails that test (a section
   keeps its title in its text, 65 documents measured), later sources are not
   used: the tree stays with `tree_headings_only`.
@@ -82,8 +85,10 @@ evidence of any correction whose evidence document (its `evidence.key`, else its
 own key) switches, and build fails closed on a quote it cannot find verbatim at
 the evidence anchor. So the implementation checks every such correction against
 the transcription before the run, and a correction that would fail is updated
-first. On the measured release one correction qualifies (`vn:vbpl:2145`,
-evidence in `vn:vbpl:10761` `dieu-20`), and its quote survives verbatim.
+first. A correction with external evidence (a URL, no anchor) is not checked:
+build does not search corpus text for it. On the measured release one correction
+qualifies (`vn:vbpl:2145`, evidence in `vn:vbpl:10761` `dieu-20`), and its quote
+survives verbatim.
 
 ## Effects
 

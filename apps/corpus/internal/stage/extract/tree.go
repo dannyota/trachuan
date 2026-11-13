@@ -135,3 +135,21 @@ func extractTree(ctx context.Context, nodes []vbpl.Node) ([]provision, []stage.G
 	}
 	return rows, gaps, nil
 }
+
+// Source child lists keep the count independent of untrusted node ids.
+func sourceHeadingCount(rows []provision, nodes []vbpl.Node) int {
+	count, index := 0, 0
+	var walk func([]vbpl.Node)
+	walk = func(siblings []vbpl.Node) {
+		for _, node := range siblings {
+			row := rows[index]
+			index++
+			if row.Kind == "dieu" && len(node.Children) == 0 && headingTextOnly(row) {
+				count++
+			}
+			walk(node.Children)
+		}
+	}
+	walk(nodes)
+	return count
+}

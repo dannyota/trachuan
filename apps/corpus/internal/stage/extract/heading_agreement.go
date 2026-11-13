@@ -55,6 +55,15 @@ func headingArticles(rows []provision) (int, map[string]bool) {
 }
 
 func compareTree(rows []provision, selected selection) *treeComparison {
+	if !validTreeIdentity(rows) {
+		comparison := &treeComparison{FailedRule: 3}
+		for _, row := range rows {
+			if row.Kind == "dieu" {
+				comparison.Articles++
+			}
+		}
+		return comparison
+	}
 	articles, headings := headingArticles(rows)
 	c := &treeComparison{Articles: articles, HeadingOnlyArticles: len(headings)}
 	c.Rules[0].Total = 1
@@ -153,4 +162,20 @@ func compareTree(rows []provision, selected selection) *treeComparison {
 
 func (c *treeComparison) detail() string {
 	return fmt.Sprintf("%d of %d articles heading-only; rule %d failed", c.HeadingOnlyArticles, c.Articles, c.FailedRule)
+}
+
+func validTreeIdentity(rows []provision) bool {
+	ids := make(map[string]bool, len(rows))
+	for _, row := range rows {
+		if row.NodeID == "" || ids[row.NodeID] {
+			return false
+		}
+		ids[row.NodeID] = true
+	}
+	for _, row := range rows {
+		if row.ParentNodeID != nil && !ids[*row.ParentNodeID] {
+			return false
+		}
+	}
+	return true
 }
