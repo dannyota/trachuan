@@ -15,12 +15,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// Open reads and validates the release in a corpus database.
 func Open(ctx context.Context, db *pgxpool.Pool, embedder Embedder, options Options) (*Engine, error) {
 	r, err := ReadRelease(ctx, db)
 	if err != nil {
-		// Keep validation errors such as an unsupported schema version; only a
-		// vanished database is reclassified.
 		if gone := databaseFailure("read release failed", err); errors.Is(gone, ErrReleaseGone) {
 			return nil, gone
 		}
@@ -29,7 +26,6 @@ func Open(ctx context.Context, db *pgxpool.Pool, embedder Embedder, options Opti
 	return openEngine(ctx, db, embedder, r, options, false)
 }
 
-// OpenDraft validates explicit metadata for trusted calibration callers.
 func OpenDraft(ctx context.Context, db *pgxpool.Pool, embedder Embedder, release Release, options Options) (*Engine, error) {
 	return openEngine(ctx, db, embedder, release, options, true)
 }
@@ -68,6 +64,7 @@ func openEngine(ctx context.Context, db *pgxpool.Pool, embedder Embedder, r Rele
 	if err != nil {
 		return nil, err
 	}
+	engine.sparse.init()
 	return engine, nil
 }
 
@@ -101,7 +98,6 @@ func validObject(b []byte) bool {
 	return json.Unmarshal(b, &v) == nil && v != nil
 }
 
-// Release returns the metadata pinned to this engine.
 func (e *Engine) Release() Release {
 	r := e.release
 	r.ChunkRecipe = append(json.RawMessage(nil), r.ChunkRecipe...)

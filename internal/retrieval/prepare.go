@@ -11,7 +11,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// Engine holds one corpus and its query runtime.
 type Engine struct {
 	db             *pgxpool.Pool
 	release        Release
@@ -19,14 +18,13 @@ type Engine struct {
 	embedder       Embedder
 	queryRecipe    embedding.Recipe
 	numberSegments map[string]struct{}
+	sparse         sparseLifecycle
 }
 
-// Prepare validates and embeds an accepted query exactly once.
 func (e *Engine) Prepare(ctx context.Context, req Request) (Prepared, error) {
 	return e.prepare(ctx, req, false)
 }
 
-// PrepareLegacy skips the diacritics gate for trusted evaluation.
 func (e *Engine) PrepareLegacy(ctx context.Context, req Request) (Prepared, error) {
 	return e.prepare(ctx, req, true)
 }

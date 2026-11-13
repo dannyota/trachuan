@@ -54,6 +54,7 @@ func (e *Engine) collectWithLexical(ctx context.Context, p Prepared, depths Dept
 	refs := append([]string{}, p.Validation.References...)
 	vec := denseVector(p.Vector.Values)
 	sv := sparseVector(sparse, e.release.LexicalRecipe.Dimensions)
+	postings := e.postingsFor(sparse)
 	exact := p.Request.Mode == "exact"
 	var pool int
 	if exact {
@@ -85,6 +86,8 @@ func (e *Engine) collectWithLexical(ctx context.Context, p Prepared, depths Dept
 				candidates = source.NonCurrent
 			}
 			g.Lexical = lexicalPrefix(candidates, depths.Lexical)
+		} else if postings != nil {
+			continue
 		} else if notYet {
 			g.Lexical, err = lexicalQueryWithValidity(ctx, tx, true, sv, date, historical, flags[i], depths.Lexical, refs)
 		} else {
@@ -119,6 +122,15 @@ func (e *Engine) collectWithLexical(ctx context.Context, p Prepared, depths Dept
 	if err = indexSettings(ctx, tx); err != nil {
 		return Arms{}, err
 	}
+	if source == nil && postings != nil {
+		lexical, scoreErr := postings.lexical(ctx, tx, sparse, sv, parsedDate, historical, notYet, refs, depths.Lexical)
+		if scoreErr != nil {
+			return Arms{}, scoreErr
+		}
+		for i, g := range groups {
+			g.Lexical = lexical[i]
+		}
+	}
 	for _, g := range groups {
 		if err = hydrate(ctx, tx, g, vec); err != nil {
 			return Arms{}, err
@@ -151,6 +163,13 @@ func (e *Engine) collectWithLexical(ctx context.Context, p Prepared, depths Dept
 	}
 	if err = tx.Commit(ctx); err != nil {
 		return Arms{}, databaseFailure("commit retrieval failed", err)
+	}
+	if source != nil {
+		e.sparse.reused.Add(1)
+	} else if postings != nil {
+		e.sparse.postings.Add(1)
+	} else {
+		e.sparse.sql.Add(1)
 	}
 	return result, nil
 }

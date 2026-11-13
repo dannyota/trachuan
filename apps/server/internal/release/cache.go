@@ -27,6 +27,9 @@ type cacheEntry struct {
 
 func (entry *cacheEntry) close() {
 	entry.closeOnce.Do(func() {
+		if entry.engine != nil {
+			entry.engine.Close()
+		}
 		if entry.closePool != nil {
 			entry.closePool()
 		}
@@ -48,6 +51,7 @@ func (r *Resolver) load(ctx context.Context, country, name string) (*cacheEntry,
 		r.entries[name] = entry
 	}
 	engine := entry.engine
+	hadEngine := engine != nil
 	entry.opening = true
 	r.mu.Unlock()
 	var err error
@@ -66,8 +70,14 @@ func (r *Resolver) load(ctx context.Context, country, name string) (*cacheEntry,
 	}
 	r.mu.Lock()
 	entry.opening = false
+	if engine != nil {
+		entry.engine = engine
+	}
 	if r.closed || entry.retired || r.entries[name] != entry || r.active[country] != name {
 		entry.retired = true
+		if entry.engine != nil {
+			entry.engine.Retire()
+		}
 		closePool := entry.leases == 0
 		r.mu.Unlock()
 		if closePool {
@@ -76,10 +86,13 @@ func (r *Resolver) load(ctx context.Context, country, name string) (*cacheEntry,
 		return nil, ErrExpired
 	}
 	if err != nil {
-		empty := entry.engine == nil || databaseGone(err)
+		empty := !hadEngine || databaseGone(err)
 		if empty {
 			delete(r.entries, name)
 			entry.retired = true
+			if entry.engine != nil {
+				entry.engine.Retire()
+			}
 		}
 		closePool := entry.leases == 0
 		r.mu.Unlock()
@@ -92,6 +105,11 @@ func (r *Resolver) load(ctx context.Context, country, name string) (*cacheEntry,
 		return nil, fmt.Errorf("open corpus engine: %w", err)
 	}
 	entry.engine = engine
+	engine.StartSparsePostings(func(outcome retrieval.PostingsOutcome) {
+		if r.OnPostings != nil {
+			r.OnPostings(engine.Release().Rel, outcome)
+		}
+	})
 	r.mu.Unlock()
 	return entry, nil
 }
@@ -153,7 +171,7 @@ func (r *Resolver) open(ctx context.Context, name string, entry *cacheEntry) (*r
 	}
 	metadata = engine.Release()
 	if metadata.Country != entry.country || "corpus_"+metadata.Country+"_"+metadata.Rel != name {
-		return nil, errors.New("corpus release identity differs from database name")
+		return engine, errors.New("corpus release identity differs from database name")
 	}
 	return engine, nil
 }
