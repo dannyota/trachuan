@@ -1,4 +1,3 @@
-// Package app wires the server command and its dependencies.
 package app
 
 import (
@@ -36,7 +35,6 @@ const (
 	authQueryDeadline     = 2 * time.Second
 )
 
-// Run executes a server subcommand and returns its exit status.
 func Run(ctx context.Context, args []string, stderr io.Writer) int {
 	return exitCode(run(ctx, args, os.Stdout, stderr), stderr)
 }
@@ -115,6 +113,9 @@ func serve(ctx context.Context, cfg config, pool *pgxpool.Pool, queries *store.Q
 			return &cachedQuery{query: embedding.Query{Client: client, RecipeHash: hash, ExpectedRecipe: &expected}, vectors: vectors}
 		},
 		OnActivate: caches.ActivateRelease, AllowTestRecipe: cfg.strictDeployment,
+		OnPostings: func(rel string, outcome retrieval.PostingsOutcome) {
+			slog.New(slog.NewJSONHandler(stderr, nil)).Info("sparse postings", "release", rel, "status", outcome.Status, "reason", outcome.Reason, "load_seconds", outcome.LoadSeconds, "bytes", outcome.Bytes, "estimated_peak_bytes", outcome.EstimatedPeakBytes)
+		},
 		OnTestRecipeRefused: func() { _, _ = fmt.Fprintln(stderr, "test embedding recipe refused") }}
 	verifier := &credential.Verifier{Store: queries, Audience: cfg.audience}
 	limiter := limits.New(clock)

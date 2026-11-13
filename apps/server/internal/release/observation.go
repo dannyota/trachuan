@@ -10,8 +10,6 @@ import (
 
 const authQueryDeadline = 2 * time.Second
 
-// Observation waits and database work share a deadline. The state mutex only
-// protects channel initialization and the in-memory pointer transition.
 func (r *Resolver) resolveName(ctx context.Context, country, rel string) (string, string, uint64, error) {
 	if err := ctx.Err(); err != nil {
 		return "", "", 0, err
@@ -61,13 +59,15 @@ func (r *Resolver) resolveName(ctx context.Context, country, rel string) (string
 	}
 	previous, observed := r.active[country]
 	r.active[country] = active
-	var retired []*cacheEntry
 	for name, entry := range r.entries {
 		if entry.country == country && name != active {
 			delete(r.entries, name)
 			entry.retired = true
+			if entry.engine != nil {
+				entry.engine.Retire()
+			}
 			if !entry.opening && entry.leases == 0 {
-				retired = append(retired, entry)
+				r.cleanupLocked(entry)
 			}
 		}
 	}
@@ -82,9 +82,6 @@ func (r *Resolver) resolveName(ctx context.Context, country, rel string) (string
 	release := strings.TrimPrefix(active, "corpus_"+country+"_")
 	if notify != nil {
 		notify(release, generation)
-	}
-	for _, entry := range retired {
-		entry.close()
 	}
 	if !allowed {
 		return "", "", 0, ErrExpired

@@ -25,6 +25,7 @@ func TestResolver_RollbackClosesOnlyRetiredGeneration(t *testing.T) {
 	current := takeLease(t, r, "")
 	currentPool := latest["corpus_vn_20990103"]
 	first.Done()
+	waitResolverCleanup(r)
 	if !oldPool.closed || currentPool.closed {
 		t.Fatalf("retired closed=%t current closed=%t", oldPool.closed, currentPool.closed)
 	}
@@ -33,6 +34,7 @@ func TestResolver_RollbackClosesOnlyRetiredGeneration(t *testing.T) {
 		t.Fatal("closed current generation before its lease ended")
 	}
 	current.Done()
+	waitResolverCleanup(r)
 	if !currentPool.closed {
 		t.Fatal("current generation did not close after Done")
 	}
