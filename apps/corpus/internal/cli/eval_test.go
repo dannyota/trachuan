@@ -432,3 +432,41 @@ func TestEvalCLI_RequireFloorsIgnoresAbstention(t *testing.T) {
 		t.Fatalf("exit = %d", got)
 	}
 }
+
+func TestEvalCLI_ArticleCapForwarded(t *testing.T) {
+	prepare := func(context.Context, string, string, string) (evalTarget, error) {
+		return evalTarget{runner: cliCapStage{}, close: func() {}}, nil
+	}
+	for _, value := range []string{"1", "none", "0", "51", "01"} {
+		t.Run(value, func(t *testing.T) {
+			out := filepath.Join(t.TempDir(), "report")
+			var stderr bytes.Buffer
+			code := runEvalWith(context.Background(), []string{"vn", "20261109", "--out", out, "--article-cap", value}, &stderr, prepare)
+			valid := value == "1" || value == "none"
+			if !valid {
+				if code == 0 {
+					t.Fatal("invalid cap accepted")
+				}
+				return
+			}
+			if code != 0 {
+				t.Fatalf("exit %d: %s", code, stderr.String())
+			}
+			b, err := os.ReadFile(filepath.Join(out, "report.json"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			var report evaluation.Report
+			if err := json.Unmarshal(b, &report); err != nil {
+				t.Fatal(err)
+			}
+			want := retrieval.ArticleCapOverride(1)
+			if value == "none" {
+				want = 0
+			}
+			if report.ArticleCapOverride == nil || *report.ArticleCapOverride != want {
+				t.Fatalf("article cap: %v", report.ArticleCapOverride)
+			}
+		})
+	}
+}

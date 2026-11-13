@@ -20,18 +20,18 @@ publishing its final recipe.
 Freeze the engine clock to the build's evaluation date, but leave request `AsOf`
 nil and `InForceOnly` true for both old cohorts and calibration. Setting `AsOf`
 would change the test to historical eligibility. Research-only overrides on
-`corpus eval` (the per-document cap, and validity policy overrides for cases
-tagged `historical`, a non-current tail and not-yet documents) may change a
-trial's request or shaping; each is recorded on the report and on every record
-that carries `limit`, never reaches serving or the stage, and a mismatch makes
-`previous_diff` incompatible. Cache/report fields distinguish `evaluation_date`
-from nullable `request_as_of`. Use the evaluation deadline profile for every
-arm. Cases run three at a time within the item and their results merge in case
-order, so every report and cache field except `timings_ms` equals a serial run;
-`timings_ms` measures latency with three cases in flight. In ANN mode the
-lexical arm reuses the exact-mode lexical result cut to the recipe depth: its
-order (score descending, then chunk id) is total, so the prefix equals a fresh
-query.
+`corpus eval` (the per-document and per-article caps, and validity policy
+overrides for cases tagged `historical`, a non-current tail and not-yet
+documents) may change a trial's request or shaping; each is recorded on the
+report and on every record that carries `limit`, never reaches serving or the
+stage, and a mismatch makes `previous_diff` incompatible. Cache/report fields
+distinguish `evaluation_date` from nullable `request_as_of`. Use the evaluation
+deadline profile for every arm. Cases run three at a time within the item and
+their results merge in case order, so every report and cache field except
+`timings_ms` equals a serial run; `timings_ms` measures latency with three cases
+in flight. In ANN mode the lexical arm reuses the exact-mode lexical result cut
+to the recipe depth: its order (score descending, then chunk id) is total, so
+the prefix equals a fresh query.
 
 CLI: `corpus eval <cc> <rel> --out <directory> [--previous <report.json>]`. It
 verifies/resolves the build artifact, opens that release, runs exact and ANN

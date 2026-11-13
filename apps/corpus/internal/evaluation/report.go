@@ -20,6 +20,7 @@ type ValidityOverrides struct {
 type Options struct {
 	ValidityOverrides
 	CapOverride          *retrieval.CapOverride
+	ArticleCapOverride   *retrieval.ArticleCapOverride
 	Mapping              ValidationReport
 	EvaluationDate       retrieval.Date
 	Modes                []retrieval.Mode
@@ -35,17 +36,18 @@ type Options struct {
 // Metric records a measured ratio with its counts.
 type Metric struct {
 	ValidityOverrides
-	CapOverride            *retrieval.CapOverride `json:"cap_override"`
-	Mode                   retrieval.Mode         `json:"mode"`
-	Arms                   retrieval.ArmMode      `json:"arms"`
-	Limit                  int                    `json:"limit"`
-	Name                   string                 `json:"name"`
-	Numerator              float64                `json:"numerator"`
-	Denominator            int                    `json:"denominator"`
-	Value                  *float64               `json:"value"`
-	Confusion              *Confusion             `json:"confusion,omitempty"`
-	Reason                 string                 `json:"reason,omitempty"`
-	MappingIncompleteCount int                    `json:"mapping_incomplete_count,omitempty"`
+	CapOverride            *retrieval.CapOverride        `json:"cap_override"`
+	ArticleCapOverride     *retrieval.ArticleCapOverride `json:"article_cap_override,omitempty"`
+	Mode                   retrieval.Mode                `json:"mode"`
+	Arms                   retrieval.ArmMode             `json:"arms"`
+	Limit                  int                           `json:"limit"`
+	Name                   string                        `json:"name"`
+	Numerator              float64                       `json:"numerator"`
+	Denominator            int                           `json:"denominator"`
+	Value                  *float64                      `json:"value"`
+	Confusion              *Confusion                    `json:"confusion,omitempty"`
+	Reason                 string                        `json:"reason,omitempty"`
+	MappingIncompleteCount int                           `json:"mapping_incomplete_count,omitempty"`
 }
 
 // Cohort summarizes the cases and metrics for one scoring policy.
@@ -78,16 +80,17 @@ type Target struct {
 // NonRegression compares a metric with its previous value.
 type NonRegression struct {
 	ValidityOverrides
-	CapOverride            *retrieval.CapOverride `json:"cap_override"`
-	Mode                   retrieval.Mode         `json:"mode"`
-	Arms                   retrieval.ArmMode      `json:"arms"`
-	Limit                  int                    `json:"limit"`
-	Name                   string                 `json:"name"`
-	Value                  *float64               `json:"value"`
-	PreviousValue          *float64               `json:"previous_value"`
-	Status                 string                 `json:"status"`
-	Reason                 string                 `json:"reason,omitempty"`
-	MappingIncompleteCount int                    `json:"mapping_incomplete_count,omitempty"`
+	CapOverride            *retrieval.CapOverride        `json:"cap_override"`
+	ArticleCapOverride     *retrieval.ArticleCapOverride `json:"article_cap_override,omitempty"`
+	Mode                   retrieval.Mode                `json:"mode"`
+	Arms                   retrieval.ArmMode             `json:"arms"`
+	Limit                  int                           `json:"limit"`
+	Name                   string                        `json:"name"`
+	Value                  *float64                      `json:"value"`
+	PreviousValue          *float64                      `json:"previous_value"`
+	Status                 string                        `json:"status"`
+	Reason                 string                        `json:"reason,omitempty"`
+	MappingIncompleteCount int                           `json:"mapping_incomplete_count,omitempty"`
 }
 
 // MappingIncomplete identifies one incomplete citation mapping.
@@ -101,37 +104,39 @@ type MappingIncomplete struct {
 // SizeSummary records nearest-rank evidence sizes.
 type SizeSummary struct {
 	ValidityOverrides
-	CapOverride *retrieval.CapOverride `json:"cap_override"`
-	Cohort      string                 `json:"cohort"`
-	Mode        retrieval.Mode         `json:"mode"`
-	Arms        retrieval.ArmMode      `json:"arms"`
-	Limit       int                    `json:"limit"`
-	N           int                    `json:"n"`
-	P50         *float64               `json:"p50"`
-	P95         *float64               `json:"p95"`
+	CapOverride        *retrieval.CapOverride        `json:"cap_override"`
+	ArticleCapOverride *retrieval.ArticleCapOverride `json:"article_cap_override,omitempty"`
+	Cohort             string                        `json:"cohort"`
+	Mode               retrieval.Mode                `json:"mode"`
+	Arms               retrieval.ArmMode             `json:"arms"`
+	Limit              int                           `json:"limit"`
+	N                  int                           `json:"n"`
+	P50                *float64                      `json:"p50"`
+	P95                *float64                      `json:"p95"`
 }
 
 // CaseResult contains the non-sensitive result of one response.
 type CaseResult struct {
 	ValidityOverrides
-	CapOverride   *retrieval.CapOverride `json:"cap_override"`
-	MappingIssues []MappingIssue         `json:"mapping_issues,omitempty"`
-	CaseID        string                 `json:"case_id"`
-	Cohort        string                 `json:"cohort"`
-	Mode          retrieval.Mode         `json:"mode"`
-	Arms          retrieval.ArmMode      `json:"arms"`
-	Limit         int                    `json:"limit"`
-	Expected      int                    `json:"expected"`
-	Ranks         []int                  `json:"ranks"`
-	DirectRanks   []int                  `json:"direct_ranks,omitempty"`
-	Returned      []retrieval.Identity   `json:"returned"`
-	Mapped        [][]Alternative        `json:"mapped_identities"`
-	Matched       int                    `json:"matched"`
-	Losses        []CitationLoss         `json:"losses"`
-	Abstain       bool                   `json:"abstain"`
-	Reason        string                 `json:"reason,omitempty"`
-	Gaps          []retrieval.Gap        `json:"gaps"`
-	Characters    int                    `json:"characters"`
+	CapOverride        *retrieval.CapOverride        `json:"cap_override"`
+	ArticleCapOverride *retrieval.ArticleCapOverride `json:"article_cap_override,omitempty"`
+	MappingIssues      []MappingIssue                `json:"mapping_issues,omitempty"`
+	CaseID             string                        `json:"case_id"`
+	Cohort             string                        `json:"cohort"`
+	Mode               retrieval.Mode                `json:"mode"`
+	Arms               retrieval.ArmMode             `json:"arms"`
+	Limit              int                           `json:"limit"`
+	Expected           int                           `json:"expected"`
+	Ranks              []int                         `json:"ranks"`
+	DirectRanks        []int                         `json:"direct_ranks,omitempty"`
+	Returned           []retrieval.Identity          `json:"returned"`
+	Mapped             [][]Alternative               `json:"mapped_identities"`
+	Matched            int                           `json:"matched"`
+	Losses             []CitationLoss                `json:"losses"`
+	Abstain            bool                          `json:"abstain"`
+	Reason             string                        `json:"reason,omitempty"`
+	Gaps               []retrieval.Gap               `json:"gaps"`
+	Characters         int                           `json:"characters"`
 }
 
 // Rejection records a product input gate check.
@@ -144,16 +149,17 @@ type Rejection struct {
 // PresentedSummary records matching and serialized response sizes.
 type PresentedSummary struct {
 	ValidityOverrides
-	CapOverride *retrieval.CapOverride `json:"cap_override"`
-	Cohort      string                 `json:"cohort"`
-	Mode        retrieval.Mode         `json:"mode"`
-	Detail      retrieval.Detail       `json:"detail"`
-	Limit       int                    `json:"limit"`
-	Cases       int                    `json:"cases"`
-	Expected    int                    `json:"expected"`
-	Found       int                    `json:"found"`
-	SizeP50     *float64               `json:"size_p50"`
-	SizeP95     *float64               `json:"size_p95"`
+	CapOverride        *retrieval.CapOverride        `json:"cap_override"`
+	ArticleCapOverride *retrieval.ArticleCapOverride `json:"article_cap_override,omitempty"`
+	Cohort             string                        `json:"cohort"`
+	Mode               retrieval.Mode                `json:"mode"`
+	Detail             retrieval.Detail              `json:"detail"`
+	Limit              int                           `json:"limit"`
+	Cases              int                           `json:"cases"`
+	Expected           int                           `json:"expected"`
+	Found              int                           `json:"found"`
+	SizeP50            *float64                      `json:"size_p50"`
+	SizeP95            *float64                      `json:"size_p95"`
 }
 
 // CompactSizeGate compares compact and full response sizes.
@@ -166,52 +172,53 @@ type CompactSizeGate struct {
 // Report is a completed diagnostic evaluation.
 type Report struct {
 	ValidityOverrides
-	CapOverride                   *retrieval.CapOverride    `json:"cap_override"`
-	Presented                     []PresentedSummary        `json:"presented"`
-	CompactSizeGate               CompactSizeGate           `json:"compact_size_gate"`
-	DocumentsByClass              map[string]int            `json:"documents_by_class"`
-	DocumentsBySource             map[string]int            `json:"documents_by_source"`
-	DocumentsByTextSource         map[string]int            `json:"documents_by_text_source"`
-	DocumentsByTextSourceAndClass map[string]map[string]int `json:"documents_by_text_source_and_class"`
-	DocumentsTextIncomplete       int                       `json:"documents_text_incomplete"`
-	HitsByClass                   map[string]int            `json:"hits_by_class"`
-	HitsByStatusBasis             map[string]int            `json:"hits_by_status_basis"`
-	HitsByConflictKind            map[string]int            `json:"hits_by_conflict_kind"`
-	ValidityAdjudicated           AdjudicatedValidity       `json:"validity_adjudicated"`
-	Version                       int                       `json:"version"`
-	Scorer                        string                    `json:"scorer"`
-	Status                        string                    `json:"status"`
-	QualityPass                   bool                      `json:"quality_pass"`
-	ReleaseEligible               bool                      `json:"release_eligible"`
-	Country                       string                    `json:"country"`
-	Rel                           string                    `json:"rel"`
-	BuildArtifactSHA256           string                    `json:"build_artifact_sha256"`
-	DumpSHA256                    string                    `json:"dump_sha256"`
-	FixtureHashes                 FixtureHashes             `json:"fixture_hashes"`
-	IdentityMapSHA256             string                    `json:"identity_map_sha256"`
-	Recipes                       map[string]string         `json:"recipes"`
-	EvaluationDate                retrieval.Date            `json:"evaluation_date"`
-	RequestAsOf                   *retrieval.Date           `json:"request_as_of"`
-	DatabaseInstanceKind          string                    `json:"database_instance_kind"`
-	Software                      map[string]string         `json:"software"`
-	Calibration                   any                       `json:"calibration"`
-	Cohorts                       map[string]Cohort         `json:"cohorts"`
-	Targets                       []Target                  `json:"targets"`
-	NonRegression                 []NonRegression           `json:"non_regression"`
-	FilterGate                    FilterGate                `json:"filter_gate"`
-	Floors                        []Floor                   `json:"floors"`
-	Rejections                    []Rejection               `json:"rejections"`
-	Coverage                      []Coverage                `json:"coverage"`
-	MappingIncomplete             []MappingIncomplete       `json:"mapping_incomplete"`
-	ANN                           []ANNMeasure              `json:"-"`
-	ANNResults                    map[string]ANNLoss        `json:"ann_loss"`
-	TimingsMS                     map[string]any            `json:"timings_ms"`
-	EvidenceCharacters            []SizeSummary             `json:"evidence_characters"`
-	CacheManifest                 map[string]any            `json:"cache_manifest"`
-	PreviousDiff                  any                       `json:"previous_diff"`
-	NotRun                        map[string]string         `json:"not_run"`
-	Limitations                   []string                  `json:"limitations"`
-	Cases                         []CaseResult              `json:"cases"`
+	CapOverride                   *retrieval.CapOverride        `json:"cap_override"`
+	ArticleCapOverride            *retrieval.ArticleCapOverride `json:"article_cap_override,omitempty"`
+	Presented                     []PresentedSummary            `json:"presented"`
+	CompactSizeGate               CompactSizeGate               `json:"compact_size_gate"`
+	DocumentsByClass              map[string]int                `json:"documents_by_class"`
+	DocumentsBySource             map[string]int                `json:"documents_by_source"`
+	DocumentsByTextSource         map[string]int                `json:"documents_by_text_source"`
+	DocumentsByTextSourceAndClass map[string]map[string]int     `json:"documents_by_text_source_and_class"`
+	DocumentsTextIncomplete       int                           `json:"documents_text_incomplete"`
+	HitsByClass                   map[string]int                `json:"hits_by_class"`
+	HitsByStatusBasis             map[string]int                `json:"hits_by_status_basis"`
+	HitsByConflictKind            map[string]int                `json:"hits_by_conflict_kind"`
+	ValidityAdjudicated           AdjudicatedValidity           `json:"validity_adjudicated"`
+	Version                       int                           `json:"version"`
+	Scorer                        string                        `json:"scorer"`
+	Status                        string                        `json:"status"`
+	QualityPass                   bool                          `json:"quality_pass"`
+	ReleaseEligible               bool                          `json:"release_eligible"`
+	Country                       string                        `json:"country"`
+	Rel                           string                        `json:"rel"`
+	BuildArtifactSHA256           string                        `json:"build_artifact_sha256"`
+	DumpSHA256                    string                        `json:"dump_sha256"`
+	FixtureHashes                 FixtureHashes                 `json:"fixture_hashes"`
+	IdentityMapSHA256             string                        `json:"identity_map_sha256"`
+	Recipes                       map[string]string             `json:"recipes"`
+	EvaluationDate                retrieval.Date                `json:"evaluation_date"`
+	RequestAsOf                   *retrieval.Date               `json:"request_as_of"`
+	DatabaseInstanceKind          string                        `json:"database_instance_kind"`
+	Software                      map[string]string             `json:"software"`
+	Calibration                   any                           `json:"calibration"`
+	Cohorts                       map[string]Cohort             `json:"cohorts"`
+	Targets                       []Target                      `json:"targets"`
+	NonRegression                 []NonRegression               `json:"non_regression"`
+	FilterGate                    FilterGate                    `json:"filter_gate"`
+	Floors                        []Floor                       `json:"floors"`
+	Rejections                    []Rejection                   `json:"rejections"`
+	Coverage                      []Coverage                    `json:"coverage"`
+	MappingIncomplete             []MappingIncomplete           `json:"mapping_incomplete"`
+	ANN                           []ANNMeasure                  `json:"-"`
+	ANNResults                    map[string]ANNLoss            `json:"ann_loss"`
+	TimingsMS                     map[string]any                `json:"timings_ms"`
+	EvidenceCharacters            []SizeSummary                 `json:"evidence_characters"`
+	CacheManifest                 map[string]any                `json:"cache_manifest"`
+	PreviousDiff                  any                           `json:"previous_diff"`
+	NotRun                        map[string]string             `json:"not_run"`
+	Limitations                   []string                      `json:"limitations"`
+	Cases                         []CaseResult                  `json:"cases"`
 }
 
 // ANNMeasure reports candidate overlap before and after fallback.
@@ -368,7 +375,7 @@ func addLegacyDirectMetrics(r *Report) {
 				}
 				add := func(name string, num float64, den int) {
 					v := num / float64(den)
-					cohort.Metrics = append(cohort.Metrics, Metric{Mode: mode, Arms: arm, Limit: limit, Name: name, Numerator: num, Denominator: den, Value: &v, CapOverride: r.CapOverride, ValidityOverrides: r.ValidityOverrides})
+					cohort.Metrics = append(cohort.Metrics, Metric{Mode: mode, Arms: arm, Limit: limit, Name: name, Numerator: num, Denominator: den, Value: &v, CapOverride: r.CapOverride, ArticleCapOverride: r.ArticleCapOverride, ValidityOverrides: r.ValidityOverrides})
 				}
 				add("direct_recall", float64(matched), total)
 				add("direct_macro_recall", macro, positive)
