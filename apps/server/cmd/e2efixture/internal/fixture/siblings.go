@@ -23,7 +23,7 @@ func siblingTexts() []string {
 
 func populateSiblings(ctx context.Context, db *pgxpool.Pool, stats lexical.Stats, lex lexical.Recipe) ([]int, error) {
 	hash := strings.Repeat("a", 64)
-	_, err := db.Exec(ctx, `INSERT INTO document (id,country,key,number,number_norm,title,doc_type,issuer,class,source,eff_from,raw_issue_date,raw_eff_from,raw_eff_to,status_code,status_name,status_class,status_basis,is_current,is_consolidated,content_state,fetch_sha256,text_source,text_complete) VALUES (29,'vn','vn:fixture:siblings','29/2099/TT-TEST','29/2099/TT-TEST','Văn bản hợp nhất giả lập','test','Cơ quan giả lập','primary','vbpl','2000-01-01','','','','','','in_force','source_status',true,false,'indexed',$1,'source_tree',true)`, hash)
+	_, err := db.Exec(ctx, `INSERT INTO document (id,country,key,number,number_norm,title,doc_type,issuer,class,source,validity_conflict,eff_from,raw_issue_date,raw_eff_from,raw_eff_to,status_code,status_name,status_class,status_basis,is_current,is_consolidated,content_state,fetch_sha256,text_source,text_complete) VALUES (29,'vn','vn:fixture:siblings','29/2099/TT-TEST','29/2099/TT-TEST','Văn bản hợp nhất giả lập','test','Cơ quan giả lập','primary','vbpl',false,'2000-01-01','','','','','','in_force','source_status',true,false,'indexed',$1,'source_tree',true)`, hash)
 	if err != nil {
 		return nil, fmt.Errorf("insert sibling document: %w", err)
 	}
