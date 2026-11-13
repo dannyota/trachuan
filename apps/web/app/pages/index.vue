@@ -18,6 +18,8 @@ const route = useRoute()
 const deleted = ref(false)
 onMounted(() => { deleted.value = route.query.account === 'deleted' })
 const api = useApi()
+const releaseDate = /^(\d{4})(\d{2})(\d{2})(?:_\d+)?$/.exec(sample.release || '')
+const statusDate = releaseDate ? `${releaseDate[1]}-${releaseDate[2]}-${releaseDate[3]}` : undefined
 const { data: status } = await useAsyncData('coverage-home', () => import.meta.server ? getCoverage(() => api.client.GET('/api/v1/public/status')).then(status => ({ status })) : Promise.resolve({ status: null }), { server: true, default: () => ({ status: null }) })
 </script>
 <template>
@@ -26,7 +28,7 @@ const { data: status } = await useAsyncData('coverage-home', () => import.meta.s
     <HomeHero />
     <section class="container home-sample" aria-labelledby="home-sample-title">
       <div><h2 id="home-sample-title">{{ labels.sampleTitle }}</h2><p>{{ labels.sampleText }}</p><ul><li>{{ labels.check1 }}</li><li v-if="citation">{{ labels.check2 }}: {{ citation }}</li><li v-if="hasSource">{{ labels.check3 }}</li></ul></div>
-      <ResultCard v-if="sample.hits?.[0]" :hit="sample.hits[0]" :documents="sample.documents" :nodes="sample.nodes" current-release />
+      <ResultCard v-if="sample.hits?.[0]" :hit="sample.hits[0]" :documents="sample.documents" :nodes="sample.nodes" :status-date="statusDate" current-release />
     </section>
     <div class="container home-coverage"><CoverageFacts :status="status.status" :show-release="false" /><p>{{ labels.scope }} <NuxtLink to="/sources">{{ labels.scopeLink }}</NuxtLink></p></div>
     <HomeConnect />

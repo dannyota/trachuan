@@ -46,4 +46,6 @@
   .home-sample, .home-connect-cards { grid-template-columns: 1fr; }
   .home-sample { gap: 24px; padding-block: 40px 24px; }
   .home-connect-inner { padding-block: 40px; }
+  .home-address { display: flex; align-items: flex-start; flex-direction: column; width: 100%; padding: 0; border: 0; background: transparent; }
+  .home-address code { display: block; width: 100%; padding: 12px; border: 1px solid var(--color-line-strong); border-radius: var(--radius-md); background: var(--color-card); white-space: pre; }
 }

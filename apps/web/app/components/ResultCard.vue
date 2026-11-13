@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { nextTick, onMounted, onUnmounted, watch } from 'vue'
 import type { components } from '@trachuan/schema/gen/openapi'
-import { documentCitation, gapCategory, highlightSpans, hitByline, matchedMembers, warningAdvice, warningSentence } from '../content'
+import { documentCitation, gapCategory, highlightSpans, hitByline, matchedMembers, statusAsOf, warningAdvice, warningSentence } from '../content'
 import { readerLink, warningLink } from '../utils/search-results'
 import { searchMessages } from '../../i18n/search'
 import type { Language } from '../../i18n'
@@ -10,7 +10,7 @@ import CopyButton from './CopyButton.vue'
 
 type Hit = components['schemas']['Hit']
 type Result = components['schemas']['SearchResult']
-const props = defineProps<{ hit: Hit, documents?: Result['documents'], nodes?: Result['nodes'], release?: string, currentRelease?: boolean, query?: string, rank?: number }>()
+const props = defineProps<{ hit: Hit, documents?: Result['documents'], nodes?: Result['nodes'], release?: string, currentRelease?: boolean, statusDate?: string, query?: string, rank?: number }>()
 const language = useState<Language>('language', () => 'vi')
 const messages = computed(() => searchMessages(language.value))
 const doc = computed(() => props.documents?.[props.hit.doc || ''])
@@ -74,7 +74,7 @@ function memberLink(memberAnchor: string | undefined) {
 <template>
   <article class="card result-card">
     <div class="result-card-head">
-      <ValidityStamp :status="doc?.status.class" />
+      <ValidityStamp :status="doc?.status.class" /><span v-if="statusDate" class="result-byline">{{ statusAsOf(statusDate, doc?.source_url, language) }}</span>
       <NuxtLink v-if="doc?.number && link" :to="link" class="num result-number">{{ doc.number }}</NuxtLink><span v-else-if="doc?.number" class="num">{{ doc.number }}</span>
       <span v-if="doc" class="result-byline">{{ hitByline(doc, language) }}</span>
       <span v-if="rank" class="result-rank">#{{ rank }}</span>
