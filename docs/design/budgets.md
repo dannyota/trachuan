@@ -148,15 +148,16 @@ Exceeding a build ceiling fails explicitly; it never drops rows to fit.
 | Lexical dimensions; k1; b                                 | 1,048,576; 1.2; 0.75                                            |
 | Sparse nonzeros per chunk                                 | At most 16,000; overflow fails build, no pruning                |
 | HNSW construction                                         | m=16, ef_construction=64, cosine; no sparse index               |
-| Build concurrency                                         | 1 database build/restore per worker, 1 SQL index worker         |
+| Build concurrency                                         | 1 build/restore per worker; HNSW with 4 parallel workers        |
 | Build maximum documents; provisions; inserted chunks      | 10,000; 2,000,000; 500,000                                      |
 | Build distinct normalized terms                           | 2,000,000                                                       |
 | Build copy/update batch                                   | 2,000 rows; stream vectors rather than retain all               |
 | Build artifact file read                                  | At most 256 MiB per JSON file, checked before decoding          |
-| Build memory ceiling; maintenance_work_mem                | 8 GiB worker RSS; 512 MiB PostgreSQL                            |
+| Build memory ceiling; maintenance_work_mem                | 8 GiB worker RSS; 2 GiB PostgreSQL                              |
 | Build/restore free disk before start; minimum during work | 30 GiB; 10 GiB (`CORPUS_DISK_START_GIB`, `CORPUS_DISK_MIN_GIB`) |
 | Build item deadline; dump/restore command deadline        | 50 minutes; 15 minutes each within the item deadline            |
 | Eval item deadline; ad-hoc exact query deadline           | 50 minutes; 60 s per query                                      |
+| Eval and calibration case concurrency                     | 3 cases in flight; results merged in case order                 |
 | Eval artifact/cache total                                 | 2 GiB; fail explicitly if exceeded                              |
 
 Query limits apply to the Go query service. ONNX Runtime's
