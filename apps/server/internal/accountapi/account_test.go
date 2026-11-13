@@ -161,19 +161,27 @@ func TestMe_ReturnsAccountAndCSRF(t *testing.T) {
 	}
 }
 func TestMe_NoCookie(t *testing.T) {
-	h, _, _, _, _ := setup(t)
-	r := httptest.NewRequest(http.MethodGet, "https://example.invalid/api/v1/me", nil)
-	w := httptest.NewRecorder()
-	h.ServeHTTP(w, r)
-	expect(t, w, 204)
-	if w.Body.Len() != 0 || w.Header().Get("Cache-Control") != "no-store" || len(w.Result().Cookies()) != 0 {
-		t.Fatalf("unexpected response: headers=%v body=%q", w.Header(), w.Body.String())
+	for _, cookie := range []string{"", "other=value; language=en"} {
+		h, _, _, _, _ := setup(t)
+		r := httptest.NewRequest(http.MethodGet, "https://example.invalid/api/v1/me", nil)
+		if cookie != "" {
+			r.Header.Set("Cookie", cookie)
+		}
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, r)
+		expect(t, w, 204)
+		if w.Body.Len() != 0 || w.Header().Get("Cache-Control") != "no-store" || len(w.Result().Cookies()) != 0 {
+			t.Fatalf("unexpected response: headers=%v body=%q", w.Header(), w.Body.String())
+		}
 	}
 }
 func TestMe_InvalidCookies(t *testing.T) {
 	for _, tc := range []struct{ name, cookie string }{
 		{"empty", "__Host-session="},
+		{"space before empty", "__Host-session ="},
+		{"space before invalid", "__Host-session =bad"},
 		{"malformed", "__Host-session=\"bad value\""},
+		{"unparseable", "other=value; __Host-session =\"unterminated"},
 		{"duplicate", "__Host-session=bad; __Host-session=bad"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

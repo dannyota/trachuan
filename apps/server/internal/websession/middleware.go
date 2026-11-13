@@ -53,7 +53,7 @@ func hasSessionCookie(r *http.Request) bool {
 	for _, header := range r.Header.Values("Cookie") {
 		for _, part := range strings.Split(header, ";") {
 			name, _, _ := strings.Cut(strings.TrimSpace(part), "=")
-			if name == sessionCookieName {
+			if strings.TrimSpace(name) == sessionCookieName {
 				return true
 			}
 		}
