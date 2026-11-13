@@ -68,6 +68,7 @@ type Querier interface {
 	InsertArtifact(ctx context.Context, arg InsertArtifactParams) (int64, error)
 	InsertChunk(ctx context.Context, arg InsertChunkParams) error
 	InsertDocument(ctx context.Context, arg InsertDocumentParams) error
+	InsertEmbedRow(ctx context.Context, arg InsertEmbedRowParams) (int64, error)
 	InsertFetchObservation(ctx context.Context, arg InsertFetchObservationParams) error
 	InsertFetchedFile(ctx context.Context, arg InsertFetchedFileParams) error
 	InsertGap(ctx context.Context, arg InsertGapParams) error
@@ -91,6 +92,7 @@ type Querier interface {
 	ListDiscoveryListings(ctx context.Context, country string) ([]ListDiscoveryListingsRow, error)
 	ListDiscoveryRuns(ctx context.Context, country string) ([]ListDiscoveryRunsRow, error)
 	ListEarlierRuns(ctx context.Context, arg ListEarlierRunsParams) ([]ListEarlierRunsRow, error)
+	ListEmbedArtifacts(ctx context.Context, recipeHash string) ([]ListEmbedArtifactsRow, error)
 	ListEmbedInputs(ctx context.Context, runID int64) ([]ListEmbedInputsRow, error)
 	ListExtractInputs(ctx context.Context, runID int64) ([]ListExtractInputsRow, error)
 	ListFetchReadMessages(ctx context.Context, arg ListFetchReadMessagesParams) ([]string, error)
@@ -117,6 +119,7 @@ type Querier interface {
 	ListStageItemArtifacts(ctx context.Context, arg ListStageItemArtifactsParams) ([]ListStageItemArtifactsRow, error)
 	ListUnacceptedGapCounts(ctx context.Context, runID int64) ([]ListUnacceptedGapCountsRow, error)
 	ListVisionSelectionKeys(ctx context.Context, runID int64) ([]string, error)
+	LookupEmbedRows(ctx context.Context, arg LookupEmbedRowsParams) ([]LookupEmbedRowsRow, error)
 	MarkOCRCheckAttemptsSubmitted(ctx context.Context, arg MarkOCRCheckAttemptsSubmittedParams) (int64, error)
 	MarkOCRCheckAttemptsUncertain(ctx context.Context, arg MarkOCRCheckAttemptsUncertainParams) (int64, error)
 	MarkRunFromStates(ctx context.Context, arg MarkRunFromStatesParams) (int64, error)

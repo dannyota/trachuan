@@ -94,6 +94,11 @@ func ReadArtifact(dir string) (Index, error) {
 	if _, err := artifact.Verify(dir); err != nil {
 		return idx, fmt.Errorf("verify embed artifact: %w", err)
 	}
+	return readVerifiedIndex(dir)
+}
+
+func readVerifiedIndex(dir string) (Index, error) {
+	var idx Index
 	if err := decodeFile(dir, "index.json", &idx); err != nil {
 		return idx, err
 	}
