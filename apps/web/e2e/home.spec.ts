@@ -8,15 +8,16 @@ test('signed-in home search submits its draft without putting the question in a 
   page.on('request', request => urls.push(request.url()))
   await page.route('**/api/v1/me', route => route.fulfill({ json: account }))
   await page.route('**/api/v1/status', route => route.fulfill({ status: 503 }))
-  await page.route('**/api/v1/search', route => {
-    expect(route.request().postDataJSON()).toMatchObject({ query, in_force_only: false })
-    return route.fulfill({ json: { abstain: false, hits: [] } })
-  })
+  await page.route('**/api/v1/search', route => route.fulfill({ json: { abstain: false, hits: [] } }))
   await page.goto('/')
   await expect(page.getByRole('link', { name: /tài khoản/i })).toBeVisible()
   await page.locator('#home-query').fill(query)
   await page.locator('.home-form input[type=checkbox]').uncheck()
+  const searchRequest = page.waitForRequest(request => new URL(request.url()).pathname === '/api/v1/search')
   await page.locator('.home-form').getByRole('button', { name: 'Tra cứu' }).click()
+  const request = await searchRequest
+  expect(request.method()).toBe('POST')
+  expect(request.postDataJSON()).toEqual({ country: 'vn', query, detail: 'full', limit: 20, in_force_only: false })
   await expect(page).toHaveURL(/\/vn\/search$/)
   await expect(page.locator('#search-query')).toHaveValue(query)
   expect(urls.every(url => !url.includes(encodeURIComponent(query)) && !url.includes(query))).toBe(true)
@@ -35,3 +36,20 @@ test('home keeps the sample current, public and usable on mobile', async ({ page
   await expect(page.locator('.home-coverage .coverage-release')).toHaveCount(0)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
 })
+
+for (const width of [1280, 390]) {
+  test(`home bands span the viewport at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 })
+    await page.goto('/')
+    for (const selector of ['.home-hero', '.home-connect']) {
+      const band = page.locator(selector)
+      const box = await band.boundingBox()
+      expect(box?.x).toBe(0)
+      expect(box?.width).toBe(width)
+      const inner = band.locator('.container')
+      const contentLeft = await inner.evaluate(element => element.getBoundingClientRect().left + parseFloat(getComputedStyle(element).paddingLeft))
+      expect(contentLeft).toBe(width === 390 ? 16 : 40)
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  })
+}

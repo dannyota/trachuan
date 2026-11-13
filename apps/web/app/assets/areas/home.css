@@ -1,3 +1,4 @@
+.site-main:has(> .home-page) { max-width: none; padding: 0; }
 .home-hero { background: var(--color-surface); border-bottom: 1px solid var(--color-line); }
 .home-hero-inner { display: flex; flex-direction: column; gap: 24px; padding-block: 72px 56px; }
 .home-eyebrow { margin: 0; color: var(--color-seal); font-size: 14px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }

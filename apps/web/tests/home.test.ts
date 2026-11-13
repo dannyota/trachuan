@@ -40,3 +40,14 @@ it.each(['unknown', 'signed-out'] as const)('sends %s visitors to login without 
   expect(useSearchDraftStore().draft).toBeNull()
   expect(navigate).toHaveBeenCalledWith('/api/v1/auth/google/start?next=%2Fvn%2Fsearch', { external: true })
 })
+
+it('keeps Vietnamese suggestions in the English interface', async () => {
+  vi.stubGlobal('useState', () => ref('en'))
+  const wrapper = mount(HomeHero)
+  expect(wrapper.get('.home-suggestions span').text()).toBe('Suggestions:')
+  expect(wrapper.findAll('.home-suggestions button').map(button => button.text())).toEqual([
+    'xác thực sinh trắc học khi chuyển tiền', 'hệ thống thông tin cấp độ 3', 'xóa dữ liệu cá nhân theo yêu cầu', '50/2024/TT-NHNN',
+  ])
+  await wrapper.find('.home-suggestions button').trigger('click')
+  expect((wrapper.get('#home-query').element as HTMLInputElement).value).toBe('xác thực sinh trắc học khi chuyển tiền')
+})
