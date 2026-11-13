@@ -33,6 +33,10 @@ for kind in uid gid; do
   usermod "--add-sub${kind}s" "$start-$((start + 65535))" trachuan
  fi
 done
+# Rootless containers set CPU and I/O limits; OL9 delegates only memory and pids by default.
+install -d -m 0755 /etc/systemd/system/user@.service.d
+printf '[Service]\nDelegate=cpu cpuset io memory pids\n' >/etc/systemd/system/user@.service.d/delegate.conf
+systemctl daemon-reload
 loginctl enable-linger trachuan
 uid=$(id -u trachuan)
 systemctl start "user@$uid.service"
@@ -41,6 +45,10 @@ as_user() {
   DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$uid/bus" "$@"
 }
 [[ $(as_user podman info --format '{{.Host.CgroupsVersion}}') == v2 ]] || fail 'rootless Podman requires cgroup v2'
+controllers=$(<"/sys/fs/cgroup/user.slice/user-$uid.slice/user@$uid.service/cgroup.controllers")
+for controller in cpu cpuset io memory pids; do
+ [[ " $controllers " == *" $controller "* ]] || fail "cgroup controller $controller is not delegated; restart user@$uid.service"
+done
 
 printf '%s\n' 'net.ipv4.ip_unprivileged_port_start=80' >/etc/sysctl.d/90-trachuan.conf
 sysctl -p /etc/sysctl.d/90-trachuan.conf >/dev/null

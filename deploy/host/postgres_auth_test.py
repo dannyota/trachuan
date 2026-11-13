@@ -20,8 +20,10 @@ if not os.path.exists(os.environ['POSTGRES_AUTH_TEST_READY']): sys.exit(92)
 if '/usr/local/bin/postgres-admin.sh' in args:
     if mode == 'unavailable': sys.exit(2)
     print('1'); sys.exit(0)
-for setting in ['PGPASSWORD=', 'PGPASSFILE=/dev/null', 'PGSERVICE=', 'PGSERVICEFILE=/dev/null']:
+for setting in ['PGPASSWORD=', 'PGPASSFILE=/dev/null']:
     if setting not in args: sys.exit(91)
+# An empty PGSERVICE makes libpq look up a service named "" and fail for the wrong reason.
+if any(a.startswith(('PGSERVICE=', 'PGHOSTADDR=')) for a in args): sys.exit(93)
 host = args[args.index('--host') + 1]
 if mode == 'tcp-trust' and host == '127.0.0.1': print('1'); sys.exit(0)
 if mode == 'socket-trust' and host == '/var/run/postgresql': print('1'); sys.exit(0)
