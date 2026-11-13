@@ -39,6 +39,7 @@ func TestResolver_SwitchClosesOldPool(t *testing.T) {
 	takeLease(t, r, "").Done()
 	s.active = "corpus_vn_20990104"
 	lease := takeLease(t, r, "")
+	waitResolverCleanup(r)
 	if lease.Release != "20990104" {
 		t.Fatalf("release=%q", lease.Release)
 	}
@@ -87,6 +88,7 @@ func TestResolver_EvictionDuringOpenClosesAndRejectsEngine(t *testing.T) {
 	if err := <-result; !errors.Is(err, ErrExpired) {
 		t.Fatalf("pending error %v", err)
 	}
+	waitResolverCleanup(r)
 	mu.Lock()
 	defer mu.Unlock()
 	if len(closed) != 1 || closed[0] != "corpus_vn_20990103" {
@@ -129,6 +131,7 @@ func TestResolver_CloseWaitsForPendingOpenerToFinish(t *testing.T) {
 	if err := <-result; !errors.Is(err, ErrExpired) {
 		t.Fatalf("pending error=%v", err)
 	}
+	waitResolverCleanup(r)
 	mu.Lock()
 	defer mu.Unlock()
 	if !closed || premature {
@@ -172,8 +175,6 @@ func TestResolver_ActivationChangesBeforeOpenResultIsConsumed(t *testing.T) {
 	r, s, engine := resolverFixture(t)
 	ctx := &beforeWaitContext{Context: context.Background()}
 	ctx.beforeWait = func() {
-		// Schedule two activations after the original open finishes but before its
-		// caller consumes the result, including an eviction of the original entry.
 		<-r.flight.DoChan("corpus_vn_20990103", func() (any, error) { return nil, nil })
 		s.mu.Lock()
 		s.active = "corpus_vn_20990104"
@@ -260,6 +261,7 @@ func TestResolver_SwitchPreservesInFlightWork(t *testing.T) {
 		wg.Go(second.Done)
 	}
 	wg.Wait()
+	waitResolverCleanup(r)
 	if len(closed) != 1 || closed[0] != "corpus_vn_20990103" {
 		t.Fatalf("closed=%v", closed)
 	}
@@ -406,6 +408,7 @@ func TestResolver_CloseDefersPoolUntilLeaseEnds(t *testing.T) {
 	}
 	lease.Done()
 	lease.Done()
+	waitResolverCleanup(r)
 	if closed != 1 {
 		t.Fatalf("closed=%d", closed)
 	}

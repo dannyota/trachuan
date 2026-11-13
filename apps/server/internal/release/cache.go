@@ -78,11 +78,10 @@ func (r *Resolver) load(ctx context.Context, country, name string) (*cacheEntry,
 		if entry.engine != nil {
 			entry.engine.Retire()
 		}
-		closePool := entry.leases == 0
-		r.mu.Unlock()
-		if closePool {
-			entry.close()
+		if entry.leases == 0 {
+			r.cleanupLocked(entry)
 		}
+		r.mu.Unlock()
 		return nil, ErrExpired
 	}
 	if err != nil {
@@ -94,11 +93,10 @@ func (r *Resolver) load(ctx context.Context, country, name string) (*cacheEntry,
 				entry.engine.Retire()
 			}
 		}
-		closePool := entry.leases == 0
-		r.mu.Unlock()
-		if empty && closePool {
-			entry.close()
+		if empty && entry.leases == 0 {
+			r.cleanupLocked(entry)
 		}
+		r.mu.Unlock()
 		if databaseGone(err) {
 			return nil, ErrExpired
 		}

@@ -45,13 +45,23 @@ func (e *Engine) StartSparsePostings(report func(PostingsOutcome)) {
 	s := &e.sparse
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.started || s.closed || s.retired || e.db == nil || e.options.Profile != "serving" || s.ctx == nil {
+	if s.started || s.closed || s.retired {
+		return
+	}
+	serving := e.options.Profile == "serving"
+	if serving && (e.db == nil || s.ctx == nil) {
 		return
 	}
 	s.started = true
 	s.wg.Add(1)
 	go func() {
 		defer s.wg.Done()
+		if !serving {
+			if report != nil {
+				report(PostingsOutcome{Status: "disabled", Reason: "profile"})
+			}
+			return
+		}
 		start := time.Now()
 		index, outcome := e.loadPostings(s.ctx)
 		if index != nil && e.publishPostings(index) {

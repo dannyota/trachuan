@@ -37,6 +37,7 @@ type Resolver struct {
 	generation  uint64
 	observation chan struct{}
 	entries     map[string]*cacheEntry
+	cleanups    map[*cacheEntry]chan struct{}
 	active      map[string]string
 	workCtx     context.Context
 	cancelWork  context.CancelFunc
@@ -116,14 +117,13 @@ func (r *Resolver) Close() {
 	r.mu.Lock()
 	r.closed = true
 	cancel := r.cancelWork
-	var entries []*cacheEntry
 	for _, entry := range r.entries {
 		entry.retired = true
 		if entry.engine != nil {
 			entry.engine.Retire()
 		}
 		if !entry.opening && entry.leases == 0 {
-			entries = append(entries, entry)
+			r.cleanupLocked(entry)
 		}
 	}
 	r.entries = nil
@@ -131,7 +131,18 @@ func (r *Resolver) Close() {
 	if cancel != nil {
 		cancel()
 	}
-	for _, entry := range entries {
-		entry.close()
+	for {
+		r.mu.Lock()
+		done := make([]chan struct{}, 0, len(r.cleanups))
+		for _, cleanup := range r.cleanups {
+			done = append(done, cleanup)
+		}
+		r.mu.Unlock()
+		if len(done) == 0 {
+			return
+		}
+		for _, cleanup := range done {
+			<-cleanup
+		}
 	}
 }

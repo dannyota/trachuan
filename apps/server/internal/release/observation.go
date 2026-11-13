@@ -59,7 +59,6 @@ func (r *Resolver) resolveName(ctx context.Context, country, rel string) (string
 	}
 	previous, observed := r.active[country]
 	r.active[country] = active
-	var retired []*cacheEntry
 	for name, entry := range r.entries {
 		if entry.country == country && name != active {
 			delete(r.entries, name)
@@ -68,7 +67,7 @@ func (r *Resolver) resolveName(ctx context.Context, country, rel string) (string
 				entry.engine.Retire()
 			}
 			if !entry.opening && entry.leases == 0 {
-				retired = append(retired, entry)
+				r.cleanupLocked(entry)
 			}
 		}
 	}
@@ -83,9 +82,6 @@ func (r *Resolver) resolveName(ctx context.Context, country, rel string) (string
 	release := strings.TrimPrefix(active, "corpus_"+country+"_")
 	if notify != nil {
 		notify(release, generation)
-	}
-	for _, entry := range retired {
-		entry.close()
 	}
 	if !allowed {
 		return "", "", 0, ErrExpired

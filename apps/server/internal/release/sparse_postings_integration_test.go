@@ -5,7 +5,9 @@ package release
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
+	"time"
 
 	"danny.vn/trachuan/internal/retrieval"
 )
@@ -36,6 +38,7 @@ func TestResolver_PostingsOutliveRetirementUntilLastLease(t *testing.T) {
 				t.Fatal("retirement discarded published postings")
 			}
 			lease.Done()
+			waitResolverCleanup(r)
 			if lease.Engine.SparsePostingsReady() {
 				t.Fatal("last lease did not close engine")
 			}
@@ -71,10 +74,86 @@ func TestResolver_OpenFailureClosesEngineBeforePool(t *testing.T) {
 			closed = true
 		}, errors.New("open failed after engine creation")
 	}
-	if _, err = r.Resolve(t.Context(), "vn", rel); err == nil || !closed {
+	_, err = r.Resolve(t.Context(), "vn", rel)
+	waitResolverCleanup(r)
+	if err == nil || !closed {
 		t.Fatalf("error=%v closed=%t", err, closed)
 	}
 	if e.SparsePostingsReady() {
 		t.Fatal("failed open retained engine")
+	}
+}
+
+func TestResolver_BlockedLoaderDoesNotDelayRetirementRequests(t *testing.T) {
+	for _, lastLease := range []bool{false, true} {
+		t.Run(map[bool]string{false: "activation", true: "last lease"}[lastLease], func(t *testing.T) {
+			r, _, _, rel := corpusFixture(t)
+			entered, release, returned, poolClosed := make(chan struct{}), make(chan struct{}), make(chan struct{}), make(chan struct{})
+			var once sync.Once
+			stop := func() { once.Do(func() { close(release) }) }
+			defer r.Close()
+			defer stop()
+			r.OnPostings = func(_ string, outcome retrieval.PostingsOutcome) {
+				if outcome.Status != "ready" {
+					t.Errorf("postings outcome: %+v", outcome)
+				}
+				close(entered)
+				<-release
+				close(returned)
+			}
+			lease := takeLease(t, r, rel)
+			<-entered
+			r.mu.Lock()
+			entry := r.entries["corpus_vn_"+rel]
+			closePool := entry.closePool
+			entry.closePool = func() {
+				select {
+				case <-returned:
+				default:
+					t.Error("pool closed before loader returned")
+				}
+				if lease.Engine.SparsePostingsReady() {
+					t.Error("pool closed before engine")
+				}
+				closePool()
+				close(poolClosed)
+			}
+			r.mu.Unlock()
+			if !lastLease {
+				lease.Done()
+			}
+			store := r.Auth.(*fakeStore)
+			store.mu.Lock()
+			store.active = ""
+			store.mu.Unlock()
+			activate := func() error { _, err := r.Resolve(t.Context(), "vn", rel); return err }
+			result := make(chan error, 1)
+			if lastLease {
+				if err := activate(); !errors.Is(err, ErrExpired) {
+					t.Fatal(err)
+				}
+				go func() { lease.Done(); result <- nil }()
+			} else {
+				go func() { result <- activate() }()
+			}
+			select {
+			case err := <-result:
+				if !lastLease && !errors.Is(err, ErrExpired) {
+					t.Fatal(err)
+				}
+			case <-time.After(100 * time.Millisecond):
+				t.Fatal("request waited for blocked loader")
+			}
+			finished := make(chan struct{})
+			go func() { r.Close(); close(finished) }()
+			select {
+			case <-finished:
+				t.Error("Close returned before loader cleanup")
+			case <-time.After(20 * time.Millisecond):
+			}
+			stop()
+			<-finished
+			<-poolClosed
+		})
 	}
 }

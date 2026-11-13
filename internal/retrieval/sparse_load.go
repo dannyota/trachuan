@@ -1,11 +1,9 @@
 package retrieval
 
 import (
-	"cmp"
 	"context"
 	"errors"
 	"math"
-	"slices"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -74,6 +72,10 @@ func (e *Engine) buildPostings(ctx context.Context, tx pgx.Tx, size sparseSize) 
 		return nil, databaseFailure("read postings documents failed", err)
 	}
 	for rows.Next() {
+		if err = ctx.Err(); err != nil {
+			rows.Close()
+			return nil, err
+		}
 		var id int64
 		var doc sparseDocument
 		if err = rows.Scan(&id, &doc.current, &doc.conflict, &doc.from, &doc.to, &doc.class, &doc.number, &doc.status); err != nil {
@@ -99,6 +101,10 @@ func (e *Engine) buildPostings(ctx context.Context, tx pgx.Tx, size sparseSize) 
 	}
 	defer rows.Close()
 	for rows.Next() {
+		if err = ctx.Err(); err != nil {
+			rows.Close()
+			return nil, err
+		}
 		var id, document int64
 		var text string
 		if err = rows.Scan(&id, &document, &text); err != nil {
@@ -118,7 +124,12 @@ func (e *Engine) buildPostings(ctx context.Context, tx pgx.Tx, size sparseSize) 
 		index.delta = max(index.delta, bound)
 		pos := uint32(len(index.chunks))
 		index.chunks = append(index.chunks, sparseChunk{id: id, document: doc})
-		for _, entry := range vector {
+		for i, entry := range vector {
+			if i%4096 == 0 {
+				if err = ctx.Err(); err != nil {
+					return nil, err
+				}
+			}
 			triples = append(triples, sparseTriple{dimension: entry.Index, position: pos, weight: entry.Value})
 		}
 	}
@@ -129,32 +140,11 @@ func (e *Engine) buildPostings(ctx context.Context, tx pgx.Tx, size sparseSize) 
 	if int64(len(triples)) != size.postings || int64(len(index.chunks)) != size.chunks || int64(len(index.documents)) != size.documents {
 		return nil, errors.New("postings counts differ")
 	}
-	if err = ctx.Err(); err != nil {
+	if err = sortSparseTriples(ctx, triples); err != nil {
 		return nil, err
 	}
-	slices.SortFunc(triples, func(a, b sparseTriple) int {
-		if n := cmp.Compare(a.dimension, b.dimension); n != 0 {
-			return n
-		}
-		return cmp.Compare(a.position, b.position)
-	})
-	if err = ctx.Err(); err != nil {
+	if err = index.buildDirectory(ctx, triples); err != nil {
 		return nil, err
-	}
-	dimensions := 0
-	for i, triple := range triples {
-		if i == 0 || triple.dimension != triples[i-1].dimension {
-			dimensions++
-		}
-	}
-	index.dimensions = make([]sparseDimension, 0, dimensions)
-	index.entries = make([]sparsePosting, len(triples))
-	for i, triple := range triples {
-		if i == 0 || triple.dimension != triples[i-1].dimension {
-			index.dimensions = append(index.dimensions, sparseDimension{index: triple.dimension, start: uint32(i)})
-		}
-		index.dimensions[len(index.dimensions)-1].end = uint32(i + 1)
-		index.entries[i] = sparsePosting{position: triple.position, weight: triple.weight}
 	}
 	return index, nil
 }

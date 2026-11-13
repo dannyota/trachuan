@@ -116,3 +116,16 @@ func TestSparseLifecycle_CloseWaitsForLoader(t *testing.T) {
 	close(release)
 	<-finished
 }
+
+func TestSparseLifecycle_EvaluationReportsDisabledOnce(t *testing.T) {
+	e := &Engine{options: Options{Profile: "evaluation"}}
+	e.sparse.init()
+	var outcomes []PostingsOutcome
+	for range 2 {
+		e.StartSparsePostings(func(outcome PostingsOutcome) { outcomes = append(outcomes, outcome) })
+	}
+	e.Close()
+	if len(outcomes) != 1 || outcomes[0].Status != "disabled" || outcomes[0].Reason != "profile" || e.SparsePostingsReady() {
+		t.Fatalf("outcomes=%+v", outcomes)
+	}
+}

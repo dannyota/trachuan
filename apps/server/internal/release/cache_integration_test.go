@@ -102,7 +102,6 @@ func TestResolver_DefaultOpenSharesPoolAndChecksIdentity(t *testing.T) {
 	read.Done()
 	search.Done()
 	r.Close()
-	// A new resolver must reject a corpus whose row claims another release.
 	r2 := &Resolver{Auth: r.Auth, Clock: r.Clock, URLTemplate: r.URLTemplate, EmbedderFor: r.EmbedderFor}
 	t.Cleanup(r2.Close)
 	if _, updateErr := db.Exec(ctx, `UPDATE release SET rel='20990101_invalid'`); updateErr != nil {
@@ -133,7 +132,6 @@ func TestResolver_DefaultOpenMissingDatabaseIsExpired(t *testing.T) {
 	}
 }
 
-// authStore exposes only the active pointer from the generated store.
 type authStore struct{ queries *store.Queries }
 
 func (s authStore) GetActiveRelease(ctx context.Context, country string) (string, error) {
@@ -191,13 +189,13 @@ func TestResolver_RemovingActiveDrainsPool(t *testing.T) {
 	if _, err := r.Resolve(ctx, "vn", rel); !errors.Is(err, ErrExpired) {
 		t.Fatalf("removed active release error=%v", err)
 	}
-	// No connection is held between queries. The lease protects the whole request.
 	for range 2 {
 		if _, err := lease.Engine.Status(ctx); err != nil {
 			t.Fatalf("in-flight request lost its pool: %v", err)
 		}
 	}
 	lease.Done()
+	waitResolverCleanup(r)
 	if unexpected, err := pool.Acquire(ctx); err == nil {
 		unexpected.Release()
 		t.Fatal("old pool still accepts connections after Done")
