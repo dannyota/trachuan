@@ -22,11 +22,17 @@ class Font:
         self.glyphs = glyphs if glyphs is not None else [".notdef", "a"]
         table = types.SimpleNamespace(platformID=3, platEncID=1, language=0, format=4,
                                       cmap=cmap if cmap is not None else {97: "a"})
-        self.tables = [table]
+        other = types.SimpleNamespace(platformID=0, platEncID=3, language=0, format=4,
+                                      cmap={98: "b"})
+        self.tables = [table, other]
         self.saved = False
 
     def __getitem__(self, key):
-        return types.SimpleNamespace(axes=self.axes) if key == "fvar" else types.SimpleNamespace(tables=self.tables)
+        if key == "fvar":
+            return types.SimpleNamespace(axes=self.axes)
+        return types.SimpleNamespace(compile=lambda font: json.dumps(
+            [sorted(table.cmap.items()) for table in self.tables]
+        ).encode("utf-8"))
 
     def getGlyphOrder(self):
         return self.glyphs
@@ -54,8 +60,10 @@ class InstanceTests(unittest.TestCase):
         with patch.dict(sys.modules, modules):
             namespace = runpy.run_path(str(SCRIPT))
             main = namespace["main"]
-            expected = hashlib.sha256(json.dumps([[97, "a"]]).encode("utf-8")).hexdigest()
-            main.__globals__["FINGERPRINTS"] = {"test-font": (2, expected)}
+            original = Font()
+            cmap = hashlib.sha256(original["cmap"].compile(original)).hexdigest()
+            glyphs = hashlib.sha256(b".notdef\na").hexdigest()
+            main.__globals__["FINGERPRINTS"] = {"test-font": (cmap, glyphs)}
             main()
 
     def test_rejects_changed_glyph_count(self):
@@ -94,6 +102,17 @@ class InstanceTests(unittest.TestCase):
 
     def test_rejects_already_instanced_changed_cmap(self):
         source = Font([Axis("wght", 400, 700)], cmap={97: "other"})
+        with self.assertRaises(ValueError):
+            self.run_helper(source, Font())
+
+    def test_rejects_already_instanced_changed_nonpreferred_cmap(self):
+        source = Font([Axis("wght", 400, 700)])
+        source.tables[1].cmap[98] = "other"
+        with self.assertRaises(ValueError):
+            self.run_helper(source, Font())
+
+    def test_rejects_already_instanced_renamed_glyph(self):
+        source = Font([Axis("wght", 400, 700)], [".notdef", "renamed"])
         with self.assertRaises(ValueError):
             self.run_helper(source, Font())
 
