@@ -11,7 +11,7 @@ paths = ['''docs/research/.*''']
 [[allowlists]]
 description = "VBPL provision node keys in recorded fixtures"
 condition = "AND"
-paths = ['''apps/corpus/internal/vbpl/testdata/tree-.*\.json''', '''apps/corpus/internal/stage/extract/testdata/structure/[0-9]+-tree\.json''']
+paths = ['''apps/corpus/internal/vbpl/testdata/tree-.*\.json''', '''^apps/corpus/internal/stage/extract/testdata/structure/(145780|27845|67878)-tree\.json$''']
 regexes = ['''key"\s*:\s*"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"''']
 regexTarget = "match"
 

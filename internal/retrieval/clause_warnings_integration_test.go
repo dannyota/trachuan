@@ -23,7 +23,7 @@ func TestWarnings_ClauseOwnedHitTargetsAndStatus(t *testing.T) {
 	}{
 		{11, "p11", "exact article"}, {12, "p12", "exact clause"}, {13, "p13", "inside clause"}, {14, "sibling", "sibling clause"}, {11, "p11/missing", "inexact article"},
 	} {
-		_, err = db.Exec(ctx, `INSERT INTO relation(id,source_document_id,target_document_id,source_provision_id,target_provision_id,source_key,target_key,source_number,target_number,kind,raw_code,raw_label,target_node_id,evidence,method,artifact_sha256,ordinal) VALUES($1,2,1,21,$2,'vn:2','vn:1','n','n','suspends','','',$3,$4,'text_rule/1',$5,$1)`, i+1, tc.target, tc.named, tc.evidence, strings.Repeat("a", 64))
+		_, err = db.Exec(ctx, `INSERT INTO relation(id,source_document_id,target_document_id,source_provision_id,target_provision_id,source_key,target_key,source_number,target_number,kind,raw_code,raw_label,target_node_id,evidence,method,artifact_sha256,ordinal) VALUES($1::bigint,2,1,21,$2,'vn:2','vn:1','n','n','suspends','','',$3,$4,'text_rule/1',$5,($1::bigint)::integer)`, i+1, tc.target, tc.named, tc.evidence, strings.Repeat("a", 64))
 		if err != nil {
 			t.Fatal(err)
 		}

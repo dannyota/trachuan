@@ -103,7 +103,7 @@ func splitArticle(article Provision, paragraphs []Paragraph, quoted []bool, gram
 			end = clauses[i+1].index
 		}
 		clause := childProvision(article, paragraphs[start.index:end], start, i+1)
-		if strings.Count(article.Text, clause.Text) != 1 {
+		if !uniqueContainment(article.Text, clause.Text) {
 			return nil, 0, "containment"
 		}
 		var ownPoints []childStart
@@ -146,12 +146,21 @@ func splitPoints(parent Provision, paragraphs []Paragraph, points []childStart, 
 			end = points[i+1].index
 		}
 		point := childProvision(parent, paragraphs[start.index:end], start, i+1)
-		if strings.Count(parent.Text, point.Text) != 1 {
+		if !uniqueContainment(parent.Text, point.Text) {
 			return nil, 0, "containment"
 		}
 		children = append(children, point)
 	}
 	return children, 0, ""
+}
+
+func uniqueContainment(parent, child string) bool {
+	if child == "" {
+		return false
+	}
+	first := strings.Index(parent, child)
+	// Advance from the match's start so a second, overlapping match also rejects it.
+	return first >= 0 && !strings.Contains(parent[first+1:], child)
 }
 
 func childProvision(parent Provision, paragraphs []Paragraph, start childStart, ordinal int) Provision {

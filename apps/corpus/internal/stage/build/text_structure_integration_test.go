@@ -15,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"danny.vn/trachuan/apps/corpus/internal/evaluation"
 	"danny.vn/trachuan/apps/corpus/internal/source"
 	"danny.vn/trachuan/apps/corpus/internal/stage"
 	"danny.vn/trachuan/apps/corpus/internal/stage/chunk"
@@ -170,7 +171,17 @@ func assertStructureHit(t *testing.T, f *loadFixture, counts Counts) {
 	}
 	hash := strings.Repeat("a", 64)
 	release := retrieval.Release{Country: "vn", Rel: f.run.Rel, SchemaVersion: corpusdb.SchemaVersion, DenseRecipe: retrieval.DenseRecipe{Version: 1, Model: query.Model, Dimensions: query.Dimensions, Document: document, DocumentHash: document.Hash(), Query: query, QueryHash: query.Hash()}, ChunkRecipe: json.RawMessage(`{}`), LexicalRecipe: f.recipes.Lexical, RetrievalRecipe: retrieval.Recipe1(), LexicalStats: counts.LexicalStats, SourceManifestHash: hash, BuildInputHash: hash, BuildRecipeHash: hash, EvaluationSummary: json.RawMessage(`{}`), BuiltAt: now}
-	engine, err := retrieval.OpenDraft(ctx, pool, structureEmbedder{}, release, retrieval.Options{Now: func() time.Time { return now }, Profile: "evaluation"})
+	calibration := evaluation.Calibration{Threshold: 0.1}
+	calibrationJSON, err := json.Marshal(calibration)
+	if err != nil {
+		t.Fatal(err)
+	}
+	release.RetrievalRecipe.Abstention.Threshold = &calibration.Threshold
+	release.RetrievalRecipe.Abstention.CalibrationSHA256 = fmt.Sprintf("%x", sha256.Sum256(calibrationJSON))
+	if err = insertRelease(ctx, f.corpus, release); err != nil {
+		t.Fatal(err)
+	}
+	engine, err := retrieval.Open(ctx, pool, structureEmbedder{}, retrieval.Options{Now: func() time.Time { return now }, Profile: "evaluation"})
 	if err != nil {
 		t.Fatal(err)
 	}
