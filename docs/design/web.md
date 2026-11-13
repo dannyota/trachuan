@@ -28,12 +28,13 @@ slash): a known path with a trailing slash or repeated slashes is a 308 to the
 canonical path without the query, and any other unknown path gets a fixed 404
 page without a render: one prebuilt static HTML document, Vietnamese or English
 by the language cookie, styled by a same-origin static stylesheet whose values
-equal the light tokens. A topic code the taxonomy API does not serve renders the
-topic route, which then answers with the same 404 document, since only the API
-knows the served codes. Admission covers every page request, not only public
-ones (static assets excepted): 120 per minute per client address, and at most 4
-concurrent server renders of any page, error pages included; a cache hit renders
-nothing, and a rejection is a fixed plain-text 429 without a render.
+equal the tokens in both themes. A topic code the taxonomy API does not serve
+renders the topic route, which then answers with the same 404 document, since
+only the API knows the served codes. Admission covers every page request, not
+only public ones (static assets excepted): 120 per minute per client address,
+and at most 4 concurrent server renders of any page, error pages included; a
+cache hit renders nothing, and a rejection is a fixed plain-text 429 without a
+render.
 
 ## Signed in
 
