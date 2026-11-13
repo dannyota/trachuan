@@ -2826,14 +2826,14 @@
       "state": "resolved",
       "expected_number": "10/2023/TT-NHNN",
       "reason": "Article 8 of the lending circular in its current consolidated text lists the capital needs credit institutions may not lend for (including buying gold bars); a 2023 circular suspends clauses 8 to 10 (capital contribution, unlisted shares, financial offsetting) until new rules take effect.",
-      "reviewed_at": "2026-11-11",
+      "reviewed_at": "2026-11-13",
       "evidence": [
         {
           "document_key": "vn:vbpl:162094",
           "document_number": "10/2023/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "8ef45df942aa0c68291152bc2f87100a4fc3a5a8379826ee43293e7fe20eb0bc",
-          "node_id": "a8285d5a-e17b-11f0-bee1-11e97097ce43",
+          "node_id": "tx:299bc05d54d048bd",
           "quoted_span": "Ngưng hiệu lực thi hành khoản 8, khoản 9 và khoản 10 Điều 8 của Thông tư số 39/2016/TT-NHNN ngày 30 tháng 12 năm 2016"
         }
       ],
@@ -3229,14 +3229,14 @@
       "state": "resolved",
       "expected_number": "41/2025/TT-NHNN",
       "reason": "Article 26(1) of Circular 40/2024/TT-NHNN as replaced by Circular 41/2025/TT-NHNN Article 10(1), carried in the consolidated text 76/VBHN-NHNN, caps transfers and payments through one customer's personal e-wallets at one provider at 100 million dong per month; merchant wallets are exempt.",
-      "reviewed_at": "2026-11-11",
+      "reviewed_at": "2026-11-13",
       "evidence": [
         {
           "document_key": "vn:vbpl:183319",
           "document_number": "41/2025/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "e0c5df1a9bb882e51b55e1f017d70ec9ab1910f7185aeb74a42aaefb4ec7ba29",
-          "node_id": "38db8ef4-df3c-11f0-bcb2-999d134ef4af",
+          "node_id": "tx:5a507db941b3f647",
           "quoted_span": "Tổng hạn mức giao dịch qua các ví điện tử cá nhân của 01 khách hàng tại 01 tổ chức cung ứng dịch vụ ví điện tử (bao gồm giao dịch chuyển tiền và thanh toán theo quy định tại điểm b, điểm c, điểm d, điểm đ khoản 2 Điều 25 Thông tư này) tối đa là 100 (một trăm) triệu đồng Việt Nam trong một tháng."
         }
       ],
@@ -3338,14 +3338,14 @@
       "state": "resolved",
       "expected_number": "30/2016/TT-NHNN",
       "reason": "In 2020 bank cards were governed by Circular 19/2016/TT-NHNN (Article 1 sets its scope; in force from 15 August 2016 to 30 June 2024) as amended by Circulars 30/2016 (Article 1, from 28 November 2016), 26/2017, 41/2018 and 28/2019 (from 1 April 2020); 22/2020 took effect only in December 2021. Each amending Article 1 names 19/2016 in its heading.",
-      "reviewed_at": "2026-11-11",
+      "reviewed_at": "2026-11-13",
       "evidence": [
         {
           "document_key": "vn:vbpl:114612",
           "document_number": "30/2016/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "a8384e7659ba4004b6babf0aff74626f68a2c9c3929910ef1d565c6f1e9983f9",
-          "node_id": "cf907dea-eb8b-11f0-844d-f77a5410d426",
+          "node_id": "tx:ec7a8b098bfda10b",
           "quoted_span": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư số 19/2016/TT-NHNN ngày 30 tháng 6 năm 2016 của Thống đốc Ngân hàng Nhà nước quy định về hoạt động thẻ ngân hàng"
         }
       ],
@@ -4351,14 +4351,14 @@
       "state": "resolved",
       "expected_number": "11/2011/TT-NHNN",
       "reason": "Circular 11/2011/TT-NHNN, effective 1 May 2011, ended gold lending (Article 1) and gold deposit-taking except short-term gold certificates (Article 2); Circular 12/2012/TT-NHNN moved the end of those certificates to 25 November 2012.",
-      "reviewed_at": "2026-11-11",
+      "reviewed_at": "2026-11-13",
       "evidence": [
         {
           "document_key": "vn:vbpl:26392",
           "document_number": "11/2011/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "f0ea5c939e368b0c1fdeb113bb3176c407de1779116001bd16414dd0aa048d89",
-          "node_id": "0b7e6ed4-df48-11f0-8ae9-4374db9c1659",
+          "node_id": "tx:0e3cb8c07c84b99e",
           "quoted_span": "không được huy động vốn bằng vàng, trừ trường hợp phát hành chứng chỉ ngắn hạn bằng vàng để chi trả vàng theo yêu cầu của khách hàng khi số vàng thu nợ và tồn quỹ không đủ để chi trả. Việc phát hành chứng chỉ ngắn hạn bằng vàng của tổ chức tín dụng chấm dứt vào ngày 01 tháng 5 năm 2012."
         }
       ],
@@ -4378,14 +4378,14 @@
       "state": "resolved",
       "expected_number": "11/2011/TT-NHNN",
       "reason": "Circular 11/2011/TT-NHNN, effective 1 May 2011, ended gold lending (Article 1) and gold deposit-taking except short-term gold certificates (Article 2); Circular 12/2012/TT-NHNN moved the end of those certificates to 25 November 2012.",
-      "reviewed_at": "2026-11-11",
+      "reviewed_at": "2026-11-13",
       "evidence": [
         {
           "document_key": "vn:vbpl:26392",
           "document_number": "11/2011/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "f0ea5c939e368b0c1fdeb113bb3176c407de1779116001bd16414dd0aa048d89",
-          "node_id": "0b7e6eca-df48-11f0-a5c4-f7aabad6c071",
+          "node_id": "tx:12ba0f4855e1a631",
           "quoted_span": "Điều 1. Tổ chức tín dụng không được thực hiện cho vay vốn bằng vàng đối với khách hàng và các tổ chức tín dụng khác (kể cả các hợp đồng tín dụng đã ký kết nhưng chưa giải ngân hoặc giải ngân chưa hết)"
         }
       ],
@@ -4405,14 +4405,14 @@
       "state": "resolved",
       "expected_number": "11/2011/TT-NHNN",
       "reason": "Circular 11/2011/TT-NHNN, effective 1 May 2011, ended gold lending (Article 1) and gold deposit-taking except short-term gold certificates (Article 2); Circular 12/2012/TT-NHNN moved the end of those certificates to 25 November 2012.",
-      "reviewed_at": "2026-11-11",
+      "reviewed_at": "2026-11-13",
       "evidence": [
         {
           "document_key": "vn:vbpl:26392",
           "document_number": "11/2011/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "f0ea5c939e368b0c1fdeb113bb3176c407de1779116001bd16414dd0aa048d89",
-          "node_id": "0b7e6f24-df48-11f0-91ea-d5b682bc7239",
+          "node_id": "tx:18036a52e3e9ca0d",
           "quoted_span": "1. Thông tư này có hiệu lực thi hành kể từ ngày 01 tháng 5 năm 2011.\n2. Thông tư số 22/2010/TT-NHNN ngày 29 tháng 10 năm 2010 của Thống đốc Ngân hàng Nhà nước quy định về huy động và cho vay vốn bằng vàng của các tổ chức tín dụng hết hiệu lực thi hành."
         }
       ],
@@ -4480,14 +4480,14 @@
       "state": "resolved",
       "expected_number": "02/2011/TT-NHNN",
       "reason": "For 2011 to 2014 the VND deposit-rate caps were set by Circulars 02/2011, 30/2011 (its Article 1 replaced by 05/2012, 08/2012, 17/2012 and 19/2012), 32/2012, 08/2013, 15/2013 and 07/2014, each replacing the previous one; each Article 1 sets the cap.",
-      "reviewed_at": "2026-11-11",
+      "reviewed_at": "2026-11-13",
       "evidence": [
         {
           "document_key": "vn:vbpl:26162",
           "document_number": "02/2011/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "96c8a83913fb387f86baa90db42b49f9b8095df0d19302904694d9c3c28b9c13",
-          "node_id": "cfbaef7a-df39-11f0-9558-35619907ba9b",
+          "node_id": "tx:74b3d79b64395673",
           "quoted_span": "Tổ chức tín dụng ấn định lãi suất huy động vốn bằng đồng Việt Nam (lãi suất tiền gửi; lãi suất chứng chỉ tiền gửi, kỳ phiếu, tín phiếu và trái phiếu) của các tổ chức (trừ tổ chức tín dụng) và cá nhân bao gồm cả khoản chi khuyến mại dưới mọi hình thức không vượt quá 14%/năm"
         }
       ],
@@ -4507,14 +4507,14 @@
       "state": "resolved",
       "expected_number": "30/2011/TT-NHNN",
       "reason": "For 2011 to 2014 the VND deposit-rate caps were set by Circulars 02/2011, 30/2011 (its Article 1 replaced by 05/2012, 08/2012, 17/2012 and 19/2012), 32/2012, 08/2013, 15/2013 and 07/2014, each replacing the previous one; each Article 1 sets the cap.",
-      "reviewed_at": "2026-11-11",
+      "reviewed_at": "2026-11-13",
       "evidence": [
         {
           "document_key": "vn:vbpl:26745",
           "document_number": "30/2011/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "e945327701068e6ae4ec0f18a2f7905ad0f4e72c4a8b05339df9ae31289d84be",
-          "node_id": "efa854aa-df41-11f0-b8f1-75b9ca9055ef",
+          "node_id": "tx:232c1502f485bd1e",
           "quoted_span": "1. Lãi suất tối đa áp dụng đối với tiền gửi không kỳ hạn và có kỳ hạn dưới 1 tháng là 6%/năm.\n2. Lãi suất tối đa áp dụng đối với tiền gửi có kỳ hạn từ 1 tháng trở lên là 14%/năm"
         }
       ],
@@ -4632,14 +4632,14 @@
       "state": "resolved",
       "expected_number": "32/2012/TT-NHNN",
       "reason": "For 2011 to 2014 the VND deposit-rate caps were set by Circulars 02/2011, 30/2011 (its Article 1 replaced by 05/2012, 08/2012, 17/2012 and 19/2012), 32/2012, 08/2013, 15/2013 and 07/2014, each replacing the previous one; each Article 1 sets the cap.",
-      "reviewed_at": "2026-11-11",
+      "reviewed_at": "2026-11-13",
       "evidence": [
         {
           "document_key": "vn:vbpl:71267",
           "document_number": "32/2012/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "a715b4fbeefdfec2eb0c4f7b78a78da5fb98845dc45a86533851ad7aa6bf7cc6",
-          "node_id": "133241c0-eae0-11f0-be9b-019752ed8389",
+          "node_id": "tx:4c67d030a66a03c5",
           "quoted_span": "1. Lãi suất tối đa áp dụng đối với tiền gửi không kỳ hạn và có kỳ hạn dưới 1 tháng là 2%/năm.\n2. Lãi suất tối đa áp dụng đối với tiền gửi có kỳ hạn từ 1 tháng đến dưới 12 tháng là 8%/năm"
         }
       ],
@@ -4673,14 +4673,14 @@
       "state": "resolved",
       "expected_number": "08/2013/TT-NHNN",
       "reason": "For 2011 to 2014 the VND deposit-rate caps were set by Circulars 02/2011, 30/2011 (its Article 1 replaced by 05/2012, 08/2012, 17/2012 and 19/2012), 32/2012, 08/2013, 15/2013 and 07/2014, each replacing the previous one; each Article 1 sets the cap.",
-      "reviewed_at": "2026-11-11",
+      "reviewed_at": "2026-11-13",
       "evidence": [
         {
           "document_key": "vn:vbpl:30432",
           "document_number": "08/2013/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "ea85c57190ba8ac74612a08b9d3666fabd78c02e891250cc420e640702514c10",
-          "node_id": "bb6a6600-eac3-11f0-a3d0-6db0b78b3234",
+          "node_id": "tx:91c0b99a21c3a11c",
           "quoted_span": "1. Lãi suất tối đa áp dụng đối với tiền gửi không kỳ hạn và có kỳ hạn dưới 1 tháng là 2%/năm.\n2. Lãi suất tối đa áp dụng đối với tiền gửi có kỳ hạn từ 1 tháng đến dưới 12 tháng là 7,5%/năm"
         }
       ],
@@ -4714,14 +4714,14 @@
       "state": "resolved",
       "expected_number": "15/2013/TT-NHNN",
       "reason": "For 2011 to 2014 the VND deposit-rate caps were set by Circulars 02/2011, 30/2011 (its Article 1 replaced by 05/2012, 08/2012, 17/2012 and 19/2012), 32/2012, 08/2013, 15/2013 and 07/2014, each replacing the previous one; each Article 1 sets the cap.",
-      "reviewed_at": "2026-11-11",
+      "reviewed_at": "2026-11-13",
       "evidence": [
         {
           "document_key": "vn:vbpl:43264",
           "document_number": "15/2013/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "cb3195b07444f2137a0b57e18623aafd14759e0880de763c658c8ddc2be82759",
-          "node_id": "23fd64ba-e169-11f0-853b-49d6d1565d58",
+          "node_id": "tx:01656d93fea77e78",
           "quoted_span": "1. Lãi suất tối đa áp dụng đối với tiền gửi không kỳ hạn và có kỳ hạn dưới 1 tháng là 1,2%/năm.\n2. Lãi suất tối đa áp dụng đối với tiền gửi có kỳ hạn từ 1 tháng đến dưới 6 tháng là 7,0%/năm"
         }
       ],
