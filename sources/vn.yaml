@@ -76,6 +76,13 @@ vbpl:
     - "340/2025/NĐ-CP"
     - "52/2024/NĐ-CP"
     - "304/2025/NĐ-CP"
+  pinned:
+    - key: "vn:vbpl:179989"
+      number: "71/2025/QH15"
+      expand: "135daf5e1835e9f22e359029d7a43cbbacafaf814322c37f663bf9f8391e16d6"
+      fetch: "8d24a7fdf545dbc5112db05e02bbd36c311faa170b90c727ce151b9023702610"
+      rel: "20261113_1"
+      since: "2026-11-13"
 chinhphu:
   issuer_policy_version: 1
   central_issuer_forms:
