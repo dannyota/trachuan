@@ -7,9 +7,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"danny.vn/trachuan/apps/corpus/internal/artifact"
 	"danny.vn/trachuan/apps/corpus/internal/stage"
@@ -91,7 +93,18 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 	if file.Version != 1 || file.DocumentKey != item.Key || coverage.Version != 1 || coverage.DocumentKey != item.Key {
 		return stage.Output{}, fmt.Errorf("chunk artifact identity mismatch")
 	}
-	idx, vectors, err := s.build(ctx, file, coverage, hash)
+	hits, err := s.lookup(ctx, env, run, item, file)
+	if err != nil {
+		return stage.Output{}, err
+	}
+	idx, vectors, err := s.buildCached(ctx, file, hash, hits)
+	hitCount := 0
+	for _, c := range file.Chunks {
+		if _, ok := hits[hashText(strings.TrimSpace(c.ContextPrefix)+"\n"+strings.TrimSpace(c.Content))]; ok {
+			hitCount++
+		}
+	}
+	slog.Info("embed cache", "run", run.Country+"/"+run.Rel, "key", item.Key, "hits", hitCount, "misses", len(file.Chunks)-hitCount)
 	if err != nil {
 		return stage.Output{}, err
 	}

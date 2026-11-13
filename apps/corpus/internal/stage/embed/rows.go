@@ -7,11 +7,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"sort"
 	"strings"
 
 	"danny.vn/trachuan/apps/corpus/internal/artifact"
 	"danny.vn/trachuan/apps/corpus/internal/stage"
 	"danny.vn/trachuan/apps/corpus/internal/stage/chunk"
+	"danny.vn/trachuan/apps/corpus/internal/store"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -30,9 +32,14 @@ func requestSize(hash string, texts []string) int {
 	return len(b)
 }
 func (s *Stage) build(ctx context.Context, file chunk.File, _ chunk.Coverage, hash string) (Index, []byte, error) {
+	return s.buildCached(ctx, file, hash, nil)
+}
+
+func (s *Stage) buildCached(ctx context.Context, file chunk.File, hash string, hits map[string]cachedRow) (Index, []byte, error) {
 	idx := Index{Version: 1, DocumentKey: file.DocumentKey, ChunkSHA256: hash, RecipeHash: s.expected.Hash(), Recipe: s.expected, Dimensions: s.expected.Dimensions, Rows: []Row{}, Rejected: []Rejected{}}
 	var batch []pending
 	var vectors []byte
+	vectorRows := make(map[int][]byte)
 	last := -1
 	flush := func() error {
 		if len(batch) == 0 {
@@ -74,7 +81,8 @@ func (s *Stage) build(ctx context.Context, file chunk.File, _ chunk.Coverage, ha
 				if e = validateVectors(vectors[start:], 1, idx.Dimensions); e != nil {
 					return e
 				}
-				idx.Rows = append(idx.Rows, Row{len(idx.Rows), accepted[i].ordinal, accepted[i].count, hashText(accepted[i].text)})
+				vectorRows[accepted[i].ordinal] = append([]byte(nil), vectors[start:]...)
+				idx.Rows = append(idx.Rows, Row{0, accepted[i].ordinal, accepted[i].count, hashText(accepted[i].text)})
 			}
 		}
 		batch = nil
@@ -86,6 +94,11 @@ func (s *Stage) build(ctx context.Context, file chunk.File, _ chunk.Coverage, ha
 		}
 		last = c.Ordinal
 		text := strings.TrimSpace(c.ContextPrefix) + "\n" + strings.TrimSpace(c.Content)
+		if hit, ok := hits[hashText(text)]; ok {
+			idx.Rows = append(idx.Rows, Row{0, c.Ordinal, hit.count, hashText(text)})
+			vectorRows[c.Ordinal] = hit.bytes
+			continue
+		}
 		if requestSize(idx.RecipeHash, []string{text}) > 1048576 {
 			if err := flush(); err != nil {
 				return Index{}, nil, err
@@ -108,12 +121,50 @@ func (s *Stage) build(ctx context.Context, file chunk.File, _ chunk.Coverage, ha
 	if err := flush(); err != nil {
 		return Index{}, nil, err
 	}
+	sort.Slice(idx.Rows, func(i, j int) bool { return idx.Rows[i].ChunkOrdinal < idx.Rows[j].ChunkOrdinal })
+	vectors = nil
+	for i := range idx.Rows {
+		idx.Rows[i].Row = i
+		vectors = append(vectors, vectorRows[idx.Rows[i].ChunkOrdinal]...)
+	}
 	return idx, vectors, nil
 }
 
-// Rows does not create workshop rows for vectors.
-func (*Stage) Rows(context.Context, stage.Env, artifact.Result) (func(context.Context, pgx.Tx, int64) error, error) {
-	return nil, nil
+// Rows prepares verified embedding rows for the artifact transaction.
+func (s *Stage) Rows(_ context.Context, env stage.Env, art artifact.Result) (func(context.Context, pgx.Tx, int64) error, error) {
+	dir := env.Artifacts.Abs(art.Path)
+	hash, err := artifact.Verify(dir)
+	if err != nil {
+		return nil, fmt.Errorf("verify embed artifact: %w", err)
+	}
+	if hash != art.SHA256 {
+		return nil, fmt.Errorf("embed artifact hash mismatch")
+	}
+	idx, err := readVerifiedIndex(dir)
+	if err != nil {
+		return nil, err
+	}
+	if idx.Recipe != s.expected {
+		return nil, fmt.Errorf("embed artifact recipe mismatch")
+	}
+	return func(ctx context.Context, tx pgx.Tx, id int64) error {
+		_, err := insertRows(ctx, store.New(tx), s.Recipe(stage.Snapshot{}), id, idx.Rows)
+		return err
+	}, nil
+}
+
+func insertRows(ctx context.Context, q *store.Queries, recipe string, id int64, rows []Row) (int64, error) {
+	var total int64
+	ordered := append([]Row(nil), rows...)
+	sort.SliceStable(ordered, func(i, j int) bool { return ordered[i].InputSHA256 < ordered[j].InputSHA256 })
+	for _, row := range ordered {
+		n, err := q.InsertEmbedRow(ctx, store.InsertEmbedRowParams{RecipeHash: recipe, InputSha256: row.InputSHA256, ArtifactID: id, Row: int32(row.Row), TokenCount: int32(row.TokenCount)})
+		if err != nil {
+			return total, fmt.Errorf("insert embed row: %w", err)
+		}
+		total += n
+	}
+	return total, nil
 }
 
 // Resolve recreates the gaps from a verified artifact.

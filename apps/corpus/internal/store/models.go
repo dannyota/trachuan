@@ -56,6 +56,14 @@ type Document struct {
 	IdentityEvidence []byte
 }
 
+type EmbedRow struct {
+	RecipeHash  string
+	InputSha256 string
+	ArtifactID  int64
+	Row         int32
+	TokenCount  int32
+}
+
 type FetchBaseline struct {
 	DocumentKey     string
 	FetchRecipeHash string
