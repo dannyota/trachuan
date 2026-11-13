@@ -64,4 +64,3 @@ One line per item: date, area, finding, source.
 - 2026-11-14, search latency and payload: measured per statement in docs/design/retrieval-performance.md; implement its changes in the order there once the note is accepted.
 - 2026-11-14, web, every page logs a console 401 from `GET /api/v1/me` for a signed-out visitor; probe the session without an error response (for example a 204 when signed out) or skip the call when no session cookie can exist.
 - 2026-11-14, auth, owner decision: after release add username and password sign-in with TOTP and email sign-up, as in aboutme; needs an ADR before any work.
-- 2026-11-14, oauth, the consent and error pages show "Tra Chuẩn" as text with no seal; an inline SVG seal would match the site header without a CSP change.
