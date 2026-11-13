@@ -27,7 +27,13 @@ own after every plan is gone. Do not use em dashes.
   `docs/plans/` are exempt because they are deleted when their work lands.
   Non-test code files are at most 400 lines; split by concern.
   `scripts/check-lengths.sh` enforces both.
-- Comments explain why, not what. A comment that restates the code is deleted.
+- No comments in code. Design docs, ADRs and runbooks hold decisions and
+  explanations; comments drift from the code and mislead agents. Two exceptions:
+  tool directives (`//go:build`, `//go:embed`, `//nolint`, `# shellcheck`,
+  `// @ts-expect-error`, generated-code markers, sqlc query annotations), and
+  one line on why for a behaviour of an external tool or service that no design
+  doc owns, naming the source. No doc comment that only repeats a name. Delete
+  other comments in code you touch.
 - Verify before asserting: cite first-party documentation for product behavior
   and mark what stays unverified.
 
