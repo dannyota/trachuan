@@ -1,0 +1,38 @@
+[
+  {
+    "id": "67878",
+    "number": "22/2014/TT-NHNN",
+    "fetch_bundle": "a120e79dc430a703d1d55acaedeb51adee3ba43509a9efac50696981a44beeb8-1f6699b0264c7ff2550542ccf2689868c1d40e435464151edcfa3dd991b9b351",
+    "transcription_sha256": "c02215b3cb41ad3f8a7ddaea0b8f43590858f55a99ba38e24e66fb5922581b80",
+    "baseline_extract": "a120e79dc430a703d1d55acaedeb51adee3ba43509a9efac50696981a44beeb8-28e7ff7224f9906e20ff7096c4786ea57dc6c3ade508ad87cee2861f9c09a8c8",
+    "baseline_sha256": {
+      "provisions.json": "d28ff46f6cd50eee2000fee3652701df5f785a445a126737a3be402d1cbfc169",
+      "report.json": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "MANIFEST.sha256": "2e31d021f019a91eba44056aff135c7a7d0f5239dda95727cca7a494d5696b5f"
+    }
+  },
+  {
+    "id": "27845",
+    "number": "83/2012/NĐ-CP",
+    "fetch_bundle": "00227042b25c934cbec30c0e80c5c795638bc6e480f27bee60c3613f66e0d29c-f38d300c413736c47a1d6eb46b5f19c2d79a96b03506ce46832f33c9d60e2841",
+    "transcription_sha256": "47bae661c1eaff5130cf0347ec4bf6e39ead45f88acd77d8e14f08941ceee375",
+    "baseline_extract": "feb08d9a29eb7607a00d4ea736a863c50584ea5e70761ae4a8ce66e913d2d47d-650c994352a1c5dde1ca9aac4533e595532e4af18d3c7aaebc32d8594282118b",
+    "baseline_sha256": {
+      "provisions.json": "0bdf3bea3036a6115b81aa43be0a6040c38b3ede8f8422ab3588808111947572",
+      "report.json": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "MANIFEST.sha256": "632ce7c14cfcf84a20ddbecafff8c6ff7b3f9b12a629119f844f025101ae05fa"
+    }
+  },
+  {
+    "id": "145780",
+    "number": "20/2020/TT-NHNN",
+    "fetch_bundle": "002e454f5f605a51596defc557ddf5320f7619d2ac444837b44e1d86932c7a4f-94144857c829ed50c1050468688fe2e45f1c4c060413919d536a6d2b8637056d",
+    "transcription_sha256": "fa06e24bf2728a43827c704c29732628341c1ba5c85e140956f151685a8c80aa",
+    "baseline_extract": "2ecd2f11ce050e51b90a4b84907205238e8d52defda773e4d7ccbc319c3a6d7f-13dd14536be0a21352aa950afa6aee1aeff7b395f08f6db442ddfa789e8f5d6b",
+    "baseline_sha256": {
+      "provisions.json": "70b2399af74c2fdece8a4dff3e68a5ff8f5086cdb437cbd0806f52f40bfa4a34",
+      "report.json": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "MANIFEST.sha256": "74fb27cfcdd668a54a7aeacf380542b5985a77cc8bf70044c53bc92b4c6d4d99"
+    }
+  }
+]

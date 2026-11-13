@@ -40,12 +40,18 @@ func parseParagraphs(paragraphs []textparse.Paragraph, err error, record *textRe
 			gaps = append(gaps, stage.Gap{Kind: "no_text", Detail: err.Error()})
 		}
 	} else {
-		result := textparse.Parse(paragraphs)
+		var result textparse.Result
+		if record.TextSource == "html_transcription" || record.TextSource == "pdf_text" {
+			result = textparse.Parse(paragraphs)
+		} else {
+			result = textparse.ParseArticles(paragraphs)
+		}
 		record.Scopes = result.Scopes
 		record.Counts = result.Counts
 		record.Provisions = result.Provisions
 		var part, chapter, section *string
 		scope := -2
+		ids := make(map[string]string)
 		for _, p := range result.Provisions {
 			if p.ScopeIndex != scope {
 				part, chapter, section = nil, nil, nil
@@ -81,7 +87,16 @@ func parseParagraphs(paragraphs []textparse.Paragraph, err error, record *textRe
 					parent = part
 				}
 			}
-			rows = append(rows, provision{NodeID: p.NodeID, ParentNodeID: parent, Kind: p.Kind, Label: label, Heading: heading, Ordinal: len(rows) + 1, Path: p.Anchor, Text: p.Text})
+			ordinal := len(rows) + 1
+			if p.ParentAnchor != "" {
+				id := ids[p.ParentAnchor]
+				parent = &id
+				if p.Ordinal > 0 {
+					ordinal = p.Ordinal
+				}
+			}
+			ids[p.Anchor] = p.NodeID
+			rows = append(rows, provision{NodeID: p.NodeID, ParentNodeID: parent, Kind: p.Kind, Label: label, Heading: heading, Ordinal: ordinal, Path: p.Anchor, Text: p.Text})
 			id := p.NodeID
 			switch p.Kind {
 			case "phan":

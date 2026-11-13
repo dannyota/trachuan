@@ -51,6 +51,9 @@ func TestParse_Fixtures(t *testing.T) {
 				t.Fatal(err)
 			}
 			got := Parse(p)
+			if strings.HasSuffix(name, ".txt") {
+				got = ParseArticles(p)
+			}
 			var boundaries []string
 			seen := map[string]bool{}
 			for _, v := range got.Provisions {
@@ -58,6 +61,9 @@ func TestParse_Fixtures(t *testing.T) {
 					t.Errorf("duplicate anchor %q", v.Anchor)
 				}
 				seen[v.Anchor] = true
+				if v.Kind == "khoan" || v.Kind == "diem" {
+					continue
+				}
 				h := sha256.Sum256([]byte(v.Text))
 				boundaries = append(boundaries, hex.EncodeToString(h[:]))
 			}

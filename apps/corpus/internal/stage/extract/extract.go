@@ -59,7 +59,7 @@ func (*Stage) Name() string { return "extract" }
 
 // Recipe returns the extract recipe hash.
 func (s *Stage) Recipe(stage.Snapshot) string {
-	parts := append([]string{"html-transcription/1", "textparse/6", "ocr-store/2", s.checker}, s.engines...)
+	parts := append([]string{"html-transcription/1", "textparse/7", "ocr-store/2", s.checker}, s.engines...)
 	parts = append(parts, manualMismatchRecipe()...)
 	return stage.RecipeHash("extract", "tree/1", parts...)
 }

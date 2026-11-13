@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 	"unicode/utf8"
+
+	"danny.vn/trachuan/apps/corpus/internal/anchor"
 )
 
 type span struct {
@@ -12,8 +14,8 @@ type span struct {
 	kind       string
 }
 
-// Parse builds provisions and records uncertainty without asserting unverified articles.
-func Parse(paragraphs []Paragraph) Result {
+// ParseArticles builds article-level provisions, including for unvalidated OCR structure.
+func ParseArticles(paragraphs []Paragraph) Result {
 	r := Result{}
 	for _, p := range paragraphs {
 		n := utf8.RuneCountInString(p.Text)
@@ -282,10 +284,10 @@ func accepted(p []Paragraph, quoted []bool, scope int, prefix string, instrument
 			if prefix != "" {
 				label = fmt.Sprintf("Điều %s (văn bản kèm theo %d)", number, instrumentNumber)
 			}
-			out = append(out, makeProvision(p[start:end], "dieu", number, label, p[start].Text, prefix+"dieu-"+number, scope))
+			out = append(out, makeProvision(p[start:end], "dieu", number, label, p[start].Text, prefix+anchor.Segment("dieu", number), scope))
 		} else if kind, number, ok := structure(p[start].Text); ok && !quoted[start] {
 			end = titleEnd(p, quoted, start)
-			out = append(out, makeProvision(p[start:end], kind, number, p[start].Text, p[start].Text, prefix+kind+"-"+strings.ToLower(number), scope))
+			out = append(out, makeProvision(p[start:end], kind, number, p[start].Text, p[start].Text, prefix+anchor.Segment(kind, number), scope))
 		} else {
 			n++
 			out = append(out, makeProvision(p[start:end], "other", "", "", "", fmt.Sprintf("%sdoan-%d", prefix, n), scope))

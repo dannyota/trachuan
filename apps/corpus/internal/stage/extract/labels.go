@@ -4,6 +4,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"danny.vn/trachuan/apps/corpus/internal/anchor"
 )
 
 func nodeKind(level string, ptype int) string {
@@ -74,5 +76,5 @@ func titleParts(kind, title string, position int) (string, string, string, int) 
 			number, _ = strconv.Atoi(digits)
 		}
 	}
-	return label, heading, kind + "-" + strings.ToLower(token), number
+	return label, heading, anchor.Segment(kind, token), number
 }

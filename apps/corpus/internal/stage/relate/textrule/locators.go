@@ -1,5 +1,7 @@
 package textrule
 
+import "danny.vn/trachuan/apps/corpus/internal/anchor"
+
 func (c *cursor) separator() bool {
 	return c.take(",") || c.take("và") || c.take(";")
 }
@@ -23,7 +25,7 @@ func (c *cursor) group() ([]string, bool) {
 		if !ok {
 			return nil, false
 		}
-		points = append(points, "/diem-"+label)
+		points = append(points, "/"+anchor.Segment("diem", label))
 		separated := c.separator()
 		if (separated && !c.at("điểm")) || (!separated && !c.at("khoản") && !c.at("điều")) {
 			return nil, false
@@ -34,7 +36,7 @@ func (c *cursor) group() ([]string, bool) {
 		if !ok {
 			return nil, false
 		}
-		clause := "/khoan-" + label
+		clause := "/" + anchor.Segment("khoan", label)
 		if len(points) == 0 {
 			clauses = append(clauses, clause)
 		} else {
@@ -55,7 +57,7 @@ func (c *cursor) group() ([]string, bool) {
 	if !ok {
 		return nil, false
 	}
-	article := "dieu-" + label
+	article := anchor.Segment("dieu", label)
 	suffixes := clauses
 	if len(clauses) == 0 {
 		suffixes = points
