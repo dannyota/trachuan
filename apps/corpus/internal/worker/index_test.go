@@ -33,7 +33,11 @@ func TestIndexDeps_ConfiguresBuildAndEval(t *testing.T) {
 		t.Fatal("missing embedder or suite")
 	}
 	for _, e := range []any{deps.Build.Embedder, deps.Eval.Build.Embedder, deps.Eval.Embedder} {
-		q, ok := e.(embedding.Query)
+		v, ok := e.(retryEmbedder)
+		if !ok {
+			t.Fatalf("query embedder type = %T, want retryEmbedder", e)
+		}
+		q, ok := v.embedder.(embedding.Query)
 		if !ok || q.Client == nil || q.RecipeHash != embedding.QueryRecipe1().Hash() {
 			t.Error("invalid query embedder")
 			continue

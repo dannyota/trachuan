@@ -1,13 +1,15 @@
 package embedding
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
-// Error describes a rejected embedder request.
 type Error struct {
+	RetryAfter        *time.Duration
 	Status            int
 	Code              string
 	Index, TokenCount *int
 }
 
-// Error returns the status and fixed service error code.
 func (e *Error) Error() string { return fmt.Sprintf("embedder HTTP %d: %s", e.Status, e.Code) }

@@ -5,10 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestClient_DecodesErrorTable(t *testing.T) {
@@ -92,5 +94,33 @@ func TestQuery_RejectsInconsistentExpectedRecipe(t *testing.T) {
 	_, err := (Query{RecipeHash: "wrong", ExpectedRecipe: &expected}).Recipe(context.Background())
 	if err == nil || !strings.Contains(err.Error(), "query recipe mismatch") {
 		t.Fatalf("inconsistent expected recipe: %v", err)
+	}
+}
+
+func TestClient_CapturesRetryAfter(t *testing.T) {
+	for _, tt := range []struct {
+		header string
+		want   *time.Duration
+	}{
+		{"2", new(2 * time.Second)}, {"0", new(time.Duration(0))}, {"", nil}, {"-1", nil}, {"+2", nil}, {"invalid", nil}, {"999999999999999999999999999", new(time.Duration(math.MaxInt64))},
+	} {
+		t.Run(tt.header, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				if tt.header != "" {
+					w.Header().Set("Retry-After", tt.header)
+				}
+				w.WriteHeader(http.StatusTooManyRequests)
+				_, _ = fmt.Fprint(w, `{"error":{"code":"busy"}}`)
+			}))
+			defer server.Close()
+			_, err := NewClient(server.URL, server.Client()).Embed(context.Background(), "hash", []string{"text"})
+			var e *Error
+			if !errors.As(err, &e) {
+				t.Fatalf("error = %v", err)
+			}
+			if (e.RetryAfter == nil) != (tt.want == nil) || (tt.want != nil && *e.RetryAfter != *tt.want) {
+				t.Fatalf("RetryAfter = %v, want %v", e.RetryAfter, tt.want)
+			}
+		})
 	}
 }

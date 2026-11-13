@@ -6,25 +6,24 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 )
 
-// Report is the verified runtime recipe returned by the service.
 type Report struct {
 	ProtocolVersion int    `json:"protocol_version"`
 	RecipeHash      string `json:"recipe_hash"`
 	Recipe          Recipe `json:"recipe"`
 }
 
-// Client communicates with an embedding service.
 type Client struct {
 	base string
 	http *http.Client
 }
 
-// NewClient creates a client. A nil HTTP client uses the document timeout.
 func NewClient(baseURL string, hc *http.Client) *Client {
 	if hc == nil {
 		hc = &http.Client{Timeout: 125 * time.Second}
@@ -54,6 +53,7 @@ func (c *Client) request(ctx context.Context, path string, body any, out any) er
 	if err != nil {
 		return fmt.Errorf("embedder request: %w", err)
 	}
+	receivedAt := time.Now()
 	defer func() { _ = resp.Body.Close() }()
 	dec := json.NewDecoder(io.LimitReader(resp.Body, 64<<20))
 	if resp.StatusCode != http.StatusOK {
@@ -67,7 +67,20 @@ func (c *Client) request(ctx context.Context, path string, body any, out any) er
 		if err := dec.Decode(&data); err != nil {
 			return fmt.Errorf("decode embedder error: %w", err)
 		}
-		return &Error{Status: resp.StatusCode, Code: data.Error.Code, Index: data.Error.Index, TokenCount: data.Error.TokenCount}
+		var retryAfter *time.Duration
+		header := resp.Header.Get("Retry-After")
+		if header != "" && strings.Trim(header, "0123456789") == "" {
+			seconds, err := strconv.ParseUint(header, 10, 64)
+			delay := time.Duration(math.MaxInt64)
+			if err == nil && seconds <= uint64(math.MaxInt64/int64(time.Second)) {
+				delay = time.Duration(seconds) * time.Second
+			}
+			retryAfter = &delay
+		} else if date, err := http.ParseTime(header); err == nil {
+			delay := max(date.Sub(receivedAt), 0)
+			retryAfter = &delay
+		}
+		return &Error{Status: resp.StatusCode, Code: data.Error.Code, Index: data.Error.Index, TokenCount: data.Error.TokenCount, RetryAfter: retryAfter}
 	}
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(out); err != nil {
@@ -80,7 +93,6 @@ func (c *Client) request(ctx context.Context, path string, body any, out any) er
 	return nil
 }
 
-// Recipe returns the service's runtime report.
 func (c *Client) Recipe(ctx context.Context) (Report, error) {
 	var r Report
 	if err := c.request(ctx, "/v1/recipe", nil, &r); err != nil {
@@ -97,7 +109,6 @@ type textRequest struct {
 	Texts      []string `json:"texts"`
 }
 
-// Tokenize returns unpadded token counts in input order.
 func (c *Client) Tokenize(ctx context.Context, hash string, texts []string) ([]int, error) {
 	var r struct {
 		RecipeHash string `json:"recipe_hash"`
@@ -117,7 +128,6 @@ func (c *Client) Tokenize(ctx context.Context, hash string, texts []string) ([]i
 	return r.Counts, nil
 }
 
-// Embed returns vectors in input order.
 func (c *Client) Embed(ctx context.Context, hash string, texts []string) ([]Vector, error) {
 	var r struct {
 		RecipeHash string `json:"recipe_hash"`
@@ -144,15 +154,12 @@ func (c *Client) Embed(ctx context.Context, hash string, texts []string) ([]Vect
 	return out, nil
 }
 
-// Query adapts the client to single query embeddings.
 type Query struct {
-	Client     *Client
-	RecipeHash string
-	// ExpectedRecipe enables field-level diagnostics and must match RecipeHash when set.
+	Client         *Client
+	RecipeHash     string
 	ExpectedRecipe *Recipe
 }
 
-// Recipe verifies and returns the query service recipe.
 func (q Query) Recipe(ctx context.Context) (Recipe, error) {
 	if q.ExpectedRecipe != nil && q.ExpectedRecipe.Hash() != q.RecipeHash {
 		return Recipe{}, fmt.Errorf("query recipe mismatch: expected recipe hash %q, configured hash %q", q.ExpectedRecipe.Hash(), q.RecipeHash)
@@ -170,7 +177,6 @@ func (q Query) Recipe(ctx context.Context) (Recipe, error) {
 	return r.Recipe, nil
 }
 
-// Embed embeds one query.
 func (q Query) Embed(ctx context.Context, text string) (Vector, error) {
 	v, err := q.Client.Embed(ctx, q.RecipeHash, []string{text})
 	if err != nil {
