@@ -34,7 +34,9 @@ fragment. `serve` requires both Google variables and `SERVER_PUBLIC_URL`;
 `migrate` and `admin` do not. `SERVER_TRUSTED_PROXIES` is an optional
 comma-separated list of proxy CIDRs; it defaults to empty.
 `SERVER_OAUTH_CLIENTS` optionally names a JSON file of pre-registered clients;
-when absent, no clients are pre-registered.
+when absent, no clients are pre-registered. `SERVER_SIGNUP_EMAILS` optionally
+lists, comma-separated, the only emails that may create an account (production
+sets the owner's); when absent, sign-up is open.
 
 Apply auth migrations and select the built database. Replace the database name
 with the actual local release name before executing the SQL.

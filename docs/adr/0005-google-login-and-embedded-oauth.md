@@ -41,3 +41,9 @@ AuthPlane (fallbacks if the spike fails).
   ([research note](../research/oauth-clients-2026-11.md)).
 - 2026-11-11: aboutme `oauthsrv` at `1b1ece3d` reviewed against auth.md; the
   import is a starting point and [OAuth](../design/oauth.md) closes its gaps.
+- 2026-11-13: first production serves the owner only. A consent screen in
+  Testing does not limit who signs in when the app requests only name, email and
+  profile ([Google](https://support.google.com/cloud/answer/15549945): "your
+  users do not need to be in the trusted user list"), so the server gains
+  `SERVER_SIGNUP_EMAILS`: when set, only a listed verified email can create an
+  account, and existing accounts sign in as before.

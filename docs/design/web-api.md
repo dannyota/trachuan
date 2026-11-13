@@ -30,16 +30,24 @@ issuer (`https://accounts.google.com`, or `accounts.google.com`, which Google
 also documents as valid), audience (the client id) and expiry; `nonce` equal to
 the stored value; `email_verified` true. A rejected login (bad state, nonce,
 token or code, an unverified email, an expired or already claimed transaction, a
-blocked account) clears the cookie and redirects to `/login?error=<code>` with a
-fixed code (`login_failed`, `login_expired`, `account_blocked`). A failure of
-the auth database or of Google's endpoints at any step (claiming the
-transaction, upserting the account, revoking a presented session, creating the
-session) is 503 `unavailable` and issues no session; the transaction stays
-claimed, so the user starts again. Provider error text is never shown or logged.
+blocked account, a new account whose email sign-up does not allow) clears the
+cookie and redirects to `/login?error=<code>` with a fixed code (`login_failed`,
+`login_expired`, `account_blocked`, `signup_closed`). A failure of the auth
+database or of Google's endpoints at any step (claiming the transaction,
+upserting the account, revoking a presented session, creating the session) is
+503 `unavailable` and issues no session; the transaction stays claimed, so the
+user starts again. Provider error text is never shown or logged.
 
 The account is found by `google_sub` only, never by email. The first login
-creates it; every login stores the current email and `last_login_at`. A blocked
-account, or one whose deletion was requested, cannot log in.
+creates it; every login stores the current email and `last_login_at`. Sign-up is
+open unless `SERVER_SIGNUP_EMAILS` is set: a comma-separated list of emails,
+compared after trimming and lowercasing. Then a Google subject with no account
+is admitted only when its verified email is in the list; otherwise the callback
+redirects with `signup_closed` and writes no account, session or login time (the
+login transaction stays claimed). An existing account signs in whatever the list
+says. A variable that is present but empty, or holds an entry without `@`, stops
+the server at startup. A blocked account, or one whose deletion was requested,
+cannot log in.
 
 `next` is validated twice, on the raw value and after decoding percent-escapes
 once (a malformed escape rejects it). Both forms must start with exactly one
