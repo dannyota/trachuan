@@ -27,3 +27,12 @@ it('opens topic pages with a server navigation', () => {
   const wrapper = mount(TopicTree, { props: { nodes: [{ code: '1', name: 'First' }] }, global: { stubs: { NuxtLink: link } } })
   expect(wrapper.findComponent(link).props('external')).toBe(true)
 })
+
+it('formats topic counts for the selected language', () => {
+  vi.stubGlobal('useApi', () => ({ client: {} }))
+  vi.stubGlobal('useState', () => ref('vi'))
+  vi.stubGlobal('computed', computed)
+  vi.stubGlobal('ref', ref)
+  const wrapper = mount(TopicTree, { props: { nodes: [{ code: '1', name: 'First', provisions: 1200, documents: 25 }] }, global: { stubs: { NuxtLink: { template: '<a><slot /></a>' } } } })
+  expect(wrapper.text()).toContain('1.200 quy định · 25 văn bản')
+})

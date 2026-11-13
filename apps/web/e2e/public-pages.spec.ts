@@ -32,6 +32,7 @@ test('login errors use fixed messages and never echo the query', async ({ page }
     ['login_failed', 'Đăng nhập không thành công'],
     ['login_expired', 'Phiên đăng nhập đã hết hạn'],
     ['account_blocked', 'Tài khoản đã bị khóa'],
+    ['signup_closed', 'chưa mở đăng ký'],
     ['attacker-input', 'Không thể hoàn tất đăng nhập'],
   ]) {
     const response = await page.goto(`/login?error=${code}`)
