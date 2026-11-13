@@ -34,7 +34,7 @@ func (*Stage) Name() string { return "relate" }
 // Recipe returns the recipe hash for the frozen relation code table.
 func (*Stage) Recipe(snapshot stage.Snapshot) string {
 	list, _ := source.Parse(snapshot.SourceList)
-	return stage.RecipeHash("relate", "vbpl-relations/1", "chinhphu-empty/1", list.RelationCodesHash(), "text_rules:vn-targets/1", list.CentralIssuersHash())
+	return stage.RecipeHash("relate", "vbpl-relations/1", "chinhphu-empty/1", list.RelationCodesHash(), "text_rules:vn-targets/2", list.CentralIssuersHash())
 }
 
 // PairInputHash binds a relate item to its fetch and extract artifacts.

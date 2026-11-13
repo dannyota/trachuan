@@ -49,13 +49,15 @@ wording as candidates:
    ordinal order. So every nonempty descendant is read exactly once. Any other
    layout gives `relation_text_source_order`.
 2. **Quotations and new wording.** Quotation state carries across the units in
-   reading order and must be closed at the end of the article's own text and at
-   the end of each direct `khoan` subtree; otherwise
-   `relation_text_unbalanced_quote`. Text inside a quotation never yields a row.
-   A sentence other than a scope lead that ends in `như sau` (optionally `:`)
-   introduces new wording, which must be exactly one quotation opening right
-   after it; anything else gives `relation_text_unquoted_wording`. A scope
-   lead's `như sau` introduces its item list.
+   reading order and must be closed at the end of each read unit: the article's
+   own text and, when rule 1 reads a scoped article's children, each direct
+   `khoan` subtree; otherwise `relation_text_unbalanced_quote`. Clauses
+   contained in a text that is read alone are not separate units and have no
+   boundary of their own. Text inside a quotation never yields a row. A sentence
+   other than a scope lead that ends in `như sau` (optionally `:`) introduces
+   new wording, which must be exactly one quotation opening right after it;
+   anything else gives `relation_text_unquoted_wording`. A scope lead's
+   `như sau` introduces its item list.
 3. **Sentence ends.** A line break ends a sentence only before a line that
    starts with a list marker (`N.` or `x)`) or a quotation mark; every other
    line continues the sentence, joined by one space, so `Điều 5.` on its own
@@ -165,11 +167,11 @@ phrase form; it is not a verb of the table.
   separate clause node (`relation_text_source_order`); a heading-only article
   with a `diem` or `other` child beside its clauses
   (`relation_text_source_order`, even when the skipped child holds the quotation
-  marks); a quotation opened in one clause and closed in the next; a point line
-  naming its own document inside a scope (`relation_text_nested_scope`, no
-  version 1 row); an article without a scope lead whose version 1 sentence ends
-  in `như sau:` and is followed by an unquoted
-  `2. Bãi bỏ Điều 5a của Thông tư số 19/2018/TT-NHNN.`
+  marks); a quotation opened in one clause node and closed in the next clause
+  node of a heading-only article; a point line naming its own document inside a
+  scope (`relation_text_nested_scope`, no version 1 row); an article without a
+  scope lead whose version 1 sentence ends in `như sau:` and is followed by an
+  unquoted `2. Bãi bỏ Điều 5a của Thông tư số 19/2018/TT-NHNN.`
   (`relation_text_unquoted_wording`, no row for either).
 - On the next evaluated run the relate report counts rows per kind and gaps per
   name. The primary reads 50 item rows drawn at random against the source

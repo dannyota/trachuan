@@ -243,3 +243,165 @@ func TestGapDetail_BoundsLongIDsAndFourByteRunes(t *testing.T) {
 		}
 	}
 }
+
+func TestTextRelations_ScopedSubtrees(t *testing.T) {
+	const lead = "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư 19/2018/TT-NHNN như sau:"
+	const item = "1. Bãi bỏ khoản 2 Điều 5."
+	parent := "article"
+	clause := "clause"
+	for _, tc := range []struct {
+		name, text, gap string
+		children        []chunk.Node
+		anchors         []string
+	}{
+		{name: "text contains descendants", text: lead + "\n" + item, children: []chunk.Node{{NodeID: clause, ParentNodeID: &parent, Kind: "khoan", Text: item}}, anchors: []string{"dieu-5/khoan-2"}},
+		{name: "heading and clause nodes in ordinal order", text: lead, children: []chunk.Node{
+			{NodeID: "later", ParentNodeID: &parent, Kind: "khoan", Ordinal: 2, Text: "2. Bãi bỏ Điều 6."},
+			{NodeID: clause, ParentNodeID: &parent, Kind: "khoan", Ordinal: 1, Text: item},
+		}, anchors: []string{"dieu-5/khoan-2", "dieu-6"}},
+		{name: "quote spans point nodes", text: lead, children: []chunk.Node{
+			{NodeID: clause, ParentNodeID: &parent, Kind: "khoan", Text: "1. Sửa đổi khoản 2 Điều 5 như sau:"},
+			{NodeID: "p1", ParentNodeID: &clause, Kind: "diem", Ordinal: 1, Text: "“a) Nội dung."},
+			{NodeID: "p2", ParentNodeID: &clause, Kind: "diem", Ordinal: 2, Text: "b) Bãi bỏ Điều 9.”"},
+		}, anchors: []string{"dieu-5/khoan-2"}},
+		{name: "partial containment", text: lead + "\n" + item, children: []chunk.Node{
+			{NodeID: clause, ParentNodeID: &parent, Kind: "khoan", Ordinal: 1, Text: item},
+			{NodeID: "later", ParentNodeID: &parent, Kind: "khoan", Ordinal: 2, Text: "2. Bãi bỏ Điều 6."},
+		}, gap: "relation_text_source_order"},
+		{name: "point beside clause", text: lead, children: []chunk.Node{
+			{NodeID: clause, ParentNodeID: &parent, Kind: "khoan", Text: item},
+			{NodeID: "p", ParentNodeID: &parent, Kind: "diem", Text: "“nội dung”"},
+		}, gap: "relation_text_source_order"},
+		{name: "other beside clause with quotation", text: lead, children: []chunk.Node{
+			{NodeID: clause, ParentNodeID: &parent, Kind: "khoan", Text: "1. Sửa đổi Điều 5 như sau:"},
+			{NodeID: "other", ParentNodeID: &parent, Kind: "other", Text: "“nội dung”"},
+		}, gap: "relation_text_source_order"},
+		{name: "contained quote stays within one read unit", text: lead + "\n1. Sửa đổi Điều 5 như sau: “nội dung\n2. Bãi bỏ Điều 6.”", children: []chunk.Node{
+			{NodeID: clause, ParentNodeID: &parent, Kind: "khoan", Ordinal: 1, Text: "1. Sửa đổi Điều 5 như sau: “nội dung"},
+			{NodeID: "later", ParentNodeID: &parent, Kind: "khoan", Ordinal: 2, Text: "2. Bãi bỏ Điều 6.”"},
+		}, anchors: []string{"dieu-5"}},
+		{name: "quote crosses clauses", text: lead, children: []chunk.Node{
+			{NodeID: clause, ParentNodeID: &parent, Kind: "khoan", Ordinal: 1, Text: "1. Sửa đổi Điều 5 như sau: “nội dung"},
+			{NodeID: "later", ParentNodeID: &parent, Kind: "khoan", Ordinal: 2, Text: "2. Bãi bỏ Điều 6.”"},
+		}, gap: "relation_text_unbalanced_quote"},
+		{name: "nested point with document", text: lead, children: []chunk.Node{
+			{NodeID: clause, ParentNodeID: &parent, Kind: "khoan", Text: item},
+			{NodeID: "p", ParentNodeID: &clause, Kind: "diem", Text: "a) Bãi bỏ Điều 9 của Thông tư 19/2018/TT-NHNN."},
+		}, anchors: []string{"dieu-5/khoan-2"}, gap: "relation_text_nested_scope"},
+		{name: "numbered second sentence in clause", text: lead, children: []chunk.Node{
+			{NodeID: clause, ParentNodeID: &parent, Kind: "khoan", Text: item + "\n2. Bãi bỏ Điều 6."},
+		}, anchors: []string{"dieu-5/khoan-2"}, gap: "relation_text_nested_scope"},
+		{name: "numbered point with own document", text: lead, children: []chunk.Node{
+			{NodeID: clause, ParentNodeID: &parent, Kind: "khoan", Text: item},
+			{NodeID: "point", ParentNodeID: &clause, Kind: "diem", Text: "2. Bãi bỏ Điều 6 của Thông tư 19/2018/TT-NHNN."},
+		}, anchors: []string{"dieu-5/khoan-2"}, gap: "relation_text_nested_scope"},
+		{name: "unscoped contained quote stays within one read unit", text: "Điều 1. Bãi bỏ Điều 5 của Thông tư 19/2018/TT-NHNN.\n1. Nội dung “một\n2. Nội dung hai”", children: []chunk.Node{
+			{NodeID: clause, ParentNodeID: &parent, Kind: "khoan", Ordinal: 1, Text: "1. Nội dung “một"},
+			{NodeID: "later", ParentNodeID: &parent, Kind: "khoan", Ordinal: 2, Text: "2. Nội dung hai”"},
+		}, anchors: []string{"dieu-5"}},
+		{name: "contained clause occurs earlier in quotation", text: lead + "\n1. Sửa đổi Điều 5 như sau: “2. Bãi bỏ Điều 6.”\n2. Bãi bỏ Điều 6.", children: []chunk.Node{
+			{NodeID: "later", ParentNodeID: &parent, Kind: "khoan", Ordinal: 2, Text: "2. Bãi bỏ Điều 6."},
+			{NodeID: clause, ParentNodeID: &parent, Kind: "khoan", Ordinal: 1, Text: "1. Sửa đổi Điều 5 như sau: “2. Bãi bỏ Điều 6.”"},
+		}, anchors: []string{"dieu-5", "dieu-6"}},
+		{name: "contained text ignores descendant ordinal order", text: lead + "\n" + item + "\n2. Bãi bỏ Điều 6.", children: []chunk.Node{
+			{NodeID: clause, ParentNodeID: &parent, Kind: "khoan", Ordinal: 1, Text: "2. Bãi bỏ Điều 6."},
+			{NodeID: "later", ParentNodeID: &parent, Kind: "khoan", Ordinal: 2, Text: item},
+		}, anchors: []string{"dieu-5/khoan-2", "dieu-6"}},
+		{name: "contained text reads duplicate descendants once", text: lead + "\n" + item, children: []chunk.Node{
+			{NodeID: clause, ParentNodeID: &parent, Kind: "khoan", Ordinal: 1, Text: item},
+			{NodeID: "later", ParentNodeID: &parent, Kind: "khoan", Ordinal: 2, Text: item},
+		}, anchors: []string{"dieu-5/khoan-2"}},
+		{name: "unscoped text ignores descendant ordinal order", text: "Điều 1. Bãi bỏ Điều 5 của Thông tư 19/2018/TT-NHNN.\n1. Thực hiện.\n2. Theo dõi.", children: []chunk.Node{
+			{NodeID: clause, ParentNodeID: &parent, Kind: "khoan", Ordinal: 1, Text: "2. Theo dõi."},
+			{NodeID: "later", ParentNodeID: &parent, Kind: "khoan", Ordinal: 2, Text: "1. Thực hiện."},
+		}, anchors: []string{"dieu-5"}},
+		{name: "unscoped ignores separate clause", text: "Điều 1. Bãi bỏ Điều 5 của Thông tư 19/2018/TT-NHNN.", children: []chunk.Node{{NodeID: clause, ParentNodeID: &parent, Kind: "khoan", Text: "Bãi bỏ Điều 9."}}, anchors: []string{"dieu-5"}},
+		{name: "unscoped ignores children", text: "Điều 1. Bãi bỏ Điều 5 của Thông tư 19/2018/TT-NHNN.", children: []chunk.Node{{NodeID: clause, ParentNodeID: &parent, Kind: "other", Text: "Bãi bỏ Điều 9."}}, anchors: []string{"dieu-5"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := t.TempDir()
+			writeTextFixture(t, dir, "report.json", []stage.Gap{})
+			nodes := append([]chunk.Node{{NodeID: parent, Kind: "dieu", Text: tc.text}}, tc.children...)
+			writeTextFixture(t, dir, "provisions.json", nodes)
+			rows, report, err := textRelations(dir, []relation{{TargetNumber: "19/2018/TT-NHNN", TargetVBPLID: "42"}}, map[string]string{"NHNN": "NHNN"})
+			if err != nil {
+				t.Fatal(err)
+			}
+			var anchors []string
+			for _, row := range rows[1:] {
+				anchors = append(anchors, row.TargetAnchor)
+				if row.SourceNodeID == nil || *row.SourceNodeID != parent {
+					t.Errorf("source=%v", row.SourceNodeID)
+				}
+				if strings.HasPrefix(tc.text, lead) && !strings.HasPrefix(row.Evidence, lead+"\n") {
+					t.Errorf("evidence=%q", row.Evidence)
+				}
+			}
+			if strings.Join(anchors, ",") != strings.Join(tc.anchors, ",") || (tc.gap == "" && len(report.GapDetails) != 0) || (tc.gap != "" && report.Gaps[tc.gap] != 1) {
+				t.Fatalf("anchors=%v report=%+v; want %v gap=%s", anchors, report, tc.anchors, tc.gap)
+			}
+		})
+	}
+}
+
+func TestTextRelations_RejectedScope(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		rows []relation
+		gap  string
+	}{
+		{name: "unlinked", gap: "relation_text_unlinked_target"},
+		{name: "ambiguous", rows: []relation{{TargetNumber: "19/2018/TT-NHNN", TargetVBPLID: "42"}, {TargetNumber: "19/2018/TT-NHNN", TargetVBPLID: "43"}}, gap: "relation_text_ambiguous_target"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := t.TempDir()
+			writeTextFixture(t, dir, "report.json", []stage.Gap{})
+			writeTextFixture(t, dir, "provisions.json", []chunk.Node{{NodeID: "article", Kind: "dieu", Text: "Điều 1. Sửa đổi một số điều của Thông tư 19/2018/TT-NHNN\n1. Bãi bỏ Điều 5.\n2. Bãi bỏ Điều 6."}})
+			rows, report, err := textRelations(dir, tc.rows, map[string]string{"NHNN": "NHNN"})
+			if err != nil || len(rows) != len(tc.rows) || report.Gaps[tc.gap] != 1 || report.Gaps["relation_text_scope_rejected"] != 2 {
+				t.Fatalf("rows=%+v report=%+v err=%v", rows, report, err)
+			}
+			gaps := (relationReport{Text: report}).resolveGaps(nil, nil)
+			if len(gaps) != 3 || !strings.HasPrefix(gaps[1].Detail, "1:article:") {
+				t.Fatalf("run gaps=%+v", gaps)
+			}
+		})
+	}
+}
+
+func TestTextRelations_QuoteErrors(t *testing.T) {
+	for _, text := range []string{"Bãi bỏ Điều 5 của Thông tư 19/2018/TT-NHNN. “nội dung»", "nội dung”"} {
+		dir := t.TempDir()
+		writeTextFixture(t, dir, "report.json", []stage.Gap{})
+		writeTextFixture(t, dir, "provisions.json", []chunk.Node{{NodeID: "article", Kind: "dieu", Text: text}})
+		rows, report, err := textRelations(dir, nil, map[string]string{"NHNN": "NHNN"})
+		if err != nil || len(rows) != 0 || report.Gaps["relation_text_unbalanced_quote"] != 1 {
+			t.Fatalf("rows=%+v report=%+v err=%v", rows, report, err)
+		}
+	}
+}
+
+func TestTextRelations_SemicolonContinuationUsesOwnDocument(t *testing.T) {
+	const text = "Điều 1. Sửa đổi một số điều của Thông tư 19/2018/TT-NHNN như sau:\n1. Bãi bỏ Điều 5;\nĐiều 6 của Thông tư 39/2016/TT-NHNN."
+	const evidence = "1. Bãi bỏ Điều 5; Điều 6 của Thông tư 39/2016/TT-NHNN."
+	dir := t.TempDir()
+	writeTextFixture(t, dir, "report.json", []stage.Gap{})
+	writeTextFixture(t, dir, "provisions.json", []chunk.Node{{NodeID: "article", Kind: "dieu", Text: text}})
+	links := []relation{
+		{TargetNumber: "19/2018/TT-NHNN", TargetVBPLID: "19"},
+		{TargetNumber: "39/2016/TT-NHNN", TargetVBPLID: "39"},
+	}
+	rows, report, err := textRelations(dir, links, map[string]string{"NHNN": "NHNN"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 4 || len(report.GapDetails) != 0 || report.Emitted["repeals"] != 2 {
+		t.Fatalf("rows=%+v report=%+v", rows, report)
+	}
+	for i, anchor := range []string{"dieu-5", "dieu-6"} {
+		row := rows[len(links)+i]
+		if row.TargetVBPLID != "39" || row.TargetNumber != "39/2016/TT-NHNN" || row.TargetAnchor != anchor || row.Evidence != evidence {
+			t.Errorf("row=%+v; want anchor=%s on 39/2016/TT-NHNN", row, anchor)
+		}
+	}
+}

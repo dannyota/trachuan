@@ -34,7 +34,7 @@ func TestQuoteMask_NestingAndProvisionScope(t *testing.T) {
 				return
 			}
 			var words []string
-			for _, sentence := range sentences(tc.text, mask) {
+			for _, sentence := range (reading{text: tc.text, mask: mask}).scan() {
 				for _, token := range sentence.tokens {
 					if token.quoted && numberWord(token.word) {
 						words = append(words, token.word)
@@ -51,7 +51,7 @@ func TestQuoteMask_NestingAndProvisionScope(t *testing.T) {
 func TestSentences_ListMarkersAndNumberStops(t *testing.T) {
 	text := "1. Bãi bỏ Điều 3 của Nghị định 1.234/2020/NĐ-CP. 2. Thay thế Điều 4 của Thông tư 39/2016/TT-NHNN."
 	mask, _ := quoteMask(text)
-	parts := sentences(text, mask)
+	parts := (reading{text: text, mask: mask}).scan()
 	if len(parts) != 2 || parts[0].text != "1. Bãi bỏ Điều 3 của Nghị định 1.234/2020/NĐ-CP." || parts[1].text != "2. Thay thế Điều 4 của Thông tư 39/2016/TT-NHNN." {
 		t.Fatalf("sentences = %#v", parts)
 	}
