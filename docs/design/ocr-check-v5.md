@@ -42,8 +42,9 @@ Structured outputs enforce types and required fields but no numeric bounds
 - Instruction. The pipeline states the page count it rendered ("There are N
   pages, labelled Page 1 to Page N") and adds: report `items` as an empty list
   when the OCR text has no disagreement; never write an item without a reading;
-  a finding about the whole document goes into `coverage.note`, not into an
-  item. The rest of the version 3 text is unchanged.
+  a disagreement about the whole document is `same_document` false or items,
+  never only a note; `coverage.note` is for what limited the reading (a page too
+  faint, a page out of order). The rest of the version 3 text is unchanged.
 - Schema. `pages` becomes `coverage`, an object with `pages_read` (integer),
   `unreadable_pages` (array of integers) and `note` (string). It gives the model
   a place for what is not a page finding.
@@ -55,9 +56,19 @@ Structured outputs enforce types and required fields but no numeric bounds
   - Each item's page must be between 1 and `pdf_pages`, else
     `schema:items[i].page`.
   - An item whose `ocr`, `pdf` and `note` are all empty fails the attempt as
-    `placeholder_item`, counted on its own.
-  - `coverage.note` is stored with the result as reviewer evidence and never
-    changes a verdict; an empty note is allowed.
+    `placeholder_item`, counted on its own. - A nonempty `coverage.note` makes
+    the verdict at least `flagged`: the pipeline cannot tell commentary from a
+    disagreement written in the wrong place, so a note always reaches review and
+    a check with one is never `clean`. An empty note is allowed and changes
+    nothing.
+- Stored format. The stored result keeps the version 3 fields: `pages` holds
+  `coverage.pages_read`, `pdf_pages`, `items`, `verdict`, and adds
+  `coverage_note` (string, may be empty). `ocrstore` decoding accepts
+  `coverage_note` only for checker version 5 and later and requires it there;
+  results of versions 2 and 3 decode unchanged. `unreadable_pages` is never
+  stored: a check with unread pages is not complete.
+- Review file. `ocr-review.json` carries `coverage_note` on the document's entry
+  when it is nonempty, beside the items.
 - Verdicts, the readings rules, the quote check and the retry rule are those of
   the cross-check note.
 
@@ -65,22 +76,31 @@ Structured outputs enforce types and required fields but no numeric bounds
 
 A sample run decides whether version 5 replaces version 3 for later passes: 20
 documents with a complete version 3 check, chosen deterministically, half of
-them from the 27 that failed with a placeholder first. Version 5 is accepted
-when no `placeholder_item` or page-0 failure occurs, `coverage_incomplete` stays
-below 2 of 20, and the verdicts agree with version 3 on at least 18 of 20 (each
-disagreement read by hand). The sample costs about 25 USD at the version 3 rate
-and needs a budget from the owner.
+them from the 27 that failed with a placeholder first. Each document gets one
+attempt and, after a failure that is not a placeholder, one retry; a
+`placeholder_item` or page-0 failure anywhere fails the sample. Version 5 is
+accepted when, in addition, `coverage_incomplete` occurs in fewer than 2 of 20
+documents and every difference from version 3 has been read and approved by
+hand: a changed verdict, and any item version 3 had and version 5 lacks. An
+unapproved loss of an `article_label` or `document_number` item, or an
+unapproved move to a cleaner verdict, fails the sample, because it would let OCR
+text reach the index that version 3 kept out. The sample costs about 25 USD at
+the version 3 rate and needs a budget from the owner.
 
 ## Checks
 
 The primary runs these; they are requirements, not results.
 
 - Prompt and schema fixtures: the instruction states the rendered page count;
-  the schema has `coverage` with its three fields and no `pages`.
+  the answer schema has `coverage` with its three fields and no `pages`.
 - Validator fixtures: `pages_read` unequal to `pdf_pages`; `unreadable_pages`
   nonempty and out of range; an item on page 0 and above `pdf_pages`; an
   all-empty item (`placeholder_item`); an empty `items` list with full coverage
-  (`clean`); a note with findings (stored, verdict unchanged).
+  (`clean`); empty items with a nonempty note (`flagged`, never `clean`).
+- Store fixtures: a version 5 result round-trips with `coverage_note`; version 2
+  and 3 results decode unchanged; `coverage_note` on a version 3 result is
+  rejected; extract reads results of every version; the review file shows a
+  nonempty note.
 - The failure diagnostic records `coverage` facts (counts and lengths only) for
   schema failures, as it does for items.
 - Version 3 results and their checker id are untouched; the extract recipe
