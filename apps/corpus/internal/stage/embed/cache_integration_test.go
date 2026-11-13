@@ -36,6 +36,11 @@ func TestEmbedRow_MigrationReverts(t *testing.T) {
 	if _, err = p.UpTo(ctx, 10); err != nil {
 		t.Fatal(err)
 	}
+	var version int64
+	var exists bool
+	if err = db.QueryRowContext(ctx, "SELECT (SELECT max(version_id) FROM goose_db_version WHERE is_applied), to_regclass('embed_row') IS NOT NULL").Scan(&version, &exists); err != nil || version != 10 || !exists {
+		t.Fatalf("up: version=%d exists=%v err=%v", version, exists, err)
+	}
 	if _, err = p.Down(ctx); err != nil {
 		t.Fatal(err)
 	}

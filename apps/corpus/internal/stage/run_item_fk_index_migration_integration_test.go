@@ -22,14 +22,31 @@ func TestRunItemForeignKeys_HaveLeadingIndex(t *testing.T) {
 	if _, err := provider.Up(ctx); err != nil {
 		t.Fatal(err)
 	}
-	fks := columnLists(t, db, `SELECT c.conrelid::regclass::text, c.conname, array_to_string(ARRAY(SELECT a.attname FROM unnest(c.conkey) WITH ORDINALITY AS k(n, o) JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = k.n ORDER BY k.o), ',') FROM pg_constraint c WHERE c.contype = 'f' AND c.confrelid = 'run_item'::regclass`)
-	if len(fks) == 0 {
-		t.Fatal("no foreign keys reference run_item")
+	if missing := unindexedRunItemForeignKeys(t, db); len(missing) > 0 {
+		t.Fatalf("foreign keys without a leading index: %v", missing)
 	}
-	indexes := columnLists(t, db, `SELECT i.indrelid::regclass::text, i.indexrelid::regclass::text, array_to_string(ARRAY(SELECT a.attname FROM unnest(i.indkey) WITH ORDINALITY AS k(n, o) JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = k.n ORDER BY k.o), ',') FROM pg_index i`)
-	for _, fk := range fks {
-		if !slices.ContainsFunc(indexes, func(ix columnList) bool { return ix.table == fk.table && hasPrefix(ix.columns, fk.columns) }) {
-			t.Errorf("%s.%s (%v) has no index leading with its columns", fk.table, fk.name, fk.columns)
+}
+
+func TestRunItemForeignKeys_RejectUnusableIndexes(t *testing.T) {
+	ctx := context.Background()
+	db, provider := openMigrations(t)
+	if _, err := provider.Up(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.ExecContext(ctx, `DROP INDEX run_seed_observation_item_idx`); err != nil {
+		t.Fatal(err)
+	}
+	for _, ddl := range []string{
+		`CREATE INDEX run_seed_observation_partial_idx ON run_seed_observation (run_id, stage, item_key) WHERE item_key <> ''`,
+		`CREATE INDEX run_seed_observation_include_idx ON run_seed_observation (run_id, stage) INCLUDE (item_key)`,
+		`CREATE INDEX run_seed_observation_expression_idx ON run_seed_observation (run_id, lower(stage), item_key)`,
+	} {
+		if _, err := db.ExecContext(ctx, ddl); err != nil {
+			t.Fatal(err)
+		}
+		missing := unindexedRunItemForeignKeys(t, db)
+		if !slices.Contains(missing, "run_seed_observation.run_seed_observation_run_id_stage_item_key_fkey") {
+			t.Fatalf("%s accepted as a leading index: missing=%v", ddl, missing)
 		}
 	}
 }
@@ -61,6 +78,22 @@ func TestRunItemForeignKeyIndexMigration_UpAndDown(t *testing.T) {
 type columnList struct {
 	table, name string
 	columns     []string
+}
+
+func unindexedRunItemForeignKeys(t *testing.T, db *sql.DB) []string {
+	t.Helper()
+	fks := columnLists(t, db, `SELECT c.conrelid::regclass::text, c.conname, array_to_string(ARRAY(SELECT a.attname FROM unnest(c.conkey) WITH ORDINALITY AS k(n, o) JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = k.n ORDER BY k.o), ',') FROM pg_constraint c WHERE c.contype = 'f' AND c.confrelid = 'run_item'::regclass`)
+	if len(fks) == 0 {
+		t.Fatal("no foreign keys reference run_item")
+	}
+	indexes := columnLists(t, db, `SELECT i.indrelid::regclass::text, i.indexrelid::regclass::text, array_to_string(ARRAY(SELECT COALESCE(a.attname, '(expression)') FROM unnest(i.indkey) WITH ORDINALITY AS k(n, o) LEFT JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = k.n AND k.n > 0 WHERE k.o <= i.indnkeyatts ORDER BY k.o), ',') FROM pg_index i WHERE i.indisvalid AND i.indisready AND i.indpred IS NULL`)
+	var missing []string
+	for _, fk := range fks {
+		if !slices.ContainsFunc(indexes, func(ix columnList) bool { return ix.table == fk.table && hasPrefix(ix.columns, fk.columns) }) {
+			missing = append(missing, fk.table+"."+fk.name)
+		}
+	}
+	return missing
 }
 
 func openMigrations(t *testing.T) (*sql.DB, *goose.Provider) {
