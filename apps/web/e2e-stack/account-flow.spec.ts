@@ -25,7 +25,7 @@ test('creates and revokes a token, revokes another session and signs out', async
     expect(token?.trim().length).toBeGreaterThan(20)
     const response = await page.request.post('/mcp', {
       headers: { Authorization: `Bearer ${token!.trim()}`, Accept: 'application/json, text/event-stream' },
-      data: { jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'report_issue', arguments: { country: 'vn', kind: 'wrong_text', handle: 'vn:fixture:1#article-1' } } },
+      data: { jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'report_issue', arguments: { country: 'vn', kind: 'wrong_text', handle: 'vn:fixture:1#dieu-1' } } },
     })
     expect(response.ok()).toBe(true)
     const result = await response.json()

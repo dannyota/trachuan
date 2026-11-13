@@ -65,19 +65,19 @@ func TestSearch_FixtureAndDocument(t *testing.T) {
 		t.Fatal(err)
 	}
 	closeBody(response)
-	if len(result.Hits) == 0 || result.Hits[0].Doc != "vn:fixture:1" || result.Hits[0].Handle != "vn:fixture:1#article-1" {
+	if len(result.Hits) == 0 || result.Hits[0].Doc != "vn:fixture:1" || result.Hits[0].Handle != "vn:fixture:1#dieu-1" {
 		t.Fatalf("unexpected first hit: %+v", result.Hits)
 	}
 	warnings := result.Hits[0].Warnings
-	if len(warnings) != 3 || warnings[0].Kind != "amends_supplements" || !warnings[0].Exact || warnings[0].Citation != "Điều 1" || warnings[1].Named != "article-1/khoan-9" || warnings[1].Exact || warnings[2].Basis != "vbpl_reference" || !warnings[2].Exact {
+	if len(warnings) != 3 || warnings[0].Kind != "amends_supplements" || !warnings[0].Exact || warnings[0].Citation != "Điều 1" || warnings[1].Named != "dieu-1/khoan-9" || warnings[1].Exact || warnings[2].Basis != "vbpl_reference" || !warnings[2].Exact {
 		t.Fatalf("search warnings: %+v", warnings)
 	}
 	for _, warning := range warnings {
-		if warning.Key != "vn:fixture:warnings" || warning.Number != "28/2099/TT-TEST" || warning.Source != "vn:fixture:warnings#article-1" {
+		if warning.Key != "vn:fixture:warnings" || warning.Number != "28/2099/TT-TEST" || warning.Source != "vn:fixture:warnings#dieu-1" {
 			t.Fatalf("warning source: %+v", warning)
 		}
 	}
-	readReq, err := http.NewRequest(http.MethodPost, server+"/api/v1/read", strings.NewReader(`{"country":"vn","items":[{"handle":"vn:fixture:1#article-1","relations":true}]}`))
+	readReq, err := http.NewRequest(http.MethodPost, server+"/api/v1/read", strings.NewReader(`{"country":"vn","items":[{"handle":"vn:fixture:1#dieu-1","relations":true}]}`))
 	if err != nil {
 		t.Fatal(err)
 	}

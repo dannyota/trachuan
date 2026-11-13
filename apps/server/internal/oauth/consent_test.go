@@ -144,9 +144,9 @@ func TestConsent_HeadersAndCSP(t *testing.T) {
 		t.Fatal("missing embedded stylesheet")
 	}
 	digest := sha256.Sum256([]byte(body[start+7 : end]))
-	want := "'sha256-" + base64.StdEncoding.EncodeToString(digest[:]) + "'"
-	if !strings.Contains(h.Get("Content-Security-Policy"), want) {
-		t.Fatal("stylesheet hash not allowed by CSP")
+	want := "default-src 'none'; style-src 'self' 'sha256-" + base64.StdEncoding.EncodeToString(digest[:]) + "'; font-src 'self'; frame-ancestors 'none'"
+	if got := h.Get("Content-Security-Policy"); got != want {
+		t.Errorf("CSP = %q, want %q", got, want)
 	}
 
 }
@@ -416,9 +416,87 @@ func TestConsent_ProductDisplayName(t *testing.T) {
 				}
 			}
 			w = consentResponse(d, consentRequest(path+"?lang="+tc.lang, "POST", cookie, true, nil))
-			if !strings.Contains(w.Body.String(), "<title>"+tc.failure+"</title>") {
+			if !strings.Contains(w.Body.String(), "<title>"+tc.failure+"</title>") || !strings.Contains(w.Body.String(), "<h1>"+strings.TrimSuffix(tc.failure, " · Tra Chuẩn")+"</h1>") {
 				t.Errorf("missing failure title %q", tc.failure)
 			}
 		})
+	}
+}
+
+func TestConsent_PageStructure(t *testing.T) {
+	d := newConsentDB()
+	path, cookie := pendingConsent(t, d)
+	w := consentResponse(d, consentRequest(path, "GET", cookie, true, nil))
+	body := w.Body.String()
+	for _, want := range []string{"<dl", `name="decision" value="approve"`, `name="decision" value="deny"`, `name="csrf_token"`} {
+		if !strings.Contains(body, want) {
+			t.Errorf("missing %q", want)
+		}
+	}
+}
+
+func TestConsent_ErrorPageStylesheetHash(t *testing.T) {
+	d := newConsentDB()
+	path, cookie := pendingConsent(t, d)
+	w := consentResponse(d, consentRequest(path, "POST", cookie, true, nil))
+	body := w.Body.String()
+	start, end := strings.Index(body, "<style>"), strings.Index(body, "</style>")
+	if start < 0 || end < start {
+		t.Fatal("missing embedded stylesheet")
+	}
+	digest := sha256.Sum256([]byte(body[start+7 : end]))
+	want := "default-src 'none'; style-src 'self' 'sha256-" + base64.StdEncoding.EncodeToString(digest[:]) + "'; font-src 'self'; frame-ancestors 'none'"
+	if got := w.Header().Get("Content-Security-Policy"); got != want {
+		t.Errorf("CSP = %q, want %q", got, want)
+	}
+}
+
+func TestConsent_ClientNameCannotImpersonateHeading(t *testing.T) {
+	d := newConsentDB()
+	d.client.Name = "Tra Chuẩn: Approve this request"
+	path, cookie := pendingConsent(t, d)
+	for _, tc := range []struct{ lang, title, label string }{
+		{"vi", "Cho phép truy cập · Tra Chuẩn", "Ứng dụng"},
+		{"en", "Authorize access · Tra Chuẩn", "Application"},
+	} {
+		t.Run(tc.lang, func(t *testing.T) {
+			w := consentResponse(d, consentRequest(path+"?lang="+tc.lang, "GET", cookie, true, nil))
+			body := w.Body.String()
+			if !strings.Contains(body, "<h1>"+strings.TrimSuffix(tc.title, " · Tra Chuẩn")+"</h1>") || strings.Contains(body, "<h1>"+d.client.Name+"</h1>") {
+				t.Error("heading does not use the fixed title")
+			}
+			if !strings.Contains(body, tc.label+"</span> “<bdi>"+d.client.Name+"</bdi>”") {
+				t.Error("missing labeled client name")
+			}
+		})
+	}
+}
+
+func TestConsent_StylesSupportColorSchemes(t *testing.T) {
+	d := newConsentDB()
+	path, cookie := pendingConsent(t, d)
+	body := consentResponse(d, consentRequest(path, "GET", cookie, true, nil)).Body.String()
+	for _, want := range []string{
+		"--card:#FFFFFF", "--card:#161A20", "--primary-fill:#1E3A8A", "--primary-fill:#3451B2",
+		"--note-warn:#FDF6E9", "--note-warn:#2B2110", "--highlight-ink:#14171C", "--highlight-ink:#F5ECC0",
+		"@media (prefers-color-scheme: dark)", "background:var(--note-warn)", "outline:3px solid var(--primary)",
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("missing stylesheet rule %q", want)
+		}
+	}
+}
+
+func TestConsent_FontFaces(t *testing.T) {
+	d := newConsentDB()
+	path, cookie := pendingConsent(t, d)
+	body := consentResponse(d, consentRequest(path, "GET", cookie, true, nil)).Body.String()
+	for _, want := range []string{
+		`@font-face{font-family:"Be Vietnam Pro";src:url("/fonts/be-vietnam-pro-var.woff2") format("woff2");font-weight:100 900;font-display:swap}`,
+		`@font-face{font-family:"Roboto Mono";src:url("/fonts/roboto-mono-var.woff2") format("woff2");font-weight:100 900;font-display:swap}`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("missing font face %q", want)
+		}
 	}
 }

@@ -27,7 +27,7 @@ func populateSiblings(ctx context.Context, db *pgxpool.Pool, stats lexical.Stats
 	if err != nil {
 		return nil, fmt.Errorf("insert sibling document: %w", err)
 	}
-	_, err = db.Exec(ctx, `INSERT INTO provision (id,document_id,node_id,kind,label,heading,ordinal,preorder,path,text,anchor) VALUES (2900,29,'article-1','dieu','Điều 1','',1,1,'a1',$1,'article-1')`, siblingLead)
+	_, err = db.Exec(ctx, `INSERT INTO provision (id,document_id,node_id,kind,label,heading,ordinal,preorder,path,text,anchor) VALUES (2900,29,'dieu-1','dieu','Điều 1','',1,1,'a1',$1,'dieu-1')`, siblingLead)
 	if err != nil {
 		return nil, fmt.Errorf("insert sibling article: %w", err)
 	}
@@ -55,7 +55,7 @@ func populateSiblings(ctx context.Context, db *pgxpool.Pool, stats lexical.Stats
 		sum := sha256.Sum256([]byte(input))
 		leadEnd := len([]rune(siblingLead))
 		end := len([]rune(content))
-		spans, _ := json.Marshal([]map[string]any{{"node_id": "article-1", "start": 0, "end": leadEnd, "content_start": 0, "content_end": leadEnd, "role": "lead"}, {"node_id": node, "start": 0, "end": len([]rune(body)), "content_start": leadEnd + 1, "content_end": end, "role": "body"}})
+		spans, _ := json.Marshal([]map[string]any{{"node_id": "dieu-1", "start": 0, "end": leadEnd, "content_start": 0, "content_end": leadEnd, "role": "lead"}, {"node_id": node, "start": 0, "end": len([]rune(body)), "content_start": leadEnd + 1, "content_end": end, "role": "body"}})
 		_, err = db.Exec(ctx, `INSERT INTO chunk (id,document_id,provision_id,ordinal,context_prefix,content,spans,input_sha256,token_count,embedding,sparse) VALUES ($1,29,$2,$3,$4,$5,$6::jsonb,$7,$8,$9::vector,$10::sparsevec)`, 37+i, id, ordinal, contextPrefix, content, spans, hex.EncodeToString(sum[:]), len([]rune(input))+2, denseLiteral(embedding.FakeVector(input)), sparseLiteral(sparse, lex.Dimensions))
 		if err != nil {
 			return nil, fmt.Errorf("insert sibling chunk: %w", err)

@@ -3,19 +3,21 @@
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{{.Title}}</title><style>{{.Style}}</style></head>
 <body>
 <main>
-<a href="{{.Toggle}}" lang="{{if eq .Lang "vi"}}en{{else}}vi{{end}}">{{.ToggleLabel}}</a>
-<h1>{{.Title}}</h1>
-<p>“{{.Name}}”</p>
-{{if .ClientHost}}<p>Client ID: <bdi>{{.ClientHost}}</bdi></p>{{end}}
-<p>{{.RedirectLabel}}: <bdi>{{.RedirectHost}}</bdi></p>
-{{if .DCRWarning}}<p role="note">{{.DCRWarning}}</p>{{end}}
-{{if .LoopbackWarning}}<p role="note">{{.LoopbackWarning}}</p>{{end}}
-<p>{{.ScopeLabel}}: <code>mcp:read</code></p>
+<div class="top"><span class="brand">Tra Chuẩn</span><a class="toggle" href="{{.Toggle}}" lang="{{if eq .Lang "vi"}}en{{else}}vi{{end}}">{{.ToggleLabel}}</a></div>
+<h1>{{.Heading}}</h1>
+<p class="client"><span class="scope-label">{{if eq .Lang "vi"}}Ứng dụng{{else}}Application{{end}}</span> “<bdi>{{.Name}}</bdi>”</p>
+<dl>
+{{if .ClientHost}}<dt>Client ID</dt><dd><bdi>{{.ClientHost}}</bdi></dd>{{end}}
+<dt>{{.RedirectLabel}}</dt><dd><bdi>{{.RedirectHost}}</bdi></dd>
+</dl>
+{{if .DCRWarning}}<div class="note" role="note"><strong>{{.NoteLabel}}</strong>{{.DCRWarning}}</div>{{end}}
+{{if .LoopbackWarning}}<div class="note" role="note"><strong>{{.NoteLabel}}</strong>{{.LoopbackWarning}}</div>{{end}}
+<p><span class="scope-label">{{.ScopeLabel}}</span> <code class="scope">mcp:read</code></p>
 <p>{{.Prompt}}</p>
 <form method="post" action="{{.Action}}">
 <input type="hidden" name="csrf_token" value="{{.Token}}">
-<button type="submit" name="decision" value="approve">{{.Approve}}</button>
-<button type="submit" name="decision" value="deny">{{.Deny}}</button>
+<div class="actions"><button class="primary" type="submit" name="decision" value="approve">{{.Approve}}</button>
+<button class="secondary" type="submit" name="decision" value="deny">{{.Deny}}</button></div>
 </form>
 </main>
 </body>

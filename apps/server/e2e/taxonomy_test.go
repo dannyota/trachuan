@@ -129,7 +129,7 @@ func TestTaxonomy_Flow(t *testing.T) {
 					articles = 4
 				}
 				for article := 1; article <= articles; article++ {
-					handle := fmt.Sprintf("vn:fixture:%d#article-%d", document, article)
+					handle := fmt.Sprintf("vn:fixture:%d#dieu-%d", document, article)
 					expected[handle] = true
 					if !seen[handle] {
 						t.Fatalf("missing fixture hit %s", handle)
