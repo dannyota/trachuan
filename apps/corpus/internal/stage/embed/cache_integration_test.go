@@ -33,7 +33,7 @@ func TestEmbedRow_MigrationReverts(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err = p.Up(ctx); err != nil {
+	if _, err = p.UpTo(ctx, 10); err != nil {
 		t.Fatal(err)
 	}
 	if _, err = p.Down(ctx); err != nil {
