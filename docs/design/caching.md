@@ -79,6 +79,15 @@ the first relation pointers and the counts. They are immutable within a release.
 Status, which comes from the hit stamp at present time, is never cached in this
 entry.
 
+## Topic node pages
+
+The public node page (`GET /api/v1/public/taxonomy/{code}`) is cached per
+release and code: the node, its ancestors, its children and its leading
+documents. The page reads only release content, so it is immutable within a
+release and holds no account data. The key is `sha256(release, code)` after the
+code passes validation; an unknown code, an invalid code and any error are not
+cached. A hit still passes the public route's rate limit.
+
 ## Not cached
 
 Credentials beyond the existing 10-second lookup cache in [auth](auth.md),

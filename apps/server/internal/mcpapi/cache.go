@@ -16,49 +16,44 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-// Caches owns the release-scoped caches shared by MCP and retrieval engines.
-// Query vectors are separate because they survive release changes.
 type Caches struct {
-	mu        sync.Mutex
-	Search    *cache.Scoped[[]byte]
-	Documents *cache.Scoped[[]byte]
-	Sequences *cache.Scoped[[]byte]
+	mu         sync.Mutex
+	Search     *cache.Scoped[[]byte]
+	Documents  *cache.Scoped[[]byte]
+	Sequences  *cache.Scoped[[]byte]
+	TopicNodes *cache.Scoped[[]byte]
 }
 
-// NewCaches creates caches with the host budgets. They remain disabled until
-// the resolver adapter calls ActivateRelease before lending its first lease.
 func NewCaches(clock func() time.Time) *Caches {
 	size := func(v []byte) int { return len(v) }
 	return &Caches{
-		Search:    cache.NewScoped(cache.New("search_responses", 1_024_000_000, time.Hour, clock, size)),
-		Documents: cache.NewScoped(cache.New("document_entries", 64_000_000, 0, clock, size)),
-		Sequences: cache.NewScoped(cache.New("read_items", 512_000_000, 24*time.Hour, clock, size)),
+		Search:     cache.NewScoped(cache.New("search_responses", 1_024_000_000, time.Hour, clock, size)),
+		Documents:  cache.NewScoped(cache.New("document_entries", 64_000_000, 0, clock, size)),
+		Sequences:  cache.NewScoped(cache.New("read_items", 512_000_000, 24*time.Hour, clock, size)),
+		TopicNodes: cache.NewScoped(cache.New("topic_node_pages", 8_000_000, 0, clock, size)),
 	}
 }
 
-// ActivateRelease purges every corpus cache on a switch. The resolver adapter
-// must serialize switch notifications and call this before returning a lease.
-// Scope uses the observation generation carried by each lease.
 func (c *Caches) ActivateRelease(release string, generation uint64) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.Search.ActivateRelease(release, generation)
 	c.Documents.ActivateRelease(release, generation)
 	c.Sequences.ActivateRelease(release, generation)
+	c.TopicNodes.ActivateRelease(release, generation)
 }
 
-// RequestCaches binds all corpus caches to one activation generation.
 type RequestCaches struct {
-	Search    cache.Handle[[]byte]
-	Documents cache.Handle[[]byte]
-	Sequences cache.Handle[[]byte]
+	Search     cache.Handle[[]byte]
+	Documents  cache.Handle[[]byte]
+	Sequences  cache.Handle[[]byte]
+	TopicNodes cache.Handle[[]byte]
 }
 
-// Scope binds handles to the resolver observation carried by the lease.
 func (c *Caches) Scope(release string, generation uint64) RequestCaches {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	return RequestCaches{Search: c.Search.Scope(release, generation), Documents: c.Documents.Scope(release, generation), Sequences: c.Sequences.Scope(release, generation)}
+	return RequestCaches{Search: c.Search.Scope(release, generation), Documents: c.Documents.Scope(release, generation), Sequences: c.Sequences.Scope(release, generation), TopicNodes: c.TopicNodes.Scope(release, generation)}
 }
 
 func (cfg Config) cachedSearch(ctx context.Context, in searchInput, validate func(any) error) (*mcp.CallToolResult, any, error) {

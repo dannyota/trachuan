@@ -103,6 +103,7 @@ Server caches, each a byte-capped least-recently-used map
 | Search responses | 1,024 MB | 1 hour             |
 | Read items       | 512 MB   | release life, 24 h |
 | Document entries | 64 MB    | release life       |
+| Topic node pages | 8 MB     | release life       |
 
 A value above one sixteenth of its cache's byte cap is not cached.
 
