@@ -103,3 +103,18 @@
 - [ ] **Step 1:** The owner creates a Google OAuth client (Web application) for the local HTTPS origin and puts the id and secret in `.env`.
 - [ ] **Step 2:** Log in through the browser, create and revoke a personal token, run search, read and a document page, log out; record shapes and sizes in the PR, never question text.
 - [ ] **Step 3:** Open the PR; the coordinator merges after the final adversarial review and green CI.
+
+#### Live acceptance on production, 2026-11-14 (main bbc842ee, release vn/20261112_2)
+
+The owner signed in with Google himself; the coordinator session drove his browser. No question text, token, cookie or email is recorded.
+
+- A1 pass: Google sign-in in Chrome returns to `/` with the account in the header.
+- A2 open: Firefox not run.
+- A3 pass: case `onbank-password-length-50-2024`; top hit Điều 11 Khoản 1 of `vn:vbpl:171687`; 20 hits per page, "Xem thêm kết quả" appended to 40; non-current disclosure present (2 hits); filtered search 1.55 s and 165 KB.
+- A4 pass after the reader fixes of #191: target band over the clause and its points, identity band, relations rail, technical details.
+- A5 pass: 33 topic roots; node `1` page in 2.7 s (slow, backlog); "Tra cứu trong chủ đề này" opens `/vn/search?node=1`.
+- A6 pass: personal token shown once and listed; `/mcp` worked with it; after revoke, 401 within 3 s.
+- A7 pass: `POST /api/v1/auth/logout` 204, cookie cleared, `GET /api/v1/me` 401, the old session cookie replayed 401.
+- A8 open: needs a second Google account outside `SERVER_SIGNUP_EMAILS`.
+- Fixed during the run: none on this plan's routes (the reader defects were fixed in #191 before A4).
+- Open for the owner: A2, A8.
