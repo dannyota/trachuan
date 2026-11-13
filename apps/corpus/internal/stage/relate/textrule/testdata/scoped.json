@@ -418,7 +418,9 @@
   {
     "name": "missing sentence end",
     "text": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư 19/2018/TT-NHNN như sau:\n1. Bãi bỏ Điều 8\n2. Bãi bỏ Điều 5.",
-    "anchors": [],
+    "anchors": [
+      "dieu-5"
+    ],
     "kind": "repeals",
     "gaps": [
       "relation_text_grammar"
