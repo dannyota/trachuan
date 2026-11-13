@@ -167,12 +167,14 @@ func (r *Runner) resume(ctx context.Context, docs []Document, o Options, s *Summ
 				case "canceled":
 					reason = "canceled"
 				}
-				if err = r.Repository.Finish(ctx, a, doc.Entry, Usage{Final: true, RequestID: result.Response.Usage.RequestID}.withReservation(a.Usage), nil, reason); err != nil {
+				u := result.Response.Usage.withReservation(a.Usage)
+				u.Final = true
+				if err = r.Repository.Finish(ctx, a, doc.Entry, u, nil, reason); err != nil {
 					return true, fmt.Errorf("finish OCR batch failure: %w", err)
 				}
 				s.CostMicroUSD -= a.Usage.charge()
 				s.Failed++
-				s.record(doc, a.Usage.PDFPages, Usage{}, reason)
+				s.record(doc, a.Usage.PDFPages, u, reason)
 				continue
 			}
 			if !result.Response.FinalUsage {

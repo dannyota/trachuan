@@ -343,3 +343,70 @@ func TestDiagnostics_DocumentedProviderTypes(t *testing.T) {
 		})
 	}
 }
+
+func TestDiagnostics_UncertainBatchPersistsProviderType(t *testing.T) {
+	r, repo, client, docs := fixture(t)
+	client.CreateError = &APIError{Status: 529, RequestID: "req_test", Reason: "api_error", Class: "http_status", ProviderType: "overloaded_error"}
+	o := options()
+	o.Batch = true
+	summary, err := r.Run(context.Background(), docs, o)
+	if err == nil {
+		t.Fatal("expected uncertain submission")
+	}
+	if got := repo.attempts[0].Usage.APIErrorType; got != "overloaded_error" {
+		t.Errorf("stored type=%q", got)
+	}
+	if got := summary.Documents[0].Outcome; got != "uncertain:api_error:overloaded_error" {
+		t.Errorf("outcome=%q", got)
+	}
+	summary, err = r.Run(context.Background(), docs, o)
+	if err == nil {
+		t.Fatal("expected uncertain submission to block")
+	}
+	if got := summary.Documents[0].Outcome; got != "uncertain:api_error:overloaded_error" {
+		t.Errorf("resumed outcome=%q", got)
+	}
+}
+
+func TestDiagnostics_BatchResultProviderType(t *testing.T) {
+	for _, tc := range []struct{ name, errorJSON, want, outcome string }{
+		{"known", `{"type":"invalid_request_error","message":"sentinel-private-message"}`, "invalid_request_error", "api_error:invalid_request_error"},
+		{"unknown", `{"type":"sentinel-private-message","message":"sentinel-private-message"}`, "other", "api_error:other"},
+		{"missing", `{"message":"sentinel-private-message"}`, "", "api_error"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			r, repo, client, docs := fixture(t)
+			o := options()
+			o.Batch = true
+			if err := run(t, r, docs, o); err != nil {
+				t.Fatal(err)
+			}
+			id := customID(repo.attempts[0])
+			sdk := sdkForTest(func(*http.Request) (*http.Response, error) {
+				return sdkResponse(200, "application/x-jsonl", `{"custom_id":"`+id+`","result":{"type":"errored","error":{"type":"error","request_id":"req_test","error":`+tc.errorJSON+`}}}`+"\n"), nil
+			})
+			results, err := sdk.BatchResults(context.Background(), "batch_test")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := results[0].Response.Usage.APIErrorType; got != tc.want {
+				t.Errorf("converted type=%q want=%q", got, tc.want)
+			}
+			client.BatchEnded, client.Results = true, results
+			summary, err := r.Run(context.Background(), docs, o)
+			if err != nil {
+				t.Fatal(err)
+			}
+			usage := repo.attempts[0].Usage
+			if usage.APIErrorType != tc.want || usage.RequestID != "req_test" {
+				t.Errorf("stored usage=%+v", usage)
+			}
+			if got := summary.Documents[0].Outcome; got != tc.outcome {
+				t.Errorf("outcome=%q want=%q", got, tc.outcome)
+			}
+			if strings.Contains(fmt.Sprint(results, usage, summary), "sentinel-private-message") {
+				t.Fatal("provider text escaped")
+			}
+		})
+	}
+}

@@ -127,6 +127,9 @@ func (s *SDKClient) BatchResults(ctx context.Context, id string) ([]BatchResult,
 		response := fromMessage(v.Result.Message)
 		if v.Result.Type != "succeeded" {
 			response = Response{Usage: Usage{RequestID: v.Result.Error.RequestID}}
+			if v.Result.Type == "errored" {
+				response.Usage.APIErrorType = providerErrorType(v.Result.Error.RawJSON())
+			}
 		}
 		results = append(results, BatchResult{CustomID: v.CustomID, Type: v.Result.Type, Response: response})
 	}

@@ -17,5 +17,9 @@ func (s *Summary) record(doc Document, pages int, u Usage, outcome string) {
 }
 
 func (s *Summary) recordPending(a Attempt) {
-	s.Documents = append(s.Documents, DocumentSummary{EntryID: a.EntryID, Pages: a.Usage.PDFPages, InputTokens: a.Usage.CountedInput, OutputTokens: a.Usage.Output, CostMicroUSD: a.Usage.charge(), Outcome: a.State})
+	outcome := a.State
+	if a.State == "uncertain" && a.Usage.APIErrorType != "" {
+		outcome += ":api_error:" + a.Usage.APIErrorType
+	}
+	s.Documents = append(s.Documents, DocumentSummary{EntryID: a.EntryID, Pages: a.Usage.PDFPages, InputTokens: a.Usage.CountedInput, OutputTokens: a.Usage.Output, CostMicroUSD: a.Usage.charge(), Outcome: outcome})
 }

@@ -170,7 +170,7 @@ func (d *Database) UncertainWithError(ctx context.Context, attempts []Attempt, m
 	q := store.New(tx)
 	for _, a := range attempts {
 		u := a.Usage
-		u.ErrorClass, u.ErrorType = metadata.ErrorClass, metadata.ErrorType
+		u.ErrorClass, u.ErrorType, u.APIErrorType = metadata.ErrorClass, metadata.ErrorType, metadata.APIErrorType
 		data, encodeErr := json.Marshal(u)
 		if encodeErr != nil {
 			return fmt.Errorf("encode uncertain OCR usage: %w", encodeErr)

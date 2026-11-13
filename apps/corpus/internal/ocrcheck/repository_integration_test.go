@@ -312,3 +312,50 @@ func TestCheck_DatabaseInsertRejection(t *testing.T) {
 		})
 	}
 }
+
+func TestCheck_DatabaseUncertainBatchStoresProviderType(t *testing.T) {
+	r, db, c, docs := databaseFixture(t)
+	o := options()
+	o.Batch = true
+	c.CreateError = &APIError{Status: 529, RequestID: "req_test", Reason: "api_error", Class: "http_status", ProviderType: "overloaded_error"}
+	if err := run(t, r, docs, o); err == nil {
+		t.Fatal("expected uncertain submission")
+	}
+	open, err := NewDatabase(db, r.Repository.(*Database).root).Open(context.Background(), o.CheckerID())
+	if err != nil || len(open) != 1 {
+		t.Fatalf("open=%+v err=%v", open, err)
+	}
+	if open[0].State != "uncertain" || open[0].Usage.APIErrorType != "overloaded_error" {
+		t.Fatalf("attempt=%+v", open[0])
+	}
+}
+
+func TestCheck_DatabaseResumedBatchStoresProviderType(t *testing.T) {
+	r, db, c, docs := databaseFixture(t)
+	o := options()
+	o.Batch = true
+	if err := run(t, r, docs, o); err != nil {
+		t.Fatal(err)
+	}
+	open, err := r.Repository.Open(context.Background(), o.CheckerID())
+	if err != nil || len(open) != 1 {
+		t.Fatalf("open=%+v err=%v", open, err)
+	}
+	c.BatchEnded = true
+	c.Results = []BatchResult{{CustomID: customID(open[0]), Type: "errored", Response: Response{Usage: Usage{RequestID: "req_test", APIErrorType: "invalid_request_error"}}}}
+	summary, err := r.Run(context.Background(), docs, o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var usageBytes []byte
+	if err = db.QueryRow(context.Background(), `SELECT usage FROM ocr_check_attempt WHERE ocr_text_id=$1`, docs[0].Entry.ID).Scan(&usageBytes); err != nil {
+		t.Fatal(err)
+	}
+	var usage Usage
+	if err = json.Unmarshal(usageBytes, &usage); err != nil {
+		t.Fatal(err)
+	}
+	if usage.APIErrorType != "invalid_request_error" || usage.RequestID != "req_test" || summary.Documents[0].Outcome != "api_error:invalid_request_error" {
+		t.Fatalf("usage=%+v summary=%+v", usage, summary)
+	}
+}
