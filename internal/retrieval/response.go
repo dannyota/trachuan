@@ -10,6 +10,7 @@ import (
 // provision; Complete is true only when it holds every covered source interval
 // of that provision.
 type Fragment struct {
+	Citation  string   `json:"-"`
 	Identity  Identity `json:"identity"`
 	Start     int      `json:"start"`
 	End       int      `json:"end"`

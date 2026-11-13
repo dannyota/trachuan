@@ -137,6 +137,7 @@ func evidence(g Group, capRunes int) (string, []Fragment, bool, []Gap, Identity,
 			}
 		}
 	}
+	SetFragmentCitations(full.fragments, []Candidate{c})
 	bestStart := 0
 	located := false
 	if bestSpan != nil {
@@ -149,7 +150,6 @@ func evidence(g Group, capRunes int) (string, []Fragment, bool, []Gap, Identity,
 		}
 	}
 	if !located {
-		// Fall back to the hit when the best span is absent from returned text.
 		bestMember = g.Identity
 		if len(leads.text) > 0 {
 			bestStart = min(len(leads.text)+1, len(full.text))

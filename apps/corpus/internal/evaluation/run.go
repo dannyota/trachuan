@@ -14,7 +14,11 @@ import (
 )
 
 // ScorerVersion identifies the scoring policy used by reports and artifacts.
-const ScorerVersion = "agent-eval/3"
+const ScorerVersion = "agent-eval/4"
+
+func productComparableScorer(previous, current string) bool {
+	return previous == "agent-eval/3" && current == "agent-eval/4"
+}
 
 type metricKey struct {
 	cohort string
@@ -77,13 +81,13 @@ func run(ctx context.Context, engine Engine, suite Suite, o Options, limit int) 
 		if err != nil {
 			return Report{}, Cache{}, err
 		}
-		if prior.Version != 1 || (prior.Scorer != r.Scorer && prior.Scorer != "agent-eval/1" && prior.Scorer != "agent-eval/2") || prior.FixtureHashes.Legacy != r.FixtureHashes.Legacy || prior.FixtureHashes.OldProduct != r.FixtureHashes.OldProduct {
+		if prior.Version != 1 || (prior.Scorer != r.Scorer && prior.Scorer != "agent-eval/1" && prior.Scorer != "agent-eval/2" && prior.Scorer != "agent-eval/3") || prior.FixtureHashes.Legacy != r.FixtureHashes.Legacy || prior.FixtureHashes.OldProduct != r.FixtureHashes.OldProduct {
 			return Report{}, Cache{}, fmt.Errorf("incompatible previous scorer or fixtures")
 		}
 		if prior.Cohorts["development"].CaseCount > 0 && prior.FixtureHashes.Development != r.FixtureHashes.Development {
 			return Report{}, Cache{}, fmt.Errorf("incompatible previous development fixtures")
 		}
-		if prior.Scorer != r.Scorer {
+		if prior.Scorer != r.Scorer && !productComparableScorer(prior.Scorer, r.Scorer) {
 			r.PreviousDiff = map[string]any{"reason": "incompatible scorer version"}
 		} else if (prior.CapOverride == nil) != (o.CapOverride == nil) || (prior.CapOverride != nil && o.CapOverride != nil && *prior.CapOverride != *o.CapOverride) {
 			r.PreviousDiff = map[string]any{"reason": "incompatible cap override"}
@@ -354,7 +358,13 @@ func run(ctx context.Context, engine Engine, suite Suite, o Options, limit int) 
 		r.ANNResults[cohort] = summarizeANN(subset, cohort)
 	}
 	if previous != nil {
-		diff := map[string]any{"label": "corpus changes are coverage changes", "cases": compareCases(previous.Cases, r.Cases)}
+		cases := compareCases(previous.Cases, r.Cases)
+		diff := map[string]any{"label": "corpus changes are coverage changes"}
+		if previous.Scorer != r.Scorer {
+			cases = productCaseDifferences(cases)
+			diff["previous_scorer"], diff["scorer"] = previous.Scorer, r.Scorer
+		}
+		diff["cases"] = cases
 		priorVersion := previous.RetrievalRecipeVersion
 		if priorVersion == 0 {
 			priorVersion = 2

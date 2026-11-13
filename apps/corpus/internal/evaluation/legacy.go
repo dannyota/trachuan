@@ -54,8 +54,15 @@ func MatchLegacy(e Expectation, hits []retrieval.Hit) (int, bool) {
 	numbers := append([]string{e.DocNumber}, e.AltDocNumbers...)
 	for i, h := range hits {
 		for _, n := range numbers {
-			if numberMatches(n, h.Number) && citationMatches(e, h.Citation) {
-				return i + 1, false
+			if numberMatches(n, h.Number) {
+				if citationMatches(e, h.Citation) {
+					return i + 1, false
+				}
+				for _, fragment := range h.Fragments {
+					if fragment.Complete && citationMatches(e, fragment.Citation) {
+						return i + 1, false
+					}
+				}
 			}
 		}
 		if !e.RelationOK || e.Article != "" || e.Clause != "" || e.Point != "" {

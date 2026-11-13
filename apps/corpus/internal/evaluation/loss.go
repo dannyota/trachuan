@@ -41,6 +41,7 @@ func candidateHit(c retrieval.Candidate) retrieval.Hit {
 	for _, p := range c.Descendants {
 		h.Fragments = append(h.Fragments, retrieval.Fragment{Identity: p.Identity, Complete: true})
 	}
+	retrieval.SetFragmentCitations(h.Fragments, []retrieval.Candidate{c})
 	for _, r := range c.Relations {
 		relation := r.Value
 		sum := sha256.Sum256([]byte(relation.Evidence))
