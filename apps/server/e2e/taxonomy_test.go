@@ -169,7 +169,7 @@ func taxonomyToken(t *testing.T, c *http.Client, server string) string {
 	location, err := r.Location()
 	closeBody(r)
 	if err != nil || r.StatusCode != http.StatusSeeOther || location.Query().Get("code") == "" {
-		t.Fatal("consent failed")
+		t.Fatalf("consent status %d; expected redirect with authorization code", r.StatusCode)
 	}
 	exchange := url.Values{"grant_type": {"authorization_code"}, "client_id": {registration.Client}, "redirect_uri": {redirect}, "code": {location.Query().Get("code")}, "code_verifier": {verifier}, "resource": {server + "/mcp"}}
 	r, err = c.PostForm(server+"/oauth/token", exchange)

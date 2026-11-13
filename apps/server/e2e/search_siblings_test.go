@@ -18,7 +18,7 @@ func TestSearch_Recipe3MergedArticle(t *testing.T) {
 	c := client(t)
 	login(t, c, "siblings@example.invalid", true)
 	server := base(t, "E2E_SERVER_URL")
-	token := taxonomyToken(t, c, server)
+	token := personalToken(t, c, server)
 	call := func(name string, args any, out any) {
 		t.Helper()
 		body, err := json.Marshal(map[string]any{"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": map[string]any{"name": name, "arguments": args}})
