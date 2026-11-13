@@ -1,5 +1,37 @@
-.account-row { border-top: 1px solid var(--color-border); padding: 1rem 0; overflow-wrap: anywhere; }
-dialog[open] { box-sizing: border-box; width: min(32rem, calc(100vw - 2rem)); max-height: calc(100vh - 2rem); margin: auto; overflow: auto; padding: 1.5rem; border: 1px solid var(--color-border); background: Canvas; color: CanvasText; }
-dialog form { display: grid; gap: .75rem; }
-dialog input { border: 1px solid var(--color-border); padding: .3rem; }
-.token-value { overflow-wrap: anywhere; font-family: var(--font-mono); }
+.site-main:has(.account-page) { max-width: none; padding: 0; background: var(--color-surface); }
+.account-page { max-width: 960px; margin: 0 auto; padding: 40px 24px 64px; display: flex; flex-direction: column; gap: 24px; }
+.account-heading, .account-card-head, .account-danger { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.account-heading h1 { margin: 0; font-size: 30px; line-height: 1.3; }
+.account-heading p { margin: 4px 0 0; color: var(--color-ink-soft); font-size: 15px; overflow-wrap: anywhere; }
+.account-card { overflow: hidden; }
+.account-card-head { padding: 18px 20px; border-bottom: 1px solid var(--color-line); }
+.account-card h2, .account-danger h2 { margin: 0; font-size: 17px; line-height: 1.4; }
+.account-card-head p { margin: 4px 0 0; color: var(--color-muted); font-size: 13px; }
+.account-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 20px; padding: 14px 20px; border-bottom: 1px solid var(--color-line); font-size: 14px; }
+.account-row:last-child { border-bottom: 0; }
+.account-row-label { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; overflow-wrap: anywhere; }
+.account-row h3 { margin: 0; font-size: 14px; }
+.account-meta { flex: 1 1 auto; margin: 0; color: var(--color-muted); font-size: 13px; }
+.account-host { color: var(--color-muted); font-family: var(--font-mono); font-size: 12.5px; }
+.account-current, .account-revoked { padding: 2px 8px; border-radius: var(--radius-pill); background: var(--color-stamp-in-force-bg); color: var(--color-ink-in-force); font-size: 12px; font-weight: 600; }
+.account-revoked { background: var(--color-stamp-expired-bg); color: var(--color-ink-expired); }
+.account-empty { margin: 0; padding: 22px 20px; color: var(--color-muted); font-size: 14px; }
+.account-skeleton { height: 70px; margin: 14px 20px; border-radius: var(--radius-md); background: var(--color-surface); }
+.account-report { padding: 14px 20px; border-bottom: 1px solid var(--color-line); font-size: 14px; overflow-wrap: anywhere; }
+.account-report p { margin: 3px 0; }
+.account-report button { margin-top: 10px; }
+.reports-more { margin: 14px 20px; }
+.account-danger { padding: 18px 20px; border-color: var(--color-danger-line); }
+.account-danger h2 { color: var(--color-danger); }
+.account-danger p { max-width: 600px; margin: 4px 0 0; color: var(--color-ink-soft); font-size: 14px; }
+.account-dialog { margin: auto; width: min(520px, calc(100% - 32px)); max-height: calc(100% - 32px); padding: 24px; color: var(--color-ink); overflow: auto; }
+.account-dialog::backdrop { background: rgb(0 0 0 / 55%); }
+.account-dialog h2 { margin: 0 0 12px; font-size: 20px; }
+.account-dialog label { display: flex; flex-direction: column; gap: 4px; margin: 12px 0; }
+.account-dialog-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+.account-dialog .token-value { overflow-wrap: anywhere; }
+@media (max-width: 767px) {
+  .account-page { padding: 24px 16px 48px; }
+  .account-heading, .account-card-head, .account-danger, .account-row { align-items: stretch; flex-direction: column; }
+  .account-row .btn, .account-danger .btn, .account-heading .btn, .account-card-head .btn, .account-report .btn { width: 100%; }
+}

@@ -20,7 +20,11 @@ function setup(rejected = false) {
   const sent: string[] = []
   const api = createApi({ origin: 'http://localhost', session, fetch: async input => {
     const request = input as Request
-    if (request.method === 'GET') return new Response(JSON.stringify({ ...session.account, csrf_token: session.csrfToken }), { headers: { 'content-type': 'application/json' } })
+    if (request.method === 'GET') {
+      const path = new URL(request.url).pathname
+      const data = path.endsWith('/reports') ? { reports: [] } : path === '/api/v1/me' ? { ...session.account, csrf_token: session.csrfToken } : []
+      return new Response(JSON.stringify(data), { headers: { 'content-type': 'application/json' } })
+    }
     sent.push(request.headers.get('x-csrf-token') || '')
     if (rejected) return new Response(JSON.stringify({ error: { code: 'csrf_rejected' } }), { status: 403, headers: { 'content-type': 'application/json' } })
     return new Response(null, { status: 204 })
@@ -65,7 +69,7 @@ for (const kind of ['delete', 'create'] as const) {
     vi.stubGlobal('definePageMeta', () => {})
     const stub = defineComponent({ props: ['action', 'email'], template: '<div />' })
     const wrapper = mount(Account, { global: { stubs: { TokenCreateDialog: stub, AccountDeleteDialog: stub } } })
-    const label = kind === 'delete' ? 'Delete account' : 'Create token'
+    const label = kind === 'delete' ? 'Delete account…' : 'Create token'
     const button = wrapper.findAll('button').find(item => item.text() === label)!
     ;(button.element as HTMLButtonElement).click()
     switchAccount(session)

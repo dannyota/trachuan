@@ -2,7 +2,7 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, onUnmounted, ref } from 'vue'
 import TokenCreateDialog from '../app/components/TokenCreateDialog.vue'
 import AccountDeleteDialog from '../app/components/AccountDeleteDialog.vue'
 
@@ -16,6 +16,7 @@ beforeEach(() => {
   vi.stubGlobal('ref', ref)
   vi.stubGlobal('onMounted', onMounted)
   vi.stubGlobal('onBeforeUnmount', onBeforeUnmount)
+  vi.stubGlobal('onUnmounted', onUnmounted)
   vi.stubGlobal('useApi', () => ({ forAction: () => ({ POST: async () => ({ data: { token: 'fixture-secret' } }) }) }))
 })
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals() })
@@ -153,5 +154,17 @@ it('wraps the controls shown after token creation', async () => {
   close!.dispatchEvent(forward)
   expect(forward.defaultPrevented).toBe(true)
   expect(document.activeElement).toBe(copy)
+  wrapper.unmount()
+})
+
+it.each([
+  ['Create token', TokenCreateDialog, { action }],
+  ['Delete account', AccountDeleteDialog, { email: 'test@example.invalid', action }],
+])('names the %s dialog from its heading', (title, component, props) => {
+  const wrapper = mount(component, { props })
+  const id = wrapper.get('dialog').attributes('aria-labelledby')
+  expect(id).toBeTruthy()
+  expect(wrapper.get('h2').attributes('id')).toBe(id)
+  expect(wrapper.get('h2').text()).toBe(title)
   wrapper.unmount()
 })
