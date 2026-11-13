@@ -71,7 +71,7 @@ func New(cfg Config) http.Handler {
 	})
 	registerTools(s, cfg)
 	transport := mcp.NewStreamableHTTPHandler(func(*http.Request) *mcp.Server { return s }, &mcp.StreamableHTTPOptions{
-		Stateless: true, JSONResponse: true, MaxRequestBodyBytes: 64 << 10, PropagateRequestCancellation: true,
+		Stateless: true, JSONResponse: true, MaxRequestBodyBytes: 64 << 10, PropagateRequestCancellation: true, DisableLocalhostProtection: true,
 	})
 	return guard(transport)
 }

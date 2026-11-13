@@ -44,6 +44,12 @@ serves cached pages, bounds the cache to the known public routes and node codes,
 and caps concurrent renders at the value in budgets; an uncached request above
 the cap receives 429 at once, with no queue.
 
+`server` listens on loopback behind Caddy, so every `/mcp` request arrives with
+the public Host. The MCP SDK's localhost Host check (DNS rebinding protection
+for unauthenticated local servers) is therefore off: it would reject every
+proxied request with 403. Caddy serves only the configured site names, and
+`/mcp` requires a bearer token, so a rebinding page holds no credential.
+
 ## Write path
 
 Corpus releases are built on the owner's MacBook by the `corpus` worker under a
