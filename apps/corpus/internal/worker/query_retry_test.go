@@ -4,7 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
 	"reflect"
+	"strings"
 	"testing"
 	"testing/synctest"
 	"time"
@@ -39,7 +42,7 @@ func (s *scriptedEmbedder) Embed(_ context.Context, text string) (embedding.Vect
 func TestRetryEmbedder_Embed(t *testing.T) {
 	busy := &embedding.Error{Status: 429}
 	codeBusy := &embedding.Error{Status: 503, Code: "busy"}
-	one, two, thirty := 1, 2, 30
+	one, two, thirty := time.Second, 2*time.Second, 30*time.Second
 	lastBusy := &embedding.Error{Status: 429, Code: "last"}
 	transport := errors.New("transport")
 	for _, tt := range []struct {
@@ -107,5 +110,59 @@ func TestRetryEmbedder_RecipeDoesNotRetry(t *testing.T) {
 	_, err := (retryEmbedder{embedder: fake}).Recipe(context.Background())
 	if err == nil || fake.recipeCalls != 1 {
 		t.Fatalf("error = %v, calls = %d", err, fake.recipeCalls)
+	}
+}
+
+type retryHeaderTransport struct {
+	header string
+	times  []time.Time
+}
+
+func (r *retryHeaderTransport) RoundTrip(_ *http.Request) (*http.Response, error) {
+	r.times = append(r.times, time.Now())
+	status := http.StatusTooManyRequests
+	body := `{"error":{"code":"busy"}}`
+	header := make(http.Header)
+	header.Set("Retry-After", r.header)
+	if len(r.times) > 1 {
+		status = http.StatusOK
+		body = `{"recipe_hash":"hash","dimensions":1,"data":[{"index":0,"token_count":1,"embedding":[1]}]}`
+	}
+	return &http.Response{StatusCode: status, Header: header, Body: io.NopCloser(strings.NewReader(body))}, nil
+}
+
+func TestRetryEmbedder_HTTPRetryAfter(t *testing.T) {
+	for _, tt := range []struct {
+		name   string
+		offset time.Duration
+		header string
+		want   time.Duration
+	}{
+		{"future date capped", 10 * time.Second, "", 5 * time.Second},
+		{"future date", 2 * time.Second, "", 2 * time.Second},
+		{"past date", -time.Second, "", 250 * time.Millisecond},
+		{"oversized decimal", 0, "99999999999999999999", 5 * time.Second},
+		{"garbage", 0, "garbage", 250 * time.Millisecond},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				header := tt.header
+				if header == "" {
+					header = time.Now().Add(tt.offset).UTC().Format(http.TimeFormat)
+				}
+				transport := &retryHeaderTransport{header: header}
+				q := embedding.Query{Client: embedding.NewClient("http://embedder", &http.Client{Transport: transport}), RecipeHash: "hash"}
+				_, err := (retryEmbedder{embedder: q}).Embed(context.Background(), "query")
+				if err != nil {
+					t.Fatal(err)
+				}
+				if len(transport.times) != 2 {
+					t.Fatalf("calls = %d", len(transport.times))
+				}
+				if got := transport.times[1].Sub(transport.times[0]); got != tt.want {
+					t.Fatalf("wait = %v, want %v", got, tt.want)
+				}
+			})
+		})
 	}
 }

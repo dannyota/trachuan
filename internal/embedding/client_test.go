@@ -5,10 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestClient_DecodesErrorTable(t *testing.T) {
@@ -98,9 +100,9 @@ func TestQuery_RejectsInconsistentExpectedRecipe(t *testing.T) {
 func TestClient_CapturesRetryAfter(t *testing.T) {
 	for _, tt := range []struct {
 		header string
-		want   *int
+		want   *time.Duration
 	}{
-		{"2", new(2)}, {"0", new(0)}, {"", nil}, {"-1", nil}, {"+2", nil}, {"invalid", nil}, {"999999999999999999999999999", nil},
+		{"2", new(2 * time.Second)}, {"0", new(time.Duration(0))}, {"", nil}, {"-1", nil}, {"+2", nil}, {"invalid", nil}, {"999999999999999999999999999", new(time.Duration(math.MaxInt64))},
 	} {
 		t.Run(tt.header, func(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {

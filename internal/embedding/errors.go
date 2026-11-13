@@ -1,9 +1,12 @@
 package embedding
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
 type Error struct {
-	RetryAfter        *int
+	RetryAfter        *time.Duration
 	Status            int
 	Code              string
 	Index, TokenCount *int

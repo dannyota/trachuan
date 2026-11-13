@@ -27,12 +27,7 @@ func (r retryEmbedder) Embed(ctx context.Context, text string) (embedding.Vector
 		}
 		wait := waits[attempt]
 		if service.RetryAfter != nil {
-			seconds := *service.RetryAfter
-			if seconds >= 5 {
-				wait = 5 * time.Second
-			} else if seconds > 0 && time.Duration(seconds)*time.Second > wait {
-				wait = time.Duration(seconds) * time.Second
-			}
+			wait = min(max(wait, *service.RetryAfter), 5*time.Second)
 		}
 		timer := time.NewTimer(wait)
 		select {

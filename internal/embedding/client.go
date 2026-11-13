@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -52,6 +53,7 @@ func (c *Client) request(ctx context.Context, path string, body any, out any) er
 	if err != nil {
 		return fmt.Errorf("embedder request: %w", err)
 	}
+	receivedAt := time.Now()
 	defer func() { _ = resp.Body.Close() }()
 	dec := json.NewDecoder(io.LimitReader(resp.Body, 64<<20))
 	if resp.StatusCode != http.StatusOK {
@@ -65,12 +67,18 @@ func (c *Client) request(ctx context.Context, path string, body any, out any) er
 		if err := dec.Decode(&data); err != nil {
 			return fmt.Errorf("decode embedder error: %w", err)
 		}
-		var retryAfter *int
+		var retryAfter *time.Duration
 		header := resp.Header.Get("Retry-After")
 		if header != "" && strings.Trim(header, "0123456789") == "" {
-			if seconds, err := strconv.Atoi(header); err == nil {
-				retryAfter = &seconds
+			seconds, err := strconv.ParseUint(header, 10, 64)
+			delay := time.Duration(math.MaxInt64)
+			if err == nil && seconds <= uint64(math.MaxInt64/int64(time.Second)) {
+				delay = time.Duration(seconds) * time.Second
 			}
+			retryAfter = &delay
+		} else if date, err := http.ParseTime(header); err == nil {
+			delay := max(date.Sub(receivedAt), 0)
+			retryAfter = &delay
 		}
 		return &Error{Status: resp.StatusCode, Code: data.Error.Code, Index: data.Error.Index, TokenCount: data.Error.TokenCount, RetryAfter: retryAfter}
 	}
