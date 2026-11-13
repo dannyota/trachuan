@@ -26,8 +26,6 @@ type Querier interface {
 	CountUnacceptedGaps(ctx context.Context, runID int64) (int64, error)
 	CreateRun(ctx context.Context, arg CreateRunParams) error
 	DeleteItemGaps(ctx context.Context, arg DeleteItemGapsParams) (int64, error)
-	// Listing rows written by one discover item: their query key is the item key,
-	// "@" and the query identity, the convention the membership readers use.
 	DeleteRunListingsByItem(ctx context.Context, arg DeleteRunListingsByItemParams) (int64, error)
 	DeleteRunListingsByQuery(ctx context.Context, arg DeleteRunListingsByQueryParams) (int64, error)
 	DeleteStageGaps(ctx context.Context, arg DeleteStageGapsParams) (int64, error)
@@ -42,8 +40,6 @@ type Querier interface {
 	GetBatchRun(ctx context.Context, id int64) (Run, error)
 	GetBatchRunState(ctx context.Context, id int64) (string, error)
 	GetBuildInventory(ctx context.Context, runID int64) (json.RawMessage, error)
-	// One statement, so items, gaps, the final membership snapshot and the file
-	// projection come from one consistent read.
 	GetBuildInventoryV2(ctx context.Context, runID int64) (json.RawMessage, error)
 	GetChunkInput(ctx context.Context, arg GetChunkInputParams) (GetChunkInputRow, error)
 	GetControlRunForUpdate(ctx context.Context, id int64) (Run, error)
@@ -54,6 +50,7 @@ type Querier interface {
 	GetFileHash(ctx context.Context, sha256 string) (FileHash, error)
 	GetOCRCheck(ctx context.Context, arg GetOCRCheckParams) (OcrCheck, error)
 	GetOCRText(ctx context.Context, arg GetOCRTextParams) (OcrText, error)
+	GetPinnedArtifact(ctx context.Context, arg GetPinnedArtifactParams) (GetPinnedArtifactRow, error)
 	GetRun(ctx context.Context, arg GetRunParams) (Run, error)
 	GetRunAcquisition(ctx context.Context, arg GetRunAcquisitionParams) (GetRunAcquisitionRow, error)
 	GetRunForUpdate(ctx context.Context, arg GetRunForUpdateParams) (Run, error)
@@ -91,6 +88,7 @@ type Querier interface {
 	ListDiscoveryItems(ctx context.Context, country string) ([]ListDiscoveryItemsRow, error)
 	ListDiscoveryListings(ctx context.Context, country string) ([]ListDiscoveryListingsRow, error)
 	ListDiscoveryRuns(ctx context.Context, country string) ([]ListDiscoveryRunsRow, error)
+	ListDocumentAcquisitions(ctx context.Context, arg ListDocumentAcquisitionsParams) ([]ListDocumentAcquisitionsRow, error)
 	ListEarlierRuns(ctx context.Context, arg ListEarlierRunsParams) ([]ListEarlierRunsRow, error)
 	ListEmbedArtifacts(ctx context.Context, recipeHash string) ([]ListEmbedArtifactsRow, error)
 	ListEmbedInputs(ctx context.Context, runID int64) ([]ListEmbedInputsRow, error)
@@ -131,8 +129,6 @@ type Querier interface {
 	ResetFailedItems(ctx context.Context, arg ResetFailedItemsParams) error
 	ResetOlderFailedStageItems(ctx context.Context, arg ResetOlderFailedStageItemsParams) error
 	ResetRetryItem(ctx context.Context, arg ResetRetryItemParams) (int64, error)
-	// Seeds acquisitions from the run's own committed done items; used once,
-	// before the first retry invalidation of a run that has none.
 	SeedRunAcquisitions(ctx context.Context, runID int64) (int64, error)
 	SetFetchCloseInputHash(ctx context.Context, arg SetFetchCloseInputHashParams) (int64, error)
 	SetFetchedFileTime(ctx context.Context, arg SetFetchedFileTimeParams) (int64, error)

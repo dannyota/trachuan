@@ -96,6 +96,7 @@ func (s *Stage) central(ctx context.Context, dir string, rules source.VBPLSource
 	for _, key := range keys {
 		selected.Items = append(selected.Items, selectedByID[key])
 	}
+	report.Notices = livePins(catalog.IDs, rules.Pinned, catalog.Complete)
 	for _, file := range []struct {
 		name  string
 		value any

@@ -13,6 +13,7 @@ import (
 )
 
 type seedMember struct {
+	numbers map[string]bool
 	entry   membership.Entry
 	records []membership.EvidenceRecord
 }
@@ -43,6 +44,10 @@ func currentMembers(ctx context.Context, q *store.Queries, r stage.Run) (map[str
 		}
 		if selected.Number != nil {
 			n := retrieval.NormalizeNumber(*selected.Number)
+			if m.numbers == nil {
+				m.numbers = map[string]bool{}
+			}
+			m.numbers[n] = true
 			m.entry.RawNumber = selected.Number
 			m.entry.NormalizedNumber = &n
 		}
@@ -87,7 +92,7 @@ func isLegacy(s membership.SupportTuple) bool {
 	return s.Evidence.QueryIdentity != nil && (strings.HasPrefix(*s.Evidence.QueryIdentity, "vbpl:sweep@") || strings.HasPrefix(*s.Evidence.QueryIdentity, "vbpl:keyword:"))
 }
 func directSupport(s membership.SupportTuple) bool {
-	return s.RuleKind == "agency" || s.RuleKind == "term" || s.RuleKind == "named" || (s.RuleKind == "secondary_probe" && strings.Contains(s.RuleValue, "|")) || isLegacy(s)
+	return s.RuleKind == "agency" || s.RuleKind == "term" || s.RuleKind == "named" || s.RuleKind == "pinned" || (s.RuleKind == "secondary_probe" && strings.Contains(s.RuleValue, "|")) || isLegacy(s)
 }
 func sameSupport(a, b membership.SupportTuple) bool {
 	return len(membership.MergeSupports([]membership.SupportTuple{a}, []membership.SupportTuple{b})) == 1

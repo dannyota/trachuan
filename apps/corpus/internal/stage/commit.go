@@ -15,7 +15,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// Commit holds the rows and fence for one stage item.
 type Commit struct {
 	RunID        int64
 	Stage        string
@@ -27,17 +26,14 @@ type Commit struct {
 	ArtifactRows func(context.Context, pgx.Tx, int64) error
 	RunRows      func(context.Context, pgx.Tx) error
 	Gaps         []Gap
-	// Sources lists every source the item contacted or depends on.
 	Sources      []string
 	Observations []FetchObservation
 	Requests     []sourcegate.RequestRecord
 	State        string
 	Message      string
-	// SourceRead distinguishes a fresh read from reuse of committed bytes.
-	SourceRead bool
+	SourceRead   bool
 }
 
-// CommitItem commits an item and its rows if its fence is current.
 func CommitItem(ctx context.Context, pool *pgxpool.Pool, c Commit) (applied bool, err error) {
 	return commitItem(ctx, pool, &c)
 }
@@ -200,7 +196,7 @@ func commitItem(ctx context.Context, pool *pgxpool.Pool, c *Commit) (applied boo
 		}
 	}
 	parts := strings.SplitN(c.ItemKey, ":", 3)
-	if c.Stage == "fetch" && c.State == "done" && artifactID != nil && c.Message != AcquisitionMessage && len(parts) == 3 && parts[0] != "" && parts[1] == "vbpl" && parts[2] != "" {
+	if c.Stage == "fetch" && c.State == "done" && artifactID != nil && c.Message != AcquisitionMessage && c.Message != PinnedMessage && len(parts) == 3 && parts[0] != "" && parts[1] == "vbpl" && parts[2] != "" {
 		if err = q.UpsertFetchBaseline(ctx, store.UpsertFetchBaselineParams{DocumentKey: c.ItemKey, FetchRecipeHash: c.RecipeHash, ArtifactID: *artifactID, RunID: c.RunID, ItemKey: c.ItemKey, Generation: int32(c.Generation), Attempt: int32(c.Attempt)}); err != nil {
 			return false, fmt.Errorf("record fetch baseline: %w", err)
 		}

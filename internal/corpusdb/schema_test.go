@@ -66,11 +66,11 @@ func TestApplyTables_DefersANNIndex(t *testing.T) {
 	}
 }
 
-func TestSchema_Version5Constraints(t *testing.T) {
-	if SchemaVersion != 5 {
-		t.Fatalf("schema version = %d, want 5", SchemaVersion)
+func TestSchema_Version6Constraints(t *testing.T) {
+	if SchemaVersion != 6 {
+		t.Fatalf("schema version = %d, want 6", SchemaVersion)
 	}
-	for _, part := range []string{"validity_decision", "validity_conflict", "derived_from_text", "manual_correction", "schema_version = 5", "ordinal integer NOT NULL CHECK (ordinal >= 1)", "provision_count integer NOT NULL CHECK (provision_count >= 0)", "document_count integer NOT NULL CHECK (document_count >= 0)", "UNIQUE NULLS NOT DISTINCT (parent_id,ordinal)", "text_source text NOT NULL", "text_complete boolean NOT NULL", "locator text", "text_source <> 'none' OR NOT text_complete"} {
+	for _, part := range []string{"validity_decision", "validity_conflict", "derived_from_text", "manual_correction", "schema_version = 6", "ordinal integer NOT NULL CHECK (ordinal >= 1)", "provision_count integer NOT NULL CHECK (provision_count >= 0)", "document_count integer NOT NULL CHECK (document_count >= 0)", "UNIQUE NULLS NOT DISTINCT (parent_id,ordinal)", "text_source text NOT NULL", "text_complete boolean NOT NULL", "locator text", "text_source <> 'none' OR NOT text_complete"} {
 		if !strings.Contains(schema, part) {
 			t.Errorf("schema missing %q", part)
 		}

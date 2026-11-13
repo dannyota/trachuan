@@ -11,7 +11,6 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// Finalize publishes the discovery seed membership in the close transaction.
 func (s *Stage) Finalize(ctx context.Context, env stage.Env, tx pgx.Tx, r stage.Run) (stage.Finalization, error) {
 	list, err := source.Parse(r.Snapshot.SourceList)
 	if err != nil {
@@ -39,6 +38,9 @@ func (s *Stage) Finalize(ctx context.Context, env stage.Env, tx pgx.Tx, r stage.
 	}
 	if err = addSecondaryMembers(ctx, q, env, r, secondary, members); err != nil {
 		return stage.Finalization{}, err
+	}
+	if failure := addPinnedMembers(r, list.VBPL.Pinned, members); failure.Code != "" {
+		return failure, nil
 	}
 	ambiguous, err := supplementNamed(ctx, q, env, r, list.VBPL.NamedNumbers, members)
 	if err != nil {

@@ -13,13 +13,11 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// Recipes identifies the dense and lexical encoders used for the build.
 type Recipes struct {
 	Dense   embedding.Recipe
 	Lexical lexical.Recipe
 }
 
-// Counts reports rows and lexical statistics loaded into the corpus.
 type Counts struct {
 	Documents, SourceFiles, Provisions, Chunks, DenseVectors, Rejected, UnavailableArtifacts, Relations, Gaps int64
 	LexicalStats                                                                                              lexical.StatsSummary
@@ -28,6 +26,7 @@ type Counts struct {
 }
 
 type loader struct {
+	pins            map[string]source.Pin
 	tx              pgx.Tx
 	inv             Inventory
 	artifacts       artifact.Store
@@ -42,14 +41,13 @@ type loader struct {
 	counts          Counts
 }
 
-// LoadOptions carries frozen issuer identities, taxonomy input and phase timings.
 type LoadOptions struct {
+	Pins           []source.Pin
 	CentralIssuers map[string]string
 	Taxonomy       TaxonomyInput
 	Durations      map[string]int64
 }
 
-// Load inserts a frozen inventory into an already initialized corpus database.
 func Load(ctx context.Context, conn *pgx.Conn, inv Inventory, artifacts artifact.Store, recipes Recipes, codes map[string]source.StatusCode, corrections []source.Correction, asOf string, options ...LoadOptions) (Counts, error) {
 	opts := LoadOptions{}
 	if len(options) > 0 {
@@ -78,6 +76,10 @@ func Load(ctx context.Context, conn *pgx.Conn, inv Inventory, artifacts artifact
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 	l := loader{tx: tx, inv: inv.sorted(), artifacts: artifacts, recipes: recipes, codes: codes, items: make(map[string]map[string]InventoryItem), docs: make(map[string]*loadedDocument), present: inv.Presence(), members: map[string]membership.Entry{}, provenanceFiles: map[string][]provenanceFile{}, gaps: append([]InventoryGap{}, inv.Gaps...)}
+	l.pins = map[string]source.Pin{}
+	for _, pin := range opts.Pins {
+		l.pins[pin.Key] = pin
+	}
 	for _, item := range l.inv.Items {
 		if l.items[item.Stage] == nil {
 			l.items[item.Stage] = make(map[string]InventoryItem)

@@ -37,8 +37,6 @@ type DeleteRunListingsByItemParams struct {
 	ItemKey string
 }
 
-// Listing rows written by one discover item: their query key is the item key,
-// "@" and the query identity, the convention the membership readers use.
 func (q *Queries) DeleteRunListingsByItem(ctx context.Context, arg DeleteRunListingsByItemParams) (int64, error) {
 	result, err := q.db.Exec(ctx, deleteRunListingsByItem, arg.RunID, arg.ItemKey)
 	if err != nil {

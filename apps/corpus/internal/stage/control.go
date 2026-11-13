@@ -9,20 +9,17 @@ import (
 	"danny.vn/trachuan/apps/corpus/internal/store"
 )
 
-// StageInput identifies a stage of a run generation.
 type StageInput struct {
 	RunID      int64
 	Generation int
 	Stage      string
 }
 
-// PlanResult lists the batch numbers that still hold pending items.
 type PlanResult struct {
 	Batches    []int
 	Cancelling bool
 }
 
-// CloseResult reports a closed stage.
 type CloseResult struct {
 	Counts     Counts
 	NextStage  string
@@ -31,7 +28,6 @@ type CloseResult struct {
 	Reason     string
 }
 
-// MarkInput asks for a fenced run state change.
 type MarkInput struct {
 	RunID       int64
 	Generation  int
@@ -39,7 +35,6 @@ type MarkInput struct {
 	To, Message string
 }
 
-// PlanStage checks the generation and recipes, then records the stage's items.
 func PlanStage(ctx context.Context, env Env, st Stage, in StageInput, compiled map[string]string) (PlanResult, error) {
 	var result PlanResult
 	tx, err := env.DB.Begin(ctx)
@@ -71,6 +66,16 @@ func PlanStage(ctx context.Context, env Env, st Stage, in StageInput, compiled m
 		}
 	}
 	run := Run{ID: row.ID, Country: row.Country, Rel: row.Rel, Generation: int(row.Generation), Snapshot: snapshot}
+	failed, err := preflight(ctx, env, tx, st, run)
+	if err != nil {
+		return result, err
+	}
+	if failed {
+		if err = tx.Commit(ctx); err != nil {
+			return result, fmt.Errorf("commit preflight failure: %w", err)
+		}
+		return result, nil
+	}
 	items, err := st.Plan(ctx, env, run)
 	if err != nil {
 		return result, fmt.Errorf("plan stage %s: %w", in.Stage, err)
@@ -117,7 +122,6 @@ func PlanStage(ctx context.Context, env Env, st Stage, in StageInput, compiled m
 	return result, nil
 }
 
-// CloseStage records the stage's counts and moves next_stage when no item is pending or failed.
 func CloseStage(ctx context.Context, env Env, st Stage, in StageInput, following string) (CloseResult, error) {
 	var result CloseResult
 	tx, err := env.DB.Begin(ctx)
@@ -268,7 +272,6 @@ func CloseStage(ctx context.Context, env Env, st Stage, in StageInput, following
 	return result, nil
 }
 
-// MarkRun changes the run state only from an allowed state and only for its own generation.
 func MarkRun(ctx context.Context, env Env, in MarkInput) (bool, error) {
 	tx, err := env.DB.Begin(ctx)
 	if err != nil {

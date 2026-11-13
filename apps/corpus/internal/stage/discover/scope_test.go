@@ -45,7 +45,6 @@ func TestDiscover_CentralListingStablePasses(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// Synthetic total bounds the recorded items to one test page.
 	p := response(string(itemsJSON), len(recorded.Data.Items))
 	resolved, _, dir, err := scopeRun(t, "", []string{p, p})
 	if err != nil || len(resolved.Gaps) != 0 {
@@ -65,7 +64,6 @@ func TestDiscover_CentralListingStablePasses(t *testing.T) {
 
 }
 
-// Synthetic responses use the gateway's listing envelope.
 func scopeRun(t *testing.T, entry string, responses []string) (stage.Resolution, stage.Output, string, error) {
 	t.Helper()
 	calls := 0
@@ -272,7 +270,7 @@ func TestRecipe_SecondaryConfigurationBumpsRecipe(t *testing.T) {
 	base := stage.Snapshot{SourceList: json.RawMessage(`{"vbpl":{"selection_version":1}}`)}
 	secondary := stage.Snapshot{SourceList: json.RawMessage(`{"vbpl":{"selection_version":1},"chinhphu":{"issuer_policy_version":1,"central_issuer_forms":["Chính phủ"],"keywords":["law"]}}`)}
 	legacyRecipe := stage.RecipeHash("discover", "vbpl-discover/selection-2", secondary.SourceListHash)
-	if New(nil).Recipe(secondary) == legacyRecipe || New(nil).Recipe(base) != stage.RecipeHash("discover", "vbpl-discover/selection-2", base.SourceListHash) {
+	if New(nil).Recipe(secondary) == legacyRecipe || New(nil).Recipe(base) != stage.RecipeHash("discover", "vbpl-discover/selection-3", base.SourceListHash) {
 		t.Fatal("recipe does not bind secondary implementation")
 	}
 	for _, snapshot := range []stage.Snapshot{base, secondary} {

@@ -1,4 +1,3 @@
-// Package source parses frozen source lists.
 package source
 
 import (
@@ -14,7 +13,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// List holds the sources and code tables for a country.
 type List struct {
 	Country        string                  `yaml:"country" json:"country"`
 	Chinhphu       ChinhphuSources         `yaml:"chinhphu" json:"chinhphu,omitempty"`
@@ -24,8 +22,8 @@ type List struct {
 	StatusCodes    map[string]StatusCode   `yaml:"status_codes" json:"status_codes"`
 }
 
-// VBPLSources defines the discovery queries.
 type VBPLSources struct {
+	Pinned           []Pin    `yaml:"pinned" json:"pinned,omitempty"`
 	SelectionVersion int      `yaml:"selection_version" json:"selection_version,omitempty"`
 	NamedNumbers     []string `yaml:"named_numbers" json:"named_numbers,omitempty"`
 	SweepAgencies    []string `yaml:"sweep_agencies" json:"sweep_agencies"`
@@ -33,7 +31,6 @@ type VBPLSources struct {
 	Keywords         []string `yaml:"keywords" json:"keywords"`
 }
 
-// ChinhphuSources defines secondary discovery queries.
 type ChinhphuSources struct {
 	IssuerPolicyVersion int      `yaml:"issuer_policy_version" json:"issuer_policy_version,omitempty"`
 	CentralIssuerForms  []string `yaml:"central_issuer_forms" json:"central_issuer_forms,omitempty"`
@@ -41,13 +38,11 @@ type ChinhphuSources struct {
 	NamedNumbers        []string `yaml:"named_numbers" json:"named_numbers,omitempty"`
 }
 
-// NamedNumber is a number and its optional civil issue date.
 type NamedNumber struct {
 	Number string
 	Date   string
 }
 
-// ParseNamedNumber parses a named entry and validates its date qualifier.
 func ParseNamedNumber(entry string) (NamedNumber, error) {
 	number, date, qualified := strings.Cut(entry, "@")
 	if number == "" {
@@ -73,7 +68,6 @@ func ParseNamedNumber(entry string) (NamedNumber, error) {
 	return NamedNumber{Number: number, Date: date}, nil
 }
 
-// RelationCode defines a source relation.
 type RelationCode struct {
 	Kind        string `yaml:"kind" json:"kind"`
 	Label       string `yaml:"label" json:"label"`
@@ -81,13 +75,11 @@ type RelationCode struct {
 	Superseding bool   `yaml:"superseding" json:"superseding"`
 }
 
-// StatusCode defines a source validity status.
 type StatusCode struct {
 	Class   string `yaml:"class" json:"class"`
 	Current bool   `yaml:"current" json:"current"`
 }
 
-// Parse decodes a YAML or JSON source list.
 func Parse(data []byte) (List, error) {
 	var list List
 	if err := yaml.Unmarshal(data, &list); err != nil {
@@ -114,7 +106,6 @@ func Parse(data []byte) (List, error) {
 	return list, nil
 }
 
-// ValidateSecondary checks the configured secondary issuer policy.
 func (l List) ValidateSecondary() error {
 	c := l.Chinhphu
 	if len(c.Keywords) > 0 || len(c.NamedNumbers) > 0 || c.IssuerPolicyVersion != 0 || len(c.CentralIssuerForms) > 0 {
@@ -133,19 +124,16 @@ func (l List) ValidateSecondary() error {
 	return nil
 }
 
-// NormalizeIssuer returns the identity comparison form of an issuer.
 func NormalizeIssuer(value string) string {
 	return strings.Join(strings.Fields(strings.ToUpper(norm.NFC.String(value))), " ")
 }
 
-// RelationCodesHash returns the hash of the canonical relation code JSON.
 func (l List) RelationCodesHash() string {
 	data, _ := json.Marshal(l.RelationCodes)
 	sum := sha256.Sum256(data)
 	return hex.EncodeToString(sum[:])
 }
 
-// CentralIssuersHash returns the hash of the canonical issuer table JSON.
 func (l List) CentralIssuersHash() string {
 	var data []byte
 	if l.CentralIssuers != nil {

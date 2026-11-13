@@ -20,6 +20,8 @@ CREATE TABLE document (
  fetch_sha256 text COLLATE "C" NOT NULL CHECK (fetch_sha256 ~ '^[0-9a-f]{64}$'),
  extract_sha256 text COLLATE "C" CHECK (extract_sha256 ~ '^[0-9a-f]{64}$'),
  source_url text,
+ source_withdrawn_since date, source_withdrawn_rel text,
+ CHECK ((source_withdrawn_since IS NULL) = (source_withdrawn_rel IS NULL)),
  CHECK (eff_to IS NULL OR eff_from IS NULL OR eff_to >= eff_from)
 );
 CREATE INDEX ON document (number_norm);
@@ -154,7 +156,7 @@ CREATE INDEX ON taxonomy_assignment (provision_id,family_id);
 
 CREATE TABLE release (
  singleton boolean PRIMARY KEY CHECK (singleton), country text COLLATE "C" NOT NULL CHECK (country = 'vn'),
- rel text COLLATE "C" NOT NULL UNIQUE, schema_version integer NOT NULL CHECK (schema_version = 5),
+ rel text COLLATE "C" NOT NULL UNIQUE, schema_version integer NOT NULL CHECK (schema_version = 6),
  taxonomy_version text COLLATE "C" NOT NULL,
  dense_recipe jsonb NOT NULL CHECK (jsonb_typeof(dense_recipe) = 'object'),
  chunk_recipe jsonb NOT NULL CHECK (jsonb_typeof(chunk_recipe) = 'object'),

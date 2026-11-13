@@ -12,8 +12,6 @@ SELECT jsonb_build_object(
 )::jsonb AS inventory;
 
 -- name: GetBuildInventoryV2 :one
--- One statement, so items, gaps, the final membership snapshot and the file
--- projection come from one consistent read.
 SELECT jsonb_build_object(
   'items', COALESCE((SELECT jsonb_agg(jsonb_build_object(
     'stage', i.stage, 'item_key', i.item_key, 'state', i.state,

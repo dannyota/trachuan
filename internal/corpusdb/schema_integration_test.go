@@ -31,7 +31,7 @@ func schemaDB(t *testing.T) *pgx.Conn {
 	return conn
 }
 
-func TestApply_CreatesSchemaVersion5(t *testing.T) {
+func TestApply_CreatesSchemaVersion6(t *testing.T) {
 	conn := schemaDB(t)
 	ctx := context.Background()
 	for _, table := range []string{"document", "source_file", "provision", "provision_validity", "chunk", "lexical_df", "relation", "coverage_gap", "taxonomy_node", "taxonomy_assignment", "validity_decision", "release"} {

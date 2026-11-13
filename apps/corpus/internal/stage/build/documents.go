@@ -164,7 +164,11 @@ func (l *loader) loadDocuments(ctx context.Context) error {
 			member := l.members[key]
 			docClass, docSource = member.Class, member.Source
 		}
-		_, err = l.tx.Exec(ctx, `INSERT INTO document(id,country,key,number,number_norm,title,doc_type,issuer,class,source,validity_conflict,issue_date,eff_from,eff_to,raw_issue_date,raw_eff_from,raw_eff_to,status_code,status_name,status_class,status_basis,is_current,is_consolidated,content_state,fetch_sha256,extract_sha256,source_url,text_source,text_complete) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$24,$25,false,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$26,$27,$28)`, id, l.inv.Country, key, d.Number, retrieval.NormalizeNumber(d.Number), d.Title, d.DocType, d.Issuer, issue, from, to, d.IssueDate, d.EffFrom, d.EffTo, d.StatusCode, d.StatusName, class, basis, current, d.IsConsolidated, state, *item.ArtifactSHA256, extractHash, docClass, docSource, d.SourceURL, textSource, textComplete(len(nodes), key, l.gaps))
+		since, rel, err := l.pinnedMetadata(key, *item.ArtifactSHA256)
+		if err != nil {
+			return err
+		}
+		_, err = l.tx.Exec(ctx, `INSERT INTO document(id,country,key,number,number_norm,title,doc_type,issuer,class,source,validity_conflict,issue_date,eff_from,eff_to,raw_issue_date,raw_eff_from,raw_eff_to,status_code,status_name,status_class,status_basis,is_current,is_consolidated,content_state,fetch_sha256,extract_sha256,source_url,text_source,text_complete,source_withdrawn_since,source_withdrawn_rel) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$24,$25,false,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$26,$27,$28,$29,$30)`, id, l.inv.Country, key, d.Number, retrieval.NormalizeNumber(d.Number), d.Title, d.DocType, d.Issuer, issue, from, to, d.IssueDate, d.EffFrom, d.EffTo, d.StatusCode, d.StatusName, class, basis, current, d.IsConsolidated, state, *item.ArtifactSHA256, extractHash, docClass, docSource, d.SourceURL, textSource, textComplete(len(nodes), key, l.gaps), since, rel)
 		if err != nil {
 			return fmt.Errorf("insert document: %w", err)
 		}

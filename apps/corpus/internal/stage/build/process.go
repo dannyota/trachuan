@@ -25,7 +25,6 @@ import (
 	"go.temporal.io/sdk/temporal"
 )
 
-// Process builds and dumps a corpus from the planned inventory.
 func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item stage.Item) (output stage.Output, resultErr error) {
 	started := time.Now()
 	timings := phases{}
@@ -126,7 +125,7 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 		return stage.Output{}, temporal.NewNonRetryableApplicationError("inventory_changed", "inventory_changed", err)
 	}
 	phaseStart = time.Now()
-	counts, err := Load(ctx, conn.Conn(), inv, env.Artifacts, Recipes{Dense: embedding.DocumentRecipe1(), Lexical: lexical.Recipe1()}, codes.StatusCodes, entries, run.Rel[:4]+"-"+run.Rel[4:6]+"-"+run.Rel[6:8], LoadOptions{CentralIssuers: codes.CentralIssuers, Taxonomy: s.cfg.Taxonomy, Durations: timings})
+	counts, err := Load(ctx, conn.Conn(), inv, env.Artifacts, Recipes{Dense: embedding.DocumentRecipe1(), Lexical: lexical.Recipe1()}, codes.StatusCodes, entries, run.Rel[:4]+"-"+run.Rel[4:6]+"-"+run.Rel[6:8], LoadOptions{Pins: codes.VBPL.Pinned, CentralIssuers: codes.CentralIssuers, Taxonomy: s.cfg.Taxonomy, Durations: timings})
 	if err != nil {
 		return stage.Output{}, err
 	}
@@ -275,12 +274,10 @@ func insertRelease(ctx context.Context, conn *pgx.Conn, r retrieval.Release) err
 	return nil
 }
 
-// Rows provides no workshop projections for a build artifact.
 func (*Stage) Rows(context.Context, stage.Env, artifact.Result) (func(context.Context, pgx.Tx, int64) error, error) {
 	return nil, nil
 }
 
-// Resolve verifies the build artifact and ensures its corpus database exists.
 func (s *Stage) Resolve(ctx context.Context, env stage.Env, run stage.Run, item stage.Item, art artifact.Result) (stage.Resolution, error) {
 	if item.Key != run.Country+"/"+run.Rel || item.InputHash != art.InputHash {
 		return stage.Resolution{}, fmt.Errorf("build item identity mismatch")

@@ -11,22 +11,15 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// Finalizer publishes stage results in the close transaction. It reads artifacts
-// only through env.Artifacts and accesses the database only through tx, never
-// env.DB. It never commits, calls the network, or writes artifacts. It must be
-// idempotent for identical inputs and reject changed input after finalization.
 type Finalizer interface {
 	Finalize(context.Context, Env, pgx.Tx, Run) (Finalization, error)
 }
 
-// Finalization describes success when Code is empty, or a durable domain failure.
 type Finalization struct {
 	Code, Reason, ItemKey string
 	EvidenceRefs          []string
 }
 
-// failureIdentity hashes the JSON tuple of code, stage, item key and reason, so
-// the same failure is idempotent without ambiguous separators.
 func failureIdentity(stage string, f Finalization) (string, error) {
 	data, err := json.Marshal([]string{f.Code, stage, f.ItemKey, f.Reason})
 	if err != nil {
@@ -62,7 +55,6 @@ func recordFinalization(ctx context.Context, q *store.Queries, in StageInput, f 
 	return nil
 }
 
-// BlockingFailureCodes lists non-acceptable run failure codes.
 func BlockingFailureCodes() []string {
-	return []string{"scope_changed", "secondary_candidate_ceiling", "expansion_context_ceiling"}
+	return []string{"scope_changed", "secondary_candidate_ceiling", "expansion_context_ceiling", "pin_invalid", "pin_conflict"}
 }

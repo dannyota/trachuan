@@ -5,9 +5,10 @@ import (
 	"fmt"
 
 	"danny.vn/trachuan/apps/corpus/internal/lookup"
+	"danny.vn/trachuan/apps/corpus/internal/source"
 )
 
-func (s *Stage) named(ctx context.Context, dir, number string) error {
+func (s *Stage) named(ctx context.Context, dir, number string, pins ...source.Pin) error {
 	report := scopeReport{Version: 2, Passes: []lookup.Result{}}
 	var previous []string
 	var final lookup.Result
@@ -33,6 +34,7 @@ func (s *Stage) named(ctx context.Context, dir, number string) error {
 		}
 		previous = current
 	}
+	report.Notices = livePins(ids(final.Items), pins, report.Stable)
 	if err := writeJSON(dir, "report.json", report); err != nil {
 		return err
 	}

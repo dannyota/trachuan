@@ -10,11 +10,13 @@ import (
 	"strings"
 
 	"danny.vn/trachuan/apps/corpus/internal/artifact"
+	"danny.vn/trachuan/apps/corpus/internal/source"
 	"danny.vn/trachuan/apps/corpus/internal/store"
 	"github.com/jackc/pgx/v5"
 )
 
-// AcquisitionMessage identifies an item committed by same-run acquisition reuse.
+const PinnedMessage = "pinned acquisition"
+
 const AcquisitionMessage = "acquisition reused"
 
 type acquisitionVerifier interface {
@@ -24,6 +26,13 @@ type acquisitionVerifier interface {
 func adoptAcquisition(ctx context.Context, env Env, st Stage, r Run, item Item) (Output, bool, error) {
 	verifier, ok := st.(acquisitionVerifier)
 	if !ok || (st.Name() != "fetch" && st.Name() != "expand") || item.Skip != nil {
+		return Output{}, false, nil
+	}
+	list, parseErr := source.Parse(r.Snapshot.SourceList)
+	if parseErr != nil {
+		return Output{}, false, fmt.Errorf("parse acquisition sources: %w", parseErr)
+	}
+	if _, ok := list.Pin(item.Key); ok {
 		return Output{}, false, nil
 	}
 	a, err := store.New(env.DB).GetRunAcquisition(ctx, store.GetRunAcquisitionParams{RunID: r.ID, Stage: st.Name(), DocumentKey: item.Key})

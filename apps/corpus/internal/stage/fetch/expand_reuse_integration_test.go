@@ -31,8 +31,8 @@ func TestFetch_ExpandItemBelongsToCurrentRun(t *testing.T) {
 		t.Fatal(err)
 	}
 	art, err := env.Artifacts.PublishContent(ctx, "expand", recipe, func(dir string) error {
-		if err := os.WriteFile(filepath.Join(dir, "detail.json"), []byte(f.detailBody), 0600); err != nil {
-			return err
+		if writeErr := os.WriteFile(filepath.Join(dir, "detail.json"), []byte(f.detailBody), 0600); writeErr != nil {
+			return writeErr
 		}
 		return os.WriteFile(filepath.Join(dir, "diagram.json"), diagram, 0600)
 	})

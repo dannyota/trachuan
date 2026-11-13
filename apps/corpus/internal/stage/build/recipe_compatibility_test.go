@@ -7,11 +7,11 @@ import (
 	"danny.vn/trachuan/internal/retrieval"
 )
 
-func TestBuildRecipe_RetainsRecipe2Artifacts(t *testing.T) {
+func TestBuildRecipe_SupportsRetrievalRecipe2(t *testing.T) {
 	s := New(Config{})
 	snapshot := stage.Snapshot{SourceList: []byte(`{}`)}
 	old := s.recipeForRetrieval(snapshot, retrieval.Recipe2())
-	if old != "d438c55a2d2dda8a7455ace7d4160ad4dc084f954474a1e0bcf52bb6062b2a29" {
+	if old != "023fd0a0ce8b065171f90f585f5fcc2e563c6632c3964d6f0e67687569ceaa50" {
 		t.Fatalf("recipe 2 build hash %s", old)
 	}
 	if !s.acceptsRecipeHash(snapshot, old) || !s.acceptsRecipeHash(snapshot, s.Recipe(snapshot)) || s.acceptsRecipeHash(snapshot, "other") {

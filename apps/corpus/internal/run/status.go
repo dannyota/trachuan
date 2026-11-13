@@ -9,25 +9,26 @@ import (
 	"path/filepath"
 
 	"danny.vn/trachuan/apps/corpus/internal/artifact"
+	"danny.vn/trachuan/apps/corpus/internal/pinned"
 	"danny.vn/trachuan/apps/corpus/internal/stage"
 	"danny.vn/trachuan/apps/corpus/internal/store"
 	"go.temporal.io/api/serviceerror"
 	workflowpb "go.temporal.io/api/workflow/v1"
 )
 
-// Report contains workshop progress and Temporal activity details.
 type Report struct {
-	AdoptedItems      int        `json:"adopted_items"`
-	FetchReads        FetchReads `json:"fetch_reads"`
-	QualityPass       *bool      `json:"quality_pass,omitempty"`
-	QualityReason     string     `json:"quality_reason,omitempty"`
-	ReleaseEligible   *bool      `json:"release_eligible,omitempty"`
-	Run               store.Run
-	Stages            map[string]stage.Counts
-	PendingActivities []*workflowpb.PendingActivityInfo
+	NewlyWithdrawnNamed []WithdrawnNamed `json:"newly_withdrawn_named"`
+	PinNotices          []pinned.Notice  `json:"pin_notices"`
+	AdoptedItems        int              `json:"adopted_items"`
+	FetchReads          FetchReads       `json:"fetch_reads"`
+	QualityPass         *bool            `json:"quality_pass,omitempty"`
+	QualityReason       string           `json:"quality_reason,omitempty"`
+	ReleaseEligible     *bool            `json:"release_eligible,omitempty"`
+	Run                 store.Run
+	Stages              map[string]stage.Counts
+	PendingActivities   []*workflowpb.PendingActivityInfo
 }
 
-// Status reports the recorded progress and pending Temporal activities.
 func Status(ctx context.Context, d Deps, cc, rel string) (Report, error) {
 	q := store.New(d.DB)
 	row, err := q.GetRun(ctx, store.GetRunParams{Country: cc, Rel: rel})
@@ -35,6 +36,9 @@ func Status(ctx context.Context, d Deps, cc, rel string) (Report, error) {
 		return Report{}, fmt.Errorf("get run: %w", err)
 	}
 	report := Report{Run: row, Stages: make(map[string]stage.Counts)}
+	if err = report.loadPinStatus(ctx, q, d.Artifacts); err != nil {
+		return Report{}, err
+	}
 	report.AdoptedItems, err = countAdoptedItems(ctx, q, row.ID, int(row.Generation))
 	if err != nil {
 		return Report{}, err

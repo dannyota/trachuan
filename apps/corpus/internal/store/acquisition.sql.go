@@ -178,8 +178,6 @@ WHERE i.run_id = $1 AND i.stage IN ('expand', 'fetch') AND i.state = 'done' AND 
 ON CONFLICT (run_id, stage, document_key) DO NOTHING
 `
 
-// Seeds acquisitions from the run's own committed done items; used once,
-// before the first retry invalidation of a run that has none.
 func (q *Queries) SeedRunAcquisitions(ctx context.Context, runID int64) (int64, error) {
 	result, err := q.db.Exec(ctx, seedRunAcquisitions, runID)
 	if err != nil {

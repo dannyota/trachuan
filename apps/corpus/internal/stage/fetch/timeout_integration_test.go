@@ -71,9 +71,9 @@ func TestRunBatch_HungVBPLRequest(t *testing.T) {
 		t.Fatalf("attempt 1: result = %+v, error = %v", result, err)
 	}
 	select {
-	case err := <-cancelled:
-		if !errors.Is(err, context.DeadlineExceeded) || batchCtx.Err() != nil {
-			t.Fatalf("request cancellation = %v", err)
+	case cancelErr := <-cancelled:
+		if !errors.Is(cancelErr, context.DeadlineExceeded) || batchCtx.Err() != nil {
+			t.Fatalf("request cancellation = %v", cancelErr)
 		}
 	case <-batchCtx.Done():
 		t.Fatal("request cancellation was not observed")
