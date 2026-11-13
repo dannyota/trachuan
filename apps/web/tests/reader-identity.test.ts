@@ -13,3 +13,12 @@ it('shows the release and status basis without inventing a status date', async (
   expect(wrapper.text()).toContain('according to vbpl.vn')
   expect(wrapper.text()).not.toContain('Status as of')
 })
+it('offers the search return link before the document stamp', async () => {
+  setupReader([{ data: { release: '20990101', item: { complete: true, document: { number: '1/2099', title: 'Test law', status: { class: 'in_force', current: true }, text_source: 'none', text_complete: false }, units: [] } } }])
+  const wrapper = mount(Reader)
+  await flushPromises()
+  const band = wrapper.get('.reader-identity')
+  const link = band.get('a[href="/vn/search"]')
+  expect(link.text()).toContain('Back to results')
+  expect(link.element.compareDocumentPosition(band.get('.stamp').element) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+})

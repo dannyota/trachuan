@@ -1,5 +1,6 @@
 .reader-main { max-width: none; padding: 0; }
 .reader-back { font-size: 14px; text-decoration: none; }
+.reader-back-mobile { display: none; }
 .reader-identity { background: var(--color-surface); border-bottom: 1px solid var(--color-line); }
 .reader-identity-inner { display: flex; flex-direction: column; gap: 12px; padding-block: 28px 24px; }
 .reader-identity-line, .reader-meta, .reader-actions, .reader-chips, .reader-more, .reader-target-label { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
@@ -9,7 +10,7 @@
 .reader-meta { gap: 8px 28px; color: var(--color-ink-soft); font-size: 14px; }
 .reader-meta strong { color: var(--color-ink); }
 .reader-actions { margin-top: 4px; }
-.reader { display: grid; grid-template-columns: 260px minmax(0, 1fr) 260px; gap: 32px; align-items: start; padding-block: 24px; }
+.reader { --reader-target-surface: #F3F5FA; display: grid; grid-template-columns: 260px minmax(0, 1fr) 260px; gap: 32px; align-items: start; padding-block: 24px; }
 .reader-content, .reader-rail { min-width: 0; overflow-wrap: anywhere; }
 .reader-toc-desktop h2 { margin: 0 10px 6px; font-size: 13px; }
 .reader-toc ul { padding: 0; margin: 0; list-style: none; }
@@ -22,7 +23,7 @@
 .reader-unit h2 { margin: 0 0 12px; font-family: var(--font-serif); font-size: 20px; }
 .reader-unit .law-text { margin: 0 0 12px; }
 .reader-unit .reader-point { padding-left: 24px; }
-.reader-unit-target { padding: 12px 16px; border-left: 3px solid var(--color-primary); border-radius: var(--radius-md); background: var(--color-highlight); color: var(--color-highlight-ink); }
+.reader-unit-target { padding: 12px 16px; border-left: 3px solid var(--color-primary); border-radius: var(--radius-md); background: var(--reader-target-surface); color: var(--color-ink); }
 .reader-target-label { margin-bottom: 8px; font-size: 13px; }
 .reader-target-label .btn { min-height: 36px; }
 .reader-rail { display: flex; flex-direction: column; gap: 20px; }
@@ -50,5 +51,10 @@
   .reader-toc-desktop { display: none; }
   .reader-toc-mobile { display: block; margin-bottom: 24px; }
 }
-@media (max-width: 767px) { .reader-identity h1 { font-size: 24px; } }
+@media (max-width: 767px) {
+  .reader-back-header { display: none; }
+  .reader-back-mobile { display: inline; align-self: flex-start; }
+  .reader-identity h1 { font-size: 24px; }
+}
+@media (prefers-color-scheme: dark) { .reader { --reader-target-surface: var(--color-surface); } }
 @media (prefers-reduced-motion: reduce) { .reader-spinner { animation: none; } }

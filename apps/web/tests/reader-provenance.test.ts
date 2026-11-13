@@ -19,5 +19,5 @@ it('shows indexed document nodes when opened directly', async () => {
   const wrapper = mount(Reader, { global: { stubs: { NuxtLink: { template: '<a><slot /></a>' } } } })
   await flushPromises()
   expect(wrapper.text()).toContain('Ngân hàng')
-  expect(wrapper.findAll('a')).toHaveLength(1)
+  expect(wrapper.findAll('.reader-chips a')).toHaveLength(1)
 })

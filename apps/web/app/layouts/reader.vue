@@ -1,21 +1,12 @@
 <script setup lang="ts">
 import { messagesFor, type Language } from '../../i18n'
 import { useSessionStore } from '../stores/session'
-import { readerMessages } from '../../i18n/reader'
+import ReaderBack from '../components/ReaderBack.vue'
 
 const requestLanguage = useRequestHeader('x-trachuan-language')
 const language = useState<Language>('language', () => requestLanguage === 'en' ? 'en' : 'vi')
 const messages = computed(() => messagesFor(language.value))
 const route = useRoute()
-const reader = computed(() => readerMessages(language.value))
-function back(event: MouseEvent) {
-  const previous = window.history.state?.back
-  if (typeof previous !== 'string') return
-  try {
-    const url = new URL(previous, window.location.origin)
-    if (url.origin === window.location.origin && url.pathname === '/vn/search') { event.preventDefault(); window.history.back() }
-  } catch { return }
-}
 const session = useSessionStore()
 const api = useApi()
 const siteOrigin = useRuntimeConfig().public.siteOrigin
@@ -45,7 +36,7 @@ useHead(() => {
 
 <template>
   <div class="site-layout">
-    <SiteHeader compact><a href="/vn/search" class="reader-back" @click="back">{{ reader.back }}</a></SiteHeader>
+    <SiteHeader compact><ReaderBack class="reader-back-header" /></SiteHeader>
     <main class="site-main reader-main"><slot /></main>
     <SiteFooter />
   </div>
