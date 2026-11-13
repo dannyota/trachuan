@@ -1,0 +1,111 @@
+package worker
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"reflect"
+	"testing"
+	"testing/synctest"
+	"time"
+
+	"danny.vn/trachuan/internal/embedding"
+)
+
+type scriptedEmbedder struct {
+	errors      []error
+	calls       int
+	times       []time.Time
+	recipeCalls int
+}
+
+func (s *scriptedEmbedder) Recipe(context.Context) (embedding.Recipe, error) {
+	s.recipeCalls++
+	return embedding.Recipe{}, errors.New("recipe failure")
+}
+
+func (s *scriptedEmbedder) Embed(_ context.Context, text string) (embedding.Vector, error) {
+	s.calls++
+	s.times = append(s.times, time.Now())
+	if text != "query" {
+		return embedding.Vector{}, errors.New("wrong text")
+	}
+	if s.calls <= len(s.errors) {
+		return embedding.Vector{}, s.errors[s.calls-1]
+	}
+	return embedding.Vector{Values: []float32{1}}, nil
+}
+
+func TestRetryEmbedder_Embed(t *testing.T) {
+	busy := &embedding.Error{Status: 429}
+	codeBusy := &embedding.Error{Status: 503, Code: "busy"}
+	one, two, thirty := 1, 2, 30
+	lastBusy := &embedding.Error{Status: 429, Code: "last"}
+	transport := errors.New("transport")
+	for _, tt := range []struct {
+		name    string
+		errs    []error
+		waits   []time.Duration
+		wantErr error
+	}{
+		{"success", []error{busy, codeBusy}, []time.Duration{250 * time.Millisecond, time.Second}, nil},
+		{"exhausted", []error{busy, busy, busy, lastBusy}, []time.Duration{250 * time.Millisecond, time.Second, 3 * time.Second}, lastBusy},
+		{"wrapped busy", []error{fmt.Errorf("wrapped: %w", busy)}, []time.Duration{250 * time.Millisecond}, nil},
+		{"shorter retry after", []error{busy, busy, &embedding.Error{Status: 429, RetryAfter: &one}}, []time.Duration{250 * time.Millisecond, time.Second, 3 * time.Second}, nil},
+		{"500", []error{&embedding.Error{Status: 500}}, nil, nil},
+		{"400", []error{&embedding.Error{Status: 400}}, nil, nil},
+		{"transport", []error{transport}, nil, transport},
+		{"retry after", []error{&embedding.Error{Status: 429, RetryAfter: &two}}, []time.Duration{2 * time.Second}, nil},
+		{"retry after cap", []error{&embedding.Error{Status: 429, RetryAfter: &thirty}}, []time.Duration{5 * time.Second}, nil},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				fake := &scriptedEmbedder{errors: tt.errs}
+				vector, err := (retryEmbedder{embedder: fake}).Embed(context.Background(), "query")
+				wantErr := tt.wantErr
+				if tt.name == "500" || tt.name == "400" {
+					wantErr = tt.errs[0]
+				}
+				if err != wantErr {
+					t.Fatalf("error = %v, want %v", err, wantErr)
+				}
+				if err == nil && !reflect.DeepEqual(vector.Values, []float32{1}) {
+					t.Fatalf("vector = %v", vector)
+				}
+				if fake.calls != len(tt.waits)+1 {
+					t.Fatalf("calls = %d, want %d", fake.calls, len(tt.waits)+1)
+				}
+				for i, want := range tt.waits {
+					if got := fake.times[i+1].Sub(fake.times[i]); got != want {
+						t.Errorf("wait %d = %v, want %v", i, got, want)
+					}
+				}
+			})
+		})
+	}
+}
+
+func TestRetryEmbedder_CancelWhileWaiting(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		fake := &scriptedEmbedder{errors: []error{&embedding.Error{Status: 429}}}
+		done := make(chan error, 1)
+		go func() { _, err := (retryEmbedder{embedder: fake}).Embed(ctx, "query"); done <- err }()
+		synctest.Wait()
+		cancel()
+		if err := <-done; !errors.Is(err, context.Canceled) {
+			t.Fatalf("error = %v", err)
+		}
+		if fake.calls != 1 {
+			t.Fatalf("calls = %d", fake.calls)
+		}
+	})
+}
+
+func TestRetryEmbedder_RecipeDoesNotRetry(t *testing.T) {
+	fake := &scriptedEmbedder{}
+	_, err := (retryEmbedder{embedder: fake}).Recipe(context.Background())
+	if err == nil || fake.recipeCalls != 1 {
+		t.Fatalf("error = %v, calls = %d", err, fake.recipeCalls)
+	}
+}

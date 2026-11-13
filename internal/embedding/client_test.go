@@ -94,3 +94,31 @@ func TestQuery_RejectsInconsistentExpectedRecipe(t *testing.T) {
 		t.Fatalf("inconsistent expected recipe: %v", err)
 	}
 }
+
+func TestClient_CapturesRetryAfter(t *testing.T) {
+	for _, tt := range []struct {
+		header string
+		want   *int
+	}{
+		{"2", new(2)}, {"0", new(0)}, {"", nil}, {"-1", nil}, {"+2", nil}, {"invalid", nil}, {"999999999999999999999999999", nil},
+	} {
+		t.Run(tt.header, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				if tt.header != "" {
+					w.Header().Set("Retry-After", tt.header)
+				}
+				w.WriteHeader(http.StatusTooManyRequests)
+				_, _ = fmt.Fprint(w, `{"error":{"code":"busy"}}`)
+			}))
+			defer server.Close()
+			_, err := NewClient(server.URL, server.Client()).Embed(context.Background(), "hash", []string{"text"})
+			var e *Error
+			if !errors.As(err, &e) {
+				t.Fatalf("error = %v", err)
+			}
+			if (e.RetryAfter == nil) != (tt.want == nil) || (tt.want != nil && *e.RetryAfter != *tt.want) {
+				t.Fatalf("RetryAfter = %v, want %v", e.RetryAfter, tt.want)
+			}
+		})
+	}
+}
