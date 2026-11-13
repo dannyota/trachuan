@@ -319,3 +319,15 @@ type RunSourceEvent struct {
 	ClearNote   *string
 	CreatedAt   time.Time
 }
+
+type RunSourceRequest struct {
+	RunID      int64
+	Stage      string
+	Source     string
+	Endpoint   string
+	Attempt    int32
+	StartedAt  time.Time
+	DurationMs int64
+	Status     pgtype.Int4
+	Outcome    string
+}

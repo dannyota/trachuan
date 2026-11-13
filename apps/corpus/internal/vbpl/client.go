@@ -193,6 +193,9 @@ func (c *Client) request(ctx context.Context, method, target string, body []byte
 	if opts.ranged {
 		req.Header.Set("Range", "bytes=0-0")
 	}
+	if opts.started != nil {
+		*opts.started = time.Now()
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		classified := classify(safeError(err), endpoint(target), 0)
@@ -286,8 +289,10 @@ func data(raw json.RawMessage, out any) error {
 func docPath(id string) string { return "/doc/" + url.PathEscape(id) }
 
 // Detail requests raw and decoded document metadata.
-func (c *Client) Detail(ctx context.Context, id string) (json.RawMessage, Detail, error) {
-	raw, err := c.api(ctx, http.MethodGet, docPath(id), nil)
+func (c *Client) Detail(ctx context.Context, id string) (raw json.RawMessage, detail Detail, err error) {
+	ctx, finish := sourcegate.WithBodyValidation(ctx)
+	defer func() { finish(invalidJSONFields(err)) }()
+	raw, err = c.api(ctx, http.MethodGet, docPath(id), nil)
 	if err != nil {
 		return nil, Detail{}, err
 	}
@@ -347,7 +352,9 @@ func (c *Client) Tree(ctx context.Context, id string) (json.RawMessage, []Node, 
 }
 
 // Diagram requests the raw relation diagram.
-func (c *Client) Diagram(ctx context.Context, id string) (json.RawMessage, error) {
+func (c *Client) Diagram(ctx context.Context, id string) (raw json.RawMessage, err error) {
+	ctx, finish := sourcegate.WithBodyValidation(ctx)
+	defer func() { finish(invalidJSONFields(err)) }()
 	return c.api(ctx, http.MethodGet, docPath(id)+"/diagram", nil)
 }
 
@@ -376,6 +383,7 @@ type requestOptions struct {
 	timeout time.Duration
 	ranged  bool
 	headers *http.Header
+	started *time.Time
 }
 
 // WithClock sets the retry clock and cancellable wait for offline tests.

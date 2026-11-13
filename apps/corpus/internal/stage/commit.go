@@ -30,6 +30,7 @@ type Commit struct {
 	// Sources lists every source the item contacted or depends on.
 	Sources      []string
 	Observations []FetchObservation
+	Requests     []sourcegate.RequestRecord
 	State        string
 	Message      string
 	// SourceRead distinguishes a fresh read from reuse of committed bytes.
@@ -173,6 +174,25 @@ func commitItem(ctx context.Context, pool *pgxpool.Pool, c *Commit) (applied boo
 	}
 	if rows == 0 {
 		return false, nil
+	}
+	if len(c.Requests) > 0 {
+		params := store.InsertSourceRequestsParams{RunID: c.RunID, Stage: c.Stage}
+		for _, request := range c.Requests {
+			params.Sources = append(params.Sources, request.Source)
+			params.Endpoints = append(params.Endpoints, request.Endpoint)
+			params.Attempts = append(params.Attempts, int32(request.Attempt))
+			params.StartedAts = append(params.StartedAts, request.StartedAt)
+			params.DurationsMs = append(params.DurationsMs, request.DurationMS)
+			var status int32
+			if request.Status != nil {
+				status = int32(*request.Status)
+			}
+			params.Statuses = append(params.Statuses, status)
+			params.Outcomes = append(params.Outcomes, request.Outcome)
+		}
+		if err = q.InsertSourceRequests(ctx, params); err != nil {
+			return false, fmt.Errorf("insert source requests: %w", err)
+		}
 	}
 	if c.SourceRead && len(c.Sources) > 0 && c.State == "done" && artifactID != nil && (c.Stage == "fetch" || c.Stage == "expand") {
 		if err = q.UpsertRunAcquisition(ctx, store.UpsertRunAcquisitionParams{RunID: c.RunID, Stage: c.Stage, DocumentKey: c.ItemKey, ArtifactID: *artifactID, Generation: int32(c.Generation)}); err != nil {

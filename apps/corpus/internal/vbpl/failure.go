@@ -2,6 +2,7 @@ package vbpl
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -10,6 +11,12 @@ import (
 	"strings"
 	"syscall"
 )
+
+func invalidJSONFields(err error) bool {
+	var syntax *json.SyntaxError
+	var typeErr *json.UnmarshalTypeError
+	return errors.As(err, &syntax) || errors.As(err, &typeErr)
+}
 
 // Failure describes a gateway or transport failure without response contents.
 type Failure struct {

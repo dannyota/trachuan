@@ -84,6 +84,7 @@ func TestExpand_PauseCancelsSibling(t *testing.T) {
 				})
 				client := vbpl.NewWithBase("https://example.test", "test", vbpl.WithTransport(transport), vbpl.WithLimits(float64(rate.Inf), 8), vbpl.WithGate(sourcegate.NewMemory()))
 				ctx := sourcegate.WithRunID(sourcegate.WithActivity(context.Background()), 1)
+				ctx, telemetry := sourcegate.WithTelemetry(ctx)
 				_, err := New(client).Process(ctx, stage.Env{}, stage.Run{Country: "vn"}, stage.Item{Key: "vn:vbpl:1"})
 				if !errors.Is(err, sourcegate.ErrSourcePaused) {
 					t.Fatalf("error = %v", err)
@@ -92,6 +93,17 @@ func TestExpand_PauseCancelsSibling(t *testing.T) {
 				case <-cancelled:
 				default:
 					t.Fatal("sibling was not cancelled")
+				}
+				seen := map[string]string{}
+				for _, row := range telemetry.Records() {
+					seen[row.Endpoint] = row.Outcome
+				}
+				other := "detail"
+				if paused == "detail" {
+					other = "diagram"
+				}
+				if seen[paused] != "paused" || seen[other] != "cancelled" {
+					t.Fatalf("telemetry = %v", seen)
 				}
 			})
 		})

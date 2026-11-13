@@ -7,16 +7,20 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 
 	"danny.vn/trachuan/apps/corpus/internal/sourcegate"
 )
 
 func (c *Client) apiRaw(ctx context.Context, method, path string, body []byte) (json.RawMessage, error) {
 	policy := sourcegate.Retry{Backoffs: c.backoffs, WaitLimit: c.requestBudget}
+	attempt := 0
 	for {
+		attempt++
 		var raw []byte
 		var headers http.Header
-		status, err := c.request(ctx, method, c.base+path, body, false, requestOptions{headers: &headers}, func(r io.Reader) error {
+		var started time.Time
+		status, err := c.request(sourcegate.WithAttempt(ctx, attempt), method, c.base+path, body, false, requestOptions{headers: &headers, started: &started}, func(r io.Reader) error {
 			var e error
 			raw, e = io.ReadAll(io.LimitReader(r, apiLimit+1))
 			if e != nil {
@@ -27,6 +31,14 @@ func (c *Client) apiRaw(ctx context.Context, method, path string, body []byte) (
 			}
 			return nil
 		})
+		if !started.IsZero() {
+			observedErr := err
+			if status == http.StatusOK && (errors.Is(err, ErrTooLarge) || err == nil && !json.Valid(raw)) {
+				observedErr = sourcegate.ErrInvalidBody
+			}
+			name := map[string]string{"doc/all": "list", "doc/detail": "detail", "doc/diagram": "diagram"}[endpoint(path)]
+			sourcegate.RecordAttempt(sourcegate.WithAttempt(ctx, attempt), "vbpl", name, started, status, observedErr)
+		}
 		if contextErr := sourcegate.OutcomeContextError(ctx, status, http.StatusOK, err); contextErr != nil {
 			return nil, contextErr
 		}
