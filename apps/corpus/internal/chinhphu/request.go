@@ -262,8 +262,8 @@ func (c *Client) one(ctx context.Context, method, target string, form url.Values
 	defer func() { _ = resp.Body.Close() }()
 	status = resp.StatusCode
 	after = retryDelay(resp.Header.Get("Retry-After"), c.now())
-	prefix, r := sourcegate.ResponsePrefix(ctx, budgetReader{c, resp.Body}, resp.Body, status, http.StatusOK, responseChallenge)
-	if responseChallenge(prefix) {
+	prefix, r, complete := sourcegate.ResponsePrefixComplete(ctx, budgetReader{c, resp.Body}, resp.Body, status, http.StatusOK, positiveChallenge)
+	if positiveChallenge(prefix) || complete && responseChallenge(prefix) {
 		return status, "", after, c.pause(ctx, "challenge")
 	}
 	if status == 403 {
