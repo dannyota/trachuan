@@ -6,7 +6,7 @@ import type { Action } from '../api/client'
 import { useSessionStore } from '../stores/session'
 import { errorMessage, messagesFor, type Language } from '../../i18n'
 import { accountMessages } from '../../i18n/account'
-import { formatDate, formatDateTime } from '../content'
+import { formatDateTime } from '../content'
 
 definePageMeta({ signedIn: true })
 type Session = components['schemas']['Session']
@@ -41,6 +41,7 @@ const busy = ref(false)
 const loading = ref(true)
 const orderedSessions = computed(() => [...sessions.value].sort((a, b) => Number(b.current) - Number(a.current)))
 const currentSession = computed(() => sessions.value.find(item => item.current))
+function creationDate(value: string) { return formatDateTime(value, language.value).replace(/,? \d{2}:\d{2}$/, '') }
 function date(value: string | null) { return value ? formatDateTime(value, language.value) : messages.value.none }
 function showError(code?: string) { error.value = errorMessage(language.value, code || 'generic') }
 async function loadSessions() {
@@ -90,7 +91,7 @@ async function tokenCreated() { try { await loadTokens() } catch { showError() }
 <template>
   <div class="account-page">
     <div class="account-heading">
-      <div><h1>{{ labels.title }}</h1><p v-if="session.account">{{ session.account.email }} · {{ labels.created }} {{ formatDate(session.account.created_at.slice(0, 10), language) }}</p></div>
+      <div><h1>{{ labels.title }}</h1><p v-if="session.account"><span>{{ session.account.email }}</span> · {{ labels.created }} {{ creationDate(session.account.created_at) }}</p></div>
       <button class="btn btn-secondary" type="button" :disabled="busy || !currentSession" @click="currentSession && revokeSession(currentSession)">{{ labels.signOut }}</button>
     </div>
     <p v-if="error" class="notice" role="alert" aria-live="assertive">{{ error }}</p>

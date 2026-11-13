@@ -51,8 +51,8 @@ async function create() {
 }
 </script>
 <template>
-  <dialog ref="dialog" class="card account-dialog" @cancel.prevent="close" @keydown="wrapDialogFocus">
-    <h2>{{ messages.createToken }}</h2>
+  <dialog ref="dialog" class="card account-dialog" aria-labelledby="token-dialog-title" @cancel.prevent="close" @keydown="wrapDialogFocus">
+    <h2 id="token-dialog-title">{{ messages.createToken }}</h2>
     <form v-if="!token" @submit.prevent="create">
       <label>{{ messages.name }} <input v-model="name" class="input" required maxlength="64"></label>
       <label>{{ messages.days }} <input v-model.number="days" class="input" type="number" min="1" max="365" required></label>

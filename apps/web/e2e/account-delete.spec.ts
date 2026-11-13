@@ -4,7 +4,12 @@ import { email, openAccount } from './account-fixture'
 test('deletion requires the exact email', async ({ page }) => {
   await openAccount(page)
   await page.getByRole('button', { name: 'Delete account…', exact: true }).click()
-  const dialog = page.getByRole('dialog')
+  const dialog = page.getByRole('dialog', { name: 'Delete account', exact: true })
+  const bounds = await dialog.boundingBox()
+  const viewport = page.viewportSize()!
+  expect(bounds).not.toBeNull()
+  expect(Math.abs(bounds!.x + bounds!.width / 2 - viewport.width / 2)).toBeLessThan(2)
+  expect(Math.abs(bounds!.y + bounds!.height / 2 - viewport.height / 2)).toBeLessThan(2)
   await expect(page.locator('dialog:modal')).toHaveCount(1)
   await expect(dialog.getByLabel('Email')).toBeFocused()
   const confirm = dialog.getByRole('button', { name: 'Delete account', exact: true })
@@ -15,4 +20,20 @@ test('deletion requires the exact email', async ({ page }) => {
   }
   await dialog.getByLabel('Email').fill(email)
   await expect(confirm).toBeEnabled()
+})
+
+test('account spacing applies once at desktop and mobile widths', async ({ page }) => {
+  for (const width of [1280, 390]) {
+    await page.setViewportSize({ width, height: 900 })
+    await openAccount(page)
+    const main = await page.locator('main').boundingBox()
+    const heading = await page.getByRole('heading', { name: 'Account', exact: true }).boundingBox()
+    const card = await page.locator('.account-card').first().boundingBox()
+    expect(main).not.toBeNull()
+    expect(heading).not.toBeNull()
+    expect(card).not.toBeNull()
+    expect(Math.abs(heading!.y - main!.y - (width < 768 ? 24 : 40))).toBeLessThan(2)
+    if (width < 768) expect(Math.abs(card!.x - 16)).toBeLessThan(2)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  }
 })

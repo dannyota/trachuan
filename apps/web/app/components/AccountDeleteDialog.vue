@@ -46,8 +46,8 @@ async function remove() {
 }
 </script>
 <template>
-  <dialog ref="dialog" class="card account-dialog" @cancel.prevent="close" @keydown="wrapDialogFocus">
-    <h2>{{ messages.deleteAccount }}</h2><p>{{ messages.deletePrompt }}</p>
+  <dialog ref="dialog" class="card account-dialog" aria-labelledby="delete-dialog-title" @cancel.prevent="close" @keydown="wrapDialogFocus">
+    <h2 id="delete-dialog-title">{{ messages.deleteAccount }}</h2><p>{{ messages.deletePrompt }}</p>
     <form @submit.prevent="remove">
       <label>{{ messages.email }} <input v-model="confirmation" class="input" autocomplete="off"></label>
       <p v-if="error" class="notice" role="alert" aria-live="assertive">{{ error }}</p>

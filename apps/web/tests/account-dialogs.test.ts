@@ -156,3 +156,15 @@ it('wraps the controls shown after token creation', async () => {
   expect(document.activeElement).toBe(copy)
   wrapper.unmount()
 })
+
+it.each([
+  ['Create token', TokenCreateDialog, { action }],
+  ['Delete account', AccountDeleteDialog, { email: 'test@example.invalid', action }],
+])('names the %s dialog from its heading', (title, component, props) => {
+  const wrapper = mount(component, { props })
+  const id = wrapper.get('dialog').attributes('aria-labelledby')
+  expect(id).toBeTruthy()
+  expect(wrapper.get('h2').attributes('id')).toBe(id)
+  expect(wrapper.get('h2').text()).toBe(title)
+  wrapper.unmount()
+})

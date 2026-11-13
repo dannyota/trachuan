@@ -56,3 +56,20 @@ it('shows the current session before other sessions', async () => {
   expect(wrapper.findAll('.account-row')[0]!.text()).toContain('This browser')
   wrapper.unmount()
 })
+
+it('shows the account creation date in Vietnam time and keeps the email separate', async () => {
+  setActivePinia(createPinia())
+  const session = useSessionStore()
+  session.account = { id: 1, email: 'test@example.invalid', created_at: '2026-11-13T18:00:00Z' }
+  vi.stubGlobal('definePageMeta', () => {})
+  vi.stubGlobal('useState', () => ref('vi'))
+  vi.stubGlobal('useApi', () => ({ client: { GET: async (path: string) => ({ data: path.endsWith('/reports') ? { reports: [] } : [] }) } }))
+  vi.stubGlobal('computed', computed)
+  vi.stubGlobal('ref', ref)
+  vi.stubGlobal('onMounted', onMounted)
+  const wrapper = mount(Account)
+  await flushPromises()
+  expect(wrapper.get('.account-heading p').text()).toContain('14/11/2026')
+  expect(wrapper.findAll('.account-heading span').some(item => item.text() === 'test@example.invalid')).toBe(true)
+  wrapper.unmount()
+})

@@ -15,6 +15,12 @@ async function outsideState(page: Page) {
 }
 async function create(page: Page) {
   await page.getByRole('button', { name: 'Create token', exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: 'Create token', exact: true })
+  const bounds = await dialog.boundingBox()
+  const viewport = page.viewportSize()!
+  expect(bounds).not.toBeNull()
+  expect(Math.abs(bounds!.x + bounds!.width / 2 - viewport.width / 2)).toBeLessThan(2)
+  expect(Math.abs(bounds!.y + bounds!.height / 2 - viewport.height / 2)).toBeLessThan(2)
   await expect(page.getByLabel('Name')).toBeFocused()
   await page.getByLabel('Name').fill('test')
   await page.getByRole('button', { name: 'Create', exact: true }).click()
