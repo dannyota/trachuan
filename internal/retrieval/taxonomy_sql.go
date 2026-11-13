@@ -38,8 +38,8 @@ func taxonomyDocuments(ctx context.Context, tx pgx.Tx, id int64) ([]NodeDocument
  SELECT id FROM subtree WHERE level=2
  UNION SELECT f.id FROM taxonomy_node f JOIN taxonomy_node target ON target.id=$1 AND f.level=2 AND f.path @> target.path
  ), expanded AS (
- SELECT a.provision_id,a.node_id,a.family_id,a.exclude,0 AS distance FROM taxonomy_assignment a JOIN families f ON f.id=a.family_id
- UNION ALL SELECT p.id,e.node_id,e.family_id,e.exclude,e.distance+1 FROM expanded e JOIN provision p ON p.parent_id=e.provision_id
+ SELECT a.provision_id,p0.document_id,a.node_id,a.family_id,a.exclude,0 AS distance FROM taxonomy_assignment a JOIN families f ON f.id=a.family_id JOIN provision p0 ON p0.id=a.provision_id
+ UNION ALL SELECT p.id,p.document_id,e.node_id,e.family_id,e.exclude,e.distance+1 FROM expanded e JOIN LATERAL (SELECT id,document_id FROM provision WHERE document_id=e.document_id AND parent_id=e.provision_id OFFSET 0) p ON true
  ), nearest AS (
  SELECT provision_id,family_id,min(distance) AS distance FROM expanded GROUP BY provision_id,family_id
  ), effective AS (
