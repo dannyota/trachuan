@@ -172,9 +172,9 @@ func (l *loader) loadRelations(ctx context.Context, issuers map[string]string) e
 			l.addGap("build", entry.key, "unresolved_provision_relation", detail)
 		}
 
-		_, err := l.tx.Exec(ctx, `INSERT INTO relation(id,source_document_id,target_document_id,source_key,target_key,source_number,target_number,kind,raw_code,raw_label,source_provision_id,target_provision_id,source_node_id,target_node_id,evidence,method,artifact_sha256,ordinal) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)`, l.counts.Relations+1, docID(source), docID(target), entry.key, targetKey, srcNumber, r.TargetNumber, r.Kind, r.RawCode, r.RawLabel, srcNode, dstNode, r.SourceNode, r.TargetNode, r.Evidence, r.Method, entry.hash, r.Ordinal)
+		err := l.batch.queue(ctx, "insert relation", `INSERT INTO relation(id,source_document_id,target_document_id,source_key,target_key,source_number,target_number,kind,raw_code,raw_label,source_provision_id,target_provision_id,source_node_id,target_node_id,evidence,method,artifact_sha256,ordinal) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)`, l.counts.Relations+1, docID(source), docID(target), entry.key, targetKey, srcNumber, r.TargetNumber, r.Kind, r.RawCode, r.RawLabel, srcNode, dstNode, r.SourceNode, r.TargetNode, r.Evidence, r.Method, entry.hash, r.Ordinal)
 		if err != nil {
-			return fmt.Errorf("insert relation: %w", err)
+			return err
 		}
 		l.counts.Relations++
 	}

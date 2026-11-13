@@ -159,9 +159,9 @@ func (l *loader) loadTaxonomyNodes(ctx context.Context, input TaxonomyInput) (ma
 		if n.parent != 0 {
 			parent = n.parent
 		}
-		_, err = l.tx.Exec(ctx, `INSERT INTO taxonomy_node(id,country,parent_id,level,code,name,description,origin,status,path,ordinal,provision_count,document_count) VALUES($1,'vn',$2,$3,$4,$5,$6,$7,$8,$9::ltree,$10,0,0)`, n.id, parent, n.level, n.code, n.name, n.description, n.origin, n.status, n.path, n.ordinal)
+		err = l.batch.queue(ctx, "insert taxonomy node", `INSERT INTO taxonomy_node(id,country,parent_id,level,code,name,description,origin,status,path,ordinal,provision_count,document_count) VALUES($1,'vn',$2,$3,$4,$5,$6,$7,$8,$9::ltree,$10,0,0)`, n.id, parent, n.level, n.code, n.name, n.description, n.origin, n.status, n.path, n.ordinal)
 		if err != nil {
-			return nil, fmt.Errorf("insert taxonomy node: %w", err)
+			return nil, err
 		}
 	}
 	l.counts.Taxonomy.Nodes = int64(len(nodes))

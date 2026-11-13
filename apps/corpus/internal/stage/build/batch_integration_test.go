@@ -4,10 +4,14 @@ package build
 
 import (
 	"context"
+	"crypto/sha256"
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
 
+	"danny.vn/trachuan/apps/corpus/internal/source"
+	"danny.vn/trachuan/apps/corpus/internal/taxonomy"
 	"danny.vn/trachuan/internal/corpusdb"
 	"danny.vn/trachuan/internal/testpg"
 	"github.com/jackc/pgx/v5"
@@ -29,7 +33,7 @@ func batchCorpus(t *testing.T) *pgx.Conn {
 
 func batchLoad(t *testing.T, f *loadFixture, c *pgx.Conn, limit int, options ...LoadOptions) error {
 	t.Helper()
-	_, err := loadWithBatchLimit(context.Background(), c, f.inventory(t), f.artifacts, f.recipes, nil, nil, f.asOf(), limit, options...)
+	_, err := loadWithBatchLimit(context.Background(), c, f.inventory(t), f.artifacts, f.recipes, map[string]source.StatusCode{"CCHL": {Class: "not_yet"}}, nil, f.asOf(), limit, options...)
 	return err
 }
 
@@ -37,6 +41,14 @@ func TestBatchLoad_EquivalentTables(t *testing.T) {
 	f := fixture(t)
 	f.indexed(t, "vn:vbpl:1", false)
 	f.indexed(t, "vn:vbpl:2", true)
+	body := []byte("source fixture")
+	hash := fmt.Sprintf("%x", sha256.Sum256(body))
+	f.addArtifact(t, "fetch", "vn:vbpl:3", map[string]any{
+		"detail.json":   map[string]any{"data": map[string]any{"id": "3"}},
+		"files.json":    []any{map[string]any{"name": "law.pdf", "sha256": hash, "size": len(body)}},
+		"files/" + hash: body,
+	})
+	addValidityFixture(t, f, "4", "1/2024/NĐ-CP", "CCHL", "2024-01-01", "2027-01-01", "Nghị định này có hiệu lực từ ngày 1/7/2024.")
 	for _, item := range f.inventory(t).Items {
 		if item.Stage == "fetch" && item.ItemKey == "vn:vbpl:1" {
 			f.addArtifact(t, "relate", item.ItemKey, map[string]any{"relations.json": []relationRow{{Ordinal: 0, Kind: "cites", TargetID: "2"}}}, f.relateInput(t, item.ItemKey, *item.ArtifactSHA256))
@@ -44,7 +56,8 @@ func TestBatchLoad_EquivalentTables(t *testing.T) {
 		}
 	}
 	input := taxonomyInputFixture()
-	input.seeds = []taxonomySeed{{"1", "1", "1.1.c1"}}
+	input.seeds = []taxonomySeed{{"1", "1", "1.1.c1"}, {"2", "1", "1.1.c1"}}
+	input.overrides = []taxonomy.Override{{DocumentKey: "vn:vbpl:1", Anchor: "dieu-1", Code: "1.1.x1", Exclude: true}}
 	opts := LoadOptions{Taxonomy: input}
 	other := batchCorpus(t)
 	if err := batchLoad(t, f, f.corpus, 1, opts); err != nil {
@@ -73,6 +86,9 @@ func TestBatchLoad_EquivalentTables(t *testing.T) {
 				t.Fatal(err)
 			}
 			rows.Close()
+		}
+		if len(got[0]) == 0 {
+			t.Errorf("fixture did not populate %s", table)
 		}
 		if !reflect.DeepEqual(got[0], got[1]) {
 			t.Errorf("%s differs: %v versus %v", table, got[0], got[1])

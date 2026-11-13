@@ -55,12 +55,9 @@ func (l *loader) loadSourceFiles(ctx context.Context, key, source, dir string, i
 				missing["fetched_at"] = true
 			}
 		}
-		if err := l.batch.flush(ctx); err != nil {
-			return err
-		}
-		_, err := l.tx.Exec(ctx, `INSERT INTO source_file(id,document_id,source,name,hash,size,url,role,fetched_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)`, l.counts.SourceFiles+1, id, source, file.Name, file.SHA256, file.Size, url, role, fetched)
+		err := l.batch.queue(ctx, "insert source file", `INSERT INTO source_file(id,document_id,source,name,hash,size,url,role,fetched_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)`, l.counts.SourceFiles+1, id, source, file.Name, file.SHA256, file.Size, url, role, fetched)
 		if err != nil {
-			return fmt.Errorf("insert source file: %w", err)
+			return err
 		}
 		l.counts.SourceFiles++
 	}

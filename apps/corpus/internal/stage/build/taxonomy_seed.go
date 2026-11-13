@@ -67,9 +67,9 @@ func (l *loader) loadTaxonomy(ctx context.Context, input TaxonomyInput) error {
 			l.taxonomyGap(key, "seed_article_missing", seed.Code+" "+anchor, node.id)
 			continue
 		}
-		_, err = l.tx.Exec(ctx, `INSERT INTO taxonomy_assignment(provision_id,node_id,family_id,method,exclude,confidence,taxonomy_version) VALUES($1,$2,$3,'phapdien_seed',false,1,$4) ON CONFLICT (provision_id,node_id) DO NOTHING`, pid, node.id, node.family, input.version)
+		err = l.batch.queue(ctx, "insert seed", `INSERT INTO taxonomy_assignment(provision_id,node_id,family_id,method,exclude,confidence,taxonomy_version) VALUES($1,$2,$3,'phapdien_seed',false,1,$4) ON CONFLICT (provision_id,node_id) DO NOTHING`, pid, node.id, node.family, input.version)
 		if err != nil {
-			return fmt.Errorf("insert seed: %w", err)
+			return err
 		}
 	}
 	for _, o := range input.overrides {
@@ -82,12 +82,12 @@ func (l *loader) loadTaxonomy(ctx context.Context, input TaxonomyInput) error {
 			l.taxonomyGap(o.DocumentKey, "override_target_missing", o.Code+" "+o.Anchor, node.id)
 			continue
 		}
-		if _, err = l.tx.Exec(ctx, `DELETE FROM taxonomy_assignment WHERE provision_id=$1 AND family_id=$2 AND method <> 'manual'`, pid, node.family); err != nil {
-			return fmt.Errorf("replace taxonomy assignment: %w", err)
+		if err = l.batch.queue(ctx, "replace taxonomy assignment", `DELETE FROM taxonomy_assignment WHERE provision_id=$1 AND family_id=$2 AND method <> 'manual'`, pid, node.family); err != nil {
+			return err
 		}
-		_, err = l.tx.Exec(ctx, `INSERT INTO taxonomy_assignment(provision_id,node_id,family_id,method,exclude,confidence,taxonomy_version) VALUES($1,$2,$3,'manual',$4,1,$5)`, pid, node.id, node.family, o.Exclude, input.version)
+		err = l.batch.queue(ctx, "insert override", `INSERT INTO taxonomy_assignment(provision_id,node_id,family_id,method,exclude,confidence,taxonomy_version) VALUES($1,$2,$3,'manual',$4,1,$5)`, pid, node.id, node.family, o.Exclude, input.version)
 		if err != nil {
-			return fmt.Errorf("insert override: %w", err)
+			return err
 		}
 	}
 	if err = l.batch.flush(ctx); err != nil {

@@ -103,8 +103,8 @@ func (l *loader) deriveConsolidated(ctx context.Context) error {
 			dates = append(dates, docs[other].issue)
 		}
 		class, gap := consolidatedStatus(doc.issue, current, len(targets[id]), dates)
-		if _, err = l.tx.Exec(ctx, `UPDATE document SET status_class=$1,is_current=$2 WHERE id=$3`, class, class == "in_force", id); err != nil {
-			return fmt.Errorf("update consolidated status: %w", err)
+		if err = l.batch.queue(ctx, "update consolidated status", `UPDATE document SET status_class=$1,is_current=$2 WHERE id=$3`, class, class == "in_force", id); err != nil {
+			return err
 		}
 		if gap != "" {
 			l.addGap("build", doc.key, gap, "")

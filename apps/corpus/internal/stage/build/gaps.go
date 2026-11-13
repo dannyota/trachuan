@@ -2,7 +2,6 @@ package build
 
 import (
 	"context"
-	"fmt"
 	"sort"
 )
 
@@ -29,9 +28,9 @@ func (l *loader) loadGaps(ctx context.Context) error {
 		if g.ItemKey != "" {
 			key = g.ItemKey
 		}
-		_, err := l.tx.Exec(ctx, `INSERT INTO coverage_gap(id,kind,document_id,document_key,node_id,stage,item_key,detail,message,note) VALUES($1,$2,$3,$4,$5,$6,$7,$8,'','')`, l.counts.Gaps+1, g.Kind, docID(l.docs[g.ItemKey]), key, g.NodeID, g.Stage, g.ItemKey, g.Detail)
+		err := l.batch.queue(ctx, "insert coverage gap", `INSERT INTO coverage_gap(id,kind,document_id,document_key,node_id,stage,item_key,detail,message,note) VALUES($1,$2,$3,$4,$5,$6,$7,$8,'','')`, l.counts.Gaps+1, g.Kind, docID(l.docs[g.ItemKey]), key, g.NodeID, g.Stage, g.ItemKey, g.Detail)
 		if err != nil {
-			return fmt.Errorf("insert coverage gap: %w", err)
+			return err
 		}
 		l.counts.Gaps++
 		copy := g

@@ -174,9 +174,9 @@ func (l *loader) writeValidity(ctx context.Context, result validityResult) error
 		if doc == nil {
 			return fmt.Errorf("validity document %q missing", key)
 		}
-		_, err := l.tx.Exec(ctx, `UPDATE document SET status_class=$1,is_current=$2,status_basis=$3,eff_from=$4::text::date,eff_to=$5::text::date,validity_conflict=$6 WHERE id=$7`, d.values.Class, d.values.Current, d.values.Basis, d.values.From, d.values.To, d.values.Conflict, doc.id)
+		err := l.batch.queue(ctx, fmt.Sprintf("update validity %s", key), `UPDATE document SET status_class=$1,is_current=$2,status_basis=$3,eff_from=$4::text::date,eff_to=$5::text::date,validity_conflict=$6 WHERE id=$7`, d.values.Class, d.values.Current, d.values.Basis, d.values.From, d.values.To, d.values.Conflict, doc.id)
 		if err != nil {
-			return fmt.Errorf("update validity %s: %w", key, err)
+			return err
 		}
 		for index, decision := range d.history {
 			before, e := json.Marshal(decision.before)
@@ -191,9 +191,9 @@ func (l *loader) writeValidity(ctx context.Context, result validityResult) error
 			if decision.relationID != 0 {
 				relation = decision.relationID
 			}
-			_, e = l.tx.Exec(ctx, `INSERT INTO validity_decision(document_id,ordinal,layer,rule_version,before,after,actor_key,effect_date,relation_id,anchor,quote,artifact_sha256) VALUES($1,$2,$3,$4,$5::jsonb,$6::jsonb,NULLIF($7,''),NULLIF($8,'')::date,$9,NULLIF($10,''),NULLIF($11,''),NULLIF($12,''))`, doc.id, index+1, decision.layer, decision.version, before, after, decision.actor, decision.date, relation, decision.anchor, decision.quote, decision.artifact)
+			e = l.batch.queue(ctx, fmt.Sprintf("insert validity decision %s", key), `INSERT INTO validity_decision(document_id,ordinal,layer,rule_version,before,after,actor_key,effect_date,relation_id,anchor,quote,artifact_sha256) VALUES($1,$2,$3,$4,$5::jsonb,$6::jsonb,NULLIF($7,''),NULLIF($8,'')::date,$9,NULLIF($10,''),NULLIF($11,''),NULLIF($12,''))`, doc.id, index+1, decision.layer, decision.version, before, after, decision.actor, decision.date, relation, decision.anchor, decision.quote, decision.artifact)
 			if e != nil {
-				return fmt.Errorf("insert validity decision %s: %w", key, e)
+				return e
 			}
 		}
 	}
