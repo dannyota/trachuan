@@ -118,7 +118,7 @@ func TestRelate_RecipeForSnapshotWithoutIssuerTable(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := stage.RecipeHash("relate", "vbpl-relations/1", "chinhphu-empty/1", list.RelationCodesHash(), "text_rules:vn-targets/2", list.CentralIssuersHash())
+	want := stage.RecipeHash("relate", "vbpl-relations/1", "chinhphu-empty/1", list.RelationCodesHash(), "text_rules:vn-targets/3", list.CentralIssuersHash())
 	if got := New().Recipe(snapshot); got != want {
 		t.Fatalf("recipe = %s, want %s", got, want)
 	}

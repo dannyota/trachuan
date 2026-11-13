@@ -9,15 +9,25 @@ func Parse(text string, issuers map[string]string) ([]Match, []Gap) {
 // for an unlinked or ambiguous document number; nil leaves identity to the caller.
 func ParseUnits(units []Unit, issuers map[string]string, identity func(string) string) (matches []Match, gaps []Gap) {
 	r, balanced := readUnits(units)
+	parts := r.scan()
+	hasCandidate := false
+	for _, c := range parts {
+		if candidate(c) {
+			hasCandidate = true
+			break
+		}
+	}
+	if !hasCandidate {
+		return nil, nil
+	}
 	if !balanced {
 		return nil, []Gap{{Name: "relation_text_unbalanced_quote", Detail: normalize(r.text)}}
 	}
-	parts := r.scan()
 	var scope Target
 	var lead string
 	scoped, rejected := false, false
 	for i, c := range parts {
-		if i == 0 {
+		if i == 0 && candidate(c) {
 			probe := c
 			if scopePrefix(&probe) {
 				scoped = true
@@ -44,13 +54,11 @@ func ParseUnits(units []Unit, issuers map[string]string, identity func(string) s
 		if introducesWording(c) && (!wordingEnd(c.text) || !validWording(parts, i)) {
 			return nil, []Gap{{Name: "relation_text_unquoted_wording", Detail: c.text}}
 		}
-		if c.broken {
-			return nil, []Gap{{Name: "relation_text_grammar", Detail: c.text}}
+		if !candidate(c) {
+			continue
 		}
-		probe := c
-		probe.articleMarker()
-		probe.listMarker()
-		if !candidate(probe) {
+		if c.broken {
+			gaps = append(gaps, Gap{Name: "relation_text_grammar", Detail: c.text})
 			continue
 		}
 		if scoped && !c.top {
@@ -78,6 +86,8 @@ func ParseUnits(units []Unit, issuers map[string]string, identity func(string) s
 }
 
 func candidate(c cursor) bool {
+	c.articleMarker()
+	c.listMarker()
 	return c.verb() != "" || (c.take("bỏ") && (c.take("cụm", "từ") || c.take("từ")))
 }
 

@@ -30,7 +30,7 @@ func normalizeLines(text string) string {
 
 func readUnits(units []Unit) (reading, bool) {
 	r := reading{ends: map[int]bool{}, firstItems: map[int]bool{}, articles: map[int]bool{}}
-	var parts []string
+	var closes []int
 	for _, unit := range units {
 		part := normalizeLines(unit.Text)
 		start := len(r.text)
@@ -40,24 +40,18 @@ func readUnits(units []Unit) (reading, bool) {
 		if unit.FirstItem {
 			r.firstItems[start] = true
 		}
-		parts = append(parts, part)
 		if unit.Close {
-			mask, balanced := quoteMask(strings.Join(parts, "\n") + "\n")
-			if !balanced {
-				return r, false
-			}
-			r.mask = append(r.mask, mask...)
-			parts = nil
+			closes = append(closes, len(r.text)-1)
 		}
 	}
-	if len(parts) > 0 {
-		mask, balanced := quoteMask(strings.Join(parts, "\n") + "\n")
-		if !balanced {
-			return r, false
+	var balanced bool
+	r.mask, balanced = quoteMask(r.text)
+	for _, end := range closes {
+		if r.mask[end] {
+			balanced = false
 		}
-		r.mask = append(r.mask, mask...)
 	}
-	return r, true
+	return r, balanced
 }
 
 func lineMarker(text string) bool {
@@ -95,7 +89,8 @@ func (r reading) scan() []cursor {
 		if part != "" {
 			c := readingCursor(part)
 			c.top = firstItem || (articleUnit && lineStart && numericMarker(c))
-			c.broken = broken
+			firstHeading := len(out) == 0 && articleUnit && !lineMarker(part)
+			c.broken = broken && !firstHeading
 			out = append(out, c)
 			firstItem = false
 		}
@@ -110,6 +105,12 @@ func (r reading) scan() []cursor {
 				if prefix == "" || wordingEnd(prefix) {
 					add(i, false)
 					end := quotationEnd(r.text, i)
+					if end < 0 {
+						end = i + 1
+						for end < len(r.text) && r.mask[end] {
+							end++
+						}
+					}
 					add(end, false)
 					i = end - 1
 					lineStart = false
@@ -183,9 +184,6 @@ func introducesWording(c cursor) bool {
 }
 
 func readingCursor(text string) cursor {
-	mask, balanced := quoteMask(text)
-	if !balanced {
-		mask = make([]bool, len(text))
-	}
+	mask, _ := quoteMask(text)
 	return cursor{text: text, tokens: tokenize(text, mask)}
 }

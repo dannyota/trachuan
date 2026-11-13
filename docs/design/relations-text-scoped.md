@@ -57,13 +57,18 @@ wording as candidates:
    other than a scope lead that ends in `như sau` (optionally `:`) introduces
    new wording, which must be exactly one quotation opening right after it;
    anything else gives `relation_text_unquoted_wording`. A scope lead's
-   `như sau` introduces its item list.
+   `như sau` introduces its item list. These two gaps are recorded only when the
+   article's read units contain a candidate sentence outside a quotation before
+   the failure is applied; the article still yields no rows either way.
 3. **Sentence ends.** A line break ends a sentence only before a line that
    starts with a list marker (`N.` or `x)`) or a quotation mark; every other
    line continues the sentence, joined by one space, so `Điều 5.` on its own
-   line belongs to the locator before it. A sentence other than the lead must
-   end with `.`, `;`, `:` or the end of its unit; one that breaks before a
-   marker line without them gives `relation_text_grammar`.
+   line belongs to the locator before it. A sentence other than the article's
+   first (its label and heading, which never end with punctuation) must end with
+   `.`, `;`, `:` or the end of its unit. A candidate that breaks before a marker
+   line without them is rejected with `relation_text_grammar`; the failure
+   rejects that sentence only, never the article, and a non-candidate sentence
+   that breaks this way is silent.
 
 In a scoped article, rows come only from the lead and the items below; quotation
 state is closed at the start of every item. A scan of run vn/20261112_2 with the

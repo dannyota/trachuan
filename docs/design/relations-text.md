@@ -42,7 +42,7 @@ counted gap, never a row and never a guess.
   import never depends on extraction. Relate processing, the build relation
   reader and the build identity-inventory reader validate the same pair with one
   shared function ([pipeline](pipeline.md#items-artifacts-and-gaps)). The relate
-  recipe gains `text_rules:"vn-targets/1"` (`vn-targets/2` with
+  recipe gains `text_rules:"vn-targets/3"` (`vn-targets/2` with
   [scoped amendment lists](relations-text-scoped.md)). Recipes freeze when a run
   first includes the stage, so the change applies to new runs only; an existing
   run keeps its frozen relate recipe and input identity.

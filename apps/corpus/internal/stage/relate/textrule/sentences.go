@@ -6,6 +6,7 @@ import "unicode/utf8"
 func quoteMask(text string) ([]bool, bool) {
 	mask := make([]bool, len(text))
 	var stack []rune
+	valid := true
 	for i, r := range text {
 		inside := len(stack) > 0
 		switch r {
@@ -24,16 +25,17 @@ func quoteMask(text string) ([]bool, bool) {
 			inside = true
 		case '”', '»':
 			if !inside || stack[len(stack)-1] != r {
-				return nil, false
+				valid = false
+			} else {
+				stack = stack[:len(stack)-1]
 			}
-			stack = stack[:len(stack)-1]
 			inside = true
 		}
 		for j := i; j < i+utf8.RuneLen(r); j++ {
 			mask[j] = inside
 		}
 	}
-	return mask, len(stack) == 0
+	return mask, valid && len(stack) == 0
 }
 
 func quotationEnd(text string, start int) int {

@@ -370,7 +370,7 @@ func TestTextRelations_RejectedScope(t *testing.T) {
 }
 
 func TestTextRelations_QuoteErrors(t *testing.T) {
-	for _, text := range []string{"Bãi bỏ Điều 5 của Thông tư 19/2018/TT-NHNN. “nội dung»", "nội dung”"} {
+	for _, text := range []string{"Bãi bỏ Điều 5 của Thông tư 19/2018/TT-NHNN. “nội dung»", "nội dung”. Bãi bỏ Điều 5 của Thông tư 19/2018/TT-NHNN."} {
 		dir := t.TempDir()
 		writeTextFixture(t, dir, "report.json", []stage.Gap{})
 		writeTextFixture(t, dir, "provisions.json", []chunk.Node{{NodeID: "article", Kind: "dieu", Text: text}})
