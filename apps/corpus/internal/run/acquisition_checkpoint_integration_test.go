@@ -64,7 +64,12 @@ func TestRecover_CheckpointOwnsAcquisitionHistory(t *testing.T) {
 	for _, tc := range []struct {
 		name, path             string
 		acquisitions, requests int
-	}{{"before", before, 0, 2}, {"after", after, 2, 0}} {
+	}{
+		// Restoring before expand requires one expand read; fetch reuses it.
+		{"before", before, 0, 1},
+		// Restoring after fetch adopts both acquisitions without source reads.
+		{"after", after, 2, 0},
+	} {
 		t.Run(tc.name, func(t *testing.T) {
 			f.t = t
 			// Restore into a new isolated workshop, retaining every artifact directory.
@@ -102,6 +107,7 @@ func TestRecover_CheckpointOwnsAcquisitionHistory(t *testing.T) {
 				}
 			}
 			requests := f.count("/doc/1")
+			diagramRequests := f.count("/doc/1/diagram")
 			if e = run.Recover(ctx, f.deps(), "vn", f.run.Rel, false); e != nil {
 				t.Fatal(e)
 			}
@@ -118,6 +124,7 @@ func TestRecover_CheckpointOwnsAcquisitionHistory(t *testing.T) {
 			f.batch(f.expand)
 			f.batch(f.fetch)
 			f.assertRequests("/doc/1", requests+tc.requests)
+			f.assertRequests("/doc/1/diagram", diagramRequests+tc.requests)
 		})
 	}
 }

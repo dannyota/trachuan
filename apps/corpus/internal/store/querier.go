@@ -82,6 +82,7 @@ type Querier interface {
 	InsertRunItem(ctx context.Context, arg InsertRunItemParams) error
 	InsertRunOCRSelection(ctx context.Context, arg InsertRunOCRSelectionParams) error
 	InsertRunSourceEvent(ctx context.Context, arg InsertRunSourceEventParams) error
+	InsertSourceRequests(ctx context.Context, arg InsertSourceRequestsParams) error
 	ListAcceptedRemovalGaps(ctx context.Context, runID int64) ([]ListAcceptedRemovalGapsRow, error)
 	ListBlockingRunFailureCodes(ctx context.Context, arg ListBlockingRunFailureCodesParams) ([]string, error)
 	ListChunkInputs(ctx context.Context, runID int64) ([]ListChunkInputsRow, error)

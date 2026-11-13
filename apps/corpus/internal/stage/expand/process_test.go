@@ -1,6 +1,7 @@
 package expand
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -49,8 +50,30 @@ func TestExpand_ProcessRecordedFixtures(t *testing.T) {
 				t.Fatalf("output = %#v", out)
 			}
 			for _, name := range []string{"detail.json", "diagram.json", "observation.json"} {
-				if _, err := os.Stat(filepath.Join(env.Artifacts.Abs(out.Artifact.Path), name)); err != nil {
-					t.Fatal(err)
+				if _, statErr := os.Stat(filepath.Join(env.Artifacts.Abs(out.Artifact.Path), name)); statErr != nil {
+					t.Fatal(statErr)
+				}
+			}
+			detail, err := os.ReadFile(filepath.Join("..", "..", "vbpl", "testdata", "detail-"+id+".json"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			diagram, err := os.ReadFile(filepath.Join("..", "..", "vbpl", "testdata", "diagram-"+id+".json"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			observation, err := Qualify("vn:vbpl:"+id, detail, diagram, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			encoded, err := json.Marshal(observation)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for name, want := range map[string][]byte{"detail.json": detail, "diagram.json": diagram, "observation.json": encoded} {
+				got, readErr := os.ReadFile(filepath.Join(env.Artifacts.Abs(out.Artifact.Path), name))
+				if readErr != nil || !bytes.Equal(got, want) {
+					t.Fatalf("%s differs from sequential output: %v", name, readErr)
 				}
 			}
 		})

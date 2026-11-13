@@ -142,7 +142,14 @@ func RunBatch(ctx context.Context, env Env, st Stage, in BatchInput, attempt int
 				output = Output{Artifact: &art, State: "done"}
 			} else if !found {
 				itemCtx := sourcegate.WithItem(sourcegate.WithRunID(ctx, in.RunID), item.Key)
+				var telemetry *sourcegate.Telemetry
+				if in.Stage == "discover" || in.Stage == "expand" {
+					itemCtx, telemetry = sourcegate.WithTelemetry(itemCtx)
+				}
 				output, err = st.Process(itemCtx, env, run, item)
+				if telemetry != nil {
+					commit.Requests = telemetry.Records()
+				}
 				commit.SourceRead = err == nil
 				if err != nil {
 					// Only the activity's own context ends the batch; a timeout

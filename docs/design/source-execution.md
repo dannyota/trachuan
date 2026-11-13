@@ -187,6 +187,18 @@ start work; the owner then runs `corpus start`. Resume resets `source_paused`
 failed items through the normal failed-item path, retaining completed evidence.
 Reason: concurrent batches and restarts must not bypass an access denial.
 
+## Request telemetry
+
+Discover and expand record one row per source request attempt in
+`run_source_request`: `run_id`, `stage`, `source` (`vbpl`, `chinhphu`),
+`endpoint` (`list`, `detail`, `diagram`, `home`, `search`), `attempt` (1, then
+one more per retry), `started_at`, `duration_ms`, HTTP `status` (null without a
+response) and `outcome` (`ok`, `http_error`, `invalid_body` for a 2xx whose body
+fails validation, `timeout`, `transport`, `cancelled`, `paused`). Rows hold no
+document id, number, URL, query or body. They are written with the item's
+commit, so an item that never commits leaves none. They are measurement, not
+evidence: no stage reads them, and fetch keeps `run_fetch_observation`.
+
 ## Retry source gaps
 
 [Retry of source gaps](source-retry.md) owns the restart rules: selection,

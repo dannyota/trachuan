@@ -125,7 +125,13 @@ only when the item reads the source.
 For each VBPL item that reads the source:
 
 1. Read detail and diagram, two gateway calls, as today. Identity checks and
-   error handling are unchanged.
+   error handling are unchanged. A seed whose expand item is done in the same
+   run takes both from that expand artifact instead, detail with `viewCount`
+   removed as below; they are minutes to hours old, and a change after expand is
+   caught by the next run. Such a seed counts in `reused`, `null_date`,
+   `date_changed` and `missing_attachment` exactly as a fresh read would.
+   Control-sample items always read both from the source, so `control_same`
+   keeps comparing against fresh bytes.
 2. Reuse the baseline's `tree.json`, `files.json`, `report.json` and attachment
    files when every condition holds:
    - the whole baseline bundle verifies against its manifest, and its
@@ -185,13 +191,15 @@ and downloaded by reason (`no_candidate`, `etag_differs`, `etag_other_form`,
 
 ## Observations and times
 
-Detail and diagram observations are `network`, as today. A reused tree or
-attachment is recorded with acquisition `adopted`; its origin is the observation
-with the same path and content hash in the baseline's producing commit, whose
-time it copies, with `origin_ref` pointing at it. A cache copy keeps a null
-time. `fetched_file.fetched_at` follows
-[fetch bundles](fetch-bundles.md#observation-commit-and-recovery). These times
-are audit evidence only. Bundles carry no time, so reuse cannot change a hash.
+Detail and diagram observations are `network`, as today; taken from the same
+run's expand artifact they are `adopted` with null `fetched_at` and
+`origin_ref`. A reused tree or attachment is recorded with acquisition
+`adopted`; its origin is the observation with the same path and content hash in
+the baseline's producing commit, whose time it copies, with `origin_ref`
+pointing at it. A cache copy keeps a null time. `fetched_file.fetched_at`
+follows [fetch bundles](fetch-bundles.md#observation-commit-and-recovery). These
+times are audit evidence only. Bundles carry no time, so reuse cannot change a
+hash.
 
 ## Recipe
 

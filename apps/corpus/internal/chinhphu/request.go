@@ -118,8 +118,10 @@ func (c *Client) request(ctx context.Context, method, target string, form url.Va
 	}
 
 	policy := sourcegate.Retry{Backoffs: c.backoffs}
+	attempt := 0
 	for {
-		attemptCtx, cancel := context.WithTimeout(ctx, timeout)
+		attempt++
+		attemptCtx, cancel := context.WithTimeout(sourcegate.WithAttempt(ctx, attempt), timeout)
 		status, after, err := c.attempt(attemptCtx, method, target, form, file, timeout, consume)
 		cancel()
 		if contextErr := sourcegate.OutcomeContextError(ctx, status, http.StatusOK, err); contextErr != nil {
@@ -222,7 +224,7 @@ func (c *Client) hop(ctx context.Context, method, target string, form url.Values
 	}
 	return c.one(requestCtx, method, target, form, timeout, consume)
 }
-func (c *Client) one(ctx context.Context, method, target string, form url.Values, timeout time.Duration, consume func(io.Reader, http.Header) error) (int, string, time.Duration, error) {
+func (c *Client) one(ctx context.Context, method, target string, form url.Values, timeout time.Duration, consume func(io.Reader, http.Header) error) (status int, location string, after time.Duration, err error) {
 	reqctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	var body io.Reader
@@ -237,6 +239,18 @@ func (c *Client) one(ctx context.Context, method, target string, form url.Values
 	if form != nil {
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	}
+	started := time.Now()
+	defer func() {
+		observedErr := err
+		var failure *Failure
+		if errors.As(err, &failure) && failure.Origin == "transport" && failure.Cause == "timeout" {
+			observedErr = context.DeadlineExceeded
+		}
+		if status >= 200 && status < 300 && (errors.Is(err, errInvalidPayload) || errors.Is(err, ErrTooLarge)) {
+			observedErr = sourcegate.ErrInvalidBody
+		}
+		sourcegate.RecordAttempt(ctx, "chinhphu", sourcegate.Endpoint(ctx), started, status, observedErr)
+	}()
 	resp, e := c.http.Do(req)
 	if e != nil {
 		var ue *url.Error
@@ -246,8 +260,8 @@ func (c *Client) one(ctx context.Context, method, target string, form url.Values
 		return 0, "", 0, classifiedTransport(e)
 	}
 	defer func() { _ = resp.Body.Close() }()
-	status := resp.StatusCode
-	after := retryDelay(resp.Header.Get("Retry-After"), c.now())
+	status = resp.StatusCode
+	after = retryDelay(resp.Header.Get("Retry-After"), c.now())
 	prefix, r := sourcegate.ResponsePrefix(ctx, budgetReader{c, resp.Body}, resp.Body, status, http.StatusOK, responseChallenge)
 	if responseChallenge(prefix) {
 		return status, "", after, c.pause(ctx, "challenge")

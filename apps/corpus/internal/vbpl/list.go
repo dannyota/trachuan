@@ -5,10 +5,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+
+	"danny.vn/trachuan/apps/corpus/internal/sourcegate"
 )
 
 // List requests one page of a discovery query.
-func (c *Client) List(ctx context.Context, q ListQuery) (ListPage, error) {
+func (c *Client) List(ctx context.Context, q ListQuery) (page ListPage, err error) {
+	ctx, finish := sourcegate.WithBodyValidation(ctx)
+	defer func() { finish(invalidJSONFields(err)) }()
 	input := struct {
 		Page      int      `json:"pageNumber"`
 		Size      int      `json:"pageSize"`
@@ -48,7 +52,7 @@ func (c *Client) List(ctx context.Context, q ListQuery) (ListPage, error) {
 	if err := data(raw, &result); err != nil {
 		return ListPage{}, err
 	}
-	page := ListPage{Raw: raw}
+	page = ListPage{Raw: raw}
 	if result.Total != nil {
 		page.Total = *result.Total
 	}

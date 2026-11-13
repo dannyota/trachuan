@@ -172,3 +172,11 @@ func networkObservation(endpoint, path string, data []byte, at time.Time) stage.
 	key, _ := json.Marshal([3]any{endpoint, nil, nil})
 	return stage.FetchObservation{ResourceKey: string(key), Source: "vbpl", Path: path, ContentSHA256: digest(data), Size: int64(len(data)), Acquisition: "network", FetchedAt: &at}
 }
+
+func sourceObservation(endpoint, path string, data []byte, at time.Time, fromExpand bool) stage.FetchObservation {
+	o := networkObservation(endpoint, path, data, at)
+	if fromExpand {
+		o.Acquisition, o.FetchedAt = "adopted", nil
+	}
+	return o
+}

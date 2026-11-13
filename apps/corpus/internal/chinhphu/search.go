@@ -61,7 +61,7 @@ func (c *Client) Search(ctx context.Context, keyword string) (lookup.Result, [][
 	query, _ := json.Marshal(map[string]any{"source": "chinhphu", "type": "keyword", "keyword": keyword, "cap": 500})
 	b := lookup.Builder{QueryIdentity: source.KeywordSearchIdentity("chinhphu", keyword, 500), Query: query, Items: []lookup.Item{}, Pages: []lookup.Page{}}
 	bodies := [][]byte{}
-	_, home, e := c.fetchPage(ctx, http.MethodGet, c.page, nil)
+	_, home, e := c.fetchPage(sourcegate.WithEndpoint(ctx, "home"), http.MethodGet, c.page, nil)
 	if e != nil {
 		b.Failed = true
 		return b.Result(), bodies, fmt.Errorf("search home: %w", e)
@@ -79,7 +79,8 @@ func (c *Client) Search(ctx context.Context, keyword string) (lookup.Result, [][
 			form.Set("__EVENTARGUMENT", fmt.Sprintf("Page$%d", page))
 			form.Del(prefix + "btnSearch")
 		}
-		raw, node, err := c.fetchPage(ctx, http.MethodPost, c.page, form)
+		pageCtx, finish := sourcegate.WithBodyValidation(ctx)
+		raw, node, err := c.fetchPage(sourcegate.WithEndpoint(pageCtx, "search"), http.MethodPost, c.page, form)
 		if err != nil {
 			b.Failed = true
 			return b.Result(), bodies, fmt.Errorf("search page: %w", err)
@@ -91,10 +92,12 @@ func (c *Client) Search(ctx context.Context, keyword string) (lookup.Result, [][
 		form.Set(prefix+"drdDocOrg", "0")
 		safeNode, parseErr := parseHTML(raw)
 		if parseErr != nil {
+			finish(true)
 			b.Failed = true
 			return b.Result(), bodies, fmt.Errorf("parse redacted search: %w", parseErr)
 		}
 		items, start, end, total, valid := parseSearch(safeNode)
+		finish(!valid)
 		sum := sha256.Sum256(raw)
 		hash := hex.EncodeToString(sum[:])
 		ordinal := page

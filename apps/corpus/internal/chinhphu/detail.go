@@ -2,6 +2,7 @@ package chinhphu
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -48,11 +49,14 @@ func (c *Client) Detail(ctx context.Context, id int) (Detail, []byte, error) {
 	q.Set("docid", fmt.Sprint(id))
 	u.RawQuery = q.Encode()
 	u.Fragment = ""
-	raw, _, e := c.fetchPage(ctx, http.MethodGet, u.String(), nil)
+	ctx, finish := sourcegate.WithBodyValidation(ctx)
+	raw, _, e := c.fetchPage(sourcegate.WithEndpoint(ctx, "detail"), http.MethodGet, u.String(), nil)
 	if e != nil {
 		return Detail{}, nil, fmt.Errorf("detail: %w", e)
 	}
 	d, e := c.ParseDetail(raw, u.String())
+	var failure *Failure
+	finish(errors.As(e, &failure) && failure.Origin == "source_data" && failure.Cause == "invalid_payload")
 	return d, raw, e
 }
 
