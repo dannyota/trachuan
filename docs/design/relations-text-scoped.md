@@ -33,9 +33,12 @@ are clause nodes).
 
 ## One fail-closed reading rule
 
-Version 2 changes how an article with a scope lead is read; every other article
-is read exactly as in version 1. A scoped article yields rows only when its
-structure is unambiguous; otherwise it yields none, with one counted gap:
+An article yields rows only when its structure is unambiguous; otherwise it
+yields none, with one counted gap. Rules 2 and 3 apply to every article. Rule 1
+and the item restriction below apply to an article with a scope lead; any other
+article reads only its own text, as in version 1, so a version 1 sentence
+followed by unquoted new wording now drops its article instead of exposing that
+wording as candidates:
 
 1. **Source order.** Reading a node gives its units in source order. A node with
    no nonempty descendant, or whose text contains the normalized text of every
@@ -49,10 +52,10 @@ structure is unambiguous; otherwise it yields none, with one counted gap:
    reading order and must be closed at the end of the article's own text and at
    the end of each direct `khoan` subtree; otherwise
    `relation_text_unbalanced_quote`. Text inside a quotation never yields a row.
-   A sentence other than the lead that ends in `như sau` (optionally `:`)
+   A sentence other than a scope lead that ends in `như sau` (optionally `:`)
    introduces new wording, which must be exactly one quotation opening right
-   after it; anything else gives `relation_text_unquoted_wording`. The lead's
-   `như sau` introduces its item list.
+   after it; anything else gives `relation_text_unquoted_wording`. A scope
+   lead's `như sau` introduces its item list.
 3. **Sentence ends.** A line break ends a sentence only before a line that
    starts with a list marker (`N.` or `x)`) or a quotation mark; every other
    line continues the sentence, joined by one space, so `Điều 5.` on its own
@@ -60,14 +63,14 @@ structure is unambiguous; otherwise it yields none, with one counted gap:
    end with `.`, `;`, `:` or the end of its unit; one that breaks before a
    marker line without them gives `relation_text_grammar`.
 
-Rows come only from the lead and the items below; quotation state is closed at
-the start of every item. A scan of run vn/20261112_2 with the scope-list leads
-below found 494 such articles: 410 give their text alone, 76 a heading-only lead
-and separate clause nodes (16 of them with a quotation still open at the end of
-a clause subtree), and 8 contain part of their descendants. Of 2,313 numbered
-items, 1,616 end in `như sau` followed by a quotation, 440 have no `như sau`,
-and 257 have unquoted new wording, which drops their articles. The scan is a
-pattern approximation of these rules.
+In a scoped article, rows come only from the lead and the items below; quotation
+state is closed at the start of every item. A scan of run vn/20261112_2 with the
+scope-list leads below found 494 such articles: 410 give their text alone, 76 a
+heading-only lead and separate clause nodes (16 of them with a quotation still
+open at the end of a clause subtree), and 8 contain part of their descendants.
+Of 2,313 numbered items, 1,616 end in `như sau` followed by a quotation, 440
+have no `như sau`, and 257 have unquoted new wording, which drops their
+articles. The scan is a pattern approximation of these rules.
 
 ## Scope lead
 
@@ -164,7 +167,10 @@ phrase form; it is not a verb of the table.
   (`relation_text_source_order`, even when the skipped child holds the quotation
   marks); a quotation opened in one clause and closed in the next; a point line
   naming its own document inside a scope (`relation_text_nested_scope`, no
-  version 1 row).
+  version 1 row); an article without a scope lead whose version 1 sentence ends
+  in `như sau:` and is followed by an unquoted
+  `2. Bãi bỏ Điều 5a của Thông tư số 19/2018/TT-NHNN.`
+  (`relation_text_unquoted_wording`, no row for either).
 - On the next evaluated run the relate report counts rows per kind and gaps per
   name. The primary reads 50 item rows drawn at random against the source
   article; a wrong document or anchor blocks the recipe until a fixture covers
