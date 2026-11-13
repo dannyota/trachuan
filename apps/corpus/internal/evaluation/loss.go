@@ -112,7 +112,8 @@ func groupMatches(arms retrieval.Arms, recipe retrieval.Recipe, candidate retrie
 	}
 	return diagnosticRank(cohort, e, entry, response.Hits) > 0, nil
 }
-func diagnoseLoss(arms retrieval.Arms, recipe retrieval.Recipe, limit int, mode retrieval.ArmMode, cohort string, e Expectation, entry MapEntry, response retrieval.Response, tail *int, article ...*retrieval.ArticleCapOverride) (string, error) {
+func diagnoseLoss(arms retrieval.Arms, recipe retrieval.Recipe, limit int, mode retrieval.ArmMode, cohort string, e Expectation, entry MapEntry, response retrieval.Response, tail *int, overrides ...any) (string, error) {
+	articleCap, merge := diagnosticOverrides(overrides)
 	hits := append(append([]retrieval.Hit{}, response.Hits...), response.NonCurrent...)
 	rank := diagnosticRank(cohort, e, entry, hits)
 	effectiveTail := min(recipe.NonCurrentTail, limit/2)
@@ -131,10 +132,6 @@ func diagnoseLoss(arms retrieval.Arms, recipe retrieval.Recipe, limit int, mode 
 	items := fusedItems(arms, recipe, mode)
 	primaryLimit := limit - len(response.NonCurrent)
 	if tail == nil && arms.IncludeNonCurrent {
-		var articleCap *retrieval.ArticleCapOverride
-		if len(article) > 0 {
-			articleCap = article[0]
-		}
 		primary, err := retrieval.RankWithArticleCap(arms, recipe, limit, mode, nil, articleCap)
 		if err != nil {
 			return "", fmt.Errorf("rank diagnostic primary: %w", err)
@@ -142,15 +139,14 @@ func diagnoseLoss(arms retrieval.Arms, recipe retrieval.Recipe, limit int, mode 
 		reserved := max(limit/2, limit-len(primary.Groups))
 		primaryLimit = limit - min(reserved, len(response.NonCurrent))
 	}
-	var articleCap *retrieval.ArticleCapOverride
-	if len(article) > 0 {
-		articleCap = article[0]
-	}
 	shaped, rankErr := retrieval.RankWithArticleCap(arms, recipe, max(1, primaryLimit), mode, nil, articleCap)
 	if rankErr != nil {
 		return "", fmt.Errorf("rank diagnostic shaped primary: %w", rankErr)
 	}
 	if len(response.Hits) > len(shaped.Groups) {
+		primaryLimit = limit
+	}
+	if merge != nil {
 		primaryLimit = limit
 	}
 	items = items[:min(len(items), recipe.HydrateMultiplier*primaryLimit)]
@@ -168,26 +164,34 @@ func diagnoseLoss(arms retrieval.Arms, recipe retrieval.Recipe, limit int, mode 
 	if !matchingCandidate(cohort, e, entry, candidates) && rank == 0 {
 		return "fusion", nil
 	}
-	groups := map[[2]int64]bool{}
 	groupMatch := false
-	for i, item := range items {
-		c := item.candidate
-		group := int64(0)
-		probe := arms
-		if i >= primaryCount {
-			group = 1
-			probe.Primary = arms.NonCurrent
-		}
-		key := [2]int64{group, c.GroupID}
-		if groups[key] {
-			continue
-		}
-		groups[key] = true
-		match, err := groupMatches(probe, recipe, c, cohort, e, entry)
+	if merge != nil {
+		var err error
+		groupMatch, err = siblingGroupsMatch(merge, arms, recipe, limit, mode, cohort, e, entry, includeComplement)
 		if err != nil {
 			return "", err
 		}
-		groupMatch = groupMatch || match
+	} else {
+		groups := map[[2]int64]bool{}
+		for i, item := range items {
+			c := item.candidate
+			group := int64(0)
+			probe := arms
+			if i >= primaryCount {
+				group = 1
+				probe.Primary = arms.NonCurrent
+			}
+			key := [2]int64{group, c.GroupID}
+			if groups[key] {
+				continue
+			}
+			groups[key] = true
+			match, err := groupMatches(probe, recipe, c, cohort, e, entry)
+			if err != nil {
+				return "", err
+			}
+			groupMatch = groupMatch || match
+		}
 	}
 	if !groupMatch && rank == 0 {
 		return "grouping", nil
@@ -196,7 +200,9 @@ func diagnoseLoss(arms retrieval.Arms, recipe retrieval.Recipe, limit int, mode 
 	uncapped.DocumentCap = limit + len(items)
 	var alternate retrieval.Response
 	var err error
-	if tail != nil {
+	if merge != nil {
+		alternate, err = merge.Shape(arms, uncapped, limit, mode, nil, tail)
+	} else if tail != nil {
 		alternate, err = retrieval.ShapeWithNonCurrentTail(arms, uncapped, limit, mode, nil, *tail)
 	} else {
 		alternate, err = retrieval.Shape(arms, uncapped, limit, mode)
@@ -221,7 +227,7 @@ func diagnoseLoss(arms retrieval.Arms, recipe retrieval.Recipe, limit int, mode 
 	return "", nil
 }
 
-func caseDiagnostics(arms retrieval.Arms, recipe retrieval.Recipe, limit int, mode retrieval.ArmMode, cohort string, expectations []Expectation, entries map[int]MapEntry, response retrieval.Response, tail *int, article ...*retrieval.ArticleCapOverride) ([]CitationLoss, []retrieval.Gap, error) {
+func caseDiagnostics(arms retrieval.Arms, recipe retrieval.Recipe, limit int, mode retrieval.ArmMode, cohort string, expectations []Expectation, entries map[int]MapEntry, response retrieval.Response, tail *int, overrides ...any) ([]CitationLoss, []retrieval.Gap, error) {
 	hits := append(append([]retrieval.Hit{}, response.Hits...), response.NonCurrent...)
 	gaps := append([]retrieval.Gap{}, response.Gaps...)
 	for _, h := range hits {
@@ -233,7 +239,7 @@ func caseDiagnostics(arms retrieval.Arms, recipe retrieval.Recipe, limit int, mo
 		if rank == 1 && !response.Abstain {
 			continue
 		}
-		stage, err := diagnoseLoss(arms, recipe, limit, mode, cohort, e, entries[i], response, tail, article...)
+		stage, err := diagnoseLoss(arms, recipe, limit, mode, cohort, e, entries[i], response, tail, overrides...)
 		if err != nil {
 			return nil, nil, fmt.Errorf("diagnose citation %d: %w", i, err)
 		}
@@ -242,4 +248,18 @@ func caseDiagnostics(arms retrieval.Arms, recipe retrieval.Recipe, limit int, mo
 		}
 	}
 	return losses, gaps, nil
+}
+
+func diagnosticOverrides(overrides []any) (*retrieval.ArticleCapOverride, *retrieval.SiblingMerge) {
+	var article *retrieval.ArticleCapOverride
+	var merge *retrieval.SiblingMerge
+	for _, override := range overrides {
+		switch value := override.(type) {
+		case *retrieval.ArticleCapOverride:
+			article = value
+		case *retrieval.SiblingMerge:
+			merge = value
+		}
+	}
+	return article, merge
 }

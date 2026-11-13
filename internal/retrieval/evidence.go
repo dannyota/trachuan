@@ -37,6 +37,9 @@ func citation(ancestors []Provision) string {
 }
 
 func evidence(g Group, capRunes int) (string, []Fragment, bool, []Gap, Identity, int, error) {
+	if len(g.siblings) > 0 {
+		return siblingEvidence(g, capRunes)
+	}
 	c := g.Best
 	foundRoot := false
 	for _, p := range c.Descendants {

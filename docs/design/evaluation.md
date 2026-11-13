@@ -33,6 +33,8 @@ in flight. In ANN mode the lexical arm reuses the exact-mode lexical result cut
 to the recipe depth: its order (score descending, then chunk id) is total, so
 the prefix equals a fresh query.
 
+The sibling clause merge uses the research override `--merge-siblings`.
+
 CLI: `corpus eval <cc> <rel> --out <directory> [--previous <report.json>]`. It
 verifies/resolves the build artifact, opens that release, runs exact and ANN
 plus arm controls, and writes the same report/cache as the stage. Exit 0 means
