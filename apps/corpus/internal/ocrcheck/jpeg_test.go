@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"testing/synctest"
 	"time"
 )
 
@@ -186,60 +187,62 @@ func TestJPEGRender_InterruptedValidation(t *testing.T) {
 	for _, mode := range []string{"cancel", "deadline"} {
 		for _, pages := range []int{1, 2} {
 			t.Run(fmt.Sprintf("%s/%d", mode, pages), func(t *testing.T) {
-				var ctx context.Context
-				var cancel context.CancelFunc
-				if mode == "deadline" {
-					ctx, cancel = context.WithTimeout(context.Background(), 10*time.Millisecond)
-				} else {
-					ctx, cancel = context.WithCancel(context.Background())
-				}
-				defer cancel()
-				var dir string
-				validations := 0
-				r := PopplerRenderer{tools: &popplerTools{info: "info", raster: "raster"}}
-				r.command = func(_ context.Context, work, tool string, _ []string, out io.Writer) (RenderStats, error) {
-					dir = work
-					if tool == "info" {
-						_, _ = fmt.Fprintf(out, "Pages: %d\n", pages)
+				synctest.Test(t, func(t *testing.T) {
+					var ctx context.Context
+					var cancel context.CancelFunc
+					if mode == "deadline" {
+						ctx, cancel = context.WithTimeout(context.Background(), 10*time.Millisecond)
+					} else {
+						ctx, cancel = context.WithCancel(context.Background())
+					}
+					defer cancel()
+					var dir string
+					validations := 0
+					r := PopplerRenderer{tools: &popplerTools{info: "info", raster: "raster"}}
+					r.command = func(_ context.Context, work, tool string, _ []string, out io.Writer) (RenderStats, error) {
+						dir = work
+						if tool == "info" {
+							_, _ = fmt.Fprintf(out, "Pages: %d\n", pages)
+							for n := 1; n <= pages; n++ {
+								_, _ = fmt.Fprintf(out, "Page %d MediaBox: 0 0 72 72\nPage %d CropBox: 0 0 72 72\n", n, n)
+							}
+							return RenderStats{}, nil
+						}
+						var b bytes.Buffer
+						if err := jpeg.Encode(&b, image.NewGray(image.Rect(0, 0, 2, 2)), nil); err != nil {
+							t.Fatal(err)
+						}
 						for n := 1; n <= pages; n++ {
-							_, _ = fmt.Fprintf(out, "Page %d MediaBox: 0 0 72 72\nPage %d CropBox: 0 0 72 72\n", n, n)
+							if err := os.WriteFile(filepath.Join(work, fmt.Sprintf("page-%d.jpg", n)), b.Bytes(), 0600); err != nil {
+								t.Fatal(err)
+							}
 						}
 						return RenderStats{}, nil
 					}
-					var b bytes.Buffer
-					if err := jpeg.Encode(&b, image.NewGray(image.Rect(0, 0, 2, 2)), nil); err != nil {
-						t.Fatal(err)
-					}
-					for n := 1; n <= pages; n++ {
-						if err := os.WriteFile(filepath.Join(work, fmt.Sprintf("page-%d.jpg", n)), b.Bytes(), 0600); err != nil {
-							t.Fatal(err)
+					r.validateJPEG = func(path string) error {
+						validations++
+						if mode == "cancel" {
+							cancel()
+						} else {
+							<-ctx.Done()
+							synctest.Wait()
 						}
+						return validateJPEG(path)
 					}
-					return RenderStats{}, nil
-				}
-				r.validateJPEG = func(path string) error {
-					validations++
-					if mode == "cancel" {
-						cancel()
-					} else {
-						<-ctx.Done()
+					paths, cleanup, err := r.RenderJPEG(ctx, smallPDF(), pages)
+					if cleanup != nil {
+						defer cleanup()
 					}
-					return validateJPEG(path)
-				}
-				paths, cleanup, err := r.RenderJPEG(ctx, smallPDF(), pages)
-				if cleanup != nil {
-					defer cleanup()
-				}
-				if err == nil || err.Error() != "render_failed" || len(paths) != 0 {
-					t.Fatalf("paths=%v err=%v", paths, err)
-				}
-				// Under load the 10 ms deadline can pass before validation starts.
-				if validations > 1 || mode == "cancel" && validations != 1 {
-					t.Fatalf("validated %d pages after interruption", validations)
-				}
-				if _, err := os.Stat(dir); !os.IsNotExist(err) {
-					t.Fatal("scratch retained")
-				}
+					if err == nil || err.Error() != "render_failed" || len(paths) != 0 {
+						t.Fatalf("paths=%v err=%v", paths, err)
+					}
+					if validations != 1 {
+						t.Fatalf("validated %d pages after interruption", validations)
+					}
+					if _, err := os.Stat(dir); !os.IsNotExist(err) {
+						t.Fatal("scratch retained")
+					}
+				})
 			})
 		}
 	}
