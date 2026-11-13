@@ -12,7 +12,6 @@ for host in 127.0.0.1 /var/run/postgresql; do
  fi
  [[ $result == 1 ]] || fail 'unexpected administration response'
  if result=$(podman exec --env PGPASSWORD= --env PGPASSFILE=/dev/null \
-  --env PGSERVICE= --env PGSERVICEFILE=/dev/null --env PGHOSTADDR= \
   --env PGCONNECT_TIMEOUT=5 --env LC_ALL=C \
   trachuan-postgres psql -X -w -A -t --host "$host" --port 5432 \
   --username postgres --dbname postgres --command 'SELECT 1' 2>&1); then
