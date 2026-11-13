@@ -435,6 +435,30 @@ func TestConsent_PageStructure(t *testing.T) {
 	}
 }
 
+func TestConsent_Seal(t *testing.T) {
+	for _, lang := range []string{"vi", "en"} {
+		for _, method := range []string{"GET", "POST"} {
+			t.Run(lang+"/"+method, func(t *testing.T) {
+				d := newConsentDB()
+				path, cookie := pendingConsent(t, d)
+				w := consentResponse(d, consentRequest(path+"?lang="+lang, method, cookie, true, nil))
+				body := w.Body.String()
+				for _, want := range []string{
+					`<span class="brand"><svg width="28" height="28" viewBox="0 0 120 120" aria-hidden="true">`,
+					`<circle cx="60" cy="60" r="52" fill="none" stroke="currentColor" stroke-width="6"`,
+					`<circle cx="60" cy="60" r="40" fill="none" stroke="currentColor" stroke-width="2"`,
+					`<text x="60" y="74" text-anchor="middle" font-family="NotoSerif, Georgia, serif" font-size="40" font-weight="700" fill="currentColor">TC</text></svg>Tra Chuẩn</span>`,
+					`--seal:#B42318`, `--seal:#E5604F`, `color:var(--seal)`,
+				} {
+					if !strings.Contains(body, want) {
+						t.Errorf("missing %q", want)
+					}
+				}
+			})
+		}
+	}
+}
+
 func TestConsent_ErrorPageStylesheetHash(t *testing.T) {
 	d := newConsentDB()
 	path, cookie := pendingConsent(t, d)
