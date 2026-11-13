@@ -22,6 +22,7 @@ Intended behavior of trachuan. Decisions with alternatives are in the
 | [OCR store](ocr-store.md)                           | Stored OCR text and cross-check records, the banhmi import and how extract reads them         |
 | [OCR cross-check](ocr-check.md)                     | How a hosted model checks stored OCR text against its PDF, verdicts, batches and spend limits |
 | [OCR cross-check version 3](ocr-check-v3.md)        | JPEG pages at 200 dpi, direct requests, version 4 at 150 dpi                                  |
+| [OCR cross-check version 5](ocr-check-v5.md)        | Proposed: empty items allowed, coverage field, placeholder items named                        |
 | [fresh OCR requests](ocr-vision.md)                 | Google Cloud Vision requests for PDFs the OCR store lacks: page images, limits, command       |
 | [batch submissions](batch-submissions.md)           | Submission intent log and recovery for external batch services                                |
 | [scope adoption](scope-adoption.md)                 | Schema version 3, inventory version 2, build loading by final membership                      |
