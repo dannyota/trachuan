@@ -20,7 +20,6 @@ LogDriver=journald
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-ExecStartPre=/srv/trachuan/host/wait-healthy.sh trachuan-postgres
 ExecStartPre=/srv/trachuan/host/check-postgres-auth.sh
 Restart=on-failure
 RestartSec=5

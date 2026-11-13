@@ -3,6 +3,7 @@
 import configparser
 import json
 from pathlib import Path
+import re
 import shlex
 import shutil
 import subprocess
@@ -20,6 +21,12 @@ def objects(value):
     elif isinstance(value, list):
         for child in value:
             yield from objects(child)
+
+
+class InstallerTest(unittest.TestCase):
+    def test_cgroup_template_matches_podman_field(self):
+        templates = re.findall(r"podman info --format '([^']+)'", (HOST / "install.sh").read_text())
+        self.assertEqual(templates, ["{{.Host.CgroupsVersion}}"])
 
 
 class ListenerTest(unittest.TestCase):

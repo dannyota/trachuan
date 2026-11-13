@@ -20,6 +20,7 @@ Secret=corpus_reader_password,type=mount,uid=999,gid=999,mode=0400
 Volume=trachuan-postgres.volume:/var/lib/postgresql:Z,U
 Volume=/srv/trachuan/host/bootstrap.sh:/docker-entrypoint-initdb.d/10-auth.sh:ro,z
 Volume=/srv/trachuan/host/grant-corpus.sh:/usr/local/bin/grant-corpus.sh:ro,z
+Volume=/srv/trachuan/host/wait-postgres.sh:/usr/local/bin/wait-postgres.sh:ro,z
 Volume=/srv/trachuan/host/postgres-admin.sh:/usr/local/bin/postgres-admin.sh:ro,z
 Volume=/srv/trachuan/host/repair-postgres-auth.sh:/usr/local/bin/repair-postgres-auth.sh:ro,z
 Exec=postgres -c listen_addresses=127.0.0.1 -c port=5432 -c shared_buffers=4GB -c effective_cache_size=16GB -c maintenance_work_mem=512MB -c max_parallel_maintenance_workers=1 -c max_connections=50

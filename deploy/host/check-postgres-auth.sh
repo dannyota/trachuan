@@ -2,6 +2,9 @@
 # A refused connection is useful only after the same authenticated endpoint works.
 set -euo pipefail
 fail() { echo "postgres-auth: $*" >&2; exit 1; }
+if ! podman exec trachuan-postgres /usr/local/bin/postgres-admin.sh /usr/local/bin/wait-postgres.sh; then
+ fail 'database readiness failed'
+fi
 for host in 127.0.0.1 /var/run/postgresql; do
  if ! result=$(podman exec --env PGCONNECT_TIMEOUT=5 trachuan-postgres /usr/local/bin/postgres-admin.sh \
   psql -X -w -A -t --host "$host" --port 5432 --username postgres --dbname postgres --command 'SELECT 1' 2>/dev/null); then

@@ -14,7 +14,7 @@ RUN npm --prefix apps/web ci && npm --prefix apps/web run build
 FROM gcr.io/distroless/cc-debian13:nonroot@sha256:cb87acc574abe719b6e5c547384defa2f7b1f24af9605d3f618cf852495d8be2 AS runtime
 WORKDIR /app
 COPY --from=build /usr/local/bin/node /usr/local/bin/node
-COPY --from=build --chmod=0644 /usr/lib/aarch64-linux-gnu/libatomic.so.1 /usr/lib/aarch64-linux-gnu/libatomic.so.1
+RUN ["/usr/local/bin/node", "--version"]
 COPY --from=build /src/apps/web/.output/ ./.output/
 USER 65532:65532
 ENV NITRO_HOST=127.0.0.1 NITRO_PORT=3000 NODE_ENV=production

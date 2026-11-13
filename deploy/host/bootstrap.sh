@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Runs inside PostgreSQL on the first initialization of an empty data volume.
 set -euo pipefail
+# The entrypoint's temporary server has no TCP listener during initialization.
+/usr/local/bin/postgres-admin.sh /usr/local/bin/wait-postgres.sh /var/run/postgresql
 export AUTH_DB_PASSWORD CORPUS_READER_PASSWORD
 AUTH_DB_PASSWORD=$(cat /run/secrets/auth_db_password)
 CORPUS_READER_PASSWORD=$(cat /run/secrets/corpus_reader_password)

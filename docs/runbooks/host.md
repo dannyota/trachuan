@@ -1,13 +1,12 @@
 # Run the production host
 
 Phase 1 serves only the owner. Set the owner's verified email in
-`SERVER_SIGNUP_EMAILS` on the host, never in Git. Use a server image containing
-that gate and prove a previously unused second Google account is rejected before
-announcing the site. Keep Google's consent screen in [Testing][google-testing]
-as an additional measure; it does not enforce owner-only access. Before
-admitting another account, finish the signed deployment, Vault, backups, alarms,
-data volume and infrastructure work in the
-[deployment design](../design/deployment.md).
+`SERVER_SIGNUP_EMAILS` on the host, never in Git. Prove a previously unused
+second Google account is rejected before announcing the site. Keep Google's
+consent screen in [Testing][google-testing] as an additional measure; it does
+not enforce owner-only access. Before admitting another account, finish the
+signed deployment, Vault, backups, alarms, data volume and infrastructure work
+in the [deployment design](../design/deployment.md).
 
 ## Build and install
 
@@ -34,8 +33,9 @@ The installer targets OL9.8 arm64, uses only OL9 BaseOS and AppStream, requires
 SELinux enforcing, cgroup v2 and Podman >= 4.4, and verifies generated units. It
 enables lingering and opens 80/443 TCP and 443 UDP. It preserves installed env
 files under `/srv/trachuan/host/`; update those files on an existing host. The
-server's pre-start guard rejects a missing or empty signup list without logging
-its value. Leave `SERVER_GOOGLE_ISSUER` and `SERVER_OAUTH_CLIENTS` unset.
+server's pre-start guard validates every signup-list entry: a nonempty local
+part, a dotted domain and no whitespace. Invalid values refuse startup without
+being logged. Leave `SERVER_GOOGLE_ISSUER` and `SERVER_OAUTH_CLIENTS` unset.
 
 Phase 1 has no instance dynamic group or IAM policy, so the instance principal
 grants nothing. Before any Vault policy exists, block metadata access at
@@ -133,19 +133,22 @@ while IFS='=' read -r key image; do
 done </srv/trachuan/host/images.env
 systemctl --user daemon-reload
 systemctl --user start trachuan-postgres
+podman exec trachuan-postgres /usr/local/bin/postgres-admin.sh /usr/local/bin/wait-postgres.sh
 /srv/trachuan/host/check-postgres-auth.sh
 systemctl --user start trachuan-caddy
 systemctl --user status trachuan-postgres trachuan-migrate \
   trachuan-queryembed trachuan-server trachuan-web trachuan-caddy
 ```
 
-Initialization requires SCRAM for every TCP and socket connection. Bootstrap
-creates `auth`, `auth_owner` and `corpus_reader` using mounted passwords. The
-check first proves authenticated access, then proves that passwordless
-`postgres` connections to `127.0.0.1:5432` and the socket fail specifically for
-lack of a password. Migrations require that check before `server migrate` runs.
-All admin commands below use `postgres-admin.sh`, which reads the mounted
-password into its environment. Do not substitute password arguments or trust.
+Bootstrap waits for the temporary Unix socket; host checks wait for TCP with a
+120-second readiness deadline. Initialization requires SCRAM for every TCP and
+socket connection. Bootstrap creates `auth`, `auth_owner` and `corpus_reader`
+using mounted passwords. The check first proves authenticated access, then
+proves that passwordless `postgres` connections to `127.0.0.1:5432` and the
+socket fail specifically for lack of a password. Migrations require that check
+before `server migrate` runs. All admin commands below use `postgres-admin.sh`,
+which reads the mounted password into its environment. Do not substitute
+password arguments or trust.
 
 The named PostgreSQL volume initially uses rootless storage on boot disk. Never
 remove it to retry initialization. Move data to the separate volume before
@@ -155,13 +158,16 @@ recipe check; [server-local.md](server-local.md) owns server command behavior.
 ### Repair an initialized cluster
 
 Changing init flags does not repair an existing cluster. For a cluster made by
-an earlier bundle, keep traffic stopped and run the installed helper as
-`trachuan`. It atomically rewrites `pg_hba.conf` to SCRAM and reloads
-PostgreSQL. The mounted passwords must match existing roles. See the [HBA reload
-rules][hba].
+an earlier bundle, recreate PostgreSQL from its updated unit so the new helper
+mounts are present. The named volume is retained. Then rewrite `pg_hba.conf` and
+reload PostgreSQL as `trachuan`. The mounted passwords must match existing
+roles. See the [HBA reload rules][hba].
 
 ```sh
-systemctl --user stop trachuan-caddy trachuan-web trachuan-server trachuan-migrate
+systemctl --user stop trachuan-caddy trachuan-web trachuan-server trachuan-migrate trachuan-postgres
+systemctl --user daemon-reload
+systemctl --user start trachuan-postgres
+podman exec trachuan-postgres /usr/local/bin/postgres-admin.sh /usr/local/bin/wait-postgres.sh
 podman exec trachuan-postgres /usr/local/bin/repair-postgres-auth.sh
 /srv/trachuan/host/check-postgres-auth.sh
 systemctl --user start trachuan-server trachuan-web
@@ -212,7 +218,9 @@ GiB memory cap; shared memory is charged to that cap, not an extra allowance.
 ## Deploy a new digest
 
 Check green CI for the exact commit and all three attestations. Keep the old
-`images.env` outside Git for recovery. Edit `/srv/trachuan/host/images.env`:
+`images.env` outside Git for recovery. Stop all containers, reload units and
+start them again so changed mounts, limits and env files take effect. Retain the
+named volumes. Edit `/srv/trachuan/host/images.env`:
 
 ```sh
 bash /srv/trachuan/host/render-units.sh /srv/trachuan/host/images.env \
@@ -220,9 +228,11 @@ bash /srv/trachuan/host/render-units.sh /srv/trachuan/host/images.env \
 while IFS='=' read -r key image; do
   case "$key" in *_IMAGE) podman pull "$image" ;; esac
 done </srv/trachuan/host/images.env
-systemctl --user stop trachuan-caddy trachuan-web trachuan-server
+systemctl --user stop trachuan-caddy trachuan-web trachuan-server trachuan-queryembed trachuan-migrate trachuan-postgres
 systemctl --user daemon-reload
-systemctl --user restart trachuan-queryembed trachuan-migrate
+systemctl --user start trachuan-postgres
+podman exec trachuan-postgres /usr/local/bin/postgres-admin.sh /usr/local/bin/wait-postgres.sh
+systemctl --user start trachuan-queryembed trachuan-migrate
 systemctl --user start trachuan-server trachuan-web
 curl --fail http://127.0.0.1:8080/readyz
 systemctl --user start trachuan-caddy

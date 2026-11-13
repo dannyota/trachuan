@@ -12,6 +12,11 @@ import os, sys
 args = sys.argv[1:]
 mode = os.environ['POSTGRES_AUTH_TEST_MODE']
 if not args or args[0] != 'exec': sys.exit(90)
+if '/usr/local/bin/wait-postgres.sh' in args:
+    if mode == 'unavailable': sys.exit(2)
+    open(os.environ['POSTGRES_AUTH_TEST_READY'], 'w').close()
+    sys.exit(0)
+if not os.path.exists(os.environ['POSTGRES_AUTH_TEST_READY']): sys.exit(92)
 if '/usr/local/bin/postgres-admin.sh' in args:
     if mode == 'unavailable': sys.exit(2)
     print('1'); sys.exit(0)
@@ -32,7 +37,8 @@ class PasswordCheckTest(unittest.TestCase):
             fake = Path(work) / "podman"
             fake.write_text(FAKE_PODMAN)
             fake.chmod(0o755)
-            env = dict(os.environ, PATH=work + os.pathsep + os.environ["PATH"], POSTGRES_AUTH_TEST_MODE=mode)
+            env = dict(os.environ, PATH=work + os.pathsep + os.environ["PATH"], POSTGRES_AUTH_TEST_MODE=mode,
+                       POSTGRES_AUTH_TEST_READY=str(Path(work) / "ready"))
             return subprocess.run(["bash", str(HOST / "check-postgres-auth.sh")], env=env, text=True, capture_output=True)
 
     def test_authenticated_service_rejecting_passwordless_connections_passes(self):

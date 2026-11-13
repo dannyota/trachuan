@@ -40,7 +40,7 @@ as_user() {
  runuser -u trachuan -- env XDG_RUNTIME_DIR="/run/user/$uid" \
   DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$uid/bus" "$@"
 }
-[[ $(as_user podman info --format '{{.Host.CgroupVersion}}') == v2 ]] || fail 'rootless Podman requires cgroup v2'
+[[ $(as_user podman info --format '{{.Host.CgroupsVersion}}') == v2 ]] || fail 'rootless Podman requires cgroup v2'
 
 printf '%s\n' 'net.ipv4.ip_unprivileged_port_start=80' >/etc/sysctl.d/90-trachuan.conf
 sysctl -p /etc/sysctl.d/90-trachuan.conf >/dev/null
@@ -55,7 +55,7 @@ install -d -o root -g root -m 0755 /srv/trachuan
 install -d -o trachuan -g trachuan -m 0755 /srv/trachuan/host /srv/trachuan/host/quadlet
 install -d -o trachuan -g trachuan -m 0755 /srv/trachuan/models /srv/trachuan/models/vi_v2-bundle
 for script in bootstrap.sh grant-corpus.sh wait-healthy.sh render-units.sh \
- postgres-admin.sh check-postgres-auth.sh repair-postgres-auth.sh check-signup.sh client-address-log.sh; do
+ postgres-admin.sh wait-postgres.sh check-postgres-auth.sh repair-postgres-auth.sh check-signup.sh client-address-log.sh; do
  install -o trachuan -g trachuan -m 0755 "$bundle/$script" "/srv/trachuan/host/$script"
 done
 for config in Caddyfile client-address-check.caddy; do

@@ -76,7 +76,7 @@ def main():
             "app/queryembed", "app/healthcheck",
             "opt/native/libonnxruntime.so", "opt/native/libtokenizers.a",
         },
-        "web": {"usr/local/bin/node", "usr/lib/aarch64-linux-gnu/libatomic.so.1"},
+        "web": {"usr/local/bin/node"},
     }[kind]
     baseline = image_inventory(runtime)
     binaries = image_inventory(image, baseline, expected)
