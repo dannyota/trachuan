@@ -1,0 +1,75 @@
+{
+  "key": "vn:vbpl:5664",
+  "fetch_artifact": "94e669f2c6907aa745a1d8a5ead8460efc72fa45801bded69f8bbabf54d5c56f-94144857c829ed50c1050468688fe2e45f1c4c060413919d536a6d2b8637056d",
+  "transcription_sha256": "2de92a6c2c96f9da9afc7d1a58b7db19fe546bc6c16a183f517021b873c634d1",
+  "description": "Recorded articles only; publisher header and signature omitted. BRs become paragraphs.",
+  "tree": {
+    "success": true,
+    "statusCode": 200,
+    "message": "Lấy cây phân cấp provision thành công",
+    "messageCode": "provision_tree_v2_success",
+    "debugMessage": "",
+    "data": [
+      {
+        "key": "dec23b90-2872-11f1-9511-9b8b6adc8278",
+        "id": "dec23b90-2872-11f1-9511-9b8b6adc8278",
+        "title": " Điều 1. Nay công bố mức lãi suất cơ bản làm cơ sở cho tổ chức tín dụng ấn định lãi suất cho vay bằng Đồng Việt Nam đối với khách hàng là 0,75 %/tháng.",
+        "ptype": 5,
+        "level": "Article",
+        "orderIndex": 1,
+        "isLeaf": true,
+        "content": {
+          "title": "Điều 1",
+          "content": " Điều 1. Nay công bố mức lãi suất cơ bản làm cơ sở cho tổ chức tín dụng ấn định lãi suất cho vay bằng Đồng Việt Nam đối với khách hàng là 0,75 %/tháng."
+        },
+        "effFrom": "2000-12-05T00:00:00"
+      },
+      {
+        "key": "dec2d7d0-2872-11f1-b9d3-cbec902a8e6a",
+        "id": "dec2d7d0-2872-11f1-b9d3-cbec902a8e6a",
+        "title": "Điều 2.",
+        "ptype": 5,
+        "level": "Article",
+        "orderIndex": 2,
+        "isLeaf": false,
+        "content": {
+          "title": "Điều 2",
+          "content": "Điều 2.<br>1. Quyết định này có hiệu lực thi hành kể từ ngày 5/12/2000 và thay thế quy định về mức lãi suất cơ bản tại Điều 1, Quyết định 464/2000/QĐ-NHNN1 ngày 2/11/2000 của Thống đốc Ngân hàng Nhà nước về việc công bố lãi suất cơ bản làm cơ sở cho tổ chức tín dụng ấn định lãi suất cho vay bằng Đồng Việt Nam đối với khách hàng<br>2. Thủ trưởng các đơn vị thuộc Ngân hàng Nhà nước, Giám đốc chi nhánh Ngân hàng Nhà nước các tỉnh, thành phố; Chủ tịch Hội đồng quản trị và Tổng giám đốc (Giám đốc) các tổ chức tín dụng chịu trách nhiệm thi hành Quyết định này./."
+        },
+        "children": [
+          {
+            "key": "29680c30-3177-11f1-94fe-8dfaad14d491",
+            "id": "29680c30-3177-11f1-94fe-8dfaad14d491",
+            "title": "Khoản 1",
+            "ptype": 6,
+            "level": "Clause",
+            "orderIndex": 3,
+            "isLeaf": true,
+            "content": {
+              "title": "Khoản 1",
+              "content": "1. Quyết định này có hiệu lực thi hành kể từ ngày 5/12/2000 và thay thế quy định về mức lãi suất cơ bản tại Điều 1, Quyết định 464/2000/QĐ-NHNN1 ngày 2/11/2000 của Thống đốc Ngân hàng Nhà nước về việc công bố lãi suất cơ bản làm cơ sở cho tổ chức tín dụng ấn định lãi suất cho vay bằng Đồng Việt Nam đối với khách hàng"
+            },
+            "effFrom": "2000-12-05T00:00:00"
+          },
+          {
+            "key": "2968cf80-3177-11f1-87a0-9fb2783e0863",
+            "id": "2968cf80-3177-11f1-87a0-9fb2783e0863",
+            "title": "Khoản 2",
+            "ptype": 6,
+            "level": "Clause",
+            "orderIndex": 4,
+            "isLeaf": true,
+            "content": {
+              "title": "Khoản 2",
+              "content": "2. Thủ trưởng các đơn vị thuộc Ngân hàng Nhà nước, Giám đốc chi nhánh Ngân hàng Nhà nước các tỉnh, thành phố; Chủ tịch Hội đồng quản trị và Tổng giám đốc (Giám đốc) các tổ chức tín dụng chịu trách nhiệm thi hành Quyết định này./."
+            },
+            "effFrom": "2000-12-05T00:00:00"
+          }
+        ],
+        "effFrom": "2000-12-05T00:00:00"
+      }
+    ],
+    "total": 2
+  },
+  "html": "<p>Điều 1. Nay công bố mức lãi suất cơ bản làm cơ sở cho tổ chức tín dụng ấn định lãi suất cho vay bằng Đồng Việt Nam đối với khách hàng là 0,75 %/tháng.</p><p>Điều 2.</p><p>1. Quyết định này có hiệu lực thi hành kể từ ngày 5/12/2000 và thay thế quy định về mức lãi suất cơ bản tại Điều 1, Quyết định 464/2000/QĐ-NHNN1 ngày 2/11/2000 của Thống đốc Ngân hàng Nhà nước về việc công bố lãi suất cơ bản làm cơ sở cho tổ chức tín dụng ấn định lãi suất cho vay bằng Đồng Việt Nam đối với khách hàng</p><p>2. Thủ trưởng các đơn vị thuộc Ngân hàng Nhà nước, Giám đốc chi nhánh Ngân hàng Nhà nước các tỉnh, thành phố; Chủ tịch Hội đồng quản trị và Tổng giám đốc (Giám đốc) các tổ chức tín dụng chịu trách nhiệm thi hành Quyết định này./.</p>"
+}

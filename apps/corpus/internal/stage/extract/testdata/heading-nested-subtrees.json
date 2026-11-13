@@ -1,0 +1,232 @@
+[
+  {
+    "key": "vn:vbpl:139039",
+    "fetch_artifact": "a751af61ee33f3001587e0d754660893add4951eb62351744ecbeab225e9e7c7-1f6699b0264c7ff2550542ccf2689868c1d40e435464151edcfa3dd991b9b351",
+    "description": "Recorded article subtree and parsed transcription article. Node IDs replaced with local labels.",
+    "anchor": "dieu-1",
+    "rendered_characters": 630,
+    "transcription": "Điều 1. Phạm vi điều chỉnh và đối tượng áp dụng\n1. Nghị định này quy định mức vốn pháp định của tổ chức tín dụng, chi nhánh ngân hàng nước ngoài thành lập và hoạt động tại Việt Nam.\n2. Nghị định này áp dụng đối với các đối tượng sau đây:\na) Tổ chức tín dụng;\nb) Chi nhánh ngân hàng nước ngoài;\nc) Tổ chức, cá nhân có liên quan đến việc thành lập, tổ chức, hoạt động của tổ chức tín dụng, chi nhánh ngân hàng nước ngoài.",
+    "rows": [
+      {
+        "node_id": "recorded-1",
+        "parent_node_id": null,
+        "kind": "dieu",
+        "label": "Điều 1",
+        "heading": "Phạm vi điều chỉnh và đối tượng áp dụng",
+        "ordinal": 1,
+        "path": "dieu-1",
+        "text": "Điều 1. Phạm vi điều chỉnh và đối tượng áp dụng\n1. Nghị định này quy định mức vốn pháp định của tổ chức tín dụng, chi nhánh ngân hàng nước ngoài thành lập và hoạt động tại Việt Nam.\n2. Nghị định này áp dụng đối với các đối tượng sau đây:\na) Tổ chức tín dụng;"
+      },
+      {
+        "node_id": "recorded-2",
+        "parent_node_id": "recorded-1",
+        "kind": "khoan",
+        "label": "Khoản 1",
+        "heading": "",
+        "ordinal": 1,
+        "path": "dieu-1/khoan-1",
+        "text": "1. Nghị định này quy định mức vốn pháp định của tổ chức tín dụng, chi nhánh ngân hàng nước ngoài thành lập và hoạt động tại Việt Nam."
+      },
+      {
+        "node_id": "recorded-3",
+        "parent_node_id": "recorded-1",
+        "kind": "khoan",
+        "label": "Khoản 2",
+        "heading": "",
+        "ordinal": 2,
+        "path": "dieu-1/khoan-2",
+        "text": "2. Nghị định này áp dụng đối với các đối tượng sau đây:"
+      },
+      {
+        "node_id": "recorded-4",
+        "parent_node_id": "recorded-3",
+        "kind": "diem",
+        "label": "Điểm a",
+        "heading": "",
+        "ordinal": 1,
+        "path": "dieu-1/khoan-2/diem-a",
+        "text": "a) Tổ chức tín dụng;"
+      },
+      {
+        "node_id": "recorded-5",
+        "parent_node_id": "recorded-3",
+        "kind": "diem",
+        "label": "Điểm b",
+        "heading": "",
+        "ordinal": 2,
+        "path": "dieu-1/khoan-2/diem-b",
+        "text": "b) Chi nhánh ngân hàng nước ngoài;"
+      },
+      {
+        "node_id": "recorded-6",
+        "parent_node_id": "recorded-3",
+        "kind": "diem",
+        "label": "Điểm c",
+        "heading": "",
+        "ordinal": 3,
+        "path": "dieu-1/khoan-2/diem-c",
+        "text": "c) Tổ chức, cá nhân có liên quan đến việc thành lập, tổ chức, hoạt động của tổ chức tín dụng, chi nhánh ngân hàng nước ngoài."
+      }
+    ]
+  },
+  {
+    "key": "vn:vbpl:8706",
+    "fetch_artifact": "1a5b0b07844c749e2495c91bcfa23480c16daf0bde2755a21efe0e11c9751959-1f6699b0264c7ff2550542ccf2689868c1d40e435464151edcfa3dd991b9b351",
+    "description": "Recorded article subtree and parsed transcription article. Node IDs replaced with local labels.",
+    "anchor": "dieu-8",
+    "rendered_characters": 2677,
+    "transcription": "Điều 8. Xử phạt đối với những hành vi vi phạm quy định về tuyển dụng, bố trí nhân viên; về quản lý nghiệp vụ của tổ chức tín dụng:\n1. Phạt cảnh cáo đối với tổ chức tín dụng có hành vi:\na. Bố trí, sắp xếp vào làm việc tại tổ chức mình những người mà pháp luật nghiêm cấm;\nb. Không thay đổi, thuyên chuyển nhiệm vụ công tác của công chức, nhân viên ở những bộ phận nghiệp vụ kế toán, kho, quỹ, tín dụng khi đã vi phạm kỷ luật.\n2. Phạt tiền từ 15.000.000 đồng đến 20.000.000 đồng, đối với một trong những hành vi vi phạm quy định an toàn trong hoạt động ngân hàng:\na. Huy động vốn vượt quá phạm vi theo quy định của giấy phép;\nb. Cho vay vốn không đúng quy định của Ngân hàng Nhà nước;\nc. Thực hiện không đúng quy định về bảo đảm khả năng chi trả và khả năng thanh toán cho khách hàng theo quy định của Ngân hàng Nhà nước;\nd. Vi phạm quy định về hùn vốn, liên doanh, mua cổ phần theo quy định của pháp luật;\ne. Chuyển nhượng cổ phần trái với quy định của pháp luật;\ng. Vi phạm về trích lập các quỹ trái với quy định của pháp luật;\nh. Sử dụng các quỹ vào việc trả lãi cổ phần, hoặc chuyển ra nước ngoài không đúng quy định của Ngân hàng Nhà nước.\n3. Áp dụng các biện pháp khác:\na. Hạn chế hoặc cấm hoạt động một trong các nghiệp vụ nếu tái phạm quy định tại các điểm a, b, c, d khoản 2 điều này.\nb. Buộc khôi phục lại tình trạng ban đầu đối với những vi phạm nói tại điểm e, điểm g, điểm h khoản 2 điều này.",
+    "rows": [
+      {
+        "node_id": "recorded-1",
+        "parent_node_id": null,
+        "kind": "dieu",
+        "label": "Điều 8",
+        "heading": "Xử phạt đối với những hành vi vi phạm quy định về tuyển dụng, bố trí nhân viên; về quản lý nghiệp vụ của tổ chức tín dụng:",
+        "ordinal": 5,
+        "path": "dieu-8",
+        "text": "Điều 8. Xử phạt đối với những hành vi vi phạm quy định về tuyển dụng, bố trí nhân viên; về quản lý nghiệp vụ của tổ chức tín dụng:\n1. Phạt cảnh cáo đối với tổ chức tín dụng có hành vi:\na. Bố trí, sắp xếp vào làm việc tại tổ chức mình những người mà pháp luật nghiêm cấm;\nb. Không thay đổi, thuyên chuyển nhiệm vụ công tác của công chức, nhân viên ở những bộ phận nghiệp vụ kế toán, kho, quỹ, tín dụng khi đã vi phạm kỷ luật.\n2. Phạt tiền từ 15.000.000 đồng đến 20.000.000 đồng, đối với một trong những hành vi vi phạm quy định an toàn trong hoạt động ngân hàng:\na. Huy động vốn vượt quá phạm vi theo quy định của giấy phép;\nb. Cho vay vốn không đúng quy định của Ngân hàng Nhà nước;\nc. Thực hiện không đúng quy định về bảo đảm khả năng chi trả và khả năng thanh toán cho khách hàng theo quy định của Ngân hàng Nhà nước;\nd. Vi phạm quy định về hùn vốn, liên doanh, mua cổ phần theo quy định của pháp luật; \ne. Chuyển nhượng cổ phần trái với quy định của pháp luật;\ng. Vi phạm về trích lập các quỹ trái với quy định của pháp luật;\nh. Sử dụng các quỹ vào việc trả lãi cổ phần, hoặc chuyển ra nước ngoài không đúng quy định của Ngân hàng Nhà nước.\n3. Áp dụng các biện pháp khác:\na. Hạn chế hoặc cấm hoạt động một trong các nghiệp vụ nếu tái phạm quy định tại các điểm a, b, c, d khoản 2 điều này.\nb. Buộc khôi phục lại tình trạng ban đầu đối với những vi phạm nói tại điểm e, điểm g, điểm h khoản 2 điều này."
+      },
+      {
+        "node_id": "recorded-2",
+        "parent_node_id": "recorded-1",
+        "kind": "khoan",
+        "label": "Khoản 1",
+        "heading": "",
+        "ordinal": 1,
+        "path": "dieu-8/khoan-1",
+        "text": "1. Phạt cảnh cáo đối với tổ chức tín dụng có hành vi:"
+      },
+      {
+        "node_id": "recorded-3",
+        "parent_node_id": "recorded-2",
+        "kind": "diem",
+        "label": "Điểm a",
+        "heading": "",
+        "ordinal": 1,
+        "path": "dieu-8/khoan-1/diem-a",
+        "text": "a. Bố trí, sắp xếp vào làm việc tại tổ chức mình những người mà pháp luật nghiêm cấm;"
+      },
+      {
+        "node_id": "recorded-4",
+        "parent_node_id": "recorded-2",
+        "kind": "diem",
+        "label": "Điểm b",
+        "heading": "",
+        "ordinal": 2,
+        "path": "dieu-8/khoan-1/diem-b",
+        "text": "b. Không thay đổi, thuyên chuyển nhiệm vụ công tác của công chức, nhân viên ở những bộ phận nghiệp vụ kế toán, kho, quỹ, tín dụng khi đã vi phạm kỷ luật."
+      },
+      {
+        "node_id": "recorded-5",
+        "parent_node_id": "recorded-1",
+        "kind": "khoan",
+        "label": "Khoản 2",
+        "heading": "",
+        "ordinal": 2,
+        "path": "dieu-8/khoan-2",
+        "text": "2. Phạt tiền từ 15.000.000 đồng đến 20.000.000 đồng, đối với một trong những hành vi vi phạm quy định an toàn trong hoạt động ngân hàng:"
+      },
+      {
+        "node_id": "recorded-6",
+        "parent_node_id": "recorded-5",
+        "kind": "diem",
+        "label": "Điểm a",
+        "heading": "",
+        "ordinal": 1,
+        "path": "dieu-8/khoan-2/diem-a",
+        "text": "a. Huy động vốn vượt quá phạm vi theo quy định của giấy phép;"
+      },
+      {
+        "node_id": "recorded-7",
+        "parent_node_id": "recorded-5",
+        "kind": "diem",
+        "label": "Điểm b",
+        "heading": "",
+        "ordinal": 2,
+        "path": "dieu-8/khoan-2/diem-b",
+        "text": "b. Cho vay vốn không đúng quy định của Ngân hàng Nhà nước;"
+      },
+      {
+        "node_id": "recorded-8",
+        "parent_node_id": "recorded-5",
+        "kind": "diem",
+        "label": "Điểm c",
+        "heading": "",
+        "ordinal": 3,
+        "path": "dieu-8/khoan-2/diem-c",
+        "text": "c. Thực hiện không đúng quy định về bảo đảm khả năng chi trả và khả năng thanh toán cho khách hàng theo quy định của Ngân hàng Nhà nước;"
+      },
+      {
+        "node_id": "recorded-9",
+        "parent_node_id": "recorded-5",
+        "kind": "diem",
+        "label": "Điểm d",
+        "heading": "",
+        "ordinal": 4,
+        "path": "dieu-8/khoan-2/diem-d",
+        "text": "d. Vi phạm quy định về hùn vốn, liên doanh, mua cổ phần theo quy định của pháp luật; "
+      },
+      {
+        "node_id": "recorded-10",
+        "parent_node_id": "recorded-5",
+        "kind": "diem",
+        "label": "Điểm e",
+        "heading": "",
+        "ordinal": 5,
+        "path": "dieu-8/khoan-2/diem-e",
+        "text": "e. Chuyển nhượng cổ phần trái với quy định của pháp luật;"
+      },
+      {
+        "node_id": "recorded-11",
+        "parent_node_id": "recorded-5",
+        "kind": "diem",
+        "label": "Điểm g",
+        "heading": "",
+        "ordinal": 6,
+        "path": "dieu-8/khoan-2/diem-g",
+        "text": "g. Vi phạm về trích lập các quỹ trái với quy định của pháp luật;"
+      },
+      {
+        "node_id": "recorded-12",
+        "parent_node_id": "recorded-5",
+        "kind": "diem",
+        "label": "Điểm h",
+        "heading": "",
+        "ordinal": 7,
+        "path": "dieu-8/khoan-2/diem-h",
+        "text": "h. Sử dụng các quỹ vào việc trả lãi cổ phần, hoặc chuyển ra nước ngoài không đúng quy định của Ngân hàng Nhà nước."
+      },
+      {
+        "node_id": "recorded-13",
+        "parent_node_id": "recorded-1",
+        "kind": "khoan",
+        "label": "Khoản 3",
+        "heading": "",
+        "ordinal": 3,
+        "path": "dieu-8/khoan-3",
+        "text": "3. Áp dụng các biện pháp khác:"
+      },
+      {
+        "node_id": "recorded-14",
+        "parent_node_id": "recorded-13",
+        "kind": "diem",
+        "label": "Điểm a",
+        "heading": "",
+        "ordinal": 1,
+        "path": "dieu-8/khoan-3/diem-a",
+        "text": "a. Hạn chế hoặc cấm hoạt động một trong các nghiệp vụ nếu tái phạm quy định tại các điểm a, b, c, d khoản 2 điều này."
+      },
+      {
+        "node_id": "recorded-15",
+        "parent_node_id": "recorded-13",
+        "kind": "diem",
+        "label": "Điểm b",
+        "heading": "",
+        "ordinal": 2,
+        "path": "dieu-8/khoan-3/diem-b",
+        "text": "b. Buộc khôi phục lại tình trạng ban đầu đối với những vi phạm nói tại điểm e, điểm g, điểm h khoản 2 điều này."
+      }
+    ]
+  }
+]

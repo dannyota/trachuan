@@ -64,7 +64,7 @@ func textRelations(dir string, rows []relation, issuers map[string]string) ([]re
 	incomplete := map[string]bool{}
 	for _, gap := range gaps {
 		switch gap.Kind {
-		case "tree_headings_only", "structure_uncertain", "table_text", "image_content", "ocr_flagged", "ocr_rejected", "ocr_label_flagged", "needs_ocr":
+		case "tree_headings_only", "tree_headings_partial", "structure_uncertain", "table_text", "image_content", "ocr_flagged", "ocr_rejected", "ocr_label_flagged", "needs_ocr":
 			incomplete[gap.Kind] = true
 		}
 	}

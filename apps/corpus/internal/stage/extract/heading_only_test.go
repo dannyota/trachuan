@@ -56,7 +56,7 @@ func TestExtract_HeadingOnlyTreeWithoutTextKeepsTreeWithGap(t *testing.T) {
 func TestExtract_PartlyBareTreeStaysSourceTree(t *testing.T) {
 	tree := `{"success":true,"data":[{"id":"a","level":"Article","title":"Điều 1. Phạm vi","content":{"content":"Điều 1. Phạm vi"}},{"id":"b","level":"Article","title":"Điều 2. Quy định","content":{"content":"Điều 2. Quy định<br>Nội dung"}}]}`
 	s, nodes, err := choose(context.Background(), headingBundle(t, tree, true), "vn:vbpl:1")
-	if err != nil || s.source != "source_tree" || s.gap != "" || len(nodes) != 2 {
+	if err != nil || s.source != "source_tree" || s.gap != "tree_headings_partial" || len(nodes) != 2 {
 		t.Fatalf("selection=%+v nodes=%v err=%v", s, nodes, err)
 	}
 }

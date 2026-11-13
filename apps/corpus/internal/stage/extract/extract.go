@@ -59,7 +59,7 @@ func (*Stage) Name() string { return "extract" }
 
 // Recipe returns the extract recipe hash.
 func (s *Stage) Recipe(stage.Snapshot) string {
-	parts := append([]string{"html-transcription/1", "textparse/7", "ocr-store/2", s.checker}, s.engines...)
+	parts := append([]string{"html-transcription/1", "textparse/7", "heading-only/1", "ocr-store/2", s.checker}, s.engines...)
 	parts = append(parts, manualMismatchRecipe()...)
 	return stage.RecipeHash("extract", "tree/1", parts...)
 }
@@ -162,7 +162,7 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 			return stage.Output{}, fmt.Errorf("extract tree: %w", err)
 		}
 		if selected.gap != "" {
-			gaps = append(gaps, stage.Gap{Kind: selected.gap})
+			gaps = append(gaps, stage.Gap{Kind: selected.gap, Detail: selected.reason})
 		}
 	case "html_transcription":
 		if selected.tooLarge {
@@ -185,6 +185,10 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 		rows = []provision{}
 		gaps = []stage.Gap{{Kind: "no_tree"}, {Kind: selected.gap, Detail: selected.reason}}
 		record = &textRecord{TextSource: "none", Gap: selected.gap}
+	}
+
+	if record != nil {
+		record.Tree = selected.tree
 	}
 
 	art, err := env.Artifacts.Publish(ctx, s.Name(), item.InputHash, s.Recipe(run.Snapshot), func(dir string) error {

@@ -66,20 +66,34 @@ A second pass applied the rule
 [heading-only trees](../design/heading-only-trees.md) adopts after review: the
 tree article's full text with its clauses must occur unchanged inside the
 transcription's article (no similarity ratio), every tree clause and point
-anchor must occur among the transcription's (parsed with the clause-aware parser
-of PR #146, head 73d19cc), every structure and `other` text must occur in the
-transcription, and manual-correction quotes found in the tree must survive.
+anchor must occur among the transcription's, every structure and `other` text
+must occur in the emitted provisions, and manual-correction quotes found in the
+tree must survive. The final numbers come from the implementation's
+recorded-release test (`TestHeadingMeasurement_RecordedRelease`, tag
+`measurement`, on the build inputs of `vn/20261112_2`), which uses the
+production selection, parser and chunk rendering:
 
 | Result for the 707 documents                   | Documents |
 | ---------------------------------------------- | --------- |
-| Read from the transcription                    | 339       |
-| Kept: transcription not accepted by the parser | 195       |
-| Kept: article anchors differ                   | 99        |
-| Kept: a tree clause or point anchor missing    | 50        |
-| Kept: article text differs                     | 24        |
+| Read from the transcription                    | 338       |
+| Kept: transcription not accepted by the parser | 197       |
+| Kept: article anchors differ                   | 97        |
+| Kept: article text differs                     | 26        |
+| Kept: a tree clause or point anchor missing    | 49        |
 
-The 339 are 267 primary and 72 relation context documents and gain 1,913,537
-characters. No document failed the structure-text rule. Three switched documents
-carry manual corrections: one quote survives; the other two (vn:vbpl:9100 and
-vn:vbpl:6677) occur verbatim neither in the tree nor in the transcription, so
-the switch does not change them.
+The 338 are 266 primary and 72 relation context documents and gain 1,660,734
+characters net of the heading lines the tree already held. No document failed
+the structure-text rule. The 1,689 source-tree documents without a heading-only
+article keep byte-identical extract artifacts.
+
+A Python prototype of the same rule gave 339 and 368. Each of the four documents
+where they differ was traced: `vn:vbpl:5636` and `vn:vbpl:8667` have a main
+scope that fails the article sequence, which the prototype skipped while the
+rule requires it (anchors differ becomes not accepted); in `vn:vbpl:139039` a
+clause's points are missing from the clause text, and chunk's rendering, unlike
+the prototype's, shows the article holds more than the transcription (switch
+becomes kept); in `vn:vbpl:8706` a no-break space after one point makes the
+rendered clause differ (clause anchor missing becomes text differs).
+
+One correction draws its evidence from a switching document (`vn:vbpl:2145`,
+evidence in `vn:vbpl:10761` `dieu-20`), and its quote survives verbatim.

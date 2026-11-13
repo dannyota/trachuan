@@ -15,9 +15,10 @@ On release `vn/20261112_2`, 707 of 2,396 source-tree documents have at least one
 heading-only article: 642 have some (3,909 of their 11,344 articles), 65 have
 all. The 65 still read from the tree because today's whole-tree test also
 inspects structure nodes, whose titles sit in their text. Under the rule below,
-339 of the 707 are read from their transcription (267 primary, 72 relation
-context), adding about 1.9 million characters of article text that search does
-not see today; 368 keep their tree.
+338 of the 707 are read from their transcription (266 primary, 72 relation
+context), adding about 1.66 million characters of article text, net of the
+heading lines the tree already had, that search does not see today; 369 keep
+their tree.
 
 ## Rule
 
@@ -86,7 +87,7 @@ evidence in `vn:vbpl:10761` `dieu-20`), and its quote survives verbatim.
 
 ## Effects
 
-- Extract: the 339 switched documents change source; the 368 kept documents gain
+- Extract: the 338 switched documents change source; the 369 kept documents gain
   a gap, which changes their extract manifest too. So extract, relate, chunk and
   embed repeat for all 707 documents: chunk binds the extract manifest hash, and
   embed binds the chunk manifest hash, even where the embedded text of a kept
