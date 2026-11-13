@@ -408,7 +408,6 @@ func TestResolver_CloseDefersPoolUntilLeaseEnds(t *testing.T) {
 	}
 	lease.Done()
 	lease.Done()
-	waitResolverCleanup(r)
 	if closed != 1 {
 		t.Fatalf("closed=%d", closed)
 	}

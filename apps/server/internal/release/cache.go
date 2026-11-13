@@ -15,14 +15,15 @@ import (
 )
 
 type cacheEntry struct {
-	opening   bool
-	retired   bool
-	leases    int
-	country   string
-	engine    *retrieval.Engine
-	pool      *pgxpool.Pool
-	closePool func()
-	closeOnce sync.Once
+	opening     bool
+	openingDone chan struct{}
+	retired     bool
+	leases      int
+	country     string
+	engine      *retrieval.Engine
+	pool        *pgxpool.Pool
+	closePool   func()
+	closeOnce   sync.Once
 }
 
 func (entry *cacheEntry) close() {
@@ -53,6 +54,7 @@ func (r *Resolver) load(ctx context.Context, country, name string) (*cacheEntry,
 	engine := entry.engine
 	hadEngine := engine != nil
 	entry.opening = true
+	entry.openingDone = make(chan struct{})
 	r.mu.Unlock()
 	var err error
 	if engine != nil {
@@ -70,6 +72,8 @@ func (r *Resolver) load(ctx context.Context, country, name string) (*cacheEntry,
 	}
 	r.mu.Lock()
 	entry.opening = false
+	close(entry.openingDone)
+	entry.openingDone = nil
 	if engine != nil {
 		entry.engine = engine
 	}

@@ -110,7 +110,8 @@ func TestResolver_CloseWaitsForCleanupQueuedDuringShutdown(t *testing.T) {
 	r.mu.Unlock()
 	go func() { r.Close(); close(finished) }()
 	<-shutdown
-	lease.Done()
+	released := make(chan struct{})
+	go func() { lease.Done(); close(released) }()
 	<-enteredB
 	stopA.Do(func() { close(releaseA) })
 	select {
@@ -120,4 +121,61 @@ func TestResolver_CloseWaitsForCleanupQueuedDuringShutdown(t *testing.T) {
 	}
 	stopB.Do(func() { close(releaseB) })
 	<-finished
+	<-released
+}
+
+func TestResolver_ClosedFinalLeaseWaitsForCleanup(t *testing.T) {
+	r, _, _ := resolverFixture(t)
+	entered, release, finished, closed := make(chan struct{}), make(chan struct{}), make(chan struct{}), make(chan struct{})
+	withPoolCloser(r, func(string) { close(entered); <-release; close(closed) })
+	defer r.Close()
+	var stop sync.Once
+	defer stop.Do(func() { close(release) })
+	lease := takeLease(t, r, "")
+	r.Close()
+	go func() { lease.Done(); close(finished) }()
+	<-entered
+	select {
+	case <-finished:
+		t.Error("final lease returned before shutdown cleanup")
+	case <-time.After(20 * time.Millisecond):
+	}
+	stop.Do(func() { close(release) })
+	<-finished
+	select {
+	case <-closed:
+	default:
+		t.Fatal("final lease did not close pool")
+	}
+}
+
+func TestResolver_ClosedFinalLeaseWaitsForPendingOpen(t *testing.T) {
+	r, _, _ := resolverFixture(t)
+	closed := make(chan struct{})
+	withPoolCloser(r, func(string) { close(closed) })
+	lease := takeLease(t, r, "")
+	r.mu.Lock()
+	entry := r.entries["corpus_vn_20990103"]
+	entry.opening = true
+	entry.openingDone = make(chan struct{})
+	r.mu.Unlock()
+	r.Close()
+	finished := make(chan struct{})
+	go func() { lease.Done(); close(finished) }()
+	select {
+	case <-finished:
+		t.Error("final lease returned before pending open completed")
+	case <-time.After(20 * time.Millisecond):
+	}
+	r.mu.Lock()
+	entry.opening = false
+	close(entry.openingDone)
+	entry.openingDone = nil
+	r.mu.Unlock()
+	<-finished
+	select {
+	case <-closed:
+	default:
+		t.Error("final lease left pool open after pending open completed")
+	}
 }

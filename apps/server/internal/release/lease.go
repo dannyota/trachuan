@@ -24,10 +24,23 @@ func (l *Lease) Done() {
 }
 
 func (r *Resolver) finish(entry *cacheEntry) {
+	var done <-chan struct{}
 	r.mu.Lock()
 	entry.leases--
+	if r.closed && entry.leases == 0 && entry.opening {
+		opening := entry.openingDone
+		r.mu.Unlock()
+		<-opening
+		r.mu.Lock()
+	}
 	if entry.retired && entry.leases == 0 && !entry.opening {
-		r.cleanupLocked(entry)
+		cleanup := r.cleanupLocked(entry)
+		if r.closed {
+			done = cleanup
+		}
 	}
 	r.mu.Unlock()
+	if done != nil {
+		<-done
+	}
 }
