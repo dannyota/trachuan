@@ -2,8 +2,10 @@ package mcpapi
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 
+	"danny.vn/trachuan/apps/server/internal/cache"
 	"danny.vn/trachuan/internal/retrieval"
 	"github.com/google/jsonschema-go/jsonschema"
 )
@@ -37,12 +39,10 @@ func (cfg Config) taxonomy(ctx context.Context, in taxonomyInput) (retrieval.Tax
 	return engine.Taxonomy(ctx, req)
 }
 
-// Taxonomy returns the public taxonomy tree through the shared tool contract.
 func (o *Operations) Taxonomy(ctx context.Context, raw json.RawMessage) (json.RawMessage, error) {
 	return operation(o.cfg, "taxonomy", o.cfg.taxonomy)(ctx, raw)
 }
 
-// TaxonomyNode returns a public node page from the active release.
 func (o *Operations) TaxonomyNode(ctx context.Context, code string) (json.RawMessage, error) {
 	lease, err := o.cfg.resolve(ctx, "vn", "")
 	if err != nil {
@@ -53,6 +53,15 @@ func (o *Operations) TaxonomyNode(ctx context.Context, code string) (json.RawMes
 	if !ok {
 		return nil, retrieval.ErrUnavailable
 	}
+	var scoped cache.Handle[[]byte]
+	if o.cfg.Caches != nil {
+		scoped = o.cfg.Caches.Scope(lease.Release, lease.Generation).TopicNodes
+	}
+	keyBytes, _ := json.Marshal([2]string{lease.Release, code})
+	key := sha256.Sum256(keyBytes)
+	if raw, ok := scoped.Get(lease.Release, key); ok {
+		return json.RawMessage(raw), nil
+	}
 	page, err := engine.TaxonomyNode(ctx, code)
 	if err != nil {
 		return nil, err
@@ -61,7 +70,11 @@ func (o *Operations) TaxonomyNode(ctx context.Context, code string) (json.RawMes
 	if err != nil {
 		return nil, err
 	}
-	return result.StructuredContent.(json.RawMessage), nil
+	raw := result.StructuredContent.(json.RawMessage)
+	if ctx.Err() == nil {
+		scoped.Put(lease.Release, key, raw)
+	}
+	return raw, nil
 }
 
 func taxonomySchema() *jsonschema.Schema {
