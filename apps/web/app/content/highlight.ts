@@ -15,20 +15,23 @@ function tokens(text: string): Token[] {
 export function highlightSpans(text: string, query: string): Array<{ start: number, end: number }> {
   const source = tokens(text)
   const target = tokens(query)
-  const spans: Array<{ start: number, end: number }> = []
-  for (let i = 0; i < source.length;) {
-    let best = 0
+  const marked = source.map(() => false)
+  for (let i = 0; i < source.length; i++) {
     for (let j = 0; j < target.length; j++) {
       let length = 0
       while (i + length < source.length && j + length < target.length && source[i + length]!.value === target[j + length]!.value) length++
-      best = Math.max(best, length)
+      if (length >= 2 || (length === 1 && /\p{N}/u.test(source[i]!.value))) {
+        for (let k = i; k < i + length; k++) marked[k] = true
+      }
     }
-    if (best >= 2 || (best === 1 && /\p{N}/u.test(source[i]!.value))) {
-      spans.push({ start: source[i]!.start, end: source[i + best - 1]!.end })
-      i += best
-    } else {
-      i++
-    }
+  }
+  const spans: Array<{ start: number, end: number }> = []
+  for (let i = 0; i < source.length;) {
+    if (!marked[i]) { i++; continue }
+    const start = source[i]!.start
+    while (i + 1 < source.length && marked[i + 1]) i++
+    spans.push({ start, end: source[i]!.end })
+    i++
   }
   return spans
 }

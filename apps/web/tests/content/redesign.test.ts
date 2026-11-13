@@ -23,6 +23,7 @@ it('groups pointers and counts undisplayed entries', () => {
   const b = { dir: 'out', kind: 'cites', number: '2', in_release: false }
   expect(content.relationGroups([a, b, a], { 'in:repeals': 4, 'out:cites': 1, 'in:replaces': 2 }, 'vi')).toEqual([
     { label: 'Bị bãi bỏ bởi', dir: 'in', kind: 'repeals', items: [a, a], more: 2 },
+    { label: 'Bị thay thế bởi', dir: 'in', kind: 'replaces', items: [], more: 2 },
     { label: 'Dẫn chiếu', dir: 'out', kind: 'cites', items: [b], more: 0 },
   ])
 })
@@ -47,13 +48,13 @@ it('highlights single digit syllables but not single words', () => {
 it('normalizes and folds case while preserving diacritics and offsets', () => {
   const text = '😀 MÃ văn bản, ma văn bản; VĂN BẢN!'
   const spans = content.highlightSpans(text, 'mã văn bản')
-  expect(spans.map(span => text.slice(span.start, span.end))).toEqual(['MÃ văn bản', 'văn bản', 'VĂN BẢN'])
+  expect(spans.map(span => text.slice(span.start, span.end))).toEqual(['MÃ văn bản', 'văn bản; VĂN BẢN'])
   expect(content.highlightSpans('mã', 'ma')).toEqual([])
 })
 it('splits punctuation and chooses non-overlapping maximal runs', () => {
   const text = 'Điều, khoản-điểm; Điều khoản 2.'
   const spans = content.highlightSpans(text, 'điều khoản điểm')
-  expect(spans.map(span => text.slice(span.start, span.end))).toEqual(['Điều, khoản-điểm', 'Điều khoản'])
+  expect(spans.map(span => text.slice(span.start, span.end))).toEqual(['Điều, khoản-điểm; Điều khoản'])
   expect(content.highlightSpans('khác', 'điều khoản')).toEqual([])
 })
 it('prefers an available fragment identity citation', () => {
@@ -64,4 +65,26 @@ it('uses case folding for alternate letter forms', () => {
   const text = 'Straße Σίσυφος ı İ'
   expect(content.highlightSpans(text, 'STRASSE ΣΊΣΥΦΟΣ').map(span => text.slice(span.start, span.end))).toEqual(['Straße Σίσυφος'])
   expect(content.highlightSpans('ı 1', 'i 1')).toEqual([{ start: 2, end: 3 }])
+})
+
+it('returns each direct member clause once despite repeated bodies and points', () => {
+  const fragment = (anchor: string, role = 'body') => ({ identity: { document_key: 'doc', anchor }, role, start: 0, end: 1, text_start: 0, text_end: 1, complete: true })
+  const hit = { complete: false, handle: 'doc#dieu-8', fragments: [fragment('dieu-8', 'lead'), fragment('dieu-8/khoan-2'), fragment('dieu-8/khoan-2/diem-a'), fragment('dieu-8/khoan-2'), fragment('dieu-8/khoan-1'), fragment('dieu-8/khoan-1/diem-b')] }
+  expect(content.matchedMembers(hit)).toEqual(['Điều 8, Khoản 2', 'Điều 8, Khoản 1'])
+})
+it('merges overlapping matching runs and separates unmarked syllables', () => {
+  expect(content.highlightSpans('văn bản luật', 'văn bản và bản luật')).toEqual([{ start: 0, end: 12 }])
+  const text = 'văn bản luật khác điều khoản'
+  const spans = content.highlightSpans(text, 'văn bản và bản luật điều khoản')
+  expect(spans.map(span => text.slice(span.start, span.end))).toEqual(['văn bản luật', 'điều khoản'])
+})
+it('sorts count-only and shown relation groups by kind and direction', () => {
+  const out = { dir: 'out', kind: 'references', number: '1', in_release: true }
+  const incoming = { dir: 'in', kind: 'references', number: '2', in_release: true }
+  expect(content.relationGroups([out, incoming], { 'out:references': 3, 'in:references': 2, 'out:repeals': 1, 'in:repeals': 2 }, 'en')).toEqual([
+    { label: 'Repealed by', dir: 'in', kind: 'repeals', items: [], more: 2 },
+    { label: 'Repeals', dir: 'out', kind: 'repeals', items: [], more: 1 },
+    { label: 'Related', dir: 'in', kind: 'references', items: [incoming], more: 1 },
+    { label: 'Related', dir: 'out', kind: 'references', items: [out], more: 2 },
+  ])
 })
