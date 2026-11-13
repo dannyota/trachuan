@@ -7,8 +7,10 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"sync"
 	"sync/atomic"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"danny.vn/trachuan/internal/retrieval"
@@ -16,9 +18,13 @@ import (
 
 type concurrentEngine struct {
 	fakeEngine
-	active   atomic.Int32
-	peak     atomic.Int32
-	failures map[string]bool
+	active          atomic.Int32
+	peak            atomic.Int32
+	failures        map[string]bool
+	barrier         chan struct{}
+	laterDone       chan struct{}
+	laterOnce       sync.Once
+	firstAfterLater atomic.Bool
 }
 
 func (e *concurrentEngine) Prepare(ctx context.Context, r retrieval.Request) (retrieval.Prepared, error) {
@@ -31,20 +37,32 @@ func (e *concurrentEngine) PrepareLegacy(ctx context.Context, r retrieval.Reques
 
 func (e *concurrentEngine) Collect(ctx context.Context, p retrieval.Prepared, d retrieval.Depths) (retrieval.Arms, error) {
 	n := e.active.Add(1)
+	if e.laterDone != nil && p.Request.Query == "Câu hỏi không" {
+		defer e.laterOnce.Do(func() { close(e.laterDone) })
+	}
 	defer e.active.Add(-1)
 	for old := e.peak.Load(); n > old; old = e.peak.Load() {
 		if e.peak.CompareAndSwap(old, n) {
 			break
 		}
 	}
-	delay := 2 * time.Millisecond
-	if p.Request.Query == "Câu hỏi tốt" {
-		delay = 12 * time.Millisecond
+	if e.barrier != nil {
+		select {
+		case <-e.barrier:
+		case <-ctx.Done():
+			return retrieval.Arms{}, ctx.Err()
+		}
 	}
-	select {
-	case <-time.After(delay):
-	case <-ctx.Done():
-		return retrieval.Arms{}, ctx.Err()
+	if e.laterDone != nil {
+		switch p.Request.Query {
+		case "Câu hỏi tốt":
+			select {
+			case <-e.laterDone:
+				e.firstAfterLater.Store(true)
+			case <-ctx.Done():
+				return retrieval.Arms{}, ctx.Err()
+			}
+		}
 	}
 	if e.failures[p.Request.Query] {
 		return retrieval.Arms{}, errors.New("injected failure: " + p.Request.Query)
@@ -53,27 +71,39 @@ func (e *concurrentEngine) Collect(ctx context.Context, p retrieval.Prepared, d 
 }
 
 func TestRun_CollectsCasesConcurrentlyWithinLimit(t *testing.T) {
-	date := retrieval.Date{Year: 2026, Month: time.November, Day: 9}
-	engine := &concurrentEngine{fakeEngine: fakeEngine{date: date}}
-	_, _, err := Run(context.Background(), engine, recordedSuite(), Options{EvaluationDate: date, Modes: []retrieval.Mode{"exact"}})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got := engine.peak.Load(); got != 3 {
-		t.Fatalf("peak concurrent collects = %d, want 3", got)
-	}
+	testCollectConcurrency(t, false)
 }
 
 func TestCalibrate_CollectsCasesConcurrentlyWithinLimit(t *testing.T) {
-	date := retrieval.Date{Year: 2026, Month: time.November, Day: 9}
-	engine := &concurrentEngine{fakeEngine: fakeEngine{date: date}}
-	_, err := Calibrate(context.Background(), engine, recordedSuite())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got := engine.peak.Load(); got != 2 {
-		t.Fatalf("peak concurrent collects = %d, want 2", got)
-	}
+	testCollectConcurrency(t, true)
+}
+
+func testCollectConcurrency(t *testing.T, calibration bool) {
+	t.Helper()
+	synctest.Test(t, func(t *testing.T) {
+		date := retrieval.Date{Year: 2026, Month: time.November, Day: 9}
+		engine := &concurrentEngine{fakeEngine: fakeEngine{date: date}, barrier: make(chan struct{})}
+		done := make(chan error, 1)
+		go func() {
+			if calibration {
+				_, err := Calibrate(context.Background(), engine, developmentSuite())
+				done <- err
+				return
+			}
+			_, _, err := Run(context.Background(), engine, recordedSuite(), Options{EvaluationDate: date, Modes: []retrieval.Mode{"exact"}})
+			done <- err
+		}()
+		synctest.Wait()
+		active := engine.active.Load()
+		close(engine.barrier)
+		err := <-done
+		if err != nil {
+			t.Fatal(err)
+		}
+		if active != 3 || engine.peak.Load() != 3 {
+			t.Fatalf("active=%d peak=%d, want 3", active, engine.peak.Load())
+		}
+	})
 }
 
 type lexicalReuseEngine struct {
@@ -138,9 +168,18 @@ func TestCasePools_PreserveOrderAndStopOnError(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	parallel, parallelCache, err := run(context.Background(), makeEngine(), suite, opts, 3)
+	parallelEngine := makeEngine()
+	var parallel Report
+	var parallelCache Cache
+	synctest.Test(t, func(t *testing.T) {
+		parallelEngine.laterDone = make(chan struct{})
+		parallel, parallelCache, err = run(context.Background(), parallelEngine, suite, opts, 3)
+	})
 	if err != nil {
 		t.Fatal(err)
+	}
+	if !parallelEngine.firstAfterLater.Load() {
+		t.Fatal("later case did not finish first")
 	}
 	serial.TimingsMS, parallel.TimingsMS = nil, nil
 	dirs := []string{t.TempDir(), t.TempDir()}
@@ -172,9 +211,17 @@ func TestCasePools_PreserveOrderAndStopOnError(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	parallelCal, err := calibrate(context.Background(), makeEngine(), suite, 3)
+	calibrationEngine := makeEngine()
+	var parallelCal Calibration
+	synctest.Test(t, func(t *testing.T) {
+		calibrationEngine.laterDone = make(chan struct{})
+		parallelCal, err = calibrate(context.Background(), calibrationEngine, suite, 3)
+	})
 	if err != nil {
 		t.Fatal(err)
+	}
+	if !calibrationEngine.firstAfterLater.Load() {
+		t.Fatal("later calibration case did not finish first")
 	}
 	if !reflect.DeepEqual(serialCal, parallelCal) {
 		t.Fatal("calibration differs")
