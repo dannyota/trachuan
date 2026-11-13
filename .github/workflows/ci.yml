@@ -119,6 +119,7 @@ jobs:
       - uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
         with:
           version: v2.15.0
+          skip-save-cache: ${{ !(github.event_name == 'push' && github.ref == 'refs/heads/main') }}
       - run: sudo apt-get update && sudo apt-get install -y shellcheck
       - run: make pre-push
       - run: make test
@@ -171,6 +172,7 @@ jobs:
           restore-keys: |
             go-${{ runner.os }}-${{ runner.arch }}-integration-${{ matrix.shard }}-${{ hashFiles('go.sum') }}-
             go-${{ runner.os }}-${{ runner.arch }}-integration-${{ matrix.shard }}-
+      - run: go mod download
       - name: Install PostgreSQL client
         run: |
           sudo install -d /usr/share/postgresql-common/pgdg
@@ -319,6 +321,7 @@ jobs:
       - uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
         with:
           version: v2.15.0
+          skip-save-cache: ${{ !(github.event_name == 'push' && github.ref == 'refs/heads/main') }}
           args: --build-tags ort ./apps/queryembed/...
       - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
