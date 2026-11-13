@@ -1,0 +1,40 @@
+import { expect, test } from '@playwright/test'
+
+for (const colorScheme of ['light', 'dark'] as const) {
+  test(`reader target and mobile navigation in ${colorScheme}`, async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 720 })
+    await page.emulateMedia({ colorScheme })
+    await page.route('**/api/v1/me', route => route.fulfill({ json: { id: 1, email: 'test@example.invalid', created_at: '2099-01-01T00:00:00Z', csrf_token: 'token' } }))
+    await page.route('**/api/v1/documents/*', route => route.fulfill({ json: { release: '20990101', item: { complete: true, document: { number: '1/2099', title: 'Test law', status: { class: 'in_force', current: true }, text_source: 'none', text_complete: false }, units: [{ kind: 'provision', anchor: 'dieu-1', label: 'Điều 1', text: 'Text' }] } } }))
+    await page.goto('/')
+    await expect(page.getByRole('link', { name: /account|tài khoản/i })).toBeVisible()
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.evaluate(() => (document.querySelector('#__nuxt') as unknown as { __vue_app__: { config: { globalProperties: { $router: { push: (path: string) => Promise<void> } } } } }).__vue_app__.config.globalProperties.$router.push('/vn/documents/vn:vbpl:1#dieu-1'))
+    const target = page.locator('.reader-unit-target')
+    await expect(target).toHaveCSS('background-color', colorScheme === 'light' ? 'rgb(243, 245, 250)' : 'rgb(24, 28, 34)')
+    await expect(target).toHaveCSS('border-left-width', '3px')
+    await expect(target).toHaveCSS('border-left-color', colorScheme === 'light' ? 'rgb(30, 58, 138)' : 'rgb(157, 180, 245)')
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+    const back = page.locator('.reader-back-mobile').getByRole('link', { name: /quay lại kết quả/i })
+    await expect(back).toBeVisible()
+    await expect(page.getByRole('banner').getByRole('link', { name: /quay lại kết quả/i })).toBeHidden()
+    const [logo, menu, link, stamp] = await Promise.all([page.locator('.site-logo').boundingBox(), page.locator('.menu-button').boundingBox(), back.boundingBox(), page.locator('.reader-identity .stamp').boundingBox()])
+    expect(Math.abs(logo!.y - menu!.y)).toBeLessThan(20)
+    expect(link!.y).toBeLessThan(stamp!.y)
+    await page.setViewportSize({ width: 1280, height: 720 })
+    await expect(back).toBeHidden()
+    await expect(page.getByRole('banner').getByRole('link', { name: /quay lại kết quả/i })).toBeVisible()
+  })
+}
+
+test('keeps the mobile search return link when the document request fails', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 })
+  await page.route('**/api/v1/me', route => route.fulfill({ json: { id: 1, email: 'test@example.invalid', created_at: '2099-01-01T00:00:00Z', csrf_token: 'token' } }))
+  await page.route('**/api/v1/documents/*', route => route.fulfill({ status: 404, json: { error: { code: 'not_found', message: 'Not found' } } }))
+  await page.goto('/')
+  await expect(page.getByRole('link', { name: /account|tài khoản/i })).toBeVisible()
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.evaluate(() => (document.querySelector('#__nuxt') as unknown as { __vue_app__: { config: { globalProperties: { $router: { push: (path: string) => Promise<void> } } } } }).__vue_app__.config.globalProperties.$router.push('/vn/documents/vn:vbpl:1'))
+  await expect(page.getByRole('alert')).toBeVisible()
+  await expect(page.locator('.reader-back-mobile').getByRole('link', { name: /quay lại kết quả/i })).toBeVisible()
+})

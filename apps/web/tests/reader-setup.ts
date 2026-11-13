@@ -1,4 +1,4 @@
-import { computed, ref } from 'vue'
+import { computed, onUnmounted, ref } from 'vue'
 import { vi } from 'vitest'
 
 export function setupReader(pages: unknown[], query: Record<string, string> = {}) {
@@ -13,6 +13,7 @@ export function setupReader(pages: unknown[], query: Record<string, string> = {}
   } } }))
   vi.stubGlobal('computed', computed)
   vi.stubGlobal('ref', ref)
+  vi.stubGlobal('onUnmounted', onUnmounted)
   vi.stubGlobal('useApi', () => ({ client: { GET: async (_path: string, options: unknown) => {
     calls.push(options)
     return pages.shift()

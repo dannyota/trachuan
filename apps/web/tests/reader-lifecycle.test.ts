@@ -128,3 +128,22 @@ it('scrolls to the top for an unknown anchor visited after initial load', async 
   expect(scroll).toHaveBeenCalledWith(0, 0)
   wrapper.unmount()
 })
+it('uses a viewport-height observation band and updates it on resize', async () => {
+  setupReader([{ data: { release: '20990101', item: { complete: true, units: [] } } }])
+  const margins: string[] = []
+  class Observer {
+    constructor(_callback: IntersectionObserverCallback, options: IntersectionObserverInit) { margins.push(options.rootMargin || '') }
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+  vi.stubGlobal('IntersectionObserver', Observer)
+  vi.stubGlobal('innerHeight', 720)
+  const wrapper = mount(Reader)
+  await flushPromises()
+  expect(margins[1]).toBe('-72px 0px -540px 0px')
+  vi.stubGlobal('innerHeight', 1000)
+  window.dispatchEvent(new Event('resize'))
+  expect(margins[2]).toBe('-100px 0px -750px 0px')
+  wrapper.unmount()
+})
