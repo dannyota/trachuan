@@ -155,7 +155,9 @@ func (s *Stage) Rows(_ context.Context, env stage.Env, art artifact.Result) (fun
 
 func insertRows(ctx context.Context, q *store.Queries, recipe string, id int64, rows []Row) (int64, error) {
 	var total int64
-	for _, row := range rows {
+	ordered := append([]Row(nil), rows...)
+	sort.SliceStable(ordered, func(i, j int) bool { return ordered[i].InputSHA256 < ordered[j].InputSHA256 })
+	for _, row := range ordered {
 		n, err := q.InsertEmbedRow(ctx, store.InsertEmbedRowParams{RecipeHash: recipe, InputSha256: row.InputSHA256, ArtifactID: id, Row: int32(row.Row), TokenCount: int32(row.TokenCount)})
 		if err != nil {
 			return total, fmt.Errorf("insert embed row: %w", err)

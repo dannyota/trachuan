@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -68,7 +69,17 @@ func (f *fake) client(r embedding.Recipe) *embedding.Client {
 					n = 2
 				}
 				counts[i] = n
-				data[i] = map[string]any{"index": i, "token_count": n, "embedding": []float32{1, 0}}
+				vector := []float32{1, 0}
+				if n == 1 {
+					vector = []float32{0, -1}
+				} else if n == 3 {
+					vector = []float32{0, 1}
+				} else if n == 4 {
+					vector = []float32{-1, 0}
+				} else if n > 4 {
+					vector = []float32{float32(math.Cos(float64(n))), float32(math.Sin(float64(n)))}
+				}
+				data[i] = map[string]any{"index": i, "token_count": n, "embedding": vector}
 			}
 			if req.URL.Path == "/v1/tokenize" {
 				out = map[string]any{"recipe_hash": hash, "counts": counts}

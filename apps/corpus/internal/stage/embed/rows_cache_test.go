@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -84,6 +85,11 @@ func TestCache_ReusePreservesArtifactBytes(t *testing.T) {
 			if e != nil {
 				t.Fatal(e)
 			}
+			for _, hit := range hits {
+				if cap(hit.bytes) != len(hit.bytes) {
+					t.Fatalf("cached row retains vector buffer: len=%d cap=%d", len(hit.bytes), cap(hit.bytes))
+				}
+			}
 			got, data, e := subject.buildCached(ctx, file, input, hits)
 			if e != nil {
 				t.Fatal(e)
@@ -121,5 +127,81 @@ func TestCache_ReusePreservesArtifactBytes(t *testing.T) {
 	gotIndex, _ := json.Marshal(got)
 	if len(hits) != 0 || len(f.calls) != 2 || !bytes.Equal(wantIndex, gotIndex) || !bytes.Equal(vectors, data) {
 		t.Fatal("invalid artifact did not re-embed")
+	}
+}
+
+func TestCache_FakeProducesDistinctRows(t *testing.T) {
+	f := &fake{counts: map[string]int{"\na": 2, "\nb": 3}}
+	idx, vectors, err := run(t, f, chunk.Chunk{Ordinal: 0, Content: "a"}, chunk.Chunk{Ordinal: 1, Content: "b"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if idx.Rows[0].TokenCount == idx.Rows[1].TokenCount || bytes.Equal(vectors[:8], vectors[8:16]) {
+		t.Fatal("fake rows must differ by input")
+	}
+}
+
+func TestCache_InterleavedHitsAndBatchedMissesPreserveBytes(t *testing.T) {
+	ctx := context.Background()
+	r := recipe()
+	r.TokenCap = 64
+	counts := make(map[string]int)
+	chunks := make([]chunk.Chunk, 42)
+	for i := range chunks {
+		content := fmt.Sprintf("text-%02d", i)
+		chunks[i] = chunk.Chunk{Ordinal: i, Content: content}
+		counts["\n"+content] = i + 1
+	}
+	counts["\ntext-20"] = 65
+	chunks[41].Content = strings.Repeat("x", 1048576)
+	file := chunk.File{Version: 1, DocumentKey: "doc", Chunks: chunks}
+	coverage := chunk.Coverage{}
+	input := strings.Repeat("b", 64)
+	f := &fake{counts: counts}
+	subject := New(f.client(r), r)
+	idx, vectors, err := subject.build(ctx, file, coverage, input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(idx.Rejected) != 2 || idx.Rejected[0].Kind != "embedding_input_too_long" || idx.Rejected[1].Kind != "embedding_input_bytes_exceeded" {
+		t.Fatalf("rejected=%+v", idx.Rejected)
+	}
+	hits := make(map[string]cachedRow)
+	for _, row := range idx.Rows {
+		if row.ChunkOrdinal%4 == 0 {
+			start := row.Row * 8
+			hits[row.InputSHA256] = cachedRow{bytes: append([]byte(nil), vectors[start:start+8]...), count: row.TokenCount}
+		}
+	}
+	mixed := &fake{counts: counts}
+	got, data, err := New(mixed.client(r), r).buildCached(ctx, file, input, hits)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantIndex, _ := json.Marshal(idx)
+	gotIndex, _ := json.Marshal(got)
+	wantReport, _ := json.Marshal(makeReport(idx, coverage))
+	gotReport, _ := json.Marshal(makeReport(got, coverage))
+	if !bytes.Equal(wantIndex, gotIndex) || !bytes.Equal(vectors, data) || !bytes.Equal(wantReport, gotReport) {
+		t.Fatal("mixed cache output differs from fresh output")
+	}
+	if len(mixed.bodies) < 4 || len(mixed.bodies[0]) != 16 {
+		t.Fatalf("miss batches=%v", mixed.bodies)
+	}
+	for _, body := range mixed.bodies {
+		for _, text := range body {
+			if _, ok := hits[hashText(text)]; ok {
+				t.Fatal("cached input sent to client")
+			}
+		}
+	}
+}
+
+func TestCache_CopiedRowDoesNotAliasSource(t *testing.T) {
+	a := cachedArtifact{index: Index{Dimensions: 2}, vectors: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}}
+	got := copyCachedRow(a, store.LookupEmbedRowsRow{Row: 1, TokenCount: 3})
+	a.vectors[8] = 99
+	if got.bytes[0] != 9 || got.count != 3 {
+		t.Fatalf("copied row=%v count=%d", got.bytes, got.count)
 	}
 }

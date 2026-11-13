@@ -40,30 +40,38 @@ func (s *Stage) lookupFrom(ctx context.Context, q cacheReader, env stage.Env, ru
 	if err != nil {
 		return nil, fmt.Errorf("lookup embed rows: %w", err)
 	}
-	loaded := make(map[int64]cachedArtifact)
-	hits := make(map[string]cachedRow)
+	groups := make(map[int64][]store.LookupEmbedRowsRow)
 	for _, r := range rows {
-		a, ok := loaded[r.ArtifactID]
-		if !ok {
-			a = s.openCached(env, run, r)
-			loaded[r.ArtifactID] = a
-		}
-		reason := a.err
-		if reason == nil && (r.Row < 0 || int(r.Row) >= len(a.index.Rows)) {
-			reason = fmt.Errorf("row out of range")
-		}
-		if reason == nil && (a.index.Rows[r.Row].InputSHA256 != r.InputSha256 || a.index.Rows[r.Row].TokenCount != int(r.TokenCount)) {
-			reason = fmt.Errorf("index row mismatch")
-		}
-		if reason != nil {
-			slog.Warn("embed cache miss", "run", run.Country+"/"+run.Rel, "key", item.Key, "reason", reason)
-			continue
-		}
-		width := a.index.Dimensions * 4
-		start := int(r.Row) * width
-		hits[r.InputSha256] = cachedRow{bytes: a.vectors[start : start+width], count: int(r.TokenCount)}
+		groups[r.ArtifactID] = append(groups[r.ArtifactID], r)
 	}
+	hits := make(map[string]cachedRow)
+	for _, refs := range groups {
+		a := s.openCached(env, run, refs[0])
+		for _, r := range refs {
+			reason := a.err
+			if reason == nil && (r.Row < 0 || int(r.Row) >= len(a.index.Rows)) {
+				reason = fmt.Errorf("row out of range")
+			}
+			if reason == nil && (a.index.Rows[r.Row].InputSHA256 != r.InputSha256 || a.index.Rows[r.Row].TokenCount != int(r.TokenCount)) {
+				reason = fmt.Errorf("index row mismatch")
+			}
+			if reason != nil {
+				slog.Warn("embed cache miss", "run", run.Country+"/"+run.Rel, "key", item.Key, "reason", reason)
+				continue
+			}
+			hits[r.InputSha256] = copyCachedRow(a, r)
+		}
+	}
+
 	return hits, nil
+}
+
+func copyCachedRow(a cachedArtifact, row store.LookupEmbedRowsRow) cachedRow {
+	width := a.index.Dimensions * 4
+	start := int(row.Row) * width
+	data := make([]byte, width)
+	copy(data, a.vectors[start:start+width])
+	return cachedRow{bytes: data, count: int(row.TokenCount)}
 }
 
 func (s *Stage) openCached(env stage.Env, run stage.Run, row store.LookupEmbedRowsRow) cachedArtifact {
