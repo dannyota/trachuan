@@ -1,0 +1,560 @@
+[
+  {
+    "fetch_sha256": "2c6b3a8246a297fb998778fedd9dc6211667e2a417e562c92b8fd73fb4f31847",
+    "item": {
+      "complete": true,
+      "doc": "vn:vbpl:171687",
+      "document": {
+        "effective_from": "2025-01-01",
+        "issued": "2024-10-31",
+        "issuer": "Ngân hàng Nhà nước Việt Nam",
+        "number": "50/2024/TT-NHNN",
+        "related": [
+          {
+            "dir": "out",
+            "in_release": true,
+            "key": "vn:vbpl:144532",
+            "kind": "repeals",
+            "number": "09/2020/TT-NHNN"
+          },
+          {
+            "dir": "out",
+            "in_release": true,
+            "key": "vn:vbpl:144532",
+            "kind": "repeals",
+            "number": "09/2020/TT-NHNN"
+          },
+          {
+            "dir": "out",
+            "in_release": true,
+            "key": "vn:vbpl:132734",
+            "kind": "replaces",
+            "number": "35/2018/TT-NHNN"
+          },
+          {
+            "dir": "out",
+            "in_release": true,
+            "key": "vn:vbpl:117031",
+            "kind": "replaces",
+            "number": "35/2016/TT-NHNN"
+          },
+          {
+            "dir": "in",
+            "in_release": true,
+            "key": "vn:vbpl:186058",
+            "kind": "amends_supplements",
+            "number": "77/2025/TT-NHNN"
+          }
+        ],
+        "related_counts": {
+          "in:amends_supplements": 1,
+          "out:legal_basis": 6,
+          "out:repeals": 2,
+          "out:replaces": 2
+        },
+        "source_url": "https://vbpl.vn/van-ban/chi-tiet/171687",
+        "status": {
+          "basis": "source_status",
+          "class": "partial",
+          "current": true,
+          "status_basis": "source_status"
+        },
+        "text_complete": true,
+        "text_source": "source_tree",
+        "title": "Thông tư số 50/2024/TT-NHNN Quy định về an toàn, bảo mật cho việc cung cấp dịch vụ trực tuyến trong ngành Ngân hàng",
+        "type": "Thông tư"
+      },
+      "units": [
+        {
+          "anchor": "chuong-i",
+          "heading": "QUY ĐỊNH CHUNG",
+          "kind": "outline",
+          "label": "Chương I",
+          "size": 23
+        },
+        {
+          "anchor": "dieu-1",
+          "heading": "Phạm vi điều chỉnh và đối tượng áp dụng",
+          "kind": "outline",
+          "label": "Điều 1",
+          "size": 603
+        },
+        {
+          "anchor": "dieu-2",
+          "heading": "Giải thích từ ngữ và thuật ngữ",
+          "kind": "outline",
+          "label": "Điều 2",
+          "size": 2168
+        },
+        {
+          "anchor": "dieu-3",
+          "heading": "Nguyên tắc chung về bảo đảm an toàn, bảo mật hệ thống thông tin cho việc cung cấp dịch vụ Online Banking",
+          "kind": "outline",
+          "label": "Điều 3",
+          "size": 2995
+        },
+        {
+          "anchor": "dieu-11",
+          "heading": "Các hình thức xác nhận",
+          "kind": "outline",
+          "label": "Điều 11",
+          "size": 10655
+        },
+        {
+          "anchor": "chuong-i",
+          "citation": "Chương I",
+          "heading": "QUY ĐỊNH CHUNG",
+          "kind": "provision",
+          "label": "Chương I",
+          "text": "Chương I\nQUY ĐỊNH CHUNG"
+        },
+        {
+          "anchor": "dieu-1",
+          "citation": "Điều 1",
+          "heading": "Phạm vi điều chỉnh và đối tượng áp dụng",
+          "kind": "provision",
+          "label": "Điều 1",
+          "text": "Điều 1. Phạm vi điều chỉnh và đối tượng áp dụng"
+        },
+        {
+          "anchor": "dieu-1/khoan-1",
+          "citation": "Điều 1, Khoản 1",
+          "kind": "provision",
+          "label": "Khoản 1",
+          "text": "1. Phạm vi điều chỉnh\nThông tư này quy định các yêu cầu bảo đảm an toàn, bảo mật cho việc cung cấp dịch vụ trực tuyến trong ngành Ngân hàng, bao gồm:"
+        },
+        {
+          "anchor": "dieu-1/khoan-1/diem-a",
+          "citation": "Điều 1, Khoản 1, Điểm a",
+          "kind": "provision",
+          "label": "Điểm a",
+          "text": "a) Hoạt động ngân hàng và các hoạt động kinh doanh khác của tổ chức tín dụng, chi nhánh ngân hàng nước ngoài;"
+        },
+        {
+          "anchor": "dieu-1/khoan-1/diem-b",
+          "citation": "Điều 1, Khoản 1, Điểm b",
+          "kind": "provision",
+          "label": "Điểm b",
+          "text": "b) Hoạt động cung ứng dịch vụ trung gian thanh toán;"
+        },
+        {
+          "anchor": "dieu-1/khoan-1/diem-c",
+          "citation": "Điều 1, Khoản 1, Điểm c",
+          "kind": "provision",
+          "label": "Điểm c",
+          "text": "c) Hoạt động thông tin tín dụng."
+        },
+        {
+          "anchor": "dieu-1/khoan-2",
+          "citation": "Điều 1, Khoản 2",
+          "kind": "provision",
+          "label": "Khoản 2",
+          "text": "2. Đối tượng áp dụng\nThông tư này áp dụng đối với các tổ chức tín dụng, chi nhánh ngân hàng nước ngoài, tổ chức cung ứng dịch vụ trung gian thanh toán, công ty thông tin tín dụng (sau đây gọi chung là đơn vị)."
+        },
+        {
+          "anchor": "dieu-2",
+          "citation": "Điều 2",
+          "heading": "Giải thích từ ngữ và thuật ngữ",
+          "kind": "provision",
+          "label": "Điều 2",
+          "text": "Điều 2. Giải thích từ ngữ và thuật ngữ"
+        },
+        {
+          "anchor": "dieu-2/khoan-1",
+          "citation": "Điều 2, Khoản 1",
+          "kind": "provision",
+          "label": "Khoản 1",
+          "text": "1. Dịch vụ trực tuyến trong ngành Ngân hàng (gọi tắt là dịch vụ Online Banking) là dịch vụ quy định tại khoản 1 Điều 1 Thông tư này được các đơn vị cung cấp cho khách hàng trên môi trường mạng để thực hiện các giao dịch điện tử (gọi tắt là giao dịch), không bao gồm các giao dịch trực tiếp tại các đơn vị chấp nhận thanh toán qua thiết bị chấp nhận thẻ tại điểm bán, qua Mã phản hồi nhanh (Quick Response Code - QR Code) hiển thị từ phía khách hàng."
+        },
+        {
+          "anchor": "dieu-2/khoan-2",
+          "citation": "Điều 2, Khoản 2",
+          "kind": "provision",
+          "label": "Khoản 2",
+          "text": "2. Hệ thống Online Banking là một tập hợp có cấu trúc các trang thiết bị phần cứng, phần mềm, cơ sở dữ liệu, hệ thống mạng truyền thông và an toàn, bảo mật để sản xuất, truyền nhận, thu thập, xử lý, lưu trữ và trao đổi thông tin số phục vụ cho việc quản lý và cung cấp dịch vụ Online Banking, do đơn vị thiết lập, quản trị, vận hành hoặc thuê bên thứ ba thiết lập, quản trị, vận hành."
+        },
+        {
+          "anchor": "dieu-2/khoan-3",
+          "citation": "Điều 2, Khoản 3",
+          "kind": "provision",
+          "label": "Khoản 3",
+          "text": "3. Phần mềm ứng dụng Online Banking là phần mềm ứng dụng cung cấp dịch vụ Online Banking."
+        },
+        {
+          "anchor": "dieu-2/khoan-4",
+          "citation": "Điều 2, Khoản 4",
+          "kind": "provision",
+          "label": "Khoản 4",
+          "text": "4. Phần mềm ứng dụng Mobile Banking là phần mềm ứng dụng Online Banking được cài đặt trên thiết bị di động."
+        },
+        {
+          "anchor": "dieu-2/khoan-5",
+          "citation": "Điều 2, Khoản 5",
+          "kind": "provision",
+          "label": "Khoản 5",
+          "text": "5. Giao dịch thanh toán trực tuyến là giao dịch thanh toán được thực hiện bằng phương tiện điện tử thông qua hệ thống Online Banking."
+        },
+        {
+          "anchor": "dieu-2/khoan-6",
+          "citation": "Điều 2, Khoản 6",
+          "kind": "provision",
+          "label": "Khoản 6",
+          "text": "6. Khách hàng là các tổ chức, cá nhân sử dụng dịch vụ Online Banking."
+        },
+        {
+          "anchor": "dieu-2/khoan-7",
+          "citation": "Điều 2, Khoản 7",
+          "kind": "provision",
+          "label": "Khoản 7",
+          "text": "7. Phương thức xử lý xuyên suốt (Straight-Through Processing) là phương thức trao đổi thông tin, dữ liệu, tài liệu hai chiều tự động, thông qua kết nối an toàn giữa hệ thống thông tin của khách hàng với hệ thống Online Banking."
+        },
+        {
+          "anchor": "dieu-2/khoan-8",
+          "citation": "Điều 2, Khoản 8",
+          "kind": "provision",
+          "label": "Khoản 8",
+          "text": "8. Xác nhận giao dịch điện tử (sau đây gọi là xác nhận giao dịch) là hình thức xác nhận bằng phương tiện điện tử để thể hiện sự chấp thuận của khách hàng đối với các thông điệp dữ liệu trong giao dịch điện tử."
+        },
+        {
+          "anchor": "dieu-2/khoan-9",
+          "citation": "Điều 2, Khoản 9",
+          "kind": "provision",
+          "label": "Khoản 9",
+          "text": "9. Mã hóa điểm đầu đến điểm cuối (end to end encryption) là cơ chế mã hóa an toàn thông tin ở điểm đầu trước khi gửi đi và chỉ được giải mã sau khi nhận được tại điểm cuối trong quá trình trao đổi thông tin giữa các ứng dụng, các thiết bị trong hệ thống nhằm hạn chế rủi ro bị lộ, lọt thông tin trên đường truyền."
+        },
+        {
+          "anchor": "dieu-2/khoan-10",
+          "citation": "Điều 2, Khoản 10",
+          "kind": "provision",
+          "label": "Khoản 10",
+          "text": "10. Hệ quản trị cơ sở dữ liệu là phần mềm được thiết kế để quản lý, lưu trữ, truy xuất và thực thi các truy vấn dữ liệu trong cơ sở dữ liệu."
+        },
+        {
+          "anchor": "dieu-3",
+          "citation": "Điều 3",
+          "heading": "Nguyên tắc chung về bảo đảm an toàn, bảo mật hệ thống thông tin cho việc cung cấp dịch vụ Online Banking",
+          "kind": "provision",
+          "label": "Điều 3",
+          "text": "Điều 3. Nguyên tắc chung về bảo đảm an toàn, bảo mật hệ thống thông tin cho việc cung cấp dịch vụ Online Banking"
+        },
+        {
+          "anchor": "dieu-3/khoan-1",
+          "citation": "Điều 3, Khoản 1",
+          "kind": "provision",
+          "label": "Khoản 1",
+          "text": "1. Hệ thống Online Banking phải tuân thủ quy định về bảo đảm an toàn hệ thống thông tin cấp độ 3 trở lên theo quy định của pháp luật về bảo đảm an toàn hệ thống thông tin theo cấp độ, đối với hệ thống thông tin cung cấp dịch vụ chuyển mạch tài chính, dịch vụ bù trừ điện tử phải tuân thủ quy định về bảo đảm an toàn hệ thống thông tin cấp độ 4 trở lên; tuân thủ tiêu chuẩn TCVN 11930:2017 (tiêu chuẩn Công nghệ thông tin - Các kỹ thuật an toàn - Yêu cầu cơ bản về an toàn hệ thống thông tin theo cấp độ) và quy định của Ngân hàng Nhà nước về an toàn hệ thống thông tin trong hoạt động ngân hàng."
+        },
+        {
+          "anchor": "dieu-3/khoan-2",
+          "citation": "Điều 3, Khoản 2",
+          "kind": "provision",
+          "label": "Khoản 2",
+          "text": "2. Bảo đảm tính bí mật, tính toàn vẹn của thông tin khách hàng; bảo đảm tính sẵn sàng của hệ thống Online Banking để cung cấp dịch vụ một cách liên tục."
+        },
+        {
+          "anchor": "dieu-3/khoan-3",
+          "citation": "Điều 3, Khoản 3",
+          "kind": "provision",
+          "label": "Khoản 3",
+          "text": "3. Các giao dịch của khách hàng được phân loại và đánh giá mức độ rủi ro tối thiểu theo: nhóm khách hàng, hành vi sử dụng của khách hàng, loại giao dịch, hạn mức giao dịch (nếu có) và tuân thủ các quy định của pháp luật liên quan. Trên cơ sở đó, đơn vị cung cấp các hình thức xác nhận giao dịch phù hợp cho khách hàng lựa chọn, tuân thủ tối thiểu các quy định sau:"
+        },
+        {
+          "anchor": "dieu-3/khoan-3/diem-a",
+          "citation": "Điều 3, Khoản 3, Điểm a",
+          "kind": "provision",
+          "label": "Điểm a",
+          "text": "a) Áp dụng tối thiểu một trong các hình thức xác nhận quy định tại khoản 3, khoản 4, khoản 5, khoản 7, khoản 8, khoản 9 Điều 11 Thông tư này khi thay đổi thông tin định danh khách hàng;"
+        },
+        {
+          "anchor": "dieu-3/khoan-3/diem-b",
+          "citation": "Điều 3, Khoản 3, Điểm b",
+          "kind": "provision",
+          "label": "Điểm b",
+          "text": "b) Áp dụng tối thiểu một hoặc kết hợp các hình thức xác nhận giao dịch theo quy định tại Thông tư này; Trường hợp văn bản quy phạm pháp luật hướng dẫn về các dịch vụ quy định tại khoản 1 Điều 1 Thông tư này có quy định về hình thức xác nhận giao dịch thì thực hiện theo văn bản quy phạm pháp luật đó;"
+        },
+        {
+          "anchor": "dieu-3/khoan-3/diem-c",
+          "citation": "Điều 3, Khoản 3, Điểm c",
+          "kind": "provision",
+          "label": "Điểm c",
+          "text": "c) Đối với giao dịch gồm nhiều bước, phải thực hiện xác nhận giao dịch tại bước phê duyệt cuối cùng."
+        },
+        {
+          "anchor": "dieu-3/khoan-4",
+          "citation": "Điều 3, Khoản 4",
+          "kind": "provision",
+          "label": "Khoản 4",
+          "text": "4. Thực hiện kiểm tra, đánh giá an toàn, bảo mật hệ thống Online Banking định kỳ hàng năm."
+        },
+        {
+          "anchor": "dieu-3/khoan-5",
+          "citation": "Điều 3, Khoản 5",
+          "kind": "provision",
+          "label": "Khoản 5",
+          "text": "5. Thường xuyên nhận dạng rủi ro, nguy cơ gây ra rủi ro và xác định nguyên nhân gây ra rủi ro, kịp thời có biện pháp phòng ngừa, kiểm soát và xử lý rủi ro trong cung cấp dịch vụ Online Banking."
+        },
+        {
+          "anchor": "dieu-3/khoan-6",
+          "citation": "Điều 3, Khoản 6",
+          "kind": "provision",
+          "label": "Khoản 6",
+          "text": "6. Các trang thiết bị hạ tầng kỹ thuật công nghệ thông tin cung cấp dịch vụ Online Banking phải có bản quyền, nguồn gốc, xuất xứ rõ ràng. Với các trang thiết bị sắp hết vòng đời sản phẩm và sẽ không được nhà sản xuất tiếp tục hỗ trợ, đơn vị phải có kế hoạch nâng cấp, thay thế theo thông báo của nhà sản xuất, bảo đảm các trang thiết bị hạ tầng có khả năng cài đặt phiên bản phần mềm mới. Trong thời gian chưa nâng cấp, thay thế, đơn vị phải có biện pháp tăng cường bảo đảm an toàn, bảo mật hệ thống Online Banking."
+        },
+        {
+          "anchor": "dieu-3/khoan-7",
+          "citation": "Điều 3, Khoản 7",
+          "kind": "provision",
+          "label": "Khoản 7",
+          "text": "7. Đối với các hệ thống cung cấp dịch vụ cổng thanh toán điện tử, dịch vụ hỗ trợ thu hộ, chi hộ, không phải tuân thủ các quy định tại khoản 7, khoản 9, khoản 10 Điều 7 và Mục 2 Chương II Thông tư này."
+        },
+        {
+          "anchor": "dieu-3/khoan-8",
+          "citation": "Điều 3, Khoản 8",
+          "kind": "provision",
+          "label": "Khoản 8",
+          "text": "8. Hệ thống Online Banking chỉ được hoạt động cung cấp dịch vụ cho khách hàng khi bảo đảm an toàn, bảo mật theo quy định của Thông tư này và các quy định của pháp luật liên quan."
+        },
+        {
+          "anchor": "dieu-11",
+          "citation": "Điều 11",
+          "heading": "Các hình thức xác nhận",
+          "kind": "provision",
+          "label": "Điều 11",
+          "text": "Điều 11. Các hình thức xác nhận"
+        },
+        {
+          "anchor": "dieu-11/khoan-1",
+          "citation": "Điều 11, Khoản 1",
+          "kind": "provision",
+          "label": "Khoản 1",
+          "text": "1. Hình thức xác nhận bằng mã khóa bí mật (Password): khách hàng sử dụng mã khóa bí mật là một chuỗi ký tự để xác nhận quyền truy cập của khách hàng vào hệ thống thông tin, ứng dụng, dịch vụ hoặc xác nhận khách hàng thực hiện giao dịch. Hình thức xác nhận bằng mã khóa bí mật phải đáp ứng yêu cầu:"
+        },
+        {
+          "anchor": "dieu-11/khoan-1/diem-a",
+          "citation": "Điều 11, Khoản 1, Điểm a",
+          "kind": "provision",
+          "label": "Điểm a",
+          "text": "a) Mã khóa bí mật có độ dài tối thiểu 08 ký tự và cấu tạo bao gồm tối thiểu các ký tự: số, chữ hoa, chữ thường;"
+        },
+        {
+          "anchor": "dieu-11/khoan-1/diem-b",
+          "citation": "Điều 11, Khoản 1, Điểm b",
+          "kind": "provision",
+          "label": "Điểm b",
+          "text": "b) Thời gian hiệu lực của mã khóa bí mật tối đa 12 tháng, đối với mã khóa bí mật được cấp phát mặc định lần đầu: thời gian hiệu lực tối đa là 30 ngày."
+        },
+        {
+          "anchor": "dieu-11/khoan-2",
+          "citation": "Điều 11, Khoản 2",
+          "kind": "provision",
+          "label": "Khoản 2",
+          "text": "2. Hình thức xác nhận bằng mã PIN (Personal Identification Number) là hình thức xác nhận bằng mã khóa bí mật trong đó mã khóa bí mật được tạo từ một chuỗi các chữ số. Hình thức xác nhận bằng mã PIN (trừ trường hợp mã PIN gắn với thẻ vật lý) phải đáp ứng yêu cầu:"
+        },
+        {
+          "anchor": "dieu-11/khoan-2/diem-a",
+          "citation": "Điều 11, Khoản 2, Điểm a",
+          "kind": "provision",
+          "label": "Điểm a",
+          "text": "a) Mã PIN có độ dài tối thiểu 06 ký tự;"
+        },
+        {
+          "anchor": "dieu-11/khoan-2/diem-b",
+          "citation": "Điều 11, Khoản 2, Điểm b",
+          "kind": "provision",
+          "label": "Điểm b",
+          "text": "b) Thời gian hiệu lực của mã PIN tối đa 12 tháng, đối với mã PIN được cấp phát mặc định lần đầu: thời gian hiệu lực tối đa là 30 ngày."
+        },
+        {
+          "anchor": "dieu-11/khoan-3",
+          "citation": "Điều 11, Khoản 3",
+          "kind": "provision",
+          "label": "Khoản 3",
+          "text": "3. Hình thức xác nhận bằng mã khóa bí mật dùng một lần (One Time Password - OTP) là hình thức xác nhận bằng mã khóa bí mật trong đó mã khóa bí mật có giá trị sử dụng một lần và có hiệu lực trong một khoảng thời gian nhất định, bao gồm các hình thức sau:"
+        },
+        {
+          "anchor": "dieu-11/khoan-3/diem-a",
+          "citation": "Điều 11, Khoản 3, Điểm a",
+          "kind": "provision",
+          "label": "Điểm a",
+          "text": "a) SMS OTP là hình thức xác nhận thông qua mã OTP được gửi qua tin nhắn SMS (Short Message Services) hoặc tin nhắn thông qua dịch vụ viễn thông cơ bản trên Internet. SMS OTP phải đáp ứng yêu cầu:\n(i) OTP gửi tới khách hàng phải kèm thông tin thông báo để khách hàng nhận biết được mục đích của OTP;\n(ii) OTP có hiệu lực tối đa 05 phút."
+        },
+        {
+          "anchor": "dieu-11/khoan-3/diem-b",
+          "citation": "Điều 11, Khoản 3, Điểm b",
+          "kind": "provision",
+          "label": "Điểm b",
+          "text": "b) Voice OTP là hình thức xác nhận thông qua mã OTP được gửi qua cuộc gọi thoại hoặc cuộc gọi thông qua dịch vụ viễn thông cơ bản trên Internet. Voice OTP phải đáp ứng yêu cầu:\n(i) OTP gửi tới khách hàng phải kèm thông tin thông báo để khách hàng nhận biết được mục đích của OTP;\n(ii) OTP có hiệu lực tối đa 03 phút."
+        },
+        {
+          "anchor": "dieu-11/khoan-3/diem-c",
+          "citation": "Điều 11, Khoản 3, Điểm c",
+          "kind": "provision",
+          "label": "Điểm c",
+          "text": "c) Email OTP là hình thức xác nhận thông qua mã OTP được gửi qua thư điện tử. Email OTP phải đáp ứng yêu cầu:\n(i) OTP gửi tới khách hàng phải kèm thông tin thông báo để khách hàng nhận biết được mục đích của OTP;\n(ii) OTP có hiệu lực tối đa 05 phút."
+        },
+        {
+          "anchor": "dieu-11/khoan-3/diem-d",
+          "citation": "Điều 11, Khoản 3, Điểm d",
+          "kind": "provision",
+          "label": "Điểm d",
+          "text": "d) Thẻ ma trận OTP là hình thức xác nhận thông qua mã OTP được xác định từ một bảng 2 chiều (dòng, cột), tương ứng với mỗi dòng, cột là một mã OTP. Thẻ ma trận OTP phải đáp ứng yêu cầu:\n(i) Thẻ ma trận OTP có thời hạn sử dụng tối đa 01 năm kể từ ngày đăng ký thẻ;\n(ii) OTP có hiệu lực tối đa 02 phút."
+        },
+        {
+          "anchor": "dieu-11/khoan-3/diem-đ",
+          "citation": "Điều 11, Khoản 3, Điểm đ",
+          "kind": "provision",
+          "label": "Điểm đ",
+          "text": "đ) Soft OTP là hình thức xác nhận thông qua mã OTP được tạo bởi phần mềm cài đặt trên thiết bị di động của khách hàng, phần mềm Soft OTP có thể là phần mềm độc lập hoặc được tích hợp với phần mềm ứng dụng Mobile Banking.\nSoft OTP có 02 loại: (i) Soft OTP loại cơ bản: Mã OTP được sinh ngẫu nhiên theo thời gian, đồng bộ với hệ thống Online Banking; (ii) Soft OTP loại nâng cao: Mã OTP được tạo kết hợp với mã của từng giao dịch, khi thực hiện giao dịch, hệ thống Online Banking tạo ra một mã giao dịch thông báo cho khách hàng hoặc truyền cho phần mềm Soft OTP, khách hàng hoặc phần mềm Soft OTP tự động nhập mã giao dịch vào phần mềm Soft OTP để phần mềm Soft OTP tạo ra mã OTP.\nSoft OTP phải đáp ứng yêu cầu:\n(i) Trường hợp phần mềm Soft OTP độc lập với phần mềm ứng dụng Mobile Banking, phải được đơn vị đăng ký, quản lý tại kho ứng dụng chính thức của hãng cung cấp hệ điều hành cho thiết bị di động và hướng dẫn cài đặt rõ ràng trên trang tin điện tử của đơn vị để khách hàng tải và cài đặt phần mềm Soft OTP;\n(ii) Phần mềm Soft OTP phải yêu cầu kích hoạt trước khi sử dụng. Mã kích hoạt sử dụng Soft OTP do đơn vị cung cấp cho khách hàng và chỉ được sử dụng để kích hoạt trên một thiết bị di động. Mã kích hoạt phải được thiết lập thời hạn hiệu lực sử dụng;\n(iii) Phần mềm Soft OTP phải có chức năng kiểm soát truy cập. Trường hợp truy cập sai liên tiếp quá số lần do đơn vị quy định (nhưng không quá 10 lần), phần mềm Soft OTP phải tự động khóa không cho khách hàng sử dụng tiếp. Đơn vị chỉ mở khóa phần mềm Soft OTP khi khách hàng yêu cầu và phải kiểm tra, nhận biết khách hàng trước khi thực hiện mở khóa, bảo đảm chống gian lận, giả mạo.\n(iv) Trường hợp phần mềm Soft OTP độc lập với phần mềm ứng dụng Mobile Banking phải có chức năng kiểm tra khách hàng cá nhân trước khi cho phép khách hàng sử dụng lần đầu hoặc trước khi khách hàng sử dụng trên thiết bị khác với thiết bị sử dụng lần gần nhất. Việc kiểm tra khách hàng tối thiểu bao gồm: (i) khớp đúng SMS OTP hoặc Voice OTP thông qua số điện thoại đã được khách hàng đăng ký, (ii) và khớp đúng thông tin sinh trắc học của khách hàng;\n(v) Mã OTP có hiệu lực tối đa 02 phút."
+        },
+        {
+          "anchor": "dieu-11/khoan-3/diem-e",
+          "citation": "Điều 11, Khoản 3, Điểm e",
+          "kind": "provision",
+          "label": "Điểm e",
+          "text": "e) Token OTP là hình thức xác nhận thông qua mã OTP tạo bởi thiết bị chuyên dụng. Token OTP có 02 loại: (i) Token OTP loại cơ bản: Mã OTP được tạo một cách ngẫu nhiên theo thời gian, đồng bộ với hệ thống Online Banking; (ii) Token OTP loại nâng cao: Mã OTP được tạo ra kết hợp với mã của từng giao dịch. Khi thực hiện giao dịch, hệ thống Online Banking tạo ra một mã giao dịch thông báo cho khách hàng, khách hàng nhập mã giao dịch vào Token OTP để thiết bị tạo ra mã OTP. Token OTP có hiệu lực tối đa 02 phút."
+        },
+        {
+          "anchor": "dieu-11/khoan-4",
+          "citation": "Điều 11, Khoản 4",
+          "kind": "provision",
+          "label": "Khoản 4",
+          "text": "4. Hình thức xác nhận hai kênh là hình thức xác nhận khi khách hàng thực hiện giao dịch, hệ thống Online Banking sẽ gửi thông tin yêu cầu xác nhận giao dịch đến thiết bị di động của khách hàng qua cuộc gọi thoại hoặc cuộc gọi thông qua dịch vụ viễn thông cơ bản trên Internet hoặc qua mã tin nhắn nhanh USSD (Unstructured Supplementary Service Data) hoặc qua phần mềm chuyên dụng, khách hàng phản hồi trực tiếp qua kênh đã kết nối để xác nhận hoặc không xác nhận thực hiện giao dịch. Yêu cầu xác nhận của hình thức xác nhận hai kênh có hiệu lực tối đa 05 phút."
+        },
+        {
+          "anchor": "dieu-11/khoan-5",
+          "citation": "Điều 11, Khoản 5",
+          "kind": "provision",
+          "label": "Khoản 5",
+          "text": "5. Hình thức xác nhận khớp đúng thông tin sinh trắc học là việc đối chiếu, so sánh để bảo đảm trùng khớp thông tin sinh trắc học của khách hàng đang thực hiện giao dịch với thông tin sinh trắc học của khách hàng đã thu thập, lưu trữ tại đơn vị theo quy định của Thống đốc Ngân hàng Nhà nước. Hình thức khớp đúng thông tin sinh trắc học phải đáp ứng tối thiểu yêu cầu:"
+        },
+        {
+          "anchor": "dieu-11/khoan-5/diem-a",
+          "citation": "Điều 11, Khoản 5, Điểm a",
+          "kind": "provision",
+          "label": "Điểm a",
+          "text": "a) Trường hợp áp dụng hình thức khớp đúng thông tin sinh trắc học sử dụng khuôn mặt:\n(i) Có độ chính xác được xác định theo tiêu chuẩn quốc tế như sau (hoặc tương đương): Có tỷ lệ từ chối sai < 5% với tỷ lệ chấp nhận sai < 0,01% theo tiêu chuẩn FIDO Biometric Requirement (áp dụng đối với tập mẫu tối thiểu 10.000 mẫu);\n(ii) Có khả năng phát hiện tấn công giả mạo thông tin sinh trắc học của vật thể sống (Presentation Attack Detection - PAD) dựa trên các tiêu chuẩn quốc tế (như NIST Special Publication 800-63B Digital Identity Guidelines: Authentication and Lifecycle Management hoặc ISO 30107 - Biometric presentation attack detection hoặc FIDO Biometric Requirements) để phòng, chống gian lận, giả mạo khách hàng qua hình ảnh, video, mặt nạ 3D."
+        },
+        {
+          "anchor": "dieu-11/khoan-5/diem-b",
+          "citation": "Điều 11, Khoản 5, Điểm b",
+          "kind": "provision",
+          "label": "Điểm b",
+          "text": "b) Trường hợp áp dụng các hình thức khớp đúng thông tin sinh trắc học khác, phải bảo đảm phòng, chống gian lận, giả mạo khách hàng theo tiêu chuẩn tương đương;"
+        },
+        {
+          "anchor": "dieu-11/khoan-5/diem-c",
+          "citation": "Điều 11, Khoản 5, Điểm c",
+          "kind": "provision",
+          "label": "Điểm c",
+          "text": "c) Giải pháp phát hiện tấn công giả mạo thông tin sinh trắc học của vật thể sống (Presentation Attack Detection - PAD) theo quy định tại điểm a khoản này do đơn vị tự triển khai hoặc sử dụng của bên thứ ba cung cấp phải được cấp chứng nhận của tổ chức/phòng thí nghiệm sinh trắc học được Liên minh FIDO (FIDO Alliance) công nhận;"
+        },
+        {
+          "anchor": "dieu-11/khoan-5/diem-d",
+          "citation": "Điều 11, Khoản 5, Điểm d",
+          "kind": "provision",
+          "label": "Điểm d",
+          "text": "d) Trường hợp khách hàng xác nhận bằng hình thức khớp đúng thông tin sinh trắc học quá số lần sai liên tiếp do đơn vị quy định (nhưng không quá 10 lần): khóa chức năng thực hiện xác nhận giao dịch bằng hình thức khớp đúng thông tin sinh trắc học, chỉ mở khóa khi khách hàng yêu cầu và phải kiểm tra khách hàng trước khi thực hiện, bảo đảm chống gian lận, giả mạo;"
+        },
+        {
+          "anchor": "dieu-11/khoan-5/diem-đ",
+          "citation": "Điều 11, Khoản 5, Điểm đ",
+          "kind": "provision",
+          "label": "Điểm đ",
+          "text": "đ) Thời gian thực hiện khớp đúng thông tin sinh trắc học tối đa 03 phút."
+        },
+        {
+          "anchor": "dieu-11/khoan-6",
+          "citation": "Điều 11, Khoản 6",
+          "kind": "provision",
+          "label": "Khoản 6",
+          "text": "6. Hình thức xác nhận khớp đúng thông tin sinh trắc học thiết bị là việc đối chiếu, so sánh để bảo đảm trùng khớp thông tin sinh trắc học của khách hàng đang thực hiện giao dịch với thông tin sinh trắc học của khách hàng đã lưu trữ trên thiết bị di động của khách hàng. Hình thức khớp đúng thông tin sinh trắc học thiết bị phải đáp ứng yêu cầu:"
+        },
+        {
+          "anchor": "dieu-11/khoan-6/diem-a",
+          "citation": "Điều 11, Khoản 6, Điểm a",
+          "kind": "provision",
+          "label": "Điểm a",
+          "text": "a) Chỉ cho phép kích hoạt sử dụng sau khi có sự đồng ý của khách hàng và khách hàng đã thực hiện ít nhất một giao dịch thành công bằng hình thức xác nhận khác;"
+        },
+        {
+          "anchor": "dieu-11/khoan-6/diem-b",
+          "citation": "Điều 11, Khoản 6, Điểm b",
+          "kind": "provision",
+          "label": "Điểm b",
+          "text": "b) Thời gian thực hiện khớp đúng thông tin sinh trắc học tối đa 02 phút."
+        },
+        {
+          "anchor": "dieu-11/khoan-7",
+          "citation": "Điều 11, Khoản 7",
+          "kind": "provision",
+          "label": "Khoản 7",
+          "text": "7. Hình thức xác nhận FIDO (Fast IDentity Online) là hình thức xác nhận theo tiêu chuẩn về xác nhận giao dịch sử dụng thuật toán khóa không đối xứng (gồm khóa bí mật và khóa công khai, trong đó khóa bí mật được dùng để ký số và khóa công khai được dùng để kiểm tra chữ ký số) do Liên minh FIDO (FIDO Alliance) ban hành. Hình thức xác nhận FIDO phải đáp ứng yêu cầu:"
+        },
+        {
+          "anchor": "dieu-11/khoan-7/diem-a",
+          "citation": "Điều 11, Khoản 7, Điểm a",
+          "kind": "provision",
+          "label": "Điểm a",
+          "text": "a) Khóa bí mật được lưu giữ an toàn trên thiết bị của khách hàng. Khách hàng sử dụng hình thức xác nhận bằng mã PIN hoặc khớp đúng thông tin sinh trắc học thiết bị để truy cập, sử dụng khóa bí mật khi thực hiện giao dịch;"
+        },
+        {
+          "anchor": "dieu-11/khoan-7/diem-b",
+          "citation": "Điều 11, Khoản 7, Điểm b",
+          "kind": "provision",
+          "label": "Điểm b",
+          "text": "b) Khóa công khai được lưu trữ an toàn tại đơn vị và được liên kết với tài khoản giao dịch điện tử của khách hàng;"
+        },
+        {
+          "anchor": "dieu-11/khoan-7/diem-c",
+          "citation": "Điều 11, Khoản 7, Điểm c",
+          "kind": "provision",
+          "label": "Điểm c",
+          "text": "c) Giải pháp do đơn vị tự triển khai hoặc sử dụng của bên thứ ba cung cấp phải được cấp chứng nhận của tổ chức được Liên minh FIDO (FIDO Alliance) công nhận."
+        },
+        {
+          "anchor": "dieu-11/khoan-8",
+          "citation": "Điều 11, Khoản 8",
+          "kind": "provision",
+          "label": "Khoản 8",
+          "text": "8. Hình thức xác nhận bằng chữ ký điện tử theo quy định của pháp luật về chữ ký điện tử (không bao gồm chữ ký điện tử an toàn quy định tại khoản 9 Điều này)."
+        },
+        {
+          "anchor": "dieu-11/khoan-9",
+          "citation": "Điều 11, Khoản 9",
+          "kind": "provision",
+          "label": "Khoản 9",
+          "text": "9. Hình thức xác nhận bằng chữ ký điện tử an toàn là hình thức xác nhận bằng chữ ký điện tử, trong đó chữ ký điện tử là chữ ký điện tử chuyên dùng bảo đảm an toàn hoặc chữ ký số hoặc chữ ký điện tử nước ngoài được công nhận tại Việt Nam theo quy định của pháp luật về chữ ký điện tử."
+        },
+        {
+          "anchor": "dieu-11/khoan-10",
+          "citation": "Điều 11, Khoản 10",
+          "kind": "provision",
+          "label": "Khoản 10",
+          "text": "10. Hình thức xác nhận trên cơ sở đánh giá rủi ro đối với giao dịch thanh toán thẻ trực tuyến theo tiêu chuẩn EMV 3-D Secure (sau đây gọi tắt là hình thức xác nhận EMV 3DS). Hình thức xác nhận EMV 3DS phải đáp ứng yêu cầu: Tổ chức phát hành thẻ, tổ chức thanh toán thẻ và đơn vị chấp nhận thẻ phải triển khai tiêu chuẩn EMV 3-D Secure."
+        },
+        {
+          "anchor": "dieu-11/khoan-11",
+          "citation": "Điều 11, Khoản 11",
+          "kind": "provision",
+          "label": "Khoản 11",
+          "text": "11. Hình thức xác nhận thông qua các thao tác thể hiện sự xác nhận của khách hàng đối với thông điệp dữ liệu khi thực hiện giao dịch như bấm chấp nhận, phê duyệt, gửi hoặc các hoạt động tương tự trên phần mềm ứng dụng Online Banking. Hình thức xác nhận thông qua các thao tác thể hiện sự xác nhận của khách hàng đối với thông điệp dữ liệu khi thực hiện giao dịch phải đáp ứng yêu cầu:"
+        },
+        {
+          "anchor": "dieu-11/khoan-11/diem-a",
+          "citation": "Điều 11, Khoản 11, Điểm a",
+          "kind": "provision",
+          "label": "Điểm a",
+          "text": "a) Các thao tác xác nhận phải được lưu trữ nhật ký (log) để có thể truy vấn được thông tin liên quan đến các thao tác xác nhận này;"
+        },
+        {
+          "anchor": "dieu-11/khoan-11/diem-b",
+          "citation": "Điều 11, Khoản 11, Điểm b",
+          "kind": "provision",
+          "label": "Điểm b",
+          "text": "b) Khách hàng là tổ chức và đã thực hiện đăng nhập phần mềm ứng dụng Online Banking sử dụng hình thức xác nhận theo quy định tại Điều này trừ khoản 1, khoản 2, khoản 6, khoản 10."
+        }
+      ]
+    },
+    "release": "20261112_2"
+  }
+]

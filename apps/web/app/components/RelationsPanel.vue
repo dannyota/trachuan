@@ -39,7 +39,17 @@ const groups = computed(() => {
   }
   const bases = legalBases(relations.value)
   return relationGroups(items, partial ? props.document.related_counts : undefined, language.value).map(group =>
-    group.dir === 'out' && group.kind === 'legal_basis' && (bases.length || partial) ? { ...group, label: m.value.legalBases } : group)
+    {
+      const seen = new Set<string>()
+      const unique = group.items.filter(item => {
+        const identity = item.key || item.number
+        if (!identity) return true
+        if (seen.has(identity)) return false
+        seen.add(identity)
+        return true
+      })
+      return { ...group, items: unique, label: group.dir === 'out' && group.kind === 'legal_basis' && (bases.length || partial) ? m.value.legalBases : group.label }
+    })
 })
 function path(item: Relation | components['schemas']['Pointer']) {
   return item.in_release && item.key && isDocumentKey(item.key) ? { path: `/vn/documents/${item.key}`, query: { release: props.release } } : undefined

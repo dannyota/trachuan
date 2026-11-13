@@ -51,3 +51,22 @@ it('keeps outstanding groups and continuation visible after loading from a count
   expect(wrapper.text()).toContain('B')
   expect(wrapper.findAll('dt').map(node => node.text())).toEqual(['Related', 'Related'])
 })
+
+it('shows one chip for repeated document pointers from the real document', async () => {
+  const fixture = (await import('./fixtures/reader-171687.json')).default[0]!
+  vi.stubGlobal('useState', () => ref('en'))
+  vi.stubGlobal('computed', computed)
+  vi.stubGlobal('useApi', () => ({}))
+  const wrapper = mount(ReaderRail, { props: { document: fixture.item.document, release: fixture.release, documentKey: 'vn:vbpl:171687', gaps: [] }, global: { stubs: { NuxtLink: { template: '<a><slot /></a>' } } } })
+  expect(wrapper.findAll('.reader-relation-chip').filter(node => node.text() === '09/2020/TT-NHNN')).toHaveLength(1)
+})
+it('loads legal bases in place from the real document count', async () => {
+  const fixture = (await import('./fixtures/reader-171687.json')).default[0]!
+  vi.stubGlobal('useState', () => ref('en'))
+  vi.stubGlobal('computed', computed)
+  vi.stubGlobal('useApi', () => ({ captureAction: () => ({ accountId: 1, csrfToken: 'csrf' }), forAction: () => ({ POST: async () => ({ data: { items: [{ units: [{ kind: 'relation', relation: { dir: 'out', kind: 'legal_basis', number: 'Synthetic basis', in_release: false, evidence_complete: true } }] }] } }) }), session: { account: { id: 1 } } }))
+  const wrapper = mount(ReaderRail, { props: { document: fixture.item.document, release: fixture.release, documentKey: 'vn:vbpl:171687', gaps: [] } })
+  await wrapper.get('button[aria-label="Load more relations: Legal bases"]').trigger('click')
+  await flushPromises()
+  expect(wrapper.text()).toContain('Synthetic basis')
+})

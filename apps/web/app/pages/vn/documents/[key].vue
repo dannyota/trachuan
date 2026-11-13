@@ -30,6 +30,23 @@ const rawUnits = ref<Unit[]>([])
 const units = computed(() => joinedUnits(rawUnits.value))
 const outline = computed(() => units.value.filter(unit => unit.kind === 'outline'))
 const textUnits = computed(() => units.value.filter(unit => unit.kind !== 'outline'))
+const displayUnits = computed(() => {
+  const anchor = route.hash.slice(1)
+  const result: { target: boolean, units: Unit[] }[] = []
+  let band: Unit[] | undefined
+  for (const unit of textUnits.value) {
+    if (anchor && unit.anchor === anchor) {
+      band = [unit]
+      result.push({ target: true, units: band })
+    } else if (band && unit.anchor?.startsWith(`${anchor}/`)) {
+      band.push(unit)
+    } else {
+      band = undefined
+      result.push({ target: false, units: [unit] })
+    }
+  }
+  return result
+})
 const warnings = computed(() => warningsByTarget(rawUnits.value))
 const next = ref('')
 const error = ref('')
@@ -234,7 +251,10 @@ watch(textUnits, async () => {
       <section ref="content" class="reader-content" aria-live="polite">
         <details class="reader-toc-mobile"><summary>{{ readerMessagesText.contents }}</summary><ReaderToc :units="outline" :current="route.hash.slice(1) || visibleAnchor" /></details>
         <div v-if="loading && !pages" class="reader-skeleton" aria-hidden="true"><span class="reader-skeleton-line reader-skeleton-short" /><span class="reader-skeleton-line" /><span class="reader-skeleton-line" /><span class="reader-skeleton-line" /></div>
-        <ReaderUnit v-for="(unit, index) in textUnits" :key="index" :unit="unit" :document="documentEntry" :release="release" :target="!!unit.anchor && unit.anchor === route.hash.slice(1)" :warnings="warnings.get(`${key}#${unit.anchor}`) || []" />
+        <template v-for="(group, index) in displayUnits" :key="index">
+          <div v-if="group.target" class="reader-unit-target"><ReaderUnit v-for="(unit, i) in group.units" :key="i" :unit="unit" :document="documentEntry" :release="release" :target="i === 0" :warnings="warnings.get(`${key}#${unit.anchor}`) || []" /></div>
+          <ReaderUnit v-else :unit="group.units[0]!" :document="documentEntry" :release="release" :target="false" :warnings="warnings.get(`${key}#${group.units[0]?.anchor}`) || []" />
+        </template>
         <p v-if="error" class="notice" role="alert">{{ errorMessage(language, error) }} <a v-if="error === 'release_expired'" :href="`/vn/documents/${key}`">{{ messages.readerCurrent }}</a></p>
         <div v-if="next && !error" class="reader-more"><button ref="sentinel" class="btn btn-secondary" type="button" :disabled="loading" @click="load">{{ messages.readerMore }}</button><span v-if="loading" role="status"><span class="reader-spinner" aria-hidden="true" /> {{ readerMessagesText.loading }}</span></div>
       </section>
