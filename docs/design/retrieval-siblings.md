@@ -1,6 +1,7 @@
 # Sibling clause merge
 
-A candidate rule for retrieval recipe 3, measured first as a research override.
+The sibling clause merge of retrieval recipe 3, adopted on 2026-11-13 after ADR
+0010 item 4 passed; the numbers are in ADR 0010 History.
 [Retrieval recipe](retrieval-recipe.md) owns grouping, capping and hit text;
 this note owns only the merge of sibling clause groups.
 
@@ -57,7 +58,8 @@ use the merged groups as they are and never add members later.
 
 ## Measurement
 
-The research override `corpus eval --merge-siblings` applies the rule in eval
-only. It is adopted as recipe 3 only under ADR 0010 item 4 against the release
-vn/20261112_2 on both cohorts, with the compact size gate passing. Record the
-numbers in ADR 0010 History and move the rule into the retrieval recipe then.
+The rule was measured with the research override `corpus eval --merge-siblings`
+against release vn/20261112_2 on both cohorts, with the compact size gate. It
+passed ADR 0010 item 4 and became recipe 3. The release recipe now decides: the
+override is rejected with a message naming the release recipe, while
+`--article-cap` stays a research tool on both recipes.
