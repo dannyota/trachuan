@@ -17,6 +17,7 @@ import (
 )
 
 type bindingOptions struct {
+	recipe    *retrieval.Recipe
 	recipe2   bool
 	durations map[string]int64
 	taxonomy  *TaxonomyStats
@@ -46,13 +47,20 @@ func bindingArtifact(t *testing.T, binding *string, oldRecipe bool, options ...b
 		"taxonomy": TaxonomyStats{}, "version": 1, "country": run.Country, "rel": run.Rel, "database_name": "corpus_vn_20990101", "schema_version": corpusdb.SchemaVersion,
 		"build_input_hash": input, "build_recipe_hash": rowRecipe, "source_manifest_hash": inv.SourceManifestHash(), "identity_inventory_hash": inv.IdentityHash(), "identity_map_sha256": "map",
 		"worker_version": "worker", "built_at": time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC),
-		"durations_ms":     map[string]int64{"total": 1},
-		"dump":             map[string]any{"sha256": hashBytes(dump), "bytes": len(dump), "format": "custom"},
-		"retrieval_recipe": map[string]any{"abstention": map[string]any{"threshold": 0, "calibration_sha256": hashBytes(calibration)}},
+		"durations_ms": map[string]int64{"total": 1},
+		"dump":         map[string]any{"sha256": hashBytes(dump), "bytes": len(dump), "format": "custom"},
 	}
+	policy := retrieval.Recipe3()
 	if opts.recipe2 {
-		record["retrieval_recipe"].(map[string]any)["version"] = 2
+		policy = retrieval.Recipe2()
 	}
+	if opts.recipe != nil {
+		policy = *opts.recipe
+	}
+	threshold := 0.0
+	policy.Abstention.Threshold = &threshold
+	policy.Abstention.CalibrationSHA256 = hashBytes(calibration)
+	record["retrieval_recipe"] = policy
 	if opts.durations != nil {
 		record["durations_ms"] = opts.durations
 	}

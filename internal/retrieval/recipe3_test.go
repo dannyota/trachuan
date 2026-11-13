@@ -67,13 +67,13 @@ func TestSupportedRecipe_ExactPairs(t *testing.T) {
 	} {
 		r := Recipe2()
 		r.Version, r.SiblingMerge = tc.version, tc.merge
-		if got := supportedRecipe(r); got != tc.want {
+		if got := r.Supported(); got != tc.want {
 			t.Errorf("version %d merge %q accepted %t", tc.version, tc.merge, got)
 		}
 	}
 	r := Recipe3()
 	r.DocumentCap++
-	if supportedRecipe(r) {
+	if r.Supported() {
 		t.Fatal("accepted changed recipe values")
 	}
 }
@@ -166,6 +166,22 @@ func TestRecipe3_ArticleCapUsesReleaseGrouping(t *testing.T) {
 		out, err := ShapeWithArticleCap(a, r, 8, "dense", nil, nil, &article)
 		if err != nil || len(out.Hits) != want {
 			t.Fatalf("merge %t hits %d error %v", merge, len(out.Hits), err)
+		}
+	}
+}
+
+func TestRecipeSupported_IgnoresOnlyCalibratedFields(t *testing.T) {
+	for _, recipe := range []Recipe{Recipe2(), Recipe3()} {
+		threshold := 0.5
+		recipe.Abstention.Threshold = &threshold
+		recipe.Abstention.CalibrationSHA256 = strings.Repeat("a", 64)
+		before := recipe
+		if !recipe.Supported() || recipe != before {
+			t.Fatal("calibration changed policy acceptance or input")
+		}
+		recipe.Abstention.Status = "other"
+		if recipe.Supported() {
+			t.Fatal("accepted changed abstention policy")
 		}
 	}
 }

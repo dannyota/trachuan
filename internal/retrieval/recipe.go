@@ -75,7 +75,13 @@ func Recipe3() Recipe {
 	return r
 }
 
-func supportedRecipe(r Recipe) bool { return r == Recipe2() || r == Recipe3() }
+// Supported reports whether the policy is recipe 2 or 3, ignoring the calibrated
+// threshold and calibration hash.
+func (r Recipe) Supported() bool {
+	r.Abstention.Threshold = nil
+	r.Abstention.CalibrationSHA256 = ""
+	return r == Recipe2() || r == Recipe3()
+}
 
 // JSON returns compact fixed-field JSON.
 func (r Recipe) JSON() ([]byte, error) { return json.Marshal(r) }

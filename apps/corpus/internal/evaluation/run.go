@@ -73,9 +73,9 @@ func run(ctx context.Context, engine Engine, suite Suite, o Options, limit int) 
 		if err != nil {
 			return Report{}, Cache{}, fmt.Errorf("read previous report: %w", err)
 		}
-		var prior Report
-		if err = json.Unmarshal(b, &prior); err != nil {
-			return Report{}, Cache{}, fmt.Errorf("decode previous report: %w", err)
+		prior, err := decodePreviousReport(b)
+		if err != nil {
+			return Report{}, Cache{}, err
 		}
 		if prior.Version != 1 || (prior.Scorer != r.Scorer && prior.Scorer != "agent-eval/1" && prior.Scorer != "agent-eval/2") || prior.FixtureHashes.Legacy != r.FixtureHashes.Legacy || prior.FixtureHashes.OldProduct != r.FixtureHashes.OldProduct {
 			return Report{}, Cache{}, fmt.Errorf("incompatible previous scorer or fixtures")
