@@ -44,6 +44,7 @@ test('leaving a reader cancels its delayed request and prevents later scrolling'
   await arrived
   await navigate(page, '/connect')
   await expect(page.getByRole('heading', { name: /connect|kết nối/i, level: 1 })).toBeVisible()
+  await page.evaluate(() => document.fonts.ready)
   await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))))
   await page.evaluate(() => {
     const spacer = document.createElement('div')
