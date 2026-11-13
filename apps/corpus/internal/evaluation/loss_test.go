@@ -383,3 +383,12 @@ func TestLossDiagnostics_DefaultGroupedPrimaryBackfill(t *testing.T) {
 		t.Fatalf("stage = %q, want rank_limit, error %v", stage, err)
 	}
 }
+
+func TestMatchingCandidate_LegacyCompleteDescendant(t *testing.T) {
+	article := retrieval.Provision{ID: 1, Identity: retrieval.Identity{Country: "vn", DocumentKey: "doc", Anchor: "article"}, Kind: "dieu", Label: "Điều 11"}
+	clause := retrieval.Provision{ID: 2, ParentID: &article.ID, Identity: retrieval.Identity{Country: "vn", DocumentKey: "doc", Anchor: "clause"}, Kind: "khoan", Label: "Khoản 2"}
+	c := retrieval.Candidate{Identity: article.Identity, GroupID: article.ID, Document: retrieval.Document{Number: "12"}, Ancestors: []retrieval.Provision{article}, Descendants: []retrieval.Provision{article, clause}}
+	if !matchingCandidate("legacy", Expectation{DocNumber: "12", Article: "11", Clause: "2"}, MapEntry{}, []retrieval.Candidate{c}) {
+		t.Fatal("complete child missed")
+	}
+}

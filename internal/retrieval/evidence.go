@@ -137,7 +137,7 @@ func evidence(g Group, capRunes int) (string, []Fragment, bool, []Gap, Identity,
 			}
 		}
 	}
-	setFragmentCitations(full.fragments, []Candidate{c})
+	SetFragmentCitations(full.fragments, []Candidate{c})
 	bestStart := 0
 	located := false
 	if bestSpan != nil {

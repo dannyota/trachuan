@@ -2,6 +2,16 @@ package evaluation
 
 import "danny.vn/trachuan/internal/retrieval"
 
+func productCaseDifferences(cases []CaseDifference) []CaseDifference {
+	filtered := cases[:0]
+	for _, c := range cases {
+		if c.Cohort != "legacy" {
+			filtered = append(filtered, c)
+		}
+	}
+	return filtered
+}
+
 // CaseDifference lists changed citation matches and abstention decisions.
 type CaseDifference struct {
 	ValidityOverrides

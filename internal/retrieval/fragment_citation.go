@@ -1,6 +1,6 @@
 package retrieval
 
-func setFragmentCitations(fragments []Fragment, candidates []Candidate) {
+func SetFragmentCitations(fragments []Fragment, candidates []Candidate) {
 	citations := map[Identity]string{}
 	for _, c := range candidates {
 		paths := map[int64][]Provision{}

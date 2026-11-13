@@ -1011,3 +1011,61 @@ func TestReport_DefaultArticleCapOmitted(t *testing.T) {
 		t.Errorf("previous diff contains article_cap_override: %s", b)
 	}
 }
+
+func TestPreviousDiff_ProductComparableScorer(t *testing.T) {
+	date := retrieval.Date{Year: 2026, Month: 11, Day: 9}
+	opts := Options{EvaluationDate: date, Modes: []retrieval.Mode{"exact"}}
+	prior, _, err := Run(context.Background(), &fakeEngine{date: date}, developmentSuite(), opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prior.Scorer = "agent-eval/3"
+	for i := range prior.Cases {
+		if prior.Cases[i].Cohort == "legacy" || prior.Cases[i].Cohort == "old_product" || prior.Cases[i].Cohort == "development" {
+			prior.Cases[i].Abstain = !prior.Cases[i].Abstain
+		}
+	}
+	data, err := json.Marshal(prior)
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(t.TempDir(), "previous.json")
+	if err = os.WriteFile(path, data, 0600); err != nil {
+		t.Fatal(err)
+	}
+	opts.PreviousReport = path
+	current, _, err := Run(context.Background(), &fakeEngine{date: date}, developmentSuite(), opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	diff, ok := current.PreviousDiff.(map[string]any)
+	if !ok || diff["previous_scorer"] != "agent-eval/3" || diff["scorer"] != "agent-eval/4" {
+		t.Fatalf("diff = %v", current.PreviousDiff)
+	}
+	changes, ok := diff["cases"].([]CaseDifference)
+	if !ok || len(changes) == 0 {
+		t.Fatalf("changes = %v", diff["cases"])
+	}
+	seen := map[string]bool{}
+	for _, c := range changes {
+		seen[c.Cohort] = true
+		if c.Cohort == "legacy" {
+			t.Fatalf("legacy diff = %+v", c)
+		}
+	}
+	if !seen["old_product"] || !seen["development"] {
+		t.Fatalf("missing product cohort changes: %v", seen)
+	}
+	compared := 0
+	for _, n := range current.NonRegression {
+		if n.Mode == "exact" && n.Value != nil {
+			if n.PreviousValue == nil || n.Status == "no_previous" {
+				t.Fatalf("non-regression = %+v", n)
+			}
+			compared++
+		}
+	}
+	if compared == 0 {
+		t.Fatal("no product metrics compared")
+	}
+}

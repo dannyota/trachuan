@@ -113,7 +113,7 @@ func siblingEvidence(g Group, capRunes int) (string, []Fragment, bool, []Gap, Id
 	for _, member := range g.siblings {
 		candidates = append(candidates, member.Best)
 	}
-	setFragmentCitations(full.fragments, candidates)
+	SetFragmentCitations(full.fragments, candidates)
 	bestMember := g.Identity
 	bestStart := min(len(leads.text)+1, len(full.text))
 	if len(leads.text) == 0 {
