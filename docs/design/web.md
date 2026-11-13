@@ -93,15 +93,15 @@ because public HTML is cached for ten minutes and a cached page would replay an
 old nonce. Self-hosted fonts; CSP with no third-party host.
 
 The look is an official gazette: ink on paper, a red seal, stamps for validity.
-Tokens live in `apps/web/app/assets/tokens.css`: ink #14171C, muted #59606B,
-line #E3E6EA, surface #F6F7F9, primary #1E3A8A, seal #B42318 and highlight
-#FFF1A8, with a dark palette that follows the device and keeps every text pair
-at 4.5:1 or more. Validity stamps differ by text, border and fill, not colour
-alone: in force, partly in force, not yet in force, expired (struck through) and
-unknown (dashed border); suspended uses the expired palette without the strike.
-Document numbers use monospace with ligatures off. The logo and icons are the
-seal with "TC" (a solid red circle with "T" at 16 px), generated with the Open
-Graph image by `apps/web/scripts/make-icons.mjs`. Every page has the header
-(logo, Search, Topics, Connect AI assistants, Sources, language, account or
-sign-in; a menu button under 768 px) and the footer (terms, privacy, sources).
-Phase 2: dossiers, watch lists, exports.
+Tokens live in `apps/web/app/assets/tokens.css`: ink `#14171C`, muted `#59606B`,
+line `#E3E6EA`, surface `#F6F7F9`, primary `#1E3A8A`, seal `#B42318` and
+highlight `#FFF1A8`, with a dark palette that follows the device and keeps every
+text pair at 4.5:1 or more. Validity stamps differ by text, border and fill, not
+colour alone: in force, partly in force, not yet in force, expired (struck
+through) and unknown (dashed border); suspended uses the expired palette without
+the strike. Document numbers use monospace with ligatures off. The logo and
+icons are the seal with "TC" (a solid red circle with "T" at 16 px), generated
+with the Open Graph image by `apps/web/scripts/make-icons.mjs`. Every page has
+the header (logo, Search, Topics, Connect AI assistants, Sources, language,
+account or sign-in; a menu button under 768 px) and the footer (terms, privacy,
+sources). Phase 2: dossiers, watch lists, exports.
