@@ -24,6 +24,7 @@ describe('search results', () => {
     expect(resultHits({ ...compact, non_current: [hit] })).toHaveLength(2)
     expect(resultHits({ ...compact, abstain: true, reason: 'low_confidence' })).toHaveLength(1)
     expect(readerLink(hit, 'r1')).toBe('/vn/documents/vn:vbpl:1?release=r1#dieu-1')
+    expect(readerLink(hit, '')).toBe('/vn/documents/vn:vbpl:1?release=#dieu-1')
     expect(readerLink({ ...hit, handle: 'vn:vbpl:1' }, 'r1')).toBe('/vn/documents/vn:vbpl:1?release=r1')
   })
 })
@@ -64,4 +65,9 @@ it('appends each page to its own group and merges reference maps', () => {
   expect(merged.hits?.map(item => item.citation)).toEqual(['Điều 1', 'Next'])
   expect(merged.non_current?.map(item => item.citation)).toEqual(['Old', 'Past'])
   expect(merged.nodes?.topic?.name).toBe('Topic')
+})
+
+it('links to the current reader release when no release is supplied', () => {
+  expect(readerLink(hit)).toBe('/vn/documents/vn:vbpl:1#dieu-1')
+  expect(readerLink({ ...hit, handle: 'vn:vbpl:1' })).toBe('/vn/documents/vn:vbpl:1')
 })

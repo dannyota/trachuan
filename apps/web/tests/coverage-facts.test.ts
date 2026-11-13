@@ -17,3 +17,13 @@ it('formats coverage and groups gaps without exposing their codes', () => {
   expect(wrapper.text()).not.toContain('missing_attachment')
   expect(wrapper.text()).not.toContain('20260101_1')
 })
+
+it('shows the release by default and can omit it', async () => {
+  vi.stubGlobal('useState', () => ref('vi'))
+  vi.stubGlobal('computed', computed)
+  const status = { release: '20990101_1', documents: 1, provisions: 2, nodes: 3, gaps: {} }
+  const wrapper = mount(CoverageFacts, { props: { status } })
+  expect(wrapper.find('.coverage-release').exists()).toBe(true)
+  await wrapper.setProps({ showRelease: false })
+  expect(wrapper.find('.coverage-release').exists()).toBe(false)
+})

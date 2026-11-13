@@ -4,7 +4,7 @@ import { messagesFor, type Language } from '../../i18n'
 import { pagesMessages } from '../../i18n/pages'
 import { formatDate, formatNumber, formatRelease, gapSummary } from '../content'
 
-const props = defineProps<{ status: components['schemas']['CorpusStatus'] | null, showGaps?: boolean }>()
+const props = withDefaults(defineProps<{ status: components['schemas']['CorpusStatus'] | null, showGaps?: boolean, showRelease?: boolean }>(), { showRelease: true })
 const language = useState<Language>('language', () => 'vi')
 const messages = computed(() => messagesFor(language.value))
 const labels = computed(() => pagesMessages(language.value))
@@ -20,7 +20,7 @@ const gaps = computed(() => props.status ? gapSummary(props.status, language.val
         <div><dt>{{ labels.nodes }}</dt><dd>{{ formatNumber(status.nodes, language) }}</dd></div>
         <div><dt>{{ labels.newest }}</dt><dd>{{ status.newest_source_date ? formatDate(status.newest_source_date, language) : '-' }}</dd></div>
       </dl>
-      <p class="coverage-release">{{ labels.release }}: {{ formatRelease(status.release, language) }}</p>
+      <p v-if="showRelease !== false" class="coverage-release">{{ labels.release }}: {{ formatRelease(status.release, language) }}</p>
     </template>
     <slot />
     <section v-if="showGaps && status" class="page-section"><h2>{{ labels.missing }}</h2><ul class="gap-list"><li v-for="gap in gaps" :key="gap.key"><h3>{{ gap.name }}</h3><p>{{ gap.sentence }} {{ gap.casesLabel }}</p></li></ul></section>

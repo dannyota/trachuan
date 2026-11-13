@@ -2,10 +2,12 @@
 import { getCoverage } from '../api/coverage'
 import rawSample from '../data/sample-result.json'
 import type { components } from '@trachuan/schema/gen/openapi'
-import { messagesFor, statusMessage, type Language } from '../../i18n'
+import { messagesFor, type Language } from '../../i18n'
+import { homeMessages } from '../../i18n/home'
 const sample = rawSample as components['schemas']['SearchResult']
 const language = useState<Language>('language', () => 'vi')
 const messages = computed(() => messagesFor(language.value))
+const labels = computed(() => homeMessages(language.value))
 const route = useRoute()
 const deleted = ref(false)
 onMounted(() => { deleted.value = route.query.account === 'deleted' })
@@ -14,15 +16,13 @@ const { data: status } = await useAsyncData('coverage-home', () => import.meta.s
 </script>
 <template>
   <div>
-    <p v-if="deleted" role="status">{{ messages.deletedNotice }}</p>
-    <h1>{{ messages.home }}</h1><p>{{ messages.purpose }}</p>
-    <a href="/api/v1/auth/google/start?next=%2F">{{ messages.signIn }}</a>
-    <NuxtLink to="/connect">{{ messages.connect }}</NuxtLink>
-    <CoverageFacts :status="status.status" />
-    <section><h2>{{ messages.sample }}</h2>
-      <article v-for="hit in (sample.hits || []).slice(0, 1)" :key="hit.handle || hit.citation">
-        <p>{{ hit.citation }}</p><p>{{ statusMessage(language, hit.doc ? sample.documents?.[hit.doc]?.status.class : undefined) }}</p><p>{{ hit.text || hit.snippet }}</p>
-      </article>
+    <p v-if="deleted" class="container notice" role="status">{{ messages.deletedNotice }}</p>
+    <HomeHero />
+    <section class="container home-sample" aria-labelledby="home-sample-title">
+      <div><h2 id="home-sample-title">{{ labels.sampleTitle }}</h2><p>{{ labels.sampleText }}</p><ul><li v-for="item in [labels.check1, labels.check2, labels.check3]" :key="item">{{ item }}</li></ul></div>
+      <ResultCard v-if="sample.hits?.[0]" :hit="sample.hits[0]" :documents="sample.documents" :nodes="sample.nodes" current-release />
     </section>
+    <div class="container home-coverage"><CoverageFacts :status="status.status" :show-release="false" /><p>{{ labels.scope }} <NuxtLink to="/sources">{{ labels.scopeLink }}</NuxtLink></p></div>
+    <HomeConnect />
   </div>
 </template>
