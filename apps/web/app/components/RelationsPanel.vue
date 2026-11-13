@@ -20,10 +20,27 @@ const loaded = ref(false)
 const loading = ref(false)
 const next = ref('')
 const error = ref('')
+const details = ref<HTMLDetailsElement>()
 let action: Action | undefined
 const relations = computed(() => joinedUnits(raw.value).flatMap(unit => unit.relation ? [unit.relation] : []))
-const bases = computed(() => legalBases(relations.value))
-const groups = computed(() => loaded.value ? relationGroups(relations.value.filter(item => !bases.value.includes(item)), undefined, language.value) : relationGroups(props.document.related, props.document.related_counts, language.value))
+const groups = computed(() => {
+  const partial = !loaded.value || !!next.value
+  const items: components['schemas']['Pointer'][] = [...relations.value]
+  if (partial) {
+    const matched = new Map<string, number>()
+    const identity = (item: components['schemas']['Pointer']) => JSON.stringify([item.dir, item.kind, item.key, item.number, item.in_release])
+    for (const item of items) matched.set(identity(item), (matched.get(identity(item)) || 0) + 1)
+    for (const item of props.document.related || []) {
+      const key = identity(item)
+      const count = matched.get(key) || 0
+      if (count) matched.set(key, count - 1)
+      else items.push(item)
+    }
+  }
+  const bases = legalBases(relations.value)
+  return relationGroups(items, partial ? props.document.related_counts : undefined, language.value).map(group =>
+    group.dir === 'out' && group.kind === 'legal_basis' && (bases.length || partial) ? { ...group, label: m.value.legalBases } : group)
+})
 function path(item: Relation | components['schemas']['Pointer']) {
   return item.in_release && item.key && isDocumentKey(item.key) ? { path: `/vn/documents/${item.key}`, query: { release: props.release } } : undefined
 }
@@ -48,6 +65,10 @@ async function load() {
     if (!controller.signal.aborted) loading.value = false
   }
 }
+function loadMore() {
+  if (details.value) details.value.open = true
+  void load()
+}
 function expand(event: Event) { if ((event.target as HTMLDetailsElement).open && !loaded.value && !error.value) void load() }
 onBeforeUnmount(() => controller.abort())
 </script>
@@ -55,12 +76,11 @@ onBeforeUnmount(() => controller.abort())
   <section class="card reader-card">
     <h2>{{ m.relations }}</h2>
     <dl class="reader-relations">
-      <template v-for="group in groups" :key="group.label">
-        <dt>{{ group.label }}</dt><dd><template v-for="(item, index) in group.items" :key="index"><NuxtLink v-if="path(item)" class="reader-relation-chip num" :to="path(item)!">{{ item.number || item.key }}</NuxtLink><span v-else class="reader-relation-chip num">{{ item.number || item.key }}</span></template><button v-if="group.more" class="reader-relation-chip" type="button" :aria-label="`${m.moreRelations}: ${group.label}`" @click="load">+{{ group.more }}</button></dd>
+      <template v-for="group in groups" :key="JSON.stringify([group.dir, group.kind])">
+        <dt>{{ group.label }}</dt><dd><template v-for="(item, index) in group.items" :key="index"><NuxtLink v-if="path(item)" class="reader-relation-chip num" :to="path(item)!">{{ item.number || item.key }}</NuxtLink><span v-else class="reader-relation-chip num">{{ item.number || item.key }}</span></template><button v-if="group.more" class="reader-relation-chip" type="button" :aria-label="`${m.moreRelations}: ${group.label}`" @click="loadMore">+{{ group.more }}</button></dd>
       </template>
-      <template v-if="bases.length"><dt>{{ m.legalBases }}</dt><dd><template v-for="(item, index) in bases" :key="index"><NuxtLink v-if="path(item)" class="reader-relation-chip num" :to="path(item)!">{{ item.number || item.key }}</NuxtLink><span v-else class="reader-relation-chip num">{{ item.number || item.key }}</span></template></dd></template>
     </dl>
-    <details @toggle="expand"><summary>{{ m.moreRelations }}</summary><p v-if="loading" role="status">{{ m.loading }}</p><button v-if="next && !loading" class="btn btn-secondary" type="button" @click="load">{{ m.moreRelations }}</button></details>
+    <details ref="details" @toggle="expand"><summary>{{ m.moreRelations }}</summary><p v-if="loading" role="status">{{ m.loading }}</p><button v-if="next && !loading" class="btn btn-secondary" type="button" @click="load">{{ m.moreRelations }}</button></details>
     <p v-if="error" class="notice" role="alert">{{ errorMessage(language, error) }} <button type="button" @click="load">{{ m.retry }}</button></p>
   </section>
 </template>

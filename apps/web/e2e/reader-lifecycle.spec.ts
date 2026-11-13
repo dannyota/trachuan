@@ -59,3 +59,19 @@ test('leaving a reader cancels its delayed request and prevents later scrolling'
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(500)
   expect(requests).toBe(1)
 })
+
+test('tracks the article in view at desktop width', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 })
+  await page.route('**/api/v1/documents/*', route => route.fulfill({ json: { release: '20990101', item: { complete: true, units: [
+    ...[1, 2, 3].map(i => ({ kind: 'outline', anchor: `dieu-${i}`, label: `Điều ${i}` })),
+    ...[1, 2, 3].map(i => ({ kind: 'provision', anchor: `dieu-${i}`, label: `Điều ${i}`, text: 'Nội dung.\n'.repeat(100) })),
+  ] } } }))
+  await start(page)
+  await navigate(page, '/vn/documents/vn:vbpl:1')
+  await expect(page.locator('[data-anchor="dieu-2"]')).toBeVisible()
+  await page.locator('[data-anchor="dieu-2"]').evaluate(element => {
+    element.scrollIntoView()
+    window.scrollBy(0, -100)
+  })
+  await expect(page.locator('.reader-toc-desktop [aria-current="location"]')).toHaveText(/Điều 2/)
+})

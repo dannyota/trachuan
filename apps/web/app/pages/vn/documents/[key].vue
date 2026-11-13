@@ -156,15 +156,23 @@ async function seekAnchor(initial = false) {
   seeking = false
   void fillVisible(seekGeneration, signal)
 }
+function observeUnits() {
+  unitObserver?.disconnect()
+  const top = Math.floor(window.innerHeight * 0.1)
+  const bottom = Math.floor(window.innerHeight * 0.75)
+  unitObserver = new IntersectionObserver(entries => {
+    const visible = entries.find(entry => entry.isIntersecting)
+    if (visible) visibleAnchor.value = (visible.target as HTMLElement).dataset.anchor || ''
+  }, { rootMargin: `-${top}px 0px -${bottom}px 0px` })
+  content.value?.querySelectorAll('[data-anchor]').forEach(element => unitObserver?.observe(element))
+}
 onMounted(async () => {
   mounted = true
   const initialHash = route.hash
   if (typeof IntersectionObserver !== 'undefined') {
     observer = new IntersectionObserver(entries => { if (entries.some(entry => entry.isIntersecting)) void fillVisible(generation, controller.signal) }, { rootMargin: '600px' })
-    unitObserver = new IntersectionObserver(entries => {
-      const visible = entries.find(entry => entry.isIntersecting)
-      if (visible) visibleAnchor.value = (visible.target as HTMLElement).dataset.anchor || ''
-    }, { rootMargin: '-10% 0px -75% 0px' })
+    observeUnits()
+    window.addEventListener('resize', observeUnits)
   }
   const version = generation
   const signal = controller.signal
@@ -178,6 +186,7 @@ onBeforeUnmount(() => {
   controller.abort()
   observer?.disconnect()
   unitObserver?.disconnect()
+  window.removeEventListener('resize', observeUnits)
 })
 watch(sentinel, (element, old) => {
   if (old) observer?.unobserve(old)

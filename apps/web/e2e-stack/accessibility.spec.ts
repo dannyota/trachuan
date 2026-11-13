@@ -5,7 +5,7 @@ import { freshEmail, signIn } from './identity'
 test.use({ extraHTTPHeaders: { 'X-Forwarded-For': '192.0.2.10' } })
 
 async function keyboard(page: Page) {
-  const controls = page.locator('a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])')
+  const controls = page.locator('a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), details > summary:first-of-type, [tabindex]:not([tabindex="-1"])')
   const expected = []
   for (const control of await controls.elementHandles()) {
     if (await control.evaluate(node => {
