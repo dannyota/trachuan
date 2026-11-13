@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -38,6 +39,8 @@ type Config struct {
 	Sessions                          SessionCreator
 	Clock                             func() time.Time
 	Rand                              io.Reader
+	// SignupEmails restricts new accounts to normalized emails; nil leaves sign-up open.
+	SignupEmails []string
 }
 
 // Handler exposes GET-only Google authorization start and callback routes.
@@ -52,6 +55,7 @@ type Handler struct {
 	random          io.Reader
 	randomMu        sync.Mutex
 	client          *http.Client
+	signupEmails    []string
 }
 
 // New discovers the provider once at startup. An HTTP client supplied through
@@ -96,6 +100,7 @@ func New(ctx context.Context, cfg Config) (*Handler, error) {
 	h := &Handler{
 		oauth:    oauth2.Config{ClientID: cfg.ClientID, ClientSecret: cfg.ClientSecret, Endpoint: endpoint, RedirectURL: strings.TrimSuffix(cfg.PublicURL, "/") + "/api/v1/auth/google/callback", Scopes: []string{oidc.ScopeOpenID, "email"}},
 		verifier: verifier, issuer: cfg.Issuer, store: cfg.Store, sessions: cfg.Sessions, clock: cfg.Clock, random: cfg.Rand, client: &client,
+		signupEmails: slices.Clone(cfg.SignupEmails),
 	}
 	h.Start = http.HandlerFunc(h.start)
 	h.Callback = http.HandlerFunc(h.callback)

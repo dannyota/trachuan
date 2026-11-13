@@ -190,6 +190,32 @@ func (q *Queries) RequestDeletion(ctx context.Context, id int64) (RequestDeletio
 	return i, err
 }
 
+const updateGoogleAccount = `-- name: UpdateGoogleAccount :one
+UPDATE account SET email = $2, last_login_at = now()
+WHERE google_sub = $1 RETURNING id, google_sub, email, blocked_at, created_at, last_login_at, delete_requested_at, auth_epoch
+`
+
+type UpdateGoogleAccountParams struct {
+	GoogleSub string
+	Email     string
+}
+
+func (q *Queries) UpdateGoogleAccount(ctx context.Context, arg UpdateGoogleAccountParams) (Account, error) {
+	row := q.db.QueryRow(ctx, updateGoogleAccount, arg.GoogleSub, arg.Email)
+	var i Account
+	err := row.Scan(
+		&i.ID,
+		&i.GoogleSub,
+		&i.Email,
+		&i.BlockedAt,
+		&i.CreatedAt,
+		&i.LastLoginAt,
+		&i.DeleteRequestedAt,
+		&i.AuthEpoch,
+	)
+	return i, err
+}
+
 const upsertGoogleAccount = `-- name: UpsertGoogleAccount :one
 INSERT INTO account (google_sub, email, last_login_at) VALUES ($1, $2, now())
 ON CONFLICT (google_sub) DO UPDATE SET email = EXCLUDED.email, last_login_at = now()

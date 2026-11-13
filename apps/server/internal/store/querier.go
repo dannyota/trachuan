@@ -74,6 +74,7 @@ type Querier interface {
 	TouchSession(ctx context.Context, tokenHash string) (int64, error)
 	TriageGroups(ctx context.Context, arg TriageGroupsParams) ([]TriageGroupsRow, error)
 	TriageReports(ctx context.Context, arg TriageReportsParams) ([]IssueReport, error)
+	UpdateGoogleAccount(ctx context.Context, arg UpdateGoogleAccountParams) (Account, error)
 	UpsertGoogleAccount(ctx context.Context, arg UpsertGoogleAccountParams) (Account, error)
 	UpsertGrant(ctx context.Context, arg UpsertGrantParams) (OauthGrant, error)
 	WithdrawOwnReport(ctx context.Context, arg WithdrawOwnReportParams) (int64, error)

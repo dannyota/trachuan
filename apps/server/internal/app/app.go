@@ -122,7 +122,7 @@ func serve(ctx context.Context, cfg config, pool *pgxpool.Pool, queries *store.Q
 	tools := mcpapi.Config{Reports: reportService, Resolver: mcpResolver{resolver}, Limiter: limiter, Logger: slog.New(slog.NewJSONHandler(stderr, nil)), Caches: caches}
 	bounded := credentialStore{Queries: queries, db: pool}
 	sessions := &websession.Manager{Store: bounded, PublicURL: cfg.publicURL, Clock: clock}
-	login, err := weblogin.New(ctx, weblogin.Config{ClientID: cfg.googleID, ClientSecret: cfg.googleSecret, PublicURL: cfg.publicURL, Issuer: cfg.googleIssuer, Store: loginStore{queries}, Sessions: sessions})
+	login, err := weblogin.New(ctx, weblogin.Config{ClientID: cfg.googleID, ClientSecret: cfg.googleSecret, PublicURL: cfg.publicURL, Issuer: cfg.googleIssuer, SignupEmails: cfg.signupEmails, Store: loginStore{queries}, Sessions: sessions})
 	if err != nil {
 		resolver.Close()
 		return errors.New("google provider discovery failed")

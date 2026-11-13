@@ -32,6 +32,10 @@ INSERT INTO account (google_sub, email, last_login_at) VALUES ($1, $2, now())
 ON CONFLICT (google_sub) DO UPDATE SET email = EXCLUDED.email, last_login_at = now()
 RETURNING *;
 
+-- name: UpdateGoogleAccount :one
+UPDATE account SET email = $2, last_login_at = now()
+WHERE google_sub = $1 RETURNING *;
+
 -- name: RequestDeletion :one
 WITH blocked AS (
     UPDATE account SET blocked_at = COALESCE(blocked_at, now()),

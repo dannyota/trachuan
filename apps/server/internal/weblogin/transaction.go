@@ -25,7 +25,11 @@ type ClaimLoginTransactionParams struct {
 }
 
 // UpsertGoogleAccountParams identifies an account by subject and current email.
-type UpsertGoogleAccountParams struct{ Sub, Email string }
+type UpsertGoogleAccountParams struct {
+	Sub, Email string
+	// RejectSignup permits updating an existing subject but forbids inserting one.
+	RejectSignup bool
+}
 
 // GoogleAccount contains the login eligibility returned by the account upsert.
 type GoogleAccount struct {
@@ -37,6 +41,8 @@ type GoogleAccount struct {
 // an unclaimed row whose expiry is after Now and return sql.ErrNoRows otherwise.
 // HandleHash is lowercase SHA-256 hex. UpsertGoogleAccount keys only by Sub and
 // updates current email and last_login_at, returning both account block flags.
+// With RejectSignup, it must only update an existing row and return sql.ErrNoRows
+// when the subject has no account, without inserting anything.
 type Store interface {
 	CreateLoginTransaction(context.Context, LoginTransaction) error
 	ClaimLoginTransaction(context.Context, ClaimLoginTransactionParams) (LoginTransaction, error)
