@@ -1,4 +1,4 @@
-.site-main:has(.account-page) { padding: 0; background: var(--color-surface); }
+.site-main:has(.account-page) { max-width: none; padding: 0; background: var(--color-surface); }
 .account-page { max-width: 960px; margin: 0 auto; padding: 40px 24px 64px; display: flex; flex-direction: column; gap: 24px; }
 .account-heading, .account-card-head, .account-danger { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
 .account-heading h1 { margin: 0; font-size: 30px; line-height: 1.3; }

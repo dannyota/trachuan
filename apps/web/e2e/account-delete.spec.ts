@@ -32,8 +32,11 @@ test('account spacing applies once at desktop and mobile widths', async ({ page 
     expect(main).not.toBeNull()
     expect(heading).not.toBeNull()
     expect(card).not.toBeNull()
+    expect(Math.abs(main!.x)).toBeLessThan(2)
+    expect(Math.abs(main!.width - width)).toBeLessThan(2)
+    expect(await page.locator('main').evaluate(element => getComputedStyle(element).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)')
     expect(Math.abs(heading!.y - main!.y - (width < 768 ? 24 : 40))).toBeLessThan(2)
-    if (width < 768) expect(Math.abs(card!.x - 16)).toBeLessThan(2)
+    expect(Math.abs(card!.x - (width < 768 ? 16 : 184))).toBeLessThan(2)
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
   }
 })
