@@ -45,7 +45,7 @@ func loadConfig() (config, error) {
 			email := strings.ToLower(strings.TrimSpace(part))
 			address, parseErr := mail.ParseAddress(email)
 			at := strings.LastIndex(email, "@")
-			if parseErr != nil || address.Name != "" || address.Address != email || at <= 0 || !strings.Contains(email[at+1:], ".") || strings.ContainsAny(email, "<>") || strings.IndexFunc(email, unicode.IsSpace) >= 0 {
+			if parseErr != nil || address.Name != "" || address.Address != email || at <= 0 || !validSignupDomain(email[at+1:]) || strings.ContainsAny(email, "<>") || strings.IndexFunc(email, unicode.IsSpace) >= 0 {
 				return config{}, errors.New("invalid or missing server configuration")
 			}
 			c.signupEmails = append(c.signupEmails, email)
@@ -71,6 +71,23 @@ func loadConfig() (config, error) {
 		}
 	}
 	return c, nil
+}
+
+func validSignupDomain(domain string) bool {
+	if len(domain) > 253 || !strings.Contains(domain, ".") {
+		return false
+	}
+	for _, label := range strings.Split(domain, ".") {
+		if len(label) == 0 || len(label) > 63 || label[0] == '-' || label[len(label)-1] == '-' {
+			return false
+		}
+		for _, c := range label {
+			if (c < 'a' || c > 'z') && (c < '0' || c > '9') && c != '-' {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 func publicOrigin(base string) (string, bool) {

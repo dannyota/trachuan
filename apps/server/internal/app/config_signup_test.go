@@ -44,6 +44,14 @@ func TestConfig_SignupEmails(t *testing.T) {
 		{name: "angle brackets", raw: "<a@b.c>", invalid: true},
 		{name: "multiple at signs", raw: "a@@b.c", invalid: true},
 		{name: "tab in address", raw: "a@b\t.c", invalid: true},
+		{name: "IPv4 literal", raw: "a@[192.0.2.1]", invalid: true},
+		{name: "IPv6 literal", raw: "a@[IPv6:2001:db8::1]", invalid: true},
+		{name: "trailing domain dot", raw: "a@b.c.", invalid: true},
+		{name: "leading domain dot", raw: "a@.b.c", invalid: true},
+		{name: "empty domain label", raw: "a@b..c", invalid: true},
+		{name: "underscore in domain", raw: "a@b_c.d", invalid: true},
+		{name: "leading domain hyphen", raw: "a@-b.c", invalid: true},
+		{name: "trailing domain hyphen", raw: "a@b-.c", invalid: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Setenv("SERVER_SIGNUP_EMAILS", tc.raw)
@@ -77,9 +85,13 @@ func TestConfig_InvalidSignupStopsBeforeDatabase(t *testing.T) {
 	t.Setenv("SERVER_OAUTH_CLIENTS", "")
 	t.Setenv("GOOGLE_CLIENT_ID", "fixture")
 	t.Setenv("GOOGLE_CLIENT_SECRET", "fixture")
-	t.Setenv("SERVER_SIGNUP_EMAILS", "")
-	err := run(context.Background(), []string{"serve"}, io.Discard, io.Discard)
-	if err == nil || err.Error() != "invalid or missing server configuration" {
-		t.Fatalf("expected configuration error before database setup, got %v", err)
+	for _, email := range []string{"", "a@[192.0.2.1]", "a@[IPv6:2001:db8::1]", "a@b.c.", "a@.b.c", "a@b..c"} {
+		t.Run(email, func(t *testing.T) {
+			t.Setenv("SERVER_SIGNUP_EMAILS", email)
+			err := run(context.Background(), []string{"serve"}, io.Discard, io.Discard)
+			if err == nil || err.Error() != "invalid or missing server configuration" {
+				t.Fatalf("expected configuration error before database setup, got %v", err)
+			}
+		})
 	}
 }
