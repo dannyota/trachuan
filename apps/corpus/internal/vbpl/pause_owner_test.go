@@ -3,10 +3,13 @@ package vbpl
 import (
 	"context"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync/atomic"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"danny.vn/trachuan/apps/corpus/internal/sourcegate"
@@ -67,84 +70,90 @@ func TestPause_WaitersRespectOwnDeadline(t *testing.T) {
 	}
 }
 
+func forbiddenTransport(requests *atomic.Int32) http.RoundTripper {
+	return statusTransport(func(*http.Request) (*http.Response, error) {
+		requests.Add(1)
+		return &http.Response{StatusCode: http.StatusForbidden, Header: http.Header{}, Body: io.NopCloser(strings.NewReader(""))}, nil
+	})
+}
+
 func TestPause_RequestDeadlineIncludesSlotWait(t *testing.T) {
-	g := &failingPauseGate{Memory: sourcegate.NewMemory(), called: make(chan struct{}, 10), allow: make(chan struct{})}
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusForbidden) }))
-	defer server.Close()
-	c := NewWithBase(server.URL, "test", WithLimits(float64(rate.Inf), 1), WithBackoffs(), WithGate(g))
-	c.timeout, c.requestBudget = 30*time.Millisecond, 80*time.Millisecond
-	ctx, cancel := context.WithCancel(sourcegate.WithRunID(context.Background(), 1))
-	defer cancel()
-	ctx = sourcegate.WithActivity(ctx)
-	if _, _, err := c.Detail(ctx, "1"); !errors.Is(err, sourcegate.ErrSourcePaused) {
-		t.Fatalf("initial error = %v", err)
-	}
-	<-g.called
-	c.slots <- struct{}{}
-	go func() { time.Sleep(20 * time.Millisecond); <-c.slots }()
-	started := time.Now()
-	_, _, err := c.Detail(ctx, "2")
-	if !errors.Is(err, sourcegate.ErrSourcePaused) || time.Since(started) > 75*time.Millisecond {
-		t.Fatalf("error = %v, elapsed = %v", err, time.Since(started))
-	}
+	synctest.Test(t, func(t *testing.T) {
+		g := &failingPauseGate{Memory: sourcegate.NewMemory(), called: make(chan struct{}, 10), allow: make(chan struct{})}
+		var requests atomic.Int32
+		c := NewWithBase("http://127.0.0.1", "test", WithTransport(forbiddenTransport(&requests)), WithLimits(float64(rate.Inf), 1), WithBackoffs(), WithGate(g))
+		c.timeout, c.requestBudget = 30*time.Millisecond, 80*time.Millisecond
+		ctx, cancel := context.WithCancel(sourcegate.WithRunID(context.Background(), 1))
+		defer cancel()
+		ctx = sourcegate.WithActivity(ctx)
+		if _, _, err := c.Detail(ctx, "1"); !errors.Is(err, sourcegate.ErrSourcePaused) {
+			t.Fatalf("initial error = %v", err)
+		}
+		<-g.called
+		c.slots <- struct{}{}
+		go func() { timer := time.NewTimer(20 * time.Millisecond); defer timer.Stop(); <-timer.C; <-c.slots }()
+		started := time.Now()
+		_, _, err := c.Detail(ctx, "2")
+		if !errors.Is(err, sourcegate.ErrSourcePaused) || time.Since(started) != 30*time.Millisecond {
+			t.Fatalf("error = %v, elapsed = %v", err, time.Since(started))
+		}
+	})
 }
 
 func TestPause_OwnerRetriesAndStops(t *testing.T) {
 	for _, succeed := range []bool{true, false} {
 		t.Run(map[bool]string{true: "persists", false: "cancel"}[succeed], func(t *testing.T) {
-			g := &failingPauseGate{Memory: sourcegate.NewMemory(), called: make(chan struct{}, 20), allow: make(chan struct{})}
-			var requests atomic.Int32
-			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { requests.Add(1); w.WriteHeader(http.StatusForbidden) }))
-			defer server.Close()
-			c := NewWithBase(server.URL, "test", WithLimits(float64(rate.Inf), 1), WithBackoffs(time.Millisecond), WithGate(g))
-			ctx, cancel := context.WithCancel(sourcegate.WithRunID(context.Background(), 1))
-			defer cancel()
-			ctx = sourcegate.WithActivity(ctx)
-			result := make(chan error, 1)
-			go func() { _, _, err := c.Detail(ctx, "1"); result <- err }()
-			select {
-			case err := <-result:
-				if !errors.Is(err, sourcegate.ErrSourcePaused) {
-					t.Fatalf("error = %v", err)
-				}
-			case <-time.After(20 * time.Millisecond):
-				t.Fatal("403 request waited for pause")
-			}
-			select {
-			case <-g.called:
-			case <-time.After(20 * time.Millisecond):
-				t.Fatal("owner did not try pause")
-			}
-			if succeed {
-				close(g.allow)
+			synctest.Test(t, func(t *testing.T) {
+				g := &failingPauseGate{Memory: sourcegate.NewMemory(), called: make(chan struct{}, 20), allow: make(chan struct{})}
+				var requests atomic.Int32
+				c := NewWithBase("http://127.0.0.1", "test", WithTransport(forbiddenTransport(&requests)), WithLimits(float64(rate.Inf), 1), WithBackoffs(time.Millisecond), WithGate(g))
+				ctx, cancel := context.WithCancel(sourcegate.WithRunID(context.Background(), 1))
+				defer cancel()
+				ctx = sourcegate.WithActivity(ctx)
+				result := make(chan error, 1)
+				go func() { _, _, err := c.Detail(ctx, "1"); result <- err }()
+				synctest.Wait()
 				select {
-				case <-g.called:
-				case <-time.After(30 * time.Millisecond):
-					t.Fatal("owner did not retry")
+				case err := <-result:
+					if !errors.Is(err, sourcegate.ErrSourcePaused) {
+						t.Fatalf("error = %v", err)
+					}
+				default:
+					t.Fatal("403 request waited for pause")
 				}
-				waitCtx, stop := context.WithTimeout(ctx, 40*time.Millisecond)
-				defer stop()
-				if err := c.awaitPause(waitCtx, 1); err != nil && !errors.Is(err, sourcegate.ErrSourcePaused) {
-					t.Fatalf("await: %v", err)
-				}
-				if err := g.Admit(ctx, 1, "vbpl"); !errors.Is(err, sourcegate.ErrSourcePaused) {
-					t.Fatalf("admit: %v", err)
-				}
-				if _, _, err := c.Detail(ctx, "2"); !errors.Is(err, sourcegate.ErrSourcePaused) || requests.Load() != 1 {
-					t.Fatalf("later error = %v, requests = %d", err, requests.Load())
-				}
-			} else {
-				cancel()
 				select {
 				case <-g.called:
 				default:
+					t.Fatal("owner did not try pause")
 				}
-				before := g.writes.Load()
-				time.Sleep(10 * time.Millisecond)
-				if g.writes.Load() != before {
-					t.Fatal("owner continued after cancellation")
+				if succeed {
+					close(g.allow)
+					timer := time.NewTimer(5 * time.Millisecond)
+					defer timer.Stop()
+					select {
+					case <-g.called:
+					case <-timer.C:
+						t.Fatal("owner did not retry")
+					}
+					synctest.Wait()
+					if err := g.Admit(ctx, 1, "vbpl"); !errors.Is(err, sourcegate.ErrSourcePaused) {
+						t.Fatalf("admit: %v", err)
+					}
+					if _, _, err := c.Detail(ctx, "2"); !errors.Is(err, sourcegate.ErrSourcePaused) || requests.Load() != 1 {
+						t.Fatalf("later error = %v, requests = %d", err, requests.Load())
+					}
+				} else {
+					before := g.writes.Load()
+					cancel()
+					synctest.Wait()
+					timer := time.NewTimer(10 * time.Millisecond)
+					<-timer.C
+					synctest.Wait()
+					if g.writes.Load() != before {
+						t.Fatal("owner continued after cancellation")
+					}
 				}
-			}
+			})
 		})
 	}
 }

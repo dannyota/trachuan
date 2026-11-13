@@ -192,3 +192,8 @@ func isChallenge(n *xhtml.Node, b []byte) bool {
 	lower := strings.ToLower(string(b))
 	return !form && (strings.Contains(lower, "captcha") || strings.Contains(lower, "cf-chl") || strings.Contains(lower, "challenge-platform"))
 }
+
+func positiveChallenge(b []byte) bool {
+	lower := strings.ToLower(string(b))
+	return strings.Contains(lower, "cf-chl") || strings.Contains(lower, "challenge-platform")
+}
