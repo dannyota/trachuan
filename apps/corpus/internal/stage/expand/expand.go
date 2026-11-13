@@ -4,6 +4,7 @@ package expand
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -11,6 +12,7 @@ import (
 
 	"danny.vn/trachuan/apps/corpus/internal/artifact"
 	"danny.vn/trachuan/apps/corpus/internal/source"
+	"danny.vn/trachuan/apps/corpus/internal/sourcegate"
 	"danny.vn/trachuan/apps/corpus/internal/stage"
 	"danny.vn/trachuan/apps/corpus/internal/stage/membership"
 	"danny.vn/trachuan/apps/corpus/internal/store"
@@ -69,14 +71,49 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, r stage.Run, item st
 		return out, fmt.Errorf("VBPL client is required")
 	}
 	id := strings.TrimPrefix(item.Key, prefix)
-	detail, decoded, err := s.client.Detail(ctx, id)
+	type result struct {
+		index   int
+		raw     json.RawMessage
+		decoded vbpl.Detail
+		err     error
+	}
+	detailCtx, cancelDetail := context.WithCancel(ctx)
+	defer cancelDetail()
+	diagramCtx, cancelDiagram := context.WithCancel(ctx)
+	defer cancelDiagram()
+	results := make(chan result, 2)
+	go func() {
+		raw, decoded, callErr := s.client.Detail(detailCtx, id)
+		results <- result{index: 0, raw: raw, decoded: decoded, err: callErr}
+	}()
+	go func() {
+		raw, callErr := s.client.Diagram(diagramCtx, id)
+		results <- result{index: 1, raw: raw, err: callErr}
+	}()
+	var calls [2]result
+	for range 2 {
+		res := <-results
+		calls[res.index] = res
+		if errors.Is(res.err, sourcegate.ErrSourcePaused) {
+			cancelDetail()
+			cancelDiagram()
+		} else if res.index == 0 && (res.err != nil || res.decoded.ID != id) {
+			cancelDiagram()
+		}
+	}
+	for _, call := range calls {
+		if errors.Is(call.err, sourcegate.ErrSourcePaused) {
+			return apiError(call.err, id, call.index == 0)
+		}
+	}
+	detail, decoded, err := calls[0].raw, calls[0].decoded, calls[0].err
 	if err != nil {
 		return apiError(err, id, true)
 	}
 	if decoded.ID != id {
 		return stage.Output{State: "gap", Gaps: []stage.Gap{{Kind: "detail_id_mismatch", Detail: fmt.Sprintf("requested %q, received %q", id, decoded.ID)}}}, nil
 	}
-	diagram, err := s.client.Diagram(ctx, id)
+	diagram, err := calls[1].raw, calls[1].err
 	if err != nil {
 		return apiError(err, id, false)
 	}

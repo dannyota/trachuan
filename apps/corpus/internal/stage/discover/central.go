@@ -8,7 +8,6 @@ import (
 
 	"danny.vn/trachuan/apps/corpus/internal/lookup"
 	"danny.vn/trachuan/apps/corpus/internal/source"
-	"danny.vn/trachuan/apps/corpus/internal/vbpl"
 )
 
 func (s *Stage) central(ctx context.Context, dir string, rules source.VBPLSources) error {
@@ -107,12 +106,18 @@ func (s *Stage) central(ctx context.Context, dir string, rules source.VBPLSource
 	}
 	return nil
 }
-func (s *Stage) centralPass(ctx context.Context, dir string, pass int, identity string, definition json.RawMessage) (lookup.Result, map[string]pageReference, error) {
+func (s *Stage) centralPass(ctx context.Context, dir string, pass int, identity string, definition json.RawMessage) (result lookup.Result, references map[string]pageReference, err error) {
+	pages := newCentralPages(ctx, s.client)
+	defer func() {
+		if pause := pages.close(); pause != nil {
+			result, references, err = lookup.Result{}, nil, retryLookup(pause)
+		}
+	}()
 	b := lookup.Builder{QueryIdentity: identity, Query: definition, Items: []lookup.Item{}, Pages: []lookup.Page{}}
 	seen := map[string]bool{}
 	refs := map[string]pageReference{}
 	for page := 1; page <= 100001; page++ {
-		p, err := s.client.List(ctx, vbpl.ListQuery{Page: page, PageSize: 1000, Level: "TRUNG_UONG"})
+		p, err := pages.get(page)
 		if err != nil {
 			return lookup.Result{}, nil, retryLookup(err)
 		}
