@@ -222,8 +222,9 @@ numbered outline (`I.`, `1.`) when one exists. Text under 300 characters is
   entry's hash and its cross-check result, the paragraphs with locators, the
   scopes with their checks, and counts. The artifact of a source-tree document
   is unchanged in every file and in its manifest, so its chunk and embed
-  artifacts are reused; a compatibility test pins the fetch, extract, chunk and
-  embed hashes of recorded documents.
+  artifacts are reused, except for trees with heading-only articles, which
+  [heading-only trees](heading-only-trees.md) reads again; a compatibility test
+  pins the fetch, extract, chunk and embed hashes of recorded documents.
 - Generated node ids are `tx:` plus the first 16 hex characters of the SHA-256
   of the scope index, the anchor and the provision text joined by newlines. The
   id therefore names one text at one anchor in one scope: if text moves to

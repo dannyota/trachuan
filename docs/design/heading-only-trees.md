@@ -44,22 +44,27 @@ transcription when all of these hold:
 4. Every clause and point anchor of the tree occurs among the transcription's
    clause and point anchors (with [clauses and points](text-structure.md)).
 5. The text of every other tree provision (parts, chapters, sections, `other`)
-   occurs in the transcription's text after whitespace collapse.
-6. Every manual correction on the document whose quote occurs in the tree text
-   still occurs in the transcription text under the same anchor.
+   occurs, after whitespace collapse, in the text of the provisions the parser
+   emits from the transcription, not merely in its input paragraphs: text the
+   parser discards (a signature block, a preamble table) does not count.
 
 Then the document's text source is `html_transcription`, and `text.json` records
 that the tree was consulted and set aside, with the counts behind each rule.
 
 Otherwise the tree stays. Then:
 
-- When every article is heading-only, the existing order of later sources
-  applies unchanged: the transcription when it is usable, then `pdf_text` and
-  checked OCR as text extraction orders them, and only when none is usable the
-  tree with the gap `tree_headings_only`. Frozen selection replays the same
-  choice.
-- When some articles hold text, later sources are not used: they cannot be
-  checked against the tree's text. The tree stays with the new gap
+- When the tree passes today's whole-tree test (every node, structure nodes
+  included, holds only its label and heading), the existing order of later
+  sources applies unchanged: the transcription when it is usable, then
+  `pdf_text` and checked OCR as text extraction orders them, and only when none
+  is usable the tree with the gap `tree_headings_only`. Frozen selection replays
+  the same choice. On the measured release no document is in this case: such
+  trees were already read from a later source.
+- When every article is heading-only but the tree fails that test (a section
+  keeps its title in its text, 65 documents measured), later sources are not
+  used: the tree stays with `tree_headings_only`.
+- When some articles hold text, later sources are not used either: they cannot
+  be checked against the tree's text. The tree stays with the new gap
   `tree_headings_partial` (detail: the count of heading-only articles and the
   first rule that failed).
 
@@ -70,13 +75,24 @@ relations from text are not read ([relations text](relations-text.md)). Like
 `tree_headings_only` it is a coverage gap that release acceptance reports and
 that the owner may accept.
 
+Manual corrections are not an extract input: they stay pinned at build planning
+([validity corrections](validity-status.md)). A switch can still invalidate the
+evidence of any correction whose evidence document (its `evidence.key`, else its
+own key) switches, and build fails closed on a quote it cannot find verbatim at
+the evidence anchor. So the implementation checks every such correction against
+the transcription before the run, and a correction that would fail is updated
+first. On the measured release one correction qualifies (`vn:vbpl:2145`,
+evidence in `vn:vbpl:10761` `dieu-20`), and its quote survives verbatim.
+
 ## Effects
 
 - Extract: the 339 switched documents change source; the 368 kept documents gain
-  a gap, which changes their extract manifest too. So extract, relate and chunk
-  repeat for all 707 documents, and embed for the switched ones. The extract
-  recipe changes; this joins the run that carries `textparse/7`. Source-tree
-  documents without a heading-only article keep byte-identical artifacts.
+  a gap, which changes their extract manifest too. So extract, relate, chunk and
+  embed repeat for all 707 documents: chunk binds the extract manifest hash, and
+  embed binds the chunk manifest hash, even where the embedded text of a kept
+  document is unchanged. The extract recipe changes; this joins the run that
+  carries `textparse/7`. Source-tree documents without a heading-only article
+  keep byte-identical artifacts.
 - Citations: article anchors are unchanged by rule 2 and clause anchors by
   rule 4. Structure anchors may change (a source `chuong-i/muc-1` can become a
   parsed `muc-1`); node ids change from source ids to `tx:` ids. The run lists
@@ -100,11 +116,15 @@ The primary runs these; they are requirements, not results.
   from the transcription); anchors that differ; a `~k` anchor; a rejected
   transcription; a changed number, a dropped word and a reordered clause in an
   article that holds text; a tree clause anchor the transcription lacks; a
-  section title missing from the transcription; a correction quote lost; each
-  kept with `tree_headings_partial`.
+  section title missing from the emitted provisions; each kept with
+  `tree_headings_partial`.
+- A correction on another document whose evidence quote sits in a switching
+  document: the pre-run check finds it, and build fails closed if it is missed.
 - A tree whose every article is heading-only and whose sections hold titles:
-  read from a matching transcription; with no usable transcription, falls to
-  `pdf_text` or checked OCR as today; replay of a frozen selection.
+  read from a transcription that passes rules 1 to 5; with none, it keeps the
+  tree with `tree_headings_only` and uses no later source. A tree that passes
+  today's whole-tree test still falls to `pdf_text` or checked OCR as today. A
+  frozen selection replays the same choice.
 - `tree_headings_partial` sets `text_complete` false in build, suppresses text
   relations in relate, appears in coverage and status, and blocks release until
   accepted.
