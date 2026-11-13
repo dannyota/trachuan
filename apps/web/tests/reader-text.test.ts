@@ -19,3 +19,29 @@ it('indents lettered points while preserving the legal text', async () => {
   const point = wrapper.findAll('.law-text').find(element => element.text() === 'a) Point text')
   expect(point?.classes()).toContain('reader-point')
 })
+
+it('wraps the target clause and its points without wrapping the next clause', async () => {
+  const fixture = (await import('./fixtures/reader-171687.json')).default[0]!
+  setupReader([{ data: fixture }])
+  vi.stubGlobal('useRoute', () => ({ params: { key: 'vn:vbpl:171687' }, query: {}, hash: '#dieu-11/khoan-1' }))
+  const wrapper = mount(Reader)
+  await flushPromises()
+  const band = wrapper.get('.reader-unit-target')
+  expect(band.find('[data-anchor="dieu-11/khoan-1"]').exists()).toBe(true)
+  expect(band.find('[data-anchor="dieu-11/khoan-1/diem-a"]').exists()).toBe(true)
+  expect(band.find('[data-anchor="dieu-11/khoan-1/diem-b"]').exists()).toBe(true)
+  expect(band.find('[data-anchor="dieu-11/khoan-2"]').exists()).toBe(false)
+})
+it('renders source labels once for the real provisions', async () => {
+  const fixture = (await import('./fixtures/reader-171687.json')).default[0]!
+  setupReader([{ data: fixture }])
+  const wrapper = mount(Reader)
+  await flushPromises()
+  const article = wrapper.get('[data-anchor="dieu-11"]')
+  expect(article.findAll('h2')).toHaveLength(1)
+  expect(article.get('h2').text()).toContain('Các hình thức xác nhận')
+  expect(article.findAll('.law-text')).toHaveLength(0)
+  expect(wrapper.get('[data-anchor="dieu-11/khoan-1"]').find('h2').exists()).toBe(false)
+  expect(wrapper.get('[data-anchor="dieu-11/khoan-1/diem-a"]').find('h2').exists()).toBe(false)
+  expect(wrapper.get('[data-anchor="chuong-i"]').findAll('.law-text')).toHaveLength(0)
+})
