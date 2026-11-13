@@ -1,0 +1,27 @@
+.site-layout { min-height: 100vh; display: flex; flex-direction: column; }
+.site-main { flex: 1; width: 100%; max-width: 1248px; margin: auto; padding: 32px 24px; }
+.site-header, .site-footer { border-bottom: 1px solid var(--color-line); background: var(--color-page); }
+.header-inner { display: flex; flex-wrap: wrap; align-items: center; gap: 16px 32px; padding-block: 14px; }
+.site-logo { display: inline-flex; align-items: center; gap: 10px; color: var(--color-ink); font-size: 19px; font-weight: 700; text-decoration: none; white-space: nowrap; }
+.site-logo svg { color: var(--color-seal); }
+.header-menu { display: flex; align-items: center; flex: 1; gap: 24px; }
+.site-nav { display: flex; flex-wrap: wrap; flex: 1; gap: 4px 24px; }
+.site-nav a { padding: 10px 0; border-bottom: 2px solid transparent; color: var(--color-muted); font-weight: 500; text-decoration: none; }
+.site-nav a.site-nav--active { color: var(--color-ink); border-color: var(--color-primary); }
+.header-actions { display: flex; align-items: center; gap: 12px; }
+.language-button { padding: 10px 6px; color: var(--color-muted); font-size: 14px; }
+.account-link { display: inline-flex; align-items: center; gap: 8px; color: var(--color-ink); text-decoration: none; }
+.avatar { display: inline-flex; justify-content: center; align-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--color-note); color: var(--color-primary); font-weight: 700; }
+.menu-button { display: none; }
+.site-footer { border-top: 1px solid var(--color-line); border-bottom: 0; }
+.footer-inner { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 28px; padding-block: 28px; color: var(--color-muted); font-size: 14px; }
+.footer-inner a { color: var(--color-muted); }
+.footer-source { margin-left: auto; }
+@media (max-width: 767px) {
+  .site-main { padding: 24px 16px; }
+  .menu-button { display: flex; justify-content: center; align-items: center; min-width: 44px; min-height: 44px; margin-left: auto; padding: 8px; }
+  .header-menu { display: none; flex-basis: 100%; align-items: stretch; flex-direction: column; }
+  .header-menu--open { display: flex; }
+  .site-nav, .header-actions { align-items: stretch; flex-direction: column; }
+  .footer-source { margin-left: 0; }
+}

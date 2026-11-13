@@ -23,7 +23,7 @@ it('renders localized page titles and the wordmark without search query text', (
   ]
   for (const [index, page] of pages.slice(0, 18).entries()) {
     expect(page).toContain(`<title>${titles[Math.floor(index / 9)]![index % 9]} · Tra Chuẩn</title>`)
-    expect(page).toContain('>Tra Chuẩn</a>')
+    expect(page).toMatch(/<a[^>]*class="[^"]*site-logo[^"]*"[^>]*>.*?<span>Tra Chuẩn<\/span><\/a>/)
     expect(page).not.toContain('private-search')
   }
   expect(pages[5]).toContain('<h1>Đăng nhập vào Tra Chuẩn</h1>')

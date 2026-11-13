@@ -1,0 +1,10 @@
+import type { Language } from '../../i18n'
+
+const documents: Record<Language, string> = {
+  vi: '<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Không tìm thấy trang · Tra Chuẩn</title><link rel="stylesheet" href="/static-page.css"></head><body><main><a class="logo" href="/"><svg class="seal" width="34" height="34" viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="52" fill="none" stroke="currentColor" stroke-width="6"></circle><circle cx="60" cy="60" r="40" fill="none" stroke="currentColor" stroke-width="2"></circle><text x="60" y="74" text-anchor="middle" font-family="NotoSerif, Georgia, serif" font-size="40" font-weight="700" fill="currentColor">TC</text></svg>Tra Chuẩn</a><h1>Không tìm thấy trang</h1><p>Trang bạn tìm không tồn tại hoặc không còn được phục vụ.</p><nav><a href="/">Trang chủ</a><a href="/vn/search">Tra cứu</a><a href="/vn/topics">Chủ đề</a></nav></main></body></html>',
+  en: '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Page not found · Tra Chuẩn</title><link rel="stylesheet" href="/static-page.css"></head><body><main><a class="logo" href="/"><svg class="seal" width="34" height="34" viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="52" fill="none" stroke="currentColor" stroke-width="6"></circle><circle cx="60" cy="60" r="40" fill="none" stroke="currentColor" stroke-width="2"></circle><text x="60" y="74" text-anchor="middle" font-family="NotoSerif, Georgia, serif" font-size="40" font-weight="700" fill="currentColor">TC</text></svg>Tra Chuẩn</a><h1>Page not found</h1><p>The page you requested does not exist or is no longer available.</p><nav><a href="/">Home</a><a href="/vn/search">Search</a><a href="/vn/topics">Topics</a></nav></main></body></html>',
+}
+
+export function notFoundDocument(language: Language): string {
+  return documents[language]
+}

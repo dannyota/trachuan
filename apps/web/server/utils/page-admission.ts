@@ -3,6 +3,7 @@ import { getAsset } from '#nitro-internal-virtual/public-assets'
 import { languageFromCookie } from '../../i18n'
 import { clientAddress, createAdmission } from './public-admission'
 import { matchPage } from './page-route'
+import { notFoundDocument } from './not-found'
 
 const admission = createAdmission(Date.now)
 
@@ -47,8 +48,9 @@ export function admitPage(event: H3Event): void {
   }
   if (!page) {
     setResponseStatus(event, 404)
-    setResponseHeader(event, 'Content-Type', 'text/plain; charset=utf-8')
-    event.node.res.end('Not Found\n')
+    setResponseHeader(event, 'Content-Type', 'text/html; charset=utf-8')
+    event.node.res.removeHeader('ETag')
+    event.node.res.end(notFoundDocument(request.headers['x-trachuan-language'] === 'en' ? 'en' : 'vi'))
     return
   }
   if (page.alias) {
