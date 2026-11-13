@@ -83,9 +83,9 @@ Legacy evaluation bypasses only the product diacritics rejection through
 `Engine.PrepareLegacy(ctx,request)` followed by `Engine.Collect`; it still
 enforces size/token and SQL safety limits, and does not restore accents or add
 Qwen instructions. The method is a trusted evaluation API, never exposed by the
-server. All other candidate and shaping choices are recipe 1. Call the result
-`legacy_matcher_on_product_recipe`, not a reproduction of banhmi's engine.
-Compare descriptively with the accepted numbers and the
+server. All other candidate and shaping choices follow the release recipe. Call
+the result `legacy_matcher_on_product_recipe`, not a reproduction of banhmi's
+engine. Compare descriptively with the accepted numbers and the
 [local exact baseline](../research/retrieval-hybrid-results-2026-11.md),
 labeling corpus, model and policy differences; no legacy floor or parity claim.
 
@@ -192,25 +192,25 @@ gates.
 ## Cache and report format
 
 Cache exact dense and lexical arms to the study's maximum trial depths in
-budgets. Recipe-1 responses use only their own shallower prefixes. Store ANN
-recipe-depth raw and fallback lists separately. `arms.jsonl` rows have
+budgets. Release-recipe responses use only their own shallower prefixes. Store
+ANN recipe-depth raw and fallback lists separately. `arms.jsonl` rows have
 `version,case_id,cohort,release_hash,recipe_hashes,evaluation_date, request_as_of,mode,depths,route, eligibility_hash,dense[],lexical[],raw_ann[],fallback,groups[],diagnostics`.
 Entries store chunk id, owning identity, rank and raw cosine or BM25 score;
-`groups[]` holds the recipe-1 groups of the shaped responses. Alternate-group
-evidence, member cosines for other groupings and consolidation family roots are
-deferred to the tuning plan, which hydrates them from the immutable dump and
-these deep arm lists. Exceeding the cache budget fails explicitly. Changing
-tokenizer, prefix or dictionary needs fresh arms. This work implements only
-recipe-1 shaping, not the trial runner.
+`groups[]` holds the release recipe's groups of the shaped responses.
+Alternate-group evidence, member cosines for other groupings and consolidation
+family roots are deferred to the tuning plan, which hydrates them from the
+immutable dump and these deep arm lists. Exceeding the cache budget fails
+explicitly. Changing tokenizer, prefix or dictionary needs fresh arms. This work
+implements only the release recipe's shaping, not the trial runner.
 
 Reuse one query vector per accepted fixture input and recipe across limits, arm
 controls and modes, through one `Engine.Prepare` (or `PrepareLegacy`) per input
 whose vector the cache writes to `queries.f32`. Exact deep-cache prefixes
-produce shallower exact arms; collect ANN separately at recipe-1 depth/settings.
-Record the database instance kind (`built` or `restored`) because restored HNSW
-pages may differ. Eval scores the resolved database it actually opens; the
-primary also runs the CLI after a restore and retains both reports as recovery
-evidence.
+produce shallower exact arms; collect ANN separately at the release recipe's
+depth/settings. Record the database instance kind (`built` or `restored`)
+because restored HNSW pages may differ. Eval scores the resolved database it
+actually opens; the primary also runs the CLI after a restore and retains both
+reports as recovery evidence.
 
 `queries.f32` uses the embedding artifact's binary format; `query-index.json`
 maps case IDs/cohorts to rows, counts, query UTF-8 hashes and query recipe hash.
@@ -253,7 +253,9 @@ summaries hold `{n,p50,p95,p99}` in milliseconds, using the same quantile rule.
 mapped identities, returned identities, arm/fusion/group/cap/abstention losses,
 decision reason, validity gaps and character counts, without query text.
 `previous_diff` is null with a reason when no previous report exists; otherwise
-compare per-case gains/losses and reject incompatible scorer/fixture versions.
-Corpus changes are labeled coverage changes, not an isolated model effect.
-Report low sample size and old-cohort reuse; no superiority interval or claim is
-needed here.
+compare per-case gains/losses and reject incompatible scorer/fixture versions. A
+previous report under another retrieval recipe version stays comparable: the
+diff and the non-regression checks run, and the report labels the comparison
+with both recipe versions, as for corpus changes. Corpus changes are labeled
+coverage changes, not an isolated model effect. Report low sample size and
+old-cohort reuse; no superiority interval or claim is needed here.
