@@ -7,6 +7,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import CopyButton from '../app/components/CopyButton.vue'
 import SiteHeader from '../app/components/SiteHeader.vue'
 import SealLogo from '../app/components/SealLogo.vue'
+import { useSessionStore } from '../app/stores/session'
 
 function setup() {
   vi.stubGlobal('useState', () => ref('en'))
@@ -67,6 +68,20 @@ it('uses the approved seal geometry', () => {
   expect(seal.findAll('circle').map(circle => [circle.attributes('cx'), circle.attributes('cy'), circle.attributes('r'), circle.attributes('stroke-width')])).toEqual([['60', '60', '52', '6'], ['60', '60', '40', '2']])
   expect(seal.get('text').attributes()).toMatchObject({ x: '60', y: '74', 'font-size': '40', 'font-weight': '700' })
   expect(seal.get('text').text()).toBe('TC')
+})
+
+it('excludes the avatar initial from the account link accessible text', () => {
+  setup()
+  setActivePinia(createPinia())
+  useSessionStore().$patch({ status: 'signed-in', account: { id: 1, email: 'test@example.invalid', created_at: '2026-01-01T00:00:00Z' } })
+  vi.stubGlobal('useRoute', () => ({ path: '/', fullPath: '/' }))
+  const wrapper = mount(SiteHeader, { global: { stubs: { NuxtLink: { template: '<a><slot /></a>' }, SealLogo: true } } })
+  const link = wrapper.get('.account-link')
+  expect(link.get('.avatar').text()).toBe('T')
+  const accessible = link.element.cloneNode(true) as HTMLElement
+  accessible.querySelectorAll('[aria-hidden="true"]').forEach(element => element.remove())
+  expect(accessible.textContent).toBe('Account')
+  wrapper.unmount()
 })
 
 it('gives the mobile menu button a centered 44px target', () => {
