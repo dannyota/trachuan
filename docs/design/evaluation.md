@@ -259,6 +259,11 @@ mapped identities, returned identities, arm/fusion/group/cap/abstention losses,
 decision reason, validity gaps and character counts, without query text.
 `previous_diff` is null with a reason when no previous report exists; otherwise
 compare per-case gains/losses and reject incompatible scorer/fixture versions. A
+previous report scored by `agent-eval/3` stays comparable with `agent-eval/4`
+for the product cohorts, because the two differ only in legacy matching: the
+non-regression checks and the old product and development case diffs run, the
+diff names both scorers, and legacy cases are left out of it. Every other scorer
+difference skips the comparison with the reason `incompatible scorer version`. A
 previous report under another retrieval recipe version stays comparable: the
 diff and the non-regression checks run, and the report labels the comparison
 with both recipe versions, as for corpus changes. Corpus changes are labeled
