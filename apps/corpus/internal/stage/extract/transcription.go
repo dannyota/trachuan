@@ -9,6 +9,7 @@ import (
 )
 
 type textRecord struct {
+	Tree         *treeComparison       `json:"tree,omitempty"`
 	TextSource   string                `json:"text_source"`
 	Gap          string                `json:"gap,omitempty"`
 	FileName     string                `json:"file_name"`

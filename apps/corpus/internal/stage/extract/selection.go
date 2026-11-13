@@ -28,6 +28,7 @@ type selection struct {
 	tooLarge, parseLimit    bool
 	consulted               bool
 	entry                   *ocrstore.Entry
+	tree                    *treeComparison
 }
 
 // InputHash binds the fetch manifest and the selected text source.
@@ -137,30 +138,48 @@ func chooseForCheck(ctx context.Context, dir, key string, ocr ocrReader, engines
 			if extractErr != nil {
 				return selection{}, nil, extractErr
 			}
-			if !headingOnly(rows) {
+			headingCount := sourceHeadingCount(rows, nodes)
+			if headingCount == 0 {
 				return selection{source: "source_tree"}, nodes, nil
 			}
 			doc, readErr := fetch.ReadDocument(dir, key)
 			if readErr != nil {
 				return selection{}, nil, fmt.Errorf("read fetch document: %w", readErr)
 			}
-			selected, selectErr := selectOCRFilesMode(ctx, dir, parts[2], doc.Files, ocr, engines, checker, unchecked)
+			if headingOnly(rows) {
+				selected, selectErr := selectOCRFilesMode(ctx, dir, parts[2], doc.Files, ocr, engines, checker, unchecked)
+				if selectErr != nil {
+					return selection{}, nil, selectErr
+				}
+				if selected.source == "ocr" {
+					data, readErr := ocr.ReadText(selected.entry.Text)
+					if readErr == nil {
+						paragraphs, parseErr := textparse.ParagraphsFromText(string(data))
+						if parseErr != nil || len(textparse.Parse(paragraphs).Provisions) == 0 {
+							selected.parseLimit = true
+						}
+					}
+				}
+				if selected.source != "none" && !selected.tooLarge && !selected.parseLimit {
+					return selected, nil, nil
+				}
+				return selection{source: "source_tree", gap: "tree_headings_only", consulted: selected.consulted || selected.source == "none"}, nodes, nil
+			}
+			transcription, selectErr := selectFiles(dir, parts[2], doc.Files, absentOCR{})
 			if selectErr != nil {
 				return selection{}, nil, selectErr
 			}
-			if selected.source == "ocr" {
-				data, readErr := ocr.ReadText(selected.entry.Text)
-				if readErr == nil {
-					paragraphs, parseErr := textparse.ParagraphsFromText(string(data))
-					if parseErr != nil || len(textparse.Parse(paragraphs).Provisions) == 0 {
-						selected.parseLimit = true
-					}
-				}
+			comparison := compareTree(rows, transcription)
+			comparison.HeadingOnlyArticles = headingCount
+			if comparison.SetAside {
+				transcription.tree = comparison
+				return transcription, nil, nil
 			}
-			if selected.source != "none" && !selected.tooLarge && !selected.parseLimit {
-				return selected, nil, nil
+			gap := "tree_headings_partial"
+			if comparison.Articles == comparison.HeadingOnlyArticles {
+				gap = "tree_headings_only"
 			}
-			return selection{source: "source_tree", gap: "tree_headings_only", consulted: selected.consulted || selected.source == "none"}, nodes, nil
+			return selection{source: "source_tree", gap: gap, reason: comparison.detail()}, nodes, nil
 		}
 	}
 	doc, err := fetch.ReadDocument(dir, key)
@@ -186,16 +205,7 @@ func headingOnly(rows []provision) bool {
 		if row.Kind == "dieu" && children[row.NodeID] {
 			return false
 		}
-		text := strings.Join(strings.Fields(row.Text), " ")
-		label := strings.Join(strings.Fields(row.Label), " ")
-		heading := strings.Join(strings.Fields(row.Heading), " ")
-		if text == "" && row.Kind != "dieu" {
-			continue
-		}
-		if text != label && text != label+"." && text != label+" "+heading && text != label+". "+heading {
-			return false
-		}
-		if heading != "" && (text == label || text == label+".") {
+		if !headingTextOnly(row) {
 			return false
 		}
 	}

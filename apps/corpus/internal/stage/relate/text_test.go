@@ -74,7 +74,7 @@ func TestTextRelations_Emission(t *testing.T) {
 }
 
 func TestTextRelations_SourceQualityGate(t *testing.T) {
-	for _, name := range []string{"tree_headings_only", "structure_uncertain", "table_text", "image_content", "ocr_flagged", "ocr_rejected", "ocr_label_flagged", "needs_ocr"} {
+	for _, name := range []string{"tree_headings_only", "tree_headings_partial", "structure_uncertain", "table_text", "image_content", "ocr_flagged", "ocr_rejected", "ocr_label_flagged", "needs_ocr"} {
 		t.Run(name, func(t *testing.T) {
 			dir := t.TempDir()
 			// A gated source must not even read the provisions.
