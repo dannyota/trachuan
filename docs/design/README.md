@@ -18,6 +18,7 @@ Intended behavior of trachuan. Decisions with alternatives are in the
 | [calibration](calibration.md)                       | Provisional abstention threshold                                                              |
 | [text extraction](text-extraction.md)               | Provision trees from HTML transcriptions and attached files when the source has no tree       |
 | [clauses and points](text-structure.md)             | Clause and point provisions inside accepted articles of parsed text, fail closed              |
+| [heading-only trees](heading-only-trees.md)         | When a tree with heading-only articles is read from its transcription                         |
 | [PDF text layer](pdf-text.md)                       | When extract reads a PDF's own text instead of OCR: gate, measured counts, extractor          |
 | [OCR store](ocr-store.md)                           | Stored OCR text and cross-check records, the banhmi import and how extract reads them         |
 | [OCR cross-check](ocr-check.md)                     | How a hosted model checks stored OCR text against its PDF, verdicts, batches and spend limits |

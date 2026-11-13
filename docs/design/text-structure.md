@@ -160,17 +160,9 @@ points.
 
 ## Source trees with heading-only articles
 
-7,324 source-tree articles in 686 documents hold a single short line (a
-heuristic count of heading-only candidates, not yet compared with each heading),
-while other articles of the same tree hold text; the body sits in the bundle's
-transcription. Text extraction already switches a document to its transcription
-when every article is heading-only. For a partial tree the candidate rule is:
-when the transcription's article reading is accepted and its article numbers
-equal the tree's, read the whole document from the transcription; otherwise keep
-the tree and mark the document incomplete. It needs its own measurement (how
-many of the 686 pass the number match, and whether the texts of articles that do
-hold text agree) before it becomes a rule. It comes next after this note, ahead
-of the heading grammar below: these documents lose text, not only structure.
+Measured and decided in [heading-only trees](heading-only-trees.md): 707
+source-tree documents have heading-only articles on `vn/20261112_2`, and 405 of
+them are read from their transcription under that note's anchor and text checks.
 
 ## Older article headings
 

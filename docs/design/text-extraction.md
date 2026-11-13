@@ -41,13 +41,11 @@ the backlog carries them with their counts.
 
 Exactly one source supplies a document's text, chosen in this order:
 
-1. `source_tree`: the source's tree, as today, unless it is a heading-only tree:
-   it has at least one article, no article has a child, and every node's text is
-   only its own label and heading (an article's heading line, a structure node's
-   label and title), so no node anywhere holds body text. A heading-only tree is
-   used only when no later source is usable, and a later source that exceeds a
-   parsing limit is not usable; the document then keeps its provisions and gets
-   the gap `tree_headings_only`.
+1. `source_tree`: the source's tree, as today, unless some of its articles hold
+   only their heading line: then [heading-only trees](heading-only-trees.md)
+   decides, article by article, whether the transcription replaces the tree; a
+   tree kept despite heading-only articles gets `tree_headings_only` (all
+   articles) or `tree_headings_partial` (some).
 2. `html_transcription`: `<id>_content.html` of the bundle when its text has at
    least 300 characters. `_content_origin`, `_body_content` and dated backups
    are never read: the inventory shows they add no document, and where the
@@ -224,8 +222,9 @@ numbered outline (`I.`, `1.`) when one exists. Text under 300 characters is
   entry's hash and its cross-check result, the paragraphs with locators, the
   scopes with their checks, and counts. The artifact of a source-tree document
   is unchanged in every file and in its manifest, so its chunk and embed
-  artifacts are reused; a compatibility test pins the fetch, extract, chunk and
-  embed hashes of recorded documents.
+  artifacts are reused, except for trees with heading-only articles, which
+  [heading-only trees](heading-only-trees.md) reads again; a compatibility test
+  pins the fetch, extract, chunk and embed hashes of recorded documents.
 - Generated node ids are `tx:` plus the first 16 hex characters of the SHA-256
   of the scope index, the anchor and the provision text joined by newlines. The
   id therefore names one text at one anchor in one scope: if text moves to
@@ -235,13 +234,14 @@ numbered outline (`I.`, `1.`) when one exists. Text under 300 characters is
 - Corpus: `document.text_source` (`source_tree`, `html_transcription`, `ocr`,
   `none`; `pdf_text` joins with schema version 5) and
   `document.text_complete boolean`, false when any gap of `tree_headings_only`,
-  `structure_uncertain`, `table_text` (more than a tenth of the characters
-  inside provisions are in tables; letterhead and signature tables outside any
-  provision do not count), `image_content`, `ocr_flagged`, `ocr_rejected`,
-  `ocr_label_flagged` or `needs_ocr` applies; build derives `source_tree` for
-  artifacts without `text.json`. Search and read results return both on the
-  document entry, with each provision's locator (hits, read units, ranges and
-  continued parts alike). This is corpus schema version 4.
+  `tree_headings_partial`, `structure_uncertain`, `table_text` (more than a
+  tenth of the characters inside provisions are in tables; letterhead and
+  signature tables outside any provision do not count), `image_content`,
+  `ocr_flagged`, `ocr_rejected`, `ocr_label_flagged` or `needs_ocr` applies;
+  build derives `source_tree` for artifacts without `text.json`. Search and read
+  results return both on the document entry, with each provision's locator
+  (hits, read units, ranges and continued parts alike). This is corpus schema
+  version 4.
 
 ## Inputs and reuse
 

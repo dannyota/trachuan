@@ -56,18 +56,18 @@ counted gap, never a row and never a guess.
 Text comes from the source document's extract artifact. A source document whose
 extract evidence makes `text_complete` false
 ([text extraction](text-extraction.md#what-is-recorded): `tree_headings_only`,
-`structure_uncertain`, `table_text`, `image_content`, `ocr_flagged`,
-`ocr_rejected`, `ocr_label_flagged` or `needs_ocr`) yields no text relations and
-gets gap `relation_text_source_incomplete`; an incorrectly read sentence must
-not create a relation. For each `dieu` provision whose text is not empty, the
-parser normalizes the text (NFC, whitespace collapsed to one space, ASCII
-digits, letters compared case-insensitively) and splits it into sentences at a
-full stop followed by a space or the end; a full stop inside a number token
-(`39/2016/TT-NHNN.` only at the end) does not split. Quotation marks (`"`,
-`“ ”`, `« »`, `'`) are tracked across the provision: text inside a quotation is
-never a candidate, and a provision with unbalanced quotation marks yields
-nothing with gap `relation_text_unbalanced_quote`. The parser is a hand-written
-scanner over tokens; no pattern language.
+`tree_headings_partial`, `structure_uncertain`, `table_text`, `image_content`,
+`ocr_flagged`, `ocr_rejected`, `ocr_label_flagged` or `needs_ocr`) yields no
+text relations and gets gap `relation_text_source_incomplete`; an incorrectly
+read sentence must not create a relation. For each `dieu` provision whose text
+is not empty, the parser normalizes the text (NFC, whitespace collapsed to one
+space, ASCII digits, letters compared case-insensitively) and splits it into
+sentences at a full stop followed by a space or the end; a full stop inside a
+number token (`39/2016/TT-NHNN.` only at the end) does not split. Quotation
+marks (`"`, `“ ”`, `« »`, `'`) are tracked across the provision: text inside a
+quotation is never a candidate, and a provision with unbalanced quotation marks
+yields nothing with gap `relation_text_unbalanced_quote`. The parser is a
+hand-written scanner over tokens; no pattern language.
 
 A candidate sentence has, in order:
 
