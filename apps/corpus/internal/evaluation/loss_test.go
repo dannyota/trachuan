@@ -16,7 +16,7 @@ func lossCandidate(id int64, doc, anchor string) retrieval.Candidate {
 	return retrieval.Candidate{ChunkID: id, Identity: identity, Group: identity, GroupID: id, ProvisionID: id, Cosine: .9, Document: retrieval.Document{Number: doc, StatusClass: "in_force", IsCurrent: true}, Provision: p, Ancestors: []retrieval.Provision{p}, Descendants: []retrieval.Provision{p}}
 }
 func TestLossDiagnostics_Stages(t *testing.T) {
-	recipe := retrieval.Recipe1()
+	recipe := retrieval.Recipe2()
 	threshold := 0.0
 	recipe.Abstention.Threshold = &threshold
 	recipe.DenseDepth = 2
@@ -78,7 +78,7 @@ func TestCaseLosses_StoredWithHitGaps(t *testing.T) {
 	c := lossCandidate(1, "doc", "one")
 	c.Document.StatusClass = "unknown"
 	c.Document.IsCurrent = false
-	recipe := retrieval.Recipe1()
+	recipe := retrieval.Recipe2()
 	threshold := .95
 	recipe.Abstention.Threshold = &threshold
 	arms := retrieval.Arms{Validation: retrieval.Validation{Accepted: true}, Depths: retrieval.Depths{Dense: 200, Lexical: 100}, Date: retrieval.Date{Year: 2026, Month: time.November, Day: 9}, Primary: retrieval.ArmGroup{Dense: []retrieval.Candidate{c}, Members: []retrieval.Candidate{c}}}
@@ -109,7 +109,7 @@ func TestLossDiagnostics_RelationCandidateUsesEvidenceHash(t *testing.T) {
 }
 
 func TestLossDiagnostics_CapDemotesReturnedCitation(t *testing.T) {
-	recipe := retrieval.Recipe1()
+	recipe := retrieval.Recipe2()
 	threshold := 0.0
 	recipe.Abstention.Threshold = &threshold
 	recipe.DenseDepth = 3
@@ -136,7 +136,7 @@ func TestLossDiagnostics_CapDemotesReturnedCitation(t *testing.T) {
 }
 
 func TestLossDiagnostics_RecordsLateNaturalRank(t *testing.T) {
-	recipe := retrieval.Recipe1()
+	recipe := retrieval.Recipe2()
 	threshold := 0.0
 	recipe.Abstention.Threshold = &threshold
 	a, b := lossCandidate(1, "first", "a"), lossCandidate(2, "second", "b")
@@ -158,7 +158,7 @@ func TestLossDiagnostics_RecordsLateNaturalRank(t *testing.T) {
 }
 
 func TestLossDiagnostics_FirstAlternativeAcrossGroups(t *testing.T) {
-	recipe := retrieval.Recipe1()
+	recipe := retrieval.Recipe2()
 	threshold := 0.0
 	recipe.Abstention.Threshold = &threshold
 	recipe.DocumentCap = 1
@@ -204,7 +204,7 @@ func TestLossDiagnostics_ComplementBeyondTailIsRankLimit(t *testing.T) {
 }
 
 func TestLossDiagnostics_HistoricalComplementBeyondLimit(t *testing.T) {
-	recipe := retrieval.Recipe1()
+	recipe := retrieval.Recipe2()
 	threshold := 0.0
 	recipe.Abstention.Threshold = &threshold
 	primary := []retrieval.Candidate{lossCandidate(1, "a", "a"), lossCandidate(2, "b", "b")}
@@ -227,7 +227,7 @@ func TestLossDiagnostics_HistoricalComplementBeyondLimit(t *testing.T) {
 
 func tailLossTest(t *testing.T, complement bool) {
 	t.Helper()
-	recipe := retrieval.Recipe1()
+	recipe := retrieval.Recipe2()
 	threshold := 0.0
 	recipe.Abstention.Threshold = &threshold
 	primary := []retrieval.Candidate{lossCandidate(1, "a", "a"), lossCandidate(2, "b", "b"), lossCandidate(3, "c", "c")}
@@ -254,7 +254,7 @@ func tailLossTest(t *testing.T, complement bool) {
 }
 
 func TestLossDiagnostics_DefaultTailIncludesComplement(t *testing.T) {
-	recipe := retrieval.Recipe1()
+	recipe := retrieval.Recipe2()
 	threshold := 0.0
 	recipe.Abstention.Threshold = &threshold
 	primary := []retrieval.Candidate{lossCandidate(1, "a", "a"), lossCandidate(2, "b", "b"), lossCandidate(3, "c", "c")}
@@ -276,7 +276,7 @@ func TestLossDiagnostics_DefaultTailIncludesComplement(t *testing.T) {
 }
 
 func TestLossDiagnostics_PrimaryHydrationUsesTailQuota(t *testing.T) {
-	recipe := retrieval.Recipe1()
+	recipe := retrieval.Recipe2()
 	threshold := 0.0
 	recipe.Abstention.Threshold = &threshold
 	var primary []retrieval.Candidate
@@ -318,7 +318,7 @@ func TestCandidateHit_AncestorInArms(t *testing.T) {
 }
 
 func TestLossDiagnostics_ExplicitFalseGroupedPrimaryHydration(t *testing.T) {
-	recipe := retrieval.Recipe1()
+	recipe := retrieval.Recipe2()
 	threshold := 0.0
 	recipe.Abstention.Threshold = &threshold
 	recipe.HydrateMultiplier = 8
@@ -356,7 +356,7 @@ func TestLossDiagnostics_ExplicitFalseGroupedPrimaryHydration(t *testing.T) {
 }
 
 func TestLossDiagnostics_DefaultGroupedPrimaryBackfill(t *testing.T) {
-	recipe := retrieval.Recipe1()
+	recipe := retrieval.Recipe2()
 	threshold := 0.0
 	recipe.Abstention.Threshold = &threshold
 	recipe.HydrateMultiplier = 8

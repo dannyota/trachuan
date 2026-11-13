@@ -45,8 +45,8 @@ func TestNormalizeNumber(t *testing.T) {
 	}
 }
 func TestRecipe1_HashStable(t *testing.T) {
-	r := Recipe1()
-	first, second := r.Hash(), Recipe1().Hash()
+	r := Recipe2()
+	first, second := r.Hash(), Recipe2().Hash()
 	if first == "" || first != second {
 		t.Fatal("unstable hash")
 	}
@@ -72,16 +72,16 @@ func TestValidateQuery_RejectsExcessRunes(t *testing.T) {
 
 func TestRecipe_ValidityPolicyVersionBumped(t *testing.T) {
 	// Recipe 2 changes the serialized version, cap and non-current tail.
-	if got := Recipe1().Hash(); got != "108211da043b1de9c3da72f0306114af730b7d610cec2f5701e62307343e2922" {
+	if got := Recipe2().Hash(); got != "108211da043b1de9c3da72f0306114af730b7d610cec2f5701e62307343e2922" {
 		t.Errorf("hash = %q", got)
 	}
-	if got := Recipe1().Validity; got != "document-dates/3" {
+	if got := Recipe2().Validity; got != "document-dates/3" {
 		t.Errorf("validity = %q", got)
 	}
 }
 
 func TestRecipe1_ContextScopeField(t *testing.T) {
-	b, err := Recipe1().JSON()
+	b, err := Recipe2().JSON()
 	if err != nil || !strings.Contains(string(b), `"context_scope":"number-routed/1"`) {
 		t.Fatalf("recipe = %s, error %v", b, err)
 	}

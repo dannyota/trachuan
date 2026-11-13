@@ -53,7 +53,7 @@ func TestPresent_HydratesIntraDocumentEndpoints(t *testing.T) {
 		if len(rels[tc.id]) != 2 {
 			t.Fatalf("group %d relations: %+v", tc.id, rels[tc.id])
 		}
-		shaped, _ := shapeRelations(rels[tc.id], Recipe1(), Identity{})
+		shaped, _ := shapeRelations(rels[tc.id], Recipe2(), Identity{})
 		if len(shaped) != 2 || shaped[0].Kind != "cites" || shaped[0].SourceInHit || shaped[0].TargetInHit || shaped[1].Kind != "repeals" || shaped[1].SourceInHit != tc.source || shaped[1].TargetInHit != tc.target {
 			t.Fatalf("group %d relations: %+v", tc.id, shaped)
 		}

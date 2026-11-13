@@ -9,7 +9,7 @@ import (
 func TestRank_FirstBestCosineWithoutThreshold(t *testing.T) {
 	c := Candidate{ChunkID: 1, GroupID: 1, Group: Identity{DocumentKey: "vn:1"}, Cosine: 0.4}
 	a := Arms{Validation: Validation{Accepted: true}, Depths: Depths{Dense: 50, Lexical: 50}, Primary: ArmGroup{Dense: []Candidate{c}, Members: []Candidate{c}}}
-	r, err := Rank(a, Recipe1(), 8, "hybrid")
+	r, err := Rank(a, Recipe2(), 8, "hybrid")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -20,7 +20,7 @@ func TestRank_FirstBestCosineWithoutThreshold(t *testing.T) {
 
 func TestFuse_WeightedRRFWithMissingArm(t *testing.T) {
 	a := rankFixture([]Candidate{rankCandidate(1, 1, "a", .4), rankCandidate(2, 2, "b", .5)}, []Candidate{rankCandidate(2, 2, "b", .5)})
-	got, err := Rank(a, Recipe1(), 8, "hybrid")
+	got, err := Rank(a, Recipe2(), 8, "hybrid")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -31,7 +31,7 @@ func TestFuse_WeightedRRFWithMissingArm(t *testing.T) {
 
 func TestFuse_TiesByChunkID(t *testing.T) {
 	a := rankFixture([]Candidate{rankCandidate(2, 2, "b", .4)}, []Candidate{rankCandidate(1, 1, "a", .5)})
-	recipe := Recipe1()
+	recipe := Recipe2()
 	recipe.RRF.LexicalWeight = 1
 	got, err := Rank(a, recipe, 8, "hybrid")
 	if err != nil {
@@ -45,7 +45,7 @@ func TestFuse_TiesByChunkID(t *testing.T) {
 func TestFuse_RoutedLexicalWeight(t *testing.T) {
 	a := rankFixture([]Candidate{rankCandidate(2, 2, "b", .4)}, []Candidate{rankCandidate(1, 1, "a", .5)})
 	a.Validation.Routed = true
-	got, err := Rank(a, Recipe1(), 8, "hybrid")
+	got, err := Rank(a, Recipe2(), 8, "hybrid")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -56,7 +56,7 @@ func TestFuse_RoutedLexicalWeight(t *testing.T) {
 
 func TestGroup_MaxReducerNeverSums(t *testing.T) {
 	a := rankFixture([]Candidate{rankCandidate(1, 1, "a", .4), rankCandidate(2, 2, "b", .5), rankCandidate(3, 2, "b", .9)}, nil)
-	got, err := Rank(a, Recipe1(), 8, "hybrid")
+	got, err := Rank(a, Recipe2(), 8, "hybrid")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -68,7 +68,7 @@ func TestGroup_MaxReducerNeverSums(t *testing.T) {
 func TestCap_FivePerDocumentWithDemotedBackfill(t *testing.T) {
 	// Recipe 2 raises the diversity cap to five.
 	a := rankFixture([]Candidate{rankCandidate(1, 1, "a", .4), rankCandidate(2, 2, "a", .4), rankCandidate(3, 3, "a", .4), rankCandidate(4, 4, "a", .4), rankCandidate(5, 5, "a", .4), rankCandidate(6, 6, "a", .4), rankCandidate(7, 7, "b", .4)}, nil)
-	got, err := Rank(a, Recipe1(), 7, "hybrid")
+	got, err := Rank(a, Recipe2(), 7, "hybrid")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -89,7 +89,7 @@ func rankFixture(dense, lexical []Candidate) Arms {
 func TestRank_CacheInsufficientFails(t *testing.T) {
 	a := rankFixture([]Candidate{rankCandidate(1, 1, "a", .4)}, nil)
 	a.Primary.Members = nil
-	_, err := Rank(a, Recipe1(), 8, "hybrid")
+	_, err := Rank(a, Recipe2(), 8, "hybrid")
 	if !errors.Is(err, ErrCacheInsufficient) {
 		t.Fatalf("got %v, want cache insufficient", err)
 	}
@@ -97,7 +97,7 @@ func TestRank_CacheInsufficientFails(t *testing.T) {
 
 func TestRank_SingleArmRemovesOtherArmBeforeFusion(t *testing.T) {
 	a := rankFixture([]Candidate{rankCandidate(1, 1, "a", .4)}, []Candidate{rankCandidate(2, 2, "b", .5)})
-	got, err := Rank(a, Recipe1(), 8, "lexical")
+	got, err := Rank(a, Recipe2(), 8, "lexical")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -112,7 +112,7 @@ func TestGroup_PointRollsUpToNearestClause(t *testing.T) {
 	point := rankCandidate(2, 12, "a", .9)
 	point.Group = clause.Group
 	a := rankFixture([]Candidate{clause, point}, nil)
-	got, err := Rank(a, Recipe1(), 8, "hybrid")
+	got, err := Rank(a, Recipe2(), 8, "hybrid")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -125,7 +125,7 @@ func TestGroup_ArticleOwnedStaysArticle(t *testing.T) {
 	article.Group = Identity{DocumentKey: "a", Anchor: "article"}
 	clause := rankCandidate(2, 12, "a", .5)
 	clause.Group = Identity{DocumentKey: "a", Anchor: "clause"}
-	got, err := Rank(rankFixture([]Candidate{article, clause}, nil), Recipe1(), 8, "hybrid")
+	got, err := Rank(rankFixture([]Candidate{article, clause}, nil), Recipe2(), 8, "hybrid")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -150,7 +150,7 @@ func testCapOverride(t *testing.T, value string, want int) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	got, err := Rank(rankFixture(candidates, nil), Recipe1(), 5, "hybrid", cap)
+	got, err := Rank(rankFixture(candidates, nil), Recipe2(), 5, "hybrid", cap)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -166,7 +166,7 @@ func testCapOverride(t *testing.T, value string, want int) {
 }
 
 func TestCapOverride_EvalOnly(t *testing.T) {
-	recipe := Recipe1()
+	recipe := Recipe2()
 	before := recipe.Hash()
 	cap, err := ParseCapOverride("none")
 	if err != nil {
@@ -176,7 +176,7 @@ func TestCapOverride_EvalOnly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if recipe.Hash() != before || Recipe1().Hash() != before {
+	if recipe.Hash() != before || Recipe2().Hash() != before {
 		t.Fatal("recipe hash changed")
 	}
 	if _, ok := reflect.TypeOf(Request{}).FieldByName("CapOverride"); ok {

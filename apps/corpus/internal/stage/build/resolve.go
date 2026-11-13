@@ -161,14 +161,7 @@ func databaseOwnership(ctx context.Context, conn *pgx.Conn, name string) (bool, 
 
 // VerifyForRun finds and verifies the committed build artifact without opening a corpus database.
 func VerifyForRun(ctx context.Context, cfg Config, q store.Querier, artifacts artifact.Store, run stage.Run) (artifact.Result, error) {
-	art, err := committedBuild(ctx, cfg, q, artifacts, run)
-	if err != nil {
-		return artifact.Result{}, err
-	}
-	if _, _, err := verifyBuildArtifact(artifacts, art, run, cfg); err != nil {
-		return artifact.Result{}, fmt.Errorf("verify committed build artifact: %w", err)
-	}
-	return art, nil
+	return committedBuild(ctx, cfg, q, artifacts, run)
 }
 
 func committedBuild(ctx context.Context, cfg Config, q store.Querier, artifacts artifact.Store, run stage.Run) (artifact.Result, error) {
@@ -199,11 +192,11 @@ func committedBuild(ctx context.Context, cfg Config, q store.Querier, artifacts 
 			return artifact.Result{}, errors.New("invalid committed build artifact")
 		}
 		art := artifact.Result{Path: *item.Path, SHA256: *item.ArtifactSHA256, InputHash: *item.InputHash}
-		if *item.RecipeHash != New(cfg).Recipe(run.Snapshot) {
-			// Inspect the record before rejecting an older recipe so recovery is clear.
-			if _, _, err := verifyBuildArtifact(artifacts, art, run, cfg); err != nil {
-				return artifact.Result{}, fmt.Errorf("verify committed build artifact: %w", err)
-			}
+		record, _, err := verifyBuildArtifact(artifacts, art, run, cfg)
+		if err != nil {
+			return artifact.Result{}, fmt.Errorf("verify committed build artifact: %w", err)
+		}
+		if !New(cfg).acceptsRecipeHash(run.Snapshot, *item.RecipeHash) || record.BuildRecipeHash != *item.RecipeHash {
 			return artifact.Result{}, errors.New("invalid committed build artifact")
 		}
 		return art, nil

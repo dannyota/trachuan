@@ -50,7 +50,7 @@ func readFixture(t *testing.T) (*pgxpool.Pool, *Engine) {
 	for _, n := range nodes {
 		readExec(t, db, `INSERT INTO provision(id,document_id,parent_id,node_id,kind,label,heading,ordinal,preorder,path,text,anchor) VALUES($1,$2,$3,$4,$5,$6,'heading',$8,$8,$4::text::ltree,$7,$4)`, n.id, n.doc, n.parent, fmt.Sprintf("p%d", n.id), n.kind, n.label, n.text, n.id)
 	}
-	return db, &Engine{db: db, release: Release{Rel: "20991110_1", RetrievalRecipe: Recipe1()}, options: fixtureOptions()}
+	return db, &Engine{db: db, release: Release{Rel: "20991110_1", RetrievalRecipe: Recipe2()}, options: fixtureOptions()}
 }
 
 func readExec(t *testing.T, db *pgxpool.Pool, sql string, args ...any) {

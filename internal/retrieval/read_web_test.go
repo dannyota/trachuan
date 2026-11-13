@@ -143,7 +143,7 @@ func (tx *documentHashTx) QueryRow(_ context.Context, _ string, _ ...any) pgx.Ro
 func TestDocuments_WholeScopeAndCacheStaySeparateFromMCP(t *testing.T) {
 	now := func() time.Time { return time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC) }
 	cache := &memoryCache{}
-	e := &Engine{release: Release{Rel: "20991110_1", RetrievalRecipe: Recipe1()}, options: Options{Now: now, Sequences: cache}}
+	e := &Engine{release: Release{Rel: "20991110_1", RetrievalRecipe: Recipe2()}, options: Options{Now: now, Sequences: cache}}
 	tx := &documentHashTx{}
 	c := webCursor()
 	cold, _, save, err := e.readItem(t.Context(), tx, c, false, c.PageCap, true)

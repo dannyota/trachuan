@@ -25,8 +25,13 @@ func buildSearchWalk(arms Arms, recipe Recipe, firstLimit int, mode ArmMode) (se
 	if err != nil {
 		return w, err
 	}
-	w.primary = prefixGroups(first.primary, primary.Groups)
-	w.nonCurrent = prefixGroups(first.nonCurrent, other.Groups)
+	if recipe.SiblingMerge == "article-clauses/1" {
+		w.primary = prefixConstituents(first.primary, primary.Groups)
+		w.nonCurrent = prefixConstituents(first.nonCurrent, other.Groups)
+	} else {
+		w.primary = prefixGroups(first.primary, primary.Groups)
+		w.nonCurrent = prefixGroups(first.nonCurrent, other.Groups)
+	}
 	return w, nil
 }
 
@@ -56,7 +61,7 @@ func (w *searchWalk) filter(req Request, nodes map[int64][]string, docs map[stri
 	for _, groups := range []*[]Group{&w.primary, &w.nonCurrent} {
 		in, out := []Group{}, []Group{}
 		for _, g := range *groups {
-			match := matchesFilter(req, g.Identity, w.nodes[g.Best.GroupID], docs[g.Identity.DocumentKey])
+			match := matchesFilter(req, g.Identity, w.nodes[groupNodeID(g)], docs[g.Identity.DocumentKey])
 			w.inside[g.Identity] = match
 			if match {
 				in = append(in, g)

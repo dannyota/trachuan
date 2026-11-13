@@ -3,14 +3,14 @@ package retrieval
 import "testing"
 
 func TestRecipe2_CapAndTailValues(t *testing.T) {
-	r := Recipe1()
+	r := Recipe2()
 	if r.Version != 2 || r.DocumentCap != 5 || r.NonCurrentTail != 2 {
 		t.Fatalf("recipe: %+v", r)
 	}
 }
 
 func TestRecipeHash_ChangesWithTail(t *testing.T) {
-	r := Recipe1()
+	r := Recipe2()
 	before := r.Hash()
 	r.NonCurrentTail = 0
 	if r.Hash() == before {

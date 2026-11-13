@@ -17,7 +17,7 @@ func shapeFixture(text string) (Arms, Recipe) {
 	c := Candidate{ChunkID: 1, GroupID: 2, ProvisionID: 2, Group: id, Identity: id, Provision: clause, Ancestors: []Provision{article, clause}, Descendants: []Provision{clause}, Document: Document{StatusClass: "in_force", IsCurrent: true, EffectiveFrom: &start}, Cosine: .5}
 	a := rankFixture([]Candidate{c}, nil)
 	a.Date = Date{2025, time.January, 1}
-	recipe := Recipe1()
+	recipe := Recipe2()
 	threshold := .5
 	recipe.Abstention.Threshold = &threshold
 	return a, recipe
@@ -343,7 +343,7 @@ func TestShape_MissingTreeFails(t *testing.T) {
 }
 
 func TestSearch_ValidationRejectionRetainsRelease(t *testing.T) {
-	r := Recipe1()
+	r := Recipe2()
 	threshold := .5
 	r.Abstention.Threshold = &threshold
 	e := Engine{release: Release{Rel: "release-1", RetrievalRecipe: r}, options: Options{Now: func() time.Time { return time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC) }}}

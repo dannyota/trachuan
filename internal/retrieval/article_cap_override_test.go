@@ -26,7 +26,7 @@ func TestArticleCap_Rank(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			cap := ArticleCapOverride(1)
-			got, err := RankWithArticleCap(rankFixture(candidates, nil), Recipe1(), tc.limit, "hybrid", tc.document, &cap)
+			got, err := RankWithArticleCap(rankFixture(candidates, nil), Recipe2(), tc.limit, "hybrid", tc.document, &cap)
 			if err != nil {
 				t.Fatal(err)
 			}

@@ -161,6 +161,7 @@ type Arms struct {
 	IncludeNonCurrent bool
 	EffectiveNodes    map[int64][]string
 	Nodes             map[string]NodeRef
+	Articles          map[int64]Candidate `json:",omitempty"`
 	Primary           ArmGroup
 	NonCurrent        ArmGroup
 }

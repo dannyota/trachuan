@@ -56,7 +56,7 @@ func TestReadCache_OversizedSequenceAllocatesNoBuffer(t *testing.T) {
 }
 
 func TestReadCache_OversizedRangeMatchesUncachedUnderDeadline(t *testing.T) {
-	e := &Engine{release: Release{Rel: "20990101", RetrievalRecipe: Recipe1()}, options: Options{Now: time.Now}}
+	e := &Engine{release: Release{Rel: "20990101", RetrievalRecipe: Recipe2()}, options: Options{Now: time.Now}}
 	c := cursor{V: 1, Release: e.release.Rel, Item: ReadItem{Handle: "vn:1", From: "p1", To: "p1"}}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

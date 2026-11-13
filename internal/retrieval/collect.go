@@ -131,6 +131,17 @@ func (e *Engine) collectWithLexical(ctx context.Context, p Prepared, depths Dept
 			}
 		}
 	}
+	if e.release.RetrievalRecipe.SiblingMerge == "article-clauses/1" {
+		articleIDs, hydrateErr := hydrateSiblingArticles(ctx, tx, &result)
+		if hydrateErr != nil {
+			return Arms{}, hydrateErr
+		}
+		for _, id := range articleIDs {
+			if !seenGroups[id] {
+				groupIDs = append(groupIDs, id)
+			}
+		}
+	}
 	result.EffectiveNodes, result.Nodes, err = e.loadEffectiveNodes(ctx, tx, groupIDs)
 	if err != nil {
 		return Arms{}, err

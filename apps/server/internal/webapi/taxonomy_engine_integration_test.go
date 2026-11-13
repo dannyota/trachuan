@@ -91,7 +91,7 @@ func taxonomyIntegrationEngine(t *testing.T) *retrieval.Engine {
 	exec(`INSERT INTO taxonomy_node(id,country,parent_id,level,code,name,description,origin,status,path,ordinal,provision_count,document_count) VALUES (1,'vn',NULL,1,'1','Root','Root description','custom','active','n1',1,1,1), (2,'vn',1,2,'1.1','Family','Family description','custom','active','n1.n2',1,1,1);
  INSERT INTO taxonomy_assignment(provision_id,node_id,family_id,method,exclude,confidence,taxonomy_version) VALUES(1,2,2,'manual',false,1,'v1')`)
 	now := func() time.Time { return time.Date(2099, 11, 10, 0, 0, 0, 0, time.UTC) }
-	recipe := retrieval.Recipe1()
+	recipe := retrieval.Recipe2()
 	threshold := 0.1
 	recipe.Abstention.Threshold = &threshold
 	recipe.Abstention.CalibrationSHA256 = hash

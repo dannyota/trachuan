@@ -23,7 +23,7 @@ func TestOpen_ClosedPoolDuringOpeningIsReleaseGone(t *testing.T) {
 	}
 	pool.Close() // Never connect to PostgreSQL.
 	hash := strings.Repeat("a", 64)
-	release := Release{Country: "vn", Rel: "20990101", SchemaVersion: corpusdb.SchemaVersion, RetrievalRecipe: Recipe1(), LexicalRecipe: lexical.Recipe1(), ChunkRecipe: json.RawMessage(`{}`), EvaluationSummary: json.RawMessage(`{}`), SourceManifestHash: hash, BuildInputHash: hash, BuildRecipeHash: hash, BuiltAt: time.Now(), LexicalStats: lexical.StatsSummary{Version: 1, AvgDL: 1, VocabularySHA256: hash, DFSHA256: hash}}
+	release := Release{Country: "vn", Rel: "20990101", SchemaVersion: corpusdb.SchemaVersion, RetrievalRecipe: Recipe2(), LexicalRecipe: lexical.Recipe1(), ChunkRecipe: json.RawMessage(`{}`), EvaluationSummary: json.RawMessage(`{}`), SourceManifestHash: hash, BuildInputHash: hash, BuildRecipeHash: hash, BuiltAt: time.Now(), LexicalStats: lexical.StatsSummary{Version: 1, AvgDL: 1, VocabularySHA256: hash, DFSHA256: hash}}
 	for _, stage := range []string{"metadata", "dimensions"} {
 		t.Run(stage, func(t *testing.T) {
 			var err error
@@ -79,10 +79,37 @@ func TestOpenDraft_WrapsRecipeFailure(t *testing.T) {
 	}
 	defer pool.Close()
 	hash := strings.Repeat("a", 64)
-	release := Release{Country: "vn", Rel: "20990101", SchemaVersion: corpusdb.SchemaVersion, RetrievalRecipe: Recipe1(), LexicalRecipe: lexical.Recipe1(), ChunkRecipe: json.RawMessage(`{}`), EvaluationSummary: json.RawMessage(`{}`), SourceManifestHash: hash, BuildInputHash: hash, BuildRecipeHash: hash, BuiltAt: time.Now(), LexicalStats: lexical.StatsSummary{Version: 1, AvgDL: 1, VocabularySHA256: hash, DFSHA256: hash}}
+	release := Release{Country: "vn", Rel: "20990101", SchemaVersion: corpusdb.SchemaVersion, RetrievalRecipe: Recipe2(), LexicalRecipe: lexical.Recipe1(), ChunkRecipe: json.RawMessage(`{}`), EvaluationSummary: json.RawMessage(`{}`), SourceManifestHash: hash, BuildInputHash: hash, BuildRecipeHash: hash, BuiltAt: time.Now(), LexicalStats: lexical.StatsSummary{Version: 1, AvgDL: 1, VocabularySHA256: hash, DFSHA256: hash}}
 	cause := errors.New("query recipe mismatch: details")
 	_, err = OpenDraft(context.Background(), pool, failingRecipeEmbedder{cause}, release, Options{Now: time.Now, Profile: "serving"})
 	if !errors.Is(err, cause) || !strings.Contains(err.Error(), "read embedder recipe failed: query recipe mismatch: details") {
 		t.Fatalf("recipe error = %v", err)
+	}
+}
+
+func TestOpenDraft_ReleaseRecipePairs(t *testing.T) {
+	pool, err := pgxpool.New(context.Background(), "postgres://localhost/unused")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pool.Close()
+	hash := strings.Repeat("a", 64)
+	release := Release{Country: "vn", Rel: "20990101", SchemaVersion: corpusdb.SchemaVersion, LexicalRecipe: lexical.Recipe1(), ChunkRecipe: json.RawMessage(`{}`), EvaluationSummary: json.RawMessage(`{}`), SourceManifestHash: hash, BuildInputHash: hash, BuildRecipeHash: hash, BuiltAt: time.Now(), LexicalStats: lexical.StatsSummary{Version: 1, AvgDL: 1, VocabularySHA256: hash, DFSHA256: hash}}
+	reached := errors.New("metadata accepted")
+	for _, tc := range []struct {
+		version int
+		merge   string
+		valid   bool
+	}{{2, "", true}, {3, "article-clauses/1", true}, {3, "", false}, {2, "article-clauses/1", false}, {1, "", false}, {4, "article-clauses/1", false}} {
+		release.RetrievalRecipe = Recipe2()
+		release.RetrievalRecipe.Version, release.RetrievalRecipe.SiblingMerge = tc.version, tc.merge
+		_, err = OpenDraft(context.Background(), pool, failingRecipeEmbedder{reached}, release, Options{Now: time.Now, Profile: "serving"})
+		if tc.valid {
+			if !errors.Is(err, reached) {
+				t.Fatalf("recipe %d %q: %v", tc.version, tc.merge, err)
+			}
+		} else if err == nil || err.Error() != "invalid release metadata" {
+			t.Fatalf("accepted recipe %d %q: %v", tc.version, tc.merge, err)
+		}
 	}
 }

@@ -8,7 +8,7 @@ import (
 	"danny.vn/trachuan/internal/retrieval"
 )
 
-func siblingLossFixture(t *testing.T) (retrieval.Arms, retrieval.Recipe, *retrieval.SiblingMerge) {
+func siblingLossFixture(t *testing.T) (retrieval.Arms, retrieval.Recipe) {
 	t.Helper()
 	engine := &siblingResultEngine{fakeEngine{date: retrieval.Date{Year: 2026, Month: 11, Day: 9}}}
 	arms, err := engine.Collect(context.Background(), retrieval.Prepared{Validation: retrieval.Validation{Accepted: true}}, retrieval.Depths{Dense: 200, Lexical: 100})
@@ -29,24 +29,25 @@ func siblingLossFixture(t *testing.T) (retrieval.Arms, retrieval.Recipe, *retrie
 		c.Spans = []byte(fmt.Sprintf(`[{"node_id":"article","start":0,"end":4,"content_start":0,"content_end":4,"role":"lead"},{"node_id":%q,"start":0,"end":%d,"content_start":5,"content_end":%d,"role":"body"}]`, p.NodeID, len([]rune(text)), 5+len([]rune(text))))
 	}
 	arms.Primary = retrieval.ArmGroup{Dense: members, Lexical: members, Members: members}
-	merge, err := engine.HydrateSiblingMerge(context.Background(), arms)
-	if err != nil {
-		t.Fatal(err)
+	nodes := []retrieval.Provision{article}
+	for _, c := range members {
+		nodes = append(nodes, c.Descendants...)
 	}
+	arms.Articles = map[int64]retrieval.Candidate{article.ID: {GroupID: article.ID, Identity: article.Identity, Group: article.Identity, Ancestors: []retrieval.Provision{article}, Descendants: nodes, Document: members[0].Document}}
 	recipe := engine.Release().RetrievalRecipe
 	recipe.EvidenceRuneCap = 20
-	return arms, recipe, merge
+	return arms, recipe
 }
 
 func TestMergeSiblings_ClippedMemberLossIsGrouping(t *testing.T) {
 	for _, nonCurrent := range []bool{false, true} {
 		t.Run(fmt.Sprintf("non_current_%t", nonCurrent), func(t *testing.T) {
-			arms, recipe, merge := siblingLossFixture(t)
+			arms, recipe := siblingLossFixture(t)
 			if nonCurrent {
 				arms.NonCurrent = arms.Primary
 				arms.Primary = retrieval.ArmGroup{}
 			}
-			response, err := merge.Shape(arms, recipe, 8, "hybrid", nil, nil)
+			response, err := retrieval.Shape(arms, recipe, 8, "hybrid")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -59,7 +60,7 @@ func TestMergeSiblings_ClippedMemberLossIsGrouping(t *testing.T) {
 			if MatchProduct(entry, hits) != 0 {
 				t.Fatal("clipped clause received credit")
 			}
-			losses, _, err := caseDiagnostics(arms, recipe, 8, "hybrid", "old_product", []Expectation{{DocNumber: "doc"}}, map[int]MapEntry{0: entry}, response, nil, merge)
+			losses, _, err := caseDiagnostics(arms, recipe, 8, "hybrid", "old_product", []Expectation{{DocNumber: "doc"}}, map[int]MapEntry{0: entry}, response, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -71,13 +72,13 @@ func TestMergeSiblings_ClippedMemberLossIsGrouping(t *testing.T) {
 }
 
 func TestMergeSiblings_LateGroupLossRemainsRankLimit(t *testing.T) {
-	arms, recipe, merge := siblingLossFixture(t)
+	arms, recipe := siblingLossFixture(t)
 	late := lossCandidate(10, "other", "late")
 	arms.Primary.Dense = append(arms.Primary.Dense, late)
 	arms.Primary.Lexical = append(arms.Primary.Lexical, late)
 	arms.Primary.Members = append(arms.Primary.Members, late)
 	recipe.NonCurrentTail = 0
-	response, err := merge.Shape(arms, recipe, 1, "hybrid", nil, nil)
+	response, err := retrieval.Shape(arms, recipe, 1, "hybrid")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -86,7 +87,7 @@ func TestMergeSiblings_LateGroupLossRemainsRankLimit(t *testing.T) {
 	}
 	anchor := "late"
 	entry := MapEntry{State: "resolved", Alternatives: []Alternative{{Country: "vn", DocumentKey: "other", Anchor: &anchor, Kind: "provision"}}}
-	stage, err := diagnoseLoss(arms, recipe, 1, "hybrid", "old_product", Expectation{}, entry, response, nil, merge)
+	stage, err := diagnoseLoss(arms, recipe, 1, "hybrid", "old_product", Expectation{}, entry, response, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -67,7 +67,7 @@ func corpusFixtureWithBuilder(t *testing.T, builder testpg.Builder) (*Resolver, 
 	query, document := embedding.QueryRecipe1(), embedding.DocumentRecipe1()
 	dense := retrieval.DenseRecipe{Version: 1, Model: query.Model, Dimensions: query.Dimensions, Query: query, QueryHash: query.Hash(), Document: document, DocumentHash: document.Hash()}
 	hash := strings.Repeat("a", 64)
-	recipe := retrieval.Recipe1()
+	recipe := retrieval.Recipe2()
 	threshold := 0.1
 	recipe.Abstention.Threshold = &threshold
 	recipe.Abstention.CalibrationSHA256 = hash

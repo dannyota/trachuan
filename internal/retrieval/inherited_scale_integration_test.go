@@ -74,7 +74,7 @@ func TestHydrate_InheritedEvidenceIsBounded(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, id := range ids {
-		rels, gaps := shapeRelations(relations[id], Recipe1(), Identity{DocumentKey: "vn:1", Anchor: fmt.Sprintf("clause-%d", id-1000)})
+		rels, gaps := shapeRelations(relations[id], Recipe2(), Identity{DocumentKey: "vn:1", Anchor: fmt.Sprintf("clause-%d", id-1000)})
 		if len(rels) != 20 || len(gaps) != 1 || rels[0].Kind != "cites" || rels[1].Evidence != "evidence-1" || rels[19].Evidence != "evidence-19" {
 			t.Fatalf("group %d relations: %+v gaps %+v", id, rels, gaps)
 		}

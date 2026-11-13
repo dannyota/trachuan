@@ -113,7 +113,8 @@ func groupMatches(arms retrieval.Arms, recipe retrieval.Recipe, candidate retrie
 	return diagnosticRank(cohort, e, entry, response.Hits) > 0, nil
 }
 func diagnoseLoss(arms retrieval.Arms, recipe retrieval.Recipe, limit int, mode retrieval.ArmMode, cohort string, e Expectation, entry MapEntry, response retrieval.Response, tail *int, overrides ...any) (string, error) {
-	articleCap, merge := diagnosticOverrides(overrides)
+	articleCap := diagnosticArticleCap(overrides)
+	merge := recipe.SiblingMerge == "article-clauses/1"
 	hits := append(append([]retrieval.Hit{}, response.Hits...), response.NonCurrent...)
 	rank := diagnosticRank(cohort, e, entry, hits)
 	effectiveTail := min(recipe.NonCurrentTail, limit/2)
@@ -146,7 +147,7 @@ func diagnoseLoss(arms retrieval.Arms, recipe retrieval.Recipe, limit int, mode 
 	if len(response.Hits) > len(shaped.Groups) {
 		primaryLimit = limit
 	}
-	if merge != nil {
+	if merge {
 		primaryLimit = limit
 	}
 	items = items[:min(len(items), recipe.HydrateMultiplier*primaryLimit)]
@@ -165,9 +166,9 @@ func diagnoseLoss(arms retrieval.Arms, recipe retrieval.Recipe, limit int, mode 
 		return "fusion", nil
 	}
 	groupMatch := false
-	if merge != nil {
+	if merge {
 		var err error
-		groupMatch, err = siblingGroupsMatch(merge, arms, recipe, limit, mode, cohort, e, entry, includeComplement)
+		groupMatch, err = siblingGroupsMatch(arms, recipe, limit, mode, cohort, e, entry, includeComplement)
 		if err != nil {
 			return "", err
 		}
@@ -200,9 +201,7 @@ func diagnoseLoss(arms retrieval.Arms, recipe retrieval.Recipe, limit int, mode 
 	uncapped.DocumentCap = limit + len(items)
 	var alternate retrieval.Response
 	var err error
-	if merge != nil {
-		alternate, err = merge.Shape(arms, uncapped, limit, mode, nil, tail)
-	} else if tail != nil {
+	if tail != nil {
 		alternate, err = retrieval.ShapeWithNonCurrentTail(arms, uncapped, limit, mode, nil, *tail)
 	} else {
 		alternate, err = retrieval.Shape(arms, uncapped, limit, mode)
@@ -250,16 +249,11 @@ func caseDiagnostics(arms retrieval.Arms, recipe retrieval.Recipe, limit int, mo
 	return losses, gaps, nil
 }
 
-func diagnosticOverrides(overrides []any) (*retrieval.ArticleCapOverride, *retrieval.SiblingMerge) {
-	var article *retrieval.ArticleCapOverride
-	var merge *retrieval.SiblingMerge
+func diagnosticArticleCap(overrides []any) *retrieval.ArticleCapOverride {
 	for _, override := range overrides {
-		switch value := override.(type) {
-		case *retrieval.ArticleCapOverride:
-			article = value
-		case *retrieval.SiblingMerge:
-			merge = value
+		if value, ok := override.(*retrieval.ArticleCapOverride); ok {
+			return value
 		}
 	}
-	return article, merge
+	return nil
 }
