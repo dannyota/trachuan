@@ -144,6 +144,9 @@ func (r *Report) loadNamedAcquisitions(ctx context.Context, q *store.Queries, ar
 	sort.Slice(rows, func(i, j int) bool { return CompareRel(rows[i].Rel, rows[j].Rel) > 0 })
 	candidate := WithdrawnNamed{}
 	for _, row := range rows {
+		if row.Rel == "" {
+			continue
+		}
 		if candidate.Rel != row.Rel {
 			candidate = WithdrawnNamed{Key: doc.Key, Number: doc.Number, Rel: row.Rel}
 		}
@@ -168,18 +171,6 @@ func (r *Report) loadNamedAcquisitions(ctx context.Context, q *store.Queries, ar
 }
 
 func verifiedNamedAcquisition(artifacts artifact.Store, country, key string, row store.ListDocumentAcquisitionsRow) (string, bool) {
-	dir := artifacts.Abs(row.Path)
-	hash, err := artifact.Verify(dir)
-	if err != nil || hash != row.Sha256 {
-		return "", false
-	}
-	data, err := os.ReadFile(filepath.Join(dir, "detail.json"))
-	if err != nil {
-		return "", false
-	}
-	var detail struct{ Data struct{ ID, DocNum string } }
-	if json.Unmarshal(data, &detail) != nil || country+":vbpl:"+detail.Data.ID != key {
-		return "", false
-	}
-	return detail.Data.DocNum, true
+	number, err := pinned.InspectArtifact(artifacts, country, key, store.GetPinnedArtifactRow{Stage: row.Stage, Path: row.Path, Sha256: row.Sha256})
+	return number, err == nil
 }

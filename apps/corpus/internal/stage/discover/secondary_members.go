@@ -44,6 +44,12 @@ func addSecondaryMembers(ctx context.Context, q *store.Queries, env stage.Env, r
 				}
 				number := c.Number
 				norm := retrieval.NormalizeNumber(number)
+				if src == "vbpl" && norm != "" {
+					if m.numbers == nil {
+						m.numbers = map[string]bool{}
+					}
+					m.numbers[norm] = true
+				}
 				if m.entry.RawNumber == nil {
 					m.entry.RawNumber = &number
 					m.entry.NormalizedNumber = &norm

@@ -75,8 +75,7 @@ func TestStatus_UsesNewestVerifiedPairFromOneRelease(t *testing.T) {
 			add := func(rel, stageName string) store.ListDocumentAcquisitionsRow {
 				t.Helper()
 				art, err := artifacts.PublishContent(ctx, stageName, stage.RecipeHash(stageName, rel), func(dir string) error {
-					data := []byte(fmt.Sprintf(`{"data":{"id":"pin","docNum":"71/2099/QH15"},"fixture":"%s/%s"}`, rel, stageName))
-					return os.WriteFile(filepath.Join(dir, "detail.json"), data, 0600)
+					return writeStatusAcquisition(dir, rel, stageName, "71/2099/QH15", "")
 				})
 				if err != nil {
 					t.Fatal(err)
@@ -143,6 +142,126 @@ func TestStatus_UsesNewestVerifiedPairFromOneRelease(t *testing.T) {
 			}
 			if doc.Key != "vn:vbpl:pin" || doc.Number != "71/2099/QH15" {
 				t.Fatalf("lost key or number: %s", data)
+			}
+		})
+	}
+}
+
+func writeStatusAcquisition(dir, rel, stageName, number, omitted string) error {
+	data, err := json.Marshal(map[string]any{"data": map[string]string{"id": "pin", "docNum": number}, "fixture": rel + "/" + stageName})
+	if err != nil {
+		return err
+	}
+	files := map[string][]byte{"detail.json": data, "diagram.json": []byte(`{"data":{}}`)}
+	if stageName == "expand" {
+		files["observation.json"] = []byte(`{}`)
+	} else {
+		files["tree.json"] = []byte(`{"data":[]}`)
+		files["files.json"] = []byte(`[]`)
+		files["report.json"] = []byte(`{"missing":[],"too_large":[]}`)
+	}
+	for name, body := range files {
+		if name == omitted {
+			continue
+		}
+		if writeErr := os.WriteFile(filepath.Join(dir, name), body, 0600); writeErr != nil {
+			return writeErr
+		}
+	}
+	return nil
+}
+
+func (db statusAcquisitionDB) GetPinnedArtifact(_ context.Context, p store.GetPinnedArtifactParams) (store.GetPinnedArtifactRow, error) {
+	if p.Country != "vn" || p.ItemKey != "vn:vbpl:pin" {
+		return store.GetPinnedArtifactRow{}, pgx.ErrNoRows
+	}
+	for _, row := range db.rows {
+		if row.Rel == p.Rel && row.Stage == p.Stage && row.Sha256 == p.Sha256 {
+			return store.GetPinnedArtifactRow{Stage: row.Stage, Path: row.Path, Sha256: row.Sha256}, nil
+		}
+	}
+	return store.GetPinnedArtifactRow{}, pgx.ErrNoRows
+}
+
+func TestStatus_EmittedPairPassesPinVerification(t *testing.T) {
+	for _, name := range []string{"eligible", "empty fetch number", "blank fetch number", "missing expand diagram", "missing expand observation", "missing fetch diagram", "missing fetch tree", "missing fetch files", "missing fetch report", "altered required file", "no eligible pair", "empty release"} {
+		t.Run(name, func(t *testing.T) {
+			ctx := context.Background()
+			artifacts := artifact.Store{Root: t.TempDir()}
+			var rows []store.ListDocumentAcquisitionsRow
+			add := func(rel, stageName, number, omitted string) store.ListDocumentAcquisitionsRow {
+				t.Helper()
+				art, err := artifacts.PublishContent(ctx, stageName, stage.RecipeHash(stageName, rel), func(dir string) error { return writeStatusAcquisition(dir, rel, stageName, number, omitted) })
+				if err != nil {
+					t.Fatal(err)
+				}
+				row := store.ListDocumentAcquisitionsRow{Rel: rel, Stage: stageName, Path: art.Path, Sha256: art.SHA256}
+				rows = append(rows, row)
+				return row
+			}
+			if name != "no eligible pair" && name != "empty release" {
+				for _, stageName := range []string{"expand", "fetch"} {
+					add("20990101_9", stageName, "71/2099/QH15", "")
+				}
+			}
+			for _, stageName := range []string{"expand", "fetch"} {
+				rel := "20990101_11"
+				if name == "empty release" {
+					rel = ""
+				}
+				number, omitted := "71/2099/QH15", ""
+				if stageName == "fetch" {
+					switch name {
+					case "empty fetch number":
+						number = ""
+					case "blank fetch number":
+						number = " \t \n "
+					}
+				}
+				missing := map[string]string{"missing expand diagram": "expand/diagram.json", "missing expand observation": "expand/observation.json", "missing fetch diagram": "fetch/diagram.json", "missing fetch tree": "fetch/tree.json", "missing fetch files": "fetch/files.json", "missing fetch report": "fetch/report.json", "no eligible pair": "fetch/report.json"}
+				if target, ok := missing[name]; ok {
+					prefix, file, _ := strings.Cut(target, "/")
+					if prefix == stageName {
+						omitted = file
+					}
+				}
+				row := add(rel, stageName, number, omitted)
+				if name == "altered required file" && stageName == "fetch" {
+					if err := os.WriteFile(filepath.Join(artifacts.Abs(row.Path), "diagram.json"), []byte("altered"), 0600); err != nil {
+						t.Fatal(err)
+					}
+				}
+			}
+			db := statusAcquisitionDB{rows: rows}
+			report := Report{Run: store.Run{Country: "vn", Rel: "20990102_1"}}
+			doc := WithdrawnNamed{Key: "vn:vbpl:pin", Number: "72/2099/QH15"}
+			if err := report.loadNamedAcquisitions(ctx, store.New(db), artifacts, &doc); err != nil {
+				t.Fatal(err)
+			}
+			if name == "no eligible pair" || name == "empty release" {
+				if doc.Message != "no verified pair" || doc.Rel != "" || doc.Expand != "" || doc.Fetch != "" || doc.Number != "72/2099/QH15" {
+					t.Fatalf("ineligible pair emitted: %+v", doc)
+				}
+				return
+			}
+			expectedRel := "20990101_9"
+			if name == "eligible" {
+				expectedRel = "20990101_11"
+			}
+			if doc.Rel != expectedRel {
+				t.Errorf("pair release=%s want=%s", doc.Rel, expectedRel)
+			}
+			data, err := json.Marshal(doc)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var pin source.Pin
+			if err = json.Unmarshal(data, &pin); err != nil {
+				t.Fatal(err)
+			}
+			pin.Since = "2099-01-02"
+			if err = pinned.Verify(ctx, db, artifacts, "vn", []source.Pin{pin}); err != nil {
+				t.Fatalf("status emitted an unusable pin: %v", err)
 			}
 		})
 	}

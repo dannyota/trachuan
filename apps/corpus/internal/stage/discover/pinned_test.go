@@ -4,9 +4,11 @@ import (
 	"context"
 	"testing"
 
+	"danny.vn/trachuan/apps/corpus/internal/artifact"
 	"danny.vn/trachuan/apps/corpus/internal/source"
 	"danny.vn/trachuan/apps/corpus/internal/stage"
 	"danny.vn/trachuan/apps/corpus/internal/stage/membership"
+	"danny.vn/trachuan/apps/corpus/internal/store"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -64,5 +66,51 @@ func TestPinned_ConflictsWithAnyCurrentListingNumber(t *testing.T) {
 	members := map[string]*seedMember{"vn:vbpl:other": {entry: membership.Entry{DocumentKey: "vn:vbpl:other", Source: "vbpl", Disposition: "active", NormalizedNumber: &otherNumber}, numbers: map[string]bool{pin.Number: true, otherNumber: true}}}
 	if failure := addPinnedMembers(stage.Run{Country: "vn"}, []source.Pin{pin}, members); failure.Code != "pin_conflict" {
 		t.Fatalf("failure=%+v", failure)
+	}
+}
+
+type pinProbeDB struct {
+	store.DBTX
+	artifact artifact.Result
+}
+
+func (db pinProbeDB) QueryRow(context.Context, string, ...any) pgx.Row {
+	return pinProbeRow{artifact: db.artifact}
+}
+
+type pinProbeRow struct{ artifact artifact.Result }
+
+func (row pinProbeRow) Scan(dest ...any) error {
+	for i, value := range []string{"done", row.artifact.Path, row.artifact.SHA256} {
+		*dest[i].(*string) = value
+	}
+	return nil
+}
+
+func TestPinned_ConflictsWithSuccessfulSecondaryProbe(t *testing.T) {
+	for _, state := range []string{"seed_primary", "admit_secondary", "ambiguous", "incomplete"} {
+		t.Run(state, func(t *testing.T) {
+			ctx := context.Background()
+			env := stage.Env{Artifacts: artifact.Store{Root: t.TempDir()}}
+			pin := source.Pin{Key: "vn:vbpl:pin", Number: "71/2099/QH15"}
+			listingNumber := "72/2099/QH15"
+			members := map[string]*seedMember{"vn:vbpl:X": {entry: membership.Entry{DocumentKey: "vn:vbpl:X", Source: "vbpl", SourceID: "X", Class: "primary", Disposition: "active", RawNumber: &listingNumber, NormalizedNumber: &listingNumber}, numbers: map[string]bool{listingNumber: true}}}
+			candidate := secondaryCandidate{ID: "1", State: state, PrimaryID: "X", Number: " 71 / 2099 / qh15 ", Issuer: "central", IssuerForm: "Quốc hội", Date: "2099-01-01", ProbeState: "complete"}
+			art, err := env.Artifacts.PublishContent(ctx, "discover", stage.RecipeHash("discover", "probe"), func(dir string) error { return writeJSON(dir, "candidate-1.json", candidate) })
+			if err != nil {
+				t.Fatal(err)
+			}
+			observation := secondaryObservation{key: "chinhphu:keyword:law", hash: art.SHA256, report: secondaryReport{Stable: true, QueryIdentity: "probe", Candidates: []secondaryCandidate{candidate}}}
+			if err = addSecondaryMembers(ctx, store.New(pinProbeDB{artifact: art}), env, stage.Run{Country: "vn"}, []secondaryObservation{observation}, members); err != nil {
+				t.Fatal(err)
+			}
+			failure := addPinnedMembers(stage.Run{Country: "vn"}, []source.Pin{pin}, members)
+			if (failure.Code == "pin_conflict") != (state == "seed_primary") {
+				t.Fatalf("probe state=%s failure=%+v", state, failure)
+			}
+			if !members["vn:vbpl:X"].numbers[listingNumber] || *members["vn:vbpl:X"].entry.NormalizedNumber != listingNumber {
+				t.Fatal("probe erased the independent listing number")
+			}
+		})
 	}
 }

@@ -11,6 +11,8 @@ import (
 	"testing"
 
 	"danny.vn/trachuan/apps/corpus/internal/artifact"
+	"danny.vn/trachuan/apps/corpus/internal/pinned"
+	"danny.vn/trachuan/apps/corpus/internal/source"
 	"danny.vn/trachuan/apps/corpus/internal/stage"
 	"danny.vn/trachuan/apps/corpus/internal/stage/membership"
 	"danny.vn/trachuan/apps/corpus/internal/store"
@@ -66,7 +68,7 @@ func TestStatus_WithdrawnUsesLatestVerifiedPair(t *testing.T) {
 				continue
 			}
 			art, publishErr := artifacts.PublishContent(ctx, name, stage.RecipeHash(name, rel), func(dir string) error {
-				return os.WriteFile(filepath.Join(dir, "detail.json"), []byte(`{"data":{"id":"pin","docNum":"71/2099/QH15"}}`), 0600)
+				return writeStatusAcquisition(dir, rel, name, number, "")
 			})
 			if publishErr != nil {
 				t.Fatal(publishErr)
@@ -102,6 +104,11 @@ func TestStatus_WithdrawnUsesLatestVerifiedPair(t *testing.T) {
 	doc := report.NewlyWithdrawnNamed[0]
 	if doc.Number != number || doc.Rel != "20990101_1" || doc.Expand != wanted["expand"] || doc.Fetch != wanted["fetch"] || doc.Message != "" {
 		t.Fatalf("withdrawn=%+v", doc)
+	}
+
+	pin := source.Pin{Key: doc.Key, Number: doc.Number, Rel: doc.Rel, Expand: doc.Expand, Fetch: doc.Fetch, Since: "2099-01-02"}
+	if err = pinned.Verify(ctx, q, artifacts, "vn", []source.Pin{pin}); err != nil {
+		t.Fatalf("emitted pair fails pin verification: %v", err)
 	}
 	data, err := json.Marshal(report)
 	if err != nil || !strings.HasPrefix(string(data), `{"newly_withdrawn_named":`) {

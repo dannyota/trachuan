@@ -20,8 +20,6 @@ WHERE run_id = $1 AND generation = $2
   AND artifact_id IS NOT NULL AND message = $3;
 
 -- name: SeedRunAcquisitions :execrows
--- Seeds acquisitions from the run's own committed done items; used once,
--- before the first retry invalidation of a run that has none.
 INSERT INTO run_acquisition (run_id, stage, document_key, artifact_id, generation)
 SELECT i.run_id, i.stage, i.item_key, i.artifact_id, i.generation
 FROM run_item i

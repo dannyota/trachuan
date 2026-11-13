@@ -56,8 +56,6 @@ SELECT jsonb_build_object(
 )::jsonb AS inventory
 `
 
-// One statement, so items, gaps, the final membership snapshot and the file
-// projection come from one consistent read.
 func (q *Queries) GetBuildInventoryV2(ctx context.Context, runID int64) (json.RawMessage, error) {
 	row := q.db.QueryRow(ctx, getBuildInventoryV2, runID)
 	var inventory json.RawMessage
