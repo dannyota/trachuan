@@ -39,15 +39,17 @@ func (e *Engine) readDocument(ctx context.Context, tx pgx.Tx, item ReadItem) (in
 	}
 	var id int64
 	var doc DocumentEntry
-	var issued, from, to *time.Time
+	var issued, from, to, withdrawnSince *time.Time
+	var withdrawnRel *string
 	var source Document
-	err := tx.QueryRow(ctx, `SELECT id,number,title,doc_type,issuer,issue_date,eff_from,eff_to,COALESCE(source_url,''),status_class,status_basis,is_current,validity_conflict,text_source,text_complete,fetch_sha256 FROM document WHERE key=$1`, key).Scan(&id, &doc.Number, &doc.Title, &doc.Type, &doc.Issuer, &issued, &from, &to, &doc.SourceURL, &source.StatusClass, &source.StatusBasis, &source.IsCurrent, &source.ValidityConflict, &doc.TextSource, &doc.TextComplete, &source.FetchSHA256)
+	err := tx.QueryRow(ctx, `SELECT id,number,title,doc_type,issuer,issue_date,eff_from,eff_to,COALESCE(source_url,''),status_class,status_basis,is_current,validity_conflict,text_source,text_complete,fetch_sha256`+withdrawnColumns(e.release.SchemaVersion)+` FROM document WHERE key=$1`, key).Scan(&id, &doc.Number, &doc.Title, &doc.Type, &doc.Issuer, &issued, &from, &to, &doc.SourceURL, &source.StatusClass, &source.StatusBasis, &source.IsCurrent, &source.ValidityConflict, &doc.TextSource, &doc.TextComplete, &source.FetchSHA256, &withdrawnSince, &withdrawnRel)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return 0, key, doc, Document{}, "not_found", nil
 	}
 	if err != nil {
 		return 0, key, doc, Document{}, "", databaseFailure("query read document", err)
 	}
+	doc.SourceWithdrawn = sourceWithdrawal(e.release.SchemaVersion, withdrawnSince, withdrawnRel)
 	doc.Issued, doc.EffectiveFrom, doc.EffectiveTo = dateValue(issued), dateValue(from), dateValue(to)
 	source.EffectiveFrom, source.EffectiveTo = from, to
 	rows, err := tx.Query(ctx, documentCountsSQL, []string{key})
@@ -134,7 +136,6 @@ func scanReadNodes(rows pgx.Rows, key string) ([]Provision, error) {
 	return nodes, nil
 }
 
-// The shared incident CTE preserves pointer ordering and both self directions.
 const readRelationsSQL = `WITH incident AS (` + incidentRelationsSQL + `), scoped AS (
  SELECT i.*,r.raw_label,r.evidence FROM incident i JOIN relation r
  ON r.source_key=i.source_key AND r.artifact_sha256=i.artifact_sha256 AND r.ordinal=i.ordinal

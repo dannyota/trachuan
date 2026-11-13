@@ -1,4 +1,3 @@
-// Package discover lists documents from the frozen VBPL queries.
 package discover
 
 import (
@@ -41,20 +40,16 @@ type report struct {
 	Items    map[string]json.RawMessage `json:"items"`
 }
 
-// Stage discovers the documents named by VBPL listings.
 type Stage struct {
 	client   *vbpl.Client
 	chinhphu *chinhphu.Client
 	ceiling  int
 }
 
-// Option configures discovery.
 type Option func(*Stage)
 
-// WithChinhphu sets the secondary source client.
 func WithChinhphu(client *chinhphu.Client) Option { return func(s *Stage) { s.chinhphu = client } }
 
-// WithCandidateCeiling sets a lower ceiling for controlled runs.
 func WithCandidateCeiling(limit int) Option {
 	return func(s *Stage) {
 		if limit > 0 && limit < 100 {
@@ -63,7 +58,6 @@ func WithCandidateCeiling(limit int) Option {
 	}
 }
 
-// New constructs a discover stage.
 func New(client *vbpl.Client, options ...Option) *Stage {
 	s := &Stage{client: client}
 	for _, option := range options {
@@ -72,17 +66,15 @@ func New(client *vbpl.Client, options ...Option) *Stage {
 	return s
 }
 
-// Name returns the stage name.
 func (*Stage) Name() string { return "discover" }
 
-// Recipe returns the discovery recipe hash.
 func (*Stage) Recipe(snapshot stage.Snapshot) string {
 	list, err := source.Parse(snapshot.SourceList)
 	if err == nil && list.VBPL.SelectionVersion == 1 {
 		if len(list.Chinhphu.Keywords) > 0 || len(list.Chinhphu.NamedNumbers) > 0 {
-			return stage.RecipeHash("discover", "secondary-discover/1", "issuer-classifier/1", "issuer-normalization/1", retrieval.NumberNormalizationVersion, snapshot.SourceListHash)
+			return stage.RecipeHash("discover", "secondary-discover/2", "issuer-classifier/1", "issuer-normalization/1", retrieval.NumberNormalizationVersion, snapshot.SourceListHash)
 		}
-		return stage.RecipeHash("discover", "vbpl-discover/selection-2", snapshot.SourceListHash)
+		return stage.RecipeHash("discover", "vbpl-discover/selection-3", snapshot.SourceListHash)
 	}
 	return stage.RecipeHash("discover", "vbpl-discover/1")
 }
@@ -108,7 +100,6 @@ func queryIdentity(key string, definition query) (string, error) {
 	return fmt.Sprintf("%s@%x", key, sum[:8]), nil
 }
 
-// Plan returns every frozen query without an input hash.
 func (*Stage) Plan(_ context.Context, _ stage.Env, r stage.Run) ([]stage.Item, error) {
 	list, err := source.Parse(r.Snapshot.SourceList)
 	if err != nil {
@@ -157,7 +148,6 @@ func (*Stage) Plan(_ context.Context, _ stage.Env, r stage.Run) ([]stage.Item, e
 	return items, nil
 }
 
-// Process collects listing passes and publishes their results.
 func (s *Stage) Process(ctx context.Context, env stage.Env, r stage.Run, it stage.Item) (output stage.Output, err error) {
 	list, parseErr := source.Parse(r.Snapshot.SourceList)
 	if parseErr != nil {
@@ -275,12 +265,10 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, r stage.Run, it stag
 	return stage.Output{Artifact: &art, State: "done"}, nil
 }
 
-// Rows returns no artifact rows for listings.
 func (*Stage) Rows(context.Context, stage.Env, artifact.Result) (func(context.Context, pgx.Tx, int64) error, error) {
 	return nil, nil
 }
 
-// Resolve prepares listing rows and an instability gap for this run.
 func (*Stage) Resolve(_ context.Context, env stage.Env, r stage.Run, it stage.Item, art artifact.Result) (stage.Resolution, error) {
 	list, err := source.Parse(r.Snapshot.SourceList)
 	if err != nil {

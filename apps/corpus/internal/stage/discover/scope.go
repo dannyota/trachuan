@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"danny.vn/trachuan/apps/corpus/internal/lookup"
+	"danny.vn/trachuan/apps/corpus/internal/pinned"
 	"danny.vn/trachuan/apps/corpus/internal/source"
 	"danny.vn/trachuan/apps/corpus/internal/sourcegate"
 	"danny.vn/trachuan/apps/corpus/internal/stage"
@@ -20,6 +21,7 @@ import (
 )
 
 type scopeReport struct {
+	Notices       []pinned.Notice `json:"notices,omitempty"`
 	Version       int             `json:"version"`
 	QueryIdentity string          `json:"query_identity"`
 	Passes        []lookup.Result `json:"passes"`
@@ -80,7 +82,7 @@ func (s *Stage) processScope(ctx context.Context, env stage.Env, r stage.Run, it
 		if err != nil {
 			return fmt.Errorf("parse named entry: %w", err)
 		}
-		return s.named(ctx, dir, entry.Number)
+		return s.named(ctx, dir, entry.Number, rules.Pinned...)
 	})
 	if err != nil {
 		return out, fmt.Errorf("publish discovery artifact: %w", err)

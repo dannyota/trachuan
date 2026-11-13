@@ -1943,6 +1943,11 @@ export interface components {
             text_source: "source_tree" | "html_transcription" | "ocr" | "none";
             text_complete: boolean;
             source_url?: string;
+            source_withdrawn?: {
+                /** Format: date */
+                since: string;
+                acquired_by_rel: string;
+            };
             related?: components["schemas"]["Pointer"][];
             related_counts?: {
                 [key: string]: number;

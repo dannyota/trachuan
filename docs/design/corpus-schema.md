@@ -1,4 +1,4 @@
-# Corpus schema version 5
+# Corpus schema version 6
 
 Proposed exact template contract for `internal/corpusdb/schema.sql`, embedded by
 `schema.go` in root module `danny.vn/trachuan`. The workshop keeps goose
@@ -9,7 +9,8 @@ adds membership class and validity corrections per
 [scope adoption](scope-adoption.md); earlier dumps remain unchanged and require
 their compatible reader. Version 4 adds the text source columns per
 [text extraction](text-extraction.md). Version 5 fills the taxonomy tables and
-adds node ordinals and counts per [taxonomy](taxonomy.md).
+adds node ordinals and counts per [taxonomy](taxonomy.md). Version 6 adds the
+source-withdrawn columns per [pinned documents](pinned-documents.md).
 
 ## Conventions and identity
 
@@ -33,7 +34,7 @@ ancestry index, not the public extraction anchor. This avoids interpreting
 slashes or Vietnamese letters as ltree syntax. Taxonomy ltree labels are `n<id>`
 along its parent chain.
 
-`schema.go` exports `SchemaVersion = 5` and
+`schema.go` exports `SchemaVersion = 6` and
 `Apply(ctx context.Context, db DB, dimensions int) error`; DB exposes
 `Exec(context.Context,string,...any)`. Its return values are
 `(pgconn.CommandTag,error)`, matching pgx connections and transactions. The only
@@ -75,6 +76,8 @@ rejects a mismatch. No server dimension constant.
 - `is_consolidated boolean`; `content_state text` in
   (`indexed`,`no_tree`,`no_chunks`,`embedding_gap`); `fetch_sha256 text`;
   `extract_sha256 text?`; `source_url text?`.
+- `source_withdrawn_since date?` and `source_withdrawn_rel text?`: set together
+  for a [pinned](pinned-documents.md) document, both null otherwise.
 - CHECK `eff_to IS NULL OR eff_from IS NULL OR eff_to >= eff_from`.
 
 Indexes: `document(number_norm)`, `document(status_class,eff_from,eff_to)`.
@@ -236,7 +239,7 @@ rules.
 ## Release row
 
 `release`: `singleton boolean PRIMARY KEY CHECK(singleton)`, `country text`
-CHECK country='vn', `rel text UNIQUE`, `schema_version integer CHECK(=5)`,
+CHECK country='vn', `rel text UNIQUE`, `schema_version integer CHECK(=6)`,
 `taxonomy_version text`, `dense_recipe jsonb`, `chunk_recipe jsonb`,
 `lexical_recipe jsonb`, `retrieval_recipe jsonb`, `lexical_stats jsonb`,
 `source_manifest_hash text`, `build_input_hash text`, `build_recipe_hash text`,
@@ -267,12 +270,15 @@ Version 2 added `document.status_basis`. Version 3 adds class, source and
 validity decisions. Version 4 adds `document.text_source`,
 `document.text_complete` and `provision.locator`. Version 5 fills the taxonomy
 tables and adds `taxonomy_node.ordinal`, `provision_count` and `document_count`.
+Version 6 adds `document.source_withdrawn_since` and `source_withdrawn_rel`.
 Always rebuild from preserved source artifacts, never backfill an old release
-with an assumed value. Readers must support version 5 before activation; earlier
-dumps remain unchanged. The server reads versions 4 and 5, and a version-4
-release serves no nodes, so a version-5 server keeps serving the previous
-release until a version-5 release is activated, and rolling back is activating
-the previous release.
+with an assumed value. Readers must support a version before a release of it is
+activated, so the server deploys first; earlier dumps remain unchanged. The
+server reads versions {4, 5, 6}: a version-4 release serves no nodes, and the
+server reads the source-withdrawn columns only from version 6, since a version-5
+release has none and no pinned documents. A newer server keeps serving the
+previous release until a newer release is activated, and rolling back is
+activating the previous release.
 
 The host restore policy currently permits only pgvector extensions, while the
 existing data design already requires ltree. This work uses both locally; host

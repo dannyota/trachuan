@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"danny.vn/trachuan/apps/corpus/internal/artifact"
+	"danny.vn/trachuan/apps/corpus/internal/source"
 	"danny.vn/trachuan/apps/corpus/internal/stage"
 	"danny.vn/trachuan/apps/corpus/internal/vbpl"
 	"golang.org/x/sync/errgroup"
@@ -178,8 +179,7 @@ func (s *Stage) writeBundleWithBaseline(ctx context.Context, dir, id string, det
 	return nil
 }
 
-// Resolve returns gaps recorded in the bundle for this run.
-func (*Stage) Resolve(_ context.Context, env stage.Env, _ stage.Run, item stage.Item, art artifact.Result) (stage.Resolution, error) {
+func (*Stage) Resolve(_ context.Context, env stage.Env, r stage.Run, item stage.Item, art artifact.Result) (stage.Resolution, error) {
 	dir := env.Artifacts.Abs(art.Path)
 	if _, err := os.Stat(filepath.Join(dir, "document.json")); err == nil {
 		return resolveChinhphu(dir, item)
@@ -211,6 +211,17 @@ func (*Stage) Resolve(_ context.Context, env stage.Env, _ stage.Run, item stage.
 	}
 	for _, name := range result.TooLarge {
 		gaps = append(gaps, stage.Gap{Kind: "file_too_large", Detail: name})
+	}
+	list, err := source.Parse(r.Snapshot.SourceList)
+	if err != nil {
+		return stage.Resolution{}, fmt.Errorf("parse pin sources: %w", err)
+	}
+	if pin, ok := list.Pin(item.Key); ok {
+		data, err := json.Marshal(pin)
+		if err != nil {
+			return stage.Resolution{}, fmt.Errorf("encode pin gap: %w", err)
+		}
+		gaps = append(gaps, stage.Gap{Kind: "source_withdrawn_retained", Detail: string(data)})
 	}
 	return stage.Resolution{Gaps: gaps}, nil
 }

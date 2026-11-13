@@ -1,4 +1,3 @@
-// Package fetch downloads VBPL documents into content-addressed bundles.
 package fetch
 
 import (
@@ -15,6 +14,8 @@ import (
 	"danny.vn/trachuan/apps/corpus/internal/artifact"
 	"danny.vn/trachuan/apps/corpus/internal/chinhphu"
 	"danny.vn/trachuan/apps/corpus/internal/filecache"
+	"danny.vn/trachuan/apps/corpus/internal/pinned"
+	"danny.vn/trachuan/apps/corpus/internal/source"
 	"danny.vn/trachuan/apps/corpus/internal/sourcegate"
 	"danny.vn/trachuan/apps/corpus/internal/stage"
 	"danny.vn/trachuan/apps/corpus/internal/stage/discover"
@@ -23,8 +24,8 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// Stage fetches documents and their attachments.
 type Stage struct {
+	loadPinned   func(context.Context, stage.Env, stage.Run, source.Pin) (pinned.Acquisition, error)
 	client       *vbpl.Client
 	chinhphu     *chinhphu.Client
 	cache        *filecache.Cache
@@ -33,22 +34,16 @@ type Stage struct {
 	loadExpand   func(context.Context, stage.Env, stage.Run, stage.Item) ([]byte, []byte, bool, error)
 }
 
-// New constructs a fetch stage.
 func New(client *vbpl.Client) *Stage { return &Stage{client: client, fileLimit: 50_000_000} }
 
-// WithChinhphu sets the secondary source client.
 func (s *Stage) WithChinhphu(client *chinhphu.Client) *Stage { s.chinhphu = client; return s }
 
-// WithCache sets the optional attachment cache.
 func (s *Stage) WithCache(cache *filecache.Cache) *Stage { s.cache = cache; return s }
 
-// WithFileLimit sets the attachment size limit in bytes.
 func (s *Stage) WithFileLimit(limit int64) *Stage { s.fileLimit = limit; return s }
 
-// Name returns the stage name.
 func (*Stage) Name() string { return "fetch" }
 
-// Recipe returns the fetch recipe hash.
 func (*Stage) Recipe(stage.Snapshot) string {
 	return stage.RecipeHash("fetch", "vbpl-fetch/2", "chinhphu-fetch/2", "json:encoding/json:compact:no-newline",
 		"metadata:version,source_id,source_url,occurrences,attachments;occurrence:name,value,cells,ambiguous;attachment:name,label,url",
@@ -56,7 +51,6 @@ func (*Stage) Recipe(stage.Snapshot) string {
 		"files:version,files;file:source,name,sha256,size,path,url,role;report:version,missing,too_large;outcome:name,url;evidence:path,sha256")
 }
 
-// Plan returns the expected documents and their skip reasons.
 func (*Stage) Plan(ctx context.Context, env stage.Env, r stage.Run) ([]stage.Item, error) {
 	expected, err := discover.ExpectedSet(ctx, env.DB, r, env.Artifacts)
 	if err != nil {
@@ -69,13 +63,19 @@ func (*Stage) Plan(ctx context.Context, env stage.Env, r stage.Run) ([]stage.Ite
 	return items, nil
 }
 
-// Process fetches the source responses and publishes a bundle.
 func (s *Stage) Process(ctx context.Context, env stage.Env, r stage.Run, item stage.Item) (stage.Output, error) {
 	var decision readDecision
 	return s.processItem(ctx, env, r, item, &decision)
 }
 
 func (s *Stage) processItem(ctx context.Context, env stage.Env, r stage.Run, item stage.Item, result *readDecision) (output stage.Output, err error) {
+	list, parseErr := source.Parse(r.Snapshot.SourceList)
+	if parseErr != nil {
+		return output, fmt.Errorf("parse fetch sources: %w", parseErr)
+	}
+	if pin, ok := list.Pin(item.Key); ok {
+		return s.processPinned(ctx, env, r, pin)
+	}
 	if strings.HasPrefix(item.Key, "vn:chinhphu:") {
 		out, processErr := s.processChinhphu(ctx, env, r, item)
 		out.Sources = []string{"chinhphu"}
@@ -295,7 +295,6 @@ func apiError(err error, id string, detail bool) (stage.Output, error) {
 	return stage.Output{}, stage.Retryable(wrapped)
 }
 
-// unavailableNow records an exhausted source request without another batch retry.
 func unavailableNow(id string, c stage.GapCause) stage.Output {
 	var decision readDecision
 	reason := string(c.Cause)

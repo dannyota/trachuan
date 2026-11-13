@@ -1598,6 +1598,13 @@ components:
           enum: [source_tree, html_transcription, ocr, none]
         text_complete: *id007
         source_url: *id001
+        source_withdrawn:
+          type: object
+          properties:
+            since: *id008
+            acquired_by_rel:
+              type: string
+          required: [since, acquired_by_rel]
         related:
           type: array
           items:

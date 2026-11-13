@@ -9,7 +9,6 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// Status contains the document portion of a hit's validity stamp.
 type Status struct {
 	Class       string `json:"class,omitempty"`
 	Basis       string `json:"basis,omitempty"`
@@ -17,22 +16,22 @@ type Status struct {
 	Current     bool   `json:"current"`
 }
 
-// DocumentEntry contains document metadata and bounded relation pointers.
 type DocumentEntry struct {
-	Number        string         `json:"number,omitempty"`
-	Title         string         `json:"title,omitempty"`
-	Type          string         `json:"type,omitempty"`
-	Issuer        string         `json:"issuer,omitempty"`
-	Issued        *Date          `json:"issued,omitempty"`
-	EffectiveFrom *Date          `json:"effective_from,omitempty"`
-	EffectiveTo   *Date          `json:"effective_to,omitempty"`
-	Status        Status         `json:"status"`
-	TextSource    string         `json:"text_source"`
-	TextComplete  bool           `json:"text_complete"`
-	SourceURL     string         `json:"source_url,omitempty"`
-	Related       []Pointer      `json:"related,omitempty"`
-	RelatedCounts map[string]int `json:"related_counts,omitempty"`
-	Nodes         []string       `json:"nodes,omitempty"`
+	SourceWithdrawn *SourceWithdrawal `json:"source_withdrawn,omitempty"`
+	Number          string            `json:"number,omitempty"`
+	Title           string            `json:"title,omitempty"`
+	Type            string            `json:"type,omitempty"`
+	Issuer          string            `json:"issuer,omitempty"`
+	Issued          *Date             `json:"issued,omitempty"`
+	EffectiveFrom   *Date             `json:"effective_from,omitempty"`
+	EffectiveTo     *Date             `json:"effective_to,omitempty"`
+	Status          Status            `json:"status"`
+	TextSource      string            `json:"text_source"`
+	TextComplete    bool              `json:"text_complete"`
+	SourceURL       string            `json:"source_url,omitempty"`
+	Related         []Pointer         `json:"related,omitempty"`
+	RelatedCounts   map[string]int    `json:"related_counts,omitempty"`
+	Nodes           []string          `json:"nodes,omitempty"`
 }
 
 func (e *Engine) loadDocuments(ctx context.Context, keys []string) (map[string]DocumentEntry, error) {
@@ -50,18 +49,20 @@ func (e *Engine) loadDocuments(ctx context.Context, keys []string) (map[string]D
 		return nil, fmt.Errorf("set documents deadline: %w", err)
 	}
 	docs := make(map[string]DocumentEntry)
-	rows, err := tx.Query(ctx, `SELECT key, number, title, doc_type, issuer, issue_date, eff_from, eff_to, COALESCE(source_url, ''), text_source, text_complete FROM document WHERE key = ANY($1)`, keys)
+	rows, err := tx.Query(ctx, `SELECT key, number, title, doc_type, issuer, issue_date, eff_from, eff_to, COALESCE(source_url, ''), text_source, text_complete`+withdrawnColumns(e.release.SchemaVersion)+` FROM document WHERE key = ANY($1)`, keys)
 	if err != nil {
 		return nil, databaseFailure("query document metadata", err)
 	}
 	for rows.Next() {
 		var key string
 		var doc DocumentEntry
-		var issued, from, to *time.Time
-		if err = rows.Scan(&key, &doc.Number, &doc.Title, &doc.Type, &doc.Issuer, &issued, &from, &to, &doc.SourceURL, &doc.TextSource, &doc.TextComplete); err != nil {
+		var issued, from, to, withdrawnSince *time.Time
+		var withdrawnRel *string
+		if err = rows.Scan(&key, &doc.Number, &doc.Title, &doc.Type, &doc.Issuer, &issued, &from, &to, &doc.SourceURL, &doc.TextSource, &doc.TextComplete, &withdrawnSince, &withdrawnRel); err != nil {
 			rows.Close()
 			return nil, databaseFailure("scan document metadata", err)
 		}
+		doc.SourceWithdrawn = sourceWithdrawal(e.release.SchemaVersion, withdrawnSince, withdrawnRel)
 		doc.Issued, doc.EffectiveFrom, doc.EffectiveTo = dateValue(issued), dateValue(from), dateValue(to)
 		docs[key] = doc
 	}

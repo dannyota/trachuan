@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"danny.vn/trachuan/apps/corpus/internal/lookup"
+	"danny.vn/trachuan/apps/corpus/internal/pinned"
 	"danny.vn/trachuan/apps/corpus/internal/source"
 	"danny.vn/trachuan/apps/corpus/internal/sourcegate"
 	"danny.vn/trachuan/apps/corpus/internal/stage"
@@ -27,6 +28,7 @@ type secondaryDefinition struct {
 	Cap     int    `json:"cap"`
 }
 type secondaryReport struct {
+	Notices             []pinned.Notice          `json:"notices,omitempty"`
 	Version             int                      `json:"version"`
 	Definition          secondaryDefinition      `json:"definition"`
 	QueryIdentity       string                   `json:"query_identity"`
@@ -241,6 +243,23 @@ func (s *Stage) secondary(ctx context.Context, dir string, r stage.Run, d second
 			return err
 		}
 	}
+	list, err := source.Parse(r.Snapshot.SourceList)
+	if err != nil {
+		return fmt.Errorf("parse pin notices: %w", err)
+	}
+	live := map[string]bool{}
+	for _, candidate := range report.Candidates {
+		if (candidate.ProbeState != "complete" && candidate.ProbeState != "ambiguous") || len(candidate.ProbePasses) == 0 {
+			continue
+		}
+		for _, notice := range livePins(ids(candidate.ProbePasses[len(candidate.ProbePasses)-1].Items), list.VBPL.Pinned, true) {
+			live[notice.Key] = true
+		}
+	}
+	for key := range live {
+		report.Notices = append(report.Notices, pinned.Notice{Kind: "source_pin_live", Key: key})
+	}
+	sort.Slice(report.Notices, func(i, j int) bool { return report.Notices[i].Key < report.Notices[j].Key })
 	return writeJSON(dir, "secondary.json", report)
 }
 

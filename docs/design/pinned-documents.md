@@ -126,8 +126,9 @@ VBPL never returns.
 - Coverage gap kinds gain `source_withdrawn_retained`; `source_pin_live` is kept
   in the discover report and shown by status, never in `gap`.
 - The release `document` row gains nullable `source_withdrawn_since` and
-  `source_withdrawn_rel`; the MCP schema gains the optional `source_withdrawn`
-  object on document entries.
+  `source_withdrawn_rel` (corpus schema version 6, read only from version 6);
+  the MCP schema gains the optional `source_withdrawn` object on document
+  entries.
 
 ## Checks
 

@@ -1,4 +1,3 @@
-// Package expand freezes one-hop VBPL relation context.
 package expand
 
 import (
@@ -20,16 +19,15 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// Stage observes direct relations of frozen primary seeds.
-type Stage struct{ client *vbpl.Client }
+type Stage struct {
+	client     *vbpl.Client
+	loadPinned func(context.Context, stage.Env, stage.Run, source.Pin) (store.GetPinnedArtifactRow, error)
+}
 
-// New constructs an expand stage.
 func New(client *vbpl.Client) *Stage { return &Stage{client: client} }
 
-// Name returns the stage name.
 func (*Stage) Name() string { return "expand" }
 
-// Recipe binds the qualifying kinds and relation table.
 func (*Stage) Recipe(snapshot stage.Snapshot) string {
 	list, _ := source.Parse(snapshot.SourceList)
 	return stage.RecipeHash("expand", "vbpl-expand/2", list.RelationCodesHash(), "legal_basis,implements,guided_by,amends_supplements,replaces,repeals,suspends,consolidates,cites,references", "outward", "one-hop")
@@ -44,7 +42,6 @@ func seedItems(entries []membership.Entry) []stage.Item {
 	return items
 }
 
-// Plan selects only active primary seeds from the verified frozen phase.
 func (*Stage) Plan(ctx context.Context, env stage.Env, r stage.Run) ([]stage.Item, error) {
 	list, err := source.Parse(r.Snapshot.SourceList)
 	if err != nil {
@@ -60,8 +57,14 @@ func (*Stage) Plan(ctx context.Context, env stage.Env, r stage.Run) ([]stage.Ite
 	return seedItems(s.Entries), nil
 }
 
-// Process downloads detail and diagram and publishes their qualified relations.
 func (s *Stage) Process(ctx context.Context, env stage.Env, r stage.Run, item stage.Item) (out stage.Output, err error) {
+	list, err := source.Parse(r.Snapshot.SourceList)
+	if err != nil {
+		return out, fmt.Errorf("parse expand sources: %w", err)
+	}
+	if pin, ok := list.Pin(item.Key); ok {
+		return s.processPinned(ctx, env, r, pin, list)
+	}
 	defer func() { out.Sources = []string{"vbpl"} }()
 	prefix := r.Country + ":vbpl:"
 	if r.Country == "" || !strings.HasPrefix(item.Key, prefix) || len(item.Key) == len(prefix) {
@@ -118,10 +121,6 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, r stage.Run, item st
 	if err != nil {
 		return apiError(err, id, false)
 	}
-	list, err := source.Parse(r.Snapshot.SourceList)
-	if err != nil {
-		return out, fmt.Errorf("parse source list: %w", err)
-	}
 	observation, err := Qualify(item.Key, detail, diagram, list.RelationCodes)
 	if err != nil {
 		var diagramErr *diagramDecodeError
@@ -149,12 +148,10 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, r stage.Run, item st
 	return stage.Output{State: "done", Artifact: &art}, nil
 }
 
-// Rows writes no artifact projections.
 func (*Stage) Rows(context.Context, stage.Env, artifact.Result) (func(context.Context, pgx.Tx, int64) error, error) {
 	return nil, nil
 }
 
-// Resolve writes no run-specific rows or gaps.
 func (*Stage) Resolve(context.Context, stage.Env, stage.Run, stage.Item, artifact.Result) (stage.Resolution, error) {
 	return stage.Resolution{}, nil
 }
