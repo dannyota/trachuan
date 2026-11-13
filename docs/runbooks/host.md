@@ -199,6 +199,14 @@ podman exec trachuan-postgres /usr/local/bin/postgres-admin.sh /usr/local/bin/wa
 systemctl --user start trachuan-queryembed trachuan-migrate
 systemctl --user start trachuan-server trachuan-web
 curl --fail http://127.0.0.1:8080/readyz
+DB=$(podman exec trachuan-postgres /usr/local/bin/postgres-admin.sh psql -X -At \
+  -U postgres -d auth -c "SELECT active_db FROM corpus_release WHERE country = 'vn'")
+```
+
+The restart emptied the buffer cache:
+[prewarm](release-restore.md#prewarm-a-corpus-database) `$DB`, then start Caddy:
+
+```sh
 systemctl --user start trachuan-caddy
 ```
 

@@ -23,15 +23,11 @@ podman exec -i \
   trachuan-postgres /usr/local/bin/postgres-admin.sh pg_restore -U postgres \
   --exit-on-error --no-owner --no-privileges --dbname "$DB" <"$DUMP"
 podman exec trachuan-postgres bash /usr/local/bin/grant-corpus.sh "$DB"
-podman exec -i trachuan-postgres /usr/local/bin/postgres-admin.sh \
-  psql -X -v ON_ERROR_STOP=1 -U postgres -d "$DB" <<'SQL'
-CREATE EXTENSION pg_prewarm;
-\timing on
-SELECT sum(pg_prewarm(c.oid)) AS blocks FROM pg_class c
-JOIN pg_namespace n ON n.oid = c.relnamespace
-WHERE n.nspname IN ('public', 'pg_toast') AND c.relkind IN ('r', 'i', 't');
-DROP EXTENSION pg_prewarm;
-SQL
+```
+
+[Prewarm](#prewarm-a-corpus-database) `$DB`, then select it:
+
+```sh
 podman exec -i trachuan-postgres /usr/local/bin/postgres-admin.sh \
   psql -X -v ON_ERROR_STOP=1 -U postgres -d auth -v database="$DB" <<'SQL'
 INSERT INTO corpus_release (country, active_db, activated_at, activated_by)
@@ -43,13 +39,28 @@ curl --fail http://127.0.0.1:8080/readyz
 systemctl --user start trachuan-caddy
 ```
 
-The prewarm reads every table, index and TOAST relation of the new database (3.6
-GB for vn/20261112_2) into the 4 GiB buffer cache before the switch, then drops
-the extension so the release keeps no extra object. Record the printed time and
-the first search's latency with the activation.
-
 Start Caddy only after readiness passes. On a recipe mismatch, keep traffic
 stopped and select the previous compatible database or matching serving bundle.
 Keep the previous database. This manual phase does not implement signed release
 activation. PostgreSQL has 3 GiB of shared-memory capacity within its existing 8
 GiB memory cap; shared memory is charged to that cap, not an extra allowance.
+
+## Prewarm a corpus database
+
+Run this for `$DB` before Caddy starts: after a restore, and after every
+PostgreSQL restart (a digest deploy) for the active database. It reads every
+table, index and TOAST relation (3.6 GB for vn/20261112_2) into the 4 GiB buffer
+cache, then drops the extension so the release keeps no extra object. Record the
+printed time and the first search's latency.
+
+```sh
+podman exec -i trachuan-postgres /usr/local/bin/postgres-admin.sh \
+  psql -X -v ON_ERROR_STOP=1 -U postgres -d "$DB" <<'SQL'
+CREATE EXTENSION pg_prewarm;
+\timing on
+SELECT sum(pg_prewarm(c.oid)) AS blocks FROM pg_class c
+JOIN pg_namespace n ON n.oid = c.relnamespace
+WHERE n.nspname IN ('public', 'pg_toast') AND c.relkind IN ('r', 'i', 't');
+DROP EXTENSION pg_prewarm;
+SQL
+```
