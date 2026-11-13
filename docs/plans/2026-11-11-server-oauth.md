@@ -98,3 +98,16 @@
 - [ ] **Step 1:** Local server with Google login (Plan 9b client); Claude Code connects over CIMD and over DCR; run `guide`, `corpus_status`, `search` and `read`; refresh after the access token expires (shortened lifetime in a test build only); revoke the grant through `/api/v1/me/grants`; block the account; record outcomes in the PR, never question text.
 - [ ] **Step 2:** ADR 0013 agent-in-the-loop check: Claude Code answers five golden questions through the tools with no other context; record per question whether it searched compactly, read chosen handles in one batch, followed `next` and cited handles; findings go to the backlog or ADR 0013 History.
 - [ ] **Step 3:** Add a backlog line for Claude.ai and ChatGPT connector acceptance on the first public deployment; open the PR; the coordinator merges after the final adversarial review and green CI.
+
+#### Live acceptance on production, 2026-11-14 (main bbc842ee, release vn/20261112_2)
+
+The owner signed in and approved consent himself; the coordinator session drove his browser and the scripted client. No token, code or email is recorded.
+
+- Production defects found and fixed during the run: every `/mcp` request returned 403 from the MCP SDK's localhost Host check (#189); every search returned 503 because PostgreSQL JIT spent 1.2 s compiling the relation query, past the deadline (#190, JIT off).
+- B1 to B4 open: Claude Code, Claude.ai and ChatGPT connectors are the owner's clients and were not run.
+- B5 pass, DCR with a loopback redirect: register 201; consent showed the unverified-client and loopback warnings, scope `mcp:read` and the language toggle; the callback carried `code`, `iss` and `state`; exchange 200 (`expires_in` 3600); refresh 200; replaying the old refresh token 400 `invalid_grant`, after which a new refresh returned 400 and the access token 401 (the grant was revoked). CIMD was not exercised live.
+- B6 pass through the scripted client: tools `corpus_status`, `guide`, `quality_gaps`, `read`, `report_issue`, `search`, `taxonomy`; `guide` needs `country` (with `{}` it returns `isError`); search 18 hits in 1.27 s and 77.7 KB; search with `nodes` returns `outside_filter_count`; a batch read of 2 items in 157 ms.
+- B7 open: silent refresh after the 1-hour expiry in a real client not run (B5 covered refresh and replay by script).
+- B8 pass on the scripted grant: revoked from `/account`, the next call 401 within 1 s.
+- C (ADR 0013 agent check) open: needs the owner's Claude Code.
+- Open for the owner: B1 to B4, B7, C. The plan file stays until they close.
