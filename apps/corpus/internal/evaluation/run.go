@@ -122,11 +122,8 @@ func run(ctx context.Context, engine Engine, suite Suite, o Options, limit int) 
 	})
 	defer pool.stop()
 	for index, input := range inputs {
-		prefetched, poolErr := pool.take(index)
+		prefetched := pool.take(index)
 		c := input.c
-		if poolErr != nil {
-			return Report{}, Cache{}, fmt.Errorf("prepare case %s: %w", c.ID, poolErr)
-		}
 		force := inForceForCase(c, o.ValidityOverrides)
 		product, err := prefetched.product, prefetched.prepareErr
 		if err != nil {

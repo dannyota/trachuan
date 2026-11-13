@@ -11,7 +11,6 @@ import (
 const caseConcurrency = 3
 
 type orderedPool[T any] struct {
-	ctx     context.Context
 	cancel  context.CancelFunc
 	jobs    chan int
 	results []chan T
@@ -21,7 +20,7 @@ type orderedPool[T any] struct {
 
 func newOrderedPool[T any](ctx context.Context, count, limit int, work func(context.Context, int) T) *orderedPool[T] {
 	ctx, cancel := context.WithCancel(ctx)
-	p := &orderedPool[T]{ctx: ctx, cancel: cancel, jobs: make(chan int, 2*limit), results: make([]chan T, count)}
+	p := &orderedPool[T]{cancel: cancel, jobs: make(chan int, 2*limit), results: make([]chan T, count)}
 	for i := range p.results {
 		p.results[i] = make(chan T, 1)
 	}
@@ -29,17 +28,8 @@ func newOrderedPool[T any](ctx context.Context, count, limit int, work func(cont
 		p.wg.Add(1)
 		go func() {
 			defer p.wg.Done()
-			for {
-				select {
-				case <-ctx.Done():
-					return
-				case index, ok := <-p.jobs:
-					if !ok {
-						return
-					}
-					result := work(ctx, index)
-					p.results[index] <- result
-				}
+			for index := range p.jobs {
+				p.results[index] <- work(ctx, index)
 			}
 		}()
 	}
@@ -50,18 +40,13 @@ func newOrderedPool[T any](ctx context.Context, count, limit int, work func(cont
 	return p
 }
 
-func (p *orderedPool[T]) take(index int) (T, error) {
-	var result T
-	select {
-	case result = <-p.results[index]:
-	case <-p.ctx.Done():
-		return result, p.ctx.Err()
-	}
+func (p *orderedPool[T]) take(index int) T {
+	result := <-p.results[index]
 	if p.next < len(p.results) {
 		p.jobs <- p.next
 		p.next++
 	}
-	return result, nil
+	return result
 }
 
 func (p *orderedPool[T]) stop() {

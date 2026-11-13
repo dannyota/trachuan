@@ -33,16 +33,8 @@ func newIdentityPool(count, limit int, work func(int) identityResult) *identityP
 		p.wg.Add(1)
 		go func() {
 			defer p.wg.Done()
-			for {
-				select {
-				case <-p.done:
-					return
-				case index, ok := <-p.jobs:
-					if !ok {
-						return
-					}
-					p.results[index] <- work(index)
-				}
+			for index := range p.jobs {
+				p.results[index] <- work(index)
 			}
 		}()
 	}

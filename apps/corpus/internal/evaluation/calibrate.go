@@ -133,10 +133,7 @@ func calibrate(ctx context.Context, engine Engine, suite Suite, limit int) (Cali
 	})
 	defer pool.stop()
 	for i, c := range cases {
-		result, poolErr := pool.take(i)
-		if poolErr != nil {
-			return Calibration{}, fmt.Errorf("prepare case %s: %w", c.ID, poolErr)
-		}
+		result := pool.take(i)
 		p, err := result.prepared, result.prepareErr
 		if err != nil {
 			return Calibration{}, fmt.Errorf("prepare case %s: %w", c.ID, err)
