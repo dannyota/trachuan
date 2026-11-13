@@ -18,7 +18,7 @@ it('formats numbers, civil dates, instants and releases', () => {
 const relations = [
   ['repeals', 'Bị bãi bỏ bởi', 'Bãi bỏ', 'Repealed by', 'Repeals'],
   ['replaces', 'Bị thay thế bởi', 'Thay thế', 'Replaced by', 'Replaces'],
-  ['suspends', 'Bị đình chỉ thi hành bởi', 'Đình chỉ thi hành', 'Suspended by', 'Suspends'],
+  ['suspends', 'Bị ngưng hiệu lực bởi', 'Ngưng hiệu lực', 'Suspended by', 'Suspends'],
   ['amends_supplements', 'Được sửa đổi, bổ sung bởi', 'Sửa đổi, bổ sung', 'Amended by', 'Amends'],
   ['consolidates', 'Được hợp nhất trong', 'Hợp nhất', 'Consolidated in', 'Consolidates'],
   ['implements', 'Được quy định chi tiết, hướng dẫn bởi', 'Quy định chi tiết, hướng dẫn', 'Implemented by', 'Implements'],
@@ -40,19 +40,19 @@ it('does not expose unknown relation codes', () => {
 })
 
 it('renders anchors in citation order without exposing malformed anchors', () => {
-  expect(citationFromAnchor('dieu-1/khoan-9/diem-a')).toBe('Điểm a Khoản 9 Điều 1')
-  expect(citationFromAnchor('dieu-5/khoan-2a')).toBe('Khoản 2a Điều 5')
+  expect(citationFromAnchor('dieu-1/khoan-9/diem-a')).toBe('Điều 1, Khoản 9, Điểm a')
+  expect(citationFromAnchor('dieu-5/khoan-2a')).toBe('Điều 5, Khoản 2a')
   expect(citationFromAnchor('dieu-3')).toBe('Điều 3')
   expect(citationFromAnchor('chuong-I')).toBe('Chương I')
   expect(citationFromAnchor('muc-2')).toBe('Mục 2')
   expect(citationFromAnchor('phan-I')).toBe('Phần I')
-  expect(citationFromAnchor('dieu-1/diem-a')).toBeNull()
+  expect(citationFromAnchor('dieu-1/diem-a')).toBe('Điều 1, Điểm a')
   expect(documentCitation('dieu-11/khoan-1', { type: 'Thông tư', number: '50/2024/TT-NHNN' })).toBe('Khoản 1 Điều 11 Thông tư 50/2024/TT-NHNN')
 })
 it('uses exact citations or named paths in warnings', () => {
-  const warning = { in_release: true, basis: 'text', target: 'key#dieu-11', exact: true, citation: 'Khoản 1 Điều 11', number: '77/2025/TT-NHNN', kind: 'amends_supplements' }
-  expect(warningSentence(warning, 'vi')).toBe('77/2025/TT-NHNN sửa đổi, bổ sung Khoản 1 Điều 11.')
-  expect(warningSentence({ ...warning, exact: false, named: 'dieu-11/khoan-2a' }, 'en')).toBe('77/2025/TT-NHNN amends or supplements Khoản 2a Điều 11.')
+  const warning = { in_release: true, basis: 'text', target: 'key#dieu-11', exact: true, citation: 'Điều 11, Khoản 1', number: '77/2025/TT-NHNN', kind: 'amends_supplements' }
+  expect(warningSentence(warning, 'vi')).toBe('77/2025/TT-NHNN sửa đổi, bổ sung Điều 11, Khoản 1.')
+  expect(warningSentence({ ...warning, exact: false, named: 'dieu-11/khoan-2a' }, 'en')).toBe('77/2025/TT-NHNN amends or supplements Điều 11, Khoản 2a (this clause or point is not in the loaded text).')
   expect(warningSentence({ ...warning, exact: false, named: 'raw-anchor' }, 'vi')).toContain('một phần của văn bản')
 })
 
@@ -93,4 +93,28 @@ describe('language counterparts', () => {
 it('classifies corpus gap kinds instead of displaying internal names', () => {
   const kinds = ['ambiguous_tree_text', 'article_sequence', 'chunk_omission', 'consolidated_status_unordered', 'consolidated_status_unresolved', 'empty_text', 'file_format_unsupported', 'image_content', 'invalid_date', 'invalid_validity_interval', 'missing_attachment', 'missing_effective_date', 'named_document_missing', 'needs_ocr', 'no_chunks', 'no_text_source', 'no_tree', 'ocr_flagged', 'ocr_label_flagged', 'ocr_rejected', 'partial_status_unexplained', 'relation_clause_unresolved', 'scope_removed', 'seed_article_missing', 'source_provenance_missing', 'source_replaced', 'source_unavailable', 'structure_uncertain', 'table_text', 'text_number_mismatch', 'text_source_ambiguous', 'unknown_relation_code', 'unknown_status', 'unknown_target', 'tree_headings_only', 'tree_headings_partial', 'withdrawn', 'source_withdrawn_retained']
   for (const kind of kinds) expect(gapCategory(kind, 'vi').key, kind).not.toBe('other')
+})
+
+it('renders nested sections and inserted point tokens', () => {
+  expect(citationFromAnchor('dieu-1a/diem-a1')).toBe('Điều 1a, Điểm a1')
+  expect(citationFromAnchor('dieu-1/khoan-2a/diem-đ')).toBe('Điều 1, Khoản 2a, Điểm đ')
+  expect(citationFromAnchor('chuong-i/muc-2')).toBe('Chương I, Mục 2')
+  expect(citationFromAnchor('phan-i/chuong-ii/muc-1')).toBe('Phần I, Chương II, Mục 1')
+})
+it('adds warning notes and preserves exact citations', () => {
+  const warning = { in_release: true, basis: 'vbpl_reference', target: 'key#dieu-8', exact: false, named: 'dieu-8/khoan-9/diem-a', citation: 'Điều 8', number: '77', kind: 'repeals' }
+  expect(warningSentence(warning, 'vi')).toBe('77 bãi bỏ Điều 8, Khoản 9, Điểm a (khoản hoặc điểm này chưa có trong văn bản đã tải) (theo liên kết của VBPL).')
+  expect(warningSentence({ ...warning, exact: true }, 'en')).toBe('77 repeals Điều 8 (per a VBPL link).')
+})
+it('rejects a non-existent date before timestamp conversion', () => {
+  expect(formatDateTime('2026-02-30T14:31:00Z', 'vi')).toBe('2026-02-30T14:31:00Z')
+})
+it('describes the additional gaps and topic assignment accurately', () => {
+  expect(gapCategory('relations_omitted', 'en').sentence).toContain('omitted')
+  expect(gapCategory('historical_document_dates', 'en').sentence).toContain('document dates')
+  expect(gapCategory('eval_floor_failed', 'en').sentence).toContain('evaluation')
+  expect(gapCategory('eval_rejection_failed', 'en').sentence).toContain('rejection')
+  for (const kind of ['seed_article_missing', 'override_target_missing']) {
+    expect(gapCategory(kind, 'en').sentence).toContain('Topics may be missing for some provisions')
+  }
 })

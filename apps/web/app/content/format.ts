@@ -25,6 +25,7 @@ export function formatDate(isoDate: string, lang: Language): string {
 
 export function formatDateTime(iso: string, lang: Language): string {
   if (!/^\d{4}-\d{2}-\d{2}T.*(?:Z|[+-]\d{2}:\d{2})$/i.test(iso)) return iso
+  if (!civilDate(iso.slice(0, 10))) return iso
   const date = new Date(iso)
   if (Number.isNaN(date.getTime())) return iso
   const timeZone = 'Asia/Ho_Chi_Minh'

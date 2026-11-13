@@ -4,7 +4,7 @@ type Labels = Record<Language, { in: string, out: string }>
 const labels: Record<string, Labels> = {
   repeals: { vi: { in: 'Bị bãi bỏ bởi', out: 'Bãi bỏ' }, en: { in: 'Repealed by', out: 'Repeals' } },
   replaces: { vi: { in: 'Bị thay thế bởi', out: 'Thay thế' }, en: { in: 'Replaced by', out: 'Replaces' } },
-  suspends: { vi: { in: 'Bị đình chỉ thi hành bởi', out: 'Đình chỉ thi hành' }, en: { in: 'Suspended by', out: 'Suspends' } },
+  suspends: { vi: { in: 'Bị ngưng hiệu lực bởi', out: 'Ngưng hiệu lực' }, en: { in: 'Suspended by', out: 'Suspends' } },
   amends_supplements: { vi: { in: 'Được sửa đổi, bổ sung bởi', out: 'Sửa đổi, bổ sung' }, en: { in: 'Amended by', out: 'Amends' } },
   consolidates: { vi: { in: 'Được hợp nhất trong', out: 'Hợp nhất' }, en: { in: 'Consolidated in', out: 'Consolidates' } },
   implements: { vi: { in: 'Được quy định chi tiết, hướng dẫn bởi', out: 'Quy định chi tiết, hướng dẫn' }, en: { in: 'Implemented by', out: 'Implements' } },

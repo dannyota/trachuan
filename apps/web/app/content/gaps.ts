@@ -2,7 +2,7 @@ import type { components } from '@trachuan/schema/gen/openapi'
 import type { Language } from '../../i18n'
 import { formatNumber } from './format'
 
-type CategoryKey = 'content' | 'structure' | 'validity' | 'relations' | 'scope' | 'ocr' | 'provenance' | 'other'
+type CategoryKey = 'content' | 'structure' | 'validity' | 'relations' | 'scope' | 'ocr' | 'provenance' | 'topics' | 'omitted' | 'historical' | 'evaluation' | 'rejection' | 'other'
 export type GapCategory = { key: CategoryKey, name: string, sentence: string }
 export type GapSummary = GapCategory & { cases: number, casesLabel: string }
 
@@ -14,16 +14,26 @@ const categories: Record<CategoryKey, Record<Language, { name: string, sentence:
   scope: { vi: { name: 'Thay đổi phạm vi nguồn', sentence: 'Một số văn bản đã bị gỡ, thay thế hoặc giữ lại từ bản trước.' }, en: { name: 'Source scope changes', sentence: 'Some documents were removed, replaced or retained from an earlier copy.' } },
   ocr: { vi: { name: 'Nhận dạng ký tự đang được xem xét', sentence: 'Một số kết quả nhận dạng ký tự đang được xem xét.' }, en: { name: 'OCR under review', sentence: 'Some character recognition results are under review.' } },
   provenance: { vi: { name: 'Thông tin nguồn chưa đầy đủ', sentence: 'Thông tin về nguồn của một số văn bản chưa đầy đủ.' }, en: { name: 'Source information incomplete', sentence: 'Source information is incomplete for some documents.' } },
+  topics: { vi: { name: 'Gán chủ đề chưa đầy đủ', sentence: 'Một số quy định có thể thiếu chủ đề.' }, en: { name: 'Topic assignments incomplete', sentence: 'Topics may be missing for some provisions.' } },
+  omitted: { vi: { name: 'Quan hệ chưa hiển thị hết', sentence: 'Một số quan hệ chưa được hiển thị; hãy đọc văn bản để xem thêm.' }, en: { name: 'Relations omitted', sentence: 'Some relations are omitted; read the document for more.' } },
+  historical: { vi: { name: 'Giới hạn ngày lịch sử', sentence: 'Bộ lọc lịch sử dùng ngày của văn bản, không dùng lịch sử từng quy định hoặc trạng thái tạm ngưng trong quá khứ.' }, en: { name: 'Historical date limits', sentence: 'Historical filtering uses document dates, not provision history or past suspension status.' } },
+  evaluation: { vi: { name: 'Ngưỡng đánh giá chưa đạt', sentence: 'Một ngưỡng đánh giá chưa đạt hoặc chưa có kết quả.' }, en: { name: 'Evaluation threshold unmet', sentence: 'An evaluation threshold failed or was unavailable.' } },
+  rejection: { vi: { name: 'Kiểm tra từ chối chưa đạt', sentence: 'Một kiểm tra từ chối trong đánh giá chưa đạt.' }, en: { name: 'Rejection check failed', sentence: 'An evaluation rejection check failed.' } },
   other: { vi: { name: 'Khác', sentence: 'Có những trường hợp khác cần xem xét.' }, en: { name: 'Other', sentence: 'Other cases need review.' } },
 }
 
 const kinds: Record<Exclude<CategoryKey, 'other'>, readonly string[]> = {
   content: ['chunk_omission', 'empty_text', 'file_format_unsupported', 'file_too_large', 'image_content', 'missing_attachment', 'no_chunks', 'no_text', 'no_text_source', 'no_tree', 'source_unavailable', 'table_text', 'text_limit', 'text_source_ambiguous', 'tree_too_large', 'not_found', 'response_too_large'],
-  structure: ['ambiguous_tree_text', 'article_number_out_of_range', 'article_sequence', 'structure_uncertain', 'text_number_mismatch', 'tree_headings_only', 'tree_headings_partial', 'unknown_node_kind', 'invalid_ancestry', 'seed_article_missing'],
+  structure: ['ambiguous_tree_text', 'article_number_out_of_range', 'article_sequence', 'structure_uncertain', 'text_number_mismatch', 'tree_headings_only', 'tree_headings_partial', 'unknown_node_kind', 'invalid_ancestry'],
   validity: ['consolidated_status_unordered', 'consolidated_status_unresolved', 'invalid_date', 'invalid_validity_interval', 'missing_effective_date', 'missing_commencement', 'multiple_commencement_sentences', 'multiple_effect_articles', 'partial_status_unexplained', 'unknown_status', 'validity_conflict', 'correction_evidence_unavailable'],
-  relations: ['named_document_ambiguous', 'named_document_missing', 'unknown_relation_code', 'unknown_target', 'unresolved_provision_relation', 'override_target_missing'],
+  relations: ['named_document_ambiguous', 'named_document_missing', 'unknown_relation_code', 'unknown_target', 'unresolved_provision_relation'],
   scope: ['scope_removed', 'source_replaced', 'withdrawn', 'source_withdrawn_retained'],
   ocr: ['needs_ocr', 'ocr_flagged', 'ocr_label_flagged', 'ocr_rejected'],
+  topics: ['seed_article_missing', 'override_target_missing'],
+  omitted: ['relations_omitted'],
+  historical: ['historical_document_dates'],
+  evaluation: ['eval_floor_failed'],
+  rejection: ['eval_rejection_failed'],
   provenance: ['source_provenance_missing', 'detail_id_mismatch', 'invalid_source_data', 'listing_unstable', 'source_identity_ambiguous'],
 }
 
