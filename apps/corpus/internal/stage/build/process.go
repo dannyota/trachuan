@@ -132,7 +132,7 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 	}
 	timings.observe("load", phaseStart)
 	slog.Info("taxonomy stats", "stats", counts.Taxonomy)
-	if _, err = conn.Exec(ctx, `SET maintenance_work_mem = '512MB'; SET max_parallel_maintenance_workers = 0`); err != nil {
+	if _, err = conn.Exec(ctx, `SET maintenance_work_mem = '2GB'; SET max_parallel_maintenance_workers = 4`); err != nil {
 		return stage.Output{}, fmt.Errorf("set index limits: %w", err)
 	}
 	phaseStart = time.Now()

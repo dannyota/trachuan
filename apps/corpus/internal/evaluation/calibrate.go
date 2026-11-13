@@ -105,6 +105,10 @@ func calibrationThreshold(scores []calibrationScore) (float64, []CalibrationCand
 
 // Calibrate fits both product cohorts using exact retrieval.
 func Calibrate(ctx context.Context, engine Engine, suite Suite) (Calibration, error) {
+	return calibrate(ctx, engine, suite, caseConcurrency)
+}
+
+func calibrate(ctx context.Context, engine Engine, suite Suite, limit int) (Calibration, error) {
 	if err := validateSuite(suite); err != nil {
 		return Calibration{}, err
 	}
@@ -117,19 +121,30 @@ func Calibrate(ctx context.Context, engine Engine, suite Suite) (Calibration, er
 	}
 	rejects := rejectionSet(suite)
 	scores := []calibrationScore{}
+	var cases []Case
 	for _, c := range append(append([]Case{}, suite.Legacy...), suite.Development...) {
-		if rejects[c.ID] {
-			continue
+		if !rejects[c.ID] {
+			cases = append(cases, c)
 		}
-		force := true
-		p, err := engine.Prepare(ctx, retrieval.Request{Query: c.Question, Limit: 8, Mode: "exact", Arms: "hybrid", InForceOnly: &force})
+	}
+	depths := retrieval.Depths{Dense: recipe.DenseDepth, Lexical: recipe.LexicalDepth}
+	pool := newOrderedPool(ctx, len(cases), limit, func(ctx context.Context, i int) calibrationPrefetch {
+		return prefetchCalibration(ctx, engine, cases[i], depths)
+	})
+	defer pool.stop()
+	for i, c := range cases {
+		result, poolErr := pool.take(i)
+		if poolErr != nil {
+			return Calibration{}, fmt.Errorf("prepare case %s: %w", c.ID, poolErr)
+		}
+		p, err := result.prepared, result.prepareErr
 		if err != nil {
 			return Calibration{}, fmt.Errorf("prepare case %s: %w", c.ID, err)
 		}
 		observation := CalibrationObservation{CaseID: c.ID, Negative: c.ExpectAbstain}
 		score := calibrationScore{negative: c.ExpectAbstain, empty: true}
 		if p.Validation.Accepted {
-			arms, err := engine.Collect(ctx, p, retrieval.Depths{Dense: recipe.DenseDepth, Lexical: recipe.LexicalDepth})
+			arms, err := result.arms, result.collectErr
 			if err != nil {
 				return Calibration{}, fmt.Errorf("collect case %s: %w", c.ID, err)
 			}

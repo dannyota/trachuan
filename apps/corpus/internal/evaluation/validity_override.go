@@ -47,12 +47,19 @@ func validateValidityOverrides(v ValidityOverrides) error {
 	return nil
 }
 
-func collectEvaluation(ctx context.Context, engine Engine, prepared retrieval.Prepared, depths retrieval.Depths, force bool, policy ValidityOverrides) (retrieval.Arms, error) {
+func collectEvaluation(ctx context.Context, engine Engine, prepared retrieval.Prepared, depths retrieval.Depths, force bool, policy ValidityOverrides, lexical *retrieval.LexicalArms) (retrieval.Arms, error) {
 	if force && policy.NonCurrentTail != nil && *policy.NonCurrentTail > 0 {
 		include := false
 		prepared.Request.InForceOnly = &include
 	}
 	if !policy.NotYetEligible {
+		if lexical != nil {
+			if collector, ok := engine.(interface {
+				CollectWithLexical(context.Context, retrieval.Prepared, retrieval.Depths, retrieval.LexicalArms) (retrieval.Arms, error)
+			}); ok {
+				return collector.CollectWithLexical(ctx, prepared, depths, *lexical)
+			}
+		}
 		return engine.Collect(ctx, prepared, depths)
 	}
 	collector, ok := engine.(interface {

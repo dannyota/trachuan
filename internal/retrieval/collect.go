@@ -16,6 +16,10 @@ func (e *Engine) Collect(ctx context.Context, p Prepared, depths Depths) (Arms, 
 }
 
 func (e *Engine) collect(ctx context.Context, p Prepared, depths Depths, notYet bool) (Arms, error) {
+	return e.collectWithLexical(ctx, p, depths, notYet, nil)
+}
+
+func (e *Engine) collectWithLexical(ctx context.Context, p Prepared, depths Depths, notYet bool, source *LexicalArms) (Arms, error) {
 	if !p.Validation.Accepted {
 		return Arms{Release: e.release.Rel, RecipeHash: e.release.RetrievalRecipe.Hash(), QueryRecipeHash: e.queryRecipe.Hash(), Validation: p.Validation}, nil
 	}
@@ -72,7 +76,13 @@ func (e *Engine) collect(ctx context.Context, p Prepared, depths Depths, notYet 
 		if err != nil {
 			return Arms{}, err
 		}
-		if notYet {
+		if source != nil {
+			candidates := source.Primary
+			if i == 1 {
+				candidates = source.NonCurrent
+			}
+			g.Lexical = lexicalPrefix(candidates, depths.Lexical)
+		} else if notYet {
 			g.Lexical, err = lexicalQueryWithValidity(ctx, tx, true, sv, date, historical, flags[i], depths.Lexical, refs)
 		} else {
 			g.Lexical, err = lexicalQuery(ctx, tx, sv, date, historical, flags[i], depths.Lexical, refs)
