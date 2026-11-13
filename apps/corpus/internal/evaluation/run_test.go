@@ -948,3 +948,66 @@ func TestPreviousDiff_ScorerVersionIncompatible(t *testing.T) {
 		t.Fatalf("diff = %v", current.PreviousDiff)
 	}
 }
+
+func TestRun_ArticleCapOverrideReport(t *testing.T) {
+	date := retrieval.Date{Year: 2026, Month: time.November, Day: 9}
+	cap := retrieval.ArticleCapOverride(1)
+	report, _, err := Run(context.Background(), &fakeEngine{date: date}, recordedSuite(), Options{EvaluationDate: date, Modes: []retrieval.Mode{"exact"}, ArticleCapOverride: &cap})
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := json.Marshal(report)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(b, &fields); err != nil {
+		t.Fatal(err)
+	}
+	if string(fields["article_cap_override"]) != "1" {
+		t.Fatalf("article cap: %s", fields["article_cap_override"])
+	}
+	if report.NotRun["filtered"] != "research_override" {
+		t.Fatalf("filter: %v", report.NotRun)
+	}
+	for _, c := range report.Cases {
+		if c.ArticleCapOverride == nil || *c.ArticleCapOverride != cap {
+			t.Fatal("case lost override")
+		}
+	}
+	for _, cohort := range report.Cohorts {
+		for _, metric := range cohort.Metrics {
+			if metric.ArticleCapOverride == nil || *metric.ArticleCapOverride != cap {
+				t.Fatalf("metric %s lost override", metric.Name)
+			}
+		}
+	}
+}
+
+func TestReport_DefaultArticleCapOmitted(t *testing.T) {
+	date := retrieval.Date{Year: 2026, Month: time.November, Day: 9}
+	report, _, err := Run(context.Background(), &recordedEngine{fakeEngine: fakeEngine{date: date}}, recordedSuite(), Options{EvaluationDate: date, Modes: []retrieval.Mode{"exact"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir := t.TempDir()
+	if writeErr := report.WriteFiles(dir); writeErr != nil {
+		t.Fatal(writeErr)
+	}
+	for _, name := range []string{"report.json", "cases.jsonl"} {
+		data, readErr := os.ReadFile(filepath.Join(dir, name))
+		if readErr != nil {
+			t.Fatal(readErr)
+		}
+		if strings.Contains(string(data), `"article_cap_override"`) {
+			t.Errorf("%s contains article_cap_override; pre-override format has no such key", name)
+		}
+	}
+	b, err := json.Marshal(CaseDifference{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(b), `"article_cap_override"`) {
+		t.Errorf("previous diff contains article_cap_override: %s", b)
+	}
+}

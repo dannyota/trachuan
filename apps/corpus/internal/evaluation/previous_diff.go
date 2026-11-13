@@ -5,16 +5,17 @@ import "danny.vn/trachuan/internal/retrieval"
 // CaseDifference lists changed citation matches and abstention decisions.
 type CaseDifference struct {
 	ValidityOverrides
-	CapOverride     *retrieval.CapOverride `json:"cap_override"`
-	CaseID          string                 `json:"case_id"`
-	Cohort          string                 `json:"cohort"`
-	Mode            retrieval.Mode         `json:"mode"`
-	Arms            retrieval.ArmMode      `json:"arms"`
-	Limit           int                    `json:"limit"`
-	Gained          []int                  `json:"gained"`
-	Lost            []int                  `json:"lost"`
-	PreviousAbstain bool                   `json:"previous_abstain"`
-	Abstain         bool                   `json:"abstain"`
+	CapOverride        *retrieval.CapOverride        `json:"cap_override"`
+	ArticleCapOverride *retrieval.ArticleCapOverride `json:"article_cap_override,omitempty"`
+	CaseID             string                        `json:"case_id"`
+	Cohort             string                        `json:"cohort"`
+	Mode               retrieval.Mode                `json:"mode"`
+	Arms               retrieval.ArmMode             `json:"arms"`
+	Limit              int                           `json:"limit"`
+	Gained             []int                         `json:"gained"`
+	Lost               []int                         `json:"lost"`
+	PreviousAbstain    bool                          `json:"previous_abstain"`
+	Abstain            bool                          `json:"abstain"`
 }
 
 func compareCases(previous, current []CaseResult) []CaseDifference {
@@ -34,7 +35,7 @@ func compareCases(previous, current []CaseResult) []CaseDifference {
 		if !ok {
 			continue
 		}
-		d := CaseDifference{CapOverride: c.CapOverride, ValidityOverrides: c.ValidityOverrides, CaseID: c.CaseID, Cohort: c.Cohort, Mode: c.Mode, Arms: c.Arms, Limit: c.Limit, PreviousAbstain: p.Abstain, Abstain: c.Abstain}
+		d := CaseDifference{CapOverride: c.CapOverride, ArticleCapOverride: c.ArticleCapOverride, ValidityOverrides: c.ValidityOverrides, CaseID: c.CaseID, Cohort: c.Cohort, Mode: c.Mode, Arms: c.Arms, Limit: c.Limit, PreviousAbstain: p.Abstain, Abstain: c.Abstain}
 		for i := 0; i < max(len(p.Ranks), len(c.Ranks)); i++ {
 			before := i < len(p.Ranks) && p.Ranks[i] > 0
 			after := i < len(c.Ranks) && c.Ranks[i] > 0

@@ -89,9 +89,9 @@ type evalTarget struct {
 func runEvalWith(ctx context.Context, args []string, stderr io.Writer, prepare func(context.Context, string, string, string) (evalTarget, error)) int {
 	fail := func(err error) int { _, _ = fmt.Fprintln(stderr, err); return 1 }
 	if len(args) < 2 {
-		return fail(fmt.Errorf("usage: corpus eval <cc> <rel> --out DIR [--previous FILE] [--require-floors] [--cap N|none] [--historical-policy agent] [--non-current-tail N] [--not-yet-eligible]"))
+		return fail(fmt.Errorf("usage: corpus eval <cc> <rel> --out DIR [--previous FILE] [--require-floors] [--cap N|none] [--article-cap N|none] [--historical-policy agent] [--non-current-tail N] [--not-yet-eligible]"))
 	}
-	opts, err := options(args[2:], map[string]bool{"--out": true, "--previous": true, "--require-floors": false, "--cap": true, "--historical-policy": true, "--non-current-tail": true, "--not-yet-eligible": false})
+	opts, err := options(args[2:], map[string]bool{"--out": true, "--previous": true, "--require-floors": false, "--cap": true, "--article-cap": true, "--historical-policy": true, "--non-current-tail": true, "--not-yet-eligible": false})
 	if err != nil {
 		return fail(err)
 	}
@@ -103,6 +103,13 @@ func runEvalWith(ctx context.Context, args []string, stderr io.Writer, prepare f
 		capOverride, err = retrieval.ParseCapOverride(value)
 		if err != nil {
 			return fail(fmt.Errorf("--cap: %w", err))
+		}
+	}
+	var articleCapOverride *retrieval.ArticleCapOverride
+	if value, ok := opts["--article-cap"]; ok {
+		articleCapOverride, err = retrieval.ParseArticleCapOverride(value)
+		if err != nil {
+			return fail(fmt.Errorf("--article-cap: %w", err))
 		}
 	}
 	validity := evaluation.ValidityOverrides{NotYetEligible: opts["--not-yet-eligible"] == "true"}
@@ -127,7 +134,7 @@ func runEvalWith(ctx context.Context, args []string, stderr io.Writer, prepare f
 		return fail(err)
 	}
 	defer target.close()
-	report, cache, err := target.runner.Evaluate(ctx, target.env, target.run, evaluation.Options{CapOverride: capOverride, ValidityOverrides: validity})
+	report, cache, err := target.runner.Evaluate(ctx, target.env, target.run, evaluation.Options{CapOverride: capOverride, ArticleCapOverride: articleCapOverride, ValidityOverrides: validity})
 	if err != nil {
 		return fail(err)
 	}

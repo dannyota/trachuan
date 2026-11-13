@@ -11,11 +11,11 @@ func Shape(arms Arms, recipe Recipe, limit int, mode ArmMode) (Response, error) 
 	return shapeWithPolicy(arms, recipe, limit, mode, recipe.DocumentCap, recipe.NonCurrentTail)
 }
 
-func shapeWithPolicy(arms Arms, recipe Recipe, limit int, mode ArmMode, cap, tail int) (Response, error) {
+func shapeWithPolicy(arms Arms, recipe Recipe, limit int, mode ArmMode, cap, tail int, article ...*ArticleCapOverride) (Response, error) {
 	if limit < 0 || limit > MaxLimit {
 		return Response{}, errors.New("invalid ranking options")
 	}
-	plan, err := planWithPolicy(arms, recipe, limit, mode, cap, tail)
+	plan, err := planWithPolicy(arms, recipe, limit, mode, cap, tail, article...)
 	if err != nil {
 		return Response{}, err
 	}
@@ -52,7 +52,7 @@ func (p responsePlan) shape(arms Arms, recipe Recipe) (Response, error) {
 	return out, nil
 }
 
-func planWithPolicy(arms Arms, recipe Recipe, limit int, mode ArmMode, cap, tail int) (responsePlan, error) {
+func planWithPolicy(arms Arms, recipe Recipe, limit int, mode ArmMode, cap, tail int, article ...*ArticleCapOverride) (responsePlan, error) {
 	if tail < 0 || tail > 5 {
 		return responsePlan{}, errors.New("invalid non-current tail")
 	}
@@ -64,14 +64,14 @@ func planWithPolicy(arms Arms, recipe Recipe, limit int, mode ArmMode, cap, tail
 		tail = limit / 2
 	}
 	if (tail == 0 && !arms.IncludeNonCurrent) || !arms.Validation.Accepted {
-		return planWithCap(arms, recipe, limit, mode, cap)
+		return planWithCap(arms, recipe, limit, mode, cap, article...)
 	}
 	// Validate and rank primary before ranking the complement.
-	primary, err := rankWithCap(arms, recipe, limit, mode, cap)
+	primary, err := rankWithCap(arms, recipe, limit, mode, cap, article...)
 	if err != nil {
 		return responsePlan{}, err
 	}
-	other, err := rankGroup(arms.NonCurrent, arms.Validation.Routed, recipe, limit, mode, cap)
+	other, err := rankGroup(arms.NonCurrent, arms.Validation.Routed, recipe, limit, mode, cap, article...)
 	if err != nil {
 		return responsePlan{}, err
 	}
@@ -80,7 +80,7 @@ func planWithPolicy(arms Arms, recipe Recipe, limit int, mode ArmMode, cap, tail
 	}
 	count := min(tail, len(other.Groups))
 	primaryLimit := limit - count
-	out, err := planWithCap(arms, recipe, max(1, primaryLimit), mode, cap)
+	out, err := planWithCap(arms, recipe, max(1, primaryLimit), mode, cap, article...)
 	if err != nil {
 		return responsePlan{}, err
 	}
@@ -106,7 +106,7 @@ func planWithPolicy(arms Arms, recipe Recipe, limit int, mode ArmMode, cap, tail
 	return out, nil
 }
 
-func planWithCap(arms Arms, recipe Recipe, limit int, mode ArmMode, cap int) (responsePlan, error) {
+func planWithCap(arms Arms, recipe Recipe, limit int, mode ArmMode, cap int, article ...*ArticleCapOverride) (responsePlan, error) {
 	out := responsePlan{response: Response{Release: arms.Release, Hits: []Hit{}, NonCurrent: []Hit{}, Gaps: []Gap{}, Diagnostics: Diagnostics{DenseCount: len(arms.Primary.Dense), LexicalCount: len(arms.Primary.Lexical), RawANNCount: len(arms.Primary.RawANN), Fallback: arms.Primary.Fallback, QueryRecipeHash: arms.QueryRecipeHash, TimingsMS: map[string]int64{}}}}
 	if !arms.Validation.Accepted {
 		out.response.Abstain = true
@@ -117,7 +117,7 @@ func planWithCap(arms Arms, recipe Recipe, limit int, mode ArmMode, cap int) (re
 	if recipe.Abstention.Threshold == nil || math.IsNaN(*recipe.Abstention.Threshold) || math.IsInf(*recipe.Abstention.Threshold, 0) {
 		return responsePlan{}, errors.New("uncalibrated retrieval recipe")
 	}
-	ranking, err := rankWithCap(arms, recipe, limit, mode, cap)
+	ranking, err := rankWithCap(arms, recipe, limit, mode, cap, article...)
 	if err != nil {
 		return responsePlan{}, err
 	}

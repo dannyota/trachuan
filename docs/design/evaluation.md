@@ -20,8 +20,9 @@ publishing its final recipe.
 Freeze the engine clock to the build's evaluation date, but leave request `AsOf`
 nil and `InForceOnly` true for both old cohorts and calibration. Setting `AsOf`
 would change the test to historical eligibility. Research-only overrides on
-`corpus eval` (the per-document cap, and validity policy overrides for cases
-tagged `historical`, a non-current tail and not-yet documents) may change a
+`corpus eval` (the per-document and per-article caps, and validity policy
+overrides for cases tagged `historical`, a non-current tail and not-yet documents)
+may change a
 trial's request or shaping; each is recorded on the report and on every record
 that carries `limit`, never reaches serving or the stage, and a mismatch makes
 `previous_diff` incompatible. Cache/report fields distinguish `evaluation_date`

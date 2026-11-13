@@ -51,7 +51,7 @@ func Rank(arms Arms, recipe Recipe, limit int, mode ArmMode, overrides ...*CapOv
 	return rankWithCap(arms, recipe, limit, mode, cap)
 }
 
-func rankWithCap(arms Arms, recipe Recipe, limit int, mode ArmMode, cap int) (Ranking, error) {
+func rankWithCap(arms Arms, recipe Recipe, limit int, mode ArmMode, cap int, article ...*ArticleCapOverride) (Ranking, error) {
 	if limit == 0 {
 		limit = 8
 	}
@@ -61,10 +61,10 @@ func rankWithCap(arms Arms, recipe Recipe, limit int, mode ArmMode, cap int) (Ra
 	if (mode != "lexical" && arms.Depths.Dense < recipe.DenseDepth) || (mode != "dense" && arms.Depths.Lexical < recipe.LexicalDepth) {
 		return Ranking{}, ErrCacheInsufficient
 	}
-	return rankGroup(arms.Primary, arms.Validation.Routed, recipe, limit, mode, cap)
+	return rankGroup(arms.Primary, arms.Validation.Routed, recipe, limit, mode, cap, article...)
 }
 
-func rankGroup(arm ArmGroup, routed bool, recipe Recipe, limit int, mode ArmMode, cap int) (Ranking, error) {
+func rankGroup(arm ArmGroup, routed bool, recipe Recipe, limit int, mode ArmMode, cap int, article ...*ArticleCapOverride) (Ranking, error) {
 	scores := map[int64]fusedCandidate{}
 	add := func(cs []Candidate, depth int, weight float64) {
 		for i, c := range cs {
@@ -137,13 +137,28 @@ func rankGroup(arm ArmGroup, routed bool, recipe Recipe, limit int, mode ArmMode
 		first = &v
 	}
 	counts := map[string]int{}
+	articleCounts := map[Identity]int{}
 	selected := []Group{}
 	demoted := []Group{}
 	for _, g := range groups {
 		key := g.Identity.DocumentKey
-		if counts[key] < cap {
+		var articleKey Identity
+		hasArticle := false
+		if len(article) > 0 && article[0] != nil && *article[0] > 0 {
+			for i := len(g.Best.Ancestors) - 1; i >= 0; i-- {
+				p := g.Best.Ancestors[i]
+				if p.Kind == "dieu" {
+					articleKey, hasArticle = p.Identity, true
+					break
+				}
+			}
+		}
+		if counts[key] < cap && (!hasArticle || articleCounts[articleKey] < int(*article[0])) {
 			selected = append(selected, g)
 			counts[key]++
+			if hasArticle {
+				articleCounts[articleKey]++
+			}
 		} else {
 			demoted = append(demoted, g)
 		}
