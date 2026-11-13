@@ -119,12 +119,12 @@ jobs:
       - uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
         with:
           version: v2.15.0
-          skip-save-cache: ${{ !((github.event_name == 'push' && github.ref == 'refs/heads/main') || github.head_ref == 'ci-speed') }}
+          skip-save-cache: ${{ !(github.event_name == 'push' && github.ref == 'refs/heads/main') }}
       - run: sudo apt-get update && sudo apt-get install -y shellcheck
       - run: make pre-push
       - run: make test
       - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.head_ref == 'ci-speed'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
           path: |
             ~/.cache/go-build
@@ -192,7 +192,7 @@ jobs:
       - if: matrix.shard == 'proof'
         run: make test-proof
       - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.head_ref == 'ci-speed'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
           path: |
             ~/.cache/go-build
@@ -244,7 +244,7 @@ jobs:
         working-directory: apps/web
       - run: make e2e
       - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.head_ref == 'ci-speed'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
           path: |
             ~/.cache/go-build
@@ -321,10 +321,10 @@ jobs:
       - uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
         with:
           version: v2.15.0
-          skip-save-cache: ${{ !((github.event_name == 'push' && github.ref == 'refs/heads/main') || github.head_ref == 'ci-speed') }}
+          skip-save-cache: ${{ !(github.event_name == 'push' && github.ref == 'refs/heads/main') }}
           args: --build-tags ort ./apps/queryembed/...
       - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.head_ref == 'ci-speed'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
           path: |
             ~/.cache/go-build
