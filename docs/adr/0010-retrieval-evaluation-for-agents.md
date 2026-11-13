@@ -18,8 +18,9 @@ choice, and three of them send unaccented queries that ADR 0002 rejects.
 ## Decision
 
 1. Three cohorts. **Legacy parity**: banhmi's 92 cases with their expectations
-   and matcher unchanged, compared only with banhmi's accepted numbers; no floor
-   applies. **Old product**: the same 92 cases under product scoring; the three
+   and matcher rules unchanged, applied to each hit and to each complete
+   fragment of a merged hit, compared only with banhmi's accepted numbers; no
+   floor applies. **Old product**: the same 92 cases under product scoring; the three
    unaccented cases become rejection checks that must all return the ADR 0002
    diacritics message and sit outside the recall, MRR and abstention
    denominators; the other 89 keep their expectations. **Development**: the new
@@ -197,3 +198,11 @@ accuracy on either cohort.
   0.853; compact p95 at 20 hits 35,519 characters, so the size gate passes. Item
   4 passes. Serving accepts recipes 2 and 3; the first recipe-3 build
   recalibrates.
+- 2026-11-13: legacy parity reads complete fragments (scorer `agent-eval/4`).
+  Recipe 3 folds an article's member clauses into one hit cited by the article,
+  so banhmi's matcher, which read one clause per hit, lost rank-1 credit on run
+  vn/20261113_3 for expectations such as Điều 11 khoản 1 while the product path
+  credited the same complete fragment. The number and citation rules stay
+  banhmi's and also apply to each complete fragment's own citation; a truncated
+  fragment earns nothing. Legacy parity stays comparable with banhmi's numbers,
+  where those clauses were separate hits.
