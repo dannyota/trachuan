@@ -128,10 +128,14 @@ this release; relations alone never populate it.
 recipes. UNIQUE `(document_id,ordinal)`; composite FK
 `(document_id,provision_id)` to provision `(document_id,id)`; indexes
 `(provision_id)`, HNSW `(embedding vector_cosine_ops)` with construction
-settings in [budgets](budgets.md#indexing). No sparse index. Build validates
-actual token cap, finite components, vector norm and sparse nonzero bound before
-insertion. The artifact ordinal remains unchanged when oversize chunks are
-excluded, so corpus ordinals may have holes.
+settings in [budgets](budgets.md#indexing). No sparse index. `sparse` uses
+`STORAGE MAIN`, so wide rows move `content` and `spans` out of line first and
+the sparse scan reads the heap only
+([retrieval performance](retrieval-performance.md#sparse-arm)); build metrics
+report `sparse_out_of_line`, the chunks whose vector is still stored out of
+line. Build validates actual token cap, finite components, vector norm and
+sparse nonzero bound before insertion. The artifact ordinal remains unchanged
+when oversize chunks are excluded, so corpus ordinals may have holes.
 
 `lexical_df`: `token text PRIMARY KEY`, `dimension integer` constrained to
 `1..S`, `df bigint > 0`. No index beyond the PK; collisions are permitted. Build

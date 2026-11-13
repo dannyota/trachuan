@@ -74,6 +74,7 @@ CREATE TABLE chunk (
  FOREIGN KEY (document_id,provision_id) REFERENCES provision (document_id,id)
 );
 CREATE INDEX ON chunk (provision_id);
+ALTER TABLE chunk ALTER COLUMN sparse SET STORAGE MAIN;
 
 CREATE TABLE lexical_df (
  token text COLLATE "C" PRIMARY KEY, dimension integer NOT NULL CHECK (dimension BETWEEN 1 AND 1048576),
