@@ -10,6 +10,9 @@ type DocumentSummary struct {
 }
 
 func (s *Summary) record(doc Document, pages int, u Usage, outcome string) {
+	if u.APIErrorType != "" && (outcome == "api_error" || outcome == "uncertain:api_error") {
+		outcome += ":" + u.APIErrorType
+	}
 	s.Documents = append(s.Documents, DocumentSummary{EntryID: doc.Entry.ID, Pages: pages, InputTokens: u.Input, OutputTokens: u.Output, CostMicroUSD: u.charge(), Outcome: outcome})
 }
 

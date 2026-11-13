@@ -285,3 +285,61 @@ func TestDiagnostics_ContextLimitKeepsPreparedSize(t *testing.T) {
 		t.Fatalf("request bytes=%d want=%d", got, p.requestBytes)
 	}
 }
+
+func TestDiagnostics_ProviderErrorType(t *testing.T) {
+	for _, tc := range []struct{ name, body, want, outcome string }{
+		{"known", `{"type":"error","error":{"type":"invalid_request_error","message":"sentinel-private-message"}}`, "invalid_request_error", "api_error:invalid_request_error"},
+		{"unknown", `{"type":"error","error":{"type":"sentinel-private-message","message":"sentinel-private-message"}}`, "other", "api_error:other"},
+		{"missing", `{"type":"error","error":{"message":"sentinel-private-message"}}`, "", "api_error"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			sdk := sdkForTest(func(*http.Request) (*http.Response, error) {
+				return sdkResponse(400, "application/json", tc.body), nil
+			})
+			response, callErr := sdk.Direct(context.Background(), Request{Model: "claude-sonnet-5-5", Effort: "medium"})
+			if callErr == nil {
+				t.Fatal("expected API error")
+			}
+			r, repo, client, docs := fixture(t)
+			client.Response, client.DirectError = response, callErr
+			summary, err := r.Run(context.Background(), docs, options())
+			if err != nil {
+				t.Fatal(err)
+			}
+			usage := fields(t, repo.attempts[0].Usage)
+			if got, ok := usage["api_error_type"]; (tc.want == "" && ok) || (tc.want != "" && got != tc.want) {
+				t.Errorf("api_error_type=%v, present=%v, want=%q", got, ok, tc.want)
+			}
+			if summary.Documents[0].Outcome != tc.outcome {
+				t.Errorf("outcome=%q want=%q", summary.Documents[0].Outcome, tc.outcome)
+			}
+			if strings.Contains(fmt.Sprint(usage, callErr, summary), "sentinel-private-message") {
+				t.Fatal("provider text escaped")
+			}
+		})
+	}
+}
+
+func TestDiagnostics_SuccessOmitsProviderErrorType(t *testing.T) {
+	r, repo, _, docs := fixture(t)
+	if err := run(t, r, docs, options()); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := fields(t, repo.attempts[0].Usage)["api_error_type"]; ok {
+		t.Fatal("successful attempt recorded provider error type")
+	}
+}
+
+func TestDiagnostics_DocumentedProviderTypes(t *testing.T) {
+	for _, value := range []string{"invalid_request_error", "authentication_error", "permission_error", "not_found_error", "request_too_large", "rate_limit_error", "api_error", "overloaded_error", "billing_error", "timeout_error"} {
+		t.Run(value, func(t *testing.T) {
+			sdk := sdkForTest(func(*http.Request) (*http.Response, error) {
+				return sdkResponse(400, "application/json", `{"type":"error","error":{"type":"`+value+`","message":"sentinel-private-message"}}`), nil
+			})
+			_, err := sdk.Direct(context.Background(), Request{Model: "claude-sonnet-5-5", Effort: "medium"})
+			if got := fields(t, errorUsage(err))["api_error_type"]; got != value {
+				t.Errorf("api_error_type=%v want=%s", got, value)
+			}
+		})
+	}
+}

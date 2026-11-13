@@ -57,7 +57,7 @@ func (r *Runner) submit(ctx context.Context, group []prepared, o Options, s *Sum
 			return fmt.Errorf("record uncertain OCR batch: %w", markErr)
 		}
 		for i, a := range attempts {
-			s.record(docs[i], group[i].pages, Usage{Input: group[i].inputTokens, ReservationMicroUSD: a.Usage.ReservationMicroUSD}, "uncertain:api_error")
+			s.record(docs[i], group[i].pages, Usage{Input: group[i].inputTokens, ReservationMicroUSD: a.Usage.ReservationMicroUSD, APIErrorType: errorUsage(err).APIErrorType}, "uncertain:api_error")
 		}
 		return safeError(err)
 	}
