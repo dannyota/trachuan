@@ -193,7 +193,9 @@ class Corpus:
                 with self.db.lock():
                     self.mode = next((r['mode'] for r in self.db.operations()
                                       if r['manifest_hash'] == self.hash and r['mode'] != 'prune'), None)
-                self.result.write('failed' if failed else 'current', 'noop', 'corpus manifest already seen',
+                self.result.write('failed' if failed else 'current', 'noop',
+                                  'corpus manifest failed; re-sign the release to retry' if failed
+                                  else 'corpus manifest already seen',
                                   self.hash, self.manifest, self.mode)
                 return not failed
             self.state.accept('corpus', self.hash, self.manifest['sequence'])

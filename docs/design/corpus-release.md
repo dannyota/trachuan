@@ -103,8 +103,11 @@ reads one bucket of public legal text and cannot write. The job:
    `<cc>-production`.
 
 `release_eligible` in the report stays false; the signed corpus manifest is the
-release authorization. Signing an older `rel` again gives it a new sequence,
-which is how a corpus rollback is requested. No MacBook signing key exists.
+release authorization. A failed manifest is never retried by the host;
+dispatching `corpus-release.yml` again for the same `rel` signs a new manifest
+with a new sequence, which is how a failed activation is retried. Signing an
+older `rel` again gives it a new sequence, which is how a corpus rollback is
+requested. No MacBook signing key exists.
 
 ### Corpus manifest
 
@@ -201,7 +204,10 @@ even when the auth migrations ran before the role existed.
    `pg_prewarm`, creating and dropping the extension as the
    [runbook](../runbooks/release-restore.md#prewarm-a-corpus-database) does.
    Then `server release-check --database <target>` runs one search and one read
-   against it with the server code that will serve it.
+   against it with the server code that will serve it, under the evaluation
+   profile: no candidate cache or postings and the 60-second deadline, since the
+   smoke checks correctness, not serving latency. The restore and prewarm
+   sessions set every PostgreSQL timeout to zero.
 4. In one transaction: require the country's pointer row, compare-and-swap
    `corpus_release.active_db` from the journaled expected value, require exactly
    one updated row, insert the old database into `retired_release` with its dump
