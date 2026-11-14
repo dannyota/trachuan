@@ -43,5 +43,13 @@ class MountExtractionTest(unittest.TestCase):
             ])
 
 
+    def test_each_source_must_yield_its_mounts(self):
+        with self.assertRaises(ValueError):
+            self.check['required']([], 'restore-check.sh', {'/run/restore-check'})
+        mounts = [('restore-check.sh', '999:999', '--mount', 'type=tmpfs,destination=/run/restore-check,tmpfs-mode=0700,U=true')]
+        self.assertEqual(self.check['required'](mounts, 'restore-check.sh', {'/run/restore-check'}), mounts)
+        with self.assertRaises(ValueError):
+            self.check['required'](mounts, 'restore-check.sh', {'/run/restore-check', '/tmp'})
+
 if __name__ == '__main__':
     unittest.main()

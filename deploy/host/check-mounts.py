@@ -52,6 +52,21 @@ def script_mounts(script):
     return mounts
 
 
+def required(mounts, source, destinations):
+    found = set()
+    for name, _, flag, value in mounts:
+        if name != source:
+            continue
+        if flag == '--mount':
+            found.update(part.split('=', 1)[1] for part in value.split(',') if part.startswith('destination='))
+        else:
+            found.add(value.split(':', 1)[0])
+    missing = destinations - found
+    if missing:
+        raise ValueError(f'{source}: missing mounts {sorted(missing)}')
+    return mounts
+
+
 def probe_script(mounts):
     if not mounts:
         raise ValueError('no mounts found')
@@ -94,7 +109,8 @@ def main():
                                 for name, repo in repositories.items()))
         units = work / 'units'
         subprocess.run(['bash', str(HOST / 'render-units.sh'), str(pins), str(units)], check=True)
-        mounts = quadlet_mounts(units) + script_mounts(HOST / 'restore-check.sh')
+        mounts = required(quadlet_mounts(units), 'trachuan-postgres.container', {'/run/pgbackrest'}) + required(
+            script_mounts(HOST / 'restore-check.sh'), 'restore-check.sh', {'/run/pgbackrest', '/run/restore-check', '/tmp'})
         subprocess.run(['docker', 'run', '--rm', '--privileged', '--entrypoint=/bin/sh',
                         PODMAN_IMAGE, '-euc', probe_script(mounts)], check=True, timeout=170)
 
