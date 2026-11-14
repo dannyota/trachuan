@@ -55,87 +55,49 @@ are never built into them, and the release check lists the binaries in each
 image and fails on any other. Private images would need a rotating read-only
 host secret. The code manifest is separate from the corpus manifest below.
 
-A systemd timer fetches the production artifact over HTTPS. Its tag is only a
-discovery hint; stage the manifest, bundle and images locally before checking
-them. GitHub publishes with its job-scoped `GITHUB_TOKEN` and signs with
-[cosign keyless signing through GitHub OIDC](https://docs.sigstore.dev/quickstart/quickstart-ci/).
-No OCI or host credential is stored in GitHub. No inbound deploy listener is
-opened; administrative SSH stays restricted to the owner's IP.
-
-### Host trust policy
-
-The owner installs a root-owned policy pinning the repository, release workflow
-path, allowed protected release-tag pattern, image repository names and Sigstore
-trust roots. Populate these values before enabling the timer. The release
-workflow signs only after owner production approval and green CI for the exact
-source commit; protect its file and tags against unauthorized edits, creation
-and movement. Verify the repository plan supports the required
-[environment protection](https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments);
-missing protection blocks rollout. A normal build signature is not promotion.
-
-The signed manifest binds the repository, full source commit, protected source
-ref, image names and SHA-256 digests, production target, promotion sequence and
-optional rollback target manifest hash. These are required policy fields, not
-instructions for executing shell text. Before activation the host must:
-
-1. Use [cosign verification](https://docs.sigstore.dev/cosign/verifying/verify/)
-   (`verify-blob --bundle`) on the exact manifest bytes, requiring issuer
-   `https://token.actions.githubusercontent.com` and certificate identity
-   `https://github.com/<repository>/<release-workflow>@<protected-ref>`.
-   Construct the anchored identity constraint from local policy, never from
-   untrusted manifest values alone. Verify the certificate chain and log proof;
-   never skip signature, identity or transparency checks.
-2. Require the signed repository/ref to match that policy and signer identity.
-   Verify each image's
-   [signed build attestation](https://docs.sigstore.dev/cosign/verifying/attestation/)
-   against the pinned build workflow identity. Require the
-   [SLSA v1 predicate](https://slsa.dev/spec/v1.2/provenance) and compare its
-   resolved source repository, full commit and ref with the manifest. Require
-   matching attestation subject/image digest and locally pulled digest. Reject
-   tags, unlisted image repositories, missing claims and mismatches.
-3. Require explicit production authorization from the release workflow above,
-   covering that exact commit and all digests. Enforce a strictly increasing
-   promotion sequence persisted on the host; a previously seen manifest is a
-   no-op, never an instruction to reactivate it. Reject sequence reuse with
-   different content. Owner bootstrap pins an initial authorized manifest hash
-   and sequence floor; lost state requires owner recovery, not a reset to zero.
-4. Permit rollback only to a locally retained, previously authorized manifest
-   whose hash is explicitly authorized by the failed/current promotion, or by a
-   fresh signed rollback authorization from the same release authority. Bind
-   rollback authorization to both current and target manifest hashes; recheck
-   signatures and policy. Persist consumed rollback authorization and keep the
-   highest promotion sequence, preventing replay after rollback.
-
-Under one host lock, journal activation/rollback and retain previous authorized
-manifests and digests; update Quadlets, run `systemctl --user daemon-reload` and
-restart. Failure alerts and restores the authorized previous bundle when
-permitted; otherwise stop for the owner. Recover from the journal without
-repeatedly retrying a failed promotion. Fetch/verification failure leaves the
-current deployment running. Corpus activation and recipe changes require the
-maintenance window below and the same image authorization policy. Application
-containers cannot write trust policy/state. Compromised release authority or
-host root defeats this boundary. Before rollout, prove rejection of development
-builds, wrong commits/digests and replayed rollback.
+A release tag deploys without SSH: GitHub signs a release manifest with
+[cosign keyless signing through GitHub OIDC](https://docs.sigstore.dev/quickstart/quickstart-ci/),
+and a root timer on the host verifies it and the image attestations before it
+changes anything. No inbound deploy listener is opened. Repository settings, the
+manifest, host policy, activation, rollback and proofs are in
+[pull deployment](pull-deployment.md).
 
 ## Secrets
 
-Use regional OCI Vault secrets and a standard vault with a software-protected
-key. The host's
+Use regional OCI Vault secrets in vault `trachuan-vault` with the
+software-protected key `trachuan-secrets`. Each Vault secret has the name of the
+Podman secret it becomes: `google_client_secret`, `smtp_username`,
+`smtp_password`, `account_keys`, `postgres_password`, `auth_db_password`,
+`corpus_reader_password`, `activator_db_password`, `restorer_db_password`,
+`backup_s3_key`, `backup_s3_key_secret` and `server_signup_emails` (an env
+secret for `SERVER_SIGNUP_EMAILS`, so the owner email stays out of Git). The
+fetcher derives `server_auth_database_url` and `server_corpus_database_url` from
+the passwords as the [host runbook](../runbooks/host.md#create-secrets) does.
+
+The root `trachuan-secrets.service` runs at boot, before each activation and
+hourly. Through the host's
 [instance principal](https://docs.oracle.com/en-us/iaas/Content/Identity/Tasks/callingservicesfrominstances.htm)
-fetches
-[secret bundles](https://docs.oracle.com/en-us/iaas/Content/secret-management/Tasks/get-secrets-contents.htm)
-at deploy into Podman secrets: Google client secret, database passwords, the
-corpus manifest public key and backup credentials. Scope the dynamic group to
-this instance and `read secret-bundles` to named secrets; no secret management
-or tenancy-wide grants. Decode through a pipe or private runtime file, never
-logs, command arguments, images or OpenTofu state. Recreate affected containers
-after secret replacement. Instance identity is a host-wide privilege: block
-application-container access to instance metadata; a compromised host can still
-obtain its allowed secrets. Keep an owner recovery copy outside the host. The
-server holds no token signing key: access and refresh tokens are opaque database
-rows, and the consent form is bound to the session's CSRF secret. In the first
-production phase the owner enters the secrets as Podman secrets over SSH
-([host runbook](../runbooks/host.md)).
+and the installed OCI Python SDK it reads the current
+[secret bundle](https://docs.oracle.com/en-us/iaas/Content/secret-management/Tasks/get-secrets-contents.htm)
+of each named secret and compares its version with the one recorded in
+`/var/lib/trachuan-deploy/secrets.json` (names and versions only). On a change
+it pipes the value into `podman secret create --replace` as `trachuan` and
+recreates the containers that mount it. Values never reach disk, logs, command
+arguments, images or OpenTofu state. A missing or unreadable secret keeps the
+current Podman secret and records `secrets_failed`, alarmed like
+`deploy_failed`. Changing a database role password is an owner runbook step
+(`ALTER ROLE`, then the Vault version); the fetcher does not alter roles.
+
+Dynamic group `trachuan-host` (this instance only) gets `read secret-bundles`
+where
+[`target.secret.name`](https://docs.oracle.com/en-us/iaas/Content/Identity/Reference/keypolicyreference.htm)
+is one of the names above, `read objects` in bucket `trachuan-releases`, and
+`use log-content` for its log; no secret management or tenancy-wide grants.
+Instance identity is a host-wide privilege: application containers cannot reach
+instance metadata (host firewall rule for `trachuan` and its subordinate UIDs).
+Keep an owner recovery copy outside the host. The server holds no token signing
+key: access and refresh tokens are opaque database rows, and the consent form is
+bound to the session's CSRF secret.
 
 ## Object Storage
 
@@ -146,11 +108,12 @@ is `https://<namespace>.compat.objectstorage.<region>.oraclecloud.com`, using
 the region in ADR 0006. Use IPv4 connectivity, HTTPS, Signature Version 4 and
 path-style addressing. Authenticate with an OCI IAM user's
 [customer secret key](https://docs.oracle.com/en-us/iaas/Content/Identity/access/working-with-customer-secret-keys.htm)
-(access-key/secret-key pair), not an OCI API signing key or instance principal.
-Use separate service users for backup, corpus release upload and download; their
-bucket policies, not the key itself, constrain access. Keep the MacBook uploader
-key in the owner's credential store; host keys come from Vault. Rotate by
-installing a replacement, proving access, then revoking the old key.
+(access-key/secret-key pair), not an OCI API signing key. The host's release
+downloads are the one exception: they use its instance principal. Use separate
+service users per purpose; their bucket policies, not the key itself, constrain
+access. Keep the MacBook uploader key in the owner's credential store; host keys
+come from Vault. Rotate by installing a replacement, proving access, then
+revoking the old key.
 
 [pgBackRest configuration](https://pgbackrest.org/configuration.html) uses
 `repo1-type=s3`, `repo1-s3-endpoint` set to the endpoint hostname without
@@ -161,59 +124,22 @@ configuration from Podman secret mounts; keep TLS verification enabled. These
 documented generic S3 options are a compatibility proposal, not a completed OCI
 restore test.
 
-Upload `manifest.json`, `manifest.sig` and dumps with an S3 client configured
-with that endpoint, region, path style and a customer secret key; Oracle lists
-[supported operations and clients](https://docs.oracle.com/en-us/iaas/Content/Object/Tasks/s3compatibleapi_topic-Amazon_S3_Compatibility_API_Support.htm).
-The uploader writes only its release bucket; the host reads releases and has no
-release write/delete grant. Backup credentials access only their bucket,
-including deletion needed for pgBackRest expiry. A separate pipeline identity
-writes checkpoints and intent logs; exclude the never-deleted intent log from
-expiry policies. Never put credentials in manifests. Prove multipart upload,
-download/hash verification, WAL archive and restore with the pinned clients
-before first release.
+Bucket `trachuan-releases` holds corpus releases
+([corpus release](corpus-release.md#upload)). IAM user `trachuan-release-upload`
+(MacBook) may create and overwrite objects there; `trachuan-release-verify`
+(GitHub environment `corpus-release`) may only read them; the host reads them
+through its instance principal and needs no key. Backup credentials access only
+`trachuan-backups`, including deletion needed for pgBackRest expiry. A separate
+pipeline identity writes checkpoints and intent logs; exclude the never-deleted
+intent log from expiry policies. Never put credentials in manifests. Prove
+multipart upload, download and hash verification with the pinned clients before
+the first release.
 
 ## Serving bundle and release activation
 
 A serving bundle is the server image, embedder image and recipe, and the active
-corpus release. `release activate <rel>` runs as the `activator` role in one of
-two modes, recorded in the journal: `new` restores a database from Object
-Storage; `retained` reactivates a database still listed in `retired_release`,
-skipping steps 1 to 3 and verifying instead that the database exists and its
-`release` row matches `<rel>`. Steps:
-
-0. Take the `activation` advisory lock, shared with `release prune`,
-   `release resume` and `release abort`; append `release_journal` (`started`,
-   target database name). Every later step appends its own row, so any crash
-   leaves a known last step.
-1. Download `manifest.json`, `manifest.sig`, dump. Verify the signature with the
-   pinned public key, then the dump `sha256` and size against the manifest.
-2. Refuse when `schema_version` is not among the versions the running server
-   reads, or when `dense_recipe` or `lexical_recipe` (the runtime algorithm
-   identifier, not the per-release statistics) differ from what the running
-   server and embedder report, or when free memory or disk is below the
-   thresholds in [host budgets](budgets-host.md#host-memory-estimates).
-3. `pg_restore --no-owner` as `restorer` into `corpus_<cc>_<rel>` with a
-   dedicated `maintenance_work_mem`; the TOC is listed first and refused if it
-   contains functions, extensions other than pgvector, or event triggers. Dumps
-   are zstd-compressed (`-Z zstd:1`), so the host `pg_restore` must be built
-   with zstd.
-4. Prewarm the new database's chunk table and its indexes with `pg_prewarm`,
-   then run smoke queries: counts, one search, one read.
-5. In one transaction: compare-and-swap `auth.corpus_release.active_db` against
-   the expected current value, insert the old active database into
-   `retired_release` with `retain_until` seven days ahead, and append the
-   journal row `activated`. 5a. In `retained` mode the same transaction also
-   deletes the target from `retired_release`.
-6. The server resolves the release once per request and holds that connection
-   for the request. `release prune`, under the same lock, drops a database only
-   when it is not `active_db`, is not the target of an unfinished journal, its
-   `retain_until` has passed, and it has no connections; the journal records the
-   drop. After a crash, `release resume` rereads the journal and applies the
-   mode's guard: in `new` mode the target must still be neither active nor
-   retired; in `retained` mode it must still be retired and not active. It then
-   continues from the last recorded step. `release abort` drops the target only
-   in `new` mode and only when the guard holds; in `retained` mode it only
-   closes the journal.
+corpus release. Upload, signing, verification, restore, activation, resume,
+prune and recipe changes are in [corpus release](corpus-release.md).
 
 The server serves only the active release; a retained database is a rollback
 target that the server never opens. `lexical_recipe` identifies the algorithm
@@ -222,11 +148,11 @@ target that the server never opens. `lexical_recipe` identifies the algorithm
 to each release, changes with every corpus refresh, and is loaded for the
 release being searched.
 
-A recipe change needs a maintenance window: stop traffic at Caddy, deploy the
-new server and embedder, activate the matching release, resume. Rollback of a
-bundle is the same window in reverse: an authorized previous image manifest
-under the host trust policy, then `release activate --retained` of the previous
-release. The runbook owns the exact steps.
+A recipe change stops traffic at Caddy while the new server and embedder and the
+matching release are activated together
+([recipe changes](corpus-release.md#recipe-changes)). Rolling a bundle back
+re-signs the previous corpus release and uses a signed
+[rollback](pull-deployment.md#rollback-workflow) of the images.
 
 ## Backups
 
@@ -263,6 +189,15 @@ Monitoring alarms replace CloudWatch:
   [`oci_compute_infrastructure_health.instance_status`](https://docs.oracle.com/en-us/iaas/Content/Compute/References/infrastructurehealthmetrics.htm),
   plus missing heartbeat/metrics; a stopped instance may emit no status value.
 
+Host jobs (deploy, release, secrets, backups) write result JSON under
+`/srv/trachuan/state/`; the metrics timer publishes `deploy_failed`,
+`release_failed`, `secrets_failed` and the backup ages, and each has an alarm.
+Their log files under `/var/log/trachuan/` go to custom log `trachuan-host-jobs`
+in log group `trachuan-logs` through the
+[Custom Logs Monitoring plugin](https://docs.oracle.com/en-us/iaas/Content/Logging/Concepts/agent_management.htm),
+which reads files from local directories, so results and logs are readable
+without SSH. Log lines carry status, never secret values or account data.
+
 Set thresholds from [host budgets](budgets-host.md#host-alarms-proposed).
 Deliver OCI alarms through
 [Notifications](https://docs.oracle.com/en-us/iaas/Content/Notification/Concepts/notificationoverview.htm)
@@ -289,10 +224,12 @@ configure secrets and the host pull policy, then prove upload/restore, rollback
 and off-host alarms before any account other than the owner's signs in. DNS
 already points at the host: the first production phase serves only the owner,
 with images pulled by digest over SSH and secrets entered as Podman secrets.
-Reuse the measurement instance only after inventory and OpenTofu import; do not
-destroy it to recreate capacity. If AWS data exists, stop writes for a final
-backup, verify the copied objects and restore in OCI, then cut over. Keep old
-data and decryption keys until OCI restore proof and the retention period
-finish. Do not run two auth writers or roll back to a stale auth database after
-accepting new writes; reconcile those writes and apply the existing auth restore
-epoch rule first.
+Pull deployment, Vault secrets and corpus release activation replace both, and
+then the deploy SSH key is removed
+([remote execution](pull-deployment.md#remote-execution)). Reuse the measurement
+instance only after inventory and OpenTofu import; do not destroy it to recreate
+capacity. If AWS data exists, stop writes for a final backup, verify the copied
+objects and restore in OCI, then cut over. Keep old data and decryption keys
+until OCI restore proof and the retention period finish. Do not run two auth
+writers or roll back to a stale auth database after accepting new writes;
+reconcile those writes and apply the existing auth restore epoch rule first.

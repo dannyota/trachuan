@@ -55,8 +55,8 @@ proxied request with 403. Caddy serves only the configured site names, and
 Corpus releases are built on the owner's MacBook by the `corpus` worker under a
 self-hosted Temporal server ([pipeline](pipeline.md),
 [ADR 0008](../adr/0008-write-path-temporal-self-hosted.md)). A release is a
-signed manifest plus a PostgreSQL dump in OCI Object Storage. Activation on the
-host is a separate command run by the owner ([deployment](deployment.md)).
+signed manifest plus a PostgreSQL dump in OCI Object Storage. A host timer
+activates it ([corpus release](corpus-release.md)).
 
 ## Database roles
 

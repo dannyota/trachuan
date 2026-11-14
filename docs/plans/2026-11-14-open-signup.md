@@ -19,8 +19,9 @@
 - [ ] IAM service users with customer secret keys: backup (backup bucket read, write, delete), release upload (MacBook, release bucket write), release download (host, release bucket read); policies by bucket, nothing tenancy-wide.
 
 ### A3: Vault secrets
-- [ ] Standard vault, software key; secrets for Google client secret, database passwords, backup keys, release download keys, SMTP credentials and the TOTP key ring (after Part B defines it).
-- [ ] Dynamic group of this instance with `read secret-bundles` on named secrets only; a host script fetches bundles into Podman secrets through a pipe; application containers cannot reach instance metadata.
+- [ ] Vault `trachuan-vault`, key `trachuan-secrets`; secrets named as in deployment.md "Secrets" (TOTP key ring after Part B defines it).
+- [ ] Dynamic group `trachuan-host` policy: `read secret-bundles` on those names, `read objects` in `trachuan-releases`, `use log-content`.
+- [ ] Root `trachuan-secrets` service and timer fetch bundles into Podman secrets through a pipe and recreate affected containers; `secrets_failed` metric and alarm.
 - [ ] Owner keeps a recovery copy outside the host; the runbook names secrets only.
 
 ### A4: Backups
@@ -35,9 +36,19 @@
 - [ ] Host `watch` timer with Telegram alerts and an external uptime check (owner supplies the Telegram bot and chat; names only in Git).
 
 ### A6: Signed pull deployment
-- [ ] Release workflow signs a manifest only for a protected `v*` tag with green CI on its commit and owner approval through a protected GitHub environment.
-- [ ] Root-owned host trust policy and timer that verify the manifest and image attestations, enforce the promotion sequence and roll back only to authorized manifests (deployment.md "Host trust policy").
-- [ ] Proof: rejection of a development build, a wrong commit or digest, and a replayed rollback.
+- [ ] Repository settings (pull-deployment.md "Repository settings") applied from `deploy/github/settings.json`.
+- [ ] `images.yml` attests to the registry and signs the image release manifest for a protected `v*` tag with green CI on its commit; `rollback.yml`.
+- [ ] Root host updater and timer per pull-deployment.md: verification, promotion sequence, host bundle install, activation, automatic rollback, `deploy_failed` metric and alarm, log file shipped to OCI Logging.
+- [ ] Proof: rejection of a development build, a wrong commit or digest, an older sequence and a replayed rollback, on the host in mode `verify`.
+
+### A6b: Corpus release without SSH
+- [ ] Bucket `trachuan-releases`, IAM users `trachuan-release-upload` (MacBook, write) and `trachuan-release-verify` (GitHub environment `corpus-release`, read).
+- [ ] `scripts/corpus-upload.sh`, `corpus release-row`, `corpus-release.yml`, auth migrations for `release_journal` and `retired_release`, `server release-check`, host activator and timer per corpus-release.md; `release_failed` metric and alarm.
+- [ ] Proof: the next evaluated corpus release activates through the timer; a crash and resume test on a 2099 release.
+
+### A6c: Cutover
+- [ ] Bootstrap the updater in mode `verify` (last planned SSH deploy), run the host proofs, switch to `activate`.
+- [ ] Remove the deploy SSH key from `opc` and `trachuan`; disable the Run Command plugin; the owner keeps his key and the serial console.
 
 ### A7: OpenTofu import
 - [ ] `deploy/oci/` OpenTofu root importing instance, volumes, reserved IP, security list, buckets, IAM users and policies, vault and alarms; plan shows no changes after import; state holds no secret values.
