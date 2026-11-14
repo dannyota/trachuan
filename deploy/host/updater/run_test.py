@@ -173,6 +173,13 @@ class RunTest(fixture.ActivationFixture, unittest.TestCase):
         self.assertEqual(self.app.run(), 0)
         self.assertEqual(json.loads(self.paths.result.read_bytes())['status'], 'skipped')
 
+    def test_command_failure_names_command_and_stderr_tail_in_result(self):
+        self.registry.fetch.side_effect = CommandError('command failed', detail='oras resolve: Error: not found')
+        self.assertEqual(self.app.run(), 1)
+        result = json.loads(self.paths.result.read_bytes())
+        self.assertEqual(result['step'], 'fetch')
+        self.assertEqual(result['message'], 'command failed: oras resolve: Error: not found')
+
     def test_bootstrap_refuses_matching_pins_with_stale_running_image(self):
         self.state.path.unlink()
         self.registry.find.return_value = self.old.directory

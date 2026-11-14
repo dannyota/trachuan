@@ -47,7 +47,7 @@ class Registry:
         try:
             tags = self.tags(self.rules['rollback_repository'])
         except CommandError as error:
-            if error.reason == 'not_found':
+            if error.reason in ('not_found', 'denied'):
                 return None
             raise
         numbers = [tag for tag in tags if re.fullmatch('[1-9][0-9]*', tag)]

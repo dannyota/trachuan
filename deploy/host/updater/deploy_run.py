@@ -106,7 +106,12 @@ class Updater:
                 status = Activator(state, self.store, self.host).recover()
             except (OSError, ValueError, CommandError, InterruptedError):
                 status = 'failed'
-        reason = str(error) if isinstance(error, ValueError) else 'command failed or run interrupted'
+        if isinstance(error, ValueError):
+            reason = str(error)
+        elif isinstance(error, CommandError) and error.detail:
+            reason = str(error) + ': ' + error.detail
+        else:
+            reason = 'command failed or run interrupted'
         result.write(status or 'failed', self.step, reason, self.hash, self.manifest)
         return 1
 

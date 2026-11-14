@@ -133,6 +133,10 @@ retries. A run has three phases, each skipped when nothing changed: secrets
 
 1. Fetch: resolve `ghcr.io/dannyota/trachuan-release:production` and the
    rollback repository's newest tag; download into a fresh staging directory.
+   GHCR answers an anonymous request for a package that does not exist yet with
+   `denied`, so an unreadable rollback repository means no rollback
+   authorization; that only withholds rollbacks. Any other registry error fails
+   the run, and the result names the command and the tail of its error output.
 2. Verify the manifest: `cosign verify-blob --bundle` with
    `--certificate-oidc-issuer` and `--certificate-identity-regexp` from policy;
    the transparency log proof is required and no skip flag is ever passed. Check

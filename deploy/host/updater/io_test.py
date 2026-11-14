@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from unittest import mock
 
-from updater.deploy_io import atomic, Result
+from updater.deploy_io import atomic, command, CommandError, failure_reason, Result
 
 
 class IOTest(unittest.TestCase):
@@ -38,6 +38,25 @@ class IOTest(unittest.TestCase):
             self.assertEqual(value['last_success_at'], '2026-01-01T00:00:00Z')
             self.assertEqual(value['finished_at'], '2026-01-02T00:00:00Z')
 
+
+    def test_failed_command_detail_names_program_and_single_line_stderr_tail(self):
+        with self.assertRaises(CommandError) as raised:
+            command(['/bin/sh', '-c', 'printf "first\\nError: %s\\n" "$(printf x%.0s $(seq 400))" >&2; exit 3'])
+        detail = raised.exception.detail
+        self.assertTrue(detail.startswith('sh -c: '))
+        self.assertNotIn('\n', detail)
+        self.assertLessEqual(len(detail), len('sh -c: ') + 300)
+        self.assertTrue(detail.endswith('x'))
+
+    def test_failed_command_detail_skips_runuser_prefix(self):
+        with self.assertRaises(CommandError) as raised:
+            command(['/usr/bin/env', '--', 'sh', '-c', 'echo boom >&2; exit 1'])
+        self.assertEqual(raised.exception.detail, 'sh -c: boom')
+
+    def test_ghcr_anonymous_denied_on_rollback_tags_is_classified(self):
+        stderr = b'Error response from registry: denied: requested access to the resource is denied\n'
+        self.assertEqual(failure_reason(['/usr/local/libexec/trachuan/bin/oras', 'repo', 'tags'], stderr), 'denied')
+        self.assertEqual(failure_reason(['/usr/local/libexec/trachuan/bin/oras', 'resolve'], stderr), 'failed')
 
 if __name__ == '__main__':
     unittest.main()

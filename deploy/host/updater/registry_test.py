@@ -54,9 +54,12 @@ class RegistryTest(unittest.TestCase):
             raise CommandError('repository absent', reason='not_found')
         self.assertIsNone(r.Registry(self.policy, missing).latest_rollback())
         def denied(*args, **kwargs):
+            raise CommandError('repository not readable anonymously', reason='denied')
+        self.assertIsNone(r.Registry(self.policy, denied).latest_rollback())
+        def failed(*args, **kwargs):
             raise CommandError('registry failed')
         with self.assertRaises(CommandError):
-            r.Registry(self.policy, denied).latest_rollback()
+            r.Registry(self.policy, failed).latest_rollback()
 
     def test_blob_fetch_uses_bounded_stdout_before_publishing_file(self):
         r.Registry(self.policy, self.command).fetch(self.policy['release_repository'], 'production', self.directory, 'release')

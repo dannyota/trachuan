@@ -74,10 +74,22 @@ class Lock:
 
 
 class CommandError(Exception):
-    def __init__(self, message, reason='failed', returncode=None):
+    def __init__(self, message, reason='failed', returncode=None, detail=None):
         super().__init__(message)
         self.reason = reason
         self.returncode = returncode
+        self.detail = detail
+
+
+def describe(args, stderr):
+    program = list(args[args.index('--') + 1:] if '--' in args else args)
+    words = [Path(program[0]).name]
+    for arg in program[1:3]:
+        if not re.fullmatch('-?[a-z][a-z-]*', arg):
+            break
+        words.append(arg)
+    tail = ' '.join(stderr.decode('utf-8', errors='replace').split())[-300:]
+    return ' '.join(words) + ': ' + tail
 
 
 def failure_reason(args, stderr):
@@ -87,6 +99,8 @@ def failure_reason(args, stderr):
             return 'not_found'
         if re.search(r'get "[^"\n]+/v2/[^"\n]+/tags/list(?:\?[^"\n]*)?": response status code 404:', text):
             return 'not_found'
+        if 'denied: requested access to the resource is denied' in text:
+            return 'denied'
     if Path(args[0]).name == 'cosign' and 'verify-attestation' in args:
         if 'none of the expected identities matched what was in the certificate' in text:
             return 'identity'
@@ -136,7 +150,7 @@ def command(args, input=None, timeout=300, stdout_limit=None):
                     output, errors = bounded_output(process, stdout_limit, timeout)
                 if process.returncode:
                     raise CommandError('command failed', reason=failure_reason(args, errors),
-                                       returncode=process.returncode)
+                                       returncode=process.returncode, detail=describe(args, errors))
             except BaseException:
                 try:
                     os.killpg(process.pid, signal.SIGKILL)
