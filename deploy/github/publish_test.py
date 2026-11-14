@@ -1,8 +1,10 @@
 import importlib
+import io
 import json
 from pathlib import Path
 import tempfile
 import unittest
+from contextlib import redirect_stdout
 from unittest.mock import patch
 
 import manifest
@@ -18,6 +20,7 @@ class PublishTest(unittest.TestCase):
                                 {n: 'sha256:' + 'b' * 64 for n in ('server', 'web', 'queryembed', 'postgres')},
                                 'docker.io/library/caddy@sha256:' + 'c' * 64, b'bundle')
         with tempfile.TemporaryDirectory() as work, patch('publish.sign') as sign, \
+                patch('publish.production', return_value=None), \
                 patch('publish.subprocess.run') as run:
             path = Path(work)
             (path / 'manifest.json').write_bytes(data)
@@ -41,6 +44,43 @@ class PublishTest(unittest.TestCase):
             with self.assertRaises(ValueError):
                 self.publisher.release(path, 'refs/tags/v1.2.3', 'a' * 40)
             run.assert_not_called()
+
+    def test_reversed_completion_keeps_newer_production_sequence(self):
+        data = manifest.release('a' * 40, 'refs/tags/v1.2.3', 4,
+                                {n: 'sha256:' + 'b' * 64 for n in ('server', 'web', 'queryembed', 'postgres')},
+                                'docker.io/library/caddy@sha256:' + 'c' * 64, b'bundle')
+        pointer = {'sequence': 3}
+
+        def run(args, **kwargs):
+            if args[:2] == ['oras', 'tag']:
+                pointer['sequence'] = int(args[2].rsplit('.', 1)[1])
+
+        with tempfile.TemporaryDirectory() as work, patch('publish.sign'), \
+                patch('publish.production', side_effect=lambda directory: pointer.copy()), \
+                patch('publish.subprocess.run', side_effect=run), redirect_stdout(io.StringIO()) as output:
+            path = Path(work)
+            sequences = []
+            for sequence in (5, 4, 5):
+                obj = json.loads(data) | {'sequence': sequence, 'release': f'v1.2.{sequence}',
+                                          'ref': f'refs/tags/v1.2.{sequence}'}
+                (path / 'manifest.json').write_bytes(manifest.canonical(obj))
+                self.publisher.release(path, obj['ref'], 'a' * 40)
+                sequences.append(pointer['sequence'])
+            self.assertEqual(sequences, [5, 5, 5])
+            self.assertEqual(len(output.getvalue().splitlines()), 2)
+
+    def test_unverified_production_never_moves_pointer(self):
+        data = manifest.release('a' * 40, 'refs/tags/v1.2.3', 4,
+                                {n: 'sha256:' + 'b' * 64 for n in ('server', 'web', 'queryembed', 'postgres')},
+                                'docker.io/library/caddy@sha256:' + 'c' * 64, b'bundle')
+        with tempfile.TemporaryDirectory() as work, patch('publish.sign'), \
+                patch('publish.production', side_effect=ValueError('signature')), \
+                patch('publish.subprocess.run') as run:
+            path = Path(work)
+            (path / 'manifest.json').write_bytes(data)
+            with self.assertRaises(ValueError):
+                self.publisher.release(path, 'refs/tags/v1.2.3', 'a' * 40)
+            self.assertFalse(any(call.args[0][:2] == ['oras', 'tag'] for call in run.call_args_list))
 
     def test_rollback_publishes_only_verified_authorization(self):
         current = json.loads(manifest.release('a' * 40, 'refs/tags/v1.2.3', 4,

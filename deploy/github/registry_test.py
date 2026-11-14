@@ -1,11 +1,12 @@
 import hashlib
 import importlib
+import io
 import json
 from pathlib import Path
 import subprocess
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import manifest
 
@@ -27,6 +28,33 @@ class RegistryTest(unittest.TestCase):
                             annotations={'org.opencontainers.image.title': 'host-bundle.tar.gz'})]
         self.artifact = dict(artifactType='application/vnd.trachuan.release.v1', layers=self.layers)
         self.commands = []
+        process = patch('registry.subprocess.Popen', side_effect=self.pipe)
+        process.start()
+        self.addCleanup(process.stop)
+
+    def pipe(self, args, stdout):
+        self.assertEqual(stdout, subprocess.PIPE)
+        process = MagicMock()
+        process.__enter__.return_value = process
+        process.stdout = io.BytesIO(self.command(args))
+        process.wait.return_value = 0
+        process.poll.return_value = 0
+        return process
+
+    def test_oversized_blob_stops_after_advertised_size_and_kills_fetch(self):
+        body = io.BytesIO(b'x' * 100000)
+        process = MagicMock()
+        process.__enter__.return_value = process
+        process.stdout = body
+        process.poll.return_value = None
+        layer = dict(digest='sha256:' + 'a' * 64, size=4)
+        with patch('registry.command', side_effect=lambda args: body.read()), \
+                patch('registry.subprocess.Popen', return_value=process):
+            with self.assertRaises(ValueError):
+                self.registry.fetch_blob('example.invalid/release', layer, 1024)
+        self.assertLessEqual(body.tell(), 5)
+        process.kill.assert_called_once()
+        process.wait.assert_called_once()
 
     def command(self, args):
         self.commands.append(args)
@@ -57,6 +85,35 @@ class RegistryTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as work, patch('registry.command', self.command):
             with self.assertRaisesRegex(ValueError, 'not found'):
                 self.registry.find({'f' * 64}, Path(work))
+
+    def test_production_resolves_immutable_artifact_and_verifies_manifest(self):
+        self.assertTrue(hasattr(self.registry, 'production'), 'production lookup missing')
+        with tempfile.TemporaryDirectory() as work, patch('registry.command', self.command), \
+                patch('registry.verify') as verify:
+            result = self.registry.production(Path(work))
+            self.assertEqual(result['sequence'], 4)
+            verify.assert_called_once()
+        self.assertIn(['oras', 'resolve', 'ghcr.io/dannyota/trachuan-release:production'], self.commands)
+
+    def test_absent_production_does_not_resolve_or_verify(self):
+        self.assertTrue(hasattr(self.registry, 'production'), 'production lookup missing')
+        with tempfile.TemporaryDirectory() as work, \
+                patch('registry.command', return_value=b'{"tags":["v1.2.3"]}') as command, \
+                patch('registry.verify') as verify:
+            self.assertIsNone(self.registry.production(Path(work)))
+            self.assertEqual(command.call_count, 1)
+            verify.assert_not_called()
+
+    def test_production_lookup_fails_closed_on_registry_or_signature_error(self):
+        self.assertTrue(hasattr(self.registry, 'production'), 'production lookup missing')
+        with tempfile.TemporaryDirectory() as work, patch('registry.command', self.command), \
+                patch('registry.verify', side_effect=ValueError('signature')):
+            with self.assertRaises(ValueError):
+                self.registry.production(Path(work))
+        with tempfile.TemporaryDirectory() as work, \
+                patch('registry.command', side_effect=subprocess.CalledProcessError(1, ['oras'])):
+            with self.assertRaises(subprocess.CalledProcessError):
+                self.registry.production(Path(work))
 
     def test_wrong_blob_hash_or_signature_cannot_authorize_rollback(self):
         with tempfile.TemporaryDirectory() as work, patch('registry.command', self.command), \

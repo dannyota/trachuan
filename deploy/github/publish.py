@@ -4,7 +4,7 @@ from pathlib import Path
 import subprocess
 
 from manifest import read_release, require_match, rollback as rollback_document
-from registry import find
+from registry import find, production
 from signing import sign
 
 
@@ -27,7 +27,11 @@ def release(directory, ref, commit):
     sign(path, directory / 'manifest.sigstore.json', 'images.yml', ref, commit)
     repository = 'ghcr.io/dannyota/trachuan-release'
     push(directory, repository, obj['release'], 'application/vnd.trachuan.release.v1', host_bundle=True)
-    subprocess.run(['oras', 'tag', repository + ':' + obj['release'], 'production'], check=True)
+    current = production(directory / 'production')
+    if current is None or obj['sequence'] > current['sequence']:
+        subprocess.run(['oras', 'tag', repository + ':' + obj['release'], 'production'], check=True)
+    else:
+        print(f"Production sequence {current['sequence']} is not below release sequence {obj['sequence']}; leaving production unchanged")
 
 
 def rollback(directory, current, target, sequence, ref, commit):

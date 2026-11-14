@@ -115,7 +115,6 @@ jobs:
             [[ $digest =~ ^sha256:[0-9a-f]{64}$ ]]
             echo "$name=$digest" >>"$GITHUB_OUTPUT"
           done
-          docker logout ghcr.io
       - name: Attest server
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8
         with:
@@ -153,11 +152,17 @@ jobs:
             echo "ghcr.io/dannyota/trachuan-queryembed@$QUERYEMBED"
             echo "ghcr.io/dannyota/trachuan-postgres@$POSTGRES"
           } >>"$GITHUB_STEP_SUMMARY"
+      - name: Log out of image registry
+        if: always()
+        run: docker logout ghcr.io
 
   release:
     needs: images
     if: github.event_name == 'push'
     environment: production
+    concurrency:
+      group: release-production
+      cancel-in-progress: false
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 75
     permissions:
