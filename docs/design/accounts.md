@@ -93,7 +93,7 @@ rule:
 | `POST /api/v1/auth/reset`           | `Origin`, JSON body, per-IP bucket                         |
 | `POST /api/v1/auth/reset/complete`  | `Origin`, JSON body, per-IP bucket                         |
 | `POST /api/v1/auth/factor`          | `Origin`, JSON body, pending cookie and its `X-CSRF-Token` |
-| `GET /api/v1/auth/link/{token}`     | per-IP bucket; reads only                                  |
+| `POST /api/v1/auth/link`            | `Origin`, JSON body `{token}`, per-IP bucket; reads only   |
 | `GET /api/v1/auth/factor`           | pending cookie; returns `{csrf, next}`; reads only         |
 
 `Origin` must equal the public origin. Add-password completion is a session
@@ -121,7 +121,7 @@ admits the address and no account holds it, write a `registration` link and its
 outbox row; when an account holds it, write an `account_exists` notice to that
 account's email instead, within the per-recipient limit. The handler performs
 one lookup and one insert in both branches and never waits for mail.
-`GET /api/v1/auth/link/{token}` returns `{purpose, email}` for a live link and
+`POST /api/v1/auth/link {token}` returns `{purpose, email}` for a live link and
 consumes nothing. `POST /api/v1/auth/signup/complete {token, password}`
 validates the password, then in one transaction claims the link, rechecks that
 the address is free and sign-up still admits it, creates the account and
@@ -266,8 +266,14 @@ host and AUTH only after TLS, under one deadline per message. Success sets
 `sent_at` and clears the payload; a failure sets `next_attempt_at`; a crash
 leaves the row to be claimed again after `claimed_until`. A message whose
 outcome was uncertain may be delivered twice. After the attempt bound or
-`expires_at` the payload is cleared. Mail is from `no-reply@trachuan.vn`,
-Vietnamese then English, plain text. Kinds: `registration`, `account_exists`,
+`expires_at` the payload is cleared. A link in mail is
+`SERVER_PUBLIC_URL + "/link#" + token`: the token stays in the fragment, so it
+never reaches server or proxy logs or a `Referer`, and the web sends it only in
+a request body. Outside a loopback deployment (the rule that admits the fake
+Google issuer) the server refuses to start without SMTP settings;
+`SERVER_MAIL_CAPTURE_DIR`, which writes each message to a 0600 file, is allowed
+only in a loopback deployment. Mail is from `no-reply@trachuan.vn`, Vietnamese
+then English, plain text. Kinds: `registration`, `account_exists`,
 `add_password`, `reset`, `password_changed`, `totp_enrolled`, `totp_removed`,
 `recovery_codes_replaced`. Logs carry kind, row id and result, never the address
 or link.
