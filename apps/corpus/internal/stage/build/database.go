@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"regexp"
+	"time"
 
 	"danny.vn/trachuan/internal/pgdrop"
 	"github.com/jackc/pgx/v5"
@@ -72,12 +73,8 @@ func recreateTemporary(ctx context.Context, admin *pgx.Conn, cfg Config, name, m
 		if !owned || !sameOwnership(actual, marker) {
 			return fmt.Errorf("temporary database ownership mismatch")
 		}
-		var active bool
-		if err = admin.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE datname=$1 AND usesysid IS NOT NULL)`, name).Scan(&active); err != nil {
-			return fmt.Errorf("inspect database sessions: %w", err)
-		}
-		if active {
-			return fmt.Errorf("temporary database has active sessions")
+		if err = waitSessions(ctx, admin, name); err != nil {
+			return err
 		}
 		if err = pgdrop.DropOnly(ctx, admin, name); err != nil {
 			return fmt.Errorf("drop temporary database: %w", err)
@@ -121,4 +118,27 @@ func writeMarker(ctx context.Context, admin *pgx.Conn, name, marker string) erro
 		return fmt.Errorf("mark temporary database: %w", err)
 	}
 	return nil
+}
+
+var sessionGrace = 5 * time.Second
+
+func waitSessions(ctx context.Context, admin *pgx.Conn, name string) error {
+	deadline := time.Now().Add(sessionGrace)
+	for {
+		var active bool
+		if err := admin.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE datname=$1 AND usesysid IS NOT NULL)`, name).Scan(&active); err != nil {
+			return fmt.Errorf("inspect database sessions: %w", err)
+		}
+		if !active {
+			return nil
+		}
+		if time.Now().After(deadline) {
+			return fmt.Errorf("temporary database has active sessions")
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(50 * time.Millisecond):
+		}
+	}
 }
