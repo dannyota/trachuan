@@ -115,6 +115,16 @@ minutes; embedder RSS at most 2.0 GB after a 5-minute stress at full admission
 (Go service: 1.7 GB on the Mac); activation peak memory within the headroom row;
 disk under 70% after activation with the previous release kept for rollback.
 
+Search on the host (2026-11-14, 9d44fde3, release vn/20261112_2 with sparse
+postings, measured from a client with a 36 ms round trip): one MCP client, 40
+distinct questions per class at about 0.9 requests per second, 240 requests, 0
+errors. Cold p50 / p95 / p99: full at 20 hits 555 / 640 / 1,281 ms (the slowest
+was the run's first request), filtered full 535 / 662 / 678 ms, compact 447 /
+577 / 593 ms. Repeats served from the response cache: 120 to 215 ms at p50,
+mostly payload transfer (316 KB full, 69 KB compact). Server memory stayed at
+335 to 382 MB. The 2-requests-per-second gate is not yet measured: it needs two
+clients, because each user is limited to 60 searches a minute.
+
 Embedder measurements on the host: 0.83 GB in a direct ONNX Runtime run (INT8,
 2026-11-10). The Go query service (2026-11-11) passes the embedder gate. At
 e25b097 it held 1.21 to 1.28 GB through and after the 5-minute stress at full
