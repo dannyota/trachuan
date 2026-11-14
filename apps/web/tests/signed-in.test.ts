@@ -7,7 +7,7 @@ describe('login destination', () => {
     expect(safeNext('/vn/search?q=x')).toBe('/vn/search')
     expect(safeNext('/vn/documents/vn:1?release=20261111_2&q=x')).toBe('/vn/documents/vn:1?release=20261111_2')
     expect(safeNext('/vn/documents/vn:1?release=bad')).toBe('/vn/documents/vn:1')
-    expect(loginUrl('/account')).toBe('/api/v1/auth/google/start?next=%2Faccount')
+    expect(loginUrl('/account')).toBe('/login?next=%2Faccount')
   })
   it.each(['//host', '/\\host', '/a\\b', '/a\u0001b', '/a/../b', '/a/./b', '/%2fhost', '/a/%2e%2e/b', '/a/%5cb', '/a/%00', '/a/%zz', `/${'a'.repeat(512)}`])('rejects %s', (path) => {
     expect(safeNext(path)).toBe('/')
@@ -33,7 +33,7 @@ it('loads the session for protected routes and redirects a signed-out visitor', 
   try {
     const { default: guard } = await import('../app/middleware/signed-in.global')
     const to = { path: '/vn/search', fullPath: '/vn/search?q=x', meta: { signedIn: true } }
-    expect(await guard(to as never, {} as never)).toBe('/api/v1/auth/google/start?next=%2Fvn%2Fsearch')
+    expect(await guard(to as never, {} as never)).toBe('/login?next=%2Fvn%2Fsearch')
     expect(requested).toBe('/vn/search?q=x')
   } finally {
     vi.unstubAllGlobals()

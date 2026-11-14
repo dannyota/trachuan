@@ -55,7 +55,7 @@ it('takes a generated reader link directly to the signed-in guard', async () => 
     console.log(JSON.stringify({ status: response.status, location: response.headers.get('location') }));
   `
   const output = execFileSync(process.execPath, ['--input-type=module', '-e', script, link!], { encoding: 'utf8' })
-  expect(JSON.parse(output)).toMatchObject({ status: 302, location: expect.stringContaining('/api/v1/auth/google/start?next=') })
+  expect(JSON.parse(output)).toMatchObject({ status: 302, location: expect.stringContaining('/login?next=') })
 })
 
 it('appends each page to its own group and merges reference maps', () => {

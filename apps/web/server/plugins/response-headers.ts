@@ -5,11 +5,14 @@ import { admitPage } from '../utils/page-admission'
 export default defineNitroPlugin((nitro) => {
   nitro.hooks.hook('request', (event) => {
     const response = event.node.res
-    const isPublic = matchPage(event.node.req.url ?? '')?.public === true
+    const page = matchPage(event.node.req.url ?? '')
+    const isPublic = page?.public === true
+    const isAccount = page && ['/login', '/login/factor', '/signup', '/reset', '/link', '/account'].includes(page.path)
     const finalize = () => {
       if (response.headersSent) return
       response.setHeader('Content-Security-Policy', APP_CSP)
       response.setHeader('Cache-Control', isPublic ? 'no-cache' : 'no-store')
+      if (isAccount) response.setHeader('X-Robots-Tag', 'noindex')
       if (!isPublic) return
       response.removeHeader('Last-Modified')
       if (response.statusCode >= 400) response.removeHeader('ETag')

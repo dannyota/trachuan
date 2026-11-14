@@ -1,6 +1,7 @@
 import tailwindcss from '@tailwindcss/vite'
 import { APP_CSP } from './app/utils/csp'
 
+const accountHeaders = { 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex' }
 const cache = { maxAge: 600, swr: false, varies: ['x-trachuan-language'] }
 
 export default defineNuxtConfig({
@@ -20,8 +21,12 @@ export default defineNuxtConfig({
     '/privacy': { cache },
     '/terms': { cache },
     '/llms.txt': { cache },
-    '/login': { headers: { 'Cache-Control': 'no-store' } },
-    '/account': { headers: { 'Cache-Control': 'no-store' } },
+    '/login': { headers: accountHeaders },
+    '/login/factor': { headers: accountHeaders },
+    '/signup': { headers: accountHeaders },
+    '/reset': { headers: accountHeaders },
+    '/link': { headers: accountHeaders },
+    '/account': { headers: accountHeaders },
     '/vn/topics': { cache, headers: { 'Cache-Control': 'public, max-age=600' } },
     '/vn/topics/**': { cache, headers: { 'Cache-Control': 'public, max-age=600' } },
     '/vn/**': { headers: { 'Cache-Control': 'no-store' } },

@@ -17,6 +17,7 @@ const messages = computed(() => messagesFor(language.value))
 const labels = computed(() => accountMessages(language.value))
 const session = useSessionStore()
 const api = useApi({ userAction: true })
+const refreshApi = useApi({ userAction: true, localUnavailable: true })
 const actions = accountActions(api.client)
 const sessions = ref<Session[]>([])
 const tokens = ref<Token[]>([])
@@ -86,6 +87,23 @@ async function revokeGrant(id: number) {
   try { const result = await actions.revokeGrant(id); if (result.error) showError(result.error.error.code); else await loadGrants() }
   catch { showError() } finally { busy.value = false }
 }
+async function refreshSecurity(signal: AbortSignal) {
+  const accountId = session.account?.id
+  sessions.value = []; tokens.value = []; grants.value = []; error.value = ''; loading.value = true
+  try {
+    const results = await Promise.all([
+      refreshApi.client.GET('/api/v1/me/sessions', { signal }),
+      refreshApi.client.GET('/api/v1/me/tokens', { signal }),
+      refreshApi.client.GET('/api/v1/me/grants', { signal }),
+    ])
+    if (signal.aborted || accountId !== session.account?.id) return
+    if (results[0].data) sessions.value = results[0].data
+    if (results[1].data) tokens.value = results[1].data
+    if (results[2].data) grants.value = results[2].data
+    for (const result of results) if (result.error) showError(result.error.error.code)
+  } catch { if (!signal.aborted) showError() }
+  finally { loading.value = false }
+}
 async function tokenCreated() { try { await loadTokens() } catch { showError() } }
 </script>
 <template>
@@ -119,6 +137,7 @@ async function tokenCreated() { try { await loadTokens() } catch { showError() }
         <p class="account-meta">{{ labels.granted }} {{ date(item.created_at) }} · {{ labels.lastUsed }} {{ date(item.last_used_at) }}</p><button class="btn btn-secondary" type="button" :disabled="busy" @click="revokeGrant(item.id)">{{ labels.revokeGrant }}</button>
       </article>
     </section>
+    <AccountSecurity @changed="refreshSecurity" />
     <ReportsSection />
     <section class="card account-danger"><div><h2>{{ labels.deleteAccount }}</h2><p>{{ labels.deleteDescription }}</p></div><button class="btn btn-danger" type="button" :disabled="busy" @click="openDeletion">{{ labels.deleteButton }}</button></section>
     <TokenCreateDialog v-if="creating && tokenAction" :action="tokenAction" @close="creating = false" @created="tokenCreated" />

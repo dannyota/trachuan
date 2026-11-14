@@ -3311,6 +3311,10 @@ export interface components {
             email: string;
             /** Format: date-time */
             created_at: string;
+            password: boolean;
+            google: boolean;
+            totp: boolean;
+            totp_enrollment: boolean;
             csrf_token: string;
         };
         Session: {

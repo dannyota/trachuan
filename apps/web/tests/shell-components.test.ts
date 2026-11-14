@@ -93,3 +93,20 @@ it('gives the mobile menu button a centered 44px target', () => {
   expect(button).toMatch(/justify-content:\s*center/)
   expect(button).toMatch(/align-items:\s*center/)
 })
+
+it('switches the link ceremony language without reloading its document', async () => {
+  setup()
+  setActivePinia(createPinia())
+  const language = ref('en')
+  vi.stubGlobal('useState', () => language)
+  vi.stubGlobal('useRoute', () => ({ path: '/link', fullPath: '/link' }))
+  const reload = vi.spyOn(location, 'reload').mockImplementation(() => {})
+  const wrapper = mount(SiteHeader, { global: { stubs: { NuxtLink: { template: '<a><slot /></a>' }, SealLogo: true } } })
+  try {
+    await wrapper.get('.language-button').trigger('click')
+    expect(language.value).toBe('vi')
+    expect(wrapper.get('.language-button').text()).toBe('English')
+    expect(document.cookie).toContain('lang=vi')
+    expect(reload).not.toHaveBeenCalled()
+  } finally { wrapper.unmount() }
+})

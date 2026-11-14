@@ -1,0 +1,9 @@
+.auth-form { display: flex; flex-direction: column; gap: 16px; margin: 20px 0; text-align: left; }
+.auth-form label { display: flex; flex-direction: column; gap: 6px; }
+.auth-form p { margin: 0; }
+.auth-actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.account-security { padding: 20px; }
+.account-security h2, .account-security h3 { margin: 0 0 12px; }
+.account-security section + section { margin-top: 24px; }
+.auth-qr { display: block; width: 240px; max-width: 100%; height: auto; margin: 16px 0; }
+.auth-secret, .recovery-codes { font-family: var(--font-mono); overflow-wrap: anywhere; white-space: pre-wrap; }

@@ -13,3 +13,8 @@ describe('language selection', () => {
     expect(messagesFor('en').signIn).toBe('Sign in')
   })
 })
+
+it('describes both supported sign-in methods in the privacy copy', () => {
+  expect(messagesFor('en').legalIdentity).toContain('password')
+  expect(messagesFor('vi').legalIdentity).toContain('mật khẩu')
+})

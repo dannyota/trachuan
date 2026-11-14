@@ -6,13 +6,17 @@ text is never translated.
 
 ## Public, no account
 
-| Route                             | Content                                                                                                                                                                                     |
-| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/`                               | Purpose, one real pre-rendered sample result, coverage facts from `GET /api/v1/public/status`, Google sign-in, connect link                                                                 |
-| `/vn/topics`, `/vn/topics/{code}` | Subject tree from `GET /api/v1/public/taxonomy`: served nodes in sibling order with name, description and counts; a node page with its path, children and main documents; no provision text |
-| `/connect`                        | Setup for Claude.ai, ChatGPT, Claude Code, Cursor; no secrets                                                                                                                               |
-| `/sources`                        | Sources, current release, known gaps (from `GET /api/v1/public/status`)                                                                                                                     |
-| `/privacy`, `/terms`, `/llms.txt` | Legal pages ("evidence, not legal advice"; account email stored in Singapore; Google is the identity provider; no questions stored) and agent guidance                                      |
+| Route                             | Content                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/`                               | Purpose, one real pre-rendered sample result, coverage facts from `GET /api/v1/public/status`, Google sign-in, connect link                                                                                                                                                                                                                                                                                                                                                |
+| `/vn/topics`, `/vn/topics/{code}` | Subject tree from `GET /api/v1/public/taxonomy`: served nodes in sibling order with name, description and counts; a node page with its path, children and main documents; no provision text                                                                                                                                                                                                                                                                                |
+| `/connect`                        | Setup for Claude.ai, ChatGPT, Claude Code, Cursor; no secrets                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `/sources`                        | Sources, current release, known gaps (from `GET /api/v1/public/status`)                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `/privacy`, `/terms`, `/llms.txt` | Legal pages ("evidence, not legal advice"; account email stored in Singapore; Google is the identity provider; no questions stored) and agent guidance                                                                                                                                                                                                                                                                                                                     |
+| `/login?next=`                    | Google button, email and password form, links to `/signup` and `/reset`; `factor_required` goes to `/login/factor`; error codes from the URL or the API                                                                                                                                                                                                                                                                                                                    |
+| `/login/factor`                   | One field for a TOTP code with a switch to a recovery code; `GET /api/v1/auth/factor` supplies `csrf` and `next`; success goes to `next`; a missing or expired pending cookie returns to `/login`                                                                                                                                                                                                                                                                          |
+| `/signup`, `/reset`               | Email form; the answer is always the same "check your mail" text, also while sign-up is closed by the allowlist, so the page never reveals it                                                                                                                                                                                                                                                                                                                              |
+| `/link`                           | Reads the token from the fragment and removes it with `history.replaceState` before any request; `POST /api/v1/auth/link` gives the purpose: `registration` and `add_password` show a set-password form, `reset` a new-password form; an expired or used link shows one fixed message; an `add_password` link opened without a live session, or one that needs reauth, shows a fixed message to sign in and open the link from the mail again, and the token is never kept |
 
 Public pages are rendered from release data at build or cached by Nitro route
 rules with a 10-minute window; they make no per-visitor corpus query. Only Nitro
@@ -42,13 +46,27 @@ render.
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `/vn/search`          | Vietnamese query box; filters: nodes picked on the tree, applies-on date, type, issuer. Cards: citation, stamp, verbatim text, relation chips, nodes. Summary bar by validity and gaps. Outside-filter hits follow inside hits with a divider and the total count; paging continues through them |
 | `/vn/documents/{key}` | Reader: table of contents, text scrolled to the anchor, side rail with validity, relations, nodes, sources and hashes, release id                                                                                                                                                                |
-| `/account`            | Email, sessions, personal tokens (create, name, revoke), authorized MCP clients (revoke), delete account                                                                                                                                                                                         |
+| `/account`            | Email, sessions, personal tokens (create, name, revoke), authorized MCP clients (revoke), security (below), delete account                                                                                                                                                                       |
 
-A signed-out visit to a signed-in route starts Google login with `next` set to
-the path plus only allowlisted query parameters: `release` on the reader and
-`node` (a served node code, from a topic page link) on search; every other
+A signed-out visit to a signed-in route redirects to `/login?next=` with `next`
+set to the path plus only allowlisted query parameters: `release` on the reader
+and `node` (a served node code, from a topic page link) on search; every other
 parameter is dropped, so a query or form state never reaches a URL
 ([web API](web-api.md#google-login) states the `next` rules).
+
+Security on `/account`: a password is added through the mailed link or changed
+with the current and new password. Two-step verification setup appears only when
+the API offers it (enrollment answers 404 while off) and shows the QR code,
+drawn by a bundled encoder, with the secret as text; confirm takes a code and
+shows the recovery codes once, with copy and download; remove takes a code or a
+recovery code; recovery codes can be replaced. A 403 `reauth_required` asks for
+the password, or sends a Google account to sign in again, and `{factor: true}`
+also asks for a code.
+
+The account pages above use the existing shell and Vietnamese copy with English
+through the language toggle, add no third-party script, and answer
+`Cache-Control: no-store`, as `/login` and `/account` do, and
+`X-Robots-Tag: noindex`.
 
 ## Warnings
 

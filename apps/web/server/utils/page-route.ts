@@ -1,7 +1,7 @@
 import { isDocumentKey } from '../../app/utils/document-key'
 
 const publicPaths = new Set(['/', '/connect', '/sources', '/privacy', '/terms', '/llms.txt'])
-const privatePaths = new Set(['/login', '/account', '/vn/search'])
+const privatePaths = new Set(['/login', '/login/factor', '/signup', '/reset', '/link', '/account', '/vn/search'])
 
 export function matchPage(url: string): { path: string, public: boolean, alias: boolean } | null {
   const raw = url.split('?')[0] ?? ''

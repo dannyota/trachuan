@@ -8,9 +8,10 @@ describe('route rules', () => {
     for (const path of ['/', '/connect', '/sources', '/privacy', '/terms', '/llms.txt']) {
       expect(rules[path]?.cache).toMatchObject({ maxAge: 600, varies: ['x-trachuan-language'] })
     }
-    for (const path of ['/login', '/account', '/vn/**']) {
+    for (const path of ['/login', '/login/factor', '/signup', '/reset', '/link', '/account', '/vn/**']) {
       expect(rules[path]?.cache).toBeUndefined()
       expect(rules[path]?.headers?.['Cache-Control']).toBe('no-store')
+      if (path !== '/vn/**') expect(rules[path]?.headers?.['X-Robots-Tag']).toBe('noindex')
     }
   })
 })

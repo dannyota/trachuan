@@ -64,3 +64,16 @@ it('sends the captured token when the store token changes before submission', as
   await actions.deleteAccount()
   expect(tokens).toEqual(['old', 'new'])
 })
+
+it('rejects a mutation response that arrives after the account changes', async () => {
+  const session = { account: { id: 1, email: 'one@example.invalid', created_at: '2026-01-01T00:00:00Z', password: true, google: false, totp: false, totp_enrollment: true }, csrfToken: 'one', status: 'signed-in' as const }
+  let finish!: (response: Response) => void
+  const api = createApi({ origin: 'http://localhost', session, fetch: () => new Promise(resolve => { finish = resolve }) })
+  const request = api.client.POST('/api/v1/me/recovery-codes', { params: { header: { 'X-CSRF-Token': '' } }, body: { code: '123456' } })
+  await Promise.resolve()
+  session.account = { ...session.account, id: 2 }
+  finish(new Response(JSON.stringify({ recovery_codes: ['SYNTHETIC'] }), { headers: { 'content-type': 'application/json' } }))
+  const result = await request
+  expect(result.error?.error.code).toBe('account_changed')
+  expect(result.data).toBeUndefined()
+})

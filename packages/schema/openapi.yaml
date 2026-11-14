@@ -2563,12 +2563,24 @@ components:
         created_at: &id004
           type: string
           format: date-time
+        password:
+          type: boolean
+        google:
+          type: boolean
+        totp:
+          type: boolean
+        totp_enrollment:
+          type: boolean
         csrf_token: *id001
       required:
       - id
       - email
       - created_at
       - csrf_token
+      - password
+      - google
+      - totp
+      - totp_enrollment
     Session:
       type: object
       properties:

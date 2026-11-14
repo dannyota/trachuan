@@ -20,6 +20,8 @@ import (
 
 type Store interface {
 	GetAccount(context.Context, int64) (store.Account, error)
+	GetPasswordCredential(context.Context, int64) (store.PasswordCredential, error)
+	HasTOTP(context.Context, int64) (bool, error)
 	ListLiveSessions(context.Context, int64) ([]store.WebSession, error)
 	ListTokens(context.Context, int64) ([]store.PersonalToken, error)
 	CreateWebPersonalToken(context.Context, store.WebPersonalTokenParams) (store.PersonalToken, error)
@@ -42,12 +44,13 @@ type Limiter interface {
 }
 
 type Config struct {
-	Store    Store
-	Sessions Sessions
-	Verifier Verifier
-	Limiter  Limiter
-	Clock    func() time.Time
-	Rand     io.Reader
+	TOTPEnrollment bool
+	Store          Store
+	Sessions       Sessions
+	Verifier       Verifier
+	Limiter        Limiter
+	Clock          func() time.Time
+	Rand           io.Reader
 }
 
 type Handler struct {
@@ -100,12 +103,26 @@ func (h *Handler) me(w http.ResponseWriter, r *http.Request) {
 		unavailable(w)
 		return
 	}
+	_, passwordErr := h.cfg.Store.GetPasswordCredential(r.Context(), p.AccountID)
+	if passwordErr != nil && !errors.Is(passwordErr, pgx.ErrNoRows) {
+		unavailable(w)
+		return
+	}
+	totp, err := h.cfg.Store.HasTOTP(r.Context(), p.AccountID)
+	if err != nil || r.Context().Err() != nil {
+		unavailable(w)
+		return
+	}
 	writeJSON(w, 200, struct {
-		ID        int64     `json:"id"`
-		Email     string    `json:"email"`
-		CreatedAt time.Time `json:"created_at"`
-		CSRFToken string    `json:"csrf_token"`
-	}{a.ID, a.Email, a.CreatedAt, p.CSRFSecret})
+		Password       bool      `json:"password"`
+		Google         bool      `json:"google"`
+		TOTP           bool      `json:"totp"`
+		TOTPEnrollment bool      `json:"totp_enrollment"`
+		ID             int64     `json:"id"`
+		Email          string    `json:"email"`
+		CreatedAt      time.Time `json:"created_at"`
+		CSRFToken      string    `json:"csrf_token"`
+	}{passwordErr == nil, a.GoogleSub != nil, totp, h.cfg.TOTPEnrollment, a.ID, a.Email, a.CreatedAt, p.CSRFSecret})
 }
 func writeJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")

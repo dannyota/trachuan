@@ -168,3 +168,25 @@ it.each([
   expect(wrapper.get('h2').text()).toBe(title)
   wrapper.unmount()
 })
+
+it('asks for password reauth before retrying token creation', async () => {
+  const { useSessionStore } = await import('../app/stores/session')
+  useSessionStore().$patch({ account: { id: 1, email: 'test@example.invalid', created_at: '2026-01-01T00:00:00Z', password: true, google: false, totp: false, totp_enrollment: true }, status: 'signed-in', csrfToken: 'csrf' })
+  let attempts = 0
+  vi.stubGlobal('useApi', () => ({ forAction: () => ({ POST: async (path: string) => {
+    if (path.endsWith('/reauth')) return { response: { status: 204 } }
+    attempts++
+    return attempts === 1 ? { error: { error: { code: 'reauth_required' } }, response: { status: 403 } } : { data: { token: 'fixture-secret' } }
+  } }) }))
+  const wrapper = mount(TokenCreateDialog, { props: { action } })
+  await wrapper.get('input').setValue('test')
+  await wrapper.get('form').trigger('submit')
+  await flushPromises()
+  expect(wrapper.text()).toContain('Confirm your password to continue')
+  await wrapper.get('input[type=password]').setValue('synthetic password')
+  await wrapper.get('form').trigger('submit')
+  await flushPromises()
+  expect(attempts).toBe(2)
+  expect(wrapper.text()).toContain('fixture-secret')
+  wrapper.unmount()
+})
