@@ -29,7 +29,7 @@ func TestLoginStore_PersistsAndClaims(t *testing.T) {
 	defer pool.Close()
 	s := loginStore{queries: store.New(pool)}
 	tx := weblogin.LoginTransaction{HandleHash: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", State: "state", Nonce: "nonce", PKCEVerifier: "verifier", NextPath: "/next", RedirectURI: "http://localhost/callback", ExpiresAt: time.Now().Add(time.Hour)}
-	if err := s.CreateLoginTransaction(ctx, tx); err != nil {
+	if err = s.CreateLoginTransaction(ctx, tx); err != nil {
 		t.Fatal(err)
 	}
 	got, err := s.ClaimLoginTransaction(ctx, weblogin.ClaimLoginTransactionParams{HandleHash: tx.HandleHash, Now: time.Now()})
@@ -41,9 +41,5 @@ func TestLoginStore_PersistsAndClaims(t *testing.T) {
 	}
 	if _, err = s.ClaimLoginTransaction(ctx, weblogin.ClaimLoginTransactionParams{HandleHash: tx.HandleHash, Now: time.Now()}); !errors.Is(err, sql.ErrNoRows) {
 		t.Fatalf("second claim: %v", err)
-	}
-	a, err := s.UpsertGoogleAccount(ctx, weblogin.UpsertGoogleAccountParams{Sub: "test-subject", Email: "test@example.invalid"})
-	if err != nil || a.ID == 0 || a.Blocked || a.DeleteRequested {
-		t.Fatalf("upsert account: %v", err)
 	}
 }

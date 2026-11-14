@@ -16,35 +16,27 @@ const (
 	maxCacheTTL       = 10 * time.Second
 	authQueryDeadline = 2 * time.Second
 
-	// ErrUnauthorized means the credential is missing, invalid or no longer valid.
-	ErrUnauthorized failure = "unauthorized"
-	// ErrInsufficientScope means an otherwise valid token lacks MCP read scope.
+	ErrUnauthorized              = store.ErrUnauthorized
 	ErrInsufficientScope failure = "insufficient scope"
-	// ErrUnavailable means the verifier cannot check the credential.
-	ErrUnavailable failure = "credential service unavailable"
+	ErrUnavailable       failure = "credential service unavailable"
 )
 
-// Principal identifies an authenticated account and its MCP permissions.
 type Principal struct {
 	AccountID int64
 	Scope     string
 	Audience  string
 }
 
-// Store supplies credential state and records successful token use.
 type Store interface {
 	GetCredential(context.Context, string) (store.GetCredentialRow, error)
 	TouchPersonalToken(context.Context, string) error
 }
 
-// Verifier checks personal and OAuth access tokens. Configure its fields before
-// use, do not copy it after use, and share one instance across requests.
 type Verifier struct {
-	Store    Store
-	Clock    func() time.Time
-	CacheTTL time.Duration
-	Audience string
-	// QueryTimeout can shorten the two-second auth database deadline.
+	Store        Store
+	Clock        func() time.Time
+	CacheTTL     time.Duration
+	Audience     string
 	QueryTimeout time.Duration
 
 	mu                 sync.Mutex
@@ -58,7 +50,6 @@ type Verifier struct {
 	grantGenerations   map[int64]uint64
 }
 
-// Verify authenticates a raw personal or OAuth access token without the Bearer scheme.
 func (v *Verifier) Verify(ctx context.Context, bearer string) (Principal, error) {
 	if !validToken(bearer) {
 		return Principal{}, ErrUnauthorized
@@ -69,8 +60,6 @@ func (v *Verifier) Verify(ctx context.Context, bearer string) (Principal, error)
 	hash := tokenHash(bearer)
 	entry, flight, ok := v.startLookup(hash, v.now())
 	if ok {
-		// Cached hits skip availability checks and touches because the lookup is
-		// cached by design: docs/design/auth.md, "Token checks and revocation".
 		if !entry.expires.After(v.now()) {
 			return Principal{}, ErrUnauthorized
 		}
@@ -92,7 +81,6 @@ func (v *Verifier) Verify(ctx context.Context, bearer string) (Principal, error)
 		return Principal{}, ErrUnauthorized
 	}
 	if err != nil {
-		// Store errors can contain SQL, parameters or connection details.
 		return Principal{}, fmt.Errorf("verify credential: %w", ErrUnavailable)
 	}
 	if row.RevokedAt != nil || row.BlockedAt != nil || row.AccountAuthEpoch != row.TokenAuthEpoch || !row.ExpiresAt.After(v.now()) {
@@ -116,7 +104,6 @@ func (v *Verifier) Verify(ctx context.Context, bearer string) (Principal, error)
 	ttl := v.ttl()
 	freshness := ttl
 	if freshness < 0 {
-		// Disabling cached reuse still bounds the age of a fresh lookup.
 		freshness = maxCacheTTL
 	}
 	if now.Sub(started) > freshness {

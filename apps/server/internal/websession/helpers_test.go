@@ -73,10 +73,23 @@ func (s *fakeStore) CreateSession(ctx context.Context, p store.CreateSessionPara
 	if err := s.check(ctx, "create"); err != nil {
 		return store.CreateSessionRow{}, err
 	}
+	if len(p.ReplacedHashes) > 0 {
+		if err := s.check(ctx, "revoke"); err != nil {
+			return store.CreateSessionRow{}, err
+		}
+	}
+	var revoked []string
+	for _, hash := range p.ReplacedHashes {
+		if old, ok := s.rows[hash]; ok && old.RevokedAt == nil {
+			old.RevokedAt = &s.now
+			s.rows[hash] = old
+			revoked = append(revoked, hash)
+		}
+	}
 	s.writes++
 	row := store.GetSessionRow{ID: int64(len(s.rows) + 1), TokenHash: p.TokenHash, AccountID: p.AccountID, CsrfSecret: p.CsrfSecret, SessionAuthEpoch: p.AuthEpoch, AccountAuthEpoch: p.AuthEpoch, CreatedAt: s.now, LastSeenAt: s.now, ExpiresAt: p.ExpiresAt}
 	s.rows[p.TokenHash] = row
-	return store.CreateSessionRow{ID: row.ID, TokenHash: p.TokenHash, CreatedAt: s.now, LastSeenAt: s.now, ExpiresAt: p.ExpiresAt}, nil
+	return store.CreateSessionRow{ID: row.ID, TokenHash: p.TokenHash, CreatedAt: s.now, LastSeenAt: s.now, ExpiresAt: p.ExpiresAt, RevokedHashes: revoked}, nil
 }
 
 func (s *fakeStore) TouchSession(ctx context.Context, hash string) (int64, error) {

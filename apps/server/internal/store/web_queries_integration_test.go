@@ -15,7 +15,7 @@ import (
 
 func webAccount(t *testing.T, ctx context.Context, conn *pgx.Conn, sub string) int64 {
 	t.Helper()
-	account, err := store.New(conn).CreateAccount(ctx, store.CreateAccountParams{GoogleSub: sub, Email: "test@example.invalid"})
+	account, err := store.New(conn).CreateAccount(ctx, store.CreateAccountParams{GoogleSub: sub, Email: sub + "@example.test"})
 	if err != nil {
 		t.Fatal(err)
 	}

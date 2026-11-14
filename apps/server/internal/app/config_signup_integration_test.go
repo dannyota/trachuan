@@ -51,7 +51,7 @@ func signupConfigHandler(t *testing.T, raw *string) (*weblogin.Handler, *pgxpool
 	t.Cleanup(pool.Close)
 	q := store.New(pool)
 	p := oidctest.New(t)
-	h, err := weblogin.New(t.Context(), weblogin.Config{ClientID: oidctest.ClientID, ClientSecret: "fixture", PublicURL: cfg.publicURL, Issuer: p.URL, SignupEmails: cfg.signupEmails, Store: loginStore{q}, Sessions: &websession.Manager{Store: q, PublicURL: cfg.publicURL}})
+	h, err := weblogin.New(t.Context(), weblogin.Config{ClientID: oidctest.ClientID, ClientSecret: "fixture", PublicURL: cfg.publicURL, Issuer: p.URL, SignupEmails: cfg.signupEmails, Store: loginStore{q}, Sessions: &websession.Manager{Store: credentialStore{Queries: q, db: pool}, PublicURL: cfg.publicURL}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -115,13 +115,13 @@ func TestConfig_SignupCallbackDatabase(t *testing.T) {
 		open, existing, blocked, deleted, otherSubject bool
 	}{
 		{name: "listed", list: "fixture@example.invalid", email: "fixture@example.invalid", want: "/destination"},
-		{name: "list case and whitespace", list: " OTHER@example.invalid, FIXTURE@Example.Invalid ", email: "fixture@example.invalid", want: "/destination"},
-		{name: "email case", list: "fixture@example.invalid", email: "FIXTURE@Example.Invalid", want: "/destination"},
+		{name: "list case and whitespace", list: " OTHER@example.invalid, fixture@Example.Invalid ", email: "fixture@example.invalid", want: "/destination"},
+		{name: "email case", list: "fixture@example.invalid", email: "FIXTURE@Example.Invalid", want: "/login?error=signup_closed"},
 		{name: "unlisted", list: "owner@example.invalid", email: "fixture@example.invalid", want: "/login?error=signup_closed"},
 		{name: "existing unlisted", list: "owner@example.invalid", email: "current@example.invalid", existing: true, want: "/destination"},
 		{name: "blocked unlisted", list: "owner@example.invalid", email: "current@example.invalid", existing: true, blocked: true, want: "/login?error=account_blocked"},
 		{name: "deleted unlisted", list: "owner@example.invalid", email: "current@example.invalid", existing: true, deleted: true, want: "/login?error=account_blocked"},
-		{name: "same email other subject", list: "owner@example.invalid", email: "fixture@example.invalid", otherSubject: true, want: "/login?error=signup_closed"},
+		{name: "same email other subject", list: "owner@example.invalid", email: "fixture@example.invalid", otherSubject: true, want: "/login?error=login_failed"},
 		{name: "unset", open: true, email: "fixture@example.invalid", want: "/destination"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -162,8 +162,12 @@ func TestConfig_SignupCallbackDatabase(t *testing.T) {
 				if err := pool.QueryRow(t.Context(), `SELECT id,email,last_login_at FROM account WHERE google_sub=$1`, sub).Scan(&gotID, &email, &lastLogin); err != nil {
 					t.Fatal("read signed-in account")
 				}
-				if email != tc.email || !lastLogin.After(old) || (tc.existing && gotID != id) {
-					t.Fatal("account identity, current email or login time not retained")
+				wantEmail := tc.email
+				if tc.existing {
+					wantEmail = "old@example.invalid"
+				}
+				if email != wantEmail || (success && !lastLogin.After(old)) || (tc.existing && gotID != id) {
+					t.Fatal("account identity, fixed email or login time not retained")
 				}
 			}
 		})

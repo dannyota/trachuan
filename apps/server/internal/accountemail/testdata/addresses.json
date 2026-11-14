@@ -1,0 +1,172 @@
+[
+  {
+    "name": "trim",
+    "raw": " \tUser@EXAMPLE.COM\r\n",
+    "want": "User@example.com"
+  },
+  {
+    "name": "local case",
+    "raw": "Owner@example.com",
+    "want": "Owner@example.com"
+  },
+  {
+    "name": "special",
+    "raw": "a!#$%&'*+-/=?^_`{|}~@example.test",
+    "want": "a!#$%&'*+-/=?^_`{|}~@example.test"
+  },
+  {
+    "name": "local 64",
+    "raw": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@example.com",
+    "want": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@example.com"
+  },
+  {
+    "name": "local 65",
+    "raw": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@example.com",
+    "want": ""
+  },
+  {
+    "name": "total 254",
+    "raw": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "want": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+  },
+  {
+    "name": "total 255",
+    "raw": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "want": ""
+  },
+  {
+    "name": "label 64",
+    "raw": "a@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.com",
+    "want": ""
+  },
+  {
+    "name": "empty",
+    "raw": "",
+    "want": ""
+  },
+  {
+    "name": "local empty",
+    "raw": "@example.com",
+    "want": ""
+  },
+  {
+    "name": "domain empty",
+    "raw": "a@",
+    "want": ""
+  },
+  {
+    "name": "two at",
+    "raw": "a@b@example.com",
+    "want": ""
+  },
+  {
+    "name": "quoted",
+    "raw": "\"a\"@example.com",
+    "want": ""
+  },
+  {
+    "name": "comment",
+    "raw": "a(comment)@example.com",
+    "want": ""
+  },
+  {
+    "name": "ip",
+    "raw": "a@[192.0.2.1]",
+    "want": ""
+  },
+  {
+    "name": "ipv6",
+    "raw": "a@[IPv6:2001:db8::1]",
+    "want": ""
+  },
+  {
+    "name": "display",
+    "raw": "User <a@example.com>",
+    "want": ""
+  },
+  {
+    "name": "angle",
+    "raw": "<a@example.com>",
+    "want": ""
+  },
+  {
+    "name": "no dot",
+    "raw": "a@localhost",
+    "want": ""
+  },
+  {
+    "name": "unicode local",
+    "raw": "\u00e9@example.com",
+    "want": ""
+  },
+  {
+    "name": "unicode domain",
+    "raw": "a@\u00e9xample.com",
+    "want": ""
+  },
+  {
+    "name": "space",
+    "raw": "a b@example.com",
+    "want": ""
+  },
+  {
+    "name": "tab",
+    "raw": "a@exam\tple.com",
+    "want": ""
+  },
+  {
+    "name": "leading dot",
+    "raw": ".a@example.com",
+    "want": ""
+  },
+  {
+    "name": "trailing dot",
+    "raw": "a.@example.com",
+    "want": ""
+  },
+  {
+    "name": "double dot",
+    "raw": "a..b@example.com",
+    "want": ""
+  },
+  {
+    "name": "domain trailing dot",
+    "raw": "a@example.com.",
+    "want": ""
+  },
+  {
+    "name": "empty label",
+    "raw": "a@example..com",
+    "want": ""
+  },
+  {
+    "name": "hyphen start",
+    "raw": "a@-example.com",
+    "want": ""
+  },
+  {
+    "name": "hyphen end",
+    "raw": "a@example-.com",
+    "want": ""
+  },
+  {
+    "name": "underscore",
+    "raw": "a@exam_ple.com",
+    "want": ""
+  },
+  {
+    "name": "control",
+    "raw": "a\u007f@example.com",
+    "want": ""
+  },
+  {
+    "name": "all outer whitespace",
+    "raw": "\t\n\u000b\f\r \u0085\u00a0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u2028\u2029\u202f\u205f\u3000User@EXAMPLE.TEST\t\n\u000b\f\r \u0085\u00a0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u2028\u2029\u202f\u205f\u3000",
+    "want": "User@example.test"
+  },
+  {
+    "name": "total after trimming",
+    "raw": " \taaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd \n",
+    "want": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+  }
+]

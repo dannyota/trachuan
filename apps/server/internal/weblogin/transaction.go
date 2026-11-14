@@ -1,4 +1,3 @@
-// Package weblogin implements Google login with single-use transactions.
 package weblogin
 
 import (
@@ -12,45 +11,22 @@ import (
 	"golang.org/x/oauth2"
 )
 
-// LoginTransaction holds the server-side authorization request and handle hash.
 type LoginTransaction struct {
 	HandleHash, State, Nonce, PKCEVerifier, NextPath, RedirectURI string
 	CreatedAt, ExpiresAt                                          time.Time
 }
 
-// ClaimLoginTransactionParams identifies one transaction and the claim time.
 type ClaimLoginTransactionParams struct {
 	HandleHash string
 	Now        time.Time
 }
 
-// UpsertGoogleAccountParams identifies an account by subject and current email.
-type UpsertGoogleAccountParams struct {
-	Sub, Email string
-	// RejectSignup permits updating an existing subject but forbids inserting one.
-	RejectSignup bool
-}
-
-// GoogleAccount contains the login eligibility returned by the account upsert.
-type GoogleAccount struct {
-	ID                       int64
-	Blocked, DeleteRequested bool
-}
-
-// Store persists login state. ClaimLoginTransaction must atomically claim only
-// an unclaimed row whose expiry is after Now and return sql.ErrNoRows otherwise.
-// HandleHash is lowercase SHA-256 hex. UpsertGoogleAccount keys only by Sub and
-// updates current email and last_login_at, returning both account block flags.
-// With RejectSignup, it must only update an existing row and return sql.ErrNoRows
-// when the subject has no account, without inserting anything.
 type Store interface {
 	CreateLoginTransaction(context.Context, LoginTransaction) error
 	ClaimLoginTransaction(context.Context, ClaimLoginTransactionParams) (LoginTransaction, error)
-	UpsertGoogleAccount(context.Context, UpsertGoogleAccountParams) (GoogleAccount, error)
 }
 
 func (h *Handler) begin(ctx context.Context, next string) (string, LoginTransaction, error) {
-	// Readers injected by tests need not be safe for concurrent starts.
 	h.randomMu.Lock()
 	handle, state, nonce, err := h.transactionValues()
 	h.randomMu.Unlock()

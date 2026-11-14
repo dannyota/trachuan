@@ -7,11 +7,13 @@ package store
 import (
 	"encoding/json"
 	"time"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Account struct {
 	ID                int64
-	GoogleSub         string
+	GoogleSub         *string
 	Email             string
 	BlockedAt         *time.Time
 	CreatedAt         time.Time
@@ -25,6 +27,18 @@ type CorpusRelease struct {
 	ActiveDb    string
 	ActivatedAt time.Time
 	ActivatedBy string
+}
+
+type EmailLink struct {
+	ID         int64
+	CreatedAt  time.Time
+	Purpose    string
+	TokenHash  string
+	Email      string
+	AccountID  *int64
+	AuthEpoch  pgtype.Int4
+	ExpiresAt  time.Time
+	ConsumedAt *time.Time
 }
 
 type IssueReport struct {
@@ -67,6 +81,22 @@ type LoginTransaction struct {
 	CreatedAt    time.Time
 	ExpiresAt    time.Time
 	ClaimedAt    *time.Time
+}
+
+type MailOutbox struct {
+	ID            int64
+	CreatedAt     time.Time
+	Kind          string
+	Class         string
+	AccountID     *int64
+	EmailLinkID   *int64
+	SealedPayload []byte
+	KeyID         string
+	Attempts      int32
+	ClaimedUntil  *time.Time
+	NextAttemptAt time.Time
+	ExpiresAt     time.Time
+	SentAt        *time.Time
 }
 
 type OauthClient struct {
@@ -143,6 +173,28 @@ type OauthToken struct {
 	LastUsedAt      *time.Time
 }
 
+type PasswordCredential struct {
+	ID        int64
+	CreatedAt time.Time
+	AccountID int64
+	Hash      string
+	Version   int64
+}
+
+type PendingAuth struct {
+	ID          int64
+	CreatedAt   time.Time
+	TokenHash   string
+	CsrfSecret  string
+	AccountID   int64
+	AuthEpoch   int32
+	PrimaryKind string
+	PrimaryAt   time.Time
+	Next        *string
+	ExpiresAt   time.Time
+	ConsumedAt  *time.Time
+}
+
 type PersonalToken struct {
 	TokenHash  string
 	AccountID  int64
@@ -153,6 +205,21 @@ type PersonalToken struct {
 	RevokedAt  *time.Time
 	AuthEpoch  int32
 	ID         int64
+}
+
+type RecoveryAttempt struct {
+	ID        int64
+	CreatedAt time.Time
+	AccountID int64
+	At        time.Time
+}
+
+type RecoveryCode struct {
+	ID        int64
+	CreatedAt time.Time
+	AccountID int64
+	Digest    string
+	UsedAt    *time.Time
 }
 
 type ReleaseJournal struct {
@@ -173,6 +240,30 @@ type RetiredRelease struct {
 	DroppedAt   *time.Time
 }
 
+type TotpCredential struct {
+	ID            int64
+	CreatedAt     time.Time
+	AccountID     int64
+	SealedSecret  []byte
+	KeyID         string
+	LastStep      *int64
+	Failures      int32
+	CooldownUntil *time.Time
+	LastFailureAt *time.Time
+}
+
+type TotpEnrollment struct {
+	ID           int64
+	CreatedAt    time.Time
+	AccountID    int64
+	WebSessionID int64
+	SealedSecret []byte
+	KeyID        string
+	AuthEpoch    int32
+	Failures     int32
+	ExpiresAt    time.Time
+}
+
 type WebSession struct {
 	ID         int64
 	TokenHash  string
@@ -183,4 +274,6 @@ type WebSession struct {
 	LastSeenAt time.Time
 	ExpiresAt  time.Time
 	RevokedAt  *time.Time
+	ProofAt    *time.Time
+	FactorAt   *time.Time
 }

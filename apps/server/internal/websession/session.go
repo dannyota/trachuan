@@ -1,4 +1,3 @@
-// Package websession authenticates web cookies and protects web mutations.
 package websession
 
 import (
@@ -33,13 +32,12 @@ const (
 	errUnavailable     failure = "session service unavailable"
 )
 
-// Principal identifies the account and session authenticated by Middleware.
 type Principal struct {
 	AccountID, SessionID int64
 	CSRFSecret           string
+	AuthEpoch            int32
 }
 
-// Store supplies session state and account eligibility. Generated Queries satisfy it.
 type Store interface {
 	GetAccount(context.Context, int64) (store.Account, error)
 	CreateSession(context.Context, store.CreateSessionParams) (store.CreateSessionRow, error)
@@ -49,9 +47,6 @@ type Store interface {
 	RevokeOwnSession(context.Context, store.RevokeOwnSessionParams) (int64, error)
 }
 
-// Manager issues and authenticates sessions. Configure before use, share one
-// instance across requests, and do not copy it after use. A negative CacheTTL
-// disables reuse; zero or values above ten seconds use ten seconds.
 type Manager struct {
 	Store     Store
 	Clock     func() time.Time
@@ -68,19 +63,16 @@ type Manager struct {
 	accountGenerations map[int64]uint64
 }
 
-// CreateSession revokes presented sessions before creating a fresh login session.
-// It publishes the cookie only after all database operations succeed.
 func (m *Manager) CreateSession(ctx context.Context, w http.ResponseWriter, r *http.Request, accountID int64) error {
 	ctx, cancel := context.WithTimeout(ctx, authQueryDeadline)
 	defer cancel()
 	if m.Store == nil {
 		return errUnavailable
 	}
+	var hashes []string
 	for _, cookie := range r.CookiesNamed(sessionCookieName) {
 		if validValue(cookie.Value) {
-			if err := m.RevokeSession(ctx, cookie.Value); err != nil {
-				return fmt.Errorf("replace session: %w", err)
-			}
+			hashes = append(hashes, hashToken(cookie.Value))
 		}
 	}
 	account, err := m.Store.GetAccount(ctx, accountID)
@@ -94,12 +86,16 @@ func (m *Manager) CreateSession(ctx context.Context, w http.ResponseWriter, r *h
 	if err != nil {
 		return fmt.Errorf("create session values: %w", errUnavailable)
 	}
-	row, err := m.Store.CreateSession(ctx, store.CreateSessionParams{TokenHash: hashToken(token), AccountID: accountID, CsrfSecret: secret, AuthEpoch: account.AuthEpoch, ExpiresAt: m.now().Add(idleLifetime)})
+	row, err := m.Store.CreateSession(ctx, store.CreateSessionParams{TokenHash: hashToken(token), AccountID: accountID, CsrfSecret: secret, AuthEpoch: account.AuthEpoch, ExpiresAt: m.now().Add(idleLifetime), ReplacedHashes: hashes})
+	for _, digest := range hashes {
+		rev := revocation{hash: digest}
+		m.fence(rev)
+		m.unfence(rev)
+	}
 	if ctx.Err() != nil || err != nil {
 		m.EvictAccount(accountID)
 		return fmt.Errorf("create session: %w", errUnavailable)
 	}
-	// Preserve marks for lookups that read a session before SQL revoked it.
 	for _, digest := range row.RevokedHashes {
 		rev := revocation{hash: digest}
 		m.fence(rev)

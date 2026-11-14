@@ -16,7 +16,7 @@ import (
 
 type fullTokenStore struct{ *fakeStore }
 
-func (*fullTokenStore) CreatePersonalToken(context.Context, store.CreatePersonalTokenParams) (store.PersonalToken, error) {
+func (*fullTokenStore) CreateWebPersonalToken(context.Context, store.WebPersonalTokenParams) (store.PersonalToken, error) {
 	return store.PersonalToken{}, credential.ErrTokenLimit
 }
 func TestTokens_LimitContract(t *testing.T) {

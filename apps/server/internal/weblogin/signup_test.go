@@ -14,7 +14,7 @@ func TestCallback_SignupEmails(t *testing.T) {
 		want        string
 	}{
 		{name: "listed", email: "first@example.test", list: []string{"first@example.test"}, want: "/destination"},
-		{name: "email case", email: "FIRST@Example.Test", list: []string{"first@example.test"}, want: "/destination"},
+		{name: "email case", email: "FIRST@Example.Test", list: []string{"first@example.test"}, want: "/login?error=signup_closed"},
 		{name: "unlisted", email: "first@example.test", list: []string{"owner@example.test"}, want: "/login?error=signup_closed"},
 		{name: "existing unlisted", email: "new@example.test", list: []string{"owner@example.test"}, existing: &GoogleAccount{ID: 7}, want: "/destination"},
 		{name: "blocked unlisted", email: "first@example.test", list: []string{"owner@example.test"}, existing: &GoogleAccount{ID: 7, Blocked: true}, want: "/login?error=account_blocked"},
@@ -39,8 +39,8 @@ func TestCallback_SignupEmails(t *testing.T) {
 					t.Fatal("session not created")
 				}
 				cookieNamed(t, w, "__Host-session")
-				if f.store.emails["test-sub"] != tc.email {
-					t.Fatal("current email not stored")
+				if tc.existing == nil && f.store.emails["test-sub"] != tc.email {
+					t.Fatal("initial email not stored")
 				}
 				if tc.existing != nil && f.sessions.accounts[0] != tc.existing.ID {
 					t.Fatal("existing subject changed accounts")
@@ -65,4 +65,18 @@ func TestCallback_SignupDatabaseFailureIsUnavailable(t *testing.T) {
 	f.register(a, "signup-code", nil)
 	f.store.upsertErr = privateFailure()
 	assertUnavailable(t, f, f.callback(a, "signup-code"))
+}
+
+func TestCallback_TakenEmailIsLoginFailed(t *testing.T) {
+	for _, list := range [][]string{nil, {"owner@example.test"}} {
+		f := newFixture(t, list)
+		f.store.accounts["held-sub"] = GoogleAccount{ID: 7}
+		f.store.emails["held-sub"] = "first@example.test"
+		a := f.begin(t, "/")
+		f.register(a, "taken-code", nil)
+		assertRejected(t, f, f.callback(a, "taken-code"), "login_failed")
+		if len(f.store.accounts) != 1 {
+			t.Fatal("taken email created an account")
+		}
+	}
 }

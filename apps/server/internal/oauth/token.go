@@ -13,7 +13,6 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// TokenDB begins token exchange transactions against the auth database.
 type TokenDB interface {
 	Begin(context.Context) (pgx.Tx, error)
 }
@@ -32,10 +31,6 @@ type tokenResponse struct {
 	Scope        string `json:"scope"`
 }
 
-// NewTokenHandler serves public-client code and refresh token exchanges.
-// invalidateGrant drops cached credentials when a replay revokes a grant or a
-// code exchange evicts its oldest family. A nil callback disables cache eviction.
-// The caller mounts the handler behind the shared login and OAuth IP limiter.
 func NewTokenHandler(db TokenDB, base string, invalidateGrant func(int64)) http.Handler {
 	return &tokenHandler{db: db, resource: base + "/mcp", invalidateGrant: invalidateGrant}
 }
@@ -71,23 +66,23 @@ func (h *tokenHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		defer rollbackCancel()
 		_ = tx.Rollback(rollbackCtx)
 	}()
-	client, err := InUse(ctx, tx, form.Get("client_id"))
+	clientRow, err := store.New(tx).GetClient(ctx, form.Get("client_id"))
 	if err != nil {
-		if errors.Is(err, ErrInvalidClient) {
+		if errors.Is(err, pgx.ErrNoRows) {
 			writeTokenError(w, 400, "invalid_client")
 		} else {
 			writeTokenError(w, 503, "temporarily_unavailable")
 		}
 		return
 	}
-	if !client.Allows(form.Get("grant_type")) {
+	if !clientFromRow(clientRow).Allows(form.Get("grant_type")) {
 		writeTokenError(w, 400, "unauthorized_client")
 		return
 	}
 	var response tokenResponse
 	var invalidateID int64
 	if form.Get("grant_type") == "authorization_code" {
-		response, invalidateID, code, err = h.exchangeCode(ctx, tx, form, client.Allows("refresh_token"))
+		response, invalidateID, code, err = h.exchangeCode(ctx, tx, form)
 	} else {
 		response, invalidateID, code, err = h.refresh(ctx, tx, form)
 	}
@@ -99,7 +94,6 @@ func (h *tokenHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		writeTokenError(w, 400, code)
 		return
 	}
-	// Invalidate even on an unknown commit outcome: revocation may have committed.
 	err = tx.Commit(ctx)
 	if invalidateID != 0 && h.invalidateGrant != nil {
 		h.invalidateGrant(invalidateID)
@@ -135,33 +129,43 @@ func writeTokenError(w http.ResponseWriter, status int, code string) {
 	}{code})
 }
 
-// Account, grant, then credential locks match account block and revocation.
-// The initial credential read only discovers identities; validation uses rows
-// read after these locks, so a waiting refresh sees the committed reuse marker.
-func lockTokenAuthority(ctx context.Context, tx pgx.Tx, accountID, grantID int64, clientID, resource string) (int32, error) {
-	account, err := store.New(tx).LockCredentialAccount(ctx, accountID)
+func lockTokenAuthority(ctx context.Context, tx pgx.Tx, accountID, grantID int64, clientID, resource, grantType string) (int32, Client, error) {
+	account, err := store.LockAccount(ctx, tx, accountID)
 	if err != nil {
-		return 0, fmt.Errorf("lock token account: %w", err)
+		return 0, Client{}, fmt.Errorf("lock token account: %w", err)
 	}
 	if account.BlockedAt != nil || account.DeleteRequestedAt != nil {
-		return 0, pgx.ErrNoRows
+		return 0, Client{}, pgx.ErrNoRows
 	}
-	var owner int64
-	var client, target, scope string
-	var revoked *time.Time
-	err = tx.QueryRow(ctx, `/* token grant authority */
-SELECT account_id, client_id, resource, scope, revoked_at
-FROM oauth_grant WHERE id=$1 FOR UPDATE`, grantID).Scan(&owner, &client, &target, &scope, &revoked)
+	client, err := InUse(ctx, tx, clientID)
+	if errors.Is(err, ErrInvalidClient) {
+		return 0, Client{}, tokenAuthorityFailure("invalid_client")
+	}
 	if err != nil {
-		return 0, fmt.Errorf("lock token grant: %w", err)
+		return 0, Client{}, err
 	}
-	if revoked != nil || owner != account.ID || client != clientID || target != resource || scope != "mcp:read" {
-		return 0, pgx.ErrNoRows
+	if !client.Allows(grantType) {
+		return 0, Client{}, tokenAuthorityFailure("unauthorized_client")
 	}
-	return account.AuthEpoch, nil
+	grant, err := store.New(tx).LockGrantAuthority(ctx, grantID)
+	if err != nil {
+		return 0, Client{}, fmt.Errorf("lock token grant: %w", err)
+	}
+	if grant.RevokedAt != nil || grant.AccountID != account.ID || grant.ClientID != clientID || grant.Resource != resource || grant.Scope != "mcp:read" {
+		return 0, Client{}, pgx.ErrNoRows
+	}
+	return account.AuthEpoch, client, nil
 }
 
+type tokenAuthorityFailure string
+
+func (e tokenAuthorityFailure) Error() string { return string(e) }
+
 func tokenStateError(err error) (string, error) {
+	var authority tokenAuthorityFailure
+	if errors.As(err, &authority) {
+		return string(authority), nil
+	}
 	if errors.Is(err, pgx.ErrNoRows) {
 		return "invalid_grant", nil
 	}
@@ -184,7 +188,6 @@ func issueTokenPair(ctx context.Context, tx pgx.Tx, params store.CreateTokenFami
 	params.TokenHash = fmt.Sprintf("%x", accessHash)
 	params.Kind = "access"
 	params.ExpiresAt = accessExpiry
-	// Only the rotated refresh token has a predecessor.
 	predecessor := params.RotatedFrom
 	params.RotatedFrom = nil
 	if _, err = store.New(tx).CreateTokenFamily(ctx, params); err != nil {

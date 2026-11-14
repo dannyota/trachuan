@@ -580,13 +580,16 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description Request failed */
+                /** @description CSRF rejected, account blocked, or reauth_required. A recent primary proof with a missing or stale enrolled factor adds factor true. */
                 403: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["Error"];
+                        "application/json": components["schemas"]["Error"] & {
+                            /** @constant */
+                            factor?: true;
+                        };
                     };
                 };
                 /** @description Token limit reached */
@@ -1823,7 +1826,7 @@ export interface components {
         Error: {
             error: {
                 /** @enum {string} */
-                code: "invalid_request" | "unauthenticated" | "csrf_rejected" | "account_blocked" | "not_found" | "release_expired" | "body_too_large" | "unsupported_media_type" | "token_limit" | "rate_limited" | "busy" | "unavailable" | "inference_failed" | "internal";
+                code: "invalid_request" | "unauthenticated" | "reauth_required" | "csrf_rejected" | "account_blocked" | "not_found" | "release_expired" | "body_too_large" | "unsupported_media_type" | "token_limit" | "rate_limited" | "busy" | "unavailable" | "inference_failed" | "internal";
                 message: string;
             };
         };

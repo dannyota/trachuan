@@ -34,22 +34,3 @@ func (s loginStore) ClaimLoginTransaction(ctx context.Context, p weblogin.ClaimL
 	}
 	return weblogin.LoginTransaction{HandleHash: row.HandleHash, State: row.State, Nonce: row.Nonce, PKCEVerifier: row.PkceVerifier, NextPath: row.NextPath, RedirectURI: row.RedirectUri, CreatedAt: row.CreatedAt, ExpiresAt: row.ExpiresAt}, nil
 }
-func (s loginStore) UpsertGoogleAccount(ctx context.Context, p weblogin.UpsertGoogleAccountParams) (weblogin.GoogleAccount, error) {
-	ctx, cancel := context.WithTimeout(ctx, authQueryDeadline)
-	defer cancel()
-	var row store.Account
-	var err error
-	if p.RejectSignup {
-		// An unlisted email can update an existing subject, never insert one.
-		row, err = s.queries.UpdateGoogleAccount(ctx, store.UpdateGoogleAccountParams{GoogleSub: p.Sub, Email: p.Email})
-	} else {
-		row, err = s.queries.UpsertGoogleAccount(ctx, store.UpsertGoogleAccountParams{GoogleSub: p.Sub, Email: p.Email})
-	}
-	if ctx.Err() != nil {
-		err = ctx.Err()
-	}
-	if err != nil {
-		return weblogin.GoogleAccount{}, fmt.Errorf("upsert Google account: %w", err)
-	}
-	return weblogin.GoogleAccount{ID: row.ID, Blocked: row.BlockedAt != nil, DeleteRequested: row.DeleteRequestedAt != nil}, nil
-}

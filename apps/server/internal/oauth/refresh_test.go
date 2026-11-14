@@ -87,7 +87,6 @@ func TestRefresh_ConcurrentReuseRevokesGrant(t *testing.T) {
 	m := newTokenMemory()
 	raw := seedRefresh(t, m)
 	h := m.handler()
-	// A different family and an unconsumed code must also end on reuse.
 	m.code.ConsumedAt = nil
 	seedRefresh(t, m)
 	m.code.ConsumedAt = nil
@@ -120,9 +119,9 @@ func TestRefresh_ConcurrentReuseRevokesGrant(t *testing.T) {
 }
 func TestToken_DatabaseErrors503AndUnknownCommit(t *testing.T) {
 	for _, grant := range []string{"code", "refresh"} {
-		stages := []string{"begin", "pg_advisory_xact_lock_shared", "name: GetClient", "name: TouchClient", "name: LockCredentialAccount", "token grant authority", "name: CreateTokenFamily", "commit"}
+		stages := []string{"begin", "pg_advisory_xact_lock_shared", "name: GetClient", "name: TouchClient", "name: LockCredentialAccount", "name: LockGrantAuthority", "name: CreateTokenFamily", "commit"}
 		if grant == "code" {
-			stages = append(stages, "token code identity", "name: ConsumeCode", "token family cap")
+			stages = append(stages, "name: GetCodeIdentity", "name: ConsumeCode", "name: PruneTokenFamilies")
 		} else {
 			stages = append(stages, "name: GetToken", "name: RotateRefresh")
 		}

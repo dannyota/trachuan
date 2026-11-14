@@ -10,33 +10,43 @@ import (
 	"time"
 )
 
-const blockAccount = `-- name: BlockAccount :one
-WITH blocked AS (
-    UPDATE account SET blocked_at = COALESCE(blocked_at, now()),
-        auth_epoch = auth_epoch + 1
-    WHERE account.id = $1 RETURNING id, google_sub, email, blocked_at, created_at, last_login_at, delete_requested_at, auth_epoch
-), revoked_sessions AS (
-    UPDATE web_session SET revoked_at = now()
-    WHERE account_id IN (SELECT id FROM blocked) AND revoked_at IS NULL
-), revoked AS (
-    UPDATE personal_token SET revoked_at = now()
-    WHERE account_id IN (SELECT id FROM blocked) AND revoked_at IS NULL
-), revoked_grants AS (
-    UPDATE oauth_grant SET revoked_at = COALESCE(revoked_at, now())
-    WHERE account_id IN (SELECT id FROM blocked) RETURNING id
-), revoked_codes AS (
-    UPDATE oauth_code SET revoked_at = COALESCE(revoked_at, now())
-    WHERE grant_id IN (SELECT id FROM revoked_grants)
-), revoked_oauth_tokens AS (
-    UPDATE oauth_token SET revoked_at = COALESCE(revoked_at, now())
-    WHERE grant_id IN (SELECT id FROM revoked_grants)
-)
-SELECT id, google_sub, email, blocked_at, created_at, last_login_at, delete_requested_at, auth_epoch FROM blocked
+const accountEmailExists = `-- name: AccountEmailExists :one
+SELECT EXISTS (SELECT 1 FROM account WHERE email = $1)
 `
 
-type BlockAccountRow struct {
+func (q *Queries) AccountEmailExists(ctx context.Context, email string) (bool, error) {
+	row := q.db.QueryRow(ctx, accountEmailExists, email)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
+const bumpAccountEpoch = `-- name: BumpAccountEpoch :one
+WITH bumped AS (
+    UPDATE account SET auth_epoch = account.auth_epoch + 1 WHERE account.id = $1 RETURNING account.id, account.google_sub, account.email, account.blocked_at, account.created_at, account.last_login_at, account.delete_requested_at, account.auth_epoch
+), sessions AS (
+    UPDATE web_session SET revoked_at = now() WHERE account_id = $1 AND revoked_at IS NULL
+), personal AS (
+    UPDATE personal_token SET revoked_at = now() WHERE account_id = $1 AND revoked_at IS NULL
+), grants AS (
+    UPDATE oauth_grant SET revoked_at = COALESCE(revoked_at, now()) WHERE account_id = $1
+), codes AS (
+    UPDATE oauth_code SET revoked_at = COALESCE(revoked_at, now()) WHERE account_id = $1
+), tokens AS (
+    UPDATE oauth_token SET revoked_at = COALESCE(revoked_at, now()) WHERE account_id = $1
+), pending AS (
+    DELETE FROM pending_auth WHERE account_id = $1
+), enrollments AS (
+    DELETE FROM totp_enrollment WHERE account_id = $1
+), links AS (
+    UPDATE email_link SET consumed_at = now() WHERE account_id = $1 AND consumed_at IS NULL
+)
+SELECT id, google_sub, email, blocked_at, created_at, last_login_at, delete_requested_at, auth_epoch FROM bumped
+`
+
+type BumpAccountEpochRow struct {
 	ID                int64
-	GoogleSub         string
+	GoogleSub         *string
 	Email             string
 	BlockedAt         *time.Time
 	CreatedAt         time.Time
@@ -45,9 +55,9 @@ type BlockAccountRow struct {
 	AuthEpoch         int32
 }
 
-func (q *Queries) BlockAccount(ctx context.Context, id int64) (BlockAccountRow, error) {
-	row := q.db.QueryRow(ctx, blockAccount, id)
-	var i BlockAccountRow
+func (q *Queries) BumpAccountEpoch(ctx context.Context, id int64) (BumpAccountEpochRow, error) {
+	row := q.db.QueryRow(ctx, bumpAccountEpoch, id)
+	var i BumpAccountEpochRow
 	err := row.Scan(
 		&i.ID,
 		&i.GoogleSub,
@@ -62,7 +72,7 @@ func (q *Queries) BlockAccount(ctx context.Context, id int64) (BlockAccountRow, 
 }
 
 const createAccount = `-- name: CreateAccount :one
-INSERT INTO account (google_sub, email) VALUES ($1, $2) RETURNING id, google_sub, email, blocked_at, created_at, last_login_at, delete_requested_at, auth_epoch
+INSERT INTO account (google_sub, email) VALUES ($1::text, $2::text) RETURNING id, google_sub, email, blocked_at, created_at, last_login_at, delete_requested_at, auth_epoch
 `
 
 type CreateAccountParams struct {
@@ -72,6 +82,26 @@ type CreateAccountParams struct {
 
 func (q *Queries) CreateAccount(ctx context.Context, arg CreateAccountParams) (Account, error) {
 	row := q.db.QueryRow(ctx, createAccount, arg.GoogleSub, arg.Email)
+	var i Account
+	err := row.Scan(
+		&i.ID,
+		&i.GoogleSub,
+		&i.Email,
+		&i.BlockedAt,
+		&i.CreatedAt,
+		&i.LastLoginAt,
+		&i.DeleteRequestedAt,
+		&i.AuthEpoch,
+	)
+	return i, err
+}
+
+const findGoogleAccount = `-- name: FindGoogleAccount :one
+SELECT id, google_sub, email, blocked_at, created_at, last_login_at, delete_requested_at, auth_epoch FROM account WHERE google_sub = $1::text
+`
+
+func (q *Queries) FindGoogleAccount(ctx context.Context, googleSub string) (Account, error) {
+	row := q.db.QueryRow(ctx, findGoogleAccount, googleSub)
 	var i Account
 	err := row.Scan(
 		&i.ID,
@@ -106,12 +136,137 @@ func (q *Queries) GetAccount(ctx context.Context, id int64) (Account, error) {
 	return i, err
 }
 
+const getLiveAuthoritySession = `-- name: GetLiveAuthoritySession :one
+SELECT web_session.id, web_session.token_hash, web_session.account_id, web_session.csrf_secret, web_session.auth_epoch, web_session.created_at, web_session.last_seen_at, web_session.expires_at, web_session.revoked_at, web_session.proof_at, web_session.factor_at, statement_timestamp()::timestamptz AS checked_at FROM web_session WHERE id = $1 AND account_id = $2 AND auth_epoch = $3
+    AND revoked_at IS NULL AND expires_at > statement_timestamp() AND created_at + interval '90 days' > statement_timestamp()
+FOR SHARE
+`
+
+type GetLiveAuthoritySessionParams struct {
+	ID        int64
+	AccountID int64
+	AuthEpoch int32
+}
+
+type GetLiveAuthoritySessionRow struct {
+	ID         int64
+	TokenHash  string
+	AccountID  int64
+	CsrfSecret string
+	AuthEpoch  int32
+	CreatedAt  time.Time
+	LastSeenAt time.Time
+	ExpiresAt  time.Time
+	RevokedAt  *time.Time
+	ProofAt    *time.Time
+	FactorAt   *time.Time
+	CheckedAt  time.Time
+}
+
+func (q *Queries) GetLiveAuthoritySession(ctx context.Context, arg GetLiveAuthoritySessionParams) (GetLiveAuthoritySessionRow, error) {
+	row := q.db.QueryRow(ctx, getLiveAuthoritySession, arg.ID, arg.AccountID, arg.AuthEpoch)
+	var i GetLiveAuthoritySessionRow
+	err := row.Scan(
+		&i.ID,
+		&i.TokenHash,
+		&i.AccountID,
+		&i.CsrfSecret,
+		&i.AuthEpoch,
+		&i.CreatedAt,
+		&i.LastSeenAt,
+		&i.ExpiresAt,
+		&i.RevokedAt,
+		&i.ProofAt,
+		&i.FactorAt,
+		&i.CheckedAt,
+	)
+	return i, err
+}
+
+const hasTOTP = `-- name: HasTOTP :one
+SELECT EXISTS (SELECT 1 FROM totp_credential WHERE account_id = $1)
+`
+
+func (q *Queries) HasTOTP(ctx context.Context, accountID int64) (bool, error) {
+	row := q.db.QueryRow(ctx, hasTOTP, accountID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
+const insertGoogleAccount = `-- name: InsertGoogleAccount :one
+INSERT INTO account (google_sub, email, last_login_at) VALUES ($1::text, $2::text, now())
+ON CONFLICT DO NOTHING RETURNING id, google_sub, email, blocked_at, created_at, last_login_at, delete_requested_at, auth_epoch
+`
+
+type InsertGoogleAccountParams struct {
+	GoogleSub string
+	Email     string
+}
+
+func (q *Queries) InsertGoogleAccount(ctx context.Context, arg InsertGoogleAccountParams) (Account, error) {
+	row := q.db.QueryRow(ctx, insertGoogleAccount, arg.GoogleSub, arg.Email)
+	var i Account
+	err := row.Scan(
+		&i.ID,
+		&i.GoogleSub,
+		&i.Email,
+		&i.BlockedAt,
+		&i.CreatedAt,
+		&i.LastLoginAt,
+		&i.DeleteRequestedAt,
+		&i.AuthEpoch,
+	)
+	return i, err
+}
+
 const lockCredentialAccount = `-- name: LockCredentialAccount :one
 SELECT id, google_sub, email, blocked_at, created_at, last_login_at, delete_requested_at, auth_epoch FROM account WHERE id = $1 FOR UPDATE
 `
 
 func (q *Queries) LockCredentialAccount(ctx context.Context, id int64) (Account, error) {
 	row := q.db.QueryRow(ctx, lockCredentialAccount, id)
+	var i Account
+	err := row.Scan(
+		&i.ID,
+		&i.GoogleSub,
+		&i.Email,
+		&i.BlockedAt,
+		&i.CreatedAt,
+		&i.LastLoginAt,
+		&i.DeleteRequestedAt,
+		&i.AuthEpoch,
+	)
+	return i, err
+}
+
+const markAccountBlocked = `-- name: MarkAccountBlocked :one
+UPDATE account SET blocked_at = COALESCE(blocked_at, now()) WHERE id = $1 RETURNING id, google_sub, email, blocked_at, created_at, last_login_at, delete_requested_at, auth_epoch
+`
+
+func (q *Queries) MarkAccountBlocked(ctx context.Context, id int64) (Account, error) {
+	row := q.db.QueryRow(ctx, markAccountBlocked, id)
+	var i Account
+	err := row.Scan(
+		&i.ID,
+		&i.GoogleSub,
+		&i.Email,
+		&i.BlockedAt,
+		&i.CreatedAt,
+		&i.LastLoginAt,
+		&i.DeleteRequestedAt,
+		&i.AuthEpoch,
+	)
+	return i, err
+}
+
+const markAccountDeleting = `-- name: MarkAccountDeleting :one
+UPDATE account SET blocked_at = COALESCE(blocked_at, now()),
+    delete_requested_at = COALESCE(delete_requested_at, now()) WHERE id = $1 RETURNING id, google_sub, email, blocked_at, created_at, last_login_at, delete_requested_at, auth_epoch
+`
+
+func (q *Queries) MarkAccountDeleting(ctx context.Context, id int64) (Account, error) {
+	row := q.db.QueryRow(ctx, markAccountDeleting, id)
 	var i Account
 	err := row.Scan(
 		&i.ID,
@@ -138,97 +293,12 @@ func (q *Queries) PurgeDeletedAccounts(ctx context.Context, dollar_1 time.Time) 
 	return result.RowsAffected(), nil
 }
 
-const requestDeletion = `-- name: RequestDeletion :one
-WITH blocked AS (
-    UPDATE account SET blocked_at = COALESCE(blocked_at, now()),
-        delete_requested_at = COALESCE(delete_requested_at, now()),
-        auth_epoch = auth_epoch + 1
-    WHERE account.id = $1 RETURNING id, google_sub, email, blocked_at, created_at, last_login_at, delete_requested_at, auth_epoch
-), revoked_sessions AS (
-    UPDATE web_session SET revoked_at = now()
-    WHERE account_id IN (SELECT id FROM blocked) AND revoked_at IS NULL
-), revoked_tokens AS (
-    UPDATE personal_token SET revoked_at = now()
-    WHERE account_id IN (SELECT id FROM blocked) AND revoked_at IS NULL
-), revoked_grants AS (
-    UPDATE oauth_grant SET revoked_at = COALESCE(revoked_at, now())
-    WHERE account_id IN (SELECT id FROM blocked) RETURNING id
-), revoked_codes AS (
-    UPDATE oauth_code SET revoked_at = COALESCE(revoked_at, now())
-    WHERE grant_id IN (SELECT id FROM revoked_grants)
-), revoked_oauth_tokens AS (
-    UPDATE oauth_token SET revoked_at = COALESCE(revoked_at, now())
-    WHERE grant_id IN (SELECT id FROM revoked_grants)
-)
-SELECT id, google_sub, email, blocked_at, created_at, last_login_at, delete_requested_at, auth_epoch FROM blocked
+const recordGoogleLogin = `-- name: RecordGoogleLogin :one
+UPDATE account SET last_login_at = now() WHERE id = $1 RETURNING id, google_sub, email, blocked_at, created_at, last_login_at, delete_requested_at, auth_epoch
 `
 
-type RequestDeletionRow struct {
-	ID                int64
-	GoogleSub         string
-	Email             string
-	BlockedAt         *time.Time
-	CreatedAt         time.Time
-	LastLoginAt       *time.Time
-	DeleteRequestedAt *time.Time
-	AuthEpoch         int32
-}
-
-func (q *Queries) RequestDeletion(ctx context.Context, id int64) (RequestDeletionRow, error) {
-	row := q.db.QueryRow(ctx, requestDeletion, id)
-	var i RequestDeletionRow
-	err := row.Scan(
-		&i.ID,
-		&i.GoogleSub,
-		&i.Email,
-		&i.BlockedAt,
-		&i.CreatedAt,
-		&i.LastLoginAt,
-		&i.DeleteRequestedAt,
-		&i.AuthEpoch,
-	)
-	return i, err
-}
-
-const updateGoogleAccount = `-- name: UpdateGoogleAccount :one
-UPDATE account SET email = $2, last_login_at = now()
-WHERE google_sub = $1 RETURNING id, google_sub, email, blocked_at, created_at, last_login_at, delete_requested_at, auth_epoch
-`
-
-type UpdateGoogleAccountParams struct {
-	GoogleSub string
-	Email     string
-}
-
-func (q *Queries) UpdateGoogleAccount(ctx context.Context, arg UpdateGoogleAccountParams) (Account, error) {
-	row := q.db.QueryRow(ctx, updateGoogleAccount, arg.GoogleSub, arg.Email)
-	var i Account
-	err := row.Scan(
-		&i.ID,
-		&i.GoogleSub,
-		&i.Email,
-		&i.BlockedAt,
-		&i.CreatedAt,
-		&i.LastLoginAt,
-		&i.DeleteRequestedAt,
-		&i.AuthEpoch,
-	)
-	return i, err
-}
-
-const upsertGoogleAccount = `-- name: UpsertGoogleAccount :one
-INSERT INTO account (google_sub, email, last_login_at) VALUES ($1, $2, now())
-ON CONFLICT (google_sub) DO UPDATE SET email = EXCLUDED.email, last_login_at = now()
-RETURNING id, google_sub, email, blocked_at, created_at, last_login_at, delete_requested_at, auth_epoch
-`
-
-type UpsertGoogleAccountParams struct {
-	GoogleSub string
-	Email     string
-}
-
-func (q *Queries) UpsertGoogleAccount(ctx context.Context, arg UpsertGoogleAccountParams) (Account, error) {
-	row := q.db.QueryRow(ctx, upsertGoogleAccount, arg.GoogleSub, arg.Email)
+func (q *Queries) RecordGoogleLogin(ctx context.Context, id int64) (Account, error) {
+	row := q.db.QueryRow(ctx, recordGoogleLogin, id)
 	var i Account
 	err := row.Scan(
 		&i.ID,

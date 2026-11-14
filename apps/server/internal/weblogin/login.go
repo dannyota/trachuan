@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"danny.vn/trachuan/apps/server/internal/apierror"
+	"danny.vn/trachuan/apps/server/internal/store"
 
 	"github.com/coreos/go-oidc/v3/oidc"
 	"golang.org/x/oauth2"
@@ -24,14 +25,10 @@ const loginCookie = "__Host-login"
 const transactionTTL = 10 * time.Minute
 const providerTimeout = 10 * time.Second
 
-// SessionCreator revokes a presented session before issuing a new one. Errors
-// must leave no new session in storage. Callback discards response headers on error.
 type SessionCreator interface {
-	CreateSession(context.Context, http.ResponseWriter, *http.Request, int64) error
+	CreateGoogleSession(context.Context, http.ResponseWriter, *http.Request, store.GoogleIdentity) error
 }
 
-// Config supplies credentials and login dependencies. Issuer overrides Google
-// only in tests. Clock and Rand default to time.Now and crypto/rand.Reader.
 type Config struct {
 	ClientID, ClientSecret, PublicURL string
 	Issuer                            string
@@ -39,11 +36,9 @@ type Config struct {
 	Sessions                          SessionCreator
 	Clock                             func() time.Time
 	Rand                              io.Reader
-	// SignupEmails restricts new accounts to normalized emails; nil leaves sign-up open.
-	SignupEmails []string
+	SignupEmails                      []string
 }
 
-// Handler exposes GET-only Google authorization start and callback routes.
 type Handler struct {
 	Start, Callback http.Handler
 	oauth           oauth2.Config
@@ -58,8 +53,6 @@ type Handler struct {
 	signupEmails    []string
 }
 
-// New discovers the provider once at startup. An HTTP client supplied through
-// oidc.ClientContext is retained, with a maximum ten-second request timeout.
 func New(ctx context.Context, cfg Config) (*Handler, error) {
 	if cfg.ClientID == "" || cfg.ClientSecret == "" || cfg.Store == nil || cfg.Sessions == nil {
 		return nil, errors.New("weblogin: client credentials, store and sessions are required")
@@ -85,7 +78,6 @@ func New(ctx context.Context, cfg Config) (*Handler, error) {
 	if client.Timeout == 0 || client.Timeout > providerTimeout {
 		client.Timeout = providerTimeout
 	}
-	// Neither token exchange nor key discovery needs to follow a redirect.
 	client.CheckRedirect = func(_ *http.Request, _ []*http.Request) error { return http.ErrUseLastResponse }
 	provider, err := oidc.NewProvider(oidc.ClientContext(ctx, &client), cfg.Issuer)
 	if err != nil {
@@ -107,7 +99,6 @@ func New(ctx context.Context, cfg Config) (*Handler, error) {
 	return h, nil
 }
 
-// Discovery errors may include provider response bodies. Keep startup logs fixed.
 type discoveryError struct{ cause error }
 
 func (e discoveryError) Error() string { return "weblogin: provider discovery unavailable" }

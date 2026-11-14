@@ -20,8 +20,8 @@ func TestConfig_SignupEmails(t *testing.T) {
 		want           []string
 	}{
 		{name: "unset", unset: true},
-		{name: "normalized", raw: " Owner@Example.Invalid , SECOND@example.invalid ", want: []string{"owner@example.invalid", "second@example.invalid"}},
-		{name: "normalized owner", raw: " Owner@Example.COM ", want: []string{"owner@example.com"}},
+		{name: "normalized", raw: " Owner@Example.Invalid , SECOND@example.invalid ", want: []string{"Owner@example.invalid", "SECOND@example.invalid"}},
+		{name: "normalized owner", raw: " Owner@Example.COM ", want: []string{"Owner@example.com"}},
 		{name: "tagged subdomain", raw: "first.last+tag@sub.example.vn", want: []string{"first.last+tag@sub.example.vn"}},
 		{name: "empty", invalid: true},
 		{name: "whitespace", raw: " \t ", invalid: true},

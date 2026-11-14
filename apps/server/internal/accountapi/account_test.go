@@ -51,7 +51,8 @@ func (s *fakeStore) ListTokens(_ context.Context, id int64) ([]store.PersonalTok
 	}
 	return rows, nil
 }
-func (s *fakeStore) CreatePersonalToken(_ context.Context, p store.CreatePersonalTokenParams) (store.PersonalToken, error) {
+func (s *fakeStore) CreateWebPersonalToken(_ context.Context, params store.WebPersonalTokenParams) (store.PersonalToken, error) {
+	p := params.Token
 	r := store.PersonalToken{ID: int64(len(s.tokens) + 1), AccountID: p.AccountID, TokenHash: p.TokenHash, Name: p.Name, ExpiresAt: p.ExpiresAt, CreatedAt: s.now, AuthEpoch: p.AuthEpoch}
 	s.tokens = append(s.tokens, r)
 	return r, nil

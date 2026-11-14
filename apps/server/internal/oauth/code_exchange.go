@@ -12,16 +12,15 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-func (h *tokenHandler) exchangeCode(ctx context.Context, tx pgx.Tx, form url.Values, issueRefresh bool) (tokenResponse, int64, string, error) {
+func (h *tokenHandler) exchangeCode(ctx context.Context, tx pgx.Tx, form url.Values) (tokenResponse, int64, string, error) {
 	hash := fmt.Sprintf("%x", sha256.Sum256([]byte(form.Get("code"))))
-	var accountID, grantID int64
-	err := tx.QueryRow(ctx, `/* token code identity */
-SELECT account_id, grant_id FROM oauth_code WHERE code_hash=$1`, hash).Scan(&accountID, &grantID)
+	identity, err := store.New(tx).GetCodeIdentity(ctx, hash)
 	if err != nil {
 		code, dbErr := tokenStateError(err)
 		return tokenResponse{}, 0, code, dbErr
 	}
-	epoch, err := lockTokenAuthority(ctx, tx, accountID, grantID, form.Get("client_id"), h.resource)
+	accountID, grantID := identity.AccountID, identity.GrantID
+	epoch, client, err := lockTokenAuthority(ctx, tx, accountID, grantID, form.Get("client_id"), h.resource, "authorization_code")
 	if err != nil {
 		code, dbErr := tokenStateError(err)
 		return tokenResponse{}, 0, code, dbErr
@@ -45,16 +44,7 @@ SELECT account_id, grant_id FROM oauth_code WHERE code_hash=$1`, hash).Scan(&acc
 	if !row.ExpiresAt.After(time.Now()) {
 		return tokenResponse{}, 0, "invalid_grant", nil
 	}
-	// The grant lock serializes exchanges, so parallel codes cannot exceed the cap.
-	// Order by the family's first token, then its ID to break timestamp ties.
-	pruned, err := tx.Exec(ctx, `/* token family cap */
-WITH excess AS (
- SELECT family_id FROM oauth_token
- WHERE grant_id=$1 AND revoked_at IS NULL AND family_expires_at > now()
- GROUP BY family_id ORDER BY min(created_at) DESC, family_id DESC OFFSET 9
-)
-UPDATE oauth_token SET revoked_at=COALESCE(revoked_at,now())
-WHERE grant_id=$1 AND family_id IN (SELECT family_id FROM excess)`, grantID)
+	pruned, err := store.New(tx).PruneTokenFamilies(ctx, grantID)
 	if err != nil {
 		return tokenResponse{}, 0, "", fmt.Errorf("cap token families: %w", err)
 	}
@@ -62,8 +52,8 @@ WHERE grant_id=$1 AND family_id IN (SELECT family_id FROM excess)`, grantID)
 	if err != nil {
 		return tokenResponse{}, 0, "", fmt.Errorf("create token family: %w", err)
 	}
-	response, err := issueTokenPair(ctx, tx, store.CreateTokenFamilyParams{GrantID: grantID, FamilyID: fmt.Sprintf("%x", familyHash), Resource: row.Resource, Scope: row.Scope, AuthEpoch: row.AuthEpoch, FamilyExpiresAt: time.Now().Add(30 * 24 * time.Hour)}, issueRefresh)
-	if pruned.RowsAffected() > 0 {
+	response, err := issueTokenPair(ctx, tx, store.CreateTokenFamilyParams{GrantID: grantID, FamilyID: fmt.Sprintf("%x", familyHash), Resource: row.Resource, Scope: row.Scope, AuthEpoch: row.AuthEpoch, FamilyExpiresAt: time.Now().Add(30 * 24 * time.Hour)}, client.Allows("refresh_token"))
+	if pruned > 0 {
 		return response, grantID, "", err
 	}
 	return response, 0, "", err

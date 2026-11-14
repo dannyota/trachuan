@@ -136,9 +136,8 @@ func (tx *tokenMemoryTx) Exec(ctx context.Context, sql string, args ...any) (pgc
 	if err := tx.check(ctx, sql); err != nil {
 		return pgconn.CommandTag{}, err
 	}
-	if strings.Contains(sql, "token family cap") {
+	if strings.Contains(sql, "name: PruneTokenFamilies") {
 		revoked := 0
-		// Model family age separately from random IDs, including all tokens in a family.
 		families := map[string]time.Time{}
 		for _, v := range tx.tokens {
 			if v.RevokedAt == nil && v.FamilyExpiresAt.After(time.Now()) {
@@ -208,14 +207,14 @@ func (tx *tokenMemoryTx) QueryRow(ctx context.Context, sql string, args ...any) 
 		return tokenStructRow(store.OauthClient{ClientID: args[0].(string), GrantTypes: tx.m.grants})
 	case strings.Contains(sql, "name: TouchClient"):
 		return tokenStructRow(store.OauthClient{ClientID: args[0].(string)})
-	case strings.Contains(sql, "token code identity"):
+	case strings.Contains(sql, "name: GetCodeIdentity"):
 		if args[0] != tx.code.CodeHash {
 			return tokenScan{err: pgx.ErrNoRows}
 		}
 		return tokenScan{values: []any{tx.code.AccountID, tx.code.GrantID}}
 	case strings.Contains(sql, "name: LockCredentialAccount"):
 		return tokenStructRow(tx.m.account)
-	case strings.Contains(sql, "token grant authority"):
+	case strings.Contains(sql, "name: LockGrantAuthority"):
 		var revoked *time.Time
 		if tx.revoked {
 			now := time.Now()
