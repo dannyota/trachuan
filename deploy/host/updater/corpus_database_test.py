@@ -48,6 +48,21 @@ class CorpusDatabaseTest(unittest.TestCase):
             self.assertIn(word, sql)
         self.assertEqual(sql.count('BEGIN;'), 1)
 
+    def test_cas_checks_pointer_and_update_count_before_retirement(self):
+        for mode in ('new', 'retained'):
+            self.response = json.dumps(dict(self.row, step='activated')).encode()
+            self.db.activate(dict(self.row, mode=mode))
+            sql = self.calls[-1][1]['input'].decode()
+            with self.subTest(mode=mode):
+                self.assertTrue('IF NOT FOUND THEN' in sql, 'missing pointer must raise')
+                self.assertRegex(sql, r'GET DIAGNOSTICS \w+ = ROW_COUNT;')
+                self.assertRegex(sql, r'IF \w+ <> 1 THEN')
+                self.assertLess(sql.index('IF NOT FOUND THEN'), sql.index('UPDATE corpus_release'))
+                self.assertLess(sql.index('UPDATE corpus_release'), sql.index('GET DIAGNOSTICS'))
+                self.assertLess(sql.index('GET DIAGNOSTICS'), sql.index('INSERT INTO retired_release'))
+                if mode == 'retained':
+                    self.assertLess(sql.index('GET DIAGNOSTICS'), sql.index('DELETE FROM retired_release'))
+
     def test_protection_query_covers_active_open_journals_and_retention(self):
         self.response = b't\n'
         self.assertTrue(self.db.protected(self.m['database']))

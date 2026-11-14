@@ -91,7 +91,9 @@ class CorpusVerificationTest(unittest.TestCase):
         sdk.object_storage.ObjectStorageClient.return_value.get_object.return_value.data.raw = io.BytesIO(b'synthetic dump')
         with tempfile.TemporaryDirectory() as directory:
             d.fetch(sdk, 'ap-singapore-1', 'syntheticnamespace', 'synthetic-bucket', self.m['dump'], Path(directory)/'corpus.dump')
-        sdk.auth.signers.InstancePrincipalsSecurityTokenSigner.assert_called_once()
+        sdk.auth.signers.InstancePrincipalsSecurityTokenSigner.assert_called_once_with(
+            retry_strategy=sdk.retry.NoneRetryStrategy.return_value,
+            federation_client_retry_strategy=sdk.retry.NoneRetryStrategy.return_value)
         client = sdk.object_storage.ObjectStorageClient
         self.assertEqual(client.call_args.kwargs['config'], {'region':'ap-singapore-1'})
         self.assertEqual(client.return_value.get_object.call_args.args,

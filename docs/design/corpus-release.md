@@ -119,12 +119,14 @@ The host activator lives under `deploy/host/release/` and works through
 `postgres` through `postgres-admin.sh`; everything else runs as `activator` (ADR
 0003; [system](system.md#database-roles)), which has `CREATEDB`, owns the corpus
 databases it creates, and may write only `corpus_release`, `release_journal` and
-`retired_release` in `auth`. The updater runs the idempotent
-`provision-activator.sh` as `postgres` before each activation: it creates the
-role with `CREATEDB` when missing and sets its password from the Vault secret
-`activator_db_password`, so an existing cluster gets the role without
-reinitialization. The table grants belong to the auth migrations, which run
-after it and create `release_journal` and `retired_release`.
+`retired_release` in `auth`. Before its first activator connection, the corpus
+phase requires both `/usr/local/bin/provision-activator.sh` and
+`/run/secrets/activator_db_password` to be readable in the running PostgreSQL
+container; otherwise it waits with reason `activator not provisioned`. It runs
+the idempotent provisioner as `postgres` before connecting and before each
+activation: it creates the role with `CREATEDB` when missing, sets its password
+from the Vault secret `activator_db_password`, and reapplies the table grants
+even when the auth migrations ran before the role existed.
 
 0. Take the `activation` advisory lock in `auth`; append `release_journal`
    (`started`, mode, target database, manifest hash, dump SHA-256, expected
@@ -147,8 +149,9 @@ after it and create `release_journal` and `retired_release`.
    [runbook](../runbooks/release-restore.md#prewarm-a-corpus-database) does.
    Then `server release-check --database <target>` runs one search and one read
    against it with the server code that will serve it.
-4. In one transaction: compare-and-swap `corpus_release.active_db` from the
-   journaled expected value, insert the old database into `retired_release` with
+4. In one transaction: require the country's pointer row, compare-and-swap
+   `corpus_release.active_db` from the journaled expected value, require exactly
+   one updated row, insert the old database into `retired_release` with
    its dump SHA-256 and `retain_until` seven days ahead, delete the target from
    `retired_release` in `retained` mode, and append `activated`.
 5. The server resolves the release once per request, so traffic moves without a

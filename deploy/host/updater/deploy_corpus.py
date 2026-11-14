@@ -12,6 +12,10 @@ from .deploy_corpus_verify import compatible, verify
 from .deploy_io import atomic, canonical, CommandError, Busy
 
 
+class ActivatorNotProvisioned(Exception):
+    pass
+
+
 class Corpus:
     def __init__(self, state, store, host, rules, registry, database=None, prepare=lambda: True, clock=time.time):
         self.state, self.store, self.host, self.rules, self.registry = state, store, host, rules, registry
@@ -28,7 +32,11 @@ class Corpus:
     def prepare_activation(self):
         if not self.prepare():
             raise ValueError('secret replacement pending before corpus activation')
-        self.host.provision_activator()
+        self.provision()
+
+    def provision(self):
+        if not self.host.provision_activator():
+            raise ActivatorNotProvisioned()
 
     def remember(self, directory):
         target = self.artifacts / self.hash
@@ -163,6 +171,8 @@ class Corpus:
 
     def run(self, directory, mode):
         try:
+            self.step = 'provision'
+            self.provision()
             recovered = self.recover(mode)
             if recovered is not None:
                 return recovered
@@ -196,6 +206,9 @@ class Corpus:
                 dump = self.download() if self.mode == 'new' else None
                 self.step = 'activation'
                 return self.finish(self.engine.run(self.hash, self.manifest, dump, image))
+        except ActivatorNotProvisioned:
+            self.result.write('waiting', 'provision', 'activator not provisioned', self.hash, self.manifest, self.mode)
+            return True
         except Busy:
             self.result.write('skipped', self.step, 'activation advisory lock busy; retry later', self.hash, self.manifest, self.mode)
             return True

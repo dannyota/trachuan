@@ -37,6 +37,56 @@ class CorpusRunTest(fixture.ActivationFixture, unittest.TestCase):
         import json
         return json.loads(self.phase.result.path.read_bytes())
 
+    def test_missing_mount_waits_without_any_activator_connection(self):
+        for mode in ('activate', 'verify'):
+            for missing in ('/usr/local/bin/provision-activator.sh', '/run/secrets/activator_db_password'):
+                with self.subTest(mode=mode, missing=missing):
+                    def runner(args, **kwargs):
+                        if args[-3:] == ['test', '-r', missing]:
+                            raise CommandError('unreadable mount', returncode=1)
+                        return self.runner(args, **kwargs)
+                    self.host.runner = runner
+                    self.db.lock = mock.Mock(side_effect=CommandError('activator must not connect'))
+                    self.assertTrue(self.run_phase(mode))
+                    self.assertEqual(self.result()['status'], 'waiting')
+                    self.assertEqual(self.result()['message'], 'activator not provisioned')
+                    self.db.lock.assert_not_called()
+                    self.registry.fetch.assert_not_called()
+                    self.prepare.assert_not_called()
+
+    def test_next_corpus_run_repairs_first_upgrade_from_previous_updater(self):
+        role = dict(exists=False, grants=False, migration_skipped_grants=False)
+        def runner(args, **kwargs):
+            if 'start' in args and 'trachuan-migrate.service' in args:
+                role['migration_skipped_grants'] = not role['exists']
+                role['grants'] = role['exists']
+                self.schema = 8
+            if 'bash' in args and args[-1] == '/usr/local/bin/provision-activator.sh':
+                role.update(exists=True, grants=True)
+            return self.runner(args, **kwargs)
+        self.host.runner = runner
+        def previous_migrate():
+            self.host.systemctl('start', 'queryembed')
+            self.host.systemctl('start', 'migrate')
+            self.assertEqual(self.host.user('systemctl', '--user', 'show', '--property=Result', '--value',
+                                           'trachuan-migrate.service').strip(), b'success')
+        with mock.patch.object(self.host, 'migrate', previous_migrate):
+            self.engine.activate(self.new)
+        self.assertTrue(role['migration_skipped_grants'])
+        self.assertEqual(self.state.data['schemas'][self.new.hash], 8)
+        self.assertFalse(role['exists'])
+        lock = self.db.lock
+        def connect():
+            if not role['exists'] or not role['grants']:
+                raise CommandError('activator role or grants missing')
+            return lock()
+        self.db.lock = mock.Mock(side_effect=connect)
+        self.assertTrue(self.run_phase())
+        self.assertEqual(self.result()['status'], 'ok')
+        self.assertTrue(role['exists'])
+        self.assertTrue(role['grants'])
+        self.db.lock.assert_called()
+
     def test_waiting_stays_pending_and_keeps_original_timestamp(self):
         self.db.describe.return_value['dense_query_hash'] = 'f'*64
         self.assertTrue(self.run_phase())

@@ -32,11 +32,20 @@ def activate(row):
                 if row['mode'] == 'retained' else '')
     return f"""BEGIN;
 DO $activation$
-DECLARE previous text; old_digest text;
+DECLARE previous text; old_digest text; changed bigint;
 BEGIN
   SELECT active_db INTO previous FROM corpus_release WHERE country={country} FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'active corpus pointer missing';
+  END IF;
   IF previous IS DISTINCT FROM {expected} THEN
     RAISE EXCEPTION 'active corpus changed';
+  END IF;
+  UPDATE corpus_release SET active_db={target},activated_at=now(),activated_by='activator'
+    WHERE country={country} AND active_db IS NOT DISTINCT FROM {expected};
+  GET DIAGNOSTICS changed = ROW_COUNT;
+  IF changed <> 1 THEN
+    RAISE EXCEPTION 'active corpus update must affect exactly one row';
   END IF;
   SELECT dump_sha256 INTO old_digest FROM release_journal
     WHERE country={country} AND database_name=previous AND step='activated'
@@ -47,8 +56,6 @@ BEGIN
       ON CONFLICT (country,db_name) DO UPDATE SET retired_at=EXCLUDED.retired_at,
         retain_until=EXCLUDED.retain_until,dropped_at=NULL,dump_sha256=EXCLUDED.dump_sha256;
   END IF;
-  UPDATE corpus_release SET active_db={target},activated_at=now(),activated_by='activator'
-    WHERE country={country};
   {retained}
 END;
 $activation$;

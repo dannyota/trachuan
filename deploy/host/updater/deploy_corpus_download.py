@@ -33,7 +33,8 @@ def stream(source, target, metadata):
 
 def fetch(sdk, region, namespace, bucket, metadata, target):
     signer = sdk.auth.signers.InstancePrincipalsSecurityTokenSigner(
-        retry_strategy=sdk.retry.NoneRetryStrategy())
+        retry_strategy=sdk.retry.NoneRetryStrategy(),
+        federation_client_retry_strategy=sdk.retry.NoneRetryStrategy())
     client = sdk.object_storage.ObjectStorageClient(
         config={'region': region}, signer=signer, timeout=(10, 60),
         retry_strategy=sdk.retry.NoneRetryStrategy())

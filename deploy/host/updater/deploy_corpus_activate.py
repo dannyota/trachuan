@@ -11,6 +11,8 @@ class Activation:
     def choose(self, manifest):
         name, country = manifest['database'], manifest['country']
         active = self.db.current(country)
+        if active is None:
+            raise ValueError('active corpus pointer missing')
         retired = self.db.retirement(name)
         if retired is not None:
             if not retired['dump_sha256'] or retired['dump_sha256'] != manifest['dump']['sha256']:
@@ -46,7 +48,7 @@ class Activation:
         name = row['database_name']
         active = self.db.current(row['country'])
         retired = self.db.retirement(name)
-        if active != row['expected_active_db'] or active == name:
+        if active is None or active != row['expected_active_db'] or active == name:
             return False
         if row['mode'] == 'new':
             return retired is None

@@ -113,6 +113,29 @@ class CorpusActivationTest(unittest.TestCase):
     def activate(self):
         return self.engine.run(self.hash, self.m, '/synthetic/dump', 'server-image')
 
+    def test_activation_requires_country_pointer_before_selecting_either_mode(self):
+        self.db.active = None
+        for mode in ('new', 'retained'):
+            if mode == 'retained':
+                self.db.retired[self.m['database']] = dict(dump_sha256=self.m['dump']['sha256'], live=True)
+                self.db.databases.add(self.m['database'])
+            with self.subTest(mode=mode), self.assertRaisesRegex(ValueError, 'active corpus pointer missing'):
+                self.activate()
+        self.assertFalse(self.db.rows)
+        self.assertFalse(self.db.dropped)
+
+    def test_resume_refuses_retained_journal_with_missing_pointer(self):
+        self.db.active = None
+        self.db.retired[self.m['database']] = dict(dump_sha256=self.m['dump']['sha256'], live=True)
+        self.db.databases.add(self.m['database'])
+        row = self.engine.begin(self.hash, self.m, 'retained', None)
+        self.assertFalse(self.engine.guarded(row))
+        result = self.engine.resume(row, None, 'server-image')
+        self.assertEqual(result['step'], 'aborted')
+        self.assertIsNone(self.db.active)
+        self.assertIn(self.m['database'], self.db.retired)
+        self.assertFalse(self.db.dropped)
+
     def test_each_journal_step_resumes_without_repeating_complete_activation(self):
         for step in ('started', 'creating', 'created', 'restoring', 'restored', 'validated', 'checked', 'activated'):
             with self.subTest(step=step):

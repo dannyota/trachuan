@@ -202,3 +202,77 @@ func TestActivation_RestoreCASRetainedAndPrune(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestActivation_RejectsMissingOrUnchangedPointer(t *testing.T) {
+	for _, tc := range []struct {
+		name, mode string
+		present    bool
+	}{
+		{"missing_new_pointer", "new", false},
+		{"missing_retained_pointer", "retained", false},
+		{"suppressed_retained_update", "retained", true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
+			authURL := testpg.NewDatabase(t)
+			if err := migrate.Up(ctx, authURL); err != nil {
+				t.Fatal(err)
+			}
+			conn, err := pgx.Connect(ctx, authURL)
+			if err != nil {
+				t.Fatal("connect isolated auth fixture")
+			}
+			t.Cleanup(func() { _ = conn.Close(ctx) })
+			rel := testpg.Release(t)
+			target := "corpus_vn_" + rel
+			var expected any
+			if tc.present {
+				expected = "corpus_vn_20990101_1"
+				if _, err = conn.Exec(ctx, `INSERT INTO corpus_release VALUES ('vn',$1,now(),'fixture')`, expected); err != nil {
+					t.Fatal(err)
+				}
+				if _, err = conn.Exec(ctx, `CREATE FUNCTION suppress_pointer_update() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RETURN NULL; END; $$;
+					CREATE TRIGGER suppress_pointer_update BEFORE UPDATE ON corpus_release FOR EACH ROW EXECUTE FUNCTION suppress_pointer_update();`); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if _, err = conn.Exec(ctx, `INSERT INTO retired_release (country,db_name,retired_at,retain_until,dump_sha256) VALUES ('vn',$1,now(),now()+interval '7 days',$2)`, target, strings.Repeat("b", 64)); err != nil {
+				t.Fatal(err)
+			}
+			snapshot := func() string {
+				t.Helper()
+				var value string
+				if scanErr := conn.QueryRow(ctx, `SELECT jsonb_agg(to_jsonb(r) ORDER BY db_name)::text FROM retired_release r`).Scan(&value); scanErr != nil {
+					t.Fatal(scanErr)
+				}
+				return value
+			}
+			before := snapshot()
+			row := map[string]any{"operation_id": strings.Repeat("5", 32), "country": "vn", "rel": rel, "mode": tc.mode, "database_name": target, "manifest_hash": strings.Repeat("a", 64), "dump_sha256": strings.Repeat("b", 64), "expected_active_db": expected, "manifest": map[string]any{"fixture": true}}
+			_, activationErr := conn.Exec(ctx, pythonSQL(t, "activate", row))
+			if activationErr == nil {
+				t.Error("activation accepted a missing or unchanged pointer")
+			}
+			if _, err = conn.Exec(ctx, "ROLLBACK"); err != nil {
+				t.Fatal(err)
+			}
+			if after := snapshot(); after != before {
+				t.Error("failed activation changed retirement protection")
+			}
+			var count int
+			if err = conn.QueryRow(ctx, `SELECT count(*) FROM release_journal WHERE step='activated'`).Scan(&count); err != nil || count != 0 {
+				t.Fatalf("success journal count=%d error=%v", count, err)
+			}
+			var pointer *string
+			if err = conn.QueryRow(ctx, `SELECT (SELECT active_db FROM corpus_release WHERE country='vn')`).Scan(&pointer); err != nil {
+				t.Fatal(err)
+			}
+			if tc.present && (pointer == nil || *pointer != expected) {
+				t.Fatal("failed activation changed the active pointer")
+			}
+			if !tc.present && pointer != nil {
+				t.Fatal("failed activation inserted a country pointer")
+			}
+		})
+	}
+}
