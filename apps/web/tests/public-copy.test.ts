@@ -34,7 +34,7 @@ it('provides every legal section in both languages', () => {
 
 it('provides localized metadata for every named public route', () => {
   for (const language of ['vi', 'en'] as const) {
-    for (const path of ['/', '/vn/topics', '/vn/topics/example', '/connect', '/sources', '/privacy', '/terms', '/login', '/signup', '/reset']) {
+    for (const path of ['/', '/vn/topics', '/vn/topics/example', '/connect', '/sources', '/privacy', '/terms', '/login', '/signup', '/reset', '/link']) {
       expect(publicHead(language, path)?.title, path).toBeTruthy()
       expect(publicHead(language, path)?.description, path).toBeTruthy()
     }

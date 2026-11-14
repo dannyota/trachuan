@@ -119,7 +119,7 @@ func TestPassword_CounterSharedWithReauth(t *testing.T) {
 	client := f.client()
 	f.status(f.postWithHeaders(client, "/api/v1/auth/password", `{"email":"person@example.test","password":"synthetic passphrase"}`, "application/json", f.server.URL, ""), 200)
 	me := f.me(client)
-	for range 9 {
+	for range 10 {
 		f.status(f.postWithHeaders(client, "/api/v1/me/reauth", `{"password":"wrong synthetic password"}`, "application/json", f.server.URL, me.CSRF), 401)
 	}
 	f.status(f.postWithHeaders(client, "/api/v1/auth/password", `{"email":"person@EXAMPLE.TEST","password":"synthetic passphrase"}`, "application/json", f.server.URL, ""), 401)

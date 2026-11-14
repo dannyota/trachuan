@@ -67,8 +67,33 @@ for (const purpose of ['registration', 'reset']) {
     await expect(page).toHaveURL(/\/link$/)
     expect(await page.evaluate(() => JSON.stringify(history.state))).not.toContain(token)
     await page.getByRole('button', { name: 'Lưu mật khẩu' }).click()
-    if (purpose === 'reset') await expect(page.getByRole('status').filter({ hasText: 'Đã lưu mật khẩu.' })).toBeVisible()
+    if (purpose === 'reset') {
+      await expect(page.getByRole('status').filter({ hasText: 'Đã lưu mật khẩu.' })).toBeVisible()
+      await expect(page.getByRole('heading', { level: 1 })).toHaveText('Đặt lại mật khẩu')
+      await expect(page).toHaveTitle('Đặt lại mật khẩu · Tra Chuẩn')
+      await page.getByRole('button', { name: 'English', exact: true }).click()
+      await expect(page.getByRole('heading', { level: 1 })).toHaveText('Reset password')
+      await expect(page).toHaveTitle('Reset password · Tra Chuẩn')
+    }
     else await expect(page).toHaveURL(/\/account$/)
     expect(body).toEqual({ token, password: 'synthetic replacement password' })
+  })
+}
+
+for (const purpose of ['registration', 'add_password', 'reset']) {
+  test(`${purpose} has a localized title and a visually hidden account username`, async ({ page }) => {
+    await lookup(page, purpose)
+    await page.goto(`/link#${token}`)
+    await expect(page).toHaveTitle(`${purpose === 'reset' ? 'Reset password' : 'Set password'} · Tra Chuẩn`)
+    const username = page.locator('form input[name=username]')
+    await expect(username).toHaveAttribute('type', 'text')
+    await expect(username).toHaveAttribute('autocomplete', 'username')
+    await expect(username).toHaveValue(account.email)
+    const bounds = await username.boundingBox()
+    expect(bounds?.width).toBeLessThanOrEqual(1)
+    expect(bounds?.height).toBeLessThanOrEqual(1)
+    await page.getByRole('button', { name: 'Tiếng Việt', exact: true }).click()
+    await expect(page).toHaveTitle(`${purpose === 'reset' ? 'Đặt lại mật khẩu' : 'Đặt mật khẩu'} · Tra Chuẩn`)
+    await expect(username).toHaveValue(account.email)
   })
 }

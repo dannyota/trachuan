@@ -56,7 +56,7 @@ func NewConsentHandler(base string, db ClientDB, sessions *websession.Manager) h
 		if status != 0 {
 			if status == 401 {
 				consentHeaders(w)
-				w.Header().Set("Location", "/api/v1/auth/google/start?next="+url.QueryEscape("/oauth/consent/"+handle))
+				w.Header().Set("Location", "/login?next="+url.QueryEscape("/oauth/consent/"+handle))
 				w.WriteHeader(http.StatusSeeOther)
 			} else {
 				pages.failure(w, r, 503, "temporarily_unavailable", row.RedirectUri, row.State)

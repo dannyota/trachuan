@@ -124,10 +124,15 @@ func oauthAuthorize(t *testing.T, c *http.Client, server, id string, signedOut b
 	consentPath := loc.Path
 	if signedOut {
 		loc = oauthLocation(t, get(t, c, server+consentPath), http.StatusSeeOther)
-		if loc.Path != "/api/v1/auth/google/start" || loc.Query().Get("next") != consentPath {
-			t.Fatal("missing Google login redirect")
+		if loc.Path != "/login" || loc.Query().Get("next") != consentPath {
+			t.Fatal("missing sign-in page redirect")
 		}
-		loc = oauthLocation(t, get(t, c, server+loc.RequestURI()), http.StatusFound)
+		page := get(t, c, server+loc.RequestURI())
+		if page.StatusCode != http.StatusOK {
+			t.Fatal("sign-in page unavailable")
+		}
+		closeBody(page)
+		loc = oauthLocation(t, get(t, c, server+"/api/v1/auth/google/start?next="+url.QueryEscape(consentPath)), http.StatusFound)
 		google := base(t, "E2E_GOOGLE_URL")
 		if !strings.HasPrefix(loc.String(), google+"/") {
 			t.Fatal("wrong Google login destination")

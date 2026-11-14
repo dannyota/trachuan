@@ -60,11 +60,11 @@ func (f *e2eFixture) grant(c *http.Client, signedOut bool) e2eOAuth {
 		}
 		r = f.request(c, "GET", path, "", "", "", "")
 		loginURL, err := url.Parse(r.Header.Get("Location"))
-		if err != nil || loginURL.Path != "/api/v1/auth/google/start" || loginURL.Query().Get("next") != path {
+		if err != nil || loginURL.Path != "/login" || loginURL.Query().Get("next") != path {
 			f.t.Fatal("invalid login redirect")
 		}
 		f.status(r, 303)
-		r = f.request(c, "GET", loginURL.String(), "", "", "", "")
+		r = f.request(c, "GET", "/api/v1/auth/google/start?next="+url.QueryEscape(loginURL.Query().Get("next")), "", "", "", "")
 		location := r.Header.Get("Location")
 		f.status(r, 302)
 		r = f.request(c, "GET", location, "", "", "", "")
