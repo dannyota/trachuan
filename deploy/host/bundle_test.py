@@ -111,7 +111,7 @@ class ListenerTest(unittest.TestCase):
                         self.assertIn("archive_command=pgbackrest --stanza=trachuan archive-push %%p", args)
                         self.assertEqual(container["Entrypoint"], "/usr/local/bin/pgbackrest-entrypoint.sh")
                         text = unit.read_text()
-                        self.assertIn("Tmpfs=/run/pgbackrest:rw,noexec,nosuid,nodev,uid=999,gid=999,mode=0700", text)
+                        self.assertIn("Mount=type=tmpfs,destination=/run/pgbackrest,tmpfs-mode=0700,U=true,noexec,nosuid,nodev", text)
                         self.assertIn("Volume=/srv/trachuan/data/pgbackrest:/srv/trachuan/data/pgbackrest:Z,U", text)
                         for secret in ["backup_s3_key", "backup_s3_key_secret", "postgres_password"]:
                             self.assertIn(f"Secret={secret},type=mount,uid=999,gid=999,mode=0400", text)

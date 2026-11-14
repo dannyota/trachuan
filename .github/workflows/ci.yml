@@ -68,11 +68,8 @@ jobs:
             done < "$paths"
             rm "$paths"
           fi
-          echo "schema=$schema" >> "$GITHUB_OUTPUT"
-          echo "go=$go" >> "$GITHUB_OUTPUT"
-          echo "docembed=$docembed" >> "$GITHUB_OUTPUT"
-          echo "queryembed=$queryembed" >> "$GITHUB_OUTPUT"
-          echo "web=$web" >> "$GITHUB_OUTPUT"
+          printf '%s\n' "schema=$schema" "go=$go" "docembed=$docembed" \
+            "queryembed=$queryembed" "web=$web" >> "$GITHUB_OUTPUT"
 
   schema:
     needs: [preflight]
@@ -127,6 +124,8 @@ jobs:
       - run: PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s deploy/host -p '*_test.py'
       - run: PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s deploy/images -p '*_test.py'
       - run: bash deploy/host/render-units-test.sh
+      - run: python3 deploy/host/check-mounts.py
+        timeout-minutes: 3
       - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
