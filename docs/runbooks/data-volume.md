@@ -17,7 +17,7 @@ sudo lsblk -f "$DEVICE"
 sudo wipefs -n "$DEVICE"
 if test -b "$DEVICE" && signatures=$(sudo wipefs -n --noheadings --output TYPE "$DEVICE") &&
   test -z "$signatures"; then
-  sudo mkfs.xfs -L trachuan-data "$DEVICE"
+  sudo mkfs.xfs -L trachuandata "$DEVICE"
 else
   echo 'Device inspection failed or found signatures; stop' >&2
 fi
