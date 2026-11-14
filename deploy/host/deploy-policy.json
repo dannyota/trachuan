@@ -1,5 +1,20 @@
 {
   "version": 1,
+  "vault_id": "ocid1.vault.oc1.ap-singapore-1.gzvpqimlaaara.abzwsljrj7hxz2mkqnqxpthkuhxaju36hrry4dpsr4nmmoqukg3ojbrfccwq",
+  "region": "ap-singapore-1",
+  "secrets": [
+    "google_client_secret",
+    "smtp_username",
+    "smtp_password",
+    "account_keys",
+    "postgres_password",
+    "auth_db_password",
+    "corpus_reader_password",
+    "activator_db_password",
+    "backup_s3_key",
+    "backup_s3_key_secret",
+    "server_signup_emails"
+  ],
   "repository": "dannyota/trachuan",
   "release_repository": "ghcr.io/dannyota/trachuan-release",
   "rollback_repository": "ghcr.io/dannyota/trachuan-rollback",

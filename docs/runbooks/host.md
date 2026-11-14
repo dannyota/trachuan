@@ -86,8 +86,10 @@ images and corpus. Preserve the bundle's contents and manifest.
 
 ## Create secrets
 
-The owner uses an interactive Bash terminal. Silent reads keep values out of
-arguments, repository files and history. Keep a recovery copy outside the host.
+Vault is the source for [secrets](../design/deployment.md#secrets); the updater
+installs Podman secrets. The manual block below is owner break-glass only. Use
+an interactive Bash terminal with silent reads and keep a recovery copy outside
+the host.
 
 ```sh
 sudo -iu trachuan
@@ -117,7 +119,6 @@ sys.stdout.write("postgres://" + sys.argv[1] + ":" + password +
 }
 secret google_client_secret
 secret server_signup_emails
-
 secret smtp_username
 secret smtp_password
 openssl rand -base64 32 | tr '+/' '-_' | tr -d '=' | \
@@ -128,10 +129,11 @@ db_secret corpus_reader_password corpus_reader '{database}' server_corpus_databa
 unset -f secret db_secret
 ```
 
-Use nonempty passwords without newlines. The derived URL secrets supply the
-server's existing variables. No token signing key exists. To rotate passwords,
-stop affected containers, update database roles and both corresponding secrets,
-then recreate containers. Initialization secrets do not change existing roles.
+Use nonempty passwords without newlines. The updater derives the database URL
+secrets. No token signing key exists. To rotate a database password, the owner
+changes the role with `ALTER ROLE`, then publishes its Vault version. The
+updater recreates consumers; initialization secrets do not change existing
+roles.
 
 ## Account key rotation
 

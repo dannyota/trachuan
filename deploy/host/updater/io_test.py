@@ -39,6 +39,21 @@ class IOTest(unittest.TestCase):
             self.assertEqual(value['finished_at'], '2026-01-02T00:00:00Z')
 
 
+    def test_current_refreshes_last_success(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'result.json'
+            log = Path(directory) / 'deploy.log'
+            Result(path, log, clock=lambda: '2026-01-01T00:00:00Z').write('ok', 'complete', 'activated')
+            Result(path, log, clock=lambda: '2026-01-02T00:00:00Z').write('current', 'noop', 'already active')
+            self.assertEqual(json.loads(path.read_bytes())['last_success_at'], '2026-01-02T00:00:00Z')
+
+    def test_safe_sdk_code_is_extracted_without_other_error_output(self):
+        with self.assertRaises(CommandError) as raised:
+            command(['/bin/sh', '-c', 'printf "OCI_ERROR:NotAuthorizedOrNotFound\\n" >&2; exit 1'],
+                    error_prefix='OCI_ERROR:')
+        self.assertEqual(raised.exception.code, 'NotAuthorizedOrNotFound')
+        self.assertNotIn('NotAuthorizedOrNotFound', raised.exception.detail)
+
     def test_failed_command_detail_omits_stderr_of_other_programs(self):
         with self.assertRaises(CommandError) as raised:
             command(['/bin/sh', '-c', 'echo password=hunter2 >&2; exit 3'])
