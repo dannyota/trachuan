@@ -51,7 +51,7 @@ func TestLogin_UniformFailureAndQueue(t *testing.T) {
 	version := int64(1)
 	now := time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC)
 	var expected string
-	for _, scenario := range []string{"unknown", "passwordless", "wrong", "blocked", "enrolled", "counter", "busy known", "busy unknown"} {
+	for _, scenario := range []string{"unknown", "passwordless", "wrong", "blocked", "counter", "busy known", "busy unknown"} {
 		t.Run(scenario, func(t *testing.T) {
 			db := fakeStore{row: store.PasswordSnapshot{AccountID: 1, Hash: &hash, Version: &version}}
 			h := &fakeHasher{match: true}
@@ -64,7 +64,7 @@ func TestLogin_UniformFailureAndQueue(t *testing.T) {
 				db.row.Hash = nil
 			case "wrong":
 				h.match = false
-			case "blocked", "enrolled":
+			case "blocked":
 				sessions.err = store.ErrLoginFailed
 			case "counter":
 				for range 10 {

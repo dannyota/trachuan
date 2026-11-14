@@ -88,6 +88,7 @@ type LoginTransaction struct {
 	CreatedAt    time.Time
 	ExpiresAt    time.Time
 	ClaimedAt    *time.Time
+	PendingHash  string
 }
 
 type MailDelivery struct {

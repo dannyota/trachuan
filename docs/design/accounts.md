@@ -2,10 +2,10 @@
 
 Decision: [ADR 0015](../adr/0015-email-password-accounts-and-totp.md). This
 document is the contract for email and password accounts, the optional TOTP
-second factor, recovery codes, the key ring and the mail outbox. Sessions, CSRF
-and route conventions are in [web API](web-api.md); tokens and revocation in
-[auth](auth.md); consent in [OAuth](oauth.md). Numbers are in
-[budgets](budgets.md#accounts).
+second factor, recovery codes and the key ring; the mail outbox is in
+[account mail](account-mail.md). Sessions, CSRF and route conventions are in
+[web API](web-api.md); tokens and revocation in [auth](auth.md); consent in
+[OAuth](oauth.md). Numbers are in [budgets](budgets.md#accounts).
 
 ## Email address
 
@@ -100,11 +100,13 @@ rule:
 route with the session CSRF rule. `__Host-pending` is `Path=/`, `Secure`,
 `HttpOnly`, `SameSite=Strict`, 5 minutes, and is set only by a primary sign-in
 on an enrolled account; a new primary sign-in consumes any earlier pending row
-of that browser. The pending row stores a 32-byte random CSRF secret, as web
-sessions do; it is returned in the sign-in response body (password) or by
-`GET /api/v1/auth/factor` (Google redirect) and compared in constant time.
-Completion and expiry clear the cookie. A pending row authorizes only factor
-completion.
+of that browser. The Strict cookie is not sent on the cross-site Google
+callback, so Google login start records the hash of a presented pending cookie
+in the login transaction and a successful callback consumes that row. The
+pending row stores a 32-byte random CSRF secret, as web sessions do; it is
+returned in the sign-in response body (password) or by `GET /api/v1/auth/factor`
+(Google redirect) and compared in constant time. Completion and expiry clear the
+cookie. A pending row authorizes only factor completion.
 
 ## Sign-in entry and OAuth
 
@@ -249,36 +251,6 @@ server is the only writer, so after the restart no row is written with the old
 key); run `account keys reseal`, which fails if any row cannot be opened; run
 `account keys check`, which must report no row on the old key; only then restart
 with the new key alone.
-
-## Mail outbox
-
-Classes share the global caps: `signup` (registration and account-exists mail)
-may use at most the signup share of the hourly and monthly budget; `recovery`
-(reset, add password) and `notice` (security notices) use the rest, and a
-security notice is always enqueued in the transaction of its change, outside the
-row cap. Notices stay bounded because security changes are: each account may
-make at most the number of security changes per day in budgets (reset
-completions have their own allowance, so signed-in changes cannot block mailbox
-recovery), and a change beyond it is refused with 429 before anything is
-written, so every committed change has exactly one notice and no row is ever
-replaced. One sender claims a due row by setting `claimed_until` and
-incrementing `attempts` in a committed statement, then sends: SMTP to OCI Email
-Delivery with mandatory STARTTLS, certificate verification for the configured
-host and AUTH only after TLS, under one deadline per message. Success sets
-`sent_at` and clears the payload; a failure sets `next_attempt_at`; a crash
-leaves the row to be claimed again after `claimed_until`. A message whose
-outcome was uncertain may be delivered twice. After the attempt bound or
-`expires_at` the payload is cleared. A link in mail is
-`SERVER_PUBLIC_URL + "/link#" + token`: the token stays in the fragment, so it
-never reaches server or proxy logs or a `Referer`, and the web sends it only in
-a request body. Outside a loopback deployment (the rule that admits the fake
-Google issuer) the server refuses to start without SMTP settings;
-`SERVER_MAIL_CAPTURE_DIR`, which writes each message to a 0600 file, is allowed
-only in a loopback deployment. Mail is from `no-reply@trachuan.vn`, Vietnamese
-then English, plain text. Kinds: `registration`, `account_exists`,
-`add_password`, `reset`, `password_changed`, `totp_enrolled`, `totp_removed`,
-`recovery_codes_replaced`. Logs carry kind, row id and result, never the address
-or link.
 
 ## Release floor
 

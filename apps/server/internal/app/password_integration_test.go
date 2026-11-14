@@ -89,7 +89,7 @@ func TestPassword_FailuresAreIdentical(t *testing.T) {
 	expected := ""
 	for _, email := range []string{"unknown@example.test", "google@example.test", "known@example.test", "blocked@example.test", "enrolled@example.test"} {
 		secret := "synthetic passphrase"
-		if email == "known@example.test" {
+		if email == "known@example.test" || email == "enrolled@example.test" {
 			secret = "incorrect synthetic password"
 		}
 		response := f.postWithHeaders(client, "/api/v1/auth/password", `{"email":"`+email+`","password":"`+secret+`"}`, "application/json", f.server.URL, "")

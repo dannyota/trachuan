@@ -90,7 +90,12 @@ func (h *Handler) callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	staged := &sessionHeaders{header: make(http.Header)}
-	if err := h.sessions.CreateGoogleSession(ctx, staged, r, store.GoogleIdentity{Sub: id.Subject, Email: claims.Email, SignupEmails: h.signupEmails}); err != nil {
+	next := ValidateNext(tx.NextPath)
+	err = h.sessions.CreateGoogleSession(ctx, staged, r, store.GoogleIdentity{Sub: id.Subject, Email: claims.Email, SignupEmails: h.signupEmails, Next: next, PendingHash: tx.PendingHash})
+	var pending *store.PendingRequired
+	if errors.As(err, &pending) {
+		next = "/login/factor"
+	} else if err != nil {
 		switch {
 		case errors.Is(err, store.ErrLoginFailed):
 			rejection(w, r, "login_failed")
@@ -108,7 +113,7 @@ func (h *Handler) callback(w http.ResponseWriter, r *http.Request) {
 			w.Header().Add(key, value)
 		}
 	}
-	http.Redirect(w, r, ValidateNext(tx.NextPath), http.StatusFound)
+	http.Redirect(w, r, next, http.StatusFound)
 }
 
 func rejectedExchange(err error) bool {

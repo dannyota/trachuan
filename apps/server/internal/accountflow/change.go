@@ -92,7 +92,14 @@ func (s *Service) ChangePassword(ctx context.Context, p Completion) (store.Creat
 			return fmt.Errorf("read password change factor: %w", err)
 		}
 		if enrolled {
-			return store.ErrFactorRequired
+			if p.CodeProvided || p.Code != "" {
+				if err = s.verifyFactor(ctx, tx, a.ID, p.Code, nil, acting.CheckedAt); err != nil {
+					return err
+				}
+				acting.FactorAt = &acting.CheckedAt
+			} else if acting.FactorAt == nil || acting.FactorAt.Before(acting.CheckedAt.Add(-recentWindow)) {
+				return store.ErrFactorRequired
+			}
 		}
 		if err = securityAllowance(ctx, tx, a.ID, "signed_in", 10); err != nil {
 			return err

@@ -17,6 +17,8 @@ const (
 
 type GoogleIdentity struct {
 	Sub, Email   string
+	Next         string
+	PendingHash  string
 	SignupEmails []string
 }
 
@@ -24,6 +26,7 @@ type GoogleSessionParams struct {
 	Identity       GoogleIdentity
 	Session        CreateSessionParams
 	ReplacedHashes []string
+	Pending        PendingParams
 }
 
 type WebPersonalTokenParams struct {

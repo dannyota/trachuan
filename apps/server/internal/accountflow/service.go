@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"slices"
 
+	"danny.vn/trachuan/apps/server/internal/factor"
 	"danny.vn/trachuan/apps/server/internal/seal"
 	"danny.vn/trachuan/apps/server/internal/store"
 	"github.com/jackc/pgx/v5"
@@ -25,6 +27,7 @@ type Service struct {
 	DB           store.TransactionBeginner
 	Ring         *seal.Ring
 	SignupEmails []string
+	Logger       *slog.Logger
 }
 type Acting struct {
 	AccountID, SessionID int64
@@ -35,6 +38,8 @@ type Completion struct {
 	Acting          Acting
 	Verified        store.PasswordSnapshot
 	Session         store.CreateSessionParams
+	Code            string
+	CodeProvided    bool
 }
 
 func (s *Service) admits(email string) bool {
@@ -46,13 +51,14 @@ func (s *Service) transaction(ctx context.Context, write func(pgx.Tx) error) err
 		return fmt.Errorf("begin account flow: %w", err)
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
-	if err = write(tx); err != nil {
+	err = write(tx)
+	if err != nil && !errors.Is(err, factor.ErrFailed) && !errors.Is(err, factor.ErrLimited) {
 		return err
 	}
-	if err = tx.Commit(ctx); err != nil {
-		return fmt.Errorf("commit account flow: %w", err)
+	if commitErr := tx.Commit(ctx); commitErr != nil {
+		return fmt.Errorf("commit account flow: %w", commitErr)
 	}
-	return nil
+	return err
 }
 func liveAccount(ctx context.Context, tx pgx.Tx, acting Acting) (store.Account, error) {
 	a, err := store.LockAccount(ctx, tx, acting.AccountID)

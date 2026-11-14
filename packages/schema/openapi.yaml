@@ -171,20 +171,18 @@ paths:
                   type: string
       responses:
         '200':
-          description: Session created. Enrolled accounts fail closed until factor completion is available.
+          description: Session created, or pending factor authentication created for five minutes.
           headers:
             Set-Cookie:
+              description: Sets the session cookie, or __Host-pending with Secure, HttpOnly, SameSite=Strict, Path=/ and Max-Age=300.
               schema:
                 type: string
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: false
-                required: [next]
-                properties:
-                  next:
-                    type: string
+                oneOf:
+                - $ref: '#/components/schemas/LoginDestination'
+                - $ref: '#/components/schemas/FactorRequired'
         '400':
           description: Invalid JSON request.
           content:
@@ -701,7 +699,7 @@ paths:
               $ref: '#/components/schemas/PasswordChange'
       responses:
         '200':
-          description: Password set or changed; one replacement session issued. Enrolled accounts fail closed until factor verification is available.
+          description: Password set or changed; one replacement session issued. Enrolled accounts require recent factor proof or a code.
           headers:
             Set-Cookie:
               schema:
@@ -717,7 +715,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: unauthenticated or reauth_failed.
+          description: unauthenticated, reauth_failed or factor_failed.
           content:
             application/json:
               schema:
@@ -741,7 +739,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '429':
-          description: rate_limited; no change committed.
+          description: rate_limited; TOTP failures persist in the locked request transaction.
           content:
             application/json:
               schema:
@@ -752,6 +750,388 @@ paths:
                 type: integer
         '503':
           description: busy or unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/auth/factor:
+    get:
+      tags: [factor]
+      security:
+      - pending: []
+      responses:
+        '200':
+          description: Pending CSRF token and validated destination; reads only.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PendingFactor'
+        '401':
+          description: factor_failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags: [factor]
+      security:
+      - pending: []
+      parameters:
+      - name: Origin
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: X-CSRF-Token
+        in: header
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FactorInput'
+      responses:
+        '200':
+          description: Pending authentication consumed; session issued with primary and factor proof times.
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginDestination'
+        '400':
+          description: invalid_request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: factor_failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: csrf_rejected.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: Body exceeds 64 KiB.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '415':
+          description: JSON content type required.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: rate_limited; failed attempts persist and recovery codes ignore TOTP cooldown.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/me/totp/setup:
+    post:
+      tags: [factor]
+      parameters:
+      - name: Origin
+        in: header
+        schema:
+          type: string
+      - name: Referer
+        in: header
+        schema:
+          type: string
+      - name: X-CSRF-Token
+        in: header
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: New enrollment supersedes earlier enrollment; secret returned once.
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TOTPSetup'
+        '401':
+          description: unauthenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: csrf_rejected or reauth_required; factor true means recent factor proof is required.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: not_found while SERVER_TOTP_ENROLLMENT is off.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/me/totp/confirm:
+    post:
+      tags: [factor]
+      parameters:
+      - name: Origin
+        in: header
+        schema:
+          type: string
+      - name: Referer
+        in: header
+        schema:
+          type: string
+      - name: X-CSRF-Token
+        in: header
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FactorCode'
+      responses:
+        '200':
+          description: TOTP installed; epoch bumped and replacement session issued. First enrollment returns recovery codes once.
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TOTPConfirmation'
+        '400':
+          description: invalid_request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: factor_failed or unauthenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: csrf_rejected or reauth_required; factor true means recent factor proof is required.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: not_found while SERVER_TOTP_ENROLLMENT is off.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: Body exceeds 64 KiB.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: rate_limited; daily security-change allowance exhausted.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/me/totp:
+    delete:
+      tags: [factor]
+      parameters:
+      - name: Origin
+        in: header
+        schema:
+          type: string
+      - name: Referer
+        in: header
+        schema:
+          type: string
+      - name: X-CSRF-Token
+        in: header
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FactorInput'
+      responses:
+        '200':
+          description: TOTP and recovery codes removed; epoch bumped and replacement session issued.
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Empty'
+        '400':
+          description: invalid_request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: factor_failed or unauthenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: csrf_rejected or reauth_required; factor true means recent factor proof is required.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: Body exceeds 64 KiB.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: rate_limited; failed attempts persist and recovery codes ignore TOTP cooldown.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/me/recovery-codes:
+    post:
+      tags: [factor]
+      parameters:
+      - name: Origin
+        in: header
+        schema:
+          type: string
+      - name: Referer
+        in: header
+        schema:
+          type: string
+      - name: X-CSRF-Token
+        in: header
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FactorCode'
+      responses:
+        '200':
+          description: Recovery codes replaced and returned once; epoch bumped and replacement session issued.
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecoveryCodes'
+        '400':
+          description: invalid_request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: factor_failed or unauthenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: csrf_rejected or reauth_required; factor true means recent factor proof is required.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: Body exceeds 64 KiB.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: rate_limited; failed attempts persist and recovery codes ignore TOTP cooldown.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: unavailable.
           content:
             application/json:
               schema:
@@ -1824,7 +2204,75 @@ components:
       type: apiKey
       in: cookie
       name: __Host-login
+    pending:
+      type: apiKey
+      in: cookie
+      name: __Host-pending
   schemas:
+    LoginDestination:
+      type: object
+      additionalProperties: false
+      required: [next]
+      properties:
+        next:
+          type: string
+    FactorRequired:
+      type: object
+      additionalProperties: false
+      required: [factor_required, csrf]
+      properties:
+        factor_required:
+          type: boolean
+          enum: [true]
+        csrf:
+          type: string
+    PendingFactor:
+      type: object
+      additionalProperties: false
+      required: [csrf, next]
+      properties:
+        csrf:
+          type: string
+        next:
+          type: string
+    FactorCode:
+      type: object
+      additionalProperties: false
+      required: [code]
+      properties:
+        code:
+          type: string
+    FactorInput:
+      oneOf:
+      - $ref: '#/components/schemas/FactorCode'
+      - type: object
+        additionalProperties: false
+        required: [recovery_code]
+        properties:
+          recovery_code:
+            type: string
+    TOTPSetup:
+      type: object
+      additionalProperties: false
+      required: [otpauth_uri, secret]
+      properties:
+        otpauth_uri:
+          type: string
+        secret:
+          type: string
+    RecoveryCodes:
+      type: object
+      additionalProperties: false
+      required: [recovery_codes]
+      properties:
+        recovery_codes:
+          type: array
+          items:
+            type: string
+    TOTPConfirmation:
+      oneOf:
+      - $ref: '#/components/schemas/Empty'
+      - $ref: '#/components/schemas/RecoveryCodes'
     Empty:
       type: object
       additionalProperties: false
@@ -2084,6 +2532,7 @@ components:
               - reauth_required
               - reauth_failed
               - login_failed
+              - factor_failed
               - link_invalid
               - password_rejected
               - csrf_rejected

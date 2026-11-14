@@ -134,6 +134,7 @@ export const vi = {
     unauthenticated: 'Vui lòng đăng nhập.',
     login_failed: 'Đăng nhập thất bại. Hãy kiểm tra email và mật khẩu.',
     reauth_failed: 'Không thể xác minh mật khẩu.',
+    factor_failed: 'Không thể xác minh mã xác thực.',
     link_invalid: 'Liên kết không hợp lệ hoặc đã hết hạn.',
     password_rejected: 'Hãy chọn mật khẩu dài hơn, ít phổ biến hơn.',
     reauth_required: 'Vui lòng đăng nhập lại để tiếp tục.',

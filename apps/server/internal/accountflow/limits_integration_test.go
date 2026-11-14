@@ -126,7 +126,7 @@ func TestPasswordChange_AllowanceNoticeAndProofs(t *testing.T) {
 		t.Fatal("security window did not renew", err)
 	}
 }
-func TestAddPassword_RequiresOwnerRecentProofAndNoFactor(t *testing.T) {
+func TestAddPassword_RequiresOwnerRecentPrimaryAndFactorProof(t *testing.T) {
 	for _, refusal := range []string{"stale proof", "other owner", "enrolled", "already set", "expired", "stale epoch", "revoked session"} {
 		t.Run(refusal, func(t *testing.T) {
 			s, db := fixture(t)

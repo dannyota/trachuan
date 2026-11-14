@@ -77,7 +77,8 @@ func newE2EWithSignupEmails(t *testing.T, emails []string) *e2eFixture {
 	if err != nil {
 		t.Fatal(err)
 	}
-	passwordLogin.Flows = &accountflow.Service{DB: pool, Ring: ring, SignupEmails: emails}
+	flows := &accountflow.Service{DB: pool, Ring: ring, SignupEmails: emails}
+	passwordLogin.Flows, passwordLogin.Factors = flows, flows
 	passwordLogin.Evict = func(id int64) { sessions.EvictAccount(id); verifier.EvictAccount(id) }
 	mux := newWebMux(webDeps{password: passwordLogin, store: db, sessions: sessions, login: login, verifier: verifier, tools: mcpapi.Config{Resolver: e2eResolver{}, Limiter: limits.New(time.Now)}, loginLimit: newLoginLimiter(time.Now, nil), oauthDB: pool, publicURL: base})
 	mux.HandleFunc("GET /destination", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNoContent) })
