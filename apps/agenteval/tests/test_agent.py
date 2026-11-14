@@ -118,6 +118,7 @@ def test_anthropic_loop_preserves_thinking_and_forces_mode_detail():
     assert client.requests[0]["thinking"] == {"type": "adaptive"}
     assert client.requests[0]["output_config"] == {"effort": "high"}
     assert client.requests[0]["system"][0]["cache_control"] == {"type": "ephemeral"}
+    assert client.requests[0]["cache_control"] == {"type": "ephemeral"}
     assert client.requests[1]["messages"][1]["content"][0] == thinking
     assert result.tool_result_codepoints == len('{"complete":true,"text":"đúng"}')
 

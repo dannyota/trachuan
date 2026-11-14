@@ -89,6 +89,7 @@ class AnthropicProvider:
             system=[{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}],
             tools=translate_tools(tools, "anthropic"),
             messages=deepcopy(history),
+            cache_control={"type": "ephemeral"},
         )
         raw = response.model_dump(mode="json", exclude_none=True)
         usage = normalize_usage("anthropic", raw.get("usage", {}))
