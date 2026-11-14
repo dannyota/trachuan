@@ -80,15 +80,15 @@ before every activation, under its locks. Through the host's
 and the installed OCI Python SDK it reads the current
 [secret bundle](https://docs.oracle.com/en-us/iaas/Content/secret-management/Tasks/get-secrets-contents.htm)
 version of each named secret. A secret needs work when its version differs from
-the recorded one or its Podman secret is missing. For each such secret the
-updater pipes the value into `podman secret create --replace` as `trachuan`,
-rebuilds the derived URL secrets that depend on it, and recreates the containers
-that use it with the activation procedure (PostgreSQL under the backup lock,
-readiness before Caddy). The version is recorded in `/var/lib/trachuan-deploy/`
-(names and versions only) only after every dependent secret and container is
-reconciled; anything less leaves it pending for the next run. Values travel
-through pipes and are stored only by Podman's default file driver under the
-`trachuan` account
+the recorded one, its Podman secret is missing, or a derived URL secret built
+from it is missing. For each such secret the updater pipes the value into
+`podman secret create --replace` as `trachuan`, rebuilds the derived URL secrets
+that depend on it, and recreates the containers that use it with the activation
+procedure (PostgreSQL under the backup lock, readiness before Caddy). The
+version is recorded in `/var/lib/trachuan-deploy/` (names and versions only)
+only after every dependent secret and container is reconciled; anything less
+leaves it pending for the next run. Values travel through pipes and are stored
+only by Podman's default file driver under the `trachuan` account
 ([podman secret create](https://docs.podman.io/en/v5.8.2/markdown/podman-secret-create.1.html));
 never in other files, logs, command arguments, images or OpenTofu state. A
 missing or unreadable Vault secret keeps the current Podman secret and records

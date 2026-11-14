@@ -45,8 +45,9 @@ reads one bucket of public legal text and cannot write. The job:
    `dump_sha256` to equal the downloaded dump's SHA-256, and records its size.
 3. Requires the report's `country` and `rel` to equal the inputs, `status`
    completed, `quality_pass: true`, no research override, a `previous_diff`
-   naming the release it was compared with, and its `recipes` to equal the
-   recipes in `release.json`.
+   naming the release it was compared with, every gating `non_regression` entry
+   in every cohort with status `pass` (`not_run` fails), and its `recipes` to
+   equal the recipes in `release.json`.
 4. Writes the corpus manifest below as canonical JSON and signs it with
    `cosign sign-blob --bundle`, keyless, like the image manifest.
 5. Pushes `manifest.json` and `manifest.sigstore.json` to
@@ -77,8 +78,11 @@ which is how a corpus rollback is requested. No MacBook signing key exists.
 ```
 
 `sequence` is `github.run_number` of `corpus-release.yml`. `previous` is the
-release in the report's `previous_diff`. `extensions` comes from the dump's TOC
-and must equal the host allowlist. The certificate identity is
+release in the report's `previous_diff`. `extensions` comes from `release.json`,
+where `corpus release-row` records the build database's `pg_extension` names and
+versions; the host requires exactly the names `vector` and `ltree` and logs the
+versions, and the smoke check in step 3 proves the restored data works with the
+image's versions. The certificate identity is
 `https://github.com/dannyota/trachuan/.github/workflows/corpus-release.yml@refs/heads/main`.
 
 ## Host activation
@@ -88,9 +92,8 @@ The [updater](pull-deployment.md#updater) checks
 the same locks, so image and corpus changes never overlap.
 
 1. Verify with `cosign verify-blob --bundle`, the identity from policy and the
-   transparency log proof. A manifest whose hash is active or retained is a
-   no-op. Otherwise require a sequence above the stored highest corpus sequence,
-   and record the sequence-to-hash binding before any change.
+   transparency log proof, then apply the
+   [acceptance rule](pull-deployment.md#acceptance) for corpus sequences.
 2. Choose the mode: `retained` when `database` is listed in `retired_release`
    and its recorded dump SHA-256 equals the manifest's; refuse when the name is
    listed with another digest; else `new`. `new` also requires `previous` to
@@ -118,9 +121,10 @@ The host activator lives under `deploy/host/release/` and works through
 databases it creates, and may write only `corpus_release`, `release_journal` and
 `retired_release` in `auth`. The updater runs the idempotent
 `provision-activator.sh` as `postgres` before each activation: it creates the
-role when missing, sets its password from the Vault secret
-`activator_db_password`, and applies those grants, so an existing cluster gets
-the role without reinitialization.
+role with `CREATEDB` when missing and sets its password from the Vault secret
+`activator_db_password`, so an existing cluster gets the role without
+reinitialization. The table grants belong to the auth migrations, which run
+after it and create `release_journal` and `retired_release`.
 
 0. Take the `activation` advisory lock in `auth`; append `release_journal`
    (`started`, mode, target database, manifest hash, dump SHA-256, expected
@@ -132,7 +136,8 @@ the role without reinitialization.
    - As `activator`: create the database.
    - As `postgres`: create `vector` and `ltree` in it.
    - As `activator`: `pg_restore --no-owner --no-privileges --exit-on-error`
-     with a TOC list (`-L`) that omits the extension entries, with
+     with a TOC list (`-L`) that omits every extension entry and every entry
+     that belongs to an extension, including `COMMENT ON EXTENSION`, with
      `maintenance_work_mem=2GB` and two maintenance workers.
    - As `postgres`: run `grant-corpus.sh`.
 2. Require the restored `release` row to equal the manifest's `rel`,
@@ -153,18 +158,19 @@ the role without reinitialization.
 `release_journal` and `retired_release` (with `dump_sha256`) are auth
 migrations. Two rules close recovery and cleanup:
 
-- A journal whose last row is `activated` is complete; the next run only
-  finishes local bookkeeping.
-- No step, abort or prune ever drops a database that is `active_db` or listed in
-  `retired_release`, whatever the journal says.
+- A journal whose last row is `activated` or `reverted` is complete; the next
+  run only finishes local bookkeeping.
+- A database is protected when it is `active_db`, the target of an open journal,
+  or in `retired_release` with `retain_until` in the future. No step, abort or
+  prune ever drops a protected database, whatever the journal says.
 
 After a crash, an open journal continues from its last step when the guard holds
 (`new`: the target is neither active nor retired; `retained`: it is retired and
 not active). Otherwise the journal is closed as aborted, and a `new` target is
-dropped subject to the rule above. A daily `prune` under the same lock drops a
-database only when it is not active, not the target of an open journal, past
-`retain_until`, and without connections; it then removes the `retired_release`
-row.
+dropped subject to the rule above. A daily `prune` under the same lock handles
+each unprotected database in `retired_release` without connections: it journals
+`pruning`, drops the database if it exists, deletes the row, and journals
+`pruned`. An open `pruning` journal is finished the same way on the next run.
 
 ## Recipe changes
 
@@ -177,11 +183,16 @@ it in `corpus_release`. The updater activates the pair in one locked run:
 2. Stop Caddy; activate the images up to started containers, without the
    readiness gate.
 3. Run step 3 with the new server image, then step 4, then require loopback
-   `/readyz` and the edge probe, then start Caddy.
-4. On failure: when the pointer moved, compare-and-swap it back; restore the
-   previous images under the
-   [rollback rule](pull-deployment.md#failure-and-recovery); start Caddy only
-   when the previous pair passes readiness.
+   `/readyz`, start Caddy and run the edge probe; a failed probe stops Caddy.
+4. On failure after step 4, one transaction reverses it: compare-and-swap the
+   pointer back, delete the old release's `retired_release` row, insert the new
+   one with its digest and `retain_until` seven days ahead, and journal
+   `reverted`. Then restore the previous images under the
+   [failure rule](pull-deployment.md#failure-and-recovery) and start Caddy only
+   when the previous pair passes readiness and the edge probe. An interrupted
+   pair run is recovered by the same rule: its image journal is treated as
+   failed, and a corpus journal ending in `activated` for that pair is reversed
+   first.
 
 ## Results and alarms
 

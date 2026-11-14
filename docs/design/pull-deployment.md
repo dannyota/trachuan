@@ -138,10 +138,7 @@ retries. A run has three phases, each skipped when nothing changed: secrets
    `kind`, `version`, `repository` and `target`, and bind the manifest's `ref`
    and `commit` to the certificate with `--certificate-github-workflow-ref` and
    `--certificate-github-workflow-sha`.
-3. Decide: a manifest whose hash is active, retained or failed is a no-op. A
-   sequence already bound to another hash is rejected. Accept a new manifest
-   only when its sequence is above every accepted image sequence, and record the
-   sequence-to-hash binding before any change; it survives failure and rollback.
+3. Apply the [acceptance rule](#acceptance).
 4. Verify images: pull each by digest, then verify its build attestation from
    the registry with the build identity from policy and require the SLSA v1
    subject digest, source repository, commit and ref to equal the manifest. The
@@ -166,9 +163,11 @@ retries. A run has three phases, each skipped when nothing changed: secrets
      when its image or rendered unit changed; then wait for it, run
      `pgbackrest check` and prewarm the active corpus database
      ([release restore](../runbooks/release-restore.md#prewarm-a-corpus-database)).
-   - Run `provision-activator.sh`
-     ([corpus release](corpus-release.md#activation-steps)); start queryembed;
-     start migrate, a oneshot unit, and require success; start server and web.
+     - Run `provision-activator.sh`
+       ([corpus release](corpus-release.md#activation-steps)), which creates the
+       role and sets its password; start queryembed; start migrate, a oneshot
+       unit, and require success (the auth migrations that create the activation
+       tables grant on them to `activator`); start server and web.
    - Require loopback `http://127.0.0.1:8080/readyz`; start Caddy; require
      `https://trachuan.vn/` to answer 200 through Caddy on the host
      (`curl --resolve trachuan.vn:443:127.0.0.1`), since public `/readyz` is not
@@ -179,6 +178,17 @@ Configuration that differs per host and is not secret lives in Git, in
 `server.env` and `web.env`; the Google client identifier is public and moves
 there. Values that must stay out of Git, such as the sign-up allowlist, are
 [Vault secrets](deployment.md#secrets) passed as env secrets.
+
+### Acceptance
+
+One rule covers image, rollback and corpus manifests, each kind with its own
+sequences. A manifest whose hash is active, retained or failed is a no-op. A
+hash already accepted and still pending (waiting, downloading or interrupted
+before its journal starts) continues. A sequence bound to another hash is
+rejected. Otherwise a manifest is accepted only when its sequence is above every
+accepted sequence of its kind, and the sequence-to-hash binding is recorded as
+pending before any change; the binding survives failure and rollback, and the
+state moves to active, retained or failed.
 
 ### Failure and recovery
 
