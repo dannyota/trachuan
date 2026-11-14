@@ -10,7 +10,7 @@ def verify(path, bundle, workflow, ref, commit, release=False):
         identity = ['--certificate-identity-regexp',
                     r'^https://github\.com/dannyota/trachuan/\.github/workflows/images\.yml@refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$']
     else:
-        if workflow not in ('images.yml', 'rollback.yml'):
+        if workflow not in ('images.yml', 'rollback.yml', 'corpus-release.yml'):
             raise ValueError('invalid workflow')
         pattern = r'refs/tags/v[0-9]+\.[0-9]+\.[0-9]+' if workflow == 'images.yml' else r'refs/heads/main'
         require_match(pattern, ref, 'workflow ref')

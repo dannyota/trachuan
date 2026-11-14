@@ -8,8 +8,9 @@ restores and activates it. Code and images follow
 
 ## Upload
 
-`scripts/corpus-upload.sh <cc> <rel>` runs on the MacBook after `corpus eval`
-and uploads to bucket `trachuan-releases`, prefix `<cc>/<rel>/`:
+`scripts/corpus-upload.sh [--dry-run] <cc> <rel> <build-dir> <report.json>` runs
+on the MacBook after `corpus eval` and uploads to bucket `trachuan-releases`,
+prefix `<cc>/<rel>/`:
 
 - `corpus.dump`: the build's verified dump.
 - `MANIFEST.sha256`: the build artifact manifest
@@ -18,6 +19,22 @@ and uploads to bucket `trachuan-releases`, prefix `<cc>/<rel>/`:
   `--previous` set to the report of the release active in production.
 - `release.json`: the dump's `release` row as JSON
   ([corpus schema](corpus-schema.md)), written by `corpus release-row`.
+
+`corpus release-row <cc> <rel> --out <file>` reads the release database and
+workshop read-only, without Temporal. `release.json` keeps the release row's
+column names, excluding `singleton`, and adds `extensions`, `run` and
+`recipe_hash_inputs`. `run` records its id, expected and incomplete item counts,
+unaccepted gap count, matching build artifact hash and `complete`. Complete
+requires an evaluated or released run, every item done or a gap with a gap row,
+every gap accepted, and a done build whose input and recipe hashes match the
+release row. The workshop reads share one repeatable-read snapshot.
+
+Report recipes are hashes. `recipe_hash_inputs` holds the exact JSON strings
+hashed for `query`, `document`, `chunk`, `lexical` and `retrieval`: the
+embedding and search recipes use their Go serialization; chunk uses PostgreSQL's
+JSONB bytes, as evaluation does. Validation parses each string and requires
+equality with its release-row recipe object, then checks its SHA-256 against the
+report. The signed manifest carries the release row's recipe objects.
 
 It uses AWS CLI v2 against the
 [S3 compatibility endpoint](deployment.md#object-storage) with the
@@ -28,9 +45,31 @@ since recent AWS CLI versions add checksum headers by default
 It refuses before upload unless the run's expected items are all done or
 accepted gaps (the workshop database is the only place gap acceptance exists),
 `report.json` has `quality_pass: true`, no research override and a
-`previous_diff`, and its `dump_sha256` equals the local dump. A prefix that
-already holds objects is never overwritten; a rebuilt corpus gets a new `rel`.
-Then it dispatches `corpus-release.yml` with `country` and `rel`.
+`previous_diff`, every required `non_regression` entry is present with
+`gating:true` and status `pass` in the top-level product comparison and each
+product cohort with cases, and its `dump_sha256` equals the local dump. The
+previous report identity is
+`previous_diff.previous:{country,rel,report_sha256}`; its country must match the
+upload country. A prefix that already holds objects is never overwritten; a
+rebuilt corpus gets a new `rel`. Then it dispatches `corpus-release.yml` with
+`country` and `rel`. All evaluator cohorts must be present, including empty
+cohorts; empty cohorts require no comparisons. The Python validator owns the
+comparison contract, and a Go test checks it against evaluator output, including
+the non-gating flags.
+
+The uploader holds an exclusive nonblocking `flock` on
+`${HOME}/.cache/trachuan/corpus-upload.lock` through validation, prefix
+checking, uploads and dispatch. The cache directory has mode `0700`; all
+checkouts for the same owner share the lock. Another local upload refuses while
+the lock is held. Uploads use S3
+[`PutObject`](https://docs.aws.amazon.com/cli/latest/reference/s3api/put-object.html)
+or
+[multipart uploads](https://docs.aws.amazon.com/cli/latest/reference/s3api/complete-multipart-upload.html)
+with 64 MiB parts, retaining each returned ETag and the local byte count. After
+all uploads, every object's HEAD size and ETag must still match that receipt
+before dispatch. ETags are opaque identifiers, not content hashes. Both the
+uploader and workflow log the exact AWS CLI version; the runner client will be
+pinned after the first live compatibility proof.
 
 ## Signing workflow
 
@@ -39,15 +78,24 @@ environment `corpus-release`, which holds the `trachuan-release-verify`
 read-only customer secret key. That key is the only OCI credential in GitHub; it
 reads one bucket of public legal text and cannot write. The job:
 
-1. Downloads the four objects into the runner.
+1. HEADs all four objects before downloading: dump at most 16 GiB, each JSON
+   sidecar at most 16 MiB, and `MANIFEST.sha256` at most 1 MiB. Their total must
+   be below the runner's current free disk minus 2 GiB. Each download requests a
+   [byte range](https://docs.aws.amazon.com/cli/latest/reference/s3api/get-object.html)
+   of exactly `bytes=0-<HEAD size minus 1>`, with `--if-match` set to HEAD's
+   ETag, and must have that size. The GET response must repeat HEAD's ETag and
+   report `ContentRange` as `bytes 0-<HEAD size minus 1>/<HEAD size>`. Response
+   checks reject growth or replacement even when the endpoint ignores
+   `--if-match` and the downloaded prefix is unchanged.
 2. Requires SHA-256 of `MANIFEST.sha256` to equal the report's
    `build_artifact_sha256`, the manifest's `corpus.dump` line and the report's
    `dump_sha256` to equal the downloaded dump's SHA-256, and records its size.
 3. Requires the report's `country` and `rel` to equal the inputs, `status`
    completed, `quality_pass: true`, no research override, a `previous_diff`
-   naming the release it was compared with, every gating `non_regression` entry
-   in every cohort with status `pass` (`not_run` fails), and its `recipes` to
-   equal the recipes in `release.json`.
+   naming the release it was compared with, the complete required
+   `non_regression` gate set in each product cohort with cases and the top-level
+   comparison, with `gating:true` and status `pass` (`not_run` fails), and its
+   `recipes` to equal the recipes in `release.json`.
 4. Writes the corpus manifest below as canonical JSON and signs it with
    `cosign sign-blob --bundle`, keyless, like the image manifest.
 5. Pushes `manifest.json` and `manifest.sigstore.json` to
@@ -77,12 +125,14 @@ which is how a corpus rollback is requested. No MacBook signing key exists.
 }
 ```
 
-`sequence` is `github.run_number` of `corpus-release.yml`. `previous` is the
-release in the report's `previous_diff`. `extensions` comes from `release.json`,
-where `corpus release-row` records the build database's `pg_extension` names and
-versions; the host requires exactly the names `vector` and `ltree` and logs the
-versions, and the smoke check in step 3 proves the restored data works with the
-image's versions. The certificate identity is
+`sequence` is `github.run_number` of `corpus-release.yml`. `previous` is
+`previous_diff.previous.rel`. The OCI artifact type is
+`application/vnd.trachuan.corpus-release.v1`. Publication moves
+`<cc>-production` only above the current verified sequence. `extensions` comes
+from `release.json`, where `corpus release-row` records the build database's
+`pg_extension` names and versions; the host requires exactly the names `vector`
+and `ltree` and logs the versions, and the smoke check in step 3 proves the
+restored data works with the image's versions. The certificate identity is
 `https://github.com/dannyota/trachuan/.github/workflows/corpus-release.yml@refs/heads/main`.
 
 ## Host activation

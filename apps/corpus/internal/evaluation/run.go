@@ -13,7 +13,6 @@ import (
 	"danny.vn/trachuan/internal/retrieval"
 )
 
-// ScorerVersion identifies the scoring policy used by reports and artifacts.
 const ScorerVersion = "agent-eval/4"
 
 func productComparableScorer(previous, current string) bool {
@@ -27,7 +26,6 @@ type metricKey struct {
 	limit  int
 }
 
-// Run scores legacy, old-product and development cases with a frozen recipe.
 func Run(ctx context.Context, engine Engine, suite Suite, o Options) (Report, Cache, error) {
 	return run(ctx, engine, suite, o, caseConcurrency)
 }
@@ -72,6 +70,7 @@ func run(ctx context.Context, engine Engine, suite Suite, o Options, limit int) 
 	r.ArticleCapOverride = o.ArticleCapOverride
 	r.ValidityOverrides = o.ValidityOverrides
 	var previous *Report
+	var previousHash string
 	if o.PreviousReport != "" {
 		b, err := os.ReadFile(o.PreviousReport)
 		if err != nil {
@@ -81,6 +80,8 @@ func run(ctx context.Context, engine Engine, suite Suite, o Options, limit int) 
 		if err != nil {
 			return Report{}, Cache{}, err
 		}
+		sum := sha256.Sum256(b)
+		previousHash = hex.EncodeToString(sum[:])
 		if prior.Version != 1 || (prior.Scorer != r.Scorer && prior.Scorer != "agent-eval/1" && prior.Scorer != "agent-eval/2" && prior.Scorer != "agent-eval/3") || prior.FixtureHashes.Legacy != r.FixtureHashes.Legacy || prior.FixtureHashes.OldProduct != r.FixtureHashes.OldProduct {
 			return Report{}, Cache{}, fmt.Errorf("incompatible previous scorer or fixtures")
 		}
@@ -360,6 +361,7 @@ func run(ctx context.Context, engine Engine, suite Suite, o Options, limit int) 
 	if previous != nil {
 		cases := compareCases(previous.Cases, r.Cases)
 		diff := map[string]any{"label": "corpus changes are coverage changes"}
+		diff["previous"] = map[string]string{"country": previous.Country, "rel": previous.Rel, "report_sha256": previousHash}
 		if previous.Scorer != r.Scorer {
 			cases = productCaseDifferences(cases)
 			diff["previous_scorer"], diff["scorer"] = previous.Scorer, r.Scorer

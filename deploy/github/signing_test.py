@@ -27,6 +27,18 @@ class SigningTest(unittest.TestCase):
         self.assertIn('https://github.com/dannyota/trachuan/.github/workflows/rollback.yml@refs/heads/main',
                       run.call_args.args[0])
 
+    def test_corpus_uses_main_identity_and_binds_workflow_source(self):
+        with patch('signing.subprocess.run') as run:
+            self.s.sign('manifest.json', 'manifest.sigstore.json', 'corpus-release.yml', 'refs/heads/main', 'b' * 40)
+        command = run.call_args.args[0]
+        self.assertIn('https://github.com/dannyota/trachuan/.github/workflows/corpus-release.yml@refs/heads/main', command)
+        self.assertEqual(command[command.index('--certificate-github-workflow-ref') + 1], 'refs/heads/main')
+        self.assertEqual(command[command.index('--certificate-github-workflow-sha') + 1], 'b' * 40)
+        with patch('signing.subprocess.run') as run:
+            with self.assertRaises(ValueError):
+                self.s.verify('manifest.json', 'sig.json', 'corpus-release.yml', 'refs/heads/other', 'b' * 40)
+            run.assert_not_called()
+
     def test_discovered_release_binds_ref_and_commit_with_anchored_identity(self):
         with patch('signing.subprocess.run') as run:
             self.s.verify('manifest.json', 'sig.json', 'images.yml', 'refs/tags/v1.2.3', 'c' * 40, release=True)
