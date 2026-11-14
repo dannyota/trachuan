@@ -38,6 +38,28 @@ when absent, no clients are pre-registered. `SERVER_SIGNUP_EMAILS` optionally
 lists, comma-separated, the only emails that may create an account (production
 sets the owner's); when absent, sign-up is open.
 
+Create the required local key file outside the repository, then enable captured
+mail. Capture requires loopback hosts in both `SERVER_PUBLIC_URL` and
+`SERVER_LISTEN`; leave `SERVER_SMTP_HOST` unset. With neither capture nor SMTP,
+a loopback deployment logs one warning and leaves mail queued. Outside loopback,
+`serve` requires `SERVER_SMTP_HOST`, `SERVER_SMTP_USERNAME` and
+`SERVER_SMTP_PASSWORD`. `SERVER_SMTP_PORT` defaults to `587` and
+`SERVER_MAIL_FROM` to `no-reply@trachuan.vn`.
+
+```sh
+mkdir -p "$HOME/.config/trachuan"
+(set -C; umask 077; openssl rand -base64 32 | tr '/+' '_-' > "$HOME/.config/trachuan/account_keys")
+chmod 600 "$HOME/.config/trachuan/account_keys"
+export SERVER_ACCOUNT_KEYS_FILE="$HOME/.config/trachuan/account_keys"
+export SERVER_MAIL_CAPTURE_DIR="$HOME/.local/share/trachuan/mail"
+```
+
+Keep the key file across restarts. For rotation, follow the
+[key-ring procedure](../design/accounts.md#key-ring), using
+`go run ./apps/server/cmd/server admin account keys reseal` and
+`go run ./apps/server/cmd/server admin account keys check`. Check prints only
+table names and counts of payloads on a non-active key.
+
 Apply auth migrations and select the built database. Replace the database name
 with the actual local release name before executing the SQL.
 

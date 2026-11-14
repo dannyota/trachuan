@@ -11,9 +11,12 @@ import (
 
 	"danny.vn/trachuan/apps/server/internal/accountemail"
 	"danny.vn/trachuan/apps/server/internal/oauth"
+	"danny.vn/trachuan/apps/server/internal/seal"
 )
 
 type config struct {
+	accountKeys                                                                                        *seal.Ring
+	mail                                                                                               mailConfig
 	listen, authURL, corpusURL, embedderURL, audience, publicURL, googleID, googleSecret, googleIssuer string
 	strictDeployment                                                                                   bool
 	trustedProxies                                                                                     []netip.Prefix

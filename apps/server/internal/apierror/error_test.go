@@ -37,3 +37,11 @@ func TestRetryMessage_IncludesSeconds(t *testing.T) {
 		t.Fatalf("message %q", got)
 	}
 }
+
+func TestMessage_AccountErrors(t *testing.T) {
+	for code, want := range map[string]string{"busy": "Service busy.", "login_failed": "Sign-in failed.", "reauth_failed": "Reauthentication failed.", "password_rejected": "Password rejected."} {
+		if got := Message(code); got != want {
+			t.Errorf("%s: got %q want %q", code, got, want)
+		}
+	}
+}

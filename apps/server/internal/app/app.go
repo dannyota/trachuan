@@ -16,8 +16,11 @@ import (
 	"danny.vn/trachuan/apps/server/internal/mcpapi"
 	"danny.vn/trachuan/apps/server/internal/migrate"
 	"danny.vn/trachuan/apps/server/internal/oauth"
+	"danny.vn/trachuan/apps/server/internal/password"
+	"danny.vn/trachuan/apps/server/internal/passwordauth"
 	"danny.vn/trachuan/apps/server/internal/release"
 	"danny.vn/trachuan/apps/server/internal/reports"
+	"danny.vn/trachuan/apps/server/internal/seal"
 	"danny.vn/trachuan/apps/server/internal/store"
 	"danny.vn/trachuan/apps/server/internal/weblogin"
 	"danny.vn/trachuan/apps/server/internal/websession"
@@ -59,6 +62,16 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 	}
 	if args[0] == "serve" && (cfg.googleID == "" || cfg.googleSecret == "") {
 		return errors.New("invalid or missing server configuration")
+	}
+	if args[0] == "serve" {
+		cfg.accountKeys, err = seal.LoadFile(os.Getenv("SERVER_ACCOUNT_KEYS_FILE"))
+		if err != nil {
+			return err
+		}
+		cfg.mail, err = loadMailConfig(os.Getenv("SERVER_PUBLIC_URL"), cfg.listen)
+		if err != nil {
+			return err
+		}
 	}
 	if cfg.googleIssuer != "" && args[0] == "serve" {
 		_, _ = fmt.Fprintln(stderr, "Google issuer override active")
@@ -128,17 +141,24 @@ func serve(ctx context.Context, cfg config, pool *pgxpool.Pool, queries *store.Q
 		resolver.Close()
 		return errors.New("google provider discovery failed")
 	}
-	mux := newWebMux(webDeps{store: bounded, reportStore: queries, sessions: sessions, login: login, verifier: verifier, tools: tools, loginLimit: newLoginLimiter(clock, cfg.trustedProxies), oauthDB: pool, oauthClients: cfg.oauthClients, publicURL: cfg.publicURL})
+	passwordLogin := &passwordauth.Handler{Store: queries, Proofs: queries, Hasher: password.NewHasher(), Counter: password.NewCounter(clock), Sessions: sessions, PublicURL: cfg.publicURL}
+	mux := newWebMux(webDeps{password: passwordLogin, store: bounded, reportStore: queries, sessions: sessions, login: login, verifier: verifier, tools: tools, loginLimit: newLoginLimiter(clock, cfg.trustedProxies), oauthDB: pool, oauthClients: cfg.oauthClients, publicURL: cfg.publicURL})
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) })
 	mux.Handle("GET /readyz", readiness(ctx, func(ctx context.Context) error {
 		return readyCheck(ctx, pool.Ping, func(ctx context.Context) error {
-			lease, err := resolver.Resolve(ctx, "vn", "")
-			if err == nil {
+			lease, resolveErr := resolver.Resolve(ctx, "vn", "")
+			if resolveErr == nil {
 				lease.Done()
 			}
-			return err
+			return resolveErr
 		})
 	}))
+	stopMail, err := startMail(ctx, cfg, queries, stderr)
+	if err != nil {
+		resolver.Close()
+		return err
+	}
+	defer stopMail()
 	server := newHTTPServer(cfg.listen, mux)
 	purgeCtx, cancel := context.WithCancel(ctx)
 	done := make(chan struct{})
@@ -199,5 +219,8 @@ func runNonServe(ctx context.Context, args []string, stdout io.Writer) error {
 		return errors.New("create auth pool failed")
 	}
 	defer pool.Close()
+	if len(args) >= 3 && args[1] == "account" && args[2] == "keys" {
+		return runAccountKeys(ctx, args[3:], store.New(pool), stdout)
+	}
 	return runAdmin(ctx, args[1:], credentialStore{Queries: store.New(pool), db: pool}, stdout)
 }

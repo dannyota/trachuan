@@ -13,6 +13,7 @@ type purgeStore interface {
 	accountapi.PurgeStore
 	DeleteExpiredLoginTransactions(context.Context) error
 	PurgeEndedCredentials(context.Context) (int64, error)
+	PurgeMail(context.Context) (int64, error)
 	DeleteExpiredReports(context.Context, store.DeleteExpiredReportsParams) (int64, error)
 	DeleteExpiredSnapshots(context.Context, store.DeleteExpiredSnapshotsParams) (int64, error)
 }
@@ -40,6 +41,12 @@ func runPurgeLoop(ctx context.Context, s purgeStore, clock func() time.Time, log
 			cancel()
 			if err != nil {
 				logger.Error("purge failed", "step", "ended_credentials")
+			}
+			queryCtx, cancel = context.WithTimeout(ctx, 2*time.Second)
+			_, err = s.PurgeMail(queryCtx)
+			cancel()
+			if err != nil {
+				logger.Error("purge failed", "step", "mail_outbox")
 			}
 			before := clock().Add(-90 * 24 * time.Hour)
 			purgeReportBatches(ctx, logger, "reports", func(ctx context.Context) (int64, error) {

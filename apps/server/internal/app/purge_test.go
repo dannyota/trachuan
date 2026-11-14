@@ -38,6 +38,9 @@ func (s *failingPurgeStore) PurgeEndedCredentials(context.Context) (int64, error
 	s.credentials++
 	return 0, errors.New("private driver detail")
 }
+func (*failingPurgeStore) PurgeMail(context.Context) (int64, error) {
+	return 0, errors.New("private driver detail")
+}
 func (*failingPurgeStore) DeleteExpiredReports(context.Context, store.DeleteExpiredReportsParams) (int64, error) {
 	return 0, errors.New("private driver detail")
 }
@@ -65,7 +68,7 @@ func TestPurge_LogsRetriesAndStops(t *testing.T) {
 		t.Fatalf("purge calls login=%d account=%d", login, account)
 	}
 	out := logs.String()
-	if strings.Count(out, `"msg":"purge failed"`) != 10 || strings.Count(out, `"step":"reports"`) != 2 || strings.Count(out, `"step":"report_snapshots"`) != 2 || strings.Count(out, `"step":"login_transactions"`) != 2 || strings.Count(out, `"step":"deleted_accounts"`) != 2 || strings.Count(out, `"step":"ended_credentials"`) != 2 || strings.Contains(out, "private driver detail") {
+	if strings.Count(out, `"msg":"purge failed"`) != 12 || strings.Count(out, `"step":"reports"`) != 2 || strings.Count(out, `"step":"report_snapshots"`) != 2 || strings.Count(out, `"step":"login_transactions"`) != 2 || strings.Count(out, `"step":"deleted_accounts"`) != 2 || strings.Count(out, `"step":"ended_credentials"`) != 2 || strings.Count(out, `"step":"mail_outbox"`) != 2 || strings.Contains(out, "private driver detail") {
 		t.Fatal("unexpected purge events", out)
 	}
 }

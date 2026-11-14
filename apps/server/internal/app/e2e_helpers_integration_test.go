@@ -18,6 +18,8 @@ import (
 	"danny.vn/trachuan/apps/server/internal/limits"
 	"danny.vn/trachuan/apps/server/internal/mcpapi"
 	"danny.vn/trachuan/apps/server/internal/migrate"
+	"danny.vn/trachuan/apps/server/internal/password"
+	"danny.vn/trachuan/apps/server/internal/passwordauth"
 	"danny.vn/trachuan/apps/server/internal/store"
 	"danny.vn/trachuan/apps/server/internal/weblogin"
 	"danny.vn/trachuan/apps/server/internal/weblogin/oidctest"
@@ -62,7 +64,8 @@ func newE2E(t *testing.T) *e2eFixture {
 	if err != nil {
 		t.Fatal(err)
 	}
-	mux := newWebMux(webDeps{store: db, sessions: sessions, login: login, verifier: verifier, tools: mcpapi.Config{Resolver: e2eResolver{}, Limiter: limits.New(time.Now)}, loginLimit: newLoginLimiter(time.Now, nil), oauthDB: pool, publicURL: base})
+	passwordLogin := &passwordauth.Handler{Store: q, Proofs: q, Hasher: password.NewHasher(), Counter: password.NewCounter(clock), Sessions: sessions, PublicURL: base}
+	mux := newWebMux(webDeps{password: passwordLogin, store: db, sessions: sessions, login: login, verifier: verifier, tools: mcpapi.Config{Resolver: e2eResolver{}, Limiter: limits.New(time.Now)}, loginLimit: newLoginLimiter(time.Now, nil), oauthDB: pool, publicURL: base})
 	mux.HandleFunc("GET /destination", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNoContent) })
 	server.Config.Handler = mux
 	server.StartTLS()

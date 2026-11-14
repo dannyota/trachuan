@@ -10,6 +10,7 @@ import (
 	"danny.vn/trachuan/apps/server/internal/limits"
 	"danny.vn/trachuan/apps/server/internal/mcpapi"
 	"danny.vn/trachuan/apps/server/internal/oauth"
+	"danny.vn/trachuan/apps/server/internal/passwordauth"
 	"danny.vn/trachuan/apps/server/internal/reportsapi"
 	"danny.vn/trachuan/apps/server/internal/webapi"
 	"danny.vn/trachuan/apps/server/internal/weblogin"
@@ -17,6 +18,7 @@ import (
 )
 
 type webDeps struct {
+	password     *passwordauth.Handler
 	store        accountapi.Store
 	reportStore  reportsapi.Store
 	sessions     *websession.Manager
@@ -31,6 +33,7 @@ type webDeps struct {
 
 func newWebMux(d webDeps) *http.ServeMux {
 	mux := http.NewServeMux()
+	mountPasswordRoutes(mux, d)
 	mux.Handle("/mcp", credential.Middleware(d.verifier, mcpapi.New(d.tools)))
 	account := d.sessions.Middleware(d.sessions.CSRF(accountapi.New(accountapi.Config{Store: d.store, Sessions: d.sessions, Verifier: d.verifier, Limiter: d.tools.Limiter, Clock: d.tools.Clock})))
 	logout := d.sessions.Middleware(d.sessions.CSRF(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
