@@ -27,6 +27,21 @@ class InstallerTest(unittest.TestCase):
         self.assertEqual(templates, ["{{.Host.CgroupsVersion}}"])
 
 
+class ServerEnvironmentTest(unittest.TestCase):
+    def test_account_key_file_and_smtp_settings(self):
+        lines = (HOST / "server.env").read_text().splitlines()
+        expected = {
+            "SERVER_ACCOUNT_KEYS_FILE": "/run/secrets/account_keys",
+            "SERVER_SMTP_HOST": "smtp.email.ap-singapore-1.oci.oraclecloud.com",
+            "SERVER_SMTP_PORT": "587",
+            "SERVER_MAIL_FROM": "no-reply@trachuan.vn",
+        }
+        for name, value in expected.items():
+            with self.subTest(variable=name):
+                self.assertEqual([line for line in lines if line.startswith(f"{name}=")],
+                                 [f"{name}={value}"])
+
+
 class ListenerTest(unittest.TestCase):
     def test_rendered_services_use_host_network_without_port_forwarding(self):
         with tempfile.TemporaryDirectory(prefix="trachuan-host-test-") as work:
@@ -83,6 +98,18 @@ class ListenerTest(unittest.TestCase):
                              if line.startswith("ExecStartPre=")]
                     if unit.name == "trachuan-server.container":
                         self.assertIn(["/srv/trachuan/host/check-signup.sh", "/srv/trachuan/host/server.env"], hooks)
+                        self.assertEqual(container["User"], "65532:65532")
+                        secrets = {
+                            "account_keys": "type=mount,target=/run/secrets/account_keys,uid=65532,gid=65532,mode=0400",
+                            "smtp_username": "type=env,target=SERVER_SMTP_USERNAME",
+                            "smtp_password": "type=env,target=SERVER_SMTP_PASSWORD",
+                        }
+                        for name, options in secrets.items():
+                            with self.subTest(secret=name):
+                                self.assertEqual([
+                                    line for line in unit.read_text().splitlines()
+                                    if line.startswith(f"Secret={name},")
+                                ], [f"Secret={name},{options}"])
                     if unit.name == "trachuan-migrate.container":
                         self.assertIn(["/srv/trachuan/host/check-postgres-auth.sh"], hooks)
                     if unit.name == "trachuan-queryembed.container":
