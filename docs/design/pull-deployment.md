@@ -135,8 +135,10 @@ retries. A run has three phases, each skipped when nothing changed: secrets
    rollback repository's newest tag; download into a fresh staging directory.
    GHCR answers an anonymous request for a package that does not exist yet with
    `denied`, so an unreadable rollback repository means no rollback
-   authorization; that only withholds rollbacks. Any other registry error fails
-   the run, and the result names the command and the tail of its error output.
+   authorization, logged as a warning, until the host has once accepted a
+   rollback; after that it fails the run. Any other registry error fails the
+   run. Results name the failing command and exit code, plus the error tail for
+   `oras` and `cosign` unless it mentions credentials.
 2. Verify the manifest: `cosign verify-blob --bundle` with
    `--certificate-oidc-issuer` and `--certificate-identity-regexp` from policy;
    the transparency log proof is required and no skip flag is ever passed. Check

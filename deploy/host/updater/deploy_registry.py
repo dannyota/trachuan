@@ -43,11 +43,13 @@ class Registry:
             match(r'[a-zA-Z0-9_][a-zA-Z0-9_.-]{0,127}', tag, 'artifact tag')
         return tags
 
-    def latest_rollback(self):
+    def latest_rollback(self, readable_before=False):
+        self.rollback_unreadable = False
         try:
             tags = self.tags(self.rules['rollback_repository'])
         except CommandError as error:
-            if error.reason in ('not_found', 'denied'):
+            if error.reason in ('not_found', 'denied') and not readable_before:
+                self.rollback_unreadable = True
                 return None
             raise
         numbers = [tag for tag in tags if re.fullmatch('[1-9][0-9]*', tag)]

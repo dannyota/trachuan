@@ -55,7 +55,11 @@ class RegistryTest(unittest.TestCase):
         self.assertIsNone(r.Registry(self.policy, missing).latest_rollback())
         def denied(*args, **kwargs):
             raise CommandError('repository not readable anonymously', reason='denied')
-        self.assertIsNone(r.Registry(self.policy, denied).latest_rollback())
+        registry = r.Registry(self.policy, denied)
+        self.assertIsNone(registry.latest_rollback())
+        self.assertTrue(registry.rollback_unreadable)
+        with self.assertRaises(CommandError):
+            registry.latest_rollback(readable_before=True)
         def failed(*args, **kwargs):
             raise CommandError('registry failed')
         with self.assertRaises(CommandError):

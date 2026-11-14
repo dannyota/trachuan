@@ -81,15 +81,20 @@ class CommandError(Exception):
         self.detail = detail
 
 
-def describe(args, stderr):
+def describe(args, stderr, returncode):
     program = list(args[args.index('--') + 1:] if '--' in args else args)
     words = [Path(program[0]).name]
     for arg in program[1:3]:
         if not re.fullmatch('-?[a-z][a-z-]*', arg):
             break
         words.append(arg)
+    detail = ' '.join(words) + ': exit ' + str(returncode)
+    if words[0] not in ('oras', 'cosign'):
+        return detail
     tail = ' '.join(stderr.decode('utf-8', errors='replace').split())[-300:]
-    return ' '.join(words) + ': ' + tail
+    if re.search('auth|basic|bearer|password|secret|token|credential', tail, re.IGNORECASE):
+        return detail + ': error output withheld'
+    return detail + ': ' + tail
 
 
 def failure_reason(args, stderr):
@@ -150,7 +155,8 @@ def command(args, input=None, timeout=300, stdout_limit=None):
                     output, errors = bounded_output(process, stdout_limit, timeout)
                 if process.returncode:
                     raise CommandError('command failed', reason=failure_reason(args, errors),
-                                       returncode=process.returncode, detail=describe(args, errors))
+                                       returncode=process.returncode,
+                                       detail=describe(args, errors, process.returncode))
             except BaseException:
                 try:
                     os.killpg(process.pid, signal.SIGKILL)

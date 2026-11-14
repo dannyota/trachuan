@@ -58,7 +58,10 @@ class Updater:
     def images(self, state, directory, mode, result):
         self.step = 'fetch'
         production = self.registry.fetch(self.rules['release_repository'], 'production', directory / 'production', 'release')
-        tag = self.registry.latest_rollback()
+        tag = self.registry.latest_rollback(bool(state.data['accepted'].get('rollback')))
+        if getattr(self.registry, 'rollback_unreadable', False) is True:
+            result.append(dict(status='warning', step='fetch',
+                               message='rollback channel unreadable; rollback authorizations withheld'))
         authorization = None
         if tag:
             rollback_path = self.registry.fetch(self.rules['rollback_repository'], tag, directory / 'rollback', 'rollback')
