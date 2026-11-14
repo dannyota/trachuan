@@ -137,6 +137,7 @@ export const en: Catalog = {
     unauthenticated: 'Please sign in.',
     login_failed: 'Sign-in failed. Check your email and password.',
     reauth_failed: 'The password could not be verified.',
+    factor_failed: 'The verification code could not be verified.',
     link_invalid: 'This link is invalid or has expired.',
     password_rejected: 'Choose a longer, less common password.',
     reauth_required: 'Please sign in again to continue.',

@@ -2,9 +2,11 @@ package websession
 
 import (
 	"context"
+	"errors"
 	"net/http"
 
 	"danny.vn/trachuan/apps/server/internal/store"
+	"danny.vn/trachuan/apps/server/internal/weblogin"
 )
 
 type googleSessionStore interface {
@@ -28,13 +30,25 @@ func (m *Manager) CreateGoogleSession(ctx context.Context, w http.ResponseWriter
 			hashes = append(hashes, hashToken(cookie.Value))
 		}
 	}
-	row, err := db.CreateGoogleSession(ctx, store.GoogleSessionParams{Identity: identity, Session: store.CreateSessionParams{TokenHash: hashToken(token), CsrfSecret: secret, ExpiresAt: m.now().Add(idleLifetime)}, ReplacedHashes: hashes})
+	pendingParams := store.PendingParams{Next: weblogin.ValidateNext(identity.Next)}
+	if identity.PendingHash != "" {
+		pendingParams.ReplacedHashes = []string{identity.PendingHash}
+	}
+	row, err := db.CreateGoogleSession(ctx, store.GoogleSessionParams{Identity: identity, Pending: pendingParams, Session: store.CreateSessionParams{TokenHash: hashToken(token), CsrfSecret: secret, ExpiresAt: m.now().Add(idleLifetime)}, ReplacedHashes: hashes})
 	for _, hash := range append(hashes, row.RevokedHashes...) {
 		rev := revocation{hash: hash}
 		m.fence(rev)
 		m.unfence(rev)
 	}
 	if err != nil {
+		var pending *store.PendingRequired
+		if errors.As(err, &pending) {
+			if ctx.Err() != nil {
+				return errUnavailable
+			}
+			setPending(w, token, pendingAge())
+			return err
+		}
 		if row.AccountID != 0 {
 			m.EvictAccount(row.AccountID)
 		}
@@ -48,5 +62,8 @@ func (m *Manager) CreateGoogleSession(ctx context.Context, w http.ResponseWriter
 		return errUnavailable
 	}
 	setSessionCookie(w, token, expires, m.now())
+	if identity.PendingHash != "" || len(r.CookiesNamed("__Host-pending")) > 0 {
+		ClearPending(w)
+	}
 	return nil
 }

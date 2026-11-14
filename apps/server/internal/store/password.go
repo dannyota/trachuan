@@ -12,26 +12,29 @@ type PasswordSnapshot = GetPasswordByEmailRow
 type PasswordSessionParams struct {
 	Verified PasswordSnapshot
 	Session  CreateSessionParams
+	Pending  PendingParams
 }
 
 func (q *Queries) CreatePasswordSession(ctx context.Context, p PasswordSessionParams) (CreateSessionRow, error) {
 	var session CreateSessionRow
+	var pending bool
 	err := q.withPassword(ctx, p.Verified, func(current *Queries) error {
-		enrolled, err := current.HasTOTP(ctx, p.Verified.AccountID)
-		if err != nil {
-			return fmt.Errorf("read password factor: %w", err)
-		}
-		if enrolled {
-			return ErrLoginFailed
-		}
 		p.Session.AccountID = p.Verified.AccountID
 		p.Session.AuthEpoch = p.Verified.AuthEpoch
+		var err error
+		pending, err = current.primaryPending(ctx, p.Session, p.Pending, "password")
+		if err != nil || pending {
+			return err
+		}
 		session, err = current.CreateSession(ctx, p.Session)
 		if err != nil {
 			return fmt.Errorf("create password session: %w", err)
 		}
 		return nil
 	})
+	if err == nil && pending {
+		return session, &PendingRequired{CSRF: p.Session.CsrfSecret}
+	}
 	return session, err
 }
 func (q *Queries) ReauthPassword(ctx context.Context, verified PasswordSnapshot, sessionID int64) error {

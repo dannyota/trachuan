@@ -13,6 +13,7 @@ import (
 
 type LoginTransaction struct {
 	HandleHash, State, Nonce, PKCEVerifier, NextPath, RedirectURI string
+	PendingHash                                                   string
 	CreatedAt, ExpiresAt                                          time.Time
 }
 
@@ -26,7 +27,7 @@ type Store interface {
 	ClaimLoginTransaction(context.Context, ClaimLoginTransactionParams) (LoginTransaction, error)
 }
 
-func (h *Handler) begin(ctx context.Context, next string) (string, LoginTransaction, error) {
+func (h *Handler) begin(ctx context.Context, next, pendingHash string) (string, LoginTransaction, error) {
 	h.randomMu.Lock()
 	handle, state, nonce, err := h.transactionValues()
 	h.randomMu.Unlock()
@@ -34,7 +35,7 @@ func (h *Handler) begin(ctx context.Context, next string) (string, LoginTransact
 		return "", LoginTransaction{}, err
 	}
 	now := h.clock()
-	tx := LoginTransaction{HandleHash: hashHandle(handle), State: state, Nonce: nonce, PKCEVerifier: oauth2.GenerateVerifier(), NextPath: next, RedirectURI: h.oauth.RedirectURL, CreatedAt: now, ExpiresAt: now.Add(transactionTTL)}
+	tx := LoginTransaction{HandleHash: hashHandle(handle), State: state, Nonce: nonce, PKCEVerifier: oauth2.GenerateVerifier(), NextPath: next, RedirectURI: h.oauth.RedirectURL, CreatedAt: now, ExpiresAt: now.Add(transactionTTL), PendingHash: pendingHash}
 	if err := h.store.CreateLoginTransaction(ctx, tx); err != nil {
 		return "", LoginTransaction{}, fmt.Errorf("create login transaction: %w", err)
 	}

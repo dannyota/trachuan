@@ -41,7 +41,7 @@ func (h *Handler) Password(w http.ResponseWriter, r *http.Request) {
 	}
 	token, tokenOK := requestString(body.Token)
 	current, currentOK := requestString(body.Current)
-	_, codeOK := requestString(body.Code)
+	code, codeOK := requestString(body.Code)
 	if body.Password == nil || (body.Token == nil) == (body.Current == nil) || body.Token != nil && !tokenOK || body.Current != nil && !currentOK || body.Code != nil && !codeOK {
 		apierror.Write(w, 400, "invalid_request")
 		return
@@ -52,7 +52,7 @@ func (h *Handler) Password(w http.ResponseWriter, r *http.Request) {
 	if h.flowFailure(w, err) {
 		return
 	}
-	completion := accountflow.Completion{Acting: p}
+	completion := accountflow.Completion{Acting: p, Code: code, CodeProvided: body.Code != nil}
 	if body.Token != nil {
 		completion.TokenHash = linkDigest(token)
 	}

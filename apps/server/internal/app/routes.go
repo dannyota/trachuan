@@ -34,6 +34,7 @@ type webDeps struct {
 func newWebMux(d webDeps) *http.ServeMux {
 	mux := http.NewServeMux()
 	mountPasswordRoutes(mux, d)
+	mountFactorRoutes(mux, d)
 	mux.Handle("/mcp", credential.Middleware(d.verifier, mcpapi.New(d.tools)))
 	account := d.sessions.Middleware(d.sessions.CSRF(accountapi.New(accountapi.Config{Store: d.store, Sessions: d.sessions, Verifier: d.verifier, Limiter: d.tools.Limiter, Clock: d.tools.Clock})))
 	logout := d.sessions.Middleware(d.sessions.CSRF(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

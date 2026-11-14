@@ -13,7 +13,7 @@ type loginStore struct{ queries *store.Queries }
 func (s loginStore) CreateLoginTransaction(ctx context.Context, tx weblogin.LoginTransaction) error {
 	ctx, cancel := context.WithTimeout(ctx, authQueryDeadline)
 	defer cancel()
-	_, err := s.queries.CreateLoginTransaction(ctx, store.CreateLoginTransactionParams{HandleHash: tx.HandleHash, State: tx.State, Nonce: tx.Nonce, PkceVerifier: tx.PKCEVerifier, NextPath: tx.NextPath, RedirectUri: tx.RedirectURI, ExpiresAt: tx.ExpiresAt})
+	_, err := s.queries.CreateLoginTransaction(ctx, store.CreateLoginTransactionParams{HandleHash: tx.HandleHash, State: tx.State, Nonce: tx.Nonce, PkceVerifier: tx.PKCEVerifier, NextPath: tx.NextPath, RedirectUri: tx.RedirectURI, ExpiresAt: tx.ExpiresAt, PendingHash: tx.PendingHash})
 	if ctx.Err() != nil {
 		err = ctx.Err()
 	}
@@ -32,5 +32,5 @@ func (s loginStore) ClaimLoginTransaction(ctx context.Context, p weblogin.ClaimL
 	if err != nil {
 		return weblogin.LoginTransaction{}, fmt.Errorf("claim login transaction: %w", err)
 	}
-	return weblogin.LoginTransaction{HandleHash: row.HandleHash, State: row.State, Nonce: row.Nonce, PKCEVerifier: row.PkceVerifier, NextPath: row.NextPath, RedirectURI: row.RedirectUri, CreatedAt: row.CreatedAt, ExpiresAt: row.ExpiresAt}, nil
+	return weblogin.LoginTransaction{HandleHash: row.HandleHash, State: row.State, Nonce: row.Nonce, PKCEVerifier: row.PkceVerifier, NextPath: row.NextPath, RedirectURI: row.RedirectUri, CreatedAt: row.CreatedAt, ExpiresAt: row.ExpiresAt, PendingHash: row.PendingHash}, nil
 }

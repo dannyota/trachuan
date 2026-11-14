@@ -57,18 +57,21 @@ func (q *Queries) CreateGoogleSession(ctx context.Context, p GoogleSessionParams
 	if account.BlockedAt != nil || account.DeleteRequestedAt != nil {
 		return CreateSessionRow{}, ErrAccountBlocked
 	}
-	enrolled, err := current.HasTOTP(ctx, account.ID)
-	if err != nil {
-		return CreateSessionRow{}, fmt.Errorf("read Google factor: %w", err)
-	}
-	if enrolled {
-		return CreateSessionRow{}, ErrLoginFailed
-	}
 	if _, err = current.RecordGoogleLogin(ctx, account.ID); err != nil {
 		return CreateSessionRow{}, fmt.Errorf("record Google login: %w", err)
 	}
 	p.Session.ReplacedHashes = p.ReplacedHashes
 	p.Session.AccountID, p.Session.AuthEpoch = account.ID, account.AuthEpoch
+	pending, err := current.primaryPending(ctx, p.Session, p.Pending, "google")
+	if err != nil {
+		return CreateSessionRow{}, err
+	}
+	if pending {
+		if err = tx.Commit(ctx); err != nil {
+			return CreateSessionRow{}, fmt.Errorf("commit Google pending authentication: %w", err)
+		}
+		return CreateSessionRow{}, &PendingRequired{CSRF: p.Session.CsrfSecret}
+	}
 	row, err := current.CreateSession(ctx, p.Session)
 	if err != nil {
 		return CreateSessionRow{}, fmt.Errorf("create Google session: %w", err)

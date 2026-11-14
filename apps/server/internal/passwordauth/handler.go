@@ -27,7 +27,12 @@ type Hasher interface {
 type Sessions interface {
 	CreatePasswordSession(context.Context, http.ResponseWriter, *http.Request, store.PasswordSnapshot) error
 }
+type primarySessions interface {
+	CreatePasswordLogin(context.Context, http.ResponseWriter, *http.Request, store.PasswordSnapshot, string) error
+}
 type Handler struct {
+	Factors      FactorStore
+	Enrollment   bool
 	Flows        FlowStore
 	HashPassword func(context.Context, string) (string, error)
 	Evict        func(int64)
@@ -75,7 +80,18 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		apierror.Write(w, 401, "login_failed")
 		return
 	}
-	err = h.Sessions.CreatePasswordSession(r.Context(), w, r, verified)
+	if sessions, ok := h.Sessions.(primarySessions); ok {
+		err = sessions.CreatePasswordLogin(r.Context(), w, r, verified, weblogin.ValidateNext(body.Next))
+	} else {
+		err = h.Sessions.CreatePasswordSession(r.Context(), w, r, verified)
+	}
+	var pending *store.PendingRequired
+	if errors.As(err, &pending) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Cache-Control", "no-store")
+		_ = json.NewEncoder(w).Encode(map[string]any{"factor_required": true, "csrf": pending.CSRF})
+		return
+	}
 	if h.failure(w, err, "login_failed") {
 		return
 	}

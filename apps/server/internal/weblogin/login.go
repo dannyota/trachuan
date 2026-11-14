@@ -109,7 +109,11 @@ func (h *Handler) start(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Cache-Control", "no-store")
-	handle, tx, err := h.begin(r.Context(), ValidateNext(r.URL.Query().Get("next")))
+	var pendingHash string
+	if cookies := r.CookiesNamed("__Host-pending"); len(cookies) == 1 && validHandle(cookies[0].Value) {
+		pendingHash = hashHandle(cookies[0].Value)
+	}
+	handle, tx, err := h.begin(r.Context(), ValidateNext(r.URL.Query().Get("next")), pendingHash)
 	if err != nil {
 		unavailable(w)
 		return

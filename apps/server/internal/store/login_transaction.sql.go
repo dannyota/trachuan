@@ -13,7 +13,7 @@ import (
 const claimLoginTransaction = `-- name: ClaimLoginTransaction :one
 UPDATE login_transaction SET claimed_at = now()
 WHERE handle_hash = $1 AND claimed_at IS NULL AND expires_at > now()
-RETURNING handle_hash, state, nonce, pkce_verifier, next_path, redirect_uri, created_at, expires_at, claimed_at
+RETURNING handle_hash, state, nonce, pkce_verifier, next_path, redirect_uri, created_at, expires_at, claimed_at, pending_hash
 `
 
 func (q *Queries) ClaimLoginTransaction(ctx context.Context, handleHash string) (LoginTransaction, error) {
@@ -29,13 +29,14 @@ func (q *Queries) ClaimLoginTransaction(ctx context.Context, handleHash string) 
 		&i.CreatedAt,
 		&i.ExpiresAt,
 		&i.ClaimedAt,
+		&i.PendingHash,
 	)
 	return i, err
 }
 
 const createLoginTransaction = `-- name: CreateLoginTransaction :one
-INSERT INTO login_transaction (handle_hash, state, nonce, pkce_verifier, next_path, redirect_uri, expires_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING handle_hash, state, nonce, pkce_verifier, next_path, redirect_uri, created_at, expires_at, claimed_at
+INSERT INTO login_transaction (handle_hash, state, nonce, pkce_verifier, next_path, redirect_uri, expires_at, pending_hash)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING handle_hash, state, nonce, pkce_verifier, next_path, redirect_uri, created_at, expires_at, claimed_at, pending_hash
 `
 
 type CreateLoginTransactionParams struct {
@@ -46,6 +47,7 @@ type CreateLoginTransactionParams struct {
 	NextPath     string
 	RedirectUri  string
 	ExpiresAt    time.Time
+	PendingHash  string
 }
 
 func (q *Queries) CreateLoginTransaction(ctx context.Context, arg CreateLoginTransactionParams) (LoginTransaction, error) {
@@ -57,6 +59,7 @@ func (q *Queries) CreateLoginTransaction(ctx context.Context, arg CreateLoginTra
 		arg.NextPath,
 		arg.RedirectUri,
 		arg.ExpiresAt,
+		arg.PendingHash,
 	)
 	var i LoginTransaction
 	err := row.Scan(
@@ -69,6 +72,7 @@ func (q *Queries) CreateLoginTransaction(ctx context.Context, arg CreateLoginTra
 		&i.CreatedAt,
 		&i.ExpiresAt,
 		&i.ClaimedAt,
+		&i.PendingHash,
 	)
 	return i, err
 }

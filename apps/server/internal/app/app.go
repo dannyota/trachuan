@@ -144,7 +144,8 @@ func serve(ctx context.Context, cfg config, pool *pgxpool.Pool, queries *store.Q
 	}
 	hasher := password.NewHasher()
 	passwordLogin := &passwordauth.Handler{Store: queries, Proofs: queries, Hasher: hasher, HashPassword: hasher.Hash, Counter: password.NewCounter(clock), Sessions: sessions, PublicURL: cfg.publicURL}
-	passwordLogin.Flows = &accountflow.Service{DB: pool, Ring: cfg.accountKeys, SignupEmails: cfg.signupEmails}
+	flows := &accountflow.Service{DB: pool, Ring: cfg.accountKeys, SignupEmails: cfg.signupEmails, Logger: tools.Logger}
+	passwordLogin.Flows, passwordLogin.Factors, passwordLogin.Enrollment = flows, flows, cfg.totpEnrollment
 	passwordLogin.Evict = func(id int64) { sessions.EvictAccount(id); verifier.EvictAccount(id) }
 	mux := newWebMux(webDeps{password: passwordLogin, store: bounded, reportStore: queries, sessions: sessions, login: login, verifier: verifier, tools: tools, loginLimit: newLoginLimiter(clock, cfg.trustedProxies), oauthDB: pool, oauthClients: cfg.oauthClients, publicURL: cfg.publicURL})
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) })

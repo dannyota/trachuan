@@ -19,6 +19,7 @@ type config struct {
 	mail                                                                                               mailConfig
 	listen, authURL, corpusURL, embedderURL, audience, publicURL, googleID, googleSecret, googleIssuer string
 	strictDeployment                                                                                   bool
+	totpEnrollment                                                                                     bool
 	trustedProxies                                                                                     []netip.Prefix
 	oauthClients                                                                                       []oauth.Client
 	signupEmails                                                                                       []string
@@ -33,6 +34,12 @@ func loadConfig() (config, error) {
 		c.embedderURL = "http://127.0.0.1:8091"
 	}
 	var err error
+	if raw := os.Getenv("SERVER_TOTP_ENROLLMENT"); raw != "" {
+		c.totpEnrollment, err = strconv.ParseBool(raw)
+		if err != nil {
+			return config{}, errors.New("invalid SERVER_TOTP_ENROLLMENT")
+		}
+	}
 	rawPublicURL := os.Getenv("SERVER_PUBLIC_URL")
 	origin, ok := publicOrigin(rawPublicURL)
 	c.googleIssuer = os.Getenv("SERVER_GOOGLE_ISSUER")

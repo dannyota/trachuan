@@ -13,6 +13,7 @@ import (
 	"danny.vn/trachuan/apps/server/internal/accountemail"
 	"danny.vn/trachuan/apps/server/internal/accountflow"
 	"danny.vn/trachuan/apps/server/internal/apierror"
+	"danny.vn/trachuan/apps/server/internal/factor"
 	"danny.vn/trachuan/apps/server/internal/password"
 	"danny.vn/trachuan/apps/server/internal/store"
 	"danny.vn/trachuan/apps/server/internal/websession"
@@ -199,6 +200,15 @@ func (h *Handler) flowFailure(w http.ResponseWriter, err error) bool {
 		return false
 	}
 	switch {
+	case errors.Is(err, factor.ErrFailed):
+		apierror.Write(w, 401, "factor_failed")
+	case errors.Is(err, factor.ErrLimited):
+		wait := 24 * time.Hour
+		var limited *factor.Limited
+		if errors.As(err, &limited) {
+			wait = limited.Wait
+		}
+		apierror.RateLimited(w, wait)
 	case errors.Is(err, accountflow.ErrLinkInvalid):
 		apierror.Write(w, 409, "link_invalid")
 	case errors.Is(err, accountflow.ErrInvalidRequest):

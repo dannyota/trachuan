@@ -1,6 +1,6 @@
 -- name: CreateLoginTransaction :one
-INSERT INTO login_transaction (handle_hash, state, nonce, pkce_verifier, next_path, redirect_uri, expires_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *;
+INSERT INTO login_transaction (handle_hash, state, nonce, pkce_verifier, next_path, redirect_uri, expires_at, pending_hash)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *;
 
 -- name: ClaimLoginTransaction :one
 UPDATE login_transaction SET claimed_at = now()

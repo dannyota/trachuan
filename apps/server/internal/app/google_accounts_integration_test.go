@@ -33,7 +33,7 @@ func TestGoogle_SubjectOnlyAndFixedEmail(t *testing.T) {
 	assertSignupRows(t, pool, 1, 2, 3)
 }
 
-func TestGoogle_RejectsInvalidEmailAndEnrolledAccount(t *testing.T) {
+func TestGoogle_RejectsInvalidEmailAndStagesEnrolledAccount(t *testing.T) {
 	for _, enrolled := range []bool{false, true} {
 		t.Run(map[bool]string{false: "invalid", true: "enrolled"}[enrolled], func(t *testing.T) {
 			h, pool, p := signupConfigHandler(t, nil)
@@ -47,7 +47,28 @@ func TestGoogle_RejectsInvalidEmailAndEnrolledAccount(t *testing.T) {
 			}
 			w := httptest.NewRecorder()
 			h.Callback.ServeHTTP(w, signupRequest(t, h, p, "refused", "enrolled", email))
-			assertSignupResponse(t, w, "/login?error=login_failed", false)
+			destination := "/login?error=login_failed"
+			if enrolled {
+				destination = "/login/factor"
+			}
+			assertSignupResponse(t, w, destination, false)
+			var pendingCount int
+			if err := pool.QueryRow(t.Context(), `SELECT count(*) FROM pending_auth WHERE next='/destination' AND primary_kind='google'`).Scan(&pendingCount); err != nil {
+				t.Fatal(err)
+			}
+			if enrolled {
+				found := false
+				for _, cookie := range w.Result().Cookies() {
+					if cookie.Name == "__Host-pending" && cookie.MaxAge == 300 {
+						found = true
+					}
+				}
+				if pendingCount != 1 || !found {
+					t.Fatal("Google sign-in did not stage factor")
+				}
+			} else if pendingCount != 0 {
+				t.Fatal("invalid email staged pending authentication")
+			}
 			count := 0
 			if enrolled {
 				count = 1

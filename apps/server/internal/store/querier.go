@@ -51,6 +51,7 @@ type Querier interface {
 	GetLiveAuthoritySession(ctx context.Context, arg GetLiveAuthoritySessionParams) (GetLiveAuthoritySessionRow, error)
 	GetPasswordByEmail(ctx context.Context, email string) (GetPasswordByEmailRow, error)
 	GetPasswordCredential(ctx context.Context, accountID int64) (PasswordCredential, error)
+	GetPendingAuth(ctx context.Context, tokenHash string) (PendingAuth, error)
 	GetSession(ctx context.Context, tokenHash string) (GetSessionRow, error)
 	GetToken(ctx context.Context, tokenHash string) (GetTokenRow, error)
 	HasTOTP(ctx context.Context, accountID int64) (bool, error)
@@ -66,6 +67,7 @@ type Querier interface {
 	LockClaimedMail(ctx context.Context, arg LockClaimedMailParams) (MailOutbox, error)
 	LockCredentialAccount(ctx context.Context, id int64) (Account, error)
 	LockGrantAuthority(ctx context.Context, id int64) (LockGrantAuthorityRow, error)
+	LockPendingAuth(ctx context.Context, tokenHash string) (PendingAuth, error)
 	LockReports(ctx context.Context) error
 	MarkAccountBlocked(ctx context.Context, id int64) (Account, error)
 	MarkAccountDeleting(ctx context.Context, id int64) (Account, error)
