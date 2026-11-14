@@ -105,5 +105,5 @@ credentials; published image layers and release metadata are public.
   verifies and applies images, the host bundle and corpus releases; secrets come
   from Vault through the instance principal. After cutover the agent SSH key is
   removed from the host, and the owner keeps the only break-glass key outside
-  agent reach. Agents still hold the owner's GitHub token, so GitHub, not the
-  host, is the remaining trust boundary.
+  agent reach. Agents still act through the owner's signed-in `gh` CLI on the
+  MacBook, so GitHub, not the host, is the remaining trust boundary.
