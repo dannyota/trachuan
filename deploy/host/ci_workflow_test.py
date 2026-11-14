@@ -34,7 +34,9 @@ for path in json.loads(os.environ['CHANGED_PATHS']): sys.stdout.buffer.write(pat
 
     def test_deploy_changes_select_static_gate_on_pull_requests(self):
         for path in ['deploy/host/backup.py', 'deploy/images/check-image.py',
-                     'deploy/host/render-units-test.sh', '.github/workflows/ci.yml']:
+                     'deploy/github/manifest.py', 'deploy/github/settings.json',
+                     'deploy/host/render-units-test.sh', '.github/workflows/images.yml',
+                     '.github/workflows/rollback.yml', '.github/workflows/ci.yml']:
             with self.subTest(path=path):
                 self.assertEqual(self.preflight([path])['go'], 'true')
 
@@ -48,6 +50,8 @@ for path in json.loads(os.environ['CHANGED_PATHS']): sys.stdout.buffer.write(pat
         commands = re.findall(r'      - run: (.+)', static)
         for command in ["PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s deploy/host -p '*_test.py'",
                         "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s deploy/images -p '*_test.py'",
+                        "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s deploy/github -p '*_test.py'",
+                        'bash deploy/github/actionlint.sh',
                         'bash deploy/host/render-units-test.sh',
                         'python3 deploy/host/check-mounts.py']:
             self.assertIn(command, commands)

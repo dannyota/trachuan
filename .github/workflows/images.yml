@@ -121,25 +121,25 @@ jobs:
         with:
           subject-name: ghcr.io/dannyota/trachuan-server
           subject-digest: ${{ steps.push.outputs.server }}
-          push-to-registry: false
+          push-to-registry: true
       - name: Attest web
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8
         with:
           subject-name: ghcr.io/dannyota/trachuan-web
           subject-digest: ${{ steps.push.outputs.web }}
-          push-to-registry: false
+          push-to-registry: true
       - name: Attest queryembed
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8
         with:
           subject-name: ghcr.io/dannyota/trachuan-queryembed
           subject-digest: ${{ steps.push.outputs.queryembed }}
-          push-to-registry: false
+          push-to-registry: true
       - name: Attest postgres
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8
         with:
           subject-name: ghcr.io/dannyota/trachuan-postgres
           subject-digest: ${{ steps.push.outputs.postgres }}
-          push-to-registry: false
+          push-to-registry: true
       - name: Record image references
         env:
           SERVER: ${{ steps.push.outputs.server }}
@@ -153,3 +153,55 @@ jobs:
             echo "ghcr.io/dannyota/trachuan-queryembed@$QUERYEMBED"
             echo "ghcr.io/dannyota/trachuan-postgres@$POSTGRES"
           } >>"$GITHUB_STEP_SUMMARY"
+
+  release:
+    needs: images
+    if: github.event_name == 'push'
+    environment: production
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 75
+    permissions:
+      contents: read
+      actions: read
+      packages: write
+      id-token: write
+    env:
+      REF_PROTECTED: ${{ github.ref_protected }}
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Require protected release from main
+        run: |
+          [[ $GITHUB_REF =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          [[ $REF_PROTECTED == true ]]
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+          echo "RELEASE_DIR=$RUNNER_TEMP/trachuan-release" >> "$GITHUB_ENV"
+      - name: Require successful main CI
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 deploy/github/wait_ci.py
+      - name: Build host bundle and manifest
+        env:
+          SERVER: ${{ needs.images.outputs.server }}
+          WEB: ${{ needs.images.outputs.web }}
+          QUERYEMBED: ${{ needs.images.outputs.queryembed }}
+          POSTGRES: ${{ needs.images.outputs.postgres }}
+        run: |
+          mkdir -p "$RELEASE_DIR"
+          git archive --format=tar "$GITHUB_SHA" deploy/host | gzip -n > "$RELEASE_DIR/host-bundle.tar.gz"
+          git show "$GITHUB_SHA:deploy/host/images.env" > "$RELEASE_DIR/images.env"
+          python3 deploy/github/manifest.py --bundle "$RELEASE_DIR/host-bundle.tar.gz" \
+            --images-env "$RELEASE_DIR/images.env" --output "$RELEASE_DIR/manifest.json"
+      - name: Install signing and registry tools
+        run: bash deploy/github/install-tools.sh
+      - name: Sign, verify and publish release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          printf '%s' "$GITHUB_TOKEN" | oras login ghcr.io --username "$ACTOR" --password-stdin
+          trap 'oras logout ghcr.io' EXIT
+          python3 deploy/github/publish.py release "$RELEASE_DIR"

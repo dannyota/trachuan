@@ -1,0 +1,62 @@
+{
+  "rulesets": [
+    {
+      "name": "main",
+      "target": "branch",
+      "enforcement": "active",
+      "bypass_actors": [],
+      "conditions": {"ref_name": {"include": ["refs/heads/main"], "exclude": []}},
+      "rules": [
+        {"type": "pull_request", "parameters": {
+          "dismiss_stale_reviews_on_push": false,
+          "require_code_owner_review": false,
+          "require_last_push_approval": false,
+          "required_approving_review_count": 0,
+          "required_review_thread_resolution": false
+        }},
+        {"type": "required_status_checks", "parameters": {
+          "required_status_checks": [{"context": "ci"}],
+          "strict_required_status_checks_policy": false
+        }},
+        {"type": "non_fast_forward"},
+        {"type": "deletion"}
+      ]
+    },
+    {
+      "name": "release-tags-fixed",
+      "target": "tag",
+      "enforcement": "active",
+      "bypass_actors": [],
+      "conditions": {"ref_name": {"include": ["refs/tags/v*"], "exclude": []}},
+      "rules": [{"type": "update"}, {"type": "deletion"}]
+    },
+    {
+      "name": "release-tags-create",
+      "target": "tag",
+      "enforcement": "active",
+      "bypass_actors": [{"actor_id": 5, "actor_type": "RepositoryRole", "bypass_mode": "always"}],
+      "conditions": {"ref_name": {"include": ["refs/tags/v*"], "exclude": []}},
+      "rules": [{"type": "creation"}]
+    }
+  ],
+  "environments": [
+    {
+      "name": "production",
+      "settings": {
+        "wait_timer": 0,
+        "reviewers": [],
+        "deployment_branch_policy": {"protected_branches": false, "custom_branch_policies": true}
+      },
+      "refs": [{"name": "v*", "type": "tag"}, {"name": "main", "type": "branch"}]
+    },
+    {
+      "name": "corpus-release",
+      "settings": {
+        "wait_timer": 0,
+        "reviewers": [],
+        "deployment_branch_policy": {"protected_branches": false, "custom_branch_policies": true}
+      },
+      "refs": [{"name": "main", "type": "branch"}]
+    }
+  ]
+}
