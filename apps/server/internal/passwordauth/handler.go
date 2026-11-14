@@ -28,12 +28,15 @@ type Sessions interface {
 	CreatePasswordSession(context.Context, http.ResponseWriter, *http.Request, store.PasswordSnapshot) error
 }
 type Handler struct {
-	Store     Store
-	Hasher    Hasher
-	Counter   *password.Counter
-	Sessions  Sessions
-	Proofs    ProofStore
-	PublicURL string
+	Flows        FlowStore
+	HashPassword func(context.Context, string) (string, error)
+	Evict        func(int64)
+	Store        Store
+	Hasher       Hasher
+	Counter      *password.Counter
+	Sessions     Sessions
+	Proofs       ProofStore
+	PublicURL    string
 }
 
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {

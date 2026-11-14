@@ -22,6 +22,13 @@ type Account struct {
 	AuthEpoch         int32
 }
 
+type AccountSecurityChange struct {
+	ID        int64
+	AccountID int64
+	Kind      string
+	CreatedAt time.Time
+}
+
 type CorpusRelease struct {
 	Country     string
 	ActiveDb    string
@@ -81,6 +88,15 @@ type LoginTransaction struct {
 	CreatedAt    time.Time
 	ExpiresAt    time.Time
 	ClaimedAt    *time.Time
+}
+
+type MailDelivery struct {
+	ID         int64
+	OutboxID   int64
+	Attempt    int32
+	Class      string
+	ReservedAt time.Time
+	SentAt     *time.Time
 }
 
 type MailOutbox struct {

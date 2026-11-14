@@ -36,3 +36,23 @@ func TestLoadFile_Validation(t *testing.T) {
 		}
 	}
 }
+
+func TestLoadFile_SymlinkValidatesOpenedTarget(t *testing.T) {
+	dir := t.TempDir()
+	target, link := filepath.Join(dir, "target"), filepath.Join(dir, "link")
+	if err := os.WriteFile(target, []byte(key(1)), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(target, link); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := LoadFile(link); err != nil {
+		t.Fatal("private regular target refused")
+	}
+	if err := os.Chmod(target, 0640); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := LoadFile(link); err == nil {
+		t.Fatal("unsafe symlink target accepted")
+	}
+}

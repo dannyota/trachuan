@@ -57,11 +57,13 @@ func TestWorker_SuccessRetryExpiryAndAlarm(t *testing.T) {
 		expired          bool
 		openErr, sendErr error
 		sent, drop       bool
+		uncertain        bool
 		calls            int
 	}{
 		{name: "success", attempt: 1, sent: true, calls: 1},
-		{name: "retry", attempt: 1, sendErr: errors.New("private SMTP detail"), calls: 1},
-		{name: "last attempt", attempt: 6, sendErr: errors.New("private detail"), calls: 1},
+		{name: "retry", attempt: 1, uncertain: true, sendErr: errors.New("private SMTP detail"), calls: 1},
+		{name: "last attempt", attempt: 6, uncertain: true, sendErr: errors.New("private detail"), calls: 1},
+		{name: "definite failure", attempt: 1, sendErr: ErrNotDelivered, calls: 1},
 		{name: "expired", attempt: 2, expired: true, drop: true},
 		{name: "unknown key", attempt: 1, openErr: seal.ErrUnknownKey, drop: true},
 		{name: "failed open", attempt: 1, openErr: seal.ErrAuthentication, drop: true},
@@ -80,7 +82,7 @@ func TestWorker_SuccessRetryExpiryAndAlarm(t *testing.T) {
 				t.Fatal("worker failed", err)
 			}
 			p := s.finish[0]
-			if p.Sent != tc.sent || p.Drop != tc.drop || p.Attempts != tc.attempt {
+			if p.Sent != tc.sent || p.Drop != tc.drop || p.Attempts != tc.attempt || p.Uncertain != tc.uncertain {
 				t.Fatal("wrong finish state")
 			}
 			if strings.Contains(logs.String(), "person@example.test") || strings.Contains(logs.String(), "synthetic") || strings.Contains(logs.String(), "private") {

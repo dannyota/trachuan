@@ -12,7 +12,9 @@ import (
 	"testing"
 	"time"
 
+	"danny.vn/trachuan/apps/server/internal/accountflow"
 	"danny.vn/trachuan/apps/server/internal/credential"
+	"danny.vn/trachuan/apps/server/internal/seal"
 	"danny.vn/trachuan/apps/server/internal/store"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -51,8 +53,8 @@ func (tx issuerTx) QueryRow(ctx context.Context, query string, args ...any) pgx.
 	return tx.Tx.QueryRow(ctx, query, args...)
 }
 
-func TestIssuers_BumpEpochRace(t *testing.T) {
-	for _, kind := range []string{"session", "sliding", "web token", "admin token", "Google"} {
+func TestIssuers_ResetRace(t *testing.T) {
+	for _, kind := range []string{"session", "sliding", "web token", "admin token", "Google", "password", "reauth", "change password"} {
 		t.Run(kind, func(t *testing.T) {
 			ctx, pool, _, id := boundsFixture(t)
 			observed := &issuerPool{Pool: pool, lock: make(chan struct{})}
@@ -70,13 +72,24 @@ func TestIssuers_BumpEpochRace(t *testing.T) {
 				t.Fatal(err)
 			}
 			defer func() { _ = bump.Rollback(ctx) }()
-			if _, err = store.BumpEpoch(ctx, bump, id); err != nil {
+			stagePasswordReset(t, pool, bump, id)
+			oldHash, oldVersion := "old", int64(1)
+			verified := store.PasswordSnapshot{AccountID: id, Email: "test@example.invalid", Hash: &oldHash, Version: &oldVersion}
+			ring, err := seal.Parse([]byte(strings.Repeat("A", 43)))
+			if err != nil {
 				t.Fatal(err)
 			}
+			changes := accountflow.Service{DB: observed, Ring: ring}
 			result := make(chan error, 1)
 			go func() {
 				var issueErr error
 				switch kind {
+				case "change password":
+					_, issueErr = changes.ChangePassword(ctx, accountflow.Completion{Acting: accountflow.Acting{AccountID: id, SessionID: session.ID}, Verified: verified, Hash: "new", Session: store.CreateSessionParams{TokenHash: strings.Repeat("8", 64), CsrfSecret: "synthetic", ExpiresAt: now.Add(time.Hour)}})
+				case "password":
+					_, issueErr = s.CreatePasswordSession(ctx, store.PasswordSessionParams{Verified: verified, Session: store.CreateSessionParams{TokenHash: strings.Repeat("f", 64), CsrfSecret: "synthetic", ExpiresAt: now.Add(time.Hour)}})
+				case "reauth":
+					issueErr = s.ReauthPassword(ctx, verified, session.ID)
 				case "session":
 					_, issueErr = s.CreateSession(ctx, store.CreateSessionParams{AccountID: id, TokenHash: strings.Repeat("b", 64), CsrfSecret: "synthetic", ExpiresAt: now.Add(time.Hour)})
 				case "sliding":
@@ -107,8 +120,16 @@ func TestIssuers_BumpEpochRace(t *testing.T) {
 				if err == nil {
 					t.Fatal("stale admin issued token")
 				}
+			} else if kind == "password" || kind == "reauth" {
+				if !errors.Is(err, store.ErrLoginFailed) {
+					t.Fatalf("stale password issuer: %v", err)
+				}
 			} else if !errors.Is(err, credential.ErrUnauthorized) {
 				t.Fatalf("stale issuer error=%v", err)
+			}
+			var actingRevoked bool
+			if err := pool.QueryRow(ctx, `SELECT revoked_at IS NOT NULL FROM web_session WHERE id=$1`, session.ID).Scan(&actingRevoked); err != nil || !actingRevoked {
+				t.Fatal("acting session survived reset", err)
 			}
 			for _, table := range []string{"web_session", "personal_token"} {
 				var live int
@@ -132,5 +153,32 @@ func TestAdmin_EnrolledCommandRefuses(t *testing.T) {
 	var count int
 	if err := pool.QueryRow(ctx, `SELECT count(*) FROM personal_token`).Scan(&count); err != nil || count != 0 {
 		t.Fatal("enrolled operator token issued")
+	}
+}
+
+type stagedResetDB struct{ tx pgx.Tx }
+type stagedResetTx struct{ pgx.Tx }
+
+func (db stagedResetDB) BeginTx(context.Context, pgx.TxOptions) (pgx.Tx, error) {
+	return stagedResetTx{db.tx}, nil
+}
+func (stagedResetTx) Commit(context.Context) error   { return nil }
+func (stagedResetTx) Rollback(context.Context) error { return nil }
+func stagePasswordReset(t *testing.T, pool *pgxpool.Pool, tx pgx.Tx, id int64) {
+	t.Helper()
+	ctx := t.Context()
+	if _, err := pool.Exec(ctx, `INSERT INTO password_credential(account_id,hash) VALUES ($1,'old') ON CONFLICT DO NOTHING`, id); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Exec(ctx, `INSERT INTO email_link(purpose,token_hash,email,account_id,auth_epoch,expires_at) SELECT 'reset',repeat('9',64),email,id,auth_epoch,now()+interval '1 hour' FROM account WHERE id=$1`, id); err != nil {
+		t.Fatal(err)
+	}
+	ring, err := seal.Parse([]byte(strings.Repeat("A", 43)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	service := accountflow.Service{DB: stagedResetDB{tx}, Ring: ring}
+	if got, err := service.CompleteReset(ctx, accountflow.Completion{TokenHash: strings.Repeat("9", 64), Hash: "new"}); err != nil || got != id {
+		t.Fatal("stage reset", err)
 	}
 }

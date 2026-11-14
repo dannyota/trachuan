@@ -1,5 +1,9 @@
 -- name: PurgeEndedCredentials :execrows
-WITH tokens AS (
+WITH links AS (
+ DELETE FROM email_link WHERE LEAST(consumed_at,expires_at)<statement_timestamp()-interval '7 days'
+), changes AS (
+ DELETE FROM account_security_change WHERE created_at<statement_timestamp()-interval '7 days'
+), tokens AS (
     DELETE FROM personal_token
     WHERE LEAST(expires_at, revoked_at) < now() - interval '7 days'
 )
