@@ -102,6 +102,27 @@ GiB memory cap; shared memory is charged to that cap, not an extra allowance.
 Rollback to a hand-restored release within its seven days is the owner's manual
 compare-and-swap of `corpus_release.active_db`.
 
+Prune drops only databases listed in `retired_release`. A database restored by
+hand that never became active through the pipeline, such as
+`corpus_vn_20261112_2`, has no row there and stays until it is dropped once by
+hand. Confirm it is not `active_db`, not in `retired_release`, and has no
+connections, then drop it:
+
+```sh
+DB=corpus_vn_20261112_2
+podman exec -i trachuan-postgres /usr/local/bin/postgres-admin.sh psql -X -At \
+  -U postgres -d auth -v db="$DB" <<'SQL'
+SELECT (SELECT count(*) FROM corpus_release WHERE active_db = :'db'),
+       (SELECT count(*) FROM retired_release WHERE db_name = :'db'),
+       (SELECT count(*) FROM pg_stat_activity WHERE datname = :'db');
+SQL
+podman exec trachuan-postgres /usr/local/bin/postgres-admin.sh dropdb -U postgres "$DB"
+```
+
+Drop only when all three counts are 0. The release replaced by the first
+pipeline activation (`corpus_vn_20261114_3`) has a row with a NULL digest, so
+prune drops it after its seven days.
+
 ## Prewarm a corpus database
 
 Run this for `$DB` before Caddy starts: after a restore, and after every
