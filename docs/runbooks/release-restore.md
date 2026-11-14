@@ -43,8 +43,10 @@ bash scripts/corpus-upload.sh "$CC" "$REL" "$UPLOAD" "$REPORT"
 ```
 
 Dry-run validates local files and prints the upload and dispatch plan without
-calling AWS or GitHub. A real upload holds `work/corpus-upload.lock`, checks the
-prefix is empty, uploads all four objects, then rechecks every size and ETag
+calling AWS or GitHub. A real upload holds
+`${HOME}/.cache/trachuan/corpus-upload.lock`, shared by all checkouts for the
+same owner. The uploader creates the cache directory with mode `0700`, checks
+the prefix is empty, uploads all four objects, then rechecks every size and ETag
 against its upload receipt before dispatching `corpus-release.yml` from `main`.
 If dispatch alone fails, dispatch it manually with the same country and release;
 do not upload again. A partial upload reserves that prefix; use a new release id

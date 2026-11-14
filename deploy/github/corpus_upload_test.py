@@ -47,6 +47,7 @@ elif 'head-object' in args:
         path = build / filename
     size = json.loads(os.getenv('FAKE_HEAD_SIZES', '{}')).get(filename, path.stat().st_size)
     result = dict(ContentLength=size + (1 if os.getenv('FAKE_BAD_SIZE') == filename else 0), ETag=etag(path))
+    result['ETag'] = json.loads(os.getenv('FAKE_HEAD_ETAGS', '{}')).get(filename, result['ETag'])
     print(result['ContentLength'] if '--query' in args else json.dumps(result))
 elif 'put-object' in args:
     filename = option('--key').rsplit('/', 1)[1]
@@ -66,11 +67,16 @@ elif 'get-object' in args:
     data = (build / filename).read_bytes()
     if os.getenv('FAKE_GROW_AFTER_HEAD') == filename:
         data += b'growth'
+    total = len(data)
+    object_etag = '"' + hashlib.sha256(data).hexdigest() + '"'
+    first, last = '0', str(total - 1)
     if '--range' in args and os.getenv('FAKE_IGNORE_RANGE') != filename:
         first, last = option('--range').removeprefix('bytes=').split('-')
         data = data[int(first):int(last) + 1]
     Path(args[-1]).write_bytes(data)
-    print(json.dumps(dict(ContentLength=len(data))))
+    result = dict(ContentLength=len(data), ETag=object_etag, ContentRange=f'bytes {first}-{last}/{total}')
+    result.update(json.loads(os.getenv('FAKE_GET_METADATA', '{}')).get(filename, {}))
+    print(json.dumps(result))
 elif name == 'aws' and 'cp' in args:
     index = args.index('cp')
     if args[index + 1].startswith('s3://'):
@@ -110,18 +116,22 @@ class CorpusUploadTest(unittest.TestCase):
         self.log = self.path / 'calls.jsonl'
         self.remote = self.path / 'remote'
         self.remote.mkdir()
-        repo = self.path / 'repo'
-        (repo / 'scripts').mkdir(parents=True)
-        self.script = repo / 'scripts/corpus-upload.sh'
-        shutil.copyfile(ROOT / 'scripts/corpus-upload.sh', self.script)
-        (repo / 'deploy').symlink_to(ROOT / 'deploy', target_is_directory=True)
+        self.script = self.checkout_script('repo')
         self.env = dict(PATH=str(self.bin) + os.pathsep + os.environ['PATH'], HOME=str(self.path),
                         OCI_S3_ENDPOINT='https://synthetic.compat.objectstorage.ap-singapore-1.oraclecloud.com',
                         FAKE_LOG=str(self.log), FAKE_BUILD=str(self.build), FAKE_REMOTE=str(self.remote),
                         PYTHONDONTWRITEBYTECODE='1')
 
-    def upload_command(self, *flags):
-        return ['bash', str(self.script), *flags, 'vn', '20990102_1',
+    def checkout_script(self, name):
+        repo = self.path / name
+        (repo / 'scripts').mkdir(parents=True)
+        script = repo / 'scripts/corpus-upload.sh'
+        shutil.copyfile(ROOT / 'scripts/corpus-upload.sh', script)
+        (repo / 'deploy').symlink_to(ROOT / 'deploy', target_is_directory=True)
+        return script
+
+    def upload_command(self, *flags, script=None):
+        return ['bash', str(script or self.script), *flags, 'vn', '20990102_1',
                 str(self.build), str(self.build / 'report.json')]
 
     def run_upload(self, *flags):
@@ -142,6 +152,9 @@ class CorpusUploadTest(unittest.TestCase):
                            max(i for i, call in enumerate(calls) if 'put-object' in call['args']))
         self.assertEqual(calls[-1]['args'], ['workflow', 'run', 'corpus-release.yml', '--ref', 'main',
                                            '-f', 'country=vn', '-f', 'rel=20990102_1'])
+        lock_dir = self.path / '.cache/trachuan'
+        self.assertEqual(lock_dir.stat().st_mode & 0o777, 0o700)
+        self.assertTrue((lock_dir / 'corpus-upload.lock').exists())
         for call in calls:
             if call['name'] == 'aws' and '--version' not in call['args']:
                 self.assertIn('trachuan-release-upload', call['args'])
@@ -203,6 +216,14 @@ class CorpusUploadTest(unittest.TestCase):
         self.assertFalse(any(call['name'] == 'gh' for call in self.calls()))
 
     def test_concurrent_uploads_cannot_interleave(self):
+        self.assert_uploads_share_lock(self.script)
+
+    def test_concurrent_uploads_from_different_checkouts_share_lock(self):
+        other = self.checkout_script('another-repo')
+        self.assertNotEqual(other.parent.parent, self.script.parent.parent)
+        self.assert_uploads_share_lock(other)
+
+    def assert_uploads_share_lock(self, other_script):
         ready, resume = self.path / 'ready', self.path / 'resume'
         os.mkfifo(ready)
         os.mkfifo(resume)
@@ -218,7 +239,7 @@ class CorpusUploadTest(unittest.TestCase):
                     reached_upload = bool(selector.select(timeout=5))
                     self.assertTrue(reached_upload, 'first uploader did not reach upload')
                     os.read(descriptor, 5)
-                    result = subprocess.run(self.upload_command(), env=self.env | {'FAKE_RUN': 'second'},
+                    result = subprocess.run(self.upload_command(script=other_script), env=self.env | {'FAKE_RUN': 'second'},
                                             capture_output=True, text=True, timeout=5)
                 finally:
                     if reached_upload:
@@ -231,6 +252,14 @@ class CorpusUploadTest(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertEqual(sum(call['name'] == 'gh' for call in self.calls()), 1)
         self.assertFalse(any(call['run'] == 'second' and 'list-objects-v2' in call['args'] for call in self.calls()))
+
+    def test_existing_cache_directory_is_made_private(self):
+        lock_dir = self.path / '.cache/trachuan'
+        lock_dir.mkdir(parents=True)
+        lock_dir.chmod(0o755)
+        result = self.run_upload()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(lock_dir.stat().st_mode & 0o777, 0o700)
 
     def test_logs_exact_aws_version(self):
         self.env['FAKE_AWS_VERSION'] = '2.31.0 Python/synthetic synthetic-os'

@@ -24,8 +24,11 @@ endpoint=${OCI_S3_ENDPOINT:?OCI_S3_ENDPOINT is required}
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 export PYTHONDONTWRITEBYTECODE=1
 if [[ $dry_run != true ]]; then
-  mkdir -p "$root/work"
-  exec 9> "$root/work/corpus-upload.lock"
+  umask 077
+  lock_directory="${HOME:?HOME is required}/.cache/trachuan"
+  mkdir -p "$lock_directory"
+  chmod 0700 "$lock_directory"
+  exec 9> "$lock_directory/corpus-upload.lock"
   flock --exclusive --nonblock 9 || { echo 'Another corpus upload holds the local lock' >&2; exit 1; }
 fi
 python3 "$root/deploy/github/corpus_manifest.py" validate "$country" "$rel" "$build_dir" "$report"

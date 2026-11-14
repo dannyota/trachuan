@@ -57,9 +57,11 @@ cohorts; empty cohorts require no comparisons. The Python validator owns the
 comparison contract, and a Go test checks it against evaluator output, including
 the non-gating flags.
 
-The uploader holds an exclusive nonblocking `flock` on `work/corpus-upload.lock`
-through validation, prefix checking, uploads and dispatch. Another local upload
-refuses while the lock is held. Uploads use S3
+The uploader holds an exclusive nonblocking `flock` on
+`${HOME}/.cache/trachuan/corpus-upload.lock` through validation, prefix
+checking, uploads and dispatch. The cache directory has mode `0700`; all
+checkouts for the same owner share the lock. Another local upload refuses while
+the lock is held. Uploads use S3
 [`PutObject`](https://docs.aws.amazon.com/cli/latest/reference/s3api/put-object.html)
 or
 [multipart uploads](https://docs.aws.amazon.com/cli/latest/reference/s3api/complete-multipart-upload.html)
@@ -80,8 +82,11 @@ reads one bucket of public legal text and cannot write. The job:
    sidecar at most 16 MiB, and `MANIFEST.sha256` at most 1 MiB. Their total must
    be below the runner's current free disk minus 2 GiB. Each download requests a
    [byte range](https://docs.aws.amazon.com/cli/latest/reference/s3api/get-object.html)
-   of exactly `bytes=0-<HEAD size minus 1>` and must have that size, so object
-   growth after HEAD cannot increase the transfer.
+   of exactly `bytes=0-<HEAD size minus 1>`, with `--if-match` set to HEAD's
+   ETag, and must have that size. The GET response must repeat HEAD's ETag and
+   report `ContentRange` as `bytes 0-<HEAD size minus 1>/<HEAD size>`. Response
+   checks reject growth or replacement even when the endpoint ignores
+   `--if-match` and the downloaded prefix is unchanged.
 2. Requires SHA-256 of `MANIFEST.sha256` to equal the report's
    `build_artifact_sha256`, the manifest's `corpus.dump` line and the report's
    `dump_sha256` to equal the downloaded dump's SHA-256, and records its size.

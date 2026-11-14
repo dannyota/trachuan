@@ -29,27 +29,35 @@ def download(country, rel, directory):
         command = ['aws', '--endpoint-url', endpoint, '--no-cli-pager']
         limits = {'corpus.dump': 16 * 1024**3, 'MANIFEST.sha256': 1024**2,
                   'report.json': 16 * 1024**2, 'release.json': 16 * 1024**2}
-        sizes = {}
+        objects = {}
         for name, limit in limits.items():
             key = f'{country}/{rel}/{name}'
             head = [*command, 's3api', 'head-object', '--bucket', 'trachuan-releases',
                     '--key', key, '--output', 'json']
             result = subprocess.run(head, check=True, capture_output=True, text=True, env=env)
-            expected = json.loads(result.stdout)['ContentLength']
+            metadata = json.loads(result.stdout)
+            expected = metadata['ContentLength']
             positive(expected, 'object size')
             if expected > limit:
                 raise ValueError(f'object exceeds download limit: {name}')
-            sizes[name] = expected
-        if sum(sizes.values()) >= shutil.disk_usage(directory).free - 2 * 1024**3:
+            etag = metadata.get('ETag')
+            if not isinstance(etag, str) or not etag:
+                raise ValueError(f'HEAD did not return an ETag: {name}')
+            objects[name] = (expected, etag)
+        if sum(size for size, _ in objects.values()) >= shutil.disk_usage(directory).free - 2 * 1024**3:
             raise ValueError('corpus objects exceed free disk minus 2 GiB')
-        for name, expected in sizes.items():
+        for name, (expected, etag) in objects.items():
             key = f'{country}/{rel}/{name}'
             path = directory / name
-            subprocess.run([*command, 's3api', 'get-object', '--bucket', 'trachuan-releases',
-                            '--key', key, '--range', f'bytes=0-{expected - 1}', str(path)],
-                           check=True, stdout=subprocess.PIPE, env=env)
+            result = subprocess.run([*command, 's3api', 'get-object', '--bucket', 'trachuan-releases',
+                                     '--key', key, '--range', f'bytes=0-{expected - 1}',
+                                     '--if-match', etag, '--output', 'json', str(path)],
+                                    check=True, stdout=subprocess.PIPE, text=True, env=env)
             if path.stat().st_size != expected:
                 raise ValueError(f'downloaded size differs: {name}')
+            metadata = json.loads(result.stdout)
+            if metadata.get('ETag') != etag or metadata.get('ContentRange') != f'bytes 0-{expected - 1}/{expected}':
+                raise ValueError(f'GET object identity or full size differs from HEAD: {name}')
 
 
 def main():

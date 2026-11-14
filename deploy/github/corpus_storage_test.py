@@ -10,7 +10,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from corpus_upload_test import FAKE
-from corpus_test_support import write_fixture
+from corpus_test_support import digest, write_fixture
 
 
 class CorpusStorageTest(unittest.TestCase):
@@ -46,6 +46,9 @@ class CorpusStorageTest(unittest.TestCase):
                 name = args[args.index('--key') + 1].rsplit('/', 1)[1]
                 expected = (self.remote / name).stat().st_size
                 self.assertEqual(args[args.index('--range') + 1], f'bytes=0-{expected - 1}')
+                self.assertIn('--if-match', args)
+                self.assertEqual(args[args.index('--if-match') + 1], '"' + digest((self.remote / name).read_bytes()) + '"')
+                self.assertEqual(args[args.index('--output') + 1], 'json')
         for call in calls[1:]:
             self.assertEqual(call['checksum'], 'when_required')
             self.assertIn('addressing_style = path', call['config'])
@@ -83,15 +86,45 @@ class CorpusStorageTest(unittest.TestCase):
                 self.assertFalse(any('get-object' in call['args'] or 'cp' in call['args'] for call in calls))
                 self.log.unlink()
 
-    def test_growth_after_head_cannot_exceed_the_requested_range(self):
+    def test_growth_after_head_refuses_even_when_the_prefix_matches(self):
         output = self.path / 'bounded'
         with patch.dict(os.environ, self.env | {'FAKE_GROW_AFTER_HEAD': 'corpus.dump'}, clear=True):
-            self.storage.download('vn', '20990102_1', output)
+            with self.assertRaises(ValueError):
+                self.storage.download('vn', '20990102_1', output)
         self.assertEqual((output / 'corpus.dump').read_bytes(), (self.remote / 'corpus.dump').read_bytes())
         with patch.dict(os.environ, self.env | {'FAKE_GROW_AFTER_HEAD': 'corpus.dump',
                                               'FAKE_IGNORE_RANGE': 'corpus.dump'}, clear=True):
             with self.assertRaises(ValueError):
                 self.storage.download('vn', '20990102_1', self.path / 'bad-range')
+
+    def test_response_identity_and_total_are_required_when_if_match_is_ignored(self):
+        name = 'corpus.dump'
+        size = (self.remote / name).stat().st_size
+        original_etag = '"' + digest((self.remote / name).read_bytes()) + '"'
+        mutations = [
+            ({'FAKE_GROW_AFTER_HEAD': name}, {'ETag': original_etag}),
+            ({}, {'ETag': '"replacement-with-the-same-prefix"'}),
+            ({}, {'ETag': None}),
+            ({}, {'ContentRange': None}),
+            ({}, {'ContentRange': f'bytes 0-{size - 1}/*'}),
+            ({}, {'ContentRange': f'bytes 1-{size}/{size}'}),
+            ({}, {'ContentRange': f'bytes 0-{size - 2}/{size}'}),
+        ]
+        for index, (extra_env, metadata) in enumerate(mutations):
+            output = self.path / f'replaced-{index}'
+            env = self.env | extra_env | {'FAKE_GET_METADATA': json.dumps({name: metadata})}
+            with self.subTest(metadata=metadata), patch.dict(os.environ, env, clear=True):
+                with self.assertRaises(ValueError):
+                    self.storage.download('vn', '20990102_1', output)
+                self.assertEqual((output / name).read_bytes(), (self.remote / name).read_bytes())
+
+    def test_missing_head_etag_refuses_before_downloading(self):
+        env = self.env | {'FAKE_HEAD_ETAGS': json.dumps({'corpus.dump': None})}
+        with patch.dict(os.environ, env, clear=True):
+            with self.assertRaises(ValueError):
+                self.storage.download('vn', '20990102_1', self.path / 'missing-etag')
+        calls = [json.loads(line) for line in self.log.read_text().splitlines()]
+        self.assertFalse(any('get-object' in call['args'] for call in calls))
 
     def test_logs_exact_aws_version(self):
         version = '2.31.0 Python/synthetic synthetic-os'
