@@ -8,6 +8,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -53,12 +54,46 @@ func pgCommand(t *testing.T, config *pgx.ConnConfig, program string, input []byt
 	cmd.Stdin = bytes.NewReader(input)
 	output, err := cmd.Output()
 	if err != nil {
-		t.Fatalf("fixture %s failed", program)
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
+			stderr := bytes.TrimSpace(exitErr.Stderr)
+			if len(stderr) > 400 {
+				stderr = stderr[:400]
+			}
+			t.Fatalf("fixture %s failed: %v: %s", program, err, stderr)
+		}
+		t.Fatalf("fixture %s failed: %v", program, err)
 	}
 	return output
 }
 
 func TestActivation_RestoreCASRetainedAndPrune(t *testing.T) {
+	dumpPath := pgClientPath("pg_dump", os.Getenv("CORPUS_PG_DUMP"))
+	restorePath := pgClientPath("pg_restore", os.Getenv("CORPUS_PG_RESTORE"))
+	for _, client := range []struct{ name, env, path string }{
+		{"pg_dump", "CORPUS_PG_DUMP", dumpPath},
+		{"pg_restore", "CORPUS_PG_RESTORE", restorePath},
+	} {
+		output, err := exec.CommandContext(t.Context(), client.path, "--version").Output()
+		if err != nil {
+			t.Fatalf("get %s version: %v", client.name, err)
+		}
+		major, err := pgClientMajorVersion(client.name, string(output))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if major < 18 {
+			source := "PATH"
+			if os.Getenv(client.env) != "" {
+				source = client.env
+			}
+			message := "needs %s 18 or newer (found %d via %s); set %s to a version 18 %s, or on macOS put /opt/homebrew/opt/postgresql@18/bin first on PATH"
+			if os.Getenv("CI") == "true" {
+				t.Fatalf(message, client.name, major, source, client.env, client.name)
+			}
+			t.Skipf(message, client.name, major, source, client.env, client.name)
+		}
+	}
 	ctx := context.Background()
 	admin, base, err := testpg.OpenAdministrator(ctx)
 	if err != nil {
@@ -112,8 +147,8 @@ func TestActivation_RestoreCASRetainedAndPrune(t *testing.T) {
 	if _, err = source.Exec(ctx, `CREATE TABLE release (rel text, embedding vector(3), path ltree); INSERT INTO release VALUES ('synthetic','[1,0,0]','law.article');`); err != nil {
 		t.Fatal(err)
 	}
-	dump := pgCommand(t, source.Config(), "pg_dump", nil, "-Fc", "--no-owner", "--no-privileges", source.Config().Database)
-	listing := pgCommand(t, source.Config(), "pg_restore", dump, "--list")
+	dump := pgCommand(t, source.Config(), dumpPath, nil, "-Fc", "--no-owner", "--no-privileges", source.Config().Database)
+	listing := pgCommand(t, source.Config(), restorePath, dump, "--list")
 	root, err := filepath.Abs("../../../..")
 	if err != nil {
 		t.Fatal(err)
@@ -142,7 +177,7 @@ func TestActivation_RestoreCASRetainedAndPrune(t *testing.T) {
 	}
 	restoreConfig := activatorConfig.Copy()
 	restoreConfig.Database = names[1]
-	pgCommand(t, restoreConfig, "pg_restore", dump, "--dbname", names[1], "--no-owner", "--no-privileges", "--exit-on-error", "--single-transaction", "-L", listPath)
+	pgCommand(t, restoreConfig, restorePath, dump, "--dbname", names[1], "--no-owner", "--no-privileges", "--exit-on-error", "--single-transaction", "-L", listPath)
 	restored, err := pgx.ConnectConfig(ctx, restoreConfig)
 	if err != nil {
 		t.Fatal("connect restored corpus as synthetic activator")
