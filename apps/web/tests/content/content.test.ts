@@ -79,7 +79,7 @@ describe('language counterparts', () => {
       expect(relationLabel(kind, dir, 'vi')).toBeTruthy()
       expect(relationLabel(kind, dir, 'en')).toBeTruthy()
     }
-    for (const kind of ['no_tree', 'article_sequence', 'invalid_date', 'relation_missing', 'withdrawn', 'ocr_flagged', 'source_provenance_missing', 'other']) {
+    for (const kind of ['no_tree', 'article_sequence', 'invalid_date', 'relation_missing', 'withdrawn', 'ocr_flagged', 'source_provenance_missing', 'listing_only', 'other']) {
       expect(gapCategory(kind, 'vi').sentence).toBeTruthy()
       expect(gapCategory(kind, 'en').sentence).toBeTruthy()
     }
@@ -91,8 +91,10 @@ describe('language counterparts', () => {
 })
 
 it('classifies corpus gap kinds instead of displaying internal names', () => {
-  const kinds = ['ambiguous_tree_text', 'article_sequence', 'chunk_omission', 'consolidated_status_unordered', 'consolidated_status_unresolved', 'empty_text', 'file_format_unsupported', 'image_content', 'invalid_date', 'invalid_validity_interval', 'missing_attachment', 'missing_effective_date', 'named_document_missing', 'needs_ocr', 'no_chunks', 'no_text_source', 'no_tree', 'ocr_flagged', 'ocr_label_flagged', 'ocr_rejected', 'partial_status_unexplained', 'relation_clause_unresolved', 'scope_removed', 'seed_article_missing', 'source_provenance_missing', 'source_replaced', 'source_unavailable', 'structure_uncertain', 'table_text', 'text_number_mismatch', 'text_source_ambiguous', 'unknown_relation_code', 'unknown_status', 'unknown_target', 'tree_headings_only', 'tree_headings_partial', 'withdrawn', 'source_withdrawn_retained']
+  const kinds = ['ambiguous_tree_text', 'article_sequence', 'chunk_omission', 'consolidated_status_unordered', 'consolidated_status_unresolved', 'empty_text', 'file_format_unsupported', 'image_content', 'invalid_date', 'invalid_validity_interval', 'listing_only', 'missing_attachment', 'missing_effective_date', 'named_document_missing', 'needs_ocr', 'no_chunks', 'no_text_source', 'no_tree', 'ocr_flagged', 'ocr_label_flagged', 'ocr_rejected', 'partial_status_unexplained', 'relation_clause_unresolved', 'scope_removed', 'seed_article_missing', 'source_provenance_missing', 'source_replaced', 'source_unavailable', 'structure_uncertain', 'table_text', 'text_number_mismatch', 'text_source_ambiguous', 'unknown_relation_code', 'unknown_status', 'unknown_target', 'tree_headings_only', 'tree_headings_partial', 'withdrawn', 'source_withdrawn_retained']
   for (const kind of kinds) expect(gapCategory(kind, 'vi').key, kind).not.toBe('other')
+  expect(gapCategory('listing_only', 'vi')).toMatchObject({ key: 'search', name: 'Không đưa vào tìm kiếm' })
+  expect(gapCategory('listing_only', 'en').sentence).toBe('Some documents only list other documents; they stay readable but are excluded from search.')
 })
 
 it('renders nested sections and inserted point tokens', () => {

@@ -2,12 +2,13 @@ import type { components } from '@trachuan/schema/gen/openapi'
 import type { Language } from '../../i18n'
 import { formatNumber } from './format'
 
-type CategoryKey = 'content' | 'structure' | 'validity' | 'relations' | 'scope' | 'ocr' | 'provenance' | 'topics' | 'omitted' | 'historical' | 'evaluation' | 'rejection' | 'other'
+type CategoryKey = 'content' | 'search' | 'structure' | 'validity' | 'relations' | 'scope' | 'ocr' | 'provenance' | 'topics' | 'omitted' | 'historical' | 'evaluation' | 'rejection' | 'other'
 export type GapCategory = { key: CategoryKey, name: string, sentence: string }
 export type GapSummary = GapCategory & { cases: number, casesLabel: string }
 
 const categories: Record<CategoryKey, Record<Language, { name: string, sentence: string }>> = {
   content: { vi: { name: 'Nội dung thiếu hoặc không đọc được', sentence: 'Một số nội dung bị thiếu hoặc không đọc được.' }, en: { name: 'Content missing or unreadable', sentence: 'Some content is missing or unreadable.' } },
+  search: { vi: { name: 'Không đưa vào tìm kiếm', sentence: 'Một số văn bản chỉ liệt kê các văn bản khác; vẫn đọc được nhưng không được đưa vào tìm kiếm.' }, en: { name: 'Excluded from search', sentence: 'Some documents only list other documents; they stay readable but are excluded from search.' } },
   structure: { vi: { name: 'Cấu trúc chưa chắc chắn', sentence: 'Cấu trúc của một số văn bản chưa chắc chắn.' }, en: { name: 'Structure uncertain', sentence: 'The structure of some documents is uncertain.' } },
   validity: { vi: { name: 'Thông tin hiệu lực chưa đầy đủ', sentence: 'Thông tin hiệu lực của một số văn bản chưa đầy đủ.' }, en: { name: 'Validity incomplete', sentence: 'Validity information is incomplete for some documents.' } },
   relations: { vi: { name: 'Liên kết giữa các văn bản chưa đầy đủ', sentence: 'Một số liên kết giữa các văn bản chưa đầy đủ.' }, en: { name: 'Links between documents incomplete', sentence: 'Some links between documents are incomplete.' } },
@@ -24,6 +25,7 @@ const categories: Record<CategoryKey, Record<Language, { name: string, sentence:
 
 const kinds: Record<Exclude<CategoryKey, 'other'>, readonly string[]> = {
   content: ['chunk_omission', 'empty_text', 'file_format_unsupported', 'file_too_large', 'image_content', 'missing_attachment', 'no_chunks', 'no_text', 'no_text_source', 'no_tree', 'source_unavailable', 'table_text', 'text_limit', 'text_source_ambiguous', 'tree_too_large', 'not_found', 'response_too_large'],
+  search: ['listing_only'],
   structure: ['ambiguous_tree_text', 'article_number_out_of_range', 'article_sequence', 'structure_uncertain', 'text_number_mismatch', 'tree_headings_only', 'tree_headings_partial', 'unknown_node_kind', 'invalid_ancestry'],
   validity: ['consolidated_status_unordered', 'consolidated_status_unresolved', 'invalid_date', 'invalid_validity_interval', 'missing_effective_date', 'missing_commencement', 'multiple_commencement_sentences', 'multiple_effect_articles', 'partial_status_unexplained', 'unknown_status', 'validity_conflict', 'correction_evidence_unavailable'],
   relations: ['named_document_ambiguous', 'named_document_missing', 'unknown_relation_code', 'unknown_target', 'unresolved_provision_relation'],
