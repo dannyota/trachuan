@@ -24,8 +24,9 @@ a boot volume and a separate persistent data volume, sized in
 [host budgets](budgets-host.md#disk-budget-host-estimates). Balanced performance
 scales with size, so validate restore and database I/O rather than assuming
 gp3-equivalent IOPS. Use one reserved public IPv4 address, no CDN or load
-balancer. Port the OpenTofu root to `deploy/oci/`; retain the Cloudflare
-provider and `deploy/host/` bundle.
+balancer. The OpenTofu root `deploy/oci/` holds the OCI resources
+([runbook](../runbooks/opentofu.md)); DNS stays out of OpenTofu and is managed
+with the `cf` CLI (owner decision); the host bundle stays in `deploy/host/`.
 
 ## Domain and DNS
 
