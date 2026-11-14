@@ -26,19 +26,24 @@ class InventoryTest(unittest.TestCase):
     def test_changed_base_binary_is_rejected(self):
         self.assertRaises(ValueError, self.scan, "lib/loader", b"\x7fELFchanged", {"lib/loader": "old-hash"})
 
-    def test_postgres_accepts_all_four_observed_additions(self):
+    def test_postgres_accepts_all_observed_additions(self):
         self.assertEqual(set(self.scan_postgres()), {
             "usr/bin/pgbackrest",
             "usr/lib/aarch64-linux-gnu/libssh2.so.1.0.1",
             "var/lib/dpkg/info/pgbackrest.postinst",
             "var/lib/dpkg/info/pgbackrest.postrm",
+            "usr/sbin/update-ca-certificates",
+            "var/lib/dpkg/info/ca-certificates.config",
+            "var/lib/dpkg/info/ca-certificates.postinst",
+            "var/lib/dpkg/info/ca-certificates.postrm",
         })
 
     def test_postgres_rejects_unobserved_libraries_scripts_and_binaries(self):
         for name in ["usr/lib/aarch64-linux-gnu/libyaml-0.so.2.0.9",
                      "usr/lib/aarch64-linux-gnu/libssh2.so.1.0.2",
                      "var/lib/dpkg/info/pgbackrest.preinst",
-                     "var/lib/dpkg/info/pgbackrest.postinst.extra", "usr/bin/curl"]:
+                     "var/lib/dpkg/info/pgbackrest.postinst.extra", "usr/bin/curl",
+                     "var/lib/dpkg/info/ca-certificates.preinst"]:
             with self.subTest(name=name), self.assertRaisesRegex(ValueError, "unexpected binary: " + re.escape(name) + "$"):
                 self.scan_postgres(name)
 
@@ -50,6 +55,10 @@ class InventoryTest(unittest.TestCase):
             "usr/lib/aarch64-linux-gnu/libssh2.so.1.0.1": b"\x7fELFssh",
             "var/lib/dpkg/info/pgbackrest.postinst": b"#!/bin/sh\nexit 0\n",
             "var/lib/dpkg/info/pgbackrest.postrm": b"#!/bin/sh\nexit 0\n",
+            "usr/sbin/update-ca-certificates": b"#!/bin/sh\nexit 0\n",
+            "var/lib/dpkg/info/ca-certificates.config": b"#!/bin/sh\nexit 0\n",
+            "var/lib/dpkg/info/ca-certificates.postinst": b"#!/bin/sh\nexit 0\n",
+            "var/lib/dpkg/info/ca-certificates.postrm": b"#!/bin/sh\nexit 0\n",
         }
         if extra:
             payloads[extra] = b"#!/bin/sh\nexit 0\n"

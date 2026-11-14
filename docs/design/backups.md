@@ -20,9 +20,10 @@ there; the upstream pgvector image has none. The Images workflow builds
 `trachuan-postgres` from the pinned pgvector digest (Debian 13, PostgreSQL 18.7)
 plus the PGDG package `pgbackrest=2.60.0-1.pgdg13+1` (arm64 `.deb` SHA-256
 `ac2348d57b62f8ae02bb012d7b776c7aff10aa9d798b03dcde0e05ad6f53ae4e`, checked
-before install). The image keeps user 999 and the upstream entrypoint, passes
-the workflow's binary-list check, and is pinned by digest and attested like the
-other images.
+before install) and Debian's `ca-certificates`, which pgBackRest needs to verify
+the Object Storage TLS chain (`--no-install-recommends` skips it). The image
+keeps user 999 and the upstream entrypoint, passes the workflow's binary-list
+check, and is pinned by digest and attested like the other images.
 
 ## Configuration and secrets
 

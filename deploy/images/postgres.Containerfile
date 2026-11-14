@@ -3,6 +3,6 @@ ADD --checksum=sha256:ac2348d57b62f8ae02bb012d7b776c7aff10aa9d798b03dcde0e05ad6f
 RUN test "$(dpkg --print-architecture)" = arm64 \
     && printf '%s  %s\n' ac2348d57b62f8ae02bb012d7b776c7aff10aa9d798b03dcde0e05ad6f53ae4e /tmp/pgbackrest.deb | sha256sum --check --strict \
     && apt-get update \
-    && apt-get install -y --no-install-recommends /tmp/pgbackrest.deb \
+    && apt-get install -y --no-install-recommends ca-certificates /tmp/pgbackrest.deb \
     && rm -rf /var/lib/apt/lists/* /tmp/pgbackrest.deb
 USER 999:999
