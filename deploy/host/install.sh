@@ -87,10 +87,17 @@ for job in full diff verify health restore-check; do
 done
 systemctl daemon-reload
 systemctl enable --now trachuan-metrics.timer
+install -d -o root -g root -m 0755 /etc/pgbackrest
+install -o root -g root -m 0644 "$bundle/pgbackrest.conf" /etc/pgbackrest/pgbackrest.conf
+install -d -o trachuan -g trachuan -m 0755 /srv/trachuan/host/systemd
 install -d -o trachuan -g trachuan -m 0755 /srv/trachuan/models /srv/trachuan/models/vi_v2-bundle
 for script in bootstrap.sh grant-corpus.sh wait-healthy.sh render-units.sh \
+ pgbackrest-entrypoint.sh restore-check.sh restore-auth.sh \
  postgres-admin.sh wait-postgres.sh check-postgres-auth.sh repair-postgres-auth.sh check-signup.sh client-address-log.sh; do
  install -o trachuan -g trachuan -m 0755 "$bundle/$script" "/srv/trachuan/host/$script"
+done
+for script in backup.py backup_result.py backup_status.py; do
+ install -o trachuan -g trachuan -m 0644 "$bundle/$script" "/srv/trachuan/host/$script"
 done
 for config in Caddyfile client-address-check.caddy; do
  install -o trachuan -g trachuan -m 0644 "$bundle/$config" "/srv/trachuan/host/$config"
@@ -103,6 +110,9 @@ done
 rm -f /srv/trachuan/host/quadlet/trachuan.network /srv/trachuan/host/quadlet/trachuan-db.network \
  /srv/trachuan/host/quadlet/trachuan-postgres.volume \
  /home/trachuan/.config/containers/systemd/trachuan-postgres.volume
+for template in "$bundle"/systemd/*; do
+ install -o trachuan -g trachuan -m 0644 "$template" "/srv/trachuan/host/systemd/${template##*/}"
+done
 for template in "$bundle"/quadlet/*; do
  install -o trachuan -g trachuan -m 0644 "$template" "/srv/trachuan/host/quadlet/${template##*/}"
 done
@@ -110,11 +120,18 @@ if ! semanage fcontext -l -C | awk '$1 == "/srv/trachuan(/.*)?" {found=1} END {e
  semanage fcontext -a -t container_file_t '/srv/trachuan(/.*)?'
 fi
 restorecon -RF /srv/trachuan
-install -d -o trachuan -g trachuan -m 0755 /home/trachuan/.config /home/trachuan/.config/containers /home/trachuan/.config/containers/systemd
-as_user bash /srv/trachuan/host/render-units.sh /srv/trachuan/host/images.env /home/trachuan/.config/containers/systemd
+if ! semanage fcontext -l -C | awk '$1 == "/etc/pgbackrest(/.*)?" {found=1} END {exit !found}'; then
+ semanage fcontext -a -t container_file_t '/etc/pgbackrest(/.*)?'
+fi
+restorecon -RF /etc/pgbackrest
+install -d -o trachuan -g trachuan -m 0755 /home/trachuan/.config /home/trachuan/.config/containers /home/trachuan/.config/containers/systemd /home/trachuan/.config/systemd/user
+as_user bash /srv/trachuan/host/render-units.sh /srv/trachuan/host/images.env /home/trachuan/.config/containers/systemd /home/trachuan/.config/systemd/user
 as_user systemctl --user daemon-reload
 for unit in trachuan-caddy-data-volume trachuan-caddy-config-volume trachuan-postgres \
  trachuan-migrate trachuan-queryembed trachuan-server trachuan-web trachuan-caddy; do
  [[ $(as_user systemctl --user show --property=LoadState --value "$unit.service") == loaded ]] || fail "Quadlet cannot load $unit.service; upgrade Podman from OL9 repositories"
+done
+for kind in full diff verify health restore-check; do
+ as_user systemctl --user enable "trachuan-backup-$kind.timer"
 done
 echo 'install: bundle installed; create secrets and provision the model before starting services'

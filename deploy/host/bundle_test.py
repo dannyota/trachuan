@@ -43,7 +43,7 @@ class ListenerTest(unittest.TestCase):
                 "WEB": "ghcr.io/dannyota/trachuan-web",
                 "QUERYEMBED": "ghcr.io/dannyota/trachuan-queryembed",
                 "CADDY": "docker.io/library/caddy",
-                "POSTGRES": "docker.io/pgvector/pgvector",
+                "POSTGRES": "ghcr.io/dannyota/trachuan-postgres",
             }
             pins = work / "images.env"
             pins.write_text("".join(
@@ -56,6 +56,17 @@ class ListenerTest(unittest.TestCase):
             subprocess.run(["bash", str(HOST / "render-units.sh"), str(pins), str(work / "units")], check=True)
             units = list((work / "units").glob("*.container"))
             self.assertEqual(len(units), 6)
+            schedules = {"full": "Sun *-*-* 02:00:00", "diff": "Mon..Sat *-*-* 02:00:00",
+                         "verify": "Wed *-*-* 04:00:00", "health": "*-*-* *:00:00",
+                         "restore-check": "*-*-01 05:00:00"}
+            for kind, schedule in schedules.items():
+                timer = configparser.ConfigParser(interpolation=None)
+                timer.read(work / "units" / f"trachuan-backup-{kind}.timer")
+                self.assertEqual(timer["Timer"]["OnCalendar"], schedule+" Asia/Ho_Chi_Minh")
+                self.assertEqual(timer["Timer"]["Persistent"], "true")
+                service = configparser.ConfigParser(interpolation=None)
+                service.read(work / "units" / f"trachuan-backup-{kind}.service")
+                self.assertIn(f"/srv/trachuan/host/backup.py {kind}", service["Service"]["ExecStart"])
             self.assertEqual(list((work / "units").glob("*.network")), [])
             self.assertFalse((work / "units" / "trachuan-postgres.volume").exists())
             for unit in units:
@@ -72,12 +83,24 @@ class ListenerTest(unittest.TestCase):
                         self.assertIn("Volume=/srv/trachuan/data/postgres:/var/lib/postgresql:Z,U",
                                       unit.read_text().splitlines())
                         self.assertIn("listen_addresses=127.0.0.1", shlex.split(container["Exec"]))
+                        args = shlex.split(container["Exec"])
+                        self.assertIn("archive_mode=on", args)
+                        self.assertIn("archive_timeout=300", args)
+                        self.assertIn("archive_command=pgbackrest --stanza=trachuan archive-push %p", args)
+                        self.assertEqual(container["Entrypoint"], "/usr/local/bin/pgbackrest-entrypoint.sh")
+                        text = unit.read_text()
+                        self.assertIn("Tmpfs=/run/pgbackrest:rw,noexec,nosuid,nodev,uid=999,gid=999,mode=0700", text)
+                        self.assertIn("Volume=/srv/trachuan/data/pgbackrest:/srv/trachuan/data/pgbackrest:Z,U", text)
+                        for secret in ["backup_s3_key", "backup_s3_key_secret", "postgres_password"]:
+                            self.assertIn(f"Secret={secret},type=mount,uid=999,gid=999,mode=0400", text)
                         environment = {}
                         for line in unit.read_text().splitlines():
                             if line.startswith("Environment="):
                                 for assignment in shlex.split(line.split("=", 1)[1]):
                                     name, value = assignment.split("=", 1)
                                     environment[name] = value
+                        self.assertEqual(environment.get("PGBACKREST_CONFIG_INCLUDE_PATH"), "/run/pgbackrest/conf.d")
+                        self.assertEqual(environment.get("PGPASSFILE"), "/run/pgbackrest/pgpass")
                         with self.subTest(policy="authentication"):
                             self.assertEqual(environment.get("POSTGRES_HOST_AUTH_METHOD"), "scram-sha-256")
                             self.assertEqual(set(shlex.split(environment.get("POSTGRES_INITDB_ARGS", ""))), {

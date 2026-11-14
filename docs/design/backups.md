@@ -68,18 +68,19 @@ Host user units run `podman exec trachuan-postgres pgbackrest …`, so backups u
 the archiving binary, configuration and data directory. All share one lock; a
 run that cannot take it records `skipped`.
 
-| Unit               | Schedule (Asia/Ho_Chi_Minh)  | Command                                  | Result file          |
-| ------------------ | ---------------------------- | ---------------------------------------- | -------------------- |
-| Full               | Sunday 02:00                 | `backup --type=full`                     | `full.json`          |
-| Differential       | Monday to Saturday 02:00     | `backup --type=diff`                     | `diff.json`          |
-| Verify             | Wednesday 04:00              | `verify --output=text --verbose`         | `verify.json`        |
-| Health             | hourly                       | `info --output=json`, `pg_stat_archiver` | `health.json`        |
-| Auth restore check | first day of the month 05:00 | below                                    | `restore-check.json` |
+| Unit               | Schedule (Asia/Ho_Chi_Minh)  | Command                                  | Result file          | Deadline   |
+| ------------------ | ---------------------------- | ---------------------------------------- | -------------------- | ---------- |
+| Full               | Sunday 02:00                 | `backup --type=full`                     | `full.json`          | 4 hours    |
+| Differential       | Monday to Saturday 02:00     | `backup --type=diff`                     | `diff.json`          | 2 hours    |
+| Verify             | Wednesday 04:00              | `verify --output=text --verbose`         | `verify.json`        | 4 hours    |
+| Health             | hourly                       | `info --output=json`, `pg_stat_archiver` | `health.json`        | 5 minutes  |
+| Auth restore check | first day of the month 05:00 | below                                    | `restore-check.json` | 20 minutes |
 
-Timers use `Persistent=true`. Expiry runs after every successful backup;
-differentials remain until their full expires. `stanza-create` and `check` run
-once from the runbook. After each corpus release activation the runbook takes a
-full backup, so later differentials do not each carry the new corpus database.
+Timers use `Persistent=true`; a unit that passes its deadline is stopped and
+records `failed`. Expiry runs after every successful backup; differentials
+remain until their full expires. `stanza-create` and `check` run once from the
+runbook. After each corpus release activation the runbook takes a full backup,
+so later differentials do not each carry the new corpus database.
 
 Each unit keeps one JSON file under `/srv/trachuan/state/backup/`, written
 atomically, and logs one journald line per change. The file holds the last

@@ -1,0 +1,9 @@
+[Unit]
+Description=trachuan backup verify schedule
+
+[Timer]
+OnCalendar=Wed *-*-* 04:00:00 Asia/Ho_Chi_Minh
+Persistent=true
+
+[Install]
+WantedBy=timers.target

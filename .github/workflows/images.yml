@@ -25,6 +25,7 @@ jobs:
       server: ${{ steps.push.outputs.server }}
       web: ${{ steps.push.outputs.web }}
       queryembed: ${{ steps.push.outputs.queryembed }}
+      postgres: ${{ steps.push.outputs.postgres }}
     env:
       COMMIT: ${{ github.sha }}
       REF: ${{ github.ref }}
@@ -40,7 +41,7 @@ jobs:
             [[ $REF == refs/heads/main ]] ||
               { echo 'Dispatch images from main' >&2; exit 1; }
           fi
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
       - name: Check release helpers
@@ -50,17 +51,18 @@ jobs:
           PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s deploy/host -p '*_test.py'
       - name: Build and inspect production images
         run: |
-          for name in server web queryembed; do
+          for name in server web queryembed postgres; do
             image="ghcr.io/dannyota/trachuan-$name:sha-$COMMIT"
             docker build --platform linux/arm64 --file "deploy/images/$name.Containerfile" \
               --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" \
               --label "org.opencontainers.image.revision=$COMMIT" --tag "$image" .
             [[ $(docker inspect --format '{{.Architecture}}' "$image") == arm64 ]]
-            [[ $(docker inspect --format '{{.Config.User}}' "$image") == 65532:65532 ]]
+            expected_user=65532:65532
+            if [[ $name == postgres ]]; then expected_user=999:999; fi
+            [[ $(docker inspect --format '{{.Config.User}}' "$image") == "$expected_user" ]]
             python3 deploy/images/check-image.py "$image" "$name"
           done
           [[ $(docker run --rm "ghcr.io/dannyota/trachuan-web:sha-$COMMIT" --version) == v24.22.2 ]]
-          # Check that the dynamic binary starts without model weights or secrets.
           if output=$(docker run --rm "ghcr.io/dannyota/trachuan-queryembed:sha-$COMMIT" --invalid 2>&1); then
             echo 'queryembed accepted an invalid invocation' >&2; exit 1
           else
@@ -95,10 +97,9 @@ jobs:
           ACTOR: ${{ github.actor }}
         run: |
           printf '%s' "$GHCR_TOKEN" | docker login ghcr.io --username "$ACTOR" --password-stdin
-          for name in server web queryembed; do
+          for name in server web queryembed postgres; do
             repository="ghcr.io/dannyota/trachuan-$name"
             image="$repository:sha-$COMMIT"
-            # GHCR can answer "unknown blob" after a cross-repository mount; retry.
             for attempt in 1 2 3; do
               if docker push "$image"; then
                 break
@@ -116,31 +117,39 @@ jobs:
           done
           docker logout ghcr.io
       - name: Attest server
-        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8
         with:
           subject-name: ghcr.io/dannyota/trachuan-server
           subject-digest: ${{ steps.push.outputs.server }}
           push-to-registry: false
       - name: Attest web
-        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8
         with:
           subject-name: ghcr.io/dannyota/trachuan-web
           subject-digest: ${{ steps.push.outputs.web }}
           push-to-registry: false
       - name: Attest queryembed
-        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8
         with:
           subject-name: ghcr.io/dannyota/trachuan-queryembed
           subject-digest: ${{ steps.push.outputs.queryembed }}
+          push-to-registry: false
+      - name: Attest postgres
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8
+        with:
+          subject-name: ghcr.io/dannyota/trachuan-postgres
+          subject-digest: ${{ steps.push.outputs.postgres }}
           push-to-registry: false
       - name: Record image references
         env:
           SERVER: ${{ steps.push.outputs.server }}
           WEB: ${{ steps.push.outputs.web }}
           QUERYEMBED: ${{ steps.push.outputs.queryembed }}
+          POSTGRES: ${{ steps.push.outputs.postgres }}
         run: |
           {
             echo "ghcr.io/dannyota/trachuan-server@$SERVER"
             echo "ghcr.io/dannyota/trachuan-web@$WEB"
             echo "ghcr.io/dannyota/trachuan-queryembed@$QUERYEMBED"
+            echo "ghcr.io/dannyota/trachuan-postgres@$POSTGRES"
           } >>"$GITHUB_STEP_SUMMARY"

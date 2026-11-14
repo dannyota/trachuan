@@ -1,0 +1,15 @@
+[Unit]
+Description=trachuan backup full
+Requires=trachuan-postgres.service
+After=trachuan-postgres.service
+RequiresMountsFor=/srv/trachuan/data
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /srv/trachuan/host/backup.py full
+Environment=PYTHONDONTWRITEBYTECODE=1
+TimeoutStartSec=14400
+TimeoutStopSec=30
+KillMode=mixed
+UMask=0077
+LimitCORE=0

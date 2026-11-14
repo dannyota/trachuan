@@ -10,7 +10,7 @@ SERVER_IMAGE=ghcr.io/dannyota/trachuan-server@$digest
 WEB_IMAGE=ghcr.io/dannyota/trachuan-web@$digest
 QUERYEMBED_IMAGE=ghcr.io/dannyota/trachuan-queryembed@$digest
 CADDY_IMAGE=docker.io/library/caddy@$digest
-POSTGRES_IMAGE=docker.io/pgvector/pgvector@$digest
+POSTGRES_IMAGE=ghcr.io/dannyota/trachuan-postgres@$digest
 PINS
 bash "$here/render-units.sh" "$pins" "$work/units"
 grep -qxF "Image=ghcr.io/dannyota/trachuan-server@$digest" "$work/units/trachuan-server.container"
