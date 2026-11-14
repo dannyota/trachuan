@@ -101,7 +101,7 @@ def describe(args, stderr, returncode):
 
 def failure_reason(args, stderr):
     text = stderr.decode('utf-8', errors='replace').lower()
-    if Path(args[0]).name == 'oras' and args[1:3] == ['repo', 'tags']:
+    if Path(args[0]).name == 'oras' and (args[1:3] == ['repo', 'tags'] or args[1:2] == ['resolve']):
         if re.search(r'(?:^|[:\n]\s*)(?:name unknown|repository not found)(?::|$)', text):
             return 'not_found'
         if re.search(r'get "[^"\n]+/v2/[^"\n]+/tags/list(?:\?[^"\n]*)?": response status code 404:', text):

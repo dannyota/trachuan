@@ -139,7 +139,10 @@ restored data works with the image's versions. The certificate identity is
 
 The [updater](pull-deployment.md#updater) checks
 `ghcr.io/dannyota/trachuan-corpus-release:<cc>-production` on every run, under
-the same locks, so image and corpus changes never overlap.
+the same locks, so image and corpus changes never overlap. Until the host has
+accepted a corpus manifest, a missing or anonymously unreadable package (GHCR
+answers `denied`) is status `current` with "no corpus release published"; after
+that it fails the run.
 
 1. Verify with `cosign verify-blob --bundle`, the identity from policy and the
    transparency log proof, then apply the

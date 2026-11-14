@@ -37,6 +37,21 @@ class CorpusRunTest(fixture.ActivationFixture, unittest.TestCase):
         import json
         return json.loads(self.phase.result.path.read_bytes())
 
+    def test_unpublished_corpus_package_is_current_until_a_manifest_was_accepted(self):
+        for reason in ('denied', 'not_found'):
+            with self.subTest(reason=reason):
+                self.registry.fetch.side_effect = CommandError('package unreadable', reason=reason)
+                self.assertTrue(self.run_phase())
+                self.assertEqual(self.result()['status'], 'current')
+                self.assertEqual(self.result()['message'], 'no corpus release published')
+        self.state.data['accepted']['corpus']['1'] = {'hash': 'a' * 64, 'status': 'active'}
+        self.registry.fetch.side_effect = CommandError('package unreadable', reason='denied')
+        self.assertFalse(self.run_phase())
+        self.assertEqual(self.result()['status'], 'failed')
+        self.registry.fetch.side_effect = CommandError('registry failed')
+        self.state.data['accepted']['corpus'].clear()
+        self.assertFalse(self.run_phase())
+
     def test_missing_mount_waits_without_any_activator_connection(self):
         for mode in ('activate', 'verify'):
             for missing in ('/usr/local/bin/provision-activator.sh', '/run/secrets/activator_db_password'):
