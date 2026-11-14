@@ -253,4 +253,6 @@ input tokens are lower than full. Trimmed compact (document entries without
 `related`, ADR 0013 History 2026-11-14) runs in the same check as a third mode
 and replaces current compact only if, for each model, its mean cited expected
 provisions are at least current compact's and its mean summed input tokens are
-lower. No question text is stored outside the evaluation files.
+lower. No question text is stored outside the evaluation files. The server
+setting `SERVER_COMPACT_RELATED=omit` serves trimmed compact for this check; it
+stays evaluation-only until trimmed compact passes it.
