@@ -19,15 +19,15 @@ alarms and the OpenTofu import before any other account signs in.
 ## Decision
 
 1. **Email and password beside Google.** An account has at most one Google
-   identity and at most one password credential, and needs at least one of
-   them. The sign-in name is the email address; there is no separate username.
+   identity and at most one password credential, and needs at least one of them.
+   The sign-in name is the email address; there is no separate username.
    Sessions stay the only browser credential; every issuer issues the same
    session.
 2. **The account email is fixed and verified.** One canonical parser (ASCII
    addr-spec, lower-cased domain) serves registration, login lookup, storage and
    rate-limit keys. The account email is set at creation and never changes: a
-   Google sign-in no longer copies the provider's current email, superseding
-   the rule in [web API](../design/web-api.md#sessions). It is unique across
+   Google sign-in no longer copies the provider's current email, superseding the
+   rule in [web API](../design/web-api.md#sessions). It is unique across
    accounts. A Google identity resolves by its subject only; a Google sign-in
    with a new subject whose email another account holds is refused with a
    generic message, and accounts are never merged or linked by email. Changing
@@ -44,12 +44,12 @@ alarms and the OpenTofu import before any other account signs in.
    account.
 4. **Uniform answers and bounded work.** Sign-up, login and reset answer
    identically whether or not the email is known, including when admission is
-   refused. Passwords use Argon2id; link tokens are random and stored as
-   SHA-256 digests. Length bounds follow NIST SP 800-63B (no composition rules;
-   room for passphrases). Limits exist per client address, per email and per
-   recipient, plus global caps on pending registrations, outbox size, mail sent
-   per hour and concurrent hashing; pending rows and links expire and mail
-   retries are bounded. The numbers live in [budgets](../design/budgets.md).
+   refused. Passwords use Argon2id; link tokens are random and stored as SHA-256
+   digests. Length bounds follow NIST SP 800-63B (no composition rules; room for
+   passphrases). Limits exist per client address, per email and per recipient,
+   plus global caps on pending registrations, outbox size, mail sent per hour
+   and concurrent hashing; pending rows and links expire and mail retries are
+   bounded. The numbers live in [budgets](../design/budgets.md).
 5. **Reset only for password credentials, and it never signs in.** A reset link
    is sent only for an account that has a password; a Google-only account gets
    the same answer and no mail. A reset sets the new password, increments the
@@ -58,39 +58,39 @@ alarms and the OpenTofu import before any other account signs in.
    digits, 30-second step, previous, current and next step accepted, each step
    used once. One authenticator per account. It belongs to the account, so it
    also follows a Google sign-in. Primary sign-in on an enrolled account yields
-   a short pending authentication, not a session; only a TOTP code or a
-   recovery code completes it. Failed TOTP codes have a per-account cool-down
-   that grows, ignores client address and survives password reset and new
-   logins. Recovery codes have their own attempt bound and are never blocked
-   by the TOTP cool-down.
+   a short pending authentication, not a session; only a TOTP code or a recovery
+   code completes it. Failed TOTP codes have a per-account cool-down that grows,
+   ignores client address and survives password reset and new logins. Recovery
+   codes have their own attempt bound and are never blocked by the TOTP
+   cool-down.
 7. **Recovery codes are the only lost-factor path.** First enrollment returns
    ten single-use codes once; the server keeps only their digests. Password
    reset, Google sign-in, email and the operator never remove a factor.
 8. **Sealed secrets.** TOTP secrets and token-bearing outbox payloads are
    AES-256-GCM sealed with a key ring held as a Podman secret, outside the
    database, and bound to their row and owner (an account, or a pending
-   registration before one exists); a database backup alone
-   yields neither codes nor usable links. Outbox payloads are deleted once sent
-   or expired. The QR code is drawn in the browser from the `otpauth` URI.
+   registration before one exists); a database backup alone yields neither codes
+   nor usable links. Outbox payloads are deleted once sent or expired. The QR
+   code is drawn in the browser from the `otpauth` URI.
 9. **Sensitive changes need fresh proof.** Setting or changing a password,
-   enrolling, replacing or removing TOTP and regenerating recovery codes
-   require CSRF and Origin checks, recent primary proof (the password, or a
-   Google sign-in within the window in budgets) and, on an enrolled account, a
-   TOTP or recovery code. A new authenticator is active only after a correct
-   code from it. Registration (item 3) and forgotten-password reset (item 5)
-   need no existing primary proof: the verified mailbox link authorizes them,
-   and reset keeps its no-session and factor-preservation rules.
-10. **One epoch fences all authority, under one lock.** Every issuer (Google
-    and password sign-in, pending-factor completion, session rotation, OAuth
+   enrolling, replacing or removing TOTP and regenerating recovery codes require
+   CSRF and Origin checks, recent primary proof (the password, or a Google
+   sign-in within the window in budgets) and, on an enrolled account, a TOTP or
+   recovery code. A new authenticator is active only after a correct code from
+   it. Registration (item 3) and forgotten-password reset (item 5) need no
+   existing primary proof: the verified mailbox link authorizes them, and reset
+   keeps its no-session and factor-preservation rules.
+10. **One epoch fences all authority, under one lock.** Every issuer (Google and
+    password sign-in, pending-factor completion, session rotation, OAuth
     consent, code exchange, refresh, personal token creation) and every
     sensitive change takes the account row lock and rechecks blocked state,
     credentials, proof state and `auth_epoch` before it issues. Pending
-    ceremonies on an existing account record the epoch they began under and
-    fail on a mismatch; a pending registration has no epoch (item 3). Each
-    sensitive change and each reset increments the epoch and, in the same
-    transaction, revokes every session (except the one fresh session a signed-in
-    change returns), OAuth grant, refresh token, authorization code and personal
-    token, and drops their credential-cache entries.
+    ceremonies on an existing account record the epoch they began under and fail
+    on a mismatch; a pending registration has no epoch (item 3). Each sensitive
+    change and each reset increments the epoch and, in the same transaction,
+    revokes every session (except the one fresh session a signed-in change
+    returns), OAuth grant, refresh token, authorization code and personal token,
+    and drops their credential-cache entries.
 11. **Factor enforcement has a release floor.** An older image would issue a
     session without the factor. TOTP enrollment stays off until the host deploy
     policy enforces a minimum release that verifies factors; deploy, rollback
@@ -103,8 +103,8 @@ alarms and the OpenTofu import before any other account signs in.
     within its bound and never blocks the change. Mail is bilingual.
 13. **Open sign-up follows the full hardening gate.** Until every prerequisite
     in ADR 0006 History (2026-11-13) is live, `SERVER_SIGNUP_EMAILS` gates
-    password registration exactly as it gates Google sign-up. Opening sign-up
-    is then a configuration change.
+    password registration exactly as it gates Google sign-up. Opening sign-up is
+    then a configuration change.
 
 ## Consequences
 
