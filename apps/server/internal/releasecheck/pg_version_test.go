@@ -40,3 +40,25 @@ func pgClientMajorVersion(program, output string) (int, error) {
 	}
 	return major, nil
 }
+
+func TestPGClientPath_UsesOverrideOrPATH(t *testing.T) {
+	for _, tc := range []struct {
+		program, override, want string
+	}{
+		{"pg_dump", "", "pg_dump"},
+		{"pg_restore", "", "pg_restore"},
+		{"pg_dump", "/fixture/bin/pg_dump", "/fixture/bin/pg_dump"},
+		{"pg_restore", "/fixture/bin/pg_restore", "/fixture/bin/pg_restore"},
+	} {
+		if got := pgClientPath(tc.program, tc.override); got != tc.want {
+			t.Errorf("pgClientPath(%q, %q) = %q; want %q", tc.program, tc.override, got, tc.want)
+		}
+	}
+}
+
+func pgClientPath(program, override string) string {
+	if override != "" {
+		return override
+	}
+	return program
+}

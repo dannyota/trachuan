@@ -154,5 +154,7 @@ server. If an older client comes first on `PATH` (for example a leftover
 PATH="/opt/homebrew/opt/postgresql@18/bin:$PATH" go test -tags integration ./apps/server/...
 ```
 
-With an older `pg_dump` the activation test is skipped locally with a message
-naming the version it found; in CI it fails instead.
+Alternatively set `CORPUS_PG_DUMP` and `CORPUS_PG_RESTORE` to the version 18
+binaries, as CI does; the test prefers them over `PATH`. With an older client
+the activation test is skipped locally with a message naming the version it
+found; in CI it fails instead.
