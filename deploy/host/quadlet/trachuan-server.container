@@ -15,6 +15,9 @@ EnvironmentFile=/srv/trachuan/host/server.env
 Secret=google_client_secret,type=env,target=GOOGLE_CLIENT_SECRET
 Secret=server_auth_database_url,type=env,target=SERVER_AUTH_DATABASE_URL
 Secret=server_corpus_database_url,type=env,target=SERVER_CORPUS_DATABASE_URL
+Secret=account_keys,type=mount,target=/run/secrets/account_keys,uid=65532,gid=65532,mode=0400
+Secret=smtp_username,type=env,target=SERVER_SMTP_USERNAME
+Secret=smtp_password,type=env,target=SERVER_SMTP_PASSWORD
 Exec=serve
 PodmanArgs=--cpus=4 --memory=2500m --memory-reservation=2000m
 HealthCmd=["/app/healthcheck", "http://127.0.0.1:8080/healthz"]

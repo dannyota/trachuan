@@ -51,10 +51,10 @@ directory][quadlet]. All containers use host networking. Only Caddy binds public
 addresses on 80/443 TCP and 443 UDP. Go binds `127.0.0.1:8080`, Nitro
 `127.0.0.1:3000`, queryembed `127.0.0.1:8091`, PostgreSQL `127.0.0.1:5432`, and
 Caddy health `127.0.0.1:8081`. Both trusted-proxy variables are `127.0.0.1/32`.
-Go needs outbound HTTPS for Google and arbitrary CIMD hosts; PostgreSQL and
-queryembed need none. The workflow verifies Nitro's actual image listener
-without runtime overrides; `NITRO_HOST` and `NITRO_PORT` are explicit in the
-image and env file.
+Go needs outbound HTTPS for Google and arbitrary CIMD hosts, plus SMTP on
+port 587. PostgreSQL and queryembed need none. The workflow verifies Nitro's
+actual image listener without runtime overrides; `NITRO_HOST` and `NITRO_PORT`
+are explicit in the image and env file.
 
 ## Provision the model
 
@@ -117,6 +117,10 @@ sys.stdout.write("postgres://" + sys.argv[1] + ":" + password +
   unset value
 }
 secret google_client_secret
+secret smtp_username
+secret smtp_password
+openssl rand -base64 32 | tr '+/' '-_' | tr -d '=' | \
+  podman secret create account_keys - >/dev/null
 secret postgres_password
 db_secret auth_db_password auth_owner auth server_auth_database_url
 db_secret corpus_reader_password corpus_reader '{database}' server_corpus_database_url
@@ -127,6 +131,21 @@ Use nonempty passwords without newlines. The derived URL secrets supply the
 server's existing variables. No token signing key exists. To rotate passwords,
 stop affected containers, update database roles and both corresponding secrets,
 then recreate containers. Initialization secrets do not change existing roles.
+
+## Account key rotation
+
+Follow [Key ring](../design/accounts.md#key-ring): restart with the new key
+first and the old second, run `account keys reseal`, then `account keys check`.
+Only after both succeed and the check reports no row on the old key, restart
+with the new key alone. Before each restart, as `trachuan` with tracing off,
+replace the secret from a private recovery file, one newline-terminated key per
+line. Substitute that file's path below. [Replacement][secret-create] needs a
+new container; the Quadlet restart recreates the server:
+
+```sh
+podman secret create --replace account_keys - </path/to/private/account_keys >/dev/null
+systemctl --user restart trachuan-server
+```
 
 ## First start and database authentication
 
@@ -271,6 +290,8 @@ after the comparison and cleanup succeed. Never copy addresses or logs into Git
 or reports.
 
 [quadlet]: https://docs.podman.io/en/latest/markdown/podman-systemd.unit.5.html
+[secret-create]:
+  https://docs.podman.io/en/v5.8.2/markdown/podman-secret-create.1.html#replace-false
 [hba]: https://www.postgresql.org/docs/18/auth-pg-hba-conf.html
 [google-testing]:
   https://developers.google.com/identity/protocols/oauth2/production-readiness/overview
