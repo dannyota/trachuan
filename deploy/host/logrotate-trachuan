@@ -1,4 +1,4 @@
-/var/log/trachuan/deploy.log {
+/var/log/trachuan/deploy.log /var/log/trachuan/release.log {
     daily
     rotate 30
     compress

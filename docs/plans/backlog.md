@@ -69,3 +69,4 @@ One line per item: date, area, finding, source.
 - 2026-11-14, server, count the exact dense fallback per engine (searches, groups) next to the postings counters and log it, so the partitioned-ANN decision in docs/design/retrieval-performance.md can use the production rate; revisit above 5%.
 - 2026-11-14, deploy, rotating a database role password is a manual owner step (`ALTER ROLE`, then a new Vault version that the secrets fetcher installs); automate it under the deploy lock if rotations become routine.
 - 2026-11-14, deploy, the query embedder model under `/srv/trachuan/models` is provisioned by hand; a dense recipe change needs a model distribution path (releases bucket plus a hash in the image manifest) before it can deploy without SSH.
+- 2026-11-14, deploy, implement paired image and corpus activation for recipe changes, including pointer rollback and interrupted-pair recovery, per docs/design/corpus-release.md.

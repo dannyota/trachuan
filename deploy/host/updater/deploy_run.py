@@ -5,6 +5,7 @@ import tempfile
 
 from .deploy_activate import Activator
 from .deploy_bundle import bundle
+from .deploy_corpus import Corpus
 from .deploy_host import Host
 from .deploy_io import atomic, Busy, command, CommandError, Lock, Result
 from .deploy_registry import Registry
@@ -23,7 +24,7 @@ class Updater:
         self.verifier = Verifier(self.rules, runner, user_prefix)
         self.registry = Registry(self.rules, runner)
         self.store = Store(self.paths, self.rules, runner)
-        self.phases = ('secrets', 'images')
+        self.phases = ('secrets', 'images', 'corpus')
         self.secrets_failed = False
         self.step, self.hash, self.manifest = 'starting', None, None
 
@@ -124,6 +125,12 @@ class Updater:
         Activator(state, self.store, self.host).activate(candidate, expected_schema=schema,
                                                        authorization=hash_value, rollback=auth)
         result.write('ok', 'rollback', 'authorized rollback activated', hash_value, auth)
+
+    def corpus(self, state, directory, mode, result):
+        if (state.data['journal'] or {}).get('status') == 'stopped':
+            return False
+        return Corpus(state, self.store, self.host, self.rules, self.registry,
+                      prepare=lambda: self.secrets(state, directory, mode, result, force=True)).run(directory, mode)
 
     def failure(self, result, state, error):
         status = None

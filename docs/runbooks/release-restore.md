@@ -45,6 +45,9 @@ Keep the previous database. This manual phase does not implement signed release
 activation. PostgreSQL has 3 GiB of shared-memory capacity within its existing 8
 GiB memory cap; shared memory is charged to that cap, not an extra allowance.
 
+Rollback to a hand-restored release within its seven days is the owner's manual
+compare-and-swap of `corpus_release.active_db`.
+
 ## Prewarm a corpus database
 
 Run this for `$DB` before Caddy starts: after a restore, and after every

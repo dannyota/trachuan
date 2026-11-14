@@ -25,7 +25,8 @@ def policy(path):
     keys = {'version', 'repository', 'release_repository', 'rollback_repository',
             'release_identity', 'build_identity', 'rollback_identity', 'issuer',
             'workflow_path', 'images', 'upstream', 'extensions', 'sigstore_trust_root',
-            'vault_id', 'region', 'secrets'}
+            'vault_id', 'region', 'secrets', 'corpus_repository', 'corpus_identity',
+            'release_namespace', 'release_bucket'}
     if not isinstance(value, dict) or set(value) != keys or value['version'] != 1:
         raise ValueError('invalid policy fields')
     match(r'ocid1\.vault\.[A-Za-z0-9_.-]+', value['vault_id'], 'vault id')
@@ -36,19 +37,23 @@ def policy(path):
         raise ValueError('invalid policy secret names')
     if value['sigstore_trust_root'] != 'cosign-v3.1.4':
         raise ValueError('unsupported trust root')
-    for key in ('release_identity', 'build_identity', 'rollback_identity'):
+    for key in ('release_identity', 'build_identity', 'rollback_identity', 'corpus_identity'):
         expression = value[key]
         if not isinstance(expression, str) or not expression.startswith('^') or not expression.endswith('$'):
             raise ValueError('policy identity must be anchored')
         re.compile(expression)
     if set(value['images']) != {'server', 'web', 'queryembed', 'postgres'} or set(value['upstream']) != {'caddy'}:
         raise ValueError('invalid policy images')
-    for name in ('release_repository', 'rollback_repository'):
+    for name in ('release_repository', 'rollback_repository', 'corpus_repository'):
         match(r'ghcr\.io/[a-z0-9_./-]+', value[name], name)
     for name in ('images', 'upstream'):
         for repository in value[name].values():
             match(r'[a-z0-9.-]+/[a-z0-9_./-]+', repository, 'policy image')
     match(r'[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+', value['repository'], 'repository')
+    match(r'[a-z0-9]+', value['release_namespace'], 'release namespace')
+    match(r'[a-z0-9][a-z0-9-]{0,62}', value['release_bucket'], 'release bucket')
+    if not isinstance(value['extensions'], list) or value['extensions'] not in (['vector','ltree'], ['ltree','vector']):
+        raise ValueError('invalid extension allowlist')
     return value
 
 
@@ -58,6 +63,8 @@ def release(data, rules):
             'target', 'images', 'upstream', 'host_bundle', 'corpus_release', 'rollback_target'}
     if not isinstance(obj, dict) or set(obj) != keys:
         raise ValueError('invalid release fields')
+    if obj['corpus_release'] is not None:
+        raise ValueError('paired corpus and image activation is not implemented')
     for key, value in {'kind': 'trachuan.image-release', 'version': 1,
                        'repository': rules['repository'], 'target': 'production',
                        'corpus_release': None, 'rollback_target': None}.items():

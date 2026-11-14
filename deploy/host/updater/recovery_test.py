@@ -164,6 +164,7 @@ class HousekeepingTest(ActivationFixture, unittest.TestCase):
         self.paths.mode.write_text('activate\n')
         self.paths.policy.write_bytes(canonical(self.rules))
         self.app = Updater(self.paths, self.runner, user_prefix=[])
+        self.app.phases = ('secrets', 'images')
         self.app.registry = mock.Mock()
         self.app.registry.fetch.return_value = self.new.directory
         self.app.registry.latest_rollback.return_value = None

@@ -156,7 +156,11 @@ after it and create `release_journal` and `retired_release`.
    server's existing gate ([sparse postings](sparse-postings.md)).
 
 `release_journal` and `retired_release` (with `dump_sha256`) are auth
-migrations. Two rules close recovery and cleanup:
+migrations. The old active database gets its dump digest from its active corpus
+manifest, or NULL when restored by hand; that row stays protected for seven days
+and cannot be reactivated by the pipeline, so rollback within that window is the
+owner's manual compare-and-swap of `corpus_release.active_db`. Two rules close
+recovery and cleanup:
 
 - A journal whose last row is `activated` or `reverted` is complete; the next
   run only finishes local bookkeeping.
@@ -174,6 +178,9 @@ each unprotected database in `retired_release` without connections: it journals
 `pruned`. An open `pruning` journal is finished the same way on the next run.
 
 ## Recipe changes
+
+The pair activation path is not yet implemented; recipe mismatches wait and
+image manifests with a non-null `corpus_release` are refused.
 
 A release whose recipes differ from the running server waits until the
 [image manifest](pull-deployment.md#image-manifest) for the matching code names

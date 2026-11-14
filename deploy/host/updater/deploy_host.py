@@ -101,7 +101,12 @@ class Host:
                   "WHERE n.nspname IN ('public', 'pg_toast') AND c.relkind IN ('r', 'i', 't'); "
                   "DROP EXTENSION pg_prewarm; COMMIT;")
 
+    def provision_activator(self):
+        self.user('podman', 'exec', 'trachuan-postgres', '/usr/local/bin/postgres-admin.sh',
+                  'bash', '/usr/local/bin/provision-activator.sh')
+
     def migrate(self):
+        self.provision_activator()
         self.systemctl('start', 'queryembed')
         self.systemctl('start', 'migrate')
         result = self.user('systemctl', '--user', 'show', '--property=Result', '--value', 'trachuan-migrate.service')

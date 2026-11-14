@@ -12,6 +12,20 @@ spec.loader.exec_module(publisher)
 
 
 class DeployMetricsTest(unittest.TestCase):
+    def test_corpus_metrics_report_failure_and_waiting_age(self):
+        now = datetime(2026, 1, 2, tzinfo=timezone.utc)
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'release.json'
+            self.assertEqual(publisher.release(path, now), [])
+            for status in ('waiting', 'failed', 'ok', 'current', 'verified', 'skipped'):
+                path.write_text(json.dumps(dict(status=status, waiting_since='2026-01-01T00:00:00Z')))
+                self.assertEqual(publisher.release(path, now), [
+                    ('release_failed', int(status == 'failed')),
+                    ('release_waiting_age_seconds', 86400 if status == 'waiting' else 0)])
+            path.write_text('{"status":"waiting"}')
+            with self.assertRaises(ValueError):
+                publisher.release(path, now)
+
     def test_failure_statuses_and_last_success_are_published(self):
         now = datetime(2026, 1, 2, tzinfo=timezone.utc)
         with tempfile.TemporaryDirectory() as directory:

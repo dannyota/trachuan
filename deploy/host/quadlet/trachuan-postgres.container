@@ -28,9 +28,11 @@ Environment=POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
 Secret=postgres_password,type=mount,uid=999,gid=999,mode=0400
 Secret=auth_db_password,type=mount,uid=999,gid=999,mode=0400
 Secret=corpus_reader_password,type=mount,uid=999,gid=999,mode=0400
+Secret=activator_db_password,type=mount,uid=999,gid=999,mode=0400
 Volume=/srv/trachuan/data/postgres:/var/lib/postgresql:Z,U
 Volume=/srv/trachuan/host/bootstrap.sh:/docker-entrypoint-initdb.d/10-auth.sh:ro,z
 Volume=/srv/trachuan/host/grant-corpus.sh:/usr/local/bin/grant-corpus.sh:ro,z
+Volume=/srv/trachuan/host/provision-activator.sh:/usr/local/bin/provision-activator.sh:ro,z
 Volume=/srv/trachuan/host/wait-postgres.sh:/usr/local/bin/wait-postgres.sh:ro,z
 Volume=/srv/trachuan/host/postgres-admin.sh:/usr/local/bin/postgres-admin.sh:ro,z
 Volume=/srv/trachuan/host/repair-postgres-auth.sh:/usr/local/bin/repair-postgres-auth.sh:ro,z

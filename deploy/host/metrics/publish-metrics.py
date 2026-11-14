@@ -12,6 +12,7 @@ from urllib.request import Request, urlopen
 BACKUP_DIR = Path('/srv/trachuan/state/backup')
 DEPLOY_RESULT = Path('/srv/trachuan/state/deploy/result.json')
 SECRETS_RESULT = Path('/srv/trachuan/state/deploy/secrets.json')
+RELEASE_RESULT = Path('/srv/trachuan/state/deploy/release.json')
 JOBS = ('full', 'diff', 'verify', 'health', 'restore-check')
 MOUNTS = ('/', '/srv/trachuan/data')
 MAX_RESULT_BYTES = 65536
@@ -23,18 +24,24 @@ def filesystem(path):
     return used / (used + stat.f_bavail) * 100, stat.f_bavail * stat.f_frsize
 
 
-def job_result(path, now, prefix, statuses, failures):
+def read_result(path):
     try:
         fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
     except FileNotFoundError:
-        return []
+        return None
     with os.fdopen(fd, 'rb') as source:
         if not stat.S_ISREG(os.fstat(source.fileno()).st_mode):
             raise ValueError('job result is not a regular file')
         raw = source.read(MAX_RESULT_BYTES + 1)
     if len(raw) > MAX_RESULT_BYTES:
         raise ValueError('job result too large')
-    result = json.loads(raw.decode('utf-8'))
+    return json.loads(raw.decode('utf-8'))
+
+
+def job_result(path, now, prefix, statuses, failures):
+    result = read_result(path)
+    if result is None:
+        return []
     status = result['status']
     if status not in statuses:
         raise ValueError('invalid job status')
@@ -59,6 +66,25 @@ def deploy(path, now):
                       ('failed', 'rolled_back', 'stopped'))
 
 
+def release(path, now):
+    result = read_result(path)
+    if result is None:
+        return []
+    status = result['status']
+    if status not in ('ok', 'failed', 'waiting', 'current', 'verified', 'skipped'):
+        raise ValueError('invalid corpus release status')
+    age = 0
+    if status == 'waiting':
+        value = result.get('waiting_since')
+        if not isinstance(value, str):
+            raise ValueError('missing corpus waiting timestamp')
+        timestamp = datetime.fromisoformat(value.replace('Z', '+00:00'))
+        if timestamp.utcoffset() != timezone.utc.utcoffset(timestamp):
+            raise ValueError('invalid corpus waiting timestamp')
+        age = max(0, (now-timestamp).total_seconds())
+    return [('release_failed', int(status == 'failed')), ('release_waiting_age_seconds', age)]
+
+
 def collect(host, now):
     metrics = [('heartbeat', 1, {'host': host})]
     for path in MOUNTS:
@@ -71,6 +97,8 @@ def collect(host, now):
         for name, value in backup(BACKUP_DIR / (job + '.json'), now):
             metrics.append((name, value, {'host': host, 'job': job}))
     for name, value in deploy(DEPLOY_RESULT, now):
+        metrics.append((name, value, {'host': host}))
+    for name, value in release(RELEASE_RESULT, now):
         metrics.append((name, value, {'host': host}))
     for name, value in job_result(SECRETS_RESULT, now, 'secrets',
                                   ('ok', 'current', 'failed', 'skipped'), ('failed',)):

@@ -111,7 +111,7 @@ install -d -o root -g root -m 0755 /etc/pgbackrest
 install -o root -g root -m 0644 "$bundle/pgbackrest.conf" /etc/pgbackrest/pgbackrest.conf
 install -d -o trachuan -g trachuan -m 0755 /srv/trachuan/host/systemd
 install -d -o trachuan -g trachuan -m 0755 /srv/trachuan/models /srv/trachuan/models/vi_v2-bundle
-for script in bootstrap.sh grant-corpus.sh wait-healthy.sh render-units.sh \
+for script in bootstrap.sh grant-corpus.sh provision-activator.sh wait-healthy.sh render-units.sh \
  pgbackrest-entrypoint.sh backup-job.sh restore-check.sh restore-auth.sh \
  postgres-admin.sh wait-postgres.sh check-postgres-auth.sh repair-postgres-auth.sh client-address-log.sh; do
  install -o trachuan -g trachuan -m 0755 "$bundle/$script" "/srv/trachuan/host/$script"
