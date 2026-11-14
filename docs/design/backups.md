@@ -39,6 +39,11 @@ stanza `trachuan`, `pg1-path` and `pg1-socket-path` for the live cluster;
 `/srv/trachuan/data/pgbackrest`, `process-max=2`, `start-fast=y`, TLS
 verification on.
 
+The PostgreSQL container runs with `RunInit=true`, so Podman's init is PID 1.
+Asynchronous `archive-push` leaves a background process; with PostgreSQL as PID
+1 it was adopted as an untracked child and its exit restarted every backend
+(seen on the host on 2026-11-14).
+
 No credential enters that file, an image, an environment value or a command
 line. The PostgreSQL unit mounts the Podman secrets `backup_s3_key`,
 `backup_s3_key_secret` and `postgres_password`. Before PostgreSQL starts, a

@@ -3,6 +3,7 @@ Description=trachuan PostgreSQL 18 and pgvector
 RequiresMountsFor=/srv/trachuan/data
 
 [Container]
+RunInit=true
 Image=@POSTGRES_IMAGE@
 ContainerName=trachuan-postgres
 Entrypoint=/usr/local/bin/pgbackrest-entrypoint.sh
