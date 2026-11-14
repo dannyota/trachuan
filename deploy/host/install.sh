@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+cd /
 fail() { echo "install: $*" >&2; exit 1; }
 [[ $(id -u) == 0 ]] || fail 'run with sudo from the opc account'
 [[ $# == 1 ]] || fail 'usage: install.sh bundle-directory'
