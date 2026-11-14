@@ -91,10 +91,10 @@ def describe(args, stderr, returncode):
     detail = ' '.join(words) + ': exit ' + str(returncode)
     if words[0] not in ('oras', 'cosign'):
         return detail
-    tail = ' '.join(stderr.decode('utf-8', errors='replace').split())[-300:]
-    if re.search('auth|basic|bearer|password|secret|token|credential', tail, re.IGNORECASE):
+    text = ' '.join(stderr.decode('utf-8', errors='replace').split())
+    if re.search('auth|basic|bearer|password|secret|token|credential', text, re.IGNORECASE):
         return detail + ': error output withheld'
-    return detail + ': ' + tail
+    return detail + ': ' + text[-300:]
 
 
 def failure_reason(args, stderr):

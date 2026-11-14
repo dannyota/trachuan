@@ -72,6 +72,13 @@ class IOTest(unittest.TestCase):
                 command([str(path), 'resolve', 'ghcr.io/x/y:production'])
         self.assertEqual(raised.exception.detail, 'oras resolve: exit 1: error output withheld')
 
+    def test_oras_detail_withholds_credentials_beyond_the_tail_window(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path, env = self.fake_tool(directory, 'oras', 'password=' + 'x' * 400)
+            with mock.patch.dict('os.environ', env), self.assertRaises(CommandError) as raised:
+                command([str(path), 'resolve', 'ghcr.io/x/y:production'])
+        self.assertEqual(raised.exception.detail, 'oras resolve: exit 1: error output withheld')
+
     def test_ghcr_anonymous_denied_on_rollback_tags_is_classified(self):
         stderr = b'Error response from registry: denied: requested access to the resource is denied\n'
         self.assertEqual(failure_reason(['/usr/local/libexec/trachuan/bin/oras', 'repo', 'tags'], stderr), 'denied')
