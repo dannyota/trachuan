@@ -236,7 +236,8 @@ Options:
 3. Shorten paths or snippets. Snippets are the evidence; path headings are small
    per hit. Not worth the loss.
 
-Recommendation: option 1, which needs a revision of
+Recommendation: option 1. ADR 0013 item 2 is revised (2026-11-14) and gates it
+on the agent-in-the-loop check; it needed a revision of
 [ADR 0013](../adr/0013-compact-search-and-batch-read.md) item 2 (bounded
 pointers with counts) and matching [MCP results](mcp-results.md) and guide
 changes first; it ships under item 5 and stays only if the agent-in-the-loop
