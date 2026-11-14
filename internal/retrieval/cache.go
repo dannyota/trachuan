@@ -9,17 +9,12 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// DocumentCache retains serialized immutable metadata by release and digest.
-// Implementations must bind reads and writes to the request activation.
 type DocumentCache interface {
 	Get(release string, key [32]byte) ([]byte, bool)
 	Put(release string, key [32]byte, value []byte)
 }
 
-// SequenceCache retains serialized read scopes by release and digest.
-// Implementations must bind reads and writes to the request activation.
 type SequenceCache interface {
-	// MaxValueBytes returns the oversized limit, or zero for an expired handle.
 	MaxValueBytes() int64
 	Get(release string, key [32]byte) ([]byte, bool)
 	Put(release string, key [32]byte, value []byte)
@@ -27,14 +22,13 @@ type SequenceCache interface {
 
 type cacheContextKey struct{}
 type requestCaches struct {
-	documents DocumentCache
-	sequences SequenceCache
+	documents  DocumentCache
+	sequences  SequenceCache
+	candidates CandidateCache
 }
 
-// WithCaches binds immutable cache handles to this request. These override the
-// engine defaults so an old lease cannot acquire a new activation's handles.
-func WithCaches(ctx context.Context, documents DocumentCache, sequences SequenceCache) context.Context {
-	return context.WithValue(ctx, cacheContextKey{}, requestCaches{documents: documents, sequences: sequences})
+func WithCaches(ctx context.Context, documents DocumentCache, sequences SequenceCache, candidates CandidateCache) context.Context {
+	return context.WithValue(ctx, cacheContextKey{}, requestCaches{documents: documents, sequences: sequences, candidates: candidates})
 }
 
 func (e *Engine) documentCache(ctx context.Context) DocumentCache {
@@ -68,8 +62,6 @@ func (e *Engine) cacheDocument(ctx context.Context, key string, doc DocumentEntr
 	e.documentCache(ctx).Put(e.release.Rel, documentKey(e.release.Rel, key), metadataJSON(doc))
 }
 
-// Documents loads cached metadata and queries only missing keys. Status is
-// applied by presentation from each response's validity stamp.
 func (e *Engine) Documents(ctx context.Context, keys []string) (map[string]DocumentEntry, error) {
 	cache := e.documentCache(ctx)
 	if cache == nil {
@@ -145,8 +137,6 @@ func (e *Engine) sequence(ctx context.Context, tx pgx.Tx, c cursor) (readSequenc
 	if cache != nil {
 		if raw, ok := cache.Get(e.release.Rel, cursorSequenceKey(e.release.Rel, c)); ok {
 			var stored cachedSequence
-			// Relation scopes are already bounded SQL windows. Reuse a window only
-			// at its original offset; a miss must not load extra relation pages.
 			if json.Unmarshal(raw, &stored) == nil && (!c.Item.Relations || c.Unit == stored.Offset) {
 				seq := readSequence{doc: stored.Doc, source: stored.Source, units: stored.Units, parts: stored.Parts, gaps: stored.Gaps, offset: stored.Offset, more: stored.More, complete: stored.Complete}
 				if len(stored.Document) > 0 {

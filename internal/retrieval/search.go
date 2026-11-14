@@ -6,7 +6,6 @@ import (
 	"fmt"
 )
 
-// Search validates, collects and shapes a request using the release recipe.
 func (e *Engine) Search(ctx context.Context, req Request) (Response, error) {
 	recipe := e.release.RetrievalRecipe
 	if recipe.Abstention.Threshold == nil {
@@ -20,7 +19,13 @@ func (e *Engine) Search(ctx context.Context, req Request) (Response, error) {
 	if err != nil {
 		return Response{}, fmt.Errorf("prepare search: %w", err)
 	}
-	arms, err := e.Collect(ctx, prepared, Depths{Dense: recipe.DenseDepth, Lexical: recipe.LexicalDepth})
+	var pending candidatePublication
+	cache := e.candidateCache(ctx)
+	if cache != nil {
+		pending.CandidateCache = cache
+		cache = &pending
+	}
+	arms, err := e.collectWithCandidates(ctx, prepared, Depths{Dense: recipe.DenseDepth, Lexical: recipe.LexicalDepth}, false, nil, cache)
 	if err != nil {
 		return Response{}, fmt.Errorf("collect search: %w", err)
 	}
@@ -49,5 +54,6 @@ func (e *Engine) Search(ctx context.Context, req Request) (Response, error) {
 	if err := e.LoadDecisions(ctx, response.Hits, response.NonCurrent); err != nil {
 		return Response{}, fmt.Errorf("load validity decisions: %w", err)
 	}
+	pending.publish(ctx)
 	return response, nil
 }
