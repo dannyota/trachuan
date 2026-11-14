@@ -42,6 +42,7 @@ Intended behavior of trachuan. Decisions with alternatives are in the
 | [error reports](error-reports.md)                   | Agent and web reports of corpus defects, triage, export to reviewed fixes                      |
 | [web](web.md)                                       | Routes, pages, visual system                                                                   |
 | [deployment](deployment.md)                         | Host, deploy, secrets, release activation, backups, observability                              |
+| [backups](backups.md)                               | pgBackRest image, configuration, schedules, restore proof and results                          |
 | [budgets](budgets.md)                               | Request, pipeline, indexing, retrieval and Temporal limits                                     |
 | [host budgets](budgets-host.md)                     | Hosting cost, host memory, alarms and disk                                                     |
 | [caching](caching.md)                               | Server caches for query vectors, search responses, read items and document entries             |

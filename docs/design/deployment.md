@@ -230,8 +230,8 @@ release. The runbook owns the exact steps.
 
 ## Backups
 
-pgBackRest to the private backup bucket: continuous WAL, weekly full, daily
-differential, weekly verify, 30-day retention. Use only
+pgBackRest ([backups](backups.md)) to the private backup bucket: continuous WAL,
+weekly full, daily differential, weekly verify, 30-day retention. Use only
 [default Object Storage encryption](https://docs.oracle.com/en-us/iaas/Content/Object/Tasks/encryption.htm)
 with Oracle-managed keys. Configure no Vault bucket key, SSE-C key or pgBackRest
 client-side encryption (`repo1-cipher-type=none`). Anyone who can read the
