@@ -1,4 +1,4 @@
-# ADR 0005: Google-only login; OAuth server copied from aboutme
+# ADR 0005: Google login; OAuth server copied from aboutme
 
 Status: accepted 2026-11-08.
 
@@ -47,3 +47,7 @@ AuthPlane (fallbacks if the spike fails).
   users do not need to be in the trusted user list"), so the server gains
   `SERVER_SIGNUP_EMAILS`: when set, only a listed verified email can create an
   account, and existing accounts sign in as before.
+- 2026-11-14: login is no longer Google only. Email and password accounts with
+  optional TOTP join Google under
+  [ADR 0015](0015-email-password-accounts-and-totp.md), which also fixes the
+  account email at creation.

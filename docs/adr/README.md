@@ -12,7 +12,7 @@ only for a new topic.
 | [0002](0002-evidence-only-vietnamese-queries.md) | Evidence only; Vietnamese queries; no platform model                   |
 | [0003](0003-postgres-per-release-corpus.md)      | PostgreSQL with one database per corpus release                        |
 | [0004](0004-subject-taxonomy-from-phap-dien.md)  | Subject taxonomy seeded from Bộ pháp điển                              |
-| [0005](0005-google-login-and-embedded-oauth.md)  | Google-only login; OAuth server copied from aboutme                    |
+| [0005](0005-google-login-and-embedded-oauth.md)  | Google login; OAuth server copied from aboutme                         |
 | [0006](0006-single-host-oci-podman.md)           | One OCI Ampere A1 host, rootless Podman Quadlet                        |
 | [0007](0007-nuxt-frontend.md)                    | Nuxt 4 frontend with English routes                                    |
 | [0008](0008-write-path-temporal-self-hosted.md)  | Write path on self-hosted Temporal, worker on the MacBook              |
@@ -22,3 +22,4 @@ only for a new topic.
 | [0012](0012-vietnam-corpus-sources.md)           | Vietnam primary and secondary legal sources                            |
 | [0013](0013-compact-search-and-batch-read.md)    | Compact search results and batch reading for agents                    |
 | [0014](0014-ocr-on-the-write-path.md)            | OCR on the write path with Google Cloud Vision and a model cross-check |
+| [0015](0015-email-password-accounts-and-totp.md) | Email and password accounts, open sign-up, optional TOTP               |
