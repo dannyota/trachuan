@@ -136,6 +136,10 @@ func TestOperationOwnership_CoversContract(t *testing.T) {
 				if path != "/api/v1/auth/logout" {
 					t.Errorf("%s %s is not covered by websession", method, path)
 				}
+			case "password":
+				if method != "post" || (path != "/api/v1/auth/password" && path != "/api/v1/me/reauth") {
+					t.Errorf("%s %s is not covered by passwordauth", method, path)
+				}
 			case "account", "web", "reports":
 			default:
 				t.Errorf("%s %s has unknown owner %q", method, path, op.Tags[0])

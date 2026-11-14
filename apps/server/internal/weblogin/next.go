@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-func validateNext(raw string) string {
+func ValidateNext(raw string) string {
 	if len(raw) > 512 || !safeNext(raw) {
 		return "/"
 	}

@@ -109,7 +109,7 @@ func (h *Handler) start(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Cache-Control", "no-store")
-	handle, tx, err := h.begin(r.Context(), validateNext(r.URL.Query().Get("next")))
+	handle, tx, err := h.begin(r.Context(), ValidateNext(r.URL.Query().Get("next")))
 	if err != nil {
 		unavailable(w)
 		return

@@ -143,6 +143,158 @@ paths:
         description: Used when Origin is absent.
         schema:
           type: string
+  /api/v1/auth/password:
+    post:
+      tags: [password]
+      security: []
+      parameters:
+      - name: Origin
+        in: header
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                next:
+                  type: string
+                  description: A same-origin path validated before and after percent decoding; defaults to /.
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Session created. Enrolled accounts fail closed until factor completion is available.
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [next]
+                properties:
+                  next:
+                    type: string
+        '400':
+          description: Invalid JSON request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: login_failed for every credential or email-counter refusal.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: CSRF rejected.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: Body exceeds 64 KiB.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '415':
+          description: JSON content type required.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Per-IP login bucket exhausted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+        '503':
+          description: busy when hashing admission is full or times out; unavailable on service failure.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/me/reauth:
+    post:
+      tags: [password]
+      parameters:
+      - name: Origin
+        in: header
+        required: false
+        schema:
+          type: string
+      - name: X-CSRF-Token
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: Referer
+        in: header
+        required: false
+        description: Used when Origin is absent.
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [password]
+              properties:
+                password:
+                  type: string
+      responses:
+        '204':
+          description: Primary proof refreshed on this session.
+        '400':
+          description: Invalid JSON request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: reauth_failed or unauthenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: CSRF rejected.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: Body exceeds 64 KiB.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: busy when hashing admission is full or times out; unavailable on service failure.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /api/v1/me:
     get:
       tags: [account]
@@ -1397,6 +1549,9 @@ components:
               - invalid_request
               - unauthenticated
               - reauth_required
+              - reauth_failed
+              - login_failed
+              - password_rejected
               - csrf_rejected
               - account_blocked
               - not_found

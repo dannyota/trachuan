@@ -132,6 +132,12 @@ export SERVER_LISTEN="127.0.0.1:$server_port"
 export SERVER_TRUSTED_PROXIES="127.0.0.1/32"
 export SERVER_PUBLIC_URL="http://localhost:$edge_port"
 export SERVER_QUERY_EMBEDDER_URL="http://127.0.0.1:$embed_port"
+export SERVER_ACCOUNT_KEYS_FILE="$tmp_dir/account_keys"
+export SERVER_MAIL_CAPTURE_DIR="$tmp_dir/mail"
+unset SERVER_SMTP_HOST SERVER_SMTP_USERNAME SERVER_SMTP_PASSWORD
+(umask 077; openssl rand -base64 32 | tr '/+' '_-' > "$SERVER_ACCOUNT_KEYS_FILE")
+chmod 600 "$SERVER_ACCOUNT_KEYS_FILE"
+mkdir -m 700 "$SERVER_MAIL_CAPTURE_DIR"
 export SERVER_GOOGLE_ISSUER="http://127.0.0.1:$google_port"
 export GOOGLE_CLIENT_ID=e2e-client
 export GOOGLE_CLIENT_SECRET=e2e-secret

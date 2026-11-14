@@ -108,7 +108,7 @@ func (h *Handler) callback(w http.ResponseWriter, r *http.Request) {
 			w.Header().Add(key, value)
 		}
 	}
-	http.Redirect(w, r, validateNext(tx.NextPath), http.StatusFound)
+	http.Redirect(w, r, ValidateNext(tx.NextPath), http.StatusFound)
 }
 
 func rejectedExchange(err error) bool {
