@@ -48,7 +48,8 @@ for path in json.loads(os.environ['CHANGED_PATHS']): sys.stdout.buffer.write(pat
         commands = re.findall(r'      - run: (.+)', static)
         for command in ["PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s deploy/host -p '*_test.py'",
                         "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s deploy/images -p '*_test.py'",
-                        'bash deploy/host/render-units-test.sh']:
+                        'bash deploy/host/render-units-test.sh',
+                        'python3 deploy/host/check-mounts.py']:
             self.assertIn(command, commands)
         self.assertIn("if: needs.preflight.outputs.go == 'true'", static)
         self.assertIn('test "$STATIC" = success', workflow.split('\n  ci:\n', 1)[1])

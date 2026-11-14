@@ -17,7 +17,7 @@ Environment=POSTGRES_HOST_AUTH_METHOD=scram-sha-256
 Environment="POSTGRES_INITDB_ARGS=--auth-host=scram-sha-256 --auth-local=scram-sha-256"
 Environment=PGBACKREST_CONFIG_INCLUDE_PATH=/run/pgbackrest/conf.d
 Environment=PGPASSFILE=/run/pgbackrest/pgpass
-Tmpfs=/run/pgbackrest:rw,noexec,nosuid,nodev,uid=999,gid=999,mode=0700
+Mount=type=tmpfs,destination=/run/pgbackrest,tmpfs-mode=0700,U=true,noexec,nosuid,nodev
 Secret=backup_s3_key,type=mount,uid=999,gid=999,mode=0400
 Secret=backup_s3_key_secret,type=mount,uid=999,gid=999,mode=0400
 Volume=/etc/pgbackrest/pgbackrest.conf:/etc/pgbackrest/pgbackrest.conf:ro,z

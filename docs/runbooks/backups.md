@@ -87,7 +87,7 @@ podman run --rm --network=host --user=999:999 \
   --volume /srv/trachuan/data/postgres:/var/lib/postgresql:Z,U \
   --volume /etc/pgbackrest/pgbackrest.conf:/etc/pgbackrest/pgbackrest.conf:ro,z \
   --volume /srv/trachuan/host/pgbackrest-entrypoint.sh:/usr/local/bin/pgbackrest-entrypoint.sh:ro,z \
-  --tmpfs /run/pgbackrest:rw,noexec,nosuid,nodev,uid=999,gid=999,mode=0700 \
+  --mount=type=tmpfs,destination=/run/pgbackrest,tmpfs-mode=0700,U=true,noexec,nosuid,nodev \
   --env PGBACKREST_CONFIG_INCLUDE_PATH=/run/pgbackrest/conf.d \
   --secret=backup_s3_key,type=mount,uid=999,gid=999,mode=0400 \
   --secret=backup_s3_key_secret,type=mount,uid=999,gid=999,mode=0400 \

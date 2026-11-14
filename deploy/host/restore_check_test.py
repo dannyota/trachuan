@@ -40,6 +40,13 @@ if args[0]=='wait':
         run = next(call for call in calls if call[0] == 'run')
         for option in ['--network=pasta:--ipv4-only,--dns-forward,1.1.1.1,--dns-host,1.1.1.1,--no-map-gw,--map-guest-addr,none,--map-host-loopback,none,-t,none,-u,none,-T,none,-U,none', '--dns=1.1.1.1', '--no-hosts', '--memory=2g', '--cpus=1', '--user=999:999', '--read-only', '--cap-drop=ALL']:
             self.assertIn(option, run)
+        mounts = [run[index + 1] for index, arg in enumerate(run) if arg == '--mount']
+        self.assertEqual(mounts, [
+            'type=tmpfs,destination=/run/pgbackrest,tmpfs-mode=0700,U=true,noexec,nosuid,nodev',
+            'type=tmpfs,destination=/run/restore-check,tmpfs-mode=0700,U=true,noexec,nosuid,nodev',
+        ])
+        self.assertEqual([run[index + 1] for index, arg in enumerate(run) if arg == '--tmpfs'],
+                         ['/tmp:rw,noexec,nosuid,nodev,mode=1777'])
         secrets = [arg for arg in run if arg.startswith('--secret=')]
         self.assertEqual(secrets, ['--secret=backup_s3_key,type=mount,uid=999,gid=999,mode=0400',
                                    '--secret=backup_s3_key_secret,type=mount,uid=999,gid=999,mode=0400'])
