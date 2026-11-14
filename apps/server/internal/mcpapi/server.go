@@ -53,7 +53,6 @@ type Reports interface {
 
 // Config supplies tool dependencies. Configure it before calling New.
 type Config struct {
-	// OmitCompactRelated enables the evaluation-only compact response.
 	OmitCompactRelated bool
 	Resolver           Resolver
 	Limiter            Limiter
