@@ -95,7 +95,7 @@ test('keyboard focus and validity contrast on the website', async ({ page }) => 
   await keyboard(page)
   const accountEmail = freshEmail()
   await signIn(page, accountEmail)
-  await expect(page.getByText('Phiên hiện tại')).toBeVisible()
+  await expect(page.getByText('Phiên này')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Tạo mã mới' })).toBeVisible()
   await keyboard(page)
   const openToken = page.getByRole('button', { name: 'Tạo mã mới', exact: true })

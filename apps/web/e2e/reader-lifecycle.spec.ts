@@ -1,4 +1,9 @@
 import { expect, test, type Page } from '@playwright/test'
+import { clientAddress } from './client-address'
+
+test.beforeEach(async ({ page }, info) => {
+  await page.setExtraHTTPHeaders({ 'X-Forwarded-For': clientAddress(info) })
+})
 
 const account = { id: 1, email: 'test@example.invalid', created_at: '2026-01-01T00:00:00Z', csrf_token: 'token' }
 async function navigate(page: Page, path: string) {
@@ -71,7 +76,14 @@ test('tracks the article in view at desktop width', async ({ page }) => {
   await expect(page.locator('[data-anchor="dieu-2"]')).toBeVisible()
   await page.locator('[data-anchor="dieu-2"]').evaluate(element => {
     element.scrollIntoView()
-    window.scrollBy(0, -100)
+    window.scrollBy(0, -50)
+  })
+  await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))))
+  await page.evaluate(async () => {
+    for (let i = 0; i < 20; i++) {
+      window.scrollBy(0, 5)
+      await new Promise<void>(resolve => requestAnimationFrame(() => resolve()))
+    }
   })
   await expect(page.locator('.reader-toc-desktop [aria-current="location"]')).toHaveText(/Điều 2/)
 })

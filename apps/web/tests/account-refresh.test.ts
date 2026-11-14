@@ -48,14 +48,15 @@ for (const kind of ['password', 'confirm', 'remove', 'recovery']) {
       const security = wrapper.findComponent(AccountAuthenticator)
       if (kind === 'password') {
         const password = wrapper.findComponent(AccountPassword)
+        await password.get('button').trigger('click')
         await password.get('input[autocomplete=current-password]').setValue('synthetic current password')
         await password.get('input[autocomplete=new-password]').setValue('synthetic replacement password')
         await password.get('form').trigger('submit')
       } else {
-        if (kind === 'confirm') { await security.get('button').trigger('click'); await flushPromises() }
+        await security.findAll('button').find(button => button.text() === (kind === 'confirm' ? 'Enable' : kind === 'recovery' ? 'Generate new recovery codes' : 'Disable'))!.trigger('click')
+        if (kind === 'confirm') await flushPromises()
         await security.get('input').setValue('123456')
-        if (kind === 'recovery') await security.findAll('button').find(button => button.text() === 'Replace recovery codes')!.trigger('click')
-        else await security.get('form').trigger('submit')
+        await security.get('form').trigger('submit')
       }
       await flushPromises()
       const sessions = wrapper.findAll('.account-card').find(section => section.text().startsWith('Sessions'))!
@@ -72,8 +73,9 @@ it('keeps one-time codes visible when refreshing a credential list fails', async
   try {
     await flushPromises()
     const security = wrapper.findComponent(AccountAuthenticator)
+    await security.findAll('button').find(button => button.text() === 'Generate new recovery codes')!.trigger('click')
     await security.get('input').setValue('123456')
-    await security.findAll('button').find(button => button.text() === 'Replace recovery codes')!.trigger('click')
+    await security.get('form').trigger('submit')
     await flushPromises()
     expect(wrapper.get('.recovery-codes').text()).toContain('ABCDE FGHIJ KLMNO PQRST UVWXY Z')
     expect(wrapper.findAll('[role=alert]').length).toBeGreaterThan(0)

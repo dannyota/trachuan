@@ -13,6 +13,7 @@ test('keeps the shell and retries the same failed search', async ({ page }) => {
     return bodies.length === 1 ? route.fulfill({ status: 503 }) : route.fulfill({ json: { release: '20990101', hits: [], abstain: true } })
   })
   await page.goto('/')
+  await page.waitForFunction(() => Boolean((document.querySelector('#__nuxt') as unknown as { __vue_app__?: unknown } | null)?.__vue_app__))
   await page.evaluate(() => (document.querySelector('#__nuxt') as unknown as { __vue_app__: { config: { globalProperties: { $router: { push: (path: string) => Promise<void> } } } } }).__vue_app__.config.globalProperties.$router.push('/vn/search?q=ignored&node=1'))
   await expect(page).not.toHaveURL(/q=/)
   await page.locator('#search-query').fill('fixture query')

@@ -5,6 +5,7 @@ export function setupReader(pages: unknown[], query: Record<string, string> = {}
   const calls: unknown[] = []
   vi.stubGlobal('IntersectionObserver', undefined)
   vi.stubGlobal('definePageMeta', () => {})
+  vi.stubGlobal('useHead', () => {})
   vi.stubGlobal('useRoute', () => ({ params: { key: 'vn:vbpl:1' }, query, hash: '' }))
   vi.stubGlobal('useState', () => ref('en'))
   vi.stubGlobal('useRouter', () => ({ currentRoute: { get value() {

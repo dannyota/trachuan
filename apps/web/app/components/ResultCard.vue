@@ -2,6 +2,7 @@
 import { nextTick, onMounted, onUnmounted, watch } from 'vue'
 import type { components } from '@trachuan/schema/gen/openapi'
 import { documentCitation, gapCategory, highlightSpans, hitByline, matchedMembers, statusAsOf, warningAdvice, warningSentence } from '../content'
+import { displayHeading } from '../utils/reader-units'
 import { readerLink, warningLink } from '../utils/search-results'
 import { searchMessages } from '../../i18n/search'
 import type { Language } from '../../i18n'
@@ -81,7 +82,7 @@ function memberLink(memberAnchor: string | undefined) {
     </div>
     <div class="result-card-body">
       <p v-if="doc?.title" class="result-title">{{ doc.title }}</p>
-      <h2>{{ hit.citation }}<template v-if="heading"> · {{ heading }}</template></h2>
+      <h2>{{ displayHeading(hit.citation, heading) }}</h2>
       <p v-if="members.length > 1" class="result-members">{{ messages.matched.replace('{n}', String(members.length)) }} <template v-for="(member, index) in members" :key="index"><NuxtLink v-if="memberLink(member.anchor)" :to="memberLink(member.anchor)!"><template v-if="index">, </template>{{ member.label }}</NuxtLink><span v-else><template v-if="index">, </template>{{ member.label }}</span></template></p>
       <p v-if="text" ref="textElement" class="law-text result-text" :class="{ 'result-text--clamped': !expanded }"><template v-for="(piece, index) in pieces" :key="index"><mark v-if="piece.marked" :aria-label="`${messages.matchedWords}: ${piece.text}`">{{ piece.text }}</mark><template v-else>{{ piece.text }}</template></template></p>
       <button v-if="canExpand" type="button" class="result-toggle" :aria-expanded="expanded" @click="expanded = !expanded">{{ expanded ? messages.collapse : messages.expand }}</button>

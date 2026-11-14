@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import CopyButton from './CopyButton.vue'
 import AuthenticatorQr from './AuthenticatorQr.vue'
 import RecoveryCodes from './RecoveryCodes.vue'
 import ReauthForm from './ReauthForm.vue'
@@ -22,11 +23,12 @@ const setupAction = ref<Action | null>(null)
 const codes = ref<string[]>([])
 const code = ref('')
 const recovery = ref(false)
+const editing = ref<'remove' | 'recovery' | null>(null)
 const busy = ref(false)
 const error = ref('')
 const notice = ref('')
 const enrollmentOff = ref(false)
-function clear() { setup.value = null; setupAction.value = null; codes.value = []; code.value = ''; reauth.cancel() }
+function clear() { setup.value = null; setupAction.value = null; codes.value = []; code.value = ''; editing.value = null; recovery.value = false; reauth.cancel() }
 const secrets = usePageSecrets(clear)
 watch(() => session.account?.id, clear)
 type Operation = 'setup' | 'confirm' | 'remove' | 'recovery'
@@ -63,24 +65,27 @@ async function mutate(kind: Operation, action = kind === 'confirm' ? setupAction
 function toggle() { recovery.value = !recovery.value; code.value = '' }
 </script>
 <template>
-  <section aria-labelledby="account-authenticator-title">
-    <h3 id="account-authenticator-title">{{ labels.factorTitle }}</h3>
+  <section class="account-row" aria-labelledby="account-authenticator-title">
+    <h3 id="account-authenticator-title">{{ labels.factorTitle }}: {{ session.account?.totp ? labels.factorOn : labels.factorOff }}</h3>
     <p v-if="error" class="notice" role="alert">{{ error }}</p><p v-if="notice" role="status">{{ notice }}</p>
     <RecoveryCodes v-if="codes.length" :codes="codes" @close="codes = []" />
     <ReauthForm v-if="reauth.challenge.value" v-bind="reauth.challenge.value" @verified="reauth.verified" @cancel="clear" />
     <template v-else-if="setup">
+      <p>{{ labels.setupInstruction }}</p>
       <AuthenticatorQr :uri="setup.otpauth_uri" :label="labels.qr" />
-      <p>{{ labels.secret }}</p><p class="auth-secret">{{ setup.secret }}</p>
+      <p class="auth-secret">{{ setup.secret.match(/.{1,4}/g)?.join(' ') }}</p><CopyButton :text="setup.secret" :label="labels.copySecret" />
       <form class="auth-form" @submit.prevent="mutate('confirm')">
         <label>{{ labels.code }}<input v-model="code" class="input" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" required></label>
         <div class="auth-actions"><button class="btn btn-primary" :disabled="busy">{{ labels.confirm }}</button><button class="btn btn-secondary" type="button" @click="clear">{{ labels.cancel }}</button></div>
       </form>
     </template>
     <template v-else>
-      <button v-if="session.account?.totp_enrollment && !enrollmentOff" class="btn btn-secondary" type="button" :disabled="busy" @click="mutate('setup')">{{ labels.setup }}</button>
-      <form v-if="session.account?.totp" class="auth-form" @submit.prevent="mutate('remove')">
+      <button v-if="!session.account?.totp && session.account?.totp_enrollment && !enrollmentOff" class="btn btn-secondary" type="button" :disabled="busy" @click="mutate('setup')">{{ labels.setup }}</button>
+      <button v-if="session.account?.totp && !editing" class="btn btn-secondary" type="button" @click="editing = 'remove'">{{ labels.remove }}</button>
+      <button v-if="session.account?.totp && !editing" class="btn btn-secondary" type="button" @click="editing = 'recovery'">{{ labels.replaceCodes }}</button>
+      <form v-if="session.account?.totp && editing" class="auth-form" @submit.prevent="mutate(editing)">
         <label>{{ recovery ? labels.recovery : labels.code }}<input v-model="code" class="input" :inputmode="recovery ? 'text' : 'numeric'" :autocomplete="recovery ? 'off' : 'one-time-code'" :pattern="recovery ? undefined : '[0-9]{6}'" required></label>
-        <div class="auth-actions"><button class="btn btn-secondary" type="button" @click="toggle">{{ recovery ? labels.useCode : labels.useRecovery }}</button><button class="btn btn-secondary" :disabled="busy">{{ labels.remove }}</button><button v-if="!recovery" class="btn btn-secondary" type="button" :disabled="busy || !code" @click="mutate('recovery')">{{ labels.replaceCodes }}</button></div>
+        <div class="auth-actions"><button v-if="editing === 'remove'" class="btn btn-secondary" type="button" @click="toggle">{{ recovery ? labels.useCode : labels.useRecovery }}</button><button class="btn btn-secondary" :disabled="busy">{{ editing === 'remove' ? labels.remove : labels.replaceCodes }}</button><button class="btn btn-secondary" type="button" @click="clear">{{ labels.cancel }}</button></div>
       </form>
     </template>
   </section>

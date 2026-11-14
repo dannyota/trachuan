@@ -50,7 +50,7 @@ it('shows matched fragments, highlighting, warnings, and safe document actions',
   vi.stubGlobal('onUnmounted', () => {})
   const link = { template: '<a :href="to"><slot /></a>', props: ['to'] }
   const wrapper = mount(SearchResults, { props: { result, query: 'cụm từ phù hợp' }, global: { stubs: { NuxtLink: link } } })
-  expect(wrapper.find('h2').text()).toBe('Điều 1 · Heading')
+  expect(wrapper.find('h2').text()).toBe('Điều 1. Heading')
   expect(wrapper.find('mark').text()).toBe('cụm từ phù hợp')
   expect(wrapper.find('a[href$="#dieu-1/khoan-1"]').text()).toContain('Khoản 1')
   expect(wrapper.find('a[href$="#dieu-1/khoan-2"]').text()).toContain('Khoản 2')

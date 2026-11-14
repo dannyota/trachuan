@@ -45,3 +45,11 @@ it('renders source labels once for the real provisions', async () => {
   expect(wrapper.get('[data-anchor="dieu-11/khoan-1/diem-a"]').find('h2').exists()).toBe(false)
   expect(wrapper.get('[data-anchor="chuong-i"]').findAll('.law-text')).toHaveLength(0)
 })
+it.each([['dieu-1', 'Article you are viewing'], ['dieu-1/khoan-1', 'Clause you are viewing'], ['dieu-1/khoan-1/diem-a', 'Point you are viewing']])('names the target level for %s', async (anchor, label) => {
+  setupReader([{ data: { release: '20990101', item: { complete: true, units: [{ kind: 'provision', anchor, label: 'Điều 1', text: 'Text' }] } } }])
+  vi.stubGlobal('useRoute', () => ({ params: { key: 'vn:vbpl:1' }, query: {}, hash: `#${anchor}` }))
+  const wrapper = mount(Reader)
+  await flushPromises()
+  expect(wrapper.get('.reader-target-label').text()).toContain(label)
+  wrapper.unmount()
+})
