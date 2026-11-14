@@ -21,17 +21,25 @@ func (q *Queries) AllocateMailID(ctx context.Context) (int64, error) {
 	return column_1, err
 }
 
-const claimDueMail = `-- name: ClaimDueMail :one
+const claimMailCandidate = `-- name: ClaimMailCandidate :one
 UPDATE mail_outbox SET claimed_until=$1::timestamptz+interval '2 minutes', attempts=attempts+1
 WHERE id=(SELECT id FROM mail_outbox WHERE sent_at IS NULL AND sealed_payload IS NOT NULL
  AND (next_attempt_at<=$1::timestamptz OR expires_at<=$1::timestamptz OR attempts>=6)
  AND (claimed_until IS NULL OR claimed_until<=$1::timestamptz)
+ AND (expires_at<=$1::timestamptz OR attempts>=6 OR (
+  (SELECT count(*) FROM mail_delivery d WHERE COALESCE(d.sent_at,d.reserved_at)>$1::timestamptz-interval '1 hour')<100
+  AND (SELECT count(*) FROM mail_delivery d WHERE COALESCE(d.sent_at,d.reserved_at)>=date_trunc('month',$1::timestamptz AT TIME ZONE 'UTC') AT TIME ZONE 'UTC')<2500
+  AND (class<>'signup' OR (
+   (SELECT count(*) FROM mail_delivery d WHERE d.class='signup' AND COALESCE(d.sent_at,d.reserved_at)>$1::timestamptz-interval '1 hour')<60
+   AND (SELECT count(*) FROM mail_delivery d WHERE d.class='signup' AND COALESCE(d.sent_at,d.reserved_at)>=date_trunc('month',$1::timestamptz AT TIME ZONE 'UTC') AT TIME ZONE 'UTC')<1500
+  ))
+ ))
  ORDER BY next_attempt_at,id FOR UPDATE SKIP LOCKED LIMIT 1)
 RETURNING id, created_at, kind, class, account_id, email_link_id, sealed_payload, key_id, attempts, claimed_until, next_attempt_at, expires_at, sent_at
 `
 
-func (q *Queries) ClaimDueMail(ctx context.Context, at time.Time) (MailOutbox, error) {
-	row := q.db.QueryRow(ctx, claimDueMail, at)
+func (q *Queries) ClaimMailCandidate(ctx context.Context, at time.Time) (MailOutbox, error) {
+	row := q.db.QueryRow(ctx, claimMailCandidate, at)
 	var i MailOutbox
 	err := row.Scan(
 		&i.ID,

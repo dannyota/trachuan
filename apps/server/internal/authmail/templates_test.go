@@ -64,3 +64,27 @@ func TestCapture_PrivateMessage(t *testing.T) {
 		t.Fatal("ignored cancellation")
 	}
 }
+
+func TestTemplates_RejectsHeaderInjection(t *testing.T) {
+	for _, kind := range []string{"registration", "account_exists", "reset", "add_password", "password_changed"} {
+		for _, field := range []string{"recipient", "token", "url", "kind"} {
+			t.Run(kind+"/"+field, func(t *testing.T) {
+				payload := Payload{To: "person@example.test", Token: "synthetic-token"}
+				publicURL, templateKind := "https://example.test", kind
+				switch field {
+				case "recipient":
+					payload.To += "\r\nBcc: attacker@example.test"
+				case "token":
+					payload.Token += "\r\nBcc: attacker@example.test"
+				case "url":
+					publicURL += "\r\nBcc: attacker@example.test"
+				case "kind":
+					templateKind += "\r\nBcc: attacker@example.test"
+				}
+				if _, err := Render(publicURL, templateKind, payload); err == nil {
+					t.Fatal("accepted CR/LF in template field")
+				}
+			})
+		}
+	}
+}

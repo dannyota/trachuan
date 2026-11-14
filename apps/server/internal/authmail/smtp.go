@@ -11,7 +11,6 @@ import (
 	"mime/quotedprintable"
 	"net"
 	"net/smtp"
-	"net/textproto"
 	"strconv"
 	"strings"
 	"time"
@@ -37,7 +36,7 @@ func NewSMTP(opts SMTPOptions) (*SMTP, error) {
 func (s *SMTP) Send(ctx context.Context, msg Message) error {
 	data, err := renderMessage(s.options.From, msg)
 	if err != nil {
-		return err
+		return notDelivered(err)
 	}
 	if err = s.deliver(ctx, msg.To, data); err != nil {
 		return fmt.Errorf("SMTP delivery: %w", err)
@@ -52,52 +51,42 @@ func (s *SMTP) deliver(ctx context.Context, to string, data []byte) error {
 	dialer := net.Dialer{Deadline: deadline}
 	conn, err := dialer.DialContext(ctx, "tcp", net.JoinHostPort(s.options.Host, s.options.Port))
 	if err != nil {
-		return err
+		return notDelivered(err)
 	}
 	defer func() { _ = conn.Close() }()
 	if err = conn.SetDeadline(deadline); err != nil {
-		return err
+		return notDelivered(err)
 	}
 	stop := context.AfterFunc(ctx, func() { _ = conn.SetDeadline(time.Unix(1, 0)) })
 	defer stop()
 	client, err := smtp.NewClient(conn, s.options.Host)
 	if err != nil {
-		return err
+		return notDelivered(err)
 	}
 	if ok, _ := client.Extension("STARTTLS"); !ok {
-		return errors.New("SMTP STARTTLS required")
+		return notDelivered(errors.New("SMTP STARTTLS required"))
 	}
 	serverName := s.options.Host
 	if s.options.serverName != "" {
 		serverName = s.options.serverName
 	}
 	if err = client.StartTLS(&tls.Config{ServerName: serverName, RootCAs: s.options.RootCAs, MinVersion: tls.VersionTLS12}); err != nil {
-		return err
+		return notDelivered(err)
 	}
 	if _, ok := client.TLSConnectionState(); !ok {
-		return errors.New("SMTP TLS required")
+		return notDelivered(errors.New("SMTP TLS required"))
 	}
 	if err = client.Auth(smtp.PlainAuth("", s.options.Username, s.options.Password, s.options.Host)); err != nil {
-		return err
+		return notDelivered(err)
 	}
 	if err = client.Mail(s.options.From); err != nil {
-		return err
+		return notDelivered(err)
 	}
 	if err = client.Rcpt(to); err != nil {
-		return err
+		return notDelivered(err)
 	}
-	writer, err := client.Data()
-	if err != nil {
+	if err = submitMessage(client.Text, data); err != nil {
 		return err
-	}
-	if _, err = writer.Write(data); err != nil {
-		return err
-	}
-	if err = writer.Close(); err != nil {
-		var reply *textproto.Error
-		if !errors.As(err, &reply) || reply.Code < 200 || reply.Code >= 300 {
-			return err
-		}
 	}
 	_ = client.Quit()
 	return nil

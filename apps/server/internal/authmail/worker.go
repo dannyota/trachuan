@@ -92,10 +92,11 @@ func (w *Worker) Step(ctx context.Context) (bool, error) {
 				timeout = min(timeout, row.ExpiresAt.Sub(w.Clock()))
 				sendCtx, sendCancel := context.WithTimeout(ctx, timeout)
 				sendErr := w.Sender.Send(sendCtx, message)
-				if sendCtx.Err() != nil {
+				if sendCtx.Err() != nil && sendErr == nil {
 					sendErr = sendCtx.Err()
 				}
 				sendCancel()
+				p.Uncertain = sendErr != nil && !errors.Is(sendErr, ErrNotDelivered)
 				if sendErr == nil {
 					p.Sent = true
 					result = "sent"

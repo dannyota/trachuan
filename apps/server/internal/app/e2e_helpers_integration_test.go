@@ -14,12 +14,16 @@ import (
 	"testing"
 	"time"
 
+	"encoding/base64"
+
+	"danny.vn/trachuan/apps/server/internal/accountflow"
 	"danny.vn/trachuan/apps/server/internal/credential"
 	"danny.vn/trachuan/apps/server/internal/limits"
 	"danny.vn/trachuan/apps/server/internal/mcpapi"
 	"danny.vn/trachuan/apps/server/internal/migrate"
 	"danny.vn/trachuan/apps/server/internal/password"
 	"danny.vn/trachuan/apps/server/internal/passwordauth"
+	"danny.vn/trachuan/apps/server/internal/seal"
 	"danny.vn/trachuan/apps/server/internal/store"
 	"danny.vn/trachuan/apps/server/internal/weblogin"
 	"danny.vn/trachuan/apps/server/internal/weblogin/oidctest"
@@ -40,6 +44,9 @@ type e2eFixture struct {
 }
 
 func newE2E(t *testing.T) *e2eFixture {
+	return newE2EWithSignupEmails(t, nil)
+}
+func newE2EWithSignupEmails(t *testing.T, emails []string) *e2eFixture {
 	t.Helper()
 	dsn := testpg.NewDatabase(t)
 	if err := migrate.Up(t.Context(), dsn); err != nil {
@@ -64,7 +71,14 @@ func newE2E(t *testing.T) *e2eFixture {
 	if err != nil {
 		t.Fatal(err)
 	}
-	passwordLogin := &passwordauth.Handler{Store: q, Proofs: q, Hasher: password.NewHasher(), Counter: password.NewCounter(clock), Sessions: sessions, PublicURL: base}
+	hasher := password.NewHasher()
+	passwordLogin := &passwordauth.Handler{Store: q, Proofs: q, Hasher: hasher, HashPassword: hasher.Hash, Counter: password.NewCounter(clock), Sessions: sessions, PublicURL: base}
+	ring, err := seal.Parse([]byte(base64.RawURLEncoding.EncodeToString(make([]byte, 32))))
+	if err != nil {
+		t.Fatal(err)
+	}
+	passwordLogin.Flows = &accountflow.Service{DB: pool, Ring: ring, SignupEmails: emails}
+	passwordLogin.Evict = func(id int64) { sessions.EvictAccount(id); verifier.EvictAccount(id) }
 	mux := newWebMux(webDeps{password: passwordLogin, store: db, sessions: sessions, login: login, verifier: verifier, tools: mcpapi.Config{Resolver: e2eResolver{}, Limiter: limits.New(time.Now)}, loginLimit: newLoginLimiter(time.Now, nil), oauthDB: pool, publicURL: base})
 	mux.HandleFunc("GET /destination", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNoContent) })
 	server.Config.Handler = mux

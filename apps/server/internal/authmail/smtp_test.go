@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-func smtpTestServer(t *testing.T, mode string) (SMTPOptions, <-chan []string) {
+func smtpTestServer(t *testing.T, mode string) (SMTPOptions, <-chan []string, <-chan struct{}) {
 	t.Helper()
 	certServer := httptest.NewTLSServer(nil)
 	certificate := certServer.TLS.Certificates[0]
@@ -26,14 +26,15 @@ func smtpTestServer(t *testing.T, mode string) (SMTPOptions, <-chan []string) {
 	}
 	t.Cleanup(func() { _ = listener.Close() })
 	result := make(chan []string, 1)
+	dataStarted := make(chan struct{})
 	go func() {
+		var commands []string
+		defer func() { result <- commands }()
 		conn, err := listener.Accept()
 		if err != nil {
 			return
 		}
 		defer func() { _ = conn.Close() }()
-		var commands []string
-		defer func() { result <- commands }()
 		reader := bufio.NewReader(conn)
 		if mode == "stall" {
 			_, _ = reader.ReadString('\n')
@@ -58,6 +59,10 @@ func smtpTestServer(t *testing.T, mode string) (SMTPOptions, <-chan []string) {
 					_, _ = io.WriteString(conn, "250-localhost\r\n250-STARTTLS\r\n250 AUTH PLAIN\r\n")
 				}
 			case command == "STARTTLS":
+				if mode == "TLS rejected" {
+					_, _ = io.WriteString(conn, "454 Unavailable\r\n")
+					return
+				}
 				_, _ = io.WriteString(conn, "220 Ready\r\n")
 				transport := tls.Server(conn, &tls.Config{Certificates: []tls.Certificate{certificate}, MinVersion: tls.VersionTLS12})
 				if err := transport.Handshake(); err != nil {
@@ -71,9 +76,34 @@ func smtpTestServer(t *testing.T, mode string) (SMTPOptions, <-chan []string) {
 					_, _ = io.WriteString(conn, "530 TLS required\r\n")
 					return
 				}
+				if mode == "AUTH rejected" {
+					_, _ = io.WriteString(conn, "535 Rejected\r\n")
+					return
+				}
 				_, _ = io.WriteString(conn, "235 OK\r\n")
+			case strings.HasPrefix(command, "MAIL FROM:") && mode == "MAIL rejected":
+				_, _ = io.WriteString(conn, "550 Rejected\r\n")
+				return
+			case strings.HasPrefix(command, "RCPT TO:") && mode == "RCPT rejected":
+				_, _ = io.WriteString(conn, "550 Rejected\r\n")
+				return
 			case command == "DATA":
+				close(dataStarted)
+				if mode == "DATA rejected" {
+					_, _ = io.WriteString(conn, "554 Rejected\r\n")
+					return
+				}
+				if mode == "DATA malformed" {
+					_, _ = io.WriteString(conn, "invalid reply\r\n")
+					return
+				}
+				if mode == "DATA command disconnect" {
+					return
+				}
 				_, _ = io.WriteString(conn, "354 Go ahead\r\n")
+				if mode == "DATA disconnect" {
+					return
+				}
 				for {
 					s, err := reader.ReadString('\n')
 					if err != nil {
@@ -82,6 +112,25 @@ func smtpTestServer(t *testing.T, mode string) (SMTPOptions, <-chan []string) {
 					if s == ".\r\n" {
 						break
 					}
+				}
+				if mode == "DATA body rejected 554" {
+					_, _ = io.WriteString(conn, "554 Rejected\r\n")
+					return
+				}
+				if mode == "DATA body rejected 451" {
+					_, _ = io.WriteString(conn, "451 Retry later\r\n")
+					return
+				}
+				if mode == "DATA body malformed" {
+					_, _ = io.WriteString(conn, "invalid reply\r\n")
+					return
+				}
+				if mode == "DATA acknowledgement lost" {
+					return
+				}
+				if mode == "DATA deadline" {
+					_, _ = reader.ReadString('\n')
+					return
 				}
 				_, _ = io.WriteString(conn, "250 Queued\r\n")
 			case command == "QUIT":
@@ -93,13 +142,16 @@ func smtpTestServer(t *testing.T, mode string) (SMTPOptions, <-chan []string) {
 		}
 	}()
 	host, port, _ := net.SplitHostPort(listener.Addr().String())
-	return SMTPOptions{Host: host, Port: port, Username: "synthetic", Password: "synthetic", From: "no-reply@example.test", RootCAs: roots}, result
+	if mode == "dial" {
+		_ = listener.Close()
+	}
+	return SMTPOptions{Host: host, Port: port, Username: "synthetic", Password: "synthetic", From: "no-reply@example.test", RootCAs: roots}, result, dataStarted
 }
 
 func TestSMTP_STARTTLSAndDeadline(t *testing.T) {
 	for _, mode := range []string{"TLS", "no TLS", "untrusted", "wrong host", "stall"} {
 		t.Run(mode, func(t *testing.T) {
-			opts, result := smtpTestServer(t, mode)
+			opts, result, _ := smtpTestServer(t, mode)
 			if mode == "untrusted" {
 				opts.RootCAs = x509.NewCertPool()
 			}

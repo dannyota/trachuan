@@ -16,7 +16,7 @@ import (
 
 func TestMail_SealingClaimAndRotation(t *testing.T) {
 	ctx, conn, provider := accountsMigration(t)
-	if _, err := provider.UpTo(ctx, 5); err != nil {
+	if _, err := provider.UpTo(ctx, 6); err != nil {
 		t.Fatal(err)
 	}
 	var accountID int64
@@ -88,7 +88,7 @@ func TestMail_SealingClaimAndRotation(t *testing.T) {
 
 func TestMail_BackoffExhaustionAndRetention(t *testing.T) {
 	ctx, conn, provider := accountsMigration(t)
-	if _, err := provider.UpTo(ctx, 5); err != nil {
+	if _, err := provider.UpTo(ctx, 6); err != nil {
 		t.Fatal(err)
 	}
 	var accountID int64
@@ -147,7 +147,7 @@ func TestMail_BackoffExhaustionAndRetention(t *testing.T) {
 
 func TestMail_EmailLinkBindingAndExpiry(t *testing.T) {
 	ctx, conn, provider := accountsMigration(t)
-	if _, err := provider.UpTo(ctx, 5); err != nil {
+	if _, err := provider.UpTo(ctx, 6); err != nil {
 		t.Fatal(err)
 	}
 	var linkID int64

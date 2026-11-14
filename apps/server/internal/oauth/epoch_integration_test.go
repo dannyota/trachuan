@@ -12,7 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"danny.vn/trachuan/apps/server/internal/store"
+	"danny.vn/trachuan/apps/server/internal/accountflow"
+	"danny.vn/trachuan/apps/server/internal/seal"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -43,7 +44,7 @@ func (tx epochTx) QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
 	return tx.Tx.QueryRow(ctx, sql, args...)
 }
 
-func TestOAuth_BumpEpochRacesIssuers(t *testing.T) {
+func TestOAuth_ResetRacesIssuers(t *testing.T) {
 	for _, kind := range []string{"consent", "code", "refresh"} {
 		t.Run(kind, func(t *testing.T) {
 			var pool *pgxpool.Pool
@@ -74,9 +75,7 @@ func TestOAuth_BumpEpochRacesIssuers(t *testing.T) {
 				t.Fatal(err)
 			}
 			defer func() { _ = bump.Rollback(t.Context()) }()
-			if _, err := store.BumpEpoch(t.Context(), bump, accountID); err != nil {
-				t.Fatal(err)
-			}
+			stagePasswordReset(t, pool, bump, accountID)
 			db := &epochPool{Pool: pool, lock: make(chan struct{})}
 			result := make(chan int, 1)
 			go func() { result <- issue(db) }()
@@ -134,4 +133,31 @@ func requestConsentWithDB(db *epochPool, path string, cookie *http.Cookie) int {
 	w := httptest.NewRecorder()
 	NewConsentHandler(consentBase, db, consentSessionManager()).ServeHTTP(w, consentRequest(path, "POST", cookie, true, formFor(path, "approve")))
 	return w.Code
+}
+
+type stagedResetDB struct{ tx pgx.Tx }
+type stagedResetTx struct{ pgx.Tx }
+
+func (db stagedResetDB) BeginTx(context.Context, pgx.TxOptions) (pgx.Tx, error) {
+	return stagedResetTx{db.tx}, nil
+}
+func (stagedResetTx) Commit(context.Context) error   { return nil }
+func (stagedResetTx) Rollback(context.Context) error { return nil }
+func stagePasswordReset(t *testing.T, pool *pgxpool.Pool, tx pgx.Tx, id int64) {
+	t.Helper()
+	ctx := t.Context()
+	if _, err := pool.Exec(ctx, `INSERT INTO password_credential(account_id,hash) VALUES ($1,'old') ON CONFLICT DO NOTHING`, id); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Exec(ctx, `INSERT INTO email_link(purpose,token_hash,email,account_id,auth_epoch,expires_at) SELECT 'reset',repeat('9',64),email,id,auth_epoch,now()+interval '1 hour' FROM account WHERE id=$1`, id); err != nil {
+		t.Fatal(err)
+	}
+	ring, err := seal.Parse([]byte(strings.Repeat("A", 43)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	service := accountflow.Service{DB: stagedResetDB{tx}, Ring: ring}
+	if got, err := service.CompleteReset(ctx, accountflow.Completion{TokenHash: strings.Repeat("9", 64), Hash: "new"}); err != nil || got != id {
+		t.Fatal("stage reset", err)
+	}
 }

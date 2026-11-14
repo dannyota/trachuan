@@ -18,6 +18,9 @@ type Message struct {
 }
 
 func Render(publicURL, kind string, payload Payload) (Message, error) {
+	if strings.ContainsAny(publicURL+kind+payload.To+payload.Token, "\r\n") {
+		return Message{}, errors.New("invalid mail field")
+	}
 	address, err := accountemail.Parse(payload.To)
 	if err != nil || address != payload.To {
 		return Message{}, errors.New("invalid mail recipient")
