@@ -27,6 +27,10 @@ type fakeStore struct {
 	deleted  bool
 }
 
+func (s *fakeStore) GetPasswordCredential(context.Context, int64) (store.PasswordCredential, error) {
+	return store.PasswordCredential{}, pgx.ErrNoRows
+}
+func (s *fakeStore) HasTOTP(context.Context, int64) (bool, error) { return false, nil }
 func (s *fakeStore) GetAccount(_ context.Context, id int64) (store.Account, error) {
 	if id != s.account.ID {
 		return store.Account{}, pgx.ErrNoRows

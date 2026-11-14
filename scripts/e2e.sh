@@ -134,6 +134,7 @@ export SERVER_PUBLIC_URL="http://localhost:$edge_port"
 export SERVER_QUERY_EMBEDDER_URL="http://127.0.0.1:$embed_port"
 export SERVER_ACCOUNT_KEYS_FILE="$tmp_dir/account_keys"
 export SERVER_MAIL_CAPTURE_DIR="$tmp_dir/mail"
+export SERVER_TOTP_ENROLLMENT=true
 unset SERVER_SMTP_HOST SERVER_SMTP_USERNAME SERVER_SMTP_PASSWORD
 (umask 077; openssl rand -base64 32 | tr '/+' '_-' > "$SERVER_ACCOUNT_KEYS_FILE")
 chmod 600 "$SERVER_ACCOUNT_KEYS_FILE"

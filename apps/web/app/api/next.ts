@@ -25,5 +25,5 @@ export function safeNext(input: string): string {
 }
 
 export function loginUrl(path: string): string {
-  return `/api/v1/auth/google/start?next=${encodeURIComponent(safeNext(path))}`
+  return `/login?next=${encodeURIComponent(safeNext(path))}`
 }

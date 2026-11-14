@@ -23,7 +23,8 @@ function toggleLanguage() {
   const loopback = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname)
   const secure = location.protocol === 'http:' && loopback ? '' : '; Secure'
   document.cookie = `lang=${next}; Path=/; Max-Age=31536000; SameSite=Lax${secure}`
-  location.reload()
+  if (route.path === '/link') language.value = next
+  else location.reload()
 }
 onMounted(() => { document.addEventListener('keydown', onKey); document.addEventListener('click', onOutside) })
 onUnmounted(() => { document.removeEventListener('keydown', onKey); document.removeEventListener('click', onOutside) })

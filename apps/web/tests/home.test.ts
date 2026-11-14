@@ -28,17 +28,17 @@ it('fills a suggestion without submitting and sends signed-in searches through t
   await wrapper.get('form').trigger('submit')
   expect(useSearchDraftStore().draft).toEqual({ query: 'xác thực sinh trắc học khi chuyển tiền', inForceOnly: false })
   expect(navigate).toHaveBeenCalledWith('/vn/search')
-  expect(wrapper.text()).not.toContain('Cần đăng nhập Google')
+  expect(wrapper.text()).not.toContain('Cần đăng nhập để tra cứu.')
 })
 
 it.each(['unknown', 'signed-out'] as const)('sends %s visitors to login without carrying their question', async (status) => {
   useSessionStore().status = status
   const wrapper = mount(HomeHero)
   await wrapper.get('#home-query').setValue('private question')
-  expect(wrapper.text()).toContain('Cần đăng nhập Google để tra cứu.')
+  expect(wrapper.text()).toContain('Cần đăng nhập để tra cứu.')
   await wrapper.get('form').trigger('submit')
   expect(useSearchDraftStore().draft).toBeNull()
-  expect(navigate).toHaveBeenCalledWith('/api/v1/auth/google/start?next=%2Fvn%2Fsearch', { external: true })
+  expect(navigate).toHaveBeenCalledWith('/login?next=%2Fvn%2Fsearch', { external: true })
 })
 
 it('keeps Vietnamese suggestions in the English interface', async () => {

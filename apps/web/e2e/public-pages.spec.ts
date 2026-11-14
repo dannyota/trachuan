@@ -38,6 +38,6 @@ test('login errors use fixed messages and never echo the query', async ({ page }
     const response = await page.goto(`/login?error=${code}`)
     await expect(page.getByText(expected, { exact: false })).toBeVisible()
     if (code === 'attacker-input') expect(await response!.text()).not.toContain(code)
-    await expect(page.getByRole('link', { name: /đăng nhập Google/i })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Tiếp tục với Google', exact: true })).toBeVisible()
   }
 })

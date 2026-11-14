@@ -99,6 +99,7 @@ export function createApi(options: Options) {
     }
     let response = await send(makeRequest(csrfToken))
     if (unsafe) input.signal.throwIfAborted()
+    if (unsafe && accountId !== (session.account?.id ?? null)) return accountChanged()
     if (unsafe && response.status === 403) {
       const error = await response.clone().json().catch(() => null)
       if (error?.error?.code === 'csrf_rejected') {
@@ -112,7 +113,11 @@ export function createApi(options: Options) {
         if (response.status === 403 && (await response.clone().json().catch(() => null))?.error?.code === 'csrf_rejected') throw new ApiError('csrf_rejected', 403)
       }
     }
-    if (response.status === 401 && !input.signal.aborted) await options.onUnauthorized?.()
+    if (unsafe && accountId !== (session.account?.id ?? null)) return accountChanged()
+    if (response.status === 401 && !input.signal.aborted) {
+      const code = (await response.clone().json().catch(() => null))?.error?.code
+      if (code !== 'reauth_failed' && code !== 'factor_failed') await options.onUnauthorized?.()
+    }
     return response
   }
   function createActionClient(action: Action) {

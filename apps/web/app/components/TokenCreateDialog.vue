@@ -2,6 +2,8 @@
 import { onBeforeRouteLeave } from 'vue-router'
 import { nextTick } from 'vue'
 import CopyButton from './CopyButton.vue'
+import ReauthForm from './ReauthForm.vue'
+import { useReauth } from '../composables/useReauth'
 import { wrapDialogFocus } from '../utils/dialog-focus'
 import { accountActions } from '../api/account-actions'
 import type { Action } from '../api/client'
@@ -21,6 +23,7 @@ onMounted(() => {
   window.addEventListener('pageshow', restored)
 })
 const api = useApi({ userAction: true })
+const reauth = useReauth()
 const actions = accountActions(api.forAction(props.action))
 const name = ref('')
 const days = ref(90)
@@ -28,7 +31,7 @@ const token = ref('')
 const error = ref('')
 const busy = ref(false)
 let active = true
-function clear() { active = false; token.value = '' }
+function clear() { active = false; token.value = ''; reauth.cancel() }
 function close() { clear(); dialog.value?.close(); if (opener?.isConnected) opener.focus(); emit('close') }
 function restored(event: PageTransitionEvent) { if (event.persisted) close() }
 onBeforeRouteLeave(clear)
@@ -45,7 +48,7 @@ async function create() {
     const result = await actions.createToken(name.value, days.value)
     if (!active) return
     if (result.data) { token.value = result.data.token; emit('created'); await nextTick(); if (active) copyArea.value?.querySelector('button')?.focus() }
-    else error.value = errorMessage(language.value, result.error?.error.code || 'generic')
+    else if (!result.error || !reauth.requireProof(result.error, props.action, false, create)) error.value = errorMessage(language.value, result.error?.error.code || 'generic')
   } catch { if (active) error.value = errorMessage(language.value, 'generic') }
   finally { busy.value = false }
 }
@@ -53,7 +56,8 @@ async function create() {
 <template>
   <dialog ref="dialog" class="card account-dialog" aria-labelledby="token-dialog-title" @cancel.prevent="close" @keydown="wrapDialogFocus">
     <h2 id="token-dialog-title">{{ messages.createToken }}</h2>
-    <form v-if="!token" @submit.prevent="create">
+    <ReauthForm v-if="reauth.challenge.value" v-bind="reauth.challenge.value" @verified="reauth.verified" @cancel="close" />
+    <form v-else-if="!token" @submit.prevent="create">
       <label>{{ messages.name }} <input v-model="name" class="input" required maxlength="64"></label>
       <label>{{ messages.days }} <input v-model.number="days" class="input" type="number" min="1" max="365" required></label>
       <p v-if="error" class="notice" role="alert" aria-live="assertive">{{ error }}</p>

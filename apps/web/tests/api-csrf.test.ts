@@ -34,3 +34,10 @@ it('navigates on a 401 from a user action', async () => {
   await api.client.GET('/api/v1/me')
   expect(redirected).toBe(true)
 })
+
+it.each(['reauth_failed', 'factor_failed'])('keeps a session for a credential failure %s', async (code) => {
+  let redirected = false
+  const api = createApi({ origin: 'http://localhost', onUnauthorized: () => { redirected = true }, fetch: async () => json({ error: { code, message: code } }, 401) })
+  await api.client.GET('/api/v1/me')
+  expect(redirected).toBe(false)
+})
