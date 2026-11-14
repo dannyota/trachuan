@@ -38,7 +38,7 @@ func TestPrefix_RecordedVBPLDates(t *testing.T) {
 			continue
 		}
 		count++
-		got := prefix(Meta{EffFrom: detail.Data.EffFrom, IssueDate: detail.Data.IssueDate}, &treeNode{}, Recipe1())
+		got := prefix(Meta{EffFrom: detail.Data.EffFrom, IssueDate: detail.Data.IssueDate}, &treeNode{}, Recipe2())
 		if !strings.Contains(got, label+raw[:10]) {
 			t.Errorf("%s: prefix %q", filepath.Base(path), got)
 		}

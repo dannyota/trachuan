@@ -78,6 +78,9 @@ func (l *loader) loadChunks(ctx context.Context) error {
 			return err
 		}
 		for _, o := range coverage.Omissions {
+			if o.Reason == "listing_only" {
+				continue
+			}
 			l.addGap("build", key, "chunk_omission", fmt.Sprintf("%s:%d-%d:%s", o.NodeID, o.Start, o.End, o.Reason))
 		}
 		if len(file.Chunks) == 0 {

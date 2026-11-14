@@ -1,4 +1,4 @@
-# Chunk recipe 1
+# Chunk recipe 2
 
 Proposal for implementation and independent review. This is the baseline from
 the [study](../research/retrieval-hybrid-2026-11.md), adapted to the extracted
@@ -20,14 +20,15 @@ prefixes when the tree is unchanged. Require both artifacts to name the same
 document and the extract input to reference that fetch hash; mismatched lineage
 is an infrastructure error.
 
-Recipe hash components, in order: `chunk`, `vn-article/1`, the canonical recipe
-JSON. JSON fields are `version`, `rough_count`, `body_limit`, `minimum_runes`,
-`traversal`, `parent_lead`, `sharding`, `dedup`, `outside_articles`,
-`prefix_fields`, `prefix_field_limit`, `prefix_number_limit`, `date_normalizer`.
-Values are the algorithms below and the limits in budgets. Serialize a
-fixed-field Go struct without whitespace; never hash map iteration.
-`date_normalizer` records the shared build normalizer's `normalizer_version`
-from [normalization](normalization.md). Hash that version in this recipe; a
+Recipe hash components, in order: `chunk`, `vn-article/2`, the canonical recipe
+JSON. JSON fields are `version` (2), `rough_count`, `body_limit`,
+`minimum_runes`, `traversal`, `parent_lead`, `sharding`, `dedup`,
+`outside_articles`, `prefix_fields`, `prefix_field_limit`,
+`prefix_number_limit`, `date_normalizer`, `listing_only_doc_types`. Values are
+the algorithms below and the limits in budgets. Serialize a fixed-field Go
+struct without whitespace; never hash map iteration. `date_normalizer` records
+the shared build normalizer's `normalizer_version` from
+[normalization](normalization.md). Hash that version in this recipe; a
 normalizer change requires re-chunking and re-embedding affected inputs.
 
 Artifact files: `chunks.json`, `coverage.json`, `MANIFEST.sha256`. JSON uses
@@ -77,10 +78,10 @@ contiguous after omission and deduplication. Build identity is
 and `omissions[]` of `{node_id,start,end,reason,kept_ordinal}`; the last field
 is null except for duplicates. It also records `covered_ranges[]` and
 `whitespace_ranges[]`, each with `{node_id,start,end}` in source coordinates.
-Reasons: `label_only`, `short`, `duplicate`, `structural_heading`. Every
-non-whitespace source interval must be covered or explicitly omitted. Coverage
-is the union of body and lead source intervals; repeating a lead never increases
-coverage. Record containment aliases too.
+Reasons: `label_only`, `short`, `duplicate`, `structural_heading`,
+`listing_only`. Every non-whitespace source interval must be covered or
+explicitly omitted. Coverage is the union of body and lead source intervals;
+repeating a lead never increases coverage. Record containment aliases too.
 
 ## Tree rendering
 
@@ -153,10 +154,28 @@ visited once. Invalid ancestry ends the item as `invalid_source_data` without
 chunks; build preserves the gap rather than accepting a repaired tree.
 
 If the tree is empty, preserve `no_tree`. If a nonempty tree produces no chunk,
-emit `no_chunks`. Every short or duplicate omission appears in the coverage
-report and a summarized `chunk_omission` gap. A done artifact may have gaps;
-`Resolve` recreates them for each run. A failed invariant is not a valid empty
-artifact.
+emit `no_chunks`, except for a [listing-only](#listing-only-documents) document.
+Every short or duplicate omission appears in the coverage report and a
+summarized `chunk_omission` gap. A done artifact may have gaps; `Resolve`
+recreates them for each run. A failed invariant is not a valid empty artifact.
+
+## Listing-only documents
+
+Some document types list other documents instead of stating provisions. Their
+rows match questions by the titles and numbers they repeat and crowd out the
+provisions they name. `listing_only_doc_types` is exactly
+`["Văn bản hệ thống hóa"]`. A document whose doc_type (build stores it unchanged
+from the fetch artifact; the match trims leading and trailing white space, as
+Go's `strings.TrimSpace` does, and folds nothing else) equals an entry byte for
+byte gets no chunks: every non-whitespace source interval is an omission with
+reason `listing_only`, and the coverage report carries one summarized gap
+`listing_only` with the doc_type as detail instead of `no_chunks` or
+`chunk_omission`. The same type padded with white space matches; any other text,
+including a near spelling such as `Văn bản hệ thống hoá`, is chunked normally;
+on 2026-11-14 every workshop row of this type used the listed spelling. The
+document stays a member: it is loaded, readable with its full text, related and
+listed, and only search skips it. Build sets its `content_state` to `no_chunks`;
+the corpus schema does not change.
 
 ## Context prefix
 
@@ -191,3 +210,16 @@ containing children, ambiguous containment, blank/label/short leaves, duplicate
 citations, long line, oversized word, non-article text, empty tree, exact span
 coverage and repeatable ordinals. Lost short duties and duplicate citations are
 visible baseline limitations, not evidence that extraction succeeded fully.
+
+## History
+
+- 2026-11-14: recipe 2 adds listing-only documents. From vn/20261113_3,
+  heading-only trees read `vn:vbpl:hhtquyetdinh_65` (211/QĐ-NHNN, the only
+  `Văn bản hệ thống hóa` in the corpus) from its transcription: 753 provisions
+  and 1,507 chunks of catalogue table rows instead of 3 chunks. Its rows entered
+  the top 8 of six development cases (dev-022, 023, 033, 051, 076, 093) and
+  lowered development MRR@8 from the 0.6616 measured for recipe 3 on
+  vn/20261113_1 to 0.6450 in vn/20261114_2. Recomputed from that run's limit-20
+  lists, removing its hits moves MRR@8 from 0.6332 to 0.6447 against 0.6473 for
+  the recipe 3 measurement on the same scale. No evaluation fixture cites a
+  document of that type.

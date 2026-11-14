@@ -64,3 +64,5 @@ One line per item: date, area, finding, source.
 - 2026-11-14, search latency and payload: measured per statement in docs/design/retrieval-performance.md; implement its changes in the order there once the note is accepted.
 - 2026-11-14, web, every page logs a console 401 from `GET /api/v1/me` for a signed-out visitor; probe the session without an error response (for example a 204 when signed out) or skip the call when no session cookie can exist.
 - 2026-11-14, auth, owner decision: after release add username and password sign-in with TOTP and email sign-up, as in aboutme; needs an ADR before any work.
+- 2026-11-14, corpus, `document.doc_type` is stored exactly as the source gives it, so some values carry leading white space and newlines ("\n   Quyết định" and others, mostly chinhphu); a build-wide doc_type normalization would change stored values, filters and facets and needs its own change and evaluated run.
+- 2026-11-14, server, log each engine's `LexicalSources` counts (collections served by sparse postings, by SQL, reused) periodically and when a release retires, so production shows the postings share; today only the load outcome is logged.

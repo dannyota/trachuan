@@ -11,7 +11,7 @@ import (
 
 func TestSplit_SmallArticleOneChunk(t *testing.T) {
 	nodes := []Node{{NodeID: "a", Kind: "dieu", Path: "dieu-1", Text: "A substantive article with enough text to retain."}}
-	file, _, err := Split(nodes, Meta{Key: "vn:vbpl:1"}, Recipe1())
+	file, _, err := Split(nodes, Meta{Key: "vn:vbpl:1"}, Recipe2())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -21,7 +21,7 @@ func TestSplit_SmallArticleOneChunk(t *testing.T) {
 }
 
 func TestSplit_EmptyTreeNoTreeGap(t *testing.T) {
-	file, coverage, err := Split(nil, Meta{Key: "vn:vbpl:1"}, Recipe1())
+	file, coverage, err := Split(nil, Meta{Key: "vn:vbpl:1"}, Recipe2())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -38,7 +38,7 @@ func TestSplit_EmptyTreeNoTreeGap(t *testing.T) {
 
 func TestSplit_InvalidParentIsSourceData(t *testing.T) {
 	parent := "missing"
-	_, _, err := Split([]Node{{NodeID: "a", ParentNodeID: &parent, Kind: "dieu", Path: "dieu-1", Text: "Text"}}, Meta{Key: "vn:vbpl:1"}, Recipe1())
+	_, _, err := Split([]Node{{NodeID: "a", ParentNodeID: &parent, Kind: "dieu", Path: "dieu-1", Text: "Text"}}, Meta{Key: "vn:vbpl:1"}, Recipe2())
 	if !errors.Is(err, stage.ErrSourceData) {
 		t.Fatalf("got error %v, want source data error", err)
 	}
@@ -46,11 +46,11 @@ func TestSplit_InvalidParentIsSourceData(t *testing.T) {
 
 func TestSplit_OrdinalsRepeatable(t *testing.T) {
 	nodes := []Node{{NodeID: "a", Kind: "dieu", Path: "dieu-1", Text: strings.Repeat("A substantive sentence. ", 100)}}
-	first, firstCoverage, err := Split(nodes, Meta{Key: "vn:vbpl:1"}, Recipe1())
+	first, firstCoverage, err := Split(nodes, Meta{Key: "vn:vbpl:1"}, Recipe2())
 	if err != nil {
 		t.Fatal(err)
 	}
-	second, secondCoverage, err := Split(nodes, Meta{Key: "vn:vbpl:1"}, Recipe1())
+	second, secondCoverage, err := Split(nodes, Meta{Key: "vn:vbpl:1"}, Recipe2())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -69,7 +69,7 @@ func TestSplit_ShortAndLabelLeavesOmitted(t *testing.T) {
 		{NodeID: "a", Kind: "dieu", Path: "dieu-1", Label: "Điều 1", Text: "Điều 1."},
 		{NodeID: "b", Kind: "dieu", Path: "dieu-2", Text: "Short duty"},
 	}
-	file, coverage, err := Split(nodes, Meta{Key: "vn:vbpl:1"}, Recipe1())
+	file, coverage, err := Split(nodes, Meta{Key: "vn:vbpl:1"}, Recipe2())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -91,7 +91,7 @@ func TestSplit_DuplicateKeepsFirstAndRecordsOrdinal(t *testing.T) {
 		{NodeID: "a", Kind: "dieu", Path: "dieu-1", Text: body},
 		{NodeID: "b", Kind: "dieu", Path: "dieu-2", Ordinal: 1, Text: body},
 	}
-	file, coverage, err := Split(nodes, Meta{Key: "vn:vbpl:1"}, Recipe1())
+	file, coverage, err := Split(nodes, Meta{Key: "vn:vbpl:1"}, Recipe2())
 	if err != nil {
 		t.Fatal(err)
 	}

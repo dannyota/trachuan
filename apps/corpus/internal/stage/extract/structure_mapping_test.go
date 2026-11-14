@@ -15,7 +15,6 @@ func TestExtract_AcceptedChildSpansMapToTheirParagraphs(t *testing.T) {
 		"b) " + strings.Repeat("Trách nhiệm bảo vệ tài nguyên. ", 40) + "Kết thúc.",
 		"2. " + strings.Repeat("Quyền và nghĩa vụ thực hiện. ", 35) + "Thi hành.",
 	}
-	// Earlier quoted paragraphs share a prefix with the true clause and point.
 	body := "<p>" + strings.Repeat("Lời mở đầu ", 40) + "</p><p>" + strings.Join(paragraphs, "</p><p>") + "</p>"
 	rows, gaps, record := parseTranscription([]byte(body), "1_content.html", "fixture")
 	if len(gaps) != 0 {
@@ -35,14 +34,13 @@ func TestExtract_AcceptedChildSpansMapToTheirParagraphs(t *testing.T) {
 			articleID = p.NodeID
 		}
 		if index, ok := expected[p.Path]; ok {
-			// Derive the source offset from paragraph positions, not substring search.
 			offsets[p.NodeID] = utf8.RuneCountInString(strings.Join(paragraphs[:index], "\n")) + 1
 		}
 	}
 	if articleID == "" || len(offsets) != 4 {
 		t.Fatalf("article=%s child offsets=%v", articleID, offsets)
 	}
-	file, coverage, err := chunk.Split(nodes, chunk.Meta{Key: "vn:vbpl:1"}, chunk.Recipe1())
+	file, coverage, err := chunk.Split(nodes, chunk.Meta{Key: "vn:vbpl:1"}, chunk.Recipe2())
 	if err != nil {
 		t.Fatal(err)
 	}

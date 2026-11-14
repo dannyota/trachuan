@@ -241,8 +241,7 @@ func TestBuild_FrozenSchema2RecipeRefused(t *testing.T) {
 	}
 	defer pool.Close()
 	snapshot := stage.Snapshot{SourceList: []byte(`{"country":"vn","status_codes":{}}`)}
-	// The old recipe includes schema version 2 in its hashed fields.
-	old := buildRecipe{SchemaVersion: 2, SchemaSHA256: "3aa0edadd92150db2ddbb4eb17ad47e55e2e91db3c872a8488a9b6488843aff6", ChunkRecipeHash: chunk.Recipe1().Hash(), DocumentRecipeHash: embedding.DocumentRecipe1().Hash(), QueryRecipeHash: embedding.QueryRecipe1().Hash(), LexicalRecipeHash: lexical.Recipe1().Hash(), RetrievalPolicyHash: retrieval.Recipe2().Hash(), NormalizerVersion: normalizer.Version, NumberNormalizationVersion: retrieval.NumberNormalizationVersion, StatusCodesSHA256: fmt.Sprintf("%x", sha256.Sum256([]byte("{}"))), CalibrationPolicy: "provisional-old-product/1"}
+	old := buildRecipe{SchemaVersion: 2, SchemaSHA256: "3aa0edadd92150db2ddbb4eb17ad47e55e2e91db3c872a8488a9b6488843aff6", ChunkRecipeHash: chunk.Recipe2().Hash(), DocumentRecipeHash: embedding.DocumentRecipe1().Hash(), QueryRecipeHash: embedding.QueryRecipe1().Hash(), LexicalRecipeHash: lexical.Recipe1().Hash(), RetrievalPolicyHash: retrieval.Recipe2().Hash(), NormalizerVersion: normalizer.Version, NumberNormalizationVersion: retrieval.NumberNormalizationVersion, StatusCodesSHA256: fmt.Sprintf("%x", sha256.Sum256([]byte("{}"))), CalibrationPolicy: "provisional-old-product/1"}
 	snapshot.Recipes = map[string]string{"build": old.hash()}
 	data, err := json.Marshal(snapshot)
 	if err != nil {

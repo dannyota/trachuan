@@ -144,7 +144,7 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 		return stage.Output{}, fmt.Errorf("analyze corpus: %w", err)
 	}
 	timings.observe("analyze", phaseStart)
-	chunkJSON, _ := json.Marshal(chunk.Recipe1())
+	chunkJSON, _ := json.Marshal(chunk.Recipe2())
 	doc, query := embedding.DocumentRecipe1(), embedding.QueryRecipe1()
 	release := retrieval.Release{Country: run.Country, Rel: run.Rel, SchemaVersion: corpusdb.SchemaVersion, TaxonomyVersion: s.cfg.Taxonomy.version, DenseRecipe: retrieval.DenseRecipe{Version: 1, Model: doc.Model, Dimensions: doc.Dimensions, Document: doc, DocumentHash: doc.Hash(), Query: query, QueryHash: query.Hash()}, ChunkRecipe: chunkJSON, LexicalRecipe: lexical.Recipe1(), RetrievalRecipe: retrieval.Recipe3(), LexicalStats: counts.LexicalStats, SourceManifestHash: inv.SourceManifestHash(), BuildInputHash: item.InputHash, BuildRecipeHash: recipeHash, EvaluationSummary: initialEvaluationSummary(), BuiltAt: s.cfg.Now().UTC().Truncate(time.Microsecond)}
 	phaseStart = time.Now()

@@ -13,7 +13,7 @@ func TestSplit_LeadWithNoRoomForWordKeepsParentOwner(t *testing.T) {
 		{NodeID: parent, Kind: "dieu", Path: "dieu-1", Text: lead},
 		{NodeID: "child", ParentNodeID: &parent, Kind: "khoan", Path: "dieu-1/khoan-1", Text: word},
 	}
-	file, _, err := Split(nodes, Meta{Key: "vn:vbpl:1"}, Recipe1())
+	file, _, err := Split(nodes, Meta{Key: "vn:vbpl:1"}, Recipe2())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -39,7 +39,7 @@ func TestSplit_NestedLeadsKeepTheirOwners(t *testing.T) {
 				{NodeID: "point-1", ParentNodeID: &clause, Kind: "diem", Path: "dieu-1/khoan-1/diem-a", Text: strings.Repeat("p", 20)},
 				{NodeID: "point-2", ParentNodeID: &clause, Kind: "diem", Path: "dieu-1/khoan-1/diem-b", Ordinal: 1, Text: strings.Repeat("q", 20)},
 			}
-			recipe := Recipe1()
+			recipe := Recipe2()
 			recipe.BodyLimit, recipe.MinimumRunes = 30, 1
 			file, _, err := Split(nodes, Meta{Key: "vn:vbpl:1"}, recipe)
 			if err != nil {

@@ -14,23 +14,18 @@ import (
 	"danny.vn/trachuan/apps/corpus/internal/store"
 )
 
-// Stage produces provision-owned chunks.
 type Stage struct{}
 
-// New constructs a chunk stage.
 func New() *Stage { return &Stage{} }
 
-// Name returns the stage name.
 func (*Stage) Name() string { return "chunk" }
 
-// Recipe returns the chunk recipe hash.
-func (*Stage) Recipe(stage.Snapshot) string { return Recipe1().Hash() }
+func (*Stage) Recipe(stage.Snapshot) string { return Recipe2().Hash() }
 
 func inputHash(key, fetch, extract string) string {
 	return stage.RecipeHash("chunk-input", "1", key, fetch, extract)
 }
 
-// Plan selects completed extract and fetch artifacts.
 func (*Stage) Plan(ctx context.Context, env stage.Env, run stage.Run) ([]stage.Item, error) {
 	q := store.New(env.DB)
 	active, err := membership.FinalActiveKeys(ctx, q, run)
@@ -72,7 +67,6 @@ func decode(path string, value any) error {
 	return nil
 }
 
-// Process verifies inputs and publishes a chunk artifact.
 func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item stage.Item) (stage.Output, error) {
 	in, err := store.New(env.DB).GetChunkInput(ctx, store.GetChunkInputParams{RunID: run.ID, ItemKey: item.Key})
 	if err != nil {
@@ -128,7 +122,7 @@ func chunkInputs(fetchDir, extractDir, key string) (File, Coverage, error) {
 	if err = decode(filepath.Join(extractDir, "provisions.json"), &nodes); err != nil {
 		return File{}, Coverage{}, err
 	}
-	return Split(nodes, Meta{Key: key, Number: doc.Number, Title: doc.Title, EffFrom: doc.EffFrom, IssueDate: doc.IssueDate}, Recipe1())
+	return Split(nodes, Meta{Key: key, Number: doc.Number, Title: doc.Title, DocType: doc.DocType, EffFrom: doc.EffFrom, IssueDate: doc.IssueDate}, Recipe2())
 }
 
 func checkExtractLineage(dir, fetchHash, inputHash string) error {

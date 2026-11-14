@@ -35,7 +35,7 @@ func TestChunkStage_RowsAndResolveGaps(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	file, coverage, err := Split([]Node{{NodeID: "a", Kind: "dieu", Path: "dieu-1", Text: "A substantive provision with sufficient text."}}, Meta{Key: "vn:vbpl:1"}, Recipe1())
+	file, coverage, err := Split([]Node{{NodeID: "a", Kind: "dieu", Path: "dieu-1", Text: "A substantive provision with sufficient text."}}, Meta{Key: "vn:vbpl:1"}, Recipe2())
 	if err != nil {
 		t.Fatal(err)
 	}
