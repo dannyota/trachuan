@@ -19,6 +19,10 @@ func (e *Engine) collect(ctx context.Context, p Prepared, depths Depths, notYet 
 }
 
 func (e *Engine) collectWithLexical(ctx context.Context, p Prepared, depths Depths, notYet bool, source *LexicalArms) (Arms, error) {
+	return e.collectWithCandidates(ctx, p, depths, notYet, source, nil)
+}
+
+func (e *Engine) collectWithCandidates(ctx context.Context, p Prepared, depths Depths, notYet bool, source *LexicalArms, cache CandidateCache) (Arms, error) {
 	if !p.Validation.Accepted {
 		return Arms{Release: e.release.Rel, RecipeHash: e.release.RetrievalRecipe.Hash(), QueryRecipeHash: e.queryRecipe.Hash(), Validation: p.Validation}, nil
 	}
@@ -30,7 +34,6 @@ func (e *Engine) collectWithLexical(ctx context.Context, p Prepared, depths Dept
 		return Arms{}, errors.New("encode lexical query failed")
 	}
 	date := e.searchDate(p.Request)
-	historical := p.Request.AsOf != nil
 	ctx, cancel := context.WithTimeout(ctx, e.deadline())
 	defer cancel()
 	tx, err := e.db.BeginTx(ctx, pgx.TxOptions{AccessMode: pgx.ReadOnly})
@@ -50,87 +53,12 @@ func (e *Engine) collectWithLexical(ctx context.Context, p Prepared, depths Dept
 	result.AsOf = p.Request.AsOf
 	result.IncludeNonCurrent = p.Request.InForceOnly != nil && !*p.Request.InForceOnly
 	groups := []*ArmGroup{&result.Primary, &result.NonCurrent}
-	flags := []bool{true, false}
-	refs := append([]string{}, p.Validation.References...)
 	vec := denseVector(p.Vector.Values)
-	sv := sparseVector(sparse, e.release.LexicalRecipe.Dimensions)
-	postings := e.postingsFor(sparse)
-	exact := p.Request.Mode == "exact"
-	var pool int
-	if exact {
-		err = exactSettings(ctx, tx)
-	} else {
-		pool, err = annSettings(ctx, tx, depths.Dense, e.release.RetrievalRecipe.ANN)
-	}
+	candidates, complete, err := e.candidates(ctx, tx, p, vec, sparse, depths, parsedDate, notYet, source, cache)
 	if err != nil {
 		return Arms{}, err
 	}
-	if !exact {
-		if err = annQuery(ctx, tx, groups, depths.Dense, validitySQL(annSQL, notYet), vec, date, historical, refs, pool); err != nil {
-			return Arms{}, err
-		}
-	}
-	for i, g := range groups {
-		args := []any{vec, date, historical, flags[i], depths.Dense, refs}
-		if exact {
-			g.Dense, err = denseQuery(ctx, tx, validitySQL(exactSQL, notYet), args...)
-		} else {
-			g.Dense = g.RawANN
-		}
-		if err != nil {
-			return Arms{}, err
-		}
-		if source != nil {
-			candidates := source.Primary
-			if i == 1 {
-				candidates = source.NonCurrent
-			}
-			g.Lexical = lexicalPrefix(candidates, depths.Lexical)
-		} else if postings != nil {
-			continue
-		} else if notYet {
-			g.Lexical, err = lexicalQueryWithValidity(ctx, tx, true, sv, date, historical, flags[i], depths.Lexical, refs)
-		} else {
-			g.Lexical, err = lexicalQuery(ctx, tx, sv, date, historical, flags[i], depths.Lexical, refs)
-		}
-		if err != nil {
-			return Arms{}, err
-		}
-	}
-	if !exact {
-		need := false
-		for _, g := range groups {
-			if len(g.RawANN) < depths.Dense {
-				need = true
-			}
-		}
-		if need {
-			if err = exactSettings(ctx, tx); err != nil {
-				return Arms{}, err
-			}
-			for i, g := range groups {
-				if len(g.RawANN) < depths.Dense {
-					g.Fallback = true
-					g.Dense, err = denseQuery(ctx, tx, validitySQL(exactSQL, notYet), vec, date, historical, flags[i], depths.Dense, refs)
-					if err != nil {
-						return Arms{}, err
-					}
-				}
-			}
-		}
-	}
-	if err = indexSettings(ctx, tx); err != nil {
-		return Arms{}, err
-	}
-	if source == nil && postings != nil {
-		lexical, scoreErr := postings.lexical(ctx, tx, sparse, sv, parsedDate, historical, notYet, refs, depths.Lexical)
-		if scoreErr != nil {
-			return Arms{}, scoreErr
-		}
-		for i, g := range groups {
-			g.Lexical = lexical[i]
-		}
-	}
+	result.Primary, result.NonCurrent = candidates[0], candidates[1]
 	for _, g := range groups {
 		if err = hydrate(ctx, tx, g, vec); err != nil {
 			return Arms{}, err
@@ -164,12 +92,8 @@ func (e *Engine) collectWithLexical(ctx context.Context, p Prepared, depths Dept
 	if err = tx.Commit(ctx); err != nil {
 		return Arms{}, databaseFailure("commit retrieval failed", err)
 	}
-	if source != nil {
-		e.sparse.reused.Add(1)
-	} else if postings != nil {
-		e.sparse.postings.Add(1)
-	} else {
-		e.sparse.sql.Add(1)
+	if complete != nil {
+		complete()
 	}
 	return result, nil
 }

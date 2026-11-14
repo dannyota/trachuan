@@ -97,13 +97,14 @@ without it (measured 2026-11-14). The owner accepted the embedder row (ADR 0009,
 Server caches, each a byte-capped least-recently-used map
 ([caching](caching.md)):
 
-| Cache            | Byte cap | Maximum age        |
-| ---------------- | -------- | ------------------ |
-| Query vectors    | 256 MB   | 24 hours           |
-| Search responses | 1,024 MB | 1 hour             |
-| Read items       | 512 MB   | release life, 24 h |
-| Document entries | 64 MB    | release life       |
-| Topic node pages | 8 MB     | release life       |
+| Cache             | Byte cap | Maximum age        |
+| ----------------- | -------- | ------------------ |
+| Query vectors     | 256 MB   | 24 hours           |
+| Search responses  | 992 MB   | 1 hour             |
+| Search candidates | 32 MB    | 1 hour             |
+| Read items        | 512 MB   | release life, 24 h |
+| Document entries  | 64 MB    | release life       |
+| Topic node pages  | 8 MB     | release life       |
 
 A value above one sixteenth of its cache's byte cap is not cached.
 

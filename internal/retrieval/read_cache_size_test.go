@@ -64,7 +64,7 @@ func TestCache_RequestHandlesOverrideEngineDefaults(t *testing.T) {
 	key := documentKey(e.release.Rel, "vn:1")
 	defaults.Put(e.release.Rel, key, metadataJSON(DocumentEntry{Title: "default"}))
 	scoped.Put(e.release.Rel, key, metadataJSON(DocumentEntry{Title: "scoped"}))
-	ctx := WithCaches(t.Context(), scoped, scoped)
+	ctx := WithCaches(t.Context(), scoped, scoped, nil)
 	docs, err := e.Documents(ctx, []string{"vn:1"})
 	if err != nil || docs["vn:1"].Title != "scoped" {
 		t.Fatal("document handles were not request scoped", err)

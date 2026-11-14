@@ -27,7 +27,7 @@ func (cfg Config) readRequest(ctx context.Context, country string, req retrieval
 	defer lease.Done()
 	if cfg.Caches != nil {
 		scope := cfg.Caches.Scope(lease.Release, lease.Generation)
-		ctx = retrieval.WithCaches(ctx, scope.Documents, scope.Sequences)
+		ctx = retrieval.WithCaches(ctx, scope.Documents, scope.Sequences, nil)
 	}
 	req.Release = lease.Release
 	return lease.Engine.Read(ctx, req)

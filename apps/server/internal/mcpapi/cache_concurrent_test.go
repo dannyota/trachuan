@@ -105,10 +105,11 @@ func TestSearchCache_LeaseReleaseAndAllCachesPurged(t *testing.T) {
 	}
 	c.Scope(e.release, 1).Documents.Put(e.release, [32]byte{}, []byte("metadata"))
 	c.Scope(e.release, 1).Sequences.Put(e.release, [32]byte{}, []byte("sequence"))
+	c.Scope(e.release, 1).Candidates.Put(e.release, [32]byte{}, []byte("candidates"))
 	e.release = "20990102"
 	c.ActivateRelease(e.release, 2)
 	e.generation = 2
-	if c.Search.Stats().Bytes != 0 || c.Documents.Stats().Bytes != 0 || c.Sequences.Stats().Bytes != 0 {
+	if c.Search.Stats().Bytes != 0 || c.Documents.Stats().Bytes != 0 || c.Sequences.Stats().Bytes != 0 || c.Candidates.Stats().Bytes != 0 {
 		t.Fatal("activation retained corpus data")
 	}
 	miss, hit := run(), run()
@@ -124,8 +125,8 @@ func TestCache_AllHandlesExpireAcrossRollback(t *testing.T) {
 	c.ActivateRelease("B", 2)
 	c.ActivateRelease("A", 3)
 	fresh := c.Scope("A", 3)
-	oldHandles := []cache.Handle[[]byte]{old.Search, old.Documents, old.Sequences}
-	freshHandles := []cache.Handle[[]byte]{fresh.Search, fresh.Documents, fresh.Sequences}
+	oldHandles := []cache.Handle[[]byte]{old.Search, old.Documents, old.Sequences, old.Candidates}
+	freshHandles := []cache.Handle[[]byte]{fresh.Search, fresh.Documents, fresh.Sequences, fresh.Candidates}
 	for i, h := range freshHandles {
 		h.Put("A", [32]byte{}, []byte("fresh"))
 		if _, ok := oldHandles[i].Get("A", [32]byte{}); ok {

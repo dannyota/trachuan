@@ -34,7 +34,7 @@ func (cfg Config) search(ctx context.Context, in searchInput) (retrieval.SearchR
 	defer lease.Done()
 	if cfg.Caches != nil {
 		scope := cfg.Caches.Scope(lease.Release, lease.Generation)
-		ctx = retrieval.WithCaches(ctx, scope.Documents, scope.Sequences)
+		ctx = retrieval.WithCaches(ctx, scope.Documents, scope.Sequences, scope.Candidates)
 	}
 	req.Instant = cfg.requestInstant(ctx)
 	return searchResolved(ctx, lease.Engine, lease.Release, req, detail, validation)

@@ -1,4 +1,3 @@
-// Package retrieval implements the shared corpus retrieval engine.
 package retrieval
 
 import (
@@ -8,31 +7,24 @@ import (
 	"danny.vn/trachuan/internal/embedding"
 )
 
-// Embedder is the query embedding runtime.
 type Embedder interface {
 	Recipe(context.Context) (embedding.Recipe, error)
 	Embed(context.Context, string) (embedding.Vector, error)
 }
 
-// Profile selects serving or evaluation deadlines.
 type Profile string
 
-// Mode selects exact or approximate dense retrieval.
 type Mode string
 
-// ArmMode selects arms used by later ranking.
 type ArmMode string
 
-// Date is a civil calendar date.
 type Date struct {
 	Year  int
 	Month time.Month
 	Day   int
 }
 
-// Request describes a retrieval request.
 type Request struct {
-	// Instant fixes current-law eligibility for this request. Zero uses the engine clock.
 	Instant     time.Time `json:"-"`
 	Query       string
 	Limit       int
@@ -47,35 +39,31 @@ type Request struct {
 	Cursor      string
 }
 
-// Prepared holds a validated request and its single query vector.
 type Prepared struct {
 	Request    Request
 	Validation Validation
 	Vector     *embedding.Vector
 }
 
-// Options supplies the clock and execution profile.
 type Options struct {
-	Now       func() time.Time
-	Profile   Profile
-	Documents DocumentCache
-	Sequences SequenceCache
+	Now        func() time.Time
+	Profile    Profile
+	Documents  DocumentCache
+	Sequences  SequenceCache
+	Candidates CandidateCache
 }
 
-// Depths specifies the candidate count per arm.
 type Depths struct {
 	Dense   int
 	Lexical int
 }
 
-// Identity identifies a provision in a release.
 type Identity struct {
 	Country     string `json:"country"`
 	DocumentKey string `json:"document_key"`
 	Anchor      string `json:"anchor"`
 }
 
-// Provision holds source text and ancestry for evidence shaping.
 type Provision struct {
 	ID       int64
 	ParentID *int64
@@ -90,7 +78,6 @@ type Provision struct {
 	Locator  *string
 }
 
-// Document holds source metadata for validity and evidence.
 type Document struct {
 	FetchSHA256      string
 	Number           string
@@ -108,7 +95,6 @@ type Document struct {
 	DerivationGaps   []string
 }
 
-// Candidate is an ordered candidate and its hydrated source metadata.
 type Candidate struct {
 	ChunkID         int64
 	Ordinal         int
@@ -131,7 +117,6 @@ type Candidate struct {
 	WarningsOmitted int
 }
 
-// SourceRelation associates a source edge with its stable artifact identity.
 type SourceRelation struct {
 	Value          Relation
 	ArtifactSHA256 string
@@ -140,7 +125,6 @@ type SourceRelation struct {
 	TargetInHit    bool
 }
 
-// ArmGroup holds candidates for one document eligibility group.
 type ArmGroup struct {
 	Dense    []Candidate
 	Lexical  []Candidate
@@ -149,7 +133,6 @@ type ArmGroup struct {
 	Members  []Candidate
 }
 
-// Arms is the reusable candidate cache for a prepared query.
 type Arms struct {
 	Release           string
 	RecipeHash        string
