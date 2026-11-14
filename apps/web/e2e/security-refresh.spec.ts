@@ -40,15 +40,16 @@ async function setup(page: Page, kind: string, failList = false) {
 }
 async function mutate(page: Page, kind: string) {
   if (kind === 'password') {
-    const password = page.getByRole('region', { name: 'Change password', exact: true })
+    const password = page.getByRole('region', { name: 'Password: Set', exact: true })
+    await password.getByRole('button', { name: 'Change password' }).click()
     await password.getByLabel('Current password', { exact: true }).fill('synthetic current password')
     await password.getByLabel('New password', { exact: true }).fill('synthetic replacement password')
     await password.getByRole('button', { name: 'Save password' }).click()
   } else {
-    const authenticator = page.getByRole('region', { name: 'Two-step verification', exact: true })
-    if (kind === 'confirm') await authenticator.getByRole('button', { name: 'Set up two-step verification', exact: true }).click()
+    const authenticator = page.getByRole('region', { name: kind === 'confirm' ? 'Two-step verification: Off' : 'Two-step verification: On', exact: true })
+    await authenticator.getByRole('button', { name: kind === 'confirm' ? 'Enable' : kind === 'remove' ? 'Disable' : 'Generate new recovery codes', exact: true }).click()
     await authenticator.getByLabel('Authenticator code', { exact: true }).fill('123456')
-    await authenticator.getByRole('button', { name: kind === 'confirm' ? 'Confirm authenticator' : kind === 'remove' ? 'Remove authenticator' : 'Replace recovery codes', exact: true }).click()
+    await authenticator.getByRole('button', { name: kind === 'confirm' ? 'Confirm authenticator' : kind === 'remove' ? 'Disable' : 'Generate new recovery codes', exact: true }).click()
   }
 }
 async function refreshed(page: Page) {
@@ -76,7 +77,7 @@ test('a mailed password set opens the refreshed account lists', async ({ page })
   await page.getByLabel('New password', { exact: true }).fill('synthetic replacement password')
   await page.getByRole('button', { name: 'Save password' }).click()
   await expect(page).toHaveURL(/\/account$/)
-  await expect(page.getByRole('region', { name: 'Change password', exact: true })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Password: Set', exact: true })).toBeVisible()
   await expect.poll(() => ['sessions', 'tokens', 'grants'].every(path => reads.has(path))).toBe(true)
   await refreshed(page)
 })

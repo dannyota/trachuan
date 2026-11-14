@@ -39,3 +39,20 @@ export function warningsByTarget(units: Unit[]): Map<string, NonNullable<Unit['w
   }
   return groups
 }
+
+export function displayHeading(label?: string, title?: string): string {
+  if (!title) return label || ''
+  if (!label) return title
+  return `${label}${/[\p{P}\p{S}]$/u.test(label) ? ' ' : '. '}${title}`
+}
+
+export function headingIndex(headings: HTMLElement[], edge: number): number {
+  let low = 0
+  let high = headings.length
+  while (low < high) {
+    const middle = Math.floor((low + high) / 2)
+    if (headings[middle]!.getBoundingClientRect().top <= edge) low = middle + 1
+    else high = middle
+  }
+  return low - 1
+}

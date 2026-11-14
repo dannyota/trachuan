@@ -7,6 +7,7 @@ import { createApi } from '../app/api/client'
 import { useSessionStore } from '../app/stores/session'
 import AccountAuthenticator from '../app/components/AccountAuthenticator.vue'
 import AccountPassword from '../app/components/AccountPassword.vue'
+import AccountSecurity from '../app/components/AccountSecurity.vue'
 import AuthenticatorQr from '../app/components/AuthenticatorQr.vue'
 import RecoveryCodes from '../app/components/RecoveryCodes.vue'
 
@@ -36,9 +37,9 @@ it('renders a QR as SVG paths without embedding the URI', () => {
 it('keeps removal and replacement available with enrollment disabled', () => {
   setup(() => json({}), true, false)
   const wrapper = mount(AccountAuthenticator)
-  expect(wrapper.text()).not.toContain('Set up two-step verification')
-  expect(wrapper.text()).toContain('Remove authenticator')
-  expect(wrapper.text()).toContain('Replace recovery codes')
+  expect(wrapper.text()).not.toContain('Enable')
+  expect(wrapper.text()).toContain('Disable')
+  expect(wrapper.text()).toContain('Generate new recovery codes')
   wrapper.unmount()
 })
 it('clears setup and recovery codes on pagehide and refreshes CSRF after confirmation', async () => {
@@ -50,7 +51,7 @@ it('clears setup and recovery codes on pagehide and refreshes CSRF after confirm
   const wrapper = mount(AccountAuthenticator)
   await wrapper.get('button').trigger('click')
   await flushPromises()
-  expect(wrapper.text()).toContain('synthetic-secret')
+  expect(wrapper.text()).toContain('synt heti c-se cret')
   await wrapper.get('input').setValue('123456')
   await wrapper.get('form').trigger('submit')
   await flushPromises()
@@ -72,7 +73,7 @@ it('ignores a setup response after leaving the page', async () => {
   window.dispatchEvent(new Event('pagehide'))
   resolve(json({ secret: 'synthetic-secret', otpauth_uri: 'otpauth://totp/synthetic' }))
   await flushPromises()
-  expect(wrapper.text()).not.toContain('synthetic-secret')
+  expect(wrapper.text()).not.toContain('synt heti c-se cret')
   wrapper.unmount()
 })
 it('retries a password change with fresh primary proof and a requested factor', async () => {
@@ -83,6 +84,7 @@ it('retries a password change with fresh primary proof and a requested factor', 
     return bodies.length === 1 ? json({ error: { code: 'reauth_required' }, factor: true }, 403) : json({})
   })
   const wrapper = mount(AccountPassword)
+  await wrapper.get('button').trigger('click')
   await wrapper.get('input[autocomplete=current-password]').setValue('synthetic current password')
   await wrapper.get('input[autocomplete=new-password]').setValue('synthetic new password')
   await wrapper.get('form').trigger('submit')
@@ -128,13 +130,60 @@ it('rejects a pre-restore setup response and permits a fresh setup on the restor
     window.dispatchEvent(restored)
     finish(json({ secret: 'stale-secret', otpauth_uri: 'otpauth://totp/synthetic' }))
     await flushPromises()
-    expect(wrapper.text()).not.toContain('stale-secret')
+    expect(wrapper.text()).not.toContain('stal e-se cret')
     expect(signals[0]!.aborted).toBe(true)
     await wrapper.get('button').trigger('click')
     await flushPromises()
     expect(signals).toHaveLength(2)
     expect(signals[1]!.aborted).toBe(false)
-    expect(wrapper.text()).toContain('fresh-secret')
+    expect(wrapper.text()).toContain('fres h-se cret')
     expect(reload).not.toHaveBeenCalled()
   } finally { wrapper.unmount() }
+})
+it('shows the setup key in groups of four', async () => {
+  setup(() => json({ secret: 'ABCDEFGHIJKLMNOP', otpauth_uri: 'otpauth://totp/synthetic?secret=ABCDEFGHIJKLMNOP' }))
+  const wrapper = mount(AccountAuthenticator)
+  await wrapper.get('button').trigger('click')
+  await flushPromises()
+  expect(wrapper.get('.auth-secret').text()).toContain('ABCD EFGH IJKL MNOP')
+  wrapper.unmount()
+})
+it('shows password and two-step states from the account', () => {
+  setup(() => json({}), true)
+  const wrapper = mount(AccountSecurity)
+  expect(wrapper.text()).toContain('Password: Set')
+  expect(wrapper.text()).toContain('Two-step verification: On')
+  wrapper.unmount()
+})
+it('shows unset and disabled states and copies the ungrouped setup key', async () => {
+  const session = setup(() => json({ secret: 'ABCDEFGHIJKLMNOP', otpauth_uri: 'otpauth://totp/synthetic?secret=ABCDEFGHIJKLMNOP' }))
+  session.account!.password = false
+  const writeText = vi.fn().mockResolvedValue(undefined)
+  vi.stubGlobal('navigator', { clipboard: { writeText } })
+  const wrapper = mount(AccountSecurity)
+  expect(wrapper.text()).toContain('Password: Not set')
+  expect(wrapper.text()).toContain('Two-step verification: Off')
+  await wrapper.findComponent(AccountAuthenticator).get('button').trigger('click')
+  await flushPromises()
+  await wrapper.findAll('button').find(button => button.text() === 'Copy key')!.trigger('click')
+  expect(writeText).toHaveBeenCalledWith('ABCDEFGHIJKLMNOP')
+  wrapper.unmount()
+})
+it.each([
+  ['Generate new recovery codes', 'POST', '/api/v1/me/recovery-codes'],
+  ['Disable', 'DELETE', '/api/v1/me/totp'],
+])('submits the chosen %s operation from its form', async (action, method, path) => {
+  const calls: string[] = []
+  setup(request => {
+    calls.push(`${request.method} ${new URL(request.url).pathname}`)
+    return json(path.endsWith('recovery-codes') ? { recovery_codes: ['ABCDEFGHIJKLMNOPQRSTUVWXYZ'] } : {})
+  }, true)
+  const wrapper = mount(AccountAuthenticator)
+  await wrapper.findAll('button').find(button => button.text() === action)!.trigger('click')
+  await wrapper.get('input').setValue('123456')
+  expect(wrapper.get('form button:not([type=button])').text()).toBe(action)
+  await wrapper.get('form').trigger('submit')
+  await flushPromises()
+  expect(calls).toEqual([`${method} ${path}`])
+  wrapper.unmount()
 })

@@ -84,8 +84,8 @@ test('registers through mail, signs in with a password and resets through mail',
 test('enrolls TOTP and signs in with TOTP and a recovery code', async ({ page }) => {
   const email = freshEmail()
   await register(page, email)
-  await page.getByRole('button', { name: 'Set up two-step verification', exact: true }).click()
-  const secret = (await page.locator('.auth-secret').textContent())!.trim()
+  await page.getByRole('button', { name: 'Enable', exact: true }).click()
+  const secret = (await page.locator('.auth-secret').textContent())!.replace(/\s/g, '')
   await page.getByLabel('Authenticator code', { exact: true }).fill(totp(secret, -1))
   await page.getByRole('button', { name: 'Confirm authenticator', exact: true }).click()
   const recovery = (await page.locator('.recovery-codes').textContent())!.trim().split('\n')[0]!

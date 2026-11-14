@@ -119,7 +119,7 @@ async function tokenCreated() { try { await loadTokens() } catch { showError() }
       <article v-for="item in orderedSessions" :key="item.id" class="account-row">
         <div class="account-row-label"><strong>{{ item.current ? labels.thisBrowser : labels.otherSession }}</strong><span v-if="item.current" class="account-current">{{ labels.current }}</span></div>
         <p class="account-meta">{{ labels.signedIn }} {{ date(item.created_at) }} · {{ labels.lastSeen }} {{ date(item.last_seen_at) }}</p>
-        <button class="btn btn-secondary" type="button" :disabled="busy" @click="revokeSession(item)">{{ item.current ? labels.signOut : labels.revoke }}</button>
+        <button v-if="!item.current" class="btn btn-secondary" type="button" :disabled="busy" @click="revokeSession(item)">{{ labels.revoke }}</button>
       </article>
     </section>
     <section class="card account-card"><div class="account-card-head"><div><h2>{{ labels.tokens }}</h2><p>{{ labels.tokensDescription }}</p></div><button class="btn btn-primary" type="button" :disabled="busy" @click="openToken">{{ labels.createToken }}</button></div>

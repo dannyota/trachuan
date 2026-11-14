@@ -2,10 +2,12 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { components } from '@trachuan/schema/gen/openapi'
 import ReaderRail from '../../../components/ReaderRail.vue'
-import { joinedUnits, warningsByTarget } from '../../../utils/reader-units'
+import { wrapDialogFocus } from '../../../utils/dialog-focus'
+import { headingIndex, joinedUnits, warningsByTarget } from '../../../utils/reader-units'
 import ReaderHeader from '../../../components/ReaderHeader.vue'
 import ReaderBack from '../../../components/ReaderBack.vue'
 import ReaderToc from '../../../components/ReaderToc.vue'
+import ReaderCompact from '../../../components/ReaderCompact.vue'
 import ReaderUnit from '../../../components/ReaderUnit.vue'
 import { readerMessages } from '../../../../i18n/reader'
 import { errorMessage, messagesFor, type Language } from '../../../../i18n'
@@ -24,6 +26,11 @@ const key = computed(() => String(route.params.key))
 const release = ref('')
 const hash = ref('')
 const documentEntry = ref<Document>()
+useHead(() => {
+  const document = documentEntry.value
+  const name = document?.number === 'Không số' ? document.title?.slice(0, 60) : document?.number
+  return name ? { title: `${name} · Tra Chuẩn` } : {}
+})
 const gaps = ref<Gap[]>([])
 const nodes = ref<components['schemas']['NodeIndex']>({})
 const rawUnits = ref<Unit[]>([])
@@ -55,6 +62,48 @@ const pages = ref(0)
 const sentinel = ref<HTMLElement>()
 const content = ref<HTMLElement>()
 const visibleAnchor = ref('')
+const visibleArticle = ref('')
+const position = { anchor: visibleAnchor, article: visibleArticle }
+const readerRoot = ref<HTMLElement>()
+const compactBar = ref<InstanceType<typeof ReaderCompact>>()
+const tocDialog = ref<HTMLDialogElement>()
+const topMarker = ref<HTMLElement>()
+const showTop = ref(false)
+let topObserver: IntersectionObserver | undefined
+let sizeObserver: ResizeObserver | undefined
+let readerShell: HTMLElement | null = null
+let pendingFocus = ''
+let stickyHeight = 0
+let headings: HTMLElement[] = []
+let headingFrame: number | undefined
+function measureSticky() {
+  const header = readerShell?.querySelector<HTMLElement>('.site-header')
+  if (!readerShell || !header) return
+  const headerHeight = header.getBoundingClientRect().height
+  const bar = compactBar.value?.$el as HTMLElement | undefined
+  const barHeight = bar?.getBoundingClientRect().height || 0
+  const stackHeight = headerHeight + barHeight
+  if (stackHeight !== stickyHeight) {
+    stickyHeight = stackHeight
+    if (unitObserver) observeUnits()
+  }
+  readerShell.style.setProperty('--reader-header-height', `${headerHeight}px`)
+  readerShell.style.setProperty('--reader-stack-height', `${stackHeight}px`)
+}
+function openToc() { tocDialog.value?.showModal() }
+function closeToc() { tocDialog.value?.close(); compactBar.value?.focus() }
+async function selectToc(event: MouseEvent) {
+  const link = (event.target as HTMLElement).closest<HTMLAnchorElement>('a[data-toc-anchor]')
+  if (!link) return
+  event.preventDefault()
+  const anchor = link.dataset.tocAnchor || ''
+  pendingFocus = anchor
+  closeToc()
+  await router.push({ hash: `#${anchor}` })
+  await nextTick()
+  await seekAnchor()
+}
+function backToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }) }
 let observer: IntersectionObserver | undefined
 let unitObserver: IntersectionObserver | undefined
 let seeking = false
@@ -149,7 +198,7 @@ async function seekAnchor(initial = false) {
   const seekGeneration = generation
   const signal = controller.signal
   if (!anchor) {
-    if (initial) scrollReader(seekGeneration, signal)
+    if (initial) { scrollReader(seekGeneration, signal); syncHeading() }
     seeking = false
     void fillVisible(seekGeneration, signal)
     return
@@ -169,27 +218,55 @@ async function seekAnchor(initial = false) {
     await seekAnchor()
     return
   }
-  if (target) scrollReader(seekGeneration, signal, target)
-  else scrollReader(seekGeneration, signal)
+  if (target) {
+    scrollReader(seekGeneration, signal, target)
+    syncHeading()
+    if (pendingFocus === anchor) target.focus({ preventScroll: true })
+  } else { scrollReader(seekGeneration, signal); syncHeading() }
+  pendingFocus = ''
   seeking = false
   void fillVisible(seekGeneration, signal)
 }
+function setHeading(index: number) {
+  visibleAnchor.value = headings[index]?.dataset.spyAnchor || ''
+  let article = index
+  while (article >= 0 && !headings[article]?.dataset.spyAnchor?.startsWith('dieu-')) article--
+  visibleArticle.value = headings[article]?.dataset.spyAnchor || ''
+}
+function syncHeading() {
+  setHeading(headingIndex(headings, stickyHeight + 1))
+}
+function scheduleHeading() {
+  if (headingFrame !== undefined) return
+  headingFrame = requestAnimationFrame(() => {
+    headingFrame = undefined
+    if (!disposed) syncHeading()
+  })
+}
 function observeUnits() {
   unitObserver?.disconnect()
-  const top = Math.floor(window.innerHeight * 0.1)
-  const bottom = Math.floor(window.innerHeight * 0.75)
-  unitObserver = new IntersectionObserver(entries => {
-    const visible = entries.find(entry => entry.isIntersecting)
-    if (visible) visibleAnchor.value = (visible.target as HTMLElement).dataset.anchor || ''
-  }, { rootMargin: `-${top}px 0px -${bottom}px 0px` })
-  content.value?.querySelectorAll('[data-anchor]').forEach(element => unitObserver?.observe(element))
+  unitObserver = new IntersectionObserver(scheduleHeading, { rootMargin: `-${stickyHeight + 1}px 0px 0px 0px`, threshold: [0, 1] })
+  content.value?.querySelectorAll('[data-spy], .reader-unit').forEach(element => unitObserver?.observe(element))
 }
+
 onMounted(async () => {
   mounted = true
+  readerShell = readerRoot.value?.closest<HTMLElement>('.site-layout') || null
+  const header = readerShell?.querySelector<HTMLElement>('.site-header')
+  if (header) {
+    measureSticky()
+    if (typeof ResizeObserver !== 'undefined') {
+      sizeObserver = new ResizeObserver(measureSticky)
+      sizeObserver.observe(header)
+      if (compactBar.value?.$el) sizeObserver.observe(compactBar.value.$el as HTMLElement)
+    }
+  }
   const initialHash = route.hash
   if (typeof IntersectionObserver !== 'undefined') {
     observer = new IntersectionObserver(entries => { if (entries.some(entry => entry.isIntersecting)) void fillVisible(generation, controller.signal) }, { rootMargin: '600px' })
     observeUnits()
+    topObserver = new IntersectionObserver(entries => { for (const entry of entries) showTop.value = !entry.isIntersecting && entry.boundingClientRect.top < 0 }, { rootMargin: '0px' })
+    if (topMarker.value) topObserver.observe(topMarker.value)
     window.addEventListener('resize', observeUnits)
   }
   const version = generation
@@ -204,6 +281,11 @@ onBeforeUnmount(() => {
   controller.abort()
   observer?.disconnect()
   unitObserver?.disconnect()
+  if (headingFrame !== undefined) cancelAnimationFrame(headingFrame)
+  topObserver?.disconnect()
+  sizeObserver?.disconnect()
+  readerShell?.style.removeProperty('--reader-header-height')
+  readerShell?.style.removeProperty('--reader-stack-height')
   window.removeEventListener('resize', observeUnits)
 })
 watch(sentinel, (element, old) => {
@@ -219,6 +301,9 @@ watch([key, () => route.query.release], async () => {
   release.value = ''
   hash.value = ''
   documentEntry.value = undefined
+  visibleAnchor.value = ''
+  visibleArticle.value = ''
+  pendingFocus = ''
   gaps.value = []
   nodes.value = {}
   rawUnits.value = []
@@ -234,22 +319,25 @@ watch([key, () => route.query.release], async () => {
   if (active(version, signal)) await seekAnchor(route.hash === initialHash)
 })
 watch(() => route.hash, () => { void seekAnchor() })
-watch(textUnits, async () => {
+watch(displayUnits, async () => {
   await nextTick()
-  unitObserver?.disconnect()
-  content.value?.querySelectorAll('[data-anchor]').forEach(element => unitObserver?.observe(element))
+  headings = Array.from(content.value?.querySelectorAll<HTMLElement>('[data-spy]') || [])
+  syncHeading()
+  if (unitObserver) observeUnits()
 })
 </script>
 
 <template>
-  <div>
+  <div ref="readerRoot">
     <div class="reader-back-mobile container"><ReaderBack /></div>
     <ReaderHeader v-if="documentEntry" :document="documentEntry" :release="release" />
     <div v-else-if="loading && !pages" class="reader-identity reader-skeleton" role="status"><div class="container"><span class="visually-hidden">{{ readerMessagesText.loading }}</span><span class="reader-skeleton-line reader-skeleton-short" /><span class="reader-skeleton-line reader-skeleton-title" /><span class="reader-skeleton-line" /></div></div>
+    <div ref="topMarker" class="reader-top-marker" aria-hidden="true" />
+    <ReaderCompact ref="compactBar" :position="position" :units="outline" @open="openToc" />
+    <dialog ref="tocDialog" class="reader-sheet" :aria-label="readerMessagesText.contents" @cancel.prevent="closeToc" @keydown="wrapDialogFocus" @click="selectToc"><button class="btn btn-secondary" type="button" @click="closeToc">{{ readerMessagesText.close }}</button><ReaderToc :units="outline" :position="position" /></dialog>
     <div class="container reader">
-      <div class="reader-toc-desktop"><h2>{{ readerMessagesText.contents }}</h2><ReaderToc :units="outline" :current="route.hash.slice(1) || visibleAnchor" /></div>
+      <div class="reader-toc-desktop"><h2>{{ readerMessagesText.contents }}</h2><ReaderToc :units="outline" :position="position" /></div>
       <section ref="content" class="reader-content" aria-live="polite">
-        <details class="reader-toc-mobile"><summary>{{ readerMessagesText.contents }}</summary><ReaderToc :units="outline" :current="route.hash.slice(1) || visibleAnchor" /></details>
         <div v-if="loading && !pages" class="reader-skeleton" aria-hidden="true"><span class="reader-skeleton-line reader-skeleton-short" /><span class="reader-skeleton-line" /><span class="reader-skeleton-line" /><span class="reader-skeleton-line" /></div>
         <template v-for="(group, index) in displayUnits" :key="index">
           <div v-if="group.target" class="reader-unit-target"><ReaderUnit v-for="(unit, i) in group.units" :key="i" :unit="unit" :document="documentEntry" :release="release" :target="i === 0" :warnings="warnings.get(`${key}#${unit.anchor}`) || []" /></div>
@@ -260,5 +348,6 @@ watch(textUnits, async () => {
       </section>
       <ReaderRail v-if="release" :document="documentEntry" :nodes="nodes" :gaps="gaps" :release="release" :hash="hash" :units="textUnits" :document-key="key" :warnings="warnings" />
     </div>
+    <button v-if="showTop" class="btn btn-secondary reader-top" type="button" @click="backToTop">{{ readerMessagesText.backToTop }}</button>
   </div>
 </template>

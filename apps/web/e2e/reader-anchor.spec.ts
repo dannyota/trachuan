@@ -1,9 +1,11 @@
 import { expect, test } from '@playwright/test'
+import { clientAddress } from './client-address'
 
 const account = { id: 1, email: 'test@example.invalid', created_at: '2026-01-01T00:00:00Z', csrf_token: 'token' }
 const anchor = 'dieu-"]-[x'
 
-test('finds a quoted anchor on a later page and leaves unknown anchors at the top', async ({ page }) => {
+test('finds a quoted anchor on a later page and leaves unknown anchors at the top', async ({ page }, info) => {
+  await page.setExtraHTTPHeaders({ 'X-Forwarded-For': clientAddress(info) })
   await page.route('**/api/v1/me', route => route.fulfill({ json: account }))
   await page.route('**/api/v1/documents/*', route => {
     const next = new URL(route.request().url()).searchParams.get('next')
@@ -18,6 +20,7 @@ test('finds a quoted anchor on a later page and leaves unknown anchors at the to
   const target = page.getByText('Target provision')
   await expect(target).toBeVisible()
   await expect.poll(() => target.evaluate(el => Math.abs(el.getBoundingClientRect().top))).toBeLessThan(150)
+  await expect.poll(() => target.evaluate(el => Math.abs(el.closest('article')!.getBoundingClientRect().top - document.querySelector('.site-header')!.getBoundingClientRect().bottom))).toBeLessThan(2)
   await navigate('/vn/documents/vn:vbpl:1#unknown')
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0)
 })
