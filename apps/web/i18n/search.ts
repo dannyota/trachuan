@@ -1,6 +1,7 @@
 import type { Language } from './index'
 
 export const en = {
+  noTopics: 'No matching topics.', unavailable: 'Search is unavailable right now.', filteredBy: 'Filtered by: {filters}.', clearFilters: 'Clear filters', dateHint: 'mm/dd/yyyy',
   filters: 'Filters', validity: 'Validity', showAll: 'Show all', showLess: 'Show less', close: 'Close filters',
   results: 'results', weak: 'Weak evidence', weakDetail: 'Results are shown, but the match is weak. Check carefully before citing.',
   noEvidence: 'No evidence found', noEvidenceDetail: 'Try different words or search by document number.',
@@ -12,6 +13,7 @@ export const en = {
   read: 'Read in document', copy: 'Copy citation', warningMore: 'and {n} more warnings', matchedWords: 'Matched words',
 }
 export const vi: Record<keyof typeof en, string> = {
+  noTopics: 'Không có chủ đề phù hợp.', unavailable: 'Không thể tra cứu lúc này.', filteredBy: 'Đang lọc theo: {filters}.', clearFilters: 'Bỏ bộ lọc', dateHint: 'dd/mm/yyyy',
   filters: 'Bộ lọc', validity: 'Hiệu lực', showAll: 'Xem tất cả', showLess: 'Thu gọn', close: 'Đóng bộ lọc',
   results: 'kết quả', weak: 'Bằng chứng yếu', weakDetail: 'Kết quả vẫn hiện, nhưng độ khớp thấp. Kiểm tra kỹ trước khi dẫn chiếu.',
   noEvidence: 'Không tìm thấy bằng chứng', noEvidenceDetail: 'Thử diễn đạt khác, hoặc tìm theo số hiệu văn bản.',

@@ -23,7 +23,7 @@ export class ApiError extends Error {
 export function createApi(options: Options) {
   const session: Session = options.session || { account: null, csrfToken: null, status: 'unknown' }
   const transport = options.fetch || globalThis.fetch
-  async function send(request: Request): Promise<Response> {
+  async function send(request: Request, sessionCheck = false): Promise<Response> {
     const headers = new Headers(request.headers)
     headers.delete('cookie')
     if (options.cookie && !options.publicRoute) headers.set('cookie', options.cookie)
@@ -37,7 +37,7 @@ export function createApi(options: Options) {
       }
     } catch {
       if (request.signal.aborted) throw new DOMException('Aborted', 'AbortError')
-      options.onUnavailable?.()
+      if (sessionCheck) options.onUnavailable?.()
       throw new ApiError('unavailable', 503)
     }
     if (!options.publicRoute && options.onSetCookie) {
@@ -51,7 +51,7 @@ export function createApi(options: Options) {
       return
     }
     signal?.throwIfAborted()
-    const response = await send(new Request(new URL('/api/v1/me', options.origin), { signal }))
+    const response = await send(new Request(new URL('/api/v1/me', options.origin), { signal }), true)
     signal?.throwIfAborted()
     if (response.status === 204 || response.status === 401) {
       session.account = null

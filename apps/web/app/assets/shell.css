@@ -25,3 +25,7 @@
   .site-nav, .header-actions { align-items: stretch; flex-direction: column; }
   .footer-source { margin-left: 0; }
 }
+
+.skip-link { position: absolute; left: 16px; top: -100px; z-index: 100; padding: 8px; background: var(--color-surface); color: var(--color-ink); }
+.skip-link:focus { top: 8px; }
+.footer-inner a { display: inline-flex; align-items: center; min-height: 24px; padding-block: 4px; }

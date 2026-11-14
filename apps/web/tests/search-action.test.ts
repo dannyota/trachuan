@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, expect, it, vi } from 'vitest'
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import Search from '../app/pages/vn/search.vue'
 import { createApi } from '../app/api/client'
 import { createPinia, setActivePinia } from 'pinia'
@@ -19,10 +19,12 @@ function setup(fetch: typeof globalThis.fetch, route: { query: Record<string, st
   vi.stubGlobal('ref', ref)
   vi.stubGlobal('onBeforeUnmount', onBeforeUnmount)
   vi.stubGlobal('useRoute', () => route)
+  vi.stubGlobal('useRouter', () => ({ replace: vi.fn() }))
+  vi.stubGlobal('nextTick', nextTick)
   vi.stubGlobal('onMounted', onMounted)
   vi.stubGlobal('useApi', () => api)
   setActivePinia(createPinia())
-  const wrapper = mount(Search, { global: { stubs: { NuxtLayout: { template: '<div><slot name="header" /><slot /></div>' }, SearchResults: { props: ['result'], template: '<div class="result-stub">{{ result.hits?.length }}</div>' }, SearchNodePicker: true } } })
+  const wrapper = mount(Search, { global: { stubs: { NuxtLayout: { template: '<div><slot name="header" /><slot /></div>' }, SearchResults: { props: ['result'], emits: ['clearFilters'], template: `<div class="result-stub search-results"><h1 tabindex="-1">{{ result.hits?.length }}</h1><button @click="$emit('clearFilters')">Clear filters</button></div>` }, SearchNodePicker: true } } })
   return { wrapper, session }
 }
 async function submit(wrapper: ReturnType<typeof mount>) {
@@ -97,7 +99,7 @@ it('appends cursor pages and stops at the end', async () => {
   await submit(wrapper)
   await more(wrapper)
   expect(calls[1]).toMatchObject({ cursor: 'cursor-a', release: '20261111_1', limit: 20 })
-  expect(wrapper.get('.result-stub').text()).toBe('2')
+  expect(wrapper.get('.result-stub h1').text()).toBe('2')
   expect(wrapper.findAll('button').some(button => button.text() === 'Show more results')).toBe(false)
   wrapper.unmount()
 })
@@ -169,6 +171,7 @@ it('limits each facet selection to ten values', async () => {
   vi.stubGlobal('onBeforeUnmount', onBeforeUnmount)
   vi.stubGlobal('onMounted', onMounted)
   vi.stubGlobal('useRoute', () => ({ query: {} }))
+  vi.stubGlobal('useRouter', () => ({ replace: vi.fn() }))
   vi.stubGlobal('useApi', () => api)
   setActivePinia(createPinia())
   const wrapper = mount(Search, { global: { stubs: { NuxtLayout: { template: '<div><slot name="header" /><slot /></div>' }, SearchResults: true, SearchNodePicker: true } } })
@@ -241,4 +244,60 @@ it('submits on Enter but not Shift+Enter or during text composition', async () =
   expect(calls).toHaveLength(1)
   expect(calls[0]?.query).toBe('fixture question')
   wrapper.unmount()
+})
+
+
+it('retries the failed cursor request and appends its result', async () => {
+  const bodies: Record<string, unknown>[] = []
+  const { wrapper } = setup(async input => {
+    bodies.push(await (input as Request).json())
+    if (bodies.length === 2) return json({}, 503)
+    return json(bodies.length === 1 ? page : { release: page.release, abstain: false, hits: [{ doc: 'vn:vbpl:2' }] })
+  })
+  document.body.appendChild(wrapper.element)
+  await submit(wrapper)
+  await more(wrapper)
+  await wrapper.get('[role="alert"] button').trigger('click')
+  await flushPromises()
+  expect(document.activeElement).toBe(wrapper.get('.result-stub h1').element)
+  expect(bodies[2]).toEqual(bodies[1])
+  expect(wrapper.get('.result-stub').text()).toContain('2')
+  wrapper.unmount()
+})
+
+it('clears filters using the submitted query when the field is empty', async () => {
+  const bodies: Record<string, unknown>[] = []
+  const { wrapper } = setup(async input => { bodies.push(await (input as Request).json()); return json({ release: page.release, abstain: true, hits: [] }) })
+  document.body.appendChild(wrapper.element)
+  await submit(wrapper)
+  await wrapper.get('textarea').setValue('')
+  await wrapper.get('.result-stub button').trigger('click')
+  await flushPromises()
+  expect(document.activeElement).toBe(wrapper.get('.result-stub h1').element)
+  expect(bodies).toHaveLength(2)
+  expect(bodies[1]).toMatchObject({ query: 'fixture query', in_force_only: false })
+  expect(bodies[1]).not.toHaveProperty('nodes')
+  wrapper.unmount()
+})
+
+it('focuses the error heading when a retry fails again', async () => {
+  const { wrapper } = setup(async () => json({}, 503))
+  document.body.appendChild(wrapper.element)
+  await submit(wrapper)
+  await wrapper.get('[role="alert"] button').trigger('click')
+  await flushPromises()
+  expect(document.activeElement).toBe(wrapper.get('[role="alert"] h1').element)
+  wrapper.unmount()
+})
+
+it('replaces disallowed search query parameters through the router', async () => {
+  const replace = vi.fn()
+  const { wrapper } = setup(async () => json(page))
+  wrapper.unmount()
+  vi.stubGlobal('useRoute', () => ({ query: { node: '1', q: 'private' }, hash: '' }))
+  vi.stubGlobal('useRouter', () => ({ replace }))
+  const mounted = mount(Search, { global: { stubs: { NuxtLayout: { template: '<div><slot name="header" /><slot /></div>' }, SearchResults: true, SearchNodePicker: true } } })
+  await flushPromises()
+  expect(replace).toHaveBeenCalledWith(expect.objectContaining({ query: { node: '1' } }))
+  mounted.unmount()
 })

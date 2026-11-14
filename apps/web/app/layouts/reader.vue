@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { messagesFor, type Language } from '../../i18n'
+import { messagesFor, shellMessages, type Language } from '../../i18n'
 import { useSessionStore } from '../stores/session'
 import ReaderBack from '../components/ReaderBack.vue'
 
@@ -36,8 +36,9 @@ useHead(() => {
 
 <template>
   <div class="site-layout">
+    <a class="skip-link" href="#main">{{ shellMessages(language).skip }}</a>
     <SiteHeader compact><ReaderBack class="reader-back-header" /></SiteHeader>
-    <main class="site-main reader-main"><slot /></main>
+    <main id="main" tabindex="-1" class="site-main reader-main"><slot /></main>
     <SiteFooter />
   </div>
 </template>

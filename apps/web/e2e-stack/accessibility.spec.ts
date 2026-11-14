@@ -15,7 +15,7 @@ async function keyboard(page: Page) {
     })) expected.push(control)
   }
   expect(expected.length).toBeGreaterThan(0)
-  await page.locator('body').click({ position: { x: 1, y: 1 } })
+  await page.evaluate(() => { document.body.tabIndex = -1; document.body.focus(); document.body.removeAttribute('tabindex') })
   let previous = await page.evaluateHandle(() => document.activeElement)
   for (const control of expected) {
     let changed = false

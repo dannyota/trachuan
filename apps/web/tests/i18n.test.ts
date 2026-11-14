@@ -18,3 +18,12 @@ it('describes both supported sign-in methods in the privacy copy', () => {
   expect(messagesFor('en').legalIdentity).toContain('password')
   expect(messagesFor('vi').legalIdentity).toContain('mật khẩu')
 })
+
+it('provides the search state and accessibility copy in both languages', async () => {
+  const { searchMessages } = await import('../i18n/search')
+  const { shellMessages } = await import('../i18n/shell')
+  expect(searchMessages('vi').noTopics).toBe('Không có chủ đề phù hợp.')
+  expect(searchMessages('en').unavailable).toBe('Search is unavailable right now.')
+  expect(shellMessages('vi').skip).toBe('Bỏ qua đến nội dung')
+  expect(shellMessages('en').skip).toBe('Skip to content')
+})

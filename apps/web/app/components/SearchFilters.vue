@@ -24,7 +24,7 @@ function toggle(list: string[], value: string, group: 'docTypes' | 'issuers') {
     <h2>{{ labels.filters }}</h2>
     <fieldset><legend>{{ labels.validity }}</legend>
       <label><input type="checkbox" :checked="inForce" @change="emit('update:inForce', ($event.target as HTMLInputElement).checked)"> {{ messages.searchInForce }}</label>
-      <label>{{ messages.searchDate }} <input class="input" type="date" :value="asOf" @input="emit('update:asOf', ($event.target as HTMLInputElement).value)"></label>
+      <label>{{ messages.searchDate }} <span>{{ labels.dateHint }}</span> <input class="input" type="date" :value="asOf" @input="emit('update:asOf', ($event.target as HTMLInputElement).value)"></label>
     </fieldset>
     <p v-if="failed" role="status">{{ messages.filtersUnavailable }} <button type="button" @click="emit('retry')">{{ messages.retry }}</button></p>
     <fieldset v-for="group in ['docTypes', 'issuers'] as const" :key="group">

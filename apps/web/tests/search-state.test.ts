@@ -6,7 +6,7 @@ it('keeps search fields in local component state and prevents form navigation', 
   expect(page).toMatch(/@submit\.prevent/)
   expect(page).toMatch(/autocomplete="off"/)
   expect(page).not.toMatch(/useState[^\n]*(query|asOf|inForce)/i)
-  expect(page).not.toMatch(/(?:localStorage|sessionStorage|history\.|v-html)/)
+  expect(page).not.toMatch(/(?:localStorage|sessionStorage|v-html)/)
 })
 
 it('serves only the form on signed-in SSR', async () => {
