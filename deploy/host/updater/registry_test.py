@@ -5,7 +5,7 @@ import tempfile
 import unittest
 
 from updater import deploy_registry as r
-from updater.deploy_io import canonical
+from updater.deploy_io import canonical, CommandError
 from updater.deploy_verify import policy
 
 
@@ -32,6 +32,9 @@ class RegistryTest(unittest.TestCase):
         if 'blob' in args:
             digest = args[-1].split('@sha256:')[1]
             data = next(data for data in self.blobs.values() if hashlib.sha256(data).hexdigest() == digest)
+            if args[args.index('--output') + 1] == '-':
+                self.assertEqual(kwargs['stdout_limit'], len(data))
+                return data
             Path(args[args.index('--output') + 1]).write_bytes(data)
             return b''
         raise AssertionError(args)
@@ -45,6 +48,20 @@ class RegistryTest(unittest.TestCase):
 
     def test_newest_rollback_tag_is_numeric_not_lexical(self):
         self.assertEqual(r.Registry(self.policy, self.command).latest_rollback(), '10')
+
+    def test_missing_rollback_repository_is_empty_but_other_registry_errors_fail(self):
+        def missing(*args, **kwargs):
+            raise CommandError('repository absent', reason='not_found')
+        self.assertIsNone(r.Registry(self.policy, missing).latest_rollback())
+        def denied(*args, **kwargs):
+            raise CommandError('registry failed')
+        with self.assertRaises(CommandError):
+            r.Registry(self.policy, denied).latest_rollback()
+
+    def test_blob_fetch_uses_bounded_stdout_before_publishing_file(self):
+        r.Registry(self.policy, self.command).fetch(self.policy['release_repository'], 'production', self.directory, 'release')
+        blobs = [args for args in self.calls if 'blob' in args]
+        self.assertTrue(all(args[args.index('--output') + 1] == '-' for args in blobs))
 
     def test_wrong_artifact_layers_and_unbounded_size_rejected_before_blob_fetch(self):
         for mutation in ('title', 'size', 'type', 'digest', 'duplicate'):

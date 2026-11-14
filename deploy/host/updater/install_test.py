@@ -16,12 +16,14 @@ class ToolInstallTest(unittest.TestCase):
         self.assertTrue(helper.is_file())
         with tempfile.TemporaryDirectory() as directory:
             work = Path(directory)
-            source = work / 'source'
+            source = work / 'source/updater'
             shutil.copytree(HOST / 'updater', source)
             target = work / 'libexec'
             subprocess.run(['bash', str(helper), str(source), str(target)], check=True)
             previous = (target / 'updater').resolve()
             self.assertTrue((target / 'updater').is_symlink())
+            self.assertEqual((previous / 'fixtures/manifest.json').read_bytes(),
+                             (source / 'fixtures/manifest.json').read_bytes())
             before = (previous / 'deploy_run.py').read_bytes()
             (source / 'deploy_run.py').write_bytes(before + b'\n')
             commands = work / 'commands'

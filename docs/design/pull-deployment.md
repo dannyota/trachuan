@@ -205,6 +205,11 @@ target joins the failed hashes and `deploy_failed` is recorded; a higher
 sequence is still accepted. A fetch or verification failure changes nothing on
 the host.
 
+The updater atomically writes `/srv/trachuan/state/deploy-hold` (root 0644) on
+recovery start or failure, keeps it present for a `stopped` journal and stops
+Caddy again on each run, and clears the Caddy startup gate only after loopback
+readiness immediately before starting Caddy, restoring it on any later failure.
+
 A signed rollback authorization is applied when its `current` equals the active
 hash, its `target` is retained, it was accepted under the
 [acceptance rule](#acceptance) and is not consumed, and the target's auth schema
@@ -247,6 +252,10 @@ Unit tests with recorded fixtures cover each rejection: a dispatch build from
 `main`, an unprotected or non-release ref, a wrong commit, a wrong or missing
 image digest, an unlisted image, an older sequence, sequence reuse, a replayed
 or consumed rollback, a bundle hash mismatch, and lost state; and the no-op for
-a seen manifest. On the host in mode `verify`, the owner's proof script feeds a
-dispatch-build manifest, a wrong digest, a replayed rollback and an older
-sequence, and each is rejected in `deploy.log` without a change.
+a seen manifest. On the host in mode `verify`, the owner's proof script takes an
+image reference attested by an Images dispatch from `main` and requires its
+rejection at the attestation identity check, verifies the v0.1.1 server
+attestation against that manifest's web digest and requires a subject mismatch,
+and rejects a replayed rollback and an older sequence against isolated state
+copies; each rejection records its stage in `deploy.log` without a host or
+deployment state change.

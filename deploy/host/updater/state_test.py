@@ -54,6 +54,8 @@ class StateTest(unittest.TestCase):
             with self.subTest(changes=changes, schema=schema), self.assertRaises(ValueError):
                 self.state.authorize('e' * 64, dict(auth, **changes), schema)
             self.assertEqual(self.state.data, baseline)
+        self.state.data['journal'] = dict(target='a' * 64, previous='c' * 64, baseline=7,
+            restart_postgres=False, status='started', step='started', authorization='e' * 64)
         self.state.authorize('e' * 64, auth, 7)
         reloaded = s.State(self.path)
         self.assertIn('e' * 64, reloaded.data['consumed'])
@@ -74,6 +76,8 @@ class StateTest(unittest.TestCase):
         self.state.activate('c' * 64, 7)
         self.state.accept('rollback', 'd' * 64, 1)
         auth = {'current': 'c' * 64, 'target': 'a' * 64, 'sequence': 2}
+        self.state.data['journal'] = dict(target='a' * 64, previous='c' * 64, baseline=7,
+            restart_postgres=False, status='started', step='started', authorization='e' * 64)
         self.state.authorize('e' * 64, auth, 7)
         self.state.activate('a' * 64, 7, authorization='e' * 64)
         self.assertEqual(s.State(self.path).data['accepted']['rollback']['1']['status'], 'failed')

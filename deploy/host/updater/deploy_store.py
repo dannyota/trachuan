@@ -20,6 +20,7 @@ class Paths:
         self.user_units = self.root / 'home/trachuan/.config/systemd/user'
         self.postgres_unit = self.quadlet / 'trachuan-postgres.container'
         self.result = self.root / 'srv/trachuan/state/deploy/result.json'
+        self.hold = self.root / 'srv/trachuan/state/deploy-hold'
         self.log = self.root / 'var/log/trachuan/deploy.log'
         self.lock = self.root / 'run/trachuan-deploy.lock'
         self.backup_lock = self.root / 'srv/trachuan/state/backup/backup.lock'

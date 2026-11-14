@@ -197,6 +197,67 @@ class RunTest(fixture.ActivationFixture, unittest.TestCase):
         self.assertEqual(self.app.run(), 0)
         self.assertEqual(State(self.state.path).data['active'], self.new.hash)
 
+    def test_unconfirmed_backup_marker_skips_run_and_bootstrap_without_host_changes(self):
+        marker = self.paths.backup_lock.with_name('active-job')
+        marker.write_bytes(b'synthetic unconfirmed backup')
+        before = self.state.path.read_bytes()
+        for action, expected in ((self.app.run, 0), (lambda: self.app.bootstrap(self.old.hash), 1)):
+            self.calls.clear()
+            self.registry.reset_mock()
+            self.assertEqual(action(), expected)
+            self.assertEqual(self.state.path.read_bytes(), before)
+            self.assertEqual(json.loads(self.paths.result.read_bytes())['status'], 'skipped')
+            self.registry.fetch.assert_not_called()
+            self.registry.find.assert_not_called()
+            self.assertEqual(self.calls, [])
+
+    def test_crash_when_rollback_consumption_is_saved_also_has_activation_journal(self):
+        self.paths.mode.write_text('activate\n')
+        self.assertEqual(self.app.run(), 0)
+        authorization = self.rollback_artifact(self.new.hash, self.old.hash)
+        save = State.save
+        def crash(state):
+            save(state)
+            if authorization in state.data['consumed']:
+                raise Crash()
+        with mock.patch.object(State, 'save', crash), self.assertRaises(Crash):
+            self.app.run()
+        state = State(self.state.path)
+        self.assertIn(authorization, state.data['consumed'])
+        self.assertEqual(state.data['journal']['authorization'], authorization)
+        self.assertEqual(state.data['journal']['target'], self.old.hash)
+        self.assertEqual(state.data['journal']['status'], 'started')
+        self.assertEqual(self.app.run(), 1)
+        self.assertEqual(State(self.state.path).data['journal']['status'], 'rolled_back')
+
+    def test_stopped_run_reasserts_hold_and_stops_caddy_even_when_backup_is_pending(self):
+        self.crash_step = 'migrate'
+        with self.assertRaises(Crash):
+            self.engine.activate(self.new)
+        self.schema = 8
+        self.assertEqual(self.engine.recover(), 'stopped')
+        self.paths.hold.unlink()
+        self.paths.backup_lock.with_name('active-job').touch()
+        self.calls.clear()
+        self.assertEqual(self.app.run(), 0)
+        self.assertTrue(self.paths.hold.exists())
+        self.assertEqual([args for args, _ in self.calls],
+                         [['systemctl', '--user', 'stop', 'trachuan-caddy.service']])
+        self.assertEqual(json.loads(self.paths.result.read_bytes())['status'], 'skipped')
+
+    def test_higher_release_can_activate_after_stopped_journal(self):
+        self.crash_step = 'migrate'
+        with self.assertRaises(Crash):
+            self.engine.activate(self.new)
+        self.schema = 8
+        self.assertEqual(self.engine.recover(), 'stopped')
+        fixed = self.candidate(16, b'fixed')
+        self.registry.fetch.return_value = fixed.directory
+        self.paths.mode.write_text('activate\n')
+        self.assertEqual(self.app.run(), 0)
+        self.assertEqual(State(self.state.path).data['active'], fixed.hash)
+        self.assertFalse(self.paths.hold.exists())
+
 
 if __name__ == '__main__':
     unittest.main()

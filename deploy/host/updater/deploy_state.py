@@ -156,7 +156,9 @@ class State:
 
     def authorize(self, hash_value, auth, schema):
         self.check_rollback(hash_value, auth, schema)
-        self.accept('rollback', hash_value, auth['sequence'])
+        journal = self.data['journal']
+        if not journal or journal['authorization'] != hash_value or journal['target'] != auth['target'] or journal['previous'] != auth['current'] or journal['baseline'] != schema or journal['status'] != 'started':
+            raise ValueError('rollback activation journal required')
         self.data['consumed'].append(hash_value)
-        self.data['accepted']['rollback'][str(auth['sequence'])]['status'] = 'consumed'
+        self.data['accepted']['rollback'][str(auth['sequence'])] = {'hash': hash_value, 'status': 'consumed'}
         self.save()

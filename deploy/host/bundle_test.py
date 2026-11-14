@@ -26,7 +26,7 @@ class InstallerTest(unittest.TestCase):
         script = (HOST / "install.sh").read_text()
         for path in ("metrics/publish-metrics.py", "systemd/trachuan-metrics.service", "systemd/trachuan-metrics.timer"):
             self.assertTrue((HOST / path).is_file(), path)
-        for value in ("ol9_oci_included", "python39-oci-sdk", "--uid-owner", "169.254.169.254", "--dport 80", "--query-rule", "--add-rule", "trachuan-metrics.timer"):
+        for value in ("updater/install-packages.sh", "--uid-owner", "169.254.169.254", "--dport 80", "--query-rule", "--add-rule", "trachuan-metrics.timer"):
             self.assertIn(value, script)
 
     def test_restore_directory_is_provisioned_before_rootless_use(self):

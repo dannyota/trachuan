@@ -1,7 +1,7 @@
 import re
 
-from .deploy_io import atomic, command
-from .deploy_verify import as_user
+from .deploy_io import atomic, command, remove
+from .deploy_verify import as_user, pull_image
 
 
 def pins(manifest):
@@ -19,6 +19,12 @@ class Host:
 
     def systemctl(self, action, *names):
         return self.user('systemctl', '--user', action, *['trachuan-' + name + '.service' for name in names])
+
+    def hold(self):
+        atomic(self.paths.hold, b'deployment held\n', 0o644)
+
+    def clear_hold(self):
+        remove(self.paths.hold)
 
     def psql(self, database, sql):
         return self.user('podman', 'exec', '-i', 'trachuan-postgres',
@@ -51,10 +57,35 @@ class Host:
                   str(self.paths.host / 'images.env'), str(self.paths.quadlet), str(self.paths.user_units))
         self.user('systemctl', '--user', 'daemon-reload')
 
-    def postgres(self):
+    def restart_postgres(self):
         self.systemctl('restart', 'postgres')
         self.user('podman', 'exec', 'trachuan-postgres', '/usr/local/bin/postgres-admin.sh',
                   '/usr/local/bin/wait-postgres.sh', timeout=150)
+
+    def restore_postgres(self, candidate, directory):
+        template = candidate.files['quadlet/trachuan-postgres.container']
+        for line in template.decode().splitlines():
+            if not line.startswith('Volume='):
+                continue
+            source = line.split('=', 1)[1].split(':', 1)[0]
+            if source.startswith('/srv/trachuan/host/'):
+                name = source[len('/srv/trachuan/host/'):]
+            elif source == '/etc/pgbackrest/pgbackrest.conf':
+                name = 'pgbackrest.conf'
+            else:
+                continue
+            atomic(self.paths.root / source.lstrip('/'), candidate.files[name],
+                   0o755 if name.endswith('.sh') else 0o644)
+        image = candidate.manifest['images']['postgres']
+        rendered = directory / 'recovery-postgres.container'
+        atomic(rendered, template.replace(b'@POSTGRES_IMAGE@', image.encode()), 0o644)
+        self.user('install', '-m', '0644', str(rendered), str(self.paths.postgres_unit))
+        self.user('systemctl', '--user', 'daemon-reload')
+        pull_image(image, self.runner, self.user_prefix)
+        self.restart_postgres()
+
+    def postgres(self):
+        self.restart_postgres()
         self.user('podman', 'exec', 'trachuan-postgres', 'pgbackrest', '--stanza=trachuan', 'check')
         database = self.psql('auth', "SELECT active_db FROM corpus_release WHERE country = 'vn';").decode().strip()
         if not re.fullmatch(r'corpus_vn_[0-9]{8}_[0-9]+', database):

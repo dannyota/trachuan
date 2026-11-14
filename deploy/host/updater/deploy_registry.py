@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 import re
 
-from .deploy_io import command
+from .deploy_io import atomic, command, CommandError
 from .deploy_verify import match
 
 
@@ -32,8 +32,8 @@ class Registry:
     def __init__(self, rules, runner=command):
         self.rules, self.runner = rules, runner
 
-    def oras(self, *args):
-        return self.runner(['/usr/local/libexec/trachuan/bin/oras', *args])
+    def oras(self, *args, **kwargs):
+        return self.runner(['/usr/local/libexec/trachuan/bin/oras', *args], **kwargs)
 
     def tags(self, repository):
         tags = json.loads(self.oras('repo', 'tags', '--format', 'json', repository))['tags'] or []
@@ -44,7 +44,12 @@ class Registry:
         return tags
 
     def latest_rollback(self):
-        tags = self.tags(self.rules['rollback_repository'])
+        try:
+            tags = self.tags(self.rules['rollback_repository'])
+        except CommandError as error:
+            if error.reason == 'not_found':
+                return None
+            raise
         numbers = [tag for tag in tags if re.fullmatch('[1-9][0-9]*', tag)]
         return max(numbers, key=int) if numbers else None
 
@@ -61,9 +66,10 @@ class Registry:
         directory.mkdir(mode=0o700, parents=True, exist_ok=True)
         for name, layer in descriptors.items():
             path = directory / name
-            self.oras('blob', 'fetch', '--output', str(path), repository + '@' + layer['digest'])
-            if path.stat().st_size != layer['size'] or 'sha256:' + hashlib.sha256(path.read_bytes()).hexdigest() != layer['digest']:
+            data = self.oras('blob', 'fetch', '--output', '-', repository + '@' + layer['digest'], stdout_limit=layer['size'])
+            if len(data) != layer['size'] or 'sha256:' + hashlib.sha256(data).hexdigest() != layer['digest']:
                 raise ValueError('artifact layer size or hash mismatch')
+            atomic(path, data)
         return directory
 
     def find(self, hash_value, directory):

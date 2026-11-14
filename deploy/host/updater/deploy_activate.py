@@ -29,10 +29,11 @@ class Activator:
         self.step(prefix + 'loopback')
         self.host.probe()
         self.step(prefix + 'edge')
+        self.host.clear_hold()
         self.host.systemctl('start', 'caddy')
         self.host.probe(edge=True)
 
-    def activate(self, candidate, expected_schema=None, authorization=None):
+    def activate(self, candidate, expected_schema=None, authorization=None, rollback=None):
         previous = self.state.data['active']
         baseline = self.host.schema()
         if expected_schema is not None and baseline != expected_schema:
@@ -43,33 +44,58 @@ class Activator:
         self.state.data['journal'] = dict(target=candidate.hash, previous=previous, baseline=baseline,
                                            restart_postgres=restart, status='started', step='started',
                                            authorization=authorization)
-        self.state.save()
-        self.apply(candidate, restart)
-        schema = self.host.schema()
-        self.state.data['journal'].update(status='activated', step='complete')
-        self.state.activate(candidate.hash, schema, authorization=authorization)
-        self.store.prune(self.state)
+        if authorization:
+            self.state.authorize(authorization, rollback, baseline)
+        else:
+            self.state.save()
+        try:
+            self.apply(candidate, restart)
+            schema = self.host.schema()
+            self.state.data['journal'].update(status='activated', step='complete')
+            self.state.activate(candidate.hash, schema, authorization=authorization)
+            self.store.prune(self.state)
+        except BaseException:
+            self.host.hold()
+            raise
+
+    def enforce_stopped(self):
+        journal = self.state.data['journal']
+        if journal and journal['status'] == 'stopped':
+            self.host.hold()
+            self.host.systemctl('stop', 'caddy')
+            return True
+        return False
 
     def recover(self):
         journal = self.state.data['journal']
+        if self.enforce_stopped():
+            return None
         if not journal or journal['status'] not in ('started', 'recovering'):
             return None
+        self.host.hold()
         self.host.systemctl('stop', 'caddy')
         self.state.mark_failed(journal['target'])
         journal['status'] = 'recovering'
         self.state.save()
         try:
             self.host.systemctl('stop', 'web', 'server', 'migrate', 'queryembed')
-            if self.host.schema() != journal['baseline'] or journal['previous'] not in self.state.data['retained']:
-                raise ValueError('recovery schema changed or previous manifest not retained')
+            if journal['previous'] not in self.state.data['retained']:
+                raise ValueError('previous manifest not retained')
             candidate = self.store.load(journal['previous'])
+            if journal['restart_postgres']:
+                self.host.restore_postgres(candidate, self.store.unpack(candidate))
+            if self.host.schema() != journal['baseline']:
+                raise ValueError('recovery schema changed or previous manifest not retained')
             restart = journal['restart_postgres'] or self.host.postgres_changed(candidate)
             self.apply(candidate, restart, 'rollback:')
             journal.update(status='rolled_back', step='complete')
             self.state.activate(candidate.hash, journal['baseline'])
             self.store.prune(self.state)
             return 'rolled_back'
-        except Exception:
+        except BaseException as error:
+            self.host.hold()
+            if not isinstance(error, Exception):
+                raise
             self.host.systemctl('stop', 'caddy')
             journal.update(status='stopped', step='recovery')
             self.state.save()

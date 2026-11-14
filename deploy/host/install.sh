@@ -12,9 +12,7 @@ source /etc/os-release
 [[ $ID == ol && $VERSION_ID == 9.8 && $(uname -m) == aarch64 ]] || fail 'requires Oracle Linux 9.8 arm64'
 [[ $(stat -fc %T /sys/fs/cgroup) == cgroup2fs ]] || fail 'cgroup v2 is required'
 
-dnf --disablerepo='*' --enablerepo=ol9_baseos_latest --enablerepo=ol9_appstream \
- install -y podman container-selinux firewalld policycoreutils-python-utils shadow-utils python3 acl tar gzip logrotate
-dnf --disablerepo='*' --enablerepo=ol9_oci_included install -y python39-oci-sdk
+bash "$bundle/updater/install-packages.sh"
 version=$(podman --version | awk '{print $3}')
 [[ $(printf '%s\n' 4.4 "$version" | sort -V | head -1) == 4.4 ]] || fail 'Podman >= 4.4 is required'
 [[ $(getenforce) == Enforcing ]] || fail 'SELinux must be enforcing'
@@ -80,7 +78,7 @@ for unit in trachuan-metrics.service trachuan-metrics.timer; do
 done
 [[ -d /srv/trachuan/state ]] || install -d -o root -g root -m 0755 /srv/trachuan/state
 [[ -d /srv/trachuan/state/backup ]] || install -d -o trachuan -g trachuan -m 0750 /srv/trachuan/state/backup
-setfacl -m u:trachuan-metrics:--x /srv/trachuan/state
+setfacl -m u:trachuan:--x,u:trachuan-metrics:--x /srv/trachuan/state
 setfacl -m u:trachuan-metrics:r-x,d:u:trachuan-metrics:r-x /srv/trachuan/state/backup
 for job in full diff verify health restore-check; do
  [[ ! -f /srv/trachuan/state/backup/$job.json ]] || setfacl -m u:trachuan-metrics:r-- "/srv/trachuan/state/backup/$job.json"
@@ -95,13 +93,13 @@ install -d -o root -g root -m 0700 /var/lib/trachuan-deploy
 install -d -o root -g root -m 0750 /srv/trachuan/state/deploy /var/log/trachuan
 setfacl -m u:trachuan-metrics:r-x,d:u:trachuan-metrics:r-x /srv/trachuan/state/deploy
 [[ ! -f /srv/trachuan/state/deploy/result.json ]] || setfacl -m u:trachuan-metrics:r-- /srv/trachuan/state/deploy/result.json
-install -o root -g root -m 0644 "$bundle/deploy-policy.json" /etc/trachuan/deploy-policy.json
+python3 -I "$bundle/updater/publish.py" policy "$bundle/deploy-policy.json" /etc/trachuan/deploy-policy.json
 install -o root -g root -m 0644 "$bundle/logrotate-trachuan" /etc/logrotate.d/trachuan
 bash "$bundle/updater/install-updater.sh" "$bundle/updater" /usr/local/libexec/trachuan
 command -v curl >/dev/null || fail 'curl is required to install pinned tools'
 bash "$bundle/updater/install-tools.sh" /usr/local/libexec/trachuan/bin
 for unit in trachuan-deploy.service trachuan-deploy.timer; do
- install -o root -g root -m 0644 "$bundle/systemd/$unit" "/etc/systemd/system/$unit"
+ python3 -I "$bundle/updater/publish.py" file "$bundle/systemd/$unit" "/etc/systemd/system/$unit"
 done
 systemctl daemon-reload
 systemctl enable --now trachuan-metrics.timer

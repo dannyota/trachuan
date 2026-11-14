@@ -4,30 +4,35 @@ set -euo pipefail
 source_dir=$(cd "$1" && pwd)
 install -d -m 0755 "$2" "$2/updaters"
 target=$(cd "$2" && pwd)
-version=$(cd "$source_dir" && sha256sum __init__.py deploy_*.py main.py proof.py | sha256sum | cut -d' ' -f1)
+version=$(cd "$source_dir" && sha256sum __init__.py deploy_*.py main.py proof.py publish.py fixtures/manifest.json | sha256sum | cut -d' ' -f1)
 destination=$target/updaters/$version
 staged=$(mktemp -d "$target/updaters/.staging.XXXXXX")
 pointer=$target/.updater-link.$$
 trap 'rm -rf "$staged"; rm -f "$pointer" "$target/.entry.$$"' EXIT
 chmod 0755 "$staged"
 install -d -m 0755 "$staged/updater"
-for module in "$source_dir"/deploy_*.py "$source_dir/__init__.py" "$source_dir/main.py" "$source_dir/proof.py"; do
+for module in "$source_dir"/deploy_*.py "$source_dir/__init__.py" "$source_dir/main.py" "$source_dir/proof.py" "$source_dir/publish.py"; do
  install -m 0644 "$module" "$staged/updater/${module##*/}"
 done
+install -d -m 0755 "$staged/updater/fixtures"
+install -m 0644 "$source_dir/fixtures/manifest.json" "$staged/updater/fixtures/manifest.json"
 if [[ -e $destination ]]; then
  for module in "$staged"/updater/*; do
+  [[ ! -d $module ]] || continue
   cmp -s "$module" "$destination/updater/${module##*/}"
  done
+ cmp -s "$source_dir/fixtures/manifest.json" "$destination/updater/fixtures/manifest.json"
 else
+ python3 -I "$source_dir/publish.py" tree "$staged"
  mv "$staged" "$destination"
+ python3 -I "$source_dir/publish.py" directory "$target/updaters"
 fi
 [[ ! -e $target/updater || -L $target/updater ]]
 ln -s "$destination/updater" "$pointer"
-python3 -c 'import os, sys; os.replace(sys.argv[1], sys.argv[2])' "$pointer" "$target/updater"
+python3 -I "$source_dir/publish.py" rename "$pointer" "$target/updater"
 for script in trachuan-deploy proof.sh; do
  [[ ! -L $target/$script ]]
- install -m 0755 "$source_dir/$script" "$target/.entry.$$"
- python3 -c 'import os, sys; os.replace(sys.argv[1], sys.argv[2])' "$target/.entry.$$" "$target/$script"
+ python3 -I "$source_dir/publish.py" executable "$source_dir/$script" "$target/$script"
 done
 touch "$destination"
 python3 - "$target/updaters" <<'PY'

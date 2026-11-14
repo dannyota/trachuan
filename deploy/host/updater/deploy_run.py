@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 import tempfile
 
@@ -28,6 +29,12 @@ class Updater:
         if mode not in ('verify', 'activate'):
             raise ValueError('invalid deploy mode')
         return mode
+
+    def backup_pending(self, result):
+        if os.path.lexists(self.paths.backup_lock.with_name('active-job')):
+            result.write('skipped', 'backup', 'backup cancellation unconfirmed; retry later')
+            return True
+        return False
 
     def noop(self, result, state):
         journal = state.data['journal'] or {}
@@ -88,8 +95,8 @@ class Updater:
         if mode == 'verify':
             result.write('verified', 'rollback', 'rollback verified; activation disabled', hash_value, auth)
             return
-        state.authorize(hash_value, auth, schema)
-        Activator(state, self.store, self.host).activate(candidate, expected_schema=schema, authorization=hash_value)
+        Activator(state, self.store, self.host).activate(candidate, expected_schema=schema,
+                                                       authorization=hash_value, rollback=auth)
         result.write('ok', 'rollback', 'authorized rollback activated', hash_value, auth)
 
     def failure(self, result, state, error):
@@ -112,7 +119,11 @@ class Updater:
                     mode = self.mode()
                     state = State(self.paths.state / 'state.json')
                     self.step = 'recovery'
-                    recovered = Activator(state, self.store, self.host).recover()
+                    activator = Activator(state, self.store, self.host)
+                    stopped = activator.enforce_stopped()
+                    if self.backup_pending(result):
+                        return 0
+                    recovered = None if stopped else activator.recover()
                     if recovered:
                         journal = state.data['journal']
                         result.write(recovered, 'recovery', 'interrupted activation recovered', journal['target'])
@@ -132,6 +143,8 @@ class Updater:
             with Lock(self.paths.lock), Lock(self.paths.backup_lock, create=False):
                 result = Result(self.paths.result, self.paths.log)
                 try:
+                    if self.backup_pending(result):
+                        return 1
                     with tempfile.TemporaryDirectory(prefix='bootstrap-', dir=self.paths.state) as directory:
                         path = self.registry.find(hash_value, Path(directory))
                         candidate = Candidate.read(path, self.rules, self.runner)

@@ -1,5 +1,6 @@
 import hashlib
 import json
+import shutil
 from pathlib import Path
 import tempfile
 import unittest
@@ -65,6 +66,9 @@ class ActivationFixture:
         if step == self.error_step and step is not None:
             self.error_step = None
             raise CommandError('injected failure')
+        if args[:1] == ['install']:
+            shutil.copyfile(args[-2], args[-1])
+            return b''
         if 'psql' in args:
             if input and b'max(version_id)' in input:
                 return (str(self.schema) + '\n').encode()
@@ -74,6 +78,8 @@ class ActivationFixture:
             return b'200'
         if 'show' in args:
             return b'success\n'
+        if 'image' in args and 'inspect' in args:
+            return canonical([{'RepoDigests': [args[-1]]}])
         if 'container' in args and 'inspect' in args:
             if '{{.State.Running}}' in args:
                 return b'true\n'
@@ -85,6 +91,43 @@ class ActivationFixture:
 
 
 class ActivationTest(ActivationFixture, unittest.TestCase):
+    def test_recovery_restores_previous_postgres_before_querying_schema(self):
+        self.paths.postgres_unit.write_bytes(b'changed\n')
+        self.crash_step = 'migrate'
+        with self.assertRaises(Crash):
+            self.engine.activate(self.new)
+        restored = []
+        def runner(args, input=None, **kwargs):
+            if 'restart' in args and 'trachuan-postgres.service' in args:
+                wanted = b'Image=' + self.old.manifest['images']['postgres'].encode() + b'\n'
+                self.assertEqual(self.paths.postgres_unit.read_bytes(), wanted)
+                restored.append(True)
+            if input and b'max(version_id)' in input and not restored:
+                raise CommandError('new postgres never became ready')
+            return self.runner(args, input=input, **kwargs)
+        self.host.runner = runner
+        self.calls.clear()
+        self.assertEqual(self.engine.recover(), 'rolled_back')
+        self.assertTrue(restored)
+        query = next(i for i, (args, data) in enumerate(self.calls) if data and b'max(version_id)' in data)
+        wait = next(i for i, (args, data) in enumerate(self.calls) if '/usr/local/bin/wait-postgres.sh' in args)
+        self.assertLess(wait, query)
+
+    def test_schema_read_failure_after_postgres_restore_remains_stopped(self):
+        self.paths.postgres_unit.write_bytes(b'changed\n')
+        self.crash_step = 'migrate'
+        with self.assertRaises(Crash):
+            self.engine.activate(self.new)
+        def runner(args, input=None, **kwargs):
+            if input and b'max(version_id)' in input:
+                raise CommandError('schema still unavailable')
+            return self.runner(args, input=input, **kwargs)
+        self.host.runner = runner
+        self.calls.clear()
+        self.assertEqual(self.engine.recover(), 'stopped')
+        self.assertTrue(any('restart' in args and 'trachuan-postgres.service' in args for args, _ in self.calls))
+        self.assertEqual(self.state.data['journal']['baseline'], 7)
+
     def test_activation_order_and_postgres_stays_up_for_same_unit(self):
         self.engine.activate(self.new)
         commands = [args for args, _ in self.calls]

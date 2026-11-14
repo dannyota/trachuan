@@ -111,6 +111,10 @@ def verify_manifest(directory, rules, runner=command, kind='release'):
     return hashlib.sha256(data).hexdigest(), obj
 
 
+class SubjectMismatch(ValueError):
+    pass
+
+
 def provenance(obj, manifest, image, rules):
     try:
         if obj['_type'] != 'https://in-toto.io/Statement/v1' or obj['predicateType'] != 'https://slsa.dev/provenance/v1':
@@ -118,7 +122,7 @@ def provenance(obj, manifest, image, rules):
         repository, digest = image.split('@sha256:')
         if not any(subject['digest']['sha256'] == digest and subject['name'] == repository
                    for subject in obj['subject']):
-            raise ValueError('wrong attestation subject digest')
+            raise SubjectMismatch('wrong attestation subject digest')
         definition = obj['predicate']['buildDefinition']
         workflow = definition['externalParameters']['workflow']
         source = 'https://github.com/' + rules['repository']
@@ -151,23 +155,31 @@ def as_user():
             'DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/' + str(uid) + '/bus']
 
 
+def pull_image(image, runner, user_prefix):
+    runner(user_prefix + ['podman', 'pull', image], timeout=600)
+    rows = json.loads(runner(user_prefix + ['podman', 'image', 'inspect', image]))
+    if len(rows) != 1 or image not in rows[0].get('RepoDigests', []):
+        raise ValueError('local digest mismatch')
+
+
 class Verifier:
     def __init__(self, rules, runner=command, user_prefix=None):
         self.rules, self.runner = rules, runner
         self.user_prefix = as_user() if user_prefix is None else user_prefix
 
+    def attestation(self, manifest, image, expected_image=None):
+        raw = self.runner(['/usr/local/libexec/trachuan/bin/cosign', 'verify-attestation',
+            '--new-bundle-format', '--type', 'slsaprovenance1',
+            *flags(self.rules, 'build', manifest['ref'], manifest['commit']), image])
+        statements = envelopes(raw)
+        for statement in statements:
+            provenance(statement, manifest, expected_image or image, self.rules)
+        return statements
+
     def images(self, manifest):
         for kind in ('images', 'upstream'):
             for image in manifest[kind].values():
-                self.runner(self.user_prefix + ['podman', 'pull', image], timeout=600)
-                rows = json.loads(self.runner(self.user_prefix + ['podman', 'image', 'inspect', image]))
-                if len(rows) != 1 or image not in rows[0].get('RepoDigests', []):
-                    raise ValueError('local digest mismatch')
+                pull_image(image, self.runner, self.user_prefix)
                 if kind == 'upstream':
                     continue
-                raw = self.runner(['/usr/local/libexec/trachuan/bin/cosign', 'verify-attestation',
-                    '--new-bundle-format', '--type', 'slsaprovenance1',
-                    *flags(self.rules, 'build', manifest['ref'], manifest['commit']), image])
-                statements = envelopes(raw)
-                for statement in statements:
-                    provenance(statement, manifest, image, self.rules)
+                self.attestation(manifest, image)
