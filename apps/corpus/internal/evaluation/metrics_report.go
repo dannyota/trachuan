@@ -279,6 +279,7 @@ func finishProductQuality(r *Report, previous *Report) {
 			}
 			r.Targets = append(r.Targets, Target{Metric: m, Target: spec.threshold, Status: status})
 			if spec.compare {
+				gating := spec.name != "abstention_balanced_accuracy"
 				var old *float64
 				if previous != nil {
 					old = findQualityMetric(previous, mode, spec.name, spec.limit).Value
@@ -289,10 +290,13 @@ func finishProductQuality(r *Report, previous *Report) {
 				} else if old != nil {
 					status = "pass"
 					if *m.Value < *old {
-						status = "fail"
+						status = "below"
+						if gating {
+							status = "fail"
+						}
 					}
 				}
-				r.NonRegression = append(r.NonRegression, NonRegression{Mode: mode, Arms: "hybrid", Limit: spec.limit, Name: spec.name, Value: m.Value, PreviousValue: old, Status: status, ValidityOverrides: r.ValidityOverrides, CapOverride: r.CapOverride, ArticleCapOverride: r.ArticleCapOverride, Reason: m.Reason, MappingIncompleteCount: m.MappingIncompleteCount})
+				r.NonRegression = append(r.NonRegression, NonRegression{Mode: mode, Arms: "hybrid", Limit: spec.limit, Name: spec.name, Value: m.Value, PreviousValue: old, Gating: gating, Status: status, ValidityOverrides: r.ValidityOverrides, CapOverride: r.CapOverride, ArticleCapOverride: r.ArticleCapOverride, Reason: m.Reason, MappingIncompleteCount: m.MappingIncompleteCount})
 			}
 		}
 	}
@@ -304,7 +308,7 @@ func finishProductQuality(r *Report, previous *Report) {
 		r.QualityPass = r.QualityPass && rejection.Passed
 	}
 	for _, comparison := range r.NonRegression {
-		if comparison.Name != "abstention_balanced_accuracy" {
+		if comparison.Gating {
 			r.QualityPass = r.QualityPass && comparison.Status != "fail" && comparison.Status != "unavailable"
 		}
 	}

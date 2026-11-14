@@ -9,14 +9,12 @@ import (
 	"danny.vn/trachuan/internal/retrieval"
 )
 
-// ValidityOverrides describes research-only validity policies.
 type ValidityOverrides struct {
 	HistoricalPolicy *string `json:"historical_policy"`
 	NonCurrentTail   *int    `json:"non_current_tail"`
 	NotYetEligible   bool    `json:"not_yet_eligible"`
 }
 
-// Options identifies the inputs and environment of an evaluation.
 type Options struct {
 	ValidityOverrides
 	CapOverride          *retrieval.CapOverride
@@ -33,7 +31,6 @@ type Options struct {
 	Calibration          any
 }
 
-// Metric records a measured ratio with its counts.
 type Metric struct {
 	ValidityOverrides
 	CapOverride            *retrieval.CapOverride        `json:"cap_override"`
@@ -50,7 +47,6 @@ type Metric struct {
 	MappingIncompleteCount int                           `json:"mapping_incomplete_count,omitempty"`
 }
 
-// Cohort summarizes the cases and metrics for one scoring policy.
 type Cohort struct {
 	Floors            []Floor         `json:"floors,omitempty"`
 	Targets           []Target        `json:"targets,omitempty"`
@@ -63,21 +59,18 @@ type Cohort struct {
 	Metrics           []Metric        `json:"metrics"`
 }
 
-// Floor records a product-cohort quality gate.
 type Floor struct {
 	Metric
 	Floor  float64 `json:"floor"`
 	Status string  `json:"status"`
 }
 
-// Target records a goal that does not affect quality.
 type Target struct {
 	Metric
 	Target float64 `json:"target"`
 	Status string  `json:"status"`
 }
 
-// NonRegression compares a metric with its previous value.
 type NonRegression struct {
 	ValidityOverrides
 	CapOverride            *retrieval.CapOverride        `json:"cap_override"`
@@ -88,12 +81,12 @@ type NonRegression struct {
 	Name                   string                        `json:"name"`
 	Value                  *float64                      `json:"value"`
 	PreviousValue          *float64                      `json:"previous_value"`
+	Gating                 bool                          `json:"gating"`
 	Status                 string                        `json:"status"`
 	Reason                 string                        `json:"reason,omitempty"`
 	MappingIncompleteCount int                           `json:"mapping_incomplete_count,omitempty"`
 }
 
-// MappingIncomplete identifies one incomplete citation mapping.
 type MappingIncomplete struct {
 	CaseID        string `json:"case_id"`
 	Cohort        string `json:"cohort"`
@@ -101,7 +94,6 @@ type MappingIncomplete struct {
 	Detail        string `json:"detail"`
 }
 
-// SizeSummary records nearest-rank evidence sizes.
 type SizeSummary struct {
 	ValidityOverrides
 	CapOverride        *retrieval.CapOverride        `json:"cap_override"`
@@ -115,7 +107,6 @@ type SizeSummary struct {
 	P95                *float64                      `json:"p95"`
 }
 
-// CaseResult contains the non-sensitive result of one response.
 type CaseResult struct {
 	ValidityOverrides
 	CapOverride        *retrieval.CapOverride        `json:"cap_override"`
@@ -139,14 +130,12 @@ type CaseResult struct {
 	Characters         int                           `json:"characters"`
 }
 
-// Rejection records a product input gate check.
 type Rejection struct {
 	CaseID string `json:"case_id"`
 	Reason string `json:"reason"`
 	Passed bool   `json:"passed"`
 }
 
-// PresentedSummary records matching and serialized response sizes.
 type PresentedSummary struct {
 	ValidityOverrides
 	CapOverride        *retrieval.CapOverride        `json:"cap_override"`
@@ -162,14 +151,12 @@ type PresentedSummary struct {
 	SizeP95            *float64                      `json:"size_p95"`
 }
 
-// CompactSizeGate compares compact and full response sizes.
 type CompactSizeGate struct {
 	FullP95At8     *float64 `json:"full_p95_at_8"`
 	CompactP95At20 *float64 `json:"compact_p95_at_20"`
 	Pass           bool     `json:"pass"`
 }
 
-// Report is a completed diagnostic evaluation.
 type Report struct {
 	RetrievalRecipeVersion int `json:"retrieval_recipe_version,omitempty"`
 	ValidityOverrides
@@ -222,7 +209,6 @@ type Report struct {
 	Cases                         []CaseResult                  `json:"cases"`
 }
 
-// ANNMeasure reports candidate overlap before and after fallback.
 type ANNMeasure struct {
 	CaseID           string `json:"case_id"`
 	Cohort           string `json:"cohort"`
@@ -232,7 +218,6 @@ type ANNMeasure struct {
 	Fallback         bool   `json:"fallback"`
 }
 
-// WriteFiles writes the report and per-response rows.
 func (r Report) WriteFiles(dir string) error {
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		return fmt.Errorf("create report directory: %w", err)
@@ -274,7 +259,6 @@ func writeJSONLines[T any](path string, rows []T) error {
 	return nil
 }
 
-// ANNLoss summarizes candidate overlap and hybrid score differences.
 type ANNLoss struct {
 	Cases             int              `json:"cases"`
 	ExactCandidates   int              `json:"exact_candidates"`
