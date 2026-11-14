@@ -98,3 +98,12 @@ credentials; published image layers and release metadata are public.
   pull deployment, Vault secrets, backups with a restore proof, alarms and the
   OpenTofu import must land before any other account signs in
   ([deployment](../design/deployment.md#domain-and-dns)).
+- 2026-11-14: the owner chose automatic deployment from GitHub so that agents no
+  longer reach the host over SSH ("i want we setup auto deployment with github,
+  so you dont need to do SSH anymore"). A signed release from a protected `v*`
+  tag with green CI deploys without a per-release approval: the host timer
+  verifies and applies images, the host bundle and corpus releases; secrets come
+  from Vault through the instance principal. After cutover the agent SSH key is
+  removed from the host, and the owner keeps the only break-glass key outside
+  agent reach. Agents still hold the owner's GitHub token, so GitHub, not the
+  host, is the remaining trust boundary.
