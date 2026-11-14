@@ -240,13 +240,20 @@ type RecoveryCode struct {
 }
 
 type ReleaseJournal struct {
-	ID      int64
-	Country string
-	Rel     string
-	Step    string
-	State   string
-	At      time.Time
-	Message string
+	ID               int64
+	Country          string
+	Rel              string
+	Step             string
+	State            string
+	At               time.Time
+	Message          string
+	OperationID      *string
+	Mode             *string
+	DatabaseName     *string
+	ManifestHash     *string
+	DumpSha256       *string
+	ExpectedActiveDb *string
+	Manifest         []byte
 }
 
 type RetiredRelease struct {
@@ -255,6 +262,7 @@ type RetiredRelease struct {
 	RetiredAt   time.Time
 	RetainUntil time.Time
 	DroppedAt   *time.Time
+	DumpSha256  *string
 }
 
 type TotpCredential struct {

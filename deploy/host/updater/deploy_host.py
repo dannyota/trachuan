@@ -1,6 +1,6 @@
 import re
 
-from .deploy_io import atomic, command, remove, Result
+from .deploy_io import atomic, command, CommandError, remove, Result
 from .deploy_transfer import program
 from .deploy_verify import as_user, pull_image
 
@@ -101,7 +101,23 @@ class Host:
                   "WHERE n.nspname IN ('public', 'pg_toast') AND c.relkind IN ('r', 'i', 't'); "
                   "DROP EXTENSION pg_prewarm; COMMIT;")
 
+    def provision_activator(self):
+        available = True
+        for path in ('/usr/local/bin/provision-activator.sh', '/run/secrets/activator_db_password'):
+            try:
+                self.user('podman', 'exec', 'trachuan-postgres', 'test', '-r', path)
+            except CommandError as error:
+                if error.returncode != 1:
+                    raise
+                available = False
+        if not available:
+            return False
+        self.user('podman', 'exec', 'trachuan-postgres', '/usr/local/bin/postgres-admin.sh',
+                  'bash', '/usr/local/bin/provision-activator.sh')
+        return True
+
     def migrate(self):
+        self.provision_activator()
         self.systemctl('start', 'queryembed')
         self.systemctl('start', 'migrate')
         result = self.user('systemctl', '--user', 'show', '--property=Result', '--value', 'trachuan-migrate.service')

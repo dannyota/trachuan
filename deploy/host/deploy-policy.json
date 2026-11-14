@@ -31,5 +31,9 @@
   },
   "upstream": { "caddy": "docker.io/library/caddy" },
   "extensions": ["vector", "ltree"],
-  "sigstore_trust_root": "cosign-v3.1.4"
+  "sigstore_trust_root": "cosign-v3.1.4",
+  "corpus_repository": "ghcr.io/dannyota/trachuan-corpus-release",
+  "corpus_identity": "^https://github\\.com/dannyota/trachuan/\\.github/workflows/corpus-release\\.yml@refs/heads/main$",
+  "release_namespace": "axj58m4cpgbr",
+  "release_bucket": "trachuan-releases"
 }

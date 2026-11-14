@@ -27,6 +27,7 @@ class RunTest(fixture.ActivationFixture, unittest.TestCase):
         self.registry.fetch.return_value = self.new.directory
         self.registry.latest_rollback.return_value = None
         self.app = r.Updater(self.paths, self.runner, user_prefix=[])
+        self.app.phases = ('secrets', 'images')
         self.app.registry = self.registry
         self.verify_images = mock.patch('updater.deploy_run.Verifier.images')
         self.images = self.verify_images.start()

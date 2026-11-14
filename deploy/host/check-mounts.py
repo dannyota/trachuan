@@ -25,6 +25,8 @@ def quadlet_mounts(units):
                 user = value
             elif key in ('Tmpfs', 'Mount'):
                 values.append(('--tmpfs' if key == 'Tmpfs' else '--mount', value))
+            elif key == 'Secret' and 'type=mount' in value.split(','):
+                values.append(('--secret', value))
         mounts.extend((unit.name, user, flag, value) for flag, value in values)
     return mounts
 
@@ -72,7 +74,24 @@ def probe_script(mounts):
         raise ValueError('no mounts found')
     podman = ['podman', '--storage-driver=vfs']
     commands = [shlex.join([*podman, 'pull', PROBE_IMAGE])]
+    for name in sorted({value.split(',', 1)[0] for _, _, flag, value in mounts if flag == '--secret'}):
+        commands.append(f"printf probe | {shlex.join([*podman, 'secret', 'create', name, '-'])}")
     for source, user, flag, value in mounts:
+        if flag == '--secret':
+            options = dict(option.partition('=')[::2] for option in value.split(',')[1:])
+            path = options.get('target', '/run/secrets/' + value.split(',', 1)[0])
+            if not path.startswith('/'):
+                path = '/run/secrets/' + path
+            expected = f"{options.get('uid', '0')}:{options.get('gid', '0')} {options.get('mode', '0444').lstrip('0')}"
+            args = [*podman, 'run', '--rm', '--pull=never', '--cgroups=disabled', '--network=none']
+            if user:
+                args.extend(['--user', user])
+            args.extend([flag, value, PROBE_IMAGE, 'sh', '-ec',
+                         'stat -c "%u:%g %a" "$1"; test "$(stat -c "%u:%g %a" "$1")" = "$2"; test "$(cat "$1")" = probe',
+                         'sh', path, expected])
+            commands.append(shlex.join(['printf', '%s\\n', f'{source}: {flag} {value}']))
+            commands.append(shlex.join(args))
+            continue
         if flag == '--tmpfs':
             destination = value.split(':', 1)[0]
         else:

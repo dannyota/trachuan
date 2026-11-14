@@ -169,12 +169,14 @@ The host activator lives under `deploy/host/release/` and works through
 `postgres` through `postgres-admin.sh`; everything else runs as `activator` (ADR
 0003; [system](system.md#database-roles)), which has `CREATEDB`, owns the corpus
 databases it creates, and may write only `corpus_release`, `release_journal` and
-`retired_release` in `auth`. The updater runs the idempotent
-`provision-activator.sh` as `postgres` before each activation: it creates the
-role with `CREATEDB` when missing and sets its password from the Vault secret
-`activator_db_password`, so an existing cluster gets the role without
-reinitialization. The table grants belong to the auth migrations, which run
-after it and create `release_journal` and `retired_release`.
+`retired_release` in `auth`. Before its first activator connection, the corpus
+phase requires both `/usr/local/bin/provision-activator.sh` and
+`/run/secrets/activator_db_password` to be readable in the running PostgreSQL
+container; otherwise it waits with reason `activator not provisioned`. It runs
+the idempotent provisioner as `postgres` before connecting and before each
+activation: it creates the role with `CREATEDB` when missing, sets its password
+from the Vault secret `activator_db_password`, and reapplies the table grants
+even when the auth migrations ran before the role existed.
 
 0. Take the `activation` advisory lock in `auth`; append `release_journal`
    (`started`, mode, target database, manifest hash, dump SHA-256, expected
@@ -197,16 +199,21 @@ after it and create `release_journal` and `retired_release`.
    [runbook](../runbooks/release-restore.md#prewarm-a-corpus-database) does.
    Then `server release-check --database <target>` runs one search and one read
    against it with the server code that will serve it.
-4. In one transaction: compare-and-swap `corpus_release.active_db` from the
-   journaled expected value, insert the old database into `retired_release` with
-   its dump SHA-256 and `retain_until` seven days ahead, delete the target from
+4. In one transaction: require the country's pointer row, compare-and-swap
+   `corpus_release.active_db` from the journaled expected value, require exactly
+   one updated row, insert the old database into `retired_release` with its dump
+   SHA-256 and `retain_until` seven days ahead, delete the target from
    `retired_release` in `retained` mode, and append `activated`.
 5. The server resolves the release once per request, so traffic moves without a
    restart; the postings for the new release load on first use under the
    server's existing gate ([sparse postings](sparse-postings.md)).
 
 `release_journal` and `retired_release` (with `dump_sha256`) are auth
-migrations. Two rules close recovery and cleanup:
+migrations. The old active database gets its dump digest from its active corpus
+manifest, or NULL when restored by hand; that row stays protected for seven days
+and cannot be reactivated by the pipeline, so rollback within that window is the
+owner's manual compare-and-swap of `corpus_release.active_db`. Two rules close
+recovery and cleanup:
 
 - A journal whose last row is `activated` or `reverted` is complete; the next
   run only finishes local bookkeeping.
@@ -224,6 +231,9 @@ each unprotected database in `retired_release` without connections: it journals
 `pruned`. An open `pruning` journal is finished the same way on the next run.
 
 ## Recipe changes
+
+The pair activation path is not yet implemented; recipe mismatches wait and
+image manifests with a non-null `corpus_release` are refused.
 
 A release whose recipes differ from the running server waits until the
 [image manifest](pull-deployment.md#image-manifest) for the matching code names

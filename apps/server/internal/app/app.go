@@ -54,6 +54,9 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 	if len(args) == 0 {
 		return errors.New("missing subcommand")
 	}
+	if args[0] == "release-check" {
+		return runReleaseCheck(ctx, args[1:], stdout)
+	}
 	if args[0] == "migrate" || args[0] == "admin" {
 		return runNonServe(ctx, args, stdout)
 	}

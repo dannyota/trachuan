@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from contextlib import ExitStack
 import fcntl
 import json
 import os
@@ -143,10 +144,15 @@ def bounded_output(process, limit, timeout):
     return bytes(output), bytes(errors)
 
 
-def command(args, input=None, timeout=300, stdout_limit=None, error_prefix=None):
+def command(args, input=None, timeout=300, stdout_limit=None, error_prefix=None, input_file=None):
+    if input is not None and input_file is not None:
+        raise ValueError('conflicting command input')
     try:
-        with subprocess.Popen(args, stdin=subprocess.PIPE if input is not None else subprocess.DEVNULL,
-                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=True) as process:
+        with ExitStack() as stack:
+            source = stack.enter_context(open(input_file, 'rb')) if input_file is not None else None
+            process = stack.enter_context(subprocess.Popen(
+                args, stdin=source if source is not None else subprocess.PIPE if input is not None else subprocess.DEVNULL,
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=True))
             try:
                 if stdout_limit is None:
                     output, errors = process.communicate(input=input, timeout=timeout)
