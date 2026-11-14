@@ -92,17 +92,19 @@ filter, detail level, limit or cursor page, none of which change collection.
 The key is the SHA-256 of the canonical JSON of: the query recipe hash, the
 retrieval recipe hash, the lexical recipe hash, the exact query text the
 embedder receives, the resolved collection date (the Vietnam civil date of the
-request, or the date a cursor pins, after cursor validation), whether the
-request is historical (`as_of` given), the dense mode (`ann` or `exact`) and
-both depths. The release is bound by the release-scoped handle, as for the other
-corpus caches. Validation references, the query vector and the sparse query are
-functions of the text and recipes, so they are covered. Filters, nodes,
-documents, `in_force_only`, detail, limit, arm mode and cursor position are not
-in the key: collection does not read them (`in_force_only` only selects which
-collected group is shaped). Only serving collections are cached; evaluation
-overrides (not-yet eligibility) never read or write it. Rejected queries,
-errors, cancelled and timed-out collections are not cached. A hit still runs
-request validation, served-filter checks and the query embedding lookup.
+request, or the date a cursor pins, after cursor validation), the `as_of` date
+or none, the dense mode (`ann` or `exact`) and both depths. The candidate phase
+reads the date and whether `as_of` is given; the date already equals `as_of`
+when it is given, and the key carries `as_of` itself so that no change in that
+derivation can serve a wrong entry. The release is bound by the release-scoped
+handle, as for the other corpus caches. Validation references, the query vector
+and the sparse query are functions of the text and recipes, so they are covered.
+Filters, nodes, documents, `in_force_only`, detail, limit, arm mode and cursor
+position are not in the key: collection does not read them (`in_force_only` only
+selects which collected group is shaped). Only serving collections are cached;
+evaluation overrides (not-yet eligibility) never read or write it. Rejected
+queries, errors, cancelled and timed-out collections are not cached. A hit still
+runs request validation, served-filter checks and the query embedding lookup.
 
 ## Topic node pages
 
