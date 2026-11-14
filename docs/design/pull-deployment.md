@@ -188,7 +188,9 @@ before its journal starts) continues. A sequence bound to another hash is
 rejected. Otherwise a manifest is accepted only when its sequence is above every
 accepted sequence of its kind, and the sequence-to-hash binding is recorded as
 pending before any change; the binding survives failure and rollback, and the
-state moves to active, retained or failed.
+state moves to active, retained or failed. When a manifest of a kind becomes
+active, every pending manifest of that kind with a lower sequence becomes
+failed, so a delayed older release never runs.
 
 ### Failure and recovery
 
@@ -204,9 +206,10 @@ sequence is still accepted. A fetch or verification failure changes nothing on
 the host.
 
 A signed rollback authorization is applied when its `current` equals the active
-hash, its `target` is retained, its sequence is above every accepted rollback
-sequence, and the target's auth schema version equals the current one. It is
-consumed before activation begins, so it never applies twice.
+hash, its `target` is retained, it was accepted under the
+[acceptance rule](#acceptance) and is not consumed, and the target's auth schema
+version equals the current one. It is consumed before activation begins, so it
+never applies twice.
 
 Image activation that needs a model the host does not have fails at queryembed
 readiness. Model provisioning stays a manual owner step.

@@ -160,9 +160,10 @@ migrations. Two rules close recovery and cleanup:
 
 - A journal whose last row is `activated` or `reverted` is complete; the next
   run only finishes local bookkeeping.
-- A database is protected when it is `active_db`, the target of an open journal,
-  or in `retired_release` with `retain_until` in the future. No step, abort or
-  prune ever drops a protected database, whatever the journal says.
+- A database is protected when it is `active_db`, the target of an open
+  activation journal, or in `retired_release` with `retain_until` in the future.
+  No step, abort or prune ever drops a protected database, whatever the journal
+  says.
 
 After a crash, an open journal continues from its last step when the guard holds
 (`new`: the target is neither active nor retired; `retained`: it is retired and
@@ -188,11 +189,11 @@ it in `corpus_release`. The updater activates the pair in one locked run:
    pointer back, delete the old release's `retired_release` row, insert the new
    one with its digest and `retain_until` seven days ahead, and journal
    `reverted`. Then restore the previous images under the
-   [failure rule](pull-deployment.md#failure-and-recovery) and start Caddy only
-   when the previous pair passes readiness and the edge probe. An interrupted
-   pair run is recovered by the same rule: its image journal is treated as
-   failed, and a corpus journal ending in `activated` for that pair is reversed
-   first.
+   [failure rule](pull-deployment.md#failure-and-recovery) and start Caddy once
+   the previous pair passes loopback readiness, then run the edge probe; a
+   failed probe stops Caddy and records the failure. An interrupted pair run is
+   recovered by the same rule: its image journal is treated as failed, and a
+   corpus journal ending in `activated` for that pair is reversed first.
 
 ## Results and alarms
 
