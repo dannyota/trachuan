@@ -12,8 +12,9 @@ the rules.
 - Memory only, inside the `server` process. Nothing is written to disk, a
   database, logs, metrics labels or backups, and a restart empties every cache.
 - Keys are SHA-256 digests of a canonical byte string, never the text itself. A
-  cache never holds query text; values hold only vectors or responses the server
-  would return anyway.
+  cache never holds query text; values hold only vectors, responses the server
+  would return anyway, or [search candidates](#search-candidates) (chunk ids,
+  ranks, scores and fallback flags).
 - Every key that depends on corpus content includes the release, so activating a
   release makes older entries unreachable; the server also drops them at once
   when the active database changes. Query vectors depend only on the query
@@ -104,7 +105,9 @@ position are not in the key: collection does not read them (`in_force_only` only
 selects which collected group is shaped). Only serving collections are cached;
 evaluation overrides (not-yet eligibility) never read or write it. Rejected
 queries, errors, cancelled and timed-out collections are not cached. A hit still
-runs request validation, served-filter checks and the query embedding lookup.
+runs request validation, served-filter checks and the query embedding lookup,
+and hands hydration its own copy of the lists. A collection given precomputed
+lexical arms bypasses the cache.
 
 ## Topic node pages
 
