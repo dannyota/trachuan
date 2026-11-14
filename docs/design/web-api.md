@@ -39,16 +39,19 @@ upserting the account, revoking a presented session, creating the session) is
 user starts again. Provider error text is never shown or logged.
 
 The account is found by `google_sub` only, never by email. The first login
-creates it; every login stores the current email and `last_login_at`. Sign-up is
-open unless `SERVER_SIGNUP_EMAILS` is set: a comma-separated list of emails,
-compared after trimming and lowercasing. Then a Google subject with no account
-is admitted only when its verified email is in the list; otherwise the callback
-redirects with `signup_closed` and writes no account, session or login time (the
-login transaction stays claimed). An existing account signs in whatever the list
-says. A variable that is present but empty, or holds an entry that is not a
-plain address (a non-empty local part, `@`, a DNS domain with a dot and no
-`[...]` literal, no whitespace and no display name), stops the server at
-startup. A blocked account, or one whose deletion was requested, cannot log in.
+creates it; every login stores `last_login_at`. The email is fixed at creation
+([accounts](accounts.md)). Sign-up is open unless `SERVER_SIGNUP_EMAILS` is set:
+a comma-separated list of emails, each parsed with the account address parser
+([accounts](accounts.md#email-address)) and compared exactly with the parsed
+email. Then a Google subject with no account is admitted only when its verified
+email is in the list, and password sign-up admits only listed addresses;
+otherwise the callback redirects with `signup_closed` and writes no account,
+session or login time (the login transaction stays claimed). An existing account
+signs in whatever the list says. A variable that is present but empty, or holds
+an entry that is not a plain address (a non-empty local part, `@`, a DNS domain
+with a dot and no `[...]` literal, no whitespace and no display name), stops the
+server at startup. A blocked account, or one whose deletion was requested,
+cannot log in.
 
 `next` is validated twice, on the raw value and after decoding percent-escapes
 once (a malformed escape rejects it). Both forms must start with exactly one
@@ -115,7 +118,8 @@ page.
 
 ## CSRF
 
-Every request to `/api/v1` with a method other than `GET`, `HEAD` or `OPTIONS`
+Every request to `/api/v1` with a method other than `GET`, `HEAD` or `OPTIONS`,
+except the pre-session routes in [accounts](accounts.md#pre-session-requests),
 requires: `Origin` equal to the origin of `SERVER_PUBLIC_URL` (the `Referer`
 origin when `Origin` is absent; both absent fails); header `X-CSRF-Token` equal
 to the session's CSRF secret, compared in constant time; and
