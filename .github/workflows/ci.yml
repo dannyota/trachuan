@@ -59,6 +59,7 @@ jobs:
                 apps/web/*|packages/schema/*|.tool-versions|.github/workflows/ci.yml) web=true ;;
               esac
               case "$path" in
+                deploy/host/*|deploy/images/*) go=true ;;
                 docs/*.md) ;;
                 apps/web/*) ;;
                 *.md) [[ "$path" != */* ]] || go=true ;;
@@ -123,6 +124,9 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install -y shellcheck
       - run: make pre-push
       - run: make test
+      - run: PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s deploy/host -p '*_test.py'
+      - run: PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s deploy/images -p '*_test.py'
+      - run: bash deploy/host/render-units-test.sh
       - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
@@ -314,7 +318,6 @@ jobs:
           restore-keys: |
             go-${{ runner.os }}-${{ runner.arch }}-queryembed-${{ hashFiles('go.sum') }}-
             go-${{ runner.os }}-${{ runner.arch }}-queryembed-
-      # The query recipe pins the Go version; build with exactly that toolchain.
       - run: echo "GOTOOLCHAIN=go$(awk '$1 == "go" { print $2; exit }' go.mod)" >> "$GITHUB_ENV"
       - run: bash scripts/queryembed-native.sh linux-arm64
       - run: go test -race -tags ort ./apps/queryembed/...

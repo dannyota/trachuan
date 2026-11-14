@@ -67,7 +67,7 @@ class RunTest(unittest.TestCase):
     def test_container_command_gets_its_own_remaining_deadline(self):
         module = load()
         with patch.object(module.time, 'monotonic', return_value=400), patch.object(module.process.Executor, 'execute', return_value='') as execute:
-            module.work('verify', deadline=500, executor=module.process.Executor(Path('/unused')))
+            module.work('verify', deadline=500, executor=module.process.Executor(Path('/unused'), 500))
         self.assertEqual(execute.call_args.args[0], ['pgbackrest', '--stanza=trachuan', 'verify', '--output=text', '--verbose'])
         self.assertEqual(execute.call_args.kwargs['timeout'], 100)
 

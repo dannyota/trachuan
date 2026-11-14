@@ -81,6 +81,8 @@ def work(kind, deadline, executor=None):
 def run(kind, state=Path('/srv/trachuan/state/backup')):
     if kind not in {'full', 'diff', 'verify', 'health', 'restore-check'}:
         raise ValueError('invalid backup unit')
+    limits = {'full': 14400, 'diff': 7200, 'verify': 14400, 'health': 300, 'restore-check': 1200}
+    deadline = time.monotonic()+limits[kind]
     result = Result(state / (kind+'.json'))
     with (state / 'backup.lock').open('a') as lock:
         try:
@@ -90,11 +92,12 @@ def run(kind, state=Path('/srv/trachuan/state/backup')):
             result.write('skipped', 'another backup unit holds the lock')
             return 0
         result.write('running', 'starting')
-        limits = {'full': 14400, 'diff': 7200, 'verify': 14400, 'health': 300, 'restore-check': 1200}
         try:
-            executor = process.Executor(state)
+            executor = process.Executor(state, deadline)
             executor.recover()
-            status, reason = work(kind, time.monotonic()+limits[kind], executor)
+            status, reason = work(kind, deadline, executor)
+        except process.CancellationUnconfirmed as error:
+            status, reason = 'failed', str(error)
         except subprocess.TimeoutExpired as error:
             detail = error.stderr or ''
             status, reason = 'failed', 'deadline exceeded'+(': '+detail if detail else '')

@@ -83,7 +83,7 @@ class ContainerProcessTest(unittest.TestCase):
                 calls.append(args[4:])
                 return 'stopped\n' if args[4] == 'cancel' else ''
             with patch.object(module, 'command', side_effect=runner):
-                executor = module.Executor(state)
+                executor = module.Executor(state, module.time.monotonic()+100)
                 executor.recover()
                 executor.execute(['pgbackrest', '--stanza=trachuan', 'verify'], 100)
             self.assertEqual(calls[0], ['cancel', token])
