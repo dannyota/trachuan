@@ -72,7 +72,7 @@ run that cannot take it records `skipped`.
 | ------------------ | ---------------------------- | ---------------------------------------- | -------------------- |
 | Full               | Sunday 02:00                 | `backup --type=full`                     | `backup.json`        |
 | Differential       | Monday to Saturday 02:00     | `backup --type=diff`                     | `backup.json`        |
-| Verify             | Wednesday 04:00              | `verify --output=text`                   | `verify.json`        |
+| Verify             | Wednesday 04:00              | `verify --output=text --verbose`         | `verify.json`        |
 | Health             | hourly                       | `info --output=json`, `pg_stat_archiver` | `health.json`        |
 | Auth restore check | first day of the month 05:00 | below                                    | `restore-check.json` |
 
@@ -81,17 +81,24 @@ differentials remain until their full expires. `stanza-create` and `check` run
 once from the runbook. After each corpus release activation the runbook takes a
 full backup, so later differentials do not each carry the new corpus database.
 
-Each unit atomically writes one JSON file under `/srv/trachuan/state/backup/`
-and one journald line, with `checked_at`, `status` and `reason`. `status` is
-`ok`, `failed` (the unit ran and found a problem, or the command failed) or
-`unknown` (storage unreachable, output malformed or a timestamp invalid; never
-treated as ok). A backup that pgBackRest records with an error, including page
+Each unit keeps one JSON file under `/srv/trachuan/state/backup/`, written
+atomically, and logs one journald line per change. The file holds the last
+attempt (`started_at`, `finished_at` or null, `status`, `reason`) and
+`last_success_at`. The unit writes `running` with `started_at` before it starts
+work and its final status when it ends. Statuses: `ok`; `failed` (it ran and
+found a problem, or its command failed); `unknown` (storage unreachable, output
+malformed or a timestamp invalid; never treated as ok); `skipped` (another unit
+held the lock). A backup that pgBackRest records with an error, including page
 checksum errors, is `failed` and does not count as the newest good backup.
-Verify is `ok` only when its text output reports status ok for the stanza and no
-invalid files. Health is `failed` when the newest good backup is older than 26
-hours or archiving is unhealthy as above. For alarms, a missing file or a
-`checked_at` older than twice the unit's period means the unit never ran;
-`failed` and `unknown` mean it ran. This note adds no alarm transport.
+Verify is `ok` only when its verbose text output reports status ok for the
+stanza and no invalid files. Health is `failed` when the newest good backup is
+older than 26 hours or archiving is unhealthy as above.
+
+For alarms: no file means the unit has never run; `running` past the unit's
+deadline means it crashed or hung; a last `started_at` older than twice the
+unit's period means it stopped running; `failed`, `unknown` and repeated
+`skipped` mean it ran without success, and `last_success_at` tells how long ago
+it last succeeded. This note adds no alarm transport.
 
 ## Auth restore check
 
