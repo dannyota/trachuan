@@ -178,7 +178,13 @@ class Corpus:
                 return recovered
             self.prune(mode)
             self.step = 'fetch'
-            path = self.registry.fetch(self.rules['corpus_repository'], 'vn-production', Path(directory)/'corpus', 'corpus-release')
+            try:
+                path = self.registry.fetch(self.rules['corpus_repository'], 'vn-production', Path(directory)/'corpus', 'corpus-release')
+            except CommandError as error:
+                if error.reason in ('not_found', 'denied') and not self.state.data['accepted']['corpus']:
+                    self.result.write('current', 'fetch', 'no corpus release published')
+                    return True
+                raise
             self.step = 'manifest'
             self.hash, self.manifest = verify(path, self.rules, self.host.runner)
             decision = self.state.decision('corpus', self.hash, self.manifest['sequence'])

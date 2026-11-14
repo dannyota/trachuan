@@ -97,7 +97,8 @@ class IOTest(unittest.TestCase):
     def test_ghcr_anonymous_denied_on_rollback_tags_is_classified(self):
         stderr = b'Error response from registry: denied: requested access to the resource is denied\n'
         self.assertEqual(failure_reason(['/usr/local/libexec/trachuan/bin/oras', 'repo', 'tags'], stderr), 'denied')
-        self.assertEqual(failure_reason(['/usr/local/libexec/trachuan/bin/oras', 'resolve'], stderr), 'failed')
+        self.assertEqual(failure_reason(['/usr/local/libexec/trachuan/bin/oras', 'resolve'], stderr), 'denied')
+        self.assertEqual(failure_reason(['/usr/local/libexec/trachuan/bin/oras', 'manifest', 'fetch'], stderr), 'failed')
 
 if __name__ == '__main__':
     unittest.main()
