@@ -1,12 +1,12 @@
 # Run the production host
 
-Phase 1 serves only the owner. Set the owner's verified email in
-`SERVER_SIGNUP_EMAILS` on the host, never in Git. Prove a previously unused
-second Google account is rejected before announcing the site. Keep Google's
-consent screen in [Testing][google-testing] as an additional measure; it does
-not enforce owner-only access. Before admitting another account, finish the
-signed deployment, Vault, backups, alarms, data volume and infrastructure work
-in the [deployment design](../design/deployment.md).
+Phase 1 serves only the owner. Put the owner's verified email in the Podman
+secret `server_signup_emails`, never in Git. Prove a previously unused second
+Google account is rejected before announcing the site. Keep Google's consent
+screen in [Testing][google-testing] as an additional measure; it does not
+enforce owner-only access. Before admitting another account, finish the signed
+deployment, Vault, backups, alarms, data volume and infrastructure work in the
+[deployment design](../design/deployment.md).
 
 ## Build and install
 
@@ -21,9 +21,8 @@ requires `/srv/trachuan/data` to be mounted. Copy the bundle from the MacBook:
 rsync -a deploy/host/ opc@trachuan-host:/tmp/trachuan-host/
 ```
 
-On the host, fill the three digests in `/tmp/trachuan-host/images.env`, and the
-public `GOOGLE_CLIENT_ID` and private owner `SERVER_SIGNUP_EMAILS` in that
-bundle's `server.env`. Register Google redirect URI
+On the host, fill the digests in `/tmp/trachuan-host/images.env`; `server.env`
+in Git already holds the public `GOOGLE_CLIENT_ID`. Register Google redirect URI
 `https://trachuan.vn/api/v1/auth/google/callback`. From the `opc` login:
 
 ```sh
@@ -34,10 +33,10 @@ The installer targets OL9.8 arm64. It uses OL9 BaseOS and AppStream for every
 package, plus `ol9_oci_included` for `python39-oci-sdk` only. It requires
 SELinux enforcing, cgroup v2 and Podman >= 4.4, and verifies generated units. It
 enables lingering and opens 80/443 TCP and 443 UDP. It preserves installed env
-files under `/srv/trachuan/host/`; update those files on an existing host. The
-server's pre-start guard validates every signup-list entry: a nonempty local
-part, a dotted domain and no whitespace. Invalid values refuse startup without
-being logged. Leave `SERVER_GOOGLE_ISSUER` and `SERVER_OAUTH_CLIENTS` unset.
+files under `/srv/trachuan/host/`; update those files on an existing host.
+Podman refuses to start the server without the `server_signup_emails` secret,
+and the server refuses an empty or malformed list at startup without logging it.
+Leave `SERVER_GOOGLE_ISSUER` and `SERVER_OAUTH_CLIENTS` unset.
 
 The dynamic group `trachuan-host` includes only this instance. Its policy grants
 `use metrics` in compartment `trachuan` for namespace `trachuan_host`. The
@@ -117,6 +116,8 @@ sys.stdout.write("postgres://" + sys.argv[1] + ":" + password +
   unset value
 }
 secret google_client_secret
+secret server_signup_emails
+
 secret smtp_username
 secret smtp_password
 openssl rand -base64 32 | tr '+/' '-_' | tr -d '=' | \

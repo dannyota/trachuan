@@ -18,6 +18,7 @@ Secret=server_corpus_database_url,type=env,target=SERVER_CORPUS_DATABASE_URL
 Secret=account_keys,type=mount,target=/run/secrets/account_keys,uid=65532,gid=65532,mode=0400
 Secret=smtp_username,type=env,target=SERVER_SMTP_USERNAME
 Secret=smtp_password,type=env,target=SERVER_SMTP_PASSWORD
+Secret=server_signup_emails,type=env,target=SERVER_SIGNUP_EMAILS
 Exec=serve
 PodmanArgs=--cpus=4 --memory=2500m --memory-reservation=2000m
 HealthCmd=["/app/healthcheck", "http://127.0.0.1:8080/healthz"]
@@ -29,7 +30,6 @@ HealthOnFailure=kill
 LogDriver=journald
 
 [Service]
-ExecStartPre=/srv/trachuan/host/check-signup.sh /srv/trachuan/host/server.env
 ExecStartPre=/srv/trachuan/host/wait-healthy.sh trachuan-queryembed
 Restart=on-failure
 RestartSec=5

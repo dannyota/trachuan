@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+set -euo pipefail
+[[ $# == 2 && ! -L $2 && ! -L $2/updaters ]]
+source_dir=$(cd "$1" && pwd)
+install -d -m 0755 "$2" "$2/updaters"
+target=$(cd "$2" && pwd)
+version=$(cd "$source_dir" && sha256sum __init__.py deploy_*.py main.py proof.py publish.py fixtures/manifest.json | sha256sum | cut -d' ' -f1)
+destination=$target/updaters/$version
+staged=$(mktemp -d "$target/updaters/.staging.XXXXXX")
+pointer=$target/.updater-link.$$
+trap 'rm -rf "$staged"; rm -f "$pointer" "$target/.entry.$$"' EXIT
+chmod 0755 "$staged"
+install -d -m 0755 "$staged/updater"
+for module in "$source_dir"/deploy_*.py "$source_dir/__init__.py" "$source_dir/main.py" "$source_dir/proof.py" "$source_dir/publish.py"; do
+ install -m 0644 "$module" "$staged/updater/${module##*/}"
+done
+install -d -m 0755 "$staged/updater/fixtures"
+install -m 0644 "$source_dir/fixtures/manifest.json" "$staged/updater/fixtures/manifest.json"
+if [[ -e $destination ]]; then
+ for module in "$staged"/updater/*; do
+  [[ ! -d $module ]] || continue
+  cmp -s "$module" "$destination/updater/${module##*/}"
+ done
+ cmp -s "$source_dir/fixtures/manifest.json" "$destination/updater/fixtures/manifest.json"
+else
+ python3 -I "$source_dir/publish.py" tree "$staged"
+ mv "$staged" "$destination"
+ python3 -I "$source_dir/publish.py" directory "$target/updaters"
+fi
+[[ ! -e $target/updater || -L $target/updater ]]
+ln -s "$destination/updater" "$pointer"
+python3 -I "$source_dir/publish.py" rename "$pointer" "$target/updater"
+for script in trachuan-deploy proof.sh; do
+ [[ ! -L $target/$script ]]
+ python3 -I "$source_dir/publish.py" executable "$source_dir/$script" "$target/$script"
+done
+touch "$destination"
+python3 - "$target/updaters" <<'PY'
+from pathlib import Path
+import re
+import shutil
+import sys
+versions = [path for path in Path(sys.argv[1]).iterdir()
+            if re.fullmatch('[0-9a-f]{64}', path.name) and path.is_dir() and not path.is_symlink()]
+for path in sorted(versions, key=lambda path: path.stat().st_mtime_ns, reverse=True)[5:]:
+    shutil.rmtree(path)
+PY

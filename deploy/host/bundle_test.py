@@ -26,7 +26,7 @@ class InstallerTest(unittest.TestCase):
         script = (HOST / "install.sh").read_text()
         for path in ("metrics/publish-metrics.py", "systemd/trachuan-metrics.service", "systemd/trachuan-metrics.timer"):
             self.assertTrue((HOST / path).is_file(), path)
-        for value in ("ol9_oci_included", "python39-oci-sdk", "--uid-owner", "169.254.169.254", "--dport 80", "--query-rule", "--add-rule", "trachuan-metrics.timer"):
+        for value in ("updater/install-packages.sh", "--uid-owner", "169.254.169.254", "--dport 80", "--query-rule", "--add-rule", "trachuan-metrics.timer"):
             self.assertIn(value, script)
 
     def test_restore_directory_is_provisioned_before_rootless_use(self):
@@ -41,6 +41,12 @@ class InstallerTest(unittest.TestCase):
 
 
 class ServerEnvironmentTest(unittest.TestCase):
+    def test_signup_secret_and_public_client_id_need_no_host_env_edit(self):
+        lines = (HOST / 'server.env').read_text().splitlines()
+        self.assertFalse(any(line.startswith('SERVER_SIGNUP_EMAILS=') for line in lines))
+        self.assertIn('GOOGLE_CLIENT_ID=192561568520-coclqgncgggn9oiss8icpr6nlktqvvg0.apps.googleusercontent.com', lines)
+        self.assertFalse(any('REPLACE' in line for line in lines))
+
     def test_account_key_file_and_smtp_settings(self):
         lines = (HOST / "server.env").read_text().splitlines()
         expected = {
@@ -135,12 +141,13 @@ class ListenerTest(unittest.TestCase):
                     hooks = [shlex.split(line.split("=", 1)[1]) for line in unit.read_text().splitlines()
                              if line.startswith("ExecStartPre=")]
                     if unit.name == "trachuan-server.container":
-                        self.assertIn(["/srv/trachuan/host/check-signup.sh", "/srv/trachuan/host/server.env"], hooks)
+                        self.assertFalse(any('check-signup.sh' in hook[0] for hook in hooks))
                         self.assertEqual(container["User"], "65532:65532")
                         secrets = {
                             "account_keys": "type=mount,target=/run/secrets/account_keys,uid=65532,gid=65532,mode=0400",
                             "smtp_username": "type=env,target=SERVER_SMTP_USERNAME",
                             "smtp_password": "type=env,target=SERVER_SMTP_PASSWORD",
+                            "server_signup_emails": "type=env,target=SERVER_SIGNUP_EMAILS",
                         }
                         for name, options in secrets.items():
                             with self.subTest(secret=name):

@@ -1,0 +1,11 @@
+[Unit]
+Description=Check signed trachuan releases every five minutes
+ConditionPathExists=/etc/trachuan/deploy-mode
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+Unit=trachuan-deploy.service
+
+[Install]
+WantedBy=timers.target

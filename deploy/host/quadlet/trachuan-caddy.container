@@ -26,6 +26,7 @@ HealthOnFailure=kill
 LogDriver=journald
 
 [Service]
+ExecStartPre=/usr/bin/test ! -e /srv/trachuan/state/deploy-hold
 ExecStartPre=/srv/trachuan/host/client-address-log.sh prepare
 ExecStartPre=/srv/trachuan/host/wait-healthy.sh trachuan-web
 Restart=on-failure
