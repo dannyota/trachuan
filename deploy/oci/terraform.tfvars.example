@@ -1,0 +1,18 @@
+tenancy_ocid = "<tenancy-ocid>"
+compartment_ocid = "<compartment-ocid>"
+alarm_email = "<alarm-email>"
+instance_image_ocid = "<instance-image-ocid>"
+identity_emails = {
+  smtp = "<smtp-identity-email>"
+  backup = "<backup-identity-email>"
+  tfstate = "<tfstate-identity-email>"
+  release_upload = "<release-upload-identity-email>"
+  release_verify = "<release-verify-identity-email>"
+}
+sender_email = "<sender-email>"
+owner_ssh_rules = [
+  { cidr = "<ssh-cidr-1>", description = "<ssh-description-1>" },
+  { cidr = "<ssh-cidr-2>", description = "<ssh-description-2>" },
+  { cidr = "<ssh-cidr-3>", description = "<ssh-description-3>" },
+  { cidr = "<ssh-cidr-4>", description = "<ssh-description-4>" },
+]
