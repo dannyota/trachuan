@@ -6,6 +6,29 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 class WorkflowsTest(unittest.TestCase):
+    def test_opentofu_ci_rules(self):
+        text = (ROOT / '.github/workflows/ci.yml').read_text()
+        preflight = text.split('\n  schema:\n', 1)[0]
+        for line in ('tofu: ${{ steps.paths.outputs.tofu }}', 'tofu=true', 'tofu=false',
+                     'deploy/oci/*|.github/workflows/ci.yml) tofu=true ;;',
+                     'deploy/oci/*) ;;', '"tofu=$tofu"'):
+            self.assertIn(line, preflight)
+        job = text.split('\n  opentofu:\n', 1)[1].split('\n  ci:\n', 1)[0]
+        for line in ('needs: [preflight]', "if: needs.preflight.outputs.tofu == 'true'",
+                     'runs-on: ubuntu-24.04', 'timeout-minutes: 5', 'contents: read',
+                     'working-directory: deploy/oci', 'actions/checkout@',
+                     'opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4 # v2.0.2',
+                     'tofu_version: 1.13.9', 'tofu_wrapper: false',
+                     'tofu fmt -check -recursive', 'tofu init -backend=false -input=false -lockfile=readonly',
+                     'tofu validate -no-color'):
+            self.assertIn(line, job)
+        ci = text.split('\n  ci:\n', 1)[1]
+        for line in ('needs: [preflight, static, integration, e2e, docembed, queryembed, schema, web, opentofu]',
+                     'TOFU_NEEDED: ${{ needs.preflight.outputs.tofu }}', 'TOFU: ${{ needs.opentofu.result }}',
+                     'if [ "$TOFU_NEEDED" = true ]; then', 'test "$TOFU" = success',
+                     'elif [ "$TOFU_NEEDED" = false ]; then', 'test "$TOFU" = skipped'):
+            self.assertIn(line, ci)
+
     def test_registry_login_lasts_through_attestations_and_always_logs_out(self):
         text = (ROOT / '.github/workflows/images.yml').read_text().split('\n  release:\n', 1)[0]
         steps = re.split(r'\n      - ', text)[1:]
