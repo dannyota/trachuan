@@ -81,6 +81,10 @@ def main():
             "usr/lib/aarch64-linux-gnu/libssh2.so.1.0.1",
             "var/lib/dpkg/info/pgbackrest.postinst",
             "var/lib/dpkg/info/pgbackrest.postrm",
+            "usr/sbin/update-ca-certificates",
+            "var/lib/dpkg/info/ca-certificates.config",
+            "var/lib/dpkg/info/ca-certificates.postinst",
+            "var/lib/dpkg/info/ca-certificates.postrm",
         },
     }[kind]
     baseline = image_inventory(runtime)
