@@ -60,13 +60,12 @@ activates it ([corpus release](corpus-release.md)).
 
 ## Database roles
 
-| Role             | Where             | May                                                                                                                    | May not                             |
-| ---------------- | ----------------- | ---------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
-| `server`         | host              | read any `corpus_*`; read and write `auth` tables                                                                      | create or drop databases            |
-| `activator`      | host, CLI         | create and drop `corpus_*` databases; write `auth.corpus_release`, `auth.release_journal`, `auth.retired_release` only | read or write other `auth` tables   |
-| `restorer`       | host, CLI         | restore into one new `corpus_*` database                                                                               | touch `auth`; superuser rights      |
-| `pipeline`       | MacBook           | read and write the local workshop database                                                                             | connect to the host                 |
-| `corpus_builder` | MacBook, proposed | create and own local corpus build databases; separate connection                                                       | read auth/workshop; connect to host |
+| Role             | Where             | May                                                                                                                                  | May not                             |
+| ---------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------- |
+| `server`         | host              | read any `corpus_*`; read and write `auth` tables                                                                                    | create or drop databases            |
+| `activator`      | host, CLI         | create, restore into and drop `corpus_*` databases; write `auth.corpus_release`, `auth.release_journal`, `auth.retired_release` only | read or write other `auth` tables   |
+| `pipeline`       | MacBook           | read and write the local workshop database                                                                                           | connect to the host                 |
+| `corpus_builder` | MacBook, proposed | create and own local corpus build databases; separate connection                                                                     | read auth/workshop; connect to host |
 
 The server never writes corpus data. The pipeline never connects to the host.
 The proposed local builder needs owner approval for CREATEDB; its actual scope

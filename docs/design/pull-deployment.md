@@ -16,9 +16,10 @@ the production host with no SSH session. Corpus releases follow
   the repository admin role. Rulesets make
   [`github.ref_protected`](https://docs.github.com/en/actions/reference/workflows-and-actions/contexts#github-context)
   true for release tags.
-- Environment `production` with deployment tags `v*` and no required reviewer. A
-  reviewer can be added later without changing code. Environments are available
-  for public repositories on GitHub Free
+- Environment `production` with deployment refs tag `v*` (release job) and
+  branch `main` (rollback workflow), and no required reviewer. A reviewer can be
+  added later without changing code. Environments are available for public
+  repositories on GitHub Free
   ([environments](https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments)).
 - Environment `corpus-release`, deployment branch `main`, holding the release
   bucket read key ([corpus release](corpus-release.md#signing-workflow)).
@@ -104,26 +105,30 @@ the same way, published as `ghcr.io/dannyota/trachuan-rollback:<sequence>`.
 ## Host policy and state
 
 `/etc/trachuan/deploy-policy.json`, root 0644, installed by the bundle:
-repository, the two workflow identities as anchored regular expressions, OIDC
-issuer `https://token.actions.githubusercontent.com`, artifact repositories,
-image names, upstream repositories, mode (`verify` or `activate`), and the
-Sigstore trust root pinned by the cosign release. Values come from this policy
-only, never from a manifest.
+repository, the workflow identities as anchored regular expressions, OIDC issuer
+`https://token.actions.githubusercontent.com`, artifact repositories, image
+names, upstream repositories, the extension allowlist, mode (`verify` or
+`activate`), and the Sigstore trust root pinned by the cosign release. Values
+come from this policy only, never from a manifest.
 
-State in `/var/lib/trachuan-deploy/`, root 0700: active manifest hash, highest
-image sequence, highest rollback sequence, consumed rollback authorizations,
-retained manifests and bundles (the last five), installed bundle hash, and the
-journal. Application containers and the `trachuan` user cannot write policy or
-state. Lost state is not reset to zero: the updater stops with `deploy_failed`
-until [bootstrap](#bootstrap) runs again.
+State in `/var/lib/trachuan-deploy/`, root 0700: active image and corpus
+manifest hashes, every accepted sequence with its manifest hash (image, rollback
+and corpus), consumed rollback authorizations, failed manifest hashes, retained
+manifests and bundles (the last five), installed bundle hash, Vault secret
+versions, and the journal. Application containers and the `trachuan` user cannot
+write policy or state. Lost state is not reset to zero: the updater stops with
+`deploy_failed` until [bootstrap](#bootstrap) runs again.
 
 ## Updater
 
 `trachuan-deploy.timer` starts the root `trachuan-deploy.service` every 5
-minutes. One run holds `/run/trachuan-deploy.lock`. Before restarting PostgreSQL
-it also takes the backup lock (`/srv/trachuan/state/backup/backup.lock`) without
-waiting; when a backup holds it, the run ends without changes and the next run
-retries.
+minutes. One run holds `/run/trachuan-deploy.lock` throughout. Before its first
+change to the host it takes the backup lock
+(`/srv/trachuan/state/backup/backup.lock`) without waiting and holds it to the
+end; when a backup holds it, the run ends without changes and the next run
+retries. A run has three phases, each skipped when nothing changed: secrets
+([deployment](deployment.md#secrets)), images, then
+[corpus](corpus-release.md#host-activation).
 
 1. Fetch: resolve `ghcr.io/dannyota/trachuan-release:production` and the
    rollback repository's newest tag; download into a fresh staging directory.
@@ -133,9 +138,10 @@ retries.
    `kind`, `version`, `repository` and `target`, and bind the manifest's `ref`
    and `commit` to the certificate with `--certificate-github-workflow-ref` and
    `--certificate-github-workflow-sha`.
-3. Decide: a manifest whose hash is active or retained is a no-op. Accept a new
-   manifest only when its sequence is above the stored highest; reject an equal
-   or lower sequence with different bytes.
+3. Decide: a manifest whose hash is active, retained or failed is a no-op. A
+   sequence already bound to another hash is rejected. Accept a new manifest
+   only when its sequence is above every accepted image sequence, and record the
+   sequence-to-hash binding before any change; it survives failure and rollback.
 4. Verify images: pull each by digest, then verify its build attestation from
    the registry with the build identity from policy and require the SLSA v1
    subject digest, source repository, commit and ref to equal the manifest. The
@@ -145,33 +151,52 @@ retries.
    anonymously, and otherwise uses a pinned
    `gh attestation verify --bundle-from-oci`. Upstream images: digest equality
    only. Reject tags, unlisted repositories and missing claims.
-5. Verify the host bundle: size and SHA-256 equal the manifest.
+5. Verify the host bundle: size and SHA-256 equal the manifest, and its
+   `server.env` and `web.env` contain no `REPLACE` placeholder. The bundle's
+   `images.env` is ignored; the manifest is the only source of image references.
 6. Activate (mode `activate` only):
-   - Journal `started` with the manifest hash and the auth schema version
-     (`max(version_id)` in `goose_db_version`).
+   - Journal `started` with the target hash, the previous active hash, the auth
+     schema version (`max(version_id)` in `goose_db_version`) and whether
+     PostgreSQL restarts.
    - When the bundle hash differs from the installed one: unpack into
      `/srv/trachuan/bundles/<sha256>/` and run its `install.sh` as root.
    - Write `/srv/trachuan/host/images.env` from the manifest; install the
      bundle's `server.env` and `web.env`; render units; `daemon-reload`.
-   - Stop Caddy, web, server and queryembed. Restart PostgreSQL only when its
-     image or rendered unit changed; then wait for it, run `pgbackrest check`
-     and prewarm the active corpus database
+   - Stop Caddy, web, server, migrate and queryembed. Restart PostgreSQL only
+     when its image or rendered unit changed; then wait for it, run
+     `pgbackrest check` and prewarm the active corpus database
      ([release restore](../runbooks/release-restore.md#prewarm-a-corpus-database)).
-   - Start queryembed and migrate, then server and web; require `/readyz`; start
-     Caddy; require `https://trachuan.vn/readyz` through Caddy.
-   - Journal `activated`; store the new hash and sequence.
-7. Failure after step 6 begins: when the auth schema version is unchanged and a
-   previous manifest is retained, activate it the same way (its bundle's
-   `install.sh` runs again when the bundle differs) and journal `rolled_back`.
-   Otherwise leave Caddy stopped and journal `stopped`. Either way record
-   `deploy_failed`; the failed manifest is never retried, and a higher sequence
-   is still accepted. A fetch or verification failure changes nothing on the
-   host.
+   - Run `provision-activator.sh`
+     ([corpus release](corpus-release.md#activation-steps)); start queryembed;
+     start migrate, a oneshot unit, and require success; start server and web.
+   - Require loopback `http://127.0.0.1:8080/readyz`; start Caddy; require
+     `https://trachuan.vn/` to answer 200 through Caddy on the host
+     (`curl --resolve trachuan.vn:443:127.0.0.1`), since public `/readyz` is not
+     routed.
+   - Journal `activated`; store the new active hash.
+
+Configuration that differs per host and is not secret lives in Git, in
+`server.env` and `web.env`; the Google client identifier is public and moves
+there. Values that must stay out of Git, such as the sign-up allowlist, are
+[Vault secrets](deployment.md#secrets) passed as env secrets.
+
+### Failure and recovery
+
+One rule covers a failed step and an interrupted run. A run that finds an open
+journal first stops Caddy, then treats the journaled target as failed. A failed
+target is handled with the journal's baseline, never a fresh one: when the auth
+schema version still equals the journaled baseline and the previous manifest is
+retained, the updater activates the previous manifest the same way (its bundle's
+`install.sh` runs again when the bundle differs) and journals `rolled_back`.
+Otherwise Caddy stays stopped and the journal reads `stopped`. Either way the
+target joins the failed hashes and `deploy_failed` is recorded; a higher
+sequence is still accepted. A fetch or verification failure changes nothing on
+the host.
 
 A signed rollback authorization is applied when its `current` equals the active
-hash, its `target` is retained, its sequence is above the stored rollback
+hash, its `target` is retained, its sequence is above every accepted rollback
 sequence, and the target's auth schema version equals the current one. It is
-consumed even when activation fails.
+consumed before activation begins, so it never applies twice.
 
 Image activation that needs a model the host does not have fails at queryembed
 readiness. Model provisioning stays a manual owner step.
@@ -181,8 +206,10 @@ readiness. Model provisioning stays a manual owner step.
 The leader's last planned SSH session installs the bundle containing the
 updater, writes the policy in mode `verify`, and runs
 `trachuan-deploy bootstrap <manifest-sha256>`, which pins that manifest as
-active and its sequence as the floor after full verification. Switching to
-`activate` is a policy change shipped in a release.
+active and its sequence as the floor after full verification. After the host
+proofs pass, the same session sets mode `activate` locally, runs one updater
+run, and confirms its result before the deploy SSH key is removed. Later policy
+changes ship in releases.
 
 ## Results and alarms
 

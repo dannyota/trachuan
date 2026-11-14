@@ -68,25 +68,33 @@ Use regional OCI Vault secrets in vault `trachuan-vault` with the
 software-protected key `trachuan-secrets`. Each Vault secret has the name of the
 Podman secret it becomes: `google_client_secret`, `smtp_username`,
 `smtp_password`, `account_keys`, `postgres_password`, `auth_db_password`,
-`corpus_reader_password`, `activator_db_password`, `restorer_db_password`,
-`backup_s3_key`, `backup_s3_key_secret` and `server_signup_emails` (an env
-secret for `SERVER_SIGNUP_EMAILS`, so the owner email stays out of Git). The
-fetcher derives `server_auth_database_url` and `server_corpus_database_url` from
-the passwords as the [host runbook](../runbooks/host.md#create-secrets) does.
+`corpus_reader_password`, `activator_db_password`, `backup_s3_key`,
+`backup_s3_key_secret` and `server_signup_emails` (an env secret for
+`SERVER_SIGNUP_EMAILS`, so the owner email stays out of Git). The fetcher
+derives `server_auth_database_url` and `server_corpus_database_url` from the
+passwords as the [host runbook](../runbooks/host.md#create-secrets) does.
 
-The root `trachuan-secrets.service` runs at boot, before each activation and
-hourly. Through the host's
+The [updater](pull-deployment.md#updater) reconciles secrets at most hourly and
+before every activation, under its locks. Through the host's
 [instance principal](https://docs.oracle.com/en-us/iaas/Content/Identity/Tasks/callingservicesfrominstances.htm)
 and the installed OCI Python SDK it reads the current
 [secret bundle](https://docs.oracle.com/en-us/iaas/Content/secret-management/Tasks/get-secrets-contents.htm)
-of each named secret and compares its version with the one recorded in
-`/var/lib/trachuan-deploy/secrets.json` (names and versions only). On a change
-it pipes the value into `podman secret create --replace` as `trachuan` and
-recreates the containers that mount it. Values never reach disk, logs, command
-arguments, images or OpenTofu state. A missing or unreadable secret keeps the
-current Podman secret and records `secrets_failed`, alarmed like
-`deploy_failed`. Changing a database role password is an owner runbook step
-(`ALTER ROLE`, then the Vault version); the fetcher does not alter roles.
+version of each named secret. A secret needs work when its version differs from
+the recorded one or its Podman secret is missing. For each such secret the
+updater pipes the value into `podman secret create --replace` as `trachuan`,
+rebuilds the derived URL secrets that depend on it, and recreates the containers
+that use it with the activation procedure (PostgreSQL under the backup lock,
+readiness before Caddy). The version is recorded in `/var/lib/trachuan-deploy/`
+(names and versions only) only after every dependent secret and container is
+reconciled; anything less leaves it pending for the next run. Values travel
+through pipes and are stored only by Podman's default file driver under the
+`trachuan` account
+([podman secret create](https://docs.podman.io/en/v5.8.2/markdown/podman-secret-create.1.html));
+never in other files, logs, command arguments, images or OpenTofu state. A
+missing or unreadable Vault secret keeps the current Podman secret and records
+`secrets_failed`, alarmed like `deploy_failed`. Changing a database role
+password is an owner runbook step (`ALTER ROLE`, then the Vault version); the
+updater alters only the `activator` role it provisions.
 
 Dynamic group `trachuan-host` (this instance only) gets `read secret-bundles`
 where
