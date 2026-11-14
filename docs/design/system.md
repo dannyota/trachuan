@@ -55,18 +55,17 @@ proxied request with 403. Caddy serves only the configured site names, and
 Corpus releases are built on the owner's MacBook by the `corpus` worker under a
 self-hosted Temporal server ([pipeline](pipeline.md),
 [ADR 0008](../adr/0008-write-path-temporal-self-hosted.md)). A release is a
-signed manifest plus a PostgreSQL dump in OCI Object Storage. Activation on the
-host is a separate command run by the owner ([deployment](deployment.md)).
+signed manifest plus a PostgreSQL dump in OCI Object Storage. A host timer
+activates it ([corpus release](corpus-release.md)).
 
 ## Database roles
 
-| Role             | Where             | May                                                                                                                    | May not                             |
-| ---------------- | ----------------- | ---------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
-| `server`         | host              | read any `corpus_*`; read and write `auth` tables                                                                      | create or drop databases            |
-| `activator`      | host, CLI         | create and drop `corpus_*` databases; write `auth.corpus_release`, `auth.release_journal`, `auth.retired_release` only | read or write other `auth` tables   |
-| `restorer`       | host, CLI         | restore into one new `corpus_*` database                                                                               | touch `auth`; superuser rights      |
-| `pipeline`       | MacBook           | read and write the local workshop database                                                                             | connect to the host                 |
-| `corpus_builder` | MacBook, proposed | create and own local corpus build databases; separate connection                                                       | read auth/workshop; connect to host |
+| Role             | Where             | May                                                                                                                                  | May not                             |
+| ---------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------- |
+| `server`         | host              | read any `corpus_*`; read and write `auth` tables                                                                                    | create or drop databases            |
+| `activator`      | host, CLI         | create, restore into and drop `corpus_*` databases; write `auth.corpus_release`, `auth.release_journal`, `auth.retired_release` only | read or write other `auth` tables   |
+| `pipeline`       | MacBook           | read and write the local workshop database                                                                                           | connect to the host                 |
+| `corpus_builder` | MacBook, proposed | create and own local corpus build databases; separate connection                                                                     | read auth/workshop; connect to host |
 
 The server never writes corpus data. The pipeline never connects to the host.
 The proposed local builder needs owner approval for CREATEDB; its actual scope

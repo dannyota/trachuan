@@ -43,6 +43,8 @@ Intended behavior of trachuan. Decisions with alternatives are in the
 | [web](web.md)                                       | Routes, pages, visual system                                                                   |
 | [deployment](deployment.md)                         | Host, deploy, secrets, release activation, backups, observability                              |
 | [backups](backups.md)                               | pgBackRest image, configuration, schedules, restore proof and results                          |
+| [pull deployment](pull-deployment.md)               | Signed release from a tag, host updater, rollback, remote execution                            |
+| [corpus release](corpus-release.md)                 | Upload, signed corpus manifest, host restore and activation                                    |
 | [budgets](budgets.md)                               | Request, pipeline, indexing, retrieval and Temporal limits                                     |
 | [host budgets](budgets-host.md)                     | Hosting cost, host memory, alarms and disk                                                     |
 | [caching](caching.md)                               | Server caches for query vectors, search responses, read items and document entries             |
