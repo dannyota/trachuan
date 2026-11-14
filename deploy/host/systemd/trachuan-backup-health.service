@@ -1,0 +1,15 @@
+[Unit]
+Description=trachuan backup health
+Requires=trachuan-postgres.service
+After=trachuan-postgres.service
+RequiresMountsFor=/srv/trachuan/data
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /srv/trachuan/host/backup.py health
+Environment=PYTHONDONTWRITEBYTECODE=1
+TimeoutStartSec=300
+TimeoutStopSec=30
+KillMode=mixed
+UMask=0027
+LimitCORE=0

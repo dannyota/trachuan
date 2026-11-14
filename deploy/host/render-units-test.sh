@@ -10,13 +10,14 @@ SERVER_IMAGE=ghcr.io/dannyota/trachuan-server@$digest
 WEB_IMAGE=ghcr.io/dannyota/trachuan-web@$digest
 QUERYEMBED_IMAGE=ghcr.io/dannyota/trachuan-queryembed@$digest
 CADDY_IMAGE=docker.io/library/caddy@$digest
-POSTGRES_IMAGE=docker.io/pgvector/pgvector@$digest
+POSTGRES_IMAGE=ghcr.io/dannyota/trachuan-postgres@$digest
 PINS
 bash "$here/render-units.sh" "$pins" "$work/units"
 grep -qxF "Image=ghcr.io/dannyota/trachuan-server@$digest" "$work/units/trachuan-server.container"
 grep -qxF "RequiresMountsFor=/srv/trachuan/data" "$work/units/trachuan-postgres.container"
 grep -qxF "ExecStartPre=/usr/bin/mountpoint -q /srv/trachuan/data" "$work/units/trachuan-postgres.container"
 grep -qxF "Volume=/srv/trachuan/data/postgres:/var/lib/postgresql:Z,U" "$work/units/trachuan-postgres.container"
+grep -Fq 'archive_command=pgbackrest --stanza=trachuan archive-push %%p' "$work/units/trachuan-postgres.container"
 [[ ! -e $work/units/trachuan-postgres.volume ]]
 if grep -RE '@[A-Z_]+@' "$work/units"; then exit 1; fi
 cp "$work/units/trachuan-server.container" "$work/before"

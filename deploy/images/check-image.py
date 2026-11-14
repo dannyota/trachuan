@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""List binaries and reject additions outside the production allowlist."""
 
 import hashlib
 import pathlib
@@ -77,6 +76,12 @@ def main():
             "opt/native/libonnxruntime.so", "opt/native/libtokenizers.a",
         },
         "web": {"usr/local/bin/node"},
+        "postgres": {
+            "usr/bin/pgbackrest",
+            "usr/lib/aarch64-linux-gnu/libssh2.so.1.0.1",
+            "var/lib/dpkg/info/pgbackrest.postinst",
+            "var/lib/dpkg/info/pgbackrest.postrm",
+        },
     }[kind]
     baseline = image_inventory(runtime)
     binaries = image_inventory(image, baseline, expected)

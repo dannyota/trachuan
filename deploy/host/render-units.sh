@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Quadlet does not expand shell variables in Image=.
 set -euo pipefail
 here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-[[ $# == 2 ]] || { echo 'usage: render-units.sh images.env destination' >&2; exit 1; }
+[[ $# == 2 || $# == 3 ]] || { echo 'usage: render-units.sh images.env destination [user-unit-destination]' >&2; exit 1; }
 pins=$1
 destination=$2
+user_destination=${3:-$destination}
 templates=${QUADLET_TEMPLATES:-$here/quadlet}
 fail() { echo "render-units: $*" >&2; exit 1; }
 [[ -f $pins && ! -L $pins ]] || fail 'expected a regular images.env'
@@ -21,7 +21,7 @@ while IFS= read -r line || [[ -n $line ]]; do
   WEB_IMAGE) repository=ghcr.io/dannyota/trachuan-web ;;
   QUERYEMBED_IMAGE) repository=ghcr.io/dannyota/trachuan-queryembed ;;
   CADDY_IMAGE) repository=docker.io/library/caddy ;;
-  POSTGRES_IMAGE) repository=docker.io/pgvector/pgvector ;;
+  POSTGRES_IMAGE) repository=ghcr.io/dannyota/trachuan-postgres ;;
   *) fail 'unknown image key' ;;
  esac
  [[ -z ${!key} ]] || fail "duplicate $key"
@@ -31,9 +31,8 @@ done <"$pins"
 for key in SERVER_IMAGE WEB_IMAGE QUERYEMBED_IMAGE CADDY_IMAGE POSTGRES_IMAGE; do
  [[ -n ${!key} ]] || fail "missing $key"
 done
-# Validate the whole bundle before replacing any installed file.
 files=() contents=()
-for file in "$templates"/*.container "$templates"/*.volume; do
+for file in "$templates"/*.container "$templates"/*.volume "$here"/systemd/*.service "$here"/systemd/*.timer; do
  [[ -e $file ]] || continue
  [[ -f $file && ! -L $file ]] || fail 'unsafe template'
  content=$(cat "$file")
@@ -41,26 +40,28 @@ for file in "$templates"/*.container "$templates"/*.volume; do
   content=${content//@$key@/${!key}}
  done
  [[ ! $content =~ @[A-Z_]+@ ]] || fail 'unknown template placeholder'
- target=$destination/${file##*/}
+ case $file in
+  *.service|*.timer) target=$user_destination/${file##*/} ;;
+  *) target=$destination/${file##*/} ;;
+ esac
  [[ ! -L $target && ! -d $target ]] || fail 'unsafe destination file'
  files+=("$target")
  contents+=("$content")
 done
 ((${#files[@]} > 0)) || fail 'no templates found'
-[[ ! -L $destination ]] || fail 'destination must not be a symlink'
+[[ ! -L $destination && ! -L $user_destination ]] || fail 'destination must not be a symlink'
 for obsolete in trachuan.network trachuan-db.network; do
  [[ ! -L $destination/$obsolete && ! -d $destination/$obsolete ]] || fail 'unsafe obsolete network unit'
 done
-mkdir -p "$destination"
+mkdir -p "$destination" "$user_destination"
 staged=
 trap 'if [[ -n $staged ]]; then rm -f "$staged"; fi' EXIT
 for ((index=0; index<${#files[@]}; index++)); do
- staged=$(mktemp "$destination/.quadlet.XXXXXX")
+ staged=$(mktemp "$(dirname "${files[index]}")/.unit.XXXXXX")
  printf '%s\n' "${contents[index]}" >"$staged"
  chmod 0644 "$staged"
  mv -f "$staged" "${files[index]}"
  staged=
 done
 
-# Remove only the two bridge definitions replaced by host networking.
 rm -f "$destination/trachuan.network" "$destination/trachuan-db.network"
