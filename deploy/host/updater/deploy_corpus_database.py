@@ -155,7 +155,8 @@ class Database:
 
     def smoke(self, row, image):
         self.check_lock()
-        self.host.psql(row['database_name'], 'SET statement_timeout=0; SET transaction_timeout=0; BEGIN; CREATE EXTENSION IF NOT EXISTS pg_prewarm; '
+        self.host.psql(row['database_name'], 'SET statement_timeout=0; SET lock_timeout=0; SET idle_in_transaction_session_timeout=0; '
+            'SET transaction_timeout=0; BEGIN; CREATE EXTENSION IF NOT EXISTS pg_prewarm; '
             "SELECT sum(pg_prewarm(c.oid)) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace "
             "WHERE n.nspname IN ('public','pg_toast') AND c.relkind IN ('r','i','t'); "
             'DROP EXTENSION pg_prewarm; COMMIT;')
