@@ -55,7 +55,7 @@ func checkDatabase(ctx context.Context, db *pgxpool.Pool, name string, client *e
 		return errors.New("incompatible target release identity or query recipe")
 	}
 	query := embedding.Query{Client: client, RecipeHash: r.DenseRecipe.QueryHash, ExpectedRecipe: &r.DenseRecipe.Query}
-	engine, err := retrieval.Open(ctx, db, query, retrieval.Options{Now: time.Now, Profile: "serving"})
+	engine, err := retrieval.Open(ctx, db, query, retrieval.Options{Now: time.Now, Profile: "evaluation"})
 	if err != nil {
 		return fmt.Errorf("open target retrieval engine: %w", err)
 	}

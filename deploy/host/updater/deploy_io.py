@@ -83,15 +83,22 @@ class CommandError(Exception):
         self.code = code
 
 
+PROGRAMS = ('pg_restore', 'pg_dump', 'psql', 'createdb', 'dropdb', 'oras', 'cosign', 'podman', 'systemctl', 'curl')
+STDERR_TAIL = ('oras', 'cosign', 'pg_restore')
+
+
 def describe(args, stderr, returncode):
-    program = list(args[args.index('--') + 1:] if '--' in args else args)
+    names = [Path(arg).name for arg in args]
+    known = [index for index, name in enumerate(names) if name in PROGRAMS]
+    start = known[-1] if known else (args.index('--') + 1 if '--' in args else 0)
+    program = list(args[start:])
     words = [Path(program[0]).name]
     for arg in program[1:3]:
         if not re.fullmatch('-?[a-z][a-z-]*', arg):
             break
         words.append(arg)
     detail = ' '.join(words) + ': exit ' + str(returncode)
-    if words[0] not in ('oras', 'cosign'):
+    if words[0] not in STDERR_TAIL:
         return detail
     text = ' '.join(stderr.decode('utf-8', errors='replace').split())
     if re.search('auth|basic|bearer|password|secret|token|credential', text, re.IGNORECASE):
