@@ -70,8 +70,8 @@ run that cannot take it records `skipped`.
 
 | Unit               | Schedule (Asia/Ho_Chi_Minh)  | Command                                  | Result file          |
 | ------------------ | ---------------------------- | ---------------------------------------- | -------------------- |
-| Full               | Sunday 02:00                 | `backup --type=full`                     | `backup.json`        |
-| Differential       | Monday to Saturday 02:00     | `backup --type=diff`                     | `backup.json`        |
+| Full               | Sunday 02:00                 | `backup --type=full`                     | `full.json`          |
+| Differential       | Monday to Saturday 02:00     | `backup --type=diff`                     | `diff.json`          |
 | Verify             | Wednesday 04:00              | `verify --output=text --verbose`         | `verify.json`        |
 | Health             | hourly                       | `info --output=json`, `pg_stat_archiver` | `health.json`        |
 | Auth restore check | first day of the month 05:00 | below                                    | `restore-check.json` |
