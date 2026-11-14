@@ -13,8 +13,11 @@ CADDY_IMAGE=docker.io/library/caddy@$digest
 POSTGRES_IMAGE=docker.io/pgvector/pgvector@$digest
 PINS
 bash "$here/render-units.sh" "$pins" "$work/units"
-# The consumer needs literal digest references, never environment expansion.
 grep -qxF "Image=ghcr.io/dannyota/trachuan-server@$digest" "$work/units/trachuan-server.container"
+grep -qxF "RequiresMountsFor=/srv/trachuan/data" "$work/units/trachuan-postgres.container"
+grep -qxF "ExecStartPre=/usr/bin/mountpoint -q /srv/trachuan/data" "$work/units/trachuan-postgres.container"
+grep -qxF "Volume=/srv/trachuan/data/postgres:/var/lib/postgresql:Z,U" "$work/units/trachuan-postgres.container"
+[[ ! -e $work/units/trachuan-postgres.volume ]]
 if grep -RE '@[A-Z_]+@' "$work/units"; then exit 1; fi
 cp "$work/units/trachuan-server.container" "$work/before"
 for attack in tag duplicate missing repository shell; do
@@ -32,7 +35,6 @@ for attack in tag duplicate missing repository shell; do
  cmp "$work/before" "$work/units/trachuan-server.container"
  [[ ! -e $work/executed ]]
 done
-# Refuse a template that would produce a unit with an unresolved image.
 mkdir "$work/templates"
 printf '[Container]\nImage=@UNKNOWN_IMAGE@\n' >"$work/templates/bad.container"
 if QUADLET_TEMPLATES="$work/templates" bash "$here/render-units.sh" "$pins" "$work/units"; then

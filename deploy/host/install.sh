@@ -1,17 +1,16 @@
 #!/usr/bin/env bash
-# Run from an opc login: sudo bash install.sh /path/to/host-bundle
 set -euo pipefail
 fail() { echo "install: $*" >&2; exit 1; }
 [[ $(id -u) == 0 ]] || fail 'run with sudo from the opc account'
 [[ $# == 1 ]] || fail 'usage: install.sh bundle-directory'
 bundle=$(realpath "$1")
 [[ -d $bundle/quadlet && -f $bundle/images.env ]] || fail 'incomplete host bundle'
+mountpoint -q /srv/trachuan/data || fail 'mount /srv/trachuan/data first; follow docs/runbooks/data-volume.md'
 # shellcheck source=/dev/null
 source /etc/os-release
 [[ $ID == ol && $VERSION_ID == 9.8 && $(uname -m) == aarch64 ]] || fail 'requires Oracle Linux 9.8 arm64'
 [[ $(stat -fc %T /sys/fs/cgroup) == cgroup2fs ]] || fail 'cgroup v2 is required'
 
-# Use only the supported OL9 BaseOS and AppStream repositories.
 dnf --disablerepo='*' --enablerepo=ol9_baseos_latest --enablerepo=ol9_appstream \
  install -y podman container-selinux firewalld policycoreutils-python-utils shadow-utils python3
 version=$(podman --version | awk '{print $3}')
@@ -22,7 +21,6 @@ if ! id trachuan >/dev/null 2>&1; then
  useradd --create-home --shell /bin/bash trachuan
 fi
 [[ $(getent passwd trachuan | cut -d: -f6) == /home/trachuan ]] || fail 'unexpected trachuan home'
-# Preserve existing mappings. Never move a range after rootless storage exists.
 for kind in uid gid; do
  file=/etc/sub${kind}
  if ! awk -F: '$1 == "trachuan" && $3 >= 65536 {found=1} END {exit !found}' "$file"; then
@@ -33,7 +31,6 @@ for kind in uid gid; do
   usermod "--add-sub${kind}s" "$start-$((start + 65535))" trachuan
  fi
 done
-# Rootless containers set CPU and I/O limits; OL9 delegates only memory and pids by default.
 install -d -m 0755 /etc/systemd/system/user@.service.d
 printf '[Service]\nDelegate=cpu cpuset io memory pids\n' >/etc/systemd/system/user@.service.d/delegate.conf
 systemctl daemon-reload
@@ -60,6 +57,9 @@ firewall-cmd --permanent --query-port=443/udp >/dev/null || firewall-cmd --perma
 firewall-cmd --reload
 
 install -d -o root -g root -m 0755 /srv/trachuan
+for dir in /srv/trachuan/data/postgres /srv/trachuan/data/pgbackrest; do
+ [[ -d $dir ]] || install -d -o trachuan -g trachuan -m 0700 "$dir"
+done
 install -d -o trachuan -g trachuan -m 0755 /srv/trachuan/host /srv/trachuan/host/quadlet
 install -d -o trachuan -g trachuan -m 0755 /srv/trachuan/models /srv/trachuan/models/vi_v2-bundle
 for script in bootstrap.sh grant-corpus.sh wait-healthy.sh render-units.sh \
@@ -74,7 +74,9 @@ for config in images.env server.env web.env; do
   install -o trachuan -g trachuan -m 0644 "$bundle/$config" "/srv/trachuan/host/$config"
  fi
 done
-rm -f /srv/trachuan/host/quadlet/trachuan.network /srv/trachuan/host/quadlet/trachuan-db.network
+rm -f /srv/trachuan/host/quadlet/trachuan.network /srv/trachuan/host/quadlet/trachuan-db.network \
+ /srv/trachuan/host/quadlet/trachuan-postgres.volume \
+ /home/trachuan/.config/containers/systemd/trachuan-postgres.volume
 for template in "$bundle"/quadlet/*; do
  install -o trachuan -g trachuan -m 0644 "$template" "/srv/trachuan/host/quadlet/${template##*/}"
 done
@@ -85,9 +87,7 @@ restorecon -RF /srv/trachuan
 install -d -o trachuan -g trachuan -m 0755 /home/trachuan/.config /home/trachuan/.config/containers /home/trachuan/.config/containers/systemd
 as_user bash /srv/trachuan/host/render-units.sh /srv/trachuan/host/images.env /home/trachuan/.config/containers/systemd
 as_user systemctl --user daemon-reload
-# A version alone does not prove that this build supports the bundle's keys.
-for unit in trachuan-postgres-volume \
- trachuan-caddy-data-volume trachuan-caddy-config-volume trachuan-postgres \
+for unit in trachuan-caddy-data-volume trachuan-caddy-config-volume trachuan-postgres \
  trachuan-migrate trachuan-queryembed trachuan-server trachuan-web trachuan-caddy; do
  [[ $(as_user systemctl --user show --property=LoadState --value "$unit.service") == loaded ]] || fail "Quadlet cannot load $unit.service; upgrade Podman from OL9 repositories"
 done

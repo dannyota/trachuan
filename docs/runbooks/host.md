@@ -14,7 +14,8 @@ Run the `Images` workflow on `main`, or use a protected `v*` tag. The primary
 checks green CI on the exact commit and its three build attestations, then
 selects digest references from the successful workflow summary. Make the GHCR
 packages public before anonymous pulls. Keep weights and secrets out of images.
-Copy the bundle from the MacBook:
+Prepare the [data volume](data-volume.md) before installing: `install.sh`
+requires `/srv/trachuan/data` to be mounted. Copy the bundle from the MacBook:
 
 ```sh
 rsync -a deploy/host/ opc@trachuan-host:/tmp/trachuan-host/
@@ -150,17 +151,16 @@ before `server migrate` runs. All admin commands below use `postgres-admin.sh`,
 which reads the mounted password into its environment. Do not substitute
 password arguments or trust.
 
-The named PostgreSQL volume initially uses rootless storage on boot disk. Never
-remove it to retry initialization. Move data to the separate volume before
-another account signs in. `/readyz` stays 503 until an active corpus passes its
-recipe check; [server-local.md](server-local.md) owns server command behavior.
+PostgreSQL data lives on the separate data volume. Never remove it to retry
+initialization. `/readyz` stays 503 until an active corpus passes its recipe
+check; [server-local.md](server-local.md) owns server command behavior.
 
 ### Repair an initialized cluster
 
 Changing init flags does not repair an existing cluster. For a cluster made by
 an earlier bundle, recreate PostgreSQL from its updated unit so the new helper
-mounts are present. The named volume is retained. Then rewrite `pg_hba.conf` and
-reload PostgreSQL as `trachuan`. The mounted passwords must match existing
+mounts are present. The data directory is retained. Then rewrite `pg_hba.conf`
+and reload PostgreSQL as `trachuan`. The mounted passwords must match existing
 roles. See the [HBA reload rules][hba].
 
 ```sh
@@ -184,7 +184,7 @@ Follow [release restore](release-restore.md).
 Check green CI for the exact commit and all three attestations. Keep the old
 `images.env` outside Git for recovery. Stop all containers, reload units and
 start them again so changed mounts, limits and env files take effect. Retain the
-named volumes. Edit `/srv/trachuan/host/images.env`:
+data directory and named volumes. Edit `/srv/trachuan/host/images.env`:
 
 ```sh
 bash /srv/trachuan/host/render-units.sh /srv/trachuan/host/images.env \
