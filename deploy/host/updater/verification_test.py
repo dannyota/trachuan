@@ -59,6 +59,17 @@ class VerificationTest(unittest.TestCase):
             return canonical({'payload': base64.b64encode(canonical(statement(self.manifest, args[-1]))).decode()})
         return b''
 
+    def test_policy_requires_exact_secret_names_and_valid_vault_region(self):
+        for change in ({'secrets': self.policy['secrets'][:-1]},
+                       {'secrets': self.policy['secrets'] + ['smtp_password']},
+                       {'secrets': self.policy['secrets'][:-1] + [None]},
+                       {'vault_id': 'ocid1.vault.'}, {'region': 'invalid'}):
+            with self.subTest(change=change):
+                path = self.path / 'policy.json'
+                path.write_text(json.dumps(dict(self.policy, **change)))
+                with self.assertRaises(ValueError):
+                    v.policy(path)
+
     def test_real_fixture_is_canonical_and_signature_bundle_is_parsed(self):
         self.assertEqual(v.release((FIXTURES / 'manifest.json').read_bytes(), self.policy), self.manifest)
         bundle = json.loads((FIXTURES / 'manifest.sigstore.json').read_bytes())

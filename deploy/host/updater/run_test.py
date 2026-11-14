@@ -31,6 +31,9 @@ class RunTest(fixture.ActivationFixture, unittest.TestCase):
         self.verify_images = mock.patch('updater.deploy_run.Verifier.images')
         self.images = self.verify_images.start()
         self.addCleanup(self.verify_images.stop)
+        secret_phase = mock.patch('updater.deploy_run.Secrets.run', return_value=True)
+        secret_phase.start()
+        self.addCleanup(secret_phase.stop)
 
     def test_verify_keeps_pending_without_activation_or_install(self):
         self.assertEqual(self.app.run(), 0)
@@ -171,7 +174,8 @@ class RunTest(fixture.ActivationFixture, unittest.TestCase):
         self.registry.fetch.side_effect = None
         self.registry.fetch.return_value = self.old.directory
         self.assertEqual(self.app.run(), 0)
-        self.assertEqual(json.loads(self.paths.result.read_bytes())['status'], 'skipped')
+        self.assertEqual(json.loads(self.paths.result.read_bytes())['status'], 'current')
+        self.assertIsNotNone(json.loads(self.paths.result.read_bytes())['last_success_at'])
 
     def test_command_failure_names_command_and_stderr_tail_in_result(self):
         self.registry.fetch.side_effect = CommandError('command failed', detail='oras resolve: exit 1: Error: not found')

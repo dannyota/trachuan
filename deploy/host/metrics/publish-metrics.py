@@ -11,6 +11,7 @@ from urllib.request import Request, urlopen
 
 BACKUP_DIR = Path('/srv/trachuan/state/backup')
 DEPLOY_RESULT = Path('/srv/trachuan/state/deploy/result.json')
+SECRETS_RESULT = Path('/srv/trachuan/state/deploy/secrets.json')
 JOBS = ('full', 'diff', 'verify', 'health', 'restore-check')
 MOUNTS = ('/', '/srv/trachuan/data')
 MAX_RESULT_BYTES = 65536
@@ -54,7 +55,7 @@ def backup(path, now):
 
 def deploy(path, now):
     return job_result(path, now, 'deploy',
-                      ('ok', 'failed', 'rolled_back', 'stopped', 'verified', 'skipped', 'bootstrapped'),
+                      ('ok', 'failed', 'rolled_back', 'stopped', 'verified', 'skipped', 'bootstrapped', 'current'),
                       ('failed', 'rolled_back', 'stopped'))
 
 
@@ -70,6 +71,9 @@ def collect(host, now):
         for name, value in backup(BACKUP_DIR / (job + '.json'), now):
             metrics.append((name, value, {'host': host, 'job': job}))
     for name, value in deploy(DEPLOY_RESULT, now):
+        metrics.append((name, value, {'host': host}))
+    for name, value in job_result(SECRETS_RESULT, now, 'secrets',
+                                  ('ok', 'current', 'failed', 'skipped'), ('failed',)):
         metrics.append((name, value, {'host': host}))
     return metrics
 

@@ -170,6 +170,9 @@ class HousekeepingTest(ActivationFixture, unittest.TestCase):
         self.images = mock.patch('updater.deploy_run.Verifier.images')
         self.images.start()
         self.addCleanup(self.images.stop)
+        secrets = mock.patch('updater.deploy_run.Secrets.run', return_value=True)
+        secrets.start()
+        self.addCleanup(secrets.stop)
 
     def test_prune_failure_is_success_and_next_run_can_restart_caddy(self):
         self.paths.mode.write_text('activate\n')

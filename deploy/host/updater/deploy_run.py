@@ -8,6 +8,7 @@ from .deploy_bundle import bundle
 from .deploy_host import Host
 from .deploy_io import atomic, Busy, command, CommandError, Lock, Result
 from .deploy_registry import Registry
+from .deploy_secrets import Secrets
 from .deploy_state import State
 from .deploy_store import Candidate, Paths, Store
 from .deploy_verify import match, policy, Verifier, verify_manifest
@@ -21,7 +22,8 @@ class Updater:
         self.verifier = Verifier(self.rules, runner, user_prefix)
         self.registry = Registry(self.rules, runner)
         self.store = Store(self.paths, self.rules, runner)
-        self.phases = ('images',)
+        self.phases = ('secrets', 'images')
+        self.secrets_failed = False
         self.step, self.hash, self.manifest = 'starting', None, None
 
     def mode(self):
@@ -38,10 +40,19 @@ class Updater:
 
     def noop(self, result, state):
         journal = state.data['journal'] or {}
-        status = 'skipped'
+        status = 'current' if self.hash == state.data['active'] else 'skipped'
         if self.hash in state.data['failed'] or journal.get('status') == 'stopped':
             status = journal.get('status') if journal.get('status') in ('rolled_back', 'stopped') else 'failed'
         result.write(status, 'noop', 'manifest already seen', self.hash, self.manifest)
+
+    def secrets(self, state, directory, mode, result, force=False):
+        self.step = 'secrets'
+        phase = Secrets(state, self.host, self.rules)
+        proceed = phase.run(force=True) if force else phase.run()
+        self.secrets_failed = self.secrets_failed or phase.failed
+        if not proceed:
+            result.write('failed', 'secrets', 'secret replacement pending')
+        return proceed
 
     def verified(self, state, candidate, mode, result):
         self.step = 'images'
@@ -50,6 +61,8 @@ class Updater:
         candidate.files = bundle(candidate.directory / 'host-bundle.tar.gz', candidate.manifest)
         if mode == 'verify':
             result.write('verified', 'complete', 'release verified; activation disabled', candidate.hash, candidate.manifest)
+            return
+        if not self.secrets(state, candidate.directory, mode, result, force=True):
             return
         self.step = 'activate'
         Activator(state, self.store, self.host).activate(candidate)
@@ -98,13 +111,16 @@ class Updater:
         if mode == 'verify':
             result.write('verified', 'rollback', 'rollback verified; activation disabled', hash_value, auth)
             return
+        if not self.secrets(state, candidate.directory, mode, result, force=True):
+            return
+        self.step = 'rollback'
         Activator(state, self.store, self.host).activate(candidate, expected_schema=schema,
                                                        authorization=hash_value, rollback=auth)
         result.write('ok', 'rollback', 'authorized rollback activated', hash_value, auth)
 
     def failure(self, result, state, error):
         status = None
-        if state and self.step != 'recovery':
+        if state and self.step != 'recovery' and not state.data['secrets']['pending']:
             try:
                 status = Activator(state, self.store, self.host).recover()
             except (OSError, ValueError, CommandError, InterruptedError):
@@ -120,6 +136,7 @@ class Updater:
 
     def run(self):
         state = None
+        self.secrets_failed = False
         try:
             with Lock(self.paths.lock), Lock(self.paths.backup_lock, create=False):
                 result = Result(self.paths.result, self.paths.log)
@@ -131,15 +148,16 @@ class Updater:
                     stopped = activator.enforce_stopped()
                     if self.backup_pending(result):
                         return 0
-                    recovered = None if stopped else activator.recover()
+                    recovered = None if stopped or state.data['secrets']['pending'] else activator.recover()
                     if recovered:
                         journal = state.data['journal']
                         result.write(recovered, 'recovery', 'interrupted activation recovered', journal['target'])
                         return 1
                     with tempfile.TemporaryDirectory(prefix='run-', dir=self.paths.state) as directory:
                         for phase in self.phases:
-                            getattr(self, phase)(state, Path(directory), mode, result)
-                    return 0
+                            if getattr(self, phase)(state, Path(directory), mode, result) is False:
+                                return 1
+                    return int(self.secrets_failed)
                 except (OSError, ValueError, KeyError, TypeError, CommandError, InterruptedError) as error:
                     return self.failure(result, state, error)
         except Busy:

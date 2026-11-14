@@ -5,6 +5,7 @@ from pathlib import Path
 import pwd
 import re
 
+from .deploy_vault import names
 from .deploy_bundle import bundle
 from .deploy_io import canonical, command, CommandError
 
@@ -23,9 +24,16 @@ def policy(path):
     value = json.loads(Path(path).read_bytes())
     keys = {'version', 'repository', 'release_repository', 'rollback_repository',
             'release_identity', 'build_identity', 'rollback_identity', 'issuer',
-            'workflow_path', 'images', 'upstream', 'extensions', 'sigstore_trust_root'}
+            'workflow_path', 'images', 'upstream', 'extensions', 'sigstore_trust_root',
+            'vault_id', 'region', 'secrets'}
     if not isinstance(value, dict) or set(value) != keys or value['version'] != 1:
         raise ValueError('invalid policy fields')
+    match(r'ocid1\.vault\.[A-Za-z0-9_.-]+', value['vault_id'], 'vault id')
+    match(r'[a-z]+-[a-z]+-[0-9]+', value['region'], 'region')
+    secrets = value['secrets']
+    if (not isinstance(secrets, list) or not all(isinstance(name, str) for name in secrets)
+            or sorted(secrets) != sorted(names())):
+        raise ValueError('invalid policy secret names')
     if value['sigstore_trust_root'] != 'cosign-v3.1.4':
         raise ValueError('unsupported trust root')
     for key in ('release_identity', 'build_identity', 'rollback_identity'):

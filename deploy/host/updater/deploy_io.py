@@ -74,11 +74,12 @@ class Lock:
 
 
 class CommandError(Exception):
-    def __init__(self, message, reason='failed', returncode=None, detail=None):
+    def __init__(self, message, reason='failed', returncode=None, detail=None, code=None):
         super().__init__(message)
         self.reason = reason
         self.returncode = returncode
         self.detail = detail
+        self.code = code
 
 
 def describe(args, stderr, returncode):
@@ -142,7 +143,7 @@ def bounded_output(process, limit, timeout):
     return bytes(output), bytes(errors)
 
 
-def command(args, input=None, timeout=300, stdout_limit=None):
+def command(args, input=None, timeout=300, stdout_limit=None, error_prefix=None):
     try:
         with subprocess.Popen(args, stdin=subprocess.PIPE if input is not None else subprocess.DEVNULL,
                               stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=True) as process:
@@ -154,8 +155,12 @@ def command(args, input=None, timeout=300, stdout_limit=None):
                         raise ValueError('invalid streaming command limits')
                     output, errors = bounded_output(process, stdout_limit, timeout)
                 if process.returncode:
+                    code = None
+                    if error_prefix:
+                        found = re.fullmatch(re.escape(error_prefix.encode()) + rb'([A-Za-z][A-Za-z0-9_]{0,79})\n', errors)
+                        code = found[1].decode() if found else 'SDKError'
                     raise CommandError('command failed', reason=failure_reason(args, errors),
-                                       returncode=process.returncode,
+                                       returncode=process.returncode, code=code,
                                        detail=describe(args, errors, process.returncode))
             except BaseException:
                 try:
@@ -186,7 +191,7 @@ class Result:
     def write(self, status, step, message, digest=None, manifest=None):
         manifest = manifest or {}
         finished = self.clock()
-        success = finished if status in ('ok', 'verified', 'bootstrapped') else self.previous.get('last_success_at')
+        success = finished if status in ('ok', 'verified', 'bootstrapped', 'current') else self.previous.get('last_success_at')
         value = dict(status=status, manifest_hash=digest, release=manifest.get('release'),
                      sequence=manifest.get('sequence'), step=step, message=message,
                      started_at=self.started, finished_at=finished, last_success_at=success)

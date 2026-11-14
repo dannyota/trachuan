@@ -1,8 +1,10 @@
+from datetime import datetime, timezone
 import json
 from pathlib import Path
 import re
 
 from .deploy_io import atomic, canonical
+from .deploy_vault import names
 
 
 def digest(value):
@@ -20,8 +22,10 @@ class State:
 
     def validate(self):
         data = self.data
+        data.setdefault('secrets', dict(versions={}, pending={}, last_success_at=None, held=False))
+        self.validate_secrets()
         if set(data) != {'version', 'active', 'accepted', 'retained', 'failed', 'consumed',
-                         'schemas', 'installed_bundle', 'journal'} or data['version'] != 1:
+                         'schemas', 'installed_bundle', 'journal', 'secrets'} or data['version'] != 1:
             raise ValueError('state fields')
         if not digest(data['active']) or set(data['accepted']) != {'image', 'rollback', 'corpus'}:
             raise ValueError('state active')
@@ -61,6 +65,22 @@ class State:
                 raise ValueError('journal status')
             if journal['authorization'] is not None and not digest(journal['authorization']):
                 raise ValueError('journal authorization')
+
+    def validate_secrets(self):
+        value = self.data['secrets']
+        if not isinstance(value, dict) or set(value) != {'versions', 'pending', 'last_success_at', 'held'}:
+            raise ValueError('state secrets')
+        for key in ('versions', 'pending'):
+            if not isinstance(value[key], dict) or not set(value[key]).issubset(names()):
+                raise ValueError('state secret names')
+            if any(type(version) is not int or version < 1 for version in value[key].values()):
+                raise ValueError('state secret version')
+        if type(value['held']) is not bool:
+            raise ValueError('state secret hold')
+        if value['last_success_at'] is not None:
+            timestamp = datetime.fromisoformat(value['last_success_at'].replace('Z', '+00:00'))
+            if timestamp.utcoffset() != timezone.utc.utcoffset(timestamp):
+                raise ValueError('state secret timestamp')
 
     @classmethod
     def bootstrap(cls, path, active, sequence, schema, bundle):
