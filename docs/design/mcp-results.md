@@ -44,9 +44,9 @@ A document entry has `number`, `title`, `type`, `issuer`, `issued`,
 validity stamp: class, current flag, basis, status basis), `text_source` and
 `text_complete` ([text extraction](text-extraction.md): whether the text is the
 source's tree, a parsed transcription, PDF text or OCR, and whether it is known
-complete), `source_url`, `related`, `related_counts` and `nodes`: up to 10
-served node codes with the most effective assignments in the document, most
-first.
+complete), `source_url`, `related` (full results and `read` only),
+`related_counts` and `nodes`: up to 10 served node codes with the most effective
+assignments in the document, most first.
 
 A compact hit has, in this order:
 
@@ -143,11 +143,11 @@ order `repeals`, `replaces`, `suspends`, `amends_supplements`, `consolidates`,
 `implements`, `guided_by`, `legal_basis`, `cites`, `references`, `unknown`; then
 `in` before `out`; then the other document's issue date, newest first, unknown
 dates last; then number; then the relation's unique
-`(source_key, artifact_sha256, ordinal)`. Search returns the first pointers up
-to the cap in budgets; `related_counts` maps `<dir>:<kind>` to the full count,
-and `read` reaches every counted relation. Pointers carry no evidence text and
-state no inverse legal effect. A pointer whose endpoint is not in the release is
-never replaced by a number lookup.
+`(source_key, artifact_sha256, ordinal)`. Full search returns the first pointers
+up to the cap in budgets; `related_counts` maps `<dir>:<kind>` to the full
+count, and `read` reaches every counted relation. Pointers carry no evidence
+text and state no inverse legal effect. A pointer whose endpoint is not in the
+release is never replaced by a number lookup.
 
 ## Read
 
@@ -218,13 +218,15 @@ and every item result that resolved a document carries its `doc` key.
 
 `guide` states the flow: `search`; scan `documents` and `hits`; read the chosen
 handles in one `read` call, choosing a `path` anchor, read as `<doc>#<anchor>`,
-to read a whole article or chapter; check `status`, `warnings` and `in` pointers
-of kinds `repeals`, `replaces`, `suspends` and `amends_supplements` before
-relying on a document; read `in:implements` documents for detailed rules; follow
-`next` tokens to the last page before citing read text. It says that a snippet
-is not the provision, that `[…]` marks omitted text, that pointer direction is
-as recorded by the source, that a pointer outside the release must not be
-replaced by a number lookup, and that only text returned complete may be cited.
+to read a whole article or chapter; check `status`, `warnings` and, when
+`related_counts` shows `in` relations of kinds `repeals`, `replaces`, `suspends`
+or `amends_supplements`, read the document's relations
+(`{handle, relations:true}`, following `next`) before relying on it; read
+`in:implements` documents for detailed rules; follow `next` tokens to the last
+page before citing read text. It says that a snippet is not the provision, that
+`[…]` marks omitted text, that pointer direction is as recorded by the source,
+that a pointer outside the release must not be replaced by a number lookup, and
+that only text returned complete may be cited.
 
 ## Evaluation
 
@@ -247,5 +249,8 @@ Per model it records expected provisions cited under the product matcher, tool
 calls, input tokens summed over every model request in the task as the provider
 reports them, and tool-result size separately. Compact stays the default only
 if, for each model, mean cited expected provisions do not fall and mean summed
-input tokens are lower than full. No question text is stored outside the
-evaluation files.
+input tokens are lower than full. Trimmed compact (document entries without
+`related`, ADR 0013 History 2026-11-14) runs in the same check as a third mode
+and replaces current compact only if, for each model, its mean cited expected
+provisions are at least current compact's and its mean summed input tokens are
+lower. No question text is stored outside the evaluation files.

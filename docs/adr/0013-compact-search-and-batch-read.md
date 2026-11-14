@@ -30,9 +30,9 @@ a target document in the corpus.
    with a completeness flag, and handles. `detail:"full"` returns the recipe
    evidence of the first contract instead. Ranking, abstention and validity are
    recipe 1, unchanged.
-2. Document-level relations appear as bounded pointers on each returned
-   document, with counts by direction and kind. Provision-level relations stay
-   on the hit as warnings.
+2. Document-level relations appear on each returned document as counts by
+   direction and kind; full results and `read` also list them as bounded
+   pointers. Provision-level relations stay on the hit as warnings.
 3. `read` replaces `document`. One call reads several handles: a document handle
    returns its metadata and outline, a provision handle returns its verbatim
    text with its ancestors' lead-ins, and a relation item lists every counted
@@ -90,3 +90,9 @@ they never state an inverse legal effect.
   hits is 31,932 code points at p50 and 36,034 at p95, full at 8 is 58,062 and
   80,305. Document keys were 30% of compact size, so positions inside one
   document became bare anchors and pointers dropped the duplicate handle.
+- 2026-11-14: item 2 revised: compact document entries keep `related_counts` and
+  drop the `related` pointers, which were 9 of 22 KB of document entries in a 45
+  KB compact result; full results and `read` keep them. It ships only under the
+  gate in [search results](../design/mcp-results.md#evaluation): against current
+  compact, per model, cited expected provisions do not fall and summed input
+  tokens are lower; the guide reads relations when counts warrant.
