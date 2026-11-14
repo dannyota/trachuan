@@ -11,14 +11,18 @@ fields are `aws_access_key_id` and `aws_secret_access_key`. Region is
 `ap-singapore-1`. The uploader uses that named shared-credentials profile and
 supplies a temporary configuration with path-style S3 addressing. It never reads
 or prints the keys. Set `OCI_S3_ENDPOINT` to the releases bucket's HTTPS S3
-compatibility endpoint. Python 3.11 or later and signed-in `gh` are also
-required.
+compatibility endpoint. Python 3.11 or later, `flock` and signed-in `gh` are
+also required. On macOS, install `flock` with `brew install flock` if absent
+([Homebrew](https://formulae.brew.sh/formula/flock)). The uploader and workflow
+print the exact AWS CLI version; retain those lines with the first live release
+evidence.
 
 Evaluate with
 `corpus eval <cc> <rel> --out <directory> --previous <report.json>`, using the
 report of the release active in production. Accept the run's reviewed gaps with
 `corpus accept-gaps`. The upload requires completed quality checks, passing
-gating comparisons in every cohort, and no research override.
+required gating comparisons in every product cohort with cases, and no research
+override. All cohorts must be present; empty cohorts require no comparisons.
 
 Prepare a separate upload directory so the immutable build artifact stays
 unchanged. Copy its dump and original manifest without regenerating the
@@ -39,12 +43,13 @@ bash scripts/corpus-upload.sh "$CC" "$REL" "$UPLOAD" "$REPORT"
 ```
 
 Dry-run validates local files and prints the upload and dispatch plan without
-calling AWS or GitHub. A real upload checks the prefix is empty, uploads all
-four objects, verifies their sizes, then dispatches `corpus-release.yml` from
-`main`. If dispatch alone fails, dispatch it manually with the same country and
-release; do not upload again. A partial upload reserves that prefix; use a new
-release id for a rebuilt corpus. The signed manifest authorizes release; the
-report's `release_eligible` remains false. Host activation follows
+calling AWS or GitHub. A real upload holds `work/corpus-upload.lock`, checks the
+prefix is empty, uploads all four objects, then rechecks every size and ETag
+against its upload receipt before dispatching `corpus-release.yml` from `main`.
+If dispatch alone fails, dispatch it manually with the same country and release;
+do not upload again. A partial upload reserves that prefix; use a new release id
+for a rebuilt corpus. The signed manifest authorizes release; the report's
+`release_eligible` remains false. Host activation follows
 [corpus release](../design/corpus-release.md#host-activation).
 
 ## Restore a corpus manually

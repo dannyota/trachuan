@@ -48,14 +48,34 @@ def no_research_override(value):
         raise ValueError('research override is not releasable')
 
 
-def check_comparisons(records):
+def non_regression_contract():
+    comparisons = [dict(mode=mode, arms='hybrid', limit=limit, name=name, gating=gating)
+                   for mode in ('exact', 'ann')
+                   for name, limit, gating in (('recall', 20, True), ('mrr', 8, True),
+                                               ('abstention_balanced_accuracy', 8, False))]
+    return {'legacy': [], 'old_product': comparisons, 'development': comparisons}
+
+
+def check_comparisons(records, expected):
     if not isinstance(records, list):
         raise ValueError('invalid non_regression')
+    seen = {}
     for record in records:
         if not isinstance(record, dict) or type(record.get('gating')) is not bool:
             raise ValueError('invalid non_regression gating')
+        if any(not isinstance(record.get(field), str) for field in ('mode', 'arms', 'name')) or type(record.get('limit')) is not int:
+            raise ValueError('invalid non_regression identity')
+        key = tuple(record[field] for field in ('mode', 'arms', 'limit', 'name'))
+        if key in seen:
+            raise ValueError('duplicate non_regression entry')
+        seen[key] = record
         if record['gating'] and record.get('status') != 'pass':
             raise ValueError('gating non_regression did not pass')
+    for entry in expected:
+        if entry['gating']:
+            key = tuple(entry[field] for field in ('mode', 'arms', 'limit', 'name'))
+            if key not in seen or seen[key]['gating'] is not True or seen[key].get('status') != 'pass':
+                raise ValueError('required non_regression gate missing or not passing')
 
 
 def validate_report(report, country, rel):
@@ -76,14 +96,16 @@ def validate_report(report, country, rel):
         raise ValueError('previous country differs from inputs')
     require_match(r'[0-9]{8}(?:_[0-9]+)?', previous.get('rel'), 'previous rel')
     require_match(r'[0-9a-f]{64}', previous.get('report_sha256'), 'previous report hash')
-    check_comparisons(report.get('non_regression'))
+    contract = non_regression_contract()
+    check_comparisons(report.get('non_regression'), contract['old_product'])
     cohorts = report.get('cohorts')
-    if not isinstance(cohorts, dict) or 'old_product' not in cohorts:
+    if not isinstance(cohorts, dict) or set(cohorts) != set(contract):
         raise ValueError('missing report cohorts')
-    for cohort in cohorts.values():
-        if not isinstance(cohort, dict):
+    for name, cohort in cohorts.items():
+        if not isinstance(cohort, dict) or type(cohort.get('case_count')) is not int or cohort['case_count'] < 0:
             raise ValueError('invalid cohort')
-        check_comparisons(cohort.get('non_regression', []))
+        if cohort['case_count'] > 0:
+            check_comparisons(cohort.get('non_regression', []), contract[name])
 
 
 def validate_recipes(row, report):

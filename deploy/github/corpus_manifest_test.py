@@ -107,6 +107,47 @@ class CorpusManifestTest(unittest.TestCase):
         save_fixture(self.path, self.row, self.report)
         self.validate()
 
+    def test_requires_all_emitted_gates_in_top_level_and_populated_cohorts(self):
+        for location in ('top', 'old_product', 'development'):
+            for change in ('missing', 'empty', 'omit', 'downgrade', 'not_run', 'duplicate', 'wrong_mode', 'wrong_limit'):
+                with self.subTest(location=location, change=change):
+                    row, report = copy.deepcopy(self.row), copy.deepcopy(self.report)
+                    target = report if location == 'top' else report['cohorts'][location]
+                    records = target['non_regression']
+                    if change == 'missing':
+                        target.pop('non_regression')
+                    elif change == 'empty':
+                        target['non_regression'] = []
+                    elif change == 'omit':
+                        records.pop(0)
+                    elif change == 'downgrade':
+                        records[0]['gating'] = False
+                    elif change == 'not_run':
+                        records[0]['status'] = 'not_run'
+                    elif change == 'duplicate':
+                        records.append(records[0].copy())
+                    elif change == 'wrong_mode':
+                        records[0]['mode'] = 'other'
+                    else:
+                        records[0]['limit'] = 8
+                    save_fixture(self.path, row, report)
+                    with self.assertRaises(ValueError):
+                        self.validate()
+        for name in self.report['cohorts']:
+            with self.subTest(missing_cohort=name):
+                report = copy.deepcopy(self.report)
+                report['cohorts'].pop(name)
+                save_fixture(self.path, self.row, report)
+                with self.assertRaises(ValueError):
+                    self.validate()
+
+    def test_empty_development_does_not_require_comparisons(self):
+        self.report['cohorts']['development']['case_count'] = 0
+        for record in self.report['cohorts']['development']['non_regression']:
+            record['status'] = 'not_run'
+        save_fixture(self.path, self.row, self.report)
+        self.validate()
+
 
 if __name__ == '__main__':
     unittest.main()

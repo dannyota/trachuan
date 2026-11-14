@@ -1,6 +1,8 @@
 import hashlib
 import json
 
+from corpus_manifest import non_regression_contract
+
 
 def digest(data):
     return hashlib.sha256(data).hexdigest()
@@ -23,15 +25,16 @@ def write_fixture(path):
                extensions={'vector': '0.8.1', 'ltree': '1.3'},
                run=dict(complete=True, expected_items=5, incomplete_items=0,
                         unaccepted_gaps=0, build_artifact_sha256=digest(manifest)))
-    comparison = dict(mode='ann', arms='hybrid', limit=20, name='recall', gating=True, status='pass')
+    comparisons = [entry | {'status': 'pass'} for entry in non_regression_contract()['old_product']]
     report = dict(version=1, country=row['country'], rel=row['rel'], status='complete',
                   quality_pass=True, release_eligible=False, dump_sha256=digest(dump),
                   build_artifact_sha256=digest(manifest),
                   previous_diff={'previous': dict(country='vn', rel='20990101_1', report_sha256='b' * 64)},
                   recipes={name: digest(value.encode()) for name, value in inputs.items()},
-                  non_regression=[comparison.copy()],
-                  cohorts={'old_product': {'non_regression': [comparison.copy()]},
-                           'development': {'non_regression': [dict(gating=False, status='not_run')]}})
+                  non_regression=[item.copy() for item in comparisons],
+                  cohorts={'legacy': {'case_count': 5},
+                           'old_product': {'case_count': 5, 'non_regression': [item.copy() for item in comparisons]},
+                           'development': {'case_count': 2, 'non_regression': [item.copy() for item in comparisons]}})
     (path / 'corpus.dump').write_bytes(dump)
     (path / 'MANIFEST.sha256').write_bytes(manifest)
     save_fixture(path, row, report)

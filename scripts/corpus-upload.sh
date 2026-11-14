@@ -23,6 +23,11 @@ endpoint=${OCI_S3_ENDPOINT:?OCI_S3_ENDPOINT is required}
 }
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 export PYTHONDONTWRITEBYTECODE=1
+if [[ $dry_run != true ]]; then
+  mkdir -p "$root/work"
+  exec 9> "$root/work/corpus-upload.lock"
+  flock --exclusive --nonblock 9 || { echo 'Another corpus upload holds the local lock' >&2; exit 1; }
+fi
 python3 "$root/deploy/github/corpus_manifest.py" validate "$country" "$rel" "$build_dir" "$report"
 prefix="$country/$rel/"
 files=(corpus.dump MANIFEST.sha256 report.json release.json)
@@ -30,13 +35,15 @@ files=(corpus.dump MANIFEST.sha256 report.json release.json)
 if [[ $dry_run == true ]]; then
   printf 'Check empty prefix s3://trachuan-releases/%s with profile trachuan-release-upload\n' "$prefix"
   for file in "${files[@]}"; do
-    printf 'Upload and verify size: s3://trachuan-releases/%s%s\n' "$prefix" "$file"
+    printf 'Upload and verify size and ETag: s3://trachuan-releases/%s%s\n' "$prefix" "$file"
   done
   printf 'gh workflow run corpus-release.yml --ref main -f country=%s -f rel=%s\n' "$country" "$rel"
   exit 0
 fi
 
-[[ $(aws --version) == aws-cli/2.* ]] || { echo 'AWS CLI v2 is required' >&2; exit 1; }
+version=$(aws --version)
+[[ $version == aws-cli/2.* ]] || { echo 'AWS CLI v2 is required' >&2; exit 1; }
+printf '%s\n' "$version"
 umask 077
 directory=$(mktemp -d)
 trap 'rm -rf "$directory"' EXIT
@@ -51,13 +58,5 @@ count=$(aws_release s3api list-objects-v2 --bucket trachuan-releases --prefix "$
   --max-keys 1 --query KeyCount --output text)
 [[ $count == 0 ]] || { echo 'Release prefix already holds objects; choose a new rel' >&2; exit 1; }
 
-for file in "${files[@]}"; do
-  source="$build_dir/$file"
-  if [[ $file == report.json ]]; then source=$report; fi
-  aws_release s3 cp "$source" "s3://trachuan-releases/$prefix$file" --only-show-errors
-  expected=$(wc -c < "$source" | tr -d '[:space:]')
-  actual=$(aws_release s3api head-object --bucket trachuan-releases --key "$prefix$file" \
-    --query ContentLength --output text)
-  [[ $actual == "$expected" ]] || { printf 'Uploaded size differs: %s\n' "$file" >&2; exit 1; }
-done
+python3 "$root/deploy/github/corpus_upload.py" "$country" "$rel" "$build_dir" "$report"
 gh workflow run corpus-release.yml --ref main -f "country=$country" -f "rel=$rel"
