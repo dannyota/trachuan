@@ -6,7 +6,7 @@ import pwd
 import re
 
 from .deploy_bundle import bundle
-from .deploy_io import canonical, command
+from .deploy_io import canonical, command, CommandError
 
 
 def match(pattern, value, field):
@@ -156,8 +156,20 @@ def as_user():
 
 
 def pull_image(image, runner, user_prefix):
-    runner(user_prefix + ['podman', 'pull', image], timeout=600)
-    rows = json.loads(runner(user_prefix + ['podman', 'image', 'inspect', image]))
+    inspect = user_prefix + ['podman', 'image', 'inspect', image]
+    try:
+        raw = runner(inspect)
+    except CommandError:
+        try:
+            runner(user_prefix + ['podman', 'image', 'exists', image])
+        except CommandError as error:
+            if error.returncode != 1:
+                raise
+        else:
+            raise
+        runner(user_prefix + ['podman', 'pull', image], timeout=600)
+        raw = runner(inspect)
+    rows = json.loads(raw)
     if len(rows) != 1 or image not in rows[0].get('RepoDigests', []):
         raise ValueError('local digest mismatch')
 

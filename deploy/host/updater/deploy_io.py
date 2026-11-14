@@ -74,9 +74,10 @@ class Lock:
 
 
 class CommandError(Exception):
-    def __init__(self, message, reason='failed'):
+    def __init__(self, message, reason='failed', returncode=None):
         super().__init__(message)
         self.reason = reason
+        self.returncode = returncode
 
 
 def failure_reason(args, stderr):
@@ -134,7 +135,8 @@ def command(args, input=None, timeout=300, stdout_limit=None):
                         raise ValueError('invalid streaming command limits')
                     output, errors = bounded_output(process, stdout_limit, timeout)
                 if process.returncode:
-                    raise CommandError('command failed', reason=failure_reason(args, errors))
+                    raise CommandError('command failed', reason=failure_reason(args, errors),
+                                       returncode=process.returncode)
             except BaseException:
                 try:
                     os.killpg(process.pid, signal.SIGKILL)

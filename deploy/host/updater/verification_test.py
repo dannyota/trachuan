@@ -131,7 +131,15 @@ class VerificationTest(unittest.TestCase):
                     v.provenance(bad, self.manifest, image, self.policy)
 
     def test_images_use_digest_and_new_bundle_attestations_with_no_gh_fallback(self):
-        verifier = v.Verifier(self.policy, self.run_command, user_prefix=['as-user'])
+        present = set()
+        def uncached(args, **kwargs):
+            if ('inspect' in args or 'exists' in args) and args[-1] not in present:
+                self.calls.append(args)
+                raise CommandError('image absent', returncode=1)
+            if 'pull' in args:
+                present.add(args[-1])
+            return self.run_command(args, **kwargs)
+        verifier = v.Verifier(self.policy, uncached, user_prefix=['as-user'])
         verifier.images(self.manifest)
         pulls = [a for a in self.calls if 'pull' in a]
         self.assertEqual(len(pulls), 5)
@@ -140,6 +148,12 @@ class VerificationTest(unittest.TestCase):
         self.assertEqual(len(attestations), 4)
         self.assertTrue(all('--new-bundle-format' in a and 'slsaprovenance1' in a for a in attestations))
         self.assertFalse(any('gh' in a for a in self.calls))
+
+    def test_cached_images_still_require_build_attestations(self):
+        v.Verifier(self.policy, self.run_command, user_prefix=['as-user']).images(self.manifest)
+        self.assertFalse(any('pull' in args for args in self.calls))
+        self.assertEqual(len([args for args in self.calls if 'inspect' in args]), 5)
+        self.assertEqual(len([args for args in self.calls if 'verify-attestation' in args]), 4)
 
     def test_wrong_local_digest_stops_before_attestation(self):
         def wrong(args, **kwargs):

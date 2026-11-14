@@ -1,6 +1,7 @@
 import re
 
-from .deploy_io import atomic, command, remove
+from .deploy_io import atomic, command, remove, Result
+from .deploy_transfer import program
 from .deploy_verify import as_user, pull_image
 
 
@@ -25,6 +26,12 @@ class Host:
 
     def clear_hold(self):
         remove(self.paths.hold)
+
+    def warning(self, step, message):
+        Result(self.paths.result, self.paths.log).append(dict(level='warning', step=step, message=message))
+
+    def publish_user(self, path, data, mode=0o644):
+        self.user('python3', '-I', '-c', program(), str(path), format(mode, '04o'), input=data)
 
     def psql(self, database, sql):
         return self.user('podman', 'exec', '-i', 'trachuan-postgres',
@@ -62,7 +69,7 @@ class Host:
         self.user('podman', 'exec', 'trachuan-postgres', '/usr/local/bin/postgres-admin.sh',
                   '/usr/local/bin/wait-postgres.sh', timeout=150)
 
-    def restore_postgres(self, candidate, directory):
+    def restore_postgres(self, candidate):
         template = candidate.files['quadlet/trachuan-postgres.container']
         for line in template.decode().splitlines():
             if not line.startswith('Volume='):
@@ -77,9 +84,7 @@ class Host:
             atomic(self.paths.root / source.lstrip('/'), candidate.files[name],
                    0o755 if name.endswith('.sh') else 0o644)
         image = candidate.manifest['images']['postgres']
-        rendered = directory / 'recovery-postgres.container'
-        atomic(rendered, template.replace(b'@POSTGRES_IMAGE@', image.encode()), 0o644)
-        self.user('install', '-m', '0644', str(rendered), str(self.paths.postgres_unit))
+        self.publish_user(self.paths.postgres_unit, template.replace(b'@POSTGRES_IMAGE@', image.encode()))
         self.user('systemctl', '--user', 'daemon-reload')
         pull_image(image, self.runner, self.user_prefix)
         self.restart_postgres()

@@ -1,12 +1,11 @@
 import hashlib
 import json
-import shutil
 from pathlib import Path
 import tempfile
 import unittest
 
 from updater import deploy_activate as a
-from updater.deploy_io import CommandError, canonical
+from updater.deploy_io import CommandError, canonical, command
 from updater.deploy_state import State
 from updater.deploy_verify import policy
 from updater.deploy_host import Host
@@ -66,9 +65,8 @@ class ActivationFixture:
         if step == self.error_step and step is not None:
             self.error_step = None
             raise CommandError('injected failure')
-        if args[:1] == ['install']:
-            shutil.copyfile(args[-2], args[-1])
-            return b''
+        if args[:3] == ['python3', '-I', '-c']:
+            return command(args, input=input)
         if 'psql' in args:
             if input and b'max(version_id)' in input:
                 return (str(self.schema) + '\n').encode()

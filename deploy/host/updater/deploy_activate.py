@@ -6,6 +6,27 @@ class Activator:
         self.state.data['journal']['step'] = name
         self.state.save()
 
+    def housekeeping(self):
+        for step, action in (('hold', self.host.clear_hold),
+                             ('prune', lambda: self.store.prune(self.state))):
+            try:
+                action()
+            except Exception:
+                try:
+                    self.host.warning(step, 'post-activation housekeeping failed; retry later')
+                except OSError:
+                    pass
+
+    def resume_ingress(self):
+        try:
+            self.host.probe()
+            self.host.clear_hold()
+            self.host.systemctl('start', 'caddy')
+            self.host.probe(edge=True)
+        except BaseException:
+            self.host.hold()
+            raise
+
     def apply(self, candidate, restart, prefix=''):
         self.step(prefix + 'install')
         bundle_hash = candidate.manifest['host_bundle']['sha256']
@@ -53,10 +74,10 @@ class Activator:
             schema = self.host.schema()
             self.state.data['journal'].update(status='activated', step='complete')
             self.state.activate(candidate.hash, schema, authorization=authorization)
-            self.store.prune(self.state)
         except BaseException:
             self.host.hold()
             raise
+        self.housekeeping()
 
     def enforce_stopped(self):
         journal = self.state.data['journal']
@@ -69,6 +90,9 @@ class Activator:
     def recover(self):
         journal = self.state.data['journal']
         if self.enforce_stopped():
+            return None
+        if journal and journal['status'] in ('activated', 'rolled_back') and self.host.paths.hold.exists():
+            self.resume_ingress()
             return None
         if not journal or journal['status'] not in ('started', 'recovering'):
             return None
@@ -83,15 +107,13 @@ class Activator:
                 raise ValueError('previous manifest not retained')
             candidate = self.store.load(journal['previous'])
             if journal['restart_postgres']:
-                self.host.restore_postgres(candidate, self.store.unpack(candidate))
+                self.host.restore_postgres(candidate)
             if self.host.schema() != journal['baseline']:
                 raise ValueError('recovery schema changed or previous manifest not retained')
             restart = journal['restart_postgres'] or self.host.postgres_changed(candidate)
             self.apply(candidate, restart, 'rollback:')
             journal.update(status='rolled_back', step='complete')
             self.state.activate(candidate.hash, journal['baseline'])
-            self.store.prune(self.state)
-            return 'rolled_back'
         except BaseException as error:
             self.host.hold()
             if not isinstance(error, Exception):
@@ -100,3 +122,5 @@ class Activator:
             journal.update(status='stopped', step='recovery')
             self.state.save()
             return 'stopped'
+        self.housekeeping()
+        return 'rolled_back'

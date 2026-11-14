@@ -44,6 +44,7 @@ as_user() {
  runuser -u trachuan -- env XDG_RUNTIME_DIR="/run/user/$uid" \
   DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$uid/bus" "$@"
 }
+user_file_program=$(<"$bundle/updater/deploy_transfer.py")
 [[ $(as_user podman info --format '{{.Host.CgroupsVersion}}') == v2 ]] || fail 'rootless Podman requires cgroup v2'
 controllers=$(<"/sys/fs/cgroup/user.slice/user-$uid.slice/user@$uid.service/cgroup.controllers")
 for controller in cpu cpuset io memory pids; do
@@ -131,10 +132,10 @@ rm -f /srv/trachuan/host/quadlet/trachuan.network /srv/trachuan/host/quadlet/tra
  /home/trachuan/.config/containers/systemd/trachuan-postgres.volume
 for template in "$bundle"/systemd/*; do
  case ${template##*/} in trachuan-deploy.*|trachuan-metrics.*) continue ;; esac
- install -o trachuan -g trachuan -m 0644 "$template" "/srv/trachuan/host/systemd/${template##*/}"
+ as_user python3 -I -c "$user_file_program" "/srv/trachuan/host/systemd/${template##*/}" 0644 <"$template"
 done
 for template in "$bundle"/quadlet/*; do
- install -o trachuan -g trachuan -m 0644 "$template" "/srv/trachuan/host/quadlet/${template##*/}"
+ as_user python3 -I -c "$user_file_program" "/srv/trachuan/host/quadlet/${template##*/}" 0644 <"$template"
 done
 if ! semanage fcontext -l -C | awk '$1 == "/srv/trachuan(/.*)?" {found=1} END {exit !found}'; then
  semanage fcontext -a -t container_file_t '/srv/trachuan(/.*)?'
