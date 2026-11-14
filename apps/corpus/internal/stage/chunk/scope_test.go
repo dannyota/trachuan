@@ -38,11 +38,11 @@ func TestChunk_VBPLArtifactBytesUnchanged(t *testing.T) {
 		t.Fatal(err)
 	}
 	const want = `[{"version":1,"document_key":"vn:vbpl:1","fetch_sha256":"fetch","extract_sha256":"extract","chunks":[{"ordinal":0,"node_id":"article","anchor":"dieu-1","context_prefix":"1/2024/TT\nFixture title\nHiệu lực: 2024-07-01","content":"A substantive provision with sufficient text.","rough_tokens":22,"spans":[{"node_id":"article","start":0,"end":45,"content_start":0,"content_end":45,"role":"body"}]}]},{"version":1,"document_key":"vn:vbpl:1","gaps":[],"omissions":[],"covered_ranges":[{"node_id":"article","start":0,"end":45}],"whitespace_ranges":[{"node_id":"article","start":1,"end":2},{"node_id":"article","start":13,"end":14},{"node_id":"article","start":23,"end":24},{"node_id":"article","start":28,"end":29},{"node_id":"article","start":39,"end":40}]}]`
-	if Recipe1().Hash() != "620e0ae95a786f399500349dec089c779fba9900f84d52e6000a34152a176cb7" {
-		t.Fatalf("recipe hash changed: %s", Recipe1().Hash())
+	if Recipe2().Hash() != "40c50d47068734972075a0a0a6cd78b1e5dc55fc43bfb4dfce34944049336d82" {
+		t.Fatalf("recipe hash changed: %s", Recipe2().Hash())
 	}
 	if string(b) != want {
-		t.Fatalf("artifact=%s\nrecipe=%s", b, Recipe1().Hash())
+		t.Fatalf("artifact=%s\nrecipe=%s", b, Recipe2().Hash())
 	}
 }
 
@@ -76,7 +76,7 @@ func TestChunk_GeneratedProvisionsChunked(t *testing.T) {
 		{NodeID: "tx:article", ParentNodeID: &chapter, Kind: "dieu", Label: "Điều 1", Ordinal: 2, Path: "kem-theo-1/dieu-1", Text: "Điều 1. Nội dung của quy định có đủ chữ để lập một đoạn văn bản."},
 		{NodeID: "tx:neutral", Kind: "other", Ordinal: 3, Path: "doan-1", Text: "Một đoạn văn bản trung lập có đủ nội dung để tạo thành đoạn trích."},
 	}
-	file, _, err := Split(nodes, Meta{Key: "vn:vbpl:1", Number: "123", Title: "Văn bản"}, Recipe1())
+	file, _, err := Split(nodes, Meta{Key: "vn:vbpl:1", Number: "123", Title: "Văn bản"}, Recipe2())
 	if err != nil {
 		t.Fatal(err)
 	}

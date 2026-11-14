@@ -25,7 +25,7 @@ func fixtureTrees() map[string][]Node {
 
 func splitFixture(t *testing.T, name string) (File, Coverage) {
 	t.Helper()
-	file, coverage, err := Split(fixtureTrees()[name], Meta{Key: "vn:vbpl:1"}, Recipe1())
+	file, coverage, err := Split(fixtureTrees()[name], Meta{Key: "vn:vbpl:1"}, Recipe2())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -50,7 +50,7 @@ func TestSplit_LargeArticleRecursesIntoClausesWithLead(t *testing.T) {
 func TestSplit_LabelOnlyLeadNotCarried(t *testing.T) {
 	nodes := fixtureTrees()["large"]
 	nodes[0].Label, nodes[0].Text = "Điều 1", "Điều 1."
-	file, _, err := Split(nodes, Meta{Key: "vn:vbpl:1"}, Recipe1())
+	file, _, err := Split(nodes, Meta{Key: "vn:vbpl:1"}, Recipe2())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,7 +65,7 @@ func TestSplit_ParentContainsChildrenUsesParentOnce(t *testing.T) {
 	article := "a"
 	child := "A substantive child provision that must appear once."
 	nodes := []Node{{NodeID: article, Kind: "dieu", Path: "dieu-1", Text: "Substantive introduction.\n" + child}, {NodeID: "b", ParentNodeID: &article, Kind: "khoan", Path: "dieu-1/khoan-1", Text: child}}
-	file, _, err := Split(nodes, Meta{Key: "vn:vbpl:1"}, Recipe1())
+	file, _, err := Split(nodes, Meta{Key: "vn:vbpl:1"}, Recipe2())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -113,7 +113,7 @@ func TestSplit_NonArticleTextChunked(t *testing.T) {
 func TestSplit_SpanSubstringsMatchSource(t *testing.T) {
 	for name, nodes := range fixtureTrees() {
 		t.Run(name, func(t *testing.T) {
-			file, coverage, err := Split(nodes, Meta{Key: "vn:vbpl:1"}, Recipe1())
+			file, coverage, err := Split(nodes, Meta{Key: "vn:vbpl:1"}, Recipe2())
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -169,7 +169,7 @@ func TestPrefix_FieldsCapsAndDateFallback(t *testing.T) {
 	chapter, section := "chapter", "section"
 	nodes := []Node{{NodeID: chapter, Kind: "chuong", Path: "chuong-1", Label: "Chương I", Heading: strings.Repeat("h", 240)}, {NodeID: section, ParentNodeID: &chapter, Kind: "muc", Path: "muc-1", Label: "Mục 1", Heading: "Section heading"}, {NodeID: "article", ParentNodeID: &section, Kind: "dieu", Path: "dieu-1", Text: "A substantive article with sufficient text."}}
 	meta := Meta{Key: "vn:vbpl:1", Number: strings.Repeat("n", 140), Title: strings.Repeat("t", 240), EffFrom: "invalid", IssueDate: "2024-01-01T20:00:00Z"}
-	file, _, err := Split(nodes, meta, Recipe1())
+	file, _, err := Split(nodes, meta, Recipe2())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -201,7 +201,7 @@ func TestPrefix_UsesBuildDateNormalizer(t *testing.T) {
 			t.Errorf("civilDate(%q) = %q", raw, got)
 		}
 	}
-	if got := Recipe1().DateNormalizer; got != "corpus-normalizer/3" {
+	if got := Recipe2().DateNormalizer; got != "corpus-normalizer/3" {
 		t.Errorf("date normalizer = %q", got)
 	}
 }

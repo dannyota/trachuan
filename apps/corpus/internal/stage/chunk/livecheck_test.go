@@ -10,9 +10,6 @@ import (
 	"testing"
 )
 
-// TestLiveSplitInvariants splits every extract artifact under LIVE_ARTIFACTS
-// and checks that every span quotes its source text exactly. Run it by hand:
-// LIVE_ARTIFACTS=work/artifacts go test -tags livecheck -run TestLiveSplitInvariants ./apps/corpus/internal/stage/chunk/
 func TestLiveSplitInvariants(t *testing.T) {
 	root := os.Getenv("LIVE_ARTIFACTS")
 	if root == "" {
@@ -35,7 +32,7 @@ func TestLiveSplitInvariants(t *testing.T) {
 		if len(nodes) == 0 {
 			empty++
 		}
-		file, cov, err := Split(nodes, Meta{Key: "vn:vbpl:x", Number: "1/2024/TT-X", Title: "T"}, Recipe1())
+		file, cov, err := Split(nodes, Meta{Key: "vn:vbpl:x", Number: "1/2024/TT-X", Title: "T"}, Recipe2())
 		if err != nil {
 			errs++
 			if errs <= 5 {

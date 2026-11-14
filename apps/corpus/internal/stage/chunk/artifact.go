@@ -1,4 +1,3 @@
-// Package chunk creates provision-owned retrieval chunks.
 package chunk
 
 import (
@@ -8,7 +7,6 @@ import (
 	"path/filepath"
 )
 
-// Node is an extracted provision and its position in the source tree.
 type Node struct {
 	NodeID       string  `json:"node_id"`
 	ParentNodeID *string `json:"parent_node_id"`
@@ -20,12 +18,10 @@ type Node struct {
 	Text         string  `json:"text"`
 }
 
-// Meta holds document fields used by the chunk recipe.
 type Meta struct {
-	Key, Number, Title, EffFrom, IssueDate string
+	Key, Number, Title, DocType, EffFrom, IssueDate string
 }
 
-// File is the chunks.json artifact.
 type File struct {
 	Version       int     `json:"version"`
 	DocumentKey   string  `json:"document_key"`
@@ -34,7 +30,6 @@ type File struct {
 	Chunks        []Chunk `json:"chunks"`
 }
 
-// Chunk holds rendered source text and its owning provision.
 type Chunk struct {
 	Ordinal       int    `json:"ordinal"`
 	NodeID        string `json:"node_id"`
@@ -45,7 +40,6 @@ type Chunk struct {
 	Spans         []Span `json:"spans"`
 }
 
-// Span maps an interval of source text to an identical content interval.
 type Span struct {
 	NodeID       string `json:"node_id"`
 	Start        int    `json:"start"`
@@ -55,20 +49,17 @@ type Span struct {
 	Role         string `json:"role"`
 }
 
-// Gap describes an incomplete chunk artifact.
 type Gap struct {
 	Kind   string `json:"kind"`
 	Detail string `json:"detail"`
 }
 
-// Range identifies an interval of an extracted provision.
 type Range struct {
 	NodeID string `json:"node_id"`
 	Start  int    `json:"start"`
 	End    int    `json:"end"`
 }
 
-// Omission identifies a source interval excluded from the output.
 type Omission struct {
 	NodeID      string `json:"node_id"`
 	Start       int    `json:"start"`
@@ -77,7 +68,6 @@ type Omission struct {
 	KeptOrdinal *int   `json:"kept_ordinal"`
 }
 
-// Coverage is the coverage.json artifact.
 type Coverage struct {
 	Version          int        `json:"version"`
 	DocumentKey      string     `json:"document_key"`
@@ -87,7 +77,6 @@ type Coverage struct {
 	WhitespaceRanges []Range    `json:"whitespace_ranges"`
 }
 
-// ReadArtifact decodes both artifact files without verifying their manifest.
 func ReadArtifact(dir string) (File, Coverage, error) {
 	var file File
 	var coverage Coverage

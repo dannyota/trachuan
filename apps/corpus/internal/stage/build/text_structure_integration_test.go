@@ -71,7 +71,7 @@ func TestLoad_ParsedClausesThroughExtractChunkAndBuild(t *testing.T) {
 	if err = json.Unmarshal(files["provisions.json"].([]byte), &nodes); err != nil {
 		t.Fatal(err)
 	}
-	cf, coverage, err := chunk.Split(nodes, chunk.Meta{Key: key}, chunk.Recipe1())
+	cf, coverage, err := chunk.Split(nodes, chunk.Meta{Key: key}, chunk.Recipe2())
 	if err != nil {
 		t.Fatal(err)
 	}

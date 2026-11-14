@@ -2,6 +2,7 @@ package chunk
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"unicode"
 
@@ -61,7 +62,6 @@ func trimRun(t textRun) textRun {
 	return t
 }
 
-// Split renders and splits extracted provisions while recording source coverage.
 func Split(nodes []Node, meta Meta, recipe Recipe) (File, Coverage, error) {
 	s := splitter{file: File{Version: 1, DocumentKey: meta.Key, Chunks: []Chunk{}}, coverage: Coverage{Version: 1, DocumentKey: meta.Key, Gaps: []Gap{}, Omissions: []Omission{}, CoveredRanges: []Range{}, WhitespaceRanges: []Range{}}, meta: meta, recipe: recipe, seen: make(map[string]int)}
 	roots, err := tree(nodes)
@@ -74,6 +74,17 @@ func Split(nodes []Node, meta Meta, recipe Recipe) (File, Coverage, error) {
 	}
 	if recipe.BodyLimit <= 0 || recipe.MinimumRunes < 0 {
 		return s.file, s.coverage, fmt.Errorf("invalid chunk recipe limits")
+	}
+	if slices.Contains(recipe.ListingOnlyDocTypes, strings.TrimSpace(meta.DocType)) {
+		for _, node := range nodes {
+			s.omit(sourceText(node), "listing_only", nil)
+		}
+		s.coverage.Gaps = append(s.coverage.Gaps, Gap{Kind: "listing_only", Detail: meta.DocType})
+		s.finalCoverage(nodes)
+		if err := s.checkCoverage(nodes); err != nil {
+			return File{}, Coverage{}, err
+		}
+		return s.file, s.coverage, nil
 	}
 	for _, root := range roots {
 		render(root, &s.coverage)
@@ -207,7 +218,6 @@ func (s *splitter) shards(n *treeNode, leads []carriedLead, body textRun) {
 		s.emit(n, lead, body)
 		return
 	}
-	// Split long lines into words and preserve mappings for their source characters.
 	var lines []textRun
 	start := 0
 	for i := 0; i <= len(body); i++ {

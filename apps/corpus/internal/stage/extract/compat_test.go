@@ -84,12 +84,12 @@ func assertPinnedTreeChunk(t *testing.T, store artifact.Store, art artifact.Resu
 	if err = json.Unmarshal(data, &nodes); err != nil {
 		t.Fatal(err)
 	}
-	file, coverage, err := chunk.Split(nodes, chunk.Meta{Key: doc.Key, Number: doc.Number, Title: doc.Title, EffFrom: doc.EffFrom, IssueDate: doc.IssueDate}, chunk.Recipe1())
+	file, coverage, err := chunk.Split(nodes, chunk.Meta{Key: doc.Key, Number: doc.Number, Title: doc.Title, EffFrom: doc.EffFrom, IssueDate: doc.IssueDate}, chunk.Recipe2())
 	if err != nil {
 		t.Fatal(err)
 	}
 	file.FetchSHA256, file.ExtractSHA256 = strings.Repeat("a", 64), art.SHA256
-	chunkArt, err := store.Publish(ctx, "chunk", chunkInput, chunk.Recipe1().Hash(), func(dir string) error {
+	chunkArt, err := store.Publish(ctx, "chunk", chunkInput, chunk.Recipe2().Hash(), func(dir string) error {
 		for _, v := range []struct {
 			name  string
 			value any

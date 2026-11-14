@@ -40,7 +40,7 @@ func TestExtract_ChildrenParentsAndChunkOwners(t *testing.T) {
 	for i, p := range rows {
 		nodes[i] = chunk.Node{NodeID: p.NodeID, ParentNodeID: p.ParentNodeID, Kind: p.Kind, Label: p.Label, Heading: p.Heading, Ordinal: p.Ordinal, Path: p.Path, Text: p.Text}
 	}
-	recipe := chunk.Recipe1()
+	recipe := chunk.Recipe2()
 	file, coverage, err := chunk.Split(nodes, chunk.Meta{Key: "vn:vbpl:1"}, recipe)
 	if err != nil {
 		t.Fatal(err)
@@ -142,7 +142,6 @@ func TestExtract_InsertedAnchorsMatchRelations(t *testing.T) {
 }
 
 func TestExtract_SourceTreeRelationLabelForms(t *testing.T) {
-	// Source trees also retain labels outside the parsed-text sequence grammar.
 	for _, tc := range []struct{ kind, token, segment string }{
 		{"khoan", "0", "khoan-0"}, {"khoan", "01", "khoan-01"}, {"khoan", "1234", "khoan-1234"},
 		{"diem", "A", "diem-a"}, {"diem", "Đ", "diem-đ"}, {"diem", "I", "diem-i"}, {"diem", "f", "diem-f"}, {"diem", "Z", "diem-z"}, {"diem", "é", "diem-é"},

@@ -28,7 +28,7 @@ func TestSubtreeText_AgreesWithChunkRendering(t *testing.T) {
 			for _, row := range rows {
 				nodes = append(nodes, chunk.Node{NodeID: row.NodeID, ParentNodeID: row.ParentNodeID, Kind: row.Kind, Label: row.Label, Heading: row.Heading, Ordinal: row.Ordinal, Path: row.Path, Text: row.Text})
 			}
-			recipe := chunk.Recipe1()
+			recipe := chunk.Recipe2()
 			recipe.MinimumRunes = 0
 			file, _, err := chunk.Split(nodes, chunk.Meta{}, recipe)
 			if err != nil {

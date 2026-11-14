@@ -11,7 +11,7 @@ func TestBuildRecipe_SupportsRetrievalRecipe2(t *testing.T) {
 	s := New(Config{})
 	snapshot := stage.Snapshot{SourceList: []byte(`{}`)}
 	old := s.recipeForRetrieval(snapshot, retrieval.Recipe2())
-	if old != "023fd0a0ce8b065171f90f585f5fcc2e563c6632c3964d6f0e67687569ceaa50" {
+	if old != "5854cd3e5f40f5ee3df4232e7fa8ba6bc97816dce9c1df4c7288bea1ae2f59ee" {
 		t.Fatalf("recipe 2 build hash %s", old)
 	}
 	if !s.acceptsRecipeHash(snapshot, old) || !s.acceptsRecipeHash(snapshot, s.Recipe(snapshot)) || s.acceptsRecipeHash(snapshot, "other") {
