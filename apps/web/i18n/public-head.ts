@@ -11,6 +11,7 @@ const heads = {
     '/login': ['Đăng nhập', 'Đăng nhập Tra Chuẩn để tra cứu pháp luật.'],
     '/signup': ['Đăng ký', 'Đăng ký tài khoản Tra Chuẩn.'],
     '/reset': ['Đặt lại mật khẩu', 'Yêu cầu liên kết đặt lại mật khẩu Tra Chuẩn.'],
+    '/link': ['Đặt mật khẩu', 'Đặt mật khẩu cho tài khoản Tra Chuẩn.'],
   },
   en: {
     '/': ['Home', 'Find evidence from Vietnamese legal texts.'],
@@ -22,6 +23,7 @@ const heads = {
     '/login': ['Sign in', 'Sign in to Tra Chuẩn to search legal texts.'],
     '/signup': ['Sign up', 'Create a Tra Chuẩn account.'],
     '/reset': ['Reset password', 'Request a link to reset your Tra Chuẩn password.'],
+    '/link': ['Set password', 'Set a password for your Tra Chuẩn account.'],
   },
 }
 export function publicHead(language: Language, path: string) {

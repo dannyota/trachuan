@@ -62,7 +62,8 @@ func TestReauth_ProofAndSharedCounter(t *testing.T) {
 				proofs.err = store.ErrLoginFailed
 			case "capped":
 				for range 10 {
-					counter.Allow("person@example.test")
+					finish, _ := counter.Reserve("person@example.test")
+					finish(false)
 				}
 			case "busy":
 				hasher.err = password.ErrBusy

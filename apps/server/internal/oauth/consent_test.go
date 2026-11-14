@@ -20,8 +20,14 @@ func TestConsent_RequiresSessionAndRoundTripsLogin(t *testing.T) {
 	path, cookie := pendingConsent(t, d)
 	w := consentResponse(d, consentRequest(path, "GET", cookie, false, nil))
 	u, _ := url.Parse(w.Header().Get("Location"))
-	if w.Code != 303 || u.Path != "/api/v1/auth/google/start" || u.Query().Get("next") != path || len(w.Result().Cookies()) != 0 {
+	want := "/login?next=%2Foauth%2Fconsent%2F" + strings.TrimPrefix(path, "/oauth/consent/")
+	if w.Code != 303 || w.Header().Get("Location") != want || u.Query().Get("next") != path || len(w.Result().Cookies()) != 0 {
 		t.Fatalf("login %d %s", w.Code, u)
+	}
+	for name, value := range map[string]string{"Cache-Control": "no-store", "X-Frame-Options": "DENY", "Referrer-Policy": "same-origin"} {
+		if w.Header().Get(name) != value {
+			t.Errorf("%s = %q, want %q", name, w.Header().Get(name), value)
+		}
 	}
 	w = consentResponse(d, consentRequest(path, "GET", cookie, true, nil))
 	if w.Code != 200 || !strings.Contains(w.Body.String(), "<form") {

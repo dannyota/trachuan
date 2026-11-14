@@ -125,7 +125,8 @@ func TestPasswordChange_SharedCounterAndFactorRefusal(t *testing.T) {
 		counter := password.NewCounter(time.Now)
 		if capped {
 			for range 10 {
-				counter.Allow("person@example.test")
+				finish, _ := counter.Reserve("person@example.test")
+				finish(false)
 			}
 		}
 		sessions := &websession.Manager{Store: sessionStore{}, PublicURL: "https://example.test"}

@@ -1,4 +1,4 @@
-import { createHmac } from 'node:crypto'
+import { createHash, createHmac } from 'node:crypto'
 import { readdir, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
@@ -103,3 +103,50 @@ test('enrolls TOTP and signs in with TOTP and a recovery code', async ({ page })
   await page.getByRole('button', { name: 'Verify', exact: true }).click()
   await expect(page).toHaveURL(/\/account$/)
 })
+
+for (const method of ['password', 'Google']) {
+  test(`signed-out OAuth consent returns through ${method} sign-in and approves the same handle`, async ({ page }) => {
+    const address = method === 'password' ? '192.0.2.32' : '192.0.2.33'
+    await page.setExtraHTTPHeaders({ 'X-Forwarded-For': address })
+    const email = freshEmail()
+    await english(page)
+    if (method === 'password') {
+      await register(page, email)
+      await signOut(page)
+    }
+    const origin = new URL(process.env.E2E_SERVER_URL || 'http://localhost:28083').origin
+    const callback = 'http://127.0.0.1:12345/callback'
+    const registration = await page.request.post('/oauth/register', { headers: { 'X-Forwarded-For': address }, data: { client_name: 'Consent flow fixture', redirect_uris: [callback], grant_types: ['authorization_code'], response_types: ['code'], token_endpoint_auth_method: 'none' } })
+    expect(registration.status()).toBe(201)
+    const { client_id: clientId } = await registration.json() as { client_id: string }
+    const verifier = 'a'.repeat(43)
+    const query = new URLSearchParams({ client_id: clientId, redirect_uri: callback, response_type: 'code', code_challenge: createHash('sha256').update(verifier).digest('base64url'), code_challenge_method: 'S256', state: 'consent-flow-state', resource: `${origin}/mcp` })
+    await page.goto(`/oauth/authorize?${query}`)
+    await expect(page).toHaveURL(/\/login\?next=/)
+    const next = new URL(page.url()).searchParams.get('next')!
+    expect(next).toMatch(/^\/oauth\/consent\/[A-Za-z0-9_-]{43}$/)
+    const binding = (await page.context().cookies()).find(cookie => cookie.name === '__Host-oauth')!.value
+    const google = page.getByRole('link', { name: 'Continue with Google', exact: true })
+    const googleURL = new URL((await google.getAttribute('href'))!, origin)
+    expect(googleURL.pathname).toBe('/api/v1/auth/google/start')
+    expect(googleURL.searchParams.get('next')).toBe(next)
+    if (method === 'password') {
+      await page.getByLabel('Email', { exact: true }).fill(email)
+      await page.getByLabel('Password', { exact: true }).fill(password)
+      await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+    } else {
+      await google.click()
+      await page.getByLabel('Email', { exact: true }).fill(email)
+      await page.getByRole('button', { name: 'Continue', exact: true }).click()
+    }
+    await expect(page).toHaveURL(`${origin}${next}`)
+    expect((await page.context().cookies()).find(cookie => cookie.name === '__Host-oauth')?.value).toBe(binding)
+    const callbackRequest = page.waitForRequest(new RegExp('^http://127\\.0\\.0\\.1:12345/callback\\?'))
+    await page.locator('button[name=decision][value=approve]').click()
+    const result = new URL((await callbackRequest).url())
+    expect(result.searchParams.get('state')).toBe('consent-flow-state')
+    expect(result.searchParams.get('iss')).toBe(origin)
+    expect(result.searchParams.get('code')).toMatch(/^[A-Za-z0-9_-]{43}$/)
+    expect((await page.context().cookies(origin)).find(cookie => cookie.name === '__Host-oauth')).toBeUndefined()
+  })
+}

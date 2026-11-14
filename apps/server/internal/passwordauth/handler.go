@@ -100,7 +100,11 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(map[string]string{"next": weblogin.ValidateNext(body.Next)})
 }
 func (h *Handler) verify(ctx context.Context, email, raw string) (store.PasswordSnapshot, bool, error) {
-	admitted := h.Counter.Allow(email)
+	finish, admitted := h.Counter.Reserve(email)
+	release := true
+	if admitted {
+		defer func() { finish(release) }()
+	}
 	query, cancel := context.WithTimeout(ctx, 2*time.Second)
 	snapshot, err := h.Store.GetPasswordByEmail(query, email)
 	cancel()
@@ -112,9 +116,12 @@ func (h *Handler) verify(ctx context.Context, email, raw string) (store.Password
 		normalized = "synthetic invalid password"
 	}
 	if !admitted || err != nil || snapshot.Hash == nil || snapshot.Version == nil || policyErr != nil {
-		return snapshot, false, h.Hasher.VerifyDummy(ctx, normalized)
+		err = h.Hasher.VerifyDummy(ctx, normalized)
+		release = err != nil
+		return snapshot, false, err
 	}
 	match, err := h.Hasher.Verify(ctx, *snapshot.Hash, normalized)
+	release = match || err != nil
 	if errors.Is(err, password.ErrHashInvalid) {
 		return snapshot, false, h.Hasher.VerifyDummy(ctx, normalized)
 	}

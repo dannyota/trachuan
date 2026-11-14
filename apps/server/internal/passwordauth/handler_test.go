@@ -68,7 +68,8 @@ func TestLogin_UniformFailureAndQueue(t *testing.T) {
 				sessions.err = store.ErrLoginFailed
 			case "counter":
 				for range 10 {
-					counter.Allow("person@example.test")
+					finish, _ := counter.Reserve("person@example.test")
+					finish(false)
 				}
 			}
 			if strings.HasPrefix(scenario, "busy") {
