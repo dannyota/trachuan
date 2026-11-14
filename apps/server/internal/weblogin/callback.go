@@ -7,9 +7,8 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
-	"slices"
-	"strings"
 
+	"danny.vn/trachuan/apps/server/internal/store"
 	"github.com/coreos/go-oidc/v3/oidc"
 	"golang.org/x/oauth2"
 )
@@ -90,24 +89,18 @@ func (h *Handler) callback(w http.ResponseWriter, r *http.Request) {
 		rejection(w, r, "login_failed")
 		return
 	}
-	rejectSignup := h.signupEmails != nil && !slices.Contains(h.signupEmails, strings.ToLower(strings.TrimSpace(claims.Email)))
-	account, err := h.store.UpsertGoogleAccount(ctx, UpsertGoogleAccountParams{Sub: id.Subject, Email: claims.Email, RejectSignup: rejectSignup})
-	if errors.Is(err, sql.ErrNoRows) && rejectSignup {
-		rejection(w, r, "signup_closed")
-		return
-	}
-	if err != nil {
-		unavailable(w)
-		return
-	}
-	if account.Blocked || account.DeleteRequested {
-		rejection(w, r, "account_blocked")
-		return
-	}
-	// Publish session headers only after the creator completes every database step.
 	staged := &sessionHeaders{header: make(http.Header)}
-	if err := h.sessions.CreateSession(ctx, staged, r, account.ID); err != nil {
-		unavailable(w)
+	if err := h.sessions.CreateGoogleSession(ctx, staged, r, store.GoogleIdentity{Sub: id.Subject, Email: claims.Email, SignupEmails: h.signupEmails}); err != nil {
+		switch {
+		case errors.Is(err, store.ErrLoginFailed):
+			rejection(w, r, "login_failed")
+		case errors.Is(err, store.ErrSignupClosed):
+			rejection(w, r, "signup_closed")
+		case errors.Is(err, store.ErrAccountBlocked):
+			rejection(w, r, "account_blocked")
+		default:
+			unavailable(w)
+		}
 		return
 	}
 	for key, values := range staged.header {

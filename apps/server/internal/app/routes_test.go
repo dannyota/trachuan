@@ -37,9 +37,6 @@ func (s *routeLoginStore) ClaimLoginTransaction(context.Context, weblogin.ClaimL
 	s.claims++
 	return weblogin.LoginTransaction{}, sql.ErrNoRows
 }
-func (*routeLoginStore) UpsertGoogleAccount(context.Context, weblogin.UpsertGoogleAccountParams) (weblogin.GoogleAccount, error) {
-	panic("unexpected account lookup")
-}
 
 type discoveryRoundTrip struct{}
 

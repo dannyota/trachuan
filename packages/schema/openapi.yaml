@@ -379,11 +379,17 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '403':
-          description: Request failed
+          description: CSRF rejected, account blocked, or reauth_required. A recent primary proof with a missing or stale enrolled factor adds factor true.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                allOf:
+                - $ref: '#/components/schemas/Error'
+                - type: object
+                  properties:
+                    factor:
+                      type: boolean
+                      const: true
         '429':
           description: Request failed
           content:
@@ -1390,6 +1396,7 @@ components:
               enum:
               - invalid_request
               - unauthenticated
+              - reauth_required
               - csrf_rejected
               - account_blocked
               - not_found

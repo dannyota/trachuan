@@ -34,7 +34,7 @@ func TestAdmin_CredentialLifecycle(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			now := time.Now().UTC().Truncate(time.Second)
 			a := &admin.Service{Store: queries, Clock: func() time.Time { return now }}
-			account, err := a.CreateAccount(ctx, "test-subject-"+name, "test@example.invalid")
+			account, err := a.CreateAccount(ctx, "test-subject-"+name, "test-"+name+"@example.test")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -98,7 +98,7 @@ func TestAdmin_CredentialLifecycle(t *testing.T) {
 
 	t.Run("auth unavailable", func(t *testing.T) {
 		a := &admin.Service{Store: queries}
-		account, err := a.CreateAccount(ctx, "test-subject-unavailable", "test@example.invalid")
+		account, err := a.CreateAccount(ctx, "test-subject-unavailable", "test-unavailable@example.test")
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -19,7 +19,7 @@ func (h *tokenHandler) refresh(ctx context.Context, tx pgx.Tx, form url.Values) 
 		code, dbErr := tokenStateError(err)
 		return tokenResponse{}, 0, code, dbErr
 	}
-	epoch, err := lockTokenAuthority(ctx, tx, initial.AccountID, initial.GrantID, form.Get("client_id"), h.resource)
+	epoch, _, err := lockTokenAuthority(ctx, tx, initial.AccountID, initial.GrantID, form.Get("client_id"), h.resource, "refresh_token")
 	if err != nil {
 		code, dbErr := tokenStateError(err)
 		return tokenResponse{}, 0, code, dbErr
@@ -32,7 +32,6 @@ func (h *tokenHandler) refresh(ctx context.Context, tx pgx.Tx, form url.Values) 
 	if row.AccountID != initial.AccountID || row.GrantID != initial.GrantID || row.Kind != "refresh" || row.ClientID != form.Get("client_id") || row.Resource != h.resource || row.Scope != "mcp:read" || row.AuthEpoch != epoch {
 		return tokenResponse{}, 0, "invalid_grant", nil
 	}
-	// Superseded rows stay useful for reuse detection after token/family expiry.
 	if row.Reuse {
 		if _, err = q.RevokeGrant(ctx, row.GrantID); err != nil {
 			return tokenResponse{}, 0, "", fmt.Errorf("revoke reused refresh grant: %w", err)

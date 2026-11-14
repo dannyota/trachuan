@@ -1,4 +1,3 @@
-// Package credential issues personal tokens and authenticates MCP requests.
 package credential
 
 import (
@@ -7,6 +6,8 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+
+	"danny.vn/trachuan/apps/server/internal/store"
 )
 
 type failure string
@@ -14,20 +15,16 @@ type failure string
 func (e failure) Error() string { return string(e) }
 
 const (
-	errEntropy failure = "random source unavailable"
-	// ErrTokenLimit means the account already has twenty live personal tokens.
-	ErrTokenLimit failure = "token limit reached"
+	errEntropy    failure = "random source unavailable"
+	ErrTokenLimit         = store.ErrTokenLimit
 )
 
-// Issue reads 32 random bytes and returns a token and its SHA-256 hex digest.
-// Only the digest may be persisted.
 func Issue(rand io.Reader) (plain, hash string, err error) {
 	var random [32]byte
 	if rand == nil {
 		return "", "", fmt.Errorf("issue personal token: %w", errEntropy)
 	}
 	if _, err := io.ReadFull(rand, random[:]); err != nil {
-		// Reader errors can contain sensitive source details.
 		return "", "", fmt.Errorf("issue personal token: %w", errEntropy)
 	}
 	plain = "trc_" + base64.RawURLEncoding.EncodeToString(random[:])

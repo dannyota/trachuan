@@ -1,4 +1,3 @@
-// Package accountapi serves account management endpoints for web sessions.
 package accountapi
 
 import (
@@ -19,35 +18,29 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// Store supplies account and personal token state. CreatePersonalToken returns
-// credential.ErrTokenLimit when the account has twenty live tokens.
 type Store interface {
 	GetAccount(context.Context, int64) (store.Account, error)
 	ListLiveSessions(context.Context, int64) ([]store.WebSession, error)
 	ListTokens(context.Context, int64) ([]store.PersonalToken, error)
-	CreatePersonalToken(context.Context, store.CreatePersonalTokenParams) (store.PersonalToken, error)
+	CreateWebPersonalToken(context.Context, store.WebPersonalTokenParams) (store.PersonalToken, error)
 	RevokeOwnToken(context.Context, store.RevokeOwnTokenParams) (string, error)
-	RequestDeletion(context.Context, int64) (store.RequestDeletionRow, error)
+	RequestDeletion(context.Context, store.RequestDeletionParams) (store.RequestDeletionRow, error)
 }
 
-// Sessions revokes sessions through the shared session manager.
 type Sessions interface {
 	EvictAccount(int64)
 	RevokeOwnSession(context.Context, int64, int64) (int64, error)
 }
 
-// Verifier evicts cached bearer credentials.
 type Verifier interface {
 	Evict(string)
 	EvictAccount(int64)
 }
 
-// Limiter consumes the shared per-account request budget.
 type Limiter interface {
 	Allow(int64, limits.Class) (bool, time.Duration)
 }
 
-// Config supplies shared account dependencies. Configure before serving requests.
 type Config struct {
 	Store    Store
 	Sessions Sessions
@@ -57,14 +50,12 @@ type Config struct {
 	Rand     io.Reader
 }
 
-// Handler serves account routes. Install session and CSRF middleware outside it.
 type Handler struct {
 	cfg      Config
 	mux      *http.ServeMux
 	randomMu sync.Mutex
 }
 
-// New creates an account handler.
 func New(cfg Config) *Handler {
 	if cfg.Clock == nil {
 		cfg.Clock = time.Now

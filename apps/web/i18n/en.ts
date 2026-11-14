@@ -135,6 +135,7 @@ export const en: Catalog = {
     account_changed: 'Your account changed. Please review and try again.',
     invalid_request: 'The request is invalid.',
     unauthenticated: 'Please sign in.',
+    reauth_required: 'Please sign in again to continue.',
     csrf_rejected: 'The security session is invalid. Please try again.',
     account_blocked: 'The account is blocked.',
     not_found: 'The requested item was not found.',

@@ -79,11 +79,6 @@ func (h *Handler) createToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	p, _ := websession.FromContext(r.Context())
-	a, err := h.cfg.Store.GetAccount(r.Context(), p.AccountID)
-	if err != nil || r.Context().Err() != nil {
-		unavailable(w)
-		return
-	}
 	h.randomMu.Lock()
 	plain, hash, err := credential.Issue(h.cfg.Rand)
 	h.randomMu.Unlock()
@@ -91,7 +86,18 @@ func (h *Handler) createToken(w http.ResponseWriter, r *http.Request) {
 		unavailable(w)
 		return
 	}
-	row, err := h.cfg.Store.CreatePersonalToken(r.Context(), store.CreatePersonalTokenParams{TokenHash: hash, AccountID: p.AccountID, Name: name, ExpiresAt: h.cfg.Clock().Add(time.Duration(days) * 24 * time.Hour), AuthEpoch: a.AuthEpoch})
+	row, err := h.cfg.Store.CreateWebPersonalToken(r.Context(), store.WebPersonalTokenParams{Token: store.CreatePersonalTokenParams{TokenHash: hash, AccountID: p.AccountID, Name: name, ExpiresAt: h.cfg.Clock().Add(time.Duration(days) * 24 * time.Hour), AuthEpoch: p.AuthEpoch}, SessionID: p.SessionID})
+	if errors.Is(err, store.ErrReauthRequired) && r.Context().Err() == nil {
+		apierror.Write(w, 403, "reauth_required")
+		return
+	}
+	if errors.Is(err, store.ErrFactorRequired) && r.Context().Err() == nil {
+		writeJSON(w, 403, struct {
+			Error  map[string]string `json:"error"`
+			Factor bool              `json:"factor"`
+		}{map[string]string{"code": "reauth_required", "message": apierror.Message("reauth_required")}, true})
+		return
+	}
 	if errors.Is(err, credential.ErrUnauthorized) && r.Context().Err() == nil {
 		apierror.Write(w, 403, "account_blocked")
 		return
@@ -118,7 +124,6 @@ func (h *Handler) revokeToken(w http.ResponseWriter, r *http.Request) {
 	}
 	digest, err := h.cfg.Store.RevokeOwnToken(r.Context(), store.RevokeOwnTokenParams{AccountID: p.AccountID, ID: id})
 	if err != nil || r.Context().Err() != nil {
-		// A failed response can hide a committed revocation.
 		h.cfg.Verifier.EvictAccount(p.AccountID)
 		if r.Context().Err() != nil {
 			unavailable(w)

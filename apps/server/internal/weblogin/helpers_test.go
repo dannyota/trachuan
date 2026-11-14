@@ -9,12 +9,24 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"slices"
 	"sync"
 	"testing"
 	"time"
 
+	"danny.vn/trachuan/apps/server/internal/accountemail"
+	"danny.vn/trachuan/apps/server/internal/store"
 	"danny.vn/trachuan/apps/server/internal/weblogin/oidctest"
 )
+
+type GoogleAccount struct {
+	ID                       int64
+	Blocked, DeleteRequested bool
+}
+type UpsertGoogleAccountParams struct {
+	Sub, Email   string
+	SignupEmails []string
+}
 
 const callbackPath = "/api/v1/auth/google/callback"
 const startPath = "/api/v1/auth/google/start"
@@ -65,17 +77,27 @@ func (s *fakeStore) UpsertGoogleAccount(_ context.Context, p UpsertGoogleAccount
 	}
 	a, ok := s.accounts[p.Sub]
 	if !ok {
-		if p.RejectSignup {
-			return GoogleAccount{}, sql.ErrNoRows
+		email, err := accountemail.Parse(p.Email)
+		if err != nil {
+			return GoogleAccount{}, store.ErrLoginFailed
 		}
+		for sub, held := range s.emails {
+			if sub != p.Sub && held == email {
+				return GoogleAccount{}, store.ErrLoginFailed
+			}
+		}
+		if p.SignupEmails != nil && !slices.Contains(p.SignupEmails, email) {
+			return GoogleAccount{}, store.ErrSignupClosed
+		}
+		s.emails[p.Sub] = email
 		a = GoogleAccount{ID: int64(len(s.accounts) + 1)}
 	}
 	s.accounts[p.Sub] = a
-	s.emails[p.Sub] = p.Email
 	return a, nil
 }
 
 type fakeSessions struct {
+	store                    *fakeStore
 	mu                       sync.Mutex
 	accounts                 []int64
 	presented                []string
@@ -83,7 +105,15 @@ type fakeSessions struct {
 	revokeCalls, createCalls int
 }
 
-func (s *fakeSessions) CreateSession(_ context.Context, w http.ResponseWriter, r *http.Request, id int64) error {
+func (s *fakeSessions) CreateGoogleSession(ctx context.Context, w http.ResponseWriter, r *http.Request, identity store.GoogleIdentity) error {
+	account, err := s.store.UpsertGoogleAccount(ctx, UpsertGoogleAccountParams{Sub: identity.Sub, Email: identity.Email, SignupEmails: identity.SignupEmails})
+	if err != nil {
+		return err
+	}
+	if account.Blocked || account.DeleteRequested {
+		return store.ErrAccountBlocked
+	}
+	id := account.ID
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if c, err := r.Cookie("__Host-session"); err == nil {
@@ -115,6 +145,7 @@ type fixture struct {
 func newFixture(t *testing.T, signupEmails ...[]string) *fixture {
 	t.Helper()
 	f := &fixture{p: oidctest.New(t), store: newFakeStore(), sessions: &fakeSessions{}, now: time.Now().Truncate(time.Second)}
+	f.sessions.store = f.store
 	var err error
 	var emails []string
 	if len(signupEmails) > 0 {

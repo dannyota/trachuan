@@ -132,6 +132,7 @@ export const vi = {
     account_changed: 'Tài khoản đã thay đổi. Vui lòng kiểm tra và thử lại.',
     invalid_request: 'Yêu cầu không hợp lệ.',
     unauthenticated: 'Vui lòng đăng nhập.',
+    reauth_required: 'Vui lòng đăng nhập lại để tiếp tục.',
     csrf_rejected: 'Phiên bảo mật không hợp lệ. Vui lòng thử lại.',
     account_blocked: 'Tài khoản đã bị khóa.',
     not_found: 'Không tìm thấy nội dung.',

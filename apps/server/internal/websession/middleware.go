@@ -44,7 +44,7 @@ func (m *Manager) Middleware(next http.Handler) http.Handler {
 		if renew {
 			setSessionCookie(w, raw, minTime(row.ExpiresAt, row.CreatedAt.Add(absoluteLifetime)), m.now())
 		}
-		p := Principal{AccountID: row.AccountID, SessionID: row.ID, CSRFSecret: row.CsrfSecret}
+		p := Principal{AccountID: row.AccountID, SessionID: row.ID, CSRFSecret: row.CsrfSecret, AuthEpoch: row.SessionAuthEpoch}
 		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), principalKey{}, p)))
 	})
 }

@@ -130,7 +130,7 @@ func (tx *consentTx) QueryRow(_ context.Context, sql string, args ...any) pgx.Ro
 		if tx.db.staleSession {
 			return consentRow{err: pgx.ErrNoRows}
 		}
-		return consentRow{values: []any{int64(1)}}
+		return structRow(store.GetLiveAuthoritySessionRow{ID: 1, AuthEpoch: 3})
 	case strings.Contains(sql, "ClaimRequest"):
 		if tx.claimed || args[0] != tx.pending.HandleHash || args[1] != tx.pending.BrowserHash || !tx.pending.ExpiresAt.After(time.Now()) {
 			return consentRow{err: pgx.ErrNoRows}

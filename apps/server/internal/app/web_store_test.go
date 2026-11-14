@@ -46,10 +46,6 @@ func TestLoginStore_QueryDeadline(t *testing.T) {
 			_, err := s.ClaimLoginTransaction(context.Background(), weblogin.ClaimLoginTransactionParams{})
 			return err
 		}},
-		{"upsert", func(s loginStore) error {
-			_, err := s.UpsertGoogleAccount(context.Background(), weblogin.UpsertGoogleAccountParams{})
-			return err
-		}},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			db := &deadlineDB{}
@@ -107,7 +103,6 @@ func TestLoginStore_CanceledContextReturnsError(t *testing.T) {
 			_, err := s.ClaimLoginTransaction(ctx, weblogin.ClaimLoginTransactionParams{})
 			return err
 		}},
-		{"upsert", func() error { _, err := s.UpsertGoogleAccount(ctx, weblogin.UpsertGoogleAccountParams{}); return err }},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			if err := tt.call(); !errors.Is(err, context.Canceled) {

@@ -29,9 +29,6 @@ const (
 	consentUnauthorized consentFailure = "unauthorized_client"
 )
 
-// NewConsentHandler serves the consent page and its browser-bound decision.
-// Sessions are authenticated here so login failures use OAuth pages and redirects.
-// The caller supplies the shared login and OAuth IP limiter.
 func NewConsentHandler(base string, db ClientDB, sessions *websession.Manager) http.Handler {
 	pages := newConsentPages(base)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -138,8 +135,6 @@ func readConsentRequest(ctx context.Context, db store.DBTX, handle, browser stri
 	return row, nil
 }
 
-// consentSession uses the session middleware without exposing its JSON errors on
-// OAuth pages. Successful renewal cookies pass through the original headers.
 func consentSession(w http.ResponseWriter, r *http.Request, sessions *websession.Manager) (*http.Request, int) {
 	if sessions == nil {
 		return nil, 401
@@ -201,31 +196,26 @@ func decideConsent(ctx context.Context, db ClientDB, pending store.OauthRequest,
 		return "", fmt.Errorf("begin consent decision: %w", err)
 	}
 	defer consentRollback(tx)
+	q := store.New(tx)
+	accountID := principal.AccountID
+	account, err := store.LockAccount(ctx, tx, accountID)
+	if err != nil {
+		return "", fmt.Errorf("lock consent account: %w", err)
+	}
+	if account.BlockedAt != nil || account.DeleteRequestedAt != nil || account.AuthEpoch != principal.AuthEpoch {
+		return "", consentInvalid
+	}
+	_, err = q.GetLiveAuthoritySession(ctx, store.GetLiveAuthoritySessionParams{ID: principal.SessionID, AccountID: accountID, AuthEpoch: account.AuthEpoch})
+	if err != nil {
+		return "", fmt.Errorf("recheck consent session: %w", err)
+	}
+
 	client, err := InUse(ctx, tx, pending.ClientID)
 	if err != nil {
 		return "", fmt.Errorf("protect consent client: %w", err)
 	}
 	if decision == "approve" && !client.Allows("authorization_code") {
 		return "", consentUnauthorized
-	}
-	q := store.New(tx)
-	// All grant issuers serialize on the account before counting the live grants.
-	accountID := principal.AccountID
-	account, err := q.LockCredentialAccount(ctx, accountID)
-	if err != nil {
-		return "", fmt.Errorf("lock consent account: %w", err)
-	}
-	if account.BlockedAt != nil || account.DeleteRequestedAt != nil {
-		return "", consentInvalid
-	}
-	// A cached session must not mint new-epoch authority after revocation or restore.
-	var sessionID int64
-	err = tx.QueryRow(ctx, `SELECT id FROM web_session
- WHERE id=$1 AND account_id=$2 AND auth_epoch=$3 AND revoked_at IS NULL
- AND expires_at > now() AND created_at + interval '90 days' > now()
- FOR SHARE`, principal.SessionID, accountID, account.AuthEpoch).Scan(&sessionID)
-	if err != nil {
-		return "", fmt.Errorf("recheck consent session: %w", err)
 	}
 
 	row, err := q.ClaimRequest(ctx, store.ClaimRequestParams{HandleHash: consentDigest(handle), BrowserHash: consentDigest(browser), AccountID: &accountID})
@@ -261,7 +251,6 @@ func decideConsent(ctx context.Context, db ClientDB, pending store.OauthRequest,
 	return code, nil
 }
 
-// Adapted from aboutme oauthsrv at 1b1ece3d; every response carries state and iss.
 func consentResultURL(redirect, issuer, code, errorCode, state string) string {
 	u, err := url.Parse(redirect)
 	if err != nil {

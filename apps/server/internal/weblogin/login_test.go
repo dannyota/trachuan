@@ -47,7 +47,7 @@ func TestLogin_NewAndReturningAccount(t *testing.T) {
 	}
 }
 
-func TestLogin_EmailUpdatedBySub(t *testing.T) {
+func TestLogin_EmailFixedBySub(t *testing.T) {
 	f := newFixture(t)
 	for _, c := range []struct{ sub, email string }{{"first-sub", "first@example.test"}, {"first-sub", "new@example.test"}, {"second-sub", "new@example.test"}} {
 		a := f.begin(t, "/")
@@ -56,8 +56,8 @@ func TestLogin_EmailUpdatedBySub(t *testing.T) {
 			t.Fatalf("login=%d %s", w.Code, w.Body.String())
 		}
 	}
-	if len(f.store.accounts) != 2 || f.store.emails["first-sub"] != "new@example.test" || f.store.accounts["first-sub"].ID == f.store.accounts["second-sub"].ID {
-		t.Error("accounts not keyed by subject with current email")
+	if len(f.store.accounts) != 2 || f.store.emails["first-sub"] != "first@example.test" || f.store.accounts["first-sub"].ID == f.store.accounts["second-sub"].ID {
+		t.Error("accounts not keyed by subject with fixed email")
 	}
 }
 

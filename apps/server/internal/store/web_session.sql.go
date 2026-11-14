@@ -13,27 +13,30 @@ import (
 const createSession = `-- name: CreateSession :one
 WITH revoked AS (
     UPDATE web_session SET revoked_at = now()
-    WHERE id IN (
-        SELECT s.id FROM web_session s WHERE s.account_id = $2 AND s.revoked_at IS NULL
+    WHERE revoked_at IS NULL AND (token_hash = ANY(COALESCE($1::text[], ARRAY[]::text[])) OR id IN (
+        SELECT s.id FROM web_session s WHERE s.account_id = $2
+            AND s.revoked_at IS NULL AND s.token_hash <> ALL(COALESCE($1::text[], ARRAY[]::text[]))
             AND s.expires_at > now() AND s.created_at + interval '90 days' > now()
         ORDER BY s.created_at DESC, s.id DESC OFFSET 49
-    ) RETURNING token_hash
+    )) RETURNING token_hash
 ), created AS (
-    INSERT INTO web_session (token_hash, account_id, csrf_secret, auth_epoch, expires_at)
-    SELECT $1, $2, $3, $4, $5
+    INSERT INTO web_session (token_hash, account_id, csrf_secret, auth_epoch, expires_at, proof_at)
+    SELECT $3, $2, $4,
+        $5, $6, now()
     WHERE EXISTS (SELECT 1 FROM account WHERE id = $2 AND blocked_at IS NULL
-        AND delete_requested_at IS NULL AND auth_epoch = $4)
-    RETURNING id, token_hash, account_id, csrf_secret, auth_epoch, created_at, last_seen_at, expires_at, revoked_at
+        AND delete_requested_at IS NULL AND auth_epoch = $5)
+    RETURNING id, token_hash, account_id, csrf_secret, auth_epoch, created_at, last_seen_at, expires_at, revoked_at, proof_at, factor_at
 )
-SELECT created.id, created.token_hash, created.account_id, created.csrf_secret, created.auth_epoch, created.created_at, created.last_seen_at, created.expires_at, created.revoked_at, ARRAY(SELECT token_hash FROM revoked)::text[] AS revoked_hashes FROM created
+SELECT created.id, created.token_hash, created.account_id, created.csrf_secret, created.auth_epoch, created.created_at, created.last_seen_at, created.expires_at, created.revoked_at, created.proof_at, created.factor_at, ARRAY(SELECT token_hash FROM revoked)::text[] AS revoked_hashes FROM created
 `
 
 type CreateSessionParams struct {
-	TokenHash  string
-	AccountID  int64
-	CsrfSecret string
-	AuthEpoch  int32
-	ExpiresAt  time.Time
+	ReplacedHashes []string
+	AccountID      int64
+	TokenHash      string
+	CsrfSecret     string
+	AuthEpoch      int32
+	ExpiresAt      time.Time
 }
 
 type CreateSessionRow struct {
@@ -46,13 +49,16 @@ type CreateSessionRow struct {
 	LastSeenAt    time.Time
 	ExpiresAt     time.Time
 	RevokedAt     *time.Time
+	ProofAt       *time.Time
+	FactorAt      *time.Time
 	RevokedHashes []string
 }
 
 func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) (CreateSessionRow, error) {
 	row := q.db.QueryRow(ctx, createSession,
-		arg.TokenHash,
+		arg.ReplacedHashes,
 		arg.AccountID,
+		arg.TokenHash,
 		arg.CsrfSecret,
 		arg.AuthEpoch,
 		arg.ExpiresAt,
@@ -68,6 +74,8 @@ func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) (C
 		&i.LastSeenAt,
 		&i.ExpiresAt,
 		&i.RevokedAt,
+		&i.ProofAt,
+		&i.FactorAt,
 		&i.RevokedHashes,
 	)
 	return i, err
@@ -75,7 +83,7 @@ func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) (C
 
 const getSession = `-- name: GetSession :one
 SELECT s.id, s.token_hash, s.account_id, s.csrf_secret,
-    s.auth_epoch AS session_auth_epoch, s.created_at, s.last_seen_at,
+    s.auth_epoch AS session_auth_epoch, s.created_at, s.last_seen_at, s.proof_at, s.factor_at,
     s.expires_at, s.revoked_at, a.blocked_at, a.delete_requested_at,
     a.auth_epoch AS account_auth_epoch
 FROM web_session s JOIN account a ON a.id = s.account_id
@@ -90,6 +98,8 @@ type GetSessionRow struct {
 	SessionAuthEpoch  int32
 	CreatedAt         time.Time
 	LastSeenAt        time.Time
+	ProofAt           *time.Time
+	FactorAt          *time.Time
 	ExpiresAt         time.Time
 	RevokedAt         *time.Time
 	BlockedAt         *time.Time
@@ -108,6 +118,8 @@ func (q *Queries) GetSession(ctx context.Context, tokenHash string) (GetSessionR
 		&i.SessionAuthEpoch,
 		&i.CreatedAt,
 		&i.LastSeenAt,
+		&i.ProofAt,
+		&i.FactorAt,
 		&i.ExpiresAt,
 		&i.RevokedAt,
 		&i.BlockedAt,
@@ -118,7 +130,7 @@ func (q *Queries) GetSession(ctx context.Context, tokenHash string) (GetSessionR
 }
 
 const listLiveSessions = `-- name: ListLiveSessions :many
-SELECT s.id, s.token_hash, s.account_id, s.csrf_secret, s.auth_epoch, s.created_at, s.last_seen_at, s.expires_at, s.revoked_at FROM web_session s JOIN account a ON a.id = s.account_id
+SELECT s.id, s.token_hash, s.account_id, s.csrf_secret, s.auth_epoch, s.created_at, s.last_seen_at, s.expires_at, s.revoked_at, s.proof_at, s.factor_at FROM web_session s JOIN account a ON a.id = s.account_id
 WHERE s.account_id = $1 AND s.revoked_at IS NULL
     AND a.blocked_at IS NULL AND a.delete_requested_at IS NULL
     AND s.auth_epoch = a.auth_epoch
@@ -126,8 +138,6 @@ WHERE s.account_id = $1 AND s.revoked_at IS NULL
 ORDER BY s.created_at DESC, s.id DESC LIMIT 100
 `
 
-// Keep revocation, account state, auth epoch and both expiry bounds aligned
-// with validSession in apps/server/internal/websession/middleware.go.
 func (q *Queries) ListLiveSessions(ctx context.Context, accountID int64) ([]WebSession, error) {
 	rows, err := q.db.Query(ctx, listLiveSessions, accountID)
 	if err != nil {
@@ -147,6 +157,8 @@ func (q *Queries) ListLiveSessions(ctx context.Context, accountID int64) ([]WebS
 			&i.LastSeenAt,
 			&i.ExpiresAt,
 			&i.RevokedAt,
+			&i.ProofAt,
+			&i.FactorAt,
 		); err != nil {
 			return nil, err
 		}
@@ -159,7 +171,7 @@ func (q *Queries) ListLiveSessions(ctx context.Context, accountID int64) ([]WebS
 }
 
 const listSessions = `-- name: ListSessions :many
-SELECT id, token_hash, account_id, csrf_secret, auth_epoch, created_at, last_seen_at, expires_at, revoked_at FROM web_session WHERE account_id = $1
+SELECT id, token_hash, account_id, csrf_secret, auth_epoch, created_at, last_seen_at, expires_at, revoked_at, proof_at, factor_at FROM web_session WHERE account_id = $1
     AND LEAST(expires_at, created_at + interval '90 days', revoked_at) >= now() - interval '7 days'
 ORDER BY created_at DESC, id DESC LIMIT 100
 `
@@ -183,6 +195,8 @@ func (q *Queries) ListSessions(ctx context.Context, accountID int64) ([]WebSessi
 			&i.LastSeenAt,
 			&i.ExpiresAt,
 			&i.RevokedAt,
+			&i.ProofAt,
+			&i.FactorAt,
 		); err != nil {
 			return nil, err
 		}
@@ -226,10 +240,13 @@ func (q *Queries) RevokeSession(ctx context.Context, tokenHash string) (int64, e
 }
 
 const touchSession = `-- name: TouchSession :execrows
-UPDATE web_session SET last_seen_at = now(),
-    expires_at = LEAST(now() + interval '30 days', created_at + interval '90 days')
-WHERE token_hash = $1 AND revoked_at IS NULL AND expires_at > now()
-    AND last_seen_at <= now() - interval '1 hour'
+UPDATE web_session SET last_seen_at = statement_timestamp(),
+    expires_at = LEAST(statement_timestamp() + interval '30 days', created_at + interval '90 days')
+WHERE token_hash = $1 AND revoked_at IS NULL AND expires_at > statement_timestamp()
+    AND created_at + interval '90 days' > statement_timestamp()
+    AND EXISTS (SELECT 1 FROM account a WHERE a.id = web_session.account_id
+        AND a.blocked_at IS NULL AND a.delete_requested_at IS NULL AND a.auth_epoch = web_session.auth_epoch)
+    AND last_seen_at <= statement_timestamp() - interval '1 hour'
 `
 
 func (q *Queries) TouchSession(ctx context.Context, tokenHash string) (int64, error) {

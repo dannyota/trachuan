@@ -13,6 +13,7 @@ import (
 
 	"danny.vn/trachuan/apps/server/internal/migrate"
 	"danny.vn/trachuan/apps/server/internal/store"
+	"danny.vn/trachuan/apps/server/internal/websession"
 	"danny.vn/trachuan/internal/testpg"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -186,27 +187,46 @@ func TestAuthorize_PendingCapConcurrent_Postgres(t *testing.T) {
 }
 func TestConsent_ReconsentPreservesIssuedEpoch_Postgres(t *testing.T) {
 	db := consentPostgres(t)
+	if _, err := db.Exec(t.Context(), `DELETE FROM web_session WHERE id=1`); err != nil {
+		t.Fatal(err)
+	}
+	q := store.New(db)
+	sessions := &websession.Manager{Store: q, PublicURL: consentBase, CacheTTL: -1}
+	approve := func(path string, browser *http.Cookie) int {
+		t.Helper()
+		login := httptest.NewRecorder()
+		if err := sessions.CreateSession(t.Context(), login, httptest.NewRequest("GET", "/", nil), 7); err != nil {
+			t.Fatal(err)
+		}
+		sessionCookie := login.Result().Cookies()[0]
+		session, err := q.GetSession(t.Context(), consentDigest(sessionCookie.Value))
+		if err != nil {
+			t.Fatal(err)
+		}
+		form := formFor(path, "approve")
+		form.Set("csrf_token", consentFormToken(session.CsrfSecret, strings.TrimPrefix(path, "/oauth/consent/")))
+		request := consentRequest(path, "POST", browser, false, form)
+		request.AddCookie(sessionCookie)
+		response := httptest.NewRecorder()
+		NewConsentHandler(consentBase, db, sessions).ServeHTTP(response, request)
+		return response.Code
+	}
 	path, cookie := postgresPending(t, db, "fixture")
-	if status := postgresConsent(db, path, cookie); status != 303 {
+	if status := approve(path, cookie); status != 303 {
 		t.Fatalf("first status %d", status)
 	}
 	if _, err := db.Exec(t.Context(), `UPDATE account SET auth_epoch=4 WHERE id=7`); err != nil {
 		t.Fatal(err)
 	}
-	// A fresh login at the new epoch may reuse the grant without changing old codes.
-	if _, err := db.Exec(t.Context(), `UPDATE web_session SET auth_epoch=4 WHERE id=1`); err != nil {
-		t.Fatal(err)
-	}
-
 	path, cookie = postgresPending(t, db, "fixture")
-	if status := postgresConsent(db, path, cookie); status != 303 {
+	if status := approve(path, cookie); status != 303 {
 		t.Fatalf("second status %d", status)
 	}
 	var old, newer int
 	if err := db.QueryRow(context.Background(), `SELECT count(*) FILTER(WHERE auth_epoch=3),count(*) FILTER(WHERE auth_epoch=4) FROM oauth_code`).Scan(&old, &newer); err != nil || old != 1 || newer != 1 {
 		t.Fatalf("epochs %d %d error %v", old, newer, err)
 	}
-	if grants, err := store.New(db).CountLiveGrants(t.Context(), 7); err != nil || grants != 1 {
+	if grants, err := q.CountLiveGrants(t.Context(), 7); err != nil || grants != 1 {
 		t.Fatalf("grants %d error %v", grants, err)
 	}
 }
