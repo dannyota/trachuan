@@ -151,8 +151,8 @@ even when the auth migrations ran before the role existed.
    against it with the server code that will serve it.
 4. In one transaction: require the country's pointer row, compare-and-swap
    `corpus_release.active_db` from the journaled expected value, require exactly
-   one updated row, insert the old database into `retired_release` with
-   its dump SHA-256 and `retain_until` seven days ahead, delete the target from
+   one updated row, insert the old database into `retired_release` with its dump
+   SHA-256 and `retain_until` seven days ahead, delete the target from
    `retired_release` in `retained` mode, and append `activated`.
 5. The server resolves the release once per request, so traffic moves without a
    restart; the postings for the new release load on first use under the
