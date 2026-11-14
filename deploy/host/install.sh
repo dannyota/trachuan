@@ -13,13 +13,17 @@ source /etc/os-release
 [[ $(stat -fc %T /sys/fs/cgroup) == cgroup2fs ]] || fail 'cgroup v2 is required'
 
 dnf --disablerepo='*' --enablerepo=ol9_baseos_latest --enablerepo=ol9_appstream \
- install -y podman container-selinux firewalld policycoreutils-python-utils shadow-utils python3
+ install -y podman container-selinux firewalld policycoreutils-python-utils shadow-utils python3 acl
+dnf --disablerepo='*' --enablerepo=ol9_oci_included install -y python39-oci-sdk
 version=$(podman --version | awk '{print $3}')
 [[ $(printf '%s\n' 4.4 "$version" | sort -V | head -1) == 4.4 ]] || fail 'Podman >= 4.4 is required'
 [[ $(getenforce) == Enforcing ]] || fail 'SELinux must be enforcing'
 
 if ! id trachuan >/dev/null 2>&1; then
  useradd --create-home --shell /bin/bash trachuan
+fi
+if ! id trachuan-metrics >/dev/null 2>&1; then
+ useradd --system --no-create-home --shell /sbin/nologin trachuan-metrics
 fi
 [[ $(getent passwd trachuan | cut -d: -f6) == /home/trachuan ]] || fail 'unexpected trachuan home'
 for kind in uid gid; do
@@ -55,13 +59,34 @@ for service in http https; do
  firewall-cmd --permanent --query-service="$service" >/dev/null || firewall-cmd --permanent --add-service="$service"
 done
 firewall-cmd --permanent --query-port=443/udp >/dev/null || firewall-cmd --permanent --add-port=443/udp
+subuid=$(awk -F: '$1 == "trachuan" {count++; start=$2; size=$3} END {if (count != 1 || start !~ /^[0-9]+$/ || size !~ /^[0-9]+$/ || size < 1) exit 1; printf "%.0f-%.0f", start, start + size - 1}' /etc/subuid) || fail 'expected one valid subordinate uid range'
+for owner in "$uid" "$subuid"; do
+ rule=(ipv4 filter OUTPUT 0 -d 169.254.169.254 -p tcp --dport 80 -m owner --uid-owner "$owner" -j REJECT)
+ firewall-cmd --permanent --direct --query-rule "${rule[@]}" >/dev/null || firewall-cmd --permanent --direct --add-rule "${rule[@]}"
+done
 firewall-cmd --reload
 
 install -d -o root -g root -m 0755 /srv/trachuan
 for dir in /srv/trachuan/data/postgres /srv/trachuan/data/pgbackrest; do
  [[ -d $dir ]] || install -d -o trachuan -g trachuan -m 0700 "$dir"
 done
-install -d -o trachuan -g trachuan -m 0755 /srv/trachuan/host /srv/trachuan/host/quadlet
+install -d -o root -g root -m 0755 /srv/trachuan/host
+install -d -o trachuan -g trachuan -m 0755 /srv/trachuan/host/quadlet
+install -d -o root -g root -m 0755 /usr/local/libexec/trachuan
+[[ ! -L /usr/local/libexec/trachuan && ! -L /usr/local/libexec/trachuan/publish-metrics.py ]] || fail 'symlink in the metrics publisher path'
+install -o root -g root -m 0644 "$bundle/metrics/publish-metrics.py" /usr/local/libexec/trachuan/publish-metrics.py
+for unit in trachuan-metrics.service trachuan-metrics.timer; do
+ install -o root -g root -m 0644 "$bundle/systemd/$unit" "/etc/systemd/system/$unit"
+done
+[[ -d /srv/trachuan/state ]] || install -d -o root -g root -m 0755 /srv/trachuan/state
+[[ -d /srv/trachuan/state/backup ]] || install -d -o trachuan -g trachuan -m 0750 /srv/trachuan/state/backup
+setfacl -m u:trachuan-metrics:--x /srv/trachuan/state
+setfacl -m u:trachuan-metrics:r-x,d:u:trachuan-metrics:r-x /srv/trachuan/state/backup
+for job in full diff verify health restore-check; do
+ [[ ! -f /srv/trachuan/state/backup/$job.json ]] || setfacl -m u:trachuan-metrics:r-- "/srv/trachuan/state/backup/$job.json"
+done
+systemctl daemon-reload
+systemctl enable --now trachuan-metrics.timer
 install -d -o trachuan -g trachuan -m 0755 /srv/trachuan/models /srv/trachuan/models/vi_v2-bundle
 for script in bootstrap.sh grant-corpus.sh wait-healthy.sh render-units.sh \
  postgres-admin.sh wait-postgres.sh check-postgres-auth.sh repair-postgres-auth.sh check-signup.sh client-address-log.sh; do

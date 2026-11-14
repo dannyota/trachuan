@@ -30,7 +30,8 @@ bundle's `server.env`. Register Google redirect URI
 sudo bash /tmp/trachuan-host/install.sh /tmp/trachuan-host
 ```
 
-The installer targets OL9.8 arm64, uses only OL9 BaseOS and AppStream, requires
+The installer targets OL9.8 arm64. It uses OL9 BaseOS and AppStream for every
+package, plus `ol9_oci_included` for `python39-oci-sdk` only. It requires
 SELinux enforcing, cgroup v2 and Podman >= 4.4, and verifies generated units. It
 enables lingering and opens 80/443 TCP and 443 UDP. It preserves installed env
 files under `/srv/trachuan/host/`; update those files on an existing host. The
@@ -38,9 +39,12 @@ server's pre-start guard validates every signup-list entry: a nonempty local
 part, a dotted domain and no whitespace. Invalid values refuse startup without
 being logged. Leave `SERVER_GOOGLE_ISSUER` and `SERVER_OAUTH_CLIENTS` unset.
 
-Phase 1 has no instance dynamic group or IAM policy, so the instance principal
-grants nothing. Before any Vault policy exists, block metadata access at
-`169.254.169.254` for `trachuan` and its mapped container UIDs.
+The dynamic group `trachuan-host` includes only this instance. Its policy grants
+`use metrics` in compartment `trachuan` for namespace `trachuan_host`. The
+installer blocks metadata HTTP for `trachuan` and its subordinate UID range,
+covering the application and its containers. Other local accounts retain access.
+Future Vault grants to the same dynamic group must name the secrets. See
+[alarms](alarms.md) for a metadata access check.
 
 The renderer writes literal digests into the user's [Quadlet
 directory][quadlet]. All containers use host networking. Only Caddy binds public

@@ -1,0 +1,14 @@
+[Unit]
+Description=Publish host metrics to OCI Monitoring
+
+[Service]
+Type=oneshot
+User=trachuan-metrics
+ExecStart=/usr/bin/python3 -I /usr/local/libexec/trachuan/publish-metrics.py
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+TimeoutStartSec=30
+TimeoutStopSec=5
+MemoryMax=256M

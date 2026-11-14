@@ -22,6 +22,13 @@ def objects(value):
 
 
 class InstallerTest(unittest.TestCase):
+    def test_metrics_bundle_and_metadata_firewall(self):
+        script = (HOST / "install.sh").read_text()
+        for path in ("metrics/publish-metrics.py", "systemd/trachuan-metrics.service", "systemd/trachuan-metrics.timer"):
+            self.assertTrue((HOST / path).is_file(), path)
+        for value in ("ol9_oci_included", "python39-oci-sdk", "--uid-owner", "169.254.169.254", "--dport 80", "--query-rule", "--add-rule", "trachuan-metrics.timer"):
+            self.assertIn(value, script)
+
     def test_cgroup_template_matches_podman_field(self):
         templates = re.findall(r"podman info --format '([^']+)'", (HOST / "install.sh").read_text())
         self.assertEqual(templates, ["{{.Host.CgroupsVersion}}"])
