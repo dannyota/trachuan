@@ -185,9 +185,9 @@ missing or older than the window, and adds `{factor: true}` when only
 reauth (password). Every sign-in sets `proof_at` on the session it creates.
 
 Per-IP limits and the hash queue answer the same for known and unknown emails.
-The per-email counter is keyed by the parsed address and counts attempts whether
-or not an account holds it. An unknown email, or an account without a password,
-still hashes against a fixed dummy hash.
+The per-email counter is keyed by the parsed address and counts failed attempts
+whether or not an account holds it. An unknown email, or an account without a
+password, still hashes against a fixed dummy hash.
 
 ## Password rules
 
