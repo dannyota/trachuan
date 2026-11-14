@@ -187,16 +187,20 @@ depend on filters, detail or limit.
 
 Options:
 
-1. Cache collected arms (candidates, hydration and diagnostics, no query text)
-   by release, resolved collection date (after cursor validation), query recipe
-   hash, query text digest, `as_of`, `in_force_only`, dense mode and both
-   depths. A hit still validates the request in full. Adding a filter or
-   switching detail after a search then skips both arms and hydration and
-   reshapes only. Size per entry is bounded by the depths; the cap goes into
-   host budgets.
-2. Longer response cache lifetime. It helps only identical repeats.
+1. Cache collected arms with their hydration. Measured on the 476 comparison
+   records of vn/20261112_2, a serialized `Arms` is 13.7 MB at p50 and 125 MB at
+   p95 (hydrated members carry provision text, ancestors, descendants and
+   relations), so a useful cap would hold only a handful of entries. Rejected.
+2. Cache only the candidate phase
+   ([search candidates](caching.md#search-candidates)): per arm group, the
+   ordered raw ANN, dense and lexical candidates with their scores and the
+   fallback flag, about 10 KB per entry. A hit skips the dense pool, the exact
+   fallback (140 to 770 ms when it runs) and the sparse arm; hydration, which
+   read about 15 to 60 ms of immutable release rows in the measurements, runs as
+   on a miss, so every later value is computed exactly as without the cache.
+3. Longer response cache lifetime. It helps only identical repeats.
 
-Recommendation: option 1, with the topic page cache above.
+Recommendation: option 2, with the topic page cache above.
 
 ## Compact payload
 
@@ -232,7 +236,8 @@ provisions and lower total input tokens.
    heap (build storage, needs the next build): about −100 to −250 ms per search,
    and a shorter cold first search.
 3. In-memory sparse postings: about −500 ms per search on the host.
-4. Arm cache: filter and detail changes after a search are about 10 ms.
+4. Candidate cache: a filter or detail change after a search skips both arms;
+   hydration and shaping remain.
 5. Compact `related` removal after the ADR 0013 revision: about −20% compact
    size.
 6. Partitioned ANN pools, as a recipe candidate: most exact fallbacks (140 to

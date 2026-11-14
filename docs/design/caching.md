@@ -79,6 +79,31 @@ the first relation pointers and the counts. They are immutable within a release.
 Status, which comes from the hit stamp at present time, is never cached in this
 entry.
 
+## Search candidates
+
+The candidate phase of a search collection is cached: for the current and the
+non-current group, the ordered raw ANN, dense and lexical candidate lists (chunk
+id, rank, cosine or score) and whether the exact fallback ran. Hydration,
+validity, presentation and paging always run as on a miss, so a hit returns
+exactly the bytes a miss returns. The search response cache still answers
+identical repeats first; this cache serves the same question with a different
+filter, detail level, limit or cursor page, none of which change collection.
+
+The key is the SHA-256 of the canonical JSON of: the query recipe hash, the
+retrieval recipe hash, the lexical recipe hash, the exact query text the
+embedder receives, the resolved collection date (the Vietnam civil date of the
+request, or the date a cursor pins, after cursor validation), whether the
+request is historical (`as_of` given), the dense mode (`ann` or `exact`) and
+both depths. The release is bound by the release-scoped handle, as for the other
+corpus caches. Validation references, the query vector and the sparse query are
+functions of the text and recipes, so they are covered. Filters, nodes,
+documents, `in_force_only`, detail, limit, arm mode and cursor position are not
+in the key: collection does not read them (`in_force_only` only selects which
+collected group is shaped). Only serving collections are cached; evaluation
+overrides (not-yet eligibility) never read or write it. Rejected queries,
+errors, cancelled and timed-out collections are not cached. A hit still runs
+request validation, served-filter checks and the query embedding lookup.
+
 ## Topic node pages
 
 The public node page (`GET /api/v1/public/taxonomy/{code}`) is cached per
