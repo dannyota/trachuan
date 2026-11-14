@@ -22,6 +22,7 @@ jobs:
       docembed: ${{ steps.paths.outputs.docembed }}
       queryembed: ${{ steps.paths.outputs.queryembed }}
       web: ${{ steps.paths.outputs.web }}
+      tofu: ${{ steps.paths.outputs.tofu }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -37,6 +38,7 @@ jobs:
           docembed=true
           queryembed=true
           web=true
+          tofu=true
           if [ "$EVENT_NAME" = pull_request ]; then
             paths=$(mktemp)
             git diff --no-ext-diff --no-textconv --no-renames --name-only -z "$BASE_SHA...$HEAD_SHA" -- > "$paths"
@@ -45,6 +47,7 @@ jobs:
             docembed=false
             queryembed=false
             web=false
+            tofu=false
             while IFS= read -r -d '' path; do
               case "$path" in
                 packages/schema/*|apps/server/internal/accountapi/*|apps/server/internal/webapi/*|apps/server/internal/weblogin/*|apps/server/internal/websession/*|apps/server/internal/apierror/*|apps/server/internal/contracttest/*|apps/server/internal/mcpapi/*|.github/workflows/ci.yml|.tool-versions|Makefile) schema=true ;;
@@ -59,7 +62,11 @@ jobs:
                 apps/web/*|packages/schema/*|.tool-versions|.github/workflows/ci.yml) web=true ;;
               esac
               case "$path" in
+                deploy/oci/*|.github/workflows/ci.yml) tofu=true ;;
+              esac
+              case "$path" in
                 deploy/host/*|deploy/images/*|deploy/github/*|.github/workflows/*) go=true ;;
+                deploy/oci/*) ;;
                 docs/*.md) ;;
                 apps/web/*) ;;
                 *.md) [[ "$path" != */* ]] || go=true ;;
@@ -69,7 +76,7 @@ jobs:
             rm "$paths"
           fi
           printf '%s\n' "schema=$schema" "go=$go" "docembed=$docembed" \
-            "queryembed=$queryembed" "web=$web" >> "$GITHUB_OUTPUT"
+            "queryembed=$queryembed" "web=$web" "tofu=$tofu" >> "$GITHUB_OUTPUT"
 
   schema:
     needs: [preflight]
@@ -333,9 +340,29 @@ jobs:
             ~/go/pkg/mod
           key: go-${{ runner.os }}-${{ runner.arch }}-queryembed-${{ hashFiles('go.sum') }}-${{ github.sha }}
 
+  opentofu:
+    needs: [preflight]
+    if: needs.preflight.outputs.tofu == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: deploy/oci
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4 # v2.0.2
+        with:
+          tofu_version: 1.13.9
+          tofu_wrapper: false
+      - run: tofu fmt -check -recursive
+      - run: tofu init -backend=false -input=false -lockfile=readonly
+      - run: tofu validate -no-color
+
   ci:
     if: always()
-    needs: [preflight, static, integration, e2e, docembed, queryembed, schema, web]
+    needs: [preflight, static, integration, e2e, docembed, queryembed, schema, web, opentofu]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     env:
@@ -352,9 +379,18 @@ jobs:
       QUERYEMBED: ${{ needs.queryembed.result }}
       WEB_NEEDED: ${{ needs.preflight.outputs.web }}
       WEB: ${{ needs.web.result }}
+      TOFU_NEEDED: ${{ needs.preflight.outputs.tofu }}
+      TOFU: ${{ needs.opentofu.result }}
     steps:
       - run: |
           test "$PREFLIGHT" = success
+          if [ "$TOFU_NEEDED" = true ]; then
+            test "$TOFU" = success
+          elif [ "$TOFU_NEEDED" = false ]; then
+            test "$TOFU" = skipped
+          else
+            exit 1
+          fi
           if [ "$SCHEMA_NEEDED" = true ]; then
             test "$SCHEMA" = success
           elif [ "$SCHEMA_NEEDED" = false ]; then
