@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "repository": "dannyota/trachuan",
+  "release_repository": "ghcr.io/dannyota/trachuan-release",
+  "rollback_repository": "ghcr.io/dannyota/trachuan-rollback",
+  "release_identity": "^https://github\\.com/dannyota/trachuan/\\.github/workflows/images\\.yml@refs/tags/v[0-9]+\\.[0-9]+\\.[0-9]+$",
+  "build_identity": "^https://github\\.com/dannyota/trachuan/\\.github/workflows/images\\.yml@refs/tags/v[0-9]+\\.[0-9]+\\.[0-9]+$",
+  "rollback_identity": "^https://github\\.com/dannyota/trachuan/\\.github/workflows/rollback\\.yml@refs/heads/main$",
+  "issuer": "https://token.actions.githubusercontent.com",
+  "workflow_path": ".github/workflows/images.yml",
+  "images": {
+    "server": "ghcr.io/dannyota/trachuan-server",
+    "web": "ghcr.io/dannyota/trachuan-web",
+    "queryembed": "ghcr.io/dannyota/trachuan-queryembed",
+    "postgres": "ghcr.io/dannyota/trachuan-postgres"
+  },
+  "upstream": { "caddy": "docker.io/library/caddy" },
+  "extensions": ["vector", "ltree"],
+  "sigstore_trust_root": "cosign-v3.1.4"
+}

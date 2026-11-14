@@ -107,9 +107,10 @@ the same way, published as `ghcr.io/dannyota/trachuan-rollback:<sequence>`.
 `/etc/trachuan/deploy-policy.json`, root 0644, installed by the bundle:
 repository, the workflow identities as anchored regular expressions, OIDC issuer
 `https://token.actions.githubusercontent.com`, artifact repositories, image
-names, upstream repositories, the extension allowlist, mode (`verify` or
-`activate`), and the Sigstore trust root pinned by the cosign release. Values
-come from this policy only, never from a manifest.
+names, upstream repositories, the extension allowlist, and the Sigstore trust
+root pinned by the cosign release. Values come from this policy only, never from
+a manifest. Mode (`verify` or `activate`) lives in `/etc/trachuan/deploy-mode`,
+root 0644, written only by bootstrap and the owner, never by a bundle.
 
 State in `/var/lib/trachuan-deploy/`, root 0700: active image and corpus
 manifest hashes, every accepted sequence with its manifest hash (image, rollback
@@ -163,11 +164,10 @@ retries. A run has three phases, each skipped when nothing changed: secrets
      when its image or rendered unit changed; then wait for it, run
      `pgbackrest check` and prewarm the active corpus database
      ([release restore](../runbooks/release-restore.md#prewarm-a-corpus-database)).
-     - Run `provision-activator.sh`
-       ([corpus release](corpus-release.md#activation-steps)), which creates the
-       role and sets its password; start queryembed; start migrate, a oneshot
-       unit, and require success (the auth migrations that create the activation
-       tables grant on them to `activator`); start server and web.
+     - Start queryembed; start migrate, a oneshot unit, and require success;
+       start server and web. The corpus phase, once installed, adds
+       `provision-activator.sh`
+       ([corpus release](corpus-release.md#activation-steps)) before migrate.
    - Require loopback `http://127.0.0.1:8080/readyz`; start Caddy; require
      `https://trachuan.vn/` to answer 200 through Caddy on the host
      (`curl --resolve trachuan.vn:443:127.0.0.1`), since public `/readyz` is not
@@ -216,13 +216,13 @@ readiness. Model provisioning stays a manual owner step.
 
 ## Bootstrap
 
-The leader's last planned SSH session installs the bundle containing the
-updater, writes the policy in mode `verify`, and runs
-`trachuan-deploy bootstrap <manifest-sha256>`, which pins that manifest as
-active and its sequence as the floor after full verification. After the host
-proofs pass, the same session sets mode `activate` locally, runs one updater
-run, and confirms its result before the deploy SSH key is removed. Later policy
-changes ship in releases.
+The leader's last planned SSH session installs the bundle containing the updater
+and runs `trachuan-deploy bootstrap <manifest-sha256>`, which pins that manifest
+as active and its sequence as the floor after full verification and writes
+`/etc/trachuan/deploy-mode` as `verify`. After the host proofs pass, the same
+session sets mode `activate` locally, runs one updater run, and confirms its
+result before the deploy SSH key is removed. Later policy changes ship in
+releases.
 
 ## Results and alarms
 

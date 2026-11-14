@@ -10,6 +10,7 @@ from urllib.request import Request, urlopen
 
 
 BACKUP_DIR = Path('/srv/trachuan/state/backup')
+DEPLOY_RESULT = Path('/srv/trachuan/state/deploy/result.json')
 JOBS = ('full', 'diff', 'verify', 'health', 'restore-check')
 MOUNTS = ('/', '/srv/trachuan/data')
 MAX_RESULT_BYTES = 65536
@@ -21,29 +22,40 @@ def filesystem(path):
     return used / (used + stat.f_bavail) * 100, stat.f_bavail * stat.f_frsize
 
 
-def backup(path, now):
+def job_result(path, now, prefix, statuses, failures):
     try:
         fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
     except FileNotFoundError:
         return []
     with os.fdopen(fd, 'rb') as source:
         if not stat.S_ISREG(os.fstat(source.fileno()).st_mode):
-            raise ValueError('backup result is not a regular file')
+            raise ValueError('job result is not a regular file')
         raw = source.read(MAX_RESULT_BYTES + 1)
     if len(raw) > MAX_RESULT_BYTES:
-        raise ValueError('backup result too large')
+        raise ValueError('job result too large')
     result = json.loads(raw.decode('utf-8'))
     status = result['status']
-    if status not in ('ok', 'failed', 'unknown', 'skipped', 'running'):
-        raise ValueError('invalid backup status')
-    metrics = [('backup_failed', int(status in ('failed', 'unknown')))]
+    if status not in statuses:
+        raise ValueError('invalid job status')
+    metrics = [(prefix + '_failed', int(status in failures))]
     timestamp = result.get('last_success_at')
     if timestamp:
         last_success = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
         if last_success.utcoffset() != timezone.utc.utcoffset(last_success):
-            raise ValueError('invalid backup timestamp')
-        metrics.append(('backup_last_success_age_seconds', (now - last_success).total_seconds()))
+            raise ValueError('invalid job timestamp')
+        metrics.append((prefix + '_last_success_age_seconds', (now - last_success).total_seconds()))
     return metrics
+
+
+def backup(path, now):
+    return job_result(path, now, 'backup', ('ok', 'failed', 'unknown', 'skipped', 'running'),
+                      ('failed', 'unknown'))
+
+
+def deploy(path, now):
+    return job_result(path, now, 'deploy',
+                      ('ok', 'failed', 'rolled_back', 'stopped', 'verified', 'skipped', 'bootstrapped'),
+                      ('failed', 'rolled_back', 'stopped'))
 
 
 def collect(host, now):
@@ -57,6 +69,8 @@ def collect(host, now):
     for job in JOBS:
         for name, value in backup(BACKUP_DIR / (job + '.json'), now):
             metrics.append((name, value, {'host': host, 'job': job}))
+    for name, value in deploy(DEPLOY_RESULT, now):
+        metrics.append((name, value, {'host': host}))
     return metrics
 
 

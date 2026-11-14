@@ -13,7 +13,7 @@ source /etc/os-release
 [[ $(stat -fc %T /sys/fs/cgroup) == cgroup2fs ]] || fail 'cgroup v2 is required'
 
 dnf --disablerepo='*' --enablerepo=ol9_baseos_latest --enablerepo=ol9_appstream \
- install -y podman container-selinux firewalld policycoreutils-python-utils shadow-utils python3 acl
+ install -y podman container-selinux firewalld policycoreutils-python-utils shadow-utils python3 acl tar gzip logrotate
 dnf --disablerepo='*' --enablerepo=ol9_oci_included install -y python39-oci-sdk
 version=$(podman --version | awk '{print $3}')
 [[ $(printf '%s\n' 4.4 "$version" | sort -V | head -1) == 4.4 ]] || fail 'Podman >= 4.4 is required'
@@ -85,15 +85,36 @@ setfacl -m u:trachuan-metrics:r-x,d:u:trachuan-metrics:r-x /srv/trachuan/state/b
 for job in full diff verify health restore-check; do
  [[ ! -f /srv/trachuan/state/backup/$job.json ]] || setfacl -m u:trachuan-metrics:r-- "/srv/trachuan/state/backup/$job.json"
 done
+[[ -e /srv/trachuan/state/backup/backup.lock ]] || install -o trachuan -g trachuan -m 0600 /dev/null /srv/trachuan/state/backup/backup.lock
+for dir in /etc/trachuan /srv/trachuan/bundles /usr/local/libexec/trachuan/bin; do
+ [[ ! -L $dir ]] || fail 'symlink in the updater installation path'
+ install -d -o root -g root -m 0755 "$dir"
+done
+[[ ! -L /var/lib/trachuan-deploy ]] || fail 'symlink in updater state path'
+install -d -o root -g root -m 0700 /var/lib/trachuan-deploy
+install -d -o root -g root -m 0750 /srv/trachuan/state/deploy /var/log/trachuan
+setfacl -m u:trachuan-metrics:r-x,d:u:trachuan-metrics:r-x /srv/trachuan/state/deploy
+[[ ! -f /srv/trachuan/state/deploy/result.json ]] || setfacl -m u:trachuan-metrics:r-- /srv/trachuan/state/deploy/result.json
+install -o root -g root -m 0644 "$bundle/deploy-policy.json" /etc/trachuan/deploy-policy.json
+install -o root -g root -m 0644 "$bundle/logrotate-trachuan" /etc/logrotate.d/trachuan
+bash "$bundle/updater/install-updater.sh" "$bundle/updater" /usr/local/libexec/trachuan
+command -v curl >/dev/null || fail 'curl is required to install pinned tools'
+bash "$bundle/updater/install-tools.sh" /usr/local/libexec/trachuan/bin
+for unit in trachuan-deploy.service trachuan-deploy.timer; do
+ install -o root -g root -m 0644 "$bundle/systemd/$unit" "/etc/systemd/system/$unit"
+done
 systemctl daemon-reload
 systemctl enable --now trachuan-metrics.timer
+if [[ -f /etc/trachuan/deploy-mode && ! -L /etc/trachuan/deploy-mode ]]; then
+ systemctl enable --now trachuan-deploy.timer
+fi
 install -d -o root -g root -m 0755 /etc/pgbackrest
 install -o root -g root -m 0644 "$bundle/pgbackrest.conf" /etc/pgbackrest/pgbackrest.conf
 install -d -o trachuan -g trachuan -m 0755 /srv/trachuan/host/systemd
 install -d -o trachuan -g trachuan -m 0755 /srv/trachuan/models /srv/trachuan/models/vi_v2-bundle
 for script in bootstrap.sh grant-corpus.sh wait-healthy.sh render-units.sh \
  pgbackrest-entrypoint.sh backup-job.sh restore-check.sh restore-auth.sh \
- postgres-admin.sh wait-postgres.sh check-postgres-auth.sh repair-postgres-auth.sh check-signup.sh client-address-log.sh; do
+ postgres-admin.sh wait-postgres.sh check-postgres-auth.sh repair-postgres-auth.sh client-address-log.sh; do
  install -o trachuan -g trachuan -m 0755 "$bundle/$script" "/srv/trachuan/host/$script"
 done
 for script in backup.py backup_process.py backup_result.py backup_status.py; do
@@ -111,6 +132,7 @@ rm -f /srv/trachuan/host/quadlet/trachuan.network /srv/trachuan/host/quadlet/tra
  /srv/trachuan/host/quadlet/trachuan-postgres.volume \
  /home/trachuan/.config/containers/systemd/trachuan-postgres.volume
 for template in "$bundle"/systemd/*; do
+ case ${template##*/} in trachuan-deploy.*|trachuan-metrics.*) continue ;; esac
  install -o trachuan -g trachuan -m 0644 "$template" "/srv/trachuan/host/systemd/${template##*/}"
 done
 for template in "$bundle"/quadlet/*; do

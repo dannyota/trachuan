@@ -1,0 +1,22 @@
+[Unit]
+Description=Verify and activate signed trachuan images
+After=network-online.target
+Wants=network-online.target
+RequiresMountsFor=/srv/trachuan/data
+ConditionPathExists=/etc/trachuan/deploy-mode
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/usr/local/libexec/trachuan/trachuan-deploy run
+UMask=0077
+PrivateTmp=yes
+ProtectClock=yes
+ProtectKernelLogs=yes
+RestrictRealtime=yes
+LockPersonality=yes
+LimitCORE=0
+TimeoutStartSec=60min
+TimeoutStopSec=30
+KillMode=control-group
+MemoryMax=1G
