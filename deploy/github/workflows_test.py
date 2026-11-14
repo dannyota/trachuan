@@ -24,6 +24,7 @@ class WorkflowsTest(unittest.TestCase):
         for line in ('    needs: images', "    if: github.event_name == 'push'",
                      '    environment: production', '    timeout-minutes: 75',
                      '      group: release-production', '      cancel-in-progress: false',
+                     '      queue: max',
                      '          fetch-depth: 0', '          persist-credentials: false'):
             self.assertIn(line, release)
         self.assertEqual(text.count('push-to-registry: true'), 4)

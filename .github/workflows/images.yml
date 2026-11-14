@@ -163,6 +163,7 @@ jobs:
     concurrency:
       group: release-production
       cancel-in-progress: false
+      queue: max
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 75
     permissions:
