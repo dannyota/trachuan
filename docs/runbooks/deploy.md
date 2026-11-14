@@ -77,4 +77,7 @@ A `stopped` journal keeps `/srv/trachuan/state/deploy-hold`, so Caddy stays down
 even after a reboot. Fix forward: merge the fix and tag a new patch release; the
 updater accepts any higher sequence. To return to an older release, dispatch
 `rollback.yml` from `main` with the current and target manifest hashes; it
-applies only when the auth schema is unchanged.
+applies only when the auth schema is unchanged. After the first rollback
+publish, confirm the package is public: an anonymous
+`oras repo tags ghcr.io/dannyota/trachuan-rollback` must list its tag. Until
+then the host logs `rollback channel unreadable` and withholds rollbacks.

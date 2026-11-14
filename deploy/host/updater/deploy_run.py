@@ -58,7 +58,10 @@ class Updater:
     def images(self, state, directory, mode, result):
         self.step = 'fetch'
         production = self.registry.fetch(self.rules['release_repository'], 'production', directory / 'production', 'release')
-        tag = self.registry.latest_rollback()
+        tag = self.registry.latest_rollback(bool(state.data['accepted'].get('rollback')))
+        if getattr(self.registry, 'rollback_unreadable', False) is True:
+            result.append(dict(status='warning', step='fetch',
+                               message='rollback channel unreadable; rollback authorizations withheld'))
         authorization = None
         if tag:
             rollback_path = self.registry.fetch(self.rules['rollback_repository'], tag, directory / 'rollback', 'rollback')
@@ -106,7 +109,12 @@ class Updater:
                 status = Activator(state, self.store, self.host).recover()
             except (OSError, ValueError, CommandError, InterruptedError):
                 status = 'failed'
-        reason = str(error) if isinstance(error, ValueError) else 'command failed or run interrupted'
+        if isinstance(error, ValueError):
+            reason = str(error)
+        elif isinstance(error, CommandError) and error.detail:
+            reason = str(error) + ': ' + error.detail
+        else:
+            reason = 'command failed or run interrupted'
         result.write(status or 'failed', self.step, reason, self.hash, self.manifest)
         return 1
 

@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from unittest import mock
 
-from updater.deploy_io import atomic, Result
+from updater.deploy_io import atomic, command, CommandError, failure_reason, Result
 
 
 class IOTest(unittest.TestCase):
@@ -38,6 +38,51 @@ class IOTest(unittest.TestCase):
             self.assertEqual(value['last_success_at'], '2026-01-01T00:00:00Z')
             self.assertEqual(value['finished_at'], '2026-01-02T00:00:00Z')
 
+
+    def test_failed_command_detail_omits_stderr_of_other_programs(self):
+        with self.assertRaises(CommandError) as raised:
+            command(['/bin/sh', '-c', 'echo password=hunter2 >&2; exit 3'])
+        self.assertEqual(raised.exception.detail, 'sh -c: exit 3')
+
+    def test_failed_command_detail_skips_runuser_prefix(self):
+        with self.assertRaises(CommandError) as raised:
+            command(['/usr/bin/env', '--', 'sh', '-c', 'echo boom >&2; exit 1'])
+        self.assertEqual(raised.exception.detail, 'sh -c: exit 1')
+
+    def fake_tool(self, directory, name, stderr):
+        path = Path(directory) / name
+        path.write_text('#!/bin/sh\nprintf "%s\\n" "$STDERR_TEXT" >&2\nexit 1\n')
+        path.chmod(0o755)
+        return path, dict(STDERR_TEXT=stderr)
+
+    def test_oras_detail_keeps_single_line_bounded_stderr_tail(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path, env = self.fake_tool(directory, 'oras', 'first line\nError: ' + 'x' * 400)
+            with mock.patch.dict('os.environ', env), self.assertRaises(CommandError) as raised:
+                command([str(path), 'repo', 'tags', 'ghcr.io/x/y'])
+        detail = raised.exception.detail
+        self.assertTrue(detail.startswith('oras repo tags: exit 1: '))
+        self.assertNotIn('\n', detail)
+        self.assertEqual(len(detail), len('oras repo tags: exit 1: ') + 300)
+
+    def test_oras_detail_withholds_stderr_that_mentions_credentials(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path, env = self.fake_tool(directory, 'oras', 'error decoding auth: user:s3cret')
+            with mock.patch.dict('os.environ', env), self.assertRaises(CommandError) as raised:
+                command([str(path), 'resolve', 'ghcr.io/x/y:production'])
+        self.assertEqual(raised.exception.detail, 'oras resolve: exit 1: error output withheld')
+
+    def test_oras_detail_withholds_credentials_beyond_the_tail_window(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path, env = self.fake_tool(directory, 'oras', 'password=' + 'x' * 400)
+            with mock.patch.dict('os.environ', env), self.assertRaises(CommandError) as raised:
+                command([str(path), 'resolve', 'ghcr.io/x/y:production'])
+        self.assertEqual(raised.exception.detail, 'oras resolve: exit 1: error output withheld')
+
+    def test_ghcr_anonymous_denied_on_rollback_tags_is_classified(self):
+        stderr = b'Error response from registry: denied: requested access to the resource is denied\n'
+        self.assertEqual(failure_reason(['/usr/local/libexec/trachuan/bin/oras', 'repo', 'tags'], stderr), 'denied')
+        self.assertEqual(failure_reason(['/usr/local/libexec/trachuan/bin/oras', 'resolve'], stderr), 'failed')
 
 if __name__ == '__main__':
     unittest.main()
