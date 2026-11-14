@@ -2,6 +2,53 @@
 
 On the [production host](host.md), after first start.
 
+## Release a corpus
+
+On the MacBook, configure AWS CLI v2 profile `trachuan-release-upload` with the
+OCI IAM user `trachuan-release-upload` customer secret key. Run
+`aws configure --profile trachuan-release-upload` yourself; the credential
+fields are `aws_access_key_id` and `aws_secret_access_key`. Region is
+`ap-singapore-1`. The uploader uses that named shared-credentials profile and
+supplies a temporary configuration with path-style S3 addressing. It never reads
+or prints the keys. Set `OCI_S3_ENDPOINT` to the releases bucket's HTTPS S3
+compatibility endpoint. Python 3.11 or later and signed-in `gh` are also
+required.
+
+Evaluate with
+`corpus eval <cc> <rel> --out <directory> --previous <report.json>`, using the
+report of the release active in production. Accept the run's reviewed gaps with
+`corpus accept-gaps`. The upload requires completed quality checks, passing
+gating comparisons in every cohort, and no research override.
+
+Prepare a separate upload directory so the immutable build artifact stays
+unchanged. Copy its dump and original manifest without regenerating the
+manifest. With `CORPUS_DATABASE_URL` and `CORPUS_BUILDER_DATABASE_URL`
+configured:
+
+```sh
+CC=vn
+REL=20261114_3
+BUILD=/path/to/verified-build-artifact
+UPLOAD=/path/to/new-upload-directory
+REPORT=/path/to/evaluation/report.json
+mkdir "$UPLOAD"
+cp "$BUILD/corpus.dump" "$BUILD/MANIFEST.sha256" "$UPLOAD/"
+corpus release-row "$CC" "$REL" --out "$UPLOAD/release.json"
+bash scripts/corpus-upload.sh --dry-run "$CC" "$REL" "$UPLOAD" "$REPORT"
+bash scripts/corpus-upload.sh "$CC" "$REL" "$UPLOAD" "$REPORT"
+```
+
+Dry-run validates local files and prints the upload and dispatch plan without
+calling AWS or GitHub. A real upload checks the prefix is empty, uploads all
+four objects, verifies their sizes, then dispatches `corpus-release.yml` from
+`main`. If dispatch alone fails, dispatch it manually with the same country and
+release; do not upload again. A partial upload reserves that prefix; use a new
+release id for a rebuilt corpus. The signed manifest authorizes release; the
+report's `release_eligible` remains false. Host activation follows
+[corpus release](../design/corpus-release.md#host-activation).
+
+## Restore a corpus manually
+
 Use a trusted, evaluated PostgreSQL 18 dump whose recorded checksum the primary
 has verified. Stop on unexpected functions, event triggers or extensions in the
 TOC. Create a fresh database; do not overwrite an existing release:

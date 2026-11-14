@@ -232,12 +232,13 @@ versions; mismatches invalidate reuse.
 `database_instance_kind`, `software`, `calibration`,
 `cohorts:{legacy,old_product,development}`, `floors`, `rejections`, `coverage`,
 `ann_loss`, `timings_ms`, `evidence_characters`, `cache_manifest`,
-`previous_diff`, `not_run`, `limitations`, and the counts in
-[scope adoption](scope-adoption.md#readers-and-evaluation). Each metric stores
-counts as well as the value. `coverage` lists each missing original/alternate
-document number and affected case/citation, including the five known omissions
-in the ingest research. Never remove them because the source sweep did not find
-them.
+`previous_diff` (with `previous:{country,rel,report_sha256}` naming the compared
+report and SHA-256 of its exact bytes), `not_run`, `limitations`, and the counts
+in [scope adoption](scope-adoption.md#readers-and-evaluation). Each metric
+stores counts as well as the value. `coverage` lists each missing
+original/alternate document number and affected case/citation, including the
+five known omissions in the ingest research. Never remove them because the
+source sweep did not find them.
 
 `mapping_incomplete` lists each validation issue by cohort, case ID, citation
 index and detail, sorted in that order; affected unavailable recall and MRR

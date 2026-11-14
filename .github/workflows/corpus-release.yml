@@ -1,0 +1,65 @@
+name: Corpus release
+
+on:
+  workflow_dispatch:
+    inputs:
+      country:
+        description: Two lowercase country letters
+        required: true
+        type: string
+      rel:
+        description: Corpus release YYYYMMDD_N
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    if: github.ref == 'refs/heads/main'
+    environment: corpus-release
+    concurrency:
+      group: corpus-release-production
+      cancel-in-progress: false
+      queue: max
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 75
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    env:
+      COUNTRY: ${{ inputs.country }}
+      REL: ${{ inputs.rel }}
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - name: Require main and valid release identity
+        run: |
+          [[ $GITHUB_REF == refs/heads/main ]]
+          [[ $COUNTRY =~ ^[a-z]{2}$ && $REL =~ ^[0-9]{8}_[0-9]+$ ]]
+          echo "RELEASE_DIR=$RUNNER_TEMP/trachuan-corpus-release" >> "$GITHUB_ENV"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Download corpus objects and check sizes
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.RELEASES_READ_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.RELEASES_READ_KEY_SECRET }}
+          OCI_S3_ENDPOINT: ${{ vars.OCI_S3_ENDPOINT }}
+          AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+        run: python3 deploy/github/corpus_storage.py "$COUNTRY" "$REL" "$RELEASE_DIR"
+      - name: Validate evaluation and write corpus manifest
+        run: |
+          python3 deploy/github/corpus_manifest.py create "$COUNTRY" "$REL" \
+            "$RELEASE_DIR" "$RELEASE_DIR/report.json"
+      - name: Install signing and registry tools
+        run: bash deploy/github/install-tools.sh
+      - name: Sign, verify and publish corpus release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          printf '%s' "$GITHUB_TOKEN" | oras login ghcr.io --username "$ACTOR" --password-stdin
+          trap 'oras logout ghcr.io' EXIT
+          python3 deploy/github/corpus_publish.py "$RELEASE_DIR"

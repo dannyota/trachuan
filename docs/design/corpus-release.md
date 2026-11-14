@@ -8,8 +8,9 @@ restores and activates it. Code and images follow
 
 ## Upload
 
-`scripts/corpus-upload.sh <cc> <rel>` runs on the MacBook after `corpus eval`
-and uploads to bucket `trachuan-releases`, prefix `<cc>/<rel>/`:
+`scripts/corpus-upload.sh [--dry-run] <cc> <rel> <build-dir> <report.json>` runs
+on the MacBook after `corpus eval` and uploads to bucket `trachuan-releases`,
+prefix `<cc>/<rel>/`:
 
 - `corpus.dump`: the build's verified dump.
 - `MANIFEST.sha256`: the build artifact manifest
@@ -18,6 +19,22 @@ and uploads to bucket `trachuan-releases`, prefix `<cc>/<rel>/`:
   `--previous` set to the report of the release active in production.
 - `release.json`: the dump's `release` row as JSON
   ([corpus schema](corpus-schema.md)), written by `corpus release-row`.
+
+`corpus release-row <cc> <rel> --out <file>` reads the release database and
+workshop read-only, without Temporal. `release.json` keeps the release row's
+column names, excluding `singleton`, and adds `extensions`, `run` and
+`recipe_hash_inputs`. `run` records its id, expected and incomplete item counts,
+unaccepted gap count, matching build artifact hash and `complete`. Complete
+requires an evaluated or released run, every item done or a gap with a gap row,
+every gap accepted, and a done build whose input and recipe hashes match the
+release row. The workshop reads share one repeatable-read snapshot.
+
+Report recipes are hashes. `recipe_hash_inputs` holds the exact JSON strings
+hashed for `query`, `document`, `chunk`, `lexical` and `retrieval`: the
+embedding and search recipes use their Go serialization; chunk uses PostgreSQL's
+JSONB bytes, as evaluation does. Validation parses each string and requires
+equality with its release-row recipe object, then checks its SHA-256 against the
+report. The signed manifest carries the release row's recipe objects.
 
 It uses AWS CLI v2 against the
 [S3 compatibility endpoint](deployment.md#object-storage) with the
@@ -28,9 +45,12 @@ since recent AWS CLI versions add checksum headers by default
 It refuses before upload unless the run's expected items are all done or
 accepted gaps (the workshop database is the only place gap acceptance exists),
 `report.json` has `quality_pass: true`, no research override and a
-`previous_diff`, and its `dump_sha256` equals the local dump. A prefix that
-already holds objects is never overwritten; a rebuilt corpus gets a new `rel`.
-Then it dispatches `corpus-release.yml` with `country` and `rel`.
+`previous_diff`, every gating `non_regression` entry passes, and its
+`dump_sha256` equals the local dump. The previous report identity is
+`previous_diff.previous:{country,rel,report_sha256}`; its country must match the
+upload country. A prefix that already holds objects is never overwritten; a
+rebuilt corpus gets a new `rel`. Then it dispatches `corpus-release.yml` with
+`country` and `rel`.
 
 ## Signing workflow
 
@@ -77,12 +97,14 @@ which is how a corpus rollback is requested. No MacBook signing key exists.
 }
 ```
 
-`sequence` is `github.run_number` of `corpus-release.yml`. `previous` is the
-release in the report's `previous_diff`. `extensions` comes from `release.json`,
-where `corpus release-row` records the build database's `pg_extension` names and
-versions; the host requires exactly the names `vector` and `ltree` and logs the
-versions, and the smoke check in step 3 proves the restored data works with the
-image's versions. The certificate identity is
+`sequence` is `github.run_number` of `corpus-release.yml`. `previous` is
+`previous_diff.previous.rel`. The OCI artifact type is
+`application/vnd.trachuan.corpus-release.v1`. Publication moves
+`<cc>-production` only above the current verified sequence. `extensions` comes
+from `release.json`, where `corpus release-row` records the build database's
+`pg_extension` names and versions; the host requires exactly the names `vector`
+and `ltree` and logs the versions, and the smoke check in step 3 proves the
+restored data works with the image's versions. The certificate identity is
 `https://github.com/dannyota/trachuan/.github/workflows/corpus-release.yml@refs/heads/main`.
 
 ## Host activation
