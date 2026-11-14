@@ -35,7 +35,7 @@ async function signIn() {
   <div class="container login-page"><div class="card login-card">
     <SealLogo /><h1>{{ pages.loginTitle }}</h1><p>{{ pages.loginIntro }}</p>
     <p v-if="urlError" class="notice notice--warn" role="status">{{ urlError }}</p>
-    <a class="btn btn-primary" :href="google">{{ labels.google }}</a>
+    <a class="btn google-button" :href="google"><img src="/google-g.png" alt="" width="20" height="20">{{ labels.google }}</a>
     <form class="auth-form" @submit.prevent="signIn">
       <label>{{ labels.email }}<input v-model="email" class="input" type="email" autocomplete="username" required></label>
       <label>{{ labels.password }}<input v-model="password" class="input" type="password" autocomplete="current-password" required></label>

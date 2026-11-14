@@ -1,5 +1,6 @@
 import { execFileSync } from 'node:child_process'
 import { expect, it } from 'vitest'
+import { legalCopy } from '../i18n/legal'
 
 it('renders localized page titles and the wordmark without search query text', () => {
   const script = `
@@ -30,5 +31,12 @@ it('renders localized page titles and the wordmark without search query text', (
   expect(pages[14]).toContain('<h1>Sign in to Tra Chuẩn</h1>')
   expect(pages[3]).toContain('Tra Chuẩn trả về bằng chứng')
   expect(pages[12]).toContain('Tra Chuẩn returns evidence')
+  for (const [language, offset] of [['vi', 0], ['en', 9]] as const) {
+    const copy = legalCopy(language)
+    for (const [heading, text] of copy.privacy) { expect(pages[3 + offset]).toContain(heading); expect(pages[3 + offset]).toContain(text) }
+    for (const [heading, text] of copy.terms) { expect(pages[4 + offset]).toContain(heading); expect(pages[4 + offset]).toContain(text) }
+    expect(pages[3 + offset]).toContain(copy.updated)
+    expect(pages[4 + offset]).toContain(copy.updated)
+  }
   expect(pages[18]).toMatch(/^Tra Chuẩn \(trachuan\) provides evidence/)
 })

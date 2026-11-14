@@ -1,3 +1,4 @@
 @font-face { font-family: BeVietnam; src: url('/fonts/be-vietnam-pro-var.woff2') format('woff2'); font-weight: 400 700; font-display: swap; }
 @font-face { font-family: NotoSerif; src: url('/fonts/noto-serif-var.woff2') format('woff2'); font-weight: 400 700; font-display: swap; }
 @font-face { font-family: RobotoMono; src: url('/fonts/roboto-mono-var.woff2') format('woff2'); font-weight: 400 700; font-display: swap; }
+@font-face { font-family: GoogleSansButton; src: url('/fonts/google-sans-button.woff2') format('woff2'); font-weight: 500; font-display: swap; }

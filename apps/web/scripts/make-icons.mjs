@@ -33,6 +33,6 @@ for (const [index, png] of [png16, png32].entries()) {
   ico.writeUInt32LE(png.length, offset + 8); ico.writeUInt32LE(38 + (index ? png16.length : 0), offset + 12)
 }
 await writeFile(`${publicDir}favicon.ico`, Buffer.concat([ico, png16, png32]))
-for (const [size, name] of [[180, 'apple-touch-icon.png'], [512, 'icon-512.png']]) await writeFile(`${publicDir}${name}`, await render(size, size, large(size)))
+for (const [size, name] of [[120, 'icon-120.png'], [180, 'apple-touch-icon.png'], [512, 'icon-512.png']]) await writeFile(`${publicDir}${name}`, await render(size, size, large(size)))
 await writeFile(`${publicDir}og-image.png`, await render(1200, 630, `<div style="box-sizing:border-box;width:1200px;height:630px;background:white;color:#14171C;padding:110px;font-family:Be,sans-serif"><div style="display:flex;align-items:center;gap:28px">${large(120)}<strong style="font-size:54px">Tra Chuẩn</strong></div><h1 style="font-size:48px;line-height:1.2;max-width:900px">Tra cứu đúng điều, đúng khoản, kèm trạng thái hiệu lực.</h1><p style="color:#59606B;font-size:26px">trachuan.vn</p></div>`))
 await browser.close()

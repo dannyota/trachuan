@@ -1,10 +1,12 @@
 import { globSync, readFileSync } from 'node:fs'
 import { expect, it } from 'vitest'
+import { authMessages } from '../i18n/auth'
 
 const families = {
   BeVietnam: 'be-vietnam-pro-var',
   NotoSerif: 'noto-serif-var',
   RobotoMono: 'roboto-mono-var',
+  GoogleSansButton: 'google-sans-button',
 }
 
 it('declares one same-origin face per family with the available weights', () => {
@@ -19,7 +21,7 @@ it('declares one same-origin face per family with the available weights', () => 
       const face = faces[index]!
       expect(face).toMatch(new RegExp(`font-family:\\s*${name}\\s*;`))
       expect(face).toContain(`src: url('/fonts/${families[name as keyof typeof families]}.woff2') format('woff2');`)
-      expect(face).toMatch(/font-weight:\s*400 700\s*;/)
+      expect(face).toMatch(name === 'GoogleSansButton' ? /font-weight:\s*500\s*;/ : /font-weight:\s*400 700\s*;/)
       expect(face).toMatch(/font-display:\s*swap\s*;/)
       expect(face).not.toMatch(/unicode-range\s*:/)
     }
@@ -36,5 +38,19 @@ it('keeps app CSS weights within every font family range', () => {
       expect(weight, `${path}: ${match[0]}`).toBeGreaterThanOrEqual(400)
       expect(weight, `${path}: ${match[0]}`).toBeLessThanOrEqual(700)
     }
+  }
+})
+
+it('uses the Google Sans subset for Google sign-in', () => {
+  const fonts = readFileSync('app/assets/fonts.css', 'utf8')
+  expect(fonts).toMatch(/font-family:\s*GoogleSansButton\s*;[^}]*google-sans-button\.woff2[^}]*font-weight:\s*500\s*;[^}]*font-display:\s*swap/)
+  const css = readFileSync('app/assets/areas/pages.css', 'utf8')
+  expect(css.match(/\.google-button\s*\{([^}]*)\}/)?.[1]).toMatch(/font-family:\s*GoogleSansButton,\s*var\(--font-sans\)/)
+})
+
+it('keeps Google labels within the subset character set', () => {
+  const supported = new Set('Tiếp tục với GoogleContinue with Google')
+  for (const language of ['vi', 'en'] as const) {
+    for (const character of authMessages(language).google) expect(supported.has(character), `${language}: ${character}`).toBe(true)
   }
 })

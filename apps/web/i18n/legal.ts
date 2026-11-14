@@ -1,0 +1,63 @@
+import type { Language } from './index'
+
+const copy = {
+  vi: {
+    updated: 'Cập nhật lần cuối: 14/11/2026',
+    privacy: [
+      ['Chúng tôi là ai', 'Tra Chuẩn trả về bằng chứng từ văn bản pháp luật Việt Nam, không phải tư vấn pháp lý. Liên hệ support@trachuan.vn.'],
+      ['Dữ liệu từ Google', 'Đăng nhập Google chỉ yêu cầu các phạm vi openid và email. Chúng tôi nhận mã định danh và địa chỉ email của tài khoản Google. Chúng tôi lưu mã định danh tài khoản Google và địa chỉ email tại thời điểm bạn đăng ký; thay đổi email Google sau đó không được sao chép. Trạng thái xác minh email được kiểm tra khi đăng nhập và không được lưu. Chúng tôi không yêu cầu dữ liệu khác từ Google.'],
+      ['Tài khoản mật khẩu', 'Chúng tôi lưu địa chỉ email, mã băm mật khẩu Argon2id và, nếu bật xác minh hai bước, bí mật TOTP được mã hóa và mã băm của mã khôi phục.'],
+      ['Dữ liệu tài khoản', 'Chúng tôi lưu thời gian tạo và đăng nhập gần nhất; mã phiên đã băm cùng thời gian tạo, hoạt động gần nhất và hết hạn. Phiên hết hạn sau 30 ngày không sử dụng và tối đa 90 ngày sau đăng nhập. Chúng tôi lưu mã truy cập cá nhân và trợ lý AI đã kết nối, gồm mã đã băm, tên và lần dùng gần nhất. Báo lỗi bạn gửi chỉ chứa trường có cấu trúc, không có văn bản tự do.'],
+      ['Dữ liệu không lưu', 'Địa chỉ IP chỉ được dùng trong bộ nhớ để giới hạn tần suất, không ghi vào cơ sở dữ liệu hoặc nhật ký. Phiên không lưu địa chỉ IP hay thông tin trình duyệt. Câu hỏi tìm kiếm chỉ ở bộ nhớ đệm: phản hồi trong 1 giờ, vector câu hỏi trong 24 giờ. Chúng không được ghi vào đĩa hoặc nhật ký.'],
+      ['Nhật ký', 'Nhật ký lưu mã tài khoản, đường dẫn, mã kết quả và thời gian xử lý trong 30 ngày. Nhật ký không lưu câu hỏi, văn bản trả về, email, mã truy cập hay cookie.'],
+      ['Cách sử dụng dữ liệu', 'Chúng tôi chỉ dùng dữ liệu để đăng nhập, duy trì phiên và mã truy cập, gửi email tài khoản và áp dụng giới hạn. Chúng tôi không quảng cáo, phân tích, bán hay chia sẻ dữ liệu, lập hồ sơ hoặc huấn luyện mô hình AI.'],
+      ['Nhà cung cấp dịch vụ', 'Oracle Cloud Infrastructure (OCI) cung cấp máy chủ, cơ sở dữ liệu, bản sao lưu và gửi email tại Singapore. Google cung cấp đăng nhập. Cloudflare chỉ cung cấp DNS; lưu lượng trang không đi qua Cloudflare.'],
+      ['Email tài khoản', 'Email được gửi qua OCI Email Delivery. Nội dung được mã hóa trong hàng đợi, xóa sau khi gửi và bản ghi được xóa sau 7 ngày.'],
+      ['Cookie', 'Chúng tôi chỉ dùng cookie của bên thứ nhất, không theo dõi: phiên, ngôn ngữ, bước đăng nhập và bước xác minh hai bước.'],
+      ['Xóa dữ liệu', 'Bạn có thể xóa tài khoản trên trang tài khoản. Đăng nhập và mã truy cập bị chặn ngay; tài khoản và dữ liệu bị xóa sau 7 ngày. Bản sao lưu trong Oracle Cloud Object Storage được Oracle mã hóa khi lưu và giữ tối đa 30 ngày. Báo lỗi được xóa cùng tài khoản; các báo cáo đã đóng khác được xóa sau 90 ngày kể từ thay đổi cuối.'],
+      ['Bảo mật', 'Mọi kết nối dùng TLS. Thông tin xác thực chỉ được lưu dưới dạng mã băm; bí mật TOTP và email trong hàng đợi được mã hóa.'],
+      ['Chính sách dữ liệu Google', 'Việc sử dụng thông tin từ API Google tuân thủ Chính sách dữ liệu người dùng của Dịch vụ API Google.'],
+      ['Thay đổi', 'Chúng tôi thông báo và xin sự đồng ý trước khi dùng dữ liệu Google theo cách mới.'],
+    ],
+    terms: [
+      ['Dịch vụ', 'Tra Chuẩn cung cấp bằng chứng từ văn bản pháp luật Việt Nam qua trang web và MCP.'],
+      ['Không phải tư vấn pháp lý', 'Dịch vụ cung cấp bằng chứng, không phải tư vấn pháp lý.'],
+      ['Phạm vi', 'Chúng tôi không bảo đảm tính đầy đủ hoặc cập nhật. Các khoảng thiếu đã biết được liệt kê tại /sources.'],
+      ['Sử dụng chấp nhận được', 'Hãy tuân thủ giới hạn tần suất. Không thu thập tự động vượt giới hạn, lạm dụng MCP hoặc tài khoản, hay tìm cách truy cập tài khoản khác.'],
+      ['Đình chỉ', 'Chúng tôi có thể đình chỉ hoặc chặn tài khoản vi phạm các điều khoản này.'],
+      ['Xóa tài khoản', 'Bạn có thể xóa tài khoản theo chính sách quyền riêng tư.'],
+      ['Thay đổi', 'Điều khoản thay đổi sẽ có ngày cập nhật mới.'],
+      ['Liên hệ', 'Liên hệ support@trachuan.vn.'],
+    ],
+  },
+  en: {
+    updated: 'Last updated: 14 Nov 2026',
+    privacy: [
+      ['Who we are', 'Tra Chuẩn returns evidence from Vietnamese legal texts, not legal advice. Contact support@trachuan.vn.'],
+      ['Data from Google', 'Google sign-in requests only the openid and email scopes. We receive the Google account identifier and email address. We store the Google account identifier and the email address it had when you signed up; later changes to your Google email are not copied. We check the email-verified flag at sign-in and do not store it. We request nothing else from Google.'],
+      ['Password accounts', 'We store your email address, an Argon2id password hash and, if two-step verification is enabled, an encrypted TOTP secret and recovery-code digests.'],
+      ['Account data', 'We store account creation and last sign-in times; hashed session tokens with creation, last-seen and expiry times. Sessions expire after 30 days without use and at most 90 days after sign-in. We store personal access tokens and connected AI assistants, including hashed tokens, names and last use. Error reports you submit contain structured fields only, never free text.'],
+      ['Data we do not store', 'IP addresses are used only in memory for rate limits and are never written to the database or logs. Sessions store no IP address or browser user agent. Search questions stay only in memory caches: responses for 1 hour and query vectors for 24 hours. They are never written to disk or logs.'],
+      ['Logs', 'Logs contain account ID, route, result code and latency, and are kept for 30 days. They never contain questions, returned text, email, tokens or cookies.'],
+      ['How we use data', 'We use data only to sign you in, maintain sessions and tokens, send account email and enforce limits. We do not advertise, use analytics, sell or share data, profile users or train AI models.'],
+      ['Service providers', 'Oracle Cloud Infrastructure (OCI) provides hosting, database, backups and email delivery in Singapore. Google provides sign-in. Cloudflare provides DNS only; site traffic does not pass through it.'],
+      ['Account email', 'Email is sent through OCI Email Delivery. The body is encrypted while queued, cleared once sent, and the record is deleted after 7 days.'],
+      ['Cookies', 'We use first-party cookies only, with no tracking: session, language, sign-in step and two-step verification step.'],
+      ['Deletion', 'You can delete your account on the account page. Sign-in and tokens are blocked immediately; the account and its data are deleted after 7 days. Backups in Oracle Cloud Object Storage are encrypted at rest by Oracle and kept up to 30 days. Error reports are deleted with the account; other closed reports are deleted 90 days after their last change.'],
+      ['Security', 'Every connection uses TLS. Credentials are stored only as hashes; TOTP secrets and queued email are encrypted.'],
+      ['Google data policy', 'Our use of information received from Google APIs adheres to the Google API Services User Data Policy.'],
+      ['Changes', 'We notify users and ask for consent before using Google data in a new way.'],
+    ],
+    terms: [
+      ['The service', 'Tra Chuẩn provides evidence from Vietnamese legal texts through the website and MCP.'],
+      ['Not legal advice', 'The service provides evidence, not legal advice.'],
+      ['Coverage', 'We do not warrant completeness or currency. Known gaps are listed at /sources.'],
+      ['Acceptable use', 'Respect rate limits. Do not collect automatically beyond them, abuse MCP or accounts, or attempt to access other accounts.'],
+      ['Suspension', 'We may suspend or block accounts that break these terms.'],
+      ['Account deletion', 'You can delete your account as described in the privacy policy.'],
+      ['Changes', 'Changed terms will have a new date.'],
+      ['Contact', 'Contact support@trachuan.vn.'],
+    ],
+  },
+}
+export function legalCopy(language: Language) { return copy[language] }
