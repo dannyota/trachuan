@@ -17,9 +17,9 @@ type deletionRaceStore struct {
 	before func()
 }
 
-func (s *deletionRaceStore) RequestDeletion(ctx context.Context, id int64) (store.RequestDeletionRow, error) {
+func (s *deletionRaceStore) RequestDeletion(ctx context.Context, p store.RequestDeletionParams) (store.RequestDeletionRow, error) {
 	s.before()
-	return s.fakeStore.RequestDeletion(ctx, id)
+	return s.fakeStore.RequestDeletion(ctx, p)
 }
 func TestDelete_CredentialsCreatedAfterEnumeration(t *testing.T) {
 	_, s, v, raw, secret := setup(t)
@@ -43,5 +43,33 @@ func TestDelete_CredentialsCreatedAfterEnumeration(t *testing.T) {
 	expect(t, call(probe, session, secret, "GET", "/api/v1/me", ""), 401)
 	if _, err := v.Verify(context.Background(), token); err == nil {
 		t.Fatal("new token remains cached")
+	}
+}
+
+type unauthorizedDeletionStore struct {
+	*fakeStore
+	acting store.RequestDeletionParams
+}
+
+func (s *unauthorizedDeletionStore) RequestDeletion(_ context.Context, p store.RequestDeletionParams) (store.RequestDeletionRow, error) {
+	s.acting = p
+	return store.RequestDeletionRow{}, store.ErrUnauthorized
+}
+
+func TestDelete_PassesActingSessionAndRejectsLostAuthority(t *testing.T) {
+	_, base, v, raw, secret := setup(t)
+	base.account.AuthEpoch = 7
+	base.sessions[0].AuthEpoch = 7
+	db := &unauthorizedDeletionStore{fakeStore: base}
+	clock := func() time.Time { return base.now }
+	m := &websession.Manager{Store: db, Clock: clock, PublicURL: "https://example.invalid"}
+	h := m.Middleware(m.CSRF(New(Config{Store: db, Sessions: m, Verifier: v, Limiter: limits.New(clock)})))
+	response := call(h, raw, secret, "DELETE", "/api/v1/me", "")
+	expect(t, response, 401)
+	if db.acting.AccountID != 1 || db.acting.SessionID != 1 || db.acting.AuthEpoch != 7 {
+		t.Fatalf("deletion authority=%+v", db.acting)
+	}
+	if base.deleted || !strings.Contains(response.Body.String(), `"code":"unauthenticated"`) {
+		t.Fatal("lost deletion authority was not refused")
 	}
 }

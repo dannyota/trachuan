@@ -37,8 +37,8 @@ func (s *uncertainStore) RevokeOwnToken(ctx context.Context, p store.RevokeOwnTo
 	}
 	return n, s.outcome()
 }
-func (s *uncertainStore) RequestDeletion(ctx context.Context, id int64) (store.RequestDeletionRow, error) {
-	row, err := s.fakeStore.RequestDeletion(ctx, id)
+func (s *uncertainStore) RequestDeletion(ctx context.Context, p store.RequestDeletionParams) (store.RequestDeletionRow, error) {
+	row, err := s.fakeStore.RequestDeletion(ctx, p)
 	if err != nil {
 		return row, err
 	}

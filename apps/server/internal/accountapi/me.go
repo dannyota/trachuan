@@ -24,7 +24,7 @@ type Store interface {
 	ListTokens(context.Context, int64) ([]store.PersonalToken, error)
 	CreateWebPersonalToken(context.Context, store.WebPersonalTokenParams) (store.PersonalToken, error)
 	RevokeOwnToken(context.Context, store.RevokeOwnTokenParams) (string, error)
-	RequestDeletion(context.Context, int64) (store.RequestDeletionRow, error)
+	RequestDeletion(context.Context, store.RequestDeletionParams) (store.RequestDeletionRow, error)
 }
 
 type Sessions interface {

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -91,7 +92,6 @@ func TestCredentials_SessionLimitEvictsOldest(t *testing.T) {
 	if w.Code != 204 {
 		t.Fatal(w.Code)
 	}
-	// Make the oldest unambiguous even when concurrent transactions share timestamps.
 	if _, err := pool.Exec(ctx, `UPDATE web_session SET created_at=now()-interval '1 day'`); err != nil {
 		t.Fatal(err)
 	}
@@ -117,7 +117,6 @@ func TestCredentials_SessionLimitEvictsOldest(t *testing.T) {
 
 func TestCredentials_ListsAndRetention(t *testing.T) {
 	ctx, pool, s, id := boundsFixture(t)
-	// Direct fixtures bypass creation limits to test historical rows and the list cap.
 	for _, table := range []string{"personal_token", "web_session"} {
 		cols, vals := "name", "'test'"
 		if table == "web_session" {
@@ -210,7 +209,11 @@ func TestCredentials_RejectsBlockedAccount(t *testing.T) {
 		t.Run(fmt.Sprint(deletion), func(t *testing.T) {
 			ctx, _, s, id := boundsFixture(t)
 			if deletion {
-				if _, err := s.RequestDeletion(ctx, id); err != nil {
+				session, createErr := s.CreateSession(ctx, store.CreateSessionParams{AccountID: id, TokenHash: strings.Repeat("f", 64), CsrfSecret: "synthetic", ExpiresAt: time.Now().Add(time.Hour)})
+				if createErr != nil {
+					t.Fatal(createErr)
+				}
+				if _, err := s.RequestDeletion(ctx, store.RequestDeletionParams{AccountID: id, SessionID: session.ID, AuthEpoch: session.AuthEpoch}); err != nil {
 					t.Fatal(err)
 				}
 			} else {

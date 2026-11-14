@@ -21,7 +21,11 @@ func TestStore_AccountActionsRevokeOAuth(t *testing.T) {
 			return err
 		}},
 		{"deletion", func(ctx context.Context, q *store.Queries, id int64) error {
-			_, err := q.RequestDeletion(ctx, id)
+			session, err := q.CreateSession(ctx, store.CreateSessionParams{AccountID: id, TokenHash: strings.Repeat("0", 64), CsrfSecret: "synthetic", ExpiresAt: time.Now().Add(time.Hour)})
+			if err != nil {
+				return err
+			}
+			_, err = q.RequestDeletion(ctx, store.RequestDeletionParams{AccountID: id, SessionID: session.ID, AuthEpoch: session.AuthEpoch})
 			return err
 		}},
 	} {

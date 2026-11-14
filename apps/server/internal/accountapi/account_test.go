@@ -67,22 +67,22 @@ func (s *fakeStore) RevokeOwnToken(_ context.Context, p store.RevokeOwnTokenPara
 	}
 	return "", pgx.ErrNoRows
 }
-func (s *fakeStore) RequestDeletion(_ context.Context, id int64) (store.RequestDeletionRow, error) {
-	if id != s.account.ID {
+func (s *fakeStore) RequestDeletion(_ context.Context, p store.RequestDeletionParams) (store.RequestDeletionRow, error) {
+	if p.AccountID != s.account.ID {
 		return store.RequestDeletionRow{}, pgx.ErrNoRows
 	}
 	s.deleted = true
 	for i := range s.sessions {
-		if s.sessions[i].AccountID == id {
+		if s.sessions[i].AccountID == p.AccountID {
 			s.sessions[i].RevokedAt = &s.now
 		}
 	}
 	for i := range s.tokens {
-		if s.tokens[i].AccountID == id {
+		if s.tokens[i].AccountID == p.AccountID {
 			s.tokens[i].RevokedAt = &s.now
 		}
 	}
-	return store.RequestDeletionRow{ID: id}, nil
+	return store.RequestDeletionRow{ID: p.AccountID}, nil
 }
 func (s *fakeStore) PurgeDeletedAccounts(_ context.Context, now time.Time) (int64, error) {
 	if s.deleted && now.After(s.now.Add(7*24*time.Hour)) {
@@ -97,7 +97,7 @@ func (s *fakeStore) CreateSession(context.Context, store.CreateSessionParams) (s
 func (s *fakeStore) GetSession(_ context.Context, hash string) (store.GetSessionRow, error) {
 	for _, r := range s.sessions {
 		if r.TokenHash == hash {
-			return store.GetSessionRow{ID: r.ID, TokenHash: hash, AccountID: r.AccountID, CsrfSecret: r.CsrfSecret, CreatedAt: r.CreatedAt, LastSeenAt: r.LastSeenAt, ExpiresAt: r.ExpiresAt, RevokedAt: r.RevokedAt}, nil
+			return store.GetSessionRow{ID: r.ID, TokenHash: hash, AccountID: r.AccountID, CsrfSecret: r.CsrfSecret, SessionAuthEpoch: r.AuthEpoch, AccountAuthEpoch: s.account.AuthEpoch, CreatedAt: r.CreatedAt, LastSeenAt: r.LastSeenAt, ExpiresAt: r.ExpiresAt, RevokedAt: r.RevokedAt}, nil
 		}
 	}
 	return store.GetSessionRow{}, pgx.ErrNoRows

@@ -153,7 +153,7 @@ func TestStore_TouchInactiveSession(t *testing.T) {
 func TestStore_RequestDeletionRevokesAll(t *testing.T) {
 	ctx, conn, q := setup(t)
 	id := webAccount(t, ctx, conn, "one")
-	webSession(t, ctx, conn, id, strings.Repeat("d", 64))
+	acting := webSession(t, ctx, conn, id, strings.Repeat("d", 64))
 	webSession(t, ctx, conn, id, strings.Repeat("f", 64))
 	other := webAccount(t, ctx, conn, "other")
 	webSession(t, ctx, conn, other, strings.Repeat("a", 64))
@@ -162,7 +162,7 @@ func TestStore_RequestDeletionRevokesAll(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if _, err := q.RequestDeletion(ctx, id); err != nil {
+	if _, err := q.RequestDeletion(ctx, store.RequestDeletionParams{AccountID: id, SessionID: acting}); err != nil {
 		t.Fatal(err)
 	}
 	var ok bool

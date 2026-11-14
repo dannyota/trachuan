@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -9,6 +10,11 @@ import (
 
 type BlockAccountRow = Account
 type RequestDeletionRow = Account
+
+type RequestDeletionParams struct {
+	AccountID, SessionID int64
+	AuthEpoch            int32
+}
 
 func LockAccount(ctx context.Context, tx pgx.Tx, id int64) (Account, error) {
 	account, err := New(tx).LockCredentialAccount(ctx, id)
@@ -30,12 +36,12 @@ func BumpEpoch(ctx context.Context, tx pgx.Tx, id int64) (int64, error) {
 }
 
 func (q *Queries) BlockAccount(ctx context.Context, id int64) (BlockAccountRow, error) {
-	return q.endAccount(ctx, id, false)
+	return q.endAccount(ctx, id, nil)
 }
-func (q *Queries) RequestDeletion(ctx context.Context, id int64) (RequestDeletionRow, error) {
-	return q.endAccount(ctx, id, true)
+func (q *Queries) RequestDeletion(ctx context.Context, p RequestDeletionParams) (RequestDeletionRow, error) {
+	return q.endAccount(ctx, p.AccountID, &p)
 }
-func (q *Queries) endAccount(ctx context.Context, id int64, deleting bool) (Account, error) {
+func (q *Queries) endAccount(ctx context.Context, id int64, acting *RequestDeletionParams) (Account, error) {
 	db, ok := q.db.(TransactionBeginner)
 	if !ok {
 		return Account{}, fmt.Errorf("account store cannot begin transactions")
@@ -45,11 +51,27 @@ func (q *Queries) endAccount(ctx context.Context, id int64, deleting bool) (Acco
 		return Account{}, fmt.Errorf("begin account change: %w", err)
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
+	if acting != nil {
+		account, lockErr := LockAccount(ctx, tx, id)
+		if lockErr != nil {
+			return Account{}, lockErr
+		}
+		if account.BlockedAt != nil || account.DeleteRequestedAt != nil || account.AuthEpoch != acting.AuthEpoch {
+			return Account{}, ErrUnauthorized
+		}
+		_, err = New(tx).GetLiveAuthoritySession(ctx, GetLiveAuthoritySessionParams{ID: acting.SessionID, AccountID: id, AuthEpoch: acting.AuthEpoch})
+		if errors.Is(err, pgx.ErrNoRows) {
+			return Account{}, ErrUnauthorized
+		}
+		if err != nil {
+			return Account{}, fmt.Errorf("recheck deletion session: %w", err)
+		}
+	}
 	if _, err = BumpEpoch(ctx, tx, id); err != nil {
 		return Account{}, err
 	}
 	var account Account
-	if deleting {
+	if acting != nil {
 		account, err = New(tx).MarkAccountDeleting(ctx, id)
 	} else {
 		account, err = New(tx).MarkAccountBlocked(ctx, id)

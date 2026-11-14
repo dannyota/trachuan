@@ -4,6 +4,7 @@ package oauth
 
 import (
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -73,7 +74,11 @@ func TestBearer_PostgreSQLAccountLifecycle(t *testing.T) {
 				}
 				v.EvictAccount(p.account.ID)
 			case "deletion":
-				if _, err := q.RequestDeletion(t.Context(), p.account.ID); err != nil {
+				session, sessionErr := q.CreateSession(t.Context(), store.CreateSessionParams{AccountID: p.account.ID, AuthEpoch: p.account.AuthEpoch, TokenHash: strings.Repeat("f", 64), CsrfSecret: "synthetic", ExpiresAt: time.Now().Add(time.Hour)})
+				if sessionErr != nil {
+					t.Fatal(sessionErr)
+				}
+				if _, err := q.RequestDeletion(t.Context(), store.RequestDeletionParams{AccountID: p.account.ID, SessionID: session.ID, AuthEpoch: session.AuthEpoch}); err != nil {
 					t.Fatal(err)
 				}
 				v.EvictAccount(p.account.ID)

@@ -16,6 +16,7 @@ type failure string
 func (e failure) Error() string { return string(e) }
 
 const (
+	ErrInvalidBinding failure = "invalid sealing binding"
 	ErrUnknownKey     failure = "unknown sealing key"
 	ErrAuthentication failure = "sealed value authentication failed"
 )
@@ -65,6 +66,9 @@ func Parse(content []byte) (*Ring, error) {
 }
 
 func (r *Ring) Seal(binding Binding, plaintext []byte) ([]byte, string, error) {
+	if !binding.valid() {
+		return nil, "", ErrInvalidBinding
+	}
 	if r == nil || len(r.keys) == 0 {
 		return nil, "", ErrUnknownKey
 	}
@@ -77,6 +81,9 @@ func (r *Ring) Seal(binding Binding, plaintext []byte) ([]byte, string, error) {
 }
 
 func (r *Ring) Open(binding Binding, id string, sealed []byte) ([]byte, bool, error) {
+	if !binding.valid() {
+		return nil, false, ErrInvalidBinding
+	}
 	if r != nil {
 		for i, k := range r.keys {
 			if k.id != id {
@@ -97,4 +104,8 @@ func (r *Ring) Open(binding Binding, id string, sealed []byte) ([]byte, bool, er
 
 func (b Binding) data(id string) []byte {
 	return []byte(fmt.Sprintf("%s|%s|%d|%d|%s", b.Purpose, b.OwnerKind, b.OwnerID, b.RowID, id))
+}
+
+func (b Binding) valid() bool {
+	return b.Purpose != "" && b.OwnerKind != "" && !strings.Contains(b.Purpose, "|") && !strings.Contains(b.OwnerKind, "|")
 }
