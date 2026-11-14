@@ -1,5 +1,3 @@
-"""Check the host bundle's emitted listener and edge configuration."""
-
 import configparser
 import json
 from pathlib import Path
@@ -52,6 +50,7 @@ class ListenerTest(unittest.TestCase):
             units = list((work / "units").glob("*.container"))
             self.assertEqual(len(units), 6)
             self.assertEqual(list((work / "units").glob("*.network")), [])
+            self.assertFalse((work / "units" / "trachuan-postgres.volume").exists())
             for unit in units:
                 config = configparser.ConfigParser(strict=False, interpolation=None)
                 config.read(unit)
@@ -61,6 +60,10 @@ class ListenerTest(unittest.TestCase):
                     self.assertNotIn("PublishPort", container)
                     self.assertNotIn("IP", container)
                     if unit.name == "trachuan-postgres.container":
+                        self.assertEqual(config["Unit"]["RequiresMountsFor"], "/srv/trachuan/data")
+                        self.assertEqual(config["Service"]["ExecStartPre"], "/usr/bin/mountpoint -q /srv/trachuan/data")
+                        self.assertIn("Volume=/srv/trachuan/data/postgres:/var/lib/postgresql:Z,U",
+                                      unit.read_text().splitlines())
                         self.assertIn("listen_addresses=127.0.0.1", shlex.split(container["Exec"]))
                         environment = {}
                         for line in unit.read_text().splitlines():

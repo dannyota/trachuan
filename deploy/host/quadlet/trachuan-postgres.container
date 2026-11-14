@@ -1,5 +1,6 @@
 [Unit]
 Description=trachuan PostgreSQL 18 and pgvector
+RequiresMountsFor=/srv/trachuan/data
 
 [Container]
 Image=@POSTGRES_IMAGE@
@@ -17,7 +18,7 @@ Secret=postgres_password,type=mount,uid=999,gid=999,mode=0400
 Secret=auth_db_password,type=mount,uid=999,gid=999,mode=0400
 Secret=corpus_reader_password,type=mount,uid=999,gid=999,mode=0400
 # PostgreSQL 18 mounts the parent, not the old /var/lib/postgresql/data path.
-Volume=trachuan-postgres.volume:/var/lib/postgresql:Z,U
+Volume=/srv/trachuan/data/postgres:/var/lib/postgresql:Z,U
 Volume=/srv/trachuan/host/bootstrap.sh:/docker-entrypoint-initdb.d/10-auth.sh:ro,z
 Volume=/srv/trachuan/host/grant-corpus.sh:/usr/local/bin/grant-corpus.sh:ro,z
 Volume=/srv/trachuan/host/wait-postgres.sh:/usr/local/bin/wait-postgres.sh:ro,z
@@ -34,6 +35,7 @@ HealthOnFailure=kill
 LogDriver=journald
 
 [Service]
+ExecStartPre=/usr/bin/mountpoint -q /srv/trachuan/data
 Restart=on-failure
 RestartSec=5
 TimeoutStartSec=180
