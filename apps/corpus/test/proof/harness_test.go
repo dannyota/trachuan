@@ -115,6 +115,14 @@ func newHarness(t *testing.T) *harness {
 	if err := os.WriteFile(filepath.Join(h.root, "sources", "vn.yaml"), []byte(sources), 0600); err != nil {
 		t.Fatal(err)
 	}
+	for _, dir := range []string{"ocr", "cache"} {
+		if err := os.Mkdir(filepath.Join(h.root, dir), 0700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(h.root, "cache", "index.tsv"), []byte("vbpl_id\tname\tsize\tsha256\tformat\tcollected_at\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
 	t.Cleanup(func() {
 		if h.worker != nil {
 			h.stopWorker()
@@ -124,7 +132,7 @@ func newHarness(t *testing.T) *harness {
 }
 
 func (h *harness) env(fault string) []string {
-	return append(append(os.Environ(), h.extra...), "CORPUS_DATABASE_URL="+h.dbURL, "CORPUS_TEMPORAL_ADDRESS="+h.server.FrontendHostPort(), "CORPUS_TEMPORAL_NAMESPACE="+h.namespace, "CORPUS_ARTIFACTS="+h.artifacts, "CORPUS_CHECKPOINT_DIR="+h.checkpoints, "CORPUS_PG_DUMP="+h.dump, "CORPUS_VBPL_URL="+h.gateway.server.URL, "CORPUS_VBPL_LOOPBACK_HTTP=true", "CORPUS_VBPL_FILE_HOSTS=127.0.0.1", "CORPUS_HEARTBEAT_EVERY=200ms", "CORPUS_HEARTBEAT_TIMEOUT=2s", "CORPUS_VBPL_RPS=1000", "CORPUS_VBPL_IN_FLIGHT=16", "CORPUS_FAULT="+fault)
+	return append(append(os.Environ(), h.extra...), "CORPUS_DATABASE_URL="+h.dbURL, "CORPUS_TEMPORAL_ADDRESS="+h.server.FrontendHostPort(), "CORPUS_TEMPORAL_NAMESPACE="+h.namespace, "CORPUS_ARTIFACTS="+h.artifacts, "CORPUS_CHECKPOINT_DIR="+h.checkpoints, "CORPUS_PG_DUMP="+h.dump, "CORPUS_VBPL_URL="+h.gateway.server.URL, "CORPUS_VBPL_LOOPBACK_HTTP=true", "CORPUS_VBPL_FILE_HOSTS=127.0.0.1", "CORPUS_HEARTBEAT_EVERY=200ms", "CORPUS_HEARTBEAT_TIMEOUT=2s", "CORPUS_VBPL_RPS=1000", "CORPUS_VBPL_IN_FLIGHT=16", "CORPUS_FAULT="+fault, "CORPUS_OCR_STORE="+filepath.Join(h.root, "ocr"), "CORPUS_FILE_CACHE="+filepath.Join(h.root, "cache"))
 }
 
 func (h *harness) command(args ...string) {
