@@ -97,9 +97,24 @@ Options:
 3. `halfvec` storage. It halves the bytes read but changes cosines, so it is a
    recipe change with a smaller gain than option 1.
 
-Recommendation: option 1, as the next recipe candidate. It removes most
-fallbacks instead of making them cheaper, and it also shrinks the dense pool's
-reads.
+Measured on vn/20261114_3 (2026-11-14, 243,647 chunks; the 357 queries of the
+comparison set, each collection timed outside the server, warm pages): the pool
+of 1,200 held fewer than 50 eligible chunks for one or both groups in 18 of 354
+default searches (5%) and 10 of 90 `as_of` searches (11%). Each exact fallback
+statement took 120 to 147 ms (p50 132, p95 147; 548 ms at p95 with cold pages),
+about 250 ms per affected search; the shared pool statement took 32 ms at p50.
+The fallbacks come from the artificial queries: 16 of 120 nine-word chunk
+excerpts (often text that only `relation_context` documents contain) against 2
+of 157 evaluation questions, 0 of 80 titles and 0 of 94 queries naming a number.
+Filters, detail and limit do not change collection, so they do not change these
+numbers. On questions like the evaluation set the fallback costs about 3 ms per
+search on average.
+
+Recommendation: defer option 1. It is a recipe change that needs an evaluated
+run under item 4 and item 7, for about 3 ms per realistic search. Revisit when
+production shows the fallback in more than 5% of searches, which needs the
+fallback counted per engine and logged (backlog), or when the release grows
+enough that the eligible share of the pool falls.
 
 ## Sparse arm
 
@@ -240,8 +255,9 @@ provisions and lower total input tokens.
    hydration and shaping remain.
 5. Compact `related` removal after the ADR 0013 revision: about −20% compact
    size.
-6. Partitioned ANN pools, as a recipe candidate: most exact fallbacks (140 to
-   770 ms) removed.
+6. Partitioned ANN pools: deferred until production shows the fallback in more
+   than 5% of searches (measured 5% on artificial queries, about 1% on
+   evaluation questions).
 
 Items 1 to 4 return identical rows; item 5 changes the MCP contract; item 6
 changes the recipe and ships only under ADR 0010.
