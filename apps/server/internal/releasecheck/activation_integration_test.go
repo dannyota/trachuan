@@ -8,6 +8,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -53,12 +54,36 @@ func pgCommand(t *testing.T, config *pgx.ConnConfig, program string, input []byt
 	cmd.Stdin = bytes.NewReader(input)
 	output, err := cmd.Output()
 	if err != nil {
-		t.Fatalf("fixture %s failed", program)
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
+			stderr := bytes.TrimSpace(exitErr.Stderr)
+			if len(stderr) > 400 {
+				stderr = stderr[:400]
+			}
+			t.Fatalf("fixture %s failed: %v: %s", program, err, stderr)
+		}
+		t.Fatalf("fixture %s failed: %v", program, err)
 	}
 	return output
 }
 
 func TestActivation_RestoreCASRetainedAndPrune(t *testing.T) {
+	for _, program := range []string{"pg_dump", "pg_restore"} {
+		output, err := exec.CommandContext(t.Context(), program, "--version").Output()
+		if err != nil {
+			t.Fatalf("get %s version: %v", program, err)
+		}
+		major, err := pgClientMajorVersion(program, string(output))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if major < 18 {
+			if os.Getenv("CI") == "true" {
+				t.Fatalf("needs %s 18 or newer on PATH (found %d); on macOS put /opt/homebrew/opt/postgresql@18/bin first", program, major)
+			}
+			t.Skipf("needs %s 18 or newer on PATH (found %d); on macOS put /opt/homebrew/opt/postgresql@18/bin first", program, major)
+		}
+	}
 	ctx := context.Background()
 	admin, base, err := testpg.OpenAdministrator(ctx)
 	if err != nil {

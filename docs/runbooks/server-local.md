@@ -142,3 +142,17 @@ output directory or remove the incomplete destination after checking it:
 ```sh
 go run ./apps/server/cmd/server admin reports export --batch BATCH_ID --out DIR
 ```
+
+## Run the integration tests
+
+Server integration tests need the PostgreSQL 18 client tools first on `PATH`:
+the release activation test runs `pg_dump` and `pg_restore` against the local
+server. If an older client comes first on `PATH` (for example a leftover
+`postgresql@17` install), put the version 18 directory first for the run:
+
+```sh
+PATH="/opt/homebrew/opt/postgresql@18/bin:$PATH" go test -tags integration ./apps/server/...
+```
+
+With an older `pg_dump` the activation test is skipped locally with a message
+naming the version it found; in CI it fails instead.
