@@ -108,11 +108,13 @@ completion.
 
 ## Sign-in entry and OAuth
 
-`/login?next=<path>` is the one sign-in page; `next` is accepted only as a
-consent path `/oauth/consent/{handle}`, otherwise `/account`. Google start,
-password sign-in and the pending row carry it; registration completion ignores
-it. Unauthenticated consent redirects there instead of straight to Google
-([OAuth](oauth.md#consent)); the `__Host-oauth` browser binding is unchanged.
+`/login?next=<path>` is the one sign-in page. Google start, password sign-in and
+the pending row validate `next` with the one rule in
+[web API](web-api.md#google-login) (a rejected value becomes `/`) and carry it,
+consent paths `/oauth/consent/{handle}` included; registration completion
+ignores it. Unauthenticated consent redirects there instead of straight to
+Google ([OAuth](oauth.md#consent)); the `__Host-oauth` browser binding is
+unchanged.
 
 ## Flows
 
