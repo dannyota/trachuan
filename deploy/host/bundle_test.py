@@ -101,6 +101,7 @@ class ListenerTest(unittest.TestCase):
                     self.assertNotIn("IP", container)
                     if unit.name == "trachuan-postgres.container":
                         self.assertEqual(config["Unit"]["RequiresMountsFor"], "/srv/trachuan/data")
+                        self.assertEqual(container["RunInit"], "true")
                         self.assertEqual(config["Service"]["ExecStartPre"], "/usr/bin/mountpoint -q /srv/trachuan/data")
                         self.assertIn("Volume=/srv/trachuan/data/postgres:/var/lib/postgresql:Z,U",
                                       unit.read_text().splitlines())
