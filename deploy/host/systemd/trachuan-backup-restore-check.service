@@ -11,5 +11,5 @@ Environment=PYTHONDONTWRITEBYTECODE=1
 TimeoutStartSec=1200
 TimeoutStopSec=30
 KillMode=mixed
-UMask=0077
+UMask=0027
 LimitCORE=0

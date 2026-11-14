@@ -10,20 +10,23 @@ image=$3
 name=trachuan-restore-check
 data=/srv/trachuan/data/restore-check
 cleanup() {
- podman rm --force --ignore "$name" >/dev/null && podman unshare rm -rf -- "$data"
+ podman rm --force --ignore "$name" >/dev/null && podman unshare find "$data" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +
 }
 finish() {
  code=$?
  trap - EXIT
+ if ((code != 0)); then
+  podman stop --time=5 "$name" >/dev/null 2>&1 || true
+  podman logs --tail=40 "$name" >&2 || true
+ fi
  if ! cleanup; then code=1; fi
  exit "$code"
 }
 trap finish EXIT
 trap 'exit 1' HUP INT TERM
 cleanup
-podman unshare mkdir -m 0700 -- "$data"
-podman run --detach --name "$name" --network=none --memory=2g --cpus=1 \
- --user=999:999 --read-only --cap-drop=ALL --security-opt=no-new-privileges --log-driver=none \
+podman run --detach --name "$name" --network=pasta:--ipv4-only,--dns-forward,1.1.1.1,--dns-host,1.1.1.1,--no-map-gw,--map-guest-addr,none,--map-host-loopback,none,-t,none,-u,none,-T,none,-U,none --dns=1.1.1.1 --no-hosts --memory=2g --cpus=1 \
+ --user=999:999 --read-only --cap-drop=ALL --security-opt=no-new-privileges --log-driver=k8s-file --log-opt=max-size=1mb \
  --tmpfs /run/pgbackrest:rw,noexec,nosuid,nodev,uid=999,gid=999,mode=0700 \
  --tmpfs /run/restore-check:rw,noexec,nosuid,nodev,uid=999,gid=999,mode=0700 \
  --tmpfs /tmp:rw,noexec,nosuid,nodev,mode=1777 \

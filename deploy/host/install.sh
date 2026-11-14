@@ -67,7 +67,7 @@ done
 firewall-cmd --reload
 
 install -d -o root -g root -m 0755 /srv/trachuan
-for dir in /srv/trachuan/data/postgres /srv/trachuan/data/pgbackrest; do
+for dir in /srv/trachuan/data/postgres /srv/trachuan/data/pgbackrest /srv/trachuan/data/restore-check; do
  [[ -d $dir ]] || install -d -o trachuan -g trachuan -m 0700 "$dir"
 done
 install -d -o root -g root -m 0755 /srv/trachuan/host
@@ -92,11 +92,11 @@ install -o root -g root -m 0644 "$bundle/pgbackrest.conf" /etc/pgbackrest/pgback
 install -d -o trachuan -g trachuan -m 0755 /srv/trachuan/host/systemd
 install -d -o trachuan -g trachuan -m 0755 /srv/trachuan/models /srv/trachuan/models/vi_v2-bundle
 for script in bootstrap.sh grant-corpus.sh wait-healthy.sh render-units.sh \
- pgbackrest-entrypoint.sh restore-check.sh restore-auth.sh \
+ pgbackrest-entrypoint.sh backup-job.sh restore-check.sh restore-auth.sh \
  postgres-admin.sh wait-postgres.sh check-postgres-auth.sh repair-postgres-auth.sh check-signup.sh client-address-log.sh; do
  install -o trachuan -g trachuan -m 0755 "$bundle/$script" "/srv/trachuan/host/$script"
 done
-for script in backup.py backup_result.py backup_status.py; do
+for script in backup.py backup_process.py backup_result.py backup_status.py; do
  install -o trachuan -g trachuan -m 0644 "$bundle/$script" "/srv/trachuan/host/$script"
 done
 for config in Caddyfile client-address-check.caddy; do

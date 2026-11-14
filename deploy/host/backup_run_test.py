@@ -25,6 +25,15 @@ def load():
 
 
 class RunTest(unittest.TestCase):
+    def test_missing_state_directory_fails_without_recreating_private_directory(self):
+        module = load()
+        with tempfile.TemporaryDirectory() as work:
+            state = Path(work) / 'absent'
+            with patch.object(module, 'work', return_value=('ok', 'synthetic')):
+                with self.assertRaisesRegex(FileNotFoundError, 'directory is not provisioned'):
+                    module.run('health', state)
+            self.assertFalse(state.exists())
+
     def test_approved_deadlines_stop_work_and_record_failure_for_every_unit(self):
         module = load()
         limits = {'full': 14400, 'diff': 7200, 'verify': 14400, 'health': 300, 'restore-check': 1200}
@@ -32,7 +41,7 @@ class RunTest(unittest.TestCase):
             with self.subTest(kind=kind), tempfile.TemporaryDirectory() as work:
                 path = Path(work) / (kind+'.json')
                 path.write_text(json.dumps({'last_success_at': '2026-01-01T00:00:00Z'}))
-                def expired(actual_kind, deadline):
+                def expired(actual_kind, deadline, executor):
                     self.assertEqual(actual_kind, kind)
                     self.assertEqual(deadline, 500+seconds)
                     self.assertEqual(json.loads(path.read_text())['status'], 'running')
@@ -57,12 +66,10 @@ class RunTest(unittest.TestCase):
 
     def test_container_command_gets_its_own_remaining_deadline(self):
         module = load()
-        with patch.object(module.time, 'monotonic', return_value=400), patch.object(module, 'command', return_value='') as command:
-            module.work('verify', deadline=500)
-        args = command.call_args.args[0]
-        self.assertEqual(args[:7], ['podman', 'exec', 'trachuan-postgres', 'timeout',
-                                   '--signal=TERM', '--kill-after=5s', '100.000s'])
-        self.assertEqual(command.call_args.kwargs['timeout'], 100)
+        with patch.object(module.time, 'monotonic', return_value=400), patch.object(module.process.Executor, 'execute', return_value='') as execute:
+            module.work('verify', deadline=500, executor=module.process.Executor(Path('/unused')))
+        self.assertEqual(execute.call_args.args[0], ['pgbackrest', '--stanza=trachuan', 'verify', '--output=text', '--verbose'])
+        self.assertEqual(execute.call_args.kwargs['timeout'], 100)
 
     def test_command_timeout_terminates_and_reaps_child(self):
         module = load()
@@ -95,6 +102,8 @@ class RunTest(unittest.TestCase):
                     calls = []
                     def command(args, **kwargs):
                         calls.append(args)
+                        if args[4] in {'prepare', 'cancel'}:
+                            return 'stopped\n' if args[4] == 'cancel' else ''
                         state = json.loads((Path(work) / (kind+'.json')).read_text())
                         self.assertEqual(state['status'], 'running')
                         if args[-1] == '--output=json':
@@ -102,7 +111,7 @@ class RunTest(unittest.TestCase):
                         if fail:
                             raise module.CommandFailed()
                         return ''
-                    with patch.object(module, 'command', side_effect=command), patch.object(module.time, 'time', return_value=NOW):
+                    with patch.object(module.process, 'command', side_effect=command), patch.object(module.time, 'time', return_value=NOW):
                         code = module.run(kind, Path(work))
                     state = json.loads((Path(work) / (kind+'.json')).read_text())
                     self.assertEqual(state['status'], 'failed' if fail else 'ok')
@@ -115,11 +124,13 @@ class RunTest(unittest.TestCase):
         calls = []
         def command(args, **kwargs):
             calls.append(args)
+            if args[4] in {'prepare', 'cancel'}:
+                return 'stopped\n' if args[4] == 'cancel' else ''
             return info(error=True) if args[-1] == '--output=json' else ''
         with tempfile.TemporaryDirectory() as work:
             path = Path(work) / 'full.json'
             path.write_text(json.dumps({'last_success_at': '2026-01-01T00:00:00Z'}))
-            with patch.object(module, 'command', side_effect=command), patch.object(module.time, 'time', return_value=NOW):
+            with patch.object(module.process, 'command', side_effect=command), patch.object(module.time, 'time', return_value=NOW):
                 self.assertEqual(module.run('full', Path(work)), 1)
             result = json.loads(path.read_text())
             self.assertEqual(result['status'], 'failed')
@@ -131,15 +142,17 @@ class RunTest(unittest.TestCase):
         calls = []
         def command(args, **kwargs):
             calls.append(args)
+            if args[:4] == ['podman', 'exec', 'trachuan-postgres', '/usr/local/bin/backup-job.sh'] and args[4] in {'prepare', 'cancel'}:
+                return 'stopped\n' if args[4] == 'cancel' else ''
             if args[-1] == '--output=json':
                 raise module.CommandFailed()
             return json.dumps({'failed_count': 0, 'last_failed_time': None,
                                'last_archived_time': None, 'wal_bytes': 10_000_000_001})
         with tempfile.TemporaryDirectory() as work:
-            with patch.object(module, 'command', side_effect=command):
+            with patch.object(module.process, 'command', side_effect=command):
                 self.assertEqual(module.run('health', Path(work)), 1)
             self.assertEqual(json.loads((Path(work)/'health.json').read_text())['status'], 'failed')
-        self.assertEqual(len(calls), 2)
+        self.assertEqual(sum(args[4] == 'run' for args in calls), 2)
 
     def test_shared_lock_skips_every_kind(self):
         module = load()
@@ -156,7 +169,7 @@ class RunTest(unittest.TestCase):
     def test_info_unreachable_is_unknown(self):
         module = load()
         with tempfile.TemporaryDirectory() as work:
-            with patch.object(module, 'command', side_effect=module.CommandFailed()):
+            with patch.object(module.process.Executor, 'execute', side_effect=module.CommandFailed()):
                 self.assertEqual(module.run('health', Path(work)), 1)
             self.assertEqual(json.loads((Path(work) / 'health.json').read_text())['status'], 'unknown')
 
@@ -165,13 +178,15 @@ class RunTest(unittest.TestCase):
         calls = []
         def command(args, **kwargs):
             calls.append(args)
+            if args[:4] == ['podman', 'exec', 'trachuan-postgres', '/usr/local/bin/backup-job.sh'] and args[4] in {'prepare', 'cancel'}:
+                return 'stopped\n' if args[4] == 'cancel' else ''
             if args[-1] == '--output=json':
                 return info()
             if 'inspect' in args:
                 return 'sha256:' + '1'*64
             return ''
         with tempfile.TemporaryDirectory() as work:
-            with patch.object(module, 'command', side_effect=command), patch.object(module.time, 'time', return_value=NOW):
+            with patch.object(module.process, 'command', side_effect=command), patch.object(module.time, 'time', return_value=NOW):
                 self.assertEqual(module.run('restore-check', Path(work)), 0)
         self.assertEqual(calls[-1], ['bash', str(HOST / 'restore-check.sh'), '--locked', '20270115-020000F', 'sha256:'+'1'*64])
 

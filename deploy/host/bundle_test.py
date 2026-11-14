@@ -29,6 +29,12 @@ class InstallerTest(unittest.TestCase):
         for value in ("ol9_oci_included", "python39-oci-sdk", "--uid-owner", "169.254.169.254", "--dport 80", "--query-rule", "--add-rule", "trachuan-metrics.timer"):
             self.assertIn(value, script)
 
+    def test_restore_directory_is_provisioned_before_rootless_use(self):
+        source = (HOST / "install.sh").read_text()
+        loop = re.search(r"for dir in ([^;]+); do\n(.*?)\ndone", source, re.S)
+        self.assertIn("/srv/trachuan/data/restore-check", shlex.split(loop.group(1)))
+        self.assertIn('install -d -o trachuan -g trachuan -m 0700 "$dir"', loop.group(2))
+
     def test_cgroup_template_matches_podman_field(self):
         templates = re.findall(r"podman info --format '([^']+)'", (HOST / "install.sh").read_text())
         self.assertEqual(templates, ["{{.Host.CgroupsVersion}}"])
@@ -67,6 +73,7 @@ class ListenerTest(unittest.TestCase):
                 service = configparser.ConfigParser(interpolation=None)
                 service.read(work / "units" / f"trachuan-backup-{kind}.service")
                 self.assertIn(f"/srv/trachuan/host/backup.py {kind}", service["Service"]["ExecStart"])
+                self.assertEqual(service["Service"]["UMask"], "0027")
             self.assertEqual(list((work / "units").glob("*.network")), [])
             self.assertFalse((work / "units" / "trachuan-postgres.volume").exists())
             for unit in units:
@@ -86,7 +93,7 @@ class ListenerTest(unittest.TestCase):
                         args = shlex.split(container["Exec"])
                         self.assertIn("archive_mode=on", args)
                         self.assertIn("archive_timeout=300", args)
-                        self.assertIn("archive_command=pgbackrest --stanza=trachuan archive-push %p", args)
+                        self.assertIn("archive_command=pgbackrest --stanza=trachuan archive-push %%p", args)
                         self.assertEqual(container["Entrypoint"], "/usr/local/bin/pgbackrest-entrypoint.sh")
                         text = unit.read_text()
                         self.assertIn("Tmpfs=/run/pgbackrest:rw,noexec,nosuid,nodev,uid=999,gid=999,mode=0700", text)

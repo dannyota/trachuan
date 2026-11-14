@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 import fcntl
-import os
 from pathlib import Path
 import re
+import backup_process as process
 import signal
 import subprocess
 import sys
@@ -16,48 +16,22 @@ def interrupted(signum, frame):
     raise InterruptedError('backup interrupted')
 
 
-class CommandFailed(RuntimeError):
-    pass
+CommandFailed = process.CommandFailed
 
 
-def command(args, timeout):
-    if timeout <= 0:
-        raise subprocess.TimeoutExpired(args, timeout)
-    with subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
-                          text=True, start_new_session=True) as child:
-        try:
-            output, _ = child.communicate(timeout=timeout)
-        except BaseException:
-            try:
-                os.killpg(child.pid, signal.SIGTERM)
-            except ProcessLookupError:
-                pass
-            try:
-                child.wait(timeout=15)
-            except subprocess.TimeoutExpired:
-                try:
-                    os.killpg(child.pid, signal.SIGKILL)
-                except ProcessLookupError:
-                    pass
-                child.wait()
-            raise
-        if child.returncode in {124, 137} and args[:4] == ['podman', 'exec', 'trachuan-postgres', 'timeout']:
-            raise subprocess.TimeoutExpired(args, timeout)
-        if child.returncode:
-            raise CommandFailed()
-        return output
+def command(args, timeout, **kwargs):
+    return process.command(args, timeout=timeout, **kwargs)
 
 
-def work(kind, deadline):
+def work(kind, deadline, executor=None):
     pgbackrest = ['podman', 'exec', 'trachuan-postgres', 'pgbackrest', '--stanza=trachuan']
     def execute(args):
         remaining = deadline-time.monotonic()
         if remaining <= 0:
             raise subprocess.TimeoutExpired(args, remaining)
         if args[:3] == ['podman', 'exec', 'trachuan-postgres']:
-            args = args[:3] + ['timeout', '--signal=TERM', '--kill-after=5s',
-                              f'{remaining:.3f}s'] + args[3:]
-        return command(args, timeout=remaining)
+            return executor.execute(args[3:], timeout=remaining)
+        return command(args, timeout=remaining, diagnostics=kind == 'restore-check')
     def repository():
         try:
             return execute(pgbackrest + ['info', '--output=json'])
@@ -107,7 +81,6 @@ def work(kind, deadline):
 def run(kind, state=Path('/srv/trachuan/state/backup')):
     if kind not in {'full', 'diff', 'verify', 'health', 'restore-check'}:
         raise ValueError('invalid backup unit')
-    state.mkdir(mode=0o700, parents=True, exist_ok=True)
     result = Result(state / (kind+'.json'))
     with (state / 'backup.lock').open('a') as lock:
         try:
@@ -119,12 +92,17 @@ def run(kind, state=Path('/srv/trachuan/state/backup')):
         result.write('running', 'starting')
         limits = {'full': 14400, 'diff': 7200, 'verify': 14400, 'health': 300, 'restore-check': 1200}
         try:
-            status, reason = work(kind, time.monotonic()+limits[kind])
-        except subprocess.TimeoutExpired:
-            status, reason = 'failed', 'deadline exceeded'
+            executor = process.Executor(state)
+            executor.recover()
+            status, reason = work(kind, time.monotonic()+limits[kind], executor)
+        except subprocess.TimeoutExpired as error:
+            detail = error.stderr or ''
+            status, reason = 'failed', 'deadline exceeded'+(': '+detail if detail else '')
         except Unknown:
             status, reason = 'unknown', 'repository unreachable or invalid output'
-        except (CommandFailed, OSError, InterruptedError):
+        except CommandFailed as error:
+            status, reason = 'failed', str(error) or 'command failed'
+        except (OSError, InterruptedError):
             status, reason = 'failed', 'command failed, interrupted or exceeded deadline'
         result.write(status, reason)
         return 0 if status in {'ok', 'skipped'} else 1

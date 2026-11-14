@@ -1,5 +1,6 @@
 import importlib.util
 import json
+import os
 from pathlib import Path
 import tempfile
 import unittest
@@ -19,6 +20,35 @@ def load():
 
 
 class ResultTest(unittest.TestCase):
+    def setUp(self):
+        previous = os.umask(0o027)
+        self.addCleanup(os.umask, previous)
+
+    def test_temporary_file_requests_acl_compatible_mode_without_chmod(self):
+        module = load()
+        with tempfile.TemporaryDirectory() as work:
+            target = Path(work) / 'health.json'
+            result = module.Result(target)
+            with patch.object(module.os, 'open', wraps=module.os.open) as create, patch.object(module.os, 'chmod') as chmod:
+                result.write('unknown', 'synthetic unavailable repository')
+            create.assert_called_once()
+            path, flags, mode = create.call_args.args
+            self.assertEqual(Path(path).parent, target.parent)
+            self.assertNotEqual(Path(path), target)
+            self.assertEqual(flags, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            self.assertEqual(mode, 0o640)
+            chmod.assert_not_called()
+            self.assertEqual(target.stat().st_mode & 0o777, 0o640)
+            self.assertEqual(json.loads(target.read_text())['status'], 'unknown')
+
+    def test_missing_result_directory_fails_without_creating_it(self):
+        module = load()
+        with tempfile.TemporaryDirectory() as work:
+            target = Path(work) / 'absent' / 'health.json'
+            with self.assertRaisesRegex(FileNotFoundError, 'directory is not provisioned'):
+                module.Result(target).write('running', 'starting')
+            self.assertFalse(target.parent.exists())
+
     def test_running_then_final_preserves_last_success_for_every_status(self):
         module = load()
         with tempfile.TemporaryDirectory() as work:
@@ -38,7 +68,7 @@ class ResultTest(unittest.TestCase):
                     self.assertEqual(final['started_at'], running['started_at'])
                     self.assertEqual(final['finished_at'], '2026-01-02T00:00:00Z')
                     self.assertEqual(final['last_success_at'], final['finished_at'] if status == 'ok' else before)
-                    self.assertEqual(path.stat().st_mode & 0o777, 0o600)
+                    self.assertEqual(path.stat().st_mode & 0o777, 0o640)
 
     def test_replace_failure_leaves_complete_previous_file_and_no_staging_file(self):
         module = load()

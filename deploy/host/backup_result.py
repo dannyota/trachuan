@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 import json
 import os
 from pathlib import Path
-import tempfile
+import uuid
 
 
 def utc_now():
@@ -13,6 +13,8 @@ def utc_now():
 class Result:
     def __init__(self, path, now=utc_now):
         self.path = Path(path)
+        if not self.path.parent.is_dir():
+            raise FileNotFoundError(f'backup result directory is not provisioned: {self.path.parent}')
         self.now = now
         self.started = now()
         self.success = None
@@ -28,8 +30,8 @@ class Result:
         success = finished if status == 'ok' else self.success
         payload = {'started_at': self.started, 'finished_at': finished,
                    'status': status, 'reason': reason, 'last_success_at': success}
-        self.path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-        descriptor, staging = tempfile.mkstemp(prefix='.' + self.path.name, dir=self.path.parent)
+        staging = self.path.with_name('.'+self.path.name+'.'+uuid.uuid4().hex)
+        descriptor = os.open(staging, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o640)
         try:
             with os.fdopen(descriptor, 'w') as output:
                 json.dump(payload, output, separators=(',', ':'))
