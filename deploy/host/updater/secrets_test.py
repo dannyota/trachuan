@@ -7,6 +7,7 @@ import unittest
 from updater import activation_test as fixture
 from updater.deploy_io import CommandError
 from updater.deploy_state import State
+from updater.deploy_secrets_state import SecretsState
 from updater.deploy_secrets import Secrets, consumers
 
 
@@ -56,17 +57,22 @@ class SecretsFixture(fixture.ActivationFixture):
         return self.runner(args, input=input, **kwargs)
 
     def versions_recorded(self):
-        return State(self.state.path).data['secrets']['versions']
+        return self.secret_state().data['versions']
+
+    def secret_state(self):
+        return SecretsState(self.paths.state / 'secrets-state.json')
 
     def changed(self, name='google_client_secret'):
-        self.state.data['secrets']['versions'] = dict(self.versions)
+        self.reconcile.data['versions'] = dict(self.versions)
+        self.reconcile.storage.save()
         self.versions[name] = 2
 
     def restarts(self):
         return [args for args, _, _ in self.secret_calls if 'systemctl' in args]
 
     def assert_safe(self):
-        for path in (self.paths.result, self.paths.result.with_name('secrets.json'), self.paths.log, self.state.path):
+        for path in (self.paths.result, self.paths.result.with_name('secrets.json'), self.paths.log, self.state.path,
+                     self.paths.state / 'secrets-state.json'):
             if path.exists():
                 for value in self.values.values():
                     self.assertNotIn(value, path.read_bytes())
@@ -137,7 +143,8 @@ class SecretsTest(SecretsFixture, unittest.TestCase):
         for missing in ('auth_db_password', 'server_auth_database_url'):
             with self.subTest(missing=missing):
                 self.setUp()
-                self.state.data['secrets']['versions'] = dict(self.versions)
+                self.reconcile.data['versions'] = dict(self.versions)
+                self.reconcile.storage.save()
                 del self.installed[missing]
                 self.assertTrue(self.reconcile.run())
                 self.assertEqual(self.installed['server_auth_database_url'],
@@ -156,14 +163,35 @@ class SecretsTest(SecretsFixture, unittest.TestCase):
         self.fail_create = 'server_auth_database_url'
         self.assertFalse(self.reconcile.run())
         state = State(self.state.path)
-        self.assertEqual(state.data['secrets']['versions']['auth_db_password'], 1)
-        self.assertIn('auth_db_password', state.data['secrets']['pending'])
+        self.assertEqual(self.secret_state().data['versions']['auth_db_password'], 1)
+        self.assertIn('auth_db_password', self.secret_state().data['pending'])
         self.assertTrue(self.paths.hold.exists())
         self.fail_create = None
         self.reconcile = Secrets(state, self.host, self.rules, clock=lambda: 10001)
         self.assertTrue(self.reconcile.run())
         self.assertEqual(self.versions_recorded()['auth_db_password'], 2)
         self.assertFalse(self.paths.hold.exists())
+
+    def test_crash_keeps_pending_metadata_without_changing_image_state(self):
+        self.changed('auth_db_password')
+        before = self.state.path.read_bytes()
+        runner = self.host.runner
+        def interrupted_create(args, **kwargs):
+            if args[:3] == ['podman', 'secret', 'create'] and args[-2] == 'server_auth_database_url':
+                raise fixture.Crash()
+            return runner(args, **kwargs)
+        with mock.patch.object(self.host, 'runner', side_effect=interrupted_create):
+            with self.assertRaises(fixture.Crash):
+                self.reconcile.run()
+        self.assertEqual(self.state.path.read_bytes(), before)
+        self.assertEqual(self.secret_state().data['pending'], {'auth_db_password': 2})
+        self.assertEqual(self.secret_state().data['versions']['auth_db_password'], 1)
+        self.reconcile = Secrets(State(self.state.path), self.host, self.rules, clock=lambda: 10001)
+        self.assertTrue(self.reconcile.run())
+        self.assertEqual(self.state.path.read_bytes(), before)
+        self.assertEqual(self.secret_state().data['pending'], {})
+        self.assertEqual(self.versions_recorded()['auth_db_password'], 2)
+        self.assert_safe()
 
     def test_sdk_failure_keeps_every_current_value_and_names_code_without_values(self):
         self.changed()
@@ -264,20 +292,20 @@ class SecretsTest(SecretsFixture, unittest.TestCase):
         self.assertTrue(self.reconcile.run())
         self.assertTrue(self.reconcile.failed)
         self.assertFalse(any('create' in args for args, _, _ in self.secret_calls))
-        self.assertEqual(self.versions_recorded().get('google_client_secret'), None)
+        self.assertEqual(self.versions_recorded().get('google_client_secret'), 1)
 
     def test_failed_completion_save_keeps_pending_and_blocks_images(self):
         self.changed()
         self.state.save()
-        save = self.state.save
+        save = self.reconcile.storage.save
         def fail_completion():
-            if not self.state.data['secrets']['pending']:
+            if not self.reconcile.data['pending']:
                 raise OSError('synthetic completion failure')
             save()
-        with mock.patch.object(self.state, 'save', side_effect=fail_completion):
+        with mock.patch.object(self.reconcile.storage, 'save', side_effect=fail_completion):
             self.assertFalse(self.reconcile.run())
         self.assertEqual(self.versions_recorded()['google_client_secret'], 1)
-        self.assertTrue(State(self.state.path).data['secrets']['pending'])
+        self.assertTrue(self.secret_state().data['pending'])
         self.assertTrue(self.paths.hold.exists())
 
     def test_caddy_stop_failure_still_reports_pending_without_escaping(self):
@@ -289,7 +317,7 @@ class SecretsTest(SecretsFixture, unittest.TestCase):
             return runner(args, **kwargs)
         self.host.runner = fail_stop
         self.assertFalse(self.reconcile.run())
-        self.assertTrue(State(self.state.path).data['secrets']['pending'])
+        self.assertTrue(self.secret_state().data['pending'])
         self.assertTrue(self.paths.hold.exists())
 
     def test_existing_stopped_hold_is_not_cleared(self):

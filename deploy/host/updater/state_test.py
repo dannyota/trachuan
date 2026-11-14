@@ -14,7 +14,7 @@ class StateTest(unittest.TestCase):
         self.path = Path(self.work.name) / 'state.json'
         self.state = s.State.bootstrap(self.path, 'a' * 64, 14, 7, 'b' * 64)
 
-    def test_existing_bootstrap_state_loads_with_default_secrets(self):
+    def test_existing_bootstrap_state_keeps_main_validator_shape(self):
         original = dict(version=1, active='a' * 64,
                         accepted={'image': {'14': {'hash': 'a' * 64, 'status': 'active'}},
                                   'rollback': {}, 'corpus': {}},
@@ -24,12 +24,15 @@ class StateTest(unittest.TestCase):
         raw = json.dumps(original).encode() + b'\n'
         self.path.write_bytes(raw)
         state = s.State(self.path)
-        self.assertEqual(state.data['secrets'],
-                         {'versions': {}, 'pending': {}, 'last_success_at': None, 'held': False})
-        self.assertEqual({key: value for key, value in state.data.items() if key != 'secrets'}, original)
+        main_fields = {'version', 'active', 'accepted', 'retained', 'failed', 'consumed',
+                       'schemas', 'installed_bundle', 'journal'}
+        self.assertEqual(set(state.data), main_fields)
+        self.assertEqual(state.data, original)
         self.assertEqual(self.path.read_bytes(), raw)
         state.save()
         self.assertEqual(s.State(self.path).data, state.data)
+        self.assertEqual(set(json.loads(self.path.read_bytes())), main_fields)
+        self.assertFalse(self.path.with_name('secrets-state.json').exists())
         self.assertEqual(self.path.stat().st_mode & 0o777, 0o600)
 
     def test_missing_or_corrupt_state_never_resets_floor(self):

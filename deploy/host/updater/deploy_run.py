@@ -9,6 +9,7 @@ from .deploy_host import Host
 from .deploy_io import atomic, Busy, command, CommandError, Lock, Result
 from .deploy_registry import Registry
 from .deploy_secrets import Secrets
+from .deploy_secrets_state import SecretsState
 from .deploy_state import State
 from .deploy_store import Candidate, Paths, Store
 from .deploy_verify import match, policy, Verifier, verify_manifest
@@ -44,6 +45,12 @@ class Updater:
         if self.hash in state.data['failed'] or journal.get('status') == 'stopped':
             status = journal.get('status') if journal.get('status') in ('rolled_back', 'stopped') else 'failed'
         result.write(status, 'noop', 'manifest already seen', self.hash, self.manifest)
+
+    def secret_pending(self):
+        try:
+            return bool(SecretsState(self.paths.state / 'secrets-state.json').data['pending'])
+        except (OSError, ValueError):
+            return False
 
     def secrets(self, state, directory, mode, result, force=False):
         self.step = 'secrets'
@@ -120,7 +127,7 @@ class Updater:
 
     def failure(self, result, state, error):
         status = None
-        if state and self.step != 'recovery' and not state.data['secrets']['pending']:
+        if state and self.step != 'recovery' and not self.secret_pending():
             try:
                 status = Activator(state, self.store, self.host).recover()
             except (OSError, ValueError, CommandError, InterruptedError):
@@ -148,7 +155,7 @@ class Updater:
                     stopped = activator.enforce_stopped()
                     if self.backup_pending(result):
                         return 0
-                    recovered = None if stopped or state.data['secrets']['pending'] else activator.recover()
+                    recovered = None if stopped or self.secret_pending() else activator.recover()
                     if recovered:
                         journal = state.data['journal']
                         result.write(recovered, 'recovery', 'interrupted activation recovered', journal['target'])

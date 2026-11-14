@@ -8,6 +8,7 @@ import time
 from urllib.parse import quote
 
 from .deploy_io import CommandError, Result
+from .deploy_secrets_state import SecretsState
 
 
 def consumers(directory, secrets):
@@ -44,7 +45,11 @@ def derived(name, value):
 class Secrets:
     def __init__(self, state, host, rules, clock=time.time):
         self.state, self.host, self.rules, self.clock = state, host, rules, clock
-        self.data = state.data['secrets']
+        try:
+            self.storage = SecretsState(host.paths.state / 'secrets-state.json')
+        except (OSError, ValueError):
+            self.storage = None
+        self.data = self.storage.data if self.storage else None
         self.failed = False
         self.name = 'vault'
 
@@ -125,7 +130,7 @@ class Secrets:
             if not self.data['pending']:
                 self.data['held'] = self.host.paths.hold.exists()
             self.data['pending'] = {name: bundles[name][0] for name in work}
-            self.state.save()
+            self.storage.save()
             if affected:
                 self.host.hold()
                 self.host.systemctl('stop', 'caddy')
@@ -141,18 +146,21 @@ class Secrets:
         self.data['held'] = False
         self.data['last_success_at'] = datetime.fromtimestamp(self.clock(), timezone.utc).isoformat(timespec='seconds').replace('+00:00', 'Z')
         try:
-            self.state.save()
+            self.storage.save()
         except BaseException:
             self.data = previous
-            self.state.data['secrets'] = previous
+            self.storage.data = previous
             raise
         return bool(work)
 
     def run(self, force=False):
-        if not self.due(force):
-            return True
         result = Result(self.host.paths.result.with_name('secrets.json'), self.host.paths.log)
         try:
+            if self.storage is None:
+                self.name = 'state'
+                raise ValueError('invalid secret state')
+            if not self.due(force):
+                return True
             if 'REPLACE' in self.rules['vault_id'].upper():
                 raise ValueError('placeholder vault id')
             bundles = {name: self.fetch(name) for name in self.rules['secrets']}
@@ -162,10 +170,12 @@ class Secrets:
         except (OSError, ValueError, TypeError, CommandError, InterruptedError) as error:
             self.failed = True
             code = error.code if isinstance(error, CommandError) and error.code else 'ReconcileError'
-            if isinstance(error, ValueError) and 'REPLACE' in self.rules['vault_id'].upper():
+            if self.storage is None:
+                code = 'InvalidSecretsState'
+            elif isinstance(error, ValueError) and 'REPLACE' in self.rules['vault_id'].upper():
                 code = 'PlaceholderVault'
             result.write('failed', 'secrets', self.name + ': ' + code)
-            if self.data['pending']:
+            if self.data and self.data['pending']:
                 self.host.hold()
                 try:
                     self.host.systemctl('stop', 'caddy')
@@ -174,6 +184,6 @@ class Secrets:
                 return False
             return True
         except BaseException:
-            if self.data['pending']:
+            if self.data and self.data['pending']:
                 self.host.hold()
             raise
