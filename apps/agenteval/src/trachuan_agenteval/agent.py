@@ -18,6 +18,7 @@ class Outcome:
     tool_result_codepoints: int = 0
     wall_seconds: float = 0
     stop_reason: str = "max_turns"
+    error: str | None = None
 
     @property
     def complete(self) -> bool:
@@ -46,8 +47,9 @@ async def run_task(
             break
         try:
             reply = await provider.request(SYSTEM, history, tools)
-        except Exception:
+        except Exception as failure:
             outcome.stop_reason = "provider_error"
+            outcome.error = provider_error(failure)
             break
         on_usage(reply.usage)
         outcome.usage += reply.usage
@@ -87,3 +89,10 @@ async def run_task(
         provider.append(history, reply, results)
     outcome.wall_seconds = clock() - started
     return outcome
+
+
+def provider_error(failure: Exception) -> str:
+    status = getattr(failure, "status_code", None)
+    body = getattr(failure, "body", None)
+    kind = body.get("error", {}).get("type") if isinstance(body, dict) else None
+    return " ".join(str(part) for part in (type(failure).__name__, status, kind) if part)

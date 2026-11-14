@@ -70,6 +70,7 @@ async def execute(
                         "tool_result_codepoints": result.tool_result_codepoints,
                         "wall_seconds": result.wall_seconds,
                         "stop_reason": result.stop_reason,
+                        "error": result.error,
                         "complete": result.complete,
                         "cost_usd": str(budget.spent - before),
                     }

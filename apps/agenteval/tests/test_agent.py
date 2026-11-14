@@ -274,3 +274,36 @@ def test_budget_is_checked_immediately_before_each_provider_request(initially_bl
     assert len(requests) == (0 if initially_blocked else 1)
     assert result.stop_reason == "budget"
     assert not result.complete
+
+
+def test_top_level_combinators_are_flattened_for_both_providers():
+    from trachuan_agenteval.providers import translate_tools
+
+    schema = {
+        "type": "object",
+        "properties": {"release": {"type": "string"}},
+        "oneOf": [
+            {"properties": {"handle": {"type": "string"}}, "required": ["handle"]},
+            {"properties": {"items": {"type": "array"}}, "required": ["items"]},
+        ],
+    }
+    tools = [{"name": "read", "description": "", "inputSchema": schema}]
+    anthropic = translate_tools(tools, "anthropic")[0]["input_schema"]
+    openai = translate_tools(tools, "openai")[0]["parameters"]
+    for translated in (anthropic, openai):
+        assert not any(key in translated for key in ("oneOf", "anyOf", "allOf"))
+        assert translated["type"] == "object"
+        assert set(translated["properties"]) == {"release", "handle", "items"}
+        assert "required" not in translated
+    assert anthropic == openai
+    assert "oneOf" in schema
+
+
+def test_provider_error_records_class_status_and_type_only():
+    from trachuan_agenteval.agent import provider_error
+
+    class Failure(Exception):
+        status_code = 400
+        body = {"error": {"type": "invalid_request_error", "message": "secret-ish detail"}}
+
+    assert provider_error(Failure("message with details")) == "Failure 400 invalid_request_error"

@@ -5,10 +5,35 @@ from typing import Any
 
 from .usage import Usage, normalize_usage
 
+COMBINATORS = ("oneOf", "anyOf", "allOf")
+
+
+def flatten_schema(schema: dict) -> dict:
+    schema = deepcopy(schema)
+    branches = [branch for key in COMBINATORS for branch in schema.pop(key, [])]
+    if not branches:
+        return schema
+    properties = dict(schema.get("properties", {}))
+    required = None
+    for branch in branches:
+        for name, value in branch.get("properties", {}).items():
+            properties.setdefault(name, value)
+        names = set(branch.get("required", []))
+        required = names if required is None else required & names
+    schema["type"] = "object"
+    schema["properties"] = properties
+    common = sorted(set(schema.get("required", [])) | (required or set()))
+    if common:
+        schema["required"] = common
+    else:
+        schema.pop("required", None)
+    return schema
+
 
 def translate_tools(tools: list[dict], provider: str) -> list[dict]:
     translated = []
     for tool in tools:
+        tool = dict(tool, inputSchema=flatten_schema(tool["inputSchema"]))
         if provider == "anthropic":
             translated.append(
                 {
