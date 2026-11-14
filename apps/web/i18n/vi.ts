@@ -3,7 +3,7 @@ export const vi = {
   account: 'Tài khoản',
   language: 'English',
   home: 'Tra cứu pháp luật',
-  connect: 'Kết nối',
+  connect: 'Kết nối trợ lý AI',
   topics: 'Chủ đề',
   topicExpand: 'Xem chủ đề con',
   topicCollapse: 'Ẩn chủ đề con',

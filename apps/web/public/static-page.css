@@ -13,3 +13,6 @@ h1 { margin-top: 64px; }
 p { color: var(--color-muted); }
 nav { display: flex; flex-wrap: wrap; gap: 24px; }
 :focus-visible { outline: 3px solid var(--color-primary); outline-offset: 2px; }
+
+.skip-link { position: absolute; left: 16px; top: -100px; padding: 8px; background: var(--color-page); }
+.skip-link:focus { top: 8px; }

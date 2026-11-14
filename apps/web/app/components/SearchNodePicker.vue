@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { watch } from 'vue'
 import type { components } from '@trachuan/schema/gen/openapi'
+import { searchMessages } from '../../i18n/search'
 import { messagesFor, type Language } from '../../i18n'
 
 type Node = components['schemas']['NodeEntry']
@@ -79,6 +80,7 @@ onMounted(loadRoots)
     <label>{{ messages.searchNodeLookup }} <input v-model="lookup" class="input" type="search" autocomplete="off"></label>
     <p v-if="failed" role="status">{{ messages.filtersUnavailable }} <button type="button" @click="retry">{{ messages.retry }}</button></p>
     <div class="node-selected"><button v-for="code in modelValue" :key="code" class="chip" type="button" @click="toggleSelection(code)">{{ nodes.find(node => node.code === code)?.name || messages.searchNodes }} ×</button></div>
+    <p v-if="lookup && !failed && !matches.length">{{ searchMessages(language).noTopics }}</p>
     <ul><li v-for="node in matches" :key="node.code">
       <label><input type="checkbox" :checked="modelValue.includes(node.code || '')" :disabled="!modelValue.includes(node.code || '') && modelValue.length >= 20" @change="node.code && toggleSelection(node.code)"> {{ node.name }}</label>
       <button v-if="node.code" class="node-expand" type="button" :aria-label="expanded[node.code] ? messages.topicCollapse : messages.topicExpand" :aria-expanded="!!expanded[node.code]" @click="expand(node.code)"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><path :d="expanded[node.code] ? 'M4 10l4-4 4 4' : 'M4 6l4 4 4-4'" /></svg></button>

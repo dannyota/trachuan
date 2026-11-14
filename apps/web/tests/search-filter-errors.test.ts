@@ -32,6 +32,7 @@ it.each(['status', 'taxonomy'])('keeps search state after %s fails and retries l
   vi.stubGlobal('onMounted', onMounted)
   vi.stubGlobal('onBeforeUnmount', onBeforeUnmount)
   vi.stubGlobal('useRoute', () => ({ query: {}, meta: { signedIn: true }, path: '/vn/search', fullPath: '/vn/search' }))
+  vi.stubGlobal('useRouter', () => ({ replace: vi.fn() }))
   vi.stubGlobal('useApi', (options: { localUnavailable?: boolean } = {}) => createApi({ origin: 'http://localhost', session, fetch: fetcher, onUnavailable: options.localUnavailable ? undefined : () => { unavailable.value = true } }))
   const Shell = defineComponent({ setup: () => () => unavailable.value ? h('p', 'global unavailable') : h(Search) })
   setActivePinia(createPinia())

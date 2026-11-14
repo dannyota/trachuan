@@ -93,3 +93,15 @@ it('retries an initial taxonomy network failure without losing a selected node',
   expect(wrapper.text()).not.toContain('Filters unavailable')
   expect(wrapper.text()).toContain('Root ×')
 })
+
+it('shows a message when no topics match', async () => {
+  vi.stubGlobal('useState', () => ref('en'))
+  vi.stubGlobal('computed', computed)
+  vi.stubGlobal('ref', ref)
+  vi.stubGlobal('onMounted', onMounted)
+  vi.stubGlobal('useApi', () => ({ client: { GET: async () => ({ data: { nodes: [{ code: '1', name: 'Root' }] } }) } }))
+  const wrapper = mount(SearchNodePicker, { props: { modelValue: [] } })
+  await flushPromises()
+  await wrapper.get('input[type="search"]').setValue('missing')
+  expect(wrapper.text()).toContain('No matching topics.')
+})

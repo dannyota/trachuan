@@ -6,7 +6,7 @@ export const en: Catalog = {
   account: 'Account',
   language: 'Tiếng Việt',
   home: 'Legal research',
-  connect: 'Connect',
+  connect: 'Connect AI assistants',
   topics: 'Topics',
   topicExpand: 'Show children',
   topicCollapse: 'Hide children',

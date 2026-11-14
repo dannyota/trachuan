@@ -22,8 +22,8 @@ it('renders localized titles and descriptions on public routes', () => {
   `
   const pages: { status: number, html: string }[] = JSON.parse(execFileSync(process.execPath, ['--input-type=module', '-e', script], { encoding: 'utf8' }))
   const titles = [
-    ['Tra cứu pháp luật', 'Chủ đề', 'Chủ đề', 'Kết nối', 'Nguồn dữ liệu', 'Quyền riêng tư', 'Điều khoản', 'Đăng nhập', 'Đăng ký', 'Đặt lại mật khẩu'],
-    ['Legal research', 'Topics', 'Topics', 'Connect', 'Sources', 'Privacy', 'Terms', 'Sign in', 'Sign up', 'Reset password'],
+    ['Tra cứu pháp luật', 'Chủ đề', 'Chủ đề', 'Kết nối trợ lý AI', 'Nguồn dữ liệu', 'Quyền riêng tư', 'Điều khoản', 'Đăng nhập', 'Đăng ký', 'Đặt lại mật khẩu'],
+    ['Legal research', 'Topics', 'Topics', 'Connect AI assistants', 'Sources', 'Privacy', 'Terms', 'Sign in', 'Sign up', 'Reset password'],
   ]
   const descriptions = [
     ['Tra cứu bằng chứng từ văn bản pháp luật Việt Nam.', 'Khám phá văn bản pháp luật Việt Nam theo chủ đề.', 'Khám phá văn bản pháp luật Việt Nam theo chủ đề.', 'Kết nối trợ lý AI với bằng chứng pháp luật Việt Nam.', 'Xem nguồn dữ liệu và phạm vi văn bản pháp luật Việt Nam.', 'Tìm hiểu cách Tra Chuẩn xử lý và bảo vệ dữ liệu của bạn.', 'Đọc các điều khoản sử dụng Tra Chuẩn.', 'Đăng nhập Tra Chuẩn để tra cứu pháp luật.', 'Đăng ký tài khoản Tra Chuẩn.', 'Yêu cầu liên kết đặt lại mật khẩu Tra Chuẩn.'],

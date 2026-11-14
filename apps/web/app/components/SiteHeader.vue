@@ -42,7 +42,7 @@ onUnmounted(() => { document.removeEventListener('keydown', onKey); document.rem
         <div class="header-actions">
           <button type="button" class="language-button" @click="toggleLanguage">{{ messages.language }}</button>
           <NuxtLink v-if="session.status === 'signed-in'" class="account-link" to="/account"><span class="avatar" aria-hidden="true">{{ session.account?.email?.charAt(0).toUpperCase() }}</span>{{ messages.account }}</NuxtLink>
-          <a v-else class="btn btn-secondary" :href="loginUrl(route.fullPath)">
+          <a v-else-if="!['/login', '/signup', '/reset'].includes(route.path)" class="btn btn-secondary" :href="loginUrl(route.fullPath)">
             {{ messages.signIn }}
           </a>
         </div>

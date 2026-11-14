@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { messagesFor, type Language } from '../../i18n'
+import { messagesFor, shellMessages, type Language } from '../../i18n'
 import { useSessionStore } from '../stores/session'
 
 const requestLanguage = useRequestHeader('x-trachuan-language')
@@ -35,8 +35,9 @@ useHead(() => {
 
 <template>
   <div class="site-layout">
+    <a class="skip-link" href="#main">{{ shellMessages(language).skip }}</a>
     <SiteHeader compact><slot name="header" /></SiteHeader>
-    <main class="site-main"><slot /></main>
+    <main id="main" tabindex="-1" class="site-main"><slot /></main>
     <SiteFooter />
   </div>
 </template>

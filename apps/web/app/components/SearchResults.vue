@@ -6,7 +6,8 @@ import { messagesFor, statusMessage, type Language } from '../../i18n'
 import { searchMessages } from '../../i18n/search'
 import ResultCard from './ResultCard.vue'
 
-const props = defineProps<{ result: components['schemas']['SearchResult'], query?: string }>()
+const props = defineProps<{ result: components['schemas']['SearchResult'], query?: string, filters?: string[] }>()
+const emit = defineEmits<{ clearFilters: [] }>()
 const language = useState<Language>('language', () => 'vi')
 const messages = computed(() => searchMessages(language.value))
 const oldMessages = computed(() => messagesFor(language.value))
@@ -23,12 +24,11 @@ const counts = computed(() => statuses.map(status => ({ status, count: hits.valu
 <template>
   <section class="search-results" aria-live="polite">
     <div v-if="hits.length" class="search-summary">
-      <h1>{{ formatNumber(hits.length, language) }} {{ messages.results }}</h1>
+      <h1 tabindex="-1">{{ formatNumber(hits.length, language) }} {{ messages.results }}</h1>
       <div class="search-legend"><span v-for="item in counts" :key="item.status" :class="`ink-${validityInk(item.status)}`">{{ statusMessage(language, item.status) }} {{ formatNumber(item.count, language) }}</span></div>
     </div>
-    <div v-if="result.abstain && !hits.length" class="notice search-state" role="status"><strong>{{ messages.noEvidence }}</strong><p>{{ messages.noEvidenceDetail }}</p></div>
+    <div v-if="!hits.length" class="notice search-state" role="status"><h1 tabindex="-1">{{ result.abstain ? messages.noEvidence : oldMessages.searchEmpty }}</h1><p>{{ messages.noEvidenceDetail }}</p><p v-if="filters?.length">{{ messages.filteredBy.replace('{filters}', filters.join(', ')) }}</p><button v-if="filters?.length" type="button" class="btn btn-secondary" @click="emit('clearFilters')">{{ messages.clearFilters }}</button></div>
     <div v-else-if="result.abstain && result.reason === 'low_confidence'" class="notice notice--warn search-state" role="status"><strong>{{ messages.weak }}</strong><p>{{ messages.weakDetail }}</p></div>
-    <p v-if="!hits.length && !result.abstain">{{ oldMessages.searchEmpty }}</p>
     <p v-if="result.gaps?.length" class="search-gaps">{{ result.gaps.map(gap => gapCategory(gap.kind, language).name).join('; ') }}</p>
     <ResultCard v-for="(hit, index) in inside" :key="`inside-${hit.handle}-${index}`" :hit="hit" :documents="result.documents" :nodes="result.nodes" :release="result.release" :query="query" :rank="index + 1" />
     <template v-if="outside.length">
