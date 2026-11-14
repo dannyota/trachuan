@@ -57,6 +57,10 @@ func readMarker(ctx context.Context, admin *pgx.Conn, name string) (string, erro
 }
 
 func recreateTemporary(ctx context.Context, admin *pgx.Conn, cfg Config, name, marker string) error {
+	return recreateTemporaryWithin(ctx, admin, cfg, name, marker, sessionGrace)
+}
+
+func recreateTemporaryWithin(ctx context.Context, admin *pgx.Conn, cfg Config, name, marker string, grace time.Duration) error {
 	if !regexp.MustCompile(`^corpus_tmp_[a-z]{2}_[0-9a-f]{24}$`).MatchString(name) || cfg.Template == "" || marker == "" {
 		return fmt.Errorf("invalid temporary database identity")
 	}
@@ -73,7 +77,7 @@ func recreateTemporary(ctx context.Context, admin *pgx.Conn, cfg Config, name, m
 		if !owned || !sameOwnership(actual, marker) {
 			return fmt.Errorf("temporary database ownership mismatch")
 		}
-		if err = waitSessions(ctx, admin, name); err != nil {
+		if err = waitSessions(ctx, admin, name, grace); err != nil {
 			return err
 		}
 		if err = pgdrop.DropOnly(ctx, admin, name); err != nil {
@@ -120,10 +124,10 @@ func writeMarker(ctx context.Context, admin *pgx.Conn, name, marker string) erro
 	return nil
 }
 
-var sessionGrace = 5 * time.Second
+const sessionGrace = 5 * time.Second
 
-func waitSessions(ctx context.Context, admin *pgx.Conn, name string) error {
-	deadline := time.Now().Add(sessionGrace)
+func waitSessions(ctx context.Context, admin *pgx.Conn, name string, grace time.Duration) error {
+	deadline := time.Now().Add(grace)
 	for {
 		var active bool
 		if err := admin.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE datname=$1 AND usesysid IS NOT NULL)`, name).Scan(&active); err != nil {
