@@ -175,6 +175,11 @@ or `code`; then sets the hash and calls `bumpEpoch`.
 | Reauth, change password | 401 `reauth_failed`                            | Per account email; hash queue                                      |
 | Factor completion       | 401 `factor_failed`; 429 during TOTP cool-down | Verifier state                                                     |
 
+A route that needs recent proof answers 403 `reauth_required` when `proof_at` is
+missing or older than the window, and adds `{factor: true}` when only
+`factor_at` is stale; the web then asks the user to sign in again (Google) or to
+reauth (password). Every sign-in sets `proof_at` on the session it creates.
+
 Per-IP limits and the hash queue answer the same for known and unknown emails.
 The per-email counter is keyed by the parsed address and counts attempts whether
 or not an account holds it. An unknown email, or an account without a password,
