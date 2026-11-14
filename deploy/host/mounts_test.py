@@ -26,6 +26,21 @@ class MountExtractionTest(unittest.TestCase):
                 ('example.container', '999:999', '--tmpfs', '/cache:rw,noexec'),
             ])
 
+    def test_quadlet_secret_mounts_are_probed_with_their_options(self):
+        with tempfile.TemporaryDirectory() as work:
+            units = Path(work)
+            (units / 'example.container').write_text(
+                '[Container]\nUser=999:999\n'
+                'Secret=activator_db_password,type=mount,uid=999,gid=999,mode=0400\n'
+                'Secret=smtp_password,type=env,target=SERVER_SMTP_PASSWORD\n')
+            mounts = self.check['quadlet_mounts'](units)
+            self.assertEqual(mounts, [('example.container', '999:999', '--secret',
+                                       'activator_db_password,type=mount,uid=999,gid=999,mode=0400')])
+            script = self.check['probe_script'](mounts)
+            self.assertIn('secret create activator_db_password -', script)
+            self.assertIn('--secret activator_db_password,type=mount,uid=999,gid=999,mode=0400 ', script)
+            self.assertIn('999:999 400', script)
+
     def test_script_mounts_accept_split_and_equals_arguments(self):
         with tempfile.TemporaryDirectory() as work:
             script = Path(work) / 'restore-check.sh'
