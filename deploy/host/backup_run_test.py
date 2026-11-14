@@ -191,5 +191,22 @@ class RunTest(unittest.TestCase):
         self.assertEqual(calls[-1], ['bash', str(HOST / 'restore-check.sh'), '--locked', '20270115-020000F', 'sha256:'+'1'*64])
 
 
+    def test_restore_accepts_bare_image_id_from_podman(self):
+        module = load()
+        calls = []
+        def command(args, **kwargs):
+            calls.append(args)
+            if args[:4] == ['podman', 'exec', 'trachuan-postgres', '/usr/local/bin/backup-job.sh'] and args[4] in {'prepare', 'cancel'}:
+                return 'stopped\n' if args[4] == 'cancel' else ''
+            if args[-1] == '--output=json':
+                return info()
+            if 'inspect' in args:
+                return '2'*64 + '\n'
+            return ''
+        with tempfile.TemporaryDirectory() as work:
+            with patch.object(module.process, 'command', side_effect=command), patch.object(module.time, 'time', return_value=NOW):
+                self.assertEqual(module.run('restore-check', Path(work)), 0)
+        self.assertEqual(calls[-1], ['bash', str(HOST / 'restore-check.sh'), '--locked', '20270115-020000F', 'sha256:'+'2'*64])
+
 if __name__ == '__main__':
     unittest.main()

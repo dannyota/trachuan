@@ -71,6 +71,8 @@ def work(kind, deadline, executor=None):
         return 'ok', 'backup and archiving healthy'
     label = newest_good(repository(), time.time())['label']
     image = execute(['podman', 'inspect', '--format', '{{.Image}}', 'trachuan-postgres']).strip()
+    if re.fullmatch(r'[0-9a-f]{64}', image):
+        image = 'sha256:' + image
     if not re.fullmatch(r'sha256:[0-9a-f]{64}', image):
         raise Unknown('invalid live image identity')
     started = time.monotonic()
