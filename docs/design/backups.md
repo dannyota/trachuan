@@ -106,16 +106,20 @@ it last succeeded. This note adds no alarm transport.
 is not a recovery-time measurement. It takes the backup lock, removes any
 leftover `trachuan-restore-check` container and directory first, then runs that
 container from the same image with only `/srv/trachuan/data/restore-check`
-mounted as its data directory, its own socket directory and spool, loopback port
-55432, no secrets except the repository keys, `archive_mode=off`, 2 GB memory
-and one CPU. It restores with
+mounted as its data directory, its own socket directory and spool, no TCP
+listener (`listen_addresses=''`), the repository keys as its only secrets,
+`archive_mode=off`, 2 GB memory and one CPU. It starts PostgreSQL with its own
+`hba_file` that allows only `local` peer authentication for the `postgres` role
+on that private socket (the container runs as user 999, the image's `postgres`),
+so it needs no database password and the restored SCRAM rules never apply to it.
+It restores with
 `--set=<newest good backup label> --db-include=auth --type=immediate --target-action=promote`
 (other databases are restored as sparse zeroed files and never opened), waits up
 to 20 minutes for recovery to end and `pg_is_in_recovery()` to return false,
 runs smoke queries (auth schema version; row counts of accounts, sessions,
 grants and tokens; one index read), records the elapsed time and result, and
 always stops the container and deletes the directory through a trap on exit and
-signals. It never touches the live cluster, its socket, port or archive.
+signals. It never touches the live cluster, its socket or archive.
 
 ## Production restore
 
