@@ -242,6 +242,8 @@ limit 8. Compact at limit 20 must not exceed full at limit 8 at p95 on the old
 product cohort; otherwise the snippet cap or the compact default changes before
 the server ships.
 
+`SERVER_COMPACT_RELATED=omit` is for evaluation only until this gate passes.
+
 After the server exists, an agent-in-the-loop check runs on the development
 cohort with only the MCP tools: one Claude and one OpenAI client model, model
 versions recorded, the same system prompt, each case twice per mode per model.
