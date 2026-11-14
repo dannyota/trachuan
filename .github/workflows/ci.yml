@@ -59,7 +59,7 @@ jobs:
                 apps/web/*|packages/schema/*|.tool-versions|.github/workflows/ci.yml) web=true ;;
               esac
               case "$path" in
-                deploy/host/*|deploy/images/*) go=true ;;
+                deploy/host/*|deploy/images/*|deploy/github/*|.github/workflows/*) go=true ;;
                 docs/*.md) ;;
                 apps/web/*) ;;
                 *.md) [[ "$path" != */* ]] || go=true ;;
@@ -88,19 +88,18 @@ jobs:
       - run: make schema-gen
       - run: git diff --exit-code
       - run: test -z "$(git status --porcelain -- packages/schema)"
-
   static:
     needs: [preflight]
     if: needs.preflight.outputs.go == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
         with:
           go-version-file: go.mod
           cache: false
-      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: |
             ~/.cache/go-build
@@ -109,12 +108,12 @@ jobs:
           restore-keys: |
             go-${{ runner.os }}-${{ runner.arch }}-static-${{ hashFiles('go.sum') }}-
             go-${{ runner.os }}-${{ runner.arch }}-static-
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           node-version-file: .tool-versions
           cache: npm
       - run: npm ci
-      - uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+      - uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a
         with:
           version: v2.15.0
           skip-save-cache: ${{ !(github.event_name == 'push' && github.ref == 'refs/heads/main') }}
@@ -123,17 +122,18 @@ jobs:
       - run: make test
       - run: PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s deploy/host -p '*_test.py'
       - run: PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s deploy/images -p '*_test.py'
+      - run: PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s deploy/github -p '*_test.py'
+      - run: bash deploy/github/actionlint.sh
       - run: bash deploy/host/render-units-test.sh
       - run: python3 deploy/host/check-mounts.py
         timeout-minutes: 3
-      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
           path: |
             ~/.cache/go-build
             ~/go/pkg/mod
           key: go-${{ runner.os }}-${{ runner.arch }}-static-${{ hashFiles('go.sum') }}-${{ github.sha }}
-
   integration:
     needs: [preflight]
     if: needs.preflight.outputs.go == 'true'

@@ -1,0 +1,54 @@
+name: Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      current:
+        description: Current image manifest SHA-256
+        required: true
+        type: string
+      target:
+        description: Target image manifest SHA-256
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rollback-production
+  cancel-in-progress: false
+
+jobs:
+  rollback:
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 75
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    env:
+      CURRENT: ${{ inputs.current }}
+      TARGET: ${{ inputs.target }}
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - name: Validate rollback inputs
+        run: |
+          [[ $GITHUB_REF == refs/heads/main ]]
+          [[ $CURRENT =~ ^[0-9a-f]{64}$ && $TARGET =~ ^[0-9a-f]{64}$ ]]
+          echo "RELEASE_DIR=$RUNNER_TEMP/trachuan-rollback" >> "$GITHUB_ENV"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Install signing and registry tools
+        run: bash deploy/github/install-tools.sh
+      - name: Verify releases, sign and publish rollback
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          printf '%s' "$GITHUB_TOKEN" | oras login ghcr.io --username "$ACTOR" --password-stdin
+          trap 'oras logout ghcr.io' EXIT
+          python3 deploy/github/publish.py rollback "$RELEASE_DIR"
