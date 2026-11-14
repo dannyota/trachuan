@@ -125,8 +125,9 @@ to the browser: the response sets cookie `__Host-oauth` (`Path=/`, `Secure`,
 keeps the SHA-256 of both. The browser is redirected (303) to
 `/oauth/consent/{handle}`. The consent page and its `POST` require the cookie to
 match the handle's row; the page needs a web session and, without one, redirects
-to the Google login with `next` set to the consent path (the `__Host-oauth`
-cookie survives the login round trip).
+to `/login?next=<consent path>`, which offers Google and password sign-in
+([accounts](accounts.md#sign-in-entry-and-oauth)); the `__Host-oauth` cookie
+survives the login round trip.
 
 The page (Go `html/template`, Vietnamese with an English toggle) shows the
 client name in quotes, the client ID host for CIMD, the literal redirect host,

@@ -34,6 +34,32 @@ by measurement before the first release.
 | OAuth lifetimes                                                           | Pending authorization request 10 min; code 60 s; access token 1 h; refresh family 30 days from the code exchange                                                                                                                                                                                                                           |
 | OAuth state kept                                                          | 10 token families per grant (the oldest is revoked); 10,000 unexpired pending requests; `last_used_at` written at most hourly; cleanup every 10 min in batches of 1,000, up to 50 batches per step per run; replay retention 1 day (start events in [OAuth](oauth.md#retention)); grants without an unexpired family retired after 30 days |
 
+## Accounts
+
+Limits for [email accounts and TOTP](accounts.md).
+
+| Item                              | Value                                                                                                                                                                                          |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Argon2id                          | m = 64 MiB, t = 3, p = 2 (RFC 9106 second option, p lowered for the host)                                                                                                                      |
+| Concurrent hashes, queue, wait    | 2 running, 16 queued, 2 s                                                                                                                                                                      |
+| Password length                   | 15 to 128 code points, at most 1,024 bytes                                                                                                                                                     |
+| Link lifetime                     | registration 24 h, add password 1 h, reset 1 h                                                                                                                                                 |
+| Pending authentication            | 5 min                                                                                                                                                                                          |
+| Recent proof, recent factor       | 10 min                                                                                                                                                                                         |
+| TOTP enrollment                   | 10 min; 5 wrong codes end it                                                                                                                                                                   |
+| TOTP cool-down                    | from the 5th failure, 15 min doubling to 24 h                                                                                                                                                  |
+| Recovery-code failures            | 10 per account per day                                                                                                                                                                         |
+| Sign-up and reset requests per IP | 5 per hour each                                                                                                                                                                                |
+| Mail per recipient                | 3 per hour, 10 per day                                                                                                                                                                         |
+| Password attempts per email       | 10 per 15 min, shared by sign-in, reauth and change password                                                                                                                                   |
+| Pending registrations             | 10,000 live; beyond, sign-up admits nothing                                                                                                                                                    |
+| Mail sent                         | 100 per hour and 2,500 per calendar month; the `signup` class at most 60 per hour and 1,500 per month; security notices always enqueue                                                         |
+| Outbox                            | 5,000 unsent rows outside security notices                                                                                                                                                     |
+| Security changes per account      | 10 per day for signed-in changes (password set or change, TOTP confirm or remove, recovery-code replacement); reset completions have a separate 5 per day that signed-in changes never consume |
+| Mail delivery                     | 30 s per message, claim 2 min, 6 attempts with backoff from 1 min doubling, payload life 24 h                                                                                                  |
+
+Per-IP login limits keep the existing 20 per minute bucket.
+
 ## Pipeline
 
 Parser limits: 50 MB per file, 5 minutes per document. PDF tool subprocesses

@@ -36,6 +36,7 @@ Intended behavior of trachuan. Decisions with alternatives are in the
 | [fetch reuse](fetch-reuse.md)                       | What a new run keeps from the previous VBPL read when `updatedDate` is unchanged               |
 | [attachments by content hash](fetch-attachments.md) | Copy or download each VBPL attachment by its source ETag, fail closed                          |
 | [auth](auth.md)                                     | Google login, OAuth for MCP, CIMD, revocation, account lifecycle                               |
+| [accounts](accounts.md)                             | Email and password accounts, TOTP, recovery codes, key ring, mail outbox                       |
 | [web API](web-api.md)                               | Google login flow, web sessions, CSRF, `/api/v1` routes, OpenAPI contract                      |
 | [OAuth](oauth.md)                                   | MCP authorization server: clients, consent, codes, tokens, aboutme import gaps                 |
 | [error reports](error-reports.md)                   | Agent and web reports of corpus defects, triage, export to reviewed fixes                      |
