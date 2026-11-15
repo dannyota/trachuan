@@ -139,3 +139,6 @@ alarms and the OpenTofu import before any other account signs in.
 
 - 2026-11-14: proposed after the owner chose open sign-up and OCI Email
   Delivery; revised after independent review (S-01 to S-13) and accepted.
+- 2026-11-15: sign-up opened after the hardening gate and the host acceptance of
+  registration, reset, TOTP, recovery codes and MCP connect with a password
+  account.

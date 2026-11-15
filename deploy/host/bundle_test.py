@@ -41,9 +41,18 @@ class InstallerTest(unittest.TestCase):
 
 
 class ServerEnvironmentTest(unittest.TestCase):
-    def test_signup_secret_and_public_client_id_need_no_host_env_edit(self):
+    def test_signup_gate_absent_from_source_units_and_env_files(self):
+        paths = [*(HOST / "quadlet").rglob("*"),
+                 *(HOST / "systemd").rglob("*"), *HOST.rglob("*.env")]
+        for path in paths:
+            if path.is_file():
+                with self.subTest(path=str(path.relative_to(HOST))):
+                    self.assertIsNone(re.search(
+                        r"server_signup_emails|SERVER_SIGNUP_EMAILS", path.read_text()
+                    ), str(path.relative_to(HOST)))
+
+    def test_public_client_id_needs_no_host_env_edit(self):
         lines = (HOST / 'server.env').read_text().splitlines()
-        self.assertFalse(any(line.startswith('SERVER_SIGNUP_EMAILS=') for line in lines))
         self.assertIn('GOOGLE_CLIENT_ID=192561568520-coclqgncgggn9oiss8icpr6nlktqvvg0.apps.googleusercontent.com', lines)
         self.assertFalse(any('REPLACE' in line for line in lines))
 
@@ -82,6 +91,11 @@ class ListenerTest(unittest.TestCase):
             for name in ["trachuan.network", "trachuan-db.network"]:
                 (work / "units" / name).write_text("[Network]\n")
             subprocess.run(["bash", str(HOST / "render-units.sh"), str(pins), str(work / "units")], check=True)
+            for unit in (work / "units").iterdir():
+                with self.subTest(signup_gate=unit.name):
+                    self.assertIsNone(re.search(
+                        r"server_signup_emails|SERVER_SIGNUP_EMAILS", unit.read_text()
+                    ), unit.name)
             units = list((work / "units").glob("*.container"))
             self.assertEqual(len(units), 6)
             schedules = {"full": "Sun *-*-* 02:00:00", "diff": "Mon..Sat *-*-* 02:00:00",
@@ -148,7 +162,6 @@ class ListenerTest(unittest.TestCase):
                             "account_keys": "type=mount,target=/run/secrets/account_keys,uid=65532,gid=65532,mode=0400",
                             "smtp_username": "type=env,target=SERVER_SMTP_USERNAME",
                             "smtp_password": "type=env,target=SERVER_SMTP_PASSWORD",
-                            "server_signup_emails": "type=env,target=SERVER_SIGNUP_EMAILS",
                         }
                         for name, options in secrets.items():
                             with self.subTest(secret=name):
