@@ -65,6 +65,13 @@ A release database `frameworks_<rel>` (schema version 1):
 Public identity is `(framework code, version, citation)`; integer ids are
 release-local.
 
+A release's framework versions, and their `access`, are fixed before any mapping
+evidence is written. `framework_version` rows are never updated or deleted, and
+the `release` row carries a one-way `versions_sealed` flag: versions are
+inserted only before it is set, evidence only after. A reclassification is a new
+release, built from scratch, never an edit, so evidence can never outlive the
+classification its dependency set was computed under.
+
 ## Pipeline
 
 The stages of [pipeline](pipeline.md) with framework inputs: `discover` reads
