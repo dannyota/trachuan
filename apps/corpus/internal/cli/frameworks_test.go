@@ -83,6 +83,15 @@ func TestFrameworks_BuildAndNoTextOutput(t *testing.T) {
 	require.NotContains(t, out.String()+errout.String(), "licensed title")
 	require.FileExists(t, "work/20990101/chunk/manifest.json")
 	require.FileExists(t, "work/20990101/embed/manifest.json")
+	manifestData, err := os.ReadFile("work/20990101/embed/manifest.json")
+	require.NoError(t, err)
+	var embedManifest struct {
+		Recipe struct {
+			Parameters map[string]any `json:"parameters"`
+		} `json:"recipe"`
+	}
+	require.NoError(t, json.Unmarshal(manifestData, &embedManifest))
+	require.Equal(t, newFrameworkEmbedder().Recipe(), embedManifest.Recipe.Parameters["law_stage_recipe_hash"])
 	artifacts, err := filepath.Glob("work/20990101/embed/artifacts/*")
 	require.NoError(t, err)
 	require.Len(t, artifacts, 2)
@@ -92,7 +101,7 @@ func TestFrameworks_BuildAndNoTextOutput(t *testing.T) {
 		require.NoError(t, readErr)
 		keys[idx.DocumentKey] = true
 		require.Equal(t, embedding.DocumentRecipe1().Hash(), idx.RecipeHash)
-		chunkData, readErr := os.ReadFile("work/20990101/chunk/chunks.jsonl")
+		chunkData, readErr := os.ReadFile("work/20990101/chunk/manifest.json")
 		require.NoError(t, readErr)
 		require.Equal(t, fmt.Sprintf("%x", sha256.Sum256(chunkData)), idx.ChunkSHA256)
 		reader, openErr := lawembed.OpenVectors(dir, idx)

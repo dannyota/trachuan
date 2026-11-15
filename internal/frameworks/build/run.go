@@ -132,9 +132,20 @@ func runStep(ctx context.Context, base, step, runID, source string, out io.Write
 		return err
 	}
 	r := stepRecipe(step)
+	if step == "embed" {
+		if embedder == nil {
+			return fmt.Errorf("embedder unavailable")
+		}
+		r.Parameters["law_stage_recipe_hash"] = embedder.Recipe()
+	}
 	if exists {
 		if err = validate(target, r, inputs); err != nil {
 			return err
+		}
+		if step == "embed" {
+			if err = validateEmbeddings(ctx, base, target, embedder, *inputs["chunk/manifest.json"]); err != nil {
+				return err
+			}
 		}
 		if _, err = fmt.Fprintf(out, "%s skipped\n", step); err != nil {
 			return hide("write progress", err)
@@ -168,6 +179,11 @@ func runStep(ctx context.Context, base, step, runID, source string, out io.Write
 	}
 	if err := ctx.Err(); err != nil {
 		return err
+	}
+	if step == "embed" {
+		if err := validateEmbeddings(ctx, base, tmp, embedder, *inputs["chunk/manifest.json"]); err != nil {
+			return err
+		}
 	}
 	if err := seal(tmp, target, r, inputs); err != nil {
 		return err

@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 
+	"danny.vn/trachuan/apps/corpus/internal/stage"
+	lawembed "danny.vn/trachuan/apps/corpus/internal/stage/embed"
 	"danny.vn/trachuan/internal/embedding"
 	"danny.vn/trachuan/internal/frameworks/build"
 	"github.com/stretchr/testify/require"
@@ -70,4 +72,9 @@ func TestFrameworkEmbedder_RejectsRemoteURL(t *testing.T) {
 		t.Setenv("CORPUS_EMBEDDER_URL", address)
 		require.Error(t, newFrameworkEmbedder().Check(context.Background()))
 	}
+}
+
+func TestFrameworkEmbedder_LawRecipeIdentity(t *testing.T) {
+	service := newFrameworkEmbedder()
+	require.Equal(t, lawembed.New(nil, embedding.DocumentRecipe1()).Recipe(stage.Snapshot{}), service.Recipe())
 }

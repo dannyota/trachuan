@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"danny.vn/trachuan/apps/corpus/internal/stage"
 	"danny.vn/trachuan/apps/corpus/internal/stage/chunk"
 	lawembed "danny.vn/trachuan/apps/corpus/internal/stage/embed"
 	"danny.vn/trachuan/internal/embedding"
@@ -57,6 +58,10 @@ func newFrameworkEmbedder() *frameworkEmbedder {
 	}}
 	hc := &http.Client{Transport: transport, Timeout: 125 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 	return &frameworkEmbedder{client: embedding.NewClient(address, hc), expected: embedding.DocumentRecipe1()}
+}
+
+func (*frameworkEmbedder) Recipe() string {
+	return lawembed.New(nil, embedding.DocumentRecipe1()).Recipe(stage.Snapshot{})
 }
 
 func (s *frameworkEmbedder) Check(ctx context.Context) error {

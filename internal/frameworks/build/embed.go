@@ -22,6 +22,8 @@ type EmbedResult struct {
 }
 
 type Embedder interface {
+	Recipe() string
+	Validate(context.Context, string, string, []Chunk, string) error
 	Check(context.Context) error
 	Build(context.Context, string, []Chunk, string) (EmbedResult, error)
 }
@@ -33,7 +35,7 @@ func embedStep(ctx context.Context, base, dir string, service Embedder) error {
 	if err := service.Check(ctx); err != nil {
 		return err
 	}
-	data, err := readFile(filepath.Join(base, "chunk/chunks.jsonl"))
+	data, err := readFile(filepath.Join(base, "chunk/manifest.json"))
 	if err != nil {
 		return err
 	}
