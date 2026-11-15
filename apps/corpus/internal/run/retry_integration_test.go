@@ -288,7 +288,7 @@ func TestRetry_ClearsPredecessorWithSeeds(t *testing.T) {
 func TestStart_RetriesDoneVBPLFetchWithMixedGaps(t *testing.T) {
 	d := retryRun(t, "fetch")
 	ctx := context.Background()
-	_, err := d.DB.Exec(ctx, `INSERT INTO run_item(run_id,stage,item_key,state,batch) SELECT id,s,k,state,0 FROM run CROSS JOIN (VALUES ('fetch','vn:vbpl:1','done'),('fetch','vn:vbpl:2','gap'),('fetch','vn:chinhphu:3','done'),('expand','vn:vbpl:4','done')) v(s,k,state)`)
+	_, err := d.DB.Exec(ctx, `INSERT INTO run_item(run_id,stage,item_key,state,batch) SELECT run.id,v.s,v.k,v.state,0 FROM run CROSS JOIN (VALUES ('fetch','vn:vbpl:1','done'),('fetch','vn:vbpl:2','gap'),('fetch','vn:chinhphu:3','done'),('expand','vn:vbpl:4','done')) v(s,k,state)`)
 	if err != nil {
 		t.Fatal(err)
 	}
