@@ -11,6 +11,7 @@ import (
 	"danny.vn/trachuan/apps/corpus/internal/evaluation"
 	"danny.vn/trachuan/apps/corpus/internal/stage/build"
 	"danny.vn/trachuan/apps/corpus/internal/stage/eval"
+	"danny.vn/trachuan/apps/corpus/internal/stage/extract"
 	"danny.vn/trachuan/apps/corpus/internal/workflow"
 	"danny.vn/trachuan/internal/embedding"
 )
@@ -37,7 +38,12 @@ func IndexDeps(ctx context.Context, cfg config.Config) (workflow.Deps, error) {
 	if err != nil {
 		return workflow.Deps{}, fmt.Errorf("load taxonomy: %w", err)
 	}
+	waivers, err := extract.ReadWaivers("sources/vn-ocr-waivers.yaml")
+	if err != nil {
+		return workflow.Deps{}, fmt.Errorf("load OCR waivers: %w", err)
+	}
 	deps := indexDeps(cfg, suite, time.Now)
+	deps.Waivers = waivers
 	deps.Build.Taxonomy = taxonomy
 	deps.Eval.Build.Taxonomy = taxonomy
 	deps.Build.Corrections = corrections

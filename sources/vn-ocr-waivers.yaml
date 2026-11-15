@@ -1,0 +1,14 @@
+- key: vn:chinhphu:218029
+  pdf_sha256: 988fa7091b9f70615b8ae984e7e43b15293eb31398a113c86cc34f26666d5e40
+  check_sha256: e73f56caf0c364e067e49f322c821d0bd3dedbb471d08942b6a5007e6f47ffd1
+  items:
+    - { page: 17, kind: document_number, ocr: "Mẫu AJ016", pdf: "Mẫu AI01b", reading: "Annex form code, not the decree number." }
+    - { page: 18, kind: document_number, ocr: "Mẫu AJ02", pdf: "Mẫu AI02", reading: "Annex form code, not the decree number." }
+    - { page: 25, kind: document_number, ocr: "Mẫu A106b", pdf: "Mẫu AI06b", reading: "Annex form code, not the decree number." }
+    - { page: 67, kind: document_number, ocr: "Mẫu A06a", pdf: "Mẫu AI06a", reading: "Annex form code, not the decree number." }
+    - { page: 71, kind: document_number, ocr: "Mẫu A107a", pdf: "Mẫu AI07a", reading: "Annex form code, not the decree number." }
+    - { page: 73, kind: document_number, ocr: "Mẫu A107b", pdf: "Mẫu AI07b", reading: "Annex form code, not the decree number." }
+    - { page: 75, kind: document_number, ocr: "Mẫu AK08a", pdf: "Mẫu AI08a", reading: "Annex form code, not the decree number." }
+    - { page: 84, kind: document_number, ocr: "Mẫu A108b", pdf: "Mẫu AI08b", reading: "Annex form code, not the decree number." }
+  reason: "Every label and number item is a misread annex form code (AI01b, AI02, AI06a, AI06b, AI07a, AI07b, AI08a, AI08b), not the decree number or an article label; the OCR text keeps those misreadings, and the sonnet check also noted a section heading VIII read as VII on the form pages."
+  reviewed: "2026-11-15"

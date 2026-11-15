@@ -8,7 +8,13 @@ import (
 	"danny.vn/trachuan/apps/corpus/internal/textparse"
 )
 
+type waiverRecord struct {
+	Key         string `json:"key"`
+	CheckSHA256 string `json:"check_sha256"`
+}
+
 type textRecord struct {
+	Waiver       *waiverRecord         `json:"waiver,omitempty"`
 	Tree         *treeComparison       `json:"tree,omitempty"`
 	TextSource   string                `json:"text_source"`
 	Gap          string                `json:"gap,omitempty"`

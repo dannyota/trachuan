@@ -23,7 +23,7 @@ func selectOCRFiles(ctx context.Context, dir, id string, files []fetch.DocumentF
 	return selectOCRFilesMode(ctx, dir, id, files, source, engines, checker, false)
 }
 
-func selectOCRFilesMode(ctx context.Context, dir, id string, files []fetch.DocumentFile, source ocrReader, engines []string, checker string, unchecked bool) (selection, error) {
+func selectOCRFilesMode(ctx context.Context, dir, id string, files []fetch.DocumentFile, source ocrReader, engines []string, checker string, unchecked bool, waivers ...*Waiver) (selection, error) {
 	selected, err := selectFiles(dir, id, files, absentOCR{})
 	if err != nil || selected.source != "none" {
 		return selected, err
@@ -71,11 +71,19 @@ func selectOCRFilesMode(ctx context.Context, dir, id string, files []fetch.Docum
 	if err != nil {
 		return selection{}, fmt.Errorf("invalid stored OCR check: %w", err)
 	}
+	var waiver *Waiver
+	if len(waivers) > 0 {
+		waiver = waivers[0]
+	}
+	matched, _, err := matchWaiver(waiver, hash, entry, result)
+	if err != nil {
+		return selection{}, err
+	}
 	if result.Verdict == "rejected" {
 		return selection{source: "none", gap: "ocr_rejected", reason: "checker rejected OCR text", consulted: true}, nil
 	}
 	for _, item := range result.Items {
-		if slices.Contains([]string{"article_label", "document_number"}, item.Kind) {
+		if !matched && slices.Contains([]string{"article_label", "document_number"}, item.Kind) {
 			return selection{source: "none", gap: "ocr_label_flagged", reason: "checker flagged an article label or document number", consulted: true}, nil
 		}
 	}
