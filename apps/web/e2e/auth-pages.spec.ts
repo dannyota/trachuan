@@ -66,6 +66,14 @@ test('password factor_required opens the pending factor page', async ({ page }) 
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
   await expect(page).toHaveURL(/\/login\/factor$/)
 })
+test('factor page has a localized title', async ({ page }) => {
+  await english(page)
+  await page.route('**/api/v1/auth/factor', route => route.fulfill({ json: { csrf: 'pending-csrf', next: '/account' } }))
+  await page.goto('/login/factor')
+  await expect(page).toHaveTitle('Two-step verification · Tra Chuẩn')
+  await page.getByRole('button', { name: 'Tiếng Việt', exact: true }).click()
+  await expect(page).toHaveTitle('Xác minh hai bước · Tra Chuẩn')
+})
 for (const recovery of [false, true]) {
   test(`pending factor completes with ${recovery ? 'recovery' : 'TOTP'} code`, async ({ page }) => {
     await english(page)
