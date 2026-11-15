@@ -35,11 +35,17 @@ export CORPUS_PG_RESTORE=/opt/homebrew/opt/postgresql@18/bin/pg_restore
 export CORPUS_BUILDER_DATABASE_URL="postgres://corpus_builder:${BUILDER_PASSWORD}@127.0.0.1:25433/postgres"
 export CORPUS_DATABASE_DISK_PATH=work
 export CORPUS_PHAPDIEN_PACKAGE=work/phapdien/BoPhapDienDienTu.zip
+export CORPUS_OCR_STORE="$PWD/work/ocr"
+export CORPUS_FILE_CACHE="$PWD/work/cache/banhmi-vn"
 go run ./apps/corpus/cmd/corpus migrate
 go run ./apps/corpus/cmd/corpus worker &
 go run ./apps/corpus/cmd/corpus start vn 20261109 --until relate
 go run ./apps/corpus/cmd/corpus status vn 20261109
 ```
+
+The worker refuses to start unless `CORPUS_OCR_STORE` and `CORPUS_FILE_CACHE`
+name existing directories; without them a run silently loses checked OCR text
+and cached source files.
 
 Fetch the Pháp điển package with `scripts/phapdien-fetch.sh` once; the worker
 reads `taxonomy/` and refuses to start when the package is missing or its hash
