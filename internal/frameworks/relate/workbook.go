@@ -53,11 +53,14 @@ func Workbook(parser string, data []byte, nodes []parse.Node) ([]Input, int, err
 			}
 			found = true
 			for _, row := range rows[1:] {
-				from := nistCitation(cellValue(row, focal))
+				focalValue, to := cellValue(row, focal), cellValue(row, target)
+				from := nistCitation(focalValue)
 				if from == "" {
+					if focalValue != "" && to != "" {
+						dropped++
+					}
 					continue
 				}
-				to := cellValue(row, target)
 				if !isoCitation(to) {
 					dropped++
 					continue

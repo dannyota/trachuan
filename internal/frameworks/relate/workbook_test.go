@@ -71,3 +71,26 @@ func TestWorkbook_CISTargetsAndRelations(t *testing.T) {
 		})
 	}
 }
+
+func TestWorkbook_OLIRMalformedFocal(t *testing.T) {
+	data := workbook(t, "Relationships-XX", [][]string{{"Focal Document Element", "Focal Document Element Description", "Security Control Baseline", "Reference Document Element", "Reference Document Element Description", "Comments (optional)"}, {"invented malformed", "", "", "5.2"}, {"invented malformed", "", "", ""}, {"", "", "", "5.3"}})
+	inputs, dropped, err := Workbook("nist-olir", data, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(inputs) != 0 || dropped != 1 {
+		t.Fatal("incorrect malformed focal count")
+	}
+}
+
+func TestWorkbook_CISAmbiguousTitleDropped(t *testing.T) {
+	data := workbook(t, "All CIS Controls & Safeguards", [][]string{{}, {"", "", "", "", "", "invented title", "", "", "", "", "Equivalent", "5.2"}})
+	nodes := []parse.Node{{Kind: "safeguard", Citation: "1.1", PublisherTitle: "invented title"}, {Kind: "safeguard", Citation: "1.2", PublisherTitle: "invented title"}}
+	inputs, dropped, err := Workbook("cis-iso27001", data, nodes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(inputs) != 0 || dropped != 1 {
+		t.Fatal("ambiguous title was not dropped")
+	}
+}

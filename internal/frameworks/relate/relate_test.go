@@ -111,3 +111,35 @@ func TestBuild_ResolvesPaddedOSCALCitations(t *testing.T) {
 		t.Fatal("padded citation did not resolve")
 	}
 }
+
+func TestBuild_ResolvesCatalogPaddedOnlyLabels(t *testing.T) {
+	data := []byte(`{"catalog":{"groups":[{"id":"xx","controls":[{"id":"xx-2","props":[{"name":"label","class":"zero-padded","value":"XX-02"}]}]}]}}`)
+	count := 2
+	catalog, err := parse.Parse("nist-oscal-800-53", data, "beta", "1", &count)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reg := &registry.Registry{Frameworks: []registry.Framework{{Code: "alpha", Version: "1"}, {Code: "beta", Version: "1", CitationScheme: "oscal-catalog"}}}
+	catalogs := map[string]*parse.Result{"alpha:1": {Nodes: []parse.Node{{Citation: "A"}}}, "beta:1": catalog}
+	inputs := []Input{{From: Key{"alpha", "1", "A"}, To: Key{"beta", "1", "XX-2"}, Relation: "related", Source: "book"}, {From: Key{"beta", "1", "XX-2"}, To: Key{"alpha", "1", "A"}, Relation: "related", Source: "book"}}
+	edges, stats, err := Build(reg, catalogs, inputs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(edges) != 2 || stats.Unresolved != 0 || !edges[0].Resolved || edges[0].To.Citation != "XX-02" || !edges[1].Resolved || edges[1].From.Citation != "XX-02" {
+		t.Fatal("padded catalog identity not resolved")
+	}
+}
+
+func TestBuild_UnresolvedDuplicatesCountOnce(t *testing.T) {
+	reg := &registry.Registry{Frameworks: []registry.Framework{{Code: "alpha", Version: "1"}, {Code: "beta", Version: "1"}}}
+	catalogs := map[string]*parse.Result{"alpha:1": {Nodes: []parse.Node{{Citation: "A"}}}}
+	in := Input{From: Key{"alpha", "1", "A"}, To: Key{"beta", "1", "B"}, Relation: "related", Source: "book"}
+	edges, stats, err := Build(reg, catalogs, []Input{in, in})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(edges) != 1 || edges[0].Resolved || stats.Unresolved != 1 || stats.Duplicates != 1 {
+		t.Fatal("unresolved duplicate counts incorrect")
+	}
+}

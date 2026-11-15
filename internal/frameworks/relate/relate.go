@@ -75,7 +75,7 @@ func Build(reg *registry.Registry, catalogs map[string]*parse.Result, inputs []I
 		if exists {
 			if result := catalogs[code+":"+version]; result != nil {
 				for _, n := range result.Nodes {
-					if norm(n.Citation) == norm(in.To.Citation) {
+					if norm(lookupCitation(reg, Key{code, version, n.Citation})) == norm(in.To.Citation) {
 						edge.To.Citation = n.Citation
 						edge.Resolved = true
 						break
@@ -87,7 +87,7 @@ func Build(reg *registry.Registry, catalogs map[string]*parse.Result, inputs []I
 			sourceFound := false
 			if result := catalogs[in.From.Code+":"+in.From.Version]; result != nil {
 				for _, node := range result.Nodes {
-					if norm(node.Citation) == norm(in.From.Citation) {
+					if norm(lookupCitation(reg, Key{in.From.Code, in.From.Version, node.Citation})) == norm(in.From.Citation) {
 						edge.From.Citation = node.Citation
 						sourceFound = true
 						break
