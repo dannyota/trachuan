@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import CommandTokens from './CommandTokens.vue'
 import { homeMessages } from '../../i18n/home'
 import type { Language } from '../../i18n'
 const language = useState<Language>('language', () => 'vi')
@@ -13,7 +14,7 @@ const command = `claude mcp add --transport http trachuan ${endpoint}`
       <div class="home-connect-cards">
         <section class="card home-connect-card"><h3>Claude.ai</h3><p>{{ labels.claude }}</p></section>
         <section class="card home-connect-card"><h3>ChatGPT</h3><p>{{ labels.chat }}</p></section>
-        <section class="card home-connect-card"><h3>Claude Code</h3><p>{{ labels.code }}</p><pre tabindex="0" :aria-label="labels.code">{{ command }}</pre><CopyButton :text="command" :label="labels.copy" /></section>
+        <section class="card home-connect-card"><h3>Claude Code</h3><p>{{ labels.code }}</p><pre tabindex="0" :aria-label="labels.code"><CommandTokens :text="command" /></pre><CopyButton :text="command" :label="labels.copy" /></section>
       </div>
       <NuxtLink to="/connect">{{ labels.connectLink }}</NuxtLink>
     </div>

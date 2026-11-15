@@ -7,7 +7,7 @@
 .server-address { max-width: 760px; }
 .server-address h2 { font-size: 14px; margin: 0 0 8px; }
 .page-code { min-width: 0; padding: 12px; border: 1px solid var(--color-line-strong); border-radius: var(--radius-md); background: var(--color-surface); }
-.page-code pre { max-width: 100%; margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; }
+.page-code pre { max-width: 100%; margin: 0; white-space: pre-wrap; overflow-wrap: normal; word-break: normal; font-size: 13px; }
 .page-copy { margin-top: 8px; }
 .server-address .page-code { background: var(--color-card); }
 .server-address .page-code pre { font-size: 16px; }
@@ -70,3 +70,9 @@
 
 .google-button { font-family: GoogleSansButton, var(--font-sans); display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 40px; height: 40px; padding: 0 12px; border: 1px solid #747775; background: #fff; color: #1f1f1f; font-size: 14px; font-weight: 500; line-height: 20px; }
 .google-button:hover, .google-button:focus { background: #fff; color: #1f1f1f; }
+
+@media (max-width: 360px) {
+  .connect-card { padding-inline: 12px; }
+  .page-code { padding-inline: 8px; }
+  .login-card { padding-inline: 16px; }
+}

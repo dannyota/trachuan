@@ -2,7 +2,9 @@
 .account-page { max-width: 960px; margin: 0 auto; padding: 40px 24px 64px; display: flex; flex-direction: column; gap: 24px; }
 .account-heading, .account-card-head, .account-danger { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
 .account-heading h1 { margin: 0; font-size: 30px; line-height: 1.3; }
-.account-heading p { margin: 4px 0 0; color: var(--color-ink-soft); font-size: 15px; overflow-wrap: anywhere; }
+.account-heading p { margin: 4px 0 0; color: var(--color-ink-soft); font-size: 15px; overflow-wrap: normal; word-break: normal; }
+.account-email span { display: inline-block; max-width: 100%; overflow-wrap: anywhere; }
+.account-created { white-space: nowrap; }
 .account-card { overflow: hidden; }
 .account-card-head { padding: 18px 20px; border-bottom: 1px solid var(--color-line); }
 .account-card h2, .account-danger h2 { margin: 0; font-size: 17px; line-height: 1.4; }
@@ -33,7 +35,8 @@
 .account-dialog h2 { margin: 0 0 12px; font-size: 20px; }
 .account-dialog label { display: flex; flex-direction: column; gap: 4px; margin: 12px 0; }
 .account-dialog-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 20px; }
-.account-dialog .token-value { overflow-wrap: anywhere; }
+.token-copy { display: flex; align-items: center; gap: 8px; }
+.token-copy .token-value { flex: 1; min-width: 0; }
 @media (max-width: 767px) {
   .account-page { padding: 24px 16px 48px; }
   .account-heading, .account-card-head, .account-danger, .account-row { align-items: stretch; flex-direction: column; }

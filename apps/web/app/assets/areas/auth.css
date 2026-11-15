@@ -15,3 +15,9 @@
   .recovery-panel .auth-actions > span { width: 100%; }
   .recovery-panel .auth-actions > span > span { display: block; }
 }
+
+@media (max-width: 360px) {
+  .account-security-row { padding-inline: 12px; }
+  .recovery-codes { font-size: 11px; padding-left: 2em; }
+  .recovery-codes li span { white-space: normal; overflow-wrap: normal; word-break: normal; }
+}
