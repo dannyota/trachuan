@@ -76,6 +76,7 @@ func deleteDiscoverListings(ctx context.Context, q *store.Queries, runID int64, 
 		if err != nil {
 			return fmt.Errorf("list legacy discovery listings: %w", err)
 		}
+		seen := make(map[string]bool)
 		for _, row := range rows {
 			suffix, ok := strings.CutPrefix(row.QueryKey, key+"@")
 			if !ok || len(suffix) != 16 {
@@ -84,6 +85,10 @@ func deleteDiscoverListings(ctx context.Context, q *store.Queries, runID int64, 
 			if _, err := hex.DecodeString(suffix); err != nil {
 				continue
 			}
+			if seen[row.QueryKey] {
+				continue
+			}
+			seen[row.QueryKey] = true
 			if _, err := q.DeleteRunListingsByQuery(ctx, store.DeleteRunListingsByQueryParams{RunID: runID, QueryKey: row.QueryKey}); err != nil {
 				return fmt.Errorf("delete legacy discovery listings: %w", err)
 			}

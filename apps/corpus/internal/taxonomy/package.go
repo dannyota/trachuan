@@ -1,4 +1,3 @@
-// Package taxonomy reads the Pháp điển taxonomy package.
 package taxonomy
 
 import (
@@ -15,7 +14,6 @@ import (
 	"strings"
 )
 
-// Package contains the taxonomy and article references from a package.
 type Package struct {
 	SHA256   string
 	ChuDe    []ChuDe
@@ -23,26 +21,19 @@ type Package struct {
 	Tree     []TreeNode
 	Articles []Article
 }
-
-// ChuDe is a subject.
 type ChuDe struct {
 	GUID string
 	STT  int
 	Name string
 }
-
-// DeMuc is a subject's section.
 type DeMuc struct {
 	GUID, ChuDeGUID string
 	STT             int
 	Name            string
 	Removed         bool
 }
-
-// NodeKind identifies a tree node's structural kind.
 type NodeKind string
 
-// Tree node kinds.
 const (
 	KindPhan    NodeKind = "phan"
 	KindChuong  NodeKind = "chuong"
@@ -51,15 +42,12 @@ const (
 	KindDieu    NodeKind = "dieu"
 )
 
-// TreeNode is a node in the package tree.
 type TreeNode struct {
 	GUID, MAPC, DeMucGUID, ParentGUID string
 	Kind                              NodeKind
 	Name                              string
 	Order                             int
 }
-
-// Article identifies a placed article without retaining its text.
 type Article struct {
 	DeMucGUID, MAPC          string
 	Seq                      int
@@ -70,7 +58,6 @@ type treeKey struct{ section, code string }
 
 const maxEntry = 64 << 20
 
-// ReadPackage reads a zip package without extracting its contents.
 func ReadPackage(zipPath string) (Package, error) {
 	data, err := os.ReadFile(zipPath)
 	if err != nil {
@@ -103,11 +90,11 @@ func ReadPackage(zipPath string) (Package, error) {
 	if err = parseJSON(raw, &p); err != nil {
 		return Package{}, err
 	}
-	first := make(map[treeKey]string, len(p.Tree))
+	articles := make(map[treeKey][]string, len(p.Tree))
 	for _, n := range p.Tree {
-		key := treeKey{n.DeMucGUID, n.MAPC}
-		if _, ok := first[key]; !ok {
-			first[key] = n.GUID
+		if n.Kind == KindDieu {
+			key := treeKey{n.DeMucGUID, n.MAPC}
+			articles[key] = append(articles[key], n.GUID)
 		}
 	}
 	names := make([]string, 0, len(files))
@@ -123,7 +110,7 @@ func ReadPackage(zipPath string) (Package, error) {
 			return Package{}, err
 		}
 		id := strings.ToLower(strings.TrimSuffix(strings.TrimPrefix(name, "demuc/"), ".html"))
-		p.Articles = appendArticles(p.Articles, raw, id, first)
+		p.Articles = appendArticles(p.Articles, raw, id, articles)
 	}
 	return p, nil
 }

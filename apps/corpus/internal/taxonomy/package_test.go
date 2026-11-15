@@ -180,9 +180,9 @@ func TestReadPackage_ArticleTreeScopedBySection(t *testing.T) {
 	}
 	z := zip.NewWriter(f)
 	files := []struct{ name, body string }{
-		{"jsonData.js", `var jdChuDe = [{"Value":"subject","STT":"1","Text":"Subject"}]; var jdDeMuc = [{"Value":"one","ChuDe":"subject","STT":"1","Text":"One"},{"Value":"two","ChuDe":"subject","STT":"2","Text":"Two"}]; var jdAllTree = [{"ID":"first","MAPC":"same","DeMucID":"one","TEN":"Điều one"},{"ID":"duplicate","MAPC":"same","DeMucID":"one","TEN":"Điều duplicate"},{"ID":"second","MAPC":"same","DeMucID":"two","TEN":"Điều two"}];`},
-		{"demuc/one.html", `<p class='pDieu'><a name='same'></a>Synthetic one</p>`},
-		{"demuc/two.html", `<p class='pDieu'><a name='same'></a>Synthetic two</p>`},
+		{"jsonData.js", `var jdChuDe = [{"Value":"subject","STT":"1","Text":"Subject"}]; var jdDeMuc = [{"Value":"one","ChuDe":"subject","STT":"1","Text":"One"},{"Value":"two","ChuDe":"subject","STT":"2","Text":"Two"}]; var jdAllTree = [{"ID":"chapter","MAPC":"same","DeMucID":"one","TEN":"Chương I"},{"ID":"first","MAPC":"same","DeMucID":"one","TEN":"Điều one"},{"ID":"duplicate","MAPC":"same","DeMucID":"one","TEN":"Điều duplicate"},{"ID":"second","MAPC":"same","DeMucID":"two","TEN":"Điều two"}];`},
+		{"demuc/one.html", `<p class='pDieu'><a name='same'></a>Synthetic one</p><p class='pDieu'><a name='same'></a>Synthetic duplicate</p>`},
+		{"demuc/two.html", `<p class='pDieu'><a name='same'></a>Synthetic two</p><p class='pDieu'><a name='same'></a>Synthetic extra</p>`},
 	}
 	for _, file := range files {
 		w, createErr := z.Create(file.name)
@@ -203,11 +203,11 @@ func TestReadPackage_ArticleTreeScopedBySection(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(p.Articles) != 2 {
+	if len(p.Articles) != 4 {
 		t.Fatalf("got %d articles", len(p.Articles))
 	}
-	for _, a := range p.Articles {
-		want := map[string]string{"one": "first", "two": "second"}[a.DeMucGUID]
+	for i, a := range p.Articles {
+		want := []string{"first", "duplicate", "second", ""}[i]
 		if a.TreeGUID != want {
 			t.Errorf("section %s tree GUID = %q, want %q", a.DeMucGUID, a.TreeGUID, want)
 		}
