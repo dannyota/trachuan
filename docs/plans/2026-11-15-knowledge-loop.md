@@ -7,7 +7,8 @@
 **Routes:** the validator, application of knowledge in build and the uploader gate are hard (`gpt-6.1-sol` implements, `gpt-6-astra` reviews); detectors, CLI and reports are routine (`gpt-6.1-terra`, `gpt-6.1-sol`). Executor: trachuan-dev (corpus), after the batch 2 release. Standing rules: no model and no network at build; existing gap kinds keep their names; no server-checked recipe changes without telling the coordinator.
 
 ## 16.0 Design (primary, astra review)
-- [ ] ADR 0017, knowledge-loop.md and the survey note reviewed by `gpt-6-astra`; findings fixed; ADR accepted; sc365's comments on `changes.json` recorded.
+- [x] ADR 0017, knowledge-loop.md and the survey note reviewed by `gpt-6-astra` in five rounds (S-01 to S-23, A-01, A-02 fixed) and read by the corpus session against the code; ADR accepted 2026-11-15.
+- [ ] sc365's comments on `changes.json`, `identity.jsonl` and the intake record recorded before 16.4 freezes their shapes.
 
 ## 16.1 Registry and evidence stage
 - [ ] Go detector registry as the only list (`corpus detectors list`): subject types, discriminators, completeness declaration, semantics numbers, registry hash; stage gap validation rejects an unregistered kind at run time, and a test checks every kind constant against the registry.

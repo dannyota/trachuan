@@ -1,6 +1,6 @@
 # ADR 0017: Findings and reviewed knowledge on the write path
 
-Status: proposed 2026-11-15.
+Status: accepted 2026-11-15.
 
 ## Context
 
@@ -125,3 +125,4 @@ knowledge.
 - 2026-11-15: fourth review round (S-22, S-23): a changed evidence recipe needs
   a new run; the release floor is set at the first image that admits reviewed
   effects before a corpus holding them is published.
+- 2026-11-15: accepted after the fifth review round found nothing open.
