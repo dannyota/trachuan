@@ -7,8 +7,14 @@ import (
 	"strings"
 )
 
+var (
+	parameterPattern      = regexp.MustCompile(`\{\{\s*insert:\s*param,\s*([^}\s]+)\s*\}\}`)
+	oscalControlIDPattern = regexp.MustCompile(`^[a-z]{2}-[0-9]+(?:\.[0-9]+)*$`)
+)
+
 type property struct {
 	Name  string `json:"name"`
+	Class string `json:"class"`
 	Value string `json:"value"`
 }
 type oscalParam struct {
@@ -45,10 +51,22 @@ type oscalGroup struct {
 }
 
 func label(id string, props []property) string {
+	first := ""
+	found := false
 	for _, p := range props {
-		if p.Name == "label" {
+		if p.Name != "label" {
+			continue
+		}
+		if !found {
+			first = p.Value
+			found = true
+		}
+		if p.Class != "zero-padded" {
 			return p.Value
 		}
+	}
+	if found {
+		return first
 	}
 	return strings.ToUpper(id)
 }
@@ -65,9 +83,8 @@ func prose(parts []oscalPart, params map[string]oscalParam) string {
 	return strings.Join(out, "\n")
 }
 func renderParams(value string, params map[string]oscalParam) string {
-	pattern := regexp.MustCompile(`\{\{\s*insert:\s*param,\s*([^}\s]+)\s*\}\}`)
-	return pattern.ReplaceAllStringFunc(value, func(match string) string {
-		id := pattern.FindStringSubmatch(match)[1]
+	return parameterPattern.ReplaceAllStringFunc(value, func(match string) string {
+		id := parameterPattern.FindStringSubmatch(match)[1]
 		param, ok := params[id]
 		if !ok {
 			return match
@@ -126,7 +143,6 @@ func parseOSCAL(data []byte, code, version string) ([]Node, error) {
 		index(g.Controls)
 	}
 	var nodes []Node
-	controlID := regexp.MustCompile(`^[a-z]{2}-[0-9]+(?:\.[0-9]+)*$`)
 	var walk func(oscalControl, int, string, map[string]oscalParam) error
 	walk = func(c oscalControl, parent int, kind string, parentParams map[string]oscalParam) error {
 		params := withParams(parentParams, c.Params)
@@ -145,7 +161,7 @@ func parseOSCAL(data []byte, code, version string) ([]Node, error) {
 			}
 			id := strings.TrimPrefix(l.Href, "#")
 			target, ok := ids[id]
-			if !ok && !controlID.MatchString(id) {
+			if !ok && !oscalControlIDPattern.MatchString(id) {
 				continue
 			}
 			if !ok {

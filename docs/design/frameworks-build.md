@@ -35,7 +35,14 @@ invalid lineage fail the step; they are not gaps.
 
 **Relate** emits edges by business key with source and relation, and each
 evidence value with the set of licensed versions whose text it uses, computed
-from the snapshot's access classes.
+from the snapshot's access classes. The set is not inferred from the evidence's
+words: it holds every licensed version at either end of the edge, which fails
+closed, so only evidence on an edge between free versions is public. A target
+named in a source file resolves through registry codes and aliases. Its version
+token, without a `v`, `Rev` or `Revision` prefix, names the registered version
+equal to it, else the registered version that is its major number (`Rev 5.2.0`
+names `r5`, `v8.0` names `v8`). An edge whose target version or either citation
+is not in a parsed catalog stays unresolved and is counted.
 
 **Chunk** applies the law split rule (size limits and cut points) to each
 control body as one unit. That rule is extracted from the law chunk package into

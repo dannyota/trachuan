@@ -69,3 +69,20 @@ func TestCSF_PartialStatistics(t *testing.T) {
 		t.Error("partial statistics missing")
 	}
 }
+
+func TestOSCAL_PrefersUnpaddedLabels(t *testing.T) {
+	data := []byte(`{"catalog":{"groups":[{"id":"xx","controls":[{"id":"xx-1","props":[{"name":"label","class":"zero-padded","value":"XX-01"},{"name":"label","value":"XX-1"}],"controls":[{"id":"xx-1.1","props":[{"name":"label","class":"zero-padded","value":"XX-01(01)"},{"name":"label","value":"XX-1(1)"}]}],"links":[{"rel":"related","href":"#xx-1.1"}]},{"id":"xx-2","props":[{"name":"label","class":"zero-padded","value":"XX-02"}]},{"id":"xx-3"}]}]}}`)
+	count := 5
+	result, err := Parse("nist-oscal-800-53", data, "alpha", "1", &count)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i, want := range []string{"XX", "XX-1", "XX-1(1)", "XX-02", "XX-3"} {
+		if result.Nodes[i].Citation != want {
+			t.Errorf("citation %d: got %q want %q", i, result.Nodes[i].Citation, want)
+		}
+	}
+	if result.Nodes[1].Mappings[0].TargetCitation != "XX-1(1)" {
+		t.Error("link target not canonical")
+	}
+}
