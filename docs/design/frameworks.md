@@ -22,7 +22,8 @@ and release. Law stays in the notes it has today.
 version with publisher, code, version, language, `access` (`free` or
 `licensed`), licence kind as the publisher states it, the source files with
 their SHA-256, size and role (text, catalog, mapping workbook), and the parser.
-It holds no document text and nothing else derived from a licensed file
+It holds each version's expected control count (an approved public fact), no
+document text and nothing else derived from a licensed file
 ([published values](frameworks-access.md#licensed-material-and-where-it-may-be)).
 Seeds come from compliary's `framework.csv`, `framework_version.csv` and
 `file_rule.csv`.
@@ -79,8 +80,7 @@ the registry, `fetch` copies and hashes files from the source directory,
 `extract` runs the entry's parser (OSCAL JSON, XLSX catalog, PDF text, OCR),
 `relate` builds mapping edges, then `chunk`, `embed`, `build` and `eval`.
 Parsers are deterministic; no model writes canonical text. Each parser has an
-exact control-count check: a free version's expected count is in the registry, a
-licensed version's in a file under `FRAMEWORKS_SOURCE_DIR`, never in Git.
+exact control-count check against the version's expected count in the registry.
 
 Run state and artifacts follow
 [licensed material](frameworks-access.md#licensed-material-and-where-it-may-be).

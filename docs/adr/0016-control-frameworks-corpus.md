@@ -56,8 +56,10 @@ and its per-document gate was stored but not enforced when serving
    lists; that table is the only list. Publication exceptions: the integrity
    values of the signed manifest (dump digest and size, report and build
    artifact digests) and of the registry's source files (digest and size), which
-   identify a release or a file and say nothing about its text. Tests use
-   synthetic documents only.
+   identify a release or a file and say nothing about its text. The number of
+   controls of a version is an approved public fact, like a citation, and is
+   published; nothing finer than that per-version total is. Tests use synthetic
+   documents only.
 7. **Scans use the OCR path, as an exception to ADR 0014.** A source without a
    text layer goes through the Vision OCR and cross-check of
    [ADR 0014](0014-ocr-on-the-write-path.md), which otherwise sends only public
@@ -120,3 +122,5 @@ and its per-document gate was stored but not enforced when serving
 - 2026-11-15: accepted after the fourth review round found nothing open.
 - 2026-11-15: the registry's source-file digests and sizes added as the second
   publication exception, so the reader can refuse unregistered files.
+- 2026-11-15: the per-version control count named an approved public fact, held
+  in the registry for every version; nothing finer is published.

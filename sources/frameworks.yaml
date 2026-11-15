@@ -352,7 +352,8 @@ frameworks:
     size: 1518858
     role: guide
     format: pdf
-  parser: ''
+  parser: nist-csf-2-xlsx
+  expected_controls: 225
 - code: nist80053
   version: r4
   name: NIST SP 800-53 Security and Privacy Controls
@@ -399,7 +400,8 @@ frameworks:
     size: 155745
     role: mapping workbook
     format: xlsx
-  parser: ''
+  parser: nist-oscal-800-53
+  expected_controls: 1216
 - code: ciscontrols
   version: v8
   name: CIS Critical Security Controls
@@ -461,7 +463,8 @@ frameworks:
     size: 1422769
     role: guide
     format: pdf
-  parser: ''
+  parser: cis-controls-8-xlsx
+  expected_controls: 171
 - code: csaccm
   version: v4.0
   name: CSA Cloud Controls Matrix
