@@ -213,11 +213,15 @@ with the OAuth error body `{"error":"invalid_request"}` before the per-IP bucket
 and any credential check, so rejected requests cost no database work and use no
 bucket tokens. In `log` mode it proceeds. In both modes the server counts it and
 writes one log line per distinct value per hour with the path and the value's
-class: a well-formed origin (scheme, host and optional port, nothing else) is
-logged as that origin; a malformed value is logged only as `malformed`, and
-several `Origin` headers only as `multiple`, never with their contents. At most
-100 distinct values are tracked per hour, the rest counted together. The consent
-routes keep their own same-origin check in [Consent](#consent).
+class: a well-formed origin is logged exactly as sent, so it can be copied into
+`SERVER_MCP_ORIGINS` unchanged; any other value is logged only as `malformed`,
+and several `Origin` headers only as `multiple`, never with their contents. A
+well-formed origin is at most 200 bytes of ASCII, `http` or `https`, a host and
+an optional port, with no user information, path, query or fragment. Matching
+compares exact strings without normalizing, and each `SERVER_MCP_ORIGINS` entry
+must be well-formed or the server stops at startup. At most 100 distinct values
+are tracked per hour, the rest counted together. The consent routes keep their
+own same-origin check in [Consent](#consent).
 
 [Anthropic's connector guide](https://claude.com/docs/connectors/building/testing#debug-connection-failures)
 warns that strict `Origin` checks reject its connector traffic, and neither

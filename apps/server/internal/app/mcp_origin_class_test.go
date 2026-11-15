@@ -5,22 +5,27 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 )
 
-func TestMCPOriginTracker_CanonicalClasses(t *testing.T) {
+func TestMCPOriginTracker_ExactClasses(t *testing.T) {
 	for _, tc := range []struct {
 		name   string
 		values []string
 		want   string
 	}{
-		{"scheme host and default port", []string{"HTTPS://CLIENT.TEST:443"}, "https://client.test"},
-		{"remote http", []string{"http://CLIENT.TEST:80"}, "http://client.test"},
-		{"nondefault port", []string{"http://CLIENT.TEST:08080"}, "http://client.test:8080"},
-		{"ipv6", []string{"https://[2001:0DB8:0:0:0:0:0:1]:443"}, "https://[2001:db8::1]"},
+		{"scheme host and default port", []string{"HTTPS://CLIENT.TEST:443"}, "HTTPS://CLIENT.TEST:443"},
+		{"remote http", []string{"http://CLIENT.TEST:80"}, "http://CLIENT.TEST:80"},
+		{"nondefault port", []string{"http://CLIENT.TEST:08080"}, "http://CLIENT.TEST:08080"},
+		{"ipv6", []string{"https://[2001:0DB8:0:0:0:0:0:1]:443"}, "https://[2001:0DB8:0:0:0:0:0:1]:443"},
 		{"ipv6 port", []string{"http://[::1]:8080"}, "http://[::1]:8080"},
-		{"unicode hostname", []string{"https://BÜCHER.test"}, "https://xn--bcher-kva.test"},
+		{"punycode hostname", []string{"https://XN--BCHER-KVA.test"}, "https://XN--BCHER-KVA.test"},
+		{"unicode hostname", []string{"https://BÜCHER.test"}, "malformed"},
+		{"200 bytes", []string{"https://" + strings.Repeat("a.", 94) + "test"}, "https://" + strings.Repeat("a.", 94) + "test"},
+		{"201 bytes", []string{"https://" + strings.Repeat("a.", 94) + "tests"}, "malformed"},
+		{"comma in host", []string{"https://client,other.test"}, "malformed"},
 		{"empty", []string{""}, "malformed"},
 		{"null", []string{"null"}, "malformed"},
 		{"other scheme", []string{"custom://client.test"}, "malformed"},

@@ -11,7 +11,6 @@ import (
 	"sync"
 	"testing"
 	"time"
-	"unicode/utf8"
 )
 
 func originRequest(mux http.Handler, origin, method, path string) {
@@ -117,7 +116,7 @@ func TestMCPOriginTracker_BoundedOverflow(t *testing.T) {
 	}
 }
 
-func TestMCPOriginTracker_TruncatesCanonicalClass(t *testing.T) {
+func TestMCPOriginTracker_RejectsOversizedOrigin(t *testing.T) {
 	var logs bytes.Buffer
 	policy := newMCPOriginPolicy("https://example.test", nil, "log", slog.New(slog.NewJSONHandler(&logs, nil)), time.Now)
 	handler := policy.middleware("", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(204) }))
@@ -128,8 +127,8 @@ func TestMCPOriginTracker_TruncatesCanonicalClass(t *testing.T) {
 		t.Fatal("missing origin class")
 	}
 	logged, ok := records[0]["origin"].(string)
-	if !ok || len(logged) != 200 || !utf8.ValidString(logged) || !strings.HasPrefix(origin, logged) {
-		t.Fatal("canonical origin class was not bounded")
+	if !ok || logged != "malformed" || strings.Contains(logs.String(), origin[:200]) {
+		t.Fatal("oversized origin was logged instead of classified")
 	}
 	if _, stored := policy.tracker.origins[logged]; !stored || len(policy.tracker.origins) != 1 {
 		t.Fatal("tracker retained a value other than the logged class")
@@ -162,11 +161,11 @@ func TestMCPOriginTracker_OnlyStoresClasses(t *testing.T) {
 				t.Fatal("synthetic sensitive input reached the log")
 			}
 			for key := range policy.tracker.origins {
-				if key != "malformed" && key != "multiple" && key != "https://outside.test" {
+				if key != "malformed" && key != "multiple" && key != "https://outside.test" && key != "HTTPS://OUTSIDE.TEST:443" {
 					t.Fatal("tracker retained raw input instead of an origin class")
 				}
 			}
-			if len(policy.tracker.origins) != 3 || len(originLogs(t, &logs)) != 3 || policy.tracker.total != 12 {
+			if len(policy.tracker.origins) != 4 || len(originLogs(t, &logs)) != 4 || policy.tracker.total != 12 {
 				t.Fatal("tracker did not deduplicate classes or count all outside requests")
 			}
 		})

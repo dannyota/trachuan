@@ -1,13 +1,10 @@
 package app
 
 import (
-	"net"
 	"net/netip"
 	"net/url"
 	"strconv"
 	"strings"
-
-	"golang.org/x/net/idna"
 )
 
 func mcpOriginClass(values []string) string {
@@ -17,35 +14,33 @@ func mcpOriginClass(values []string) string {
 	if len(values) != 1 || !validMCPOrigin(values[0]) {
 		return "malformed"
 	}
-	u, err := url.Parse(values[0])
-	if err != nil || (u.Scheme != "http" && u.Scheme != "https") {
-		return "malformed"
+	return values[0]
+}
+
+func validMCPOrigin(raw string) bool {
+	if len(raw) == 0 || len(raw) > 200 {
+		return false
 	}
-	host := strings.ToLower(u.Hostname())
-	if ip, parseErr := netip.ParseAddr(host); parseErr == nil {
-		if ip.Zone() != "" {
-			return "malformed"
-		}
-		host = ip.String()
-	} else {
-		host, err = idna.Lookup.ToASCII(host)
-		if err != nil {
-			return "malformed"
+	for i := range len(raw) {
+		if raw[i] <= ' ' || raw[i] >= 0x7f {
+			return false
 		}
 	}
-	port := u.Port()
-	if port != "" {
-		n, _ := strconv.Atoi(port)
-		port = strconv.Itoa(n)
+	u, err := url.Parse(raw)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || u.Hostname() == "" || u.User != nil || u.Opaque != "" || u.Path != "" || u.RawPath != "" || strings.ContainsAny(raw, "?#,") || strings.HasSuffix(u.Host, ":") {
+		return false
 	}
-	if (u.Scheme == "https" && port == "443") || (u.Scheme == "http" && port == "80") {
-		port = ""
+	if strings.HasPrefix(u.Host, "[") || strings.Contains(u.Hostname(), ":") {
+		ip, parseErr := netip.ParseAddr(u.Hostname())
+		if parseErr != nil || !ip.Is6() || ip.Zone() != "" || !strings.HasPrefix(u.Host, "[") {
+			return false
+		}
 	}
-	if port != "" {
-		host = net.JoinHostPort(host, port)
-	} else if strings.Contains(host, ":") {
-		host = "[" + host + "]"
+	if port := u.Port(); port != "" {
+		n, parseErr := strconv.Atoi(port)
+		if parseErr != nil || n < 1 || n > 65535 {
+			return false
+		}
 	}
-	canonical := u.Scheme + "://" + host
-	return canonical[:min(len(canonical), 200)]
+	return true
 }
