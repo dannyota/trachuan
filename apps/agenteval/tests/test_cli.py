@@ -33,8 +33,10 @@ def test_openai_empty_price_row_refuses_paid_run_but_allows_dry_run():
         ]
     )
     assert prepare_plan(args, ROOT)["planned_tasks"] == 780
-    with pytest.raises(ValueError, match="OpenAI price"):
+    with pytest.raises(ValueError, match="no price row"):
         load_prices(["openai-test"])
+    both = ["claude-sonnet-5-5", "claude-opus-5-5"]
+    assert set(load_prices(both)) == set(both)
 
 
 @pytest.mark.parametrize(
@@ -120,19 +122,28 @@ def test_dry_run_starts_stack_discovers_both_servers_without_model_clients(
     assert "fixture_tool" in capsys.readouterr().out
 
 
-def test_at_most_one_openai_model_in_plan():
-    args = parse_args(
-        [
-            "run",
-            "--models",
-            "openai-a,openai-b",
-            "--dry-run",
-            "--query-embedder-url",
-            "http://127.0.0.1:8091",
-        ]
+def plan_for(models):
+    return prepare_plan(
+        parse_args(
+            [
+                "run",
+                "--models",
+                models,
+                "--dry-run",
+                "--query-embedder-url",
+                "http://127.0.0.1:8091",
+            ]
+        ),
+        ROOT,
     )
+
+
+def test_two_priced_claude_models_plan_and_unpriced_claude_model_refuses():
+    assert plan_for("claude-sonnet-5-5,claude-opus-5-5")["planned_tasks"] == 780
     with pytest.raises(ValueError):
-        prepare_plan(args, ROOT)
+        plan_for("claude-unpriced-1")
+    with pytest.raises(ValueError):
+        plan_for("claude-sonnet-5-5,claude-opus-5-5,openai-a")
 
 
 def test_password_configuration_error_names_variable_without_value(tmp_path, monkeypatch, capsys):

@@ -29,11 +29,11 @@ the repository root. `work/` is already ignored.
   they go only into server environments, never command arguments or results.
 - Include the sibling server change that implements
   `SERVER_COMPACT_RELATED=omit` before measuring trimmed compact.
-- Fill the OpenAI row in `apps/agenteval/src/trachuan_agenteval/prices.json`
-  with the exact model ID, input, output, cache-read and cache-write USD rates
-  per million tokens and the source URL. Paid OpenAI runs refuse an empty or
-  mismatched row. The Anthropic row uses the coordinator's table cached on
-  2026-11-03.
+- The evaluated models are `claude-sonnet-5-5` and `claude-opus-5-5` (owner
+  decision, 2026-11-15). `apps/agenteval/src/trachuan_agenteval/prices.json`
+  holds one row per model with input, output, cache-read and cache-write USD
+  rates per million tokens and the source URL; a model without a row cannot run
+  paid. The rows use Anthropic's table cached on 2026-11-03.
 
 The harness builds the server, fake Google provider and matcher offline. It
 creates one fresh `trachuan_e2e_<random>` auth database using the same `psql`
@@ -56,25 +56,24 @@ server test hook or personal token is used.
 
 ## Dry run
 
-No model key or completed OpenAI price row is needed. This command starts both
-servers, completes OAuth, discovers the tools and prints task counts, tool names
-and the USD scheduling ceiling. It writes only a manifest.
+No model key is needed. This command starts both servers, completes OAuth,
+discovers the tools and prints task counts, tool names and the USD scheduling
+ceiling. It writes only a manifest.
 
 ```sh
 cd apps/agenteval
 uv run --frozen --offline agenteval run \
-  --models claude-sonnet-5-5,OPENAI_MODEL \
-  --modes full,compact,trimmed --cases all --runs 2 \
-  --budget-usd 60 --query-embedder-url http://127.0.0.1:8091 --dry-run
+  --models claude-sonnet-5-5,claude-opus-5-5 \
+  --modes full,compact,trimmed --cases all --runs 1 \
+  --budget-usd 40 --query-embedder-url http://127.0.0.1:8091 --dry-run
 ```
 
 ## Pilot and full run
 
 Paid runs need the coordinator's approval of models and budget. Source keys in a
 subshell for each command. Replace `<key file>` with the owner's path. The
-harness reads only `ANTHROPIC_API_KEY` and `OPENAI_API_KEY` from its own
-environment. Never print keys or put their values in arguments. The example
-contains names only.
+harness reads only `ANTHROPIC_API_KEY` from its own environment. Never print
+keys or put their values in arguments. The example contains names only.
 
 Pilot with two cases, one run per mode, one model and a USD 3 ceiling:
 
@@ -87,17 +86,16 @@ Pilot with two cases, one run per mode, one model and a USD 3 ceiling:
    --query-embedder-url http://127.0.0.1:8091)
 ```
 
-After the OpenAI row and key are ready, run both models on all 65 cases. The
-default two runs give 780 tasks. Replace `OPENAI_MODEL` with the exact ID in the
-price table. Export the owner's chosen OpenAI key as `OPENAI_API_KEY` in the
-same subshell if the key file uses another variable name.
+The full run uses one run per mode per model (coordinator decision, 2026-11-15):
+195 tasks per model, each model in its own command with its own cap, USD 40 for
+Sonnet and USD 60 for Opus:
 
 ```sh
 (set -a; . <key file>; set +a;
  ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY_DANNY2" \
  uv run --frozen --offline agenteval run \
-   --models claude-sonnet-5-5,OPENAI_MODEL \
-   --modes full,compact,trimmed --cases all --runs 2 --budget-usd 60 \
+   --models claude-sonnet-5-5 \
+   --modes full,compact,trimmed --cases all --runs 1 --budget-usd 40 \
    --query-embedder-url http://127.0.0.1:8091)
 ```
 

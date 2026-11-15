@@ -18,7 +18,7 @@ from anthropic import AsyncAnthropic
 from openai import AsyncOpenAI
 
 from .oauth import authorize
-from .pricing import load_prices, load_table
+from .pricing import load_prices, load_table, provider_for
 from .prompt import SYSTEM
 from .providers import AnthropicProvider, OpenAIProvider
 from .runner import execute
@@ -58,11 +58,10 @@ def prepare_plan(args: argparse.Namespace, root: Path) -> dict:
         not models
         or len(models) != len(set(models))
         or len(models) > 2
-        or sum(m != "claude-sonnet-5-5" for m in models) > 1
         or any(not m.strip() or m != m.strip() for m in models)
-        or any(m.startswith("claude-") and m != "claude-sonnet-5-5" for m in models)
+        or any(provider_for(m) == "anthropic" and m not in load_table() for m in models)
     ):
-        raise ValueError("select claude-sonnet-5-5 and at most one OpenAI model")
+        raise ValueError("select at most two models; Claude models need a price row")
     if (
         not modes
         or len(modes) != len(set(modes))
@@ -123,7 +122,7 @@ async def run(args: argparse.Namespace, root: Path) -> int:
     keys = {}
     if not args.dry_run:
         for model in models:
-            name = "ANTHROPIC_API_KEY" if model == "claude-sonnet-5-5" else "OPENAI_API_KEY"
+            name = "ANTHROPIC_API_KEY" if provider_for(model) == "anthropic" else "OPENAI_API_KEY"
             if not os.environ.get(name):
                 raise ValueError(name + " is required in the process environment")
             keys[model] = os.environ[name]
@@ -177,7 +176,7 @@ async def run(args: argparse.Namespace, root: Path) -> int:
                 provider_http = await resources.enter_async_context(
                     httpx2.AsyncClient(trust_env=False, follow_redirects=False, timeout=180)
                 )
-                if model == "claude-sonnet-5-5":
+                if provider_for(model) == "anthropic":
                     client = await resources.enter_async_context(
                         AsyncAnthropic(
                             api_key=keys[model],

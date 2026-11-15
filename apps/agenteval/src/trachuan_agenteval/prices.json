@@ -1,6 +1,6 @@
 {
-  "anthropic": {
-    "model": "claude-sonnet-5-5",
+  "claude-sonnet-5-5": {
+    "provider": "anthropic",
     "input": "2",
     "output": "10",
     "cache_read": "0.10",
@@ -8,12 +8,13 @@
     "source_url": "https://platform.claude.com/docs/en/about-claude/pricing",
     "source_cached": "2026-11-03"
   },
-  "openai": {
-    "model": "",
-    "input": null,
-    "output": null,
-    "cache_read": null,
-    "cache_write": null,
-    "source_url": "https://developers.openai.com/api/docs/pricing"
+  "claude-opus-5-5": {
+    "provider": "anthropic",
+    "input": "4",
+    "output": "20",
+    "cache_read": "0.20",
+    "cache_write": "5.00",
+    "source_url": "https://platform.claude.com/docs/en/about-claude/pricing",
+    "source_cached": "2026-11-03"
   }
 }
