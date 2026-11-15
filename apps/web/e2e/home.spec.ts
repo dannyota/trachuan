@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { withStatusSite } from './status-fixture'
 
 const account = { id: 1, email: 'test@example.invalid', created_at: '2099-01-01T00:00:00Z', csrf_token: 'token' }
 
@@ -59,5 +60,36 @@ for (const width of [1280, 390]) {
       expect(contentLeft).toBe(width === 390 ? 16 : 40)
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  })
+}
+
+for (const width of [320, 390, 767, 768, 1023, 1024, 1280]) {
+  test(`coverage values and code fit at ${width}px`, async ({ page }) => {
+    await withStatusSite({ release: '20990101', documents: 1234567, provisions: 9876543, nodes: 2, newest_source_date: '2099-12-28', gaps: {} }, async origin => {
+      await page.setViewportSize({ width, height: 900 })
+      for (const language of ['vi', 'en']) {
+        await page.setExtraHTTPHeaders({ 'x-trachuan-language': language })
+        for (const path of ['/', '/sources']) {
+          await page.goto(origin + path)
+          const values = page.locator('.coverage-stats dd')
+          await expect(values).toHaveCount(4)
+          await expect(values.last()).toContainText('2099')
+          for (const value of await values.all()) {
+            expect(await value.evaluate(element => {
+              const range = document.createRange()
+              range.selectNodeContents(element)
+              const text = range.getBoundingClientRect()
+              const box = element.getBoundingClientRect()
+              return text.width <= box.width + 0.5 && range.getClientRects().length === 1
+            }), `${language} ${path}`).toBe(true)
+          }
+          expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+        }
+      }
+      await page.goto(origin)
+      const command = page.locator('.home-connect-card pre')
+      await expect(command).toHaveCSS('white-space', 'pre-wrap')
+      expect(await command.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true)
+    })
   })
 }
