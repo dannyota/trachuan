@@ -122,3 +122,6 @@ knowledge.
   predecessor comes from the selected report, decisions apply only in the
   evidence stage, the stage has a recipe and input hash, no schema version for
   effects, an identity summary instead of the previous database.
+- 2026-11-15: fourth review round (S-22, S-23): a changed evidence recipe needs
+  a new run; the release floor is set at the first image that admits reviewed
+  effects before a corpus holding them is published.

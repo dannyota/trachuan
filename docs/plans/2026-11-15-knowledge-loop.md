@@ -21,7 +21,7 @@
 ## 16.3 Knowledge contract
 - [ ] One validator (`corpus knowledge check`, build, CI test over `sources/`), all entries together: per-kind target, evidence and `depends` of knowledge-loop.md recomputed from the frozen run, exact-substring quote, refusal of `~k` anchors and URL evidence, stale handling (`knowledge_stale`) for effects and relations; decisions checked for structure only.
 - [ ] `review_decision` bound to key, fingerprint, semantics number and `first_rel`.
-- [ ] `provision_effect` and `relation`: relation method `reviewed` (no schema version; `relation.method` is free text); server admits it in `warnings.go`, `warning_sql.go`, `read_sql.go` and `hydrate_tree.go` (dev2) with an evaluation case; identity (S, T, kind), redundant and contradictory rules; that image released before the first corpus release that holds such rows; runbook line.
+- [ ] `provision_effect` and `relation`: relation method `reviewed` (no schema version; `relation.method` is free text); server admits it in `warnings.go`, `warning_sql.go`, `read_sql.go` and `hydrate_tree.go` (dev2) with an evaluation case; identity (S, T, kind), redundant and contradictory rules; that image live and the release floor confirmed at it before the first corpus release that holds such rows; runbook line.
 
 ## 16.4 Intake and release gate
 - [ ] `sources/<cc>-reports.yaml` with the closed schema, origin registry, 500-record bound, replay idempotence; detector `external_report`; `corpus findings import` converts an export batch into records for a pull request; error-reports.md keeps its batch guarantees.

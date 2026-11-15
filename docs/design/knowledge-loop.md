@@ -31,8 +31,8 @@ never reports zero findings.
 
 - **Recipe**, frozen when the run first includes the stage: the registry
   (detector versions and semantics numbers), detector configuration and the
-  serialization rules of the files it writes. A detector fix changes the recipe
-  and reruns this stage alone.
+  serialization rules of the files it writes. A changed recipe needs a new run,
+  as for every stage.
 - **Input hash**: the build artifact, the selected evaluation report with that
   report's gap snapshot, the reviewed knowledge bytes of the build input, and
   the predecessor's evidence ([Findings](#findings)).
@@ -164,8 +164,11 @@ admit `reviewed` wherever it lists the methods that reach a provision
 (`internal/retrieval`: `warnings.go`, `warning_sql.go`, `read_sql.go`,
 `hydrate_tree.go`), with an evaluation case. An image without that change serves
 such a row as a plain document-level relation and gives no warning on the
-provision; nothing fails. So the image is released first, and the runbook says
-so.
+provision; nothing fails, but the warning is lost. So before a corpus release
+that holds such rows is published, the first image that admits the method is
+live and the release floor is confirmed at that image
+([pull deployment](pull-deployment.md#release-floor)), so no rollback can reach
+an older one.
 
 ### Control frameworks
 
