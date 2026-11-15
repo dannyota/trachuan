@@ -85,7 +85,7 @@ func toolCall[In, Out any](cfg Config, name string, run func(context.Context, In
 			if outputResolved.Validate(data) != nil {
 				return nil, retrieval.ErrUnavailable
 			}
-			return result, nil
+			return compactRelatedResult(cfg, name, any(in), result)
 		}
 		out, err := run(ctx, in)
 		if err != nil {
@@ -95,6 +95,6 @@ func toolCall[In, Out any](cfg Config, name string, run func(context.Context, In
 		if err != nil || outputResolved.Validate(data) != nil {
 			return nil, retrieval.ErrUnavailable
 		}
-		return result, nil
+		return compactRelatedResult(cfg, name, any(in), result)
 	}
 }

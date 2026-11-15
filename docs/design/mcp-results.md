@@ -243,8 +243,9 @@ product cohort; otherwise the snippet cap or the compact default changes before
 the server ships.
 
 After the server exists, an agent-in-the-loop check runs on the development
-cohort with only the MCP tools: one Claude and one OpenAI client model, model
-versions recorded, the same system prompt, each case twice per mode per model.
+cohort with only the MCP tools: two Claude client models (Sonnet and Opus; the
+owner chose Claude only on 2026-11-14), model versions recorded, the same system
+prompt, each case once per mode per model within the budget the primary sets.
 Per model it records expected provisions cited under the product matcher, tool
 calls, input tokens summed over every model request in the task as the provider
 reports them, and tool-result size separately. Compact stays the default only
@@ -253,4 +254,6 @@ input tokens are lower than full. Trimmed compact (document entries without
 `related`, ADR 0013 History 2026-11-14) runs in the same check as a third mode
 and replaces current compact only if, for each model, its mean cited expected
 provisions are at least current compact's and its mean summed input tokens are
-lower. No question text is stored outside the evaluation files.
+lower. No question text is stored outside the evaluation files. The server
+setting `SERVER_COMPACT_RELATED=omit` serves trimmed compact for this check; it
+stays evaluation-only until trimmed compact passes it.
