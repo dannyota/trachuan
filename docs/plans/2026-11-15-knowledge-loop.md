@@ -26,7 +26,7 @@
 
 ## 16.4 Intake and release gate
 - [ ] `sources/<cc>-reports.yaml` with the closed schema, origin registry, 500-record bound, replay idempotence; detector `external_report`; `corpus findings import` converts an export batch into records for a pull request; error-reports.md keeps its batch guarantees.
-- [ ] `identity.jsonl` in the evidence artifact and `changes.jsonl` from this summary and the predecessor's (cause classes, legal and provenance changes, no moves, `baseline` when the predecessor has none); upload of all three files; their hashes in the signed manifest; uploader and signing validator enforce the gate table of knowledge-loop.md; corpus-release.md updated in the same change.
+- [ ] `identity.jsonl` in the evidence artifact (parent anchors, ambiguity mark, relation ends with `exact` and `named`, validity rows, the one hash format) and `changes.jsonl` from this summary and the predecessor's (bound to the predecessor's `identity.jsonl` hash; cause classes, hand-over key changes, legal and provenance changes, no moves, `baseline` when the predecessor has none), per release-evidence.md; upload of all three files; their hashes in the signed manifest; uploader and signing validator enforce the gate table of release-evidence.md; corpus-release.md updated in the same change.
 
 ## 16.5 First use
 - [ ] Triage the first run's findings in batches (model-adjudicated with a 10 percent read sample); operative claims in the 394 partly expired documents and the 196 `ocr_label_flagged` documents first.

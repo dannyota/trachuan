@@ -2,9 +2,9 @@
 
 Decision: [ADR 0017](../adr/0017-findings-and-reviewed-knowledge.md). Evidence:
 [write-path survey](../research/write-path-findings-2026-11.md). This note owns
-detectors, findings, the contract for reviewed knowledge, intake and the
-evidence each release carries. It covers the law corpus. Each existing check and
-input keeps its own note.
+detectors, findings, the contract for reviewed knowledge and intake; the files
+each release carries are in [release evidence](release-evidence.md). It covers
+the law corpus. Each existing check and input keeps its own note.
 
 ## Detectors
 
@@ -215,74 +215,10 @@ batch's files into records for a pull request and writes nothing else.
 
 ## Release evidence
 
-The `evidence` stage runs after `eval` and writes one immutable artifact that
-binds, and never changes, the build artifact and the evaluation report:
-
-- **`findings.json`**: schema version; bindings (`rel`, the dump's SHA-256, the
-  build artifact hash, the report's SHA-256, the detector registry hash, the
-  predecessor's `rel` and the SHA-256 of its `findings.json`, or `none` when it
-  predates evidence); per detector `complete: true` and the number of subjects
-  observed and not observable; every finding with key, fingerprint, semantics
-  number, `first_rel`, status and `carried`; and the keys that are new, gone and
-  carried.
-- **`identity.jsonl`**: this release's identity summary, one JSON object per
-  line. The first line holds the schema version and the bindings. Then:
-  - per document: key, `number_norm`, status class, `eff_from`, `eff_to`,
-    `is_current`, `validity_conflict`, text source, completeness and how it was
-    obtained;
-  - per provision: document key, anchor, the SHA-256 of its own `text` column
-    exactly as stored (UTF-8 bytes, no normalization, not its subtree), and the
-    codes of its effective positive taxonomy nodes, resolved by the serving
-    rules of [taxonomy](taxonomy.md);
-  - every relation by its two ends, kind and method.
-
-  A reader of the dump can recompute every hash and get the same value.
-
-- **`changes.jsonl`**: one JSON object per line; the first line holds the schema
-  version and the bindings. Records are before and after pairs by public
-  identity, from this summary and the predecessor's:
-  - documents added and removed, each with a cause class: `membership`,
-    `coverage` (a fetch gap, a baseline, a withheld text) or `source`. A removed
-    document's provisions are removed with it, under its cause class, and are
-    not listed one by one;
-  - document metadata: `number_norm` before and after on a surviving key;
-  - provisions added, removed and changed (text hash before and after) in
-    surviving documents. Each carries `provenance: true` when its document's
-    text source or completeness changed in this release, so a new extraction is
-    not read as a change of law;
-  - legal changes: status class, `eff_from`, `eff_to`, `is_current`,
-    `validity_conflict`, and relations and effects added and removed;
-  - provenance changes: text source, completeness, served from a baseline;
-  - classification changes: node codes added to and removed from a provision.
-
-  When the predecessor has no summary (it predates evidence, or there is none),
-  the file says `baseline` and lists nothing.
-
-  It reports no "moved" provision: without a verified correspondence between two
-  identities, a move is one removal and one addition for the reader to review.
-
-An evaluation against another predecessor is a new evidence item and artifact.
-Once a `rel` has an upload prefix it is never reused, so that case needs a new
-`rel` ([corpus release](corpus-release.md)). The release upload gains
-`findings.json`, `identity.jsonl` and `changes.jsonl` beside the dump,
-`MANIFEST.sha256`, `report.json` and `release.json`, and the signed corpus
-manifest carries the SHA-256 of all three.
-
-### Gate
-
-| Condition                                                                                                                    | Result                                                                                                                                       |
-| ---------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| every existing rule of corpus release: items complete, every gap accepted, evaluation gates                                  | unchanged                                                                                                                                    |
-| a sidecar missing, or a binding that does not match the dump, the build artifact, the report or the report's `previous_diff` | refuse                                                                                                                                       |
-| a detector not complete                                                                                                      | refuse                                                                                                                                       |
-| an `open` finding of a `blocking` detector, fired or carried                                                                 | refuse                                                                                                                                       |
-| `open` findings of `review` and `info` detectors                                                                             | allowed, counted                                                                                                                             |
-| first release with evidence                                                                                                  | allowed: the predecessor's identity is recorded, its findings are empty and `changes.jsonl` is `baseline`; every existing rule still applies |
-
-`identity.jsonl` and `changes.jsonl` are the downstream products' input for
-selecting what to import and re-checking their own mappings. An effect has no
-date. The acting document's `eff_from` describes that document only; a provision
-may commence later, so no date of effect is to be inferred from it.
+After `eval`, an `evidence` stage writes `findings.json`, `identity.jsonl` and
+`changes.jsonl`, bound to the build and the report, uploaded beside the dump and
+hashed into the signed manifest. The file shapes, their bindings and the release
+gate are in [release evidence](release-evidence.md).
 
 ## What stays out
 

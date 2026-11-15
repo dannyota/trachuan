@@ -130,3 +130,8 @@ knowledge.
   signed, per-provision hash defined as SHA-256 of the stored text, validity
   dates and taxonomy codes in the summary, the change list as JSON Lines, the
   intake claim codes fixed.
+- 2026-11-15: after sc365's application read: the evidence files move to their
+  own note; the summary gains parent anchors, an ambiguity mark, relation ends
+  with `exact` and `named`, and provision validity rows; the change list binds
+  the predecessor's summary and records a hand-over's key change; one hash
+  format.
