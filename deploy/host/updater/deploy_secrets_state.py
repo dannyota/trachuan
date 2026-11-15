@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 
 from .deploy_io import atomic, canonical
-from .deploy_vault import names
+from .deploy_vault import names, retired
 
 
 class SecretsState:
@@ -13,7 +13,21 @@ class SecretsState:
             self.data = json.loads(self.path.read_bytes())
         except FileNotFoundError:
             self.data = dict(versions={}, pending={}, last_success_at=None, held=False)
+        self.prune_retired()
         self.validate()
+
+    def prune_retired(self):
+        data = self.data
+        if not isinstance(data, dict) or not all(isinstance(data.get(key), dict) for key in ('versions', 'pending')):
+            return
+        for name in retired():
+            if name in data['pending']:
+                raise ValueError('invalid secret state: retired secret ' + name + ' is pending')
+            if name in data['versions']:
+                version = data['versions'][name]
+                if type(version) is not int or version < 1:
+                    raise ValueError('invalid secret state')
+                del data['versions'][name]
 
     def validate(self):
         try:
@@ -37,3 +51,13 @@ class SecretsState:
     def save(self):
         self.validate()
         atomic(self.path, canonical(self.data) + b'\n', 0o600)
+
+
+def raw_pending(path):
+    try:
+        raw = json.loads(Path(path).read_bytes())
+    except (OSError, ValueError):
+        return False
+    pending = raw.get('pending') if isinstance(raw, dict) else None
+    return isinstance(pending, dict) and bool(pending)
+

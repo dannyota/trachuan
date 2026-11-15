@@ -19,7 +19,7 @@ class SecretsFixture(fixture.ActivationFixture):
         self.rules['secrets'] = ['google_client_secret', 'smtp_username', 'smtp_password',
                                 'account_keys', 'postgres_password', 'auth_db_password',
                                 'corpus_reader_password', 'activator_db_password',
-                                'backup_s3_key', 'backup_s3_key_secret', 'server_signup_emails']
+                                'backup_s3_key', 'backup_s3_key_secret']
         self.values = {name: b'synthetic-' + name.encode() for name in self.rules['secrets']}
         self.values['auth_db_password'] = b'synthetic:/?#@ %'
         self.versions = dict.fromkeys(self.values, 1)
@@ -330,3 +330,27 @@ class SecretsTest(SecretsFixture, unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class RetiredSecretStateTest(unittest.TestCase):
+    def test_retired_name_is_pruned_and_unknown_name_still_fails(self):
+        import json
+        import tempfile
+
+        from updater.deploy_secrets_state import SecretsState
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'secrets-state.json'
+            path.write_text(json.dumps(dict(
+                versions={'smtp_password': 2, 'server_signup_emails': 3},
+                pending={}, last_success_at=None, held=False)))
+            state = SecretsState(path)
+            self.assertEqual(state.data['versions'], {'smtp_password': 2})
+            for versions, pending in (({'server_signup_emails': None}, {}), ({}, {'server_signup_emails': 4})):
+                path.write_text(json.dumps(dict(versions=versions, pending=pending, last_success_at=None, held=False)))
+                with self.assertRaises(ValueError):
+                    SecretsState(path)
+            path.write_text(json.dumps(dict(
+                versions={'unexpected_secret': 1}, pending={}, last_success_at=None, held=False)))
+            with self.assertRaises(ValueError):
+                SecretsState(path)

@@ -11,7 +11,7 @@ from .deploy_floor import check_floor
 from .deploy_io import atomic, Busy, command, CommandError, Lock, Result
 from .deploy_registry import Registry
 from .deploy_secrets import Secrets
-from .deploy_secrets_state import SecretsState
+from .deploy_secrets_state import raw_pending, SecretsState
 from .deploy_state import State
 from .deploy_store import Candidate, Paths, Store
 from .deploy_verify import match, policy, positive, Verifier, verify_manifest
@@ -55,7 +55,7 @@ class Updater:
         try:
             return bool(SecretsState(self.paths.state / 'secrets-state.json').data['pending'])
         except (OSError, ValueError):
-            return False
+            return raw_pending(self.paths.state / 'secrets-state.json')
 
     def secrets(self, state, directory, mode, result, force=False):
         self.step = 'secrets'

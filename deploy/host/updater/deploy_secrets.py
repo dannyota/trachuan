@@ -8,7 +8,7 @@ import time
 from urllib.parse import quote
 
 from .deploy_io import CommandError, Result
-from .deploy_secrets_state import SecretsState
+from .deploy_secrets_state import raw_pending, SecretsState
 
 
 def consumers(directory, secrets):
@@ -175,7 +175,8 @@ class Secrets:
             elif isinstance(error, ValueError) and 'REPLACE' in self.rules['vault_id'].upper():
                 code = 'PlaceholderVault'
             result.write('failed', 'secrets', self.name + ': ' + code)
-            if self.data and self.data['pending']:
+            if (self.data and self.data['pending']) or (
+                    self.storage is None and raw_pending(self.host.paths.state / 'secrets-state.json')):
                 self.host.hold()
                 try:
                     self.host.systemctl('stop', 'caddy')

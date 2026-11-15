@@ -60,11 +60,25 @@ class SecretsRunTest(fixture.SecretsFixture, unittest.TestCase):
         self.assertEqual(json.loads(path.read_bytes())['versions'], self.versions)
         self.assertEqual(self.restarts(), [])
 
+    def test_invalid_metadata_with_pending_work_blocks_activation(self):
+        metadata = dict(versions={}, pending={}, last_success_at=None, held=False)
+        for pending in ({'smtp_password': 'invalid'}, {'server_signup_emails': 4}):
+            with self.subTest(pending=pending):
+                self.setUp()
+                path = self.paths.state / 'secrets-state.json'
+                raw = canonical(dict(metadata, pending=pending))
+                path.write_bytes(raw)
+                self.assertEqual(self.app.run(), 1)
+                self.assertNotEqual(State(self.state.path).data['active'], self.new.hash)
+                self.assertTrue(self.paths.hold.exists())
+                self.assertEqual(path.read_bytes(), raw)
+                result = json.loads(self.paths.result.with_name('secrets.json').read_bytes())
+                self.assertEqual((result['status'], result['step']), ('failed', 'secrets'))
+
     def test_corrupt_secret_metadata_fails_secrets_but_images_still_activate(self):
         metadata = dict(versions={}, pending={}, last_success_at=None, held=False)
         cases = [b'{synthetic corrupt metadata', b'[]', b'null', b'{}',
                  canonical(dict(metadata, versions={'unlisted': 1})),
-                 canonical(dict(metadata, pending={'smtp_password': 'invalid'})),
                  canonical(dict(metadata, held='invalid')),
                  canonical(dict(metadata, last_success_at='invalid'))]
         for raw in cases:

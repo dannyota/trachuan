@@ -278,6 +278,11 @@ class RunTest(fixture.ActivationFixture, unittest.TestCase):
         self.assertEqual(State(self.state.path).data['active'], fixed.hash)
         self.assertFalse(self.paths.hold.exists())
 
+    def test_pending_retired_secret_counts_as_pending(self):
+        (self.paths.state / 'secrets-state.json').write_text(json.dumps(dict(
+            versions={}, pending={'server_signup_emails': 4}, last_success_at=None, held=False)))
+        self.assertTrue(self.app.secret_pending())
+
 
 if __name__ == '__main__':
     unittest.main()
