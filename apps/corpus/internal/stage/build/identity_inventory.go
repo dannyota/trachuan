@@ -10,7 +10,6 @@ import (
 	"danny.vn/trachuan/internal/retrieval"
 )
 
-// IdentityInventory verifies artifacts and extracts document-qualified identities.
 func IdentityInventory(inv Inventory, artifacts artifact.Store) (evaluation.IdentityInventory, error) {
 	return identityInventory(inv, artifacts, identityConcurrency)
 }
@@ -23,7 +22,27 @@ func identityFetchError(err error, decoding bool) error {
 }
 
 func identityInventory(inv Inventory, artifacts artifact.Store, limit int) (evaluation.IdentityInventory, error) {
+	out, _, err := identityInventoryWithFetch(inv, artifacts, limit, readIdentityFetch)
+	return out, err
+}
+
+type verifiedFetch struct {
+	document fetch.Document
+	dir      string
+	hash     string
+}
+
+func (l *loader) verifiedDocument(item InventoryItem) (verifiedFetch, error) {
+	verified, ok := l.verified[item.ItemKey]
+	if !ok || item.ArtifactSHA256 == nil || verified.hash != *item.ArtifactSHA256 {
+		return verifiedFetch{}, fmt.Errorf("missing verified fetch for %s", item.ItemKey)
+	}
+	return verified, nil
+}
+
+func identityInventoryWithFetch(inv Inventory, artifacts artifact.Store, limit int, read func(artifact.Store, InventoryItem) identityResult) (evaluation.IdentityInventory, map[string]verifiedFetch, error) {
 	out := evaluation.IdentityInventory{Documents: map[string]evaluation.IdentityDocument{}, Replacements: map[string]string{}}
+	verified := make(map[string]verifiedFetch)
 	for _, entry := range inv.Membership.Entries {
 		if entry.Disposition == "source_replaced" && entry.ReplacementKey != nil {
 			out.Replacements[entry.DocumentKey] = *entry.ReplacementKey
@@ -43,13 +62,14 @@ func identityInventory(inv Inventory, artifacts artifact.Store, limit int) (eval
 			fetchItems = append(fetchItems, item)
 		}
 	}
-	fetchPool := newIdentityPool(len(fetchItems), limit, func(i int) identityResult { return readIdentityFetch(artifacts, fetchItems[i]) })
+	fetchPool := newIdentityPool(len(fetchItems), limit, func(i int) identityResult { return read(artifacts, fetchItems[i]) })
 	for i, item := range fetchItems {
 		result := fetchPool.take(i)
 		if result.err != nil {
 			fetchPool.stop()
-			return out, result.err
+			return out, nil, result.err
 		}
+		verified[item.ItemKey] = verifiedFetch{document: result.detail, dir: result.dir, hash: *item.ArtifactSHA256}
 		if !present[item.ItemKey] {
 			continue
 		}
@@ -97,7 +117,7 @@ func identityInventory(inv Inventory, artifacts artifact.Store, limit int) (eval
 	for i, item := range items {
 		result := pool.take(i)
 		if result.err != nil {
-			return out, result.err
+			return out, nil, result.err
 		}
 		if item.Stage == "relate" {
 			continue
@@ -109,5 +129,5 @@ func identityInventory(inv Inventory, artifacts artifact.Store, limit int) (eval
 		}
 		out.Documents[item.ItemKey] = doc
 	}
-	return out, nil
+	return out, verified, nil
 }

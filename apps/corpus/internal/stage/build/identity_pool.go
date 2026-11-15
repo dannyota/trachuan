@@ -12,6 +12,7 @@ const identityConcurrency = 8
 
 type identityResult struct {
 	detail fetch.Document
+	dir    string
 	nodes  []chunk.Node
 	err    error
 }
@@ -69,5 +70,5 @@ func readIdentityFetch(artifacts artifact.Store, item InventoryItem) identityRes
 	if err != nil {
 		return identityResult{err: identityFetchError(err, true)}
 	}
-	return identityResult{detail: detail}
+	return identityResult{detail: detail, dir: dir}
 }

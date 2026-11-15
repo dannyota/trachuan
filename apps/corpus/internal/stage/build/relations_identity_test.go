@@ -62,8 +62,12 @@ func TestLoadRelations_TextIdentityGate(t *testing.T) {
 			}
 			input := relate.PairInputHash(source.SHA256, "-")
 			relations := publish("relate", input, map[string]any{"relations.json": rows})
+			targetResult := readIdentityFetch(artifacts, InventoryItem{ItemKey: "vn:vbpl:2", Path: &target.Path, ArtifactSHA256: &target.SHA256})
+			if targetResult.err != nil {
+				t.Fatal(targetResult.err)
+			}
 			tx := &noneTx{}
-			l := loader{tx: tx, artifacts: artifacts, items: map[string]map[string]InventoryItem{
+			l := loader{tx: tx, artifacts: artifacts, verified: map[string]verifiedFetch{"vn:vbpl:2": {document: targetResult.detail, dir: targetResult.dir, hash: target.SHA256}}, items: map[string]map[string]InventoryItem{
 				"fetch": {
 					"vn:vbpl:1": {ItemKey: "vn:vbpl:1", State: "done", Path: &source.Path, ArtifactSHA256: &source.SHA256},
 					"vn:vbpl:2": {ItemKey: "vn:vbpl:2", State: "done", Path: &target.Path, ArtifactSHA256: &target.SHA256},

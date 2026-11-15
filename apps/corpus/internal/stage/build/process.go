@@ -55,7 +55,7 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 		return stage.Output{}, temporal.NewNonRetryableApplicationError("inventory_changed", "inventory_changed", err)
 	}
 	phaseStart := time.Now()
-	planned, err := s.Plan(ctx, env, run)
+	planned, verified, err := s.plan(ctx, env, run)
 	if err != nil {
 		return stage.Output{}, err
 	}
@@ -125,7 +125,7 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 		return stage.Output{}, temporal.NewNonRetryableApplicationError("inventory_changed", "inventory_changed", err)
 	}
 	phaseStart = time.Now()
-	counts, err := Load(ctx, conn.Conn(), inv, env.Artifacts, Recipes{Dense: embedding.DocumentRecipe1(), Lexical: lexical.Recipe1()}, codes.StatusCodes, entries, run.Rel[:4]+"-"+run.Rel[4:6]+"-"+run.Rel[6:8], LoadOptions{Pins: codes.VBPL.Pinned, CentralIssuers: codes.CentralIssuers, Taxonomy: s.cfg.Taxonomy, Durations: timings})
+	counts, err := Load(ctx, conn.Conn(), inv, env.Artifacts, Recipes{Dense: embedding.DocumentRecipe1(), Lexical: lexical.Recipe1()}, codes.StatusCodes, entries, run.Rel[:4]+"-"+run.Rel[4:6]+"-"+run.Rel[6:8], LoadOptions{Pins: codes.VBPL.Pinned, CentralIssuers: codes.CentralIssuers, Taxonomy: s.cfg.Taxonomy, Durations: timings, verified: verified})
 	if err != nil {
 		return stage.Output{}, err
 	}

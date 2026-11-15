@@ -63,14 +63,11 @@ func (l *loader) loadDocuments(ctx context.Context) error {
 		if !ok || item.State != "done" {
 			continue
 		}
-		dir, err := artifactDir(l.artifacts, item)
+		verified, err := l.verifiedDocument(item)
 		if err != nil {
 			return fmt.Errorf("fetch artifact: %w", err)
 		}
-		d, err := fetch.ReadDocument(dir, key)
-		if err != nil {
-			return fmt.Errorf("decode fetch artifact: %w", err)
-		}
+		dir, d := verified.dir, verified.document
 		files := d.Files
 		sort.Slice(files, func(i, j int) bool {
 			if files[i].Name != files[j].Name {

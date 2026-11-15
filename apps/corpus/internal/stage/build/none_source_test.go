@@ -49,8 +49,12 @@ func TestLoad_RejectsProvisionsForNoneSource(t *testing.T) {
 			input := fetch.ExtractInputHash(f.SHA256, "none", "no_text_source")
 			e := publish("extract", input, map[string]string{"text.json": `{"text_source":"none","gap":"no_text_source","provisions":` + tc.entries + `}`, "provisions.json": `[{"node_id":"tx:1","kind":"dieu","label":"Điều 1","ordinal":1,"path":"dieu-1","text":"Nội dung"}]`})
 			key := "vn:vbpl:1"
+			result := readIdentityFetch(store, InventoryItem{ItemKey: key, Path: &f.Path, ArtifactSHA256: &f.SHA256})
+			if result.err != nil {
+				t.Fatal(result.err)
+			}
 			tx := &noneTx{}
-			l := loader{tx: tx, inv: Inventory{Country: "vn", ExpectedKeys: []string{key}}, artifacts: store, present: map[string]bool{key: true}, docs: map[string]*loadedDocument{}, items: map[string]map[string]InventoryItem{
+			l := loader{tx: tx, inv: Inventory{Country: "vn", ExpectedKeys: []string{key}}, artifacts: store, verified: map[string]verifiedFetch{key: {document: result.detail, dir: result.dir, hash: f.SHA256}}, present: map[string]bool{key: true}, docs: map[string]*loadedDocument{}, items: map[string]map[string]InventoryItem{
 				"fetch":   {key: {ItemKey: key, State: "done", Path: &f.Path, ArtifactSHA256: &f.SHA256}},
 				"extract": {key: {ItemKey: key, State: "done", Path: &e.Path, ArtifactSHA256: &e.SHA256, InputHash: &input}},
 			}}

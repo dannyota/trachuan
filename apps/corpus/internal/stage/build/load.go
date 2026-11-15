@@ -37,6 +37,7 @@ type loader struct {
 	present         map[string]bool
 	members         map[string]membership.Entry
 	provenanceFiles map[string][]provenanceFile
+	verified        map[string]verifiedFetch
 	gaps            []InventoryGap
 	counts          Counts
 }
@@ -46,6 +47,7 @@ type LoadOptions struct {
 	CentralIssuers map[string]string
 	Taxonomy       TaxonomyInput
 	Durations      map[string]int64
+	verified       map[string]verifiedFetch
 }
 
 func Load(ctx context.Context, conn *pgx.Conn, inv Inventory, artifacts artifact.Store, recipes Recipes, codes map[string]source.StatusCode, corrections []source.Correction, asOf string, options ...LoadOptions) (Counts, error) {
@@ -63,6 +65,19 @@ func Load(ctx context.Context, conn *pgx.Conn, inv Inventory, artifacts artifact
 	if recipes.Lexical != lexical.Recipe1() {
 		return Counts{}, fmt.Errorf("unsupported lexical recipe")
 	}
+	if opts.verified == nil {
+		opts.verified = make(map[string]verifiedFetch)
+		for _, item := range inv.Items {
+			if item.Stage != "fetch" || item.State != "done" {
+				continue
+			}
+			result := readIdentityFetch(artifacts, item)
+			if result.err != nil {
+				return Counts{}, result.err
+			}
+			opts.verified[item.ItemKey] = verifiedFetch{document: result.detail, dir: result.dir, hash: *item.ArtifactSHA256}
+		}
+	}
 	for code, v := range codes {
 		current := v.Class == "in_force" || v.Class == "partial"
 		valid := current || v.Class == "expired" || v.Class == "not_yet" || v.Class == "suspended" || v.Class == "unknown"
@@ -75,7 +90,7 @@ func Load(ctx context.Context, conn *pgx.Conn, inv Inventory, artifacts artifact
 		return Counts{}, fmt.Errorf("begin corpus load: %w", err)
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
-	l := loader{tx: tx, inv: inv.sorted(), artifacts: artifacts, recipes: recipes, codes: codes, items: make(map[string]map[string]InventoryItem), docs: make(map[string]*loadedDocument), present: inv.Presence(), members: map[string]membership.Entry{}, provenanceFiles: map[string][]provenanceFile{}, gaps: append([]InventoryGap{}, inv.Gaps...)}
+	l := loader{tx: tx, inv: inv.sorted(), artifacts: artifacts, recipes: recipes, codes: codes, items: make(map[string]map[string]InventoryItem), docs: make(map[string]*loadedDocument), present: inv.Presence(), members: map[string]membership.Entry{}, provenanceFiles: map[string][]provenanceFile{}, gaps: append([]InventoryGap{}, inv.Gaps...), verified: opts.verified}
 	l.pins = map[string]source.Pin{}
 	for _, pin := range opts.Pins {
 		l.pins[pin.Key] = pin
