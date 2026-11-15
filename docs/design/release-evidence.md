@@ -51,11 +51,20 @@ build artifact hash and the report's SHA-256. Then:
   method), an empty list while that table has no row for it;
 - per relation: kind, method and two ends. Every row of the relation table is
   written, whatever the class, text source or completeness of either document.
-  An end has `key`, `number`, `in_release`, and `anchor`, the anchor of the
-  end's provision or null for a document-level end. The target end of a row that
-  names a provision also has `exact`, and `named` when it is not exact, with the
-  meaning of [MCP results](mcp-results.md): `anchor` is then the deepest
-  resolved ancestor and `named` is the path the act names.
+  An end has `key`, `number`, `in_release`, and `anchor`: the anchor of the
+  provision the row's provision column points to, or null when that column is
+  null, which is a document-level end or a provision end build did not resolve
+  ([relations from text](relations-text.md#resolution-in-build)). The target end
+  also has:
+  - `exact`, only when `anchor` is not null, with the meaning of
+    [MCP results](mcp-results.md);
+  - `named`, for a `text_rule/1` or `reviewed` row whose requested path is not
+    exactly `anchor`: the path the act names, from `target_node_id`. It is
+    present with a null `anchor` when build resolved no provision, and with the
+    deepest resolved ancestor as `anchor` when a clause or point is missing;
+  - `node`, for a row of another method with a null `anchor` and a stored
+    `target_node_id`: the source's node id as stored. It is opaque and is not a
+    path.
 
 ## `changes.jsonl`
 
@@ -75,11 +84,17 @@ predecessor's:
   by one;
 - document key: the key before and after, only for a hand-over that fetch
   recorded as an accepted `source_replaced` naming both keys
-  ([sources](sources.md#secondary-discovery-and-hand-over)). The document is
-  then a surviving document: its metadata, provisions, relations and
-  classification are compared across the two keys, and every provision record
-  carries `provenance: true`. Any other change of key is one removal and one
-  addition;
+  ([sources](sources.md#secondary-discovery-and-hand-over)), and only when the
+  old key has a document line in the predecessor's summary and the new key has
+  one in this summary. The document is then a surviving document, compared as
+  one: metadata and classification as on a surviving key; provisions paired by
+  equal anchor, each record carrying `provenance: true`; relation ends compared
+  with the old key read as the new key, so a relation that differs only by the
+  key is unchanged. When the new key has no document line, as after a failed
+  fetch of the replacement, the old document is a removal with cause `source`
+  that names the replacement key in `replaced_by`, and the replacement is an
+  addition in the release that first holds it. Any other change of key is one
+  removal and one addition;
 - document metadata: `number_norm` before and after on a surviving key;
 - provisions added, removed and changed (text hash before and after) in
   surviving documents. Each carries `provenance: true` when its document's text
