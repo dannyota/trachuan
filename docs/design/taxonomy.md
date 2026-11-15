@@ -150,9 +150,12 @@ below: a release serving `inherited` assignments must pass the inheritance rows,
 and one serving `llm` assignments the LLM rows. A release whose assignments come
 only from seeds and overrides serves them without the classification floors;
 every release that serves nodes must pass the filter gate in
-[evaluation](evaluation.md). The LLM layer's candidate text for a node is,
-versioned with the classification recipe, the names of its ancestors and itself
-joined from the root, followed by its description when it has one.
+[evaluation](evaluation.md). The LLM layer's candidate text for a node
+(`candidate-text/1`, versioned with the classification recipe) is embedded with
+the dense document recipe like a chunk: the context prefix is its ancestors'
+names from the root, joined with `\n`; the content is its own name, followed by
+`\n` and its description when it has one; white space inside each name is
+collapsed.
 
 ## Evaluation gate
 
@@ -163,36 +166,58 @@ Labels are sets, so every metric is micro precision and recall over (article,
 node) pairs. The same set tunes prompts and thresholds and gates the release;
 every prompt or threshold change reruns it.
 
-| Slice                                            | Metric                                              | Floor |
-| ------------------------------------------------ | --------------------------------------------------- | ----- |
-| 300 seeded articles, labels masked               | precision and recall at level 2                     | 0.90  |
-| same                                             | precision and recall at level 3                     | 0.80  |
-| same                                             | precision and recall at the deepest level           | 0.75  |
-| 100 articles with labels in two or more families | precision and recall over all pairs                 | 0.80  |
-| every LLM slice                                  | candidate recall at 10 (true node among candidates) | 0.95  |
-| 100 post-2023 articles, model-adjudicated        | precision and recall at level 2                     | 0.85  |
-| same                                             | precision and recall at the deepest level           | 0.70  |
-| 50 articles that belong to custom nodes          | precision and recall of custom nodes                | 0.80  |
-| seeded consolidated articles, inherited          | precision at level 2 (inheritance layer)            | 0.95  |
-| same                                             | precision at level 3 (inheritance layer)            | 0.90  |
-| same                                             | precision at the deepest level (inheritance layer)  | 0.85  |
+| Slice                                                  | Reference         | Metric                                              | Floor |
+| ------------------------------------------------------ | ----------------- | --------------------------------------------------- | ----- |
+| 300 seeded articles, labels masked                     | seeded, masked    | precision and recall at level 2                     | 0.90  |
+| same                                                   | seeded, masked    | precision and recall at level 3                     | 0.80  |
+| same                                                   | seeded, masked    | precision and recall at the deepest level           | 0.75  |
+| 100 unseeded articles labeled with every family        | model-adjudicated | precision and recall over all pairs                 | 0.80  |
+| every LLM slice                                        | as the slice      | candidate recall at 10 (true node among candidates) | 0.95  |
+| 100 post-2023 articles                                 | model-adjudicated | precision and recall at level 2                     | 0.85  |
+| same                                                   | model-adjudicated | precision and recall at the deepest level           | 0.70  |
+| 50 articles that belong to custom nodes                | seeded            | precision and recall of custom nodes                | 0.80  |
+| 100 inherited consolidated articles                    | model-adjudicated | precision at level 2 (inheritance layer)            | 0.95  |
+| same                                                   | model-adjudicated | precision at level 3 (inheritance layer)            | 0.90  |
+| same                                                   | model-adjudicated | precision at the deepest level (inheritance layer)  | 0.85  |
+| the seeded articles with seeds in two or more families | seeded            | precision and recall over all pairs, reported       | none  |
 
 Every level that a release serves must have a floor in this table; a new level
 or slice is added here before it is served.
 
-The post-2023 reference is model-adjudicated, not owner-labeled: Codex
-`gpt-6-astra` labels 100 post-2023 articles independently, blind to the
-classifier's output and candidates, and the coordinator reads 20 of its labels.
-The coordinator's corrections are applied, then the set is frozen with a hash
-like the seeded set; the slice gates only against that frozen set. The
-custom-node slice does not apply while `custom.yaml` is empty. The inheritance
-slice masks every seeded article of a consolidated document that has a
-corresponding source article and compares the nodes it would inherit with its
-seeds; with fewer than 100 such articles the slice is unavailable. Build
-measures this slice from seeds alone, before it writes assignments: when the
-slice is unavailable or any inheritance row fails, build writes no `inherited`
-assignment and records why in the taxonomy stats, so the release serves seeds
-and overrides only; `corpus eval` reports the same rows.
+A model-adjudicated reference is not owner-labeled: Codex `gpt-6-astra` labels
+the articles independently, blind to the classifier's output and candidates, and
+the coordinator reads 20 of the post-2023 labels and 10 of the multi-family
+labels before either slice gates. Seeds almost never span two families, because
+the package places each article once (17 of 13,027 seeded articles on
+`vn/20261115_2`), so the multi-family slice is model-adjudicated: 100 unseeded
+articles from documents the classifier will see, half drawn from documents whose
+document-level request returns two or more level-2 codes and half at random,
+each labeled with every family that applies. The 17 seeded multi-family articles
+are reported without a floor. The coordinator's corrections are applied, then
+the set is frozen with a hash like the seeded set; the slice gates only against
+that frozen set. The custom-node slice does not apply while `custom.yaml` is
+empty. Seeds land on the original documents the package links, almost never on
+consolidated texts, so no consolidated article has an independent label to
+compare with (run `vn/20261115_2`: 0 testable articles). The inheritance slice
+is therefore model-adjudicated like the post-2023 one: Codex `gpt-6-astra`
+labels 100 inherited consolidated articles blind to the inherited nodes, the
+coordinator reads 20, and the set is frozen with a hash; with fewer than 100
+inherited articles the slice is unavailable. Build measures this slice against
+that frozen set, before it writes assignments; until the set exists the slice is
+unavailable: when the slice is unavailable or any inheritance row fails, build
+writes no `inherited` assignment and records why in the taxonomy stats, so the
+release serves seeds and overrides only; `corpus eval` reports the same rows.
+
+The seeded labeled set is
+`apps/corpus/internal/evaluation/testdata/<cc>/taxonomy-labels.json`: for each
+article its document key, anchor and the seeded node codes, with the release it
+was drawn from. It is drawn once by a fixed seed from the primary articles that
+hold seeds, at most two articles per document, and frozen; its SHA-256 enters
+the evaluation input like the identity map. It holds the 300 masked articles.
+Each model-adjudicated set (multi-family, post-2023, inheritance) is its own
+file beside it, `taxonomy-<slice>.json`, with the same fields, the labeling
+model and the draw rule, frozen with its own SHA-256 after the coordinator's
+reading. A redraw is a reviewed change, never automatic.
 
 The report also lists assignment counts per node, unassigned counts, and the
 diff of node changes against the previous release. A failed floor blocks
