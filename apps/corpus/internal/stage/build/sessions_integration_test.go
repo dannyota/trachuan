@@ -61,13 +61,25 @@ func TestTemporaryDatabase_ClientSessions(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func(c *pgx.Conn) { _ = c.Close(ctx) }(own)
-	if err = recreateTemporary(ctx, admin, cfg, temp, marker); err == nil || !strings.Contains(err.Error(), "active sessions") {
+	const short = 200 * time.Millisecond
+	if err = recreateTemporaryWithin(ctx, admin, cfg, temp, marker, short); err == nil || !strings.Contains(err.Error(), "active sessions") {
 		t.Fatalf("same-role client was not refused: %v", err)
 	}
 	if err = own.Close(ctx); err != nil {
 		t.Fatal(err)
 	}
 	waitClosed(own.PgConn().PID())
+	closing, err := pgx.ConnectConfig(ctx, ownCfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	go func() {
+		time.Sleep(300 * time.Millisecond)
+		_ = closing.Close(context.Background())
+	}()
+	if err = recreateTemporary(ctx, admin, cfg, temp, marker); err != nil {
+		t.Fatalf("session closing during the grace was not awaited: %v", err)
+	}
 	observer, base, err := testpg.OpenAdministrator(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -79,7 +91,7 @@ func TestTemporaryDatabase_ClientSessions(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = foreign.Close(ctx) }()
-	if err = recreateTemporary(ctx, admin, cfg, temp, marker); err == nil || !strings.Contains(err.Error(), "active sessions") {
+	if err = recreateTemporaryWithin(ctx, admin, cfg, temp, marker, short); err == nil || !strings.Contains(err.Error(), "active sessions") {
 		t.Fatalf("foreign client was not refused: %v", err)
 	}
 	own, err = pgx.ConnectConfig(ctx, ownCfg)
