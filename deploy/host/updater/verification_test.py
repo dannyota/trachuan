@@ -18,11 +18,12 @@ FIXTURES = Path(__file__).with_name('fixtures')
 POLICY = Path(__file__).parents[1] / 'deploy-policy.json'
 
 
-def archive(server=b'GOOGLE_CLIENT_ID=public\n', web=b'NITRO_HOST=127.0.0.1\n'):
+def archive(server=b'GOOGLE_CLIENT_ID=public\n', web=b'NITRO_HOST=127.0.0.1\n', policy=None):
     output = io.BytesIO()
     with tarfile.open(fileobj=output, mode='w:gz') as tar:
         for name, data in [('server.env', server), ('web.env', web), ('install.sh', b'#!/bin/bash\n'),
-                           ('quadlet/trachuan-postgres.container', b'Image=@POSTGRES_IMAGE@\n')]:
+                           ('quadlet/trachuan-postgres.container', b'Image=@POSTGRES_IMAGE@\n'),
+                           ('deploy-policy.json', canonical(policy) if policy is not None else POLICY.read_bytes())]:
             entry = tarfile.TarInfo('deploy/host/' + name)
             entry.size = len(data)
             entry.mode = 0o755 if name.endswith('.sh') else 0o644

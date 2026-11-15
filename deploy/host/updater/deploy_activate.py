@@ -1,6 +1,10 @@
+from .deploy_floor import bundle_floor
+
+
 class Activator:
     def __init__(self, state, store, host):
         self.state, self.store, self.host = state, store, host
+        self.recovery_message = 'interrupted activation recovered'
 
     def step(self, name):
         self.state.data['journal']['step'] = name
@@ -55,6 +59,7 @@ class Activator:
         self.host.probe(edge=True)
 
     def activate(self, candidate, expected_schema=None, authorization=None, rollback=None):
+        self.state.check_floor(candidate.manifest['sequence'])
         previous = self.state.data['active']
         baseline = self.host.schema()
         if expected_schema is not None and baseline != expected_schema:
@@ -73,7 +78,8 @@ class Activator:
             self.apply(candidate, restart)
             schema = self.host.schema()
             self.state.data['journal'].update(status='activated', step='complete')
-            self.state.activate(candidate.hash, schema, authorization=authorization)
+            self.state.activate(candidate.hash, schema, authorization=authorization,
+                                release_floor=bundle_floor(candidate.files))
         except BaseException:
             self.host.hold()
             raise
@@ -105,7 +111,9 @@ class Activator:
             self.host.systemctl('stop', 'web', 'server', 'migrate', 'queryembed')
             if journal['previous'] not in self.state.data['retained']:
                 raise ValueError('previous manifest not retained')
+            self.state.check_floor(self.state.image_sequence(journal['previous']))
             candidate = self.store.load(journal['previous'])
+            self.state.check_floor(candidate.manifest['sequence'])
             if journal['restart_postgres']:
                 self.host.restore_postgres(candidate)
             if self.host.schema() != journal['baseline']:
@@ -121,6 +129,8 @@ class Activator:
             self.host.systemctl('stop', 'caddy')
             journal.update(status='stopped', step='recovery')
             self.state.save()
+            if isinstance(error, ValueError):
+                self.recovery_message = str(error)
             return 'stopped'
         self.housekeeping()
         return 'rolled_back'

@@ -36,7 +36,8 @@ class DeployMetricsTest(unittest.TestCase):
                     path.write_text(json.dumps({'status': status, 'last_success_at': '2026-01-01T00:00:00Z'}))
                     self.assertEqual(publisher.deploy(path, now), [
                         ('deploy_failed', int(status in ('failed', 'rolled_back', 'stopped'))),
-                        ('deploy_last_success_age_seconds', 86400)])
+                        ('deploy_last_success_age_seconds', 86400),
+                        ('deploy_release_floor', 0)])
             with mock.patch.object(publisher, 'DEPLOY_RESULT', path), \
                  mock.patch.object(publisher, 'BACKUP_DIR', Path(directory)), \
                  mock.patch.object(publisher, 'filesystem', return_value=(25, 100)):

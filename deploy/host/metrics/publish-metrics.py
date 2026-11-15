@@ -40,6 +40,10 @@ def read_result(path):
 
 def job_result(path, now, prefix, statuses, failures):
     result = read_result(path)
+    return job_metrics(result, now, prefix, statuses, failures)
+
+
+def job_metrics(result, now, prefix, statuses, failures):
     if result is None:
         return []
     status = result['status']
@@ -61,9 +65,16 @@ def backup(path, now):
 
 
 def deploy(path, now):
-    return job_result(path, now, 'deploy',
+    result = read_result(path)
+    metrics = job_metrics(result, now, 'deploy',
                       ('ok', 'failed', 'rolled_back', 'stopped', 'verified', 'skipped', 'bootstrapped', 'current'),
                       ('failed', 'rolled_back', 'stopped'))
+    if result is not None:
+        floor = result.get('release_floor')
+        if floor is not None and (type(floor) is not int or floor < 1):
+            raise ValueError('invalid release floor')
+        metrics.append(('deploy_release_floor', floor or 0))
+    return metrics
 
 
 def release(path, now):
