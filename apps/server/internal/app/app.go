@@ -121,6 +121,7 @@ func readyCheck(ctx context.Context, auth, activeRelease func(context.Context) e
 }
 
 func serve(ctx context.Context, cfg config, pool *pgxpool.Pool, queries *store.Queries, stderr io.Writer) error {
+	slog.New(slog.NewJSONHandler(stderr, nil)).Info("frameworks configuration", "enabled", cfg.frameworks)
 	clock := time.Now
 	caches := mcpapi.NewCaches(clock)
 	vectors := embedcache.NewVectors(clock)

@@ -29,7 +29,11 @@ verified and equals `email`; it may exist before the account does.
 `server admin frameworks allow|revoke|list` is the only writer until the admin
 portal exists. Each change and its row in `framework_entitlement_event` (who,
 when, what; never document text) commit in one transaction; events are never
-updated or deleted.
+updated or deleted. A database trigger rejects updates, deletes and truncation
+of events, which guards against defects and operator mistakes. It does not stop
+a compromised server: the server's database role owns the auth tables and could
+disable the trigger, but that server is also the access check and could serve
+licensed text directly, so separate roles would protect only the history.
 
 After an auth database restore ([backups](backups.md#production-restore)), every
 live entitlement is revoked with reason `restore` before traffic resumes,
