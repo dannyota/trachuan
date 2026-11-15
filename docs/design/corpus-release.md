@@ -67,9 +67,9 @@ or
 [multipart uploads](https://docs.aws.amazon.com/cli/latest/reference/s3api/complete-multipart-upload.html)
 with 64 MiB parts, retaining each returned ETag and the local byte count. After
 all uploads, every object's HEAD size and ETag must still match that receipt
-before dispatch. ETags are opaque identifiers, not content hashes. Both the
-uploader and workflow log the exact AWS CLI version; the runner client will be
-pinned after the first live compatibility proof.
+before dispatch. ETags are opaque identifiers, not content hashes. The uploader
+logs its AWS CLI version. The workflow installs and requires AWS CLI 2.40.0 and
+logs its version.
 
 ## Signing workflow
 

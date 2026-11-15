@@ -2,7 +2,6 @@
 
 One line per item: date, area, finding, source.
 
-- 2026-11-14, deploy, pin and checksum the runner's AWS CLI at the version the first live corpus release used (aws-cli 2.40.0), and record the tested uploader version; owner decision in corpus release review.
 - 2026-11-09, classify, seeds cover only 25.3% of primary articles; size the LLM batch and the held-out set for the other 75%, docs/research/phapdien-join-2026-11.md.
 - 2026-11-09, classify, let consolidated-text articles inherit seeds through `consolidates` relations (4,648 of 8,963) with their own confidence and a held-out slice, same note finding 2.
 - 2026-11-09, taxonomy import, key package articles by load sequence; MAPC and (đề mục, label) repeat, same note finding 4.
@@ -31,7 +30,6 @@ One line per item: date, area, finding, source.
 - 2026-11-13, server admin, `server admin account block` has no unblock counterpart (apps/server/internal/app/admin.go); add one before a block needs reversing in production, 9b/9c live acceptance planning.
 - 2026-11-13, corpus schema, foreign keys without an index leading with their columns (deletes on the referenced table scan the referencing table): into `run`: `run_source_request(run_id)`, `fetch_baseline(run_id)`, `run_scope(predecessor_run_id)`; into `run_source`: `run_source_event(run_id, source)`; `run_document(run_id, country)` has only `run_id`; into `artifact`: `run_item`, `run_acquisition`, `fetch_baseline`, `embed_row`, `fetched_file` (`artifact_id`), and `fetched_file(artifact_id, source)` into `document`. Index them when a delete path on those tables becomes slow; the `run_item` ones are indexed by migration 00011.
 - 2026-11-13, corpus eval fixtures, identity-map evidence on transcription documents binds `tx:` node ids, which hash scope, anchor and text, so any text change in a transcription document (the planned chapter-heading parser fix, a source edit) turns those entries into `mapping_incomplete` and needs re-adjudication (11 entries re-adjudicated after heading-only trees switched their documents); consider validating such evidence by document key, anchor and verbatim `quoted_span` instead of node id.
-- 2026-11-13, ci, every main push saves one Go cache per job keyed by commit and the Go build cache grows across restores; Actions cache use was 14.3 GB in 42 caches on 2026-11-15, over the 10 GB limit. Add a scheduled prune that keeps the newest `go-*` cache per job prefix.
 - 2026-11-14, web, a stat card with no value shows "-" (home and sources "Nguồn mới nhất" when `newest_source_date` is absent); hide the card instead.
 - 2026-11-14, web, the home sample (`apps/web/app/data/sample-result.json`, `scripts/make-sample.mjs`) is stored from one release and its stamp states that release's date; refresh it whenever a release is activated so the date stays current.
 - 2026-11-14, mcp, define an Origin policy for `/mcp` now that the SDK's localhost Host check is replaced (#189 review finding R-01): which browser origins may call it, and the response for others.

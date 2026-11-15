@@ -66,6 +66,17 @@ class WorkflowsTest(unittest.TestCase):
             for flag in ('--insecure-ignore-tlog', '--insecure-ignore-sct', '--allow-insecure-registry'):
                 self.assertNotIn(flag, path.read_text(), str(path))
 
+    def test_cache_prune_schedule_and_permissions(self):
+        path = ROOT / '.github/workflows/cache-prune.yml'
+        self.assertTrue(path.exists())
+        text = path.read_text()
+        self.assertRegex(text, r"schedule:\s*\n\s*- cron: ['\"]\d+ \d+ \* \* \*['\"]")
+        self.assertIn('workflow_dispatch:', text)
+        self.assertRegex(text, r'(?m)^permissions:\n  actions: write\n  contents: read\n')
+        self.assertEqual(re.findall(r'(?m)^[ \t]+permissions:', text), [])
+        self.assertEqual(re.findall(r'(?m)^\s+([\w-]+): write$', text), ['actions'])
+        self.assertIn('deploy/github/cache_prune.py', text)
+
     def test_actions_are_pinned(self):
         for path in (ROOT / '.github/workflows').glob('*.yml'):
             for action in re.findall(r'uses: (\S+)', path.read_text()):
