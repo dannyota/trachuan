@@ -48,11 +48,13 @@ knowledge.
    finding, its fingerprint, the detector's semantics and the occurrence, so a
    changed or returning defect is open again.
 3. **Reviewed knowledge has one contract.** Every new reviewed entry names its
-   target by public identity, states a typed claim, quotes evidence from a
-   document in the run, and lists everything the review depended on as hashes.
-   One validator checks it before merge and at build, all entries together. An
-   entry whose dependencies cannot be verified against the frozen run is stale:
-   it is not applied, and its finding is open again.
+   target by public identity, states a typed claim, and gives the evidence and
+   the dependencies its kind requires: an effect or a relation quotes a document
+   in the run and lists everything the review depended on as hashes; a review
+   decision has no quote and binds to its finding. One validator checks entries
+   before merge and at build, all together. An effect or relation whose
+   dependencies cannot be verified against the frozen run is stale and not
+   applied; a decision that matches no current finding accepts nothing.
 4. **Knowledge reaches provisions.** A reviewed provision effect (one provision
    repeals, amends, replaces or suspends another) is stored and served exactly
    as a relation read from text with the same kind: a warning on the target, no
@@ -87,8 +89,9 @@ knowledge.
 - The first run with cross-signal detectors will open many findings (274 partly
   expired documents have no incoming repeal relation). They are triaged in
   batches; only detectors marked blocking stop a release.
-- Reviewed entries carry pins, so a source change costs a re-review of the
-  entries it touches, not a silent wrong answer.
+- Reviewed entries carry their dependencies, so a source change, or a change of
+  extraction that moves structure, makes the entries it touches stale. That
+  costs a re-review after each such change, not a silent wrong answer.
 - Downstream products get a change list and stable identities to hang private
   mappings on.
 
@@ -114,3 +117,8 @@ knowledge.
   an evidence stage and artifact after evaluation, per-kind evidence and
   dependencies, effects without dates, schema capability checked at build and
   deployment at publication, no count detector, law only.
+- 2026-11-15: third review round (S-13, S-18, S-20 to S-22) and the corpus
+  session's reading: occurrence inherits only from an unchanged finding, the
+  predecessor comes from the selected report, decisions apply only in the
+  evidence stage, the stage has a recipe and input hash, no schema version for
+  effects, an identity summary instead of the previous database.
