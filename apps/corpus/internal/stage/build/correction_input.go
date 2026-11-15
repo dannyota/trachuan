@@ -1,20 +1,18 @@
 package build
 
 import (
-	"errors"
 	"fmt"
 	"os"
+	"strings"
 
 	"danny.vn/trachuan/apps/corpus/internal/source"
 )
 
-// CorrectionsInput holds correction bytes captured for a build.
 type CorrectionsInput struct {
 	bytes      []byte
 	hash, path string
 }
 
-// ReadCorrections loads reviewed correction bytes; a missing file is an empty list.
 func ReadCorrections(path string) (CorrectionsInput, error) {
 	data, err := readCorrections(path)
 	if err != nil {
@@ -24,11 +22,15 @@ func ReadCorrections(path string) (CorrectionsInput, error) {
 }
 func readCorrections(path string) ([]byte, error) {
 	data, err := os.ReadFile(path)
-	if errors.Is(err, os.ErrNotExist) {
-		return []byte("[]\n"), nil
-	}
 	if err != nil {
-		return nil, fmt.Errorf("read corrections: %w", err)
+		cwd, cwdErr := os.Getwd()
+		if cwdErr != nil {
+			return nil, fmt.Errorf("read corrections %q (working directory unavailable): %w", path, err)
+		}
+		return nil, fmt.Errorf("read corrections %q in working directory %q: %w", path, cwd, err)
+	}
+	if strings.TrimSpace(string(data)) == "" {
+		return []byte("[]\n"), nil
 	}
 	return data, nil
 }

@@ -9,7 +9,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Correction is a reviewed override of a document's validity.
 type Correction struct {
 	Key      string             `yaml:"key"`
 	Number   string             `yaml:"number"`
@@ -21,14 +20,12 @@ type Correction struct {
 	Reviewed string             `yaml:"reviewed"`
 }
 
-// CorrectionSet contains the fields a correction may replace.
 type CorrectionSet struct {
 	StatusClass *string `yaml:"status_class"`
 	EffFrom     *string `yaml:"eff_from"`
 	EffTo       *string `yaml:"eff_to"`
 }
 
-// CorrectionEvidence identifies the text reviewed for a correction.
 type CorrectionEvidence struct {
 	Key    string `yaml:"key"`
 	Anchor string `yaml:"anchor"`
@@ -36,8 +33,27 @@ type CorrectionEvidence struct {
 	Quote  string `yaml:"quote"`
 }
 
-// ParseCorrections decodes a correction list and validates its date syntax.
 func ParseCorrections(data []byte) ([]Correction, error) {
+	entries, err := DecodeCorrections(data)
+	if err != nil {
+		return nil, err
+	}
+	for _, entry := range entries {
+		for _, value := range []*string{entry.Set.EffFrom, entry.Set.EffTo} {
+			if value != nil {
+				if _, err := time.Parse("2006-01-02", *value); err != nil {
+					return nil, fmt.Errorf("parse correction date: %w", err)
+				}
+			}
+		}
+	}
+	return entries, nil
+}
+
+func DecodeCorrections(data []byte) ([]Correction, error) {
+	if strings.TrimSpace(string(data)) == "" {
+		data = []byte("[]")
+	}
 	var entries []Correction
 	decoder := yaml.NewDecoder(strings.NewReader(string(data)))
 	decoder.KnownFields(true)
@@ -50,15 +66,6 @@ func ParseCorrections(data []byte) ([]Correction, error) {
 			return nil, fmt.Errorf("parse trailing corrections: %w", err)
 		}
 		return nil, fmt.Errorf("multiple correction documents")
-	}
-	for _, entry := range entries {
-		for _, value := range []*string{entry.Set.EffFrom, entry.Set.EffTo} {
-			if value != nil {
-				if _, err := time.Parse("2006-01-02", *value); err != nil {
-					return nil, fmt.Errorf("parse correction date: %w", err)
-				}
-			}
-		}
 	}
 	return entries, nil
 }

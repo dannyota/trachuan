@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -42,10 +41,15 @@ type Waivers struct {
 
 func ReadWaivers(path string) (Waivers, error) {
 	data, err := os.ReadFile(path)
-	if errors.Is(err, os.ErrNotExist) {
+	if err != nil {
+		cwd, cwdErr := os.Getwd()
+		if cwdErr != nil {
+			return Waivers{}, fmt.Errorf("read OCR waivers %q (working directory unavailable): %w", path, err)
+		}
+		return Waivers{}, fmt.Errorf("read OCR waivers %q in working directory %q: %w", path, cwd, err)
+	}
+	if strings.TrimSpace(string(data)) == "" {
 		data = []byte("[]")
-	} else if err != nil {
-		return Waivers{}, fmt.Errorf("read OCR waivers: %w", err)
 	}
 	entries, hash, err := parseWaivers(data)
 	if err != nil {

@@ -73,3 +73,55 @@ func validateCorrections(entries []source.Correction, docs map[string]correction
 	}
 	return result, nil
 }
+
+func checkCorrections(entries []source.Correction, docs map[string]correctionDocument) []error {
+	var failures []error
+	seen := map[string]bool{}
+	for _, entry := range entries {
+		if seen[entry.Key] {
+			failures = append(failures, fmt.Errorf("correction %q: duplicate key", entry.Key))
+			continue
+		}
+		seen[entry.Key] = true
+		if _, err := validateCorrections([]source.Correction{entry}, docs); err != nil {
+			failures = append(failures, err)
+			continue
+		}
+		doc := docs[entry.Key]
+		before := validityValues{}
+		if doc.from != nil {
+			from := doc.from.Format("2006-01-02")
+			before.From = &from
+		}
+		if doc.to != nil {
+			to := doc.to.Format("2006-01-02")
+			before.To = &to
+		}
+		after, _ := applyCorrection(before, entry, false)
+		if err := validateCorrectionInterval(entry.Key, after); err != nil {
+			failures = append(failures, err)
+		}
+	}
+	return failures
+}
+
+func validateCorrectionInterval(key string, values validityValues) error {
+	if values.From != nil && values.To != nil && *values.To < *values.From {
+		return fmt.Errorf("validity %s: invalid interval", key)
+	}
+	return nil
+}
+
+func addCorrectionEvidence(docs map[string]correctionDocument, labels map[int64]string, key string, id int64, parent *int64, label, anchor, text string) {
+	name := label
+	if parent != nil && labels[*parent] != "" {
+		name = labels[*parent] + " " + strings.ToLower(label)
+	}
+	labels[id] = name
+	doc := docs[key]
+	doc.provisions[anchor] = text
+	if name != "" {
+		doc.provisions[name] = text
+	}
+	docs[key] = doc
+}

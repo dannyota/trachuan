@@ -3,6 +3,7 @@ package build
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"danny.vn/trachuan/apps/corpus/internal/source"
@@ -112,5 +113,34 @@ func TestCorrections_CanonicalIncludesEvidenceKey(t *testing.T) {
 	const want = `[{"key":"a","number":"A","set":{},"hold":true,"reason":"why","evidence":{"key":"b","anchor":"dieu-37/khoan-1","quote":"text"},"reviewed":"2026-11-10"}]`
 	if string(got) != want {
 		t.Fatalf("canonical = %s", got)
+	}
+}
+
+func TestReadCorrections_MissingAndEmpty(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "corrections.yaml")
+	cwd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ReadCorrections(path); err == nil || !strings.Contains(err.Error(), path) || !strings.Contains(err.Error(), cwd) {
+		t.Fatalf("missing file error: %v", err)
+	}
+	var hash string
+	for _, data := range []string{"", "[]\n"} {
+		if err := os.WriteFile(path, []byte(data), 0600); err != nil {
+			t.Fatal(err)
+		}
+		input, err := ReadCorrections(path)
+		if err != nil {
+			t.Fatalf("%q: %v", data, err)
+		}
+		entries, pin, err := input.pinned()
+		if err != nil || len(entries) != 0 {
+			t.Fatalf("%q: %v %v", data, entries, err)
+		}
+		if hash != "" && hash != pin.hash {
+			t.Fatal("empty input hash differs from empty list")
+		}
+		hash = pin.hash
 	}
 }

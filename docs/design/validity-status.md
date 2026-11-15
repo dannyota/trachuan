@@ -134,7 +134,8 @@ validity is later work.
 parsed entries are pinned at build planning and the SHA-256 of their canonical
 JSON (entries sorted by key, fixed field order) is part of the build input, not
 of the frozen source list. A new entry therefore needs only a new build and
-evaluation, never a new ingest run; a missing file is an empty list. Each entry:
+evaluation, never a new ingest run. The file must exist; an empty file or YAML
+list means no corrections. Each entry:
 
 ```yaml
 - key: vn:vbpl:167087

@@ -110,8 +110,8 @@ func (e *validityEngine) apply(events []validityEvent) error {
 				o.history = append(o.history, validityDecision{layer: "manual", version: "validity/2", before: before, after: after, actor: c.Evidence.Key, anchor: anchor, quote: truncateQuote(c.Evidence.Quote), artifact: artifact})
 			}
 		}
-		if o.values.From != nil && o.values.To != nil && *o.values.To < *o.values.From {
-			return fmt.Errorf("validity %s: invalid interval", key)
+		if err := validateCorrectionInterval(key, o.values); err != nil {
+			return err
 		}
 		if len(o.history) > 0 {
 			base := o.history[0].before

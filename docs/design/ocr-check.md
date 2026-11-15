@@ -240,11 +240,12 @@ under [validity corrections](validity-status.md) or accept the flag.
 
 A checker can file a misread form code or appendix label as a `document_number`
 or `article_label` item, which makes the OCR text unusable.
-`sources/<cc>-ocr-waivers.yaml` is reviewed input like the corrections file. An
-entry names the document key, the PDF's SHA-256 and the SHA-256 of the stored
-`ocr_check` result, and lists every flagged item by page with the reviewer's
-reading of the PDF and why it is not the document's number or an article label.
-A waiver only turns `ocr_label_flagged` into `ocr_flagged`: the text is indexed,
+`sources/<cc>-ocr-waivers.yaml` is reviewed input like the corrections file; it
+must exist, and an empty file or YAML list means no waivers. An entry names the
+document key, the PDF's SHA-256 and the SHA-256 of the stored `ocr_check`
+result, and lists every flagged item by page with the reviewer's reading of the
+PDF and why it is not the document's number or an article label. A waiver only
+turns `ocr_label_flagged` into `ocr_flagged`: the text is indexed,
 `text_complete` is false and the gap stays visible. Fail closed: an entry whose
 document key has no OCR selection in the run stops extract planning; an entry
 whose PDF or result hash differs from the selection is void, so the flag stays

@@ -177,3 +177,54 @@ func TestCorrections_ExternalEvidenceAcceptedAndListed(t *testing.T) {
 		t.Fatalf("reviews=%s", data)
 	}
 }
+
+func TestCheckCorrections_ReportsEveryInvalidEntry(t *testing.T) {
+	valid := source.Correction{Key: "a", Number: "A", Hold: true, Reason: "reviewed", Reviewed: "2026-11-15", Evidence: source.CorrectionEvidence{Anchor: "dieu-1", Quote: "exact text"}}
+	badQuote := valid
+	badQuote.Evidence.Quote = "exact  text"
+	missing := valid
+	missing.Key = "missing"
+	docs := map[string]correctionDocument{"a": {number: "A", provisions: map[string]string{"dieu-1": "exact text"}}}
+	failures := checkCorrections([]source.Correction{badQuote, missing, valid}, docs)
+	if len(failures) != 3 || !strings.Contains(failures[0].Error(), "evidence not found") || !strings.Contains(failures[1].Error(), "document absent") || !strings.Contains(failures[2].Error(), "duplicate") {
+		t.Fatalf("failures: %v", failures)
+	}
+}
+
+func TestCheckCorrections_RejectsInvalidInterval(t *testing.T) {
+	from, to := "2025-01-01", "2024-01-01"
+	c := source.Correction{Key: "a", Number: "A", Set: source.CorrectionSet{EffFrom: &from, EffTo: &to}, Reason: "reviewed", Reviewed: "2026-11-15", Evidence: source.CorrectionEvidence{URL: "https://example.org", Quote: "text"}}
+	failures := checkCorrections([]source.Correction{c}, map[string]correctionDocument{"a": {number: "A"}})
+	if len(failures) != 1 || !strings.Contains(failures[0].Error(), "invalid interval") {
+		t.Fatalf("failures: %v", failures)
+	}
+}
+
+func TestCorrectionEvidence_ParentLabelsAndExactQuotes(t *testing.T) {
+	docs := map[string]correctionDocument{"a": {number: "A", provisions: map[string]string{}}}
+	labels := map[int64]string{}
+	addCorrectionEvidence(docs, labels, "a", 1, nil, "Điều 1", "dieu-1", "article")
+	parent := int64(1)
+	addCorrectionEvidence(docs, labels, "a", 2, &parent, "Khoản 1", "dieu-1/khoan-1", "exact text")
+	c := source.Correction{Key: "a", Number: "A", Hold: true, Reason: "reviewed", Reviewed: "2026-11-15", Evidence: source.CorrectionEvidence{Anchor: "Điều 1 khoản 1", Quote: "exact text"}}
+	if _, err := validateCorrections([]source.Correction{c}, docs); err != nil {
+		t.Fatal(err)
+	}
+	c.Evidence.Quote = "exact  text"
+	if _, err := validateCorrections([]source.Correction{c}, docs); err == nil {
+		t.Fatal("accepted nonmatching quote")
+	}
+}
+
+func TestCheckCorrections_UsesUnchangedIntervalBound(t *testing.T) {
+	from, err := time.Parse("2006-01-02", "2025-01-01")
+	if err != nil {
+		t.Fatal(err)
+	}
+	to := "2024-01-01"
+	c := source.Correction{Key: "a", Number: "A", Set: source.CorrectionSet{EffTo: &to}, Reason: "reviewed", Reviewed: "2026-11-15", Evidence: source.CorrectionEvidence{URL: "https://example.org", Quote: "text"}}
+	failures := checkCorrections([]source.Correction{c}, map[string]correctionDocument{"a": {number: "A", from: &from}})
+	if len(failures) != 1 || !strings.Contains(failures[0].Error(), "invalid interval") {
+		t.Fatalf("failures: %v", failures)
+	}
+}

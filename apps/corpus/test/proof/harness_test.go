@@ -75,6 +75,14 @@ func newHarness(t *testing.T) *harness {
 	h.extra = []string{"CORPUS_BUILDER_DATABASE_URL=" + builder.URL, "CORPUS_BUILDER_TEMPLATE=" + builder.Template, "CORPUS_DATABASE_DISK_PATH=" + h.root, "CORPUS_DISK_START_GIB=1", "CORPUS_DISK_MIN_GIB=1"}
 	h.artifacts = filepath.Join(h.root, "artifacts")
 	h.checkpoints = filepath.Join(h.root, "checkpoints")
+	if err := os.MkdirAll(filepath.Join(h.root, "sources"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"vn-corrections.yaml", "vn-ocr-waivers.yaml"} {
+		if err := os.WriteFile(filepath.Join(h.root, "sources", name), nil, 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
 	h.dump = os.Getenv("CORPUS_PG_DUMP")
 	if h.dump == "" {
 		h.dump = "pg_dump"
@@ -108,7 +116,7 @@ func newHarness(t *testing.T) *harness {
 		t.Fatal(err)
 	}
 	h.gateway = newGateway(t)
-	if err := os.Mkdir(filepath.Join(h.root, "sources"), 0700); err != nil {
+	if err := os.MkdirAll(filepath.Join(h.root, "sources"), 0700); err != nil {
 		t.Fatal(err)
 	}
 	sources := "country: vn\nvbpl:\n  sweep_agencies: ['62']\n  keyword_agencies: ['62']\n  keywords: ['test']\nrelation_codes:\n  '10':\n    kind: amends_supplements\n    label: amends\nstatus_codes: {}\n"
