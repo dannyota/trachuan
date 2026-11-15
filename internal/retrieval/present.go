@@ -53,6 +53,7 @@ func present(resp Response, docs map[string]DocumentEntry, d Detail) SearchResul
 			if !seen[key] {
 				seen[key] = true
 				if doc, ok := docs[key]; ok {
+					doc = presentDocument(doc)
 					if doc.Nodes == nil {
 						doc.Nodes = []string{}
 					}
@@ -60,12 +61,12 @@ func present(resp Response, docs map[string]DocumentEntry, d Detail) SearchResul
 					result.Documents[key] = doc
 				}
 			}
-			p := PresentedHit{InFilter: h.InFilter, Nodes: append([]string{}, h.Nodes...), Handle: Handle(h.Identity), Doc: key, Citation: h.Citation, Gaps: h.Gaps, Locator: h.Locator, Warnings: h.Warnings, WarningsOmitted: h.WarningsOmitted}
+			p := PresentedHit{InFilter: h.InFilter, Nodes: append([]string{}, h.Nodes...), Handle: Handle(h.Identity), Doc: key, Citation: h.Citation, Gaps: h.Gaps, Locator: h.Locator, Warnings: presentWarnings(h.Warnings), WarningsOmitted: h.WarningsOmitted}
 			for _, node := range h.Path {
 				p.Path = append(p.Path, PresentedPathNode{Label: node.Label, Heading: node.Heading, Anchor: node.Identity.Anchor})
 			}
 			if d == DetailFull {
-				p.Text, p.Fragments, p.Relations, p.Complete = h.Text, h.Fragments, h.Relations, h.Complete
+				p.Text, p.Fragments, p.Relations, p.Complete = h.Text, h.Fragments, presentRelations(h.Relations), h.Complete
 				score := h.Score
 				p.Score = &score
 				if !h.Complete {

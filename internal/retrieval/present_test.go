@@ -165,3 +165,30 @@ func TestHit_LocatorOnlyForGeneratedText(t *testing.T) {
 		t.Fatalf("hit %s: %v", b, err)
 	}
 }
+
+func TestPresent_DocumentMetadataWhitespace(t *testing.T) {
+	raw := "\n  Alpha\u00a0 \t Beta  "
+	h := presentationHit("vn:1", "a")
+	h.Text = "Legal  \n text"
+	h.Warnings = []Warning{{Pointer: Pointer{Number: raw}}}
+	h.Relations = []Relation{{SourceNumber: raw, TargetNumber: raw, Evidence: h.Text}}
+	docs := map[string]DocumentEntry{"vn:1": {Number: raw, Title: raw, Related: []Pointer{{Number: raw}}}}
+	for _, detail := range []Detail{DetailCompact, DetailFull} {
+		t.Run(string(detail), func(t *testing.T) {
+			got := present(Response{Hits: []Hit{h}}, docs, detail)
+			doc := got.Documents["vn:1"]
+			if got.Hits[0].Warnings[0].Number != "Alpha Beta" {
+				t.Errorf("warning: %+v", got.Hits[0].Warnings)
+			}
+			if doc.Number != "Alpha Beta" || doc.Title != "Alpha Beta" || doc.Related[0].Number != "Alpha Beta" {
+				t.Errorf("document: %+v", doc)
+			}
+			if detail == DetailFull {
+				hit := got.Hits[0]
+				if hit.Text != h.Text || hit.Relations[0].Evidence != h.Text || hit.Relations[0].SourceNumber != "Alpha Beta" || hit.Relations[0].TargetNumber != "Alpha Beta" {
+					t.Errorf("hit: %+v", hit)
+				}
+			}
+		})
+	}
+}

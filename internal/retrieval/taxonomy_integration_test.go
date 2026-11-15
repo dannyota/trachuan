@@ -164,3 +164,13 @@ func TestTaxonomyNode_OtherFamilyDoesNotOverride(t *testing.T) {
 		}
 	}
 }
+
+func TestTaxonomyNode_DocumentMetadataWhitespace(t *testing.T) {
+	e := taxonomyFixture(t)
+	raw := "\n  Alpha\u2003  Beta "
+	readExec(t, e.db, `UPDATE document SET number=$1,title=$1 WHERE id=1`, raw)
+	page, err := e.TaxonomyNode(context.Background(), "1.1")
+	if err != nil || len(page.Documents) != 1 || page.Documents[0].Number != "Alpha Beta" || page.Documents[0].Title != "Alpha Beta" {
+		t.Fatalf("page %+v: %v", page, err)
+	}
+}

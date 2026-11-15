@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"danny.vn/trachuan/apps/server/internal/apierror"
@@ -67,7 +68,12 @@ func (h *handler) list(w http.ResponseWriter, r *http.Request) {
 	}
 	views := make([]reportView, 0, len(rows))
 	for _, row := range rows {
-		views = append(views, reportView{row.ID, row.Kind, row.DocumentKey, row.Anchor, row.DocumentNumber, row.Target, row.Suggestion, row.State, row.CreatedAt, row.ChangedAt})
+		target, suggestion := row.Target, row.Suggestion
+		if row.Kind == "broken_citation" || row.Kind == "missing_document" {
+			target = strings.Join(strings.Fields(target), " ")
+			suggestion = presentSuggestion(suggestion)
+		}
+		views = append(views, reportView{row.ID, row.Kind, row.DocumentKey, row.Anchor, strings.Join(strings.Fields(row.DocumentNumber), " "), target, suggestion, row.State, row.CreatedAt, row.ChangedAt})
 	}
 	writeJSON(w, struct {
 		Reports []reportView `json:"reports"`
@@ -98,4 +104,21 @@ func (h *handler) withdraw(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Cache-Control", "no-store")
 	w.WriteHeader(204)
+}
+
+func presentSuggestion(raw json.RawMessage) json.RawMessage {
+	var fields map[string]json.RawMessage
+	if json.Unmarshal(raw, &fields) != nil {
+		return raw
+	}
+	var number string
+	if json.Unmarshal(fields["document_number"], &number) != nil {
+		return raw
+	}
+	fields["document_number"], _ = json.Marshal(strings.Join(strings.Fields(number), " "))
+	result, err := json.Marshal(fields)
+	if err != nil {
+		return raw
+	}
+	return result
 }

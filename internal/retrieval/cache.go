@@ -63,6 +63,17 @@ func (e *Engine) cacheDocument(ctx context.Context, key string, doc DocumentEntr
 }
 
 func (e *Engine) Documents(ctx context.Context, keys []string) (map[string]DocumentEntry, error) {
+	docs, err := e.documents(ctx, keys)
+	if err != nil {
+		return nil, err
+	}
+	for key, doc := range docs {
+		docs[key] = presentDocument(doc)
+	}
+	return docs, nil
+}
+
+func (e *Engine) documents(ctx context.Context, keys []string) (map[string]DocumentEntry, error) {
 	cache := e.documentCache(ctx)
 	if cache == nil {
 		return e.loadDocuments(ctx, keys)

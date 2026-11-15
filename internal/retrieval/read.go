@@ -82,6 +82,9 @@ func (e *Engine) Read(ctx context.Context, req ReadRequest) (ReadResult, error) 
 			save()
 		}
 	}
+	for i := range result.Items {
+		result.Items[i] = presentReadItem(result.Items[i])
+	}
 	return result, nil
 }
 

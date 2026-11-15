@@ -46,7 +46,10 @@ validity stamp: class, current flag, basis, status basis), `text_source` and
 source's tree, a parsed transcription, PDF text or OCR, and whether it is known
 complete), `source_url`, `related` (full results and `read` only),
 `related_counts` and `nodes`: up to 10 served node codes with the most effective
-assignments in the document, most first.
+assignments in the document, most first. Every output, MCP and `/api/v1`, trims
+a document `number` and `title` and collapses each run of white space inside
+them to one space, wherever they appear (document entries, relation pointers);
+stored values and legal text are not changed.
 
 A compact hit has, in this order:
 

@@ -55,6 +55,14 @@ func (e *Engine) Search(ctx context.Context, req Request) (Response, error) {
 	if err := e.LoadDecisions(ctx, response.Hits, response.NonCurrent); err != nil {
 		return Response{}, fmt.Errorf("load validity decisions: %w", err)
 	}
+	for _, hits := range [][]Hit{response.Hits, response.NonCurrent} {
+		for i := range hits {
+			hits[i].Number = presentMetadata(hits[i].Number)
+			hits[i].Title = presentMetadata(hits[i].Title)
+			hits[i].Relations = presentRelations(hits[i].Relations)
+			hits[i].Warnings = presentWarnings(hits[i].Warnings)
+		}
+	}
 	pending.publish(ctx)
 	return response, nil
 }

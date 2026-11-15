@@ -327,3 +327,46 @@ func TestReports_MalformedCursor(t *testing.T) {
 		t.Run(query[:min(len(query), 30)], func(t *testing.T) { expect(t, call(h, raw, "GET", "/api/v1/me/reports"+query, ""), 400) })
 	}
 }
+
+func TestReports_OwnListDocumentNumberWhitespace(t *testing.T) {
+	h, db, raw := setup()
+	db.rows = []store.IssueReport{row(1, 1, db.now)}
+	db.rows[0].DocumentNumber = "\n  Alpha\u2003  Beta  "
+	w := call(h, raw, "GET", "/api/v1/me/reports", "")
+	expect(t, w, 200)
+	var page struct {
+		Reports []struct {
+			DocumentNumber string `json:"document_number"`
+		} `json:"reports"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &page); err != nil || len(page.Reports) != 1 || page.Reports[0].DocumentNumber != "Alpha Beta" {
+		t.Fatalf("response %s: %v", w.Body.String(), err)
+	}
+	if db.rows[0].DocumentNumber != "\n  Alpha\u2003  Beta  " {
+		t.Fatal("stored number changed")
+	}
+}
+
+func TestReports_OwnListSuggestedNumberWhitespace(t *testing.T) {
+	h, db, raw := setup()
+	db.rows = []store.IssueReport{row(1, 1, db.now)}
+	db.rows[0].Kind = "broken_citation"
+	db.rows[0].Target = "A  B"
+	db.rows[0].Suggestion = json.RawMessage(`{"document_number":"A  B"}`)
+	w := call(h, raw, "GET", "/api/v1/me/reports", "")
+	expect(t, w, 200)
+	var page struct {
+		Reports []struct {
+			Target     string `json:"target"`
+			Suggestion struct {
+				DocumentNumber string `json:"document_number"`
+			} `json:"suggestion"`
+		} `json:"reports"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &page); err != nil || len(page.Reports) != 1 || page.Reports[0].Target != "A B" || page.Reports[0].Suggestion.DocumentNumber != "A B" {
+		t.Fatalf("response %s: %v", w.Body.String(), err)
+	}
+	if db.rows[0].Target != "A  B" || string(db.rows[0].Suggestion) != `{"document_number":"A  B"}` {
+		t.Fatal("stored suggestion changed")
+	}
+}
