@@ -11,7 +11,6 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"danny.vn/trachuan/apps/corpus/internal/artifact"
 	"danny.vn/trachuan/apps/corpus/internal/stage"
@@ -100,7 +99,7 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 	idx, vectors, err := s.buildCached(ctx, file, hash, hits)
 	hitCount := 0
 	for _, c := range file.Chunks {
-		if _, ok := hits[hashText(strings.TrimSpace(c.ContextPrefix)+"\n"+strings.TrimSpace(c.Content))]; ok {
+		if _, ok := hits[InputSHA256(c.ContextPrefix, c.Content)]; ok {
 			hitCount++
 		}
 	}

@@ -2,9 +2,7 @@ package cli
 
 import (
 	"context"
-	"crypto/sha256"
 	"fmt"
-	"strings"
 
 	lawembed "danny.vn/trachuan/apps/corpus/internal/stage/embed"
 	"danny.vn/trachuan/internal/embedding"
@@ -34,8 +32,7 @@ func (*frameworkEmbedder) Validate(ctx context.Context, dir, key string, chunks 
 		if _, ok := expected[c.Ordinal]; ok {
 			return fmt.Errorf("duplicate chunk ordinal")
 		}
-		input := strings.TrimSpace(c.ContextPrefix) + "\n" + strings.TrimSpace(c.Content)
-		expected[c.Ordinal] = fmt.Sprintf("%x", sha256.Sum256([]byte(input)))
+		expected[c.Ordinal] = lawembed.InputSHA256(c.ContextPrefix, c.Content)
 	}
 	for _, row := range idx.Rows {
 		input, ok := expected[row.ChunkOrdinal]
