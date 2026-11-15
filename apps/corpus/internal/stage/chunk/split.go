@@ -6,6 +6,7 @@ import (
 	"strings"
 	"unicode"
 
+	"danny.vn/trachuan/internal/textsplit"
 	"golang.org/x/text/unicode/norm"
 )
 
@@ -44,13 +45,7 @@ func labelOnly(t textRun, n Node) bool {
 	return n.Label != "" && clean(plain(t)) == clean(n.Label)
 }
 func rough(t textRun) int {
-	if len(t) == 0 {
-		return 0
-	}
-	if len(t) < 2 {
-		return 1
-	}
-	return len(t) / 2
+	return textsplit.Rough(len(t))
 }
 func trimRun(t textRun) textRun {
 	for len(t) > 0 && unicode.IsSpace(t[0].value) {
@@ -210,76 +205,27 @@ func (s *splitter) leadFits(lead textRun, children []*treeNode) bool {
 
 func (s *splitter) shards(n *treeNode, leads []carriedLead, body textRun) {
 	body = trimRun(body)
-	if len(body) == 0 {
-		return
-	}
 	lead := leadText(leads)
-	if rough(join(lead, body)) <= s.recipe.BodyLimit {
-		s.emit(n, lead, body)
-		return
-	}
-	var lines []textRun
-	start := 0
-	for i := 0; i <= len(body); i++ {
-		if i == len(body) || body[i].value == '\n' {
-			line := trimRun(body[start:i])
-			if len(line) > 0 {
-				lines = append(lines, line)
-			}
-			start = i + 1
-		}
-	}
-	var current textRun
-	flush := func() {
-		if len(current) > 0 {
-			s.emit(n, lead, current)
-			current = nil
-		}
-	}
-	for _, line := range lines {
-		if rough(join(lead, line)) <= s.recipe.BodyLimit {
-			candidate := join(current, line)
-			if len(current) > 0 && rough(join(lead, candidate)) > s.recipe.BodyLimit {
-				flush()
-				candidate = line
-			}
-			current = candidate
+	for _, event := range textsplit.Split([]rune(plain(body)), len(lead), s.recipe.BodyLimit) {
+		if event.ReleaseLead {
+			s.emitLeads(leads)
+			leads = nil
+			lead = nil
 			continue
 		}
-		flush()
-		var words []textRun
-		for i := 0; i < len(line); {
-			for i < len(line) && unicode.IsSpace(line[i].value) {
-				i++
+		var piece textRun
+		for i, r := range event.Ranges {
+			if i > 0 {
+				piece = append(piece, mappedRune{value: event.Separator})
 			}
-			start = i
-			for i < len(line) && !unicode.IsSpace(line[i].value) {
-				i++
-			}
-			if start < i {
-				words = append(words, line[start:i])
-			}
+			piece = append(piece, body[r.Start:r.End]...)
 		}
-		for _, word := range words {
-			if len(lead) > 0 && rough(join(lead, word)) > s.recipe.BodyLimit {
-				s.emitLeads(leads)
-				leads = nil
-				lead = nil
-			}
-			candidate := append(textRun(nil), current...)
-			if len(candidate) > 0 {
-				candidate = append(candidate, mappedRune{value: ' '})
-			}
-			candidate = append(candidate, word...)
-			if len(current) > 0 && rough(join(lead, candidate)) > s.recipe.BodyLimit {
-				flush()
-				candidate = word
-			}
-			current = candidate
+		var attached textRun
+		if event.AttachLead {
+			attached = lead
 		}
-		flush()
+		s.emit(n, attached, piece)
 	}
-	flush()
 }
 
 func (s *splitter) emit(n *treeNode, lead, body textRun) {
