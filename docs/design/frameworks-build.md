@@ -111,12 +111,13 @@ database.
 
 ## Artifacts and provenance
 
-Each step writes `FRAMEWORKS_WORK_DIR/<rel>/<step>/` on the MacBook's external
-disk: its outputs and a `manifest.json` with the step's recipe (name, version,
-parameters), the SHA-256 of each input (snapshot files or earlier manifests) and
-of each output. JSON Lines rows are serialized canonically in a total order per
-schema: `controls/1` by (code, version order, `citation_norm`), `edges/1` by
-(`from`, `to`, `relation`, `source`), `chunks/1` by (`document_key`, `ordinal`).
+Each step writes `FRAMEWORKS_WORK_DIR/<rel>/<step>/` on a local disk of the
+MacBook, outside every sync folder: its outputs and a `manifest.json` with the
+step's recipe (name, version, parameters), the SHA-256 of each input (snapshot
+files or earlier manifests) and of each output. JSON Lines rows are serialized
+canonically in a total order per schema: `controls/1` by (code, version order,
+`citation_norm`), `edges/1` by (`from`, `to`, `relation`, `source`), `chunks/1`
+by (`document_key`, `ordinal`).
 
 The `release` row inside the dump records the recipes and input hashes of
 `snapshot` through `embed`. The build manifest (dump SHA-256 and size, build
