@@ -53,12 +53,13 @@ type Reports interface {
 
 // Config supplies tool dependencies. Configure it before calling New.
 type Config struct {
-	Resolver Resolver
-	Limiter  Limiter
-	Logger   *slog.Logger
-	Clock    func() time.Time
-	Caches   *Caches
-	Reports  Reports
+	OmitCompactRelated bool
+	Resolver           Resolver
+	Limiter            Limiter
+	Logger             *slog.Logger
+	Clock              func() time.Time
+	Caches             *Caches
+	Reports            Reports
 }
 
 // New constructs a stateless JSON Streamable HTTP endpoint behind credential.Middleware.

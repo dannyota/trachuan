@@ -26,6 +26,7 @@ type fakeEngine struct {
 	request    retrieval.Request
 	detail     retrieval.Detail
 	read       retrieval.ReadRequest
+	readResult *retrieval.ReadResult
 	err        error
 	presented  *retrieval.SearchResult
 	presentErr error
@@ -57,6 +58,9 @@ func (e *fakeEngine) Present(_ context.Context, _ retrieval.Response, d retrieva
 func (e *fakeEngine) Read(_ context.Context, r retrieval.ReadRequest) (retrieval.ReadResult, error) {
 	e.calls.Add(1)
 	e.read = r
+	if e.readResult != nil {
+		return *e.readResult, e.err
+	}
 	return retrieval.ReadResult{Release: r.Release, Items: []retrieval.ItemResult{{Complete: false, Next: "opaque"}, {Complete: true}}}, e.err
 }
 func (e *fakeEngine) Status(context.Context) (retrieval.CorpusStatus, error) {

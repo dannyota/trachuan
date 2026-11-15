@@ -20,6 +20,7 @@ type config struct {
 	listen, authURL, corpusURL, embedderURL, audience, publicURL, googleID, googleSecret, googleIssuer string
 	strictDeployment                                                                                   bool
 	totpEnrollment                                                                                     bool
+	omitCompactRelated                                                                                 bool
 	trustedProxies                                                                                     []netip.Prefix
 	oauthClients                                                                                       []oauth.Client
 	signupEmails                                                                                       []string
@@ -34,6 +35,15 @@ func loadConfig() (config, error) {
 		c.embedderURL = "http://127.0.0.1:8091"
 	}
 	var err error
+	if raw, present := os.LookupEnv("SERVER_COMPACT_RELATED"); present {
+		switch raw {
+		case "keep":
+		case "omit":
+			c.omitCompactRelated = true
+		default:
+			return config{}, errors.New("invalid SERVER_COMPACT_RELATED")
+		}
+	}
 	if raw := os.Getenv("SERVER_TOTP_ENROLLMENT"); raw != "" {
 		c.totpEnrollment, err = strconv.ParseBool(raw)
 		if err != nil {

@@ -22,6 +22,7 @@ type Operations struct {
 
 // NewOperations constructs shared operations with the MCP schemas and caches.
 func NewOperations(cfg Config) *Operations {
+	cfg.OmitCompactRelated = false
 	if cfg.Clock == nil {
 		cfg.Clock = time.Now
 	}
