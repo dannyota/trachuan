@@ -255,7 +255,8 @@ provisions and lower total input tokens.
 4. Candidate cache: a filter or detail change after a search skips both arms;
    hydration and shaping remain.
 5. Compact `related` removal after the ADR 0013 revision: about −20% compact
-   size.
+   size. Not shipped: the agent check found no clear token advantage (ADR 0013
+   History 2026-11-15); `SERVER_COMPACT_RELATED` stays unset.
 6. Partitioned ANN pools: deferred until production shows the fallback in more
    than 5% of searches (measured 5% on artificial queries, about 1% on
    evaluation questions).
