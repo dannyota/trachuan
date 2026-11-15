@@ -1721,32 +1721,83 @@
     {
       "case_id": "new-ai-decree-risk-tool-142-2026",
       "citation_index": 0,
-      "state": "absent",
+      "state": "resolved",
       "expected_number": "142/2026/nđ-cp",
-      "reason": "Searched 142/2026/nđ-cp. No matching document exists in the exported inventory.",
-      "reviewed_at": "2026-11-09",
-      "evidence": [],
-      "alternatives": []
+      "reason": "142/2026/NĐ-CP is present as vn:chinhphu:218029 (chinhphu), read from OCR under the reviewed waiver; Điều 10 holds the expected provision. Re-adjudicated 2026-11-15 from run vn/20261115_2 text.",
+      "reviewed_at": "2026-11-15",
+      "evidence": [
+        {
+          "document_key": "vn:chinhphu:218029",
+          "document_number": "142/2026/ND-CP",
+          "source_url": "",
+          "fetch_sha256": "d4b385e8180950215d6adc710229eb0659fbf887768f1c21912950ce7ecc4e93",
+          "anchor": "dieu-10",
+          "quoted_span": "Bộ Khoa học và Công nghệ thiết lập, duy trì Công cụ hỗ trợ phân loại rủi ro tự động trên Cổng thông tin điện tử một cửa về trí tuệ nhân tạo"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:chinhphu:218029",
+          "document_number": "142/2026/ND-CP",
+          "anchor": "dieu-10",
+          "kind": "provision"
+        }
+      ]
     },
     {
       "case_id": "new-ai-decree-reclassify-142-2026",
       "citation_index": 0,
-      "state": "absent",
+      "state": "resolved",
       "expected_number": "142/2026/nđ-cp",
-      "reason": "Searched 142/2026/nđ-cp. No matching document exists in the exported inventory.",
-      "reviewed_at": "2026-11-09",
-      "evidence": [],
-      "alternatives": []
+      "reason": "142/2026/NĐ-CP is present as vn:chinhphu:218029 (chinhphu), read from OCR under the reviewed waiver; Điều 11 holds the expected provision. Re-adjudicated 2026-11-15 from run vn/20261115_2 text.",
+      "reviewed_at": "2026-11-15",
+      "evidence": [
+        {
+          "document_key": "vn:chinhphu:218029",
+          "document_number": "142/2026/ND-CP",
+          "source_url": "",
+          "fetch_sha256": "d4b385e8180950215d6adc710229eb0659fbf887768f1c21912950ce7ecc4e93",
+          "anchor": "dieu-11",
+          "quoted_span": "Nhà cung cấp phải thực hiện rà soát và phân loại lại mức độ rủi ro của hệ thống trí tuệ nhân tạo khi phát sinh một trong các sự kiện pháp lý sau đây"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:chinhphu:218029",
+          "document_number": "142/2026/ND-CP",
+          "anchor": "dieu-11",
+          "kind": "provision"
+        }
+      ]
     },
     {
       "case_id": "new-ai-decree-dossier-142-2026",
       "citation_index": 0,
-      "state": "absent",
+      "state": "resolved",
       "expected_number": "142/2026/nđ-cp",
-      "reason": "Searched 142/2026/nđ-cp. No matching document exists in the exported inventory.",
-      "reviewed_at": "2026-11-09",
-      "evidence": [],
-      "alternatives": []
+      "reason": "142/2026/NĐ-CP is present as vn:chinhphu:218029 (chinhphu), read from OCR under the reviewed waiver; Điều 12 holds the expected provision. Re-adjudicated 2026-11-15 from run vn/20261115_2 text.",
+      "reviewed_at": "2026-11-15",
+      "evidence": [
+        {
+          "document_key": "vn:chinhphu:218029",
+          "document_number": "142/2026/ND-CP",
+          "source_url": "",
+          "fetch_sha256": "d4b385e8180950215d6adc710229eb0659fbf887768f1c21912950ce7ecc4e93",
+          "anchor": "dieu-12",
+          "quoted_span": "Nhà cung cấp phải lập hồ sơ phân loại rủi ro đối với hệ thống trí tuệ nhân tạo có rủi ro cao và hệ thống trí tuệ nhân tạo có rủi ro trung bình"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:chinhphu:218029",
+          "document_number": "142/2026/ND-CP",
+          "anchor": "dieu-12",
+          "kind": "provision"
+        }
+      ]
     },
     {
       "case_id": "new-credit-info-scope-58-2021",
@@ -2075,12 +2126,29 @@
     {
       "case_id": "new-relation-ai-law-decree-pair",
       "citation_index": 0,
-      "state": "absent",
+      "state": "resolved",
       "expected_number": "142/2026/nđ-cp",
-      "reason": "Searched 142/2026/nđ-cp. No matching document exists in the exported inventory.",
-      "reviewed_at": "2026-11-09",
-      "evidence": [],
-      "alternatives": []
+      "reason": "142/2026/NĐ-CP is present as vn:chinhphu:218029 (chinhphu), read from OCR under the reviewed waiver; Điều 10 holds the expected provision. Re-adjudicated 2026-11-15 from run vn/20261115_2 text.",
+      "reviewed_at": "2026-11-15",
+      "evidence": [
+        {
+          "document_key": "vn:chinhphu:218029",
+          "document_number": "142/2026/ND-CP",
+          "source_url": "",
+          "fetch_sha256": "d4b385e8180950215d6adc710229eb0659fbf887768f1c21912950ce7ecc4e93",
+          "anchor": "dieu-10",
+          "quoted_span": "Bộ Khoa học và Công nghệ thiết lập, duy trì Công cụ hỗ trợ phân loại rủi ro tự động trên Cổng thông tin điện tử một cửa về trí tuệ nhân tạo"
+        }
+      ],
+      "alternatives": [
+        {
+          "country": "vn",
+          "document_key": "vn:chinhphu:218029",
+          "document_number": "142/2026/ND-CP",
+          "anchor": "dieu-10",
+          "kind": "provision"
+        }
+      ]
     },
     {
       "case_id": "new-relation-ai-law-decree-pair",
