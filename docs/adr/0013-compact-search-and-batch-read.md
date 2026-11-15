@@ -96,3 +96,6 @@ they never state an inverse legal effect.
   gate in [search results](../design/mcp-results.md#evaluation): against current
   compact, per model, cited expected provisions do not fall and summed input
   tokens are lower; the guide reads relations when counts warrant.
+- 2026-11-14: the agent-in-the-loop check uses two Claude models (Sonnet and
+  Opus) instead of one Claude and one OpenAI model, by owner decision, each case
+  once per mode per model.

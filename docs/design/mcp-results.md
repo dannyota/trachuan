@@ -243,8 +243,9 @@ product cohort; otherwise the snippet cap or the compact default changes before
 the server ships.
 
 After the server exists, an agent-in-the-loop check runs on the development
-cohort with only the MCP tools: one Claude and one OpenAI client model, model
-versions recorded, the same system prompt, each case twice per mode per model.
+cohort with only the MCP tools: two Claude client models (Sonnet and Opus; the
+owner chose Claude only on 2026-11-14), model versions recorded, the same system
+prompt, each case once per mode per model within the budget the primary sets.
 Per model it records expected provisions cited under the product matcher, tool
 calls, input tokens summed over every model request in the task as the provider
 reports them, and tool-result size separately. Compact stays the default only
