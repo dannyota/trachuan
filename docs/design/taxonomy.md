@@ -97,7 +97,9 @@ under the corpus rules.
 3. LLM in batches over public legal text, after `chunk` and `embed` have run,
    for articles that hold no seed or inherited node:
    - One request per document (title, scope article, table of contents, VBPL
-     field) yields level-2 nodes.
+     field) returns a set of active level-2 codes; a code that is not an active
+     level-2 node is dropped and counted. The result is not an assignment: it is
+     given as document context to every article request of that document.
    - One request per chapter with all its articles yields assignments for each
      article; a document without chapters is split into groups of up to 12
      articles in document order. The classification recipe sets a maximum input
@@ -107,16 +109,16 @@ under the corpus rules.
      nodes are the top 10 by cosine between the article's chunk vectors and node
      description vectors embedded with the same dense recipe, searched across
      the whole tree.
-   - Output is JSON keyed by the request's article anchors, with a set of codes
-     and a confidence per code for each; an article may receive several nodes in
-     different families. A code outside that article's own candidates or unknown
-     to the mapping, and an anchor not in the request, is dropped and counted. A
-     response that is truncated, fails the schema or misses an article yields no
-     assignment for those articles and gap `unassigned` with detail
-     `invalid_response`. The model, effort and prompt are part of the
-     classification recipe. The threshold per level is calibrated on the labeled
-     set to reach precision at least 0.85, then frozen in the release; below it,
-     no assignment and a gap "unassigned".
+   - Article request output is JSON keyed by the request's article anchors, with
+     a set of codes and a confidence per code for each; an article may receive
+     several nodes in different families. A code outside that article's own
+     candidates or unknown to the mapping, and an anchor not in the request, is
+     dropped and counted. A response that is truncated, fails the schema or
+     misses an article yields no assignment for those articles and gap
+     `unassigned` with detail `invalid_response`. The model, effort and prompt
+     are part of the classification recipe. The threshold per level is
+     calibrated on the labeled set to reach precision at least 0.85, then frozen
+     in the release; below it, no assignment and a gap "unassigned".
 4. Manual overrides in `taxonomy/overrides.yaml`. An override names an active
    package node at level 2 or deeper or a custom node; any other code fails
    `corpus taxonomy check` and the build. An override whose document or anchor

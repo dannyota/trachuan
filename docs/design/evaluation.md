@@ -187,14 +187,15 @@ is `out_of_scope` when the release serves no nodes
 ([retrieval](retrieval.md#filter-contract)), and `not_run` when a research
 override is set. `quality_pass` means both hybrid modes meet all old-product
 floors, and development floors once development cases exist, the filter gate
-when the release serves nodes, and all three rejection checks pass; legacy has
-no gate. `release_eligible` is always false in this baseline, including when
-`quality_pass` is true. Measured failures leave the stage done and the run
-evaluated, with `quality_pass:false` and `release_eligible:false`. Per-case
-`mapping_incomplete` is a reported diagnostic, not a run failure. Malformed
-fixture/map files, incomplete case execution or infrastructure failure fail the
-stage. CLI and status must distinguish completed evaluation from passed quality
-gates.
+when the release serves nodes, every taxonomy classification floor that applies
+to the release passes (a failed or unavailable applicable row fails), and all
+three rejection checks pass; legacy has no gate. `release_eligible` is always
+false in this baseline, including when `quality_pass` is true. Measured failures
+leave the stage done and the run evaluated, with `quality_pass:false` and
+`release_eligible:false`. Per-case `mapping_incomplete` is a reported
+diagnostic, not a run failure. Malformed fixture/map files, incomplete case
+execution or infrastructure failure fail the stage. CLI and status must
+distinguish completed evaluation from passed quality gates.
 
 ## Cache and report format
 
