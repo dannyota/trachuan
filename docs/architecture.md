@@ -72,7 +72,7 @@ routes. The admin CLI triages and exports reports.
 
 ## Shared retrieval (`internal/retrieval`)
 
-The engine serves recipe 1 over one corpus release database: `Search` ranks and
+The engine serves recipe 3 over one corpus release database: `Search` ranks and
 shapes evidence, `Present` turns a response into compact or full results with
 document entries and relation pointers, and `Read` reads handles in batches with
 fixed parts and `next` tokens ([search results](design/mcp-results.md)).

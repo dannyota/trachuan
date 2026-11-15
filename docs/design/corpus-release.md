@@ -170,7 +170,7 @@ that it fails the run.
 
 ### Activation steps
 
-The host activator lives under `deploy/host/release/` and works through
+The host activator lives under `deploy/host/updater/` and works through
 `podman exec` into `trachuan-postgres`. Privileged preparation runs as
 `postgres` through `postgres-admin.sh`; everything else runs as `activator` (ADR
 0003; [system](system.md#database-roles)), which has `CREATEDB`, owns the corpus
