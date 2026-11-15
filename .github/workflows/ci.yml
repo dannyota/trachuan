@@ -132,6 +132,7 @@ jobs:
           skip-save-cache: ${{ !(github.event_name == 'push' && github.ref == 'refs/heads/main') }}
       - run: sudo apt-get update && sudo apt-get install -y shellcheck
       - run: make pre-push
+      - run: go mod tidy -diff
       - run: make test
       - run: PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s deploy/host -p '*_test.py'
       - run: PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s deploy/images -p '*_test.py'
