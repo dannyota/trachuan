@@ -148,3 +148,28 @@ func TestWaiver_FrozenReplayRecordsWaiver(t *testing.T) {
 		t.Fatalf("stale waiver not reported: %v", gaps)
 	}
 }
+
+func TestReadWaivers_MissingAndEmpty(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "waivers.yaml")
+	cwd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ReadWaivers(path); err == nil || !strings.Contains(err.Error(), path) || !strings.Contains(err.Error(), cwd) {
+		t.Fatalf("missing file error: %v", err)
+	}
+	var hash string
+	for _, data := range []string{"[]\n", ""} {
+		if err := os.WriteFile(path, []byte(data), 0600); err != nil {
+			t.Fatal(err)
+		}
+		w, err := ReadWaivers(path)
+		if err != nil || len(w.entries) != 0 {
+			t.Fatalf("%q: %v", data, err)
+		}
+		if hash != "" && hash != w.hash {
+			t.Fatal("empty input hash differs from empty list")
+		}
+		hash = w.hash
+	}
+}

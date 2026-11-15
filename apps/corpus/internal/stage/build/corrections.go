@@ -73,3 +73,19 @@ func validateCorrections(entries []source.Correction, docs map[string]correction
 	}
 	return result, nil
 }
+
+func checkCorrections(entries []source.Correction, docs map[string]correctionDocument) []error {
+	var failures []error
+	seen := map[string]bool{}
+	for _, entry := range entries {
+		if seen[entry.Key] {
+			failures = append(failures, fmt.Errorf("correction %q: duplicate key", entry.Key))
+			continue
+		}
+		seen[entry.Key] = true
+		if _, err := validateCorrections([]source.Correction{entry}, docs); err != nil {
+			failures = append(failures, err)
+		}
+	}
+	return failures
+}

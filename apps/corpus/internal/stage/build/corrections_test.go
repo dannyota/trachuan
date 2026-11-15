@@ -177,3 +177,16 @@ func TestCorrections_ExternalEvidenceAcceptedAndListed(t *testing.T) {
 		t.Fatalf("reviews=%s", data)
 	}
 }
+
+func TestCheckCorrections_ReportsEveryInvalidEntry(t *testing.T) {
+	valid := source.Correction{Key: "a", Number: "A", Hold: true, Reason: "reviewed", Reviewed: "2026-11-15", Evidence: source.CorrectionEvidence{Anchor: "dieu-1", Quote: "exact text"}}
+	badQuote := valid
+	badQuote.Evidence.Quote = "exact  text"
+	missing := valid
+	missing.Key = "missing"
+	docs := map[string]correctionDocument{"a": {number: "A", provisions: map[string]string{"dieu-1": "exact text"}}}
+	failures := checkCorrections([]source.Correction{badQuote, missing, valid}, docs)
+	if len(failures) != 3 || !strings.Contains(failures[0].Error(), "evidence not found") || !strings.Contains(failures[1].Error(), "document absent") || !strings.Contains(failures[2].Error(), "duplicate") {
+		t.Fatalf("failures: %v", failures)
+	}
+}

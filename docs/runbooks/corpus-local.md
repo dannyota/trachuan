@@ -20,6 +20,12 @@ retention. Every step is idempotent. `.env` must hold `POSTGRES_PASSWORD`,
 
 Checkpoints need `pg_dump` 18 or newer (`brew install postgresql@18`).
 
+Always run the worker from a dedicated checkout pinned to the commit used to
+build its binary: `git worktree add --detach <path> <commit>`. Never run the
+worker from the main checkout, which the coordinator pulls during releases. In
+a separate terminal, start the built binary with `corpus worker` from the pinned
+checkout.
+
 The OCR cross-check renders PDF pages with `pdftoppm` from poppler
 (`brew install poppler`; 26.11.0 at the time of writing). Only
 `corpus ocr check` needs it; the worker does not. Set `CORPUS_OCR_STORE` to the
@@ -38,7 +44,6 @@ export CORPUS_PHAPDIEN_PACKAGE=work/phapdien/BoPhapDienDienTu.zip
 export CORPUS_OCR_STORE="$PWD/work/ocr"
 export CORPUS_FILE_CACHE="$PWD/work/cache/banhmi-vn"
 go run ./apps/corpus/cmd/corpus migrate
-go run ./apps/corpus/cmd/corpus worker &
 go run ./apps/corpus/cmd/corpus start vn 20261109 --until relate
 go run ./apps/corpus/cmd/corpus status vn 20261109
 ```
@@ -81,8 +86,10 @@ and `corpus export-history` take the same country and release. Run every command
 from the repository root: `start` reads `sources/<cc>.yaml` there and artifacts
 default to `work/artifacts`.
 
-Review `sources/vn-corrections.yaml` before a build; a missing file means no
-corrections. The build pins the parsed entries at planning. Review
+Run `corpus corrections check vn <rel>` against the release corpus database and
+require it to pass before merging a corrections PR. The command uses
+`CORPUS_BUILDER_DATABASE_URL` and reads `sources/vn-corrections.yaml` from the
+current checkout. The build pins the parsed entries at planning. Review
 `validity-review.json` in the build artifact for unresolved validity and
 proposed corrections before accepting the release.
 
