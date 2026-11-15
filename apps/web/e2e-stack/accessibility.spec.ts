@@ -11,6 +11,11 @@ async function keyboard(page: Page) {
     if (await control.evaluate(node => {
       const element = node as HTMLElement
       const style = getComputedStyle(element)
+      let closed = element.closest('details:not([open])')
+      while (closed) {
+        if (element !== closed.querySelector(':scope > summary')) return false
+        closed = closed.parentElement?.closest('details:not([open])') || null
+      }
       return style.visibility !== 'hidden' && element.getClientRects().length > 0 && !element.closest('[inert]')
     })) expected.push(control)
   }
