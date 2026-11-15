@@ -39,7 +39,8 @@ Rules:
 - A provision may carry several assignments from different families. A node
   family is the set of nodes under one level-2 ancestor. Within a family a
   provision holds assignments from one method only: a `manual` entry replaces
-  every `phapdien_seed` and `llm` entry in that family, and a seed replaces
+  every `phapdien_seed`, `inherited` and `llm` entry in that family, a seed
+  replaces `inherited` and `llm` entries, and an `inherited` entry replaces
   `llm` entries there. A manual entry may be negative (`exclude`), which removes
   the family from the provision and blocks later automatic entries.
 - The public identity of a node is its `code`; integer ids are internal. A

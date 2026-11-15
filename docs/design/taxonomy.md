@@ -85,29 +85,38 @@ under the corpus rules.
    that is not in the release is expected and yields nothing; a document found
    without the article yields a coverage gap `seed_article_missing` naming the
    document and the node. Number-only and consolidation matches are not seeds.
-2. Consolidation inheritance. An unseeded article of a consolidated document
-   inherits every seed of the same-numbered article (`dieu-<n>`) of a document
-   it `consolidates`. It is stored as method `phapdien_seed` with
-   `confidence = 0.9` (a direct seed carries 1.0), so the precedence in
-   [data](data.md) and the corpus schema are unchanged; the source follows from
-   the `consolidates` relation. Several sources give the union; a source without
-   that article gives nothing. No LLM is involved.
+2. Consolidation inheritance. Article numbers alone do not prove that two
+   articles correspond ([corpus schema](corpus-schema.md)), so an unseeded
+   article of a consolidated document inherits only from a corresponding
+   article: a seeded article with the same `dieu-<n>` anchor in a document it
+   `consolidates` whose non-empty `heading` equals its own after Unicode NFC,
+   case folding and whitespace collapse. It receives that article's seeds as
+   method `inherited` at `confidence = 0.9`. Several corresponding sources give
+   the union. Any other case (no such article, an empty or different heading)
+   inherits nothing, goes to the LLM layer and is counted. No LLM is involved.
 3. LLM in batches over public legal text, after `chunk` and `embed` have run,
    for articles that hold no seed or inherited node:
    - One request per document (title, scope article, table of contents, VBPL
      field) yields level-2 nodes.
    - One request per chapter with all its articles yields assignments for each
      article; a document without chapters is split into groups of up to 12
-     articles in document order. Candidate nodes are the top 10 by cosine
-     between the article's chunk vectors and node description vectors embedded
-     with the same dense recipe, searched across the whole tree.
-   - Output is JSON with a set of codes and a confidence per code; an article
-     may receive several nodes in different families. A code outside the
-     request's candidates or unknown to the mapping is dropped and counted. The
-     model, effort and prompt are part of the classification recipe. The
-     threshold per level is calibrated on the labeled set to reach precision at
-     least 0.85, then frozen in the release; below it, no assignment and a gap
-     "unassigned".
+     articles in document order. The classification recipe sets a maximum input
+     and output size per request; a chapter or group over it is split into runs
+     of consecutive articles that fit, and an article that alone exceeds it gets
+     no LLM assignment and gap `unassigned` with detail `too_long`. Candidate
+     nodes are the top 10 by cosine between the article's chunk vectors and node
+     description vectors embedded with the same dense recipe, searched across
+     the whole tree.
+   - Output is JSON keyed by the request's article anchors, with a set of codes
+     and a confidence per code for each; an article may receive several nodes in
+     different families. A code outside that article's own candidates or unknown
+     to the mapping, and an anchor not in the request, is dropped and counted. A
+     response that is truncated, fails the schema or misses an article yields no
+     assignment for those articles and gap `unassigned` with detail
+     `invalid_response`. The model, effort and prompt are part of the
+     classification recipe. The threshold per level is calibrated on the labeled
+     set to reach precision at least 0.85, then frozen in the release; below it,
+     no assignment and a gap "unassigned".
 4. Manual overrides in `taxonomy/overrides.yaml`. An override names an active
    package node at level 2 or deeper or a custom node; any other code fails
    `corpus taxonomy check` and the build. An override whose document or anchor
@@ -134,9 +143,11 @@ of their documents. The build computes both. It places a retired node under its
 recorded parent at the parent's level plus one and leaves out a retired node
 that would fall below level 4. Every mapping and custom node reaches a chủ đề
 through its parents in at most four steps; any other chain, including a cycle,
-fails `corpus taxonomy check` and the build. A release whose assignments come
-only from seeds and overrides serves them without the classification floors
-below, which gate the LLM layer; it must still pass the filter gate in
+fails `corpus taxonomy check` and the build. Each layer is gated by its own rows
+below: a release serving `inherited` assignments must pass the inheritance rows,
+and one serving `llm` assignments the LLM rows. A release whose assignments come
+only from seeds and overrides serves them without the classification floors;
+every release that serves nodes must pass the filter gate in
 [evaluation](evaluation.md). The LLM layer's candidate text for a node is,
 versioned with the classification recipe, the names of its ancestors and itself
 joined from the root, followed by its description when it has one.
@@ -156,21 +167,27 @@ every prompt or threshold change reruns it.
 | same                                             | precision and recall at level 3                     | 0.80  |
 | same                                             | precision and recall at the deepest level           | 0.75  |
 | 100 articles with labels in two or more families | precision and recall over all pairs                 | 0.80  |
-| every slice                                      | candidate recall at 10 (true node among candidates) | 0.95  |
+| every LLM slice                                  | candidate recall at 10 (true node among candidates) | 0.95  |
 | 100 post-2023 articles, model-adjudicated        | precision and recall at level 2                     | 0.85  |
 | same                                             | precision and recall at the deepest level           | 0.70  |
 | 50 articles that belong to custom nodes          | precision and recall of custom nodes                | 0.80  |
-| 200 seeded consolidated articles, inherited      | precision at level 2 (inheritance layer)            | 0.90  |
+| seeded consolidated articles, inherited          | precision at level 2 (inheritance layer)            | 0.95  |
+| same                                             | precision at level 3 (inheritance layer)            | 0.90  |
+| same                                             | precision at the deepest level (inheritance layer)  | 0.85  |
 
 Every level that a release serves must have a floor in this table; a new level
 or slice is added here before it is served.
 
 The post-2023 reference is model-adjudicated, not owner-labeled: Codex
 `gpt-6-astra` labels 100 post-2023 articles independently, blind to the
-classifier's output and candidates, and the coordinator reads 20 of its labels
-before the slice gates. The custom-node slice does not apply while `custom.yaml`
-is empty. The inheritance slice masks seeded articles of consolidated documents
-and compares the nodes they would inherit with their seeds.
+classifier's output and candidates, and the coordinator reads 20 of its labels.
+The coordinator's corrections are applied, then the set is frozen with a hash
+like the seeded set; the slice gates only against that frozen set. The
+custom-node slice does not apply while `custom.yaml` is empty. The inheritance
+slice masks every seeded article of a consolidated document that has a
+corresponding source article and compares the nodes it would inherit with its
+seeds; with fewer than 100 such articles the slice is unavailable and
+`inherited` assignments are not served.
 
 The report also lists assignment counts per node, unassigned counts, and the
 diff of node changes against the previous release. A failed floor blocks

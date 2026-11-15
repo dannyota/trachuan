@@ -4,7 +4,7 @@
 
 **Goal:** every primary article in the release carries subject nodes: seeds from the 2023 codification package, then inheritance through consolidations, then an LLM layer in batches for the rest, gated by the floors in [taxonomy](../design/taxonomy.md#evaluation-gate).
 
-**Budget:** owner cap 150 USD on the key, pilot included. Pilot budget 15 USD. The full batch is pre-approved when the pilot passes every applicable floor and the projection, pilot included, stays under 100 USD; otherwise, and before any Opus run, report to the coordinator.
+**Budget:** owner cap 150 USD on the key, pilot included. Pilot budget 15 USD. The full batch is pre-approved when the pilot passes every applicable floor and the projection, pilot included, stays under 100 USD; otherwise, and before any Opus run, report to the coordinator. Admission: before each submission or retry, settled cost plus the reserved cost of every unsettled batch plus this batch's reserve (counted input tokens at the batch input price, plus every request's `max_tokens` at the batch output price) must fit the applicable budget (pilot 15 USD, full batch 100 USD, cap 150 USD); otherwise it is not submitted. A batch's reserve is released only when its cost is settled from its results.
 
 **Spec:** [taxonomy](../design/taxonomy.md) ("Classification layers", "Serving", "Evaluation gate"), [batch submissions](../design/batch-submissions.md), [embedder](../design/embedder.md) for node vectors, [evaluation](../design/evaluation.md) filter gate. The spec wins over this plan.
 
@@ -24,12 +24,12 @@
 
 ### 8.0 Design delta (primary, astra review)
 
-- [x] taxonomy.md: consolidation inheritance layer (confidence 0.9, union of sources) with its own slice (precision 0.90 at level 2).
-- [x] taxonomy.md: LLM request shape (chapters; groups of 12 without chapters), model, effort and prompt in the recipe, output codes outside the candidates dropped; post-2023 slice model-adjudicated by Codex `gpt-6-astra`, blind, 20 read by the coordinator; custom-node slice not applicable while `custom.yaml` is empty.
+- [x] taxonomy.md and ADR 0004: consolidation inheritance through corresponding articles (same anchor and heading), method `inherited` below seeds and above `llm` (data.md, corpus-schema.md), confidence 0.9, its own precision rows at levels 2, 3 and deepest; each layer gated by its own rows.
+- [x] taxonomy.md: LLM request shape (chapters; groups of 12 without chapters), model, effort and prompt in the recipe, request size bounds, output keyed by article and validated against that article's candidates, `too_long` and `invalid_response` gaps; post-2023 slice model-adjudicated by Codex `gpt-6-astra`, blind, 20 read by the coordinator, then frozen with a hash; custom-node slice not applicable while `custom.yaml` is empty.
 
 ### 8.1 Seeds and inheritance in build (no paid calls)
 
-- [ ] Build computes seed assignments and inheritance assignments, with `seed_article_missing` gaps; the filter gate in evaluation runs on them; release serves them without the LLM floors.
+- [ ] Migration adds `inherited` to the assignment method check. Build computes seed and inheritance assignments, with `seed_article_missing` gaps and the count of consolidated articles without a corresponding source; the inheritance rows and the filter gate run on them; seeds serve without floors, inherited assignments only when their rows pass.
 
 ### 8.2 Candidates and labeled set (no paid calls)
 

@@ -192,7 +192,8 @@ not a VBPL source node. Global gaps may have neither document nor taxonomy node.
 
 The build fills these tables from the taxonomy inputs ([taxonomy](taxonomy.md));
 without inputs they stay empty and `release.taxonomy_version` is the empty
-string. Seeds and manual entries are the only methods until the LLM layer lands.
+string. Seeds, inherited seeds and manual entries are the only methods until the
+LLM layer lands.
 
 `taxonomy_node`: `id bigint PRIMARY KEY`, `country text CHECK(country='vn')`,
 `parent_id bigint?` FK taxonomy_node,
@@ -209,7 +210,7 @@ the import never reuses them.
 
 `taxonomy_assignment`: `provision_id bigint` FK provision, `node_id bigint` FK
 taxonomy_node, `family_id bigint` FK taxonomy_node, `method text` in
-(`manual`,`phapdien_seed`,`llm`), `exclude boolean`,
+(`manual`,`phapdien_seed`,`inherited`,`llm`), `exclude boolean`,
 `confidence double precision CHECK(confidence BETWEEN 0 AND 1)`,
 `taxonomy_version text CHECK(taxonomy_version <> '')`. PK
 `(provision_id,node_id)`; CHECK `NOT exclude OR method='manual'`; index

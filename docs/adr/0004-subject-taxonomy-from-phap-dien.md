@@ -14,11 +14,12 @@ exists with 86,388 placed articles linked to VBPL ItemIDs.
 
 Levels 1 to 4 of the subject tree come from the 2023 codification package,
 keeping names and codes. Custom nodes are declared in a YAML file for subjects
-the codification lacks. Articles matching the package receive seed labels; the
-rest are classified by an LLM in batches (document, then chapter with all its
-articles) using embedding-selected candidate nodes; manual overrides win. The
-subject filter never hides results: search runs over the whole corpus and
-reports the count outside the filter.
+the codification lacks. Articles matching the package receive seed labels; an
+article of a consolidated document whose corresponding source article is seeded
+inherits those labels; the rest are classified by an LLM in batches (document,
+then chapter with all its articles) using embedding-selected candidate nodes;
+manual overrides win. The subject filter never hides results: search runs over
+the whole corpus and reports the count outside the filter.
 
 ## Consequences
 
@@ -41,3 +42,6 @@ classifier. Hard-cut subject filtering.
   found seeds for 25.3% of primary corpus articles (24.7% through the VBPL
   ItemID alone) and 91.6% of chủ đề 22 package articles; added Tiểu mục
   flattening, STT collision and empty đề mục rules to the import mapping.
+- 2026-11-15: added consolidation inheritance (method `inherited`, below seeds,
+  above `llm`) with its own evaluation rows after the classification design
+  review; see design/taxonomy.md.
