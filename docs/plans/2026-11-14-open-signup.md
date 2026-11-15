@@ -55,11 +55,14 @@
 
 ## Part B: accounts (trachuan-dev2)
 
-- [ ] B1 Design: `docs/design/accounts.md` with the API, schema, mail outbox, TOTP and key ring contracts and a budgets section (Argon2id parameters, token lifetimes, rate limits, cool-downs), written from ADR 0015 by the primary and reviewed by `gpt-6.1-sol` before code.
-- [ ] B2 Mail: OCI Email Delivery approved sender for `trachuan.vn`, SPF and DKIM records through the `cf` CLI, SMTP credential as a secret; proof mail to the owner lands in the inbox, not spam.
-- [ ] B3 Server: migrations and endpoints for registration, verification, password sign-in, reset, add password to a Google account; TOTP enrollment, pending authentication, recovery codes; epoch fencing on every issuer; outbox sender.
-- [ ] B4 Web: sign-up, verify, sign-in with password, reset, account security (TOTP with in-browser QR, recovery codes), OAuth consent works for password and TOTP accounts.
+- [x] B1 Design: `docs/design/accounts.md` with the API, schema, mail outbox, TOTP and key ring contracts and a budgets section (Argon2id parameters, token lifetimes, rate limits, cool-downs), written from ADR 0015 by the primary and reviewed by `gpt-6.1-sol` before code.
+- [x] B2 Mail: OCI Email Delivery approved sender for `trachuan.vn`, SPF and DKIM records through the `cf` CLI, SMTP credential as a secret; proof mail to the owner lands in the inbox, not spam.
+- [x] B3 Server: migrations and endpoints for registration, verification, password sign-in, reset, add password to a Google account; TOTP enrollment, pending authentication, recovery codes; epoch fencing on every issuer; outbox sender.
+- [x] B4 Web: sign-up, verify, sign-in with password, reset, account security (TOTP with in-browser QR, recovery codes), OAuth consent works for password and TOTP accounts.
 - [ ] B5 Acceptance on the host with throwaway accounts under `SERVER_SIGNUP_EMAILS`: register, verify, sign in, reset, enroll and use TOTP, recovery code, MCP connect with a password account.
+  - Done 2026-11-14 on v0.1.5, rechecked 2026-11-15 on v0.1.8, with three throwaway plus-address accounts under the allowlist (deleted afterwards) and one address kept off the allowlist: sign-up, mail link, set password, sign-in and sign-out, change password, reset (every session and personal token revoked, no session issued), uniform 202 answers and comparable sign-in latency for allowlisted, non-allowlisted and registered addresses, account-exists mail, mail in Vietnamese then English with tokens only in the `/link#` fragment, per-email password limit, MCP connect with a password account (DCR, consent, PKCE, token, tools/list, revoke). TOTP enrollment is off in production: setup hidden and its route 404; TOTP and recovery-code sign-in are covered by the e2e stack.
+  - Fixed from the run (#251, live in v0.1.8): signed-out consent redirected to Google instead of `/login?next=`; the per-email limit counted successful attempts (now failed attempts only, #249); `/link` title, username field and reset heading.
+  - Pending: owner-only step, add a password to the owner's Google account.
 
 ## Part C: open sign-up
 
