@@ -2,12 +2,13 @@ import copy
 import unittest
 
 from corpus_manifest import validate_report
+from corpus_test_support import recipe_fixture
 
 
 def reports():
+    row, hashes = recipe_fixture()
     previous = dict(version=1, scorer='agent-eval/4', country='vn', rel='20990101_1',
-                    retrieval_recipe=dict(version=3, abstention=dict(threshold=.53, calibration_sha256='same')),
-                    recipes=dict(query='q', document='d', chunk='c', lexical='l', retrieval='r'),
+                    retrieval_recipe=row['retrieval_recipe'], recipes=hashes,
                     fixture_hashes=dict(Legacy='a', OldProduct='b', Development='c'),
                     rejections=[dict(case_id=f'r{i}', passed=True) for i in range(3)],
                     cohorts={}, cases=[])
@@ -47,14 +48,28 @@ def reports():
     return previous, candidate
 
 
+def validate_comparison(candidate, previous=None, release_row=None):
+    row = recipe_fixture(candidate.get('retrieval_recipe'))[0] if release_row is None else release_row
+    validate_report(candidate, 'vn', candidate['rel'], previous_report=previous, release_row=row)
+
+
 class CorpusComparisonTest(unittest.TestCase):
-    def validate(self, candidate, previous):
-        validate_report(candidate, 'vn', '20990102_1', previous_report=previous)
+    def validate(self, candidate, previous, release_row=None):
+        validate_comparison(candidate, previous, release_row=release_row)
 
     def test_tolerates_a_verified_corpus_only_loss(self):
         previous, candidate = reports()
-        validate_report(candidate, 'vn', '20990102_1')
+        validate_comparison(candidate)
         self.validate(candidate, previous)
+
+    def test_recipe_non_current_tail_is_not_a_research_override(self):
+        previous, candidate = reports()
+        for report in (previous, candidate):
+            report['retrieval_recipe']['non_current_tail'] = 2
+        self.validate(candidate, previous)
+        candidate['cases'][0]['non_current_tail'] = 2
+        with self.assertRaises(ValueError):
+            self.validate(candidate, previous)
 
     def test_refuses_forged_fields_and_nonfinite_values(self):
         for field, value in [('high_water', .99), ('status', 'fail'), ('previous', .99),
@@ -90,7 +105,8 @@ class CorpusComparisonTest(unittest.TestCase):
     def test_version_one_cannot_claim_tolerance(self):
         previous, candidate = reports()
         candidate.update(version=1, scorer='agent-eval/4')
-        with self.assertRaises(ValueError):
+        candidate.pop('retrieval_recipe')
+        with self.assertRaisesRegex(ValueError, 'recomputed non_regression did not pass'):
             self.validate(candidate, previous)
 
     def test_provenance_does_not_remove_an_alternative(self):
@@ -156,9 +172,10 @@ class CorpusComparisonTest(unittest.TestCase):
             for record in last['cohorts'][name]['non_regression']:
                 if record['name'] == 'mrr':
                     record.update(high_water=.99, tolerance=0)
-        last['recipes']['chunk'] = 'new recipe'
+        row, hashes = recipe_fixture(last['retrieval_recipe'], chunk={'version': 2})
+        last['recipes']['chunk'] = hashes['chunk']
         last['non_regression'] = copy.deepcopy(last['cohorts']['old_product']['non_regression'])
-        self.validate(last, middle)
+        self.validate(last, middle, release_row=row)
 
     def test_unknown_versions_and_scorers_are_refused(self):
         for version, scorer in [(3, 'agent-eval/5'), (2, 'agent-eval/6'), (1, 'agent-eval/5')]:
@@ -205,11 +222,12 @@ class CorpusComparisonTest(unittest.TestCase):
                             ('exact', 'hybrid', 8, 'mrr'), rows)
 
     def test_calibration_hash_alone_allows_tolerance_but_threshold_does_not(self):
-        for threshold, calibration, allowed in [(.53, 'new', True), (.54, 'old', False), (.54, 'new', False)]:
+        for threshold, calibration, allowed in [(0.5297041131124263, 'new', True), (.54, 'old', False), (.54, 'new', False)]:
             previous, candidate = reports()
-            previous['retrieval_recipe'] = dict(version=3, abstention=dict(threshold=.53, calibration_sha256='old'))
-            candidate['retrieval_recipe'] = dict(version=3, abstention=dict(threshold=threshold, calibration_sha256=calibration))
-            candidate['recipes']['retrieval'] = 'different full recipe hash'
+            previous['retrieval_recipe']['abstention'].update(calibration_sha256='old')
+            candidate['retrieval_recipe']['abstention'].update(threshold=threshold, calibration_sha256=calibration)
+            previous['recipes']['retrieval'] = recipe_fixture(previous['retrieval_recipe'])[1]['retrieval']
+            candidate['recipes']['retrieval'] = recipe_fixture(candidate['retrieval_recipe'])[1]['retrieval']
             with self.subTest(threshold=threshold, calibration=calibration):
                 if allowed:
                     self.validate(candidate, previous)
@@ -219,9 +237,11 @@ class CorpusComparisonTest(unittest.TestCase):
 
     def test_calibration_change_preserves_the_watermark(self):
         previous, candidate = reports()
-        previous.update(version=2, scorer='agent-eval/5', retrieval_recipe=dict(version=3, abstention=dict(threshold=.53, calibration_sha256='old')))
-        candidate['retrieval_recipe'] = dict(version=3, abstention=dict(threshold=.53, calibration_sha256='new'))
-        candidate['recipes']['retrieval'] = 'different full recipe hash'
+        previous.update(version=2, scorer='agent-eval/5')
+        previous['retrieval_recipe']['abstention'].update(calibration_sha256='old')
+        candidate['retrieval_recipe']['abstention'].update(calibration_sha256='new')
+        previous['recipes']['retrieval'] = recipe_fixture(previous['retrieval_recipe'])[1]['retrieval']
+        candidate['recipes']['retrieval'] = recipe_fixture(candidate['retrieval_recipe'])[1]['retrieval']
         for name in ('old_product', 'development'):
             for record in previous['cohorts'][name]['non_regression']:
                 if record['name'] == 'mrr':

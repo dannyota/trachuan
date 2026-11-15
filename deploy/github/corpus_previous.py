@@ -9,7 +9,7 @@ from corpus_manifest import decode, validate_report
 from manifest import canonical, positive
 
 
-def verified_previous(report, directory, client):
+def verified_previous(report, directory, client, release_row=None):
     from corpus_registry import release
 
     previous = report['previous_diff']['previous']
@@ -41,11 +41,11 @@ def verified_previous(report, directory, client):
     if 'retrieval_recipe' in prior and canonical(prior['retrieval_recipe']) != canonical(recipe):
         raise ValueError('previous report retrieval recipe differs from signed manifest')
     prior = prior | {'retrieval_recipe': recipe}
-    validate_report(report, report['country'], report['rel'], previous_report=prior)
+    validate_report(report, report['country'], report['rel'], previous_report=prior, release_row=release_row)
     return prior
 
 
-def remote_previous(report, directory):
+def remote_previous(report, directory, release_row=None):
     endpoint = os.environ['OCI_S3_ENDPOINT']
     if not endpoint.startswith('https://') or '@' in endpoint:
         raise ValueError('OCI_S3_ENDPOINT must be HTTPS without credentials')
@@ -63,9 +63,9 @@ def remote_previous(report, directory):
                                 capture_output=True, text=True, env=env)
         return json.loads(result.stdout)
 
-    return verified_previous(report, directory, client)
+    return verified_previous(report, directory, client, release_row=release_row)
 
 
-def check_remote(report):
+def check_remote(report, release_row=None):
     with tempfile.TemporaryDirectory() as temporary:
-        return remote_previous(report, Path(temporary))
+        return remote_previous(report, Path(temporary), release_row=release_row)

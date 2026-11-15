@@ -80,7 +80,7 @@ def check_comparisons(records, expected):
                 raise ValueError('required non_regression gate missing or not passing')
 
 
-def validate_report(report, country, rel, previous_report=None):
+def validate_report(report, country, rel, previous_report=None, release_row=None):
     if not isinstance(report, dict):
         raise ValueError('invalid report')
     versions(report)
@@ -89,7 +89,12 @@ def validate_report(report, country, rel, previous_report=None):
         raise ValueError('report identity differs from inputs')
     if report.get('status') != 'complete' or report.get('quality_pass') is not True or report.get('release_eligible') is not False:
         raise ValueError('report must have completed quality checks and release_eligible false')
-    no_research_override(report)
+    if release_row is not None:
+        validate_recipes(release_row, report)
+    scanned = report
+    if report['version'] == 2 and release_row is not None:
+        scanned = {key: value for key, value in report.items() if key != 'retrieval_recipe'}
+    no_research_override(scanned)
     diff = report.get('previous_diff')
     if not isinstance(diff, dict) or 'reason' in diff or not isinstance(diff.get('previous'), dict):
         raise ValueError('report must compare a previous release')
@@ -161,16 +166,15 @@ def validate_inputs(country, rel, directory, report_path):
     identity(country, rel)
     row = decode((directory / 'release.json').read_bytes())
     report = decode(report_path.read_bytes())
-    validate_report(report, country, rel)
     if not isinstance(row, dict) or row.get('country') != country or row.get('rel') != rel:
         raise ValueError('release row identity differs from inputs')
+    validate_report(report, country, rel, release_row=row)
     run = row.get('run')
     if not isinstance(run, dict) or run.get('complete') is not True or run.get('incomplete_items') != 0 or run.get('unaccepted_gaps') != 0:
         raise ValueError('run must be complete with every gap accepted')
     positive(run.get('expected_items'), 'expected items')
     extensions(row.get('extensions'))
     positive(row.get('schema_version'), 'schema version')
-    validate_recipes(row, report)
     dump_hash = sha256(directory / 'corpus.dump')
     manifest_path = directory / 'MANIFEST.sha256'
     build_hash = sha256(manifest_path)
@@ -230,7 +234,7 @@ def read_manifest(data):
 def create(commit, sequence, country, rel, directory, report_path, previous_report=None):
     row, report = validate_inputs(country, rel, directory, report_path)
     if previous_report is not None:
-        validate_report(report, country, rel, previous_report=previous_report)
+        validate_report(report, country, rel, previous_report=previous_report, release_row=row)
     obj = dict(kind='trachuan.corpus-release', version=1, repository='dannyota/trachuan',
                commit=commit, country=country, rel=rel, database=f'corpus_{country}_{rel}',
                sequence=sequence, previous=report['previous_diff']['previous']['rel'],
@@ -257,8 +261,8 @@ def main():
         if os.environ['GITHUB_REF'] != 'refs/heads/main':
             raise ValueError('dispatch corpus release from main')
         from corpus_previous import check_remote
-        _, report = validate_inputs(args.country, args.rel, args.directory, args.report)
-        previous_report = check_remote(report)
+        row, report = validate_inputs(args.country, args.rel, args.directory, args.report)
+        previous_report = check_remote(report, release_row=row)
         (args.directory / 'manifest.json').write_bytes(create(
             os.environ['GITHUB_SHA'], int(os.environ['GITHUB_RUN_NUMBER']),
             args.country, args.rel, args.directory, args.report, previous_report=previous_report))

@@ -270,6 +270,8 @@ class CorpusUploadTest(unittest.TestCase):
                 self.report['cohorts']['development'].update(case_count=0, positive_count=0,
                                                              expected_citations=0, metrics=[], non_regression=[])
             else:
+                self.report.update(version=1, scorer='agent-eval/4')
+                self.report.pop('retrieval_recipe')
                 path = self.build / 'previous-report.json'
                 previous = json.loads(path.read_bytes())
                 previous.update(version=2, scorer='agent-eval/5', retrieval_recipe=self.row['retrieval_recipe'])

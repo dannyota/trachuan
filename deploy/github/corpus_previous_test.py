@@ -7,6 +7,7 @@ import unittest
 from unittest.mock import patch
 
 from corpus_comparison_test import reports
+from corpus_test_support import recipe_fixture, retrieval_recipe
 
 
 class CorpusPreviousTest(unittest.TestCase):
@@ -31,7 +32,9 @@ class CorpusPreviousTest(unittest.TestCase):
     def verify(self, report=None, manifest=None, client=None):
         from corpus_previous import verified_previous
         with patch('corpus_registry.release', return_value=manifest or self.manifest):
-            return verified_previous(report or self.report, self.path, client or self.client)
+            candidate = report or self.report
+            row = recipe_fixture(candidate['retrieval_recipe'])[0]
+            return verified_previous(candidate, self.path, client or self.client, release_row=row)
 
     def test_downloads_bounded_previous_report_and_checks_both_hashes(self):
         self.assertEqual(self.verify(), self.previous)
@@ -59,10 +62,11 @@ class CorpusPreviousTest(unittest.TestCase):
 
     def test_old_report_uses_verified_manifest_recipe_for_calibration_comparison(self):
         self.previous.pop('retrieval_recipe', None)
-        previous_recipe = dict(version=3, abstention=dict(threshold=.53, calibration_sha256='old'))
+        previous_recipe = retrieval_recipe()
+        previous_recipe['abstention']['calibration_sha256'] = 'old'
         self.manifest['recipes'] = {'retrieval': previous_recipe}
-        self.report['retrieval_recipe'] = dict(version=3, abstention=dict(threshold=.53, calibration_sha256='new'))
-        self.report['recipes']['retrieval'] = 'different recipe hash'
+        self.report['retrieval_recipe']['abstention']['calibration_sha256'] = 'new'
+        self.report['recipes']['retrieval'] = recipe_fixture(self.report['retrieval_recipe'])[1]['retrieval']
         self.data = json.dumps(self.previous).encode()
         digest = hashlib.sha256(self.data).hexdigest()
         self.report['previous_diff']['previous']['report_sha256'] = digest
@@ -70,7 +74,8 @@ class CorpusPreviousTest(unittest.TestCase):
         self.assertEqual(self.verify()['retrieval_recipe'], previous_recipe)
 
     def test_previous_report_recipe_cannot_disagree_with_signed_manifest(self):
-        self.manifest['recipes'] = {'retrieval': dict(version=99, abstention={})}
+        self.manifest['recipes']['retrieval'] = copy.deepcopy(self.previous['retrieval_recipe'])
+        self.manifest['recipes']['retrieval']['non_current_tail'] = 3
         with self.assertRaises(ValueError):
             self.verify()
 

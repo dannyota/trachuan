@@ -10,29 +10,55 @@ def digest(data):
     return hashlib.sha256(data).hexdigest()
 
 
+def retrieval_recipe():
+    return dict(
+        abstention=dict(calibration_sha256='49c5e01c3518df3e843e2832d29b1480e63a8b21821fb2683685e2ee5908b905',
+                        statistic='first-group-best-member-cosine', status='provisional-old-product',
+                        threshold=0.5297041131124263),
+        ann=dict(ef_max=1000, fallback='exact', iterative_scan='strict_order', max_scan_tuples=20000,
+                 plan_cache_mode='force_custom_plan', pool_min=400, pool_multiplier=24, scan_mem_multiplier=1),
+        backfill='demoted-order', context_scope='number-routed/1', default_in_force_only=True,
+        dense_depth=50, document_cap=5, evidence='source-spans/1', evidence_rune_cap=14000,
+        family_collapse='off-unverified-alignment', group='nearest-khoan', hydrate_multiplier=8,
+        lexical_depth=50, non_current_tail=2, query_gate='vn-marks/1', reducer='max', relation_cap=20,
+        relation_evidence_rune_cap=1000, routing='vn-number/1',
+        rrf=dict(dense_weight=1, k=60, lexical_weight=0.5, routed_lexical_weight=1),
+        sibling_merge='article-clauses/1', ties='score-id', validity='document-dates/3', version=3)
+
+
+def recipe_fixture(retrieval=None, chunk=None):
+    recipes = dict(document={'model': 'synthetic', 'version': 1, 'dimensions': 128},
+                   query={'model': 'synthetic', 'version': 1, 'dimensions': 128},
+                   chunk={'version': 1} if chunk is None else copy.deepcopy(chunk),
+                   lexical={'version': 1}, retrieval=retrieval_recipe() if retrieval is None else copy.deepcopy(retrieval))
+    inputs = {name: json.dumps(recipe, separators=(',', ':')) for name, recipe in recipes.items()}
+    hashes = {name: digest(value.encode()) for name, value in inputs.items()}
+    row = dict(dense_recipe=dict(version=1, model='synthetic', dimensions=128,
+                                document=recipes['document'], query=recipes['query'],
+                                document_hash=hashes['document'], query_hash=hashes['query']),
+               chunk_recipe=recipes['chunk'], lexical_recipe=recipes['lexical'],
+               retrieval_recipe=recipes['retrieval'], recipe_hash_inputs=inputs)
+    return row, hashes
+
+
 def write_fixture(path):
     dump = b'synthetic corpus dump\n'
     manifest = (digest(dump) + '  corpus.dump\n').encode()
-    recipes = dict(document={'model': 'synthetic', 'version': 1, 'dimensions': 128},
-                   query={'model': 'synthetic', 'version': 1, 'dimensions': 128}, chunk={'version': 1},
-                   lexical={'version': 1}, retrieval={'version': 3, 'abstention': {'threshold': .53, 'calibration_sha256': 'synthetic'}})
-    inputs = {name: json.dumps(recipe, separators=(',', ':')) for name, recipe in recipes.items()}
-    row = dict(country='vn', rel='20990102_1', schema_version=6,
-               dense_recipe=dict(version=1, model='synthetic', dimensions=128,
-                                 document=recipes['document'], query=recipes['query'],
-                                 document_hash=digest(inputs['document'].encode()),
-                                 query_hash=digest(inputs['query'].encode())),
-               chunk_recipe=recipes['chunk'], lexical_recipe=recipes['lexical'],
-               retrieval_recipe=recipes['retrieval'], recipe_hash_inputs=inputs,
+    row, hashes = recipe_fixture()
+    row.update(country='vn', rel='20990102_1', schema_version=6,
                extensions={'vector': '0.8.1', 'ltree': '1.3'},
                run=dict(complete=True, expected_items=5, incomplete_items=0,
                         unaccepted_gaps=0, build_artifact_sha256=digest(manifest)))
     comparisons = [entry | {'status': 'pass', 'value': 1., 'previous_value': 1.} for entry in non_regression_contract()['old_product']]
-    report = dict(version=1, scorer="agent-eval/4", country=row['country'], rel=row['rel'], status='complete',
+    for record in comparisons:
+        if record['name'] == 'mrr':
+            record.update(previous=1., high_water=1., tolerance=.005, within_tolerance=False, losses=[])
+    report = dict(version=2, scorer='agent-eval/5', retrieval_recipe=copy.deepcopy(row['retrieval_recipe']),
+                  country=row['country'], rel=row['rel'], status='complete',
                   quality_pass=True, release_eligible=False, dump_sha256=digest(dump),
                   build_artifact_sha256=digest(manifest),
                   previous_diff={'previous': dict(country='vn', rel='20990101_1', report_sha256='b' * 64)},
-                  recipes={name: digest(value.encode()) for name, value in inputs.items()},
+                  recipes=hashes,
                   non_regression=[item.copy() for item in comparisons],
                   cohorts={'legacy': {'case_count': 5},
                            'old_product': {'case_count': 5, 'non_regression': [item.copy() for item in comparisons]},
