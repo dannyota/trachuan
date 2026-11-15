@@ -13,6 +13,7 @@ it('formats coverage and groups gaps without exposing their codes', () => {
   const wrapper = mount(CoverageFacts, { props: { status, showGaps: true } })
   expect(wrapper.text()).toContain('1.200')
   expect(wrapper.text()).toContain('01/01/2026')
+  expect(wrapper.findAll('.coverage-stats > div')).toHaveLength(4)
   expect(wrapper.text()).toContain('3 trường hợp')
   expect(wrapper.text()).not.toContain('missing_attachment')
   expect(wrapper.text()).not.toContain('20260101_1')
@@ -26,4 +27,13 @@ it('shows the release by default and can omit it', async () => {
   expect(wrapper.find('.coverage-release').exists()).toBe(true)
   await wrapper.setProps({ showRelease: false })
   expect(wrapper.find('.coverage-release').exists()).toBe(false)
+})
+
+it('omits the newest date card when the date is absent', () => {
+  vi.stubGlobal('useState', () => ref('vi'))
+  vi.stubGlobal('computed', computed)
+  const status = { release: '20990101', documents: 0, provisions: 0, nodes: 0, gaps: {} }
+  const wrapper = mount(CoverageFacts, { props: { status } })
+  expect(wrapper.findAll('.coverage-stats > div')).toHaveLength(3)
+  expect(wrapper.findAll('.coverage-stats dd').map(item => item.text())).toEqual(['0', '0', '0'])
 })

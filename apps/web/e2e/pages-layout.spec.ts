@@ -31,3 +31,18 @@ test('sources shows four coverage facts in a two by two grid on mobile', async (
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   })
 })
+
+test('sources fills the grid when the newest date is absent', async ({ page }) => {
+  await withStatusSite({ release: '20990101', documents: 12, provisions: 34, nodes: 2, gaps: {} }, async origin => {
+    for (const width of [390, 1024]) {
+      await page.setViewportSize({ width, height: 900 })
+      await page.goto(`${origin}/sources`)
+      const grid = page.locator('.coverage-stats')
+      const facts = grid.locator(':scope > div')
+      await expect(facts).toHaveCount(3)
+      const right = await grid.evaluate(el => el.getBoundingClientRect().right)
+      const last = await facts.last().boundingBox()
+      expect(last!.x + last!.width).toBeCloseTo(right - 1, 0)
+    }
+  })
+})
