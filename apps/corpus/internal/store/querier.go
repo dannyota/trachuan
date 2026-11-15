@@ -116,6 +116,7 @@ type Querier interface {
 	ListSeedObservations(ctx context.Context, runID int64) ([]RunSeedObservation, error)
 	ListStageItemArtifacts(ctx context.Context, arg ListStageItemArtifactsParams) ([]ListStageItemArtifactsRow, error)
 	ListUnacceptedGapCounts(ctx context.Context, runID int64) ([]ListUnacceptedGapCountsRow, error)
+	ListUnavailableDoneVBPLFetch(ctx context.Context, runID int64) ([]string, error)
 	ListVisionSelectionKeys(ctx context.Context, runID int64) ([]string, error)
 	LookupEmbedRows(ctx context.Context, arg LookupEmbedRowsParams) ([]LookupEmbedRowsRow, error)
 	MarkOCRCheckAttemptsSubmitted(ctx context.Context, arg MarkOCRCheckAttemptsSubmittedParams) (int64, error)

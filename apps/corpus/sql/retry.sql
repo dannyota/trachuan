@@ -37,3 +37,8 @@ DELETE FROM listing WHERE run_id = sqlc.arg(run_id) AND query_key = sqlc.arg(que
 -- name: DeleteRunListingsByItem :execrows
 DELETE FROM listing
 WHERE run_id = sqlc.arg(run_id) AND starts_with(query_key, sqlc.arg(item_key)::text || '@');
+
+-- name: ListUnavailableDoneVBPLFetch :many
+SELECT i.item_key FROM run_item i
+WHERE i.run_id = $1 AND i.stage = 'fetch' AND i.state = 'done' AND i.item_key LIKE 'vn:vbpl:%'
+  AND EXISTS (SELECT 1 FROM gap g WHERE g.run_id = i.run_id AND g.stage = i.stage AND g.item_key = i.item_key AND g.kind = 'source_unavailable');

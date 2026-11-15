@@ -11,7 +11,7 @@ import (
 )
 
 func TestCommit_FetchBaseline(t *testing.T) {
-	for _, mode := range []string{"replace", "other recipe", "attachment gap", "gap", "failed", "no artifact", "chinhphu", "expand", "adopted", "replay", "stale attempt", "stale generation", "paused"} {
+	for _, mode := range []string{"replace", "other recipe", "attachment gap", "unavailable gap", "gap", "failed", "no artifact", "chinhphu", "expand", "adopted", "replay", "stale attempt", "stale generation", "paused"} {
 		t.Run(mode, func(t *testing.T) {
 			ctx := context.Background()
 			pool, id := setup(t)
@@ -44,6 +44,8 @@ func TestCommit_FetchBaseline(t *testing.T) {
 				c.RecipeHash = "other"
 			case "attachment gap":
 				c.Gaps = []Gap{{Kind: "missing_attachment", Detail: "file"}}
+			case "unavailable gap":
+				c.Gaps = []Gap{{Kind: "source_unavailable", Detail: "unavailable"}}
 			case "gap":
 				c.State = "gap"
 			case "failed":

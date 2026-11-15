@@ -209,7 +209,7 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 		if inv.Version == 2 || correction.nonempty {
 			record["corrections_sha256"] = correction.hash
 		}
-		if inv.Version == 2 {
+		if inv.Version == 2 || len(inv.Provenance.DetailTimes) > 0 {
 			provenanceBytes, e := json.Marshal(inv.Provenance)
 			if e != nil {
 				return fmt.Errorf("encode provenance: %w", e)

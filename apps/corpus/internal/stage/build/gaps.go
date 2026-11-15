@@ -29,7 +29,15 @@ func (l *loader) loadGaps(ctx context.Context) error {
 		if g.ItemKey != "" {
 			key = g.ItemKey
 		}
-		_, err := l.tx.Exec(ctx, `INSERT INTO coverage_gap(id,kind,document_id,document_key,node_id,stage,item_key,detail,message,note) VALUES($1,$2,$3,$4,$5,$6,$7,$8,'','')`, l.counts.Gaps+1, g.Kind, docID(l.docs[g.ItemKey]), key, g.NodeID, g.Stage, g.ItemKey, g.Detail)
+		message := ""
+		if g.Kind == "baseline_served" {
+			if g.Detail == "unknown" {
+				message = "The source fetch date for this text is unknown."
+			} else {
+				message = "This text is from the source as fetched on " + g.Detail + "."
+			}
+		}
+		_, err := l.tx.Exec(ctx, `INSERT INTO coverage_gap(id,kind,document_id,document_key,node_id,stage,item_key,detail,message,note) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,'')`, l.counts.Gaps+1, g.Kind, docID(l.docs[g.ItemKey]), key, g.NodeID, g.Stage, g.ItemKey, g.Detail, message)
 		if err != nil {
 			return fmt.Errorf("insert coverage gap: %w", err)
 		}
@@ -41,6 +49,24 @@ func (l *loader) loadGaps(ctx context.Context) error {
 }
 
 func (l *loader) addMembershipGaps() {
+	dates := map[string]string{}
+	for _, d := range l.inv.Provenance.DetailTimes {
+		if d.FetchedAt != nil {
+			dates[d.DocumentKey] = d.FetchedAt.UTC().Format("2006-01-02")
+		}
+	}
+	seen := map[string]bool{}
+	for _, g := range l.gaps {
+		if g.Stage != "fetch" || g.Kind != "source_unavailable" || l.items["fetch"][g.ItemKey].State != "done" || seen[g.ItemKey] {
+			continue
+		}
+		seen[g.ItemKey] = true
+		date := dates[g.ItemKey]
+		if date == "" {
+			date = "unknown"
+		}
+		l.addGap("build", g.ItemKey, "baseline_served", date)
+	}
 	if l.inv.Version != 2 {
 		return
 	}

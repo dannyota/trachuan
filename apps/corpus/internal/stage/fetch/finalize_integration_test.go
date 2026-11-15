@@ -223,3 +223,24 @@ func TestFinalize_DeduplicatesReferencesAndSkipsAttachmentHash(t *testing.T) {
 		t.Fatalf("result=%#v err=%v", got, err)
 	}
 }
+
+func TestFinalize_BaselineServedSkipsDrift(t *testing.T) {
+	f := newCloseFixture(t, 1, true)
+	f.phase(membership.Expanded, closeSeed("1"))
+	f.bundle("2")
+	if _, err := f.db.Exec(f.ctx, `INSERT INTO gap(run_id,stage,item_key,kind,detail) VALUES ($1,'fetch','vn:vbpl:1','source_unavailable','')`, f.run.ID); err != nil {
+		t.Fatal(err)
+	}
+	result, err := f.finalize()
+	if err != nil || result.Code != "" {
+		t.Fatalf("result=%+v err=%v", result, err)
+	}
+	snapshot, err := membership.ReadPhase(f.ctx, store.New(f.db), f.run.ID, membership.Final)
+	if err != nil || len(snapshot.Active) != 1 || snapshot.Active[0].DocumentKey != "vn:vbpl:1" {
+		t.Fatalf("snapshot=%+v err=%v", snapshot, err)
+	}
+	var failures int
+	if err := f.db.QueryRow(f.ctx, `SELECT count(*) FROM run_failure WHERE run_id=$1 AND code='scope_changed'`, f.run.ID).Scan(&failures); err != nil || failures != 0 {
+		t.Fatalf("failures=%d err=%v", failures, err)
+	}
+}

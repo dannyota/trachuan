@@ -152,6 +152,33 @@ read; storage that cannot be read at all stays an infrastructure error. No
 condition reads a time: origin times stay recorded in the observations and
 nothing else uses them.
 
+## Unavailable source
+
+When a VBPL item that reads the source would end with a terminal
+`source_unavailable` gap (an HTTP 429 that leaves the item pending is not one)
+([fetch attachments](fetch-attachments.md) retry table) and its baseline bundle
+verifies against its manifest and its `detail.json` names the same document, the
+item commits done with the baseline artifact instead, every observation
+`adopted` from the baseline's producing commit, and keeps the
+`source_unavailable` gap next to the baseline's own attachment gaps, so the next
+`corpus start` retries it
+([source retry](source-retry.md#selection-and-rewind)). It writes no
+`fetch_baseline` row and no same-run
+[acquisition](source-retry.md#acquisitions), so the retry reads the source. The
+baseline bundle is not fresh fetch evidence: the
+[fetch drift](membership.md#fetch-drift) check skips the item, and its relations
+to targets outside membership stay unresolved in build. Without a valid baseline
+the item ends as today. A gap that is not `source_unavailable` never uses the
+baseline.
+
+Build gives each document whose fetch item is done with a `source_unavailable`
+gap one coverage gap `baseline_served` whose detail is the baseline's detail
+observation time as a UTC date (`YYYY-MM-DD`), or `unknown` when that
+observation has no time, and whose message states the date the text was fetched,
+or that it is unknown. Readers see it through `quality_gaps`; the document is
+served from that bundle like any other. `fetch_reads` counts these items as
+`baseline_after_unavailable`.
+
 ## Attachments by content hash
 
 In a full read every listed attachment is copied from a stored copy or

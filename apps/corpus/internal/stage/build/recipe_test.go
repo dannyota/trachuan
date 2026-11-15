@@ -131,7 +131,7 @@ func TestBuildInput_RecordMatchesCorrectionsHash(t *testing.T) {
 		nonempty bool
 	}{{0, "", false}, {0, "nonempty", true}, {2, hashBytes([]byte("[]")), false}} {
 		inv := Inventory{Version: tc.version}
-		got := recordInputHash("vn", "20990101", inv, "map", hashJSON(inv.Provenance), tc.hash, "")
+		got := recordInputHash("vn", "20990101", inv, "map", provenanceInputHash(inv), tc.hash, "")
 		want := withDevelopmentHash(inventoryInputHash("vn", "20990101", inv, "map", correctionInput{hash: tc.hash, nonempty: tc.nonempty}), "")
 		if got != want {
 			t.Fatalf("version %d: got %s want %s", tc.version, got, want)

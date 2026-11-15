@@ -63,11 +63,11 @@ func TestBuild_DevelopmentHashInInput(t *testing.T) {
 		s := New(Config{Suite: evaluation.Suite{Hashes: evaluation.FixtureHashes{IdentityMap: "map", Development: "first"}}})
 		correction := correctionInput{hash: hashBytes([]byte("[]"))}
 		first := s.inputHash("vn", "20990101", inv, correction)
-		restored := recordInputHash("vn", "20990101", inv, "map", hashJSON(inv.Provenance), tc.recordedCorrections, "first")
+		restored := recordInputHash("vn", "20990101", inv, "map", provenanceInputHash(inv), tc.recordedCorrections, "first")
 		if restored != first {
 			t.Fatalf("inventory version %d restore hash differs from planned input", version)
 		}
-		if restored == recordInputHash("vn", "20990101", inv, "map", hashJSON(inv.Provenance), tc.recordedCorrections, "changed") {
+		if restored == recordInputHash("vn", "20990101", inv, "map", provenanceInputHash(inv), tc.recordedCorrections, "changed") {
 			t.Fatal("restore hash omitted development fixture")
 		}
 		s.cfg.Suite.Hashes.Development = "second"

@@ -31,6 +31,7 @@ func (q *Queries) CountAdoptedRunItems(ctx context.Context, arg CountAdoptedRunI
 
 const countFetchReads = `-- name: CountFetchReads :one
 SELECT
+  count(*) FILTER (WHERE split_part(message, ' ', 1) = 'read=baseline_after_unavailable') AS baseline_after_unavailable,
   count(*) FILTER (WHERE split_part(message, ' ', 1) = 'read=reused') AS reused,
   count(*) FILTER (WHERE split_part(message, ' ', 1) = 'read=no_baseline') AS no_baseline,
   count(*) FILTER (WHERE split_part(message, ' ', 1) = 'read=invalid_baseline') AS invalid_baseline,
@@ -52,22 +53,24 @@ type CountFetchReadsParams struct {
 }
 
 type CountFetchReadsRow struct {
-	Reused             int64
-	NoBaseline         int64
-	InvalidBaseline    int64
-	NullDate           int64
-	DateChanged        int64
-	MissingAttachment  int64
-	Control            int64
-	ControlSame        int64
-	ControlTreeIdsOnly int64
-	ControlChanged     int64
+	BaselineAfterUnavailable int64
+	Reused                   int64
+	NoBaseline               int64
+	InvalidBaseline          int64
+	NullDate                 int64
+	DateChanged              int64
+	MissingAttachment        int64
+	Control                  int64
+	ControlSame              int64
+	ControlTreeIdsOnly       int64
+	ControlChanged           int64
 }
 
 func (q *Queries) CountFetchReads(ctx context.Context, arg CountFetchReadsParams) (CountFetchReadsRow, error) {
 	row := q.db.QueryRow(ctx, countFetchReads, arg.RunID, arg.Generation)
 	var i CountFetchReadsRow
 	err := row.Scan(
+		&i.BaselineAfterUnavailable,
 		&i.Reused,
 		&i.NoBaseline,
 		&i.InvalidBaseline,
@@ -175,6 +178,7 @@ INSERT INTO run_acquisition (run_id, stage, document_key, artifact_id, generatio
 SELECT i.run_id, i.stage, i.item_key, i.artifact_id, i.generation
 FROM run_item i
 WHERE i.run_id = $1 AND i.stage IN ('expand', 'fetch') AND i.state = 'done' AND i.artifact_id IS NOT NULL
+  AND NOT (i.stage = 'fetch' AND EXISTS (SELECT 1 FROM gap g WHERE g.run_id = i.run_id AND g.stage = i.stage AND g.item_key = i.item_key AND g.kind = 'source_unavailable'))
 ON CONFLICT (run_id, stage, document_key) DO NOTHING
 `
 
