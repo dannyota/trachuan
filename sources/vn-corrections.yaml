@@ -249,8 +249,8 @@
   reason: "The whole law ends on 2020-07-01; Điều 152 khoản 1 preserves handling of tax matters arising before that date."
   evidence:
     key: vn:vbpl:136036
-    anchor: "dieu-151"
-    quote: "1. Luật này có hiệu lực thi hành từ ngày 01 tháng 7 năm 2020, trừ trường hợp quy định tại khoản 2 Điều này. 2. Quy định về hóa đơn, chứng từ điện tử của Luật này có hiệu lực thi hành từ ngày 01 tháng 7 năm 2022; khuyến khích cơ quan, tổ chức, cá nhân áp dụng quy định về hóa đơn, chứng từ điện tử của Luật này trước ngày 01 tháng 7 năm 2022. 3. Luật Quản lý thuế số 78/2006/QH11 đã được sửa đổi, bổ sung một số điều theo Luật số 21/2012/QH13, Luật số 71/2014/QH13 và Luật số 106/2016/QH13 hết hiệu lực kể từ ngày Luật này có hiệu lực thi hành, trừ trường hợp quy định tại khoản 1 Điều 152 của Luật này."
+    anchor: "dieu-151/khoan-3"
+    quote: "Luật Quản lý thuế số 78/2006/QH11\u00a0đã được sửa đổi, bổ sung một số điều theo\u00a0Luật số 21/2012/QH13,\u00a0Luật số 71/2014/QH13\u00a0và\u00a0Luật số 106/2016/QH13\u00a0hết hiệu lực kể từ ngày Luật này có hiệu lực thi hành, trừ trường hợp quy định tại khoản 1 Điều 152 của Luật này."
   reviewed: "2026-11-15"
 - key: vn:vbpl:6857
   number: "362/1999/QĐ-NHNN1"
@@ -258,8 +258,8 @@
   reason: "16/2019/TT-NHNN replaces the whole decision from 2019-12-09."
   evidence:
     key: vn:vbpl:138488
-    anchor: "dieu-14"
-    quote: "1. Thông tư này có hiệu lực thi hành từ ngày 09/12/2019. 2. Thông tư này thay thế Quyết định số 362/1999/QĐ-NHNN1 ngày 08/10/1999 của Thống đốc Ngân hàng Nhà nước về việc ban hành Quy chế phát hành tín phiếu Ngân hàng Nhà nước."
+    anchor: "dieu-14/khoan-2"
+    quote: "Thông tư này thay thế Quyết định số 362/1999/QĐ-NHNN1 ngày 08/10/1999 của Thống đốc Ngân hàng Nhà nước về việc ban hành Quy chế phát hành tín phiếu Ngân hàng Nhà nước."
   reviewed: "2026-11-15"
 - key: vn:vbpl:19835
   number: "581/2003/QĐ-NHNN"
@@ -267,8 +267,8 @@
   reason: "The whole decision ends on 2020-03-01; khoản 5 preserves interest calculations for reserve periods already notified."
   evidence:
     key: vn:vbpl:139766
-    anchor: "dieu-17"
-    quote: "1. Thông tư này có hiệu lực thi hành kể từ ngày 01/3/2020. 2. Kể từ ngày Thông tư này có hiệu lực thi hành, các văn bản sau đây hết hiệu lực thi hành: a) Quyết định số 581/2003/QĐ-NHNN ngày 09 tháng 6 năm 2003 của Thống đốc Ngân hàng Nhà nước về việc ban hành Quy chế dự trữ bắt buộc đối với các tổ chức tín dụng;"
+    anchor: "dieu-17/khoan-2/diem-a"
+    quote: "Quyết định số 581/2003/QĐ-NHNN ngày 09 tháng 6 năm 2003 của Thống đốc Ngân hàng Nhà nước về việc ban hành Quy chế dự trữ bắt buộc đối với các tổ chức tín dụng;"
   reviewed: "2026-11-15"
 - key: vn:vbpl:44187
   number: "23/2014/TT-NHNN"
