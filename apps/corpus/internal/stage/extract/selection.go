@@ -113,7 +113,7 @@ func chooseWithOCR(ctx context.Context, dir, key string, ocr ocrReader, engines 
 	return chooseForCheck(ctx, dir, key, ocr, engines, checker, false)
 }
 
-func chooseForCheck(ctx context.Context, dir, key string, ocr ocrReader, engines []string, checker string, unchecked bool) (selection, []vbpl.Node, error) {
+func chooseForCheck(ctx context.Context, dir, key string, ocr ocrReader, engines []string, checker string, unchecked bool, waivers ...*Waiver) (selection, []vbpl.Node, error) {
 	parts := strings.SplitN(key, ":", 3)
 	if len(parts) != 3 {
 		return selection{}, nil, fmt.Errorf("invalid document key")
@@ -163,7 +163,7 @@ func chooseForCheck(ctx context.Context, dir, key string, ocr ocrReader, engines
 				return selection{}, nil, fmt.Errorf("read fetch document: %w", readErr)
 			}
 			if headingCount > 0 && headingOnly(rows) {
-				selected, selectErr := selectOCRFilesMode(ctx, dir, parts[2], doc.Files, ocr, engines, checker, unchecked)
+				selected, selectErr := selectOCRFilesMode(ctx, dir, parts[2], doc.Files, ocr, engines, checker, unchecked, waivers...)
 				if selectErr != nil {
 					return selection{}, nil, selectErr
 				}
@@ -202,7 +202,7 @@ func chooseForCheck(ctx context.Context, dir, key string, ocr ocrReader, engines
 	if err != nil {
 		return selection{}, nil, fmt.Errorf("read fetch document: %w", err)
 	}
-	s, err := selectOCRFilesMode(ctx, dir, parts[2], doc.Files, ocr, engines, checker, unchecked)
+	s, err := selectOCRFilesMode(ctx, dir, parts[2], doc.Files, ocr, engines, checker, unchecked, waivers...)
 	return s, nil, err
 }
 

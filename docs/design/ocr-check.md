@@ -236,6 +236,22 @@ verdict, the items and the anchors of the provisions that contain each OCR
 reading, so a person can open the PDF page and decide on a manual correction
 under [validity corrections](validity-status.md) or accept the flag.
 
+## Flag waivers
+
+A checker can file a misread form code or appendix label as a `document_number`
+or `article_label` item, which makes the OCR text unusable.
+`sources/<cc>-ocr-waivers.yaml` is reviewed input like the corrections file. An
+entry names the document key, the PDF's SHA-256 and the SHA-256 of the stored
+`ocr_check` result, and lists every flagged item by page with the reviewer's
+reading of the PDF and why it is not the document's number or an article label.
+A waiver only turns `ocr_label_flagged` into `ocr_flagged`: the text is indexed,
+`text_complete` is false and the gap stays visible. Fail closed: an entry whose
+document key has no OCR selection in the run stops extract planning; an entry
+whose PDF or result hash differs from the selection is void, so the flag stays
+and the run reports the stale entry; an entry that matches but does not list
+exactly the result's label and number items stops extract planning. The list's
+SHA-256 enters the extract recipe.
+
 ## Pilot
 
 Before the full pass the primary runs direct mode on 10 documents with each

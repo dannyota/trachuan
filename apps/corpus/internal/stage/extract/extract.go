@@ -24,6 +24,7 @@ type Stage struct {
 	ocr     ocrReader
 	engines []string
 	checker string
+	waivers Waivers
 }
 
 func New() *Stage { return &Stage{engines: AcceptedEngines(), checker: ReleaseChecker} }
@@ -47,11 +48,16 @@ func (s *Stage) WithOCR(store *ocrstore.Store, engines []string, checker string)
 	return s
 }
 
+func (s *Stage) WithWaivers(w Waivers) *Stage { s.waivers = w; return s }
+
 func (*Stage) Name() string { return "extract" }
 
 func (s *Stage) Recipe(stage.Snapshot) string {
 	parts := append([]string{"html-transcription/1", "textparse/8", "heading-only/1", "ocr-store/2", s.checker}, s.engines...)
 	parts = append(parts, manualMismatchRecipe()...)
+	if s.waivers.hash != "" {
+		parts = append(parts, s.waivers.hash)
+	}
 	return stage.RecipeHash("extract", "tree/1", parts...)
 }
 
@@ -66,6 +72,7 @@ func (s *Stage) Plan(ctx context.Context, env stage.Env, run stage.Run) ([]stage
 		return nil, fmt.Errorf("list fetch artifacts: %w", err)
 	}
 	items := make([]stage.Item, 0, len(inputs))
+	seenWaivers := make(map[string]bool)
 	for _, input := range inputs {
 		if active != nil && !active[input.ItemKey] {
 			continue
@@ -75,7 +82,7 @@ func (s *Stage) Plan(ctx context.Context, env stage.Env, run stage.Run) ([]stage
 			return nil, fmt.Errorf("load fetch artifact: %w", getErr)
 		}
 		selected, selectErr := planFrozenSelection(ctx, q, run.ID, input.ItemKey, func() (selection, error) {
-			choice, _, err := chooseWithOCR(ctx, env.Artifacts.Abs(entry.Path), input.ItemKey, s.ocr, s.engines, s.checker)
+			choice, _, err := chooseForCheck(ctx, env.Artifacts.Abs(entry.Path), input.ItemKey, s.ocr, s.engines, s.checker, false, s.waivers.find(input.ItemKey))
 			if errors.Is(err, vbpl.ErrTreeTooLarge) {
 				return selection{source: "source_tree"}, nil
 			}
@@ -83,6 +90,9 @@ func (s *Stage) Plan(ctx context.Context, env stage.Env, run stage.Run) ([]stage
 		})
 		if selectErr != nil {
 			return nil, fmt.Errorf("select text source: %w", selectErr)
+		}
+		if selected.consulted && s.waivers.find(input.ItemKey) != nil {
+			seenWaivers[input.ItemKey] = true
 		}
 		if selected.consulted && selected.gap != "text_number_mismatch" {
 			mismatch, checkErr := frozenMismatch(env.Artifacts.Abs(entry.Path), input.ItemKey)
@@ -94,6 +104,9 @@ func (s *Stage) Plan(ctx context.Context, env stage.Env, run stage.Run) ([]stage
 			}
 		}
 		items = append(items, stage.Item{Key: input.ItemKey, InputHash: selectionInputHash(input.Sha256, selected)})
+	}
+	if err := s.waivers.validateSelections(seenWaivers); err != nil {
+		return nil, err
 	}
 	return items, nil
 }
@@ -178,6 +191,8 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 		gaps = []stage.Gap{{Kind: "no_tree"}, {Kind: selected.gap, Detail: selected.reason}}
 		record = &textRecord{TextSource: "none", Gap: selected.gap}
 	}
+
+	gaps = annotateWaiver(s.waivers.find(item.Key), selected, record, gaps)
 
 	if record != nil {
 		record.Tree = selected.tree
