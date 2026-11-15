@@ -93,9 +93,11 @@ only by Podman's default file driver under the `trachuan` account
 ([podman secret create](https://docs.podman.io/en/v5.8.2/markdown/podman-secret-create.1.html));
 never in other files, logs, command arguments, images or OpenTofu state. A
 missing or unreadable Vault secret keeps the current Podman secret and records
-`secrets_failed`, alarmed like `deploy_failed`. Changing a database role
-password is an owner runbook step (`ALTER ROLE`, then the Vault version); the
-updater alters only the `activator` role it provisions.
+`secrets_failed`, alarmed like `deploy_failed`. Invalid secret records that
+still list pending work, including a retired secret, hold ingress and block
+recovery and activation until resolved. Changing a database role password is an
+owner runbook step (`ALTER ROLE`, then the Vault version); the updater alters
+only the `activator` role it provisions.
 
 Dynamic group `trachuan-host` (this instance only) gets `read secret-bundles`
 where

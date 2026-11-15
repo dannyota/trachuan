@@ -51,3 +51,13 @@ class SecretsState:
     def save(self):
         self.validate()
         atomic(self.path, canonical(self.data) + b'\n', 0o600)
+
+
+def raw_pending(path):
+    try:
+        raw = json.loads(Path(path).read_bytes())
+    except (OSError, ValueError):
+        return False
+    pending = raw.get('pending') if isinstance(raw, dict) else None
+    return isinstance(pending, dict) and bool(pending)
+
