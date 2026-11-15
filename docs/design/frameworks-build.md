@@ -29,6 +29,14 @@ its hash in the snapshot manifest), the golden cases and the gap kind table. No
 later step, and no resume, reads anything outside the snapshot, so a registry or
 title change during a run cannot reach it.
 
+The versions in a release are the registry versions that name a parser. Our
+titles are one CSV, `FRAMEWORKS_SOURCE_DIR/trachuan/titles.csv` (`code`,
+`version`, `citation`, `title`), outside Git like the waivers. A control of a
+`free` version without a row takes the publisher's title as ours, since that
+text is public. A control of a `licensed` version without a row has no title and
+records a `title_missing` gap; its public-field record then carries citation and
+kind only.
+
 **Parse** runs each version's parser ([frameworks](frameworks.md#pipeline)).
 Parse errors, a control-count mismatch, an invalid or duplicate citation and an
 invalid lineage fail the step; they are not gaps.
@@ -134,7 +142,11 @@ and `~/Documents/` (synced when iCloud Desktop and Documents is on). The
 prefixes are a first guard; the command also refuses a path under any sync root
 the installed clients report (the `path` entries of `~/.dropbox/info.json`) and
 a path with an ancestor directory holding a `.dropbox` marker, which covers sync
-roots on external drives.
+roots on external drives. The real path is resolved from the value as given,
+symlinks before any `..`, and the check applies to every directory the command
+reads or writes (source, work, `<rel>`, step and temporary directories), each
+checked when first used; all reads and writes then go through the checked real
+path, never the original value.
 
 One command runs per `<rel>`: it holds an exclusive lock file
 `FRAMEWORKS_WORK_DIR/<rel>/.lock` for the whole run. Under the lock it first
