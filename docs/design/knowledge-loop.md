@@ -199,12 +199,12 @@ says in one line why the class cannot be seen in data.
 Outside signals enter as records in `sources/<cc>-reports.yaml`, in Git and in
 the build input hash. A record has a closed schema and no free text:
 
-| Field                 | Values                                                                                                                                                                                                                                         |
-| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `origin`, `origin_id` | a registered origin (`issue_report`, `sc365`, `eval`) and its id; the pair is unique, so a replay changes nothing                                                                                                                              |
-| `kind`                | the issue-report kinds of [error reports](error-reports.md)                                                                                                                                                                                    |
-| `target`              | document or provision identity, or a normalized number for a missing document                                                                                                                                                                  |
-| `claim`               | a code from a fixed list, with the acting identity where it has one: `repealed_by`, `amended_by`, `replaced_by`, `suspended_by`, `wrong_number`, `missing_document`, `ambiguous_anchor`, `empty_text`, `status_conflict`, `missing_source_url` |
+| Field                 | Values                                                                                                                                                                                                                                                                                                            |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `origin`, `origin_id` | a registered origin (`issue_report`, `sc365`, `eval`) and its id; the pair is unique, so a replay changes nothing                                                                                                                                                                                                 |
+| `kind`                | the issue-report kinds of [error reports](error-reports.md)                                                                                                                                                                                                                                                       |
+| `target`              | document or provision identity, or a normalized number for a missing document                                                                                                                                                                                                                                     |
+| `claim`               | a code from a fixed list, with the acting identity where it has one: `repealed_by`, `amended_by`, `replaced_by`, `suspended_by`, `wrong_number`, `missing_document`, `ambiguous_anchor`, `empty_text`, `status_conflict`, `missing_source_url`, and `reported` for an accepted report with no more specific claim |
 
 At most 500 records change per pull request. Records carry no account, question
 or client data. A record never applies knowledge; it only opens a finding. The
@@ -231,7 +231,8 @@ binds, and never changes, the build artifact and the evaluation report:
     obtained;
   - per provision: document key, anchor, the SHA-256 of its own `text` column
     exactly as stored (UTF-8 bytes, no normalization, not its subtree), and the
-    codes of the taxonomy nodes assigned to it;
+    codes of its effective positive taxonomy nodes, resolved by the serving
+    rules of [taxonomy](taxonomy.md);
   - every relation by its two ends, kind and method.
 
   A reader of the dump can recompute every hash and get the same value.
@@ -243,10 +244,11 @@ binds, and never changes, the build artifact and the evaluation report:
     `coverage` (a fetch gap, a baseline, a withheld text) or `source`. A removed
     document's provisions are removed with it, under its cause class, and are
     not listed one by one;
-  - provisions added, removed and changed (text hash before and after). A
-    changed provision carries `provenance: true` when its document's text source
-    or completeness changed in this release, so a new extraction is not read as
-    a change of law;
+  - document metadata: `number_norm` before and after on a surviving key;
+  - provisions added, removed and changed (text hash before and after) in
+    surviving documents. Each carries `provenance: true` when its document's
+    text source or completeness changed in this release, so a new extraction is
+    not read as a change of law;
   - legal changes: status class, `eff_from`, `eff_to`, `is_current`,
     `validity_conflict`, and relations and effects added and removed;
   - provenance changes: text source, completeness, served from a baseline;
@@ -278,7 +280,8 @@ manifest carries the SHA-256 of all three.
 
 `identity.jsonl` and `changes.jsonl` are the downstream products' input for
 selecting what to import and re-checking their own mappings. An effect has no
-date of its own: a reader takes the acting document's `eff_from`.
+date. The acting document's `eff_from` describes that document only; a provision
+may commence later, so no date of effect is to be inferred from it.
 
 ## What stays out
 

@@ -70,9 +70,9 @@ knowledge.
    the cross-signal detectors over frozen inputs and writes one immutable
    artifact with `findings.json`, `identity.jsonl` and `changes.jsonl`, bound to
    the dump, the build, the report, the detector registry and the previous
-   release's findings. Both are uploaded and hashed into the signed manifest. A
-   missing or mismatched file, an incomplete detector or an open blocking
-   finding refuses the release; every existing release rule stays.
+   release's findings. All three are uploaded and hashed into the signed
+   manifest. A missing or mismatched file, an incomplete detector or an open
+   blocking finding refuses the release; every existing release rule stays.
 8. **Models draft, the validator decides.** A model may propose knowledge
    entries and triage findings; nothing it writes applies without passing the
    validator, and bulk adjudication keeps a human-read sample.
