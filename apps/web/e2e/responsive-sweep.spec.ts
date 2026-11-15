@@ -14,6 +14,12 @@ const status = { release: '20990101', documents: 1234567, provisions: 9876543, n
 const account = { id: 1, email: 'test@example.invalid', created_at: '2099-01-01T00:00:00Z', csrf_token: 'csrf', password: true, google: false, totp: false, totp_enrollment: true }
 const node = { code: '1', name: 'Fixture topic', provisions: 4, documents: 2 }
 const codes = Array(10).fill('ABCDEFGHIJKLMNOPQRSTUVWXYZ')
+const fileHash = 'abcdef012345'.repeat(5) + 'abcd'
+const files = [
+  { name: 'main.pdf', url: 'https://example.test/main.pdf', hash: fileHash, size: 1500, role: 'main', fetched_at: '2099-01-01T00:00:00Z' },
+  { name: 'long-appendix_name.with-many-parts-for-the-reader.pdf', url: 'https://example.test/appendix', hash: fileHash, size: 2000000, role: 'appendix', fetched_at: '2099-01-02T00:00:00Z' },
+  { name: 'scan.pdf', url: null, hash: fileHash, size: 3000, role: 'scan', fetched_at: null },
+]
 const longEmail = `${'a'.repeat(40)}@example.invalid`
 
 async function publicSite(run: (origin: string) => Promise<void>) {
@@ -115,6 +121,7 @@ const states = [
   { name: '/link add_password', path: '/link', kind: 'add_password' },
   { name: '/vn/search hits', path: '/vn/search', kind: 'search' },
   { name: '/vn/documents/vn:vbpl:1', path: '/vn/documents/vn:vbpl:1', kind: 'reader' },
+  { name: '/vn/documents/vn:vbpl:1 files', path: '/vn/documents/vn:vbpl:1', kind: 'reader-files' },
   ...['set', 'unset', 'long email', 'setup', 'recovery', 'remove', 'change password', 'add notice', 'token dialog', 'token value', 'delete dialog'].map(name => ({ name: `/account ${name}`, path: name, kind: 'account' })),
 ]
 
@@ -131,10 +138,10 @@ for (const width of [320, 390, 768, 1280]) for (const language of ['vi', 'en']) 
         if (state.path === '/' || state.path === '/sources') await expect(page.locator('.coverage-stats dd')).toHaveCount(4)
         else await expect(page.locator('main').getByText('Fixture topic').first()).toBeVisible()
       } else if (state.kind === 'account') await accountState(page, state.path, language)
-      else if (state.kind === 'search' || state.kind === 'reader') {
+      else if (state.kind === 'search' || state.kind === 'reader' || state.kind === 'reader-files') {
         await page.route('**/api/v1/me', route => route.fulfill({ json: account }))
         await page.route('**/api/v1/search', route => route.fulfill({ json: { release: '20990101', abstain: false, hits: [{ citation: 'Điều 1', complete: true, text: 'Nội dung giả lập.' }] } }))
-        await page.route('**/api/v1/documents/*', route => route.fulfill({ json: { release: '20990101', item: { complete: true, document: { number: '1/2099', title: 'Test law', status: { class: 'in_force', current: true }, text_source: 'none', text_complete: false }, units: [{ kind: 'provision', anchor: 'dieu-1', label: 'Điều 1', text: 'Text' }] } } }))
+        await page.route('**/api/v1/documents/*', route => route.fulfill({ json: { release: '20990101', fetch_sha256: fileHash, files: state.kind === 'reader-files' ? files : [], item: { complete: true, document: { number: '1/2099', title: 'Test law', status: { class: 'in_force', current: true }, text_source: 'none', text_complete: false }, units: [{ kind: 'provision', anchor: 'dieu-1', label: 'Điều 1', text: 'Text' }] } } }))
         await page.goto('/')
         const menu = page.locator('button[aria-controls="site-menu"]')
         if (await menu.isVisible()) await menu.click()
@@ -145,7 +152,12 @@ for (const width of [320, 390, 768, 1280]) for (const language of ['vi', 'en']) 
           await page.locator('#search-query').fill('Nội dung giả lập')
           await page.locator('.search-box').evaluate(form => (form as HTMLFormElement).requestSubmit())
           await expect(page.locator('.result-card .law-text')).toBeVisible()
-        } else await expect(page.locator('.reader-identity .num')).toBeVisible()
+        } else {
+          await expect(page.locator('.reader-identity .num')).toBeVisible()
+          await page.locator('.reader-rail').getByText(language === 'vi' ? 'Chi tiết kỹ thuật' : 'Technical details', { exact: true }).click()
+          await expect(page.locator('.reader-technical')).toBeVisible()
+          if (state.kind === 'reader-files') await expect(page.locator('.reader-file')).toHaveCount(3)
+        }
       } else {
         await page.route('**/api/v1/me', route => route.fulfill({ json: account }))
         await page.route('**/api/v1/auth/factor', route => route.fulfill({ json: { csrf: 'csrf', next: '/account' } }))
@@ -186,7 +198,7 @@ for (const width of [320, 390, 768, 1280]) for (const language of ['vi', 'en']) 
           if (selection?.toString() !== block.textContent) add(block, 'selection differs from command text')
           selection?.removeAllRanges()
         }
-        const selectors = '.coverage-stats dd, .recovery-codes li span, .auth-secret, .num, .account-email, .reader-meta strong, .token-value, [data-value], .connect-tools code, .page-code pre, .home-address code, .home-connect-card pre'
+        const selectors = '.coverage-stats dd, .recovery-codes li span, .auth-secret, .num, .account-email, .reader-meta strong, .token-value, [data-value], .connect-tools code, .page-code pre, .home-address code, .home-connect-card pre, .reader-file-name, .reader-file-value'
         for (const element of document.querySelectorAll<HTMLElement>(selectors)) {
           if (!element.getClientRects().length || getComputedStyle(element).visibility !== 'visible') continue
           const emailSegmentsBreakOnlyAfterAtOrDot = element.matches('.account-email')
@@ -195,7 +207,7 @@ for (const width of [320, 390, 768, 1280]) for (const language of ['vi', 'en']) 
               if (!/[@.]$/.test(breakElement.previousElementSibling?.textContent || '')) add(element, 'email break is not after @ or .')
             }
           }
-          const split = element.matches('.recovery-codes li span, .auth-secret, .connect-tools code, .page-code pre, .home-connect-card pre, .account-email')
+          const split = element.matches('.recovery-codes li span, .auth-secret, .connect-tools code, .page-code pre, .home-connect-card pre, .account-email, .reader-file-name')
           if (!split) {
             const range = document.createRange()
             range.selectNodeContents(element)
@@ -214,7 +226,7 @@ for (const width of [320, 390, 768, 1280]) for (const language of ['vi', 'en']) 
               const tops = Array.from(range.getClientRects(), rect => rect.top)
               if (tops.length && Math.max(...tops) - Math.min(...tops) > 2) {
                 let exceedsLine = false
-                if (element.matches('.page-code pre, .home-connect-card pre, .account-email')) {
+                if (element.matches('.page-code pre, .home-connect-card pre, .account-email, .reader-file-name')) {
                   const probe = document.createElement('span')
                   probe.textContent = text.data.slice(start, end)
                   probe.style.cssText = 'position:fixed;visibility:hidden;display:inline-block;white-space:nowrap;width:max-content;max-width:none;overflow-wrap:normal;word-break:normal'
