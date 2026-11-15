@@ -6,6 +6,7 @@ from pathlib import Path
 import re
 
 from manifest import canonical, positive, require_match
+from corpus_comparison import check_mrr_fields, finite_values, validate_comparisons, versions
 
 
 def unique_object(pairs):
@@ -78,11 +79,11 @@ def check_comparisons(records, expected):
                 raise ValueError('required non_regression gate missing or not passing')
 
 
-def validate_report(report, country, rel):
+def validate_report(report, country, rel, previous_report=None):
     if not isinstance(report, dict):
         raise ValueError('invalid report')
-    if type(report.get('version')) is not int or report['version'] != 1:
-        raise ValueError('invalid report version')
+    versions(report)
+    finite_values(report)
     if report.get('country') != country or report.get('rel') != rel:
         raise ValueError('report identity differs from inputs')
     if report.get('status') != 'complete' or report.get('quality_pass') is not True or report.get('release_eligible') is not False:
@@ -106,6 +107,17 @@ def validate_report(report, country, rel):
             raise ValueError('invalid cohort')
         if cohort['case_count'] > 0:
             check_comparisons(cohort.get('non_regression', []), contract[name])
+    if report['version'] == 2:
+        for records in [report['non_regression'], *(cohort.get('non_regression', []) for cohort in cohorts.values() if cohort['case_count'] > 0)]:
+            for record in records:
+                if record.get('name') == 'mrr' and record.get('gating'):
+                    check_mrr_fields(record)
+    if report['non_regression'] != cohorts['old_product'].get('non_regression'):
+        raise ValueError('top-level non_regression differs from old_product')
+    if previous_report is not None:
+        if previous_report.get('country') != country or previous_report.get('rel') != previous['rel']:
+            raise ValueError('previous report identity differs from inputs')
+        validate_comparisons(report, previous_report)
 
 
 def validate_recipes(row, report):
@@ -118,6 +130,8 @@ def validate_recipes(row, report):
     objects = dict(query=dense.get('query'), document=dense.get('document'),
                    chunk=row.get('chunk_recipe'), lexical=row.get('lexical_recipe'),
                    retrieval=row.get('retrieval_recipe'))
+    if report['version'] == 2 and canonical(report.get('retrieval_recipe')) != canonical(objects['retrieval']):
+        raise ValueError('report retrieval recipe object differs from release row')
     inputs, hashes = row.get('recipe_hash_inputs'), report.get('recipes')
     if not isinstance(inputs, dict) or set(inputs) != set(objects) or not isinstance(hashes, dict) or set(hashes) != set(objects):
         raise ValueError('missing recipe hash inputs')
@@ -211,8 +225,10 @@ def read_manifest(data):
     return obj
 
 
-def create(commit, sequence, country, rel, directory, report_path):
+def create(commit, sequence, country, rel, directory, report_path, previous_report=None):
     row, report = validate_inputs(country, rel, directory, report_path)
+    if previous_report is not None:
+        validate_report(report, country, rel, previous_report=previous_report)
     obj = dict(kind='trachuan.corpus-release', version=1, repository='dannyota/trachuan',
                commit=commit, country=country, rel=rel, database=f'corpus_{country}_{rel}',
                sequence=sequence, previous=report['previous_diff']['previous']['rel'],
@@ -238,9 +254,12 @@ def main():
     else:
         if os.environ['GITHUB_REF'] != 'refs/heads/main':
             raise ValueError('dispatch corpus release from main')
+        from corpus_previous import check_remote
+        _, report = validate_inputs(args.country, args.rel, args.directory, args.report)
+        previous_report = check_remote(report)
         (args.directory / 'manifest.json').write_bytes(create(
             os.environ['GITHUB_SHA'], int(os.environ['GITHUB_RUN_NUMBER']),
-            args.country, args.rel, args.directory, args.report))
+            args.country, args.rel, args.directory, args.report, previous_report=previous_report))
 
 
 if __name__ == '__main__':

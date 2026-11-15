@@ -783,7 +783,6 @@ func (e *populatedCapEngine) Collect(_ context.Context, p retrieval.Prepared, d 
 	var candidates []retrieval.Candidate
 	for i := int64(1); i <= 10; i++ {
 		doc := "other"
-		// Recipe 2 caps a document at five, so six hits exercise demotion.
 		if i <= 6 {
 			doc = "doc"
 		}
@@ -1039,7 +1038,7 @@ func TestPreviousDiff_ProductComparableScorer(t *testing.T) {
 		t.Fatal(err)
 	}
 	diff, ok := current.PreviousDiff.(map[string]any)
-	if !ok || diff["previous_scorer"] != "agent-eval/3" || diff["scorer"] != "agent-eval/4" {
+	if !ok || diff["previous_scorer"] != "agent-eval/3" || diff["scorer"] != "agent-eval/5" {
 		t.Fatalf("diff = %v", current.PreviousDiff)
 	}
 	changes, ok := diff["cases"].([]CaseDifference)

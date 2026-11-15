@@ -35,14 +35,29 @@ with open(os.environ['FAKE_LOG'], 'a') as stream:
     stream.write(json.dumps(dict(name=name, args=args, checksum=os.getenv('AWS_REQUEST_CHECKSUM_CALCULATION'),
                                 run=os.getenv('FAKE_RUN', ''),
                                 config=Path(os.environ['AWS_CONFIG_FILE']).read_text() if 'AWS_CONFIG_FILE' in os.environ else '')) + '\\n')
-if '--version' in args:
+if name == 'oras':
+    manifest = (build / 'previous-manifest.json').read_bytes()
+    signature = b'synthetic bundle'
+    if 'resolve' in args:
+        print('sha256:' + 'c' * 64)
+    elif 'manifest' in args:
+        print(json.dumps(dict(artifactType='application/vnd.trachuan.corpus-release.v1',
+                              layers=[dict(digest='sha256:' + hashlib.sha256(data).hexdigest(), size=len(data),
+                                           annotations={'org.opencontainers.image.title': title})
+                                      for title, data in [('manifest.json', manifest), ('manifest.sigstore.json', signature)]])))
+    elif 'blob' in args:
+        sys.stdout.buffer.write(manifest if args[-1].endswith(hashlib.sha256(manifest).hexdigest()) else signature)
+elif name == 'cosign':
+    if os.getenv('FAKE_BAD_SIGNATURE'):
+        sys.exit(1)
+elif '--version' in args:
     print('aws-cli/' + os.getenv('FAKE_AWS_VERSION', '2.31.0'))
 elif 'list-objects-v2' in args:
     count = sum(path.is_file() for path in remote.iterdir()) if remote.exists() else 0
     print(os.getenv('FAKE_KEY_COUNT', str(count)))
 elif 'head-object' in args:
     filename = option('--key').rsplit('/', 1)[1]
-    path = remote / filename
+    path = build / 'previous-report.json' if option('--key').startswith('vn/20990101_1/') else remote / filename
     if not path.exists():
         path = build / filename
     size = json.loads(os.getenv('FAKE_HEAD_SIZES', '{}')).get(filename, path.stat().st_size)
@@ -64,7 +79,8 @@ elif 'put-object' in args:
         replaced.write_bytes(b'x' * replaced.stat().st_size)
 elif 'get-object' in args:
     filename = option('--key').rsplit('/', 1)[1]
-    data = (build / filename).read_bytes()
+    source = build / ('previous-report.json' if option('--key').startswith('vn/20990101_1/') else filename)
+    data = source.read_bytes()
     if os.getenv('FAKE_GROW_AFTER_HEAD') == filename:
         data += b'growth'
     total = len(data)
@@ -94,8 +110,11 @@ elif name == 'aws' and 'cp' in args:
             replaced.write_bytes(b'x' * replaced.stat().st_size)
     if os.getenv('FAKE_FAIL_UPLOAD'):
         sys.exit(1)
-elif name == 'gh' and os.getenv('FAKE_FAIL_DISPATCH'):
-    sys.exit(1)
+elif name == 'gh':
+    if os.getenv('FAKE_FAIL_DISPATCH'):
+        sys.exit(1)
+else:
+    sys.exit('unsupported synthetic client call')
 '''
 
 
@@ -109,7 +128,7 @@ class CorpusUploadTest(unittest.TestCase):
         self.row, self.report = write_fixture(self.build)
         self.bin = self.path / 'bin'
         self.bin.mkdir()
-        for name in ('aws', 'gh'):
+        for name in ('aws', 'gh', 'oras', 'cosign'):
             executable = self.bin / name
             executable.write_text(FAKE)
             executable.chmod(0o755)
@@ -147,8 +166,8 @@ class CorpusUploadTest(unittest.TestCase):
         calls = self.calls()
         uploads = [call for call in calls if 'put-object' in call['args']]
         self.assertEqual(len(uploads), 4)
-        self.assertEqual(len([call for call in calls if 'head-object' in call['args']]), 4)
-        self.assertGreater(min(i for i, call in enumerate(calls) if 'head-object' in call['args']),
+        self.assertEqual(len([call for call in calls if 'head-object' in call['args']]), 5)
+        self.assertGreater(min(i for i, call in enumerate(calls) if 'head-object' in call['args'] and 'vn/20990101_1/report.json' not in call['args']),
                            max(i for i, call in enumerate(calls) if 'put-object' in call['args']))
         self.assertEqual(calls[-1]['args'], ['workflow', 'run', 'corpus-release.yml', '--ref', 'main',
                                            '-f', 'country=vn', '-f', 'rel=20990102_1'])
@@ -214,6 +233,44 @@ class CorpusUploadTest(unittest.TestCase):
         result = self.run_upload()
         self.assertNotEqual(result.returncode, 0)
         self.assertFalse(any(call['name'] == 'gh' for call in self.calls()))
+
+    def test_previous_report_hash_and_signature_fail_before_any_upload(self):
+        for fault in ('report_hash', 'manifest_hash', 'signature', 'missing'):
+            with self.subTest(fault=fault):
+                self.row, self.report = write_fixture(self.build)
+                self.log.unlink(missing_ok=True)
+                if fault == 'report_hash':
+                    self.report['previous_diff']['previous']['report_sha256'] = '0' * 64
+                    save_fixture(self.build, self.row, self.report)
+                elif fault == 'manifest_hash':
+                    from manifest import canonical
+                    path = self.build / 'previous-manifest.json'
+                    manifest = json.loads(path.read_bytes())
+                    manifest['report']['sha256'] = '0' * 64
+                    path.write_bytes(canonical(manifest))
+                elif fault == 'signature':
+                    self.env['FAKE_BAD_SIGNATURE'] = '1'
+                else:
+                    (self.build / 'previous-report.json').unlink()
+                result = self.run_upload()
+                self.env.pop('FAKE_BAD_SIGNATURE', None)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertFalse(any('put-object' in call['args'] or call['name'] == 'gh' for call in self.calls()))
+
+    def test_signing_cli_checks_previous_before_creating_manifest(self):
+        self.env.update(GITHUB_REF='refs/heads/main', GITHUB_SHA='a' * 40, GITHUB_RUN_NUMBER='10')
+        command = ['python3', str(ROOT / 'deploy/github/corpus_manifest.py'), 'create', 'vn', '20990102_1',
+                   str(self.build), str(self.build / 'report.json')]
+        result = subprocess.run(command, env=self.env, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        manifest = self.build / 'manifest.json'
+        self.assertTrue(manifest.exists())
+        manifest.unlink()
+        self.report['previous_diff']['previous']['report_sha256'] = '0' * 64
+        save_fixture(self.build, self.row, self.report)
+        result = subprocess.run(command, env=self.env, capture_output=True, text=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse(manifest.exists())
 
     def test_concurrent_uploads_cannot_interleave(self):
         self.assert_uploads_share_lock(self.script)

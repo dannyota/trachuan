@@ -222,3 +222,7 @@ accuracy on either cohort.
   per-case decision file was considered and dropped after review: it needed its
   own evidence contract for little gain over a bound. The strict rule stays for
   recipe and model changes.
+- 2026-11-15: re-evaluating `vn/20261115_2` showed that each build recomputes
+  `abstention.calibration_sha256` from its release's data. Condition 1 of the
+  MRR@8 tolerance compares retrieval recipes without that field; the abstention
+  threshold and every other field must still match.

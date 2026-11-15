@@ -58,17 +58,18 @@ jobs:
           OCI_S3_ENDPOINT: ${{ vars.OCI_S3_ENDPOINT }}
           AWS_REQUEST_CHECKSUM_CALCULATION: when_required
         run: python3 deploy/github/corpus_storage.py "$COUNTRY" "$REL" "$RELEASE_DIR"
-      - name: Validate evaluation and write corpus manifest
-        run: |
-          python3 deploy/github/corpus_manifest.py create "$COUNTRY" "$REL" \
-            "$RELEASE_DIR" "$RELEASE_DIR/report.json"
       - name: Install signing and registry tools
         run: bash deploy/github/install-tools.sh
-      - name: Sign, verify and publish corpus release
+      - name: Validate, sign, verify and publish corpus release
         env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.RELEASES_READ_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.RELEASES_READ_KEY_SECRET }}
+          OCI_S3_ENDPOINT: ${{ vars.OCI_S3_ENDPOINT }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ACTOR: ${{ github.actor }}
         run: |
           printf '%s' "$GITHUB_TOKEN" | oras login ghcr.io --username "$ACTOR" --password-stdin
           trap 'oras logout ghcr.io' EXIT
+          python3 deploy/github/corpus_manifest.py create "$COUNTRY" "$REL" \
+            "$RELEASE_DIR" "$RELEASE_DIR/report.json"
           python3 deploy/github/corpus_publish.py "$RELEASE_DIR"

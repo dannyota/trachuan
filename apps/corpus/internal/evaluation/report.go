@@ -22,6 +22,7 @@ type Options struct {
 	Mapping              ValidationReport
 	EvaluationDate       retrieval.Date
 	Modes                []retrieval.Mode
+	PreviousRelease      string
 	PreviousReport       string
 	BuildArtifactSHA256  string
 	DumpSHA256           string
@@ -72,6 +73,7 @@ type Target struct {
 }
 
 type NonRegression struct {
+	*MRRComparison
 	ValidityOverrides
 	CapOverride            *retrieval.CapOverride        `json:"cap_override"`
 	ArticleCapOverride     *retrieval.ArticleCapOverride `json:"article_cap_override,omitempty"`
@@ -158,7 +160,8 @@ type CompactSizeGate struct {
 }
 
 type Report struct {
-	RetrievalRecipeVersion int `json:"retrieval_recipe_version,omitempty"`
+	RetrievalRecipe        json.RawMessage `json:"retrieval_recipe,omitempty"`
+	RetrievalRecipeVersion int             `json:"retrieval_recipe_version,omitempty"`
 	ValidityOverrides
 	CapOverride                   *retrieval.CapOverride        `json:"cap_override"`
 	ArticleCapOverride            *retrieval.ArticleCapOverride `json:"article_cap_override,omitempty"`
