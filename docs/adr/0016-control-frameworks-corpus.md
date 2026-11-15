@@ -53,9 +53,10 @@ and its per-document gate was stored but not enforced when serving
    derivative (extracted and OCR text, check results, reviewer readings,
    indexes, dumps) exist only in the places the
    [access note](../design/frameworks-access.md#licensed-material-and-where-it-may-be)
-   lists; that table is the only list. One publication exception: the signed
-   manifest's integrity values (dump digest and size, report and build artifact
-   digests), which show that a release changed and nothing about what. Tests use
+   lists; that table is the only list. Publication exceptions: the integrity
+   values of the signed manifest (dump digest and size, report and build
+   artifact digests) and of the registry's source files (digest and size), which
+   identify a release or a file and say nothing about its text. Tests use
    synthetic documents only.
 7. **Scans use the OCR path, as an exception to ADR 0014.** A source without a
    text layer goes through the Vision OCR and cross-check of
@@ -117,3 +118,5 @@ and its per-document gate was stored but not enforced when serving
   named as the one publication exception, the access note's table as the only
   list of places, a broken link.
 - 2026-11-15: accepted after the fourth review round found nothing open.
+- 2026-11-15: the registry's source-file digests and sizes added as the second
+  publication exception, so the reader can refuse unregistered files.

@@ -21,9 +21,11 @@ and release. Law stays in the notes it has today.
 `sources/frameworks.yaml` is the registry, in Git: one entry per framework
 version with publisher, code, version, language, `access` (`free` or
 `licensed`), licence kind as the publisher states it, the source files with
-their SHA-256 and role (text, catalog, mapping workbook), and the parser. It
-holds no document text. Seeds come from compliary's `framework.csv`,
-`framework_version.csv` and `file_rule.csv`.
+their SHA-256, size and role (text, catalog, mapping workbook), and the parser.
+It holds no document text and nothing else derived from a licensed file
+([published values](frameworks-access.md#licensed-material-and-where-it-may-be)).
+Seeds come from compliary's `framework.csv`, `framework_version.csv` and
+`file_rule.csv`.
 
 The files themselves are read from a local directory named by
 `FRAMEWORKS_SOURCE_DIR` (the owner's clone of `compliary-private`). A file whose
@@ -70,7 +72,8 @@ the registry, `fetch` copies and hashes files from the source directory,
 `extract` runs the entry's parser (OSCAL JSON, XLSX catalog, PDF text, OCR),
 `relate` builds mapping edges, then `chunk`, `embed`, `build` and `eval`.
 Parsers are deterministic; no model writes canonical text. Each parser has an
-exact control-count check against the registry.
+exact control-count check: a free version's expected count is in the registry, a
+licensed version's in a file under `FRAMEWORKS_SOURCE_DIR`, never in Git.
 
 Run state and artifacts follow
 [licensed material](frameworks-access.md#licensed-material-and-where-it-may-be).

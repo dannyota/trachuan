@@ -115,10 +115,15 @@ chunks, embeddings, indexes and dumps. It may exist only in:
 
 It is never in Git, CI logs or artifacts, public buckets, log lines, metrics,
 quality gap details, error reports, evaluation reports, cache keys or PR text.
-One value class is published although it is computed from licensed bodies: the
-integrity fields of the signed manifest (`dump` SHA-256 and size, `report`
-SHA-256, `build_artifact_sha256`). They are needed to verify and to refuse
-replays, and they reveal only that a release differs from another. No other
-body-derived value is published. Reviewer readings of licensed text (OCR
-waivers) live in a file under `FRAMEWORKS_SOURCE_DIR`, not in `sources/`. Tests
-and fixtures use invented frameworks.
+Two value classes are published although they are computed from licensed files.
+The integrity fields of the signed manifest (`dump` SHA-256 and size, `report`
+SHA-256, `build_artifact_sha256`) are needed to verify and to refuse replays,
+and reveal only that a release differs from another. The SHA-256 and byte size
+of each source file in the registry (`sources/frameworks.yaml`) let the reader
+refuse an unregistered file, and reveal only which file it is. No other value
+derived from a licensed file is published: the registry holds no page, character
+or control counts and no titles taken from a licensed file, and a licensed
+parser reads its expected control count from a file under
+`FRAMEWORKS_SOURCE_DIR`. Reviewer readings of licensed text (OCR waivers) live
+in a file under `FRAMEWORKS_SOURCE_DIR`, not in `sources/`. Tests and fixtures
+use invented frameworks.
