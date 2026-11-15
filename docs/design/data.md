@@ -130,8 +130,8 @@ Rules:
   request and auth restore; tokens issued before the epoch are invalid.
 - Account deletion revokes all sessions, tokens and OAuth grants in one
   transaction and removes the row after 7 days. A framework entitlement
-  ([control frameworks](frameworks.md#classes-and-entitlements)) belongs to an
-  email, not to the account, and is not touched.
+  ([framework access](frameworks-access.md#classes-and-entitlements)) belongs to
+  an email, not to the account, and is not touched.
 
 ## Local workshop database (MacBook)
 

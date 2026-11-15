@@ -36,108 +36,11 @@ licence and a `licence_url`; the validator refuses `free` otherwise.
 
 ## Access
 
-### Classes and entitlements
-
-Every framework version carries `access` from the registry into the release. An
-**entitlement** lets one email read licensed text. It is not an OAuth grant
-([OAuth](oauth.md)) and not account data: it belongs to the email, so account
-deletion leaves it and a later account that verifies the same email holds it
-again. Auth database table `framework_entitlement`:
-
-| Column                     | Meaning                                                 |
-| -------------------------- | ------------------------------------------------------- |
-| `id`                       | key                                                     |
-| `email`                    | canonical email ([accounts](accounts.md) parser)        |
-| `scope`                    | `*` for every licensed framework, or one framework code |
-| `granted_at`, `granted_by` | time and operator name                                  |
-| `note`                     | free text, operator only                                |
-| `revoked_at`, `revoked_by` | null while live                                         |
-| `revoke_reason`            | `operator` or `restore`                                 |
-
-One live row per `(email, scope)`. It applies only to an account whose email is
-verified and equals `email`; it may exist before the account does.
-
-`server admin frameworks allow|revoke|list` is the only writer until the admin
-portal exists. Each change and its row in `framework_entitlement_event` (who,
-when, what; never document text) commit in one transaction; events are never
-updated or deleted.
-
-After an auth database restore ([backups](backups.md#restore)), every live
-entitlement is revoked with reason `restore` before traffic resumes, because the
-backup may predate a revocation. The operator allows again from the event
-history.
-
-### Decision
-
-One function returns the caller's **access set** for a release: the framework
-codes whose licensed text the account may read, or `*`. For a framework version:
-
-1. `free`: full.
-2. `licensed` and the framework is in the access set: full.
-3. Otherwise: reduced.
-
-The function reads entitlements through the store that checks sessions, so a
-revocation takes effect within the revocation delay in [web API](web-api.md),
-for sessions, personal tokens and OAuth tokens alike. Search, read, mappings and
-the web API call it on every request, before any cache lookup and before a
-cursor continues; no other path builds a control record. A missing class, an
-unknown framework or a store error is reduced; a store error is also reported as
-unavailable.
-
-### Reduced record
-
-A reduced control carries: framework code and version, citation, kind, tree
-position, trachuan's paraphrased title, status, amendment and lineage links,
-mapping edges, and `access: "licensed"` with `text_withheld: true`. It never
-carries the publisher's title, body text, notes, tables or any snippet cut from
-them. Paraphrased titles are ours (seeded from compliary's `control_title.csv`,
-reviewed to keep the standard terms) and are served to everyone. The approved
-public fields of a licensed version are exactly: citation, kind, tree position,
-our title, status, lineage and mapping edges.
-
-### The invariant
-
-For any caller, changing text the caller may not read, while the approved public
-fields stay the same, changes nothing the caller can observe: hits, order,
-scores, abstention, counts, cursors, timing class and errors. Every rule below
-follows from it, and a synthetic test proves it for search, read, mappings,
-cache hits and pagination with callers of different access sets.
-
-- **Candidates are chosen after authorization.** The body index of a version is
-  searched only for callers with full access to it. Everyone else reaches that
-  version through the public-field index.
-- **Ranking statistics are isolated.** Lexical statistics are kept per framework
-  version for the body index and separately for the public-field index, so one
-  version's body never weights another's score.
-- **Dense search is an exact scan** over the vectors the caller may use; no
-  shared approximate graph.
-- **Caches are partitioned** by release and the complete access set, for every
-  cache that holds authorization-dependent data (response, candidate, read item
-  and document caches).
-- **Framework responses are `no-store`**, API and HTML, and are excluded from
-  the Nitro and CDN public caches.
-- Citation lookups (`PCI DSS 8.3.1`) resolve for everyone through public fields.
-
-### Licensed material and where it may be
-
-Licensed material is a source file of a `licensed` version and everything
-derived from its text: extracted and OCR text, check results, reviewer readings,
-chunks, embeddings, indexes and dumps. It may exist only in:
-
-| Place                                                   | Why                           |
-| ------------------------------------------------------- | ----------------------------- |
-| `FRAMEWORKS_SOURCE_DIR` and the MacBook's external disk | sources and run artifacts     |
-| The workshop database on the MacBook                    | run state, OCR store          |
-| The private releases bucket                             | the dump                      |
-| The signing runner, for the length of one job           | hash check; nothing persisted |
-| The host's release database and its encrypted backups   | serving                       |
-| The OCR and cross-check providers, for scans only       | see [Scans](#scans)           |
-
-It is never in Git, CI logs or artifacts, public buckets, log lines, metrics,
-quality gap details, error reports, evaluation reports, cache keys or PR text.
-Reviewer readings of licensed text (OCR waivers) live in a file under
-`FRAMEWORKS_SOURCE_DIR`, not in `sources/`. Tests and fixtures use invented
-frameworks.
+[Control frameworks: access](frameworks-access.md) owns the access classes,
+entitlements, the reduced record, the invariant and the places licensed material
+may exist. In short: a `licensed` version's text is served only to an email with
+an entitlement; everyone else gets a reduced record; and text a caller may not
+read cannot change anything that caller observes.
 
 ## Data model
 
@@ -170,7 +73,7 @@ Parsers are deterministic; no model writes canonical text. Each parser has an
 exact control-count check against the registry.
 
 Run state and artifacts follow
-[Licensed material](#licensed-material-and-where-it-may-be).
+[licensed material](frameworks-access.md#licensed-material-and-where-it-may-be).
 
 ### Scans
 
@@ -203,10 +106,11 @@ reviewed before serving work starts. Its fixed rules:
 - **Outputs.** Control records, not law records: no law validity stamp, no
   ancestor headings from text. Every nested object has a reduced form: a mapping
   edge end is citation, version and our title; provenance is the mapping
-  source's name; an outline is citations and our titles; a gap detail is a kind,
-  a count and a citation, never text.
-- **Counts** (versions, controls, edges, gaps) are release facts and the same
-  for every caller.
+  source's name; an outline is citations and our titles.
+- **Diagnostics and counts.** For a version the caller may not read, gaps and
+  counts come only from approved public fields; text-dependent gaps are withheld
+  ([invariant](frameworks-access.md#the-invariant)). A gap detail never quotes
+  text for anyone.
 - **Web.** `/api/v1/frameworks/...`, pages `/frameworks`,
   `/frameworks/{code}/{version}` and a control page; the search page gains the
   corpus switch. A reduced control shows our title, its mappings and a plain
@@ -218,17 +122,21 @@ compliary's 205 golden cases are the starting cohort, re-adjudicated against
 this release. Floors are set from the first measured run and recorded here;
 compliary measured recall@8 of 86.3% without a framework filter and 93.2% with
 one. Evaluation runs with full access. A second suite runs the
-[invariant](#the-invariant) with reduced and mixed access sets; a release that
-fails it is not signed.
+[invariant](frameworks-access.md#the-invariant) with reduced and mixed access
+sets; a release that fails it is not signed.
 
 ## Release and deployment
 
 The corpus kind is part of release identity everywhere, not a channel name:
 
-- **Manifest.** `corpus_kind: "frameworks"`, database `frameworks_<rel>`, schema
-  version of this kind, recipes and counts. It holds no text and no control
-  citations. The signed manifest is public like the law manifest; that is the
-  one exception to "nothing anonymous", and it is limited to those fields.
+- **Manifest.** The signed manifest is public like the law manifest; that is the
+  one exception to "nothing anonymous". Its complete field list: `kind`,
+  `version`, `corpus_kind: "frameworks"`, `repository`, `commit`, `rel`,
+  `database` (`frameworks_<rel>`), `sequence`, `previous`, `dump` (object,
+  SHA-256, size), `report` (SHA-256, `quality_pass`), `build_artifact_sha256`,
+  `schema_version`, `extensions`, `recipes` (parameters only) and the number of
+  framework versions and controls. It holds no text, no citations and nothing
+  computed from body text (vocabulary sizes, frequencies, lengths).
 - **Channel and sequences.** `ghcr.io/dannyota/trachuan-corpus-release` tag
   `frameworks-production`, with its own sequence history, pointer row, journal
   and retired list on the host, keyed by kind; one kind's pending or failed
@@ -246,6 +154,26 @@ The corpus kind is part of release identity everywhere, not a channel name:
 Until the first release is active the feature is off: `SERVER_FRAMEWORKS=false`
 hides the tools, routes and pages.
 
+## Downstream products
+
+The owner's other products (sc365 first) build private knowledge on top of this
+corpus: mappings from an organization's assets to the requirements that apply.
+Those mappings stay downstream. What this corpus gives them:
+
+- **Identity.** `(framework code, version, citation)` for a control and
+  `(country, document key, anchor)` for a legal provision. A downstream mapping
+  stores these keys, never text.
+- **A reduced export.** The public fields of every version, the full text of
+  `free` versions, mapping edges and lineage, with the release's signed
+  manifest. It holds no licensed text, so it may leave the host and the MacBook.
+  The full dump has no hand-over path.
+- **A change list per release**, by identity: controls added, removed, changed
+  (public fields or, for `free` versions, text), superseded or amended, and
+  edges added or removed, so a downstream mapping knows what to review.
+- **Links from controls to legal provisions**, as reviewed mapping edges with a
+  source and evidence, once the reviewed-knowledge inputs of the corpus carry
+  them.
+
 ## Admin portal (later)
 
 A separate hostname behind Cloudflare Access. The server accepts admin routes
@@ -256,6 +184,5 @@ events.
 ## Open
 
 - Which frameworks are `free`: the terms review per publisher.
-- Links from controls to legal provisions.
 - Whether the body index for licensed versions needs its own memory budget on
   the host; measured with the first release.

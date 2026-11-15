@@ -2,7 +2,7 @@
 
 **Goal:** the framework corpus kind of ADR 0016 serves free framework text to every account and licensed text to entitled emails, in production behind `SERVER_FRAMEWORKS`, with the owner's email as the only entitlement until the licence terms review.
 
-**Spec:** `docs/adr/0016-control-frameworks-corpus.md`, `docs/design/frameworks.md`, `docs/research/compliary-survey-2026-11.md`. Sources: the owner's clone of `compliary-private` (never copied into this repository); seeds from `/Users/danny/src/dannyota/compliary/deploy/seed/` and `deploy/eval/golden.csv`.
+**Spec:** `docs/adr/0016-control-frameworks-corpus.md`, `docs/design/frameworks.md`, `docs/design/frameworks-access.md`, `docs/research/compliary-survey-2026-11.md`. Sources: the owner's clone of `compliary-private` (never copied into this repository); seeds from `/Users/danny/src/dannyota/compliary/deploy/seed/` and `deploy/eval/golden.csv`.
 
 **Routes:** access, entitlements, serving and release paths are hard (Codex `implementer` `gpt-6.1-sol`, `reviewer` `gpt-6-astra`); parsers and web pages are routine (`gpt-6.1-terra`, `gpt-6.1-sol`). Standing rules: no licensed text in Git, fixtures, logs, reports or PR bodies; fixtures are invented frameworks; a framework version is `licensed` unless the registry says `free` with an open licence.
 
@@ -33,7 +33,12 @@
 - [ ] Corpus kind in release identity: manifest `corpus_kind`, per-kind sequence history, pointer, journal and retired list on the host, first-release bootstrap with `previous: null`, release-check per kind, image then release floor then first release; signing job persists nothing; memory measured with both corpora active; runbook.
 - [ ] Owner entitlement created on the host; feature flag on; acceptance with an entitled and a non-entitled account.
 
-## 15.6 Later
+## 15.6 Downstream contract (corpus and server; dev, dev2)
+- [ ] Reduced export command and its manifest; a test that no licensed field or body-derived value is in it.
+- [ ] Change list per release by identity (controls and edges added, removed, changed, superseded), written by build next to the report.
+- [ ] Links from controls to legal provisions as reviewed mapping edges with source and evidence (uses the reviewed-knowledge inputs of the knowledge loop design).
+- [ ] sc365 reads the export and the change list; record its feedback before freezing the shapes.
+
+## 15.7 Later
 - [ ] Licence terms review per publisher and the `free` list.
 - [ ] Admin portal behind Cloudflare Access.
-- [ ] Links from controls to legal provisions.

@@ -51,11 +51,11 @@ and its per-document gate was stored but not enforced when serving
    not read cannot change anything that caller observes.
 6. **Licensed material has a closed list of places.** Source files and every
    derivative (extracted and OCR text, check results, reviewer readings,
-   indexes, dumps) exist only where [the design](../design/frameworks.md) lists:
-   the source directory and run disk, the workshop database, the private bucket,
-   the signing job, the host database and its backups, and the OCR providers for
-   scans. Never Git, CI logs, public buckets, reports or log lines. Tests use
-   synthetic documents only.
+   indexes, dumps) exist only where [the design](../design/frameworks-access.md)
+   lists: the source directory and run disk, the workshop database, the private
+   bucket, the signing job, the host database and its backups, and the OCR
+   providers for scans. Never Git, CI logs, public buckets, reports or log
+   lines. Tests use synthetic documents only.
 7. **Scans use the OCR path, as an exception to ADR 0014.** A source without a
    text layer goes through the Vision OCR and cross-check of
    [ADR 0014](0014-ocr-on-the-write-path.md), which otherwise sends only public
@@ -79,10 +79,13 @@ and its per-document gate was stored but not enforced when serving
   memory budget grows by the framework index.
 - Access becomes data that changes at run time, so entitlements need audit rows
   and the admin command needs the same care as account blocking.
-- The signed-manifest and private-bucket path carries the framework release; its
-  dump is licensed material and has no hand-over path.
+- The signed-manifest and private-bucket path carries the framework release. Its
+  full dump is licensed material and has no hand-over path; a reduced export
+  (public fields, free text, edges, lineage) and a change list per release are
+  the hand-over form for the owner's other products, which keep their private
+  mappings keyed by this corpus's identities.
 - Links from controls to Vietnamese legal provisions become possible in one
-  product; they are not part of this decision.
+  product, as reviewed mapping edges; the plan carries them after serving.
 
 ## Alternatives
 
@@ -105,3 +108,7 @@ and its per-document gate was stored but not enforced when serving
 - 2026-11-15: revised after independent review (A-01 to A-03, S-01 to S-04):
   entitlements instead of grants, the access invariant, the closed list of
   places for licensed material, corpus kind in release identity, restore rule.
+- 2026-11-15: second review round (A-04, S-05, S-06): text-dependent diagnostics
+  withheld from callers without access, complete public manifest field list,
+  host staging and server memory in the list of places. Added the downstream
+  contract after the owner named sc365's private asset mappings.
