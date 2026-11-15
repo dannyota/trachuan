@@ -255,9 +255,16 @@ with the new key alone.
 ## Release floor
 
 `SERVER_TOTP_ENROLLMENT` defaults to off. It turns on only after the signed pull
-deployment's trust policy pins a minimum release at or above the first image
-that enforces factors on every issuer; deploy, rollback and restore refuse
-images below it.
+deployment's [release floor](pull-deployment.md#release-floor) is active on the
+host at or above the first release whose updater enforces the floor; that
+release already enforces factors on every issuer. Deploy, rollback, failure
+recovery and bootstrap then refuse images below it, and turning enrollment off
+later never lowers it. The order is three releases: the floor-aware updater with
+no floor set; a release that sets the floor to that release's sequence; and,
+once the host reports the floor, a release that sets
+`SERVER_TOTP_ENROLLMENT=true` in `deploy/host/server.env`. A host acceptance
+then enrolls TOTP on a throwaway account, signs in with a code and with a
+recovery code, and removes TOTP.
 
 ## Tests
 
