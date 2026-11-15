@@ -60,15 +60,20 @@ extract evidence makes `text_complete` false
 `table_text`, `image_content`, `ocr_flagged`, `ocr_rejected`,
 `ocr_label_flagged` or `needs_ocr`) yields no text relations and gets gap
 `relation_text_source_incomplete`; an incorrectly read sentence must not create
-a relation. For each `dieu` provision whose text is not empty, the parser
-normalizes the text (NFC, whitespace collapsed to one space, ASCII digits,
-letters compared case-insensitively) and splits it into sentences at a full stop
-followed by a space or the end; a full stop inside a number token
-(`39/2016/TT-NHNN.` only at the end) does not split. Quotation marks (`"`,
-`“ ”`, `« »`, `'`) are tracked across the provision: text inside a quotation is
-never a candidate, and a provision with unbalanced quotation marks yields
-nothing with gap `relation_text_unbalanced_quote`. The parser is a hand-written
-scanner over tokens; no pattern language.
+a relation. One exception (coordinator decision 2026-11-15): a document whose
+only such gaps are `tree_headings_partial` or `tree_headings_only` is read from
+the articles that have text, because that text is the source's own tree and the
+missing text sits only in heading-only articles; it keeps its gaps, and its
+relations carry nothing that says the source was complete. For each `dieu`
+provision whose text is not empty, the parser normalizes the text (NFC,
+whitespace collapsed to one space, ASCII digits, letters compared
+case-insensitively) and splits it into sentences at a full stop followed by a
+space or the end; a full stop inside a number token (`39/2016/TT-NHNN.` only at
+the end) does not split. Quotation marks (`"`, `“ ”`, `« »`, `'`) are tracked
+across the provision: text inside a quotation is never a candidate, and a
+provision with unbalanced quotation marks yields nothing with gap
+`relation_text_unbalanced_quote`. The parser is a hand-written scanner over
+tokens; no pattern language.
 
 A candidate sentence has, in order:
 

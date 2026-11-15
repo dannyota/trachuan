@@ -62,13 +62,17 @@ func textRelations(dir string, rows []relation, issuers map[string]string) ([]re
 		return nil, nil, err
 	}
 	incomplete := map[string]bool{}
+	blocked := false
 	for _, gap := range gaps {
 		switch gap.Kind {
 		case "tree_headings_only", "tree_headings_partial", "tree_text_partial", "structure_uncertain", "table_text", "image_content", "ocr_flagged", "ocr_rejected", "ocr_label_flagged", "needs_ocr":
 			incomplete[gap.Kind] = true
+			if gap.Kind != "tree_headings_only" && gap.Kind != "tree_headings_partial" {
+				blocked = true
+			}
 		}
 	}
-	if len(incomplete) > 0 {
+	if blocked {
 		names := make([]string, 0, len(incomplete))
 		for name := range incomplete {
 			names = append(names, name)

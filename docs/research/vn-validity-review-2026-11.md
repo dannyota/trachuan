@@ -46,3 +46,11 @@ provision names no date.
 
 The four bulk kinds (1,473 entries) are reviewed in a later batch under the
 model-adjudicated rule in validity status.
+
+## Partial documents without relations
+
+On `vn/20261114_5` all 394 documents with source status `HHL1P` ("Hết hiệu lực
+một phần") have no `provision_validity` row, as the table is empty by design.
+274 have no incoming `repeals` relation, and 80 have no incoming `repeals`,
+`replaces`, `amends_supplements` or `suspends` relation at all. Both counts feed
+the bulk review batch.
