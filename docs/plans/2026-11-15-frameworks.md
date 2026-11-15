@@ -7,7 +7,7 @@
 **Routes:** access, entitlements, serving and release paths are hard (Codex `implementer` `gpt-6.1-sol`, `reviewer` `gpt-6-astra`); parsers and web pages are routine (`gpt-6.1-terra`, `gpt-6.1-sol`). Standing rules: no licensed text in Git, fixtures, logs, reports or PR bodies; fixtures are invented frameworks; a framework version is `licensed` unless the registry says `free` with an open licence.
 
 ## 15.0 Design (primary, astra review)
-- [ ] ADR 0016, frameworks.md and the survey note reviewed by `gpt-6-astra`; findings fixed; ADR accepted.
+- [x] ADR 0016, frameworks.md, frameworks-access.md and the survey note reviewed by `gpt-6-astra` in four rounds (A-01 to A-04, S-01 to S-07 fixed); ADR accepted 2026-11-15.
 
 ## 15.1 Access foundation (server; dev2)
 - [ ] Tests first, then: auth migration `framework_entitlement` and `framework_entitlement_event` (mutation and event in one transaction, events immutable); the access-set function with fail-closed cases (unknown framework, missing class, store error, revoked entitlement, entitlement before account, unverified email, email canonical form, account deletion keeps it); `server admin frameworks allow|revoke|list`; the restore step that revokes every live entitlement with reason `restore`; `SERVER_FRAMEWORKS` flag default false. No serving yet.

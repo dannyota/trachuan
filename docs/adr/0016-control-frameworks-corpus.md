@@ -1,6 +1,6 @@
 # ADR 0016: Control frameworks beside the law corpus, licensed text by allowlist
 
-Status: proposed 2026-11-15.
+Status: accepted 2026-11-15.
 
 ## Context
 
@@ -116,3 +116,4 @@ and its per-document gate was stored but not enforced when serving
 - 2026-11-15: third review round (S-05 to S-07): the manifest's integrity values
   named as the one publication exception, the access note's table as the only
   list of places, a broken link.
+- 2026-11-15: accepted after the fourth review round found nothing open.
