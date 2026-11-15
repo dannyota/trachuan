@@ -33,26 +33,35 @@ and its per-document gate was stored but not enforced when serving
    lessons. Parsers are written for trachuan's pipeline; a compliary parser may
    be ported with its tests when the owner owns both sides.
 3. **Every framework version has an access class.** `free`: text served to every
-   signed-in account. `licensed`: text served only under a grant. A new version
-   is `licensed` until a reviewed registry entry says `free`, so forgetting to
-   classify fails closed.
-4. **Licensed text is served by grant.** A grant names a verified account email
-   and a scope (every licensed framework, or one framework). Grants are rows in
-   the auth database, written by a server admin command and later by the admin
-   portal. The check runs on every search and read, in one place, after
-   authentication; no cache outlives a revocation by more than the session
-   revocation delay.
-5. **Without a grant a licensed control is a reduced record.** The caller gets
-   the framework, version, citation, trachuan's own paraphrased title, mapping
-   edges and version lineage; never the publisher's title or body text. Search
-   for that caller neither matches nor returns licensed body text.
-6. **Licensed text stays out of public places.** Source files, extracted text,
-   OCR text and release dumps of this kind never enter Git, CI logs, public
-   buckets, error reports, evaluation reports or log lines. Tests use synthetic
-   documents only.
-7. **Scans use the OCR path.** A source without a text layer goes through the
-   Vision OCR and cross-check of [ADR 0014](0014-ocr-on-the-write-path.md), with
-   the same gaps and waivers.
+   signed-in account. `licensed`: text served only under an entitlement. A new
+   version is `licensed` until a reviewed registry entry says `free`, so
+   forgetting to classify fails closed.
+4. **Licensed text is served by entitlement.** An entitlement names a verified
+   email and a scope (every licensed framework, or one framework). It is a row
+   in the auth database, written by a server admin command and later by the
+   admin portal, with an audit event in the same transaction. It belongs to the
+   email, not to an account or an OAuth grant. The check runs on every request,
+   in one place, before any cache; a revocation takes effect within the session
+   revocation delay; a restore from backup revokes every entitlement until the
+   operator allows it again.
+5. **Without an entitlement a licensed control is a reduced record.** The caller
+   gets the framework, version, citation, trachuan's own paraphrased title,
+   mapping edges and version lineage; never the publisher's title or body text.
+   One invariant governs search, read, mappings and caches: text a caller may
+   not read cannot change anything that caller observes.
+6. **Licensed material has a closed list of places.** Source files and every
+   derivative (extracted and OCR text, check results, reviewer readings,
+   indexes, dumps) exist only where [the design](../design/frameworks.md) lists:
+   the source directory and run disk, the workshop database, the private bucket,
+   the signing job, the host database and its backups, and the OCR providers for
+   scans. Never Git, CI logs, public buckets, reports or log lines. Tests use
+   synthetic documents only.
+7. **Scans use the OCR path, as an exception to ADR 0014.** A source without a
+   text layer goes through the Vision OCR and cross-check of
+   [ADR 0014](0014-ocr-on-the-write-path.md), which otherwise sends only public
+   legal text to the providers. The owner decided on 2026-11-15 to OCR his
+   licensed scans this way. A scan is sent only after the providers' data-use
+   terms are recorded in the registry; reviewer readings stay outside Git.
 8. **One served model.** Frameworks use the law corpus's dense recipe and the
    one query embedder on the host. A different recipe needs measured evidence
    that this one misses the floors on the framework golden cases.
@@ -61,15 +70,15 @@ and its per-document gate was stored but not enforced when serving
    capability to the public site or to `/mcp`.
 10. **Licence terms are deferred, exposure is not.** During development every
     held document may be ingested. Until the terms review lands, only the
-    owner's account holds grants and no framework is `free` except those whose
-    publisher states public-domain or open terms in the registry.
+    owner's email holds an entitlement and no framework is `free` except those
+    whose publisher states public-domain or open terms in the registry.
 
 ## Consequences
 
 - The server resolves two kinds of release and keeps two engine sets; the host
   memory budget grows by the framework index.
-- Access becomes data that changes at run time, so grants need audit rows and
-  the admin command needs the same care as account blocking.
+- Access becomes data that changes at run time, so entitlements need audit rows
+  and the admin command needs the same care as account blocking.
 - The signed-manifest and private-bucket path carries the framework release; its
   dump is licensed material and has no hand-over path.
 - Links from controls to Vietnamese legal provisions become possible in one
@@ -83,12 +92,16 @@ and its per-document gate was stored but not enforced when serving
   mix licensed text with public law, and document, validity and taxonomy rules
   for law do not fit controls.
 - **Allowlist in Vault, like the retired sign-up list.** Rejected by the owner:
-  grants change often, need audit and an admin interface, and are not secrets.
-- **Hide licensed frameworks entirely from accounts without a grant.** Rejected:
-  citations, mapping edges and our own titles carry no licensed text and are
-  what makes the free part useful.
+  entitlements change often, need audit and an admin interface, and are not
+  secrets.
+- **Hide licensed frameworks entirely from accounts without an entitlement.**
+  Rejected: citations, mapping edges and our own titles carry no licensed text
+  and are what makes the free part useful.
 
 ## History
 
 - 2026-11-15: proposed after the owner's decision and the survey of compliary
   and `compliary-private`.
+- 2026-11-15: revised after independent review (A-01 to A-03, S-01 to S-04):
+  entitlements instead of grants, the access invariant, the closed list of
+  places for licensed material, corpus kind in release identity, restore rule.

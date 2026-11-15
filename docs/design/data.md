@@ -128,8 +128,10 @@ Rules:
   latency, never the question or returned text; kept 30 days.
 - Every credential is stored as a hash. `auth_epoch` increments on block, delete
   request and auth restore; tokens issued before the epoch are invalid.
-- Account deletion revokes all sessions, tokens and grants in one transaction
-  and removes the row after 7 days.
+- Account deletion revokes all sessions, tokens and OAuth grants in one
+  transaction and removes the row after 7 days. A framework entitlement
+  ([control frameworks](frameworks.md#classes-and-entitlements)) belongs to an
+  email, not to the account, and is not touched.
 
 ## Local workshop database (MacBook)
 

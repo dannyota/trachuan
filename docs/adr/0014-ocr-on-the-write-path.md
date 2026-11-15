@@ -80,3 +80,7 @@ serving path only.
   imported text, to compare engines; the new reading is stored under its own
   engine id and replaces nothing. Recorded with the client design; the first
   comparison read three PDFs.
+- 2026-11-15: [ADR 0016](0016-control-frameworks-corpus.md) adds one exception
+  to "only public legal text reaches the providers": the owner's licensed
+  framework scans, sent only after the providers' data-use terms are recorded in
+  the framework registry.
