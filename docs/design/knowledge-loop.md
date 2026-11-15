@@ -162,7 +162,8 @@ relation read from text with the same kind:
 It needs no schema version: `relation.method` is free text. The server must
 admit `reviewed` wherever it lists the methods that reach a provision
 (`internal/retrieval`: `warnings.go`, `warning_sql.go`, `read_sql.go`,
-`hydrate_tree.go`), with an evaluation case. An image without that change serves
+`hydrate_tree.go`), with an integration test that compares `reviewed` rows with
+equal text rows through search and read. An image without that change serves
 such a row as a plain document-level relation and gives no warning on the
 provision; nothing fails, but the warning is lost. So before a corpus release
 that holds such rows is published, the first image that admits the method is
