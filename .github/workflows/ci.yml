@@ -384,19 +384,7 @@ jobs:
 
   ci:
     if: always()
-    needs:
-      [
-        preflight,
-        static,
-        integration,
-        e2e,
-        docembed,
-        agenteval,
-        queryembed,
-        schema,
-        web,
-        opentofu,
-      ]
+    needs: [preflight, static, integration, e2e, docembed, agenteval, queryembed, schema, web, opentofu]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     env:

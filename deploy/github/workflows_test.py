@@ -23,7 +23,7 @@ class WorkflowsTest(unittest.TestCase):
                      'tofu validate -no-color'):
             self.assertIn(line, job)
         ci = text.split('\n  ci:\n', 1)[1]
-        for line in ('needs: [preflight, static, integration, e2e, docembed, queryembed, schema, web, opentofu]',
+        for line in ('needs: [preflight, static, integration, e2e, docembed, agenteval, queryembed, schema, web, opentofu]',
                      'TOFU_NEEDED: ${{ needs.preflight.outputs.tofu }}', 'TOFU: ${{ needs.opentofu.result }}',
                      'if [ "$TOFU_NEEDED" = true ]; then', 'test "$TOFU" = success',
                      'elif [ "$TOFU_NEEDED" = false ]; then', 'test "$TOFU" = skipped'):
