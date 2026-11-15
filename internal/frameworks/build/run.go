@@ -11,10 +11,11 @@ import (
 	"regexp"
 	"strings"
 
+	"danny.vn/trachuan/internal/embedding"
 	"golang.org/x/sys/unix"
 )
 
-func Run(ctx context.Context, rel string, out io.Writer) error {
+func Run(ctx context.Context, rel string, out io.Writer, embedder Embedder) error {
 	if !regexp.MustCompile(`^[0-9]{8}(_[0-9]{1,2})?$`).MatchString(rel) {
 		return fmt.Errorf("invalid release id")
 	}
@@ -55,11 +56,11 @@ func Run(ctx context.Context, rel string, out io.Writer) error {
 	if _, err = rand.Read(id); err != nil {
 		return hide("create run id", err)
 	}
-	for _, step := range []string{"snapshot", "parse", "relate", "chunk"} {
+	for _, step := range []string{"snapshot", "parse", "relate", "chunk", "embed"} {
 		if err := ctx.Err(); err != nil {
 			return fmt.Errorf("%s: %w", step, err)
 		}
-		if err := runStep(ctx, base, step, fmt.Sprintf("%x", id), source, out); err != nil {
+		if err := runStep(ctx, base, step, fmt.Sprintf("%x", id), source, out, embedder); err != nil {
 			return fmt.Errorf("%s: %w", step, err)
 		}
 	}
@@ -73,6 +74,8 @@ func stepRecipe(step string) recipe {
 		params["schema"] = "controls/1"
 	case "relate":
 		params["schema"] = "edges/1"
+	case "embed":
+		params["embedding_recipe_hash"] = embedding.DocumentRecipe1().Hash()
 	case "chunk":
 		params["schema"] = "chunks/1"
 		params["limit"] = 512
@@ -87,6 +90,9 @@ func stepInputs(base, step string) (map[string]*string, error) {
 	if step == "relate" || step == "chunk" {
 		deps = append(deps, "parse")
 	}
+	if step == "embed" {
+		deps = append(deps, "chunk")
+	}
 	for _, dep := range deps {
 		name := dep + "/manifest.json"
 		data, err := readFile(filepath.Join(base, name))
@@ -99,7 +105,7 @@ func stepInputs(base, step string) (map[string]*string, error) {
 	return inputs, nil
 }
 
-func runStep(ctx context.Context, base, step, runID, source string, out io.Writer) error {
+func runStep(ctx context.Context, base, step, runID, source string, out io.Writer, embedder Embedder) error {
 	target, err := checkedDir(filepath.Join(base, step))
 	if err != nil {
 		return err
@@ -154,6 +160,8 @@ func runStep(ctx context.Context, base, step, runID, source string, out io.Write
 		err = relateStep(ctx, base, tmp)
 	case "chunk":
 		err = chunkStep(ctx, base, tmp)
+	case "embed":
+		err = embedStep(ctx, base, tmp, embedder)
 	}
 	if err != nil {
 		return err
