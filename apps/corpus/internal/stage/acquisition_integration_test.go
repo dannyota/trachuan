@@ -8,21 +8,23 @@ import (
 	"testing"
 
 	"danny.vn/trachuan/apps/corpus/internal/artifact"
+	"danny.vn/trachuan/apps/corpus/internal/store"
 	"github.com/jackc/pgx/v5"
 )
 
 func TestCommit_AcquisitionRequiresCommittedSourceRead(t *testing.T) {
-	for _, mode := range []string{"done", "attachment gap", "gap", "failed", "stale generation", "stale attempt", "paused", "rows fail", "no source", "reuse", "expand"} {
+	for _, mode := range []string{"done", "attachment gap", "unavailable gap", "gap", "failed", "stale generation", "stale attempt", "paused", "rows fail", "no source", "reuse", "expand"} {
 		t.Run(mode, func(t *testing.T) {
 			pool, id := setup(t)
 			c := testCommit(id)
 			c.Sources = []string{"vbpl"}
 			c.Artifact = &artifact.Result{Path: "path", SHA256: "hash", InputHash: "hash"}
-			// RunBatch marks successful Process calls, independently of artifact publication adoption.
 			c.SourceRead = true
 			switch mode {
 			case "attachment gap":
 				c.Gaps = []Gap{{Kind: "missing_attachment", Detail: "a"}}
+			case "unavailable gap":
+				c.Gaps = []Gap{{Kind: "source_unavailable", Detail: "unavailable"}}
 			case "gap":
 				c.State = "gap"
 				c.Artifact = nil
@@ -97,5 +99,36 @@ func TestCommit_AcquisitionReplayAndPausePreserveOriginal(t *testing.T) {
 	}
 	if before != after {
 		t.Fatalf("acquisition changed: %s -> %s", before, after)
+	}
+}
+
+func TestAcquisitionSeed_SkipsUnavailableFetch(t *testing.T) {
+	for _, kind := range []string{"source_unavailable", "missing_attachment"} {
+		t.Run(kind, func(t *testing.T) {
+			pool, id := setup(t)
+			c := testCommit(id)
+			c.Artifact = &artifact.Result{Path: "path", SHA256: "hash", InputHash: "hash"}
+			c.Gaps = []Gap{{Kind: kind, Detail: "fixture"}}
+			if ok, err := CommitItem(context.Background(), pool, c); err != nil || !ok {
+				t.Fatalf("commit=%v err=%v", ok, err)
+			}
+			if _, err := pool.Exec(context.Background(), `DELETE FROM run_acquisition WHERE run_id=$1`, id); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := store.New(pool).SeedRunAcquisitions(context.Background(), id); err != nil {
+				t.Fatal(err)
+			}
+			var count int
+			if err := pool.QueryRow(context.Background(), `SELECT count(*) FROM run_acquisition WHERE run_id=$1`, id).Scan(&count); err != nil {
+				t.Fatal(err)
+			}
+			want := 1
+			if kind == "source_unavailable" {
+				want = 0
+			}
+			if count != want {
+				t.Fatalf("count=%d want=%d", count, want)
+			}
+		})
 	}
 }

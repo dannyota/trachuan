@@ -16,9 +16,14 @@ type provenanceFile struct {
 	Role        *string    `json:"role"`
 	FetchedAt   *time.Time `json:"fetched_at"`
 }
+type detailTime struct {
+	DocumentKey string     `json:"document_key"`
+	FetchedAt   *time.Time `json:"fetched_at"`
+}
 type provenance struct {
-	Version int              `json:"version"`
-	Files   []provenanceFile `json:"files"`
+	DetailTimes []detailTime     `json:"detail_times,omitempty"`
+	Version     int              `json:"version"`
+	Files       []provenanceFile `json:"files"`
 }
 
 func provenanceSnapshot(files []provenanceFile, present map[string]bool) provenance {
@@ -42,5 +47,17 @@ func provenanceSnapshot(files []provenanceFile, present map[string]bool) provena
 		}
 		return x.SHA256 < y.SHA256
 	})
+	return result
+}
+
+func snapshotDetailTimes(times []detailTime) []detailTime {
+	result := append([]detailTime(nil), times...)
+	for i := range result {
+		if result[i].FetchedAt != nil {
+			utc := result[i].FetchedAt.UTC()
+			result[i].FetchedAt = &utc
+		}
+	}
+	sort.Slice(result, func(i, j int) bool { return result[i].DocumentKey < result[j].DocumentKey })
 	return result
 }

@@ -187,6 +187,32 @@ func (q *Queries) ListRunGapsByRun(ctx context.Context, runID int64) ([]Gap, err
 	return items, nil
 }
 
+const listUnavailableDoneVBPLFetch = `-- name: ListUnavailableDoneVBPLFetch :many
+SELECT i.item_key FROM run_item i
+WHERE i.run_id = $1 AND i.stage = 'fetch' AND i.state = 'done' AND i.item_key LIKE 'vn:vbpl:%'
+  AND EXISTS (SELECT 1 FROM gap g WHERE g.run_id = i.run_id AND g.stage = i.stage AND g.item_key = i.item_key AND g.kind = 'source_unavailable')
+`
+
+func (q *Queries) ListUnavailableDoneVBPLFetch(ctx context.Context, runID int64) ([]string, error) {
+	rows, err := q.db.Query(ctx, listUnavailableDoneVBPLFetch, runID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var item_key string
+		if err := rows.Scan(&item_key); err != nil {
+			return nil, err
+		}
+		items = append(items, item_key)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const resetRetryItem = `-- name: ResetRetryItem :execrows
 UPDATE run_item SET state = 'pending', input_hash = NULL, artifact_id = NULL, attempt = 0,
     generation = $1, message = NULL, updated_at = now()

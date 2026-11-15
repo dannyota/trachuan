@@ -39,6 +39,13 @@ func planRetry(ctx context.Context, q *store.Queries, runID int64, country strin
 			eligible[item] = false
 		}
 	}
+	baselineItems, err := q.ListUnavailableDoneVBPLFetch(ctx, runID)
+	if err != nil {
+		return retryPlan{}, fmt.Errorf("list unavailable baseline items: %w", err)
+	}
+	for _, key := range baselineItems {
+		eligible[retryItem{"fetch", key}] = true
+	}
 	plan := retryPlan{rewind: len(stages)}
 	for i, name := range stages {
 		has := false
@@ -105,8 +112,6 @@ func applyRetry(ctx context.Context, q *store.Queries, runID int64, generation i
 	if containsStage(affected, "expand") {
 		kinds = []string{"relation"}
 	}
-	// Clear finalizer evidence at and after the rewind so finalizers rebuild it
-	// from preserved artifacts without retaining stale support tuples.
 	if _, err := q.DeleteStageMembershipEvidence(ctx, store.DeleteStageMembershipEvidenceParams{RunID: runID, Stages: affected, RuleKinds: kinds}); err != nil {
 		return fmt.Errorf("delete membership evidence: %w", err)
 	}

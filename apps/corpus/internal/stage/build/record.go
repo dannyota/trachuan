@@ -14,7 +14,6 @@ import (
 	"danny.vn/trachuan/internal/corpusdb"
 )
 
-// BuildRecord describes the frozen corpus database and its dump.
 type BuildRecord struct {
 	Version                int              `json:"version"`
 	Country                string           `json:"country"`
@@ -105,7 +104,7 @@ func verifyBuildArtifact(store artifact.Store, art artifact.Result, run stage.Ru
 	if record.Taxonomy == nil || record.Taxonomy.Nodes < 0 || record.Taxonomy.Served < 0 || record.Taxonomy.Seeds < 0 || record.Taxonomy.Overrides < 0 || record.Taxonomy.Excluded < 0 || record.Taxonomy.MissingArticles < 0 || record.Taxonomy.MissingOverrideTargets < 0 {
 		return record, "", fmt.Errorf("invalid taxonomy stats")
 	}
-	if inventory.Version == 2 {
+	if inventory.Version == 2 || record.ProvenanceSHA256 != "" {
 		data, e := os.ReadFile(filepath.Join(dir, "provenance.json"))
 		if e != nil {
 			return record, "", fmt.Errorf("read provenance: %w", e)

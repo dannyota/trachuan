@@ -97,7 +97,7 @@ func inventoryInputHash(country, rel string, inv Inventory, identityMap string, 
 	if len(corrections) > 0 {
 		c = corrections[0]
 	}
-	return buildHash(country, rel, inv, identityMap, hashJSON(inv.Provenance), c)
+	return buildHash(country, rel, inv, identityMap, provenanceInputHash(inv), c)
 }
 func buildHash(country, rel string, inv Inventory, identityMap, provenance string, c correctionInput, versions ...string) string {
 	args := []string{country, rel, inv.SourceManifestHash(), strconv.Itoa(corpusdb.SchemaVersion), identityMap}
@@ -111,6 +111,9 @@ func buildHash(country, rel string, inv Inventory, identityMap, provenance strin
 	}
 	if c.nonempty {
 		args = append(args, c.hash)
+	}
+	if provenance != "" {
+		args = append(args, provenance)
 	}
 	return stage.RecipeHash("build-input", "2", args...)
 }
@@ -128,9 +131,16 @@ func (s *Stage) validateMappings(identities evaluation.IdentityInventory) (evalu
 }
 
 func (s *Stage) inputHash(country, rel string, inv Inventory, correction correctionInput) string {
-	return withDevelopmentHash(buildHash(country, rel, inv, s.cfg.Suite.Hashes.IdentityMap, hashJSON(inv.Provenance), correction, s.cfg.Taxonomy.version), s.cfg.Suite.Hashes.Development)
+	return withDevelopmentHash(buildHash(country, rel, inv, s.cfg.Suite.Hashes.IdentityMap, provenanceInputHash(inv), correction, s.cfg.Taxonomy.version), s.cfg.Suite.Hashes.Development)
 }
 
 func withDevelopmentHash(inputHash, development string) string {
 	return stage.RecipeHash("build-input", "4", inputHash, development)
+}
+
+func provenanceInputHash(inv Inventory) string {
+	if inv.Version != 2 && len(inv.Provenance.DetailTimes) == 0 {
+		return ""
+	}
+	return hashJSON(inv.Provenance)
 }

@@ -190,13 +190,20 @@ func commitItem(ctx context.Context, pool *pgxpool.Pool, c *Commit) (applied boo
 			return false, fmt.Errorf("insert source requests: %w", err)
 		}
 	}
-	if c.SourceRead && len(c.Sources) > 0 && c.State == "done" && artifactID != nil && (c.Stage == "fetch" || c.Stage == "expand") {
+	unavailable := false
+	for _, gap := range c.Gaps {
+		if c.Stage == "fetch" && gap.Kind == "source_unavailable" {
+			unavailable = true
+			break
+		}
+	}
+	if !unavailable && c.SourceRead && len(c.Sources) > 0 && c.State == "done" && artifactID != nil && (c.Stage == "fetch" || c.Stage == "expand") {
 		if err = q.UpsertRunAcquisition(ctx, store.UpsertRunAcquisitionParams{RunID: c.RunID, Stage: c.Stage, DocumentKey: c.ItemKey, ArtifactID: *artifactID, Generation: int32(c.Generation)}); err != nil {
 			return false, fmt.Errorf("record acquisition: %w", err)
 		}
 	}
 	parts := strings.SplitN(c.ItemKey, ":", 3)
-	if c.Stage == "fetch" && c.State == "done" && artifactID != nil && c.Message != AcquisitionMessage && c.Message != PinnedMessage && len(parts) == 3 && parts[0] != "" && parts[1] == "vbpl" && parts[2] != "" {
+	if !unavailable && c.Stage == "fetch" && c.State == "done" && artifactID != nil && c.Message != AcquisitionMessage && c.Message != PinnedMessage && len(parts) == 3 && parts[0] != "" && parts[1] == "vbpl" && parts[2] != "" {
 		if err = q.UpsertFetchBaseline(ctx, store.UpsertFetchBaselineParams{DocumentKey: c.ItemKey, FetchRecipeHash: c.RecipeHash, ArtifactID: *artifactID, RunID: c.RunID, ItemKey: c.ItemKey, Generation: int32(c.Generation), Attempt: int32(c.Attempt)}); err != nil {
 			return false, fmt.Errorf("record fetch baseline: %w", err)
 		}

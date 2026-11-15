@@ -71,13 +71,14 @@ func TestStatus_FetchReadCounts(t *testing.T) {
  ('fetch','vn:vbpl:13','gap',2,'read= files={"failure_timeout":1}'),
  ('fetch','vn:chinhphu:14','done',2,'read=reused'),
  ('expand','vn:vbpl:15','done',2,'read=reused'),
- ('fetch','vn:vbpl:16','done',2,'acquisition reused')
+ ('fetch','vn:vbpl:16','done',2,'acquisition reused'),
+ ('fetch','vn:vbpl:17','done',2,'read=baseline_after_unavailable')
  ) v(stage,key,state,generation,message)`, f.run.ID)
 	report, err := run.Status(context.Background(), f.deps(), "vn", f.run.Rel)
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := run.FetchReads{Attachments: map[string]int64{"etag_md5_cache": 1, "no_candidate": 2, "failure_timeout": 1}, Reused: 1, NoBaseline: 1, InvalidBaseline: 1, NullDate: 1, DateChanged: 1, MissingAttachment: 1, Control: 4, ControlSame: 1, ControlTreeIDsOnly: 1, ControlChanged: 1}
+	want := run.FetchReads{BaselineAfterUnavailable: 1, Attachments: map[string]int64{"etag_md5_cache": 1, "no_candidate": 2, "failure_timeout": 1}, Reused: 1, NoBaseline: 1, InvalidBaseline: 1, NullDate: 1, DateChanged: 1, MissingAttachment: 1, Control: 4, ControlSame: 1, ControlTreeIDsOnly: 1, ControlChanged: 1}
 	if !reflect.DeepEqual(report.FetchReads, want) {
 		t.Fatalf("fetch reads = %+v, want %+v", report.FetchReads, want)
 	}

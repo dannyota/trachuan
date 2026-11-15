@@ -94,6 +94,34 @@ func (s *Stage) processItem(ctx context.Context, env stage.Env, r stage.Run, ite
 		return stage.Output{}, fmt.Errorf("VBPL client is required")
 	}
 	id := strings.TrimPrefix(item.Key, prefix)
+	defer func() {
+		if err != nil {
+			return
+		}
+		if len(output.Gaps) != 1 || output.Gaps[0].Kind != "source_unavailable" {
+			return
+		}
+		loader := s.loadBaseline
+		if loader == nil {
+			loader = loadBaseline
+		}
+		base, invalid, loadErr := loader(ctx, env, r, item)
+		if loadErr != nil {
+			output, err = stage.Output{}, loadErr
+			return
+		}
+		if base == nil || invalid || base.invalid {
+			return
+		}
+		art := artifact.Result{Path: base.row.Path, SHA256: base.row.Sha256, InputHash: base.row.Sha256}
+		observations := make([]stage.FetchObservation, 0, len(base.observations))
+		for i := range base.observations {
+			observations = append(observations, adopted(&base.observations[i]))
+		}
+		output.Artifact, output.State, output.Observations = &art, "done", observations
+		output.Message = (readDecision{reason: "baseline_after_unavailable"}).message()
+		err = nil
+	}()
 	var detail, tree, diagram json.RawMessage
 	var decoded vbpl.Detail
 	var files []vbpl.File

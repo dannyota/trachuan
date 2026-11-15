@@ -6,6 +6,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -103,5 +104,63 @@ func TestLoad_LegacyRunClassPrimary(t *testing.T) {
 	var class, source string
 	if err := f.corpus.QueryRow(context.Background(), `SELECT class,source FROM document`).Scan(&class, &source); err != nil || class != "primary" || source != "vbpl" {
 		t.Fatalf("class=%q source=%q error=%v", class, source, err)
+	}
+}
+
+func TestLoad_BaselineServedCoverage(t *testing.T) {
+	f := fixture(t)
+	key := "vn:vbpl:1"
+	f.fetch(t, key)
+	inv := f.inventory(t)
+	at := time.Date(2099, 1, 2, 1, 0, 0, 0, time.FixedZone("test", 7*60*60))
+	inv.Gaps = append(inv.Gaps, InventoryGap{Stage: "fetch", ItemKey: key, Kind: "source_unavailable"})
+	inv.Provenance.DetailTimes = []detailTime{{DocumentKey: key, FetchedAt: &at}}
+	if _, err := Load(context.Background(), f.corpus, inv, f.artifacts, f.recipes, nil, nil, f.asOf()); err != nil {
+		t.Fatal(err)
+	}
+	var detail, message string
+	var id int64
+	err := f.corpus.QueryRow(context.Background(), `SELECT document_id, detail, message FROM coverage_gap WHERE document_key=$1 AND kind='baseline_served'`, key).Scan(&id, &detail, &message)
+	if err != nil || id == 0 || detail != "2099-01-01" || message != "This text is from the source as fetched on 2099-01-01." {
+		t.Fatalf("id=%d detail=%q message=%q err=%v", id, detail, message, err)
+	}
+}
+
+func TestInventory_BaselineDetailObservation(t *testing.T) {
+	f := fixture(t)
+	key := "vn:vbpl:1"
+	art := f.fetch(t, key)
+	ctx := context.Background()
+	at := time.Date(2099, 1, 2, 0, 0, 0, 0, time.UTC)
+	_, err := f.workshop.Exec(ctx, `INSERT INTO gap(run_id,stage,item_key,kind,detail) VALUES($1,'fetch',$2,'source_unavailable','')`, f.run.ID, key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = f.workshop.Exec(ctx, `INSERT INTO run_fetch_observation(run_id,item_key,generation,attempt,resource_key,artifact_sha256,source,path,content_sha256,size,acquisition,fetched_at) VALUES($1,$2,0,0,'["doc/detail",null,null]',$3,'vbpl','detail.json',$4,1,'adopted',$5)`, f.run.ID, key, art.SHA256, strings.Repeat("a", 64), at)
+	if err != nil {
+		t.Fatal(err)
+	}
+	inv := f.inventory(t)
+	if len(inv.Provenance.DetailTimes) != 1 || inv.Provenance.DetailTimes[0].DocumentKey != key || inv.Provenance.DetailTimes[0].FetchedAt == nil || !inv.Provenance.DetailTimes[0].FetchedAt.Equal(at) {
+		t.Fatalf("detail times=%+v", inv.Provenance.DetailTimes)
+	}
+}
+
+func TestLoad_BaselineRelationOutsideMembershipStaysUnresolved(t *testing.T) {
+	f := fixture(t)
+	key := "vn:vbpl:1"
+	fetch := f.fetch(t, key)
+	f.addArtifact(t, "relate", key, map[string]any{"relations.json": []relationRow{{Ordinal: 0, Kind: "cites", TargetID: "999", TargetNumber: "99/2099"}}}, f.relateInput(t, key, fetch.SHA256))
+	inv := f.inventory(t)
+	inv.Version = 2
+	inv.Membership.Entries = []membership.Entry{{DocumentKey: key, Disposition: "active", Class: "primary", Source: "vbpl"}}
+	inv.Gaps = append(inv.Gaps, InventoryGap{Stage: "fetch", ItemKey: key, Kind: "source_unavailable"})
+	counts, err := Load(context.Background(), f.corpus, inv, f.artifacts, f.recipes, nil, nil, f.asOf())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var unresolved bool
+	if err = f.corpus.QueryRow(context.Background(), `SELECT target_document_id IS NULL AND target_key='vn:vbpl:999' FROM relation WHERE source_key=$1`, key).Scan(&unresolved); err != nil || !unresolved || counts.Relations != 1 {
+		t.Fatalf("unresolved=%v count=%d err=%v", unresolved, counts.Relations, err)
 	}
 }

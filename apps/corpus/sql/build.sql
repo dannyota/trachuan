@@ -1,5 +1,9 @@
 -- name: GetBuildInventory :one
 SELECT jsonb_build_object(
+  'detail_times', COALESCE((SELECT jsonb_agg(jsonb_build_object('document_key', i.item_key, 'fetched_at', o.fetched_at) ORDER BY i.item_key)
+    FROM run_item i JOIN artifact a ON a.id = i.artifact_id
+    LEFT JOIN run_fetch_observation o ON o.run_id = i.run_id AND o.item_key = i.item_key AND o.generation = i.generation AND o.attempt = i.attempt AND o.artifact_sha256 = a.sha256 AND o.path = 'detail.json' AND o.resource_key = '["doc/detail",null,null]'
+    WHERE i.run_id = sqlc.arg(run_id) AND i.stage = 'fetch' AND i.state = 'done' AND EXISTS (SELECT 1 FROM gap g WHERE g.run_id = i.run_id AND g.stage = i.stage AND g.item_key = i.item_key AND g.kind = 'source_unavailable')), '[]'::jsonb),
   'items', COALESCE((SELECT jsonb_agg(jsonb_build_object(
     'stage', i.stage, 'item_key', i.item_key, 'state', i.state,
     'input_hash', i.input_hash, 'recipe_hash', i.recipe_hash,
@@ -13,6 +17,10 @@ SELECT jsonb_build_object(
 
 -- name: GetBuildInventoryV2 :one
 SELECT jsonb_build_object(
+  'detail_times', COALESCE((SELECT jsonb_agg(jsonb_build_object('document_key', i.item_key, 'fetched_at', o.fetched_at) ORDER BY i.item_key)
+    FROM run_item i JOIN artifact a ON a.id = i.artifact_id
+    LEFT JOIN run_fetch_observation o ON o.run_id = i.run_id AND o.item_key = i.item_key AND o.generation = i.generation AND o.attempt = i.attempt AND o.artifact_sha256 = a.sha256 AND o.path = 'detail.json' AND o.resource_key = '["doc/detail",null,null]'
+    WHERE i.run_id = sqlc.arg(run_id) AND i.stage = 'fetch' AND i.state = 'done' AND EXISTS (SELECT 1 FROM gap g WHERE g.run_id = i.run_id AND g.stage = i.stage AND g.item_key = i.item_key AND g.kind = 'source_unavailable')), '[]'::jsonb),
   'items', COALESCE((SELECT jsonb_agg(jsonb_build_object(
     'stage', i.stage, 'item_key', i.item_key, 'state', i.state,
     'input_hash', i.input_hash, 'recipe_hash', i.recipe_hash,

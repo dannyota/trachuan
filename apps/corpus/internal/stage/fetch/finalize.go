@@ -50,7 +50,6 @@ func findDrift(seed string, obs expand.Observation, s membership.PhaseSnapshot, 
 	return out
 }
 
-// Finalize rejects scope drift and freezes final membership in the close transaction.
 func (s *Stage) Finalize(ctx context.Context, env stage.Env, tx pgx.Tx, r stage.Run) (stage.Finalization, error) {
 	list, err := source.Parse(r.Snapshot.SourceList)
 	if err != nil {
@@ -108,6 +107,16 @@ func (s *Stage) Finalize(ctx context.Context, env stage.Env, tx pgx.Tx, r stage.
 		return stage.Finalization{}, fmt.Errorf("fetch close input changed after finalization")
 	}
 	if staged {
+		gaps, gapErr := q.ListRunGapsByRun(ctx, r.ID)
+		if gapErr != nil {
+			return stage.Finalization{}, fmt.Errorf("list fetch gaps: %w", gapErr)
+		}
+		unavailable := make(map[string]bool)
+		for _, gap := range gaps {
+			if gap.Stage == "fetch" && gap.Kind == "source_unavailable" {
+				unavailable[gap.ItemKey] = true
+			}
+		}
 		expandItems, listErr := q.ListStageItemArtifacts(ctx, store.ListStageItemArtifactsParams{RunID: r.ID, Stage: "expand"})
 		if listErr != nil {
 			return stage.Finalization{}, fmt.Errorf("list expand items: %w", listErr)
@@ -126,7 +135,7 @@ func (s *Stage) Finalize(ctx context.Context, env stage.Env, tx pgx.Tx, r stage.
 		}
 		var drifts []drift
 		for _, item := range items {
-			if !seeds[item.ItemKey] || item.State != "done" || item.Path == nil || item.Sha256 == nil {
+			if unavailable[item.ItemKey] || !seeds[item.ItemKey] || item.State != "done" || item.Path == nil || item.Sha256 == nil {
 				continue
 			}
 			dir := env.Artifacts.Abs(*item.Path)

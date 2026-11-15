@@ -284,3 +284,27 @@ func TestRetry_ClearsPredecessorWithSeeds(t *testing.T) {
 		t.Fatalf("id=%v phase=%v hash=%v seeds=%v err=%v", id, phase, hash, seeds, err)
 	}
 }
+
+func TestStart_RetriesDoneVBPLFetchWithMixedGaps(t *testing.T) {
+	d := retryRun(t, "fetch")
+	ctx := context.Background()
+	_, err := d.DB.Exec(ctx, `INSERT INTO run_item(run_id,stage,item_key,state,batch) SELECT run.id,v.s,v.k,v.state,0 FROM run CROSS JOIN (VALUES ('fetch','vn:vbpl:1','done'),('fetch','vn:vbpl:2','gap'),('fetch','vn:chinhphu:3','done'),('expand','vn:vbpl:4','done')) v(s,k,state)`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = d.DB.Exec(ctx, `INSERT INTO gap(run_id,stage,item_key,kind,detail) SELECT id,'fetch',k,kind,'' FROM run CROSS JOIN (VALUES ('vn:vbpl:1','source_unavailable'),('vn:vbpl:1','missing_attachment'),('vn:vbpl:2','source_unavailable'),('vn:vbpl:2','missing_attachment'),('vn:chinhphu:3','source_unavailable'),('vn:chinhphu:3','missing_attachment')) v(k,kind)`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = d.DB.Exec(ctx, `INSERT INTO gap(run_id,stage,item_key,kind,detail) SELECT id,'expand','vn:vbpl:4',kind,'' FROM run CROSS JOIN unnest(ARRAY['source_unavailable','missing_attachment']) kind`); err != nil {
+		t.Fatal(err)
+	}
+	if err = Start(ctx, d, "vn", d.TaskQueue, "", ""); err != nil {
+		t.Fatal(err)
+	}
+	var first, second, third, fourth string
+	err = d.DB.QueryRow(ctx, `SELECT (SELECT state FROM run_item WHERE item_key='vn:vbpl:1'),(SELECT state FROM run_item WHERE item_key='vn:vbpl:2'),(SELECT state FROM run_item WHERE item_key='vn:chinhphu:3'),(SELECT state FROM run_item WHERE item_key='vn:vbpl:4')`).Scan(&first, &second, &third, &fourth)
+	if err != nil || first != "pending" || second != "gap" || third != "done" || fourth != "done" {
+		t.Fatalf("states=%s,%s,%s,%s err=%v", first, second, third, fourth, err)
+	}
+}

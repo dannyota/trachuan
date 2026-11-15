@@ -112,6 +112,7 @@ func loadInventoryV2(ctx context.Context, q store.Querier, run stage.Run, limit 
 		Failures      int               `json:"failures"`
 		PausedSources []string          `json:"paused_sources"`
 		Files         []provenanceFile  `json:"files"`
+		DetailTimes   []detailTime      `json:"detail_times"`
 	}
 	if err = json.Unmarshal(raw, &p); err != nil {
 		return Inventory{}, fmt.Errorf("decode inventory: %w", err)
@@ -151,6 +152,7 @@ func loadInventoryV2(ctx context.Context, q store.Querier, run stage.Run, limit 
 	}
 	present := i.Presence()
 	i.Provenance = provenanceSnapshot(p.Files, present)
+	i.Provenance.DetailTimes = snapshotDetailTimes(p.DetailTimes)
 	return i.sorted(), nil
 }
 func reconcileMembership(i Inventory) error {

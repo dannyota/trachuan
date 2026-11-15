@@ -17,7 +17,7 @@ func TestStatus_ContainsFetchReads(t *testing.T) {
 		PausedSources []store.RunSource `json:"paused_sources"`
 	}{}
 	data, err := json.Marshal(result)
-	if err != nil || !strings.Contains(string(data), `"fetch_reads":{"reused":0`) || !strings.Contains(string(data), `"control_changed":0`) {
+	if err != nil || !strings.Contains(string(data), `"fetch_reads":{"baseline_after_unavailable":0`) || !strings.Contains(string(data), `"reused":0`) || !strings.Contains(string(data), `"control_changed":0`) {
 		t.Fatalf("status %s: %v", data, err)
 	}
 }

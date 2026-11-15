@@ -1,4 +1,3 @@
-// Package build assembles a corpus from a frozen workshop inventory.
 package build
 
 import (
@@ -15,7 +14,6 @@ import (
 	"danny.vn/trachuan/apps/corpus/internal/store"
 )
 
-// InventoryItem identifies one frozen stage result.
 type InventoryItem struct {
 	Stage          string  `json:"stage"`
 	ItemKey        string  `json:"item_key"`
@@ -26,7 +24,6 @@ type InventoryItem struct {
 	Path           *string `json:"-"`
 }
 
-// InventoryGap records an upstream coverage gap.
 type InventoryGap struct {
 	NodeID      *int64  `json:"-"`
 	Stage       string  `json:"stage"`
@@ -41,7 +38,6 @@ type InventoryGap struct {
 	EvidenceRef *string `json:"-"`
 }
 
-// Inventory holds frozen source identities and upstream results.
 type Inventory struct {
 	Version             int                      `json:"-"`
 	FinalMembershipHash string                   `json:"-"`
@@ -116,10 +112,8 @@ func hashJSON(v any) string {
 	return hex.EncodeToString(sum[:])
 }
 
-// SourceManifestHash returns the hash of the sorted upstream inventory.
 func (i Inventory) SourceManifestHash() string { return hashJSON(i.sorted()) }
 
-// IdentityJSON returns the compact sorted identity inventory.
 func (i Inventory) IdentityJSON() ([]byte, error) {
 	i = i.sorted()
 	items := make([]InventoryItem, 0, len(i.Items))
@@ -139,14 +133,12 @@ func (i Inventory) IdentityJSON() ([]byte, error) {
 	}{i.Country, i.SourceListHash, i.ExpectedKeys, items})
 }
 
-// IdentityHash returns the hash of the source identity inventory.
 func (i Inventory) IdentityHash() string {
 	b, _ := i.IdentityJSON()
 	sum := sha256.Sum256(b)
 	return hex.EncodeToString(sum[:])
 }
 
-// LoadInventory reads the requested stages in one workshop snapshot.
 func LoadInventory(ctx context.Context, q store.Querier, run stage.Run, through string) (Inventory, error) {
 	limit := stageOrder(through)
 	if limit == 7 {
@@ -170,8 +162,9 @@ func LoadInventory(ctx context.Context, q store.Querier, run stage.Run, through 
 		return Inventory{}, fmt.Errorf("read inventory: %w", err)
 	}
 	var payload struct {
-		Items []json.RawMessage `json:"items"`
-		Gaps  []InventoryGap    `json:"gaps"`
+		Items       []json.RawMessage `json:"items"`
+		Gaps        []InventoryGap    `json:"gaps"`
+		DetailTimes []detailTime      `json:"detail_times"`
 	}
 	if err = json.Unmarshal(raw, &payload); err != nil {
 		return Inventory{}, fmt.Errorf("decode inventory: %w", err)
@@ -201,5 +194,6 @@ func LoadInventory(ctx context.Context, q store.Querier, run stage.Run, through 
 			result.Gaps = append(result.Gaps, gap)
 		}
 	}
+	result.Provenance.DetailTimes = snapshotDetailTimes(payload.DetailTimes)
 	return result.sorted(), nil
 }
