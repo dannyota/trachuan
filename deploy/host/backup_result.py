@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 import json
 import os
 from pathlib import Path
+import time
 import uuid
 
 
@@ -11,8 +12,9 @@ def utc_now():
 
 
 class Result:
-    def __init__(self, path, now=utc_now):
+    def __init__(self, path, now=utc_now, log=None):
         self.path = Path(path)
+        self.log = Path(log) if log is not None else None
         if not self.path.parent.is_dir():
             raise FileNotFoundError(f'backup result directory is not provisioned: {self.path.parent}')
         self.now = now
@@ -20,7 +22,7 @@ class Result:
         self.success = None
         try:
             self.success = json.loads(self.path.read_text())['last_success_at']
-        except (OSError, ValueError, KeyError):
+        except (OSError, ValueError, KeyError, TypeError, RecursionError):
             pass
 
     def write(self, status, reason):
@@ -43,3 +45,20 @@ class Result:
         finally:
             Path(staging).unlink(missing_ok=True)
         print(f'backup unit={self.path.stem} status={status} reason={reason}', flush=True)
+        if status != 'running' and self.log is not None:
+            self.append(dict(kind=self.path.stem, **payload))
+
+    def append(self, payload):
+        line = json.dumps(payload, separators=(',', ':'))+'\n'
+        for attempt in range(2):
+            try:
+                if attempt:
+                    time.sleep(0.05)
+                descriptor = os.open(self.log, os.O_WRONLY | os.O_APPEND | os.O_NOFOLLOW)
+                with os.fdopen(descriptor, 'w') as output:
+                    output.write(line)
+                    output.flush()
+                    os.fsync(output.fileno())
+                return
+            except OSError:
+                pass

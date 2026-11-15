@@ -42,7 +42,7 @@ class ContainerProcessTest(unittest.TestCase):
                         return 'stopped\n'
                     return ''
                 with patch.object(module, 'command', side_effect=runner):
-                    self.assertEqual(backup.run('verify', state), 1)
+                    self.assertEqual(backup.run('verify', state, log=state/'backup.log'), 1)
                 self.assertEqual(calls, ['prepare', 'run', 'cancel'])
                 result = json.loads((state/'verify.json').read_text())
                 self.assertEqual(result['status'], 'failed')
@@ -69,7 +69,7 @@ class ContainerProcessTest(unittest.TestCase):
                     return 'stopped\n'
                 return ''
             with patch.object(module, 'command', side_effect=runner), patch.object(module.time, 'sleep'):
-                self.assertEqual(backup.run('full', state), 1)
+                self.assertEqual(backup.run('full', state, log=state/'backup.log'), 1)
             self.assertEqual(calls, ['prepare', 'run', 'cancel', 'cancel'])
 
     def test_leftover_job_is_stopped_before_new_work(self):
@@ -102,11 +102,12 @@ class ContainerProcessTest(unittest.TestCase):
             self.assertIn('FATAL: recovery diagnostic', failure.exception.stderr)
         self.assertEqual(events, ['remote-stopped', 'client-stop'])
 
-    def test_restore_diagnostic_reaches_result_reason(self):
+    def test_restore_diagnostic_is_withheld_from_result_reason(self):
         module = load()
         import backup
         from backup_status_test import info, NOW
         with tempfile.TemporaryDirectory() as work:
+            (Path(work)/'backup.log').touch()
             def execute(self, args, timeout):
                 return info()
             def command(args, timeout, **kwargs):
@@ -114,9 +115,22 @@ class ContainerProcessTest(unittest.TestCase):
                     return 'sha256:'+'1'*64
                 raise module.CommandFailed('FATAL: synthetic recovery diagnostic')
             with patch.object(module.Executor, 'execute', execute), patch.object(backup, 'command', side_effect=command), patch.object(backup.time, 'time', return_value=NOW):
-                self.assertEqual(backup.run('restore-check', Path(work)), 1)
+                self.assertEqual(backup.run('restore-check', Path(work), log=Path(work)/'backup.log'), 1)
             result = json.loads((Path(work)/'restore-check.json').read_text())
-            self.assertIn('FATAL: synthetic recovery diagnostic', result['reason'])
+            self.assertEqual(result['reason'], 'command failed')
+            self.assertNotIn('FATAL: synthetic recovery diagnostic', (Path(work)/'backup.log').read_text())
+
+    def test_timeout_output_is_withheld_from_result_and_log(self):
+        import backup
+        with tempfile.TemporaryDirectory() as directory:
+            state = Path(directory)
+            (state/'backup.log').touch()
+            error = subprocess.TimeoutExpired('synthetic command', 1, stderr='synthetic private output')
+            with patch.object(backup, 'work', side_effect=error):
+                self.assertEqual(backup.run('restore-check', state, log=state/'backup.log'), 1)
+            row = json.loads((state/'restore-check.json').read_text())
+            self.assertEqual(row['reason'], 'deadline exceeded')
+            self.assertNotIn('synthetic private output', (state/'backup.log').read_text())
 
 
 if __name__ == '__main__':

@@ -7,3 +7,12 @@
     notifempty
     create 0640 root root
 }
+/var/log/trachuan/backup.log {
+    daily
+    rotate 30
+    compress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+}

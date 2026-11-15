@@ -31,17 +31,41 @@ Record the time of the first full backup and the bucket size after it.
 ## Results
 
 Each unit writes `/srv/trachuan/state/backup/<unit>.json` (`full`, `diff`,
-`verify`, `health`, `restore-check`) and one journald line. Read them with:
+`verify`, `health`, `restore-check`) and one journald line per change. Each
+final result also appends one JSON line to `/var/log/trachuan/backup.log`,
+shipped to OCI Logging. Read them with:
 
 ```sh
 for f in /srv/trachuan/state/backup/*.json; do echo "$f"; cat "$f"; echo; done
 journalctl --user -u 'trachuan-backup-*' --since today
+tail -n 20 /var/log/trachuan/backup.log
 podman exec trachuan-postgres pgbackrest --stanza=trachuan info
 ```
 
 No file means the unit never ran; `running` past the unit's deadline means it
 crashed or hung; `failed` and `unknown` carry a `reason`. The metrics publisher
-reads `status` and `last_success_at`; leave the files' mode and ACL alone.
+reads `status` and `last_success_at`; leave the files' mode and ACL alone. Only
+health can be `skipped`: another backup or the updater holds the lock. Other
+units record `running` with reason `waiting for backup lock` while they wait.
+Waiting counts toward their deadline; lock expiry records `failed` and sets that
+job's `backup_failed` metric to 1. Command output is withheld from result
+reasons and the JSON log.
+
+## Recover a missed backup
+
+Read `full.json` and `diff.json` and check `last_success_at`. If a full has ever
+succeeded, start a differential:
+
+```sh
+systemctl --user start --no-block trachuan-backup-diff.service
+journalctl --user -fu trachuan-backup-diff.service
+```
+
+Use `trachuan-backup-full.service` in both commands when no full has succeeded.
+
+The unit waits for any backup or deployment to release the lock. Confirm `ok`
+and a new `last_success_at` in the selected result file after completion. Do not
+remove `backup.lock` or `active-job`.
 
 ## After a corpus release activation
 

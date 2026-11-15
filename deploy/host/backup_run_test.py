@@ -25,13 +25,54 @@ def load():
 
 
 class RunTest(unittest.TestCase):
+    def test_unwritable_or_missing_log_preserves_success_and_exit_code(self):
+        module = load()
+        import backup_result
+        for failure in ['unwritable', 'missing', 'write']:
+            with self.subTest(failure=failure), tempfile.TemporaryDirectory() as directory:
+                state = Path(directory)
+                log = state / 'backup.log'
+                if failure != 'missing':
+                    log.write_text('synthetic previous line\n')
+                original_open = backup_result.os.open
+                attempts = []
+                snapshots = []
+                def open_file(path, flags, *args):
+                    if Path(path) != log:
+                        return original_open(path, flags, *args)
+                    attempts.append(flags)
+                    snapshots.append((state/'full.json').read_bytes())
+                    if failure == 'unwritable':
+                        raise PermissionError('synthetic unwritable log')
+                    if failure == 'write':
+                        return original_open(path, backup_result.os.O_RDONLY)
+                    return original_open(path, flags, *args)
+                with patch.object(backup_result.os, 'open', side_effect=open_file), \
+                     patch('time.sleep') as sleep, \
+                     patch.object(module, 'work', return_value=('ok', 'synthetic success')), \
+                     patch('builtins.print') as journal:
+                    self.assertEqual(module.run('full', state, log=log), 0)
+                row = json.loads((state/'full.json').read_text())
+                self.assertEqual(row['status'], 'ok')
+                self.assertEqual(row['reason'], 'synthetic success')
+                self.assertEqual(row['last_success_at'], row['finished_at'])
+                self.assertEqual(len(attempts), 2)
+                self.assertEqual(snapshots, [(state/'full.json').read_bytes()]*2)
+                sleep.assert_called_once_with(0.05)
+                self.assertEqual(journal.call_count, 2)
+                self.assertIn('status=ok', journal.call_args.args[0])
+                if failure == 'missing':
+                    self.assertFalse(log.exists())
+                else:
+                    self.assertEqual(log.read_text(), 'synthetic previous line\n')
+
     def test_missing_state_directory_fails_without_recreating_private_directory(self):
         module = load()
         with tempfile.TemporaryDirectory() as work:
             state = Path(work) / 'absent'
             with patch.object(module, 'work', return_value=('ok', 'synthetic')):
                 with self.assertRaisesRegex(FileNotFoundError, 'directory is not provisioned'):
-                    module.run('health', state)
+                    module.run('health', state, log=state/'backup.log')
             self.assertFalse(state.exists())
 
     def test_approved_deadlines_stop_work_and_record_failure_for_every_unit(self):
@@ -47,14 +88,14 @@ class RunTest(unittest.TestCase):
                     self.assertEqual(json.loads(path.read_text())['status'], 'running')
                     raise subprocess.TimeoutExpired('synthetic-command', seconds)
                 with patch.object(module.time, 'monotonic', return_value=500), patch.object(module, 'work', side_effect=expired):
-                    self.assertEqual(module.run(kind, Path(work)), 1)
+                    self.assertEqual(module.run(kind, Path(work), log=Path(work)/'backup.log'), 1)
                 result = json.loads(path.read_text())
                 self.assertEqual(result['status'], 'failed')
                 self.assertIsNotNone(result['finished_at'])
                 self.assertEqual(result['last_success_at'], '2026-01-01T00:00:00Z')
                 unit = configparser.ConfigParser(interpolation=None)
                 unit.read(HOST / 'systemd' / f'trachuan-backup-{kind}.service')
-                self.assertEqual(int(unit['Service']['TimeoutStartSec']), seconds)
+                self.assertEqual(int(unit['Service']['TimeoutStartSec']), seconds+30)
                 self.assertGreaterEqual(int(unit['Service']['TimeoutStopSec']), 30)
 
     def test_no_command_starts_after_deadline(self):
@@ -112,7 +153,7 @@ class RunTest(unittest.TestCase):
                             raise module.CommandFailed()
                         return ''
                     with patch.object(module.process, 'command', side_effect=command), patch.object(module.time, 'time', return_value=NOW):
-                        code = module.run(kind, Path(work))
+                        code = module.run(kind, Path(work), log=Path(work)/'backup.log')
                     state = json.loads((Path(work) / (kind+'.json')).read_text())
                     self.assertEqual(state['status'], 'failed' if fail else 'ok')
                     self.assertEqual(code, 1 if fail else 0)
@@ -131,7 +172,7 @@ class RunTest(unittest.TestCase):
             path = Path(work) / 'full.json'
             path.write_text(json.dumps({'last_success_at': '2026-01-01T00:00:00Z'}))
             with patch.object(module.process, 'command', side_effect=command), patch.object(module.time, 'time', return_value=NOW):
-                self.assertEqual(module.run('full', Path(work)), 1)
+                self.assertEqual(module.run('full', Path(work), log=Path(work)/'backup.log'), 1)
             result = json.loads(path.read_text())
             self.assertEqual(result['status'], 'failed')
             self.assertEqual(result['last_success_at'], '2026-01-01T00:00:00Z')
@@ -150,19 +191,19 @@ class RunTest(unittest.TestCase):
                                'last_archived_time': None, 'wal_bytes': 10_000_000_001})
         with tempfile.TemporaryDirectory() as work:
             with patch.object(module.process, 'command', side_effect=command):
-                self.assertEqual(module.run('health', Path(work)), 1)
+                self.assertEqual(module.run('health', Path(work), log=Path(work)/'backup.log'), 1)
             self.assertEqual(json.loads((Path(work)/'health.json').read_text())['status'], 'failed')
         self.assertEqual(sum(args[4] == 'run' for args in calls), 2)
 
-    def test_shared_lock_skips_every_kind(self):
+    def test_shared_lock_skips_only_health(self):
         module = load()
         with tempfile.TemporaryDirectory() as work:
             root = Path(work)
             with (root / 'backup.lock').open('w') as lock:
                 fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-                for kind in ['full', 'diff', 'verify', 'health', 'restore-check']:
+                for kind in ['health']:
                     with patch.object(module, 'command') as command:
-                        self.assertEqual(module.run(kind, root), 0)
+                        self.assertEqual(module.run(kind, root, log=root/'backup.log'), 0)
                         command.assert_not_called()
                     self.assertEqual(json.loads((root / (kind+'.json')).read_text())['status'], 'skipped')
 
@@ -170,7 +211,7 @@ class RunTest(unittest.TestCase):
         module = load()
         with tempfile.TemporaryDirectory() as work:
             with patch.object(module.process.Executor, 'execute', side_effect=module.CommandFailed()):
-                self.assertEqual(module.run('health', Path(work)), 1)
+                self.assertEqual(module.run('health', Path(work), log=Path(work)/'backup.log'), 1)
             self.assertEqual(json.loads((Path(work) / 'health.json').read_text())['status'], 'unknown')
 
     def test_restore_selects_good_label_and_exact_live_image(self):
@@ -187,7 +228,7 @@ class RunTest(unittest.TestCase):
             return ''
         with tempfile.TemporaryDirectory() as work:
             with patch.object(module.process, 'command', side_effect=command), patch.object(module.time, 'time', return_value=NOW):
-                self.assertEqual(module.run('restore-check', Path(work)), 0)
+                self.assertEqual(module.run('restore-check', Path(work), log=Path(work)/'backup.log'), 0)
         self.assertEqual(calls[-1], ['bash', str(HOST / 'restore-check.sh'), '--locked', '20270115-020000F', 'sha256:'+'1'*64])
 
 
@@ -205,7 +246,7 @@ class RunTest(unittest.TestCase):
             return ''
         with tempfile.TemporaryDirectory() as work:
             with patch.object(module.process, 'command', side_effect=command), patch.object(module.time, 'time', return_value=NOW):
-                self.assertEqual(module.run('restore-check', Path(work)), 0)
+                self.assertEqual(module.run('restore-check', Path(work), log=Path(work)/'backup.log'), 0)
         self.assertEqual(calls[-1], ['bash', str(HOST / 'restore-check.sh'), '--locked', '20270115-020000F', 'sha256:'+'2'*64])
 
 if __name__ == '__main__':

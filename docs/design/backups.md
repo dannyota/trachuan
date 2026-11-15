@@ -71,15 +71,21 @@ recovery for the gap) and must take a full backup once archiving returns.
 ## Schedules and results
 
 Host user units run `podman exec trachuan-postgres pgbackrest …`, so backups use
-the archiving binary, configuration and data directory. All share one lock; a
-run that cannot take it records `skipped`.
+the archiving binary, configuration and data directory. All share one lock.
+Health tries it once and records `skipped` when it is busy. Every other unit
+waits for the lock within its own deadline (the time spent waiting counts); if
+the deadline passes while it waits, it records `failed` with the reason that the
+lock was not acquired and exits non-zero, so a skipped full or differential is
+never silent. Health runs at minute 30, so its calendar never meets another
+unit's; after downtime, `Persistent=true` can still start several overdue units
+together, and the waiting rule above orders them.
 
 | Unit               | Schedule (Asia/Ho_Chi_Minh)  | Command                                  | Result file          | Deadline   |
 | ------------------ | ---------------------------- | ---------------------------------------- | -------------------- | ---------- |
 | Full               | Sunday 02:00                 | `backup --type=full`                     | `full.json`          | 4 hours    |
 | Differential       | Monday to Saturday 02:00     | `backup --type=diff`                     | `diff.json`          | 2 hours    |
 | Verify             | Wednesday 04:00              | `verify --output=text --verbose`         | `verify.json`        | 4 hours    |
-| Health             | hourly                       | `info --output=json`, `pg_stat_archiver` | `health.json`        | 5 minutes  |
+| Health             | hourly at minute 30          | `info --output=json`, `pg_stat_archiver` | `health.json`        | 5 minutes  |
 | Auth restore check | first day of the month 05:00 | below                                    | `restore-check.json` | 20 minutes |
 
 Timers use `Persistent=true`; a unit that passes its deadline is stopped and
@@ -89,17 +95,23 @@ runbook. After each corpus release activation the runbook takes a full backup,
 so later differentials do not each carry the new corpus database.
 
 Each unit keeps one JSON file under `/srv/trachuan/state/backup/`, written
-atomically, and logs one journald line per change. The file holds the last
-attempt (`started_at`, `finished_at` or null, `status`, `reason`) and
-`last_success_at`. The unit writes `running` with `started_at` before it starts
-work and its final status when it ends. Statuses: `ok`; `failed` (it ran and
-found a problem, or its command failed); `unknown` (storage unreachable, output
-malformed or a timestamp invalid; never treated as ok); `skipped` (another unit
-held the lock). A backup that pgBackRest records with an error, including page
-checksum errors, is `failed` and does not count as the newest good backup.
-Verify is `ok` only when its verbose text output reports status ok for the
-stanza and no invalid files. Health is `failed` when the newest good backup is
-older than 26 hours or archiving is unhealthy as above.
+atomically, and logs one journald line per change. Each unit also appends its
+final result as one JSON line (`kind`, `status`, `reason`, `started_at`,
+`finished_at`, `last_success_at`; no secrets) to `/var/log/trachuan/backup.log`,
+which the host job log path ships to OCI Logging and `logrotate-trachuan`
+rotates. The file holds the last attempt (`started_at`, `finished_at` or null,
+`status`, `reason`) and `last_success_at`. The unit writes `running` with
+`started_at` before it starts work and its final status when it ends. Statuses:
+`ok`; `failed` (it ran and found a problem, or its command failed); `unknown`
+(storage unreachable, output malformed or a timestamp invalid; never treated as
+ok); `skipped` (health only: another unit held the lock). A backup that
+pgBackRest records with an error, including page checksum errors, is `failed`
+and does not count as the newest good backup. Verify is `ok` only when its
+verbose text output reports status ok for the stanza and no invalid files.
+Health is `failed` when the newest good backup is older than 26 hours or
+archiving is unhealthy as above. A full backup took 8.5 minutes on 2026-11-15
+(8.4 GB database, 4.3 GB in the repository), so 26 hours leaves ample room for
+the Sunday full after Saturday's differential.
 
 For alarms: no file means the unit has never run; `running` past the unit's
 deadline means it crashed or hung; a last `started_at` older than twice the

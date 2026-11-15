@@ -80,33 +80,50 @@ def work(kind, deadline, executor=None):
     return 'ok', f'auth restore smoke passed in {int(time.monotonic()-started)} seconds'
 
 
-def run(kind, state=Path('/srv/trachuan/state/backup')):
+def acquire(lock, kind, deadline, result):
+    waiting = False
+    while True:
+        if time.monotonic() >= deadline:
+            result.write('failed', 'backup lock not acquired before the deadline')
+            return 1
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            return None
+        except BlockingIOError:
+            if not waiting:
+                result.write('running', 'waiting for backup lock')
+                waiting = True
+            if kind == 'health':
+                result.write('skipped', 'another backup unit holds the lock')
+                return 0
+            remaining = deadline-time.monotonic()
+            if remaining > 0:
+                time.sleep(min(0.1, remaining))
+
+
+def run(kind, state=Path('/srv/trachuan/state/backup'), log=Path('/var/log/trachuan/backup.log')):
     if kind not in {'full', 'diff', 'verify', 'health', 'restore-check'}:
         raise ValueError('invalid backup unit')
     limits = {'full': 14400, 'diff': 7200, 'verify': 14400, 'health': 300, 'restore-check': 1200}
     deadline = time.monotonic()+limits[kind]
-    result = Result(state / (kind+'.json'))
+    result = Result(state / (kind+'.json'), log=log)
     with (state / 'backup.lock').open('a') as lock:
         try:
-            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError:
-            result.write('running', 'waiting for backup lock')
-            result.write('skipped', 'another backup unit holds the lock')
-            return 0
-        result.write('running', 'starting')
-        try:
+            code = acquire(lock, kind, deadline, result)
+            if code is not None:
+                return code
+            result.write('running', 'starting')
             executor = process.Executor(state, deadline)
             executor.recover()
             status, reason = work(kind, deadline, executor)
         except process.CancellationUnconfirmed as error:
             status, reason = 'failed', str(error)
-        except subprocess.TimeoutExpired as error:
-            detail = error.stderr or ''
-            status, reason = 'failed', 'deadline exceeded'+(': '+detail if detail else '')
+        except subprocess.TimeoutExpired:
+            status, reason = 'failed', 'deadline exceeded'
         except Unknown:
             status, reason = 'unknown', 'repository unreachable or invalid output'
-        except CommandFailed as error:
-            status, reason = 'failed', str(error) or 'command failed'
+        except CommandFailed:
+            status, reason = 'failed', 'command failed'
         except (OSError, InterruptedError):
             status, reason = 'failed', 'command failed, interrupted or exceeded deadline'
         result.write(status, reason)
