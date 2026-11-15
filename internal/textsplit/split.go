@@ -24,13 +24,13 @@ func Rough(n int) int {
 	return n / 2
 }
 
-func Split(body []rune, lead int, limit int) []Event {
+func Split(body []rune, leadLength int, limit int) []Event {
 	whole := trim(body, Range{0, len(body)})
 	if whole.Start == whole.End {
 		return nil
 	}
-	if Rough(joinedLength(lead, whole.End-whole.Start)) <= limit {
-		return []Event{{Ranges: []Range{whole}, AttachLead: lead > 0}}
+	if Rough(joinedLength(leadLength, whole.End-whole.Start)) <= limit {
+		return []Event{{Ranges: []Range{whole}, AttachLead: leadLength > 0}}
 	}
 	var lines []Range
 	start := whole.Start
@@ -48,7 +48,7 @@ func Split(body []rune, lead int, limit int) []Event {
 	currentLength := 0
 	flush := func() {
 		if currentLength > 0 {
-			current.AttachLead = lead > 0
+			current.AttachLead = leadLength > 0
 			events = append(events, current)
 			current = Event{}
 			currentLength = 0
@@ -56,9 +56,9 @@ func Split(body []rune, lead int, limit int) []Event {
 	}
 	for _, line := range lines {
 		lineLength := line.End - line.Start
-		if Rough(joinedLength(lead, lineLength)) <= limit {
+		if Rough(joinedLength(leadLength, lineLength)) <= limit {
 			candidateLength := joinedLength(currentLength, lineLength)
-			if currentLength > 0 && Rough(joinedLength(lead, candidateLength)) > limit {
+			if currentLength > 0 && Rough(joinedLength(leadLength, candidateLength)) > limit {
 				flush()
 				candidateLength = lineLength
 			}
@@ -83,12 +83,12 @@ func Split(body []rune, lead int, limit int) []Event {
 		}
 		for _, word := range words {
 			wordLength := word.End - word.Start
-			if lead > 0 && Rough(joinedLength(lead, wordLength)) > limit {
+			if leadLength > 0 && Rough(joinedLength(leadLength, wordLength)) > limit {
 				events = append(events, Event{ReleaseLead: true})
-				lead = 0
+				leadLength = 0
 			}
 			candidateLength := joinedLength(currentLength, wordLength)
-			if currentLength > 0 && Rough(joinedLength(lead, candidateLength)) > limit {
+			if currentLength > 0 && Rough(joinedLength(leadLength, candidateLength)) > limit {
 				flush()
 				candidateLength = wordLength
 			}
