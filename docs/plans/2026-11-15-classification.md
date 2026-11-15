@@ -34,7 +34,9 @@
 ### 8.2 Candidates and labeled set (no paid calls)
 
 - [ ] Node candidate text per taxonomy.md "Serving", embedded with the dense document recipe; candidate recall at 10 measured on the labeled set before any prompt work.
-- [ ] Labeled set from seeds: 300 masked seeded articles and 100 with labels in two or more families, sampled by document, frozen with a hash.
+- [ ] Labeled set from seeds: the 300 masked articles of taxonomy.md "Evaluation gate", drawn by `corpus taxonomy labels`, frozen with a hash.
+- [ ] Candidate selection that meets the candidate-recall floor, measured offline on the masked set (whole-tree cosine top 10 measured 0.05/0.24/0.37 on vn/20261115_2), then written into taxonomy.md before any prompt work.
+- [ ] Model-adjudicated sets (no Anthropic calls; Codex gpt-6-astra labels blind): inheritance (100 inherited consolidated articles) now; multi-family (100 unseeded articles, half from documents with a multi-topic document-level result) after 8.3 can run the document-level request; post-2023 (100 articles). The coordinator reads 10 of multi-family and 20 of post-2023 before either gates.
 
 ### 8.3 Classify stage and batch submission
 
