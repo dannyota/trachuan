@@ -37,6 +37,7 @@ Intended behavior of trachuan. Decisions with alternatives are in the
 | [attachments by content hash](fetch-attachments.md) | Copy or download each VBPL attachment by its source ETag, fail closed                          |
 | [auth](auth.md)                                     | Google login, OAuth for MCP, CIMD, revocation, account lifecycle                               |
 | [accounts](accounts.md)                             | Email and password accounts, TOTP, recovery codes, key ring                                    |
+| [control frameworks](frameworks.md)                 | Framework corpus kind: sources, access by grant, data model, pipeline, serving                 |
 | [account mail](account-mail.md)                     | Mail outbox: classes, sender, content                                                          |
 | [web API](web-api.md)                               | Google login flow, web sessions, CSRF, `/api/v1` routes, OpenAPI contract                      |
 | [OAuth](oauth.md)                                   | MCP authorization server: clients, consent, codes, tokens, aboutme import gaps                 |
