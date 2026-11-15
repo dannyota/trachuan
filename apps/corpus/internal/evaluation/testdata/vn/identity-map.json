@@ -6781,26 +6781,19 @@
       "citation_index": 1,
       "state": "resolved",
       "expected_number": "41/2026/TT-BTC",
-      "reason": "Circular 32/2026/TT-BTC taxes an individual's crypto-asset transfers through a licensed service provider at 0.1% of each transfer price, not on the gain; Circular 41/2026/TT-BTC makes the service provider withhold and pay that tax on the individual's behalf.",
-      "reviewed_at": "2026-11-11",
+      "reason": "Circular 32/2026/TT-BTC taxes an individual's crypto-asset transfers through a licensed service provider at 0.1% of each transfer price, not on the gain; Circular 41/2026/TT-BTC makes the service provider withhold and pay that tax on the individual's behalf. Re-adjudicated 2026-11-15: 41/2026/TT-BTC is read from its transcription (partial-tree rule), which has no clause anchors under dieu-4; the quoted text sits in dieu-4.",
+      "reviewed_at": "2026-11-15",
       "evidence": [
         {
           "document_key": "vn:vbpl:65cdc730-6644-11f1-b14b-8902925e71de",
           "document_number": "41/2026/TT-BTC",
           "source_url": "",
           "fetch_sha256": "0a51ed7b0936f5be6d2bedf032ae0580718921e5c7c7545185c488014e7302b6",
-          "anchor": "dieu-4/khoan-1",
+          "anchor": "dieu-4",
           "quoted_span": "khấu trừ, nộp thuế thay số thuế thu nhập cá nhân phát sinh đối với mỗi giao dịch chuyển nhượng tài sản mã hóa mà cá nhân (bao gồm cá nhân cư trú và cá nhân không cư trú) thực hiện thông qua Tổ chức cung cấp dịch vụ."
         }
       ],
       "alternatives": [
-        {
-          "country": "vn",
-          "document_key": "vn:vbpl:65cdc730-6644-11f1-b14b-8902925e71de",
-          "document_number": "41/2026/TT-BTC",
-          "anchor": "dieu-4/khoan-1",
-          "kind": "provision"
-        },
         {
           "country": "vn",
           "document_key": "vn:vbpl:65cdc730-6644-11f1-b14b-8902925e71de",

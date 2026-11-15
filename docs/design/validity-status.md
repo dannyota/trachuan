@@ -251,4 +251,8 @@ status name, a cleared invalid interval, list continuation, every manual entry
 check, and both retrieval modes. Before the new baseline is accepted, the
 primary reviews every rule B expiry, every rule C conflict and the whole review
 queue for the run, and records the counts and the recall cost in the research
-note.
+note. The bulk kinds (`unresolved_article`, `parsed_text_article`, `unknown`,
+`repeals_current`) are model-adjudicated: Codex `gpt-6-astra` checks each parser
+proposal against the quoted sentences, only unambiguous ones become manual
+entries, and the primary reads a 10 percent sample before they are accepted
+(coordinator decision 2026-11-15).
