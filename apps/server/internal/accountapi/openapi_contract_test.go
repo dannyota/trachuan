@@ -47,7 +47,11 @@ func testAccountContract_Guards(t *testing.T, coverage *contracttest.Coverage) {
 		t.Run(tc.method+tc.path, func(t *testing.T) {
 			h, _, _, raw, _ := setup(t)
 			w := call(h, "invalid", "", tc.method, tc.actual, "")
-			if w.Code != 401 {
+			want := 401
+			if tc.method == "GET" && tc.path == "/api/v1/me" {
+				want = 204
+			}
+			if w.Code != want {
 				t.Fatalf("status %d", w.Code)
 			}
 			coverage.Check(t, tc.method, tc.path, w)

@@ -20,6 +20,9 @@ ON CONFLICT DO NOTHING RETURNING *;
 -- name: MarkAccountBlocked :one
 UPDATE account SET blocked_at = COALESCE(blocked_at, now()) WHERE id = $1 RETURNING *;
 
+-- name: MarkAccountUnblocked :one
+UPDATE account SET blocked_at = NULL WHERE id = $1 AND delete_requested_at IS NULL RETURNING *;
+
 -- name: MarkAccountDeleting :one
 UPDATE account SET blocked_at = COALESCE(blocked_at, now()),
     delete_requested_at = COALESCE(delete_requested_at, now()) WHERE id = $1 RETURNING *;

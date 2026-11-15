@@ -24,9 +24,7 @@ func (m *Manager) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		raw, ok := sessionToken(r)
 		if !ok {
-			if r.Method == http.MethodGet && r.URL.Path == "/api/v1/me" && !hasSessionCookie(r) {
-				w.Header().Set("Cache-Control", "no-store")
-				w.WriteHeader(http.StatusNoContent)
+			if sessionProbe(w, r) {
 				return
 			}
 			apierror.Write(w, 401, "unauthenticated")
@@ -36,7 +34,7 @@ func (m *Manager) Middleware(next http.Handler) http.Handler {
 		if err != nil {
 			if errors.Is(err, errUnavailable) {
 				apierror.Write(w, 503, "unavailable")
-			} else {
+			} else if !sessionProbe(w, r) {
 				apierror.Write(w, 401, "unauthenticated")
 			}
 			return
@@ -47,6 +45,18 @@ func (m *Manager) Middleware(next http.Handler) http.Handler {
 		p := Principal{AccountID: row.AccountID, SessionID: row.ID, CSRFSecret: row.CsrfSecret, AuthEpoch: row.SessionAuthEpoch}
 		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), principalKey{}, p)))
 	})
+}
+
+func sessionProbe(w http.ResponseWriter, r *http.Request) bool {
+	if r.Method != http.MethodGet || r.URL.Path != "/api/v1/me" {
+		return false
+	}
+	if hasSessionCookie(r) {
+		writeCookie(w, "", -1)
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(http.StatusNoContent)
+	return true
 }
 
 func hasSessionCookie(r *http.Request) bool {

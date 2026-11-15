@@ -132,7 +132,7 @@ func TestAccounts_RegistrationResetAndChange(t *testing.T) {
 		t.Fatal("reset issued cookie")
 	}
 	f.status(response, 204)
-	f.status(f.request(client, "GET", "/api/v1/me", "", "", "", ""), 401)
+	f.status(f.request(client, "GET", "/api/v1/me", "", "", "", ""), 204)
 	f.status(post("/api/v1/auth/password", `{"email":"person@example.test","password":"synthetic passphrase gamma"}`), 200)
 	f.me(client)
 }

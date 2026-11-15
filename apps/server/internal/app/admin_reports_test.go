@@ -7,11 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"danny.vn/trachuan/apps/server/internal/admin"
 	"danny.vn/trachuan/apps/server/internal/store"
 )
 
-type triageFixture struct{ admin.Store }
+type triageFixture struct{ adminStore }
 
 func (triageFixture) TriageGroups(context.Context, store.TriageGroupsParams) ([]store.TriageGroupsRow, error) {
 	return []store.TriageGroupsRow{

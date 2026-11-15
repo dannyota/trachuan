@@ -281,6 +281,26 @@ func (q *Queries) MarkAccountDeleting(ctx context.Context, id int64) (Account, e
 	return i, err
 }
 
+const markAccountUnblocked = `-- name: MarkAccountUnblocked :one
+UPDATE account SET blocked_at = NULL WHERE id = $1 AND delete_requested_at IS NULL RETURNING id, google_sub, email, blocked_at, created_at, last_login_at, delete_requested_at, auth_epoch
+`
+
+func (q *Queries) MarkAccountUnblocked(ctx context.Context, id int64) (Account, error) {
+	row := q.db.QueryRow(ctx, markAccountUnblocked, id)
+	var i Account
+	err := row.Scan(
+		&i.ID,
+		&i.GoogleSub,
+		&i.Email,
+		&i.BlockedAt,
+		&i.CreatedAt,
+		&i.LastLoginAt,
+		&i.DeleteRequestedAt,
+		&i.AuthEpoch,
+	)
+	return i, err
+}
+
 const purgeDeletedAccounts = `-- name: PurgeDeletedAccounts :execrows
 DELETE FROM account WHERE delete_requested_at < $1::timestamptz - interval '7 days'
 `

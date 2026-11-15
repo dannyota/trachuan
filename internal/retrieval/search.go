@@ -7,6 +7,7 @@ import (
 )
 
 func (e *Engine) Search(ctx context.Context, req Request) (Response, error) {
+	e.sparse.searches.Add(1)
 	recipe := e.release.RetrievalRecipe
 	if recipe.Abstention.Threshold == nil {
 		return Response{}, errors.New("uncalibrated retrieval recipe")

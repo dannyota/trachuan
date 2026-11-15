@@ -78,6 +78,6 @@ func TestE2E_WebLoginTokensAndLogout(t *testing.T) {
 	f.status(f.request(first, "GET", "/api/v1/me", "", "", "", ""), 204)
 	replay := f.client()
 	replay.Jar.SetCookies(base, []*http.Cookie{session})
-	f.status(f.request(replay, "GET", "/api/v1/me", "", "", "", ""), 401)
+	f.status(f.request(replay, "GET", "/api/v1/me", "", "", "", ""), 204)
 	f.me(second)
 }

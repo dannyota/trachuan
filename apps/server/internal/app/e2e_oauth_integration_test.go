@@ -222,7 +222,7 @@ func TestE2E_OAuthGrantAndBlock(t *testing.T) {
 		t.Fatal("block account failed")
 	}
 	f.offset.Store(int64(11 * time.Second))
-	f.status(f.request(browser, "GET", "/api/v1/me", "", "", "", ""), 401)
+	f.status(f.request(browser, "GET", "/api/v1/me", "", "", "", ""), 204)
 	f.mcp(browser, personal.Token, 401)
 	f.mcp(browser, third.access, 401)
 }

@@ -1639,21 +1639,12 @@ export interface paths {
                         "application/json": components["schemas"]["Account"];
                     };
                 };
-                /** @description No session cookie */
+                /** @description No live session */
                 204: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content?: never;
-                };
-                /** @description Request failed */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
                 };
                 /** @description Request failed */
                 429: {

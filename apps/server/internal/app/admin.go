@@ -9,11 +9,18 @@ import (
 	"time"
 
 	"danny.vn/trachuan/apps/server/internal/admin"
+	"danny.vn/trachuan/apps/server/internal/store"
+	"github.com/jackc/pgx/v5"
 )
 
 type accountEvicter interface{ EvictAccount(int64) }
 
-func runAdmin(ctx context.Context, args []string, queries admin.Store, out io.Writer, caches ...accountEvicter) error {
+type adminStore interface {
+	admin.Store
+	MarkAccountUnblocked(context.Context, int64) (store.Account, error)
+}
+
+func runAdmin(ctx context.Context, args []string, queries adminStore, out io.Writer, caches ...accountEvicter) error {
 	if len(args) < 2 {
 		return errors.New("missing admin subcommand")
 	}
@@ -52,6 +59,31 @@ func runAdmin(ctx context.Context, args []string, queries admin.Store, out io.Wr
 			cache.EvictAccount(*account)
 		}
 		return err
+	case "account unblock":
+		if *account <= 0 {
+			return errors.New("invalid account")
+		}
+		_, err := queries.MarkAccountUnblocked(ctx, *account)
+		for _, cache := range caches {
+			cache.EvictAccount(*account)
+		}
+		if errors.Is(err, pgx.ErrNoRows) {
+			row, lookupErr := queries.GetAccount(ctx, *account)
+			if errors.Is(lookupErr, pgx.ErrNoRows) {
+				return errors.New("account not found")
+			}
+			if lookupErr != nil {
+				return errors.New("account store unavailable")
+			}
+			if row.DeleteRequestedAt != nil {
+				return errors.New("account is being deleted")
+			}
+			return errors.New("account could not be unblocked")
+		}
+		if err != nil {
+			return errors.New("account store unavailable")
+		}
+		return nil
 	case "token create":
 		if *account <= 0 || *name == "" || *days < 1 || *days > 365 {
 			return errors.New("invalid token fields")

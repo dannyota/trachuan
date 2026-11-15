@@ -18,23 +18,29 @@ type PostingsOutcome struct {
 }
 
 type LexicalSources struct {
-	SQL      uint64
-	Postings uint64
-	Reused   uint64
+	SQL              uint64
+	Postings         uint64
+	Reused           uint64
+	FallbackSearches uint64
+	FallbackGroups   uint64
+	Searches         uint64
 }
 
 type sparseLifecycle struct {
-	mu       sync.Mutex
-	ctx      context.Context
-	cancel   context.CancelFunc
-	wg       sync.WaitGroup
-	started  bool
-	closed   bool
-	retired  bool
-	index    atomic.Pointer[sparsePostings]
-	sql      atomic.Uint64
-	postings atomic.Uint64
-	reused   atomic.Uint64
+	mu               sync.Mutex
+	ctx              context.Context
+	cancel           context.CancelFunc
+	wg               sync.WaitGroup
+	started          bool
+	closed           bool
+	retired          bool
+	index            atomic.Pointer[sparsePostings]
+	sql              atomic.Uint64
+	postings         atomic.Uint64
+	reused           atomic.Uint64
+	fallbackSearches atomic.Uint64
+	fallbackGroups   atomic.Uint64
+	searches         atomic.Uint64
 }
 
 func (s *sparseLifecycle) init() {
@@ -118,7 +124,7 @@ func (e *Engine) Close() {
 func (e *Engine) SparsePostingsReady() bool { return e.sparse.index.Load() != nil }
 
 func (e *Engine) LexicalSources() LexicalSources {
-	return LexicalSources{SQL: e.sparse.sql.Load(), Postings: e.sparse.postings.Load(), Reused: e.sparse.reused.Load()}
+	return LexicalSources{SQL: e.sparse.sql.Load(), Postings: e.sparse.postings.Load(), Reused: e.sparse.reused.Load(), FallbackSearches: e.sparse.fallbackSearches.Load(), FallbackGroups: e.sparse.fallbackGroups.Load(), Searches: e.sparse.searches.Load()}
 }
 
 func (e *Engine) postingsFor(query lexical.Vector) *sparsePostings {

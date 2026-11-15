@@ -15,21 +15,29 @@ import (
 )
 
 type cacheEntry struct {
-	opening     bool
-	openingDone chan struct{}
-	retired     bool
-	leases      int
-	country     string
-	engine      *retrieval.Engine
-	pool        *pgxpool.Pool
-	closePool   func()
-	closeOnce   sync.Once
+	opening      bool
+	openingDone  chan struct{}
+	retired      bool
+	leases       int
+	country      string
+	name         string
+	stopCounters chan struct{}
+	countersDone chan struct{}
+	engine       *retrieval.Engine
+	pool         *pgxpool.Pool
+	closePool    func()
+	closeOnce    sync.Once
 }
 
-func (entry *cacheEntry) close() {
+func (entry *cacheEntry) close(engine *retrieval.Engine) {
 	entry.closeOnce.Do(func() {
-		if entry.engine != nil {
-			entry.engine.Close()
+		if entry.stopCounters != nil {
+			close(entry.stopCounters)
+			<-entry.countersDone
+		}
+		if engine != nil {
+			engine.Close()
+			entry.logCounters(engine)
 		}
 		if entry.closePool != nil {
 			entry.closePool()
@@ -48,7 +56,7 @@ func (r *Resolver) load(ctx context.Context, country, name string) (*cacheEntry,
 	}
 	entry := r.entries[name]
 	if entry == nil {
-		entry = &cacheEntry{country: country}
+		entry = &cacheEntry{country: country, name: strings.TrimPrefix(name, "corpus_"+country+"_")}
 		r.entries[name] = entry
 	}
 	engine := entry.engine
@@ -107,6 +115,7 @@ func (r *Resolver) load(ctx context.Context, country, name string) (*cacheEntry,
 		return nil, fmt.Errorf("open corpus engine: %w", err)
 	}
 	entry.engine = engine
+	entry.startCounters(engine)
 	engine.StartSparsePostings(func(outcome retrieval.PostingsOutcome) {
 		if r.OnPostings != nil {
 			r.OnPostings(engine.Release().Rel, outcome)

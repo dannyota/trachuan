@@ -62,7 +62,7 @@ func TestAccount_RealStore(t *testing.T) {
 	if _, err := v.Verify(ctx, body.Token); !errors.Is(err, credential.ErrUnauthorized) {
 		t.Fatal("credential remained valid")
 	}
-	expect(t, call(h, raw, row.CsrfSecret, "GET", "/api/v1/me", ""), 401)
+	expect(t, call(h, raw, row.CsrfSecret, "GET", "/api/v1/me", ""), 204)
 	n, err := Purge(ctx, q, time.Now().Add(6*24*time.Hour))
 	if err != nil || n != 0 {
 		t.Fatalf("early purge count=%d error=%v", n, err)

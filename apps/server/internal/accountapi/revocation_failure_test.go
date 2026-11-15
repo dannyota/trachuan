@@ -84,7 +84,7 @@ func TestRevocation_UncertainOutcomeEvictsCredentials(t *testing.T) {
 					t.Error("revoked token remains cached")
 				}
 				if route == "deletion" {
-					w = call(handler, raw, secret, "GET", "/api/v1/me", "")
+					w = call(handler, raw, secret, "GET", "/api/v1/me/sessions", "")
 					if w.Code != 401 {
 						t.Errorf("revoked session remains cached: status %d", w.Code)
 					}
