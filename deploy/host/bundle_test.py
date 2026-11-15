@@ -64,6 +64,7 @@ class ServerEnvironmentTest(unittest.TestCase):
             "SERVER_SMTP_PORT": "587",
             "SERVER_MAIL_FROM": "no-reply@trachuan.vn",
             "SERVER_TOTP_ENROLLMENT": "true",
+            "SERVER_MCP_ORIGIN_MODE": "log",
         }
         for name, value in expected.items():
             with self.subTest(variable=name):
