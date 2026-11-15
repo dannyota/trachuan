@@ -14,71 +14,69 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// Config supplies the resources used to build a corpus database.
 type Config struct {
 	BuilderURL, Template, PgDump, PgRestore string
-	// DatabaseDiskPath identifies an existing directory on the database volume.
-	DatabaseDiskPath string
-	// MinFreeBeforeBytes defaults to 30 GiB when zero.
-	MinFreeBeforeBytes uint64
-	// MinFreeDuringBytes defaults to 10 GiB when zero.
-	MinFreeDuringBytes uint64
-	diskCheck          func(string, uint64) error
-	Embedder           retrieval.Embedder
-	Suite              evaluation.Suite
-	Corrections        CorrectionsInput
-	Taxonomy           TaxonomyInput
-	Now                func() time.Time
-	Versions           Versions
-	Calibrate          func(context.Context, *pgxpool.Pool, retrieval.Release) (evaluation.Calibration, error)
+	DatabaseDiskPath                        string
+	MinFreeBeforeBytes                      uint64
+	MinFreeDuringBytes                      uint64
+	diskCheck                               func(string, uint64) error
+	Embedder                                retrieval.Embedder
+	Suite                                   evaluation.Suite
+	Corrections                             CorrectionsInput
+	Taxonomy                                TaxonomyInput
+	Now                                     func() time.Time
+	Versions                                Versions
+	Calibrate                               func(context.Context, *pgxpool.Pool, retrieval.Release) (evaluation.Calibration, error)
 }
 
-// Stage builds one corpus database per release.
 type Stage struct{ cfg Config }
 
-// New constructs a build stage.
 func New(cfg Config) *Stage { return &Stage{cfg: cfg} }
 
-// Plan selects a single build after all predecessor items have finished.
 func (s *Stage) Plan(ctx context.Context, env stage.Env, run stage.Run) ([]stage.Item, error) {
+	items, _, err := s.plan(ctx, env, run)
+	return items, err
+}
+
+func (s *Stage) plan(ctx context.Context, env stage.Env, run stage.Run) ([]stage.Item, map[string]verifiedFetch, error) {
 	if _, err := DatabaseName(run.Country, run.Rel); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	date, err := time.Parse("20060102", run.Rel[:8])
 	if err != nil {
-		return nil, fmt.Errorf("invalid release date: %w", err)
+		return nil, nil, fmt.Errorf("invalid release date: %w", err)
 	}
 	if date.Year() == 0 {
-		return nil, fmt.Errorf("invalid release date")
+		return nil, nil, fmt.Errorf("invalid release date")
 	}
 	inv, err := LoadInventory(ctx, store.New(env.DB), run, "embed")
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if err = reconcileMembership(inv); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	for _, item := range inv.Items {
 		if item.State != "done" && item.State != "gap" {
-			return nil, fmt.Errorf("predecessor %s is %s", item.Stage, item.State)
+			return nil, nil, fmt.Errorf("predecessor %s is %s", item.Stage, item.State)
 		}
 	}
-	identities, err := IdentityInventory(inv, env.Artifacts)
+	identities, verified, err := identityInventoryWithFetch(inv, env.Artifacts, identityConcurrency, readIdentityFetch)
 	if err != nil {
-		return nil, fmt.Errorf("load identity inventory: %w", err)
+		return nil, nil, fmt.Errorf("load identity inventory: %w", err)
 	}
 	if _, err = s.validateMappings(identities); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	_, correction, err := s.cfg.Corrections.pinned()
 	if err != nil {
-		return nil, fmt.Errorf("verify corrections: %w", err)
+		return nil, nil, fmt.Errorf("verify corrections: %w", err)
 	}
 	if err = s.cfg.Taxonomy.pinned(); err != nil {
-		return nil, fmt.Errorf("verify taxonomy: %w", err)
+		return nil, nil, fmt.Errorf("verify taxonomy: %w", err)
 	}
 	hash := s.inputHash(run.Country, run.Rel, inv, correction)
-	return []stage.Item{{Key: run.Country + "/" + run.Rel, InputHash: hash}}, nil
+	return []stage.Item{{Key: run.Country + "/" + run.Rel, InputHash: hash}}, verified, nil
 }
 
 func buildInputHash(country, rel, manifest, identityMap string) string {

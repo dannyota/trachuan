@@ -45,7 +45,6 @@ func checkRelationInput(item, fetchItem, extractItem InventoryItem, found bool) 
 	} else if (extractItem.State != "gap" && extractItem.State != "failed") || extractItem.ArtifactSHA256 != nil {
 		return fmt.Errorf("unfinished or invalid relation extract item")
 	}
-	// A worker refuses runs with a different frozen relate recipe, so build only sees pair hashes.
 	return checkInputHash(item, relate.PairInputHash(*fetchItem.ArtifactSHA256, extract))
 }
 
@@ -91,8 +90,6 @@ func (l *loader) loadRelations(ctx context.Context, issuers map[string]string) e
 			entries = append(entries, pendingRelation{key, *item.ArtifactSHA256, row})
 		}
 	}
-	// Documents can have byte-identical relation artifacts, so the source key
-	// leads the order and the unique key.
 	sort.Slice(entries, func(i, j int) bool {
 		if entries[i].key != entries[j].key {
 			return entries[i].key < entries[j].key
@@ -103,7 +100,6 @@ func (l *loader) loadRelations(ctx context.Context, issuers map[string]string) e
 		return entries[i].row.Ordinal < entries[j].row.Ordinal
 	})
 	numbers := l.documentNumbers()
-	identities := map[string]fetch.Document{}
 	for _, entry := range entries {
 		r := entry.row
 		source := l.docs[entry.key]
@@ -123,19 +119,11 @@ func (l *loader) loadRelations(ctx context.Context, issuers map[string]string) e
 				l.addGap("build", entry.key, "relation_text_identity_conflict", detail+":number")
 				continue
 			}
-			identity, found := identities[target.key]
-			if !found {
-				dir, err := artifactDir(l.artifacts, l.items["fetch"][target.key])
-				if err != nil {
-					return fmt.Errorf("relation target artifact: %w", err)
-				}
-				identity, err = fetch.ReadDocument(dir, target.key)
-				if err != nil {
-					return fmt.Errorf("decode relation target: %w", err)
-				}
-				identities[target.key] = identity
+			verified, err := l.verifiedDocument(l.items["fetch"][target.key])
+			if err != nil {
+				return fmt.Errorf("relation target artifact: %w", err)
 			}
-			if !textRelationIdentity(r, identity, issuers) {
+			if !textRelationIdentity(r, verified.document, issuers) {
 				l.addGap("build", entry.key, "relation_text_identity_conflict", detail)
 				continue
 			}
@@ -144,15 +132,11 @@ func (l *loader) loadRelations(ctx context.Context, issuers map[string]string) e
 		if source != nil {
 			srcNumber = source.number
 		} else if fetchItem, ok := l.items["fetch"][entry.key]; ok && fetchItem.State == "done" {
-			dir, err := artifactDir(l.artifacts, fetchItem)
+			verified, err := l.verifiedDocument(fetchItem)
 			if err != nil {
 				return fmt.Errorf("relation source artifact: %w", err)
 			}
-			detail, err := fetch.ReadDocument(dir, entry.key)
-			if err != nil {
-				return fmt.Errorf("decode relation source: %w", err)
-			}
-			srcNumber = detail.Number
+			srcNumber = verified.document.Number
 		} else {
 			l.addGap("build", entry.key, "source_provenance_missing", "relation source number")
 		}
