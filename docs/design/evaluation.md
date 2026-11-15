@@ -272,6 +272,6 @@ previous report under another retrieval recipe version stays comparable: the
 diff and the non-regression checks run, and the report labels the comparison
 with both recipe versions, as for corpus changes. Corpus changes are labeled
 coverage changes, not an isolated model effect. Report low sample size and
-old-cohort reuse; no superiority interval or claim is needed here. A fall of
-MRR@8 on a corpus-only release is handled by
-[accepted rank losses](evaluation-rank-loss.md).
+old-cohort reuse; no superiority interval or claim is needed here. MRR@8 on a
+corpus-only release is judged by the
+[MRR@8 tolerance](evaluation-mrr-tolerance.md).

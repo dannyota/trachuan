@@ -53,10 +53,10 @@ choice, and three of them send unaccented queries that ADR 0002 rejects.
    have targets that every report states, but a target is not a gate: a release
    ships when the gates pass and recall@20 and MRR@8 do not fall against the
    previous release. One exception, for a release whose recipes equal the
-   previous release's: a fall of MRR@8 caused by a named corpus change may be
-   accepted case by case through reviewed decisions in Git, within fixed limits
-   and with recall@20 still strict
-   ([accepted rank losses](../design/evaluation-rank-loss.md)). A change that
+   previous release's: MRR@8 may be below the previous value while it stays
+   within a fixed tolerance of the highest value reached under those recipes,
+   with recall@20 still strict
+   ([MRR@8 tolerance](../design/evaluation-mrr-tolerance.md)). A change that
    alters only the abstention threshold or its calibration policy ships when
    matched citations are identical on every cohort and abstention balanced
    accuracy does not fall on either cohort. Reports state the small sample size;
@@ -212,8 +212,13 @@ accuracy on either cohort.
   recipe-2 parent hit as in a merged hit, as product matching already does; a
   truncated fragment earns nothing. Legacy parity stays comparable with banhmi's
   numbers, where those clauses were separate hits.
-- 2026-11-15: accepted rank losses added to item 4 after `vn/20261115_2`:
-  recall@20 rose from 0.9247 to 0.9570 with four cases gained, and one case fell
-  from rank 4 to 9 behind table rows of a consolidated text that had just become
-  complete, so MRR@8 fell by 0.002. The strict rule stays for recipe and model
-  changes.
+- 2026-11-15: a bounded MRR@8 tolerance for corpus-only releases added to item 4
+  after `vn/20261115_2` against `vn/20261114_5`, same recipes: recall@20 rose
+  from 0.9247 to 0.9570 with four cases gained; one case fell from rank 4 to 9
+  behind table rows of a consolidated text that had just become complete, so
+  MRR@8 fell from 0.7247 to 0.7226 (exact) and 0.7241 to 0.7226 (ANN). Accepted
+  cost: greater corpus coverage may justify a bounded loss of early-ranked
+  evidence for agents; the high-water mark keeps the loss from accumulating. A
+  per-case decision file was considered and dropped after review: it needed its
+  own evidence contract for little gain over a bound. The strict rule stays for
+  recipe and model changes.
