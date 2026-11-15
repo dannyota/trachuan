@@ -8,11 +8,8 @@ import (
 	"danny.vn/trachuan/internal/retrieval"
 )
 
-// Operation validates, resolves and serializes a tool request. Authentication
-// and per-account admission belong to the transport calling it.
 type Operation func(context.Context, json.RawMessage) (json.RawMessage, error)
 
-// Operations holds the same corpus operations used by the MCP tools.
 type Operations struct {
 	Search Operation
 	Read   Operation
@@ -20,7 +17,6 @@ type Operations struct {
 	cfg    Config
 }
 
-// NewOperations constructs shared operations with the MCP schemas and caches.
 func NewOperations(cfg Config) *Operations {
 	cfg.OmitCompactRelated = false
 	if cfg.Clock == nil {
@@ -41,7 +37,6 @@ func operation[In, Out any](cfg Config, name string, run func(context.Context, I
 	}
 }
 
-// Document reads one whole-document page with the website's byte budgets.
 func (o *Operations) Document(ctx context.Context, key, release, next string) (json.RawMessage, error) {
 	item := retrieval.ReadItem{Handle: key}
 	if next != "" {
@@ -55,18 +50,24 @@ func (o *Operations) Document(ctx context.Context, key, release, next string) (j
 		return nil, retrieval.ErrUnavailable
 	}
 	readItem := result.Items[0]
-	page := struct {
-		Release     string                       `json:"release"`
-		FetchSHA256 string                       `json:"fetch_sha256,omitempty"`
-		Item        retrieval.ItemResult         `json:"item"`
-		Nodes       map[string]retrieval.NodeRef `json:"nodes"`
-	}{Release: result.Release, Item: readItem, Nodes: result.Nodes}
-	if readItem.Error == "" {
-		page.FetchSHA256 = readItem.FetchSHA256
-	}
-	encoded, _, err := encodeResult(page, false)
+	encoded, _, err := encodeResult(readItem, false)
 	if err != nil {
 		return nil, err
 	}
-	return encoded.StructuredContent.(json.RawMessage), nil
+	page := struct {
+		Files       *[]retrieval.SourceFile      `json:"files,omitempty"`
+		Release     string                       `json:"release"`
+		FetchSHA256 string                       `json:"fetch_sha256,omitempty"`
+		Item        json.RawMessage              `json:"item"`
+		Nodes       map[string]retrieval.NodeRef `json:"nodes,omitempty"`
+	}{Release: result.Release, Item: encoded.StructuredContent.(json.RawMessage), Nodes: result.Nodes}
+	if readItem.Error == "" {
+		page.FetchSHA256 = readItem.FetchSHA256
+		files := readItem.Files
+		if files == nil {
+			files = []retrieval.SourceFile{}
+		}
+		page.Files = &files
+	}
+	return json.Marshal(page)
 }

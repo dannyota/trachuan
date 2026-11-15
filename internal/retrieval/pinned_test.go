@@ -8,7 +8,7 @@ import (
 )
 
 func TestDocumentEntry_SourceWithdrawal(t *testing.T) {
-	for _, schema := range []int{5, 6} {
+	for _, schema := range []int{5, 6, 7} {
 		for _, pinned := range []bool{false, true} {
 			var since *time.Time
 			var rel *string
@@ -34,7 +34,7 @@ func TestDocumentEntry_SourceWithdrawal(t *testing.T) {
 }
 
 func TestDocumentMetadataSQL_Version5OmitsPinColumns(t *testing.T) {
-	for _, version := range []int{4, 5, 6} {
+	for _, version := range []int{4, 5, 6, 7} {
 		fields := withdrawnColumns(version)
 		if strings.Contains(fields, "source_withdrawn_since") != (version >= 6) || strings.Contains(fields, "source_withdrawn_rel") != (version >= 6) {
 			t.Fatalf("schema %d columns=%s", version, fields)

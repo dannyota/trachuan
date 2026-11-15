@@ -2746,7 +2746,7 @@ components:
           $ref: '#/components/schemas/StatusStamp'
         text_source:
           type: string
-          enum: [source_tree, html_transcription, ocr, none]
+          enum: [source_tree, html_transcription, pdf_text, ocr, none]
         text_complete: *id007
         source_url: *id001
         source_withdrawn:
@@ -3070,9 +3070,35 @@ components:
             $ref: '#/components/schemas/Gap'
       required:
       - complete
+    SourceFile:
+      type: object
+      properties:
+        name:
+          type: string
+        url:
+          type: [string, 'null']
+        hash:
+          type: string
+          pattern: '^[0-9a-f]{64}$'
+        size:
+          type: integer
+          format: int64
+          minimum: 0
+        role:
+          type: string
+          enum: [main, appendix, scan, unknown]
+        fetched_at:
+          type: [string, 'null']
+          format: date-time
+      required: [name, url, hash, size, role, fetched_at]
+      additionalProperties: false
     DocumentPage:
       type: object
       properties:
+        files:
+          type: array
+          items:
+            $ref: '#/components/schemas/SourceFile'
         nodes:
           $ref: '#/components/schemas/NodeIndex'
         release:

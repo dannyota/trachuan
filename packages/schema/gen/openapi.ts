@@ -3413,7 +3413,7 @@ export interface components {
             effective_to?: string;
             status: components["schemas"]["StatusStamp"];
             /** @enum {string} */
-            text_source: "source_tree" | "html_transcription" | "ocr" | "none";
+            text_source: "source_tree" | "html_transcription" | "pdf_text" | "ocr" | "none";
             text_complete: boolean;
             source_url?: string;
             source_withdrawn?: {
@@ -3619,7 +3619,19 @@ export interface components {
             error?: string;
             gaps?: components["schemas"]["Gap"][];
         };
+        SourceFile: {
+            name: string;
+            url: string | null;
+            hash: string;
+            /** Format: int64 */
+            size: number;
+            /** @enum {string} */
+            role: "main" | "appendix" | "scan" | "unknown";
+            /** Format: date-time */
+            fetched_at: string | null;
+        };
         DocumentPage: {
+            files?: components["schemas"]["SourceFile"][];
             nodes?: components["schemas"]["NodeIndex"];
             release: string;
             fetch_sha256?: string;

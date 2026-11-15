@@ -9,7 +9,6 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// Read returns bounded pages of independent scopes from the engine's release.
 func (e *Engine) Read(ctx context.Context, req ReadRequest) (ReadResult, error) {
 	result := ReadResult{Release: e.release.Rel, Nodes: map[string]NodeRef{}}
 	if req.PageCap < 0 || req.PartSize < 0 || (cursor{PageCap: req.PageCap, PartSize: req.PartSize}).partSize() > (cursor{PageCap: req.PageCap}).pageCap() {
@@ -178,7 +177,7 @@ func (e *Engine) readItem(ctx context.Context, tx pgx.Tx, c cursor, continued bo
 }
 
 func readPage(seq readSequence, c cursor, budget int, first bool) (ItemResult, int, error) {
-	result := ItemResult{Doc: seq.doc, Gaps: seq.gaps, FetchSHA256: seq.source.FetchSHA256}
+	result := ItemResult{Doc: seq.doc, Gaps: seq.gaps, Files: seq.files, FetchSHA256: seq.source.FetchSHA256}
 	used := 0
 	var firstParts []Unit
 	firstPartsChecked, firstPartsOK := false, false

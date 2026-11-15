@@ -12,9 +12,9 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
-const SchemaVersion = 6
+const SchemaVersion = 7
 
-func SupportedSchemaVersions() []int { return []int{4, 5, 6} }
+func SupportedSchemaVersions() []int { return []int{4, 5, 6, 7} }
 
 const SparseDimensions = 1048576
 

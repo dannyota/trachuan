@@ -231,8 +231,8 @@ numbered outline (`I.`, `1.`) when one exists. Text under 300 characters is
   another anchor, or an anchor comes to hold other text, the old id no longer
   exists, and the identity map's node check forces re-adjudication even when
   anchor strings such as `doan-3` survive a refetch or a parser change.
-- Corpus: `document.text_source` (`source_tree`, `html_transcription`, `ocr`,
-  `none`; `pdf_text` joins with schema version 5) and
+- Corpus: `document.text_source` (`source_tree`, `html_transcription`,
+  `pdf_text` from schema version 7, `ocr`, `none`) and
   `document.text_complete boolean`, false when any gap of `tree_headings_only`,
   `tree_headings_partial`, `tree_text_partial`, `structure_uncertain`,
   `table_text` (more than a tenth of the characters inside provisions are in
