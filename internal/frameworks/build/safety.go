@@ -21,26 +21,83 @@ func hide(message string, err error) error {
 }
 
 func realPath(path string) (string, error) {
-	abs, err := filepath.Abs(path)
-	if err != nil {
-		return "", hide("resolve path", err)
+	current := string(filepath.Separator)
+	if !filepath.IsAbs(path) {
+		var err error
+		current, err = os.Getwd()
+		if err != nil {
+			return "", hide("resolve path", err)
+		}
+		current, err = filepath.EvalSymlinks(current)
+		if err != nil {
+			return "", hide("resolve path", err)
+		}
 	}
-	real, err := filepath.EvalSymlinks(abs)
-	if err == nil {
-		return real, nil
+	missing := false
+	directory := true
+	for _, part := range strings.Split(path, string(filepath.Separator)) {
+		if part != "" && !directory {
+			return "", fmt.Errorf("resolve path: parent is not a directory")
+		}
+		switch part {
+		case "", ".":
+			continue
+		case "..":
+			if missing {
+				return "", fmt.Errorf("resolve path: missing parent")
+			}
+			current = filepath.Dir(current)
+			continue
+		}
+		current = filepath.Join(current, part)
+		if missing {
+			continue
+		}
+		info, err := os.Lstat(current)
+		if errors.Is(err, os.ErrNotExist) {
+			missing = true
+			continue
+		}
+		if err != nil {
+			return "", hide("resolve path", err)
+		}
+		if info.Mode()&os.ModeSymlink != 0 {
+			current, err = filepath.EvalSymlinks(current)
+			if err != nil {
+				return "", hide("resolve path", err)
+			}
+			info, err = os.Stat(current)
+			if err != nil {
+				return "", hide("resolve path", err)
+			}
+		}
+		directory = info.IsDir()
 	}
-	if !errors.Is(err, os.ErrNotExist) || filepath.Dir(abs) == abs {
-		return "", hide("resolve path", err)
-	}
-	parent, err := realPath(filepath.Dir(abs))
+	return current, nil
+}
+
+func checkedDir(path string) (string, error) {
+	path, err := realPath(path)
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(parent, filepath.Base(abs)), nil
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", hide("resolve home", err)
+	}
+	if err := checkSync(path, home); err != nil {
+		return "", err
+	}
+	return path, nil
 }
 
 func inside(path, root string) bool {
 	rel, err := filepath.Rel(strings.ToLower(root), strings.ToLower(path))
+	return err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
+}
+
+func contained(path, root string) bool {
+	rel, err := filepath.Rel(root, path)
 	return err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
 }
 
@@ -115,39 +172,40 @@ func checkSync(path, home string) error {
 	return nil
 }
 
-func prepare() (string, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", hide("resolve home", err)
-	}
-	var work string
+func prepare() (string, string, error) {
+	var source, work string
 	for _, name := range []string{"FRAMEWORKS_SOURCE_DIR", "FRAMEWORKS_WORK_DIR"} {
 		value := os.Getenv(name)
 		if value == "" {
-			return "", fmt.Errorf("%s is required", name)
+			return "", "", fmt.Errorf("%s is required", name)
 		}
-		path, err := realPath(value)
+		path, err := checkedDir(value)
 		if err != nil {
-			return "", err
-		}
-		if err := checkSync(path, home); err != nil {
-			return "", err
+			return "", "", err
 		}
 		if name == "FRAMEWORKS_WORK_DIR" {
 			work = path
+		} else {
+			source = path
 		}
 	}
 	if err := unix.Setrlimit(unix.RLIMIT_CORE, &unix.Rlimit{Cur: 0, Max: 0}); err != nil {
-		return "", hide("disable core dumps", err)
+		return "", "", hide("disable core dumps", err)
 	}
-	tmp := filepath.Join(work, "tmp")
+	tmp, err := checkedDir(filepath.Join(work, "tmp"))
+	if err != nil {
+		return "", "", err
+	}
+	if !contained(tmp, work) {
+		return "", "", fmt.Errorf("temporary directory outside work directory")
+	}
 	if err := makeDirectory(tmp); err != nil {
-		return "", err
+		return "", "", err
 	}
 	if err := os.Setenv("TMPDIR", tmp); err != nil {
-		return "", hide("set temporary directory", err)
+		return "", "", hide("set temporary directory", err)
 	}
-	return work, nil
+	return source, work, nil
 }
 
 func makeDirectory(path string) error {
@@ -160,6 +218,37 @@ func makeDirectory(path string) error {
 	}
 	if !info.IsDir() {
 		return fmt.Errorf("directory refused: %s", path)
+	}
+	return nil
+}
+
+func removeTemp(path string) error {
+	resolved, err := checkedDir(path)
+	if err != nil {
+		return err
+	}
+	info, err := os.Lstat(path)
+	if err != nil {
+		return hide("inspect temporary step", err)
+	}
+	if info.Mode()&os.ModeSymlink != 0 {
+		return fmt.Errorf("temporary step is a symlink")
+	}
+	err = filepath.WalkDir(resolved, func(path string, entry os.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return hide("inspect temporary step", walkErr)
+		}
+		if entry.IsDir() {
+			_, checkErr := checkedDir(path)
+			return checkErr
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	if err := os.RemoveAll(resolved); err != nil {
+		return hide("remove temporary step", err)
 	}
 	return nil
 }

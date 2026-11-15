@@ -28,6 +28,11 @@ type manifest struct {
 func digest(data []byte) string { return fmt.Sprintf("%x", sha256.Sum256(data)) }
 
 func readFile(path string) ([]byte, error) {
+	dir, err := checkedDir(filepath.Dir(path))
+	if err != nil {
+		return nil, err
+	}
+	path = filepath.Join(dir, filepath.Base(path))
 	info, err := os.Lstat(path)
 	if err != nil {
 		return nil, hide("inspect artifact", err)
@@ -43,10 +48,22 @@ func readFile(path string) ([]byte, error) {
 }
 
 func writeFile(dir, name string, data []byte) error {
+	dir, err := checkedDir(dir)
+	if err != nil {
+		return err
+	}
 	path := filepath.Join(dir, name)
-	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+	parent, err := checkedDir(filepath.Dir(path))
+	if err != nil {
+		return err
+	}
+	if !contained(parent, dir) {
+		return fmt.Errorf("output directory outside step directory")
+	}
+	if err = os.MkdirAll(parent, 0700); err != nil {
 		return hide("create output directory", err)
 	}
+	path = filepath.Join(parent, filepath.Base(path))
 	f, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
 	if err != nil {
 		return hide("create output", err)
@@ -110,6 +127,9 @@ func outputHashes(dir string) (map[string]string, error) {
 			return hide("inspect outputs", err)
 		}
 		if entry.IsDir() {
+			if _, checkErr := checkedDir(path); checkErr != nil {
+				return checkErr
+			}
 			return nil
 		}
 		name, err := filepath.Rel(dir, path)
@@ -164,6 +184,10 @@ func validate(dir string, expected recipe, inputs map[string]*string) error {
 }
 
 func syncDirectory(path string) error {
+	path, err := checkedDir(path)
+	if err != nil {
+		return err
+	}
 	f, err := os.Open(path)
 	if err != nil {
 		return hide("open output directory", err)
@@ -189,7 +213,11 @@ func seal(dir, target string, r recipe, inputs map[string]*string) error {
 			return hide("inspect output directory", err)
 		}
 		if entry.IsDir() {
-			dirs = append(dirs, path)
+			checked, err := checkedDir(path)
+			if err != nil {
+				return err
+			}
+			dirs = append(dirs, checked)
 		}
 		return nil
 	}); err != nil {

@@ -55,7 +55,7 @@ func releaseVersions(reg *registry.Registry) []registry.Framework {
 	return versions
 }
 
-func snapshot(ctx context.Context, dir string) (map[string]*string, error) {
+func snapshot(ctx context.Context, dir, sourceDir string) (map[string]*string, error) {
 	data, err := readFile("sources/frameworks.yaml")
 	if err != nil {
 		return nil, err
@@ -75,22 +75,36 @@ func snapshot(ctx context.Context, dir string) (map[string]*string, error) {
 			if contextErr := ctx.Err(); contextErr != nil {
 				return nil, contextErr
 			}
-			source, readErr := reg.Read(file.Path)
+			name, readErr := checkedSourceFile(sourceDir, file.Path)
+			if readErr != nil {
+				return nil, readErr
+			}
+			if err = os.Setenv("FRAMEWORKS_SOURCE_DIR", sourceDir); err != nil {
+				return nil, hide("set source directory", err)
+			}
+			original := file.Path
+			file.Path = name
+			registered := registry.Registry{Frameworks: []registry.Framework{{Files: []registry.File{file}}}}
+			source, readErr := registered.Read(name)
 			if readErr != nil {
 				return nil, hide("read registered source", readErr)
 			}
-			if err = writeFile(dir, "files/"+file.Path, source); err != nil {
+			if err = writeFile(dir, "files/"+original, source); err != nil {
 				return nil, err
 			}
 		}
 	}
-	root, err := os.OpenRoot(os.Getenv("FRAMEWORKS_SOURCE_DIR"))
+	root, err := os.OpenRoot(sourceDir)
 	if err != nil {
 		return nil, hide("open private inputs", err)
 	}
 	defer func() { _ = root.Close() }()
 	for _, name := range []string{"trachuan/titles.csv", "trachuan/ocr-waivers.yaml"} {
-		info, err := root.Stat(name)
+		checked, err := checkedSourceFile(sourceDir, name)
+		if err != nil {
+			return nil, err
+		}
+		info, err := root.Stat(checked)
 		if errors.Is(err, fs.ErrNotExist) {
 			continue
 		}
@@ -100,7 +114,7 @@ func snapshot(ctx context.Context, dir string) (map[string]*string, error) {
 		if !info.Mode().IsRegular() {
 			return nil, fmt.Errorf("private input is not a regular file")
 		}
-		data, err := root.ReadFile(name)
+		data, err := root.ReadFile(checked)
 		if err != nil {
 			return nil, hide("read private input", err)
 		}
@@ -112,6 +126,26 @@ func snapshot(ctx context.Context, dir string) (map[string]*string, error) {
 		return nil, err
 	}
 	return snapshotInputs(dir)
+}
+
+func checkedSourceFile(source, name string) (string, error) {
+	path, err := realPath(filepath.Join(source, name))
+	if err != nil {
+		return "", err
+	}
+	parent, err := checkedDir(filepath.Dir(path))
+	if err != nil {
+		return "", err
+	}
+	path = filepath.Join(parent, filepath.Base(path))
+	if !contained(path, source) {
+		return "", fmt.Errorf("source file outside source directory")
+	}
+	name, err = filepath.Rel(source, path)
+	if err != nil {
+		return "", hide("resolve source file", err)
+	}
+	return filepath.ToSlash(name), nil
 }
 
 func snapshotInputs(dir string) (map[string]*string, error) {

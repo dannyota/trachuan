@@ -18,11 +18,17 @@ func Run(ctx context.Context, rel string, out io.Writer) error {
 	if !regexp.MustCompile(`^[0-9]{8}(_[0-9]{1,2})?$`).MatchString(rel) {
 		return fmt.Errorf("invalid release id")
 	}
-	work, err := prepare()
+	source, work, err := prepare()
 	if err != nil {
 		return err
 	}
-	base := filepath.Join(work, rel)
+	base, err := checkedDir(filepath.Join(work, rel))
+	if err != nil {
+		return err
+	}
+	if !contained(base, work) {
+		return fmt.Errorf("release directory outside work directory")
+	}
 	if err = makeDirectory(base); err != nil {
 		return err
 	}
@@ -40,8 +46,8 @@ func Run(ctx context.Context, rel string, out io.Writer) error {
 	}
 	for _, entry := range entries {
 		if strings.HasPrefix(entry.Name(), ".tmp-") {
-			if err = os.RemoveAll(filepath.Join(base, entry.Name())); err != nil {
-				return hide("remove temporary step", err)
+			if err = removeTemp(filepath.Join(base, entry.Name())); err != nil {
+				return err
 			}
 		}
 	}
@@ -53,7 +59,7 @@ func Run(ctx context.Context, rel string, out io.Writer) error {
 		if err := ctx.Err(); err != nil {
 			return fmt.Errorf("%s: %w", step, err)
 		}
-		if err := runStep(ctx, base, step, fmt.Sprintf("%x", id), out); err != nil {
+		if err := runStep(ctx, base, step, fmt.Sprintf("%x", id), source, out); err != nil {
 			return fmt.Errorf("%s: %w", step, err)
 		}
 	}
@@ -93,8 +99,14 @@ func stepInputs(base, step string) (map[string]*string, error) {
 	return inputs, nil
 }
 
-func runStep(ctx context.Context, base, step, runID string, out io.Writer) error {
-	target := filepath.Join(base, step)
+func runStep(ctx context.Context, base, step, runID, source string, out io.Writer) error {
+	target, err := checkedDir(filepath.Join(base, step))
+	if err != nil {
+		return err
+	}
+	if !contained(target, base) {
+		return fmt.Errorf("step directory outside release directory")
+	}
 	info, err := os.Lstat(target)
 	exists := err == nil
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
@@ -123,13 +135,19 @@ func runStep(ctx context.Context, base, step, runID string, out io.Writer) error
 		}
 		return nil
 	}
-	tmp := filepath.Join(base, ".tmp-"+step+"-"+runID)
+	tmp, err := checkedDir(filepath.Join(base, ".tmp-"+step+"-"+runID))
+	if err != nil {
+		return err
+	}
+	if !contained(tmp, base) {
+		return fmt.Errorf("temporary directory outside release directory")
+	}
 	if err = os.Mkdir(tmp, 0700); err != nil {
 		return hide("create step directory", err)
 	}
 	switch step {
 	case "snapshot":
-		inputs, err = snapshot(ctx, tmp)
+		inputs, err = snapshot(ctx, tmp, source)
 	case "parse":
 		err = parseStep(ctx, base, tmp)
 	case "relate":
