@@ -32,7 +32,7 @@ func TestCorrectionsCheck_ReleaseText(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer db.Close()
-	_, err = db.Exec(ctx, `CREATE TABLE document (id bigint PRIMARY KEY, key text, number text); CREATE TABLE provision (document_id bigint, anchor text, text text); INSERT INTO document VALUES (1,'a','A'),(2,'b','B'); INSERT INTO provision VALUES (2,'dieu-1','exact text')`)
+	_, err = db.Exec(ctx, `CREATE TABLE document (id bigint PRIMARY KEY, key text, number text, eff_from date, eff_to date); CREATE TABLE provision (id bigint, document_id bigint, parent_id bigint, label text, anchor text, text text, preorder int); INSERT INTO document VALUES (1,'a','A',NULL,NULL),(2,'b','B',NULL,NULL); INSERT INTO provision VALUES (1,2,NULL,'Điều 1','dieu-1','exact text',1)`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -71,6 +71,15 @@ func TestCorrectionsCheck_ReleaseText(t *testing.T) {
 	out.Reset()
 	errout.Reset()
 	if code := Run(ctx, []string{"corrections", "check", "vn", rel}, &out, &errout); code != 0 {
+		t.Fatalf("code=%d stderr=%s", code, errout.String())
+	}
+	data = "- {key: a, number: A, set: {eff_from: '2025-01-01', eff_to: '2024-01-01'}, reason: why, reviewed: '2099-01-01', evidence: {key: b, anchor: dieu-1, quote: 'exact text'}}\n"
+	if err = os.WriteFile(path, []byte(data), 0600); err != nil {
+		t.Fatal(err)
+	}
+	out.Reset()
+	errout.Reset()
+	if code := Run(ctx, []string{"corrections", "check", "vn", rel}, &out, &errout); code != 1 || !strings.Contains(errout.String(), "invalid interval") {
 		t.Fatalf("code=%d stderr=%s", code, errout.String())
 	}
 	var text string

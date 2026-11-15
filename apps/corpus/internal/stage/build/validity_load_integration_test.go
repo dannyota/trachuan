@@ -10,6 +10,7 @@ import (
 
 	"danny.vn/trachuan/apps/corpus/internal/source"
 	"danny.vn/trachuan/apps/corpus/internal/stage/chunk"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func addValidityFixture(t *testing.T, f *loadFixture, id, number, code, issue, from, body string) string {
@@ -116,5 +117,52 @@ func TestLoad_FutureActorNotStartedAtReleaseDate(t *testing.T) {
 	var conflict bool
 	if err := f.corpus.QueryRow(context.Background(), `SELECT validity_conflict FROM document WHERE key='vn:vbpl:1'`).Scan(&conflict); err != nil || conflict {
 		t.Fatalf("conflict=%v: %v", conflict, err)
+	}
+}
+
+func TestCorrectionCheck_EvidenceParityWithBuild(t *testing.T) {
+	for _, tc := range []struct {
+		name, quote string
+		valid       bool
+	}{{"matching alias", "synthetic clause", true}, {"nonmatching alias", "missing quote", false}} {
+		t.Run(tc.name, func(t *testing.T) {
+			create := func(t *testing.T) *loadFixture {
+				t.Helper()
+				f := fixture(t)
+				key := "vn:vbpl:1"
+				fetch := f.addArtifact(t, "fetch", key, map[string]any{"detail.json": map[string]any{"data": map[string]any{"id": "1", "docNum": "1/2024/NĐ-CP", "docType": map[string]any{"name": "Nghị định"}, "agencyName": "Chính phủ", "issueDate": "2024-01-01", "effFrom": "2024-01-01", "effStatus": map[string]any{"code": "CHL"}}}, "files.json": []any{}})
+				parent := "article"
+				nodes := []chunk.Node{{NodeID: parent, Kind: "dieu", Label: "Điều 1", Ordinal: 1, Path: "dieu-1", Text: "article"}, {NodeID: "clause", ParentNodeID: &parent, Kind: "khoan", Label: "Khoản 1", Ordinal: 1, Path: "dieu-1/khoan-1", Text: "synthetic clause"}}
+				f.addArtifact(t, "extract", key, map[string]any{"provisions.json": nodes, "report.json": []any{}}, fetch.SHA256)
+				return f
+			}
+			c := correctionFixture()
+			c.Evidence.Anchor = "Điều 1 khoản 1"
+			c.Evidence.Quote = tc.quote
+			buildFixture := create(t)
+			buildErr := loadValidityFixture(t, buildFixture, []source.Correction{c})
+			if (buildErr == nil) != tc.valid || (!tc.valid && !strings.Contains(buildErr.Error(), "evidence not found")) {
+				t.Fatalf("build error: %v", buildErr)
+			}
+			checkFixture := create(t)
+			if err := loadValidityFixture(t, checkFixture, nil); err != nil {
+				t.Fatal(err)
+			}
+			db, err := pgxpool.New(context.Background(), checkFixture.corpus.Config().ConnString())
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer db.Close()
+			failures, err := CheckCorrections(context.Background(), db, []source.Correction{c})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if (len(failures) == 0) != tc.valid {
+				t.Fatalf("check failures: %v", failures)
+			}
+			if !tc.valid && !strings.Contains(failures[0].Error(), "evidence not found") {
+				t.Fatalf("check failures: %v", failures)
+			}
+		})
 	}
 }

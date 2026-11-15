@@ -22,8 +22,8 @@ Checkpoints need `pg_dump` 18 or newer (`brew install postgresql@18`).
 
 Always run the worker from a dedicated checkout pinned to the commit used to
 build its binary: `git worktree add --detach <path> <commit>`. Never run the
-worker from the main checkout, which the coordinator pulls during releases. In
-a separate terminal, start the built binary with `corpus worker` from the pinned
+worker from the main checkout, which the coordinator pulls during releases. In a
+separate terminal, start the built binary with `corpus worker` from the pinned
 checkout.
 
 The OCR cross-check renders PDF pages with `pdftoppm` from poppler

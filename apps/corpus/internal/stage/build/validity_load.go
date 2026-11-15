@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"regexp"
 	"sort"
-	"strings"
 	"time"
 
 	"danny.vn/trachuan/apps/corpus/internal/source"
@@ -103,17 +102,7 @@ func (l *loader) readValidityProvisions(ctx context.Context, docs map[string]val
 			rows.Close()
 			return fmt.Errorf("scan validity provision: %w", err)
 		}
-		name := label
-		if parent != nil && labels[*parent] != "" {
-			name = labels[*parent] + " " + strings.ToLower(label)
-		}
-		labels[id] = name
-		cd := validation[key]
-		cd.provisions[anchor] = text
-		if name != "" {
-			cd.provisions[name] = text
-		}
-		validation[key] = cd
+		addCorrectionEvidence(validation, labels, key, id, parent, label, anchor, text)
 		d := docs[key]
 		title := heading
 		if kind == "dieu" && d.textSource != "" && d.textSource != "source_tree" {
