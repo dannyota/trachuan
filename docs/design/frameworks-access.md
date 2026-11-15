@@ -31,10 +31,10 @@ portal exists. Each change and its row in `framework_entitlement_event` (who,
 when, what; never document text) commit in one transaction; events are never
 updated or deleted.
 
-After an auth database restore ([backups](backups.md#restore)), every live
-entitlement is revoked with reason `restore` before traffic resumes, because the
-backup may predate a revocation. The operator allows again from the event
-history.
+After an auth database restore ([backups](backups.md#production-restore)), every
+live entitlement is revoked with reason `restore` before traffic resumes,
+because the backup may predate a revocation. The operator allows again from the
+event history.
 
 ## Decision
 
@@ -111,6 +111,10 @@ chunks, embeddings, indexes and dumps. It may exist only in:
 
 It is never in Git, CI logs or artifacts, public buckets, log lines, metrics,
 quality gap details, error reports, evaluation reports, cache keys or PR text.
-Reviewer readings of licensed text (OCR waivers) live in a file under
-`FRAMEWORKS_SOURCE_DIR`, not in `sources/`. Tests and fixtures use invented
-frameworks.
+One value class is published although it is computed from licensed bodies: the
+integrity fields of the signed manifest (`dump` SHA-256 and size, `report`
+SHA-256, `build_artifact_sha256`). They are needed to verify and to refuse
+replays, and they reveal only that a release differs from another. No other
+body-derived value is published. Reviewer readings of licensed text (OCR
+waivers) live in a file under `FRAMEWORKS_SOURCE_DIR`, not in `sources/`. Tests
+and fixtures use invented frameworks.

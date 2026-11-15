@@ -135,8 +135,11 @@ The corpus kind is part of release identity everywhere, not a channel name:
   `database` (`frameworks_<rel>`), `sequence`, `previous`, `dump` (object,
   SHA-256, size), `report` (SHA-256, `quality_pass`), `build_artifact_sha256`,
   `schema_version`, `extensions`, `recipes` (parameters only) and the number of
-  framework versions and controls. It holds no text, no citations and nothing
-  computed from body text (vocabulary sizes, frequencies, lengths).
+  framework versions and controls. It holds no text and no citations. The
+  integrity fields are the one body-derived class that is published
+  ([access](frameworks-access.md#licensed-material-and-where-it-may-be));
+  nothing else computed from body text is (vocabulary sizes, frequencies,
+  lengths).
 - **Channel and sequences.** `ghcr.io/dannyota/trachuan-corpus-release` tag
   `frameworks-production`, with its own sequence history, pointer row, journal
   and retired list on the host, keyed by kind; one kind's pending or failed
@@ -173,6 +176,12 @@ Those mappings stay downstream. What this corpus gives them:
 - **Links from controls to legal provisions**, as reviewed mapping edges with a
   source and evidence, once the reviewed-knowledge inputs of the corpus carry
   them.
+
+The export and the change list are built only from the approved public
+projection and permitted free text, applied to every nested value (mapping
+evidence and provenance included). A field with no classification is refused. A
+change to licensed body text alone leaves both artifacts byte-identical apart
+from the manifest's integrity fields; a test holds this.
 
 ## Admin portal (later)
 

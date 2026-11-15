@@ -51,11 +51,12 @@ and its per-document gate was stored but not enforced when serving
    not read cannot change anything that caller observes.
 6. **Licensed material has a closed list of places.** Source files and every
    derivative (extracted and OCR text, check results, reviewer readings,
-   indexes, dumps) exist only where [the design](../design/frameworks-access.md)
-   lists: the source directory and run disk, the workshop database, the private
-   bucket, the signing job, the host database and its backups, and the OCR
-   providers for scans. Never Git, CI logs, public buckets, reports or log
-   lines. Tests use synthetic documents only.
+   indexes, dumps) exist only in the places the
+   [access note](../design/frameworks-access.md#licensed-material-and-where-it-may-be)
+   lists; that table is the only list. One publication exception: the signed
+   manifest's integrity values (dump digest and size, report and build artifact
+   digests), which show that a release changed and nothing about what. Tests use
+   synthetic documents only.
 7. **Scans use the OCR path, as an exception to ADR 0014.** A source without a
    text layer goes through the Vision OCR and cross-check of
    [ADR 0014](0014-ocr-on-the-write-path.md), which otherwise sends only public
@@ -112,3 +113,6 @@ and its per-document gate was stored but not enforced when serving
   withheld from callers without access, complete public manifest field list,
   host staging and server memory in the list of places. Added the downstream
   contract after the owner named sc365's private asset mappings.
+- 2026-11-15: third review round (S-05 to S-07): the manifest's integrity values
+  named as the one publication exception, the access note's table as the only
+  list of places, a broken link.
