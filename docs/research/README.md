@@ -41,3 +41,5 @@ Observations and experiments. Not project authority.
 - [Source trees with heading-only articles](vn-heading-only-trees-2026-11.md):
   707 trees with heading-only articles against their transcriptions on
   vn/20261112_2.
+- [Validity review queue](vn-validity-review-2026-11.md): queue counts on
+  `vn/20261114_5` and the small-kind review.

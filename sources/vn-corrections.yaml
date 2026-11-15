@@ -202,3 +202,143 @@
     url: https://luatvietnam.vn/doanh-nghiep/nghi-dinh-50-cp-chinh-phu-4082-d1.html
     quote: "Nghị định này có hiệu lực kể từ ngày ký ban hành và thay thế Nghị định số 388/HĐBT"
   reviewed: "2026-11-11"
+- key: vn:vbpl:139770
+  number: "27/2019/TT-NHNN"
+  set: {"eff_from": "2020-05-01"}
+  reason: "Điều 4 states 2020-05-01, not the source date 2020-01-01."
+  evidence:
+    anchor: "dieu-4"
+    quote: "Thông tư này có hiệu lực từ ngày 01 tháng 5 năm 2020."
+  reviewed: "2026-11-15"
+- key: vn:vbpl:171297
+  number: "122/2024/NĐ-CP"
+  set: {"eff_from": "2024-11-01"}
+  reason: "Điều 2 khoản 1 states 2024-11-01, not the source date 2024-12-01."
+  evidence:
+    anchor: "dieu-2/khoan-1"
+    quote: "Nghị định này có hiệu lực thi hành từ ngày 01 tháng 11 năm 2024."
+  reviewed: "2026-11-15"
+- key: vn:vbpl:172946
+  number: "54/2024/TT-NHNN"
+  set: {"eff_from": "2025-02-05"}
+  reason: "Điều 3 states 2025-02-05, not the source date 2024-02-05."
+  evidence:
+    anchor: "dieu-3"
+    quote: "Thông tư này có hiệu lực từ ngày 05 tháng 02 năm 2025."
+  reviewed: "2026-11-15"
+- key: vn:vbpl:173070
+  number: "55/2024/TT-NHNN"
+  set: {"eff_from": "2025-02-01"}
+  reason: "Điều 3 states 2025-02-01, not the source date 2024-02-01."
+  evidence:
+    anchor: "dieu-3"
+    quote: "Thông tư này có hiệu lực từ ngày 01 tháng 02 năm 2025."
+  reviewed: "2026-11-15"
+- key: vn:vbpl:14392
+  number: "45/2007/NĐ-CP"
+  set: {"status_class": "expired"}
+  reason: "73/2016/NĐ-CP ends the whole decree; the source partial status is wrong."
+  evidence:
+    key: vn:vbpl:112025
+    anchor: "dieu-115/khoan-2"
+    quote: "Nghị định số 45/2007/NĐ-CP ngày 27 tháng 3 năm 2007 của Chính phủ quy định chi tiết thi hành một số điều của Luật kinh doanh bảo hiểm; Nghị định số 123/2011/NĐ-CP ngày 28 tháng 12 năm 2011 của Chính phủ quy định chi tiết thi hành một số điều của Luật sửa đổi, bổ sung một số điều của Luật kinh doanh bảo hiểm và sửa đổi, bổ sung một số điều của Nghị định số 45/2007/NĐ-CP ngày 27 tháng 3 năm 2007 của Chính phủ quy định chi tiết thi hành một số điều của Luật kinh doanh bảo hiểm; Nghị định số 68/2014/NĐ-CP ngày 09 tháng 7 năm 2014 của Chính phủ sửa đổi, bổ sung một số điều của Nghị định số 45/2007/NĐ-CP ngày 27 tháng 3 năm 2007 của Chính phủ quy định chi tiết thi hành một số điều của Luật kinh doanh bảo hiểm và Nghị định số 46/2007/NĐ-CP ngày 27 tháng 3 năm 2007 của Chính phủ quy định chế độ tài chính đối với doanh nghiệp bảo hiểm, doanh nghiệp môi giới bảo hiểm hết hiệu lực thi hành kể từ ngày Nghị định này có hiệu lực."
+  reviewed: "2026-11-15"
+- key: vn:vbpl:14832
+  number: "78/2006/QH11"
+  set: {"eff_to": "2020-07-01"}
+  reason: "The whole law ends on 2020-07-01; Điều 152 khoản 1 preserves handling of tax matters arising before that date."
+  evidence:
+    key: vn:vbpl:136036
+    anchor: "dieu-151"
+    quote: "1. Luật này có hiệu lực thi hành từ ngày 01 tháng 7 năm 2020, trừ trường hợp quy định tại khoản 2 Điều này. 2. Quy định về hóa đơn, chứng từ điện tử của Luật này có hiệu lực thi hành từ ngày 01 tháng 7 năm 2022; khuyến khích cơ quan, tổ chức, cá nhân áp dụng quy định về hóa đơn, chứng từ điện tử của Luật này trước ngày 01 tháng 7 năm 2022. 3. Luật Quản lý thuế số 78/2006/QH11 đã được sửa đổi, bổ sung một số điều theo Luật số 21/2012/QH13, Luật số 71/2014/QH13 và Luật số 106/2016/QH13 hết hiệu lực kể từ ngày Luật này có hiệu lực thi hành, trừ trường hợp quy định tại khoản 1 Điều 152 của Luật này."
+  reviewed: "2026-11-15"
+- key: vn:vbpl:6857
+  number: "362/1999/QĐ-NHNN1"
+  set: {"eff_to": "2019-12-09"}
+  reason: "16/2019/TT-NHNN replaces the whole decision from 2019-12-09."
+  evidence:
+    key: vn:vbpl:138488
+    anchor: "dieu-14"
+    quote: "1. Thông tư này có hiệu lực thi hành từ ngày 09/12/2019. 2. Thông tư này thay thế Quyết định số 362/1999/QĐ-NHNN1 ngày 08/10/1999 của Thống đốc Ngân hàng Nhà nước về việc ban hành Quy chế phát hành tín phiếu Ngân hàng Nhà nước."
+  reviewed: "2026-11-15"
+- key: vn:vbpl:19835
+  number: "581/2003/QĐ-NHNN"
+  set: {"eff_to": "2020-03-01"}
+  reason: "The whole decision ends on 2020-03-01; khoản 5 preserves interest calculations for reserve periods already notified."
+  evidence:
+    key: vn:vbpl:139766
+    anchor: "dieu-17"
+    quote: "1. Thông tư này có hiệu lực thi hành kể từ ngày 01/3/2020. 2. Kể từ ngày Thông tư này có hiệu lực thi hành, các văn bản sau đây hết hiệu lực thi hành: a) Quyết định số 581/2003/QĐ-NHNN ngày 09 tháng 6 năm 2003 của Thống đốc Ngân hàng Nhà nước về việc ban hành Quy chế dự trữ bắt buộc đối với các tổ chức tín dụng;"
+  reviewed: "2026-11-15"
+- key: vn:vbpl:44187
+  number: "23/2014/TT-NHNN"
+  set: {"eff_to": "2024-10-01"}
+  reason: "The last excepted articles remain effective through 2024-09-30, so the first excluded date is 2024-10-01."
+  evidence:
+    key: vn:vbpl:168124
+    anchor: "dieu-23/khoan-6"
+    quote: "Thông tư số 23/2014/TT-NHNN ngày 19 tháng 8 năm 2014 của Thống đốc Ngân hàng Nhà nước Việt Nam hướng dẫn việc mở và sử dụng tài khoản thanh toán tại tổ chức cung ứng dịch vụ thanh toán đã được sửa đổi, bổ sung một số điều theo Thông tư số 02/2019/TT-NHNN ngày 28 tháng 02 năm 2019 của Thống đốc Ngân hàng Nhà nước Việt Nam sửa đổi, bổ sung một số điều của Thông tư số 23/2014/TT-NHNN ngày 19/8/2014 của Ngân hàng Nhà nước Việt Nam hướng dẫn việc mở và sử dụng tài khoản thanh toán tại tổ chức cung ứng dịch vụ thanh toán và Thông tư số 16/2020/TT-NHNN ngày 04 tháng 12 năm 2020 của Thống đốc Ngân hàng Nhà nước Việt Nam sửa đổi, bổ sung một số điều của Thông tư số 23/2014/TT-NHNN ngày 19/8/2014 của Thống đốc Ngân hàng Nhà nước Việt Nam hướng dẫn việc mở và sử dụng tài khoản thanh toán tại tổ chức cung ứng dịch vụ thanh toán hết hiệu lực kể từ ngày Thông tư này có hiệu lực thi hành, trừ các Điều 12, 13, 13a, 14 và Điều 14a có hiệu lực đến hết ngày 30 tháng 9 năm 2024."
+  reviewed: "2026-11-15"
+- key: vn:vbpl:115470
+  number: "156/2016/NĐ-CP"
+  set: {}
+  eligible: true
+  reason: "68/2024/NĐ-CP replaces only a phrase in khoản 1 Điều 14, so its relation does not justify excluding the whole decree."
+  evidence:
+    key: vn:vbpl:168208
+    anchor: "dieu-40/khoan-2"
+    quote: "Thay thế cụm từ “chứng thư số được cung cấp bởi tổ chức cung cấp dịch vụ chứng thực chữ ký số chuyên dùng phục vụ các cơ quan thuộc hệ thống chính trị” bằng cụm từ “chứng thư chữ ký số được cung cấp bởi Tổ chức cung cấp dịch vụ chứng thực chữ ký số chuyên dùng công vụ” tại khoản 1 Điều 14 Nghị định số 156/2016/NĐ-CP ngày 21 tháng 11 năm 2016 của Chính phủ sửa đổi, bổ sung một số điều của Nghị định số 27/2007/NĐ-CP ngày 23 tháng 02 năm 2007 của Chính phủ về giao dịch điện tử trong hoạt động tài chính."
+  reviewed: "2026-11-15"
+- key: vn:vbpl:134267
+  number: "130/2018/NĐ-CP"
+  set: {"status_class": "expired"}
+  reason: "23/2025/NĐ-CP ends the whole decree; Điều 47 preserves transitional arrangements rather than the whole decree in force."
+  evidence:
+    key: vn:vbpl:175484
+    anchor: "dieu-46/khoan-2"
+    quote: "Nghị định số 130/2018/NĐ-CP ngày 27 tháng 9 năm 2018 của Chính phủ quy định chi tiết thi hành Luật Giao dịch điện tử về chữ ký số và dịch vụ chứng thực chữ ký số và Nghị định số 48/2024/NĐ-CP ngày 09 tháng 5 năm 2024 của Chính phủ sửa đổi, bổ sung một số điều của Nghị định số 130/2018/NĐ-CP ngày 27 tháng 9 năm 2018 của Chính phủ quy định chi tiết thi hành Luật Giao dịch điện tử về chữ ký số và dịch vụ chứng thực chữ ký số hết hiệu lực kể từ ngày Nghị định này có hiệu lực thi hành, trừ trường hợp quy định tại Điều 47 của Nghị định này."
+  reviewed: "2026-11-15"
+- key: vn:vbpl:46790
+  number: "69/2014/QH13"
+  set: {"status_class": "expired"}
+  reason: "68/2025/QH15 ends the whole law; Điều 59 preserves earlier arrangements and reporting for earlier financial years."
+  evidence:
+    key: vn:vbpl:179942
+    anchor: "dieu-58/khoan-3"
+    quote: "Luật Quản lý, sử dụng vốn nhà nước đầu tư vào sản xuất, kinh doanh tại doanh nghiệp số 69/2014/QH13 đã được sửa đổi, bổ sung một số điều theo Luật số 35/2018/QH14 (sau đây gọi là Luật số 69/2014/QH13) hết hiệu lực kể từ ngày Luật này có hiệu lực thi hành, trừ các trường hợp quy định tại Điều 59 của Luật này."
+  reviewed: "2026-11-15"
+- key: vn:vbpl:141954
+  number: "47/2020/NĐ-CP"
+  set: {"status_class": "expired"}
+  reason: "278/2025/NĐ-CP expressly ends the whole decree; no numeric signing date is supplied in its commencement provision."
+  evidence:
+    key: vn:vbpl:183655
+    anchor: "dieu-23/khoan-2"
+    quote: "Nghị định số 47/2020/NĐ-CP ngày 09 tháng 4 năm 2020 của Chính phủ về quản lý, kết nối và chia sẻ dữ liệu số của cơ quan nhà nước hết hiệu lực thi hành kể từ ngày Nghị định này có hiệu lực thi hành."
+  reviewed: "2026-11-15"
+- key: vn:vbpl:95908
+  number: "86/2015/QH13"
+  set: {"status_class": "expired"}
+  reason: "116/2025/QH15 ends the whole law; Điều 45 preserves existing system classifications, licences and products."
+  evidence:
+    key: vn:vbpl:187039
+    anchor: "dieu-44/khoan-2"
+    quote: "Luật An toàn thông tin mạng số 86/2015/QH13 đã được sửa đổi, bổ sung một số điều theo Luật số 35/2018/QH14; Luật An ninh mạng số 24/2018/QH14 hết hiệu lực kể từ ngày Luật này có hiệu lực thi hành."
+  reviewed: "2026-11-15"
+- key: vn:vbpl:175587
+  number: "55/2025/NĐ-CP"
+  set: {"eff_to": "2026-07-01"}
+  reason: "225/2026/NĐ-CP replaces the whole decree from 2026-07-01; Điều 4 temporarily preserves duties of existing units."
+  evidence:
+    key: vn:vbpl:6443a570-b0da-11f1-9cab-2bd0c44f9032
+    anchor: "dieu-5"
+    quote: "Nghị định này có hiệu lực thi hành từ ngày 01 tháng 7 năm 2026 và thay thế Nghị định số 55/2025/NĐ-CP ngày 02 tháng 3 năm 2025 của Chính phủ quy định chức năng, nhiệm vụ, quyền hạn và cơ cấu tổ chức của Bộ Khoa học và Công nghệ."
+  reviewed: "2026-11-15"
+- key: vn:vbpl:136036
+  number: "38/2019/QH14"
+  set: {"eff_from": "2020-07-01"}
+  reason: "Điều 151 khoản 1 states 2020-07-01, not the source date 2019-07-01."
+  evidence:
+    anchor: "dieu-151/khoan-1"
+    quote: "Luật này có hiệu lực thi hành từ ngày 01 tháng 7 năm 2020, trừ trường hợp quy định tại khoản 2 Điều này."
+  reviewed: "2026-11-15"
