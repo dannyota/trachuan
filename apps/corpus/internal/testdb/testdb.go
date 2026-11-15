@@ -1,31 +1,25 @@
 //go:build integration
 
-// Package testdb creates isolated PostgreSQL databases for integration tests.
 package testdb
 
 import (
 	"context"
 	"crypto/rand"
-	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"io/fs"
 	"net/url"
 	"os"
 	"testing"
 
 	"danny.vn/trachuan/apps/corpus/internal/migrate"
-	"danny.vn/trachuan/apps/corpus/migrations"
 	"danny.vn/trachuan/internal/pgdrop"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
-// New creates an isolated database cloned from the migrated template.
 func New(t *testing.T) string { return create(t, true) }
 
-// NewEmpty creates an isolated database without migrations.
 func NewEmpty(t *testing.T) string { return create(t, false) }
 
 func create(t *testing.T, migrated bool) string {
@@ -72,19 +66,10 @@ func create(t *testing.T, migrated bool) string {
 }
 
 func ensureTemplate(ctx context.Context, t *testing.T, admin *pgx.Conn, adminURL *url.URL) (string, error) {
-	files, err := fs.Glob(migrations.FS, "*.sql")
+	name, err := migrationTemplateName()
 	if err != nil {
-		return "", fmt.Errorf("list migrations: %w", err)
+		return "", err
 	}
-	hash := sha256.New()
-	for _, name := range files {
-		data, readErr := migrations.FS.ReadFile(name)
-		if readErr != nil {
-			return "", fmt.Errorf("read migration: %w", readErr)
-		}
-		_, _ = hash.Write(data)
-	}
-	name := "corpus_tpl_" + hex.EncodeToString(hash.Sum(nil))[:12]
 	ready, err := templateReady(ctx, admin, name)
 	if err != nil {
 		return "", err
