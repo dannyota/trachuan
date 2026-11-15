@@ -5,21 +5,20 @@ import (
 	"strings"
 
 	"danny.vn/trachuan/internal/retrieval"
+	"golang.org/x/text/unicode/norm"
 )
 
-// IdentityDocument records identities verified from one document's artifacts.
 type IdentityDocument struct {
-	Number         string
-	Anchors, Nodes map[string]bool
+	Number  string
+	Anchors map[string]bool
+	Texts   map[string]string
 }
 
-// IdentityInventory holds source document identities for one run.
 type IdentityInventory struct {
 	Documents    map[string]IdentityDocument
 	Replacements map[string]string
 }
 
-// MappingIssue identifies a defect in one citation's mapping.
 type MappingIssue struct {
 	CitationIndex int    `json:"citation_index"`
 	Kind          string `json:"kind"`
@@ -27,12 +26,10 @@ type MappingIssue struct {
 	Detail        string `json:"detail"`
 }
 
-// ValidationReport groups mapping defects by case.
 type ValidationReport map[string][]MappingIssue
 
-// Validate checks mappings against the document-qualified inventory.
 func (m IdentityMap) Validate(cases []Case, legacy string, inventory IdentityInventory) (ValidationReport, error) {
-	if (m.Version != 1 && m.Version != 2) || legacy == "" || m.LegacySHA256 != legacy {
+	if (m.Version != 1 && m.Version != 2 && m.Version != 3) || legacy == "" || m.LegacySHA256 != legacy {
 		return nil, fmt.Errorf("invalid mapping version or legacy hash")
 	}
 	report := ValidationReport{}
@@ -65,6 +62,9 @@ func (m IdentityMap) Validate(cases []Case, legacy string, inventory IdentityInv
 				continue
 			}
 			e := found[0]
+			if m.Version < 3 {
+				issue("evidence", "map version requires conversion")
+			}
 			if e.ExpectedNumber != expected.DocNumber {
 				issue("expected_number", "changed expectation")
 			}
@@ -113,24 +113,33 @@ func (m IdentityMap) Validate(cases []Case, legacy string, inventory IdentityInv
 				}
 				return doc
 			}
-			needsNode := false
+			needsAnchor := false
 			for _, alt := range e.Alternatives {
 				if alt.Kind == "provision" {
-					needsNode = true
+					needsAnchor = true
 				}
 			}
+			hasAnchor := false
 			for n, evidence := range e.Evidence {
 				p := fmt.Sprintf("evidence[%d].document", n)
 				doc := checkDoc(p, evidence.DocumentKey, evidence.DocumentNumber)
-				if (needsNode && evidence.NodeID == "") || (evidence.NodeID != "" && !doc.Nodes[evidence.NodeID]) {
-					issue(fmt.Sprintf("evidence[%d].node_id", n), "missing document-qualified node")
+				if evidence.Anchor != nil {
+					hasAnchor = true
+					if !doc.Anchors[*evidence.Anchor] {
+						issue(fmt.Sprintf("evidence[%d].anchor", n), "missing provision anchor")
+					} else if quote := normalizeEvidence(evidence.QuotedSpan); quote != "" && !strings.Contains(normalizeEvidence(doc.Texts[*evidence.Anchor]), quote) {
+						issue(fmt.Sprintf("evidence[%d].quoted_span", n), "quote not found")
+					}
 				}
 				if evidence.FetchSHA256 == "" {
 					issue(fmt.Sprintf("evidence[%d].fetch_sha256", n), "missing review evidence")
 				}
-				if evidence.QuotedSpan == "" {
+				if normalizeEvidence(evidence.QuotedSpan) == "" {
 					issue(fmt.Sprintf("evidence[%d].quoted_span", n), "missing review evidence")
 				}
+			}
+			if needsAnchor && !hasAnchor {
+				issue("evidence", "missing anchored evidence")
 			}
 			for n, alt := range e.Alternatives {
 				p := fmt.Sprintf("alternatives[%d]", n)
@@ -174,4 +183,8 @@ func (m IdentityMap) Validate(cases []Case, legacy string, inventory IdentityInv
 		}
 	}
 	return report, nil
+}
+
+func normalizeEvidence(s string) string {
+	return strings.Join(strings.Fields(norm.NFC.String(s)), " ")
 }

@@ -1,4 +1,3 @@
-// Package eval adapts the evaluation harness to the pipeline.
 package eval
 
 import (
@@ -21,7 +20,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// Config supplies the build and evaluation dependencies.
 type Config struct {
 	Build    build.Config
 	Suite    evaluation.Suite
@@ -29,7 +27,6 @@ type Config struct {
 	Previous string
 }
 
-// Stage evaluates one built release.
 type Stage struct {
 	cfg      Config
 	lookup   func(context.Context, stage.Env, stage.Run) (artifact.Result, error)
@@ -37,13 +34,10 @@ type Stage struct {
 	evaluate func(context.Context, stage.Env, stage.Run, build.Database, artifact.Result, evaluation.Options) (evaluation.Report, evaluation.Cache, error)
 }
 
-// New constructs an evaluation stage.
 func New(cfg Config) *Stage { return &Stage{cfg: cfg} }
 
-// Name returns the stage name.
 func (*Stage) Name() string { return "eval" }
 
-// Recipe identifies the scoring and cache policies.
 func (s *Stage) Recipe(stage.Snapshot) string {
 	return stage.RecipeHash("eval", evaluation.ScorerVersion, "legacy-matcher/2", "product-matcher/1", "recall,mrr,current-law-precision,abstention,evidence,ann/1", strings.Join(s.cfg.Suite.Rejections, "\x00"), "diacritics_required:Vui lòng nhập câu hỏi tiếng Việt có dấu hoặc số hiệu văn bản.", "cache/1:200:100", "nearest-rank", "gates:0.99;targets:recall20=0.90,mrr8=0.66,recall8=0.90,abstention-balanced=0.85;nonregression:recall20,mrr8,abstention-balanced", "compact/1", "corpus-text-counts/1", "filter-gate/1")
 }
@@ -75,7 +69,6 @@ func (s *Stage) inputHash(art artifact.Result, run stage.Run) (string, error) {
 	return stage.RecipeHash("eval-input", "2", art.SHA256, h.Legacy, h.OldProduct, h.IdentityMap, h.ValidityCases, h.Development, previous, d.Format("2006-01-02"), "exact,ann"), nil
 }
 
-// Plan resolves the build and selects its single evaluation item.
 func (s *Stage) Plan(ctx context.Context, env stage.Env, run stage.Run) ([]stage.Item, error) {
 	art, err := s.lookupBuild(ctx, env, run)
 	if err != nil {
@@ -88,7 +81,6 @@ func (s *Stage) Plan(ctx context.Context, env stage.Env, run stage.Run) ([]stage
 	return []stage.Item{{Key: run.Country + "/" + run.Rel, InputHash: hash}}, nil
 }
 
-// Evaluate resolves the build and runs a diagnostic evaluation.
 func (s *Stage) Evaluate(ctx context.Context, env stage.Env, run stage.Run, opts evaluation.Options) (evaluation.Report, evaluation.Cache, error) {
 	db, art, err := s.ensureBuild(ctx, env, run)
 	if err != nil {
@@ -133,14 +125,14 @@ func (s *Stage) evaluateBuild(ctx context.Context, env stage.Env, run stage.Run,
 	if err != nil {
 		return evaluation.Report{}, evaluation.Cache{}, fmt.Errorf("load evaluation inventory: %w", err)
 	}
-	identities, err := build.IdentityInventory(inv, env.Artifacts)
-	if err != nil {
-		return evaluation.Report{}, evaluation.Cache{}, fmt.Errorf("verify evaluation inventory: %w", err)
-	}
 	suite := s.cfg.Suite
 	suite.Map, err = suite.PinnedMap()
 	if err != nil {
 		return evaluation.Report{}, evaluation.Cache{}, fmt.Errorf("verify identity map: %w", err)
+	}
+	identities, err := build.IdentityInventory(inv, env.Artifacts, suite.Map.EvidenceAnchors())
+	if err != nil {
+		return evaluation.Report{}, evaluation.Cache{}, fmt.Errorf("verify evaluation inventory: %w", err)
 	}
 	suite.ValidityCases, err = suite.PinnedValidityCases()
 	if err != nil {
@@ -196,7 +188,6 @@ func (s *Stage) evaluateBuild(ctx context.Context, env stage.Env, run stage.Run,
 	return report, cache, nil
 }
 
-// Process publishes the report and caches for one evaluation.
 func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item stage.Item) (stage.Output, error) {
 	ctx, cancel := context.WithTimeout(ctx, 50*time.Minute)
 	defer cancel()
@@ -226,12 +217,10 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 	return stage.Output{Artifact: &result, State: "done"}, nil
 }
 
-// Rows provides no workshop projections.
 func (*Stage) Rows(context.Context, stage.Env, artifact.Result) (func(context.Context, pgx.Tx, int64) error, error) {
 	return nil, nil
 }
 
-// Resolve validates the report and restores its run-specific gaps.
 func (s *Stage) Resolve(_ context.Context, env stage.Env, run stage.Run, item stage.Item, art artifact.Result) (stage.Resolution, error) {
 	if item.Key != run.Country+"/"+run.Rel || item.InputHash != art.InputHash {
 		return stage.Resolution{}, fmt.Errorf("evaluation item identity mismatch")

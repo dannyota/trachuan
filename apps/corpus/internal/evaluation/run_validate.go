@@ -21,7 +21,7 @@ func validateSuite(s Suite) error {
 	if _, err = LoadLegacy(bytes.NewReader(b)); err != nil {
 		return fmt.Errorf("validate suite: %w", err)
 	}
-	if (s.Map.Version != 1 && s.Map.Version != 2) || s.Map.LegacySHA256 != s.Hashes.Legacy {
+	if (s.Map.Version != 1 && s.Map.Version != 2 && s.Map.Version != 3) || s.Map.LegacySHA256 != s.Hashes.Legacy {
 		return fmt.Errorf("invalid map version or legacy hash")
 	}
 	ids := map[string]bool{}

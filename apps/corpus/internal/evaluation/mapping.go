@@ -6,17 +6,15 @@ import (
 	"io"
 )
 
-// Evidence records the source used to adjudicate an expectation.
 type Evidence struct {
-	DocumentKey    string `json:"document_key"`
-	DocumentNumber string `json:"document_number"`
-	SourceURL      string `json:"source_url"`
-	FetchSHA256    string `json:"fetch_sha256"`
-	NodeID         string `json:"node_id"`
-	QuotedSpan     string `json:"quoted_span"`
+	DocumentKey    string  `json:"document_key"`
+	DocumentNumber string  `json:"document_number"`
+	SourceURL      string  `json:"source_url"`
+	FetchSHA256    string  `json:"fetch_sha256"`
+	Anchor         *string `json:"anchor"`
+	QuotedSpan     string  `json:"quoted_span"`
 }
 
-// Alternative is an adjudicated identity or relation.
 type Alternative struct {
 	Country        string  `json:"country"`
 	DocumentKey    string  `json:"document_key"`
@@ -31,7 +29,6 @@ type Alternative struct {
 	EvidenceSHA256 string  `json:"evidence_sha256,omitempty"`
 }
 
-// MapEntry adjudicates one original citation.
 type MapEntry struct {
 	CaseID         string        `json:"case_id"`
 	CitationIndex  int           `json:"citation_index"`
@@ -43,7 +40,6 @@ type MapEntry struct {
 	Alternatives   []Alternative `json:"alternatives"`
 }
 
-// IdentityMap binds adjudications to the fixture and inventory.
 type IdentityMap struct {
 	Version               int        `json:"version"`
 	LegacySHA256          string     `json:"legacy_sha256"`
@@ -51,7 +47,6 @@ type IdentityMap struct {
 	Entries               []MapEntry `json:"entries"`
 }
 
-// LoadIdentityMap decodes an identity map.
 func LoadIdentityMap(r io.Reader) (IdentityMap, error) {
 	var m IdentityMap
 	d := json.NewDecoder(r)
@@ -76,4 +71,20 @@ func sameAlternative(a, b Alternative) bool {
 		return false
 	}
 	return (aa == nil && bb == nil) || (aa != nil && bb != nil && *aa == *bb)
+}
+
+func (m IdentityMap) EvidenceAnchors() map[string]map[string]bool {
+	anchors := map[string]map[string]bool{}
+	for _, entry := range m.Entries {
+		for _, evidence := range entry.Evidence {
+			if evidence.Anchor == nil {
+				continue
+			}
+			if anchors[evidence.DocumentKey] == nil {
+				anchors[evidence.DocumentKey] = map[string]bool{}
+			}
+			anchors[evidence.DocumentKey][*evidence.Anchor] = true
+		}
+	}
+	return anchors
 }

@@ -12,7 +12,7 @@ import (
 
 func TestBuild_DevelopmentMappingsValidated(t *testing.T) {
 	suite := evaluation.Suite{Legacy: []evaluation.Case{{ID: "old", ExpectedCitations: []evaluation.Expectation{{DocNumber: "1/2026/TT"}}}}, Development: []evaluation.Case{{ID: "development", ExpectedCitations: []evaluation.Expectation{{DocNumber: "2/2026/TT"}}}}, Hashes: evaluation.FixtureHashes{Legacy: "legacy"}}
-	mapping := evaluation.IdentityMap{Version: 2, LegacySHA256: "legacy"}
+	mapping := evaluation.IdentityMap{Version: 3, LegacySHA256: "legacy"}
 	for _, c := range append(append([]evaluation.Case{}, suite.Legacy...), suite.Development...) {
 		number := c.ExpectedCitations[0].DocNumber
 		mapping.Entries = append(mapping.Entries, evaluation.MapEntry{CaseID: c.ID, State: "resolved", ExpectedNumber: number, Reason: "reviewed", ReviewedAt: "2026-11-11", Evidence: []evaluation.Evidence{{DocumentKey: c.ID, DocumentNumber: number, FetchSHA256: "hash", QuotedSpan: "reviewed"}}, Alternatives: []evaluation.Alternative{{Country: "vn", DocumentKey: c.ID, DocumentNumber: number, Kind: "document"}}})

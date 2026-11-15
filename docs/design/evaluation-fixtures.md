@@ -22,19 +22,24 @@ Missing booleans mean false. `expect_fail` never removes a case from scoring.
 Validate IDs, explicit expectations and contradictory abstention labels before
 any model call.
 
-`identity-map.json` is `{version:2,legacy_sha256,entries:[...]}`. Each entry
+`identity-map.json` is `{version:3,legacy_sha256,entries:[...]}`. Each entry
 contains `case_id`, zero-based `citation_index`, `state` (`resolved` or
 `absent`), `expected_number`, `reason`, `reviewed_at`,
-`evidence:[{source_url,fetch_sha256,document_key,document_number,node_id,quoted_span}]`,
+`evidence:[{source_url,fetch_sha256,document_key,document_number,anchor,quoted_span}]`,
 and `alternatives`. Each alternative is
 `{country,document_key,document_number,anchor:null|string,kind}`; kind is
 `document`, `provision`, or `relation`. A relation additionally requires
 `source_key,source_number,target_key,target_number,relation_kind,evidence_sha256`.
 Every number field tied to a document key is required and stores its normalized
-number under [build normalization](normalization.md). Evidence nodes are
-identified by `(document_key,node_id)`, never node id alone. Document and
-document-level relation anchors are null; provision anchors are exact. Use
-official legal text and stored evidence, never retrieval rank, to adjudicate.
+number under [build normalization](normalization.md). Evidence is identified by
+`(document_key,anchor,quoted_span)`, never by a node id: node ids of
+transcription and OCR text hash their text, so a text change would orphan them.
+`anchor` is null for document-level evidence and otherwise an exact provision
+anchor of that document. With an anchor, `quoted_span` is verbatim text of that
+provision; with a null anchor it is the reviewed title line, held as review
+evidence and covered by the number check. Document and document-level relation
+anchors are null; provision anchors are exact. Use official legal text and
+stored evidence, never retrieval rank, to adjudicate.
 
 There is one mapping entry per original expectation, including absent documents.
 Resolved entries need at least one unique adjudicated identity; absent entries
@@ -50,23 +55,30 @@ key or provision anchor from a label.
 
 Validate every recorded identity against the run's present documents: document
 key and normalized number, provision anchor, both relation endpoints and their
-numbers, and each document-qualified evidence node. Missing records or
-missing/changed identities yield `mapping_incomplete` for that case, with
+numbers, and each evidence record: its `quoted_span` is not empty, and a
+non-null anchor names a provision of that document whose own text contains
+`quoted_span` after NFC and white-space collapse on both sides. Missing records
+or missing/changed identities yield `mapping_incomplete` for that case, with
 citation index and a detail naming the field, such as
 `alternatives[0].source_number` or `evidence[0].document_key`. This includes
-version 1 maps lacking these records until re-adjudication; missing records are
-case defects, not malformed-file errors. Block that case's credit and score the
-others. Keep cases and citation denominators; affected metrics are unavailable,
-so quality gates cannot pass. A refetch preserving mapped identities stays valid
-despite changed artifact hashes. Fetch hashes record review evidence, not
-freshness. Relation credit still requires the edge and evidence hash below.
+version 1 and 2 maps lacking these records until re-adjudication or conversion;
+missing records are case defects, not malformed-file errors. Block that case's
+credit and score the others. Keep cases and citation denominators; affected
+metrics are unavailable, so quality gates cannot pass. A refetch preserving
+mapped identities stays valid despite changed artifact hashes. Fetch hashes
+record review evidence, not freshness. Relation credit still requires the edge
+and evidence hash below.
 
 For a new run, use `corpus inventory <cc> <rel> --out FILE` after relate. It
 exports the inventory, not a rewritten map. The adjudicator reviews verified
 artifacts and official text, then edits `identity-map.json`; the primary reviews
 the evidence before accepting those bytes. Reuse an unchanged valid map. No
 build/eval command rewrites or automatically re-adjudicates it. Re-adjudicate
-version 1 maps into version 2, removing `identity_inventory_hash` and supplying
-every required identity record above. Map bytes are pinned by the
-[build input hash](index.md#build-stage) and eval input hash, not a recipe;
-editing the map requires new build/eval input, not changed frozen recipes.
+version 1 maps into version 3, removing `identity_inventory_hash` and supplying
+every required identity record above. A version 2 map converts to version 3 by
+replacing each evidence `node_id` with that node's anchor in the release the map
+was adjudicated on (null when it had none); a converted record whose quote is
+not found under the rule above stays `mapping_incomplete` until re-adjudicated.
+Map bytes are pinned by the [build input hash](index.md#build-stage) and eval
+input hash, not a recipe; editing the map requires new build/eval input, not
+changed frozen recipes.

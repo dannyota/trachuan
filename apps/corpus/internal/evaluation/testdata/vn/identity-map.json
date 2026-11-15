@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "legacy_sha256": "881d09074ed5160e1e3ef97cd9220eb53ee16ccbbd7d7b0d39fb9483bbcb3aae",
   "entries": [
     {
@@ -15,7 +15,7 @@
           "document_number": "50/2024/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "bf2187f9115ec99f3ad697c76ac70f135d81f1f2ff2a6ebc2880f974efa7c8fe",
-          "node_id": "95516e00-eab4-11f0-9ae0-85d6d1e120d2",
+          "anchor": "dieu-3",
           "quoted_span": "Điều 3. Nguyên tắc chung về bảo đảm an toàn, bảo mật hệ thống thông tin cho việc cung cấp dịch vụ Online Banking\n1. Hệ thống Online Banking phải tuân thủ quy định về bảo đảm an toàn hệ thống thông tin"
         }
       ],
@@ -42,7 +42,7 @@
           "document_number": "09/2020/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "c73bc7a0715a0bd8a6c0ee7d2b0c5ba00d5302ab0e1f0258c6ee11c0b4753715",
-          "node_id": "044bb83c-df3f-11f0-b20c-75527e48f141",
+          "anchor": "dieu-5",
           "quoted_span": "Điều 5. Phân loại hệ thống thông tin\n1. Đối với hệ thống thông tin cung cấp dịch vụ trực tuyến cho khách hàng, các tổ chức thực hiện phân loại theo quy định tại Nghị định số 85/2016/NĐ-CP ngày 01/7/20"
         }
       ],
@@ -69,7 +69,7 @@
           "document_number": "17/2024/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "8516e84652cae181e2eac543e6a8fd0808a73b1b5056d5c7e2f56e725b9494ad",
-          "node_id": "7d9ec820-2d44-11f1-9488-e32218e280a5",
+          "anchor": "dieu-16",
           "quoted_span": "Điều 16. Mở tài khoản thanh toán bằng phương tiện điện tử"
         }
       ],
@@ -96,7 +96,7 @@
           "document_number": "25/2025/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "214db0f22c6860360e8ff808fb29d79ca420f62ed5a3e3f37f95135bc83adc99",
-          "node_id": "bae61d60-df3c-11f0-9a93-0bfbcc75d984",
+          "anchor": "dieu-7/khoan-2",
           "quoted_span": "2. Sửa đổi, bổ sung khoản 3 Điều 16 như sau:\n\"3. Việc mở tài khoản thanh toán bằng phương tiện điện tử không áp dụng đối với các trường hợp sau:\na) Tài khoản thanh toán chung;\nb) Khách hàng cá nhân th"
         }
       ],
@@ -123,7 +123,7 @@
           "document_number": "64/2024/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "b8c1117806b378a4e9cbfeef70dd4dafce877df3fd6399ffc69473ce1ad0d359",
-          "node_id": "79d85870-2ccf-11f1-bd1e-cf673d3953c2",
+          "anchor": "dieu-7",
           "quoted_span": "Điều 7.  Danh mục tiêu chuẩn kỹ thuật\n1.  Các tiêu chuẩn kỹ thuật triển khai Open API gồm tiêu chuẩn kiến trúc, tiêu chuẩn dữ liệu và tiêu chuẩn an toàn thông tin.\n2.  Tiêu chuẩn kỹ thuật triển khai O"
         }
       ],
@@ -150,7 +150,7 @@
           "document_number": "52/2024/ND-CP",
           "source_url": "",
           "fetch_sha256": "fb18e69a937912e4eb0de8eccdd0fe9455497c6df251098b575450228697fa35",
-          "node_id": "ac03c722-df58-11f0-ac1a-fbc48b602dad",
+          "anchor": "dieu-22/khoan-2",
           "quoted_span": "2. Điều kiện cung ứng dịch vụ trung gian thanh toán:\nTổ chức không phải là ngân hàng, chi nhánh ngân hàng nước ngoài được Ngân hàng Nhà nước cấp Giấy phép hoạt động cung ứng dịch vụ trung gian thanh t"
         }
       ],
@@ -177,7 +177,7 @@
           "document_number": "91/2025/QH15",
           "source_url": "",
           "fetch_sha256": "60cd5851a56a5fe04877683d80bf9b5bb1b19c891dc0e9d70977879fab10a837",
-          "node_id": "ca11a2ba-22e3-11f1-b653-99408dcb6cb2",
+          "anchor": "dieu-3",
           "quoted_span": "Điều 3. Nguyên tắc bảo vệ dữ liệu cá nhân\n1. Tuân thủ quy định của Hiến pháp, quy định của Luật này và quy định khác của pháp luật có liên quan.\n2. Chỉ được thu thập, xử lý dữ liệu cá nhân đúng phạm v"
         }
       ],
@@ -204,7 +204,7 @@
           "document_number": "50/2024/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "bf2187f9115ec99f3ad697c76ac70f135d81f1f2ff2a6ebc2880f974efa7c8fe",
-          "node_id": "956bfae0-eab4-11f0-a8bc-016ed79cdfd2",
+          "anchor": "dieu-11/khoan-2",
           "quoted_span": "2. Hình thức xác nhận bằng mã PIN (Personal Identification Number) là hình thức xác nhận bằng mã khóa bí mật trong đó mã khóa bí mật được tạo từ một chuỗi các chữ số. Hình thức xác nhận bằng mã PIN (t"
         }
       ],
@@ -231,7 +231,7 @@
           "document_number": "50/2024/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "bf2187f9115ec99f3ad697c76ac70f135d81f1f2ff2a6ebc2880f974efa7c8fe",
-          "node_id": "956b3790-eab4-11f0-8bac-b733f87724f0",
+          "anchor": "dieu-11/khoan-1",
           "quoted_span": "1. Hình thức xác nhận bằng mã khóa bí mật (Password): khách hàng sử dụng mã khóa bí mật là một chuỗi ký tự để xác nhận quyền truy cập của khách hàng vào hệ thống thông tin, ứng dụng, dịch vụ hoặc xác "
         }
       ],
@@ -258,7 +258,7 @@
           "document_number": "09/2020/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "c73bc7a0715a0bd8a6c0ee7d2b0c5ba00d5302ab0e1f0258c6ee11c0b4753715",
-          "node_id": "044bb882-df3f-11f0-bbf7-d1f9be0e9f7e",
+          "anchor": "dieu-5/khoan-4",
           "quoted_span": "4. Hệ thống thông tin cấp độ 3 là hệ thống thông tin có một trong các tiêu chí sau:"
         }
       ],
@@ -285,7 +285,7 @@
           "document_number": "50/2024/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "bf2187f9115ec99f3ad697c76ac70f135d81f1f2ff2a6ebc2880f974efa7c8fe",
-          "node_id": "95712b00-eab4-11f0-a093-1f70edb4d885",
+          "anchor": "dieu-11/khoan-5",
           "quoted_span": "5. Hình thức xác nhận khớp đúng thông tin sinh trắc học là việc đối chiếu, so sánh để bảo đảm trùng khớp thông tin sinh trắc học của khách hàng đang thực hiện giao dịch với thông tin sinh trắc học của"
         }
       ],
@@ -312,7 +312,7 @@
           "document_number": "50/2024/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "bf2187f9115ec99f3ad697c76ac70f135d81f1f2ff2a6ebc2880f974efa7c8fe",
-          "node_id": "95685160-eab4-11f0-9c4d-f9d87e61e3c5",
+          "anchor": "dieu-10",
           "quoted_span": "Điều 10. Xác nhận giao dịch\n1. Đối với giao dịch thanh toán trực tuyến:\na) Đối với giao dịch thanh toán sử dụng tài khoản thanh toán hoặc ví điện tử hoặc giao dịch chuyển tiền từ thẻ ghi nợ, thẻ trả t"
         }
       ],
@@ -339,7 +339,7 @@
           "document_number": "116/2025/QH15",
           "source_url": "",
           "fetch_sha256": "b263e0973fde00aa912601daf16fa6960577d037b1c4821e576d45105689b35f",
-          "node_id": "97352db0-3177-11f1-9c8f-bf2ddf685e18",
+          "anchor": "dieu-7",
           "quoted_span": "Điều 7. Các hành vi bị nghiêm cấm về an ninh mạng"
         }
       ],
@@ -366,7 +366,7 @@
           "document_number": "116/2025/QH15",
           "source_url": "",
           "fetch_sha256": "b263e0973fde00aa912601daf16fa6960577d037b1c4821e576d45105689b35f",
-          "node_id": "972fd680-3177-11f1-a2e0-4944b0b5fd21",
+          "anchor": "dieu-5",
           "quoted_span": "Điều 5. Biện pháp bảo vệ an ninh mạng"
         }
       ],
@@ -393,7 +393,7 @@
           "document_number": "23/2025/ND-CP",
           "source_url": "",
           "fetch_sha256": "4db0b7fde620d8f02ca1e0d6a4883652f0d5f6247c9968efa29838e3f7114781",
-          "node_id": "d850a310-2d21-11f1-bc1b-ebdc69dcb7f8",
+          "anchor": "dieu-7",
           "quoted_span": "Điều 7. Thời hạn có hiệu lực của chứng thư chữ ký điện tử, chứng thư chữ ký số"
         }
       ],
@@ -420,7 +420,7 @@
           "document_number": "23/2025/ND-CP",
           "source_url": "",
           "fetch_sha256": "4db0b7fde620d8f02ca1e0d6a4883652f0d5f6247c9968efa29838e3f7114781",
-          "node_id": "d84c3640-2d21-11f1-822f-a3fb72fd155f",
+          "anchor": "dieu-6",
           "quoted_span": "Điều 6. Nội dung của chứng thư chữ ký số"
         }
       ],
@@ -447,7 +447,7 @@
           "document_number": "40/2024/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "09fa3a2c47add04e66b1e89089d4eae88c89cac93f630619d911e3044a7835dc",
-          "node_id": "8795b7ce-2c83-11f1-bb8f-33c4547396c2",
+          "anchor": "dieu-6",
           "quoted_span": "Điều 6. Phạm vi sử dụng dịch vụ trung gian thanh toán\nDịch vụ trung gian thanh toán (trừ dịch vụ chuyển mạch tài chính) được sử dụng cho các giao dịch thanh toán hàng hóa, dịch vụ hợp pháp theo quy đị"
         },
         {
@@ -455,7 +455,7 @@
           "document_number": "76/VBHN-NHNN",
           "source_url": "",
           "fetch_sha256": "a28981bf804167f88c72fd46fd39e085f456a9b81ad8c1e7725d1185ff9ef1a2",
-          "node_id": "9fc3fa50-4405-4efe-a3c4-26bc14ab39c9",
+          "anchor": "dieu-6",
           "quoted_span": "Điều 6. Phạm vi sử dụng dịch vụ trung gian thanh toán\nDịch vụ trung gian thanh toán (trừ dịch vụ chuyển mạch tài chính) được sử dụng cho các giao dịch thanh toán hàng hóa, dịch vụ hợp pháp theo quy đị"
         }
       ],
@@ -489,7 +489,7 @@
           "document_number": "130/2018/ND-CP",
           "source_url": "",
           "fetch_sha256": "3d9ee443186bb55f7756577f32c04b535fa4e594cea5d239a775c758b9c8eb5e",
-          "node_id": "2f1307b0-2525-11f1-8cf0-e59c6d9760b6",
+          "anchor": "dieu-7",
           "quoted_span": "Điều 7. Sử dụng chữ ký số và chứng thư số của cơ quan, tổ chức và người có thẩm quyền của cơ quan, tổ chức"
         }
       ],
@@ -516,7 +516,7 @@
           "document_number": "09/2020/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "c73bc7a0715a0bd8a6c0ee7d2b0c5ba00d5302ab0e1f0258c6ee11c0b4753715",
-          "node_id": "044c083c-df3f-11f0-8ddf-032bc273fc22",
+          "anchor": "dieu-33",
           "quoted_span": "Điều 33. Các yêu cầu khi sử dụng dịch vụ của bên thứ ba\nTrước khi sử dụng dịch vụ của bên thứ ba triển khai cho các hệ thống thông tin từ cấp độ 3 trở lên và các hệ thống thông tin có xử lý thông tin "
         }
       ],
@@ -543,7 +543,7 @@
           "document_number": "50/2024/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "bf2187f9115ec99f3ad697c76ac70f135d81f1f2ff2a6ebc2880f974efa7c8fe",
-          "node_id": "",
+          "anchor": null,
           "quoted_span": "Thông tư số 50/2024/TT-NHNN Quy định về an toàn, bảo mật cho việc cung cấp dịch vụ trực tuyến trong ngành Ngân hàng"
         }
       ],
@@ -570,7 +570,7 @@
           "document_number": "09/2020/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "c73bc7a0715a0bd8a6c0ee7d2b0c5ba00d5302ab0e1f0258c6ee11c0b4753715",
-          "node_id": "",
+          "anchor": null,
           "quoted_span": "Thông tư số 09/2020/TT-NHNN Quy định về an toàn hệ thống thông tin trong hoạt động ngân hàng"
         }
       ],
@@ -597,7 +597,7 @@
           "document_number": "09/2020/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "c73bc7a0715a0bd8a6c0ee7d2b0c5ba00d5302ab0e1f0258c6ee11c0b4753715",
-          "node_id": "044c083c-df3f-11f0-8ddf-032bc273fc22",
+          "anchor": "dieu-33",
           "quoted_span": "Điều 33. Các yêu cầu khi sử dụng dịch vụ của bên thứ ba\nTrước khi sử dụng dịch vụ của bên thứ ba triển khai cho các hệ thống thông tin từ cấp độ 3 trở lên và các hệ thống thông tin có xử lý thông tin "
         }
       ],
@@ -624,7 +624,7 @@
           "document_number": "71/2025/QH15",
           "source_url": "",
           "fetch_sha256": "eceb97f8acc13551e00b4584c300bc21851482e2ca101b7c827416a526e3c81e",
-          "node_id": "3b8d08aa-eb7e-11f0-9478-0907a0aefba1",
+          "anchor": "dieu-47",
           "quoted_span": "Điều 47. Phân loại tài sản số\n1. Tài sản số được phân loại theo một hoặc một số tiêu chí sau:"
         }
       ],
@@ -651,7 +651,7 @@
           "document_number": "94/2025/ND-CP",
           "source_url": "",
           "fetch_sha256": "085dc2f535e74683e0243e99902dd176cce01ed0860ad81e2d0d794a288dd545",
-          "node_id": "",
+          "anchor": null,
           "quoted_span": "Nghị định số 94/2025/NĐ-CP Quy định về Cơ chế thử nghiệm có kiểm soát\ntrong lĩnh vực ngân hàng"
         }
       ],
@@ -678,7 +678,7 @@
           "document_number": "09/2020/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "c73bc7a0715a0bd8a6c0ee7d2b0c5ba00d5302ab0e1f0258c6ee11c0b4753715",
-          "node_id": "044c083c-df3f-11f0-8ddf-032bc273fc22",
+          "anchor": "dieu-33",
           "quoted_span": "Điều 33. Các yêu cầu khi sử dụng dịch vụ của bên thứ ba\nTrước khi sử dụng dịch vụ của bên thứ ba triển khai cho các hệ thống thông tin từ cấp độ 3 trở lên và các hệ thống thông tin có xử lý thông tin "
         }
       ],
@@ -705,7 +705,7 @@
           "document_number": "09/2020/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "c73bc7a0715a0bd8a6c0ee7d2b0c5ba00d5302ab0e1f0258c6ee11c0b4753715",
-          "node_id": "",
+          "anchor": null,
           "quoted_span": "Thông tư số 09/2020/TT-NHNN Quy định về an toàn hệ thống thông tin trong hoạt động ngân hàng"
         }
       ],
@@ -732,7 +732,7 @@
           "document_number": "18/2018/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "b039c7e091b997fa725a03b958ba4a1bcb60651b6368cc64d78c89552e06b47d",
-          "node_id": "",
+          "anchor": null,
           "quoted_span": "Thông tư số 18 /2018/TT-NHNN Quy định về an toàn hệ thống thông tin\ntrong hoạt động ngân hàng"
         }
       ],
@@ -759,7 +759,7 @@
           "document_number": "31/2015/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "5133217c59184ce4c9ae9e4b0fcabef3eb38305b8a63f6b398e6ec91d6b80ac1",
-          "node_id": "",
+          "anchor": null,
           "quoted_span": "Thông tư số 31/2015/TT-NHNN Quy định về đảm bảo an toàn, bảo mật hệ thống công nghệ thông tin trong hoạt động ngân hàng"
         }
       ],
@@ -786,7 +786,7 @@
           "document_number": "09/2020/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "c73bc7a0715a0bd8a6c0ee7d2b0c5ba00d5302ab0e1f0258c6ee11c0b4753715",
-          "node_id": "",
+          "anchor": null,
           "quoted_span": "Thông tư số 09/2020/TT-NHNN Quy định về an toàn hệ thống thông tin trong hoạt động ngân hàng"
         }
       ],
@@ -813,7 +813,7 @@
           "document_number": "91/2025/QH15",
           "source_url": "",
           "fetch_sha256": "60cd5851a56a5fe04877683d80bf9b5bb1b19c891dc0e9d70977879fab10a837",
-          "node_id": "",
+          "anchor": null,
           "quoted_span": "Luật Bảo vệ dữ liệu cá nhân số 91/2025/QH15"
         }
       ],
@@ -840,7 +840,7 @@
           "document_number": "20/2023/QH15",
           "source_url": "",
           "fetch_sha256": "bd9f611978f710ba5a99b3e9114c63b04b485a31ac30b0d765130da68c9ae05b",
-          "node_id": "df366f24-e182-11f0-81d5-bbd853501e38",
+          "anchor": "dieu-1",
           "quoted_span": "Điều 1. Phạm vi điều chỉnh"
         }
       ],
@@ -867,7 +867,7 @@
           "document_number": "20/2023/QH15",
           "source_url": "",
           "fetch_sha256": "bd9f611978f710ba5a99b3e9114c63b04b485a31ac30b0d765130da68c9ae05b",
-          "node_id": "df36710e-e182-11f0-aaf4-f7b25fa14132",
+          "anchor": "dieu-10",
           "quoted_span": "Điều 10. Thông điệp dữ liệu có giá trị như bản gốc\n1. Thông tin trong thông điệp dữ liệu được bảo đảm toàn vẹn kể từ khi được khởi tạo lần đầu tiên dưới dạng một thông điệp dữ liệu hoàn chỉnh. Thông t"
         }
       ],
@@ -894,7 +894,7 @@
           "document_number": "20/2023/QH15",
           "source_url": "",
           "fetch_sha256": "bd9f611978f710ba5a99b3e9114c63b04b485a31ac30b0d765130da68c9ae05b",
-          "node_id": "df36749c-e182-11f0-8b7b-e5142c637590",
+          "anchor": "dieu-23",
           "quoted_span": "Điều 23. Giá trị pháp lý của chữ ký điện tử\n1. Chữ ký điện tử không bị phủ nhận giá trị pháp lý chỉ vì được thể hiện dưới dạng chữ ký điện tử.\n2. Chữ ký điện tử chuyên dùng bảo đảm an toàn hoặc chữ ký"
         }
       ],
@@ -921,7 +921,7 @@
           "document_number": "356/2025/ND-CP",
           "source_url": "",
           "fetch_sha256": "cfd329cbf0f7fa7e0f6cfea620e14744d342c6a93de2432def6d37085b18b53c",
-          "node_id": "6f0655c0-31af-11f1-bb60-91e61639244d",
+          "anchor": "dieu-17",
           "quoted_span": "Điều 17. Chuyển dữ liệu cá nhân xuyên biên giới\n1. Bên kiểm soát dữ liệu cá nhân, bên kiểm soát và xử lý dữ liệu cá nhân, bên xử lý dữ liệu cá nhân và bên thứ ba thực hiện hoạt động chuyển dữ liệu cá "
         }
       ],
@@ -948,7 +948,7 @@
           "document_number": "91/2025/QH15",
           "source_url": "",
           "fetch_sha256": "60cd5851a56a5fe04877683d80bf9b5bb1b19c891dc0e9d70977879fab10a837",
-          "node_id": "ca18f5ba-22e3-11f1-9ada-31e5e2d82af7",
+          "anchor": "dieu-4",
           "quoted_span": "Điều 4. Quyền và nghĩa vụ của chủ thể dữ liệu cá nhân\n1. Quyền của chủ thể dữ liệu cá nhân bao gồm:\na) Được biết về hoạt động xử lý dữ liệu cá nhân;\nb) Đồng ý hoặc không đồng ý, yêu cầu rút lại sự đồn"
         }
       ],
@@ -975,7 +975,7 @@
           "document_number": "91/2025/QH15",
           "source_url": "",
           "fetch_sha256": "60cd5851a56a5fe04877683d80bf9b5bb1b19c891dc0e9d70977879fab10a837",
-          "node_id": "",
+          "anchor": null,
           "quoted_span": "Luật Bảo vệ dữ liệu cá nhân số 91/2025/QH15"
         }
       ],
@@ -1002,7 +1002,7 @@
           "document_number": "116/2025/QH15",
           "source_url": "",
           "fetch_sha256": "b263e0973fde00aa912601daf16fa6960577d037b1c4821e576d45105689b35f",
-          "node_id": "",
+          "anchor": null,
           "quoted_span": "LUẬT AN NINH MẠNG SỐ 116/2025/QH15"
         }
       ],
@@ -1029,7 +1029,7 @@
           "document_number": "116/2025/QH15",
           "source_url": "",
           "fetch_sha256": "b263e0973fde00aa912601daf16fa6960577d037b1c4821e576d45105689b35f",
-          "node_id": "",
+          "anchor": null,
           "quoted_span": "LUẬT AN NINH MẠNG SỐ 116/2025/QH15"
         }
       ],
@@ -1056,7 +1056,7 @@
           "document_number": "52/2024/ND-CP",
           "source_url": "",
           "fetch_sha256": "fb18e69a937912e4eb0de8eccdd0fe9455497c6df251098b575450228697fa35",
-          "node_id": "ac03ed92-df58-11f0-8538-9557e74e5910",
+          "anchor": "dieu-29",
           "quoted_span": "Điều 29. Đảm bảo an toàn, bảo mật trong thanh toán\n1. Tổ chức cung ứng dịch vụ thanh toán, tổ chức cung ứng dịch vụ trung gian thanh toán phải áp dụng các biện pháp đảm bảo an toàn, bảo mật trong than"
         }
       ],
@@ -1083,7 +1083,7 @@
           "document_number": "40/2024/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "09fa3a2c47add04e66b1e89089d4eae88c89cac93f630619d911e3044a7835dc",
-          "node_id": "",
+          "anchor": null,
           "quoted_span": "Thông tư số 40/2024/TT-NHNN Quy định về hoạt động cung ứng dịch vụ trung gian thanh toán"
         }
       ],
@@ -1110,7 +1110,7 @@
           "document_number": "368/2025/ND-CP",
           "source_url": "",
           "fetch_sha256": "e9ea0c5044e648f690e70ca3f28111aa3146c13de5898719260e841fc47113f6",
-          "node_id": "1411aba0-31b5-11f1-87f3-63f8c92aeaa3",
+          "anchor": "dieu-15",
           "quoted_span": "Điều 15. Hạn mức giao dịch tài khoản Tiền di động"
         }
       ],
@@ -1137,7 +1137,7 @@
           "document_number": "09/2020/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "c73bc7a0715a0bd8a6c0ee7d2b0c5ba00d5302ab0e1f0258c6ee11c0b4753715",
-          "node_id": "044c5364-df3f-11f0-8ac9-8fdb6edc338e",
+          "anchor": "dieu-54",
           "quoted_span": "Điều 54. Chế độ báo cáo\nTổ chức có trách nhiệm gửi báo cáo về Ngân hàng Nhà nước (Cục Công nghệ thông tin) các nội dung sau:\n1. Báo cáo sự cố an toàn thông tin (theo Phụ lục 01 kèm theo Thông tư này) "
         }
       ],
@@ -1164,7 +1164,7 @@
           "document_number": "09/2020/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "c73bc7a0715a0bd8a6c0ee7d2b0c5ba00d5302ab0e1f0258c6ee11c0b4753715",
-          "node_id": "044c2c9a-df3f-11f0-857e-d13c21bf092a",
+          "anchor": "dieu-42",
           "quoted_span": "Điều 42. Kiểm tra, đánh giá an toàn thông tin\n1. Nội dung kiểm tra, đánh giá an toàn thông tin tối thiểu phải bao gồm các nội dung sau:\na) Kiểm tra việc tuân thủ quy định của pháp luật về bảo đảm an t"
         }
       ],
@@ -1191,7 +1191,7 @@
           "document_number": "09/2020/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "c73bc7a0715a0bd8a6c0ee7d2b0c5ba00d5302ab0e1f0258c6ee11c0b4753715",
-          "node_id": "044c2f92-df3f-11f0-b887-29e34c3f653b",
+          "anchor": "dieu-50",
           "quoted_span": "Điều 50. Xây dựng hệ thống dự phòng thảm họa\n1. Tổ chức xây dựng hệ thống dự phòng thảm họa đáp ứng các yêu cầu sau:\na) Đánh giá rủi ro và xem xét khả năng xảy ra các thảm họa ảnh hưởng đồng thời tới "
         }
       ],
@@ -1218,7 +1218,7 @@
           "document_number": "09/2020/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "c73bc7a0715a0bd8a6c0ee7d2b0c5ba00d5302ab0e1f0258c6ee11c0b4753715",
-          "node_id": "044be320-df3f-11f0-ad3a-317506d4d583",
+          "anchor": "dieu-22",
           "quoted_span": "Điều 22. Sao lưu dự phòng\nTổ chức thực hiện sao lưu dự phòng bảo đảm an toàn dữ liệu như sau:\n1. Lập danh sách hệ thống thông tin theo cấp độ quan trọng cần được sao lưu, kèm theo thời gian lưu trữ, đ"
         }
       ],
@@ -1245,7 +1245,7 @@
           "document_number": "09/2020/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "c73bc7a0715a0bd8a6c0ee7d2b0c5ba00d5302ab0e1f0258c6ee11c0b4753715",
-          "node_id": "044be366-df3f-11f0-9079-2f0144b08d96",
+          "anchor": "dieu-23",
           "quoted_span": "Điều 23. Quản lý an toàn, bảo mật hệ thống mạng\nTổ chức thực hiện quản lý an toàn, bảo mật hệ thống mạng như sau:\n1. Xây dựng quy định về quản lý an toàn, bảo mật hệ thống mạng và quản lý các thiết bị"
         }
       ],
@@ -1272,7 +1272,7 @@
           "document_number": "134/2025/QH15",
           "source_url": "",
           "fetch_sha256": "9788c2dff9609a9e70369245c804afbeba0f5a07c5b70a13716c1c294e63e774",
-          "node_id": "f7b610a5-e2b5-447c-b37d-91211b07de22",
+          "anchor": "dieu-1",
           "quoted_span": "Điều 1. Phạm vi điều chỉnh\n1. Luật này quy định về nghiên cứu, phát triển, cung cấp, triển khai và sử dụng hệ thống trí tuệ nhân tạo (sau đây gọi là hoạt động trí tuệ nhân tạo); quyền, nghĩa vụ của tổ"
         }
       ],
@@ -1299,7 +1299,7 @@
           "document_number": "134/2025/QH15",
           "source_url": "",
           "fetch_sha256": "9788c2dff9609a9e70369245c804afbeba0f5a07c5b70a13716c1c294e63e774",
-          "node_id": "4cbf4944-0e28-46f8-9729-a92fa115a83e",
+          "anchor": "dieu-9",
           "quoted_span": "Điều 9. Phân loại mức độ rủi ro của hệ thống trí tuệ nhân tạo\n1. Hệ thống trí tuệ nhân tạo được phân loại theo các mức độ rủi ro sau đây:\na) Hệ thống trí tuệ nhân tạo có rủi ro cao là hệ thống có thể "
         }
       ],
@@ -1326,7 +1326,7 @@
           "document_number": "50/2024/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "bf2187f9115ec99f3ad697c76ac70f135d81f1f2ff2a6ebc2880f974efa7c8fe",
-          "node_id": "956b1080-eab4-11f0-8bb4-ebb147b48b2b",
+          "anchor": "dieu-11",
           "quoted_span": "Điều 11. Các hình thức xác nhận\n1. Hình thức xác nhận bằng mã khóa bí mật (Password): khách hàng sử dụng mã khóa bí mật là một chuỗi ký tự để xác nhận quyền truy cập của khách hàng vào hệ thống thông "
         }
       ],
@@ -1353,7 +1353,7 @@
           "document_number": "50/2024/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "bf2187f9115ec99f3ad697c76ac70f135d81f1f2ff2a6ebc2880f974efa7c8fe",
-          "node_id": "95516e00-eab4-11f0-9ae0-85d6d1e120d2",
+          "anchor": "dieu-3",
           "quoted_span": "Điều 3. Nguyên tắc chung về bảo đảm an toàn, bảo mật hệ thống thông tin cho việc cung cấp dịch vụ Online Banking\n1. Hệ thống Online Banking phải tuân thủ quy định về bảo đảm an toàn hệ thống thông tin"
         }
       ],
@@ -1380,7 +1380,7 @@
           "document_number": "94/2025/ND-CP",
           "source_url": "",
           "fetch_sha256": "085dc2f535e74683e0243e99902dd176cce01ed0860ad81e2d0d794a288dd545",
-          "node_id": "284d6aa0-df4e-11f0-9730-dd53b7ad6a90",
+          "anchor": "dieu-11",
           "quoted_span": "Điều 11. Điều kiện và tiêu chí tham gia Cơ chế thử nghiệm\n1. Giải pháp cho vay ngang hàng được xem xét cấp Giấy chứng nhận tham gia Cơ chế thử nghiệm khi giải pháp đáp ứng các tiêu chí quy định tại kh"
         }
       ],
@@ -1407,7 +1407,7 @@
           "document_number": "15/2024/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "da6fada9b847f67d537f16aab68ad4f89c655ff9eb9544d98cf6071d6cf5b991",
-          "node_id": "",
+          "anchor": null,
           "quoted_span": "Thông tư số 15/2024/TT-NHNN Quy định về cung ứng dịch vụ thanh toán không dùng tiền mặt"
         }
       ],
@@ -1434,7 +1434,7 @@
           "document_number": "52/2024/ND-CP",
           "source_url": "",
           "fetch_sha256": "fb18e69a937912e4eb0de8eccdd0fe9455497c6df251098b575450228697fa35",
-          "node_id": "",
+          "anchor": null,
           "quoted_span": "Nghị định số 52/2024/NĐ-CP quy định về thanh toán không dung tiền mặt"
         }
       ],
@@ -1461,7 +1461,7 @@
           "document_number": "09/2020/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "c73bc7a0715a0bd8a6c0ee7d2b0c5ba00d5302ab0e1f0258c6ee11c0b4753715",
-          "node_id": "",
+          "anchor": null,
           "quoted_span": "Thông tư số 09/2020/TT-NHNN Quy định về an toàn hệ thống thông tin trong hoạt động ngân hàng"
         }
       ],
@@ -1488,7 +1488,7 @@
           "document_number": "39/2016/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "883bed00abf5fb38082800af26bbcad07309125ab39634febaae6c74ac99e0ee",
-          "node_id": "ad16ccb8-2c7e-11f1-946a-17e7992b6e51",
+          "anchor": "dieu-13",
           "quoted_span": "Điều 13. Lãi suất cho vay\n1. Tổ chức tín dụng và khách hàng thỏa thuận về lãi suất cho vay theo cung cầu vốn thị trường, nhu cầu vay vốn và mức độ tín nhiệm của khách hàng, trừ trường hợp Ngân hàng Nh"
         }
       ],
@@ -1515,7 +1515,7 @@
           "document_number": "41/2016/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "b6c306773ee04c57d25af8c83d160ead4ba7e02d0ba54fe98502dd663ef56d20",
-          "node_id": "0e053b34-eb9a-11f0-ba35-c764fcb9657c",
+          "anchor": "dieu-6",
           "quoted_span": "Điều 6. Tỷ lệ an toàn vốn\n1. Tỷ lệ an toàn vốn (CAR) tính theo đơn vị phần trăm (%) được xác định bằng công thức:\nTrong đó:\n- C: Vốn tự có;\n- RWA: Tổng tài sản tính theo rủi ro tín dụng;\n- KOR: Vốn yê"
         }
       ],
@@ -1542,7 +1542,7 @@
           "document_number": "340/2025/ND-CP",
           "source_url": "",
           "fetch_sha256": "644071b9cda9e473f4a703ee5f626cd60e5b83864c0f78c1c8f12c5953bb9433",
-          "node_id": "7edd9800-3029-11f1-a10a-c76ce3e839fe",
+          "anchor": "dieu-1",
           "quoted_span": "Điều 1. Phạm vi điều chỉnh"
         }
       ],
@@ -1569,7 +1569,7 @@
           "document_number": "340/2025/ND-CP",
           "source_url": "",
           "fetch_sha256": "644071b9cda9e473f4a703ee5f626cd60e5b83864c0f78c1c8f12c5953bb9433",
-          "node_id": "7f8b1610-3029-11f1-8b5e-9f8e0e712af8",
+          "anchor": "dieu-61",
           "quoted_span": "Điều 61. Vi phạm quy định về an toàn công nghệ thông tin trong hoạt động ngân hàng"
         }
       ],
@@ -1596,7 +1596,7 @@
           "document_number": "340/2025/ND-CP",
           "source_url": "",
           "fetch_sha256": "644071b9cda9e473f4a703ee5f626cd60e5b83864c0f78c1c8f12c5953bb9433",
-          "node_id": "7f1c9cd0-3029-11f1-a850-3f7a322310f9",
+          "anchor": "dieu-24",
           "quoted_span": "Điều 24. Vi phạm quy định về an toàn, lưu giữ thông tin tín dụng\nPhạt tiền từ 40.000.000 đồng đến 80.000.000 đồng đối với một trong các hành vi vi phạm sau đây:"
         }
       ],
@@ -1623,7 +1623,7 @@
           "document_number": "340/2025/ND-CP",
           "source_url": "",
           "fetch_sha256": "644071b9cda9e473f4a703ee5f626cd60e5b83864c0f78c1c8f12c5953bb9433",
-          "node_id": "7f1faa10-3029-11f1-9d8c-23f9e9f28bf8",
+          "anchor": "dieu-27",
           "quoted_span": "Điều 27. Vi phạm quy định về hoạt động ngoại hối"
         }
       ],
@@ -1650,7 +1650,7 @@
           "document_number": "83/2025/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "b1a73d7170316fb24c5c2afa070d95958282b4eb4666ee905947623f10b8cc15",
-          "node_id": "399c79fa-31af-11f1-9edf-6562716f5abe",
+          "anchor": "dieu-4",
           "quoted_span": "Điều 4. Yêu cầu đối với hệ thống kiểm soát nội bộ\n1. Hệ thống kiểm soát nội bộ của ngân hàng phải đáp ứng các yêu cầu sau:\na) Tuân thủ quy định tại Luật Các tổ chức tín dụng và các văn bản sửa đổi, bổ"
         }
       ],
@@ -1677,7 +1677,7 @@
           "document_number": "83/2025/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "b1a73d7170316fb24c5c2afa070d95958282b4eb4666ee905947623f10b8cc15",
-          "node_id": "39b001f0-31af-11f1-abae-a56f375a7e13",
+          "anchor": "dieu-11/khoan-7",
           "quoted_span": "7. Ngân hàng phải có quy định về hoạt động kiểm soát đối với các hoạt động được thực hiện bằng phương tiện điện tử đảm bảo đáp ứng các quy định tại Thông tư này và các quy định của pháp luật có liên q"
         }
       ],
@@ -1704,7 +1704,7 @@
           "document_number": "83/2025/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "b1a73d7170316fb24c5c2afa070d95958282b4eb4666ee905947623f10b8cc15",
-          "node_id": "39b05010-31af-11f1-af33-592f75690965",
+          "anchor": "dieu-12",
           "quoted_span": "Điều 12. Giám sát của quản lý cấp cao\n1. Việc giám sát của quản lý cấp cao phải phù hợp với yêu cầu quy định tại Điều 11 Thông tư này.\n2. Việc giám sát của quản lý cấp cao tại ngân hàng thương mại đượ"
         }
       ],
@@ -1761,7 +1761,7 @@
           "document_number": "58/2021/ND-CP",
           "source_url": "",
           "fetch_sha256": "b98bd812424539404e423b2c695bb61118f86bfa9eb321e1296a47dcaaeb68e6",
-          "node_id": "ecd87c80-2d45-11f1-9573-c96e7df733d0",
+          "anchor": "dieu-1",
           "quoted_span": "Điều 1. Phạm vi điều chỉnh\n1. Nghị định này quy định về điều kiện, thủ tục cấp, cấp lại, thay đổi nội dung và thu hồi Giấy chứng nhận đủ điều kiện hoạt động cung ứng dịch vụ thông tin tín dụng"
         }
       ],
@@ -1788,7 +1788,7 @@
           "document_number": "58/2021/ND-CP",
           "source_url": "",
           "fetch_sha256": "b98bd812424539404e423b2c695bb61118f86bfa9eb321e1296a47dcaaeb68e6",
-          "node_id": "ece0e0f0-2d45-11f1-a3b9-e3c52c7750b1",
+          "anchor": "dieu-5",
           "quoted_span": "Điều 5. Nguyên tắc sử dụng sản phẩm thông tin tín dụng"
         }
       ],
@@ -1815,7 +1815,7 @@
           "document_number": "58/2021/ND-CP",
           "source_url": "",
           "fetch_sha256": "b98bd812424539404e423b2c695bb61118f86bfa9eb321e1296a47dcaaeb68e6",
-          "node_id": "ece17d30-2d45-11f1-9b91-074bf6116a69",
+          "anchor": "dieu-6",
           "quoted_span": "Điều 6. Các hành vi bị cấm trong hoạt động cung ứng dịch vụ thông tin tín dụng"
         }
       ],
@@ -1842,7 +1842,7 @@
           "document_number": "58/2021/ND-CP",
           "source_url": "",
           "fetch_sha256": "b98bd812424539404e423b2c695bb61118f86bfa9eb321e1296a47dcaaeb68e6",
-          "node_id": "ecf8aeb0-2d45-11f1-82ea-974f1558d270",
+          "anchor": "dieu-20",
           "quoted_span": "Điều 20. Lưu giữ thông tin tín dụng\n1. Thông tin tín dụng phải được lưu giữ an toàn, bảo mật, phòng tránh các sự cố, thảm họa có thể xảy ra và ngăn chặn sự xâm nhập, truy cập bất hợp pháp từ bên ngoài.\n2. Thông tin tín dụng được lưu giữ tối thiểu trong 05 năm, kể từ ngày công ty thông tin tín dụng thu thập."
         }
       ],
@@ -1869,7 +1869,7 @@
           "document_number": "08/2024/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "1d6d5dd99a229f4f5e90b58b7800788a55bddd5a663f7bbe5dfce09eec58e955",
-          "node_id": "75ed5470-2d44-11f1-8a98-ef5b66cb2453",
+          "anchor": "dieu-1",
           "quoted_span": "Điều 1. Phạm vi điều chỉnh và đối tượng áp dụng"
         }
       ],
@@ -1896,7 +1896,7 @@
           "document_number": "08/2024/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "1d6d5dd99a229f4f5e90b58b7800788a55bddd5a663f7bbe5dfce09eec58e955",
-          "node_id": "75f9b080-2d44-11f1-8be2-a99d13c9f631",
+          "anchor": "dieu-10",
           "quoted_span": "Điều 10. Quy định về sử dụng dịch vụ thanh toán"
         }
       ],
@@ -1923,7 +1923,7 @@
           "document_number": "24/2023/QH15",
           "source_url": "",
           "fetch_sha256": "2edac11bb989d5e12b9f4a50df7811826d8594077e19de5200718b7ca8b9ebe2",
-          "node_id": "de9d1fb8-e182-11f0-8ee4-b55e4df6784d",
+          "anchor": "dieu-29",
           "quoted_span": "Điều 29. Cung cấp và sử dụng dịch vụ trung tâm dữ liệu, dịch vụ điện toán đám mây\n1. Doanh nghiệp cung cấp dịch vụ trung tâm dữ liệu, dịch vụ điện toán đám mây có các quyền sau đây:\na) Đầu tư kinh doa"
         }
       ],
@@ -1950,7 +1950,7 @@
           "document_number": "340/2025/ND-CP",
           "source_url": "",
           "fetch_sha256": "644071b9cda9e473f4a703ee5f626cd60e5b83864c0f78c1c8f12c5953bb9433",
-          "node_id": "",
+          "anchor": null,
           "quoted_span": "NGHỊ ĐỊNH SỐ 340/2025/NĐ-CP QUY ĐỊNH VỀ XỬ PHẠT VI PHẠM HÀNH CHÍNH TRONG LĨNH VỰC TIỀN TỆ VÀ NGÂN HÀNG"
         }
       ],
@@ -1977,7 +1977,7 @@
           "document_number": "88/2019/ND-CP",
           "source_url": "",
           "fetch_sha256": "7d95dcdf6774fcb52f954fc5aac7f4aa87e8ca8ad86df703c7096f49a361099e",
-          "node_id": "",
+          "anchor": null,
           "quoted_span": "Nghị định số 88/2019/NĐ-CP Quy định xử phạt vi phạm hành chính trong lĩnh vực tiền tệ và ngân hàng"
         }
       ],
@@ -2004,7 +2004,7 @@
           "document_number": "83/2025/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "b1a73d7170316fb24c5c2afa070d95958282b4eb4666ee905947623f10b8cc15",
-          "node_id": "",
+          "anchor": null,
           "quoted_span": "Thông tư số 83/2025/TT-NHNN Quy định về hệ thống kiểm soát nội bộ của ngân hàng thương mại, \nchi nhánh ngân hàng nước ngoài"
         }
       ],
@@ -2031,7 +2031,7 @@
           "document_number": "143/2021/ND-CP",
           "source_url": "",
           "fetch_sha256": "cda1fb0cd198cbdba38c4ee3ae714896dc969ec69637f5c60a0e966189b252e1",
-          "node_id": "",
+          "anchor": null,
           "quoted_span": "Nghị định số 143/2021/NĐ-CP sửa đổi, bổ sung một số điều của Nghị định số 88/2019/NĐ-CP ngày 14 tháng 11 năm 2019 quy định về xử phạt vi phạm hành chính trong lĩnh vực tiền tệ và ngân hàng"
         }
       ],
@@ -2058,7 +2058,7 @@
           "document_number": "88/2019/ND-CP",
           "source_url": "",
           "fetch_sha256": "7d95dcdf6774fcb52f954fc5aac7f4aa87e8ca8ad86df703c7096f49a361099e",
-          "node_id": "",
+          "anchor": null,
           "quoted_span": "Nghị định số 88/2019/NĐ-CP Quy định xử phạt vi phạm hành chính trong lĩnh vực tiền tệ và ngân hàng"
         }
       ],
@@ -2095,7 +2095,7 @@
           "document_number": "134/2025/QH15",
           "source_url": "",
           "fetch_sha256": "9788c2dff9609a9e70369245c804afbeba0f5a07c5b70a13716c1c294e63e774",
-          "node_id": "4cbf4944-0e28-46f8-9729-a92fa115a83e",
+          "anchor": "dieu-9",
           "quoted_span": "Điều 9. Phân loại mức độ rủi ro của hệ thống trí tuệ nhân tạo\n1. Hệ thống trí tuệ nhân tạo được phân loại theo các mức độ rủi ro sau đây:\na) Hệ thống trí tuệ nhân tạo có rủi ro cao là hệ thống có thể "
         }
       ],
@@ -2122,7 +2122,7 @@
           "document_number": "340/2025/ND-CP",
           "source_url": "",
           "fetch_sha256": "644071b9cda9e473f4a703ee5f626cd60e5b83864c0f78c1c8f12c5953bb9433",
-          "node_id": "7f1c9cd0-3029-11f1-a850-3f7a322310f9",
+          "anchor": "dieu-24",
           "quoted_span": "Điều 24. Vi phạm quy định về an toàn, lưu giữ thông tin tín dụng\nPhạt tiền từ 40.000.000 đồng đến 80.000.000 đồng đối với một trong các hành vi vi phạm sau đây:"
         }
       ],
@@ -2149,7 +2149,7 @@
           "document_number": "09/2020/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "c73bc7a0715a0bd8a6c0ee7d2b0c5ba00d5302ab0e1f0258c6ee11c0b4753715",
-          "node_id": "044bb7d8-df3f-11f0-b188-59c776772e02",
+          "anchor": "dieu-3",
           "quoted_span": "Điều 3. Nguyên tắc chung\n1. Tổ chức có trách nhiệm bảo đảm an toàn thông tin theo nguyên tắc xác định rõ quyền hạn, trách nhiệm từng bộ phận và cá nhân trong tổ chức.\n2. Hệ thống thông tin được phân l"
         }
       ],
@@ -2176,7 +2176,7 @@
           "document_number": "58/2021/ND-CP",
           "source_url": "",
           "fetch_sha256": "b98bd812424539404e423b2c695bb61118f86bfa9eb321e1296a47dcaaeb68e6",
-          "node_id": "ecf8aeb0-2d45-11f1-82ea-974f1558d270",
+          "anchor": "dieu-20",
           "quoted_span": "Điều 20. Lưu giữ thông tin tín dụng\n1. Thông tin tín dụng phải được lưu giữ an toàn, bảo mật, phòng tránh các sự cố, thảm họa có thể xảy ra và ngăn chặn sự xâm nhập, truy cập bất hợp pháp từ bên ngoài.\n2. Thông tin tín dụng được lưu giữ tối thiểu trong 05 năm, kể từ ngày công ty thông tin tín dụng thu thập."
         }
       ],
@@ -2203,7 +2203,7 @@
           "document_number": "91/2025/QH15",
           "source_url": "",
           "fetch_sha256": "60cd5851a56a5fe04877683d80bf9b5bb1b19c891dc0e9d70977879fab10a837",
-          "node_id": "",
+          "anchor": null,
           "quoted_span": "Luật Bảo vệ dữ liệu cá nhân số 91/2025/QH15"
         }
       ],
@@ -2230,7 +2230,7 @@
           "document_number": "04/2025/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "01b56a088d45ac3e370715378ff42fef48a179040968d12d7f544cc5fcd746f2",
-          "node_id": "dec2cf4c-e169-11f0-9d14-77cb3ce5c0d9",
+          "anchor": "dieu-3/khoan-1",
           "quoted_span": "1. Thời hạn lưu trữ hồ sơ, tài liệu là khoảng thời gian cần thiết để lưu trữ hồ sơ, tài liệu được tính từ năm kết thúc công việc."
         }
       ],
@@ -2257,7 +2257,7 @@
           "document_number": "04/2025/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "01b56a088d45ac3e370715378ff42fef48a179040968d12d7f544cc5fcd746f2",
-          "node_id": "",
+          "anchor": null,
           "quoted_span": "Thông tư số 04/2025/TT-NHNN Quy định thời hạn lưu trữ hồ sơ, tài liệu ngành Ngân hàng"
         }
       ],
@@ -2284,7 +2284,7 @@
           "document_number": "37/2026/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "e5f2cb60a4e2bdbaaada5d6327603ad5265bff06a9ee114e249cdb38edf9df68",
-          "node_id": "",
+          "anchor": null,
           "quoted_span": "Thông tư số 37/2026/TT-NHNN Sửa đổi, bổ sung một số điều của Thông tư số 04/2025/TT-NHNN ngày 15 tháng 5 năm 2025 quy định thời hạn lưu trữ hồ sơ, tài liệu ngành Ngân hàng"
         }
       ],
@@ -2311,7 +2311,7 @@
           "document_number": "57/2025/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "96d9b9eff0db7d7dfec8090b8efb71b5d6be946fdfba49a631a44bdb418ae6b5",
-          "node_id": "1976c180-31b9-11f1-b7dd-dbcc5503704a",
+          "anchor": "dieu-7",
           "quoted_span": "Điều 7. Tỷ lệ an toàn vốn tối thiểu\n1. Tổ chức tài chính vi mô phải thường xuyên duy trì tỷ lệ an toàn vốn tối thiểu 10%.\n2. Tỷ lệ an toàn vốn được xác định bằng công thức sau đây: \n\nTrong đó:\na) Vốn "
         }
       ],
@@ -2338,7 +2338,7 @@
           "document_number": "68/2025/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "3f9224f301ce93e294cdc0df2a28aef0da9d08d1143ae4f0eab6db9149df11ef",
-          "node_id": "c8faa080-31a1-11f1-9687-49bf18461d28",
+          "anchor": "dieu-8/khoan-1",
           "quoted_span": "1. Ngân hàng Phát triển Việt Nam thực hiện phân loại nợ (trừ các khoản trả thay theo cam kết ngoại bảng) theo 05 nhóm như sau:"
         }
       ],
@@ -2365,7 +2365,7 @@
           "document_number": "35/2025/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "f07b09547177103257c12bf9fa9206e9f18b28812120d47e12ccc53f72dbe562",
-          "node_id": "33cdaaf0-3199-11f1-aa7e-c74c96a15860",
+          "anchor": "dieu-12",
           "quoted_span": "Điều 12. Thời hạn cho vay đặc biệt, gia hạn thời hạn cho vay đặc biệt"
         }
       ],
@@ -2392,7 +2392,7 @@
           "document_number": "83/2025/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "b1a73d7170316fb24c5c2afa070d95958282b4eb4666ee905947623f10b8cc15",
-          "node_id": "3a20ec30-31af-11f1-ba47-31b3245e162e",
+          "anchor": "dieu-70",
           "quoted_span": "Điều 70. Nội dung kiểm toán nội bộ\n1. Kiểm toán nội bộ của ngân hàng thương mại thực hiện quy định tại Điều 58 Luật Các tổ chức tín dụng trên cơ sở các nội dung sau đây:\na) Kiểm tra, đánh giá độc lập,"
         }
       ],
@@ -2419,7 +2419,7 @@
           "document_number": "79/2025/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "ef2fb0116bd1b6eccc311e2b8fe8b7622a46e66d17d8f9787938d12396bb8253",
-          "node_id": "8b8e49c0-3270-11f1-9e16-5d1134c7a437",
+          "anchor": "dieu-14",
           "quoted_span": "Điều 14. Nghĩa vụ đăng ký khoản cho vay ra nước ngoài\nBên cho vay phải đăng ký với Ngân hàng Nhà nước các khoản cho vay ra nước ngoài sau:"
         }
       ],
@@ -2446,7 +2446,7 @@
           "document_number": "82/2025/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "73fbfc7bd9bc955e5c5078b48c6a80005ba0a5b62fc973a139bb34436d573525",
-          "node_id": "ee6e7bb0-31ac-11f1-94c1-37e74ded7a0c",
+          "anchor": "dieu-4",
           "quoted_span": "Điều 4. Giới hạn trạng thái vàng"
         }
       ],
@@ -2473,7 +2473,7 @@
           "document_number": "54/2025/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "04160e401a1af734e89410aba5037472754afe5bbef23d6be10b4659fe3aa1f5",
-          "node_id": "302e97f0-31a9-11f1-b176-49d8ab6dcfca",
+          "anchor": "dieu-23",
           "quoted_span": "2. Chủ sở hữu, thành viên góp vốn không được dùng vốn ủy thác, vốn huy động, vốn vay dưới bất kỳ hình thức nào để góp vốn vào tổ chức tài chính vi mô và phải cam kết, chịu trách nhiệm về tính hợp pháp"
         },
         {
@@ -2481,7 +2481,7 @@
           "document_number": "62/VBHN-NHNN",
           "source_url": "",
           "fetch_sha256": "5cff40a1012fd6ade67ea76e65b8ba060691ff8e99224855d8b08b5620449311",
-          "node_id": "b2385ec8-002d-4436-87f2-c893a99811fd",
+          "anchor": "dieu-23",
           "quoted_span": "2. Chủ sở hữu, thành viên góp vốn không được dùng vốn ủy thác, vốn huy động, vốn vay dưới bất kỳ hình thức nào để góp vốn vào tổ chức tài chính vi mô và phải cam kết, chịu trách nhiệm về tính hợp pháp"
         }
       ],
@@ -2515,7 +2515,7 @@
           "document_number": "61/2025/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "e8d8cb08dcbd1e8f8dee2e107f365850898e9981db19c39926ea41d017b86eca",
-          "node_id": "efa17d7a-31ac-11f1-b136-611f00149288",
+          "anchor": "dieu-8/khoan-1",
           "quoted_span": "1. Ngân hàng thương mại được thành lập tối đa 10 chi nhánh tại mỗi khu vực nội thành thành phố Hà Nội hoặc nội thành thành phố Hồ Chí Minh."
         },
         {
@@ -2523,7 +2523,7 @@
           "document_number": "55/VBHN-NHNN",
           "source_url": "",
           "fetch_sha256": "5eb7f687ca47f6ecac46c47f8abeaeb0d702df0a6adbaf5f246412ab2a16506f",
-          "node_id": "64dd88d5-eaaa-4647-bda4-f336888c132f",
+          "anchor": "dieu-8/khoan-1",
           "quoted_span": "1. Ngân hàng thương mại được thành lập tối đa 10 chi nhánh tại mỗi khu vực nội thành thành phố Hà Nội hoặc nội thành thành phố Hồ Chí Minh."
         }
       ],
@@ -2557,7 +2557,7 @@
           "document_number": "61/2025/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "e8d8cb08dcbd1e8f8dee2e107f365850898e9981db19c39926ea41d017b86eca",
-          "node_id": "",
+          "anchor": null,
           "quoted_span": "Thông tư số 61/2025/TT-NHNN Quy định về mạng lưới hoạt động của ngân hàng thương mại"
         }
       ],
@@ -2584,7 +2584,7 @@
           "document_number": "43/2016/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "1bfe82cecadebe85aa127ec108d8616dc19421ff5827807c16ac12bfa01448d8",
-          "node_id": "c88ae630-1e02-11f1-99f2-c9edb6f759bd",
+          "anchor": "dieu-3/khoan-1",
           "quoted_span": "tổng dư nợ cho vay tiêu dùng đối với một khách hàng tại công ty tài chính đó không vượt quá 100.000.000 đồng (một trăm triệu đồng)."
         }
       ],
@@ -2618,7 +2618,7 @@
           "document_number": "18/2019/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "7fb8e436c83736bad229d16eeacbf6b649e4a5683cda9b90ec2d38400f8dd55e",
-          "node_id": "4da6fa50-25d0-11f1-9e8d-c93ec6125859",
+          "anchor": "dieu-1",
           "quoted_span": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư số 43/2016/TT-NHNN ngày 30 tháng 12 năm 2016 của Thống đốc Ngân hàng Nhà nước Việt Nam quy định cho vay tiêu dùng của công ty tài chính"
         }
       ],
@@ -2757,7 +2757,7 @@
           "document_number": "86/VBHN-NHNN",
           "source_url": "",
           "fetch_sha256": "15927e366cef5a227281b00ca4876e83e43a87879c158222e780b57a3c2b24a6",
-          "node_id": "408bc650-82b1-47d4-8c2a-e6bede4bbe6b",
+          "anchor": "dieu-8",
           "quoted_span": "Tổ chức tín dụng không được cho vay đối với các nhu cầu vốn:\n1. Để thực hiện các hoạt động đầu tư kinh doanh thuộc ngành, nghề cấm đầu tư kinh doanh theo quy định của Luật Đầu tư."
         }
       ],
@@ -2833,7 +2833,7 @@
           "document_number": "10/2023/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "8ef45df942aa0c68291152bc2f87100a4fc3a5a8379826ee43293e7fe20eb0bc",
-          "node_id": "tx:299bc05d54d048bd",
+          "anchor": "dieu-1",
           "quoted_span": "Ngưng hiệu lực thi hành khoản 8, khoản 9 và khoản 10 Điều 8 của Thông tư số 39/2016/TT-NHNN ngày 30 tháng 12 năm 2016"
         }
       ],
@@ -2860,7 +2860,7 @@
           "document_number": "04/2022/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "228a05b7dd7995c115aa13da5af5531118a6301a8500fd38d353cebee6b55a73",
-          "node_id": "dc2b63f4-eb99-11f0-8fdd-6b72cbc3c7c2",
+          "anchor": "dieu-5/khoan-2/diem-a",
           "quoted_span": "a) Đối với phần tiền gửi rút trước hạn, tổ chức tín dụng áp dụng mức lãi suất tối đa bằng mức lãi suất tiền gửi không kỳ hạn thấp nhất của tổ chức tín dụng đó theo đối tượng khách hàng và/hoặc theo loại đồng tiền đã gửi tại thời điểm khách hàng rút trước hạn tiền gửi;"
         }
       ],
@@ -2901,7 +2901,7 @@
           "document_number": "04/2022/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "228a05b7dd7995c115aa13da5af5531118a6301a8500fd38d353cebee6b55a73",
-          "node_id": "dc2b63fe-eb99-11f0-929f-5dcac316d1ff",
+          "anchor": "dieu-5/khoan-2/diem-b",
           "quoted_span": "b) Đối với phần tiền gửi còn lại, tổ chức tín dụng áp dụng mức lãi suất đang áp dụng đối với khoản tiền gửi mà khách hàng rút trước hạn một phần."
         }
       ],
@@ -2942,7 +2942,7 @@
           "document_number": "05/2026/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "77b22a0d810d9bbcfa3d213e8b172dd5feaf797076f033857a811bf2e6c21087",
-          "node_id": "160fcf08-a222-4ef3-a592-8ead6f490a9b",
+          "anchor": "dieu-3",
           "quoted_span": "Số tiền tối đa Bảo hiểm tiền gửi Việt Nam trả cho tất cả các khoản tiền gửi được bảo hiểm theo quy định của Luật Bảo hiểm tiền gửi (gồm cả tiền gốc và tiền lãi) của một người tại một tổ chức tham gia bảo hiểm tiền gửi khi phát sinh nghĩa vụ trả tiền bảo hiểm là 350.000.000 đồng"
         }
       ],
@@ -2969,7 +2969,7 @@
           "document_number": "17/2024/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "8516e84652cae181e2eac543e6a8fd0808a73b1b5056d5c7e2f56e725b9494ad",
-          "node_id": "7d96159a-2d44-11f1-aacb-618214d4c14f",
+          "anchor": "dieu-11/khoan-1/diem-a",
           "quoted_span": "a) Người từ đủ 15 tuổi trở lên không bị hạn chế hoặc mất năng lực hành vi dân sự theo quy định pháp luật Việt Nam;"
         }
       ],
@@ -3010,7 +3010,7 @@
           "document_number": "17/2024/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "8516e84652cae181e2eac543e6a8fd0808a73b1b5056d5c7e2f56e725b9494ad",
-          "node_id": "7d9f3d50-2d44-11f1-82ca-478450cd69bb",
+          "anchor": "dieu-16/khoan-1/diem-b",
           "quoted_span": "b) Kiểm tra tính hợp pháp, hợp lệ của các tài liệu, thông tin, dữ liệu xác minh thông tin nhận biết khách hàng và phải thực hiện đối chiếu khớp đúng thông tin sinh trắc học của chủ tài khoản thanh toán (đối với khách hàng là cá nhân)"
         }
       ],
@@ -3051,7 +3051,7 @@
           "document_number": "25/2025/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "214db0f22c6860360e8ff808fb29d79ca420f62ed5a3e3f37f95135bc83adc99",
-          "node_id": "bae61d56-df3c-11f0-8252-531d481780cc",
+          "anchor": "dieu-7/khoan-1",
           "quoted_span": "c) Lưu trữ, bảo quản đầy đủ, chi tiết đối với các tài liệu, thông tin, dữ liệu nhận biết khách hàng trong quá trình mở, sử dụng tài khoản thanh toán bằng phương tiện điện tử, như: thông tin nhận biết khách hàng; các yếu tố sinh trắc học của chủ tài khoản thanh toán cá nhân"
         }
       ],
@@ -3085,7 +3085,7 @@
           "document_number": "25/2025/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "214db0f22c6860360e8ff808fb29d79ca420f62ed5a3e3f37f95135bc83adc99",
-          "node_id": "bae61cfc-df3c-11f0-a825-352514a12bf8",
+          "anchor": "dieu-3/khoan-1",
           "quoted_span": "1. Sửa đổi, bổ sung điểm a khoản 2 Điều 12 như sau:\n\"a) Trường hợp cá nhân là công dân Việt Nam: Thẻ căn cước công dân, thẻ căn cước hoặc căn cước điện tử hoặc giấy khai sinh đối với người dưới 14 tuổi chưa có thẻ căn cước;"
         }
       ],
@@ -3119,7 +3119,7 @@
           "document_number": "64/2024/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "b8c1117806b378a4e9cbfeef70dd4dafce877df3fd6399ffc69473ce1ad0d359",
-          "node_id": "79ddd6b0-2ccf-11f1-82b7-77a6e883504c",
+          "anchor": "dieu-12",
           "quoted_span": "c)  Ban hành quy trình quản lý rủi ro; quy trình chăm sóc khách hàng; quy trình xử lý khiếu nại; quy trình giải quyết tranh chấp; quy trình bảo đảm hoạt động liên tục và quy trình sử dụng dịch vụ khi cung cấp dịch vụ cho khách hàng."
         }
       ],
@@ -3153,7 +3153,7 @@
           "document_number": "64/2024/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "b8c1117806b378a4e9cbfeef70dd4dafce877df3fd6399ffc69473ce1ad0d359",
-          "node_id": "79d91bc0-2ccf-11f1-8ca3-bd2a9c3e9d16",
+          "anchor": "dieu-8",
           "quoted_span": "Ngân hàng phải ký kết hợp đồng với bên thứ ba về việc triển khai Open API, bao gồm tối thiểu các nội dung sau:\n1.  Cam kết bảo mật thông tin, trong đó có thỏa thuận về việc bảo đảm an toàn, bảo mật thông tin khi thực hiện xử lý dữ liệu qua Open API do Ngân hàng cung cấp."
         }
       ],
@@ -3236,7 +3236,7 @@
           "document_number": "41/2025/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "e0c5df1a9bb882e51b55e1f017d70ec9ab1910f7185aeb74a42aaefb4ec7ba29",
-          "node_id": "tx:5a507db941b3f647",
+          "anchor": "dieu-10/khoan-1",
           "quoted_span": "Tổng hạn mức giao dịch qua các ví điện tử cá nhân của 01 khách hàng tại 01 tổ chức cung ứng dịch vụ ví điện tử (bao gồm giao dịch chuyển tiền và thanh toán theo quy định tại điểm b, điểm c, điểm d, điểm đ khoản 2 Điều 25 Thông tư này) tối đa là 100 (một trăm) triệu đồng Việt Nam trong một tháng."
         }
       ],
@@ -3284,7 +3284,7 @@
           "document_number": "52/2024/ND-CP",
           "source_url": "",
           "fetch_sha256": "fb18e69a937912e4eb0de8eccdd0fe9455497c6df251098b575450228697fa35",
-          "node_id": "ac03c70e-df58-11f0-9df4-d9328e28770b",
+          "anchor": "dieu-22",
           "quoted_span": "b) Có vốn điều lệ thực góp hoặc được cấp tối thiểu: 50 tỷ đồng đối với dịch vụ ví điện tử, dịch vụ hỗ trợ thu hộ, chi hộ và dịch vụ cổng thanh toán điện tử; 300 tỷ đồng đối với dịch vụ chuyển mạch tài chính, dịch vụ chuyển mạch tài chính quốc tế, dịch vụ bù trừ điện tử;"
         }
       ],
@@ -3318,7 +3318,7 @@
           "document_number": "19/2016/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "59e8abd3f15926c739f78fa48f68c4f008366a68d855a433dfc57efd17a10856",
-          "node_id": "tx:6dcdc70b517f9ecd",
+          "anchor": "dieu-1",
           "quoted_span": "Thông tư này quy định về hoạt động thẻ ngân hàng (sau đây gọi tắt là thẻ) bao gồm: hoạt động phát hành, sử dụng, thanh toán, chuyển mạch, bù trừ điện tử và quyết toán giao dịch thẻ."
         }
       ],
@@ -3345,7 +3345,7 @@
           "document_number": "30/2016/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "a8384e7659ba4004b6babf0aff74626f68a2c9c3929910ef1d565c6f1e9983f9",
-          "node_id": "tx:ec7a8b098bfda10b",
+          "anchor": "dieu-1",
           "quoted_span": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư số 19/2016/TT-NHNN ngày 30 tháng 6 năm 2016 của Thống đốc Ngân hàng Nhà nước quy định về hoạt động thẻ ngân hàng"
         }
       ],
@@ -3456,7 +3456,7 @@
           "document_number": "26/2017/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "527b3bdb74c714e8c308a423802c46cb872faa6dee9d2e101dab4c4bd5689080",
-          "node_id": "tx:39cf5f341fa54bf5",
+          "anchor": "dieu-1",
           "quoted_span": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư số 19/2016/TT-NHNN ngày 30 tháng 6 năm 2016 của Thống đốc Ngân hàng Nhà nước Việt Nam quy định về hoạt động thẻ ngân hàng"
         }
       ],
@@ -3483,7 +3483,7 @@
           "document_number": "41/2018/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "6a3c651aa515e2b2466af0339d2d0f7f05a5d9cfcefdacb36468cdec55ab37f6",
-          "node_id": "9a6d549a-eb76-11f0-92d1-27766f9e88e2",
+          "anchor": "dieu-1",
           "quoted_span": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư số 19/2016/TT-NHNN ngày 30 tháng 6 năm 2016 của Thống đốc Ngân hàng Nhà nước Việt Nam quy định về hoạt động thẻ ngân hàng"
         }
       ],
@@ -3545,7 +3545,7 @@
           "document_number": "28/2019/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "d8d02c663830963ced02217fab4f8d3c5da2e386ebe3bc2f270c9e4ef7585f44",
-          "node_id": "tx:083c1724da57506e",
+          "anchor": "dieu-1",
           "quoted_span": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư số 19/2016/TT-NHNN ngày 30 tháng 6 năm 2016 của Thống đốc Ngân hàng Nhà nước Việt Nam quy định về hoạt động thẻ ngân hàng"
         }
       ],
@@ -3572,7 +3572,7 @@
           "document_number": "44/2025/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "25a0cb46a8dc9cdce0b1f093e787e0ed383576a38e3465b350325e9a4af5a88a",
-          "node_id": "bc3351aa-ec3f-11f0-b291-c59788eda2e0",
+          "anchor": "dieu-1",
           "quoted_span": "a) Nộp/rút tiền mặt vào/từ tài khoản thanh toán của khách hàng mở tại bên giao đại lý;\nb) Nộp/rút tiền mặt vào/từ thẻ ghi nợ, thẻ trả trước định danh của khách hàng do bên giao đại lý phát hành;"
         }
       ],
@@ -3599,7 +3599,7 @@
           "document_number": "07/2024/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "81609c6d81ede73756217036a55f2d82edbf4ea2f6ffd5032a69d7c12d997508",
-          "node_id": "8f2b17e0-2c83-11f1-b90e-f5dc7e381a09",
+          "anchor": "dieu-5",
           "quoted_span": "1. Bên giao đại lý phải có các biện pháp quản lý số dư, hạn mức giao dịch của bên đại lý là tổ chức khác, gồm:\na) Hạn mức giao dịch (bao gồm giao dịch nộp và rút tiền mặt) đối với khách hàng cá nhân, tối đa là 20 triệu đồng/khách hàng/ngày;"
         }
       ],
@@ -3633,7 +3633,7 @@
           "document_number": "07/2024/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "81609c6d81ede73756217036a55f2d82edbf4ea2f6ffd5032a69d7c12d997508",
-          "node_id": "8f2c9e80-2c83-11f1-af05-93ff91d0de8b",
+          "anchor": "dieu-6/khoan-4",
           "quoted_span": "4. Tổ chức khác là doanh nghiệp thành lập hợp pháp được làm đại lý theo thỏa thuận với bên giao đại lý."
         }
       ],
@@ -3674,7 +3674,7 @@
           "document_number": "07/2024/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "81609c6d81ede73756217036a55f2d82edbf4ea2f6ffd5032a69d7c12d997508",
-          "node_id": "8f2d88e0-2c83-11f1-8786-b719b270b2b1",
+          "anchor": "dieu-7/khoan-4",
           "quoted_span": "bên đại lý là tổ chức khác phải mở và duy trì tài khoản thanh toán tại bên giao đại lý để thực hiện các nghiệp vụ được giao đại lý trong phạm vi số dư do bên giao đại lý và bên đại lý thỏa thuận;"
         }
       ],
@@ -3722,7 +3722,7 @@
           "document_number": "27/2025/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "d0798601c3ffb3aa6668d6d3087e67b455a2eaba61e2be4187c3f2938ff6b8e0",
-          "node_id": "062adcc0-eac3-11f0-8e7a-63429a51fd20",
+          "anchor": "dieu-4/khoan-5",
           "quoted_span": "Đối với khách hàng có mức độ rủi ro về rửa tiền cao, ngoài việc áp dụng các biện pháp nhận biết khách hàng theo quy định của Luật Phòng, chống rửa tiền và Nghị định của Chính phủ quy định chi tiết một số điều của Luật Phòng, chống rửa tiền, đối tượng báo cáo phải áp dụng các biện pháp tăng cường"
         }
       ],
@@ -3756,7 +3756,7 @@
           "document_number": "35/2013/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "4f6694368b510da8ae17c42ecee71c5d41dfc6c645375ba2077e39ae1fc81063",
-          "node_id": "tx:9e7bbcd3796b94f9",
+          "anchor": "dieu-1",
           "quoted_span": "Thông tư này quy định về đánh giá tăng cường đối với khách hàng có rủi ro cao; thông báo danh sách cá nhân nước ngoài có ảnh hưởng chính trị; nội dung, hình thức các báo cáo: giao dịch có giá trị lớn, giao dịch đáng ngờ, giao dịch chuyển tiền điện tử, hành vi rửa tiền nhằm tài tr"
         }
       ],
@@ -3790,7 +3790,7 @@
           "document_number": "31/2014/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "ca4baa5e7ebbcb66032449b630f62a56974fc32dbfbc7a9033db9636f71c158d",
-          "node_id": "3f12e09a-df43-11f0-88c4-a16bf3c672f0",
+          "anchor": "dieu-1",
           "quoted_span": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư số 35/2013/TT-NHNN như sau:\n1. Khoản 2, 3, 4 Điều 3 được sửa đổi như sau:"
         }
       ],
@@ -3852,7 +3852,7 @@
           "document_number": "20/2019/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "6ddd0b744089d7ee8a678029e9233c3d450fa9369f494c23b086aa69d4b884cd",
-          "node_id": "eedc1d4a-eb71-11f0-85c8-d5f0f884319a",
+          "anchor": "dieu-1",
           "quoted_span": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư số 35/2013/TT-NHNN ngày 31/12/2013 hướng dẫn thực hiện một số quy định về phòng, chống rửa tiền"
         }
       ],
@@ -3956,7 +3956,7 @@
           "document_number": "09/2023/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "3b2f51a180ad842aac1eafaab1edf3ce6825316eed563c345c330df0b9bd170a",
-          "node_id": "tx:6267d8a5b0c22ebd",
+          "anchor": "dieu-11",
           "quoted_span": "3. Kể từ ngày Thông tư này có hiệu lực thi hành theo quy định tại khoản 1 Điều này, các Thông tư sau hết hiệu lực thi hành:\na) Thông tư số 35/2013/TT-NHNN ngày 31 tháng 12 năm 2013 của Thống đốc Ngân hàng Nhà nước Việt Nam, trừ quy định về báo cáo giao dịch có"
         }
       ],
@@ -3990,7 +3990,7 @@
           "document_number": "27/2025/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "d0798601c3ffb3aa6668d6d3087e67b455a2eaba61e2be4187c3f2938ff6b8e0",
-          "node_id": "06489df0-eac3-11f0-88bb-c5af94be7424",
+          "anchor": "dieu-13/khoan-4",
           "quoted_span": "4. Thông tư số 09/2023/TT-NHNN ngày 28 tháng 7 năm 2023 của Thống đốc Ngân hàng Nhà nước hướng dẫn thực hiện một số điều của Luật Phòng, chống rửa tiền hết hiệu lực kể từ ngày Thông tư này có hiệu lực thi hành"
         }
       ],
@@ -4024,7 +4024,7 @@
           "document_number": "15/2011/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "661d7a2458f85feac810892722afb9cdc8841d222386b38dd3835349be8ebff0",
-          "node_id": "c82ccd40-295e-11f1-8197-fbaa6f653e9a",
+          "anchor": "dieu-2/khoan-1/diem-a",
           "quoted_span": "a) 5.000 USD (Năm nghìn Đôla Mỹ) hoặc các loại ngoại tệ khác có giá trị tương đương;"
         }
       ],
@@ -4065,7 +4065,7 @@
           "document_number": "08/2023/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "01b98d708c26abf247c6126a994bf4decdedd0b4fbeb7ba1248ce5afcd8bf8ce",
-          "node_id": "7535ce10-2f22-11f1-8ccc-d1843414170c",
+          "anchor": "dieu-17",
           "quoted_span": "2. Mục đích vay trung, dài hạn nước ngoài:\nBên đi vay chỉ được vay trung, dài hạn nước ngoài để phục vụ các mục đích sau:\na) Thực hiện dự án đầu tư của bên đi vay; \nb) Thực hiện kế hoạch sản xuất, kinh doanh, dự án khác của bên đi vay;"
         }
       ],
@@ -4113,7 +4113,7 @@
           "document_number": "08/2023/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "01b98d708c26abf247c6126a994bf4decdedd0b4fbeb7ba1248ce5afcd8bf8ce",
-          "node_id": "75383f10-2f22-11f1-84ca-b1518442a1a6",
+          "anchor": "dieu-18",
           "quoted_span": "b) Giới hạn vay vốn của dự án đầu tư quy định tại điểm a khoản 1 Điều này là phần chênh lệch giữa tổng vốn đầu tư của dự án đầu tư và vốn góp của nhà đầu tư ghi nhận tại Giấy chứng nhận đầu tư, Giấy chứng nhận đăng ký đầu tư, văn bản chấp thuận chủ trương đầu tư."
         }
       ],
@@ -4147,7 +4147,7 @@
           "document_number": "12/2022/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "1def690409f5f7ab36bf59b7dbdf3db5a85e26cb65b8ff1931e2a96bd1569555",
-          "node_id": "d3605560-2cd8-11f1-a59f-c9e4135aca2f",
+          "anchor": "dieu-11",
           "quoted_span": "Khoản vay phải thực hiện đăng ký với Ngân hàng Nhà nước bao gồm:\n1. Khoản vay trung, dài hạn nước ngoài.\n2. Khoản vay ngắn hạn được gia hạn thời gian trả nợ gốc mà tổng thời hạn của khoản vay là trên 01 năm."
         }
       ],
@@ -4188,7 +4188,7 @@
           "document_number": "38/2026/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "c0feca9aa1c3c0fd077d36721ba9441e4c6002ba5a36dd84de32b5335b4aaec9",
-          "node_id": "ce0e0399-e18d-4d1a-9bec-64b25092e587",
+          "anchor": "dieu-7/khoan-1",
           "quoted_span": "1. Các đối tượng quy định tại Điều 6 Thông tư này được mở 01 (một) tài khoản vốn đầu tư bằng ngoại tệ và/hoặc 01 (một) tài khoản vốn đầu tư bằng đồng Việt Nam tại cùng 01 (một) ngân hàng được phép."
         }
       ],
@@ -4222,7 +4222,7 @@
           "document_number": "38/2026/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "c0feca9aa1c3c0fd077d36721ba9441e4c6002ba5a36dd84de32b5335b4aaec9",
-          "node_id": "506d9af6-70ce-493a-a8cb-50077d11e456",
+          "anchor": "dieu-8",
           "quoted_span": "Điều 8. Các giao dịch thu, chi trên tài khoản vốn đầu tư bằng ngoại tệ\n1. Thu:\na) Chuyển khoản tiền góp vốn của nhà đầu tư, doanh nghiệp thành viên trong tổ chức kinh tế có vốn đầu tư nước ngoài, nhà đầu tư nước ngoài tham gia hợp đồng BCC"
         }
       ],
@@ -4263,7 +4263,7 @@
           "document_number": "32/2013/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "46987382b360d86afc59896f81310389e66147c1d57dfb380fb1c6f5e1e0b1f8",
-          "node_id": "45967412-df49-11f0-9da3-557adc64adcf",
+          "anchor": "dieu-3",
           "quoted_span": "mọi giao dịch, thanh toán, niêm yết, quảng cáo, báo giá, định giá, ghi giá trong hợp đồng, thỏa thuận và các hình thức tương tự khác (bao gồm cả quy đổi hoặc điều chỉnh giá hàng hóa, dịch vụ, giá trị của hợp đồng, thỏa thuận) của người cư trú, người không cư trú không được thực hiện bằng ngoại hối."
         }
       ],
@@ -4290,7 +4290,7 @@
           "document_number": "117/2026/VBHN-ND-NHNN",
           "source_url": "",
           "fetch_sha256": "79edd5d58657260a0a50af2285b722d58b91150b38b5ff42abe10f6ec1f48cce",
-          "node_id": "b49051ab-62cd-47ba-8768-917d4fb5990f",
+          "anchor": "dieu-11",
           "quoted_span": "1. Doanh nghiệp được Ngân hàng Nhà nước xem xét cấp Giấy phép kinh doanh mua, bán vàng miếng khi đáp ứng đủ các điều kiện sau:\na) Là doanh nghiệp thành lập và hoạt động theo quy định của pháp luật.\nb) Có vốn điều lệ từ 100 tỷ đồng trở lên."
         }
       ],
@@ -4324,7 +4324,7 @@
           "document_number": "40/2024/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "09fa3a2c47add04e66b1e89089d4eae88c89cac93f630619d911e3044a7835dc",
-          "node_id": "87b48abe-2c83-11f1-97ab-9d564a5afe2f",
+          "anchor": "dieu-25/khoan-5",
           "quoted_span": "5. Tổ chức cung ứng dịch vụ ví điện tử không được nhận tiền mặt từ khách hàng để nạp tiền vào ví điện tử; không được phép cấp tín dụng cho khách hàng sử dụng ví điện tử, trả lãi trên số dư ví điện tử."
         }
       ],
@@ -4358,7 +4358,7 @@
           "document_number": "11/2011/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "f0ea5c939e368b0c1fdeb113bb3176c407de1779116001bd16414dd0aa048d89",
-          "node_id": "tx:0e3cb8c07c84b99e",
+          "anchor": "dieu-2",
           "quoted_span": "không được huy động vốn bằng vàng, trừ trường hợp phát hành chứng chỉ ngắn hạn bằng vàng để chi trả vàng theo yêu cầu của khách hàng khi số vàng thu nợ và tồn quỹ không đủ để chi trả. Việc phát hành chứng chỉ ngắn hạn bằng vàng của tổ chức tín dụng chấm dứt vào ngày 01 tháng 5 năm 2012."
         }
       ],
@@ -4385,7 +4385,7 @@
           "document_number": "11/2011/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "f0ea5c939e368b0c1fdeb113bb3176c407de1779116001bd16414dd0aa048d89",
-          "node_id": "tx:12ba0f4855e1a631",
+          "anchor": "dieu-1",
           "quoted_span": "Điều 1. Tổ chức tín dụng không được thực hiện cho vay vốn bằng vàng đối với khách hàng và các tổ chức tín dụng khác (kể cả các hợp đồng tín dụng đã ký kết nhưng chưa giải ngân hoặc giải ngân chưa hết)"
         }
       ],
@@ -4412,7 +4412,7 @@
           "document_number": "11/2011/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "f0ea5c939e368b0c1fdeb113bb3176c407de1779116001bd16414dd0aa048d89",
-          "node_id": "tx:18036a52e3e9ca0d",
+          "anchor": "dieu-5",
           "quoted_span": "1. Thông tư này có hiệu lực thi hành kể từ ngày 01 tháng 5 năm 2011.\n2. Thông tư số 22/2010/TT-NHNN ngày 29 tháng 10 năm 2010 của Thống đốc Ngân hàng Nhà nước quy định về huy động và cho vay vốn bằng vàng của các tổ chức tín dụng hết hiệu lực thi hành."
         }
       ],
@@ -4446,7 +4446,7 @@
           "document_number": "12/2012/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "1bd20145b941d2a04d81988ef9c6d6ae229328837c519b364fd166c37e0c0fc4",
-          "node_id": "45b60284-df4c-11f0-bc5e-1b67f27ef096",
+          "anchor": "dieu-1/khoan-1",
           "quoted_span": "không được huy động vốn bằng vàng, trừ trường hợp phát hành chứng chỉ ngắn hạn bằng vàng để chi trả vàng theo yêu cầu của khách hàng khi số vàng thu nợ và tồn quỹ không đủ để chi trả. Việc phát hành chứng chỉ ngắn hạn bằng vàng của tổ chức tín dụng chấm dứt vào ngày 25 tháng 11 năm 2012."
         }
       ],
@@ -4487,7 +4487,7 @@
           "document_number": "02/2011/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "96c8a83913fb387f86baa90db42b49f9b8095df0d19302904694d9c3c28b9c13",
-          "node_id": "tx:74b3d79b64395673",
+          "anchor": "dieu-1",
           "quoted_span": "Tổ chức tín dụng ấn định lãi suất huy động vốn bằng đồng Việt Nam (lãi suất tiền gửi; lãi suất chứng chỉ tiền gửi, kỳ phiếu, tín phiếu và trái phiếu) của các tổ chức (trừ tổ chức tín dụng) và cá nhân bao gồm cả khoản chi khuyến mại dưới mọi hình thức không vượt quá 14%/năm"
         }
       ],
@@ -4514,7 +4514,7 @@
           "document_number": "30/2011/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "e945327701068e6ae4ec0f18a2f7905ad0f4e72c4a8b05339df9ae31289d84be",
-          "node_id": "tx:232c1502f485bd1e",
+          "anchor": "dieu-1",
           "quoted_span": "1. Lãi suất tối đa áp dụng đối với tiền gửi không kỳ hạn và có kỳ hạn dưới 1 tháng là 6%/năm.\n2. Lãi suất tối đa áp dụng đối với tiền gửi có kỳ hạn từ 1 tháng trở lên là 14%/năm"
         }
       ],
@@ -4639,7 +4639,7 @@
           "document_number": "32/2012/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "a715b4fbeefdfec2eb0c4f7b78a78da5fb98845dc45a86533851ad7aa6bf7cc6",
-          "node_id": "tx:4c67d030a66a03c5",
+          "anchor": "dieu-1",
           "quoted_span": "1. Lãi suất tối đa áp dụng đối với tiền gửi không kỳ hạn và có kỳ hạn dưới 1 tháng là 2%/năm.\n2. Lãi suất tối đa áp dụng đối với tiền gửi có kỳ hạn từ 1 tháng đến dưới 12 tháng là 8%/năm"
         }
       ],
@@ -4680,7 +4680,7 @@
           "document_number": "08/2013/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "ea85c57190ba8ac74612a08b9d3666fabd78c02e891250cc420e640702514c10",
-          "node_id": "tx:91c0b99a21c3a11c",
+          "anchor": "dieu-1",
           "quoted_span": "1. Lãi suất tối đa áp dụng đối với tiền gửi không kỳ hạn và có kỳ hạn dưới 1 tháng là 2%/năm.\n2. Lãi suất tối đa áp dụng đối với tiền gửi có kỳ hạn từ 1 tháng đến dưới 12 tháng là 7,5%/năm"
         }
       ],
@@ -4721,7 +4721,7 @@
           "document_number": "15/2013/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "cb3195b07444f2137a0b57e18623aafd14759e0880de763c658c8ddc2be82759",
-          "node_id": "tx:01656d93fea77e78",
+          "anchor": "dieu-1",
           "quoted_span": "1. Lãi suất tối đa áp dụng đối với tiền gửi không kỳ hạn và có kỳ hạn dưới 1 tháng là 1,2%/năm.\n2. Lãi suất tối đa áp dụng đối với tiền gửi có kỳ hạn từ 1 tháng đến dưới 6 tháng là 7,0%/năm"
         }
       ],
@@ -4762,7 +4762,7 @@
           "document_number": "07/2014/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "5c295754e58b5839f3007250adcd0621ccfd1841408b306f91db6ca7eeffff4b",
-          "node_id": "46777104-df3c-11f0-8e16-87d90a9f6af8",
+          "anchor": "dieu-1/khoan-1",
           "quoted_span": "áp dụng lãi suất tiền gửi bằng đồng Việt Nam của tổ chức và cá nhân không vượt quá mức lãi suất tối đa đối với tiền gửi không kỳ hạn, tiền gửi có kỳ hạn dưới 1 tháng, tiền gửi có kỳ hạn từ 1 tháng đến dưới 6 tháng do Thống đốc Ngân hàng Nhà nước Việt Nam quyết định trong từng thời kỳ"
         }
       ],
@@ -4796,7 +4796,7 @@
           "document_number": "117/2018/ND-CP",
           "source_url": "",
           "fetch_sha256": "4e2c253d93440811d5a855552bb2f19f4176eeabbaf228218fd9a9441cc92ec8",
-          "node_id": "72352ea4-df54-11f0-872e-dd743f85555d",
+          "anchor": "dieu-4/khoan-3",
           "quoted_span": "3. Cơ quan nhà nước, tổ chức khác, cá nhân chỉ được yêu cầu tổ chức tín dụng, chi nhánh ngân hàng nước ngoài cung cấp thông tin khách hàng theo đúng mục đích, nội dung, phạm vi, thẩm quyền theo quy định của pháp luật hoặc khi được sự chấp thuận của khách hàng"
         }
       ],
@@ -4830,7 +4830,7 @@
           "document_number": "117/2018/ND-CP",
           "source_url": "",
           "fetch_sha256": "4e2c253d93440811d5a855552bb2f19f4176eeabbaf228218fd9a9441cc92ec8",
-          "node_id": "72352f94-df54-11f0-87c4-c98bb6ac64a4",
+          "anchor": "dieu-8",
           "quoted_span": "Điều 8. Trình tự, thủ tục cung cấp thông tin khách hàng\n1. Khi cần thông tin khách hàng, cơ quan nhà nước gửi tổ chức tín dụng, chi nhánh ngân hàng nước ngoài hồ sơ yêu cầu cung cấp thông tin khách hàng theo quy định tại Nghị định này."
         }
       ],
@@ -4878,7 +4878,7 @@
           "document_number": "117/2018/ND-CP",
           "source_url": "",
           "fetch_sha256": "4e2c253d93440811d5a855552bb2f19f4176eeabbaf228218fd9a9441cc92ec8",
-          "node_id": "72352fd0-df54-11f0-bb5e-b17263fb17e1",
+          "anchor": "dieu-9",
           "quoted_span": "a) Căn cứ pháp lý cụ thể quy định thẩm quyền được yêu cầu cung cấp thông tin khách hàng;\nb) Lý do, mục đích yêu cầu cung cấp thông tin khách hàng trong đó nêu rõ mối liên quan của khách hàng với mục đích yêu cầu cung cấp thông tin khách hàng;\nc) Nội dung, phạm vi thông tin khách hàng"
         }
       ],
@@ -4912,7 +4912,7 @@
           "document_number": "340/2025/ND-CP",
           "source_url": "",
           "fetch_sha256": "644071b9cda9e473f4a703ee5f626cd60e5b83864c0f78c1c8f12c5953bb9433",
-          "node_id": "7f209470-3029-11f1-b3c3-3b02d8d82e6a",
+          "anchor": "dieu-27/khoan-2",
           "quoted_span": "2. Phạt tiền từ 10.000.000 đồng đến 20.000.000 đồng đối với một trong các hành vi vi phạm sau đây:"
         }
       ],
@@ -4946,7 +4946,7 @@
           "document_number": "340/2025/ND-CP",
           "source_url": "",
           "fetch_sha256": "644071b9cda9e473f4a703ee5f626cd60e5b83864c0f78c1c8f12c5953bb9433",
-          "node_id": "7f2acda0-3029-11f1-bcc6-91707c1aa296",
+          "anchor": "dieu-27/khoan-10/diem-a",
           "quoted_span": "a) Tịch thu số ngoại tệ, đồng Việt Nam đối với hành vi vi phạm quy định tại khoản 2, các điểm h, i, k khoản 3, điểm h khoản 4, các điểm e, g, h khoản 5, điểm d khoản 8 Điều này;"
         }
       ],
@@ -4987,7 +4987,7 @@
           "document_number": "340/2025/ND-CP",
           "source_url": "",
           "fetch_sha256": "644071b9cda9e473f4a703ee5f626cd60e5b83864c0f78c1c8f12c5953bb9433",
-          "node_id": "7ee4eb00-3029-11f1-972a-adf16af72815",
+          "anchor": "dieu-5/khoan-3/diem-a",
           "quoted_span": "a) Mức phạt tiền quy định tại Chương II Nghị định này là mức phạt tiền áp dụng đối với cá nhân;"
         }
       ],
@@ -5028,7 +5028,7 @@
           "document_number": "88/2019/ND-CP",
           "source_url": "",
           "fetch_sha256": "7d95dcdf6774fcb52f954fc5aac7f4aa87e8ca8ad86df703c7096f49a361099e",
-          "node_id": "41aa6534-2c83-11f1-8d8f-7f7f2c3af91c",
+          "anchor": "dieu-1/khoan-1",
           "quoted_span": "1. Nghị định này quy định các hành vi vi phạm hành chính, hình thức xử phạt, mức xử phạt, biện pháp khắc phục hậu quả, thẩm quyền xử phạt vi phạm hành chính, thẩm quyền lập biên bản vi phạm hành chính trong lĩnh vực tiền tệ và ngân hàng."
         }
       ],
@@ -5062,7 +5062,7 @@
           "document_number": "143/2021/ND-CP",
           "source_url": "",
           "fetch_sha256": "cda1fb0cd198cbdba38c4ee3ae714896dc969ec69637f5c60a0e966189b252e1",
-          "node_id": "ac1cd4c0-2d45-11f1-bff2-6b4a27c48786",
+          "anchor": "dieu-1",
           "quoted_span": "Điều 1. Sửa đổi, bổ sung một số điều của Nghị định số 88/2019/NĐ-CP ngày 14 tháng 11 năm 2019 của Chính phủ quy định xử phạt vi phạm hành chính trong lĩnh vực tiền tệ và ngân hàng"
         }
       ],
@@ -5397,7 +5397,7 @@
           "document_number": "86/2019/ND-CP",
           "source_url": "",
           "fetch_sha256": "9b0c316085e79258786e7cc8783d6faade73be2375c9a87683992717739a0b31",
-          "node_id": "8042d106-e16e-11f0-8214-f981634d848a",
+          "anchor": "dieu-2",
           "quoted_span": "1. Ngân hàng thương mại: 3.000 tỷ đồng.\n2. Ngân hàng chính sách: 5.000 tỷ đồng.\n3. Ngân hàng hợp tác xã: 3.000 tỷ đồng.\n4. Chi nhánh ngân hàng nước ngoài: 15 triệu đô la Mỹ (USD).\n5. Công ty tài chính: 500 tỷ đồng.\n6. Công ty cho thuê tài chính: 150 tỷ đồng.\n7. Tổ chức tài chính vi mô: 05 tỷ đồng."
         }
       ],
@@ -5487,7 +5487,7 @@
           "document_number": "38/2014/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "9513d6af6e37a5de9cd70d4c7b5aabdf73e6fc86d535176828506b3f2a6994c7",
-          "node_id": "722d4160-2d53-11f1-a1c2-e9f9c095f09d",
+          "anchor": "dieu-6",
           "quoted_span": "2. Văn bản hoặc tài liệu của tổ chức xếp hạng tín nhiệm quốc tế về kết quả xếp hạng tín nhiệm gần nhất với thời điểm nộp hồ sơ đối với tổ chức nước ngoài."
         }
       ],
@@ -5703,7 +5703,7 @@
           "document_number": "46/VBHN-NHNN",
           "source_url": "",
           "fetch_sha256": "f63f239a2ce7efb6c02ad5d937286e81a78feaecaaba4b7857ea329a660db516",
-          "node_id": "1e0d9c00-a7bb-42f0-bd59-e0719bbdc73e",
+          "anchor": "dieu-12",
           "quoted_span": "3. Trong thời hạn 19 ngày làm việc kể từ ngày nhận đủ hồ sơ hợp lệ, Ngân hàng Nhà nước xem xét chấp thuận hoặc không chấp thuận bằng văn bản việc mua cổ phần của nhà đầu tư nước ngoài."
         }
       ],
@@ -5758,7 +5758,7 @@
           "document_number": "94/2025/ND-CP",
           "source_url": "",
           "fetch_sha256": "085dc2f535e74683e0243e99902dd176cce01ed0860ad81e2d0d794a288dd545",
-          "node_id": "284d67e4-df4e-11f0-8595-c1de1b163b57",
+          "anchor": "dieu-1",
           "quoted_span": "2. Các giải pháp công nghệ tài chính (viết tắt là giải pháp Fintech) được tham gia thử nghiệm tại Cơ chế thử nghiệm bao gồm:\na) Chấm điểm tín dụng;\nb) Chia sẻ dữ liệu qua giao diện lập trình ứng dụng mở (Open API);\nc) Cho vay ngang hàng."
         }
       ],
@@ -5792,7 +5792,7 @@
           "document_number": "94/2025/ND-CP",
           "source_url": "",
           "fetch_sha256": "085dc2f535e74683e0243e99902dd176cce01ed0860ad81e2d0d794a288dd545",
-          "node_id": "284d6910-df4e-11f0-b704-1df88c60b6ac",
+          "anchor": "dieu-6/khoan-1",
           "quoted_span": "1. Thời gian thử nghiệm các giải pháp Fintech tối đa 02 năm tùy từng giải pháp và lĩnh vực cụ thể tính từ thời điểm được Ngân hàng Nhà nước cấp Giấy chứng nhận tham gia Cơ chế thử nghiệm. Thời gian thử nghiệm có thể được gia hạn theo quy định tại Điều 20 Nghị định này."
         }
       ],
@@ -5826,7 +5826,7 @@
           "document_number": "53/2026/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "0f7f95c45de855768deb47817c773685892fe63cc41fd2dda9b1b51d84f04437",
-          "node_id": "e1b5bc41-f441-4467-a099-731d08756d54",
+          "anchor": "dieu-6",
           "quoted_span": "1. Hệ thống trí tuệ nhân tạo phải được kiểm tra, đánh giá an ninh mạng trước khi đưa vào vận hành chính thức và định kỳ hoặc ngay khi có thay đổi đáng kể của hệ thống trí tuệ nhân tạo, tối thiểu bao gồm:"
         }
       ],
@@ -5867,7 +5867,7 @@
           "document_number": "53/2026/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "0f7f95c45de855768deb47817c773685892fe63cc41fd2dda9b1b51d84f04437",
-          "node_id": "87accdad-361f-4fb5-8c1f-acb03ec2ab2c",
+          "anchor": "dieu-14",
           "quoted_span": "1. Đơn vị phải xây dựng, ban hành và tổ chức thực hiện khung quản lý rủi ro đối với ứng dụng hệ thống trí tuệ nhân tạo, bảo đảm phù hợp, đồng bộ với chính sách quản lý rủi ro tổng thể và không tách rời khỏi hệ thống kiểm soát nội bộ chung của đơn vị."
         }
       ],
@@ -5922,7 +5922,7 @@
           "document_number": "53/2026/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "0f7f95c45de855768deb47817c773685892fe63cc41fd2dda9b1b51d84f04437",
-          "node_id": "442231db-c2b3-4a82-b021-af33ad1281bd",
+          "anchor": "dieu-22",
           "quoted_span": "1. Đơn vị lập hồ sơ liên quan đến hệ thống trí tuệ nhân tạo theo khoản 2 Điều này và báo cáo cấp có thẩm quyền của đơn vị quyết định việc đưa hệ thống trí tuệ nhân tạo vào vận hành chính thức."
         }
       ],
@@ -5977,7 +5977,7 @@
           "document_number": "53/2026/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "0f7f95c45de855768deb47817c773685892fe63cc41fd2dda9b1b51d84f04437",
-          "node_id": "e2e62ee3-e692-4062-a7c8-53d5d747ee06",
+          "anchor": "dieu-23/khoan-1",
           "quoted_span": "1. Thông tư này có hiệu lực thi hành kể từ ngày 15 tháng 11 năm 2026, trừ quy định tại khoản 2, 3 và 4 Điều này."
         }
       ],
@@ -6032,7 +6032,7 @@
           "document_number": "134/2025/QH15",
           "source_url": "",
           "fetch_sha256": "9788c2dff9609a9e70369245c804afbeba0f5a07c5b70a13716c1c294e63e774",
-          "node_id": "4cbf4944-0e28-46f8-9729-a92fa115a83e",
+          "anchor": "dieu-9",
           "quoted_span": "1. Hệ thống trí tuệ nhân tạo được phân loại theo các mức độ rủi ro sau đây:\na) Hệ thống trí tuệ nhân tạo có rủi ro cao là hệ thống có thể gây thiệt hại đáng kể đến tính mạng, sức khỏe, quyền và lợi ích hợp pháp của tổ chức, cá nhân, lợi ích quốc gia, lợi ích công cộng, an ninh quốc gia;"
         }
       ],
@@ -6066,7 +6066,7 @@
           "document_number": "134/2025/QH15",
           "source_url": "",
           "fetch_sha256": "9788c2dff9609a9e70369245c804afbeba0f5a07c5b70a13716c1c294e63e774",
-          "node_id": "73a28264-7385-4056-b320-c516a258a1f2",
+          "anchor": "dieu-14",
           "quoted_span": "1. Nhà cung cấp hệ thống trí tuệ nhân tạo có rủi ro cao có trách nhiệm sau đây:\na) Thiết lập và duy trì biện pháp quản lý rủi ro và thường xuyên rà soát khi hệ thống có thay đổi đáng kể hoặc phát sinh rủi ro mới;"
         }
       ],
@@ -6100,7 +6100,7 @@
           "document_number": "91/2025/QH15",
           "source_url": "",
           "fetch_sha256": "502d4e3ea95f870347b19d59b7fa3d0531ca06bbc86ec2f364ff00aa4250d180",
-          "node_id": "cad78ac0-22e3-11f1-a54e-c148cce206ab",
+          "anchor": "dieu-23/khoan-1",
           "quoted_span": "xâm phạm đến tính mạng, sức khỏe, danh dự, nhân phẩm, tài sản của chủ thể dữ liệu cá nhân thì phải thông báo cho cơ quan chuyên trách bảo vệ dữ liệu cá nhân chậm nhất là 72 giờ kể từ khi phát hiện hành vi vi phạm."
         }
       ],
@@ -6134,7 +6134,7 @@
           "document_number": "356/2025/ND-CP",
           "source_url": "",
           "fetch_sha256": "167415445b4f709fe16592ad6b09339321cbd234e959d1d8986b8791a35dd9be",
-          "node_id": "6f1c27b0-31af-11f1-97d4-3defc0ee8608",
+          "anchor": "dieu-28",
           "quoted_span": "1. Nội dung thông báo vi phạm quy định về bảo vệ dữ liệu cá nhân, gồm:\na) Mô tả tính chất của việc vi phạm quy định bảo vệ dữ liệu cá nhân, bao gồm: thời gian, địa điểm, hành vi, tổ chức, cá nhân, các loại dữ liệu cá nhân và số lượng dữ liệu liên quan;"
         }
       ],
@@ -6175,7 +6175,7 @@
           "document_number": "356/2025/ND-CP",
           "source_url": "",
           "fetch_sha256": "167415445b4f709fe16592ad6b09339321cbd234e959d1d8986b8791a35dd9be",
-          "node_id": "6ef45460-31af-11f1-ae9e-2ff26d9b56a7",
+          "anchor": "dieu-8/khoan-3",
           "quoted_span": "Trong thời hạn không quá 72 giờ sau khi phát hiện lộ, mất dữ liệu nhạy cảm của chủ thể dữ liệu cá nhân trong lĩnh vực tài chính, ngân hàng, hoạt động thông tin tín dụng, tổ chức, cá nhân trực tiếp thu thập dữ liệu cá nhân của chủ thể dữ liệu có trách nhiệm thông báo"
         }
       ],
@@ -6209,7 +6209,7 @@
           "document_number": "13/2023/ND-CP",
           "source_url": "",
           "fetch_sha256": "0bb43f53bc30f2ab75adea2f6231b5ba0710454f67ba523c3f6fb679283596ab",
-          "node_id": "aa530cac-df45-11f0-bd9a-7f58c57b449e",
+          "anchor": "dieu-24/khoan-1",
           "quoted_span": "1. Bên Kiểm soát dữ liệu cá nhân, Bên Kiểm soát và xử lý dữ liệu cá nhân lập và lưu giữ Hồ sơ đánh giá tác động xử lý dữ liệu cá nhân của mình kể từ thời điểm bắt đầu xử lý dữ liệu cá nhân."
         }
       ],
@@ -6243,7 +6243,7 @@
           "document_number": "356/2025/ND-CP",
           "source_url": "",
           "fetch_sha256": "167415445b4f709fe16592ad6b09339321cbd234e959d1d8986b8791a35dd9be",
-          "node_id": "6efd7c20-31af-11f1-9612-2d0631f4cbdb",
+          "anchor": "dieu-13",
           "quoted_span": "2. Nhân sự bảo vệ dữ liệu cá nhân được cơ quan, tổ chức chỉ định phải đáp ứng đủ các điều kiện năng lực như sau:\na) Có trình độ cao đẳng trở lên;\nb) Có ít nhất 02 năm kinh nghiệm công tác"
         }
       ],
@@ -6291,7 +6291,7 @@
           "document_number": "356/2025/ND-CP",
           "source_url": "",
           "fetch_sha256": "167415445b4f709fe16592ad6b09339321cbd234e959d1d8986b8791a35dd9be",
-          "node_id": "6eff29d0-31af-11f1-a9ff-2331b499ba65",
+          "anchor": "dieu-14",
           "quoted_span": "1. Bộ phận bảo vệ dữ liệu cá nhân có chức năng, nhiệm vụ như sau:\na) Tổ chức xây dựng chính sách, quy trình, quy định, biểu mẫu để tuân thủ các quy định pháp luật về bảo vệ dữ liệu cá nhân;"
         }
       ],
@@ -6332,7 +6332,7 @@
           "document_number": "356/2025/ND-CP",
           "source_url": "",
           "fetch_sha256": "167415445b4f709fe16592ad6b09339321cbd234e959d1d8986b8791a35dd9be",
-          "node_id": "6f2e7730-31af-11f1-90ae-69e7a78aa114",
+          "anchor": "dieu-41",
           "quoted_span": "1. Doanh nghiệp nhỏ, doanh nghiệp khởi nghiệp được quyền lựa chọn thực hiện hoặc không thực hiện quy định tại Điều 21, Điều 22 và khoản 2 Điều 33 của Luật Bảo vệ dữ liệu cá nhân trong thời gian 05 năm kể từ ngày Luật Bảo vệ dữ liệu cá nhân có hiệu lực thi hành"
         }
       ],
@@ -6373,7 +6373,7 @@
           "document_number": "116/2025/QH15",
           "source_url": "",
           "fetch_sha256": "06a4a97ee3fea1b6835eab3cc239345a87050ea806b129a478e1bc458a3e5f08",
-          "node_id": "beaf6030-3182-11f1-97d5-658f0a4bf748",
+          "anchor": "dieu-44/khoan-1",
           "quoted_span": "1. Luật này có hiệu lực thi hành từ ngày 01 tháng 7 năm 2026."
         }
       ],
@@ -6407,7 +6407,7 @@
           "document_number": "116/2025/QH15",
           "source_url": "",
           "fetch_sha256": "06a4a97ee3fea1b6835eab3cc239345a87050ea806b129a478e1bc458a3e5f08",
-          "node_id": "beafae50-3182-11f1-8f0d-adf3758faa45",
+          "anchor": "dieu-44/khoan-2",
           "quoted_span": "2. Luật An toàn thông tin mạng số 86/2015/QH13 đã được sửa đổi, bổ sung một số điều theo Luật số 35/2018/QH14; Luật An ninh mạng số 24/2018/QH14 hết hiệu lực kể từ ngày Luật này có hiệu lực thi hành."
         }
       ],
@@ -6441,7 +6441,7 @@
           "document_number": "09/2020/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "c73bc7a0715a0bd8a6c0ee7d2b0c5ba00d5302ab0e1f0258c6ee11c0b4753715",
-          "node_id": "044c083c-df3f-11f0-8ddf-032bc273fc22",
+          "anchor": "dieu-33",
           "quoted_span": "Trước khi sử dụng dịch vụ của bên thứ ba triển khai cho các hệ thống thông tin từ cấp độ 3 trở lên và các hệ thống thông tin có xử lý thông tin cá nhân của khách hàng, tổ chức thực hiện:\n1. Đánh giá rủi ro công nghệ thông tin, rủi ro hoạt động tối thiểu bao gồm các nội dung sau:"
         }
       ],
@@ -6475,7 +6475,7 @@
           "document_number": "09/2020/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "c73bc7a0715a0bd8a6c0ee7d2b0c5ba00d5302ab0e1f0258c6ee11c0b4753715",
-          "node_id": "044c083c-df3f-11f0-8ddf-032bc273fc22",
+          "anchor": "dieu-33",
           "quoted_span": "2. Trong trường hợp sử dụng dịch vụ điện toán đám mây, ngoài các yêu cầu tại khoản 1 Điều này, tổ chức thực hiện:\na) Phân loại hoạt động, nghiệp vụ dự kiến triển khai trên điện toán đám mây dựa trên đánh giá tác động của hoạt động, nghiệp vụ đó với hoạt động của tổ chức;"
         }
       ],
@@ -6509,7 +6509,7 @@
           "document_number": "09/2020/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "c73bc7a0715a0bd8a6c0ee7d2b0c5ba00d5302ab0e1f0258c6ee11c0b4753715",
-          "node_id": "044c08be-df3f-11f0-9a43-c91bb075029b",
+          "anchor": "dieu-34",
           "quoted_span": "1. Bên thứ ba phải là doanh nghiệp.\n2. Có hạ tầng công nghệ thông tin tương ứng với dịch vụ mà tổ chức sử dụng đáp ứng các yêu cầu sau:\na) Các quy định của pháp luật Việt Nam;\nb) Có chứng nhận quốc tế còn hiệu lực về bảo đảm an toàn thông tin."
         }
       ],
@@ -6550,7 +6550,7 @@
           "document_number": "122/2025/QH15",
           "source_url": "",
           "fetch_sha256": "bc6bfae79906920df5405f89caa655a84b1dfe2470165b360866def4f60e2836",
-          "node_id": "7f38ad34-7561-4818-921a-a8516b276965",
+          "anchor": "dieu-24/khoan-1",
           "quoted_span": "1. Cung cấp thông tin cho chủ quản nền tảng thương mại điện tử để phục vụ việc xác thực danh tính người livestream bán hàng."
         }
       ],
@@ -6598,7 +6598,7 @@
           "document_number": "122/2025/QH15",
           "source_url": "",
           "fetch_sha256": "bc6bfae79906920df5405f89caa655a84b1dfe2470165b360866def4f60e2836",
-          "node_id": "467d5ef1-3826-424f-9a59-ca03c6029539",
+          "anchor": "dieu-23",
           "quoted_span": "1. Trước khi thực hiện livestream bán hàng, người bán phải cung cấp đầy đủ cho người livestream bán hàng giấy tờ chứng minh sau đây:\na) Giấy tờ chứng minh đáp ứng điều kiện đầu tư kinh doanh đối với ngành, nghề đầu tư kinh doanh có điều kiện trước khi livestream bán hàng;"
         }
       ],
@@ -6646,7 +6646,7 @@
           "document_number": "248/2026/ND-CP",
           "source_url": "",
           "fetch_sha256": "922732769e0db4da4b9a3ceeab59332a624ce8d1e67f28266410213b79cae11b",
-          "node_id": "d0fd1b79-c809-4f11-8474-e8494c28d374",
+          "anchor": "dieu-52/khoan-2",
           "quoted_span": "2. Chủ quản nền tảng thương mại điện tử có trách nhiệm thực hiện việc xác thực điện tử danh tính người bán và người livestream bán hàng kể từ ngày 01 tháng 01 năm 2027."
         }
       ],
@@ -6694,7 +6694,7 @@
           "document_number": "05/2025/NQ-CP",
           "source_url": "",
           "fetch_sha256": "a881cd13ff6ecaa9c8931383ca2a5261057f112a6490e3bbd728e4ef4675c201",
-          "node_id": "f4f4fa1a-504f-11f1-bd07-3d3542102ecb",
+          "anchor": "dieu-7/khoan-2",
           "quoted_span": "2. Sau thời hạn 6 tháng kể từ khi tổ chức cung cấp dịch vụ tài sản mã hóa đầu tiên được cấp phép, nhà đầu tư trong nước giao dịch tài sản mã hóa không thông qua tổ chức cung cấp dịch vụ tài sản mã hóa do Bộ Tài chính cấp phép tùy theo tính chất, mức độ vi phạm sẽ bị xử lý vi phạm hành chính"
         }
       ],
@@ -6728,7 +6728,7 @@
           "document_number": "284/2026/ND-CP",
           "source_url": "",
           "fetch_sha256": "f1846b67ba7ba4a601d0baae33c1950a0bae26c80ec6257ff2c9b1941215deba",
-          "node_id": "ad50332d-19b2-4743-a8ef-1ceb4238ae58",
+          "anchor": "dieu-9/khoan-1",
           "quoted_span": "1. Phạt tiền từ 30.000.000 đồng đến 50.000.000 đồng đối với nhà đầu tư trong nước giao dịch tài sản mã hóa không thông qua tổ chức cung cấp dịch vụ tài sản mã hóa do Bộ Tài chính cấp phép theo quy định tại khoản 2 Điều 7 Nghị quyết số 05/2025/NQ-CP."
         }
       ],
@@ -6762,7 +6762,7 @@
           "document_number": "32/2026/TT-BTC",
           "source_url": "",
           "fetch_sha256": "85528086812d61bb18e2a3bcb1a89b804356611bb5eecf3554c9ddc14debc0c8",
-          "node_id": "81cf5df4-59a6-11f1-b692-c9bb9a59162e",
+          "anchor": "dieu-5",
           "quoted_span": "Nhà đầu tư là cá nhân (không phân biệt cá nhân cư trú hay không cư trú) có hoạt động chuyển nhượng tài sản mã hóa qua tổ chức cung cấp dịch vụ tài sản mã hóa thuộc đối tượng nộp thuế thu nhập cá nhân theo tỷ lệ 0,1% trên giá chuyển nhượng từng lần."
         }
       ],
@@ -6789,7 +6789,7 @@
           "document_number": "41/2026/TT-BTC",
           "source_url": "",
           "fetch_sha256": "0a51ed7b0936f5be6d2bedf032ae0580718921e5c7c7545185c488014e7302b6",
-          "node_id": "58627f10-81ce-4e98-b089-c008f75e4490",
+          "anchor": "dieu-4/khoan-1",
           "quoted_span": "khấu trừ, nộp thuế thay số thuế thu nhập cá nhân phát sinh đối với mỗi giao dịch chuyển nhượng tài sản mã hóa mà cá nhân (bao gồm cá nhân cư trú và cá nhân không cư trú) thực hiện thông qua Tổ chức cung cấp dịch vụ."
         }
       ],
@@ -6823,7 +6823,7 @@
           "document_number": "15/2026/TT-BTC",
           "source_url": "",
           "fetch_sha256": "4de08efcd27e5df3777bbe2ad4d32ebddb31a76ac0c21ccf5a77d76941a08b26",
-          "node_id": "f6c2923e-536a-433f-9a37-5b493e7e94e6",
+          "anchor": "dieu-5/khoan-3/diem-c",
           "quoted_span": "c) Tổ chức cung cấp dịch vụ tài sản mã hóa thực hiện trích lập dự phòng rủi ro liên quan đến hoạt động tự doanh tài sản mã hoá tương tự như hoạt động tự doanh chứng khoán của công ty chứng khoán."
         }
       ],
@@ -6857,7 +6857,7 @@
           "document_number": "15/2026/TT-BTC",
           "source_url": "",
           "fetch_sha256": "4de08efcd27e5df3777bbe2ad4d32ebddb31a76ac0c21ccf5a77d76941a08b26",
-          "node_id": "166428c7-4ed8-46a9-bfdf-4be92eda5826",
+          "anchor": "dieu-4/khoan-2",
           "quoted_span": "thực hiện hạch toán kế toán theo Chế độ kế toán doanh nghiệp ban hành kèm theo Thông tư số 99/2025/TT-BTC ngày 27/10/2025 của Bộ trưởng Bộ Tài chính và những nội dung quy định tại Thông tư này để ghi sổ kế toán, lập và trình bày báo cáo tài chính."
         }
       ],
@@ -6898,7 +6898,7 @@
           "document_number": "15/2026/TT-BTC",
           "source_url": "",
           "fetch_sha256": "4de08efcd27e5df3777bbe2ad4d32ebddb31a76ac0c21ccf5a77d76941a08b26",
-          "node_id": "0938b62c-057a-40d6-bb4d-d3f7e1550e5e",
+          "anchor": "dieu-5/khoan-2/diem-b",
           "quoted_span": "b) Tài sản mã hóa của khách hàng lưu ký tại tổ chức cung cấp dịch vụ tài sản mã hóa không được ghi nhận là tài sản của tổ chức cung cấp dịch vụ mà được theo dõi chi tiết để phục vụ yêu cầu quản lý và thuyết minh trên báo cáo tài chính."
         }
       ],
@@ -6939,7 +6939,7 @@
           "document_number": "47/2025/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "0afea5c7d6a9b86711d0c9e9b25261bf8a9266f2c1bd34afc610cdebb20e1d9e",
-          "node_id": "7baca3d0-2d3e-11f1-bd79-0b90d969f6bd",
+          "anchor": "dieu-5/khoan-1",
           "quoted_span": "1. Văn bản của tổ chức tín dụng cổ phần đề nghị Ngân hàng Nhà nước chấp thuận niêm yết trên thị trường chứng khoán nước ngoài (theo mẫu tại Phụ lục I ban hành kèm theo Thông tư này)."
         }
       ],
@@ -7001,7 +7001,7 @@
           "document_number": "47/2025/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "0afea5c7d6a9b86711d0c9e9b25261bf8a9266f2c1bd34afc610cdebb20e1d9e",
-          "node_id": "7bad4010-2d3e-11f1-957d-9b7e8af7251d",
+          "anchor": "dieu-6/khoan-1",
           "quoted_span": "1. Tổ chức tín dụng cổ phần lập 01 bộ hồ sơ theo quy định tại Điều 5 Thông tư này gửi Ngân hàng Nhà nước (Bộ phận Một cửa). Trường hợp hồ sơ chưa đầy đủ, hợp lệ, trong thời hạn 05 ngày làm việc kể từ ngày nhận được hồ sơ, Ngân hàng Nhà nước có văn bản yêu cầu"
         }
       ],
@@ -7042,7 +7042,7 @@
           "document_number": "48/VBHN-NHNN",
           "source_url": "",
           "fetch_sha256": "76aebf2c578c999b05e79b8cefe7c710447b135adafc09fa90e5ba1f77bb1f7c",
-          "node_id": "f12255f8-f12d-4328-ac2d-a8b38994d22b",
+          "anchor": "dieu-6/khoan-2",
           "quoted_span": "2. Trong thời hạn 14 ngày làm việc kể từ ngày nhận được đầy đủ hồ sơ quy định tại Điều 5 Thông tư này, Ngân hàng Nhà nước có văn bản chấp thuận (theo mẫu tại Phụ lục II ban hành kèm theo Thông tư này) hoặc không chấp thuận việc tổ chức tín dụng cổ phần niêm yết trên thị trường chứng khoán nước ngoài"
         }
       ],
@@ -7076,7 +7076,7 @@
           "document_number": "61/2024/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "6a764cff237cfa4444e0838929f95e127a3267e959f93f6ff685e25ac130b724",
-          "node_id": "5d761cd0-2c7a-11f1-b112-13baff26a03f",
+          "anchor": "dieu-16",
           "quoted_span": "e) Số tiền bảo lãnh, đồng tiền bảo lãnh;\ng) Nghĩa vụ bảo lãnh;\nh) Điều kiện thực hiện nghĩa vụ bảo lãnh;\ni) Hồ sơ yêu cầu thực hiện nghĩa vụ bảo lãnh gồm yêu cầu thực hiện nghĩa vụ bảo lãnh kèm danh mục chứng từ, tài liệu cần phải cung cấp;"
         }
       ],
@@ -7124,7 +7124,7 @@
           "document_number": "61/2024/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "6a764cff237cfa4444e0838929f95e127a3267e959f93f6ff685e25ac130b724",
-          "node_id": "5d7dbe18-2c7a-11f1-abc4-ad4854e6e85a",
+          "anchor": "dieu-23",
           "quoted_span": "Nghĩa vụ bảo lãnh chấm dứt trong các trường hợp sau:\n1. Nghĩa vụ của bên được bảo lãnh chấm dứt.\n2. Nghĩa vụ bảo lãnh đã được thực hiện theo đúng cam kết bảo lãnh."
         }
       ],
@@ -7256,7 +7256,7 @@
           "document_number": "07/2015/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "7175655b9957ce554f8058aa0c94b59dd712300cf3513f8bc5279103dea14090",
-          "node_id": "tx:c183d745060ab9ab",
+          "anchor": "dieu-1",
           "quoted_span": "Thông tư này quy định về nghiệp vụ bảo lãnh ngân hàng của tổ chức tín dụng, chi nhánh ngân hàng nước ngoài đối với khách hàng."
         }
       ],
@@ -7283,7 +7283,7 @@
           "document_number": "13/2017/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "37a44155065f035dc4baadcc4aab84a1c770c530012404bc50255b9dd5597edf",
-          "node_id": "f58fa03a-e171-11f0-affc-f532a86b9573",
+          "anchor": "dieu-1",
           "quoted_span": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư số 07/2015/TT-NHNN ngày 25 tháng 6 năm 2015 của Thống đốc Ngân hàng Nhà nước Việt Nam quy định về bảo lãnh ngân hàng"
         }
       ],
@@ -7338,7 +7338,7 @@
           "document_number": "01/2020/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "857b80cd061481773568f64f7c0657c58d4ddc9d7378572c895edff546a2b5ab",
-          "node_id": "5b017ae4-df40-11f0-b44a-35519189d9d1",
+          "anchor": "dieu-1",
           "quoted_span": "Thông tư này quy định về việc tổ chức tín dụng, chi nhánh ngân hàng nước ngoài cơ cấu lại thời hạn trả nợ, miễn, giảm lãi, phí, giữ nguyên nhóm nợ nhằm hỗ trợ khách hàng chịu ảnh hưởng bởi dịch Covid - 19."
         }
       ],
@@ -7365,7 +7365,7 @@
           "document_number": "03/2021/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "095cce58640a5fe7d660790a64799584f7ce12cd0e840870d838871d0c185145",
-          "node_id": "bdf5e94a-df46-11f0-9799-b1b5a49457e9",
+          "anchor": "dieu-1",
           "quoted_span": "đối với số dư nợ của khoản nợ phát sinh trước ngày 10/6/2020 từ hoạt động cấp tín dụng (trừ hoạt động mua, đầu tư trái phiếu doanh nghiệp) mà nghĩa vụ trả nợ gốc và/hoặc lãi đến hạn thanh toán trong khoảng thời gian từ ngày 23/01/2020 đến ngày 31/12/2021"
         }
       ],
@@ -7434,7 +7434,7 @@
           "document_number": "14/2021/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "4339a9b959249deb0b8b2e5878c32b683b7484f8b1d8006856418446fc318a2a",
-          "node_id": "1796a28a-eb7e-11f0-8edb-3b459185129c",
+          "anchor": "dieu-1",
           "quoted_span": "đối với số dư nợ của khoản nợ phát sinh trước ngày 01/8/2021 từ hoạt động cấp tín dụng (trừ hoạt động mua, đầu tư trái phiếu doanh nghiệp) mà nghĩa vụ trả nợ gốc và/hoặc lãi đến hạn thanh toán trong khoảng thời gian từ ngày 23/01/2020 đến ngày 30/6/2022"
         }
       ],
@@ -7482,7 +7482,7 @@
           "document_number": "31/2024/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "7872dde9b32becaf7b0610289a88f535e347a89e2de61035823e2759db99f0b3",
-          "node_id": "3ef94d04-df40-11f0-854c-89707382d2c7",
+          "anchor": "dieu-16/khoan-2",
           "quoted_span": "Thông tư số 11/2021/TT-NHNN ngày 30 tháng 7 năm 2021 của Thống đốc Ngân hàng Nhà nước quy định về phân loại tài sản có, mức trích, phương pháp trích lập dự phòng rủi ro và việc sử dụng dự phòng để xử lý rủi ro trong hoạt động của tổ chức tín dụng, chi nhánh ngân hàng nước ngoài hết hiệu lực thi hành"
         }
       ],
@@ -7516,7 +7516,7 @@
           "document_number": "31/2024/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "7872dde9b32becaf7b0610289a88f535e347a89e2de61035823e2759db99f0b3",
-          "node_id": "3ef94cf0-df40-11f0-aeb6-6b4313eff6a5",
+          "anchor": "dieu-16",
           "quoted_span": "Điều 16. Điều khoản thi hành\n1. Thông tư này có hiệu lực thi hành kể từ ngày 01 tháng 07 năm 2024."
         }
       ],
@@ -7557,7 +7557,7 @@
           "document_number": "14/2025/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "48fda25633571e9bf14c0172c30eb2ae483e5f000f3b4dfa00db521a8e7b3a9d",
-          "node_id": "06d174ce-eb70-11f0-a8d9-9f1285d59bb3",
+          "anchor": "dieu-5",
           "quoted_span": "3. Ngân hàng thương mại không có công ty con, chi nhánh ngân hàng nước ngoài phải duy trì các tỷ lệ an toàn vốn riêng lẻ sau đây:\na) Tỷ lệ vốn lõi cấp 1 tối thiểu là 4,5%;\nb) Tỷ lệ vốn cấp 1 tối thiểu là 6%;\nc) Tỷ lệ an toàn vốn tối thiểu là 8%."
         }
       ],
@@ -7598,7 +7598,7 @@
           "document_number": "14/2025/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "48fda25633571e9bf14c0172c30eb2ae483e5f000f3b4dfa00db521a8e7b3a9d",
-          "node_id": "06d174ce-eb70-11f0-a8d9-9f1285d59bb3",
+          "anchor": "dieu-5",
           "quoted_span": "a) Tỷ lệ bộ đệm bảo toàn vốn (CCB) là phần tỷ lệ vốn lõi cấp 1 còn lại sau khi ngân hàng đáp ứng đầy đủ các tỷ lệ an toàn vốn (bao gồm tỷ lệ vốn lõi cấp 1, tỷ lệ vốn cấp 1 và tỷ lệ an toàn vốn);"
         }
       ],
@@ -7632,7 +7632,7 @@
           "document_number": "14/2025/TT-NHNN",
           "source_url": "",
           "fetch_sha256": "48fda25633571e9bf14c0172c30eb2ae483e5f000f3b4dfa00db521a8e7b3a9d",
-          "node_id": "06d1760e-eb70-11f0-831c-35decf1704cc",
+          "anchor": "dieu-7/khoan-1",
           "quoted_span": "1. Kể từ ngày 01 tháng 01 năm 2030, ngân hàng phải áp dụng quy định tại Thông tư này, trừ quy định tại Chương III Thông tư này."
         }
       ],
@@ -7680,7 +7680,7 @@
           "document_number": "16/SL",
           "source_url": "",
           "fetch_sha256": "d80840a1d606ca375c2030b92bfc0b9465b6d4e97a9c90994959dbf5787d0be6",
-          "node_id": "tx:b4bee215dfa94255",
+          "anchor": "doan-3",
           "quoted_span": "Điều 1 Nay bổ nhiệm: Ông Nguyễn Lương Bằng giữ chức Tổng Giám đốc, Lê Viết Lượng giữ chức Phó Tổng Giám đốc Ngân hàng Quốc gia Việt Nam."
         }
       ],
@@ -7714,7 +7714,7 @@
           "document_number": "198/2026/ND-CP",
           "source_url": "",
           "fetch_sha256": "8e165bbb5fe5f79f3863556e61b117b91cdcb1115fe68a2cd87dbb64b4e02fdc",
-          "node_id": "0e10df49-90c5-4a3f-8047-27126f4ce9c9",
+          "anchor": "dieu-1",
           "quoted_span": "Điều 1. Sửa đổi, bổ sung Điều 3 Nghị định số 26/2025/NĐ-CP ngày 24 tháng 02 năm 2025 của Chính phủ quy định chức năng, nhiệm vụ, quyền hạn và cơ cấu tổ chức của Ngân hàng Nhà nước Việt Nam như sau:"
         }
       ],
@@ -7741,7 +7741,7 @@
           "document_number": "23/2026/QH16",
           "source_url": "",
           "fetch_sha256": "65f660b838299c03af1223b802f64e4ef3324cdc9fee353303eccf84925f2b9e",
-          "node_id": "500ce85c-6523-4229-a1d5-916daa31a08a",
+          "anchor": "dieu-1",
           "quoted_span": "Điều 1. Sửa đổi, bổ sung một số điều của Luật Ngân hàng Nhà nước Việt Nam\n1. Sửa đổi, bổ sung khoản 15 Điều 4 như sau:"
         }
       ],
@@ -7852,7 +7852,7 @@
           "document_number": "23/2026/QH16",
           "source_url": "",
           "fetch_sha256": "65f660b838299c03af1223b802f64e4ef3324cdc9fee353303eccf84925f2b9e",
-          "node_id": "56b232e4-9f36-4a5b-bfe7-4fe9ff484fc6",
+          "anchor": "dieu-2",
           "quoted_span": "Điều 2. Sửa đổi, bổ sung một số điều của Luật Phòng, chống rửa tiền\n1. Sửa đổi, bổ sung khoản 7 Điều 3 như sau:"
         }
       ],
@@ -8012,7 +8012,7 @@
           "document_number": "23/2026/QH16",
           "source_url": "",
           "fetch_sha256": "65f660b838299c03af1223b802f64e4ef3324cdc9fee353303eccf84925f2b9e",
-          "node_id": "d92f9131-ea38-4d84-b99c-0489e87d2b6b",
+          "anchor": "dieu-3",
           "quoted_span": "Điều 3. Sửa đổi, bổ sung khoản 2 Điều 114 của Luật Các tổ chức tín dụng\nBổ sung điểm e vào sau điểm đ như sau:"
         }
       ],
@@ -8039,7 +8039,7 @@
           "document_number": "23/2026/QH16",
           "source_url": "",
           "fetch_sha256": "65f660b838299c03af1223b802f64e4ef3324cdc9fee353303eccf84925f2b9e",
-          "node_id": "d034948a-cada-4aa8-9c2e-7137c0c83d41",
+          "anchor": "dieu-4",
           "quoted_span": "1. Luật này có hiệu lực thi hành từ ngày 01 tháng 12 năm 2026.\n2. Bãi bỏ Điều 22 và khoản 2 Điều 34 của Pháp lệnh Ngoại hối số 28/2005/PL-UBTVQH11"
         }
       ],
@@ -8073,7 +8073,7 @@
           "document_number": "340/2025/ND-CP",
           "source_url": "",
           "fetch_sha256": "644071b9cda9e473f4a703ee5f626cd60e5b83864c0f78c1c8f12c5953bb9433",
-          "node_id": "7faafa20-3029-11f1-aff1-a76d144595bf",
+          "anchor": "dieu-72/khoan-1",
           "quoted_span": "1. Nghị định này có hiệu lực thi hành từ ngày 09 tháng 02 năm 2026."
         }
       ],
@@ -8107,7 +8107,7 @@
           "document_number": "340/2025/ND-CP",
           "source_url": "",
           "fetch_sha256": "644071b9cda9e473f4a703ee5f626cd60e5b83864c0f78c1c8f12c5953bb9433",
-          "node_id": "7fab4840-3029-11f1-b60c-81ef6e9ecb92",
+          "anchor": "dieu-72/khoan-2/diem-a",
           "quoted_span": "a) Nghị định số 88/2019/NĐ-CP ngày 14 tháng 11 năm 2019 của Chính phủ quy định về xử phạt vi phạm hành chính trong lĩnh vực tiền tệ và ngân hàng;"
         }
       ],

@@ -65,7 +65,7 @@ func TestRelationReaders_ValidatePair(t *testing.T) {
 				t.Errorf("loadRelations error = %v", err)
 			}
 			inv := Inventory{ExpectedKeys: []string{key}, Items: items}
-			if _, err := IdentityInventory(inv, store); (err == nil) != tc.valid {
+			if _, err := IdentityInventory(inv, store, nil); (err == nil) != tc.valid {
 				t.Errorf("IdentityInventory error = %v", err)
 			}
 		})

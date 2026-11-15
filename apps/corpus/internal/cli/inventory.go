@@ -52,7 +52,7 @@ func runInventory(ctx context.Context, args []string, stdout, stderr io.Writer) 
 		_, _ = fmt.Fprintln(stderr, err)
 		return 1
 	}
-	if _, err = build.IdentityInventory(inv, artifact.Store{Root: cfg.Artifacts}); err != nil {
+	if _, err = build.IdentityInventory(inv, artifact.Store{Root: cfg.Artifacts}, nil); err != nil {
 		_, _ = fmt.Fprintln(stderr, err)
 		return 1
 	}

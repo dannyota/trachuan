@@ -40,19 +40,18 @@ func TestParsedStructure_RecordedArticleEvidenceUnchanged(t *testing.T) {
 				if old[p.Anchor] != article {
 					t.Fatalf("article identity or evidence changed at %s", p.Anchor)
 				}
-				// Existing manual evidence and identity entries still bind the same article.
 				key, number, anchor := "vn:vbpl:1", "1/2020/TT-NHNN", p.Anchor
 				correction := source.Correction{Key: key, Number: number, Hold: true, Reason: "reviewed text", Evidence: source.CorrectionEvidence{Anchor: anchor, Quote: p.Text}, Reviewed: "2026-11-12"}
 				if _, err = validateCorrections([]source.Correction{correction}, map[string]correctionDocument{key: {number: number, provisions: map[string]string{anchor: p.Text}}}); err != nil {
 					t.Fatal(err)
 				}
 				cases := []evaluation.Case{{ID: "article", ExpectedCitations: []evaluation.Expectation{{DocNumber: number}}}}
-				mapping := evaluation.IdentityMap{Version: 2, LegacySHA256: "legacy", Entries: []evaluation.MapEntry{{CaseID: "article", ExpectedNumber: number, State: "resolved", Reason: "reviewed text", ReviewedAt: "2026-11-12", Evidence: []evaluation.Evidence{{DocumentKey: key, DocumentNumber: number, NodeID: old[anchor].NodeID, FetchSHA256: "fetch", QuotedSpan: p.Text}}, Alternatives: []evaluation.Alternative{{Country: "vn", DocumentKey: key, DocumentNumber: number, Kind: "provision", Anchor: &anchor}}}}}
-				inventory := evaluation.IdentityInventory{Documents: map[string]evaluation.IdentityDocument{key: {Number: number, Anchors: map[string]bool{}, Nodes: map[string]bool{}}}}
+				mapping := evaluation.IdentityMap{Version: 3, LegacySHA256: "legacy", Entries: []evaluation.MapEntry{{CaseID: "article", ExpectedNumber: number, State: "resolved", Reason: "reviewed text", ReviewedAt: "2026-11-12", Evidence: []evaluation.Evidence{{DocumentKey: key, DocumentNumber: number, Anchor: &anchor, FetchSHA256: "fetch", QuotedSpan: p.Text}}, Alternatives: []evaluation.Alternative{{Country: "vn", DocumentKey: key, DocumentNumber: number, Kind: "provision", Anchor: &anchor}}}}}
+				inventory := evaluation.IdentityInventory{Documents: map[string]evaluation.IdentityDocument{key: {Number: number, Anchors: map[string]bool{}, Texts: map[string]string{}}}}
 				doc := inventory.Documents[key]
 				for _, node := range after.Provisions {
 					doc.Anchors[node.Anchor] = true
-					doc.Nodes[node.NodeID] = true
+					doc.Texts[node.Anchor] = node.Text
 				}
 				report, e := mapping.Validate(cases, "legacy", inventory)
 				if e != nil || len(report["article"]) != 0 {
