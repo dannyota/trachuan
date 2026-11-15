@@ -21,6 +21,19 @@ class CorpusWorkflowTest(unittest.TestCase):
             self.assertIn(required, text)
         self.assertIn('.github/workflows/corpus-release.yml:', (ROOT / '.github/actionlint.yaml').read_text())
 
+    def test_installs_verified_aws_before_credentials(self):
+        text = (ROOT / '.github/workflows/corpus-release.yml').read_text()
+        install = text.index('Install AWS CLI')
+        download = text.index('Download corpus objects')
+        self.assertLess(install, download)
+        step = text[install:download]
+        for value in ('awscli-exe-linux-aarch64-2.40.0.zip',
+                      'd293743e9e79dc69dc79dcbc23e26d1258193f0dd1253ba0c09ccf56b6123c6e',
+                      'sha256sum --check --strict', '$RUNNER_TEMP', '$GITHUB_PATH', 'aws-cli/2.40.0'):
+            self.assertIn(value, step)
+        self.assertNotIn('sudo', step)
+        self.assertNotIn('--update', step)
+
     def test_secrets_are_environment_only_and_verification_has_no_skip_flags(self):
         text = (ROOT / '.github/workflows/corpus-release.yml').read_text()
         self.assertIn('AWS_ACCESS_KEY_ID: ${{ secrets.RELEASES_READ_KEY_ID }}', text)

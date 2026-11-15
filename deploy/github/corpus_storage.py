@@ -16,8 +16,8 @@ def download(country, rel, directory):
     if not endpoint.startswith('https://') or '@' in endpoint:
         raise ValueError('OCI_S3_ENDPOINT must be HTTPS without credentials')
     version = subprocess.run(['aws', '--version'], check=True, capture_output=True, text=True).stdout
-    if not version.startswith('aws-cli/2.'):
-        raise ValueError('AWS CLI v2 is required')
+    if version.split(maxsplit=1)[0:1] != ['aws-cli/2.40.0']:
+        raise ValueError('AWS CLI 2.40.0 is required')
     print(version.strip(), flush=True)
     directory.mkdir(parents=True, exist_ok=False)
     with tempfile.TemporaryDirectory() as temporary:

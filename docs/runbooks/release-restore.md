@@ -13,9 +13,9 @@ supplies a temporary configuration with path-style S3 addressing. It never reads
 or prints the keys. Set `OCI_S3_ENDPOINT` to the releases bucket's HTTPS S3
 compatibility endpoint. Python 3.11 or later, `flock` and signed-in `gh` are
 also required. On macOS, install `flock` with `brew install flock` if absent
-([Homebrew](https://formulae.brew.sh/formula/flock)). The uploader and workflow
-print the exact AWS CLI version; retain those lines with the first live release
-evidence.
+([Homebrew](https://formulae.brew.sh/formula/flock)). The uploader prints its
+AWS CLI version. The workflow installs and requires AWS CLI 2.40.0 and prints
+its version.
 
 Evaluate with
 `corpus eval <cc> <rel> --out <directory> --previous <report.json>`, using the

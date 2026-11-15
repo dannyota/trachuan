@@ -28,7 +28,8 @@ class CorpusStorageTest(unittest.TestCase):
         self.log = self.path / 'calls.jsonl'
         self.env = dict(PATH=str(self.path) + os.pathsep + os.environ['PATH'],
                         FAKE_BUILD=str(self.remote), FAKE_LOG=str(self.log),
-                        OCI_S3_ENDPOINT='https://synthetic.example', PYTHONDONTWRITEBYTECODE='1')
+                        OCI_S3_ENDPOINT='https://synthetic.example', PYTHONDONTWRITEBYTECODE='1',
+                        FAKE_AWS_VERSION='2.40.0')
 
     def test_downloads_all_four_objects_with_path_style_and_size_checks(self):
         output = self.path / 'download'
@@ -127,11 +128,19 @@ class CorpusStorageTest(unittest.TestCase):
         self.assertFalse(any('get-object' in call['args'] for call in calls))
 
     def test_logs_exact_aws_version(self):
-        version = '2.31.0 Python/synthetic synthetic-os'
+        version = '2.40.0 Python/synthetic synthetic-os'
         with patch.dict(os.environ, self.env | {'FAKE_AWS_VERSION': version}, clear=True), \
                 redirect_stdout(io.StringIO()) as output:
             self.storage.download('vn', '20990102_1', self.path / 'logged')
         self.assertIn('aws-cli/' + version, output.getvalue())
+
+    def test_rejects_other_aws_versions_before_download(self):
+        for version in ('2.39.0', '2.40.01', '2.40.0rc1', '3.0.0'):
+            with self.subTest(version=version), patch.dict(os.environ, self.env | {
+                    'FAKE_AWS_VERSION': version}, clear=True):
+                with self.assertRaises(ValueError):
+                    self.storage.download('vn', '20990102_1', self.path / version)
+                self.assertFalse((self.path / version).exists())
 
 
 if __name__ == '__main__':
