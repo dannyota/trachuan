@@ -118,7 +118,6 @@ sys.stdout.write("postgres://" + sys.argv[1] + ":" + password +
   unset value
 }
 secret google_client_secret
-secret server_signup_emails
 secret smtp_username
 secret smtp_password
 openssl rand -base64 32 | tr '+/' '-_' | tr -d '=' | \

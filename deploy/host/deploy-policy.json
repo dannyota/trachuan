@@ -13,8 +13,7 @@
     "corpus_reader_password",
     "activator_db_password",
     "backup_s3_key",
-    "backup_s3_key_secret",
-    "server_signup_emails"
+    "backup_s3_key_secret"
   ],
   "repository": "dannyota/trachuan",
   "release_repository": "ghcr.io/dannyota/trachuan-release",

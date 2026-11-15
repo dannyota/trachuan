@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 
 from .deploy_io import atomic, canonical
-from .deploy_vault import names
+from .deploy_vault import names, retired
 
 
 class SecretsState:
@@ -13,6 +13,10 @@ class SecretsState:
             self.data = json.loads(self.path.read_bytes())
         except FileNotFoundError:
             self.data = dict(versions={}, pending={}, last_success_at=None, held=False)
+        for key in ('versions', 'pending'):
+            if isinstance(self.data, dict) and isinstance(self.data.get(key), dict):
+                for name in retired():
+                    self.data[key].pop(name, None)
         self.validate()
 
     def validate(self):
