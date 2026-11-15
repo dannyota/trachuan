@@ -16,6 +16,14 @@ values become null plus `invalid_date` naming the field. Raw strings remain
 stored. If the parsed end precedes the start, clear both effective dates,
 preserve raw values and add `invalid_validity_interval`.
 
+Build stores `document.doc_type` and the issuer name after Unicode NFC, trimming
+and collapsing every run of white space to one space; both columns stay
+`NOT NULL`, so an empty result is the empty string. Chunk reads the fetch value,
+so its listing-only test is unchanged. Stored, filtered, faceted and served
+values are the normalized ones. The source bytes stay in the fetch bundle. This
+rule is versioned as `label_normalizer` `corpus-labels/1` in the build recipe
+only; `normalizer_version` also enters the chunk recipe and stays unchanged.
+
 `eff_to` is the first excluded civil date, so eligibility is
 `eff_from <= date AND (eff_to IS NULL OR date < eff_to)`. A same-day interval is
 empty, not automatically extended. Missing `eff_from` stays eligible for the

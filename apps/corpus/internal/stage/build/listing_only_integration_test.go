@@ -66,7 +66,7 @@ func TestLoad_ListingOnlyThroughChunkEmbedAndBuild(t *testing.T) {
  (SELECT count(*) FROM coverage_gap WHERE document_key=$1 AND kind='listing_only' AND detail=$2),
  (SELECT count(*) FROM relation WHERE source_key=$1 AND source_document_id IS NOT NULL AND target_document_id IS NOT NULL)
  FROM document WHERE key=$1`, key, docType).Scan(&state, &storedType, &complete, &omissions, &gaps, &resolved)
-	if err != nil || state != "no_chunks" || storedType != docType || !complete || omissions != 0 || gaps != 2 || resolved != 1 {
+	if err != nil || state != "no_chunks" || storedType != "Văn bản hệ thống hóa" || !complete || omissions != 0 || gaps != 2 || resolved != 1 {
 		t.Fatalf("state=%s type=%q complete=%v omissions=%d gaps=%d resolved=%d err=%v", state, storedType, complete, omissions, gaps, resolved, err)
 	}
 	assertListingRetrieval(t, f, counts, nodes[0].Text)

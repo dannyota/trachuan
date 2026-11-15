@@ -68,6 +68,7 @@ func (l *loader) loadDocuments(ctx context.Context) error {
 			return fmt.Errorf("fetch artifact: %w", err)
 		}
 		dir, d := verified.dir, verified.document
+		d.DocType, d.Issuer = normalizeLabel(d.DocType), normalizeLabel(d.Issuer)
 		files := d.Files
 		sort.Slice(files, func(i, j int) bool {
 			if files[i].Name != files[j].Name {

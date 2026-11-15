@@ -150,3 +150,11 @@ func TestTextRelationIdentity_RequiresIssuerAndStatedDate(t *testing.T) {
 		})
 	}
 }
+
+func TestTextRelationIdentity_NormalizesIssuerTable(t *testing.T) {
+	row := relationRow{IssuerCode: "CP"}
+	target := fetch.Document{Issuer: "  Chính\n phủ "}
+	if !textRelationIdentity(row, target, map[string]string{"CP": "  Chi\u0301nh  phu\u0309 "}) {
+		t.Fatal("normalized issuer did not match the central issuer table")
+	}
+}

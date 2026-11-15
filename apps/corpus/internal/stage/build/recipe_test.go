@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 
 	"danny.vn/trachuan/apps/corpus/internal/evaluation"
@@ -77,7 +78,7 @@ func TestRecipe_NumberNormalizationVersionChangesHash(t *testing.T) {
 		t.Fatal(err)
 	}
 	r := buildRecipe{SchemaVersion: corpusdb.SchemaVersion, SchemaSHA256: schema,
-		ChunkRecipeHash: chunk.Recipe2().Hash(), DocumentRecipeHash: embedding.DocumentRecipe1().Hash(), QueryRecipeHash: embedding.QueryRecipe1().Hash(), LexicalRecipeHash: lexical.Recipe1().Hash(), RetrievalPolicyHash: retrieval.Recipe3().Hash(), NormalizerVersion: normalizer.Version, NumberNormalizationVersion: retrieval.NumberNormalizationVersion, StatusCodesSHA256: fmt.Sprintf("%x", sha256.Sum256([]byte("null"))), ValidityRulesVersion: "validity/2", CalibrationPolicy: "provisional-old-product/balanced/1"}
+		ChunkRecipeHash: chunk.Recipe2().Hash(), DocumentRecipeHash: embedding.DocumentRecipe1().Hash(), QueryRecipeHash: embedding.QueryRecipe1().Hash(), LexicalRecipeHash: lexical.Recipe1().Hash(), RetrievalPolicyHash: retrieval.Recipe3().Hash(), NormalizerVersion: normalizer.Version, LabelNormalizer: "corpus-labels/1", NumberNormalizationVersion: retrieval.NumberNormalizationVersion, StatusCodesSHA256: fmt.Sprintf("%x", sha256.Sum256([]byte("null"))), ValidityRulesVersion: "validity/2", CalibrationPolicy: "provisional-old-product/balanced/1"}
 	got := New(Config{}).Recipe(stage.Snapshot{SourceList: []byte(`{}`)})
 	if got != r.hash() {
 		t.Fatalf("Recipe() = %s, want %s", got, r.hash())
@@ -102,7 +103,7 @@ func TestRecipe_ValidityRulesVersion2(t *testing.T) {
 		t.Fatal(err)
 	}
 	r := buildRecipe{SchemaVersion: corpusdb.SchemaVersion, SchemaSHA256: schema,
-		ChunkRecipeHash: chunk.Recipe2().Hash(), DocumentRecipeHash: embedding.DocumentRecipe1().Hash(), QueryRecipeHash: embedding.QueryRecipe1().Hash(), LexicalRecipeHash: lexical.Recipe1().Hash(), RetrievalPolicyHash: retrieval.Recipe3().Hash(), NormalizerVersion: normalizer.Version, NumberNormalizationVersion: retrieval.NumberNormalizationVersion, StatusCodesSHA256: fmt.Sprintf("%x", sha256.Sum256([]byte("null"))), ValidityRulesVersion: "validity/2", CalibrationPolicy: "provisional-old-product/balanced/1"}
+		ChunkRecipeHash: chunk.Recipe2().Hash(), DocumentRecipeHash: embedding.DocumentRecipe1().Hash(), QueryRecipeHash: embedding.QueryRecipe1().Hash(), LexicalRecipeHash: lexical.Recipe1().Hash(), RetrievalPolicyHash: retrieval.Recipe3().Hash(), NormalizerVersion: normalizer.Version, LabelNormalizer: "corpus-labels/1", NumberNormalizationVersion: retrieval.NumberNormalizationVersion, StatusCodesSHA256: fmt.Sprintf("%x", sha256.Sum256([]byte("null"))), ValidityRulesVersion: "validity/2", CalibrationPolicy: "provisional-old-product/balanced/1"}
 	want := r.hash()
 	if got := New(Config{}).Recipe(stage.Snapshot{SourceList: []byte(`{}`)}); got != want {
 		t.Fatalf("recipe = %s, want %s", got, want)
@@ -147,5 +148,37 @@ func TestBuildRecipe_Version3(t *testing.T) {
 	}
 	if got, want := r.hash(), stage.RecipeHash("build", "corpus/3", string(b)); got != want {
 		t.Fatalf("hash = %s, want %s", got, want)
+	}
+}
+
+func TestBuildRecipe_LabelNormalizer(t *testing.T) {
+	schema, err := corpusdb.SchemaSHA256(embedding.DocumentRecipe1().Dimensions)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := buildRecipe{SchemaVersion: corpusdb.SchemaVersion, SchemaSHA256: schema,
+		ChunkRecipeHash: chunk.Recipe2().Hash(), DocumentRecipeHash: embedding.DocumentRecipe1().Hash(), QueryRecipeHash: embedding.QueryRecipe1().Hash(), LexicalRecipeHash: lexical.Recipe1().Hash(), RetrievalPolicyHash: retrieval.Recipe3().Hash(), NormalizerVersion: normalizer.Version, NumberNormalizationVersion: retrieval.NumberNormalizationVersion, StatusCodesSHA256: fmt.Sprintf("%x", sha256.Sum256([]byte("null"))), ValidityRulesVersion: "validity/2", CalibrationPolicy: "provisional-old-product/balanced/1"}
+	b, err := json.Marshal(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantJSON := strings.Replace(string(b), `,"label_normalizer":""`, "", 1)
+	wantJSON = strings.Replace(wantJSON, `"normalizer_version":"corpus-normalizer/3"`, `"normalizer_version":"corpus-normalizer/3","label_normalizer":"corpus-labels/1"`, 1)
+	want := stage.RecipeHash("build", "corpus/3", wantJSON)
+	if got := New(Config{}).Recipe(stage.Snapshot{SourceList: []byte(`{}`)}); got != want {
+		t.Fatalf("build recipe = %s, want %s", got, want)
+	}
+}
+
+func TestBuildRecipe_OtherRecipesUnchanged(t *testing.T) {
+	for _, tc := range []struct{ name, got, want string }{
+		{"chunk", chunk.Recipe2().Hash(), "40c50d47068734972075a0a0a6cd78b1e5dc55fc43bfb4dfce34944049336d82"},
+		{"dense", embedding.DocumentRecipe1().Hash(), "13a832d5b076a4ecac77ea73c35c5fae8fe735c7aa2763c6b74dfef65d14d5ec"},
+		{"lexical", lexical.Recipe1().Hash(), "b43b5c5338c214ce206b7be98cbc97d96ea402b1fbc12a2f12e369c4dddcbbec"},
+		{"retrieval", retrieval.Recipe3().Hash(), "931adf62eeb3040a00d8f7ff2c161aaf7ac5bb4e7bcc66d3e2c6481626447de8"},
+	} {
+		if tc.got != tc.want {
+			t.Errorf("%s recipe = %s, want %s", tc.name, tc.got, tc.want)
+		}
 	}
 }

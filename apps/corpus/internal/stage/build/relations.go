@@ -227,7 +227,7 @@ func anchorSuffix(s string) bool {
 }
 
 func textRelationIdentity(row relationRow, target fetch.Document, issuers map[string]string) bool {
-	expected := issuers[row.IssuerCode]
+	expected := source.NormalizeIssuer(issuers[row.IssuerCode])
 	if expected == "" || source.NormalizeIssuer(target.Issuer) != expected {
 		return false
 	}
