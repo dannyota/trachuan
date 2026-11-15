@@ -198,12 +198,11 @@ gap's identity is its key (`kind`, version handle, subject citation or business
 key, detail) computed from public data for `public` gaps; the build fails on
 duplicate keys. Pages are ordered and continued by that key, never by a database
 sequence, so adding or removing a private gap cannot renumber or move a public
-one. Each gap kind is classified at build: `public` (`mapping_unresolved`,
-`control_count`, `title_missing`, `lineage_invalid`) or `text` (parse,
-extraction, OCR, completeness). A caller gets `public` gaps for every version
-and `text` gaps only for readable versions; the query filters by class and
-version, so unreadable text gaps are never read. A gap detail names identities
-and counts and never quotes text, for anyone.
+one. Each gap kind is classified at build: `public` or `text`, as the gap kind
+table in [build](frameworks-build.md#gaps-and-signing) fixes it. A caller gets
+`public` gaps for every version and `text` gaps only for readable versions; the
+query filters by class and version, so unreadable text gaps are never read. A
+gap detail names identities and counts and never quotes text, for anyone.
 
 Errors are the law set with fixed messages: `invalid_request`, `invalid_handle`,
 `not_found` (read items), `release_expired`, `cursor_expired`, `invalid_next`,

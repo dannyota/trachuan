@@ -75,15 +75,12 @@ classification its dependency set was computed under.
 
 ## Pipeline
 
-The stages of [pipeline](pipeline.md) with framework inputs: `discover` reads
-the registry, `fetch` copies and hashes files from the source directory,
-`extract` runs the entry's parser (OSCAL JSON, XLSX catalog, PDF text, OCR),
-`relate` builds mapping edges, then `chunk`, `embed`, `build` and `eval`.
-Parsers are deterministic; no model writes canonical text. Each parser has an
-exact control-count check against the version's expected count in the registry.
-
-Run state and artifacts follow
-[licensed material](frameworks-access.md#licensed-material-and-where-it-may-be).
+A frameworks release is built by one offline command on the MacBook, in steps
+`snapshot`, `parse`, `relate`, `chunk`, `embed`, `build` and `evaluate`, each
+writing an immutable artifact directory; the contract is in
+[build](frameworks-build.md). Parsers are deterministic; no model writes
+canonical text. Each parser has an exact control-count check against the
+version's expected count in the registry.
 
 ### Scans
 
@@ -94,10 +91,13 @@ text reach the two providers; ADR 0016 adds the exception for framework scans,
 on the owner's decision. Before the first licensed scan is sent, the registry
 entry records each provider's data-use terms (URL and date read: no training on
 the content, retention period); without that record the scan stays blocked with
-gap `ocr_blocked`. Its text source is `ocr`, labels are asserted at the level
-the OCR design allows, and the law corpus's gap rules apply. compliary's
-hand-made `.txt` is not used as text; it may serve as a comparison when
-reviewing flags.
+gap `ocr_blocked`. Its OCR evidence and waivers are kept under
+`FRAMEWORKS_WORK_DIR`
+([licensed material](frameworks-access.md#licensed-material-and-where-it-may-be)),
+never in the workshop database, whose checkpoints leave the approved places. Its
+text source is `ocr`, labels are asserted at the level the OCR design allows,
+and the law corpus's gap rules apply. compliary's hand-made `.txt` is not used
+as text; it may serve as a comparison when reviewing flags.
 
 ## Serving
 
