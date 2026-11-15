@@ -63,6 +63,15 @@ it('groups gap rows as cases, including global rows', () => {
   expect(gapCategory('relation_any', 'en').name).toBeTruthy()
   expect(gapCategory('something_new', 'vi').name).toBe('Khác')
 })
+it.each(['vi', 'en'] as const)('classifies and groups partial trees and retained baselines in %s', (lang) => {
+  expect(gapCategory('tree_text_partial', lang).key).toBe('structure')
+  expect(gapCategory('baseline_served', lang).key).toBe('scope')
+  const result = gapSummary({ gaps: { tree_text_partial: 2, tree_headings_partial: 3, baseline_served: 4, scope_removed: 5 } }, lang)
+  expect(result.map(({ key, cases }) => ({ key, cases }))).toEqual([
+    { key: 'scope', cases: 9 },
+    { key: 'structure', cases: 5 },
+  ])
+})
 it('labels provenance and source withdrawal', () => {
   expect(textSourceLabel('source_tree', true, 'https://vbpl.vn/example', 'vi')).toBe('Nội dung: đầy đủ, từ cấu trúc văn bản của vbpl.vn')
   expect(textSourceLabel('html_transcription', false, 'https://chinhphu.vn/x', 'vi')).toContain('có thể chưa đầy đủ, từ bản HTML của chinhphu.vn')

@@ -26,10 +26,10 @@ const categories: Record<CategoryKey, Record<Language, { name: string, sentence:
 const kinds: Record<Exclude<CategoryKey, 'other'>, readonly string[]> = {
   content: ['chunk_omission', 'empty_text', 'file_format_unsupported', 'file_too_large', 'image_content', 'missing_attachment', 'no_chunks', 'no_text', 'no_text_source', 'no_tree', 'source_unavailable', 'table_text', 'text_limit', 'text_source_ambiguous', 'tree_too_large', 'not_found', 'response_too_large'],
   search: ['listing_only'],
-  structure: ['ambiguous_tree_text', 'article_number_out_of_range', 'article_sequence', 'structure_uncertain', 'text_number_mismatch', 'tree_headings_only', 'tree_headings_partial', 'unknown_node_kind', 'invalid_ancestry'],
+  structure: ['ambiguous_tree_text', 'article_number_out_of_range', 'article_sequence', 'structure_uncertain', 'text_number_mismatch', 'tree_headings_only', 'tree_headings_partial', 'tree_text_partial', 'unknown_node_kind', 'invalid_ancestry'],
   validity: ['consolidated_status_unordered', 'consolidated_status_unresolved', 'invalid_date', 'invalid_validity_interval', 'missing_effective_date', 'missing_commencement', 'multiple_commencement_sentences', 'multiple_effect_articles', 'partial_status_unexplained', 'unknown_status', 'validity_conflict', 'correction_evidence_unavailable'],
   relations: ['named_document_ambiguous', 'named_document_missing', 'unknown_relation_code', 'unknown_target', 'unresolved_provision_relation'],
-  scope: ['scope_removed', 'source_replaced', 'withdrawn', 'source_withdrawn_retained'],
+  scope: ['scope_removed', 'source_replaced', 'withdrawn', 'source_withdrawn_retained', 'baseline_served'],
   ocr: ['needs_ocr', 'ocr_flagged', 'ocr_label_flagged', 'ocr_rejected'],
   topics: ['seed_article_missing', 'override_target_missing'],
   omitted: ['relations_omitted'],
