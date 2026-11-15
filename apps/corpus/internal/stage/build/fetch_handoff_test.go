@@ -46,7 +46,7 @@ func TestFetchHandoff_RelationsUseVerifiedDocuments(t *testing.T) {
 		mu.Unlock()
 		return readIdentityFetch(store, item)
 	}
-	_, verified, err := identityInventoryWithFetch(inv, store, identityConcurrency, read)
+	_, verified, err := identityInventoryWithFetch(inv, store, nil, identityConcurrency, read)
 	if err != nil {
 		t.Fatal(err)
 	}

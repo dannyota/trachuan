@@ -100,7 +100,7 @@ func (h *harness) indexSetup() {
 	if fetchHash == "" {
 		h.t.Fatal("missing proof fetch artifact")
 	}
-	m := evaluation.IdentityMap{Version: 2, LegacySHA256: hash, Entries: []evaluation.MapEntry{{CaseID: "positive", CitationIndex: 0, State: "resolved", ExpectedNumber: "1/2026", Reason: "proof document", ReviewedAt: "2026-11-09", Evidence: []evaluation.Evidence{{DocumentKey: "vn:vbpl:1", DocumentNumber: "1/2026", FetchSHA256: fetchHash, QuotedSpan: "Document 1"}}, Alternatives: []evaluation.Alternative{{Country: "vn", DocumentKey: "vn:vbpl:1", DocumentNumber: "1/2026", Kind: "document"}}}}}
+	m := evaluation.IdentityMap{Version: 3, LegacySHA256: hash, Entries: []evaluation.MapEntry{{CaseID: "positive", CitationIndex: 0, State: "resolved", ExpectedNumber: "1/2026", Reason: "proof document", ReviewedAt: "2026-11-09", Evidence: []evaluation.Evidence{{DocumentKey: "vn:vbpl:1", DocumentNumber: "1/2026", FetchSHA256: fetchHash, QuotedSpan: "Document 1"}}, Alternatives: []evaluation.Alternative{{Country: "vn", DocumentKey: "vn:vbpl:1", DocumentNumber: "1/2026", Kind: "document"}}}}}
 	dir := filepath.Join(h.root, "fixtures")
 	if err = os.Mkdir(dir, 0700); err != nil {
 		h.t.Fatal(err)
@@ -136,7 +136,7 @@ func (h *harness) indexSetup() {
 	if err != nil {
 		h.t.Fatalf("load proof fixtures: %v", err)
 	}
-	identities, err := build.IdentityInventory(inv, artifact.Store{Root: h.artifacts})
+	identities, err := build.IdentityInventory(inv, artifact.Store{Root: h.artifacts}, suite.Map.EvidenceAnchors())
 	if err != nil {
 		h.t.Fatal(err)
 	}

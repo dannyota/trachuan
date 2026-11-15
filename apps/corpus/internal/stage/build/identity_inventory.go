@@ -10,8 +10,8 @@ import (
 	"danny.vn/trachuan/internal/retrieval"
 )
 
-func IdentityInventory(inv Inventory, artifacts artifact.Store) (evaluation.IdentityInventory, error) {
-	return identityInventory(inv, artifacts, identityConcurrency)
+func IdentityInventory(inv Inventory, artifacts artifact.Store, anchors map[string]map[string]bool) (evaluation.IdentityInventory, error) {
+	return identityInventory(inv, artifacts, anchors, identityConcurrency)
 }
 
 func identityFetchError(err error, decoding bool) error {
@@ -21,8 +21,8 @@ func identityFetchError(err error, decoding bool) error {
 	return fmt.Errorf("identity fetch: %w", err)
 }
 
-func identityInventory(inv Inventory, artifacts artifact.Store, limit int) (evaluation.IdentityInventory, error) {
-	out, _, err := identityInventoryWithFetch(inv, artifacts, limit, readIdentityFetch)
+func identityInventory(inv Inventory, artifacts artifact.Store, anchors map[string]map[string]bool, limit int) (evaluation.IdentityInventory, error) {
+	out, _, err := identityInventoryWithFetch(inv, artifacts, anchors, limit, readIdentityFetch)
 	return out, err
 }
 
@@ -40,7 +40,7 @@ func (l *loader) verifiedDocument(item InventoryItem) (verifiedFetch, error) {
 	return verified, nil
 }
 
-func identityInventoryWithFetch(inv Inventory, artifacts artifact.Store, limit int, read func(artifact.Store, InventoryItem) identityResult) (evaluation.IdentityInventory, map[string]verifiedFetch, error) {
+func identityInventoryWithFetch(inv Inventory, artifacts artifact.Store, anchors map[string]map[string]bool, limit int, read func(artifact.Store, InventoryItem) identityResult) (evaluation.IdentityInventory, map[string]verifiedFetch, error) {
 	out := evaluation.IdentityInventory{Documents: map[string]evaluation.IdentityDocument{}, Replacements: map[string]string{}}
 	verified := make(map[string]verifiedFetch)
 	for _, entry := range inv.Membership.Entries {
@@ -73,7 +73,7 @@ func identityInventoryWithFetch(inv Inventory, artifacts artifact.Store, limit i
 		if !present[item.ItemKey] {
 			continue
 		}
-		out.Documents[item.ItemKey] = evaluation.IdentityDocument{Number: retrieval.NormalizeNumber(result.detail.Number), Anchors: map[string]bool{}, Nodes: map[string]bool{}}
+		out.Documents[item.ItemKey] = evaluation.IdentityDocument{Number: retrieval.NormalizeNumber(result.detail.Number), Anchors: map[string]bool{}, Texts: map[string]string{}}
 		fetches[item.ItemKey] = item
 	}
 	fetchPool.stop()
@@ -124,7 +124,9 @@ func identityInventoryWithFetch(inv Inventory, artifacts artifact.Store, limit i
 		}
 		doc := out.Documents[item.ItemKey]
 		for _, node := range result.nodes {
-			doc.Nodes[node.NodeID] = true
+			if anchors[item.ItemKey][node.Path] {
+				doc.Texts[node.Path] = node.Text
+			}
 			doc.Anchors[node.Path] = true
 		}
 		out.Documents[item.ItemKey] = doc

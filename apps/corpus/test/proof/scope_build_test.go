@@ -90,7 +90,7 @@ func scopeEvalFixtures(h *harness) string {
 	if fetchHash == "" {
 		h.t.Fatal("missing actor fetch artifact")
 	}
-	m := evaluation.IdentityMap{Version: 2, LegacySHA256: hash, Entries: []evaluation.MapEntry{{CaseID: "positive", CitationIndex: 0, State: "resolved", ExpectedNumber: "22/2014/TT-NHNN", Reason: "proof document", ReviewedAt: "2026-11-09", Evidence: []evaluation.Evidence{{DocumentKey: "vn:vbpl:67878", DocumentNumber: "22/2014/TT-NHNN", FetchSHA256: fetchHash, QuotedSpan: "central selected"}}, Alternatives: []evaluation.Alternative{{Country: "vn", DocumentKey: "vn:vbpl:67878", DocumentNumber: "22/2014/TT-NHNN", Kind: "document"}}}}}
+	m := evaluation.IdentityMap{Version: 3, LegacySHA256: hash, Entries: []evaluation.MapEntry{{CaseID: "positive", CitationIndex: 0, State: "resolved", ExpectedNumber: "22/2014/TT-NHNN", Reason: "proof document", ReviewedAt: "2026-11-09", Evidence: []evaluation.Evidence{{DocumentKey: "vn:vbpl:67878", DocumentNumber: "22/2014/TT-NHNN", FetchSHA256: fetchHash, QuotedSpan: "central selected"}}, Alternatives: []evaluation.Alternative{{Country: "vn", DocumentKey: "vn:vbpl:67878", DocumentNumber: "22/2014/TT-NHNN", Kind: "document"}}}}}
 	dir := filepath.Join(h.root, "fixtures")
 	if err = os.Mkdir(dir, 0700); err != nil {
 		h.t.Fatal(err)
@@ -126,7 +126,7 @@ func scopeEvalFixtures(h *harness) string {
 	if err != nil {
 		h.t.Fatal(err)
 	}
-	identities, err := build.IdentityInventory(inv, artifact.Store{Root: h.artifacts})
+	identities, err := build.IdentityInventory(inv, artifact.Store{Root: h.artifacts}, suite.Map.EvidenceAnchors())
 	if err != nil {
 		h.t.Fatal(err)
 	}

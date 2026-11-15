@@ -153,7 +153,7 @@ func TestQuantile_NearestRank(t *testing.T) {
 
 func TestValidate_AbsentNamesAllNumbers(t *testing.T) {
 	cases := []Case{{ID: "a", ExpectedCitations: []Expectation{{DocNumber: "12", AltDocNumbers: []string{"13"}}}}}
-	m := IdentityMap{Version: 2, LegacySHA256: "l", Entries: []MapEntry{{CaseID: "a", State: "absent", ExpectedNumber: "12", Reason: "searched 12", ReviewedAt: "2026-01-01"}}}
+	m := IdentityMap{Version: 3, LegacySHA256: "l", Entries: []MapEntry{{CaseID: "a", State: "absent", ExpectedNumber: "12", Reason: "searched 12", ReviewedAt: "2026-01-01"}}}
 	report, err := m.Validate(cases, "l", IdentityInventory{})
 	if err != nil || len(report["a"]) == 0 {
 		t.Fatal("absence omits alternate number")
@@ -166,7 +166,7 @@ func TestValidate_AbsentNamesAllNumbers(t *testing.T) {
 }
 func TestValidate_AbsentNumberPresentOnlyWithProvisions(t *testing.T) {
 	cases := []Case{{ID: "a", ExpectedCitations: []Expectation{{DocNumber: "12", Article: "5"}}}}
-	m := IdentityMap{Version: 2, LegacySHA256: "l", Entries: []MapEntry{{CaseID: "a", State: "absent", ExpectedNumber: "12", Reason: "searched 12", ReviewedAt: "2026-01-01"}}}
+	m := IdentityMap{Version: 3, LegacySHA256: "l", Entries: []MapEntry{{CaseID: "a", State: "absent", ExpectedNumber: "12", Reason: "searched 12", ReviewedAt: "2026-01-01"}}}
 	inventory := IdentityInventory{Documents: map[string]IdentityDocument{"vn:x:1": {Number: "12"}}}
 	report, err := m.Validate(cases, "l", inventory)
 	if err != nil || len(report["a"]) != 0 {
@@ -226,11 +226,11 @@ func TestMatchProduct_RelationNeedsCompleteEvidence(t *testing.T) {
 	}
 }
 
-func TestValidate_EvidenceURLOptionalNodeIDOnlyForDocuments(t *testing.T) {
+func TestValidate_EvidenceURLOptionalAnchorRequiredForProvisions(t *testing.T) {
 	cases := []Case{{ID: "a", ExpectedCitations: []Expectation{{DocNumber: "12"}}}}
 	entry := MapEntry{CaseID: "a", State: "resolved", ExpectedNumber: "12", Reason: "reviewed", ReviewedAt: "2026-01-01", Evidence: []Evidence{{DocumentKey: "d", DocumentNumber: "12", FetchSHA256: "hash", QuotedSpan: "title"}}, Alternatives: []Alternative{{Country: "vn", DocumentKey: "d", DocumentNumber: "12", Kind: "document"}}}
-	m := IdentityMap{Version: 2, LegacySHA256: "l", Entries: []MapEntry{entry}}
-	inv := IdentityInventory{Documents: map[string]IdentityDocument{"d": {Number: "12", Anchors: map[string]bool{"dieu-3": true}, Nodes: map[string]bool{"n1": true}}}}
+	m := IdentityMap{Version: 3, LegacySHA256: "l", Entries: []MapEntry{entry}}
+	inv := IdentityInventory{Documents: map[string]IdentityDocument{"d": {Number: "12", Anchors: map[string]bool{"dieu-3": true}, Texts: map[string]string{"dieu-3": "title"}}}}
 	report, err := m.Validate(cases, "l", inv)
 	if err != nil || len(report["a"]) != 0 {
 		t.Fatalf("document: %v %v", report, err)
@@ -240,9 +240,9 @@ func TestValidate_EvidenceURLOptionalNodeIDOnlyForDocuments(t *testing.T) {
 	m.Entries[0].Alternatives[0].Anchor = &anchor
 	report, err = m.Validate(cases, "l", inv)
 	if err != nil || len(report["a"]) == 0 {
-		t.Fatal("missing node accepted")
+		t.Fatal("missing anchor accepted")
 	}
-	m.Entries[0].Evidence[0].NodeID = "n1"
+	m.Entries[0].Evidence[0].Anchor = &anchor
 	report, err = m.Validate(cases, "l", inv)
 	if err != nil || len(report["a"]) != 0 {
 		t.Fatalf("provision: %v %v", report, err)

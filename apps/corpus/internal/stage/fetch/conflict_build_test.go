@@ -48,7 +48,7 @@ func TestConflictBundle_BuildIdentityFixture(t *testing.T) {
 		item.Path = &out.Artifact.Path
 		item.ArtifactSHA256 = &out.Artifact.SHA256
 	}
-	identities, err := build.IdentityInventory(build.Inventory{ExpectedKeys: []string{"vn:vbpl:1"}, Items: []build.InventoryItem{item}}, env.Artifacts)
+	identities, err := build.IdentityInventory(build.Inventory{ExpectedKeys: []string{"vn:vbpl:1"}, Items: []build.InventoryItem{item}}, env.Artifacts, nil)
 	if err != nil || identities.Documents["vn:vbpl:1"].Number != "42/2026/QD" {
 		t.Fatalf("build identities=%+v error=%v", identities, err)
 	}

@@ -61,7 +61,11 @@ func (s *Stage) plan(ctx context.Context, env stage.Env, run stage.Run) ([]stage
 			return nil, nil, fmt.Errorf("predecessor %s is %s", item.Stage, item.State)
 		}
 	}
-	identities, verified, err := identityInventoryWithFetch(inv, env.Artifacts, identityConcurrency, readIdentityFetch)
+	mapping, err := s.cfg.Suite.PinnedMap()
+	if err != nil {
+		return nil, nil, fmt.Errorf("verify identity map: %w", err)
+	}
+	identities, verified, err := identityInventoryWithFetch(inv, env.Artifacts, mapping.EvidenceAnchors(), identityConcurrency, readIdentityFetch)
 	if err != nil {
 		return nil, nil, fmt.Errorf("load identity inventory: %w", err)
 	}
