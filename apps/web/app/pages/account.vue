@@ -109,7 +109,7 @@ async function tokenCreated() { try { await loadTokens() } catch { showError() }
 <template>
   <div class="account-page">
     <div class="account-heading">
-      <div><h1>{{ labels.title }}</h1><p v-if="session.account"><span>{{ session.account.email }}</span> · {{ labels.created }} {{ creationDate(session.account.created_at) }}</p></div>
+      <div><h1>{{ labels.title }}</h1><p v-if="session.account" data-value="account-created"><span>{{ session.account.email }}</span> · {{ labels.created }} {{ creationDate(session.account.created_at) }}</p></div>
       <button class="btn btn-secondary" type="button" :disabled="busy || !currentSession" @click="currentSession && revokeSession(currentSession)">{{ labels.signOut }}</button>
     </div>
     <p v-if="error" class="notice" role="alert" aria-live="assertive">{{ error }}</p>
