@@ -54,6 +54,23 @@ for a rebuilt corpus. The signed manifest authorizes release; the report's
 `release_eligible` remains false. Host activation follows
 [corpus release](../design/corpus-release.md#host-activation).
 
+### Refresh the home sample
+
+The home page shows one stored search result whose stamp states its release
+date. After the host activates a new corpus release (`corpus_status` on
+`https://trachuan.vn` names it), refresh the sample from the MacBook with a
+personal token, typed at a hidden prompt rather than on the command line:
+
+```sh
+read -rs TRACHUAN_TOKEN && export TRACHUAN_TOKEN
+TRACHUAN_URL=https://trachuan.vn node apps/web/scripts/make-sample.mjs
+unset TRACHUAN_TOKEN
+```
+
+The script rewrites `apps/web/app/data/sample-result.json` and
+`sample-result.meta.json`. Review the diff and open a web pull request with both
+files; the sample reaches the site with the next tag.
+
 ## Restore a corpus manually
 
 Use a trusted, evaluated PostgreSQL 18 dump whose recorded checksum the primary
