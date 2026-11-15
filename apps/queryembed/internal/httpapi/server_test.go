@@ -175,7 +175,7 @@ func TestEmbed_BusyAndDeadline(t *testing.T) {
 		limits admission.Limits
 		wait   bool
 		status int
-	}{{"busy", admission.Limits{Active: 0, Queued: 0, Wait: time.Millisecond, Deadline: time.Second}, false, 429}, {"deadline", admission.Limits{Active: 1, Wait: time.Millisecond, Deadline: time.Millisecond}, true, 504}} {
+	}{{"busy", admission.Limits{Active: 0, Queued: 0, Wait: time.Millisecond, Deadline: time.Second}, false, 429}, {"deadline", admission.Limits{Active: 1, Wait: time.Second, Deadline: 100 * time.Millisecond}, true, 504}} {
 		t.Run(tc.name, func(t *testing.T) {
 			s := New(Config{Tokenizer: fakeTokenizer{}, Runtime: &fakeRuntime{wait: tc.wait}, Recipe: r, Admission: admission.New(tc.limits), Logger: slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))})
 			s.SetReady(true)
