@@ -16,6 +16,7 @@ from updater.deploy_io import canonical, CommandError
 
 FIXTURES = Path(__file__).with_name('fixtures')
 POLICY = Path(__file__).parents[1] / 'deploy-policy.json'
+FIXTURE_POLICY = {key: value for key, value in json.loads(POLICY.read_bytes()).items() if key != 'release_floor'}
 
 
 def archive(server=b'GOOGLE_CLIENT_ID=public\n', web=b'NITRO_HOST=127.0.0.1\n', policy=None):
@@ -23,7 +24,7 @@ def archive(server=b'GOOGLE_CLIENT_ID=public\n', web=b'NITRO_HOST=127.0.0.1\n', 
     with tarfile.open(fileobj=output, mode='w:gz') as tar:
         for name, data in [('server.env', server), ('web.env', web), ('install.sh', b'#!/bin/bash\n'),
                            ('quadlet/trachuan-postgres.container', b'Image=@POSTGRES_IMAGE@\n'),
-                           ('deploy-policy.json', canonical(policy) if policy is not None else POLICY.read_bytes())]:
+                           ('deploy-policy.json', canonical(policy if policy is not None else FIXTURE_POLICY))]:
             entry = tarfile.TarInfo('deploy/host/' + name)
             entry.size = len(data)
             entry.mode = 0o755 if name.endswith('.sh') else 0o644
