@@ -7,16 +7,16 @@ import (
 )
 
 func TestSchema_PinsKeepVersion5Supported(t *testing.T) {
-	if SchemaVersion != 6 || !slices.Contains(SupportedSchemaVersions(), 5) || !slices.Contains(SupportedSchemaVersions(), 6) {
+	if SchemaVersion != 7 || !slices.Equal(SupportedSchemaVersions(), []int{4, 5, 6, 7}) {
 		t.Fatalf("schema=%d supported=%v", SchemaVersion, SupportedSchemaVersions())
 	}
-	for _, part := range []string{"schema_version = 6", "source_withdrawn_since date", "source_withdrawn_rel text"} {
+	for _, part := range []string{"schema_version = 7", "source_withdrawn_since date", "source_withdrawn_rel text"} {
 		if !strings.Contains(schema, part) {
 			t.Errorf("schema missing %s", part)
 		}
 	}
 	hash, err := SchemaSHA256(1024)
-	if err != nil || hash != "066a2887494acb127f830f7a75fcb1dabe1b3e0f50b0f136fbcf375f636b61ed" {
+	if err != nil || hash != "550515aeeef8ed9232c334c7a88229f76c7074cb471de9b71ecd8a67cbf7a40d" {
 		t.Fatalf("schema SHA256=%s err=%v", hash, err)
 	}
 

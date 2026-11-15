@@ -6,14 +6,13 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// NodeRef names a served node referenced by a result.
 type NodeRef struct {
 	Name  string `json:"name"`
 	Level int    `json:"level"`
 }
 
 func assignmentMethodRankSQL(alias string) string {
-	return "CASE " + alias + ".method WHEN 'manual' THEN 0 WHEN 'phapdien_seed' THEN 1 ELSE 2 END"
+	return "CASE " + alias + ".method WHEN 'manual' THEN 0 WHEN 'phapdien_seed' THEN 1 WHEN 'inherited' THEN 2 ELSE 3 END"
 }
 
 func effectiveNodesCTE(seeds string) string {

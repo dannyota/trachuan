@@ -175,15 +175,20 @@ page makes progress. The unit sequence starts with the document entry with its
 status, then the outline entries, then the leads and provisions; outline entries
 are ordinary units of that sequence, so a long outline continues across pages
 through `next` like any other units. The response is
-`{release, fetch_sha256, item, nodes}`: `release` is the release the page was
-read from, `item` is the `read` item result object, and `fetch_sha256` is the
-document's fetch hash in that release, read with the item from the same release
-(directly or through the release-keyed read cache). It is present on every page
-that carries the document, first or continuation, and absent when `item.error`
-is set. `nodes` names (`name`, `level`) every node code in `item`. Continuation
-is `item.next`, passed back as `next`. The website links search results to the
-reader with `?release=`, so the reader shows the release the result came from;
-the reader shows the document's single `source_url` only when present.
+`{release, fetch_sha256, item, nodes, files}`: `release` is the release the page
+was read from, `item` is the `read` item result object, and `fetch_sha256` is
+the document's fetch hash in that release, read with the item from the same
+release (directly or through the release-keyed read cache). It is present on
+every page that carries the document, first or continuation, and absent when
+`item.error` is set. `nodes` names (`name`, `level`) every node code in `item`.
+Continuation is `item.next`, passed back as `next`. The website links search
+results to the reader with `?release=`, so the reader shows the release the
+result came from; the reader shows the document's single `source_url` only when
+present. The response also carries `files`, the document's fetched files from
+`source_file` in that release ordered by `name` then `hash`:
+`{name, url, hash, size, role, fetched_at}`, with `url` and `fetched_at` null
+when unknown; it is present with the document and absent when `item.error` is
+set. MCP results do not carry it.
 
 Search, read and status take the same inputs and return the same objects as the
 MCP tools. Documents wraps one `read` item result with the web caps in the

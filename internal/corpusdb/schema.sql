@@ -14,7 +14,7 @@ CREATE TABLE document (
  validity_conflict boolean NOT NULL,
  is_current boolean NOT NULL CHECK (is_current = (status_class IN ('in_force','partial'))),
  is_consolidated boolean NOT NULL,
- text_source text NOT NULL CHECK (text_source IN ('source_tree','html_transcription','ocr','none')),
+ text_source text NOT NULL CHECK (text_source IN ('source_tree','html_transcription','pdf_text','ocr','none')),
  text_complete boolean NOT NULL CHECK (text_source <> 'none' OR NOT text_complete),
  content_state text NOT NULL CHECK (content_state IN ('indexed','no_tree','no_chunks','embedding_gap')),
  fetch_sha256 text COLLATE "C" NOT NULL CHECK (fetch_sha256 ~ '^[0-9a-f]{64}$'),
@@ -146,7 +146,7 @@ CREATE INDEX ON coverage_gap (node_id);
 CREATE TABLE taxonomy_assignment (
  provision_id bigint NOT NULL REFERENCES provision(id), node_id bigint NOT NULL REFERENCES taxonomy_node(id),
  family_id bigint NOT NULL REFERENCES taxonomy_node(id),
- method text NOT NULL CHECK (method IN ('manual','phapdien_seed','llm')), exclude boolean NOT NULL,
+ method text NOT NULL CHECK (method IN ('manual','phapdien_seed','inherited','llm')), exclude boolean NOT NULL,
  confidence double precision NOT NULL CHECK (confidence BETWEEN 0 AND 1),
  taxonomy_version text COLLATE "C" NOT NULL CHECK (taxonomy_version <> ''),
  PRIMARY KEY (provision_id,node_id), CHECK (NOT exclude OR method = 'manual')
@@ -156,7 +156,7 @@ CREATE INDEX ON taxonomy_assignment (provision_id,family_id);
 
 CREATE TABLE release (
  singleton boolean PRIMARY KEY CHECK (singleton), country text COLLATE "C" NOT NULL CHECK (country = 'vn'),
- rel text COLLATE "C" NOT NULL UNIQUE, schema_version integer NOT NULL CHECK (schema_version = 6),
+ rel text COLLATE "C" NOT NULL UNIQUE, schema_version integer NOT NULL CHECK (schema_version = 7),
  taxonomy_version text COLLATE "C" NOT NULL,
  dense_recipe jsonb NOT NULL CHECK (jsonb_typeof(dense_recipe) = 'object'),
  chunk_recipe jsonb NOT NULL CHECK (jsonb_typeof(chunk_recipe) = 'object'),

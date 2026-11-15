@@ -6,27 +6,19 @@ import (
 	"unicode/utf8"
 )
 
-// ErrTooManyItems rejects calls above the batch item budget.
 var ErrTooManyItems = errors.New("too many read items")
 
-// ErrInvalidReadLimits rejects inconsistent internal paging options.
 var ErrInvalidReadLimits = errors.New("invalid read limits")
 
-// ReadRequest selects scopes from one pinned release.
 type ReadRequest struct {
-	Release string     `json:"release"`
-	Items   []ReadItem `json:"items,omitempty"`
-	// PageCap and PartSize override MCP defaults. WholeDocument measures bytes;
-	// other modes measure Unicode code points of serialized units.
-	PageCap  int `json:"-"`
-	PartSize int `json:"-"`
-	// WholeDocument adds the outline and all text after the document entry.
-	WholeDocument bool `json:"-"`
-	// DocumentKey binds whole-document continuations to the reader route's key.
-	DocumentKey string `json:"-"`
+	Release       string     `json:"release"`
+	Items         []ReadItem `json:"items,omitempty"`
+	PageCap       int        `json:"-"`
+	PartSize      int        `json:"-"`
+	WholeDocument bool       `json:"-"`
+	DocumentKey   string     `json:"-"`
 }
 
-// Unit is one lead, provision, outline entry or relation, or a fixed part of it.
 type Unit struct {
 	Kind            string          `json:"kind"`
 	Warnings        []Warning       `json:"warnings,omitempty"`
@@ -43,7 +35,6 @@ type Unit struct {
 	Parts           int             `json:"parts,omitempty"`
 }
 
-// ListedRelation adds source evidence to a stored relation pointer.
 type ListedRelation struct {
 	Pointer
 	RawLabel         string `json:"raw_label,omitempty"`
@@ -51,9 +42,8 @@ type ListedRelation struct {
 	EvidenceComplete bool   `json:"evidence_complete"`
 }
 
-// ItemResult is one page of a read item's chain.
 type ItemResult struct {
-	// FetchSHA256 is the source document hash, excluded from read output.
+	Files       []SourceFile   `json:"-"`
 	FetchSHA256 string         `json:"-"`
 	Doc         string         `json:"doc,omitempty"`
 	Document    *DocumentEntry `json:"document,omitempty"`
@@ -65,7 +55,6 @@ type ItemResult struct {
 	Gaps        []Gap          `json:"gaps,omitempty"`
 }
 
-// ReadResult preserves request item order and identifies the pinned release.
 type ReadResult struct {
 	Release string             `json:"release"`
 	Items   []ItemResult       `json:"items,omitempty"`
@@ -73,6 +62,7 @@ type ReadResult struct {
 }
 
 type readSequence struct {
+	files    []SourceFile
 	source   Document
 	doc      string
 	document *DocumentEntry
@@ -85,7 +75,6 @@ type readSequence struct {
 }
 
 func readSize(v any) int {
-	// Read values contain only JSON-compatible scalar fields and slices.
 	b, _ := json.Marshal(v)
 	return utf8.RuneCount(b)
 }

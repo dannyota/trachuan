@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"slices"
 	"strings"
 	"testing"
 
-	"danny.vn/trachuan/internal/corpusdb"
 	"danny.vn/trachuan/internal/embedding"
 	"danny.vn/trachuan/internal/retrieval/lexical"
 )
@@ -30,7 +30,7 @@ func TestDescribe_ReportsPinnedAndRunningRecipesSeparately(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if got.DenseQueryHash != embedding.QueryRecipe1().Hash() || got.RunningQuery.Recipe != recipe || got.LexicalRecipe != lexical.Recipe1() || len(got.RetrievalRecipes) != 2 || len(got.SchemaVersions) != len(corpusdb.SupportedSchemaVersions()) {
+		if got.DenseQueryHash != embedding.QueryRecipe1().Hash() || got.RunningQuery.Recipe != recipe || got.LexicalRecipe != lexical.Recipe1() || len(got.RetrievalRecipes) != 2 || !slices.Equal(got.SchemaVersions, []int{4, 5, 6, 7}) {
 			t.Fatalf("unexpected description: %+v", got)
 		}
 	}

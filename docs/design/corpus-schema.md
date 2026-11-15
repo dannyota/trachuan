@@ -1,4 +1,4 @@
-# Corpus schema version 6
+# Corpus schema version 7
 
 Proposed exact template contract for `internal/corpusdb/schema.sql`, embedded by
 `schema.go` in root module `danny.vn/trachuan`. The workshop keeps goose
@@ -34,7 +34,7 @@ ancestry index, not the public extraction anchor. This avoids interpreting
 slashes or Vietnamese letters as ltree syntax. Taxonomy ltree labels are `n<id>`
 along its parent chain.
 
-`schema.go` exports `SchemaVersion = 6` and
+`schema.go` exports `SchemaVersion = 7` and
 `Apply(ctx context.Context, db DB, dimensions int) error`; DB exposes
 `Exec(context.Context,string,...any)`. Its return values are
 `(pgconn.CommandTag,error)`, matching pgx connections and transactions. The only
@@ -67,7 +67,7 @@ rejects a mismatch. No server dimension constant.
   `validity_conflict boolean`, with decisions in `validity_decision` per
   [validity corrections](validity-status.md).
   [Build normalization](normalization.md) owns assignment and derivation gaps.
-- `text_source text NOT NULL CHECK(text_source IN ('source_tree','html_transcription','ocr','none'))`
+- `text_source text NOT NULL CHECK(text_source IN ('source_tree','html_transcription','pdf_text','ocr','none'))`
   and `text_complete boolean NOT NULL`, no defaults, assigned per
   [text extraction](text-extraction.md#what-is-recorded). CHECK `text_complete`
   is false when `text_source = 'none'`; build also sets it false for a document
@@ -240,7 +240,7 @@ rules.
 ## Release row
 
 `release`: `singleton boolean PRIMARY KEY CHECK(singleton)`, `country text`
-CHECK country='vn', `rel text UNIQUE`, `schema_version integer CHECK(=6)`,
+CHECK country='vn', `rel text UNIQUE`, `schema_version integer CHECK(=7)`,
 `taxonomy_version text`, `dense_recipe jsonb`, `chunk_recipe jsonb`,
 `lexical_recipe jsonb`, `retrieval_recipe jsonb`, `lexical_stats jsonb`,
 `source_manifest_hash text`, `build_input_hash text`, `build_recipe_hash text`,
@@ -272,14 +272,19 @@ validity decisions. Version 4 adds `document.text_source`,
 `document.text_complete` and `provision.locator`. Version 5 fills the taxonomy
 tables and adds `taxonomy_node.ordinal`, `provision_count` and `document_count`.
 Version 6 adds `document.source_withdrawn_since` and `source_withdrawn_rel`.
-Always rebuild from preserved source artifacts, never backfill an old release
-with an assumed value. Readers must support a version before a release of it is
+Version 7 adds the `text_source` value `pdf_text`
+([PDF text layer](pdf-text.md)) and the taxonomy method `inherited`
+([taxonomy](taxonomy.md#classification-layers)); no column changes. Always
+rebuild from preserved source artifacts, never backfill an old release with an
+assumed value. Readers must support a version before a release of it is
 activated, so the server deploys first; earlier dumps remain unchanged. The
-server reads versions {4, 5, 6}: a version-4 release serves no nodes, and the
-server reads the source-withdrawn columns only from version 6, since a version-5
-release has none and no pinned documents. A newer server keeps serving the
-previous release until a newer release is activated, and rolling back is
-activating the previous release.
+server reads versions {4, 5, 6, 7}: a version-4 release serves no nodes, the
+server reads the source-withdrawn columns only from version 6 and later, since a
+version-5 release has none and no pinned documents, and it serves `pdf_text` and
+`inherited` values as stored. The order for a version change is in
+[corpus release](corpus-release.md#schema-version-changes). A newer server keeps
+serving the previous release until a newer release is activated, and rolling
+back is activating the previous release.
 
 Host restore permits exactly `vector` and `ltree`, at the versions the
 PostgreSQL image provides

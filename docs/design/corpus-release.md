@@ -239,6 +239,21 @@ each unprotected database in `retired_release` without connections: it journals
 `pruning`, drops the database if it exists, deletes the row, and journals
 `pruned`. An open `pruning` journal is finished the same way on the next run.
 
+## Schema version changes
+
+`server release-check` refuses a release whose `schema_version` the serving
+image cannot read. A version change ships in this order:
+
+1. Tag and deploy the first image whose server reads the new version; it keeps
+   serving the active release. Confirm it live and healthy.
+2. Tag the next image with `release_floor` in its policy set to that image's
+   sequence ([release floor](pull-deployment.md#release-floor)) and confirm
+   `deploy_release_floor` reports it, so no rollback can reach an image that
+   cannot read the new version.
+3. Upload and sign the corpus release of the new version; the host activates it
+   as usual. The retained previous-version release, still readable, stays the
+   corpus rollback for seven days.
+
 ## Recipe changes
 
 The pair activation path is not yet implemented; recipe mismatches wait and

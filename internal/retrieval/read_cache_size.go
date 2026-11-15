@@ -8,10 +8,8 @@ import (
 	"unicode/utf8"
 )
 
-// Count the JSON bytes without preparing a cache buffer. Stop once the value
-// cannot fit; raw strings alone can rule out a large scope without scanning it.
 func sequenceSize(seq readSequence, limit int64) int64 {
-	stored := cachedSequence{Doc: seq.doc, Source: seq.source, Units: seq.units, Parts: seq.parts, Gaps: seq.gaps, Offset: seq.offset, More: seq.more, Complete: seq.complete}
+	stored := cachedSequence{Doc: seq.doc, Source: seq.source, Files: seq.files, Units: seq.units, Parts: seq.parts, Gaps: seq.gaps, Offset: seq.offset, More: seq.more, Complete: seq.complete}
 	n := cacheJSONSize(reflect.ValueOf(stored), limit)
 	if seq.document != nil && n <= limit {
 		size, _ := cacheJSONFields(reflect.ValueOf(*seq.document), limit, "Status")
@@ -20,8 +18,6 @@ func sequenceSize(seq readSequence, limit int64) int64 {
 	return n
 }
 
-// This counter supports only the immutable read-cache schema. Unknown kinds
-// refuse caching rather than invoking arbitrary MarshalJSON implementations.
 func cacheJSONSize(v reflect.Value, limit int64) int64 {
 	if limit < 0 {
 		return 0
@@ -60,8 +56,6 @@ func cacheJSONSize(v reflect.Value, limit int64) int64 {
 		if v.Kind() == reflect.Slice && v.IsNil() {
 			return 4
 		}
-		// No byte slices are present here: cachedSequence.Document stays omitted
-		// until its metadata size has passed the preflight above.
 		if v.Type().Elem().Kind() == reflect.Uint8 {
 			return limit + 1
 		}

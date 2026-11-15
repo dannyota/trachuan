@@ -165,13 +165,11 @@ func TestDocuments_IsReadWithWebCaps(t *testing.T) {
 		t.Fatalf("document request %d: %+v", w.Code, r)
 	}
 	var page struct {
-		Release string               `json:"release"`
-		Item    retrieval.ItemResult `json:"item"`
+		Nodes   map[string]retrieval.NodeRef `json:"nodes"`
+		Release string                       `json:"release"`
+		Item    retrieval.ItemResult         `json:"item"`
 	}
-	if !strings.Contains(w.Body.String(), `"nodes":{"1":{"level":1,"name":"Name"}}`) {
-		t.Fatal(w.Body.String())
-	}
-	if json.Unmarshal(w.Body.Bytes(), &page) != nil || page.Release != "20991110_1" || page.Item.Doc != "vn:1" || !page.Item.Complete {
+	if json.Unmarshal(w.Body.Bytes(), &page) != nil || page.Release != "20991110_1" || page.Nodes["1"] != (retrieval.NodeRef{Name: "Name", Level: 1}) || page.Item.Doc != "vn:1" || !page.Item.Complete {
 		t.Fatal(w.Body.String())
 	}
 }

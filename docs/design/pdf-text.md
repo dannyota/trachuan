@@ -8,9 +8,9 @@ sources and the parsing that follows; [OCR store](ocr-store.md) and
 Status: decided, not implemented. The owner decided on 2026-11-11 to prefer the
 PDF's own text and use OCR only when that text fails, as banhmi did. It is
 scheduled after the OCR path, because every document it would serve gets text
-through OCR in the meantime. The `pdf_text` value joins the corpus schema as
-version 5, together with the next schema change, with the matching reader,
-OpenAPI and client changes; version 4 keeps its four values.
+through OCR in the meantime. The `pdf_text` value joins the corpus schema in
+version 7, with the matching reader, OpenAPI and client changes; earlier
+versions keep their four values.
 
 ## What qualifies
 

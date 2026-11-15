@@ -3,6 +3,7 @@ package retrieval
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -132,7 +133,49 @@ func TestDocuments_OversizedEntryIsTerminal(t *testing.T) {
 	}
 }
 
-type documentHashTx struct{ readCacheTx }
+type documentHashTx struct {
+	readCacheTx
+	fileQueries int
+	fileName    string
+}
+
+func (tx *documentHashTx) Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error) {
+	if strings.Contains(sql, "FROM source_file") {
+		tx.queries++
+		tx.fileQueries++
+		if !strings.Contains(sql, "ORDER BY name,hash") || len(args) != 1 || args[0] != int64(1) {
+			return nil, fmt.Errorf("invalid source file query: %s %v", sql, args)
+		}
+		name := tx.fileName
+		if name == "" {
+			name = "law.pdf"
+		}
+		return &cacheRows{values: [][]any{{name, nil, strings.Repeat("b", 64), int64(42), "main", nil}}}, nil
+	}
+	return tx.readCacheTx.Query(ctx, sql, args...)
+}
+
+func TestDocuments_SourceFilesCacheIsReleaseScoped(t *testing.T) {
+	cache := &memoryCache{}
+	engine := &Engine{release: Release{Rel: "20991110_1", RetrievalRecipe: Recipe2()}, options: Options{Now: func() time.Time { return time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC) }, Sequences: cache}}
+	tx := &documentHashTx{}
+	for _, tc := range []struct{ release, name string }{{"20991110_1", "first.pdf"}, {"20991110_2", "second.pdf"}, {"20991110_1", "first.pdf"}} {
+		engine.release.Rel = tc.release
+		tx.fileName = tc.name
+		c := webCursor()
+		c.Release = tc.release
+		page, _, save, err := engine.readItem(t.Context(), tx, c, false, c.PageCap, true)
+		if err != nil || len(page.Files) != 1 || page.Files[0].Name != tc.name {
+			t.Fatalf("release %s files = %+v, error = %v", tc.release, page.Files, err)
+		}
+		if save != nil {
+			save()
+		}
+	}
+	if tx.fileQueries != 2 {
+		t.Fatalf("source file queries = %d, want 2", tx.fileQueries)
+	}
+}
 
 func (tx *documentHashTx) QueryRow(_ context.Context, _ string, _ ...any) pgx.Row {
 	tx.queries++
@@ -149,6 +192,12 @@ func TestDocuments_WholeScopeAndCacheStaySeparateFromMCP(t *testing.T) {
 	cold, _, save, err := e.readItem(t.Context(), tx, c, false, c.PageCap, true)
 	if err != nil || cold.FetchSHA256 != strings.Repeat("a", 64) || cold.Error != "" || cold.Document == nil || !cold.Document.Status.Current || len(cold.Units) != 2 || cold.Units[0].Kind != "outline" || cold.Units[1].Kind != "provision" || cold.Units[1].Text != strings.TrimSpace(strings.Repeat("điều luật ", 12000)) {
 		t.Fatal("whole document omitted or reordered text", err)
+	}
+	if !reflect.DeepEqual(cold.Files, []SourceFile{{Name: "law.pdf", Hash: strings.Repeat("b", 64), Size: 42, Role: "main"}}) {
+		t.Fatalf("source files = %+v", cold.Files)
+	}
+	if tx.fileQueries != 1 {
+		t.Fatalf("source file queries = %d, want 1", tx.fileQueries)
 	}
 	if save == nil {
 		t.Fatal("missing cache save")
@@ -175,13 +224,12 @@ func TestDocuments_WholeScopeAndCacheStaySeparateFromMCP(t *testing.T) {
 	}
 	queries = tx.queries
 	second, _, _, err := e.readItem(t.Context(), tx, continued, true, continued.PageCap, true)
-	if err != nil || second.FetchSHA256 != cold.FetchSHA256 || tx.queries != queries {
+	if err != nil || second.FetchSHA256 != cold.FetchSHA256 || !reflect.DeepEqual(second.Files, cold.Files) || tx.queries != queries {
 		t.Fatal("cached continuation lost hash or queried the database", err)
 	}
-	// The same document handle remains outline-only with MCP's original budgets.
 	mcp := cursor{V: 1, Release: c.Release, Item: c.Item}
 	outlined, _, _, err := e.readItem(t.Context(), tx, mcp, false, ReadCallCap, true)
-	if err != nil || len(outlined.Units) != 1 || outlined.Units[0].Kind != "outline" || tx.queries == queries {
+	if err != nil || len(outlined.Units) != 1 || outlined.Units[0].Kind != "outline" || outlined.Files != nil || tx.fileQueries != 2 || tx.queries == queries {
 		t.Fatal("MCP reused whole-document cache", err)
 	}
 	changed := c

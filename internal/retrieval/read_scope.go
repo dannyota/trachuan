@@ -53,6 +53,12 @@ func (e *Engine) readScope(ctx context.Context, tx pgx.Tx, c cursor) (readSequen
 	seq := readSequence{doc: key, source: source, complete: true}
 	if anchor == "" && item.From == "" {
 		seq.document = &doc
+		if c.WholeDocument {
+			seq.files, err = readSourceFiles(ctx, tx, id)
+			if err != nil {
+				return readSequence{}, "", err
+			}
+		}
 		seq.units, err = readOutlineContext(ctx, nodes)
 		if err != nil {
 			return readSequence{}, "", err
