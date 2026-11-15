@@ -39,7 +39,7 @@ func New(cfg Config) *Stage { return &Stage{cfg: cfg} }
 func (*Stage) Name() string { return "eval" }
 
 func (s *Stage) Recipe(stage.Snapshot) string {
-	return stage.RecipeHash("eval", evaluation.ScorerVersion, "legacy-matcher/2", "product-matcher/1", "recall,mrr,current-law-precision,abstention,evidence,ann/1", strings.Join(s.cfg.Suite.Rejections, "\x00"), "diacritics_required:Vui lòng nhập câu hỏi tiếng Việt có dấu hoặc số hiệu văn bản.", "cache/1:200:100", "nearest-rank", "gates:0.99;targets:recall20=0.90,mrr8=0.66,recall8=0.90,abstention-balanced=0.85;nonregression:recall20,mrr8,abstention-balanced", "compact/1", "corpus-text-counts/1", "filter-gate/1")
+	return stage.RecipeHash("eval", evaluation.ScorerVersion, "legacy-matcher/2", "product-matcher/1", "recall,mrr,current-law-precision,abstention,evidence,ann/1", strings.Join(s.cfg.Suite.Rejections, "\x00"), "diacritics_required:Vui lòng nhập câu hỏi tiếng Việt có dấu hoặc số hiệu văn bản.", "cache/1:200:100", "nearest-rank", "gates:0.99;targets:recall20=0.90,mrr8=0.66,recall8=0.90,abstention-balanced=0.85;nonregression:recall20,mrr8,abstention-balanced", "compact/1", "corpus-text-counts/1", "filter-gate/1", "inheritance-gate/2")
 }
 
 func dateForRun(run stage.Run) (time.Time, error) {
@@ -176,6 +176,13 @@ func (s *Stage) evaluateBuild(ctx context.Context, env stage.Env, run stage.Run,
 	report, cache, err := evaluation.Run(ctx, engine, suite, opts)
 	if err != nil {
 		return report, cache, fmt.Errorf("run evaluation: %w", err)
+	}
+	if db.Record.Taxonomy != nil {
+		var hasLLM bool
+		if err = pool.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM taxonomy_assignment WHERE method='llm')`).Scan(&hasLLM); err != nil {
+			return report, cache, fmt.Errorf("check llm assignments: %w", err)
+		}
+		applyInheritance(&report, *db.Record.Taxonomy, hasLLM)
 	}
 	if err = readDocumentCounts(ctx, pool, &report); err != nil {
 		return report, cache, err

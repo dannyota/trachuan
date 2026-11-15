@@ -5,15 +5,17 @@ import (
 	"fmt"
 )
 
-// TaxonomyStats reports loaded taxonomy rows and missing targets.
 type TaxonomyStats struct {
-	Nodes                  int64 `json:"nodes"`
-	Served                 int64 `json:"served"`
-	Seeds                  int64 `json:"seeds"`
-	Overrides              int64 `json:"overrides"`
-	Excluded               int64 `json:"excluded"`
-	MissingArticles        int64 `json:"missing_articles"`
-	MissingOverrideTargets int64 `json:"missing_override_targets"`
+	Nodes                  int64           `json:"nodes"`
+	Served                 int64           `json:"served"`
+	Seeds                  int64           `json:"seeds"`
+	Inherited              int64           `json:"inherited"`
+	UnmatchedConsolidated  int64           `json:"unmatched_consolidated"`
+	Inheritance            inheritanceGate `json:"inheritance"`
+	Overrides              int64           `json:"overrides"`
+	Excluded               int64           `json:"excluded"`
+	MissingArticles        int64           `json:"missing_articles"`
+	MissingOverrideTargets int64           `json:"missing_override_targets"`
 }
 
 func (l *loader) taxonomyGap(key, kind, detail string, node int64) {
@@ -52,6 +54,12 @@ func (l *loader) loadTaxonomy(ctx context.Context, input TaxonomyInput) error {
 	if err != nil {
 		return err
 	}
+	result, err := l.inheritance(ctx, input, nodes)
+	if err != nil {
+		return err
+	}
+	l.counts.Taxonomy.Inheritance = result.gate
+	l.counts.Taxonomy.UnmatchedConsolidated = result.unmatched
 	for _, seed := range input.seeds {
 		node, ok := nodes[seed.Code]
 		if !ok {
@@ -71,6 +79,9 @@ func (l *loader) loadTaxonomy(ctx context.Context, input TaxonomyInput) error {
 		if err != nil {
 			return fmt.Errorf("insert seed: %w", err)
 		}
+	}
+	if err = l.insertInheritance(ctx, result, nodes, input.version); err != nil {
+		return err
 	}
 	for _, o := range input.overrides {
 		node, ok := nodes[o.Code]
@@ -93,7 +104,7 @@ func (l *loader) loadTaxonomy(ctx context.Context, input TaxonomyInput) error {
 	if _, err = l.tx.Exec(ctx, taxonomyCountsSQL); err != nil {
 		return fmt.Errorf("count effective taxonomy: %w", err)
 	}
-	err = l.tx.QueryRow(ctx, `SELECT count(*) FILTER (WHERE method='phapdien_seed'), count(*) FILTER (WHERE method='manual' AND NOT exclude), count(*) FILTER (WHERE exclude) FROM taxonomy_assignment`).Scan(&l.counts.Taxonomy.Seeds, &l.counts.Taxonomy.Overrides, &l.counts.Taxonomy.Excluded)
+	err = l.tx.QueryRow(ctx, `SELECT count(*) FILTER (WHERE method='phapdien_seed'), count(DISTINCT provision_id) FILTER (WHERE method='inherited'), count(*) FILTER (WHERE method='manual' AND NOT exclude), count(*) FILTER (WHERE exclude) FROM taxonomy_assignment`).Scan(&l.counts.Taxonomy.Seeds, &l.counts.Taxonomy.Inherited, &l.counts.Taxonomy.Overrides, &l.counts.Taxonomy.Excluded)
 	if err != nil {
 		return fmt.Errorf("count taxonomy assignments: %w", err)
 	}
