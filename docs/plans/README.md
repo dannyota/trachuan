@@ -24,7 +24,6 @@ history keeps it. States: `planned`, `in progress`, `landed`, `verified`,
 |11|Host and release|`deploy/`: first production (images, host bundle, Quadlet, DNS); release v0.1.0 live for the owner on 2026-11-14|Plans 1 to 10 images|landed|
 |12|Compact results and read|`internal/retrieval`: hit path and best member, snippets, document entries and relation pointers, `Engine.Present` (compact and full), `Engine.Read` (outline, provision, range, relations, parts, `next` tokens, input bounds); eval compact diagnostic and size gate (ADR 0013); evidence `docs/research/compact-results-2026-11.md`|Plan 2; ADR 0013|landed|
 |13|Agent error reports|MCP tool `report_issue` and web routes (submit, own list, withdraw) with structured fields only and no free text (ADR 0002); auth-database table, per-account and global caps, admin triage and export CLI feeding `sources/vn-corrections.yaml`, text review and identity-map review ([error reports](../design/error-reports.md)); the website submission form waits for an owner decision|Plan 9a (MCP), Plan 9b (web)|landed|
-|14|[Open sign-up](2026-11-14-open-signup.md)|hardening gate (data volume, Object Storage, Vault secrets, pgBackRest with restore proof, alarms, signed pull deployment, OpenTofu import); email and password accounts with optional TOTP (ADR 0015); open sign-up|Plan 11|in progress|
 
 Each later plan is written with the writing-plans skill when its dependency
 lands, against `docs/design/README.md` and the research notes from Plan 0.

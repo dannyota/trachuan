@@ -1,12 +1,12 @@
 # Run the production host
 
-Phase 1 serves only the owner. Put the owner's verified email in the Podman
-secret `server_signup_emails`, never in Git. Prove a previously unused second
-Google account is rejected before announcing the site. Keep Google's consent
-screen in [Testing][google-testing] as an additional measure; it does not
-enforce owner-only access. Before admitting another account, finish the signed
-deployment, Vault, backups, alarms, data volume and infrastructure work in the
-[deployment design](../design/deployment.md).
+Sign-up is open: the server unit sets no `SERVER_SIGNUP_EMAILS`, so any verified
+Google or mailbox-proven email can create an account. To close sign-up in an
+emergency, first create a Podman secret holding a valid, nonempty
+comma-separated allowlist (and its Vault secret, if the updater should keep it),
+then ship a release whose server unit mounts it as `SERVER_SIGNUP_EMAILS` and
+whose bundle tests allow that mount. A missing secret stops the unit, and an
+empty or malformed value stops the server.
 
 ## Build and install
 
@@ -33,10 +33,8 @@ The installer targets OL9.8 arm64. It uses OL9 BaseOS and AppStream for every
 package, plus `ol9_oci_included` for `python39-oci-sdk` only. It requires
 SELinux enforcing, cgroup v2 and Podman >= 4.4, and verifies generated units. It
 enables lingering and opens 80/443 TCP and 443 UDP. It preserves installed env
-files under `/srv/trachuan/host/`; update those files on an existing host.
-Podman refuses to start the server without the `server_signup_emails` secret,
-and the server refuses an empty or malformed list at startup without logging it.
-Leave `SERVER_GOOGLE_ISSUER` and `SERVER_OAUTH_CLIENTS` unset.
+files under `/srv/trachuan/host/`; update those files on an existing host. Leave
+`SERVER_GOOGLE_ISSUER` and `SERVER_OAUTH_CLIENTS` unset.
 
 The dynamic group `trachuan-host` includes only this instance. Its policy grants
 `use metrics` in compartment `trachuan` for namespace `trachuan_host`. The
@@ -118,7 +116,6 @@ sys.stdout.write("postgres://" + sys.argv[1] + ":" + password +
   unset value
 }
 secret google_client_secret
-secret server_signup_emails
 secret smtp_username
 secret smtp_password
 openssl rand -base64 32 | tr '+/' '-_' | tr -d '=' | \
@@ -296,5 +293,3 @@ or reports.
 [secret-create]:
   https://docs.podman.io/en/v5.8.2/markdown/podman-secret-create.1.html#replace-false
 [hba]: https://www.postgresql.org/docs/18/auth-pg-hba-conf.html
-[google-testing]:
-  https://developers.google.com/identity/protocols/oauth2/production-readiness/overview

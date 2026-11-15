@@ -183,7 +183,7 @@ retries. A run has three phases, each skipped when nothing changed: secrets
 
 Configuration that differs per host and is not secret lives in Git, in
 `server.env` and `web.env`; the Google client identifier is public and moves
-there. Values that must stay out of Git, such as the sign-up allowlist, are
+there. Values that must stay out of Git, such as the SMTP credentials, are
 [Vault secrets](deployment.md#secrets) passed as env secrets.
 
 ### Acceptance

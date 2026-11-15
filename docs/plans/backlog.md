@@ -42,3 +42,7 @@ One line per item: date, area, finding, source.
 - 2026-11-14, deploy, the query embedder model under `/srv/trachuan/models` is provisioned by hand; a dense recipe change needs a model distribution path (releases bucket plus a hash in the image manifest) before it can deploy without SSH.
 - 2026-11-14, deploy, implement paired image and corpus activation for recipe changes, including pointer rollback and interrupted-pair recovery, per docs/design/corpus-release.md.
 - 2026-11-15, corpus, review every rule B expiry, rule C conflict and the whole validity review queue, add manual entries with evidence to `sources/vn-corrections.yaml`, rebuild and re-adjudicate the identity map; the open step of the corpus schema 3 plan, docs/design/validity-status.md.
+- 2026-11-15, deploy, whole-cluster restore rehearsal against the one-hour RTO; only the auth restore check (53 s) is proven, open sign-up plan A4.
+- 2026-11-15, deploy, host `watch` timer with Telegram alerts and an external uptime check; waits for the owner's Telegram bot and chat, open sign-up plan A5.
+- 2026-11-15, deploy, crash and resume test of the corpus activator on the host with a 2099 release; activation itself is proven with vn/20261114_5, open sign-up plan A6b.
+- 2026-11-15, deploy, delete the Vault secret `server_signup_emails` and its name in `deploy/oci/iam.tf` only after `release_floor` reaches the release whose updater no longer fetches it; an older updater reinstalled by rollback fetches it and fails every secret reconcile without it.

@@ -35,8 +35,8 @@ fragment. `serve` requires both Google variables and `SERVER_PUBLIC_URL`;
 comma-separated list of proxy CIDRs; it defaults to empty.
 `SERVER_OAUTH_CLIENTS` optionally names a JSON file of pre-registered clients;
 when absent, no clients are pre-registered. `SERVER_SIGNUP_EMAILS` optionally
-lists, comma-separated, the only emails that may create an account (production
-sets the owner's); when absent, sign-up is open.
+lists, comma-separated, the only emails that may create an account; when absent,
+sign-up is open, as in production.
 
 Create the required local key file outside the repository, then enable captured
 mail. Capture requires loopback hosts in both `SERVER_PUBLIC_URL` and
