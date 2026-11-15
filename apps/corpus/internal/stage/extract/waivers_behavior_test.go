@@ -16,7 +16,7 @@ import (
 
 func TestWaiver_MatchesExactItems(t *testing.T) {
 	w := Waiver{Key: "vn:test:1", PDFSHA256: strings.Repeat("a", 64), CheckSHA256: strings.Repeat("b", 64), Items: []WaiverItem{{Page: 1, Kind: "document_number", OCR: "a", PDF: "b", Reading: "form code"}}}
-	result := ocrstore.CheckResult{Verdict: "flagged", Items: []ocrstore.CheckItem{{Page: 1, Kind: "document_number"}}}
+	result := ocrstore.CheckResult{Verdict: "flagged", Items: []ocrstore.CheckItem{{Page: 1, Kind: "document_number", OCR: "a", PDF: "b"}}}
 	entry := ocrstore.Entry{Check: &store.OcrCheck{ResultSha256: w.CheckSHA256}}
 	ok, stale, err := matchWaiver(&w, w.PDFSHA256, entry, result)
 	if err != nil || !ok || stale {
@@ -29,6 +29,15 @@ func TestWaiver_MatchesExactItems(t *testing.T) {
 	_, stale, err = matchWaiver(&w, strings.Repeat("c", 64), entry, result)
 	if err != nil || !stale {
 		t.Fatalf("stale=%v err=%v", stale, err)
+	}
+	changed := ocrstore.CheckResult{Verdict: "flagged", Items: []ocrstore.CheckItem{{Page: 1, Kind: "document_number", OCR: "a", PDF: "c"}}}
+	if _, _, err = matchWaiver(&w, w.PDFSHA256, entry, changed); err == nil {
+		t.Fatal("changed reading accepted")
+	}
+	pair := Waiver{Key: w.Key, PDFSHA256: w.PDFSHA256, CheckSHA256: w.CheckSHA256, Items: []WaiverItem{{Page: 1, Kind: "document_number", OCR: "a", PDF: "b", Reading: "form code"}, {Page: 1, Kind: "document_number", OCR: "a", PDF: "b", Reading: "form code"}}}
+	two := ocrstore.CheckResult{Verdict: "flagged", Items: []ocrstore.CheckItem{{Page: 1, Kind: "document_number", OCR: "a", PDF: "b"}, {Page: 1, Kind: "document_number", OCR: "x", PDF: "y"}}}
+	if _, _, err = matchWaiver(&pair, pair.PDFSHA256, entry, two); err == nil {
+		t.Fatal("duplicate substitution accepted")
 	}
 }
 
@@ -49,7 +58,7 @@ func TestWaiver_SelectsOnlyMatchingCheck(t *testing.T) {
 	}
 	entry.Check.Result = data
 	src.entries[hash] = entry
-	w := &Waiver{Key: "vn:test:1", PDFSHA256: hash, CheckSHA256: entry.Check.ResultSha256, Items: []WaiverItem{{Page: 1, Kind: "document_number"}}}
+	w := &Waiver{Key: "vn:test:1", PDFSHA256: hash, CheckSHA256: entry.Check.ResultSha256, Items: []WaiverItem{{Page: 1, Kind: "document_number", OCR: "1", PDF: "2"}}}
 	files := []fetch.DocumentFile{{Name: "scan.pdf", SHA256: hash}}
 	choose := func() (selection, error) {
 		return selectOCRFilesMode(context.Background(), t.TempDir(), "1", files, src, []string{"vision-ocr/builtin-latest"}, "checker", false, w)

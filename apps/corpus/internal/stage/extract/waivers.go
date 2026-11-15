@@ -118,13 +118,13 @@ func matchWaiver(w *Waiver, pdf string, entry ocrstore.Entry, result ocrstore.Ch
 	}
 	counts := map[string]int{}
 	for _, item := range w.Items {
-		counts[fmt.Sprintf("%d:%s", item.Page, item.Kind)]++
+		counts[waiverItemKey(item.Page, item.Kind, item.OCR, item.PDF)]++
 	}
 	n := 0
 	for _, item := range result.Items {
 		if item.Kind == "article_label" || item.Kind == "document_number" {
 			n++
-			k := fmt.Sprintf("%d:%s", item.Page, item.Kind)
+			k := waiverItemKey(item.Page, item.Kind, item.OCR, item.PDF)
 			counts[k]--
 			if counts[k] < 0 {
 				return false, false, fmt.Errorf("OCR waiver %q items differ from check", w.Key)
@@ -135,6 +135,10 @@ func matchWaiver(w *Waiver, pdf string, entry ocrstore.Entry, result ocrstore.Ch
 		return false, false, fmt.Errorf("OCR waiver %q items differ from check", w.Key)
 	}
 	return true, false, nil
+}
+
+func waiverItemKey(page int, kind, ocr, pdf string) string {
+	return fmt.Sprintf("%d\x00%s\x00%s\x00%s", page, kind, ocr, pdf)
 }
 
 func (w Waivers) validateSelections(seen map[string]bool) error {
