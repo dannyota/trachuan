@@ -10,10 +10,10 @@
 - [x] ADR 0016, frameworks.md, frameworks-access.md and the survey note reviewed by `gpt-6-astra` in four rounds (A-01 to A-04, S-01 to S-07 fixed); ADR accepted 2026-11-15.
 
 ## 15.1 Access foundation (server; dev2)
-- [ ] Tests first, then: auth migration `framework_entitlement` and `framework_entitlement_event` (mutation and event in one transaction, events immutable); the access-set function with fail-closed cases (unknown framework, missing class, store error, revoked entitlement, entitlement before account, unverified email, email canonical form, account deletion keeps it); `server admin frameworks allow|revoke|list`; the restore step that revokes every live entitlement with reason `restore`; `SERVER_FRAMEWORKS` flag default false. No serving yet.
+- [x] Tests first, then: auth migration `framework_entitlement` and `framework_entitlement_event` (mutation and event in one transaction, events immutable); the access-set function with fail-closed cases (unknown framework, missing class, store error, revoked entitlement, entitlement before account, unverified email, email canonical form, account deletion keeps it); `server admin frameworks allow|revoke|list`; the restore step that revokes every live entitlement with reason `restore`; `SERVER_FRAMEWORKS` flag default false. No serving yet.
 
 ## 15.2 Registry and free frameworks (corpus; dev)
-- [ ] `sources/frameworks.yaml` with validation (hashes, access, licence kind and URL for `free`), seeded from compliary's registry; `FRAMEWORKS_SOURCE_DIR` reader that refuses unknown hashes.
+- [x] `sources/frameworks.yaml` with validation (hashes, access, licence kind and URL for `free`), seeded from compliary's registry; `FRAMEWORKS_SOURCE_DIR` reader that refuses unknown hashes.
 - [ ] Release schema `frameworks` version 1 in `internal/corpusdb`; stages for the kind; structured parsers first: NIST SP 800-53 r5 (OSCAL), NIST CSF 2.0 and CIS Controls v8.1 (XLSX), each with an exact control-count check.
 - [ ] Mapping edges from catalogs, NIST OLIR and CIS workbooks, by business key, unresolved targets counted.
 - [ ] Body and public-field indexes; dense recipe of the law corpus; golden cases re-adjudicated; first measured run; floors written into frameworks.md.

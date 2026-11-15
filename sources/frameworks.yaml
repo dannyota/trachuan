@@ -1,0 +1,629 @@
+frameworks:
+- code: iso27001
+  version: '2013'
+  name: ISO/IEC 27001 Information security management systems (ISMS) requirements
+  publisher: ISO/IEC JTC 1/SC 27
+  language: en
+  access: licensed
+  licence_kind: ''
+  licence_url: ''
+  released: null
+  ordinal: 1
+  citation_scheme: iso-ams
+  aliases:
+  - ISO 27001
+  - ISO/IEC 27001
+  files: []
+  parser: ''
+- code: iso27001
+  version: '2022'
+  name: ISO/IEC 27001 Information security management systems (ISMS) requirements
+  publisher: ISO/IEC JTC 1/SC 27
+  language: en
+  access: licensed
+  licence_kind: ''
+  licence_url: ''
+  released: '2022-10-25'
+  ordinal: 2
+  citation_scheme: iso-ams
+  aliases:
+  - ISO 27001
+  - ISO/IEC 27001
+  files:
+  - path: iso/iso-iec-27001-2022.pdf
+    sha256: e270769945c630894a21f64fd018bcdc586a82281edcd4c29a5d864ddf371b54
+    size: 1214352
+    role: text
+    format: pdf
+  - path: iso/iso-iec-27001-2022-amd1-2024.pdf
+    sha256: 9a17aec8d8a1d79839bbe0833cc48202b65ed71e478fee0c78e6ba4b2c6dc6a7
+    size: 868937
+    role: text
+    format: pdf
+  parser: ''
+- code: iso27002
+  version: '2013'
+  name: ISO/IEC 27002 Information security controls
+  publisher: ISO/IEC JTC 1/SC 27
+  language: en
+  access: licensed
+  licence_kind: ''
+  licence_url: ''
+  released: null
+  ordinal: 1
+  citation_scheme: iso-control-catalog
+  aliases:
+  - ISO 27002
+  - ISO/IEC 27002
+  files: []
+  parser: ''
+- code: iso27002
+  version: '2022'
+  name: ISO/IEC 27002 Information security controls
+  publisher: ISO/IEC JTC 1/SC 27
+  language: en
+  access: licensed
+  licence_kind: ''
+  licence_url: ''
+  released: null
+  ordinal: 2
+  citation_scheme: iso-control-catalog
+  aliases:
+  - ISO 27002
+  - ISO/IEC 27002
+  files:
+  - path: iso/iso-iec-27002-2022.pdf
+    sha256: 1da41b305cce13c7d9150e8ceb520eb13d082d8a80080f9768a5dc9f2900b7e2
+    size: 1752777
+    role: text
+    format: pdf
+  parser: ''
+- code: iso27017
+  version: '2015'
+  name: ISO/IEC 27017 Information security controls for cloud services
+  publisher: ISO/IEC JTC 1/SC 27
+  language: en
+  access: licensed
+  licence_kind: ''
+  licence_url: ''
+  released: null
+  ordinal: 1
+  citation_scheme: iso-control-catalog
+  aliases:
+  - ISO 27017
+  - ISO/IEC 27017
+  files:
+  - path: iso/iso-iec-27017-2015.pdf
+    sha256: baa45e80a596e7eb929fd3450dcf1ea6f96ec07f6cca12aa0efe552c2fe0bf5a
+    size: 902244
+    role: text
+    format: pdf
+  parser: ''
+- code: iso27018
+  version: '2014'
+  name: ISO/IEC 27018 Protection of PII in public clouds acting as PII processors
+  publisher: ISO/IEC JTC 1/SC 27
+  language: en
+  access: licensed
+  licence_kind: ''
+  licence_url: ''
+  released: null
+  ordinal: 1
+  citation_scheme: iso-control-catalog
+  aliases:
+  - ISO 27018
+  - ISO/IEC 27018
+  files: []
+  parser: ''
+- code: iso27018
+  version: '2019'
+  name: ISO/IEC 27018 Protection of PII in public clouds acting as PII processors
+  publisher: ISO/IEC JTC 1/SC 27
+  language: en
+  access: licensed
+  licence_kind: ''
+  licence_url: ''
+  released: null
+  ordinal: 2
+  citation_scheme: iso-control-catalog
+  aliases:
+  - ISO 27018
+  - ISO/IEC 27018
+  files:
+  - path: iso/iso-iec-27018-2019.pdf
+    sha256: 83e63bb508e90238d101d964d6b0d00eabe1e564e32a697181a7dc230ccf7cdf
+    size: 1263833
+    role: text
+    format: pdf
+  parser: ''
+- code: iso27018
+  version: '2025'
+  name: ISO/IEC 27018 Protection of PII in public clouds acting as PII processors
+  publisher: ISO/IEC JTC 1/SC 27
+  language: en
+  access: licensed
+  licence_kind: ''
+  licence_url: ''
+  released: null
+  ordinal: 3
+  citation_scheme: iso-control-catalog
+  aliases:
+  - ISO 27018
+  - ISO/IEC 27018
+  files: []
+  parser: ''
+- code: iso27701
+  version: '2019'
+  name: ISO/IEC 27701 Privacy information management systems
+  publisher: ISO/IEC JTC 1/SC 27
+  language: en
+  access: licensed
+  licence_kind: ''
+  licence_url: ''
+  released: null
+  ordinal: 1
+  citation_scheme: iso-ams
+  aliases:
+  - ISO 27701
+  - ISO/IEC 27701
+  files: []
+  parser: ''
+- code: iso27701
+  version: '2025'
+  name: ISO/IEC 27701 Privacy information management systems
+  publisher: ISO/IEC JTC 1/SC 27
+  language: en
+  access: licensed
+  licence_kind: ''
+  licence_url: ''
+  released: null
+  ordinal: 2
+  citation_scheme: iso-ams
+  aliases:
+  - ISO 27701
+  - ISO/IEC 27701
+  files: []
+  parser: ''
+- code: iso22301
+  version: '2012'
+  name: ISO 22301 Business continuity management systems requirements
+  publisher: ISO/TC 292
+  language: en
+  access: licensed
+  licence_kind: ''
+  licence_url: ''
+  released: null
+  ordinal: 1
+  citation_scheme: iso-ams
+  aliases:
+  - ISO 22301
+  - ISO 22301 BCMS
+  files: []
+  parser: ''
+- code: iso22301
+  version: '2019'
+  name: ISO 22301 Business continuity management systems requirements
+  publisher: ISO/TC 292
+  language: en
+  access: licensed
+  licence_kind: ''
+  licence_url: ''
+  released: null
+  ordinal: 2
+  citation_scheme: iso-ams
+  aliases:
+  - ISO 22301
+  - ISO 22301 BCMS
+  files:
+  - path: iso/iso-22301-2019-amd1-2024.pdf
+    sha256: 1ffa8bc0147f891b91a5610da902ec6e2433b5b3c321549f0fd13824d204823d
+    size: 862715
+    role: text
+    format: pdf
+  parser: ''
+- code: iso42001
+  version: '2023'
+  name: ISO/IEC 42001 Artificial intelligence management systems
+  publisher: ISO/IEC JTC 1/SC 42
+  language: en
+  access: licensed
+  licence_kind: ''
+  licence_url: ''
+  released: null
+  ordinal: 1
+  citation_scheme: iso-ams
+  aliases:
+  - ISO 42001
+  - ISO/IEC 42001
+  files: []
+  parser: ''
+- code: soc2tsc
+  version: '2017'
+  name: SOC 2 Trust Services Criteria (AICPA TSC)
+  publisher: AICPA
+  language: en
+  access: licensed
+  licence_kind: ''
+  licence_url: ''
+  released: null
+  ordinal: 1
+  citation_scheme: tsc-criteria
+  aliases:
+  - SOC 2
+  - AICPA TSC
+  files:
+  - path: aicpa/aicpa-tsc-2017-points-of-focus-2022.pdf
+    sha256: 23a099dd1dc273b7a45fda2351f376344c33fcb2911d586036c0e0d631b8ad69
+    size: 567612
+    role: text
+    format: pdf
+  parser: ''
+- code: pcidss
+  version: v3.2.1
+  name: PCI Data Security Standard
+  publisher: PCI Security Standards Council
+  language: en
+  access: licensed
+  licence_kind: ''
+  licence_url: ''
+  released: null
+  ordinal: 1
+  citation_scheme: pci-requirement
+  aliases:
+  - PCI DSS
+  - PCI Data Security Standard
+  files: []
+  parser: ''
+- code: pcidss
+  version: v4.0
+  name: PCI Data Security Standard
+  publisher: PCI Security Standards Council
+  language: en
+  access: licensed
+  licence_kind: ''
+  licence_url: ''
+  released: '2022-03-31'
+  ordinal: 2
+  citation_scheme: pci-requirement
+  aliases:
+  - PCI DSS
+  - PCI Data Security Standard
+  files: []
+  parser: ''
+- code: pcidss
+  version: v4.0.1
+  name: PCI Data Security Standard
+  publisher: PCI Security Standards Council
+  language: en
+  access: licensed
+  licence_kind: ''
+  licence_url: ''
+  released: '2024-06-11'
+  ordinal: 3
+  citation_scheme: pci-requirement
+  aliases:
+  - PCI DSS
+  - PCI Data Security Standard
+  files:
+  - path: pcissc/pci-dss-v4.0.1.pdf
+    sha256: 5e6b9093b84007b973097d20126a3768ea2f0a1d4200255c849b0fb3bf04ebc7
+    size: 4458346
+    role: text
+    format: pdf
+  parser: ''
+- code: nistcsf
+  version: '1.1'
+  name: NIST Cybersecurity Framework
+  publisher: NIST
+  language: en
+  access: free
+  licence_kind: public-domain
+  licence_url: https://www.nist.gov/open/copyright-fair-use-and-licensing-statements-srd-data-software-and-technical-series-publications
+  released: '2018-04-16'
+  ordinal: 1
+  citation_scheme: csf-workbook
+  aliases:
+  - NIST CSF
+  - NIST Cybersecurity Framework
+  files: []
+  parser: ''
+- code: nistcsf
+  version: '2.0'
+  name: NIST Cybersecurity Framework
+  publisher: NIST
+  language: en
+  access: free
+  licence_kind: public-domain
+  licence_url: https://www.nist.gov/open/copyright-fair-use-and-licensing-statements-srd-data-software-and-technical-series-publications
+  released: '2024-02-26'
+  ordinal: 2
+  citation_scheme: csf-workbook
+  aliases:
+  - NIST CSF
+  - NIST Cybersecurity Framework
+  files:
+  - path: nist/nist-csf-2.0.xlsx
+    sha256: f791fd9157ae8aa63e8a5be75d261c404bd0ad57b18e2b57e902b7d37e3f56ee
+    size: 144518
+    role: catalog
+    format: xlsx
+  - path: nist/nist-csf-2.0.pdf
+    sha256: 3c31f46fee98cac0c4323453e5109291a213b4de7fef8c058af9bf67f717433c
+    size: 1518858
+    role: guide
+    format: pdf
+  parser: ''
+- code: nist80053
+  version: r4
+  name: NIST SP 800-53 Security and Privacy Controls
+  publisher: NIST
+  language: en
+  access: free
+  licence_kind: public-domain
+  licence_url: https://www.nist.gov/open/copyright-fair-use-and-licensing-statements-srd-data-software-and-technical-series-publications
+  released: '2013-04-30'
+  ordinal: 1
+  citation_scheme: oscal-catalog
+  aliases:
+  - NIST SP 800-53
+  - NIST 800-53
+  files: []
+  parser: ''
+- code: nist80053
+  version: r5
+  name: NIST SP 800-53 Security and Privacy Controls
+  publisher: NIST
+  language: en
+  access: free
+  licence_kind: public-domain
+  licence_url: https://www.nist.gov/open/copyright-fair-use-and-licensing-statements-srd-data-software-and-technical-series-publications
+  released: '2020-09-23'
+  ordinal: 2
+  citation_scheme: oscal-catalog
+  aliases:
+  - NIST SP 800-53
+  - NIST 800-53
+  files:
+  - path: nist/nist-sp-800-53r5-oscal-catalog.json
+    sha256: 01f37cf90ea99d92242c936cbfbdebcc338eef1f71454e2acac36cc56e9bc062
+    size: 10442037
+    role: catalog
+    format: oscal-json
+  - path: nist/nist-sp-800-53r5.pdf
+    sha256: fc63bcd61715d0181dd8e85998b1e6201ae3515fc6626102101cab1841e11ec6
+    size: 6073678
+    role: guide
+    format: pdf
+  - path: nist/nist-sp-800-53r5-to-iso27001-2022-olir.xlsx
+    sha256: e631de234a1fac057991773f015c221226940540f5602e1b70a3768eaff5cbd9
+    size: 155745
+    role: mapping workbook
+    format: xlsx
+  parser: ''
+- code: ciscontrols
+  version: v8
+  name: CIS Critical Security Controls
+  publisher: Center for Internet Security
+  language: en
+  access: licensed
+  licence_kind: CC BY-NC-ND 4.0
+  licence_url: https://creativecommons.org/licenses/by-nc-nd/4.0/legalcode
+  released: '2021-05-18'
+  ordinal: 1
+  citation_scheme: cis-workbook
+  aliases:
+  - CIS Controls
+  - CIS Critical Security Controls
+  files: []
+  parser: ''
+- code: ciscontrols
+  version: v8.1
+  name: CIS Critical Security Controls
+  publisher: Center for Internet Security
+  language: en
+  access: licensed
+  licence_kind: CC BY-NC-ND 4.0
+  licence_url: https://creativecommons.org/licenses/by-nc-nd/4.0/legalcode
+  released: null
+  ordinal: 2
+  citation_scheme: cis-workbook
+  aliases:
+  - CIS Controls
+  - CIS Critical Security Controls
+  files:
+  - path: cis/cis-controls-version-8.1.2-march-2025.xlsx
+    sha256: 56ee1b73be5d80fa933332f9c5810da35b9d279e7e5ea1c8d67c9faed8a7ef5d
+    size: 728326
+    role: catalog
+    format: xlsx
+  - path: cis/cis-controls-version-8.1.2-change-log-march-2025.xlsx
+    sha256: 783bf60fdef91ff9a99f9fadfda50221381e948c97649412d03e97720e49415a
+    size: 825851
+    role: change log
+    format: xlsx
+  - path: cis/cis-controls-v8.1-mapping-to-iso-iec-27001-2022.xlsx
+    sha256: eb6e5adc464cbd7f0ccba553639896f79f5963b8e9452eeda011e672e581f223
+    size: 636602
+    role: mapping workbook
+    format: xlsx
+  - path: cis/cis-controls-v8.1-mapping-to-nist-csf-2.0.xlsx
+    sha256: 2fbf724c1ab1a26c1dd49402ebea3bf97940791c63d2df4105aad9be34b6ab2f
+    size: 691012
+    role: mapping workbook
+    format: xlsx
+  - path: cis/cis-controls-v8.1-mapping-to-nist-sp-800-53-r5.xlsx
+    sha256: 47e9f6be77b4569b49108c333d35848212572c858a13fb928186696005351259
+    size: 712690
+    role: mapping workbook
+    format: xlsx
+  - path: cis/cis-controls-guide-v8.1.2-0325-v2.pdf
+    sha256: e21b6d20098f3b0ed6391f95ac8f60fb7958a4b74389f96b456b37cd6ac878e4
+    size: 1422769
+    role: guide
+    format: pdf
+  parser: ''
+- code: csaccm
+  version: v4.0
+  name: CSA Cloud Controls Matrix
+  publisher: Cloud Security Alliance
+  language: en
+  access: licensed
+  licence_kind: ''
+  licence_url: ''
+  released: '2021-01-21'
+  ordinal: 1
+  citation_scheme: ccm-workbook
+  aliases:
+  - CSA CCM
+  - CSA Cloud Controls Matrix
+  files: []
+  parser: ''
+- code: csaccm
+  version: v4.1
+  name: CSA Cloud Controls Matrix
+  publisher: Cloud Security Alliance
+  language: en
+  access: licensed
+  licence_kind: ''
+  licence_url: ''
+  released: null
+  ordinal: 2
+  citation_scheme: ccm-workbook
+  aliases:
+  - CSA CCM
+  - CSA Cloud Controls Matrix
+  files:
+  - path: csa/csa-ccm-v4.1.0.xlsx
+    sha256: 5e721628c8ab297bdbd355afa4c01699971fcbb9cb16802ccb9d42c7176ab32b
+    size: 569961
+    role: catalog
+    format: xlsx
+  - path: csa/csa-caiq-v4.1.0.xlsx
+    sha256: cdf35cf5519a566edaa2c84e4c163d11a8696c59fe1b5ec2a4aa3c2b0bbf10e0
+    size: 140270
+    role: catalog
+    format: xlsx
+  - path: csa/csa-caiq-v4.0.3-to-v4.1-changes.xlsx
+    sha256: 6fe754907b1eafc07256bca8c4a3f59af435dc16d11ce72c83ca1695ad5c89bc
+    size: 76698
+    role: change log
+    format: xlsx
+  - path: csa/csa-ccm-caiq-guide.pdf
+    sha256: 091bbd49bbacecf65e4e198ccc5103ef4da31f659df06c668f64b23fb8c4bc5e
+    size: 139419
+    role: guide
+    format: pdf
+  - path: csa/csa-ccm-introductory-guidance.pdf
+    sha256: 2cd139d815085b045c59425f4b52516db5b861c712e3d8d9adaeebd0b867884e
+    size: 2317969
+    role: guide
+    format: pdf
+  - path: csa/csa-ccm-v4.1-implementation-guidelines.pdf
+    sha256: 0aa2a19d84b3bff7ad21931876f475d97fcce5b76a51466fa48d40d82f29ca76
+    size: 13785102
+    role: guide
+    format: pdf
+  parser: ''
+- code: swiftcscf
+  version: v2026
+  name: SWIFT Customer Security Controls Framework
+  publisher: SWIFT
+  language: en
+  access: licensed
+  licence_kind: ''
+  licence_url: ''
+  released: null
+  ordinal: 1
+  citation_scheme: cscf-control
+  aliases:
+  - SWIFT CSCF
+  - SWIFT Customer Security Controls Framework
+  files: []
+  parser: ''
+- code: cobit
+  version: '5'
+  name: COBIT Governance and management objectives
+  publisher: ISACA
+  language: en
+  access: licensed
+  licence_kind: ''
+  licence_url: ''
+  released: null
+  ordinal: 1
+  citation_scheme: cobit-objective
+  aliases:
+  - ISACA COBIT
+  - COBIT Framework
+  files: []
+  parser: ''
+- code: cobit
+  version: '2019'
+  name: COBIT Governance and management objectives
+  publisher: ISACA
+  language: en
+  access: licensed
+  licence_kind: ''
+  licence_url: ''
+  released: null
+  ordinal: 2
+  citation_scheme: cobit-objective
+  aliases:
+  - ISACA COBIT
+  - COBIT Framework
+  files:
+  - path: isaca/cobit-2019-framework-governance-and-management-objectives.pdf
+    sha256: 8bbdf564a15a01a90feee58ac4a94307dd08b0ea26def4886d3864d23e6bfa01
+    size: 5943271
+    role: text
+    format: pdf
+  - path: isaca/cobit-2019-framework-introduction-and-methodology.pdf
+    sha256: a168563579e3e3b583fa870d19833f0475b94c0fbcd4a061bd77e369dd229edd
+    size: 826985
+    role: guide
+    format: pdf
+  parser: ''
+- code: tcvn11930
+  version: '2017'
+  name: TCVN 11930 Basic requirements for securing information systems by security level
+  publisher: Bộ Khoa học và Công nghệ (Việt Nam)
+  language: vi
+  access: licensed
+  licence_kind: ''
+  licence_url: ''
+  released: '2017-09-25'
+  ordinal: 1
+  citation_scheme: tcvn-clause
+  aliases:
+  - TCVN 11930
+  files:
+  - path: tcvn/tcvn-11930-2017.pdf
+    sha256: 9f46c1956803eb0c72c3709832c8442ea7df837c99ad5b8ce68804e583e93f71
+    size: 1028565
+    role: text
+    format: pdf
+  parser: ''
+- code: tcvn14423
+  version: '2025'
+  name: TCVN 14423 Cyber security requirements for critical information systems
+  publisher: Bộ Khoa học và Công nghệ (Việt Nam)
+  language: vi
+  access: licensed
+  licence_kind: ''
+  licence_url: ''
+  released: '2025-05-29'
+  ordinal: 1
+  citation_scheme: tcvn-clause
+  aliases:
+  - TCVN 14423
+  files:
+  - path: tcvn/tcvn-14423-2025.txt
+    sha256: 0fdd324cbc3f4fb69f4f9a4ae407ad91eeac3cb41d7a9c40d51508eeb99863be
+    size: 115614
+    role: text
+    format: txt
+  - path: tcvn/tcvn-14423-2025.pdf
+    sha256: 29e90f480e2cf2e2a7e0acd9559e62f6c79e8ca03f435426ecf1adcf08660932
+    size: 16560579
+    role: guide
+    format: pdf
+  parser: ''
