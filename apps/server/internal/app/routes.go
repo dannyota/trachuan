@@ -18,24 +18,27 @@ import (
 )
 
 type webDeps struct {
-	password     *passwordauth.Handler
-	store        accountapi.Store
-	reportStore  reportsapi.Store
-	sessions     *websession.Manager
-	login        *weblogin.Handler
-	verifier     *credential.Verifier
-	tools        mcpapi.Config
-	loginLimit   *loginLimiter
-	oauthDB      oauth.ClientDB
-	oauthClients []oauth.Client
-	publicURL    string
+	password      *passwordauth.Handler
+	store         accountapi.Store
+	reportStore   reportsapi.Store
+	sessions      *websession.Manager
+	login         *weblogin.Handler
+	verifier      *credential.Verifier
+	tools         mcpapi.Config
+	loginLimit    *loginLimiter
+	oauthDB       oauth.ClientDB
+	oauthClients  []oauth.Client
+	publicURL     string
+	mcpOrigins    []string
+	mcpOriginMode string
 }
 
 func newWebMux(d webDeps) *http.ServeMux {
 	mux := http.NewServeMux()
+	origins := newMCPOriginPolicy(d.publicURL, d.mcpOrigins, d.mcpOriginMode, d.tools.Logger, d.loginLimit.clock)
 	mountPasswordRoutes(mux, d)
 	mountFactorRoutes(mux, d)
-	mux.Handle("/mcp", credential.Middleware(d.verifier, mcpapi.New(d.tools)))
+	mux.Handle("/mcp", origins.middleware("", credential.Middleware(d.verifier, mcpapi.New(d.tools))))
 	account := d.sessions.Middleware(d.sessions.CSRF(accountapi.New(accountapi.Config{Store: d.store, Sessions: d.sessions, Verifier: d.verifier, Limiter: d.tools.Limiter, Clock: d.tools.Clock, TOTPEnrollment: d.password != nil && d.password.Enrollment})))
 	logout := d.sessions.Middleware(d.sessions.CSRF(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		p, _ := websession.FromContext(r.Context())
@@ -70,11 +73,11 @@ func newWebMux(d webDeps) *http.ServeMux {
 	} {
 		switch pattern {
 		case "POST /oauth/token", "POST /oauth/register", "POST /oauth/revoke":
-			mux.Handle(pattern, d.loginLimit.oauthJSON(handler))
+			mux.Handle(pattern, origins.middleware(http.MethodPost, d.loginLimit.oauthJSON(handler)))
 		case "GET /oauth/authorize", "GET /oauth/consent/{handle}", "POST /oauth/consent/{handle}":
 			mux.Handle(pattern, d.loginLimit.oauthPage(handler))
 		default:
-			mux.Handle(pattern, d.loginLimit.middleware(handler))
+			mux.Handle(pattern, origins.middleware(http.MethodGet, d.loginLimit.middleware(handler)))
 		}
 	}
 	mountRoutes(mux, d.loginLimit.middleware(d.login.Start), d.loginLimit.middleware(d.login.Callback), logout, account, corpus)

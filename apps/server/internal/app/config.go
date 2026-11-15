@@ -24,6 +24,8 @@ type config struct {
 	trustedProxies                                                                                     []netip.Prefix
 	oauthClients                                                                                       []oauth.Client
 	signupEmails                                                                                       []string
+	mcpOrigins                                                                                         []string
+	mcpOriginMode                                                                                      string
 }
 
 func loadConfig() (config, error) {
@@ -35,6 +37,10 @@ func loadConfig() (config, error) {
 		c.embedderURL = "http://127.0.0.1:8091"
 	}
 	var err error
+	c.mcpOrigins, c.mcpOriginMode, err = loadMCPOriginConfig()
+	if err != nil {
+		return config{}, err
+	}
 	if raw, present := os.LookupEnv("SERVER_COMPACT_RELATED"); present {
 		switch raw {
 		case "keep":

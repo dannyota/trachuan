@@ -47,7 +47,8 @@ closed here with a test before the import counts as done:
 | `POST /oauth/revoke`                            | RFC 7009 revocation                                                                                                              |
 
 `<base>` is `SERVER_PUBLIC_URL`. Every endpoint here shares the login and OAuth
-per-IP bucket in budgets.
+per-IP bucket in budgets, except requests the [Origin policy](#origin-policy)
+rejects first.
 
 ## Clients
 
@@ -193,6 +194,37 @@ Challenges on `/mcp`: no credential is 401 with
 an invalid, expired or revoked one adds `error="invalid_token"`; a token without
 the scope is 403 with `error="insufficient_scope"`, the scope and
 `resource_metadata`. Personal tokens get the same challenges.
+
+## Origin policy
+
+`/mcp`, `POST /oauth/token`, `POST /oauth/register`, `POST /oauth/revoke` and
+the two metadata documents accept bearer credentials or none and never read a
+cookie. They send no CORS headers, so a browser page on another site cannot read
+their answers. The
+[MCP transport](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports#security-warning)
+requires servers to validate `Origin`. A request without `Origin` passes, as
+native and server-side clients send none. A request whose `Origin` is the public
+origin or appears in `SERVER_MCP_ORIGINS` (comma-separated exact origins, empty
+by default) passes. Any other value, `null` included, is outside the list.
+
+`SERVER_MCP_ORIGIN_MODE` is `enforce` (default) or `log`; any other value stops
+the server at startup. In `enforce` mode a request outside the list gets 403
+with the OAuth error body `{"error":"invalid_request"}` before the per-IP bucket
+and any credential check, so rejected requests cost no database work and use no
+bucket tokens. In `log` mode it proceeds. In both modes the server counts it and
+writes one log line per distinct value per hour with the path and the value's
+class: a well-formed origin (scheme, host and optional port, nothing else) is
+logged as that origin; a malformed value is logged only as `malformed`, and
+several `Origin` headers only as `multiple`, never with their contents. At most
+100 distinct values are tracked per hour, the rest counted together. The consent
+routes keep their own same-origin check in [Consent](#consent).
+
+[Anthropic's connector guide](https://claude.com/docs/connectors/building/testing#debug-connection-failures)
+warns that strict `Origin` checks reject its connector traffic, and neither
+Anthropic nor OpenAI documents the value its backends send. Production sets
+`log` in `server.env` as a temporary exception to the MCP rule until the
+Claude.ai and ChatGPT connector acceptance shows which origins they send; those
+go into `SERVER_MCP_ORIGINS` and the override is removed.
 
 ## Revocation
 

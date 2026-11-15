@@ -36,7 +36,13 @@ comma-separated list of proxy CIDRs; it defaults to empty.
 `SERVER_OAUTH_CLIENTS` optionally names a JSON file of pre-registered clients;
 when absent, no clients are pre-registered. `SERVER_SIGNUP_EMAILS` optionally
 lists, comma-separated, the only emails that may create an account; when absent,
-sign-up is open, as in production.
+sign-up is open, as in production. `SERVER_MCP_ORIGINS` optionally lists
+comma-separated exact origins for MCP and OAuth clients; spaces are trimmed, and
+empty or unset allows no extra origins. Each entry must be
+`scheme://host[:port]` with no path, query or fragment. The public origin is
+always allowed. `SERVER_MCP_ORIGIN_MODE` defaults to `enforce` when unset and
+rejects outside origins with 403; `log` explicitly allows them while recording
+observations. Any other value, including an empty value, prevents startup.
 
 Create the required local key file outside the repository, then enable captured
 mail. Capture requires loopback hosts in both `SERVER_PUBLIC_URL` and
