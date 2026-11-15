@@ -28,14 +28,20 @@ A record is judged with the tolerance only when all of these hold between the
 candidate report and the previous report; otherwise the strict rule applies:
 
 1. The dense, chunk, lexical and retrieval recipes are equal.
-2. The scorer versions are equal.
-3. The cohort has the same case ids, positive count and denominators, the same
+2. The scorer versions are equal, or are a pair the evaluator and the validators
+   list as compatible because product matching and the metric definitions are
+   unchanged between them.
+3. The legacy, old-product and development fixture hashes are equal, and the
+   cohort has the same case ids, positive count and denominators, the same
    rejection set, and the same modes, arms and limits.
 4. For every case of the record whose first-correct reciprocal rank at limit 8
-   fell, the identity that was first correct in the previous report (the hit at
-   that rank in its case record) is still an accepted identity of the case under
-   the candidate's identity map. So a fall caused by a changed expectation is
-   never tolerated; the identity map may otherwise differ.
+   fell, every scoring alternative the previous report records for the case
+   (`mapped_identities`, compared by the fields the matcher uses, not by
+   provenance) is still a scoring alternative of the case in the candidate
+   report. So a fall caused by a removed or changed expectation is never
+   tolerated; the identity map may otherwise differ and gain entries. A previous
+   report that does not record the alternatives of such a case gives the strict
+   rule.
 
 ## Rule
 
@@ -84,13 +90,14 @@ both:
   `previous_diff.previous.report_sha256` and the `report.sha256` of the previous
   release's signed manifest; a missing or different file refuses the release
   rather than resetting the watermark;
-- for every gated record, recompute the conditions of
-  [When the tolerance applies](#when-the-tolerance-applies) that the two reports
-  can show (1 to 3), recompute `high_water`, the comparison and `losses` from
-  the two reports' case records, with the tolerance as their own constant, and
-  refuse a record whose stated fields or status differ, a non-finite value, or a
-  version 2 record without its fields. Condition 4 is asserted by the evaluator
-  from the identity map and recorded per case as `expectation_kept: true`; a
-  record with a loss lacking it is judged strictly.
+- for every gated record, recompute the four conditions of
+  [When the tolerance applies](#when-the-tolerance-applies) from the two
+  reports, recompute `high_water`, the comparison and `losses` from their case
+  records, with the tolerance as their own constant, and refuse a record whose
+  stated fields or status differ, a non-finite value, or a version 2 record
+  without its fields.
+
+The previous signed manifest is verified under the release policy before its
+`report.sha256` is used.
 
 The host reads `quality_pass` as before.
