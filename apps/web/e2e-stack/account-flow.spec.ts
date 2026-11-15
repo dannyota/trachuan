@@ -21,7 +21,7 @@ test('creates and revokes a token, revokes another session and signs out', async
     const dialog = page.getByRole('dialog')
     await dialog.getByLabel('Tên').fill('fixture token')
     await dialog.getByRole('button', { name: 'Tạo', exact: true }).click()
-    const token = await dialog.locator('.token-value').textContent()
+    const token = await dialog.locator('input.token-value[readonly]').inputValue()
     expect(token?.trim().length).toBeGreaterThan(20)
     const response = await page.request.post('/mcp', {
       headers: { Authorization: `Bearer ${token!.trim()}`, Accept: 'application/json, text/event-stream' },
@@ -36,7 +36,7 @@ test('creates and revokes a token, revokes another session and signs out', async
     await expect(reports).toContainText('1/2099/TT-TEST')
     await reports.getByRole('button', { name: 'Rút báo cáo' }).click()
     await expect(reports).toContainText('Đã rút')
-    await expect(page.getByText(token!, { exact: true })).toHaveCount(0)
+    await expect(page.locator('input.token-value')).toHaveCount(0)
     const row = page.locator('.account-row').filter({ has: page.getByRole('heading', { name: 'fixture token' }) })
     await row.getByRole('button', { name: 'Thu hồi' }).click()
     await expect(row.getByRole('button', { name: 'Thu hồi' })).toHaveCount(0)

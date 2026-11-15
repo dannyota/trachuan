@@ -14,7 +14,7 @@ const emit = defineEmits<{ close: [], created: [] }>()
 const language = useState<Language>('language', () => 'vi')
 const messages = computed(() => messagesFor(language.value))
 const dialog = ref<HTMLDialogElement | null>(null)
-const copyArea = ref<HTMLElement | null>(null)
+const tokenInput = ref<HTMLInputElement | null>(null)
 let opener: HTMLElement | null = null
 onMounted(() => {
   opener = document.activeElement instanceof HTMLElement ? document.activeElement : null
@@ -47,7 +47,7 @@ async function create() {
   try {
     const result = await actions.createToken(name.value, days.value)
     if (!active) return
-    if (result.data) { token.value = result.data.token; emit('created'); await nextTick(); if (active) copyArea.value?.querySelector('button')?.focus() }
+    if (result.data) { token.value = result.data.token; emit('created'); await nextTick(); if (active && tokenInput.value) { tokenInput.value.focus(); tokenInput.value.select() } }
     else if (!result.error || !reauth.requireProof(result.error, props.action, false, create)) error.value = errorMessage(language.value, result.error?.error.code || 'generic')
   } catch { if (active) error.value = errorMessage(language.value, 'generic') }
   finally { busy.value = false }
@@ -63,6 +63,6 @@ async function create() {
       <p v-if="error" class="notice" role="alert" aria-live="assertive">{{ error }}</p>
       <div class="account-dialog-actions"><button class="btn btn-primary" type="submit" :disabled="busy">{{ messages.create }}</button><button class="btn btn-secondary" type="button" @click="close">{{ messages.close }}</button></div>
     </form>
-    <div v-else><p>{{ messages.tokenOnce }}</p><p class="token-value">{{ token }}</p><div ref="copyArea" class="account-dialog-actions"><CopyButton :text="token" :label="messages.copy" /><button class="btn btn-secondary" type="button" @click="close">{{ messages.close }}</button></div></div>
+    <div v-else><p id="token-once-label">{{ messages.tokenOnce }}</p><div class="token-copy"><input ref="tokenInput" class="input token-value" :value="token" aria-labelledby="token-once-label" readonly><CopyButton :text="token" :label="messages.copy" /></div><div class="account-dialog-actions"><button class="btn btn-secondary" type="button" @click="close">{{ messages.close }}</button></div></div>
   </dialog>
 </template>

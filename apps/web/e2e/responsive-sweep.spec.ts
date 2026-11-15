@@ -6,11 +6,15 @@ import { expect, test, type Page } from '@playwright/test'
 import { openAccount } from './account-fixture'
 import { clientAddress } from './client-address'
 
-const allowlist: { selector: string, reason: string }[] = []
+const allowlist: { selector: string, reason: string }[] = [
+  { selector: 'input.token-value[readonly]', reason: 'copy-only secret, single line, scrolls inside a readonly input' },
+  { selector: '.login-card input#username[readonly]', reason: 'readonly email, scrolls only when longer than the field' },
+]
 const status = { release: '20990101', documents: 1234567, provisions: 9876543, nodes: 2, newest_source_date: '2099-12-28', gaps: {} }
 const account = { id: 1, email: 'test@example.invalid', created_at: '2099-01-01T00:00:00Z', csrf_token: 'csrf', password: true, google: false, totp: false, totp_enrollment: true }
 const node = { code: '1', name: 'Fixture topic', provisions: 4, documents: 2 }
 const codes = Array(10).fill('ABCDEFGHIJKLMNOPQRSTUVWXYZ')
+const longEmail = `${'a'.repeat(40)}@example.invalid`
 
 async function publicSite(run: (origin: string) => Promise<void>) {
   const api = createServer((request, response) => {
@@ -49,13 +53,21 @@ async function accountState(page: Page, state: string, language: string) {
   await openAccount(page)
   const password = !['unset', 'add notice'].includes(state)
   const totp = state === 'remove'
-  await page.route('**/api/v1/me', route => route.fulfill({ json: { ...account, password, google: !password, totp } }))
+  const email = state === 'long email' ? longEmail : account.email
+  await page.route('**/api/v1/me', route => route.fulfill({ json: { ...account, email, password, google: !password, totp } }))
   await page.context().addCookies([
     { name: 'lang', value: language, url: 'http://127.0.0.1:3031' },
     { name: 'account-security', value: `${Number(password)}${Number(totp)}1`, url: 'http://127.0.0.1:3031' },
   ])
   await page.reload()
   await expect(page.locator('.account-security')).toBeVisible()
+  if (state === 'long email') {
+    await page.evaluate(email => {
+      const app = (document.querySelector('#__nuxt') as unknown as { __vue_app__: { $nuxt: { $pinia: { state: { value: { session: { account: { email: string } } } } } } } }).__vue_app__
+      app.$nuxt.$pinia.state.value.session.account.email = email
+    }, email)
+    await expect(page.locator('.account-email')).toHaveText(email)
+  }
   if (state === 'setup' || state === 'recovery') {
     await page.route('**/api/v1/me/totp/setup', route => route.fulfill({ json: { secret: 'JBSWY3DPEHPK3PXP', otpauth_uri: 'otpauth://totp/synthetic?secret=JBSWY3DPEHPK3PXP' } }))
     await page.route('**/api/v1/me/totp/confirm', route => route.fulfill({ json: { recovery_codes: codes } }))
@@ -80,7 +92,7 @@ async function accountState(page: Page, state: string, language: string) {
     if (state === 'token value') {
       await page.locator('dialog input').first().fill('fixture')
       await page.locator('dialog button[type="submit"]').click()
-      await expect(page.locator('.token-value')).toBeVisible()
+      await expect(page.locator('input.token-value[readonly]')).toHaveValue('trp_fixture_secret_only_once')
     }
   }
   if (state === 'delete dialog') await page.getByRole('button', { name: /^(Delete account…|Xóa tài khoản…)$/ }).click()
@@ -103,7 +115,7 @@ const states = [
   { name: '/link add_password', path: '/link', kind: 'add_password' },
   { name: '/vn/search hits', path: '/vn/search', kind: 'search' },
   { name: '/vn/documents/vn:vbpl:1', path: '/vn/documents/vn:vbpl:1', kind: 'reader' },
-  ...['set', 'unset', 'setup', 'recovery', 'remove', 'change password', 'add notice', 'token dialog', 'token value', 'delete dialog'].map(name => ({ name: `/account ${name}`, path: name, kind: 'account' })),
+  ...['set', 'unset', 'long email', 'setup', 'recovery', 'remove', 'change password', 'add notice', 'token dialog', 'token value', 'delete dialog'].map(name => ({ name: `/account ${name}`, path: name, kind: 'account' })),
 ]
 
 for (const width of [320, 390, 768, 1280]) for (const language of ['vi', 'en']) for (const state of states) {
@@ -124,7 +136,10 @@ for (const width of [320, 390, 768, 1280]) for (const language of ['vi', 'en']) 
         await page.route('**/api/v1/search', route => route.fulfill({ json: { release: '20990101', abstain: false, hits: [{ citation: 'Điều 1', complete: true, text: 'Nội dung giả lập.' }] } }))
         await page.route('**/api/v1/documents/*', route => route.fulfill({ json: { release: '20990101', item: { complete: true, document: { number: '1/2099', title: 'Test law', status: { class: 'in_force', current: true }, text_source: 'none', text_complete: false }, units: [{ kind: 'provision', anchor: 'dieu-1', label: 'Điều 1', text: 'Text' }] } } }))
         await page.goto('/')
-        await expect(page.getByRole('link', { name: /account|tài khoản/i }).first()).toBeAttached()
+        const menu = page.locator('button[aria-controls="site-menu"]')
+        if (await menu.isVisible()) await menu.click()
+        await expect(page.getByRole('link', { name: /^(account|tài khoản)$/i })).toBeVisible()
+        if (await menu.isVisible()) await menu.click()
         await navigate(page, state.path)
         if (state.kind === 'search') {
           await page.locator('#search-query').fill('Nội dung giả lập')
@@ -155,26 +170,63 @@ for (const width of [320, 390, 768, 1280]) for (const language of ['vi', 'en']) 
         if (document.documentElement.scrollWidth > innerWidth) add(document.documentElement, `page width ${document.documentElement.scrollWidth} > ${innerWidth}`)
         for (const element of document.querySelectorAll<HTMLElement>('*')) {
           const style = getComputedStyle(element)
-          if (!element.getClientRects().length || style.visibility !== 'visible' || style.display === 'none') continue
+          const clip = /^rect\(([-\d.]+)px,?\s+([-\d.]+)px,?\s+([-\d.]+)px,?\s+([-\d.]+)px\)$/.exec(style.clip)
+          const clipped = clip && Number(clip[2]) - Number(clip[4]) <= 1 && Number(clip[3]) - Number(clip[1]) <= 1
+          if (!element.getClientRects().length || style.visibility !== 'visible' || style.display === 'none' || element.classList.contains('sr-only') || clipped) continue
+          if (element.matches('.login-card input#username[readonly]') && element.scrollWidth > element.clientWidth + 1) add(element, 'fixture email does not fit')
           if (!allowlist.some(entry => element.matches(entry.selector)) && element.scrollWidth > element.clientWidth + 1 && style.overflowX !== 'visible') add(element, `horizontal overflow: ${style.overflowX}`)
           if (!allowlist.some(entry => element.matches(entry.selector)) && style.textOverflow === 'ellipsis' && element.scrollWidth > element.clientWidth + 1) add(element, 'text ellipsis')
         }
-        const selectors = '.coverage-stats dd, .recovery-codes li span, .auth-secret, .num, .account-heading p span, .reader-meta strong, .token-value, [data-value], .connect-tools code, .page-code pre, .home-address code, .home-connect-card pre'
+        for (const block of document.querySelectorAll('.page-code pre, .home-connect-card pre')) {
+          const selection = window.getSelection()
+          const range = document.createRange()
+          range.selectNodeContents(block)
+          selection?.removeAllRanges()
+          selection?.addRange(range)
+          if (selection?.toString() !== block.textContent) add(block, 'selection differs from command text')
+          selection?.removeAllRanges()
+        }
+        const selectors = '.coverage-stats dd, .recovery-codes li span, .auth-secret, .num, .account-email, .reader-meta strong, .token-value, [data-value], .connect-tools code, .page-code pre, .home-address code, .home-connect-card pre'
         for (const element of document.querySelectorAll<HTMLElement>(selectors)) {
           if (!element.getClientRects().length || getComputedStyle(element).visibility !== 'visible') continue
+          const emailSegmentsBreakOnlyAfterAtOrDot = element.matches('.account-email')
+          if (emailSegmentsBreakOnlyAfterAtOrDot) {
+            for (const breakElement of element.querySelectorAll('wbr')) {
+              if (!/[@.]$/.test(breakElement.previousElementSibling?.textContent || '')) add(element, 'email break is not after @ or .')
+            }
+          }
+          const split = element.matches('.recovery-codes li span, .auth-secret, .connect-tools code, .page-code pre, .home-connect-card pre, .account-email')
+          if (!split) {
+            const range = document.createRange()
+            range.selectNodeContents(element)
+            const tops = Array.from(range.getClientRects(), rect => rect.top)
+            if (tops.length && Math.max(...tops) - Math.min(...tops) > 2) add(element, 'value breaks within a segment')
+            continue
+          }
           const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT)
           while (walker.nextNode()) {
             const text = walker.currentNode as Text
-            if (element.matches('[data-value=account-created]') && text.parentElement !== element) continue
-            const split = element.matches('.recovery-codes li span, .auth-secret, .page-code pre, .home-connect-card pre')
-            const startDate = element.matches('[data-value=account-created]') ? text.data.search(/\d/) : 0
-            const chunks = split ? [...text.data.matchAll(/\S+/g)].map(match => [match.index, match.index + match[0].length]) : [[startDate, text.length]]
+            const chunks = [...text.data.matchAll(/\S+/g)].map(match => [match.index, match.index + match[0].length])
             for (const [start, end] of chunks) {
               if (start === undefined || end === undefined || start < 0 || start === end) continue
               const range = document.createRange()
               range.setStart(text, start); range.setEnd(text, end)
               const tops = Array.from(range.getClientRects(), rect => rect.top)
-              if (tops.length && Math.max(...tops) - Math.min(...tops) > 2) add(element, 'value breaks within a segment')
+              if (tops.length && Math.max(...tops) - Math.min(...tops) > 2) {
+                let exceedsLine = false
+                if (element.matches('.page-code pre, .home-connect-card pre, .account-email')) {
+                  const probe = document.createElement('span')
+                  probe.textContent = text.data.slice(start, end)
+                  probe.style.cssText = 'position:fixed;visibility:hidden;display:inline-block;white-space:nowrap;width:max-content;max-width:none;overflow-wrap:normal;word-break:normal'
+                  const container = element.matches('.account-email') ? element.parentElement! : element
+                  container.append(probe)
+                  const style = getComputedStyle(container)
+                  const contentWidth = container.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)
+                  exceedsLine = probe.getBoundingClientRect().width > contentWidth
+                  probe.remove()
+                }
+                if (!exceedsLine) add(element, 'value breaks within a segment')
+              }
             }
           }
         }

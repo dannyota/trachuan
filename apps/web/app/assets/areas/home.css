@@ -37,7 +37,7 @@
 .home-connect-card { min-width: 0; padding: 20px; }
 .home-connect-card h3 { margin: 0 0 6px; font-size: 16px; }
 .home-connect-card p { margin: 0; color: var(--color-muted); font-size: 14px; }
-.home-connect-card pre { max-width: 100%; margin: 8px 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; }
+.home-connect-card pre { max-width: 100%; margin: 8px 0; white-space: pre-wrap; overflow-wrap: normal; word-break: normal; font-size: 13px; }
 @media (max-width: 767px) {
   .home-hero-inner { padding-block: 40px; }
   .home-hero h1 { font-size: 32px; }
@@ -48,4 +48,12 @@
   .home-connect-inner { padding-block: 40px; }
   .home-address { display: flex; align-items: flex-start; flex-direction: column; width: 100%; padding: 0; border: 0; background: transparent; }
   .home-address code { display: block; width: 100%; padding: 12px; border: 1px solid var(--color-line-strong); border-radius: var(--radius-md); background: var(--color-card); }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .home-connect-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 360px) {
+  .home-connect-card { padding-inline: 16px; }
 }
