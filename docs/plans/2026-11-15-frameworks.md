@@ -24,7 +24,7 @@
 - [ ] Paraphrased titles imported from compliary's `control_title.csv`, coverage test.
 
 ## 15.4 Serving (server and web; dev2)
-- [ ] `docs/design/frameworks-results.md`: field-level input and output contract under the fixed rules of frameworks.md "Serving"; `gpt-6-astra` review before any serving code.
+- [x] `docs/design/frameworks-results.md`: field-level input and output contract under the fixed rules of frameworks.md "Serving"; reviewed by `gpt-6-astra` in three rounds (A-01 to A-07, S-01 to S-09) and a ranking confirmation (S-10, S-11); accepted 2026-11-15.
 - [ ] Engine for the kind: authorization before candidate selection, body index per version and public-field index with isolated statistics, exact dense scan, caches partitioned by release and access set, `no-store` responses; `corpus: "frameworks"` on `corpus_status`, `search`, `read`, `quality_gaps`; new tool `mappings`; guide text; reduced records.
 - [ ] Invariant suite with synthetic frameworks: changing inaccessible text changes nothing observable (hits, order, scores, abstention, counts, cursors) for reduced and mixed access sets, across cache hits and pagination; it gates signing.
 - [ ] `/api/v1/frameworks` routes, OpenAPI, website pages and the corpus switch on search; responsive sweep covers them.
