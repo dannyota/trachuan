@@ -24,3 +24,4 @@ only for a new topic.
 | [0014](0014-ocr-on-the-write-path.md)            | OCR on the write path with Google Cloud Vision and a model cross-check |
 | [0015](0015-email-password-accounts-and-totp.md) | Email and password accounts, open sign-up, optional TOTP               |
 | [0016](0016-control-frameworks-corpus.md)        | Control frameworks beside the law corpus, licensed text by allowlist   |
+| [0017](0017-findings-and-reviewed-knowledge.md)  | Findings and reviewed knowledge on the write path                      |

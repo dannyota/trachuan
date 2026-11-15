@@ -46,3 +46,5 @@ Observations and experiments. Not project authority.
 - [compliary survey](compliary-survey-2026-11.md): what the archived framework
   corpus held, how it gated licensed text, and the text layer of each private
   document.
+- [Write-path detection and reviewed inputs](write-path-findings-2026-11.md):
+  what the pipeline detects and applies today, and four defects it missed.
