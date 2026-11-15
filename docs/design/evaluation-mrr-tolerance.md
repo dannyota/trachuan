@@ -28,10 +28,10 @@ A record is judged with the tolerance only when all of these hold between the
 candidate report and the previous report; otherwise the strict rule applies:
 
 1. The dense, chunk and lexical recipes are equal, and the retrieval recipes are
-   equal with `abstention.calibration_sha256` left out: that field identifies the
-   release's own calibration data, not a recipe choice. The abstention threshold
-   and every other field must be equal. Calibration is recomputed from each
-   release's data on every build.
+   equal with `abstention.calibration_sha256` left out: that field identifies
+   the release's own calibration data, not a recipe choice. The abstention
+   threshold and every other field must be equal. Calibration is recomputed from
+   each release's data on every build.
 2. The scorer versions are equal, or are a pair the evaluator and the validators
    list as compatible because product matching and the metric definitions are
    unchanged between them.

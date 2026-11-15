@@ -13,9 +13,10 @@ prefix `<cc>/<rel>/`:
 - `corpus.dump`: the build's verified dump.
 - `MANIFEST.sha256`: the build artifact manifest
   ([pipeline](pipeline.md#items-artifacts-and-gaps)).
-- `report.json`: the [evaluation](evaluation.md) report, with `--previous` set to
-  the active report. For version 1, `--previous-release` supplies `release.json`
-  or a signed manifest. Version 2 keeps the full retrieval recipe.
+- `report.json`: the [evaluation](evaluation.md) report, with `--previous` set
+  to the active report. For version 1, `--previous-release` supplies
+  `release.json` or a signed manifest. Version 2 keeps the full retrieval
+  recipe.
 - `release.json`: the dump's `release` row as JSON
   ([corpus schema](corpus-schema.md)), written by `corpus release-row`.
 
@@ -42,19 +43,19 @@ path-style addressing and `AWS_REQUEST_CHECKSUM_CALCULATION=when_required`,
 since recent AWS CLI versions add checksum headers by default
 ([AWS SDK data integrity](https://docs.aws.amazon.com/sdkref/latest/guide/feature-dataintegrity.html)).
 It refuses unless the run's expected items are done or accepted gaps,
-`report.json` has `quality_pass: true`, no research override and a `previous_diff`,
-every required `non_regression` gate has `gating:true` and status `pass` at the
-top level and in each populated product cohort, and `dump_sha256` equals the
-local dump. Previous identity: `previous_diff.previous:{country,rel,report_sha256}`.
-The uploader uses `oras` and `cosign` to verify that release's signed manifest
-under the release policy. It downloads `<cc>/<previous rel>/report.json` through
-the same S3 configuration and requires its SHA-256 to equal `report_sha256` and
-the signed `report.sha256`. Both validators accept listed versions, keep version
-1 strict, and recompute [MRR@8 tolerance](evaluation-mrr-tolerance.md) from both
-reports. Missing files or fields, non-finite values and any difference refuse.
-Top-level comparisons must equal `old_product`; all cohorts must exist, including
-empty ones without comparisons. Populated prefixes refuse upload. Success
-dispatches `corpus-release.yml`; dry-run only checks local inputs.
+`report.json` has `quality_pass: true`, no research override and a
+`previous_diff`, every required `non_regression` gate has `gating:true` and
+status `pass` at the top level and in each populated product cohort, and
+`dump_sha256` equals the local dump. Previous identity:
+`previous_diff.previous:{country,rel,report_sha256}`. The uploader verifies the
+previous release's signed manifest with `oras` and `cosign`, fetches its report
+through the same S3 configuration, and applies the checks of
+[MRR@8 tolerance](evaluation-mrr-tolerance.md#validators). Top-level comparisons
+must equal `old_product`; all cohorts must exist, including empty ones without
+comparisons. A prefix that already holds objects is never overwritten; a rebuilt
+corpus gets a new `rel`. The Python validator owns the comparison contract, and
+a Go test checks it against evaluator output, including the non-gating flags.
+Success dispatches `corpus-release.yml`; dry-run only checks local inputs.
 
 The uploader holds an exclusive nonblocking `flock` on
 `${HOME}/.cache/trachuan/corpus-upload.lock` through validation and dispatch.
@@ -94,10 +95,8 @@ reads one bucket of public legal text and cannot write. The job:
    `non_regression` gate set in each product cohort with cases and the top-level
    comparison, with `gating:true` and status `pass` (`not_run` fails), and its
    `recipes` to equal the recipes in `release.json`.
-4. Verifies the previous release's signed manifest, downloads its report with
-   the bounded S3 checks above, and performs the same hash and recomputation
-   checks as upload. It writes canonical JSON and signs it with
-   `cosign sign-blob --bundle`, keyless, like the image manifest.
+4. Repeats the previous-report checks of upload, writes canonical JSON and signs
+   it with `cosign sign-blob --bundle`, keyless, like the image manifest.
 5. Pushes `manifest.json` and `manifest.sigstore.json` to
    `ghcr.io/dannyota/trachuan-corpus-release`, tagged `<cc>-<rel>` and
    `<cc>-production`.
