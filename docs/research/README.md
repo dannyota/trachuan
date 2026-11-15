@@ -43,3 +43,6 @@ Observations and experiments. Not project authority.
   vn/20261112_2.
 - [Validity review queue](vn-validity-review-2026-11.md): queue counts on
   `vn/20261114_5` and the small-kind review.
+- [compliary survey](compliary-survey-2026-11.md): what the archived framework
+  corpus held, how it gated licensed text, and the text layer of each private
+  document.

@@ -24,6 +24,7 @@ history keeps it. States: `planned`, `in progress`, `landed`, `verified`,
 |11|Host and release|`deploy/`: first production (images, host bundle, Quadlet, DNS); release v0.1.0 live for the owner on 2026-11-14|Plans 1 to 10 images|landed|
 |12|Compact results and read|`internal/retrieval`: hit path and best member, snippets, document entries and relation pointers, `Engine.Present` (compact and full), `Engine.Read` (outline, provision, range, relations, parts, `next` tokens, input bounds); eval compact diagnostic and size gate (ADR 0013); evidence `docs/research/compact-results-2026-11.md`|Plan 2; ADR 0013|landed|
 |13|Agent error reports|MCP tool `report_issue` and web routes (submit, own list, withdraw) with structured fields only and no free text (ADR 0002); auth-database table, per-account and global caps, admin triage and export CLI feeding `sources/vn-corrections.yaml`, text review and identity-map review ([error reports](../design/error-reports.md)); the website submission form waits for an owner decision|Plan 9a (MCP), Plan 9b (web)|landed|
+|15|[Control frameworks](2026-11-15-frameworks.md)|framework corpus kind (ADR 0016): registry, access by grant, parsers and OCR for scans, MCP and web serving, release channel; data and lessons from compliary|Plans 9a to 11; batch 2 corpus release|planned|
 
 Each later plan is written with the writing-plans skill when its dependency
 lands, against `docs/design/README.md` and the research notes from Plan 0.

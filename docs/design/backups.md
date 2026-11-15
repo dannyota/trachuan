@@ -133,8 +133,10 @@ signals. It never touches the live cluster, its socket or archive.
 The runbook restores the whole cluster in this order: stop Caddy, web and
 server; stop PostgreSQL; `pgbackrest restore --delta` to the chosen target;
 start PostgreSQL and wait for recovery to finish and promote; in one committed
-transaction increment every `auth_epoch` and revoke all sessions and tokens
-([auth](auth.md)); start server and web; prewarm the active corpus database
+transaction increment every `auth_epoch`, revoke all sessions and tokens
+([auth](auth.md)) and revoke every live framework entitlement with reason
+`restore` ([framework access](frameworks-access.md#classes-and-entitlements));
+start server and web; prewarm the active corpus database
 ([runbook](../runbooks/release-restore.md#prewarm-a-corpus-database)); pass
 readiness; then start Caddy. Before the one-hour RTO is claimed, a timed
 whole-cluster rehearsal of this procedure restores into a scratch directory and

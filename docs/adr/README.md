@@ -23,3 +23,4 @@ only for a new topic.
 | [0013](0013-compact-search-and-batch-read.md)    | Compact search results and batch reading for agents                    |
 | [0014](0014-ocr-on-the-write-path.md)            | OCR on the write path with Google Cloud Vision and a model cross-check |
 | [0015](0015-email-password-accounts-and-totp.md) | Email and password accounts, open sign-up, optional TOTP               |
+| [0016](0016-control-frameworks-corpus.md)        | Control frameworks beside the law corpus, licensed text by allowlist   |
