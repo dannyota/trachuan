@@ -116,7 +116,7 @@ func newHarness(t *testing.T) *harness {
 		t.Fatal(err)
 	}
 	h.gateway = newGateway(t)
-	if err := os.Mkdir(filepath.Join(h.root, "sources"), 0700); err != nil {
+	if err := os.MkdirAll(filepath.Join(h.root, "sources"), 0700); err != nil {
 		t.Fatal(err)
 	}
 	sources := "country: vn\nvbpl:\n  sweep_agencies: ['62']\n  keyword_agencies: ['62']\n  keywords: ['test']\nrelation_codes:\n  '10':\n    kind: amends_supplements\n    label: amends\nstatus_codes: {}\n"
