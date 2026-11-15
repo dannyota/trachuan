@@ -57,7 +57,9 @@ func TestMRRTolerance_RetrievalRecipeCalibration(t *testing.T) {
 			after.Abstention.CalibrationSHA256 = tc.calibration
 			p := withComparisonRecipe(t, toleranceReport(t, .7247), before)
 			r := withComparisonRecipe(t, toleranceReport(t, .7226), after)
-			finishQuality(&r, &p)
+			if err := finishQuality(&r, &p); err != nil {
+				t.Fatal(err)
+			}
 			for _, cohort := range []string{"old_product", "development"} {
 				n := mrrRecord(t, r, cohort)
 				if (n["status"] == "pass") != tc.pass {
@@ -74,11 +76,15 @@ func TestMRRTolerance_CalibrationChangeKeepsWatermark(t *testing.T) {
 	before.Abstention.CalibrationSHA256 = "first"
 	p := withComparisonRecipe(t, toleranceReport(t, .7247), before)
 	middle := withComparisonRecipe(t, toleranceReport(t, .7226), before)
-	finishQuality(&middle, &p)
+	if err := finishQuality(&middle, &p); err != nil {
+		t.Fatal(err)
+	}
 	after := before
 	after.Abstention.CalibrationSHA256 = "second"
 	r := withComparisonRecipe(t, toleranceReport(t, .719), after)
-	finishQuality(&r, &middle)
+	if err := finishQuality(&r, &middle); err != nil {
+		t.Fatal(err)
+	}
 	n := mrrRecord(t, r, "old_product")
 	if n["high_water"] != .7247 || n["status"] != "fail" || n["tolerance"] != .005 {
 		t.Fatalf("watermark: %v", n)
@@ -127,7 +133,9 @@ func TestPreviousRecipe_LegacyReportMetadata(t *testing.T) {
 				t.Fatal("metadata changed previous report hash")
 			}
 			current := withComparisonRecipe(t, toleranceReport(t, .7226), after)
-			finishQuality(&current, &prior)
+			if err = finishQuality(&current, &prior); err != nil {
+				t.Fatal(err)
+			}
 			if n := mrrRecord(t, current, "old_product"); n["status"] != "pass" || n["tolerance"] != .005 {
 				t.Fatalf("comparison: %v", n)
 			}

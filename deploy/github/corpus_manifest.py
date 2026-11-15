@@ -6,6 +6,7 @@ from pathlib import Path
 import re
 
 from manifest import canonical, positive, require_match
+from corpus_cohorts import cohort_counts
 from corpus_comparison import check_mrr_fields, finite_values, validate_comparisons, versions
 
 
@@ -102,6 +103,7 @@ def validate_report(report, country, rel, previous_report=None):
     cohorts = report.get('cohorts')
     if not isinstance(cohorts, dict) or set(cohorts) != set(contract):
         raise ValueError('missing report cohorts')
+    cohort_counts(report)
     for name, cohort in cohorts.items():
         if not isinstance(cohort, dict) or type(cohort.get('case_count')) is not int or cohort['case_count'] < 0:
             raise ValueError('invalid cohort')

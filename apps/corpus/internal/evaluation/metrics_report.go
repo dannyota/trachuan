@@ -218,7 +218,11 @@ func finishMappingReport(r *Report, inputs []cohortInput, rejects map[string]boo
 	}
 }
 
-func finishQuality(r *Report, previous *Report) {
+func finishQuality(r *Report, previous *Report) error {
+	if err := validateReportTransition(r, previous); err != nil {
+		r.QualityPass = false
+		return err
+	}
 	finishProductQuality(r, previous, "old_product")
 	old := r.Cohorts["old_product"]
 	old.Floors, old.Targets, old.NonRegression = r.Floors, r.Targets, r.NonRegression
@@ -242,6 +246,7 @@ func finishQuality(r *Report, previous *Report) {
 	}
 	development.Floors, development.Targets, development.NonRegression = current.Floors, current.Targets, current.NonRegression
 	r.Cohorts["development"] = development
+	return nil
 }
 
 func finishProductQuality(r *Report, previous *Report, cohort string) {

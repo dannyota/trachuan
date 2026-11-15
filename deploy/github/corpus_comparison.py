@@ -1,5 +1,7 @@
 import math
 
+from corpus_cohorts import cohort_counts
+
 
 TOLERANCE = .005
 
@@ -203,8 +205,14 @@ def check_mrr_fields(record):
 def validate_comparisons(report, previous):
     versions(previous)
     finite_values(previous)
+    if report['version'] == 1 and previous['version'] == 2:
+        raise ValueError('report version cannot downgrade from 2 to 1')
+    current_counts, prior_counts = cohort_counts(report), cohort_counts(previous)
+    for name, count in prior_counts.items():
+        if count > 0 and current_counts.get(name, 0) == 0:
+            raise ValueError('populated previous cohort is empty or absent: ' + name)
     for cohort in ('old_product', 'development'):
-        if cohort == 'development' and report['cohorts'][cohort]['case_count'] == 0:
+        if cohort == 'development' and current_counts[cohort] == 0:
             continue
         records = report['cohorts'][cohort]['non_regression']
         current_cases, prior_cases = cases(report, cohort), cases(previous, cohort)

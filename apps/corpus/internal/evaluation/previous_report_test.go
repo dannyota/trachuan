@@ -42,7 +42,11 @@ func TestRun_RejectsLegacySiblingMergePreviousReport(t *testing.T) {
 				target := root
 				for i, key := range path {
 					if i == len(path)-1 {
-						target[key] = []any{map[string]any{"merge_siblings": enabled}}
+						if key == "cases" && len(path) == 1 {
+							target[key].([]any)[0].(map[string]any)["merge_siblings"] = enabled
+						} else {
+							target[key] = []any{map[string]any{"merge_siblings": enabled}}
+						}
 						break
 					}
 					nested, ok := target[key].(map[string]any)

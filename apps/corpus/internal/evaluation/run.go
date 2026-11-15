@@ -336,7 +336,9 @@ func run(ctx context.Context, engine Engine, suite Suite, o Options, limit int) 
 	finishReport(&r, metrics, modes)
 	finishPresented(&r, presented, modes)
 	finishMappingReport(&r, inputs, rejects, o.Mapping)
-	finishQuality(&r, previous)
+	if err := finishQuality(&r, previous); err != nil {
+		return Report{}, Cache{}, err
+	}
 	filter.finish(modes)
 	r.FilterGate = filter.gate
 	if filter.active {

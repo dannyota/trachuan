@@ -143,6 +143,7 @@ class CorpusManifestTest(unittest.TestCase):
 
     def test_empty_development_does_not_require_comparisons(self):
         self.report['cohorts']['development']['case_count'] = 0
+        self.report['cases'] = [case for case in self.report['cases'] if case['cohort'] != 'development']
         for record in self.report['cohorts']['development']['non_regression']:
             record['status'] = 'not_run'
         save_fixture(self.path, self.row, self.report)

@@ -14,6 +14,10 @@ func toleranceReport(t *testing.T, value float64) Report {
 	r := Report{Version: 2, EvaluationDate: retrieval.Date{Year: 2099, Month: 1, Day: 2}, Scorer: "agent-eval/5", Recipes: map[string]string{"query": "q", "document": "d", "chunk": "c", "lexical": "l", "retrieval": "r"}, FixtureHashes: FixtureHashes{Legacy: "a", OldProduct: "b", Development: "c"}, Cohorts: map[string]Cohort{}, Rejections: []Rejection{{CaseID: "r1", Passed: true}, {CaseID: "r2", Passed: true}, {CaseID: "r3", Passed: true}}}
 	for _, name := range []string{"old_product", "development"} {
 		c := Cohort{CaseCount: 1, PositiveCount: 1, ExpectedCitations: 1}
+		if name == "old_product" {
+			c.CaseCount = 4
+			c.RejectionCount = 3
+		}
 		for _, mode := range []retrieval.Mode{"exact", "ann"} {
 			for _, spec := range []struct {
 				name  string
@@ -62,7 +66,13 @@ func TestMRRTolerance_Conditions(t *testing.T) {
 		{"scorer incompatible", func(r, p *Report) { p.Scorer = "agent-eval/3" }, false},
 		{"compatible scorer", func(r, p *Report) { p.Scorer = "agent-eval/4"; p.Version = 1 }, true},
 		{"fixtures differ", func(r, p *Report) { r.FixtureHashes.Development = "changed" }, false},
-		{"case set differs", func(r, p *Report) { r.Cases[0].CaseID = "other" }, false},
+		{"case set differs", func(r, p *Report) {
+			for i := range r.Cases {
+				if r.Cases[i].Cohort == "old_product" {
+					r.Cases[i].CaseID = "other"
+				}
+			}
+		}, false},
 		{"denominator differs", func(r, p *Report) {
 			c := r.Cohorts["old_product"]
 			c.Metrics[2].Denominator = 2
@@ -72,13 +82,15 @@ func TestMRRTolerance_Conditions(t *testing.T) {
 		{"expectation removed", func(r, p *Report) { r.Cases[0].Mapped = nil }, false},
 		{"previous alternatives absent", func(r, p *Report) { p.Cases[0].Mapped = nil }, false},
 		{"provenance changes", func(r, p *Report) { r.Cases[0].Mapped[0][0].DocumentNumber = "new" }, true},
-		{"version one strict", func(r, p *Report) { r.Version = 1 }, false},
+		{"version one strict", func(r, p *Report) { r.Version = 1; p.Version = 1 }, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			p, r := toleranceReport(t, .7247), toleranceReport(t, .7226)
 			r.Cases[0].Ranks = []int{9}
 			tc.mutate(&r, &p)
-			finishQuality(&r, &p)
+			if err := finishQuality(&r, &p); err != nil {
+				t.Fatal(err)
+			}
 			n := mrrRecord(t, r, "old_product")
 			if (n["status"] == "pass") != tc.pass {
 				t.Fatalf("comparison: %v", n)
@@ -94,7 +106,9 @@ func TestMRRTolerance_WatermarkChainAndBoundary(t *testing.T) {
 	p := toleranceReport(t, .7247)
 	for _, value := range []float64{.7226, .7200, .7197, math.Nextafter(.7197, 0)} {
 		r := toleranceReport(t, value)
-		finishQuality(&r, &p)
+		if err := finishQuality(&r, &p); err != nil {
+			t.Fatal(err)
+		}
 		n := mrrRecord(t, r, "old_product")
 		if n["high_water"] != .7247 || (n["status"] == "pass") != (value >= .7247-.005) {
 			t.Fatalf("value %v: %v", value, n)
@@ -105,7 +119,9 @@ func TestMRRTolerance_WatermarkChainAndBoundary(t *testing.T) {
 	recipe := retrieval.Recipe3()
 	recipe.DocumentCap = 6
 	r = withComparisonRecipe(t, r, recipe)
-	finishQuality(&r, &p)
+	if err := finishQuality(&r, &p); err != nil {
+		t.Fatal(err)
+	}
 	if n := mrrRecord(t, r, "old_product"); n["high_water"] != *p.Cohorts["old_product"].Metrics[2].Value {
 		t.Fatalf("recipe change retained watermark: %v", n)
 	}
@@ -136,7 +152,9 @@ func TestMRRTolerance_ReleaseNumbers(t *testing.T) {
 			r.Cases[i].Ranks = []int{9}
 		}
 	}
-	finishQuality(&r, &p)
+	if err := finishQuality(&r, &p); err != nil {
+		t.Fatal(err)
+	}
 	if !reflect.DeepEqual(r.NonRegression, r.Cohorts["old_product"].NonRegression) {
 		t.Fatal("top-level comparison differs")
 	}
@@ -177,21 +195,24 @@ func TestMRRTolerance_ReleaseNumbers(t *testing.T) {
 func TestMRRTolerance_StrictFallbackAndVersionOne(t *testing.T) {
 	p := toleranceReport(t, .7247)
 	middle := toleranceReport(t, .7226)
-	finishQuality(&middle, &p)
+	if err := finishQuality(&middle, &p); err != nil {
+		t.Fatal(err)
+	}
 	r := toleranceReport(t, .723)
 	r.FixtureHashes.Development = "changed"
-	finishQuality(&r, &middle)
+	if err := finishQuality(&r, &middle); err != nil {
+		t.Fatal(err)
+	}
 	n := mrrRecord(t, r, "old_product")
 	if n["status"] != "pass" || n["tolerance"] != float64(0) || n["high_water"] != .7247 {
 		t.Fatalf("strict fallback: %v", n)
 	}
 	r = toleranceReport(t, .722)
 	r.Version = 1
-	finishQuality(&r, &middle)
-	n = mrrRecord(t, r, "old_product")
-	if n["status"] != "fail" || n["high_water"] != nil {
-		t.Fatalf("version one: %v", n)
+	if err := finishQuality(&r, &middle); err == nil || r.QualityPass {
+		t.Fatal("version downgrade accepted")
 	}
+
 }
 
 func TestMRRTolerance_RecallRemainsStrict(t *testing.T) {
@@ -199,7 +220,9 @@ func TestMRRTolerance_RecallRemainsStrict(t *testing.T) {
 	c := r.Cohorts["development"]
 	c.Metrics[1].Value = new(.9499)
 	r.Cohorts["development"] = c
-	finishQuality(&r, &p)
+	if err := finishQuality(&r, &p); err != nil {
+		t.Fatal(err)
+	}
 	if r.QualityPass {
 		t.Fatal("recall regression passed")
 	}
@@ -207,12 +230,16 @@ func TestMRRTolerance_RecallRemainsStrict(t *testing.T) {
 
 func TestMRRTolerance_CandidateNeverEntersWatermark(t *testing.T) {
 	p, r := toleranceReport(t, .72), toleranceReport(t, .75)
-	finishQuality(&r, &p)
+	if err := finishQuality(&r, &p); err != nil {
+		t.Fatal(err)
+	}
 	if n := mrrRecord(t, r, "old_product"); n["high_water"] != .72 {
 		t.Fatalf("candidate entered watermark: %v", n)
 	}
 	next := toleranceReport(t, .746)
-	finishQuality(&next, &r)
+	if err := finishQuality(&next, &r); err != nil {
+		t.Fatal(err)
+	}
 	if n := mrrRecord(t, next, "old_product"); n["high_water"] != .75 || n["status"] != "pass" {
 		t.Fatalf("gain not retained: %v", n)
 	}
@@ -220,7 +247,9 @@ func TestMRRTolerance_CandidateNeverEntersWatermark(t *testing.T) {
 
 func TestPreviousReport_MissingWatermarkRefused(t *testing.T) {
 	p, r := toleranceReport(t, .7247), toleranceReport(t, .7226)
-	finishQuality(&r, &p)
+	if err := finishQuality(&r, &p); err != nil {
+		t.Fatal(err)
+	}
 	data, err := json.Marshal(r)
 	if err != nil {
 		t.Fatal(err)
@@ -260,7 +289,9 @@ func TestMRRTolerance_LossRanksAcrossLimits(t *testing.T) {
 				r.Cases[0].Mapped = nil
 			}
 			r.Cases[1].Ranks = []int{tc.rank20}
-			finishQuality(&r, &p)
+			if err := finishQuality(&r, &p); err != nil {
+				t.Fatal(err)
+			}
 			n := mrrRecord(t, r, "old_product")
 			losses := n["losses"].([]any)
 			if len(losses) != 1 || losses[0].(map[string]any)["rank"] != float64(tc.want) {

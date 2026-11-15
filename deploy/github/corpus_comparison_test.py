@@ -26,6 +26,7 @@ def reports():
         previous['cohorts'][cohort] = dict(case_count=100, positive_count=100, negative_count=0,
                                            rejection_count=0, expected_citations=100,
                                            metrics=metrics, non_regression=comparisons)
+    previous['cohorts']['old_product'].update(case_count=103, rejection_count=3)
     previous['cohorts']['legacy'] = dict(case_count=0)
     previous['non_regression'] = copy.deepcopy(previous['cohorts']['old_product']['non_regression'])
     candidate = copy.deepcopy(previous)
@@ -158,21 +159,6 @@ class CorpusComparisonTest(unittest.TestCase):
         last['recipes']['chunk'] = 'new recipe'
         last['non_regression'] = copy.deepcopy(last['cohorts']['old_product']['non_regression'])
         self.validate(last, middle)
-
-    def test_version_one_compares_strictly_against_version_two(self):
-        previous, middle = reports()
-        self.validate(middle, previous)
-        candidate = copy.deepcopy(middle)
-        candidate.update(version=1, scorer='agent-eval/4')
-        middle['rel'] = previous['rel']
-        for name in ('old_product', 'development'):
-            for record in candidate['cohorts'][name]['non_regression']:
-                if record['name'] == 'mrr':
-                    record['previous_value'] = .99
-                    for field in ('previous', 'high_water', 'tolerance', 'within_tolerance', 'losses'):
-                        record.pop(field)
-        candidate['non_regression'] = copy.deepcopy(candidate['cohorts']['old_product']['non_regression'])
-        self.validate(candidate, middle)
 
     def test_unknown_versions_and_scorers_are_refused(self):
         for version, scorer in [(3, 'agent-eval/5'), (2, 'agent-eval/6'), (1, 'agent-eval/5')]:

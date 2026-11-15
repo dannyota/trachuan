@@ -257,6 +257,44 @@ class CorpusUploadTest(unittest.TestCase):
                 self.assertNotEqual(result.returncode, 0)
                 self.assertFalse(any('put-object' in call['args'] or call['name'] == 'gh' for call in self.calls()))
 
+    def test_invalid_report_transitions_fail_upload_and_signing(self):
+        from corpus_test_support import digest
+        from manifest import canonical
+
+        self.env.update(GITHUB_REF='refs/heads/main', GITHUB_SHA='a' * 40, GITHUB_RUN_NUMBER='10')
+        for fault in ('empty development', 'version downgrade'):
+            self.row, self.report = write_fixture(self.build)
+            self.log.unlink(missing_ok=True)
+            if fault == 'empty development':
+                self.report['cases'] = [row for row in self.report['cases'] if row['cohort'] != 'development']
+                self.report['cohorts']['development'].update(case_count=0, positive_count=0,
+                                                             expected_citations=0, metrics=[], non_regression=[])
+            else:
+                path = self.build / 'previous-report.json'
+                previous = json.loads(path.read_bytes())
+                previous.update(version=2, scorer='agent-eval/5', retrieval_recipe=self.row['retrieval_recipe'])
+                for records in [previous['non_regression'], *(previous['cohorts'][name]['non_regression'] for name in ('old_product', 'development'))]:
+                    for record in records:
+                        if record['name'] == 'mrr':
+                            record.update(previous=1., high_water=1., tolerance=.005, within_tolerance=False, losses=[])
+                data = json.dumps(previous).encode()
+                path.write_bytes(data)
+                self.report['previous_diff']['previous']['report_sha256'] = digest(data)
+                path = self.build / 'previous-manifest.json'
+                manifest = json.loads(path.read_bytes())
+                manifest['report']['sha256'] = digest(data)
+                path.write_bytes(canonical(manifest))
+            save_fixture(self.build, self.row, self.report)
+            commands = [self.upload_command(),
+                        ['python3', str(ROOT / 'deploy/github/corpus_manifest.py'), 'create', 'vn', '20990102_1',
+                         str(self.build), str(self.build / 'report.json')]]
+            for command in commands:
+                with self.subTest(fault=fault, executable=command[0]):
+                    result = subprocess.run(command, env=self.env, capture_output=True, text=True)
+                    self.assertNotEqual(result.returncode, 0, result.stderr)
+                    self.assertFalse((self.build / 'manifest.json').exists())
+                    self.assertFalse(any('put-object' in call['args'] or call['name'] == 'gh' for call in self.calls()))
+
     def test_signing_cli_checks_previous_before_creating_manifest(self):
         self.env.update(GITHUB_REF='refs/heads/main', GITHUB_SHA='a' * 40, GITHUB_RUN_NUMBER='10')
         command = ['python3', str(ROOT / 'deploy/github/corpus_manifest.py'), 'create', 'vn', '20990102_1',
