@@ -386,3 +386,94 @@ func TestRead_ItemDocAndAnchors(t *testing.T) {
 		t.Fatalf("item: %+v, %v", result, err)
 	}
 }
+
+func TestReadOutput_DocumentMetadataWhitespace(t *testing.T) {
+	raw := "\n  Alpha\u2003 \t Beta  "
+	evidence := "Legal  \n text"
+	seq := readSequence{doc: "vn:1", document: &DocumentEntry{Number: raw, Title: raw, Related: []Pointer{{Number: raw}}}, units: []Unit{{Kind: "relation", Warnings: []Warning{{Pointer: Pointer{Number: raw}}}, Relation: &ListedRelation{Pointer: Pointer{Number: raw}, Evidence: evidence}}}, complete: true}
+	got, _, err := readPage(seq, cursor{}, ReadCallCap, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got = presentReadItem(got)
+	if got.Document.Number != "Alpha Beta" || got.Document.Title != "Alpha Beta" || got.Document.Related[0].Number != "Alpha Beta" || got.Units[0].Warnings[0].Number != "Alpha Beta" || got.Units[0].Relation.Number != "Alpha Beta" || got.Units[0].Relation.Evidence != evidence {
+		t.Fatalf("page: %+v, %+v", got.Document, got.Units)
+	}
+}
+
+func TestReadPage_CachesRawPartsAndSizesRawMetadata(t *testing.T) {
+	raw := "\n" + strings.Repeat(" ", 50) + "Number"
+	seq := readSequence{document: &DocumentEntry{Number: raw, Title: raw}, units: []Unit{{Kind: "provision", Text: strings.Repeat("legal text ", 200), Warnings: []Warning{{Pointer: Pointer{Number: raw}}}}}, parts: make(map[int][]Unit), complete: true}
+	c := cursor{PageCap: 800, PartSize: 400}
+	originalParts, ok := unitParts(seq.units[0], c)
+	if !ok || len(originalParts) < 2 {
+		t.Fatal("fixture does not split")
+	}
+	seq.parts[0] = originalParts
+	page, cost, err := readPage(seq, c, c.PageCap, true)
+	if err != nil || page.Next == "" {
+		t.Fatalf("page: %+v %v", page, err)
+	}
+	if page.Document.Number != raw || cost < c.size(seq.document) || seq.parts[0][0].Warnings[0].Number != raw || page.Units[0].Warnings[0].Number != raw {
+		t.Fatal("paging or cache normalized metadata")
+	}
+}
+
+func TestReadPage_WhitespaceCacheEvictionPreservesChains(t *testing.T) {
+	raw := "\n  Number\u2003  Value  "
+	text := strings.Repeat("legal text ", 500)
+	unit := Unit{Kind: "provision", Text: text, Warnings: []Warning{{Pointer: Pointer{Number: raw}}}}
+	cache := map[int][]Unit{}
+	collect := func(mode string) []ItemResult {
+		t.Helper()
+		seq := readSequence{doc: "vn:1", document: &DocumentEntry{Number: raw, Title: raw}, units: []Unit{unit}, complete: true}
+		if mode != "miss" {
+			seq.parts = cache
+		}
+		c := cursor{V: 1, Release: "20990101", Item: ReadItem{Handle: "vn:1"}, PageCap: 900, PartSize: 450}
+		var pages []ItemResult
+		for i := 0; i < 40; i++ {
+			if mode == "evicted" {
+				seq.parts = make(map[int][]Unit)
+			}
+			page, _, err := readPage(seq, c, c.PageCap, true)
+			if err != nil || page.Error != "" {
+				t.Fatalf("%s: %+v %v", mode, page, err)
+			}
+			page = presentReadItem(page)
+			pages = append(pages, page)
+			if page.Next == "" {
+				return pages
+			}
+			c, err = decodeNext(page.Next)
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
+		t.Fatal("chain did not finish")
+		return nil
+	}
+	miss, warm := collect("miss"), collect("warm")
+	if len(cache) == 0 || cache[0][0].Warnings[0].Number != raw {
+		t.Fatal("cache is empty or changed")
+	}
+	hit, evicted := collect("hit"), collect("evicted")
+	if len(miss) < 2 || !reflect.DeepEqual(miss, warm) || !reflect.DeepEqual(miss, hit) || !reflect.DeepEqual(miss, evicted) {
+		t.Fatal("cache changed pages")
+	}
+	if miss[0].Document.Number != "Number Value" || miss[0].Document.Title != "Number Value" {
+		t.Fatal("document metadata not normalized")
+	}
+	var joined strings.Builder
+	for _, page := range miss {
+		for _, part := range page.Units {
+			if part.Warnings[0].Number != "Number Value" {
+				t.Fatal("warning not normalized")
+			}
+			joined.WriteString(part.Text)
+		}
+	}
+	if joined.String() != text {
+		t.Fatal("text changed across pages")
+	}
+}

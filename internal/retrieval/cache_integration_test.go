@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 )
@@ -113,5 +114,67 @@ func TestCollect_InstantPinsEligibilityAcrossMidnight(t *testing.T) {
 		if candidate.Identity.DocumentKey == "vn:1" {
 			t.Fatal("expired document remained eligible")
 		}
+	}
+}
+
+func TestReadCache_WhitespaceMetadataKeepsPageBoundaries(t *testing.T) {
+	db, e := readFixture(t)
+	raw := "\n  Number\u2003  Value  "
+	readExec(t, db, `UPDATE document SET number=$1,title=$1 WHERE id=1`, raw)
+	readExec(t, db, `INSERT INTO relation(id,source_document_id,target_document_id,target_provision_id,source_key,target_key,source_number,target_number,kind,raw_code,raw_label,target_node_id,evidence,method,artifact_sha256,ordinal) VALUES (1,2,1,9,'vn:2','vn:1',$1,'N1','repeals','','','p9','evidence','vbpl_references',$2,0)`, raw, strings.Repeat("b", 64))
+	cache := &memoryCache{}
+	collect := func(mode string) []ReadResult {
+		t.Helper()
+		if mode == "miss" {
+			e.options.Sequences = nil
+		} else {
+			e.options.Sequences = cache
+		}
+		item := ReadItem{Handle: "vn:1"}
+		var pages []ReadResult
+		for i := 0; i < 100; i++ {
+			if mode == "evicted" {
+				cache.values = nil
+			}
+			result, err := e.Read(context.Background(), ReadRequest{Release: e.release.Rel, Items: []ReadItem{item}, PageCap: 3000, PartSize: 1500, WholeDocument: true})
+			if err != nil || len(result.Items) != 1 || result.Items[0].Error != "" {
+				t.Fatalf("%s: %+v %v", mode, result, err)
+			}
+			pages = append(pages, result)
+			if result.Items[0].Next == "" {
+				return pages
+			}
+			item = ReadItem{Next: result.Items[0].Next}
+		}
+		t.Fatal("chain did not finish")
+		return nil
+	}
+	miss := collect("miss")
+	warm := collect("warm")
+	hits := cache.hits
+	hit := collect("hit")
+	if cache.hits <= hits {
+		t.Fatal("no cache hit")
+	}
+	evicted := collect("evicted")
+	if len(miss) < 2 || !reflect.DeepEqual(miss, warm) || !reflect.DeepEqual(miss, hit) || !reflect.DeepEqual(miss, evicted) {
+		t.Fatal("cache changed page boundaries or output")
+	}
+	if miss[0].Items[0].Document == nil || miss[0].Items[0].Document.Number != "Number Value" || miss[0].Items[0].Document.Title != "Number Value" {
+		t.Fatal("document metadata not normalized")
+	}
+	found := false
+	for _, page := range miss {
+		for _, unit := range page.Items[0].Units {
+			for _, warning := range unit.Warnings {
+				found = true
+				if warning.Number != "Number Value" {
+					t.Fatalf("warning: %+v", warning)
+				}
+			}
+		}
+	}
+	if !found {
+		t.Fatal("warning missing")
 	}
 }

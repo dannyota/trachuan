@@ -239,5 +239,9 @@ func (e *Engine) TaxonomyNode(ctx context.Context, code string) (NodePage, error
 	if err = tx.Commit(ctx); err != nil {
 		return result, databaseFailure("commit taxonomy node", err)
 	}
+	for i := range result.Documents {
+		result.Documents[i].Number = presentMetadata(result.Documents[i].Number)
+		result.Documents[i].Title = presentMetadata(result.Documents[i].Title)
+	}
 	return result, nil
 }

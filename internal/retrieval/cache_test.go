@@ -230,3 +230,18 @@ func TestReadCache_RelationWindowsStayBounded(t *testing.T) {
 		t.Fatal("matching relation window missed or changed")
 	}
 }
+
+func TestDocuments_MetadataWhitespace(t *testing.T) {
+	cache := &memoryCache{}
+	e := &Engine{release: Release{Rel: "20990101"}, options: Options{Documents: cache}}
+	raw := "\n  Alpha\u2003 Beta "
+	e.cacheDocument(context.Background(), "vn:1", DocumentEntry{Number: raw, Title: raw, Related: []Pointer{{Number: raw}}})
+	docs, err := e.Documents(context.Background(), []string{"vn:1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	doc := docs["vn:1"]
+	if doc.Number != "Alpha Beta" || doc.Title != "Alpha Beta" || doc.Related[0].Number != "Alpha Beta" {
+		t.Fatalf("document: %+v", doc)
+	}
+}
