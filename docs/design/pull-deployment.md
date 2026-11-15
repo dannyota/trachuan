@@ -228,38 +228,43 @@ readiness. Model provisioning stays a manual owner step.
 
 ### Release floor
 
-The policy may set `release_floor`, an image sequence. The host keeps the
-highest floor it has seen in `/var/lib/trachuan-deploy/release-floor.json` (root
-0600, written atomically, separate from `state.json` so older updaters still
-read their state). The floor rises only when a manifest journals `activated`, to
-the maximum of the stored value and the policy of the bundle that just became
-active; it never falls, and a lower or missing policy value leaves it unchanged.
-With a floor in force:
+The policy may set `release_floor`, an image sequence. Every release at or above
+the first floor-aware release reads an optional `release_floor` key in
+`state.json`; the key is written only once a floor is in force, so older
+updaters still read their state before then, and once it is set no older updater
+can run again. The key is saved in the same atomic write that journals
+`activated`, as the maximum of its previous value and the floor in the activated
+bundle's policy; it never falls, and a lower or missing policy value leaves it
+unchanged. With a floor in force:
 
-- acceptance refuses an image manifest below it;
+- verification rejects a candidate whose sequence is below the floor its own
+  bundle declares, before installation;
+- acceptance refuses an image manifest below the stored floor;
 - a rollback authorization whose target is below it is refused and not consumed;
-- failure recovery never reactivates a retained manifest below it: Caddy stays
-  stopped and the journal reads `stopped` with reason `release floor`;
-- bootstrap refuses a manifest below the higher of the stored floor and the
-  installed policy's floor.
+- failure recovery never reactivates a retained manifest below it: the journal
+  reads `stopped`, the result names the release floor, and the hold keeps Caddy
+  down whichever phase runs next.
 
-Corpus manifests are unaffected. The result file carries `release_floor` and the
-metrics timer publishes `deploy_release_floor`. Because a rollback installs the
-target's own updater, the floor must be at least the sequence of the first
-release whose updater enforces it: that release ships with no floor, and the
-next one sets `release_floor` to its sequence. A feature that depends on the
-floor ships in a later release, after the floor is confirmed active
-([accounts](accounts.md)).
+Losing `state.json` is the existing lost-state case: the updater changes nothing
+until bootstrap, so the serving image stays. Corpus manifests are unaffected.
+The result file carries `release_floor` and the metrics timer publishes
+`deploy_release_floor`. Because a rollback installs the target's own updater,
+the floor must be at least the sequence of the first floor-aware release: that
+release ships with no floor and the next sets `release_floor` to its sequence. A
+feature that depends on the floor ships in a later release, after the floor is
+confirmed active ([accounts](accounts.md)).
 
 ## Bootstrap
 
 The leader's last planned SSH session installs the bundle containing the updater
 and runs `trachuan-deploy bootstrap <manifest-sha256>`, which pins that manifest
-as active and its sequence as the floor after full verification and writes
-`/etc/trachuan/deploy-mode` as `verify`. After the host proofs pass, the same
-session sets mode `activate` locally, runs one updater run, and confirms its
-result before the deploy SSH key is removed. Later policy changes ship in
-releases.
+as active and its sequence as the acceptance floor (not the release floor) after
+full verification and writes `/etc/trachuan/deploy-mode` as `verify`. Bootstrap
+sets the release floor to the higher of the installed policy's `release_floor`
+and a value the owner passes with `--release-floor`, and refuses a manifest
+below it. After the host proofs pass, the same session sets mode `activate`
+locally, runs one updater run, and confirms its result before the deploy SSH key
+is removed. Later policy changes ship in releases.
 
 ## Results and alarms
 
