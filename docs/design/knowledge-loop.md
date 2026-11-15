@@ -199,12 +199,12 @@ says in one line why the class cannot be seen in data.
 Outside signals enter as records in `sources/<cc>-reports.yaml`, in Git and in
 the build input hash. A record has a closed schema and no free text:
 
-| Field                 | Values                                                                                                            |
-| --------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `origin`, `origin_id` | a registered origin (`issue_report`, `sc365`, `eval`) and its id; the pair is unique, so a replay changes nothing |
-| `kind`                | the issue-report kinds of [error reports](error-reports.md)                                                       |
-| `target`              | document or provision identity, or a normalized number for a missing document                                     |
-| `claim`               | a code from a fixed list (`repealed_by`, `amended_by`, `wrong_number`, ...) with an optional acting identity      |
+| Field                 | Values                                                                                                                                                                                                                                                                                                            |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `origin`, `origin_id` | a registered origin (`issue_report`, `sc365`, `eval`) and its id; the pair is unique, so a replay changes nothing                                                                                                                                                                                                 |
+| `kind`                | the issue-report kinds of [error reports](error-reports.md)                                                                                                                                                                                                                                                       |
+| `target`              | document or provision identity, or a normalized number for a missing document                                                                                                                                                                                                                                     |
+| `claim`               | a code from a fixed list, with the acting identity where it has one: `repealed_by`, `amended_by`, `replaced_by`, `suspended_by`, `wrong_number`, `missing_document`, `ambiguous_anchor`, `empty_text`, `status_conflict`, `missing_source_url`, and `reported` for an accepted report with no more specific claim |
 
 At most 500 records change per pull request. Records carry no account, question
 or client data. A record never applies knowledge; it only opens a finding. The
@@ -224,16 +224,35 @@ binds, and never changes, the build artifact and the evaluation report:
   observed and not observable; every finding with key, fingerprint, semantics
   number, `first_rel`, status and `carried`; and the keys that are new, gone and
   carried.
-- **`identity.jsonl`**: this release's identity summary: per document its key,
-  status class, text source, completeness and how it was obtained; per provision
-  its anchor and text hash; every relation by its two ends, kind and method.
-- **`changes.json`**: the same bindings, and before and after records by public
+- **`identity.jsonl`**: this release's identity summary, one JSON object per
+  line. The first line holds the schema version and the bindings. Then:
+  - per document: key, `number_norm`, status class, `eff_from`, `eff_to`,
+    `is_current`, `validity_conflict`, text source, completeness and how it was
+    obtained;
+  - per provision: document key, anchor, the SHA-256 of its own `text` column
+    exactly as stored (UTF-8 bytes, no normalization, not its subtree), and the
+    codes of its effective positive taxonomy nodes, resolved by the serving
+    rules of [taxonomy](taxonomy.md);
+  - every relation by its two ends, kind and method.
+
+  A reader of the dump can recompute every hash and get the same value.
+
+- **`changes.jsonl`**: one JSON object per line; the first line holds the schema
+  version and the bindings. Records are before and after pairs by public
   identity, from this summary and the predecessor's:
   - documents added and removed, each with a cause class: `membership`,
-    `coverage` (a fetch gap, a baseline, a withheld text) or `source`;
-  - provisions added, removed and changed (text hash before and after);
-  - legal changes: status class, relations and effects added and removed;
-  - provenance changes: text source, completeness, served from a baseline.
+    `coverage` (a fetch gap, a baseline, a withheld text) or `source`. A removed
+    document's provisions are removed with it, under its cause class, and are
+    not listed one by one;
+  - document metadata: `number_norm` before and after on a surviving key;
+  - provisions added, removed and changed (text hash before and after) in
+    surviving documents. Each carries `provenance: true` when its document's
+    text source or completeness changed in this release, so a new extraction is
+    not read as a change of law;
+  - legal changes: status class, `eff_from`, `eff_to`, `is_current`,
+    `validity_conflict`, and relations and effects added and removed;
+  - provenance changes: text source, completeness, served from a baseline;
+  - classification changes: node codes added to and removed from a provision.
 
   When the predecessor has no summary (it predates evidence, or there is none),
   the file says `baseline` and lists nothing.
@@ -244,23 +263,25 @@ binds, and never changes, the build artifact and the evaluation report:
 An evaluation against another predecessor is a new evidence item and artifact.
 Once a `rel` has an upload prefix it is never reused, so that case needs a new
 `rel` ([corpus release](corpus-release.md)). The release upload gains
-`findings.json` and `changes.json` beside the dump, `MANIFEST.sha256`,
-`report.json` and `release.json`, and the signed corpus manifest carries their
-SHA-256 ([corpus release](corpus-release.md)).
+`findings.json`, `identity.jsonl` and `changes.jsonl` beside the dump,
+`MANIFEST.sha256`, `report.json` and `release.json`, and the signed corpus
+manifest carries the SHA-256 of all three.
 
 ### Gate
 
-| Condition                                                                                                                    | Result                                                                                                                                      |
-| ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| every existing rule of corpus release: items complete, every gap accepted, evaluation gates                                  | unchanged                                                                                                                                   |
-| a sidecar missing, or a binding that does not match the dump, the build artifact, the report or the report's `previous_diff` | refuse                                                                                                                                      |
-| a detector not complete                                                                                                      | refuse                                                                                                                                      |
-| an `open` finding of a `blocking` detector, fired or carried                                                                 | refuse                                                                                                                                      |
-| `open` findings of `review` and `info` detectors                                                                             | allowed, counted                                                                                                                            |
-| first release with evidence                                                                                                  | allowed: the predecessor's identity is recorded, its findings are empty and `changes.json` is `baseline`; every existing rule still applies |
+| Condition                                                                                                                    | Result                                                                                                                                       |
+| ---------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| every existing rule of corpus release: items complete, every gap accepted, evaluation gates                                  | unchanged                                                                                                                                    |
+| a sidecar missing, or a binding that does not match the dump, the build artifact, the report or the report's `previous_diff` | refuse                                                                                                                                       |
+| a detector not complete                                                                                                      | refuse                                                                                                                                       |
+| an `open` finding of a `blocking` detector, fired or carried                                                                 | refuse                                                                                                                                       |
+| `open` findings of `review` and `info` detectors                                                                             | allowed, counted                                                                                                                             |
+| first release with evidence                                                                                                  | allowed: the predecessor's identity is recorded, its findings are empty and `changes.jsonl` is `baseline`; every existing rule still applies |
 
-`changes.json` is the downstream products' input for re-checking their own
-mappings.
+`identity.jsonl` and `changes.jsonl` are the downstream products' input for
+selecting what to import and re-checking their own mappings. An effect has no
+date. The acting document's `eff_from` describes that document only; a provision
+may commence later, so no date of effect is to be inferred from it.
 
 ## What stays out
 

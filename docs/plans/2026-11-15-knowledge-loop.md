@@ -1,6 +1,6 @@
 # Findings and reviewed knowledge plan
 
-**Goal:** the corpus write path opens findings from registered detectors, applies reviewed knowledge down to provisions and relations under one validator, and every release ships `findings.json` and `changes.json` compared with the previous release.
+**Goal:** the corpus write path opens findings from registered detectors, applies reviewed knowledge down to provisions and relations under one validator, and every release ships `findings.json`, `identity.jsonl` and `changes.jsonl` compared with the previous release.
 
 **Spec:** `docs/adr/0017-findings-and-reviewed-knowledge.md`, `docs/design/knowledge-loop.md`, `docs/research/write-path-findings-2026-11.md`. Related: `docs/design/validity-status.md`, `relations-text.md`, `ocr-check.md`, `error-reports.md`, `evaluation-fixtures.md`, `corpus-release.md`.
 
@@ -8,7 +8,7 @@
 
 ## 16.0 Design (primary, astra review)
 - [x] ADR 0017, knowledge-loop.md and the survey note reviewed by `gpt-6-astra` in five rounds (S-01 to S-23, A-01, A-02 fixed) and read by the corpus session against the code; ADR accepted 2026-11-15.
-- [ ] sc365's comments on `changes.json`, `identity.jsonl` and the intake record recorded before 16.4 freezes their shapes.
+- [x] sc365 read the contract on 2026-11-15; its seven points on `identity.jsonl` and `changes.jsonl` (hash definition, validity dates, removed documents, provenance flag, JSON Lines, upload list, schema line and taxonomy codes) and its claim codes are in knowledge-loop.md.
 
 ## 16.1 Registry and evidence stage
 - [ ] Go detector registry as the only list (`corpus detectors list`): subject types, discriminators, completeness declaration, semantics numbers, registry hash; stage gap validation rejects an unregistered kind at run time, and a test checks every kind constant against the registry.
@@ -26,7 +26,7 @@
 
 ## 16.4 Intake and release gate
 - [ ] `sources/<cc>-reports.yaml` with the closed schema, origin registry, 500-record bound, replay idempotence; detector `external_report`; `corpus findings import` converts an export batch into records for a pull request; error-reports.md keeps its batch guarantees.
-- [ ] `identity.jsonl` in the evidence artifact and `changes.json` from this summary and the predecessor's (cause classes, legal and provenance changes, no moves, `baseline` when the predecessor has none); upload of both files; their hashes in the signed manifest; uploader and signing validator enforce the gate table of knowledge-loop.md; corpus-release.md updated in the same change.
+- [ ] `identity.jsonl` in the evidence artifact and `changes.jsonl` from this summary and the predecessor's (cause classes, legal and provenance changes, no moves, `baseline` when the predecessor has none); upload of all three files; their hashes in the signed manifest; uploader and signing validator enforce the gate table of knowledge-loop.md; corpus-release.md updated in the same change.
 
 ## 16.5 First use
 - [ ] Triage the first run's findings in batches (model-adjudicated with a 10 percent read sample); operative claims in the 394 partly expired documents and the 196 `ocr_label_flagged` documents first.
