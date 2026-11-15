@@ -68,11 +68,11 @@ knowledge.
    free text and no account data. A record opens a finding and applies nothing.
 7. **Every release carries its evidence.** A last stage, after evaluation, runs
    the cross-signal detectors over frozen inputs and writes one immutable
-   artifact with `findings.json` and `changes.json`, bound to the dump, the
-   build, the report, the detector registry and the previous release's findings.
-   Both are uploaded and hashed into the signed manifest. A missing or
-   mismatched file, an incomplete detector or an open blocking finding refuses
-   the release; every existing release rule stays.
+   artifact with `findings.json`, `identity.jsonl` and `changes.jsonl`, bound to
+   the dump, the build, the report, the detector registry and the previous
+   release's findings. Both are uploaded and hashed into the signed manifest. A
+   missing or mismatched file, an incomplete detector or an open blocking
+   finding refuses the release; every existing release rule stays.
 8. **Models draft, the validator decides.** A model may propose knowledge
    entries and triage findings; nothing it writes applies without passing the
    validator, and bulk adjudication keeps a human-read sample.
@@ -126,3 +126,7 @@ knowledge.
   a new run; the release floor is set at the first image that admits reviewed
   effects before a corpus holding them is published.
 - 2026-11-15: accepted after the fifth review round found nothing open.
+- 2026-11-15: after sc365 read the contract: `identity.jsonl` uploaded and
+  signed, per-provision hash defined as SHA-256 of the stored text, validity
+  dates and taxonomy codes in the summary, the change list as JSON Lines, the
+  intake claim codes fixed.

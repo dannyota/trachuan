@@ -36,7 +36,8 @@
 ## 15.6 Downstream contract (corpus and server; dev, dev2)
 - [ ] Reduced export command and its manifest; a test that no licensed field or body-derived value is in it.
 - [ ] Change list per release by identity (controls and edges added, removed, changed, superseded), written by build next to the report.
-- [ ] Links from controls to legal provisions as reviewed mapping edges with source and evidence (uses the reviewed-knowledge inputs of the knowledge loop design).
+- [ ] Links from controls to legal provisions as reviewed mapping edges with source and evidence (ADR 0017: the control named by identity, law text quoted). First targets, from sc365: TCVN 11930:2017 against Circular 09/2020/TT-NHNN and Decree 85/2016/NĐ-CP; then NIST SP 800-53 and CIS Controls against ISO/IEC 27001:2022 and PCI DSS 4.0.1 (control to control).
+- [ ] Whether trachuan's paraphrased titles may ship inside a sold product: part of the licence terms review; until it is answered the reduced export marks titles `terms: pending`.
 - [ ] sc365 reads the export and the change list; record its feedback before freezing the shapes.
 
 ## 15.7 Later
