@@ -83,19 +83,17 @@ func Build(reg *registry.Registry, catalogs map[string]*parse.Result, inputs []I
 				}
 			}
 		}
-		if edge.Resolved {
-			sourceFound := false
-			if result := catalogs[in.From.Code+":"+in.From.Version]; result != nil {
-				for _, node := range result.Nodes {
-					if norm(lookupCitation(reg, Key{in.From.Code, in.From.Version, node.Citation})) == norm(in.From.Citation) {
-						edge.From.Citation = node.Citation
-						sourceFound = true
-						break
-					}
+		sourceFound := false
+		if result := catalogs[in.From.Code+":"+in.From.Version]; result != nil {
+			for _, node := range result.Nodes {
+				if norm(lookupCitation(reg, Key{in.From.Code, in.From.Version, node.Citation})) == norm(in.From.Citation) {
+					edge.From.Citation = node.Citation
+					sourceFound = true
+					break
 				}
 			}
-			edge.Resolved = sourceFound
 		}
+		edge.Resolved = edge.Resolved && sourceFound
 		if !edge.Resolved {
 			stats.Unresolved++
 		}

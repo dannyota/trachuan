@@ -143,3 +143,22 @@ func TestBuild_UnresolvedDuplicatesCountOnce(t *testing.T) {
 		t.Fatal("unresolved duplicate counts incorrect")
 	}
 }
+
+func TestBuild_UnresolvedTargetKeepsCatalogSourceCitation(t *testing.T) {
+	data := []byte(`{"catalog":{"groups":[{"id":"xx","controls":[{"id":"xx-2","props":[{"name":"label","class":"zero-padded","value":"XX-02"}]}]}]}}`)
+	count := 2
+	catalog, err := parse.Parse("nist-oscal-800-53", data, "alpha", "1", &count)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reg := &registry.Registry{Frameworks: []registry.Framework{{Code: "alpha", Version: "1", CitationScheme: "oscal-catalog"}, {Code: "beta", Version: "1"}}}
+	catalogs := map[string]*parse.Result{"alpha:1": catalog}
+	inputs := []Input{{From: Key{"alpha", "1", "XX-2"}, To: Key{"beta", "1", "B"}, Relation: "related", Source: "book"}}
+	edges, stats, err := Build(reg, catalogs, inputs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(edges) != 1 || edges[0].Resolved || stats.Unresolved != 1 || edges[0].From.Citation != "XX-02" {
+		t.Fatal("unresolved edge lost catalog source citation")
+	}
+}
