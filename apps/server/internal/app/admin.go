@@ -15,7 +15,12 @@ import (
 
 type accountEvicter interface{ EvictAccount(int64) }
 
-func runAdmin(ctx context.Context, args []string, queries admin.Store, out io.Writer, caches ...accountEvicter) error {
+type adminStore interface {
+	admin.Store
+	MarkAccountUnblocked(context.Context, int64) (store.Account, error)
+}
+
+func runAdmin(ctx context.Context, args []string, queries adminStore, out io.Writer, caches ...accountEvicter) error {
 	if len(args) < 2 {
 		return errors.New("missing admin subcommand")
 	}
@@ -58,13 +63,7 @@ func runAdmin(ctx context.Context, args []string, queries admin.Store, out io.Wr
 		if *account <= 0 {
 			return errors.New("invalid account")
 		}
-		unblocker, ok := queries.(interface {
-			MarkAccountUnblocked(context.Context, int64) (store.Account, error)
-		})
-		if !ok {
-			return errors.New("account store unavailable")
-		}
-		_, err := unblocker.MarkAccountUnblocked(ctx, *account)
+		_, err := queries.MarkAccountUnblocked(ctx, *account)
 		for _, cache := range caches {
 			cache.EvictAccount(*account)
 		}

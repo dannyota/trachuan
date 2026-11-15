@@ -29,15 +29,15 @@ type cacheEntry struct {
 	closeOnce    sync.Once
 }
 
-func (entry *cacheEntry) close() {
+func (entry *cacheEntry) close(engine *retrieval.Engine) {
 	entry.closeOnce.Do(func() {
 		if entry.stopCounters != nil {
 			close(entry.stopCounters)
 			<-entry.countersDone
 		}
-		if entry.engine != nil {
-			entry.engine.Close()
-			entry.logCounters()
+		if engine != nil {
+			engine.Close()
+			entry.logCounters(engine)
 		}
 		if entry.closePool != nil {
 			entry.closePool()
@@ -115,7 +115,7 @@ func (r *Resolver) load(ctx context.Context, country, name string) (*cacheEntry,
 		return nil, fmt.Errorf("open corpus engine: %w", err)
 	}
 	entry.engine = engine
-	entry.startCounters()
+	entry.startCounters(engine)
 	engine.StartSparsePostings(func(outcome retrieval.PostingsOutcome) {
 		if r.OnPostings != nil {
 			r.OnPostings(engine.Release().Rel, outcome)

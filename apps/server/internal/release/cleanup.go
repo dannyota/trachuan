@@ -9,8 +9,9 @@ func (r *Resolver) cleanupLocked(entry *cacheEntry) <-chan struct{} {
 	}
 	done := make(chan struct{})
 	r.cleanups[entry] = done
+	engine := entry.engine
 	go func() {
-		entry.close()
+		entry.close(engine)
 		r.mu.Lock()
 		close(done)
 		delete(r.cleanups, entry)

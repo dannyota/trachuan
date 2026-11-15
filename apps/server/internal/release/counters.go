@@ -3,9 +3,11 @@ package release
 import (
 	"log/slog"
 	"time"
+
+	"danny.vn/trachuan/internal/retrieval"
 )
 
-func (entry *cacheEntry) startCounters() {
+func (entry *cacheEntry) startCounters(engine *retrieval.Engine) {
 	if entry.stopCounters != nil {
 		return
 	}
@@ -18,7 +20,7 @@ func (entry *cacheEntry) startCounters() {
 		for {
 			select {
 			case <-ticker.C:
-				entry.logCounters()
+				entry.logCounters(engine)
 			case <-entry.stopCounters:
 				return
 			}
@@ -26,7 +28,7 @@ func (entry *cacheEntry) startCounters() {
 	}()
 }
 
-func (entry *cacheEntry) logCounters() {
-	counts := entry.engine.LexicalSources()
+func (entry *cacheEntry) logCounters(engine *retrieval.Engine) {
+	counts := engine.LexicalSources()
 	slog.Info("retrieval counters", "release", entry.name, "lexical_sql", counts.SQL, "lexical_postings", counts.Postings, "lexical_reused", counts.Reused, "fallback_searches", counts.FallbackSearches, "fallback_groups", counts.FallbackGroups, "searches", counts.Searches)
 }

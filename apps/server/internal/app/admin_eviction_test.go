@@ -15,7 +15,7 @@ import (
 )
 
 type blockStore struct {
-	admin.Store
+	adminStore
 	err error
 }
 
