@@ -24,6 +24,60 @@ class ResultTest(unittest.TestCase):
         previous = os.umask(0o027)
         self.addCleanup(os.umask, previous)
 
+    def test_final_results_append_one_json_line_with_only_design_fields(self):
+        module = load()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            log = root / 'backup.log'
+            log.touch()
+            for kind, status in [('full', 'ok'), ('diff', 'failed'), ('verify', 'unknown'),
+                                 ('health', 'skipped'), ('restore-check', 'failed')]:
+                with self.subTest(kind=kind):
+                    path = root / (kind+'.json')
+                    path.write_text('{"last_success_at":"2026-01-01T00:00:00Z"}')
+                    result = module.Result(path, now=lambda: '2026-01-02T00:00:00Z', log=log)
+                    result.write('running', 'waiting for backup lock')
+                    before = len(log.read_text().splitlines()) if log.exists() else 0
+                    result.write('running', 'starting')
+                    result.write(status, 'synthetic safe reason')
+                    rows = log.read_text().splitlines()
+                    self.assertEqual(len(rows), before+1)
+                    self.assertEqual(json.loads(rows[-1]), {
+                        'kind': kind, 'status': status, 'reason': 'synthetic safe reason',
+                        'started_at': '2026-01-02T00:00:00Z',
+                        'finished_at': '2026-01-02T00:00:00Z',
+                        'last_success_at': '2026-01-02T00:00:00Z' if status == 'ok'
+                        else '2026-01-01T00:00:00Z'})
+
+    def test_transient_log_open_failure_retries_without_rewriting_result(self):
+        module = load()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            path = root / 'full.json'
+            log = root / 'backup.log'
+            log.touch()
+            result = module.Result(path, log=log)
+            original_open = module.os.open
+            attempts = []
+            snapshots = []
+            def open_file(target, flags, *args):
+                if Path(target) == log:
+                    attempts.append(flags)
+                    snapshots.append(path.read_bytes())
+                    if len(attempts) == 1:
+                        raise FileNotFoundError('synthetic rotation gap')
+                return original_open(target, flags, *args)
+            with patch.object(module.os, 'open', side_effect=open_file), \
+                 patch('time.sleep') as sleep:
+                result.write('ok', 'synthetic success')
+            row = json.loads(path.read_text())
+            self.assertEqual(row['status'], 'ok')
+            self.assertEqual(snapshots, [path.read_bytes()]*2)
+            self.assertEqual([json.loads(line) for line in log.read_text().splitlines()],
+                             [dict(kind='full', **row)])
+            self.assertEqual(len(attempts), 2)
+            sleep.assert_called_once_with(0.05)
+
     def test_temporary_file_requests_acl_compatible_mode_without_chmod(self):
         module = load()
         with tempfile.TemporaryDirectory() as work:
@@ -48,6 +102,16 @@ class ResultTest(unittest.TestCase):
             with self.assertRaisesRegex(FileNotFoundError, 'directory is not provisioned'):
                 module.Result(target).write('running', 'starting')
             self.assertFalse(target.parent.exists())
+
+    def test_invalid_previous_result_still_allows_a_new_attempt(self):
+        module = load()
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'full.json'
+            for value in ['null', '[]', '42']:
+                with self.subTest(value=value):
+                    path.write_text(value)
+                    module.Result(path).write('running', 'starting')
+                    self.assertIsNone(json.loads(path.read_text())['last_success_at'])
 
     def test_running_then_final_preserves_last_success_for_every_status(self):
         module = load()

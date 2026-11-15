@@ -92,6 +92,11 @@ done
 [[ ! -L /var/lib/trachuan-deploy ]] || fail 'symlink in updater state path'
 install -d -o root -g root -m 0700 /var/lib/trachuan-deploy
 install -d -o root -g root -m 0750 /srv/trachuan/state/deploy /var/log/trachuan
+setfacl -m u:trachuan:--x /var/log/trachuan
+[[ -e /var/log/trachuan/backup.log ]] || install -o trachuan -g trachuan -m 0640 /dev/null /var/log/trachuan/backup.log
+[[ ! -L /var/log/trachuan/backup.log && -f /var/log/trachuan/backup.log ]] || fail 'expected a regular backup log'
+chown trachuan:trachuan /var/log/trachuan/backup.log
+chmod 0640 /var/log/trachuan/backup.log
 setfacl -m u:trachuan-metrics:r-x,d:u:trachuan-metrics:r-x /srv/trachuan/state/deploy
 [[ ! -f /srv/trachuan/state/deploy/result.json ]] || setfacl -m u:trachuan-metrics:r-- /srv/trachuan/state/deploy/result.json
 python3 -I "$bundle/updater/publish.py" policy "$bundle/deploy-policy.json" /etc/trachuan/deploy-policy.json

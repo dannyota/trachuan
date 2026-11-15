@@ -100,7 +100,7 @@ class ListenerTest(unittest.TestCase):
             units = list((work / "units").glob("*.container"))
             self.assertEqual(len(units), 6)
             schedules = {"full": "Sun *-*-* 02:00:00", "diff": "Mon..Sat *-*-* 02:00:00",
-                         "verify": "Wed *-*-* 04:00:00", "health": "*-*-* *:00:00",
+                         "verify": "Wed *-*-* 04:00:00", "health": "*-*-* *:30:00",
                          "restore-check": "*-*-01 05:00:00"}
             for kind, schedule in schedules.items():
                 timer = configparser.ConfigParser(interpolation=None)

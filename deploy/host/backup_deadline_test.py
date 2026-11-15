@@ -40,7 +40,7 @@ class RecoveryDeadlineTest(unittest.TestCase):
                  patch.object(process.time, 'sleep', side_effect=sleep), \
                  patch.object(process, 'command', side_effect=runner), \
                  patch.object(backup, 'work', return_value=('ok', 'synthetic')) as task:
-                code = backup.run('health', state)
+                code = backup.run('health', state, log=state/'backup.log')
             final = json.loads(result.read_text())
             self.assertLessEqual(clock[0], 300)
             self.assertIsNotNone(final['finished_at'])
@@ -86,7 +86,7 @@ class RecoveryDeadlineTest(unittest.TestCase):
                 return ''
             with patch.object(process.time, 'monotonic', side_effect=lambda: clock[0]), \
                  patch.object(process, 'command', side_effect=runner):
-                self.assertEqual(backup.run('health', state), 1)
+                self.assertEqual(backup.run('health', state, log=state/'backup.log'), 1)
             self.assertEqual(actions, ['prepare', 'run', 'cancel'])
             self.assertEqual(clock[0], 299)
             self.assertTrue((state/'active-job').exists())
@@ -131,7 +131,7 @@ class RecoveryDeadlineTest(unittest.TestCase):
             (state/'active-job').write_text('a'*32)
             with patch.object(process, 'command', side_effect=[InterruptedError('signal'), AssertionError('retried interruption')]), \
                  patch.object(backup, 'work') as task:
-                self.assertEqual(backup.run('health', state), 1)
+                self.assertEqual(backup.run('health', state, log=state/'backup.log'), 1)
             task.assert_not_called()
             self.assertEqual(json.loads((state/'health.json').read_text())['status'], 'failed')
             self.assertTrue((state/'active-job').exists())
