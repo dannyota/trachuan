@@ -2,7 +2,6 @@ package retrieval
 
 import "strings"
 
-// Warning identifies an act that targets a provision and its source basis.
 type Warning struct {
 	Pointer
 	Source   string `json:"source,omitempty"`
@@ -26,7 +25,7 @@ func warning(r Relation) (Warning, bool) {
 	text, reference := false, false
 	for _, method := range methods {
 		switch method {
-		case "text_rule/1":
+		case "text_rule/1", "reviewed":
 			text = true
 		case "vbpl_references":
 			reference = true
