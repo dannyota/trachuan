@@ -54,6 +54,7 @@ class ServerEnvironmentTest(unittest.TestCase):
             "SERVER_SMTP_HOST": "smtp.email.ap-singapore-1.oci.oraclecloud.com",
             "SERVER_SMTP_PORT": "587",
             "SERVER_MAIL_FROM": "no-reply@trachuan.vn",
+            "SERVER_TOTP_ENROLLMENT": "true",
         }
         for name, value in expected.items():
             with self.subTest(variable=name):
