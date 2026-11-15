@@ -175,7 +175,7 @@ every prompt or threshold change reruns it.
 | every LLM slice                                        | as the slice      | candidate recall at 10 (true node among candidates) | 0.95  |
 | 100 post-2023 articles                                 | model-adjudicated | precision and recall at level 2                     | 0.85  |
 | same                                                   | model-adjudicated | precision and recall at the deepest level           | 0.70  |
-| 50 articles that belong to custom nodes                | seeded            | precision and recall of custom nodes                | 0.80  |
+| 50 articles that belong to custom nodes                | model-adjudicated | precision and recall of custom nodes                | 0.80  |
 | 100 inherited consolidated articles                    | model-adjudicated | precision at level 2 (inheritance layer)            | 0.95  |
 | same                                                   | model-adjudicated | precision at level 3 (inheritance layer)            | 0.90  |
 | same                                                   | model-adjudicated | precision at the deepest level (inheritance layer)  | 0.85  |
@@ -210,14 +210,23 @@ release serves seeds and overrides only; `corpus eval` reports the same rows.
 
 The seeded labeled set is
 `apps/corpus/internal/evaluation/testdata/<cc>/taxonomy-labels.json`: for each
-article its document key, anchor and the seeded node codes, with the release it
-was drawn from. It is drawn once by a fixed seed from the primary articles that
-hold seeds, at most two articles per document, and frozen; its SHA-256 enters
-the evaluation input like the identity map. It holds the 300 masked articles.
-Each model-adjudicated set (multi-family, post-2023, inheritance) is its own
-file beside it, `taxonomy-<slice>.json`, with the same fields, the labeling
-model and the draw rule, frozen with its own SHA-256 after the coordinator's
-reading. A redraw is a reviewed change, never automatic.
+article its document key, anchor, the SHA-256 of its own text and the seeded
+node codes, with the release it was drawn from. It is drawn once by a fixed seed
+from the primary articles that hold seeds, at most two articles per document,
+and frozen; its SHA-256 enters the evaluation input like the identity map. It
+holds the 300 masked articles. Each model-adjudicated set (multi-family,
+post-2023, inheritance, custom nodes) is its own file beside it,
+`taxonomy-<slice>.json`, with the same fields, the labeling model and the draw
+rule, frozen with its own SHA-256 after the coordinator's reading; the
+custom-node set is labeled for the custom nodes only, so it cannot exist before
+`custom.yaml` has entries. The inheritance set's SHA-256, or the empty string
+while it does not exist, enters the build input hash as well, because build
+reads it; evaluation uses the same file. Every entry is checked against the
+release it scores: the document and anchor are present, the provision's own text
+has the recorded SHA-256, and every code is an active node. An entry that fails
+counts as a miss in its slice, so the denominator never shrinks; when more than
+5 percent of a set's entries fail, the slice is unavailable until the set is
+re-adjudicated and frozen again. A redraw is a reviewed change, never automatic.
 
 The report also lists assignment counts per node, unassigned counts, and the
 diff of node changes against the previous release. A failed floor blocks
