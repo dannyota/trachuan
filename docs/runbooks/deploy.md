@@ -42,8 +42,11 @@ and a release whose images, env files and units the host already runs.
    (`SERVER_IMAGE=...`, one line per name), and deploy as in
    [Deploy a new digest](host.md#deploy-a-new-digest).
 4. `sudo /usr/local/libexec/trachuan/trachuan-deploy bootstrap <manifest-sha256>`.
-   It verifies the release and every image, confirms the host runs exactly that
-   release, writes mode `verify` and enables the timer.
+   Once a release floor is in force, add `--release-floor <floor>` with the last
+   value from `result.json` or the `deploy_release_floor` metric: after state
+   loss the installed policy may not carry it. It verifies the release and every
+   image, confirms the host runs exactly that release, writes mode `verify` and
+   enables the timer.
 
 ## Host proofs
 

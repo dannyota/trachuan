@@ -260,11 +260,13 @@ The leader's last planned SSH session installs the bundle containing the updater
 and runs `trachuan-deploy bootstrap <manifest-sha256>`, which pins that manifest
 as active and its sequence as the acceptance floor (not the release floor) after
 full verification and writes `/etc/trachuan/deploy-mode` as `verify`. Bootstrap
-sets the release floor to the higher of the installed policy's `release_floor`
-and a value the owner passes with `--release-floor`, and refuses a manifest
-below it. After the host proofs pass, the same session sets mode `activate`
-locally, runs one updater run, and confirms its result before the deploy SSH key
-is removed. Later policy changes ship in releases.
+sets the release floor to the highest of a stored floor, the installed policy's
+`release_floor` and a value the owner passes with `--release-floor`, and refuses
+a manifest below it; after state loss the owner must pass the last known floor,
+since an installed policy may lack it. After the host proofs pass, the same
+session sets mode `activate` locally, runs one updater run, and confirms its
+result before the deploy SSH key is removed. Later policy changes ship in
+releases.
 
 ## Results and alarms
 
