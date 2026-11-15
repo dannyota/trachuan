@@ -120,10 +120,15 @@ The integrity fields of the signed manifest (`dump` SHA-256 and size, `report`
 SHA-256, `build_artifact_sha256`) are needed to verify and to refuse replays,
 and reveal only that a release differs from another. The SHA-256 and byte size
 of each source file in the registry (`sources/frameworks.yaml`) let the reader
-refuse an unregistered file, and reveal only which file it is. No other value
-derived from a licensed file is published: the registry holds no page, character
-or control counts and no titles taken from a licensed file, and a licensed
-parser reads its expected control count from a file under
-`FRAMEWORKS_SOURCE_DIR`. Reviewer readings of licensed text (OCR waivers) live
-in a file under `FRAMEWORKS_SOURCE_DIR`, not in `sources/`. Tests and fixtures
-use invented frameworks.
+refuse an unregistered file, and reveal only which file it is. The number of
+controls of a version is an approved public fact, served to every caller
+([results](frameworks-results.md#diagnostics-and-counts)), and the registry
+holds it for every version. Beyond these and the approved public fields of the
+[reduced record](#reduced-record) (with counts of them, such as mapping edges,
+that [results](frameworks-results.md#diagnostics-and-counts) serves), no value
+derived from a licensed file is published. In Git, the registry holds no page or
+character counts, no counts finer than the per-version total (by kind or by
+section), no tree shape and no titles taken from a licensed file. Reviewer
+readings of licensed text (OCR waivers) live in a file under
+`FRAMEWORKS_SOURCE_DIR`, not in `sources/`. Tests and fixtures use invented
+frameworks.

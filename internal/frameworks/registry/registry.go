@@ -53,9 +53,6 @@ func Parse(r io.Reader) (*Registry, error) {
 	if hasMerge(&node) {
 		return nil, fmt.Errorf("registry merge keys are not supported")
 	}
-	if err := rejectLicensedCount(&node); err != nil {
-		return nil, err
-	}
 	dec := yaml.NewDecoder(bytes.NewReader(data))
 	dec.KnownFields(true)
 	var reg Registry
@@ -110,9 +107,6 @@ func (r *Registry) Validate() error {
 			if err != nil || u.Host == "" || (u.Scheme != "https" && u.Scheme != "http") || !openLicence(f.LicenceKind) {
 				return fmt.Errorf("invalid free license for %s", f.Code)
 			}
-		}
-		if f.Access == "licensed" && f.ExpectedControls != nil {
-			return fmt.Errorf("licensed count for %s", f.Code)
 		}
 		if f.ExpectedControls != nil && *f.ExpectedControls <= 0 {
 			return fmt.Errorf("invalid count for %s", f.Code)
@@ -169,36 +163,6 @@ func openLicence(s string) bool {
 		return true
 	}
 	return false
-}
-
-func rejectLicensedCount(root *yaml.Node) error {
-	if len(root.Content) != 1 || root.Content[0].Kind != yaml.MappingNode {
-		return nil
-	}
-	m := root.Content[0].Content
-	for i := 0; i+1 < len(m); i += 2 {
-		if m[i].Value != "frameworks" || m[i+1].Kind != yaml.SequenceNode {
-			continue
-		}
-		for _, item := range m[i+1].Content {
-			if item.Kind != yaml.MappingNode {
-				continue
-			}
-			licensed, count := false, false
-			for j := 0; j+1 < len(item.Content); j += 2 {
-				if item.Content[j].Value == "access" && item.Content[j+1].Value == "licensed" {
-					licensed = true
-				}
-				if item.Content[j].Value == "expected_controls" {
-					count = true
-				}
-			}
-			if licensed && count {
-				return fmt.Errorf("licensed version has expected_controls")
-			}
-		}
-	}
-	return nil
 }
 
 func hasMerge(node *yaml.Node) bool {
