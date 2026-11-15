@@ -23,7 +23,7 @@ it('draws only matrix modules inside a four module quiet zone', () => {
   expect((geometry.path.match(/M/g) || []).length).toBe(matrix.flat().filter(Boolean).length)
 })
 it('formats recovery codes in groups of five, one per line', () => {
-  expect(recoveryText(['abcdefghijklmnopqrstuvwxyz', 'ABCDE-FGHIJ-KLMNO-PQRST-UVWXY-Z'])).toBe('ABCDE FGHIJ KLMNO PQRST UVWXY Z\nABCDE FGHIJ KLMNO PQRST UVWXY Z\n')
+  expect(recoveryText(Array(10).fill('abcdefghijklmnopqrstuvwxyz'))).toBe(Array.from({ length: 10 }, (_, i) => `${String(i + 1).padStart(2)}. ABCDE FGHIJ KLMNO PQRST UVWXY Z\n`).join(''))
 })
 it('chooses password reauth and only offers factor entry on a route that accepts it', () => {
   const error = { error: { code: 'reauth_required' }, factor: true }

@@ -11,6 +11,10 @@
 .account-row:last-child { border-bottom: 0; }
 .account-row-label { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; overflow-wrap: anywhere; }
 .account-row h3 { margin: 0; font-size: 14px; }
+.account-security-row { display: block; }
+.account-security-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.account-security-status { margin-left: 8px; color: var(--color-muted); font-weight: 400; }
+.account-security-notice { margin: 8px 0 0; color: var(--color-muted); font-size: 13px; }
 .account-meta { flex: 1 1 auto; margin: 0; color: var(--color-muted); font-size: 13px; }
 .account-host { color: var(--color-muted); font-family: var(--font-mono); font-size: 12.5px; }
 .account-current, .account-revoked { padding: 2px 8px; border-radius: var(--radius-pill); background: var(--color-stamp-in-force-bg); color: var(--color-ink-in-force); font-size: 12px; font-weight: 600; }
@@ -33,5 +37,6 @@
 @media (max-width: 767px) {
   .account-page { padding: 24px 16px 48px; }
   .account-heading, .account-card-head, .account-danger, .account-row { align-items: stretch; flex-direction: column; }
+  .account-security-head { align-items: stretch; flex-direction: column; }
   .account-row .btn, .account-danger .btn, .account-heading .btn, .account-card-head .btn, .account-report .btn { width: 100%; }
 }

@@ -128,7 +128,7 @@ for (const purpose of ['registration', 'reset', 'add_password']) {
     await expect(page).toHaveURL(/\/link$/)
     await page.getByLabel('New password', { exact: true }).fill('synthetic long password')
     await page.getByRole('button', { name: 'Save password' }).click()
-    if (purpose === 'reset') await expect(page.getByRole('status').filter({ hasText: 'Password saved' })).toBeVisible()
+    if (purpose === 'reset') { await expect(page).toHaveURL(/\/login$/); await expect(page.getByRole('status').filter({ hasText: 'Password saved' })).toBeVisible() }
     else await expect(page).toHaveURL(/\/account$/)
   })
 }

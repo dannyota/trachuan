@@ -16,9 +16,10 @@ export function useAccountLink(token: string) {
   const failure = ref<{ code?: string, status?: number } | null>(null)
   const signInRequired = ref(false)
   const error = computed(() => signInRequired.value ? labels.value.linkSignIn : failure.value ? authError(language.value, failure.value.code, failure.value.status) : '')
-  const signInHref = computed(() => signInRequired.value ? loginUrl('/account') : '/login')
+  const signInHref = computed(() => signInRequired.value ? loginUrl('/account') : link.value?.purpose === 'add_password' ? '/account' : '/login')
   const busy = ref(false)
   const saved = ref(false)
+  const savedFlag = useState<boolean>('password-saved', () => false)
   let action: Action | null = null
   function clear() { token = ''; password.value = ''; link.value = null; action = null }
   function requireSignIn() { clear(); signInRequired.value = true; failure.value = null }
@@ -66,7 +67,7 @@ export function useAccountLink(token: string) {
         return
       }
       clear()
-      if (purpose === 'reset') { saved.value = true; api.session.account = null; api.session.csrfToken = null; api.session.status = 'signed-out' }
+      if (purpose === 'reset') { saved.value = true; api.session.account = null; api.session.csrfToken = null; api.session.status = 'signed-out'; savedFlag.value = true; await navigateTo('/login') }
       else window.location.assign('/account')
     } catch { if (!signal.aborted) fail() }
     finally { busy.value = false }

@@ -6,6 +6,7 @@ button { cursor: pointer; }
 :focus-visible { outline: 3px solid var(--color-primary); outline-offset: 2px; }
 code, pre, kbd, samp { font-family: var(--font-mono); font-variant-ligatures: none; }
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 16px; border: 1px solid transparent; border-radius: var(--radius-md); font-weight: 600; text-decoration: none; }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
 .btn-primary { background: var(--color-primary-fill); color: #fff; }
 .btn-secondary { background: var(--color-card); border-color: var(--color-line-strong); color: var(--color-ink); }
 .btn-danger { background: var(--color-danger-bg); border-color: var(--color-danger-line); color: var(--color-danger); }

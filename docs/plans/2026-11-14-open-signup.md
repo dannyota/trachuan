@@ -63,7 +63,7 @@
   - Done 2026-11-14 on v0.1.5, rechecked 2026-11-15 on v0.1.8, with three throwaway plus-address accounts under the allowlist (deleted afterwards) and one address kept off the allowlist: sign-up, mail link, set password, sign-in and sign-out, change password, reset (every session and personal token revoked, no session issued), uniform 202 answers and comparable sign-in latency for allowlisted, non-allowlisted and registered addresses, account-exists mail, mail in Vietnamese then English with tokens only in the `/link#` fragment, per-email password limit, MCP connect with a password account (DCR, consent, PKCE, token, tools/list, revoke).
   - Fixed from the run (#251, live in v0.1.8): signed-out consent redirected to Google instead of `/login?next=`; the per-email limit counted successful attempts (now failed attempts only, #249); `/link` title, username field and reset heading.
   - TOTP enabled in production 2026-11-15 (v0.1.12, after the release floor) and accepted on the host with a throwaway account (deleted afterwards): setup with QR and key, confirm with recovery codes, sign-in with a TOTP code and with a recovery code (single use), removal, enrolled and removed notices without links. `/login/factor` title fixed from the run.
-- [ ] B5 owner step: add a password to the owner's Google account.
+- [x] B5 owner step: add a password to the owner's Google account (2026-11-15).
 
 ## Part C: open sign-up
 

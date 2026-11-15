@@ -16,11 +16,11 @@ useHead(() => ({ title: `${publicHead(language.value, reset.value ? '/reset' : '
     <p v-if="error" class="notice" role="alert">{{ error }}</p>
     <p v-if="saved" role="status">{{ labels.saved }}</p>
     <form v-if="link" class="auth-form" @submit.prevent="save()">
-      <input :value="link.email" class="sr-only" type="text" name="username" autocomplete="username" :aria-label="labels.email" tabindex="-1" readonly>
-      <p>{{ link.email }}</p><p id="password-help">{{ labels.passwordHelp }}</p>
-      <label>{{ labels.newPassword }}<input v-model="password" class="input" type="password" autocomplete="new-password" aria-describedby="password-help" required></label>
-      <button class="btn btn-primary" :disabled="busy">{{ labels.savePassword }}</button>
+      <label for="username">{{ labels.email }}<input id="username" :value="link.email" class="input" type="email" name="username" autocomplete="username" readonly></label>
+      <p id="password-help">{{ labels.passwordHelp }}</p>
+      <label for="new-password">{{ labels.newPassword }}<input id="new-password" v-model="password" class="input" type="password" name="new-password" autocomplete="new-password" minlength="15" passwordrules="minlength: 15; maxlength: 128;" aria-describedby="password-help" required></label>
+      <button class="btn btn-primary" type="submit" :disabled="busy">{{ labels.savePassword }}</button>
     </form>
-    <NuxtLink :to="signInHref">{{ labels.signIn }}</NuxtLink>
+    <NuxtLink :to="signInHref">{{ link?.purpose === 'add_password' ? labels.backToAccount : labels.signIn }}</NuxtLink>
   </section></div>
 </template>

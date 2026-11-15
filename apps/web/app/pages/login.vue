@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { loginError, type Language } from '../../i18n'
 import { pagesMessages } from '../../i18n/pages'
 import { authError, authMessages } from '../../i18n/auth'
 import { safeNext } from '../api/next'
 
 const language = useState<Language>('language', () => 'vi')
+const savedFlag = useState<boolean>('password-saved', () => false)
+const saved = ref(false)
+onMounted(() => { saved.value = savedFlag.value; savedFlag.value = false })
 const labels = computed(() => authMessages(language.value))
 const pages = computed(() => pagesMessages(language.value))
 const route = useRoute()
@@ -34,6 +37,7 @@ async function signIn() {
 <template>
   <div class="container login-page"><div class="card login-card">
     <SealLogo /><h1>{{ pages.loginTitle }}</h1><p>{{ pages.loginIntro }}</p>
+    <p v-if="saved" role="status">{{ labels.saved }}</p>
     <p v-if="urlError" class="notice notice--warn" role="status">{{ urlError }}</p>
     <a class="btn google-button" :href="google"><img src="/google-g.png" alt="" width="20" height="20">{{ labels.google }}</a>
     <form class="auth-form" @submit.prevent="signIn">
