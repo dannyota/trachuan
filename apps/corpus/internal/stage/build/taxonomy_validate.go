@@ -12,10 +12,12 @@ func validateTaxonomy(ctx context.Context, db *pgx.Conn, record BuildRecord) err
 		return fmt.Errorf("missing taxonomy stats: %w", errInvalidDatabase)
 	}
 	var actual TaxonomyStats
-	err := db.QueryRow(ctx, `SELECT (SELECT count(*) FROM taxonomy_node), (SELECT count(*) FROM taxonomy_node WHERE status='active' AND provision_count>0), (SELECT count(*) FROM taxonomy_assignment WHERE method='phapdien_seed'), (SELECT count(*) FROM taxonomy_assignment WHERE method='manual' AND NOT exclude), (SELECT count(*) FROM taxonomy_assignment WHERE exclude), (SELECT count(*) FROM coverage_gap WHERE stage='build' AND kind='seed_article_missing'), (SELECT count(*) FROM coverage_gap WHERE stage='build' AND kind='override_target_missing')`).Scan(&actual.Nodes, &actual.Served, &actual.Seeds, &actual.Overrides, &actual.Excluded, &actual.MissingArticles, &actual.MissingOverrideTargets)
+	err := db.QueryRow(ctx, `SELECT (SELECT count(*) FROM taxonomy_node), (SELECT count(*) FROM taxonomy_node WHERE status='active' AND provision_count>0), (SELECT count(*) FROM taxonomy_assignment WHERE method='phapdien_seed'), (SELECT count(DISTINCT provision_id) FROM taxonomy_assignment WHERE method='inherited'), (SELECT count(*) FROM taxonomy_assignment WHERE method='manual' AND NOT exclude), (SELECT count(*) FROM taxonomy_assignment WHERE exclude), (SELECT count(*) FROM coverage_gap WHERE stage='build' AND kind='seed_article_missing'), (SELECT count(*) FROM coverage_gap WHERE stage='build' AND kind='override_target_missing')`).Scan(&actual.Nodes, &actual.Served, &actual.Seeds, &actual.Inherited, &actual.Overrides, &actual.Excluded, &actual.MissingArticles, &actual.MissingOverrideTargets)
 	if err != nil {
 		return fmt.Errorf("read taxonomy stats: %w", err)
 	}
+	actual.UnmatchedConsolidated = record.Taxonomy.UnmatchedConsolidated
+	actual.Inheritance = record.Taxonomy.Inheritance
 	if actual != *record.Taxonomy {
 		return fmt.Errorf("taxonomy stats mismatch: %w", errInvalidDatabase)
 	}

@@ -188,8 +188,11 @@ like the seeded set; the slice gates only against that frozen set. The
 custom-node slice does not apply while `custom.yaml` is empty. The inheritance
 slice masks every seeded article of a consolidated document that has a
 corresponding source article and compares the nodes it would inherit with its
-seeds; with fewer than 100 such articles the slice is unavailable and
-`inherited` assignments are not served.
+seeds; with fewer than 100 such articles the slice is unavailable. Build
+measures this slice from seeds alone, before it writes assignments: when the
+slice is unavailable or any inheritance row fails, build writes no `inherited`
+assignment and records why in the taxonomy stats, so the release serves seeds
+and overrides only; `corpus eval` reports the same rows.
 
 The report also lists assignment counts per node, unassigned counts, and the
 diff of node changes against the previous release. A failed floor blocks

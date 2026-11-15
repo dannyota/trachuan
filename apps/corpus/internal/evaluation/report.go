@@ -193,6 +193,7 @@ type Report struct {
 	Cohorts                       map[string]Cohort             `json:"cohorts"`
 	Targets                       []Target                      `json:"targets"`
 	NonRegression                 []NonRegression               `json:"non_regression"`
+	Inheritance                   any                           `json:"inheritance,omitempty"`
 	FilterGate                    FilterGate                    `json:"filter_gate"`
 	Floors                        []Floor                       `json:"floors"`
 	Rejections                    []Rejection                   `json:"rejections"`
