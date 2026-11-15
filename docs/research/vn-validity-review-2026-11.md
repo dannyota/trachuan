@@ -54,3 +54,19 @@ một phần") have no `provision_validity` row, as the table is empty by design
 274 have no incoming `repeals` relation, and 80 have no incoming `repeals`,
 `replaces`, `amends_supplements` or `suspends` relation at all. Both counts feed
 the bulk review batch.
+
+## MRR@8 losses on `vn/20261115_2`
+
+Against `vn/20261114_5`, recall@20 rose from 0.925 to 0.957 and old-product
+MRR@8 fell from 0.7247 to 0.7226 (exact) and 0.7241 to 0.7226 (ANN). Four
+old-product cases lost their first correct rank. Three of the four causes are
+validity doing its job, which is a better picture than a text regression:
+
+| Case                               | Rank   | Cause                                                                                                                                                                                         |
+| ---------------------------------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ai-law-high-risk-134-2025`        | 1 to 2 | 53/2026/TT-NHNN entered into force (`not_yet` to `in_force`); its Điều 4 sets banking-specific high-risk thresholds and ranks first. The question is about the Law, so the case is unchanged. |
+| `ai-law-scope-134-2025`            | 1 to 2 | The same circular's Điều 1 (its own scope) ranks first; the question names the Law, so the case is unchanged.                                                                                 |
+| `chu-ky-so-chuyen-dung-130-2018`   | 2 to 7 | 130/2018/NĐ-CP is expired by a reviewed correction (ended by 23/2025/NĐ-CP), so it is demoted; 23/2025/NĐ-CP Điều 14, its successor with the same title, is added as an alternate.            |
+| `new-interbank-high-value-08-2024` | 4 to 9 | 111/2026/VBHN-TT-NHNN switched to its transcription and its indicator-table rows lead the lexical arm; a text effect, tracked in the backlog.                                                 |
+
+Development case `dev-027` also moved, rank 3 to 5, without a gate.

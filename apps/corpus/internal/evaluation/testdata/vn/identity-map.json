@@ -481,8 +481,8 @@
       "citation_index": 0,
       "state": "resolved",
       "expected_number": "130/2018/nđ-cp",
-      "reason": "The stored provision identifies the expected article.",
-      "reviewed_at": "2026-11-09",
+      "reason": "130/2018/NĐ-CP Điều 7 answers the question; 130/2018/NĐ-CP is expired (ended by 23/2025/NĐ-CP Điều 46 khoản 2, reviewed correction 2026-11-15), and its successor 23/2025/NĐ-CP Điều 14 with the same title is added as an alternate.",
+      "reviewed_at": "2026-11-15",
       "evidence": [
         {
           "document_key": "vn:vbpl:134267",
@@ -491,6 +491,14 @@
           "fetch_sha256": "3d9ee443186bb55f7756577f32c04b535fa4e594cea5d239a775c758b9c8eb5e",
           "anchor": "dieu-7",
           "quoted_span": "Điều 7. Sử dụng chữ ký số và chứng thư số của cơ quan, tổ chức và người có thẩm quyền của cơ quan, tổ chức"
+        },
+        {
+          "document_key": "vn:vbpl:175484",
+          "document_number": "23/2025/ND-CP",
+          "source_url": "",
+          "fetch_sha256": "8cb62cc92e9cbda226e04488e0b83dfb2fd359dc8098e372e772663f39243a58",
+          "anchor": "dieu-14",
+          "quoted_span": "Điều 14. Sử dụng chữ ký số và chứng thư chữ ký số của cơ quan, tổ chức và người có thẩm quyền của cơ quan, tổ chức"
         }
       ],
       "alternatives": [
@@ -499,6 +507,27 @@
           "document_key": "vn:vbpl:134267",
           "document_number": "130/2018/ND-CP",
           "anchor": "dieu-7",
+          "kind": "provision"
+        },
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:175484",
+          "document_number": "23/2025/ND-CP",
+          "anchor": "dieu-14",
+          "kind": "provision"
+        },
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:175484",
+          "document_number": "23/2025/ND-CP",
+          "anchor": "dieu-14/khoan-1",
+          "kind": "provision"
+        },
+        {
+          "country": "vn",
+          "document_key": "vn:vbpl:175484",
+          "document_number": "23/2025/ND-CP",
+          "anchor": "dieu-14/khoan-2",
           "kind": "provision"
         }
       ]
