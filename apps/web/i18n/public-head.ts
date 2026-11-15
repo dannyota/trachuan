@@ -1,4 +1,5 @@
 import type { Language } from './index'
+import { authMessages } from './auth'
 
 const heads = {
   vi: {
@@ -9,6 +10,7 @@ const heads = {
     '/privacy': ['Quyền riêng tư', 'Tìm hiểu cách Tra Chuẩn xử lý và bảo vệ dữ liệu của bạn.'],
     '/terms': ['Điều khoản', 'Đọc các điều khoản sử dụng Tra Chuẩn.'],
     '/login': ['Đăng nhập', 'Đăng nhập Tra Chuẩn để tra cứu pháp luật.'],
+    '/login/factor': [authMessages('vi').factorTitle, 'Nhập mã xác minh để đăng nhập Tra Chuẩn.'],
     '/signup': ['Đăng ký', 'Đăng ký tài khoản Tra Chuẩn.'],
     '/reset': ['Đặt lại mật khẩu', 'Yêu cầu liên kết đặt lại mật khẩu Tra Chuẩn.'],
     '/link': ['Đặt mật khẩu', 'Đặt mật khẩu cho tài khoản Tra Chuẩn.'],
@@ -21,6 +23,7 @@ const heads = {
     '/privacy': ['Privacy', 'Learn how Tra Chuẩn handles and protects your data.'],
     '/terms': ['Terms', 'Read the terms for using Tra Chuẩn.'],
     '/login': ['Sign in', 'Sign in to Tra Chuẩn to search legal texts.'],
+    '/login/factor': [authMessages('en').factorTitle, 'Enter a verification code to sign in to Tra Chuẩn.'],
     '/signup': ['Sign up', 'Create a Tra Chuẩn account.'],
     '/reset': ['Reset password', 'Request a link to reset your Tra Chuẩn password.'],
     '/link': ['Set password', 'Set a password for your Tra Chuẩn account.'],
