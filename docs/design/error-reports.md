@@ -50,8 +50,11 @@ A report row keeps the corpus identity it was checked against: `release`,
 without handle), the document's `document_number` and the normalized `target`
 number (`broken_citation` and `missing_document`; empty otherwise), so triage
 and export work after the release is retired. The dedupe and group key is
-(document_key, anchor, kind, target), the same across releases because document
-keys and anchors are stable; the report keeps the release it was made against.
+(document_key, anchor, kind, target). Document keys are stable across releases;
+an anchor can disappear when a document's text source changes
+([partial trees](heading-only-trees.md#partial-trees)). A report on such an
+anchor stays valid against its recorded release, and triage resolves it against
+the current text.
 
 ## Interfaces
 

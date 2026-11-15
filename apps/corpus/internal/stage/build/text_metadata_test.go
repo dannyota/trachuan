@@ -27,6 +27,9 @@ func TestTextMetadata_SourceAndComplete(t *testing.T) {
 	if textComplete(1, "x", []InventoryGap{{Stage: "extract", ItemKey: "x", Kind: "tree_headings_partial"}}) {
 		t.Fatal("partial heading tree marked complete")
 	}
+	if textComplete(1, "x", []InventoryGap{{Stage: "extract", ItemKey: "x", Kind: "tree_text_partial"}}) {
+		t.Fatal("partial text tree marked complete")
+	}
 	if textComplete(0, "x", nil) {
 		t.Fatal("empty text marked complete")
 	}
