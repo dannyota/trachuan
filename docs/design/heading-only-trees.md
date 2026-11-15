@@ -98,10 +98,10 @@ the document (coordinator decision 2026-11-15).
 
 `tree_headings_partial` joins every list that `tree_headings_only` is on: the
 gaps that set `text_complete` false
-([text extraction](text-extraction.md#what-is-recorded)), and the gaps for which
-relations from text are not read ([relations text](relations-text.md)). Like
-`tree_headings_only` it is a coverage gap that release acceptance reports and
-that the owner may accept.
+([text extraction](text-extraction.md#what-is-recorded)), and the gaps that
+[relations text](relations-text.md) names, which owns how relations are read
+from such documents. Like `tree_headings_only` it is a coverage gap that release
+acceptance reports and that the owner may accept.
 
 Manual corrections are not an extract input: they stay pinned at build planning
 ([validity corrections](validity-status.md)). A switch can still invalidate the
@@ -138,7 +138,8 @@ survives verbatim.
   before the release is accepted.
 - Relations from text: switched documents' articles that were heading-only now
   hold text, so more relations can be read; kept documents with
-  `tree_headings_partial` stop yielding text relations.
+  `tree_headings_partial` yield text relations only from their articles that
+  have text ([relations text](relations-text.md)).
 
 ## Checks
 
@@ -157,9 +158,10 @@ The primary runs these; they are requirements, not results.
   tree with `tree_headings_only` and uses no later source. A tree that passes
   today's whole-tree test still falls to `pdf_text` or checked OCR as today. A
   frozen selection replays the same choice.
-- `tree_headings_partial` sets `text_complete` false in build, suppresses text
-  relations in relate, appears in coverage and status, and blocks release until
-  accepted.
+- `tree_headings_partial` sets `text_complete` false in build, limits text
+  relations to the articles that have text
+  ([relations text](relations-text.md)), appears in coverage and status, and
+  blocks release until accepted.
 - The live run reports switched and kept documents by rule, characters gained,
   changed structure anchors and node ids, identity-map entries re-adjudicated,
   and the corpus-wide validity diff, and is gated by

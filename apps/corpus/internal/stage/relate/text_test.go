@@ -74,13 +74,43 @@ func TestTextRelations_Emission(t *testing.T) {
 }
 
 func TestTextRelations_SourceQualityGate(t *testing.T) {
-	for _, name := range []string{"tree_headings_only", "tree_headings_partial", "tree_text_partial", "structure_uncertain", "table_text", "image_content", "ocr_flagged", "ocr_rejected", "ocr_label_flagged", "needs_ocr"} {
+	for _, name := range []string{"tree_text_partial", "structure_uncertain", "table_text", "image_content", "ocr_flagged", "ocr_rejected", "ocr_label_flagged", "needs_ocr"} {
 		t.Run(name, func(t *testing.T) {
 			dir := t.TempDir()
 			writeTextFixture(t, dir, "report.json", []stage.Gap{{Kind: name}})
 			rows, report, err := textRelations(dir, nil, nil)
 			if err != nil || len(rows) != 0 || report.Gaps["relation_text_source_incomplete"] != 1 || len(report.GapDetails) != 1 || report.GapDetails[0].Detail != name {
 				t.Fatalf("rows=%v report=%+v err=%v", rows, report, err)
+			}
+		})
+	}
+}
+
+func TestTextRelations_HeadingGaps(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		gaps []stage.Gap
+		want int
+	}{
+		{"partial", []stage.Gap{{Kind: "tree_headings_partial"}}, 1},
+		{"only", []stage.Gap{{Kind: "tree_headings_only"}}, 1},
+		{"mixed", []stage.Gap{{Kind: "tree_headings_partial"}, {Kind: "ocr_flagged"}}, 0},
+		{"uncertain", []stage.Gap{{Kind: "structure_uncertain"}}, 0},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := t.TempDir()
+			writeTextFixture(t, dir, "report.json", tc.gaps)
+			writeTextFixture(t, dir, "provisions.json", []chunk.Node{
+				{NodeID: "article", Kind: "dieu", Text: "Bãi bỏ Điều 25 của Thông tư số 09/2020/TT-NHNN."},
+				{NodeID: "empty", Kind: "dieu", Text: " "},
+			})
+			links := []relation{{TargetVBPLID: "42", TargetNumber: "09/2020/TT-NHNN"}}
+			rows, report, err := textRelations(dir, links, map[string]string{"NHNN": "NHNN"})
+			if err != nil || len(rows) != 1+tc.want || report.Gaps["relation_text_source_incomplete"] != 1-tc.want {
+				t.Fatalf("rows=%+v report=%+v err=%v", rows, report, err)
+			}
+			if tc.want == 1 && (rows[1].TargetAnchor != "dieu-25" || rows[1].Kind != "repeals" || rows[1].SourceNodeID == nil || *rows[1].SourceNodeID != "article") {
+				t.Fatalf("row=%+v", rows[1])
 			}
 		})
 	}
@@ -198,7 +228,7 @@ func TestTextRelations_DeterministicOrder(t *testing.T) {
 }
 
 func TestRelationReport_RunGapDetailIsBoundedAndUnique(t *testing.T) {
-	long := strings.Repeat("Điều khoản sửa đổi ", 600) // over 10,000 characters
+	long := strings.Repeat("Điều khoản sửa đổi ", 600)
 	report := relationReport{Text: newTextReport()}
 	report.Text.addGap("relation_text_grammar", long, "dieu-1")
 	report.Text.addGap("relation_text_grammar", long, "dieu-1")
@@ -221,7 +251,7 @@ func TestRelationReport_RunGapDetailIsBoundedAndUnique(t *testing.T) {
 
 func TestGapDetail_BoundsLongIDsAndFourByteRunes(t *testing.T) {
 	node := strings.Repeat("n", 2000)
-	text := strings.Repeat("\U0001F600", 5000) // four-byte runes
+	text := strings.Repeat("\U0001F600", 5000)
 	got := runGapDetail(7, textGap{Detail: text, SourceNodeID: node})
 	if len(got) > 1024 || !utf8.ValidString(got) || !strings.HasPrefix(got, "7:nnn") {
 		t.Fatalf("bytes=%d valid=%v", len(got), utf8.ValidString(got))

@@ -9,6 +9,7 @@ import (
 
 	"danny.vn/trachuan/apps/corpus/internal/stage"
 	"danny.vn/trachuan/apps/corpus/internal/stage/chunk"
+	"danny.vn/trachuan/apps/corpus/internal/stage/heading"
 	"danny.vn/trachuan/apps/corpus/internal/stage/relate/textrule"
 	"danny.vn/trachuan/apps/corpus/internal/store"
 	"danny.vn/trachuan/internal/retrieval"
@@ -62,13 +63,17 @@ func textRelations(dir string, rows []relation, issuers map[string]string) ([]re
 		return nil, nil, err
 	}
 	incomplete := map[string]bool{}
+	blocked := false
 	for _, gap := range gaps {
 		switch gap.Kind {
 		case "tree_headings_only", "tree_headings_partial", "tree_text_partial", "structure_uncertain", "table_text", "image_content", "ocr_flagged", "ocr_rejected", "ocr_label_flagged", "needs_ocr":
 			incomplete[gap.Kind] = true
+			if gap.Kind != "tree_headings_only" && gap.Kind != "tree_headings_partial" {
+				blocked = true
+			}
 		}
 	}
-	if len(incomplete) > 0 {
+	if blocked {
 		names := make([]string, 0, len(incomplete))
 		for name := range incomplete {
 			names = append(names, name)
@@ -98,7 +103,8 @@ func textRelations(dir string, rows []relation, issuers map[string]string) ([]re
 	seen := map[identity]bool{}
 	emitted := []relation{}
 	for _, article := range provisions {
-		if article.Kind != "dieu" || strings.TrimSpace(article.Text) == "" {
+		if article.Kind != "dieu" || strings.TrimSpace(article.Text) == "" ||
+			(len(incomplete) > 0 && heading.ArticleOnly(article.Kind, article.Label, article.Heading, article.Text, len(children[article.NodeID]) > 0)) {
 			continue
 		}
 		units, ordered := articleReading(article, children)

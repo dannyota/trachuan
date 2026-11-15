@@ -24,6 +24,7 @@ func TestRelate_ProcessTextArtifact(t *testing.T) {
 	}{
 		{name: "text and diagram", want: 2},
 		{name: "incomplete", gap: "table_text", want: 1},
+		{name: "partial headings", gap: "tree_headings_partial", want: 2},
 		{name: "diagram without extract", noExtract: true, want: 1},
 		{name: "consolidated", consolidated: true, want: 1},
 	} {
@@ -128,7 +129,7 @@ func TestRelate_ProcessTextArtifact(t *testing.T) {
 					}
 				}
 			}
-			if found != (tc.gap != "") {
+			if found != (tc.gap != "" && tc.gap != "tree_headings_partial") {
 				t.Fatalf("gaps=%+v", resolution.Gaps)
 			}
 		})

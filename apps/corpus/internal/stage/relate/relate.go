@@ -29,7 +29,7 @@ func (*Stage) Name() string { return "relate" }
 
 func (*Stage) Recipe(snapshot stage.Snapshot) string {
 	list, _ := source.Parse(snapshot.SourceList)
-	return stage.RecipeHash("relate", "vbpl-relations/1", "chinhphu-empty/1", list.RelationCodesHash(), "text_rules:vn-targets/4", list.CentralIssuersHash())
+	return stage.RecipeHash("relate", "vbpl-relations/1", "chinhphu-empty/1", list.RelationCodesHash(), "text_rules:vn-targets/5", list.CentralIssuersHash())
 }
 
 func PairInputHash(fetch, extract string) string {
