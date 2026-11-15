@@ -123,7 +123,10 @@ this release. Floors are set from the first measured run and recorded here;
 compliary measured recall@8 of 86.3% without a framework filter and 93.2% with
 one. Evaluation runs with full access. A second suite runs the
 [invariant](frameworks-access.md#the-invariant) with reduced and mixed access
-sets; a release that fails it is not signed.
+sets; a release that fails it is not signed. Serving parameters are set from
+free versions' text and the public fields of licensed versions only; full-access
+evaluation measures and gates them but does not set them
+([parameters](frameworks-results.md#search)).
 
 ## Release and deployment
 

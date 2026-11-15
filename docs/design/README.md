@@ -40,7 +40,7 @@ Intended behavior of trachuan. Decisions with alternatives are in the
 | [accounts](accounts.md)                              | Email and password accounts, TOTP, recovery codes, key ring                                    |
 | [control frameworks](frameworks.md)                  | Framework corpus kind: sources, data model, pipeline, serving, release, downstream products    |
 | [control frameworks: access](frameworks-access.md)   | Access classes, entitlements, reduced record, the invariant, places for licensed material      |
-| [control frameworks: results](frameworks-results.md) | Draft: handles, inputs, search, read, mappings, diagnostics and web routes for frameworks      |
+| [control frameworks: results](frameworks-results.md) | Handles, inputs, search, read, mappings, diagnostics and web routes for frameworks             |
 | [account mail](account-mail.md)                      | Mail outbox: classes, sender, content                                                          |
 | [web API](web-api.md)                                | Google login flow, web sessions, CSRF, `/api/v1` routes, OpenAPI contract                      |
 | [OAuth](oauth.md)                                    | MCP authorization server: clients, consent, codes, tokens, aboutme import gaps                 |

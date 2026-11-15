@@ -1,8 +1,5 @@
 # Control frameworks: results
 
-Status: draft for the coordinator's decision. No serving code before it is
-accepted.
-
 This note owns the field-level contract of framework results on `/mcp` and
 `/api/v1/frameworks`. The decisions are in
 [ADR 0016](../adr/0016-control-frameworks-corpus.md); the fixed serving rules
@@ -90,13 +87,35 @@ Top level: `release`, `abstain`, `reason`, `message`, `frameworks`, `hits`,
 as version handles.
 
 **Ranking.** The frameworks retrieval recipe has the law recipe's structure
-([retrieval recipe](retrieval-recipe.md)): an exact dense scan and a lexical
-arm, fused by reciprocal rank, scored per control, with an abstention threshold.
-For a readable version both arms run over the body index; otherwise over the
-public-field index (citation, our title, kind), whose lexical statistics are its
-own. Hits from all versions are merged by fused score; ties break by framework
+([retrieval recipe](retrieval-recipe.md)): two arms, one reciprocal-rank fusion
+and an abstention threshold. The candidates are the controls of the versions the
+filters allow, taken from the body index of a version the caller can read and
+from the public-field index (citation, our title, kind) of every other version.
+Each arm produces **one** rank list across versions, cut at the recipe's arm
+depth:
+
+- **Dense**: cosine between the query vector and the candidate's vectors, by
+  exact scan; a control's score is its best chunk (body chunks for readable
+  versions, its public-field vector otherwise).
+- **Lexical**: only controls with a lexical match. A readable control scores its
+  best body chunk's BM25, computed with that version's chunk statistics; a
+  reduced control scores its public record with the public-field index's
+  statistics. All matches are ordered by that score in one list.
+
+Reciprocal-rank fusion runs once over the two lists, so no version gets a place
+by being best within itself. `score` is the fused score; ties break by framework
 code, then version order (newest first), then control order, so the order is
-total. `score` is the fused score; abstention looks only at these fused scores.
+total. As in the law recipe, abstention compares the top fused hit's best
+permitted cosine with the threshold, not the fused score, so a filter that
+leaves one control still abstains on an unrelated query.
+
+BM25 scores from different statistics are not on exactly one scale; the
+evaluation measures the effect on the golden cases, and only a measured recipe
+change alters the lexical arm. For the invariant the scale does not matter: an
+unreadable version contributes only public-field candidates scored with
+public-field statistics and public-field vectors, and the body statistics in
+play belong only to versions the caller can read, so no unreadable body can move
+any rank, score or abstention.
 
 **Parameters.** Every serving parameter (fusion constant, arm depths, abstention
 threshold) is set from free versions' text and the public fields of licensed
