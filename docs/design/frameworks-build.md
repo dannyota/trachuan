@@ -29,6 +29,14 @@ its hash in the snapshot manifest), the golden cases and the gap kind table. No
 later step, and no resume, reads anything outside the snapshot, so a registry or
 title change during a run cannot reach it.
 
+The versions in a release are the registry versions that name a parser. Our
+titles are one CSV, `FRAMEWORKS_SOURCE_DIR/trachuan/titles.csv` (`code`,
+`version`, `citation`, `title`), outside Git like the waivers. A control of a
+`free` version without a row takes the publisher's title as ours, since that
+text is public. A control of a `licensed` version without a row has no title
+and records a `title_missing` gap; its public-field record then carries
+citation and kind only.
+
 **Parse** runs each version's parser ([frameworks](frameworks.md#pipeline)).
 Parse errors, a control-count mismatch, an invalid or duplicate citation and an
 invalid lineage fail the step; they are not gaps.
