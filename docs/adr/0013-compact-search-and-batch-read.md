@@ -99,3 +99,6 @@ they never state an inverse legal effect.
 - 2026-11-14: the agent-in-the-loop check uses two Claude models (Sonnet and
   Opus) instead of one Claude and one OpenAI model, by owner decision, each case
   once per mode per model.
+- 2026-11-15: the agent check was piloted on 9 Sonnet tasks ($6.29); trimmed
+  compact showed no clear token advantage over compact and the full runs would
+  cost about $195, so the check is stopped and trimmed compact is not shipped.
