@@ -13,6 +13,12 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+var (
+	codePattern    = regexp.MustCompile(`^[a-z][a-z0-9]*(-[a-z0-9]+)*$`)
+	versionPattern = regexp.MustCompile(`^[0-9a-z]+([.+-][0-9a-z]+)*$`)
+	hashPattern    = regexp.MustCompile(`^[0-9a-f]{64}$`)
+)
+
 type Registry struct {
 	Frameworks []Framework `yaml:"frameworks"`
 }
@@ -39,6 +45,7 @@ type File struct {
 	Size   int64  `yaml:"size"`
 	Role   string `yaml:"role"`
 	Format string `yaml:"format"`
+	Parser string `yaml:"parser"`
 }
 
 func Parse(r io.Reader) (*Registry, error) {
@@ -75,9 +82,6 @@ func Parse(r io.Reader) (*Registry, error) {
 func normalized(s string) string { return cases.Fold().String(strings.Join(strings.Fields(s), " ")) }
 
 func (r *Registry) Validate() error {
-	codePattern := regexp.MustCompile(`^[a-z][a-z0-9]*(-[a-z0-9]+)*$`)
-	versionPattern := regexp.MustCompile(`^[0-9a-z]+([.+-][0-9a-z]+)*$`)
-	hashPattern := regexp.MustCompile(`^[0-9a-f]{64}$`)
 	versions := map[string]bool{}
 	paths := map[string]bool{}
 	hashes := map[string]bool{}
@@ -146,6 +150,15 @@ func (r *Registry) Validate() error {
 			case "text", "catalog", "mapping workbook", "guide", "change log":
 			default:
 				return fmt.Errorf("invalid role %q", file.Role)
+			}
+			if file.Role == "mapping workbook" {
+				switch file.Parser {
+				case "nist-olir", "cis-iso27001", "cis-nistcsf", "cis-nist80053":
+				default:
+					return fmt.Errorf("invalid mapping parser")
+				}
+			} else if file.Parser != "" {
+				return fmt.Errorf("parser on non-mapping file")
 			}
 			paths[file.Path] = true
 			hashes[file.SHA256] = true

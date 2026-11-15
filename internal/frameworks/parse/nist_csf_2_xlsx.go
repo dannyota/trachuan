@@ -6,14 +6,20 @@ import (
 	"strings"
 )
 
+var (
+	csfFunctionPattern     = regexp.MustCompile(`^[A-Z]+\s+\(([A-Z]{2})\)(?::\s*(.*))?$`)
+	csfCategoryPattern     = regexp.MustCompile(`^(.+?)\s+\(([A-Z]{2}\.[A-Z]{2,})\):\s*(.+)$`)
+	csfSubcategoryPattern  = regexp.MustCompile(`^([A-Z]{2}\.[A-Z]{2,}-[0-9]+):\s*(.+)$`)
+	csfWithdrawalPattern   = regexp.MustCompile(`^[A-Z]{2}(?:\.[A-Z]{2,}(?:-[0-9]+)?)?$`)
+	csfVersionPattern      = regexp.MustCompile(`^[0-9]{4}$`)
+	csfISOReferencePattern = regexp.MustCompile(`^[0-9]+(?:\.[0-9]+)*$`)
+)
+
 func parseCSF(data []byte, code, version string) ([]Node, error) {
 	rows, err := rows(data, "CSF 2.0", false)
 	if err != nil {
 		return nil, err
 	}
-	function := regexp.MustCompile(`^[A-Z]+\s+\(([A-Z]{2})\)(?::\s*(.*))?$`)
-	category := regexp.MustCompile(`^(.+?)\s+\(([A-Z]{2}\.[A-Z]{2,})\):\s*(.+)$`)
-	subcategory := regexp.MustCompile(`^([A-Z]{2}\.[A-Z]{2,}-[0-9]+):\s*(.+)$`)
 	var nodes []Node
 	indexes := map[string]int{}
 	currentFunction := -1
@@ -23,7 +29,7 @@ func parseCSF(data []byte, code, version string) ([]Node, error) {
 		parent := -1
 		switch {
 		case a != "":
-			m := function.FindStringSubmatch(a)
+			m := csfFunctionPattern.FindStringSubmatch(a)
 			if m == nil {
 				return nodes, fmt.Errorf("invalid function row")
 			}
@@ -39,7 +45,7 @@ func parseCSF(data []byte, code, version string) ([]Node, error) {
 				continue
 			}
 		case b != "":
-			m := category.FindStringSubmatch(b)
+			m := csfCategoryPattern.FindStringSubmatch(b)
 			if m == nil {
 				return nodes, fmt.Errorf("invalid category row")
 			}
@@ -57,7 +63,7 @@ func parseCSF(data []byte, code, version string) ([]Node, error) {
 				return nodes, fmt.Errorf("missing category parent")
 			}
 		case c != "":
-			m := subcategory.FindStringSubmatch(c)
+			m := csfSubcategoryPattern.FindStringSubmatch(c)
 			if m == nil {
 				return nodes, fmt.Errorf("invalid subcategory row")
 			}
@@ -93,7 +99,7 @@ func parseCSF(data []byte, code, version string) ([]Node, error) {
 				if strings.HasPrefix(note, action.prefix) {
 					for _, target := range strings.Split(strings.TrimPrefix(note, action.prefix), ",") {
 						target = strings.TrimSpace(target)
-						if regexp.MustCompile(`^[A-Z]{2}(?:\.[A-Z]{2,}(?:-[0-9]+)?)?$`).MatchString(target) {
+						if csfWithdrawalPattern.MatchString(target) {
 							n.Mappings = append(n.Mappings, Mapping{TargetFramework: code, TargetVersion: version, TargetCitation: target, Relation: action.relation})
 						} else {
 							n.DroppedMappings++
@@ -149,7 +155,7 @@ func reference(target, citation string) Mapping {
 	}
 	m.TargetCitation = ""
 	version, rest, ok := strings.Cut(citation, ":")
-	if !ok || !regexp.MustCompile(`^[0-9]{4}$`).MatchString(strings.TrimSpace(version)) {
+	if !ok || !csfVersionPattern.MatchString(strings.TrimSpace(version)) {
 		return m
 	}
 	m.TargetVersion = strings.TrimSpace(version)
@@ -168,7 +174,7 @@ func reference(target, citation string) Mapping {
 		return m
 	}
 	citation = strings.TrimSpace(strings.TrimSuffix(citation, ","))
-	if !regexp.MustCompile(`^[0-9]+(?:\.[0-9]+)*$`).MatchString(citation) {
+	if !csfISOReferencePattern.MatchString(citation) {
 		return m
 	}
 	if annex {

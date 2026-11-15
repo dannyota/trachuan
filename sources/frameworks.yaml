@@ -323,6 +323,7 @@ frameworks:
   ordinal: 1
   citation_scheme: csf-workbook
   aliases:
+  - CSF
   - NIST CSF
   - NIST Cybersecurity Framework
   files: []
@@ -339,6 +340,7 @@ frameworks:
   ordinal: 2
   citation_scheme: csf-workbook
   aliases:
+  - CSF
   - NIST CSF
   - NIST Cybersecurity Framework
   files:
@@ -366,6 +368,7 @@ frameworks:
   ordinal: 1
   citation_scheme: oscal-catalog
   aliases:
+  - SP 800-53
   - NIST SP 800-53
   - NIST 800-53
   files: []
@@ -382,6 +385,7 @@ frameworks:
   ordinal: 2
   citation_scheme: oscal-catalog
   aliases:
+  - SP 800-53
   - NIST SP 800-53
   - NIST 800-53
   files:
@@ -400,6 +404,7 @@ frameworks:
     size: 155745
     role: mapping workbook
     format: xlsx
+    parser: nist-olir
   parser: nist-oscal-800-53
   expected_controls: 1216
 - code: ciscontrols
@@ -448,16 +453,19 @@ frameworks:
     size: 636602
     role: mapping workbook
     format: xlsx
+    parser: cis-iso27001
   - path: cis/cis-controls-v8.1-mapping-to-nist-csf-2.0.xlsx
     sha256: 2fbf724c1ab1a26c1dd49402ebea3bf97940791c63d2df4105aad9be34b6ab2f
     size: 691012
     role: mapping workbook
     format: xlsx
+    parser: cis-nistcsf
   - path: cis/cis-controls-v8.1-mapping-to-nist-sp-800-53-r5.xlsx
     sha256: 47e9f6be77b4569b49108c333d35848212572c858a13fb928186696005351259
     size: 712690
     role: mapping workbook
     format: xlsx
+    parser: cis-nist80053
   - path: cis/cis-controls-guide-v8.1.2-0325-v2.pdf
     sha256: e21b6d20098f3b0ed6391f95ac8f60fb7958a4b74389f96b456b37cd6ac878e4
     size: 1422769
@@ -477,6 +485,7 @@ frameworks:
   ordinal: 1
   citation_scheme: ccm-workbook
   aliases:
+  - CCM
   - CSA CCM
   - CSA Cloud Controls Matrix
   files: []
@@ -493,6 +502,7 @@ frameworks:
   ordinal: 2
   citation_scheme: ccm-workbook
   aliases:
+  - CCM
   - CSA CCM
   - CSA Cloud Controls Matrix
   files:

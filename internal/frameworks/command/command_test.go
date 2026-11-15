@@ -41,6 +41,17 @@ func TestRun_SyntheticSourceOutput(t *testing.T) {
 	if err := Run([]string{"alpha", "1.0"}, &out); err != nil {
 		t.Fatal(err)
 	}
+	out.Reset()
+	if err := Run([]string{"edges"}, &out); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out.String(), "resolved: 0") || strings.Contains(out.String(), "private-citation") || strings.Contains(out.String(), "invented-private-title") {
+		t.Fatal("edge statistics leaked text or omitted counts")
+	}
+	out.Reset()
+	if err := Run([]string{"alpha", "1.0"}, &out); err != nil {
+		t.Fatal(err)
+	}
 	for _, secret := range []string{"private-citation", "invented-private-title"} {
 		if strings.Contains(strings.ToLower(out.String()), secret) {
 			t.Error("source text in output")
@@ -92,4 +103,11 @@ func TestRun_SyntheticSourceOutput(t *testing.T) {
 		}
 	}
 
+}
+
+func TestRun_UsageNamesBothForms(t *testing.T) {
+	err := Run(nil, &bytes.Buffer{})
+	if err == nil || !strings.Contains(err.Error(), "frameworks <code> <version>") || !strings.Contains(err.Error(), "frameworks edges") {
+		t.Fatal("usage omits command forms")
+	}
 }

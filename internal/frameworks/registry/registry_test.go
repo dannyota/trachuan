@@ -142,3 +142,28 @@ func TestParse_RealRegistry(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestValidate_MappingParser(t *testing.T) {
+	f, err := os.Open("../../../sources/frameworks.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = f.Close() }()
+	reg, err := Parse(f)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := range reg.Frameworks {
+		for j := range reg.Frameworks[i].Files {
+			file := &reg.Frameworks[i].Files[j]
+			if file.Role == "mapping workbook" {
+				file.Parser = ""
+				if reg.Validate() == nil {
+					t.Fatal("missing mapping parser accepted")
+				}
+				return
+			}
+		}
+	}
+	t.Fatal("no mapping workbook")
+}
