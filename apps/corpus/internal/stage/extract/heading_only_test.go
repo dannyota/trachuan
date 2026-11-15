@@ -53,10 +53,10 @@ func TestExtract_HeadingOnlyTreeWithoutTextKeepsTreeWithGap(t *testing.T) {
 	}
 }
 
-func TestExtract_PartlyBareTreeStaysSourceTree(t *testing.T) {
+func TestExtract_PartlyBareTreeSwitchesWhenTextPartial(t *testing.T) {
 	tree := `{"success":true,"data":[{"id":"a","level":"Article","title":"Điều 1. Phạm vi","content":{"content":"Điều 1. Phạm vi"}},{"id":"b","level":"Article","title":"Điều 2. Quy định","content":{"content":"Điều 2. Quy định<br>Nội dung"}}]}`
 	s, nodes, err := choose(context.Background(), headingBundle(t, tree, true), "vn:vbpl:1")
-	if err != nil || s.source != "source_tree" || s.gap != "tree_headings_partial" || len(nodes) != 2 {
+	if err != nil || s.source != "html_transcription" || s.tree == nil || s.tree.Rule != "partial_tree" || len(nodes) != 0 {
 		t.Fatalf("selection=%+v nodes=%v err=%v", s, nodes, err)
 	}
 }
@@ -75,12 +75,16 @@ func TestSelection_HeadingOnlyDefinition(t *testing.T) {
 		{"no article", `{"success":true,"data":[{"id":"a","level":"Chapter","title":"Chương I"}]}`, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			s, _, err := choose(context.Background(), headingBundle(t, tc.tree, true), "vn:vbpl:1")
+			_, nodes, err := choose(context.Background(), headingBundle(t, tc.tree, false), "vn:vbpl:1")
 			if err != nil {
 				t.Fatal(err)
 			}
-			if got := s.source == "html_transcription"; got != tc.want {
-				t.Fatalf("selection=%+v want heading-only=%v", s, tc.want)
+			rows, _, err := extractTree(context.Background(), nodes)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := headingOnly(rows); got != tc.want {
+				t.Fatalf("heading-only=%v want=%v", got, tc.want)
 			}
 		})
 	}

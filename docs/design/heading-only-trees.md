@@ -72,6 +72,30 @@ Otherwise the tree stays. Then:
   `tree_headings_partial` (detail: the count of heading-only articles and the
   first rule that failed).
 
+## Partial trees
+
+A source tree kept by the rules above, or one without heading-only articles, is
+partial when its rendered text (as chunk renders the whole tree), after
+whitespace collapse, is shorter than half of the bundle's transcription text
+(`<id>_content.html` selected and limited as text extraction selects it, after
+whitespace collapse). Coordinator decision 2026-11-15:
+
+- When the parser accepts the transcription's main scope, the document's text
+  source is `html_transcription`; `text.json` records the tree set aside, both
+  lengths and the rule `partial_tree`.
+- When the parser rejects the transcription, the tree stays with the gap
+  `tree_text_partial` (detail: both lengths), which joins every list that
+  `tree_headings_partial` is on (below).
+
+A document without a transcription has nothing to measure against and keeps its
+tree unchanged. Measured on release run 20261114_5 with `textparse/8` (the
+extract recipe moves from `textparse/7` and the relate text rules from
+`vn-targets/3` to `/4`; chunk, dense, lexical and retrieval recipes are
+unchanged): 127 documents switch, 48 of which lose 800 article, clause, point or
+structure anchors; 159 keep the tree with `tree_text_partial`; 1,777 keep it
+unchanged. Complete text outweighs anchors on a tree that holds under half of
+the document (coordinator decision 2026-11-15).
+
 `tree_headings_partial` joins every list that `tree_headings_only` is on: the
 gaps that set `text_complete` false
 ([text extraction](text-extraction.md#what-is-recorded)), and the gaps for which
@@ -98,12 +122,14 @@ survives verbatim.
   embed binds the chunk manifest hash, even where the embedded text of a kept
   document is unchanged. The extract recipe changes; this joins the run that
   carries `textparse/7`. Source-tree documents without a heading-only article
-  keep byte-identical artifacts.
-- Citations: article anchors are unchanged by rule 2 and clause anchors by
-  rule 4. Structure anchors may change (a source `chuong-i/muc-1` can become a
-  parsed `muc-1`); node ids change from source ids to `tx:` ids. The run lists
-  both, and the identity map's node check re-adjudicates entries on these
-  documents.
+  keep byte-identical artifacts unless the [partial-tree](#partial-trees) rule
+  applies.
+- Citations: for a switch under rules 1 to 5, article anchors are unchanged by
+  rule 2 and clause anchors by rule 4; a [partial-tree](#partial-trees) switch
+  may lose them. Structure anchors may change (a source `chuong-i/muc-1` can
+  become a parsed `muc-1`); node ids change from source ids to `tx:` ids. The
+  run lists both, and the identity map's node check re-adjudicates entries on
+  these documents.
 - Validity: effect articles of a switched document become review evidence, not
   rule input ([text extraction](text-extraction.md#validity-rules)). That
   withdraws its automatic effects on other documents as well. The run therefore

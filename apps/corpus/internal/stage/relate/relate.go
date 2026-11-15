@@ -1,4 +1,3 @@
-// Package relate extracts relations from VBPL fetch artifacts.
 package relate
 
 import (
@@ -22,22 +21,17 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// Stage extracts and resolves relations.
 type Stage struct{}
 
-// New constructs a relate stage.
 func New() *Stage { return &Stage{} }
 
-// Name returns the stage name.
 func (*Stage) Name() string { return "relate" }
 
-// Recipe returns the recipe hash for the frozen relation code table.
 func (*Stage) Recipe(snapshot stage.Snapshot) string {
 	list, _ := source.Parse(snapshot.SourceList)
-	return stage.RecipeHash("relate", "vbpl-relations/1", "chinhphu-empty/1", list.RelationCodesHash(), "text_rules:vn-targets/3", list.CentralIssuersHash())
+	return stage.RecipeHash("relate", "vbpl-relations/1", "chinhphu-empty/1", list.RelationCodesHash(), "text_rules:vn-targets/4", list.CentralIssuersHash())
 }
 
-// PairInputHash binds a relate item to its fetch and extract artifacts.
 func PairInputHash(fetch, extract string) string {
 	if extract == "" {
 		extract = "-"
@@ -72,7 +66,6 @@ func getExtractHash(ctx context.Context, q *store.Queries, runID int64, key stri
 	return hash, finished, nil
 }
 
-// Plan selects completed fetch artifacts for this run.
 func (*Stage) Plan(ctx context.Context, env stage.Env, run stage.Run) ([]stage.Item, error) {
 	q := store.New(env.DB)
 	active, err := membership.FinalActiveKeys(ctx, q, run)
@@ -88,7 +81,6 @@ func (*Stage) Plan(ctx context.Context, env stage.Env, run stage.Run) ([]stage.I
 		if active != nil && !active[input.ItemKey] {
 			continue
 		}
-		// The extract item state records completion, just as ListExtractInputs selects done fetch items.
 		extract, finished, getErr := getExtractHash(ctx, q, run.ID, input.ItemKey)
 		if getErr != nil {
 			return nil, getErr
@@ -100,7 +92,6 @@ func (*Stage) Plan(ctx context.Context, env stage.Env, run stage.Run) ([]stage.I
 	return items, nil
 }
 
-// Process publishes diagram and text relations from paired fetch and extract artifacts.
 func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item stage.Item) (stage.Output, error) {
 	q := store.New(env.DB)
 	input, err := q.GetExtractInput(ctx, store.GetExtractInputParams{RunID: run.ID, ItemKey: item.Key})
@@ -188,7 +179,6 @@ func readJSON(path string, value any) error {
 	return nil
 }
 
-// Rows loads relation rows from the artifact.
 func (*Stage) Rows(_ context.Context, env stage.Env, art artifact.Result) (func(context.Context, pgx.Tx, int64) error, error) {
 	var rows []relation
 	if err := readJSON(filepath.Join(env.Artifacts.Abs(art.Path), "relations.json"), &rows); err != nil {
@@ -206,7 +196,6 @@ func (*Stage) Rows(_ context.Context, env stage.Env, art artifact.Result) (func(
 	}, nil
 }
 
-// Resolve checks unmapped codes and targets against this run.
 func (*Stage) Resolve(ctx context.Context, env stage.Env, run stage.Run, _ stage.Item, art artifact.Result) (stage.Resolution, error) {
 	var rows []relation
 	if err := readJSON(filepath.Join(env.Artifacts.Abs(art.Path), "relations.json"), &rows); err != nil {

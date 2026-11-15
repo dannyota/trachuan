@@ -54,7 +54,7 @@ func planFrozenSelection(ctx context.Context, q selectionQueries, runID int64, k
 func selectionFromRow(row store.GetRunOCRSelectionRow) (selection, error) {
 	if row.Gap != "" {
 		switch row.Gap {
-		case "tree_headings_only", "tree_headings_partial":
+		case "tree_headings_only", "tree_headings_partial", "tree_text_partial":
 			return selection{source: "source_tree", gap: row.Gap, consulted: true}, nil
 		case "needs_ocr", "text_source_ambiguous", "file_format_unsupported", "no_text_source", "ocr_rejected", "ocr_label_flagged", "text_number_mismatch":
 			selected := selection{source: "none", gap: row.Gap, consulted: true}
@@ -88,7 +88,7 @@ func materializeFrozen(ctx context.Context, dir, key string, selected selection)
 		selected.reason = current.reason
 		return selected, nil, nil
 	}
-	if selected.gap == "tree_headings_only" || selected.gap == "tree_headings_partial" {
+	if selected.gap == "tree_headings_only" || selected.gap == "tree_headings_partial" || selected.gap == "tree_text_partial" {
 		fallback, nodes, err := choose(ctx, dir, key)
 		if err != nil {
 			return selection{}, nil, err

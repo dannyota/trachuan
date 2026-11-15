@@ -3,6 +3,7 @@ package extract
 import (
 	"context"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -24,6 +25,7 @@ func (absentOCR) available(string) bool { return false }
 type selection struct {
 	source, gap, name, hash string
 	reason                  string
+	extraGap, extraReason   string
 	data                    []byte
 	tooLarge, parseLimit    bool
 	consulted               bool
@@ -31,7 +33,6 @@ type selection struct {
 	tree                    *treeComparison
 }
 
-// InputHash binds the fetch manifest and the selected text source.
 func InputHash(fetchHash, source string, details ...string) string {
 	return fetch.ExtractInputHash(fetchHash, source, details...)
 }
@@ -140,13 +141,28 @@ func chooseForCheck(ctx context.Context, dir, key string, ocr ocrReader, engines
 			}
 			headingCount := sourceHeadingCount(rows, nodes)
 			if headingCount == 0 {
-				return selection{source: "source_tree"}, nodes, nil
+				data, readErr := os.ReadFile(filepath.Join(dir, "files.json"))
+				if errors.Is(readErr, os.ErrNotExist) {
+					return selection{source: "source_tree"}, nodes, nil
+				}
+				if readErr != nil {
+					return selection{}, nil, fmt.Errorf("read file list: %w", readErr)
+				}
+				var files []fetch.DocumentFile
+				if readErr = json.Unmarshal(data, &files); readErr != nil {
+					return selection{}, nil, fmt.Errorf("decode file list: %w", readErr)
+				}
+				transcription, selectErr := selectFiles(dir, parts[2], files, absentOCR{})
+				if selectErr != nil {
+					return selection{}, nil, selectErr
+				}
+				return partialTreeSelection(rows, nodes, transcription, selection{source: "source_tree"})
 			}
 			doc, readErr := fetch.ReadDocument(dir, key)
 			if readErr != nil {
 				return selection{}, nil, fmt.Errorf("read fetch document: %w", readErr)
 			}
-			if headingOnly(rows) {
+			if headingCount > 0 && headingOnly(rows) {
 				selected, selectErr := selectOCRFilesMode(ctx, dir, parts[2], doc.Files, ocr, engines, checker, unchecked)
 				if selectErr != nil {
 					return selection{}, nil, selectErr
@@ -179,7 +195,7 @@ func chooseForCheck(ctx context.Context, dir, key string, ocr ocrReader, engines
 			if comparison.Articles == comparison.HeadingOnlyArticles {
 				gap = "tree_headings_only"
 			}
-			return selection{source: "source_tree", gap: gap, reason: comparison.detail()}, nodes, nil
+			return partialTreeSelection(rows, nodes, transcription, selection{source: "source_tree", gap: gap, reason: comparison.detail()})
 		}
 	}
 	doc, err := fetch.ReadDocument(dir, key)

@@ -74,10 +74,9 @@ func TestTextRelations_Emission(t *testing.T) {
 }
 
 func TestTextRelations_SourceQualityGate(t *testing.T) {
-	for _, name := range []string{"tree_headings_only", "tree_headings_partial", "structure_uncertain", "table_text", "image_content", "ocr_flagged", "ocr_rejected", "ocr_label_flagged", "needs_ocr"} {
+	for _, name := range []string{"tree_headings_only", "tree_headings_partial", "tree_text_partial", "structure_uncertain", "table_text", "image_content", "ocr_flagged", "ocr_rejected", "ocr_label_flagged", "needs_ocr"} {
 		t.Run(name, func(t *testing.T) {
 			dir := t.TempDir()
-			// A gated source must not even read the provisions.
 			writeTextFixture(t, dir, "report.json", []stage.Gap{{Kind: name}})
 			rows, report, err := textRelations(dir, nil, nil)
 			if err != nil || len(rows) != 0 || report.Gaps["relation_text_source_incomplete"] != 1 || len(report.GapDetails) != 1 || report.GapDetails[0].Detail != name {
@@ -210,7 +209,6 @@ func TestRelationReport_RunGapDetailIsBoundedAndUnique(t *testing.T) {
 	}
 	seen := map[string]bool{}
 	for _, gap := range gaps {
-		// The workshop gap table indexes detail; a btree entry holds at most 2704 bytes.
 		if len(gap.Detail) > 1024 || !utf8.ValidString(gap.Detail) || seen[gap.Kind+gap.Detail] {
 			t.Fatalf("detail bytes=%d valid=%v duplicate=%v", len(gap.Detail), utf8.ValidString(gap.Detail), seen[gap.Kind+gap.Detail])
 		}

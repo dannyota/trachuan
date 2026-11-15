@@ -1,4 +1,3 @@
-// Package extract converts VBPL trees into provision artifacts.
 package extract
 
 import (
@@ -19,26 +18,20 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// ReleaseChecker identifies the completed OCR checks used for releases.
 const ReleaseChecker = "claude-opus-5-5/medium/ocr-check-2"
 
-// Stage extracts provisions from fetch artifacts.
 type Stage struct {
 	ocr     ocrReader
 	engines []string
 	checker string
 }
 
-// New constructs an extract stage.
 func New() *Stage { return &Stage{engines: AcceptedEngines(), checker: ReleaseChecker} }
 
-// AcceptedEngines returns the recipe's engine preference in a new slice.
 func AcceptedEngines() []string {
 	return []string{"vision-ocr/builtin-latest", "vision-ocr/builtin-latest/poppler-200", "vision-ocr/builtin-latest/poppler-200-jpeg"}
 }
 
-// WithOCR configures the store and ordered engines. An empty checker keeps the
-// current completed-check identity.
 func (s *Stage) WithOCR(store *ocrstore.Store, engines []string, checker string) *Stage {
 	if store != nil {
 		s.ocr = store
@@ -54,17 +47,14 @@ func (s *Stage) WithOCR(store *ocrstore.Store, engines []string, checker string)
 	return s
 }
 
-// Name returns the stage name.
 func (*Stage) Name() string { return "extract" }
 
-// Recipe returns the extract recipe hash.
 func (s *Stage) Recipe(stage.Snapshot) string {
-	parts := append([]string{"html-transcription/1", "textparse/7", "heading-only/1", "ocr-store/2", s.checker}, s.engines...)
+	parts := append([]string{"html-transcription/1", "textparse/8", "heading-only/1", "ocr-store/2", s.checker}, s.engines...)
 	parts = append(parts, manualMismatchRecipe()...)
 	return stage.RecipeHash("extract", "tree/1", parts...)
 }
 
-// Plan selects completed fetch artifacts for this run.
 func (s *Stage) Plan(ctx context.Context, env stage.Env, run stage.Run) ([]stage.Item, error) {
 	q := store.New(env.DB)
 	active, err := membership.FinalActiveKeys(ctx, q, run)
@@ -108,7 +98,6 @@ func (s *Stage) Plan(ctx context.Context, env stage.Env, run stage.Run) ([]stage
 	return items, nil
 }
 
-// Process publishes the extracted provisions and gaps.
 func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item stage.Item) (stage.Output, error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
@@ -163,6 +152,9 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 		}
 		if selected.gap != "" {
 			gaps = append(gaps, stage.Gap{Kind: selected.gap, Detail: selected.reason})
+		}
+		if selected.extraGap != "" {
+			gaps = append(gaps, stage.Gap{Kind: selected.extraGap, Detail: selected.extraReason})
 		}
 	case "html_transcription":
 		if selected.tooLarge {
@@ -221,7 +213,6 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 	return stage.Output{Artifact: &art, State: "done"}, nil
 }
 
-// Rows loads provision rows from the artifact.
 func (*Stage) Rows(_ context.Context, env stage.Env, art artifact.Result) (func(context.Context, pgx.Tx, int64) error, error) {
 	data, err := os.ReadFile(filepath.Join(env.Artifacts.Abs(art.Path), "provisions.json"))
 	if err != nil {
@@ -242,7 +233,6 @@ func (*Stage) Rows(_ context.Context, env stage.Env, art artifact.Result) (func(
 	}, nil
 }
 
-// Resolve returns gaps recorded in the artifact.
 func (*Stage) Resolve(_ context.Context, env stage.Env, _ stage.Run, _ stage.Item, art artifact.Result) (stage.Resolution, error) {
 	data, err := os.ReadFile(filepath.Join(env.Artifacts.Abs(art.Path), "report.json"))
 	if err != nil {

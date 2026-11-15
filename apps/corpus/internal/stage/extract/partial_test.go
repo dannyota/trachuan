@@ -38,9 +38,9 @@ func TestSelection_PartialTreeAgreement(t *testing.T) {
 	for _, tc := range []struct{ name, html, source, gap, reason string }{
 		{"matching", partialHTML(), "html_transcription", "", ""},
 		{"rejected", strings.ReplaceAll(partialHTML(), "Điều 2.", "Điều 3."), "source_tree", "tree_headings_partial", "rule 1"},
-		{"anchors", partialHTML() + "<p>Điều 3. Thi hành</p><p>Nội dung</p>", "source_tree", "tree_headings_partial", "rule 2"},
-		{"number", strings.ReplaceAll(partialHTML(), "30 ngày", "31 ngày"), "source_tree", "tree_headings_partial", "rule 3"},
-		{"word", strings.ReplaceAll(partialHTML(), "ngày làm việc", "ngày việc"), "source_tree", "tree_headings_partial", "rule 3"},
+		{"anchors", partialHTML() + "<p>Điều 3. Thi hành</p><p>Nội dung</p>", "html_transcription", "", ""},
+		{"number", strings.ReplaceAll(partialHTML(), "30 ngày", "31 ngày"), "html_transcription", "", ""},
+		{"word", strings.ReplaceAll(partialHTML(), "ngày làm việc", "ngày việc"), "html_transcription", "", ""},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			selected, nodes, err := choose(context.Background(), transcriptionBundle(t, partialTree, tc.html), "vn:vbpl:1")

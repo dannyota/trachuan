@@ -17,6 +17,9 @@ type treeComparison struct {
 	HeadingOnlyArticles int          `json:"heading_only_articles"`
 	SetAside            bool         `json:"set_aside"`
 	FailedRule          int          `json:"failed_rule,omitempty"`
+	Rule                string       `json:"rule,omitempty"`
+	TreeChars           *int         `json:"tree_chars,omitempty"`
+	TranscriptionChars  *int         `json:"transcription_chars,omitempty"`
 	Rules               [5]ruleCount `json:"rules"`
 }
 
@@ -94,7 +97,6 @@ func compareTree(rows []provision, selected selection) *treeComparison {
 			}
 		}
 		parsed = accepted
-		// Rule 5 counts all emitted text, including neutral provisions, but no discarded paragraphs.
 		var emitted []string
 		for _, p := range record.Provisions {
 			emitted = append(emitted, collapse(p.Text))
