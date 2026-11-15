@@ -126,7 +126,9 @@ func TestSession_RejectsRevokedExpiredBlockedEpoch(t *testing.T) {
 			}
 		})
 	}
-	assertStatus(t, serve(&Manager{}, request("")), 204)
+	r0 := request("")
+	r0.URL.Path = "/api/v1/me"
+	assertStatus(t, serve(&Manager{}, r0), 204)
 	for _, raw := range []string{"bad", rawValue(8)} {
 		m, _, _ := harness()
 		assertStatus(t, serve(m, request(raw)), 401)
@@ -305,6 +307,7 @@ func TestSession_LoginRevokesPresentedSession(t *testing.T) {
 func TestBearerNeverAuthorizesWeb(t *testing.T) {
 	m, s, raw := harness()
 	r := request("")
+	r.URL.Path = "/api/v1/me"
 	r.Header.Set("Authorization", "Bearer "+raw)
 	assertStatus(t, serve(m, r), 204)
 	if s.reads != 0 {

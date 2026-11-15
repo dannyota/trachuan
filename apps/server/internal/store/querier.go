@@ -71,6 +71,7 @@ type Querier interface {
 	LockReports(ctx context.Context) error
 	MarkAccountBlocked(ctx context.Context, id int64) (Account, error)
 	MarkAccountDeleting(ctx context.Context, id int64) (Account, error)
+	MarkAccountUnblocked(ctx context.Context, id int64) (Account, error)
 	OldestAccountReport(ctx context.Context, arg OldestAccountReportParams) (time.Time, error)
 	PruneTokenFamilies(ctx context.Context, grantID int64) (int64, error)
 	PurgeDeletedAccounts(ctx context.Context, dollar_1 time.Time) (int64, error)

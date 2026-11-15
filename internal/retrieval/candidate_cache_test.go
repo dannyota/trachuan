@@ -322,3 +322,28 @@ func BenchmarkCandidateCacheEntry(b *testing.B) {
 	b.ReportMetric(float64(len(raw)), "value-B/entry")
 	b.ReportMetric(float64(len(raw)+32+128), "charged-B/entry")
 }
+
+func TestCandidates_FallbackCounters(t *testing.T) {
+	e, tx := candidateEngine(), &candidateTx{}
+	p := Prepared{Request: Request{Query: "synthetic", Mode: "ann"}, Validation: Validation{Accepted: true}}
+	_, _, err := e.candidates(t.Context(), tx, p, "[1]", nil, Depths{2, 2}, time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC), false, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	snapshot := reflect.ValueOf(e.LexicalSources())
+	for name, want := range map[string]uint64{"FallbackSearches": 1, "FallbackGroups": 2} {
+		v := snapshot.FieldByName(name)
+		if !v.IsValid() || v.Uint() != want {
+			t.Errorf("%s=%v want %d", name, v, want)
+		}
+	}
+}
+
+func TestSearch_CountsRequests(t *testing.T) {
+	e := &Engine{}
+	_, _ = e.Search(t.Context(), Request{})
+	v := reflect.ValueOf(e.LexicalSources()).FieldByName("Searches")
+	if !v.IsValid() || v.Uint() != 1 {
+		t.Fatalf("searches=%v want 1", v)
+	}
+}

@@ -195,7 +195,10 @@ func TestMe_InvalidCookies(t *testing.T) {
 			r.Header.Set("Cookie", tc.cookie)
 			w := httptest.NewRecorder()
 			h.ServeHTTP(w, r)
-			expect(t, w, 401)
+			expect(t, w, 204)
+			if len(w.Result().Cookies()) != 1 || w.Result().Cookies()[0].MaxAge >= 0 {
+				t.Fatal("session cookie not cleared")
+			}
 		})
 	}
 	for _, state := range []string{"expired", "revoked"} {
@@ -206,7 +209,7 @@ func TestMe_InvalidCookies(t *testing.T) {
 			} else {
 				s.sessions[0].RevokedAt = &s.now
 			}
-			expect(t, call(h, raw, secret, "GET", "/api/v1/me", ""), 401)
+			expect(t, call(h, raw, secret, "GET", "/api/v1/me", ""), 204)
 		})
 	}
 }
@@ -214,7 +217,7 @@ func TestSessions_ListAndRevokeOwn(t *testing.T) {
 	h, _, _, r, c := setup(t)
 	expect(t, call(h, r, c, "GET", "/api/v1/me/sessions", ""), 200)
 	expect(t, call(h, r, c, "DELETE", "/api/v1/me/sessions/1", ""), 204)
-	expect(t, call(h, r, c, "GET", "/api/v1/me", ""), 401)
+	expect(t, call(h, r, c, "GET", "/api/v1/me", ""), 204)
 }
 func TestTokens_CreateShowsOnceListRevoke(t *testing.T) {
 	h, s, _, r, c := setup(t)
@@ -268,7 +271,7 @@ func TestDelete_BlocksRevokesAndPurgesAfterSevenDays(t *testing.T) {
 	if !s.deleted {
 		t.Fatal("deletion not requested")
 	}
-	expect(t, call(h, r, c, "GET", "/api/v1/me", ""), 401)
+	expect(t, call(h, r, c, "GET", "/api/v1/me", ""), 204)
 	n, err := Purge(context.Background(), s, s.now.Add(6*24*time.Hour))
 	if err != nil || n != 0 {
 		t.Fatal("purged early")

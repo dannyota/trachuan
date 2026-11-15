@@ -177,7 +177,7 @@ func harness() (*Manager, *fakeStore, string) {
 }
 
 func request(raw string) *http.Request {
-	r := httptest.NewRequest(http.MethodGet, "https://example.invalid/api/v1/me", nil)
+	r := httptest.NewRequest(http.MethodGet, "https://example.invalid/api/v1/status", nil)
 	if raw != "" {
 		r.AddCookie(&http.Cookie{Name: "__Host-session", Value: raw})
 	}

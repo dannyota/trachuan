@@ -40,7 +40,7 @@ func TestDelete_CredentialsCreatedAfterEnumeration(t *testing.T) {
 	}}
 	h := m.Middleware(m.CSRF(New(Config{Store: db, Sessions: m, Verifier: v, Limiter: limits.New(func() time.Time { return s.now })})))
 	expect(t, call(h, raw, secret, "DELETE", "/api/v1/me", ""), 204)
-	expect(t, call(probe, session, secret, "GET", "/api/v1/me", ""), 401)
+	expect(t, call(probe, session, secret, "GET", "/api/v1/me", ""), 204)
 	if _, err := v.Verify(context.Background(), token); err == nil {
 		t.Fatal("new token remains cached")
 	}

@@ -1147,13 +1147,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Account'
         '204':
-          description: No session cookie
-        '401':
-          description: Request failed
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+          description: No live session
         '429':
           description: Request failed
           content:

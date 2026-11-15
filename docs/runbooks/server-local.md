@@ -78,7 +78,9 @@ go run ./apps/server/cmd/server admin account create --google-sub SUBJECT --emai
 go run ./apps/server/cmd/server admin token create --account ACCOUNT_ID --name local --days 90
 ```
 
-Use `admin account block --account ACCOUNT_ID` to block an account and
+Use `admin account block --account ACCOUNT_ID` to block an account,
+`admin account unblock --account ACCOUNT_ID` to lift a block (an account being
+deleted stays blocked; revoked sessions and tokens stay revoked), and
 `admin token revoke --hash TOKEN_SHA256` to revoke a token. The hash is the
 lowercase SHA-256 digest of the full token. Do not put a token on a command
 line. Revocation reaches other server processes within ten seconds.

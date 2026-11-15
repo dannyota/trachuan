@@ -71,8 +71,10 @@ func (e *Engine) collectCandidates(ctx context.Context, tx pgx.Tx, p Prepared, v
 			if err = exactSettings(ctx, tx); err != nil {
 				return result, nil, err
 			}
+			e.sparse.fallbackSearches.Add(1)
 			for i, g := range groups {
 				if len(g.RawANN) < depths.Dense {
+					e.sparse.fallbackGroups.Add(1)
 					g.Fallback = true
 					g.Dense, err = denseQuery(ctx, tx, validitySQL(exactSQL, notYet), vec, day, historical, flags[i], depths.Dense, refs)
 					if err != nil {
