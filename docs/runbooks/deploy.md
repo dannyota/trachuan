@@ -22,8 +22,8 @@ activates it within about five minutes. Watch `deploy_failed` and the custom log
 
 ## Bootstrap
 
-The last planned SSH session. It needs a release whose images, env files and
-units the host already runs.
+The last planned SSH session. It needs the Podman secret `server_signup_emails`
+and a release whose images, env files and units the host already runs.
 
 1. Tag the release and wait for its `Images` run. On the MacBook, read the
    manifest hash:

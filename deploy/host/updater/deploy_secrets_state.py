@@ -13,11 +13,21 @@ class SecretsState:
             self.data = json.loads(self.path.read_bytes())
         except FileNotFoundError:
             self.data = dict(versions={}, pending={}, last_success_at=None, held=False)
-        for key in ('versions', 'pending'):
-            if isinstance(self.data, dict) and isinstance(self.data.get(key), dict):
-                for name in retired():
-                    self.data[key].pop(name, None)
+        self.prune_retired()
         self.validate()
+
+    def prune_retired(self):
+        data = self.data
+        if not isinstance(data, dict) or not all(isinstance(data.get(key), dict) for key in ('versions', 'pending')):
+            return
+        for name in retired():
+            if name in data['pending']:
+                raise ValueError('invalid secret state: retired secret ' + name + ' is pending')
+            if name in data['versions']:
+                version = data['versions'][name]
+                if type(version) is not int or version < 1:
+                    raise ValueError('invalid secret state')
+                del data['versions'][name]
 
     def validate(self):
         try:

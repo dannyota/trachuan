@@ -343,10 +343,13 @@ class RetiredSecretStateTest(unittest.TestCase):
             path = Path(directory) / 'secrets-state.json'
             path.write_text(json.dumps(dict(
                 versions={'smtp_password': 2, 'server_signup_emails': 3},
-                pending={'server_signup_emails': 4}, last_success_at=None, held=False)))
+                pending={}, last_success_at=None, held=False)))
             state = SecretsState(path)
             self.assertEqual(state.data['versions'], {'smtp_password': 2})
-            self.assertEqual(state.data['pending'], {})
+            for versions, pending in (({'server_signup_emails': None}, {}), ({}, {'server_signup_emails': 4})):
+                path.write_text(json.dumps(dict(versions=versions, pending=pending, last_success_at=None, held=False)))
+                with self.assertRaises(ValueError):
+                    SecretsState(path)
             path.write_text(json.dumps(dict(
                 versions={'unexpected_secret': 1}, pending={}, last_success_at=None, held=False)))
             with self.assertRaises(ValueError):
