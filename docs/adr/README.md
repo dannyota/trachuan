@@ -16,7 +16,7 @@ only for a new topic.
 | [0006](0006-single-host-oci-podman.md)           | One OCI Ampere A1 host, rootless Podman Quadlet                        |
 | [0007](0007-nuxt-frontend.md)                    | Nuxt 4 frontend with English routes                                    |
 | [0008](0008-write-path-temporal-self-hosted.md)  | Write path on self-hosted Temporal, worker on the MacBook              |
-| [0009](0009-dense-embedding-recipe.md)           | Dense embedding recipe: Vietnamese_Embedding_v2, ONNX FP32 queries     |
+| [0009](0009-dense-embedding-recipe.md)           | Dense embedding recipe: Vietnamese_Embedding_v2, ONNX INT8 queries     |
 | [0010](0010-retrieval-evaluation-for-agents.md)  | Retrieval evaluation for agent consumers                               |
 | [0011](0011-embedder-services.md)                | Go query embedder; Python document embedder on the MacBook             |
 | [0012](0012-vietnam-corpus-sources.md)           | Vietnam primary and secondary legal sources                            |
