@@ -101,16 +101,16 @@ missing lead.
 
 A warning is a `repeals`, `replaces`, `suspends` or `amends_supplements`
 relation row whose `method`, read as a comma-separated set, includes
-`text_rule/1` or `vbpl_references` (so a merged `vbpl_references,vbpl_diagram`
-row counts), that carries a `target_node_id` and whose `target_provision_id` is
-set, with its target document in this release; diagram-only rows
-(`vbpl_diagram`) and rows with a null `target_provision_id` never become
-warnings and stay document-level pointers. It has the pointer fields
-(`dir:"in"`, `kind`, and the acting document's `key`, `number` and `in_release`)
-and adds `source`, the acting provision's handle when it is in the release;
-`basis`, `text` for a `text_rule/1` row (its evidence is the act's operative
-sentence) or `vbpl_reference` for a row whose method set includes
-`vbpl_references` (its stored evidence is only VBPL's reference title);
+`text_rule/1`, `reviewed` or `vbpl_references` (so a merged
+`vbpl_references,vbpl_diagram` row counts), that carries a `target_node_id` and
+whose `target_provision_id` is set, with its target document in this release;
+diagram-only rows (`vbpl_diagram`) and rows with a null `target_provision_id`
+never become warnings and stay document-level pointers. It has the pointer
+fields (`dir:"in"`, `kind`, and the acting document's `key`, `number` and
+`in_release`) and adds `source`, the acting provision's handle when it is in the
+release; `basis`, `text` for a `text_rule/1` or `reviewed` row (its evidence is
+the act's operative sentence) or `vbpl_reference` for a row whose method set
+includes `vbpl_references` (its stored evidence is only VBPL's reference title);
 `target`, the handle of `target_provision_id`; `citation`, the target
 provision's citation built like a hit citation from its actual ancestry, number
 excluded; `exact`; and `named`. For a text row `target_node_id` is the requested

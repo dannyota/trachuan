@@ -141,7 +141,7 @@ const readRelationsSQL = `WITH incident AS (` + incidentRelationsSQL + `), scope
  ON r.source_key=i.source_key AND r.artifact_sha256=i.artifact_sha256 AND r.ordinal=i.ordinal
  WHERE NOT $3 OR (i.dir='in' AND (r.target_provision_id IS NULL OR r.target_provision_id=ANY($4::bigint[])))
  OR (i.dir='out' AND (r.source_provision_id IS NULL OR r.source_provision_id=ANY($4::bigint[])))
- OR (i.dir='in' AND r.target_provision_id=ANY($8::bigint[]) AND r.target_node_id IS NOT NULL AND r.kind IN ('repeals','replaces','suspends','amends_supplements') AND EXISTS (SELECT 1 FROM provision tp WHERE tp.id=r.target_provision_id AND ('vbpl_references'=ANY(string_to_array(r.method,',')) OR ('text_rule/1'=ANY(string_to_array(r.method,',')) AND r.target_node_id=tp.anchor))))
+ OR (i.dir='in' AND r.target_provision_id=ANY($8::bigint[]) AND r.target_node_id IS NOT NULL AND r.kind IN ('repeals','replaces','suspends','amends_supplements') AND EXISTS (SELECT 1 FROM provision tp WHERE tp.id=r.target_provision_id AND ('vbpl_references'=ANY(string_to_array(r.method,',')) OR (string_to_array(r.method,',') && ` + textMethodsSQL + ` AND r.target_node_id=tp.anchor))))
  ) SELECT dir,kind,COALESCE(handle,other_key,''),other_number,handle IS NOT NULL,raw_label,evidence,
  count(*) OVER (),bool_or(char_length(evidence)>$7) OVER () FROM scoped ORDER BY
  COALESCE(array_position($2::text[],kind),cardinality($2::text[])+1),

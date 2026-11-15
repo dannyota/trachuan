@@ -10,6 +10,7 @@ func TestWarning_RejectsDiagramAndUnresolvedTarget(t *testing.T) {
 	}{
 		{"diagram only", Relation{Kind: "repeals", Method: "vbpl_diagram", TargetInHit: true, TargetResolved: true, TargetAnchor: &anchor, TargetNodeID: &anchor}},
 		{"unresolved target", Relation{Kind: "repeals", Method: "text_rule/1", TargetInHit: true, TargetResolved: true, TargetNodeID: &anchor}},
+		{"reviewed null target provision", Relation{Kind: "repeals", Method: "reviewed", TargetResolved: true, TargetNodeID: &anchor}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			if got, ok := warning(tc.relation); ok {
@@ -39,6 +40,9 @@ func TestWarnings_MethodsAndExactness(t *testing.T) {
 	}{
 		{"text_rule/1", &anchor, "text", true, "", true},
 		{"text_rule/1", &missing, "text", false, missing, true},
+		{"reviewed", &anchor, "text", true, "", true},
+		{"reviewed", &missing, "text", false, missing, true},
+		{"reviewed,vbpl_diagram", &anchor, "text", true, "", true},
 		{"vbpl_references", &missing, "vbpl_reference", true, "", true},
 		{"vbpl_references,vbpl_diagram", &missing, "vbpl_reference", true, "", true},
 		{"vbpl_diagram", &anchor, "", false, "", false},

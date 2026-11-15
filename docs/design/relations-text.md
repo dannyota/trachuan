@@ -172,6 +172,12 @@ matched sentence. Rows with equal (`source_node_id`, `target_vbpl_id`,
 `target_anchor`, `kind`) collapse to one, keeping the first sentence. Diagram
 rows are unchanged; both coexist and the diagram keeps document-level credit.
 
+A reviewed provision effect
+([knowledge loop](knowledge-loop.md#provision-effects)) is stored with
+`method:"reviewed"` and the quoted sentence as `evidence`. The server treats it
+exactly as a `text_rule/1` row: the same warning on the target provision and its
+document, with `basis` `text`.
+
 Run gap rows for text gaps carry a bounded detail,
 `<index in the report>:<source node id>:<first 200 characters of the sentence>`,
 because the gap table indexes detail; the full sentence stays in the artifact
