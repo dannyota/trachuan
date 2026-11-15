@@ -26,6 +26,18 @@ worker from the main checkout, which the coordinator pulls during releases. In a
 separate terminal, start the built binary with `corpus worker` from the pinned
 checkout.
 
+Every path in the worker's environment is absolute (`CORPUS_ARTIFACTS`,
+`CORPUS_CHECKPOINT_DIR`, `CORPUS_DATABASE_DISK_PATH`, `CORPUS_FILE_CACHE`,
+`CORPUS_OCR_STORE`, `CORPUS_PHAPDIEN_PACKAGE`, the `pg_dump` and `pg_restore`
+paths): a relative path resolves against the pinned checkout, where `work/` does
+not exist. Check them before `corpus start`:
+
+```sh
+env | grep '^CORPUS_' | grep -v URL | grep -v '=/'
+```
+
+prints nothing when all are absolute.
+
 The OCR cross-check renders PDF pages with `pdftoppm` from poppler
 (`brew install poppler`; 26.11.0 at the time of writing). Only
 `corpus ocr check` needs it; the worker does not. Set `CORPUS_OCR_STORE` to the
