@@ -1,0 +1,11 @@
+CREATE INDEX IF NOT EXISTS framework_version_order ON framework_version (framework_code,released DESC,ordinal DESC);
+CREATE INDEX IF NOT EXISTS source_file_version ON source_file (version_id);
+CREATE INDEX IF NOT EXISTS control_parent ON control (version_id,parent_id,ordinal);
+CREATE INDEX IF NOT EXISTS body_chunk_version ON body_chunk (version_id,control_id);
+CREATE INDEX IF NOT EXISTS public_chunk_version ON public_chunk (version_id,control_id);
+CREATE INDEX IF NOT EXISTS body_posting_token ON body_posting (version_id,token,chunk_id);
+CREATE INDEX IF NOT EXISTS public_posting_token ON public_posting (token,chunk_id);
+CREATE INDEX IF NOT EXISTS control_mapping_to ON control_mapping (to_code,to_version,to_citation);
+CREATE INDEX IF NOT EXISTS mapping_evidence_versions ON mapping_evidence USING gin (licensed_version_ids);
+CREATE INDEX IF NOT EXISTS quality_gap_public ON quality_gap (kind,version_id,subject,detail) WHERE class='public';
+CREATE INDEX IF NOT EXISTS quality_gap_text ON quality_gap (version_id,kind,subject,detail) WHERE class='text';
