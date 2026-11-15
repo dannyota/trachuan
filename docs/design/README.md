@@ -62,6 +62,7 @@ Intended behavior of trachuan. Decisions with alternatives are in the
 | [sibling clause merge](retrieval-siblings.md)        | Candidate recipe 3 rule: clause hits of one article merge into one article hit, measured first |
 | [search results](mcp-results.md)                     | Compact search hits, snippets, related pointers, batch `read`, guide flow                      |
 | [evaluation](evaluation.md)                          | Cohorts, identity mapping, calibration, metrics and caches                                     |
+| [accepted rank losses](evaluation-rank-loss.md)      | The one exception to MRR@8 non-regression: reviewed case decisions on a corpus-only release    |
 | [evaluation fixtures](evaluation-fixtures.md)        | Authored case fixtures, the identity map and identity validation                               |
 | [serialized recipe](retrieval-recipe-serialized.md)  | Serialized retrieval recipe, hash and checks                                                   |
 | [retrieval performance](retrieval-performance.md)    | Measured statement costs per search and topic page; one change per cost                        |

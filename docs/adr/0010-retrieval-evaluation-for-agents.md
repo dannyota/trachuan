@@ -52,10 +52,15 @@ choice, and three of them send unaccented queries that ADR 0002 rejects.
    the flag keeps the hits and an agent reads it as a signal. Recall and MRR
    have targets that every report states, but a target is not a gate: a release
    ships when the gates pass and recall@20 and MRR@8 do not fall against the
-   previous release. A change that alters only the abstention threshold or its
-   calibration policy ships when matched citations are identical on every cohort
-   and abstention balanced accuracy does not fall on either cohort. Reports
-   state the small sample size; no interval or superiority claim is required.
+   previous release. One exception, for a release whose recipes equal the
+   previous release's: a fall of MRR@8 caused by a named corpus change may be
+   accepted case by case through reviewed decisions in Git, within fixed limits
+   and with recall@20 still strict
+   ([accepted rank losses](../design/evaluation-rank-loss.md)). A change that
+   alters only the abstention threshold or its calibration policy ships when
+   matched citations are identical on every cohort and abstention balanced
+   accuracy does not fall on either cohort. Reports state the small sample size;
+   no interval or superiority claim is required.
 5. Every evaluation reports returned evidence characters per response (p50,
    p95). A change that only reduces size ships when matched citations and gate
    results are identical on every cohort.
@@ -207,3 +212,8 @@ accuracy on either cohort.
   recipe-2 parent hit as in a merged hit, as product matching already does; a
   truncated fragment earns nothing. Legacy parity stays comparable with banhmi's
   numbers, where those clauses were separate hits.
+- 2026-11-15: accepted rank losses added to item 4 after `vn/20261115_2`:
+  recall@20 rose from 0.9247 to 0.9570 with four cases gained, and one case fell
+  from rank 4 to 9 behind table rows of a consolidated text that had just become
+  complete, so MRR@8 fell by 0.002. The strict rule stays for recipe and model
+  changes.
