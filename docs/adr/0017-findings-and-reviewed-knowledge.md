@@ -39,42 +39,46 @@ knowledge.
    registered under their names. New detectors compare signals the pipeline
    already holds. Detectors are deterministic: no model, no network. A detector
    that cannot complete fails the run; it never means "nothing found".
-2. **Findings have identity, and evidence is frozen.** A finding is a detector,
-   a typed subject and a discriminator; its fingerprint hashes the inputs that
-   fired it. What a run observed is immutable run evidence. Review decisions are
-   reviewed knowledge in Git. A finding's state (`open`, `accepted`, `resolved`,
-   `unobserved`) is computed from the two. A decision binds to one finding, its
-   fingerprint and the detector's semantics; a finding resolves only after its
-   subject was observed completely, and one that returns is open again.
+2. **Findings have identity and no stored state.** A finding is a detector, a
+   typed subject and a discriminator; its fingerprint hashes the inputs that
+   fired it. The findings of a release are a pure function of that run's frozen
+   inputs and the previous release's findings: each records when its occurrence
+   began, whether it fired or was carried because its subject could not be
+   observed, and whether a review decision accepts it. A decision binds to one
+   finding, its fingerprint, the detector's semantics and the occurrence, so a
+   changed or returning defect is open again.
 3. **Reviewed knowledge has one contract.** Every new reviewed entry names its
    target by public identity, states a typed claim, quotes evidence from a
    document in the run, and lists everything the review depended on as hashes.
    One validator checks it before merge and at build, all entries together. An
    entry whose dependencies cannot be verified against the frozen run is stale:
    it is not applied, and its finding is open again.
-4. **Knowledge reaches provisions.** A reviewed provision effect (repeal,
-   amendment, replacement or suspension of a provision from a date) is stored
-   and served exactly as a relation read from text with the same kind: a warning
-   on the target, no change of status class or eligibility. A reviewed document
-   relation and a review decision complete the kinds. Text is never rewritten.
+4. **Knowledge reaches provisions.** A reviewed provision effect (one provision
+   repeals, amends, replaces or suspends another) is stored and served exactly
+   as a relation read from text with the same kind: a warning on the target, no
+   date, no change of status class or eligibility. A reviewed document relation
+   and a review decision complete the kinds. Text is never rewritten.
 5. **A defect found by a person becomes a detector or a knowledge entry before
    its fix merges.** A detector when the class can be seen in data; otherwise an
    entry and one line on why not.
 6. **One intake, closed and in Git.** Issue reports, reports from downstream
    products and evaluation diagnostics become records with a closed schema, no
    free text and no account data. A record opens a finding and applies nothing.
-7. **Every release carries its evidence.** The last stage writes `findings.json`
-   and `changes.json`, bound to the dump, the detector configuration and the
-   exact previous release, listed in the artifact manifest and hashed into the
-   signed manifest. A missing or mismatched sidecar, an incomplete detector or
-   an open blocking finding refuses the release; every existing release rule
-   stays.
+7. **Every release carries its evidence.** A last stage, after evaluation, runs
+   the cross-signal detectors over frozen inputs and writes one immutable
+   artifact with `findings.json` and `changes.json`, bound to the dump, the
+   build, the report, the detector registry and the previous release's findings.
+   Both are uploaded and hashed into the signed manifest. A missing or
+   mismatched file, an incomplete detector or an open blocking finding refuses
+   the release; every existing release rule stays.
 8. **Models draft, the validator decides.** A model may propose knowledge
    entries and triage findings; nothing it writes applies without passing the
    validator, and bulk adjudication keeps a human-read sample.
-9. **The same loop serves control frameworks**
-   ([ADR 0016](0016-control-frameworks-corpus.md)): links from controls to legal
-   provisions are reviewed knowledge of this kind.
+9. **Law only, for now.** Framework text is licensed and must not be in Git
+   ([ADR 0016](0016-control-frameworks-corpus.md)), so this contract covers the
+   law corpus. A link from a control to a legal provision may be reviewed
+   knowledge here when it names the control by identity and quotes law text
+   alone.
 
 ## Consequences
 
@@ -106,3 +110,7 @@ knowledge.
   subjects, frozen observations and decisions in Git, complete dependencies,
   provision effects as reviewed relations, claim-level detector, closed intake,
   sidecars bound to the signed release, one gate table.
+- 2026-11-15: second review round (S-13 to S-19, A-02): no stored finding state,
+  an evidence stage and artifact after evaluation, per-kind evidence and
+  dependencies, effects without dates, schema capability checked at build and
+  deployment at publication, no count detector, law only.
