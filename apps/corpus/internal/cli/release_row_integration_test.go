@@ -42,7 +42,7 @@ func TestReleaseRow_ReadOnlyMetadataAndAcceptedGaps(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = corpus.Exec(ctx, `INSERT INTO release VALUES (true,'vn',$1,6,
+	_, err = corpus.Exec(ctx, `INSERT INTO release VALUES (true,'vn',$1,7,
 	'{"document":{},"query":{}}','{"version":1}','{}','{"version":3}',
 	'',$2,$2,$2,'{"status":"not_run","release_eligible":false}','{}','2099-01-01T00:00:00Z')`, rel, hash)
 	if err != nil {
