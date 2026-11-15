@@ -1,8 +1,7 @@
 import copy
 import unittest
 
-from corpus_comparison_test import reports
-from corpus_manifest import validate_report
+from corpus_comparison_test import reports, validate_comparison
 
 
 class CorpusTransitionTest(unittest.TestCase):
@@ -11,7 +10,7 @@ class CorpusTransitionTest(unittest.TestCase):
             previous, candidate = reports()
             candidate['cohorts']['development']['case_count'] = count
             with self.subTest(count=count), self.assertRaises(ValueError):
-                validate_report(candidate, 'vn', candidate['rel'], previous_report=previous)
+                validate_comparison(candidate, previous)
 
     def test_populated_previous_cohort_cannot_be_emptied_or_removed(self):
         for absent in (False, True):
@@ -22,13 +21,14 @@ class CorpusTransitionTest(unittest.TestCase):
             if absent:
                 candidate['cohorts'].pop('development')
             with self.subTest(absent=absent), self.assertRaises(ValueError):
-                validate_report(candidate, 'vn', candidate['rel'], previous_report=previous)
+                validate_comparison(candidate, previous)
 
     def test_version_one_cannot_follow_version_two(self):
         previous, middle = reports()
-        validate_report(middle, 'vn', middle['rel'], previous_report=previous)
+        validate_comparison(middle, previous)
         candidate = copy.deepcopy(middle)
         candidate.update(version=1, scorer='agent-eval/4')
+        candidate.pop('retrieval_recipe')
         middle['rel'] = previous['rel']
         for name in ('old_product', 'development'):
             for record in candidate['cohorts'][name]['non_regression']:
@@ -38,7 +38,7 @@ class CorpusTransitionTest(unittest.TestCase):
                         record.pop(field)
         candidate['non_regression'] = copy.deepcopy(candidate['cohorts']['old_product']['non_regression'])
         with self.assertRaises(ValueError):
-            validate_report(candidate, 'vn', candidate['rel'], previous_report=middle)
+            validate_comparison(candidate, middle)
 
     def test_version_two_chain_keeps_the_original_watermark(self):
         _, base = reports()
@@ -70,11 +70,11 @@ class CorpusTransitionTest(unittest.TestCase):
 
         first = release('20990101_1', 400, .8, [])
         middle = release('20990102_1', 398, .8, [398, 399])
-        validate_report(middle, 'vn', middle['rel'], previous_report=first)
+        validate_comparison(middle, first)
         last = release('20990103_1', 396, .796, [396, 397])
         last['previous_diff']['previous']['rel'] = middle['rel']
         with self.assertRaises(ValueError):
-            validate_report(last, 'vn', last['rel'], previous_report=middle)
+            validate_comparison(last, middle)
 
     def test_empty_development_in_both_reports_is_allowed(self):
         previous, candidate = reports()
@@ -82,4 +82,4 @@ class CorpusTransitionTest(unittest.TestCase):
             report['cases'] = [row for row in report['cases'] if row['cohort'] != 'development']
             report['cohorts']['development'].update(case_count=0, positive_count=0,
                                                     expected_citations=0, metrics=[], non_regression=[])
-        validate_report(candidate, 'vn', candidate['rel'], previous_report=previous)
+        validate_comparison(candidate, previous)

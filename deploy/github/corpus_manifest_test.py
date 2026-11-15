@@ -149,15 +149,56 @@ class CorpusManifestTest(unittest.TestCase):
         save_fixture(self.path, self.row, self.report)
         self.validate()
 
+    def test_version_two_equal_recipe_non_current_tail_passes(self):
+        self.validate()
+        previous = json.loads((self.path / 'previous-report.json').read_bytes())
+        self.module.create('a' * 40, 1, 'vn', self.row['rel'], self.path,
+                           self.path / 'report.json', previous_report=previous)
+
     def test_version_two_recipe_object_must_match_release_metadata(self):
-        self.report.update(version=2, scorer='agent-eval/5', retrieval_recipe={'version': 99, 'abstention': {}})
-        for records in [self.report['non_regression'], *(self.report['cohorts'][name]['non_regression'] for name in ('old_product', 'development'))]:
-            for record in records:
-                if record['name'] == 'mrr':
-                    record.update(previous=1., high_water=1., tolerance=.005, within_tolerance=False, losses=[])
+        self.report['retrieval_recipe']['non_current_tail'] = 3
         save_fixture(self.path, self.row, self.report)
-        with self.assertRaises(ValueError):
+        with self.assertRaisesRegex(ValueError, 'report retrieval recipe object differs from release row'):
             self.validate()
+
+    def test_version_one_recipe_non_current_tail_is_refused(self):
+        self.validate()
+        self.report.update(version=1, scorer='agent-eval/4')
+        save_fixture(self.path, self.row, self.report)
+        with self.assertRaisesRegex(ValueError, 'research override is not releasable'):
+            self.validate()
+
+    def test_nested_retrieval_recipe_non_current_tail_is_refused(self):
+        self.validate()
+        for nested in ({'retrieval_recipe': copy.deepcopy(self.row['retrieval_recipe'])},
+                       [{'retrieval_recipe': copy.deepcopy(self.row['retrieval_recipe'])}]):
+            with self.subTest(nested=type(nested).__name__):
+                self.report['extra'] = nested
+                save_fixture(self.path, self.row, self.report)
+                with self.assertRaisesRegex(ValueError, 'research override is not releasable'):
+                    self.validate()
+
+    def test_top_level_non_current_tail_is_refused(self):
+        self.validate()
+        self.report['non_current_tail'] = 2
+        save_fixture(self.path, self.row, self.report)
+        with self.assertRaisesRegex(ValueError, 'research override is not releasable'):
+            self.validate()
+
+    def test_case_level_non_current_tail_is_refused(self):
+        self.validate()
+        self.report['cases'][0]['non_current_tail'] = 2
+        save_fixture(self.path, self.row, self.report)
+        with self.assertRaisesRegex(ValueError, 'research override is not releasable'):
+            self.validate()
+
+    def test_version_two_without_release_row_scans_recipe(self):
+        self.module.validate_recipes(self.row, self.report)
+        previous = json.loads((self.path / 'previous-report.json').read_bytes())
+        for prior in (None, previous):
+            with self.subTest(previous=prior is not None):
+                with self.assertRaisesRegex(ValueError, 'research override is not releasable'):
+                    self.module.validate_report(self.report, 'vn', self.row['rel'], previous_report=prior)
 
 
 if __name__ == '__main__':
