@@ -25,6 +25,7 @@ const readerMessagesText = computed(() => readerMessages(language.value))
 const key = computed(() => String(route.params.key))
 const release = ref('')
 const hash = ref('')
+const files = ref<components['schemas']['SourceFile'][]>([])
 const documentEntry = ref<Document>()
 useHead(() => {
   const document = documentEntry.value
@@ -160,6 +161,7 @@ async function requestPage(version: number, signal: AbortSignal) {
     if (!pages.value) {
       release.value = page.release
       hash.value = page.fetch_sha256 || ''
+      files.value = page.files || []
       documentEntry.value = page.item.document
     }
     Object.assign(nodes.value, page.nodes || {})
@@ -300,6 +302,7 @@ watch([key, () => route.query.release], async () => {
   filling = false
   release.value = ''
   hash.value = ''
+  files.value = []
   documentEntry.value = undefined
   visibleAnchor.value = ''
   visibleArticle.value = ''
@@ -346,7 +349,7 @@ watch(displayUnits, async () => {
         <p v-if="error" class="notice" role="alert">{{ errorMessage(language, error) }} <a v-if="error === 'release_expired'" :href="`/vn/documents/${key}`">{{ messages.readerCurrent }}</a></p>
         <div v-if="next && !error" class="reader-more"><button ref="sentinel" class="btn btn-secondary" type="button" :disabled="loading" @click="load">{{ messages.readerMore }}</button><span v-if="loading" role="status"><span class="reader-spinner" aria-hidden="true" /> {{ readerMessagesText.loading }}</span></div>
       </section>
-      <ReaderRail v-if="release" :document="documentEntry" :nodes="nodes" :gaps="gaps" :release="release" :hash="hash" :units="textUnits" :document-key="key" :warnings="warnings" />
+      <ReaderRail v-if="release" :document="documentEntry" :nodes="nodes" :gaps="gaps" :release="release" :hash="hash" :files="files" :units="textUnits" :document-key="key" :warnings="warnings" />
     </div>
     <button v-if="showTop" class="btn btn-secondary reader-top" type="button" @click="backToTop">{{ readerMessagesText.backToTop }}</button>
   </div>

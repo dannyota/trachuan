@@ -16,6 +16,7 @@ export function textSourceLabel(textSource: string | undefined, textComplete: bo
   let source: string
   if (textSource === 'source_tree') source = lang === 'vi' ? `từ cấu trúc văn bản của ${host(sourceUrl, lang)}` : `from the text structure of ${host(sourceUrl, lang)}`
   else if (textSource === 'html_transcription') source = lang === 'vi' ? `từ bản HTML của ${host(sourceUrl, lang)}` : `from the HTML transcription at ${host(sourceUrl, lang)}`
+  else if (textSource === 'pdf_text') source = lang === 'vi' ? `từ tệp PDF của ${host(sourceUrl, lang)}` : `from the PDF at ${host(sourceUrl, lang)}`
   else if (textSource === 'ocr') source = lang === 'vi' ? 'từ bản quét (nhận dạng ký tự) đã kiểm tra' : 'from a checked scan (optical character recognition)'
   else return lang === 'vi' ? 'Chưa rõ nguồn nội dung' : 'Content source unknown'
   return `${lang === 'vi' ? 'Nội dung' : 'Content'}: ${complete}, ${source}`

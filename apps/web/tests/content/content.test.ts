@@ -103,7 +103,9 @@ it('classifies corpus gap kinds instead of displaying internal names', () => {
   const kinds = ['ambiguous_tree_text', 'article_sequence', 'chunk_omission', 'consolidated_status_unordered', 'consolidated_status_unresolved', 'empty_text', 'file_format_unsupported', 'image_content', 'invalid_date', 'invalid_validity_interval', 'listing_only', 'missing_attachment', 'missing_effective_date', 'named_document_missing', 'needs_ocr', 'no_chunks', 'no_text_source', 'no_tree', 'ocr_flagged', 'ocr_label_flagged', 'ocr_rejected', 'partial_status_unexplained', 'relation_clause_unresolved', 'scope_removed', 'seed_article_missing', 'source_provenance_missing', 'source_replaced', 'source_unavailable', 'structure_uncertain', 'table_text', 'text_number_mismatch', 'text_source_ambiguous', 'unknown_relation_code', 'unknown_status', 'unknown_target', 'tree_headings_only', 'tree_headings_partial', 'withdrawn', 'source_withdrawn_retained']
   for (const kind of kinds) expect(gapCategory(kind, 'vi').key, kind).not.toBe('other')
   expect(gapCategory('listing_only', 'vi')).toMatchObject({ key: 'search', name: 'Không đưa vào tìm kiếm' })
-  expect(gapCategory('listing_only', 'en').sentence).toBe('Some documents only list other documents; they stay readable but are excluded from search.')
+  expect(gapCategory('listing_only', 'en').sentence).toBe('Some content stays readable but is not fully searchable.')
+  expect(gapCategory('listing_only', 'vi').sentence).toBe('Một số nội dung vẫn đọc được nhưng không được đưa vào tìm kiếm đầy đủ.')
+  for (const kind of ['embedding_input_too_long', 'embedding_input_bytes_exceeded']) expect(gapCategory(kind, 'en').key).toBe('search')
 })
 
 it('renders nested sections and inserted point tokens', () => {
@@ -128,4 +130,13 @@ it('describes the additional gaps and topic assignment accurately', () => {
   for (const kind of ['seed_article_missing', 'override_target_missing']) {
     expect(gapCategory(kind, 'en').sentence).toContain('Topics may be missing for some provisions')
   }
+})
+
+it.each([
+  ['vi', true, 'Nội dung: đầy đủ, từ tệp PDF của vbpl.vn'],
+  ['vi', false, 'Nội dung: có thể chưa đầy đủ, từ tệp PDF của vbpl.vn'],
+  ['en', true, 'Content: complete, from the PDF at vbpl.vn'],
+  ['en', false, 'Content: may be incomplete, from the PDF at vbpl.vn'],
+] as const)('labels PDF text in %s with completeness %s', (lang, complete, expected) => {
+  expect(textSourceLabel('pdf_text', complete, 'https://vbpl.vn/doc', lang)).toBe(expected)
 })
