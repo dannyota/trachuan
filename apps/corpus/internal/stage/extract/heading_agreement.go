@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"danny.vn/trachuan/apps/corpus/internal/stage/heading"
 	"danny.vn/trachuan/apps/corpus/internal/textparse"
 )
 
@@ -26,14 +27,7 @@ type treeComparison struct {
 func collapse(s string) string { return strings.Join(strings.Fields(s), " ") }
 
 func headingTextOnly(row provision) bool {
-	text, label, heading := collapse(row.Text), collapse(row.Label), collapse(row.Heading)
-	if text == "" && row.Kind != "dieu" {
-		return true
-	}
-	if heading != "" && (text == label || text == label+".") {
-		return false
-	}
-	return text == label || text == label+"." || text == label+" "+heading || text == label+". "+heading
+	return heading.TextOnly(row.Kind, row.Label, row.Heading, row.Text)
 }
 
 func headingArticles(rows []provision) (int, map[string]bool) {
@@ -50,7 +44,7 @@ func headingArticles(rows []provision) (int, map[string]bool) {
 			continue
 		}
 		articles++
-		if !children[row.NodeID] && headingTextOnly(row) {
+		if heading.ArticleOnly(row.Kind, row.Label, row.Heading, row.Text, children[row.NodeID]) {
 			headings[row.NodeID] = true
 		}
 	}

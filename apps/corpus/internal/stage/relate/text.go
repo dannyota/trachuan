@@ -9,6 +9,7 @@ import (
 
 	"danny.vn/trachuan/apps/corpus/internal/stage"
 	"danny.vn/trachuan/apps/corpus/internal/stage/chunk"
+	"danny.vn/trachuan/apps/corpus/internal/stage/heading"
 	"danny.vn/trachuan/apps/corpus/internal/stage/relate/textrule"
 	"danny.vn/trachuan/apps/corpus/internal/store"
 	"danny.vn/trachuan/internal/retrieval"
@@ -102,7 +103,8 @@ func textRelations(dir string, rows []relation, issuers map[string]string) ([]re
 	seen := map[identity]bool{}
 	emitted := []relation{}
 	for _, article := range provisions {
-		if article.Kind != "dieu" || strings.TrimSpace(article.Text) == "" {
+		if article.Kind != "dieu" || strings.TrimSpace(article.Text) == "" ||
+			(len(incomplete) > 0 && heading.ArticleOnly(article.Kind, article.Label, article.Heading, article.Text, len(children[article.NodeID]) > 0)) {
 			continue
 		}
 		units, ordered := articleReading(article, children)
