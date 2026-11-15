@@ -41,7 +41,7 @@ func (e *testEngine) Read(_ context.Context, r retrieval.ReadRequest) (retrieval
 func (e *testEngine) Status(context.Context) (retrieval.CorpusStatus, error) {
 	return retrieval.CorpusStatus{Documents: 9007199254740993, Provisions: 3}, e.err
 }
-func (e *testEngine) Gaps(context.Context, string, int64, int) ([]retrieval.Gap, int64, error) {
+func (e *testEngine) Gaps(context.Context, string, string, int64, int) ([]retrieval.Gap, int64, error) {
 	return nil, 0, e.err
 }
 

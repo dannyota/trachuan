@@ -12,16 +12,17 @@ type NodeRef struct {
 	Level int    `json:"level"`
 }
 
-// Resolve nearest entries before discarding exclusions or unserved nodes: either
-// still blocks inheritance from a more distant provision in the same family.
-// Lateral lookups keep the recursive step bounded by each work-table row.
+func assignmentMethodRankSQL(alias string) string {
+	return "CASE " + alias + ".method WHEN 'manual' THEN 0 WHEN 'phapdien_seed' THEN 1 ELSE 2 END"
+}
+
 func effectiveNodesCTE(seeds string) string {
 	return `WITH RECURSIVE ancestry AS (
  SELECT p.id AS origin,p.id,p.parent_id,0 AS distance FROM (` + seeds + `) p
  UNION ALL SELECT a.origin,p.id,p.parent_id,a.distance+1 FROM ancestry a JOIN LATERAL (SELECT id,parent_id FROM provision WHERE id=a.parent_id OFFSET 0) p ON true
  ), ranked AS (
  SELECT a.origin,t.node_id,t.family_id,t.exclude,dense_rank() OVER (
- PARTITION BY a.origin,t.family_id ORDER BY a.distance,CASE t.method WHEN 'manual' THEN 0 WHEN 'phapdien_seed' THEN 1 ELSE 2 END) AS choice
+ PARTITION BY a.origin,t.family_id ORDER BY a.distance,` + assignmentMethodRankSQL("t") + `) AS choice
  FROM ancestry a JOIN LATERAL (SELECT * FROM taxonomy_assignment WHERE provision_id=a.id OFFSET 0) t ON true
  ), decided AS (
  SELECT *,bool_or(exclude) OVER (PARTITION BY origin,family_id) AS excluded FROM ranked WHERE choice=1

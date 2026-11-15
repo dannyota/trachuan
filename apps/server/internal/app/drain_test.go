@@ -32,7 +32,7 @@ func (*drainEngine) Present(context.Context, retrieval.Response, retrieval.Detai
 func (*drainEngine) Read(context.Context, retrieval.ReadRequest) (retrieval.ReadResult, error) {
 	return retrieval.ReadResult{}, nil
 }
-func (*drainEngine) Gaps(context.Context, string, int64, int) ([]retrieval.Gap, int64, error) {
+func (*drainEngine) Gaps(context.Context, string, string, int64, int) ([]retrieval.Gap, int64, error) {
 	return nil, 0, nil
 }
 

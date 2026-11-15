@@ -253,6 +253,6 @@ func (e2eEngine) Read(context.Context, retrieval.ReadRequest) (retrieval.ReadRes
 func (e2eEngine) Status(context.Context) (retrieval.CorpusStatus, error) {
 	return retrieval.CorpusStatus{}, nil
 }
-func (e2eEngine) Gaps(context.Context, string, int64, int) ([]retrieval.Gap, int64, error) {
+func (e2eEngine) Gaps(context.Context, string, string, int64, int) ([]retrieval.Gap, int64, error) {
 	return nil, 0, nil
 }

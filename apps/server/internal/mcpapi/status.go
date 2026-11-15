@@ -39,6 +39,7 @@ func (cfg Config) status(ctx context.Context, in countryInput) (statusResult, er
 type gapsInput struct {
 	Country string `json:"country"`
 	Kind    string `json:"kind,omitempty"`
+	Node    string `json:"node,omitempty"`
 	Cursor  string `json:"cursor,omitempty"`
 }
 type gapsResult struct {
@@ -61,7 +62,7 @@ func (cfg Config) gaps(ctx context.Context, in gapsInput) (gapsResult, error) {
 		return gapsResult{}, err
 	}
 	defer lease.Done()
-	gaps, next, err := lease.Engine.Gaps(ctx, in.Kind, after, retrieval.GapPageSize)
+	gaps, next, err := lease.Engine.Gaps(ctx, in.Kind, in.Node, after, retrieval.GapPageSize)
 	if err != nil {
 		return gapsResult{}, err
 	}

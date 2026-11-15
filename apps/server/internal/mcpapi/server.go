@@ -24,7 +24,7 @@ type Engine interface {
 	Present(context.Context, retrieval.Response, retrieval.Detail) (retrieval.SearchResult, error)
 	Read(context.Context, retrieval.ReadRequest) (retrieval.ReadResult, error)
 	Status(context.Context) (retrieval.CorpusStatus, error)
-	Gaps(context.Context, string, int64, int) ([]retrieval.Gap, int64, error)
+	Gaps(context.Context, string, string, int64, int) ([]retrieval.Gap, int64, error)
 }
 
 // Lease carries the activation observation that lent its engine. Done must run
@@ -87,7 +87,7 @@ func registerTools(s *mcp.Server, cfg Config) {
 	})
 	register(s, cfg, "taxonomy", "Find served taxonomy node codes.", cfg.taxonomy)
 	register(s, cfg, "corpus_status", "Counts and coverage of the active corpus.", cfg.status)
-	register(s, cfg, "quality_gaps", "Page through recorded corpus quality gaps.", cfg.gaps)
+	register(s, cfg, "quality_gaps", "Page through recorded corpus quality gaps; use node to filter by topic.", cfg.gaps)
 	register(s, cfg, "search", "Search Vietnamese law; compact hits by default.", cfg.search)
 	register(s, cfg, "read", "Read chosen handles in one batch; follow every next token.", cfg.read)
 	no := false

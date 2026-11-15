@@ -95,6 +95,12 @@ error, never silently different text.
 | `read`          | `country`, `items[]` of `handle`, number, `from`/`to` range, `relations`, or `next` token; `release`                                       | Per item: a document's metadata and outline, a provision's verbatim text with ancestor lead-ins and warnings, or its relation list; a per-call cap with fixed parts and opaque `next` tokens, so every call makes progress ([search results](mcp-results.md#read))                                                                                                                                                                                                                                |
 | `quality_gaps`  | `country`, `kind`, `node`, `cursor`                                                                                                        | Paged gap list                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 
+`quality_gaps` with `node` (a taxonomy code, as in `taxonomy`) returns only gaps
+whose taxonomy node is in that node's subtree, or whose document belongs to that
+subtree the way the `search` `nodes[]` filter decides membership; global gaps
+with neither are left out. An unknown code is `invalid_request`. Paging, the
+`kind` filter and the page size stay as without `node`.
+
 Tool schemas grow only additively. `/mcp` requires scope `mcp:read` and serves
 RFC 9728 metadata at `/.well-known/oauth-protected-resource`.
 
