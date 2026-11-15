@@ -15,9 +15,20 @@ and the [backup design](../design/deployment.md#backups).
 | Memory utilization                               | Above 90% for 5 minutes                               |
 | Instance accessibility and infrastructure status | Nonzero for 1 minute                                  |
 | Host heartbeat or expected agent metric stream   | Absent for 5 minutes                                  |
+| External HTTPS: `/` and `/api/v1/public/status`  | Every vantage point failing for 5 minutes             |
 | Newest backup                                    | Last success older than 26 hours                      |
 | Data volume mount                                | `data_mounted` is 0                                   |
 | Backup job                                       | `backup_failed` is 1 or last-success metric is absent |
+
+The external HTTPS alarms mean every vantage point failed for 5 minutes. In the
+OCI Console, open Health Checks and inspect the results page for
+`trachuan website uptime` (`/`) or `trachuan public status uptime`
+(`/api/v1/public/status`). Check DNS, Caddy and the host alarms above.
+
+A deleted monitor or missing Health Checks data produces no failure samples, so
+these alarms stay quiet. A firing alarm can also [reset on missing data][reset]
+without recovery. After any reset, confirm in the monitor's results that probes
+resumed and succeed.
 
 Set backup job age and absence windows to match each job's schedule. The host
 publishes last-success age separately for `full`, `diff`, `verify`, `health` and
@@ -59,3 +70,5 @@ suppression instructions][suppression].
   https://docs.oracle.com/en-us/iaas/tools/oci-cli/latest/oci_cli_docs/cmdref/monitoring/metric-data/summarize-metrics-data.html
 [suppression]:
   https://docs.oracle.com/en-us/iaas/Content/Monitoring/Tasks/suppressingalarms.htm
+[reset]:
+  https://docs.oracle.com/en-us/iaas/Content/Monitoring/Concepts/monitoringoverview.htm#monitoringoverview_topic_About_the_Internal_Reset_Period
