@@ -23,8 +23,9 @@ unverified until billing confirms it.
 | Reserved public IPv4              | 0.00                        | [Oracle public-IP pricing][ip-price]                              |
 | Vault, Monitoring, Notifications  | 0.00                        | Within [included allowances][free] below                          |
 | Cloudflare DNS, Free plan         | 0.00                        | Owner's existing plan                                             |
-| Total with eligible free volumes  | 1.04                        | Rounded from 1.037                                                |
-| Total with both volumes billed    | 5.71                        | Rounded from 5.712                                                |
+| Health Checks, 2 Basic monitors   | 0.60                        | 2 × 0.30 per endpoint, part B90323, read 2026-11-15               |
+| Total with eligible free volumes  | 1.64                        | Rounded from 1.637                                                |
+| Total with both volumes billed    | 6.31                        | Rounded from 6.312                                                |
 
 [prices]: https://www.oracle.com/cloud/price-list/
 [free]:
@@ -45,7 +46,7 @@ resources][upgrade] does not resolve which allowance applies.
 
 If the smaller allowance applies, the modeled compute charge is 26.98/month:
 1,420 excess OCPU-hours × 0.01 plus 8,520 excess GB-hours × 0.0015. Total cost
-would be 28.02 with eligible volumes or 32.69 with both volumes billed. If no A1
+would be 28.62 with eligible volumes or 33.29 with both volumes billed. If no A1
 allowance remains, [list rates][a1-price] add 55.48/month at 730 hours.
 
 [upgrade]: https://www.oracle.com/cloud/free/faq/
@@ -64,7 +65,7 @@ most 150 secrets. Keep Monitoring within 500 million ingestion and 1 billion
 retrieval points/month, Notifications within 1 million HTTPS and 1,000 email
 deliveries/month. No paid log export is assumed. If all A1, volume, Standard
 storage and request allowances are consumed elsewhere, this usage costs about
-61.46/month, before excess outbound or observability usage. The 60 USD target
+62.06/month, before excess outbound or observability usage. The 60 USD target
 therefore needs usage alerts, not a reserved instance. Domain registration,
 taxes and GitHub/GHCR usage beyond the owner's existing plan are excluded;
 verify those separately before enabling deploy automation.
@@ -153,12 +154,13 @@ requests. Current INT8 measurements and their limits are in
 
 ## Host alarms (proposed)
 
-| Signal                                       | Trigger                 |
-| -------------------------------------------- | ----------------------- |
-| Filesystem used, boot and data separately    | Above 70% for 5 minutes |
-| Memory utilization                           | Above 90% for 5 minutes |
-| Instance accessibility/infrastructure status | Nonzero for 1 minute    |
-| Host heartbeat or expected metric stream     | Absent for 5 minutes    |
+| Signal                                                                                          | Trigger                                   |
+| ----------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| Filesystem used, boot and data separately                                                       | Above 70% for 5 minutes                   |
+| Memory utilization                                                                              | Above 90% for 5 minutes                   |
+| Instance accessibility/infrastructure status                                                    | Nonzero for 1 minute                      |
+| Host heartbeat or expected metric stream                                                        | Absent for 5 minutes                      |
+| External HTTPS check of `/` and `/api/v1/public/status` (two Basic 60 s Health Checks monitors) | Every vantage point failing for 5 minutes |
 
 ## Disk budget (host, estimates)
 
