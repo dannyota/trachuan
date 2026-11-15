@@ -88,3 +88,22 @@ it('sorts count-only and shown relation groups by kind and direction', () => {
     { label: 'Related', dir: 'out', kind: 'references', items: [out], more: 2 },
   ])
 })
+
+it('matches unaccented query tokens against accented text', () => {
+  expect(content.highlightSpans('Thuế thu nhập', 'thue thu nhap')).toEqual([{ start: 0, end: 13 }])
+  expect(content.highlightSpans('thuế thu nhập', 'thuê thu nhập')).toEqual([{ start: 5, end: 13 }])
+  expect(content.highlightSpans('thuế thu nhập', 'thue thu nhập')).toEqual([{ start: 0, end: 13 }])
+  expect(content.highlightSpans('ĐIỀU khoản', 'DIEU KHOAN')).toEqual([{ start: 0, end: 10 }])
+  expect(content.highlightSpans('điều khoản', 'điêu khoản')).toEqual([])
+  expect(content.highlightSpans('thuế', 'thue')).toEqual([])
+})
+it('keeps offsets in text with decomposed combining marks', () => {
+  expect(content.highlightSpans('😀 thuế thu nhập!', 'thue thu nhap')).toEqual([{ start: 3, end: 20 }])
+})
+it('keeps Greek combining marks in the query accent classification', () => {
+  expect(content.highlightSpans('άι 1', 'α\u0345 1')).toEqual([{ start: 3, end: 4 }])
+})
+it('treats a decomposed Vietnamese query as accented', () => {
+  expect(content.highlightSpans('thuê 1', 'thue\u0302\u0301 1')).toEqual([{ start: 5, end: 6 }])
+  expect(content.highlightSpans('thuế 1', 'thue\u0302\u0301 1')).toEqual([{ start: 0, end: 6 }])
+})
