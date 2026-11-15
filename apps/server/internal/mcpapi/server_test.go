@@ -67,7 +67,7 @@ func (e *fakeEngine) Status(context.Context) (retrieval.CorpusStatus, error) {
 	e.calls.Add(1)
 	return retrieval.CorpusStatus{Release: "20991111", Documents: 2}, e.err
 }
-func (e *fakeEngine) Gaps(context.Context, string, int64, int) ([]retrieval.Gap, int64, error) {
+func (e *fakeEngine) Gaps(context.Context, string, string, int64, int) ([]retrieval.Gap, int64, error) {
 	e.calls.Add(1)
 	return []retrieval.Gap{{Kind: "missing"}}, 3, e.err
 }

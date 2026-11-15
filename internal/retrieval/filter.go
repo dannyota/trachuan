@@ -1,6 +1,7 @@
 package retrieval
 
 import (
+	"fmt"
 	"slices"
 	"strings"
 	"unicode/utf8"
@@ -40,6 +41,10 @@ func normalizeFilters(req Request) (Request, error) {
 
 func hasFilters(req Request) bool {
 	return len(req.Nodes)+len(req.DocTypes)+len(req.Issuers)+len(req.Documents) > 0
+}
+
+func nodeCodePredicateSQL(code string) string {
+	return fmt.Sprintf("(%s=$4 OR left(%s,length($4)+1)=$4||'.')", code, code)
 }
 
 func matchesFilter(req Request, id Identity, nodes []string, doc DocumentEntry) bool {

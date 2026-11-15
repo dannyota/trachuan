@@ -107,7 +107,7 @@ func TestEngine_ClosedPoolClassified(t *testing.T) {
 			return err
 		},
 		"status": func() error { _, err := e.Status(context.Background()); return err },
-		"gaps":   func() error { _, _, err := e.Gaps(context.Background(), "", 0, 0); return err },
+		"gaps":   func() error { _, _, err := e.Gaps(context.Background(), "", "", 0, 0); return err },
 	} {
 		t.Run(name, func(t *testing.T) {
 			if err := call(); !errors.Is(err, ErrReleaseGone) {
