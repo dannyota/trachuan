@@ -55,7 +55,12 @@ class Updater:
         try:
             return bool(SecretsState(self.paths.state / 'secrets-state.json').data['pending'])
         except (OSError, ValueError):
-            return False
+            try:
+                raw = json.loads((self.paths.state / 'secrets-state.json').read_bytes())
+            except (OSError, ValueError):
+                return False
+            pending = raw.get('pending') if isinstance(raw, dict) else None
+            return isinstance(pending, dict) and bool(pending)
 
     def secrets(self, state, directory, mode, result, force=False):
         self.step = 'secrets'
