@@ -102,37 +102,42 @@ Licensed material is a source file of a `licensed` version and everything
 derived from its text: extracted and OCR text, check results, reviewer readings,
 chunks, embeddings, indexes and dumps. It may exist only in:
 
-| Place                                                                                                                   | Why                                                                              |
-| ----------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| `FRAMEWORKS_SOURCE_DIR` and `FRAMEWORKS_WORK_DIR` on the MacBook's external disk                                        | sources and run artifacts ([build](frameworks-build.md))                         |
-| The MacBook's PostgreSQL instance holding `frameworks_<rel>` and `frameworks_<rel>_eval` (tables, WAL, temporary files) | the release while it is built and evaluated                                      |
-| Memory of the build command, its parsers, the evaluator and the document embedder on the MacBook                        | during a run; temporary files go under `FRAMEWORKS_WORK_DIR`, core dumps are off |
-| The private releases bucket                                                                                             | the dump                                                                         |
-| The signing runner, for the length of one job                                                                           | hash check; nothing persisted                                                    |
-| The host's release database and its encrypted backups                                                                   | serving                                                                          |
-| Host staging `/srv/trachuan/data/releases/<kind>-<rel>/`                                                                | the dump during activation; owner-only, deleted when activation ends             |
-| The server process's memory                                                                                             | indexes and partitioned caches; never written to disk                            |
-| The OCR and cross-check providers, for scans only                                                                       | see [scans](frameworks.md#scans)                                                 |
+| Place                                                                                                                                         | Why                                                                              |
+| --------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `FRAMEWORKS_SOURCE_DIR` and `FRAMEWORKS_WORK_DIR` on the MacBook's external disk, never under a third-party sync folder                       | sources and run artifacts ([build](frameworks-build.md))                         |
+| The MacBook's PostgreSQL instance on its internal disk, holding `frameworks_<rel>` and `frameworks_<rel>_eval` (tables, WAL, temporary files) | the release while it is built and evaluated                                      |
+| Memory of the build command, its parsers, the evaluator and the document embedder on the MacBook                                              | during a run; temporary files go under `FRAMEWORKS_WORK_DIR`, core dumps are off |
+| The private releases bucket                                                                                                                   | the dump                                                                         |
+| The signing runner, for the length of one job                                                                                                 | hash check; nothing persisted                                                    |
+| The host's release database and its encrypted backups                                                                                         | serving                                                                          |
+| Host staging `/srv/trachuan/data/releases/<kind>-<rel>/`                                                                                      | the dump during activation; owner-only, deleted when activation ends             |
+| The server process's memory                                                                                                                   | indexes and partitioned caches; never written to disk                            |
+| The OCR and cross-check providers, for scans only                                                                                             | see [scans](frameworks.md#scans)                                                 |
+| The owner's own backups of the MacBook                                                                                                        | internal use of the owner's licensed files                                       |
 
-The external disk, the work directory and the PostgreSQL data directory are
-excluded from Time Machine and any cloud sync, so no backup of the MacBook holds
-licensed material. It is never in Git, CI logs or artifacts, public buckets, log
-lines, metrics, quality gap details, error reports, evaluation reports, cache
-keys or PR text. Two value classes are published although they are computed from
-licensed files. The integrity fields of the signed manifest (`dump` SHA-256 and
-size, `report` SHA-256, `build_artifact_sha256`) are needed to verify and to
-refuse replays, and reveal only that a release differs from another. The SHA-256
-and byte size of each source file in the registry (`sources/frameworks.yaml`)
-let the reader refuse an unregistered file, and reveal only which file it is.
-The number of controls of a version is an approved public fact, served to every
-caller ([results](frameworks-results.md#diagnostics-and-counts)), and the
-registry holds it for every version. Beyond these and the approved public fields
-of the [reduced record](#reduced-record) (with counts of them, such as mapping
-edges, that [results](frameworks-results.md#diagnostics-and-counts) serves), no
-value derived from a licensed file is published. In Git, the registry holds no
-page or character counts, no counts finer than the per-version total (by kind or
-by section), no tree shape and no titles taken from a licensed file. OCR
-evidence for licensed scans and reviewer readings of licensed text (OCR waivers)
-are written under `FRAMEWORKS_WORK_DIR/ocr/` and `FRAMEWORKS_WORK_DIR/reviews/`,
-never in `sources/`; a build reads them only through its snapshot. Tests and
-fixtures use invented frameworks.
+Third-party sync services are not a place:
+[build](frameworks-build.md#runs-resume-and-failure) refuses a source or work
+directory inside a synced folder. It is never in this repository's Git, CI logs
+or artifacts, public buckets, log lines, metrics, quality gap details, error
+reports, evaluation reports, cache keys or PR text. Two value classes are
+published although they are computed from licensed files. The integrity fields
+of the signed manifest (`dump` SHA-256 and size, `report` SHA-256,
+`build_artifact_sha256`) are needed to verify and to refuse replays, and reveal
+only that a release differs from another. The SHA-256 and byte size of each
+source file in the registry (`sources/frameworks.yaml`) let the reader refuse an
+unregistered file, and reveal only which file it is. The number of controls of a
+version is an approved public fact, served to every caller
+([results](frameworks-results.md#diagnostics-and-counts)), and the registry
+holds it for every version. Beyond these and the approved public fields of the
+[reduced record](#reduced-record) (with counts of them, such as mapping edges,
+that [results](frameworks-results.md#diagnostics-and-counts) serves), no value
+derived from a licensed file is published. In Git, the registry holds no page or
+character counts, no counts finer than the per-version total (by kind or by
+section), no tree shape and no titles taken from a licensed file. Machine OCR
+evidence for licensed scans is written under `FRAMEWORKS_WORK_DIR/ocr/`, where
+it can be reproduced. Reviewer readings of licensed text (OCR waivers) are
+knowledge and are versioned in the private repository, in
+`FRAMEWORKS_SOURCE_DIR/trachuan/ocr-waivers.yaml`, a non-source path the reader
+ignores as a source; the owner commits them and no worker writes there. A build
+reads both only through its snapshot. Tests and fixtures use invented
+frameworks.

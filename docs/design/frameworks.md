@@ -91,8 +91,8 @@ text reach the two providers; ADR 0016 adds the exception for framework scans,
 on the owner's decision. Before the first licensed scan is sent, the registry
 entry records each provider's data-use terms (URL and date read: no training on
 the content, retention period); without that record the scan stays blocked with
-gap `ocr_blocked`. Its OCR evidence and waivers are kept under
-`FRAMEWORKS_WORK_DIR`
+gap `ocr_blocked`. Its machine OCR evidence is kept under `FRAMEWORKS_WORK_DIR`
+and its reviewed waivers in the private source repository
 ([licensed material](frameworks-access.md#licensed-material-and-where-it-may-be)),
 never in the workshop database, whose checkpoints leave the approved places. Its
 text source is `ocr`, labels are asserted at the level the OCR design allows,

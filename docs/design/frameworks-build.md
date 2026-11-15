@@ -23,10 +23,11 @@ material and stays in the places of
 
 **Inputs.** `snapshot` copies into the run, and hashes, everything later steps
 consume: the registry, the source files of the versions in the release (through
-the hash-checking reader), our paraphrased titles, OCR evidence and reviewed
-waivers for scans, the golden cases and the gap kind table. No later step, and
-no resume, reads anything outside the snapshot, so a registry or title change
-during a run cannot reach it.
+the hash-checking reader), our paraphrased titles, machine OCR evidence for
+scans, the reviewed waivers (`FRAMEWORKS_SOURCE_DIR/trachuan/ocr-waivers.yaml`,
+its hash in the snapshot manifest), the golden cases and the gap kind table. No
+later step, and no resume, reads anything outside the snapshot, so a registry or
+title change during a run cannot reach it.
 
 **Parse** runs each version's parser ([frameworks](frameworks.md#pipeline)).
 Parse errors, a control-count mismatch, an invalid or duplicate citation and an
@@ -38,13 +39,17 @@ from the snapshot's access classes.
 
 **Chunk** applies the law split rule (size limits and cut points) to each
 control body as one unit. That rule is extracted from the law chunk package into
-one exported function both callers use, with a test that the law chunk output is
-byte-identical before and after; it is not copied. The legal parts of
-[chunk](chunk.md) do not apply: no provision tree, node kinds, minimum-length
-omission or cross-provision deduplication. A body chunk's context prefix is
-framework, version, citation path and our title, never `title_original`. Every
-control also gets exactly one public-field record (citation, kind, our title),
-never cut.
+one exported function both callers use; it is not copied. The extraction is its
+own pull request, reviewed by the owner of the law chunk package, with a test
+that law chunk output is byte-identical before and after and a test that the law
+chunk recipe hash is unchanged, and merged only after the law corpus release in
+progress at the time is signed. Until then the frameworks chunk step is written
+against that function's intended signature, so nothing else waits. The legal
+parts of [chunk](chunk.md) do not apply: no provision tree, node kinds,
+minimum-length omission or cross-provision deduplication. A body chunk's context
+prefix is framework, version, citation path and our title, never
+`title_original`. Every control also gets exactly one public-field record
+(citation, kind, our title), never cut.
 
 Record schemas, named in each manifest and versioned with its recipe:
 
@@ -112,6 +117,17 @@ contents (compared by an ordered export), not the dump's bytes, which carry
 `evaluate` reproduces its metrics, not its timings.
 
 ## Runs, resume and failure
+
+The command refuses a `FRAMEWORKS_SOURCE_DIR` or `FRAMEWORKS_WORK_DIR` whose
+real path lies under a third-party sync folder, naming the folder in its error:
+`~/Library/Mobile Documents/` (iCloud Drive), `~/Library/CloudStorage/`
+(Dropbox, Google Drive, OneDrive and other File Provider services),
+`~/Dropbox/`, `~/Google Drive/`, `~/OneDrive` and its variants, and `~/Desktop/`
+and `~/Documents/` (synced when iCloud Desktop and Documents is on). The
+prefixes are a first guard; the command also refuses a path under any sync root
+the installed clients report (the `path` entries of `~/.dropbox/info.json`) and
+a path with an ancestor directory holding a `.dropbox` marker, which covers sync
+roots on external drives.
 
 One command runs per `<rel>`: it holds an exclusive lock file
 `FRAMEWORKS_WORK_DIR/<rel>/.lock` for the whole run. Under the lock it first

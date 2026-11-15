@@ -65,7 +65,9 @@ and its per-document gate was stored but not enforced when serving
    [ADR 0014](0014-ocr-on-the-write-path.md), which otherwise sends only public
    legal text to the providers. The owner decided on 2026-11-15 to OCR his
    licensed scans this way. A scan is sent only after the providers' data-use
-   terms are recorded in the registry; reviewer readings stay outside Git.
+   terms are recorded in the registry; reviewer readings stay outside this
+   repository: they are versioned in the owner's private source repository,
+   which already holds the licensed files.
 8. **One served model.** Frameworks use the law corpus's dense recipe and the
    one query embedder on the host. A different recipe needs measured evidence
    that this one misses the floors on the framework golden cases.
@@ -124,3 +126,5 @@ and its per-document gate was stored but not enforced when serving
   publication exception, so the reader can refuse unregistered files.
 - 2026-11-15: the per-version control count named an approved public fact, held
   in the registry for every version; nothing finer is published.
+- 2026-11-15: reviewed OCR waivers versioned in the owner's private source
+  repository beside the licensed files, never in this repository.
