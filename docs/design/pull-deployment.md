@@ -226,6 +226,31 @@ never applies twice.
 Image activation that needs a model the host does not have fails at queryembed
 readiness. Model provisioning stays a manual owner step.
 
+### Release floor
+
+The policy may set `release_floor`, an image sequence. The host keeps the
+highest floor it has seen in `/var/lib/trachuan-deploy/release-floor.json` (root
+0600, written atomically, separate from `state.json` so older updaters still
+read their state). The floor rises only when a manifest journals `activated`, to
+the maximum of the stored value and the policy of the bundle that just became
+active; it never falls, and a lower or missing policy value leaves it unchanged.
+With a floor in force:
+
+- acceptance refuses an image manifest below it;
+- a rollback authorization whose target is below it is refused and not consumed;
+- failure recovery never reactivates a retained manifest below it: Caddy stays
+  stopped and the journal reads `stopped` with reason `release floor`;
+- bootstrap refuses a manifest below the higher of the stored floor and the
+  installed policy's floor.
+
+Corpus manifests are unaffected. The result file carries `release_floor` and the
+metrics timer publishes `deploy_release_floor`. Because a rollback installs the
+target's own updater, the floor must be at least the sequence of the first
+release whose updater enforces it: that release ships with no floor, and the
+next one sets `release_floor` to its sequence. A feature that depends on the
+floor ships in a later release, after the floor is confirmed active
+([accounts](accounts.md)).
+
 ## Bootstrap
 
 The leader's last planned SSH session installs the bundle containing the updater
