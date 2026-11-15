@@ -308,3 +308,13 @@ def test_provider_error_records_class_status_and_type_only():
         body = {"error": {"type": "invalid_request_error", "message": "secret-ish detail"}}
 
     assert provider_error(Failure("message with details")) == "Failure 400 invalid_request_error"
+
+
+def test_task_record_keeps_provider_error_detail(tmp_path):
+    import json
+
+    from trachuan_agenteval.reporting import write_record
+
+    path = tmp_path / "tasks.jsonl"
+    write_record(path, {"case_id": "dev-001", "error": "BadRequestError 400 invalid_request_error"})
+    assert json.loads(path.read_text())["error"] == "BadRequestError 400 invalid_request_error"

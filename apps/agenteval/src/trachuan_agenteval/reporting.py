@@ -19,6 +19,7 @@ def write_record(path: Path, record: dict) -> None:
         "tool_result_codepoints",
         "wall_seconds",
         "stop_reason",
+        "error",
         "complete",
         "cost_usd",
     }
