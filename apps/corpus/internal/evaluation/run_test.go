@@ -496,12 +496,12 @@ func TestQuality_TargetsGatesAndRegression(t *testing.T) {
 		return Metric{Mode: mode, Arms: "hybrid", Name: name, Limit: limit, Value: value}
 	}
 	makeReport := func(recall, mrr, precision, abstention *float64) Report {
-		r := Report{Cohorts: map[string]Cohort{}, Rejections: []Rejection{{Passed: true}, {Passed: true}, {Passed: true}}}
+		r := Report{Cohorts: map[string]Cohort{}, Rejections: []Rejection{{CaseID: "r1", Passed: true}, {CaseID: "r2", Passed: true}, {CaseID: "r3", Passed: true}}}
 		var metrics []Metric
 		for _, mode := range []retrieval.Mode{"exact", "ann"} {
 			metrics = append(metrics, metric(mode, "recall", 20, recall), metric(mode, "recall", 8, recall), metric(mode, "mrr", 8, mrr), metric(mode, "current_law_precision", 8, precision), metric(mode, "abstention", 8, abstention))
 		}
-		r.Cohorts["old_product"] = Cohort{Metrics: metrics}
+		r.Cohorts["old_product"] = Cohort{CaseCount: 3, Metrics: metrics}
 		return r
 	}
 	for _, tc := range []struct {
@@ -519,7 +519,9 @@ func TestQuality_TargetsGatesAndRegression(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			r := makeReport(tc.value, floatPtr(.7), floatPtr(1), floatPtr(1))
 			prev := makeReport(tc.prior, floatPtr(.7), floatPtr(1), floatPtr(1))
-			finishQuality(&r, &prev)
+			if err := finishQuality(&r, &prev); err != nil {
+				t.Fatal(err)
+			}
 			if r.Targets[0].Status != tc.target || r.NonRegression[0].Status != tc.regression || r.QualityPass != tc.quality {
 				t.Fatalf("target %s regression %+v quality %v", r.Targets[0].Status, r.NonRegression[0], r.QualityPass)
 			}
@@ -536,7 +538,9 @@ func TestQuality_TargetsGatesAndRegression(t *testing.T) {
 	}{{"pass", floatPtr(.99), "pass", true}, {"fail", floatPtr(.98), "fail", false}, {"unavailable", nil, "unavailable", false}} {
 		t.Run(tc.name, func(t *testing.T) {
 			r := makeReport(floatPtr(1), floatPtr(1), tc.value, floatPtr(1))
-			finishQuality(&r, nil)
+			if err := finishQuality(&r, nil); err != nil {
+				t.Fatal(err)
+			}
 			if r.Floors[0].Status != tc.status || r.QualityPass != tc.quality {
 				t.Fatalf("gate %+v quality %v", r.Floors[0], r.QualityPass)
 			}
@@ -544,7 +548,9 @@ func TestQuality_TargetsGatesAndRegression(t *testing.T) {
 	}
 	r := makeReport(floatPtr(1), floatPtr(1), floatPtr(1), floatPtr(1))
 	markMappingUnavailable(&r)
-	finishQuality(&r, nil)
+	if err := finishQuality(&r, nil); err != nil {
+		t.Fatal(err)
+	}
 	if r.QualityPass || r.Targets[0].Status != "unavailable" || r.NonRegression[0].Status != "unavailable" {
 		t.Fatalf("mapping: %+v", r)
 	}
@@ -783,7 +789,6 @@ func (e *populatedCapEngine) Collect(_ context.Context, p retrieval.Prepared, d 
 	var candidates []retrieval.Candidate
 	for i := int64(1); i <= 10; i++ {
 		doc := "other"
-		// Recipe 2 caps a document at five, so six hits exercise demotion.
 		if i <= 6 {
 			doc = "doc"
 		}
@@ -845,7 +850,7 @@ func TestReport_AbstentionIsTargetNotFloor(t *testing.T) {
 	}
 }
 func TestQualityPass_IgnoresAbstention(t *testing.T) {
-	r := Report{Cohorts: map[string]Cohort{}, Rejections: []Rejection{{Passed: true}, {Passed: true}, {Passed: true}}}
+	r := Report{Cohorts: map[string]Cohort{}, Rejections: []Rejection{{CaseID: "r1", Passed: true}, {CaseID: "r2", Passed: true}, {CaseID: "r3", Passed: true}}}
 	for _, mode := range []retrieval.Mode{"exact", "ann"} {
 		for _, spec := range []struct {
 			name  string
@@ -858,7 +863,12 @@ func TestQualityPass_IgnoresAbstention(t *testing.T) {
 			r.Cohorts["old_product"] = c
 		}
 	}
-	finishQuality(&r, nil)
+	c := r.Cohorts["old_product"]
+	c.CaseCount = 3
+	r.Cohorts["old_product"] = c
+	if err := finishQuality(&r, nil); err != nil {
+		t.Fatal(err)
+	}
 	if !r.QualityPass {
 		t.Fatalf("abstention affected quality: %+v", r.Floors)
 	}
@@ -1039,7 +1049,7 @@ func TestPreviousDiff_ProductComparableScorer(t *testing.T) {
 		t.Fatal(err)
 	}
 	diff, ok := current.PreviousDiff.(map[string]any)
-	if !ok || diff["previous_scorer"] != "agent-eval/3" || diff["scorer"] != "agent-eval/4" {
+	if !ok || diff["previous_scorer"] != "agent-eval/3" || diff["scorer"] != "agent-eval/5" {
 		t.Fatalf("diff = %v", current.PreviousDiff)
 	}
 	changes, ok := diff["cases"].([]CaseDifference)

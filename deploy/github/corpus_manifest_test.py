@@ -47,7 +47,7 @@ class CorpusManifestTest(unittest.TestCase):
             lambda r, e: e.update(quality_pass=1),
             lambda r, e: e.update(release_eligible=True),
             lambda r, e: e.update(status='incomplete'),
-            lambda r, e: e.update(version=2),
+            lambda r, e: e.update(version=3),
             lambda r, e: e.update(country='us'),
             lambda r, e: e.update(rel='20990103_1'),
             lambda r, e: e.update(cap_override='none'),
@@ -143,10 +143,21 @@ class CorpusManifestTest(unittest.TestCase):
 
     def test_empty_development_does_not_require_comparisons(self):
         self.report['cohorts']['development']['case_count'] = 0
+        self.report['cases'] = [case for case in self.report['cases'] if case['cohort'] != 'development']
         for record in self.report['cohorts']['development']['non_regression']:
             record['status'] = 'not_run'
         save_fixture(self.path, self.row, self.report)
         self.validate()
+
+    def test_version_two_recipe_object_must_match_release_metadata(self):
+        self.report.update(version=2, scorer='agent-eval/5', retrieval_recipe={'version': 99, 'abstention': {}})
+        for records in [self.report['non_regression'], *(self.report['cohorts'][name]['non_regression'] for name in ('old_product', 'development'))]:
+            for record in records:
+                if record['name'] == 'mrr':
+                    record.update(previous=1., high_water=1., tolerance=.005, within_tolerance=False, losses=[])
+        save_fixture(self.path, self.row, self.report)
+        with self.assertRaises(ValueError):
+            self.validate()
 
 
 if __name__ == '__main__':

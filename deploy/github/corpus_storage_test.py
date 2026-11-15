@@ -76,7 +76,7 @@ class CorpusStorageTest(unittest.TestCase):
                 self.log.unlink()
 
     def test_checks_aggregate_against_free_space_with_two_gib_reserved(self):
-        total = sum(path.stat().st_size for path in self.remote.iterdir())
+        total = sum((self.remote / name).stat().st_size for name in ('corpus.dump', 'MANIFEST.sha256', 'report.json', 'release.json'))
         reserve = 2 * 1024**3
         for free in (reserve - 1, reserve + total - 1, reserve + total):
             with self.subTest(free=free), patch.dict(os.environ, self.env, clear=True), \

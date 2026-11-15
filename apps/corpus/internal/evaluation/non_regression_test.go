@@ -32,10 +32,12 @@ func TestQuality_NonRegressionGating(t *testing.T) {
 						metrics = append(metrics, Metric{Mode: mode, Arms: "hybrid", Name: m.name, Limit: m.limit, Value: &v})
 					}
 				}
-				return Report{Cohorts: map[string]Cohort{"old_product": {CaseCount: 1, Metrics: metrics}, "development": {CaseCount: 1, Metrics: metrics}}, Rejections: []Rejection{{Passed: true}, {Passed: true}, {Passed: true}}}
+				return Report{Cohorts: map[string]Cohort{"old_product": {CaseCount: 4, Metrics: metrics}, "development": {CaseCount: 1, Metrics: metrics}}, Cases: []CaseResult{{CaseID: "one", Cohort: "old_product"}, {CaseID: "one", Cohort: "development"}}, Rejections: []Rejection{{CaseID: "r1", Passed: true}, {CaseID: "r2", Passed: true}, {CaseID: "r3", Passed: true}}}
 			}
 			current, previous := makeReport(tc.mrr, tc.abstention), makeReport(.8, .8)
-			finishQuality(&current, &previous)
+			if err := finishQuality(&current, &previous); err != nil {
+				t.Fatal(err)
+			}
 			if current.QualityPass != tc.quality {
 				t.Fatalf("quality_pass = %t, want %t", current.QualityPass, tc.quality)
 			}

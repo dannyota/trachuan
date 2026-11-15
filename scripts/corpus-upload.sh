@@ -36,6 +36,7 @@ prefix="$country/$rel/"
 files=(corpus.dump MANIFEST.sha256 report.json release.json)
 
 if [[ $dry_run == true ]]; then
+  printf 'Verify previous signed manifest and report SHA-256; recompute comparisons before upload\n'
   printf 'Check empty prefix s3://trachuan-releases/%s with profile trachuan-release-upload\n' "$prefix"
   for file in "${files[@]}"; do
     printf 'Upload and verify size and ETag: s3://trachuan-releases/%s%s\n' "$prefix" "$file"

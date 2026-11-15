@@ -6,17 +6,16 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"os"
 	"time"
 	"unicode/utf8"
 
 	"danny.vn/trachuan/internal/retrieval"
 )
 
-const ScorerVersion = "agent-eval/4"
+const ScorerVersion = "agent-eval/5"
 
 func productComparableScorer(previous, current string) bool {
-	return previous == "agent-eval/3" && current == "agent-eval/4"
+	return (previous == "agent-eval/3" && (current == "agent-eval/4" || current == "agent-eval/5")) || compatibleMRRScorer(previous, current)
 }
 
 type metricKey struct {
@@ -62,7 +61,11 @@ func run(ctx context.Context, engine Engine, suite Suite, o Options, limit int) 
 	rel := engine.Release()
 	o = withReleaseRecipes(o, rel, modes)
 	recipe := rel.RetrievalRecipe
-	r := Report{Version: 1, Scorer: ScorerVersion, Status: "complete", Country: rel.Country, Rel: rel.Rel, BuildArtifactSHA256: o.BuildArtifactSHA256, DumpSHA256: o.DumpSHA256, FixtureHashes: suite.Hashes, IdentityMapSHA256: suite.Hashes.IdentityMap, Recipes: o.Recipes, EvaluationDate: date, DatabaseInstanceKind: o.DatabaseInstanceKind, Software: o.Software, Calibration: o.Calibration, Cohorts: map[string]Cohort{"legacy": {}, "old_product": {}}, TimingsMS: map[string]any{}, CacheManifest: map[string]any{}, PreviousDiff: map[string]any{"reason": "no previous report"}, NotRun: map[string]string{"development": "not_run", "taxonomy": "out_of_scope", "filtered": "out_of_scope"}, Limitations: []string{"Small sample size; calibration fits the scored product cohorts.", "Legacy results use the product recipe and are not a reproduction of the legacy engine."}}
+	recipeJSON, recipeErr := recipe.JSON()
+	if recipeErr != nil {
+		return Report{}, Cache{}, fmt.Errorf("encode retrieval recipe: %w", recipeErr)
+	}
+	r := Report{Version: 2, RetrievalRecipe: recipeJSON, Scorer: ScorerVersion, Status: "complete", Country: rel.Country, Rel: rel.Rel, BuildArtifactSHA256: o.BuildArtifactSHA256, DumpSHA256: o.DumpSHA256, FixtureHashes: suite.Hashes, IdentityMapSHA256: suite.Hashes.IdentityMap, Recipes: o.Recipes, EvaluationDate: date, DatabaseInstanceKind: o.DatabaseInstanceKind, Software: o.Software, Calibration: o.Calibration, Cohorts: map[string]Cohort{"legacy": {}, "old_product": {}}, TimingsMS: map[string]any{}, CacheManifest: map[string]any{}, PreviousDiff: map[string]any{"reason": "no previous report"}, NotRun: map[string]string{"development": "not_run", "taxonomy": "out_of_scope", "filtered": "out_of_scope"}, Limitations: []string{"Small sample size; calibration fits the scored product cohorts.", "Legacy results use the product recipe and are not a reproduction of the legacy engine."}}
 	if recipe.Version != 2 {
 		r.RetrievalRecipeVersion = recipe.Version
 	}
@@ -72,17 +75,12 @@ func run(ctx context.Context, engine Engine, suite Suite, o Options, limit int) 
 	var previous *Report
 	var previousHash string
 	if o.PreviousReport != "" {
-		b, err := os.ReadFile(o.PreviousReport)
-		if err != nil {
-			return Report{}, Cache{}, fmt.Errorf("read previous report: %w", err)
-		}
-		prior, err := decodePreviousReport(b)
+		prior, hash, err := readPreviousReport(o.PreviousReport, o.PreviousRelease)
 		if err != nil {
 			return Report{}, Cache{}, err
 		}
-		sum := sha256.Sum256(b)
-		previousHash = hex.EncodeToString(sum[:])
-		if prior.Version != 1 || (prior.Scorer != r.Scorer && prior.Scorer != "agent-eval/1" && prior.Scorer != "agent-eval/2" && prior.Scorer != "agent-eval/3") || prior.FixtureHashes.Legacy != r.FixtureHashes.Legacy || prior.FixtureHashes.OldProduct != r.FixtureHashes.OldProduct {
+		previousHash = hash
+		if (prior.Version != 1 && prior.Version != 2) || (prior.Scorer != r.Scorer && prior.Scorer != "agent-eval/4" && prior.Scorer != "agent-eval/1" && prior.Scorer != "agent-eval/2" && prior.Scorer != "agent-eval/3") || prior.FixtureHashes.Legacy != r.FixtureHashes.Legacy || prior.FixtureHashes.OldProduct != r.FixtureHashes.OldProduct {
 			return Report{}, Cache{}, fmt.Errorf("incompatible previous scorer or fixtures")
 		}
 		if prior.Cohorts["development"].CaseCount > 0 && prior.FixtureHashes.Development != r.FixtureHashes.Development {
@@ -338,7 +336,9 @@ func run(ctx context.Context, engine Engine, suite Suite, o Options, limit int) 
 	finishReport(&r, metrics, modes)
 	finishPresented(&r, presented, modes)
 	finishMappingReport(&r, inputs, rejects, o.Mapping)
-	finishQuality(&r, previous)
+	if err := finishQuality(&r, previous); err != nil {
+		return Report{}, Cache{}, err
+	}
 	filter.finish(modes)
 	r.FilterGate = filter.gate
 	if filter.active {

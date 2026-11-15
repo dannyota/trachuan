@@ -218,18 +218,19 @@ func finishMappingReport(r *Report, inputs []cohortInput, rejects map[string]boo
 	}
 }
 
-func finishQuality(r *Report, previous *Report) {
-	finishProductQuality(r, previous)
+func finishQuality(r *Report, previous *Report) error {
+	if err := validateReportTransition(r, previous); err != nil {
+		r.QualityPass = false
+		return err
+	}
+	finishProductQuality(r, previous, "old_product")
 	old := r.Cohorts["old_product"]
 	old.Floors, old.Targets, old.NonRegression = r.Floors, r.Targets, r.NonRegression
 	r.Cohorts["old_product"] = old
 	development := r.Cohorts["development"]
-	current := Report{Cohorts: map[string]Cohort{"old_product": development}, Rejections: r.Rejections, ValidityOverrides: r.ValidityOverrides, CapOverride: r.CapOverride, ArticleCapOverride: r.ArticleCapOverride}
-	var prior *Report
-	if previous != nil && previous.Cohorts["development"].CaseCount > 0 {
-		prior = &Report{Cohorts: map[string]Cohort{"old_product": previous.Cohorts["development"]}}
-	}
-	finishProductQuality(&current, prior)
+	current := *r
+	current.Floors, current.Targets, current.NonRegression = nil, nil, nil
+	finishProductQuality(&current, previous, "development")
 	if development.CaseCount == 0 {
 		for i := range current.Floors {
 			current.Floors[i].Status = "not_run"
@@ -245,9 +246,10 @@ func finishQuality(r *Report, previous *Report) {
 	}
 	development.Floors, development.Targets, development.NonRegression = current.Floors, current.Targets, current.NonRegression
 	r.Cohorts["development"] = development
+	return nil
 }
 
-func finishProductQuality(r *Report, previous *Report) {
+func finishProductQuality(r *Report, previous *Report, cohort string) {
 	for _, mode := range []retrieval.Mode{"exact", "ann"} {
 		for _, spec := range []struct {
 			name          string
@@ -258,7 +260,7 @@ func finishProductQuality(r *Report, previous *Report) {
 			{"current_law_precision", 8, .99, true, false},
 			{"recall", 20, .90, false, true}, {"mrr", 8, .66, false, true}, {"recall", 8, .90, false, false}, {"abstention_balanced_accuracy", 8, .85, false, true},
 		} {
-			m := findQualityMetric(r, mode, spec.name, spec.limit)
+			m := findQualityMetric(r, cohort, mode, spec.name, spec.limit)
 			if spec.gate {
 				status := "unavailable"
 				if m.Value != nil {
@@ -282,7 +284,7 @@ func finishProductQuality(r *Report, previous *Report) {
 				gating := spec.name != "abstention_balanced_accuracy"
 				var old *float64
 				if previous != nil {
-					old = findQualityMetric(previous, mode, spec.name, spec.limit).Value
+					old = findQualityMetric(previous, cohort, mode, spec.name, spec.limit).Value
 				}
 				status = "no_previous"
 				if m.Value == nil {
@@ -296,7 +298,11 @@ func finishProductQuality(r *Report, previous *Report) {
 						}
 					}
 				}
-				r.NonRegression = append(r.NonRegression, NonRegression{Mode: mode, Arms: "hybrid", Limit: spec.limit, Name: spec.name, Value: m.Value, PreviousValue: old, Gating: gating, Status: status, ValidityOverrides: r.ValidityOverrides, CapOverride: r.CapOverride, ArticleCapOverride: r.ArticleCapOverride, Reason: m.Reason, MappingIncompleteCount: m.MappingIncompleteCount})
+				comparison := NonRegression{Mode: mode, Arms: "hybrid", Limit: spec.limit, Name: spec.name, Value: m.Value, PreviousValue: old, Gating: gating, Status: status, ValidityOverrides: r.ValidityOverrides, CapOverride: r.CapOverride, ArticleCapOverride: r.ArticleCapOverride, Reason: m.Reason, MappingIncompleteCount: m.MappingIncompleteCount}
+				if r.Version == 2 && spec.name == "mrr" {
+					applyMRRComparison(r, previous, cohort, &comparison)
+				}
+				r.NonRegression = append(r.NonRegression, comparison)
 			}
 		}
 	}
@@ -314,8 +320,8 @@ func finishProductQuality(r *Report, previous *Report) {
 	}
 }
 
-func findQualityMetric(r *Report, mode retrieval.Mode, name string, limit int) Metric {
-	for _, m := range r.Cohorts["old_product"].Metrics {
+func findQualityMetric(r *Report, cohort string, mode retrieval.Mode, name string, limit int) Metric {
+	for _, m := range r.Cohorts[cohort].Metrics {
 		if m.Mode == mode && m.Arms == "hybrid" && m.Limit == limit && m.Name == name {
 			return m
 		}

@@ -6,7 +6,6 @@ import (
 )
 
 func decodePreviousReport(data []byte) (Report, error) {
-	// Read legacy markers separately so they never become writable report fields.
 	var legacy any
 	if err := json.Unmarshal(data, &legacy); err != nil {
 		return Report{}, fmt.Errorf("decode previous report: %w", err)
@@ -17,6 +16,11 @@ func decodePreviousReport(data []byte) (Report, error) {
 	var report Report
 	if err := json.Unmarshal(data, &report); err != nil {
 		return Report{}, fmt.Errorf("decode previous report: %w", err)
+	}
+	if report.Version == 2 {
+		if err := validatePreviousMRR(legacy); err != nil {
+			return Report{}, err
+		}
 	}
 	return report, nil
 }

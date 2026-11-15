@@ -89,9 +89,9 @@ type evalTarget struct {
 func runEvalWith(ctx context.Context, args []string, stderr io.Writer, prepare func(context.Context, string, string, string) (evalTarget, error), versions ...func(context.Context, string, string) (int, error)) int {
 	fail := func(err error) int { _, _ = fmt.Fprintln(stderr, err); return 1 }
 	if len(args) < 2 {
-		return fail(fmt.Errorf("usage: corpus eval <cc> <rel> --out DIR [--previous FILE] [--require-floors] [--cap N|none] [--article-cap N|none] [--merge-siblings] [--historical-policy agent] [--non-current-tail N] [--not-yet-eligible]"))
+		return fail(fmt.Errorf("usage: corpus eval <cc> <rel> --out DIR [--previous FILE] [--previous-release FILE] [--require-floors] [--cap N|none] [--article-cap N|none] [--merge-siblings] [--historical-policy agent] [--non-current-tail N] [--not-yet-eligible]"))
 	}
-	opts, err := options(args[2:], map[string]bool{"--out": true, "--previous": true, "--require-floors": false, "--cap": true, "--article-cap": true, "--merge-siblings": false, "--historical-policy": true, "--non-current-tail": true, "--not-yet-eligible": false})
+	opts, err := options(args[2:], map[string]bool{"--out": true, "--previous": true, "--previous-release": true, "--require-floors": false, "--cap": true, "--article-cap": true, "--merge-siblings": false, "--historical-policy": true, "--non-current-tail": true, "--not-yet-eligible": false})
 	if err != nil {
 		return fail(err)
 	}
@@ -107,6 +107,9 @@ func runEvalWith(ctx context.Context, args []string, stderr io.Writer, prepare f
 	}
 	if opts["--out"] == "" {
 		return fail(fmt.Errorf("--out DIR is required"))
+	}
+	if opts["--previous-release"] != "" && opts["--previous"] == "" {
+		return fail(fmt.Errorf("--previous-release requires --previous"))
 	}
 	var capOverride *retrieval.CapOverride
 	if value, ok := opts["--cap"]; ok {
@@ -144,7 +147,7 @@ func runEvalWith(ctx context.Context, args []string, stderr io.Writer, prepare f
 		return fail(err)
 	}
 	defer target.close()
-	report, cache, err := target.runner.Evaluate(ctx, target.env, target.run, evaluation.Options{CapOverride: capOverride, ArticleCapOverride: articleCapOverride, ValidityOverrides: validity})
+	report, cache, err := target.runner.Evaluate(ctx, target.env, target.run, evaluation.Options{PreviousRelease: opts["--previous-release"], CapOverride: capOverride, ArticleCapOverride: articleCapOverride, ValidityOverrides: validity})
 	if err != nil {
 		return fail(err)
 	}

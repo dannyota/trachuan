@@ -5,7 +5,8 @@ from pathlib import Path
 import subprocess
 import tempfile
 
-from corpus_manifest import identity
+from corpus_manifest import identity, validate_inputs
+from corpus_previous import verified_previous
 from manifest import positive
 
 
@@ -57,9 +58,13 @@ def upload(country, rel, directory, report):
                os.environ['OCI_S3_ENDPOINT'], '--no-cli-pager', 's3api']
 
     def client(args):
-        result = subprocess.run([*command, *args, '--output', 'json'],
+        result = subprocess.run([*command, '--output', 'json', *args],
                                 check=True, capture_output=True, text=True)
         return json.loads(result.stdout)
+
+    _, candidate = validate_inputs(country, rel, directory, report)
+    with tempfile.TemporaryDirectory() as temporary:
+        verified_previous(candidate, Path(temporary), client)
 
     receipts = {}
     for name in ('corpus.dump', 'MANIFEST.sha256', 'report.json', 'release.json'):

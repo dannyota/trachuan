@@ -14,6 +14,20 @@ def production(country, directory):
     tags = json.loads(command(['oras', 'repo', 'tags', '--format', 'json', repository]))['tags']
     if tag not in tags:
         return None
+    return signed_manifest(country, tag, directory)
+
+
+def release(country, rel, directory):
+    require_match(r'[a-z]{2}', country, 'country')
+    require_match(r'[0-9]{8}(?:_[0-9]+)?', rel, 'previous rel')
+    obj = signed_manifest(country, country + '-' + rel, directory)
+    if obj['rel'] != rel:
+        raise ValueError('previous manifest release differs from report')
+    return obj
+
+
+def signed_manifest(country, tag, directory):
+    repository = 'ghcr.io/dannyota/trachuan-corpus-release'
     digest = command(['oras', 'resolve', repository + ':' + tag]).decode().strip()
     require_match(r'sha256:[0-9a-f]{64}', digest, 'artifact digest')
     artifact = json.loads(command(['oras', 'manifest', 'fetch', repository + '@' + digest]))
