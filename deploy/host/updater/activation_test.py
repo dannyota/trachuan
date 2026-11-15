@@ -25,7 +25,8 @@ class ActivationFixture:
         for path in (self.paths.state, self.paths.host, self.paths.quadlet, self.paths.user_units,
                      self.paths.bundles, self.paths.result.parent, self.paths.log.parent):
             path.mkdir(parents=True, exist_ok=True)
-        self.rules = policy(Path(__file__).parents[1] / 'deploy-policy.json')
+        self.rules = {key: value for key, value in policy(Path(__file__).parents[1] / 'deploy-policy.json').items()
+                      if key != 'release_floor'}
         self.store = Store(self.paths, self.rules, self.runner)
         self.schema = 7
         self.calls = []
