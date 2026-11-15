@@ -62,6 +62,9 @@ LOAD_ENV := set -a; if [ -f .env ]; then . ./.env; fi; set +a; \
 test-integration: ## Run integration tests (loads .env when present)
 	$(LOAD_ENV); go test -tags integration -count=1 ./...
 
+test-templates-prune: ## Drop stale workshop test templates; stop local tests first (loads .env when present)
+	$(LOAD_ENV); go run ./apps/corpus/cmd/test-templates-prune
+
 e2e: ## Run end-to-end flow tests against the local stack with the fake Google provider (loads .env when present)
 	bash scripts/e2e-test.sh
 	bash scripts/e2e.sh

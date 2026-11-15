@@ -15,7 +15,26 @@ func TestLiveSplitInvariants(t *testing.T) {
 	if root == "" {
 		t.Skip("LIVE_ARTIFACTS is not set")
 	}
-	dirs, _ := filepath.Glob(filepath.Join(root, "extract", "*"))
+	if !filepath.IsAbs(root) {
+		t.Fatal("LIVE_ARTIFACTS must be an absolute path")
+	}
+	matches, err := filepath.Glob(filepath.Join(root, "extract", "*"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var dirs []string
+	for _, path := range matches {
+		info, statErr := os.Stat(path)
+		if statErr != nil {
+			t.Fatal(statErr)
+		}
+		if info.IsDir() {
+			dirs = append(dirs, path)
+		}
+	}
+	if len(dirs) == 0 {
+		t.Fatal("no extract directories found")
+	}
 	var docs, empty, errs, chunks, spans, bad int
 	gaps := map[string]int{}
 	var sizes []int
