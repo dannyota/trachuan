@@ -3,6 +3,7 @@ from pathlib import Path
 import re
 
 from .deploy_io import atomic, canonical
+from .deploy_floor import check_floor, release_floor
 
 
 def digest(value):
@@ -20,9 +21,10 @@ class State:
 
     def validate(self):
         data = self.data
-        if set(data) != {'version', 'active', 'accepted', 'retained', 'failed', 'consumed',
+        if set(data) - {'release_floor'} != {'version', 'active', 'accepted', 'retained', 'failed', 'consumed',
                          'schemas', 'installed_bundle', 'journal'} or data['version'] != 1:
             raise ValueError('state fields')
+        release_floor(data)
         if not digest(data['active']) or set(data['accepted']) != {'image', 'rollback', 'corpus'}:
             raise ValueError('state active')
         for records in data['accepted'].values():
@@ -63,12 +65,14 @@ class State:
                 raise ValueError('journal authorization')
 
     @classmethod
-    def bootstrap(cls, path, active, sequence, schema, bundle):
+    def bootstrap(cls, path, active, sequence, schema, bundle, release_floor=0):
         data = dict(version=1, active=active,
                     accepted={'image': {str(sequence): {'hash': active, 'status': 'active'}},
                               'rollback': {}, 'corpus': {}},
                     retained=[], failed=[], consumed=[], schemas={active: schema},
                     installed_bundle=bundle, journal=None)
+        if release_floor:
+            data['release_floor'] = release_floor
         state = cls(path, data)
         state.save()
         return state
@@ -80,6 +84,8 @@ class State:
     def decision(self, kind, hash_value, sequence):
         if type(sequence) is not int or sequence < 1:
             raise ValueError('older or invalid sequence')
+        if kind == 'image':
+            self.check_floor(sequence)
         records = self.data['accepted'][kind]
         bound = records.get(str(sequence))
         if bound and bound['hash'] != hash_value:
@@ -116,7 +122,13 @@ class State:
                 if record['hash'] == hash_value:
                     record['status'] = 'failed'
 
-    def activate(self, hash_value, schema, authorization=None):
+    def check_floor(self, sequence):
+        check_floor(sequence, self.data.get('release_floor', 0))
+
+    def image_sequence(self, hash_value):
+        return next(int(n) for n, row in self.data['accepted']['image'].items() if row['hash'] == hash_value)
+
+    def activate(self, hash_value, schema, authorization=None, release_floor=0):
         previous = self.data['active']
         if previous != hash_value:
             self.data['retained'] = [previous] + [h for h in self.data['retained'] if h not in (previous, hash_value)]
@@ -140,6 +152,9 @@ class State:
             for n, row in records.items():
                 if row['status'] == 'pending' and int(n) < sequence:
                     self.mark_failed(row['hash'])
+        floor = max(self.data.get('release_floor', 0), release_floor)
+        if floor:
+            self.data['release_floor'] = floor
         self.save()
 
     def check_rollback(self, hash_value, auth, schema):
@@ -150,6 +165,7 @@ class State:
             raise ValueError('rollback current mismatch or replay')
         if auth['target'] not in self.data['retained']:
             raise ValueError('rollback target not retained')
+        self.check_floor(self.image_sequence(auth['target']))
         if self.data['schemas'].get(auth['target']) != schema:
             raise ValueError('rollback schema changed')
         return decision

@@ -190,8 +190,9 @@ def command(args, input=None, timeout=300, stdout_limit=None, error_prefix=None,
 
 
 class Result:
-    def __init__(self, path, log, clock=now):
+    def __init__(self, path, log, clock=now, state=None):
         self.path, self.log, self.clock = Path(path), Path(log), clock
+        self.state = state
         self.started = clock()
         self.previous = {}
         try:
@@ -207,6 +208,7 @@ class Result:
         success = finished if status in ('ok', 'verified', 'bootstrapped', 'current') else self.previous.get('last_success_at')
         value = dict(status=status, manifest_hash=digest, release=manifest.get('release'),
                      sequence=manifest.get('sequence'), step=step, message=message,
+                     release_floor=self.state.data.get('release_floor') if self.state else None,
                      started_at=self.started, finished_at=finished, last_success_at=success)
         atomic(self.path, canonical(value) + b'\n', 0o640)
         self.append(value)

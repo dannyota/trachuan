@@ -7,13 +7,14 @@ from .deploy_activate import Activator
 from .deploy_bundle import bundle
 from .deploy_corpus import Corpus
 from .deploy_host import Host
+from .deploy_floor import check_floor
 from .deploy_io import atomic, Busy, command, CommandError, Lock, Result
 from .deploy_registry import Registry
 from .deploy_secrets import Secrets
 from .deploy_secrets_state import SecretsState
 from .deploy_state import State
 from .deploy_store import Candidate, Paths, Store
-from .deploy_verify import match, policy, Verifier, verify_manifest
+from .deploy_verify import match, policy, positive, Verifier, verify_manifest
 
 
 class Updater:
@@ -45,7 +46,10 @@ class Updater:
         status = 'current' if self.hash == state.data['active'] else 'skipped'
         if self.hash in state.data['failed'] or journal.get('status') == 'stopped':
             status = journal.get('status') if journal.get('status') in ('rolled_back', 'stopped') else 'failed'
-        result.write(status, 'noop', 'manifest already seen', self.hash, self.manifest)
+        message = 'manifest already seen'
+        if journal.get('status') == 'stopped' and state.data.get('release_floor'):
+            message += '; ingress stopped with release floor ' + str(state.data['release_floor'])
+        result.write(status, 'noop', message, self.hash, self.manifest)
 
     def secret_pending(self):
         try:
@@ -134,9 +138,13 @@ class Updater:
 
     def failure(self, result, state, error):
         status = None
+        recovery_message = None
         if state and self.step != 'recovery' and not self.secret_pending():
             try:
-                status = Activator(state, self.store, self.host).recover()
+                activator = Activator(state, self.store, self.host)
+                status = activator.recover()
+                if status == 'stopped':
+                    recovery_message = activator.recovery_message
             except (OSError, ValueError, CommandError, InterruptedError):
                 status = 'failed'
         if isinstance(error, ValueError):
@@ -145,6 +153,8 @@ class Updater:
             reason = str(error) + ': ' + error.detail
         else:
             reason = 'command failed or run interrupted'
+        if recovery_message:
+            reason += '; ' + recovery_message
         result.write(status or 'failed', self.step, reason, self.hash, self.manifest)
         return 1
 
@@ -155,8 +165,9 @@ class Updater:
             with Lock(self.paths.lock), Lock(self.paths.backup_lock, create=False):
                 result = Result(self.paths.result, self.paths.log)
                 try:
-                    mode = self.mode()
                     state = State(self.paths.state / 'state.json')
+                    result.state = state
+                    mode = self.mode()
                     self.step = 'recovery'
                     activator = Activator(state, self.store, self.host)
                     stopped = activator.enforce_stopped()
@@ -165,7 +176,7 @@ class Updater:
                     recovered = None if stopped or self.secret_pending() else activator.recover()
                     if recovered:
                         journal = state.data['journal']
-                        result.write(recovered, 'recovery', 'interrupted activation recovered', journal['target'])
+                        result.write(recovered, 'recovery', activator.recovery_message, journal['target'])
                         return 1
                     with tempfile.TemporaryDirectory(prefix='run-', dir=self.paths.state) as directory:
                         for phase in self.phases:
@@ -177,12 +188,19 @@ class Updater:
         except Busy:
             return 0
 
-    def bootstrap(self, hash_value):
+    def bootstrap(self, hash_value, release_floor=None):
         match('[0-9a-f]{64}', hash_value, 'bootstrap manifest hash')
         try:
             with Lock(self.paths.lock), Lock(self.paths.backup_lock, create=False):
                 result = Result(self.paths.result, self.paths.log)
                 try:
+                    state_path = self.paths.state / 'state.json'
+                    previous = State(state_path) if state_path.exists() else None
+                    result.state = previous
+                    if release_floor is not None:
+                        positive(release_floor, 'release floor')
+                    floor = max(previous.data.get('release_floor', 0) if previous else 0,
+                                self.rules.get('release_floor', 0), release_floor or 0)
                     if self.backup_pending(result):
                         return 1
                     with tempfile.TemporaryDirectory(prefix='bootstrap-', dir=self.paths.state) as directory:
@@ -190,6 +208,7 @@ class Updater:
                         candidate = Candidate.read(path, self.rules, self.runner)
                         if candidate.hash != hash_value:
                             raise ValueError('bootstrap hash mismatch')
+                        check_floor(candidate.manifest['sequence'], floor)
                         self.verifier.images(candidate.manifest)
                         self.host.confirm(candidate)
                         schema = self.host.schema()
@@ -197,7 +216,8 @@ class Updater:
                         atomic(self.paths.mode, b'verify\n', 0o644)
                         state = State.bootstrap(self.paths.state / 'state.json', hash_value,
                                         candidate.manifest['sequence'], schema,
-                                        candidate.manifest['host_bundle']['sha256'])
+                                        candidate.manifest['host_bundle']['sha256'], release_floor=floor)
+                        result.state = state
                         self.store.prune(state)
                         self.runner(['systemctl', 'enable', '--now', 'trachuan-deploy.timer'])
                         result.write('bootstrapped', 'complete', 'bootstrap verified; mode verify', hash_value, candidate.manifest)

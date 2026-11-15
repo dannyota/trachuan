@@ -6,6 +6,7 @@ import pwd
 import re
 
 from .deploy_vault import names
+from .deploy_floor import release_floor
 from .deploy_bundle import bundle
 from .deploy_io import canonical, command, CommandError
 
@@ -27,8 +28,9 @@ def policy(path):
             'workflow_path', 'images', 'upstream', 'extensions', 'sigstore_trust_root',
             'vault_id', 'region', 'secrets', 'corpus_repository', 'corpus_identity',
             'release_namespace', 'release_bucket'}
-    if not isinstance(value, dict) or set(value) != keys or value['version'] != 1:
+    if not isinstance(value, dict) or set(value) - {'release_floor'} != keys or value['version'] != 1:
         raise ValueError('invalid policy fields')
+    release_floor(value)
     match(r'ocid1\.vault\.[A-Za-z0-9_.-]+', value['vault_id'], 'vault id')
     match(r'[a-z]+-[a-z]+-[0-9]+', value['region'], 'region')
     secrets = value['secrets']

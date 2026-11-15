@@ -12,6 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from updater.deploy_run import Updater
 from updater.deploy_store import Paths
 from updater.deploy_io import Busy, Lock, Result
+from updater.deploy_state import State
 
 
 def interrupted(signum, frame):
@@ -32,7 +33,9 @@ def main():
     subcommands = parser.add_subparsers(dest='command', required=True)
     subcommands.add_parser('run')
     subcommands.add_parser('status')
-    subcommands.add_parser('bootstrap').add_argument('manifest_sha256')
+    bootstrap = subcommands.add_parser('bootstrap')
+    bootstrap.add_argument('manifest_sha256')
+    bootstrap.add_argument('--release-floor', type=int)
     args = parser.parse_args()
     paths = Paths()
     try:
@@ -44,13 +47,18 @@ def main():
             print(json.dumps(app.status(), sort_keys=True))
             return 0
         if args.command == 'bootstrap':
-            return app.bootstrap(args.manifest_sha256)
+            return app.bootstrap(args.manifest_sha256, release_floor=args.release_floor)
         return app.run()
     except (OSError, ValueError, KeyError, TypeError):
         if args.command != 'status':
             try:
                 with Lock(paths.lock), Lock(paths.backup_lock, create=False):
-                    Result(paths.result, paths.log).write('failed', 'configuration',
+                    result = Result(paths.result, paths.log)
+                    try:
+                        result.state = State(paths.state / 'state.json')
+                    except ValueError:
+                        pass
+                    result.write('failed', 'configuration',
                         'configuration or state invalid; bootstrap may be required')
             except (OSError, ValueError, Busy):
                 pass

@@ -2,6 +2,8 @@ import hashlib
 from pathlib import PurePosixPath
 import tarfile
 
+from .deploy_floor import bundle_floor, check_floor
+
 
 def bundle(path, manifest):
     metadata = manifest['host_bundle']
@@ -10,7 +12,9 @@ def bundle(path, manifest):
     if hashlib.sha256(path.read_bytes()).hexdigest() != metadata['sha256']:
         raise ValueError('bundle hash mismatch')
     try:
-        return contents(path)
+        files = contents(path)
+        check_floor(manifest['sequence'], bundle_floor(files))
+        return files
     except (tarfile.TarError, EOFError, OSError) as error:
         raise ValueError('invalid bundle archive') from error
 
@@ -37,7 +41,8 @@ def contents(path):
                 raise ValueError('bundle expanded size limit')
             name = '/'.join(parts[2:])
             files[name] = archive.extractfile(member).read()
-    if not {'install.sh', 'server.env', 'web.env', 'quadlet/trachuan-postgres.container'} <= files.keys():
+    if not {'install.sh', 'server.env', 'web.env', 'deploy-policy.json',
+            'quadlet/trachuan-postgres.container'} <= files.keys():
         raise ValueError('incomplete host bundle')
     for name in ('server.env', 'web.env'):
         if b'REPLACE' in files[name]:
