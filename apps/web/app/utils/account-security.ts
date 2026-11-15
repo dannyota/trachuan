@@ -16,7 +16,7 @@ export function qrGeometry(matrix: boolean[][]): { size: number, path: string } 
 }
 
 export function recoveryText(codes: string[]): string {
-  return codes.map(code => code.replace(/[\s-]/g, '').toUpperCase().match(/.{1,5}/g)?.join(' ') || '').join('\n') + '\n'
+  return codes.map((code, i) => `${String(i + 1).padStart(2)}. ${code.replace(/[\s-]/g, '').toUpperCase().match(/.{1,5}/g)?.join(' ') || ''}`).join('\n') + '\n'
 }
 
 type Refusal = { error?: { code?: string }, factor?: boolean }

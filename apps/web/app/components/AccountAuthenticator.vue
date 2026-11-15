@@ -53,6 +53,7 @@ async function mutate(kind: Operation, action = kind === 'confirm' ? setupAction
       else error.value = authError(language.value, result.error.error.code, result.response.status)
       return
     }
+    editing.value = null; recovery.value = false
     if (kind === 'setup' && result.data && 'otpauth_uri' in result.data && typeof result.data.otpauth_uri === 'string' && 'secret' in result.data && typeof result.data.secret === 'string') { setup.value = { otpauth_uri: result.data.otpauth_uri, secret: result.data.secret }; setupAction.value = action; return }
     setup.value = null; setupAction.value = null; code.value = ''
     if (result.data && 'recovery_codes' in result.data) codes.value = result.data.recovery_codes
@@ -65,11 +66,20 @@ async function mutate(kind: Operation, action = kind === 'confirm' ? setupAction
 function toggle() { recovery.value = !recovery.value; code.value = '' }
 </script>
 <template>
-  <section class="account-row" aria-labelledby="account-authenticator-title">
-    <h3 id="account-authenticator-title">{{ labels.factorTitle }}: {{ session.account?.totp ? labels.factorOn : labels.factorOff }}</h3>
-    <p v-if="error" class="notice" role="alert">{{ error }}</p><p v-if="notice" role="status">{{ notice }}</p>
+  <section class="account-row account-security-row" :aria-label="`${labels.factorTitle}: ${session.account?.totp ? labels.factorOn : labels.factorOff}`">
+    <div class="account-security-head">
+      <h3>{{ labels.factorTitle }}<span class="account-security-status">{{ session.account?.totp ? labels.factorOn : labels.factorOff }}</span></h3>
+      <div v-if="!codes.length" class="auth-actions">
+        <button v-if="!setup && !reauth.challenge.value && !session.account?.totp && session.account?.totp_enrollment && !enrollmentOff" class="btn btn-secondary" type="button" :disabled="busy" @click="mutate('setup')">{{ labels.setup }}</button>
+        <template v-if="!setup && !reauth.challenge.value && session.account?.totp && !editing">
+          <button class="btn btn-secondary" type="button" @click="editing = 'remove'">{{ labels.remove }}</button>
+          <button class="btn btn-secondary" type="button" @click="editing = 'recovery'">{{ labels.replaceCodes }}</button>
+        </template>
+      </div>
+    </div>
+    <p v-if="error" class="account-security-notice" role="alert">{{ error }}</p><p v-if="notice" class="account-security-notice" role="status" aria-live="polite">{{ notice }}</p>
     <RecoveryCodes v-if="codes.length" :codes="codes" @close="codes = []" />
-    <ReauthForm v-if="reauth.challenge.value" v-bind="reauth.challenge.value" @verified="reauth.verified" @cancel="clear" />
+    <ReauthForm v-else-if="reauth.challenge.value" v-bind="reauth.challenge.value" @verified="reauth.verified" @cancel="clear" />
     <template v-else-if="setup">
       <p>{{ labels.setupInstruction }}</p>
       <AuthenticatorQr :uri="setup.otpauth_uri" :label="labels.qr" />
@@ -80,9 +90,6 @@ function toggle() { recovery.value = !recovery.value; code.value = '' }
       </form>
     </template>
     <template v-else>
-      <button v-if="!session.account?.totp && session.account?.totp_enrollment && !enrollmentOff" class="btn btn-secondary" type="button" :disabled="busy" @click="mutate('setup')">{{ labels.setup }}</button>
-      <button v-if="session.account?.totp && !editing" class="btn btn-secondary" type="button" @click="editing = 'remove'">{{ labels.remove }}</button>
-      <button v-if="session.account?.totp && !editing" class="btn btn-secondary" type="button" @click="editing = 'recovery'">{{ labels.replaceCodes }}</button>
       <form v-if="session.account?.totp && editing" class="auth-form" @submit.prevent="mutate(editing)">
         <label>{{ recovery ? labels.recovery : labels.code }}<input v-model="code" class="input" :inputmode="recovery ? 'text' : 'numeric'" :autocomplete="recovery ? 'off' : 'one-time-code'" :pattern="recovery ? undefined : '[0-9]{6}'" required></label>
         <div class="auth-actions"><button v-if="editing === 'remove'" class="btn btn-secondary" type="button" @click="toggle">{{ recovery ? labels.useCode : labels.useRecovery }}</button><button class="btn btn-secondary" :disabled="busy">{{ editing === 'remove' ? labels.remove : labels.replaceCodes }}</button><button class="btn btn-secondary" type="button" @click="clear">{{ labels.cancel }}</button></div>

@@ -20,6 +20,8 @@ function setup(purpose: string, initialLanguage: 'vi' | 'en') {
   const account = { id: 1, email: 'test@example.invalid', created_at: '2099-01-01T00:00:00Z', password: false, google: true, totp: false, totp_enrollment: true }
   const language = ref(initialLanguage)
   const head = vi.fn()
+  const savedFlag = ref(false)
+  const navigate = vi.fn()
   const json = (body: unknown) => new Response(JSON.stringify(body), { headers: { 'content-type': 'application/json' } })
   const fetch: typeof globalThis.fetch = async input => {
     const path = new URL((input as Request).url).pathname
@@ -28,12 +30,13 @@ function setup(purpose: string, initialLanguage: 'vi' | 'en') {
     return new Response(null, { status: 204 })
   }
   vi.stubGlobal('computed', computed)
-  vi.stubGlobal('useState', () => language)
+  vi.stubGlobal('useState', (key: string) => key === 'language' ? language : savedFlag)
+  vi.stubGlobal('navigateTo', navigate)
   vi.stubGlobal('useHead', head)
   vi.stubGlobal('useAuthApi', () => createClient({ baseUrl: 'http://localhost', fetch }))
   vi.stubGlobal('useApi', () => createApi({ origin: 'http://localhost', session, fetch }))
   const wrapper = mount(LinkPage, { global: { stubs: { NuxtLink: { template: '<a><slot /></a>' } } } })
-  return { wrapper, head, language }
+  return { wrapper, head, language, savedFlag, navigate, session }
 }
 
 for (const purpose of ['registration', 'add_password', 'reset']) {
@@ -51,20 +54,18 @@ for (const purpose of ['registration', 'add_password', 'reset']) {
   }
 }
 
-it('keeps the reset heading and title after saving and localizes them without restoring the form', async () => {
-  const { wrapper, head, language } = setup('reset', 'en')
+it('clears the session and navigates to login after reset', async () => {
+  const { wrapper, savedFlag, navigate, session } = setup('reset', 'en')
   try {
     await flushPromises()
     await wrapper.get('input[type=password]').setValue('synthetic replacement password')
     await wrapper.get('form').trigger('submit')
     await flushPromises()
-    expect(wrapper.get('h1').text()).toBe('Reset password')
-    expect(head.mock.calls.at(-1)?.[0]().title).toBe('Reset password · Tra Chuẩn')
-    expect(wrapper.find('form').exists()).toBe(false)
-    language.value = 'vi'
-    await flushPromises()
-    expect(wrapper.get('h1').text()).toBe('Đặt lại mật khẩu')
-    expect(head.mock.calls.at(-1)?.[0]().title).toBe('Đặt lại mật khẩu · Tra Chuẩn')
+    expect(navigate).toHaveBeenCalledWith('/login')
+    expect(savedFlag.value).toBe(true)
+    expect(session.account).toBeNull()
+    expect(session.csrfToken).toBeNull()
+    expect(session.status).toBe('signed-out')
   } finally { wrapper.unmount() }
 })
 
@@ -72,10 +73,11 @@ it.each(['registration', 'add_password', 'reset'])('associates the %s password w
   const { wrapper } = setup(purpose, 'en')
   try {
     await flushPromises()
+    expect(wrapper.get('input[name=new-password]').attributes('maxlength')).toBeUndefined()
     const username = wrapper.get('form input[name=username]')
-    expect(username.attributes('type')).toBe('text')
+    expect(username.attributes('type')).toBe('email')
     expect(username.attributes('autocomplete')).toBe('username')
-    expect(username.classes()).toContain('sr-only')
+    expect(username.attributes('readonly')).toBeDefined()
     expect(username.element).toHaveProperty('value', 'test@example.invalid')
   } finally { wrapper.unmount() }
 })

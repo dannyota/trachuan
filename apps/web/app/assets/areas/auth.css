@@ -3,7 +3,15 @@
 .auth-form p { margin: 0; }
 .auth-actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
 .account-security { padding: 20px; }
-.account-security h2, .account-security h3 { margin: 0 0 12px; }
-.account-security section + section { margin-top: 24px; }
+.account-security h2 { margin: 0 0 12px; }
 .auth-qr { display: block; width: 240px; max-width: 100%; height: auto; margin: 16px 0; }
-.auth-secret, .recovery-codes { font-family: var(--font-mono); overflow-wrap: anywhere; white-space: pre-wrap; }
+.auth-secret { font-family: var(--font-mono); overflow-wrap: anywhere; white-space: pre-wrap; }
+.recovery-codes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 24px; padding-left: 2.5em; list-style: decimal; font-family: var(--font-mono); }
+.recovery-codes li span { white-space: nowrap; }
+.recovery-panel .auth-actions { margin-top: 16px; }
+.recovery-confirm { display: block; margin: 16px 0; }
+@media (max-width: 767px) {
+  .recovery-codes { grid-template-columns: 1fr; }
+  .recovery-panel .auth-actions > span { width: 100%; }
+  .recovery-panel .auth-actions > span > span { display: block; }
+}

@@ -69,11 +69,9 @@ for (const purpose of ['registration', 'reset']) {
     await page.getByRole('button', { name: 'Lưu mật khẩu' }).click()
     if (purpose === 'reset') {
       await expect(page.getByRole('status').filter({ hasText: 'Đã lưu mật khẩu.' })).toBeVisible()
-      await expect(page.getByRole('heading', { level: 1 })).toHaveText('Đặt lại mật khẩu')
-      await expect(page).toHaveTitle('Đặt lại mật khẩu · Tra Chuẩn')
-      await page.getByRole('button', { name: 'English', exact: true }).click()
-      await expect(page.getByRole('heading', { level: 1 })).toHaveText('Reset password')
-      await expect(page).toHaveTitle('Reset password · Tra Chuẩn')
+      await expect(page).toHaveURL(/\/login$/)
+      await page.reload()
+      await expect(page.getByRole('status').filter({ hasText: 'Đã lưu mật khẩu.' })).toHaveCount(0)
     }
     else await expect(page).toHaveURL(/\/account$/)
     expect(body).toEqual({ token, password: 'synthetic replacement password' })
@@ -81,17 +79,21 @@ for (const purpose of ['registration', 'reset']) {
 }
 
 for (const purpose of ['registration', 'add_password', 'reset']) {
-  test(`${purpose} has a localized title and a visually hidden account username`, async ({ page }) => {
+  test(`${purpose} has a localized title and password manager fields`, async ({ page }) => {
     await lookup(page, purpose)
     await page.goto(`/link#${token}`)
     await expect(page).toHaveTitle(`${purpose === 'reset' ? 'Reset password' : 'Set password'} · Tra Chuẩn`)
-    const username = page.locator('form input[name=username]')
-    await expect(username).toHaveAttribute('type', 'text')
-    await expect(username).toHaveAttribute('autocomplete', 'username')
+    const form = page.locator('form')
+    const username = form.locator('input[name="username"]')
+    await expect(username).toBeVisible()
+    for (const [name, value] of Object.entries({ id: 'username', type: 'email', autocomplete: 'username', readonly: '' })) await expect(username).toHaveAttribute(name, value)
     await expect(username).toHaveValue(account.email)
-    const bounds = await username.boundingBox()
-    expect(bounds?.width).toBeLessThanOrEqual(1)
-    expect(bounds?.height).toBeLessThanOrEqual(1)
+    const password = form.locator('input[name="new-password"]')
+    await expect(password).not.toHaveAttribute('maxlength')
+    for (const [name, value] of Object.entries({ id: 'new-password', type: 'password', autocomplete: 'new-password', minlength: '15', passwordrules: 'minlength: 15; maxlength: 128;', required: '' })) await expect(password).toHaveAttribute(name, value)
+    expect(await form.locator('input').evaluateAll(inputs => inputs.indexOf(inputs.find(input => input.name === 'username')!) < inputs.indexOf(inputs.find(input => input.name === 'new-password')!))).toBe(true)
+    await expect(form.locator('button[type="submit"]')).toBeVisible()
+    if (purpose === 'add_password') await expect(page.getByRole('link', { name: 'Back to account' })).toHaveAttribute('href', '/account')
     await page.getByRole('button', { name: 'Tiếng Việt', exact: true }).click()
     await expect(page).toHaveTitle(`${purpose === 'reset' ? 'Đặt lại mật khẩu' : 'Đặt mật khẩu'} · Tra Chuẩn`)
     await expect(username).toHaveValue(account.email)
