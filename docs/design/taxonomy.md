@@ -85,18 +85,30 @@ under the corpus rules.
    that is not in the release is expected and yields nothing; a document found
    without the article yields a coverage gap `seed_article_missing` naming the
    document and the node. Number-only and consolidation matches are not seeds.
-2. LLM in batches over public legal text, after `chunk` and `embed` have run:
+2. Consolidation inheritance. An unseeded article of a consolidated document
+   inherits every seed of the same-numbered article (`dieu-<n>`) of a document
+   it `consolidates`. It is stored as method `phapdien_seed` with
+   `confidence = 0.9` (a direct seed carries 1.0), so the precedence in
+   [data](data.md) and the corpus schema are unchanged; the source follows from
+   the `consolidates` relation. Several sources give the union; a source without
+   that article gives nothing. No LLM is involved.
+3. LLM in batches over public legal text, after `chunk` and `embed` have run,
+   for articles that hold no seed or inherited node:
    - One request per document (title, scope article, table of contents, VBPL
      field) yields level-2 nodes.
    - One request per chapter with all its articles yields assignments for each
-     article. Candidate nodes are the top 10 by cosine between the article's
-     chunk vectors and node description vectors embedded with the same dense
-     recipe, searched across the whole tree.
+     article; a document without chapters is split into groups of up to 12
+     articles in document order. Candidate nodes are the top 10 by cosine
+     between the article's chunk vectors and node description vectors embedded
+     with the same dense recipe, searched across the whole tree.
    - Output is JSON with a set of codes and a confidence per code; an article
-     may receive several nodes in different families. The threshold per level is
-     calibrated on the labeled set to reach precision at least 0.85, then frozen
-     in the release; below it, no assignment and a gap "unassigned".
-3. Manual overrides in `taxonomy/overrides.yaml`. An override names an active
+     may receive several nodes in different families. A code outside the
+     request's candidates or unknown to the mapping is dropped and counted. The
+     model, effort and prompt are part of the classification recipe. The
+     threshold per level is calibrated on the labeled set to reach precision at
+     least 0.85, then frozen in the release; below it, no assignment and a gap
+     "unassigned".
+4. Manual overrides in `taxonomy/overrides.yaml`. An override names an active
    package node at level 2 or deeper or a custom node; any other code fails
    `corpus taxonomy check` and the build. An override whose document or anchor
    is not in the release yields a coverage gap `override_target_missing` naming
@@ -145,12 +157,20 @@ every prompt or threshold change reruns it.
 | same                                             | precision and recall at the deepest level           | 0.75  |
 | 100 articles with labels in two or more families | precision and recall over all pairs                 | 0.80  |
 | every slice                                      | candidate recall at 10 (true node among candidates) | 0.95  |
-| 100 post-2023 articles labeled by the owner      | precision and recall at level 2                     | 0.85  |
+| 100 post-2023 articles, model-adjudicated        | precision and recall at level 2                     | 0.85  |
 | same                                             | precision and recall at the deepest level           | 0.70  |
 | 50 articles that belong to custom nodes          | precision and recall of custom nodes                | 0.80  |
+| 200 seeded consolidated articles, inherited      | precision at level 2 (inheritance layer)            | 0.90  |
 
 Every level that a release serves must have a floor in this table; a new level
 or slice is added here before it is served.
+
+The post-2023 reference is model-adjudicated, not owner-labeled: Codex
+`gpt-6-astra` labels 100 post-2023 articles independently, blind to the
+classifier's output and candidates, and the coordinator reads 20 of its labels
+before the slice gates. The custom-node slice does not apply while `custom.yaml`
+is empty. The inheritance slice masks seeded articles of consolidated documents
+and compares the nodes they would inherit with their seeds.
 
 The report also lists assignment counts per node, unassigned counts, and the
 diff of node changes against the previous release. A failed floor blocks
