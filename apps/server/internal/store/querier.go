@@ -12,6 +12,8 @@ import (
 type Querier interface {
 	AccountEmailExists(ctx context.Context, email string) (bool, error)
 	AllocateMailID(ctx context.Context) (int64, error)
+	ApplyFrameworkRevocation(ctx context.Context, arg ApplyFrameworkRevocationParams) (ApplyFrameworkRevocationRow, error)
+	ApplyRestoreFence(ctx context.Context) error
 	BatchSnapshot(ctx context.Context, arg BatchSnapshotParams) (BatchSnapshotRow, error)
 	BumpAccountEpoch(ctx context.Context, id int64) (BumpAccountEpochRow, error)
 	ClaimLoginTransaction(ctx context.Context, handleHash string) (LoginTransaction, error)
@@ -55,10 +57,13 @@ type Querier interface {
 	GetSession(ctx context.Context, tokenHash string) (GetSessionRow, error)
 	GetToken(ctx context.Context, tokenHash string) (GetTokenRow, error)
 	HasTOTP(ctx context.Context, accountID int64) (bool, error)
+	InsertFrameworkAllowance(ctx context.Context, arg InsertFrameworkAllowanceParams) (InsertFrameworkAllowanceRow, error)
 	InsertGoogleAccount(ctx context.Context, arg InsertGoogleAccountParams) (Account, error)
 	InsertReport(ctx context.Context, arg InsertReportParams) (IssueReport, error)
 	InsertSealedMail(ctx context.Context, arg InsertSealedMailParams) (int64, error)
+	ListFrameworkEntitlements(ctx context.Context, email string) ([]FrameworkEntitlement, error)
 	ListGrants(ctx context.Context, accountID int64) ([]ListGrantsRow, error)
+	ListLiveFrameworkEntitlementsByEmail(ctx context.Context, email string) ([]FrameworkEntitlement, error)
 	ListLiveSessions(ctx context.Context, accountID int64) ([]WebSession, error)
 	ListOwnReports(ctx context.Context, arg ListOwnReportsParams) ([]IssueReport, error)
 	ListSessions(ctx context.Context, accountID int64) ([]WebSession, error)

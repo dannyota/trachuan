@@ -20,6 +20,7 @@ type config struct {
 	listen, authURL, corpusURL, embedderURL, audience, publicURL, googleID, googleSecret, googleIssuer string
 	strictDeployment                                                                                   bool
 	totpEnrollment                                                                                     bool
+	frameworks                                                                                         bool
 	omitCompactRelated                                                                                 bool
 	trustedProxies                                                                                     []netip.Prefix
 	oauthClients                                                                                       []oauth.Client
@@ -37,6 +38,15 @@ func loadConfig() (config, error) {
 		c.embedderURL = "http://127.0.0.1:8091"
 	}
 	var err error
+	if raw, present := os.LookupEnv("SERVER_FRAMEWORKS"); present {
+		switch raw {
+		case "true":
+			c.frameworks = true
+		case "false":
+		default:
+			return config{}, errors.New("invalid SERVER_FRAMEWORKS")
+		}
+	}
 	c.mcpOrigins, c.mcpOriginMode, err = loadMCPOriginConfig()
 	if err != nil {
 		return config{}, err

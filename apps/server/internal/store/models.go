@@ -48,6 +48,30 @@ type EmailLink struct {
 	ConsumedAt *time.Time
 }
 
+type FrameworkEntitlement struct {
+	ID           int64
+	Email        string
+	Scope        string
+	GrantedAt    time.Time
+	GrantedBy    string
+	Note         string
+	RevokedAt    *time.Time
+	RevokedBy    *string
+	RevokeReason *string
+}
+
+type FrameworkEntitlementEvent struct {
+	ID            int64
+	EntitlementID int64
+	OccurredAt    time.Time
+	Actor         string
+	Action        string
+	Email         string
+	Scope         string
+	Reason        *string
+	Note          string
+}
+
 type IssueReport struct {
 	ID             int64
 	AccountID      int64

@@ -46,6 +46,10 @@ unset and rejects outside origins with 403; `log` explicitly allows them while
 recording observations. Any other value, including an empty value, prevents
 startup.
 
+`SERVER_FRAMEWORKS` defaults to `false`. Only `true` and `false` are accepted;
+an empty or any other value prevents startup. The server logs the value at
+startup; the flag gates no routes yet.
+
 Create the required local key file outside the repository, then enable captured
 mail. Capture requires loopback hosts in both `SERVER_PUBLIC_URL` and
 `SERVER_LISTEN`; leave `SERVER_SMTP_HOST` unset. With neither capture nor SMTP,

@@ -123,11 +123,33 @@ podman exec trachuan-postgres /usr/local/bin/postgres-admin.sh /usr/local/bin/wa
 
 Add `--type=time --target='<timestamp>'` to the restore for a point in time;
 `POSTGRES_IMAGE` is the reference in `/srv/trachuan/host/images.env`. Wait until
-`SELECT pg_is_in_recovery()` returns false. Then, in one committed transaction
-in the `auth` database, increment every account's `auth_epoch` and revoke all
-sessions and tokens ([auth](../design/auth.md#account-lifecycle)), so
-credentials revoked after the backup cannot return. Start `trachuan-server` and
-`trachuan-web`, [prewarm](release-restore.md#prewarm-a-corpus-database) the
+`SELECT pg_is_in_recovery()` returns false. Run migrations with the pinned
+server image through the host's migration unit first:
+
+```sh
+systemctl --user restart trachuan-migrate.service
+```
+
+Require a zero exit status before running the fence. Use `restart` because the
+unit has `RemainAfterExit=true`; `start` could skip migrations after a restore.
+The unit uses the server image pinned in `/srv/trachuan/host/images.env`, the
+auth database secret and the host's PostgreSQL authentication check. Run the
+fence with that same image as `SERVER_IMAGE`:
+
+```sh
+podman run --rm --network=host --user=65532:65532 \
+  --read-only --cap-drop=ALL --security-opt=no-new-privileges \
+  --secret=server_auth_database_url,type=env,target=SERVER_AUTH_DATABASE_URL \
+  "$SERVER_IMAGE" admin restore-fence
+```
+
+Require a zero exit status before continuing. The command increments every
+account's `auth_epoch`, revokes all credentials and outstanding login proofs,
+and revokes every live framework entitlement with reason `restore`, with one
+audit event per entitlement, in one committed transaction. Running it again is
+safe: epochs advance again, with no duplicate revocation events. The operator
+must allow entitlements again from the event history. Start `trachuan-server`
+and `trachuan-web`, [prewarm](release-restore.md#prewarm-a-corpus-database) the
 active corpus database, check `curl --fail http://127.0.0.1:8080/readyz`, and
 only then start Caddy.
 
