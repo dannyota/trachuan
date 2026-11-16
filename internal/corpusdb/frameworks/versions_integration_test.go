@@ -149,9 +149,7 @@ func TestSchema_LifecycleCannotBeReset(t *testing.T) {
 	conn := schemaDB(t)
 	seed(t, conn)
 	cases := map[string]violationCase{
-		"release delete and reinsert": {`DELETE FROM release;
- INSERT INTO release(singleton,kind,rel,schema_version,dense_recipe,chunk_recipe,lexical_recipe,retrieval_recipe,framework_count,version_count,control_count,built_at)
- VALUES(true,'frameworks','20990101',1,'{}','{}','{}','{}',2,2,2,now())`, "23514", "release_delete"},
+		"release delete and reinsert":               {`DELETE FROM release;` + releaseFixtureSQL, "23514", "release_delete"},
 		"release truncate":                          {`TRUNCATE release`, "23514", "release_truncate"},
 		"version truncate with explicit dependents": {`TRUNCATE framework_version,source_file,control,control_text,body_chunk,public_chunk,body_posting,public_posting,control_mapping,mapping_evidence,quality_gap`, "23514", "framework_version_immutable"},
 		"version truncate cascade":                  {`TRUNCATE framework_version CASCADE`, "23514", "framework_version_immutable"},

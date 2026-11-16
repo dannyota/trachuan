@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 
+	"danny.vn/trachuan/internal/frameworks/businesskey"
 	"danny.vn/trachuan/internal/frameworks/parse"
 	"danny.vn/trachuan/internal/frameworks/registry"
 )
@@ -38,17 +39,39 @@ type Input struct {
 	Source   string
 	Evidence string
 }
-type Stats struct{ Unresolved, Dropped, Duplicates int }
+type VersionKey struct{ Code, Version string }
+type Stats struct {
+	Unresolved, Dropped, Duplicates int
+	DroppedByVersion                map[VersionKey]int
+}
+
+func (s *Stats) drop(key Key, count int) {
+	if count == 0 {
+		return
+	}
+	if s.DroppedByVersion == nil {
+		s.DroppedByVersion = map[VersionKey]int{}
+	}
+	s.Dropped += count
+	s.DroppedByVersion[VersionKey{key.Code, key.Version}] += count
+}
 
 func Build(reg *registry.Registry, catalogs map[string]*parse.Result, inputs []Input) ([]Edge, Stats, error) {
 	var stats Stats
+	registered := map[string]bool{}
+	release := map[VersionKey]registry.Framework{}
+	validator := businesskey.New()
 	for _, v := range reg.Frameworks {
+		registered[v.Code] = true
+		if v.Parser != "" {
+			release[VersionKey{v.Code, v.Version}] = v
+		}
 		result := catalogs[v.Code+":"+v.Version]
 		if result == nil {
 			continue
 		}
 		for _, n := range result.Nodes {
-			stats.Dropped += n.DroppedMappings
+			stats.drop(Key{Code: v.Code, Version: v.Version}, n.DroppedMappings)
 			for _, m := range n.Mappings {
 				source := "nist-oscal"
 				if v.Parser == "nist-csf-2-xlsx" {
@@ -94,36 +117,36 @@ func Build(reg *registry.Registry, catalogs map[string]*parse.Result, inputs []I
 			}
 		}
 		edge.Resolved = edge.Resolved && sourceFound
+		if !registered[edge.From.Code] || !registered[edge.To.Code] ||
+			!validator.Valid(edge.From.Code, edge.From.Version, edge.From.Citation) || !validator.Valid(edge.To.Code, edge.To.Version, edge.To.Citation) {
+			stats.drop(edge.From, 1)
+			continue
+		}
 		if !edge.Resolved {
 			stats.Unresolved++
 		}
 		if in.Evidence != "" {
-			requires := []string{}
-			for _, key := range []Key{edge.From, edge.To} {
-				found := false
-				for _, v := range reg.Frameworks {
-					if v.Code != key.Code || v.Version != key.Version {
-						continue
-					}
+			from, fromRelease := release[VersionKey{edge.From.Code, edge.From.Version}]
+			to, toRelease := release[VersionKey{edge.To.Code, edge.To.Version}]
+			if !fromRelease || !toRelease {
+				stats.drop(edge.From, 1)
+			} else {
+				requires := []string{}
+				for _, v := range []registry.Framework{from, to} {
 					if v.Access != "free" && v.Access != "licensed" {
 						return nil, stats, fmt.Errorf("evidence access not classified")
 					}
-					found = true
 					if v.Access == "licensed" {
 						handle := "fw:" + v.Code + ":" + v.Version
 						if len(requires) == 0 || requires[0] != handle {
 							requires = append(requires, handle)
 						}
 					}
-					break
 				}
-				if !found {
-					return nil, stats, fmt.Errorf("evidence version not registered")
-				}
-			}
 
-			sort.Strings(requires)
-			edge.Evidence = &Evidence{in.Evidence, requires}
+				sort.Strings(requires)
+				edge.Evidence = &Evidence{in.Evidence, requires}
+			}
 		}
 		b, _ := json.Marshal([]any{edge.From, edge.To, edge.Relation, edge.Source})
 		id := string(b)

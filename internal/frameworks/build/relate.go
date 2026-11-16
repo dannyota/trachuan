@@ -30,9 +30,6 @@ func relateStep(ctx context.Context, base, dir string) error {
 		}
 		nodes := catalogs[v.Code+":"+v.Version].Nodes
 		dropped := 0
-		for _, node := range nodes {
-			dropped += node.DroppedMappings
-		}
 		for _, file := range v.Files {
 			if file.Role != "mapping workbook" {
 				continue
@@ -52,16 +49,14 @@ func relateStep(ctx context.Context, base, dir string) error {
 			gaps = append(gaps, Gap{Kind: "mapping_dropped", Code: v.Code, Version: v.Version, Count: dropped})
 		}
 	}
-	edges, _, err := relate.Build(reg, catalogs, inputs)
+	edges, stats, err := relate.Build(reg, catalogs, inputs)
 	if err != nil {
 		return hide("build edges", err)
 	}
-	for _, edge := range edges {
-		if !edge.Resolved {
-			citation := edge.From.Citation
-			gaps = append(gaps, Gap{Kind: "mapping_unresolved", Code: edge.From.Code, Version: edge.From.Version, Citation: &citation, Count: 1})
-		}
+	for key, count := range stats.DroppedByVersion {
+		gaps = append(gaps, Gap{Kind: "mapping_dropped", Code: key.Code, Version: key.Version, Count: count})
 	}
+	edges, gaps = releaseMappings(edges, gaps)
 	if err := writeRows(dir, "edges.jsonl", edges); err != nil {
 		return err
 	}

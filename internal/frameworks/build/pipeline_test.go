@@ -69,7 +69,7 @@ func TestRun_WorkbookDroppedCount(t *testing.T) {
 	require.NoError(t, testRun(context.Background(), "20990101", &out))
 	require.NotContains(t, out.String(), "invented mapping text")
 	gaps := readRows[Gap](t, filepath.Join(work, "20990101/relate/gaps.jsonl"))
-	require.Len(t, gaps, 3)
+	require.Len(t, gaps, 1)
 	require.Equal(t, "mapping_dropped", gaps[0].Kind)
 	require.Equal(t, "fw-alpha", gaps[0].Code)
 	require.Equal(t, "v1", gaps[0].Version)

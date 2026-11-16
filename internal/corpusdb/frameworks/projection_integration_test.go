@@ -41,7 +41,7 @@ func TestSchema_PublicProjectionIndependentOfText(t *testing.T) {
  INSERT INTO body_posting(version_id,chunk_id,token,tf) VALUES(1,2,'changed',2);
  UPDATE mapping_evidence SET evidence='Changed invented evidence';
  UPDATE source_file SET size=999,text_source='ocr',text_complete=false;
- INSERT INTO quality_gap(kind,class,version_id,subject,detail) VALUES('ocr_flagged','text',1,'A.1','1:2');`)
+ INSERT INTO quality_gap(kind,class,version_id,subject,detail,blocks) VALUES('ocr_flagged','text',1,'A.1','1:2',false);`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -102,7 +102,7 @@ func TestSchema_AcceptsPublicEvidenceAndUnresolvedEnds(t *testing.T) {
 	_, err := conn.Exec(context.Background(), `
  UPDATE mapping_evidence SET licensed_version_ids='{}';
  UPDATE control_mapping SET to_version_id=NULL,to_version='3.0',to_citation='B.9',resolved=false;
- INSERT INTO quality_gap(kind,class,version_id,subject,detail) VALUES('mapping_unresolved','public',1,'fw:fw-beta:3.0#B.9','0');
+ INSERT INTO quality_gap(kind,class,version_id,subject,detail,blocks) VALUES('mapping_unresolved','public',1,'fw:fw-beta:3.0#B.9','0',false);
  INSERT INTO control(id,version_id,ordinal,citation,citation_norm,kind,title,status)
  VALUES(3,1,2,'A . 2','A.2','control','Our title','active');`)
 	if err != nil {

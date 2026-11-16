@@ -13,7 +13,7 @@ func runFrameworks(ctx context.Context, args []string, out, errout io.Writer) in
 		_, _ = fmt.Fprintln(errout, "usage: corpus frameworks build <rel>")
 		return 2
 	}
-	if err := build.Run(ctx, args[1], out, newFrameworkEmbedder()); err != nil {
+	if err := build.Run(ctx, args[1], out, newFrameworkEmbedder(), newFrameworkDatabase()); err != nil {
 		_, _ = fmt.Fprintln(errout, err)
 		return 1
 	}

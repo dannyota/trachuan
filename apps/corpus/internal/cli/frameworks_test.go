@@ -62,7 +62,8 @@ func startFrameworkEmbedder(t *testing.T) {
 	t.Setenv("CORPUS_EMBEDDER_URL", server.URL)
 }
 
-func TestFrameworks_BuildAndNoTextOutput(t *testing.T) {
+func TestFrameworks_EmbedsBeforeDatabaseConfigurationFailure(t *testing.T) {
+	t.Setenv("CORPUS_BUILDER_DATABASE_URL", "")
 	startFrameworkEmbedder(t)
 	root := t.TempDir()
 	t.Chdir(root)
@@ -78,8 +79,9 @@ func TestFrameworks_BuildAndNoTextOutput(t *testing.T) {
 	registry := fmt.Sprintf("frameworks:\n  - code: fw-alpha\n    version: v1\n    name: Invented\n    publisher: Invented\n    language: en\n    access: licensed\n    ordinal: 1\n    citation_scheme: oscal-catalog\n    parser: nist-oscal-800-53\n    expected_controls: 1\n    files:\n      - path: catalog.json\n        sha256: %x\n        size: %d\n        role: catalog\n        format: json\n", sha256.Sum256(data), len(data))
 	require.NoError(t, os.WriteFile("sources/frameworks.yaml", []byte(registry), 0600))
 	var out, errout bytes.Buffer
-	require.Equal(t, 0, Run(context.Background(), []string{"frameworks", "build", "20990101"}, &out, &errout), errout.String())
+	require.Equal(t, 1, Run(context.Background(), []string{"frameworks", "build", "20990101"}, &out, &errout), errout.String())
 	require.Contains(t, out.String(), "embed complete")
+	require.Contains(t, errout.String(), "build")
 	require.NotContains(t, out.String()+errout.String(), "licensed title")
 	require.FileExists(t, "work/20990101/chunk/manifest.json")
 	require.FileExists(t, "work/20990101/embed/manifest.json")
@@ -112,8 +114,8 @@ func TestFrameworks_BuildAndNoTextOutput(t *testing.T) {
 	require.True(t, keys["fwp:fw-alpha:v1"])
 	out.Reset()
 	errout.Reset()
-	require.Equal(t, 0, Run(context.Background(), []string{"frameworks", "build", "20990101"}, &out, &errout), errout.String())
-	require.Contains(t, out.String(), "embed skipped")
+	require.Equal(t, 1, Run(context.Background(), []string{"frameworks", "build", "20990101"}, &out, &errout), errout.String())
+	require.Contains(t, out.String(), "embed skipped", errout.String())
 	require.NoError(t, os.WriteFile("work/20990101/parse/controls.jsonl", []byte("licensed text AA"), 0600))
 	out.Reset()
 	errout.Reset()

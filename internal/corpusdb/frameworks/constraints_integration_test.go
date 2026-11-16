@@ -59,7 +59,7 @@ func TestSchema_RejectsConstraintViolations(t *testing.T) {
 		"edge business key mismatch":      {`UPDATE control_mapping SET from_version='3.0'`, "23503", "control_mapping_from_version_fkey"},
 		"edge citation mismatch":          {`UPDATE control_mapping SET to_citation='B.2'`, "23503", "control_mapping_to_control_fkey"},
 		"gap class mismatch":              {`UPDATE quality_gap SET class='text'`, "23514", "quality_gap_class_check"},
-		"gap unknown kind":                {`UPDATE quality_gap SET kind='unknown'`, "23514", "quality_gap_class_check"},
+		"gap unknown kind":                {`UPDATE quality_gap SET kind='unknown',blocks=false`, "23514", "quality_gap_class_check"},
 		"gap key duplicate":               {`INSERT INTO quality_gap SELECT * FROM quality_gap`, "23505", "quality_gap_pkey"},
 		"gap text detail":                 {`UPDATE quality_gap SET detail='quoted document text'`, "23514", "quality_gap_detail_check"},
 		"gap empty detail":                {`UPDATE quality_gap SET detail=''`, "23514", "quality_gap_detail_check"},
@@ -86,13 +86,21 @@ func TestSchema_RejectsConstraintViolations(t *testing.T) {
 		"source text source":              {`UPDATE source_file SET text_source='bad'`, "23514", "source_file_text_source_check"},
 		"source duplicate":                {`INSERT INTO source_file SELECT 2,version_id,name,role,sha256,size,licence_kind,text_source,text_complete FROM source_file`, "23505", "source_file_identity_key"},
 		"source version missing":          {`UPDATE source_file SET version_id=99`, "23503", "source_file_version_fkey"},
-		"release duplicate":               {`INSERT INTO release SELECT singleton,kind,'20990102',schema_version,dense_recipe,chunk_recipe,lexical_recipe,retrieval_recipe,framework_count,version_count,control_count,built_at,versions_sealed FROM release`, "23505", "release_pkey"},
-		"release singleton false":         {`UPDATE release SET singleton=false`, "23514", "release_singleton_check"},
-		"release kind":                    {`UPDATE release SET kind='law'`, "23514", "release_kind_check"},
-		"release schema version":          {`UPDATE release SET schema_version=7`, "23514", "release_schema_version_check"},
-		"release framework count":         {`UPDATE release SET framework_count=-1`, "23514", "release_framework_count_check"},
-		"release version count":           {`UPDATE release SET version_count=-1`, "23514", "release_version_count_check"},
-		"release count":                   {`UPDATE release SET control_count=-1`, "23514", "release_control_count_check"},
+		"release duplicate": {`INSERT INTO release(
+ singleton,kind,rel,schema_version,dense_recipe,chunk_recipe,lexical_recipe,retrieval_recipe,
+ snapshot_recipe,parse_recipe,relate_recipe,embed_recipe,
+ snapshot_input_hash,parse_input_hash,relate_input_hash,chunk_input_hash,embed_input_hash,
+ framework_count,version_count,control_count,built_at,versions_sealed)
+ SELECT singleton,kind,'20990102',schema_version,dense_recipe,chunk_recipe,lexical_recipe,retrieval_recipe,
+ snapshot_recipe,parse_recipe,relate_recipe,embed_recipe,
+ snapshot_input_hash,parse_input_hash,relate_input_hash,chunk_input_hash,embed_input_hash,
+ framework_count,version_count,control_count,built_at,versions_sealed FROM release`, "23505", "release_pkey"},
+		"release singleton false": {`UPDATE release SET singleton=false`, "23514", "release_singleton_check"},
+		"release kind":            {`UPDATE release SET kind='law'`, "23514", "release_kind_check"},
+		"release schema version":  {`UPDATE release SET schema_version=7`, "23514", "release_schema_version_check"},
+		"release framework count": {`UPDATE release SET framework_count=-1`, "23514", "release_framework_count_check"},
+		"release version count":   {`UPDATE release SET version_count=-1`, "23514", "release_version_count_check"},
+		"release count":           {`UPDATE release SET control_count=-1`, "23514", "release_control_count_check"},
 	}
 	for _, table := range []string{"body_chunk", "public_chunk"} {
 		cases[table+" control missing"] = violationCase{"UPDATE " + table + " SET control_id=99", "23503", table + "_control_fkey"}
@@ -123,7 +131,7 @@ func TestSchema_RejectsConstraintViolations(t *testing.T) {
 		cases[end+" mapping version syntax"] = violationCase{"UPDATE control_mapping SET " + end + "_version='1..0'", "23514", "control_mapping_" + end + "_version_check"}
 		cases[end+" mapping citation alphabet"] = violationCase{"UPDATE control_mapping SET " + end + "_citation=' A.1'", "23514", "control_mapping_" + end + "_citation_check"}
 	}
-	for _, recipe := range []string{"dense_recipe", "chunk_recipe", "lexical_recipe", "retrieval_recipe"} {
+	for _, recipe := range []string{"dense_recipe", "chunk_recipe", "lexical_recipe", "retrieval_recipe", "snapshot_recipe", "parse_recipe", "relate_recipe", "embed_recipe"} {
 		cases[recipe+" shape"] = violationCase{"UPDATE release SET " + recipe + "='[]'", "23514", "release_" + recipe + "_check"}
 	}
 	runViolations(t, conn, cases)

@@ -138,10 +138,14 @@ CREATE TABLE IF NOT EXISTS quality_gap (
  version_id bigint NOT NULL CONSTRAINT quality_gap_version_fkey REFERENCES framework_version(id),
  subject text COLLATE "C" NOT NULL,
  detail text COLLATE "C" NOT NULL CONSTRAINT quality_gap_detail_check CHECK (detail ~ '^(0|[1-9][0-9]*)(:(0|[1-9][0-9]*))*$'),
+ blocks boolean NOT NULL,
  PRIMARY KEY (kind,version_id,subject,detail),
  CONSTRAINT quality_gap_class_check CHECK (
-  (class='public' AND kind IN ('mapping_unresolved','control_count','title_missing','lineage_invalid')) OR
-  (class='text' AND kind IN ('parse','extraction','ocr','completeness','ocr_blocked','ocr_quote_not_found','ocr_rejected','ocr_label_flagged','ocr_flagged'))
+  (class='public' AND kind IN ('mapping_unresolved','mapping_dropped','title_missing')) OR
+  (class='text' AND kind IN ('ocr_blocked','ocr_flagged','text_incomplete','chunk_omission','embedding_input_too_long','embedding_input_bytes_exceeded'))
+ ),
+ CONSTRAINT quality_gap_blocks_check CHECK (
+  (kind <> 'ocr_blocked' OR blocks) AND (NOT blocks OR kind IN ('ocr_blocked','title_missing'))
  )
 );
 
@@ -154,6 +158,15 @@ CREATE TABLE IF NOT EXISTS release (
  chunk_recipe jsonb NOT NULL CONSTRAINT release_chunk_recipe_check CHECK (jsonb_typeof(chunk_recipe) = 'object'),
  lexical_recipe jsonb NOT NULL CONSTRAINT release_lexical_recipe_check CHECK (jsonb_typeof(lexical_recipe) = 'object'),
  retrieval_recipe jsonb NOT NULL CONSTRAINT release_retrieval_recipe_check CHECK (jsonb_typeof(retrieval_recipe) = 'object'),
+ snapshot_recipe jsonb NOT NULL CONSTRAINT release_snapshot_recipe_check CHECK (jsonb_typeof(snapshot_recipe) = 'object'),
+ parse_recipe jsonb NOT NULL CONSTRAINT release_parse_recipe_check CHECK (jsonb_typeof(parse_recipe) = 'object'),
+ relate_recipe jsonb NOT NULL CONSTRAINT release_relate_recipe_check CHECK (jsonb_typeof(relate_recipe) = 'object'),
+ embed_recipe jsonb NOT NULL CONSTRAINT release_embed_recipe_check CHECK (jsonb_typeof(embed_recipe) = 'object'),
+ snapshot_input_hash text COLLATE "C" NOT NULL CONSTRAINT release_snapshot_input_hash_check CHECK (snapshot_input_hash ~ '^[0-9a-f]{64}$'),
+ parse_input_hash text COLLATE "C" NOT NULL CONSTRAINT release_parse_input_hash_check CHECK (parse_input_hash ~ '^[0-9a-f]{64}$'),
+ relate_input_hash text COLLATE "C" NOT NULL CONSTRAINT release_relate_input_hash_check CHECK (relate_input_hash ~ '^[0-9a-f]{64}$'),
+ chunk_input_hash text COLLATE "C" NOT NULL CONSTRAINT release_chunk_input_hash_check CHECK (chunk_input_hash ~ '^[0-9a-f]{64}$'),
+ embed_input_hash text COLLATE "C" NOT NULL CONSTRAINT release_embed_input_hash_check CHECK (embed_input_hash ~ '^[0-9a-f]{64}$'),
  framework_count bigint NOT NULL CONSTRAINT release_framework_count_check CHECK (framework_count >= 0),
  version_count bigint NOT NULL CONSTRAINT release_version_count_check CHECK (version_count >= 0),
  control_count bigint NOT NULL CONSTRAINT release_control_count_check CHECK (control_count >= 0), built_at timestamptz NOT NULL,

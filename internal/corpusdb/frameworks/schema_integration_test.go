@@ -32,9 +32,7 @@ func schemaDB(t *testing.T) *pgx.Conn {
 func seedUnsealed(t *testing.T, conn *pgx.Conn) {
 	t.Helper()
 	//nolint:misspell // Match the registry field names.
-	_, err := conn.Exec(context.Background(), `
- INSERT INTO release(singleton,kind,rel,schema_version,dense_recipe,chunk_recipe,lexical_recipe,retrieval_recipe,framework_count,version_count,control_count,built_at)
- VALUES(true,'frameworks','20990101',1,'{}','{}','{}','{}',2,2,2,now());
+	_, err := conn.Exec(context.Background(), releaseFixtureSQL+`
  INSERT INTO framework(id,code,name,publisher,aliases) VALUES
  (1,'fw-alpha','Framework Alpha','Invented publisher','{alpha}'),(2,'fw-beta','Framework Beta','Invented publisher','{beta}');
  INSERT INTO framework_version(id,framework_code,version,language,access,licence_kind,released,ordinal) VALUES
@@ -54,7 +52,7 @@ func seedUnsealed(t *testing.T, conn *pgx.Conn) {
  INSERT INTO public_posting(version_id,chunk_id,token,tf) VALUES(1,1,'alpha',1);
  INSERT INTO control_mapping(id,from_code,from_version,from_citation,to_code,to_version,to_citation,relation,source,from_version_id,to_version_id,resolved)
  VALUES(1,'fw-alpha','2.1','A.1','fw-beta','1.0','B.1','related','invented',1,2,true);
- INSERT INTO quality_gap(kind,class,version_id,subject,detail) VALUES('title_missing','public',1,'A.1','1:0');`)
+ INSERT INTO quality_gap(kind,class,version_id,subject,detail,blocks) VALUES('title_missing','public',1,'A.1','1:0',true);`)
 	if err != nil {
 		t.Fatal(err)
 	}

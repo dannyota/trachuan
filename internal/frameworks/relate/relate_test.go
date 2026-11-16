@@ -10,7 +10,7 @@ import (
 )
 
 func TestBuild_ResolvesMergesAndProtectsEvidence(t *testing.T) {
-	r := &registry.Registry{Frameworks: []registry.Framework{{Code: "alpha", Version: "1", Access: "free", Ordinal: 1}, {Code: "beta", Version: "1", Access: "licensed", Ordinal: 1}, {Code: "beta", Version: "2", Access: "licensed", Ordinal: 2}}}
+	r := &registry.Registry{Frameworks: []registry.Framework{{Code: "alpha", Version: "1", Parser: "nist-oscal-800-53", Access: "free", Ordinal: 1}, {Code: "beta", Version: "1", Parser: "nist-oscal-800-53", Access: "licensed", Ordinal: 1}, {Code: "beta", Version: "2", Parser: "nist-oscal-800-53", Access: "licensed", Ordinal: 2}, {Code: "missing", Version: "1", Parser: "nist-oscal-800-53", Access: "free", Ordinal: 1}}}
 	catalogs := map[string]*parse.Result{"alpha:1": {Nodes: []parse.Node{{Citation: "A", Mappings: []parse.Mapping{{TargetFramework: "beta", TargetCitation: "B", Relation: "moved-to"}, {TargetFramework: "missing", TargetCitation: "C", Relation: "related"}}}}}, "beta:2": {Nodes: []parse.Node{{Citation: "B"}}}}
 	inputs := []Input{{From: Key{"alpha", "1", "A"}, To: Key{"beta", "2", "B"}, Relation: "related", Source: "book", Evidence: "invented evidence"}, {From: Key{"alpha", "1", "A"}, To: Key{"beta", "2", "B"}, Relation: "related", Source: "book", Evidence: "second"}}
 	got, stats, err := Build(r, catalogs, inputs)
@@ -52,7 +52,7 @@ func TestReport_OnlyCounts(t *testing.T) {
 }
 
 func TestBuild_EvidenceDependenciesAndMissingSource(t *testing.T) {
-	reg := &registry.Registry{Frameworks: []registry.Framework{{Code: "alpha", Version: "1", Access: "free"}, {Code: "beta", Version: "1", Access: "free"}, {Code: "gamma", Version: "1", Access: "licensed"}, {Code: "delta", Version: "1", Access: "licensed"}}}
+	reg := &registry.Registry{Frameworks: []registry.Framework{{Code: "alpha", Version: "1", Parser: "nist-oscal-800-53", Access: "free"}, {Code: "beta", Version: "1", Parser: "nist-oscal-800-53", Access: "free"}, {Code: "gamma", Version: "1", Parser: "nist-oscal-800-53", Access: "licensed"}, {Code: "delta", Version: "1", Parser: "nist-oscal-800-53", Access: "licensed"}}}
 	catalogs := map[string]*parse.Result{"alpha:1": {Nodes: []parse.Node{{Citation: "A"}}}, "beta:1": {Nodes: []parse.Node{{Citation: "B"}}}, "gamma:1": {Nodes: []parse.Node{{Citation: "C"}}}, "delta:1": {Nodes: []parse.Node{{Citation: "D"}}}}
 	in := []Input{{From: Key{"alpha", "1", "A"}, To: Key{"beta", "1", "B"}, Relation: "related", Source: "book", Evidence: "invented"}, {From: Key{"delta", "1", "D"}, To: Key{"gamma", "1", "C"}, Relation: "related", Source: "book", Evidence: "invented"}, {From: Key{"alpha", "1", "missing"}, To: Key{"beta", "1", "B"}, Relation: "related", Source: "book"}}
 	edges, stats, err := Build(reg, catalogs, in)
@@ -77,7 +77,7 @@ func TestBuild_CatalogVersionHint(t *testing.T) {
 }
 
 func TestBuild_RejectsUnknownEvidenceAccess(t *testing.T) {
-	reg := &registry.Registry{Frameworks: []registry.Framework{{Code: "alpha", Version: "1", Access: "free"}, {Code: "beta", Version: "1"}}}
+	reg := &registry.Registry{Frameworks: []registry.Framework{{Code: "alpha", Version: "1", Parser: "nist-oscal-800-53", Access: "free"}, {Code: "beta", Version: "1", Parser: "nist-oscal-800-53"}}}
 	_, _, err := Build(reg, nil, []Input{{From: Key{"alpha", "1", "A"}, To: Key{"beta", "1", "B"}, Relation: "related", Source: "book", Evidence: "invented"}})
 	if err == nil {
 		t.Fatal("unclassified evidence accepted")

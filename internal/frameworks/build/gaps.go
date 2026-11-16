@@ -7,9 +7,7 @@ import (
 
 func writeGaps(dir string, gaps []Gap) error {
 	for _, gap := range gaps {
-		switch gap.Kind {
-		case "mapping_unresolved", "mapping_dropped", "title_missing", "ocr_blocked", "ocr_flagged", "text_incomplete", "chunk_omission", "embedding_input_too_long", "embedding_input_bytes_exceeded":
-		default:
+		if _, ok := gapKinds()[gap.Kind]; !ok {
 			return fmt.Errorf("unknown gap kind")
 		}
 		if gap.Count <= 0 {

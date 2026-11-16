@@ -11,15 +11,6 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-type hiddenError struct{ cause error }
-
-func (e *hiddenError) Error() string { return "operation failed" }
-func (e *hiddenError) Unwrap() error { return e.cause }
-
-func hide(message string, err error) error {
-	return fmt.Errorf("%s: %w", message, &hiddenError{cause: err})
-}
-
 func realPath(path string) (string, error) {
 	current := string(filepath.Separator)
 	if !filepath.IsAbs(path) {
