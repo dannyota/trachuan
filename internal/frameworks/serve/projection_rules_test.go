@@ -43,6 +43,7 @@ func projectionRules() map[string]statementRule {
  ORDER BY g.kind COLLATE "C",v.framework_code COLLATE "C",v.version COLLATE "C",g.subject COLLATE "C",g.detail COLLATE "C"`},
 	}
 	indexed := map[string]statementRule{}
+	rules = append(rules, operationProjectionRules()...)
 	for _, rule := range rules {
 		indexed[normalizeSQL(rule.sql)] = rule
 	}
