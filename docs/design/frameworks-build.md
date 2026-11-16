@@ -54,7 +54,9 @@ is not in a parsed catalog stays unresolved and is counted. A target that names
 no registered framework, or an end that is not a valid business key (the
 schema's code, version and citation forms), is not an edge: it is counted as
 `mapping_dropped` for its source and version, so every stored edge end is a
-valid business key with a registry code.
+valid business key with a registry code. A link between two controls of one
+version is not a mapping edge ([terms](frameworks.md#terms)): the step leaves it
+out, and it is not a gap.
 
 **Chunk** applies the law split rule (size limits and cut points) to each
 control body as one unit. That rule is extracted from the law chunk package into

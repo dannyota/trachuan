@@ -6,7 +6,6 @@ func releaseMappings(edges []relate.Edge, gaps []Gap) ([]relate.Edge, []Gap) {
 	var retained []relate.Edge
 	for _, edge := range edges {
 		if edge.From.Code == edge.To.Code && edge.From.Version == edge.To.Version {
-			gaps = append(gaps, Gap{Kind: "mapping_dropped", Code: edge.From.Code, Version: edge.From.Version, Count: 1})
 			continue
 		}
 		retained = append(retained, edge)

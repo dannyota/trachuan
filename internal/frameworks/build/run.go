@@ -80,9 +80,9 @@ func stepRecipe(step string) recipe {
 	case "parse":
 		params["schema"] = "controls/1"
 	case "relate":
-		version = 2
+		version = 3
 		params["schema"] = "edges/1"
-		params["mapping_scope"] = "cross-version/1"
+		params["mapping_scope"] = "cross-version/2"
 		params["gap_counts"] = "kind-version-subject/1"
 		params["business_key_forms"] = businesskey.Forms()
 	case "embed":

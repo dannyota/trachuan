@@ -10,17 +10,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestRelate_LocalLinksAreCountedAsDropped(t *testing.T) {
+func TestRelate_LocalLinksAreNotEdgesOrGaps(t *testing.T) {
 	work := fixture(t)
 	require.NoError(t, testRun(context.Background(), "20990101", &bytes.Buffer{}))
 	edges := readRows[relate.Edge](t, filepath.Join(work, "20990101/relate/edges.jsonl"))
 	require.Empty(t, edges)
 	gaps := readRows[Gap](t, filepath.Join(work, "20990101/relate/gaps.jsonl"))
-	require.Len(t, gaps, 2)
-	for _, g := range gaps {
-		require.Equal(t, "mapping_dropped", g.Kind)
-		require.Equal(t, 1, g.Count)
-	}
+	require.Empty(t, gaps)
 }
 
 func TestReleaseMappings_AggregatesPublicGapCounts(t *testing.T) {
@@ -35,7 +31,7 @@ func TestReleaseMappings_AggregatesPublicGapCounts(t *testing.T) {
 	for _, gap := range gaps {
 		require.Equal(t, "fw-alpha", gap.Code)
 		if gap.Kind == "mapping_dropped" {
-			require.Equal(t, 3, gap.Count)
+			require.Equal(t, 2, gap.Count)
 			require.Nil(t, gap.Citation)
 		} else {
 			require.Equal(t, "mapping_unresolved", gap.Kind)
