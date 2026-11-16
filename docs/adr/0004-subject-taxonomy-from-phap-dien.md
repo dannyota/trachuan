@@ -52,3 +52,15 @@ classifier. Hard-cut subject filtering.
   and 0.37 at levels 2, 3 and deepest; the best variant (5 families of 20 nodes
   with ancestor closure) 0.82, 0.53 and 0.47; lexical and fused selection less.
   None came near the 0.95 floor, which now applies to family recall.
+- 2026-11-16: corrected the seeded slice's precision after the Haiku pilot on
+  the 300 masked articles failed every floor (all-pairs precision 0.569, 0.353
+  and 0.260; recall 0.850, 0.653 and 0.560 at levels 2, 3 and deepest). Seeds
+  place each article once while the design lets an article take several nodes,
+  so all-pairs precision counted correct additional nodes as errors. The slice
+  now gates recall and top-1 precision at the same floors; precision of
+  additional nodes is gated on the model-adjudicated multi-family set (0.80).
+  This is a correction, not a relaxation: recall alone already fails the pilot.
+  The document menu now shows `<level-1> > <level-2>` names and omits level-2
+  nodes with no provisions and no children (54 of 282), which removes all four
+  duplicated level-2 names, including the empty 34.10 that took 34.11's
+  documents.
