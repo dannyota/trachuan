@@ -86,3 +86,24 @@ func TestLoad_SummaryOutlineCappedGap(t *testing.T) {
 		t.Fatalf("indexed=%v outline=%d gaps=%d: %v", indexed, outlines, gaps, err)
 	}
 }
+
+func TestLoad_UnknownSummaryGapFailsBuild(t *testing.T) {
+	for _, withDocument := range []bool{true, false} {
+		t.Run(fmt.Sprint(withDocument), func(t *testing.T) {
+			f := fixture(t)
+			if withDocument {
+				f.fetch(t, "vn:vbpl:1")
+			}
+			inv := f.inventory(t)
+			inv.Gaps = append(inv.Gaps, InventoryGap{Stage: "extract", Kind: "future_structure_gap"})
+			_, err := Load(context.Background(), f.corpus, inv, f.artifacts, f.recipes, nil, nil, f.asOf())
+			if err == nil || !strings.Contains(err.Error(), "future_structure_gap") {
+				t.Fatalf("unknown gap accepted: %v", err)
+			}
+			var count int
+			if err = f.corpus.QueryRow(context.Background(), `SELECT count(*) FROM document_summary`).Scan(&count); err != nil || count != 0 {
+				t.Fatalf("failed build left %d summaries: %v", count, err)
+			}
+		})
+	}
+}

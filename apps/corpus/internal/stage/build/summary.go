@@ -60,24 +60,19 @@ type summaryDocument struct {
 	TextSource       string         `json:"-"`
 }
 
-func structuralSummaryGap(kind string) bool {
-	switch kind {
-	case "ambiguous_tree_text", "article_number_out_of_range", "article_sequence", "structure_uncertain", "text_number_mismatch", "tree_headings_only", "tree_headings_partial", "tree_text_partial", "unknown_node_kind", "invalid_ancestry", "no_tree", "text_source_ambiguous":
-		return true
-	default:
-		return false
-	}
-}
-
 func makeSummary(d summaryDocument, gaps []InventoryGap, excluded map[string]bool) (summaryDocument, bool, error) {
 	d.Projection = 1
 	d.GapKinds = []string{}
 	headings := d.TextSource == "source_tree"
 	for _, g := range gaps {
+		structural, err := structuralSummaryGap(g.Kind)
+		if err != nil {
+			return summaryDocument{}, false, fmt.Errorf("summary %s: %w", d.Key, err)
+		}
 		if g.ItemKey != d.Key {
 			continue
 		}
-		if structuralSummaryGap(g.Kind) {
+		if structural {
 			headings = false
 		}
 		if g.Kind == "consolidated_status_unordered" || g.Kind == "consolidated_status_unresolved" {

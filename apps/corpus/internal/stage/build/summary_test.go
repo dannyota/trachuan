@@ -92,7 +92,7 @@ func TestSummary_HeadingRules(t *testing.T) {
 	}
 	d := summaryFixture()
 	d.Payload.Outline = []summaryOutline{{Kind: "phan", Label: "Phần I", Heading: "Hidden"}, {Kind: "muc", Label: "Mục 1", Heading: "Hidden"}, {Kind: "dieu", Label: "Điều 1", Heading: strings.Repeat("ố", 300)}, {Kind: "dieu", Label: "Điều 2", Heading: strings.Repeat("ố", 301)}, {Kind: "dieu", Label: "Điều 3", Anchor: "dieu-3", Heading: "phải làm"}}
-	r, _, err := makeSummary(d, []InventoryGap{{ItemKey: d.Key, Kind: "unknown_nonstructural"}}, map[string]bool{"dieu-3": true})
+	r, _, err := makeSummary(d, []InventoryGap{{ItemKey: d.Key, Kind: "missing_effective_date"}}, map[string]bool{"dieu-3": true})
 	if err != nil {
 		t.Fatal(err)
 	}
