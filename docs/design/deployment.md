@@ -161,8 +161,8 @@ release being searched.
 
 A recipe change stops traffic at Caddy while the new server and embedder and the
 matching release are activated together
-([recipe changes](corpus-release.md#recipe-changes)). Rolling a bundle back
-re-signs the previous corpus release and uses a signed
+([recipe changes](corpus-release-changes.md#recipe-changes)). Rolling a bundle
+back re-signs the previous corpus release and uses a signed
 [rollback](pull-deployment.md#rollback-workflow) of the images.
 
 ## Backups

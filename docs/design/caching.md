@@ -36,6 +36,11 @@ the rules.
   cap of retained values.
 - A hit still counts against the caller's per-account limit, keeps the
   credential checks, and returns exactly the bytes a miss would have produced.
+  The public summary endpoints are anonymous: their row cache (16 MiB, entries
+  living at most as long as their release) has no per-account limit, and their
+  hits pass the public admission gate instead
+  ([serving public summaries](web-public-documents-serving.md)). Nitro keeps
+  rendered summaries in a separate 32 MiB cache.
 - Metrics report hits, misses, evictions and bytes per cache, with no key or
   account labels.
 

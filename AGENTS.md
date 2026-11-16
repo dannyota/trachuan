@@ -8,7 +8,7 @@ Direct owner instructions and platform safety rules come first.
 
 ## What trachuan is
 
-A citable corpus of Vietnamese law served to AI agents over MCP and to people through a website, behind Google login. Evidence only: no answer model, generative model or reranker runs on our servers; the query embedder is the only served model. Vietnam first; country, keys and routes carry a country code from day one. Successor to banhmi (archived); it reuses banhmi's data, never its code. Design: `docs/design/README.md` and `docs/adr/`.
+A citable corpus of Vietnamese law served to AI agents over MCP and to people through a website, where reading the full text needs an account. Evidence only: no answer model, generative model or reranker runs on our servers; the query embedder is the only served model. Vietnam first; country, keys and routes carry a country code from day one. Successor to banhmi (archived); it reuses banhmi's data, never its code. Design: `docs/design/README.md` and `docs/adr/`.
 
 Language: documents, code, comments and commits in English. Product interface in Vietnamese with optional English. Legal text is never translated.
 

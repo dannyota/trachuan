@@ -178,7 +178,9 @@ own text only, in preorder, and the first unit is preceded by the leads of
 ancestors outside the range. An outline lists `phan`, `chuong`, `muc` and `dieu`
 nodes in document order, or the top-level provisions when the document has no
 `dieu`, each with `label`, `heading`, `anchor` and text size in code points.
-Relation lists follow pointer order and add `raw_label` and evidence.
+Relation lists follow pointer order and add `raw_label` and evidence. The public
+summary outline is a narrower projection with its own heading rule
+([public document summaries](web-public-documents.md)); `read` is unchanged.
 
 An item's output is a fixed sequence of units: the leads, then each provision,
 outline entry or relation, in the order above. Each unit kind has one split
