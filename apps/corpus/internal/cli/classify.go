@@ -47,6 +47,14 @@ func parseScreenOptions(cc, rel string, args []string) (classify.Options, error)
 }
 
 func runClassify(ctx context.Context, args []string, stdout, stderr io.Writer) int {
+	if len(args) > 0 {
+		switch args[0] {
+		case "articles":
+			return runClassifyArticles(ctx, args[1:], stdout, stderr)
+		case "score":
+			return runClassifyScore(ctx, args[1:], stdout, stderr)
+		}
+	}
 	if len(args) < 3 || args[0] != "screen" {
 		_, _ = fmt.Fprintln(stderr, "usage: corpus classify screen <cc> <rel> --documents N --seed S --recipe MODEL --out DIR --budget pilot --budget-usd 15 [--dry-run]")
 		return 2

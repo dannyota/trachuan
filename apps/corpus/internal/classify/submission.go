@@ -14,9 +14,11 @@ import (
 )
 
 type Item struct {
-	Key         string `json:"key"`
-	RequestHash string `json:"request_hash"`
-	InputTokens int64  `json:"counted_input_tokens"`
+	Key         string           `json:"key"`
+	RequestHash string           `json:"request_hash"`
+	InputTokens int64            `json:"counted_input_tokens"`
+	Article     *ArticleRequest  `json:"article_request,omitempty"`
+	ArticleMeta *ArticleMetadata `json:"article_metadata,omitempty"`
 }
 
 type Submission struct {
@@ -74,6 +76,7 @@ type Options struct {
 	BudgetMicroUSD   int64
 	Out              string
 	DryRun           bool
+	article          *articleWork
 }
 
 type Summary struct {
