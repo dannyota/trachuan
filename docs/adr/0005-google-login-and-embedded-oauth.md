@@ -16,14 +16,17 @@ Google OpenID Connect is the only login; the first login creates the account;
 identity is the Google subject. The MCP authorization server is embedded in the
 Go binary, copied from aboutme's oauthsrv, mcpapi and Google login after they
 are refactored into shorter decoupled files. Personal tokens for CLI clients
-come from our own table. Public pages (landing, topic tree, connect, sources)
-need no account.
+come from our own table. Public pages (landing, topic tree, connect, sources,
+and document summaries at `/vn/documents/{key}/summary`) need no account;
+reading a document's provision text at `/vn/documents/{key}` does.
 
 ## Consequences
 
 One identity store, no extra service, no password handling. Hosted Claude and
 ChatGPT connections must still be proven in a spike; aboutme verified only
-Claude Code.
+Claude Code. Document summaries never read a session and are served from a
+precomputed release table with their own capacity
+([public documents](../design/web-public-documents.md)).
 
 ## Alternatives rejected
 
@@ -51,3 +54,7 @@ AuthPlane (fallbacks if the spike fails).
   optional TOTP join Google under
   [ADR 0015](0015-email-password-accounts-and-totp.md), which also fixes the
   account email at creation.
+- 2026-11-16: the owner opened document summaries to visitors without an
+  account: identity, status, structural outline and approved chapter and article
+  titles, at their own URL. Reading the full text stays behind sign-in. Reviewed
+  by gpt-6-astra in four rounds.

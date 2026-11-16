@@ -24,9 +24,9 @@ func Shape(arms Arms, recipe Recipe, limit int, mode ArmMode) (Response, error)
 ```
 
 `Open` loads the singleton release row and validates schema (versions {4, 5, 6},
-[corpus schema](corpus-schema.md#migration-and-dependencies)), recipes, vector
-typmod, lexical stats and query embedder report. Do not accept defaults on a
-missing release field. Build calibration uses
+[corpus schema migration](corpus-schema-migration.md)), recipes, vector typmod,
+lexical stats and query embedder report. Do not accept defaults on a missing
+release field. Build calibration uses
 `OpenDraft(ctx,db,embedder, Release,options)`, restricted to trusted batch
 callers; it performs the same validation using explicit metadata before the
 singleton is inserted. A future server must only call `Open`. `Options` has

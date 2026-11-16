@@ -90,8 +90,8 @@ host rejects it as sequence reuse and a new patch tag is needed. `upstream`
 comes from `deploy/host/images.env` at the commit; upstream images are pinned by
 digest only, since they carry no build attestation from this repository.
 `corpus_release`, when set, names a corpus release and its manifest hash for a
-[recipe change](corpus-release.md#recipe-changes). `rollback_target` is always
-null from this workflow.
+[recipe change](corpus-release-changes.md#recipe-changes). `rollback_target` is
+always null from this workflow.
 
 ### Rollback workflow
 

@@ -261,37 +261,16 @@ update the dump. The later host/release design must bind the passed report to
 that exact dump in the signed manifest, with the producer and verifier changed
 together. No release exists in this work, and `not_run` cannot authorize one.
 
+## Document summaries
+
+`document_summary` holds one precomputed public summary per document: identity,
+status inputs, gap kinds, text availability, bounded relations and topics, the
+outline with candidate chapter and article headings, and the projection version.
+Its columns, caps and eligibility are in
+[serving public summaries](web-public-documents-serving.md); its presence at the
+expected projection is the release's summary capability.
+
 ## Migration and dependencies
 
-Restore requires the same PostgreSQL major and compatible extension versions
-recorded in build metadata. Existing workshop artifacts remain authoritative;
-adding the chunk projection must not rewrite ingest rows. A schema change
-rebuilds a new corpus database; retain old artifacts for diagnosis and rollback.
-Version 2 added `document.status_basis`. Version 3 adds class, source and
-validity decisions. Version 4 adds `document.text_source`,
-`document.text_complete` and `provision.locator`. Version 5 fills the taxonomy
-tables and adds `taxonomy_node.ordinal`, `provision_count` and `document_count`.
-Version 6 adds `document.source_withdrawn_since` and `source_withdrawn_rel`.
-Version 7 adds the `text_source` value `pdf_text`
-([PDF text layer](pdf-text.md)) and the taxonomy method `inherited`
-([taxonomy](taxonomy.md#classification-layers)); no column changes. Always
-rebuild from preserved source artifacts, never backfill an old release with an
-assumed value. Readers must support a version before a release of it is
-activated, so the server deploys first; earlier dumps remain unchanged. The
-server reads versions {4, 5, 6, 7}: a version-4 release serves no nodes, the
-server reads the source-withdrawn columns only from version 6 and later, since a
-version-5 release has none and no pinned documents, and it serves `pdf_text` and
-`inherited` values as stored. The order for a version change is in
-[corpus release](corpus-release.md#schema-version-changes). A newer server keeps
-serving the previous release until a newer release is activated, and rolling
-back is activating the previous release.
-
-Host restore permits exactly `vector` and `ltree`, at the versions the
-PostgreSQL image provides
-([corpus release](corpus-release.md#activation-steps)).
-
-First-party references, not fetched during this offline design:
-[constraints](https://www.postgresql.org/docs/current/ddl-constraints.html),
-[ltree](https://www.postgresql.org/docs/current/ltree.html),
-[pgvector](https://github.com/pgvector/pgvector). The primary must verify pinned
-extension support and restore behavior before implementation and deployment.
+Restore, versions and rollback across schema versions:
+[corpus schema migration](corpus-schema-migration.md).

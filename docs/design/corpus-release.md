@@ -123,7 +123,10 @@ requested. No MacBook signing key exists.
   "schema_version": 6,
   "extensions": {"vector": "<version>", "ltree": "<version>"},
   "recipes": {"dense": {...}, "chunk": {...}, "lexical": {...},
-              "retrieval": {...}}
+              "retrieval": {...}},
+  "heading_review": {"projection": 1, "scan_sha256": "<64 hex>",
+                     "exclusions_sha256": "<64 hex>", "reviewer": "<name>",
+                     "date": "2026-11-16"}
 }
 ```
 
@@ -136,6 +139,10 @@ from `release.json`, where `corpus release-row` records the build database's
 and `ltree` and logs the versions, and the smoke check in step 3 proves the
 restored data works with the image's versions. The certificate identity is
 `https://github.com/dannyota/trachuan/.github/workflows/corpus-release.yml@refs/heads/main`.
+`heading_review` is present only when `sources/vn-heading-reviews.yaml` has an
+entry for the release; signing copies it unchanged. The build input hash covers
+`sources/vn-heading-exclusions.yaml` like the corrections
+([public document summaries](web-public-documents.md)).
 
 ## Host activation
 
@@ -158,8 +165,8 @@ that it fails the run.
 3. Check compatibility: `podman run --rm <server image> server release-check`
    prints the schema versions and recipes the deployed server serves and the
    running query embedder reports. A recipe difference is status `waiting`
-   ([recipe changes](#recipe-changes)), alarmed after 24 hours. Refuse below the
-   free memory and disk thresholds in
+   ([recipe changes](corpus-release-changes.md#recipe-changes)), alarmed after
+   24 hours. Refuse below the free memory and disk thresholds in
    [host budgets](budgets-host.md#host-memory-estimates).
 4. `new`: download the dump through the instance principal with the OCI Python
    SDK into `/srv/trachuan/data/releases/<cc>-<rel>/`; require size and SHA-256
@@ -214,7 +221,12 @@ even when the auth migrations ran before the role existed.
    `retired_release` in `retained` mode, and append `activated`.
 5. The server resolves the release once per request, so traffic moves without a
    restart; the postings for the new release load on first use under the
-   server's existing gate ([sparse postings](sparse-postings.md)).
+   server's existing gate ([sparse postings](sparse-postings.md)). The public
+   summary pool of the new release opens and the old one retires within 5
+   seconds ([serving public summaries](web-public-documents-serving.md)).
+   `headings_approved` is set for the release only when the manifest's
+   `heading_review` matches its projection, its scan output hash and its
+   exclusions hash; otherwise summaries serve labels only.
 
 `release_journal` and `retired_release` (with `dump_sha256`) are auth
 migrations. The old active database gets its dump digest from its active corpus
@@ -238,45 +250,10 @@ each unprotected database in `retired_release` without connections: it journals
 `pruning`, drops the database if it exists, deletes the row, and journals
 `pruned`. An open `pruning` journal is finished the same way on the next run.
 
-## Schema version changes
+## Schema and recipe changes
 
-`server release-check` refuses a release whose `schema_version` the serving
-image cannot read. A version change ships in this order:
-
-1. Tag and deploy the first image whose server reads the new version; it keeps
-   serving the active release. Confirm it live and healthy.
-2. Tag the next image with `release_floor` in its policy set to the sequence of
-   the image from step 1 ([release floor](pull-deployment.md#release-floor)) and
-   confirm `deploy_release_floor` reports it, so no rollback can reach an image
-   that cannot read the new version.
-3. Upload and sign the corpus release of the new version; the host activates it
-   as usual. The retained previous-version release, still readable, stays the
-   corpus rollback for seven days.
-
-## Recipe changes
-
-The pair activation path is not yet implemented; recipe mismatches wait and
-image manifests with a non-null `corpus_release` are refused.
-
-A release whose recipes differ from the running server waits until the
-[image manifest](pull-deployment.md#image-manifest) for the matching code names
-it in `corpus_release`. The updater activates the pair in one locked run:
-
-1. Verify both manifests and the images. Run activation steps 0 to 2 for the
-   corpus while the old pair serves.
-2. Stop Caddy; activate the images up to started containers, without the
-   readiness gate.
-3. Run step 3 with the new server image, then step 4, then require loopback
-   `/readyz`, start Caddy and run the edge probe; a failed probe stops Caddy.
-4. On failure after step 4, one transaction reverses it: compare-and-swap the
-   pointer back, delete the old release's `retired_release` row, insert the new
-   one with its digest and `retain_until` seven days ahead, and journal
-   `reverted`. Then restore the previous images under the
-   [failure rule](pull-deployment.md#failure-and-recovery) and start Caddy once
-   the previous pair passes loopback readiness, then run the edge probe; a
-   failed probe stops Caddy and records the failure. An interrupted pair run is
-   recovered by the same rule: its image journal is treated as failed, and a
-   corpus journal ending in `activated` for that pair is reversed first.
+The order in which schema versions and recipe changes ship:
+[corpus release changes](corpus-release-changes.md).
 
 ## Results and alarms
 

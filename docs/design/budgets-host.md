@@ -90,10 +90,10 @@ without it (measured 2026-11-14). The owner accepted the embedder row (ADR 0009,
 | ---------------------------------------------- | ------ |
 | embedder (ONNX INT8, Vietnamese_Embedding_v2)  | 2,000  |
 | postgres, shared_buffers 4 GiB                 | 4,500  |
-| web (Node)                                     | 250    |
-| server (Go), with caches and sparse postings   | 2,140  |
+| web (Node)                                     | 300    |
+| server (Go), with caches and sparse postings   | 2,156  |
 | caddy                                          | 50     |
-| headroom for activation restore and HNSW build | 2,000  |
+| headroom for activation restore and HNSW build | 1,934  |
 
 Server caches, each a byte-capped least-recently-used map
 ([caching](caching.md)):
@@ -106,8 +106,17 @@ Server caches, each a byte-capped least-recently-used map
 | Read items        | 512 MB   | release life, 24 h |
 | Document entries  | 64 MB    | release life       |
 | Topic node pages  | 8 MB     | release life       |
+| Summary rows      | 16 MB    | release life       |
 
-A value above one sixteenth of its cache's byte cap is not cached.
+A value above one sixteenth of its cache's byte cap is not cached. The web row
+includes Nitro's 32 MB cache of rendered document summaries, and the server row
+the 16 MB summary row cache; both rose on 2026-11-16, taken from the headroom
+([public document summaries](web-public-documents.md)).
+
+Peak PostgreSQL connections during activation: the auth pool, two reader pools
+of four while the old and new release overlap, two public summary pools of one,
+and the restore's own connections, within `max_connections` 50. The capacity
+acceptance run records the measured peak.
 
 Activation refuses to start below 2.5 GB free memory or 10 GB free disk.
 
