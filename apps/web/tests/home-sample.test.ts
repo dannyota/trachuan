@@ -22,10 +22,10 @@ async function render() {
   return wrapper
 }
 
-it('describes the actual sample citation and omits an unavailable source', async () => {
+it('describes the actual sample citation and its source', async () => {
   const wrapper = await render()
-  expect(wrapper.get('.home-sample ul').text()).toContain('Khoản 1 Điều 25 Thông tư 09/2020/TT-NHNN')
-  expect(wrapper.get('.home-sample ul').text()).not.toContain('vbpl.vn')
+  expect(wrapper.get('.home-sample ul').text()).toContain('Điều 19 Luật 91/2025/QH15')
+  expect(wrapper.get('.home-sample ul').text()).toContain('vbpl.vn')
 })
 
 it('describes the source only when the sample has an https URL', async () => {

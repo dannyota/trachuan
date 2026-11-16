@@ -28,7 +28,7 @@ async function render() {
 
 it('dates the sample status from its release', async () => {
   const wrapper = await render()
-  expect(wrapper.get('.result-card-head').text()).toContain('Trạng thái tính đến 11/11/2026, theo nguồn')
+  expect(wrapper.get('.result-card-head').text()).toContain('Trạng thái tính đến 15/11/2026, theo vbpl.vn')
   wrapper.unmount()
 })
 
