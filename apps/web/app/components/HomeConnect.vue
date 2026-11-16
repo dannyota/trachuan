@@ -16,7 +16,7 @@ const command = `claude mcp add --transport http trachuan ${endpoint}`
         <section class="card home-connect-card"><h3>ChatGPT</h3><p>{{ labels.chat }}</p></section>
         <section class="card home-connect-card"><h3>Claude Code</h3><p>{{ labels.code }}</p><pre tabindex="0" :aria-label="labels.code"><CommandTokens :text="command" /></pre><CopyButton :text="command" :label="labels.copy" /></section>
       </div>
-      <NuxtLink to="/connect">{{ labels.connectLink }}</NuxtLink>
+      <NuxtLink class="btn home-outline home-connect-link" to="/connect">{{ labels.connectLink }}</NuxtLink>
     </div>
   </section>
 </template>
