@@ -154,9 +154,27 @@ CREATE TABLE taxonomy_assignment (
 CREATE INDEX ON taxonomy_assignment (node_id,provision_id);
 CREATE INDEX ON taxonomy_assignment (provision_id,family_id);
 
+CREATE TABLE document_summary (
+ document_key text COLLATE "C" PRIMARY KEY REFERENCES document(key),
+ class text NOT NULL CHECK (class IN ('primary','relation_context','secondary')),
+ projection integer NOT NULL CHECK (projection = 1),
+ indexed boolean NOT NULL CHECK (NOT indexed OR class='primary'),
+ status_class text NOT NULL CHECK (status_class IN ('in_force','partial','expired','not_yet','suspended','unknown')),
+ status_basis text NOT NULL CHECK (status_basis IN ('source_status','derived_from_consolidated','derived_from_text','manual_correction')),
+ is_current boolean NOT NULL CHECK (is_current = (status_class IN ('in_force','partial'))),
+ validity_conflict boolean NOT NULL,
+ eff_from date, eff_to date,
+ gap_kinds text[] NOT NULL CHECK (gap_kinds IN (
+  ARRAY[]::text[], ARRAY['consolidated_status_unordered'],
+  ARRAY['consolidated_status_unresolved'],
+  ARRAY['consolidated_status_unordered','consolidated_status_unresolved'])),
+ payload jsonb NOT NULL CHECK (jsonb_typeof(payload) = 'object' AND octet_length(payload::text) <= 65536),
+ CHECK (eff_to IS NULL OR eff_from IS NULL OR eff_to >= eff_from)
+);
+
 CREATE TABLE release (
  singleton boolean PRIMARY KEY CHECK (singleton), country text COLLATE "C" NOT NULL CHECK (country = 'vn'),
- rel text COLLATE "C" NOT NULL UNIQUE, schema_version integer NOT NULL CHECK (schema_version = 7),
+ rel text COLLATE "C" NOT NULL UNIQUE, schema_version integer NOT NULL CHECK (schema_version = 8),
  taxonomy_version text COLLATE "C" NOT NULL,
  dense_recipe jsonb NOT NULL CHECK (jsonb_typeof(dense_recipe) = 'object'),
  chunk_recipe jsonb NOT NULL CHECK (jsonb_typeof(chunk_recipe) = 'object'),

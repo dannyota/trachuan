@@ -44,7 +44,7 @@ func bindingArtifact(t *testing.T, binding *string, oldRecipe bool, options ...b
 	dump := []byte("synthetic dump")
 	calibration := []byte(`{"threshold":0}`)
 	record := map[string]any{
-		"taxonomy": TaxonomyStats{}, "version": 1, "country": run.Country, "rel": run.Rel, "database_name": "corpus_vn_20990101", "schema_version": corpusdb.SchemaVersion,
+		"heading_exclusions_sha256": hashBytes([]byte("[]")), "heading_scan_sha256": hashBytes([]byte("{}")), "taxonomy": TaxonomyStats{}, "version": 1, "country": run.Country, "rel": run.Rel, "database_name": "corpus_vn_20990101", "schema_version": corpusdb.SchemaVersion,
 		"build_input_hash": input, "build_recipe_hash": rowRecipe, "source_manifest_hash": inv.SourceManifestHash(), "identity_inventory_hash": inv.IdentityHash(), "identity_map_sha256": "map",
 		"worker_version": "worker", "built_at": time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC),
 		"durations_ms": map[string]int64{"total": 1},
@@ -71,7 +71,7 @@ func bindingArtifact(t *testing.T, binding *string, oldRecipe bool, options ...b
 		record["taxonomy"] = *opts.taxonomy
 		record["taxonomy_version"] = "fixture-version"
 	}
-	files := map[string]any{"build.json": record, "inputs.json": inv, "calibration.json": json.RawMessage(calibration), "validity-review.json": json.RawMessage(`{"version":1,"entries":[]}`)}
+	files := map[string]any{"heading-exclusions.json": json.RawMessage(`[]`), "heading-scan.json": json.RawMessage(`{}`), "build.json": record, "inputs.json": inv, "calibration.json": json.RawMessage(calibration), "validity-review.json": json.RawMessage(`{"version":1,"entries":[]}`)}
 	artifacts := artifact.Store{Root: t.TempDir()}
 	art, err := artifacts.Publish(context.Background(), "build", input, rowRecipe, func(dir string) error {
 		for name, value := range files {

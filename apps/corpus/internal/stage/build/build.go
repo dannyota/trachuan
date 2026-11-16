@@ -23,6 +23,7 @@ type Config struct {
 	Embedder                                retrieval.Embedder
 	Suite                                   evaluation.Suite
 	Corrections                             CorrectionsInput
+	HeadingExclusions                       HeadingExclusionsInput
 	Taxonomy                                TaxonomyInput
 	Now                                     func() time.Time
 	Versions                                Versions
@@ -79,6 +80,9 @@ func (s *Stage) plan(ctx context.Context, env stage.Env, run stage.Run) ([]stage
 	if err = s.cfg.Taxonomy.pinned(); err != nil {
 		return nil, nil, fmt.Errorf("verify taxonomy: %w", err)
 	}
+	if _, _, err = s.cfg.HeadingExclusions.pinned(); err != nil {
+		return nil, nil, fmt.Errorf("verify heading exclusions: %w", err)
+	}
 	hash := s.inputHash(run.Country, run.Rel, inv, correction)
 	return []stage.Item{{Key: run.Country + "/" + run.Rel, InputHash: hash}}, verified, nil
 }
@@ -131,7 +135,15 @@ func (s *Stage) validateMappings(identities evaluation.IdentityInventory) (evalu
 }
 
 func (s *Stage) inputHash(country, rel string, inv Inventory, correction correctionInput) string {
-	return withDevelopmentHash(buildHash(country, rel, inv, s.cfg.Suite.Hashes.IdentityMap, provenanceInputHash(inv), correction, s.cfg.Taxonomy.version), s.cfg.Suite.Hashes.Development)
+	_, exclusions, err := s.cfg.HeadingExclusions.pinned()
+	if err != nil {
+		return ""
+	}
+	return withHeadingExclusions(withDevelopmentHash(buildHash(country, rel, inv, s.cfg.Suite.Hashes.IdentityMap, provenanceInputHash(inv), correction, s.cfg.Taxonomy.version), s.cfg.Suite.Hashes.Development), exclusions)
+}
+
+func withHeadingExclusions(input, exclusions string) string {
+	return stage.RecipeHash("build-heading-exclusions", "1", input, exclusions)
 }
 
 func withDevelopmentHash(inputHash, development string) string {

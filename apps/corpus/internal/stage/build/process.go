@@ -54,6 +54,10 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 	if err != nil {
 		return stage.Output{}, temporal.NewNonRetryableApplicationError("inventory_changed", "inventory_changed", err)
 	}
+	exclusions, exclusionsHash, err := s.cfg.HeadingExclusions.pinned()
+	if err != nil {
+		return stage.Output{}, temporal.NewNonRetryableApplicationError("inventory_changed", "inventory_changed", err)
+	}
 	phaseStart := time.Now()
 	planned, verified, err := s.plan(ctx, env, run)
 	if err != nil {
@@ -124,8 +128,11 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 	if err = s.cfg.Taxonomy.pinned(); err != nil {
 		return stage.Output{}, temporal.NewNonRetryableApplicationError("inventory_changed", "inventory_changed", err)
 	}
+	if err = s.cfg.HeadingExclusions.unchanged(exclusionsHash); err != nil {
+		return stage.Output{}, temporal.NewNonRetryableApplicationError("inventory_changed", "inventory_changed", err)
+	}
 	phaseStart = time.Now()
-	counts, err := Load(ctx, conn.Conn(), inv, env.Artifacts, Recipes{Dense: embedding.DocumentRecipe1(), Lexical: lexical.Recipe1()}, codes.StatusCodes, entries, run.Rel[:4]+"-"+run.Rel[4:6]+"-"+run.Rel[6:8], LoadOptions{Pins: codes.VBPL.Pinned, CentralIssuers: codes.CentralIssuers, Taxonomy: s.cfg.Taxonomy, Durations: timings, verified: verified})
+	counts, err := Load(ctx, conn.Conn(), inv, env.Artifacts, Recipes{Dense: embedding.DocumentRecipe1(), Lexical: lexical.Recipe1()}, codes.StatusCodes, entries, run.Rel[:4]+"-"+run.Rel[4:6]+"-"+run.Rel[6:8], LoadOptions{HeadingExclusions: exclusions, Pins: codes.VBPL.Pinned, CentralIssuers: codes.CentralIssuers, Taxonomy: s.cfg.Taxonomy, Durations: timings, verified: verified})
 	if err != nil {
 		return stage.Output{}, err
 	}
@@ -182,6 +189,10 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 	if err != nil {
 		return stage.Output{}, err
 	}
+	scan, err := HeadingScan(ctx, conn.Conn(), run.Country, run.Rel)
+	if err != nil {
+		return stage.Output{}, err
+	}
 	art, err := env.Artifacts.Publish(ctx, "build", item.InputHash, recipeHash, func(dir string) error {
 		dumpPath := filepath.Join(dir, "corpus.dump")
 		phaseStart = time.Now()
@@ -209,10 +220,23 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 		if inv.Version == 2 || correction.nonempty {
 			record["corrections_sha256"] = correction.hash
 		}
+		record["heading_exclusions_sha256"] = exclusionsHash
+		scanHash, e := WriteHeadingScan(dir, scan)
+		if e != nil {
+			return e
+		}
+		record["heading_scan_sha256"] = scanHash
+		exclusionsJSON, e := json.Marshal(exclusions)
+		if e != nil {
+			return fmt.Errorf("encode heading exclusions: %w", e)
+		}
+		if e = os.WriteFile(filepath.Join(dir, "heading-exclusions.json"), exclusionsJSON, 0600); e != nil {
+			return fmt.Errorf("write heading exclusions: %w", e)
+		}
 		if inv.Version == 2 || len(inv.Provenance.DetailTimes) > 0 {
-			provenanceBytes, e := json.Marshal(inv.Provenance)
-			if e != nil {
-				return fmt.Errorf("encode provenance: %w", e)
+			provenanceBytes, provenanceErr := json.Marshal(inv.Provenance)
+			if provenanceErr != nil {
+				return fmt.Errorf("encode provenance: %w", provenanceErr)
 			}
 			if e = os.WriteFile(filepath.Join(dir, "provenance.json"), provenanceBytes, 0600); e != nil {
 				return fmt.Errorf("write provenance: %w", e)
@@ -240,6 +264,9 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 		}
 		if e := s.cfg.Taxonomy.pinned(); e != nil {
 			return fmt.Errorf("verify taxonomy: %w", e)
+		}
+		if e := s.cfg.HeadingExclusions.unchanged(exclusionsHash); e != nil {
+			return e
 		}
 		return ctx.Err()
 	})

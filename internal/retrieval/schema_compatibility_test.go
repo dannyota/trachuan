@@ -20,11 +20,11 @@ func TestOpenDraft_SchemaVersions(t *testing.T) {
 	pool.Close()
 	hash := strings.Repeat("a", 64)
 	reached := errors.New("schema accepted")
-	for _, version := range []int{3, 4, 5, 6, 7, 8} {
+	for _, version := range []int{3, 4, 5, 6, 7, 8, 9} {
 		t.Run(fmt.Sprint(version), func(t *testing.T) {
 			release := Release{Country: "vn", Rel: "20990101_1", SchemaVersion: version, RetrievalRecipe: Recipe2(), LexicalRecipe: lexical.Recipe1(), ChunkRecipe: json.RawMessage(`{}`), EvaluationSummary: json.RawMessage(`{}`), SourceManifestHash: hash, BuildInputHash: hash, BuildRecipeHash: hash, BuiltAt: time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC), LexicalStats: lexical.StatsSummary{Version: 1, AvgDL: 1, VocabularySHA256: hash, DFSHA256: hash}}
 			_, err := OpenDraft(t.Context(), pool, failingRecipeEmbedder{reached}, release, Options{Now: time.Now, Profile: "serving"})
-			if version >= 4 && version <= 7 {
+			if version >= 4 && version <= 8 {
 				if !errors.Is(err, reached) {
 					t.Fatal(err)
 				}

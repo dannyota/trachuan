@@ -7,6 +7,7 @@ import re
 
 from manifest import canonical, positive, require_match
 from corpus_cohorts import cohort_counts
+from corpus_heading_review import heading_review, validate_heading_review
 from corpus_comparison import check_mrr_fields, finite_values, validate_comparisons, versions
 
 
@@ -194,8 +195,10 @@ def validate_manifest(obj):
     keys = {'kind', 'version', 'repository', 'commit', 'country', 'rel', 'database',
             'sequence', 'previous', 'dump', 'report', 'build_artifact_sha256',
             'schema_version', 'extensions', 'recipes'}
-    if not isinstance(obj, dict) or set(obj) != keys:
+    if not isinstance(obj, dict) or set(obj) not in (keys, keys | {'heading_review'}):
         raise ValueError('invalid corpus manifest fields')
+    if 'heading_review' in obj:
+        validate_heading_review(obj['heading_review'])
     for key, value in dict(kind='trachuan.corpus-release', version=1, repository='dannyota/trachuan').items():
         if type(obj[key]) is not type(value) or obj[key] != value:
             raise ValueError(f'invalid {key}')
@@ -231,7 +234,7 @@ def read_manifest(data):
     return obj
 
 
-def create(commit, sequence, country, rel, directory, report_path, previous_report=None):
+def create(commit, sequence, country, rel, directory, report_path, previous_report=None, heading_reviews_path=None):
     row, report = validate_inputs(country, rel, directory, report_path)
     if previous_report is not None:
         validate_report(report, country, rel, previous_report=previous_report, release_row=row)
@@ -244,6 +247,9 @@ def create(commit, sequence, country, rel, directory, report_path, previous_repo
                build_artifact_sha256=report['build_artifact_sha256'],
                schema_version=row['schema_version'], extensions=row['extensions'],
                recipes={name: row[name + '_recipe'] for name in ('dense', 'chunk', 'lexical', 'retrieval')})
+    review = heading_review(rel, heading_reviews_path)
+    if review is not None:
+        obj['heading_review'] = review
     return canonical(validate_manifest(obj))
 
 

@@ -35,7 +35,7 @@ func validateDatabase(ctx context.Context, cfg Config, name string, record Build
 	if !matches {
 		return fmt.Errorf("release mismatch: %w", errInvalidDatabase)
 	}
-	for _, table := range []string{"document", "source_file", "provision", "provision_validity", "chunk", "lexical_df", "relation", "coverage_gap", "taxonomy_node", "taxonomy_assignment", "release"} {
+	for _, table := range []string{"document", "document_summary", "source_file", "provision", "provision_validity", "chunk", "lexical_df", "relation", "coverage_gap", "taxonomy_node", "taxonomy_assignment", "release"} {
 		expected, ok := record.Counts[table]
 		if !ok {
 			return fmt.Errorf("missing corpus count for %s: %w", table, errInvalidDatabase)
@@ -53,6 +53,12 @@ func validateDatabase(ctx context.Context, cfg Config, name string, record Build
 	}
 	if !matches {
 		return fmt.Errorf("invalid provision locator: %w", errInvalidDatabase)
+	}
+	if err = db.QueryRow(ctx, `SELECT NOT EXISTS (SELECT 1 FROM document d LEFT JOIN document_summary s ON s.document_key=d.key WHERE s.document_key IS NULL OR s.class<>d.class OR (s.status_class,s.status_basis,s.is_current,s.validity_conflict,s.eff_from,s.eff_to) IS DISTINCT FROM (d.status_class,d.status_basis,d.is_current,d.validity_conflict,d.eff_from,d.eff_to))`).Scan(&matches); err != nil {
+		return fmt.Errorf("validate summary status inputs: %w", err)
+	}
+	if !matches {
+		return fmt.Errorf("summary document mismatch: %w", errInvalidDatabase)
 	}
 	if err = validateTaxonomy(ctx, db, record); err != nil {
 		return err

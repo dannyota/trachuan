@@ -31,10 +31,10 @@ func schemaDB(t *testing.T) *pgx.Conn {
 	return conn
 }
 
-func TestApply_CreatesSchemaVersion7(t *testing.T) {
+func TestApply_CreatesSchemaVersion8(t *testing.T) {
 	conn := schemaDB(t)
 	ctx := context.Background()
-	for _, table := range []string{"document", "source_file", "provision", "provision_validity", "chunk", "lexical_df", "relation", "coverage_gap", "taxonomy_node", "taxonomy_assignment", "validity_decision", "release"} {
+	for _, table := range []string{"document", "document_summary", "source_file", "provision", "provision_validity", "chunk", "lexical_df", "relation", "coverage_gap", "taxonomy_node", "taxonomy_assignment", "validity_decision", "release"} {
 		var exists bool
 		if err := conn.QueryRow(ctx, `SELECT to_regclass($1) IS NOT NULL`, "public."+table).Scan(&exists); err != nil || !exists {
 			t.Fatalf("table %s: exists=%v error=%v", table, exists, err)
