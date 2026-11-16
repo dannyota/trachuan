@@ -1,8 +1,11 @@
 import type { Language } from './index'
+import { legalUpdated } from './legal-date'
+
+const date = new Date(`${legalUpdated}T00:00:00Z`)
 
 const copy = {
   vi: {
-    updated: 'Cập nhật lần cuối: 14/11/2026',
+    updated: `Cập nhật lần cuối: ${new Intl.DateTimeFormat('vi-VN', { timeZone: 'UTC' }).format(date)}`,
     privacy: [
       ['Chúng tôi là ai', 'Tra Chuẩn trả về bằng chứng từ văn bản pháp luật Việt Nam, không phải tư vấn pháp lý. Liên hệ support@trachuan.vn.'],
       ['Dữ liệu từ Google', 'Đăng nhập Google chỉ yêu cầu các phạm vi openid và email. Chúng tôi nhận mã định danh và địa chỉ email của tài khoản Google. Chúng tôi lưu mã định danh tài khoản Google và địa chỉ email tại thời điểm bạn đăng ký; thay đổi email Google sau đó không được sao chép. Trạng thái xác minh email được kiểm tra khi đăng nhập và không được lưu. Chúng tôi không yêu cầu dữ liệu khác từ Google.'],
@@ -31,7 +34,7 @@ const copy = {
     ],
   },
   en: {
-    updated: 'Last updated: 14 Nov 2026',
+    updated: `Last updated: ${new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(date)}`,
     privacy: [
       ['Who we are', 'Tra Chuẩn returns evidence from Vietnamese legal texts, not legal advice. Contact support@trachuan.vn.'],
       ['Data from Google', 'Google sign-in requests only the openid and email scopes. We receive the Google account identifier and email address. We store the Google account identifier and the email address it had when you signed up; later changes to your Google email are not copied. We check the email-verified flag at sign-in and do not store it. We request nothing else from Google.'],

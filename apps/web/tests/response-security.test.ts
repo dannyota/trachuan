@@ -24,7 +24,7 @@ it('counts public aliases and redirects them to the canonical path without a que
     const paths = [
       ['/connect/?x=1', '/connect'], ['/connect///?x=2', '/connect'],
       ['//connect?x=3', '/connect'], ['/vn/search/?x=4', '/vn/search'],
-      ...['/sources', '/privacy', '/terms', '/llms.txt'].map(path => [path + '/?x=1', path]),
+      ...['/sources', '/privacy', '/terms', '/llms.txt', '/robots.txt', '/sitemap.xml'].map(path => [path + '/?x=1', path]),
       ['//?x=1', '/'],
     ];
     const redirects = [];

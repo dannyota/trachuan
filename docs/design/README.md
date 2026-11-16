@@ -52,6 +52,7 @@ Intended behavior of trachuan. Decisions with alternatives are in the
 | [web voice](web-voice.md)                                   | Voice rules, claims, voice and typeface per content field, maker panel                                           |
 | [public document summaries](web-public-documents.md)        | The summary URL with no session, fields, outline and heading approval, availability, caching, head tags, sitemap |
 | [serving public summaries](web-public-documents-serving.md) | Summary rows, public document endpoints, admission and capacity, tests, capacity acceptance                      |
+| [discovery](discovery.md)                                   | Indexable routes, robots.txt, sitemap, head tags, structured data, llms.txt, measurement                         |
 | [deployment](deployment.md)                                 | Host, deploy, secrets, release activation, backups, observability                                                |
 | [backups](backups.md)                                       | pgBackRest image, configuration, schedules, restore proof and results                                            |
 | [pull deployment](pull-deployment.md)                       | Signed release from a tag, host updater, rollback, remote execution                                              |

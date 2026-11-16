@@ -10,7 +10,6 @@ const unavailable = useState<boolean>('service-unavailable', () => false)
 const route = useRoute()
 const session = useSessionStore()
 const api = useApi()
-const siteOrigin = useRuntimeConfig().public.siteOrigin
 
 onMounted(async () => {
   try {
@@ -19,7 +18,7 @@ onMounted(async () => {
     session.status = 'signed-out'
   }
 })
-useHead(() => {
+const head = computed(() => {
   const titles: Record<string, string> = {
     '/': messages.value.home,
     '/connect': messages.value.connect,
@@ -32,8 +31,10 @@ useHead(() => {
   }
   const page = publicHead(language.value, route.path)
   const title = unavailable.value ? shellMessages(language.value).unavailableTitle : titles[route.path] || page?.title || (route.path.startsWith('/vn/documents/') ? messages.value.reportDocument : '')
-  return { htmlAttrs: { lang: language.value }, title: title ? `${title} · Tra Chuẩn` : 'Tra Chuẩn', link: [{ rel: 'icon', type: 'image/svg+xml', href: '/icon.svg' }, { rel: 'icon', href: '/favicon.ico', sizes: 'any' }, { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' }, { rel: 'manifest', href: '/site.webmanifest' }], meta: [...(page ? [{ name: 'description', content: page.description }] : []), { name: 'theme-color', content: '#FFFFFF', media: '(prefers-color-scheme: light)' }, { name: 'theme-color', content: '#111418', media: '(prefers-color-scheme: dark)' }, { property: 'og:title', content: 'Tra Chuẩn' }, { property: 'og:description', content: 'Tra cứu đúng điều, đúng khoản, kèm trạng thái hiệu lực.' }, { property: 'og:image', content: new URL('/og-image.png', siteOrigin).href }, { name: 'twitter:card', content: 'summary_large_image' }] }
+  return { htmlAttrs: { lang: language.value }, title: title ? `${title} · Tra Chuẩn` : 'Tra Chuẩn', link: [{ rel: 'icon' as const, type: 'image/svg+xml', href: '/icon.svg' }, { rel: 'icon' as const, href: '/favicon.ico', sizes: 'any' }, { rel: 'apple-touch-icon' as const, href: '/apple-touch-icon.png' }, { rel: 'manifest' as const, href: '/site.webmanifest' }], meta: [...(page ? [{ name: 'description', content: page.description }] : []), { name: 'theme-color', content: '#FFFFFF', media: '(prefers-color-scheme: light)' }, { name: 'theme-color', content: '#111418', media: '(prefers-color-scheme: dark)' }] }
 })
+useHead(head)
+usePublicSeo(() => ({ path: route.path, title: head.value.title, description: publicHead(language.value, route.path)?.description ?? '', language: language.value }))
 </script>
 
 <template>
