@@ -1,6 +1,7 @@
 package classify
 
 import (
+	"encoding/json"
 	"testing"
 
 	"danny.vn/trachuan/apps/corpus/internal/taxonomy"
@@ -34,7 +35,7 @@ func TestScore_MicroSetsAncestorsAndLowestThreshold(t *testing.T) {
 	wants := []struct {
 		tp, fp, fn int
 		threshold  float64
-	}{{2, 0, 0, 0}, {3, 1, 0, 0.7}, {3, 2, 0, 0.8}}
+	}{{2, 0, 0, 0}, {3, 1, 0, 0}, {3, 2, 0, 0}}
 	for i, want := range wants {
 		row := report.Levels[i]
 		if row.Raw.TruePositive != want.tp || row.Raw.FalsePositive != want.fp || row.Raw.FalseNegative != want.fn || row.Threshold == nil || *row.Threshold != want.threshold {
@@ -107,5 +108,43 @@ func TestScore_NoQualifyingThresholdAndDuplicateLabels(t *testing.T) {
 	l.Articles = append(l.Articles, l.Articles[0])
 	if _, err = Score(l, f, a, release, nodes); err == nil {
 		t.Fatal("accepted duplicate labeled article")
+	}
+}
+
+func TestScore_TopOneAndThreshold(t *testing.T) {
+	l, f, a, release, nodes := scoreFixture(t, 3)
+	a.Articles[0].Outcome.Codes = []CodeConfidence{{"1.1.x1", 0.8}, {"1.1.c1.m1", 0.8}}
+	a.Articles[1].Outcome.Codes = []CodeConfidence{{"1.1.x1", 0.9}, {"1.1.c1.m1", 0.7}}
+	a.Articles[2].Outcome.Codes = nil
+	report, err := Score(l, f, a, release, nodes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i, want := range []float64{1, 0.5, 0.5} {
+		b, marshalErr := json.Marshal(report.Levels[i].Raw)
+		if marshalErr != nil {
+			t.Fatal(marshalErr)
+		}
+		var m struct {
+			TopOne float64 `json:"top_1_precision"`
+		}
+		if err = json.Unmarshal(b, &m); err != nil {
+			t.Fatal(err)
+		}
+		if m.TopOne != want {
+			t.Errorf("level %d top-1 %v want %v", i, m.TopOne, want)
+		}
+	}
+	if report.Levels[2].Threshold != nil {
+		t.Errorf("incorrect threshold %v", *report.Levels[2].Threshold)
+	}
+	a.Articles[1].Outcome.Codes[0].Confidence = 0.6
+	a.Articles[1].Outcome.Codes[1].Confidence = 0.5
+	report, err = Score(l, f, a, release, nodes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if report.Levels[2].Threshold == nil || *report.Levels[2].Threshold != 0.8 {
+		t.Errorf("threshold %+v", report.Levels[2].Threshold)
 	}
 }

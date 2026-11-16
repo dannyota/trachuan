@@ -9,11 +9,12 @@ import (
 )
 
 type Metrics struct {
-	TruePositive  int     `json:"true_positive"`
-	FalsePositive int     `json:"false_positive"`
-	FalseNegative int     `json:"false_negative"`
-	Precision     float64 `json:"precision"`
-	Recall        float64 `json:"recall"`
+	TruePositive    int     `json:"true_positive"`
+	FalsePositive   int     `json:"false_positive"`
+	FalseNegative   int     `json:"false_negative"`
+	Precision       float64 `json:"precision"`
+	Recall          float64 `json:"recall"`
+	TopOnePrecision float64 `json:"top_1_precision"`
 }
 
 type ThresholdMetrics struct {
@@ -42,8 +43,11 @@ type ScoreReport struct {
 }
 
 type scoredArticle struct {
-	truth       [3]map[string]bool
-	predictions [3]map[string]float64
+	truth         [3]map[string]bool
+	predictions   [3]map[string]float64
+	topCode       string
+	topConfidence float64
+	topMapped     [3]string
 }
 
 func Score(labels taxonomy.Labels, families FamilyArtifact, artifact ArticleArtifact, release []Article, nodes []Node) (ScoreReport, error) {
@@ -100,6 +104,12 @@ func Score(labels taxonomy.Labels, families FamilyArtifact, artifact ArticleArti
 				if !n.Active || n.Level < 2 || n.Level > 4 || (n.Origin != "phapdien" && n.Origin != "custom") || math.IsNaN(p.Confidence) || math.IsInf(p.Confidence, 0) || p.Confidence < 0 || p.Confidence > 1 || !containsCode(family.Codes, ancestor(p.Code, 2, byCode)) {
 					return report, fmt.Errorf("invalid article prediction code or confidence")
 				}
+				if item.topCode == "" || p.Confidence > item.topConfidence || (p.Confidence == item.topConfidence && p.Code < item.topCode) {
+					item.topCode, item.topConfidence = p.Code, p.Confidence
+					for i, level := range []int{2, 3, 0} {
+						item.topMapped[i] = ancestor(p.Code, level, byCode)
+					}
+				}
 				for i, level := range []int{2, 3, 0} {
 					mapped := ancestor(p.Code, level, byCode)
 					if mapped == "" {
@@ -130,7 +140,7 @@ func Score(labels taxonomy.Labels, families FamilyArtifact, artifact ArticleArti
 		for _, value := range values {
 			metric := scoreAt(scored, i, value)
 			row.Candidates = append(row.Candidates, ThresholdMetrics{value, metric})
-			if !unavailable && row.Threshold == nil && metric.TruePositive+metric.FalsePositive > 0 && metric.Precision >= 0.85 {
+			if !unavailable && row.Threshold == nil && metric.TopOnePrecision >= 0.85 {
 				v := value
 				row.Threshold = &v
 			}
@@ -175,7 +185,14 @@ func containsCode(codes []string, code string) bool {
 
 func scoreAt(articles []scoredArticle, level int, threshold float64) Metrics {
 	var m Metrics
+	var topTotal, topCorrect int
 	for _, a := range articles {
+		if a.topCode != "" && a.topConfidence >= threshold {
+			topTotal++
+			if a.truth[level][a.topMapped[level]] {
+				topCorrect++
+			}
+		}
 		for code, confidence := range a.predictions[level] {
 			if confidence < threshold {
 				continue
@@ -191,6 +208,9 @@ func scoreAt(articles []scoredArticle, level int, threshold float64) Metrics {
 				m.FalseNegative++
 			}
 		}
+	}
+	if topTotal > 0 {
+		m.TopOnePrecision = float64(topCorrect) / float64(topTotal)
 	}
 	if m.TruePositive+m.FalsePositive > 0 {
 		m.Precision = float64(m.TruePositive) / float64(m.TruePositive+m.FalsePositive)

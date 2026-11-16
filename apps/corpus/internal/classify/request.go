@@ -38,10 +38,18 @@ func BuildRequest(r Recipe, d Document, families []Family) (anthropic.MessageNew
 	if d.Key == "" || d.Title == "" || len(families) == 0 {
 		return anthropic.MessageNewParams{}, fmt.Errorf("document identity, title and active families are required")
 	}
+	type menuFamily struct {
+		Code string `json:"code"`
+		Name string `json:"name"`
+	}
+	menu := make([]menuFamily, 0, len(families))
+	for _, family := range families {
+		menu = append(menu, menuFamily{family.Code, family.ParentName + " > " + family.Name})
+	}
 	payload := struct {
-		Document Document `json:"document"`
-		Families []Family `json:"active_level_2_nodes"`
-	}{d, families}
+		Document Document     `json:"document"`
+		Families []menuFamily `json:"active_level_2_nodes"`
+	}{d, menu}
 	b, err := json.Marshal(payload)
 	if err != nil {
 		return anthropic.MessageNewParams{}, fmt.Errorf("encode classification request: %w", err)

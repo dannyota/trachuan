@@ -86,3 +86,25 @@ INSERT INTO taxonomy_assignment SELECT i,'phapdien_seed' FROM generate_series(4,
 		}
 	}
 }
+
+func TestLoadFamilies_ExcludesEmptyChildlessNodes(t *testing.T) {
+	ctx := context.Background()
+	db, err := pgxpool.New(ctx, testpg.NewDatabase(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(db.Close)
+	_, err = db.Exec(ctx, `CREATE TABLE taxonomy_node(id bigint,code text,name text,parent_id bigint,level integer,status text,ordinal integer,provision_count integer);
+ INSERT INTO taxonomy_node VALUES (1,'1','Topic',NULL,1,'active',1,0),(2,'1.1','Empty',1,2,'active',1,0),(3,'1.2','Parent',1,2,'active',2,0),(4,'1.2.c1','Child',3,3,'active',1,0),(5,'1.3','Populated',1,2,'active',3,1);`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := LoadFamilies(ctx, db)
+	if err != nil || len(got) != 2 || got[0].Code != "1.2" || got[1].Code != "1.3" {
+		t.Fatalf("families %+v error %v", got, err)
+	}
+	out := Validate("end_turn", `{"codes":["1.1","1.2"]}`, 5, got)
+	if len(out.Dropped) != 1 || out.Dropped[0] != "1.1" || len(out.Codes) != 1 || out.Codes[0] != "1.2" {
+		t.Fatalf("outcome %+v", out)
+	}
+}

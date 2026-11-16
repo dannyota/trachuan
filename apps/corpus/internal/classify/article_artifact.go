@@ -54,12 +54,20 @@ func readArtifact(path string, dst any) (string, error) {
 }
 
 func ReadFamilyArtifact(path, taxonomyHash string, nodes []Node) (FamilyArtifact, string, error) {
+	return readFamilyArtifact(path, taxonomyHash, nodes, false)
+}
+
+func ReadFamilyArtifactForScore(path, taxonomyHash string, nodes []Node) (FamilyArtifact, string, error) {
+	return readFamilyArtifact(path, taxonomyHash, nodes, true)
+}
+
+func readFamilyArtifact(path, taxonomyHash string, nodes []Node, historical bool) (FamilyArtifact, string, error) {
 	var f FamilyArtifact
 	hash, err := readArtifact(path, &f)
 	if err != nil {
 		return f, "", err
 	}
-	if f.Version != 1 || f.Recipe.Validate() != nil || f.Recipe.Article != nil || f.Recipe.Hash() != f.RecipeHash || f.TaxonomyHash != taxonomyHash || f.Recipe.TaxonomyHash != taxonomyHash || len(f.Documents) == 0 {
+	if f.Version != 1 || f.Recipe.validate(historical) != nil || f.Recipe.Article != nil || f.Recipe.Hash() != f.RecipeHash || f.TaxonomyHash != taxonomyHash || f.Recipe.TaxonomyHash != taxonomyHash || len(f.Documents) == 0 {
 		return f, "", fmt.Errorf("families artifact recipe or taxonomy mismatch")
 	}
 	for key, out := range f.Documents {
@@ -81,11 +89,19 @@ func ReadFamilyArtifact(path, taxonomyHash string, nodes []Node) (FamilyArtifact
 }
 
 func ReadArticleArtifact(path, taxonomyHash, familiesHash string) (ArticleArtifact, error) {
+	return readArticleArtifact(path, taxonomyHash, familiesHash, false)
+}
+
+func ReadArticleArtifactForScore(path, taxonomyHash, familiesHash string) (ArticleArtifact, error) {
+	return readArticleArtifact(path, taxonomyHash, familiesHash, true)
+}
+
+func readArticleArtifact(path, taxonomyHash, familiesHash string, historical bool) (ArticleArtifact, error) {
 	var a ArticleArtifact
 	if _, err := readArtifact(path, &a); err != nil {
 		return a, err
 	}
-	if a.Version != 1 || a.Recipe.Validate() != nil || a.Recipe.Article == nil || a.RecipeHash != a.Recipe.Hash() || a.TaxonomyHash != taxonomyHash || a.Recipe.TaxonomyHash != taxonomyHash || a.FamiliesHash != familiesHash || a.Recipe.Article.FamiliesHash != familiesHash {
+	if a.Version != 1 || a.Recipe.validate(historical) != nil || a.Recipe.Article == nil || a.RecipeHash != a.Recipe.Hash() || a.TaxonomyHash != taxonomyHash || a.Recipe.TaxonomyHash != taxonomyHash || a.FamiliesHash != familiesHash || a.Recipe.Article.FamiliesHash != familiesHash {
 		return a, fmt.Errorf("articles artifact recipe, taxonomy or families mismatch")
 	}
 	seen := map[string]bool{}

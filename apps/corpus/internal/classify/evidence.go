@@ -57,7 +57,7 @@ func ReadFields(dir, key, hash string) ([]string, error) {
 }
 
 func LoadFamilies(ctx context.Context, db *pgxpool.Pool) ([]Family, error) {
-	rows, err := db.Query(ctx, `SELECT n.code,n.name,p.name FROM taxonomy_node n JOIN taxonomy_node p ON p.id=n.parent_id WHERE n.level=2 AND n.status='active' AND p.level=1 AND p.status='active' ORDER BY p.ordinal,n.ordinal,n.code`)
+	rows, err := db.Query(ctx, `SELECT n.code,n.name,p.name FROM taxonomy_node n JOIN taxonomy_node p ON p.id=n.parent_id WHERE n.level=2 AND n.status='active' AND p.level=1 AND p.status='active' AND (n.provision_count > 0 OR EXISTS (SELECT 1 FROM taxonomy_node child WHERE child.parent_id=n.id)) ORDER BY p.ordinal,n.ordinal,n.code`)
 	if err != nil {
 		return nil, fmt.Errorf("read classification families: %w", err)
 	}

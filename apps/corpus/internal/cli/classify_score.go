@@ -50,11 +50,11 @@ func runClassifyScoreWith(ctx context.Context, args []string, stdout, stderr io.
 	if err != nil {
 		return fail(1, err)
 	}
-	families, familiesHash, err := classify.ReadFamilyArtifact(o.Families, evidence.taxonomyHash, evidence.nodes)
+	families, familiesHash, err := classify.ReadFamilyArtifactForScore(o.Families, evidence.taxonomyHash, evidence.nodes)
 	if err != nil {
 		return fail(1, err)
 	}
-	articles, err := classify.ReadArticleArtifact(o.Articles, evidence.taxonomyHash, familiesHash)
+	articles, err := classify.ReadArticleArtifactForScore(o.Articles, evidence.taxonomyHash, familiesHash)
 	if err != nil {
 		return fail(1, err)
 	}
