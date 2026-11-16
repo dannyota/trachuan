@@ -19,6 +19,8 @@ prefix `<cc>/<rel>/`:
   recipe.
 - `release.json`: the dump's `release` row as JSON
   ([corpus schema](corpus-schema.md)), written by `corpus release-row`.
+- `build.json`: the build record, listed in `MANIFEST.sha256`; schema 8 and
+  later only, the source of the manifest's `heading_evidence`.
 
 `corpus release-row <cc> <rel> --out <file>` reads the release database and
 workshop read-only, without Temporal. `release.json` keeps the release row's
@@ -77,9 +79,9 @@ environment `corpus-release`, which holds the `trachuan-release-verify`
 read-only customer secret key. That key is the only OCI credential in GitHub; it
 reads one bucket of public legal text and cannot write. The job:
 
-1. HEADs all four objects before downloading: dump at most 16 GiB, each JSON
-   sidecar at most 16 MiB, and `MANIFEST.sha256` at most 1 MiB. Their total must
-   be below the runner's current free disk minus 2 GiB. Each download requests a
+1. HEADs every object before downloading: dump at most 16 GiB, each JSON sidecar
+   at most 16 MiB, and `MANIFEST.sha256` at most 1 MiB. Their total must be
+   below the runner's current free disk minus 2 GiB. Each download requests a
    [byte range](https://docs.aws.amazon.com/cli/latest/reference/s3api/get-object.html)
    of exactly `bytes=0-<HEAD size minus 1>`, with `--if-match` set to HEAD's
    ETag, and must have that size. The GET response must repeat HEAD's ETag and
@@ -124,8 +126,10 @@ requested. No MacBook signing key exists.
   "extensions": {"vector": "<version>", "ltree": "<version>"},
   "recipes": {"dense": {...}, "chunk": {...}, "lexical": {...},
               "retrieval": {...}},
+  "heading_evidence": {"projection": 1, "scan_sha256": "<64 hex>",
+                       "exclusions_sha256": "<64 hex>"},
   "heading_review": {"projection": 1, "scan_sha256": "<64 hex>",
-                     "exclusions_sha256": "<64 hex>", "reviewer": "<name>",
+                     "exclusions_sha256": "<64 hex>", "reviewer": "<role>",
                      "date": "2026-11-16"}
 }
 ```
@@ -140,8 +144,11 @@ and `ltree` and logs the versions, and the smoke check in step 3 proves the
 restored data works with the image's versions. The certificate identity is
 `https://github.com/dannyota/trachuan/.github/workflows/corpus-release.yml@refs/heads/main`.
 `heading_review` is present only when `sources/vn-heading-reviews.yaml` has an
-entry for the release; signing copies it unchanged. The build input hash covers
-`sources/vn-heading-exclusions.yaml` like the corrections
+entry for the release; signing copies it unchanged. `heading_evidence` is copied
+by signing from the build record `build.json`, which the upload directory holds
+beside the dump and whose SHA-256 must equal its line in `MANIFEST.sha256`; it
+is required on schema 8 manifests and absent below 8. The build input hash
+covers `sources/vn-heading-exclusions.yaml` like the corrections
 ([public document summaries](web-public-documents.md)).
 
 ## Host activation
@@ -225,8 +232,9 @@ even when the auth migrations ran before the role existed.
    summary pool of the new release opens and the old one retires within 5
    seconds ([serving public summaries](web-public-documents-serving.md)).
    `headings_approved` is set for the release only when the manifest's
-   `heading_review` matches its projection, its scan output hash and its
-   exclusions hash; otherwise summaries serve labels only.
+   `heading_review` equals its `heading_evidence` field by field (projection,
+   scan output hash, exclusions hash), both signed; otherwise summaries serve
+   labels only.
 
 `release_journal` and `retired_release` (with `dump_sha256`) are auth
 migrations. The old active database gets its dump digest from its active corpus

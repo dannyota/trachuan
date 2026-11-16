@@ -29,9 +29,9 @@ required gating comparisons in every product cohort with cases, and no research
 override. All cohorts must be present; empty cohorts require no comparisons.
 
 Prepare a separate upload directory so the immutable build artifact stays
-unchanged. Copy its dump and original manifest without regenerating the
-manifest. With `CORPUS_DATABASE_URL` and `CORPUS_BUILDER_DATABASE_URL`
-configured:
+unchanged. Copy its dump, original manifest and build record without
+regenerating the manifest. With `CORPUS_DATABASE_URL` and
+`CORPUS_BUILDER_DATABASE_URL` configured:
 
 ```sh
 CC=vn
@@ -42,7 +42,7 @@ REPORT=/path/to/evaluation/report.json
 PREVIOUS=/path/to/previous-upload-directory/report.json
 corpus eval "$CC" "$REL" --out /path/to/evaluation --previous "$PREVIOUS"
 mkdir "$UPLOAD"
-cp "$BUILD/corpus.dump" "$BUILD/MANIFEST.sha256" "$UPLOAD/"
+cp "$BUILD/corpus.dump" "$BUILD/MANIFEST.sha256" "$BUILD/build.json" "$UPLOAD/"
 corpus release-row "$CC" "$REL" --out "$UPLOAD/release.json"
 bash scripts/corpus-upload.sh --dry-run "$CC" "$REL" "$UPLOAD" "$REPORT"
 bash scripts/corpus-upload.sh "$CC" "$REL" "$UPLOAD" "$REPORT"
@@ -52,14 +52,14 @@ Dry-run validates local files and prints the upload and dispatch plan without
 calling AWS or GitHub. A real upload holds
 `${HOME}/.cache/trachuan/corpus-upload.lock`, shared by all checkouts for the
 same owner. The uploader creates the cache directory with mode `0700`, checks
-the prefix is empty, uploads all four objects, then rechecks every size and ETag
-against its upload receipt. It keeps the uploaded report as
-`$UPLOAD/report.json` before dispatching `corpus-release.yml` from `main`. Use
-that file as `--previous` for the next release after this release becomes
-active. If dispatch alone fails, dispatch it manually with the same country and
-release; do not upload again. A partial upload reserves that prefix; use a new
-release id for a rebuilt corpus. The signed manifest authorizes release; the
-report's `release_eligible` remains false. Host activation follows
+the prefix is empty, uploads every object (`build.json` too from schema 8), then
+rechecks every size and ETag against its upload receipt. It keeps the uploaded
+report as `$UPLOAD/report.json` before dispatching `corpus-release.yml` from
+`main`. Use that file as `--previous` for the next release after this release
+becomes active. If dispatch alone fails, dispatch it manually with the same
+country and release; do not upload again. A partial upload reserves that prefix;
+use a new release id for a rebuilt corpus. The signed manifest authorizes
+release; the report's `release_eligible` remains false. Host activation follows
 [corpus release](../design/corpus-release.md#host-activation).
 
 ### Refresh the home sample
