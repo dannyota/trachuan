@@ -48,16 +48,14 @@ type scoredArticle struct {
 
 func Score(labels taxonomy.Labels, families FamilyArtifact, artifact ArticleArtifact, release []Article, nodes []Node) (ScoreReport, error) {
 	report := ScoreReport{Status: "available", RecipeHash: artifact.RecipeHash, FamiliesHash: artifact.FamiliesHash, Entries: len(labels.Articles)}
-	if len(labels.Articles) == 0 {
-		return report, fmt.Errorf("labeled set is empty")
+	validation, err := validateReleaseLabels(labels, release, nodes)
+	if err != nil {
+		return report, err
 	}
+	report.InvalidEntries = validation.invalid
 	byCode := map[string]Node{}
 	for _, n := range nodes {
 		byCode[n.Code] = n
-	}
-	texts := map[string]string{}
-	for _, a := range release {
-		texts[a.DocumentKey+"/"+a.Anchor] = a.OwnText
 	}
 	predicted := map[string]ArticleOutcome{}
 	for _, a := range artifact.Articles {
@@ -67,27 +65,14 @@ func Score(labels taxonomy.Labels, families FamilyArtifact, artifact ArticleArti
 		}
 		predicted[key] = a.Outcome
 	}
-	seen := map[string]bool{}
 	var scored []scoredArticle
 	candidates := [3]map[float64]bool{{0: true}, {0: true}, {0: true}}
 	for _, label := range labels.Articles {
 		key := label.Key + "/" + label.Anchor
-		if seen[key] || label.Key == "" || label.Anchor == "" || len(label.Codes) == 0 {
-			return report, fmt.Errorf("invalid or duplicate labeled article")
-		}
-		seen[key] = true
-		text, present := texts[key]
-		valid := present && taxonomy.OwnTextSHA256(text) == label.OwnTextSHA256
+		valid := validation.valid[key]
 		truthCodes := map[string]bool{}
 		for _, code := range label.Codes {
-			n, ok := byCode[code]
-			if !ok || !n.Active {
-				valid = false
-			}
 			truthCodes[code] = true
-		}
-		if !valid {
-			report.InvalidEntries++
 		}
 		family := families.Documents[label.Key]
 		for code := range truthCodes {
@@ -133,7 +118,8 @@ func Score(labels taxonomy.Labels, families FamilyArtifact, artifact ArticleArti
 	if report.FamilyTotal > 0 {
 		report.FamilyRecall = float64(report.FamilyHits) / float64(report.FamilyTotal)
 	}
-	unavailable := report.InvalidEntries*20 > report.Entries
+	availabilityErr := validation.availabilityError()
+	unavailable := availabilityErr != nil
 	for i, name := range []string{"level_2", "level_3", "deepest"} {
 		row := LevelScore{Level: name, Raw: scoreAt(scored, i, 0)}
 		values := make([]float64, 0, len(candidates[i]))
@@ -153,7 +139,7 @@ func Score(labels taxonomy.Labels, families FamilyArtifact, artifact ArticleArti
 	}
 	if unavailable {
 		report.Status = "unavailable"
-		return report, fmt.Errorf("more than 5 percent of labeled entries fail release validation")
+		return report, availabilityErr
 	}
 	return report, nil
 }

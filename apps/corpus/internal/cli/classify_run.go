@@ -12,6 +12,7 @@ import (
 	"danny.vn/trachuan/apps/corpus/internal/config"
 	"danny.vn/trachuan/apps/corpus/internal/stage/build"
 	"danny.vn/trachuan/apps/corpus/internal/store"
+	"danny.vn/trachuan/apps/corpus/internal/taxonomy"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -21,6 +22,7 @@ type screenTarget struct {
 	taxonomyHash string
 	documents    []classify.Document
 	families     []classify.Family
+	selection    *classify.DocumentSelection
 	close        func()
 }
 
@@ -101,6 +103,18 @@ func openSubmissionRunner(ctx context.Context, provider bool) (*classify.Runner,
 }
 
 func prepareScreen(ctx context.Context, o classify.Options) (screenTarget, error) {
+	var labels taxonomy.Labels
+	var labelsHash string
+	if o.LabelsFile != "" {
+		var err error
+		labels, labelsHash, err = classify.ReadLabels(o.LabelsFile)
+		if err != nil {
+			return screenTarget{}, err
+		}
+		if labels.Country != o.Country {
+			return screenTarget{}, fmt.Errorf("labeled set country differs from target release")
+		}
+	}
 	runner, workshop, cfg, err := openSubmissionRunner(ctx, true)
 	if err != nil {
 		return screenTarget{}, err
@@ -140,10 +154,20 @@ func prepareScreen(ctx context.Context, o classify.Options) (screenTarget, error
 	if err != nil {
 		return failRelease(err)
 	}
-	documents, err := classify.LoadDocuments(ctx, release, workshop, artifact.Store{Root: cfg.Artifacts}, o.Documents, o.Seed)
+	var documents []classify.Document
+	var selection *classify.DocumentSelection
+	if o.LabelsFile == "" {
+		documents, err = classify.LoadDocuments(ctx, release, workshop, artifact.Store{Root: cfg.Artifacts}, o.Documents, o.Seed)
+	} else {
+		documents, err = classify.LoadSelectedDocuments(ctx, release, workshop, artifact.Store{Root: cfg.Artifacts}, labels)
+		selection = &classify.DocumentSelection{LabelsHash: labelsHash}
+		for _, d := range documents {
+			selection.DocumentKeys = append(selection.DocumentKeys, d.Key)
+		}
+	}
 	if err != nil {
 		return failRelease(err)
 	}
 	release.Close()
-	return screenTarget{runner: runner, runID: row.ID, taxonomyHash: taxonomyHash, documents: documents, families: families, close: workshop.Close}, nil
+	return screenTarget{runner: runner, runID: row.ID, taxonomyHash: taxonomyHash, documents: documents, families: families, selection: selection, close: workshop.Close}, nil
 }

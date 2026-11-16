@@ -33,6 +33,9 @@ func (r *Runner) Articles(ctx context.Context, o Options, labelsHash string, art
 	if o.Recipe.Article == nil || o.Recipe.Validate() != nil || o.Recipe.Article.SourceRecipeHash != families.RecipeHash || families.RecipeHash != families.Recipe.Hash() || families.TaxonomyHash != o.Recipe.TaxonomyHash || len(articles) == 0 {
 		return Summary{}, fmt.Errorf("article recipe, families artifact and selected articles must agree")
 	}
+	if err := ValidateArticleFamilies(articles, families); err != nil {
+		return Summary{}, err
+	}
 	o.Documents = 1
 	o.article = &articleWork{articles: articles, families: families, nodes: nodes, labelsHash: labelsHash}
 	return r.screen(ctx, o, nil, nil, nil)

@@ -17,17 +17,30 @@ func parseScreenOptions(cc, rel string, args []string) (classify.Options, error)
 	if _, err := build.DatabaseName(cc, rel); err != nil {
 		return o, err
 	}
-	opts, err := options(args, map[string]bool{"--documents": true, "--seed": true, "--recipe": true, "--out": true, "--budget": true, "--budget-usd": true, "--dry-run": false})
+	opts, err := options(args, map[string]bool{"--select": true, "--documents": true, "--seed": true, "--recipe": true, "--out": true, "--budget": true, "--budget-usd": true, "--dry-run": false})
 	if err != nil {
 		return o, err
 	}
-	o.Documents, err = strconv.Atoi(opts["--documents"])
-	if err != nil || o.Documents < 1 || o.Documents > 400 {
-		return o, fmt.Errorf("--documents must be between 1 and 400")
-	}
-	o.Seed, err = strconv.ParseInt(opts["--seed"], 10, 64)
-	if err != nil {
-		return o, fmt.Errorf("--seed is required and must be an integer")
+	if selection, selected := opts["--select"]; selected {
+		_, documents := opts["--documents"]
+		_, seed := opts["--seed"]
+		if documents || seed {
+			return o, fmt.Errorf("--select is mutually exclusive with --documents and --seed")
+		}
+		var ok bool
+		o.LabelsFile, ok = strings.CutPrefix(selection, "labels:")
+		if !ok || o.LabelsFile == "" {
+			return o, fmt.Errorf("--select requires labels:FILE")
+		}
+	} else {
+		o.Documents, err = strconv.Atoi(opts["--documents"])
+		if err != nil || o.Documents < 1 || o.Documents > 400 {
+			return o, fmt.Errorf("--documents must be between 1 and 400")
+		}
+		o.Seed, err = strconv.ParseInt(opts["--seed"], 10, 64)
+		if err != nil {
+			return o, fmt.Errorf("--seed is required and must be an integer")
+		}
 	}
 	o.Recipe, err = classify.NewRecipe(opts["--recipe"], strings.Repeat("0", 64))
 	if err != nil {
@@ -56,7 +69,7 @@ func runClassify(ctx context.Context, args []string, stdout, stderr io.Writer) i
 		}
 	}
 	if len(args) < 3 || args[0] != "screen" {
-		_, _ = fmt.Fprintln(stderr, "usage: corpus classify screen <cc> <rel> --documents N --seed S --recipe MODEL --out DIR --budget pilot --budget-usd 15 [--dry-run]")
+		_, _ = fmt.Fprintln(stderr, "usage: corpus classify screen <cc> <rel> (--select labels:FILE | --documents N --seed S) --recipe MODEL --out DIR --budget pilot --budget-usd 15 [--dry-run]")
 		return 2
 	}
 	o, err := parseScreenOptions(args[1], args[2], args[3:])
@@ -72,6 +85,7 @@ func runClassify(ctx context.Context, args []string, stdout, stderr io.Writer) i
 	defer target.close()
 	o.RunID = target.runID
 	o.Recipe.TaxonomyHash = target.taxonomyHash
+	o.Selection = target.selection
 	summary, err := target.runner.Screen(ctx, o, target.documents, target.families)
 	if encodeErr := json.NewEncoder(stdout).Encode(summary); encodeErr != nil {
 		_, _ = fmt.Fprintln(stderr, "write screening summary:", encodeErr)

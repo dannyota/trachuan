@@ -3,6 +3,7 @@ package classify
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -67,6 +68,26 @@ func TestArticles_DryRunAndAdmission(t *testing.T) {
 	o.DryRun = false
 	if _, err = r.Articles(context.Background(), o, "labels", articleInputs(1, ""), families, articleNodes()); err == nil || f.creates != 0 {
 		t.Fatal("overspent budget")
+	}
+}
+
+func TestArticles_RefusesIncompleteFamiliesBeforeCountingOrReplay(t *testing.T) {
+	for _, replay := range []bool{false, true} {
+		t.Run(fmt.Sprint(replay), func(t *testing.T) {
+			r, ledger, client, o, families := runArticlesFixture(t)
+			articles := append(articleInputs(1, ""), Article{DocumentKey: "vn:vbpl:2", Anchor: "dieu-1", Text: "Synthetic", OwnText: "Synthetic"})
+			o.DryRun = true
+			if replay {
+				hashed := o
+				hashed.Documents = 1
+				hashed.article = &articleWork{articles: articles, families: families, nodes: articleNodes(), labelsHash: "labels"}
+				ledger.rows = []Submission{{ScreenHash: screenHash(hashed), State: "completed"}}
+			}
+			_, err := r.Articles(context.Background(), o, "labels", articles, families, articleNodes())
+			if err == nil || !strings.Contains(err.Error(), "missing from families") || client.counts != 0 || client.creates != 0 {
+				t.Fatalf("error %v, counts %d creates %d", err, client.counts, client.creates)
+			}
+		})
 	}
 }
 

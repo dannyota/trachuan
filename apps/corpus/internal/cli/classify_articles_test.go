@@ -3,7 +3,16 @@ package cli
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
+
+	"danny.vn/trachuan/apps/corpus/internal/classify"
+	"danny.vn/trachuan/apps/corpus/internal/taxonomy"
 )
 
 func TestArticleOptions_RequiresLabeledPilotAndFamilyArtifact(t *testing.T) {
@@ -20,6 +29,53 @@ func TestArticleOptions_RequiresLabeledPilotAndFamilyArtifact(t *testing.T) {
 	var out, errout bytes.Buffer
 	if code := runClassify(context.Background(), []string{"articles", "vn", "20990101"}, &out, &errout); code != 2 {
 		t.Fatalf("exit %d: %s", code, &errout)
+	}
+}
+
+func TestClassifyArticles_DryRunRefusesIncompleteFamilies(t *testing.T) {
+	t.Setenv("CORPUS_SUBMISSIONS_DIR", "")
+	dir := t.TempDir()
+	labels := taxonomy.Labels{Country: "vn", Release: "20990101"}
+	evidence := classificationEvidence{taxonomyHash: strings.Repeat("a", 64), nodes: []classify.Node{{Code: "1.1", Level: 2, Active: true, Origin: "phapdien"}}}
+	for i := 1; i <= 300; i++ {
+		key := "vn:vbpl:1"
+		if i == 300 {
+			key = "vn:vbpl:2"
+		}
+		anchor := fmt.Sprintf("dieu-%d", i)
+		labels.Articles = append(labels.Articles, taxonomy.LabelArticle{Key: key, Anchor: anchor, OwnTextSHA256: taxonomy.OwnTextSHA256("Synthetic"), Codes: []string{"1.1"}})
+		evidence.articles = append(evidence.articles, classify.Article{DocumentKey: key, Anchor: anchor, OwnText: "Synthetic", Text: "Synthetic"})
+	}
+	write := func(name string, value any) []byte {
+		t.Helper()
+		b, err := json.Marshal(value)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err = os.WriteFile(filepath.Join(dir, name), b, 0600); err != nil {
+			t.Fatal(err)
+		}
+		return b
+	}
+	write("labels.json", labels)
+	recipe, err := classify.NewRecipe("claude-haiku-5-5", evidence.taxonomyHash)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b := write("families.json", classify.FamilyArtifact{Version: 1, Recipe: recipe, RecipeHash: recipe.Hash(), TaxonomyHash: evidence.taxonomyHash, Documents: map[string]classify.Outcome{"vn:vbpl:1": {Outcome: "ok", Codes: []string{"1.1"}}}})
+	if err = os.WriteFile(filepath.Join(dir, "MANIFEST.sha256"), fmt.Appendf(nil, "%x  families.json\n", sha256.Sum256(b)), 0600); err != nil {
+		t.Fatal(err)
+	}
+	args := []string{"vn", "20990101", "--families", filepath.Join(dir, "families.json"), "--select", "labels:" + filepath.Join(dir, "labels.json"), "--recipe", recipe.Model, "--out", filepath.Join(dir, "output"), "--budget", "pilot", "--budget-usd", "15", "--dry-run"}
+	var out, errout bytes.Buffer
+	code := runClassifyArticlesWith(context.Background(), args, &out, &errout, func(context.Context, string, string, taxonomy.Labels) (classificationEvidence, error) {
+		return evidence, nil
+	})
+	if code != 1 || !strings.Contains(errout.String(), "vn:vbpl:2 missing from families artifact") || out.Len() != 0 {
+		t.Fatalf("code %d stdout %s stderr %s", code, &out, &errout)
+	}
+	if _, err = os.Stat(filepath.Join(dir, "output")); !os.IsNotExist(err) {
+		t.Fatalf("incomplete families wrote output: %v", err)
 	}
 }
 

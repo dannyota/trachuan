@@ -19,7 +19,7 @@ func (r *Runner) prepareScreenBatch(ctx context.Context, o Options, docs []Docum
 		return r.prepareArticleBatch(ctx, o)
 	}
 	var summary Summary
-	selected, err := draw(docs, o.Documents, o.Seed)
+	selected, err := screenDocuments(o, docs)
 	if err != nil {
 		return nil, err
 	}
@@ -52,6 +52,9 @@ func (r *Runner) prepareScreenBatch(ctx context.Context, o Options, docs []Docum
 			return nil, fmt.Errorf("encode batch request: %w", encodeErr)
 		}
 		bytes += len(encoded) + 1
+	}
+	if o.Selection != nil {
+		s.Items[0].Selection = o.Selection
 	}
 	// Anthropic limits batches to 256 MB: https://platform.claude.com/docs/en/build-with-claude/batch-processing
 	if len(requests) > 100000 || bytes > 256000000 {

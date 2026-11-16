@@ -17,6 +17,7 @@ type FamilyArtifact struct {
 	TaxonomyHash string             `json:"taxonomy_hash"`
 	Recipe       Recipe             `json:"recipe"`
 	Documents    map[string]Outcome `json:"documents"`
+	Selection    *DocumentSelection `json:"selection,omitempty"`
 }
 
 type ArticleMetadata struct {
