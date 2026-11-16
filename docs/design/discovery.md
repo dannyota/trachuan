@@ -10,14 +10,15 @@ The six fixed URLs `/`, `/vn/topics`, `/connect`, `/sources`, `/privacy` and
 `/terms`, and `/vn/topics/{code}` for every served code, are indexable. Nothing
 else is.
 
-| Route                                                               | Index | Sitemap | How it stays out                         |
-| ------------------------------------------------------------------- | ----- | ------- | ---------------------------------------- |
-| the six fixed URLs, served topic codes                              | yes   | yes     |                                          |
-| `/llms.txt`, `/robots.txt`, `/sitemap.xml`                          | no    | no      | not pages                                |
-| `/vn/search`, `/vn/documents/{key}`                                 | no    | no      | 302 to `/login` without a session        |
-| `/login`, `/login/factor`, `/signup`, `/reset`, `/link`, `/account` | no    | no      | `X-Robots-Tag: noindex`                  |
-| fixed 404, unavailable page                                         | no    | no      | status 404 or 503                        |
-| `/api/`, `/mcp`, `/oauth/`                                          | no    | no      | disallowed in robots.txt; not HTML pages |
+| Route                                                               | Index                                                | Sitemap | How it stays out                                                          |
+| ------------------------------------------------------------------- | ---------------------------------------------------- | ------- | ------------------------------------------------------------------------- |
+| the six fixed URLs, served topic codes                              | yes                                                  | yes     |                                                                           |
+| `/llms.txt`, `/robots.txt`, `/sitemap.xml`                          | no                                                   | no      | not pages                                                                 |
+| `/vn/documents/{key}/summary`                                       | when its `index` is true and summaries are available | same    | `X-Robots-Tag: noindex` otherwise (`docs/design/web-public-documents.md`) |
+| `/vn/search`, `/vn/documents/{key}`                                 | no                                                   | no      | 302 to `/login` without a session                                         |
+| `/login`, `/login/factor`, `/signup`, `/reset`, `/link`, `/account` | no                                                   | no      | `X-Robots-Tag: noindex`                                                   |
+| fixed 404, unavailable page                                         | no                                                   | no      | status 404 or 503                                                         |
+| `/api/`, `/mcp`, `/oauth/`                                          | no                                                   | no      | disallowed in robots.txt; not HTML pages                                  |
 
 Three separate mechanisms keep private content out. Protection: search results
 and document text need a session, so an anonymous request never receives them (a
@@ -48,8 +49,9 @@ Sitemap: https://trachuan.vn/sitemap.xml
 No group names a crawler. The wildcard admits search crawlers (Googlebot,
 Bingbot, OAI-SearchBot, Claude-SearchBot, PerplexityBot) and training crawlers
 (GPTBot, ClaudeBot) and leaves the Google-Extended token allowed, which keeps
-Tra Chuẩn eligible for grounding in Gemini Apps. User-triggered fetchers
-(ChatGPT-User, Claude-User, Perplexity-User) do not reliably follow robots.txt
+Tra Chuẩn eligible for grounding in Gemini Apps. Among user-triggered fetchers,
+ChatGPT-User may not apply robots rules, Perplexity-User generally ignores them,
+and Claude-User follows a disallow
 ([OpenAI](https://developers.openai.com/api/docs/bots),
 [Anthropic](https://support.claude.com/en/articles/8896518-does-anthropic-crawl-data-from-the-web-and-how-can-site-owners-block-the-crawler),
 [Google](https://developers.google.com/crawling/docs/crawlers-fetchers/google-common-crawlers#google-extended),
@@ -69,6 +71,10 @@ failed codes request, or a `release` different from `/api/v1/public/status`'s,
 answers an uncached 503, never a partial file. The existing taxonomy routes
 cannot list every code: an answer can be truncated at 500 nodes without saying
 which were left out.
+
+While document summaries are available, `/sitemap.xml` becomes an index over a
+pages child (the URLs above) and a documents child of every summary with `index`
+true (`docs/design/web-public-documents.md`).
 
 `lastmod` appears only on `/privacy` and `/terms`, from the same ISO date that
 the pages show as "last updated". Every other URL omits it, because Google uses
@@ -90,6 +96,12 @@ Every indexable page has, in the rendered language:
 - `og:image` `https://trachuan.vn/og-image.png` with `og:image:width` 1200,
   `og:image:height` 630 and `og:image:alt`;
 - `twitter:card` summary_large_image.
+
+Every other page carries a site-level fallback, so a shared link still shows a
+preview: `og:site_name` Tra Chuẩn, `og:title` "Tra Chuẩn", the same `og:image`
+with its size and alt, `twitter:card`, and `og:locale` from the rendered
+language. It has no description, no `og:description`, no canonical and no
+`og:url`. Indexable pages override the fallback with their own tags.
 
 | Path                | Title vi                                          | Description vi                                                                                                                                    |
 | ------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -140,14 +152,16 @@ never runs, so `script-src 'self'` does not apply
 emitted through `useHead` from `JSON.stringify(graph)` with every `<` replaced
 by the six characters `\u003c`, because a data block still ends at the first
 `</script`; titles and names come from data. The CSP test allows inline scripts
-only as `application/json` or `application/ld+json`. No node states legal
-validity: no `legislationLegalForce`, no status.
+only as `application/json` or `application/ld+json`. Every node describes
+content visible on its page
+([Google structured-data policies](https://developers.google.com/search/docs/appearance/structured-data/sd-policies)),
+and no node states legal validity: no `legislationLegalForce`, no status.
 
-| Page                | Nodes                                                                                                                                                                                                                                                                                                                                                                                 |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/`                 | `WebSite`; `Organization` (`@id` `https://trachuan.vn/#organization`, logo `/icon-512.png`, email `support@trachuan.vn`, founder the Person); `WebApplication` with its own description, which says Tra Chuẩn does not write answers and does not give legal advice; `Person` (Danny, url and `sameAs` `https://aboutme.vn/danny`, image the maker picture)                           |
-| `/vn/topics/{code}` | `BreadcrumbList` of the node path; `ItemList` of the node's main documents, each a `Legislation` with name, `legislationIdentifier`, `legislationType` and `legislationJurisdiction` VN, without url                                                                                                                                                                                  |
-| `/sources`          | `Dataset`: name, a description stating the sources and the release, document, provision and topic counts from `/api/v1/public/status`, url, `version` the release id, `dateModified` the release date, `inLanguage` vi, `spatialCoverage` Việt Nam, `creator` and `publisher` the Organization, `isBasedOn` the two sources; no `license` until the owner defines what it would cover |
+| Page                | Nodes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/`                 | `WebSite` (name, url, `inLanguage` vi, publisher the Organization); `Organization` (`@id` `https://trachuan.vn/#organization`, name, url, logo `/icon-512.png`, email `support@trachuan.vn`, founder the Person); `WebApplication` (name, url, `applicationCategory` ReferenceApplication, `operatingSystem` Web) with its own description, which says Tra Chuẩn does not write answers and does not give legal advice; `Person` (Danny, url and `sameAs` `https://aboutme.vn/danny`, image the maker picture) |
+| `/vn/topics/{code}` | `BreadcrumbList` of the node path; `ItemList` of the node's main documents, each a `Legislation` with name, `legislationIdentifier`, `legislationType` and `legislationJurisdiction` VN, without url                                                                                                                                                                                                                                                                                                           |
+| `/sources`          | `Dataset`: name, a description of 50 to 5,000 characters stating the sources and the release, document, provision and topic counts from `/api/v1/public/status`, url, `version` the release id, `dateModified` the release date, `inLanguage` vi, `spatialCoverage` Việt Nam, `creator` and `publisher` the Organization, `isBasedOn` the two sources; no `license` until the owner defines what it would cover                                                                                                |
 
 ## Facts an answer engine can quote
 
@@ -192,13 +206,16 @@ answer engines cite trachuan.vn, checked by hand.
 - Head tags, for every indexable route in both languages: one canonical,
   absolute, https, no query; `og:url` equal to it; `og:locale` matching the
   language; title and description within their limits after NFC; `og:image`
-  absolute with width, height and alt.
+  absolute with width, height and alt. Every other page carries the site-level
+  fallback and no description, canonical or `og:url`.
 - JSON-LD: parses; the expected types; no legal-force or status property; a
   fixture title containing `</script><script>alert(1)</script>` stays inside one
   block in the server-rendered response and parses back unchanged.
 - llms.txt: H1, blockquote, the verbatim guidance, absolute links.
 - Robots headers: noindex on the account routes, none on public routes; the
-  anonymous 302s for search and documents.
+  anonymous 302s for search and documents. While summaries are available, a
+  summary answers 200 without a session, and `noindex` when its `index` is
+  false.
 - A browser sweep of the indexable pages without a cookie: one canonical, one
   `h1`, the title and description limits, no CSP violation. It starts its own
   Nitro against a fixture API that answers status, taxonomy and
