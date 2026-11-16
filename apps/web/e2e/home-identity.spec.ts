@@ -21,7 +21,7 @@ for (const width of [360, 390, 768, 1024, 1366]) {
         }
       }
       const citation = page.locator('.home-citation')
-      await expect(citation).toHaveText('Khoản 1 Điều 25 Thông tư 09/2020/TT-NHNN')
+      await expect(citation).toHaveText('Điều 19 Luật 91/2025/QH15')
       await expect(citation).toBeVisible()
       const citationBox = (await citation.boundingBox())!
       expect(citationBox.x).toBeGreaterThanOrEqual(0)
@@ -52,6 +52,10 @@ for (const width of [360, 390, 768, 1024, 1366]) {
       await hero.locator('.home-form-options label').click()
       await expect(checkbox).toBeChecked()
       await checkbox.focus()
+      await page.keyboard.press('Shift+Tab')
+      await page.keyboard.press('Tab')
+      await expect(checkbox).toBeFocused()
+      await expect(box).toHaveCSS('outline-style', 'solid')
       await expect(box).toHaveCSS('outline-color', 'rgb(255, 255, 255)')
       await expect(box).toHaveCSS('outline-width', '3px')
       await expect(box).toHaveCSS('outline-offset', '3px')

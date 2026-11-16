@@ -13,7 +13,8 @@ test('signed-in home search submits its draft without putting the question in a 
   await page.goto('/')
   await expect(page.getByRole('link', { name: /tài khoản/i })).toBeVisible()
   await page.locator('#home-query').fill(query)
-  await page.locator('.home-form input[type=checkbox]').uncheck()
+  await page.locator('.home-form-options label').click()
+  await expect(page.locator('.home-form input[type=checkbox]')).not.toBeChecked()
   const searchRequest = page.waitForRequest(request => new URL(request.url()).pathname === '/api/v1/search')
   await page.locator('.home-form').getByRole('button', { name: 'Tra cứu' }).click()
   const request = await searchRequest
