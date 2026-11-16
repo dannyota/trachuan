@@ -10,15 +10,15 @@ The six fixed URLs `/`, `/vn/topics`, `/connect`, `/sources`, `/privacy` and
 `/terms`, and `/vn/topics/{code}` for every served code, are indexable. Nothing
 else is.
 
-| Route                                                               | Index                                                | Sitemap | How it stays out                                                          |
-| ------------------------------------------------------------------- | ---------------------------------------------------- | ------- | ------------------------------------------------------------------------- |
-| the six fixed URLs, served topic codes                              | yes                                                  | yes     |                                                                           |
-| `/llms.txt`, `/robots.txt`, `/sitemap.xml`                          | no                                                   | no      | not pages                                                                 |
-| `/vn/documents/{key}/summary`                                       | when its `index` is true and summaries are available | same    | `X-Robots-Tag: noindex` otherwise (`docs/design/web-public-documents.md`) |
-| `/vn/search`, `/vn/documents/{key}`                                 | no                                                   | no      | 302 to `/login` without a session                                         |
-| `/login`, `/login/factor`, `/signup`, `/reset`, `/link`, `/account` | no                                                   | no      | `X-Robots-Tag: noindex`                                                   |
-| fixed 404, unavailable page                                         | no                                                   | no      | status 404 or 503                                                         |
-| `/api/`, `/mcp`, `/oauth/`                                          | no                                                   | no      | disallowed in robots.txt; not HTML pages                                  |
+| Route                                                               | Index                                                | Sitemap | How it stays out                                                                         |
+| ------------------------------------------------------------------- | ---------------------------------------------------- | ------- | ---------------------------------------------------------------------------------------- |
+| the six fixed URLs, served topic codes                              | yes                                                  | yes     |                                                                                          |
+| `/llms.txt`, `/robots.txt`, `/sitemap.xml`                          | no                                                   | no      | not pages                                                                                |
+| `/vn/documents/{key}/summary`                                       | when its `index` is true and summaries are available | same    | `X-Robots-Tag: noindex` otherwise ([public document summaries](web-public-documents.md)) |
+| `/vn/search`, `/vn/documents/{key}`                                 | no                                                   | no      | 302 to `/login` without a session                                                        |
+| `/login`, `/login/factor`, `/signup`, `/reset`, `/link`, `/account` | no                                                   | no      | `X-Robots-Tag: noindex`                                                                  |
+| fixed 404, unavailable page                                         | no                                                   | no      | status 404 or 503                                                                        |
+| `/api/`, `/mcp`, `/oauth/`                                          | no                                                   | no      | disallowed in robots.txt; not HTML pages                                                 |
 
 Three separate mechanisms keep private content out. Protection: search results
 and document text need a session, so an anonymous request never receives them (a
@@ -74,7 +74,7 @@ which were left out.
 
 While document summaries are available, `/sitemap.xml` becomes an index over a
 pages child (the URLs above) and a documents child of every summary with `index`
-true (`docs/design/web-public-documents.md`).
+true ([public document summaries](web-public-documents.md)).
 
 `lastmod` appears only on `/privacy` and `/terms`, from the same ISO date that
 the pages show as "last updated". Every other URL omits it, because Google uses
