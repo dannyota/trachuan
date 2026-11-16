@@ -10,6 +10,7 @@ import (
 	"danny.vn/trachuan/apps/corpus/internal/classify"
 	"danny.vn/trachuan/apps/corpus/internal/stage/build"
 	"danny.vn/trachuan/apps/corpus/internal/store"
+	"danny.vn/trachuan/apps/corpus/internal/taxonomy"
 )
 
 type articleOptions struct {
@@ -42,6 +43,10 @@ func parseArticleOptions(cc, rel string, args []string) (articleOptions, error) 
 }
 
 func runClassifyArticles(ctx context.Context, args []string, stdout, stderr io.Writer) int {
+	return runClassifyArticlesWith(ctx, args, stdout, stderr, loadClassificationEvidence)
+}
+
+func runClassifyArticlesWith(ctx context.Context, args []string, stdout, stderr io.Writer, load func(context.Context, string, string, taxonomy.Labels) (classificationEvidence, error)) int {
 	fail := func(code int, err error) int { _, _ = fmt.Fprintln(stderr, err); return code }
 	if len(args) < 2 {
 		return fail(2, fmt.Errorf("usage: corpus classify articles <cc> <rel> --families FILE --select labels:FILE --recipe MODEL --out DIR --budget pilot --budget-usd 15 [--dry-run]"))
@@ -57,7 +62,7 @@ func runClassifyArticles(ctx context.Context, args []string, stdout, stderr io.W
 	if len(labels.Articles) != 300 {
 		return fail(1, fmt.Errorf("article pilot requires exactly 300 labeled articles"))
 	}
-	evidence, err := loadClassificationEvidence(ctx, args[0], args[1], labels)
+	evidence, err := load(ctx, args[0], args[1], labels)
 	if err != nil {
 		return fail(1, err)
 	}
@@ -70,6 +75,9 @@ func runClassifyArticles(ctx context.Context, args []string, stdout, stderr io.W
 	}
 	if families.Recipe.Model != o.Options.Recipe.Model {
 		return fail(1, fmt.Errorf("article model must match the document recipe"))
+	}
+	if err = classify.ValidateArticleFamilies(evidence.articles, families); err != nil {
+		return fail(1, err)
 	}
 	o.Options.Recipe, err = classify.NewArticleRecipe(families.Recipe, hash)
 	if err != nil {

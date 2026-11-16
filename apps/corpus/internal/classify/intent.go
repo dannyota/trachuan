@@ -139,7 +139,11 @@ func writeFamilies(dir string, s Submission) error {
 		TaxonomyHash string             `json:"taxonomy_hash"`
 		Recipe       Recipe             `json:"recipe"`
 		Documents    map[string]Outcome `json:"documents"`
-	}{1, s.Recipe.Hash(), s.Recipe.TaxonomyHash, s.Recipe, s.Results}
+		Selection    *DocumentSelection `json:"selection,omitempty"`
+	}{1, s.Recipe.Hash(), s.Recipe.TaxonomyHash, s.Recipe, s.Results, nil}
+	if len(s.Items) > 0 {
+		artifact.Selection = s.Items[0].Selection
+	}
 	b, err := json.MarshalIndent(artifact, "", "  ")
 	if err != nil {
 		return fmt.Errorf("encode family artifact: %w", err)

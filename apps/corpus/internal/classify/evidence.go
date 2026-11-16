@@ -104,15 +104,21 @@ func LoadDocuments(ctx context.Context, release, workshop *pgxpool.Pool, artifac
 	if err != nil {
 		return nil, err
 	}
+	return loadDocumentEvidence(ctx, release, workshop, artifacts, selected, hashes)
+}
+
+func loadDocumentEvidence(ctx context.Context, release, workshop *pgxpool.Pool, artifacts artifact.Store, selected []Document, hashes map[string]string) ([]Document, error) {
 	for i := range selected {
 		d := &selected[i]
 		var path string
-		if err = workshop.QueryRow(ctx, `SELECT path FROM artifact WHERE stage='fetch' AND sha256=$1 ORDER BY id LIMIT 1`, hashes[d.Key]).Scan(&path); err != nil {
+		if err := workshop.QueryRow(ctx, `SELECT path FROM artifact WHERE stage='fetch' AND sha256=$1 ORDER BY id LIMIT 1`, hashes[d.Key]).Scan(&path); err != nil {
 			return nil, fmt.Errorf("locate pinned classification fetch artifact: %w", err)
 		}
-		if d.Fields, err = ReadFields(artifacts.Abs(path), d.Key, hashes[d.Key]); err != nil {
+		fields, err := ReadFields(artifacts.Abs(path), d.Key, hashes[d.Key])
+		if err != nil {
 			return nil, err
 		}
+		d.Fields = fields
 		if err = loadContents(ctx, release, d); err != nil {
 			return nil, err
 		}

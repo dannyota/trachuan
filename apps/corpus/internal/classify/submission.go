@@ -14,11 +14,12 @@ import (
 )
 
 type Item struct {
-	Key         string           `json:"key"`
-	RequestHash string           `json:"request_hash"`
-	InputTokens int64            `json:"counted_input_tokens"`
-	Article     *ArticleRequest  `json:"article_request,omitempty"`
-	ArticleMeta *ArticleMetadata `json:"article_metadata,omitempty"`
+	Key         string             `json:"key"`
+	RequestHash string             `json:"request_hash"`
+	InputTokens int64              `json:"counted_input_tokens"`
+	Article     *ArticleRequest    `json:"article_request,omitempty"`
+	ArticleMeta *ArticleMetadata   `json:"article_metadata,omitempty"`
+	Selection   *DocumentSelection `json:"document_selection,omitempty"`
 }
 
 type Submission struct {
@@ -76,6 +77,8 @@ type Options struct {
 	BudgetMicroUSD   int64
 	Out              string
 	DryRun           bool
+	LabelsFile       string
+	Selection        *DocumentSelection
 	article          *articleWork
 }
 
@@ -89,8 +92,18 @@ type Summary struct {
 }
 
 func (o Options) validate() error {
-	if o.RunID < 1 || o.Country != "vn" || o.Release == "" || o.Documents < 1 || o.Documents > 400 || o.Out == "" {
+	if o.RunID < 1 || o.Country != "vn" || o.Release == "" || o.Out == "" {
 		return fmt.Errorf("invalid screening options: require release, output and 1 to 400 documents")
+	}
+	if o.Selection != nil {
+		if o.article != nil || o.Documents != 0 || o.Seed != 0 {
+			return fmt.Errorf("document selection is mutually exclusive with a draw or article requests")
+		}
+		if err := o.Selection.validate(); err != nil {
+			return err
+		}
+	} else if o.Documents < 1 || o.Documents > 400 || o.LabelsFile != "" {
+		return fmt.Errorf("screening requires a document selection or a draw of 1 to 400 documents")
 	}
 	amounts := map[string]int64{"pilot": 15000000, "full": 100000000, "cap": 150000000}
 	if amounts[o.Budget] == 0 || amounts[o.Budget] != o.BudgetMicroUSD {

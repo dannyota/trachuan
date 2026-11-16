@@ -30,6 +30,9 @@ func screenHash(o Options) string {
 	if o.article != nil {
 		return articleWorkHash(o)
 	}
+	if o.Selection != nil {
+		return documentSelectionHash(o)
+	}
 	b, _ := json.Marshal(struct {
 		RunID            int64
 		Country, Release string

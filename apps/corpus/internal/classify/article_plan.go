@@ -134,3 +134,12 @@ func countArticle(ctx context.Context, r Recipe, req ArticleRequest, count Token
 	}
 	return n, nil
 }
+
+func ValidateArticleFamilies(articles []Article, families FamilyArtifact) error {
+	for _, a := range articles {
+		if _, ok := families.Documents[a.DocumentKey]; !ok {
+			return fmt.Errorf("selected document %s missing from families artifact", a.DocumentKey)
+		}
+	}
+	return nil
+}
