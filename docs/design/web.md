@@ -109,7 +109,8 @@ proxy sends `/api/*` to the Go server, which runs with
 
 Colours, type, shape, stamps, the logo and contrast live in
 [web visual system](web-visual.md); wording rules live in
-[web voice](web-voice.md).
+[web voice](web-voice.md). Search engines, robots, sitemap, head tags and
+structured data live in [discovery](discovery.md).
 
 The product display name is "Tra Chuẩn" in both languages (header, page titles,
 login, legal pages, the OAuth consent page, agent guidance), matching the Google

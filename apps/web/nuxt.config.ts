@@ -21,6 +21,8 @@ export default defineNuxtConfig({
     '/privacy': { cache },
     '/terms': { cache },
     '/llms.txt': { cache },
+    '/robots.txt': { cache },
+    '/sitemap.xml': { cache },
     '/login': { headers: accountHeaders },
     '/login/factor': { headers: accountHeaders },
     '/signup': { headers: accountHeaders },

@@ -13,7 +13,7 @@ it('renders public coverage anonymously, caches it, and omits query and account 
     };
     const app = (await import('./.output/server/chunks/nitro/nitro.mjs')).g();
     const results = [];
-    for (const path of ['/', '/', '/sources', '/connect', '/privacy', '/terms', '/llms.txt']) {
+    for (const path of ['/', '/', '/sources', '/connect', '/privacy', '/terms', '/llms.txt', '/robots.txt', '/sitemap.xml']) {
       const res = await app.localFetch(path + '?q=secret-query-text', { headers: { cookie: 'session=private-account' } });
       results.push({ status: res.status, headers: Object.fromEntries(res.headers), text: await res.text() });
     }

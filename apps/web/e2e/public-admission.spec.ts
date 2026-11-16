@@ -31,7 +31,7 @@ test('cached pages vary by normalized language only', async ({ request }, testIn
 
 test('public responses revalidate while private routes are not stored', async ({ request }, testInfo) => {
   const headers = { 'X-Forwarded-For': clientAddress(testInfo) }
-  for (const path of ['/llms.txt', '/', '/connect', '/sources', '/privacy', '/terms']) {
+  for (const path of ['/llms.txt', '/robots.txt', '/sitemap.xml', '/', '/connect', '/sources', '/privacy', '/terms']) {
     const miss = await request.get(path, { headers })
     const hit = await request.get(path, { headers })
     expect(miss.status(), path).toBe(200)
@@ -41,7 +41,7 @@ test('public responses revalidate while private routes are not stored', async ({
     expect(miss.headers().etag, path).toBeTruthy()
     expect(hit.headers().etag, path).toBe(miss.headers().etag)
   }
-  for (const path of ['/connect', '/sources', '/privacy', '/terms', '/llms.txt']) {
+  for (const path of ['/connect', '/sources', '/privacy', '/terms', '/llms.txt', '/robots.txt', '/sitemap.xml']) {
     const alias = await request.get(`${path}/?query=ignored`, { headers, maxRedirects: 0 })
     expect(alias.status(), path).toBe(308)
     expect(alias.headers().location, path).toBe(path)
@@ -58,7 +58,7 @@ test('public responses revalidate while private routes are not stored', async ({
 
 test('public revalidation uses ETags and preserves response headers', async ({ request }, testInfo) => {
   const headers = { 'X-Forwarded-For': clientAddress(testInfo) }
-  for (const path of ['/', '/connect', '/sources', '/privacy', '/terms', '/llms.txt']) {
+  for (const path of ['/', '/connect', '/sources', '/privacy', '/terms', '/llms.txt', '/robots.txt', '/sitemap.xml']) {
     const first = await request.get(path, { headers })
     expect(first.headers()['last-modified'], path).toBeUndefined()
     const etag = first.headers().etag

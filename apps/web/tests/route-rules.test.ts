@@ -5,7 +5,7 @@ describe('route rules', () => {
   it('limits cache rules to public paths and marks private paths no-store', async () => {
     const config = await loadNuxtConfig({ cwd: process.cwd() })
     const rules = config.routeRules!
-    for (const path of ['/', '/connect', '/sources', '/privacy', '/terms', '/llms.txt']) {
+    for (const path of ['/', '/connect', '/sources', '/privacy', '/terms', '/llms.txt', '/robots.txt', '/sitemap.xml']) {
       expect(rules[path]?.cache).toMatchObject({ maxAge: 600, varies: ['x-trachuan-language'] })
     }
     for (const path of ['/login', '/login/factor', '/signup', '/reset', '/link', '/account', '/vn/**']) {
@@ -25,7 +25,7 @@ it('sends revalidation headers on cached public responses', async () => {
     const nitro = await import('./.output/server/chunks/nitro/nitro.mjs');
     const app = nitro.g();
     const results = [];
-    for (const path of ['/', '/connect', '/sources', '/privacy', '/terms', '/llms.txt']) {
+    for (const path of ['/', '/connect', '/sources', '/privacy', '/terms', '/llms.txt', '/robots.txt', '/sitemap.xml']) {
       for (let i = 0; i < 2; i++) {
         const response = await app.localFetch(path);
         results.push({ path, cache: response.headers.get('cache-control'), etag: response.headers.get('etag') });
@@ -42,12 +42,12 @@ it('sends revalidation headers on cached public responses', async () => {
   `
   const output = execFileSync(process.execPath, ['--input-type=module', '-e', script], { encoding: 'utf8' })
   const results: Array<{ path: string, cache: string, etag?: string, status?: number }> = JSON.parse(output)
-  for (const result of results.slice(0, 12)) {
+  for (const result of results.slice(0, 16)) {
     expect(result.cache, result.path).toBe('no-cache')
     expect(result.etag, result.path).toBeTruthy()
   }
-  expect(results[12]).toMatchObject({ cache: 'no-cache', status: 200 })
-  for (const result of results.slice(13)) expect(result.cache, result.path).toBe('no-store')
+  expect(results[16]).toMatchObject({ cache: 'no-cache', status: 200 })
+  for (const result of results.slice(17)) expect(result.cache, result.path).toBe('no-store')
 })
 
 
@@ -60,7 +60,7 @@ it('revalidates public routes only by ETag', async () => {
     const nitro = await import('./.output/server/chunks/nitro/nitro.mjs');
     const app = nitro.g();
     const results = [];
-    for (const path of ['/', '/connect', '/sources', '/privacy', '/terms', '/llms.txt']) {
+    for (const path of ['/', '/connect', '/sources', '/privacy', '/terms', '/llms.txt', '/robots.txt', '/sitemap.xml']) {
       const first = await app.localFetch(path);
       const etag = first.headers.get('etag');
       const mismatch = await app.localFetch(path, { headers: {

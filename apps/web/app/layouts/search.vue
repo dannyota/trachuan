@@ -8,7 +8,6 @@ const messages = computed(() => messagesFor(language.value))
 const route = useRoute()
 const session = useSessionStore()
 const api = useApi()
-const siteOrigin = useRuntimeConfig().public.siteOrigin
 
 onMounted(async () => {
   try {
@@ -29,8 +28,9 @@ useHead(() => {
     '/vn/search': messages.value.searchTitle,
   }
   const title = titles[route.path] || (route.path.startsWith('/vn/documents/') ? messages.value.reportDocument : '')
-  return { htmlAttrs: { lang: language.value }, title: title ? `${title} · Tra Chuẩn` : 'Tra Chuẩn', link: [{ rel: 'icon', type: 'image/svg+xml', href: '/icon.svg' }, { rel: 'icon', href: '/favicon.ico', sizes: 'any' }, { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' }, { rel: 'manifest', href: '/site.webmanifest' }], meta: [{ name: 'theme-color', content: '#FFFFFF', media: '(prefers-color-scheme: light)' }, { name: 'theme-color', content: '#111418', media: '(prefers-color-scheme: dark)' }, { property: 'og:title', content: 'Tra Chuẩn' }, { property: 'og:description', content: 'Tra cứu đúng điều, đúng khoản, kèm trạng thái hiệu lực.' }, { property: 'og:image', content: new URL('/og-image.png', siteOrigin).href }, { name: 'twitter:card', content: 'summary_large_image' }] }
+  return { htmlAttrs: { lang: language.value }, title: title ? `${title} · Tra Chuẩn` : 'Tra Chuẩn', link: [{ rel: 'icon', type: 'image/svg+xml', href: '/icon.svg' }, { rel: 'icon', href: '/favicon.ico', sizes: 'any' }, { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' }, { rel: 'manifest', href: '/site.webmanifest' }], meta: [{ name: 'theme-color', content: '#FFFFFF', media: '(prefers-color-scheme: light)' }, { name: 'theme-color', content: '#111418', media: '(prefers-color-scheme: dark)' }] }
 })
+usePublicSeo(() => ({ path: route.path, title: '', description: '', language: language.value }))
 </script>
 
 <template>
