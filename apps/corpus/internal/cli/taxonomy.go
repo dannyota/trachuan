@@ -11,12 +11,14 @@ import (
 	"danny.vn/trachuan/apps/corpus/internal/taxonomy"
 )
 
-func runTaxonomy(_ context.Context, args []string, stdout, stderr io.Writer) int {
+func runTaxonomy(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	fail := func(err error) int { _, _ = fmt.Fprintln(stderr, err); return 1 }
 	if len(args) == 0 {
-		return fail(fmt.Errorf("usage: corpus taxonomy <import|check>"))
+		return fail(fmt.Errorf("usage: corpus taxonomy <import|check|labels>"))
 	}
 	switch args[0] {
+	case "labels":
+		return runTaxonomyLabels(ctx, args[1:], stderr)
 	case "import":
 		opts, err := options(args[1:], map[string]bool{"--package": true, "--mapping": true})
 		if err != nil {
