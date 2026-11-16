@@ -8,8 +8,6 @@ import (
 	"os"
 	"sort"
 	"time"
-
-	"danny.vn/trachuan/apps/corpus/internal/batchapi"
 )
 
 func draw(docs []Document, n int, seed int64) ([]Document, error) {
@@ -40,6 +38,10 @@ func screenHash(o Options) string {
 }
 
 func (r *Runner) Screen(ctx context.Context, o Options, docs []Document, families []Family) (Summary, error) {
+	return r.screen(ctx, o, docs, families, nil)
+}
+
+func (r *Runner) screen(ctx context.Context, o Options, docs []Document, families []Family, prepared *screenBatch) (Summary, error) {
 	var summary Summary
 	if err := o.validate(); err != nil {
 		return summary, err
@@ -54,7 +56,13 @@ func (r *Runner) Screen(ctx context.Context, o Options, docs []Document, familie
 	if err != nil {
 		return summary, err
 	}
-	defer unlock()
+	release := func() {
+		if unlock != nil {
+			unlock()
+			unlock = nil
+		}
+	}
+	defer release()
 	rows, err := r.Repository.List(ctx)
 	if err != nil {
 		return summary, err
@@ -69,13 +77,20 @@ func (r *Runner) Screen(ctx context.Context, o Options, docs []Document, familie
 			if o.DryRun {
 				return summary, nil
 			}
+			release()
 			return summary, writeFamilies(o.Out, s)
 		}
 	}
 	for i := range rows {
 		s := &rows[i]
 		if s.State == "preparing" || s.State == "uncertain" {
-			known, restoreErr := r.restoreReceipt(s)
+			known, restoreErr := r.restoreAbandonment(s)
+			if restoreErr != nil {
+				return summary, restoreErr
+			}
+			if !known {
+				known, restoreErr = r.restoreReceipt(s)
+			}
 			if restoreErr != nil {
 				return summary, restoreErr
 			}
@@ -108,16 +123,21 @@ func (r *Runner) Screen(ctx context.Context, o Options, docs []Document, familie
 				return summary, nil
 			}
 			if s.State == "completed" || s.State == "cancelled" {
+				release()
 				return summary, writeFamilies(o.Out, s)
 			}
 			if s.State != "submitted" && s.State != "cancelling" {
 				return summary, fmt.Errorf("submission %s is %s; operator review required", s.ID, s.State)
 			}
+			release()
 			return summary, r.poll(ctx, &s, o.Out)
 		}
 		if s.RunID == o.RunID && nonterminal(s.State) {
 			return summary, fmt.Errorf("earlier classification submission %s blocks this release", s.ID)
 		}
+	}
+	if err = r.requireReconstruction(rows); err != nil {
+		return summary, err
 	}
 	entries, readErr := os.ReadDir(o.Out)
 	if readErr != nil && !os.IsNotExist(readErr) {
@@ -126,44 +146,16 @@ func (r *Runner) Screen(ctx context.Context, o Options, docs []Document, familie
 	if len(entries) > 0 {
 		return summary, fmt.Errorf("screening output directory is not empty")
 	}
-	selected, err := draw(docs, o.Documents, o.Seed)
-	if err != nil {
-		return summary, err
+	if prepared == nil {
+		release()
+		ready, prepareErr := r.prepareScreenBatch(ctx, o, docs, families)
+		if prepareErr != nil {
+			return summary, prepareErr
+		}
+		return r.screen(ctx, o, docs, families, ready)
 	}
-	s := Submission{RunID: o.RunID, Country: o.Country, Release: o.Release, ScreenHash: hash, Recipe: o.Recipe, Families: families, State: "preparing", CreatedAt: r.Now(), Budget: o.Budget, BudgetMicroUSD: o.BudgetMicroUSD, Results: map[string]Outcome{}}
-	requests := make([]batchapi.Request, len(selected))
-	bytes := len(`{"requests":[]}`)
-	for i, d := range selected {
-		p, buildErr := BuildRequest(o.Recipe, d, families)
-		if buildErr != nil {
-			return summary, buildErr
-		}
-		n, countErr := r.Client.CountTokens(ctx, p)
-		if countErr != nil {
-			return summary, providerError(countErr)
-		}
-		reserve, reserveErr := o.Recipe.Reserve(n)
-		if reserveErr != nil {
-			return summary, reserveErr
-		}
-		s.ReserveMicroUSD += reserve
-		summary.InputTokens += n
-		b, marshalErr := json.Marshal(p)
-		if marshalErr != nil {
-			return summary, fmt.Errorf("encode counted request: %w", marshalErr)
-		}
-		s.Items = append(s.Items, Item{Key: d.Key, RequestHash: digest(b), InputTokens: n})
-		requests[i] = batchapi.Request{CustomID: customID("00000000000000000000000000000000", i), Params: p}
-		encoded, encodeErr := json.Marshal(batchapi.Parameters(requests[i]))
-		if encodeErr != nil {
-			return summary, fmt.Errorf("encode batch request: %w", encodeErr)
-		}
-		bytes += len(encoded) + 1
-	}
-	// Anthropic limits batches to 256 MB: https://platform.claude.com/docs/en/build-with-claude/batch-processing
-	if len(requests) > 100000 || bytes > 256000000 {
-		return summary, fmt.Errorf("classification batch exceeds provider limit")
-	}
+	s, requests := prepared.submission, prepared.requests
+	summary = prepared.summary
 	total, err := ledgerCost(rows)
 	if err != nil {
 		return summary, err
@@ -193,10 +185,17 @@ func (r *Runner) Screen(ctx context.Context, o Options, docs []Document, familie
 	for i := range requests {
 		requests[i].CustomID = customID(s.ID, i)
 	}
+	release()
 	b, err := r.Client.Create(ctx, requests)
 	if err != nil || b.ID == "" {
-		s.State = "uncertain"
-		if saveErr := r.Repository.Save(ctx, s); saveErr != nil {
+		_, saveErr := r.transition(ctx, s.ID, func(latest *Submission) (bool, error) {
+			if latest.State != "preparing" {
+				return false, nil
+			}
+			latest.State = "uncertain"
+			return true, nil
+		})
+		if saveErr != nil {
 			return summary, saveErr
 		}
 		return summary, fmt.Errorf("classification create response is uncertain; reconcile submission %s", s.ID)
@@ -204,10 +203,29 @@ func (r *Runner) Screen(ctx context.Context, o Options, docs []Document, familie
 	if !b.CreatedAt.IsZero() {
 		s.SubmittedAt = &b.CreatedAt
 	}
-	if err = r.attach(ctx, &s, b.ID); err != nil {
+	if err = r.recordBatch(&s, b.ID); err != nil {
 		return summary, err
 	}
-	return summary, r.poll(ctx, &s, o.Out)
+	attached, err := r.transition(ctx, s.ID, func(latest *Submission) (bool, error) {
+		if latest.BatchID != "" {
+			if latest.BatchID != s.BatchID {
+				return false, fmt.Errorf("submission has a different provider batch identity")
+			}
+			return false, nil
+		}
+		if latest.State != "preparing" && latest.State != "uncertain" {
+			return false, fmt.Errorf("submission changed before provider batch attachment")
+		}
+		latest.BatchID = s.BatchID
+		latest.SubmittedAt = s.SubmittedAt
+		latest.DeadlineAt = s.DeadlineAt
+		latest.State = "submitted"
+		return true, nil
+	})
+	if err != nil {
+		return summary, err
+	}
+	return summary, r.poll(ctx, &attached, o.Out)
 }
 
 func wait(ctx context.Context, d time.Duration) error {

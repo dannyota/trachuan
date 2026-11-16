@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -29,15 +30,16 @@ func (r *Runner) Rebuild(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	existing := map[string]bool{}
+	existing := map[string]Submission{}
 	for _, s := range rows {
-		existing[s.ID] = true
+		existing[s.ID] = s
 	}
 	dir := filepath.Join(r.IntentDir, "submissions")
 	files, err := os.ReadDir(dir)
 	if err != nil {
 		return fmt.Errorf("read submission intent log: %w", err)
 	}
+	var recovered []Submission
 	for _, f := range files {
 		if !strings.HasSuffix(f.Name(), ".json") {
 			continue
@@ -68,9 +70,6 @@ func (r *Runner) Rebuild(ctx context.Context) error {
 		if reserve != s.ReserveMicroUSD {
 			return fmt.Errorf("recovered submission reservation differs from counted input and output bounds")
 		}
-		if existing[id] {
-			continue
-		}
 		s.State = "uncertain"
 		s.Settled = false
 		s.Results = map[string]Outcome{}
@@ -91,11 +90,21 @@ func (r *Runner) Rebuild(ctx context.Context) error {
 		} else if !errors.Is(readErr, os.ErrNotExist) {
 			return fmt.Errorf("read provider batch identity: %w", readErr)
 		}
-		if err = r.Repository.Save(ctx, s); err != nil {
-			return err
+		abandoned, restoreErr := r.restoreAbandonment(&s)
+		if restoreErr != nil {
+			return restoreErr
 		}
+		if prior, ok := existing[id]; ok {
+			if abandoned && nonterminal(prior.State) {
+				prior.State = "abandoned"
+				recovered = append(recovered, prior)
+			}
+			continue
+		}
+		recovered = append(recovered, s)
 	}
-	return nil
+	sort.SliceStable(recovered, func(i, j int) bool { return !nonterminal(recovered[i].State) && nonterminal(recovered[j].State) })
+	return r.Repository.Restore(ctx, recovered)
 }
 
 type batchLister interface {
@@ -169,6 +178,9 @@ func (r *Runner) Reconcile(ctx context.Context, id string, abandon bool) error {
 	if !allEnded || r.Now().Before(target.CreatedAt.Add(24*time.Hour)) {
 		return fmt.Errorf("cannot abandon until 24 hours pass and every candidate batch has ended")
 	}
+	if err = r.writeAbandonment(target); err != nil {
+		return err
+	}
 	target.State = "abandoned"
 	return r.Repository.Save(ctx, *target)
 }
@@ -187,37 +199,28 @@ func (r *Runner) Cancel(ctx context.Context, id, out string) error {
 	if r.Wait == nil {
 		r.Wait = wait
 	}
-	unlock, err := r.Repository.Lock(ctx)
-	if err != nil {
-		return err
-	}
-	defer unlock()
-	rows, err := r.Repository.List(ctx)
-	if err != nil {
-		return err
-	}
-	for _, s := range rows {
-		if s.ID != id {
-			continue
+	canceller, ok := r.Client.(batchCanceller)
+	s, err := r.transition(ctx, id, func(latest *Submission) (bool, error) {
+		if latest.State == "cancelled" {
+			return false, nil
 		}
-		if s.State == "cancelled" {
-			return writeFamilies(out, s)
+		if stateErr := pollingState(latest); stateErr != nil {
+			return false, stateErr
 		}
-		if s.State != "submitted" && s.State != "cancelling" {
-			return fmt.Errorf("only in-flight submissions can be cancelled")
-		}
-		canceller, ok := r.Client.(batchCanceller)
 		if !ok {
-			return fmt.Errorf("provider batch cancellation unavailable")
+			return false, fmt.Errorf("provider batch cancellation unavailable")
 		}
-		if err = canceller.Cancel(ctx, s.BatchID); err != nil {
-			return providerError(err)
-		}
-		s.State = "cancelling"
-		if err = r.Repository.Save(ctx, s); err != nil {
-			return err
-		}
-		return r.poll(ctx, &s, out)
+		latest.State = "cancelling"
+		return true, nil
+	})
+	if err != nil {
+		return err
 	}
-	return fmt.Errorf("submission not found")
+	if s.State == "cancelled" {
+		return writeFamilies(out, s)
+	}
+	if err = canceller.Cancel(ctx, s.BatchID); err != nil {
+		return providerError(err)
+	}
+	return r.poll(ctx, &s, out)
 }

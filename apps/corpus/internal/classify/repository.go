@@ -22,13 +22,9 @@ func (p *PGRepository) Lock(ctx context.Context) (func(), error) {
 	if err != nil {
 		return nil, fmt.Errorf("acquire submission ledger connection: %w", err)
 	}
-	var locked bool
-	if err = conn.QueryRow(ctx, `SELECT pg_try_advisory_lock(861785302)`).Scan(&locked); err != nil || !locked {
+	if _, err = conn.Exec(ctx, `SELECT pg_advisory_lock(861785302)`); err != nil {
 		conn.Release()
-		if err != nil {
-			return nil, fmt.Errorf("lock submission ledger: %w", err)
-		}
-		return nil, fmt.Errorf("another command holds the classification submission ledger")
+		return nil, fmt.Errorf("lock submission ledger: %w", err)
 	}
 	p.conn = conn
 	return func() {
@@ -72,6 +68,31 @@ func (p *PGRepository) Save(ctx context.Context, s Submission) error {
 	if p.conn == nil {
 		return fmt.Errorf("submission ledger lock required")
 	}
+	return saveSubmission(ctx, store.New(p.conn), s)
+}
+
+func (p *PGRepository) Restore(ctx context.Context, submissions []Submission) error {
+	if p.conn == nil {
+		return fmt.Errorf("submission ledger lock required")
+	}
+	tx, err := p.conn.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin submission reconstruction: %w", err)
+	}
+	defer func() { _ = tx.Rollback(context.Background()) }()
+	q := store.New(tx)
+	for _, s := range submissions {
+		if err = saveSubmission(ctx, q, s); err != nil {
+			return err
+		}
+	}
+	if err = tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit submission reconstruction: %w", err)
+	}
+	return nil
+}
+
+func saveSubmission(ctx context.Context, q *store.Queries, s Submission) error {
 	var recipe, families, items, results []byte
 	for _, entry := range []struct {
 		src any
@@ -87,7 +108,7 @@ func (p *PGRepository) Save(ctx context.Context, s Submission) error {
 	if s.BatchID != "" {
 		batch = &s.BatchID
 	}
-	err := store.New(p.conn).SaveClassificationSubmission(ctx, store.SaveClassificationSubmissionParams{ID: s.ID, RunID: s.RunID, ScreenHash: s.ScreenHash, Recipe: recipe, Families: families, ItemList: items, ItemListHash: s.ItemsHash, ProviderJobID: batch, State: s.State, CreatedAt: s.CreatedAt, SubmittedAt: s.SubmittedAt, DeadlineAt: s.DeadlineAt, Budget: s.Budget, BudgetMicroUsd: s.BudgetMicroUSD, ReservedMicroUsd: s.ReserveMicroUSD, CostMicroUsd: s.CostMicroUSD, CostSettled: s.Settled, Results: results})
+	err := q.SaveClassificationSubmission(ctx, store.SaveClassificationSubmissionParams{ID: s.ID, RunID: s.RunID, ScreenHash: s.ScreenHash, Recipe: recipe, Families: families, ItemList: items, ItemListHash: s.ItemsHash, ProviderJobID: batch, State: s.State, CreatedAt: s.CreatedAt, SubmittedAt: s.SubmittedAt, DeadlineAt: s.DeadlineAt, Budget: s.Budget, BudgetMicroUsd: s.BudgetMicroUSD, ReservedMicroUsd: s.ReserveMicroUSD, CostMicroUsd: s.CostMicroUSD, CostSettled: s.Settled, Results: results})
 	if err != nil {
 		return fmt.Errorf("save submission ledger: %w", err)
 	}

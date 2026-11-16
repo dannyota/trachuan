@@ -32,31 +32,55 @@ func (r *Runner) poll(ctx context.Context, s *Submission, out string) error {
 		return err
 	}
 	for {
-		if !r.Now().Before(*s.DeadlineAt) {
-			s.State = "failed"
-			if err := r.Repository.Save(ctx, *s); err != nil {
-				return err
+		current, err := r.transition(ctx, s.ID, func(latest *Submission) (bool, error) {
+			if settled(*latest) {
+				return false, nil
 			}
-			return fmt.Errorf("classification batch exceeded its 26-hour deadline; reservation retained for operator review")
+			if stateErr := pollingState(latest); stateErr != nil {
+				return false, stateErr
+			}
+			if !r.Now().Before(*latest.DeadlineAt) {
+				latest.State = "failed"
+				return true, nil
+			}
+			return false, nil
+		})
+		if err != nil {
+			return err
 		}
-		b, err := r.Client.Get(ctx, s.BatchID)
+		if settled(current) {
+			return writeFamilies(out, current)
+		}
+		if err = pollingState(&current); err != nil {
+			return err
+		}
+		b, err := r.Client.Get(ctx, current.BatchID)
 		if err != nil {
 			return providerError(err)
 		}
 		if b.ProcessingStatus == "ended" {
-			results, resultErr := r.Client.Results(ctx, s.BatchID)
+			results, resultErr := r.Client.Results(ctx, current.BatchID)
 			if resultErr != nil {
 				return providerError(resultErr)
 			}
-			if err = apply(s, results); err != nil {
-				return err
+			finished, finishErr := r.transition(ctx, s.ID, func(latest *Submission) (bool, error) {
+				if settled(*latest) {
+					return false, nil
+				}
+				if stateErr := pollingState(latest); stateErr != nil {
+					return false, stateErr
+				}
+				if applyErr := apply(latest, results); applyErr != nil {
+					return false, applyErr
+				}
+				return true, nil
+			})
+			if finishErr != nil {
+				return finishErr
 			}
-			if err = r.Repository.Save(ctx, *s); err != nil {
-				return err
-			}
-			return writeFamilies(out, *s)
+			return writeFamilies(out, finished)
 		}
-		delay := min(5*time.Minute, s.DeadlineAt.Sub(r.Now()))
+		delay := min(5*time.Minute, current.DeadlineAt.Sub(r.Now()))
 		if delay <= 0 {
 			continue
 		}

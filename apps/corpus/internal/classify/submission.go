@@ -46,6 +46,7 @@ type Repository interface {
 	Lock(context.Context) (func(), error)
 	List(context.Context) ([]Submission, error)
 	Save(context.Context, Submission) error
+	Restore(context.Context, []Submission) error
 }
 
 type Client interface {

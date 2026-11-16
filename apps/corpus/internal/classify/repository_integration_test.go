@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"danny.vn/trachuan/apps/corpus/internal/batchapi"
 	"danny.vn/trachuan/apps/corpus/internal/testdb"
@@ -80,7 +81,9 @@ func TestRepository_SerializesBudgetAdmission(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if release, lockErr := second.Lock(ctx); lockErr == nil {
+	waitCtx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
+	defer cancel()
+	if release, lockErr := second.Lock(waitCtx); lockErr == nil {
 		release()
 		unlock()
 		t.Fatal("two commands acquired budget admission lock")

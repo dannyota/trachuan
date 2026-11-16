@@ -80,7 +80,7 @@ func (r *Runner) writeBatch(s Submission) error {
 	if s.SubmittedAt == nil || s.DeadlineAt == nil || s.BatchID == "" {
 		return fmt.Errorf("missing provider batch identity")
 	}
-	b, err := json.Marshal(batchRecord{ID: s.BatchID, SubmittedAt: *s.SubmittedAt, DeadlineAt: *s.DeadlineAt})
+	b, err := json.Marshal(batchRecord{ID: s.BatchID, SubmittedAt: s.SubmittedAt.UTC(), DeadlineAt: s.DeadlineAt.UTC()})
 	if err != nil {
 		return fmt.Errorf("encode batch identity: %w", err)
 	}
@@ -88,6 +88,13 @@ func (r *Runner) writeBatch(s Submission) error {
 }
 
 func (r *Runner) attach(ctx context.Context, s *Submission, id string) error {
+	if err := r.recordBatch(s, id); err != nil {
+		return err
+	}
+	return r.Repository.Save(ctx, *s)
+}
+
+func (r *Runner) recordBatch(s *Submission, id string) error {
 	now := s.CreatedAt
 	if s.SubmittedAt != nil {
 		now = s.SubmittedAt.UTC().Truncate(time.Microsecond)
@@ -97,10 +104,7 @@ func (r *Runner) attach(ctx context.Context, s *Submission, id string) error {
 	s.State = "submitted"
 	s.SubmittedAt = &now
 	s.DeadlineAt = &deadline
-	if err := r.writeBatch(*s); err != nil {
-		return err
-	}
-	return r.Repository.Save(ctx, *s)
+	return r.writeBatch(*s)
 }
 
 func (r *Runner) restoreReceipt(s *Submission) (bool, error) {

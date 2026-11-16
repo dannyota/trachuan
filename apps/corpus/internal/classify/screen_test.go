@@ -30,6 +30,17 @@ func (m *memoryLedger) Save(_ context.Context, s Submission) error {
 	return nil
 }
 
+func (m *memoryLedger) Restore(ctx context.Context, submissions []Submission) error {
+	rows := append([]Submission(nil), m.rows...)
+	for _, s := range submissions {
+		if err := m.Save(ctx, s); err != nil {
+			m.rows = rows
+			return err
+		}
+	}
+	return nil
+}
+
 type fakeClient struct {
 	batchCreated                     time.Time
 	counts, creates, gets, downloads int
