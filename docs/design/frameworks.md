@@ -141,7 +141,14 @@ one. Evaluation runs with full access. A second suite runs the
 sets; a release that fails it is not signed. Serving parameters are set from
 free versions' text and the public fields of licensed versions only; full-access
 evaluation measures and gates them but does not set them
-([parameters](frameworks-results.md#search)).
+([parameters](frameworks-results.md#search)). Until the first measured run, the
+build writes the fusion constant, arm depths and abstention threshold of the
+active signed law release as a placeholder frameworks retrieval recipe, naming
+that release, with status `placeholder` in the release row; they depend on no
+framework text, but the law threshold was calibrated on law cohorts and means
+nothing for controls. `corpus_status` and `quality_gaps` report the status,
+`quality_pass` is false while it stands, and the first measured evaluation
+replaces the placeholder before any frameworks release is signed.
 
 ## Release and deployment
 

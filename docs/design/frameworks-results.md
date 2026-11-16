@@ -188,6 +188,7 @@ look the same to that caller.
 ## Diagnostics and counts
 
 `corpus_status` with `corpus: "frameworks"`: `release`, `access_set_version`,
+`retrieval_recipe_status` (`placeholder` or `measured`, also on `quality_gaps`),
 and `versions`, keyed by version handle, each with `access`, `readable`,
 `controls`, `edges_resolved`, `edges_unresolved` and `lineage`. A readable
 version adds `sources`: text source and completeness per source file. Totals are

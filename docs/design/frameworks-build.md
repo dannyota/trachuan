@@ -200,12 +200,12 @@ SHA-256, the recipe hashes of `snapshot` through `embed`, of `build` and of
 `evaluate` and, from the second release on, the previous signed report
 (`previous: {rel, report_sha256}`) with a `previous_diff` of every gating
 comparison. It carries `quality_pass`, true only when: the evaluated copy came
-from that dump; no blocking gap exists; the invariant suite passed; the
-golden-case floors, once set, are met; and from the second release every gating
-comparison against the previous report passed. The uploader and signing workflow
-refuse a frameworks release unless `quality_pass` is true, the dump, build
-manifest and report hashes match the files, the report's release id and its
-`snapshot` through `embed` recipes equal the release row's, its `build` and
-`evaluate` recipes equal those in the build and evaluation manifests, and its
-previous report is the active frameworks release's report. They read no workshop
-state.
+from that dump; no blocking gap exists; the retrieval recipe status is
+`measured`; the invariant suite passed; the golden-case floors, once set, are
+met; and from the second release every gating comparison against the previous
+report passed. The uploader and signing workflow refuse a frameworks release
+unless `quality_pass` is true, the dump, build manifest and report hashes match
+the files, the report's release id and its `snapshot` through `embed` recipes
+equal the release row's, its `build` and `evaluate` recipes equal those in the
+build and evaluation manifests, and its previous report is the active frameworks
+release's report. They read no workshop state.
