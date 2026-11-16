@@ -339,3 +339,26 @@ type RunSourceRequest struct {
 	Status     pgtype.Int4
 	Outcome    string
 }
+
+type Submission struct {
+	ID               string
+	RunID            int64
+	Stage            string
+	Provider         string
+	ScreenHash       string
+	Recipe           json.RawMessage
+	Families         json.RawMessage
+	ItemList         json.RawMessage
+	ItemListHash     string
+	ProviderJobID    *string
+	State            string
+	CreatedAt        time.Time
+	SubmittedAt      *time.Time
+	DeadlineAt       *time.Time
+	Budget           string
+	BudgetMicroUsd   int64
+	ReservedMicroUsd int64
+	CostMicroUsd     int64
+	CostSettled      bool
+	Results          json.RawMessage
+}

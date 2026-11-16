@@ -13,16 +13,15 @@ import (
 	"syscall"
 	"time"
 
+	"danny.vn/trachuan/apps/corpus/internal/batchapi"
+
 	"github.com/anthropics/anthropic-sdk-go/v2"
 	"github.com/anthropics/anthropic-sdk-go/v2/option"
 	"golang.org/x/net/http2"
 )
 
-// SDKClient uses only the official Claude SDK and never returns its raw errors.
 type SDKClient struct{ client anthropic.Client }
 
-// NewSDKClient requires the environment credential before constructing the SDK,
-// preventing its profile and federation fallbacks. The SDK reads the key itself.
 func NewSDKClient() (*SDKClient, error) {
 	if value, ok := os.LookupEnv("ANTHROPIC_API_KEY"); !ok || value == "" {
 		return nil, fmt.Errorf("ANTHROPIC_API_KEY is required")
@@ -30,17 +29,14 @@ func NewSDKClient() (*SDKClient, error) {
 	return &SDKClient{client: anthropic.NewClient(option.WithMaxRetries(0), option.WithRequestTimeout(10*time.Minute))}, nil
 }
 
-// CountTokens counts the exact images, text, instruction and output schema.
 func (s *SDKClient) CountTokens(ctx context.Context, r Request) (int64, error) {
-	p := messageParams(r)
-	v, err := s.client.Messages.CountTokens(ctx, anthropic.MessageCountTokensParams{Model: p.Model, Messages: p.Messages, OutputConfig: p.OutputConfig})
+	v, err := (batchapi.SDK{Client: s.client}).CountTokens(ctx, messageParams(r))
 	if err != nil {
 		return 0, sanitizeSDKError(err)
 	}
-	return v.InputTokens, nil
+	return v, nil
 }
 
-// Direct streams long requests and keeps partial usage on all error paths.
 func (s *SDKClient) Direct(ctx context.Context, r Request) (Response, error) {
 	events := 0
 	stream := s.client.Messages.NewStreaming(ctx, messageParams(r), option.WithMiddleware(func(req *http.Request, next option.MiddlewareNext) (*http.Response, error) {
@@ -91,66 +87,56 @@ func fromMessage(m anthropic.Message) Response {
 	return r
 }
 func batchRequest(r Request) anthropic.MessageBatchNewParamsRequest {
-	p := messageParams(r)
-	return anthropic.MessageBatchNewParamsRequest{CustomID: r.CustomID, Params: anthropic.MessageBatchNewParamsRequestParams{Model: p.Model, Messages: p.Messages, MaxTokens: p.MaxTokens, OutputConfig: p.OutputConfig}}
+	return batchapi.Parameters(batchapi.Request{CustomID: r.CustomID, Params: messageParams(r)})
 }
 
-// CreateBatch submits exactly once. A lost response must be reconciled.
 func (s *SDKClient) CreateBatch(ctx context.Context, requests []Request) (Batch, error) {
-	params := anthropic.MessageBatchNewParams{Requests: make([]anthropic.MessageBatchNewParamsRequest, len(requests))}
+	params := make([]batchapi.Request, len(requests))
 	for i, r := range requests {
-		params.Requests[i] = batchRequest(r)
+		params[i] = batchapi.Request{CustomID: r.CustomID, Params: messageParams(r)}
 	}
-	b, err := s.client.Messages.Batches.New(ctx, params)
+	b, err := (batchapi.SDK{Client: s.client}).Create(ctx, params)
 	if err != nil {
 		return Batch{}, sanitizeSDKError(err)
 	}
-	return fromBatch(*b), nil
+	return fromBatch(b), nil
 }
 
-// GetBatch reads status without waiting for completion.
 func (s *SDKClient) GetBatch(ctx context.Context, id string) (Batch, error) {
-	b, err := s.client.Messages.Batches.Get(ctx, id, anthropic.MessageBatchGetParams{})
+	b, err := (batchapi.SDK{Client: s.client}).Get(ctx, id)
 	if err != nil {
 		return Batch{}, sanitizeSDKError(err)
 	}
-	return fromBatch(*b), nil
+	return fromBatch(b), nil
 }
 
-// BatchResults downloads typed JSONL through the SDK.
 func (s *SDKClient) BatchResults(ctx context.Context, id string) ([]BatchResult, error) {
-	stream := s.client.Messages.Batches.ResultsStreaming(ctx, id, anthropic.MessageBatchResultsParams{})
-	defer func() { _ = stream.Close() }()
+	values, err := (batchapi.SDK{Client: s.client}).Results(ctx, id)
+	if err != nil {
+		return nil, sanitizeSDKError(err)
+	}
 	var results []BatchResult
-	for stream.Next() {
-		v := stream.Current()
-		response := fromMessage(v.Result.Message)
-		if v.Result.Type != "succeeded" {
-			response = Response{Usage: Usage{RequestID: v.Result.Error.RequestID}}
-			if v.Result.Type == "errored" {
-				response.Usage.APIErrorType = providerErrorType(v.Result.Error.RawJSON())
+	for _, v := range values {
+		response := fromMessage(v.Message)
+		if v.Type != "succeeded" {
+			response = Response{Usage: Usage{RequestID: v.RequestID}}
+			if v.Type == "errored" {
+				response.Usage.APIErrorType = providerErrorType(v.ErrorJSON)
 			}
 		}
-		results = append(results, BatchResult{CustomID: v.CustomID, Type: v.Result.Type, Response: response})
-	}
-	if err := stream.Err(); err != nil {
-		return nil, sanitizeSDKError(err)
+		results = append(results, BatchResult{CustomID: v.CustomID, Type: v.Type, Response: response})
 	}
 	return results, nil
 }
 
-// ListBatches scans all pages and filters the submission's possible time window.
 func (s *SDKClient) ListBatches(ctx context.Context, after, before time.Time) ([]Batch, error) {
-	pager := s.client.Messages.Batches.ListAutoPaging(ctx, anthropic.MessageBatchListParams{})
-	var batches []Batch
-	for pager.Next() {
-		b := pager.Current()
-		if !b.CreatedAt.Before(after) && !b.CreatedAt.After(before) {
-			batches = append(batches, fromBatch(b))
-		}
-	}
-	if err := pager.Err(); err != nil {
+	values, err := (batchapi.SDK{Client: s.client}).List(ctx, after, before)
+	if err != nil {
 		return nil, sanitizeSDKError(err)
+	}
+	var batches []Batch
+	for _, b := range values {
+		batches = append(batches, fromBatch(b))
 	}
 	return batches, nil
 }
