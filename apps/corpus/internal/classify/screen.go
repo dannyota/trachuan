@@ -176,6 +176,19 @@ func (r *Runner) screen(ctx context.Context, o Options, docs []Document, familie
 	summary.SubmissionID = s.ID
 	s.ItemsHash = itemsHash(s.Items)
 	s.CreatedAt = r.Now().UTC().Truncate(time.Microsecond)
+	creator, err := r.lockCreator(s.ID)
+	if err != nil {
+		return summary, err
+	}
+	dispatched, finished := false, false
+	finishCreator := func() error {
+		if finished {
+			return nil
+		}
+		finished = true
+		return r.finishCreator(s, creator, dispatched)
+	}
+	defer func() { _ = finishCreator() }()
 	if err = r.Repository.Save(ctx, s); err != nil {
 		return summary, err
 	}
@@ -186,6 +199,16 @@ func (r *Runner) screen(ctx context.Context, o Options, docs []Document, familie
 		requests[i].CustomID = customID(s.ID, i)
 	}
 	release()
+	_, err = r.transition(ctx, s.ID, func(latest *Submission) (bool, error) {
+		if latest.State != "preparing" || latest.BatchID != "" || latest.ItemsHash != s.ItemsHash {
+			return false, fmt.Errorf("creator is no longer authorized to submit this attempt")
+		}
+		return false, nil
+	})
+	if err != nil {
+		return summary, err
+	}
+	dispatched = true
 	b, err := r.Client.Create(ctx, requests)
 	if err != nil || b.ID == "" {
 		_, saveErr := r.transition(ctx, s.ID, func(latest *Submission) (bool, error) {
@@ -223,6 +246,9 @@ func (r *Runner) screen(ctx context.Context, o Options, docs []Document, familie
 		return true, nil
 	})
 	if err != nil {
+		return summary, err
+	}
+	if err = finishCreator(); err != nil {
 		return summary, err
 	}
 	return summary, r.poll(ctx, &attached, o.Out)

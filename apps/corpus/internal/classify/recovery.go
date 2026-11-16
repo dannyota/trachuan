@@ -11,8 +11,6 @@ import (
 	"sort"
 	"strings"
 	"time"
-
-	"github.com/anthropics/anthropic-sdk-go/v2"
 )
 
 func validID(id string) bool {
@@ -105,84 +103,6 @@ func (r *Runner) Rebuild(ctx context.Context) error {
 	}
 	sort.SliceStable(recovered, func(i, j int) bool { return !nonterminal(recovered[i].State) && nonterminal(recovered[j].State) })
 	return r.Repository.Restore(ctx, recovered)
-}
-
-type batchLister interface {
-	List(context.Context, time.Time, time.Time) ([]anthropic.MessageBatch, error)
-}
-
-func (r *Runner) Reconcile(ctx context.Context, id string, abandon bool) error {
-	if !validID(id) {
-		return fmt.Errorf("invalid submission id")
-	}
-	if r.Now == nil {
-		r.Now = time.Now
-	}
-	unlock, err := r.Repository.Lock(ctx)
-	if err != nil {
-		return err
-	}
-	defer unlock()
-	rows, err := r.Repository.List(ctx)
-	if err != nil {
-		return err
-	}
-	var target *Submission
-	for i := range rows {
-		if rows[i].ID == id {
-			target = &rows[i]
-		}
-	}
-	if target == nil || target.State != "uncertain" {
-		return fmt.Errorf("only uncertain submissions can be reconciled")
-	}
-	lister, ok := r.Client.(batchLister)
-	if !ok {
-		return fmt.Errorf("provider batch listing is unavailable")
-	}
-	batches, err := lister.List(ctx, target.CreatedAt.Add(-time.Minute), target.CreatedAt.Add(10*time.Minute))
-	if err != nil {
-		return providerError(err)
-	}
-	found := ""
-	var matchedAt time.Time
-	allEnded := true
-	for _, b := range batches {
-		if b.ProcessingStatus != "ended" {
-			allEnded = false
-			continue
-		}
-		results, resultErr := r.Client.Results(ctx, b.ID)
-		if resultErr != nil {
-			return providerError(resultErr)
-		}
-		for _, result := range results {
-			if strings.HasPrefix(result.CustomID, id+"-") {
-				if found != "" && found != b.ID {
-					return fmt.Errorf("multiple batches match submission; operator review required")
-				}
-				found = b.ID
-				matchedAt = b.CreatedAt
-			}
-		}
-	}
-	if found != "" {
-		if !matchedAt.IsZero() {
-			target.SubmittedAt = &matchedAt
-		}
-		return r.attach(ctx, target, found)
-	}
-	if !abandon {
-		return fmt.Errorf("no ended provider batch matches submission")
-	}
-	if !allEnded || r.Now().Before(target.CreatedAt.Add(24*time.Hour)) {
-		return fmt.Errorf("cannot abandon until 24 hours pass and every candidate batch has ended")
-	}
-	if err = r.writeAbandonment(target); err != nil {
-		return err
-	}
-	target.State = "abandoned"
-	return r.Repository.Save(ctx, *target)
 }
 
 type batchCanceller interface {
