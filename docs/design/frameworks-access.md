@@ -104,7 +104,7 @@ chunks, embeddings, indexes and dumps. It may exist only in:
 
 | Place                                                                                                                                         | Why                                                                              |
 | --------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| `FRAMEWORKS_SOURCE_DIR` and `FRAMEWORKS_WORK_DIR` on the MacBook's external disk, never under a third-party sync folder                       | sources and run artifacts ([build](frameworks-build.md))                         |
+| `FRAMEWORKS_SOURCE_DIR` and `FRAMEWORKS_WORK_DIR` on a local disk of the MacBook, never under a third-party sync folder                       | sources and run artifacts ([build](frameworks-build.md))                         |
 | The MacBook's PostgreSQL instance on its internal disk, holding `frameworks_<rel>` and `frameworks_<rel>_eval` (tables, WAL, temporary files) | the release while it is built and evaluated                                      |
 | Memory of the build command, its parsers, the evaluator and the document embedder on the MacBook                                              | during a run; temporary files go under `FRAMEWORKS_WORK_DIR`, core dumps are off |
 | The private releases bucket                                                                                                                   | the dump                                                                         |

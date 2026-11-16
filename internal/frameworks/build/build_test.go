@@ -66,7 +66,7 @@ func readRows[T any](t *testing.T, path string) []T {
 func TestRun_ArtifactsAndResume(t *testing.T) {
 	work := fixture(t)
 	var out bytes.Buffer
-	require.NoError(t, Run(context.Background(), "20990101", &out))
+	require.NoError(t, testRun(context.Background(), "20990101", &out))
 	for _, forbidden := range []string{"private body", "publisher", "Our title", "A-2"} {
 		require.NotContains(t, out.String(), forbidden)
 	}
@@ -114,8 +114,8 @@ func TestRun_ArtifactsAndResume(t *testing.T) {
 	require.NoError(t, os.RemoveAll(os.Getenv("FRAMEWORKS_SOURCE_DIR")))
 	require.NoError(t, os.Remove("sources/frameworks.yaml"))
 	out.Reset()
-	require.NoError(t, Run(context.Background(), "20990101", &out))
-	require.Equal(t, 4, strings.Count(out.String(), "skipped"))
+	require.NoError(t, testRun(context.Background(), "20990101", &out))
+	require.Equal(t, 5, strings.Count(out.String(), "skipped"))
 	after, err := os.Stat(filepath.Join(base, "chunk/manifest.json"))
 	require.NoError(t, err)
 	require.Equal(t, before.ModTime(), after.ModTime())
@@ -124,7 +124,7 @@ func TestRun_ArtifactsAndResume(t *testing.T) {
 func TestRun_Determinism(t *testing.T) {
 	work := fixture(t)
 	for _, rel := range []string{"20990101", "20990102"} {
-		require.NoError(t, Run(context.Background(), rel, &bytes.Buffer{}))
+		require.NoError(t, testRun(context.Background(), rel, &bytes.Buffer{}))
 	}
 	require.NoError(t, filepath.WalkDir(filepath.Join(work, "20990101"), func(path string, entry os.DirEntry, err error) error {
 		require.NoError(t, err)
@@ -148,10 +148,10 @@ func TestRun_LockAndCleanup(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, f.Close()) })
 	require.NoError(t, unix.Flock(int(f.Fd()), unix.LOCK_EX|unix.LOCK_NB))
-	require.ErrorContains(t, Run(context.Background(), "20990101", &bytes.Buffer{}), "locked")
+	require.ErrorContains(t, testRun(context.Background(), "20990101", &bytes.Buffer{}), "locked")
 	require.DirExists(t, filepath.Join(base, ".tmp-parse-leftover"))
 	require.NoError(t, unix.Flock(int(f.Fd()), unix.LOCK_UN))
-	require.NoError(t, Run(context.Background(), "20990101", &bytes.Buffer{}))
+	require.NoError(t, testRun(context.Background(), "20990101", &bytes.Buffer{}))
 	require.NoDirExists(t, filepath.Join(base, ".tmp-parse-leftover"))
 }
 
@@ -159,14 +159,14 @@ func TestRun_Validation(t *testing.T) {
 	for _, rel := range []string{"../20990101", "20990101_100", "2099-01-01", "20990101_", ""} {
 		t.Run(rel, func(t *testing.T) {
 			fixture(t)
-			require.Error(t, Run(context.Background(), rel, &bytes.Buffer{}))
+			require.Error(t, testRun(context.Background(), rel, &bytes.Buffer{}))
 		})
 	}
 	t.Run("corrupt output", func(t *testing.T) {
 		work := fixture(t)
-		require.NoError(t, Run(context.Background(), "20990101_1", &bytes.Buffer{}))
+		require.NoError(t, testRun(context.Background(), "20990101_1", &bytes.Buffer{}))
 		require.NoError(t, os.WriteFile(filepath.Join(work, "20990101_1/parse/controls.jsonl"), []byte("private corrupt citation"), 0600))
-		err := Run(context.Background(), "20990101_1", &bytes.Buffer{})
+		err := testRun(context.Background(), "20990101_1", &bytes.Buffer{})
 		require.ErrorContains(t, err, "parse")
 		require.NotContains(t, err.Error(), "private corrupt citation")
 	})

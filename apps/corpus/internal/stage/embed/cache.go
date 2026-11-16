@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"danny.vn/trachuan/apps/corpus/internal/stage"
 	"danny.vn/trachuan/apps/corpus/internal/stage/chunk"
@@ -34,7 +33,7 @@ func (s *Stage) lookup(ctx context.Context, env stage.Env, run stage.Run, item s
 func (s *Stage) lookupFrom(ctx context.Context, q cacheReader, env stage.Env, run stage.Run, item stage.Item, file chunk.File) (map[string]cachedRow, error) {
 	hashes := make([]string, 0, len(file.Chunks))
 	for _, c := range file.Chunks {
-		hashes = append(hashes, hashText(strings.TrimSpace(c.ContextPrefix)+"\n"+strings.TrimSpace(c.Content)))
+		hashes = append(hashes, InputSHA256(c.ContextPrefix, c.Content))
 	}
 	rows, err := q.LookupEmbedRows(ctx, store.LookupEmbedRowsParams{RecipeHash: s.Recipe(run.Snapshot), InputHashes: hashes})
 	if err != nil {

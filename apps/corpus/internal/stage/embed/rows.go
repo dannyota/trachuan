@@ -23,7 +23,11 @@ type pending struct {
 	count   int
 }
 
-func hashText(s string) string { return fmt.Sprintf("%x", sha256.Sum256([]byte(s))) }
+func InputText(prefix, content string) string {
+	return strings.TrimSpace(prefix) + "\n" + strings.TrimSpace(content)
+}
+func InputSHA256(prefix, content string) string { return hashText(InputText(prefix, content)) }
+func hashText(s string) string                  { return fmt.Sprintf("%x", sha256.Sum256([]byte(s))) }
 func requestSize(hash string, texts []string) int {
 	b, _ := json.Marshal(struct {
 		RecipeHash string   `json:"recipe_hash"`
@@ -93,7 +97,7 @@ func (s *Stage) buildCached(ctx context.Context, file chunk.File, hash string, h
 			return Index{}, nil, fmt.Errorf("chunk ordinals are not increasing")
 		}
 		last = c.Ordinal
-		text := strings.TrimSpace(c.ContextPrefix) + "\n" + strings.TrimSpace(c.Content)
+		text := InputText(c.ContextPrefix, c.Content)
 		if hit, ok := hits[hashText(text)]; ok {
 			idx.Rows = append(idx.Rows, Row{0, c.Ordinal, hit.count, hashText(text)})
 			vectorRows[c.Ordinal] = hit.bytes

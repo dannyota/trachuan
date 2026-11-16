@@ -35,7 +35,7 @@ func TestRun_CanonicalControlAndChunkOrder(t *testing.T) {
 		reg.Frameworks[1].Code = "fw-alpha"
 		reg.Frameworks[1].Version = "v2"
 	})
-	require.NoError(t, Run(context.Background(), "20990101", &bytes.Buffer{}))
+	require.NoError(t, testRun(context.Background(), "20990101", &bytes.Buffer{}))
 	base := filepath.Join(work, "20990101")
 	controls := readRows[Control](t, filepath.Join(base, "parse/controls.jsonl"))
 	require.Len(t, controls, 6)
@@ -66,7 +66,7 @@ func TestRun_WorkbookDroppedCount(t *testing.T) {
 		reg.Frameworks[0].Files = append(reg.Frameworks[0].Files, registry.File{Path: "mapping.xlsx", SHA256: digest(data), Size: int64(len(data)), Role: "mapping workbook", Format: "xlsx", Parser: "nist-olir"})
 	})
 	var out bytes.Buffer
-	require.NoError(t, Run(context.Background(), "20990101", &out))
+	require.NoError(t, testRun(context.Background(), "20990101", &out))
 	require.NotContains(t, out.String(), "invented mapping text")
 	gaps := readRows[Gap](t, filepath.Join(work, "20990101/relate/gaps.jsonl"))
 	require.Len(t, gaps, 3)
@@ -79,7 +79,7 @@ func TestRun_WorkbookDroppedCount(t *testing.T) {
 
 func TestRun_LicensedTextDoesNotChangePublicChunks(t *testing.T) {
 	work := fixture(t)
-	require.NoError(t, Run(context.Background(), "20990101", &bytes.Buffer{}))
+	require.NoError(t, testRun(context.Background(), "20990101", &bytes.Buffer{}))
 	path := filepath.Join(os.Getenv("FRAMEWORKS_SOURCE_DIR"), "fw-alpha.json")
 	data, err := os.ReadFile(path)
 	require.NoError(t, err)
@@ -90,7 +90,7 @@ func TestRun_LicensedTextDoesNotChangePublicChunks(t *testing.T) {
 		reg.Frameworks[0].Files[0].SHA256 = digest(data)
 		reg.Frameworks[0].Files[0].Size = int64(len(data))
 	})
-	require.NoError(t, Run(context.Background(), "20990102", &bytes.Buffer{}))
+	require.NoError(t, testRun(context.Background(), "20990102", &bytes.Buffer{}))
 	public := func(rel string) []Chunk {
 		var rows []Chunk
 		for _, chunk := range readRows[Chunk](t, filepath.Join(work, rel, "chunk/chunks.jsonl")) {
@@ -114,7 +114,7 @@ func TestRun_ChunksFollowControlOrdinals(t *testing.T) {
 		reg.Frameworks[0].Files[0].SHA256 = digest(data)
 		reg.Frameworks[0].Files[0].Size = int64(len(data))
 	})
-	require.NoError(t, Run(context.Background(), "20990101", &bytes.Buffer{}))
+	require.NoError(t, testRun(context.Background(), "20990101", &bytes.Buffer{}))
 	rows := readRows[Chunk](t, filepath.Join(work, "20990101/chunk/chunks.jsonl"))
 	var citations []string
 	for _, row := range rows {
@@ -129,7 +129,7 @@ func TestRun_SnapshotsReleaseVersionsOnly(t *testing.T) {
 	work := fixture(t)
 	editRegistry(t, func(reg *registry.Registry) { reg.Frameworks[1].Parser = "" })
 	require.NoError(t, os.Remove(filepath.Join(os.Getenv("FRAMEWORKS_SOURCE_DIR"), "fw-beta.json")))
-	require.NoError(t, Run(context.Background(), "20990101", &bytes.Buffer{}))
+	require.NoError(t, testRun(context.Background(), "20990101", &bytes.Buffer{}))
 	require.NoFileExists(t, filepath.Join(work, "20990101/snapshot/files/fw-beta.json"))
 	rows := readRows[Control](t, filepath.Join(work, "20990101/parse/controls.jsonl"))
 	require.Len(t, rows, 3)

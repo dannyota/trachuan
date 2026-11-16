@@ -13,7 +13,7 @@ import (
 
 func TestRun_ChangedInputStops(t *testing.T) {
 	work := fixture(t)
-	require.NoError(t, Run(context.Background(), "20990101", &bytes.Buffer{}))
+	require.NoError(t, testRun(context.Background(), "20990101", &bytes.Buffer{}))
 	dir := filepath.Join(work, "20990101/snapshot")
 	path := filepath.Join(dir, "trachuan/titles.csv")
 	data, err := os.ReadFile(path)
@@ -31,7 +31,7 @@ func TestRun_ChangedInputStops(t *testing.T) {
 	encoded, err = json.Marshal(m)
 	require.NoError(t, err)
 	require.NoError(t, os.WriteFile(manifestPath, append(encoded, '\n'), 0600))
-	err = Run(context.Background(), "20990101", &bytes.Buffer{})
+	err = testRun(context.Background(), "20990101", &bytes.Buffer{})
 	require.ErrorContains(t, err, "parse: inputs or recipe changed")
 }
 
@@ -39,7 +39,7 @@ func TestRun_InvalidExistingStepStops(t *testing.T) {
 	for _, scenario := range []string{"missing manifest", "recipe", "extra output", "symlink"} {
 		t.Run(scenario, func(t *testing.T) {
 			work := fixture(t)
-			require.NoError(t, Run(context.Background(), "20990101", &bytes.Buffer{}))
+			require.NoError(t, testRun(context.Background(), "20990101", &bytes.Buffer{}))
 			dir := filepath.Join(work, "20990101/chunk")
 			switch scenario {
 			case "missing manifest":
@@ -57,7 +57,7 @@ func TestRun_InvalidExistingStepStops(t *testing.T) {
 				require.NoError(t, os.Rename(path, path+".old"))
 				require.NoError(t, os.Symlink(path+".old", path))
 			}
-			require.ErrorContains(t, Run(context.Background(), "20990101", &bytes.Buffer{}), "chunk")
+			require.ErrorContains(t, testRun(context.Background(), "20990101", &bytes.Buffer{}), "chunk")
 		})
 	}
 }
@@ -66,7 +66,7 @@ func TestRun_FailedStepLeavesTemporaryDirectory(t *testing.T) {
 	work := fixture(t)
 	path := filepath.Join(os.Getenv("FRAMEWORKS_SOURCE_DIR"), "trachuan/titles.csv")
 	require.NoError(t, os.WriteFile(path, []byte("code,version,citation,title\nfw-alpha,v1,A,private\nfw-alpha,v1,A,duplicate\n"), 0600))
-	require.ErrorContains(t, Run(context.Background(), "20990101", &bytes.Buffer{}), "parse")
+	require.ErrorContains(t, testRun(context.Background(), "20990101", &bytes.Buffer{}), "parse")
 	base := filepath.Join(work, "20990101")
 	require.NoDirExists(t, filepath.Join(base, "parse"))
 	matches, err := filepath.Glob(filepath.Join(base, ".tmp-parse-*"))
@@ -80,7 +80,7 @@ func TestRun_OptionalInputs(t *testing.T) {
 	source := os.Getenv("FRAMEWORKS_SOURCE_DIR")
 	require.NoError(t, os.Remove(filepath.Join(source, "trachuan/titles.csv")))
 	require.NoError(t, os.WriteFile(filepath.Join(source, "trachuan/ocr-waivers.yaml"), []byte("waivers: []\n"), 0600))
-	require.NoError(t, Run(context.Background(), "20990101", &bytes.Buffer{}))
+	require.NoError(t, testRun(context.Background(), "20990101", &bytes.Buffer{}))
 	data, err := os.ReadFile(filepath.Join(work, "20990101/snapshot/manifest.json"))
 	require.NoError(t, err)
 	var m manifest
@@ -95,7 +95,7 @@ func TestRun_OptionalInputs(t *testing.T) {
 
 func TestSnapshotInputs_RefusesSymlinkDirectory(t *testing.T) {
 	work := fixture(t)
-	require.NoError(t, Run(context.Background(), "20990101", &bytes.Buffer{}))
+	require.NoError(t, testRun(context.Background(), "20990101", &bytes.Buffer{}))
 	dir := filepath.Join(work, "20990101/snapshot")
 	require.NoError(t, os.Rename(filepath.Join(dir, "sources"), filepath.Join(work, "moved")))
 	require.NoError(t, os.Symlink(filepath.Join(work, "moved"), filepath.Join(dir, "sources")))

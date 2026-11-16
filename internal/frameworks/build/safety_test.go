@@ -18,7 +18,7 @@ func TestRun_RequiresDirectories(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			fixture(t)
 			t.Setenv(name, "")
-			require.ErrorContains(t, Run(context.Background(), "20990101", &bytes.Buffer{}), name)
+			require.ErrorContains(t, testRun(context.Background(), "20990101", &bytes.Buffer{}), name)
 		})
 	}
 }
@@ -49,7 +49,7 @@ func TestRun_RefusesSyncFolders(t *testing.T) {
 				if folder != "symlink" {
 					t.Setenv(name, filepath.Join(root, "nested"))
 				}
-				err := Run(context.Background(), "20990101", &bytes.Buffer{})
+				err := testRun(context.Background(), "20990101", &bytes.Buffer{})
 				require.ErrorContains(t, err, "sync folder refused")
 				if folder == "Library/CloudStorage/Provider" {
 					require.Contains(t, err.Error(), "CloudStorage")
@@ -63,7 +63,7 @@ func TestRun_RefusesSyncFolders(t *testing.T) {
 
 func TestRun_ProcessProtection(t *testing.T) {
 	work := fixture(t)
-	require.NoError(t, Run(context.Background(), "20990101", &bytes.Buffer{}))
+	require.NoError(t, testRun(context.Background(), "20990101", &bytes.Buffer{}))
 	path, err := filepath.EvalSymlinks(os.Getenv("TMPDIR"))
 	require.NoError(t, err)
 	realWork, err := filepath.EvalSymlinks(work)
@@ -99,7 +99,7 @@ func TestCheckSync_CaseAndClientConfiguration(t *testing.T) {
 func TestRun_RefusesUncreatedOneDriveVariant(t *testing.T) {
 	fixture(t)
 	t.Setenv("FRAMEWORKS_WORK_DIR", filepath.Join(os.Getenv("HOME"), "OneDrive - NewCompany", "artifacts"))
-	err := Run(context.Background(), "20990101", &bytes.Buffer{})
+	err := testRun(context.Background(), "20990101", &bytes.Buffer{})
 	require.ErrorContains(t, err, "sync folder refused")
 	require.ErrorContains(t, err, "OneDrive - NewCompany")
 }
@@ -114,7 +114,7 @@ func TestRun_ResolvesSymlinkBeforeParent(t *testing.T) {
 			link := filepath.Join(root, "link")
 			require.NoError(t, os.Symlink(child, link))
 			t.Setenv(name, link+"/../source")
-			err := Run(context.Background(), "20990101", &bytes.Buffer{})
+			err := testRun(context.Background(), "20990101", &bytes.Buffer{})
 			require.ErrorContains(t, err, "sync folder refused")
 			require.ErrorContains(t, err, "Documents")
 		})
@@ -137,7 +137,7 @@ func TestRun_RefusesNestedSyncDirectories(t *testing.T) {
 					require.NoError(t, err)
 					require.NoError(t, os.WriteFile(filepath.Join(home, ".dropbox/info.json"), data, 0600))
 				}
-				err := Run(context.Background(), "20990101", &bytes.Buffer{})
+				err := testRun(context.Background(), "20990101", &bytes.Buffer{})
 				require.ErrorContains(t, err, "sync folder refused")
 				require.ErrorContains(t, err, filepath.Base(root))
 			})
@@ -169,16 +169,16 @@ func TestRun_RefusesNestedInputAndArtifactDirectories(t *testing.T) {
 		require.NoError(t, os.Rename(filepath.Join(source, "fw-alpha.json"), filepath.Join(nested, "fw-alpha.json")))
 		require.NoError(t, os.WriteFile(filepath.Join(nested, ".dropbox"), nil, 0600))
 		editRegistry(t, func(reg *registry.Registry) { reg.Frameworks[0].Files[0].Path = "nested/fw-alpha.json" })
-		err := Run(context.Background(), "20990101", &bytes.Buffer{})
+		err := testRun(context.Background(), "20990101", &bytes.Buffer{})
 		require.ErrorContains(t, err, "sync folder refused")
 		require.ErrorContains(t, err, "nested")
 	})
 	t.Run("artifact", func(t *testing.T) {
 		work := fixture(t)
-		require.NoError(t, Run(context.Background(), "20990101", &bytes.Buffer{}))
+		require.NoError(t, testRun(context.Background(), "20990101", &bytes.Buffer{}))
 		nested := filepath.Join(work, "20990101/snapshot/files")
 		require.NoError(t, os.WriteFile(filepath.Join(nested, ".dropbox"), nil, 0600))
-		err := Run(context.Background(), "20990101", &bytes.Buffer{})
+		err := testRun(context.Background(), "20990101", &bytes.Buffer{})
 		require.ErrorContains(t, err, "sync folder refused")
 		require.ErrorContains(t, err, "files")
 	})
