@@ -178,7 +178,7 @@ func TestFetch_ChinhphuRejectsContradictoryDetailID(t *testing.T) {
 	}
 }
 
-func TestFetch_ChinhphuPreservesRawDates(t *testing.T) {
+func TestFetch_ChinhphuStoresConvertedDates(t *testing.T) {
 	token := "abc"
 	s, env := secondaryFixture(t, false, &token)
 	out := secondaryFetch(t, s, env)
@@ -195,7 +195,7 @@ func TestFetch_ChinhphuPreservesRawDates(t *testing.T) {
 	if err = json.Unmarshal(b, &doc); err != nil {
 		t.Fatal(err)
 	}
-	if doc.Document.Issue != "\n                    30-04-2026" || doc.Document.Effective != "\n                    01-05-2026" {
+	if doc.Document.Issue != "2026-04-30" || doc.Document.Effective != "2026-05-01" {
 		t.Fatalf("dates: %q %q", doc.Document.Issue, doc.Document.Effective)
 	}
 }

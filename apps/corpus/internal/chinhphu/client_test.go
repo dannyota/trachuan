@@ -105,14 +105,14 @@ func TestSearch_CapEqualIsIncomplete(t *testing.T) {
 func TestSearch_ProvincialRawNumber(t *testing.T) {
 	c, _ := clientFor(t, pages(t, "search-provincial-org-16134.html"))
 	r, _, e := c.Search(context.Background(), "63")
-	if e != nil || len(r.Items) != 1 || r.Items[0].RawNumber == nil || *r.Items[0].RawNumber != "63/2025/QĐ-CTUBND " {
+	if e != nil || len(r.Items) != 1 || r.Items[0].RawNumber == nil || *r.Items[0].RawNumber != "63/2025/QĐ-CTUBND" {
 		t.Fatalf("%+v %v", r.Items, e)
 	}
 }
 func TestDetail_ParsesCentralIssuerAndAttachments(t *testing.T) {
 	c, _ := clientFor(t, func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(fixture(t, "detail-218029.html")) })
 	d, b, e := c.Detail(context.Background(), 218029)
-	if e != nil || d.Number != "142/2026/NĐ-CP" || d.Issuer != "Chính phủ" || d.IssueDate != "30-04-2026" || len(d.Attachments) != 1 || len(b) == 0 {
+	if e != nil || d.Number != "142/2026/NĐ-CP" || d.Issuer != "Chính phủ" || d.IssueDate != "2026-04-30" || len(d.Attachments) != 1 || len(b) == 0 {
 		t.Fatalf("%+v %v", d, e)
 	}
 }
@@ -635,7 +635,7 @@ func TestClient_PageDeadlineIncludesResolution(t *testing.T) {
 	}
 }
 
-func TestSearch_RetainsShownTitleAndDate(t *testing.T) {
+func TestSearch_TrimsShownTitleAndDate(t *testing.T) {
 	c, _ := clientFor(t, func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "GET" {
 			_, _ = w.Write(fixture(t, "home.html"))
@@ -647,7 +647,7 @@ func TestSearch_RetainsShownTitleAndDate(t *testing.T) {
 		_, _ = w.Write(b)
 	})
 	r, _, e := c.Search(context.Background(), "142")
-	if e != nil || len(r.Items) != 1 || r.Items[0].Title == nil || !strings.HasSuffix(*r.Items[0].Title, " ") || r.Items[0].IssueDate == nil || !strings.HasSuffix(*r.Items[0].IssueDate, " ") {
+	if e != nil || len(r.Items) != 1 || r.Items[0].Title == nil || strings.HasSuffix(*r.Items[0].Title, " ") || r.Items[0].IssueDate == nil || strings.HasSuffix(*r.Items[0].IssueDate, " ") {
 		t.Fatalf("items=%+v err=%v", r.Items, e)
 	}
 }
@@ -685,7 +685,7 @@ func TestDetail_RepeatedFieldsPreserveOccurrences(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(d.Occurrences) != 3 || d.Occurrences[0].Value != " Chính phủ " || d.Occurrences[2].Value != "Quốc hội" || d.Issuer != "" {
+	if len(d.Occurrences) != 3 || d.Occurrences[0].Value != "Chính phủ" || d.Occurrences[2].Value != "Quốc hội" || d.Issuer != "" {
 		t.Fatalf("detail = %+v", d)
 	}
 }

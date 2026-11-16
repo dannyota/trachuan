@@ -14,17 +14,14 @@ import (
 	xhtml "golang.org/x/net/html"
 )
 
-// Attachment describes a source-linked file.
 type Attachment struct{ Name, Label, URL string }
 
-// FieldOccurrence holds one displayed field and its untrimmed text.
 type FieldOccurrence struct {
 	Name, Value string
 	Cells       []string
 	Ambiguous   bool
 }
 
-// Detail holds the fields and attachment inventory displayed by the source.
 type Detail struct {
 	Occurrences                           []FieldOccurrence
 	Number, Title, Issuer, IssueDate, URL string
@@ -32,7 +29,6 @@ type Detail struct {
 	Attachments                           []Attachment
 }
 
-// Detail retrieves a document's displayed metadata and redacted HTML.
 func (c *Client) Detail(ctx context.Context, id int) (Detail, []byte, error) {
 	ctx = sourcegate.EnsureActivity(ctx)
 	ctx, cancel := context.WithTimeout(ctx, c.limits.ItemTimeout)
@@ -60,7 +56,6 @@ func (c *Client) Detail(ctx context.Context, id int) (Detail, []byte, error) {
 	return d, raw, e
 }
 
-// ParseDetail parses a saved detail response without making a request.
 func (c *Client) ParseDetail(raw []byte, sourceURL string) (Detail, error) {
 	node, e := parseHTML(raw)
 	if e != nil {
@@ -122,6 +117,10 @@ func (c *Client) ParseDetail(raw []byte, sourceURL string) (Detail, error) {
 		if key == "" {
 			return
 		}
+		if key == "Ngày ban hành" || key == "Ngày có hiệu lực" || key == "Ngày hết hiệu lực" {
+			value = sourceDate(value)
+		}
+		rawValue = value
 		d.Occurrences = append(d.Occurrences, FieldOccurrence{Name: content(cells[0]), Value: rawValue})
 		if key != "Tài liệu đính kèm" {
 			if prior, ok := d.Fields[key]; ok && prior != value {

@@ -47,7 +47,6 @@ func (c *Client) fetchPage(ctx context.Context, method, target string, form url.
 	return b, n, nil
 }
 
-// Search returns all observed keyword matches and redacted page evidence.
 func (c *Client) Search(ctx context.Context, keyword string) (lookup.Result, [][]byte, error) {
 	ctx = sourcegate.EnsureActivity(ctx)
 	ctx, cancel := context.WithTimeout(ctx, c.limits.ItemTimeout)
@@ -139,7 +138,6 @@ func (c *Client) Search(ctx context.Context, keyword string) (lookup.Result, [][
 	return b.Result(), bodies, fmt.Errorf("search page limit exceeded")
 }
 
-// LookupNumber returns all substring matches for a document number.
 func (c *Client) LookupNumber(ctx context.Context, number string) (lookup.Result, [][]byte, error) {
 	return c.Search(ctx, number)
 }
@@ -191,13 +189,13 @@ func parseSearch(n *xhtml.Node) ([]lookup.Item, int, int, int, bool) {
 				}
 			}
 			if hasClass(x, "code") {
-				number = content(x)
+				number = strings.TrimSpace(content(x))
 			}
 			if hasClass(x, "substract") { //nolint:misspell // The source uses this CSS class.
-				title = content(x)
+				title = strings.TrimSpace(content(x))
 			}
 			if hasClass(x, "issued-date") && date == "" {
-				date = content(x)
+				date = sourceDate(content(x))
 			}
 		})
 		if id != "" {

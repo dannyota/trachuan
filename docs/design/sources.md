@@ -194,6 +194,9 @@ metadata on an unrelated context id never blocks admission. Reason: narrow
 discovery is not proof of absence, and unrelated failures must not veto the
 secondary source.
 
+The adapter trims listing and detail values and records `DD-MM-YYYY` dates as
+`YYYY-MM-DD`; other date shapes pass on trimmed to the build normalizer.
+
 Key secondary documents as `vn:chinhphu:<docid>`, class `secondary`. Compare
 normalized number, issuer and issue date using
 [data](data.md#identity-comparison). For a candidate-specific comparison with an
