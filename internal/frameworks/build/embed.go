@@ -26,6 +26,7 @@ type Embedder interface {
 	Validate(context.Context, string, string, []Chunk, string) error
 	Check(context.Context) error
 	Build(context.Context, string, []Chunk, string) (EmbedResult, error)
+	Read(context.Context, string, string, []Chunk, string) ([]Vector, error)
 }
 
 func embedStep(ctx context.Context, base, dir string, service Embedder) error {

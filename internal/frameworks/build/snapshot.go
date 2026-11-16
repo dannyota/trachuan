@@ -70,6 +70,9 @@ func snapshot(ctx context.Context, dir, sourceDir string) (map[string]*string, e
 	if err = writeFile(dir, "sources/frameworks.yaml", data); err != nil {
 		return nil, err
 	}
+	if err = writeJSON(dir, "gap-kinds.json", gapKinds()); err != nil {
+		return nil, err
+	}
 	for _, v := range releaseVersions(reg) {
 		for _, file := range v.Files {
 			if contextErr := ctx.Err(); contextErr != nil {
@@ -156,7 +159,7 @@ func snapshotInputs(dir string) (map[string]*string, error) {
 	if err != nil {
 		return nil, err
 	}
-	names := []string{"sources/frameworks.yaml", "trachuan/titles.csv", "trachuan/ocr-waivers.yaml"}
+	names := []string{"sources/frameworks.yaml", "gap-kinds.json", "trachuan/titles.csv", "trachuan/ocr-waivers.yaml"}
 	for _, v := range releaseVersions(reg) {
 		for _, file := range v.Files {
 			names = append(names, "files/"+file.Path)

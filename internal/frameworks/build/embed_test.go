@@ -51,23 +51,27 @@ type bridgeRequest struct {
 }
 
 func bridge(ctx context.Context, req bridgeRequest) (EmbedResult, error) {
+	var result EmbedResult
+	err := bridgeCall(ctx, req, &result)
+	return result, err
+}
+
+func bridgeCall(ctx context.Context, req bridgeRequest, result any) error {
 	data, err := json.Marshal(req)
 	if err != nil {
-		return EmbedResult{}, err
+		return err
 	}
 	command := exec.CommandContext(ctx, os.Getenv("FRAMEWORKS_TEST_BRIDGE_BINARY"), "-test.run=^TestFrameworksBridge$")
 	command.Env = append(os.Environ(), "FRAMEWORKS_TEST_BRIDGE_MODE=1")
 	command.Stdin = bytes.NewReader(data)
 	out, err := command.Output()
 	if err != nil {
-		return EmbedResult{}, err
+		return err
 	}
 	if req.Op == "validate" {
-		return EmbedResult{}, nil
+		return nil
 	}
-	var result EmbedResult
-	err = json.Unmarshal(out, &result)
-	return result, err
+	return json.Unmarshal(out, result)
 }
 
 type fakeEmbedder struct{}
@@ -81,11 +85,17 @@ func (fakeEmbedder) Validate(ctx context.Context, dir, key string, chunks []Chun
 	_, err := bridge(ctx, bridgeRequest{Op: "validate", Dir: dir, Key: key, Chunks: chunks, Hash: hash})
 	return err
 }
+func (fakeEmbedder) Read(ctx context.Context, dir, key string, chunks []Chunk, hash string) ([]Vector, error) {
+	var rows []Vector
+	err := bridgeCall(ctx, bridgeRequest{Op: "read", Dir: dir, Key: key, Chunks: chunks, Hash: hash}, &rows)
+	return rows, err
+}
 func testRun(ctx context.Context, rel string, out io.Writer) error {
-	return Run(ctx, rel, out, fakeEmbedder{})
+	return Run(ctx, rel, out, fakeEmbedder{}, fakeDatabase{})
 }
 
 type rejectingEmbedder struct {
+	fakeEmbedder
 	calls   int
 	checked int
 }
@@ -111,7 +121,7 @@ func TestEmbed_GapsAndResume(t *testing.T) {
 	work := fixture(t)
 	e := &rejectingEmbedder{}
 	var out bytes.Buffer
-	require.NoError(t, Run(context.Background(), "20990101", &out, e))
+	require.NoError(t, Run(context.Background(), "20990101", &out, e, fakeDatabase{}))
 	require.Equal(t, 1, e.checked)
 	require.Equal(t, 4, e.calls)
 	base := filepath.Join(work, "20990101")
@@ -127,17 +137,20 @@ func TestEmbed_GapsAndResume(t *testing.T) {
 	}
 	require.True(t, kinds["embedding_input_too_long"])
 	require.True(t, kinds["embedding_input_bytes_exceeded"])
-	require.NoError(t, Run(context.Background(), "20990101", &out, e))
+	require.NoError(t, Run(context.Background(), "20990101", &out, e, fakeDatabase{}))
 	require.Equal(t, 1, e.checked)
 	require.Equal(t, 4, e.calls)
 	matches, err := filepath.Glob(filepath.Join(base, "embed/artifacts/*/vectors.f32"))
 	require.NoError(t, err)
 	require.Len(t, matches, 4)
 	require.NoError(t, os.WriteFile(matches[0], []byte("corrupt"), 0600))
-	require.ErrorContains(t, Run(context.Background(), "20990101", &out, e), "embed: output validation failed")
+	require.ErrorContains(t, Run(context.Background(), "20990101", &out, e, fakeDatabase{}), "embed: output validation failed")
 }
 
-type failedEmbedder struct{ builds int }
+type failedEmbedder struct {
+	fakeEmbedder
+	builds int
+}
 
 func (*failedEmbedder) Validate(context.Context, string, string, []Chunk, string) error { return nil }
 func (*failedEmbedder) Recipe() string                                                  { return "test-stage-recipe" }
@@ -150,7 +163,7 @@ func (e *failedEmbedder) Build(context.Context, string, []Chunk, string) (EmbedR
 func TestEmbed_FailedCheckLeavesNoStep(t *testing.T) {
 	work := fixture(t)
 	e := &failedEmbedder{}
-	require.ErrorContains(t, Run(context.Background(), "20990101", &bytes.Buffer{}, e), "embed: recipe mismatch")
+	require.ErrorContains(t, Run(context.Background(), "20990101", &bytes.Buffer{}, e, fakeDatabase{}), "embed: recipe mismatch")
 	require.Zero(t, e.builds)
 	base := filepath.Join(work, "20990101")
 	require.NoDirExists(t, filepath.Join(base, "embed"))
@@ -192,7 +205,7 @@ func (invalidEmbedder) Build(ctx context.Context, key string, rows []Chunk, hash
 
 func TestEmbed_InvalidArtifactIsNotPublished(t *testing.T) {
 	work := fixture(t)
-	err := Run(context.Background(), "20990101", &bytes.Buffer{}, invalidEmbedder{})
+	err := Run(context.Background(), "20990101", &bytes.Buffer{}, invalidEmbedder{}, fakeDatabase{})
 	require.ErrorContains(t, err, "invalid embedding artifact")
 	require.NoDirExists(t, filepath.Join(work, "20990101/embed"))
 }
@@ -213,10 +226,13 @@ func (sameControlEmbedder) Build(ctx context.Context, key string, rows []Chunk, 
 func (sameControlEmbedder) Validate(ctx context.Context, dir, key string, chunks []Chunk, hash string) error {
 	return (fakeEmbedder{}).Validate(ctx, dir, key, chunks, hash)
 }
+func (sameControlEmbedder) Read(ctx context.Context, dir, key string, chunks []Chunk, hash string) ([]Vector, error) {
+	return (fakeEmbedder{}).Read(ctx, dir, key, chunks, hash)
+}
 
 func TestEmbed_CountsRejectedChunksAcrossIndexes(t *testing.T) {
 	work := fixture(t)
-	require.NoError(t, Run(context.Background(), "20990101", &bytes.Buffer{}, sameControlEmbedder{}))
+	require.NoError(t, Run(context.Background(), "20990101", &bytes.Buffer{}, sameControlEmbedder{}, fakeDatabase{}))
 	base := filepath.Join(work, "20990101")
 	chunks := readRows[Chunk](t, filepath.Join(base, "chunk/chunks.jsonl"))
 	expected := 0

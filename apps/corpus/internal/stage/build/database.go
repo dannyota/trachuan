@@ -2,8 +2,6 @@ package build
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/binary"
 	"fmt"
 	"regexp"
 	"time"
@@ -12,7 +10,6 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// DatabaseName returns the final database name for a valid release identity.
 func DatabaseName(cc, rel string) (string, error) {
 	if !regexp.MustCompile(`^[a-z]{2}$`).MatchString(cc) || !regexp.MustCompile(`^[0-9]{8}(_[0-9]{1,2})?$`).MatchString(rel) {
 		return "", fmt.Errorf("invalid corpus database identity")
@@ -24,8 +21,7 @@ func lock(ctx context.Context, conn *pgx.Conn, cc, rel string) error {
 	if _, err := DatabaseName(cc, rel); err != nil {
 		return err
 	}
-	sum := sha256.Sum256([]byte(cc + "\x00" + rel))
-	key := int64(binary.BigEndian.Uint64(sum[:8]))
+	key := advisoryKey(cc + "\x00" + rel)
 	if _, err := conn.Exec(ctx, `SELECT pg_advisory_lock($1)`, key); err != nil {
 		return fmt.Errorf("acquire build lock: %w", err)
 	}
@@ -33,8 +29,7 @@ func lock(ctx context.Context, conn *pgx.Conn, cc, rel string) error {
 }
 
 func unlock(ctx context.Context, conn *pgx.Conn, cc, rel string) error {
-	sum := sha256.Sum256([]byte(cc + "\x00" + rel))
-	key := int64(binary.BigEndian.Uint64(sum[:8]))
+	key := advisoryKey(cc + "\x00" + rel)
 	var released bool
 	if err := conn.QueryRow(ctx, `SELECT pg_advisory_unlock($1)`, key).Scan(&released); err != nil {
 		return fmt.Errorf("release build lock: %w", err)
@@ -64,6 +59,10 @@ func recreateTemporaryWithin(ctx context.Context, admin *pgx.Conn, cfg Config, n
 	if !regexp.MustCompile(`^corpus_tmp_[a-z]{2}_[0-9a-f]{24}$`).MatchString(name) || cfg.Template == "" || marker == "" {
 		return fmt.Errorf("invalid temporary database identity")
 	}
+	return recreateOwned(ctx, admin, cfg, name, marker, func(actual string) bool { return sameOwnership(actual, marker) }, grace)
+}
+
+func recreateOwned(ctx context.Context, admin *pgx.Conn, cfg Config, name, marker string, owns func(string) bool, grace time.Duration) error {
 	var exists, owned bool
 	if err := admin.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM pg_database WHERE datname=$1), EXISTS(SELECT 1 FROM pg_database WHERE datname=$1 AND datdba=(SELECT oid FROM pg_roles WHERE rolname=current_user))`, name).Scan(&exists, &owned); err != nil {
 		return fmt.Errorf("inspect temporary database: %w", err)
@@ -74,7 +73,7 @@ func recreateTemporaryWithin(ctx context.Context, admin *pgx.Conn, cfg Config, n
 		if err != nil {
 			return err
 		}
-		if !owned || !sameOwnership(actual, marker) {
+		if !owned || !owns(actual) {
 			return fmt.Errorf("temporary database ownership mismatch")
 		}
 		if err = waitSessions(ctx, admin, name, grace); err != nil {

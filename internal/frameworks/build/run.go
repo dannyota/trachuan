@@ -12,10 +12,11 @@ import (
 	"strings"
 
 	"danny.vn/trachuan/internal/embedding"
+	"danny.vn/trachuan/internal/frameworks/businesskey"
 	"golang.org/x/sys/unix"
 )
 
-func Run(ctx context.Context, rel string, out io.Writer, embedder Embedder) error {
+func Run(ctx context.Context, rel string, out io.Writer, embedder Embedder, database Database) error {
 	if !regexp.MustCompile(`^[0-9]{8}(_[0-9]{1,2})?$`).MatchString(rel) {
 		return fmt.Errorf("invalid release id")
 	}
@@ -56,11 +57,12 @@ func Run(ctx context.Context, rel string, out io.Writer, embedder Embedder) erro
 	if _, err = rand.Read(id); err != nil {
 		return hide("create run id", err)
 	}
-	for _, step := range []string{"snapshot", "parse", "relate", "chunk", "embed"} {
+	request := DatabaseRequest{WorkDir: work, Rel: rel, RunID: fmt.Sprintf("%x", id)}
+	for _, step := range []string{"snapshot", "parse", "relate", "chunk", "embed", "build"} {
 		if err := ctx.Err(); err != nil {
 			return fmt.Errorf("%s: %w", step, err)
 		}
-		if err := runStep(ctx, base, step, fmt.Sprintf("%x", id), source, out, embedder); err != nil {
+		if err := runStep(ctx, base, step, request, source, out, embedder, database); err != nil {
 			return fmt.Errorf("%s: %w", step, err)
 		}
 	}
@@ -69,11 +71,20 @@ func Run(ctx context.Context, rel string, out io.Writer, embedder Embedder) erro
 
 func stepRecipe(step string) recipe {
 	params := map[string]any{}
+	version := 1
 	switch step {
+	case "snapshot":
+		params["gap_kinds"] = gapKinds()
+	case "build":
+		params = databaseRecipe()
 	case "parse":
 		params["schema"] = "controls/1"
 	case "relate":
+		version = 2
 		params["schema"] = "edges/1"
+		params["mapping_scope"] = "cross-version/1"
+		params["gap_counts"] = "kind-version-subject/1"
+		params["business_key_forms"] = businesskey.Forms()
 	case "embed":
 		params["embedding_recipe_hash"] = embedding.DocumentRecipe1().Hash()
 	case "chunk":
@@ -81,7 +92,7 @@ func stepRecipe(step string) recipe {
 		params["limit"] = 512
 		params["prefix_format_version"] = 1
 	}
-	return recipe{Name: step, Version: 1, Parameters: params}
+	return recipe{Name: step, Version: version, Parameters: params}
 }
 
 func stepInputs(base, step string) (map[string]*string, error) {
@@ -92,6 +103,9 @@ func stepInputs(base, step string) (map[string]*string, error) {
 	}
 	if step == "embed" {
 		deps = append(deps, "chunk")
+	}
+	if step == "build" {
+		deps = append(deps, "parse", "relate", "chunk", "embed")
 	}
 	for _, dep := range deps {
 		name := dep + "/manifest.json"
@@ -105,7 +119,7 @@ func stepInputs(base, step string) (map[string]*string, error) {
 	return inputs, nil
 }
 
-func runStep(ctx context.Context, base, step, runID, source string, out io.Writer, embedder Embedder) error {
+func runStep(ctx context.Context, base, step string, request DatabaseRequest, source string, out io.Writer, embedder Embedder, database Database) error {
 	target, err := checkedDir(filepath.Join(base, step))
 	if err != nil {
 		return err
@@ -147,12 +161,17 @@ func runStep(ctx context.Context, base, step, runID, source string, out io.Write
 				return err
 			}
 		}
+		if step == "build" {
+			if err = validateBuild(target); err != nil {
+				return err
+			}
+		}
 		if _, err = fmt.Fprintf(out, "%s skipped\n", step); err != nil {
 			return hide("write progress", err)
 		}
 		return nil
 	}
-	tmp, err := checkedDir(filepath.Join(base, ".tmp-"+step+"-"+runID))
+	tmp, err := checkedDir(filepath.Join(base, ".tmp-"+step+"-"+request.RunID))
 	if err != nil {
 		return err
 	}
@@ -161,6 +180,17 @@ func runStep(ctx context.Context, base, step, runID, source string, out io.Write
 	}
 	if err = os.Mkdir(tmp, 0700); err != nil {
 		return hide("create step directory", err)
+	}
+	if step == "build" {
+		return buildStep(ctx, base, tmp, request, embedder, database, func() error {
+			if sealErr := seal(tmp, target, r, inputs); sealErr != nil {
+				return sealErr
+			}
+			if _, writeErr := fmt.Fprintf(out, "%s complete\n", step); writeErr != nil {
+				return hide("write progress", writeErr)
+			}
+			return nil
+		})
 	}
 	switch step {
 	case "snapshot":

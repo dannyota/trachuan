@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 
+	"danny.vn/trachuan/internal/frameworks/businesskey"
 	"danny.vn/trachuan/internal/frameworks/parse"
 	"danny.vn/trachuan/internal/frameworks/registry"
 )
@@ -38,17 +39,35 @@ type Input struct {
 	Source   string
 	Evidence string
 }
-type Stats struct{ Unresolved, Dropped, Duplicates int }
+type VersionKey struct{ Code, Version string }
+type Stats struct {
+	Unresolved, Dropped, Duplicates int
+	DroppedByVersion                map[VersionKey]int
+}
+
+func (s *Stats) drop(key Key, count int) {
+	if count == 0 {
+		return
+	}
+	if s.DroppedByVersion == nil {
+		s.DroppedByVersion = map[VersionKey]int{}
+	}
+	s.Dropped += count
+	s.DroppedByVersion[VersionKey{key.Code, key.Version}] += count
+}
 
 func Build(reg *registry.Registry, catalogs map[string]*parse.Result, inputs []Input) ([]Edge, Stats, error) {
 	var stats Stats
+	registered := map[VersionKey]bool{}
+	validator := businesskey.New()
 	for _, v := range reg.Frameworks {
+		registered[VersionKey{v.Code, v.Version}] = true
 		result := catalogs[v.Code+":"+v.Version]
 		if result == nil {
 			continue
 		}
 		for _, n := range result.Nodes {
-			stats.Dropped += n.DroppedMappings
+			stats.drop(Key{Code: v.Code, Version: v.Version}, n.DroppedMappings)
 			for _, m := range n.Mappings {
 				source := "nist-oscal"
 				if v.Parser == "nist-csf-2-xlsx" {
@@ -94,6 +113,11 @@ func Build(reg *registry.Registry, catalogs map[string]*parse.Result, inputs []I
 			}
 		}
 		edge.Resolved = edge.Resolved && sourceFound
+		if !registered[VersionKey{edge.From.Code, edge.From.Version}] || !registered[VersionKey{edge.To.Code, edge.To.Version}] ||
+			!validator.Valid(edge.From.Code, edge.From.Version, edge.From.Citation) || !validator.Valid(edge.To.Code, edge.To.Version, edge.To.Citation) {
+			stats.drop(edge.From, 1)
+			continue
+		}
 		if !edge.Resolved {
 			stats.Unresolved++
 		}

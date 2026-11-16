@@ -170,7 +170,7 @@ func validate(dir string, expected recipe, inputs map[string]*string) error {
 	if err != nil {
 		return hide("encode recipe", err)
 	}
-	if string(a) != string(b) || !reflect.DeepEqual(inputs, m.Inputs) {
+	if !equalJSON(a, b) || !reflect.DeepEqual(inputs, m.Inputs) {
 		return fmt.Errorf("inputs or recipe changed")
 	}
 	outputs, err := outputHashes(dir)
@@ -181,6 +181,14 @@ func validate(dir string, expected recipe, inputs map[string]*string) error {
 		return fmt.Errorf("output validation failed")
 	}
 	return nil
+}
+
+func equalJSON(a, b []byte) bool {
+	var left, right any
+	if json.Unmarshal(a, &left) != nil || json.Unmarshal(b, &right) != nil {
+		return false
+	}
+	return reflect.DeepEqual(left, right)
 }
 
 func syncDirectory(path string) error {

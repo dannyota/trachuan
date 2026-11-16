@@ -67,6 +67,7 @@ func TestRun_ArtifactsAndResume(t *testing.T) {
 	work := fixture(t)
 	var out bytes.Buffer
 	require.NoError(t, testRun(context.Background(), "20990101", &out))
+	require.Contains(t, out.String(), "build complete")
 	for _, forbidden := range []string{"private body", "publisher", "Our title", "A-2"} {
 		require.NotContains(t, out.String(), forbidden)
 	}
@@ -81,8 +82,7 @@ func TestRun_ArtifactsAndResume(t *testing.T) {
 	require.Len(t, gaps, 2)
 	require.Equal(t, "title_missing", gaps[0].Kind)
 	edges := readRows[map[string]any](t, filepath.Join(base, "relate/edges.jsonl"))
-	require.Len(t, edges, 2)
-	require.Equal(t, false, edges[0]["resolved"])
+	require.Empty(t, edges)
 	chunks := readRows[Chunk](t, filepath.Join(base, "chunk/chunks.jsonl"))
 	last := map[string]int{}
 	counts := map[string]int{}
@@ -115,7 +115,7 @@ func TestRun_ArtifactsAndResume(t *testing.T) {
 	require.NoError(t, os.Remove("sources/frameworks.yaml"))
 	out.Reset()
 	require.NoError(t, testRun(context.Background(), "20990101", &out))
-	require.Equal(t, 5, strings.Count(out.String(), "skipped"))
+	require.Equal(t, 6, strings.Count(out.String(), "skipped"))
 	after, err := os.Stat(filepath.Join(base, "chunk/manifest.json"))
 	require.NoError(t, err)
 	require.Equal(t, before.ModTime(), after.ModTime())

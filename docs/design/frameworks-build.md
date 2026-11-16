@@ -50,7 +50,11 @@ named in a source file resolves through registry codes and aliases. Its version
 token, without a `v`, `Rev` or `Revision` prefix, names the registered version
 equal to it, else the registered version that is its major number (`Rev 5.2.0`
 names `r5`, `v8.0` names `v8`). An edge whose target version or either citation
-is not in a parsed catalog stays unresolved and is counted.
+is not in a parsed catalog stays unresolved and is counted. A target that names
+no registered framework, or an end that is not a valid business key (the
+schema's code, version and citation forms), is not an edge: it is counted as
+`mapping_dropped` for its source and version, so every stored edge end is a
+valid business key with a registry code.
 
 **Chunk** applies the law split rule (size limits and cut points) to each
 control body as one unit. That rule is extracted from the law chunk package into

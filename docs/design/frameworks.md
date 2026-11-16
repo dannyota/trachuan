@@ -49,7 +49,8 @@ read cannot change anything that caller observes.
 
 A release database `frameworks_<rel>` (schema version 1):
 
-- `release`: singleton with schema version, recipes and counts.
+- `release`: singleton with schema version, recipes, the recipe and input hashes
+  of each step from `snapshot` through `embed`, and counts.
 - `framework`, `framework_version`: registry fields, `access`, lineage
   (`supersedes`, `amends`).
 - `source_file`: role, SHA-256, licence kind, text source (`structured`,
@@ -60,8 +61,12 @@ A release database `frameworks_<rel>` (schema version 1):
   citation), relation, mapping source, provenance; a target not yet ingested
   stays unresolved and is counted.
 - `chunk`, embeddings and lexical postings, split by index (body, public).
-- `quality_gap`: as for law, with kinds for parse counts, unresolved mappings
-  and OCR flags.
+- `quality_gap`: key, class and blocking flag; the kinds are exactly the gap
+  kind table in [build](frameworks-build.md#gaps-and-signing), enforced by the
+  schema.
+
+Schema version 1 may change in place until the first frameworks release is
+signed; after that a change is a new schema version.
 
 Public identity is `(framework code, version, citation)`; integer ids are
 release-local.
