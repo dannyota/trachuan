@@ -153,6 +153,12 @@ explicit source-resume command. Neither is an acceptable coverage gap.
   `corpus recover`, and resumes with `corpus start`. Submission identity does
   not depend on the checkpoint: the intent log described below lives outside the
   workshop.
+- Local retention: after a release activates, local storage keeps the newest
+  checkpoint, every discover and expand artifact, fetch artifacts that are a
+  fetch baseline or pinned, and every artifact of the active release's run and
+  its predecessor; anything else may be deleted from the artifact store and its
+  checkpoint copy together, because a missing artifact is a cache miss that
+  recomputes, or re-downloads for fetch.
 
 ## Stages
 
