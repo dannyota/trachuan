@@ -36,7 +36,7 @@ ancestry index, not the public extraction anchor. This avoids interpreting
 slashes or Vietnamese letters as ltree syntax. Taxonomy ltree labels are `n<id>`
 along its parent chain.
 
-`schema.go` exports `SchemaVersion = 7` and
+`schema.go` exports `SchemaVersion = 8` and
 `Apply(ctx context.Context, db DB, dimensions int) error`; DB exposes
 `Exec(context.Context,string,...any)`. Its return values are
 `(pgconn.CommandTag,error)`, matching pgx connections and transactions. The only
