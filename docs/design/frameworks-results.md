@@ -146,7 +146,8 @@ An item emits a fixed sequence of units:
 1. **Head**: the public fields (`handle`, `citation`, `kind`, `path`, `title`,
    `status`, `lineage`, `access`, `text_withheld`), for every caller.
 2. For a readable control only: `title_original`, then each body paragraph in
-   order, then notes, then tables, one unit each; split field `text`.
+   order (a paragraph is a nonempty line of the stored body, without its line
+   break), then notes, then tables, one unit each; split field `text`.
 3. **Mappings**: edge units as in [mappings](#mappings), in that order; split
    field `evidence` when present, otherwise the unit is atomic.
 4. **Outline**: one unit per child control, `{citation, kind, title}`, ours
@@ -190,9 +191,10 @@ look the same to that caller.
 `corpus_status` with `corpus: "frameworks"`: `release`, `access_set_version`,
 `retrieval_recipe_status` (`placeholder` or `measured`, also on `quality_gaps`),
 and `versions`, keyed by version handle, each with `access`, `readable`,
-`controls`, `edges_resolved`, `edges_unresolved` and `lineage`. A readable
-version adds `sources`: text source and completeness per source file. Totals are
-sums over these fields. No chunk, token, vocabulary or byte count is reported.
+`controls`, `edges_resolved`, `edges_unresolved` (edges whose `from` end is in
+that version, so each edge counts once) and `lineage`. A readable version adds
+`sources`: text source and completeness per source file. Totals are sums over
+these fields. No chunk, token, vocabulary or byte count is reported.
 
 `quality_gaps` with `corpus: "frameworks"`, optional `versions[]` and `kind`. A
 gap's identity is its key (`kind`, version handle, subject citation or business

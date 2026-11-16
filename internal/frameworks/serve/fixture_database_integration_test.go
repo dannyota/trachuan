@@ -19,11 +19,19 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type fixtureDatabase struct{ conn *pgx.Conn }
+type fixtureDatabase struct {
+	conn              *pgx.Conn
+	changed, extended bool
+}
 
 func (d fixtureDatabase) Build(ctx context.Context, r build.DatabaseRequest, load func(context.Context, *pgx.Conn) error, publish func() error) error {
 	if err := load(ctx, d.conn); err != nil {
 		return err
+	}
+	if d.extended {
+		if err := extendOperationFixture(ctx, d.conn, d.changed); err != nil {
+			return err
+		}
 	}
 	if err := os.WriteFile(r.DumpPath, []byte("invented database dump"), 0600); err != nil {
 		return fmt.Errorf("write invented dump: %w", err)
@@ -69,6 +77,16 @@ func fixtureSources(t *testing.T, root string, changed bool) {
 
 func buildFixture(t *testing.T, changed bool) (*Engine, *queryTrace) {
 	t.Helper()
+	return buildFixtureMode(t, changed, false)
+}
+
+func buildOperationsFixture(t *testing.T, changed bool) (*Engine, *queryTrace) {
+	t.Helper()
+	return buildFixtureMode(t, changed, true)
+}
+
+func buildFixtureMode(t *testing.T, changed, extended bool) (*Engine, *queryTrace) {
+	t.Helper()
 	ctx := context.Background()
 	template := testpg.NewBuilder(t)
 	admin, base, err := testpg.OpenAdministrator(ctx)
@@ -87,7 +105,7 @@ func buildFixture(t *testing.T, changed bool) (*Engine, *queryTrace) {
 	root := t.TempDir()
 	fixtureSources(t, root, changed)
 	var progress bytes.Buffer
-	err = build.Run(ctx, "20990101", &progress, syntheticEmbedder{}, fixtureDatabase{conn})
+	err = build.Run(ctx, "20990101", &progress, syntheticEmbedder{}, fixtureDatabase{conn: conn, changed: changed, extended: extended})
 	var classes map[string]relationClass
 	if err == nil {
 		classes = readRelationClasses(t, conn)
