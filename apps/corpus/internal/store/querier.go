@@ -85,6 +85,7 @@ type Querier interface {
 	ListBlockingRunFailureCodes(ctx context.Context, arg ListBlockingRunFailureCodesParams) ([]string, error)
 	ListChunkInputs(ctx context.Context, runID int64) ([]ListChunkInputsRow, error)
 	ListChunks(ctx context.Context, artifactID int64) ([]Chunk, error)
+	ListClassificationSubmissions(ctx context.Context) ([]ListClassificationSubmissionsRow, error)
 	ListDiscoveryItems(ctx context.Context, country string) ([]ListDiscoveryItemsRow, error)
 	ListDiscoveryListings(ctx context.Context, country string) ([]ListDiscoveryListingsRow, error)
 	ListDiscoveryRuns(ctx context.Context, country string) ([]ListDiscoveryRunsRow, error)
@@ -130,6 +131,7 @@ type Querier interface {
 	ResetFailedItems(ctx context.Context, arg ResetFailedItemsParams) error
 	ResetOlderFailedStageItems(ctx context.Context, arg ResetOlderFailedStageItemsParams) error
 	ResetRetryItem(ctx context.Context, arg ResetRetryItemParams) (int64, error)
+	SaveClassificationSubmission(ctx context.Context, arg SaveClassificationSubmissionParams) error
 	SeedRunAcquisitions(ctx context.Context, runID int64) (int64, error)
 	SetFetchCloseInputHash(ctx context.Context, arg SetFetchCloseInputHashParams) (int64, error)
 	SetFetchedFileTime(ctx context.Context, arg SetFetchedFileTimeParams) (int64, error)

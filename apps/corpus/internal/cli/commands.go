@@ -15,6 +15,9 @@ func runStatus(ctx context.Context, a []string, out, errout io.Writer) int {
 	return lifecycle(ctx, "status", a, out, errout)
 }
 func runCancel(ctx context.Context, a []string, out, errout io.Writer) int {
+	if len(a) > 0 && a[0] == "--submission" {
+		return runSubmissionCancel(ctx, a, errout)
+	}
 	return lifecycle(ctx, "cancel", a, out, errout)
 }
 func runRecover(ctx context.Context, a []string, out, errout io.Writer) int {
