@@ -6,27 +6,35 @@ import (
 	"sort"
 )
 
-// Entry is a one-based sparse vector coordinate and its weight.
 type Entry struct {
 	Index int32
 	Value float32
 }
 
-// Vector contains entries sorted by index.
 type Vector []Entry
 
-// Document encodes a chunk with BM25 weights from corpus statistics.
 func Document(text string, stats Stats, recipe Recipe) (Vector, error) {
 	tokens, err := Tokenize(text, recipe)
 	if err != nil {
 		return nil, fmt.Errorf("tokenize document: %w", err)
 	}
-	if len(tokens) == 0 {
-		return Vector{}, nil
-	}
 	tf := make(map[string]int)
 	for _, token := range tokens {
 		tf[token]++
+	}
+	return DocumentCounts(tf, stats, recipe)
+}
+
+func DocumentCounts(tf map[string]int, stats Stats, recipe Recipe) (Vector, error) {
+	if err := recipe.validate(); err != nil {
+		return nil, err
+	}
+	length := 0
+	for _, count := range tf {
+		if count <= 0 {
+			return nil, fmt.Errorf("invalid lexical frequency")
+		}
+		length += count
 	}
 	terms := make([]string, 0, len(tf))
 	for token := range tf {
@@ -41,7 +49,7 @@ func Document(text string, stats Stats, recipe Recipe) (Vector, error) {
 		}
 		freq := float64(tf[token])
 		idf := math.Log(1 + (float64(stats.N-df)+0.5)/(float64(df)+0.5))
-		weights[Dimension(token, recipe)] += idf * freq * (recipe.K1 + 1) / (freq + recipe.K1*(1-recipe.B+recipe.B*float64(len(tokens))/stats.AvgDL))
+		weights[Dimension(token, recipe)] += idf * freq * (recipe.K1 + 1) / (freq + recipe.K1*(1-recipe.B+recipe.B*float64(length)/stats.AvgDL))
 	}
 	if len(weights) > 16000 {
 		return nil, fmt.Errorf("lexical vector exceeds 16000 nonzeros")
@@ -58,7 +66,6 @@ func Document(text string, stats Stats, recipe Recipe) (Vector, error) {
 	return result, nil
 }
 
-// Query encodes the presence of each hashed dimension.
 func Query(text string, recipe Recipe) (Vector, error) {
 	tokens, err := Tokenize(text, recipe)
 	if err != nil {

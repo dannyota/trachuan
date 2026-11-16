@@ -1,0 +1,64 @@
+//go:build integration
+
+package serve
+
+import (
+	"context"
+	"slices"
+	"sync"
+	"testing"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/stretchr/testify/require"
+)
+
+type queryTrace struct {
+	mu      sync.Mutex
+	reads   []queryRead
+	classes map[string]relationClass
+}
+
+func (q *queryTrace) TraceQueryStart(ctx context.Context, _ *pgx.Conn, data pgx.TraceQueryStartData) context.Context {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	r := queryRead{sql: data.SQL}
+	if len(data.Args) > 0 {
+		if ids, ok := data.Args[0].([]int64); ok {
+			r.versions = slices.Clone(ids)
+			r.hasVersions = true
+		}
+	}
+	if projectionRules()[normalizeSQL(data.SQL)].kind == "gaps" && len(data.Args) > 1 {
+		if ids, ok := data.Args[1].([]int64); ok {
+			r.textGaps = slices.Clone(ids)
+			r.hasTextGaps = true
+		}
+	}
+	q.reads = append(q.reads, r)
+	return ctx
+}
+
+func (*queryTrace) TraceQueryEnd(context.Context, *pgx.Conn, pgx.TraceQueryEndData) {}
+
+func (q *queryTrace) reset() {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	q.reads = nil
+}
+
+func (q *queryTrace) snapshot() []queryRead {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	return slices.Clone(q.reads)
+}
+
+func (q *queryTrace) assertProjection(t *testing.T, readable []int64) {
+	t.Helper()
+	require.NoError(t, q.projectionError(readable))
+}
+
+func (q *queryTrace) projectionError(readable []int64) error {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	return checkProjection(q.reads, q.classes, readable)
+}

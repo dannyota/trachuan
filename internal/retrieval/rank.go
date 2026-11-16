@@ -6,10 +6,8 @@ import (
 	"sort"
 )
 
-// ErrCacheInsufficient indicates the requested ranking exceeds the cached arms.
 var ErrCacheInsufficient = errors.New("cache_insufficient")
 
-// Group holds the highest-scoring member and all cached members of a provision.
 type Group struct {
 	Identity   Identity
 	Score      float64
@@ -20,7 +18,6 @@ type Group struct {
 	article    *Candidate
 }
 
-// Ranking holds ranked provision groups and the first group's confidence.
 type Ranking struct {
 	Groups          []Group
 	FirstBestCosine *float64
@@ -31,7 +28,6 @@ type fusedCandidate struct {
 	score     float64
 }
 
-// Rank fuses candidate arms and ranks provision groups without a confidence gate.
 func Rank(arms Arms, recipe Recipe, limit int, mode ArmMode, overrides ...*CapOverride) (Ranking, error) {
 	if limit == 0 {
 		limit = 8
@@ -96,7 +92,7 @@ func rankGroupWithPolicy(arm ArmGroup, routed bool, recipe Recipe, limit int, mo
 			}
 			f := scores[c.ChunkID]
 			f.candidate = c
-			f.score += weight / float64(recipe.RRF.K+i+1)
+			f.score += ReciprocalRank(recipe.RRF.K, i+1, weight)
 			scores[c.ChunkID] = f
 		}
 	}

@@ -23,8 +23,8 @@ func initializeRelease(ctx context.Context, db schema.DB, rel string, steps map[
  snapshot_recipe,parse_recipe,relate_recipe,embed_recipe,
  snapshot_input_hash,parse_input_hash,relate_input_hash,chunk_input_hash,embed_input_hash,
  framework_count,version_count,control_count,built_at)
- VALUES(true,'frameworks',$1,1,$2,$3,$4,'{}',$5,$6,$7,$8,$9,$10,$11,$12,$13,0,0,0,$14)`,
-		rel, denseRecipe(), steps["chunk"].Recipe, lexical.Recipe1(),
+ VALUES(true,'frameworks',$1,1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,0,0,0,$15)`,
+		rel, denseRecipe(), steps["chunk"].Recipe, lexical.Recipe1(), bootstrapRetrievalRecipe(),
 		steps["snapshot"].Recipe, steps["parse"].Recipe, steps["relate"].Recipe, steps["embed"].Recipe,
 		steps["snapshot"].InputHash, steps["parse"].InputHash, steps["relate"].InputHash, steps["chunk"].InputHash, steps["embed"].InputHash,
 		time.Now().UTC())
