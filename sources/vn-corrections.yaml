@@ -342,3 +342,27 @@
     anchor: "dieu-151/khoan-1"
     quote: "Luật này có hiệu lực thi hành từ ngày 01 tháng 7 năm 2020, trừ trường hợp quy định tại khoản 2 Điều này."
   reviewed: "2026-11-15"
+- key: vn:chinhphu:218029
+  number: "142/2026/NĐ-CP"
+  set: {status_class: "in_force", eff_from: "2026-05-01"}
+  reason: "The government site gives no status code and the text is OCR, so Rule A cannot run. Điều 45 sets 2026-05-01."
+  evidence:
+    anchor: "dieu-45"
+    quote: "Nghị định này có hiệu lực thi hành từ ngày 01 tháng 5 năm 2026"
+  reviewed: "2026-11-16"
+- key: vn:chinhphu:217165
+  number: "05/2026/TT-BKHCN"
+  set: {status_class: "in_force", eff_from: "2026-03-10"}
+  reason: "The government site gives no status code and the text is OCR, so Rule A cannot run. Điều 4 sets 2026-03-10."
+  evidence:
+    anchor: "dieu-4"
+    quote: "Thông tư này có hiệu lực thi hành kể từ ngày 10 tháng 3 năm 2026"
+  reviewed: "2026-11-16"
+- key: vn:chinhphu:218658
+  number: "33/2026/QĐ-TTg"
+  set: {status_class: "in_force", eff_from: "2026-08-15"}
+  reason: "The government site gives no status code and the text is OCR, so Rule A cannot run. Khoản 1 of the effect article sets 2026-08-15."
+  evidence:
+    anchor: "doan-9"
+    quote: "Quyết định này có hiệu lực thi hành từ ngày 15 tháng 8 năm 2026"
+  reviewed: "2026-11-16"
