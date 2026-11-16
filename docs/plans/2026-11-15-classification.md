@@ -35,7 +35,7 @@
 
 - [ ] Labeled set from seeds: the 300 masked articles of taxonomy.md "Evaluation gate", drawn by `corpus taxonomy labels`, frozen with a hash.
 - [x] Candidate selection: embedding and lexical candidates measured on the masked set fell far short of 0.95 (ADR 0004 History); taxonomy.md now limits each article to the subtrees of its document request's level-2 families and gates family recall at 0.95.
-- [ ] Model-adjudicated sets (no Anthropic calls; Codex gpt-6-astra labels blind): inheritance (100 inherited consolidated articles) now; multi-family (100 unseeded articles, half from documents with a multi-topic document-level result) after 8.3 can run the document-level request; post-2023 (100 articles). The coordinator reads 10 of multi-family and 20 of post-2023 before either gates.
+- [ ] Model-adjudicated sets (no Anthropic calls; Codex gpt-6-astra labels blind): inheritance (100 inherited consolidated articles) now; multi-family (100 unseeded articles, half from documents with a multi-topic document-level result) after the 8.4 screening pass, frozen before any multi-family scoring; post-2023 (100 articles). The coordinator reads 10 of multi-family and 20 of post-2023 before either gates.
 
 ### 8.3 Classify stage and batch submission
 
@@ -44,6 +44,7 @@
 ### 8.4 Pilot (paid, small)
 
 - [ ] Confirm current Batch and model prices on Anthropic's pricing page.
+- [ ] Screening pass inside the pilot budget: document requests only, for at most 400 documents drawn at random from those holding unseeded articles; it feeds the multi-family draw and measures nothing.
 - [ ] Labeled set only, both `claude-haiku-5-5` and `claude-sonnet-5-5`; measure family recall of the document request first (start with `F` = 5), then iterate prompts until every applicable floor passes; report cost per 1,000 articles per model.
 - [ ] Post-2023 reference: Codex `gpt-6-astra` labels 100 post-2023 articles blind; the coordinator reads 20 before it gates.
 

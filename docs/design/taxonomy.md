@@ -103,7 +103,11 @@ under the corpus rules.
      assignment: it is given as document context to every article request of
      that document and fixes those articles' allowed codes. A document whose
      request fails or keeps no code yields no LLM assignment for its articles
-     and gap `unassigned` with detail `invalid_response` or `no_family`.
+     and gap `unassigned` with detail `invalid_response` or `no_family`. The
+     classification artifact keeps each document's validated codes and outcome,
+     hashed with the classification recipe and the taxonomy; evaluation reads
+     family recall from it and counts an article of a failed or empty document
+     as a miss.
    - One request per chapter with all its articles yields assignments for each
      article; a document without chapters is split into groups of up to 12
      articles in document order. The classification recipe sets a maximum input
@@ -112,14 +116,15 @@ under the corpus rules.
      no LLM assignment and gap `unassigned` with detail `too_long`. An article's
      allowed codes are the active nodes at levels 2 to 4 in the subtrees of its
      document's level-2 codes; each article request carries those subtrees once,
-     as code, name and parent code. A level-2 subtree holds at most 91 nodes and
-     8,708 characters of names on `vn/20261115_3`.
+     as code, name and parent code, and the request size bound counts them. A
+     level-2 subtree holds at most 91 nodes and 8,708 characters of names on
+     `vn/20261115_3`.
    - Article request output is JSON keyed by the request's article anchors, with
      a set of codes and a confidence per code for each; an article may receive
      several nodes in different families. A code outside that article's allowed
-     codes or unknown to the mapping, and an anchor not in the request, is
-     dropped and counted. A response that is truncated, fails the schema or
-     misses an article yields no assignment for those articles and gap
+     codes or not an active package or custom node, and an anchor not in the
+     request, is dropped and counted. A response that is truncated, fails the
+     schema or misses an article yields no assignment for those articles and gap
      `unassigned` with detail `invalid_response`. The model, effort and prompt
      are part of the classification recipe. The threshold per level is
      calibrated on the labeled set to reach precision at least 0.85, then frozen
