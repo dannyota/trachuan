@@ -5,7 +5,6 @@ package serve
 import (
 	"context"
 	"slices"
-	"strings"
 	"sync"
 	"testing"
 
@@ -13,15 +12,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type queryRead struct {
-	sql      string
-	versions []int64
-	textGaps []int64
-}
-
 type queryTrace struct {
-	mu    sync.Mutex
-	reads []queryRead
+	mu      sync.Mutex
+	reads   []queryRead
+	classes map[string]relationClass
 }
 
 func (q *queryTrace) TraceQueryStart(ctx context.Context, _ *pgx.Conn, data pgx.TraceQueryStartData) context.Context {
@@ -31,11 +25,13 @@ func (q *queryTrace) TraceQueryStart(ctx context.Context, _ *pgx.Conn, data pgx.
 	if len(data.Args) > 0 {
 		if ids, ok := data.Args[0].([]int64); ok {
 			r.versions = slices.Clone(ids)
+			r.hasVersions = true
 		}
 	}
-	if strings.Contains(data.SQL, "FROM quality_gap") && len(data.Args) > 1 {
+	if projectionRules()[normalizeSQL(data.SQL)].kind == "gaps" && len(data.Args) > 1 {
 		if ids, ok := data.Args[1].([]int64); ok {
 			r.textGaps = slices.Clone(ids)
+			r.hasTextGaps = true
 		}
 	}
 	q.reads = append(q.reads, r)
@@ -58,22 +54,11 @@ func (q *queryTrace) snapshot() []queryRead {
 
 func (q *queryTrace) assertProjection(t *testing.T, readable []int64) {
 	t.Helper()
+	require.NoError(t, q.projectionError(readable))
+}
+
+func (q *queryTrace) projectionError(readable []int64) error {
 	q.mu.Lock()
 	defer q.mu.Unlock()
-	for _, read := range q.reads {
-		private := strings.Contains(read.sql, "body_chunk") || strings.Contains(read.sql, "body_posting") || strings.Contains(read.sql, "control_text")
-		if private {
-			require.NotEmpty(t, read.versions, "private read without a version filter")
-			require.Contains(t, read.sql, "version_id=ANY($1::bigint[])")
-			for _, id := range read.versions {
-				require.Contains(t, readable, id, "private structure read for an unreadable version")
-			}
-		}
-		if strings.Contains(read.sql, "FROM quality_gap") {
-			require.Contains(t, read.sql, "g.class='public' OR (g.class='text' AND g.version_id=ANY($2::bigint[]))")
-			for _, id := range read.textGaps {
-				require.Contains(t, readable, id, "text gap read for an unreadable version")
-			}
-		}
-	}
+	return checkProjection(q.reads, q.classes, readable)
 }

@@ -81,22 +81,23 @@ func (e *Engine) Search(ctx context.Context, request Request, caller Caller) (Re
 }
 
 func (e *Engine) lookup(query string, controls map[int64]*control) []ranked {
-	code, citation := e.citation(query)
-	if code == "" {
-		return nil
-	}
-	versions := map[int64]bool{}
+	versions := map[int64]string{}
 	for _, v := range e.versions {
-		versions[v.id] = v.info.Code == code
+		versions[v.id] = v.info.Code
 	}
-	result := []ranked{}
-	for _, c := range controls {
-		if versions[c.versionID] && c.norm == citation {
-			result = append(result, ranked{controlID: c.id})
+	for _, route := range e.citations(query) {
+		var result []ranked
+		for _, c := range controls {
+			if versions[c.versionID] == route.code && c.norm == route.citation {
+				result = append(result, ranked{controlID: c.id})
+			}
+		}
+		if len(result) > 0 {
+			sort.Slice(result, func(i, j int) bool { return e.less(controls[result[i].controlID], controls[result[j].controlID]) })
+			return result
 		}
 	}
-	sort.Slice(result, func(i, j int) bool { return e.less(controls[result[i].controlID], controls[result[j].controlID]) })
-	return result
+	return nil
 }
 
 func (e *Engine) embed(ctx context.Context, query string) (embedding.Vector, error) {

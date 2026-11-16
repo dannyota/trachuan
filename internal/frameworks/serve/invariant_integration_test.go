@@ -76,6 +76,18 @@ func TestSearch_UnreadableTextInvariant(t *testing.T) {
 					if request.Query == "unrelated" {
 						require.True(t, ra.Abstain)
 					}
+					if request.Query == "FW-ALPHA A-1" || request.Query == "fw-alpha standard A-1" {
+						require.Len(t, ra.Hits, 1)
+						require.NotNil(t, ra.Hits[0].Lookup)
+						require.True(t, *ra.Hits[0].Lookup)
+						require.Nil(t, ra.Hits[0].Score)
+						require.False(t, ra.Abstain)
+						want := "fw:fw-alpha:2#A-1"
+						if page == 1 {
+							want = "fw:fw-alpha:1#A-1"
+						}
+						require.Equal(t, want, ra.Hits[0].Handle)
+					}
 					for _, hit := range ra.Hits {
 						require.False(t, seen[hit.Handle], "duplicate across pages")
 						seen[hit.Handle] = true

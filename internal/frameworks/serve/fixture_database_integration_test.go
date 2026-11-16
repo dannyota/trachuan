@@ -88,19 +88,24 @@ func buildFixture(t *testing.T, changed bool) (*Engine, *queryTrace) {
 	fixtureSources(t, root, changed)
 	var progress bytes.Buffer
 	err = build.Run(ctx, "20990101", &progress, syntheticEmbedder{}, fixtureDatabase{conn})
+	var classes map[string]relationClass
+	if err == nil {
+		classes = readRelationClasses(t, conn)
+	}
 	require.NoError(t, conn.Close(ctx))
 	require.NoError(t, err)
 	require.NotContains(t, progress.String(), "quartz")
 	require.NotContains(t, progress.String(), "nebula")
 	config, err := pgxpool.ParseConfig(base.String())
 	require.NoError(t, err)
-	trace := &queryTrace{}
+	trace := &queryTrace{classes: classes}
 	config.ConnConfig.Tracer = trace
 	pool, err := pgxpool.NewWithConfig(ctx, config)
 	require.NoError(t, err)
 	t.Cleanup(pool.Close)
 	engine, err := Open(ctx, pool, syntheticQuery{}, Options{CursorKey: []byte(strings.Repeat("s", 32))})
 	require.NoError(t, err)
+	trace.assertProjection(t, nil)
 	trace.reset()
 	return engine, trace
 }

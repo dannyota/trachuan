@@ -62,9 +62,13 @@ func (e *Engine) selectVersions(r Request) []int64 {
 	return ids
 }
 
-func (e *Engine) citation(query string) (string, string) {
+type citationRoute struct{ code, citation string }
+
+func (e *Engine) citations(query string) []citationRoute {
 	q := strings.ToUpper(strings.TrimSpace(norm.NFC.String(query)))
 	validator := businesskey.New()
+	var routes []citationRoute
+	seen := map[citationRoute]bool{}
 	for _, alias := range []bool{false, true} {
 		for _, v := range e.versions {
 			names := []string{v.info.Code}
@@ -76,11 +80,15 @@ func (e *Engine) citation(query string) (string, string) {
 				if strings.HasPrefix(q, prefix) {
 					citation := strings.TrimSpace(strings.TrimPrefix(q, prefix))
 					if validator.Valid(v.info.Code, v.info.Version, citation) {
-						return v.info.Code, strings.ReplaceAll(citation, " ", "")
+						route := citationRoute{v.info.Code, strings.ReplaceAll(citation, " ", "")}
+						if !seen[route] {
+							routes = append(routes, route)
+							seen[route] = true
+						}
 					}
 				}
 			}
 		}
 	}
-	return "", ""
+	return routes
 }
