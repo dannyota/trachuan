@@ -221,6 +221,9 @@ func (r *Runner) screen(ctx context.Context, o Options, docs []Document, familie
 		if saveErr != nil {
 			return summary, saveErr
 		}
+		if err != nil {
+			return summary, fmt.Errorf("classification create response is uncertain; reconcile submission %s: %w", s.ID, providerError(err))
+		}
 		return summary, fmt.Errorf("classification create response is uncertain; reconcile submission %s", s.ID)
 	}
 	if !b.CreatedAt.IsZero() {

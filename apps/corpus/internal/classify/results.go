@@ -4,16 +4,31 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"regexp"
 	"time"
 
 	"danny.vn/trachuan/apps/corpus/internal/batchapi"
 	"github.com/anthropics/anthropic-sdk-go/v2"
 )
 
+var (
+	providerToken     = regexp.MustCompile(`^[a-z_]{1,64}$`)
+	providerRequestID = regexp.MustCompile(`^[A-Za-z0-9_-]{1,128}$`)
+)
+
+func providerField(value string, pattern *regexp.Regexp, missing string) string {
+	if pattern.MatchString(value) {
+		return value
+	}
+	return missing
+}
+
 func providerError(err error) error {
 	var api *anthropic.Error
 	if errors.As(err, &api) {
-		return fmt.Errorf("classification provider request failed with HTTP status %d", api.StatusCode)
+		return fmt.Errorf("classification provider request failed: status=%d type=%s code=%s request_id=%s", api.StatusCode,
+			providerField(string(api.Type()), providerToken, "unknown"), providerField(string(api.ErrorCode()), providerToken, "none"),
+			providerField(api.RequestID, providerRequestID, "unknown"))
 	}
 	if errors.Is(err, context.Canceled) {
 		return fmt.Errorf("classification provider request interrupted: %w", context.Canceled)
