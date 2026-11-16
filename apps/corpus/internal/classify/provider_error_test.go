@@ -44,3 +44,25 @@ func TestProviderError_KeepsContextErrors(t *testing.T) {
 		t.Fatal("context errors lost")
 	}
 }
+
+func TestScreen_CreateFailureKeepsProviderSummary(t *testing.T) {
+	r, ledger, client, o := screenFixture(t)
+	client.beforeCreate = nil
+	api := &anthropic.Error{StatusCode: 400, RequestID: "req_011Create"}
+	if err := api.UnmarshalJSON([]byte(`{"error":{"type":"invalid_request_error","message":"free text","details":{"error_code":"usage_limit_reached"}}}`)); err != nil {
+		t.Fatal(err)
+	}
+	client.createErr = api
+	_, err := r.Screen(context.Background(), o, documents(), families())
+	if err == nil {
+		t.Fatal("expected uncertain submission")
+	}
+	for _, want := range []string{"reconcile submission", "status=400", "code=usage_limit_reached", "request_id=req_011Create"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Fatalf("create error %q lacks %q", err, want)
+		}
+	}
+	if strings.Contains(err.Error(), "free text") || ledger.rows[0].State != "uncertain" {
+		t.Fatalf("create failure state %q error %q", ledger.rows[0].State, err)
+	}
+}
