@@ -76,14 +76,14 @@ takes the text colour of its ground.
 
 ## Type
 
-| Role                                       | Face                                     | Size and weight                                                                      |
-| ------------------------------------------ | ---------------------------------------- | ------------------------------------------------------------------------------------ |
-| Chrome, headings, stamps, warnings, labels | Plus Jakarta Sans                        | body 500 16/1.6; descriptions 15/1.5; notes 14/1.5; labels 600; buttons 700          |
-| Home and page hero h1                      | Plus Jakarta Sans 800, tracking -0.025em | 40/1.18, 48 from 48rem, 60/1.15 from 80rem                                           |
-| Section h2                                 | Plus Jakarta Sans 800, tracking -0.02em  | 32/1.25, 40/1.18 from 64rem                                                          |
-| Headings on dense screens                  | Plus Jakarta Sans 700                    | today's sizes                                                                        |
-| Words of the law                           | Noto Serif                               | verbatim text 17/1.8; reader title 34 (24 under 768 px); provision headings as today |
-| Document numbers                           | Roboto Mono 500, ligatures off           | as today                                                                             |
+| Role                                       | Face                                     | Size and weight                                                                                           |
+| ------------------------------------------ | ---------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Chrome, headings, stamps, warnings, labels | Plus Jakarta Sans                        | body 500 16/1.6; descriptions 15/1.5; notes 14/1.5; labels 600; buttons 700                               |
+| Home and page hero h1                      | Plus Jakarta Sans 800, tracking -0.025em | 40/1.18, 48 from 48rem, 60/1.15 from 80rem                                                                |
+| Section h2                                 | Plus Jakarta Sans 800, tracking -0.02em  | 32/1.25, 40/1.18 from 64rem                                                                               |
+| Headings on dense screens                  | Plus Jakarta Sans 700                    | today's sizes                                                                                             |
+| Words of the law                           | Noto Serif                               | reader text 17/1.8; result text 15.5/1.75; reader title 34 (24 under 768 px); provision headings as today |
+| Document numbers                           | Roboto Mono 500, ligatures off           | as today                                                                                                  |
 
 Fonts are self-hosted woff2 with `font-display: swap`; the CSP keeps
 `font-src 'self'`. Plus Jakarta Sans ships with its OFL licence and covers
@@ -92,6 +92,17 @@ Its stack is `'Plus Jakarta Sans', BeVietnam, sans-serif` until screenshots of
 12 to 14 px Vietnamese on the search filters, result card head and reader rail
 are accepted in both themes; then Be Vietnam Pro is removed. Only the Plus
 Jakarta Sans face goes above 700; Noto Serif and Roboto Mono declare 400 to 700.
+
+## Home
+
+Home is, from the top: the white header; the navy panel holding the headline,
+the lead, the query field, the suggestion pills and the sign-in hint; the stored
+sample result hanging over the panel's bottom edge, straight, with its real
+stamp and citation pill and no other decoration; a `mist` section on how a
+result reads, with the facts as hairline rows; a white section with the live
+coverage counts and their release; the connect section; the `sky` maker panel;
+the footer band. Actions come in pairs, a filled pill then an outline pill ("Tra
+cứu", "Xem cách kết nối").
 
 ## Shape and space
 
@@ -189,13 +200,16 @@ marks, borders and focus rings at least 3:1. The token test in `apps/web` reads
 | 3       | `stamp-neutral-border` | `card`              | 4.83  | 3.43  |
 | 3       | `stamp-neutral-border` | `mist`              | 4.39  | 3.58  |
 
-| Never paired                    | Light | Dark |
-| ------------------------------- | ----- | ---- |
-| `control` on `primary-fill`     | 2.43  | 1.73 |
-| `card` on `primary-fill`        | 10.36 | 2.34 |
-| `seal` on `primary-fill`        | 1.58  | 2.06 |
-| `ring` on `footer`              | 1.00  | 8.46 |
-| `stamp-neutral-border` on `sky` | 4.00  | 2.90 |
+Pairs below are not used where the failing theme is marked. Each row says what
+is used instead.
+
+| Pair                            | Light | Dark | Rule                                                                                             |
+| ------------------------------- | ----- | ---- | ------------------------------------------------------------------------------------------------ |
+| `control` on `primary-fill`     | 2.43  | 1.73 | both themes: no control border on navy; the hero field is bounded by its `hero-field` fill       |
+| `card` on `primary-fill`        | 10.36 | 2.34 | dark: never the only boundary of a control; the sample card may overlap the panel in both themes |
+| `seal` on `primary-fill`        | 1.58  | 2.06 | both themes: on navy the whole logo is `on-primary`                                              |
+| `ring` on `footer`              | 1.00  | 8.46 | light: the footer uses `footer-ring`                                                             |
+| `stamp-neutral-border` on `sky` | 4.00  | 2.90 | both themes by rule: a stamp never sits on `sky`, where the not-yet fill edge is 1.02:1 in light |
 
 The dark `primary-fill` against the dark `page` is 2.64:1. The panel edge
 carries no information and buttons are named by their labels, so this meets WCAG
