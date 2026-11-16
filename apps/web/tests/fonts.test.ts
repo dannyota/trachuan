@@ -7,6 +7,7 @@ const families = {
   NotoSerif: 'noto-serif-var',
   RobotoMono: 'roboto-mono-var',
   GoogleSansButton: 'google-sans-button',
+  PlusJakartaSans: 'plus-jakarta-sans-var',
 }
 
 it('declares one same-origin face per family with the available weights', () => {
@@ -21,7 +22,7 @@ it('declares one same-origin face per family with the available weights', () => 
       const face = faces[index]!
       expect(face).toMatch(new RegExp(`font-family:\\s*${name}\\s*;`))
       expect(face).toContain(`src: url('/fonts/${families[name as keyof typeof families]}.woff2') format('woff2');`)
-      expect(face).toMatch(name === 'GoogleSansButton' ? /font-weight:\s*500\s*;/ : /font-weight:\s*400 700\s*;/)
+      expect(face).toMatch(name === 'GoogleSansButton' ? /font-weight:\s*500\s*;/ : name === 'PlusJakartaSans' ? /font-weight:\s*400 800\s*;/ : /font-weight:\s*400 700\s*;/)
       expect(face).toMatch(/font-display:\s*swap\s*;/)
       expect(face).not.toMatch(/unicode-range\s*:/)
     }
@@ -33,10 +34,16 @@ it('keeps app CSS weights within every font family range', () => {
   expect(paths.length).toBeGreaterThan(0)
   for (const path of paths) {
     const css = readFileSync(path, 'utf8')
-    for (const match of css.matchAll(/font-weight\s*:\s*([^;}]+)/g)) {
+    for (const rule of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+      const match = /font-weight\s*:\s*([^;}]+)/.exec(rule[2]!)
+      if (!match) continue
       const weight = Number(match[1]!.trim())
       expect(weight, `${path}: ${match[0]}`).toBeGreaterThanOrEqual(400)
-      expect(weight, `${path}: ${match[0]}`).toBeLessThanOrEqual(700)
+      if (weight > 700) {
+        expect(path).toBe('app/assets/areas/home.css')
+        expect(rule[1]!.trim()).toMatch(/^\.home-(page h2:not\(\.result-card h2\)|hero h1)$/)
+      }
+      expect(weight, `${path}: ${match[0]}`).toBeLessThanOrEqual(800)
     }
   }
 })

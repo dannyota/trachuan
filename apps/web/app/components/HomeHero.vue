@@ -27,7 +27,6 @@ async function submit() {
 <template>
   <section class="home-hero">
     <div class="container home-hero-inner">
-      <p class="home-eyebrow">{{ labels.eyebrow }}</p>
       <h1>{{ labels.title }}</h1>
       <p class="home-intro">{{ labels.intro }}</p>
       <form class="home-form" role="search" @submit.prevent="submit">

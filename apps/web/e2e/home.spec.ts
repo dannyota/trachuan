@@ -28,7 +28,7 @@ test('home keeps the sample current, public and usable on mobile', async ({ page
   await page.setViewportSize({ width: 390, height: 844 })
   await page.route('**/api/v1/me', route => route.fulfill({ status: 204 }))
   await page.goto('/')
-  await expect(page.getByText('Cần đăng nhập để tra cứu.', { exact: true })).toBeVisible()
+  await expect(page.getByText('Bạn cần đăng nhập để tra cứu. Mình không ghi câu hỏi của bạn vào ổ đĩa hay nhật ký.', { exact: true })).toBeVisible()
   const sample = page.locator('.home-sample .result-card')
   await expect(sample.locator('mark')).toHaveCount(0)
   await expect(sample.locator('.result-rank')).toHaveCount(0)
@@ -47,18 +47,15 @@ test('home keeps the sample current, public and usable on mobile', async ({ page
 })
 
 for (const width of [1280, 390]) {
-  test(`home bands span the viewport at ${width}px`, async ({ page }) => {
+  test(`home hero is inset at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 })
     await page.goto('/')
-    for (const selector of ['.home-hero', '.home-connect']) {
-      const band = page.locator(selector)
-      const box = await band.boundingBox()
-      expect(box?.x).toBe(0)
-      expect(box?.width).toBe(width)
-      const inner = band.locator('.container')
-      const contentLeft = await inner.evaluate(element => element.getBoundingClientRect().left + parseFloat(getComputedStyle(element).paddingLeft))
-      expect(contentLeft).toBe(width === 390 ? 16 : 40)
-    }
+    const box = await page.locator('.home-hero').boundingBox()
+    expect(box!.x).toBeGreaterThan(0)
+    expect(box!.width).toBeLessThan(width)
+    const connect = (await page.locator('.home-connect').boundingBox())!
+    expect(connect.x).toBe(0)
+    expect(connect.width).toBe(width)
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   })
 }

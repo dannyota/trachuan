@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+import { createPinia, setActivePinia } from 'pinia'
 import { flushPromises, mount } from '@vue/test-utils'
 import { computed, defineComponent, h, onMounted, onUnmounted, reactive, ref, Suspense } from 'vue'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
@@ -8,6 +9,7 @@ import ResultCard from '../app/components/ResultCard.vue'
 const session = reactive<{ status: 'unknown' | 'signed-in' | 'signed-out' }>({ status: 'unknown' })
 const get = vi.fn()
 beforeEach(() => {
+  setActivePinia(createPinia())
   session.status = 'unknown'
   get.mockReset()
   vi.stubGlobal('useState', () => ref('vi'))
@@ -15,6 +17,7 @@ beforeEach(() => {
   vi.stubGlobal('ref', ref)
   vi.stubGlobal('onMounted', onMounted)
   vi.stubGlobal('onUnmounted', onUnmounted)
+  vi.stubGlobal('useHead', () => {})
   vi.stubGlobal('useRoute', () => ({ query: {} }))
   vi.stubGlobal('useApi', () => ({ session, client: { GET: get } }))
   vi.stubGlobal('useAsyncData', async () => ({ data: ref({ status: null }) }))

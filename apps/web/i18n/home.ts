@@ -1,22 +1,24 @@
 import type { Language } from './index'
 
 export const en = {
-  eyebrow: 'Vietnamese law, backed by sources', title: 'Find the right article and clause, with its legal status.',
-  intro: 'Each result is the original text from the source document, with its number, issue date and a link to the Vietnam National Database of Legal Documents. Tra Chuẩn does not write answers.',
-  query: 'Question or document number', placeholder: 'For example: minimum password length for online banking', submit: 'Search', inForce: 'Only documents in force', signIn: 'Sign in to search.', suggestions: 'Suggestions:',
-  sampleTitle: 'What a result looks like', sampleText: 'Find the exact clause that answers a question, not the whole document. The stamp shows whether the document is in force, partly in force or expired on the search date. Warnings appear on the clause when another document amends or repeals it.',
-  check1: 'Original text, without paraphrasing', check2: 'Copyable citation', check3: 'Link to the original on vbpl.vn',
-  scope: 'Focused on banking, finance, information technology and personal data.', scopeLink: 'See coverage and what is missing →',
-  connectTitle: 'Use it in your AI assistant', connectText: 'Connect through MCP so Claude or ChatGPT can find and cite the original text.', address: 'MCP address', copy: 'Copy', claude: 'Add a custom connector and sign in once.', chat: 'Enable developer mode and add an MCP connector.', code: 'Add the server with this command.', connectLink: 'Connection instructions →',
+  title: 'Ask in Vietnamese. Read the law in its own words.',
+  intro: "Hi, I'm Tra Chuẩn. I don't write answers. I find passages in the source documents and show them word for word, with the document number and the status recorded in the dataset.",
+  query: 'Question or document number', placeholder: 'For example: minimum password length for online banking', submit: 'Search', inForce: 'Only documents in force', signIn: 'Sign in to search. I never write your questions to disk or logs.', suggestions: 'Suggestions:',
+  sampleTitle: 'A real result from the {date} release.', sampleText: "Each result is a passage from the source document, not the whole document. The stamp is the document's status as recorded in Tra Chuẩn's dataset, with its stated basis; on this sample, the line beside the stamp gives the date the status applies to. A warning appears right on the clause when another document has amended or repealed it.",
+  check1: 'The original text, never paraphrased.', check2: 'Copy the citation in one click: {citation}', check3: 'A link to the original, when the source publishes one.',
+  scope: 'I focus on banking, finance, IT and personal data, so not every document is here yet.', scopeLink: "See what's missing",
+  connectTitle: 'Use Tra Chuẩn from your AI assistant.', connectText: 'Connect Claude, ChatGPT or another MCP-capable assistant. It can search, read the original text and quote it with the document number. You grant read-only access and can revoke it any time.', address: 'MCP address', copy: 'Copy', claude: 'Add a custom connector and sign in once.', chat: 'Enable developer mode and add an MCP connector.', code: 'Add the server with this command.', connectLink: 'See how to connect',
+  makerTitle: "Hi, I'm Danny.", makerText: "I once asked an AI assistant about the law. It answered with total confidence and couldn't point to a single clause. So I built a place that shows only the original text and lets you check it for yourself. The site is new and doesn't hold every document yet; the sources page lists what's missing.", makerSearch: 'Search', makerResume: 'See my resume', makerFeedback: 'Send feedback', makerAlt: 'Drawn portrait of Danny, with his wife and child in a heart-shaped frame',
 }
 export const vi: Record<keyof typeof en, string> = {
-  eyebrow: 'Pháp luật Việt Nam, có dẫn chứng', title: 'Tra cứu đúng điều, đúng khoản, kèm trạng thái hiệu lực.',
-  intro: 'Mỗi kết quả là nguyên văn quy định từ văn bản gốc, có số hiệu, ngày ban hành và đường dẫn tới Cơ sở dữ liệu quốc gia về văn bản pháp luật. Tra Chuẩn không tự viết câu trả lời.',
-  query: 'Câu hỏi hoặc số hiệu văn bản', placeholder: 'Ví dụ: độ dài tối thiểu của mật khẩu ngân hàng trực tuyến', submit: 'Tra cứu', inForce: 'Chỉ văn bản còn hiệu lực', signIn: 'Cần đăng nhập để tra cứu.', suggestions: 'Gợi ý:',
-  sampleTitle: 'Một kết quả trông như thế này', sampleText: 'Trích đúng khoản trả lời câu hỏi, không phải cả văn bản. Con dấu cho biết văn bản còn hiệu lực, hết hiệu lực một phần hay đã hết hiệu lực vào ngày tra cứu. Cảnh báo hiện ngay trên khoản khi một văn bản khác đã sửa đổi hoặc bãi bỏ nó.',
-  check1: 'Nguyên văn, không diễn giải lại', check2: 'Trích dẫn sao chép được', check3: 'Liên kết về bản gốc trên vbpl.vn',
-  scope: 'Tập trung vào ngân hàng, tài chính, công nghệ thông tin và dữ liệu cá nhân.', scopeLink: 'Xem phạm vi và những gì còn thiếu →',
-  connectTitle: 'Dùng trong trợ lý AI của bạn', connectText: 'Kết nối qua MCP để Claude hoặc ChatGPT tra cứu và trích dẫn nguyên văn, thay vì đoán.', address: 'Địa chỉ MCP', copy: 'Sao chép', claude: 'Thêm connector tùy chỉnh, đăng nhập một lần.', chat: 'Bật chế độ nhà phát triển, thêm connector MCP.', code: 'Thêm máy chủ bằng lệnh này.', connectLink: 'Hướng dẫn kết nối →',
+  title: 'Hỏi bằng tiếng Việt, đọc nguyên văn từ văn bản gốc.',
+  intro: 'Chào bạn, mình là Tra Chuẩn. Mình không viết câu trả lời. Mình tìm các đoạn trong văn bản gốc và đưa nguyên văn, kèm số hiệu và trạng thái hiệu lực ghi trong dữ liệu.',
+  query: 'Câu hỏi hoặc số hiệu văn bản', placeholder: 'Ví dụ: độ dài tối thiểu của mật khẩu ngân hàng trực tuyến', submit: 'Tra cứu', inForce: 'Chỉ văn bản còn hiệu lực', signIn: 'Bạn cần đăng nhập để tra cứu. Mình không ghi câu hỏi của bạn vào ổ đĩa hay nhật ký.', suggestions: 'Gợi ý:',
+  sampleTitle: 'Một kết quả thật, từ bản phát hành ngày {date}.', sampleText: 'Mỗi kết quả là một đoạn trích từ văn bản gốc, không phải cả văn bản. Con dấu là trạng thái hiệu lực ghi trong dữ liệu của Tra Chuẩn, cùng căn cứ của trạng thái đó; ở kết quả mẫu này, dòng bên cạnh con dấu ghi trạng thái tính đến ngày nào. Cảnh báo hiện ngay trên khoản khi một văn bản khác đã sửa đổi hoặc bãi bỏ nó.',
+  check1: 'Nguyên văn, không diễn giải.', check2: 'Sao chép trích dẫn bằng một lần bấm: {citation}', check3: 'Liên kết về bản gốc, khi nguồn có công bố.',
+  scope: 'Mình tập trung vào ngân hàng, tài chính, công nghệ thông tin và dữ liệu cá nhân, nên chưa có mọi văn bản.', scopeLink: 'Xem những gì còn thiếu',
+  connectTitle: 'Dùng Tra Chuẩn trong trợ lý AI của bạn.', connectText: 'Kết nối Claude, ChatGPT hoặc trợ lý khác hỗ trợ MCP. Trợ lý có thể tra cứu, đọc nguyên văn và trích kèm số hiệu văn bản. Bạn cấp quyền chỉ đọc và thu hồi lúc nào cũng được.', address: 'Địa chỉ MCP', copy: 'Sao chép', claude: 'Thêm connector tùy chỉnh, đăng nhập một lần.', chat: 'Bật chế độ nhà phát triển, thêm connector MCP.', code: 'Thêm máy chủ bằng lệnh này.', connectLink: 'Xem cách kết nối',
+  makerTitle: 'Chào bạn, mình là Danny.', makerText: 'Mình từng hỏi trợ lý AI về luật và nhận được câu trả lời rất tự tin, nhưng không chỉ ra được điều khoản nào. Nên mình làm một chỗ chỉ đưa nguyên văn, để bạn tự kiểm tra được. Trang còn mới và chưa đủ mọi văn bản; những gì còn thiếu mình ghi ở trang Nguồn dữ liệu.', makerSearch: 'Tra cứu', makerResume: 'Xem CV của mình', makerFeedback: 'Gửi góp ý', makerAlt: 'Tranh vẽ chân dung Danny, bên cạnh là vợ và con anh trong khung hình trái tim',
 }
 export function homeMessages(language: Language): Record<keyof typeof en, string> {
   return language === 'en' ? en : vi
