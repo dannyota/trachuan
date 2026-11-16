@@ -47,7 +47,9 @@ Intended behavior of trachuan. Decisions with alternatives are in the
 | [web API](web-api.md)                                | Google login flow, web sessions, CSRF, `/api/v1` routes, OpenAPI contract                         |
 | [OAuth](oauth.md)                                    | MCP authorization server: clients, consent, codes, tokens, aboutme import gaps                    |
 | [error reports](error-reports.md)                    | Agent and web reports of corpus defects, triage, export to reviewed fixes                         |
-| [web](web.md)                                        | Routes, pages, visual system                                                                      |
+| [web](web.md)                                        | Routes, pages, caching, routing, CSP, page shell                                                  |
+| [web visual system](web-visual.md)                   | Colour tokens, type, shape, stamps, logo, motion, contrast table                                  |
+| [web voice](web-voice.md)                            | Voice rules, claims, voice and typeface per content field, maker panel                            |
 | [deployment](deployment.md)                          | Host, deploy, secrets, release activation, backups, observability                                 |
 | [backups](backups.md)                                | pgBackRest image, configuration, schedules, restore proof and results                             |
 | [pull deployment](pull-deployment.md)                | Signed release from a tag, host updater, rollback, remote execution                               |

@@ -104,26 +104,19 @@ proxy sends `/api/*` to the Go server, which runs with
 
 ## Visual system
 
+Colours, type, shape, stamps, the logo and contrast live in
+[web visual system](web-visual.md); wording rules live in
+[web voice](web-voice.md).
+
 The product display name is "Tra Chuẩn" in both languages (header, page titles,
 login, legal pages, the OAuth consent page, agent guidance), matching the Google
 consent branding; code, routes, identifiers, the MCP server name and setup
-commands keep `trachuan`. Be Vietnam Pro for interface text, a serif for
-verbatim law, monospace for document numbers. The CSP is a static header with
-`script-src 'self'` (no `'unsafe-inline'`, no `'unsafe-eval'`) and the hydration
-payload externalized into a same-origin script; per-request nonces are not used
-because public HTML is cached for ten minutes and a cached page would replay an
-old nonce. Self-hosted fonts; CSP with no third-party host.
+commands keep `trachuan`. The CSP is a static header with `script-src 'self'`
+(no `'unsafe-inline'`, no `'unsafe-eval'`) and the hydration payload
+externalized into a same-origin script; per-request nonces are not used because
+public HTML is cached for ten minutes and a cached page would replay an old
+nonce. Self-hosted fonts; CSP with no third-party host.
 
-The look is an official gazette: ink on paper, a red seal, stamps for validity.
-Tokens live in `apps/web/app/assets/tokens.css`: ink `#14171C`, muted `#59606B`,
-line `#E3E6EA`, surface `#F6F7F9`, primary `#1E3A8A`, seal `#B42318` and
-highlight `#FFF1A8`, with a dark palette that follows the device and keeps every
-text pair at 4.5:1 or more. Validity stamps differ by text, border and fill, not
-colour alone: in force, partly in force, not yet in force, expired (struck
-through) and unknown (dashed border); suspended uses the expired palette without
-the strike. Document numbers use monospace with ligatures off. The logo and
-icons are the seal with "TC" (a solid red circle with "T" at 16 px), generated
-with the Open Graph image by `apps/web/scripts/make-icons.mjs`. Every page has
-the header (logo, Search, Topics, Connect AI assistants, Sources, language,
-account or sign-in; a menu button under 768 px) and the footer (terms, privacy,
-sources). Phase 2: dossiers, watch lists, exports.
+Every page has the header (logo, Search, Topics, Connect AI assistants, Sources,
+language, account or sign-in; a menu button under 768 px) and the footer (terms,
+privacy, sources). Phase 2: dossiers, watch lists, exports.

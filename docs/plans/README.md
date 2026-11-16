@@ -26,6 +26,7 @@ history keeps it. States: `planned`, `in progress`, `landed`, `verified`,
 |13|Agent error reports|MCP tool `report_issue` and web routes (submit, own list, withdraw) with structured fields only and no free text (ADR 0002); auth-database table, per-account and global caps, admin triage and export CLI feeding `sources/vn-corrections.yaml`, text review and identity-map review ([error reports](../design/error-reports.md)); the website submission form waits for an owner decision|Plan 9a (MCP), Plan 9b (web)|landed|
 |15|[Control frameworks](2026-11-15-frameworks.md)|framework corpus kind (ADR 0016): registry, access by grant, parsers and OCR for scans, MCP and web serving, release channel; data and lessons from compliary|Plans 9a to 11; batch 2 corpus release|planned|
 |16|[Findings and reviewed knowledge](2026-11-15-knowledge-loop.md)|detector registry, findings with identity and frozen observations, reviewed-knowledge contract down to provisions, closed intake of outside reports, `findings.json`, `identity.jsonl` and `changes.jsonl` bound to each signed release (ADR 0017)|Plans 3 and 7 landed; batch 2 corpus release|planned|
+|17|[Family identity](2026-11-16-family-identity.md)|apps/web in the family look and voice (ADR 0018): home, then chrome, then dense screens, each with a token test and a fit test; copy rewrites and the defects they fix|Plan 10 landed; ADR 0018|planned|
 
 Each later plan is written with the writing-plans skill when its dependency
 lands, against `docs/design/README.md` and the research notes from Plan 0.
