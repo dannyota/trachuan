@@ -13,7 +13,7 @@ The primary session (`manager`) plans, writes and reviews designs, ADRs and docu
 |Review of code, adversarial pass|Codex `reviewer`: `gpt-6.1-sol` high for code `gpt-6.1-terra` or the primary wrote; `--model gpt-6-astra` for code `gpt-6.1-sol` wrote or hard code the primary wrote|
 |Searches, summaries, mechanical reading|Claude `Explore` agent|
 
-Dispatch: `scripts/codex-agent.sh [--model <m>] [--effort <e>] [--search] [--resume <session-id>] <role> <worktree> <brief-file> <report-file>`. The primary decides and states the route in each brief, and picks the hard route only when a task is too hard for the routine one or has already taken too long. No model reviews its own work; the original reviewer confirms each fix.
+Dispatch: `scripts/codex-agent.sh [--model <m>] [--effort <e>] [--search] [--resume <session-id>] <role> <worktree> <brief-file> <report-file>`. The primary decides and states the route in each brief, and picks the hard route only when a task is too hard for the routine one or has already taken too long. A resume names the model that started the worker with `--model`; the launcher refuses a resume without it, because the role default may be another model. No model reviews its own work; the original reviewer confirms each fix.
 
 ## Flow
 

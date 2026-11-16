@@ -22,7 +22,7 @@ parser = argparse.ArgumentParser(prog="scripts/codex-agent.sh")
 parser.add_argument("--model")
 parser.add_argument("--effort")
 parser.add_argument("--search", action="store_true")
-parser.add_argument("--resume", help="continue a stopped worker by session id; the brief file holds the answer")
+parser.add_argument("--resume", help="continue a stopped worker by session id, with --model; the brief file holds the answer")
 parser.add_argument("role")
 parser.add_argument("worktree")
 parser.add_argument("brief_file")
@@ -31,6 +31,8 @@ args = parser.parse_args()
 if args.resume is not None and not re.fullmatch(
         r"[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}", args.resume):
     parser.error("invalid session id")
+if args.resume is not None and args.model is None:
+    parser.error("--resume needs --model: a resumed worker keeps the model that started it")
 if not re.fullmatch(r"[a-z_]+", args.role):
     parser.error("role must match ^[a-z_]+$")
 
