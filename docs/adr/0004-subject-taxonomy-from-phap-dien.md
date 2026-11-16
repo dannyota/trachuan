@@ -17,9 +17,10 @@ keeping names and codes. Custom nodes are declared in a YAML file for subjects
 the codification lacks. Articles matching the package receive seed labels; an
 article of a consolidated document whose corresponding source article is seeded
 inherits those labels; the rest are classified by an LLM in batches (document,
-then chapter with all its articles) using embedding-selected candidate nodes;
-manual overrides win. The subject filter never hides results: search runs over
-the whole corpus and reports the count outside the filter.
+then chapter with all its articles), each article choosing only within the
+level-2 families its document request returned; manual overrides win. The
+subject filter never hides results: search runs over the whole corpus and
+reports the count outside the filter.
 
 ## Consequences
 
@@ -45,3 +46,9 @@ classifier. Hard-cut subject filtering.
 - 2026-11-15: added consolidation inheritance (method `inherited`, below seeds,
   above `llm`) with its own evaluation rows after the classification design
   review; see design/taxonomy.md.
+- 2026-11-16: replaced embedding-selected candidate nodes with the subtrees of
+  the document request's level-2 families. On the 300 masked seeded articles of
+  `vn/20261115_2`, whole-tree cosine top 10 reached candidate recall 0.05, 0.24
+  and 0.37 at levels 2, 3 and deepest; the best variant (5 families of 20 nodes
+  with ancestor closure) 0.82, 0.53 and 0.47; lexical and fused selection less.
+  None came near the 0.95 floor, which now applies to family recall.

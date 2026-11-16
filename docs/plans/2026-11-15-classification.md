@@ -6,7 +6,7 @@
 
 **Budget:** owner cap 150 USD on the key, pilot included. Pilot budget 15 USD. The full batch is pre-approved when the pilot passes every applicable floor and the projection, pilot included, stays under 100 USD; otherwise, and before any Opus run, report to the coordinator. Admission: before each submission or retry, settled cost plus the reserved cost of every unsettled batch plus this batch's reserve (counted input tokens at the batch input price, plus every request's `max_tokens` at the batch output price) must fit the applicable budget (pilot 15 USD, full batch 100 USD, cap 150 USD); otherwise it is not submitted. A batch's reserve is released only when its cost is settled from its results.
 
-**Spec:** [taxonomy](../design/taxonomy.md) ("Classification layers", "Serving", "Evaluation gate"), [batch submissions](../design/batch-submissions.md), [embedder](../design/embedder.md) for node vectors, [evaluation](../design/evaluation.md) filter gate. The spec wins over this plan.
+**Spec:** [taxonomy](../design/taxonomy.md) ("Classification layers", "Serving", "Evaluation gate"), [batch submissions](../design/batch-submissions.md), [evaluation](../design/evaluation.md) filter gate. The spec wins over this plan.
 
 ## Measured size (corpus_vn_20261114_5, 2026-11-15)
 
@@ -33,9 +33,8 @@
 
 ### 8.2 Candidates and labeled set (no paid calls)
 
-- [ ] Node candidate text per taxonomy.md "Serving", embedded with the dense document recipe; candidate recall at 10 measured on the labeled set before any prompt work.
 - [ ] Labeled set from seeds: the 300 masked articles of taxonomy.md "Evaluation gate", drawn by `corpus taxonomy labels`, frozen with a hash.
-- [ ] Candidate selection that meets the candidate-recall floor, measured offline on the masked set (whole-tree cosine top 10 measured 0.05/0.24/0.37 on vn/20261115_2), then written into taxonomy.md before any prompt work.
+- [x] Candidate selection: embedding and lexical candidates measured on the masked set fell far short of 0.95 (ADR 0004 History); taxonomy.md now limits each article to the subtrees of its document request's level-2 families and gates family recall at 0.95.
 - [ ] Model-adjudicated sets (no Anthropic calls; Codex gpt-6-astra labels blind): inheritance (100 inherited consolidated articles) now; multi-family (100 unseeded articles, half from documents with a multi-topic document-level result) after 8.3 can run the document-level request; post-2023 (100 articles). The coordinator reads 10 of multi-family and 20 of post-2023 before either gates.
 
 ### 8.3 Classify stage and batch submission
@@ -45,7 +44,7 @@
 ### 8.4 Pilot (paid, small)
 
 - [ ] Confirm current Batch and model prices on Anthropic's pricing page.
-- [ ] Labeled set only, both `claude-haiku-5-5` and `claude-sonnet-5-5`; iterate prompts until every applicable floor passes; report cost per 1,000 articles per model.
+- [ ] Labeled set only, both `claude-haiku-5-5` and `claude-sonnet-5-5`; measure family recall of the document request first (start with `F` = 5), then iterate prompts until every applicable floor passes; report cost per 1,000 articles per model.
 - [ ] Post-2023 reference: Codex `gpt-6-astra` labels 100 post-2023 articles blind; the coordinator reads 20 before it gates.
 
 ### 8.5 Full batch (paid, after the coordinator confirms the estimate)

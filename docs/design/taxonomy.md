@@ -97,22 +97,27 @@ under the corpus rules.
 3. LLM in batches over public legal text, after `chunk` and `embed` have run,
    for articles that hold no seed or inherited node:
    - One request per document (title, scope article, table of contents, VBPL
-     field) returns a set of active level-2 codes; a code that is not an active
-     level-2 node is dropped and counted. The result is not an assignment: it is
-     given as document context to every article request of that document.
+     field) returns a set of at most `F` active level-2 codes, `F` set in the
+     classification recipe and enforced by the output schema; a code that is not
+     an active level-2 node is dropped and counted. The result is not an
+     assignment: it is given as document context to every article request of
+     that document and fixes those articles' allowed codes. A document whose
+     request fails or keeps no code yields no LLM assignment for its articles
+     and gap `unassigned` with detail `invalid_response` or `no_family`.
    - One request per chapter with all its articles yields assignments for each
      article; a document without chapters is split into groups of up to 12
      articles in document order. The classification recipe sets a maximum input
      and output size per request; a chapter or group over it is split into runs
      of consecutive articles that fit, and an article that alone exceeds it gets
-     no LLM assignment and gap `unassigned` with detail `too_long`. Candidate
-     nodes are the top 10 by cosine between the article's chunk vectors and node
-     description vectors embedded with the same dense recipe, searched across
-     the whole tree.
+     no LLM assignment and gap `unassigned` with detail `too_long`. An article's
+     allowed codes are the active nodes at levels 2 to 4 in the subtrees of its
+     document's level-2 codes; each article request carries those subtrees once,
+     as code, name and parent code. A level-2 subtree holds at most 91 nodes and
+     8,708 characters of names on `vn/20261115_3`.
    - Article request output is JSON keyed by the request's article anchors, with
      a set of codes and a confidence per code for each; an article may receive
-     several nodes in different families. A code outside that article's own
-     candidates or unknown to the mapping, and an anchor not in the request, is
+     several nodes in different families. A code outside that article's allowed
+     codes or unknown to the mapping, and an anchor not in the request, is
      dropped and counted. A response that is truncated, fails the schema or
      misses an article yields no assignment for those articles and gap
      `unassigned` with detail `invalid_response`. The model, effort and prompt
@@ -150,12 +155,7 @@ below: a release serving `inherited` assignments must pass the inheritance rows,
 and one serving `llm` assignments the LLM rows. A release whose assignments come
 only from seeds and overrides serves them without the classification floors;
 every release that serves nodes must pass the filter gate in
-[evaluation](evaluation.md). The LLM layer's candidate text for a node
-(`candidate-text/1`, versioned with the classification recipe) is embedded with
-the dense document recipe like a chunk: the context prefix is its ancestors'
-names from the root, joined with `\n`; the content is its own name, followed by
-`\n` and its description when it has one; white space inside each name is
-collapsed.
+[evaluation](evaluation.md).
 
 ## Evaluation gate
 
@@ -166,20 +166,20 @@ Labels are sets, so every metric is micro precision and recall over (article,
 node) pairs. The same set tunes prompts and thresholds and gates the release;
 every prompt or threshold change reruns it.
 
-| Slice                                                  | Reference         | Metric                                              | Floor |
-| ------------------------------------------------------ | ----------------- | --------------------------------------------------- | ----- |
-| 300 seeded articles, labels masked                     | seeded, masked    | precision and recall at level 2                     | 0.90  |
-| same                                                   | seeded, masked    | precision and recall at level 3                     | 0.80  |
-| same                                                   | seeded, masked    | precision and recall at the deepest level           | 0.75  |
-| 100 unseeded articles labeled with every family        | model-adjudicated | precision and recall over all pairs                 | 0.80  |
-| every LLM slice                                        | as the slice      | candidate recall at 10 (true node among candidates) | 0.95  |
-| 100 post-2023 articles                                 | model-adjudicated | precision and recall at level 2                     | 0.85  |
-| same                                                   | model-adjudicated | precision and recall at the deepest level           | 0.70  |
-| 50 articles that belong to custom nodes                | model-adjudicated | precision and recall of custom nodes                | 0.80  |
-| 100 inherited consolidated articles                    | model-adjudicated | precision at level 2 (inheritance layer)            | 0.95  |
-| same                                                   | model-adjudicated | precision at level 3 (inheritance layer)            | 0.90  |
-| same                                                   | model-adjudicated | precision at the deepest level (inheritance layer)  | 0.85  |
-| the seeded articles with seeds in two or more families | seeded            | precision and recall over all pairs, reported       | none  |
+| Slice                                                  | Reference         | Metric                                                                               | Floor |
+| ------------------------------------------------------ | ----------------- | ------------------------------------------------------------------------------------ | ----- |
+| 300 seeded articles, labels masked                     | seeded, masked    | precision and recall at level 2                                                      | 0.90  |
+| same                                                   | seeded, masked    | precision and recall at level 3                                                      | 0.80  |
+| same                                                   | seeded, masked    | precision and recall at the deepest level                                            | 0.75  |
+| 100 unseeded articles labeled with every family        | model-adjudicated | precision and recall over all pairs                                                  | 0.80  |
+| every LLM slice                                        | as the slice      | family recall (each true node's level-2 ancestor among the document request's codes) | 0.95  |
+| 100 post-2023 articles                                 | model-adjudicated | precision and recall at level 2                                                      | 0.85  |
+| same                                                   | model-adjudicated | precision and recall at the deepest level                                            | 0.70  |
+| 50 articles that belong to custom nodes                | model-adjudicated | precision and recall of custom nodes                                                 | 0.80  |
+| 100 inherited consolidated articles                    | model-adjudicated | precision at level 2 (inheritance layer)                                             | 0.95  |
+| same                                                   | model-adjudicated | precision at level 3 (inheritance layer)                                             | 0.90  |
+| same                                                   | model-adjudicated | precision at the deepest level (inheritance layer)                                   | 0.85  |
+| the seeded articles with seeds in two or more families | seeded            | precision and recall over all pairs, reported                                        | none  |
 
 Every level that a release serves must have a floor in this table; a new level
 or slice is added here before it is served.
