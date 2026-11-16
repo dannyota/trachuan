@@ -10,21 +10,29 @@ import (
 
 func evidenceFixture() (databaseInputs, databaseIDs, relate.Edge) {
 	d := databaseInputs{versions: []registry.Framework{{Code: "fw-alpha", Version: "v1", Access: "licensed"}, {Code: "fw-beta", Version: "v1", Access: "licensed"}}}
-	d.registered = d.versions
 	ids := databaseIDs{versions: map[string]int64{"fw-alpha:v1": 2, "fw-beta:v1": 1}}
 	edge := relate.Edge{From: relate.Key{Code: "fw-alpha", Version: "v1", Citation: "A.1"}, To: relate.Key{Code: "fw-beta", Version: "v1", Citation: "B.1"}, Evidence: &relate.Evidence{Value: "Invented", Requires: []string{"fw:fw-alpha:v1", "fw:fw-beta:v1"}}}
 	return d, ids, edge
 }
 
-func TestEvidenceDependencies_KnownFreeUnloadedTarget(t *testing.T) {
-	d, ids, edge := evidenceFixture()
-	d.registered[1].Access = "free"
-	d.versions = d.versions[:1]
-	delete(ids.versions, "fw-beta:v1")
-	edge.Evidence.Requires = []string{"fw:fw-alpha:v1"}
-	deps, err := evidenceDependencies(d, ids, edge)
-	require.NoError(t, err)
-	require.Equal(t, []int64{2}, deps)
+func TestEvidenceDependencies_RejectsUnloadedVersions(t *testing.T) {
+	for _, access := range []string{"free", "licensed"} {
+		for end, name := range []string{"from", "to"} {
+			t.Run(access+"/"+name, func(t *testing.T) {
+				d, ids, edge := evidenceFixture()
+				d.versions[end].Access = access
+				if access == "free" {
+					edge.Evidence.Requires = []string{"fw:fw-beta:v1"}
+					if end == 1 {
+						edge.Evidence.Requires = []string{"fw:fw-alpha:v1"}
+					}
+				}
+				delete(ids.versions, versionKey(d.versions[end].Code, d.versions[end].Version))
+				_, err := evidenceDependencies(d, ids, edge)
+				require.Error(t, err)
+			})
+		}
+	}
 }
 
 func TestLexicalPostings_UsesLawNormalizationAndTermFrequency(t *testing.T) {
@@ -54,12 +62,11 @@ func TestEvidenceDependencies_FailsClosed(t *testing.T) {
 	deps, err = evidenceDependencies(d, ids, edge)
 	require.NoError(t, err)
 	require.Empty(t, deps)
-	d.registered[0].Access = ""
+	d.versions[0].Access = ""
 	_, err = evidenceDependencies(d, ids, edge)
 	require.ErrorContains(t, err, "unknown evidence access")
-	d.registered[0].Access = "free"
+	d.versions[0].Access = "free"
 	d.versions = d.versions[:1]
-	d.registered = d.versions
 	_, err = evidenceDependencies(d, ids, edge)
-	require.ErrorContains(t, err, "evidence version not in snapshot")
+	require.ErrorContains(t, err, "evidence version not in release")
 }

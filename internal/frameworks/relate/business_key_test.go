@@ -15,11 +15,10 @@ func TestBuild_DropsInvalidEndsBeforeEvidenceAndDuplicates(t *testing.T) {
 		from, to Key
 	}{
 		{"unregistered framework", Key{"alpha", "1", "A"}, Key{"unregistered", "1", "B"}},
-		{"unregistered version", Key{"alpha", "1", "A"}, Key{"beta", "9", "B"}},
 		{"invalid version", Key{"alpha", "1", "A"}, Key{"beta", "1..0", "B"}},
 		{"long citation", Key{"alpha", "1", "A"}, Key{"beta", "1", strings.Repeat("B", 65)}},
 		{"invalid source", Key{"alpha", "1", " A"}, Key{"beta", "1", "B"}},
-		{"unregistered source", Key{"alpha", "9", "A"}, Key{"beta", "1", "B"}},
+		{"unregistered source", Key{"unregistered", "1", "A"}, Key{"beta", "1", "B"}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			for _, evidence := range []string{"invented private evidence", ""} {

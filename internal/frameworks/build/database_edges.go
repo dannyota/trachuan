@@ -23,7 +23,7 @@ func edgeVersion(ids databaseIDs, key relate.Key) *int64 {
 
 func evidenceDependencies(d databaseInputs, ids databaseIDs, edge relate.Edge) ([]int64, error) {
 	access := map[string]string{}
-	for _, v := range d.registered {
+	for _, v := range d.versions {
 		access[versionKey(v.Code, v.Version)] = v.Access
 	}
 	want := []string{}
@@ -31,7 +31,10 @@ func evidenceDependencies(d databaseInputs, ids databaseIDs, edge relate.Edge) (
 		key := versionKey(end.Code, end.Version)
 		class, ok := access[key]
 		if !ok {
-			return nil, fmt.Errorf("evidence version not in snapshot")
+			return nil, fmt.Errorf("evidence version not in release")
+		}
+		if _, err := requiredID(ids.versions, key); err != nil {
+			return nil, fmt.Errorf("evidence version not loaded: %w", err)
 		}
 		if class != "free" && class != "licensed" {
 			return nil, fmt.Errorf("unknown evidence access")

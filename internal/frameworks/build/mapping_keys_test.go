@@ -75,7 +75,7 @@ func TestRelate_OldRecipeStopsResume(t *testing.T) {
 	require.NoError(t, testRun(context.Background(), "20990101", &bytes.Buffer{}))
 	path := filepath.Join(base, "relate/manifest.json")
 	m := readRows[manifest](t, path)[0]
-	m.Recipe.Version = 1
+	m.Recipe.Version = 3
 	data, err := json.Marshal(m)
 	require.NoError(t, err)
 	require.NoError(t, os.WriteFile(path, data, 0600))

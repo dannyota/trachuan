@@ -17,7 +17,7 @@ func TestDatabase_LoadsEveryValidRelateEdge(t *testing.T) {
 	setRelateMappings(t, base, []parse.Mapping{
 		{TargetFramework: "fw-beta", TargetVersion: "v1", TargetCitation: "A-2", Relation: "related"},
 		{TargetFramework: "fw-beta", TargetVersion: "v1", TargetCitation: "Z-9", Relation: "related"},
-		{TargetFramework: "fw-beta", TargetVersion: "v1", TargetCitation: "Z-8", Relation: "related"},
+		{TargetFramework: "fw-beta", TargetVersion: "v9", TargetCitation: "Z-8", Relation: "related"},
 	})
 	ctx := context.Background()
 	dir := t.TempDir()

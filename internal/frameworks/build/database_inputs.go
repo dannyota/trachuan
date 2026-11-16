@@ -16,13 +16,12 @@ type stepProvenance struct {
 }
 
 type databaseInputs struct {
-	registered []registry.Framework
-	versions   []registry.Framework
-	controls   []Control
-	chunks     []Chunk
-	edges      []relate.Edge
-	gaps       []Gap
-	steps      map[string]stepProvenance
+	versions []registry.Framework
+	controls []Control
+	chunks   []Chunk
+	edges    []relate.Edge
+	gaps     []Gap
+	steps    map[string]stepProvenance
 }
 
 func readDatabaseInputs(base string) (databaseInputs, error) {
@@ -43,7 +42,6 @@ func readDatabaseInputs(base string) (databaseInputs, error) {
 		return d, fmt.Errorf("gap kind table changed")
 	}
 	d.versions = releaseVersions(reg)
-	d.registered = reg.Frameworks
 	if d.controls, err = loadRows[Control](filepath.Join(base, "parse/controls.jsonl")); err != nil {
 		return d, err
 	}

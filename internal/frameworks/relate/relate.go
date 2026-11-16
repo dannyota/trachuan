@@ -58,10 +58,14 @@ func (s *Stats) drop(key Key, count int) {
 
 func Build(reg *registry.Registry, catalogs map[string]*parse.Result, inputs []Input) ([]Edge, Stats, error) {
 	var stats Stats
-	registered := map[VersionKey]bool{}
+	registered := map[string]bool{}
+	release := map[VersionKey]registry.Framework{}
 	validator := businesskey.New()
 	for _, v := range reg.Frameworks {
-		registered[VersionKey{v.Code, v.Version}] = true
+		registered[v.Code] = true
+		if v.Parser != "" {
+			release[VersionKey{v.Code, v.Version}] = v
+		}
 		result := catalogs[v.Code+":"+v.Version]
 		if result == nil {
 			continue
@@ -113,7 +117,7 @@ func Build(reg *registry.Registry, catalogs map[string]*parse.Result, inputs []I
 			}
 		}
 		edge.Resolved = edge.Resolved && sourceFound
-		if !registered[VersionKey{edge.From.Code, edge.From.Version}] || !registered[VersionKey{edge.To.Code, edge.To.Version}] ||
+		if !registered[edge.From.Code] || !registered[edge.To.Code] ||
 			!validator.Valid(edge.From.Code, edge.From.Version, edge.From.Citation) || !validator.Valid(edge.To.Code, edge.To.Version, edge.To.Citation) {
 			stats.drop(edge.From, 1)
 			continue
@@ -122,32 +126,27 @@ func Build(reg *registry.Registry, catalogs map[string]*parse.Result, inputs []I
 			stats.Unresolved++
 		}
 		if in.Evidence != "" {
-			requires := []string{}
-			for _, key := range []Key{edge.From, edge.To} {
-				found := false
-				for _, v := range reg.Frameworks {
-					if v.Code != key.Code || v.Version != key.Version {
-						continue
-					}
+			from, fromRelease := release[VersionKey{edge.From.Code, edge.From.Version}]
+			to, toRelease := release[VersionKey{edge.To.Code, edge.To.Version}]
+			if !fromRelease || !toRelease {
+				stats.drop(edge.From, 1)
+			} else {
+				requires := []string{}
+				for _, v := range []registry.Framework{from, to} {
 					if v.Access != "free" && v.Access != "licensed" {
 						return nil, stats, fmt.Errorf("evidence access not classified")
 					}
-					found = true
 					if v.Access == "licensed" {
 						handle := "fw:" + v.Code + ":" + v.Version
 						if len(requires) == 0 || requires[0] != handle {
 							requires = append(requires, handle)
 						}
 					}
-					break
 				}
-				if !found {
-					return nil, stats, fmt.Errorf("evidence version not registered")
-				}
-			}
 
-			sort.Strings(requires)
-			edge.Evidence = &Evidence{in.Evidence, requires}
+				sort.Strings(requires)
+				edge.Evidence = &Evidence{in.Evidence, requires}
+			}
 		}
 		b, _ := json.Marshal([]any{edge.From, edge.To, edge.Relation, edge.Source})
 		id := string(b)
