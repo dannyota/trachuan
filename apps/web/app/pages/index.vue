@@ -35,7 +35,7 @@ const { data: status } = await useAsyncData('coverage-home', () => import.meta.s
   <div class="home-page">
     <p v-if="deleted" class="container notice" role="status">{{ messages.deletedNotice }}</p>
     <HomeHero />
-    <div class="container home-sample"><ResultCard v-if="sample.hits?.[0]" :hit="sample.hits[0]" :documents="sample.documents" :nodes="sample.nodes" :status-date="statusDate" current-release /></div>
+    <div class="container home-sample"><span v-if="citation" class="home-citation">{{ citation }}</span><ResultCard v-if="sample.hits?.[0]" :hit="sample.hits[0]" :documents="sample.documents" :nodes="sample.nodes" :status-date="statusDate" current-release /></div>
     <section class="home-explanation" aria-labelledby="home-sample-title"><div class="container">
       <h2 id="home-sample-title">{{ labels.sampleTitle.replace('{date}', formatDate(sampleDate, language)) }}</h2><p>{{ labels.sampleText }}</p><ul><li>{{ labels.check1 }}</li><li v-if="citation">{{ labels.check2.replace('{citation}', citation) }}</li><li v-if="hasSource">{{ labels.check3 }}</li></ul>
     </div></section>

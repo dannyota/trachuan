@@ -28,6 +28,7 @@ async function render() {
 it('describes the actual sample citation and its source', async () => {
   const wrapper = await render()
   expect(wrapper.get('.home-explanation ul').text()).toContain('Điều 19 Luật 91/2025/QH15')
+  expect(wrapper.get('.home-citation').text()).toBe('Điều 19 Luật 91/2025/QH15')
   expect(wrapper.get('.home-explanation ul').text()).toContain('Liên kết về bản gốc, khi nguồn có công bố.')
 })
 
