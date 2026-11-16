@@ -7,8 +7,9 @@ and caching: [web](web.md). Voice for every title and description:
 ## Indexable routes
 
 The six fixed URLs `/`, `/vn/topics`, `/connect`, `/sources`, `/privacy` and
-`/terms`, and `/vn/topics/{code}` for every served code, are indexable. Nothing
-else is.
+`/terms`, `/vn/topics/{code}` for every served code, and, while document
+summaries are available, every `/vn/documents/{key}/summary` whose `index` is
+true, are indexable. Nothing else is.
 
 | Route                                                               | Index                                                | Sitemap | How it stays out                                                                         |
 | ------------------------------------------------------------------- | ---------------------------------------------------- | ------- | ---------------------------------------------------------------------------------------- |
@@ -97,11 +98,13 @@ Every indexable page has, in the rendered language:
   `og:image:height` 630 and `og:image:alt`;
 - `twitter:card` summary_large_image.
 
-Every other page carries a site-level fallback, so a shared link still shows a
-preview: `og:site_name` Tra Chuẩn, `og:title` "Tra Chuẩn", the same `og:image`
-with its size and alt, `twitter:card`, and `og:locale` from the rendered
-language. It has no description, no `og:description`, no canonical and no
-`og:url`. Indexable pages override the fallback with their own tags.
+Every other page that Nuxt renders, search and the reader included, carries a
+site-level fallback, so a shared link still shows a preview: `og:site_name` Tra
+Chuẩn, `og:title` "Tra Chuẩn", the same `og:image` with its size and alt,
+`twitter:card`, and `og:locale` from the rendered language. It has no
+description, no `og:description`, no canonical and no `og:url`. Indexable pages
+override the fallback with their own tags. The static 404 and unavailable
+documents carry no preview tags.
 
 | Path                | Title vi                                          | Description vi                                                                                                                                    |
 | ------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -192,10 +195,11 @@ Cloudflare that stays in place
 imports the site into Bing Webmaster Tools
 ([Bing](https://www.bing.com/webmasters/help/add-and-verify-site-12184f8b)), and
 submits the sitemap. No third-party script runs. Monthly: page indexing (fixed
-URLs and topics indexed, account pages excluded by noindex, search and document
-URLs not indexed, nothing "indexed, though blocked by robots.txt"), sitemap
-processing, queries for the brand, topic names and document numbers, and whether
-answer engines cite trachuan.vn, checked by hand.
+URLs, topics and summaries with `index` true indexed, other summaries and the
+account pages excluded by noindex, search and reader URLs not indexed, nothing
+"indexed, though blocked by robots.txt"), sitemap processing, queries for the
+brand, topic names and document numbers, and whether answer engines cite
+trachuan.vn, checked by hand.
 
 ## Tests
 
@@ -206,8 +210,9 @@ answer engines cite trachuan.vn, checked by hand.
 - Head tags, for every indexable route in both languages: one canonical,
   absolute, https, no query; `og:url` equal to it; `og:locale` matching the
   language; title and description within their limits after NFC; `og:image`
-  absolute with width, height and alt. Every other page carries the site-level
-  fallback and no description, canonical or `og:url`.
+  absolute with width, height and alt. Every other page Nuxt renders carries the
+  site-level fallback and no description, canonical or `og:url`; the static 404
+  and unavailable documents are unchanged.
 - JSON-LD: parses; the expected types; no legal-force or status property; a
   fixture title containing `</script><script>alert(1)</script>` stays inside one
   block in the server-rendered response and parses back unchanged.
