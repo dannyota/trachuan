@@ -8,15 +8,16 @@ import (
 )
 
 type Recipe struct {
-	Version       int    `json:"version"`
-	Model         string `json:"model"`
-	Effort        string `json:"effort"`
-	MaxTokens     int64  `json:"max_tokens"`
-	InputBound    int64  `json:"input_bound"`
-	F             int    `json:"families"`
-	PromptVersion int    `json:"prompt_version"`
-	SchemaVersion int    `json:"schema_version"`
-	TaxonomyHash  string `json:"taxonomy_hash"`
+	Version       int            `json:"version"`
+	Model         string         `json:"model"`
+	Effort        string         `json:"effort"`
+	MaxTokens     int64          `json:"max_tokens"`
+	InputBound    int64          `json:"input_bound"`
+	F             int            `json:"families"`
+	PromptVersion int            `json:"prompt_version"`
+	SchemaVersion int            `json:"schema_version"`
+	TaxonomyHash  string         `json:"taxonomy_hash"`
+	Article       *ArticleRecipe `json:"article,omitempty"`
 }
 
 func NewRecipe(model, taxonomyHash string) (Recipe, error) {
@@ -38,6 +39,11 @@ func (r Recipe) Validate() error {
 	if err != nil || len(h) != 32 {
 		return fmt.Errorf("invalid taxonomy hash")
 	}
+	if r.Article != nil {
+		if err := r.validateArticle(); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -58,7 +64,7 @@ func (r Recipe) Reserve(input int64) (int64, error) {
 	if input < 1 || input > r.InputBound {
 		return 0, fmt.Errorf("counted input exceeds classification recipe bound or is empty")
 	}
-	return r.cost(input, r.MaxTokens), nil
+	return r.cost(input, r.outputTokens()), nil
 }
 
 func (r Recipe) cost(input, output int64) int64 {

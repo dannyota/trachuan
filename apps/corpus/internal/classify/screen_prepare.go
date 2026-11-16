@@ -15,6 +15,9 @@ type screenBatch struct {
 }
 
 func (r *Runner) prepareScreenBatch(ctx context.Context, o Options, docs []Document, families []Family) (*screenBatch, error) {
+	if o.article != nil {
+		return r.prepareArticleBatch(ctx, o)
+	}
 	var summary Summary
 	selected, err := draw(docs, o.Documents, o.Seed)
 	if err != nil {

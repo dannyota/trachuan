@@ -130,6 +130,9 @@ func (r *Runner) restoreReceipt(s *Submission) (bool, error) {
 }
 
 func writeFamilies(dir string, s Submission) error {
+	if s.Recipe.Article != nil {
+		return writeArticles(dir, s)
+	}
 	artifact := struct {
 		Version      int                `json:"version"`
 		RecipeHash   string             `json:"recipe_hash"`

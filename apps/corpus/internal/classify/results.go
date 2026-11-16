@@ -128,7 +128,7 @@ func apply(s *Submission, results []batchapi.Result) error {
 		case "succeeded":
 			m := v.Message
 			u := m.Usage
-			if !u.JSON.InputTokens.Valid() || !u.JSON.OutputTokens.Valid() || u.InputTokens < 0 || u.OutputTokens < 0 || u.InputTokens > 100000 || u.OutputTokens > s.Recipe.MaxTokens || u.CacheReadInputTokens != 0 || u.CacheCreationInputTokens != 0 {
+			if !u.JSON.InputTokens.Valid() || !u.JSON.OutputTokens.Valid() || u.InputTokens < 0 || u.OutputTokens < 0 || u.InputTokens > 100000 || u.OutputTokens > s.Recipe.outputTokens() || u.CacheReadInputTokens != 0 || u.CacheCreationInputTokens != 0 {
 				return fmt.Errorf("classification usage is incomplete or outside verified pricing; reservation retained")
 			}
 			input += u.InputTokens
@@ -139,7 +139,14 @@ func apply(s *Submission, results []batchapi.Result) error {
 					text += content.Text
 				}
 			}
-			out = Validate(string(m.StopReason), text, s.Recipe.F, s.Families)
+			if s.Recipe.Article != nil {
+				if item.Article == nil {
+					return fmt.Errorf("article submission is missing request evidence; reservation retained")
+				}
+				out.Articles, out.DroppedAnchors = ValidateArticles(string(m.StopReason), text, *item.Article, item.Article.Nodes)
+			} else {
+				out = Validate(string(m.StopReason), text, s.Recipe.F, s.Families)
+			}
 		case "errored", "expired", "canceled":
 		default:
 			return fmt.Errorf("unknown classification result type; reservation retained")

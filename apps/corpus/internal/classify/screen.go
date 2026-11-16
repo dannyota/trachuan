@@ -27,6 +27,9 @@ func draw(docs []Document, n int, seed int64) ([]Document, error) {
 }
 
 func screenHash(o Options) string {
+	if o.article != nil {
+		return articleWorkHash(o)
+	}
 	b, _ := json.Marshal(struct {
 		RunID            int64
 		Country, Release string
@@ -169,6 +172,9 @@ func (r *Runner) screen(ctx context.Context, o Options, docs []Document, familie
 	}
 	if !summary.Admitted {
 		return summary, fmt.Errorf("classification batch refused by %s budget", o.Budget)
+	}
+	if len(requests) == 0 {
+		return summary, writeArticles(o.Out, s)
 	}
 	if s.ID, err = newID(); err != nil {
 		return summary, err
