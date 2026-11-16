@@ -98,16 +98,17 @@ under the corpus rules.
    for articles that hold no seed or inherited node:
    - One request per document (title, scope article, table of contents, VBPL
      field) returns a set of at most `F` active level-2 codes, `F` set in the
-     classification recipe and enforced by the output schema; a code that is not
-     an active level-2 node is dropped and counted. The result is not an
-     assignment: it is given as document context to every article request of
-     that document and fixes those articles' allowed codes. A document whose
-     request fails or keeps no code yields no LLM assignment for its articles
-     and gap `unassigned` with detail `invalid_response` or `no_family`. The
-     classification artifact keeps each document's validated codes and outcome,
-     hashed with the classification recipe and the taxonomy; evaluation reads
-     family recall from it and counts an article of a failed or empty document
-     as a miss.
+     classification recipe and stated in the prompt; structured outputs cannot
+     bound an array's length, so a response with more than `F` codes is
+     `invalid_response`, and a code that is not an active level-2 node is
+     dropped and counted. The result is not an assignment: it is given as
+     document context to every article request of that document and fixes those
+     articles' allowed codes. A document whose request fails or keeps no code
+     yields no LLM assignment for its articles and gap `unassigned` with detail
+     `invalid_response` or `no_family`. The classification artifact keeps each
+     document's validated codes and outcome, hashed with the classification
+     recipe and the taxonomy; evaluation reads family recall from it and counts
+     an article of a failed or empty document as a miss.
    - One request per chapter with all its articles yields assignments for each
      article; a document without chapters is split into groups of up to 12
      articles in document order. The classification recipe sets a maximum input
