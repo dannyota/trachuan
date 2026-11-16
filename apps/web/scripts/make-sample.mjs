@@ -6,7 +6,7 @@ const repoRoot = new URL('../../../', import.meta.url)
 const defaultOutput = fileURLToPath(new URL('../app/data/', import.meta.url))
 const output = resolve(process.env.TRACHUAN_SAMPLE_DIR || defaultOutput)
 const cases = JSON.parse(await readFile(new URL('apps/corpus/internal/evaluation/testdata/vn/legacy.json', repoRoot), 'utf8'))
-const chosen = cases.find(item => item.id === 'atttt-50-2024')
+const chosen = cases.find(item => item.id === 'pdpl-consent-91-2025')
 const base = process.env.TRACHUAN_URL
 const token = process.env.TRACHUAN_TOKEN
 if (!base || !token || !chosen) throw new Error('Sample input is unavailable')

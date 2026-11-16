@@ -1,205 +1,38 @@
 {
   "abstain": false,
   "documents": {
-    "vn:vbpl:127395": {
-      "effective_from": "2018-03-01",
-      "issued": "2017-12-19",
-      "issuer": "Bộ Tài chính",
-      "number": "134/2017/TT-BTC",
-      "related": [
-        {
-          "dir": "out",
-          "in_release": true,
-          "key": "vn:vbpl:57250",
-          "kind": "replaces",
-          "number": "87/2013/TT-BTC"
-        },
-        {
-          "dir": "in",
-          "in_release": true,
-          "key": "vn:vbpl:144570",
-          "kind": "amends_supplements",
-          "number": "73/2020/TT-BTC"
-        },
-        {
-          "dir": "in",
-          "in_release": true,
-          "key": "vn:vbpl:146302",
-          "kind": "consolidates",
-          "number": "37/VBHN-BTC"
-        },
-        {
-          "dir": "out",
-          "in_release": true,
-          "key": "vn:vbpl:123330",
-          "kind": "legal_basis",
-          "number": "87/2017/NĐ-CP"
-        },
-        {
-          "dir": "out",
-          "in_release": true,
-          "key": "vn:vbpl:115470",
-          "kind": "legal_basis",
-          "number": "156/2016/NĐ-CP"
-        }
-      ],
-      "related_counts": {
-        "in:amends_supplements": 1,
-        "in:consolidates": 1,
-        "out:legal_basis": 11,
-        "out:replaces": 1
-      },
-      "status": {
-        "basis": "source_status",
-        "class": "in_force",
-        "current": true,
-        "status_basis": "source_status"
-      },
-      "text_complete": true,
-      "text_source": "source_tree",
-      "title": "Thông tư số 134/2017/TT-BTC Hướng dẫn giao dịch điện tử trên thị trường chứng khoán",
-      "type": "Thông tư"
-    },
-    "vn:vbpl:130985": {
-      "effective_from": "2018-11-01",
-      "issued": "2018-09-11",
+    "vn:vbpl:161106": {
+      "effective_from": "2023-07-01",
+      "effective_to": "2026-01-01",
+      "issued": "2023-04-17",
       "issuer": "Chính phủ",
-      "number": "117/2018/NĐ-CP",
-      "related": [
-        {
-          "dir": "out",
-          "in_release": true,
-          "key": "vn:vbpl:5917",
-          "kind": "replaces",
-          "number": "70/2000/NĐ-CP"
-        },
-        {
-          "dir": "in",
-          "in_release": true,
-          "key": "vn:vbpl:132734",
-          "kind": "legal_basis",
-          "number": "35/2018/TT-NHNN"
-        },
-        {
-          "dir": "out",
-          "in_release": true,
-          "key": "vn:vbpl:126820",
-          "kind": "legal_basis",
-          "number": "17/2017/QH14"
-        },
-        {
-          "dir": "out",
-          "in_release": true,
-          "key": "vn:vbpl:70821",
-          "kind": "legal_basis",
-          "number": "76/2015/QH13"
-        },
-        {
-          "dir": "out",
-          "in_release": true,
-          "key": "vn:vbpl:27704",
-          "kind": "legal_basis",
-          "number": "06/2012/QH13"
-        }
+      "nodes": [
+        "1.11.c4",
+        "1.11.c1",
+        "1.11.c7"
       ],
-      "related_counts": {
-        "in:legal_basis": 1,
-        "out:legal_basis": 4,
-        "out:replaces": 1
-      },
-      "status": {
-        "basis": "source_status",
-        "class": "in_force",
-        "current": true,
-        "status_basis": "source_status"
-      },
-      "text_complete": true,
-      "text_source": "source_tree",
-      "title": "Nghị định số 117/2018/NĐ-CP Về việc giữ bí mật, cung cấp thông tin khách hành của tổ chức tín dụng, chi nhánh ngân hàng nước ngoài",
-      "type": "Nghị định"
-    },
-    "vn:vbpl:138989": {
-      "effective_from": "2020-01-01",
-      "issued": "2019-11-15",
-      "issuer": "Ngân hàng Nhà nước Việt Nam",
-      "number": "22/2019/TT-NHNN",
-      "related": [
-        {
-          "dir": "out",
-          "in_release": true,
-          "key": "vn:vbpl:137326",
-          "kind": "repeals",
-          "number": "13/2019/TT-NHNN"
-        },
-        {
-          "dir": "out",
-          "in_release": true,
-          "key": "vn:vbpl:130018",
-          "kind": "repeals",
-          "number": "16/2018/TT-NHNN"
-        },
-        {
-          "dir": "out",
-          "in_release": true,
-          "key": "vn:vbpl:126732",
-          "kind": "repeals",
-          "number": "19/2017/TT-NHNN"
-        },
-        {
-          "dir": "out",
-          "in_release": true,
-          "key": "vn:vbpl:104204",
-          "kind": "replaces",
-          "number": "06/2016/TT-NHNN"
-        },
-        {
-          "dir": "out",
-          "in_release": true,
-          "key": "vn:vbpl:38214",
-          "kind": "replaces",
-          "number": "36/2014/TT-NHNN"
-        }
-      ],
-      "related_counts": {
-        "in:amends_supplements": 5,
-        "in:consolidates": 6,
-        "in:legal_basis": 1,
-        "out:amends_supplements": 1,
-        "out:implements": 2,
-        "out:legal_basis": 4,
-        "out:repeals": 3,
-        "out:replaces": 2
-      },
-      "status": {
-        "basis": "source_status",
-        "class": "partial",
-        "current": true,
-        "status_basis": "source_status"
-      },
-      "text_complete": true,
-      "text_source": "source_tree",
-      "title": "Thông tư số 22/2019/TT-NHNN Quy định các giới hạn, tỷ lệ bảo đảm an toàn trong hoạt động của\nngân hàng, chi nhánh ngân hàng nước ngoài",
-      "type": "Thông tư"
-    },
-    "vn:vbpl:144532": {
-      "effective_from": "2021-01-01",
-      "issued": "2020-10-21",
-      "issuer": "Ngân hàng Nhà nước Việt Nam",
-      "number": "09/2020/TT-NHNN",
+      "number": "13/2023/NĐ-CP",
       "related": [
         {
           "dir": "in",
           "in_release": true,
-          "key": "vn:vbpl:171687",
-          "kind": "repeals",
-          "number": "50/2024/TT-NHNN"
+          "key": "vn:vbpl:187276",
+          "kind": "replaces",
+          "number": "356/2025/NĐ-CP"
+        },
+        {
+          "dir": "in",
+          "in_release": true,
+          "key": "vn:vbpl:174547",
+          "kind": "legal_basis",
+          "number": "64/2024/TT-NHNN"
         },
         {
           "dir": "out",
           "in_release": true,
-          "key": "vn:vbpl:130588",
-          "kind": "replaces",
-          "number": "18/2018/TT-NHNN"
+          "key": "vn:vbpl:139878",
+          "kind": "legal_basis",
+          "number": "47/2019/QH14"
         },
         {
           "dir": "out",
@@ -211,244 +44,47 @@
         {
           "dir": "out",
           "in_release": true,
-          "key": "vn:vbpl:126820",
+          "key": "vn:vbpl:95942",
           "kind": "legal_basis",
-          "number": "17/2017/QH14"
-        },
+          "number": "91/2015/QH13"
+        }
+      ],
+      "related_counts": {
+        "in:legal_basis": 1,
+        "in:replaces": 1,
+        "out:legal_basis": 5
+      },
+      "source_url": "https://vbpl.vn/van-ban/chi-tiet/161106",
+      "status": {
+        "basis": "source_status",
+        "class": "expired",
+        "current": false,
+        "status_basis": "source_status"
+      },
+      "text_complete": true,
+      "text_source": "source_tree",
+      "title": "Nghị định số 13/2023/NĐ-CP Bảo vệ dữ liệu cá nhân",
+      "type": "Nghị định"
+    },
+    "vn:vbpl:174547": {
+      "effective_from": "2025-03-01",
+      "issued": "2024-12-31",
+      "issuer": "Ngân hàng Nhà nước Việt Nam",
+      "number": "64/2024/TT-NHNN",
+      "related": [
         {
           "dir": "out",
           "in_release": true,
-          "key": "vn:vbpl:118609",
+          "key": "vn:vbpl:171352",
           "kind": "legal_basis",
-          "number": "16/2017/NĐ-CP"
-        }
-      ],
-      "related_counts": {
-        "in:repeals": 1,
-        "out:legal_basis": 9,
-        "out:replaces": 1
-      },
-      "status": {
-        "basis": "source_status",
-        "class": "partial",
-        "current": true,
-        "status_basis": "source_status"
-      },
-      "text_complete": true,
-      "text_source": "source_tree",
-      "title": "Thông tư số 09/2020/TT-NHNN Quy định về an toàn hệ thống thông tin trong hoạt động ngân hàng",
-      "type": "Thông tư"
-    },
-    "vn:vbpl:145859": {
-      "effective_from": "2021-02-14",
-      "issued": "2020-12-31",
-      "issuer": "Ngân hàng Nhà nước Việt Nam",
-      "number": "23/2020/TT-NHNN",
-      "related": [
-        {
-          "dir": "out",
-          "in_release": true,
-          "key": "vn:vbpl:137326",
-          "kind": "replaces",
-          "number": "13/2019/TT-NHNN"
+          "number": "146/2024/NĐ-CP"
         },
         {
           "dir": "out",
           "in_release": true,
-          "key": "vn:vbpl:130018",
-          "kind": "replaces",
-          "number": "16/2018/TT-NHNN"
-        },
-        {
-          "dir": "out",
-          "in_release": true,
-          "key": "vn:vbpl:126732",
-          "kind": "replaces",
-          "number": "19/2017/TT-NHNN"
-        },
-        {
-          "dir": "out",
-          "in_release": true,
-          "key": "vn:vbpl:104204",
-          "kind": "replaces",
-          "number": "06/2016/TT-NHNN"
-        },
-        {
-          "dir": "out",
-          "in_release": true,
-          "key": "vn:vbpl:38214",
-          "kind": "replaces",
-          "number": "36/2014/TT-NHNN"
-        }
-      ],
-      "related_counts": {
-        "in:amends_supplements": 1,
-        "in:consolidates": 1,
-        "out:legal_basis": 6,
-        "out:replaces": 5
-      },
-      "status": {
-        "basis": "source_status",
-        "class": "partial",
-        "current": true,
-        "status_basis": "source_status"
-      },
-      "text_complete": true,
-      "text_source": "source_tree",
-      "title": "Thông tư số 23/2020/TT-NHNN Quy định các giới hạn, tỷ lệ bảo đảm an toàn trong hoạt động của\ntổ chức tín dụng phi ngân hàng",
-      "type": "Thông tư"
-    },
-    "vn:vbpl:160901": {
-      "effective_from": "2023-09-01",
-      "issued": "2023-06-28",
-      "issuer": "Ngân hàng Nhà nước Việt Nam",
-      "number": "06/2023/TT-NHNN",
-      "related": [
-        {
-          "dir": "in",
-          "in_release": true,
-          "key": "vn:vbpl:03a52e90-84da-11f1-bb78-cf3252a415e6",
-          "kind": "repeals",
-          "number": "29/2026/TT-NHNN"
-        },
-        {
-          "dir": "in",
-          "in_release": true,
-          "key": "vn:vbpl:167991",
-          "kind": "repeals",
-          "number": "12/2024/TT-NHNN"
-        },
-        {
-          "dir": "out",
-          "in_release": true,
-          "key": "vn:vbpl:118230",
-          "kind": "amends_supplements",
-          "number": "39/2016/TT-NHNN"
-        },
-        {
-          "dir": "in",
-          "in_release": true,
-          "key": "vn:vbpl:164710",
-          "kind": "consolidates",
-          "number": "18/VBHN-NHNN"
-        },
-        {
-          "dir": "out",
-          "in_release": true,
-          "key": "vn:vbpl:157663",
+          "key": "vn:vbpl:167087",
           "kind": "legal_basis",
-          "number": "102/2022/NĐ-CP"
-        }
-      ],
-      "related_counts": {
-        "in:consolidates": 1,
-        "in:repeals": 2,
-        "out:amends_supplements": 1,
-        "out:legal_basis": 4
-      },
-      "status": {
-        "basis": "source_status",
-        "class": "partial",
-        "current": true,
-        "status_basis": "source_status"
-      },
-      "text_complete": true,
-      "text_source": "source_tree",
-      "title": "Thông tư số 06/2023/TT-NHNN Sửa đổi, bổ sung một số điều của Thông tư số 39/2016/TT-NHNN \nngày 30 tháng 12 năm 2016 của Thống đốc Ngân hàng Nhà nước\nViệt Nam quy định về hoạt động cho vay của tổ chức tín dụng,\nchi nhánh ngân hàng nước ngoài đối với khách hàng",
-      "type": "Thông tư"
-    },
-    "vn:vbpl:168578": {
-      "effective_from": "2024-07-17",
-      "issued": "2024-07-17",
-      "issuer": "Ngân hàng Nhà nước Việt Nam",
-      "number": "40/2024/TT-NHNN",
-      "related": [
-        {
-          "dir": "out",
-          "in_release": true,
-          "key": "vn:vbpl:139072",
-          "kind": "replaces",
-          "number": "23/2019/TT-NHNN"
-        },
-        {
-          "dir": "out",
-          "in_release": true,
-          "key": "vn:vbpl:44361",
-          "kind": "replaces",
-          "number": "39/2014/TT-NHNN"
-        },
-        {
-          "dir": "in",
-          "in_release": true,
-          "key": "vn:vbpl:183319",
-          "kind": "amends_supplements",
-          "number": "41/2025/TT-NHNN"
-        },
-        {
-          "dir": "in",
-          "in_release": true,
-          "key": "vn:vbpl:e1ff68d0-73ab-11f1-8703-2379f653f630",
-          "kind": "consolidates",
-          "number": "76/VBHN-NHNN"
-        },
-        {
-          "dir": "in",
-          "in_release": true,
-          "key": "vn:vbpl:186078",
-          "kind": "consolidates",
-          "number": "29/VBHN-NHNN"
-        }
-      ],
-      "related_counts": {
-        "in:amends_supplements": 1,
-        "in:consolidates": 2,
-        "out:legal_basis": 4,
-        "out:replaces": 2
-      },
-      "status": {
-        "basis": "source_status",
-        "class": "partial",
-        "current": true,
-        "status_basis": "source_status"
-      },
-      "text_complete": true,
-      "text_source": "source_tree",
-      "title": "Thông tư số 40/2024/TT-NHNN Quy định về hoạt động cung ứng dịch vụ trung gian thanh toán",
-      "type": "Thông tư"
-    },
-    "vn:vbpl:171687": {
-      "effective_from": "2025-01-01",
-      "issued": "2024-10-31",
-      "issuer": "Ngân hàng Nhà nước Việt Nam",
-      "number": "50/2024/TT-NHNN",
-      "related": [
-        {
-          "dir": "out",
-          "in_release": true,
-          "key": "vn:vbpl:144532",
-          "kind": "repeals",
-          "number": "09/2020/TT-NHNN"
-        },
-        {
-          "dir": "out",
-          "in_release": true,
-          "key": "vn:vbpl:132734",
-          "kind": "replaces",
-          "number": "35/2018/TT-NHNN"
-        },
-        {
-          "dir": "out",
-          "in_release": true,
-          "key": "vn:vbpl:117031",
-          "kind": "replaces",
-          "number": "35/2016/TT-NHNN"
-        },
-        {
-          "dir": "in",
-          "in_release": true,
-          "key": "vn:vbpl:186058",
-          "kind": "amends_supplements",
-          "number": "77/2025/TT-NHNN"
+          "number": "52/2024/NĐ-CP"
         },
         {
           "dir": "out",
@@ -456,37 +92,123 @@
           "key": "vn:vbpl:166170",
           "kind": "legal_basis",
           "number": "32/2024/QH15"
+        },
+        {
+          "dir": "out",
+          "in_release": true,
+          "key": "vn:vbpl:165913",
+          "kind": "legal_basis",
+          "number": "20/2023/QH15"
+        },
+        {
+          "dir": "out",
+          "in_release": true,
+          "key": "vn:vbpl:161106",
+          "kind": "legal_basis",
+          "number": "13/2023/NĐ-CP"
         }
       ],
       "related_counts": {
-        "in:amends_supplements": 1,
-        "out:legal_basis": 6,
-        "out:repeals": 1,
-        "out:replaces": 2
+        "out:legal_basis": 8
       },
+      "source_url": "https://vbpl.vn/van-ban/chi-tiet/174547",
       "status": {
         "basis": "source_status",
-        "class": "partial",
+        "class": "in_force",
         "current": true,
         "status_basis": "source_status"
       },
       "text_complete": true,
       "text_source": "source_tree",
-      "title": "Thông tư số 50/2024/TT-NHNN Quy định về an toàn, bảo mật cho việc cung cấp dịch vụ trực tuyến trong ngành Ngân hàng",
+      "title": "Thông tư số 64/2024/TT-NHNN Quy định về triển khai giao diện lập trình ứng dụng mở trong ngành Ngân hàng",
       "type": "Thông tư"
     },
-    "vn:vbpl:185857": {
-      "effective_from": "2026-01-01",
-      "issued": "2025-12-31",
-      "issuer": "Chính phủ",
-      "number": "368/2025/NĐ-CP",
+    "vn:vbpl:174877": {
+      "effective_from": "2025-07-01",
+      "issued": "2024-11-30",
+      "issuer": "Quốc hội",
+      "number": "60/2024/QH15",
       "related": [
         {
           "dir": "out",
           "in_release": true,
-          "key": "vn:vbpl:179292",
+          "key": "vn:vbpl:165913",
+          "kind": "amends_supplements",
+          "number": "20/2023/QH15"
+        },
+        {
+          "dir": "in",
+          "in_release": true,
+          "key": "vn:vbpl:179833",
+          "kind": "consolidates",
+          "number": "42/VBHN-VPQH"
+        },
+        {
+          "dir": "in",
+          "in_release": true,
+          "key": "vn:vbpl:187318",
+          "kind": "consolidates",
+          "number": "42/VBHN-VPQH"
+        },
+        {
+          "dir": "in",
+          "in_release": true,
+          "key": "vn:vbpl:d9923c00-ddb3-11f1-a2e0-1f68672b5b6e",
           "kind": "legal_basis",
-          "number": "96/2025/QH15"
+          "number": "177/2026/TT-BQP"
+        },
+        {
+          "dir": "in",
+          "in_release": true,
+          "key": "vn:vbpl:16c868e0-c30d-11f1-bd4a-63b5238d0b1c",
+          "kind": "legal_basis",
+          "number": "154/2026/TT-BCA"
+        }
+      ],
+      "related_counts": {
+        "in:consolidates": 2,
+        "in:legal_basis": 10,
+        "out:amends_supplements": 1,
+        "out:legal_basis": 1
+      },
+      "source_url": "https://vbpl.vn/van-ban/chi-tiet/174877",
+      "status": {
+        "basis": "source_status",
+        "class": "in_force",
+        "current": true,
+        "status_basis": "source_status"
+      },
+      "text_complete": false,
+      "text_source": "source_tree",
+      "title": "Luật Dữ liệu số 60/2024/QH15",
+      "type": "Luật"
+    },
+    "vn:vbpl:179108": {
+      "effective_from": "2025-07-01",
+      "issued": "2025-06-30",
+      "issuer": "Chính phủ",
+      "number": "165/2025/NĐ-CP",
+      "related": [
+        {
+          "dir": "in",
+          "in_release": true,
+          "key": "vn:vbpl:187276",
+          "kind": "amends_supplements",
+          "number": "356/2025/NĐ-CP"
+        },
+        {
+          "dir": "in",
+          "in_release": true,
+          "key": "vn:vbpl:183655",
+          "kind": "amends_supplements",
+          "number": "278/2025/NĐ-CP"
+        },
+        {
+          "dir": "in",
+          "in_release": true,
+          "key": "vn:vbpl:179196",
+          "kind": "legal_basis",
+          "number": "20/2025/QĐ-TTg"
         },
         {
           "dir": "out",
@@ -498,28 +220,17 @@
         {
           "dir": "out",
           "in_release": true,
-          "key": "vn:vbpl:166170",
+          "key": "vn:vbpl:174877",
           "kind": "legal_basis",
-          "number": "32/2024/QH15"
-        },
-        {
-          "dir": "out",
-          "in_release": true,
-          "key": "vn:vbpl:165912",
-          "kind": "legal_basis",
-          "number": "24/2023/QH15"
-        },
-        {
-          "dir": "out",
-          "in_release": true,
-          "key": "vn:vbpl:157721",
-          "kind": "legal_basis",
-          "number": "14/2022/QH15"
+          "number": "60/2024/QH15"
         }
       ],
       "related_counts": {
-        "out:legal_basis": 7
+        "in:amends_supplements": 2,
+        "in:legal_basis": 1,
+        "out:legal_basis": 2
       },
+      "source_url": "https://vbpl.vn/van-ban/chi-tiet/179108",
       "status": {
         "basis": "source_status",
         "class": "in_force",
@@ -528,8 +239,126 @@
       },
       "text_complete": true,
       "text_source": "source_tree",
-      "title": "Nghị định số 368/2025/NĐ-CP Quy định về hoạt động cung ứng dịch vụ Tiền di động",
+      "title": "Nghị định số 165/2025/NĐ-CP Quy định chi tiết một số điều và biện pháp thi hành Luật Dữ liệu",
       "type": "Nghị định"
+    },
+    "vn:vbpl:179252": {
+      "effective_from": "2026-01-01",
+      "issued": "2025-06-26",
+      "issuer": "Quốc hội",
+      "number": "91/2025/QH15",
+      "related": [
+        {
+          "dir": "in",
+          "in_release": true,
+          "key": "vn:vbpl:187276",
+          "kind": "implements",
+          "number": "356/2025/NĐ-CP"
+        },
+        {
+          "dir": "in",
+          "in_release": true,
+          "key": "vn:vbpl:d9923c00-ddb3-11f1-a2e0-1f68672b5b6e",
+          "kind": "legal_basis",
+          "number": "177/2026/TT-BQP"
+        },
+        {
+          "dir": "in",
+          "in_release": true,
+          "key": "vn:vbpl:16c868e0-c30d-11f1-bd4a-63b5238d0b1c",
+          "kind": "legal_basis",
+          "number": "154/2026/TT-BCA"
+        },
+        {
+          "dir": "in",
+          "in_release": true,
+          "key": "vn:vbpl:90bd5de0-c524-11f1-86ef-85b9f675c340",
+          "kind": "legal_basis",
+          "number": "330/2026/NĐ-CP"
+        },
+        {
+          "dir": "in",
+          "in_release": true,
+          "key": "vn:vbpl:6538c270-83f9-11f1-bdde-91b39b676347",
+          "kind": "legal_basis",
+          "number": "117/2026/TT-BCA"
+        }
+      ],
+      "related_counts": {
+        "in:implements": 1,
+        "in:legal_basis": 5,
+        "out:legal_basis": 1
+      },
+      "source_url": "https://vbpl.vn/van-ban/chi-tiet/179252",
+      "status": {
+        "basis": "source_status",
+        "class": "in_force",
+        "current": true,
+        "status_basis": "source_status"
+      },
+      "text_complete": true,
+      "text_source": "source_tree",
+      "title": "Luật Bảo vệ dữ liệu cá nhân số 91/2025/QH15",
+      "type": "Luật"
+    },
+    "vn:vbpl:183838": {
+      "effective_from": "2026-01-05",
+      "issued": "2025-11-19",
+      "issuer": "Ngân hàng Nhà nước Việt Nam",
+      "number": "45/2025/TT-NHNN",
+      "related": [
+        {
+          "dir": "out",
+          "in_release": true,
+          "key": "vn:vbpl:168279",
+          "kind": "amends_supplements",
+          "number": "18/2024/TT-NHNN"
+        },
+        {
+          "dir": "in",
+          "in_release": true,
+          "key": "vn:vbpl:186079",
+          "kind": "consolidates",
+          "number": "30/VBHN-NHNN"
+        },
+        {
+          "dir": "out",
+          "in_release": true,
+          "key": "vn:vbpl:179292",
+          "kind": "legal_basis",
+          "number": "96/2025/QH15"
+        },
+        {
+          "dir": "out",
+          "in_release": true,
+          "key": "vn:vbpl:175337",
+          "kind": "legal_basis",
+          "number": "26/2025/NĐ-CP"
+        },
+        {
+          "dir": "out",
+          "in_release": true,
+          "key": "vn:vbpl:168279",
+          "kind": "legal_basis",
+          "number": "18/2024/TT-NHNN"
+        }
+      ],
+      "related_counts": {
+        "in:consolidates": 1,
+        "out:amends_supplements": 1,
+        "out:legal_basis": 8
+      },
+      "source_url": "https://vbpl.vn/van-ban/chi-tiet/183838",
+      "status": {
+        "basis": "source_status",
+        "class": "in_force",
+        "current": true,
+        "status_basis": "source_status"
+      },
+      "text_complete": true,
+      "text_source": "source_tree",
+      "title": "Thông tư số 45/2025/TT-NHNN sửa đổi, bổ sung một số điều của Thông tư số 18/2025/TT-NHNN quy định về hoạt động thẻ ngân hàng",
+      "type": "Thông tư"
     },
     "vn:vbpl:186058": {
       "effective_from": "2025-03-01",
@@ -577,6 +406,67 @@
         "out:amends_supplements": 1,
         "out:legal_basis": 6
       },
+      "source_url": "https://vbpl.vn/van-ban/chi-tiet/186058",
+      "status": {
+        "basis": "source_status",
+        "class": "in_force",
+        "current": true,
+        "status_basis": "source_status"
+      },
+      "text_complete": false,
+      "text_source": "html_transcription",
+      "title": "Thông tư số 77/2025/TT-NHNN Sửa đổi, bổ sung một số điều của Thông tư số 50/2024/TT-NHNN của Thống đốc Ngân hàng Nhà nước Việt Nam quy định về an toàn, bảo mật cho việc cung cấp dịch vụ trực tuyến trong ngành Ngân hàng",
+      "type": "Thông tư"
+    },
+    "vn:vbpl:187276": {
+      "effective_from": "2026-01-01",
+      "issued": "2025-12-31",
+      "issuer": "Chính phủ",
+      "number": "356/2025/NĐ-CP",
+      "related": [
+        {
+          "dir": "out",
+          "in_release": true,
+          "key": "vn:vbpl:161106",
+          "kind": "replaces",
+          "number": "13/2023/NĐ-CP"
+        },
+        {
+          "dir": "out",
+          "in_release": true,
+          "key": "vn:vbpl:179108",
+          "kind": "amends_supplements",
+          "number": "165/2025/NĐ-CP"
+        },
+        {
+          "dir": "out",
+          "in_release": true,
+          "key": "vn:vbpl:179252",
+          "kind": "implements",
+          "number": "91/2025/QH15"
+        },
+        {
+          "dir": "out",
+          "in_release": true,
+          "key": "vn:vbpl:179252",
+          "kind": "legal_basis",
+          "number": "91/2025/QH15"
+        },
+        {
+          "dir": "out",
+          "in_release": true,
+          "key": "vn:vbpl:179382",
+          "kind": "legal_basis",
+          "number": "90/2025/QH15"
+        }
+      ],
+      "related_counts": {
+        "out:amends_supplements": 1,
+        "out:implements": 1,
+        "out:legal_basis": 4,
+        "out:replaces": 1
+      },
+      "source_url": "https://vbpl.vn/van-ban/chi-tiet/187276",
       "status": {
         "basis": "source_status",
         "class": "in_force",
@@ -585,145 +475,33 @@
       },
       "text_complete": true,
       "text_source": "source_tree",
-      "title": "Thông tư số 77/2025/TT-NHNN Sửa đổi, bổ sung một số điều của Thông tư số 50/2024/TT-NHNN của Thống đốc Ngân hàng Nhà nước Việt Nam quy định về an toàn, bảo mật cho việc cung cấp dịch vụ trực tuyến trong ngành Ngân hàng",
-      "type": "Thông tư"
+      "title": "Nghị định số 356/2025/NĐ-CP Quy định chi tiết một số điều và biện pháp thi hành Luật Bảo vệ dữ liệu cá nhân",
+      "type": "Nghị định"
     },
-    "vn:vbpl:46996": {
-      "effective_from": "2015-04-01",
-      "issued": "2014-12-31",
+    "vn:vbpl:858726d0-de6b-11f1-8d0c-43225cb8131e": {
+      "issued": "2026-11-12",
       "issuer": "Ngân hàng Nhà nước Việt Nam",
-      "number": "47/2014/TT-NHNN",
+      "number": "119/2026/VBHN-NĐ-NHNN",
       "related": [
         {
-          "dir": "in",
+          "dir": "out",
           "in_release": true,
-          "key": "vn:vbpl:131436",
-          "kind": "repeals",
-          "number": "24/2018/TT-NHNN"
-        },
-        {
-          "dir": "in",
-          "in_release": true,
-          "key": "vn:vbpl:145780",
-          "kind": "amends_supplements",
-          "number": "20/2020/TT-NHNN"
-        },
-        {
-          "dir": "in",
-          "in_release": true,
-          "key": "vn:vbpl:146349",
+          "key": "vn:vbpl:393e0860-cec2-11f1-af18-dd18bdc0f7c4",
           "kind": "consolidates",
-          "number": "02/VBHN-NHNN"
+          "number": "382/2026/NĐ-CP"
         },
         {
           "dir": "out",
           "in_release": true,
-          "key": "vn:vbpl:30443",
-          "kind": "implements",
-          "number": "101/2012/NĐ-CP"
-        },
-        {
-          "dir": "out",
-          "in_release": true,
-          "key": "vn:vbpl:25692",
-          "kind": "implements",
-          "number": "46/2010/QH12"
-        }
-      ],
-      "related_counts": {
-        "in:amends_supplements": 1,
-        "in:consolidates": 1,
-        "in:repeals": 1,
-        "out:implements": 5,
-        "out:legal_basis": 6
-      },
-      "status": {
-        "basis": "source_status",
-        "class": "partial",
-        "current": true,
-        "status_basis": "source_status"
-      },
-      "text_complete": true,
-      "text_source": "source_tree",
-      "title": "Thông tư số 47/2014/TT-NHNN Quy định các yêu cầu kỹ thuật về an toàn bảo mật đối với trang thiết bị phục vụ thanh toán thẻ ngân hàng",
-      "type": "Thông tư"
-    },
-    "vn:vbpl:47660": {
-      "effective_from": "2013-03-01",
-      "issued": "2012-12-28",
-      "issuer": "Ngân hàng Nhà nước Việt Nam",
-      "number": "36/2012/TT-NHNN",
-      "related": [
-        {
-          "dir": "in",
-          "in_release": true,
-          "key": "vn:vbpl:114612",
-          "kind": "repeals",
-          "number": "30/2016/TT-NHNN"
-        },
-        {
-          "dir": "in",
-          "in_release": true,
-          "key": "vn:vbpl:164602",
-          "kind": "amends_supplements",
-          "number": "21/2023/TT-NHNN"
-        },
-        {
-          "dir": "in",
-          "in_release": true,
-          "key": "vn:vbpl:137583",
-          "kind": "amends_supplements",
-          "number": "14/2019/TT-NHNN"
-        },
-        {
-          "dir": "in",
-          "in_release": true,
-          "key": "vn:vbpl:132899",
-          "kind": "amends_supplements",
-          "number": "44/2018/TT-NHNN"
-        },
-        {
-          "dir": "in",
-          "in_release": true,
-          "key": "vn:vbpl:111956",
-          "kind": "amends_supplements",
-          "number": "20/2016/TT-NHNN"
-        }
-      ],
-      "related_counts": {
-        "in:amends_supplements": 4,
-        "in:consolidates": 5,
-        "in:repeals": 1,
-        "out:implements": 4,
-        "out:legal_basis": 5
-      },
-      "status": {
-        "basis": "source_status",
-        "class": "partial",
-        "current": true,
-        "status_basis": "source_status"
-      },
-      "text_complete": true,
-      "text_source": "source_tree",
-      "title": "Thông tư số 36/2012/TT-NHNN Quy định về trang bị, quản lý, vận hành và đảm bảo an toàn hoạt động của máy giao dịch tự động",
-      "type": "Thông tư"
-    },
-    "vn:vbpl:e1ff68d0-73ab-11f1-8703-2379f653f630": {
-      "issued": "2026-05-26",
-      "issuer": "Ngân hàng Nhà nước Việt Nam",
-      "number": "76/VBHN-NHNN",
-      "related": [
-        {
-          "dir": "out",
-          "in_release": true,
-          "key": "vn:vbpl:168578",
+          "key": "vn:vbpl:177341",
           "kind": "consolidates",
-          "number": "40/2024/TT-NHNN"
+          "number": "94/2025/NĐ-CP"
         }
       ],
       "related_counts": {
-        "out:consolidates": 1
+        "out:consolidates": 2
       },
+      "source_url": "https://vbpl.vn/van-ban/chi-tiet/858726d0-de6b-11f1-8d0c-43225cb8131e",
       "status": {
         "basis": "source_status",
         "class": "in_force",
@@ -732,260 +510,139 @@
       },
       "text_complete": true,
       "text_source": "source_tree",
-      "title": "Văn bản hợp nhất số 76/VBHN-NHNN Quy định về hoạt động cung ứng dịch vụ trung gian thanh toán",
+      "title": "Văn bản hợp nhất số 119/2026/VBHN-NĐ-NHNN Quy định về Cơ chế thử nghiệm có kiểm soát trong lĩnh vực ngân hàng",
       "type": "Văn bản hợp nhất"
     }
   },
   "hits": [
     {
-      "citation": "Điều 25, Khoản 1",
+      "citation": "Điều 19",
       "complete": false,
-      "doc": "vn:vbpl:144532",
-      "handle": "vn:vbpl:144532#dieu-25/khoan-1",
+      "doc": "vn:vbpl:179252",
+      "handle": "vn:vbpl:179252#dieu-19",
       "path": [
         {
           "anchor": "chuong-ii",
-          "heading": "CÁC QUY ĐỊNH VỀ BẢO ĐẢM AN TOÀN THÔNG TIN",
-          "label": "Chương II"
-        },
-        {
-          "anchor": "chuong-ii/muc-4",
-          "heading": "QUẢN LÝ VẬN HÀNH VÀ TRAO ĐỔI THÔNG TIN",
-          "label": "Mục 4"
-        },
-        {
-          "anchor": "dieu-25",
-          "heading": "Quản lý hệ thống thông tin cung cấp dịch vụ giao dịch trực tuyến",
-          "label": "Điều 25"
-        },
-        {
-          "anchor": "dieu-25/khoan-1",
-          "label": "Khoản 1"
-        }
-      ],
-      "snippet": "Điều 25. Quản lý hệ thống thông tin cung cấp dịch vụ giao dịch trực tuyến\n1. Hệ thống thông tin cung cấp dịch vụ trực tuyến cho khách hàng phải tuân thủ tiêu chuẩn TCVN 11930:2017 (tiêu chuẩn Công nghệ thông tin - Các kỹ thuật an toàn - Yêu cầu cơ bản về an toàn hệ thống thông tin theo cấp độ) và các yêu cầu sau:\na) Bảo đảm tính toàn vẹn của dữ liệu trao đổi với khách hàng trong giao dịch trực tuyến;\nb) Dữ liệu trên đường truyền phải bảo đảm tính bí mật và phải được truyền đầy đủ, đúng địa chỉ và có biện pháp bảo vệ để phát hiện các thay đổi hoặc sao chép trái phép;\nc) Đánh giá cấp độ rủi […]"
-    },
-    {
-      "citation": "Điều 1",
-      "complete": false,
-      "doc": "vn:vbpl:171687",
-      "handle": "vn:vbpl:171687#dieu-1",
-      "path": [
-        {
-          "anchor": "chuong-i",
-          "heading": "QUY ĐỊNH CHUNG",
-          "label": "Chương I"
-        },
-        {
-          "anchor": "dieu-1",
-          "heading": "Phạm vi điều chỉnh và đối tượng áp dụng",
-          "label": "Điều 1"
-        }
-      ],
-      "snippet": "Điều 1. Phạm vi điều chỉnh và đối tượng áp dụng\n1. Phạm vi điều chỉnh\nThông tư này quy định các yêu cầu bảo đảm an toàn, bảo mật cho việc cung cấp dịch vụ trực tuyến trong ngành Ngân hàng, bao gồm:\na) Hoạt động ngân hàng và các hoạt động kinh doanh khác của tổ chức tín dụng, chi nhánh ngân hàng nước ngoài;\nb) Hoạt động cung ứng dịch vụ trung gian thanh toán;\nc) Hoạt động thông tin tín dụng.\n2. Đối tượng áp dụng\nThông tư này áp dụng đối với các tổ chức tín dụng, chi nhánh ngân hàng nước ngoài, tổ chức cung ứng dịch vụ trung gian thanh toán, công ty thông tin tín dụng (sau đây gọi chung là […]"
-    },
-    {
-      "citation": "Điều 3, Khoản 1",
-      "complete": false,
-      "doc": "vn:vbpl:171687",
-      "handle": "vn:vbpl:171687#dieu-3/khoan-1",
-      "path": [
-        {
-          "anchor": "chuong-i",
-          "heading": "QUY ĐỊNH CHUNG",
-          "label": "Chương I"
-        },
-        {
-          "anchor": "dieu-3",
-          "heading": "Nguyên tắc chung về bảo đảm an toàn, bảo mật hệ thống thông tin cho việc cung cấp dịch vụ Online Banking",
-          "label": "Điều 3"
-        },
-        {
-          "anchor": "dieu-3/khoan-1",
-          "label": "Khoản 1"
-        }
-      ],
-      "snippet": "Điều 3. Nguyên tắc chung về bảo đảm an toàn, bảo mật hệ thống thông tin cho việc cung cấp dịch vụ Online Banking\n1. Hệ thống Online Banking phải tuân thủ quy định về bảo đảm an toàn hệ thống thông tin cấp độ 3 trở lên theo quy định của pháp luật về bảo đảm an toàn hệ thống thông tin theo cấp độ, đối với hệ thống thông tin cung cấp dịch vụ chuyển mạch tài chính, dịch vụ bù trừ điện tử phải tuân thủ quy định về bảo đảm an toàn hệ thống thông tin cấp độ 4 trở lên; tuân thủ tiêu chuẩn TCVN 11930:2017 (tiêu chuẩn Công nghệ thông tin - Các kỹ thuật an toàn - Yêu cầu cơ bản về an toàn hệ thống […]"
-    },
-    {
-      "citation": "Điều 18, Khoản 3",
-      "complete": true,
-      "doc": "vn:vbpl:185857",
-      "handle": "vn:vbpl:185857#dieu-18/khoan-3",
-      "path": [
-        {
-          "anchor": "chuong-ii",
-          "heading": "HOẠT ĐỘNG CUNG ỨNG DỊCH VỤ TIỀN DI ĐỘNG",
+          "heading": "BẢO VỆ DỮ LIỆU CÁ NHÂN",
           "label": "Chương II"
         },
         {
           "anchor": "chuong-ii/muc-1",
-          "heading": "MỞ VÀ SỬ DỤNG TÀI KHOẢN TIỀN DI ĐỘNG",
+          "heading": "BẢO VỆ DỮ LIỆU CÁ NHÂN TRONG QUÁ TRÌNH XỬ LÝ DỮ LIỆU CÁ NHÂN",
           "label": "Mục 1"
         },
         {
-          "anchor": "dieu-18",
-          "heading": "Các biện pháp đảm bảo an toàn khi cung ứng dịch vụ Tiền di động cho khách hàng",
-          "label": "Điều 18"
-        },
-        {
-          "anchor": "dieu-18/khoan-3",
-          "label": "Khoản 3"
+          "anchor": "dieu-19",
+          "heading": "Xử lý dữ liệu cá nhân trong trường hợp không cần sự đồng ý của chủ thể dữ liệu cá nhân",
+          "label": "Điều 19"
         }
       ],
-      "snippet": "Điều 18. Các biện pháp đảm bảo an toàn khi cung ứng dịch vụ Tiền di động cho khách hàng\n3. Tổ chức cung ứng dịch vụ Tiền di động phải tuân thủ yêu cầu về an toàn, bảo mật cho việc cung cấp dịch vụ trực tuyến trong ngành ngân hàng; triển khai các giải pháp an toàn, bảo mật trong thanh toán trực tuyến và thanh toán thẻ ngân hàng."
+      "snippet": "Điều 19. Xử lý dữ liệu cá nhân trong trường hợp không cần sự đồng ý của chủ thể dữ liệu cá nhân\n1. Các trường hợp xử lý dữ liệu cá nhân không cần sự đồng ý của chủ thể dữ liệu cá nhân bao gồm: […] b) Để giải quyết tình trạng khẩn cấp; nguy cơ đe dọa an ninh quốc gia nhưng chưa đến mức ban bố tình trạng khẩn cấp; phòng, chống bạo loạn, khủng bố, phòng, chống tội phạm và vi phạm pháp luật;\nc) Phục vụ hoạt động của cơ quan nhà nước, hoạt động quản lý nhà nước theo quy định của pháp luật;\nd) Thực hiện thỏa thuận của chủ thể dữ liệu cá nhân với cơ quan, tổ chức, cá nhân có liên quan theo quy […]"
     },
     {
-      "citation": "Điều 3, Khoản 2",
-      "complete": true,
-      "doc": "vn:vbpl:171687",
-      "handle": "vn:vbpl:171687#dieu-3/khoan-2",
-      "path": [
-        {
-          "anchor": "chuong-i",
-          "heading": "QUY ĐỊNH CHUNG",
-          "label": "Chương I"
-        },
-        {
-          "anchor": "dieu-3",
-          "heading": "Nguyên tắc chung về bảo đảm an toàn, bảo mật hệ thống thông tin cho việc cung cấp dịch vụ Online Banking",
-          "label": "Điều 3"
-        },
-        {
-          "anchor": "dieu-3/khoan-2",
-          "label": "Khoản 2"
-        }
-      ],
-      "snippet": "Điều 3. Nguyên tắc chung về bảo đảm an toàn, bảo mật hệ thống thông tin cho việc cung cấp dịch vụ Online Banking\n2. Bảo đảm tính bí mật, tính toàn vẹn của thông tin khách hàng; bảo đảm tính sẵn sàng của hệ thống Online Banking để cung cấp dịch vụ một cách liên tục."
-    },
-    {
-      "citation": "Điều 9, Khoản 3",
-      "complete": true,
-      "doc": "vn:vbpl:e1ff68d0-73ab-11f1-8703-2379f653f630",
-      "gaps": [
-        {
-          "anchor": "dieu-9/khoan-3",
-          "document_key": "vn:vbpl:e1ff68d0-73ab-11f1-8703-2379f653f630",
-          "kind": "missing_effective_date",
-          "message": "Effective start date is missing."
-        }
-      ],
-      "handle": "vn:vbpl:e1ff68d0-73ab-11f1-8703-2379f653f630#dieu-9/khoan-3",
-      "path": [
-        {
-          "anchor": "chuong-i",
-          "label": "Chương I"
-        },
-        {
-          "anchor": "dieu-9",
-          "heading": "Đảm bảo an toàn trong cung ứng dịch vụ trung gian thanh toán",
-          "label": "Điều 9"
-        },
-        {
-          "anchor": "dieu-9/khoan-3",
-          "label": "Khoản 3"
-        }
-      ],
-      "snippet": "Điều 9. Đảm bảo an toàn trong cung ứng dịch vụ trung gian thanh toán\n3. Tổ chức cung ứng dịch vụ trung gian thanh toán phải tuân thủ yêu cầu kỹ thuật về an toàn bảo mật đối với trang thiết bị phục vụ thanh toán thẻ ngân hàng; yêu cầu về an toàn hệ thống thông tin trong hoạt động ngân hàng; yêu cầu về an toàn, bảo mật cho việc cung cấp dịch vụ trực tuyến trong ngành ngân hàng; triển khai các giải pháp an toàn, bảo mật trong thanh toán trực tuyến và thanh toán thẻ ngân hàng."
-    },
-    {
-      "citation": "Điều 9, Khoản 3",
-      "complete": true,
-      "doc": "vn:vbpl:168578",
-      "handle": "vn:vbpl:168578#dieu-9/khoan-3",
-      "path": [
-        {
-          "anchor": "chuong-i",
-          "heading": "QUY ĐỊNH CHUNG",
-          "label": "Chương I"
-        },
-        {
-          "anchor": "dieu-9",
-          "heading": "Đảm bảo an toàn trong cung ứng dịch vụ trung gian thanh toán",
-          "label": "Điều 9"
-        },
-        {
-          "anchor": "dieu-9/khoan-3",
-          "label": "Khoản 3"
-        }
-      ],
-      "snippet": "Điều 9. Đảm bảo an toàn trong cung ứng dịch vụ trung gian thanh toán\n3. Tổ chức cung ứng dịch vụ trung gian thanh toán phải tuân thủ yêu cầu kỹ thuật về an toàn bảo mật đối với trang thiết bị phục vụ thanh toán thẻ ngân hàng; yêu cầu về an toàn hệ thống thông tin trong hoạt động ngân hàng; yêu cầu về an toàn, bảo mật cho việc cung cấp dịch vụ trực tuyến trong ngành ngân hàng; triển khai các giải pháp an toàn, bảo mật trong thanh toán trực tuyến và thanh toán thẻ ngân hàng."
-    },
-    {
-      "citation": "Điều 7, Khoản 6",
-      "complete": true,
-      "doc": "vn:vbpl:127395",
-      "handle": "vn:vbpl:127395#dieu-7/khoan-6",
+      "citation": "Điều 8",
+      "complete": false,
+      "doc": "vn:vbpl:187276",
+      "handle": "vn:vbpl:187276#dieu-8",
       "path": [
         {
           "anchor": "chuong-ii",
-          "heading": "HOẠT ĐỘNG GIAO DỊCH CHỨNG KHOÁN TRỰC TUYẾN",
+          "heading": "YÊU CẦU, ĐIỀU KIỆN BẢO VỆ DỮ LIỆU CÁ NHÂN",
+          "label": "Chương II"
+        },
+        {
+          "anchor": "dieu-8",
+          "heading": "Bảo vệ dữ liệu cá nhân trong hoạt động tài chính, ngân hàng, hoạt động thông tin tín dụng",
+          "label": "Điều 8"
+        }
+      ],
+      "snippet": "Điều 8. Bảo vệ dữ liệu cá nhân trong hoạt động tài chính, ngân hàng, hoạt động thông tin tín dụng […] 2. Tổ chức, cá nhân hoạt động trong lĩnh vực tài chính, ngân hàng, hoạt động thông tin tín dụng là bên kiểm soát dữ liệu cá nhân, bên kiểm soát và xử lý dữ liệu cá nhân khi xin sự đồng ý của chủ thể dữ liệu cá nhân phải đảm bảo nêu rõ:\na) Các mục đích xử lý dữ liệu cá nhân, bao gồm hoạt động chấm điểm, xếp hạng tín dụng, đánh giá thông tin tín dụng, đánh giá mức độ tín nhiệm về tín dụng nếu có;\nb) Nguồn thu thập dữ liệu cá nhân và các bên thu thập, chia sẻ dữ liệu cá nhân liên quan;\nc) […]"
+    },
+    {
+      "citation": "Điều 23, Khoản 7",
+      "complete": true,
+      "doc": "vn:vbpl:187276",
+      "handle": "vn:vbpl:187276#dieu-23/khoan-7",
+      "path": [
+        {
+          "anchor": "chuong-iii",
+          "heading": "HỒ SƠ, TRÌNH TỰ, THỦ TỤC VỀ DỮ LIỆU CÁ NHÂN",
+          "label": "Chương III"
+        },
+        {
+          "anchor": "dieu-23",
+          "heading": "Trách nhiệm của tổ chức kinh doanh dịch vụ xử lý dữ liệu cá nhân",
+          "label": "Điều 23"
+        },
+        {
+          "anchor": "dieu-23/khoan-7",
+          "label": "Khoản 7"
+        }
+      ],
+      "snippet": "Điều 23. Trách nhiệm của tổ chức kinh doanh dịch vụ xử lý dữ liệu cá nhân\n7. Trường hợp là bên xử lý dữ liệu cá nhân, tổ chức yêu cầu bên kiểm soát dữ liệu cá nhân xin sự đồng ý của chủ thể dữ liệu theo quy định trước khi cung cấp dịch vụ, bảo đảm chủ thể dữ liệu cá nhân được biết về loại dữ liệu cá nhân xử lý, mục đích xử lý và tổ chức cung cấp dịch vụ xử lý dữ liệu cá nhân."
+    },
+    {
+      "citation": "Điều 9",
+      "complete": false,
+      "doc": "vn:vbpl:179252",
+      "handle": "vn:vbpl:179252#dieu-9",
+      "path": [
+        {
+          "anchor": "chuong-ii",
+          "heading": "BẢO VỆ DỮ LIỆU CÁ NHÂN",
           "label": "Chương II"
         },
         {
           "anchor": "chuong-ii/muc-1",
-          "heading": "YÊU CẦU DỊCH VỤ, HẠ TẦNG KỸ THUẬT, AN NINH BẢO MẬT VÀ LƯU TRỮ DỮ LIỆU",
+          "heading": "BẢO VỆ DỮ LIỆU CÁ NHÂN TRONG QUÁ TRÌNH XỬ LÝ DỮ LIỆU CÁ NHÂN",
           "label": "Mục 1"
         },
         {
-          "anchor": "dieu-7",
-          "heading": "Quy định về an ninh bảo mật thông tin và lưu trữ dữ liệu của tổ chức cung cấp dịch vụ giao dịch chứng khoán trực tuyến",
-          "label": "Điều 7"
-        },
-        {
-          "anchor": "dieu-7/khoan-6",
-          "label": "Khoản 6"
+          "anchor": "dieu-9",
+          "heading": "Sự đồng ý của chủ thể dữ liệu cá nhân",
+          "label": "Điều 9"
         }
       ],
-      "snippet": "Điều 7. Quy định về an ninh bảo mật thông tin và lưu trữ dữ liệu của tổ chức cung cấp dịch vụ giao dịch chứng khoán trực tuyến\n6. Thông tin về khách hàng sử dụng dịch vụ giao dịch trực tuyến, các lệnh giao dịch và thông tin trao đổi trên hệ thống phải được mã hóa trên đường truyền và ở mức ứng dụng, được bảo mật theo quy định của pháp luật trừ khi có yêu cầu từ cơ quan quản lý nhà nước có thẩm quyền."
+      "snippet": "Điều 9. Sự đồng ý của chủ thể dữ liệu cá nhân\n1. Sự đồng ý của chủ thể dữ liệu cá nhân là việc chủ thể dữ liệu cá nhân cho phép xử lý dữ liệu cá nhân của mình, trừ trường hợp pháp luật có quy định khác.\n2. Sự đồng ý của chủ thể dữ liệu cá nhân chỉ có hiệu lực khi dựa trên sự tự nguyện và biết rõ các thông tin sau đây:\na) Loại dữ liệu cá nhân được xử lý, mục đích xử lý dữ liệu cá nhân;\nb) Bên kiểm soát dữ liệu cá nhân hoặc bên kiểm soát và xử lý dữ liệu cá nhân;\nc) Các quyền, nghĩa vụ của chủ thể dữ liệu cá nhân.\n3. Sự đồng ý của chủ thể dữ liệu cá nhân được thể hiện bằng phương thức rõ […]"
     },
     {
-      "citation": "Điều 25, Khoản 4",
-      "complete": true,
-      "doc": "vn:vbpl:144532",
-      "handle": "vn:vbpl:144532#dieu-25/khoan-4",
+      "citation": "Điều 10",
+      "complete": false,
+      "doc": "vn:vbpl:179252",
+      "handle": "vn:vbpl:179252#dieu-10",
       "path": [
         {
           "anchor": "chuong-ii",
-          "heading": "CÁC QUY ĐỊNH VỀ BẢO ĐẢM AN TOÀN THÔNG TIN",
+          "heading": "BẢO VỆ DỮ LIỆU CÁ NHÂN",
           "label": "Chương II"
         },
         {
-          "anchor": "chuong-ii/muc-4",
-          "heading": "QUẢN LÝ VẬN HÀNH VÀ TRAO ĐỔI THÔNG TIN",
-          "label": "Mục 4"
+          "anchor": "chuong-ii/muc-1",
+          "heading": "BẢO VỆ DỮ LIỆU CÁ NHÂN TRONG QUÁ TRÌNH XỬ LÝ DỮ LIỆU CÁ NHÂN",
+          "label": "Mục 1"
         },
         {
-          "anchor": "dieu-25",
-          "heading": "Quản lý hệ thống thông tin cung cấp dịch vụ giao dịch trực tuyến",
-          "label": "Điều 25"
-        },
-        {
-          "anchor": "dieu-25/khoan-4",
-          "label": "Khoản 4"
+          "anchor": "dieu-10",
+          "heading": "Yêu cầu rút lại sự đồng ý, yêu cầu hạn chế xử lý dữ liệu cá nhân",
+          "label": "Điều 10"
         }
       ],
-      "snippet": "Điều 25. Quản lý hệ thống thông tin cung cấp dịch vụ giao dịch trực tuyến\n4. Khi cung cấp phần mềm ứng dụng giao dịch trực tuyến trên Internet, tổ chức phải áp dụng các biện pháp bảo đảm tính toàn vẹn của phần mềm."
+      "snippet": "Điều 10. Yêu cầu rút lại sự đồng ý, yêu cầu hạn chế xử lý dữ liệu cá nhân\n1. Chủ thể dữ liệu cá nhân có quyền yêu cầu rút lại sự đồng ý cho phép xử lý dữ liệu cá nhân, yêu cầu hạn chế xử lý dữ liệu cá nhân của mình khi có nghi ngờ phạm vi, mục đích xử lý dữ liệu cá nhân hoặc tính chính xác của dữ liệu cá nhân, trừ trường hợp quy định tại Điều 19 của Luật này hoặc trường hợp pháp luật có quy định khác.\n2. Yêu cầu rút lại sự đồng ý, yêu cầu hạn chế xử lý dữ liệu cá nhân của chủ thể dữ liệu cá nhân phải được thể hiện bằng văn bản, bao gồm cả dạng điện tử hoặc định dạng kiểm chứng được và được […]"
     },
     {
       "citation": "Điều 5, Khoản 2",
       "complete": false,
-      "doc": "vn:vbpl:127395",
-      "handle": "vn:vbpl:127395#dieu-5/khoan-2",
+      "doc": "vn:vbpl:187276",
+      "handle": "vn:vbpl:187276#dieu-5/khoan-2",
       "path": [
         {
           "anchor": "chuong-ii",
-          "heading": "HOẠT ĐỘNG GIAO DỊCH CHỨNG KHOÁN TRỰC TUYẾN",
+          "heading": "YÊU CẦU, ĐIỀU KIỆN BẢO VỆ DỮ LIỆU CÁ NHÂN",
           "label": "Chương II"
         },
         {
-          "anchor": "chuong-ii/muc-1",
-          "heading": "YÊU CẦU DỊCH VỤ, HẠ TẦNG KỸ THUẬT, AN NINH BẢO MẬT VÀ LƯU TRỮ DỮ LIỆU",
-          "label": "Mục 1"
-        },
-        {
           "anchor": "dieu-5",
-          "heading": "Yêu cầu về dịch vụ",
+          "heading": "Thực hiện quyền của chủ thể dữ liệu cá nhân",
           "label": "Điều 5"
         },
         {
@@ -993,150 +650,56 @@
           "label": "Khoản 2"
         }
       ],
-      "snippet": "Điều 5. Yêu cầu về dịch vụ\n2. Đối với công ty chứng khoán cung cấp dịch vụ giao dịch chứng khoán trực tuyến: […] đ) Việc cung cấp và sử dụng dịch vụ giao dịch chứng khoán trực tuyến với nhà đầu tư phải được thể hiện bằng hợp đồng hoặc điều khoản của hợp đồng mở tài khoản giao dịch chứng khoán, trong đó quy định cụ thể về phương thức giao dịch chứng khoán trực tuyến, những rủi ro có thể xảy ra khi thực hiện giao dịch chứng khoán trực tuyến theo quy định tại khoản 1 Điều 15 Thông tư này, trách nhiệm bồi thường của mỗi bên khi xảy ra rủi ro và trách nhiệm khác liên quan đến hoạt động giao […]"
+      "snippet": "Điều 5. Thực hiện quyền của chủ thể dữ liệu cá nhân\n2. Khi nhận được yêu cầu rút lại sự đồng ý cho phép xử lý dữ liệu cá nhân, hạn chế xử lý dữ liệu cá nhân, phản đối xử lý dữ liệu cá nhân theo đúng thủ tục của chủ thể dữ liệu cá nhân, bên kiểm soát dữ liệu cá nhân, bên kiểm soát và xử lý dữ liệu cá nhân phải phản hồi trong thời hạn 02 ngày làm việc, cung cấp đầy đủ thông tin cho chủ thể dữ liệu cá nhân về thủ tục ngừng xử lý dữ liệu cá nhân và thực hiện trong thời hạn 15 ngày, trừ trường hợp xử lý dữ liệu cá nhân không cần sự đồng ý của chủ thể dữ liệu cá nhân theo quy định tại Điều 19 […]"
     },
     {
-      "citation": "Điều 4, Khoản 3",
-      "complete": true,
-      "doc": "vn:vbpl:186058",
-      "handle": "vn:vbpl:186058#dieu-4/khoan-3",
-      "path": [
-        {
-          "anchor": "dieu-4",
-          "heading": "Sửa đổi, bổ sung một số điểm, khoản của Điều 7",
-          "label": "Điều 4"
-        },
-        {
-          "anchor": "dieu-4/khoan-3",
-          "label": "Khoản 3"
-        }
-      ],
-      "snippet": "Điều 4. Sửa đổi, bổ sung một số điểm, khoản của Điều 7\n3. Sửa đổi, bổ sung điểm b khoản 8 Điều 7 như sau:\n“b) Phần mềm ứng dụng Online Banking phải có chức năng xác thực kết nối với phần mềm của khách hàng tổ chức để bảo đảm an toàn, bảo mật, chống gian lận, giả mạo theo tiêu chuẩn, quy chuẩn quốc tế hoặc Việt Nam;”."
-    },
-    {
-      "citation": "Điều 1, Khoản 11",
+      "citation": "Điều 27",
       "complete": false,
-      "doc": "vn:vbpl:160901",
-      "handle": "vn:vbpl:160901#dieu-1/khoan-11",
-      "path": [
-        {
-          "anchor": "dieu-1",
-          "heading": "Sửa đổi, bổ sung một số điều của Thông tư số 39/2016/TT-NHNN",
-          "label": "Điều 1"
-        },
-        {
-          "anchor": "dieu-1/khoan-11",
-          "label": "Khoản 11"
-        }
-      ],
-      "snippet": "Điều 1. Sửa đổi, bổ sung một số điều của Thông tư số 39/2016/TT-NHNN […] 3. Tổ chức tín dụng phải lưu trữ, bảo quản thông tin, dữ liệu theo quy định của pháp luật, đảm bảo an toàn, bảo mật và được sao lưu dự phòng đảm bảo tính đầy đủ, toàn vẹn của hồ sơ cho phép truy cập, sử dụng khi cần thiết hoặc để phục vụ công tác kiểm tra, đối chiếu, giải quyết tra soát, khiếu nại, tranh chấp và cung cấp thông tin khi có yêu cầu từ cơ quan quản lý nhà nước có thẩm quyền.\n4. Tổ chức tín dụng tự quyết định biện pháp, hình thức, công nghệ phục vụ hoạt động cho vay bằng phương tiện điện tử, tự chịu rủi ro […]"
-    },
-    {
-      "citation": "Điều 4, Khoản 1",
-      "complete": false,
-      "doc": "vn:vbpl:186058",
-      "handle": "vn:vbpl:186058#dieu-4/khoan-1",
-      "path": [
-        {
-          "anchor": "dieu-4",
-          "heading": "Sửa đổi, bổ sung một số điểm, khoản của Điều 7",
-          "label": "Điều 4"
-        },
-        {
-          "anchor": "dieu-4/khoan-1",
-          "label": "Khoản 1"
-        }
-      ],
-      "snippet": "Điều 4. Sửa đổi, bổ sung một số điểm, khoản của Điều 7\n1. Sửa đổi, bổ sung điểm c khoản 3 Điều 7 như sau:\n“c) Đánh giá, dò quét phát hiện lỗ hổng, điểm yếu về mặt kỹ thuật. Đánh giá khả năng phòng, chống các lỗ hổng, điểm yếu, kiểu tấn công bảo đảm tối thiểu các yêu cầu sau:\n(i) Đối với phần mềm ứng dụng Online Banking cung cấp qua nền tảng web, phải phòng, chống 10 lỗ hổng phổ biến nhất được công bố bởi tổ chức OWASP (OWASP Top Ten).\n(ii) Đối với phần mềm ứng dụng Mobile Banking, đáp ứng tối thiểu các yêu cầu về an toàn bảo mật ứng dụng di động do tổ chức OWASP công bố (OWASP Mobile […]"
-    },
-    {
-      "citation": "Điều 5",
-      "complete": false,
-      "doc": "vn:vbpl:145859",
-      "handle": "vn:vbpl:145859#dieu-5",
-      "path": [
-        {
-          "anchor": "chuong-i",
-          "heading": "QUY ĐỊNH CHUNG",
-          "label": "Chương I"
-        },
-        {
-          "anchor": "dieu-5",
-          "heading": "Hệ thống công nghệ thông tin",
-          "label": "Điều 5"
-        }
-      ],
-      "snippet": "Điều 5. Hệ thống công nghệ thông tin\nTổ chức tín dụng phi ngân hàng phải có hệ thống công nghệ thông tin được kết nối toàn hệ thống để thực hiện các quy định tại Thông tư này, đảm bảo các yêu cầu tối thiểu sau:\n1. Lưu giữ, truy cập, bổ sung cơ sở dữ liệu về khách hàng, thị trường, bảo đảm quản lý rủi ro theo quy định của Ngân hàng Nhà nước và quy định nội bộ của tổ chức tín dụng phi ngân hàng.\n2. Thống kê, theo dõi, quản lý dòng tiền, các khoản mục vốn, tài sản, nợ phải trả; tính toán, quản lý, giám sát các giới hạn, tỷ lệ bảo đảm an toàn trong hoạt động.\n3. Thực hiện chế độ báo cáo thống […]"
-    },
-    {
-      "citation": "Điều 6, Khoản 2",
-      "complete": false,
-      "doc": "vn:vbpl:130985",
-      "handle": "vn:vbpl:130985#dieu-6/khoan-2",
+      "doc": "vn:vbpl:179252",
+      "handle": "vn:vbpl:179252#dieu-27",
       "path": [
         {
           "anchor": "chuong-ii",
-          "heading": "QUY ĐỊNH CỤ THỂ",
+          "heading": "BẢO VỆ DỮ LIỆU CÁ NHÂN",
           "label": "Chương II"
         },
         {
-          "anchor": "chuong-ii/muc-1",
-          "heading": "VIỆC GIỮ BÍ MẬT, CUNG CẤP THÔNG TIN KHÁCH HÀNG CHO CƠ QUAN NHÀ NƯỚC",
-          "label": "Mục 1"
+          "anchor": "chuong-ii/muc-2",
+          "heading": "BẢO VỆ DỮ LIỆU CÁ NHÂN TRONG MỘT SỐ HOẠT ĐỘNG",
+          "label": "Mục 2"
+        },
+        {
+          "anchor": "dieu-27",
+          "heading": "Bảo vệ dữ liệu cá nhân trong hoạt động tài chính, ngân hàng, hoạt động thông tin tín dụng",
+          "label": "Điều 27"
+        }
+      ],
+      "snippet": "Điều 27. Bảo vệ dữ liệu cá nhân trong hoạt động tài chính, ngân hàng, hoạt động thông tin tín dụng\n1. Tổ chức, cá nhân hoạt động trong lĩnh vực tài chính, ngân hàng, hoạt động thông tin tín dụng có trách nhiệm sau đây:\na) Thực hiện đầy đủ quy định về bảo vệ dữ liệu cá nhân nhạy cảm, các tiêu chuẩn an toàn, bảo mật trong hoạt động tài chính, ngân hàng theo quy định của pháp luật;\nb) Không sử dụng thông tin tín dụng của chủ thể dữ liệu cá nhân để chấm điểm, xếp hạng tín dụng, đánh giá thông tin tín dụng, đánh giá mức độ tín nhiệm về tín dụng của chủ thể dữ liệu cá nhân khi chưa có sự đồng ý […]"
+    },
+    {
+      "citation": "Điều 6",
+      "complete": false,
+      "doc": "vn:vbpl:187276",
+      "handle": "vn:vbpl:187276#dieu-6",
+      "path": [
+        {
+          "anchor": "chuong-ii",
+          "heading": "YÊU CẦU, ĐIỀU KIỆN BẢO VỆ DỮ LIỆU CÁ NHÂN",
+          "label": "Chương II"
         },
         {
           "anchor": "dieu-6",
-          "heading": "Hình thức yêu cầu, cung cấp thông tin khách hàng",
+          "heading": "Phương thức thể hiện sự đồng ý của chủ thể dữ liệu cá nhân",
           "label": "Điều 6"
-        },
-        {
-          "anchor": "dieu-6/khoan-2",
-          "label": "Khoản 2"
         }
       ],
-      "snippet": "Điều 6. Hình thức yêu cầu, cung cấp thông tin khách hàng\n2. Giao nhận thông tin khách hàng: […] b) Đối với hình thức gián tiếp thông qua phương tiện điện tử, hệ thống mạng viễn thông và mạng máy tính: việc truyền, nhận, cung cấp, lưu trữ thông tin khách hàng phải bảo đảm an toàn thông tin và tuân thủ trình tự, thủ tục theo quy định của pháp luật về giao dịch điện tử, an toàn thông tin mạng, hướng dẫn của tổ chức tín dụng, chi nhánh ngân hàng nước ngoài;\nc) Đối với hình thức trực tiếp: việc giao nhận thông tin khách hàng phải được lập thành biên bản, có con dấu, chữ ký của người có thẩm […]"
+      "snippet": "Điều 6. Phương thức thể hiện sự đồng ý của chủ thể dữ liệu cá nhân\n2. Bên kiểm soát dữ liệu, bên kiểm soát và xử lý dữ liệu cá nhân phải lưu trữ sự đồng ý của chủ thể dữ liệu. Trong trường hợp có tranh chấp, trách nhiệm chứng minh sự đồng ý của chủ thể dữ liệu thuộc về bên kiểm soát dữ liệu cá nhân, bên kiểm soát và xử lý dữ liệu cá nhân.\n4. Đối với việc xin sự đồng ý xử lý dữ liệu cá nhân nhạy cảm, chủ thể dữ liệu phải được thông báo rằng dữ liệu cần xử lý là dữ liệu cá nhân nhạy cảm."
     },
     {
-      "citation": "Điều 5, Khoản 3",
-      "complete": true,
-      "doc": "vn:vbpl:127395",
-      "handle": "vn:vbpl:127395#dieu-5/khoan-3",
-      "path": [
-        {
-          "anchor": "chuong-ii",
-          "heading": "HOẠT ĐỘNG GIAO DỊCH CHỨNG KHOÁN TRỰC TUYẾN",
-          "label": "Chương II"
-        },
-        {
-          "anchor": "chuong-ii/muc-1",
-          "heading": "YÊU CẦU DỊCH VỤ, HẠ TẦNG KỸ THUẬT, AN NINH BẢO MẬT VÀ LƯU TRỮ DỮ LIỆU",
-          "label": "Mục 1"
-        },
-        {
-          "anchor": "dieu-5",
-          "heading": "Yêu cầu về dịch vụ",
-          "label": "Điều 5"
-        },
-        {
-          "anchor": "dieu-5/khoan-3",
-          "label": "Khoản 3"
-        }
-      ],
-      "snippet": "Điều 5. Yêu cầu về dịch vụ\n3. Công ty quản lý quỹ, đại lý phân phối chứng chỉ quỹ cung cấp dịch vụ giao dịch chứng khoán trực tuyến phải đáp ứng các yêu cầu theo quy định tại điểm a, b, c, đ, e và g khoản 2 Điều này."
-    },
-    {
-      "citation": "Điều 5",
+      "citation": "Điều 4",
       "complete": false,
-      "doc": "vn:vbpl:138989",
-      "gaps": [
-        {
-          "anchor": "dieu-5",
-          "document_key": "vn:vbpl:138989",
-          "kind": "relations_omitted",
-          "message": "Read the document for omitted relations."
-        }
-      ],
-      "handle": "vn:vbpl:138989#dieu-5",
+      "doc": "vn:vbpl:174547",
+      "handle": "vn:vbpl:174547#dieu-4",
       "path": [
         {
           "anchor": "chuong-i",
@@ -1144,27 +707,197 @@
           "label": "Chương I"
         },
         {
-          "anchor": "dieu-5",
-          "heading": "Hệ thống công nghệ thông tin",
-          "label": "Điều 5"
+          "anchor": "dieu-4",
+          "heading": "Nguyên tắc chung",
+          "label": "Điều 4"
         }
       ],
-      "snippet": "Điều 5. Hệ thống công nghệ thông tin\nNgân hàng, chi nhánh ngân hàng nước ngoài phải có hệ thống công nghệ thông tin được kết nối toàn hệ thống để thực hiện các quy định tại Thông tư này, đảm bảo các yêu cầu tối thiểu sau:\n1. Lưu giữ, truy cập, bổ sung cơ sở dữ liệu về khách hàng, thị trường, bảo đảm quản lý rủi ro theo quy định của Ngân hàng Nhà nước và quy định nội bộ của ngân hàng, chi nhánh ngân hàng nước ngoài.\n2. Thống kê, theo dõi, quản lý dòng tiền, các khoản mục vốn, tài sản, nợ phải trả; tính toán, quản lý, giám sát các giới hạn, tỷ lệ bảo đảm an toàn trong hoạt động.\n3. Thực hiện […]"
+      "snippet": "Điều 4.  Nguyên tắc chung\nNgân hàng, khách hàng và bên thứ ba (sau đây gọi là các bên) khi triển khai Open API phải tuân thủ các yêu cầu sau:\n1.  Tuân thủ các quy định của pháp luật về giữ bí mật, cung cấp thông tin khách hàng và bảo vệ dữ liệu cá nhân. Việc xử lý dữ liệu cá nhân của khách hàng chỉ phục vụ cho chính khách hàng đó, trừ trường hợp theo quy định của pháp luật.\n2.  Dữ liệu trong quá trình xử lý phải được quản lý, lưu trữ, khai thác, sử dụng đúng mục đích tại hợp đồng giữa các bên và phù hợp với quy định của pháp luật.\n3.  Dữ liệu trong quá trình xử lý phải bảo đảm tính cập […]"
+    },
+    {
+      "citation": "Điều 12, Khoản 11",
+      "complete": false,
+      "doc": "vn:vbpl:179108",
+      "handle": "vn:vbpl:179108#dieu-12/khoan-11",
+      "path": [
+        {
+          "anchor": "chuong-ii",
+          "heading": "CÁC HOẠT ĐỘNG XỬ LÝ DỮ LIỆU",
+          "label": "Chương II"
+        },
+        {
+          "anchor": "dieu-12",
+          "heading": "Chuyển, xử lý dữ liệu xuyên biên giới",
+          "label": "Điều 12"
+        },
+        {
+          "anchor": "dieu-12/khoan-11",
+          "label": "Khoản 11"
+        }
+      ],
+      "snippet": "Điều 12. Chuyển, xử lý dữ liệu xuyên biên giới\n11. Trường hợp chuyển, xử lý dữ liệu cốt lõi xuyên biên giới không cần sự chấp thuận của cơ quan có thẩm quyền tại khoản 5 Điều này và trường hợp chuyển, xử lý dữ liệu quan trọng không phải thông báo cho cơ quan có thẩm quyền theo quy định tại khoản 6 Điều này gồm:\na) Trong các tình huống khẩn cấp, thực sự cần thiết phải cung cấp dữ liệu cá nhân ra nước ngoài để bảo vệ tính mạng, sức khỏe và an toàn tài sản của cá nhân; để thực hiện nhiệm vụ, nghĩa vụ theo quy định của pháp luật;\nb) Thực hiện quản lý nhân sự xuyên biên giới theo quy tắc, quy […]"
+    },
+    {
+      "citation": "Điều 17, Khoản 1",
+      "complete": false,
+      "doc": "vn:vbpl:179252",
+      "handle": "vn:vbpl:179252#dieu-17/khoan-1",
+      "path": [
+        {
+          "anchor": "chuong-ii",
+          "heading": "BẢO VỆ DỮ LIỆU CÁ NHÂN",
+          "label": "Chương II"
+        },
+        {
+          "anchor": "chuong-ii/muc-1",
+          "heading": "BẢO VỆ DỮ LIỆU CÁ NHÂN TRONG QUÁ TRÌNH XỬ LÝ DỮ LIỆU CÁ NHÂN",
+          "label": "Mục 1"
+        },
+        {
+          "anchor": "dieu-17",
+          "heading": "Chuyển giao dữ liệu cá nhân",
+          "label": "Điều 17"
+        },
+        {
+          "anchor": "dieu-17/khoan-1",
+          "label": "Khoản 1"
+        }
+      ],
+      "snippet": "Điều 17. Chuyển giao dữ liệu cá nhân\n1. Việc chuyển giao dữ liệu cá nhân được thực hiện trong các trường hợp sau đây: […] a) Chuyển giao dữ liệu cá nhân khi có sự đồng ý của chủ thể dữ liệu cá nhân;\nb) Chia sẻ dữ liệu cá nhân giữa các bộ phận trong cùng một cơ quan, tổ chức để xử lý dữ liệu cá nhân phù hợp với mục đích xử lý đã xác lập;\nc) Chuyển giao dữ liệu cá nhân để tiếp tục xử lý dữ liệu cá nhân trong trường hợp chia, tách, sáp nhập cơ quan, tổ chức, đơn vị hành chính và tổ chức lại, chuyển đổi hình thức sở hữu doanh nghiệp nhà nước; chia, tách, sáp nhập, hợp nhất, kết thúc hoạt động […]"
+    },
+    {
+      "citation": "Điều 3, Khoản 6",
+      "complete": true,
+      "doc": "vn:vbpl:174547",
+      "handle": "vn:vbpl:174547#dieu-3/khoan-6",
+      "path": [
+        {
+          "anchor": "chuong-i",
+          "heading": "QUY ĐỊNH CHUNG",
+          "label": "Chương I"
+        },
+        {
+          "anchor": "dieu-3",
+          "heading": "Giải thích từ ngữ",
+          "label": "Điều 3"
+        },
+        {
+          "anchor": "dieu-3/khoan-6",
+          "label": "Khoản 6"
+        }
+      ],
+      "snippet": "Điều 3.  Giải thích từ ngữ\nTrong Thông tư này, các thuật ngữ dưới đây được hiểu như sau:\n6.  Sự đồng ý của khách hàng là việc thể hiện rõ ràng, tự nguyện, khẳng định việc cho phép xử lý dữ liệu cá nhân của khách hàng."
+    },
+    {
+      "citation": "Điều 18, Khoản 2",
+      "complete": true,
+      "doc": "vn:vbpl:174877",
+      "handle": "vn:vbpl:174877#dieu-18/khoan-2",
+      "path": [
+        {
+          "anchor": "chuong-ii",
+          "heading": "XÂY DỰNG, PHÁT TRIỂN, BẢO VỆ, QUẢN TRỊ, XỬ LÝ, SỬ SỤNG  DỮ LIỆU; QUỸ PHÁT TRIỂN DỮ LIỆU QUỐC GIA",
+          "label": "Chương II"
+        },
+        {
+          "anchor": "dieu-18",
+          "heading": "Cung cấp dữ liệu cho cơ quan nhà nước",
+          "label": "Điều 18"
+        },
+        {
+          "anchor": "dieu-18/khoan-2",
+          "label": "Khoản 2"
+        }
+      ],
+      "snippet": "Điều 18. Cung cấp dữ liệu cho cơ quan nhà nước\n2. Tổ chức, cá nhân phải cung cấp dữ liệu cho cơ quan nhà nước khi có yêu cầu của cơ quan có thẩm quyền mà không cần chủ thể dữ liệu đồng ý trong các trường hợp sau đây:\na) Ứng phó với tình trạng khẩn cấp;\nb) Khi có nguy cơ đe dọa an ninh quốc gia nhưng chưa đến mức ban bố tình trạng khẩn cấp;\nc) Thảm họa;\nd) Phòng, chống bạo loạn, khủng bố."
+    },
+    {
+      "citation": "Điều 2, Khoản 2",
+      "complete": false,
+      "doc": "vn:vbpl:183838",
+      "handle": "vn:vbpl:183838#dieu-2/khoan-2",
+      "path": [
+        {
+          "anchor": "dieu-2",
+          "heading": "Sửa đổi, bổ sung một số khoản của Điều 9",
+          "label": "Điều 2"
+        },
+        {
+          "anchor": "dieu-2/khoan-2",
+          "label": "Khoản 2"
+        }
+      ],
+      "snippet": "Điều 2. Sửa đổi, bổ sung một số khoản của Điều 9\n2. Bổ sung khoản 2a, 2b vào sau khoản 2 như sau:\n\"2a. Sau khi nhận đủ tài liệu, thông tin, dữ liệu của khách hàng cung cấp theo quy định tại khoản 2 Điều này, TCPHT thực hiện kiểm tra tính hợp pháp, hợp lệ và đối chiếu đảm bảo sự khớp đúng, chính xác của các tài liệu, thông tin, dữ liệu mà khách hàng cung cấp và tiến hành xác minh thông tin nhận biết khách hàng theo quy định của pháp luật về phòng, chống rửa tiền và các quy định sau:\na) Đối với khách hàng là cá nhân:\n(i) Trường hợp khách hàng sử dụng thẻ căn cước hoặc căn cước điện tử hoặc […]"
+    },
+    {
+      "citation": "Điều 16, Khoản 4",
+      "complete": true,
+      "doc": "vn:vbpl:858726d0-de6b-11f1-8d0c-43225cb8131e",
+      "gaps": [
+        {
+          "anchor": "dieu-16/khoan-4",
+          "document_key": "vn:vbpl:858726d0-de6b-11f1-8d0c-43225cb8131e",
+          "kind": "missing_effective_date",
+          "message": "Effective start date is missing."
+        }
+      ],
+      "handle": "vn:vbpl:858726d0-de6b-11f1-8d0c-43225cb8131e#dieu-16/khoan-4",
+      "path": [
+        {
+          "anchor": "chuong-iii",
+          "heading": "GIÁM SÁT QUÁ TRÌNH THỬ NGHIỆM VÀ KẾT THÚC THỜI GIAN THỬ NGHIỆM",
+          "label": "Chương III"
+        },
+        {
+          "anchor": "dieu-16",
+          "heading": "Bảo vệ khách hàng",
+          "label": "Điều 16"
+        },
+        {
+          "anchor": "dieu-16/khoan-4",
+          "label": "Khoản 4"
+        }
+      ],
+      "snippet": "Điều 16. Bảo vệ khách hàng\n4. Ban hành các quy định về bảo vệ thông tin khách hàng khi lưu trữ và truyền dẫn bằng các cơ chế bảo mật, mã hóa, giấu tên, che giấu dữ liệu. Trong trường hợp tổ chức thu thập, sử dụng, chuyển giao thông tin của khách hàng thì phải được sự đồng ý của khách hàng và chỉ được thu thập, chuyển giao thông tin cho bên thứ ba khi có sự cho phép của khách hàng hoặc theo yêu cầu của cơ quan nhà nước có thẩm quyền; có biện pháp kỹ thuật để xác nhận việc khách hàng cho phép cung cấp thông tin của khách hàng cho bên thứ ba."
+    },
+    {
+      "citation": "Điều 11",
+      "complete": false,
+      "doc": "vn:vbpl:174547",
+      "handle": "vn:vbpl:174547#dieu-11",
+      "path": [
+        {
+          "anchor": "chuong-ii",
+          "heading": "QUY ĐỊNH CỤ THỂ VỀ TRIỂN KHAI OPEN API",
+          "label": "Chương II"
+        },
+        {
+          "anchor": "chuong-ii/muc-2 ",
+          "heading": "QUYỀN VÀ TRÁCH NHIỆM CỦA NGÂN HÀNG VÀ BÊN THỨ BA",
+          "label": "Mục 2"
+        },
+        {
+          "anchor": "dieu-11",
+          "heading": "Trách nhiệm của Ngân hàng",
+          "label": "Điều 11"
+        }
+      ],
+      "snippet": "5.     Cung cấp công cụ hoặc chức năng cho phép khách hàng thực hiện:\na)     Tra cứu các dữ liệu mà khách hàng đồng ý cho bên thứ ba xử lý;\nb)      Rút lại sự đồng ý của khách hàng theo quy định của pháp luật.\n6.      Thiết lập thời hạn được thực hiện truy vấn thông tin của khách hàng sau khi được khách hàng đồng ý không quá 180 ngày, trừ trường hợp có thỏa thuận khác giữa khách hàng với Ngân hàng."
     },
     {
       "citation": "Điều 7, Khoản 1",
       "complete": false,
-      "doc": "vn:vbpl:46996",
-      "handle": "vn:vbpl:46996#dieu-7/khoan-1",
+      "doc": "vn:vbpl:187276",
+      "handle": "vn:vbpl:187276#dieu-7/khoan-1",
       "path": [
         {
-          "anchor": "chuong-iii",
-          "heading": "CÁC YÊU CẦU KỸ THUẬT ĐỐI VỚI ATM",
-          "label": "Chương III"
+          "anchor": "chuong-ii",
+          "heading": "YÊU CẦU, ĐIỀU KIỆN BẢO VỆ DỮ LIỆU CÁ NHÂN",
+          "label": "Chương II"
         },
         {
           "anchor": "dieu-7",
-          "heading": "Các yêu cầu kỹ thuật lắp đặt và an toàn vật lý ATM",
+          "heading": "Chuyển giao dữ liệu cá nhân",
           "label": "Điều 7"
         },
         {
@@ -1172,50 +905,94 @@
           "label": "Khoản 1"
         }
       ],
-      "snippet": "Điều 7. Các yêu cầu kỹ thuật lắp đặt và an toàn vật lý ATM\n1. Yêu cầu về lắp đặt ATM\na) Tổ chức hoạt động thẻ có cung cấp dịch vụ ATM (sau đây gọi chung là tổ chức cung cấp dịch vụ ATM) phải đảm bảo các yêu cầu về việc lắp đặt ATM theo quy định của Ngân hàng Nhà nước Việt Nam về trang bị, quản lý, vận hành và đảm bảo an toàn hoạt động của ATM;\nb) Đối với ATM đặt bên ngoài\nNgoài các yêu cầu tại Điểm a Khoản 1 Điều này, tổ chức cung cấp dịch vụ ATM thực hiện thêm các biện pháp đảm bảo an toàn cho ATM đặt bên ngoài đối với những nguy cơ mất an toàn vật lý sau:\n- Có biện pháp đảm bảo ATM tránh […]"
+      "snippet": "Điều 7. Chuyển giao dữ liệu cá nhân\n1. Tổ chức, cá nhân chuyển giao dữ liệu cá nhân theo điểm a, điểm c, điểm d khoản 1 Điều 17 của Luật Bảo vệ dữ liệu cá nhân phải xác lập thỏa thuận về việc chuyển giao dữ liệu cá nhân với bên nhận dữ liệu cá nhân, trong đó nêu rõ các nội dung sau:\na) Mục đích chuyển giao dữ liệu cá nhân;\nb) Đối tượng chủ thể dữ liệu cá nhân và loại dữ liệu cá nhân được chuyển giao phù hợp với mục đích chuyển giao;\nc) Thời hạn xử lý dữ liệu cá nhân, yêu cầu về xóa, hủy dữ liệu cá nhân sau khi hoàn thành mục đích chuyển giao;\nd) Cơ sở pháp lý của việc chuyển giao dữ liệu […]"
     },
     {
-      "citation": "Điều 25, Khoản 3",
-      "complete": true,
-      "doc": "vn:vbpl:144532",
-      "handle": "vn:vbpl:144532#dieu-25/khoan-3",
+      "citation": "Điều 3",
+      "complete": false,
+      "doc": "vn:vbpl:186058",
+      "handle": "vn:vbpl:186058#dieu-3",
+      "locator": "block:29-31",
+      "path": [
+        {
+          "anchor": "dieu-3",
+          "heading": "Điều 3. Sửa đổi, bổ sung điểm a khoản 3 Điều 3",
+          "label": "Điều 3"
+        }
+      ],
+      "snippet": "Điều 3. Sửa đổi, bổ sung điểm a khoản 3 Điều 3\n“a) Áp dụng tối thiểu một trong các hình thức xác nhận quy định tại khoản 3, khoản 4, khoản 5, khoản 7, khoản 8, khoản 9 Điều 11 Thông tư này khi thay đổi thông tin định danh khách hàng.\nTrường hợp khách hàng cá nhân, khách hàng tổ chức mới thay đổi thông tin giấy tờ tùy thân (bao gồm căn cước công dân, căn cước, căn cước điện tử, hộ chiếu của khách hàng cá nhân hoặc của người đại diện hợp pháp của khách hàng tổ chức) hoặc các thông tin để đăng ký, sử dụng các hình thức xác nhận giao dịch (tối thiểu bao gồm số điện thoại hoặc địa chỉ thư điện […]"
+    }
+  ],
+  "next_cursor": "eyJ2IjoxLCJyZWxlYXNlIjoiMjAyNjExMTVfMyIsImZpcnN0X2xpbWl0IjoyMCwidGFrZW5fcHJpbWFyeSI6MTgsInRha2VuX25vbl9jdXJyZW50IjoyLCJhc19vZiI6IjIwMjYtMTEtMTYiLCJkaWdlc3QiOiJlNzI5ZGJlZmQyMjgwNDkwYmNlYjJjYTliZDNlMjk3MDM5YWNmMmFhYTE1ODcxMDQ0ZDY3ZDQ3ZWZiYjdmMjRiIn0",
+  "nodes": {
+    "1.11.c1": {
+      "level": 3,
+      "name": "Chương I NHỮNG QUY ĐỊNH CHUNG"
+    },
+    "1.11.c4": {
+      "level": 3,
+      "name": "Chương IV HOẠT ĐỘNG BẢO VỆ AN NINH MẠNG"
+    },
+    "1.11.c7": {
+      "level": 3,
+      "name": "Chương VII ĐIỀU KHOẢN THI HÀNH"
+    }
+  },
+  "non_current": [
+    {
+      "citation": "Điều 17",
+      "complete": false,
+      "doc": "vn:vbpl:161106",
+      "handle": "vn:vbpl:161106#dieu-17",
+      "nodes": [
+        "1.11.c4"
+      ],
       "path": [
         {
           "anchor": "chuong-ii",
-          "heading": "CÁC QUY ĐỊNH VỀ BẢO ĐẢM AN TOÀN THÔNG TIN",
+          "heading": "HOẠT ĐỘNG BẢO VỆ DỮ LIỆU CÁ NHÂN",
           "label": "Chương II"
         },
         {
-          "anchor": "chuong-ii/muc-4",
-          "heading": "QUẢN LÝ VẬN HÀNH VÀ TRAO ĐỔI THÔNG TIN",
-          "label": "Mục 4"
+          "anchor": "chuong-ii/muc-2",
+          "heading": "BẢO VỆ DỮ LIỆU CÁ NHÂN TRONG QUÁ TRÌNH XỬ LÝ DỮ LIỆU CÁ NHÂN",
+          "label": "Mục 2"
         },
         {
-          "anchor": "dieu-25",
-          "heading": "Quản lý hệ thống thông tin cung cấp dịch vụ giao dịch trực tuyến",
-          "label": "Điều 25"
-        },
-        {
-          "anchor": "dieu-25/khoan-3",
-          "label": "Khoản 3"
+          "anchor": "dieu-17",
+          "heading": "Xử lý dữ liệu cá nhân trong trường hợp không cần sự đồng ý của chủ thể dữ liệu",
+          "label": "Điều 17"
         }
       ],
-      "snippet": "Điều 25. Quản lý hệ thống thông tin cung cấp dịch vụ giao dịch trực tuyến\n3. Tổ chức hướng dẫn các biện pháp bảo đảm an toàn thông tin và cảnh báo rủi ro cho khách hàng trước khi tham gia sử dụng dịch vụ giao dịch trực tuyến và theo định kỳ."
+      "snippet": "Điều 17. Xử lý dữ liệu cá nhân trong trường hợp không cần sự đồng ý của chủ thể dữ liệu\n1. Trong trường hợp khẩn cấp, cần xử lý ngay dữ liệu cá nhân có liên quan để bảo vệ tính mạng, sức khỏe của chủ thể dữ liệu hoặc người khác. Bên Kiểm soát dữ liệu cá nhân, Bên Xử lý dữ liệu cá nhân, Bên Kiểm soát và xử lý dữ liệu cá nhân, Bên thứ ba có trách nhiệm chứng minh trường hợp này.\n2. Việc công khai dữ liệu cá nhân theo quy định của luật.\n3. Việc xử lý dữ liệu của cơ quan nhà nước có thẩm quyền trong trường hợp tình trạng khẩn cấp về quốc phòng, an ninh quốc gia, trật tự an toàn xã hội, thảm […]"
     },
     {
-      "citation": "Điều 10",
-      "complete": true,
-      "doc": "vn:vbpl:47660",
-      "handle": "vn:vbpl:47660#dieu-10",
+      "citation": "Điều 11",
+      "complete": false,
+      "doc": "vn:vbpl:161106",
+      "handle": "vn:vbpl:161106#dieu-11",
+      "nodes": [
+        "1.11.c4"
+      ],
       "path": [
         {
-          "anchor": "dieu-10",
-          "heading": "Thông tin, báo cáo",
-          "label": "Điều 10"
+          "anchor": "chuong-ii",
+          "heading": "HOẠT ĐỘNG BẢO VỆ DỮ LIỆU CÁ NHÂN",
+          "label": "Chương II"
+        },
+        {
+          "anchor": "chuong-ii/muc-2",
+          "heading": "BẢO VỆ DỮ LIỆU CÁ NHÂN TRONG QUÁ TRÌNH XỬ LÝ DỮ LIỆU CÁ NHÂN",
+          "label": "Mục 2"
+        },
+        {
+          "anchor": "dieu-11",
+          "heading": "Sự đồng ý của chủ thể dữ liệu",
+          "label": "Điều 11"
         }
       ],
-      "snippet": "Điều 10. Thông tin, báo cáo\n1. Tổ chức cung ứng dịch vụ thanh toán, chi nhánh Ngân hàng Nhà nước phải thực hiện báo cáo theo chế độ báo cáo thống kê của Ngân hàng Nhà nước Việt Nam và khi có yêu cầu đột xuất của cơ quan có thẩm quyền theo quy định của pháp luật.\n2. Tổ chức cung ứng dịch vụ thanh toán báo cáo việc thực hiện nâng cấp hệ thống ATM; những vấn đề bất thường phát sinh có thể gây rủi ro, mất an toàn trong hệ thống ATM của mình và đối với hệ thống ATM của các tổ chức cung ứng dịch vụ thanh toán khác về Ngân hàng Nhà nước Việt Nam (qua Vụ Thanh toán)."
+      "snippet": "Điều 11. Sự đồng ý của chủ thể dữ liệu\n1. Sự đồng ý của chủ thể dữ liệu được áp dụng đối với tất cả các hoạt động trong quy trình xử lý dữ liệu cá nhân, trừ trường hợp luật có quy định khác.\n2. Sự đồng ý của chủ thể dữ liệu chỉ có hiệu lực khi chủ thể dữ liệu tự nguyện và biết rõ các nội dung sau:\na) Loại dữ liệu cá nhân được xử lý;\nb) Mục đích xử lý dữ liệu cá nhân;\nc) Tổ chức, cá nhân được xử lý dữ liệu cá nhân;\nd) Các quyền, nghĩa vụ của chủ thể dữ liệu.\n3. Sự đồng ý của chủ thể dữ liệu phải được thể hiện rõ ràng, cụ thể bằng văn bản, giọng nói, đánh dấu vào ô đồng ý, cú pháp đồng ý qua […]"
     }
   ],
-  "release": "20261111_2"
+  "release": "20261115_3"
 }

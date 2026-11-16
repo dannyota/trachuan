@@ -62,7 +62,7 @@ it.each(['success', 'tool-error', 'rpc-error'])('generates a sample or writes no
     expect(resultText).not.toContain(token)
     expect(metaText).not.toContain(token)
     expect(JSON.parse(resultText)).toEqual(sample)
-    expect(JSON.parse(metaText)).toMatchObject({ release: '20990101_1', case_id: 'atttt-50-2024' })
+    expect(JSON.parse(metaText)).toMatchObject({ release: '20990101_1', case_id: 'pdpl-consent-91-2025' })
     const require = createRequire(import.meta.url)
     const spec = require('yaml').parse(await readFile('../../packages/schema/openapi.yaml', 'utf8'))
     const validate = new (require('ajv'))({ strict: false, formats: { int64: true } }).compile({ ...spec.components.schemas.SearchResult, components: spec.components })
