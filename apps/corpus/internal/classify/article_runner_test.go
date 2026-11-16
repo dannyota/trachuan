@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"danny.vn/trachuan/apps/corpus/internal/batchapi"
@@ -78,5 +79,47 @@ func TestArticles_AllSkippedWritesWithoutSubmission(t *testing.T) {
 	}
 	if _, err = os.Stat(filepath.Join(o.Out, "articles.json")); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestArticles_DropsForeignAnchorsInOutcomeAndArtifact(t *testing.T) {
+	r, ledger, client, options, families := runArticlesFixture(t)
+	prepare := client.beforeCreate
+	client.beforeCreate = func(requests []batchapi.Request) {
+		prepare(requests)
+		block := &client.results[0].Message.Content[0]
+		block.Text = strings.TrimSuffix(block.Text, "}") + `,"foreign":null}`
+	}
+	if _, err := r.Articles(context.Background(), options, "labels", articleInputs(1, ""), families, articleNodes()); err != nil {
+		t.Fatal(err)
+	}
+	for _, outcome := range ledger.rows[0].Results {
+		b, err := json.Marshal(outcome)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var recorded struct {
+			DroppedAnchors int `json:"dropped_anchors"`
+		}
+		if err = json.Unmarshal(b, &recorded); err != nil {
+			t.Fatal(err)
+		}
+		if recorded.DroppedAnchors != 1 || outcome.Articles["dieu-1"].Outcome != "ok" {
+			t.Fatalf("outcome did not preserve result and count: %s", b)
+		}
+	}
+	b, err := os.ReadFile(filepath.Join(options.Out, "articles.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var artifact struct {
+		DroppedAnchors int             `json:"dropped_anchors"`
+		Articles       []ArticleRecord `json:"articles"`
+	}
+	if err = json.Unmarshal(b, &artifact); err != nil {
+		t.Fatal(err)
+	}
+	if artifact.DroppedAnchors != 1 || len(artifact.Articles) != 1 || len(artifact.Articles[0].Outcome.Codes) != 1 {
+		t.Fatalf("artifact did not preserve result and count: %s", b)
 	}
 }

@@ -25,15 +25,16 @@ type ArticleMetadata struct {
 }
 
 type ArticleArtifact struct {
-	Version      int             `json:"version"`
-	Country      string          `json:"country"`
-	Release      string          `json:"release"`
-	Recipe       Recipe          `json:"recipe"`
-	RecipeHash   string          `json:"recipe_hash"`
-	TaxonomyHash string          `json:"taxonomy_hash"`
-	FamiliesHash string          `json:"families_sha256"`
-	LabelsHash   string          `json:"labels_sha256"`
-	Articles     []ArticleRecord `json:"articles"`
+	Version        int             `json:"version"`
+	Country        string          `json:"country"`
+	Release        string          `json:"release"`
+	Recipe         Recipe          `json:"recipe"`
+	RecipeHash     string          `json:"recipe_hash"`
+	TaxonomyHash   string          `json:"taxonomy_hash"`
+	FamiliesHash   string          `json:"families_sha256"`
+	LabelsHash     string          `json:"labels_sha256"`
+	Articles       []ArticleRecord `json:"articles"`
+	DroppedAnchors int             `json:"dropped_anchors"`
 }
 
 func readArtifact(path string, dst any) (string, error) {
@@ -126,6 +127,7 @@ func writeArticles(dir string, s Submission) error {
 	}
 	a := ArticleArtifact{Version: 1, Country: s.Country, Release: s.Release, Recipe: s.Recipe, RecipeHash: s.Recipe.Hash(), TaxonomyHash: s.Recipe.TaxonomyHash, FamiliesHash: s.Recipe.Article.FamiliesHash, Articles: []ArticleRecord{}}
 	for _, item := range s.Items {
+		a.DroppedAnchors += s.Results[item.Key].DroppedAnchors
 		if item.ArticleMeta != nil {
 			a.LabelsHash = item.ArticleMeta.LabelsHash
 			a.Articles = append(a.Articles, item.ArticleMeta.Skipped...)

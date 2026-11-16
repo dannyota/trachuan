@@ -24,10 +24,11 @@ type Family struct {
 }
 
 type Outcome struct {
-	Outcome  string                    `json:"outcome"`
-	Codes    []string                  `json:"codes"`
-	Dropped  []string                  `json:"dropped_codes"`
-	Articles map[string]ArticleOutcome `json:"articles,omitempty"`
+	Outcome        string                    `json:"outcome"`
+	Codes          []string                  `json:"codes"`
+	Dropped        []string                  `json:"dropped_codes"`
+	Articles       map[string]ArticleOutcome `json:"articles,omitempty"`
+	DroppedAnchors int                       `json:"dropped_anchors,omitempty"`
 }
 
 func BuildRequest(r Recipe, d Document, families []Family) (anthropic.MessageNewParams, error) {

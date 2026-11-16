@@ -128,7 +128,7 @@ func apply(s *Submission, results []batchapi.Result) error {
 				if item.Article == nil {
 					return fmt.Errorf("article submission is missing request evidence; reservation retained")
 				}
-				out.Articles = ValidateArticles(string(m.StopReason), text, *item.Article, item.Article.Nodes)
+				out.Articles, out.DroppedAnchors = ValidateArticles(string(m.StopReason), text, *item.Article, item.Article.Nodes)
 			} else {
 				out = Validate(string(m.StopReason), text, s.Recipe.F, s.Families)
 			}
