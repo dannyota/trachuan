@@ -33,7 +33,7 @@
 
 ### 8.2 Candidates and labeled set (no paid calls)
 
-- [ ] Labeled set from seeds: the 300 masked articles of taxonomy.md "Evaluation gate", drawn by `corpus taxonomy labels`, frozen with a hash.
+- [x] Labeled set from seeds: the 300 masked articles of taxonomy.md "Evaluation gate", drawn by `corpus taxonomy labels` from vn/20261115_3 (seed 1, 197 documents), frozen as `taxonomy-labels.json`.
 - [x] Candidate selection: embedding and lexical candidates measured on the masked set fell far short of 0.95 (ADR 0004 History); taxonomy.md now limits each article to the subtrees of its document request's level-2 families and gates family recall at 0.95.
 - [ ] Model-adjudicated sets (no Anthropic calls; Codex gpt-6-astra labels blind): inheritance (100 inherited consolidated articles) now; multi-family (100 unseeded articles, half from documents with a multi-topic document-level result) after the 8.4 screening pass, frozen before any multi-family scoring; post-2023 (100 articles). The coordinator reads 10 of multi-family and 20 of post-2023 before either gates.
 
