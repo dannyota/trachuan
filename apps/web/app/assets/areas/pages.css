@@ -13,7 +13,7 @@
 .server-address .page-code pre { font-size: 16px; }
 .connect-grid { display: grid; grid-template-columns: 1fr; gap: 20px; }
 @media (min-width: 1024px) { .connect-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-.connect-card { min-width: 0; padding: 24px; }
+.connect-card { border-radius: 22px; min-width: 0; padding: 24px; }
 .connect-card h2 { font-size: 20px; margin: 0 0 12px; }
 .connect-card p, .connect-card ol { font-size: 15px; color: var(--color-ink-soft); margin: 0 0 16px; }
 .connect-card ol { padding-left: 22px; margin-bottom: 0; list-style: decimal; }
@@ -22,6 +22,8 @@
 .connect-tools h2 { grid-column: 1 / -1; margin: 0; }
 .connect-tools code { font-weight: 600; font-size: 14px; }
 .connect-tools p { margin: 4px 0 0; color: var(--color-ink-soft); font-size: 14px; }
+.page-content .coverage-summary { padding: 20px; border-radius: 22px; background: var(--color-mist); }
+.page-content .coverage-summary .coverage-stats { border: 0; }
 .coverage-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid var(--color-line); border-radius: var(--radius-lg); overflow: hidden; margin: 0; container-type: inline-size; }
 .coverage-stats-three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .coverage-stats div { display: flex; flex-direction: column-reverse; justify-content: flex-end; min-width: 0; padding: 22px 24px; border-right: 1px solid var(--color-line); }
@@ -39,7 +41,7 @@
 .legal-facts p { margin: 0; color: var(--color-ink-soft); }
 .legal-updated { font-size: 14px; }
 .login-page { display: flex; justify-content: center; padding-block: 64px; }
-.login-card { width: 100%; max-width: 480px; padding: 32px; text-align: center; }
+.login-card { border-radius: 22px; background: var(--color-mist); width: 100%; max-width: 480px; padding: 32px; text-align: center; }
 .login-card svg { margin: 0 auto; }
 .login-card h1 { font-size: 28px; line-height: 1.25; margin: 20px 0 12px; }
 .login-card p { color: var(--color-ink-soft); }
@@ -50,7 +52,7 @@
 .topic-tree .topic-tree { padding-left: 28px; border-left: 1px solid var(--color-line); }
 .topic-tree li { padding: 14px 0; border-bottom: 1px solid var(--color-line); }
 .topic-tree p { margin: 4px 0; color: var(--color-muted); }
-.topic-tree button { padding: 4px 8px; border: 1px solid var(--color-line-strong); border-radius: var(--radius-sm); color: var(--color-ink); background: var(--color-card); }
+.topic-tree button { padding: 4px 8px; border: 1px solid var(--color-line-strong); min-height: 44px; border-radius: var(--radius-pill); color: var(--color-ink); background: var(--color-card); }
 .topic-counts { font-size: 14px; }
 .topic-documents { list-style: none; padding: 0; margin: 0; }
 .topic-documents li { display: flex; align-items: center; gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--color-line); }

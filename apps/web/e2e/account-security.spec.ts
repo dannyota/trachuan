@@ -107,7 +107,10 @@ test('Google-only reauth returns through login', async ({ page }) => {
   await security(page, false)
   await page.route('**/api/v1/me/password/link', route => route.fulfill({ status: 403, json: { error: { code: 'reauth_required', message: 'fixed' } } }))
   await page.getByRole('button', { name: 'Add a password by email' }).click()
-  await expect(page).toHaveURL(url => url.pathname === '/login' && url.searchParams.get('next') === '/account' && url.search.split('&').length === 1)
+  await expect(page).toHaveURL(/\/account/)
+  await expect(page.getByText("To add a password, sign in again. You'll come back here.")).toBeVisible()
+  await page.getByRole('button', { name: 'Sign in again' }).click()
+  await expect(page).toHaveURL(/\/login\?next=%2Faccount&reason=reauth/)
 })
 
 for (const operation of ['recovery', 'remove'] as const) {

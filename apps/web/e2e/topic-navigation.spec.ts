@@ -40,7 +40,7 @@ test('returning to topic pages through browser history renders the tree', async 
       await expect(page).toHaveURL(`${origin}/connect`)
       await page.goBack()
       await expect(page.locator('main').getByText('Fixture topic').first()).toBeVisible()
-      await expect(page.getByText('Dịch vụ chưa sẵn sàng.')).toHaveCount(0)
+      await expect(page.getByText('Bạn thử lại sau.')).toHaveCount(0)
       expect(documentRequests.filter(url => url === `${origin}${path}`).length).toBeGreaterThanOrEqual(2)
     }
   } finally {

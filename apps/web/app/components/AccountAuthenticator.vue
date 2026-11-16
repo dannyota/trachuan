@@ -3,6 +3,7 @@ import CopyButton from './CopyButton.vue'
 import AuthenticatorQr from './AuthenticatorQr.vue'
 import RecoveryCodes from './RecoveryCodes.vue'
 import ReauthForm from './ReauthForm.vue'
+import ReauthNotice from './ReauthNotice.vue'
 import { useReauth } from '../composables/useReauth'
 import { usePageSecrets } from '../composables/usePageSecrets'
 import { computed, ref, watch } from 'vue'
@@ -48,7 +49,7 @@ async function mutate(kind: Operation, action = kind === 'confirm' ? setupAction
           : await client.POST('/api/v1/me/recovery-codes', { params, body: { code: proof || code.value }, signal })
     if (signal.aborted) return
     if (result.error) {
-      if (reauth.requireProof(result.error, action, kind === 'remove' || kind === 'recovery', nextCode => mutate(kind, action, nextCode))) return
+      if (reauth.requireProof(result.error, action, 'authenticator', kind === 'remove' || kind === 'recovery', nextCode => mutate(kind, action, nextCode))) return
       if (result.response.status === 404 && (kind === 'setup' || kind === 'confirm')) { enrollmentOff.value = true; setup.value = null; error.value = labels.value.enrollmentOff }
       else error.value = authError(language.value, result.error.error.code, result.response.status)
       return
@@ -66,12 +67,12 @@ async function mutate(kind: Operation, action = kind === 'confirm' ? setupAction
 function toggle() { recovery.value = !recovery.value; code.value = '' }
 </script>
 <template>
-  <section class="account-row account-security-row" :aria-label="`${labels.factorTitle}: ${session.account?.totp ? labels.factorOn : labels.factorOff}`">
+  <section id="reauth-authenticator" class="account-row account-security-row" :aria-label="`${labels.factorTitle}: ${session.account?.totp ? labels.factorOn : labels.factorOff}`">
     <div class="account-security-head">
       <h3>{{ labels.factorTitle }}<span class="account-security-status">{{ session.account?.totp ? labels.factorOn : labels.factorOff }}</span></h3>
       <div v-if="!codes.length" class="auth-actions">
-        <button v-if="!setup && !reauth.challenge.value && !session.account?.totp && session.account?.totp_enrollment && !enrollmentOff" class="btn btn-secondary" type="button" :disabled="busy" @click="mutate('setup')">{{ labels.setup }}</button>
-        <template v-if="!setup && !reauth.challenge.value && session.account?.totp && !editing">
+        <button v-if="!setup && !reauth.challenge.value && !reauth.notice.value && !session.account?.totp && session.account?.totp_enrollment && !enrollmentOff" class="btn btn-secondary" type="button" :disabled="busy" @click="mutate('setup')">{{ labels.setup }}</button>
+        <template v-if="!setup && !reauth.challenge.value && !reauth.notice.value && session.account?.totp && !editing">
           <button class="btn btn-secondary" type="button" @click="editing = 'remove'">{{ labels.remove }}</button>
           <button class="btn btn-secondary" type="button" @click="editing = 'recovery'">{{ labels.replaceCodes }}</button>
         </template>
@@ -79,6 +80,7 @@ function toggle() { recovery.value = !recovery.value; code.value = '' }
     </div>
     <p v-if="error" class="account-security-notice" role="alert">{{ error }}</p><p v-if="notice" class="account-security-notice" role="status" aria-live="polite">{{ notice }}</p>
     <RecoveryCodes v-if="codes.length" :codes="codes" @close="codes = []" />
+    <ReauthNotice v-else-if="reauth.notice.value" :action="reauth.notice.value" @sign-in="reauth.signInAgain" @cancel="clear" />
     <ReauthForm v-else-if="reauth.challenge.value" v-bind="reauth.challenge.value" @verified="reauth.verified" @cancel="clear" />
     <template v-else-if="setup">
       <p>{{ labels.setupInstruction }}</p>

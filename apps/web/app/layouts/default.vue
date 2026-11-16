@@ -32,7 +32,7 @@ const head = computed(() => {
   }
   const page = publicHead(language.value, route.path)
   const title = unavailable.value ? shellMessages(language.value).unavailableTitle : titles[route.path] || page?.title || (route.path.startsWith('/vn/documents/') ? messages.value.reportDocument : '')
-  return { htmlAttrs: { lang: language.value }, title: title ? `${title} · Tra Chuẩn` : 'Tra Chuẩn', link: [{ rel: 'icon' as const, type: 'image/svg+xml', href: '/icon.svg' }, { rel: 'icon' as const, href: '/favicon.ico', sizes: 'any' }, { rel: 'apple-touch-icon' as const, href: '/apple-touch-icon.png' }, { rel: 'manifest' as const, href: '/site.webmanifest' }], meta: [...(page && isIndexable(route.path) ? [{ name: 'description', content: page.description }] : []), { name: 'theme-color', content: '#FFFFFF', media: '(prefers-color-scheme: light)' }, { name: 'theme-color', content: '#111418', media: '(prefers-color-scheme: dark)' }] }
+  return { htmlAttrs: { lang: language.value }, title: title ? `${title} · Tra Chuẩn` : 'Tra Chuẩn', link: [{ rel: 'icon' as const, type: 'image/svg+xml', href: '/icon.svg' }, { rel: 'icon' as const, href: '/favicon.ico', sizes: 'any' }, { rel: 'apple-touch-icon' as const, href: '/apple-touch-icon.png' }, { rel: 'manifest' as const, href: '/site.webmanifest' }], meta: [...(page && isIndexable(route.path) ? [{ name: 'description', content: page.description }] : []), { name: 'theme-color', content: '#FFFFFF', media: '(prefers-color-scheme: light)' }, { name: 'theme-color', content: '#0C1222', media: '(prefers-color-scheme: dark)' }] }
 })
 useHead(head)
 usePublicSeo(() => ({ path: route.path, title: head.value.title, description: publicHead(language.value, route.path)?.description ?? '', language: language.value }))

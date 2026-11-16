@@ -27,6 +27,6 @@ it('keeps the search return link while the first request is pending or fails', a
   expect(wrapper.find('.reader-back-mobile a[href="/vn/search"]').exists()).toBe(true)
   finish({ error: { error: { code: 'unavailable' } } })
   await flushPromises()
-  expect(wrapper.get('[role="alert"]').text()).toContain('unavailable')
+  expect(wrapper.get('[role="alert"]').text()).toContain('Please try again later.')
   expect(wrapper.find('.reader-back-mobile a[href="/vn/search"]').exists()).toBe(true)
 })

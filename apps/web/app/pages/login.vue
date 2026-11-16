@@ -37,6 +37,7 @@ async function signIn() {
 <template>
   <div class="container login-page"><div class="card login-card">
     <SealLogo /><h1>{{ pages.loginTitle }}</h1><p>{{ pages.loginIntro }}</p>
+    <p v-if="route.query.reason === 'reauth'" class="notice" role="status">{{ labels.reauthReason }}</p>
     <p v-if="saved" role="status">{{ labels.saved }}</p>
     <p v-if="urlError" class="notice notice--warn" role="status">{{ urlError }}</p>
     <a class="btn google-button" :href="google"><img src="/google-g.png" alt="" width="20" height="20">{{ labels.google }}</a>

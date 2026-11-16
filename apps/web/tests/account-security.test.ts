@@ -39,3 +39,16 @@ it('does not retain the fragment in router history state', () => {
   takeLinkToken({ hash: '#synthetic-token', pathname: '/link', search: '' }, { state: { current: '/link#synthetic-token', position: 3 }, replaceState })
   expect(JSON.stringify(replaceState.mock.calls)).not.toContain('synthetic-token')
 })
+
+it('consumes only fresh recognized pending actions', async () => {
+  const { takePendingReauth } = await import('../app/utils/reauth-pending')
+  const values = new Map<string, string>()
+  const storage = { getItem: (key: string) => values.get(key) ?? null, removeItem: (key: string) => { values.delete(key) }, setItem: (key: string, value: string) => { values.set(key, value) } }
+  storage.setItem('reauth-action', JSON.stringify({ action: 'token', at: 1000 }))
+  expect(takePendingReauth(storage, 2000)).toBe('token')
+  expect(takePendingReauth(storage, 2000)).toBeNull()
+  storage.setItem('reauth-action', JSON.stringify({ action: 'unknown', at: 1000 }))
+  expect(takePendingReauth(storage, 2000)).toBeNull()
+  storage.setItem('reauth-action', JSON.stringify({ action: 'token', at: 1000 }))
+  expect(takePendingReauth(storage, 601000)).toBeNull()
+})

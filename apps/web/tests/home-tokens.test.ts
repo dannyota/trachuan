@@ -19,9 +19,9 @@ function luminance(hex: string) {
   return channels[0]! * 0.2126 + channels[1]! * 0.7152 + channels[2]! * 0.0722
 }
 
-it('pins home tokens and their contrast in both themes', () => {
-  const css = readFileSync('app/assets/home-tokens.css', 'utf8')
-  const blocks = [...css.matchAll(/:root\[data-page="home"\]\s*\{([^}]+)\}/g)]
+it('pins global tokens and their contrast in both themes', () => {
+  const css = readFileSync('app/assets/tokens.css', 'utf8')
+  const blocks = [...css.matchAll(/(?:@theme static|:root)\s*\{([^}]+)\}/g)]
   expect(blocks).toHaveLength(2)
   for (const [index, values] of expected.entries()) {
     const actual = Object.fromEntries([...blocks[index]![1]!.matchAll(/--color-([\w-]+):\s*(#[0-9A-F]{6})/g)].map(match => [match[1], match[2]]))
@@ -32,5 +32,16 @@ it('pins home tokens and their contrast in both themes', () => {
       const b = luminance(tokens[ground]!)
       expect((Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05), `${index}: ${foreground} on ${ground}`).toBeGreaterThanOrEqual(minimum)
     }
+  }
+})
+
+
+it('keeps static error page colours equal to global tokens', () => {
+  const css = readFileSync('public/static-page.css', 'utf8')
+  const blocks = [...css.matchAll(/:root\s*\{([^}]+)\}/g)]
+  expect(blocks).toHaveLength(2)
+  for (const [index, values] of expected.entries()) {
+    const actual = Object.fromEntries([...blocks[index]![1]!.matchAll(/--color-([\w-]+):\s*(#[0-9A-F]{6})/g)].map(match => [match[1], match[2]]))
+    expect(actual).toEqual(values)
   }
 })

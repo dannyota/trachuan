@@ -55,7 +55,7 @@ test('shows session failure inside the shell with retry', async ({ page }) => {
   await expect(page.getByRole('banner')).toBeVisible()
   await expect(page.getByRole('contentinfo')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Thử lại' })).toBeVisible()
-  await expect(page).toHaveTitle('Tạm thời gián đoạn · Tra Chuẩn')
+  await expect(page).toHaveTitle('Tra Chuẩn đang gián đoạn. · Tra Chuẩn')
 })
 
 test('moves skip focus to main on the fixed 404', async ({ page }) => {

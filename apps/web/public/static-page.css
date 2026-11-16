@@ -1,18 +1,19 @@
+@font-face { font-family: PlusJakartaSans; src: url('/fonts/plus-jakarta-sans-var.woff2') format('woff2'); font-weight: 400 800; font-display: swap; }
 @font-face { font-family: BeVietnam; src: url('/fonts/be-vietnam-pro-var.woff2') format('woff2'); font-weight: 400 700; font-display: swap; }
 @font-face { font-family: NotoSerif; src: url('/fonts/noto-serif-var.woff2') format('woff2'); font-weight: 400 700; font-display: swap; }
-:root { --color-page: #FFFFFF; --color-ink: #14171C; --color-muted: #59606B; --color-primary: #1E3A8A; --color-seal: #B42318; --font-sans: BeVietnam, sans-serif; --font-serif: NotoSerif, serif; }
+:root { --color-page: #FFFFFF; --color-card: #FFFFFF; --color-mist: #F1F4FA; --color-sky: #E3EAF8; --color-ink: #0F1524; --color-muted: #4D556A; --color-line: #E1E5EE; --color-control: #6F7A9B; --color-primary-fill: #1E3A8A; --color-primary-hover: #172F70; --color-primary: #1E3A8A; --color-on-primary: #FFFFFF; --color-primary-hint: #D3DCF6; --color-hero-field: #FFFFFF; --color-hero-field-ink: #0F1524; --color-hero-placeholder: #4D556A; --color-hero-pill: #FFFFFF; --color-hero-pill-ink: #1E3A8A; --color-footer: #0F1524; --color-footer-ink: #FFFFFF; --color-footer-muted: #C3CADB; --color-ring: #0F1524; --color-ring-inverse: #FFFFFF; --color-footer-ring: #FFFFFF; --color-seal: #B42318; --color-seal-footer: #E5604F; --color-danger: #B42318; --color-danger-bg: #FEF3F2; --color-danger-line: #F3C7C1; --color-highlight: #FFF1A8; --color-highlight-ink: #0F1524; --color-note-warn: #FDF6E9; --color-ink-in-force: #0B6E63; --color-stamp-in-force-bg: #E3F4F0; --color-ink-partial: #8A4B08; --color-stamp-partial-bg: #FDF1DC; --color-ink-not-yet: #1D4ED8; --color-stamp-not-yet-bg: #E4ECFE; --color-ink-expired: #4A5160; --color-stamp-expired-bg: #ECEEF1; --color-stamp-neutral-border: #6B7280; --font-sans: PlusJakartaSans, BeVietnam, sans-serif; --font-serif: NotoSerif, serif; }
 @media (prefers-color-scheme: dark) {
-  :root { --color-page: #111418; --color-ink: #E6E8EB; --color-muted: #A0A7B2; --color-primary: #9DB4F5; --color-seal: #E5604F; }
+  :root { --color-page: #0C1222; --color-card: #161E33; --color-mist: #131A2E; --color-sky: #1B2A52; --color-ink: #EEF1F8; --color-muted: #A3ABC2; --color-line: #283048; --color-control: #6F7DA3; --color-primary-fill: #3451B2; --color-primary-hover: #2C469C; --color-primary: #9DB4F5; --color-on-primary: #FFFFFF; --color-primary-hint: #D3DCF6; --color-hero-field: #EEF1F8; --color-hero-field-ink: #0F1524; --color-hero-placeholder: #4D556A; --color-hero-pill: #FFFFFF; --color-hero-pill-ink: #1E3A8A; --color-footer: #131A2E; --color-footer-ink: #EEF1F8; --color-footer-muted: #A3ABC2; --color-ring: #9DB4F5; --color-ring-inverse: #FFFFFF; --color-footer-ring: #9DB4F5; --color-seal: #E5604F; --color-seal-footer: #E5604F; --color-danger: #E5604F; --color-danger-bg: #2A1412; --color-danger-line: #5A2620; --color-highlight: #4A3F12; --color-highlight-ink: #F5ECC0; --color-note-warn: #2B2110; --color-ink-in-force: #5ED0BD; --color-stamp-in-force-bg: #0F2C28; --color-ink-partial: #F0B565; --color-stamp-partial-bg: #33230B; --color-ink-not-yet: #9DB8FF; --color-stamp-not-yet-bg: #16224A; --color-ink-expired: #B3B9C4; --color-stamp-expired-bg: #23272E; --color-stamp-neutral-border: #6B7280; }
 }
 body { margin: 0; background: var(--color-page); color: var(--color-ink); font: 16px/1.6 var(--font-sans); }
 main { max-width: 720px; padding: 48px 24px; margin: auto; }
-a { color: var(--color-primary); }
+a { color: var(--color-primary); text-decoration-thickness: 1px; text-underline-offset: 3px; }
 .logo { display: flex; align-items: center; gap: 10px; color: var(--color-ink); font-size: 19px; font-weight: 700; text-decoration: none; }
 .seal { color: var(--color-seal); }
 h1 { margin-top: 64px; }
 p { color: var(--color-muted); }
 nav { display: flex; flex-wrap: wrap; gap: 24px; }
-:focus-visible { outline: 3px solid var(--color-primary); outline-offset: 2px; }
+:focus-visible { outline: 3px solid var(--color-ring); outline-offset: 2px; }
 
 .skip-link { position: absolute; left: 16px; top: -100px; padding: 8px; background: var(--color-page); }
 .skip-link:focus { top: 8px; }

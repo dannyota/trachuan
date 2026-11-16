@@ -7,6 +7,7 @@ import { useSessionStore } from '../stores/session'
 import { errorMessage, messagesFor, type Language } from '../../i18n'
 import { accountMessages } from '../../i18n/account'
 import { formatDateTime } from '../content'
+import { takePendingReauth } from '../utils/reauth-pending'
 
 definePageMeta({ signedIn: true })
 type Session = components['schemas']['Session']
@@ -61,6 +62,15 @@ async function loadGrants() {
   else showError(result.error?.error.code)
 }
 onMounted(async () => {
+  let pending = null
+  try { pending = takePendingReauth(window.sessionStorage) } catch { pending = null }
+  if (pending === 'token') openToken()
+  else if (pending) {
+    await nextTick()
+    const row = document.getElementById(`reauth-${pending}`)
+    row?.scrollIntoView()
+    row?.querySelector('button')?.focus()
+  }
   try { await Promise.all([loadSessions(), loadTokens(), loadGrants()]) }
   catch { showError() }
   finally { loading.value = false }
