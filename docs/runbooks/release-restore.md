@@ -11,15 +11,19 @@ fields are `aws_access_key_id` and `aws_secret_access_key`. Region is
 `ap-singapore-1`. The uploader uses that named shared-credentials profile and
 supplies a temporary configuration with path-style S3 addressing. It never reads
 or prints the keys. Set `OCI_S3_ENDPOINT` to the releases bucket's HTTPS S3
-compatibility endpoint. Python 3.11 or later, `flock` and signed-in `gh` are
-also required. On macOS, install `flock` with `brew install flock` if absent
+compatibility endpoint. Python 3.11 or later, `flock`, signed-in `gh` and
+`cosign` v3.1.4 are also required. The uploader runs `cosign verify-blob` to
+verify the active release's signed manifest. On macOS, install `flock` with
+`brew install flock` if absent
 ([Homebrew](https://formulae.brew.sh/formula/flock)). The uploader prints its
 AWS CLI version. The workflow installs and requires AWS CLI 2.40.0 and prints
 its version.
 
 Evaluate with
 `corpus eval <cc> <rel> --out <directory> --previous <report.json>`, using the
-report of the release active in production. Accept the run's reviewed gaps with
+uploaded `report.json` of the release active in production, exactly as its
+signed manifest binds it. Never use a stage evaluation artifact from the
+artifact store for `--previous`. Accept the run's reviewed gaps with
 `corpus accept-gaps`. The upload requires completed quality checks, passing
 required gating comparisons in every product cohort with cases, and no research
 override. All cohorts must be present; empty cohorts require no comparisons.
@@ -35,6 +39,8 @@ REL=20261114_3
 BUILD=/path/to/verified-build-artifact
 UPLOAD=/path/to/new-upload-directory
 REPORT=/path/to/evaluation/report.json
+PREVIOUS=/path/to/previous-upload-directory/report.json
+corpus eval "$CC" "$REL" --out /path/to/evaluation --previous "$PREVIOUS"
 mkdir "$UPLOAD"
 cp "$BUILD/corpus.dump" "$BUILD/MANIFEST.sha256" "$UPLOAD/"
 corpus release-row "$CC" "$REL" --out "$UPLOAD/release.json"
@@ -47,11 +53,13 @@ calling AWS or GitHub. A real upload holds
 `${HOME}/.cache/trachuan/corpus-upload.lock`, shared by all checkouts for the
 same owner. The uploader creates the cache directory with mode `0700`, checks
 the prefix is empty, uploads all four objects, then rechecks every size and ETag
-against its upload receipt before dispatching `corpus-release.yml` from `main`.
-If dispatch alone fails, dispatch it manually with the same country and release;
-do not upload again. A partial upload reserves that prefix; use a new release id
-for a rebuilt corpus. The signed manifest authorizes release; the report's
-`release_eligible` remains false. Host activation follows
+against its upload receipt. It keeps the uploaded report as
+`$UPLOAD/report.json` before dispatching `corpus-release.yml` from `main`. Use
+that file as `--previous` for the next release after this release becomes
+active. If dispatch alone fails, dispatch it manually with the same country and
+release; do not upload again. A partial upload reserves that prefix; use a new
+release id for a rebuilt corpus. The signed manifest authorizes release; the
+report's `release_eligible` remains false. Host activation follows
 [corpus release](../design/corpus-release.md#host-activation).
 
 ### Refresh the home sample

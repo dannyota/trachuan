@@ -181,6 +181,17 @@ class CorpusUploadTest(unittest.TestCase):
                 self.assertEqual(call['checksum'], 'when_required')
                 self.assertIn('addressing_style = path', call['config'])
 
+    def test_preserves_uploaded_report_in_upload_directory(self):
+        external = self.path / 'evaluation report.json'
+        external.write_bytes((self.build / 'report.json').read_bytes())
+        (self.build / 'report.json').unlink()
+        command = self.upload_command()
+        command[-1] = str(external)
+        result = subprocess.run(command, env=self.env, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual((self.build / 'report.json').read_bytes(), external.read_bytes())
+        self.assertEqual((self.remote / 'report.json').read_bytes(), external.read_bytes())
+
     def test_dry_run_validates_locally_and_never_calls_clients(self):
         result = self.run_upload('--dry-run')
         self.assertEqual(result.returncode, 0, result.stderr)

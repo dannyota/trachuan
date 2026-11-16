@@ -62,5 +62,7 @@ count=$(aws_release s3api list-objects-v2 --bucket trachuan-releases --prefix "$
   --max-keys 1 --query KeyCount --output text)
 [[ $count == 0 ]] || { echo 'Release prefix already holds objects; choose a new rel' >&2; exit 1; }
 
-python3 "$root/deploy/github/corpus_upload.py" "$country" "$rel" "$build_dir" "$report"
+cp "$report" "$directory/report.json"
+python3 "$root/deploy/github/corpus_upload.py" "$country" "$rel" "$build_dir" "$directory/report.json"
+cp "$directory/report.json" "$build_dir/report.json"
 gh workflow run corpus-release.yml --ref main -f "country=$country" -f "rel=$rel"
