@@ -134,8 +134,9 @@ Chuẩn gives evidence from legal texts, not legal advice. Usage limits,
 suspension and account deletion."
 
 A topic name is cut on a word boundary so its title stays under 60, and a node
-description under 160; counts come from the taxonomy response. Topic names stay
-Vietnamese in both languages.
+description under 160; a name with no word boundary within its limit is replaced
+by the topic code, and such a description by the counts sentence; counts come
+from the taxonomy response. Topic names stay Vietnamese in both languages.
 
 ## English
 
@@ -171,14 +172,14 @@ and no node states legal validity: no `legislationLegalForce`, no status.
 Each fact is one plain, server-rendered sentence that stands alone, with numbers
 next to their unit and date.
 
-| Fact                                                                                                    | Where                                                                                                                                                                                                         |
-| ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| What it is: finds passages and shows them word for word, with number and status; does not write answers | home lead; llms.txt summary; WebApplication description                                                                                                                                                       |
-| Who makes it: Danny, linked to aboutme.vn/danny                                                         | home maker panel; Person node; llms.txt                                                                                                                                                                       |
-| What it covers, and how current                                                                         | home scope line; on `/sources`, "Bản phát hành {release} có {documents} văn bản và {provisions} quy định; nguồn mới nhất ngày {date}.", without the clause after the semicolon when the newest date is absent |
-| What it does not cover                                                                                  | the `/sources` gap list                                                                                                                                                                                       |
-| How to connect by MCP                                                                                   | `/connect`; llms.txt                                                                                                                                                                                          |
-| Evidence, not legal advice                                                                              | `/terms`; llms.txt summary; WebApplication description                                                                                                                                                        |
+| Fact                                                                                                    | Where                                                                                                                                                                                                                                                                                                                            |
+| ------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| What it is: finds passages and shows them word for word, with number and status; does not write answers | home lead; llms.txt summary; WebApplication description                                                                                                                                                                                                                                                                          |
+| Who makes it: Danny, linked to aboutme.vn/danny                                                         | home maker panel; Person node; llms.txt                                                                                                                                                                                                                                                                                          |
+| What it covers, and how current                                                                         | home scope line; on `/sources`, "Bản phát hành {release} có {documents} văn bản và {provisions} quy định; nguồn mới nhất ngày {date}." (en "Release {release} has {documents} documents and {provisions} provisions; the newest source is dated {date}."), without the clause after the semicolon when the newest date is absent |
+| What it does not cover                                                                                  | the `/sources` gap list                                                                                                                                                                                                                                                                                                          |
+| How to connect by MCP                                                                                   | `/connect`; llms.txt                                                                                                                                                                                                                                                                                                             |
+| Evidence, not legal advice                                                                              | `/terms`; llms.txt summary; WebApplication description                                                                                                                                                                                                                                                                           |
 
 `/llms.txt` follows the standard shape ([llmstxt.org](https://llmstxt.org/)): an
 H1, a blockquote summary that opens with today's first sentence and says that

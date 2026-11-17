@@ -10,8 +10,8 @@
 
 | Stage | Contents | Depends on | State |
 |-|-|-|-|
-| D1, web | robots.txt; sitemap.xml with the six fixed URLs and `lastmod` on privacy and terms from one ISO date; a `usePublicSeo` composable giving every indexable page its canonical, Open Graph and Twitter tags with today's titles and descriptions; the fixture-API sweep; tests | Plan 17 stage 1 | in progress |
-| D2, web | the titles and descriptions of discovery.md; the `/sources` counts-and-date sentence; JSON-LD for home, topics and sources (the Person node and the Organization `founder` once the maker panel is on home, which it is); llms.txt in the standard shape; the CSP test widening; `tests/public-metadata.test.ts` | D1 | planned |
+| D1, web | robots.txt; sitemap.xml with the six fixed URLs and `lastmod` on privacy and terms from one ISO date; a `usePublicSeo` composable giving every indexable page its canonical, Open Graph and Twitter tags with today's titles and descriptions; the fixture-API sweep; tests | Plan 17 stage 1 | done |
+| D2, web | the titles and descriptions of discovery.md; the `/sources` counts-and-date sentence; JSON-LD for home, topics and sources (the Person node and the Organization `founder` once the maker panel is on home, which it is); llms.txt in the standard shape; the CSP test widening; `tests/public-metadata.test.ts` | D1 | in progress |
 | Topic codes, backend and web | `GET /api/v1/public/taxonomy/codes` with its OpenAPI contract, generated client and Go contract tests; the sitemap reads it under the completeness rule | D1 | planned |
 | D3 | public document summaries; separate design and review (gpt-6-astra) | astra acceptance | design |
 
