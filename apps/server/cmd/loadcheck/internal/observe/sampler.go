@@ -20,7 +20,7 @@ import (
 
 type sample struct {
 	Time        time.Time                `json:"time"`
-	Connections int                      `json:"connections"`
+	Connections *int                     `json:"connections"`
 	HostCPU     *float64                 `json:"host_cpu_percent"`
 	Processes   map[string]processSample `json:"processes"`
 }
@@ -43,7 +43,7 @@ func Sample(ctx context.Context, args []string) error {
 	fs.StringVar(&pg, "pg", "", "postgres URL")
 	fs.StringVar(&out, "out", "", "output JSONL")
 	fs.Var(&specs, "proc", "name=regex")
-	if err := fs.Parse(args); err != nil || fs.NArg() != 0 || pg == "" || out == "" || len(specs) == 0 {
+	if err := fs.Parse(args); err != nil || fs.NArg() != 0 || out == "" || len(specs) == 0 {
 		return errors.New("invalid sample options")
 	}
 	expressions := map[string]*regexp.Regexp{}
@@ -58,11 +58,15 @@ func Sample(ctx context.Context, args []string) error {
 		}
 		expressions[parts[0]] = pattern
 	}
-	conn, err := pgx.Connect(ctx, pg)
-	if err != nil {
-		return errors.New("connect sampler database failed")
+	var conn *pgx.Conn
+	if pg != "" {
+		var err error
+		conn, err = pgx.Connect(ctx, pg)
+		if err != nil {
+			return errors.New("connect sampler database failed")
+		}
+		defer func() { _ = conn.Close(context.Background()) }()
 	}
-	defer func() { _ = conn.Close(context.Background()) }()
 	f, err := os.OpenFile(out, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
 	if err != nil {
 		return fmt.Errorf("create samples: %w", err)
@@ -76,11 +80,15 @@ func Sample(ctx context.Context, args []string) error {
 	for {
 		var s sample
 		s.Time = time.Now().UTC()
-		if err = conn.QueryRow(ctx, "SELECT count(*) FROM pg_stat_activity WHERE backend_type = 'client backend'").Scan(&s.Connections); err != nil {
-			if ctx.Err() != nil {
-				return nil
+		if conn != nil {
+			var connections int
+			if err = conn.QueryRow(ctx, "SELECT count(*) FROM pg_stat_activity WHERE backend_type = 'client backend'").Scan(&connections); err != nil {
+				if ctx.Err() != nil {
+					return nil
+				}
+				return errors.New("sample database failed")
 			}
-			return errors.New("sample database failed")
+			s.Connections = &connections
 		}
 		ps, total, err := readProcesses(ctx, expressions)
 		if err != nil {

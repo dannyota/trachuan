@@ -1,7 +1,11 @@
 package observe
 
 import (
+	"context"
 	"encoding/json"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
@@ -97,5 +101,46 @@ func TestProcesses_RecordsUnmatchedName(t *testing.T) {
 	}
 	if _, ok := groups["postgres"]; !ok {
 		t.Fatal("missing zero-count process group")
+	}
+}
+
+func TestSample_WithoutPostgres(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "samples.jsonl")
+	ps := filepath.Join(dir, "ps")
+	if err := os.WriteFile(ps, []byte("#!/bin/sh\nprintf '%s\\n' '123 Thu Jan  1 12:00:00 2026 100 1.5 fixture'\n"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	if err := exec.Command("env", "LC_ALL=C", "ps").Run(); err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+	if err := Sample(ctx, []string{"--out", path, "--proc", "self=fixture"}); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got map[string]json.RawMessage
+	if err := json.Unmarshal(data, &got); err != nil {
+		t.Fatal(err)
+	}
+	if value, ok := got["connections"]; ok && string(value) != "null" {
+		t.Fatalf("connections = %s, want absent or null", value)
+	}
+	for _, name := range []string{"time", "host_cpu_percent", "processes"} {
+		if _, ok := got[name]; !ok {
+			t.Errorf("missing %s", name)
+		}
+	}
+	var processes map[string]processSample
+	if err := json.Unmarshal(got["processes"], &processes); err != nil {
+		t.Fatal(err)
+	}
+	if p := processes["self"]; p.Count != 1 || p.RSS != 102400 || p.CPU != 1.5 || len(p.Processes) != 1 || p.Restart {
+		t.Fatalf("process sample = %+v", p)
 	}
 }

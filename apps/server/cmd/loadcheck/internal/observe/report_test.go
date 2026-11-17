@@ -1,6 +1,7 @@
 package observe
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"testing"
@@ -188,4 +189,33 @@ func TestReport_MissingCPUIntervalsUnavailable(t *testing.T) {
 		}
 	}
 	t.Fatal("missing CPU gate")
+}
+
+func TestReport_ConnectionsUnavailableWithoutValues(t *testing.T) {
+	at := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	records := []loadrun.Record{{Phase: "A", Stream: "search", Status: 200, Start: at, DurationMS: 1000}, {Phase: "A", Stream: "reader", Status: 200, Start: at, DurationMS: 1000}}
+	var s sample
+	data := `{"time":"2026-01-01T00:00:00.1Z","host_cpu_percent":10,"processes":{"web":{"processes":[{"pid":1}]},"server":{"processes":[{"pid":2}]},"postgres":{"processes":[{"pid":3}]},"loadcheck":{"processes":[{"pid":4}]},"generator":{"processes":[{"pid":5}]}}}`
+	if err := json.Unmarshal([]byte(data), &s); err != nil {
+		t.Fatal(err)
+	}
+	server := `{"msg":"reader pool wait","time":"2026-01-01T00:00:00Z","bucket_bounds_ms":[50],"bucket_counts":[1,0],"count":1}`
+	gates, err := buildReport(records, loadrun.Report{}, []sample{s}, strings.NewReader(""), strings.NewReader(server))
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, g := range gates {
+		if g.Name == "PostgreSQL connections" {
+			found = true
+			if g.Result != "unavailable" || g.Value != "unavailable" {
+				t.Errorf("connections gate = %+v", g)
+			}
+		} else if g.Result == "unavailable" {
+			t.Errorf("unexpected unavailable gate: %+v", g)
+		}
+	}
+	if !found {
+		t.Fatal("missing connections gate")
+	}
 }
