@@ -4,14 +4,9 @@ func operationProjectionRules() []statementRule {
 	return []statementRule{
 		{"projected", `SELECT t.title_original,t.body,t.notes,t.tables FROM control_text t JOIN control c ON c.id=t.control_id
  WHERE c.version_id=ANY($1::bigint[]) AND c.id=$2`},
-		{"public", `SELECT sv.framework_code,sv.version,s.citation,av.framework_code,av.version,a.citation
- FROM control c LEFT JOIN control s ON s.id=c.supersedes_id LEFT JOIN framework_version sv ON sv.id=s.version_id
- LEFT JOIN control a ON a.id=c.amends_id LEFT JOIN framework_version av ON av.id=a.version_id
- WHERE c.version_id=ANY($1::bigint[]) AND c.id=$2`},
 		{"public", `SELECT m.id,m.from_code,m.from_version,m.from_citation,m.to_code,m.to_version,m.to_citation,
- m.relation,m.source,m.resolved,fc.title,tc.title
- FROM control_mapping m LEFT JOIN control fc ON fc.version_id=m.from_version_id AND fc.citation=m.from_citation
- LEFT JOIN control tc ON tc.version_id=m.to_version_id AND tc.citation=m.to_citation
+ m.relation,m.source,m.resolved,m.from_version_id,m.to_version_id
+ FROM control_mapping m
  WHERE (($1::boolean AND ((m.from_code=$2 AND m.from_version=$3 AND m.from_citation=$4)
  OR (m.to_code=$2 AND m.to_version=$3 AND m.to_citation=$4)))
  OR (NOT $1::boolean AND m.from_code=$2 AND m.from_version=$3 AND m.to_code=$5 AND m.to_version=$6))
@@ -19,11 +14,6 @@ func operationProjectionRules() []statementRule {
  ORDER BY m.from_code,m.from_version,m.from_citation,m.to_code,m.to_version,m.to_citation,m.relation,m.source`},
 		{"projected", `SELECT mapping_id,evidence FROM mapping_evidence
  WHERE licensed_version_ids <@ $1::bigint[] AND mapping_id=ANY($2::bigint[]) ORDER BY mapping_id`},
-		{"public", `SELECT v.id,
- (SELECT count(*) FROM control c WHERE c.version_id=v.id),
- (SELECT count(*) FROM control_mapping m WHERE m.from_code=v.framework_code AND m.from_version=v.version AND m.resolved),
- (SELECT count(*) FROM control_mapping m WHERE m.from_code=v.framework_code AND m.from_version=v.version AND NOT m.resolved)
- FROM framework_version v WHERE v.id=ANY($1::bigint[]) ORDER BY v.id`},
 		{"projected", `SELECT version_id,name,text_source,text_complete FROM source_file
  WHERE version_id=ANY($1::bigint[]) ORDER BY version_id,name,sha256`},
 		{"gaps", `SELECT g.kind,'fw:'||v.framework_code||':'||v.version,g.subject,g.detail

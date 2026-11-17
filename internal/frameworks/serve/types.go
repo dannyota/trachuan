@@ -73,14 +73,16 @@ type Response struct {
 }
 
 type Engine struct {
-	db       *pgxpool.Pool
-	embedder retrieval.Embedder
-	key      []byte
-	release  string
-	dense    retrieval.DenseRecipe
-	lexical  lexical.Recipe
-	recipe   recipe
-	versions []version
+	db             *pgxpool.Pool
+	embedder       retrieval.Embedder
+	key            []byte
+	release        string
+	dense          retrieval.DenseRecipe
+	lexical        lexical.Recipe
+	recipe         recipe
+	versions       []version
+	partitions     map[int64]*partition
+	partitionBytes int64
 }
 
 type version struct {

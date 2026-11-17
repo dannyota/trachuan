@@ -53,6 +53,9 @@ func Open(ctx context.Context, db *pgxpool.Pool, embedder retrieval.Embedder, op
 	if err = e.loadVersions(ctx); err != nil {
 		return nil, err
 	}
+	if err = e.loadPartitions(ctx); err != nil {
+		return nil, err
+	}
 	return e, nil
 }
 

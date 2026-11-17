@@ -42,6 +42,19 @@ filter is part of the query, not a step after it. That defines the timing class:
 which structures a request reads depends only on the access set and public
 fields.
 
+The engine reads each version's index partitions once per release, when it opens
+the release and for every version alike: controls with their public fields and
+mapping counts, and per index the postings and statistics. They live in server
+memory, keyed by version. A request then uses only the partitions of the
+versions its projection allows; no request loads, waits on or warms a partition,
+so neither the work nor the timing of a request depends on what another caller
+can read. Body text, original titles, notes, tables, evidence and text gaps stay
+in the database and are read per request under the projection filter, as above.
+The partitions are bounded: the engine counts their size while loading (entries
+times a fixed per-entry cost plus string bytes), and a release whose partitions
+would exceed 256 MiB does not open; frameworks are then `unavailable` and law
+serving is untouched. The measured heap is in [host budgets](budgets-host.md).
+
 ## Handles and identity
 
 A control handle is `fw:<code>:<version>#<citation>`, for example
@@ -257,34 +270,7 @@ must be a canonical handle of the route's kind, or the request is
 identity that could disagree with the handle. With `SERVER_FRAMEWORKS=false`
 every route answers 404 and the tools are absent from `tools/list`.
 
-## How each rule follows the invariant
+## Invariant
 
-| Rule                                                       | Why                                                              |
-| ---------------------------------------------------------- | ---------------------------------------------------------------- |
-| Authenticate first; only the entitlement lookup falls back | no unauthenticated caller reaches any result                     |
-| Queries filtered by projection, not after                  | reads and timing depend only on visible data                     |
-| Public-field index for unreadable versions                 | hits, order, scores, abstention ignore body text                 |
-| Cursors and `next` bound to `access_set_version`           | a page never continues under another access set                  |
-| Reduced units built from public fields only                | read part boundaries do not depend on text                       |
-| Edge ends always reduced; evidence by dependency set       | no edge carries text the caller may not read                     |
-| No withholding indicator on edges                          | presence of private evidence is not observable                   |
-| Gap and count classification in the query                  | diagnostics of unreadable versions are public only               |
-| Text-independent errors and `access_set_version`           | no error or version value signals licensed text                  |
-| Parameters set without licensed body text                  | a recipe change from private text cannot move a reduced response |
-| Gap keys and edge tuples from public data                  | private gaps or evidence cannot renumber or reorder public rows  |
-| One handle per route                                       | no route authorizes one identity and reads another               |
-| `no-store`, partitioned caches                             | no cache crosses access sets                                     |
-
-## Tests
-
-The invariant suite of [evaluation](frameworks.md#evaluation) runs every
-operation here (search, lookup, read with paging, mappings, status, gaps, every
-route, cache hits and misses) with a reduced, a mixed and a full access set. It
-changes the body, original title, notes, tables and private evidence of a
-synthetic licensed version and asserts byte-identical responses, cursors, `next`
-tokens, `access_set_version` and errors for every caller who cannot read that
-version. A second case rebuilds the synthetic release with changed licensed text
-and asserts identical recipe parameters, gap keys and edge order. It also
-records, per request, which tables and indexes were read for each version, and
-fails when a request reads any private structure of a version the caller cannot
-read.
+How each rule above follows the invariant, and the tests that prove it:
+[results and the invariant](frameworks-results-invariant.md).

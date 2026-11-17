@@ -19,6 +19,7 @@ const (
 
 type queryRead struct {
 	sql                      string
+	opening                  bool
 	versions, textGaps       []int64
 	hasVersions, hasTextGaps bool
 }
@@ -26,7 +27,11 @@ type queryRead struct {
 func checkProjection(reads []queryRead, classes map[string]relationClass, readable []int64) error {
 	rules := projectionRules()
 	for _, read := range reads {
-		rule, classified := rules[normalizeSQL(read.sql)]
+		active := rules
+		if read.opening {
+			active = openingProjectionRules()
+		}
+		rule, classified := active[normalizeSQL(read.sql)]
 		if !classified {
 			return fmt.Errorf("unclassified statement")
 		}
@@ -67,7 +72,8 @@ func checkRuleSources(rule statementRule, classes map[string]relationClass) erro
 		switch classes[name] {
 		case publicRelation:
 		case textRelation:
-			if rule.kind != "projected" {
+			openIndex := rule.kind == "openIndex" && (name == "body_chunk" || name == "body_posting")
+			if rule.kind != "projected" && !openIndex {
 				return fmt.Errorf("unfiltered text-derived relation %q", name)
 			}
 		case mixedRelation:
@@ -102,15 +108,15 @@ func TestProjectionGuard_RejectsDiscardedAndUnclassifiedReads(t *testing.T) {
 }
 
 func TestProjectionGuard_EnforcesBoundVersionsAndSchemaClasses(t *testing.T) {
-	classes := map[string]relationClass{"body_chunk": textRelation, "public_lexical_stats": publicRelation}
+	classes := map[string]relationClass{"body_chunk": textRelation, "public_chunk": publicRelation}
 	body := queryRead{sql: `SELECT id,version_id,control_id,ordinal,token_count,1-(embedding <=> $2::vector) FROM body_chunk WHERE version_id=ANY($1::bigint[])`, versions: []int64{3}, hasVersions: true}
 	require.NoError(t, checkProjection([]queryRead{body}, classes, []int64{3}))
 	require.Error(t, checkProjection([]queryRead{body}, classes, nil))
 	body.hasVersions = false
 	require.Error(t, checkProjection([]queryRead{body}, classes, []int64{3}))
-	public := queryRead{sql: `SELECT chunk_count,avg_length FROM public_lexical_stats`}
+	public := queryRead{sql: publicDenseSQL}
 	require.NoError(t, checkProjection([]queryRead{public}, classes, nil))
-	classes["public_lexical_stats"] = textRelation
+	classes["public_chunk"] = textRelation
 	require.ErrorContains(t, checkProjection([]queryRead{public}, classes, nil), "unfiltered text-derived relation")
 	require.Error(t, checkProjection([]queryRead{public}, nil, nil))
 }
@@ -130,4 +136,12 @@ func TestProjectionGuard_AuditsMixedGapBranches(t *testing.T) {
 	require.Error(t, checkProjection([]queryRead{read}, classes, nil))
 	read.hasTextGaps = false
 	require.Error(t, checkProjection([]queryRead{read}, classes, []int64{3}))
+}
+
+func TestProjectionGuard_RejectsRequestPostings(t *testing.T) {
+	classes := map[string]relationClass{"body_posting": textRelation, "public_posting": publicRelation}
+	for _, table := range []string{"body_posting", "public_posting"} {
+		read := queryRead{sql: "SELECT chunk_id,token,tf FROM " + table + " WHERE version_id=ANY($1::bigint[])", versions: []int64{3}, hasVersions: true}
+		require.Error(t, checkProjection([]queryRead{read}, classes, []int64{3}))
+	}
 }

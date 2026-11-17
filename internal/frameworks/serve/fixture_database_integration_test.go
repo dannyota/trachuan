@@ -129,7 +129,7 @@ func buildFixtureWithCases(t *testing.T, changed, extended, calibrated bool) (*E
 	pool, err := pgxpool.NewWithConfig(ctx, config)
 	require.NoError(t, err)
 	t.Cleanup(pool.Close)
-	engine, err := Open(ctx, pool, syntheticQuery{}, Options{CursorKey: []byte(strings.Repeat("s", 32))})
+	engine, err := Open(context.WithValue(ctx, openingTraceKey{}, true), pool, syntheticQuery{}, Options{CursorKey: []byte(strings.Repeat("s", 32))})
 	require.NoError(t, err)
 	trace.assertProjection(t, nil)
 	trace.reset()

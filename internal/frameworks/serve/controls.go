@@ -5,7 +5,6 @@ import (
 	"slices"
 
 	"danny.vn/trachuan/internal/frameworks/businesskey"
-	"github.com/jackc/pgx/v5"
 )
 
 type control struct {
@@ -14,32 +13,40 @@ type control struct {
 	ordinal, mappings           int
 	citation, norm, kind, title string
 	status                      string
+	supersedes, amends          *int64
+	lineage                     Lineage
 	path                        []string
 	order                       []int
 }
 
-func loadControls(ctx context.Context, tx pgx.Tx, versions []int64) (map[int64]*control, error) {
+const controlsSQL = `SELECT id,version_id,parent_id,ordinal,citation,citation_norm,kind,title,status,supersedes_id,amends_id FROM control`
+
+func (e *Engine) loadControls(ctx context.Context) error {
 	result := map[int64]*control{}
-	if len(versions) == 0 {
-		return result, nil
-	}
-	rows, err := tx.Query(ctx, `SELECT c.id,c.version_id,c.parent_id,c.ordinal,c.citation,c.citation_norm,c.kind,c.title,c.status,
- (SELECT count(*) FROM control_mapping m WHERE
- (m.from_version_id=c.version_id AND m.from_citation=c.citation) OR (m.to_version_id=c.version_id AND m.to_citation=c.citation))
- FROM control c WHERE c.version_id=ANY($1::bigint[])`, versions)
+	rows, err := e.db.Query(ctx, controlsSQL)
 	if err != nil {
-		return nil, ErrUnavailable
+		return ErrUnavailable
 	}
 	defer rows.Close()
 	for rows.Next() {
 		c := &control{}
-		if rows.Scan(&c.id, &c.versionID, &c.parent, &c.ordinal, &c.citation, &c.norm, &c.kind, &c.title, &c.status, &c.mappings) != nil {
-			return nil, ErrUnavailable
+		if rows.Scan(&c.id, &c.versionID, &c.parent, &c.ordinal, &c.citation, &c.norm, &c.kind, &c.title, &c.status, &c.supersedes, &c.amends) != nil {
+			return ErrUnavailable
 		}
+		if err := e.reserveControlMemory(c); err != nil {
+			return err
+		}
+		part, ok := e.partitions[c.versionID]
+		if !ok {
+			return ErrUnavailable
+		}
+		part.controls[c.id] = c
+		part.citations[c.citation] = c
+		part.counts.Controls++
 		result[c.id] = c
 	}
 	if rows.Err() != nil {
-		return nil, ErrUnavailable
+		return ErrUnavailable
 	}
 	for _, c := range result {
 		path := []string{}
@@ -47,9 +54,12 @@ func loadControls(ctx context.Context, tx pgx.Tx, versions []int64) (map[int64]*
 		seen := map[int64]bool{}
 		for node := c; node != nil; {
 			if seen[node.id] || node.versionID != c.versionID {
-				return nil, ErrUnavailable
+				return ErrUnavailable
 			}
 			seen[node.id] = true
+			if err := e.reservePartitionMemory(int64(24 + len(node.citation))); err != nil {
+				return err
+			}
 			order = append(order, node.ordinal)
 			if node.id != c.id {
 				path = append(path, node.citation)
@@ -59,15 +69,40 @@ func loadControls(ctx context.Context, tx pgx.Tx, versions []int64) (map[int64]*
 			}
 			parent, exists := result[*node.parent]
 			if !exists {
-				return nil, ErrUnavailable
+				return ErrUnavailable
 			}
 			node = parent
 		}
 		slices.Reverse(path)
 		slices.Reverse(order)
 		c.path, c.order = path, order
+		links := [2]string{}
+		for i, id := range []*int64{c.supersedes, c.amends} {
+			if id == nil {
+				continue
+			}
+			other, ok := result[*id]
+			if !ok {
+				return ErrUnavailable
+			}
+			if err := e.reservePartitionMemory(int64(len(e.partitions[other.versionID].handle) + 1 + 3*len(other.citation))); err != nil {
+				return err
+			}
+			links[i] = e.partitions[other.versionID].handle + "#" + encodeCitation(other.citation)
+		}
+		c.lineage = Lineage{links[0], links[1]}
 	}
-	return result, nil
+	return nil
 }
 
 func encodeCitation(citation string) string { return businesskey.EncodeCitation(citation) }
+
+func (e *Engine) controlsFor(versions []int64) map[int64]*control {
+	result := map[int64]*control{}
+	for _, id := range versions {
+		for key, c := range e.partitions[id].controls {
+			result[key] = c
+		}
+	}
+	return result
+}
