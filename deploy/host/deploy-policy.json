@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "release_floor": 30,
+  "release_floor": 39,
   "vault_id": "ocid1.vault.oc1.ap-singapore-1.gzvpqimlaaara.abzwsljrj7hxz2mkqnqxpthkuhxaju36hrry4dpsr4nmmoqukg3ojbrfccwq",
   "region": "ap-singapore-1",
   "secrets": [
