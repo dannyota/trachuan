@@ -27,12 +27,12 @@ func runTaxonomyDraw(ctx context.Context, args []string, stderr io.Writer) int {
 func runTaxonomyDrawWith(ctx context.Context, args []string, stderr io.Writer, load func(context.Context, string, string) (drawEvidence, error)) int {
 	fail := func(code int, err error) int { _, _ = fmt.Fprintln(stderr, err); return code }
 	if len(args) < 2 {
-		return fail(2, fmt.Errorf("usage: corpus taxonomy draw <cc> <rel> --slice SLICE --seed N --out FILE [--families FILE]"))
+		return fail(2, fmt.Errorf("usage: corpus taxonomy draw <cc> <rel> --slice SLICE --seed N --out FILE [--families FILE] [--exclude FILE]"))
 	}
 	if _, err := build.DatabaseName(args[0], args[1]); err != nil {
 		return fail(2, err)
 	}
-	opts, err := options(args[2:], map[string]bool{"--slice": true, "--seed": true, "--out": true, "--families": true})
+	opts, err := options(args[2:], map[string]bool{"--slice": true, "--seed": true, "--out": true, "--families": true, "--exclude": true})
 	if err != nil {
 		return fail(2, err)
 	}
@@ -62,11 +62,22 @@ func runTaxonomyDrawWith(ctx context.Context, args []string, stderr io.Writer, l
 			e.articles[i].MultiFamily = len(f.Documents[e.articles[i].Key].Codes) >= 2
 		}
 	}
-	articles, skipped, err := taxonomy.DrawAdjudicatedWithSkipped(e.articles, opts["--slice"], seed)
+	var exclusions struct {
+		Articles []taxonomy.ArticleID `json:"articles"`
+	}
+	if path := opts["--exclude"]; path != "" {
+		if readErr := readTaxonomyJSON(path, &exclusions); readErr != nil {
+			return fail(1, readErr)
+		}
+		if exclusions.Articles == nil {
+			return fail(1, fmt.Errorf("exclusion file must contain an articles array"))
+		}
+	}
+	articles, skipped, labelerFragments, err := taxonomy.DrawAdjudicatedExcluding(e.articles, opts["--slice"], seed, exclusions.Articles)
 	if err != nil {
 		return fail(1, err)
 	}
-	packet := taxonomy.Packet{LabelingRule: taxonomy.LabelingRule, FragmentsSkipped: skipped, Country: args[0], Release: args[1], Slice: opts["--slice"], Seed: seed, DrawRule: taxonomy.AdjudicatedDrawRule, Articles: articles, Tree: e.tree}
+	packet := taxonomy.Packet{LabelerFragments: labelerFragments, LabelingRule: taxonomy.LabelingRule, FragmentsSkipped: skipped, Country: args[0], Release: args[1], Slice: opts["--slice"], Seed: seed, DrawRule: taxonomy.AdjudicatedDrawRule, Articles: articles, Tree: e.tree}
 	if err = writeTaxonomyJSON(opts["--out"], packet); err != nil {
 		return fail(1, err)
 	}

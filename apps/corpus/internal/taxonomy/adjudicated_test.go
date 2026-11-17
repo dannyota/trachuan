@@ -3,6 +3,7 @@ package taxonomy
 import (
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"reflect"
 	"strings"
 	"testing"
@@ -144,6 +145,131 @@ func TestFreeze_NoNode(t *testing.T) {
 			b, _ := json.Marshal(got)
 			if !strings.Contains(string(b), `"no_node":true`) {
 				t.Errorf("missing no_node: %s", b)
+			}
+		}
+	}
+}
+
+func TestAdjudicatedDraw_ExclusionsPreserveSelection(t *testing.T) {
+	var rows []DrawArticle
+	for i := 0; i < 120; i++ {
+		for j := 0; j < 3; j++ {
+			rows = append(rows, DrawArticle{PacketArticle: PacketArticle{Key: fmt.Sprintf("doc-%03d", i), Anchor: fmt.Sprintf("dieu-%d", j), Text: "operative"}, Primary: true, IssueDate: "2024-01-01", MultiFamily: i < 80, Inherited: true})
+		}
+	}
+	for _, slice := range []string{"post-2023", "multi-family", "inheritance"} {
+		t.Run(slice, func(t *testing.T) {
+			original, _, _, err := DrawAdjudicatedExcluding(rows, slice, 7, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, index := range []int{0, 25, 50, 75, 99} {
+				excluded := original[index]
+				got, _, count, err := DrawAdjudicatedExcluding(rows, slice, 7, []ArticleID{{Key: excluded.Key, Anchor: excluded.Anchor}})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if count != 1 || len(got) != 100 {
+					t.Fatalf("count=%d articles=%d", count, len(got))
+				}
+				ids := map[string]bool{}
+				counts := map[string]int{}
+				for _, a := range got {
+					ids[a.Key+"/"+a.Anchor] = true
+					counts[a.Key]++
+					if counts[a.Key] > 2 {
+						t.Fatal("document cap exceeded")
+					}
+				}
+				for _, a := range original {
+					id := a.Key + "/" + a.Anchor
+					if a.Key == excluded.Key && a.Anchor == excluded.Anchor {
+						if ids[id] {
+							t.Fatal("excluded article retained")
+						}
+						continue
+					}
+					if !ids[id] {
+						t.Fatalf("lost original %s", id)
+					}
+				}
+			}
+		})
+	}
+}
+
+func TestAdjudicatedDraw_ExclusionOutsideDraw(t *testing.T) {
+	var rows []DrawArticle
+	for i := 0; i < 150; i++ {
+		rows = append(rows, DrawArticle{PacketArticle: PacketArticle{Key: fmt.Sprintf("doc-%03d", i), Anchor: "dieu-1", Text: "operative"}, Primary: true, IssueDate: "2024-01-01"})
+	}
+	baseline, _, _, err := DrawAdjudicatedExcluding(rows, "post-2023", 7, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, _, count, err := DrawAdjudicatedExcluding(rows, "post-2023", 7, []ArticleID{{Key: "not-in-pool", Anchor: "dieu-1"}})
+	if err != nil || count != 0 || !reflect.DeepEqual(baseline, got) {
+		t.Fatalf("count=%d error=%v", count, err)
+	}
+}
+
+func TestAdjudicatedDraw_ReplacementUsesContinuation(t *testing.T) {
+	var rows []DrawArticle
+	for i := 0; i < 105; i++ {
+		rows = append(rows, DrawArticle{PacketArticle: PacketArticle{Key: fmt.Sprintf("doc-%03d", i), Anchor: "dieu-1", Text: "operative"}, Primary: true, IssueDate: "2024-01-01"})
+	}
+	order := append([]DrawArticle(nil), rows...)
+	rand.New(rand.NewSource(7)).Shuffle(len(order), func(i, j int) { order[i], order[j] = order[j], order[i] })
+	excluded := ArticleID{Key: order[0].Key, Anchor: order[0].Anchor}
+	got, _, count, err := DrawAdjudicatedExcluding(rows, "post-2023", 7, []ArticleID{excluded})
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, a := range got {
+		if a.Key == order[100].Key {
+			found = true
+		}
+	}
+	if !found || count != 1 {
+		t.Fatalf("continuation %s missing, count %d", order[100].Key, count)
+	}
+}
+
+func TestAdjudicatedDraw_RepeatedExclusionPreservesPriorReplacements(t *testing.T) {
+	var rows []DrawArticle
+	for i := 0; i < 120; i++ {
+		for j := 0; j < 3; j++ {
+			rows = append(rows, DrawArticle{PacketArticle: PacketArticle{Key: fmt.Sprintf("doc-%03d", i), Anchor: fmt.Sprintf("dieu-%d", j), Text: "operative"}, Primary: true, IssueDate: "2024-01-01"})
+		}
+	}
+	original, _, _, err := DrawAdjudicatedExcluding(rows, "post-2023", 7, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 4; i++ {
+		first := ArticleID{Key: original[i].Key, Anchor: original[i].Anchor}
+		previous, _, _, drawErr := DrawAdjudicatedExcluding(rows, "post-2023", 7, []ArticleID{first})
+		if drawErr != nil {
+			t.Fatal(drawErr)
+		}
+		for j := 20; j < 28; j++ {
+			second := ArticleID{Key: original[j].Key, Anchor: original[j].Anchor}
+			next, _, _, nextErr := DrawAdjudicatedExcluding(rows, "post-2023", 7, []ArticleID{first, second})
+			if nextErr != nil {
+				t.Fatal(nextErr)
+			}
+			ids := map[string]bool{}
+			for _, a := range next {
+				ids[a.Key+"/"+a.Anchor] = true
+			}
+			for _, a := range previous {
+				if a.Key == second.Key && a.Anchor == second.Anchor {
+					continue
+				}
+				if !ids[a.Key+"/"+a.Anchor] {
+					t.Fatalf("lost previous article %s %s, excludes %v %v", a.Key, a.Anchor, first, second)
+				}
 			}
 		}
 	}

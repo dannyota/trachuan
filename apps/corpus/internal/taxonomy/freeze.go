@@ -47,7 +47,7 @@ func FreezePacket(packet Packet, labels []LabelArticle, labeler string) (FrozenL
 		sort.Strings(a.Codes)
 		byID[id] = a
 	}
-	out = FrozenLabels{Country: packet.Country, Release: packet.Release, Seed: packet.Seed, DrawRule: packet.DrawRule, Labeler: labeler, Articles: make([]LabelArticle, 0, len(packet.Articles))}
+	out = FrozenLabels{LabelerFragments: packet.LabelerFragments, Country: packet.Country, Release: packet.Release, Seed: packet.Seed, DrawRule: packet.DrawRule, Labeler: labeler, Articles: make([]LabelArticle, 0, len(packet.Articles))}
 	seen := map[string]bool{}
 	for _, a := range packet.Articles {
 		id := a.Key + "\x00" + a.Anchor
