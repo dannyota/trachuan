@@ -144,6 +144,8 @@ export const en: Catalog = {
     account_blocked: 'The account is blocked.',
     not_found: 'The requested item was not found.',
     release_expired: 'The release has expired.',
+    invalid_handle: 'The link points to an invalid item.',
+    cursor_expired: 'The results changed. Please search again.',
     body_too_large: 'The request is too large.',
     unsupported_media_type: 'The format is not supported.',
     token_limit: 'The token limit has been reached.',

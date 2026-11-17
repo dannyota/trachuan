@@ -141,6 +141,8 @@ export const vi = {
     account_blocked: 'Tài khoản đã bị khóa.',
     not_found: 'Không tìm thấy nội dung.',
     release_expired: 'Phiên bản đã hết hạn.',
+    invalid_handle: 'Liên kết trỏ tới mục không hợp lệ.',
+    cursor_expired: 'Kết quả đã thay đổi. Vui lòng tìm lại.',
     body_too_large: 'Yêu cầu quá lớn.',
     unsupported_media_type: 'Định dạng không được hỗ trợ.',
     token_limit: 'Đã đạt giới hạn mã truy cập.',
