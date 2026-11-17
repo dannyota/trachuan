@@ -81,7 +81,7 @@ func frameworkTransport(t *testing.T, engine *frameworkserve.Engine, auth *frame
 		cfg.Resolver = law[0]
 	}
 	verifier := &credential.Verifier{Store: auth, Audience: "https://example.test/mcp", Clock: func() time.Time { return time.Date(2098, 1, 1, 0, 0, 0, 0, time.UTC) }}
-	server := httptest.NewServer(credential.Middleware(verifier, mcpapi.New(cfg)))
+	server := httptest.NewServer(mcpapi.NoStore(credential.Middleware(verifier, mcpapi.New(cfg))))
 	t.Cleanup(server.Close)
 	client := mcp.NewClient(&mcp.Implementation{Name: "invented", Version: "1"}, nil)
 	session, err := client.Connect(t.Context(), &mcp.StreamableClientTransport{Endpoint: server.URL, HTTPClient: &http.Client{Transport: frameworkBearer{t: t}}, DisableStandaloneSSE: true, MaxRetries: -1}, nil)
@@ -126,7 +126,7 @@ func TestFrameworkMCP_EntitlementLookupFailureAndAuthentication(t *testing.T) {
 	require.NotContains(t, logs.String(), "invented private lookup failure")
 	denied := &frameworkTransportAuth{credentialErr: credential.ErrUnavailable}
 	verifier := &credential.Verifier{Store: denied, Audience: "https://example.test/mcp"}
-	handler := credential.Middleware(verifier, mcpapi.New(mcpapi.Config{Frameworks: true, FrameworkAccess: frameworkCaller(denied)}))
+	handler := mcpapi.NoStore(credential.Middleware(verifier, mcpapi.New(mcpapi.Config{Frameworks: true, FrameworkAccess: frameworkCaller(denied)})))
 	r := httptest.NewRequest("POST", "/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"corpus_status","arguments":{"corpus":"frameworks"}}}`))
 	r.Header.Set("Authorization", "Bearer trc_"+strings.Repeat("A", 43))
 	w := httptest.NewRecorder()

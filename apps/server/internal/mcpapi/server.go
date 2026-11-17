@@ -70,7 +70,7 @@ func New(cfg Config) http.Handler {
 	transport := mcp.NewStreamableHTTPHandler(func(*http.Request) *mcp.Server { return s }, &mcp.StreamableHTTPOptions{
 		Stateless: true, JSONResponse: true, MaxRequestBodyBytes: 64 << 10, PropagateRequestCancellation: true, DisableLocalhostProtection: true,
 	})
-	return noStore(guard(transport))
+	return guard(transport)
 }
 
 type countryInput struct {

@@ -2,7 +2,7 @@ package mcpapi
 
 import "net/http"
 
-func noStore(next http.Handler) http.Handler {
+func NoStore(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "no-store")
 		next.ServeHTTP(&noStoreWriter{ResponseWriter: w}, r)

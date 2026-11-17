@@ -120,7 +120,7 @@ func TestNoStore_StreamingAndImplicitResponses(t *testing.T) {
 					}
 				}
 			})
-			server := httptest.NewServer(noStore(next))
+			server := httptest.NewServer(NoStore(next))
 			t.Cleanup(server.Close)
 			response, err := server.Client().Get(server.URL)
 			if err != nil {
@@ -146,7 +146,7 @@ func TestNoStore_StreamingAndImplicitResponses(t *testing.T) {
 }
 
 func TestMCP_UnauthenticatedResponseIsNoStore(t *testing.T) {
-	server := httptest.NewServer(New(Config{}))
+	server := httptest.NewServer(NoStore(New(Config{})))
 	t.Cleanup(server.Close)
 	response, err := server.Client().Post(server.URL, "application/json", strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"tools/list"}`))
 	if err != nil {
