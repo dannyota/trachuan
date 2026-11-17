@@ -227,7 +227,12 @@ subject. A mention, a cross-reference, the agency responsible, or a document
 type named in passing (a contract, a report, a copy, a licence) is not enough.
 One family is the default; add another family only when a substantive part of
 the article is about it." A subject with no node in the tree gets its closest
-level-2 family alone, marked `no_node`, and scores at level 2 only. The 17
+level-2 family alone, marked `no_node`, and scores at level 2 only. An article
+the labeler leaves without any code is a fragment: it is dropped and replaced by
+the next article in the same seeded order, the replacement is labeled blind, and
+the frozen set records how many were replaced. Additional-node precision is
+measured over both adjudicated sets together: every node a model assigns beyond
+its top-1 counts as correct only when it is in the item's label set. The 17
 seeded multi-family articles are reported without a floor. The coordinator's
 corrections are applied, then the set is frozen with a hash like the seeded set;
 the slice gates only against that frozen set. The custom-node slice does not
