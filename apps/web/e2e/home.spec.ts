@@ -82,6 +82,10 @@ for (const width of [320, 390, 767, 768, 1023, 1024, 1280]) {
             }), `${language} ${path}`).toBe(true)
           }
           expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+          if (path === '/sources') {
+            const [cell, release] = await Promise.all([page.locator('.coverage-stats dd').first().evaluate(el => { const range = document.createRange(); range.selectNodeContents(el); return range.getBoundingClientRect().left }), page.locator('.coverage-release').evaluate(el => { const range = document.createRange(); range.selectNodeContents(el); return range.getBoundingClientRect().left })])
+            expect(Math.abs(cell - release), `${language} ${path}`).toBeLessThanOrEqual(1)
+          }
         }
       }
       await page.goto(origin)

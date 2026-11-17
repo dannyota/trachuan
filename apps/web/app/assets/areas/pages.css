@@ -24,6 +24,7 @@
 .connect-tools p { margin: 4px 0 0; color: var(--color-ink-soft); font-size: 14px; }
 .page-content .coverage-summary { padding: 20px; border-radius: 22px; background: var(--color-mist); }
 .page-content .coverage-summary .coverage-stats { border: 0; }
+.page-content .coverage-summary .coverage-release { padding-inline: 24px; }
 .coverage-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid var(--color-line); border-radius: var(--radius-lg); overflow: hidden; margin: 0; container-type: inline-size; }
 .coverage-stats-three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .coverage-stats div { display: flex; flex-direction: column-reverse; justify-content: flex-end; min-width: 0; padding: 22px 24px; border-right: 1px solid var(--color-line); }
@@ -62,6 +63,7 @@
   .page-content h1 { font-size: 28px; }
   .connect-tools, .source-list { grid-template-columns: 1fr; }
   .page-content .coverage-summary { padding: 8px; }
+  .page-content .coverage-summary .coverage-release { padding-inline: 16px; }
   .coverage-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .coverage-stats dd { font-size: clamp(13px, 7.5cqi - 5px, 32px); }
   .coverage-stats div { padding: 16px; border-bottom: 1px solid var(--color-line); }
