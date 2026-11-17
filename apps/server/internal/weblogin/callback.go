@@ -7,6 +7,7 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"danny.vn/trachuan/apps/server/internal/store"
 	"github.com/coreos/go-oidc/v3/oidc"
@@ -76,7 +77,7 @@ func (h *Handler) callback(w http.ResponseWriter, r *http.Request) {
 		unavailable(w)
 		return
 	}
-	if id == nil || id.Subject == "" || (id.Issuer != h.issuer && (h.issuer != googleIssuer || id.Issuer != "accounts.google.com")) || !id.Expiry.After(h.clock()) || id.Nonce == "" ||
+	if id == nil || id.Subject == "" || strings.HasPrefix(id.Subject, "loadcheck:") || (id.Issuer != h.issuer && (h.issuer != googleIssuer || id.Issuer != "accounts.google.com")) || !id.Expiry.After(h.clock()) || id.Nonce == "" ||
 		subtle.ConstantTimeCompare([]byte(id.Nonce), []byte(tx.Nonce)) != 1 {
 		rejection(w, r, "login_failed")
 		return

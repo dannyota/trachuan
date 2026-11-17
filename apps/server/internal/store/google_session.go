@@ -5,12 +5,16 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 
 	"danny.vn/trachuan/apps/server/internal/accountemail"
 	"github.com/jackc/pgx/v5"
 )
 
 func (q *Queries) CreateGoogleSession(ctx context.Context, p GoogleSessionParams) (CreateSessionRow, error) {
+	if strings.HasPrefix(p.Identity.Sub, "loadcheck:") {
+		return CreateSessionRow{}, ErrLoginFailed
+	}
 	db, ok := q.db.(TransactionBeginner)
 	if !ok {
 		return CreateSessionRow{}, fmt.Errorf("login store cannot begin transactions")
