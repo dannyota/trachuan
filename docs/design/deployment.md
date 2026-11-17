@@ -186,8 +186,8 @@ hour manual.
 ## Observability
 
 journald 30 days; health and readiness endpoints; Prometheus metrics scraped
-locally; a `watch` systemd timer and Telegram alerts; external uptime check; OCI
-Monitoring alarms replace CloudWatch:
+locally; a [`watch` timer with Telegram alerts](host-watch.md); external uptime
+check; OCI Monitoring alarms replace CloudWatch:
 
 - Enable the Compute Instance Monitoring agent for
   [`oci_computeagent.MemoryUtilization`](https://docs.oracle.com/en-us/iaas/Content/Compute/References/computemetrics.htm).

@@ -185,6 +185,7 @@ OK.
 | deploy result absent                                      | no updater result recorded                                   | 30 min   | WARNING  |
 | corpus release waiting, secrets stale                     | a signed release waits over a day; secrets older than 2 h    | 10 min   | WARNING  |
 | memory above 90%, filesystem above 70%                    | host memory; boot or data filesystem used                    | 15 min   | WARNING  |
+| Telegram watch silent                                     | no successful [watch](host-watch.md) run for over an hour    | 10 min   | WARNING  |
 
 The alarms live in `deploy/oci/alarms.tf`, `alarms-jobs.tf` and `uptime.tf`.
 
