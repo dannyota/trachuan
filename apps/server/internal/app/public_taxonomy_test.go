@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -28,6 +29,10 @@ func (*publicTaxonomyEngine) TaxonomyNode(context.Context, string) (retrieval.No
 	return retrieval.NodePage{Release: "20991110_1", Node: retrieval.NodeEntry{Code: "1", Name: "Root", Level: 1}}, nil
 }
 
+func (*publicTaxonomyEngine) TaxonomyCodes(context.Context) ([]string, error) {
+	return []string{"1"}, nil
+}
+
 type publicTaxonomyResolver struct{ engine *publicTaxonomyEngine }
 
 func (r publicTaxonomyResolver) Resolve(context.Context, string, string) (mcpapi.Lease, error) {
@@ -46,7 +51,7 @@ func TestPublicTaxonomy_MountedSharedIPLimit(t *testing.T) {
 	limiter := &routeLimiter{}
 	verifier := &credential.Verifier{Store: drainStore{}, Audience: "http://localhost/mcp"}
 	mux := newWebMux(webDeps{store: routeAccountStore{}, sessions: sessions, login: login, verifier: verifier, tools: mcpapi.Config{Limiter: limiter, Resolver: publicTaxonomyResolver{engine: &publicTaxonomyEngine{}}, Clock: clock}, loginLimit: newLoginLimiter(clock, nil)})
-	paths := []string{"/api/v1/public/status", "/api/v1/public/taxonomy", "/api/v1/public/taxonomy/1"}
+	paths := []string{"/api/v1/public/status", "/api/v1/public/taxonomy", "/api/v1/public/taxonomy/1", "/api/v1/public/taxonomy/codes"}
 	call := func(path, ip string) *httptest.ResponseRecorder {
 		r := httptest.NewRequest("GET", path, nil)
 		r.RemoteAddr = ip + ":1234"
@@ -81,5 +86,26 @@ func TestPublicTaxonomy_MountedSharedIPLimit(t *testing.T) {
 	}
 	if len(limiter.calls) != 0 {
 		t.Fatal("public routes used account limiter")
+	}
+}
+
+func TestPublicTaxonomy_CodesLiteralRoute(t *testing.T) {
+	sessions := &websession.Manager{Store: routeSessionStore{}, PublicURL: "http://localhost"}
+	ctx := context.WithValue(context.Background(), oauth2.HTTPClient, &http.Client{Transport: discoveryRoundTrip{}})
+	login, err := weblogin.New(ctx, weblogin.Config{ClientID: "id", ClientSecret: "configured", PublicURL: "http://localhost", Issuer: "https://issuer.test", Store: &routeLoginStore{}, Sessions: sessions})
+	if err != nil {
+		t.Fatal(err)
+	}
+	mux := newWebMux(webDeps{store: routeAccountStore{}, sessions: sessions, login: login, verifier: &credential.Verifier{Store: drainStore{}, Audience: "http://localhost/mcp"}, tools: mcpapi.Config{Resolver: publicTaxonomyResolver{engine: &publicTaxonomyEngine{}}}, loginLimit: newLoginLimiter(time.Now, nil)})
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, httptest.NewRequest("GET", "/api/v1/public/taxonomy/codes", nil))
+	var got struct {
+		Release string   `json:"release"`
+		Codes   []string `json:"codes"`
+	}
+	dec := json.NewDecoder(w.Body)
+	dec.DisallowUnknownFields()
+	if w.Code != 200 || dec.Decode(&got) != nil || got.Release != "20991110_1" || len(got.Codes) != 1 || got.Codes[0] != "1" {
+		t.Fatalf("unexpected response: %d %+v", w.Code, got)
 	}
 }

@@ -5,6 +5,7 @@ package retrieval
 import (
 	"context"
 	"errors"
+	"reflect"
 	"testing"
 )
 
@@ -80,6 +81,10 @@ func TestTaxonomy_Truncated(t *testing.T) {
  INSERT INTO taxonomy_node(id,country,parent_id,level,code,name,description,origin,status,path,ordinal,provision_count,document_count) SELECT i+2,'vn',1,2,'1.'||i,'node','','custom','active',('n1.n'||(i+2))::ltree,i,1,1 FROM generate_series(1,500) i`)
 	if err != nil {
 		t.Fatal(err)
+	}
+	codes, err := e.TaxonomyCodes(ctx)
+	if err != nil || len(codes) != 502 || codes[0] != "1" || codes[501] != "2" {
+		t.Fatalf("complete codes: %d %v", len(codes), err)
 	}
 	for _, q := range []string{"", "node"} {
 		got, err := e.Taxonomy(ctx, TaxonomyRequest{Q: q, Depth: 2})
@@ -172,5 +177,30 @@ func TestTaxonomyNode_DocumentMetadataWhitespace(t *testing.T) {
 	page, err := e.TaxonomyNode(context.Background(), "1.1")
 	if err != nil || len(page.Documents) != 1 || page.Documents[0].Number != "Alpha Beta" || page.Documents[0].Title != "Alpha Beta" {
 		t.Fatalf("page %+v: %v", page, err)
+	}
+}
+
+func TestTaxonomyCodes_ServedTree(t *testing.T) {
+	e := taxonomyFixture(t)
+	codes, err := e.TaxonomyCodes(context.Background())
+	if err != nil || !reflect.DeepEqual(codes, []string{"1", "1.1", "1.1.c1", "1.3"}) {
+		t.Fatalf("codes %v: %v", codes, err)
+	}
+	seen := map[string]bool{}
+	for _, code := range codes {
+		if seen[code] {
+			t.Fatalf("duplicate %s", code)
+		}
+		seen[code] = true
+		page, err := e.TaxonomyNode(context.Background(), code)
+		if err != nil || page.Release != e.release.Rel {
+			t.Fatalf("%s: %+v %v", code, page, err)
+		}
+	}
+	for _, code := range []string{"1.2", "1.1.c2"} {
+		_, err := e.TaxonomyNode(context.Background(), code)
+		if !errors.Is(err, ErrNotFound) || seen[code] {
+			t.Fatalf("%s: %v", code, err)
+		}
 	}
 }
