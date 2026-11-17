@@ -238,8 +238,11 @@ is unaffected, and once B has raised the floor that rollback is refused.
 1. The owner creates `server_frameworks_key` in Vault and applies OpenTofu: the
    bucket; the frameworks verify user, group and its read statement; the upload
    group's and the host's statements for the bucket; and the secret name in the
-   host's Vault read statement. The owner stores the verify key in the
-   `frameworks-release` environment.
+   host's Vault read statement. The verify user's key is created and stored in
+   the `frameworks-release` environment only after the signing workflow's change
+   declares that environment, deployments from `main` only, in
+   `deploy/github/settings.json` and it is applied, so no hand-made environment
+   ever holds it.
 2. Image A ships the migration, `release-check --kind`, `frameworks-schema`,
    `grant-corpus.sh` names, the updater's frameworks phase, and
    `server_frameworks_key` in the policy's secret list and the fetcher's

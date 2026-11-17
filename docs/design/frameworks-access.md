@@ -111,11 +111,15 @@ chunks, embeddings, indexes and dumps. It may exist only in:
 | Memory of the build command, its parsers, the evaluator and the document embedder on the MacBook                                              | during a run; temporary files go under `FRAMEWORKS_WORK_DIR`, core dumps are off |
 | The private releases bucket `trachuan-frameworks-releases` ([release](frameworks-release.md#bucket-and-keys))                                 | the dump                                                                         |
 | The signing runner, for the length of one job                                                                                                 | hash check; nothing persisted                                                    |
-| The host's release database and its encrypted backups                                                                                         | serving                                                                          |
+| The host's release database and its backups ([deployment](deployment.md#backups))                                                             | serving                                                                          |
 | Host staging `/srv/trachuan/data/releases/<kind>-<rel>/`                                                                                      | the dump during activation; owner-only, deleted when activation ends             |
 | The server process's memory                                                                                                                   | indexes and partitioned caches; never written to disk                            |
 | The OCR and cross-check providers, for scans only                                                                                             | see [scans](frameworks.md#scans)                                                 |
 | The owner's own backups of the MacBook                                                                                                        | internal use of the owner's licensed files                                       |
+
+Backups are encrypted at rest by Object Storage with Oracle-managed keys, and
+anyone who can read the backup bucket can read them, so licensed rows carry the
+risk already accepted for account data.
 
 Third-party sync services are not a place:
 [build](frameworks-build.md#runs-resume-and-failure) refuses a source or work
