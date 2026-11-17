@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"danny.vn/trachuan/internal/frameworks/build"
 	"danny.vn/trachuan/internal/frameworks/serve"
 	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/require"
@@ -47,7 +48,7 @@ func TestMutation_ChangesCardinalityAndDetectsCountLeak(t *testing.T) {
 	result := compareMutationClass("free-only", "body_index", before, after, fullBefore, fullAfter)
 	require.False(t, result.Pass)
 	require.True(t, result.Classes["body_index"].PositiveControl)
-	require.Contains(t, result.Failures, InvariantFailure{Operation: "corpus_status", Class: "body_index", Repeat: 0})
+	require.Contains(t, result.Failures, InvariantFailure{Cause: build.IdentifyFailure(nil), Operation: "corpus_status", Class: "body_index", Repeat: 0})
 	var removed, added, readable, postings int
 	require.NoError(t, conn.QueryRow(ctx, `SELECT (SELECT count(*) FROM body_chunk WHERE id IN (1,2,4)),(SELECT count(*) FROM body_chunk WHERE id>4),(SELECT count(*) FROM body_chunk WHERE version_id=3),(SELECT count(*) FROM body_posting WHERE version_id<>3)`).Scan(&removed, &added, &readable, &postings))
 	require.Zero(t, removed)

@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"danny.vn/trachuan/internal/frameworks/build"
 	"danny.vn/trachuan/internal/frameworks/serve"
 	"github.com/stretchr/testify/require"
 )
@@ -33,5 +34,5 @@ func TestInvariant_DetectsInjectedChunkCountLeak(t *testing.T) {
 	result := compareMutationClass("free-only", "body_index", a, b, fullA, fullB)
 	require.False(t, result.Pass)
 	require.True(t, result.Classes["body_index"].PositiveControl)
-	require.Contains(t, result.Failures, InvariantFailure{Operation: "corpus_status", Class: "body_index", Repeat: 0})
+	require.Contains(t, result.Failures, InvariantFailure{Cause: build.IdentifyFailure(nil), Operation: "corpus_status", Class: "body_index", Repeat: 0})
 }

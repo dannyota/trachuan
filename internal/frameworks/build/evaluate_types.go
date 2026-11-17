@@ -14,6 +14,7 @@ type EvaluationRequest struct {
 	InputHashes       map[string]string
 	RetrievalRecipe   map[string]any
 	Controls          []Control
+	ProbeTargets      []string
 }
 
 type Evaluator interface {
@@ -97,12 +98,13 @@ type CohortMetrics struct {
 }
 
 type InvariantFailure struct {
-	Operation string `json:"operation"`
-	Class     string `json:"class"`
-	CaseID    string `json:"case_id"`
-	Mode      string `json:"mode,omitempty"`
-	Page      int    `json:"page"`
-	Repeat    int    `json:"repeat"`
+	Cause     FailureCause `json:"cause"`
+	Operation string       `json:"operation"`
+	Class     string       `json:"class"`
+	CaseID    string       `json:"case_id"`
+	Mode      string       `json:"mode,omitempty"`
+	Page      int          `json:"page"`
+	Repeat    int          `json:"repeat"`
 }
 type InvariantClass struct {
 	Status          string `json:"status"`

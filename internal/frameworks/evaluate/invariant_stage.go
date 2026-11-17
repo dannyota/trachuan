@@ -3,26 +3,8 @@ package evaluate
 import (
 	"context"
 
-	"danny.vn/trachuan/internal/frameworks/serve"
-	"github.com/jackc/pgx/v5"
+	"danny.vn/trachuan/internal/frameworks/build"
 )
-
-func observeMutationStage(ctx context.Context, req EvaluationRequest, conn *pgx.Conn, open Opener, key []byte, caller serve.Caller, name, class string, before, fullBefore []invariantObservation) ([]invariantObservation, []invariantObservation, InvariantCaller, error) {
-	engine, closeEngine, err := open(ctx, conn, key)
-	if err != nil {
-		return nil, nil, InvariantCaller{}, err
-	}
-	defer closeEngine()
-	after, err := observe(ctx, engine, req, caller)
-	if err != nil {
-		return nil, nil, InvariantCaller{}, err
-	}
-	fullAfter, err := observe(ctx, engine, req, fullCaller())
-	if err != nil {
-		return nil, nil, InvariantCaller{}, err
-	}
-	return after, fullAfter, compareMutationClass(name, class, before, after, fullBefore, fullAfter), nil
-}
 
 func compareMutationClass(name, class string, before, after, fullBefore, fullAfter []invariantObservation) InvariantCaller {
 	all := compareInvariant(name, before, after, fullBefore, fullAfter)
@@ -40,5 +22,16 @@ func compareMutationClass(name, class string, before, after, fullBefore, fullAft
 		r.Pass = false
 	}
 	r.Classes[class] = InvariantClass{Status: "evaluated", PositiveControl: positive, Pass: r.Pass}
-	return r
+	return withFailureCauses(r)
+}
+
+func recalibrate(ctx context.Context, engine Engine, req EvaluationRequest, r *InvariantCaller) {
+	calibration, err := build.CalibrateCases(ctx, engine, req.Cases, req.CaseFileSHA256)
+	if err != nil || req.Calibration == nil || calibration.Threshold != req.Calibration.Threshold {
+		r.Pass = false
+		r.Calibration = "fail"
+		r.Failures = append(r.Failures, InvariantFailure{Operation: "recalibration", Class: "all", Cause: build.IdentifyFailure(err)})
+	} else {
+		r.Calibration = "pass"
+	}
 }

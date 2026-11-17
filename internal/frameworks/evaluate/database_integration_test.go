@@ -68,7 +68,7 @@ func TestInvariant_MixedCallersUseFrameworkCodes(t *testing.T) {
 		copyConn, _ := evaluationFixture(t)
 		return use(ctx, copyConn)
 	}
-	result := checkInvariant(ctx, req, base, restore, fixtureOpener, key, status)
+	result := checkInvariant(ctx, req, base, invariantCopies{restore: restore, open: fixtureOpener, mutate: mutateClass}, key, status)
 	require.True(t, result.Pass, "invariant failed: %+v", result.Callers)
 	require.Equal(t, "evaluated", result.MixedCoverage)
 	require.Equal(t, 3, clones)
@@ -78,5 +78,43 @@ func TestInvariant_MixedCallersUseFrameworkCodes(t *testing.T) {
 	for _, o := range before {
 		require.False(t, bytes.Contains(o.Value, []byte("Invented publisher title fw-alpha")))
 		require.False(t, bytes.Contains(o.Value, []byte("Invented publisher title fw-gamma")))
+	}
+}
+
+func TestInvariant_ReplaysRealEngineLeak(t *testing.T) {
+	ctx := context.Background()
+	conn, req := evaluationFixture(t)
+	key := []byte(strings.Repeat("k", 32))
+	opens := func(ctx context.Context, conn *pgx.Conn, key []byte) (Engine, func(), error) {
+		engine, closeEngine, err := fixtureOpener(ctx, conn, key)
+		if err != nil {
+			return nil, nil, err
+		}
+		return chunkCountLeakEngine{Engine: engine, conn: conn}, closeEngine, nil
+	}
+	base, closeEngine, err := opens(ctx, conn, key)
+	require.NoError(t, err)
+	defer closeEngine()
+	status, err := base.CorpusStatus(ctx, serve.StatusRequest{}, fullCaller())
+	require.NoError(t, err)
+	clones := 0
+	restore := func(ctx context.Context, _ build.DatabaseRequest, _ string, temporary bool, use func(context.Context, *pgx.Conn) error) error {
+		require.True(t, temporary)
+		clones++
+		copyConn, _ := evaluationFixture(t)
+		return use(ctx, copyConn)
+	}
+	result := checkInvariant(ctx, req, base, invariantCopies{restore: restore, open: opens, mutate: mutateClass}, key, status)
+	require.False(t, result.Pass)
+	require.Equal(t, 6, clones)
+	for _, caller := range result.Callers {
+		require.False(t, caller.Classes["body_index"].Pass)
+		require.True(t, caller.Classes["body_index"].PositiveControl)
+		require.NotEmpty(t, caller.Failures)
+		for _, failure := range caller.Failures {
+			require.Equal(t, "body_index", failure.Class)
+			require.Equal(t, "corpus_status", failure.Operation)
+			require.NotEmpty(t, failure.Cause.GoType)
+		}
 	}
 }

@@ -49,7 +49,11 @@ func Restored(ctx context.Context, req EvaluationRequest, restore Restore, open 
 		for _, cohort := range []string{"public", "licensed"} {
 			result.Cohorts[cohort] = build.ComputeMetrics(result.Cases, cohort, versions)
 		}
-		result.Invariant = checkInvariant(ctx, req, engine, restore, open, key, status)
+		req.ProbeTargets, err = mappingProbeTargets(ctx, conn)
+		if err != nil {
+			return err
+		}
+		result.Invariant = checkInvariant(ctx, req, engine, invariantCopies{restore: restore, open: open, mutate: mutateClass}, key, status)
 		if err := ctx.Err(); err != nil {
 			return err
 		}

@@ -98,20 +98,26 @@ func evaluationFixture(t *testing.T) (*pgx.Conn, EvaluationRequest) {
 	return conn, req
 }
 func fixtureOpener(ctx context.Context, conn *pgx.Conn, key []byte) (Engine, func(), error) {
+	return fixtureQueryOpener(ctx, conn, key, queryFixture{})
+}
+func fixtureQueryOpener(ctx context.Context, conn *pgx.Conn, key []byte, query retrieval.Embedder) (Engine, func(), error) {
 	config, err := pgxpool.ParseConfig(conn.Config().ConnString())
 	if err != nil {
 		return nil, nil, err
 	}
 	config.ConnConfig = conn.Config().Copy()
 	config.MaxConns = 1
+	config.ConnConfig.Tracer = CauseTracer{}
 	pool, err := pgxpool.NewWithConfig(ctx, config)
 	if err != nil {
 		return nil, nil, err
 	}
-	engine, err := serve.Open(ctx, pool, queryFixture{}, serve.Options{CursorKey: key})
+	engine, err := OpenWithFailureCauses(ctx, func(ctx context.Context) (Engine, error) {
+		return serve.Open(ctx, pool, query, serve.Options{CursorKey: key})
+	})
 	if err != nil {
 		pool.Close()
 		return nil, nil, err
 	}
-	return engine, pool.Close, nil
+	return WithFailureCauses(engine), pool.Close, nil
 }

@@ -11,12 +11,24 @@ import (
 	"danny.vn/trachuan/internal/frameworks/build"
 	"danny.vn/trachuan/internal/frameworks/evaluate"
 	"danny.vn/trachuan/internal/frameworks/serve"
+	"danny.vn/trachuan/internal/retrieval"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func (d *frameworkDatabase) Evaluate(ctx context.Context, req build.EvaluationRequest, publish func(build.EvaluationResult) error) error {
-	return evaluate.Restored(ctx, req, d.restore, openFrameworkEvaluation, publish)
+	query, err := newFrameworkQueryEmbedder()
+	if err != nil {
+		return err
+	}
+	cache := evaluate.NewQueryCache(query)
+	if err = cache.Prepare(ctx, req.Cases); err != nil {
+		return err
+	}
+	open := func(ctx context.Context, conn *pgx.Conn, key []byte) (evaluate.Engine, func(), error) {
+		return openFrameworkEvaluation(ctx, conn, key, cache)
+	}
+	return evaluate.Restored(ctx, req, d.restore, open, publish)
 }
 
 func (d *frameworkDatabase) restore(ctx context.Context, req build.DatabaseRequest, suffix string, temporary bool, use func(context.Context, *pgx.Conn) error) error {
@@ -53,25 +65,24 @@ func (d *frameworkDatabase) restore(ctx context.Context, req build.DatabaseReque
 	return nil
 }
 
-func openFrameworkEvaluation(ctx context.Context, conn *pgx.Conn, key []byte) (evaluate.Engine, func(), error) {
-	query, err := newFrameworkQueryEmbedder()
-	if err != nil {
-		return nil, nil, err
-	}
+func openFrameworkEvaluation(ctx context.Context, conn *pgx.Conn, key []byte, query retrieval.Embedder) (evaluate.Engine, func(), error) {
 	config, err := pgxpool.ParseConfig(conn.Config().ConnString())
 	if err != nil {
 		return nil, nil, fmt.Errorf("configure evaluation database: %w", &frameworkEmbedError{cause: err})
 	}
 	config.ConnConfig = conn.Config().Copy()
 	config.MaxConns = 1
+	config.ConnConfig.Tracer = evaluate.CauseTracer{}
 	pool, err := pgxpool.NewWithConfig(ctx, config)
 	if err != nil {
 		return nil, nil, fmt.Errorf("open evaluation database: %w", &frameworkEmbedError{cause: err})
 	}
-	engine, err := serve.Open(ctx, pool, query, serve.Options{CursorKey: key})
+	engine, err := evaluate.OpenWithFailureCauses(ctx, func(ctx context.Context) (evaluate.Engine, error) {
+		return serve.Open(ctx, pool, query, serve.Options{CursorKey: key})
+	})
 	if err != nil {
 		pool.Close()
 		return nil, nil, fmt.Errorf("open evaluation engine: %w", &frameworkEmbedError{cause: err})
 	}
-	return engine, pool.Close, nil
+	return evaluate.WithFailureCauses(engine), pool.Close, nil
 }

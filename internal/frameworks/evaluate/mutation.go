@@ -32,9 +32,9 @@ func mutateClass(ctx context.Context, conn *pgx.Conn, caller serve.Caller, class
 	for rows.Next() {
 		var id int64
 		var code, access string
-		if rows.Scan(&id, &code, &access) != nil {
+		if err = rows.Scan(&id, &code, &access); err != nil {
 			rows.Close()
-			return fmt.Errorf("read mutation version")
+			return hide("read mutation version", err)
 		}
 		if !caller.Readable(code, access) {
 			ids = append(ids, id)
