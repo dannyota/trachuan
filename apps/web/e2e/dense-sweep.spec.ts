@@ -77,6 +77,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await expect(resultNumber).toHaveText(documentNumber)
       await expect(resultNumber).not.toHaveCSS('text-overflow', 'ellipsis')
       expect(await resultNumber.evaluate(el => el.scrollWidth)).toBe(await resultNumber.evaluate(el => el.clientWidth))
+      if (width >= 1200) expect(await resultNumber.evaluate(el => { const range = document.createRange(); range.selectNodeContents(el); return range.getClientRects().length })).toBe(1)
       const fontSizes = await page.locator('.result-card').evaluate((card) => {
         const walker = document.createTreeWalker(card, NodeFilter.SHOW_TEXT)
         const sizes: number[] = []
