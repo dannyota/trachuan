@@ -39,7 +39,7 @@ func (r frameworksResolver) ResolveFrameworks(ctx context.Context, rel string) (
 	return mcpapi.FrameworkLease{Engine: lease.Frameworks, Done: lease.Done}, nil
 }
 
-func configureFrameworks(cfg config, pool *pgxpool.Pool, queries *store.Queries, client *embedding.Client, tools *mcpapi.Config) func() {
+func configureFrameworks(ctx context.Context, cfg config, pool *pgxpool.Pool, queries *store.Queries, client *embedding.Client, tools *mcpapi.Config) func() {
 	if !cfg.frameworks {
 		return func() {}
 	}
@@ -51,5 +51,8 @@ func configureFrameworks(cfg config, pool *pgxpool.Pool, queries *store.Queries,
 	tools.Frameworks = true
 	tools.FrameworkResolver = frameworksResolver{resolver}
 	tools.FrameworkAccess = frameworkCaller(queries)
-	return resolver.Close
+	work, cancel := context.WithCancel(ctx)
+	done := make(chan struct{})
+	go func() { defer close(done); resolver.WatchFrameworks(work) }()
+	return func() { cancel(); <-done; resolver.Close() }
 }

@@ -44,10 +44,7 @@ func (e *Engine) search(ctx context.Context, request Request, caller Caller, obs
 		return response, ErrUnavailable
 	}
 	ids := e.selectVersions(r)
-	controls, err := loadControls(ctx, tx, ids)
-	if err != nil {
-		return response, err
-	}
+	controls := e.controlsFor(ids)
 	lookup := e.lookup(r.Query, controls)
 	rankedHits := lookup
 	if len(lookup) == 0 {

@@ -31,12 +31,6 @@ type StatusResponse struct {
 	Totals                Counts                   `json:"totals"`
 }
 
-const statusCountsSQL = `SELECT v.id,
- (SELECT count(*) FROM control c WHERE c.version_id=v.id),
- (SELECT count(*) FROM control_mapping m WHERE m.from_code=v.framework_code AND m.from_version=v.version AND m.resolved),
- (SELECT count(*) FROM control_mapping m WHERE m.from_code=v.framework_code AND m.from_version=v.version AND NOT m.resolved)
- FROM framework_version v WHERE v.id=ANY($1::bigint[]) ORDER BY v.id`
-
 const statusSourcesSQL = `SELECT version_id,name,text_source,text_complete FROM source_file
  WHERE version_id=ANY($1::bigint[]) ORDER BY version_id,name,sha256`
 
@@ -52,34 +46,15 @@ func (e *Engine) CorpusStatus(ctx context.Context, r StatusRequest, caller Calle
 	}
 	defer cancel()
 	defer func() { _ = tx.Rollback(context.Background()) }()
-	ids, handles := []int64{}, map[int64]string{}
+	handles := map[int64]string{}
 	versions := map[string]VersionStatus{}
 	for _, v := range e.versions {
-		ids, handles[v.id] = append(ids, v.id), v.handle
-		versions[v.handle] = VersionStatus{Access: v.info.Access, Readable: p.allowed[v.id], Lineage: v.info.Lineage}
-	}
-	rows, err := tx.Query(ctx, statusCountsSQL, ids)
-	if err != nil {
-		return response, ErrUnavailable
-	}
-	for rows.Next() {
-		var id int64
-		var counts Counts
-		if rows.Scan(&id, &counts.Controls, &counts.EdgesResolved, &counts.EdgesUnresolved) != nil {
-			rows.Close()
-			return response, ErrUnavailable
-		}
-		value := versions[handles[id]]
-		value.Counts = counts
-		versions[handles[id]] = value
+		handles[v.id] = v.handle
+		counts := e.partitions[v.id].counts
+		versions[v.handle] = VersionStatus{Counts: counts, Access: v.info.Access, Readable: p.allowed[v.id], Lineage: v.info.Lineage}
 		response.Totals.Controls += counts.Controls
 		response.Totals.EdgesResolved += counts.EdgesResolved
 		response.Totals.EdgesUnresolved += counts.EdgesUnresolved
-	}
-	err = rows.Err()
-	rows.Close()
-	if err != nil {
-		return response, ErrUnavailable
 	}
 	if len(p.readable) > 0 {
 		sources, sourceErr := tx.Query(ctx, statusSourcesSQL, p.readable)

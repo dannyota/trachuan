@@ -7,9 +7,8 @@ import (
 )
 
 const mappingsSQL = `SELECT m.id,m.from_code,m.from_version,m.from_citation,m.to_code,m.to_version,m.to_citation,
- m.relation,m.source,m.resolved,fc.title,tc.title
- FROM control_mapping m LEFT JOIN control fc ON fc.version_id=m.from_version_id AND fc.citation=m.from_citation
- LEFT JOIN control tc ON tc.version_id=m.to_version_id AND tc.citation=m.to_citation
+ m.relation,m.source,m.resolved,m.from_version_id,m.to_version_id
+ FROM control_mapping m
  WHERE (($1::boolean AND ((m.from_code=$2 AND m.from_version=$3 AND m.from_citation=$4)
  OR (m.to_code=$2 AND m.to_version=$3 AND m.to_citation=$4)))
  OR (NOT $1::boolean AND m.from_code=$2 AND m.from_version=$3 AND m.to_code=$5 AND m.to_version=$6))
@@ -19,7 +18,7 @@ const mappingsSQL = `SELECT m.id,m.from_code,m.from_version,m.from_citation,m.to
 const mappingEvidenceSQL = `SELECT mapping_id,evidence FROM mapping_evidence
  WHERE licensed_version_ids <@ $1::bigint[] AND mapping_id=ANY($2::bigint[]) ORDER BY mapping_id`
 
-func loadMappingRows(ctx context.Context, tx pgx.Tx, r MappingsRequest) ([]mappingRow, error) {
+func (e *Engine) loadMappingRows(ctx context.Context, tx pgx.Tx, r MappingsRequest) ([]mappingRow, error) {
 	from, _ := parseHandle(r.From)
 	to, _ := parseHandle(r.To)
 	if r.Handle != "" {
@@ -37,13 +36,13 @@ func loadMappingRows(ctx context.Context, tx pgx.Tx, r MappingsRequest) ([]mappi
 	var result []mappingRow
 	for rows.Next() {
 		var row mappingRow
+		var fromID, toID *int64
 		row.key = make([]string, 8)
-		var fromTitle, toTitle *string
-		if rows.Scan(&row.id, &row.key[0], &row.key[1], &row.key[2], &row.key[3], &row.key[4], &row.key[5], &row.key[6], &row.key[7], &row.value.Resolved, &fromTitle, &toTitle) != nil {
+		if rows.Scan(&row.id, &row.key[0], &row.key[1], &row.key[2], &row.key[3], &row.key[4], &row.key[5], &row.key[6], &row.key[7], &row.value.Resolved, &fromID, &toID) != nil {
 			return nil, ErrUnavailable
 		}
-		row.value.From = mappingEnd(row.key[0:3], fromTitle)
-		row.value.To = mappingEnd(row.key[3:6], toTitle)
+		row.value.From = e.cachedMappingEnd(row.key[0:3], fromID)
+		row.value.To = e.cachedMappingEnd(row.key[3:6], toID)
 		row.value.Relation, row.value.Source = row.key[6], row.key[7]
 		result = append(result, row)
 	}
@@ -96,4 +95,15 @@ func mappingEvidence(ctx context.Context, tx pgx.Tx, page []mappingRow, p projec
 		return ErrUnavailable
 	}
 	return nil
+}
+
+func (e *Engine) cachedMappingEnd(key []string, versionID *int64) MappingEnd {
+	if versionID != nil {
+		if part := e.partitions[*versionID]; part != nil {
+			if c := part.citations[key[2]]; c != nil {
+				return mappingEnd(key, &c.title)
+			}
+		}
+	}
+	return mappingEnd(key, nil)
 }

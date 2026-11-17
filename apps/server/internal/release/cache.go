@@ -17,6 +17,7 @@ import (
 
 type cacheEntry struct {
 	opening      bool
+	openErr      error
 	openingDone  chan struct{}
 	retired      bool
 	leases       int
@@ -61,6 +62,11 @@ func (r *Resolver) load(ctx context.Context, country, name string) (*cacheEntry,
 		entry = &cacheEntry{country: country, name: strings.TrimPrefix(name, r.prefix(country))}
 		r.entries[name] = entry
 	}
+	if r.Frameworks != nil && entry.openErr != nil {
+		err := entry.openErr
+		r.mu.Unlock()
+		return nil, err
+	}
 	engine := entry.engine
 	hadEngine := engine != nil || entry.frameworks != nil
 	entry.opening = true
@@ -99,6 +105,15 @@ func (r *Resolver) load(ctx context.Context, country, name string) (*cacheEntry,
 		return nil, ErrExpired
 	}
 	if err != nil {
+		if r.Frameworks != nil {
+			entry.openErr = err
+			entry.retired = true
+			if entry.leases == 0 {
+				r.cleanupLocked(entry)
+			}
+			r.mu.Unlock()
+			return nil, fmt.Errorf("open frameworks engine: %w", err)
+		}
 		empty := !hadEngine || databaseGone(err)
 		if empty {
 			delete(r.entries, name)

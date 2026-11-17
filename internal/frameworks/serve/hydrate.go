@@ -2,6 +2,7 @@ package serve
 
 import (
 	"context"
+	"slices"
 
 	"danny.vn/trachuan/internal/retrieval"
 	"github.com/jackc/pgx/v5"
@@ -21,7 +22,7 @@ func (e *Engine) hydrate(ctx context.Context, tx pgx.Tx, page []ranked, controls
 		info := v.info
 		info.Readable = p.allowed[v.id]
 		frameworks[v.handle] = info
-		hit := Hit{Handle: v.handle + "#" + encodeCitation(c.citation), Citation: c.citation, Kind: c.kind, Title: c.title, Status: c.status, Path: c.path, Mappings: c.mappings, TextWithheld: !info.Readable}
+		hit := Hit{Handle: v.handle + "#" + encodeCitation(c.citation), Citation: c.citation, Kind: c.kind, Title: c.title, Status: c.status, Path: slices.Clone(c.path), Mappings: c.mappings, TextWithheld: !info.Readable}
 		if lookup {
 			value := true
 			hit.Lookup = &value

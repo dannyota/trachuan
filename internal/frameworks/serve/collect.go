@@ -51,8 +51,6 @@ func (e *Engine) collectIndex(ctx context.Context, tx pgx.Tx, versions []int64, 
 		return nil, ErrUnavailable
 	}
 	chunks := []candidate{}
-	indices := map[int64]int{}
-	stats := map[int64]lexical.Stats{}
 	for rows.Next() {
 		c := candidate{}
 		if rows.Scan(&c.chunkID, &c.versionID, &c.controlID, &c.ordinal, &c.length, &c.cosine) != nil || !finite(c.cosine) || c.length <= 0 {
@@ -65,61 +63,24 @@ func (e *Engine) collectIndex(ctx context.Context, tx pgx.Tx, versions []int64, 
 			return nil, ErrUnavailable
 		}
 		c.cosine = max(-1, min(1, c.cosine))
-		indices[c.chunkID] = len(chunks)
 		chunks = append(chunks, c)
-		s := stats[c.versionID]
-		s.N++
-		s.TotalTokens += int64(c.length)
-		if s.DF == nil {
-			s.DF = map[string]int64{}
-		}
-		stats[c.versionID] = s
 	}
 	err = rows.Err()
 	rows.Close()
 	if err != nil {
 		return nil, ErrUnavailable
 	}
-	postings, err := readPostings(ctx, tx, versions, indices, public)
-	if err != nil {
-		return nil, err
-	}
-	for id, counts := range postings {
-		c := chunks[indices[id]]
-		s := stats[c.versionID]
-		for token := range counts {
-			s.DF[token]++
-		}
-	}
-	for id, s := range stats {
-		s.AvgDL = float64(s.TotalTokens) / float64(s.N)
-		stats[id] = s
-	}
-	var publicStats lexical.Stats
-	if public {
-		publicStats, err = readPublicStats(ctx, tx)
-		if err != nil {
-			return nil, err
-		}
-	}
 	for i, c := range chunks {
-		s := stats[c.versionID]
-		if public {
-			s = publicStats
+		part := e.partitions[c.versionID]
+		index := &part.public
+		if !public {
+			index = &part.body
 		}
-		counts := postings[c.chunkID]
-		length := 0
-		for _, count := range counts {
-			length += count
-		}
-		if length != c.length {
+		chunk, ok := index.chunks[c.chunkID]
+		if !ok || chunk.controlID != c.controlID || chunk.length != c.length || chunk.ordinal != c.ordinal {
 			return nil, ErrUnavailable
 		}
-		document, encodeErr := lexical.DocumentCounts(counts, s, e.lexical)
-		if encodeErr != nil {
-			return nil, ErrUnavailable
-		}
-		chunks[i].bm25 = sparseDot(document, query)
+		chunks[i].bm25 = sparseDot(chunk.postings, query)
 	}
 	return chunks, nil
 }

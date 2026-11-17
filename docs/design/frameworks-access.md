@@ -86,7 +86,9 @@ cache hits and pagination with callers of different access sets.
   shared approximate graph.
 - **Caches are partitioned** by release and the complete access set, for every
   cache that holds authorization-dependent data (response, candidate, read item
-  and document caches).
+  and document caches); the per-version index partitions a release loads for
+  every version when it opens are not such a cache
+  ([results](frameworks-results.md#format)).
 - **Framework responses are `no-store`**, API and HTML, and are excluded from
   the Nitro and CDN public caches.
 - Citation lookups (`PCI DSS 8.3.1`) resolve for everyone through public fields.

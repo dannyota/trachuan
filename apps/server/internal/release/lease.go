@@ -46,3 +46,8 @@ func (r *Resolver) finish(entry *cacheEntry) {
 		<-done
 	}
 }
+
+func (r *Resolver) leaseLocked(entry *cacheEntry, rel string, generation uint64) *Lease {
+	entry.leases++
+	return &Lease{Engine: entry.engine, Frameworks: entry.frameworks, Release: rel, Generation: generation, done: func() { r.finish(entry) }}
+}

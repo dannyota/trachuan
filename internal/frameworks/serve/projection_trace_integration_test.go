@@ -12,6 +12,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type openingTraceKey struct{}
+
 type queryTrace struct {
 	mu      sync.Mutex
 	reads   []queryRead
@@ -21,7 +23,7 @@ type queryTrace struct {
 func (q *queryTrace) TraceQueryStart(ctx context.Context, _ *pgx.Conn, data pgx.TraceQueryStartData) context.Context {
 	q.mu.Lock()
 	defer q.mu.Unlock()
-	r := queryRead{sql: data.SQL}
+	r := queryRead{sql: data.SQL, opening: ctx.Value(openingTraceKey{}) == true}
 	if len(data.Args) > 0 {
 		if ids, ok := data.Args[0].([]int64); ok {
 			r.versions = slices.Clone(ids)

@@ -76,7 +76,7 @@ func (e *Engine) Mappings(ctx context.Context, request MappingsRequest, caller C
 	}
 	defer cancel()
 	defer func() { _ = tx.Rollback(context.Background()) }()
-	rows, err := loadMappingRows(ctx, tx, r)
+	rows, err := e.loadMappingRows(ctx, tx, r)
 	if err != nil {
 		return response, err
 	}

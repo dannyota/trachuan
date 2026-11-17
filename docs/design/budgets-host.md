@@ -113,6 +113,13 @@ includes Nitro's 32 MB cache of rendered document summaries, and the server row
 the 16 MB summary row cache; both rose on 2026-11-16, taken from the headroom
 ([public document summaries](web-public-documents.md)).
 
+With frameworks on, the server row also holds the frameworks release's index
+partitions ([results](frameworks-results.md#format)), which add at most 256 MiB
+by the engine's accounting; a release over that does not open. Their measured
+size on a real release is derived from licensed files, so it stays in private
+evidence under `FRAMEWORKS_WORK_DIR` ([access](frameworks-access.md)) and goes
+to the coordinator, never into Git.
+
 Peak PostgreSQL connections during activation: the auth pool, two reader pools
 of four while the old and new release overlap, two public summary pools of one,
 and the restore's own connections, within `max_connections` 50. The capacity
