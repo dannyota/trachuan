@@ -16,6 +16,10 @@ const transactionSettingsSQL = `SELECT set_config('statement_timeout','2000',tru
  set_config('enable_indexscan','on',true),set_config('enable_bitmapscan','on',true)`
 
 func (e *Engine) Search(ctx context.Context, request Request, caller Caller) (Response, error) {
+	return e.search(ctx, request, caller, nil)
+}
+
+func (e *Engine) search(ctx context.Context, request Request, caller Caller, observation *calibrationObservation) (Response, error) {
 	p := e.project(caller)
 	response := Response{Release: e.release, AccessSetVersion: p.version, AccessUnavailable: caller.AccessUnavailable}
 	r, err := e.validate(request)
@@ -56,7 +60,14 @@ func (e *Engine) Search(ctx context.Context, request Request, caller Caller) (Re
 			return response, collectErr
 		}
 		rankedHits = e.rank(chunks, controls)
-		e.abstention(&response, rankedHits)
+		if observation == nil {
+			e.abstention(&response, rankedHits)
+		} else if len(rankedHits) > 0 {
+			observation.cosine = &rankedHits[0].cosine
+		}
+	}
+	if observation != nil {
+		observation.lookup = len(lookup) > 0
 	}
 	if position > len(rankedHits) {
 		return response, ErrInvalidRequest

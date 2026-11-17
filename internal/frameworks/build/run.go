@@ -16,7 +16,10 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-func Run(ctx context.Context, rel string, out io.Writer, embedder Embedder, database Database) error {
+func Run(ctx context.Context, rel string, out io.Writer, embedder Embedder, database Database, calibration ...CalibrationOpener) error {
+	if len(calibration) > 1 {
+		return fmt.Errorf("multiple calibration engine openers")
+	}
 	if !regexp.MustCompile(`^[0-9]{8}(_[0-9]{1,2})?$`).MatchString(rel) {
 		return fmt.Errorf("invalid release id")
 	}
@@ -62,7 +65,7 @@ func Run(ctx context.Context, rel string, out io.Writer, embedder Embedder, data
 		if err := ctx.Err(); err != nil {
 			return fmt.Errorf("%s: %w", step, err)
 		}
-		if err := runStep(ctx, base, step, request, source, out, embedder, database); err != nil {
+		if err := runStep(ctx, base, step, request, source, out, embedder, database, calibration...); err != nil {
 			return fmt.Errorf("%s: %w", step, err)
 		}
 	}
@@ -74,8 +77,10 @@ func stepRecipe(step string) recipe {
 	version := 1
 	switch step {
 	case "snapshot":
+		version = 2
 		params["gap_kinds"] = gapKinds()
 	case "build":
+		version = 2
 		params = databaseRecipe()
 	case "parse":
 		params["schema"] = "controls/1"
@@ -119,7 +124,7 @@ func stepInputs(base, step string) (map[string]*string, error) {
 	return inputs, nil
 }
 
-func runStep(ctx context.Context, base, step string, request DatabaseRequest, source string, out io.Writer, embedder Embedder, database Database) error {
+func runStep(ctx context.Context, base, step string, request DatabaseRequest, source string, out io.Writer, embedder Embedder, database Database, calibration ...CalibrationOpener) error {
 	target, err := checkedDir(filepath.Join(base, step))
 	if err != nil {
 		return err
@@ -182,7 +187,11 @@ func runStep(ctx context.Context, base, step string, request DatabaseRequest, so
 		return hide("create step directory", err)
 	}
 	if step == "build" {
-		return buildStep(ctx, base, tmp, request, embedder, database, func() error {
+		var opener CalibrationOpener
+		if len(calibration) > 0 {
+			opener = calibration[0]
+		}
+		return buildStep(ctx, base, tmp, request, embedder, database, opener, func() error {
 			if sealErr := seal(tmp, target, r, inputs); sealErr != nil {
 				return sealErr
 			}

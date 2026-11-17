@@ -2,9 +2,9 @@ package serve
 
 import (
 	"context"
-	"fmt"
 	"slices"
 
+	"danny.vn/trachuan/internal/frameworks/businesskey"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -70,15 +70,4 @@ func loadControls(ctx context.Context, tx pgx.Tx, versions []int64) (map[int64]*
 	return result, nil
 }
 
-func encodeCitation(citation string) string {
-	result := ""
-	for i := 0; i < len(citation); i++ {
-		b := citation[i]
-		if (b >= 'A' && b <= 'Z') || (b >= 'a' && b <= 'z') || (b >= '0' && b <= '9') || b == '.' || b == '(' || b == ')' || b == '_' || b == '~' || b == '-' {
-			result += string(b)
-		} else {
-			result += fmt.Sprintf("%%%02X", b)
-		}
-	}
-	return result
-}
+func encodeCitation(citation string) string { return businesskey.EncodeCitation(citation) }

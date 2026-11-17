@@ -3,6 +3,8 @@ package build
 import (
 	"context"
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"danny.vn/trachuan/internal/retrieval"
@@ -15,6 +17,17 @@ type releaseRecorder struct{ args []any }
 func (r *releaseRecorder) Exec(_ context.Context, _ string, args ...any) (pgconn.CommandTag, error) {
 	r.args = args
 	return pgconn.CommandTag{}, nil
+}
+
+func TestBuildRecipe_RejectsPreviousCalibrationPolicy(t *testing.T) {
+	base := t.TempDir()
+	tmp, target := filepath.Join(base, "tmp"), filepath.Join(base, "build")
+	require.NoError(t, os.Mkdir(tmp, 0700))
+	require.NoError(t, writeFile(tmp, "artifact", []byte("invented artifact")))
+	previous := stepRecipe("build")
+	previous.Parameters["calibration"] = "public-free-only-open/1"
+	require.NoError(t, seal(tmp, target, previous, nil))
+	require.ErrorContains(t, validate(target, stepRecipe("build"), nil), "inputs or recipe changed")
 }
 
 func TestRelease_BootstrapRecipe(t *testing.T) {

@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 	"math"
-	"sort"
 
 	"danny.vn/trachuan/internal/retrieval"
+	"danny.vn/trachuan/internal/retrieval/abstention"
 )
 
 type Engine interface {
@@ -17,13 +17,7 @@ type Engine interface {
 	Release() retrieval.Release
 }
 
-type CalibrationCandidate struct {
-	Threshold float64 `json:"threshold"`
-	TP        int     `json:"tp"`
-	FP        int     `json:"fp"`
-	TN        int     `json:"tn"`
-	FN        int     `json:"fn"`
-}
+type CalibrationCandidate = abstention.Candidate
 
 type Calibration struct {
 	Status                 string                   `json:"status"`
@@ -51,52 +45,11 @@ type calibrationScore struct {
 }
 
 func calibrationThreshold(scores []calibrationScore) (float64, []CalibrationCandidate) {
-	values := []float64{}
-	for _, s := range scores {
-		if !s.empty {
-			values = append(values, s.value)
-		}
+	shared := make([]abstention.Score, 0, len(scores))
+	for _, score := range scores {
+		shared = append(shared, abstention.Score{Value: score.value, Negative: score.negative, Empty: score.empty})
 	}
-	sort.Float64s(values)
-	thresholds := []float64{-1}
-	for i := 1; i < len(values); i++ {
-		a, b := values[i-1], values[i]
-		if a == b {
-			continue
-		}
-		m := a + (b-a)/2
-		if m <= a {
-			m = b
-		}
-		thresholds = append(thresholds, m)
-	}
-	thresholds = append(thresholds, 2)
-	best, bestScore := -1.0, -1
-	candidates := make([]CalibrationCandidate, 0, len(thresholds))
-	for _, threshold := range thresholds {
-		c := CalibrationCandidate{Threshold: threshold}
-		for _, s := range scores {
-			abstain := s.empty || s.value < threshold
-			switch {
-			case s.negative && abstain:
-				c.TP++
-			case s.negative:
-				c.FN++
-			case abstain:
-				c.FP++
-			default:
-				c.TN++
-			}
-		}
-		candidates = append(candidates, c)
-		if c.TN+c.FP > 0 && c.TP+c.FN > 0 {
-			score := c.TN*(c.TP+c.FN) + c.TP*(c.TN+c.FP)
-			if score > bestScore {
-				best, bestScore = threshold, score
-			}
-		}
-	}
-	return best, candidates
+	return abstention.Threshold(shared)
 }
 
 func Calibrate(ctx context.Context, engine Engine, suite Suite) (Calibration, error) {

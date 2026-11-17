@@ -17,3 +17,11 @@ func bootstrapRetrievalRecipe() map[string]any {
 		},
 	}
 }
+
+func measuredRetrievalRecipe(threshold float64, calibrationHash string) map[string]any {
+	r := bootstrapRetrievalRecipe()
+	r["status"] = "measured"
+	a := r["abstention"].(map[string]any)
+	a["threshold"], a["calibration_sha256"], a["status"] = threshold, calibrationHash, "measured"
+	return r
+}

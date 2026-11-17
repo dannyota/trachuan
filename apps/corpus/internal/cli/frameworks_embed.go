@@ -4,14 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net"
-	"net/http"
-	"net/netip"
-	"net/url"
 	"os"
 	"reflect"
 	"strings"
-	"time"
 
 	"danny.vn/trachuan/apps/corpus/internal/stage"
 	"danny.vn/trachuan/apps/corpus/internal/stage/chunk"
@@ -36,28 +31,8 @@ func newFrameworkEmbedder() *frameworkEmbedder {
 	if address == "" {
 		address = "http://127.0.0.1:8092"
 	}
-	u, err := url.Parse(address)
-	if err != nil || u.Scheme != "http" || u.User != nil || u.Host == "" || u.RawQuery != "" || u.Fragment != "" || (u.Path != "" && u.Path != "/") {
-		return &frameworkEmbedder{configErr: fmt.Errorf("invalid local embedder URL")}
-	}
-	host := u.Hostname()
-	ip, ipErr := netip.ParseAddr(host)
-	if host != "localhost" && (ipErr != nil || !ip.IsLoopback()) {
-		return &frameworkEmbedder{configErr: fmt.Errorf("embedder URL must use loopback")}
-	}
-	port := u.Port()
-	if port == "" {
-		port = "80"
-	}
-	if host == "localhost" {
-		host = "127.0.0.1"
-	}
-	target := net.JoinHostPort(host, port)
-	transport := &http.Transport{DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
-		return (&net.Dialer{}).DialContext(ctx, "tcp", target)
-	}}
-	hc := &http.Client{Transport: transport, Timeout: 125 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
-	return &frameworkEmbedder{client: embedding.NewClient(address, hc), expected: embedding.DocumentRecipe1()}
+	client, err := localFrameworkEmbedderClient(address)
+	return &frameworkEmbedder{client: client, expected: embedding.DocumentRecipe1(), configErr: err}
 }
 
 func (*frameworkEmbedder) Recipe() string {

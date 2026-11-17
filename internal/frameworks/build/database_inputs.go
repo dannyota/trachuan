@@ -1,8 +1,11 @@
 package build
 
 import (
+	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strconv"
 
@@ -22,6 +25,8 @@ type databaseInputs struct {
 	edges    []relate.Edge
 	gaps     []Gap
 	steps    map[string]stepProvenance
+	cases    []GoldenCase
+	caseHash string
 }
 
 func readDatabaseInputs(base string) (databaseInputs, error) {
@@ -43,6 +48,19 @@ func readDatabaseInputs(base string) (databaseInputs, error) {
 	}
 	d.versions = releaseVersions(reg)
 	if d.controls, err = loadRows[Control](filepath.Join(base, "parse/controls.jsonl")); err != nil {
+		return d, err
+	}
+	caseData, err := readFile(filepath.Join(base, "snapshot/trachuan/golden.csv"))
+	if err == nil {
+		if err = validateGoldenReview(filepath.Join(base, "snapshot")); err != nil {
+			return d, err
+		}
+		d.cases, err = MapGoldenCases(bytes.NewReader(caseData), reg, d.controls)
+		if err != nil {
+			return d, err
+		}
+		d.caseHash = digest(caseData)
+	} else if !errors.Is(err, os.ErrNotExist) {
 		return d, err
 	}
 	if d.chunks, err = loadRows[Chunk](filepath.Join(base, "chunk/chunks.jsonl")); err != nil {
