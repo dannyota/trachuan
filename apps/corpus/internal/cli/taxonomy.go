@@ -14,9 +14,13 @@ import (
 func runTaxonomy(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	fail := func(err error) int { _, _ = fmt.Fprintln(stderr, err); return 1 }
 	if len(args) == 0 {
-		return fail(fmt.Errorf("usage: corpus taxonomy <import|check|labels>"))
+		return fail(fmt.Errorf("usage: corpus taxonomy <import|check|labels|draw|freeze>"))
 	}
 	switch args[0] {
+	case "draw":
+		return runTaxonomyDraw(ctx, args[1:], stderr)
+	case "freeze":
+		return runTaxonomyFreeze(args[1:], stderr)
 	case "labels":
 		return runTaxonomyLabels(ctx, args[1:], stderr)
 	case "import":
