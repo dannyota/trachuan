@@ -211,5 +211,8 @@ report passed. The uploader and signing workflow refuse a frameworks release
 unless `quality_pass` is true, the dump, build manifest and report hashes match
 the files, the report's release id and its `snapshot` through `embed` recipes
 equal the release row's, its `build` and `evaluate` recipes equal those in the
-build and evaluation manifests, and its previous report is the active frameworks
-release's report. They read no workshop state.
+build and evaluation manifests. The uploader also requires the previous report
+to be the active frameworks release's; the signing workflow requires a signed
+frameworks release or none, so retries and rollbacks can be signed, and the host
+decides activation ([release](frameworks-release.md)). They read no workshop
+state.
