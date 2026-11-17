@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"slices"
 	"strings"
 	"testing"
 
@@ -36,14 +37,15 @@ func TestTaxonomy_Flow(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	type taxonomyNode struct {
+		Code       string `json:"code"`
+		Provisions int    `json:"provisions"`
+		Documents  int    `json:"documents"`
+	}
 	var rpc struct {
 		Result struct {
 			Structured struct {
-				Nodes []struct {
-					Code       string `json:"code"`
-					Provisions int    `json:"provisions"`
-					Documents  int    `json:"documents"`
-				} `json:"nodes"`
+				Nodes []taxonomyNode `json:"nodes"`
 			} `json:"structuredContent"`
 			IsError bool `json:"isError"`
 		} `json:"result"`
@@ -55,7 +57,11 @@ func TestTaxonomy_Flow(t *testing.T) {
 		t.Fatal(err)
 	}
 	closeBody(response)
-	if rpc.Result.IsError || len(rpc.Result.Structured.Nodes) != 1 || rpc.Result.Structured.Nodes[0].Code != "90" || rpc.Result.Structured.Nodes[0].Provisions != 1 || rpc.Result.Structured.Nodes[0].Documents != 1 {
+	wantNodes := []taxonomyNode{{Code: "90", Provisions: 1, Documents: 1}}
+	if os.Getenv("E2E_PUBLIC_SUMMARIES") == "1" {
+		wantNodes = append(wantNodes, taxonomyNode{Code: "99", Provisions: 1, Documents: 1})
+	}
+	if rpc.Result.IsError || !slices.Equal(rpc.Result.Structured.Nodes, wantNodes) {
 		t.Fatalf("MCP taxonomy: %+v", rpc.Result)
 	}
 	response = get(t, c, server+"/api/v1/me")
@@ -122,7 +128,6 @@ func TestTaxonomy_Flow(t *testing.T) {
 		}
 		if result.Cursor == "" {
 			expected := make(map[string]bool)
-			// Every original fixture article stays reachable when optional documents exist.
 			for document := 1; document <= 27; document++ {
 				articles := 1
 				if document <= 3 {

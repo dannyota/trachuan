@@ -78,10 +78,10 @@ func (tx *summaryTx) QueryRow(_ context.Context, query string, args ...any) pgx.
 func (tx *summaryTx) Query(_ context.Context, query string, args ...any) (pgx.Rows, error) {
 	rows := &summaryRows{}
 	switch {
-	case strings.HasPrefix(query, "SELECT key,class"):
-		for _, d := range tx.documents {
+	case strings.HasPrefix(query, "SELECT id,key,class"):
+		for i, d := range tx.documents {
 			p := d.Payload
-			rows.values = append(rows.values, []any{d.Key, d.Class, d.StatusClass, d.StatusBasis, d.IsCurrent, d.ValidityConflict, d.EffFrom, d.EffTo, d.TextSource, p.Number, p.Title, p.Type, p.Issuer, p.Issued, p.TextComplete, p.SourceURL, p.HasText})
+			rows.values = append(rows.values, []any{int64(i + 1), d.Key, d.Class, d.StatusClass, d.StatusBasis, d.IsCurrent, d.ValidityConflict, d.EffFrom, d.EffTo, d.TextSource, p.Number, p.Title, p.Type, p.Issuer, p.Issued, p.TextComplete, p.SourceURL, p.HasText})
 		}
 	case strings.HasPrefix(query, "SELECT kind,label,anchor,heading"):
 		for _, n := range tx.documents[args[0].(int64)-1].Payload.Outline {

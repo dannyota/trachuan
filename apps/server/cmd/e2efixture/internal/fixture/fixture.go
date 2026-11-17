@@ -1,22 +1,20 @@
 //go:build integration
 
-// Package fixture creates and removes the end-to-end corpus.
 package fixture
 
 import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 
 	"danny.vn/trachuan/internal/corpusdb"
 	"danny.vn/trachuan/internal/testpg"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// Create builds a marked fixture corpus and returns its database name and run key.
 func Create(ctx context.Context) (name, key string, resultErr error) { return create(ctx, false) }
 
-// CreateRecipe3 builds a recipe-3 corpus with a partial merged article.
 func CreateRecipe3(ctx context.Context) (name, key string, resultErr error) { return create(ctx, true) }
 
 func create(ctx context.Context, recipe3 bool) (name, key string, resultErr error) {
@@ -56,10 +54,14 @@ func create(ctx context.Context, recipe3 bool) (name, key string, resultErr erro
 	if err := populateWithRecipe(ctx, db, key[3:], recipe3); err != nil {
 		return name, key, fmt.Errorf("populate fixture: %w", err)
 	}
+	if os.Getenv("E2E_SUMMARIES") == "1" {
+		if err := populateSummary(ctx, db); err != nil {
+			return name, key, fmt.Errorf("populate summary fixture: %w", err)
+		}
+	}
 	return name, key, nil
 }
 
-// Drop removes a fixture only when its ownership marker matches.
 func Drop(ctx context.Context, name, key string) error {
 	admin, _, err := testpg.OpenAdministrator(ctx)
 	if err != nil {
