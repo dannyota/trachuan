@@ -106,6 +106,32 @@ carries one, verbatim in Noto Serif. A lookup hit is labelled "Tra theo số hi�
 message. "Xem thêm" / "Show more" continues with `next_cursor`; `cursor_expired`
 restarts the search with one fixed line. A hit links to its control page.
 
+## Look
+
+The pages wear the family identity of [web visual](web-visual.md) and follow the
+reader's layout.
+
+- **Heads.** The version and control pages open with the reader's identity band
+  on `mist`: the identifier (`code version`, or the citation) in Roboto Mono,
+  then the heading, then one muted meta line. The heading is our title, or the
+  version's name, in Plus Jakarta Sans 700; a control without our title shows
+  its citation and kind as the heading instead. The meta line joins kind,
+  status, the access label and the account line with " · " and never starts or
+  ends with a separator.
+- **Access label.** Plain muted text with an icon: a closed lock for "Cần cấp
+  quyền", an open lock for "Đọc tự do". It is not a stamp: stamps keep their
+  shape for validity alone.
+- **Reduced statement.** A `mist` notice with the closed lock icon and `ink`
+  text, where the publisher's text would start.
+- **Lists.** Versions, outline entries, hits, mappings and gaps are rows with
+  hairline separators: the identifier as a link in Roboto Mono, then our title
+  (or the name) on its own line, then a muted meta line (counts, kind, relation,
+  source). Sections have Plus Jakarta Sans headings: "Mục lục" / "Contents",
+  "Liên kết" / "Mappings", "Giới hạn dữ liệu" / "Data limits".
+- **Faces.** The publisher's title, body, notes, tables, snippets and evidence
+  are the words of the source, in Noto Serif; everything ours is in Plus Jakarta
+  Sans.
+
 ## Words
 
 | Field or state       | vi                                                                                  | en                                                               |
