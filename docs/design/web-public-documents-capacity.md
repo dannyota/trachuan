@@ -52,12 +52,15 @@ host total.
 Locally, three accounts sign in through fake Google with the e2e flow.
 
 On A1, three dedicated accounts are created with `server admin account create`,
-each with a synthetic Google subject that no Google account can match. A new
-`server admin session create --account ID` prints one web session value once,
-valid for one day, into a file with mode `0600` that only the tool reads. Anyone
-with a shell on the host can already write sessions into the database, so the
-command adds no privilege. After the window, the accounts are blocked, which
-revokes their sessions. No owner action or real Google account is needed.
+each with a Google subject that starts with `loadcheck:`, a prefix no Google
+subject can have. `server admin session create --account ID --out FILE` mints
+one web session for such an account and refuses any account whose subject lacks
+the prefix, so it can never sign in as a real person. It writes the session
+value only into `FILE`, created new with mode `0600` and refused if it exists,
+never to standard output, and the session lasts at most one day. Anyone with a
+shell on the host can already write sessions into the database, so the command
+adds no privilege. After the window the accounts are blocked, which revokes
+their sessions. No owner action or real Google account is needed.
 
 ## Sampling
 
@@ -78,14 +81,18 @@ The window runs between 01:00 and 03:00 Vietnam time, with no deploy in flight
 and none tagged until it ends; a deploy rewrites `server.env` and would end the
 window. The coordinator runs every host step:
 
-1. Create the accounts and sessions; check `/api/v1/public/status`.
+1. Check that the host watch shows no open failure. Create the accounts and
+   sessions; check `/api/v1/public/status`.
 2. Add `SERVER_PUBLIC_SUMMARIES=true` to `/srv/trachuan/host/server.env` and
    restart `trachuan-server`; status shows `public_summaries` true.
 3. Start the samplers, then run phases A to D. Phase D's activation is the
    runbook's compare-and-swap rollback to the previous release and, after 60
-   seconds, back. Summary answers in those 60 seconds are not gated.
+   seconds, back. Summary answers in those 60 seconds are not gated. The two
+   activations make the host watch send two "corpus live" Telegram messages;
+   they are expected, not an incident.
 4. Remove the flag line, restart the server, and check status shows
    `public_summaries` false. Block the accounts and delete the session files.
+   Check that the uptime alarms are OK.
 
 Abort the window by going to step 4 when any of these occurs: a signed-in
 request fails other than with its account's own limit; search p95 over one
