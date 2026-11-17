@@ -10,8 +10,7 @@ function runServer(body: string): unknown {
     globalThis._importMeta_ = { url: pathToFileURL(resolve('.output/server/index.mjs')).href, env: process.env };
     Server.prototype.listen = function () { return this };
     process.env.NITRO_SHUTDOWN_DISABLED = '1';
-    const nitro = await import('./.output/server/chunks/nitro/nitro.mjs');
-    const app = nitro.g();
+    const { nitroApp: app } = await import('./tests/nitro-app.mjs');
     ${body}
   `
   return JSON.parse(execFileSync(process.execPath, ['--input-type=module', '-e', script], {

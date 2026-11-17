@@ -5,9 +5,11 @@ describe('route rules', () => {
   it('limits cache rules to public paths and marks private paths no-store', async () => {
     const config = await loadNuxtConfig({ cwd: process.cwd() })
     const rules = config.routeRules!
-    for (const path of ['/', '/connect', '/sources', '/privacy', '/terms', '/llms.txt', '/robots.txt', '/sitemap.xml']) {
+    for (const path of ['/', '/connect', '/sources', '/privacy', '/terms', '/llms.txt', '/robots.txt']) {
       expect(rules[path]?.cache).toMatchObject({ maxAge: 600, varies: ['x-trachuan-language'] })
     }
+    for (const path of ['/sitemap.xml', '/sitemap-pages.xml', '/sitemap-documents.xml']) expect(rules[path]?.cache).toMatchObject({ maxAge: 300, swr: false })
+    expect(rules['/vn/documents/*/summary']?.cache).toMatchObject({ maxAge: 300, swr: false, base: 'summary', varies: ['x-trachuan-language', 'x-trachuan-summary-date'] })
     for (const path of ['/login', '/login/factor', '/signup', '/reset', '/link', '/account', '/vn/**']) {
       expect(rules[path]?.cache).toBeUndefined()
       expect(rules[path]?.headers?.['Cache-Control']).toBe('no-store')
@@ -23,8 +25,7 @@ it('sends revalidation headers on cached public responses', async () => {
     Server.prototype.listen = function () { return this };
     process.env.NITRO_SHUTDOWN_DISABLED = '1';
     globalThis.fetch = async request => new URL(request.url).pathname === '/api/v1/me' ? new Response('', { status: 503 }) : new Response(JSON.stringify(new URL(request.url).pathname.endsWith('/codes') ? { release: '20990101_1', codes: ['1'] } : { release: '20990101_1' }), { headers: { 'content-type': 'application/json' } });
-    const nitro = await import('./.output/server/chunks/nitro/nitro.mjs');
-    const app = nitro.g();
+    const { nitroApp: app } = await import('./tests/nitro-app.mjs');
     const results = [];
     for (const path of ['/', '/connect', '/sources', '/privacy', '/terms', '/llms.txt', '/robots.txt', '/sitemap.xml']) {
       for (let i = 0; i < 2; i++) {
@@ -59,8 +60,7 @@ it('revalidates public routes only by ETag', async () => {
     Server.prototype.listen = function () { return this };
     process.env.NITRO_SHUTDOWN_DISABLED = '1';
     globalThis.fetch = async request => new URL(request.url).pathname === '/api/v1/me' ? new Response('', { status: 503 }) : new Response(JSON.stringify(new URL(request.url).pathname.endsWith('/codes') ? { release: '20990101_1', codes: ['1'] } : { release: '20990101_1' }), { headers: { 'content-type': 'application/json' } });
-    const nitro = await import('./.output/server/chunks/nitro/nitro.mjs');
-    const app = nitro.g();
+    const { nitroApp: app } = await import('./tests/nitro-app.mjs');
     const results = [];
     for (const path of ['/', '/connect', '/sources', '/privacy', '/terms', '/llms.txt', '/robots.txt', '/sitemap.xml']) {
       const first = await app.localFetch(path);

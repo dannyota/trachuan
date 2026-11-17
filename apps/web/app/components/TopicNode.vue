@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { components } from '@trachuan/schema/gen/openapi'
 import { messagesFor, type Language } from '../../i18n'
-defineProps<{ page: components['schemas']['NodePage'] }>()
+defineProps<{ page: components['schemas']['NodePage'], summariesAvailable?: boolean }>()
 const language = useState<Language>('language', () => 'vi')
 const messages = computed(() => messagesFor(language.value))
 </script>
@@ -11,6 +11,6 @@ const messages = computed(() => messagesFor(language.value))
     <header class="page-intro"><h1>{{ page.node?.name }}</h1><p v-if="page.node?.description">{{ page.node.description }}</p></header>
     <NuxtLink class="btn btn-primary topic-search" :to="{ path: '/vn/search', query: { node: page.node?.code } }">{{ messages.topicSearch }}</NuxtLink>
     <section class="page-section"><h2>{{ messages.topicChildren }}</h2><TopicTree :nodes="page.node?.children || []" /></section>
-    <section class="page-section"><h2>{{ messages.documents }}</h2><ul class="topic-documents"><li v-for="document in page.documents" :key="document.key"><ValidityStamp :status="document.status_class" /><span class="num">{{ document.number }}</span><NuxtLink :to="`/vn/documents/${document.key}`">{{ document.title }}</NuxtLink><span>{{ document.type }}</span></li></ul></section>
+    <section class="page-section"><h2>{{ messages.documents }}</h2><ul class="topic-documents"><li v-for="document in page.documents" :key="document.key"><ValidityStamp :status="document.status_class" /><span class="num">{{ document.number }}</span><NuxtLink :to="`/vn/documents/${document.key}${summariesAvailable ? '/summary' : ''}`">{{ document.title }}</NuxtLink><span>{{ document.type }}</span></li></ul></section>
   </div>
 </template>

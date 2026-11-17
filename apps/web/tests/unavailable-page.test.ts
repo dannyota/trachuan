@@ -7,7 +7,7 @@ it('renders a fixed 503 without logging an unhandled error when session transpor
     Server.prototype.listen = function () { return this };
     process.env.NITRO_SHUTDOWN_DISABLED = '1';
     process.env.NUXT_API_ORIGIN = 'http://127.0.0.1:1';
-    const app = (await import('./.output/server/chunks/nitro/nitro.mjs')).g();
+    const { nitroApp: app } = await import('./tests/nitro-app.mjs');
     const pages = [];
     for (const path of ['/account', '/vn/search']) {
       const res = await app.localFetch(path);

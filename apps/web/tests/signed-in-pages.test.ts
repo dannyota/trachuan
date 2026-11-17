@@ -19,8 +19,7 @@ it('protects real signed-in pages without probing public pages on SSR', () => {
       if (request.headers.get('cookie') === 'session=ok') return new Response(JSON.stringify({ id: 1, email: 'test@example.invalid', created_at: '2026-01-01T00:00:00Z', csrf_token: 'token' }), { headers: { 'content-type': 'application/json' } });
       return new Response(JSON.stringify({ error: { code: 'unauthenticated', message: 'sign in' } }), { status: 401, headers: { 'content-type': 'application/json' } });
     };
-    const nitro = await import('./.output/server/chunks/nitro/nitro.mjs');
-    const app = nitro.g();
+    const { nitroApp: app } = await import('./tests/nitro-app.mjs');
     const results = [];
     for (const path of ['/', '/account', '/vn/search', '/vn/documents/vn:vbpl:1']) {
       const response = await app.localFetch(path);

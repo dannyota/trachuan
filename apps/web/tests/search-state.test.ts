@@ -16,8 +16,8 @@ it('serves only the form on signed-in SSR', async () => {
     Server.prototype.listen = function () { return this };
     process.env.NITRO_SHUTDOWN_DISABLED = '1';
     globalThis.fetch = async () => new Response(JSON.stringify({ id: 1, email: 'test@example.invalid', created_at: '2026-01-01T00:00:00Z', csrf_token: 'token' }), { headers: { 'content-type': 'application/json' } });
-    const nitro = await import('./.output/server/chunks/nitro/nitro.mjs');
-    const response = await nitro.g().localFetch('/vn/search');
+    const { nitroApp: app } = await import('./tests/nitro-app.mjs');
+    const response = await app.localFetch('/vn/search');
     console.log(await response.text());
   `
   const html = execFileSync(process.execPath, ['--input-type=module', '-e', script], { encoding: 'utf8' })

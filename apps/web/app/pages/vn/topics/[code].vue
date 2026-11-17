@@ -1,8 +1,10 @@
 <script setup lang="ts">
+import { setResponseHeader } from 'h3'
 import { topicGraph } from '../../../utils/structured-data'
 import { topicSeo } from '../../../utils/topic-seo'
 import { notFoundDocument } from '../../../../server/utils/not-found'
 import { createApi } from '../../../api/client'
+import { createSummaryApi } from '../../../api/summary'
 import { messagesFor, type Language } from '../../../../i18n'
 const clientEntry = import.meta.client && !useNuxtApp().isHydrating
 onMounted(() => { if (clientEntry) window.location.reload() })
@@ -13,6 +15,13 @@ const code = String(route.params.code)
 const context = import.meta.server ? useNuxtApp().ssrContext : undefined
 const event = import.meta.server ? useRequestEvent() : undefined
 const api = createApi({ origin: import.meta.server ? useRuntimeConfig().apiOrigin : window.location.origin, publicRoute: true })
+const { data: summariesAvailable } = await useAsyncData(`topic-summaries-${code}`, async () => {
+  if (!import.meta.server) return false
+  try {
+    const status = await createSummaryApi(useRuntimeConfig().apiOrigin).status(AbortSignal.timeout(3000))
+    return status.data?.features?.public_summaries === true
+  } catch { return false }
+})
 const { data } = await useAsyncData(`topic-${code}`, async () => {
   if (!import.meta.server) return null
   const response = await api.client.GET('/api/v1/public/taxonomy/{code}', { params: { path: { code } } })
@@ -28,4 +37,4 @@ watchEffect(() => { topicHead.value = data.value?.node ? topicSeo(data.value.nod
 const origin = useRuntimeConfig().public.siteOrigin.replace(/\/$/, '')
 useStructuredData(() => data.value ? topicGraph(origin, data.value) : [])
 </script>
-<template><div class="container page-content"><TopicNode v-if="data" :page="data" /><p v-else role="status">{{ messages.errors.unavailable }}</p></div></template>
+<template><div class="container page-content"><TopicNode v-if="data" :page="data" :summaries-available="summariesAvailable === true" /><p v-else role="status">{{ messages.errors.unavailable }}</p></div></template>

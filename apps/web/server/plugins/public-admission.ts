@@ -1,10 +1,12 @@
 import { createAdmission } from '../utils/public-admission'
+import { matchPage } from '../utils/page-route'
 
 export default defineNitroPlugin((nitro) => {
   const admission = createAdmission(Date.now)
   const renders = new WeakMap<object, () => void>()
   nitro.hooks.hook('render:before', (context) => {
-    const release = admission.render()
+    const page = matchPage(context.event.node.req.url ?? '')
+    const release = admission.render(page?.path.endsWith('/summary') === true)
     if (!release) {
       context.response = {
         statusCode: 429,

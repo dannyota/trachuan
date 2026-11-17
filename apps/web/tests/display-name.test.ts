@@ -8,7 +8,7 @@ it('renders localized page titles and the wordmark without search query text', (
     Server.prototype.listen = function () { return this };
     process.env.NITRO_SHUTDOWN_DISABLED = '1';
     globalThis.fetch = async request => new Response(JSON.stringify(new URL(request.url).pathname === '/api/v1/me' ? { id: 1, email: 'test@example.invalid', created_at: '2026-01-01T00:00:00Z', csrf_token: 'token' } : { release: 'test', documents: 2, provisions: 3, nodes: 1 }), { headers: { 'content-type': 'application/json' } });
-    const app = (await import('./.output/server/chunks/nitro/nitro.mjs')).g();
+    const { nitroApp: app } = await import('./tests/nitro-app.mjs');
     const results = [];
     for (const lang of ['vi', 'en']) for (const path of ['/', '/connect', '/sources', '/privacy', '/terms', '/login', '/account', '/vn/search?query=private-search', '/vn/documents/vn:vbpl:1']) {
       const response = await app.localFetch(path, { headers: { cookie: 'session=ok; lang=' + lang } });

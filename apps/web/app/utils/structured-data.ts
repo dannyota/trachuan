@@ -5,6 +5,18 @@ import { formatNumber } from '../content'
 type Status = components['schemas']['CorpusStatus']
 type NodePage = components['schemas']['NodePage']
 
+export function summaryGraph(origin: string, summary: components['schemas']['PublicSummary']) {
+  const document = summary.document
+  return [{
+    '@type': 'Legislation', url: `${origin}/vn/documents/${document.key}/summary`, name: document.title,
+    legislationIdentifier: document.number, legislationType: document.type,
+    ...(document.issued ? { legislationDate: document.issued } : {}),
+    ...(document.issuer ? { legislationPassedBy: document.issuer } : {}),
+    legislationJurisdiction: 'VN', inLanguage: 'vi',
+    ...(document.source_url?.startsWith('https://') ? { sameAs: document.source_url } : {}),
+  }]
+}
+
 export function homeGraph(origin: string, language: Language) {
   const organization = { '@id': `${origin}/#organization` }
   const person = { '@id': `${origin}/#danny` }

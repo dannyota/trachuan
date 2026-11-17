@@ -13,7 +13,7 @@ it('renders localized titles and descriptions on public routes', () => {
       const data = path.endsWith('/taxonomy/1') ? { node, path: [node], documents: [] } : path.endsWith('/taxonomy') ? { nodes: [node], truncated: false } : { release: 'test', documents: 2, provisions: 3, nodes: 1 };
       return new Response(JSON.stringify(data), { headers: { 'content-type': 'application/json' } });
     };
-    const app = (await import('./.output/server/chunks/nitro/nitro.mjs')).g();
+    const { nitroApp: app } = await import('./tests/nitro-app.mjs');
     const results = [];
     for (const lang of ['vi', 'en']) for (const path of ['/', '/vn/topics', '/vn/topics/1', '/connect', '/sources', '/privacy', '/terms', '/login', '/signup', '/reset']) {
       const response = await app.localFetch(path + '?ignored=1', { headers: { cookie: 'lang=' + lang } });

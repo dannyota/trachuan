@@ -16,7 +16,7 @@ it('renders and caches anonymous topic pages, rejects unknown nodes and retries 
       const data = url.pathname.endsWith('/1') ? {node:root,path:[{code:'2',name:'Ancestor'},{code:'1',name:'First'}],documents:[{key:'vn:vbpl:1',number:'No. 1',title:'Document title',type:'law',status_class:'in_force',is_current:true}]} : {nodes:[root,{code:'2',name:'Second',provisions:3,documents:1}],truncated:false};
       return new Response(JSON.stringify(data), {headers:{'content-type':'application/json'}});
     };
-    const app = (await import('./.output/server/chunks/nitro/nitro.mjs')).g();
+    const { nitroApp: app } = await import('./tests/nitro-app.mjs');
     const results = [];
     for (const path of ['/vn/topics','/vn/topics','/vn/topics/1','/vn/topics/1','/vn/topics/9','/vn/topics/9','/vn/topics/8','/vn/topics/8']) {
       const res = await app.localFetch(path, {headers:{cookie:'session=private'}});
@@ -77,7 +77,7 @@ it('does not cache an unavailable topic tree', () => {
     process.env.NITRO_SHUTDOWN_DISABLED = '1';
     let calls = 0;
     globalThis.fetch = async () => { calls++; return new Response('{}', {status:503,headers:{'content-type':'application/json'}}) };
-    const app = (await import('./.output/server/chunks/nitro/nitro.mjs')).g();
+    const { nitroApp: app } = await import('./tests/nitro-app.mjs');
     const results = [];
     for (let i = 0; i < 2; i++) { const res = await app.localFetch('/vn/topics'); results.push({status:res.status,body:await res.text()}) }
     console.log(JSON.stringify({calls,results}));
@@ -99,7 +99,7 @@ it('does not revalidate topic errors against any ETag', () => {
       const missing = new URL(request.url).pathname.endsWith('/9');
       return new Response(JSON.stringify({error:{code:missing?'not_found':'unavailable',message:'error'}}), {status:missing?404:503,headers:{'content-type':'application/json'}});
     };
-    const app = (await import('./.output/server/chunks/nitro/nitro.mjs')).g();
+    const { nitroApp: app } = await import('./tests/nitro-app.mjs');
     const results = [];
     for (const path of ['/vn/topics/9', '/vn/topics/8', '/vn/topics']) {
       const first = await app.localFetch(path);
