@@ -209,8 +209,8 @@ in log group `trachuan-logs` through the
 which reads files from local directories, so results and logs are readable
 without SSH. Log lines carry status, never secret values or account data.
 
-Set thresholds from [host budgets](budgets-host.md#host-alarms-proposed).
-Deliver OCI alarms through
+Set thresholds from [host budgets](budgets-host.md#host-alarms). Deliver OCI
+alarms through
 [Notifications](https://docs.oracle.com/en-us/iaas/Content/Notification/Concepts/notificationoverview.htm)
 email independently of the host. Retain the host timer's Telegram alerts and
 external uptime check; do not rely on the failed host to relay cloud alarms.
