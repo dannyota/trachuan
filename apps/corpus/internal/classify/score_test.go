@@ -38,7 +38,7 @@ func TestScore_MicroSetsAncestorsAndLowestThreshold(t *testing.T) {
 	}{{2, 0, 0, 0}, {3, 1, 0, 0}, {3, 2, 0, 0}}
 	for i, want := range wants {
 		row := report.Levels[i]
-		if row.Raw.TruePositive != want.tp || row.Raw.FalsePositive != want.fp || row.Raw.FalseNegative != want.fn || row.Threshold == nil || *row.Threshold != want.threshold {
+		if row.All.Raw.TruePositive != want.tp || row.All.Raw.FalsePositive != want.fp || row.All.Raw.FalseNegative != want.fn || row.All.Threshold == nil || *row.All.Threshold != want.threshold {
 			t.Fatalf("row %+v want %+v", row, want)
 		}
 	}
@@ -52,12 +52,12 @@ func TestScore_StaleLabelsNeverShrinkDenominator(t *testing.T) {
 		l, f, a, release, nodes := scoreFixture(t, count)
 		l.Articles[0].OwnTextSHA256 = "stale"
 		report, err := Score(l, f, a, release, nodes)
-		if (err != nil) != (count == 19) || report.InvalidEntries != 1 || report.Levels[2].Raw.FalseNegative != 1 || report.FamilyRecall != float64(count-1)/float64(count) {
+		if (err != nil) != (count == 19) || report.InvalidEntries != 1 || report.Levels[2].All.Raw.FalseNegative != 1 || report.FamilyRecall != float64(count-1)/float64(count) {
 			t.Fatalf("count %d report %+v error %v", count, report, err)
 		}
 		if count == 19 {
 			for _, level := range report.Levels {
-				if level.Threshold != nil {
+				if level.All.Threshold != nil {
 					t.Fatal("unavailable set calibrated a threshold")
 				}
 			}
@@ -91,7 +91,7 @@ func TestScore_FailedFamiliesAndInvalidLabelsAreMisses(t *testing.T) {
 			if reason == "empty family" || reason == "failed family" {
 				want = 20
 			}
-			if report.Levels[2].Raw.FalseNegative != want {
+			if report.Levels[2].All.Raw.FalseNegative != want {
 				t.Fatalf("report %+v", report)
 			}
 		})
@@ -102,7 +102,7 @@ func TestScore_NoQualifyingThresholdAndDuplicateLabels(t *testing.T) {
 	l, f, a, release, nodes := scoreFixture(t, 1)
 	a.Articles[0].Outcome.Codes = []CodeConfidence{{"1.1.x1", 0.9}}
 	report, err := Score(l, f, a, release, nodes)
-	if err != nil || report.Levels[2].Threshold != nil {
+	if err != nil || report.Levels[2].All.Threshold != nil {
 		t.Fatalf("report %+v error %v", report, err)
 	}
 	l.Articles = append(l.Articles, l.Articles[0])
@@ -121,7 +121,7 @@ func TestScore_TopOneAndThreshold(t *testing.T) {
 		t.Fatal(err)
 	}
 	for i, want := range []float64{1, 0.5, 0.5} {
-		b, marshalErr := json.Marshal(report.Levels[i].Raw)
+		b, marshalErr := json.Marshal(report.Levels[i].All.Raw)
 		if marshalErr != nil {
 			t.Fatal(marshalErr)
 		}
@@ -135,8 +135,8 @@ func TestScore_TopOneAndThreshold(t *testing.T) {
 			t.Errorf("level %d top-1 %v want %v", i, m.TopOne, want)
 		}
 	}
-	if report.Levels[2].Threshold != nil {
-		t.Errorf("incorrect threshold %v", *report.Levels[2].Threshold)
+	if report.Levels[2].All.Threshold != nil {
+		t.Errorf("incorrect threshold %v", *report.Levels[2].All.Threshold)
 	}
 	a.Articles[1].Outcome.Codes[0].Confidence = 0.6
 	a.Articles[1].Outcome.Codes[1].Confidence = 0.5
@@ -144,7 +144,7 @@ func TestScore_TopOneAndThreshold(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if report.Levels[2].Threshold == nil || *report.Levels[2].Threshold != 0.8 {
-		t.Errorf("threshold %+v", report.Levels[2].Threshold)
+	if report.Levels[2].All.Threshold == nil || *report.Levels[2].All.Threshold != 0.8 {
+		t.Errorf("threshold %+v", report.Levels[2].All.Threshold)
 	}
 }
