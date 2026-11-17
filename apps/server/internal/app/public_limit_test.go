@@ -145,3 +145,20 @@ func TestPublicLimit_OtherRoutesKeepBuckets(t *testing.T) {
 		}
 	}
 }
+
+func TestPublicLimit_EachRouteExemptAlone(t *testing.T) {
+	for _, path := range []string{"/api/v1/public/status", "/api/v1/public/taxonomy", "/api/v1/public/taxonomy/a", "/api/v1/public/taxonomy/codes"} {
+		t.Run(path, func(t *testing.T) {
+			mux := publicLimitFixture()
+			for i := range 128 {
+				r := httptest.NewRequest(http.MethodGet, path, nil)
+				r.RemoteAddr = "127.0.0.1:1234"
+				w := httptest.NewRecorder()
+				mux.ServeHTTP(w, r)
+				if w.Code != http.StatusOK {
+					t.Fatalf("%s request %d: status=%d", path, i+1, w.Code)
+				}
+			}
+		})
+	}
+}
