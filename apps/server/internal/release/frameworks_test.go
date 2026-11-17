@@ -52,6 +52,24 @@ func TestResolver_FrameworksLeaseLifecycle(t *testing.T) {
 	}
 }
 
+func TestFrameworksPoolConfig_InstallsLogGuardOnlyForFrameworks(t *testing.T) {
+	template := "postgres://corpus_reader@localhost/{database}"
+	cfg, err := frameworksPoolConfig(template, "frameworks_20990101")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.AfterConnect == nil || cfg.ConnConfig.RuntimeParams["default_transaction_read_only"] != "on" {
+		t.Fatal("frameworks pool has no safety guard")
+	}
+	law, err := poolConfig(template, "corpus_vn_20990101")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if law.AfterConnect != nil {
+		t.Fatal("frameworks guard changed law pool")
+	}
+}
+
 func TestResolver_FrameworksRejectsLawPointerAndExpiredPin(t *testing.T) {
 	for _, name := range []string{"corpus_vn_20990103", "frameworks_20990103/other", "frameworks_20990103;DROP"} {
 		r := &Resolver{Auth: &fakeStore{active: name}, Clock: time.Now, Frameworks: &serve.Options{}}
