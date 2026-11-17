@@ -62,10 +62,12 @@ as citations and our titles, each a link to its control. For a version the
 account cannot read, one neutral sentence says where access comes from: "Quyền
 đọc được cấp theo địa chỉ email đã xác minh của tài khoản." / "Access is granted
 to the verified email of an account." It offers no contact, request or purchase
-flow. Public gaps of the version follow, with their fixed kind labels and
-details as served; "Xem thêm" / "Show more" continues with `next_cursor` and the
-same `versions` selector, and `cursor_expired` reloads the gaps from the start
-with one fixed line.
+flow. The gaps the response returns for the version follow (the server returns
+public gaps to everyone and text gaps only to accounts that can read the
+version; the page shows what it gets and filters nothing), with their fixed kind
+labels and details as served; "Xem thêm" / "Show more" continues with
+`next_cursor` and the same `versions` selector, and `cursor_expired` reloads the
+gaps from the start with one fixed line.
 
 **Control page.** The head first: citation, kind, path (ancestor citations as
 links), our title, status, lineage, access label. Then the units in the order
