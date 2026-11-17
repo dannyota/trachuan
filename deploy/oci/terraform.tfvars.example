@@ -8,6 +8,7 @@ identity_emails = {
   tfstate = "<tfstate-identity-email>"
   release_upload = "<release-upload-identity-email>"
   release_verify = "<release-verify-identity-email>"
+  frameworks_verify = "<frameworks-verify-identity-email>"
 }
 sender_email = "<sender-email>"
 owner_ssh_rules = [

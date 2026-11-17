@@ -8,6 +8,7 @@
     "smtp_username",
     "smtp_password",
     "account_keys",
+    "server_frameworks_key",
     "postgres_password",
     "auth_db_password",
     "corpus_reader_password",

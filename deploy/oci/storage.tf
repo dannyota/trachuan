@@ -29,3 +29,19 @@ resource "oci_objectstorage_bucket" "backups" {
     prevent_destroy = true
   }
 }
+
+resource "oci_objectstorage_bucket" "frameworks_releases" {
+  access_type           = "NoPublicAccess"
+  auto_tiering          = "Disabled"
+  bucket_scope          = "NAMESPACE"
+  compartment_id        = var.compartment_ocid
+  is_bucket_key_enabled = false
+  name                  = "trachuan-frameworks-releases"
+  namespace             = data.oci_objectstorage_namespace.current.namespace
+  object_events_enabled = false
+  storage_tier          = "Standard"
+  versioning            = "Disabled"
+  lifecycle {
+    prevent_destroy = true
+  }
+}

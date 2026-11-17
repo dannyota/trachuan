@@ -57,14 +57,20 @@ class Updater:
         except (OSError, ValueError):
             return raw_pending(self.paths.state / 'secrets-state.json')
 
-    def secrets(self, state, directory, mode, result, force=False):
+    def secrets(self, state, directory, mode, result, force=False, candidate=None):
         self.step = 'secrets'
         phase = Secrets(state, self.host, self.rules)
         proceed = phase.run(force=True) if force else phase.run()
         self.secrets_failed = self.secrets_failed or phase.failed
         if not proceed:
             result.write('failed', 'secrets', 'secret replacement pending')
-        return proceed
+            return False
+        missing = phase.missing(candidate.files) if candidate else None
+        if missing is not None:
+            self.secrets_failed = True
+            result.write('failed', 'secrets', 'secret missing: ' + missing, self.hash, self.manifest)
+            return False
+        return True
 
     def verified(self, state, candidate, mode, result):
         self.step = 'images'
@@ -74,7 +80,7 @@ class Updater:
         if mode == 'verify':
             result.write('verified', 'complete', 'release verified; activation disabled', candidate.hash, candidate.manifest)
             return
-        if not self.secrets(state, candidate.directory, mode, result, force=True):
+        if not self.secrets(state, candidate.directory, mode, result, force=True, candidate=candidate):
             return
         self.step = 'activate'
         Activator(state, self.store, self.host).activate(candidate)
@@ -123,7 +129,7 @@ class Updater:
         if mode == 'verify':
             result.write('verified', 'rollback', 'rollback verified; activation disabled', hash_value, auth)
             return
-        if not self.secrets(state, candidate.directory, mode, result, force=True):
+        if not self.secrets(state, candidate.directory, mode, result, force=True, candidate=candidate):
             return
         self.step = 'rollback'
         Activator(state, self.store, self.host).activate(candidate, expected_schema=schema,

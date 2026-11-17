@@ -94,7 +94,7 @@ resource "oci_identity_policy" "host_deploy" {
   compartment_id = var.tenancy_ocid
   description    = "host reads its named secrets and corpus releases"
   name           = "trachuan-host-deploy"
-  statements     = ["Allow dynamic-group trachuan-host to read secret-bundles in compartment trachuan where any { target.secret.name = 'google_client_secret', target.secret.name = 'smtp_username', target.secret.name = 'smtp_password', target.secret.name = 'account_keys', target.secret.name = 'postgres_password', target.secret.name = 'auth_db_password', target.secret.name = 'corpus_reader_password', target.secret.name = 'activator_db_password', target.secret.name = 'backup_s3_key', target.secret.name = 'backup_s3_key_secret', target.secret.name = 'telegram_bot_token', target.secret.name = 'telegram_chat_id'}", "Allow dynamic-group trachuan-host to read objects in compartment trachuan where target.bucket.name = 'trachuan-releases'", "Allow dynamic-group trachuan-host to read buckets in compartment trachuan where target.bucket.name = 'trachuan-releases'", "Allow dynamic-group trachuan-host to use log-content in compartment trachuan"]
+  statements     = ["Allow dynamic-group trachuan-host to read secret-bundles in compartment trachuan where any { target.secret.name = 'google_client_secret', target.secret.name = 'smtp_username', target.secret.name = 'smtp_password', target.secret.name = 'account_keys', target.secret.name = 'server_frameworks_key', target.secret.name = 'postgres_password', target.secret.name = 'auth_db_password', target.secret.name = 'corpus_reader_password', target.secret.name = 'activator_db_password', target.secret.name = 'backup_s3_key', target.secret.name = 'backup_s3_key_secret', target.secret.name = 'telegram_bot_token', target.secret.name = 'telegram_chat_id'}", "Allow dynamic-group trachuan-host to read objects in compartment trachuan where target.bucket.name = 'trachuan-releases'", "Allow dynamic-group trachuan-host to read buckets in compartment trachuan where target.bucket.name = 'trachuan-releases'", "Allow dynamic-group trachuan-host to use log-content in compartment trachuan"]
 }
 
 resource "oci_identity_user_group_membership" "tfstate" {
@@ -140,4 +140,30 @@ resource "oci_identity_user_group_membership" "release_upload" {
   compartment_id = var.tenancy_ocid
   group_id       = oci_identity_group.release_upload.id
   user_id        = oci_identity_user.release_upload.id
+}
+
+resource "oci_identity_user" "frameworks_verify" {
+  compartment_id = var.tenancy_ocid
+  description    = "trachuan trachuan-frameworks-verify (customer secret key only)"
+  email          = var.identity_emails["frameworks_verify"]
+  name           = "trachuan-frameworks-verify"
+}
+
+resource "oci_identity_group" "frameworks_verify" {
+  compartment_id = var.tenancy_ocid
+  description    = "trachuan trachuan-frameworks-verify"
+  name           = "trachuan-frameworks-verify"
+}
+
+resource "oci_identity_user_group_membership" "frameworks_verify" {
+  compartment_id = var.tenancy_ocid
+  group_id       = oci_identity_group.frameworks_verify.id
+  user_id        = oci_identity_user.frameworks_verify.id
+}
+
+resource "oci_identity_policy" "frameworks_releases" {
+  compartment_id = var.tenancy_ocid
+  description    = "frameworks release upload, verify and host read"
+  name           = "trachuan-frameworks-releases"
+  statements     = ["Allow group trachuan-release-upload to read buckets in compartment trachuan where target.bucket.name = 'trachuan-frameworks-releases'", "Allow group trachuan-release-upload to manage objects in compartment trachuan where all {target.bucket.name = 'trachuan-frameworks-releases', any {request.permission = 'OBJECT_CREATE', request.permission = 'OBJECT_OVERWRITE', request.permission = 'OBJECT_INSPECT', request.permission = 'OBJECT_READ'}}", "Allow group trachuan-frameworks-verify to read buckets in compartment trachuan where target.bucket.name = 'trachuan-frameworks-releases'", "Allow group trachuan-frameworks-verify to read objects in compartment trachuan where target.bucket.name = 'trachuan-frameworks-releases'", "Allow dynamic-group trachuan-host to read buckets in compartment trachuan where target.bucket.name = 'trachuan-frameworks-releases'", "Allow dynamic-group trachuan-host to read objects in compartment trachuan where target.bucket.name = 'trachuan-frameworks-releases'"]
 }

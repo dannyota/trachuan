@@ -17,8 +17,8 @@ class SecretsFixture(fixture.ActivationFixture):
         self.rules['vault_id'] = 'ocid1.vault.oc1.ap-singapore-1.synthetic'
         self.rules['region'] = 'ap-singapore-1'
         self.rules['secrets'] = ['google_client_secret', 'smtp_username', 'smtp_password',
-                                'account_keys', 'postgres_password', 'auth_db_password',
-                                'corpus_reader_password', 'activator_db_password',
+                                'account_keys', 'server_frameworks_key', 'postgres_password',
+                                'auth_db_password', 'corpus_reader_password', 'activator_db_password',
                                 'backup_s3_key', 'backup_s3_key_secret']
         self.values = {name: b'synthetic-' + name.encode() for name in self.rules['secrets']}
         self.values['auth_db_password'] = b'synthetic:/?#@ %'
