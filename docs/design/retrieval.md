@@ -103,8 +103,9 @@ with neither are left out. An unknown code is `invalid_request`. Paging, the
 
 Tool schemas grow only additively. `/mcp` requires scope `mcp:read` and serves
 RFC 9728 metadata at `/.well-known/oauth-protected-resource`. Every `/mcp`
-response carries `Cache-Control: no-store`, whatever the tool or corpus, so no
-separate reading of the request decides it.
+response carries `Cache-Control: no-store, no-transform`, whatever the tool or
+corpus, so no separate reading of the request decides it; `no-transform` keeps
+intermediaries from compressing or rewriting streamed responses.
 
 ## Web API
 

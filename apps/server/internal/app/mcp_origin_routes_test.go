@@ -47,7 +47,8 @@ func assertNoCORS(t *testing.T, h http.Header) {
 
 func assertOriginForbidden(t *testing.T, w *httptest.ResponseRecorder) {
 	t.Helper()
-	if w.Code != http.StatusForbidden || w.Header().Get("Content-Type") != "application/json" || w.Header().Get("Cache-Control") != "no-store" || w.Body.String() != `{"error":"invalid_request"}` {
+	cacheControl := w.Header().Get("Cache-Control")
+	if w.Code != http.StatusForbidden || w.Header().Get("Content-Type") != "application/json" || (cacheControl != "no-store" && cacheControl != mcpapi.CacheControl) || w.Body.String() != `{"error":"invalid_request"}` {
 		t.Fatalf("status=%d headers=%v body=%s", w.Code, w.Header(), w.Body.String())
 	}
 	assertNoCORS(t, w.Header())

@@ -67,7 +67,7 @@ func (b frameworkBearer) RoundTrip(r *http.Request) (*http.Response, error) {
 	r = r.Clone(r.Context())
 	r.Header.Set("Authorization", "Bearer trc_"+strings.Repeat("A", 43))
 	response, err := http.DefaultTransport.RoundTrip(r)
-	if err == nil && response.Header.Get("Cache-Control") != "no-store" {
+	if err == nil && response.Header.Get("Cache-Control") != mcpapi.CacheControl {
 		b.t.Errorf("MCP response Cache-Control=%q want no-store", response.Header.Get("Cache-Control"))
 	}
 	return response, err

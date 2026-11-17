@@ -85,7 +85,7 @@ func TestMCPRoute_AllAuthenticationOutcomesAreNoStore(t *testing.T) {
 			if response.StatusCode != tc.status {
 				t.Fatalf("status=%d want=%d body=%s", response.StatusCode, tc.status, body)
 			}
-			if got := response.Header.Get("Cache-Control"); got != "no-store" {
+			if got := response.Header.Get("Cache-Control"); got != mcpapi.CacheControl {
 				t.Errorf("Cache-Control=%q want no-store", got)
 			}
 			if !tc.auth && db.lookups.Load() != 0 {
