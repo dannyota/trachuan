@@ -61,10 +61,13 @@ def observe(state, data, now):
            now, facts=message(deploy))
     update(state, 'deploy_failed', status_value(deploy, ('failed', 'rolled_back'), ('ok', 'current')),
            now, 900, 3, attempt=(deploy or {}).get('started_at'), facts=message(deploy))
-    update(state, 'release_failed', status_value(release, ('failed',), ('ok', 'current', 'verified')),
+    release_failure = status_value(release, ('failed',), ('ok', 'current', 'verified'))
+    if release and release['status'] == 'waiting':
+        release_failure = 'hold'
+    update(state, 'release_failed', release_failure,
            now, 1800, 2, attempt=(release or {}).get('started_at'), facts=message(release))
-    waiting = status_value(release, ('waiting',), ('ok', 'current', 'verified'))
-    if waiting == 'bad':
+    waiting = status_value(release, (), ('ok', 'current', 'verified'))
+    if release and release['status'] in ('waiting', 'failed') and release.get('waiting_since') is not None:
         waiting = 'bad' if now-release['waiting_since'] > 86400 else 'hold'
     update(state, 'release_waiting', waiting, now, facts=message(release))
     secret_value = status_value(secrets, ('failed',), ('ok', 'current'))

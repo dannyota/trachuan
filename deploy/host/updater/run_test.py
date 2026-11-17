@@ -12,6 +12,7 @@ from updater.deploy_io import canonical
 from updater.deploy_io import CommandError
 from updater.deploy_state import State
 from updater.deploy_host import pins
+from watch import observations, signals
 
 
 class RunTest(fixture.ActivationFixture, unittest.TestCase):
@@ -130,6 +131,40 @@ class RunTest(fixture.ActivationFixture, unittest.TestCase):
         self.assertEqual(self.app.run(), 0)
         self.assertEqual(state.path.read_bytes(), before)
         self.assertFalse(any('systemctl' in args or 'psql' in args for args, _ in self.calls))
+
+    def test_authorized_rollback_result_tells_watch_the_activated_image_identity(self):
+        def observe(state, now):
+            data = observations.collect(self.paths.result.parent.parent,
+                                        activity=lambda: 'active', get=lambda *args: (503, {}),
+                                        disk=lambda path: 20, mem=lambda: 50)
+            signals.observe(state, data, now)
+        self.paths.mode.write_text('activate\n')
+        self.assertEqual(self.app.run(), 0)
+        state = signals.fresh()
+        observe(state, 100000)
+        self.assertEqual(signals.due(state, 100000), [])
+        authorization = self.rollback_artifact(self.new.hash, self.old.hash)
+        self.assertEqual(self.app.run(), 0)
+        observe(state, 100060)
+        pending = signals.due(state, 100060)
+        self.assertEqual([(item['key'], item.get('identity')) for item in pending],
+                         [('release_live', ['v0.1.1', 14])])
+        result = json.loads(self.paths.result.read_bytes())
+        self.assertEqual(result['status'], 'ok')
+        self.assertEqual(result['manifest_hash'], authorization)
+        self.assertEqual((result['release'], result['sequence']), ('v0.1.1', 14))
+        self.assertEqual(State(self.state.path).data['active'], self.old.hash)
+        self.assertEqual(self.app.run(), 0)
+        observe(state, 100120)
+        self.assertEqual(signals.due(state, 100120), pending)
+        signals.accept(state, pending[0], 100120)
+        self.registry.fetch.side_effect = None
+        self.registry.fetch.return_value = self.old.directory
+        self.registry.latest_rollback.return_value = None
+        self.assertEqual(self.app.run(), 0)
+        self.assertEqual(json.loads(self.paths.result.read_bytes())['status'], 'current')
+        observe(state, 100180)
+        self.assertEqual(signals.due(state, 100180), [])
 
     def test_schema_change_refuses_signed_rollback_without_consuming_authorization(self):
         self.paths.mode.write_text('activate\n')
