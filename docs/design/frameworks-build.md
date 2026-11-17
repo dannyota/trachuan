@@ -25,10 +25,11 @@ material and stays in the places of
 consume: the registry, the source files of the versions in the release (through
 the hash-checking reader), our paraphrased titles, machine OCR evidence for
 scans, the reviewed waivers (`FRAMEWORKS_SOURCE_DIR/trachuan/ocr-waivers.yaml`,
-its hash in the snapshot manifest), the golden cases with their review file and
-the private floors ([evaluation](frameworks-evaluation.md)) and the gap kind
-table. No later step, and no resume, reads anything outside the snapshot, so a
-registry or title change during a run cannot reach it.
+its hash in the snapshot manifest), the golden cases with their review file, the
+public floors (`sources/frameworks-floors.yaml`) and the private floors
+([evaluation](frameworks-evaluation.md)) and the gap kind table. No later step,
+and no resume, reads anything outside the snapshot, so a registry or title
+change during a run cannot reach it.
 
 The versions in a release are the registry versions that name a parser. Our
 titles are one CSV, `FRAMEWORKS_SOURCE_DIR/trachuan/titles.csv` (`code`,

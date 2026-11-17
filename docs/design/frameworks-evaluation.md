@@ -87,10 +87,10 @@ The filter gate is per case: every positive that hits in `open` must hit in
 Two callers run every case: **free-only** (free versions readable, licensed
 versions reduced to their public fields) and **full** (every version readable).
 
-| Cohort     | Caller    | Cases                                          | Floors live in         |
-| ---------- | --------- | ---------------------------------------------- | ---------------------- |
-| `public`   | free-only | accepted positives on free versions, negatives | `frameworks.md`        |
-| `licensed` | full      | every accepted positive and negative           | `trachuan/floors.yaml` |
+| Cohort     | Caller    | Cases                                          | Floors live in                   |
+| ---------- | --------- | ---------------------------------------------- | -------------------------------- |
+| `public`   | free-only | accepted positives on free versions, negatives | `sources/frameworks-floors.yaml` |
+| `licensed` | full      | every accepted positive and negative           | `trachuan/floors.yaml`           |
 
 The `public` cohort depends only on free text and licensed public fields, so its
 metrics and floors may be published. The `licensed` cohort's ranking depends on
@@ -158,11 +158,20 @@ sources). Any failure, or a class with no observed difference, sets
 Floors are adopted, not inferred. After the first measured run the coordinator
 reviews its numbers and records the baseline: recall@8 and MRR@8 per mode and
 the balanced abstention accuracy, each rounded down to the whole percent, for
-the `public` cohort in `frameworks.md` and for the `licensed` cohort in
-`floors.yaml`, each with the report's SHA-256. Until a baseline is recorded,
-`quality_pass` is false. The cohorts are small (33 free-version positives, 12
-licensed, 15 negatives), so one case moves recall by several points; the report
-states that next to every metric.
+the `public` cohort in `sources/frameworks-floors.yaml` (in Git) and for the
+`licensed` cohort in `floors.yaml`, each with the report's SHA-256. Until a
+baseline is recorded, `quality_pass` is false. The cohorts are small (33
+free-version positives, 12 licensed, 15 negatives), so one case moves recall by
+several points; the report states that next to every metric.
+
+Both floor files are closed YAML with the same shape: a `baselines` list whose
+entries have exactly `release`, `report_sha256`, `reviewer`, `date`,
+`cohort_change` (empty, or the recorded change that explains a lower floor) and
+`floors`, which holds `open` and `filtered`, each with `recall_at_8` and
+`mrr_at_8`, and `abstention_balanced_accuracy`, every value a whole percent. The
+last entry is in force; `evaluate` reads both files from the snapshot and fails
+when an entry lowers a floor below the one before it with an empty
+`cohort_change`.
 
 Later releases:
 
