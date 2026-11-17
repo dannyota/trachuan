@@ -21,10 +21,12 @@ const citation = computed(() => props.document ? documentCitation(props.unit.anc
 </script>
 <template>
   <article :id="unit.anchor" class="reader-unit" :data-anchor="unit.anchor" tabindex="-1">
-    <h2 v-if="heading" :data-spy="/^(chương|điều)(\s|$)/i.test(unit.label || '') ? 'true' : undefined" :data-spy-anchor="unit.anchor">{{ heading }}</h2>
-    <div v-if="target" class="reader-target-label"><strong>{{ unit.anchor?.includes('/diem-') ? m.targetPoint : unit.anchor?.includes('/khoan-') ? m.targetClause : m.targetArticle }}</strong><CopyButton v-if="citation" :text="citation" :label="`${m.copy} ${citation}`" /></div>
+    <div v-if="heading || target" :class="{ 'reader-target-heading': target }">
+      <h2 v-if="heading" :data-spy="/^(chương|điều)(\s|$)/i.test(unit.label || '') ? 'true' : undefined" :data-spy-anchor="unit.anchor">{{ heading }}</h2>
+      <div v-if="target" class="reader-target-label"><strong>{{ unit.anchor?.includes('/diem-') ? m.targetPoint : unit.anchor?.includes('/khoan-') ? m.targetClause : m.targetArticle }}</strong><CopyButton v-if="citation" :text="citation" :label="`${m.copy} ${citation}`" /></div>
+    </div>
     <p v-for="(warning, i) in warnings" :key="i" class="notice notice--warn"><NuxtLink v-if="warningLink(warning, release)" :to="warningLink(warning, release)!">{{ warningSentence(warning, language) }}</NuxtLink><template v-else>{{ warningSentence(warning, language) }}</template></p>
     <p v-if="unit.warnings_omitted" class="notice notice--warn">{{ messagesFor(language).warningMore.replace('{n}', String(unit.warnings_omitted)) }}</p>
-    <p v-for="(line, index) in text ? text.split('\n') : []" :key="index" class="law-text" :class="{ 'reader-point': /^\s*[a-zđ]\)/i.test(line) }">{{ line || '\u00a0' }}</p>
+    <p v-for="(line, index) in text ? text.split('\n') : []" v-show="line.trim()" :key="index" class="law-text" :class="{ 'reader-point': /^\s*[a-zđ]\)/i.test(line) }">{{ line }}</p>
   </article>
 </template>

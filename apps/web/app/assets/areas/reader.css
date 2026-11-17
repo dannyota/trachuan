@@ -19,12 +19,17 @@
 .reader-toc-section a, .reader-toc-section span { font-size: 13px; font-weight: 600; }
 .reader-toc a[aria-current] { background: var(--color-note); color: var(--color-primary); font-weight: 700; }
 .reader-toc-mobile { display: none; }
-.reader-unit { margin-bottom: 32px; scroll-margin-top: var(--reader-stack-height, 73px); }
+.reader-unit { display: flow-root; scroll-margin-top: var(--reader-stack-height, 73px); }
 .reader-unit h2 { margin: 0 0 12px; font-family: var(--font-serif); font-size: 20px; }
 .reader-unit .law-text { margin: 0 0 12px; }
 .reader-unit .reader-point { padding-left: 24px; }
-.reader-unit-target { padding: 12px 16px; border-left: 3px solid var(--color-primary); border-radius: var(--radius-md); background: var(--color-mist); color: var(--color-ink); }
-.reader-target-label { margin-bottom: 8px; font-size: 13px; }
+.reader-unit-target { border-left: 3px solid var(--color-primary); color: var(--color-ink); }
+.reader-unit-target .reader-unit > :not(.reader-target-heading) { margin-inline: 16px; }
+.reader-target-heading { padding: 0 16px 12px; margin-bottom: 12px; background: var(--color-mist); }
+.reader-target-heading h2 { margin-bottom: 8px; }
+.reader-target-label { font-size: 13px; }
+.reader-target-label > span { min-width: 0; }
+.reader-target-label button { max-width: 100%; overflow-wrap: anywhere; }
 .reader-rail { display: flex; flex-direction: column; gap: 20px; }
 .reader-card { border-radius: 16px; padding: 16px; font-size: 13px; }
 .reader-card h2 { margin: 0; font-size: 15px; }
@@ -66,7 +71,8 @@
 .site-layout:has(.reader-main) .site-header { position: sticky; top: 0; z-index: 20; }
 .reader-toc-desktop, .reader-rail { position: sticky; top: var(--reader-header-height, 73px); max-height: calc(100vh - var(--reader-header-height, 73px)); overflow-y: auto; }
 .reader-top-marker { position: absolute; top: 100vh; width: 1px; height: 1px; pointer-events: none; }
-.reader-top { position: fixed; right: 20px; bottom: 20px; z-index: 15; }
+.reader-top { position: sticky; bottom: 20px; z-index: 15; display: flex; width: fit-content; margin-left: auto; }
+.reader-main .reader-content { padding-bottom: 88px; }
 .reader-compact { display: none; }
 .reader-sheet { width: min(420px, 100%); height: 100%; max-height: none; margin: 0 0 0 auto; border: 0; background: var(--color-card); color: var(--color-ink); overflow-y: auto; }
 .reader-sheet::backdrop { background: rgb(0 0 0 / 55%); }

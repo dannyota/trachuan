@@ -20,6 +20,15 @@ it('indents lettered points while preserving the legal text', async () => {
   expect(point?.classes()).toContain('reader-point')
 })
 
+it('keeps blank source lines out of the visual paragraph flow', async () => {
+  setupReader([{ data: { release: '20990101', item: { complete: true, units: [{ kind: 'provision', anchor: 'dieu-1', text: '1. Clause\n\n  \na) Point text' }] } } }])
+  const wrapper = mount(Reader)
+  await flushPromises()
+  const paragraphs = wrapper.findAll('.law-text')
+  expect(paragraphs.filter(element => (element.element as HTMLElement).style.display !== 'none').map(element => element.text())).toEqual(['1. Clause', 'a) Point text'])
+  expect(paragraphs[3]?.classes()).toContain('reader-point')
+})
+
 it('wraps the target clause and its points without wrapping the next clause', async () => {
   const fixture = (await import('./fixtures/reader-171687.json')).default[0]!
   setupReader([{ data: fixture }])

@@ -348,9 +348,9 @@ watch(displayUnits, async () => {
         </template>
         <p v-if="error" class="notice" role="alert">{{ errorMessage(language, error) }} <a v-if="error === 'release_expired'" :href="`/vn/documents/${key}`">{{ messages.readerCurrent }}</a></p>
         <div v-if="next && !error" class="reader-more"><button ref="sentinel" class="btn btn-secondary" type="button" :disabled="loading" @click="load">{{ messages.readerMore }}</button><span v-if="loading" role="status"><span class="reader-spinner" aria-hidden="true" /> {{ readerMessagesText.loading }}</span></div>
+        <button v-if="showTop" class="btn btn-secondary reader-top" type="button" @click="backToTop">{{ readerMessagesText.backToTop }}</button>
       </section>
       <ReaderRail v-if="release" :document="documentEntry" :nodes="nodes" :gaps="gaps" :release="release" :hash="hash" :files="files" :units="textUnits" :document-key="key" :warnings="warnings" />
     </div>
-    <button v-if="showTop" class="btn btn-secondary reader-top" type="button" @click="backToTop">{{ readerMessagesText.backToTop }}</button>
   </div>
 </template>
