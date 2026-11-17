@@ -15,6 +15,7 @@ func Message(code string) string {
 		"link_invalid":  "Link invalid or expired.",
 		"login_failed":  "Sign-in failed.", "reauth_failed": "Reauthentication failed.", "password_rejected": "Password rejected.",
 		"invalid_request": "Invalid request.", "unauthenticated": "Authentication required.",
+		"invalid_handle": "Invalid handle.", "cursor_expired": "Cursor expired.",
 		"reauth_required": "Reauthentication required.", "csrf_rejected": "CSRF check failed.", "account_blocked": "Account blocked.",
 		"token_limit": "Token limit reached.", "not_found": "Not found.", "release_expired": "Release expired.",
 		"too_large": "Response too large.", "body_too_large": "Request body too large.", "unsupported_media_type": "Unsupported media type.",

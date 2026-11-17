@@ -2313,6 +2313,693 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '409': *id002
+  /api/v1/frameworks:
+    get:
+      tags:
+      - frameworks
+      security:
+      - session: []
+      responses:
+        '200':
+          description: Success
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FrameworkStatusResult'
+        '400':
+          description: Request failed
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Request failed
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Request failed
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Request failed
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Request failed
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Retry-After:
+              schema:
+                type: integer
+                minimum: 1
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Request failed
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      parameters:
+      - name: release
+        in: query
+        required: false
+        schema:
+          type: string
+  /api/v1/frameworks/versions/{handle}:
+    get:
+      tags:
+      - frameworks
+      security:
+      - session: []
+      responses:
+        '200':
+          description: Success
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FrameworkReadResult'
+        '400':
+          description: Request failed
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Request failed
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Request failed
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Request failed
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Request failed
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Retry-After:
+              schema:
+                type: integer
+                minimum: 1
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Request failed
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      parameters:
+      - name: release
+        in: query
+        required: false
+        schema: &frameworkPath001
+          type: string
+      - name: handle
+        in: path
+        required: true
+        description: One URL-encoded segment, decoded once to a canonical version handle.
+        schema:
+          type: string
+      - name: next
+        in: query
+        required: false
+        schema: *frameworkPath001
+  /api/v1/frameworks/controls/{handle}:
+    get:
+      tags:
+      - frameworks
+      security:
+      - session: []
+      responses:
+        '200':
+          description: Success
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FrameworkReadResult'
+        '400':
+          description: Request failed
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Request failed
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Request failed
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Request failed
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Request failed
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Retry-After:
+              schema:
+                type: integer
+                minimum: 1
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Request failed
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      parameters:
+      - name: release
+        in: query
+        required: false
+        schema: &frameworkPath002
+          type: string
+      - name: handle
+        in: path
+        required: true
+        description: One URL-encoded segment, decoded once to a canonical control handle.
+        schema:
+          type: string
+      - name: next
+        in: query
+        required: false
+        schema: *frameworkPath002
+  /api/v1/frameworks/search:
+    post:
+      tags:
+      - frameworks
+      security:
+      - session: []
+      responses:
+        '200':
+          description: Success
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FrameworkSearchResult'
+        '400':
+          description: Request failed
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Request failed
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Request failed
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Request failed
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Request failed
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Retry-After:
+              schema:
+                type: integer
+                minimum: 1
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Request failed
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Request failed
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: Request failed
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FrameworkSearchInput'
+      parameters:
+      - name: X-CSRF-Token
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: Origin
+        in: header
+        required: false
+        description: Required unless Referer supplies the same origin.
+        schema:
+          type: string
+      - name: Referer
+        in: header
+        required: false
+        schema:
+          type: string
+  /api/v1/frameworks/mappings:
+    get:
+      tags:
+      - frameworks
+      security:
+      - session: []
+      responses:
+        '200':
+          description: Success
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FrameworkMappingsResult'
+        '400':
+          description: Request failed
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Request failed
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Request failed
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Request failed
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Request failed
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Retry-After:
+              schema:
+                type: integer
+                minimum: 1
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Request failed
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: Select handle alone, or from and to together. Arrays use repeated
+        query parameters. Unknown parameters are rejected.
+      parameters:
+      - name: release
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: handle
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: from
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: to
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          type: string
+          maxLength: 2048
+      - name: relation
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+            enum:
+            - equivalent
+            - subset
+            - superset
+            - intersects
+            - related
+        style: form
+        explode: true
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 200
+  /api/v1/frameworks/gaps:
+    get:
+      tags:
+      - frameworks
+      security:
+      - session: []
+      responses:
+        '200':
+          description: Success
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FrameworkGapsResult'
+        '400':
+          description: Request failed
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Request failed
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Request failed
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Request failed
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Request failed
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Retry-After:
+              schema:
+                type: integer
+                minimum: 1
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Request failed
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      parameters:
+      - name: release
+        in: query
+        required: false
+        schema: &frameworkPath003
+          type: string
+      - name: versions
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+        style: form
+        explode: true
+      - name: kind
+        in: query
+        required: false
+        schema: *frameworkPath003
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          type: string
+          maxLength: 2048
 components:
   securitySchemes:
     session:
@@ -2647,6 +3334,8 @@ components:
               type: string
               enum:
               - invalid_request
+              - invalid_handle
+              - cursor_expired
               - unauthenticated
               - reauth_required
               - reauth_failed
@@ -3568,3 +4257,437 @@ components:
       - documents
       - provisions
       - nodes
+    FrameworkLineage:
+      type: object
+      properties:
+        supersedes:
+          type: string
+        amends:
+          type: string
+      additionalProperties: false
+    Framework:
+      type: object
+      properties:
+        code:
+          type: string
+        version:
+          type: string
+        name:
+          type: string
+        publisher:
+          type: string
+        access:
+          type: string
+          enum:
+          - free
+          - licensed
+        readable: &frameworkSchema001
+          type: boolean
+        lineage:
+          $ref: '#/components/schemas/FrameworkLineage'
+      additionalProperties: false
+      required:
+      - code
+      - version
+      - name
+      - publisher
+      - access
+      - readable
+    FrameworkCounts:
+      type: object
+      properties:
+        controls:
+          type: integer
+          minimum: 0
+        edges_resolved:
+          type: integer
+          minimum: 0
+        edges_unresolved:
+          type: integer
+          minimum: 0
+      additionalProperties: false
+      required:
+      - controls
+      - edges_resolved
+      - edges_unresolved
+    FrameworkSourceStatus:
+      type: object
+      properties:
+        name:
+          type: string
+        text_source:
+          type: string
+        text_complete: *frameworkSchema001
+      additionalProperties: false
+      required:
+      - name
+      - text_source
+      - text_complete
+    FrameworkVersionStatus:
+      type: object
+      properties:
+        controls:
+          type: integer
+          minimum: 0
+        edges_resolved:
+          type: integer
+          minimum: 0
+        edges_unresolved:
+          type: integer
+          minimum: 0
+        access:
+          type: string
+          enum:
+          - free
+          - licensed
+        readable: *frameworkSchema001
+        lineage:
+          $ref: '#/components/schemas/FrameworkLineage'
+        sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/FrameworkSourceStatus'
+      additionalProperties: false
+      required:
+      - controls
+      - edges_resolved
+      - edges_unresolved
+      - access
+      - readable
+    FrameworkStatusResult:
+      type: object
+      properties:
+        release: &frameworkSchema002
+          type: string
+        access_set_version: &frameworkSchema003
+          type: string
+        access_unavailable: *frameworkSchema001
+        retrieval_recipe_status:
+          type: string
+          enum:
+          - placeholder
+          - measured
+        versions:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/FrameworkVersionStatus'
+        totals:
+          $ref: '#/components/schemas/FrameworkCounts'
+      additionalProperties: false
+      required:
+      - release
+      - access_set_version
+      - retrieval_recipe_status
+      - totals
+    FrameworkGap:
+      type: object
+      properties:
+        kind:
+          type: string
+        version:
+          type: string
+        subject:
+          type: string
+        detail:
+          type: string
+      additionalProperties: false
+      required:
+      - kind
+      - version
+      - detail
+    FrameworkGapsResult:
+      type: object
+      properties:
+        release: *frameworkSchema002
+        access_set_version: *frameworkSchema003
+        access_unavailable: *frameworkSchema001
+        retrieval_recipe_status:
+          type: string
+          enum:
+          - placeholder
+          - measured
+        gaps:
+          type: array
+          items:
+            $ref: '#/components/schemas/FrameworkGap'
+        next_cursor:
+          type: string
+      additionalProperties: false
+      required:
+      - release
+      - access_set_version
+      - retrieval_recipe_status
+    FrameworkMappingEnd:
+      type: object
+      properties:
+        handle:
+          type: string
+        code:
+          type: string
+        citation:
+          type: string
+        version:
+          type: string
+        title:
+          type: string
+      additionalProperties: false
+      required:
+      - citation
+      - version
+    FrameworkMappingEdge:
+      type: object
+      properties:
+        from:
+          $ref: '#/components/schemas/FrameworkMappingEnd'
+        to:
+          $ref: '#/components/schemas/FrameworkMappingEnd'
+        relation:
+          type: string
+          enum:
+          - equivalent
+          - subset
+          - superset
+          - intersects
+          - related
+        source:
+          type: string
+        resolved: *frameworkSchema001
+        evidence:
+          type: string
+        evidence_truncated: *frameworkSchema001
+      additionalProperties: false
+      required:
+      - from
+      - to
+      - relation
+      - source
+      - resolved
+    FrameworkMappingsResult:
+      type: object
+      properties:
+        release: *frameworkSchema002
+        access_set_version: *frameworkSchema003
+        access_unavailable: *frameworkSchema001
+        edges:
+          type: array
+          items:
+            $ref: '#/components/schemas/FrameworkMappingEdge'
+        next_cursor:
+          type: string
+      additionalProperties: false
+      required:
+      - release
+      - access_set_version
+    FrameworkHit:
+      type: object
+      properties:
+        handle:
+          type: string
+        citation:
+          type: string
+        kind:
+          type: string
+        title:
+          type: string
+        status:
+          type: string
+        path:
+          type: array
+          items:
+            type: string
+        score:
+          type: number
+        lookup: *frameworkSchema001
+        mappings:
+          type: integer
+          minimum: 0
+        text_withheld: *frameworkSchema001
+        title_original:
+          type: string
+        snippet:
+          type: string
+      additionalProperties: false
+      required:
+      - handle
+      - citation
+      - kind
+      - mappings
+      - text_withheld
+    FrameworkSearchResult:
+      type: object
+      properties:
+        release: *frameworkSchema002
+        access_set_version: *frameworkSchema003
+        access_unavailable: *frameworkSchema001
+        abstain: *frameworkSchema001
+        reason:
+          type: string
+        message:
+          type: string
+        frameworks:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/Framework'
+        hits:
+          type: array
+          items:
+            $ref: '#/components/schemas/FrameworkHit'
+        gaps:
+          type: array
+          items:
+            $ref: '#/components/schemas/FrameworkGap'
+        next_cursor:
+          type: string
+      additionalProperties: false
+      required:
+      - release
+      - access_set_version
+      - abstain
+    FrameworkReadHead:
+      type: object
+      properties:
+        handle:
+          type: string
+        citation:
+          type: string
+        kind:
+          type: string
+        path:
+          type: array
+          items:
+            type: string
+        title:
+          type: string
+        status:
+          type: string
+        lineage:
+          $ref: '#/components/schemas/FrameworkLineage'
+        access:
+          type: string
+          enum:
+          - free
+          - licensed
+        text_withheld: *frameworkSchema001
+      additionalProperties: false
+      required:
+      - handle
+      - citation
+      - kind
+      - access
+      - text_withheld
+    FrameworkOutline:
+      type: object
+      properties:
+        citation:
+          type: string
+        kind:
+          type: string
+        title:
+          type: string
+      additionalProperties: false
+      required:
+      - citation
+    FrameworkReadUnit:
+      type: object
+      properties:
+        kind:
+          type: string
+          enum:
+          - head
+          - title_original
+          - body
+          - note
+          - table
+          - mapping
+          - outline
+        head:
+          $ref: '#/components/schemas/FrameworkReadHead'
+        version:
+          $ref: '#/components/schemas/Framework'
+        text:
+          type: string
+        edge:
+          $ref: '#/components/schemas/FrameworkMappingEdge'
+        outline:
+          $ref: '#/components/schemas/FrameworkOutline'
+        part:
+          type: integer
+          minimum: 1
+        parts:
+          type: integer
+          minimum: 1
+      additionalProperties: false
+      required:
+      - kind
+    FrameworkReadItemResult:
+      type: object
+      properties:
+        handle:
+          type: string
+        units:
+          type: array
+          items:
+            $ref: '#/components/schemas/FrameworkReadUnit'
+        complete: *frameworkSchema001
+        next:
+          type: string
+        not_read:
+          type: string
+          enum:
+          - call_cap
+        error:
+          type: string
+          enum:
+          - invalid_item
+          - invalid_handle
+          - not_found
+          - release_expired
+          - invalid_next
+          - unit_too_large
+      additionalProperties: false
+      required:
+      - complete
+    FrameworkReadResult:
+      type: object
+      properties:
+        release: *frameworkSchema002
+        access_set_version: *frameworkSchema003
+        access_unavailable: *frameworkSchema001
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/FrameworkReadItemResult'
+      additionalProperties: false
+      required:
+      - release
+      - access_set_version
+    FrameworkSearchInput:
+      type: object
+      properties:
+        corpus:
+          type: string
+          enum:
+          - frameworks
+        release:
+          type: string
+        query:
+          type: string
+        frameworks:
+          type: array
+          items:
+            type: string
+        versions:
+          type: array
+          items:
+            type: string
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 50
+        cursor:
+          type: string
+          maxLength: 2048
+      additionalProperties: false
+      required:
+      - corpus
+      - query

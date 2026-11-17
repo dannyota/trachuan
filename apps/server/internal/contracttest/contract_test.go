@@ -159,6 +159,12 @@ func TestOperationOwnership_CoversContract(t *testing.T) {
 				if method != "get" || (path != "/api/v1/public/documents" && path != "/api/v1/public/documents/{key}") {
 					t.Errorf("%s %s is not covered by publicsummary", method, path)
 				}
+			case "frameworks":
+				switch method + " " + path {
+				case "get /api/v1/frameworks", "get /api/v1/frameworks/versions/{handle}", "get /api/v1/frameworks/controls/{handle}", "post /api/v1/frameworks/search", "get /api/v1/frameworks/mappings", "get /api/v1/frameworks/gaps":
+				default:
+					t.Errorf("%s %s is not covered by framework handlers", method, path)
+				}
 			case "account", "web", "reports":
 			default:
 				t.Errorf("%s %s has unknown owner %q", method, path, op.Tags[0])

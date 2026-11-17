@@ -22,12 +22,14 @@ func httpError(err error) (int, string) {
 	}
 	code, _ := mcpapi.ErrorMessage(err)
 	switch code {
-	case "invalid_request":
+	case "invalid_request", "invalid_handle":
 		return 400, code
 	case "not_found":
 		return 404, code
-	case "release_expired":
+	case "release_expired", "cursor_expired":
 		return 409, code
+	case "rate_limited":
+		return 429, code
 	case "busy":
 		return 503, code
 	default:

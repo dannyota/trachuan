@@ -64,6 +64,9 @@ func (e *Engine) Read(ctx context.Context, request ReadRequest, caller Caller) (
 			laws = laws || lawErr == nil
 		}
 		c, code := e.readCursor(item, request.Release, p)
+		if code == "" && request.ExpectedHandle != "" && c.Handle != request.ExpectedHandle {
+			code = "invalid_next"
+		}
 		cursors[i], results[i].Error = c, code
 		if code == "" {
 			frameworks, valid = true, true
