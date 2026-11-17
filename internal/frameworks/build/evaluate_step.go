@@ -103,7 +103,7 @@ func evaluateStep(ctx context.Context, base, dir string, request DatabaseRequest
 		return err
 	}
 	report := EvaluationReport{Version: 1, Release: request.Rel, DumpSHA256: built.Dump.SHA256, BuildManifestSHA256: digest(raw), RecipeHashes: recipes, CaseFileSHA256: data.caseHash, CaseCounts: CountGoldenCases(data.cases), CalibrationSHA256: built.CalibrationSHA256, Noise: "Small cohorts: one case moves recall by several percentage points. Abstention is biased by calibration on the scored public cohort.", Floors: map[string]FloorResult{}}
-	previous, previousCases, previousErr := readPreviousReport(base, request.Rel)
+	previous, previousData, previousErr := readPreviousReport(base, request.Rel)
 	if previousErr != nil {
 		return previousErr
 	}
@@ -135,7 +135,7 @@ func evaluateStep(ctx context.Context, base, dir string, request DatabaseRequest
 		for _, cohort := range []string{"public", "licensed"} {
 			report.Floors[cohort] = checkFloors(baselines[cohort], floorHashes[cohort], result.Cohorts[cohort])
 		}
-		report.PreviousDiff = comparePrevious(previous, previousCases, result.Cases)
+		report.PreviousDiff = comparePrevious(previous, previousData, result.Cases, report.CaseCounts)
 		report.QualityPass = qualityPass(report)
 		if writeErr := writeJSON(dir, "report.json", report); writeErr != nil {
 			return writeErr

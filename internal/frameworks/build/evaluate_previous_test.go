@@ -63,7 +63,7 @@ func TestPreviousComparison_PairedMetricsAndRegressions(t *testing.T) {
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			ref := &previousReference{Rel: "20990101", ReportSHA256: "hash"}
-			diff := comparePrevious(ref, test.before, test.after)
+			diff := comparePreviousCases(ref, test.before, test.after)
 			require.Equal(t, test.pass, diff.Pass)
 			require.Equal(t, "evaluated", diff.Status)
 			m := diff.Cohorts["public"].Modes["open"]
@@ -86,13 +86,13 @@ func TestPreviousComparison_ExcludesCohortChangesAndDiagnostics(t *testing.T) {
 	after[1].Adjudication = "rejected"
 	after[2].Target = "fw:fw-alpha:1#B"
 	after[3].Adjudication = "unverified"
-	result := comparePrevious(&previousReference{}, before, after)
+	result := comparePreviousCases(&previousReference{}, before, after)
 	require.True(t, result.Pass)
 	require.Equal(t, []string{"stable"}, result.Cohorts["public"].Modes["open"].Cases)
 	require.Equal(t, []string{"rejected"}, result.Changes.Rejected)
 	require.Equal(t, []string{"retargeted"}, result.Changes.Retargeted)
 	require.Equal(t, []string{"outside"}, result.Changes.NewlyInRelease)
-	require.Equal(t, []string{"fw:fw-alpha:1"}, result.Changes.NewVersions)
+	require.Empty(t, result.Changes.NewVersions)
 	require.Equal(t, []string{"added"}, result.Changes.Added)
 	require.Equal(t, []string{"removed"}, result.Changes.Removed)
 }
@@ -100,19 +100,19 @@ func TestPreviousComparison_CohortAndModeGates(t *testing.T) {
 	previous := []CaseResult{pairedCaseFixture("free", 1, 1), pairedCaseFixture("licensed", 1, 1)}
 	current := []CaseResult{pairedCaseFixture("free", 1, 1), pairedCaseFixture("licensed", 0, 0)}
 	previous[1].Access, current[1].Access = "licensed", "licensed"
-	result := comparePrevious(&previousReference{}, previous, current)
+	result := comparePreviousCases(&previousReference{}, previous, current)
 	require.False(t, result.Pass)
 	require.True(t, result.Cohorts["public"].Modes["open"].Pass)
 	require.False(t, result.Cohorts["licensed"].Modes["open"].Pass)
-	result = comparePrevious(&previousReference{}, []CaseResult{pairedCaseFixture("p", 1, 1)}, []CaseResult{pairedCaseFixture("p", 1, 0)})
+	result = comparePreviousCases(&previousReference{}, []CaseResult{pairedCaseFixture("p", 1, 1)}, []CaseResult{pairedCaseFixture("p", 1, 0)})
 	require.True(t, result.Cohorts["public"].Modes["open"].Pass)
 	require.False(t, result.Cohorts["public"].Modes["filtered"].Pass)
 }
 func TestPreviousComparison_UnavailableAndAbsent(t *testing.T) {
-	absent := comparePrevious(nil, nil, nil)
+	absent := comparePreviousCases(nil, nil, nil)
 	require.True(t, absent.Pass)
 	require.Equal(t, "not_applicable", absent.Status)
-	empty := comparePrevious(&previousReference{}, nil, nil)
+	empty := comparePreviousCases(&previousReference{}, nil, nil)
 	require.False(t, empty.Pass)
 	require.Equal(t, "unavailable", empty.Cohorts["public"].Modes["open"].CurrentRecall.Status)
 	for _, change := range []func(*CaseResult){
@@ -122,7 +122,7 @@ func TestPreviousComparison_UnavailableAndAbsent(t *testing.T) {
 	} {
 		c := pairedCaseFixture("p", 1, 1)
 		change(&c)
-		result := comparePrevious(&previousReference{}, []CaseResult{pairedCaseFixture("p", 1, 1)}, []CaseResult{c})
+		result := comparePreviousCases(&previousReference{}, []CaseResult{pairedCaseFixture("p", 1, 1)}, []CaseResult{c})
 		require.False(t, result.Pass)
 		require.Equal(t, "unavailable", result.Cohorts["public"].Modes["open"].CurrentRecall.Status)
 	}
@@ -144,4 +144,15 @@ func TestPreviousReport_RejectsInvalidInputWithoutText(t *testing.T) {
 		require.Error(t, err)
 		require.NotContains(t, err.Error(), "invented private question")
 	}
+}
+
+func previousCasesFixture(cases []CaseResult) previousReport {
+	golden := make([]GoldenCase, 0, len(cases))
+	for _, c := range cases {
+		golden = append(golden, GoldenCase{Code: c.Code, Version: c.Version, Adjudication: c.Adjudication})
+	}
+	return previousReport{Cases: cases, CaseCounts: CountGoldenCases(golden)}
+}
+func comparePreviousCases(reference *previousReference, before, after []CaseResult) previousComparison {
+	return comparePrevious(reference, previousCasesFixture(before), after, previousCasesFixture(after).CaseCounts)
 }

@@ -3,7 +3,6 @@ package evaluate
 import (
 	"context"
 	"errors"
-	"strings"
 	"testing"
 
 	"danny.vn/trachuan/internal/frameworks/build"
@@ -50,8 +49,8 @@ func workloadInvariant(t *testing.T, req EvaluationRequest, copies invariantCopi
 	require.NoError(t, err)
 	return checkInvariant(ctx, req, base, copies, nil, status)
 }
-func TestInvariant_AttributesFinalMismatchByReplayingStages(t *testing.T) {
-	for _, class := range privateClasses() {
+func TestInvariant_AttributesEachStageMismatch(t *testing.T) {
+	for index, class := range privateClasses() {
 		t.Run(class, func(t *testing.T) {
 			req := workloadRequest()
 			counts := &workloadCounts{}
@@ -67,14 +66,14 @@ func TestInvariant_AttributesFinalMismatchByReplayingStages(t *testing.T) {
 			copies, restores := countedRestores(copies)
 			result := workloadInvariant(t, req, copies)
 			require.False(t, result.Pass)
-			require.Equal(t, 6, *restores)
-			require.Equal(t, 31, counts.opens)
+			require.Equal(t, 3, *restores)
+			require.Equal(t, 16, counts.opens)
 			for _, caller := range result.Callers {
 				require.False(t, caller.Classes[class].Pass)
 				require.True(t, caller.Classes[class].PositiveControl)
 				require.NotEmpty(t, caller.Failures)
 				for _, failure := range caller.Failures {
-					require.Equal(t, class, failure.Class)
+					require.Contains(t, privateClasses()[index:], failure.Class)
 					require.Equal(t, "search", failure.Operation)
 					require.Equal(t, 2, failure.Page)
 					require.NotEmpty(t, failure.Cause.GoType)
@@ -83,7 +82,7 @@ func TestInvariant_AttributesFinalMismatchByReplayingStages(t *testing.T) {
 		})
 	}
 }
-func TestInvariant_PositiveFailureDoesNotReplayReducedWorkload(t *testing.T) {
+func TestInvariant_PositiveFailureUsesOneCopy(t *testing.T) {
 	req := workloadRequest()
 	counts := &workloadCounts{}
 	copies := workloadCopies(counts, NewQueryCache(workloadQuery{counts}), req.Cases)
@@ -122,18 +121,18 @@ func TestInvariant_AttributesExecutionFailureWithSafeCause(t *testing.T) {
 	for _, caller := range result.Callers {
 		require.NotEmpty(t, caller.Failures)
 		for _, failure := range caller.Failures {
-			require.Equal(t, "text_gaps", failure.Class)
+			require.Contains(t, []string{"text_gaps", "source_files"}, failure.Class)
 			require.Equal(t, "23514", failure.Cause.SQLState)
 			require.Equal(t, "invented_check", failure.Cause.Constraint)
 		}
 	}
 }
 
-func TestInvariant_FinalCauseSurvivesAttributionRestoreFailure(t *testing.T) {
+func TestInvariant_StageFailurePreservesEarlierCause(t *testing.T) {
 	req := workloadRequest()
 	counts := &workloadCounts{}
 	copies := workloadCopies(counts, NewQueryCache(workloadQuery{counts}), req.Cases)
-	originalOpen, originalRestore := copies.open, copies.restore
+	originalOpen, originalMutate := copies.open, copies.mutate
 	copies.open = func(ctx context.Context, conn *pgx.Conn, key []byte) (Engine, func(), error) {
 		engine, closeEngine, err := originalOpen(ctx, conn, key)
 		if err != nil {
@@ -141,21 +140,22 @@ func TestInvariant_FinalCauseSurvivesAttributionRestoreFailure(t *testing.T) {
 		}
 		return workloadLeak{workloadEngine: engine.(workloadEngine), class: "text_gaps", executionFailure: true}, closeEngine, nil
 	}
-	copies.restore = func(ctx context.Context, req build.DatabaseRequest, suffix string, temporary bool, use func(context.Context, *pgx.Conn) error) error {
-		if strings.HasPrefix(suffix, "_eval_mut_10") {
-			return errors.New("invented private restore message")
+	copies.mutate = func(ctx context.Context, conn *pgx.Conn, caller serve.Caller, class string) error {
+		if class == "source_files" {
+			return errors.New("invented private mutation message")
 		}
-		return originalRestore(ctx, req, suffix, temporary, use)
+		return originalMutate(ctx, conn, caller, class)
 	}
 	result := workloadInvariant(t, req, copies)
 	require.False(t, result.Pass)
 	for _, caller := range result.Callers {
-		sqlCause, restoreCause := false, false
+		sqlCause, mutationCause := false, false
 		for _, failure := range caller.Failures {
 			sqlCause = sqlCause || failure.Cause.SQLState == "23514"
-			restoreCause = restoreCause || failure.Operation == "restore_attribution"
+			mutationCause = mutationCause || (failure.Operation == "mutation" && failure.Class == "source_files")
 		}
 		require.True(t, sqlCause)
-		require.True(t, restoreCause)
+		require.True(t, mutationCause)
+		require.Equal(t, "unavailable", caller.Classes["source_files"].Status)
 	}
 }

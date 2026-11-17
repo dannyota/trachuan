@@ -25,13 +25,16 @@ func compareMutationClass(name, class string, before, after, fullBefore, fullAft
 	return withFailureCauses(r)
 }
 
-func recalibrate(ctx context.Context, engine Engine, req EvaluationRequest, r *InvariantCaller) {
+func recalibrate(ctx context.Context, engine Engine, req EvaluationRequest, r *InvariantCaller, class string) bool {
 	calibration, err := build.CalibrateCases(ctx, engine, req.Cases, req.CaseFileSHA256)
 	if err != nil || req.Calibration == nil || calibration.Threshold != req.Calibration.Threshold {
 		r.Pass = false
 		r.Calibration = "fail"
-		r.Failures = append(r.Failures, InvariantFailure{Operation: "recalibration", Class: "all", Cause: build.IdentifyFailure(err)})
-	} else {
+		r.Failures = append(r.Failures, InvariantFailure{Operation: "recalibration", Class: class, Cause: build.IdentifyFailure(err)})
+		return false
+	}
+	if r.Calibration != "fail" {
 		r.Calibration = "pass"
 	}
+	return true
 }

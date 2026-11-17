@@ -82,7 +82,7 @@ func stepRecipe(step string) recipe {
 		params["public_floors"] = "sources/frameworks-floors.yaml"
 		params["previous_report"] = "trachuan/previous-report.json"
 	case "evaluate":
-		params = map[string]any{"limit": 8, "metrics": 1, "invariant": 4, "floors": 1, "previous_report": "paired-cases/1"}
+		params = map[string]any{"limit": 8, "metrics": 1, "invariant": 5, "floors": 1, "previous_report": "paired-cases/2"}
 	case "build":
 		version = 2
 		params = databaseRecipe()

@@ -48,53 +48,55 @@ type cohortChanges struct {
 }
 
 type previousReport struct {
-	Version     int          `json:"version"`
-	Rel         string       `json:"rel"`
-	QualityPass bool         `json:"quality_pass"`
-	Cases       []CaseResult `json:"cases"`
+	Version     int               `json:"version"`
+	Rel         string            `json:"rel"`
+	QualityPass bool              `json:"quality_pass"`
+	Cases       []CaseResult      `json:"cases"`
+	CaseCounts  []GoldenCaseCount `json:"case_counts"`
 }
 
-func readPreviousReport(base, rel string) (*previousReference, []CaseResult, error) {
+func readPreviousReport(base, rel string) (*previousReference, previousReport, error) {
 	raw, err := optionalArtifact(filepath.Join(base, "snapshot/trachuan/previous-report.json"))
 	if err != nil || raw == nil {
-		return nil, nil, err
+		return nil, previousReport{}, err
 	}
 	var previous previousReport
 	if err = json.Unmarshal(raw, &previous); err != nil {
-		return nil, nil, hide("decode previous report", err)
+		return nil, previousReport{}, hide("decode previous report", err)
 	}
 	if previous.Version != 1 || !regexp.MustCompile(`^[0-9]{8}(_[0-9]{1,2})?$`).MatchString(previous.Rel) || previous.Rel == rel || !previous.QualityPass || previous.Cases == nil {
-		return nil, nil, fmt.Errorf("invalid previous report")
+		return nil, previousReport{}, fmt.Errorf("invalid previous report")
 	}
 	seen := map[string]bool{}
 	for _, c := range previous.Cases {
 		if strings.TrimSpace(c.ID) == "" || strings.ContainsAny(c.ID, "\r\n") || seen[c.ID] {
-			return nil, nil, fmt.Errorf("invalid previous case identity")
+			return nil, previousReport{}, fmt.Errorf("invalid previous case identity")
 		}
 		seen[c.ID] = true
 		switch c.Adjudication {
 		case "accepted", "rejected", "unverified", "out_of_release":
 		default:
-			return nil, nil, fmt.Errorf("invalid previous case adjudication")
+			return nil, previousReport{}, fmt.Errorf("invalid previous case adjudication")
 		}
 		if c.Adjudication == "accepted" && !c.Negative && c.Target == "" {
-			return nil, nil, fmt.Errorf("missing previous target")
+			return nil, previousReport{}, fmt.Errorf("missing previous target")
 		}
 	}
-	return &previousReference{Rel: previous.Rel, ReportSHA256: digest(raw)}, previous.Cases, nil
+	return &previousReference{Rel: previous.Rel, ReportSHA256: digest(raw)}, previous, nil
 }
 
-func comparePrevious(reference *previousReference, before, after []CaseResult) previousComparison {
+func comparePrevious(reference *previousReference, before previousReport, after []CaseResult, afterCounts []GoldenCaseCount) previousComparison {
 	result := previousComparison{Status: "not_applicable", Reason: "The previous signed report input is absent.", Pass: true, Cohorts: map[string]pairedCohort{}}
 	if reference == nil {
 		return result
 	}
 	result.Status, result.Reason = "evaluated", ""
-	result.Changes = compareCohortChanges(before, after)
+	result.Changes = compareCohortChanges(before.Cases, after)
+	result.Changes.NewVersions = newlyInReleaseVersions(before.CaseCounts, afterCounts)
 	for _, cohort := range []string{"public", "licensed"} {
 		c := pairedCohort{Caller: callerFor(cohort), Modes: map[string]pairedMode{}}
 		for _, mode := range []string{"open", "filtered"} {
-			m := comparePairedMode(before, after, cohort, mode)
+			m := comparePairedMode(before.Cases, after, cohort, mode)
 			c.Modes[mode] = m
 			result.Pass = result.Pass && m.Pass
 		}
@@ -174,10 +176,6 @@ func compareCohortChanges(before, after []CaseResult) cohortChanges {
 		}
 		if p.Adjudication == "out_of_release" && c.Adjudication != "out_of_release" && c.Target != "" {
 			result.NewlyInRelease = append(result.NewlyInRelease, c.ID)
-			version := strings.SplitN(c.Target, "#", 2)[0]
-			if !slices.Contains(result.NewVersions, version) {
-				result.NewVersions = append(result.NewVersions, version)
-			}
 		}
 	}
 	for _, c := range before {
@@ -189,4 +187,25 @@ func compareCohortChanges(before, after []CaseResult) cohortChanges {
 		slices.Sort(ids)
 	}
 	return result
+}
+
+func newlyInReleaseVersions(before, after []GoldenCaseCount) []string {
+	members := func(counts []GoldenCaseCount) map[string]bool {
+		versions := map[string]bool{}
+		for _, count := range counts {
+			if count.Code != "" && count.Version != "" && (count.Accepted > 0 || count.Rejected > 0 || count.Unverified > 0) {
+				versions["fw:"+count.Code+":"+count.Version] = true
+			}
+		}
+		return versions
+	}
+	previous := members(before)
+	added := []string{}
+	for version := range members(after) {
+		if !previous[version] {
+			added = append(added, version)
+		}
+	}
+	slices.Sort(added)
+	return added
 }

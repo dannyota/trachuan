@@ -89,8 +89,10 @@ func TestEvaluate_IntegrationWorkload(t *testing.T) {
 	result := checkInvariant(ctx, req, base, copies, key, status)
 	require.True(t, result.Pass, "invariant failed: %+v", result.Callers)
 	require.Equal(t, 60, counts.embeds)
-	require.Equal(t, 144, counts.calibrations)
+	require.Equal(t, 864, counts.calibrations)
 	require.Equal(t, 16, counts.opens)
-	require.Less(t, counts.searches, 1800)
+	require.Equal(t, 4074, counts.searches)
+	require.Equal(t, 192, counts.reads)
+	require.Equal(t, 192, counts.mappings)
 	t.Logf("cases=60 searches=%d calibration_searches=%d reads=%d mappings=%d opens=%d embeddings=%d elapsed=%s", counts.searches, counts.calibrations, counts.reads, counts.mappings, counts.opens, counts.embeds, time.Since(started))
 }

@@ -81,7 +81,7 @@ func TestInvariant_MixedCallersUseFrameworkCodes(t *testing.T) {
 	}
 }
 
-func TestInvariant_ReplaysRealEngineLeak(t *testing.T) {
+func TestInvariant_AttributesRealEngineLeakStages(t *testing.T) {
 	ctx := context.Background()
 	conn, req := evaluationFixture(t)
 	key := []byte(strings.Repeat("k", 32))
@@ -106,13 +106,13 @@ func TestInvariant_ReplaysRealEngineLeak(t *testing.T) {
 	}
 	result := checkInvariant(ctx, req, base, invariantCopies{restore: restore, open: opens, mutate: mutateClass}, key, status)
 	require.False(t, result.Pass)
-	require.Equal(t, 6, clones)
+	require.Equal(t, 3, clones)
 	for _, caller := range result.Callers {
 		require.False(t, caller.Classes["body_index"].Pass)
 		require.True(t, caller.Classes["body_index"].PositiveControl)
 		require.NotEmpty(t, caller.Failures)
 		for _, failure := range caller.Failures {
-			require.Equal(t, "body_index", failure.Class)
+			require.Contains(t, []string{"body_index", "mapping_evidence", "text_gaps", "source_files"}, failure.Class)
 			require.Equal(t, "corpus_status", failure.Operation)
 			require.NotEmpty(t, failure.Cause.GoType)
 		}
