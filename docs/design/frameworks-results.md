@@ -53,7 +53,13 @@ in the database and are read per request under the projection filter, as above.
 The partitions are bounded: the engine counts their size while loading (entries
 times a fixed per-entry cost plus string bytes), and a release whose partitions
 would exceed 256 MiB does not open; frameworks are then `unavailable` and law
-serving is untouched. The measured heap is in [host budgets](budgets-host.md).
+serving is untouched. A release is opened in the background when the server
+starts or the frameworks pointer changes, never inside a request: until it has
+opened, frameworks requests answer `unavailable` at once, and a release whose
+open failed is not retried until the pointer changes or the server restarts. The
+public-field index keeps one set of statistics across versions; each version's
+body index keeps its own. The measured heap is in
+[host budgets](budgets-host.md).
 
 ## Handles and identity
 
