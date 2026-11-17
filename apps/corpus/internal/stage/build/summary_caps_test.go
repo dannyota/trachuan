@@ -27,14 +27,13 @@ func TestSummary_OrderedCaps(t *testing.T) {
 		url     string
 		step    string
 		sizes   []int
-		fail    bool
 	}{
 		{name: "whole", count: 2, label: "Điều 1", heading: "Scope", step: "whole", sizes: []int{65536}},
 		{name: "headings_dropped", count: 200, label: "Điều 1", heading: strings.Repeat("ố", 100), step: "headings_dropped", sizes: []int{65537, 65536}},
 		{name: "outline_dropped_by_bytes", count: 200, label: strings.Repeat("ố", 120), heading: "Scope", step: "outline_dropped", sizes: []int{65537, 65537, 65536}},
-		{name: "outline_dropped_by_entries", count: 1501, label: "x", heading: "Scope", step: "outline_dropped", sizes: []int{65536, 65536, 65536}},
-		{name: "outline_dropped_by_both", count: 1501, label: "x", heading: strings.Repeat("ố", 100), step: "outline_dropped", sizes: []int{65537, 65537, 65536}},
-		{name: "without_outline_still_over", count: 200, label: "Điều 1", heading: "Scope", url: strings.Repeat("a", 65536), step: "outline_dropped", sizes: []int{65537, 65537, 65537}, fail: true},
+		{name: "outline_dropped_by_entries", count: 2201, label: "x", heading: "Scope", step: "outline_dropped", sizes: []int{65536, 65536, 65536}},
+		{name: "outline_dropped_by_both", count: 2201, label: "x", heading: strings.Repeat("ố", 100), step: "outline_dropped", sizes: []int{65537, 65537, 65536}},
+		{name: "without_outline_still_over", count: 200, label: "Điều 1", heading: "Scope", url: strings.Repeat("a", 65536), step: "row_dropped", sizes: []int{65537, 65537, 65537}},
 	} {
 		for _, class := range []string{"primary", "relation_context", "secondary"} {
 			for _, labeled := range []bool{true, false} {
@@ -53,15 +52,10 @@ func TestSummary_OrderedCaps(t *testing.T) {
 						t.Fatal(err)
 					}
 					r, step, err := makeSummary(context.Background(), &summaryTx{sizes: tc.sizes}, d, nil, nil)
-					if tc.fail {
-						want := "summary vn:vbpl:1: serialized row exceeds 65536 octets"
-						if err == nil || err.Error() != want {
-							t.Fatalf("error=%v, want %s", err, want)
-						}
-					} else {
-						if err != nil {
-							t.Fatal(err)
-						}
+					if err != nil {
+						t.Fatal(err)
+					}
+					if tc.step != "row_dropped" {
 						wantIndexed := class == "primary" && labeled && tc.step != "outline_dropped"
 						if r.Indexed != wantIndexed {
 							t.Errorf("indexed=%t, want %t", r.Indexed, wantIndexed)

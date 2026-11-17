@@ -51,8 +51,9 @@ still exceeds 2,200 entries or the row 64 KiB, the build drops the outline, sets
 an outline still exceeds 64 KiB, the document gets no row and the build records
 `summary_row_capped`. On `vn/20261115_3` an estimated 4 rows drop their headings
 and 2 their outline. A document without a row answers like a key outside the
-release. The build fails only on a defect: an unknown gap kind, or a database or
-encoding error.
+release: the public endpoint and the page give 404, the list and the sitemap
+leave it out, and the page never builds a fallback from other data. The build
+fails only on a defect: an unknown gap kind, or a database or encoding error.
 
 Nothing is truncated when serving. Eligibility is computed at build from the
 row: `primary` is indexed when its outline holds at least one label and was not

@@ -87,7 +87,14 @@ func (tx *summaryTx) Query(_ context.Context, query string, args ...any) (pgx.Ro
 		for _, n := range tx.documents[args[0].(int64)-1].Payload.Outline {
 			rows.values = append(rows.values, []any{n.Kind, n.Label, n.Anchor, n.Heading})
 		}
-	case strings.HasPrefix(query, "SELECT r.kind"), query == summaryNodesSQL:
+	case strings.HasPrefix(query, "SELECT r.kind"):
+		for _, r := range tx.documents[args[0].(int64)-1].Payload.Relations {
+			rows.values = append(rows.values, []any{r.Kind, r.Direction, r.Key, r.Number, r.Title})
+		}
+	case query == summaryNodesSQL:
+		for _, n := range tx.documents[args[0].(int64)-1].Payload.Nodes {
+			rows.values = append(rows.values, []any{n.Code, n.Name})
+		}
 	default:
 		return nil, fmt.Errorf("unexpected summary query: %s", query)
 	}
@@ -103,23 +110,19 @@ func TestLoad_SummaryCapSteps(t *testing.T) {
 	whole := summaryFixture()
 	headings := summaryOutlineFixture(200, "Điều 1", strings.Repeat("ố", 100))
 	outline := summaryOutlineFixture(200, strings.Repeat("ố", 120), "Scope")
-	entries := summaryOutlineFixture(1501, "x", "Scope")
-	oversized := summaryFixture()
-	oversized.Payload.SourceURL = new(strings.Repeat("a", 65536))
+	entries := summaryOutlineFixture(2201, "x", "Scope")
 	for _, tc := range []struct {
 		name      string
 		documents []summaryDocument
 		headings  int
 		outlines  int
-		fail      bool
 		sizes     []int
 	}{
-		{"whole", []summaryDocument{whole}, 0, 0, false, []int{65536}},
-		{"headings", []summaryDocument{headings}, 1, 0, false, []int{65537, 65536}},
-		{"outline_bytes", []summaryDocument{outline}, 0, 1, false, []int{65537, 65537, 65536}},
-		{"outline_entries", []summaryDocument{entries}, 0, 1, false, []int{65536, 65536, 65536}},
-		{"mixed", []summaryDocument{whole, headings, outline, entries}, 1, 2, false, []int{65536, 65537, 65536, 65537, 65537, 65536, 65536, 65536, 65536}},
-		{"still_oversized", []summaryDocument{oversized}, 0, 0, true, []int{65537, 65537, 65537}},
+		{"whole", []summaryDocument{whole}, 0, 0, []int{65536}},
+		{"headings", []summaryDocument{headings}, 1, 0, []int{65537, 65536}},
+		{"outline_bytes", []summaryDocument{outline}, 0, 1, []int{65537, 65537, 65536}},
+		{"outline_entries", []summaryDocument{entries}, 0, 1, []int{65536, 65536, 65536}},
+		{"mixed", []summaryDocument{whole, headings, outline, entries}, 1, 2, []int{65536, 65537, 65536, 65537, 65537, 65536, 65536, 65536, 65536}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			tx := &summaryTx{documents: tc.documents, sizes: tc.sizes}
@@ -130,13 +133,10 @@ func TestLoad_SummaryCapSteps(t *testing.T) {
 				l.docs[key] = &loadedDocument{id: int64(i + 1)}
 			}
 			err := l.loadSummaries(context.Background(), nil)
-			if (err != nil) != tc.fail {
-				t.Fatalf("load error=%v, want failure=%t", err, tc.fail)
+			if err != nil {
+				t.Fatal(err)
 			}
 			wantInserts := len(tc.documents)
-			if tc.fail {
-				wantInserts = 0
-			}
 			if len(tx.inserts) != wantInserts || len(l.gaps) != tc.outlines {
 				t.Fatalf("inserts=%d gaps=%d, want %d and %d", len(tx.inserts), len(l.gaps), wantInserts, tc.outlines)
 			}
@@ -195,25 +195,20 @@ func TestLoad_SummaryUsesDatabaseSize(t *testing.T) {
 		sizes    []int
 		headings int64
 		outlines int64
-		fail     bool
 	}{
-		{"whole", []int{65536}, 0, 0, false},
-		{"headings", []int{65537, 65536}, 1, 0, false},
-		{"outline", []int{65537, 65537, 65536}, 0, 1, false},
-		{"still_over", []int{65537, 65537, 65537}, 0, 0, true},
+		{"whole", []int{65536}, 0, 0},
+		{"headings", []int{65537, 65536}, 1, 0},
+		{"outline", []int{65537, 65537, 65536}, 0, 1},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			tx := &summaryTx{documents: []summaryDocument{summaryFixture()}, sizes: tc.sizes}
 			l := loader{tx: tx, docs: map[string]*loadedDocument{"vn:vbpl:1": {id: 1}}}
 			err := l.loadSummaries(context.Background(), nil)
-			if (err != nil) != tc.fail {
-				t.Fatalf("error=%v, want failure=%t", err, tc.fail)
+			if err != nil {
+				t.Fatal(err)
 			}
 			if l.counts.Summary.HeadingsDropped != tc.headings || l.counts.Summary.OutlineDropped != tc.outlines || int64(len(l.gaps)) != tc.outlines {
 				t.Errorf("stats=%+v gaps=%d, want headings=%d outline=%d", l.counts.Summary, len(l.gaps), tc.headings, tc.outlines)
-			}
-			if tc.fail && len(tx.inserts) != 0 {
-				t.Error("oversized payload inserted")
 			}
 		})
 	}

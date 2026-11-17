@@ -18,6 +18,8 @@ const (
 	summaryWhole           summaryCapStep = "whole"
 	summaryHeadingsDropped summaryCapStep = "headings_dropped"
 	summaryOutlineDropped  summaryCapStep = "outline_dropped"
+	summaryFieldDropped    summaryCapStep = "field_dropped"
+	summaryRowDropped      summaryCapStep = "row_dropped"
 )
 
 type SummaryStats struct {
@@ -35,7 +37,7 @@ func capSummary(ctx context.Context, db summarySizer, d summaryDocument) (summar
 		if err = db.QueryRow(ctx, "SELECT octet_length($1::jsonb::text)", b).Scan(&size); err != nil {
 			return summaryDocument{}, step, fmt.Errorf("measure summary %s payload: %w", d.Key, err)
 		}
-		if len(d.Payload.Outline) <= 1500 && size <= 65536 {
+		if len(d.Payload.Outline) <= 2200 && size <= 65536 {
 			return d, step, nil
 		}
 		switch step {
@@ -49,7 +51,7 @@ func capSummary(ctx context.Context, db summarySizer, d summaryDocument) (summar
 			d.Indexed = false
 			step = summaryOutlineDropped
 		case summaryOutlineDropped:
-			return summaryDocument{}, step, fmt.Errorf("summary %s: serialized row exceeds 65536 octets", d.Key)
+			return d, summaryRowDropped, nil
 		}
 	}
 }

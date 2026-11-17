@@ -60,10 +60,6 @@ func headingScan(ctx context.Context, cc, rel, name string, stdout io.Writer) er
 	if err = db.QueryRow(ctx, `SELECT build_input_hash,build_recipe_hash FROM release WHERE singleton AND country=$1 AND rel=$2 AND schema_version=8`, cc, rel).Scan(&input, &recipe); err != nil {
 		return fmt.Errorf("read heading scan release failed")
 	}
-	data, err := build.HeadingScan(ctx, db, cc, rel)
-	if err != nil {
-		return err
-	}
 	workshop, err := headingPool(ctx, "CORPUS_DATABASE_URL", "")
 	if err != nil {
 		return err
@@ -85,6 +81,18 @@ func headingScan(ctx context.Context, cc, rel, name string, stdout io.Writer) er
 	}
 	if hash != expected {
 		return fmt.Errorf("heading scan build artifact hash mismatch")
+	}
+	exclusionsJSON, err := os.ReadFile(filepath.Join(dir, "heading-exclusions.json"))
+	if err != nil {
+		return fmt.Errorf("read pinned heading exclusions: %w", err)
+	}
+	exclusions, err := source.ParseHeadingExclusions(exclusionsJSON)
+	if err != nil {
+		return err
+	}
+	data, err := build.HeadingScan(ctx, db, cc, rel, exclusions)
+	if err != nil {
+		return err
 	}
 	scanHash, err := build.WriteHeadingScan(dir, data)
 	if err != nil {

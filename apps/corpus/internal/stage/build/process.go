@@ -189,7 +189,7 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 	if err != nil {
 		return stage.Output{}, err
 	}
-	scan, err := HeadingScan(ctx, conn.Conn(), run.Country, run.Rel)
+	scan, err := HeadingScan(ctx, conn.Conn(), run.Country, run.Rel, exclusions)
 	if err != nil {
 		return stage.Output{}, err
 	}

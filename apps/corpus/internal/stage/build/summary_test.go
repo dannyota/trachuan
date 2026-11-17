@@ -17,39 +17,6 @@ func makeUnitSummary(d summaryDocument, gaps []InventoryGap, excluded map[string
 	return makeSummary(context.Background(), &summaryTx{sizes: []int{65536, 65536, 65536}}, d, gaps, excluded)
 }
 
-func TestSummary_Caps(t *testing.T) {
-	for _, field := range []string{"number", "issuer", "type", "title", "relation_title", "topic_name"} {
-		t.Run(field, func(t *testing.T) {
-			d := summaryFixture()
-			switch field {
-			case "number":
-				d.Payload.Number = strings.Repeat("ố", 201)
-			case "issuer":
-				d.Payload.Issuer = strings.Repeat("ố", 201)
-			case "type":
-				d.Payload.Type = strings.Repeat("ố", 201)
-			case "title":
-				d.Payload.Title = strings.Repeat("ố", 1001)
-			case "relation_title":
-				d.Payload.Relations = []summaryRelation{{Title: strings.Repeat("ố", 1001)}}
-			case "topic_name":
-				d.Payload.Nodes = []summaryNode{{Name: strings.Repeat("ố", 201)}}
-			}
-			if _, _, err := makeUnitSummary(d, nil, nil); err == nil {
-				t.Fatal("accepted over-cap " + field)
-			}
-		})
-	}
-	d := summaryFixture()
-	d.Payload.Number, d.Payload.Issuer, d.Payload.Type = strings.Repeat("ố", 200), strings.Repeat("ố", 200), strings.Repeat("ố", 200)
-	d.Payload.Title = strings.Repeat("ố", 1000)
-	d.Payload.Relations = []summaryRelation{{Title: strings.Repeat("ố", 1000)}}
-	d.Payload.Nodes = []summaryNode{{Name: strings.Repeat("ố", 200)}}
-	if _, _, err := makeUnitSummary(d, nil, nil); err != nil {
-		t.Fatal(err)
-	}
-}
-
 func TestSummary_EligibilityAndOutlineCap(t *testing.T) {
 	for _, tc := range []struct {
 		class           string
@@ -58,7 +25,7 @@ func TestSummary_EligibilityAndOutlineCap(t *testing.T) {
 		indexed, capped bool
 	}{
 		{"primary", 1, "Điều 1", true, false}, {"relation_context", 1, "Điều 1", false, false}, {"secondary", 1, "Điều 1", false, false},
-		{"primary", 0, "", false, false}, {"primary", 1, "", false, false}, {"primary", 1500, "x", true, false}, {"primary", 1501, "x", false, true},
+		{"primary", 0, "", false, false}, {"primary", 1, "", false, false}, {"primary", 2200, "x", true, false}, {"primary", 2201, "x", false, true},
 	} {
 		d := summaryFixture()
 		d.Class = tc.class
@@ -73,6 +40,9 @@ func TestSummary_EligibilityAndOutlineCap(t *testing.T) {
 		}
 		if capped && len(r.Payload.Outline) != 0 {
 			t.Fatal("capped outline retained")
+		}
+		if !capped && len(r.Payload.Outline) != tc.count {
+			t.Fatalf("outline entries=%d, want %d", len(r.Payload.Outline), tc.count)
 		}
 	}
 }

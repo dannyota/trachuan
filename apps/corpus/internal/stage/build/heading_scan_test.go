@@ -18,14 +18,14 @@ func TestHeadingScan_UnapprovedCandidates(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		b, err := encodeHeadingScan("vn", "20990101_1", []summaryDocument{r})
+		b, err := encodeHeadingScan("vn", "20990101_1", []summaryDocument{r}, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
 		if strings.Contains(string(b), `"anchor":"chuong-i"`) != tc.flagged {
 			t.Fatalf("%q: %s", tc.heading, b)
 		}
-		again, _ := encodeHeadingScan("vn", "20990101_1", []summaryDocument{r})
+		again, _ := encodeHeadingScan("vn", "20990101_1", []summaryDocument{r}, nil)
 		if string(b) != string(again) {
 			t.Fatal("nondeterministic scan")
 		}

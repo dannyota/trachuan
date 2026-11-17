@@ -55,8 +55,12 @@ func summaryPayloadOctets(t *testing.T, tx pgx.Tx, p summaryPayload) int {
 func TestLoad_SummaryPayloadSizeBoundary(t *testing.T) {
 	f := fixture(t)
 	f.fetch(t, "vn:vbpl:1")
-	if _, err := f.load(t); err != nil {
-		t.Fatal(err)
+	initialCounts, loadErr := f.load(t)
+	if loadErr != nil {
+		t.Fatal(loadErr)
+	}
+	if initialCounts.Gaps == 0 {
+		t.Fatal("fixture needs committed gap rows")
 	}
 	ctx := context.Background()
 	var id int64
@@ -119,18 +123,27 @@ func TestLoad_SummaryPayloadSizeBoundary(t *testing.T) {
 						t.Fatal(err)
 					}
 					measured := &summaryMeasuredTx{Tx: tx}
-					l := loader{tx: measured, docs: map[string]*loadedDocument{"vn:vbpl:1": {id: id}}}
+					l := loader{tx: measured, docs: map[string]*loadedDocument{"vn:vbpl:1": {id: id}}, counts: Counts{Gaps: initialCounts.Gaps}}
 					err = l.loadSummaries(ctx, nil)
 					if size > 65536 && outline == "none" {
-						if err == nil || err.Error() != "summary vn:vbpl:1: serialized row exceeds 65536 octets" {
+						if err != nil {
 							t.Fatalf("oversized payload error=%v", err)
 						}
 						var count int
 						if e := tx.QueryRow(ctx, `SELECT count(*) FROM document_summary`).Scan(&count); e != nil || count != 0 {
-							t.Fatalf("failed load rows=%d: %v", count, e)
+							t.Fatalf("capped load rows=%d: %v", count, e)
 						}
 						if len(measured.sizes) != 3 || measured.sizes[2] != size {
-							t.Fatalf("failed load measurements=%v", measured.sizes)
+							t.Fatalf("capped load measurements=%v", measured.sizes)
+						}
+						if len(l.gaps) != 2 || l.gaps[0].Kind != "summary_outline_capped" || l.gaps[1].Kind != "summary_row_capped" || l.gaps[1].Detail != "" {
+							t.Fatalf("capped row gaps=%+v", l.gaps)
+						}
+						if err = l.loadGaps(ctx); err != nil {
+							t.Fatal(err)
+						}
+						if err = tx.QueryRow(ctx, `SELECT count(*) FROM coverage_gap WHERE stage='build' AND kind='summary_row_capped' AND document_key='vn:vbpl:1'`).Scan(&count); err != nil || count != 1 {
+							t.Fatalf("row cap gaps=%d: %v", count, err)
 						}
 						return
 					}

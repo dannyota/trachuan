@@ -48,7 +48,7 @@ func TestLoad_SummaryCandidatesWithoutApproval(t *testing.T) {
 	if _, err = f.corpus.Exec(ctx, `SET default_transaction_read_only=on`); err != nil {
 		t.Fatal(err)
 	}
-	scan, err := HeadingScan(ctx, f.corpus, "vn", f.run.Rel)
+	scan, err := HeadingScan(ctx, f.corpus, "vn", f.run.Rel, nil)
 	if err != nil || !strings.Contains(string(scan), `"heading":"phải làm"`) {
 		t.Fatalf("unapproved scan: %s %v", scan, err)
 	}
@@ -72,7 +72,7 @@ func TestLoad_SummaryOutlineCappedGap(t *testing.T) {
 	ctx := context.Background()
 	art := f.fetch(t, "vn:vbpl:1")
 	nodes := []chunk.Node{}
-	for i := 1; i <= 1501; i++ {
+	for i := 1; i <= 2201; i++ {
 		nodes = append(nodes, chunk.Node{NodeID: fmt.Sprint(i), Kind: "dieu", Label: "Điều " + fmt.Sprint(i), Path: "dieu-" + fmt.Sprint(i), Ordinal: i, Heading: "Title", Text: "Body"})
 	}
 	f.addArtifact(t, "extract", "vn:vbpl:1", map[string]any{"provisions.json": nodes, "report.json": []any{}}, art.SHA256)
