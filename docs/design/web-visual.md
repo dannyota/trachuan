@@ -168,11 +168,11 @@ never cut: when it does not fit beside the stamp it takes its own line, and it
 wraps only when it is longer than the card. No text in the card is smaller than
 12 px, and the actions are 13 px. The document title follows on one line with an
 ellipsis, then the provision heading in Noto Serif and the text. In the
-collapsed card, a first text line equal to the shown heading after white-space
-normalization alone is not shown; the snippet itself is never changed, and the
-expanded text and every copy action keep the full text. Topic chips close the
-card on one row, with the source caption. At 1366 px a card with three text
-lines is at most 220 px tall.
+collapsed card, on search and in the home sample alike, a first text line equal
+to the shown heading after white-space normalization alone is not shown; the
+snippet itself is never changed, and the expanded text and every copy action
+keep the full text. Topic chips close the card on one row, with the source
+caption. At 1366 px a card with three text lines is at most 220 px tall.
 
 ## Reader
 
