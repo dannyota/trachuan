@@ -21,7 +21,7 @@ it('renders a fixed 503 without logging an unhandled error when session transpor
   for (const page of JSON.parse(result.stdout)) {
     expect(page.status).toBe(503)
     expect(page.cache).toBe('no-store')
-    expect(page.body).toContain('Dịch vụ chưa sẵn sàng.')
+    expect(page.body).toContain('Bạn thử lại sau.')
     expect(page.body).not.toContain('fetch failed')
   }
 })

@@ -27,8 +27,8 @@ it('renders localized page titles and the wordmark without search query text', (
     expect(page).toMatch(/<a[^>]*class="[^"]*site-logo[^"]*"[^>]*>.*?<span>Tra Chuẩn<\/span><\/a>/)
     expect(page).not.toContain('private-search')
   }
-  expect(pages[5]).toContain('<h1>Đăng nhập vào Tra Chuẩn</h1>')
-  expect(pages[14]).toContain('<h1>Sign in to Tra Chuẩn</h1>')
+  expect(pages[5]).toContain('<h1>Đăng nhập để tra cứu</h1>')
+  expect(pages[14]).toContain('<h1>Sign in to search</h1>')
   expect(pages[3]).toContain('Tra Chuẩn trả về bằng chứng')
   expect(pages[12]).toContain('Tra Chuẩn returns evidence')
   for (const [language, offset] of [['vi', 0], ['en', 9]] as const) {

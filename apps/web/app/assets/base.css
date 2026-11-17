@@ -1,17 +1,17 @@
 :root { color-scheme: light dark; font-family: var(--font-sans); }
 body { margin: 0; background: var(--color-page); color: var(--color-ink); font-size: 16px; line-height: 1.6; }
 h1, h2, h3, h4, h5, h6 { font-family: var(--font-sans); font-weight: 700; }
-a { color: var(--color-primary); }
+a { color: var(--color-primary); text-decoration-thickness: 1px; text-underline-offset: 3px; }
 button { cursor: pointer; }
-:focus-visible { outline: 3px solid var(--color-primary); outline-offset: 2px; }
+:focus-visible { outline: 3px solid var(--color-ring); outline-offset: 2px; }
 code, pre, kbd, samp { font-family: var(--font-mono); font-variant-ligatures: none; }
 .command-token { display: inline-block; max-width: 100%; overflow-wrap: anywhere; }
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 16px; border: 1px solid transparent; border-radius: var(--radius-md); font-weight: 600; text-decoration: none; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 16px; border: 1px solid transparent; border-radius: var(--radius-pill); font-weight: 700; text-decoration: none; }
 .btn:disabled { opacity: .5; cursor: not-allowed; }
 .btn-primary { background: var(--color-primary-fill); color: #fff; }
 .btn-secondary { background: var(--color-card); border-color: var(--color-line-strong); color: var(--color-ink); }
 .btn-danger { background: var(--color-danger-bg); border-color: var(--color-danger-line); color: var(--color-danger); }
-.input { padding: 10px 12px; border: 1px solid var(--color-line-strong); border-radius: var(--radius-md); background: var(--color-card); color: var(--color-ink); }
+.input { padding: 10px 12px; border: 1px solid var(--color-line-strong); border-radius: var(--radius-input); background: var(--color-card); color: var(--color-ink); }
 .card { background: var(--color-card); border: 1px solid var(--color-line); border-radius: var(--radius-lg); }
 .chip { display: inline-flex; padding: 5px 10px; border: 1px solid var(--color-line-strong); border-radius: var(--radius-pill); background: var(--color-card); }
 .stamp { display: inline-flex; align-items: center; padding: 4px 10px; border: 1.5px solid currentColor; border-radius: var(--radius-sm); font-size: 12.5px; font-weight: 700; letter-spacing: .02em; text-transform: uppercase; }

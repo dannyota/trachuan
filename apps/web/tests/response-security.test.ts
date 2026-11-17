@@ -132,7 +132,7 @@ it('rejects unknown and encoded paths without rendering', () => {
   for (const response of result.responses) {
     expect(response.status).toBe(404)
     expect(response.type).toBe('text/html; charset=utf-8')
-    expect(response.body).toContain('Không tìm thấy trang')
+    expect(response.body).toContain('Không có trang này.')
   }
 })
 
@@ -237,6 +237,6 @@ it('serves localized unknown pages without caching or rendering', () => {
     expect(response.headers['content-type']).toBe('text/html; charset=utf-8')
     expect(response.headers['cache-control']).toBe('no-store')
     expect(response.headers.etag).toBeUndefined()
-    expect(response.body).toContain(index ? 'Page not found' : 'Không tìm thấy trang')
+    expect(response.body).toContain(index ? 'This page doesn&#39;t exist.' : 'Không có trang này.')
   }
 })

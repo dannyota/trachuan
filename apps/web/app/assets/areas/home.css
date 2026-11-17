@@ -4,7 +4,7 @@
 :root[data-page="home"] :focus-visible { outline: 3px solid var(--color-ring); outline-offset: 3px; }
 :root[data-page="home"] .site-footer { background: var(--color-footer); border: 0; }
 :root[data-page="home"] .footer-inner, :root[data-page="home"] .footer-inner a { color: var(--color-footer-muted); }
-:root[data-page="home"] .footer-inner > span:first-child { color: var(--color-footer-ink); }
+:root[data-page="home"] .footer-inner .site-logo { color: var(--color-footer-ink); }
 :root[data-page="home"] .site-footer :focus-visible { outline-color: var(--color-footer-ring); }
 .home-page .btn:not(.result-card *), .home-page button:not(.chip):not(.result-card *) { min-height: 52px; border-radius: 999px; font-weight: 700; }
 .home-page .btn:not(.result-card *) { text-decoration: none; }

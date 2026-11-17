@@ -1,6 +1,7 @@
 import type { Language } from './index'
 
 const en = {
+  reauthToken: "To create a token, sign in again. You'll come back here.", reauthPasswordLink: "To add a password, sign in again. You'll come back here.", reauthAuthenticator: "To change two-step verification, sign in again. You'll come back here.", signInAgain: 'Sign in again', reauthReason: 'Sign in again to continue on your account page.',
   signIn: 'Sign in', google: 'Continue with Google', email: 'Email', password: 'Password', signup: 'Create an account', reset: 'Reset password', send: 'Send link', mail: 'Check your mail. If this address is eligible, a link will arrive shortly.',
   addPasswordSent: 'We sent a link to set your password to your email. The link is valid for 1 hour.', recoveryUse: 'Each code works once. Use one when your phone is unavailable.', recoverySaved: 'I saved the recovery codes somewhere safe', recoveryClose: 'I saved the codes', backToAccount: 'Back to account',
   factorTitle: 'Two-step verification', code: 'Authenticator code', recovery: 'Recovery code', useRecovery: 'Use a recovery code', useCode: 'Use an authenticator code', verify: 'Verify',
@@ -9,6 +10,7 @@ const en = {
   loginFailed: 'Sign-in failed. Check your email and password.', factorFailed: 'The code is invalid or has already been used.', reauthFailed: 'The password is incorrect.', rateLimited: 'Too many attempts. Please try again later.', passwordRejected: 'Choose a less common password with 15 to 128 characters.', generic: 'Something went wrong. Please try again.', accountChanged: 'Your account changed. Please review and try again.',
 }
 const vi: Record<keyof typeof en, string> = {
+  reauthToken: 'Để tạo mã, bạn cần đăng nhập lại. Xong bạn sẽ quay lại đây.', reauthPasswordLink: 'Để thêm mật khẩu, bạn cần đăng nhập lại. Xong bạn sẽ quay lại đây.', reauthAuthenticator: 'Để thay đổi xác minh hai bước, bạn cần đăng nhập lại. Xong bạn sẽ quay lại đây.', signInAgain: 'Đăng nhập lại', reauthReason: 'Đăng nhập lại để tiếp tục trong trang Tài khoản.',
   signIn: 'Đăng nhập', google: 'Tiếp tục với Google', email: 'Email', password: 'Mật khẩu', signup: 'Tạo tài khoản', reset: 'Đặt lại mật khẩu', send: 'Gửi liên kết', mail: 'Kiểm tra email. Nếu địa chỉ đủ điều kiện, bạn sẽ sớm nhận được liên kết.',
   addPasswordSent: 'Đã gửi liên kết đặt mật khẩu tới email của bạn. Liên kết có hiệu lực trong 1 giờ.', recoveryUse: 'Mỗi mã chỉ dùng được một lần. Dùng mã khi không có điện thoại.', recoverySaved: 'Tôi đã lưu các mã khôi phục ở nơi an toàn', recoveryClose: 'Tôi đã lưu mã', backToAccount: 'Quay lại tài khoản',
   factorTitle: 'Xác minh hai bước', code: 'Mã ứng dụng xác thực', recovery: 'Mã khôi phục', useRecovery: 'Dùng mã khôi phục', useCode: 'Dùng mã ứng dụng xác thực', verify: 'Xác minh',

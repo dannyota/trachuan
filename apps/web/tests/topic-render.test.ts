@@ -49,10 +49,10 @@ it('renders and caches anonymous topic pages, rejects unknown nodes and retries 
     expect(result.headers.vary.toLowerCase()).toContain('cookie')
     expect(result.headers['last-modified']).toBeUndefined()
   }
-  for (const result of results.slice(4, 6)) { expect(result.status).toBe(404); expect(result.body).toContain('Không tìm thấy trang') }
-  expect(missingEnBody).toContain('Page not found')
+  for (const result of results.slice(4, 6)) { expect(result.status).toBe(404); expect(result.body).toContain('Không có trang này.') }
+  expect(missingEnBody).toContain('This page doesn&#39;t exist.')
   expect(results.slice(6).map((r: { status: number }) => r.status)).toEqual([503, 503])
-  expect(results[6].body).toContain('Dịch vụ chưa sẵn sàng.')
+  expect(results[6].body).toContain('Bạn thử lại sau.')
   expect(calls.filter((call: { path: string }) => call.path.endsWith('/1'))).toHaveLength(2)
   expect(calls.filter((call: { path: string, query: string }) => call.path.endsWith('/taxonomy') && call.query === '?depth=1')).toHaveLength(2)
   expect(calls.every((call: { cookie: string | null }) => call.cookie === null)).toBe(true)
@@ -86,7 +86,7 @@ it('does not cache an unavailable topic tree', () => {
   expect(calls).toBe(2)
   for (const result of results) {
     expect(result.status).toBe(503)
-    expect(result.body).toContain('Dịch vụ chưa sẵn sàng.')
+    expect(result.body).toContain('Bạn thử lại sau.')
   }
 })
 
@@ -120,8 +120,8 @@ it('does not revalidate topic errors against any ETag', () => {
       expect(response.headers['last-modified'], path).toBeUndefined()
       expect(response.headers['cache-control'], path).toBe('no-cache')
       expect(response.headers.vary.toLowerCase(), path).toContain('cookie')
-      if (path.endsWith('/9')) expect(response.body).toContain('Không tìm thấy trang')
-      else expect(response.body).toContain('Dịch vụ chưa sẵn sàng.')
+      if (path.endsWith('/9')) expect(response.body).toContain('Không có trang này.')
+      else expect(response.body).toContain('Bạn thử lại sau.')
     }
   }
 })

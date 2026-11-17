@@ -42,7 +42,7 @@ test('sources fills the grid when the newest date is absent', async ({ page }) =
       await expect(facts).toHaveCount(3)
       const right = await grid.evaluate(el => el.getBoundingClientRect().right)
       const last = await facts.last().boundingBox()
-      expect(last!.x + last!.width).toBeCloseTo(right - 1, 0)
+      expect(last!.x + last!.width).toBeCloseTo(right, 0)
     }
   })
 })

@@ -3,8 +3,8 @@ import { expect, it } from 'vitest'
 import { notFoundDocument } from '../server/utils/not-found'
 
 it('selects a fixed 404 document in the requested language', () => {
-  expect(notFoundDocument('vi')).toContain('Không tìm thấy trang')
-  expect(notFoundDocument('en')).toContain('Page not found')
+  expect(notFoundDocument('vi')).toContain('Không có trang này.')
+  expect(notFoundDocument('en')).toContain('This page doesn&#39;t exist.')
   for (const language of ['vi', 'en'] as const) {
     const html = notFoundDocument(language)
     expect(html).toContain('href="/static-page.css"')

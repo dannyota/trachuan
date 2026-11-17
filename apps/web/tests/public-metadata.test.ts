@@ -32,7 +32,7 @@ it('renders localized titles and descriptions on public routes', () => {
   ]
   const descriptions = [
     ['Tra cứu bằng chứng từ văn bản pháp luật Việt Nam.', 'Khám phá văn bản pháp luật Việt Nam theo chủ đề.', 'Khám phá văn bản pháp luật Việt Nam theo chủ đề.', 'Kết nối trợ lý AI với bằng chứng pháp luật Việt Nam.', 'Xem nguồn dữ liệu và phạm vi văn bản pháp luật Việt Nam.', 'Tìm hiểu cách Tra Chuẩn xử lý và bảo vệ dữ liệu của bạn.', 'Đọc các điều khoản sử dụng Tra Chuẩn.', 'Đăng nhập Tra Chuẩn để tra cứu pháp luật.', 'Đăng ký tài khoản Tra Chuẩn.', 'Yêu cầu liên kết đặt lại mật khẩu Tra Chuẩn.'],
-    ['Find evidence from Vietnamese legal texts.', 'Explore Vietnamese legal texts by topic.', 'Explore Vietnamese legal texts by topic.', 'Connect AI assistants to Vietnamese legal evidence.', 'See the sources and coverage of Vietnamese legal texts.', 'Learn how Tra Chuẩn handles and protects your data.', 'Read the terms for using Tra Chuẩn.', 'Sign in to Tra Chuẩn to search legal texts.', 'Create a Tra Chuẩn account.', 'Request a link to reset your Tra Chuẩn password.'],
+    ['Find evidence from Vietnamese legal texts.', 'Explore Vietnamese legal texts by topic.', 'Explore Vietnamese legal texts by topic.', 'Connect AI assistants to Vietnamese legal evidence.', 'See the sources and coverage of Vietnamese legal texts.', 'Learn how Tra Chuẩn handles and protects your data.', 'Read the terms for using Tra Chuẩn.', 'Sign in to search to search legal texts.', 'Create a Tra Chuẩn account.', 'Request a link to reset your Tra Chuẩn password.'],
   ]
   for (const [index, page] of pages.slice(0, 20).entries()) {
     const language = Math.floor(index / 10)

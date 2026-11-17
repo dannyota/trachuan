@@ -13,7 +13,7 @@ const families = {
 it('declares one same-origin face per family with the available weights', () => {
   for (const [path, names] of [
     ['app/assets/fonts.css', Object.keys(families)],
-    ['public/static-page.css', ['BeVietnam', 'NotoSerif']],
+    ['public/static-page.css', ['PlusJakartaSans', 'BeVietnam', 'NotoSerif']],
   ] as const) {
     const css = readFileSync(path, 'utf8')
     const faces = [...css.matchAll(/@font-face\s*\{([^}]*)\}/g)].map(match => match[1]!)
