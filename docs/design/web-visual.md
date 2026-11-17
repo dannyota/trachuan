@@ -121,6 +121,19 @@ straight, with the shadow
 `0 36px 56px -28px rgba(0,0,0,.5), 0 2px 6px rgba(0,0,0,.16)`; no other element
 has a shadow. The reader's text has no container.
 
+## Result cards
+
+A search result card has no footer band. Its head carries the stamp with its
+as-of line, the document number, the type and issuer, the actions ("Đọc trong
+văn bản", "Sao chép trích dẫn", the source link) and the rank. From 768 px the
+head is one line and the type and issuer are cut with an ellipsis; below 768 px
+it is two lines, the stamp, number and rank and then the actions, and the type
+and issuer move in front of the document title. The document title follows on
+one line with an ellipsis, then the provision heading in Noto Serif and the
+text; a first text line that repeats the heading is not shown. Topic chips close
+the card on one row. At 1366 px a card with three text lines is at most 220 px
+tall.
+
 ## Motion
 
 Home changes colour in 150 ms and nothing else moves. Other pages also open and
