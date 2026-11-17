@@ -144,15 +144,18 @@ restored database is mutated in every version that caller cannot read:
 | source files     | text source and completeness of its files changed                   |
 
 Public fields, public chunks and the public fields of edges stay unchanged. The
-caller must then get byte-identical responses on both copies for every case in
-both modes and every page of each, a read of every target with all
-continuations, the mappings of every target, `corpus_status`, every
-`quality_gaps` page, each operation twice (so a cache hit is covered), and a
-recalibration on the mutated copy must give the same threshold. A positive
-control per class shows the mutation took effect: the full caller sees a
-difference in each class (read text, search scores, evidence, text gaps,
-sources). Any failure, or a class with no observed difference, sets
-`quality_pass` false and names the operation, class and case id, never text.
+classes are mutated one at a time on the copy, in the table's order, and the
+comparison runs after each one, not only after the last, so leaks in two classes
+cannot cancel: a difference at any stage fails. At each stage the caller must
+get byte-identical responses on both copies for every case in both modes and
+every page of each, a read of every target with all continuations, the mappings
+of every target, `corpus_status`, every `quality_gaps` page, each operation
+twice (so a cache hit is covered), and a recalibration on the mutated copy must
+give the same threshold. A positive control per class shows the mutation took
+effect: the full caller sees a difference in each class (read text, search
+scores, evidence, text gaps, sources). Any failure, or a class with no observed
+difference, sets `quality_pass` false and names the operation, class and case
+id, never text.
 
 ## Floors
 
