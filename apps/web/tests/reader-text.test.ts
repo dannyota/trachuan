@@ -2,9 +2,19 @@
 import { mount, flushPromises } from '@vue/test-utils'
 import { afterEach, expect, it, vi } from 'vitest'
 import Reader from '../app/pages/vn/documents/[key].vue'
+import ReaderCompact from '../app/components/ReaderCompact.vue'
+import { ref } from 'vue'
 import { setupReader } from './reader-setup'
 
 afterEach(() => vi.unstubAllGlobals())
+it('shows the back-to-top action in the compact bar after the top marker', async () => {
+  setupReader([])
+  const wrapper = mount(ReaderCompact, { props: { units: [], position: { anchor: ref(''), article: ref('') }, showTop: false } })
+  expect(wrapper.find('.reader-top').exists()).toBe(false)
+  await wrapper.setProps({ showTop: true })
+  await wrapper.get('.reader-top').trigger('click')
+  expect(wrapper.emitted('top')).toHaveLength(1)
+})
 it('renders legal text literally', async () => {
   setupReader([{ data: { release: '20261111_1', item: { complete: true, units: [{ kind: 'provision', anchor: 'a', text: '<Điều 1> & text' }] } } }])
   const wrapper = mount(Reader)
@@ -18,6 +28,15 @@ it('indents lettered points while preserving the legal text', async () => {
   await flushPromises()
   const point = wrapper.findAll('.law-text').find(element => element.text() === 'a) Point text')
   expect(point?.classes()).toContain('reader-point')
+})
+
+it('keeps blank source lines out of the visual paragraph flow', async () => {
+  setupReader([{ data: { release: '20990101', item: { complete: true, units: [{ kind: 'provision', anchor: 'dieu-1', text: '1. Clause\n\n  \na) Point text' }] } } }])
+  const wrapper = mount(Reader)
+  await flushPromises()
+  const paragraphs = wrapper.findAll('.law-text')
+  expect(paragraphs.filter(element => (element.element as HTMLElement).style.display !== 'none').map(element => element.text())).toEqual(['1. Clause', 'a) Point text'])
+  expect(paragraphs[3]?.classes()).toContain('reader-point')
 })
 
 it('wraps the target clause and its points without wrapping the next clause', async () => {

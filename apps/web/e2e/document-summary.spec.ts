@@ -94,7 +94,7 @@ for (const stateName of ['available', 'flag off', 'rollback', 'no active release
 }
 
 for (const colorScheme of ['light', 'dark'] as const) {
-  for (const width of [320, 390, 1366]) {
+  for (const width of [320, 390, 768, 1024, 1366]) {
     test(`summary reader layout at ${width}px in ${colorScheme}`, async ({ browser }, testInfo) => {
       await withSummarySite(async (origin, state) => {
         const context = await browser.newContext({ viewport: { width, height: 900 }, colorScheme, extraHTTPHeaders: { 'X-Forwarded-For': clientAddress(testInfo) } })
@@ -109,13 +109,16 @@ for (const colorScheme of ['light', 'dark'] as const) {
           await expect(band.getByRole('heading', { level: 1 })).toHaveCSS('font-family', /NotoSerif/)
           await expect(band.getByRole('link', { name: 'Đọc toàn văn', exact: true })).toBeVisible()
           const content = page.locator('.reader .reader-content')
+          expect(await content.evaluate(element => getComputedStyle(element).paddingBottom)).toBe(await page.locator('main').evaluate(element => getComputedStyle(element).paddingBottom))
+          await expect(page.locator('.reader-top')).toHaveCount(0)
           await expect(content).toContainText('Chương được duyệt')
           await expect(content).toContainText('Văn bản liên quan')
           await expect(content).toContainText('Chủ đề mẫu')
           const contentBox = (await content.boundingBox())!
           const readerBox = (await page.locator('.reader').boundingBox())!
-          expect(contentBox.x).toBeCloseTo(readerBox.x + (width >= 1024 ? 316 : 16), 0)
-          expect(contentBox.width).toBeCloseTo(readerBox.width - (width >= 1024 ? 632 : 32), 0)
+          const inset = width >= 1024 ? 316 : width >= 768 ? 24 : 16
+          expect(contentBox.x).toBeCloseTo(readerBox.x + inset, 0)
+          expect(contentBox.width).toBeCloseTo(readerBox.width - 2 * inset, 0)
           if (width === 390) {
             const dates = band.locator('.summary-dates')
             await expect(dates).toHaveText('Ban hành 01/12/2098 · Hiệu lực từ 01/01/2099')

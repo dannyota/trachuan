@@ -336,10 +336,10 @@ watch(displayUnits, async () => {
     <ReaderHeader v-if="documentEntry" :document="documentEntry" :release="release" />
     <div v-else-if="loading && !pages" class="reader-identity reader-skeleton" role="status"><div class="container"><span class="visually-hidden">{{ readerMessagesText.loading }}</span><span class="reader-skeleton-line reader-skeleton-short" /><span class="reader-skeleton-line reader-skeleton-title" /><span class="reader-skeleton-line" /></div></div>
     <div ref="topMarker" class="reader-top-marker" aria-hidden="true" />
-    <ReaderCompact ref="compactBar" :position="position" :units="outline" @open="openToc" />
+    <ReaderCompact ref="compactBar" :position="position" :units="outline" :show-top="showTop" @open="openToc" @top="backToTop" />
     <dialog ref="tocDialog" class="reader-sheet" :aria-label="readerMessagesText.contents" @cancel.prevent="closeToc" @keydown="wrapDialogFocus" @click="selectToc"><button class="btn btn-secondary" type="button" @click="closeToc">{{ readerMessagesText.close }}</button><ReaderToc :units="outline" :position="position" /></dialog>
     <div class="container reader">
-      <div class="reader-toc-desktop"><h2>{{ readerMessagesText.contents }}</h2><ReaderToc :units="outline" :position="position" /></div>
+      <div class="reader-toc-desktop"><h2>{{ readerMessagesText.contents }}</h2><div class="reader-toc-scroll"><ReaderToc :units="outline" :position="position" /></div><div class="reader-toc-actions"><button v-if="showTop" class="btn btn-secondary reader-top" type="button" @click="backToTop">{{ readerMessagesText.backToTop }}</button></div></div>
       <section ref="content" class="reader-content" aria-live="polite">
         <div v-if="loading && !pages" class="reader-skeleton" aria-hidden="true"><span class="reader-skeleton-line reader-skeleton-short" /><span class="reader-skeleton-line" /><span class="reader-skeleton-line" /><span class="reader-skeleton-line" /></div>
         <template v-for="(group, index) in displayUnits" :key="index">
@@ -351,6 +351,5 @@ watch(displayUnits, async () => {
       </section>
       <ReaderRail v-if="release" :document="documentEntry" :nodes="nodes" :gaps="gaps" :release="release" :hash="hash" :files="files" :units="textUnits" :document-key="key" :warnings="warnings" />
     </div>
-    <button v-if="showTop" class="btn btn-secondary reader-top" type="button" @click="backToTop">{{ readerMessagesText.backToTop }}</button>
   </div>
 </template>
