@@ -178,6 +178,15 @@ The corpus kind is part of release identity everywhere, not a channel name:
   first release is signed ([corpus release](corpus-release.md)).
 - **Memory.** The host limit is measured with both corpora active before the
   flag is turned on ([host budgets](budgets-host.md)).
+- **Pointer.** The active frameworks database is a row of its own table,
+  `frameworks_release` (country key, `active_db`, `activated_at`,
+  `activated_by`, the checks of `corpus_release`), read-only to the server and
+  resolved by the same resolver code as law. It is not a kind column on
+  `corpus_release`: every reader and writer of that table selects by country
+  alone (the host activator's `SELECT ... FOR UPDATE` and `UPDATE`, the server's
+  resolve query), so a second row per country would let law activation overwrite
+  the frameworks pointer, or an older image resolve law to the frameworks
+  database. A separate table changes none of them.
 
 Until the first release is active the feature is off: `SERVER_FRAMEWORKS=false`
 hides the tools, routes and pages.

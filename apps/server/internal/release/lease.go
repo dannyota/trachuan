@@ -3,10 +3,12 @@ package release
 import (
 	"sync"
 
+	"danny.vn/trachuan/internal/frameworks/serve"
 	"danny.vn/trachuan/internal/retrieval"
 )
 
 type Lease struct {
+	Frameworks *serve.Engine
 	Engine     *retrieval.Engine
 	Release    string
 	Generation uint64

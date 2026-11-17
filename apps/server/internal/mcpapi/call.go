@@ -9,7 +9,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-func toolCall[In, Out any](cfg Config, name string, run func(context.Context, In) (Out, error)) (*jsonschema.Schema, *jsonschema.Schema, func(context.Context, json.RawMessage) (*mcp.CallToolResult, error)) {
+func lawToolCall[In, Out any](cfg Config, name string, run func(context.Context, In) (Out, error)) (*jsonschema.Schema, *jsonschema.Schema, func(context.Context, json.RawMessage) (*mcp.CallToolResult, error)) {
 	var input *jsonschema.Schema
 	if name == "report_issue" {
 		input = reportSchema()

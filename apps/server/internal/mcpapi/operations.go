@@ -18,6 +18,7 @@ type Operations struct {
 }
 
 func NewOperations(cfg Config) *Operations {
+	cfg.Frameworks = false
 	cfg.OmitCompactRelated = false
 	if cfg.Clock == nil {
 		cfg.Clock = time.Now

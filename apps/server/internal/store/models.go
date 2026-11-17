@@ -75,6 +75,13 @@ type FrameworkEntitlementEvent struct {
 	Note          string
 }
 
+type FrameworksRelease struct {
+	Country     string
+	ActiveDb    string
+	ActivatedAt time.Time
+	ActivatedBy string
+}
+
 type IssueReport struct {
 	ID             int64
 	AccountID      int64

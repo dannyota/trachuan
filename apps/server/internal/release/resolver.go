@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"danny.vn/trachuan/internal/embedding"
+	"danny.vn/trachuan/internal/frameworks/serve"
 	"danny.vn/trachuan/internal/retrieval"
 	"golang.org/x/sync/singleflight"
 )
@@ -20,6 +21,8 @@ type Store interface {
 }
 
 type Resolver struct {
+	Frameworks          *serve.Options
+	OpenFrameworks      func(context.Context, string) (*serve.Engine, func(), error)
 	Auth                Store
 	Open                func(ctx context.Context, dbName string) (*retrieval.Engine, func(), error)
 	Clock               func() time.Time
@@ -90,7 +93,7 @@ func (r *Resolver) Resolve(ctx context.Context, country, rel string) (*Lease, er
 			continue
 		}
 		entry.leases++
-		lease := &Lease{Engine: entry.engine, Release: currentRelease, Generation: generation, done: func() { r.finish(entry) }}
+		lease := &Lease{Engine: entry.engine, Frameworks: entry.frameworks, Release: currentRelease, Generation: generation, done: func() { r.finish(entry) }}
 		r.mu.Unlock()
 		return lease, nil
 	}

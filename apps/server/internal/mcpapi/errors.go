@@ -9,6 +9,7 @@ import (
 	"danny.vn/trachuan/apps/server/internal/apierror"
 	"danny.vn/trachuan/apps/server/internal/release"
 	"danny.vn/trachuan/apps/server/internal/reports"
+	"danny.vn/trachuan/internal/frameworks/serve"
 	"danny.vn/trachuan/internal/retrieval"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -25,8 +26,23 @@ type toolError struct {
 	Message string `json:"message"`
 }
 
-// ErrorMessage maps tool failures to fixed public codes and messages.
 func ErrorMessage(err error) (string, string) {
+	for _, failure := range []struct {
+		err           error
+		code, message string
+	}{
+		{serve.ErrInvalidRequest, "invalid_request", "Invalid request."},
+		{serve.ErrInvalidHandle, "invalid_handle", "Invalid handle."},
+		{serve.ErrReleaseExpired, "release_expired", "Release expired."},
+		{serve.ErrCursorExpired, "cursor_expired", "Cursor expired."},
+		{serve.ErrInvalidNext, "invalid_next", "Invalid continuation."},
+		{serve.ErrRateLimited, "rate_limited", "Rate limited."},
+		{serve.ErrUnavailable, "unavailable", "Service unavailable."},
+	} {
+		if errors.Is(err, failure.err) {
+			return failure.code, failure.message
+		}
+	}
 	var invalid invalidRequest
 	var report reports.Error
 	if delay, ok := reports.RetryDelay(err); ok {
@@ -74,8 +90,6 @@ func encodeResult(value any, isError bool) (*mcp.CallToolResult, any, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	// The schema library expects ordinary decoded numbers. Keep its validation
-	// view separate so large integer counts stay exact in both wire copies.
 	var validation any
 	if err = json.Unmarshal(raw, &validation); err != nil {
 		return nil, nil, err
