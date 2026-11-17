@@ -1,7 +1,7 @@
 package build
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
 	"slices"
 	"strings"
@@ -58,16 +58,17 @@ type summaryDocument struct {
 	GapKinds         []string       `json:"gap_kinds"`
 	Payload          summaryPayload `json:"payload"`
 	TextSource       string         `json:"-"`
+	CappedFields     []string       `json:"-"`
 }
 
-func makeSummary(d summaryDocument, gaps []InventoryGap, excluded map[string]bool) (summaryDocument, bool, error) {
+func makeSummary(ctx context.Context, db summarySizer, d summaryDocument, gaps []InventoryGap, excluded map[string]bool) (summaryDocument, summaryCapStep, error) {
 	d.Projection = 1
 	d.GapKinds = []string{}
 	headings := d.TextSource == "source_tree"
 	for _, g := range gaps {
 		structural, err := structuralSummaryGap(g.Kind)
 		if err != nil {
-			return summaryDocument{}, false, fmt.Errorf("summary %s: %w", d.Key, err)
+			return summaryDocument{}, summaryWhole, fmt.Errorf("summary %s: %w", d.Key, err)
 		}
 		if g.ItemKey != d.Key {
 			continue
@@ -88,25 +89,42 @@ func makeSummary(d summaryDocument, gaps []InventoryGap, excluded map[string]boo
 		cap         int
 	}{{"number", p.Number, 200}, {"title", p.Title, 1000}, {"type", p.Type, 200}, {"issuer", p.Issuer, 200}} {
 		if utf8.RuneCountInString(f.value) > f.cap {
-			return summaryDocument{}, false, fmt.Errorf("summary %s: %s exceeds %d characters", d.Key, f.name, f.cap)
+			d.CappedFields = append(d.CappedFields, f.name)
 		}
 	}
-	for i := range p.Relations {
-		r := &p.Relations[i]
-		r.Number, r.Title = normalizeLabel(r.Number), normalizeLabel(r.Title)
-		if utf8.RuneCountInString(r.Title) > 1000 || utf8.RuneCountInString(r.Number) > 200 {
-			return summaryDocument{}, false, fmt.Errorf("summary %s: relation identity exceeds cap", d.Key)
-		}
-	}
-	for i := range p.Nodes {
-		p.Nodes[i].Name = normalizeLabel(p.Nodes[i].Name)
-		if utf8.RuneCountInString(p.Nodes[i].Name) > 200 {
-			return summaryDocument{}, false, fmt.Errorf("summary %s: topic name exceeds 200 characters", d.Key)
-		}
+	if len(d.CappedFields) != 0 {
+		return d, summaryFieldDropped, nil
 	}
 	p.RelationsTotal = len(p.Relations)
-	p.Relations = append([]summaryRelation{}, p.Relations[:min(50, len(p.Relations))]...)
-	p.Nodes = append([]summaryNode{}, p.Nodes[:min(10, len(p.Nodes))]...)
+	relations := make([]summaryRelation, 0, min(50, len(p.Relations)))
+	for _, r := range p.Relations {
+		r.Number, r.Title = normalizeLabel(r.Number), normalizeLabel(r.Title)
+		numberCapped := utf8.RuneCountInString(r.Number) > 200
+		titleCapped := utf8.RuneCountInString(r.Title) > 1000
+		if numberCapped {
+			d.CappedFields = append(d.CappedFields, "relation.number")
+		}
+		if titleCapped {
+			d.CappedFields = append(d.CappedFields, "relation.title")
+		}
+		if !numberCapped && !titleCapped && len(relations) < 50 {
+			relations = append(relations, r)
+		}
+	}
+	nodes := make([]summaryNode, 0, min(10, len(p.Nodes)))
+	for _, n := range p.Nodes {
+		n.Name = normalizeLabel(n.Name)
+		if utf8.RuneCountInString(n.Name) > 600 {
+			d.CappedFields = append(d.CappedFields, "topic.name")
+			continue
+		}
+		if len(nodes) < 10 {
+			nodes = append(nodes, n)
+		}
+	}
+	p.Relations, p.Nodes = relations, nodes
+	slices.Sort(d.CappedFields)
+	d.CappedFields = slices.Compact(d.CappedFields)
 	outline := make([]summaryOutline, 0, len(p.Outline))
 	for _, n := range p.Outline {
 		if n.Kind != "phan" && n.Kind != "chuong" && n.Kind != "muc" && n.Kind != "dieu" {
@@ -117,23 +135,12 @@ func makeSummary(d summaryDocument, gaps []InventoryGap, excluded map[string]boo
 		}
 		outline = append(outline, n)
 	}
-	capped := len(outline) > 1500
 	d.Indexed = false
-	if capped {
-		outline = []summaryOutline{}
-	}
 	for _, n := range outline {
 		if d.Class == "primary" && strings.TrimSpace(n.Label) != "" {
 			d.Indexed = true
 		}
 	}
 	p.Outline = outline
-	b, err := json.Marshal(d)
-	if err != nil {
-		return summaryDocument{}, false, fmt.Errorf("encode summary: %w", err)
-	}
-	if len(b) > 65536 {
-		return summaryDocument{}, false, fmt.Errorf("summary %s: serialized row exceeds 65536 octets", d.Key)
-	}
-	return d, capped, nil
+	return capSummary(ctx, db, d)
 }

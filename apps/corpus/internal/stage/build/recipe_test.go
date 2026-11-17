@@ -140,13 +140,13 @@ func TestBuildInput_RecordMatchesCorrectionsHash(t *testing.T) {
 	}
 }
 
-func TestBuildRecipe_Version4(t *testing.T) {
+func TestBuildRecipe_Version5(t *testing.T) {
 	r := buildRecipe{}
 	b, err := json.Marshal(r)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got, want := r.hash(), stage.RecipeHash("build", "corpus/4", string(b)); got != want {
+	if got, want := r.hash(), stage.RecipeHash("build", "corpus/5", string(b)); got != want {
 		t.Fatalf("hash = %s, want %s", got, want)
 	}
 }
@@ -164,7 +164,7 @@ func TestBuildRecipe_LabelNormalizer(t *testing.T) {
 	}
 	wantJSON := strings.Replace(string(b), `,"label_normalizer":""`, "", 1)
 	wantJSON = strings.Replace(wantJSON, `"normalizer_version":"corpus-normalizer/3"`, `"normalizer_version":"corpus-normalizer/3","label_normalizer":"corpus-labels/1"`, 1)
-	want := stage.RecipeHash("build", "corpus/4", wantJSON)
+	want := stage.RecipeHash("build", "corpus/5", wantJSON)
 	if got := New(Config{}).Recipe(stage.Snapshot{SourceList: []byte(`{}`)}); got != want {
 		t.Fatalf("build recipe = %s, want %s", got, want)
 	}

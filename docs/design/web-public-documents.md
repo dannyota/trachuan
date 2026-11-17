@@ -87,7 +87,9 @@ candidate headings that the build stores; rule 5 decides whether any are served.
 - **Scan.** After the build, `corpus heading-scan <rel>` reads the stored
   candidate headings (rules 1 to 4, ignoring rule 5) and lists every one that is
   over 200 characters, ends with a sentence-final mark other than its own, or
-  contains "phải", "được", "không được" or "có trách nhiệm". Its output is kept
+  contains "phải", "được", "không được" or "có trách nhiệm". It also reports,
+  separately, the chapter and article headings that rule 3 omitted: their count
+  and the 20 longest by key, anchor and length, without text. Its output is kept
   beside the build record with its SHA-256. The scan is triage, not proof: a
   source title can still carry operative text it does not flag, a residual risk
   the owner accepted on 2026-11-16.

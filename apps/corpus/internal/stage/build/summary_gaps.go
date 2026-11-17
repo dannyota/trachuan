@@ -28,7 +28,8 @@ func structuralSummaryGap(kind string) (bool, error) {
 		"relation_text_unbalanced_quote", "relation_text_unlinked_target", "relation_text_unquoted_wording",
 		"relation_text_unsupported_locator", "relation_text_yearless_number", "response_too_large",
 		"scope_removed", "seed_article_missing", "source_identity_ambiguous", "source_provenance_missing",
-		"source_replaced", "source_unavailable", "source_withdrawn_retained", "summary_outline_capped",
+		"source_replaced", "source_unavailable", "source_withdrawn_retained", "summary_field_capped",
+		"summary_outline_capped", "summary_row_capped",
 		"table_text", "text_limit", "tree_too_large", "unknown_relation_code", "unknown_status",
 		"unknown_target", "unresolved_provision_relation", "withdrawn":
 		return false, nil

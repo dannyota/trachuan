@@ -22,6 +22,7 @@ type Counts struct {
 	Documents, SourceFiles, Provisions, Chunks, DenseVectors, Rejected, UnavailableArtifacts, Relations, Gaps int64
 	LexicalStats                                                                                              lexical.StatsSummary
 	Taxonomy                                                                                                  TaxonomyStats
+	Summary                                                                                                   SummaryStats
 	validity                                                                                                  validityResult
 }
 

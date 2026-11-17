@@ -189,7 +189,7 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 	if err != nil {
 		return stage.Output{}, err
 	}
-	scan, err := HeadingScan(ctx, conn.Conn(), run.Country, run.Rel)
+	scan, err := HeadingScan(ctx, conn.Conn(), run.Country, run.Rel, exclusions)
 	if err != nil {
 		return stage.Output{}, err
 	}
@@ -217,6 +217,7 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 		timings.observe("dump_hash", phaseStart)
 		timings["total"] = time.Since(started).Milliseconds()
 		record := map[string]any{"version": 1, "country": run.Country, "rel": run.Rel, "database_name": final, "schema_version": corpusdb.SchemaVersion, "build_input_hash": item.InputHash, "build_recipe_hash": recipeHash, "source_manifest_hash": inv.SourceManifestHash(), "identity_inventory_hash": inv.IdentityHash(), "identity_map_sha256": s.cfg.Suite.Hashes.IdentityMap, "development_cases_sha256": s.cfg.Suite.Hashes.Development, "dense_recipe": release.DenseRecipe, "chunk_recipe": release.ChunkRecipe, "lexical_recipe": release.LexicalRecipe, "retrieval_recipe": release.RetrievalRecipe, "lexical_stats": release.LexicalStats, "taxonomy_version": release.TaxonomyVersion, "taxonomy": counts.Taxonomy, "counts": tableCounts, "postgres_version": s.cfg.Versions.PostgreSQLMajor, "pgvector_version": s.cfg.Versions.PGVector, "ltree_version": s.cfg.Versions.Ltree, "pg_dump_version": s.cfg.Versions.PgDump, "worker_version": run.Snapshot.WorkerVersion, "durations_ms": timings, "relation_bytes": relationBytes, "index_bytes": indexBytes, "dump": map[string]any{"sha256": fmt.Sprintf("%x", hasher.Sum(nil)), "bytes": size, "format": "custom"}, "built_at": release.BuiltAt}
+		record["summary"] = counts.Summary
 		if inv.Version == 2 || correction.nonempty {
 			record["corrections_sha256"] = correction.hash
 		}

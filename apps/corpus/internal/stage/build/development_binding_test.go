@@ -17,10 +17,11 @@ import (
 )
 
 type bindingOptions struct {
-	recipe    *retrieval.Recipe
-	recipe2   bool
-	durations map[string]int64
-	taxonomy  *TaxonomyStats
+	buildRecipeHash string
+	recipe          *retrieval.Recipe
+	recipe2         bool
+	durations       map[string]int64
+	taxonomy        *TaxonomyStats
 }
 
 func bindingArtifact(t *testing.T, binding *string, oldRecipe bool, options ...bindingOptions) (artifact.Store, artifact.Result, stage.Run, Config, string) {
@@ -36,6 +37,9 @@ func bindingArtifact(t *testing.T, binding *string, oldRecipe bool, options ...b
 	recipe := New(cfg).Recipe(run.Snapshot)
 	if opts.recipe2 {
 		recipe = New(cfg).recipeForRetrieval(run.Snapshot, retrieval.Recipe2())
+	}
+	if opts.buildRecipeHash != "" {
+		recipe = opts.buildRecipeHash
 	}
 	rowRecipe := recipe
 	if oldRecipe {

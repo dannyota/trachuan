@@ -1,6 +1,7 @@
 package build
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -8,6 +9,8 @@ import (
 	"strings"
 	"unicode"
 	"unicode/utf8"
+
+	"danny.vn/trachuan/apps/corpus/internal/source"
 
 	"github.com/jackc/pgx/v5"
 	"golang.org/x/text/unicode/norm"
@@ -40,12 +43,25 @@ func scanReasons(heading string) []string {
 	return reasons
 }
 
-func encodeHeadingScan(cc, rel string, documents []summaryDocument) ([]byte, error) {
+func encodeHeadingScan(cc, rel string, documents []summaryDocument, omissions []headingOmission) ([]byte, error) {
 	type candidate struct {
 		Key     string   `json:"key"`
 		Anchor  string   `json:"anchor"`
 		Heading string   `json:"heading"`
 		Reasons []string `json:"reasons"`
+	}
+	slices.SortFunc(omissions, func(a, b headingOmission) int {
+		if a.Length != b.Length {
+			return cmp.Compare(b.Length, a.Length)
+		}
+		if a.Key != b.Key {
+			return strings.Compare(a.Key, b.Key)
+		}
+		return strings.Compare(a.Anchor, b.Anchor)
+	})
+	type omittedHeadings struct {
+		Count   int               `json:"count"`
+		Longest []headingOmission `json:"longest"`
 	}
 	items := []candidate{}
 	slices.SortFunc(documents, func(a, b summaryDocument) int { return strings.Compare(a.Key, b.Key) })
@@ -60,12 +76,13 @@ func encodeHeadingScan(cc, rel string, documents []summaryDocument) ([]byte, err
 		}
 	}
 	result := struct {
-		Country    string      `json:"country"`
-		Release    string      `json:"release"`
-		Projection int         `json:"projection"`
-		Matching   string      `json:"matching"`
-		Items      []candidate `json:"items"`
-	}{cc, rel, 1, "NFC; Unicode lowercase; words are maximal Unicode letter, mark or number runs; punctuation separates phrase words; final marks: . ! ? … 。", items}
+		Country    string          `json:"country"`
+		Release    string          `json:"release"`
+		Projection int             `json:"projection"`
+		Matching   string          `json:"matching"`
+		Items      []candidate     `json:"items"`
+		Omitted    omittedHeadings `json:"rule_3_omitted"`
+	}{cc, rel, 1, "NFC; Unicode lowercase; words are maximal Unicode letter, mark or number runs; punctuation separates phrase words; final marks: . ! ? … 。", items, omittedHeadings{len(omissions), append([]headingOmission{}, omissions[:min(20, len(omissions))]...)}}
 	b, err := json.Marshal(result)
 	if err != nil {
 		return nil, fmt.Errorf("encode heading scan: %w", err)
@@ -73,7 +90,7 @@ func encodeHeadingScan(cc, rel string, documents []summaryDocument) ([]byte, err
 	return append(b, '\n'), nil
 }
 
-func HeadingScan(ctx context.Context, db summaryReader, cc, rel string) ([]byte, error) {
+func HeadingScan(ctx context.Context, db summaryReader, cc, rel string, exclusions []source.HeadingExclusion) ([]byte, error) {
 	rows, err := db.Query(ctx, `SELECT document_key,payload FROM document_summary WHERE projection=1 ORDER BY document_key COLLATE "C"`)
 	if err != nil {
 		return nil, fmt.Errorf("query stored candidate headings: %w", err)
@@ -94,5 +111,9 @@ func HeadingScan(ctx context.Context, db summaryReader, cc, rel string) ([]byte,
 	if err = rows.Err(); err != nil {
 		return nil, fmt.Errorf("read stored candidate headings: %w", err)
 	}
-	return encodeHeadingScan(cc, rel, documents)
+	omissions, err := scanHeadingOmissions(ctx, db, exclusions)
+	if err != nil {
+		return nil, err
+	}
+	return encodeHeadingScan(cc, rel, documents, omissions)
 }

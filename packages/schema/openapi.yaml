@@ -4094,7 +4094,7 @@ components:
           type: string
         name:
           type: string
-          maxLength: 200
+          maxLength: 600
       required:
       - code
       - name
@@ -4153,7 +4153,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PublicSummaryOutline'
-          maxItems: 1500
+          maxItems: 2200
       required:
       - release
       - projection

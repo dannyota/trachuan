@@ -38,12 +38,25 @@ func (l *loader) loadSummaries(ctx context.Context, entries []source.HeadingExcl
 		if err = l.summaryParts(ctx, id, &d.Payload); err != nil {
 			return err
 		}
-		r, capped, e := makeSummary(d, l.gaps, excluded[d.Key])
+		r, step, e := makeSummary(ctx, l.tx, d, l.gaps, excluded[d.Key])
 		if e != nil {
 			return e
 		}
-		if capped {
+		for _, field := range r.CappedFields {
+			l.addGap("build", d.Key, "summary_field_capped", field)
+		}
+		switch step {
+		case summaryHeadingsDropped:
+			l.counts.Summary.HeadingsDropped++
+		case summaryOutlineDropped, summaryRowDropped:
+			l.counts.Summary.OutlineDropped++
 			l.addGap("build", d.Key, "summary_outline_capped", "")
+		}
+		if step == summaryRowDropped {
+			l.addGap("build", d.Key, "summary_row_capped", "")
+		}
+		if step == summaryFieldDropped || step == summaryRowDropped {
+			continue
 		}
 		payload, e := json.Marshal(r.Payload)
 		if e != nil {
