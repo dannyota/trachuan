@@ -1,11 +1,11 @@
 import type { Language } from '../../i18n'
 import { isIndexable, sitePreview } from '../utils/public-seo'
 
-export function usePublicSeo(values: () => { path: string, title: string, description: string, language: Language }) {
+export function usePublicSeo(values: () => { path: string, title: string, description: string, language: Language, summary?: boolean }) {
   const origin = useRuntimeConfig().public.siteOrigin.replace(/\/$/, '')
   useHead(() => {
-    const { path, title, description, language } = values()
-    const indexable = isIndexable(path)
+    const { path, title, description, language, summary } = values()
+    const indexable = summary || isIndexable(path)
     const canonical = `${origin}${path}`
     const preview = sitePreview(origin, language).map(tag => tag.property === 'og:title' && indexable ? { ...tag, content: title } : tag)
     return {

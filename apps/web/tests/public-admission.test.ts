@@ -32,8 +32,7 @@ it('does not acquire a render slot for a cached response', async () => {
     import { Server } from 'node:http';
     Server.prototype.listen = function () { return this };
     process.env.NITRO_SHUTDOWN_DISABLED = '1';
-    const nitro = await import('./.output/server/chunks/nitro/nitro.mjs');
-    const app = nitro.g();
+    const { nitroApp: app } = await import('./tests/nitro-app.mjs');
     const warm = await app.localFetch('/');
     if (warm.status !== 200) throw new Error('warm failed');
     let started = 0;

@@ -4,6 +4,7 @@ import { languageFromCookie } from '../../i18n'
 import { clientAddress, createAdmission } from './public-admission'
 import { matchPage } from './page-route'
 import { notFoundDocument } from './not-found'
+import { vietnamDate } from './summary-cache'
 
 const admission = createAdmission(Date.now)
 
@@ -31,6 +32,7 @@ export function admitPage(event: H3Event): void {
   const request = event.node.req as typeof event.node.req & { __unenv__?: { nuxt?: { '~rendering-error'?: boolean } } }
   const url = request.url ?? ''
   request.headers['x-trachuan-language'] = languageFromCookie(request.headers.cookie ?? '')
+  request.headers['x-trachuan-summary-date'] = vietnamDate(Date.now())
   if (url.split('?')[0] === '/__nuxt_error' && request.__unenv__?.nuxt?.['~rendering-error']) return
   if (import.meta.dev && url.startsWith('/api/')) return
   if (isStaticAsset(event, url)) return

@@ -41,6 +41,7 @@ export function clientAddress(peer: string, forwarded: string, ranges: string[])
 export function createAdmission(clock: () => number) {
   const buckets = new Map<string, { start: number, count: number }>()
   let active = 0
+  let summaries = 0
   return {
     allow(address: string): boolean {
       const now = clock()
@@ -59,12 +60,16 @@ export function createAdmission(clock: () => number) {
       bucket.count++
       return true
     },
-    render(): (() => void) | null {
-      if (active >= 4) return null
+    render(summary = false): (() => void) | null {
+      if (active >= 4 || (summary && summaries >= 2)) return null
       active++
+      if (summary) summaries++
       let released = false
       return () => {
-        if (!released) active--
+        if (!released) {
+          active--
+          if (summary) summaries--
+        }
         released = true
       }
     },

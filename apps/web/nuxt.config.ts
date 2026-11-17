@@ -3,6 +3,8 @@ import { APP_CSP } from './app/utils/csp'
 
 const accountHeaders = { 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex' }
 const cache = { maxAge: 600, swr: false, varies: ['x-trachuan-language'] }
+const sitemapCache = { ...cache, maxAge: 300 }
+const summaryCache = { ...sitemapCache, base: 'summary', varies: ['x-trachuan-language', 'x-trachuan-summary-date'] }
 
 export default defineNuxtConfig({
   compatibilityDate: '2026-11-11',
@@ -22,7 +24,9 @@ export default defineNuxtConfig({
     '/terms': { cache },
     '/llms.txt': { cache },
     '/robots.txt': { cache },
-    '/sitemap.xml': { cache },
+    '/sitemap.xml': { cache: sitemapCache },
+    '/sitemap-pages.xml': { cache: sitemapCache },
+    '/sitemap-documents.xml': { cache: sitemapCache },
     '/login': { headers: accountHeaders },
     '/login/factor': { headers: accountHeaders },
     '/signup': { headers: accountHeaders },
@@ -31,6 +35,7 @@ export default defineNuxtConfig({
     '/account': { headers: accountHeaders },
     '/vn/topics': { cache, headers: { 'Cache-Control': 'public, max-age=600' } },
     '/vn/topics/**': { cache, headers: { 'Cache-Control': 'public, max-age=600' } },
+    '/vn/documents/*/summary': { cache: summaryCache, headers: { 'Cache-Control': 'public, max-age=300' } },
     '/vn/**': { headers: { 'Cache-Control': 'no-store' } },
   },
   nitro: { devProxy: { '/api/': { target: 'http://127.0.0.1:8080/api/', changeOrigin: true } } },

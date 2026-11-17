@@ -33,7 +33,7 @@ it('renders safe structured data and localized source facts', () => {
       const data = path.endsWith('/taxonomy/1') ? { node, path: [node], documents: [{ title: '</script><script>alert(1)</script>', number: '1', type: 'Luật' }] } : { release: '20990101_1', documents: 1200, provisions: 3400, nodes: 5, ...(newest ? { newest_source_date: '2099-01-02' } : {}) };
       return new Response(JSON.stringify(data), { headers: { 'content-type': 'application/json' } });
     };
-    const app = (await import('./.output/server/chunks/nitro/nitro.mjs')).g();
+    const { nitroApp: app } = await import('./tests/nitro-app.mjs');
     const pages = [];
     for (const lang of ['vi', 'en']) for (const path of ['/', '/vn/topics/1', '/sources']) {
       const response = await app.localFetch(path + '?lang=' + lang, { headers: { cookie: 'lang=' + lang } });

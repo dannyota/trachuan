@@ -50,7 +50,7 @@ it('takes a generated reader link directly to the signed-in guard', async () => 
     Server.prototype.listen = function () { return this };
     process.env.NITRO_SHUTDOWN_DISABLED = '1';
     globalThis.fetch = async () => new Response(JSON.stringify({ error: { code: 'unauthenticated', message: 'sign in' } }), { status: 401, headers: { 'content-type': 'application/json' } });
-    const app = (await import('./.output/server/chunks/nitro/nitro.mjs')).g();
+    const { nitroApp: app } = await import('./tests/nitro-app.mjs');
     const response = await app.localFetch(process.argv[1]);
     console.log(JSON.stringify({ status: response.status, location: response.headers.get('location') }));
   `

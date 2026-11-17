@@ -11,7 +11,7 @@ it('renders public coverage anonymously, caches it, and omits query and account 
       calls.push({ path: new URL(request.url).pathname, cookie: request.headers.get('cookie') });
       return new Response(JSON.stringify(new URL(request.url).pathname.endsWith('/codes') ? { release: '20260101_1', codes: ['1'] } : { release: '20260101_1', documents: 12, provisions: 34, nodes: 2, gaps: { missing: 3 }, newest_source_date: '2026-01-01' }), { headers: { 'content-type': 'application/json' } });
     };
-    const app = (await import('./.output/server/chunks/nitro/nitro.mjs')).g();
+    const { nitroApp: app } = await import('./tests/nitro-app.mjs');
     const results = [];
     for (const path of ['/', '/', '/sources', '/connect', '/privacy', '/terms', '/llms.txt', '/robots.txt', '/sitemap.xml']) {
       const res = await app.localFetch(path + '?q=secret-query-text', { headers: { cookie: 'session=private-account' } });

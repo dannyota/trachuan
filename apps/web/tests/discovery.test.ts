@@ -8,7 +8,7 @@ it('serves robots and the fixed sitemap with the legal pages date', () => {
     Server.prototype.listen = function () { return this };
     process.env.NITRO_SHUTDOWN_DISABLED = '1';
     globalThis.fetch = async request => new Response(JSON.stringify(new URL(request.url).pathname.endsWith('/codes') ? { release: '20990101_1', codes: ['1', "a&'b", '1'] } : { release: '20990101_1' }), { headers: { 'content-type': 'application/json' } });
-    const app = (await import('./.output/server/chunks/nitro/nitro.mjs')).g();
+    const { nitroApp: app } = await import('./tests/nitro-app.mjs');
     const results = [];
     for (const [path, cookie] of [['/robots.txt', ''], ['/sitemap.xml', ''], ['/privacy', ''], ['/terms', ''], ['/privacy', 'lang=en'], ['/terms', 'lang=en']]) {
       const response = await app.localFetch(path, { headers: { cookie } });
@@ -47,7 +47,7 @@ it.each(['status', 'codes', 'release', 'malformed', 'empty', 'non-string', 'extr
       const body = codes ? { release: failed && failure === 'release' ? 'other' : '20990101_1', codes: failed && failure === 'malformed' ? null : failed && failure === 'empty' ? [''] : failed && failure === 'non-string' ? [1] : ['1', '2'], ...(failed && failure === 'extra' ? { truncated: true } : {}) } : { release: '20990101_1' };
       return new Response(JSON.stringify(body), { headers: { 'content-type': 'application/json' } });
     };
-    const app = (await import('./.output/server/chunks/nitro/nitro.mjs')).g();
+    const { nitroApp: app } = await import('./tests/nitro-app.mjs');
     const first = await app.localFetch('/sitemap.xml');
     const firstResult = { status: first.status, cache: first.headers.get('cache-control'), etag: first.headers.get('etag'), body: await first.text() };
     failed = false;
