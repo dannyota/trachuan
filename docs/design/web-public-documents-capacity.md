@@ -31,9 +31,11 @@ address from `2001:db8::/32`, the documentation range. Phase B uses 16
 addresses, phase D 40 for pages and 50 for the public API. Each signed-in
 account uses one fixed address of its own. In phase B a `busy` answer is retried
 at most three times, after 1, 2 and 4 seconds or the longer `Retry-After` up to
-5 seconds. In phase D, 5% of the public requests are cancelled at a random point
-and their 429 and 503 answers are not gated; signed-in requests are never
-cancelled and keep their gates.
+5 seconds. A page answer is busy when it is a 503, or a 429 whose `Retry-After`
+is at most 5 seconds (render admission); a per-address 429 is not busy and
+counts as a failure. In phase D, 5% of the public requests are cancelled at a
+random point and their 429 and 503 answers are not gated; signed-in requests are
+never cancelled and keep their gates.
 
 ## Where it runs
 
@@ -78,7 +80,9 @@ their sessions. No owner action or real Google account is needed.
   phase C a key whose second request logged no second render was a hit.
 - Reader-pool wait: each reader pool times every acquire with pgx's acquire
   tracer. The server logs once a minute, and only for minutes with acquires, the
-  count and the p50, p99 and maximum wait from fixed buckets.
+  count per fixed bucket with the p50, p99 and maximum wait. The gate's p99 is
+  taken over the bucket counts summed across the run, as the upper edge of the
+  bucket that holds it.
 - PostgreSQL connections: client backends in `pg_stat_activity`, once a second.
 - CPU and memory: once a second, host CPU from `/proc/stat` (the MacBook uses
   `ps`), and the RSS and CPU of the web, server and PostgreSQL processes; a
