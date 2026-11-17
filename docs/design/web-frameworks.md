@@ -116,6 +116,27 @@ restarts the search with one fixed line. A hit links to its control page.
 | counts               | {n} mục kiểm soát · {n} liên kết đã xác định đích · {n} liên kết chưa xác định đích | {n} controls · {n} resolved mappings · {n} unresolved mappings   |
 | relation             | tương đương, là một phần của, bao gồm, giao với, liên quan                          | equivalent to, subset of, superset of, intersects, related to    |
 
+| Gap kind                                                     | vi                                            | en                                     |
+| ------------------------------------------------------------ | --------------------------------------------- | -------------------------------------- |
+| `mapping_unresolved`                                         | Liên kết chưa xác định đích                   | Mapping target not resolved            |
+| `mapping_dropped`                                            | Liên kết không đưa vào bản phát hành          | Mapping left out of the release        |
+| `title_missing`                                              | Chưa có tên do Tra Chuẩn đặt                  | No Tra Chuẩn title yet                 |
+| `ocr_blocked`                                                | Nhận dạng ký tự chưa đạt                      | Character recognition did not pass     |
+| `ocr_flagged`                                                | Nhận dạng ký tự đang được xem xét             | Character recognition under review     |
+| `text_incomplete`                                            | Nội dung chưa đầy đủ                          | Text incomplete                        |
+| `chunk_omission`                                             | Một phần nội dung không được đưa vào tìm kiếm | Part of the text is not searchable     |
+| `embedding_input_too_long`, `embedding_input_bytes_exceeded` | Một phần nội dung quá dài để đưa vào tìm kiếm | Part of the text is too long to search |
+| any other kind                                               | the kind code as served                       | the kind code as served                |
+
+| State                                            | vi                                               | en                                                        |
+| ------------------------------------------------ | ------------------------------------------------ | --------------------------------------------------------- |
+| item `unit_too_large`                            | Một phần của mục này quá lớn để hiển thị.        | Part of this item is too large to show.                   |
+| item `invalid_item`                              | Không đọc được mục này.                          | This item could not be read.                              |
+| reload after `invalid_next` or `release_expired` | Dữ liệu đã được cập nhật; trang hiện lại từ đầu. | The data was updated; the page starts again from the top. |
+| `cursor_expired` (search and gaps)               | the existing `cursor_expired` message            | the existing `cursor_expired` message                     |
+| `invalid_handle`, `not_found`                    | the fixed 404                                    | the fixed 404                                             |
+| `unavailable`, `rate_limited`                    | the existing messages of those codes             | the existing messages of those codes                      |
+
 Names, publishers, versions, citations, our titles, kinds without a label,
 statuses without a label, source names and gap details are data: shown as
 served, never translated or rewritten. Citations and handles use Roboto Mono.
