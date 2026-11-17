@@ -174,6 +174,14 @@ last entry is in force; `evaluate` reads both files from the snapshot and fails
 when an entry lowers a floor below the one before it with an empty
 `cohort_change`.
 
+The previous signed report is a `snapshot` input:
+`FRAMEWORKS_SOURCE_DIR/trachuan/previous-report.json`, the active frameworks
+release's `report.json`, placed by the coordinator. When it is present, paired
+non-regression runs and gates `quality_pass`; when it is absent the report
+records `previous: null` and the comparison as `not_applicable`, and the
+uploader refuses such a report while a frameworks release is active
+([build](frameworks-build.md#gaps-and-signing)).
+
 Later releases:
 
 - every floor is met on the current cohort;
