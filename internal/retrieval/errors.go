@@ -10,35 +10,35 @@ import (
 
 type failure string
 
-// Error returns the fixed failure category.
 func (f failure) Error() string { return string(f) }
 
 const (
-	// ErrInvalidRequest means a request failed validation.
 	ErrInvalidRequest failure = "invalid_request"
-	// ErrReleaseExpired means a search cursor names another release.
 	ErrReleaseExpired failure = "release_expired"
-	// ErrNotFound means the requested item is not served.
-	ErrNotFound failure = "not_found"
-	// ErrEmbedderBusy means the query embedder refused admission.
-	ErrEmbedderBusy failure = "embedder busy"
-	// ErrEmbedder means the query embedder failed.
-	ErrEmbedder failure = "embedder failed"
-	// ErrReleaseGone means the corpus database or its pool is gone.
-	ErrReleaseGone failure = "release gone"
-	// ErrUnavailable means the corpus database failed for another reason.
-	ErrUnavailable failure = "database unavailable"
+	ErrNotFound       failure = "not_found"
+	ErrEmbedderBusy   failure = "embedder busy"
+	ErrEmbedder       failure = "embedder failed"
+	ErrReleaseGone    failure = "release gone"
+	ErrUnavailable    failure = "database unavailable"
 )
 
-// classifiedFailure retains only a fixed message and a safe classification.
-// The original cause can contain query text, vectors or connection details.
 type classifiedFailure struct {
 	message string
 	kind    error
+	code    string
 }
 
 func (f classifiedFailure) Error() string { return f.message }
 func (f classifiedFailure) Unwrap() error { return f.kind }
+
+func (f classifiedFailure) As(target any) bool {
+	p, ok := target.(**pgconn.PgError)
+	if !ok || f.code == "" {
+		return false
+	}
+	*p = &pgconn.PgError{Code: f.code}
+	return true
+}
 
 func embedderFailure(message string, cause error) error {
 	kind := ErrEmbedder
@@ -56,5 +56,9 @@ func databaseFailure(message string, cause error) error {
 		(errors.As(cause, &database) && (database.Code == "3D000" || database.Code == "57P01" || database.Code == "57P04")) {
 		kind = ErrReleaseGone
 	}
-	return classifiedFailure{message: message, kind: kind}
+	var code string
+	if errors.As(cause, &database) {
+		code = database.Code
+	}
+	return classifiedFailure{message: message, kind: kind, code: code}
 }

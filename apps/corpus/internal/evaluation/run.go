@@ -116,7 +116,7 @@ func run(ctx context.Context, engine Engine, suite Suite, o Options, limit int) 
 	}
 	filter, err := newFilterState(ctx, engine, suite, o)
 	if err != nil {
-		return Report{}, Cache{}, err
+		return Report{}, Cache{}, OfflineError(err)
 	}
 	if filter.active {
 		delete(r.NotRun, "filtered")
@@ -129,21 +129,18 @@ func run(ctx context.Context, engine Engine, suite Suite, o Options, limit int) 
 	presented := map[presentedKey]*presentedSamples{}
 	timings := map[string][]float64{}
 	vectorRows := map[string]int{}
-	pool := newOrderedPool(ctx, len(inputs), limit, func(ctx context.Context, i int) casePrefetch {
-		return prefetchCase(ctx, engine, inputs[i], rejects, modes, recipe, o.ValidityOverrides)
-	})
-	defer pool.stop()
+	results := prefetchCases(ctx, engine, inputs, rejects, modes, recipe, o.ValidityOverrides, limit)
 	for index, input := range inputs {
-		prefetched := pool.take(index)
+		prefetched := results[index]
 		c := input.c
 		force := inForceForCase(c, o.ValidityOverrides)
 		product, err := prefetched.product, prefetched.prepareErr
 		if err != nil {
-			return Report{}, Cache{}, fmt.Errorf("prepare case %s: %w", c.ID, err)
+			return Report{}, Cache{}, fmt.Errorf("prepare case %s: %w", c.ID, OfflineError(err))
 		}
 		legacy, err := prefetched.legacy, prefetched.legacyErr
 		if err != nil {
-			return Report{}, Cache{}, fmt.Errorf("prepare legacy case %s: %w", c.ID, err)
+			return Report{}, Cache{}, fmt.Errorf("prepare legacy case %s: %w", c.ID, OfflineError(err))
 		}
 		if input.legacy && (!legacy.Validation.Accepted || legacy.Vector == nil) {
 			return Report{}, Cache{}, fmt.Errorf("legacy case %s rejected", c.ID)
@@ -193,14 +190,14 @@ func run(ctx context.Context, engine Engine, suite Suite, o Options, limit int) 
 				timingKey := cohort + "/" + string(mode)
 				timings[timingKey] = append(timings[timingKey], result.elapsed)
 				if err != nil {
-					return Report{}, Cache{}, fmt.Errorf("collect case %s: %w", c.ID, err)
+					return Report{}, Cache{}, fmt.Errorf("collect case %s: %w", c.ID, OfflineError(err))
 				}
 				if arms.Date != date || arms.AsOf != nil {
 					return Report{}, Cache{}, fmt.Errorf("evaluation date mismatch for case %s", c.ID)
 				}
 				if cohort == "old_product" && len(o.Mapping[c.ID]) == 0 {
 					if err = filter.addCase(c, entries[c.ID], arms, recipe, p.Request); err != nil {
-						return Report{}, Cache{}, err
+						return Report{}, Cache{}, OfflineError(err)
 					}
 				}
 				collected[mode] = arms
@@ -221,11 +218,11 @@ func run(ctx context.Context, engine Engine, suite Suite, o Options, limit int) 
 							response, err = retrieval.ShapeWithCap(arms, recipe, limit, armMode, o.CapOverride)
 						}
 						if err != nil {
-							return Report{}, Cache{}, fmt.Errorf("shape case %s: %w", c.ID, err)
+							return Report{}, Cache{}, fmt.Errorf("shape case %s: %w", c.ID, OfflineError(err))
 						}
 						ranking, err := retrieval.Rank(arms, recipe, limit, armMode)
 						if err != nil {
-							return Report{}, Cache{}, fmt.Errorf("rank case %s: %w", c.ID, err)
+							return Report{}, Cache{}, fmt.Errorf("rank case %s: %w", c.ID, OfflineError(err))
 						}
 						for _, g := range ranking.Groups {
 							ar.Groups = append(ar.Groups, CachedGroup{armMode, limit, g.Identity, g.Score, g.BestCosine})
@@ -251,7 +248,7 @@ func run(ctx context.Context, engine Engine, suite Suite, o Options, limit int) 
 							for _, detail := range []retrieval.Detail{retrieval.DetailCompact, retrieval.DetailFull} {
 								result, presentErr := engine.Present(ctx, response, detail)
 								if presentErr != nil {
-									return Report{}, Cache{}, fmt.Errorf("present case %s: %w", c.ID, presentErr)
+									return Report{}, Cache{}, fmt.Errorf("present case %s: %w", c.ID, OfflineError(presentErr))
 								}
 								data, marshalErr := json.Marshal(result)
 								if marshalErr != nil {
@@ -306,7 +303,7 @@ func run(ctx context.Context, engine Engine, suite Suite, o Options, limit int) 
 						}
 						losses, gaps, err := caseDiagnostics(arms, diagnosticRecipe, limit, armMode, cohort, c.ExpectedCitations, diagnosticEntries, response, diagnosticTail, o.ArticleCapOverride)
 						if err != nil {
-							return Report{}, Cache{}, fmt.Errorf("diagnose case %s: %w", c.ID, err)
+							return Report{}, Cache{}, fmt.Errorf("diagnose case %s: %w", c.ID, OfflineError(err))
 						}
 						result := CaseResult{ValidityOverrides: o.ValidityOverrides, CapOverride: o.CapOverride, ArticleCapOverride: o.ArticleCapOverride, CaseID: c.ID, Cohort: cohort, Mode: mode, Arms: armMode, Limit: limit, Expected: len(ranks), Ranks: ranks, Matched: matchedCount(ranks), Mapped: caseMappings(entries[c.ID], len(ranks)), Abstain: response.Abstain, Reason: response.Reason, Gaps: gaps, Losses: losses, Characters: chars}
 						if cohort != "legacy" {

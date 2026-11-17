@@ -108,7 +108,7 @@ func (s *Stage) evaluateBuild(ctx context.Context, env stage.Env, run stage.Run,
 	defer pool.Close()
 	engine, err := retrieval.Open(ctx, pool, s.cfg.Embedder, retrieval.Options{Profile: "evaluation", Now: func() time.Time { return date }})
 	if err != nil {
-		return evaluation.Report{}, evaluation.Cache{}, fmt.Errorf("open retrieval: %w", err)
+		return evaluation.Report{}, evaluation.Cache{}, fmt.Errorf("open retrieval: %w", evaluation.OfflineError(err))
 	}
 	calibration, err := os.ReadFile(filepath.Join(env.Artifacts.Abs(art.Path), "calibration.json"))
 	if err != nil {

@@ -9,7 +9,6 @@ import (
 	"danny.vn/trachuan/internal/retrieval"
 )
 
-// Engine is the retrieval boundary used by evaluation.
 type Engine interface {
 	Prepare(context.Context, retrieval.Request) (retrieval.Prepared, error)
 	PrepareLegacy(context.Context, retrieval.Request) (retrieval.Prepared, error)
@@ -18,7 +17,6 @@ type Engine interface {
 	Release() retrieval.Release
 }
 
-// CalibrationCandidate records decisions at one threshold.
 type CalibrationCandidate struct {
 	Threshold float64 `json:"threshold"`
 	TP        int     `json:"tp"`
@@ -27,7 +25,6 @@ type CalibrationCandidate struct {
 	FN        int     `json:"fn"`
 }
 
-// Calibration records the fitted threshold and its evidence.
 type Calibration struct {
 	Status                 string                   `json:"status"`
 	Threshold              float64                  `json:"threshold"`
@@ -42,7 +39,6 @@ type Calibration struct {
 	EvaluationDate         retrieval.Date           `json:"evaluation_date"`
 }
 
-// CalibrationObservation records a case's pre-threshold score.
 type CalibrationObservation struct {
 	CaseID   string   `json:"case_id"`
 	Negative bool     `json:"negative"`
@@ -103,7 +99,6 @@ func calibrationThreshold(scores []calibrationScore) (float64, []CalibrationCand
 	return best, candidates
 }
 
-// Calibrate fits both product cohorts using exact retrieval.
 func Calibrate(ctx context.Context, engine Engine, suite Suite) (Calibration, error) {
 	return calibrate(ctx, engine, suite, caseConcurrency)
 }
@@ -131,24 +126,33 @@ func calibrate(ctx context.Context, engine Engine, suite Suite, limit int) (Cali
 	pool := newOrderedPool(ctx, len(cases), limit, func(ctx context.Context, i int) calibrationPrefetch {
 		return prefetchCalibration(ctx, engine, cases[i], depths)
 	})
-	defer pool.stop()
+	results := make([]calibrationPrefetch, len(cases))
+	for i := range cases {
+		results[i] = pool.take(i)
+	}
+	pool.stop()
+	for i := range cases {
+		if sqlState(results[i].collectErr) == "57014" {
+			results[i].arms, results[i].collectErr = engine.Collect(ctx, results[i].prepared, depths)
+		}
+	}
 	for i, c := range cases {
-		result := pool.take(i)
+		result := results[i]
 		p, err := result.prepared, result.prepareErr
 		if err != nil {
-			return Calibration{}, fmt.Errorf("prepare case %s: %w", c.ID, err)
+			return Calibration{}, fmt.Errorf("prepare case %s: %w", c.ID, OfflineError(err))
 		}
 		observation := CalibrationObservation{CaseID: c.ID, Negative: c.ExpectAbstain}
 		score := calibrationScore{negative: c.ExpectAbstain, empty: true}
 		if p.Validation.Accepted {
 			arms, err := result.arms, result.collectErr
 			if err != nil {
-				return Calibration{}, fmt.Errorf("collect case %s: %w", c.ID, err)
+				return Calibration{}, fmt.Errorf("collect case %s: %w", c.ID, OfflineError(err))
 			}
 			out.EvaluationDate = arms.Date
 			ranking, err := retrieval.Rank(arms, recipe, 8, "hybrid")
 			if err != nil {
-				return Calibration{}, fmt.Errorf("rank case %s: %w", c.ID, err)
+				return Calibration{}, fmt.Errorf("rank case %s: %w", c.ID, OfflineError(err))
 			}
 			if ranking.FirstBestCosine != nil {
 				v := *ranking.FirstBestCosine
