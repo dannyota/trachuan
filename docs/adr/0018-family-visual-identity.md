@@ -118,3 +118,6 @@ The rules live in [web visual system](../design/web-visual.md) and
   one wording, kept navy as Tra Chuẩn's brand colour with the seal and danger
   red unchanged, and approved the maker panel with his picture, name and link to
   aboutme.vn/danny. Reviewed by gpt-6.1-sol in two rounds.
+- 2026-11-17: the screenshots of 12 to 14 px Vietnamese on the dense screens
+  were accepted in both themes, and Be Vietnam Pro was removed from the website,
+  the static error pages and the OAuth consent page.

@@ -80,7 +80,7 @@ test('other routes retain their chrome', async ({ page }) => {
   for (const path of ['/sources', '/connect']) {
     await page.goto(path)
     expect(await page.locator('html').getAttribute('data-page')).toBeNull()
-    await expect(page.locator('body')).toHaveCSS('font-family', /BeVietnam/)
+    await expect(page.locator('body')).toHaveCSS('font-family', 'PlusJakartaSans, sans-serif')
     await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(255, 255, 255)')
   }
 })
