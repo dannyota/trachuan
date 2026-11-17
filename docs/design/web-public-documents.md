@@ -20,10 +20,11 @@ The summary is an independent route record,
 `app/pages/vn/document-summary/[key].vue` with
 `definePageMeta({ path: '/vn/documents/:key/summary' })`, never a child of the
 reader's `[key].vue`. Its own layout has a session-independent header (logo,
-navigation, language and a plain "Đăng nhập" / "Sign in" link): no account
-probe, no `loadSession()`, no session store. Its transport is `openapi-fetch`
-with `credentials: 'omit'` and no Cookie header on the server, and it calls only
-`GET /api/v1/public/documents/{key}` and `GET /api/v1/public/status`.
+navigation, language and the site header's navy "Đăng nhập" / "Sign in" pill as
+a static link): no account probe, no `loadSession()`, no session store. Its
+transport is `openapi-fetch` with `credentials: 'omit'` and no Cookie header on
+the server, and it calls only `GET /api/v1/public/documents/{key}` and
+`GET /api/v1/public/status`.
 
 "Đọc toàn văn" / "Read the full text" links to the reader, which sends a
 signed-out visitor through `/login`. Public topic pages and summary relations
@@ -47,6 +48,13 @@ link to summary paths while summaries are available, else to the reader.
 Never shown: a heading outside the rule below, provision, lead and annex text,
 parts, snippets, provision-level warnings, the validity history and its quotes,
 free-form gap messages, files and hashes.
+
+The page has the reader's look: an identity band on `mist` holding the stamp,
+the status basis line, the number, the title in Noto Serif, the issue and
+effective dates on one line separated by " · ", and "Đọc toàn văn" as the band's
+action; the outline, relations and topics follow in the reader's text column. It
+shares the reader's styles or a presentational component that takes data only
+through props, never a reader component that loads data or reads a session.
 
 ## Outline and headings
 
