@@ -101,44 +101,47 @@ under the corpus rules.
    - One request per document (title, scope article, table of contents, VBPL
      field) chooses from a menu of active level-2 nodes, each shown as
      `<level-1 name> > <level-2 name>`; a level-2 node with no provisions and no
-     children is left out of the menu. The request returns a set of at most `F`
-     active level-2 codes, `F` set in the classification recipe and stated in
-     the prompt; structured outputs cannot bound an array's length, so a
-     response with more than `F` codes is `invalid_response`, and a code that is
-     not an active level-2 node is dropped and counted. The result is not an
-     assignment: it is given as document context to every article request of
-     that document and fixes those articles' allowed codes. A document whose
-     request fails or keeps no code yields no LLM assignment for its articles
-     and gap `unassigned` with detail `invalid_response` or `no_family`. The
-     classification artifact keeps each document's validated codes and outcome,
-     hashed with the classification recipe and the taxonomy; evaluation reads
-     family recall from it and counts an article of a failed or empty document
-     as a miss.
+     children is left out of the menu (228 entries and 13,465 characters on
+     `vn/20261115_3`). The request returns a set of at most `F` active level-2
+     codes, `F` set in the classification recipe and stated in the prompt;
+     structured outputs cannot bound an array's length, so a response with more
+     than `F` codes is `invalid_response`, and a code that is not an active
+     level-2 node is dropped and counted. The result is not an assignment and
+     does not limit any article's choice: it is given as document context to
+     every article request of that document. A document whose request fails or
+     keeps no code gives its articles no document context; they are still
+     classified. The classification artifact keeps each document's validated
+     codes and outcome, hashed with the classification recipe and the taxonomy;
+     evaluation reports family recall from it.
    - One request per chapter with all its articles yields assignments for each
      article; a document without chapters is split into groups of up to 12
      articles in document order. The classification recipe sets a maximum input
      and output size per request; a chapter or group over it is split into runs
      of consecutive articles that fit, and an article that alone exceeds it gets
-     no LLM assignment and gap `unassigned` with detail `too_long`. An article's
-     allowed codes are the active nodes at levels 2 to 4 in the subtrees of its
-     document's level-2 codes; each article request carries those subtrees once,
-     as code, name and parent code, and the request size bound counts them. A
-     level-2 subtree holds at most 91 nodes and 8,708 characters of names on
-     `vn/20261115_3`.
-   - Article request output is JSON keyed by the request's article anchors, with
-     a set of codes and a confidence per code for each; an article may receive
-     several nodes in different families. A code outside that article's allowed
-     codes or not an active package or custom node, and an anchor not in the
-     request, is dropped and counted. A response that is truncated, fails the
-     schema or misses an article yields no assignment for those articles and gap
-     `unassigned` with detail `invalid_response`. The model, effort and prompt
-     are part of the classification recipe. The threshold per level is
-     calibrated on the seeded set to reach top-1 precision at least 0.85, then
-     frozen in the release; below it, no assignment and a gap "unassigned".
-   - The LLM layer assigns level-2 nodes only: an article's LLM assignment is
-     the level-2 ancestor of each node it returns. Level 3 joins only when it
-     passes its floors on every applicable slice; nodes deeper than level 2
-     otherwise come only from seeds and inheritance.
+     no LLM assignment and gap `unassigned` with detail `too_long`. Each article
+     request carries the same level-2 menu once, the document's title and its
+     document-request codes as context, each article's chapter heading and own
+     text, and the labeling rule of the evaluation gate verbatim; the request
+     size bound counts them all. Every menu code is allowed for every article.
+   - Article request output is JSON keyed by the request's article anchors: for
+     each article one `primary` node and an optional `additional` node, each a
+     code with a confidence, so no array needs a length bound. A code not in the
+     menu, an additional node equal to the primary, and an anchor not in the
+     request are dropped and counted; an article whose primary is dropped gets
+     no assignment and gap `unassigned` with detail `invalid_response`, as do
+     the articles of a response that is truncated, fails the schema or misses an
+     article. The model, effort and prompt are part of the classification
+     recipe. Two thresholds are calibrated, then frozen in the release: the
+     primary threshold on the seeded set's non-fragment entries, the lowest
+     confidence at which top-1 precision reaches the level's floor; the
+     additional threshold on both model-adjudicated sets together, the lowest
+     confidence at which additional-node precision reaches 0.80. A primary below
+     its threshold gives no assignment and gap `unassigned`. An additional node
+     below its threshold is dropped, and so is every additional node when no
+     confidence reaches 0.80. An article holds at most two LLM nodes.
+   - The LLM layer assigns level-2 nodes only. Level 3 needs its own request
+     design and joins only when it passes its floors on every applicable slice;
+     nodes deeper than level 2 otherwise come only from seeds and inheritance.
 4. Manual overrides in `taxonomy/overrides.yaml`. An override names an active
    package node at level 2 or deeper or a custom node; any other code fails
    `corpus taxonomy check` and the build. An override whose document or anchor
@@ -195,7 +198,7 @@ over all entries and over non-fragment entries, with the fragments listed.
 | same                                                   | seeded, masked    | recall and top-1 precision at level 3                                                | 0.80  |
 | same                                                   | seeded, masked    | recall and top-1 precision at the deepest level                                      | 0.75  |
 | 100 unseeded articles labeled with every family        | model-adjudicated | precision and recall over all pairs                                                  | 0.80  |
-| every LLM slice                                        | as the slice      | family recall (each true node's level-2 ancestor among the document request's codes) | 0.95  |
+| every LLM slice                                        | as the slice      | family recall (each true node's level-2 ancestor among the document request's codes) | none  |
 | 100 post-2023 articles                                 | model-adjudicated | precision and recall at level 2                                                      | 0.85  |
 | same                                                   | model-adjudicated | precision and recall at the deepest level                                            | 0.70  |
 | 50 articles that belong to custom nodes                | model-adjudicated | precision and recall of custom nodes                                                 | 0.80  |

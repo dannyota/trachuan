@@ -80,3 +80,12 @@ classifier. Hard-cut subject filtering.
   The seeded slice held 40 such articles of 300, so scoring them measured a case
   production never sends. Every report still states the all-entries numbers
   beside the non-fragment ones.
+- 2026-11-17: article requests choose from the full level-2 menu, and return one
+  primary node and at most one additional node. On the 200 model-adjudicated
+  articles the document request's codes missed 11 to 17 percent of the true
+  families, which capped level-2 recall, while given the family, recall was 0.95
+  to 0.98; additional nodes were right 25 of 104 times (Haiku) and 22 of 120
+  (Sonnet). The document request stays as context and screening, family recall
+  is reported without a floor, and an additional node is kept only above a
+  threshold calibrated to precision 0.80 on the adjudicated sets. Sonnet
+  measured no better than Haiku at level 2.
