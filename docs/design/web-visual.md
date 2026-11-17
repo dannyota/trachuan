@@ -160,18 +160,19 @@ A search result card has no footer band. Its head carries the stamp with its
 as-of line, the document number, the type and issuer, the actions of "Links and
 buttons" (the "Đọc trong văn bản" link and the "Sao chép trích dẫn" ghost
 button) and the rank. From 1200 px the head is one line and the type and issuer
-are cut with an ellipsis; below 1200 px it is two lines, the stamp and number,
-then the link on the left and the button and rank on the right, and the type and
-issuer move in front of the document title. The source caption closes the card
-with the topic chips. The document number is never cut: when it does not fit
-beside the stamp it takes its own line, and it wraps only when it is longer than
-the card. No text in the card is smaller than 12 px, and the actions are 13 px.
-The document title follows on one line with an ellipsis, then the provision
-heading in Noto Serif and the text. In the collapsed card, a first text line
-equal to the shown heading after white-space normalization alone is not shown;
-the snippet itself is never changed, and the expanded text and every copy action
-keep the full text. Topic chips close the card on one row, with the source
-caption. At 1366 px a card with three text lines is at most 220 px tall.
+are cut with an ellipsis; below 1200 px it is two lines, the stamp, number and
+rank, then the link on the left and the button on the right (under the link
+below 360 px), and the type and issuer move in front of the document title. The
+source caption closes the card with the topic chips. The document number is
+never cut: when it does not fit beside the stamp it takes its own line, and it
+wraps only when it is longer than the card. No text in the card is smaller than
+12 px, and the actions are 13 px. The document title follows on one line with an
+ellipsis, then the provision heading in Noto Serif and the text. In the
+collapsed card, a first text line equal to the shown heading after white-space
+normalization alone is not shown; the snippet itself is never changed, and the
+expanded text and every copy action keep the full text. Topic chips close the
+card on one row, with the source caption. At 1366 px a card with three text
+lines is at most 220 px tall.
 
 ## Reader
 

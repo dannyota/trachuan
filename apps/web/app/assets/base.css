@@ -5,6 +5,10 @@ a { color: var(--color-primary); text-decoration-line: underline; text-decoratio
 button { cursor: pointer; text-decoration: none; }
 .ghost-button { display: inline-flex; align-items: center; gap: 4px; min-height: 44px; padding: 0; border: 0; background: transparent; color: var(--color-ink); font: inherit; text-decoration: none; }
 .ghost-button:hover, .ghost-button:focus-visible { background: var(--color-mist); }
+.copy-label { display: inline-grid; }
+.copy-label > span { grid-area: 1 / 1; }
+.copy-label-size { visibility: hidden; }
+.copy-label-size::before { content: attr(data-label); }
 :focus-visible { outline: 3px solid var(--color-ring); outline-offset: 2px; }
 code, pre, kbd, samp { font-family: var(--font-mono); font-variant-ligatures: none; }
 .command-token { display: inline-block; max-width: 100%; overflow-wrap: anywhere; }

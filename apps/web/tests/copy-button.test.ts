@@ -38,3 +38,34 @@ it('announces the existing failure message when copying fails', async () => {
   expect(wrapper.get('button').text()).toBe('Sao chép trích dẫn')
   wrapper.unmount()
 })
+
+it('ignores an older copy completion and its timer after a newer result', async () => {
+  let finishFirst!: () => void
+  const first = new Promise<void>(resolve => { finishFirst = resolve })
+  vi.stubGlobal('navigator', { clipboard: { writeText: vi.fn().mockReturnValueOnce(first).mockRejectedValueOnce(new Error('refused')) } })
+  const wrapper = mount(CopyButton, { props: { text: 'citation', label: 'Sao chép trích dẫn' } })
+  await wrapper.get('button').trigger('click')
+  await wrapper.get('button').trigger('click')
+  await flushPromises()
+  expect(wrapper.get('button').text()).toBe('Chưa sao chép được')
+  await vi.advanceTimersByTimeAsync(1000)
+  finishFirst()
+  await flushPromises()
+  expect(wrapper.get('button').text()).toBe('Chưa sao chép được')
+  await vi.advanceTimersByTimeAsync(1000)
+  expect(wrapper.get('button').text()).toBe('Sao chép trích dẫn')
+  expect(vi.getTimerCount()).toBe(0)
+  wrapper.unmount()
+})
+
+it('does not schedule feedback after a pending copy settles on an unmounted component', async () => {
+  let finish!: () => void
+  const pending = new Promise<void>(resolve => { finish = resolve })
+  vi.stubGlobal('navigator', { clipboard: { writeText: vi.fn().mockReturnValue(pending) } })
+  const wrapper = mount(CopyButton, { props: { text: 'citation', label: 'Sao chép trích dẫn' } })
+  await wrapper.get('button').trigger('click')
+  wrapper.unmount()
+  finish()
+  await flushPromises()
+  expect(vi.getTimerCount()).toBe(0)
+})

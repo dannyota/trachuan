@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { clientAddress } from './client-address'
-import { checkControls } from './control-checks'
+import { checkActionGeometry, checkControls } from './control-checks'
 
 async function navigate(page: Page, path: string) {
   await page.evaluate(path => (document.querySelector('#__nuxt') as unknown as { __vue_app__: { config: { globalProperties: { $router: { push: (path: string) => Promise<void> } } } } }).__vue_app__.config.globalProperties.$router.push(path), path)
@@ -108,6 +108,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
         expect((await text.boundingBox())!.height / parseFloat(await text.evaluate(el => getComputedStyle(el).lineHeight))).toBeCloseTo(3, 0)
         expect((await page.locator('.result-card').boundingBox())!.height).toBeLessThanOrEqual(220)
       }
+      if ([320, 390, 1366].includes(width)) await checkActionGeometry(page.locator('.result-card').first(), width, true)
       await shapes(page)
       await page.locator('#search-query').focus()
       await page.keyboard.press('Tab')

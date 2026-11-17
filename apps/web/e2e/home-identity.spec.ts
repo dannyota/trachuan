@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { clientAddress } from './client-address'
-import { checkControls } from './control-checks'
+import { checkActionGeometry, checkControls } from './control-checks'
 
 test.beforeEach(async ({ page }, info) => { await page.setExtraHTTPHeaders({ 'X-Forwarded-For': clientAddress(info) }) })
 
@@ -44,6 +44,7 @@ for (const width of [320, 360, 390, 768, 1024, 1366]) {
       await expect(readLink).toHaveCSS('text-decoration-line', 'underline')
       await expect(readLink).toHaveCSS('text-decoration-thickness', '1px')
       await expect(readLink).toHaveCSS('text-underline-offset', '3px')
+      if ([320, 390, 1366].includes(width)) await checkActionGeometry(page.locator('.home-sample .result-card'), width, false)
       const checkbox = hero.locator('input[type=checkbox]')
       const box = hero.locator('.home-checkbox-box')
       const check = box.locator('svg')
