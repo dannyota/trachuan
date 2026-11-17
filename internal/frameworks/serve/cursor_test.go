@@ -21,6 +21,7 @@ func TestCursor_BindingsAndSignature(t *testing.T) {
 	for _, change := range []func(*Request){
 		func(r *Request) { r.Query = "other" },
 		func(r *Request) { r.Filters = nil },
+		func(r *Request) { r.Filters = map[string][]string{"versions": {"fw:fw-alpha:2"}} },
 		func(r *Request) { r.Mode = "other" },
 	} {
 		changed := r

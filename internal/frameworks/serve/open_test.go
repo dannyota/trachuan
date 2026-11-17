@@ -36,6 +36,14 @@ func TestRecipe_InvalidParametersFailClosed(t *testing.T) {
 	require.NoError(t, r.validate())
 }
 
+func TestRecipe_RefusesPreFusionFilters(t *testing.T) {
+	r := rankRecipe()
+	r.Version = 1
+	require.ErrorIs(t, r.validate(), ErrUnavailable)
+	r.Version = 2
+	require.NoError(t, r.validate())
+}
+
 func TestOpen_MissingDependenciesAreUnavailable(t *testing.T) {
 	_, err := Open(context.Background(), nil, nil, Options{})
 	require.ErrorIs(t, err, ErrUnavailable)

@@ -45,6 +45,7 @@ func TestRelease_BootstrapRecipe(t *testing.T) {
 		}
 	}
 	require.NotNil(t, recipe, "release must store a retrieval recipe")
+	require.Equal(t, float64(2), recipe["version"])
 	require.Equal(t, "placeholder", recipe["status"])
 	law := retrieval.Recipe3()
 	require.Equal(t, float64(law.DenseDepth), recipe["dense_depth"])

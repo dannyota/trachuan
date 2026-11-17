@@ -6,19 +6,47 @@ import (
 	"context"
 	"testing"
 
+	"danny.vn/trachuan/internal/embedding"
 	"github.com/stretchr/testify/require"
 )
+
+type countedQuery struct{ calls int }
+
+func (*countedQuery) Recipe(context.Context) (embedding.Recipe, error) {
+	return embedding.QueryRecipe1(), nil
+}
+
+func (q *countedQuery) Embed(ctx context.Context, text string) (embedding.Vector, error) {
+	q.calls++
+	return syntheticQuery{}.Embed(ctx, text)
+}
 
 func TestSearch_StatementCountDoesNotGrowWithRelease(t *testing.T) {
 	e, trace := buildFixture(t, false)
 	ctx := context.Background()
 	search := func() {
-		trace.reset()
-		response, err := e.Search(ctx, Request{Query: "quartz", Limit: 50}, fakeCaller())
-		require.NoError(t, err)
-		require.NotEmpty(t, response.Hits)
-		require.Len(t, trace.snapshot(), 7)
-		trace.assertProjection(t, e.project(fakeCaller()).readable)
+		query := &countedQuery{}
+		e.embedder = query
+		for _, tc := range []struct {
+			filters map[string][]string
+			count   int
+			empty   bool
+		}{
+			{nil, 7, false},
+			{map[string][]string{"frameworks": {"fw-alpha"}}, 6, false},
+			{map[string][]string{"frameworks": {"fw-beta"}}, 7, false},
+			{map[string][]string{"versions": {"fw:fw-alpha:2", "fw:fw-beta:1"}}, 7, false},
+			{map[string][]string{"frameworks": {"fw-beta"}, "versions": {"fw:fw-alpha:2"}}, 5, true},
+		} {
+			trace.reset()
+			before := query.calls
+			response, err := e.Search(ctx, Request{Query: "quartz", Limit: 50, Filters: tc.filters}, fakeCaller())
+			require.NoError(t, err)
+			require.Equal(t, tc.empty, len(response.Hits) == 0)
+			require.Len(t, trace.snapshot(), tc.count)
+			require.Equal(t, before+1, query.calls)
+			trace.assertSearchScan(t, e.project(fakeCaller()))
+		}
 	}
 	search()
 	_, err := e.db.Exec(ctx, `INSERT INTO control(id,version_id,ordinal,citation,citation_norm,kind,title,status)

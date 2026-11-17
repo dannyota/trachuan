@@ -52,11 +52,13 @@ func (e *Engine) search(ctx context.Context, request Request, caller Caller, obs
 		if embedErr != nil {
 			return response, embedErr
 		}
-		chunks, collectErr := e.collect(ctx, tx, ids, p, vector.Values, r.Query, controls)
+		allIDs := e.selectVersions(Request{})
+		allControls := e.controlsFor(allIDs)
+		chunks, collectErr := e.collect(ctx, tx, allIDs, p, vector.Values, r.Query, allControls)
 		if collectErr != nil {
 			return response, collectErr
 		}
-		rankedHits = e.rank(chunks, controls)
+		rankedHits = e.rankFiltered(chunks, allControls, controls)
 		if observation == nil {
 			e.abstention(&response, rankedHits)
 		} else if len(rankedHits) > 0 {

@@ -5,7 +5,7 @@ import "danny.vn/trachuan/internal/retrieval"
 func bootstrapRetrievalRecipe() map[string]any {
 	law := retrieval.Recipe3()
 	return map[string]any{
-		"version": 1, "status": "placeholder", "dense_depth": law.DenseDepth, "lexical_depth": law.LexicalDepth,
+		"version": 2, "status": "placeholder", "dense_depth": law.DenseDepth, "lexical_depth": law.LexicalDepth,
 		"rrf": law.RRF,
 		"abstention": map[string]any{
 			"statistic": "first-hit-best-permitted-cosine", "threshold": 0.5297041131124263,
