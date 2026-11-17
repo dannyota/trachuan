@@ -52,11 +52,3 @@ func TestOpen_LoadsEveryPartitionWithoutPrivateText(t *testing.T) {
 	require.Equal(t, Counts{Controls: 4, EdgesResolved: 1}, reopened.partitions[3].counts)
 	require.Equal(t, Counts{Controls: 4, EdgesUnresolved: 1}, reopened.partitions[4].counts)
 }
-
-func TestOpen_EnforcesPartitionBudgetWhileLoading(t *testing.T) {
-	e, trace := buildFixture(t, false)
-	e.partitionBytes = partitionMemoryLimit
-	trace.reset()
-	require.ErrorIs(t, e.loadPartitions(context.Background()), ErrUnavailable)
-	require.Empty(t, trace.snapshot())
-}

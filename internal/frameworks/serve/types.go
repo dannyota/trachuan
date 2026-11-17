@@ -83,6 +83,7 @@ type Engine struct {
 	versions       []version
 	partitions     map[int64]*partition
 	partitionBytes int64
+	partitionLimit int64
 }
 
 type version struct {

@@ -142,7 +142,7 @@ func serve(ctx context.Context, cfg config, pool *pgxpool.Pool, queries *store.Q
 	limiter := limits.New(clock)
 	reportService := &reports.Service{Store: reports.PGXRunner{DB: pool}, Resolver: reports.ReleaseResolver{Resolver: resolver}, Clock: clock}
 	tools := mcpapi.Config{OmitCompactRelated: cfg.omitCompactRelated, Reports: reportService, Resolver: mcpResolver{resolver}, Limiter: limiter, Logger: slog.New(slog.NewJSONHandler(stderr, nil)), Caches: caches}
-	closeFrameworks := configureFrameworks(cfg, pool, queries, client, &tools)
+	closeFrameworks := configureFrameworks(ctx, cfg, pool, queries, client, &tools)
 	defer closeFrameworks()
 	bounded := credentialStore{Queries: queries, db: pool}
 	sessions := &websession.Manager{Store: bounded, PublicURL: cfg.publicURL, Clock: clock}

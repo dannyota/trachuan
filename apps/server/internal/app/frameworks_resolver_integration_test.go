@@ -30,6 +30,7 @@ func TestFrameworkResolver_SeparatePointerAndReleaseFailures(t *testing.T) {
 	r := &release.Resolver{Auth: frameworksStore{auth}, Clock: time.Now, URLTemplate: template, Frameworks: &frameworkserve.Options{CursorKey: []byte(strings.Repeat("s", 32))}, EmbedderFor: func(string, embedding.Recipe) retrieval.Embedder { return frameworkFixtureQuery{} }}
 	resolver := frameworksResolver{r}
 	t.Cleanup(r.Close)
+	watchFrameworkResolver(t, r)
 	_, err = resolver.ResolveFrameworks(ctx, "")
 	require.ErrorIs(t, err, frameworkserve.ErrUnavailable)
 	_, err = resolver.ResolveFrameworks(ctx, "20990101")
@@ -38,6 +39,7 @@ func TestFrameworkResolver_SeparatePointerAndReleaseFailures(t *testing.T) {
 	require.NoError(t, err)
 	_, err = auth.Exec(ctx, `INSERT INTO frameworks_release VALUES('vn',$1,now(),'invented')`, "frameworks_"+engine.Release())
 	require.NoError(t, err)
+	awaitFrameworkResolver(t, resolver, engine.Release())
 	lease, err := resolver.ResolveFrameworks(ctx, "")
 	require.NoError(t, err)
 	status, err := lease.Engine.CorpusStatus(ctx, frameworkserve.StatusRequest{}, frameworkserve.Caller{})
@@ -56,4 +58,24 @@ func TestFrameworkResolver_SeparatePointerAndReleaseFailures(t *testing.T) {
 	auth.Close()
 	_, err = resolver.ResolveFrameworks(context.Background(), "")
 	require.ErrorIs(t, err, frameworkserve.ErrUnavailable)
+}
+
+func watchFrameworkResolver(t *testing.T, r *release.Resolver) {
+	t.Helper()
+	ctx, cancel := context.WithCancel(t.Context())
+	done := make(chan struct{})
+	go func() { defer close(done); r.WatchFrameworks(ctx) }()
+	t.Cleanup(func() { cancel(); <-done; r.Close() })
+}
+
+func awaitFrameworkResolver(t *testing.T, resolver frameworksResolver, rel string) {
+	t.Helper()
+	require.Eventually(t, func() bool {
+		lease, err := resolver.ResolveFrameworks(t.Context(), rel)
+		if err != nil {
+			return false
+		}
+		lease.Done()
+		return true
+	}, 3*time.Second, time.Millisecond)
 }

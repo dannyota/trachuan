@@ -52,19 +52,15 @@ func (r *Resolver) Resolve(ctx context.Context, country, rel string) (*Lease, er
 	if country != "vn" {
 		return nil, ErrExpired
 	}
-	name, _, _, err := r.resolveName(ctx, country, rel)
+	name, currentRelease, generation, err := r.resolveName(ctx, country, rel)
 	if err != nil {
 		return nil, err
 	}
+	if r.Frameworks != nil {
+		return r.readyFrameworks(name, currentRelease, generation)
+	}
 	for {
-		result := r.flight.DoChan(name, func() (any, error) {
-			workCtx, cancel, err := r.workContext()
-			if err != nil {
-				return nil, err
-			}
-			defer cancel()
-			return r.load(workCtx, country, name)
-		})
+		result := r.startOpen(country, name)
 		var opened singleflight.Result
 		select {
 		case <-ctx.Done():
@@ -92,11 +88,21 @@ func (r *Resolver) Resolve(ctx context.Context, country, rel string) (*Lease, er
 			r.mu.Unlock()
 			continue
 		}
-		entry.leases++
-		lease := &Lease{Engine: entry.engine, Frameworks: entry.frameworks, Release: currentRelease, Generation: generation, done: func() { r.finish(entry) }}
+		lease := r.leaseLocked(entry, currentRelease, generation)
 		r.mu.Unlock()
 		return lease, nil
 	}
+}
+
+func (r *Resolver) startOpen(country, name string) <-chan singleflight.Result {
+	return r.flight.DoChan(name, func() (any, error) {
+		work, cancel, err := r.workContext()
+		if err != nil {
+			return nil, err
+		}
+		defer cancel()
+		return r.load(work, country, name)
+	})
 }
 
 func (r *Resolver) workContext() (context.Context, context.CancelFunc, error) {

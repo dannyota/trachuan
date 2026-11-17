@@ -18,6 +18,7 @@ func TestResolver_FrameworksLeaseLifecycle(t *testing.T) {
 		return &serve.Engine{}, func() { closed.Add(1) }, nil
 	}}
 	t.Cleanup(r.Close)
+	<-r.refreshFrameworks(t.Context())
 	first, err := r.Resolve(t.Context(), "vn", "")
 	if err != nil {
 		t.Fatal(err)
@@ -31,6 +32,7 @@ func TestResolver_FrameworksLeaseLifecycle(t *testing.T) {
 	}
 	second.Done()
 	s.active = "frameworks_20990104"
+	<-r.refreshFrameworks(t.Context())
 	third, err := r.Resolve(t.Context(), "vn", "")
 	if err != nil {
 		t.Fatal(err)

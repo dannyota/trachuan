@@ -14,12 +14,16 @@ import (
 )
 
 func Open(ctx context.Context, db *pgxpool.Pool, embedder retrieval.Embedder, options Options) (*Engine, error) {
-	if db == nil || embedder == nil || len(options.CursorKey) < 32 {
+	return openWithPartitionLimit(ctx, db, embedder, options, partitionMemoryLimit)
+}
+
+func openWithPartitionLimit(ctx context.Context, db *pgxpool.Pool, embedder retrieval.Embedder, options Options, limit int64) (*Engine, error) {
+	if db == nil || embedder == nil || len(options.CursorKey) < 32 || limit <= 0 || limit > partitionMemoryLimit {
 		return nil, ErrUnavailable
 	}
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
-	e := &Engine{db: db, embedder: embedder, key: append([]byte(nil), options.CursorKey...)}
+	e := &Engine{db: db, embedder: embedder, key: append([]byte(nil), options.CursorKey...), partitionLimit: limit}
 	var kind string
 	var schemaVersion int
 	var sealed bool
