@@ -93,3 +93,41 @@ func TestScoreOptions_RequiresEveryArtifact(t *testing.T) {
 		t.Fatalf("exit %d: %s", code, &errout)
 	}
 }
+
+func TestArticleOptions_MaxTokens(t *testing.T) {
+	base := []string{"--families", "families.json", "--select", "labels:taxonomy-labels.json", "--recipe", "claude-sonnet-5-5", "--out", "output", "--budget", "pilot", "--budget-usd", "15"}
+	o, err := parseArticleOptions("vn", "20990101", base)
+	if err != nil || o.MaxTokens != 0 {
+		t.Fatalf("default options %+v error %v", o, err)
+	}
+	o, err = parseArticleOptions("vn", "20990101", append(append([]string{}, base...), "--max-tokens", "1452"))
+	if err != nil || o.MaxTokens != 1452 {
+		t.Fatalf("max tokens options %+v error %v", o, err)
+	}
+	for _, v := range []string{"0", "32001", "-5", "x", ""} {
+		if _, err = parseArticleOptions("vn", "20990101", append(append([]string{}, base...), "--max-tokens", v)); err == nil {
+			t.Fatalf("accepted --max-tokens %q", v)
+		}
+	}
+}
+
+func TestArticleRecipe_MaxTokensChangesHashAndReserve(t *testing.T) {
+	doc, err := classify.NewRecipe("claude-sonnet-5-5", strings.Repeat("a", 64))
+	if err != nil {
+		t.Fatal(err)
+	}
+	standard, err := classify.NewArticleRecipe(doc, strings.Repeat("b", 64))
+	if err != nil {
+		t.Fatal(err)
+	}
+	capped, err := withArticleMaxTokens(standard, 1452)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if capped.Hash() == standard.Hash() || capped.Article.MaxTokens != 1452 || standard.Article.MaxTokens != 8192 {
+		t.Fatalf("standard %+v capped %+v", standard.Article, capped.Article)
+	}
+	if same, err := withArticleMaxTokens(standard, 0); err != nil || same.Hash() != standard.Hash() {
+		t.Fatalf("zero must keep the default: %v", err)
+	}
+}
