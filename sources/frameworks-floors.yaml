@@ -1,0 +1,10 @@
+baselines:
+- release: '20261116'
+  report_sha256: 9abe9181a14cd6ad5695a34275d58c0ee179e3347ee5aabe3dc8684c56b2df98
+  reviewer: coordinator
+  date: '2026-11-17'
+  cohort_change: ''
+  floors:
+    open: {recall_at_8: 63, mrr_at_8: 49}
+    filtered: {recall_at_8: 75, mrr_at_8: 58}
+    abstention_balanced_accuracy: 88
