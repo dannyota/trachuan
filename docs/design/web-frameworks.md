@@ -13,12 +13,12 @@ field to another.
 
 ## Pages
 
-| Path                                      | Content                                                                  | API                                                     |
-| ----------------------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------- |
-| `/frameworks`                             | every framework version of the release                                   | `GET /api/v1/frameworks`                                |
-| `/frameworks/search`                      | search of the frameworks corpus                                          | `POST /api/v1/frameworks/search`                        |
-| `/frameworks/{code}/{version}`            | one version: head, outline, public gaps                                  | `GET .../versions/{handle}`, `GET .../gaps?versions=`   |
-| `/frameworks/{code}/{version}/{citation}` | one control: head, text when readable, mappings, outline of its children | `GET .../controls/{handle}`, `GET .../mappings?handle=` |
+| Path                                             | Content                                                   | API                                                   |
+| ------------------------------------------------ | --------------------------------------------------------- | ----------------------------------------------------- |
+| `/frameworks`                                    | every framework version of the release                    | `GET /api/v1/frameworks`                              |
+| `/frameworks/search`                             | search of the frameworks corpus                           | `POST /api/v1/frameworks/search`                      |
+| `/frameworks/{code}/{version}`                   | one version: head, outline, public gaps                   | `GET .../versions/{handle}`, `GET .../gaps?versions=` |
+| `/frameworks/{code}/{version}/control?citation=` | one control: head, text when readable, mappings, children | `GET .../controls/{handle}`                           |
 
 Search has its own path, so a law search link never becomes a frameworks search.
 The query form on `/vn/search` and on `/frameworks/search` carries a two-option
@@ -28,36 +28,48 @@ query text never enters a URL on either.
 
 **URLs and handles.** `{code}` and `{version}` must match the handle grammar of
 [results](frameworks-results.md#handles-and-identity), else the page is the
-fixed 404. `{citation}` is the citation, encoded once with `encodeURIComponent`;
-the router decodes it once. The page builds the canonical handle from code,
-version and citation with the handle encoding rule, passes it to the API as one
-segment with `encodeURIComponent`, and never decodes and re-encodes a handle the
-API returned: links to controls are built from the returned `code`, `version`
-and `citation` fields. `invalid_handle` and `not_found` render the fixed 404.
+fixed 404. A citation travels in the `citation` query parameter, never as a path
+segment: a citation may be `.` or `..`, which URL parsing removes from a path,
+while a query value survives as written. `URLSearchParams` decodes it once; the
+page checks it against the citation grammar, builds the canonical handle from
+code, version and citation with the handle encoding rule, and passes the handle
+to the API as one segment with `encodeURIComponent`. Links are built the same
+way from returned data: code and version from the part of a returned `handle`
+before `#` (the grammar limits that part to `fw:<code>:<version>`, so it needs
+no decoding), and the citation from the returned `citation` field. A returned
+handle is never decoded or re-encoded. A mapping end without a `handle`
+(unresolved) is shown and not linked. `invalid_handle` and `not_found` render
+the fixed 404. A signed-out visit keeps the `citation` parameter in `next`, as
+the reader keeps `release` ([web API](web-api.md#google-login)).
 
 ## What each page shows
 
-**`/frameworks`.** One row per version from `versions`, in the release's order:
-name and publisher, version, the access label, the account line, and the counts
-the response carries (`controls`, `edges_resolved`, `edges_unresolved`), plus
-lineage as links to the other versions. Readable versions add their `sources`
-(text source and completeness). Totals come from `totals`. A link opens
-`/frameworks/search`.
+**`/frameworks`.** One row per entry of `versions`, in the order of its keys:
+code and version (from the version handle), the access label, the account line,
+and the counts the response carries (`controls`, `edges_resolved`,
+`edges_unresolved`), plus lineage as links to the other versions. Readable
+versions add their `sources` (text source and completeness). Totals come from
+`totals`. The status carries no name or publisher, so the list shows none; the
+version page does. A link opens `/frameworks/search`.
 
-**Version page.** The version head (name, publisher, version, access label,
-account line, lineage), then the outline as citations and our titles, each a
-link to its control. For a version the account cannot read, one neutral sentence
-says where access comes from: "Quyền đọc được cấp theo địa chỉ email đã xác minh
-của tài khoản." / "Access is granted to the verified email of an account." It
-offers no contact, request or purchase flow. Public gaps of the version follow,
-with their fixed kind labels and details as served.
+**Version page.** The version head from the read's `version` object (name,
+publisher, code, version, access label, account line, lineage), then the outline
+as citations and our titles, each a link to its control. For a version the
+account cannot read, one neutral sentence says where access comes from: "Quyền
+đọc được cấp theo địa chỉ email đã xác minh của tài khoản." / "Access is granted
+to the verified email of an account." It offers no contact, request or purchase
+flow. Public gaps of the version follow, with their fixed kind labels and
+details as served; "Xem thêm" / "Show more" continues with `next_cursor` and the
+same `versions` selector, and `cursor_expired` reloads the gaps from the start
+with one fixed line.
 
 **Control page.** The head first: citation, kind, path (ancestor citations as
-links), our title, status, lineage, access label. Then:
+links), our title, status, lineage, access label. Then the units in the order
+they arrive:
 
 - **Readable control**: the publisher's title (`title_original`), each body
-  paragraph, notes and tables, in the order the units arrive, as the words of
-  the source: Noto Serif, verbatim, never shortened or reworded.
+  paragraph, notes and tables, as the words of the source: Noto Serif, verbatim,
+  never shortened or reworded.
 - **Reduced control** (`text_withheld: true`): one fixed line, "Nội dung của nhà
   xuất bản cần được cấp quyền mới đọc được. Tài khoản này chưa được cấp quyền."
   / "The publisher's text needs access to read. This account does not have it."
@@ -65,37 +77,40 @@ links), our title, status, lineage, access label. Then:
   hint of the text.
 - **Title**: our title when present; when absent, the citation and kind alone.
   Never `title_original` in its place, never text from another field.
+- **Mappings**: the read's mapping units are the one source of edges on this
+  page; the mappings route is not called. One row per edge with the relation
+  label and both ends (citation, version, our title; an unresolved end shows its
+  business key and no title), the source name, and `evidence` only when the unit
+  carries it, verbatim. An edge without evidence shows nothing in its place, so
+  withheld and absent evidence render the same.
+- **Outline**: the child controls as citations and our titles.
 
-Then the mappings: one row per edge with the relation label and both ends
-(citation, version, our title; an unresolved end shows its business key and no
-title), the source name, and `evidence` only when the edge carries it, with "(đã
-rút gọn)" / "(shortened)" when `evidence_truncated`. An edge without evidence
-shows nothing in its place. Then the outline of child controls.
-
-A read with `complete: false` shows "Xem tiếp" / "Show more", which calls the
-same route with `next`; `invalid_next` or `release_expired` reloads the page
-from the start with one fixed line.
+"Xem tiếp" / "Show more" appears only when the item carries `next`, and calls
+the same route with it. `invalid_next` or `release_expired` reloads the page
+from the start with one fixed line. Any other item `error` (`unit_too_large`,
+`invalid_item`) shows the error's fixed message where the units stop, and no
+button.
 
 **Search.** The query form, a framework filter (codes from the status), and the
 hits. A hit shows citation, kind, our title (or citation and kind alone), the
-version name, the access label when reduced, the mapping count, and a snippet
-only when the hit carries one, verbatim in Noto Serif. A lookup hit is labelled
-"Tra theo số hiệu" / "Citation match" instead of a score. Abstention shows the
-response's fixed message. "Xem thêm" / "Show more" continues with `next_cursor`;
-`cursor_expired` restarts the search with one fixed line. A hit links to its
-control page.
+version name from the response's `frameworks` entry for the hit's version, the
+access label when reduced, the mapping count, and a snippet only when the hit
+carries one, verbatim in Noto Serif. A lookup hit is labelled "Tra theo số hiệu"
+/ "Citation match" instead of a score. Abstention shows the response's fixed
+message. "Xem thêm" / "Show more" continues with `next_cursor`; `cursor_expired`
+restarts the search with one fixed line. A hit links to its control page.
 
 ## Words
 
-| Field or state       | vi                                                                     | en                                                               |
-| -------------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| `access: free`       | Đọc tự do                                                              | Free to read                                                     |
-| `access: licensed`   | Cần cấp quyền                                                          | Access required                                                  |
-| `readable: true`     | Bạn đọc được                                                           | You can read this                                                |
-| `readable: false`    | Bạn chưa được cấp quyền                                                | You do not have access                                           |
-| `access_unavailable` | Tạm thời chưa kiểm tra được quyền đọc; trang đang hiện phần đọc tự do. | Access could not be checked right now; this shows the free part. |
-| counts               | {n} mục kiểm soát · {n} liên kết · {n} liên kết chưa xác định đích     | {n} controls · {n} mappings · {n} unresolved mappings            |
-| relation             | tương đương, là một phần của, bao gồm, giao với, liên quan             | equivalent to, subset of, superset of, intersects, related to    |
+| Field or state       | vi                                                                                  | en                                                               |
+| -------------------- | ----------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| `access: free`       | Đọc tự do                                                                           | Free to read                                                     |
+| `access: licensed`   | Cần cấp quyền                                                                       | Access required                                                  |
+| `readable: true`     | Bạn đọc được                                                                        | You can read this                                                |
+| `readable: false`    | Bạn chưa được cấp quyền                                                             | You do not have access                                           |
+| `access_unavailable` | Tạm thời chưa kiểm tra được quyền đọc; trang đang hiện phần đọc tự do.              | Access could not be checked right now; this shows the free part. |
+| counts               | {n} mục kiểm soát · {n} liên kết đã xác định đích · {n} liên kết chưa xác định đích | {n} controls · {n} resolved mappings · {n} unresolved mappings   |
+| relation             | tương đương, là một phần của, bao gồm, giao với, liên quan                          | equivalent to, subset of, superset of, intersects, related to    |
 
 Names, publishers, versions, citations, our titles, kinds without a label,
 statuses without a label, source names and gap details are data: shown as
@@ -115,8 +130,9 @@ than the response states. `access_unavailable` is a notice, not an error page.
   the page.
 - With `SERVER_FRAMEWORKS` off every route answers 404, so every page renders
   the fixed 404. The law search shows the corpus control only after
-  `GET /api/v1/frameworks` has answered 200 for this tab; the header has no
-  frameworks link until the flag is on in production.
+  `GET /api/v1/frameworks` has answered 200 in this tab; the probe runs once per
+  tab, and any failure hides the control and shows no error on the law search.
+  The header has no frameworks link until the flag is on in production.
 
 ## Tests
 
@@ -126,7 +142,8 @@ reduced, a mixed and a full access set; that a reduced control's HTML and
 payload hold no `title_original`, body, note, table or snippet field and show
 the fixed line; that a missing title shows citation and kind only; that an edge
 without evidence renders identically whether evidence was withheld or absent;
-handles with spaces, parentheses, `/` and `#` in the citation; the 302,
+citations with spaces, parentheses, `/`, `#`, `%`, and the citations `.` and
+`..`, round-tripped through links and the `next` of a signed-out visit; the 302,
 `no-store` and `noindex` headers; the fixed 404 when the API answers 404;
 `access_unavailable`; continuations and their expiry errors; and the responsive
 sweep at 320, 390 and 1366 in both themes.
