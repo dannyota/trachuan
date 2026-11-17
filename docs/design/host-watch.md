@@ -11,40 +11,59 @@ fire even when the host is down and cannot send anything itself.
 `trachuan-watch.timer` starts `trachuan-watch.service` every minute
 (`OnCalendar=minutely`, `Persistent=false`). The service runs
 `/usr/local/libexec/trachuan/watch.py` with `python3 -I` as system user
-`trachuan-watch`, with the hardening of `trachuan-metrics.service`,
-`TimeoutStartSec=45` and `MemoryMax=128M`. It uses the Python standard library
-plus the OCI SDK the metrics publisher already uses. `install.sh` creates the
-user, grants it read ACLs on the result files the metrics user reads, and owns
-`/srv/trachuan/state/watch/` for it. The signed host bundle ships it like the
+`trachuan-watch`. It keeps the hardening of `trachuan-metrics.service`
+(`ProtectSystem=strict`, `ProtectHome`, `PrivateTmp`, `NoNewPrivileges`) and
+adds `ReadWritePaths=/srv/trachuan/state/watch /var/log/trachuan/watch`,
+`LimitCORE=0`, `MemorySwapMax=0`, `TimeoutStartSec=45` and `MemoryMax=128M`. The
+host has a swap file and `systemd-coredump`, so the last two keep the token out
+of swap and core dumps. It uses the Python standard library plus the OCI SDK the
+metrics publisher already uses.
+
+`install.sh` creates the user; grants it read ACLs on the result files the
+metrics user reads; creates `/srv/trachuan/state/watch/` and
+`/var/log/trachuan/watch/` owned by it, mode 0750; and adds `watch.log` to the
+logrotate file with `copytruncate`. The signed host bundle ships it like the
 other units ([pull deployment](pull-deployment.md)).
 
 ## Signals
 
-Each run observes every signal once. A signal fires when its condition has held
-for the time in the table, measured from the first run that saw it, and clears
-on the first run that does not see it.
+Each run observes every signal once. A failure signal fires when its condition
+has held for the window in the table and clears only on a confirmed good state.
+An indeterminate observation (a missing result, `running`, `skipped`, a check
+skipped during a deploy) keeps the current state and does not advance or reset
+the window.
 
-| Signal                   | Source                                                      | Fires after | Mark |
-| ------------------------ | ----------------------------------------------------------- | ----------- | ---- |
-| site not ready           | `GET http://127.0.0.1:8080/readyz` not 200 within 5 s       | 3 min       | 🔴   |
-| deploy stopped           | deploy `result.json` status `stopped`                       | at once     | 🔴   |
-| backup failed            | a backup job result `failed` or `unknown`                   | at once     | 🔴   |
-| backup old               | newest `full` or `diff` success over 26 h                   | at once     | 🔴   |
-| deploy failing           | deploy status `failed` or `rolled_back`                     | 15 min      | 🟠   |
-| corpus release failing   | `release.json` status `failed`                              | 30 min      | 🟠   |
-| corpus release waiting   | `release.json` `waiting` for over 24 h                      | at once     | 🟠   |
-| secrets failing or stale | `secrets.json` `failed`, or last success over 2 h           | 30 min      | 🟠   |
-| filesystem               | `/` or `/srv/trachuan/data` used over 70%                   | 15 min      | 🟠   |
-| memory                   | `MemAvailable` under 10% of `MemTotal` in `/proc/meminfo`   | 15 min      | 🟠   |
-| release live             | deploy status `ok` with a release or sequence not seen yet  | at once     | 🟢   |
-| corpus live              | `release.json` status `ok` with a corpus `rel` not seen yet | at once     | 🟢   |
+| Signal                   | Fires when                                                                                                  | Clears when                                               | Mark |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- | ---- |
+| site not ready           | `GET http://127.0.0.1:8080/readyz` is not 200 within 5 s on 3 consecutive observations spanning 3 min       | one 200                                                   | 🔴   |
+| deploy stopped           | deploy `result.json` status `stopped`                                                                       | status `ok` or `current`                                  | 🔴   |
+| backup failed            | a backup job result (`full`, `diff`, `verify`, `health`, `restore-check`) is `failed` or `unknown`          | that job is `ok` with `last_success_at` after the failure | 🔴   |
+| backup old               | the newest `full` or `diff` `last_success_at` is over 26 h old                                              | a newer success brings it under 26 h                      | 🔴   |
+| deploy failing           | 3 consecutive completed updater attempts (distinct `started_at`) are `failed` or `rolled_back`, over 15 min | status `ok` or `current`                                  | 🟠   |
+| corpus release failing   | consecutive completed attempts in `release.json` are `failed` for 30 min                                    | status `ok`, `current` or `verified`                      | 🟠   |
+| corpus release waiting   | `release.json` `waiting_since` is over 24 h old                                                             | status `ok`, `current` or `verified`                      | 🟠   |
+| secrets failing or stale | `secrets.json` attempts are `failed` for 30 min, or `last_success_at` is over 2 h old                       | `ok` or `current` with `last_success_at` under 2 h old    | 🟠   |
+| filesystem               | `/` or `/srv/trachuan/data` used over 70% on every observation for 15 min                                   | used under 65%                                            | 🟠   |
+| memory                   | `MemAvailable` under 10% of `MemTotal` in `/proc/meminfo` on every observation for 15 min                   | `MemAvailable` over 15%                                   | 🟠   |
 
-A missing result file is "no data", not a failure; the OCI absence alarms cover
-it. An unreadable or malformed result fails the run (see
-[watch health](#watch-health)) instead of guessing. The thresholds match the OCI
-alarms, except deploy failing, which tells the owner after 15 minutes (three
-failed runs) instead of 30; one or two failed runs, such as a sigstore timeout
-during a deploy, never alert.
+The readiness check is skipped while
+`systemctl is-active trachuan-deploy.service` reports `active` or `activating`:
+an activation stops and restarts services, and the updater unit's own
+`TimeoutStartSec=60min` bounds that window. The OCI uptime alarms still cover an
+outage during a deploy. Deploy failing tells the owner after three failed
+attempts instead of the OCI alarm's 30 minutes; one or two failed attempts, such
+as a sigstore timeout during a deploy, never alert.
+
+Two notices are events, not failures:
+
+- **Release live.** The active release is `release` and `sequence` from the
+  deploy result when its status is `ok` or `current`; `current` keeps them after
+  the activating run.
+- **Corpus live.** The active corpus is `rel` and `sequence` from `release.json`
+  when its status is `ok`, `current` or `verified`.
+
+An unreadable or malformed result file fails the run (see
+[watch health](#watch-health)) instead of guessing.
 
 ## Messages
 
@@ -60,10 +79,12 @@ English, Telegram HTML parse mode, link previews off. Four lines:
 
 Marks: 🔴 down or failed, 🟠 degraded or still failing, 🟢 recovered or live. A
 recovery names how long the signal fired. Every variable part is escaped (`&`,
-`<`, `>`). A job's `message` field is at most 160 characters after collapsing
-whitespace; the jobs write status there, never secret values or account data,
-and the watch adds nothing else from the host. Messages never carry account
-email, user questions or secret values.
+`<`, `>`), and a message stays under Telegram's 4,096 characters
+([sendMessage](https://core.telegram.org/bots/api#sendmessage)). A job's
+`message` field is at most 160 characters after collapsing whitespace; the jobs
+write status there, never secret values or account data, and the watch adds
+nothing else from the host. Messages never carry account email, user questions
+or secret values.
 
 Times come from the host clock (UTC, kept by chrony). The send time and the
 start times are shown in ICT through the tz database zone `Asia/Ho_Chi_Minh`,
@@ -71,54 +92,74 @@ then in UTC.
 
 ## State and delivery
 
-`/srv/trachuan/state/watch/state.json` keeps, per signal, the observed state,
-when it started, the state last told to the owner and when; plus the last
-release, sequence and corpus `rel` seen, and send times for the rate limit. It
-is written atomically. A missing or invalid state file starts fresh: the first
-run records the current releases without a 🟢 message, and a signal already
-firing is told after its own window.
+`/srv/trachuan/state/watch/state.json` keeps, per failure signal, the observed
+state, its window start and the attempts counted, the state last told and when;
+for each event, the identity observed and the identity last told; send times for
+the rate limit; and a Telegram retry deadline. It is replaced atomically. A
+missing or invalid state file starts fresh: the first run sets each told event
+identity to the observed one without a message, and a failure already present is
+told after its own window.
 
-A message is due when a signal's state differs from the state last told: fired
-gives the 🔴 or 🟠 message, cleared after a fired message gives the 🟢 recovery,
-and a signal that fired and cleared before it was told sends nothing. A signal
-still firing 24 hours after it was last told is due again as a 🟠 reminder. Due
-messages go out 🔴 first, then 🟠, then 🟢, at most 20 in any rolling hour; what
-does not fit stays due for the next run. The state records a message as told
-only after Telegram accepts it.
+Due messages:
 
-Delivery is one `sendMessage` call per message to the Bot API with a 10-second
-timeout and no retry inside the run; the next run retries. A 429, a non-2xx
-status or `"ok": false` stops sending for this run.
+- A failure signal whose state differs from the state last told: fired gives the
+  🔴 or 🟠 message; cleared after a told failure gives the 🟢 recovery; fired
+  and cleared before it was told gives nothing.
+- A failure still firing 24 hours after it was last told: a 🟠 reminder.
+- An event whose observed identity differs from the told one: one 🟢 message
+  naming the newest identity. An identity is never marked told until its message
+  is accepted, so a blocked delivery carries it forward.
+
+Due messages go out 🔴 first, then 🟠, then 🟢, at most 20 in any rolling hour;
+the rest stay due. Delivery is one `sendMessage` call per message with a
+10-second timeout and no retry inside the run. A 429 stores
+`parameters.retry_after` as the retry deadline when it is an integer from 1 to
+3,600 seconds, otherwise 60 seconds, and no run sends before it
+([ResponseParameters](https://core.telegram.org/bots/api#responseparameters)). A
+non-2xx status or `"ok": false` stops sending for the run.
+
+The state file is rewritten after each accepted message, so a crash loses at
+most one record. `sendMessage` has no idempotency key, so a message Telegram
+accepted just before a timeout or crash is sent again by the next run: delivery
+is at least once, and one duplicate is accepted.
 
 ## Secrets
 
 The bot token and chat id are the Vault secrets `telegram_bot_token` and
 `telegram_chat_id`. The watch reads them with the instance principal only in a
 run that has a message due, keeps them in memory for that run, and never writes
-them to disk, a log, the state file or an exception message. The host
-dynamic-group policy in `deploy/oci/iam.tf` names both secrets; the updater
-never reads them. The token appears only in the Bot API request path, so every
-error from Vault or Telegram is logged as a fixed text plus the HTTP status and
-Telegram `error_code`, never the URL, response body or exception text. The chat
-id is configuration, kept out of the repository because the repository may
-become public.
+them to disk, a log, the state file, process arguments or an exception message.
+The host dynamic-group policy in `deploy/oci/iam.tf` names both secrets; the
+updater never reads them. The token appears only in the Bot API request path, so
+every error from Vault or Telegram is logged as a fixed text plus the HTTP
+status and Telegram `error_code`, never the URL, response body or exception
+text. The chat id is configuration, kept out of the repository because the
+repository may become public.
 
 ## Watch health
 
 Each run writes `/srv/trachuan/state/watch/result.json` (`ok` or `failed`,
 `last_success_at`, a fixed message) and one line per due message to
-`/var/log/trachuan/watch.log`, which OCI Logging collects with the other host
-job logs. A run succeeds when it read every signal and either had nothing due or
-delivered at least one message without an error. The metrics publisher reports
-`watch_last_success_age_seconds`, and the OCI alarm "Telegram watch silent"
-(`WARNING`, over 1 hour for 10 minutes, daily repeat) emails the owner when
-Telegram alerts have stopped working.
+`/var/log/trachuan/watch/watch.log`, which OCI Logging collects with the other
+host job logs. A run succeeds when it read every signal and either had nothing
+due, was waiting for a retry deadline, or delivered at least one message without
+an error.
+
+The metrics publisher reports `watch_stale`: 0 when the result has a
+`last_success_at` under 1 hour old, and 1 when it is older, absent, never
+succeeded or malformed. A bad watch result never fails the other metrics. The
+OCI alarm "Telegram watch silent" (`WARNING`, `watch_stale` 1 for 10 minutes,
+daily repeat) emails the owner when Telegram alerts have stopped working,
+including a watch that never succeeded after install.
 
 ## Tests
 
 Unit tests run in CI with fixtures and fake Vault and Telegram clients: every
-signal's fire, hold, clear and reminder transitions; the persistence windows;
-the first run; the rate limit and its ordering; HTML escaping and the 160
-character cap; ICT and UTC rendering across midnight; a 429 and an `ok: false`
-reply; Vault failure; and that no log line, state file, result or raised error
-contains the token or chat id.
+signal's fire, hold, indeterminate, clear and reminder transitions; attempt
+counting by `started_at`; the readiness skip during a deploy; both events across
+`ok` then `current` and across a blocked delivery; the first run; the rate limit
+and its ordering; the retry deadline; a crash before and after the state write;
+HTML escaping, the 160 character cap and the 4,096 character limit; ICT and UTC
+rendering across midnight; Vault failure; `watch_stale` for each result case;
+and that no log line, state file, result or raised error contains the token or
+chat id.

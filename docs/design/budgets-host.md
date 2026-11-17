@@ -173,19 +173,19 @@ timer retries every 5 minutes, and a transient registry or sigstore error during
 a deploy clears within a run or two. OCI also emails when an alarm returns to
 OK.
 
-| Alarm                                                     | Condition                                                    | Persists | Severity |
-| --------------------------------------------------------- | ------------------------------------------------------------ | -------- | -------- |
-| website unavailable, public status unavailable            | every vantage point of the 60 s HTTPS check fails            | 5 min    | CRITICAL |
-| instance not accessible, infrastructure status            | OCI health status nonzero                                    | 5 min    | CRITICAL |
-| heartbeat absent, agent metrics absent                    | host metrics timer or compute agent silent                   | 10 min   | CRITICAL |
-| data volume not mounted                                   | `/srv/trachuan/data` not mounted                             | 5 min    | CRITICAL |
-| deploy not confirmed                                      | no successful updater run for over an hour                   | 10 min   | CRITICAL |
-| backup job failed, backup result absent, backup over 26 h | a backup failed, never succeeded, or the newest is over 26 h | 5–15 min | CRITICAL |
-| deploy failed, corpus release failed, secrets failed      | every run failed                                             | 30 min   | WARNING  |
-| deploy result absent                                      | no updater result recorded                                   | 30 min   | WARNING  |
-| corpus release waiting, secrets stale                     | a signed release waits over a day; secrets older than 2 h    | 10 min   | WARNING  |
-| memory above 90%, filesystem above 70%                    | host memory; boot or data filesystem used                    | 15 min   | WARNING  |
-| Telegram watch silent                                     | no successful [watch](host-watch.md) run for over an hour    | 10 min   | WARNING  |
+| Alarm                                                     | Condition                                                            | Persists | Severity |
+| --------------------------------------------------------- | -------------------------------------------------------------------- | -------- | -------- |
+| website unavailable, public status unavailable            | every vantage point of the 60 s HTTPS check fails                    | 5 min    | CRITICAL |
+| instance not accessible, infrastructure status            | OCI health status nonzero                                            | 5 min    | CRITICAL |
+| heartbeat absent, agent metrics absent                    | host metrics timer or compute agent silent                           | 10 min   | CRITICAL |
+| data volume not mounted                                   | `/srv/trachuan/data` not mounted                                     | 5 min    | CRITICAL |
+| deploy not confirmed                                      | no successful updater run for over an hour                           | 10 min   | CRITICAL |
+| backup job failed, backup result absent, backup over 26 h | a backup failed, never succeeded, or the newest is over 26 h         | 5–15 min | CRITICAL |
+| deploy failed, corpus release failed, secrets failed      | every run failed                                                     | 30 min   | WARNING  |
+| deploy result absent                                      | no updater result recorded                                           | 30 min   | WARNING  |
+| corpus release waiting, secrets stale                     | a signed release waits over a day; secrets older than 2 h            | 10 min   | WARNING  |
+| memory above 90%, filesystem above 70%                    | host memory; boot or data filesystem used                            | 15 min   | WARNING  |
+| Telegram watch silent                                     | no successful [watch](host-watch.md) run within an hour, or none yet | 10 min   | WARNING  |
 
 The alarms live in `deploy/oci/alarms.tf`, `alarms-jobs.tf` and `uptime.tf`.
 
