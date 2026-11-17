@@ -21,12 +21,18 @@ if [[ -z "$out_dir" ]]; then
 fi
 mkdir -p "$out_dir"
 out_dir="$(cd "$out_dir" && pwd -P)"
-for name in queries.txt samples.jsonl requests.jsonl report.json gates.json server.log web.log google.log edge.log sampler.log; do
+for name in queries.txt samples.jsonl requests.jsonl report.json gates.json server.log web.log google.log edge.log sampler.log web-node-options.txt; do
   if [[ -e "$out_dir/$name" || -L "$out_dir/$name" ]]; then
     echo 'capacity: output already exists' >&2
     exit 1
   fi
 done
+node_options="$(sed -n 's/^NODE_OPTIONS=//p' deploy/host/web.env)"
+if [[ -z "$node_options" || "$node_options" == *$'\n'* ]]; then
+  echo 'capacity: invalid host Node options' >&2
+  exit 1
+fi
+printf '%s\n' "$node_options" > "$out_dir/web-node-options.txt"
 export CORPUS_TEST_ADMIN_URL="${CORPUS_TEST_ADMIN_URL:-postgres://trachuan@127.0.0.1:25433/postgres}"
 server_port="${E2E_SERVER_PORT:-28080}"
 google_port="${E2E_GOOGLE_PORT:-28081}"
@@ -211,7 +217,7 @@ wait_for "http://127.0.0.1:$server_port/healthz" "$server_pid" "$server_port" ||
 if [[ "${E2E_WEB_PREBUILT:-0}" != 1 ]]; then (cd apps/web && npm run build); fi
 ln -s "$(command -v node)" "$tmp_dir/capacity-web"
 require_available_port "$web_port"
-(cd apps/web && exec env NITRO_HOST=127.0.0.1 NITRO_PORT="$web_port" NUXT_API_ORIGIN="http://127.0.0.1:$server_port" NUXT_TRUSTED_PROXIES=127.0.0.1/32 "$tmp_dir/capacity-web" .output/server/index.mjs) >"$out_dir/web.log" 2>&1 &
+(cd apps/web && exec env NODE_OPTIONS="$node_options" NITRO_HOST=127.0.0.1 NITRO_PORT="$web_port" NUXT_API_ORIGIN="http://127.0.0.1:$server_port" NUXT_TRUSTED_PROXIES=127.0.0.1/32 "$tmp_dir/capacity-web" .output/server/index.mjs) >"$out_dir/web.log" 2>&1 &
 web_pid=$!
 wait_for "http://127.0.0.1:$web_port/" "$web_pid" "$web_port" || { echo 'capacity: web failed' >&2; exit 1; }
 require_available_port "$edge_port"
@@ -219,7 +225,7 @@ require_available_port "$edge_port"
 edge_pid=$!
 wait_for "http://127.0.0.1:$edge_port/" "$edge_pid" "$edge_port" || { echo 'capacity: edge failed' >&2; exit 1; }
 "$tmp_dir/loadcheck" queries --corpus-db "$query_url" --suite apps/corpus/internal/evaluation/testdata/vn --out "$out_dir/queries.txt"
-"$tmp_dir/loadcheck" sample --pg "$auth_url" --proc 'server=(^|/)capacity-server$' --proc 'web=(^|/)capacity-web$' --proc 'postgres=(^|/)postgres$' --out "$out_dir/samples.jsonl" >"$out_dir/sampler.log" 2>&1 &
+"$tmp_dir/loadcheck" sample --pg "$auth_url" --proc 'server=(^|/)capacity-server$' --proc 'web=(^|/)capacity-web$' --proc 'postgres=(^|/)postgres(:|$)' --out "$out_dir/samples.jsonl" >"$out_dir/sampler.log" 2>&1 &
 sampler_pid=$!
 sampler_ready=0
 for ((attempt = 0; attempt < 50; attempt++)); do

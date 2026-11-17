@@ -5,12 +5,13 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"io"
 	"os"
 	"os/exec"
 	"regexp"
-	"sort"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type process struct {
@@ -19,30 +20,42 @@ type process struct {
 	RSS   uint64  `json:"rss_bytes"`
 	CPU   float64 `json:"cpu_percent"`
 }
-type tracker struct{ previous map[string]string }
+type tracker struct{ previous map[string]process }
 
-func newTracker() *tracker { return &tracker{previous: map[string]string{}} }
+func newTracker() *tracker { return &tracker{previous: map[string]process{}} }
 func (t *tracker) observe(name string, processes []process) bool {
-	ids := make([]string, 0, len(processes))
+	var oldest process
+	var oldestTime time.Time
 	for _, p := range processes {
-		ids = append(ids, strconv.Itoa(p.PID)+":"+p.Start)
+		started, err := time.Parse(time.ANSIC, p.Start)
+		if err != nil {
+			continue
+		}
+		if oldestTime.IsZero() || started.Before(oldestTime) || (started.Equal(oldestTime) && p.PID < oldest.PID) {
+			oldest, oldestTime = p, started
+		}
 	}
-	sort.Strings(ids)
-	current := strings.Join(ids, ",")
+	if oldestTime.IsZero() {
+		return false
+	}
 	previous, exists := t.previous[name]
-	if current != "" {
-		t.previous[name] = current
-	}
-	return exists && current != "" && previous != current
+	t.previous[name] = oldest
+	return exists && (previous.PID != oldest.PID || previous.Start != oldest.Start)
 }
 func readProcesses(ctx context.Context, expressions map[string]*regexp.Regexp) (map[string][]process, float64, error) {
-	output, err := exec.CommandContext(ctx, "ps", "-axo", "pid=,lstart=,rss=,pcpu=,comm=").Output()
+	output, err := exec.CommandContext(ctx, "env", "LC_ALL=C", "ps", "-axo", "pid=,lstart=,rss=,pcpu=,comm=").Output()
 	if err != nil {
 		return nil, 0, errors.New("process sampling failed")
 	}
+	return parseProcesses(bytes.NewReader(output), expressions, os.Getpid())
+}
+func parseProcesses(reader io.Reader, expressions map[string]*regexp.Regexp, selfPID int) (map[string][]process, float64, error) {
 	result := map[string][]process{}
+	for name := range expressions {
+		result[name] = nil
+	}
 	total := 0.0
-	scanner := bufio.NewScanner(bytes.NewReader(output))
+	scanner := bufio.NewScanner(reader)
 	for scanner.Scan() {
 		fields := strings.Fields(scanner.Text())
 		if len(fields) < 9 {
@@ -55,12 +68,26 @@ func readProcesses(ctx context.Context, expressions map[string]*regexp.Regexp) (
 			continue
 		}
 		total += cpu
-		if pid == os.Getpid() {
-			result["loadcheck"] = append(result["loadcheck"], process{PID: pid, Start: strings.Join(fields[1:6], " "), RSS: rss * 1024, CPU: cpu})
+		start := strings.Join(fields[1:6], " ")
+		matched := pid == selfPID
+		for _, regex := range expressions {
+			if regex.MatchString(fields[8]) {
+				matched = true
+				break
+			}
+		}
+		if matched {
+			if _, err := time.Parse(time.ANSIC, start); err != nil {
+				return nil, 0, errors.New("invalid process start time")
+			}
+		}
+		item := process{PID: pid, Start: start, RSS: rss * 1024, CPU: cpu}
+		if pid == selfPID {
+			result["loadcheck"] = append(result["loadcheck"], item)
 		}
 		for name, regex := range expressions {
 			if regex.MatchString(fields[8]) {
-				result[name] = append(result[name], process{PID: pid, Start: strings.Join(fields[1:6], " "), RSS: rss * 1024, CPU: cpu})
+				result[name] = append(result[name], item)
 			}
 		}
 	}

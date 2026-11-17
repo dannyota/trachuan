@@ -25,6 +25,7 @@ type sample struct {
 	Processes   map[string]processSample `json:"processes"`
 }
 type processSample struct {
+	Count     int       `json:"count"`
 	RSS       uint64    `json:"rss_bytes"`
 	CPU       float64   `json:"cpu_percent"`
 	Restart   bool      `json:"restart"`
@@ -87,12 +88,7 @@ func Sample(ctx context.Context, args []string) error {
 		}
 		s.Processes = map[string]processSample{}
 		for name, items := range ps {
-			v := processSample{Processes: items, Restart: history.observe(name, items)}
-			for _, p := range items {
-				v.RSS += p.RSS
-				v.CPU += p.CPU
-			}
-			s.Processes[name] = v
+			s.Processes[name] = summarizeProcesses(history, name, items)
 		}
 		if runtime.GOOS == "linux" {
 			t, idle, e := procCPU()
@@ -147,4 +143,13 @@ func procCPU() (uint64, uint64, error) {
 		}
 	}
 	return total, idle, nil
+}
+
+func summarizeProcesses(history *tracker, name string, items []process) processSample {
+	v := processSample{Count: len(items), Processes: items, Restart: history.observe(name, items)}
+	for _, p := range items {
+		v.RSS += p.RSS
+		v.CPU += p.CPU
+	}
+	return v
 }

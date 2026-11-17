@@ -2,6 +2,9 @@ package main
 
 import (
 	"os"
+	"os/exec"
+	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -77,5 +80,55 @@ func TestCapacityScript_RequiresRenderEvidence(t *testing.T) {
 	}
 	if !strings.Contains(string(data), "capacity: summary render log missing") {
 		t.Fatal("missing render evidence guard")
+	}
+}
+
+func TestCapacityScript_RecordsHostNodeOptions(t *testing.T) {
+	outputDir := t.TempDir()
+	command := exec.Command("bash", "../../../../scripts/capacity-local.sh", "--out", outputDir)
+	command.Env = []string{"PATH=/usr/bin:/bin", "E2E_SERVER_PORT=0"}
+	if err := command.Run(); err == nil {
+		t.Fatal("invalid port accepted")
+	}
+	recorded, err := os.ReadFile(filepath.Join(outputDir, "web-node-options.txt"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected, err := exec.Command("sed", "-n", "s/^NODE_OPTIONS=//p", "../../../../deploy/host/web.env").Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(recorded) != string(expected) || len(recorded) == 0 {
+		t.Fatal("recorded Node options differ from host")
+	}
+	data, err := os.ReadFile("../../../../scripts/capacity-local.sh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), `NODE_OPTIONS="$node_options"`) {
+		t.Fatal("web does not receive host Node options")
+	}
+}
+
+func TestCapacityScript_PostgresPatternMatchesWorkers(t *testing.T) {
+	data, err := os.ReadFile("../../../../scripts/capacity-local.sh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	match := regexp.MustCompile(`--proc 'postgres=([^']+)'`).FindStringSubmatch(string(data))
+	if len(match) != 2 {
+		t.Fatal("postgres pattern missing")
+	}
+	pattern, err := regexp.Compile(match[1])
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"/usr/bin/postgres", "postgres:", "/usr/bin/postgres:"} {
+		if !pattern.MatchString(name) {
+			t.Errorf("does not match %q", name)
+		}
+	}
+	if pattern.MatchString("postgresql-client") {
+		t.Fatal("matches unrelated process")
 	}
 }
