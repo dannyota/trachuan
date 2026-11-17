@@ -78,7 +78,7 @@ func newHarness(t *testing.T) *harness {
 	if err := os.MkdirAll(filepath.Join(h.root, "sources"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	for _, name := range []string{"vn-corrections.yaml", "vn-ocr-waivers.yaml"} {
+	for _, name := range []string{"vn-corrections.yaml", "vn-ocr-waivers.yaml", "vn-heading-exclusions.yaml", "vn-heading-reviews.yaml"} {
 		if err := os.WriteFile(filepath.Join(h.root, "sources", name), nil, 0o600); err != nil {
 			t.Fatal(err)
 		}
