@@ -27,7 +27,9 @@ WHERE s.token_hash = $1;
 
 -- name: TouchSession :execrows
 UPDATE web_session SET last_seen_at = statement_timestamp(),
-    expires_at = LEAST(statement_timestamp() + interval '30 days', created_at + interval '90 days')
+    expires_at = CASE WHEN EXISTS (
+        SELECT 1 FROM account a WHERE a.id = web_session.account_id AND starts_with(a.google_sub, 'loadcheck:')
+    ) THEN expires_at ELSE LEAST(statement_timestamp() + interval '30 days', created_at + interval '90 days') END
 WHERE token_hash = $1 AND revoked_at IS NULL AND expires_at > statement_timestamp()
     AND created_at + interval '90 days' > statement_timestamp()
     AND EXISTS (SELECT 1 FROM account a WHERE a.id = web_session.account_id

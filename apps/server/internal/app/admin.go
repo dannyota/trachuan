@@ -21,6 +21,9 @@ type adminStore interface {
 }
 
 func runAdmin(ctx context.Context, args []string, queries adminStore, out io.Writer, caches ...accountEvicter) error {
+	if len(args) > 0 && args[0] == "session" {
+		return runAdminSession(ctx, args[1:], queries)
+	}
 	if len(args) > 0 && args[0] == "frameworks" {
 		return runFrameworks(ctx, args[1:], queries, out)
 	}

@@ -82,11 +82,12 @@ func (m *Manager) CreateSession(ctx context.Context, w http.ResponseWriter, r *h
 	if account.BlockedAt != nil || account.DeleteRequestedAt != nil {
 		return errUnauthenticated
 	}
-	token, secret, err := m.newValues()
+	token, params, err := m.NewSessionParams(m.now().Add(idleLifetime))
 	if err != nil {
 		return fmt.Errorf("create session values: %w", errUnavailable)
 	}
-	row, err := m.Store.CreateSession(ctx, store.CreateSessionParams{TokenHash: hashToken(token), AccountID: accountID, CsrfSecret: secret, AuthEpoch: account.AuthEpoch, ExpiresAt: m.now().Add(idleLifetime), ReplacedHashes: hashes})
+	params.AccountID, params.AuthEpoch, params.ReplacedHashes = accountID, account.AuthEpoch, hashes
+	row, err := m.Store.CreateSession(ctx, params)
 	for _, digest := range hashes {
 		rev := revocation{hash: digest}
 		m.fence(rev)
@@ -107,6 +108,14 @@ func (m *Manager) CreateSession(ctx context.Context, w http.ResponseWriter, r *h
 	}
 	setSessionCookie(w, token, expires, m.now())
 	return nil
+}
+
+func (m *Manager) NewSessionParams(expires time.Time) (string, store.CreateSessionParams, error) {
+	token, secret, err := m.newValues()
+	if err != nil {
+		return "", store.CreateSessionParams{}, fmt.Errorf("create session values: %w", errUnavailable)
+	}
+	return token, store.CreateSessionParams{TokenHash: hashToken(token), CsrfSecret: secret, ExpiresAt: expires}, nil
 }
 
 func (m *Manager) newValues() (string, string, error) {
