@@ -28,7 +28,7 @@ type recoveryFixture struct {
 	admin *pgx.Conn
 }
 
-func recoverySetup(t *testing.T) recoveryFixture {
+func recoverySetup(t *testing.T, prepare ...func(*loadFixture)) recoveryFixture {
 	t.Helper()
 	ctx := context.Background()
 	f := fixture(t)
@@ -40,6 +40,9 @@ func recoverySetup(t *testing.T) recoveryFixture {
 	}
 	t.Cleanup(pool.Close)
 	f.run.Snapshot.SourceList = []byte(`{"country":"vn","status_codes":{}}`)
+	for _, setup := range prepare {
+		setup(f)
+	}
 	inv := f.inventory(t)
 	suite := evaluation.Suite{Legacy: []evaluation.Case{{ID: "one", Question: "ngân hàng", ExpectAbstain: true}, {ID: "two", Question: "abc", ExpectAbstain: true}, {ID: "three", Question: "def", ExpectAbstain: true}, {ID: "four", Question: "ghi", ExpectAbstain: true}}, Rejections: []string{"two", "three", "four"}, Hashes: evaluation.FixtureHashes{Legacy: "legacy"}, Map: evaluation.IdentityMap{Version: 1, LegacySHA256: "legacy", IdentityInventoryHash: inv.IdentityHash()}}
 	pinTestSuite(t, &suite)

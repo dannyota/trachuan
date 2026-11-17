@@ -9,7 +9,7 @@ import (
 
 func databaseMetrics(ctx context.Context, conn *pgx.Conn, loaded Counts) (map[string]int64, int64, int64, error) {
 	tables := []string{"document", "document_summary", "source_file", "provision", "provision_validity", "chunk", "lexical_df", "relation", "coverage_gap", "taxonomy_node", "taxonomy_assignment", "release"}
-	counts := make(map[string]int64, len(tables)+3)
+	counts := make(map[string]int64, len(tables)+4)
 	for _, table := range tables {
 		var n int64
 		if err := conn.QueryRow(ctx, "SELECT count(*) FROM "+pgx.Identifier{table}.Sanitize()).Scan(&n); err != nil {
@@ -17,7 +17,12 @@ func databaseMetrics(ctx context.Context, conn *pgx.Conn, loaded Counts) (map[st
 		}
 		counts[table] = n
 	}
-	if counts["document_summary"] != loaded.Documents || counts["document"] != loaded.Documents || counts["source_file"] != loaded.SourceFiles || counts["provision"] != loaded.Provisions || counts["chunk"] != loaded.Chunks || counts["relation"] != loaded.Relations || counts["coverage_gap"] != loaded.Gaps || loaded.Chunks != loaded.DenseVectors || counts["taxonomy_node"] != loaded.Taxonomy.Nodes || counts["taxonomy_assignment"] != loaded.Taxonomy.Seeds+loaded.Taxonomy.Overrides+loaded.Taxonomy.Excluded || counts["release"] != 1 {
+	var omitted int64
+	if err := conn.QueryRow(ctx, `SELECT count(*) FROM document d LEFT JOIN document_summary s ON s.document_key=d.key WHERE s.document_key IS NULL AND `+summaryOmissionSQL).Scan(&omitted); err != nil {
+		return nil, 0, 0, fmt.Errorf("count omitted summaries: %w", err)
+	}
+	counts["document_summary_omitted"] = omitted
+	if counts["document_summary"]+omitted != loaded.Documents || counts["document"] != loaded.Documents || counts["source_file"] != loaded.SourceFiles || counts["provision"] != loaded.Provisions || counts["chunk"] != loaded.Chunks || counts["relation"] != loaded.Relations || counts["coverage_gap"] != loaded.Gaps || loaded.Chunks != loaded.DenseVectors || counts["taxonomy_node"] != loaded.Taxonomy.Nodes || counts["taxonomy_assignment"] != loaded.Taxonomy.Seeds+loaded.Taxonomy.Overrides+loaded.Taxonomy.Excluded || counts["release"] != 1 {
 		return nil, 0, 0, fmt.Errorf("corpus row counts differ")
 	}
 	var sparseOutOfLine int64

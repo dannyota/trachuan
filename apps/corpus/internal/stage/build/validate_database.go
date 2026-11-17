@@ -54,7 +54,7 @@ func validateDatabase(ctx context.Context, cfg Config, name string, record Build
 	if !matches {
 		return fmt.Errorf("invalid provision locator: %w", errInvalidDatabase)
 	}
-	if err = db.QueryRow(ctx, `SELECT NOT EXISTS (SELECT 1 FROM document d LEFT JOIN document_summary s ON s.document_key=d.key WHERE s.document_key IS NULL OR s.class<>d.class OR (s.status_class,s.status_basis,s.is_current,s.validity_conflict,s.eff_from,s.eff_to) IS DISTINCT FROM (d.status_class,d.status_basis,d.is_current,d.validity_conflict,d.eff_from,d.eff_to))`).Scan(&matches); err != nil {
+	if err = db.QueryRow(ctx, `SELECT NOT EXISTS (SELECT 1 FROM document d LEFT JOIN document_summary s ON s.document_key=d.key WHERE (s.document_key IS NULL AND NOT `+summaryOmissionSQL+`) OR (s.document_key IS NOT NULL AND (s.class<>d.class OR (s.status_class,s.status_basis,s.is_current,s.validity_conflict,s.eff_from,s.eff_to) IS DISTINCT FROM (d.status_class,d.status_basis,d.is_current,d.validity_conflict,d.eff_from,d.eff_to))))`).Scan(&matches); err != nil {
 		return fmt.Errorf("validate summary status inputs: %w", err)
 	}
 	if !matches {
