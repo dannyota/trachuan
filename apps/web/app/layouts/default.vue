@@ -43,7 +43,7 @@ usePublicSeo(() => ({ path: route.path, title: head.value.title, description: (r
   <div class="site-layout">
     <a class="skip-link" href="#main">{{ shellMessages(language).skip }}</a>
     <SiteHeader />
-    <main id="main" tabindex="-1" class="site-main"><slot /></main>
+    <main id="main" tabindex="-1" class="site-main" :class="{ 'reader-main': /^\/frameworks\/[^/]+\/[^/]+(?:\/control)?$/.test(route.path) }"><slot /></main>
     <SiteFooter />
   </div>
 </template>

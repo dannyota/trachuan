@@ -1,5 +1,6 @@
 import { appendResponseHeader, sendRedirect, setResponseStatus } from 'h3'
 import { createApi } from '../api/client'
+import { frameworkNext } from '../utils/framework-handles'
 import { loginUrl } from '../api/next'
 import { useSessionStore } from '../stores/session'
 
@@ -24,7 +25,7 @@ export function useApi(options: { userAction?: boolean, localUnavailable?: boole
     } : undefined,
     onSetCookie: event ? cookie => appendResponseHeader(event, 'set-cookie', cookie) : undefined,
     onUnauthorized: options.userAction || protectedRoute ? async () => {
-      const destination = loginUrl(route.fullPath)
+      const destination = loginUrl(route.path.startsWith('/frameworks') ? frameworkNext(route.fullPath) : route.fullPath)
       if (import.meta.client) window.location.assign(destination)
       else if (event) await sendRedirect(event, destination)
     } : undefined,

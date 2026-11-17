@@ -29,6 +29,8 @@ export default defineNuxtConfig({
     '/sitemap.xml': { cache: sitemapCache },
     '/sitemap-pages.xml': { cache: sitemapCache },
     '/sitemap-documents.xml': { cache: sitemapCache },
+    '/frameworks': { cache: false, headers: accountHeaders },
+    '/frameworks/**': { cache: false, headers: accountHeaders },
     '/login': { headers: accountHeaders },
     '/login/factor': { headers: accountHeaders },
     '/signup': { headers: accountHeaders },

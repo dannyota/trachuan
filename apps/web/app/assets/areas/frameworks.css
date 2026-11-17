@@ -1,0 +1,22 @@
+.fw-identity { background: var(--color-mist); }
+.fw-identity h1 { font-family: var(--font-sans); font-weight: 700; overflow-wrap: anywhere; }
+.fw-identity p { margin: 0; }
+.fw-meta { color: var(--color-muted); font-size: 14px; line-height: 1.6; overflow-wrap: anywhere; }
+.fw-access { display: inline-flex; align-items: center; gap: 5px; color: var(--color-muted); }
+.fw-access svg, .fw-withheld svg { flex: none; }
+.fw-content { overflow-wrap: anywhere; }
+.fw-content > .fw-source { margin-block: 18px; line-height: 1.8; }
+.fw-withheld { display: flex; align-items: flex-start; gap: 10px; margin: 24px 0; padding: 16px; color: var(--color-ink); }
+.fw-withheld svg { margin-top: 3px; }
+.fw-ancestor + .fw-ancestor { margin-left: 12px; }
+.fw-row { padding: 16px 0; border-bottom: 1px solid var(--color-line); overflow-wrap: anywhere; }
+.fw-row p { margin: 4px 0 0; }
+.fw-title { font-weight: 700; }
+.fw-section-title { margin: 28px 0 8px; font-size: 20px; }
+.fw-page { gap: 0; }
+.fw-list-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; }
+.fw-list-header h1 { margin: 0; }
+.fw-summary { margin: 20px 0 8px; }
+.fw-form { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; margin: 24px 0; }
+.fw-form label { min-width: 0; }
+.fw-form input, .fw-form select { max-width: 100%; }

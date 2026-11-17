@@ -12,7 +12,7 @@ const page = { release: '20261111_1', next_cursor: 'cursor-a', abstain: false, h
 const expired = () => json({ error: { code: 'release_expired', message: 'expired' } }, 409)
 function setup(fetch: typeof globalThis.fetch, route: { query: Record<string, string> } = { query: {} }) {
   const session = { account: { id: 1, email: 'test@example.invalid', created_at: '2026-01-01T00:00:00Z' }, csrfToken: 'token-a', status: 'signed-in' as const }
-  const api = createApi({ origin: 'http://localhost', session, fetch: input => (input as Request).url.endsWith('/api/v1/status') ? Promise.resolve(json({ doc_types: [{ value: 'Type fixture', count: 2 }], issuers: [{ value: 'Issuer fixture', count: 1 }] })) : fetch(input) })
+  const api = createApi({ origin: 'http://localhost', session, fetch: input => (input as Request).url.endsWith('/api/v1/frameworks') ? Promise.resolve(json({ error: { code: 'not_found' } }, 404)) : (input as Request).url.endsWith('/api/v1/status') ? Promise.resolve(json({ doc_types: [{ value: 'Type fixture', count: 2 }], issuers: [{ value: 'Issuer fixture', count: 1 }] })) : fetch(input) })
   vi.stubGlobal('definePageMeta', () => {})
   vi.stubGlobal('useState', () => ref('en'))
   vi.stubGlobal('computed', computed)
