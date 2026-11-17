@@ -524,7 +524,7 @@ func TestConsent_FontFaces(t *testing.T) {
 	path, cookie := pendingConsent(t, d)
 	body := consentResponse(d, consentRequest(path, "GET", cookie, true, nil)).Body.String()
 	for _, want := range []string{
-		`@font-face{font-family:"Be Vietnam Pro";src:url("/fonts/be-vietnam-pro-var.woff2") format("woff2");font-weight:100 900;font-display:swap}`,
+		`@font-face{font-family:"Plus Jakarta Sans";src:url("/fonts/plus-jakarta-sans-var.woff2") format("woff2");font-weight:400 800;font-display:swap}`,
 		`@font-face{font-family:"Roboto Mono";src:url("/fonts/roboto-mono-var.woff2") format("woff2");font-weight:100 900;font-display:swap}`,
 	} {
 		if !strings.Contains(body, want) {

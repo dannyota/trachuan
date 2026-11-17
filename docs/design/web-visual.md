@@ -88,10 +88,9 @@ takes the text colour of its ground.
 Fonts are self-hosted woff2 with `font-display: swap`; the CSP keeps
 `font-src 'self'`. Plus Jakarta Sans ships with its OFL licence and covers
 U+1EA0 to U+1EF9, Đ đ Ơ ơ Ư ư Ă ă, U+20AB and the Vietnamese combining marks.
-Its stack is `'Plus Jakarta Sans', BeVietnam, sans-serif` until screenshots of
-12 to 14 px Vietnamese on the search filters, result card head and reader rail
-are accepted in both themes; then Be Vietnam Pro is removed. Only the Plus
-Jakarta Sans face goes above 700; Noto Serif and Roboto Mono declare 400 to 700.
+Its stack is `'Plus Jakarta Sans', sans-serif` on every page, the static error
+pages and the OAuth consent page; there is no second sans. Only the Plus Jakarta
+Sans face goes above 700; Noto Serif and Roboto Mono declare 400 to 700.
 
 ## Home
 

@@ -6,10 +6,6 @@ from fontTools.varLib.instancer import AxisTriple, instantiateVariableFont
 
 
 FINGERPRINTS = {
-    "be-vietnam-pro-var": (
-        "fc482bed0759a243e2ca6c4b3250764035f0bfc33fdc13be4743fac6449d9be6",
-        "c4015fa5381f1ac39c6587caa7aaf3aac0689fee50f3dd5587df170a119bd59c",
-    ),
     "noto-serif-var": (
         "6c3653a038615ce69fe0ce45db29d06466582dd02301f41058344fdaeb5d1d1b",
         "1bf7e8832036214e8410081c4cac7700f532e8fb3e8b2ae0db33485e391fb476",

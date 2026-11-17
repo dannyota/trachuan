@@ -3,7 +3,6 @@ import { expect, it } from 'vitest'
 import { authMessages } from '../i18n/auth'
 
 const families = {
-  BeVietnam: 'be-vietnam-pro-var',
   NotoSerif: 'noto-serif-var',
   RobotoMono: 'roboto-mono-var',
   GoogleSansButton: 'google-sans-button',
@@ -13,7 +12,7 @@ const families = {
 it('declares one same-origin face per family with the available weights', () => {
   for (const [path, names] of [
     ['app/assets/fonts.css', Object.keys(families)],
-    ['public/static-page.css', ['PlusJakartaSans', 'BeVietnam', 'NotoSerif']],
+    ['public/static-page.css', ['PlusJakartaSans', 'NotoSerif']],
   ] as const) {
     const css = readFileSync(path, 'utf8')
     const faces = [...css.matchAll(/@font-face\s*\{([^}]*)\}/g)].map(match => match[1]!)

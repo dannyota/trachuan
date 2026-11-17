@@ -1,5 +1,5 @@
 @theme static {
-  --font-sans: PlusJakartaSans, BeVietnam, sans-serif; --font-serif: NotoSerif, serif; --font-mono: RobotoMono, monospace;
+  --font-sans: PlusJakartaSans, sans-serif; --font-serif: NotoSerif, serif; --font-mono: RobotoMono, monospace;
   --color-page: #FFFFFF; --color-card: #FFFFFF; --color-mist: #F1F4FA; --color-sky: #E3EAF8;
   --color-ink: #0F1524; --color-muted: #4D556A; --color-line: #E1E5EE; --color-control: #6F7A9B;
   --color-primary-fill: #1E3A8A; --color-primary-hover: #172F70; --color-primary: #1E3A8A;
