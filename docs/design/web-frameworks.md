@@ -39,10 +39,12 @@ before `#` (the grammar limits that part to `fw:<code>:<version>`, so it needs
 no decoding), and the citation from the returned `citation` field. A returned
 handle is never decoded or re-encoded. A mapping end without a `handle`
 (unresolved) is shown and not linked. `invalid_handle` and `not_found` render
-the fixed 404. A signed-out visit keeps the `citation` parameter in `next`, as
-the reader keeps `release`, only when the resulting `next` passes the `next`
-rules of [web API](web-api.md#google-login) unchanged; a citation they refuse (a
-backslash, for one) gives the version page as `next` instead, never `/`.
+the fixed 404. For a signed-out visit, `next` is the first of these that passes
+the `next` rules of [web API](web-api.md#google-login) unchanged: the control
+page with its `citation` (as the reader keeps `release`), its version page,
+`/frameworks`. A citation or a code the rules refuse (a backslash, a path over
+the length limit) therefore falls back one step at a time, and `/frameworks`
+always passes.
 
 ## What each page shows
 
@@ -145,7 +147,8 @@ payload hold no `title_original`, body, note, table or snippet field and show
 the fixed line; that a missing title shows citation and kind only; that an edge
 without evidence renders identically whether evidence was withheld or absent;
 citations with spaces, parentheses, `/`, `#`, `%`, `\`, and the citations `.`
-and `..`, round-tripped through links and the `next` of a signed-out visit; the
+and `..`, round-tripped through links and the `next` of a signed-out visit, with
+each step of the `next` fallback (a backslash citation, an over-long code); the
 302, `no-store` and `noindex` headers; the fixed 404 when the API answers 404;
 `access_unavailable`; continuations and their expiry errors; and the responsive
 sweep at 320, 390 and 1366 in both themes.
