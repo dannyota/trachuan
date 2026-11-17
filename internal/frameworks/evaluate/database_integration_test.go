@@ -76,6 +76,7 @@ func TestInvariant_MixedCallersUseFrameworkCodes(t *testing.T) {
 	before, err := observe(ctx, base, req, freeCaller())
 	require.NoError(t, err)
 	for _, o := range before {
-		require.False(t, bytes.Contains(o.Value, []byte("Invented publisher title")))
+		require.False(t, bytes.Contains(o.Value, []byte("Invented publisher title fw-alpha")))
+		require.False(t, bytes.Contains(o.Value, []byte("Invented publisher title fw-gamma")))
 	}
 }

@@ -73,11 +73,11 @@ func evaluationFixture(t *testing.T) (*pgx.Conn, EvaluationRequest) {
 	require.NoError(t, err)
 	for i, v := range []struct{ code, version, access string }{{"fw-alpha", "1", "licensed"}, {"fw-alpha", "2", "licensed"}, {"fw-beta", "1", "free"}, {"fw-gamma", "1", "licensed"}} {
 		id := i + 1
-		_, err = conn.Exec(ctx, `INSERT INTO framework_version(id,framework_code,version,language,access,licence_kind,released,ordinal) VALUES($1,$2,$3,'en',$4,'invented','2099-01-01',$1)`, id, v.code, v.version, v.access)
+		_, err = conn.Exec(ctx, `INSERT INTO framework_version(id,framework_code,version,language,access,licence_kind,released,ordinal) VALUES($1,$2,$3,'en',$4,'invented','2099-01-01',$5)`, id, v.code, v.version, v.access, id)
 		require.NoError(t, err)
 		_, err = conn.Exec(ctx, `INSERT INTO control(id,version_id,ordinal,citation,citation_norm,kind,title,status) VALUES($1,$1,1,'A','A','control','Our title','active')`, id)
 		require.NoError(t, err)
-		_, err = conn.Exec(ctx, `INSERT INTO control_text(control_id,title_original,body,notes,tables) VALUES($1,'Invented publisher title','Invented body','{}','{}')`, id)
+		_, err = conn.Exec(ctx, `INSERT INTO control_text(control_id,title_original,body,notes,tables) VALUES($1,'Invented publisher title '||$2::text,'Invented body','{}','{}')`, id, v.code)
 		require.NoError(t, err)
 		_, err = conn.Exec(ctx, `INSERT INTO body_chunk(id,version_id,control_id,ordinal,content,input_sha256,token_count,embedding) VALUES($1,$1,$1,0,'needle',$2,1,$3::vector)`, id, hash, string(encoded))
 		require.NoError(t, err)
