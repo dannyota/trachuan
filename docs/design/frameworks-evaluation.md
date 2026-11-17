@@ -129,10 +129,11 @@ biases its abstention result; the report says so.
 ## Release invariant check
 
 The synthetic suite runs in CI. At `evaluate` the release is checked too, once
-per comparison caller: free-only, and, when the release has at least two
-licensed versions, one caller per licensed version that can read that version
-only (otherwise mixed coverage is `not_applicable`). For each caller a copy of
-the restored database is mutated in every version that caller cannot read:
+per comparison caller: free-only, and, when the release has licensed versions of
+at least two frameworks, one caller per such framework that can read that
+framework's licensed versions only, since entitlements are per framework code
+(otherwise mixed coverage is `not_applicable`). For each caller a copy of the
+restored database is mutated in every version that caller cannot read:
 
 | Private class    | Mutation                                                            |
 | ---------------- | ------------------------------------------------------------------- |
