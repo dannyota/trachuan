@@ -118,8 +118,11 @@ chunks, embeddings, indexes and dumps. It may exist only in:
 Third-party sync services are not a place:
 [build](frameworks-build.md#runs-resume-and-failure) refuses a source or work
 directory inside a synced folder. It is never in this repository's Git, CI logs
-or artifacts, public buckets, log lines, metrics, quality gap details, error
-reports, evaluation reports, cache keys or PR text. Two value classes are
+or artifacts, public buckets, log lines, operational metrics, quality gap
+details, error reports, cache keys or PR text. The frameworks evaluation report
+and the licensed cohort's floors ([evaluation](frameworks-evaluation.md)) are
+licensed derivatives and stay in the places above: the work directory, the
+source directory and the private releases bucket. Two value classes are
 published although they are computed from licensed files. The integrity fields
 of the signed manifest (`dump` SHA-256 and size, `report` SHA-256,
 `build_artifact_sha256`) are needed to verify and to refuse replays, and reveal

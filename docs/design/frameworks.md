@@ -133,10 +133,14 @@ reviewed before serving work starts. Its fixed rules:
 
 ## Evaluation
 
+The cases, hits, cohorts, measured recipe, release invariant check and floors
+are in [frameworks evaluation](frameworks-evaluation.md).
+
 compliary's 205 golden cases are the starting cohort, re-adjudicated against
-this release. Floors are set from the first measured run and recorded here;
-compliary measured recall@8 of 86.3% without a framework filter and 93.2% with
-one. Evaluation runs with full access. A second suite runs the
+this release. Floors are adopted after the first measured run: the public
+cohort's here, the licensed cohort's in a private file; compliary measured
+recall@8 of 86.3% without a framework filter and 93.2% with one. Evaluation
+measures a free-only and a full-access caller. A second suite runs the
 [invariant](frameworks-access.md#the-invariant) with reduced and mixed access
 sets; a release that fails it is not signed. Serving parameters are set from
 free versions' text and the public fields of licensed versions only; full-access
@@ -147,8 +151,10 @@ active signed law release as a placeholder frameworks retrieval recipe, naming
 that release, with status `placeholder` in the release row; they depend on no
 framework text, but the law threshold was calibrated on law cohorts and means
 nothing for controls. `corpus_status` and `quality_gaps` report the status,
-`quality_pass` is false while it stands, and the first measured evaluation
-replaces the placeholder before any frameworks release is signed.
+`quality_pass` is false while it stands. A build whose snapshot holds a reviewed
+case file calibrates the threshold before it writes the release row and the
+dump, and the evaluation of that dump gates it, so the placeholder is never
+signed.
 
 ## Release and deployment
 

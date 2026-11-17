@@ -25,9 +25,10 @@ material and stays in the places of
 consume: the registry, the source files of the versions in the release (through
 the hash-checking reader), our paraphrased titles, machine OCR evidence for
 scans, the reviewed waivers (`FRAMEWORKS_SOURCE_DIR/trachuan/ocr-waivers.yaml`,
-its hash in the snapshot manifest), the golden cases and the gap kind table. No
-later step, and no resume, reads anything outside the snapshot, so a registry or
-title change during a run cannot reach it.
+its hash in the snapshot manifest), the golden cases with their review file and
+the private floors ([evaluation](frameworks-evaluation.md)) and the gap kind
+table. No later step, and no resume, reads anything outside the snapshot, so a
+registry or title change during a run cannot reach it.
 
 The versions in a release are the registry versions that name a parser. Our
 titles are one CSV, `FRAMEWORKS_SOURCE_DIR/trachuan/titles.csv` (`code`,
@@ -110,8 +111,10 @@ otherwise.
 **Build** recreates `frameworks_<rel>`, applies schema version 1, loads
 versions, seals them ([data model](frameworks.md#data-model)), loads controls,
 text, chunks, vectors, lexical postings (the law [lexical](lexical.md)
-encoding), edges, evidence and gaps, creates indexes, writes the `release` row,
-then dumps the database. The dump in the build directory is the release.
+encoding), edges, evidence and gaps, creates indexes, calibrates the abstention
+threshold ([evaluation](frameworks-evaluation.md#the-measured-recipe)), writes
+the `release` row, then dumps the database. The dump in the build directory is
+the release.
 
 **Evaluate** verifies the dump's hash, restores it into a freshly recreated
 `frameworks_<rel>_eval`, checks the restore completed, runs on that copy only,
