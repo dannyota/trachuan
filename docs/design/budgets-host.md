@@ -164,12 +164,14 @@ requests. Current INT8 measurements and their limits are in
 ## Host alarms
 
 Email goes to the owner only for what needs a person. An outage or a risk to
-data is `CRITICAL` and repeats every 4 hours while it lasts; a condition that
-the host retries by itself, or that leaves production serving, is `WARNING`,
-alerts only once it has persisted, and repeats daily. A single failed updater,
-release or secrets run never alerts: the timer retries every 5 minutes, and a
-transient registry or sigstore error during a deploy clears within a run or two.
-OCI also emails when an alarm returns to OK.
+data is `CRITICAL`; a condition that the host retries by itself is `WARNING` and
+alerts only once it has persisted. Outage alarms repeat every 4 hours while they
+last; the backup alarms, deploy not confirmed and every `WARNING` repeat daily,
+because their state changes at most daily or the outage alarms already cover the
+urgent case. A single failed updater, release or secrets run never alerts: the
+timer retries every 5 minutes, and a transient registry or sigstore error during
+a deploy clears within a run or two. OCI also emails when an alarm returns to
+OK.
 
 | Alarm                                                     | Condition                                                    | Persists | Severity |
 | --------------------------------------------------------- | ------------------------------------------------------------ | -------- | -------- |

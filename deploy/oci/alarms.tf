@@ -218,7 +218,7 @@ resource "oci_monitoring_alarm" "backup_older_than_26h" {
 }
 
 resource "oci_monitoring_alarm" "deploy_failed" {
-  body                                          = "Every host updater run for 30 minutes failed; production keeps serving the active release. Read deploy.log in OCI Logging. Single failed runs retry every 5 minutes and do not alert."
+  body                                          = "Every host updater run for 30 minutes failed. Check the uptime alarms and the Health Checks results for whether the site is serving, then read deploy.log in OCI Logging. Single failed runs retry every 5 minutes and do not alert."
   compartment_id                                = var.compartment_ocid
   destinations                                  = [oci_ons_notification_topic.alarms.id]
   display_name                                  = "trachuan deploy failed"
