@@ -108,16 +108,16 @@ func runAdminSession(ctx context.Context, args []string, queries adminStore) (re
 }
 
 func clearAdminSessionFile(file *os.File) error {
-	if err := os.Remove(file.Name()); err == nil {
-		return nil
-	}
-	if err := file.Truncate(0); err != nil {
+	truncateErr := file.Truncate(0)
+	syncErr := file.Sync()
+	removeErr := os.Remove(file.Name())
+	if truncateErr != nil || syncErr != nil {
 		return fmt.Errorf("session file could not be cleared: %q", file.Name())
 	}
-	if err := file.Sync(); err != nil {
-		return fmt.Errorf("session file could not be cleared: %q", file.Name())
+	if removeErr != nil {
+		return errors.New("remove session file failed")
 	}
-	return errors.New("remove session file failed")
+	return nil
 }
 
 func checkSessionAccount(account store.Account) error {

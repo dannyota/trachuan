@@ -157,6 +157,34 @@ func TestAdminSession_RemoveErrorClearsHeldFile(t *testing.T) {
 	}
 }
 
+func TestAdminSession_RenameThenReplaceClearsOriginalFile(t *testing.T) {
+	for _, revokeError := range []bool{false, true} {
+		t.Run(fmt.Sprintf("revoke-error-%v", revokeError), func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "session")
+			moved := path + ".moved"
+			s := newAdminSessionCommitFixture(path)
+			s.commitError, s.revokeError = true, revokeError
+			s.afterRevoke = func() error {
+				if err := os.Rename(path, moved); err != nil {
+					return err
+				}
+				return os.WriteFile(path, []byte("synthetic replacement\n"), 0600)
+			}
+			var out, stderr bytes.Buffer
+			err := runAdmin(context.Background(), []string{"session", "create", "--account", "42", "--out", path}, s, &out)
+			if err == nil || exitCode(err, &stderr) != 1 || stderr.String() != "server: create session failed\n" || out.Len() != 0 {
+				t.Fatal("renamed session did not return a fixed error")
+			}
+			if data, readErr := os.ReadFile(moved); readErr != nil || len(data) != 0 {
+				t.Fatal("pathname replacement left the original session value readable")
+			}
+			if _, statErr := os.Stat(path); !os.IsNotExist(statErr) {
+				t.Fatal("replacement pathname was not removed")
+			}
+		})
+	}
+}
+
 func TestAdminSession_SuccessWritesOnlyValue(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "session")
 	s := newAdminSessionCommitFixture(path)
