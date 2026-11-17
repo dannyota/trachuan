@@ -36,6 +36,7 @@ type BuildRecord struct {
 	RetrievalRecipe         json.RawMessage  `json:"retrieval_recipe"`
 	LexicalStats            json.RawMessage  `json:"lexical_stats"`
 	Taxonomy                *TaxonomyStats   `json:"taxonomy"`
+	Summary                 SummaryStats     `json:"summary"`
 	TaxonomyVersion         string           `json:"taxonomy_version"`
 	Counts                  map[string]int64 `json:"counts"`
 	Dump                    struct {

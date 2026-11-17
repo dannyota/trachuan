@@ -63,7 +63,8 @@ func TestSummary_EligibilityAndOutlineCap(t *testing.T) {
 		for i := range d.Payload.Outline {
 			d.Payload.Outline[i] = summaryOutline{Kind: "dieu", Label: tc.label}
 		}
-		r, capped, err := makeSummary(d, nil, nil)
+		r, step, err := makeSummary(d, nil, nil)
+		capped := step == summaryOutlineDropped
 		if err != nil || r.Indexed != tc.indexed || capped != tc.capped {
 			t.Fatalf("%+v: %+v %t %v", tc, r, capped, err)
 		}
