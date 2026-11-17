@@ -47,7 +47,7 @@ for (const { action, url, message } of actions) {
     await expect(page).toHaveURL(before)
     expect(requests).toBe(1)
     await region.getByRole('button', { name: 'Sign in again', exact: true }).click()
-    await expect(page).toHaveURL('http://127.0.0.1:3031/login?next=%2Faccount&reason=reauth')
+    await expect(page).toHaveURL(url => url.pathname === '/login' && url.searchParams.get('next') === '/account' && url.searchParams.get('reason') === 'reauth')
     await expect(page.getByText(reason, { exact: true })).toBeVisible()
     const pending = await page.evaluate(() => JSON.parse(sessionStorage.getItem('reauth-action') || 'null'))
     expect(pending).toEqual({ action, at: expect.any(Number) })
