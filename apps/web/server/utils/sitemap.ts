@@ -2,6 +2,7 @@ import createClient from 'openapi-fetch'
 import type { components, paths } from '@trachuan/schema/gen/openapi'
 import type { H3Event } from 'h3'
 import { legalUpdated } from '../../i18n/legal-date'
+import { publicStatus } from './public-status'
 import { isDocumentKey } from '../../app/utils/document-key'
 
 function isCodes(value: unknown): value is components['schemas']['TaxonomyCodes'] {
@@ -38,10 +39,10 @@ export async function sitemap(event: H3Event, kind: 'index' | 'pages' | 'documen
     const config = useRuntimeConfig(event)
     const client = createClient<paths>({ baseUrl: config.apiOrigin, credentials: 'omit' })
     const signal = AbortSignal.timeout(3000)
-    const status = await client.GET('/api/v1/public/status', { signal })
-    if (!status.response.ok || typeof status.data?.release !== 'string') throw new Error('unavailable')
+    let status = await publicStatus(config.apiOrigin)
+    if (!status) throw new Error('unavailable')
     const origin = config.public.siteOrigin.replace(/\/$/, '')
-    const available = status.data.features?.public_summaries === true
+    const available = status.features?.public_summaries === true
     setResponseHeader(event, 'Content-Type', 'application/xml; charset=utf-8')
     if (kind !== 'index' && !available) {
       setResponseStatus(event, 404)
@@ -50,12 +51,18 @@ export async function sitemap(event: H3Event, kind: 'index' | 'pages' | 'documen
     }
     if (kind === 'index' && available) return xml('sitemapindex', ['/sitemap-pages.xml', '/sitemap-documents.xml'].map(path => `<sitemap><loc>${escapeXml(origin + path)}</loc></sitemap>`).join(''))
     if (kind === 'documents') {
+      const requested = Date.now()
       const list = await client.GET('/api/v1/public/documents', { signal })
-      if (!list.response.ok || !isList(list.data) || list.data.release !== status.data.release) throw new Error('unavailable')
+      if (!list.response.ok || !isList(list.data)) throw new Error('unavailable')
+      if (list.data.release !== status.release) status = await publicStatus(config.apiOrigin, requested)
+      if (!status || list.data.release !== status.release || (status.features?.public_summaries === true) !== available) throw new Error('unavailable')
       return xml('urlset', list.data.items.filter(item => item.index).map(item => `<url><loc>${escapeXml(`${origin}/vn/documents/${item.key}/summary`)}</loc></url>`).join(''))
     }
+    const requested = Date.now()
     const codes = await client.GET('/api/v1/public/taxonomy/codes', { signal })
-    if (!codes.response.ok || !isCodes(codes.data) || status.data.release !== codes.data.release) throw new Error('unavailable')
+    if (!codes.response.ok || !isCodes(codes.data)) throw new Error('unavailable')
+    if (codes.data.release !== status.release) status = await publicStatus(config.apiOrigin, requested)
+    if (!status || status.release !== codes.data.release || (status.features?.public_summaries === true) !== available) throw new Error('unavailable')
     const pages = ['/', '/vn/topics', '/connect', '/sources', '/privacy', '/terms', ...[...new Set(codes.data.codes)].map(code => `/vn/topics/${encodeURIComponent(code)}`)]
     return xml('urlset', pages.map((path) => {
       const lastmod = path === '/privacy' || path === '/terms' ? `<lastmod>${legalUpdated}</lastmod>` : ''

@@ -5,8 +5,11 @@ describe('route rules', () => {
   it('limits cache rules to public paths and marks private paths no-store', async () => {
     const config = await loadNuxtConfig({ cwd: process.cwd() })
     const rules = config.routeRules!
-    for (const path of ['/', '/connect', '/sources', '/privacy', '/terms', '/llms.txt', '/robots.txt']) {
+    for (const path of ['/connect', '/privacy', '/terms', '/llms.txt', '/robots.txt', '/vn/topics']) {
       expect(rules[path]?.cache).toMatchObject({ maxAge: 600, varies: ['x-trachuan-language'] })
+    }
+    for (const path of ['/', '/sources', '/vn/topics/**']) {
+      expect(rules[path]?.cache).toMatchObject({ maxAge: 540, swr: false, varies: ['x-trachuan-language'] })
     }
     for (const path of ['/sitemap.xml', '/sitemap-pages.xml', '/sitemap-documents.xml']) expect(rules[path]?.cache).toMatchObject({ maxAge: 300, swr: false })
     expect(rules['/vn/documents/*/summary']?.cache).toMatchObject({ maxAge: 300, swr: false, base: 'summary', varies: ['x-trachuan-language', 'x-trachuan-summary-date'] })

@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { sourcesGraph } from '../utils/structured-data'
 import { getCoverage } from '../api/coverage'
+import { publicStatus } from '../../server/utils/public-status'
 import { messagesFor, type Language } from '../../i18n'
 import { pagesMessages } from '../../i18n/pages'
 const language = useState<Language>('language', () => 'vi')
 const messages = computed(() => messagesFor(language.value))
 const labels = computed(() => pagesMessages(language.value))
-const api = useApi()
-const { data: status } = await useAsyncData('coverage-sources', () => import.meta.server ? getCoverage(() => api.client.GET('/api/v1/public/status')).then(status => ({ status })) : Promise.resolve({ status: null }), { server: true, default: () => ({ status: null }) })
+const { data: status } = await useAsyncData('coverage-sources', () => import.meta.server ? getCoverage(() => publicStatus(useRuntimeConfig().apiOrigin).then(data => ({ data }))).then(status => ({ status })) : Promise.resolve({ status: null }), { server: true, default: () => ({ status: null }) })
 const origin = useRuntimeConfig().public.siteOrigin.replace(/\/$/, '')
 useStructuredData(() => status.value.status ? sourcesGraph(origin, status.value.status, language.value) : [])
 </script>

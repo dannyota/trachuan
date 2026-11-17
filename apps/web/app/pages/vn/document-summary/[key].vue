@@ -4,6 +4,7 @@ import { createSummaryApi } from '../../../api/summary'
 import { summaryGraph } from '../../../utils/structured-data'
 import { summarySeo } from '../../../utils/summary-seo'
 import { isDocumentKey } from '../../../utils/document-key'
+import { publicStatus } from '../../../../server/utils/public-status'
 import { notFoundDocument } from '../../../../server/utils/not-found'
 import { messagesFor, shellMessages, type Language } from '../../../../i18n'
 
@@ -14,17 +15,25 @@ const language = useState<Language>('language', () => 'vi')
 const event = import.meta.server ? useRequestEvent() : undefined
 const context = import.meta.server ? useNuxtApp().ssrContext : undefined
 const origin = useRuntimeConfig().public.siteOrigin.replace(/\/$/, '')
-const api = createSummaryApi(import.meta.server ? useRuntimeConfig().apiOrigin : window.location.origin)
+const apiOrigin = import.meta.server ? useRuntimeConfig().apiOrigin : window.location.origin
+const api = createSummaryApi(apiOrigin)
 const { data } = await useAsyncData(`summary-${key}`, async () => {
   try {
     if (!isDocumentKey(key)) return { kind: 'missing' as const }
     const signal = AbortSignal.timeout(3000)
-    const status = await api.status(signal)
-    if (!status.data) return { kind: 'unavailable' as const }
-    if (!status.data.features.public_summaries) return { kind: 'missing' as const }
+    let status = import.meta.server ? await publicStatus(apiOrigin) : (await api.status(signal)).data
+    if (!status) return { kind: 'unavailable' as const }
+    if (!status.features?.public_summaries) return { kind: 'missing' as const }
+    const requested = Date.now()
     const result = await api.summary(key, signal)
     if (result.response.status === 404) return { kind: 'missing' as const }
-    if (!result.data || result.data.release !== status.data.release) return { kind: 'unavailable' as const }
+    if (!result.data) return { kind: 'unavailable' as const }
+    if (import.meta.server && result.data.release !== status.release) {
+      status = await publicStatus(apiOrigin, requested)
+      if (!status) return { kind: 'unavailable' as const }
+      if (!status.features?.public_summaries) return { kind: 'missing' as const }
+    }
+    if (result.data.release !== status.release) return { kind: 'unavailable' as const }
     return { kind: 'summary' as const, summary: result.data }
   } catch { return { kind: 'unavailable' as const } }
 })

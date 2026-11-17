@@ -20,7 +20,7 @@ it('renders public coverage anonymously, caches it, and omits query and account 
     console.log(JSON.stringify({ results, calls }));
   `
   const result = JSON.parse(execFileSync(process.execPath, ['--input-type=module', '-e', script], { encoding: 'utf8' }))
-  expect(result.calls).toEqual([{ path: '/api/v1/public/status', cookie: null }, { path: '/api/v1/public/status', cookie: null }, { path: '/api/v1/public/status', cookie: null }, { path: '/api/v1/public/taxonomy/codes', cookie: null }])
+  expect(result.calls).toEqual([{ path: '/api/v1/public/status', cookie: null }, { path: '/api/v1/public/taxonomy/codes', cookie: null }])
   for (const page of result.results) {
     expect(page.status).toBe(200)
     expect(page.text).not.toContain('secret-query-text')

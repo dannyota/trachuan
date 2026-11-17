@@ -40,7 +40,8 @@ the rules.
   living at most as long as their release) has no per-account limit, and their
   hits pass the public admission gate instead
   ([serving public summaries](web-public-documents-serving.md)). Nitro keeps
-  rendered summaries in a separate 32 MiB cache.
+  rendered summaries in a separate 32 MiB cache and public status for 30 seconds
+  ([caching and freshness](web-public-documents.md#caching-and-freshness)).
 - Metrics report hits, misses, evictions and bytes per cache, with no key or
   account labels.
 

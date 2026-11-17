@@ -81,7 +81,7 @@ it('renders identical credential-independent HTML and escaped legislation withou
   for (const page of result.pages.slice(1, 4)) expect(page.body).toBe(result.pages[0].body)
   expect(result.pages[4].body).toContain('Read the full text')
   expect(result.calls.every((call: { path: string, cookie: null, credentials: string }) => /^\/api\/v1\/public\/(status|documents\/)/.test(call.path) && call.cookie === null && call.credentials === 'omit')).toBe(true)
-  expect(result.calls).toHaveLength(4)
+  expect(result.calls).toHaveLength(3)
 })
 
 it.each([404, 503])('keeps a public %s error uncached even with its literal body ETag', (status) => {
@@ -134,6 +134,7 @@ it('expires warm summaries through activation, rollback without capability and r
     const rollback = await page('/vn/documents/vn:vbpl:1/summary', {'if-none-match':activated.headers.etag});
     release = summaryRelease = '20990102_1';
     available = true;
+    now += 30000;
     const reactivated = await page('/vn/documents/vn:vbpl:1/summary');
     const finalWarm = await page('/vn/documents/vn:vbpl:1/summary');
     console.log(JSON.stringify({initial,warm,activated,rollback,reactivated,finalWarm,calls}));
@@ -185,6 +186,7 @@ it('expires warm summaries at Vietnam midnight and availability changes within 3
     now += 300001;
     const off = await page('/vn/documents/vn:vbpl:1/summary',{'if-none-match':'*'});
     available = true;
+    now += 30000;
     const restored = await page('/vn/documents/vn:vbpl:1/summary');
     failed = true;
     now += 300001;
@@ -256,7 +258,7 @@ it('serves oversized renders without storing them and revalidates stored pages b
   expect(Buffer.byteLength(result.large.body)).toBeGreaterThan(256 * 1024)
   expect(result.large.status).toBe(200)
   expect(result.again.status).toBe(200)
-  expect(result.calls.length).toBe(result.count + 2)
+  expect(result.calls.length).toBe(result.count + 1)
 })
 
 it('limits summary renders to two and keeps two other render slots usable', () => {
