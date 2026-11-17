@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
 
 	"danny.vn/trachuan/apps/corpus/internal/classify"
@@ -16,6 +17,20 @@ import (
 type articleOptions struct {
 	Options          classify.Options
 	Families, Labels string
+	MaxTokens        int64
+}
+
+func withArticleMaxTokens(r classify.Recipe, maxTokens int64) (classify.Recipe, error) {
+	if maxTokens == 0 {
+		return r, nil
+	}
+	if r.Article == nil {
+		return r, fmt.Errorf("max tokens apply to an article recipe")
+	}
+	article := *r.Article
+	article.MaxTokens = maxTokens
+	r.Article = &article
+	return r, r.Validate()
 }
 
 func parseArticleOptions(cc, rel string, args []string) (articleOptions, error) {
@@ -23,9 +38,15 @@ func parseArticleOptions(cc, rel string, args []string) (articleOptions, error) 
 	if _, err := build.DatabaseName(cc, rel); err != nil {
 		return o, err
 	}
-	flags, err := options(args, map[string]bool{"--families": true, "--select": true, "--recipe": true, "--out": true, "--budget": true, "--budget-usd": true, "--dry-run": false})
+	flags, err := options(args, map[string]bool{"--families": true, "--select": true, "--recipe": true, "--out": true, "--budget": true, "--budget-usd": true, "--max-tokens": true, "--dry-run": false})
 	if err != nil {
 		return o, err
+	}
+	if value, set := flags["--max-tokens"]; set {
+		o.MaxTokens, err = strconv.ParseInt(value, 10, 64)
+		if err != nil || o.MaxTokens < 1 || o.MaxTokens > 32000 {
+			return o, fmt.Errorf("--max-tokens must be an integer from 1 to 32000")
+		}
 	}
 	selection, ok := strings.CutPrefix(flags["--select"], "labels:")
 	if !ok || selection == "" || flags["--families"] == "" || flags["--out"] == "" {
@@ -38,7 +59,7 @@ func parseArticleOptions(cc, rel string, args []string) (articleOptions, error) 
 	if err != nil {
 		return o, err
 	}
-	o = articleOptions{Options: classify.Options{Country: cc, Release: rel, Recipe: recipe, Out: flags["--out"], Budget: "pilot", BudgetMicroUSD: 15000000, DryRun: flags["--dry-run"] == "true"}, Families: flags["--families"], Labels: selection}
+	o = articleOptions{Options: classify.Options{Country: cc, Release: rel, Recipe: recipe, Out: flags["--out"], Budget: "pilot", BudgetMicroUSD: 15000000, DryRun: flags["--dry-run"] == "true"}, Families: flags["--families"], Labels: selection, MaxTokens: o.MaxTokens}
 	return o, nil
 }
 
@@ -49,7 +70,7 @@ func runClassifyArticles(ctx context.Context, args []string, stdout, stderr io.W
 func runClassifyArticlesWith(ctx context.Context, args []string, stdout, stderr io.Writer, load func(context.Context, string, string, taxonomy.Labels) (classificationEvidence, error)) int {
 	fail := func(code int, err error) int { _, _ = fmt.Fprintln(stderr, err); return code }
 	if len(args) < 2 {
-		return fail(2, fmt.Errorf("usage: corpus classify articles <cc> <rel> --families FILE --select labels:FILE --recipe MODEL --out DIR --budget pilot --budget-usd 15 [--dry-run]"))
+		return fail(2, fmt.Errorf("usage: corpus classify articles <cc> <rel> --families FILE --select labels:FILE --recipe MODEL --out DIR --budget pilot --budget-usd 15 [--max-tokens N] [--dry-run]"))
 	}
 	o, err := parseArticleOptions(args[0], args[1], args[2:])
 	if err != nil {
@@ -80,6 +101,9 @@ func runClassifyArticlesWith(ctx context.Context, args []string, stdout, stderr 
 		return fail(1, err)
 	}
 	o.Options.Recipe, err = classify.NewArticleRecipe(families.Recipe, hash)
+	if err == nil {
+		o.Options.Recipe, err = withArticleMaxTokens(o.Options.Recipe, o.MaxTokens)
+	}
 	if err != nil {
 		return fail(1, err)
 	}
