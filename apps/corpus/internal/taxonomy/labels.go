@@ -14,6 +14,7 @@ type LabelArticle struct {
 	Anchor        string   `json:"anchor"`
 	OwnTextSHA256 string   `json:"own_text_sha256"`
 	Codes         []string `json:"codes"`
+	NoNode        bool     `json:"no_node,omitempty"`
 }
 
 type Labels struct {

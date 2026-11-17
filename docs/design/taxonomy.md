@@ -215,21 +215,39 @@ unseeded articles of primary documents issued on or after 2024-01-01, after the
 2023 codification package. Every model-adjudicated draw is seeded, keeps at most
 two articles per document, and gives the labeler each article's own text, its
 document's number and title, and the active tree, never seeds, inherited nodes
-or classifier output. The 17 seeded multi-family articles are reported without a
-floor. The coordinator's corrections are applied, then the set is frozen with a
-hash like the seeded set; the slice gates only against that frozen set. The
-custom-node slice does not apply while `custom.yaml` is empty. Seeds land on the
-original documents the package links, almost never on consolidated texts, so no
-consolidated article has an independent label to compare with (run
-`vn/20261115_2`: 0 testable articles). The inheritance slice is therefore
-model-adjudicated like the post-2023 one: Codex `gpt-6-astra` labels 100
-inherited consolidated articles blind to the inherited nodes, the coordinator
-reads 20, and the set is frozen with a hash; with fewer than 100 inherited
-articles the slice is unavailable. Build measures this slice against that frozen
-set, before it writes assignments; until the set exists the slice is
-unavailable: when the slice is unavailable or any inheritance row fails, build
-writes no `inherited` assignment and records why in the taxonomy stats, so the
-release serves seeds and overrides only; `corpus eval` reports the same rows.
+or classifier output. Draws skip fragments in the same seeded order and record
+how many: a fragment is an article whose own text, after its heading line, has
+no operative sentence, because it is empty or every sentence states only when a
+document or part takes or ceases effect, names who implements, guides or answers
+for it, or marks a repeal, replacement or amendment (an annex or form included)
+without the text it repeals or puts in place. Transitional clauses with
+substance are not fragments. The labeler follows this rule, given verbatim:
+"Assign a node only when the article's own operative text regulates that
+subject. A mention, a cross-reference, the agency responsible, or a document
+type named in passing (a contract, a report, a copy, a licence) is not enough.
+One family is the default; add another family only when a substantive part of
+the article is about it." A subject with no node in the tree gets its closest
+level-2 family alone, marked `no_node`, and scores at level 2 only. An article
+the labeler leaves without any code is a fragment: it is dropped and replaced by
+the next article in the same seeded order, the replacement is labeled blind, and
+the frozen set records how many were replaced. Additional-node precision is
+measured over both adjudicated sets together: every node a model assigns beyond
+its top-1 counts as correct only when it is in the item's label set. The 17
+seeded multi-family articles are reported without a floor. The coordinator's
+corrections are applied, then the set is frozen with a hash like the seeded set;
+the slice gates only against that frozen set. The custom-node slice does not
+apply while `custom.yaml` is empty. Seeds land on the original documents the
+package links, almost never on consolidated texts, so no consolidated article
+has an independent label to compare with (run `vn/20261115_2`: 0 testable
+articles). The inheritance slice is therefore model-adjudicated like the
+post-2023 one: Codex `gpt-6-astra` labels 100 inherited consolidated articles
+blind to the inherited nodes, the coordinator reads 20, and the set is frozen
+with a hash; with fewer than 100 inherited articles the slice is unavailable.
+Build measures this slice against that frozen set, before it writes assignments;
+until the set exists the slice is unavailable: when the slice is unavailable or
+any inheritance row fails, build writes no `inherited` assignment and records
+why in the taxonomy stats, so the release serves seeds and overrides only;
+`corpus eval` reports the same rows.
 
 The seeded labeled set is
 `apps/corpus/internal/evaluation/testdata/<cc>/taxonomy-labels.json`: for each

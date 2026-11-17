@@ -14,9 +14,11 @@ import (
 func runTaxonomy(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	fail := func(err error) int { _, _ = fmt.Fprintln(stderr, err); return 1 }
 	if len(args) == 0 {
-		return fail(fmt.Errorf("usage: corpus taxonomy <import|check|labels|draw|freeze>"))
+		return fail(fmt.Errorf("usage: corpus taxonomy <import|check|labels|draw|freeze|fragments>"))
 	}
 	switch args[0] {
+	case "fragments":
+		return runTaxonomyFragmentsWith(ctx, args[1:], stdout, stderr, loadDrawEvidence)
 	case "draw":
 		return runTaxonomyDraw(ctx, args[1:], stderr)
 	case "freeze":
