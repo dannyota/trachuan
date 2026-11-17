@@ -58,7 +58,8 @@ it('uses exact citations or named paths in warnings', () => {
 
 it('groups gap rows as cases, including global rows', () => {
   const result = gapSummary({ gaps: { no_tree: 3842, empty_text: 2, invalid_date: 3, relation_missing: 1, mystery: 0 } }, 'vi')
-  expect(result[0]).toMatchObject({ cases: 3844, casesLabel: '3.844 trường hợp' })
+  expect(result[0]).toMatchObject({ cases: 3844, casesLabel: '3.844 trường hợp', casesSentence: 'Một số nội dung bị thiếu hoặc không đọc được (3.844 trường hợp).' })
+  expect(gapSummary({ gaps: { missing_effective_date: 120 } }, 'en')[0]!.casesSentence).toBe('Validity information is incomplete for some documents (120 cases).')
   expect(result.map(row => row.cases)).toEqual([3844, 3, 1])
   expect(gapCategory('relation_any', 'en').name).toBeTruthy()
   expect(gapCategory('something_new', 'vi').name).toBe('Khác')

@@ -39,10 +39,11 @@
 .result-asof { color: var(--color-muted); font-size: 12px; line-height: 1.2; }
 .result-card-head > .result-byline { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .result-card-head .result-number { flex: 0 1 auto; min-width: 0; overflow-wrap: anywhere; }
-.result-actions { display: flex; flex: none; align-items: center; gap: 8px; font-size: 13px; }
+.result-actions { display: flex; flex: none; flex-wrap: wrap; align-items: center; gap: 0 8px; font-size: 13px; }
 .result-actions a, .result-actions button { display: inline-flex; align-items: center; min-height: 44px; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
 .result-actions > span { min-width: 0; }
-.result-actions .btn { white-space: normal; text-align: left; padding: 0; border: 0; background: transparent; color: var(--color-primary); font: inherit; }
+.result-actions a, .result-actions .btn { white-space: nowrap; }
+.result-actions .btn { text-align: left; padding: 0; border: 0; background: transparent; color: var(--color-primary); font: inherit; }
 .result-mobile-byline { display: none; }
 .result-number { color: var(--color-ink); font-size: 14px; }
 .result-byline, .result-title, .result-rank { color: var(--color-muted); font-size: 13px; }
@@ -129,3 +130,4 @@
 .search-filters label:has(input[type="checkbox"]) { display: flex; align-items: baseline; gap: 8px; }
 .search-filters input[type="checkbox"] { margin: 0; }
 .filter-error button { padding: 0; border: 0; background: transparent; color: inherit; font: inherit; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.search-idle .nowrap { white-space: nowrap; }

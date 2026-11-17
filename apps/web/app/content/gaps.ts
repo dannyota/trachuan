@@ -4,7 +4,7 @@ import { formatNumber } from './format'
 
 type CategoryKey = 'content' | 'search' | 'structure' | 'validity' | 'relations' | 'scope' | 'ocr' | 'provenance' | 'topics' | 'omitted' | 'historical' | 'evaluation' | 'rejection' | 'other'
 export type GapCategory = { key: CategoryKey, name: string, sentence: string }
-export type GapSummary = GapCategory & { cases: number, casesLabel: string }
+export type GapSummary = GapCategory & { cases: number, casesLabel: string, casesSentence: string }
 
 const categories: Record<CategoryKey, Record<Language, { name: string, sentence: string }>> = {
   content: { vi: { name: 'Nội dung thiếu hoặc không đọc được', sentence: 'Một số nội dung bị thiếu hoặc không đọc được.' }, en: { name: 'Content missing or unreadable', sentence: 'Some content is missing or unreadable.' } },
@@ -50,7 +50,8 @@ export function gapSummary(coverage: Pick<components['schemas']['CorpusStatus'],
     if (count <= 0) continue
     const category = gapCategory(kind, lang)
     const cases = (grouped.get(category.key)?.cases || 0) + count
-    grouped.set(category.key, { ...category, cases, casesLabel: `${formatNumber(cases, lang)} ${lang === 'vi' ? 'trường hợp' : 'cases'}` })
+    const casesLabel = `${formatNumber(cases, lang)} ${lang === 'vi' ? 'trường hợp' : 'cases'}`
+    grouped.set(category.key, { ...category, cases, casesLabel, casesSentence: `${category.sentence.replace(/\.$/, '')} (${casesLabel}).` })
   }
   return [...grouped.values()].sort((a, b) => b.cases - a.cases || a.key.localeCompare(b.key))
 }

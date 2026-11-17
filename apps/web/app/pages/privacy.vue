@@ -11,7 +11,7 @@ const copy = computed(() => legalCopy(language.value))
     <div class="legal-facts">
       <p class="legal-updated">{{ copy.updated }}</p>
       <section v-for="[heading, text] in copy.privacy" :key="heading">
-        <h2>{{ heading }}</h2><p>{{ text }}</p>
+        <h2>{{ heading }}</h2><p><LegalText :text="text ?? ''" /></p>
         <p v-if="heading === 'Chính sách dữ liệu Google' || heading === 'Google data policy'"><a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a></p>
       </section>
     </div>

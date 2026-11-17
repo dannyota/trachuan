@@ -40,6 +40,9 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await page.setViewportSize({ width, height: 900 })
       await navigate(page, '/vn/search')
       await expect(page.locator('.search-idle')).toBeVisible()
+      const example = page.locator('.search-idle .nowrap')
+      await expect(example).toHaveText(/^\d+\/\d{4}\//)
+      expect(await example.evaluate(el => { const range = document.createRange(); range.selectNodeContents(el); return range.getClientRects().length })).toBe(1)
       await shapes(page)
       if (width < 768) await page.locator('.search-mobile-chips button').first().click()
       const retry = page.locator('.search-filters:visible .node-picker .filter-error button').first()
@@ -73,6 +76,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
         expect(actionsBox.y).toBeLessThan(statusBox.y + statusBox.height)
         expect(actionsBox.y + actionsBox.height).toBeGreaterThan(statusBox.y)
       }
+      for (const action of await page.locator('.result-card').first().locator('.result-actions a, .result-actions button').all()) expect(await action.evaluate(el => { const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT); const tops = new Set<number>(); for (let node = walker.nextNode(); node; node = walker.nextNode()) { if (!node.textContent?.trim()) continue; const range = document.createRange(); range.selectNodeContents(node); for (const rect of range.getClientRects()) tops.add(Math.round(rect.top)) } return tops.size })).toBe(1)
       const resultNumber = head.locator('.result-number')
       await expect(resultNumber).toHaveText(documentNumber)
       await expect(resultNumber).not.toHaveCSS('text-overflow', 'ellipsis')
