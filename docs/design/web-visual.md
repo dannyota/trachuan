@@ -127,9 +127,10 @@ A search result card has no footer band. Its head carries the stamp with its
 as-of line, the document number, the type and issuer, the actions ("Đọc trong
 văn bản", "Sao chép trích dẫn", the source link) and the rank. From 1200 px the
 head is one line and the type and issuer are cut with an ellipsis; below 1200 px
-it is two lines, the stamp, number and rank and then the actions, and the type
-and issuer move in front of the document title. The document number is never
-cut: it wraps when its line is too narrow. No text in the card is smaller than
+it is two lines, the stamp and number and then the actions and rank, and the
+type and issuer move in front of the document title. The document number is
+never cut: when it does not fit beside the stamp it takes its own line, and it
+wraps only when it is longer than the card. No text in the card is smaller than
 12 px, and the actions are 13 px. The document title follows on one line with an
 ellipsis, then the provision heading in Noto Serif and the text. In the
 collapsed card, a first text line equal to the shown heading after white-space
