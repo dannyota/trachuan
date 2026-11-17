@@ -6,7 +6,9 @@ export default defineNitroPlugin((nitro) => {
   const renders = new WeakMap<object, () => void>()
   nitro.hooks.hook('render:before', (context) => {
     const page = matchPage(context.event.node.req.url ?? '')
-    const release = admission.render(page?.path.endsWith('/summary') === true)
+    const summary = page !== null && /^\/vn\/documents\/[^/]+\/summary$/.test(page.path)
+    const release = admission.render(summary)
+    if (release && summary) process.stdout.write(`${JSON.stringify({ msg: 'summary render', time: new Date(Date.now()).toISOString(), path: page!.path })}\n`)
     if (!release) {
       context.response = {
         statusCode: 429,
