@@ -48,7 +48,7 @@ func databaseRecipe() map[string]any {
 		"dense_recipe": denseRecipe(), "lexical_recipe": lexical.Recipe1(),
 		"gap_kinds": gapKinds(), "loader_version": 1,
 		"lexical_runtime":  lexicalRuntime(),
-		"retrieval_recipe": bootstrapRetrievalRecipe(), "calibration": "public-free-only-open/1",
+		"retrieval_recipe": bootstrapRetrievalRecipe(), "calibration": "public-free-only-open/2",
 		"query_recipe_hash": embedding.QueryRecipe1().Hash(),
 	}
 }

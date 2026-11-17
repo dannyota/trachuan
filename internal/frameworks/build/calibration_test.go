@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math"
 	"strings"
 	"testing"
@@ -69,25 +70,83 @@ func TestCalibration_ThresholdAndProvenance(t *testing.T) {
 	require.Equal(t, digest(encoded), a["calibration_sha256"])
 }
 
-func TestCalibration_EmptyLookupAndTies(t *testing.T) {
+func TestCalibration_EmptyAndTies(t *testing.T) {
 	for _, tc := range []struct {
 		name               string
 		positive, negative calibrationAnswer
 		threshold          float64
-		lookups            int
 	}{
 		{name: "tie", positive: calibrationAnswer{cosine: cosine(.2)}, negative: calibrationAnswer{cosine: cosine(.8)}, threshold: -1},
 		{name: "empty positive", negative: calibrationAnswer{cosine: cosine(.2)}, threshold: 2},
 		{name: "empty negative", positive: calibrationAnswer{cosine: cosine(.8)}, threshold: -1},
-		{name: "lookup positive", positive: calibrationAnswer{lookup: true}, negative: calibrationAnswer{cosine: cosine(.2)}, threshold: 2, lookups: 1},
-		{name: "lookup negative", positive: calibrationAnswer{cosine: cosine(.8)}, negative: calibrationAnswer{lookup: true}, threshold: -1, lookups: 1},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			e := calibrationEngine{map[string]calibrationAnswer{"private invented positive": tc.positive, "private invented negative": tc.negative}}
 			r, err := CalibrateCases(context.Background(), e, calibrationCases(), strings.Repeat("b", 64))
 			require.NoError(t, err)
 			require.Equal(t, tc.threshold, r.Threshold)
-			require.Equal(t, tc.lookups, r.LookupCount)
+			require.Zero(t, r.LookupCount)
+		})
+	}
+}
+
+func TestCalibration_LookupsDoNotChangeFit(t *testing.T) {
+	for _, tc := range []struct {
+		name               string
+		positive, negative float64
+		threshold          float64
+	}{
+		{name: "inverted", positive: .2, negative: .8, threshold: -1},
+		{name: "separated", positive: .8, negative: .2, threshold: .5},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			e := calibrationEngine{map[string]calibrationAnswer{
+				"private invented positive": {cosine: cosine(tc.positive)},
+				"private invented negative": {cosine: cosine(tc.negative)},
+			}}
+			baseline, err := CalibrateCases(context.Background(), e, calibrationCases(), strings.Repeat("b", 64))
+			require.NoError(t, err)
+			require.Equal(t, tc.threshold, baseline.Threshold)
+			for _, labels := range [][]bool{{false}, {true}, {false, true}, {false, false, true}} {
+				cases := calibrationCases()
+				for i, negative := range labels {
+					id := fmt.Sprintf("lookup-%d", i)
+					cases = append(cases, GoldenCase{ID: id, Question: id, Negative: negative, Adjudication: "accepted", Access: "free"})
+					e.answers[id] = calibrationAnswer{lookup: true}
+				}
+				result, err := CalibrateCases(context.Background(), e, cases, strings.Repeat("b", 64))
+				require.NoError(t, err)
+				require.Equal(t, baseline.Threshold, result.Threshold)
+				require.Equal(t, baseline.Candidates, result.Candidates)
+				require.Equal(t, baseline.PositiveAnswerRate, result.PositiveAnswerRate)
+				require.Equal(t, baseline.NegativeAbstentionRate, result.NegativeAbstentionRate)
+				require.Equal(t, baseline.BalancedAccuracy, result.BalancedAccuracy)
+				require.Equal(t, len(labels), result.LookupCount)
+				require.Len(t, result.Scores, 2+len(labels))
+				for i, negative := range labels {
+					observation := result.Scores[2+i]
+					require.True(t, observation.Lookup)
+					require.Equal(t, negative, observation.Negative)
+					require.Nil(t, observation.Cosine)
+				}
+			}
+		})
+	}
+}
+
+func TestCalibration_LookupOnlyClassFails(t *testing.T) {
+	for _, tc := range []struct {
+		name               string
+		positive, negative calibrationAnswer
+	}{
+		{name: "positive", positive: calibrationAnswer{lookup: true}, negative: calibrationAnswer{cosine: cosine(.2)}},
+		{name: "negative", positive: calibrationAnswer{cosine: cosine(.8)}, negative: calibrationAnswer{lookup: true}},
+		{name: "both", positive: calibrationAnswer{lookup: true}, negative: calibrationAnswer{lookup: true}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			e := calibrationEngine{map[string]calibrationAnswer{"private invented positive": tc.positive, "private invented negative": tc.negative}}
+			_, err := CalibrateCases(context.Background(), e, calibrationCases(), strings.Repeat("b", 64))
+			require.ErrorContains(t, err, "missing calibration class")
 		})
 	}
 }

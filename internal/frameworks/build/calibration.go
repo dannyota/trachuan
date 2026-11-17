@@ -60,6 +60,7 @@ func CalibrateCases(ctx context.Context, engine CalibrationEngine, cases []Golde
 	}
 	r := CalibrationRecord{Version: 1, CaseFileSHA256: caseHash, EngineRecipeSHA256: engine.CalibrationRecipeHash(), QueryEmbedderRecipeSHA256: embedding.QueryRecipe1().Hash()}
 	scores := make([]abstention.Score, 0, len(public))
+	fittedPositives, fittedNegatives := 0, 0
 	for _, c := range public {
 		if err := ctx.Err(); err != nil {
 			return CalibrationRecord{}, &caseFailure{id: c.ID, operation: "calibration canceled", cause: err}
@@ -68,7 +69,7 @@ func CalibrateCases(ctx context.Context, engine CalibrationEngine, cases []Golde
 		if err != nil {
 			return CalibrationRecord{}, &caseFailure{id: c.ID, operation: "calibration execution failed", cause: err}
 		}
-		score := abstention.Score{Negative: c.Negative, Empty: value == nil, FixedAnswer: lookup}
+		score := abstention.Score{Negative: c.Negative, Empty: value == nil}
 		if value != nil {
 			if math.IsNaN(*value) || math.IsInf(*value, 0) {
 				return CalibrationRecord{}, &caseFailure{id: c.ID, operation: "non-finite calibration cosine"}
@@ -80,15 +81,24 @@ func CalibrateCases(ctx context.Context, engine CalibrationEngine, cases []Golde
 		if lookup {
 			r.LookupCount++
 			value = nil
+		} else {
+			scores = append(scores, score)
+			if c.Negative {
+				fittedNegatives++
+			} else {
+				fittedPositives++
+			}
 		}
-		scores = append(scores, score)
 		r.Scores = append(r.Scores, CalibrationObservation{CaseID: c.ID, Negative: c.Negative, Cosine: value, Lookup: lookup})
+	}
+	if fittedPositives == 0 || fittedNegatives == 0 {
+		return CalibrationRecord{}, fmt.Errorf("missing calibration class")
 	}
 	r.Threshold, r.Candidates = abstention.Threshold(scores)
 	for _, c := range r.Candidates {
 		if c.Threshold == r.Threshold {
-			r.PositiveAnswerRate = float64(c.TN) / float64(positives)
-			r.NegativeAbstentionRate = float64(c.TP) / float64(negatives)
+			r.PositiveAnswerRate = float64(c.TN) / float64(fittedPositives)
+			r.NegativeAbstentionRate = float64(c.TP) / float64(fittedNegatives)
 			r.BalancedAccuracy = (r.PositiveAnswerRate + r.NegativeAbstentionRate) / 2
 			break
 		}
