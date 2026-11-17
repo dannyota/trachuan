@@ -39,14 +39,16 @@ async function search(more = false, restart = false) {
   } catch (cause) {
     loading.value = false
     error.value = cause instanceof ApiError ? cause.code : 'unavailable'
+    if (error.value === 'account_changed') result.value = undefined
     return
   }
   loading.value = false
   if (response.response.status === 404) { notFound(); return }
   if (!response.data) {
-    const code = response.error?.error.code || 'unavailable'
+    const code: string = response.error?.error.code || 'unavailable'
     if (more && code === 'cursor_expired') { notice.value = errorMessage(language.value, code); result.value = undefined; await search(false, true); return }
     error.value = code
+    if (code === 'account_changed') result.value = undefined
     return
   }
   result.value = more && result.value ? { ...response.data, hits: [...(result.value.hits || []), ...(response.data.hits || [])] } : response.data

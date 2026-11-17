@@ -20,3 +20,11 @@ it('keeps a citation after Nuxt normalizes the incoming query', () => {
   const path = '/frameworks/fw-alpha/2.1/control?citation=A+(1)/%23%25'
   expect(frameworkNext(path)).toBe('/frameworks/fw-alpha/2.1/control?citation=A+%281%29%2F%23%25')
 })
+
+it.each(['A?1', 'A%3F1'])('keeps a question mark in citation %s', (citation) => {
+  const input = `/frameworks/fw-alpha/2.1/control?citation=${citation}`
+  const expected = '/frameworks/fw-alpha/2.1/control?citation=A%3F1'
+  expect(frameworkNext(input)).toBe(expected)
+  expect(safeNext(input)).toBe(expected)
+  expect(new URL(frameworkNext(input), 'https://example.test').searchParams.get('citation')).toBe('A?1')
+})

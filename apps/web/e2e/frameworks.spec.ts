@@ -37,12 +37,18 @@ test('renders the fixed 404 when the flag is off', async ({ page, context }) => 
 for (const mode of ['reduced', 'mixed', 'full']) {
   test(`renders ${mode} records through SSR and navigation`, async ({ page, context }) => {
     await fixture(context, mode)
+    const apiBodies: Promise<{ body: string, error?: string }>[] = []
+    if (mode === 'reduced') page.on('response', (received) => {
+      if (new URL(received.url()).pathname.startsWith('/api/v1/frameworks')) apiBodies.push(received.text().then(body => ({ body }), error => ({ body: '', error: String(error) })))
+    })
     const response = await page.goto('/frameworks')
     expect(response?.headers()['cache-control']).toContain('no-store')
     expect(response?.headers()['x-robots-tag']).toBe('noindex')
     await expect(page.getByRole('link', { name: 'fw-alpha 2.1' })).toBeVisible()
+    if (mode === 'reduced') await page.waitForLoadState('networkidle')
     await page.getByRole('link', { name: 'fw-alpha 2.1' }).click()
     await expect(page.getByText('Synthetic fw-alpha')).toBeVisible()
+    if (mode === 'reduced') await page.waitForLoadState('networkidle')
     await page.getByRole('link', { name: /A \(1\)/ }).click()
     await expect(page.getByRole('heading', { name: /A \(1\)/ })).toBeVisible()
     if (mode === 'full') await expect(page.getByText('Synthetic publisher body')).toBeVisible()
@@ -50,11 +56,32 @@ for (const mode of ['reduced', 'mixed', 'full']) {
       await expect(page.getByText('Nội dung của nhà xuất bản cần được cấp quyền mới đọc được. Tài khoản này chưa được cấp quyền.')).toBeVisible()
       const html = await (await page.request.get(control, { headers: { 'X-Forwarded-For': clientAddress(test.info()) } })).text()
       for (const field of ['title_original', 'Synthetic publisher title', 'Synthetic publisher body', '"body"', '"note"', '"table"', 'snippet']) expect(html).not.toContain(field)
+      if (mode === 'reduced') {
+        const decoded = ['__NUXT_CSP_DATA__', '__NUXT_CSP_CONFIG__'].map((id) => {
+          const value = new RegExp(`<meta id="${id}"[^>]*? content="([^"]+)"`).exec(html)?.[1]
+          expect(value).toBeTruthy()
+          return Buffer.from(value!, 'base64').toString('utf8')
+        })
+        expect(decoded.every(value => value.length > 0)).toBe(true)
+        const fields = ['title_original', '"body"', '"note"', '"table"', 'snippet', 'Synthetic publisher title', 'Synthetic publisher body', 'Synthetic publisher note', 'Synthetic publisher table', 'Synthetic snippet']
+        for (const body of [html, ...decoded]) for (const field of fields) expect(body).not.toContain(field)
+      }
     }
+    if (mode === 'reduced') await page.waitForLoadState('networkidle')
     await page.goto('/frameworks/search')
     await page.getByLabel('Tra cứu', { exact: true }).fill('Synthetic query')
     await page.getByRole('button', { name: 'Tra cứu', exact: true }).click()
     await expect(page.getByText('Tra theo số hiệu').first()).toBeVisible()
+    if (mode === 'reduced') {
+      await page.waitForLoadState('networkidle')
+      const bodies = await Promise.all(apiBodies)
+      expect(bodies.length).toBeGreaterThan(0)
+      const fields = ['title_original', '"body"', '"note"', '"table"', 'snippet', 'Synthetic publisher title', 'Synthetic publisher body', 'Synthetic publisher note', 'Synthetic publisher table', 'Synthetic snippet']
+      for (const result of bodies) {
+        expect(result.error).toBeUndefined()
+        for (const field of fields) expect(result.body).not.toContain(field)
+      }
+    }
   })
 }
 

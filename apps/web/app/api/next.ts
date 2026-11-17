@@ -6,7 +6,10 @@ function valid(value: string): boolean {
 }
 
 export function safeNext(input: string): string {
-  const [path, query = ''] = input.split('#', 1)[0]!.split('?', 2)
+  const withoutFragment = input.split('#', 1)[0]!
+  const separator = withoutFragment.indexOf('?')
+  const path = separator < 0 ? withoutFragment : withoutFragment.slice(0, separator)
+  const query = separator < 0 ? '' : withoutFragment.slice(separator + 1)
   let result = path || ''
   if (result === '/vn/search') {
     const node = new URLSearchParams(query).get('node')

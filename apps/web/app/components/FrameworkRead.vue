@@ -25,12 +25,17 @@ async function load(more = false) {
     : await api.client.GET('/api/v1/frameworks/controls/{handle}', { params })
   loading.value = false
   if (response.response.status === 404 || frameworkItemError(response.error?.error.code) === 'not-found') { notFound(); return }
-  if (!response.data) { error.value = response.error?.error.code || 'unavailable'; return }
+  if (!response.data) {
+    const code = response.error?.error.code || 'unavailable'
+    if (more && frameworkItemError(code) === 'restart') { notice.value = labels.value.reload; units.value = []; next.value = ''; await load(); return }
+    error.value = code
+    return
+  }
   const item = response.data.items?.[0]
   const itemError = frameworkItemError(item?.error)
   if (itemError === 'not-found') { notFound(); return }
   if (itemError === 'restart' && more) { notice.value = labels.value.reload; units.value = []; next.value = ''; await load(); return }
-  if (itemError) error.value = itemError
+  if (itemError) error.value = itemError === 'restart' ? item?.error || 'unavailable' : itemError
   release.value = response.data.release
   unavailable.value = response.data.access_unavailable === true
   units.value = more ? [...units.value, ...(item?.units || [])] : item?.units || []

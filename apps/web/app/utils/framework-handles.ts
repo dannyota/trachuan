@@ -28,7 +28,8 @@ export function controlPath(handle: string, citation: string): string | undefine
 
 export function frameworkNext(path: string): string {
   const version = /^(\/frameworks\/[^/]+\/[^/?]+)\/control(?:\?|$)/.exec(path)?.[1]
-  const citation = version ? new URLSearchParams(path.split('?')[1] || '').get('citation') : null
+  const separator = path.indexOf('?')
+  const citation = version && separator >= 0 ? new URLSearchParams(path.slice(separator + 1)).get('citation') : null
   const control = version && citation !== null ? `${version}/control?${new URLSearchParams({ citation })}` : path
   for (const candidate of [control, version, '/frameworks']) {
     if (candidate && safeNext(candidate) === candidate) return candidate

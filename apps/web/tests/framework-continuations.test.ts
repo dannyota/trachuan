@@ -102,3 +102,45 @@ it.each(['invalid_handle', 'not_found'])('uses the fixed 404 for a read response
   await flushPromises()
   expect(notFound).toHaveBeenCalledOnce()
 })
+
+it.each(['release_expired', 'invalid_next'])('restarts after call-level %s on a continuation', async (code) => {
+  const { wrapper, calls } = setup(FrameworkRead, [
+    response({ release: '20990101', items: [{ units: [head], next: 'next-a' }] }),
+    failure(code),
+    response({ release: '20990102', items: [{ units: [head], complete: true }] }),
+  ])
+  await flushPromises()
+  await wrapper.get('button').trigger('click')
+  await flushPromises()
+  expect(calls).toHaveLength(3)
+  expect(calls[2]).toMatchObject({ params: { query: {} } })
+  expect(wrapper.text()).toContain('The data was updated; the page starts again from the top.')
+  expect(wrapper.find('button').exists()).toBe(false)
+})
+
+it('does not restart again if the fresh read fails', async () => {
+  const { wrapper, calls } = setup(FrameworkRead, [
+    response({ release: '20990101', items: [{ units: [head], next: 'next-a' }] }),
+    failure('release_expired'),
+    failure('release_expired'),
+  ])
+  await flushPromises()
+  await wrapper.get('button').trigger('click')
+  await flushPromises()
+  expect(calls).toHaveLength(3)
+  expect(wrapper.get('[role="alert"]').text()).toBe('The release has expired.')
+  expect(wrapper.find('button').exists()).toBe(false)
+})
+
+it('shows the item error if the fresh read also fails', async () => {
+  const { wrapper, calls } = setup(FrameworkRead, [
+    response({ release: '20990101', items: [{ units: [head], next: 'next-a' }] }),
+    response({ release: '20990101', items: [{ error: 'release_expired' }] }),
+    response({ release: '20990101', items: [{ error: 'release_expired' }] }),
+  ])
+  await flushPromises()
+  await wrapper.get('button').trigger('click')
+  await flushPromises()
+  expect(calls).toHaveLength(3)
+  expect(wrapper.get('[role="alert"]').text()).toBe('The release has expired.')
+})
