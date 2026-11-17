@@ -141,8 +141,11 @@ arrows.
   After a successful copy the button reads "Đã sao chép" / "Copied" with a check
   icon for 2 seconds; when the clipboard refuses, it reads "Chưa sao chép được"
   / "Could not copy" with an alert icon for 2 seconds. The outcome stays inside
-  the button, so the row never reflows, and a hidden live region announces it,
-  the existing failure message included.
+  the button, which keeps the width of its longest label in every state, so the
+  row never reflows; a hidden live region announces it, the existing failure
+  message included. Where the link and the button do not fit on one row (below
+  360 px), the button sits under the link, left aligned; in a search card the
+  rank stays with the stamp and number.
 - Below them, only when the document has an https source, a muted 13 px caption:
   "Nguồn:" / "Source:" and the source's host as a link with the external-link
   icon.
