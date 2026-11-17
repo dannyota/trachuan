@@ -143,10 +143,11 @@ card on one row. At 1366 px a card with three text lines is at most 220 px tall.
 The target article keeps a 3 px `primary` rule along its full height; `mist`
 fills only its heading row (the heading, the "Điều bạn đang xem" label and the
 copy action), not its text. Clauses and points are separated by one paragraph
-gap, never by blank lines carried in the source text. The floating "Lên đầu
-trang" button never covers the end of the text: the reader leaves room below its
-last line for the button at every width, and the text column keeps its full
-width.
+gap, never by blank lines carried in the source text. "Lên đầu trang" never
+floats over content: from 1024 px it sits at the bottom of the sticky table of
+contents, and below 1024 px in the reader's sticky bar beside "Mục lục" once the
+reader has scrolled past the top. The text column keeps its full width and needs
+no room for it.
 
 ## Motion
 
