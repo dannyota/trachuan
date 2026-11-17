@@ -17,22 +17,42 @@ the outline with the candidate chapter and article headings that pass rules 1 to
 4; and the projection version. Rows are immutable within a release. The table's
 presence at the expected projection is the release's summary capability.
 
-| Field                      | Cap, enforced at build | Over the cap                   |
-| -------------------------- | ---------------------- | ------------------------------ |
-| number, issuer, type       | 200 characters each    | the build fails                |
-| title, each relation title | 1,000 characters each  | the build fails                |
-| topic name                 | 200 characters         | the build fails                |
-| outline                    | 1,500 entries          | the ordered outline rule below |
-| relations                  | 50 pointers            | the total keeps the full count |
-| serialized row             | 64 KiB                 | the ordered outline rule below |
+Every bound below is enforced at build. A cap on source-derived text is at least
+1.5 times the largest value on the release it was measured on, `vn/20261115_3`
+on 2026-11-17 (row sizes are SQL estimates of the serialized payload). Over a
+cap the build degrades and records a build gap; no bound on source data fails
+the build.
+
+| Bound                           | Cap                       | Largest measured                           | Over the cap                                                             |
+| ------------------------------- | ------------------------- | ------------------------------------------ | ------------------------------------------------------------------------ |
+| number, type, issuer            | 200 characters each       | 51, 28, 44                                 | no row for the document; build gap `summary_field_capped`                |
+| title                           | 1,000 characters          | 631                                        | no row for the document; build gap `summary_field_capped`                |
+| relation number, relation title | 200 and 1,000 characters  | 46, 631                                    | that pointer is left out, the total keeps it; gap `summary_field_capped` |
+| topic name                      | 600 characters            | 386                                        | that node is left out; build gap `summary_field_capped`                  |
+| heading                         | 300 characters (rule 3)   | 8,394; 1,388 headings over 300             | the heading is omitted, the label stays                                  |
+| relations                       | 50 pointers               | 943                                        | display list; the total keeps the full count                             |
+| nodes                           | 10, most provisions first | 35                                         | display list; the rest are not listed                                    |
+| outline                         | 2,200 entries             | 1,432                                      | the ordered rule below                                                   |
+| serialized row                  | 64 KiB                    | about 167 KB whole, 99 KB with labels only | the ordered rule below                                                   |
+
+The two display lists and the heading are not raised to 1.5 times: the lists are
+ranked previews that lose nothing (the full set stays in the reader and the
+relation total is kept), and 943 pointers would not fit the row bound; the
+heading cap is rule 3, which keeps operative text out of the public page by
+omission. The row bound comes from the response budget, so it is kept and
+degrades instead.
 
 The outline and the serialized row are one ordered check, applied after the
 other caps and never truncating inside a field: a row whose outline is within
-1,500 entries and whose serialization is within 64 KiB is kept whole; otherwise
+2,200 entries and whose serialization is within 64 KiB is kept whole; otherwise
 the build drops every heading (labels stay) and checks again; if the outline
-still exceeds 1,500 entries or the row 64 KiB, the build drops the outline, sets
+still exceeds 2,200 entries or the row 64 KiB, the build drops the outline, sets
 `index` false and records build gap `summary_outline_capped`; if the row without
-an outline still exceeds 64 KiB, the build fails.
+an outline still exceeds 64 KiB, the document gets no row and the build records
+`summary_row_capped`. On `vn/20261115_3` an estimated 4 rows drop their headings
+and 2 their outline. A document without a row answers like a key outside the
+release. The build fails only on a defect: an unknown gap kind, or a database or
+encoding error.
 
 Nothing is truncated when serving. Eligibility is computed at build from the
 row: `primary` is indexed when its outline holds at least one label and was not
