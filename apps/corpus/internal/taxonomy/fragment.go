@@ -15,34 +15,47 @@ func IsFragment(text string) bool {
 		lines = lines[1:]
 	}
 	text = strings.Join(lines, "\n")
+	document := `(?:thông tư|nghị định|quyết định|luật|văn bản|nghị quyết|chỉ thị)`
+	part := `(?:điều|khoản|điểm|phụ lục|mẫu)`
+	number := `[0-9]+(?:/[0-9]+)*(?:/[a-zđ]+(?:-[a-zđ]+)*)?`
+	referenceWord := `(?:điều|khoản|điểm|phụ|lục|mẫu|thông|tư|nghị|định|quyết|luật|văn|bản|chỉ|thị|này|của|số|ngày|tháng|năm|ban hành kèm theo|đính kèm|và|bằng|` + number + `)`
+	reference := `(?:` + part + `|` + document + `)(?:[ ,]+` + referenceWord + `)*`
+	date := `[0-9]+(?:/[0-9]+/[0-9]+|\s+tháng\s+[0-9]+\s+năm\s+[0-9]+)`
+	subject := `(?:` + document + `\s+này|` + part + `\s+(?:này|[0-9]+)(?:\s+điều\s+[0-9]+)?)`
+	addressee := `(?:bộ trưởng|thủ trưởng(?: các đơn vị thuộc ngân hàng nhà nước(?: việt nam)?| cơ quan ngang bộ)?|chánh văn phòng|vụ trưởng vụ chính sách tiền tệ|chủ tịch ủy ban nhân dân các tỉnh|thành phố trực thuộc trung ương|tổ chức tài chính vi mô|tổ chức tín dụng|tổ chức|cá nhân(?: có liên quan)?|chi nhánh ngân hàng nước ngoài|ngân hàng|cơ quan)`
+	addresseeList := `(?:các\s+)?` + addressee + `(?:(?:,\s*|\s+và\s+)(?:và\s+)?(?:các\s+)?` + addressee + `)*`
+
 	patterns := []string{
-		`^(thông tư|nghị định|quyết định|luật|văn bản|nghị quyết|chỉ thị|điều|khoản|phụ lục)[^:;]*\b(có hiệu lực thi hành từ|có hiệu lực kể từ|hết hiệu lực)(\s+(thi hành|kể từ|từ))?\s+(ngày|tháng|năm)\s+[0-9/ -]+(tháng\s+[0-9]+\s+năm\s+[0-9]+)?$`,
-		`^[^:;]*\b(chịu trách nhiệm tổ chức thực hiện|chịu trách nhiệm thi hành|hướng dẫn thi hành)\s+(thông tư|nghị định|quyết định|luật|văn bản|nghị quyết|chỉ thị|quy định)\s+này$`,
-		`^bãi bỏ\s+[^:;]+$`,
-		`^thay thế\s+phụ lục\s+[^:;]+\s+bằng\s+phụ lục\s+[^:;]+$`,
-		`^[^:;]+được sửa đổi, bổ sung như sau:$`,
+		`^` + subject + `\s+(?:có hiệu lực(?: thi hành)?|hết hiệu lực(?: thi hành)?)(?: kể)? từ ngày ` + date + `$`,
+		`^` + addresseeList + `\s+(?:chịu trách nhiệm (?:tổ chức thực hiện|thi hành|hướng dẫn thi hành|triển khai thực hiện)|hướng dẫn thi hành)\s+` + document + `\s+này$`,
+		`^bãi bỏ\s+` + reference + `$`,
+		`^thay thế\s+` + reference + `\s+bằng\s+` + reference + `$`,
+		`^` + reference + `\s+được sửa đổi, bổ sung như sau:$`,
 	}
 	compiled := make([]*regexp.Regexp, len(patterns))
 	for i, p := range patterns {
 		compiled[i] = regexp.MustCompile(p)
 	}
+	var sentences []string
 	for _, line := range strings.Split(text, "\n") {
 		line = regexp.MustCompile(`^\s*\d+\.\s*`).ReplaceAllString(line, "")
 		for _, sentence := range splitFragmentSentences(line) {
 			sentence = strings.TrimSpace(strings.Trim(sentence, " ./\t\r"))
-			if sentence == "" || regexp.MustCompile(`^\d+$`).MatchString(sentence) {
-				continue
+			if sentence != "" && !regexp.MustCompile(`^\d+$`).MatchString(sentence) {
+				sentences = append(sentences, sentence)
 			}
-			matched := false
-			for _, p := range compiled {
-				if p.MatchString(sentence) {
-					matched = true
-					break
-				}
+		}
+	}
+	for i, sentence := range sentences {
+		matched := false
+		for j, p := range compiled {
+			if p.MatchString(sentence) && (j != len(compiled)-1 || i == len(sentences)-1) {
+				matched = true
+				break
 			}
-			if !matched {
-				return false
-			}
+		}
+		if !matched {
+			return false
 		}
 	}
 	return true
