@@ -19,7 +19,10 @@ prefix `frameworks/<rel>/`. `trachuan-releases` keeps holding public legal text
 only, so no later decision about law dumps can reach a licensed one.
 
 Three principals reach it. The upload group `trachuan-release-upload` may
-create, inspect and read objects. A new user and group,
+create, overwrite, inspect and read objects, as for law: multipart uploads need
+both create and overwrite
+([OCI multipart uploads](https://docs.oracle.com/en-us/iaas/Content/Object/Tasks/usingmultipartuploads.htm)),
+and the uploader never overwrites an existing prefix. A new user and group,
 `trachuan-frameworks-verify`, with a customer secret key, may read it and
 nothing else; the law verify key cannot read it, so a leaked law key exposes no
 licensed dump. The host's dynamic group may read it. No other statement names
@@ -221,9 +224,14 @@ A Podman secret exists only after an updater that lists it has reconciled, and a
 container gets its mounts when it is created, so the first image to fetch the
 secret is not the one that mounts it (order, below). Before activating an image,
 the updater requires every secret that image's Quadlet files name to exist as a
-Podman secret after its forced reconciliation; a missing one stops the
-activation before any container changes, with reason `secret missing`, and the
-serving image stays.
+Podman secret after its forced reconciliation. A missing one stops the
+activation before any container changes: the result is `failed` at step
+`secrets` with `secret missing: <name>`, alarmed like a pending secret
+replacement; the serving image stays and the next run tries again. An updater
+older than A rejects the unknown `server_frameworks_key` in its stored secret
+state, so a rollback from A to an older image leaves that updater's secrets
+phase failing each run, alarmed, until the host rolls forward; image activation
+is unaffected, and once B has raised the floor that rollback is refused.
 
 ## Order
 
@@ -243,7 +251,7 @@ serving image stays.
 3. Image B raises the release floor to A's sequence, adds the `frameworks` block
    with `min_release_floor` A's sequence, and adds the key mount and the
    `server.env` lines with the flag off. A's updater installs it only once the
-   secret exists; until then B waits with `secret missing`.
+   secret exists; until then each run fails with `secret missing`.
 4. The first frameworks release is uploaded and signed; the host activates it.
 5. Host memory is measured with both corpora active: the runbook starts a
    one-off server container from the serving image with the flag on, on loopback

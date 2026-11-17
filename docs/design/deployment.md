@@ -104,13 +104,14 @@ only the `activator` role it provisions.
 Dynamic group `trachuan-host` (this instance only) gets `read secret-bundles`
 where
 [`target.secret.name`](https://docs.oracle.com/en-us/iaas/Content/Identity/Reference/keypolicyreference.htm)
-is one of the names above, `read objects` in bucket `trachuan-releases`, and
-`use log-content` for its log; no secret management or tenancy-wide grants.
-Instance identity is a host-wide privilege: application containers cannot reach
-instance metadata (host firewall rule for `trachuan` and its subordinate UIDs).
-Keep an owner recovery copy outside the host. The server holds no token signing
-key: access and refresh tokens are opaque database rows, and the consent form is
-bound to the session's CSRF secret.
+is one of the names above, `read objects` in buckets `trachuan-releases` and
+`trachuan-frameworks-releases`, and `use log-content` for its log; no secret
+management or tenancy-wide grants. Instance identity is a host-wide privilege:
+application containers cannot reach instance metadata (host firewall rule for
+`trachuan` and its subordinate UIDs). Keep an owner recovery copy outside the
+host. The server holds no token signing key: access and refresh tokens are
+opaque database rows, and the consent form is bound to the session's CSRF
+secret.
 
 ## Object Storage
 
@@ -141,12 +142,15 @@ Bucket `trachuan-releases` holds corpus releases
 ([corpus release](corpus-release.md#upload)). IAM user `trachuan-release-upload`
 (MacBook) may create and overwrite objects there; `trachuan-release-verify`
 (GitHub environment `corpus-release`) may only read them; the host reads them
-through its instance principal and needs no key. Backup credentials access only
-`trachuan-backups`, including deletion needed for pgBackRest expiry. A separate
-pipeline identity writes checkpoints and intent logs; exclude the never-deleted
-intent log from expiry policies. Never put credentials in manifests. Prove
-multipart upload, download and hash verification with the pinned clients before
-the first release.
+through its instance principal and needs no key. Bucket
+`trachuan-frameworks-releases` holds frameworks releases, read by its own
+`trachuan-frameworks-verify` user
+([frameworks release](frameworks-release.md#bucket-and-keys)). Backup
+credentials access only `trachuan-backups`, including deletion needed for
+pgBackRest expiry. A separate pipeline identity writes checkpoints and intent
+logs; exclude the never-deleted intent log from expiry policies. Never put
+credentials in manifests. Prove multipart upload, download and hash verification
+with the pinned clients before the first release.
 
 ## Serving bundle and release activation
 
