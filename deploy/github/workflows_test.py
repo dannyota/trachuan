@@ -10,9 +10,9 @@ class WorkflowsTest(unittest.TestCase):
         text = (ROOT / '.github/workflows/ci.yml').read_text()
         preflight = text.split('\n  schema:\n', 1)[0]
         for line in ('tofu: ${{ steps.paths.outputs.tofu }}', 'tofu=true', 'tofu=false',
-                     'deploy/oci/*|.github/workflows/ci.yml) tofu=true ;;',
-                     'deploy/oci/*) ;;', '"tofu=$tofu"'):
+                     'deploy/oci/*|.github/workflows/ci.yml) tofu=true ;;', '"tofu=$tofu"'):
             self.assertIn(line, preflight)
+        self.assertNotIn('deploy/oci/*) ;;', preflight)
         job = text.split('\n  opentofu:\n', 1)[1].split('\n  ci:\n', 1)[0]
         for line in ('needs: [preflight]', "if: needs.preflight.outputs.tofu == 'true'",
                      'runs-on: ubuntu-24.04', 'timeout-minutes: 5', 'contents: read',

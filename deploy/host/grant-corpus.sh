@@ -6,6 +6,7 @@ database=${1:?usage: grant-corpus.sh corpus_database}
 REVOKE ALL ON DATABASE :"database" FROM PUBLIC;
 GRANT CONNECT ON DATABASE :"database" TO corpus_reader;
 SQL
+PGOPTIONS='-c log_min_messages=panic -c log_min_error_statement=panic -c log_min_duration_statement=-1 -c log_statement=none' \
 /usr/local/bin/postgres-admin.sh psql -X -q --set ON_ERROR_STOP=1 --username postgres --dbname "$database" <<'SQL'
 REVOKE CREATE ON SCHEMA public FROM PUBLIC;
 GRANT USAGE ON SCHEMA public TO corpus_reader;
