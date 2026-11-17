@@ -182,15 +182,16 @@ set of seeded articles:
 
 Recall is micro over (article, node) pairs. The seeded set holds one placement
 per article, while an article may take several nodes, so its precision is top-1
-precision: the model's highest-confidence node per article, mapped to the level
-measured, against the seed at that level. Precision over all pairs, which also
-judges additional nodes, is measured on the model-adjudicated multi-family set.
-The same sets tune prompts and thresholds and gate the release; every prompt or
-threshold change reruns them. Each slice scores what the LLM layer classifies:
-the fragment rule below, applied mechanically to an entry's own text in the
-release by whole-sentence matching, excludes fragments from the scored entries,
-and the floors apply to the remaining entries. Every report states each number
-over all entries and over non-fragment entries, with the fragments listed.
+precision: the model's primary node per article (before prompt 3, its
+highest-confidence node), mapped to the level measured, against the seed at that
+level. Precision over all pairs, which also judges additional nodes, is measured
+on the model-adjudicated multi-family set. The same sets tune prompts and
+thresholds and gate the release; every prompt or threshold change reruns them.
+Each slice scores what the LLM layer classifies: the fragment rule below,
+applied mechanically to an entry's own text in the release by whole-sentence
+matching, excludes fragments from the scored entries, and the floors apply to
+the remaining entries. Every report states each number over all entries and over
+non-fragment entries, with the fragments listed.
 
 | Slice                                                  | Reference         | Metric                                                                               | Floor |
 | ------------------------------------------------------ | ----------------- | ------------------------------------------------------------------------------------ | ----- |
