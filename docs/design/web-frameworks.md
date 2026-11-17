@@ -40,7 +40,9 @@ no decoding), and the citation from the returned `citation` field. A returned
 handle is never decoded or re-encoded. A mapping end without a `handle`
 (unresolved) is shown and not linked. `invalid_handle` and `not_found` render
 the fixed 404. A signed-out visit keeps the `citation` parameter in `next`, as
-the reader keeps `release` ([web API](web-api.md#google-login)).
+the reader keeps `release`, only when the resulting `next` passes the `next`
+rules of [web API](web-api.md#google-login) unchanged; a citation they refuse (a
+backslash, for one) gives the version page as `next` instead, never `/`.
 
 ## What each page shows
 
@@ -122,7 +124,7 @@ than the response states. `access_unavailable` is a notice, not an error page.
 ## Access, caching and the flag
 
 - Every page needs a session: a signed-out visit gets the 302 to `/login?next=`
-  of [web](web.md), with `next` the path alone. Pages answer
+  of [web](web.md), with `next` built as "URLs and handles" says. Pages answer
   `Cache-Control: no-store` and `X-Robots-Tag: noindex`, take no Nitro route
   cache and no SWR, and are in no sitemap.
 - The pages call only the `/api/v1/frameworks` routes, with the session the
@@ -142,8 +144,8 @@ reduced, a mixed and a full access set; that a reduced control's HTML and
 payload hold no `title_original`, body, note, table or snippet field and show
 the fixed line; that a missing title shows citation and kind only; that an edge
 without evidence renders identically whether evidence was withheld or absent;
-citations with spaces, parentheses, `/`, `#`, `%`, and the citations `.` and
-`..`, round-tripped through links and the `next` of a signed-out visit; the 302,
-`no-store` and `noindex` headers; the fixed 404 when the API answers 404;
+citations with spaces, parentheses, `/`, `#`, `%`, `\`, and the citations `.`
+and `..`, round-tripped through links and the `next` of a signed-out visit; the
+302, `no-store` and `noindex` headers; the fixed 404 when the API answers 404;
 `access_unavailable`; continuations and their expiry errors; and the responsive
 sweep at 320, 390 and 1366 in both themes.

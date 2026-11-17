@@ -55,11 +55,11 @@ rejection is a fixed plain-text 429 without a render.
 
 A signed-out visit to a signed-in route redirects to `/login?next=` with `next`
 set to the path plus only allowlisted query parameters: `release` on the reader,
-`node` (a served node code, from a topic page link) on search, and `citation` (a
-citation of the framework grammar) on a framework control page
-([framework pages](web-frameworks.md)); every other parameter is dropped, so a
-query or form state never reaches a URL ([web API](web-api.md#google-login)
-states the `next` rules).
+`node` (a served node code, from a topic page link) on search, and `citation` on
+a framework control page when the result passes these rules, else that page's
+version page ([framework pages](web-frameworks.md)); every other parameter is
+dropped, so a query or form state never reaches a URL
+([web API](web-api.md#google-login) states the `next` rules).
 
 Security on `/account`: a password is added through the mailed link or changed
 with the current and new password. Two-step verification setup appears only when
