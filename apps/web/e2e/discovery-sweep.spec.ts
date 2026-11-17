@@ -27,7 +27,13 @@ for (const available of [true, false]) {
         }
         await expect(page.locator('html')).not.toHaveAttribute('data-csp-violation', 'true')
       }
-      for (const path of ['/robots.txt', '/sitemap.xml']) expect((await context.request.get(`${origin}${path}`)).status()).toBe(200)
+      expect((await context.request.get(`${origin}/robots.txt`)).status()).toBe(200)
+      const sitemap = await context.request.get(`${origin}/sitemap.xml`)
+      expect(sitemap.status()).toBe(available ? 200 : 503)
+      if (available) {
+        const xml = await sitemap.text()
+        expect([...xml.matchAll(/<loc>(.*?)<\/loc>/g)].map(match => match[1])).toEqual(['https://trachuan.vn/', 'https://trachuan.vn/vn/topics', 'https://trachuan.vn/connect', 'https://trachuan.vn/sources', 'https://trachuan.vn/privacy', 'https://trachuan.vn/terms', 'https://trachuan.vn/vn/topics/1'])
+      } else expect(sitemap.headers()['cache-control']).toBe('no-store')
       if (!available) expect((await context.request.get(`${origin}/vn/topics/1`)).status()).toBe(503)
       await context.close()
     })

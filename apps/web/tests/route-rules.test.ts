@@ -22,6 +22,7 @@ it('sends revalidation headers on cached public responses', async () => {
     import { Server } from 'node:http';
     Server.prototype.listen = function () { return this };
     process.env.NITRO_SHUTDOWN_DISABLED = '1';
+    globalThis.fetch = async request => new URL(request.url).pathname === '/api/v1/me' ? new Response('', { status: 503 }) : new Response(JSON.stringify(new URL(request.url).pathname.endsWith('/codes') ? { release: '20990101_1', codes: ['1'] } : { release: '20990101_1' }), { headers: { 'content-type': 'application/json' } });
     const nitro = await import('./.output/server/chunks/nitro/nitro.mjs');
     const app = nitro.g();
     const results = [];
@@ -57,6 +58,7 @@ it('revalidates public routes only by ETag', async () => {
     import { Server } from 'node:http';
     Server.prototype.listen = function () { return this };
     process.env.NITRO_SHUTDOWN_DISABLED = '1';
+    globalThis.fetch = async request => new URL(request.url).pathname === '/api/v1/me' ? new Response('', { status: 503 }) : new Response(JSON.stringify(new URL(request.url).pathname.endsWith('/codes') ? { release: '20990101_1', codes: ['1'] } : { release: '20990101_1' }), { headers: { 'content-type': 'application/json' } });
     const nitro = await import('./.output/server/chunks/nitro/nitro.mjs');
     const app = nitro.g();
     const results = [];

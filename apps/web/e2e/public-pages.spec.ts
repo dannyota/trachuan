@@ -22,11 +22,14 @@ for (const language of ['vi', 'en']) {
     const text = await context.request.get('/llms.txt?privatequery=secret-query-text')
     expect(text.headers()['content-type']).toContain('text/plain')
     expect(await text.text()).not.toContain('secret-query-text')
-    for (const path of ['/robots.txt', '/sitemap.xml']) {
+    for (const path of ['/robots.txt']) {
       const response = await context.request.get(path)
       expect(response.status()).toBe(200)
       expect(response.headers()['cache-control']).toBe('no-cache')
     }
+    const sitemap = await context.request.get('/sitemap.xml')
+    expect(sitemap.status()).toBe(503)
+    expect(sitemap.headers()['cache-control']).toBe('no-store')
     await context.close()
   })
 }
