@@ -25,7 +25,7 @@ const shownHeading = computed(() => displayHeading(props.hit.citation, heading.v
 const text = computed(() => props.hit.text ?? props.hit.snippet ?? '')
 const expanded = ref(false)
 const visibleText = computed(() => {
-  if (props.home || expanded.value || !shownHeading.value) return text.value
+  if (expanded.value || !shownHeading.value) return text.value
   const end = text.value.indexOf('\n')
   const first = end < 0 ? text.value : text.value.slice(0, end)
   const normalizeWhitespace = (value: string) => value.trim().replace(/\s+/g, ' ')
