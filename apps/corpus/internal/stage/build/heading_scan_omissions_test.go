@@ -2,7 +2,6 @@ package build
 
 import (
 	"context"
-	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -42,66 +41,79 @@ func (r headingScanReader) Query(_ context.Context, query string, _ ...any) (pgx
 
 type headingScanOutput struct {
 	Items []struct {
-		Key     string `json:"key"`
-		Anchor  string `json:"anchor"`
-		Heading string `json:"heading"`
+		Anchor string `json:"anchor"`
 	} `json:"items"`
-	Omitted struct {
+	Omitted map[string]struct {
 		Count   int `json:"count"`
 		Longest []struct {
 			Key    string `json:"key"`
 			Anchor string `json:"anchor"`
 			Length int    `json:"length"`
 		} `json:"longest"`
-	} `json:"rule_3_omitted"`
+	} `json:"omitted"`
+	ShapeCounts map[string]int `json:"shape_breakdown"`
 }
 
-func TestHeadingScan_RuleThreeBoundaryAndEligibility(t *testing.T) {
-	d := summaryFixture()
-	d.Payload.Outline = []summaryOutline{{Kind: "dieu", Anchor: "at-cap", Heading: strings.Repeat("ố", 300)}}
-	r := headingScanReader{documents: []summaryDocument{d}, provisions: [][]any{
-		{d.Key, "source_tree", "dieu", "at-cap", 300},
-		{d.Key, "source_tree", "dieu", "over-cap", 301},
-		{d.Key, "source_tree", "chuong", "chapter", 302},
-		{d.Key, "source_tree", "dieu", "excluded", 500},
-		{d.Key, "source_tree", "phan", "part", 400},
-		{d.Key, "source_tree", "muc", "section", 400},
-		{"vn:vbpl:2", "ocr", "dieu", "ocr", 400},
-		{"vn:vbpl:3", "source_tree", "dieu", "structural", 400},
-	}, gaps: [][]any{{"vn:vbpl:3", "tree_text_partial"}}}
-	b, err := HeadingScan(context.Background(), r, "vn", "20990101_1", []source.HeadingExclusion{{Key: d.Key, Anchor: "excluded"}})
+func TestHeadingScan_ReasonReport(t *testing.T) {
+	r := headingScanReader{}
+	r.provisions = append(r.provisions, []any{"broken", "source_tree", "chuong", "III", "chapter", "Bad."})
+	for i := 0; i < 25; i++ {
+		r.provisions = append(r.provisions, []any{"broken", "source_tree", "dieu", "", fmt.Sprintf("s%02d", i), strings.Repeat("S", 301+i) + "."})
+		r.provisions = append(r.provisions, []any{"valid", "source_tree", "dieu", "", fmt.Sprintf("l%02d", i), strings.Repeat("L", 301+i) + "."})
+		r.provisions = append(r.provisions, []any{"valid", "source_tree", "dieu", "", fmt.Sprintf("h%02d", i), strings.Repeat("H", i+1) + "."})
+	}
+	r.provisions = append(r.provisions,
+		[]any{"valid", "source_tree", "dieu", "", "internal", "Private. text"},
+		[]any{"valid", "source_tree", "dieu", "", "leading", "- Private"},
+		[]any{"valid", "source_tree", "dieu", "", "multiple", "- Private. text!"},
+		[]any{"valid", "source_tree", "dieu", "", "ok", "Private"},
+		[]any{"ocr", "ocr", "dieu", "", "skip", "Private."},
+		[]any{"gap", "source_tree", "dieu", "", "skip", "Private."},
+	)
+	r.gaps = [][]any{{"gap", "tree_text_partial"}}
+	b, err := HeadingScan(context.Background(), r, "vn", "20990101_1", nil)
 	if err != nil {
 		t.Fatal(err)
-	}
-	var got headingScanOutput
-	if err = json.Unmarshal(b, &got); err != nil {
-		t.Fatal(err)
-	}
-	if len(got.Items) != 1 || got.Items[0].Anchor != "at-cap" || got.Items[0].Heading != strings.Repeat("ố", 300) {
-		t.Fatalf("items=%+v", got.Items)
-	}
-	if got.Omitted.Count != 2 || len(got.Omitted.Longest) != 2 || got.Omitted.Longest[0].Anchor != "chapter" || got.Omitted.Longest[0].Length != 302 || got.Omitted.Longest[1].Anchor != "over-cap" || got.Omitted.Longest[1].Length != 301 {
-		t.Fatalf("omitted=%+v", got.Omitted)
 	}
 	var raw map[string]json.RawMessage
 	if err = json.Unmarshal(b, &raw); err != nil {
 		t.Fatal(err)
 	}
-	if strings.Contains(string(raw["rule_3_omitted"]), "heading") || strings.Contains(string(raw["rule_3_omitted"]), "ố") {
-		t.Fatalf("heading text in omissions: %s", raw["rule_3_omitted"])
+	if _, ok := raw["rule_3_omitted"]; ok {
+		t.Fatal("obsolete report present")
+	}
+	var got headingScanOutput
+	if err = json.Unmarshal(b, &got); err != nil {
+		t.Fatal(err)
+	}
+	for reason, count := range map[string]int{"sequence": 26, "length": 25, "shape": 28} {
+		report := got.Omitted[reason]
+		if report.Count != count || len(report.Longest) != 20 {
+			t.Errorf("%s: %+v", reason, report)
+		}
+		for i := 1; i < len(report.Longest); i++ {
+			if report.Longest[i-1].Length < report.Longest[i].Length {
+				t.Errorf("%s not sorted", reason)
+			}
+		}
+	}
+	if got.ShapeCounts["end_mark"] != 26 || got.ShapeCounts["internal_break"] != 1 || got.ShapeCounts["leading_marker"] != 1 {
+		t.Fatalf("shape counts: %+v", got.ShapeCounts)
+	}
+	if strings.Contains(string(raw["omitted"]), "Private") || strings.Contains(string(raw["omitted"]), "heading") {
+		t.Fatalf("text in report: %s", raw["omitted"])
 	}
 }
 
-func TestHeadingScan_RuleThreeOrderLimitAndNoSummary(t *testing.T) {
-	r := headingScanReader{gaps: [][]any{{"vn:vbpl:10", "summary_field_capped"}, {"vn:vbpl:2", "summary_row_capped"}}}
-	for i := 24; i >= 0; i-- {
-		r.provisions = append(r.provisions, []any{"vn:vbpl:2", "source_tree", "dieu", fmt.Sprintf("a%02d", i), 301 + i})
-	}
-	r.provisions = append(r.provisions,
-		[]any{"vn:vbpl:10", "source_tree", "chuong", "z", 325},
-		[]any{"vn:vbpl:10", "source_tree", "dieu", "a", 325},
-	)
-	b, err := HeadingScan(context.Background(), r, "vn", "20990101_1", nil)
+func TestHeadingScan_ExclusionsAndTies(t *testing.T) {
+	r := headingScanReader{provisions: [][]any{
+		{"doc", "source_tree", "dieu", "", "z", "Title."},
+		{"doc", "source_tree", "dieu", "", "a", "Other."},
+		{"doc", "source_tree", "dieu", "", "excluded", "Title."},
+		{"doc", "source_tree", "phan", "", "part", "Title."},
+		{"doc", "source_tree", "dieu", "", "empty", ""},
+	}}
+	b, err := HeadingScan(context.Background(), r, "vn", "20990101_1", []source.HeadingExclusion{{Key: "doc", Anchor: "excluded"}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -109,31 +121,8 @@ func TestHeadingScan_RuleThreeOrderLimitAndNoSummary(t *testing.T) {
 	if err = json.Unmarshal(b, &got); err != nil {
 		t.Fatal(err)
 	}
-	if len(got.Items) != 0 || got.Omitted.Count != 27 || len(got.Omitted.Longest) != 20 {
-		t.Fatalf("items=%d omitted=%+v", len(got.Items), got.Omitted)
-	}
-	for i, item := range got.Omitted.Longest {
-		key, anchor, length := "vn:vbpl:2", fmt.Sprintf("a%02d", 26-i), 327-i
-		if i < 2 {
-			key, anchor, length = "vn:vbpl:10", "a", 325
-			if i == 1 {
-				anchor = "z"
-			}
-		}
-		if item.Key != key || item.Anchor != anchor || item.Length != length {
-			t.Fatalf("longest[%d]=%+v, want %s/%s/%d", i, item, key, anchor, length)
-		}
-	}
-	for i, j := 0, len(r.provisions)-1; i < j; i, j = i+1, j-1 {
-		r.provisions[i], r.provisions[j] = r.provisions[j], r.provisions[i]
-	}
-	again, err := HeadingScan(context.Background(), r, "vn", "20990101_1", nil)
-	if err != nil || string(again) != string(b) {
-		t.Fatalf("nondeterministic scan: %v", err)
-	}
-	r.provisions = append(r.provisions, []any{"vn:vbpl:2", "source_tree", "dieu", "short", 301})
-	changed, err := HeadingScan(context.Background(), r, "vn", "20990101_1", nil)
-	if err != nil || sha256.Sum256(changed) == sha256.Sum256(b) {
-		t.Fatalf("omission count absent from scan hash: %v", err)
+	report := got.Omitted["shape"]
+	if report.Count != 2 || len(report.Longest) != 2 || report.Longest[0].Anchor != "a" || report.Longest[1].Anchor != "z" {
+		t.Fatalf("report: %+v", report)
 	}
 }

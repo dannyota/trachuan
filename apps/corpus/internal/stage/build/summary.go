@@ -6,6 +6,7 @@ import (
 	"slices"
 	"strings"
 	"time"
+	"unicode"
 	"unicode/utf8"
 )
 
@@ -125,12 +126,13 @@ func makeSummary(ctx context.Context, db summarySizer, d summaryDocument, gaps [
 	p.Relations, p.Nodes = relations, nodes
 	slices.Sort(d.CappedFields)
 	d.CappedFields = slices.Compact(d.CappedFields)
+	headings = headings && chapterSequenceOK(p.Outline)
 	outline := make([]summaryOutline, 0, len(p.Outline))
 	for _, n := range p.Outline {
 		if n.Kind != "phan" && n.Kind != "chuong" && n.Kind != "muc" && n.Kind != "dieu" {
 			continue
 		}
-		if !headings || (n.Kind != "chuong" && n.Kind != "dieu") || utf8.RuneCountInString(n.Heading) > 300 || excluded[n.Anchor] {
+		if !headings || (n.Kind != "chuong" && n.Kind != "dieu") || utf8.RuneCountInString(n.Heading) > 300 || headingShape(n.Heading) != "" || excluded[n.Anchor] {
 			n.Heading = ""
 		}
 		outline = append(outline, n)
@@ -143,4 +145,108 @@ func makeSummary(ctx context.Context, db summarySizer, d summaryDocument, gaps [
 	}
 	p.Outline = outline
 	return capSummary(ctx, db, d)
+}
+
+func chapterSequenceOK(outline []summaryOutline) bool {
+	previous := 0
+	for _, n := range outline {
+		if n.Kind != "chuong" {
+			continue
+		}
+		number, ok := chapterNumber(n.Label)
+		if !ok || (number != previous+1 && number != 1) {
+			return false
+		}
+		previous = number
+	}
+	return true
+}
+
+func chapterNumber(label string) (int, bool) {
+	label = strings.ToLower(strings.TrimSpace(label))
+	label = strings.TrimPrefix(label, "chương")
+	label = strings.TrimRight(strings.TrimSpace(label), ".")
+	if label == "" {
+		return 0, false
+	}
+	runes := []rune(label)
+	value := 0
+	allDigits := true
+	for _, r := range runes {
+		digit := -1
+		for _, span := range unicode.Digit.R16 {
+			if r >= rune(span.Lo) && r <= rune(span.Hi) && (r-rune(span.Lo))%rune(span.Stride) == 0 {
+				digit = int((r-rune(span.Lo))/rune(span.Stride)) % 10
+				break
+			}
+		}
+		for _, span := range unicode.Digit.R32 {
+			if r >= rune(span.Lo) && r <= rune(span.Hi) && (r-rune(span.Lo))%rune(span.Stride) == 0 {
+				digit = int((r-rune(span.Lo))/rune(span.Stride)) % 10
+				break
+			}
+		}
+		if digit < 0 {
+			allDigits = false
+			break
+		}
+		if value > (int(^uint(0)>>1)-digit)/10 {
+			return 0, false
+		}
+		value = value*10 + digit
+	}
+	if allDigits {
+		return value, true
+	}
+	roman := func(r rune) int {
+		switch r {
+		case 'i':
+			return 1
+		case 'v':
+			return 5
+		case 'x':
+			return 10
+		case 'l':
+			return 50
+		case 'c':
+			return 100
+		case 'd':
+			return 500
+		case 'm':
+			return 1000
+		}
+		return 0
+	}
+	value = 0
+	for i, r := range runes {
+		v := roman(r)
+		if v == 0 {
+			return 0, false
+		}
+		if i+1 < len(runes) && roman(runes[i+1]) > v {
+			value -= v
+		} else {
+			value += v
+		}
+	}
+	return value, true
+}
+
+func headingShape(heading string) string {
+	runes := []rune(strings.TrimSpace(heading))
+	if len(runes) == 0 {
+		return ""
+	}
+	if strings.ContainsRune(".:;?!", runes[len(runes)-1]) {
+		return "end_mark"
+	}
+	for i := 0; i+2 < len(runes); i++ {
+		if (runes[i] == '.' || runes[i] == ':') && unicode.IsSpace(runes[i+1]) {
+			return "internal_break"
+		}
+	}
+	if strings.ContainsRune("-+•*–—", runes[0]) {
+		return "leading_marker"
+	}
+	return ""
 }

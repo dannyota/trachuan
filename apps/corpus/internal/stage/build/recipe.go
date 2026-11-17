@@ -41,7 +41,7 @@ type buildRecipe struct {
 
 func (r buildRecipe) hash() string {
 	b, _ := json.Marshal(r)
-	return stage.RecipeHash("build", "corpus/5", string(b))
+	return stage.RecipeHash("build", "corpus/6", string(b))
 }
 
 type Versions struct {

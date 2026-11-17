@@ -11,7 +11,7 @@ func TestHeadingScan_UnapprovedCandidates(t *testing.T) {
 	for _, tc := range []struct {
 		heading string
 		flagged bool
-	}{{"Phạm vi", false}, {"PHẢI làm", true}, {"được làm", true}, {"không được làm", true}, {"có trách nhiệm", true}, {"phải_làm", true}, {"phải2", false}, {"bấtphải", false}, {norm.NFD.String("phải làm"), true}, {"Tên.", true}, {"Tên!", true}, {"Tên?", true}, {"Tên…", true}, {"Tên", false}, {strings.Repeat("ố", 200), false}, {strings.Repeat("ố", 201), true}} {
+	}{{"Phạm vi", false}, {"PHẢI làm", true}, {"được làm", true}, {"không được làm", true}, {"có trách nhiệm", true}, {"phải_làm", true}, {"phải2", false}, {"bấtphải", false}, {norm.NFD.String("phải làm"), true}, {"Tên.", false}, {"Tên!", false}, {"Tên?", false}, {"Tên…", true}, {"Tên", false}, {strings.Repeat("ố", 200), false}, {strings.Repeat("ố", 201), true}} {
 		d := summaryFixture()
 		d.Payload.Outline[0].Heading = tc.heading
 		r, _, err := makeUnitSummary(d, nil, nil)

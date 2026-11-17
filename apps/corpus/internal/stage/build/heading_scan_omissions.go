@@ -3,6 +3,7 @@ package build
 import (
 	"context"
 	"fmt"
+	"unicode/utf8"
 
 	"danny.vn/trachuan/apps/corpus/internal/source"
 	"github.com/jackc/pgx/v5"
@@ -12,6 +13,8 @@ type headingOmission struct {
 	Key    string `json:"key"`
 	Anchor string `json:"anchor"`
 	Length int    `json:"length"`
+	reason string
+	shape  string
 }
 
 func scanHeadingOmissions(ctx context.Context, db summaryReader, exclusions []source.HeadingExclusion) ([]headingOmission, error) {
@@ -41,25 +44,52 @@ func scanHeadingOmissions(ctx context.Context, db summaryReader, exclusions []so
 	for _, entry := range exclusions {
 		excluded[[2]string{entry.Key, entry.Anchor}] = true
 	}
-	rows, err = db.Query(ctx, `SELECT d.key,d.text_source,p.kind,p.anchor,char_length(p.heading) FROM document d JOIN provision p ON p.document_id=d.id`)
+	rows, err = db.Query(ctx, `SELECT d.key,d.text_source,p.kind,p.label,p.anchor,p.heading FROM document d JOIN provision p ON p.document_id=d.id ORDER BY d.key COLLATE "C",p.preorder`)
 	if err != nil {
 		return nil, fmt.Errorf("query omitted headings: %w", err)
 	}
 	defer rows.Close()
-	omissions := []headingOmission{}
+	type provision struct {
+		key, textSource string
+		node            summaryOutline
+	}
+	var provisions []provision
+	outlines := map[string][]summaryOutline{}
 	for rows.Next() {
-		var omission headingOmission
-		var textSource, kind string
-		if err = rows.Scan(&omission.Key, &textSource, &kind, &omission.Anchor, &omission.Length); err != nil {
+		var p provision
+		if err = rows.Scan(&p.key, &p.textSource, &p.node.Kind, &p.node.Label, &p.node.Anchor, &p.node.Heading); err != nil {
 			return nil, fmt.Errorf("scan omitted heading: %w", err)
 		}
-		if textSource != "source_tree" || structural[omission.Key] || (kind != "chuong" && kind != "dieu") || excluded[[2]string{omission.Key, omission.Anchor}] || omission.Length <= 300 {
-			continue
+		provisions = append(provisions, p)
+		if p.node.Kind == "chuong" {
+			outlines[p.key] = append(outlines[p.key], p.node)
 		}
-		omissions = append(omissions, omission)
 	}
 	if err = rows.Err(); err != nil {
 		return nil, fmt.Errorf("read omitted headings: %w", err)
+	}
+	broken := map[string]bool{}
+	for key, outline := range outlines {
+		broken[key] = !chapterSequenceOK(outline)
+	}
+	omissions := []headingOmission{}
+	for _, p := range provisions {
+		n := p.node
+		if p.textSource != "source_tree" || structural[p.key] || (n.Kind != "chuong" && n.Kind != "dieu") || excluded[[2]string{p.key, n.Anchor}] || n.Heading == "" {
+			continue
+		}
+		o := headingOmission{Key: p.key, Anchor: n.Anchor, Length: utf8.RuneCountInString(n.Heading)}
+		switch {
+		case broken[p.key]:
+			o.reason = "sequence"
+		case o.Length > 300:
+			o.reason = "length"
+		case headingShape(n.Heading) != "":
+			o.reason, o.shape = "shape", headingShape(n.Heading)
+		default:
+			continue
+		}
+		omissions = append(omissions, o)
 	}
 	return omissions, nil
 }

@@ -115,3 +115,73 @@ func TestSummary_PointersAndGaps(t *testing.T) {
 		t.Fatalf("gaps: %s", b)
 	}
 }
+
+func TestSummary_ChapterSequence(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		labels []string
+		valid  bool
+	}{
+		{"roman", []string{"I", "II", "III"}, true},
+		{"restart", []string{"I", "II", "I", "II"}, true},
+		{"letter", []string{"Chương c"}, false},
+		{"skip", []string{"I", "III"}, false},
+		{"repeat", []string{"I", "II", "II"}, false},
+		{"digits", []string{"1", "2"}, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			d := summaryFixture()
+			d.Payload.Outline = nil
+			for _, label := range tc.labels {
+				d.Payload.Outline = append(d.Payload.Outline, summaryOutline{Kind: "chuong", Label: label, Heading: "Chapter"})
+			}
+			d.Payload.Outline = append(d.Payload.Outline, summaryOutline{Kind: "dieu", Heading: "Article"})
+			r, _, err := makeUnitSummary(d, nil, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, n := range r.Payload.Outline {
+				if (n.Heading != "") != tc.valid {
+					t.Errorf("%s: heading %q, valid %v", n.Label, n.Heading, tc.valid)
+				}
+			}
+		})
+	}
+}
+
+func TestSummary_HeadingShape(t *testing.T) {
+	cases := []struct {
+		heading string
+		valid   bool
+	}{{"Title)", true}, {"Title 2", true}, {"Title", true}}
+	for _, mark := range []string{".", ":", ";", "?", "!"} {
+		cases = append(cases, struct {
+			heading string
+			valid   bool
+		}{"Title" + mark, false})
+	}
+	for _, mark := range []string{".", ":"} {
+		for _, space := range []string{" ", "\u00a0", "\u2003"} {
+			cases = append(cases, struct {
+				heading string
+				valid   bool
+			}{"Title" + mark + space + "Text", false})
+		}
+	}
+	for _, mark := range []string{"-", "+", "•", "*", "–", "—"} {
+		cases = append(cases, struct {
+			heading string
+			valid   bool
+		}{mark + " Title", false})
+	}
+	for _, tc := range cases {
+		t.Run(tc.heading, func(t *testing.T) {
+			d := summaryFixture()
+			d.Payload.Outline[1].Heading = "  " + tc.heading + "  "
+			r, _, err := makeUnitSummary(d, nil, nil)
+			if err != nil || (r.Payload.Outline[1].Heading != "") != tc.valid {
+				t.Fatalf("heading %q: got %q, err %v", tc.heading, r.Payload.Outline[1].Heading, err)
+			}
+		})
+	}
+}
