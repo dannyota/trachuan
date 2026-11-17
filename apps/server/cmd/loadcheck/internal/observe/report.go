@@ -262,6 +262,7 @@ func buildReport(records []loadrun.Record, run loadrun.Report, samples []sample,
 	var connections int
 	var cpu float64
 	haveCPU := false
+	haveConnections := false
 	maxRSS := map[string]uint64{}
 	maxCPU := map[string]float64{}
 	restarts := 0
@@ -272,7 +273,10 @@ func buildReport(records []loadrun.Record, run loadrun.Report, samples []sample,
 			continue
 		}
 		sampleCount++
-		connections = max(connections, s.Connections)
+		if s.Connections != nil {
+			connections = max(connections, *s.Connections)
+			haveConnections = true
+		}
 		if s.HostCPU != nil {
 			cpu = math.Max(cpu, *s.HostCPU)
 			haveCPU = true
@@ -289,6 +293,10 @@ func buildReport(records []loadrun.Record, run loadrun.Report, samples []sample,
 		}
 	}
 	addGate(&gates, "PostgreSQL connections", fmt.Sprint(connections), "≤ 40", sampleCount > 0 && connections <= 40)
+	if !haveConnections {
+		gates[len(gates)-1].Value = "unavailable"
+		gates[len(gates)-1].Result = "unavailable"
+	}
 	addGate(&gates, "Host CPU", fmt.Sprintf("%.2f%%", cpu), "≤ 80%", haveCPU && cpu <= 80)
 	for _, entry := range []struct {
 		name  string
