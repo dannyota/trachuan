@@ -366,3 +366,135 @@
     anchor: "doan-9"
     quote: "Quyết định này có hiệu lực thi hành từ ngày 15 tháng 8 năm 2026"
   reviewed: "2026-11-16"
+- key: vn:vbpl:100152
+  number: "09/2011/TTLT-BCA-BQP-BTP-NHNNVN-VKSNDTC-TANDTC"
+  set: {eff_from: "2012-02-07"}
+  reason: "Điều 5 states 2012-02-07, not the source date 2012-12-07."
+  evidence:
+    anchor: "dieu-5"
+    quote: "Thông tư này có hiệu lực thi hành kể từ ngày 07 tháng 02 năm 2012"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:139039
+  number: "86/2019/NĐ-CP"
+  set: {eff_from: "2020-01-15"}
+  reason: "Điều 4 khoản 1 states 2020-01-15, not the source date 2019-01-15."
+  evidence:
+    anchor: "dieu-4/khoan-1"
+    quote: "Nghị định này có hiệu lực thi hành từ ngày 15 tháng 01 năm 2020"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:144744
+  number: "120/2020/NĐ-CP"
+  set: {eff_from: "2020-12-01"}
+  reason: "Điều 29 states 2020-12-01, not the source date 2020-11-08."
+  evidence:
+    anchor: "dieu-29"
+    quote: "Nghị định này có hiệu lực thi hành từ ngày 01 tháng 12 năm 2020"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:157721
+  number: "14/2022/QH15"
+  set: {eff_from: "2023-03-01"}
+  reason: "Điều 66 khoản 1 states 2023-03-01 for the law (khoản 2 defers only khoản 1 Điều 64), not the source date 2022-11-15."
+  evidence:
+    anchor: "dieu-66/khoan-1"
+    quote: "Luật này có hiệu lực thi hành từ ngày 01 tháng 3 năm 2023"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:163727
+  number: "15/2023/TT-NHNN"
+  set: {eff_from: "2024-01-01"}
+  reason: "Điều 22 khoản 1 states 2024-01-01, not the source date 2025-01-01."
+  evidence:
+    anchor: "dieu-22/khoan-1"
+    quote: "Thông tư này có hiệu lực từ ngày 01 tháng 01 năm 2024"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:168080
+  number: "06/2022/QH15"
+  set: {eff_from: "2024-01-01"}
+  reason: "Điều 94 khoản 1 states 2024-01-01, not the source date 2024-07-01."
+  evidence:
+    anchor: "dieu-94/khoan-1"
+    quote: "Luật này có hiệu lực thi hành từ ngày 01 tháng 01 năm 2024."
+  reviewed: "2026-11-18"
+- key: vn:vbpl:92217
+  number: "19/2015/TT-NHNN"
+  set: {eff_from: "2015-12-01"}
+  reason: "Điều 13 khoản 1 states 2015-12-01, not the source date 2015-10-22."
+  evidence:
+    anchor: "dieu-13/khoan-1"
+    quote: "Thông tư này có hiệu lực thi hành kể từ ngày 01/12/2015"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:174948
+  number: "21/2024/TT-BTTTT"
+  set: {eff_from: "2025-02-15"}
+  reason: "Điều 2 states 2025-02-15, not the source date 2015-02-15."
+  evidence:
+    anchor: "dieu-2"
+    quote: "Thông tư này có hiệu lực thi hành kể từ ngày 15 tháng 02 năm 2025"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:18293
+  number: "74/2005/NĐ-CP"
+  set: {eff_from: "2005-08-01"}
+  reason: "Điều 26 states 2005-08-01, not the source date 2005-07-03."
+  evidence:
+    anchor: "dieu-26"
+    quote: "Nghị định này có hiệu lực thi hành kể từ ngày 01 tháng 8 năm 2005."
+  reviewed: "2026-11-18"
+- key: vn:vbpl:186058
+  number: "77/2025/TT-NHNN"
+  set: {eff_from: "2026-03-01"}
+  reason: "Điều 12 khoản 1 states 2026-03-01, not the source date 2025-03-01."
+  evidence:
+    anchor: "dieu-12/khoan-1"
+    quote: "Thông tư này có hiệu lực thi hành kể từ ngày 01 tháng 3 năm 2026"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:186131
+  number: "80/2025/TT-NHNN"
+  set: {eff_from: "2026-01-25"}
+  reason: "Điều 22 khoản 1 states 2026-01-25, not the source date 2025-01-25."
+  evidence:
+    anchor: "dieu-22/khoan-1"
+    quote: "Thông tư này có hiệu lực thi hành kể từ ngày 25 tháng 01 năm 2026"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:186978
+  number: "347/2025/NĐ-CP"
+  set: {eff_from: "2026-01-01"}
+  reason: "Điều 16 khoản 1 states 2026-01-01; the source gives no effective date."
+  evidence:
+    anchor: "dieu-16/khoan-1"
+    quote: "Nghị định này có hiệu lực thi hành từ ngày 01 tháng 01 năm 2026"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:100048
+  number: "18/2016/NĐ-CP"
+  set: {eff_to: "2026-11-06"}
+  reason: "359/2026/NĐ-CP Điều 33 khoản 2 điểm c ends the whole of 18/2016/NĐ-CP from the day 359/2026/NĐ-CP takes effect, which khoản 1 sets to 2026-11-06."
+  evidence:
+    key: vn:vbpl:11950eb0-b592-11f1-a376-bdf707a44d9b
+    anchor: "dieu-33"
+    quote: "c) Nghị định số 18/2016/NĐ-CP ngày 18 tháng 3 năm 2016"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:30473
+  number: "53/2013/NĐ-CP"
+  set: {eff_to: "2026-11-06"}
+  reason: "359/2026/NĐ-CP Điều 33 khoản 2 điểm a ends the whole of 53/2013/NĐ-CP from the day 359/2026/NĐ-CP takes effect, which khoản 1 sets to 2026-11-06."
+  evidence:
+    key: vn:vbpl:11950eb0-b592-11f1-a376-bdf707a44d9b
+    anchor: "dieu-33"
+    quote: "a) Nghị định số 53/2013/NĐ-CP ngày 18 tháng 5 năm 2013"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:58234
+  number: "34/2015/NĐ-CP"
+  set: {eff_to: "2026-11-06"}
+  reason: "359/2026/NĐ-CP Điều 33 khoản 2 điểm b ends the whole of 34/2015/NĐ-CP from the day 359/2026/NĐ-CP takes effect, which khoản 1 sets to 2026-11-06."
+  evidence:
+    key: vn:vbpl:11950eb0-b592-11f1-a376-bdf707a44d9b
+    anchor: "dieu-33"
+    quote: "b) Nghị định số 34/2015/NĐ-CP ngày 31 tháng 3 năm 2015"
+  reviewed: "2026-11-18"
+- key: vn:vbpl:132811
+  number: "40/2018/TT-NHNN"
+  set: {eff_to: "2026-07-01"}
+  reason: "83/2025/TT-NHNN Điều 74 khoản 6 điểm b repeals the whole of 40/2018/TT-NHNN from 01/07/2026, the date khoản 1 sets for 83/2025/TT-NHNN to take effect."
+  evidence:
+    key: vn:vbpl:186792
+    anchor: "dieu-74"
+    quote: "b) Thông tư số 40/2018/TT-NHNN ngày 28 tháng 12 năm 2018"
+  reviewed: "2026-11-18"
