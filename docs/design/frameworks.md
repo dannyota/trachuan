@@ -137,9 +137,10 @@ The cases, hits, cohorts, measured recipe, release invariant check and floors
 are in [frameworks evaluation](frameworks-evaluation.md).
 
 compliary's 205 golden cases are the starting cohort, re-adjudicated against
-this release. Floors are set from the first measured run and recorded here;
-compliary measured recall@8 of 86.3% without a framework filter and 93.2% with
-one. Evaluation runs with full access. A second suite runs the
+this release. Floors are adopted after the first measured run: the public
+cohort's here, the licensed cohort's in a private file; compliary measured
+recall@8 of 86.3% without a framework filter and 93.2% with one. Evaluation
+measures a free-only and a full-access caller. A second suite runs the
 [invariant](frameworks-access.md#the-invariant) with reduced and mixed access
 sets; a release that fails it is not signed. Serving parameters are set from
 free versions' text and the public fields of licensed versions only; full-access

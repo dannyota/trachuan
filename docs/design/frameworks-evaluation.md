@@ -2,8 +2,8 @@
 
 This note owns how a frameworks release is evaluated: the golden cases and their
 adjudication, what counts as a hit, the cohorts, the measured retrieval recipe,
-the release invariant check and the floors. The `evaluate` step that runs it is
-in [build](frameworks-build.md); the gate rules are in
+the release invariant check, the floors and the report. The steps that run it
+are in [build](frameworks-build.md); the gate rules are in
 [frameworks](frameworks.md#evaluation); the access rules are in
 [framework access](frameworks-access.md).
 
@@ -13,11 +13,12 @@ The starting cohort is compliary's 205 cases (`deploy/eval/golden.csv`: `id`,
 `question`, `framework_code`, `version_label`, `citation_norm`,
 `expect_abstain`, `notes`). The working copy is
 `FRAMEWORKS_SOURCE_DIR/trachuan/golden.csv`, outside Git like the titles and
-waivers, and a `snapshot` input, so a run reads only its frozen copy. It adds
-two columns per case: `adjudication` (`accepted`, `rejected` or
-`out_of_release`) and `reason` for a rejection; one header file beside it,
-`golden-review.yaml`, records the release, reviewer, date and the CSV's SHA-256.
-A changed CSV without a matching review entry fails `evaluate`.
+waivers, owned by the coordinator, and a `snapshot` input, so a run reads only
+its frozen copy. It adds `adjudication` (`accepted`, `rejected`,
+`out_of_release` or `unverified`) and `reason`. `golden-review.yaml` beside it
+holds one entry per change: release, reviewer (`coordinator`), date, the CSV's
+SHA-256 and the case ids added, rejected or re-targeted. A CSV whose hash has no
+entry fails `snapshot`.
 
 **Mapping a case to a control.** `framework_code` must be a registry code;
 `version_label` names a registered version by the
@@ -26,27 +27,30 @@ A changed CSV without a matching review entry fails `evaluate`.
 `oscal-catalog`, leading zeros of control and enhancement numbers are removed:
 `AC-02(03)` is `AC-2(3)`) and must equal one control's `citation_norm` in that
 version. The target is that control's handle. A case whose version is not in the
-release is `out_of_release`: counted per version in the report, never scored. A
-case whose version is in the release but whose citation matches no control fails
-`evaluate`; it is fixed by adjudication, not skipped. A case with an empty
-`framework_code` and `expect_abstain: true` is a negative.
+release is `out_of_release`: counted per version, never scored. A case whose
+version is in the release but whose citation matches no control fails the step;
+it is fixed by a review entry, not skipped.
 
-**Adjudication.** Before the first measured run every in-release case is
-re-adjudicated against this release. For a `free` version the reviewer reads the
-target control's text and marks the case `accepted` when the control answers the
-question, else `rejected` with a reason. For a `licensed` version nobody reads
-the text: the reviewer confirms the target resolves and keeps compliary's
-verdict, which the owner verified against the purchased text. Negatives are
-accepted when no release version covers the topic. Only `accepted` cases are
-scored. Adding or rejecting a case after the first run is a review entry and is
-reported as a cohort change, never a silent edit.
+**Labels come only from permitted inputs.** A negative is a case whose question
+names a framework absent from the registry or a topic outside security and
+compliance; it is labelled from the question and the registry alone, never by
+searching or reading any version's text. So no change to licensed text can turn
+a case into or out of the negative set.
+
+**Adjudication.** Every in-release positive is adjudicated against the release
+before it is scored. For a `free` version the reviewer reads the target
+control's text and marks it `accepted` or `rejected` with a reason. For a
+`licensed` version no licensed text is read into any model context: the case
+keeps compliary's verdict when an owner attestation binds that verdict to the
+same source file (the registry SHA-256 of the version's catalog) and the
+version's parse passed its control-count check in this release; otherwise it is
+`unverified`. `unverified` cases are run and reported but never gated.
 
 ## Hits and metrics
 
 A positive case hits at rank _r_ when the _r_-th hit's handle equals the target
 handle. A hit at another version of the same framework, at the target's parent
-or at a child does not count; the report counts those separately as `near_hits`
-(same framework and citation in another version; ancestor; descendant) for
+or at a child does not count; the report counts those as `near_hits` for
 diagnosis. A lookup response (citation routing) counts like a ranked list, in
 its order.
 
@@ -55,89 +59,127 @@ its order.
 - **current-version rate**: among hits of a framework with more than one version
   in the release, the share at the target version; `not_applicable` while every
   framework has one version.
-- **abstention**: for positives, the share answered (not abstaining); for
-  negatives, the share abstaining; balanced accuracy is their mean.
+- **abstention**: for positives, the answer rate; for negatives, the abstention
+  rate; balanced accuracy is their mean.
 
-Every metric is reported with numerator and denominator, overall and per
-framework version.
+Every metric has its numerator and denominator, overall and per version. A
+metric with a zero denominator, or a run in which any case errored, is
+`unavailable`, and an unavailable gated metric fails.
 
-## Cohorts
+## Cohorts and callers
 
-Each accepted case runs in two modes, through the same engine entry points the
-server uses, at limit 8, on the restored evaluation copy:
+Each scored case runs through the engine entry points the server uses, at limit
+8, on the restored evaluation copy, in two modes:
 
 | Mode       | Filter                                | Cases                |
 | ---------- | ------------------------------------- | -------------------- |
 | `open`     | none                                  | positives, negatives |
 | `filtered` | `frameworks: [target framework code]` | positives            |
 
-`filtered` recall@8 must be at least `open` recall@8 for the same cases;
-otherwise the report flags `filter_regression` and `quality_pass` is false.
+The filter gate is per case: every positive that hits in `open` must hit in
+`filtered`; any loss fails. Aggregate gains are reported separately.
 
-## Access sets
+Two callers run every case: **free-only** (free versions readable, licensed
+versions reduced to their public fields) and **full** (every version readable).
 
-Two callers run every case:
+| Cohort     | Caller    | Cases                                          | Floors live in         |
+| ---------- | --------- | ---------------------------------------------- | ---------------------- |
+| `public`   | free-only | accepted positives on free versions, negatives | `frameworks.md`        |
+| `licensed` | full      | every accepted positive and negative           | `trachuan/floors.yaml` |
 
-- **Full**: every version readable (the owner's entitlement). The reported
-  metrics and floors use this caller, as frameworks.md says.
-- **Free-only**: `free` versions readable, every `licensed` version reduced (its
-  public fields only). Calibration uses this caller and nothing else.
+The `public` cohort depends only on free text and licensed public fields, so its
+metrics and floors may be published. The `licensed` cohort's ranking depends on
+licensed bodies; its metrics stay in the private report and its floors in
+`FRAMEWORKS_SOURCE_DIR/trachuan/floors.yaml`, coordinator-owned, never in Git.
 
 ## The measured recipe
 
-The serving parameters come from free versions' text and the public fields of
-licensed versions only. The fusion constant, arm weights and depths keep the
-values the placeholder took from the active law release; they are structural and
-depend on no text. The abstention threshold is calibrated:
+Only the abstention threshold is measured. The fusion constant, arm weights and
+depths keep the law release's values: 33 free-version positives cannot tune more
+parameters without fitting noise; they are revisited when the cohort grows.
 
-- positives are the accepted cases whose target is a `free` version; negatives
-  are the accepted negatives;
-- each case runs in `open` mode as the free-only caller, and the top hit's best
-  permitted cosine is recorded;
+`build` calibrates after loading and indexing and before it writes the release
+row and the dump, the way the law build does ([calibration](calibration.md)):
+
+- it runs every `public` cohort case in `open` mode as the free-only caller on
+  the build database, through the engine without the threshold, recording for
+  each answered response the top hit's best permitted cosine;
+- an empty response is a fixed abstention; a lookup response is not fitted (the
+  threshold does not apply to lookups) and is counted; a missing class (no
+  positives or no negatives), a non-finite score or an execution error fails the
+  step;
 - candidate thresholds are the midpoints between consecutive distinct observed
   cosines plus the always-answer and always-abstain sentinels; the chosen one
-  maximizes balanced accuracy, ties to the lowest, as the law
-  [calibration](calibration.md) rule.
+  maximizes balanced accuracy, ties to the lowest.
 
-Because the free-only caller can read no licensed body, and its candidates from
-licensed versions are public-field records only, no licensed text can move the
-threshold. The calibration record (threshold, every candidate's TP/FP/TN/FN, the
-case-file and engine hashes) is written beside the report, its SHA-256 goes into
-the recipe, and the recipe status becomes `measured`. The first measured run is
-a second build of the same `<rel>` inputs whose `build` step writes the measured
-recipe; the placeholder release is never signed. Calibrating on the cohorts that
-are also scored biases their abstention result; the report says so.
+The calibration record (threshold, every candidate's TP/FP/TN/FN, the case-file
+hash, the engine and query-embedder recipe hashes) is written in the `build`
+step directory; its SHA-256 goes into `release.retrieval_recipe`, whose status
+becomes `measured`. When the snapshot holds no reviewed case file, `build`
+writes the `placeholder` recipe instead and `quality_pass` stays false. A retry
+of `build` recomputes the calibration inside the same atomic step; `evaluate`
+always runs on the dump that step published. Calibrating on the scored cohort
+biases its abstention result; the report says so.
 
 ## Release invariant check
 
-The synthetic invariant suite runs in CI. At `evaluate` the release itself is
-checked as well: the evaluator makes a second copy of the restored database in
-which, for every `licensed` version, every text-derived value is replaced
-deterministically (body, `title_original`, notes, tables, body chunk content,
-body vectors and body postings with their statistics), leaving public fields,
-public chunks and edges unchanged. For the free-only caller and one mixed caller
-(one licensed version readable), every golden query in both modes, a read of
-every target control with all its continuations, the mappings of every target,
-`corpus_status` and every `quality_gaps` page must give byte-identical responses
-on both copies. The full caller must see at least one difference, which shows
-the mutation took effect. A failure sets `quality_pass` false and names the
-operation and case, never text.
+The synthetic suite runs in CI. At `evaluate` the release is checked too, once
+per comparison caller: free-only, and, when the release has at least two
+licensed versions, one caller per licensed version that can read that version
+only (otherwise mixed coverage is `not_applicable`). For each caller a copy of
+the restored database is mutated in every version that caller cannot read:
+
+| Private class    | Mutation                                                            |
+| ---------------- | ------------------------------------------------------------------- |
+| control text     | body, `title_original`, notes and tables replaced deterministically |
+| body index       | chunk content, vectors, postings and their statistics replaced      |
+| mapping evidence | each value with that version in its set replaced; one added if none |
+| text gaps        | each text-class gap detail changed; one text gap added if none      |
+| source files     | text source and completeness of its files changed                   |
+
+Public fields, public chunks and the public fields of edges stay unchanged. The
+caller must then get byte-identical responses on both copies for every case in
+both modes and every page of each, a read of every target with all
+continuations, the mappings of every target, `corpus_status`, every
+`quality_gaps` page, each operation twice (so a cache hit is covered), and a
+recalibration on the mutated copy must give the same threshold. A positive
+control per class shows the mutation took effect: the full caller sees a
+difference in each class (read text, search scores, evidence, text gaps,
+sources). Any failure, or a class with no observed difference, sets
+`quality_pass` false and names the operation, class and case id, never text.
 
 ## Floors
 
-The first measured run sets the floors, recorded in
-[frameworks](frameworks.md#evaluation) with the run's report SHA-256: recall@8
-and MRR@8 in each mode for the full caller, and negative abstention, each the
-measured value rounded down to the whole percent. A later release meets every
-floor and, from the second release, does not regress against the previous signed
-report. Changing a floor needs a review entry and is reported.
+Floors are adopted, not inferred. After the first measured run the coordinator
+reviews its numbers and records the baseline: recall@8 and MRR@8 per mode and
+the balanced abstention accuracy, each rounded down to the whole percent, for
+the `public` cohort in `frameworks.md` and for the `licensed` cohort in
+`floors.yaml`, each with the report's SHA-256. Until a baseline is recorded,
+`quality_pass` is false. The cohorts are small (33 free-version positives, 12
+licensed, 15 negatives), so one case moves recall by several points; the report
+states that next to every metric.
+
+Later releases:
+
+- every floor is met on the current cohort;
+- non-regression compares paired cases only: the same id with the same target,
+  accepted in both releases; a case that hit at rank 8 or better in the previous
+  signed report and misses now fails, and the paired recall and MRR may not
+  fall;
+- added, rejected or re-targeted cases and newly in-release versions are cohort
+  changes, reported apart from retrieval changes; they take effect only through
+  a review entry made before the build, never to admit a failing release;
+- a floor never falls below the previous release's floor unless a recorded
+  cohort change explains it.
 
 ## Report
 
 `report.json` carries, besides the fields of
 [build](frameworks-build.md#gaps-and-signing): the case file and review hashes;
-per-version counts of accepted, rejected and `out_of_release` cases; every
-metric per mode, caller and version with numerators and denominators;
-`near_hits`; the calibration record's hash and threshold; the invariant check's
-result; each floor with its value and result; and the retrieval recipe status.
-It holds case ids, handles and counts, never question text or control text.
+per-version counts of accepted, rejected, `unverified` and `out_of_release`
+cases; every metric per cohort, mode and version with numerators, denominators
+and the noise statement; `near_hits`; the per-case filter result; the
+calibration record's hash and threshold; the invariant check per caller and
+class; each floor with its value and result; the paired comparison; and the
+retrieval recipe status. It holds case ids, handles and counts, never question
+text or control text, and stays beside the dump, never in Git.
