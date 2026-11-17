@@ -159,7 +159,9 @@ for them.
 Run on the real release on the local stack, then on the A1 host with the flag on
 for the test window only. The thresholds are proposals until measured on A1;
 measured results, including web and server RSS against their rows in
-[host budgets](budgets-host.md), go into [budgets](budgets.md).
+[host budgets](budgets-host.md), go into [budgets](budgets.md). The load tool,
+accounts, sampling and A1 window are in
+[summary capacity harness](web-public-documents-capacity.md).
 
 | Phase               | Traffic                                                                                                                                                                                          | Duration       |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------- |
