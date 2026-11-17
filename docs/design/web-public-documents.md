@@ -156,14 +156,34 @@ The reader is unaffected in every case.
   the other 2 serve all other pages.
 - **Sitemap.** `/sitemap.xml` and its children use a Nitro life of 300 seconds
   with HTTP `no-cache`.
+- **Status in Nitro.** Every server-side read of `GET /api/v1/public/status`
+  (home, sources, topic pages, summary pages and the sitemap) goes through one
+  process-wide cache. A value lives 30 seconds from the start of the request
+  that fetched it, and concurrent reads of an empty or expired cache share one
+  request. A failed, timed-out or rate-limited (429) refresh is not stored and
+  never extends a value past its life; each caller takes its existing
+  unavailable path. When a summary, list or codes response names a release other
+  than the cached status's, and that status was not requested after the
+  response's own request began, the caller refreshes status once through the
+  cache and compares again. The summary page applies every status check again to
+  the refreshed value, so a flag now off gives 404. The sitemap has already
+  chosen its shape from the old flag, so a refreshed flag that differs takes its
+  503 path. A mismatch that remains takes the unavailable path. An activation
+  therefore costs one extra status call, not 30 seconds of 503s. Nitro sends no
+  client address on any server-side call, so its reads share one per-address
+  bucket on the server; the cache keeps them to one call per 30 seconds.
 - **Promise.** A response newly served by Nitro or the API reflects the current
-  release, flag and status date within 10 minutes: the Nitro life (300 s) plus
-  the API's `max-age` (at most 300 s) with `must-revalidate`, which forbids
-  stale reuse. Topic pages revalidate in the browser (`no-cache`) and live 600
-  seconds in Nitro, which reads status on the server at render without an HTTP
-  cache, so after a change of availability their links reach the new state
-  within 10 minutes. Pages already displayed or restored from the back-forward
-  cache are not withdrawn; the promise covers new responses only.
+  release, flag and status date within 10 minutes. Nitro counts a page's life
+  from the end of its render, so a page is behind by at most its life, the
+  status cache (30 s) and its render time. Summary pages and the sitemap live
+  300 seconds. Home, sources and topic pages live 540 seconds and read status
+  after every other API call of their render, so only rendering, with no further
+  request, separates that read from the stored page; the 30 seconds left cover
+  it. An API response is at most its `max-age` (at most 300 s) behind, with
+  `must-revalidate`, which forbids stale reuse. Topic pages revalidate in the
+  browser (`no-cache`), so after a change of availability their links reach the
+  new state within 10 minutes. Pages already displayed or restored from the
+  back-forward cache are not withdrawn; the promise covers new responses only.
 
 ## Head tags and JSON-LD
 

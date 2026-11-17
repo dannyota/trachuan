@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { homeGraph } from '../utils/structured-data'
 import { getCoverage } from '../api/coverage'
+import { publicStatus } from '../../server/utils/public-status'
 import rawSample from '../data/sample-result.json'
 import sampleMeta from '../data/sample-result.meta.json'
 import { loginUrl } from '../api/next'
@@ -28,11 +29,10 @@ const labels = computed(() => homeMessages(language.value))
 const route = useRoute()
 const deleted = ref(false)
 onMounted(() => { deleted.value = route.query.account === 'deleted' })
-const api = useApi()
 const releaseDate = /^(\d{4})(\d{2})(\d{2})(?:_\d+)?$/.exec(sample.release || '')
 const statusDate = releaseDate ? `${releaseDate[1]}-${releaseDate[2]}-${releaseDate[3]}` : undefined
 const sampleDate = `${sampleMeta.release.slice(0, 4)}-${sampleMeta.release.slice(4, 6)}-${sampleMeta.release.slice(6, 8)}`
-const { data: status } = await useAsyncData('coverage-home', () => import.meta.server ? getCoverage(() => api.client.GET('/api/v1/public/status')).then(status => ({ status })) : Promise.resolve({ status: null }), { server: true, default: () => ({ status: null }) })
+const { data: status } = await useAsyncData('coverage-home', () => import.meta.server ? getCoverage(() => publicStatus(useRuntimeConfig().apiOrigin).then(data => ({ data }))).then(status => ({ status })) : Promise.resolve({ status: null }), { server: true, default: () => ({ status: null }) })
 </script>
 <template>
   <div class="home-page">

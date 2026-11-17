@@ -4,7 +4,7 @@ import { topicGraph } from '../../../utils/structured-data'
 import { topicSeo } from '../../../utils/topic-seo'
 import { notFoundDocument } from '../../../../server/utils/not-found'
 import { createApi } from '../../../api/client'
-import { createSummaryApi } from '../../../api/summary'
+import { publicStatus } from '../../../../server/utils/public-status'
 import { messagesFor, type Language } from '../../../../i18n'
 const clientEntry = import.meta.client && !useNuxtApp().isHydrating
 onMounted(() => { if (clientEntry) window.location.reload() })
@@ -15,13 +15,6 @@ const code = String(route.params.code)
 const context = import.meta.server ? useNuxtApp().ssrContext : undefined
 const event = import.meta.server ? useRequestEvent() : undefined
 const api = createApi({ origin: import.meta.server ? useRuntimeConfig().apiOrigin : window.location.origin, publicRoute: true })
-const { data: summariesAvailable } = await useAsyncData(`topic-summaries-${code}`, async () => {
-  if (!import.meta.server) return false
-  try {
-    const status = await createSummaryApi(useRuntimeConfig().apiOrigin).status(AbortSignal.timeout(3000))
-    return status.data?.features?.public_summaries === true
-  } catch { return false }
-})
 const { data } = await useAsyncData(`topic-${code}`, async () => {
   if (!import.meta.server) return null
   const response = await api.client.GET('/api/v1/public/taxonomy/{code}', { params: { path: { code } } })
@@ -31,6 +24,13 @@ const { data } = await useAsyncData(`topic-${code}`, async () => {
   }
   if (!response.data) { setResponseStatus(event!, 503); setResponseHeader(event!, 'Cache-Control', 'no-cache'); return null }
   return response.data
+})
+const { data: summariesAvailable } = await useAsyncData(`topic-summaries-${code}`, async () => {
+  if (!import.meta.server || !data.value) return false
+  try {
+    const status = await publicStatus(useRuntimeConfig().apiOrigin)
+    return status?.features?.public_summaries === true
+  } catch { return false }
 })
 const topicHead = useState<{ title: string, description: string } | null>('topic-head', () => null)
 watchEffect(() => { topicHead.value = data.value?.node ? topicSeo(data.value.node, language.value) : null })

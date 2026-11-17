@@ -3,6 +3,7 @@ import { APP_CSP } from './app/utils/csp'
 
 const accountHeaders = { 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex' }
 const cache = { maxAge: 600, swr: false, varies: ['x-trachuan-language'] }
+const statusCache = { ...cache, maxAge: 540 }
 const sitemapCache = { ...cache, maxAge: 300 }
 const summaryCache = { ...sitemapCache, base: 'summary', varies: ['x-trachuan-language', 'x-trachuan-summary-date'] }
 
@@ -19,9 +20,9 @@ export default defineNuxtConfig({
     '/**': { headers: { 'Content-Security-Policy': APP_CSP } },
     '/api/v1/frameworks': { cache: false, headers: { 'Cache-Control': 'no-store' } },
     '/api/v1/frameworks/**': { cache: false, headers: { 'Cache-Control': 'no-store' } },
-    '/': { cache },
+    '/': { cache: statusCache },
     '/connect': { cache },
-    '/sources': { cache },
+    '/sources': { cache: statusCache },
     '/privacy': { cache },
     '/terms': { cache },
     '/llms.txt': { cache },
@@ -38,7 +39,7 @@ export default defineNuxtConfig({
     '/link': { headers: accountHeaders },
     '/account': { headers: accountHeaders },
     '/vn/topics': { cache, headers: { 'Cache-Control': 'public, max-age=600' } },
-    '/vn/topics/**': { cache, headers: { 'Cache-Control': 'public, max-age=600' } },
+    '/vn/topics/**': { cache: statusCache, headers: { 'Cache-Control': 'public, max-age=600' } },
     '/vn/documents/*/summary': { cache: summaryCache, headers: { 'Cache-Control': 'public, max-age=300' } },
     '/vn/**': { headers: { 'Cache-Control': 'no-store' } },
   },
