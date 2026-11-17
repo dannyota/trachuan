@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-func runActivations(ctx context.Context, duration time.Duration, offsets []time.Duration, hook func(context.Context) error) error {
+func runActivations(ctx context.Context, duration time.Duration, offsets []time.Duration, hook func(context.Context, string) error) error {
 	if len(offsets) != 2 || duration < offsets[1] {
 		return nil
 	}
@@ -18,17 +18,17 @@ func runActivations(ctx context.Context, duration time.Duration, offsets []time.
 		return ctx.Err()
 	case <-timer.C:
 	}
-	if err := hook(ctx); err != nil {
-		return err
+	forwardErr := hook(ctx, "forward")
+	if forwardErr == nil && ctx.Err() == nil {
+		timer = time.NewTimer(time.Until(start.Add(offsets[1])))
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+		case <-timer.C:
+		}
 	}
-	timer = time.NewTimer(time.Until(start.Add(offsets[1])))
-	select {
-	case <-ctx.Done():
-		timer.Stop()
-		restoreCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancel()
-		return errors.Join(ctx.Err(), hook(restoreCtx))
-	case <-timer.C:
-		return hook(ctx)
-	}
+	restoreCtx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+	restoreErr := hook(restoreCtx, "restore")
+	return errors.Join(forwardErr, ctx.Err(), restoreErr)
 }

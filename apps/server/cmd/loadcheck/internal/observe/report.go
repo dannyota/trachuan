@@ -240,6 +240,25 @@ func buildReport(records []loadrun.Record, run loadrun.Report, samples []sample,
 		return nil, err
 	}
 	addGate(&gates, "Reader pool p99", ms(wait), "≤ 50 ms", wait <= 50)
+	names := map[string]bool{"web": true, "server": true, "postgres": true}
+	for _, s := range samples {
+		for name := range s.Processes {
+			names[name] = true
+		}
+	}
+	var required []string
+	for name := range names {
+		required = append(required, name)
+	}
+	complete := coverage(records, samples, required)
+	var cpuSamples []sample
+	for _, s := range samples {
+		if s.HostCPU != nil {
+			cpuSamples = append(cpuSamples, s)
+		}
+	}
+	cpuComplete := coverage(records, cpuSamples, nil)
+	peakStart := len(gates)
 	var connections int
 	var cpu float64
 	haveCPU := false
@@ -277,14 +296,32 @@ func buildReport(records []loadrun.Record, run loadrun.Report, samples []sample,
 	}{{"web", 300000000}, {"server", 2156000000}} {
 		addGate(&gates, entry.name+" RSS", fmt.Sprintf("%.2f MB", float64(maxRSS[entry.name])/1e6), fmt.Sprintf("≤ %d MB", entry.limit/1000000), observed[entry.name] && maxRSS[entry.name] <= entry.limit)
 	}
-	for _, name := range []string{"web", "server", "postgres", "loadcheck"} {
+	for _, name := range []string{"web", "server", "postgres", "loadcheck", "generator"} {
+		label := name
+		if name == "loadcheck" {
+			label = "sampler"
+		}
 		if observed[name] {
-			gates = append(gates, gate{Name: name + " CPU peak", Value: fmt.Sprintf("%.2f%%", maxCPU[name]), Limit: "recorded", Result: "info"})
+			gates = append(gates, gate{Name: label + " CPU peak", Value: fmt.Sprintf("%.2f%%", maxCPU[name]), Limit: "recorded", Result: "info"})
+		} else if name == "loadcheck" || name == "generator" {
+			gates = append(gates, gate{Name: label + " CPU peak", Value: "unavailable", Limit: "recorded", Result: "unavailable"})
 		}
 	}
 	if observed["postgres"] {
 		gates = append(gates, gate{Name: "postgres RSS peak", Value: fmt.Sprintf("%.2f MB", float64(maxRSS["postgres"])/1e6), Limit: "recorded", Result: "info"})
 	}
 	addGate(&gates, "Restarts", fmt.Sprint(restarts), "0", sampleCount > 0 && observed["web"] && observed["server"] && observed["postgres"] && restarts == 0)
+	if !complete {
+		for i := peakStart; i < len(gates); i++ {
+			gates[i].Result = "unavailable"
+		}
+	}
+	if !cpuComplete {
+		for i := peakStart; i < len(gates); i++ {
+			if gates[i].Name == "Host CPU" {
+				gates[i].Result = "unavailable"
+			}
+		}
+	}
 	return gates, nil
 }

@@ -8,16 +8,26 @@ import (
 )
 
 func TestSchedule_OpenLoop(t *testing.T) {
-	var started atomic.Int32
+	started := make(chan struct{}, 20)
+	release := make(chan struct{})
 	done := make(chan struct{})
 	go func() {
-		schedule(context.Background(), 20*time.Millisecond, 1000, func(int) { started.Add(1); time.Sleep(40 * time.Millisecond) })
+		schedule(context.Background(), 20*time.Millisecond, 1000, func(int) { started <- struct{}{}; <-release })
 		close(done)
 	}()
-	<-done
-	if started.Load() < 15 {
-		t.Fatalf("started %d", started.Load())
+	timer := time.NewTimer(80 * time.Millisecond)
+	defer timer.Stop()
+	for i := 0; i < 15; i++ {
+		select {
+		case <-started:
+		case <-timer.C:
+			close(release)
+			<-done
+			t.Fatalf("only %d requests started before responses released", i)
+		}
 	}
+	close(release)
+	<-done
 }
 func TestQueries_Exhaustion(t *testing.T) {
 	q, err := newQueries([]string{"one", "two"})

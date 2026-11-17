@@ -132,3 +132,28 @@ func TestCapacityScript_PostgresPatternMatchesWorkers(t *testing.T) {
 		t.Fatal("matches unrelated process")
 	}
 }
+
+func TestCapacityScript_ExplicitActivationDirection(t *testing.T) {
+	data, err := os.ReadFile("../../../../scripts/capacity-local.sh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	script := string(data)
+	for _, part := range []string{`case "${1:-}" in`, `forward)`, `restore)`, `expected='corpus_vn_20261117_7'`, `target='corpus_vn_20261117_7'`, `active_db = :'target'`} {
+		if !strings.Contains(script, part) {
+			t.Errorf("missing %s", part)
+		}
+	}
+}
+
+func TestCapacityScript_TracksTrafficGenerator(t *testing.T) {
+	data, err := os.ReadFile("../../../../scripts/capacity-local.sh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, part := range []string{`ln -s "$tmp_dir/loadcheck" "$tmp_dir/load-gen"`, `--proc 'generator=(^|/)load-gen$'`, `--proc 'loadcheck_both=(^|/)(loadcheck|load-gen)$'`, `"$tmp_dir/load-gen" "${run_args[@]}"`} {
+		if !strings.Contains(string(data), part) {
+			t.Errorf("missing %s", part)
+		}
+	}
+}

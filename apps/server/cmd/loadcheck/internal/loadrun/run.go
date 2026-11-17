@@ -175,14 +175,14 @@ func (r *runner) phase(ctx context.Context, phase string) {
 	wg.Wait()
 }
 func (r *runner) activate(ctx context.Context, duration time.Duration) {
-	err := runActivations(ctx, duration, []time.Duration{time.Minute, 2 * time.Minute}, func(hookCtx context.Context) error {
+	err := runActivations(ctx, duration, []time.Duration{time.Minute, 2 * time.Minute}, func(hookCtx context.Context, target string) error {
 		at := time.Now()
-		fmt.Printf("activation %s\n", at.Format(time.RFC3339Nano))
+		fmt.Printf("activation %s %s\n", target, at.Format(time.RFC3339Nano))
 		r.output.activation(at)
 		if r.config.Activate == "" {
 			return nil
 		}
-		cmd := exec.CommandContext(hookCtx, "sh", "-c", r.config.Activate)
+		cmd := exec.CommandContext(hookCtx, "sh", "-c", r.config.Activate+` "$1"`, "loadcheck", target)
 		if err := cmd.Run(); err != nil {
 			return errors.New("activation command failed")
 		}

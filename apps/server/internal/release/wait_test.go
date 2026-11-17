@@ -72,3 +72,46 @@ func TestReaderWait_ResolverLoggerAndReportParser(t *testing.T) {
 		t.Fatalf("report p99 = %v, error = %v", value, err)
 	}
 }
+
+func TestReaderWait_RetirementFlushes(t *testing.T) {
+	var output bytes.Buffer
+	tracer := newReaderWait(slog.New(slog.NewJSONHandler(&output, nil)), "fixture")
+	tracer.record(49 * time.Millisecond)
+	stop := make(chan struct{})
+	close(stop)
+	tracer.run(stop)
+	if !strings.Contains(output.String(), `"count":1`) {
+		t.Fatal("retirement lost pending wait")
+	}
+}
+
+type blockedWaitWriter struct {
+	entered chan struct{}
+	release chan struct{}
+}
+
+func (w *blockedWaitWriter) Write(p []byte) (int, error) {
+	close(w.entered)
+	<-w.release
+	return len(p), nil
+}
+func TestReaderWait_LoggingDoesNotBlockRecord(t *testing.T) {
+	writer := &blockedWaitWriter{entered: make(chan struct{}), release: make(chan struct{})}
+	tracer := newReaderWait(slog.New(slog.NewJSONHandler(writer, nil)), "fixture")
+	tracer.record(time.Millisecond)
+	flushed := make(chan struct{})
+	go func() { tracer.flush(); close(flushed) }()
+	<-writer.entered
+	recorded := make(chan struct{})
+	go func() { tracer.record(time.Millisecond); close(recorded) }()
+	select {
+	case <-recorded:
+	case <-time.After(25 * time.Millisecond):
+		close(writer.release)
+		<-flushed
+		<-recorded
+		t.Fatal("record blocked by logging")
+	}
+	close(writer.release)
+	<-flushed
+}

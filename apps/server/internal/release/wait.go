@@ -61,28 +61,29 @@ func (w *readerWait) record(d time.Duration) {
 }
 func (w *readerWait) flush() {
 	w.mu.Lock()
-	defer w.mu.Unlock()
-	if w.count == 0 {
+	buckets, count, maximum := w.buckets, w.count, w.max
+	w.count = 0
+	w.max = 0
+	w.buckets = [13]int{}
+	w.mu.Unlock()
+	if count == 0 {
 		return
 	}
 	percentile := func(n int) float64 {
 		total := 0
 		bounds := [...]float64{1, 2, 4, 8, 16, 32, 50, 64, 128, 256, 512, 1024}
-		for i, count := range w.buckets {
-			total += count
+		for i, value := range buckets {
+			total += value
 			if total >= n {
 				if i == len(bounds) {
-					return float64(w.max) / float64(time.Millisecond)
+					return float64(maximum) / float64(time.Millisecond)
 				}
 				return bounds[i]
 			}
 		}
-		return float64(w.max) / float64(time.Millisecond)
+		return float64(maximum) / float64(time.Millisecond)
 	}
-	w.logger.Info("reader pool wait", "release", w.release, "count", w.count, "p50_ms", percentile((w.count+1)/2), "p99_ms", percentile((99*w.count+99)/100), "max_ms", float64(w.max)/float64(time.Millisecond), "bucket_bounds_ms", []int{1, 2, 4, 8, 16, 32, 50, 64, 128, 256, 512, 1024}, "bucket_counts", w.buckets)
-	w.count = 0
-	w.max = 0
-	w.buckets = [13]int{}
+	w.logger.Info("reader pool wait", "release", w.release, "count", count, "p50_ms", percentile((count+1)/2), "p99_ms", percentile((99*count+99)/100), "max_ms", float64(maximum)/float64(time.Millisecond), "bucket_bounds_ms", []int{1, 2, 4, 8, 16, 32, 50, 64, 128, 256, 512, 1024}, "bucket_counts", buckets)
 }
 func (w *readerWait) run(stop <-chan struct{}) {
 	ticker := time.NewTicker(time.Minute)
@@ -92,6 +93,7 @@ func (w *readerWait) run(stop <-chan struct{}) {
 		case <-ticker.C:
 			w.flush()
 		case <-stop:
+			w.flush()
 			return
 		}
 	}

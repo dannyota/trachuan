@@ -143,6 +143,7 @@ trap 'exit 1' INT TERM
 go build -o "$tmp_dir/capacity-server" ./apps/server/cmd/server
 go build -o "$tmp_dir/fakegoogle" ./apps/server/cmd/fakegoogle
 go build -o "$tmp_dir/loadcheck" ./apps/server/cmd/loadcheck
+ln -s "$tmp_dir/loadcheck" "$tmp_dir/load-gen"
 printf 'CREATE DATABASE :"db"\n' | psql -X "$CORPUS_TEST_ADMIN_URL" -v ON_ERROR_STOP=1 -v db="$db_name"
 db_created=1
 export SERVER_AUTH_DATABASE_URL="$auth_url"
@@ -167,13 +168,12 @@ printf "INSERT INTO corpus_release (country,active_db,activated_at,activated_by,
 cat > "$tmp_dir/activate" <<'ACTIVATE'
 #!/usr/bin/env bash
 set -euo pipefail
-current="$(psql -X "$SERVER_AUTH_DATABASE_URL" -At -v ON_ERROR_STOP=1 -c "SELECT active_db FROM corpus_release WHERE country = 'vn'")"
-case "$current" in
-  corpus_vn_20261117_7) target='corpus_vn_20261117_5' ;;
-  corpus_vn_20261117_5) target='corpus_vn_20261117_7' ;;
-  *) echo 'capacity: unexpected active release' >&2; exit 1 ;;
+case "${1:-}" in
+  forward) expected='corpus_vn_20261117_7'; target='corpus_vn_20261117_5' ;;
+  restore) expected='corpus_vn_20261117_5'; target='corpus_vn_20261117_7' ;;
+  *) echo 'capacity: invalid activation direction' >&2; exit 1 ;;
 esac
-changed="$(psql -X "$SERVER_AUTH_DATABASE_URL" -At -v ON_ERROR_STOP=1 -v expected="$current" -v target="$target" <<'SQL'
+changed="$(psql -X "$SERVER_AUTH_DATABASE_URL" -At -v ON_ERROR_STOP=1 -v expected="$expected" -v target="$target" <<'SQL'
 WITH swapped AS (
   UPDATE corpus_release SET active_db = :'target', summary_database = :'target', summary_projection = 1, headings_approved = true, activated_at = now(), activated_by = 'capacity-local'
   WHERE country = 'vn' AND active_db = :'expected' AND active_db = summary_database AND summary_projection = 1 AND headings_approved = true
@@ -182,6 +182,12 @@ WITH swapped AS (
 SELECT count(*) FROM swapped;
 SQL
 )"
+if [[ "$changed" != 1 && "${1:-}" == restore ]]; then
+  changed="$(psql -X "$SERVER_AUTH_DATABASE_URL" -At -v ON_ERROR_STOP=1 -v target="$target" <<'SQL'
+SELECT count(*) FROM corpus_release WHERE country = 'vn' AND active_db = :'target' AND summary_database = :'target' AND summary_projection = 1 AND headings_approved = true;
+SQL
+)"
+fi
 if [[ "$changed" != 1 ]]; then
   echo 'capacity: release compare-and-swap failed' >&2
   exit 1
@@ -225,7 +231,7 @@ require_available_port "$edge_port"
 edge_pid=$!
 wait_for "http://127.0.0.1:$edge_port/" "$edge_pid" "$edge_port" || { echo 'capacity: edge failed' >&2; exit 1; }
 "$tmp_dir/loadcheck" queries --corpus-db "$query_url" --suite apps/corpus/internal/evaluation/testdata/vn --out "$out_dir/queries.txt"
-"$tmp_dir/loadcheck" sample --pg "$auth_url" --proc 'server=(^|/)capacity-server$' --proc 'web=(^|/)capacity-web$' --proc 'postgres=(^|/)postgres(:|$)' --out "$out_dir/samples.jsonl" >"$out_dir/sampler.log" 2>&1 &
+"$tmp_dir/loadcheck" sample --pg "$auth_url" --proc 'server=(^|/)capacity-server$' --proc 'web=(^|/)capacity-web$' --proc 'postgres=(^|/)postgres(:|$)' --proc 'generator=(^|/)load-gen$' --proc 'loadcheck_both=(^|/)(loadcheck|load-gen)$' --out "$out_dir/samples.jsonl" >"$out_dir/sampler.log" 2>&1 &
 sampler_pid=$!
 sampler_ready=0
 for ((attempt = 0; attempt < 50; attempt++)); do
@@ -239,7 +245,7 @@ if (( ! sampler_ready )); then
 fi
 run_args=(run --pages "$SERVER_PUBLIC_URL" --api "$SERVER_PUBLIC_URL" --public-url "$SERVER_PUBLIC_URL" --google "$SERVER_GOOGLE_ISSUER" --emails 'one@example.invalid,two@example.invalid,three@example.invalid' --queries "$out_dir/queries.txt" --phases "$phases" --out "$out_dir" --activate "$tmp_dir/activate")
 if (( short_smoke )); then run_args+=(--duration-a 5s --duration-c 5s --duration-d 5s); fi
-"$tmp_dir/loadcheck" "${run_args[@]}"
+"$tmp_dir/load-gen" "${run_args[@]}"
 sleep 61
 kill -TERM "$sampler_pid"
 wait "$sampler_pid"
