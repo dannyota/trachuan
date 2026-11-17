@@ -25,6 +25,11 @@ and the sorted list of version handles the caller can read. It depends on no
 text and no content digest; two callers with the same readable versions in the
 same release get the same value. Every response carries it.
 
+The server key for `access_set_version` and for signing continuations is read
+from `SERVER_FRAMEWORKS_KEY_FILE` (at least 32 random bytes), required when
+`SERVER_FRAMEWORKS` is on and unused otherwise; a new key makes every earlier
+continuation invalid. Law continuations stay as they are.
+
 ## Format
 
 Results follow the law [format](mcp-results.md#format). Each response is

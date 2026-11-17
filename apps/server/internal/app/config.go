@@ -22,6 +22,7 @@ type config struct {
 	totpEnrollment                                                                                     bool
 	publicSummaries                                                                                    bool
 	frameworks                                                                                         bool
+	frameworksKey                                                                                      []byte
 	omitCompactRelated                                                                                 bool
 	trustedProxies                                                                                     []netip.Prefix
 	oauthClients                                                                                       []oauth.Client
@@ -55,6 +56,12 @@ func loadConfig() (config, error) {
 		case "false":
 		default:
 			return config{}, errors.New("invalid SERVER_FRAMEWORKS")
+		}
+	}
+	if c.frameworks {
+		c.frameworksKey, err = loadFrameworksKey(os.Getenv("SERVER_FRAMEWORKS_KEY_FILE"))
+		if err != nil {
+			return config{}, err
 		}
 	}
 	c.mcpOrigins, c.mcpOriginMode, err = loadMCPOriginConfig()

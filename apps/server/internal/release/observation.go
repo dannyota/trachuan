@@ -46,7 +46,7 @@ func (r *Resolver) resolveName(ctx context.Context, country, rel string) (string
 	if err != nil {
 		return "", "", 0, fmt.Errorf("get active release: %w", err)
 	}
-	if active != "" && !validDBName(country, active) {
+	if active != "" && !r.validName(country, active) {
 		return "", "", 0, errors.New("invalid active database name")
 	}
 	r.mu.Lock()
@@ -77,9 +77,9 @@ func (r *Resolver) resolveName(ctx context.Context, country, rel string) (string
 		notify = r.OnActivate
 	}
 	generation := r.generation
-	allowed := active != "" && (rel == "" || active == "corpus_"+country+"_"+rel)
+	allowed := active != "" && (rel == "" || active == r.prefix(country)+rel)
 	r.mu.Unlock()
-	release := strings.TrimPrefix(active, "corpus_"+country+"_")
+	release := strings.TrimPrefix(active, r.prefix(country))
 	if notify != nil {
 		notify(release, generation)
 	}

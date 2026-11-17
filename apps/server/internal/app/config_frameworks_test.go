@@ -2,6 +2,8 @@ package app
 
 import (
 	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -20,6 +22,11 @@ func TestConfig_FrameworksRejectsInvalidBoolean(t *testing.T) {
 }
 
 func TestConfig_FrameworksDefaultsAndValues(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "key")
+	if err := os.WriteFile(path, []byte(strings.Repeat("s", 32)), 0600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("SERVER_FRAMEWORKS_KEY_FILE", path)
 	t.Setenv("SERVER_AUTH_DATABASE_URL", "postgres://localhost/auth")
 	t.Setenv("SERVER_CORPUS_DATABASE_URL", "postgres://localhost/{database}")
 	t.Setenv("SERVER_PUBLIC_URL", "http://localhost:8080")

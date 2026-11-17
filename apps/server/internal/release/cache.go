@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"danny.vn/trachuan/internal/embedding"
+	"danny.vn/trachuan/internal/frameworks/serve"
 	"danny.vn/trachuan/internal/retrieval"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -24,6 +25,7 @@ type cacheEntry struct {
 	stopCounters chan struct{}
 	countersDone chan struct{}
 	engine       *retrieval.Engine
+	frameworks   *serve.Engine
 	pool         *pgxpool.Pool
 	closePool    func()
 	closeOnce    sync.Once
@@ -56,16 +58,16 @@ func (r *Resolver) load(ctx context.Context, country, name string) (*cacheEntry,
 	}
 	entry := r.entries[name]
 	if entry == nil {
-		entry = &cacheEntry{country: country, name: strings.TrimPrefix(name, "corpus_"+country+"_")}
+		entry = &cacheEntry{country: country, name: strings.TrimPrefix(name, r.prefix(country))}
 		r.entries[name] = entry
 	}
 	engine := entry.engine
-	hadEngine := engine != nil
+	hadEngine := engine != nil || entry.frameworks != nil
 	entry.opening = true
 	entry.openingDone = make(chan struct{})
 	r.mu.Unlock()
 	var err error
-	if engine != nil {
+	if hadEngine {
 		if entry.pool != nil {
 			err = entry.pool.Ping(ctx)
 		}
@@ -75,7 +77,7 @@ func (r *Resolver) load(ctx context.Context, country, name string) (*cacheEntry,
 	if err == nil {
 		err = ctx.Err()
 	}
-	if err == nil && engine == nil {
+	if err == nil && engine == nil && entry.frameworks == nil {
 		err = errors.New("opener returned no engine")
 	}
 	r.mu.Lock()
@@ -115,17 +117,22 @@ func (r *Resolver) load(ctx context.Context, country, name string) (*cacheEntry,
 		return nil, fmt.Errorf("open corpus engine: %w", err)
 	}
 	entry.engine = engine
-	entry.startCounters(engine)
-	engine.StartSparsePostings(func(outcome retrieval.PostingsOutcome) {
-		if r.OnPostings != nil {
-			r.OnPostings(engine.Release().Rel, outcome)
-		}
-	})
+	if engine != nil {
+		entry.startCounters(engine)
+		engine.StartSparsePostings(func(outcome retrieval.PostingsOutcome) {
+			if r.OnPostings != nil {
+				r.OnPostings(engine.Release().Rel, outcome)
+			}
+		})
+	}
 	r.mu.Unlock()
 	return entry, nil
 }
 
 func (r *Resolver) open(ctx context.Context, name string, entry *cacheEntry) (*retrieval.Engine, error) {
+	if r.Frameworks != nil {
+		return nil, r.openFrameworks(ctx, name, entry)
+	}
 	if r.Open != nil {
 		engine, closePool, err := r.Open(ctx, name)
 		r.mu.Lock()

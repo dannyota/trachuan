@@ -39,15 +39,12 @@ func guard(next http.Handler) http.Handler {
 			protocolError(w, http.StatusBadRequest, -32700, nil)
 			return
 		}
-		// Use the SDK decoder so the guard and transport agree on field casing
-		// and duplicate fields. The standard decoder matches struct names loosely.
 		message, err := jsonrpc.DecodeMessage(body)
 		request, isRequest := message.(*jsonrpc.Request)
 		if err != nil || !isRequest {
 			protocolError(w, http.StatusBadRequest, jsonrpc.CodeInvalidRequest, nil)
 			return
 		}
-		// Listening subscriptions force SSE even with JSONResponse in this SDK.
 		if request.Method == "subscriptions/listen" {
 			protocolError(w, http.StatusBadRequest, jsonrpc.CodeMethodNotFound, request.ID.Raw())
 			return
@@ -68,8 +65,6 @@ func guard(next http.Handler) http.Handler {
 			status = http.StatusOK
 		}
 		data := buffered.body.Bytes()
-		// Protocol diagnostics from the SDK can include arbitrary client values.
-		// Keep codes and IDs, but never expose diagnostic data or interpolated text.
 		var response map[string]json.RawMessage
 		if json.Unmarshal(data, &response) == nil && response["error"] != nil {
 			var rpcError struct {

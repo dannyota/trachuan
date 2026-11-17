@@ -122,7 +122,7 @@ func newHarness(t *testing.T, change func(*Config)) *harness {
 		change(&cfg)
 	}
 	v := &credential.Verifier{Store: authStore{}, Audience: "https://example.test/mcp", Clock: func() time.Time { return time.Date(2098, 1, 1, 0, 0, 0, 0, time.UTC) }}
-	ts := httptest.NewServer(credential.Middleware(v, New(cfg)))
+	ts := httptest.NewServer(NoStore(credential.Middleware(v, New(cfg))))
 	t.Cleanup(ts.Close)
 	client := mcp.NewClient(&mcp.Implementation{Name: "test", Version: "1"}, nil)
 	session, err := client.Connect(context.Background(), &mcp.StreamableClientTransport{Endpoint: ts.URL, HTTPClient: &http.Client{Transport: authTransport{http.DefaultTransport}}, DisableStandaloneSSE: true, MaxRetries: -1}, nil)
