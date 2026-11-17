@@ -3,6 +3,7 @@ package release
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"regexp"
 	"strings"
 	"sync"
@@ -21,6 +22,7 @@ type Store interface {
 }
 
 type Resolver struct {
+	Logger              *slog.Logger
 	Frameworks          *serve.Options
 	OpenFrameworks      func(context.Context, string) (*serve.Engine, func(), error)
 	Auth                Store
