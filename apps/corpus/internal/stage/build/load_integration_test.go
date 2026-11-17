@@ -173,7 +173,7 @@ func TestLoad_ExcludesWithdrawnAndFetchGaps(t *testing.T) {
 	if _, err := f.workshop.Exec(context.Background(), `INSERT INTO run_item(run_id,stage,item_key,state,batch) VALUES($1,'fetch','vn:vbpl:2','gap',0)`, f.run.ID); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := f.workshop.Exec(context.Background(), `INSERT INTO gap(run_id,stage,item_key,kind,detail) VALUES($1,'fetch','vn:vbpl:2','missing_source','')`, f.run.ID); err != nil {
+	if _, err := f.workshop.Exec(context.Background(), `INSERT INTO gap(run_id,stage,item_key,kind,detail) VALUES($1,'fetch','vn:vbpl:2','source_unavailable','')`, f.run.ID); err != nil {
 		t.Fatal(err)
 	}
 	counts, err := f.load(t)

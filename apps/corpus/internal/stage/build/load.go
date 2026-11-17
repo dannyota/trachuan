@@ -43,11 +43,12 @@ type loader struct {
 }
 
 type LoadOptions struct {
-	Pins           []source.Pin
-	CentralIssuers map[string]string
-	Taxonomy       TaxonomyInput
-	Durations      map[string]int64
-	verified       map[string]verifiedFetch
+	HeadingExclusions []source.HeadingExclusion
+	Pins              []source.Pin
+	CentralIssuers    map[string]string
+	Taxonomy          TaxonomyInput
+	Durations         map[string]int64
+	verified          map[string]verifiedFetch
 }
 
 func Load(ctx context.Context, conn *pgx.Conn, inv Inventory, artifacts artifact.Store, recipes Recipes, codes map[string]source.StatusCode, corrections []source.Correction, asOf string, options ...LoadOptions) (Counts, error) {
@@ -146,6 +147,9 @@ func Load(ctx context.Context, conn *pgx.Conn, inv Inventory, artifacts artifact
 		return Counts{}, err
 	}
 	timings.observe("load_taxonomy", phaseStart)
+	if err = l.loadSummaries(ctx, opts.HeadingExclusions); err != nil {
+		return Counts{}, err
+	}
 	if err = l.loadGaps(ctx); err != nil {
 		return Counts{}, err
 	}

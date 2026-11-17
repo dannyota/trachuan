@@ -9,6 +9,7 @@ import (
 
 	"danny.vn/trachuan/apps/corpus/internal/config"
 	"danny.vn/trachuan/apps/corpus/internal/evaluation"
+	"danny.vn/trachuan/apps/corpus/internal/source"
 	"danny.vn/trachuan/apps/corpus/internal/stage/build"
 	"danny.vn/trachuan/apps/corpus/internal/stage/eval"
 	"danny.vn/trachuan/apps/corpus/internal/stage/extract"
@@ -34,6 +35,17 @@ func IndexDeps(ctx context.Context, cfg config.Config) (workflow.Deps, error) {
 	if err != nil {
 		return workflow.Deps{}, fmt.Errorf("load corrections: %w", err)
 	}
+	exclusions, err := build.ReadHeadingExclusions("sources/vn-heading-exclusions.yaml")
+	if err != nil {
+		return workflow.Deps{}, fmt.Errorf("load heading exclusions: %w", err)
+	}
+	reviewData, err := os.ReadFile("sources/vn-heading-reviews.yaml")
+	if err != nil {
+		return workflow.Deps{}, fmt.Errorf("load heading reviews: %w", err)
+	}
+	if _, err = source.ParseHeadingReviews(reviewData); err != nil {
+		return workflow.Deps{}, err
+	}
 	taxonomy, err := build.ReadTaxonomy("taxonomy", cfg.PhapdienPackage)
 	if err != nil {
 		return workflow.Deps{}, fmt.Errorf("load taxonomy: %w", err)
@@ -47,6 +59,8 @@ func IndexDeps(ctx context.Context, cfg config.Config) (workflow.Deps, error) {
 	deps.Build.Taxonomy = taxonomy
 	deps.Eval.Build.Taxonomy = taxonomy
 	deps.Build.Corrections = corrections
+	deps.Build.HeadingExclusions = exclusions
+	deps.Eval.Build.HeadingExclusions = exclusions
 	deps.Eval.Build.Corrections = corrections
 	versions, err := build.InspectVersions(ctx, deps.Build)
 	if err != nil {

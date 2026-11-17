@@ -6,7 +6,7 @@ import shutil
 import subprocess
 import tempfile
 
-from corpus_manifest import identity
+from corpus_manifest import decode, identity
 from manifest import positive
 
 
@@ -28,13 +28,19 @@ def download(country, rel, directory):
                    AWS_DEFAULT_REGION='ap-singapore-1', AWS_REGION='ap-singapore-1')
         command = ['aws', '--endpoint-url', endpoint, '--no-cli-pager']
         limits = {'corpus.dump': 16 * 1024**3, 'MANIFEST.sha256': 1024**2,
-                  'report.json': 16 * 1024**2, 'release.json': 16 * 1024**2}
+                  'report.json': 16 * 1024**2, 'release.json': 16 * 1024**2,
+                  'build.json': 16 * 1024**2}
         objects = {}
         for name, limit in limits.items():
             key = f'{country}/{rel}/{name}'
             head = [*command, 's3api', 'head-object', '--bucket', 'trachuan-releases',
                     '--key', key, '--output', 'json']
-            result = subprocess.run(head, check=True, capture_output=True, text=True, env=env)
+            try:
+                result = subprocess.run(head, check=True, capture_output=True, text=True, env=env)
+            except subprocess.CalledProcessError:
+                if name == 'build.json':
+                    continue
+                raise
             metadata = json.loads(result.stdout)
             expected = metadata['ContentLength']
             positive(expected, 'object size')
@@ -46,7 +52,9 @@ def download(country, rel, directory):
             objects[name] = (expected, etag)
         if sum(size for size, _ in objects.values()) >= shutil.disk_usage(directory).free - 2 * 1024**3:
             raise ValueError('corpus objects exceed free disk minus 2 GiB')
-        for name, (expected, etag) in objects.items():
+
+        def fetch(name):
+            expected, etag = objects[name]
             key = f'{country}/{rel}/{name}'
             path = directory / name
             result = subprocess.run([*command, 's3api', 'get-object', '--bucket', 'trachuan-releases',
@@ -58,6 +66,18 @@ def download(country, rel, directory):
             metadata = json.loads(result.stdout)
             if metadata.get('ETag') != etag or metadata.get('ContentRange') != f'bytes 0-{expected - 1}/{expected}':
                 raise ValueError(f'GET object identity or full size differs from HEAD: {name}')
+
+        fetch('release.json')
+        row = decode((directory / 'release.json').read_bytes())
+        if not isinstance(row, dict) or row.get('country') != country or row.get('rel') != rel:
+            raise ValueError('downloaded release identity differs from request')
+        positive(row.get('schema_version'), 'schema version')
+        if row['schema_version'] >= 8 and 'build.json' not in objects:
+            raise ValueError('schema 8 requires build.json HEAD metadata')
+        for name in objects:
+            if name == 'release.json' or (name == 'build.json' and row['schema_version'] < 8):
+                continue
+            fetch(name)
 
 
 def main():

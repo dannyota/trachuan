@@ -24,7 +24,7 @@ func TestReadRelease_ReturnsReleaseQueryRecipe(t *testing.T) {
 func TestReadRelease_RejectsUnsupportedSchemaAndMalformedMetadata(t *testing.T) {
 	for _, tt := range []struct{ name, sql string }{
 		{"schema 3", `ALTER TABLE release DROP CONSTRAINT release_schema_version_check; UPDATE release SET schema_version=3`},
-		{"schema 8", `ALTER TABLE release DROP CONSTRAINT release_schema_version_check; UPDATE release SET schema_version=8`},
+		{"schema 9", `ALTER TABLE release DROP CONSTRAINT release_schema_version_check; UPDATE release SET schema_version=9`},
 		{"metadata", `UPDATE release SET dense_recipe='{"version":"bad"}'`},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

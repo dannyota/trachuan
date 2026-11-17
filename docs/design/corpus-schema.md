@@ -1,4 +1,4 @@
-# Corpus schema version 7
+# Corpus schema version 8
 
 Proposed exact template contract for `internal/corpusdb/schema.sql`, embedded by
 `schema.go` in root module `danny.vn/trachuan`. The workshop keeps goose
@@ -10,7 +10,9 @@ adds membership class and validity corrections per
 their compatible reader. Version 4 adds the text source columns per
 [text extraction](text-extraction.md). Version 5 fills the taxonomy tables and
 adds node ordinals and counts per [taxonomy](taxonomy.md). Version 6 adds the
-source-withdrawn columns per [pinned documents](pinned-documents.md).
+source-withdrawn columns per [pinned documents](pinned-documents.md). Version 8
+adds `document_summary` per
+[serving public summaries](web-public-documents-serving.md).
 
 ## Conventions and identity
 
@@ -34,7 +36,7 @@ ancestry index, not the public extraction anchor. This avoids interpreting
 slashes or Vietnamese letters as ltree syntax. Taxonomy ltree labels are `n<id>`
 along its parent chain.
 
-`schema.go` exports `SchemaVersion = 7` and
+`schema.go` exports `SchemaVersion = 8` and
 `Apply(ctx context.Context, db DB, dimensions int) error`; DB exposes
 `Exec(context.Context,string,...any)`. Its return values are
 `(pgconn.CommandTag,error)`, matching pgx connections and transactions. The only
@@ -240,7 +242,7 @@ rules.
 ## Release row
 
 `release`: `singleton boolean PRIMARY KEY CHECK(singleton)`, `country text`
-CHECK country='vn', `rel text UNIQUE`, `schema_version integer CHECK(=7)`,
+CHECK country='vn', `rel text UNIQUE`, `schema_version integer CHECK(=8)`,
 `taxonomy_version text`, `dense_recipe jsonb`, `chunk_recipe jsonb`,
 `lexical_recipe jsonb`, `retrieval_recipe jsonb`, `lexical_stats jsonb`,
 `source_manifest_hash text`, `build_input_hash text`, `build_recipe_hash text`,
@@ -263,12 +265,24 @@ together. No release exists in this work, and `not_run` cannot authorize one.
 
 ## Document summaries
 
-`document_summary` holds one precomputed public summary per document: identity,
-status inputs, gap kinds, text availability, bounded relations and topics, the
-outline with candidate chapter and article headings, and the projection version.
-Its columns, caps and eligibility are in
-[serving public summaries](web-public-documents-serving.md); its presence at the
-expected projection is the release's summary capability.
+`document_summary` holds one precomputed public summary per document; its caps
+and eligibility are in
+[serving public summaries](web-public-documents-serving.md) and its presence at
+the expected projection is the release's summary capability. Columns:
+`document_key text COLLATE "C" PRIMARY KEY REFERENCES document(key)`;
+`class text` CHECK in (`primary`,`relation_context`,`secondary`), equal to the
+document's; `projection integer CHECK(=1)`; `indexed boolean`, CHECK
+`NOT indexed OR class='primary'`; the reader's status inputs copied from the
+document: `status_class`, `status_basis`, `is_current`, `validity_conflict`,
+`eff_from date`, `eff_to date`; `gap_kinds text[]`, the sorted distinct
+`consolidated_status_unordered` and `consolidated_status_unresolved` gaps of the
+document; `payload jsonb`, an object of at most 65,536 octets holding `number`,
+`title`, `type`, `issuer`, `issued`, `has_text`, `text_complete`, `source_url`,
+`relations` (at most 50) with `relations_total`, `nodes` (at most 10,
+`{code, name}`) and `outline` (`{kind, label, anchor, heading?}`). `heading`
+appears only where rules 1 to 4 pass; whether a release serves headings is
+decided at activation, never stored in the row. The status columns carry the
+document's checks, and every column is `NOT NULL` except the two dates.
 
 ## Migration and dependencies
 

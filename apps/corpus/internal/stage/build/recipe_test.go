@@ -77,7 +77,7 @@ func TestRecipe_NumberNormalizationVersionChangesHash(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	r := buildRecipe{SchemaVersion: corpusdb.SchemaVersion, SchemaSHA256: schema,
+	r := buildRecipe{SchemaVersion: corpusdb.SchemaVersion, SchemaSHA256: schema, HeadingProjection: 1,
 		ChunkRecipeHash: chunk.Recipe2().Hash(), DocumentRecipeHash: embedding.DocumentRecipe1().Hash(), QueryRecipeHash: embedding.QueryRecipe1().Hash(), LexicalRecipeHash: lexical.Recipe1().Hash(), RetrievalPolicyHash: retrieval.Recipe3().Hash(), NormalizerVersion: normalizer.Version, LabelNormalizer: "corpus-labels/1", NumberNormalizationVersion: retrieval.NumberNormalizationVersion, StatusCodesSHA256: fmt.Sprintf("%x", sha256.Sum256([]byte("null"))), ValidityRulesVersion: "validity/2", CalibrationPolicy: "provisional-old-product/balanced/1"}
 	got := New(Config{}).Recipe(stage.Snapshot{SourceList: []byte(`{}`)})
 	if got != r.hash() {
@@ -102,7 +102,7 @@ func TestRecipe_ValidityRulesVersion2(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	r := buildRecipe{SchemaVersion: corpusdb.SchemaVersion, SchemaSHA256: schema,
+	r := buildRecipe{SchemaVersion: corpusdb.SchemaVersion, SchemaSHA256: schema, HeadingProjection: 1,
 		ChunkRecipeHash: chunk.Recipe2().Hash(), DocumentRecipeHash: embedding.DocumentRecipe1().Hash(), QueryRecipeHash: embedding.QueryRecipe1().Hash(), LexicalRecipeHash: lexical.Recipe1().Hash(), RetrievalPolicyHash: retrieval.Recipe3().Hash(), NormalizerVersion: normalizer.Version, LabelNormalizer: "corpus-labels/1", NumberNormalizationVersion: retrieval.NumberNormalizationVersion, StatusCodesSHA256: fmt.Sprintf("%x", sha256.Sum256([]byte("null"))), ValidityRulesVersion: "validity/2", CalibrationPolicy: "provisional-old-product/balanced/1"}
 	want := r.hash()
 	if got := New(Config{}).Recipe(stage.Snapshot{SourceList: []byte(`{}`)}); got != want {
@@ -133,7 +133,7 @@ func TestBuildInput_RecordMatchesCorrectionsHash(t *testing.T) {
 	}{{0, "", false}, {0, "nonempty", true}, {2, hashBytes([]byte("[]")), false}} {
 		inv := Inventory{Version: tc.version}
 		got := recordInputHash("vn", "20990101", inv, "map", provenanceInputHash(inv), tc.hash, "")
-		want := withDevelopmentHash(inventoryInputHash("vn", "20990101", inv, "map", correctionInput{hash: tc.hash, nonempty: tc.nonempty}), "")
+		want := withHeadingExclusions(withDevelopmentHash(inventoryInputHash("vn", "20990101", inv, "map", correctionInput{hash: tc.hash, nonempty: tc.nonempty}), ""), hashBytes([]byte("[]")))
 		if got != want {
 			t.Fatalf("version %d: got %s want %s", tc.version, got, want)
 		}
@@ -156,7 +156,7 @@ func TestBuildRecipe_LabelNormalizer(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	r := buildRecipe{SchemaVersion: corpusdb.SchemaVersion, SchemaSHA256: schema,
+	r := buildRecipe{SchemaVersion: corpusdb.SchemaVersion, SchemaSHA256: schema, HeadingProjection: 1,
 		ChunkRecipeHash: chunk.Recipe2().Hash(), DocumentRecipeHash: embedding.DocumentRecipe1().Hash(), QueryRecipeHash: embedding.QueryRecipe1().Hash(), LexicalRecipeHash: lexical.Recipe1().Hash(), RetrievalPolicyHash: retrieval.Recipe3().Hash(), NormalizerVersion: normalizer.Version, NumberNormalizationVersion: retrieval.NumberNormalizationVersion, StatusCodesSHA256: fmt.Sprintf("%x", sha256.Sum256([]byte("null"))), ValidityRulesVersion: "validity/2", CalibrationPolicy: "provisional-old-product/balanced/1"}
 	b, err := json.Marshal(r)
 	if err != nil {

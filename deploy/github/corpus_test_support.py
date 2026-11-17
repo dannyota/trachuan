@@ -1,6 +1,7 @@
 import copy
 import hashlib
 import json
+from pathlib import Path
 
 from corpus_manifest import create, non_regression_contract
 from manifest import canonical
@@ -99,3 +100,15 @@ def write_fixture(path):
 def save_fixture(path, row, report):
     (path / 'release.json').write_text(json.dumps(row))
     (path / 'report.json').write_text(json.dumps(report))
+
+
+def add_heading_build(path, row, report):
+    data = (Path(__file__).parent / 'testdata/heading-build.json').read_bytes()
+    (path / 'build.json').write_bytes(data)
+    manifest = (digest((path / 'corpus.dump').read_bytes()) + '  corpus.dump\n' +
+                digest(data) + '  build.json\n').encode()
+    (path / 'MANIFEST.sha256').write_bytes(manifest)
+    row['schema_version'] = 8
+    row['run']['build_artifact_sha256'] = report['build_artifact_sha256'] = digest(manifest)
+    save_fixture(path, row, report)
+    return json.loads(data)

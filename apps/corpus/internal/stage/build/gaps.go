@@ -7,6 +7,11 @@ import (
 )
 
 func (l *loader) loadGaps(ctx context.Context) error {
+	for _, gap := range l.gaps {
+		if _, err := structuralSummaryGap(gap.Kind); err != nil {
+			return err
+		}
+	}
 	sort.Slice(l.gaps, func(i, j int) bool {
 		a, b := l.gaps[i], l.gaps[j]
 		if a.Stage != b.Stage {

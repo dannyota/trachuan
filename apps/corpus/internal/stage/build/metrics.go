@@ -8,7 +8,7 @@ import (
 )
 
 func databaseMetrics(ctx context.Context, conn *pgx.Conn, loaded Counts) (map[string]int64, int64, int64, error) {
-	tables := []string{"document", "source_file", "provision", "provision_validity", "chunk", "lexical_df", "relation", "coverage_gap", "taxonomy_node", "taxonomy_assignment", "release"}
+	tables := []string{"document", "document_summary", "source_file", "provision", "provision_validity", "chunk", "lexical_df", "relation", "coverage_gap", "taxonomy_node", "taxonomy_assignment", "release"}
 	counts := make(map[string]int64, len(tables)+3)
 	for _, table := range tables {
 		var n int64
@@ -17,7 +17,7 @@ func databaseMetrics(ctx context.Context, conn *pgx.Conn, loaded Counts) (map[st
 		}
 		counts[table] = n
 	}
-	if counts["document"] != loaded.Documents || counts["source_file"] != loaded.SourceFiles || counts["provision"] != loaded.Provisions || counts["chunk"] != loaded.Chunks || counts["relation"] != loaded.Relations || counts["coverage_gap"] != loaded.Gaps || loaded.Chunks != loaded.DenseVectors || counts["taxonomy_node"] != loaded.Taxonomy.Nodes || counts["taxonomy_assignment"] != loaded.Taxonomy.Seeds+loaded.Taxonomy.Overrides+loaded.Taxonomy.Excluded || counts["release"] != 1 {
+	if counts["document_summary"] != loaded.Documents || counts["document"] != loaded.Documents || counts["source_file"] != loaded.SourceFiles || counts["provision"] != loaded.Provisions || counts["chunk"] != loaded.Chunks || counts["relation"] != loaded.Relations || counts["coverage_gap"] != loaded.Gaps || loaded.Chunks != loaded.DenseVectors || counts["taxonomy_node"] != loaded.Taxonomy.Nodes || counts["taxonomy_assignment"] != loaded.Taxonomy.Seeds+loaded.Taxonomy.Overrides+loaded.Taxonomy.Excluded || counts["release"] != 1 {
 		return nil, 0, 0, fmt.Errorf("corpus row counts differ")
 	}
 	var sparseOutOfLine int64

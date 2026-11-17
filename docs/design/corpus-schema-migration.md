@@ -35,7 +35,9 @@ First-party references, not fetched during this offline design:
 [pgvector](https://github.com/pgvector/pgvector). The primary must verify pinned
 extension support and restore behavior before implementation and deployment.
 
-The version after 7 adds `document_summary`
-([serving public summaries](web-public-documents-serving.md)). A release of an
-earlier version stays a valid rollback target: it lacks the summary capability,
-so summaries are unavailable while it is active and the reader is unaffected.
+Version 8 adds `document_summary`
+([serving public summaries](web-public-documents-serving.md)); no existing table
+changes. A server image that reads version 8 ships and runs before any version-8
+release is activated. A release of an earlier version stays a valid rollback
+target: it lacks the summary capability, so summaries are unavailable while it
+is active and the reader is unaffected.

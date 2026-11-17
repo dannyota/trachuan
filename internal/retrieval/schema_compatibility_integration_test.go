@@ -10,14 +10,15 @@ import (
 	"testing"
 )
 
-func TestSchemaCompatibility_Version6And7Serve(t *testing.T) {
-	for _, version := range []int{6, 7} {
+func TestSchemaCompatibility_Version6To8Serve(t *testing.T) {
+	for _, version := range []int{6, 7, 8} {
 		t.Run(fmt.Sprint(version), func(t *testing.T) {
 			db, _, embedder := fixture(t)
 			ctx := t.Context()
 			textSource := "source_tree"
 			if version == 6 {
-				readExec(t, db, `ALTER TABLE release DROP CONSTRAINT release_schema_version_check;
+				readExec(t, db, `DROP TABLE document_summary;
+ALTER TABLE release DROP CONSTRAINT release_schema_version_check;
 UPDATE release SET schema_version=6;
 ALTER TABLE release ADD CHECK (schema_version=6);
 ALTER TABLE document DROP CONSTRAINT document_text_source_check;
@@ -26,6 +27,12 @@ ALTER TABLE taxonomy_assignment DROP CONSTRAINT taxonomy_assignment_method_check
 ALTER TABLE taxonomy_assignment ADD CHECK (method IN ('manual','phapdien_seed','llm'))`)
 			} else {
 				textSource = "pdf_text"
+				if version == 7 {
+					readExec(t, db, `DROP TABLE document_summary;
+ALTER TABLE release DROP CONSTRAINT release_schema_version_check;
+UPDATE release SET schema_version=7;
+ALTER TABLE release ADD CHECK (schema_version=7)`)
+				}
 				readExec(t, db, `UPDATE document SET text_source='pdf_text',text_complete=false WHERE id=1;
 INSERT INTO taxonomy_node(id,country,parent_id,level,code,name,description,origin,status,path,ordinal,provision_count,document_count) VALUES
 (1,'vn',NULL,1,'1','root','','custom','active','n1',1,3,1),
@@ -43,7 +50,7 @@ INSERT INTO taxonomy_assignment(provision_id,node_id,family_id,method,exclude,co
 			if err != nil || len(read.Items) != 1 || read.Items[0].Error != "" || read.Items[0].Document == nil || read.Items[0].Document.TextSource != textSource {
 				t.Fatalf("read = %+v, error = %v", read, err)
 			}
-			if version == 7 && !reflect.DeepEqual(read.Items[0].Document.Nodes, []string{"1.1"}) {
+			if version >= 7 && !reflect.DeepEqual(read.Items[0].Document.Nodes, []string{"1.1"}) {
 				t.Fatal(read.Items[0].Document.Nodes)
 			}
 			response, err := engine.Search(ctx, Request{Query: "ngân hàng", Mode: "exact"})
