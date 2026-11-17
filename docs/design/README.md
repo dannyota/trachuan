@@ -44,6 +44,7 @@ Intended behavior of trachuan. Decisions with alternatives are in the
 | [control frameworks: results](frameworks-results.md)                             | Handles, inputs, search, read, mappings, diagnostics and web routes for frameworks                               |
 | [control frameworks: results and the invariant](frameworks-results-invariant.md) | Why each results rule holds the invariant, and its tests                                                         |
 | [control frameworks: evaluation](frameworks-evaluation.md)                       | Golden cases, hits, cohorts, measured recipe, release invariant check, floors                                    |
+| [control frameworks: release](frameworks-release.md)                             | Bucket, upload, signing workflow, host phase, schema, key and flag, and order for frameworks releases            |
 | [control frameworks: build](frameworks-build.md)                                 | Offline build command: steps, artifacts, resume, gaps and signing evidence                                       |
 | [account mail](account-mail.md)                                                  | Mail outbox: classes, sender, content                                                                            |
 | [web API](web-api.md)                                                            | Google login flow, web sessions, CSRF, `/api/v1` routes, OpenAPI contract                                        |
