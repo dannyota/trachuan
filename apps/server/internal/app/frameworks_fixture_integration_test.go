@@ -60,7 +60,7 @@ func frameworkFixtureSources(t *testing.T, changed bool) {
 		if changed && i == 0 {
 			term = "nebula"
 		}
-		data := []byte(fmt.Sprintf(`{"catalog":{"groups":[{"id":"a","title":"Invented family","controls":[{"id":"a-1","title":%q,"parts":[{"prose":%q}]},{"id":"a-2","title":"Invented second control","parts":[{"prose":"Invented quartz second safeguard."}]},{"id":"a-3","title":"Invented third control","parts":[{"prose":"Invented quartz third safeguard."}]}]}]}}`, "Invented "+term+" publisher title", strings.Repeat("Invented "+term+" safeguard. ", 20)))
+		data := []byte(fmt.Sprintf(`{"catalog":{"groups":[{"id":"a","title":"Invented family %s","controls":[{"id":"a-1","title":%q,"parts":[{"prose":%q}]},{"id":"a-2","title":"Invented second control","parts":[{"prose":"Invented quartz second safeguard."}]},{"id":"a-3","title":"Invented third control","parts":[{"prose":"Invented quartz third safeguard."}]}]}]}}`, code, "Invented "+term+" publisher title", strings.Repeat("Invented "+term+" safeguard. ", 20)))
 		name := code + ".json"
 		require.NoError(t, os.WriteFile(filepath.Join(source, name), data, 0600))
 		//nolint:misspell // Registry field names follow the schema.
