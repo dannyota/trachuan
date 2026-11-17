@@ -129,6 +129,9 @@ func TestSummary_ChapterSequence(t *testing.T) {
 		{"skip", []string{"I", "III"}, false},
 		{"repeat", []string{"I", "II", "II"}, false},
 		{"digits", []string{"1", "2"}, true},
+		{"arabic indic", []string{"١", "٢"}, false},
+		{"fullwidth", []string{"１", "２"}, false},
+		{"multiple periods", []string{"I.."}, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			d := summaryFixture()
@@ -207,5 +210,14 @@ func TestSummary_HeadingWhitespace(t *testing.T) {
 				t.Fatalf("heading=%q err=%v", got.Payload.Outline[1].Heading, err)
 			}
 		})
+	}
+}
+
+func TestSummary_HeadingLengthAfterTrim(t *testing.T) {
+	d := summaryFixture()
+	d.Payload.Outline[1].Heading = " " + strings.Repeat("a", 300) + " "
+	got, _, err := makeUnitSummary(d, nil, nil)
+	if err != nil || got.Payload.Outline[1].Heading == "" {
+		t.Fatalf("trimmed 300 character heading omitted: %v", err)
 	}
 }

@@ -3,6 +3,7 @@ package build
 import (
 	"context"
 	"fmt"
+	"strings"
 	"unicode/utf8"
 
 	"danny.vn/trachuan/apps/corpus/internal/source"
@@ -82,7 +83,7 @@ func scanHeadingOmissions(ctx context.Context, db summaryReader, exclusions []so
 		switch {
 		case broken[p.key]:
 			o.reason = "sequence"
-		case o.Length > 300:
+		case utf8.RuneCountInString(strings.TrimSpace(n.Heading)) > 300:
 			o.reason = "length"
 		case headingShape(n.Heading) != "":
 			o.reason, o.shape = "shape", headingShape(n.Heading)

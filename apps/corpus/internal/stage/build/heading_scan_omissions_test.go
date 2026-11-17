@@ -168,3 +168,18 @@ func TestHeadingScan_LongestMembershipAndDeterminism(t *testing.T) {
 		t.Fatalf("output changed with input order: %v", err)
 	}
 }
+
+func TestHeadingScan_LengthAfterTrim(t *testing.T) {
+	r := headingScanReader{provisions: [][]any{{"doc", "source_tree", "dieu", "", "at-cap", " " + strings.Repeat("a", 300) + " "}}}
+	b, err := HeadingScan(context.Background(), r, "vn", "20990101_1", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got headingScanOutput
+	if err = json.Unmarshal(b, &got); err != nil {
+		t.Fatal(err)
+	}
+	if got.Omitted["length"].Count != 0 {
+		t.Fatalf("trimmed 300 character heading reported: %s", b)
+	}
+}

@@ -132,7 +132,7 @@ func makeSummary(ctx context.Context, db summarySizer, d summaryDocument, gaps [
 		if n.Kind != "phan" && n.Kind != "chuong" && n.Kind != "muc" && n.Kind != "dieu" {
 			continue
 		}
-		if !headings || (n.Kind != "chuong" && n.Kind != "dieu") || utf8.RuneCountInString(n.Heading) > 300 || headingShape(n.Heading) != "" || excluded[n.Anchor] {
+		if !headings || (n.Kind != "chuong" && n.Kind != "dieu") || utf8.RuneCountInString(strings.TrimSpace(n.Heading)) > 300 || headingShape(n.Heading) != "" || excluded[n.Anchor] {
 			n.Heading = ""
 		}
 		outline = append(outline, n)
@@ -165,7 +165,7 @@ func chapterSequenceOK(outline []summaryOutline) bool {
 func chapterNumber(label string) (int, bool) {
 	label = strings.ToLower(strings.TrimSpace(label))
 	label = strings.TrimPrefix(label, "chương")
-	label = strings.TrimRight(strings.TrimSpace(label), ".")
+	label = strings.TrimSuffix(strings.TrimSpace(label), ".")
 	if label == "" {
 		return 0, false
 	}
@@ -173,23 +173,11 @@ func chapterNumber(label string) (int, bool) {
 	value := 0
 	allDigits := true
 	for _, r := range runes {
-		digit := -1
-		for _, span := range unicode.Digit.R16 {
-			if r >= rune(span.Lo) && r <= rune(span.Hi) && (r-rune(span.Lo))%rune(span.Stride) == 0 {
-				digit = int((r-rune(span.Lo))/rune(span.Stride)) % 10
-				break
-			}
-		}
-		for _, span := range unicode.Digit.R32 {
-			if r >= rune(span.Lo) && r <= rune(span.Hi) && (r-rune(span.Lo))%rune(span.Stride) == 0 {
-				digit = int((r-rune(span.Lo))/rune(span.Stride)) % 10
-				break
-			}
-		}
-		if digit < 0 {
+		if r < '0' || r > '9' {
 			allDigits = false
 			break
 		}
+		digit := int(r - '0')
 		if value > (int(^uint(0)>>1)-digit)/10 {
 			return 0, false
 		}
