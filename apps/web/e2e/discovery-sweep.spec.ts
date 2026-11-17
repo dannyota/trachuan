@@ -33,7 +33,10 @@ for (const available of [true, false]) {
       if (available) {
         const xml = await sitemap.text()
         expect([...xml.matchAll(/<loc>(.*?)<\/loc>/g)].map(match => match[1])).toEqual(['https://trachuan.vn/', 'https://trachuan.vn/vn/topics', 'https://trachuan.vn/connect', 'https://trachuan.vn/sources', 'https://trachuan.vn/privacy', 'https://trachuan.vn/terms', 'https://trachuan.vn/vn/topics/1'])
-      } else expect(sitemap.headers()['cache-control']).toBe('no-store')
+      } else {
+        expect(sitemap.headers()['cache-control']).toBe('no-cache')
+        expect(sitemap.headers().etag).toBeUndefined()
+      }
       if (!available) expect((await context.request.get(`${origin}/vn/topics/1`)).status()).toBe(503)
       await context.close()
     })

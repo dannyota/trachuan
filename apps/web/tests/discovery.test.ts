@@ -34,7 +34,7 @@ it('serves robots and the fixed sitemap with the legal pages date', () => {
 })
 
 
-it.each(['status', 'codes', 'release', 'malformed', 'empty', 'non-string'])('returns an uncached 503 for %s and recovers', (failure) => {
+it.each(['status', 'codes', 'release', 'malformed', 'empty', 'non-string', 'extra'])('returns an uncached 503 for %s and recovers', (failure) => {
   const script = `
     import { Server } from 'node:http';
     Server.prototype.listen = function () { return this };
@@ -44,19 +44,20 @@ it.each(['status', 'codes', 'release', 'malformed', 'empty', 'non-string'])('ret
     globalThis.fetch = async request => {
       const codes = new URL(request.url).pathname.endsWith('/codes');
       if (failed && ((failure === 'status' && !codes) || (failure === 'codes' && codes))) return new Response('', { status: 503 });
-      const body = codes ? { release: failed && failure === 'release' ? 'other' : '20990101_1', codes: failed && failure === 'malformed' ? null : failed && failure === 'empty' ? [''] : failed && failure === 'non-string' ? [1] : ['1', '2'] } : { release: '20990101_1' };
+      const body = codes ? { release: failed && failure === 'release' ? 'other' : '20990101_1', codes: failed && failure === 'malformed' ? null : failed && failure === 'empty' ? [''] : failed && failure === 'non-string' ? [1] : ['1', '2'], ...(failed && failure === 'extra' ? { truncated: true } : {}) } : { release: '20990101_1' };
       return new Response(JSON.stringify(body), { headers: { 'content-type': 'application/json' } });
     };
     const app = (await import('./.output/server/chunks/nitro/nitro.mjs')).g();
     const first = await app.localFetch('/sitemap.xml');
-    const firstResult = { status: first.status, cache: first.headers.get('cache-control'), body: await first.text() };
+    const firstResult = { status: first.status, cache: first.headers.get('cache-control'), etag: first.headers.get('etag'), body: await first.text() };
     failed = false;
     const second = await app.localFetch('/sitemap.xml');
     console.log(JSON.stringify({ first: firstResult, second: { status: second.status, body: await second.text() } }));
   `
   const result = JSON.parse(execFileSync(process.execPath, ['--input-type=module', '-e', script], { encoding: 'utf8' }))
   expect(result.first.status).toBe(503)
-  expect(result.first.cache).toBe('no-store')
+  expect(result.first.cache).toBe('no-cache')
+  expect(result.first.etag).toBeNull()
   expect(result.first.body).not.toContain('<urlset')
   expect(result.second.status).toBe(200)
   const xml = new (new Window().DOMParser)().parseFromString(result.second.body, 'application/xml')

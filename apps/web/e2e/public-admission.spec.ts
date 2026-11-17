@@ -43,7 +43,7 @@ test('public responses revalidate while private routes are not stored', async ({
   }
   const sitemap = await request.get('/sitemap.xml', { headers })
   expect(sitemap.status()).toBe(503)
-  expect(sitemap.headers()['cache-control']).toBe('no-store')
+  expect(sitemap.headers()['cache-control']).toBe('no-cache'); expect(sitemap.headers().etag).toBeUndefined()
   for (const path of ['/connect', '/sources', '/privacy', '/terms', '/llms.txt', '/robots.txt', '/sitemap.xml']) {
     const alias = await request.get(`${path}/?query=ignored`, { headers, maxRedirects: 0 })
     expect(alias.status(), path).toBe(308)

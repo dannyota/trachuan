@@ -11,7 +11,7 @@ export default defineNitroPlugin((nitro) => {
     const finalize = () => {
       if (response.headersSent) return
       response.setHeader('Content-Security-Policy', APP_CSP)
-      response.setHeader('Cache-Control', isPublic && !(page?.path === '/sitemap.xml' && response.statusCode >= 400) ? 'no-cache' : 'no-store')
+      response.setHeader('Cache-Control', isPublic ? 'no-cache' : 'no-store')
       if (isAccount) response.setHeader('X-Robots-Tag', 'noindex')
       if (!isPublic) return
       response.removeHeader('Last-Modified')

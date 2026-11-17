@@ -5,7 +5,8 @@ import { legalUpdated } from '../../i18n/legal-date'
 function isCodes(value: unknown): value is components['schemas']['TaxonomyCodes'] {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false
   const body = value as Record<string, unknown>
-  return typeof body.release === 'string' && Array.isArray(body.codes) && body.codes.every(code => typeof code === 'string' && code.length > 0)
+  const keys = Object.keys(body).sort()
+  return keys.length === 2 && keys[0] === 'codes' && keys[1] === 'release' && typeof body.release === 'string' && Array.isArray(body.codes) && body.codes.every(code => typeof code === 'string' && code.length > 0)
 }
 
 export default defineEventHandler(async (event) => {
@@ -30,7 +31,6 @@ export default defineEventHandler(async (event) => {
   } catch {
     event.node.res.statusCode = 503
     setResponseHeader(event, 'Content-Type', 'text/plain; charset=utf-8')
-    setResponseHeader(event, 'Cache-Control', 'no-store')
     return 'Sitemap unavailable'
   }
 })

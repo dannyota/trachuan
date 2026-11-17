@@ -29,7 +29,7 @@ for (const language of ['vi', 'en']) {
     }
     const sitemap = await context.request.get('/sitemap.xml')
     expect(sitemap.status()).toBe(503)
-    expect(sitemap.headers()['cache-control']).toBe('no-store')
+    expect(sitemap.headers()['cache-control']).toBe('no-cache'); expect(sitemap.headers().etag).toBeUndefined()
     await context.close()
   })
 }
