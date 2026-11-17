@@ -36,6 +36,11 @@ def identity(country, rel):
     require_match(r'[0-9]{8}_[0-9]+', rel, 'rel')
 
 
+def release_files(schema_version):
+    names = ('corpus.dump', 'MANIFEST.sha256', 'report.json', 'release.json')
+    return names + ('build.json',) if schema_version >= 8 else names
+
+
 def no_research_override(value):
     if isinstance(value, dict):
         for key, child in value.items():
@@ -164,6 +169,11 @@ def extensions(value):
 
 
 def validate_inputs(country, rel, directory, report_path):
+    row, report, _ = validated_inputs(country, rel, directory, report_path)
+    return row, report
+
+
+def validated_inputs(country, rel, directory, report_path):
     identity(country, rel)
     row = decode((directory / 'release.json').read_bytes())
     report = decode(report_path.read_bytes())
@@ -178,24 +188,49 @@ def validate_inputs(country, rel, directory, report_path):
     positive(row.get('schema_version'), 'schema version')
     dump_hash = sha256(directory / 'corpus.dump')
     manifest_path = directory / 'MANIFEST.sha256'
-    build_hash = sha256(manifest_path)
+    manifest_bytes = manifest_path.read_bytes()
+    build_hash = hashlib.sha256(manifest_bytes).hexdigest()
     if report.get('dump_sha256') != dump_hash:
         raise ValueError('report dump hash differs from local dump')
     if report.get('build_artifact_sha256') != build_hash or run.get('build_artifact_sha256') != build_hash:
         raise ValueError('build manifest hash differs from report or release run')
-    dump_lines = [line for line in manifest_path.read_text().splitlines()
+    manifest_lines = manifest_bytes.decode().splitlines()
+    dump_lines = [line for line in manifest_lines
                   if re.fullmatch(r'[0-9a-f]{64}  corpus\.dump', line)]
     if dump_lines != [dump_hash + '  corpus.dump']:
         raise ValueError('build manifest must name the dump hash exactly once')
     positive((directory / 'corpus.dump').stat().st_size, 'dump size')
-    return row, report
+    evidence = None
+    if row['schema_version'] >= 8:
+        build_bytes = (directory / 'build.json').read_bytes()
+        build_digest = hashlib.sha256(build_bytes).hexdigest()
+        build_lines = [line for line in manifest_lines if re.fullmatch(r'[0-9a-f]{64}  build\.json', line)]
+        if build_lines != [build_digest + '  build.json']:
+            raise ValueError('build manifest must name the build.json hash exactly once')
+        record = decode(build_bytes)
+        if not isinstance(record, dict):
+            raise ValueError('invalid build record')
+        evidence = dict(projection=record.get('heading_projection'),
+                        scan_sha256=record.get('heading_scan_sha256'),
+                        exclusions_sha256=record.get('heading_exclusions_sha256'))
+        validate_heading_evidence(evidence)
+    return row, report, evidence
+
+
+def validate_heading_evidence(value):
+    if not isinstance(value, dict) or set(value) != {'projection', 'scan_sha256', 'exclusions_sha256'}:
+        raise ValueError('invalid heading evidence fields')
+    if type(value['projection']) is not int:
+        raise ValueError('invalid heading evidence projection')
+    for field in ('scan_sha256', 'exclusions_sha256'):
+        require_match(r'[0-9a-f]{64}', value[field], 'heading evidence ' + field)
 
 
 def validate_manifest(obj):
     keys = {'kind', 'version', 'repository', 'commit', 'country', 'rel', 'database',
             'sequence', 'previous', 'dump', 'report', 'build_artifact_sha256',
             'schema_version', 'extensions', 'recipes'}
-    if not isinstance(obj, dict) or set(obj) not in (keys, keys | {'heading_review'}):
+    if not isinstance(obj, dict) or set(obj) - {'heading_review', 'heading_evidence'} != keys:
         raise ValueError('invalid corpus manifest fields')
     if 'heading_review' in obj:
         validate_heading_review(obj['heading_review'])
@@ -207,6 +242,10 @@ def validate_manifest(obj):
     require_match(r'[0-9]{8}(?:_[0-9]+)?', obj['previous'], 'previous rel')
     positive(obj['sequence'], 'sequence')
     positive(obj['schema_version'], 'schema version')
+    if obj['schema_version'] >= 8:
+        validate_heading_evidence(obj.get('heading_evidence'))
+    elif 'heading_evidence' in obj:
+        raise ValueError('heading evidence is forbidden below schema 8')
     if obj['database'] != f"corpus_{obj['country']}_{obj['rel']}":
         raise ValueError('database differs from release identity')
     dump, report = obj['dump'], obj['report']
@@ -235,7 +274,7 @@ def read_manifest(data):
 
 
 def create(commit, sequence, country, rel, directory, report_path, previous_report=None, heading_reviews_path=None):
-    row, report = validate_inputs(country, rel, directory, report_path)
+    row, report, evidence = validated_inputs(country, rel, directory, report_path)
     if previous_report is not None:
         validate_report(report, country, rel, previous_report=previous_report, release_row=row)
     obj = dict(kind='trachuan.corpus-release', version=1, repository='dannyota/trachuan',
@@ -250,6 +289,8 @@ def create(commit, sequence, country, rel, directory, report_path, previous_repo
     review = heading_review(rel, heading_reviews_path)
     if review is not None:
         obj['heading_review'] = review
+    if evidence is not None:
+        obj['heading_evidence'] = evidence
     return canonical(validate_manifest(obj))
 
 
@@ -260,10 +301,15 @@ def main():
     parser.add_argument('rel')
     parser.add_argument('directory', type=Path)
     parser.add_argument('report', type=Path)
+    parser.add_argument('--list-files', action='store_true')
     args = parser.parse_args()
     if args.command == 'validate':
-        validate_inputs(args.country, args.rel, args.directory, args.report)
+        row, _ = validate_inputs(args.country, args.rel, args.directory, args.report)
+        if args.list_files:
+            print('\n'.join(release_files(row['schema_version'])))
     else:
+        if args.list_files:
+            parser.error('--list-files requires validate')
         if os.environ['GITHUB_REF'] != 'refs/heads/main':
             raise ValueError('dispatch corpus release from main')
         from corpus_previous import check_remote

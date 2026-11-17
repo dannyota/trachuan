@@ -122,7 +122,7 @@ requested. No MacBook signing key exists.
            "size": 1234567890},
   "report": {"sha256": "<64 hex>", "quality_pass": true},
   "build_artifact_sha256": "<64 hex>",
-  "schema_version": 6,
+  "schema_version": 8,
   "extensions": {"vector": "<version>", "ltree": "<version>"},
   "recipes": {"dense": {...}, "chunk": {...}, "lexical": {...},
               "retrieval": {...}},

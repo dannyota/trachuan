@@ -5,7 +5,7 @@ from pathlib import Path
 import subprocess
 import tempfile
 
-from corpus_manifest import identity, validate_inputs
+from corpus_manifest import identity, release_files, validate_inputs
 from corpus_previous import verified_previous
 from manifest import positive
 
@@ -67,7 +67,7 @@ def upload(country, rel, directory, report):
         verified_previous(candidate, Path(temporary), client, release_row=row)
 
     receipts = {}
-    for name in ('corpus.dump', 'MANIFEST.sha256', 'report.json', 'release.json'):
+    for name in release_files(row['schema_version']):
         source = report if name == 'report.json' else directory / name
         key = f'{country}/{rel}/{name}'
         receipts[key] = upload_file(source, key, client)

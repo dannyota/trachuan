@@ -7,6 +7,14 @@ import (
 	"path/filepath"
 )
 
+const headingProjection = 1
+
+func recordHeadingEvidence(record map[string]any, scanHash, exclusionsHash string) {
+	record["heading_projection"] = headingProjection
+	record["heading_scan_sha256"] = scanHash
+	record["heading_exclusions_sha256"] = exclusionsHash
+}
+
 func WriteHeadingScan(dir string, data []byte) (string, error) {
 	hash := hashBytes(data)
 	for _, f := range []struct {

@@ -51,7 +51,7 @@ jobs:
           ./aws/install --install-dir "$RUNNER_TEMP/aws-cli" --bin-dir "$RUNNER_TEMP/aws-bin"
           [[ $("$RUNNER_TEMP/aws-bin/aws" --version) == 'aws-cli/2.40.0 '* ]]
           echo "$RUNNER_TEMP/aws-bin" >> "$GITHUB_PATH"
-      - name: Download corpus objects and check sizes
+      - name: Download corpus objects and build record with size checks
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.RELEASES_READ_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.RELEASES_READ_KEY_SECRET }}

@@ -31,16 +31,15 @@ if [[ $dry_run != true ]]; then
   exec 9> "$lock_directory/corpus-upload.lock"
   flock --exclusive --nonblock 9 || { echo 'Another corpus upload holds the local lock' >&2; exit 1; }
 fi
-python3 "$root/deploy/github/corpus_manifest.py" validate "$country" "$rel" "$build_dir" "$report"
+files=$(python3 "$root/deploy/github/corpus_manifest.py" validate "$country" "$rel" "$build_dir" "$report" --list-files)
 prefix="$country/$rel/"
-files=(corpus.dump MANIFEST.sha256 report.json release.json)
 
 if [[ $dry_run == true ]]; then
   printf 'Verify previous signed manifest and report SHA-256; recompute comparisons before upload\n'
   printf 'Check empty prefix s3://trachuan-releases/%s with profile trachuan-release-upload\n' "$prefix"
-  for file in "${files[@]}"; do
+  while IFS= read -r file; do
     printf 'Upload and verify size and ETag: s3://trachuan-releases/%s%s\n' "$prefix" "$file"
-  done
+  done <<< "$files"
   printf 'gh workflow run corpus-release.yml --ref main -f country=%s -f rel=%s\n' "$country" "$rel"
   exit 0
 fi

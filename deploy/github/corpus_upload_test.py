@@ -7,7 +7,7 @@ import subprocess
 import tempfile
 import unittest
 
-from corpus_test_support import save_fixture, write_fixture
+from corpus_test_support import add_heading_build, save_fixture, write_fixture
 
 ROOT = Path(__file__).resolve().parents[2]
 FAKE = '''#!/usr/bin/env python3
@@ -74,7 +74,8 @@ elif 'put-object' in args:
     shutil.copyfile(option('--body'), destination)
     result = dict(ETag=etag(destination))
     print(json.dumps(result))
-    if filename == 'release.json' and os.getenv('FAKE_REPLACE_AFTER_UPLOAD'):
+    last = 'build.json' if json.loads((build / 'release.json').read_text())['schema_version'] >= 8 else 'release.json'
+    if filename == last and os.getenv('FAKE_REPLACE_AFTER_UPLOAD'):
         replaced = remote / os.environ['FAKE_REPLACE_AFTER_UPLOAD']
         replaced.write_bytes(b'x' * replaced.stat().st_size)
 elif 'get-object' in args:
@@ -198,6 +199,52 @@ class CorpusUploadTest(unittest.TestCase):
         self.assertIn('s3://trachuan-releases/vn/20990102_1/corpus.dump', result.stdout)
         self.assertIn('corpus-release.yml --ref main', result.stdout)
         self.assertEqual(self.calls(), [])
+
+    def test_schema_eight_uploads_build_record_and_verifies_receipt(self):
+        add_heading_build(self.build, self.row, self.report)
+        result = self.run_upload()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual((self.remote / 'build.json').read_bytes(), (self.build / 'build.json').read_bytes())
+        calls = self.calls()
+        self.assertEqual(sum('put-object' in call['args'] for call in calls), 5)
+        self.assertEqual(sum('head-object' in call['args'] for call in calls), 6)
+        self.assertEqual(calls[-1]['name'], 'gh')
+
+    def test_schema_seven_upload_keeps_four_objects_without_build_record(self):
+        self.row['schema_version'] = 7
+        save_fixture(self.build, self.row, self.report)
+        self.assertFalse((self.build / 'build.json').exists())
+        result = self.run_upload()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(sum('put-object' in call['args'] for call in self.calls()), 4)
+        self.assertEqual({path.name for path in self.remote.iterdir()},
+                         {'corpus.dump', 'MANIFEST.sha256', 'report.json', 'release.json'})
+
+    def test_schema_eight_build_record_receipt_changes_prevent_dispatch(self):
+        add_heading_build(self.build, self.row, self.report)
+        for setting in ('FAKE_BAD_SIZE', 'FAKE_REPLACE_AFTER_UPLOAD'):
+            with self.subTest(setting=setting):
+                self.log.unlink(missing_ok=True)
+                shutil.rmtree(self.remote)
+                self.remote.mkdir()
+                self.env[setting] = 'build.json'
+                result = self.run_upload()
+                self.env.pop(setting)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertFalse(any(call['name'] == 'gh' for call in self.calls()))
+
+    def test_schema_seven_and_eight_dry_runs_list_the_required_objects(self):
+        self.row['schema_version'] = 7
+        save_fixture(self.build, self.row, self.report)
+        for version in (7, 8):
+            with self.subTest(schema_version=version):
+                if version == 8:
+                    add_heading_build(self.build, self.row, self.report)
+                result = self.run_upload('--dry-run')
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual('build.json' in result.stdout, version == 8)
+                self.assertEqual(result.stdout.count('Upload and verify size and ETag:'), 5 if version == 8 else 4)
+                self.assertEqual(self.calls(), [])
 
     def test_existing_prefix_bad_size_and_old_cli_never_dispatch(self):
         for setting, value in [('FAKE_KEY_COUNT', '1'), ('FAKE_BAD_SIZE', 'report.json'),

@@ -220,12 +220,11 @@ func (s *Stage) Process(ctx context.Context, env stage.Env, run stage.Run, item 
 		if inv.Version == 2 || correction.nonempty {
 			record["corrections_sha256"] = correction.hash
 		}
-		record["heading_exclusions_sha256"] = exclusionsHash
 		scanHash, e := WriteHeadingScan(dir, scan)
 		if e != nil {
 			return e
 		}
-		record["heading_scan_sha256"] = scanHash
+		recordHeadingEvidence(record, scanHash, exclusionsHash)
 		exclusionsJSON, e := json.Marshal(exclusions)
 		if e != nil {
 			return fmt.Errorf("encode heading exclusions: %w", e)

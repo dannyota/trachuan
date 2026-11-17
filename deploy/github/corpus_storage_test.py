@@ -5,12 +5,13 @@ from pathlib import Path
 import tempfile
 import unittest
 import io
+import subprocess
 from contextlib import redirect_stdout
 from types import SimpleNamespace
 from unittest.mock import patch
 
 from corpus_upload_test import FAKE
-from corpus_test_support import digest, write_fixture
+from corpus_test_support import add_heading_build, digest, save_fixture, write_fixture
 
 
 class CorpusStorageTest(unittest.TestCase):
@@ -21,7 +22,9 @@ class CorpusStorageTest(unittest.TestCase):
         self.path = Path(self.temp.name)
         self.remote = self.path / 'remote'
         self.remote.mkdir()
-        write_fixture(self.remote)
+        self.row, self.report = write_fixture(self.remote)
+        self.row['schema_version'] = 7
+        save_fixture(self.remote, self.row, self.report)
         executable = self.path / 'aws'
         executable.write_text(FAKE)
         executable.chmod(0o755)
@@ -141,6 +144,72 @@ class CorpusStorageTest(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     self.storage.download('vn', '20990102_1', self.path / version)
                 self.assertFalse((self.path / version).exists())
+
+    def test_schema_eight_downloads_all_five_objects_after_all_heads(self):
+        add_heading_build(self.remote, self.row, self.report)
+        output = self.path / 'schema-eight'
+        with patch.dict(os.environ, self.env, clear=True):
+            self.storage.download('vn', '20990102_1', output)
+        names = ('corpus.dump', 'MANIFEST.sha256', 'release.json', 'report.json', 'build.json')
+        for name in names:
+            self.assertEqual((output / name).read_bytes(), (self.remote / name).read_bytes())
+        calls = [json.loads(line) for line in self.log.read_text().splitlines()]
+        self.assertEqual(sum('get-object' in call['args'] for call in calls), 5)
+        self.assertLess(max(i for i, call in enumerate(calls) if 'head-object' in call['args']),
+                        min(i for i, call in enumerate(calls) if 'get-object' in call['args']))
+        for call in calls:
+            args = call['args']
+            if 'get-object' not in args:
+                continue
+            name = args[args.index('--key') + 1].rsplit('/', 1)[1]
+            size = (self.remote / name).stat().st_size
+            self.assertEqual(args[args.index('--range') + 1], f'bytes=0-{size - 1}')
+            self.assertEqual(args[args.index('--if-match') + 1], '"' + digest((self.remote / name).read_bytes()) + '"')
+
+    def test_schema_eight_build_record_limit_and_identity_checks(self):
+        add_heading_build(self.remote, self.row, self.report)
+        faults = [{'FAKE_HEAD_SIZES': json.dumps({'build.json': 16 * 1024**2 + 1})},
+                  {'FAKE_BAD_SIZE': 'build.json'},
+                  {'FAKE_HEAD_ETAGS': json.dumps({'build.json': None})},
+                  {'FAKE_GROW_AFTER_HEAD': 'build.json'},
+                  {'FAKE_GET_METADATA': json.dumps({'build.json': {'ETag': '"different"'}})},
+                  {'FAKE_GET_METADATA': json.dumps({'build.json': {'ContentRange': None}})}]
+        for index, fault in enumerate(faults):
+            with self.subTest(fault=fault), patch.dict(os.environ, self.env | fault, clear=True):
+                with self.assertRaises(ValueError):
+                    self.storage.download('vn', '20990102_1', self.path / f'fault-{index}')
+
+    def test_schema_eight_missing_build_record_refuses_before_dump_download(self):
+        add_heading_build(self.remote, self.row, self.report)
+        (self.remote / 'build.json').unlink()
+        with patch.dict(os.environ, self.env, clear=True):
+            with self.assertRaises(ValueError):
+                self.storage.download('vn', '20990102_1', self.path / 'missing-build')
+        calls = [json.loads(line) for line in self.log.read_text().splitlines()]
+        self.assertFalse(any('get-object' in call['args'] and 'vn/20990102_1/corpus.dump' in call['args'] for call in calls))
+
+    def test_schema_eight_counts_build_record_in_free_space_check(self):
+        add_heading_build(self.remote, self.row, self.report)
+        total = sum((self.remote / name).stat().st_size for name in
+                    ('corpus.dump', 'MANIFEST.sha256', 'report.json', 'release.json', 'build.json'))
+        with patch.dict(os.environ, self.env, clear=True), \
+                patch('shutil.disk_usage', return_value=SimpleNamespace(free=2 * 1024**3 + total)):
+            with self.assertRaises(ValueError):
+                self.storage.download('vn', '20990102_1', self.path / 'space-boundary')
+        calls = [json.loads(line) for line in self.log.read_text().splitlines()]
+        self.assertFalse(any('get-object' in call['args'] for call in calls))
+
+    def test_workflow_download_step_transports_build_record(self):
+        import yaml
+        add_heading_build(self.remote, self.row, self.report)
+        root = Path(__file__).resolve().parents[2]
+        workflow = yaml.safe_load((root / '.github/workflows/corpus-release.yml').read_text())
+        step = next(step for step in workflow['jobs']['release']['steps'] if step.get('name', '').startswith('Download corpus objects'))
+        output = self.path / 'workflow-download'
+        env = self.env | dict(COUNTRY='vn', REL='20990102_1', RELEASE_DIR=str(output))
+        result = subprocess.run(['bash', '-c', step['run']], env=env, cwd=root, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual((output / 'build.json').read_bytes(), (self.remote / 'build.json').read_bytes())
 
 
 if __name__ == '__main__':

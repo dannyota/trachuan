@@ -3,9 +3,11 @@ package build
 import (
 	"bytes"
 	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -34,5 +36,21 @@ func TestHeadingEvidence_RejectsDifferentScan(t *testing.T) {
 	}
 	if _, err := WriteHeadingScan(dir, []byte("changed\n")); err == nil {
 		t.Fatal("overwrote a scan")
+	}
+}
+
+func TestHeadingEvidence_BuildRecordMatchesSigningFixture(t *testing.T) {
+	record := map[string]any{}
+	recordHeadingEvidence(record, strings.Repeat("a", 64), strings.Repeat("b", 64))
+	got, err := json.Marshal(record)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want, err := os.ReadFile("../../../../../deploy/github/testdata/heading-build.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(got, bytes.TrimSpace(want)) {
+		t.Fatalf("build heading fields=%s, fixture=%s", got, want)
 	}
 }
