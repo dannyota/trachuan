@@ -121,14 +121,49 @@ straight, with the shadow
 `0 36px 56px -28px rgba(0,0,0,.5), 0 2px 6px rgba(0,0,0,.16)`; no other element
 has a shadow. The reader's text has no container.
 
+## Links and buttons
+
+One rule for the home sample, search result cards and the reader. Navigation is
+a link: underlined text, never a pill. An in-place action is a button: a filled
+or outline pill for a form's main action, or a ghost button for a secondary
+action such as copying: no border and no fill, `ink` text after a leading icon
+that names the action, and `mist` behind it on hover and focus. A ghost button
+reads as a control by its icon, never by colour, so it keeps the colour rule
+that navy text never stands alone as an action. A button is never underlined.
+Chips are the third kind: compact tags that name a topic or a relation, shaped
+as pills without an underline, and they may navigate. Every link and button is a
+target at least 44 px tall. Icons are inline SVG with `aria-hidden`, never text
+arrows.
+
+- A result's actions: "Đọc trong văn bản" / "Read in document" is the primary
+  link, on the left, with an inline arrow icon; "Sao chép trích dẫn" / "Copy
+  citation" is a ghost button with a copy icon on the right of the same row.
+  After a successful copy the button reads "Đã sao chép" / "Copied" with a check
+  icon for 2 seconds; when the clipboard refuses, it reads "Chưa sao chép được"
+  / "Could not copy" with an alert icon for 2 seconds. The outcome stays inside
+  the button, which keeps the width of its longest label in every state, so the
+  row never reflows; a hidden live region announces it, the existing failure
+  message included. Where the link and the button do not fit on one row (below
+  360 px), the button sits under the link, left aligned; in a search card the
+  rank stays with the stamp and number.
+- Below them, only when the document has an https source, a muted 13 px caption:
+  "Nguồn:" / "Source:" and the source's host as a link with the external-link
+  icon.
+- "Xem đủ" / "Show all" and "Thu gọn" / "Show less" form a ghost text toggle
+  directly under the excerpt, with a chevron pointing down or up.
+- The reader's link to the original ("Bản gốc trên vbpl.vn") is a link with the
+  external-link icon, not a pill; its copy actions stay buttons.
+
 ## Result cards
 
 A search result card has no footer band. Its head carries the stamp with its
-as-of line, the document number, the type and issuer, the actions ("Đọc trong
-văn bản", "Sao chép trích dẫn", the source link) and the rank. From 1200 px the
-head is one line and the type and issuer are cut with an ellipsis; below 1200 px
-it is two lines, the stamp and number and then the actions and rank, and the
-type and issuer move in front of the document title. The document number is
+as-of line, the document number, the type and issuer, the actions of "Links and
+buttons" (the "Đọc trong văn bản" link and the "Sao chép trích dẫn" ghost
+button) and the rank. From 1200 px the head is one line and the type and issuer
+are cut with an ellipsis; below 1200 px it is two lines, the stamp, number and
+rank, then the link on the left and the button on the right (under the link
+below 360 px), and the type and issuer move in front of the document title. The
+source caption closes the card with the topic chips. The document number is
 never cut: when it does not fit beside the stamp it takes its own line, and it
 wraps only when it is longer than the card. No text in the card is smaller than
 12 px, and the actions are 13 px. The document title follows on one line with an
@@ -136,7 +171,8 @@ ellipsis, then the provision heading in Noto Serif and the text. In the
 collapsed card, a first text line equal to the shown heading after white-space
 normalization alone is not shown; the snippet itself is never changed, and the
 expanded text and every copy action keep the full text. Topic chips close the
-card on one row. At 1366 px a card with three text lines is at most 220 px tall.
+card on one row, with the source caption. At 1366 px a card with three text
+lines is at most 220 px tall.
 
 ## Reader
 

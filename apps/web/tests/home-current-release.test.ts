@@ -41,6 +41,6 @@ it('keeps the reader link without checking the current release for signed-in vis
   session.status = 'signed-in'
   const wrapper = await render()
   expect(get).not.toHaveBeenCalled()
-  expect(wrapper.get('.result-card-footer > a').isVisible()).toBe(true)
+  expect(wrapper.get('.result-card-footer .result-actions > a').isVisible()).toBe(true)
   wrapper.unmount()
 })

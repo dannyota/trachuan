@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { clientAddress } from './client-address'
+import { checkControls } from './control-checks'
 
 for (const colorScheme of ['light', 'dark'] as const) {
   for (const width of [320, 390, 768, 1024, 1366]) {
@@ -8,7 +9,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await page.setViewportSize({ width: 1366, height: 720 })
       await page.emulateMedia({ colorScheme })
       await page.route('**/api/v1/me', route => route.fulfill({ json: { id: 1, email: 'test@example.invalid', created_at: '2099-01-01T00:00:00Z', csrf_token: 'token' } }))
-      await page.route('**/api/v1/documents/*', route => route.fulfill({ json: { release: '20990101', item: { complete: true, document: { number: '1/2099', title: 'Test law', status: { class: 'in_force', current: true }, text_source: 'none', text_complete: false }, units: [
+      await page.route('**/api/v1/documents/*', route => route.fulfill({ json: { release: '20990101', item: { complete: true, document: { number: '1/2099', source_url: 'https://vbpl.vn/fixture', title: 'Test law', status: { class: 'in_force', current: true }, text_source: 'none', text_complete: false }, units: [
         { kind: 'provision', anchor: 'dieu-1', label: 'Điều 1', text: '1. First clause.\n\n' },
         { kind: 'provision', anchor: 'dieu-1/khoan-2', label: 'Khoản 2', text: '2. Second clause.\n\na) Point text.\n' + 'Further legal text.\n'.repeat(35) },
       ] } } }))
@@ -16,6 +17,8 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await expect(page.getByRole('link', { name: /account|tài khoản/i })).toBeVisible()
       await page.setViewportSize({ width, height: 720 })
       await page.evaluate(() => (document.querySelector('#__nuxt') as unknown as { __vue_app__: { config: { globalProperties: { $router: { push: (path: string) => Promise<void> } } } } }).__vue_app__.config.globalProperties.$router.push('/vn/documents/vn:vbpl:1#dieu-1'))
+      await expect(page.locator('.reader-source svg')).toBeVisible()
+      await checkControls(page.locator('.reader-main'))
       const target = page.locator('.reader-unit-target')
       const heading = target.locator('.reader-target-heading')
       const paragraphs = target.locator('.law-text:visible')

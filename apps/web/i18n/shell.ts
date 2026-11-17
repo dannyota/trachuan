@@ -4,13 +4,13 @@ export const en = {
   skip: 'Skip to content', unavailableTitle: 'Tra Chuẩn isn\'t available right now.', retry: 'Try again',
   search: 'Search', topics: 'Topics', connect: 'Connect AI assistants', connectShort: 'Connect AI', sources: 'Sources',
   account: 'Account', signIn: 'Sign in', terms: 'Terms', privacy: 'Privacy', menu: 'Menu', language: 'Tiếng Việt',
-  sourceNote: 'Sources: Vietnam National Database of Legal Documents (vbpl.vn), Government Portal.', copied: 'Copied',
+  sourceNote: 'Sources: Vietnam National Database of Legal Documents (vbpl.vn), Government Portal.', copied: 'Copied', copyFailed: 'Could not copy',
 }
 export const vi: Record<keyof typeof en, string> = {
   skip: 'Bỏ qua đến nội dung', unavailableTitle: 'Tra Chuẩn đang gián đoạn.', retry: 'Thử lại',
   search: 'Tra cứu', topics: 'Chủ đề', connect: 'Kết nối trợ lý AI', connectShort: 'Kết nối AI', sources: 'Nguồn dữ liệu',
   account: 'Tài khoản', signIn: 'Đăng nhập', terms: 'Điều khoản', privacy: 'Quyền riêng tư', menu: 'Menu', language: 'English',
-  sourceNote: 'Nguồn: Cơ sở dữ liệu quốc gia về văn bản pháp luật (vbpl.vn), Cổng thông tin điện tử Chính phủ.', copied: 'Đã sao chép',
+  sourceNote: 'Nguồn: Cơ sở dữ liệu quốc gia về văn bản pháp luật (vbpl.vn), Cổng thông tin điện tử Chính phủ.', copied: 'Đã sao chép', copyFailed: 'Chưa sao chép được',
 }
 export function shellMessages(language: Language): Record<keyof typeof en, string> {
   return language === 'en' ? en : vi

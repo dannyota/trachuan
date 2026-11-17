@@ -1,6 +1,10 @@
 import { expect, test } from '@playwright/test'
+import { clientAddress } from './client-address'
+import { checkActionGeometry, checkControls } from './control-checks'
 
-for (const width of [360, 390, 768, 1024, 1366]) {
+test.beforeEach(async ({ page }, info) => { await page.setExtraHTTPHeaders({ 'X-Forwarded-For': clientAddress(info) }) })
+
+for (const width of [320, 360, 390, 768, 1024, 1366]) {
   for (const colorScheme of ['light', 'dark'] as const) {
     test(`home identity fits at ${width}px in ${colorScheme}`, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 })
@@ -33,10 +37,14 @@ for (const width of [360, 390, 768, 1024, 1366]) {
       await expect(connect).toHaveCSS('border-top-color', 'rgb(255, 255, 255)')
       await expect(connect).toHaveCSS('border-top-width', '2px')
       await expect(connect).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
-      const readLink = page.locator('.home-sample .result-card-footer > a').first()
+      await checkControls(page.locator('.home-sample .result-card'))
+      const [actionsBox, captionBox] = await Promise.all([page.locator('.home-sample .result-actions').boundingBox(), page.locator('.home-sample .result-source').boundingBox()])
+      expect(captionBox!.y).toBeGreaterThanOrEqual(actionsBox!.y + actionsBox!.height - 1)
+      const readLink = page.locator('.home-sample .result-actions > a').first()
       await expect(readLink).toHaveCSS('text-decoration-line', 'underline')
       await expect(readLink).toHaveCSS('text-decoration-thickness', '1px')
       await expect(readLink).toHaveCSS('text-underline-offset', '3px')
+      if ([320, 390, 1366].includes(width)) await checkActionGeometry(page.locator('.home-sample .result-card'), width, false)
       const checkbox = hero.locator('input[type=checkbox]')
       const box = hero.locator('.home-checkbox-box')
       const check = box.locator('svg')

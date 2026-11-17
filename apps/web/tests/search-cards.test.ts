@@ -94,8 +94,10 @@ it('offers expansion only when the rendered text overflows four lines', async ()
   await wrapper.setProps({ result: { abstain: false, hits: [{ text: 'Longer text', complete: true }] } })
   await flushPromises()
   expect(wrapper.get('.result-toggle').attributes('aria-expanded')).toBe('false')
+  expect(wrapper.get('.result-toggle svg path').attributes('d')).toBe('m3 6 5 5 5-5')
   await wrapper.get('.result-toggle').trigger('click')
   expect(wrapper.get('.result-toggle').attributes('aria-expanded')).toBe('true')
+  expect(wrapper.get('.result-toggle svg path').attributes('d')).toBe('m3 10 5-5 5 5')
   wrapper.unmount()
   height.mockRestore()
   scroll.mockRestore()
@@ -133,4 +135,14 @@ it('shows the first line when its composition differs or it is another heading',
   expect(wrapper.get('mark').text()).toBe('thuế áp dụng')
   await wrapper.setProps({ result: { abstain: false, hits: [{ ...hit, text: 'Một tiêu đề khác\nNội dung thuế áp dụng.' }] } })
   expect(wrapper.get('.result-text').text()).toBe('Một tiêu đề khác\nNội dung thuế áp dụng.')
+})
+
+it('shows the source host only for an https source', async () => {
+  const doc = { number: '1/2099', status: { current: true }, text_source: 'source_tree' as const, text_complete: true, source_url: 'https://example.invalid/path' }
+  const result = { abstain: false, hits: [{ doc: 'vn:vbpl:1', complete: true }], documents: { 'vn:vbpl:1': doc } }
+  const wrapper = mount(SearchResults, { props: { result }, global: { stubs: { NuxtLink: true } } })
+  expect(wrapper.get('.result-source').text()).toContain('Source: example.invalid')
+  expect(wrapper.get('.result-source a').attributes('href')).toBe(doc.source_url)
+  await wrapper.setProps({ result: { ...result, documents: { 'vn:vbpl:1': { ...doc, source_url: 'http://example.invalid/path' } } } })
+  expect(wrapper.find('.result-source').exists()).toBe(false)
 })
