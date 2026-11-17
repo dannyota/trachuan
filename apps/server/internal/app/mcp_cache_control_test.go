@@ -85,8 +85,13 @@ func TestMCPRoute_AllAuthenticationOutcomesAreNoStore(t *testing.T) {
 			if response.StatusCode != tc.status {
 				t.Fatalf("status=%d want=%d body=%s", response.StatusCode, tc.status, body)
 			}
-			if got := response.Header.Get("Cache-Control"); got != mcpapi.CacheControl {
-				t.Errorf("Cache-Control=%q want no-store", got)
+			got := response.Header.Get("Cache-Control")
+			directives := map[string]bool{}
+			for _, d := range strings.Split(got, ",") {
+				directives[strings.TrimSpace(d)] = true
+			}
+			if got != mcpapi.CacheControl || !directives["no-store"] || !directives["no-transform"] {
+				t.Errorf("Cache-Control=%q want no-store and no-transform", got)
 			}
 			if !tc.auth && db.lookups.Load() != 0 {
 				t.Error("unauthenticated request queried the store")
