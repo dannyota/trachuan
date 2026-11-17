@@ -51,6 +51,7 @@ Intended behavior of trachuan. Decisions with alternatives are in the
 | [web visual system](web-visual.md)                          | Colour tokens, type, shape, stamps, logo, motion, contrast table                                                 |
 | [web voice](web-voice.md)                                   | Voice rules, claims, voice and typeface per content field, maker panel                                           |
 | [public document summaries](web-public-documents.md)        | The summary URL with no session, fields, outline and heading approval, availability, caching, head tags, sitemap |
+| [framework pages](web-frameworks.md)                        | Framework list, version, control and search pages, words per field, access labels, caching and the flag          |
 | [serving public summaries](web-public-documents-serving.md) | Summary rows, public document endpoints, admission and capacity, tests, capacity acceptance                      |
 | [discovery](discovery.md)                                   | Indexable routes, robots.txt, sitemap, head tags, structured data, llms.txt, measurement                         |
 | [deployment](deployment.md)                                 | Host, deploy, secrets, release activation, backups, observability                                                |

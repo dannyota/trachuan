@@ -129,7 +129,8 @@ reviewed before serving work starts. Its fixed rules:
 - **Web.** `/api/v1/frameworks/...`, pages `/frameworks`,
   `/frameworks/{code}/{version}` and a control page; the search page gains the
   corpus switch. A reduced control shows our title, its mappings and a plain
-  statement that the publisher's text is licensed.
+  statement that the publisher's text needs access
+  ([framework pages](web-frameworks.md)).
 
 ## Evaluation
 
