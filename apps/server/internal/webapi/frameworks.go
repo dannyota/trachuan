@@ -53,5 +53,5 @@ func newFrameworkRoutes(cfg Config) http.Handler {
 			return operation(r.Context(), p.AccountID, raw, handle)
 		}))
 	}
-	return mcpapi.NoStore(cfg.Sessions.Middleware(cfg.Sessions.CSRF(mux)))
+	return mcpapi.WithCacheControl("no-store", cfg.Sessions.Middleware(cfg.Sessions.CSRF(mux)))
 }
