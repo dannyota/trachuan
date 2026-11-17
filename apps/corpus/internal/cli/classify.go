@@ -66,6 +66,8 @@ func runClassify(ctx context.Context, args []string, stdout, stderr io.Writer) i
 			return runClassifyArticles(ctx, args[1:], stdout, stderr)
 		case "score":
 			return runClassifyScore(ctx, args[1:], stdout, stderr)
+		case "calibrate":
+			return runClassifyCalibrate(ctx, args[1:], stdout, stderr)
 		}
 	}
 	if len(args) < 3 || args[0] != "screen" {

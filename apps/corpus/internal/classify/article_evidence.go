@@ -12,7 +12,7 @@ import (
 )
 
 type ProvisionEvidence struct {
-	DocumentKey, Kind, Path, Anchor, Heading, Text string
+	DocumentKey, Kind, Path, Anchor, Heading, Text, DocumentTitle string
 }
 
 func ReadLabels(path string) (taxonomy.Labels, string, error) {
@@ -39,7 +39,7 @@ func ReadLabels(path string) (taxonomy.Labels, string, error) {
 }
 
 func LoadNodes(ctx context.Context, db *pgxpool.Pool) ([]Node, error) {
-	rows, err := db.Query(ctx, `SELECT n.code,n.name,COALESCE(p.code,''),n.level,n.status='active',n.origin FROM taxonomy_node n LEFT JOIN taxonomy_node p ON p.id=n.parent_id ORDER BY n.path,n.code`)
+	rows, err := db.Query(ctx, `SELECT n.code,n.name,COALESCE(p.code,''),n.level,n.status='active',n.origin,n.provision_count > 0,n.ordinal FROM taxonomy_node n LEFT JOIN taxonomy_node p ON p.id=n.parent_id ORDER BY n.path,n.code`)
 	if err != nil {
 		return nil, fmt.Errorf("read article taxonomy nodes: %w", err)
 	}
@@ -47,7 +47,7 @@ func LoadNodes(ctx context.Context, db *pgxpool.Pool) ([]Node, error) {
 	var nodes []Node
 	for rows.Next() {
 		var n Node
-		if err = rows.Scan(&n.Code, &n.Name, &n.Parent, &n.Level, &n.Active, &n.Origin); err != nil {
+		if err = rows.Scan(&n.Code, &n.Name, &n.Parent, &n.Level, &n.Active, &n.Origin, &n.HasProvisions, &n.Ordinal); err != nil {
 			return nil, fmt.Errorf("decode article taxonomy node: %w", err)
 		}
 		nodes = append(nodes, n)
@@ -63,7 +63,7 @@ func LoadArticles(ctx context.Context, db *pgxpool.Pool, labels []taxonomy.Label
 	for _, a := range labels {
 		keys = append(keys, a.Key)
 	}
-	rows, err := db.Query(ctx, `SELECT d.key,p.kind,p.path::text,p.anchor,p.heading,p.text FROM document d JOIN provision p ON p.document_id=d.id WHERE d.key=ANY($1) ORDER BY d.key,p.preorder`, keys)
+	rows, err := db.Query(ctx, `SELECT d.key,p.kind,p.path::text,p.anchor,p.heading,p.text,d.title FROM document d JOIN provision p ON p.document_id=d.id WHERE d.key=ANY($1) ORDER BY d.key,p.preorder`, keys)
 	if err != nil {
 		return nil, fmt.Errorf("read selected article evidence: %w", err)
 	}
@@ -71,7 +71,7 @@ func LoadArticles(ctx context.Context, db *pgxpool.Pool, labels []taxonomy.Label
 	var provisions []ProvisionEvidence
 	for rows.Next() {
 		var p ProvisionEvidence
-		if err = rows.Scan(&p.DocumentKey, &p.Kind, &p.Path, &p.Anchor, &p.Heading, &p.Text); err != nil {
+		if err = rows.Scan(&p.DocumentKey, &p.Kind, &p.Path, &p.Anchor, &p.Heading, &p.Text, &p.DocumentTitle); err != nil {
 			return nil, fmt.Errorf("decode article evidence: %w", err)
 		}
 		provisions = append(provisions, p)
@@ -96,7 +96,7 @@ func SelectArticles(provisions []ProvisionEvidence, labels []taxonomy.LabelArtic
 		if p.Kind != "dieu" || !selected[p.DocumentKey+"/"+p.Anchor] {
 			continue
 		}
-		a := Article{DocumentKey: p.DocumentKey, Anchor: p.Anchor, Heading: p.Heading, OwnText: p.Text, Text: p.Text}
+		a := Article{DocumentKey: p.DocumentKey, Anchor: p.Anchor, Heading: p.Heading, OwnText: p.Text, Text: p.Text, DocumentTitle: p.DocumentTitle}
 		for j := i - 1; j >= 0 && provisions[j].DocumentKey == p.DocumentKey; j-- {
 			parent := provisions[j]
 			if parent.Kind == "chuong" && strings.HasPrefix(p.Path, parent.Path+".") {

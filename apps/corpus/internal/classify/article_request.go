@@ -14,6 +14,9 @@ func BuildArticleRequest(r Recipe, req ArticleRequest) (anthropic.MessageNewPara
 	if r.Article == nil || req.DocumentKey == "" || len(req.Articles) == 0 || len(req.Nodes) == 0 {
 		return anthropic.MessageNewParams{}, fmt.Errorf("article request requires recipe, identity, articles and subtrees")
 	}
+	if r.Article.PromptVersion == 4 && r.Article.Step == 0 {
+		return buildMenuArticleRequest(r, req)
+	}
 	if err := validateStepMenu(r, req); err != nil {
 		return anthropic.MessageNewParams{}, err
 	}

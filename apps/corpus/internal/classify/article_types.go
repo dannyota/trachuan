@@ -1,12 +1,14 @@
 package classify
 
 type Node struct {
-	Code   string `json:"code"`
-	Name   string `json:"name"`
-	Parent string `json:"parent_code"`
-	Level  int    `json:"level"`
-	Active bool   `json:"active"`
-	Origin string `json:"origin"`
+	Code          string `json:"code"`
+	Name          string `json:"name"`
+	Parent        string `json:"parent_code"`
+	Level         int    `json:"level"`
+	Active        bool   `json:"active"`
+	Origin        string `json:"origin"`
+	HasProvisions bool   `json:"has_provisions,omitempty"`
+	Ordinal       int    `json:"ordinal,omitempty"`
 }
 
 type Article struct {
@@ -17,15 +19,19 @@ type Article struct {
 	Chapter        string `json:"-"`
 	ChapterHeading string `json:"chapter_heading,omitempty"`
 	OwnText        string `json:"-"`
+	DocumentTitle  string `json:"-"`
 }
 
 type ArticleRequest struct {
-	DocumentKey string    `json:"document_key"`
-	Articles    []Article `json:"articles"`
-	Nodes       []Node    `json:"allowed_subtrees"`
-	InputTokens int64     `json:"counted_input_tokens"`
-	Step        int       `json:"step,omitempty"`
-	Family      string    `json:"family,omitempty"`
+	DocumentKey   string    `json:"document_key"`
+	DocumentTitle string    `json:"document_title,omitempty"`
+	DocumentCodes []string  `json:"document_codes,omitempty"`
+	PromptVersion int       `json:"prompt_version,omitempty"`
+	Articles      []Article `json:"articles"`
+	Nodes         []Node    `json:"allowed_subtrees"`
+	InputTokens   int64     `json:"counted_input_tokens"`
+	Step          int       `json:"step,omitempty"`
+	Family        string    `json:"family,omitempty"`
 }
 
 type CodeConfidence struct {

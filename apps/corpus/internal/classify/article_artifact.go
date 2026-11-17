@@ -121,6 +121,9 @@ func validateArticleArtifact(a ArticleArtifact, taxonomyHash, familiesHash strin
 		if err := validateArticleOutcome(record.Outcome); err != nil {
 			return err
 		}
+		if a.Recipe.Article.PromptVersion == 4 && (record.Outcome.FailedFamilies != nil || (record.Outcome.Outcome == "ok" && (len(record.Outcome.Codes) < 1 || len(record.Outcome.Codes) > 2)) || record.Outcome.Outcome == "no_family") {
+			return fmt.Errorf("invalid menu article outcome")
+		}
 		if a.Recipe.Article.Step == 2 {
 			out := record.Outcome
 			if out.FailedFamilies == nil || out.Outcome == "too_long" || (out.Outcome == "no_family" && *out.FailedFamilies != 0) {

@@ -39,7 +39,15 @@ func BuildArticlePlan(ctx context.Context, r Recipe, articles []Article, familie
 		if !ok {
 			return plan, fmt.Errorf("selected document missing from families artifact")
 		}
-		if family.Outcome != "ok" || len(family.Codes) == 0 {
+		if r.Article.PromptVersion == 4 && r.Article.Step == 0 {
+			menu := fullArticleMenu(nodes)
+			if len(menu) == 0 {
+				return plan, fmt.Errorf("release has no active level-2 taxonomy nodes")
+			}
+			if err := splitArticles(ctx, r, group, menu, family.Codes, count, &plan); err != nil {
+				return plan, err
+			}
+		} else if family.Outcome != "ok" || len(family.Codes) == 0 {
 			outcome := "invalid_response"
 			if family.Outcome == "no_family" || family.Outcome == "ok" {
 				outcome = "no_family"
@@ -61,7 +69,7 @@ func BuildArticlePlan(ctx context.Context, r Recipe, articles []Article, familie
 				}
 				menu = familiesOnly
 			}
-			if err = splitArticles(ctx, r, group, menu, count, &plan); err != nil {
+			if err = splitArticles(ctx, r, group, menu, nil, count, &plan); err != nil {
 				return plan, err
 			}
 		}
@@ -99,10 +107,15 @@ func allowedNodes(codes []string, nodes []Node) ([]Node, error) {
 	return menu, nil
 }
 
-func splitArticles(ctx context.Context, r Recipe, group []Article, menu []Node, count TokenCounter, plan *ArticlePlan) error {
+func splitArticles(ctx context.Context, r Recipe, group []Article, menu []Node, documentCodes []string, count TokenCounter, plan *ArticlePlan) error {
 	var current *ArticleRequest
 	for _, a := range group {
 		candidate := ArticleRequest{DocumentKey: a.DocumentKey, Articles: []Article{a}, Nodes: menu}
+		if r.Article.PromptVersion == 4 && r.Article.Step == 0 {
+			candidate.DocumentTitle = a.DocumentTitle
+			candidate.DocumentCodes = documentCodes
+			candidate.PromptVersion = 4
+		}
 		candidate.Step = r.Article.Step
 		if candidate.Step == 2 {
 			for _, n := range menu {

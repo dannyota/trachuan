@@ -17,6 +17,19 @@ type articleWork struct {
 }
 
 func articleWorkHash(o Options) string {
+	if o.Recipe.Article.PromptVersion == 4 {
+		type selected struct{ DocumentKey, Anchor, Heading, Text, Chapter, ChapterHeading, DocumentTitle string }
+		selection := make([]selected, 0, len(o.article.articles))
+		for _, a := range o.article.articles {
+			selection = append(selection, selected{a.DocumentKey, a.Anchor, a.Heading, a.Text, a.Chapter, a.ChapterHeading, a.DocumentTitle})
+		}
+		b, _ := json.Marshal(struct {
+			RunID                                    int64
+			Country, Release, RecipeHash, LabelsHash string
+			Articles                                 []selected
+		}{o.RunID, o.Country, o.Release, o.Recipe.Hash(), o.article.labelsHash, selection})
+		return digest(b)
+	}
 	if o.Recipe.Article.Step != 0 {
 		b, _ := json.Marshal(struct {
 			RunID                 int64

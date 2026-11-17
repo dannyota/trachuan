@@ -119,13 +119,17 @@ func Score(labels taxonomy.Labels, families FamilyArtifact, artifact ArticleArti
 			}
 		}
 		out := predicted[key]
-		if valid && family.Outcome == "ok" && len(family.Codes) > 0 && out.Outcome == "ok" {
-			for _, p := range out.Codes {
+		menuPrompt := artifact.Recipe.Article != nil && artifact.Recipe.Article.PromptVersion == 4 && artifact.Recipe.Article.Step == 0
+		if valid && out.Outcome == "ok" && (menuPrompt || (family.Outcome == "ok" && len(family.Codes) > 0)) {
+			if menuPrompt && (len(out.Codes) < 1 || len(out.Codes) > 2) {
+				return report, fmt.Errorf("invalid menu article prediction count")
+			}
+			for index, p := range out.Codes {
 				n := byCode[p.Code]
-				if !n.Active || n.Level < 2 || n.Level > 4 || (n.Origin != "phapdien" && n.Origin != "custom") || math.IsNaN(p.Confidence) || math.IsInf(p.Confidence, 0) || p.Confidence < 0 || p.Confidence > 1 || !containsCode(family.Codes, ancestor(p.Code, 2, byCode)) {
+				if !n.Active || n.Level < 2 || n.Level > 4 || (n.Origin != "phapdien" && n.Origin != "custom") || math.IsNaN(p.Confidence) || math.IsInf(p.Confidence, 0) || p.Confidence < 0 || p.Confidence > 1 || (menuPrompt && n.Level != 2) || (!menuPrompt && !containsCode(family.Codes, ancestor(p.Code, 2, byCode))) {
 					return report, fmt.Errorf("invalid article prediction code or confidence")
 				}
-				if item.topCode == "" || p.Confidence > item.topConfidence || (p.Confidence == item.topConfidence && p.Code < item.topCode) {
+				if (menuPrompt && index == 0) || (!menuPrompt && (item.topCode == "" || p.Confidence > item.topConfidence || (p.Confidence == item.topConfidence && p.Code < item.topCode))) {
 					item.topCode, item.topConfidence = p.Code, p.Confidence
 					for i, level := range []int{2, 3, 0} {
 						item.topMapped[i] = ancestor(p.Code, level, byCode)

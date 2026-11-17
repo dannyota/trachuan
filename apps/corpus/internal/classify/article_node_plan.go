@@ -58,7 +58,7 @@ func buildArticleNodePlan(ctx context.Context, r Recipe, articles []Article, cho
 				if a.Chapter == "" {
 					size = min(size, 12)
 				}
-				if err = splitArticles(ctx, r, selected[:size], menu, count, &familyPlan); err != nil {
+				if err = splitArticles(ctx, r, selected[:size], menu, nil, count, &familyPlan); err != nil {
 					return plan, err
 				}
 				selected = selected[size:]

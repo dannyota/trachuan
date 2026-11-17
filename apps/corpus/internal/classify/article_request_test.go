@@ -20,6 +20,7 @@ func articleRecipe(t *testing.T) Recipe {
 	if err != nil {
 		t.Fatal(err)
 	}
+	r.Article.PromptVersion = 1
 	return r
 }
 

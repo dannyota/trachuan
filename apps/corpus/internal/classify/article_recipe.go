@@ -22,7 +22,7 @@ func NewArticleRecipe(base Recipe, familiesHash string) (Recipe, error) {
 	if err := base.validate(true); err != nil {
 		return Recipe{}, err
 	}
-	base.Article = &ArticleRecipe{SourceRecipeHash: base.Hash(), FamiliesHash: familiesHash, PromptVersion: 1, SchemaVersion: 1, MaxTokens: 8192}
+	base.Article = &ArticleRecipe{SourceRecipeHash: base.Hash(), FamiliesHash: familiesHash, PromptVersion: 4, SchemaVersion: 1, MaxTokens: 8192}
 	return base, base.Validate()
 }
 
@@ -34,7 +34,7 @@ func (r Recipe) validateArticle() error {
 	if err != nil || len(h) != 32 || a.SourceRecipeHash != r.documentRecipe().Hash() || a.SchemaVersion != 1 || a.MaxTokens < 1 || a.MaxTokens > 32000 {
 		return fmt.Errorf("invalid article classification recipe")
 	}
-	if a.PromptVersion == 1 && a.Step == 0 && a.Step1Hash == "" {
+	if (a.PromptVersion == 1 || a.PromptVersion == 4) && a.Step == 0 && a.Step1Hash == "" {
 		return nil
 	}
 	if a.PromptVersion != 3 || r.Model != "claude-haiku-5-5" || (a.Step != 1 && a.Step != 2) {

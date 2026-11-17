@@ -63,6 +63,9 @@ func closedObject(b []byte, keys []string) (map[string]json.RawMessage, error) {
 }
 
 func ValidateArticles(stop, text string, req ArticleRequest, nodes []Node) (map[string]ArticleOutcome, int) {
+	if req.PromptVersion == 4 && req.Step == 0 {
+		return validateMenuArticles(stop, text, req)
+	}
 	invalid := map[string]ArticleOutcome{}
 	dropped := 0
 	keys := make([]string, 0, len(req.Articles))

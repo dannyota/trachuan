@@ -25,10 +25,10 @@ func TestLoadSelectedDocuments_AllSeededPrimaryAndIneligibleKeys(t *testing.T) {
 	t.Cleanup(db.Close)
 	_, err = db.Exec(ctx, `CREATE TABLE document(id bigint,key text,title text,class text,fetch_sha256 text);
 CREATE TABLE provision(id bigint,document_id bigint,kind text,path text,anchor text,heading text,text text,label text,preorder bigint);
-CREATE TABLE taxonomy_node(id bigint,code text,name text,parent_id bigint,level integer,status text,origin text,path text);
+CREATE TABLE taxonomy_node(id bigint,code text,name text,parent_id bigint,level integer,status text,origin text,path text,provision_count integer,ordinal integer);
 CREATE TABLE taxonomy_assignment(provision_id bigint,method text);
 CREATE TABLE artifact(id bigint,stage text,sha256 text,path text);
-INSERT INTO taxonomy_node VALUES(1,'1','Topic',NULL,1,'active','phapdien','n1'),(2,'1.1','Family',1,2,'active','phapdien','n1.n1');
+INSERT INTO taxonomy_node VALUES(1,'1','Topic',NULL,1,'active','phapdien','n1',0,1),(2,'1.1','Family',1,2,'active','phapdien','n1.n1',1,1);
 INSERT INTO provision VALUES(1,1,'dieu','n1','dieu-1','Scope','Synthetic','Article 1',1),(2,2,'dieu','n1','dieu-1','Scope','Synthetic','Article 1',1),(3,3,'dieu','n1','dieu-1','Scope','Synthetic','Article 1',1);
 INSERT INTO taxonomy_assignment VALUES(1,'phapdien_seed'),(2,'phapdien_seed'),(3,'phapdien_seed');`)
 	if err != nil {
