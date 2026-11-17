@@ -35,7 +35,7 @@ type webDeps struct {
 	mcpOriginMode string
 }
 
-func newWebMux(d webDeps) *http.ServeMux {
+func newWebMux(d webDeps) *webMux {
 	mux := http.NewServeMux()
 	origins := newMCPOriginPolicy(d.publicURL, d.mcpOrigins, d.mcpOriginMode, d.tools.Logger, d.loginLimit.clock)
 	mountPasswordRoutes(mux, d)
@@ -55,8 +55,6 @@ func newWebMux(d webDeps) *http.ServeMux {
 	mux.Handle("GET /api/v1/me/reports", reportHandler)
 	mux.Handle("DELETE /api/v1/me/reports/{id}", reportHandler)
 	corpus := webapi.New(webapi.Config{Tools: d.tools, Sessions: d.sessions})
-	mux.Handle("/api/v1/frameworks", corpus)
-	mux.Handle("/api/v1/frameworks/", corpus)
 	publicLimit := newLoginLimiter(d.loginLimit.clock, d.loginLimit.proxies)
 	publicLimit.cost = time.Second
 	summaries := d.summaries
@@ -92,7 +90,7 @@ func newWebMux(d webDeps) *http.ServeMux {
 		}
 	}
 	mountRoutes(mux, d.loginLimit.middleware(d.login.Start), d.loginLimit.middleware(d.login.Callback), logout, account, corpus)
-	return mux
+	return &webMux{ServeMux: mux, frameworks: guardFrameworkRoutes(d.tools.Frameworks, corpus)}
 }
 
 func mountRoutes(mux *http.ServeMux, start, callback, logout, account, corpus http.Handler) {
