@@ -115,7 +115,7 @@ func TestRun_ArtifactsAndResume(t *testing.T) {
 	require.NoError(t, os.Remove("sources/frameworks.yaml"))
 	out.Reset()
 	require.NoError(t, testRun(context.Background(), "20990101", &out))
-	require.Equal(t, 6, strings.Count(out.String(), "skipped"))
+	require.Equal(t, 7, strings.Count(out.String(), "skipped"))
 	after, err := os.Stat(filepath.Join(base, "chunk/manifest.json"))
 	require.NoError(t, err)
 	require.Equal(t, before.ModTime(), after.ModTime())
@@ -128,7 +128,7 @@ func TestRun_Determinism(t *testing.T) {
 	}
 	require.NoError(t, filepath.WalkDir(filepath.Join(work, "20990101"), func(path string, entry os.DirEntry, err error) error {
 		require.NoError(t, err)
-		if entry.IsDir() || entry.Name() == ".lock" {
+		if entry.IsDir() || entry.Name() == ".lock" || strings.Contains(path, string(filepath.Separator)+"evaluate"+string(filepath.Separator)) {
 			return nil
 		}
 		a, err := os.ReadFile(path)
@@ -138,6 +138,11 @@ func TestRun_Determinism(t *testing.T) {
 		require.Equal(t, string(a), string(b), path)
 		return nil
 	}))
+	a := readRows[EvaluationReport](t, filepath.Join(work, "20990101/evaluate/report.json"))[0]
+	b := readRows[EvaluationReport](t, filepath.Join(work, "20990102/evaluate/report.json"))[0]
+	require.Equal(t, a.EvaluationResult, b.EvaluationResult)
+	require.Equal(t, a.QualityPass, b.QualityPass)
+	require.Equal(t, a.Floors, b.Floors)
 }
 
 func TestRun_LockAndCleanup(t *testing.T) {

@@ -59,7 +59,7 @@ func TestBuild_ManifestAndResume(t *testing.T) {
 	require.Equal(t, int64(14), rows[0].Dump.Size)
 	require.Equal(t, digest([]byte("synthetic dump")), rows[0].Dump.SHA256)
 	require.Equal(t, "build", rows[0].Recipe.Name)
-	require.NoDirExists(t, filepath.Join(base, "evaluate"))
+	require.FileExists(t, filepath.Join(base, "evaluate/report.json"))
 	inputs, err := stepInputs(base, "build")
 	require.NoError(t, err)
 	require.Len(t, inputs, 5)
@@ -146,4 +146,8 @@ func TestGapPolicy_ClassAndBlocking(t *testing.T) {
 	require.Error(t, err)
 	_, _, err = classifyGap("title_missing", "")
 	require.Error(t, err)
+}
+
+func (d fakeDatabase) Evaluate(_ context.Context, _ EvaluationRequest, publish func(EvaluationResult) error) error {
+	return publish(EvaluationResult{Restored: true, RetrievalRecipeStatus: "placeholder", Cohorts: map[string]CohortMetrics{}, Cases: []CaseResult{}, Gaps: []GapTotal{}})
 }

@@ -61,7 +61,7 @@ func Run(ctx context.Context, rel string, out io.Writer, embedder Embedder, data
 		return hide("create run id", err)
 	}
 	request := DatabaseRequest{WorkDir: work, Rel: rel, RunID: fmt.Sprintf("%x", id)}
-	for _, step := range []string{"snapshot", "parse", "relate", "chunk", "embed", "build"} {
+	for _, step := range []string{"snapshot", "parse", "relate", "chunk", "embed", "build", "evaluate"} {
 		if err := ctx.Err(); err != nil {
 			return fmt.Errorf("%s: %w", step, err)
 		}
@@ -79,6 +79,9 @@ func stepRecipe(step string) recipe {
 	case "snapshot":
 		version = 2
 		params["gap_kinds"] = gapKinds()
+		params["public_floors"] = "sources/frameworks-floors.yaml"
+	case "evaluate":
+		params = map[string]any{"limit": 8, "metrics": 1, "invariant": 1, "floors": 1, "previous_report": "not_applicable"}
 	case "build":
 		version = 2
 		params = databaseRecipe()
@@ -109,8 +112,11 @@ func stepInputs(base, step string) (map[string]*string, error) {
 	if step == "embed" {
 		deps = append(deps, "chunk")
 	}
-	if step == "build" {
+	if step == "build" || step == "evaluate" {
 		deps = append(deps, "parse", "relate", "chunk", "embed")
+	}
+	if step == "evaluate" {
+		deps = append(deps, "build")
 	}
 	for _, dep := range deps {
 		name := dep + "/manifest.json"
@@ -196,6 +202,18 @@ func runStep(ctx context.Context, base, step string, request DatabaseRequest, so
 				return sealErr
 			}
 			if _, writeErr := fmt.Fprintf(out, "%s complete\n", step); writeErr != nil {
+				return hide("write progress", writeErr)
+			}
+			return nil
+		})
+	}
+	if step == "evaluate" {
+		return evaluateStep(ctx, base, tmp, request, database, func() error {
+			if sealErr := seal(tmp, target, r, inputs); sealErr != nil {
+				return sealErr
+			}
+			_, writeErr := fmt.Fprintf(out, "%s complete\n", step)
+			if writeErr != nil {
 				return hide("write progress", writeErr)
 			}
 			return nil

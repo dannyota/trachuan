@@ -10,6 +10,10 @@ import (
 )
 
 func filterRestoreList(list string) (string, error) {
+	return filterRestoreListAllowing(list, nil)
+}
+
+func filterRestoreListAllowing(list string, functions map[string]bool) (string, error) {
 	var result strings.Builder
 	for _, line := range strings.SplitAfter(list, "\n") {
 		trimmed := strings.TrimSpace(line)
@@ -27,7 +31,11 @@ func filterRestoreList(list string) (string, error) {
 				return "", fmt.Errorf("unexpected extension in restore list")
 			}
 			continue
-		case "FUNCTION", "PROCEDURE":
+		case "FUNCTION":
+			if len(fields) != 7 || fields[4] != "public" || !functions[fields[5]] {
+				return "", fmt.Errorf("function in restore list")
+			}
+		case "PROCEDURE":
 			return "", fmt.Errorf("function in restore list")
 		case "EVENT":
 			if len(fields) > 4 && fields[4] == "TRIGGER" {
@@ -40,6 +48,10 @@ func filterRestoreList(list string) (string, error) {
 }
 
 func pgRestore(ctx context.Context, cfg Config, dbName, dumpPath string) error {
+	return pgRestoreFiltered(ctx, cfg, dbName, dumpPath, filterRestoreList)
+}
+
+func pgRestoreFiltered(ctx context.Context, cfg Config, dbName, dumpPath string, filter func(string) (string, error)) error {
 	env, password, err := toolEnvironment(cfg.BuilderURL)
 	if err != nil {
 		return err
@@ -53,7 +65,7 @@ func pgRestore(ctx context.Context, cfg Config, dbName, dumpPath string) error {
 	if err = listCmd.Run(); err != nil {
 		return toolError("list corpus dump", err, stderr.String(), password, cfg.BuilderURL)
 	}
-	filtered, err := filterRestoreList(list.String())
+	filtered, err := filter(list.String())
 	if err != nil {
 		return err
 	}

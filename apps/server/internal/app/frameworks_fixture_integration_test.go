@@ -39,6 +39,10 @@ func (d frameworkFixtureDatabase) Build(ctx context.Context, r build.DatabaseReq
 	return publish()
 }
 
+func (d frameworkFixtureDatabase) Evaluate(_ context.Context, _ build.EvaluationRequest, publish func(build.EvaluationResult) error) error {
+	return publish(build.EvaluationResult{RetrievalRecipeStatus: "placeholder"})
+}
+
 func frameworkFixtureSources(t *testing.T, changed bool) {
 	t.Helper()
 	root := t.TempDir()

@@ -35,7 +35,7 @@ func TestCalibration_PublishesMeasuredRecipeAndHashedRecord(t *testing.T) {
 
 func TestBuild_PlaceholderHasNoCalibration(t *testing.T) {
 	work := fixture(t)
-	goldenInput(t, "floors.yaml", "opaque: private floors\n")
+	goldenInput(t, "floors.yaml", "baselines: []\n")
 	require.NoError(t, testRun(context.Background(), "20990101", os.Stderr))
 	dir := filepath.Join(work, "20990101/build")
 	raw, err := os.ReadFile(filepath.Join(dir, "build.json"))
