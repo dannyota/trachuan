@@ -23,6 +23,9 @@ fi
 if ! id trachuan-metrics >/dev/null 2>&1; then
  useradd --system --no-create-home --shell /sbin/nologin trachuan-metrics
 fi
+if ! id trachuan-watch >/dev/null 2>&1; then
+ useradd --system --no-create-home --shell /sbin/nologin trachuan-watch
+fi
 [[ $(getent passwd trachuan | cut -d: -f6) == /home/trachuan ]] || fail 'unexpected trachuan home'
 for kind in uid gid; do
  file=/etc/sub${kind}
@@ -74,15 +77,22 @@ install -d -o trachuan -g trachuan -m 0755 /srv/trachuan/host/quadlet
 install -d -o root -g root -m 0755 /usr/local/libexec/trachuan
 [[ ! -L /usr/local/libexec/trachuan && ! -L /usr/local/libexec/trachuan/publish-metrics.py ]] || fail 'symlink in the metrics publisher path'
 install -o root -g root -m 0644 "$bundle/metrics/publish-metrics.py" /usr/local/libexec/trachuan/publish-metrics.py
-for unit in trachuan-metrics.service trachuan-metrics.timer; do
+[[ ! -L /usr/local/libexec/trachuan/watch && ! -L /usr/local/libexec/trachuan/watch.py ]] || fail 'symlink in the watch installation path'
+install -d -o root -g root -m 0755 /usr/local/libexec/trachuan/watch
+install -o root -g root -m 0644 "$bundle/watch/watch.py" /usr/local/libexec/trachuan/watch.py
+for module in __init__.py delivery.py messages.py network.py observations.py runtime.py signals.py storage.py; do
+ [[ ! -L /usr/local/libexec/trachuan/watch/$module ]] || fail 'symlink in the watch module path'
+ install -o root -g root -m 0644 "$bundle/watch/$module" "/usr/local/libexec/trachuan/watch/$module"
+done
+for unit in trachuan-metrics.service trachuan-metrics.timer trachuan-watch.service trachuan-watch.timer; do
  install -o root -g root -m 0644 "$bundle/systemd/$unit" "/etc/systemd/system/$unit"
 done
 [[ -d /srv/trachuan/state ]] || install -d -o root -g root -m 0755 /srv/trachuan/state
 [[ -d /srv/trachuan/state/backup ]] || install -d -o trachuan -g trachuan -m 0750 /srv/trachuan/state/backup
-setfacl -m u:trachuan:--x,u:trachuan-metrics:--x /srv/trachuan/state
-setfacl -m u:trachuan-metrics:r-x,d:u:trachuan-metrics:r-x /srv/trachuan/state/backup
+setfacl -m u:trachuan:--x,u:trachuan-metrics:--x,u:trachuan-watch:--x /srv/trachuan/state
+setfacl -m u:trachuan-metrics:r-x,d:u:trachuan-metrics:r-x,u:trachuan-watch:r-x,d:u:trachuan-watch:r-x /srv/trachuan/state/backup
 for job in full diff verify health restore-check; do
- [[ ! -f /srv/trachuan/state/backup/$job.json ]] || setfacl -m u:trachuan-metrics:r-- "/srv/trachuan/state/backup/$job.json"
+ [[ ! -f /srv/trachuan/state/backup/$job.json ]] || setfacl -m u:trachuan-metrics:r--,u:trachuan-watch:r-- "/srv/trachuan/state/backup/$job.json"
 done
 [[ -e /srv/trachuan/state/backup/backup.lock ]] || install -o trachuan -g trachuan -m 0600 /dev/null /srv/trachuan/state/backup/backup.lock
 for dir in /etc/trachuan /srv/trachuan/bundles /usr/local/libexec/trachuan/bin; do
@@ -98,7 +108,17 @@ setfacl -m u:trachuan:--x /var/log/trachuan
 chown trachuan:trachuan /var/log/trachuan/backup.log
 chmod 0640 /var/log/trachuan/backup.log
 setfacl -m u:trachuan-metrics:r-x,d:u:trachuan-metrics:r-x /srv/trachuan/state/deploy
-[[ ! -f /srv/trachuan/state/deploy/result.json ]] || setfacl -m u:trachuan-metrics:r-- /srv/trachuan/state/deploy/result.json
+setfacl -m u:trachuan-watch:--x /var/log/trachuan
+setfacl -m u:trachuan-watch:r-x,d:u:trachuan-watch:r-x /srv/trachuan/state/deploy
+for file in result.json release.json secrets.json; do
+ [[ ! -f /srv/trachuan/state/deploy/$file ]] || setfacl -m u:trachuan-metrics:r--,u:trachuan-watch:r-- "/srv/trachuan/state/deploy/$file"
+done
+for dir in /srv/trachuan/state/watch /var/log/trachuan/watch; do
+ [[ ! -L $dir ]] || fail 'symlink in the watch state or log path'
+ install -d -o trachuan-watch -g trachuan-watch -m 0750 "$dir"
+done
+setfacl -m u:trachuan-metrics:r-x,d:u:trachuan-metrics:r-- /srv/trachuan/state/watch
+[[ ! -f /srv/trachuan/state/watch/result.json ]] || setfacl -m u:trachuan-metrics:r-- /srv/trachuan/state/watch/result.json
 python3 -I "$bundle/updater/publish.py" policy "$bundle/deploy-policy.json" /etc/trachuan/deploy-policy.json
 install -o root -g root -m 0644 "$bundle/logrotate-trachuan" /etc/logrotate.d/trachuan
 bash "$bundle/updater/install-updater.sh" "$bundle/updater" /usr/local/libexec/trachuan
@@ -108,7 +128,7 @@ for unit in trachuan-deploy.service trachuan-deploy.timer; do
  python3 -I "$bundle/updater/publish.py" file "$bundle/systemd/$unit" "/etc/systemd/system/$unit"
 done
 systemctl daemon-reload
-systemctl enable --now trachuan-metrics.timer
+systemctl enable --now trachuan-metrics.timer trachuan-watch.timer
 if [[ -f /etc/trachuan/deploy-mode && ! -L /etc/trachuan/deploy-mode ]]; then
  systemctl enable --now trachuan-deploy.timer
 fi
@@ -136,7 +156,7 @@ rm -f /srv/trachuan/host/quadlet/trachuan.network /srv/trachuan/host/quadlet/tra
  /srv/trachuan/host/quadlet/trachuan-postgres.volume \
  /home/trachuan/.config/containers/systemd/trachuan-postgres.volume
 for template in "$bundle"/systemd/*; do
- case ${template##*/} in trachuan-deploy.*|trachuan-metrics.*) continue ;; esac
+ case ${template##*/} in trachuan-deploy.*|trachuan-metrics.*|trachuan-watch.*) continue ;; esac
  as_user python3 -I -c "$user_file_program" "/srv/trachuan/host/systemd/${template##*/}" 0644 <"$template"
 done
 for template in "$bundle"/quadlet/*; do

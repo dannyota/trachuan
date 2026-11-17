@@ -71,7 +71,7 @@ class MetricsTest(unittest.TestCase):
              mock.patch.object(publisher.os.path, "ismount", return_value=True):
             (Path(directory) / "full.json").write_text('{"status":"failed","last_success_at":"2026-01-01T00:00:00Z","private":"ignore"}')
             metrics = publisher.collect("host", now)
-        self.assertEqual({m[0] for m in metrics}, {"heartbeat", "filesystem_used_percent", "filesystem_free_bytes", "data_mounted", "backup_failed", "backup_last_success_age_seconds"})
+        self.assertEqual({m[0] for m in metrics}, {"heartbeat", "watch_stale", "filesystem_used_percent", "filesystem_free_bytes", "data_mounted", "backup_failed", "backup_last_success_age_seconds"})
         for name, _, dimensions in metrics:
             expected = {"host", "mount"} if name.startswith("filesystem_") else {"host", "job"} if name.startswith("backup_") else {"host"}
             self.assertEqual(set(dimensions), expected)

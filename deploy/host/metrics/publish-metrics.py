@@ -13,6 +13,7 @@ BACKUP_DIR = Path('/srv/trachuan/state/backup')
 DEPLOY_RESULT = Path('/srv/trachuan/state/deploy/result.json')
 SECRETS_RESULT = Path('/srv/trachuan/state/deploy/secrets.json')
 RELEASE_RESULT = Path('/srv/trachuan/state/deploy/release.json')
+WATCH_RESULT = Path('/srv/trachuan/state/watch/result.json')
 JOBS = ('full', 'diff', 'verify', 'health', 'restore-check')
 MOUNTS = ('/', '/srv/trachuan/data')
 MAX_RESULT_BYTES = 65536
@@ -96,8 +97,25 @@ def release(path, now):
     return [('release_failed', int(status == 'failed')), ('release_waiting_age_seconds', age)]
 
 
+def watch_stale(path, now):
+    try:
+        value = read_result(path)
+        if not isinstance(value, dict) or value.get('status') not in ('ok', 'failed'):
+            return 1
+        timestamp = value.get('last_success_at')
+        if not isinstance(timestamp, str):
+            return 1
+        success = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
+        if success.utcoffset() != timezone.utc.utcoffset(success):
+            return 1
+        return int((now-success).total_seconds() >= 3600)
+    except (OSError, ValueError, TypeError, OverflowError, RecursionError):
+        return 1
+
+
 def collect(host, now):
-    metrics = [('heartbeat', 1, {'host': host})]
+    metrics = [('heartbeat', 1, {'host': host}),
+               ('watch_stale', watch_stale(WATCH_RESULT, now), {'host': host})]
     for path in MOUNTS:
         used, free = filesystem(path)
         dimensions = {'host': host, 'mount': path}

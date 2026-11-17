@@ -27,7 +27,7 @@ resource "oci_logging_unified_agent_configuration" "host_jobs" {
     }
     sources {
       name        = "trachuan_jobs"
-      paths       = ["/var/log/trachuan/*.log"]
+      paths       = ["/var/log/trachuan/*.log", "/var/log/trachuan/watch/*.log"]
       source_type = "LOG_TAIL"
       parser {
         is_estimate_current_event  = false

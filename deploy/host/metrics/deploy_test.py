@@ -12,6 +12,35 @@ spec.loader.exec_module(publisher)
 
 
 class DeployMetricsTest(unittest.TestCase):
+    def test_watch_stale_handles_all_results_without_losing_other_metrics(self):
+        now = datetime(2026, 1, 2, tzinfo=timezone.utc)
+        cases = [(None, 1), ('{', 1), ('[]', 1), ('{}', 1),
+                 ('{"status":"ok","last_success_at":null}', 1),
+                 ('{"status":"failed","last_success_at":"2026-01-01T23:59:00Z"}', 0),
+                 ('{"status":"ok","last_success_at":"2026-01-01T23:00:01Z"}', 0),
+                 ('{"status":"ok","last_success_at":"2026-01-01T23:00:00Z"}', 1),
+                 ('{"status":"ok","last_success_at":"2026-01-01T22:59:59Z"}', 1),
+                 ('{"status":"ok","last_success_at":"bad"}', 1),
+                 ('{"status":"ok","last_success_at":"2026-01-01T23:59:00"}', 1),
+                 ('{"status":"bogus","last_success_at":"2026-01-01T23:59:00Z"}', 1)]
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'watch.json'
+            for raw, expected in cases:
+                with self.subTest(raw=raw):
+                    path.unlink(missing_ok=True)
+                    if raw is not None:
+                        path.write_text(raw)
+                    with mock.patch.object(publisher, 'WATCH_RESULT', path, create=True), \
+                         mock.patch.object(publisher, 'BACKUP_DIR', Path(directory)), \
+                         mock.patch.object(publisher, 'DEPLOY_RESULT', Path(directory)/'missing'), \
+                         mock.patch.object(publisher, 'SECRETS_RESULT', Path(directory)/'missing'), \
+                         mock.patch.object(publisher, 'RELEASE_RESULT', Path(directory)/'missing'), \
+                         mock.patch.object(publisher, 'filesystem', return_value=(25, 100)):
+                        metrics = publisher.collect('test-host', now)
+                    self.assertIn(('watch_stale', expected, {'host': 'test-host'}), metrics)
+                    self.assertIn(('heartbeat', 1, {'host': 'test-host'}), metrics)
+                    self.assertEqual(len([item for item in metrics if item[0] == 'filesystem_used_percent']), 2)
+
     def test_corpus_metrics_report_failure_and_waiting_age(self):
         now = datetime(2026, 1, 2, tzinfo=timezone.utc)
         with tempfile.TemporaryDirectory() as directory:

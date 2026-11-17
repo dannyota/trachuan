@@ -39,6 +39,15 @@ Replace the example times with a recent interval. On the host, check
 `systemctl status trachuan-metrics.timer` and
 `journalctl -u trachuan-metrics.service` if the stream is absent.
 
+The host watch sends Telegram alerts when local job or host health changes.
+Check `systemctl status trachuan-watch.timer trachuan-watch.service`,
+`journalctl -u trachuan-watch.service` and
+`/srv/trachuan/state/watch/result.json`; `last_success_at` records the last good
+run. The "Telegram watch silent" email alarm means the watch has not succeeded
+within an hour, or has never succeeded after install. Check
+`/var/log/trachuan/watch/watch.log`, Vault access and Telegram delivery. OCI
+email alarms remain the independent backstop when the host cannot send alerts.
+
 Check that metadata HTTP is blocked for the application account and permitted
 for the publisher account. The first command must fail and the second must
 succeed:
