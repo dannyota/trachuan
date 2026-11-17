@@ -59,7 +59,7 @@ func TestMCP_ResponsesAreNoStore(t *testing.T) {
 				t.Fatal(err)
 			}
 			defer func() { _ = response.Body.Close() }()
-			if got := response.Header.Get("Cache-Control"); got != "no-store" {
+			if got := response.Header.Get("Cache-Control"); got != CacheControl {
 				t.Errorf("Cache-Control=%q want no-store", got)
 			}
 			if !strings.HasPrefix(response.Header.Get("Content-Type"), "application/json") {
@@ -127,7 +127,7 @@ func TestNoStore_StreamingAndImplicitResponses(t *testing.T) {
 				t.Fatal(err)
 			}
 			defer func() { _ = response.Body.Close() }()
-			if response.Header.Get("Cache-Control") != "no-store" || response.Header.Get("Content-Type") != "text/event-stream" || response.Header.Get("X-Mcp-Test") != "kept" {
+			if response.Header.Get("Cache-Control") != CacheControl || response.Header.Get("Content-Type") != "text/event-stream" || response.Header.Get("X-Mcp-Test") != "kept" {
 				t.Fatalf("unexpected response headers: %v", response.Header)
 			}
 			body, err := io.ReadAll(response.Body)
@@ -153,7 +153,7 @@ func TestMCP_UnauthenticatedResponseIsNoStore(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = response.Body.Close() }()
-	if response.StatusCode != http.StatusUnauthorized || response.Header.Get("Cache-Control") != "no-store" {
+	if response.StatusCode != http.StatusUnauthorized || response.Header.Get("Cache-Control") != CacheControl {
 		t.Fatalf("status=%d Cache-Control=%q", response.StatusCode, response.Header.Get("Cache-Control"))
 	}
 	if response.Header.Get("WWW-Authenticate") != `Bearer error="invalid_token"` {
