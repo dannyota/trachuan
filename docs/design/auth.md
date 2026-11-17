@@ -11,11 +11,11 @@ creates the account, unless `SERVER_SIGNUP_EMAILS` is set and does not list the
 verified email ([web API](web-api.md#sessions)). Session cookie `HttpOnly`,
 `Secure`, `SameSite=Lax`, stored hashed, rotated on login, 30-day sliding expiry
 and at most 90 days after creation ([web API](web-api.md#sessions)). Logout
-revokes the server-side session. The only other way to create a web session is
+revokes the server-side session. An additional, operator-only issuer is
 `server admin session create`, for capacity tests: it accepts only accounts
-whose Google subject starts with the reserved `loadcheck:` prefix, lasts at most
-one day and writes the value only into a new `0600` file
-([capacity harness](web-public-documents-capacity.md#accounts)).
+whose Google subject starts with the reserved `loadcheck:` prefix, which Google
+login refuses, lasts at most one day and writes the value only into a new `0600`
+file ([capacity harness](web-public-documents-capacity.md#accounts)).
 
 ## MCP authorization
 

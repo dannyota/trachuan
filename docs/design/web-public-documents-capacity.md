@@ -17,19 +17,23 @@ The tool sends open-loop traffic: each stream starts requests at its stated rate
 whether or not earlier ones finished, so a slow server shows as latency, not as
 a lower rate. Per request it records start, duration, status, retries and
 whether it was aborted. A phase report gives the counts and the p50, p95 and p99
-of every stream, and the gates that pass or fail. Searches use distinct queries
-from the evaluation suite, never repeated within a run. A completed reader load
-is the reader page HTML with the session cookie, then the first
-`/api/v1/documents/{key}` page; its latency runs from the first byte sent to the
-last byte of the second response. Summary URLs come from
-`/api/v1/public/documents`.
+of every stream, and the gates that pass or fail. Searches use distinct queries,
+never repeated within a run: the evaluation suite questions first, then the
+distinct document titles and article headings of the release under test, which
+is public law text; a preflight checks the count covers every phase (about 3,400
+searches) before any traffic. A completed reader load is the reader page HTML
+with the session cookie, then the first `/api/v1/documents/{key}` page; its
+latency runs from the first byte sent to the last byte of the second response.
+Summary URLs come from `/api/v1/public/documents`.
 
 Each simulated address sends its traffic with `X-Forwarded-For` set to one
 address from `2001:db8::/32`, the documentation range. Phase B uses 16
 addresses, phase D 40 for pages and 50 for the public API. Each signed-in
 account uses one fixed address of its own. In phase B a `busy` answer is retried
 at most three times, after 1, 2 and 4 seconds or the longer `Retry-After` up to
-5 seconds. In phase D, 5% of requests are cancelled at a random point.
+5 seconds. In phase D, 5% of the public requests are cancelled at a random point
+and their 429 and 503 answers are not gated; signed-in requests are never
+cancelled and keep their gates.
 
 ## Where it runs
 
@@ -52,15 +56,17 @@ host total.
 Locally, three accounts sign in through fake Google with the e2e flow.
 
 On A1, three dedicated accounts are created with `server admin account create`,
-each with a Google subject that starts with `loadcheck:`, a prefix no Google
-subject can have. `server admin session create --account ID --out FILE` mints
-one web session for such an account and refuses any account whose subject lacks
-the prefix, so it can never sign in as a real person. It writes the session
-value only into `FILE`, created new with mode `0600` and refused if it exists,
-never to standard output, and the session lasts at most one day. Anyone with a
-shell on the host can already write sessions into the database, so the command
-adds no privilege. After the window the accounts are blocked, which revokes
-their sessions. No owner action or real Google account is needed.
+each with a Google subject that starts with `loadcheck:`, a prefix that Google
+login refuses before any account lookup or creation, so no Google identity can
+ever reach such an account.
+`server admin session create --account ID --out FILE` mints one web session for
+such an account and refuses any account whose subject lacks the prefix, so it
+can never sign in as a real person. It writes the session value only into
+`FILE`, created new with mode `0600` and refused if it exists, never to standard
+output, and the session lasts at most one day. Anyone with a shell on the host
+can already write sessions into the database, so the command adds no privilege.
+After the window the accounts are blocked, which revokes their sessions. No
+owner action or real Google account is needed.
 
 ## Sampling
 
