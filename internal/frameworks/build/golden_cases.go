@@ -46,7 +46,7 @@ func MapGoldenCases(input io.Reader, reg *registry.Registry, controls []Control)
 		}
 		columns[name] = i
 	}
-	wanted := []string{"id", "question", "framework_code", "version_label", "citation_norm", "expect_abstain", "notes", "adjudication", "reason"}
+	wanted := []string{"id", "question", "framework_code", "version_label", "citation_norm", "expect_abstain", "expect_fail", "notes", "adjudication", "reason"}
 	if len(columns) != len(wanted) {
 		return nil, fmt.Errorf("invalid golden header")
 	}
@@ -99,6 +99,13 @@ func MapGoldenCases(input io.Reader, reg *registry.Registry, controls []Control)
 		c.Negative, err = strconv.ParseBool(get("expect_abstain"))
 		if err != nil {
 			return fail("invalid abstention label")
+		}
+		expectFail, err := strconv.ParseBool(get("expect_fail"))
+		if err != nil {
+			return fail("invalid failure label")
+		}
+		if expectFail && c.Adjudication == "accepted" {
+			return fail("accepted case expects failure")
 		}
 		if !c.Negative {
 			if !registered[c.Code] || c.Version == "" {

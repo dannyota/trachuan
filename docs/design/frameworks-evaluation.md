@@ -11,7 +11,8 @@ are in [build](frameworks-build.md); the gate rules are in
 
 The starting cohort is compliary's 205 cases (`deploy/eval/golden.csv`: `id`,
 `question`, `framework_code`, `version_label`, `citation_norm`,
-`expect_abstain`, `notes`). The working copy is
+`expect_abstain`, `expect_fail`, `notes`); `expect_fail` is compliary's
+known-failure flag and must be false for an accepted case. The working copy is
 `FRAMEWORKS_SOURCE_DIR/trachuan/golden.csv`, outside Git like the titles and
 waivers, owned by the coordinator, and a `snapshot` input, so a run reads only
 its frozen copy. It adds `adjudication` (`accepted`, `rejected`,

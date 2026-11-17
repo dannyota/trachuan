@@ -20,13 +20,13 @@ import (
 
 func fixtureGoldenCases(t *testing.T, root string) {
 	t.Helper()
-	csv := "id,question,framework_code,version_label,citation_norm,expect_abstain,notes,adjudication,reason\n" +
-		"positive,quartz safeguard,fw-beta,1,A-1,false,,accepted,invented review\n" +
-		"negative,nebula unrelated,absent,,,true,,accepted,invented review\n" +
-		"lookup,fw-beta A-1,fw-beta,1,A-1,false,,accepted,invented review\n" +
-		"licensed,never fit licensed,fw-alpha,2,A-1,false,,accepted,invented review\n" +
-		"unverified,never fit unverified,fw-beta,1,A-1,false,,unverified,invented review\n" +
-		"outside,never fit outside,fw-beta,99,A-1,false,,accepted,invented review\n"
+	csv := "id,question,framework_code,version_label,citation_norm,expect_abstain,notes,adjudication,reason,expect_fail\n" +
+		"positive,quartz safeguard,fw-beta,1,A-1,false,,accepted,invented review,false\n" +
+		"negative,nebula unrelated,absent,,,true,,accepted,invented review,false\n" +
+		"lookup,fw-beta A-1,fw-beta,1,A-1,false,,accepted,invented review,false\n" +
+		"licensed,never fit licensed,fw-alpha,2,A-1,false,,accepted,invented review,false\n" +
+		"unverified,never fit unverified,fw-beta,1,A-1,false,,unverified,invented review,false\n" +
+		"outside,never fit outside,fw-beta,99,A-1,false,,accepted,invented review,false\n"
 	dir := filepath.Join(root, "source/trachuan")
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "golden.csv"), []byte(csv), 0600))
 	review := fmt.Sprintf("reviews:\n  - release: '20990101'\n    reviewer: coordinator\n    date: '2099-01-01'\n    csv_sha256: %x\n    added: [positive, negative, lookup, licensed, unverified, outside]\n    rejected: []\n    retargeted: []\n    note: invented fixture\n", sha256.Sum256([]byte(csv)))
