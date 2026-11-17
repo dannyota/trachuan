@@ -76,8 +76,9 @@ logs its version.
 
 `.github/workflows/corpus-release.yml`: `workflow_dispatch` from `main`,
 environment `corpus-release`, which holds the `trachuan-release-verify`
-read-only customer secret key. That key is the only OCI credential in GitHub; it
-reads one bucket of public legal text and cannot write. The job:
+read-only customer secret key. That key is the law workflow's only OCI
+credential; it reads one bucket of public legal text and cannot write
+([frameworks](frameworks-release.md#bucket-and-keys) has its own). The job:
 
 1. HEADs every object before downloading: dump at most 16 GiB, each JSON sidecar
    at most 16 MiB, and `MANIFEST.sha256` at most 1 MiB. Their total must be

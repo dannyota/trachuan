@@ -144,12 +144,21 @@ these differences:
   Without `--kind` the output stays the law output, byte for byte.
 - **Staging.** `/srv/trachuan/data/releases/frameworks-<rel>/`, mode `0700`,
   deleted when activation ends in any state.
-- **Logs.** Right after creating the database, as `postgres`, set on it
-  `log_min_messages`, `log_min_error_statement` to `panic`,
-  `log_min_duration_statement` to `-1` and `log_statement` to `none`, so no
-  session in a frameworks database writes an error, statement or parameter to
-  the PostgreSQL log. Other roles cannot override these settings. The updater
-  and the server log only safe causes (SQLSTATE, step, object names).
+- **Logs.** No session in a frameworks database may write an error, statement or
+  parameter to the PostgreSQL log. Right after creating the database, as
+  `postgres`, set `log_min_messages` and `log_min_error_statement` to `panic`,
+  `log_min_duration_statement` to `-1` and `log_statement` to `none` on the
+  database and, with `ALTER ROLE ... IN DATABASE`, for `activator` and
+  `corpus_reader` in it, which takes precedence over any role-wide setting. The
+  same step refuses when `pg_parameter_acl` grants `SET` on any of them to a
+  role other than a superuser; without that grant no other role can change them
+  in a session. Every session that reads a frameworks database (restore,
+  prewarm, smoke, and each connection the server's frameworks pool opens) reads
+  the four effective values first and stops, or is discarded, unless they are
+  those. Superusers are the trusted boundary: the host's `postgres` role is the
+  only one, and its own sessions set the values before touching the database.
+  The updater and the server log only safe causes (SQLSTATE, step, object
+  names).
 - **Restore.** The TOC list keeps the law allowlist and also omits every view,
   function and trigger entry, refusing the dump when such an entry is not one
   the image's schema version defines, and refusing any other executable object
@@ -210,7 +219,11 @@ search again.
 
 A Podman secret exists only after an updater that lists it has reconciled, and a
 container gets its mounts when it is created, so the first image to fetch the
-secret is not the one that mounts it (order, below).
+secret is not the one that mounts it (order, below). Before activating an image,
+the updater requires every secret that image's Quadlet files name to exist as a
+Podman secret after its forced reconciliation; a missing one stops the
+activation before any container changes, with reason `secret missing`, and the
+serving image stays.
 
 ## Order
 
@@ -222,13 +235,15 @@ secret is not the one that mounts it (order, below).
 2. Image A ships the migration, `release-check --kind`, `frameworks-schema`,
    `grant-corpus.sh` names, the updater's frameworks phase, and
    `server_frameworks_key` in the policy's secret list and the fetcher's
-   allowlist. Its policy has no `frameworks` block, so the phase does not run.
-   The updater that installs A reconciles nothing new; A's own updater fetches
-   the secret on its first run.
+   allowlist, and the secret-presence check above. Its policy has no
+   `frameworks` block, so the phase does not run; its updater keeps a
+   `frameworks` state key it finds, untouched, so a rollback from B to A loses
+   nothing. The updater that installs A reconciles nothing new; A's own updater
+   fetches the secret.
 3. Image B raises the release floor to A's sequence, adds the `frameworks` block
    with `min_release_floor` A's sequence, and adds the key mount and the
-   `server.env` lines with the flag off. A's updater, which has the secret,
-   installs it.
+   `server.env` lines with the flag off. A's updater installs it only once the
+   secret exists; until then B waits with `secret missing`.
 4. The first frameworks release is uploaded and signed; the host activates it.
 5. Host memory is measured with both corpora active: the runbook starts a
    one-off server container from the serving image with the flag on, on loopback
@@ -248,8 +263,11 @@ failure that leaves law activation, state and pointer untouched, and the
 reverse; the phase waiting below `min_release_floor`; an updater from before the
 migration completing a law activation against it; a dump carrying a function,
 trigger or view outside the schema version refused before restore; the restored
-executable objects equal to the image's; the frameworks database's log settings
-seen by each role in a new session and an induced error with a marker absent
-from the PostgreSQL log; the uploader's and the job's temporary directories
-empty after success and failure; and no log line of the uploader, the job or the
-updater holding anything but ids, sizes, hashes, counts and statuses.
+executable objects equal to the image's; the effective log settings seen by each
+role in a new session despite a conflicting role-wide setting, a session
+override and a parameter grant refused, a server connection with other values
+discarded, and an induced error with a marker absent from the PostgreSQL log; an
+image whose Quadlet names a missing secret left waiting with the serving image
+unchanged; the uploader's and the job's temporary directories empty after
+success and failure; and no log line of the uploader, the job or the updater
+holding anything but ids, sizes, hashes, counts and statuses.
