@@ -17,14 +17,22 @@ the outline with the candidate chapter and article headings that pass rules 1 to
 4; and the projection version. Rows are immutable within a release. The table's
 presence at the expected projection is the release's summary capability.
 
-| Field                      | Cap, enforced at build | Over the cap                                                                   |
-| -------------------------- | ---------------------- | ------------------------------------------------------------------------------ |
-| number, issuer, type       | 200 characters each    | the build fails                                                                |
-| title, each relation title | 1,000 characters each  | the build fails                                                                |
-| topic name                 | 200 characters         | the build fails                                                                |
-| outline                    | 1,500 entries          | the row keeps no outline, `index` is false, build gap `summary_outline_capped` |
-| relations                  | 50 pointers            | the total keeps the full count                                                 |
-| serialized row             | 64 KiB                 | the build fails                                                                |
+| Field                      | Cap, enforced at build | Over the cap                   |
+| -------------------------- | ---------------------- | ------------------------------ |
+| number, issuer, type       | 200 characters each    | the build fails                |
+| title, each relation title | 1,000 characters each  | the build fails                |
+| topic name                 | 200 characters         | the build fails                |
+| outline                    | 1,500 entries          | the ordered outline rule below |
+| relations                  | 50 pointers            | the total keeps the full count |
+| serialized row             | 64 KiB                 | the ordered outline rule below |
+
+The outline and the serialized row are one ordered check, applied after the
+other caps and never truncating inside a field: a row whose outline is within
+1,500 entries and whose serialization is within 64 KiB is kept whole; otherwise
+the build drops every heading (labels stay) and checks again; if the outline
+still exceeds 1,500 entries or the row 64 KiB, the build drops the outline, sets
+`index` false and records build gap `summary_outline_capped`; if the row without
+an outline still exceeds 64 KiB, the build fails.
 
 Nothing is truncated when serving. Eligibility is computed at build from the
 row: `primary` is indexed when its outline holds at least one label and was not
