@@ -6,7 +6,7 @@ ALTER TABLE release_journal
             AND expected_active_db ~ '^corpus_[a-z]{2}_[0-9]{8}(_[0-9]+)?$') OR
         (corpus_kind = 'frameworks' AND database_name ~ '^frameworks_[0-9]{8}(_[0-9]+)?$'
             AND expected_active_db ~ '^frameworks_[0-9]{8}(_[0-9]+)?$')
-    ),
+    ) NOT VALID,
     DROP CONSTRAINT release_journal_operation,
     ADD CONSTRAINT release_journal_operation CHECK (
         operation_id IS NULL OR (
@@ -26,7 +26,7 @@ ALTER TABLE retired_release
     ADD CONSTRAINT retired_release_kind CHECK (
         (corpus_kind = 'law' AND db_name ~ '^corpus_[a-z]{2}_[0-9]{8}(_[0-9]+)?$') OR
         (corpus_kind = 'frameworks' AND db_name ~ '^frameworks_[0-9]{8}(_[0-9]+)?$')
-    );
+    ) NOT VALID;
 ALTER TABLE frameworks_release
     ADD CONSTRAINT frameworks_release_country CHECK (country = 'vn'),
     ADD CONSTRAINT frameworks_release_active_db CHECK (active_db ~ '^frameworks_[0-9]{8}(_[0-9]+)?$');

@@ -62,11 +62,11 @@ type FrameworksSmoke struct {
 func CheckFrameworks(ctx context.Context, template, name string, client *embedding.Client) (FrameworksSmoke, error) {
 	cfg, err := frameworksDatabaseConfig(template, name)
 	if err != nil {
-		return FrameworksSmoke{}, err
+		return FrameworksSmoke{}, frameworksCheckFailure("configuration", err)
 	}
 	db, err := pgxpool.NewWithConfig(ctx, cfg)
 	if err != nil {
-		return FrameworksSmoke{}, errors.New("create frameworks reader pool failed")
+		return FrameworksSmoke{}, frameworksCheckFailure("create reader pool", err)
 	}
 	defer db.Close()
 	return checkFrameworksDatabase(ctx, db, name, client)
@@ -75,38 +75,47 @@ func CheckFrameworks(ctx context.Context, template, name string, client *embeddi
 func checkFrameworksDatabase(ctx context.Context, db *pgxpool.Pool, name string, client *embedding.Client) (FrameworksSmoke, error) {
 	conn, err := db.Acquire(ctx)
 	if err != nil {
-		return FrameworksSmoke{}, errors.New("connect frameworks reader failed")
+		return FrameworksSmoke{}, frameworksCheckFailure("connect reader", err)
 	}
 	err = schema.CheckLogSettings(ctx, conn)
 	conn.Release()
 	if err != nil {
-		return FrameworksSmoke{}, err
+		return FrameworksSmoke{}, frameworksCheckFailure("log settings", err)
 	}
 	var rel string
 	var version int
-	if err = db.QueryRow(ctx, `SELECT rel,schema_version FROM release WHERE singleton`).Scan(&rel, &version); err != nil || !validFrameworksIdentity(name, rel, version) {
-		return FrameworksSmoke{}, errors.New("frameworks release identity or schema mismatch")
+	if err = db.QueryRow(ctx, `SELECT rel,schema_version FROM release WHERE singleton`).Scan(&rel, &version); err != nil {
+		return FrameworksSmoke{}, frameworksCheckFailure("release row", err)
+	}
+	if !validFrameworksIdentity(name, rel, version) {
+		return FrameworksSmoke{}, frameworksCheckFailure("release identity or schema", serve.ErrUnavailable)
 	}
 	key := make([]byte, 32)
 	if _, err = rand.Read(key); err != nil {
-		return FrameworksSmoke{}, errors.New("create frameworks smoke key failed")
+		return FrameworksSmoke{}, frameworksCheckFailure("create smoke key", err)
 	}
 	query := embedding.QueryRecipe1()
 	engine, err := serve.Open(ctx, db, embedding.Query{Client: client, RecipeHash: query.Hash(), ExpectedRecipe: &query}, serve.Options{CursorKey: key})
 	if err != nil {
-		return FrameworksSmoke{}, errors.New("open frameworks engine failed")
+		return FrameworksSmoke{}, frameworksCheckFailure("open engine", err)
 	}
 	if "frameworks_"+engine.Release() != name {
-		return FrameworksSmoke{}, errors.New("frameworks release identity mismatch")
+		return FrameworksSmoke{}, frameworksCheckFailure("engine release identity", serve.ErrUnavailable)
 	}
 	caller := serve.Caller{Readable: func(string, string) bool { return true }}
 	search, err := engine.Search(ctx, serve.Request{Query: "control security", Limit: 1}, caller)
-	if err != nil || len(search.Hits) != 1 {
-		return FrameworksSmoke{}, errors.New("frameworks smoke search failed")
+	if err != nil {
+		return FrameworksSmoke{}, frameworksCheckFailure("search", err)
+	}
+	if len(search.Hits) != 1 {
+		return FrameworksSmoke{}, frameworksCheckFailure("search hits", serve.ErrUnavailable)
 	}
 	read, err := engine.Read(ctx, serve.ReadRequest{Release: engine.Release(), Items: []serve.ReadItem{{Handle: search.Hits[0].Handle}}}, caller)
-	if err != nil || len(read.Items) != 1 || read.Items[0].Error != "" || read.Items[0].NotRead != "" || len(read.Items[0].Units) == 0 {
-		return FrameworksSmoke{}, errors.New("frameworks smoke read failed")
+	if err != nil {
+		return FrameworksSmoke{}, frameworksCheckFailure("read", err)
+	}
+	if len(read.Items) != 1 || read.Items[0].Error != "" || read.Items[0].NotRead != "" || len(read.Items[0].Units) == 0 {
+		return FrameworksSmoke{}, frameworksCheckFailure("read result", serve.ErrUnavailable)
 	}
 	return FrameworksSmoke{Status: "ok", SearchHits: len(search.Hits), ReadItems: len(read.Items)}, nil
 }

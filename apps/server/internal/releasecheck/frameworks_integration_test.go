@@ -60,6 +60,8 @@ func frameworkSmokeFixture(t *testing.T) (*pgxpool.Pool, *pgxpool.Pool, string) 
  INSERT INTO control_text VALUES(1,'Invented private title','Invented control security body','{}','{}');
  INSERT INTO body_chunk VALUES(1,1,1,0,'Invented control security body',repeat('a',64),4,(ARRAY[1::real]||array_fill(0::real,ARRAY[1023]))::vector);
  INSERT INTO public_chunk VALUES(1,1,1,'Invented public title',repeat('a',64),3,(ARRAY[1::real]||array_fill(0::real,ARRAY[1023]))::vector);
+ INSERT INTO body_posting(version_id,chunk_id,token,tf) VALUES(1,1,'invented',1),(1,1,'control',1),(1,1,'security',1),(1,1,'body',1);
+ INSERT INTO public_posting(version_id,chunk_id,token,tf) VALUES(1,1,'invented',1),(1,1,'public',1),(1,1,'title',1);
  UPDATE release SET versions_sealed=true;`)
 	if err != nil {
 		t.Fatal(err)
@@ -97,6 +99,17 @@ func frameworkSmokeFixture(t *testing.T) (*pgxpool.Pool, *pgxpool.Pool, string) 
 
 func TestCheckFrameworksDatabase_SearchReadAndSafeOutput(t *testing.T) {
 	admin, db, name := frameworkSmokeFixture(t)
+	var valid bool
+	err := admin.QueryRow(t.Context(), `SELECT
+ NOT EXISTS(SELECT FROM body_chunk c WHERE c.token_count <> (SELECT coalesce(sum(p.tf),0) FROM body_posting p WHERE p.chunk_id=c.id AND p.version_id=c.version_id))
+ AND NOT EXISTS(SELECT FROM public_chunk c WHERE c.token_count <> (SELECT coalesce(sum(p.tf),0) FROM public_posting p WHERE p.chunk_id=c.id AND p.version_id=c.version_id))
+ AND (SELECT count(*)=1 AND bool_and(chunk_count=1 AND avg_length=4) FROM body_lexical_stats)
+ AND (SELECT chunk_count=1 AND avg_length=3 FROM public_lexical_stats)
+ AND (SELECT count(*)=4 AND bool_and(df=1) FROM body_lexical_df)
+ AND (SELECT count(*)=3 AND bool_and(df=1) FROM public_lexical_df)`).Scan(&valid)
+	if err != nil || !valid {
+		t.Fatal("fixture postings or lexical statistics disagree with chunk lengths")
+	}
 	transport := &smokeTransport{}
 	client := embedding.NewClient("http://embedder", &http.Client{Transport: transport})
 	report, err := checkFrameworksDatabase(t.Context(), db, name, client)
@@ -134,7 +147,30 @@ func TestCheckFrameworksDatabase_RefusesLogsBeforeReleaseRead(t *testing.T) {
 	}
 	defer db.Close()
 	_, err = checkFrameworksDatabase(context.Background(), db, "frameworks_20990101", nil)
-	if err == nil || err.Error() != "frameworks log settings refused" {
+	if err == nil || err.Error() != "frameworks release-check log settings: Go type *errors.errorString" {
 		t.Fatal("smoke read release before checking log settings")
+	}
+}
+
+func TestCheckFrameworksDatabase_ReportsSafeEngineFailure(t *testing.T) {
+	admin, db, name := frameworkSmokeFixture(t)
+	if _, err := admin.Exec(t.Context(), `DELETE FROM body_posting`); err != nil {
+		t.Fatal(err)
+	}
+	client := embedding.NewClient("http://embedder", &http.Client{Transport: &smokeTransport{}})
+	_, err := checkFrameworksDatabase(t.Context(), db, name, client)
+	if err == nil || err.Error() != "frameworks release-check open engine: Go type serve.failure" {
+		t.Fatal("missing safe engine failure cause")
+	}
+}
+
+func TestCheckFrameworksDatabase_ReportsReleaseReadSQLState(t *testing.T) {
+	admin, db, name := frameworkSmokeFixture(t)
+	if _, err := admin.Exec(t.Context(), `ALTER TABLE release RENAME TO invented_release`); err != nil {
+		t.Fatal(err)
+	}
+	_, err := checkFrameworksDatabase(t.Context(), db, name, nil)
+	if err == nil || err.Error() != "frameworks release-check release row: SQLSTATE 42P01" {
+		t.Fatal("missing safe release read cause")
 	}
 }

@@ -4,11 +4,13 @@ package migrations_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"danny.vn/trachuan/apps/server/migrations"
 	"danny.vn/trachuan/internal/testpg"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 func TestFrameworksActivationMigration_LegacyUpdaterAndKindChecks(t *testing.T) {
@@ -37,6 +39,12 @@ func TestFrameworksActivationMigration_LegacyUpdaterAndKindChecks(t *testing.T) 
 	if _, err = conn.Exec(ctx, legacy); err != nil {
 		t.Fatal(err)
 	}
+	if _, err = conn.Exec(ctx, `INSERT INTO retired_release(country,db_name,retired_at,retain_until)
+ VALUES('vn','invented_legacy_database',now(),now());
+ INSERT INTO release_journal(country,rel,step,state,message,database_name)
+ VALUES('vn','20990101','legacy','complete','invented','invented_legacy_database');`); err != nil {
+		t.Fatal(err)
+	}
 	raw, err := migrations.FS.ReadFile("00012_frameworks_release_activation.sql")
 	if err != nil {
 		t.Fatal(err)
@@ -54,6 +62,28 @@ func TestFrameworksActivationMigration_LegacyUpdaterAndKindChecks(t *testing.T) 
 	}
 	if err = conn.QueryRow(ctx, `SELECT bool_and(corpus_kind='law') FROM retired_release`).Scan(&law); err != nil || !law {
 		t.Fatal("legacy retired row changed kind")
+	}
+	if err = conn.QueryRow(ctx, `SELECT
+ EXISTS(SELECT FROM retired_release WHERE db_name='invented_legacy_database' AND corpus_kind='law')
+ AND EXISTS(SELECT FROM release_journal WHERE database_name='invented_legacy_database' AND corpus_kind='law')`).Scan(&law); err != nil || !law {
+		t.Fatal("migration removed legacy rows")
+	}
+	for _, sql := range []string{
+		`INSERT INTO retired_release(country,db_name,retired_at,retain_until) VALUES('vn','invented_new_database',now(),now())`,
+		`UPDATE retired_release SET retired_at=now() WHERE db_name='invented_legacy_database'`,
+		`INSERT INTO release_journal(country,rel,step,state,message,database_name) VALUES('vn','20990101','legacy','complete','invented','invented_new_database')`,
+		`UPDATE release_journal SET message='invented update' WHERE database_name='invented_legacy_database'`,
+	} {
+		tx, beginErr := conn.Begin(ctx)
+		if beginErr != nil {
+			t.Fatal(beginErr)
+		}
+		_, writeErr := tx.Exec(ctx, sql)
+		_ = tx.Rollback(ctx)
+		var violation *pgconn.PgError
+		if !errors.As(writeErr, &violation) || violation.Code != "23514" || (violation.ConstraintName != "retired_release_kind" && violation.ConstraintName != "release_journal_kind") {
+			t.Fatal("kind constraint did not refuse a new or updated legacy name")
+		}
 	}
 	for _, kind := range []string{"frameworks", "law", "other"} {
 		for _, name := range []string{"frameworks_20990101_123", "corpus_vn_20990101", "auth"} {
