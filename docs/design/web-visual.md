@@ -130,9 +130,11 @@ head is one line and the type and issuer are cut with an ellipsis; below 768 px
 it is two lines, the stamp, number and rank and then the actions, and the type
 and issuer move in front of the document title. The document title follows on
 one line with an ellipsis, then the provision heading in Noto Serif and the
-text; a first text line that repeats the heading is not shown. Topic chips close
-the card on one row. At 1366 px a card with three text lines is at most 220 px
-tall.
+text. In the collapsed card, a first text line equal to the shown heading after
+white-space normalization alone is not shown; the snippet itself is never
+changed, and the expanded text and every copy action keep the full text. Topic
+chips close the card on one row. At 1366 px a card with three text lines is at
+most 220 px tall.
 
 ## Motion
 
