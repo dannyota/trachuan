@@ -34,8 +34,8 @@ it('renders localized page titles and the wordmark without search query text', (
   expect(pages[12]).toContain('Tra Chuẩn returns evidence')
   for (const [language, offset] of [['vi', 0], ['en', 9]] as const) {
     const copy = legalCopy(language)
-    for (const [heading, text] of copy.privacy) { expect(pages[3 + offset]).toContain(heading); expect(pages[3 + offset]).toContain(text) }
-    for (const [heading, text] of copy.terms) { expect(pages[4 + offset]).toContain(heading); expect(pages[4 + offset]).toContain(text) }
+    for (const [heading, text] of copy.privacy) { expect(pages[3 + offset]).toContain(heading); expect(pages[3 + offset]!.replace(/<!--.*?-->/g, '').replace(/<[^>]+>/g, '')).toContain(text) }
+    for (const [heading, text] of copy.terms) { expect(pages[4 + offset]).toContain(heading); expect(pages[4 + offset]!.replace(/<!--.*?-->/g, '').replace(/<[^>]+>/g, '')).toContain(text) }
     expect(pages[3 + offset]).toContain(copy.updated)
     expect(pages[4 + offset]).toContain(copy.updated)
   }

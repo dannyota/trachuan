@@ -32,6 +32,6 @@ const gaps = computed(() => props.status ? gapSummary(props.status, language.val
       <p v-if="showRelease !== false" class="coverage-release">{{ sourceSentence ? releaseSentence : `${labels.release}: ${formatRelease(status.release, language)}` }}</p></div>
     </template>
     <slot />
-    <section v-if="showGaps && status" class="page-section"><h2>{{ labels.missing }}</h2><ul class="gap-list"><li v-for="gap in gaps" :key="gap.key"><h3>{{ gap.name }}</h3><p>{{ gap.sentence }} {{ gap.casesLabel }}</p></li></ul></section>
+    <section v-if="showGaps && status" class="page-section"><h2>{{ labels.missing }}</h2><ul class="gap-list"><li v-for="gap in gaps" :key="gap.key"><h3>{{ gap.name }}</h3><p>{{ gap.casesSentence }}</p></li></ul></section>
   </section>
 </template>
