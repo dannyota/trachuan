@@ -35,7 +35,7 @@ test('a built summary is public, shows only approved fields and is in the sitema
   }
   const sitemap = await page.request.get('/sitemap-documents.xml')
   expect(sitemap.status()).toBe(200)
-  expect(await sitemap.text()).toContain(`/vn/documents/${key}/summary</loc>`)
+  expect(await sitemap.text()).toContain(`<loc>https://trachuan.vn/vn/documents/${key}/summary</loc>`)
   await signIn(page, freshEmail())
   await page.goto(`/vn/documents/${key}`)
   for (const marker of markers) await expect(page.locator('.reader-unit').filter({ hasText: marker })).toHaveCount(1)
