@@ -471,7 +471,7 @@ frameworks:
     size: 1422769
     role: guide
     format: pdf
-  parser: cis-controls-8-xlsx
+  parser: ''
   expected_controls: 171
 - code: csaccm
   version: v4.0
