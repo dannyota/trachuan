@@ -16,7 +16,7 @@ func TestSummary_UnknownGapRefusesBuild(t *testing.T) {
 	for _, key := range []string{"vn:vbpl:1", "vn:vbpl:outside", ""} {
 		t.Run(key, func(t *testing.T) {
 			gaps := []InventoryGap{{Stage: "extract", ItemKey: key, Kind: "future_structure_gap"}}
-			if _, _, err := makeSummary(summaryFixture(), gaps, nil); err == nil || !strings.Contains(err.Error(), "future_structure_gap") {
+			if _, _, err := makeUnitSummary(summaryFixture(), gaps, nil); err == nil || !strings.Contains(err.Error(), "future_structure_gap") {
 				t.Fatalf("unknown gap accepted: %v", err)
 			}
 		})
@@ -87,7 +87,7 @@ func TestSummary_AllCorpusGapKindsClassifiedOnce(t *testing.T) {
 		if !slices.Contains(kinds, kind) {
 			t.Errorf("classified gap %q has no source definition", kind)
 		}
-		row, _, summaryErr := makeSummary(summaryFixture(), []InventoryGap{{ItemKey: "vn:vbpl:1", Kind: kind}}, nil)
+		row, _, summaryErr := makeUnitSummary(summaryFixture(), []InventoryGap{{ItemKey: "vn:vbpl:1", Kind: kind}}, nil)
 		if summaryErr != nil {
 			t.Errorf("known gap %q rejected: %v", kind, summaryErr)
 			continue

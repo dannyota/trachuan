@@ -1,6 +1,7 @@
 package build
 
 import (
+	"context"
 	"fmt"
 	"slices"
 	"strings"
@@ -59,7 +60,7 @@ type summaryDocument struct {
 	TextSource       string         `json:"-"`
 }
 
-func makeSummary(d summaryDocument, gaps []InventoryGap, excluded map[string]bool) (summaryDocument, summaryCapStep, error) {
+func makeSummary(ctx context.Context, db summarySizer, d summaryDocument, gaps []InventoryGap, excluded map[string]bool) (summaryDocument, summaryCapStep, error) {
 	d.Projection = 1
 	d.GapKinds = []string{}
 	headings := d.TextSource == "source_tree"
@@ -123,5 +124,5 @@ func makeSummary(d summaryDocument, gaps []InventoryGap, excluded map[string]boo
 		}
 	}
 	p.Outline = outline
-	return capSummary(d)
+	return capSummary(ctx, db, d)
 }

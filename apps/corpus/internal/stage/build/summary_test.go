@@ -1,6 +1,7 @@
 package build
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"regexp"
@@ -12,8 +13,12 @@ func summaryFixture() summaryDocument {
 	return summaryDocument{Key: "vn:vbpl:1", Class: "primary", TextSource: "source_tree", StatusClass: "unknown", StatusBasis: "source_status", Payload: summaryPayload{Number: "1", Title: "Title", Type: "Law", Issuer: "Issuer", Outline: []summaryOutline{{Kind: "chuong", Label: "Chương I", Anchor: "chuong-i", Heading: "General"}, {Kind: "dieu", Label: "Điều 1", Anchor: "dieu-1", Heading: "Scope"}}}}
 }
 
+func makeUnitSummary(d summaryDocument, gaps []InventoryGap, excluded map[string]bool) (summaryDocument, summaryCapStep, error) {
+	return makeSummary(context.Background(), &summaryTx{sizes: []int{65536, 65536, 65536}}, d, gaps, excluded)
+}
+
 func TestSummary_Caps(t *testing.T) {
-	for _, field := range []string{"number", "issuer", "type", "title", "relation_title", "topic_name", "serialized_row"} {
+	for _, field := range []string{"number", "issuer", "type", "title", "relation_title", "topic_name"} {
 		t.Run(field, func(t *testing.T) {
 			d := summaryFixture()
 			switch field {
@@ -29,10 +34,8 @@ func TestSummary_Caps(t *testing.T) {
 				d.Payload.Relations = []summaryRelation{{Title: strings.Repeat("ố", 1001)}}
 			case "topic_name":
 				d.Payload.Nodes = []summaryNode{{Name: strings.Repeat("ố", 201)}}
-			case "serialized_row":
-				d.Payload.SourceURL = new(strings.Repeat("a", 65536))
 			}
-			if _, _, err := makeSummary(d, nil, nil); err == nil {
+			if _, _, err := makeUnitSummary(d, nil, nil); err == nil {
 				t.Fatal("accepted over-cap " + field)
 			}
 		})
@@ -42,7 +45,7 @@ func TestSummary_Caps(t *testing.T) {
 	d.Payload.Title = strings.Repeat("ố", 1000)
 	d.Payload.Relations = []summaryRelation{{Title: strings.Repeat("ố", 1000)}}
 	d.Payload.Nodes = []summaryNode{{Name: strings.Repeat("ố", 200)}}
-	if _, _, err := makeSummary(d, nil, nil); err != nil {
+	if _, _, err := makeUnitSummary(d, nil, nil); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -63,7 +66,7 @@ func TestSummary_EligibilityAndOutlineCap(t *testing.T) {
 		for i := range d.Payload.Outline {
 			d.Payload.Outline[i] = summaryOutline{Kind: "dieu", Label: tc.label}
 		}
-		r, step, err := makeSummary(d, nil, nil)
+		r, step, err := makeUnitSummary(d, nil, nil)
 		capped := step == summaryOutlineDropped
 		if err != nil || r.Indexed != tc.indexed || capped != tc.capped {
 			t.Fatalf("%+v: %+v %t %v", tc, r, capped, err)
@@ -78,14 +81,14 @@ func TestSummary_HeadingRules(t *testing.T) {
 	for _, source := range []string{"source_tree", "html_transcription", "pdf_text", "ocr", "none"} {
 		d := summaryFixture()
 		d.TextSource = source
-		r, _, err := makeSummary(d, nil, nil)
+		r, _, err := makeUnitSummary(d, nil, nil)
 		if err != nil || (r.Payload.Outline[0].Heading != "") != (source == "source_tree") {
 			t.Fatalf("%s: %+v %v", source, r, err)
 		}
 	}
 	for _, kind := range []string{"ambiguous_tree_text", "article_number_out_of_range", "article_sequence", "structure_uncertain", "text_number_mismatch", "tree_headings_only", "tree_headings_partial", "tree_text_partial", "unknown_node_kind", "invalid_ancestry", "no_tree", "text_source_ambiguous"} {
 		for _, stage := range []string{"fetch", "extract", "chunk", "build"} {
-			r, _, err := makeSummary(summaryFixture(), []InventoryGap{{Stage: stage, ItemKey: "vn:vbpl:1", Kind: kind}}, nil)
+			r, _, err := makeUnitSummary(summaryFixture(), []InventoryGap{{Stage: stage, ItemKey: "vn:vbpl:1", Kind: kind}}, nil)
 			if err != nil || r.Payload.Outline[0].Heading != "" || r.Payload.Outline[1].Heading != "" {
 				t.Fatalf("%s/%s: %+v %v", stage, kind, r, err)
 			}
@@ -93,7 +96,7 @@ func TestSummary_HeadingRules(t *testing.T) {
 	}
 	d := summaryFixture()
 	d.Payload.Outline = []summaryOutline{{Kind: "phan", Label: "Phần I", Heading: "Hidden"}, {Kind: "muc", Label: "Mục 1", Heading: "Hidden"}, {Kind: "dieu", Label: "Điều 1", Heading: strings.Repeat("ố", 300)}, {Kind: "dieu", Label: "Điều 2", Heading: strings.Repeat("ố", 301)}, {Kind: "dieu", Label: "Điều 3", Anchor: "dieu-3", Heading: "phải làm"}}
-	r, _, err := makeSummary(d, []InventoryGap{{ItemKey: d.Key, Kind: "missing_effective_date"}}, map[string]bool{"dieu-3": true})
+	r, _, err := makeUnitSummary(d, []InventoryGap{{ItemKey: d.Key, Kind: "missing_effective_date"}}, map[string]bool{"dieu-3": true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -114,7 +117,7 @@ func TestSummary_AllSiteStructureKindsSuppressHeadings(t *testing.T) {
 		t.Fatal("cannot read authoritative structure category")
 	}
 	for _, match := range regexp.MustCompile(`'([^']+)'`).FindAllSubmatch(list[1], -1) {
-		r, _, e := makeSummary(summaryFixture(), []InventoryGap{{ItemKey: "vn:vbpl:1", Kind: string(match[1])}}, nil)
+		r, _, e := makeUnitSummary(summaryFixture(), []InventoryGap{{ItemKey: "vn:vbpl:1", Kind: string(match[1])}}, nil)
 		if e != nil || r.Payload.Outline[0].Heading != "" {
 			t.Fatalf("site structure kind %s exposes a heading: %v", match[1], e)
 		}
@@ -130,7 +133,7 @@ func TestSummary_PointersAndGaps(t *testing.T) {
 		d.Payload.Nodes = append(d.Payload.Nodes, summaryNode{Code: "code", Name: "name"})
 	}
 	gaps := []InventoryGap{{ItemKey: d.Key, Kind: "consolidated_status_unresolved"}, {ItemKey: d.Key, Kind: "consolidated_status_unordered"}, {ItemKey: d.Key, Kind: "consolidated_status_unresolved"}, {ItemKey: "other", Kind: "no_tree"}}
-	r, _, err := makeSummary(d, gaps, nil)
+	r, _, err := makeUnitSummary(d, gaps, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

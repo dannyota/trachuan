@@ -3,6 +3,7 @@ package build
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -41,6 +42,37 @@ type summaryTx struct {
 	pgx.Tx
 	documents []summaryDocument
 	inserts   [][]any
+	sizes     []int
+	sizeCalls int
+	sizeErr   error
+	errAt     int
+}
+
+type summarySizeRow struct {
+	size int
+	err  error
+}
+
+func (r summarySizeRow) Scan(dest ...any) error {
+	if r.err != nil {
+		return r.err
+	}
+	*dest[0].(*int) = r.size
+	return nil
+}
+
+func (tx *summaryTx) QueryRow(_ context.Context, query string, args ...any) pgx.Row {
+	tx.sizeCalls++
+	if query != "SELECT octet_length($1::jsonb::text)" || len(args) != 1 {
+		return summarySizeRow{err: fmt.Errorf("unexpected summary size query")}
+	}
+	if tx.sizeErr != nil && tx.sizeCalls == tx.errAt {
+		return summarySizeRow{err: tx.sizeErr}
+	}
+	if tx.sizeCalls > len(tx.sizes) {
+		return summarySizeRow{err: fmt.Errorf("unexpected summary size measurement")}
+	}
+	return summarySizeRow{size: tx.sizes[tx.sizeCalls-1]}
 }
 
 func (tx *summaryTx) Query(_ context.Context, query string, args ...any) (pgx.Rows, error) {
@@ -80,16 +112,17 @@ func TestLoad_SummaryCapSteps(t *testing.T) {
 		headings  int
 		outlines  int
 		fail      bool
+		sizes     []int
 	}{
-		{"whole", []summaryDocument{whole}, 0, 0, false},
-		{"headings", []summaryDocument{headings}, 1, 0, false},
-		{"outline_bytes", []summaryDocument{outline}, 0, 1, false},
-		{"outline_entries", []summaryDocument{entries}, 0, 1, false},
-		{"mixed", []summaryDocument{whole, headings, outline, entries}, 1, 2, false},
-		{"still_oversized", []summaryDocument{oversized}, 0, 0, true},
+		{"whole", []summaryDocument{whole}, 0, 0, false, []int{65536}},
+		{"headings", []summaryDocument{headings}, 1, 0, false, []int{65537, 65536}},
+		{"outline_bytes", []summaryDocument{outline}, 0, 1, false, []int{65537, 65537, 65536}},
+		{"outline_entries", []summaryDocument{entries}, 0, 1, false, []int{65536, 65536, 65536}},
+		{"mixed", []summaryDocument{whole, headings, outline, entries}, 1, 2, false, []int{65536, 65537, 65536, 65537, 65537, 65536, 65536, 65536, 65536}},
+		{"still_oversized", []summaryDocument{oversized}, 0, 0, true, []int{65537, 65537, 65537}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			tx := &summaryTx{documents: tc.documents}
+			tx := &summaryTx{documents: tc.documents, sizes: tc.sizes}
 			l := loader{tx: tx, docs: map[string]*loadedDocument{}}
 			for i := range tx.documents {
 				key := fmt.Sprintf("vn:vbpl:%d", i+1)
@@ -153,5 +186,49 @@ func TestRecord_SummaryStats(t *testing.T) {
 	}
 	if len(stats) != 2 || stats["headings_dropped"] != 2 || stats["outline_dropped"] != 3 {
 		t.Fatalf("record summary stats=%v", stats)
+	}
+}
+
+func TestLoad_SummaryUsesDatabaseSize(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		sizes    []int
+		headings int64
+		outlines int64
+		fail     bool
+	}{
+		{"whole", []int{65536}, 0, 0, false},
+		{"headings", []int{65537, 65536}, 1, 0, false},
+		{"outline", []int{65537, 65537, 65536}, 0, 1, false},
+		{"still_over", []int{65537, 65537, 65537}, 0, 0, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			tx := &summaryTx{documents: []summaryDocument{summaryFixture()}, sizes: tc.sizes}
+			l := loader{tx: tx, docs: map[string]*loadedDocument{"vn:vbpl:1": {id: 1}}}
+			err := l.loadSummaries(context.Background(), nil)
+			if (err != nil) != tc.fail {
+				t.Fatalf("error=%v, want failure=%t", err, tc.fail)
+			}
+			if l.counts.Summary.HeadingsDropped != tc.headings || l.counts.Summary.OutlineDropped != tc.outlines || int64(len(l.gaps)) != tc.outlines {
+				t.Errorf("stats=%+v gaps=%d, want headings=%d outline=%d", l.counts.Summary, len(l.gaps), tc.headings, tc.outlines)
+			}
+			if tc.fail && len(tx.inserts) != 0 {
+				t.Error("oversized payload inserted")
+			}
+		})
+	}
+}
+
+func TestLoad_SummarySizingFailure(t *testing.T) {
+	for _, at := range []int{1, 2, 3} {
+		t.Run(fmt.Sprint(at), func(t *testing.T) {
+			cause := errors.New("size query failed")
+			tx := &summaryTx{documents: []summaryDocument{summaryFixture()}, sizes: []int{65537, 65537}, sizeErr: cause, errAt: at}
+			l := loader{tx: tx, docs: map[string]*loadedDocument{"vn:vbpl:1": {id: 1}}}
+			err := l.loadSummaries(context.Background(), nil)
+			if !errors.Is(err, cause) || len(tx.inserts) != 0 || len(l.gaps) != 0 || l.counts.Summary != (SummaryStats{}) {
+				t.Fatalf("error=%v inserts=%d gaps=%d stats=%+v", err, len(tx.inserts), len(l.gaps), l.counts.Summary)
+			}
+		})
 	}
 }

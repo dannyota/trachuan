@@ -1,6 +1,7 @@
 package build
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -25,14 +26,15 @@ func TestSummary_OrderedCaps(t *testing.T) {
 		heading string
 		url     string
 		step    string
+		sizes   []int
 		fail    bool
 	}{
-		{name: "whole", count: 2, label: "Điều 1", heading: "Scope", step: "whole"},
-		{name: "headings_dropped", count: 200, label: "Điều 1", heading: strings.Repeat("ố", 100), step: "headings_dropped"},
-		{name: "outline_dropped_by_bytes", count: 200, label: strings.Repeat("ố", 120), heading: "Scope", step: "outline_dropped"},
-		{name: "outline_dropped_by_entries", count: 1501, label: "x", heading: "Scope", step: "outline_dropped"},
-		{name: "outline_dropped_by_both", count: 1501, label: "x", heading: strings.Repeat("ố", 100), step: "outline_dropped"},
-		{name: "without_outline_still_over", count: 200, label: "Điều 1", heading: "Scope", url: strings.Repeat("a", 65536), step: "outline_dropped", fail: true},
+		{name: "whole", count: 2, label: "Điều 1", heading: "Scope", step: "whole", sizes: []int{65536}},
+		{name: "headings_dropped", count: 200, label: "Điều 1", heading: strings.Repeat("ố", 100), step: "headings_dropped", sizes: []int{65537, 65536}},
+		{name: "outline_dropped_by_bytes", count: 200, label: strings.Repeat("ố", 120), heading: "Scope", step: "outline_dropped", sizes: []int{65537, 65537, 65536}},
+		{name: "outline_dropped_by_entries", count: 1501, label: "x", heading: "Scope", step: "outline_dropped", sizes: []int{65536, 65536, 65536}},
+		{name: "outline_dropped_by_both", count: 1501, label: "x", heading: strings.Repeat("ố", 100), step: "outline_dropped", sizes: []int{65537, 65537, 65536}},
+		{name: "without_outline_still_over", count: 200, label: "Điều 1", heading: "Scope", url: strings.Repeat("a", 65536), step: "outline_dropped", sizes: []int{65537, 65537, 65537}, fail: true},
 	} {
 		for _, class := range []string{"primary", "relation_context", "secondary"} {
 			for _, labeled := range []bool{true, false} {
@@ -50,7 +52,7 @@ func TestSummary_OrderedCaps(t *testing.T) {
 					if err != nil {
 						t.Fatal(err)
 					}
-					r, step, err := makeSummary(d, nil, nil)
+					r, step, err := makeSummary(context.Background(), &summaryTx{sizes: tc.sizes}, d, nil, nil)
 					if tc.fail {
 						want := "summary vn:vbpl:1: serialized row exceeds 65536 octets"
 						if err == nil || err.Error() != want {
@@ -76,10 +78,6 @@ func TestSummary_OrderedCaps(t *testing.T) {
 						if !reflect.DeepEqual(r.Payload.Outline, wantOutline) {
 							t.Errorf("outline differs from %s result", tc.step)
 						}
-						b, e := json.Marshal(r)
-						if e != nil || len(b) > 65536 {
-							t.Errorf("serialized bytes=%d: %v", len(b), e)
-						}
 					}
 					if string(step) != tc.step {
 						t.Errorf("step=%v, want %s", step, tc.step)
@@ -91,40 +89,5 @@ func TestSummary_OrderedCaps(t *testing.T) {
 				})
 			}
 		}
-	}
-}
-
-func TestSummary_RowSizeBoundary(t *testing.T) {
-	for _, size := range []int{65535, 65536, 65537} {
-		t.Run(fmt.Sprint(size), func(t *testing.T) {
-			d := summaryFixture()
-			d.Projection, d.Indexed = 1, true
-			d.GapKinds = []string{}
-			d.Payload.Relations = []summaryRelation{}
-			d.Payload.Nodes = []summaryNode{}
-			d.Payload.SourceURL = new("")
-			b, err := json.Marshal(d)
-			if err != nil {
-				t.Fatal(err)
-			}
-			d.Payload.SourceURL = new(strings.Repeat("a", size-len(b)))
-			r, step, err := makeSummary(d, nil, nil)
-			if err != nil {
-				t.Fatal(err)
-			}
-			wantStep := "whole"
-			if size > 65536 {
-				wantStep = "headings_dropped"
-			}
-			if string(step) != wantStep || !r.Indexed {
-				t.Errorf("step=%v indexed=%t, want %s and indexed", step, r.Indexed, wantStep)
-			}
-			if size <= 65536 && !reflect.DeepEqual(r, d) {
-				t.Error("row within both caps changed")
-			}
-			if size > 65536 && (r.Payload.Outline[0].Heading != "" || r.Payload.Outline[1].Heading != "") {
-				t.Error("headings retained over byte cap")
-			}
-		})
 	}
 }

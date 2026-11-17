@@ -38,7 +38,7 @@ func (l *loader) loadSummaries(ctx context.Context, entries []source.HeadingExcl
 		if err = l.summaryParts(ctx, id, &d.Payload); err != nil {
 			return err
 		}
-		r, step, e := makeSummary(d, l.gaps, excluded[d.Key])
+		r, step, e := makeSummary(ctx, l.tx, d, l.gaps, excluded[d.Key])
 		if e != nil {
 			return e
 		}

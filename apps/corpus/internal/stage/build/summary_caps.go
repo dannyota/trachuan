@@ -1,9 +1,16 @@
 package build
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+
+	"github.com/jackc/pgx/v5"
 )
+
+type summarySizer interface {
+	QueryRow(context.Context, string, ...any) pgx.Row
+}
 
 type summaryCapStep string
 
@@ -18,13 +25,17 @@ type SummaryStats struct {
 	OutlineDropped  int64 `json:"outline_dropped"`
 }
 
-func capSummary(d summaryDocument) (summaryDocument, summaryCapStep, error) {
+func capSummary(ctx context.Context, db summarySizer, d summaryDocument) (summaryDocument, summaryCapStep, error) {
 	for step := summaryWhole; ; {
-		b, err := json.Marshal(d)
+		b, err := json.Marshal(d.Payload)
 		if err != nil {
 			return summaryDocument{}, step, fmt.Errorf("encode summary: %w", err)
 		}
-		if len(d.Payload.Outline) <= 1500 && len(b) <= 65536 {
+		var size int
+		if err = db.QueryRow(ctx, "SELECT octet_length($1::jsonb::text)", b).Scan(&size); err != nil {
+			return summaryDocument{}, step, fmt.Errorf("measure summary %s payload: %w", d.Key, err)
+		}
+		if len(d.Payload.Outline) <= 1500 && size <= 65536 {
 			return d, step, nil
 		}
 		switch step {
