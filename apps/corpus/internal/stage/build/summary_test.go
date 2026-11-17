@@ -3,6 +3,7 @@ package build
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"regexp"
 	"strings"
@@ -181,6 +182,29 @@ func TestSummary_HeadingShape(t *testing.T) {
 			r, _, err := makeUnitSummary(d, nil, nil)
 			if err != nil || (r.Payload.Outline[1].Heading != "") != tc.valid {
 				t.Fatalf("heading %q: got %q, err %v", tc.heading, r.Payload.Outline[1].Heading, err)
+			}
+		})
+	}
+}
+
+func TestSummary_HeadingWhitespace(t *testing.T) {
+	for _, tc := range []struct {
+		heading string
+		valid   bool
+	}{
+		{"Title.\u00a0Text", false}, {"Title:\u3000Text", false},
+		{"\u00a0Title.\u3000", false}, {"Title.\u00a0\u3000Text", false},
+		{"Title.\u001cText", true}, {"Title.\u001dText", true},
+		{"Title.\u001eText", true}, {"Title.\u001fText", true},
+		{"Title.\u001c", true}, {"Title.\u001d", true},
+		{"Title.\u001e", true}, {"Title.\u001f", true},
+	} {
+		t.Run(fmt.Sprintf("%q", tc.heading), func(t *testing.T) {
+			d := summaryFixture()
+			d.Payload.Outline[1].Heading = tc.heading
+			got, _, err := makeUnitSummary(d, nil, nil)
+			if err != nil || (got.Payload.Outline[1].Heading != "") != tc.valid {
+				t.Fatalf("heading=%q err=%v", got.Payload.Outline[1].Heading, err)
 			}
 		})
 	}

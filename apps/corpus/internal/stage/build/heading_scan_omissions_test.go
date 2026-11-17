@@ -126,3 +126,45 @@ func TestHeadingScan_ExclusionsAndTies(t *testing.T) {
 		t.Fatalf("report: %+v", report)
 	}
 }
+
+func TestHeadingScan_LongestMembershipAndDeterminism(t *testing.T) {
+	omissions := []headingOmission{}
+	for _, reason := range []string{"sequence", "length", "shape"} {
+		for i := 0; i < 25; i++ {
+			omissions = append(omissions, headingOmission{Key: "m", Anchor: fmt.Sprintf("%s-%02d", reason, i), Length: 100 + i, reason: reason})
+		}
+		for _, item := range [][2]string{{"a", "z"}, {"b", "a"}, {"a", "a"}} {
+			omissions = append(omissions, headingOmission{Key: item[0], Anchor: item[1], Length: 124, reason: reason})
+		}
+	}
+	b, err := encodeHeadingScan("vn", "20990101_1", nil, omissions)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got headingScanOutput
+	if err = json.Unmarshal(b, &got); err != nil {
+		t.Fatal(err)
+	}
+	for _, reason := range []string{"sequence", "length", "shape"} {
+		items := got.Omitted[reason].Longest
+		if len(items) != 20 || got.Omitted[reason].Count != 28 {
+			t.Fatalf("%s: %+v", reason, got.Omitted[reason])
+		}
+		for i, item := range items {
+			key, anchor, length := "m", fmt.Sprintf("%s-%02d", reason, 27-i), 127-i
+			if i < 3 {
+				key, anchor, length = [3]string{"a", "a", "b"}[i], [3]string{"a", "z", "a"}[i], 124
+			}
+			if item.Key != key || item.Anchor != anchor || item.Length != length {
+				t.Errorf("%s[%d]=%+v want %s/%s/%d", reason, i, item, key, anchor, length)
+			}
+		}
+	}
+	for i, j := 0, len(omissions)-1; i < j; i, j = i+1, j-1 {
+		omissions[i], omissions[j] = omissions[j], omissions[i]
+	}
+	again, err := encodeHeadingScan("vn", "20990101_1", nil, omissions)
+	if err != nil || string(b) != string(again) {
+		t.Fatalf("output changed with input order: %v", err)
+	}
+}
