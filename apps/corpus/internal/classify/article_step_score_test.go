@@ -25,7 +25,7 @@ func TestArticleSteps_PartialFailureRemainsARecallMiss(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if report.Levels[2].Raw.TruePositive != 1 || report.Levels[2].Raw.FalseNegative != 1 || report.Levels[2].Raw.Recall != 0.5 {
+	if report.Levels[2].All.Raw.TruePositive != 1 || report.Levels[2].All.Raw.FalseNegative != 1 || report.Levels[2].All.Raw.Recall != 0.5 {
 		t.Fatalf("deepest score %+v", report.Levels[2])
 	}
 }

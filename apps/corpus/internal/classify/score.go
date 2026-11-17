@@ -9,12 +9,14 @@ import (
 )
 
 type Metrics struct {
-	TruePositive    int     `json:"true_positive"`
-	FalsePositive   int     `json:"false_positive"`
-	FalseNegative   int     `json:"false_negative"`
-	Precision       float64 `json:"precision"`
-	Recall          float64 `json:"recall"`
-	TopOnePrecision float64 `json:"top_1_precision"`
+	TruePositive      int     `json:"true_positive"`
+	FalsePositive     int     `json:"false_positive"`
+	FalseNegative     int     `json:"false_negative"`
+	Precision         float64 `json:"precision"`
+	Recall            float64 `json:"recall"`
+	TopOnePrecision   float64 `json:"top_1_precision"`
+	AdditionalCorrect int     `json:"additional_node_correct"`
+	AdditionalTotal   int     `json:"additional_node_total"`
 }
 
 type ThresholdMetrics struct {
@@ -22,24 +24,37 @@ type ThresholdMetrics struct {
 	Metrics   Metrics `json:"metrics"`
 }
 
-type LevelScore struct {
-	Level      string             `json:"level"`
+type ScoreBlock struct {
 	Raw        Metrics            `json:"raw"`
 	Candidates []ThresholdMetrics `json:"candidates"`
 	Threshold  *float64           `json:"threshold"`
 }
 
+type LevelScore struct {
+	Level       string     `json:"level"`
+	All         ScoreBlock `json:"all"`
+	NonFragment ScoreBlock `json:"non_fragment"`
+}
+
+type FragmentEntry struct {
+	DocumentKey string `json:"document_key"`
+	Anchor      string `json:"anchor"`
+}
+
 type ScoreReport struct {
-	Status         string       `json:"status"`
-	RecipeHash     string       `json:"recipe_hash"`
-	LabelsHash     string       `json:"labels_sha256"`
-	FamiliesHash   string       `json:"families_sha256"`
-	Entries        int          `json:"entries"`
-	InvalidEntries int          `json:"invalid_entries"`
-	FamilyHits     int          `json:"family_hits"`
-	FamilyTotal    int          `json:"family_total"`
-	FamilyRecall   float64      `json:"family_recall"`
-	Levels         []LevelScore `json:"levels"`
+	Status             string          `json:"status"`
+	RecipeHash         string          `json:"recipe_hash"`
+	LabelsHash         string          `json:"labels_sha256"`
+	FamiliesHash       string          `json:"families_sha256"`
+	Entries            int             `json:"entries"`
+	InvalidEntries     int             `json:"invalid_entries"`
+	FragmentCount      int             `json:"fragment_count"`
+	NonFragmentEntries int             `json:"non_fragment_entries"`
+	ExcludedFragments  []FragmentEntry `json:"excluded_fragments"`
+	FamilyHits         int             `json:"family_hits"`
+	FamilyTotal        int             `json:"family_total"`
+	FamilyRecall       float64         `json:"family_recall"`
+	Levels             []LevelScore    `json:"levels"`
 }
 
 type scoredArticle struct {
@@ -48,6 +63,8 @@ type scoredArticle struct {
 	topCode       string
 	topConfidence float64
 	topMapped     [3]string
+	noNode        bool
+	confidences   [3][]float64
 }
 
 func Score(labels taxonomy.Labels, families FamilyArtifact, artifact ArticleArtifact, release []Article, nodes []Node) (ScoreReport, error) {
@@ -69,8 +86,12 @@ func Score(labels taxonomy.Labels, families FamilyArtifact, artifact ArticleArti
 		}
 		predicted[key] = a.Outcome
 	}
-	var scored []scoredArticle
-	candidates := [3]map[float64]bool{{0: true}, {0: true}, {0: true}}
+	var scored, nonFragment []scoredArticle
+	texts := map[string]string{}
+	for _, article := range release {
+		texts[article.DocumentKey+"/"+article.Anchor] = article.OwnText
+	}
+	report.ExcludedFragments = []FragmentEntry{}
 	for _, label := range labels.Articles {
 		key := label.Key + "/" + label.Anchor
 		valid := validation.valid[key]
@@ -85,7 +106,7 @@ func Score(labels taxonomy.Labels, families FamilyArtifact, artifact ArticleArti
 				report.FamilyHits++
 			}
 		}
-		item := scoredArticle{truth: [3]map[string]bool{{}, {}, {}}, predictions: [3]map[string]float64{{}, {}, {}}}
+		item := scoredArticle{noNode: label.NoNode, truth: [3]map[string]bool{{}, {}, {}}, predictions: [3]map[string]float64{{}, {}, {}}}
 		for code := range truthCodes {
 			for i, level := range []int{2, 3, 0} {
 				mapped := ancestor(code, level, byCode)
@@ -115,7 +136,7 @@ func Score(labels taxonomy.Labels, families FamilyArtifact, artifact ArticleArti
 					if mapped == "" {
 						continue
 					}
-					candidates[i][p.Confidence] = true
+					item.confidences[i] = append(item.confidences[i], p.Confidence)
 					prior, ok := item.predictions[i][mapped]
 					if !ok || p.Confidence > prior {
 						item.predictions[i][mapped] = p.Confidence
@@ -124,34 +145,55 @@ func Score(labels taxonomy.Labels, families FamilyArtifact, artifact ArticleArti
 			}
 		}
 		scored = append(scored, item)
+		if text, present := texts[key]; present && taxonomy.IsFragment(text) {
+			report.ExcludedFragments = append(report.ExcludedFragments, FragmentEntry{label.Key, label.Anchor})
+		} else {
+			nonFragment = append(nonFragment, item)
+		}
 	}
 	if report.FamilyTotal > 0 {
 		report.FamilyRecall = float64(report.FamilyHits) / float64(report.FamilyTotal)
 	}
 	availabilityErr := validation.availabilityError()
 	unavailable := availabilityErr != nil
+	report.FragmentCount = len(report.ExcludedFragments)
+	report.NonFragmentEntries = len(nonFragment)
 	for i, name := range []string{"level_2", "level_3", "deepest"} {
-		row := LevelScore{Level: name, Raw: scoreAt(scored, i, 0)}
-		values := make([]float64, 0, len(candidates[i]))
-		for value := range candidates[i] {
-			values = append(values, value)
-		}
-		sort.Float64s(values)
-		for _, value := range values {
-			metric := scoreAt(scored, i, value)
-			row.Candidates = append(row.Candidates, ThresholdMetrics{value, metric})
-			if !unavailable && row.Threshold == nil && metric.TopOnePrecision >= 0.85 {
-				v := value
-				row.Threshold = &v
-			}
-		}
-		report.Levels = append(report.Levels, row)
+		report.Levels = append(report.Levels, LevelScore{Level: name, All: scoreBlock(scored, i, unavailable), NonFragment: scoreBlock(nonFragment, i, unavailable)})
 	}
+
 	if unavailable {
 		report.Status = "unavailable"
 		return report, availabilityErr
 	}
 	return report, nil
+}
+
+func scoreBlock(articles []scoredArticle, level int, unavailable bool) ScoreBlock {
+	block := ScoreBlock{Raw: scoreAt(articles, level, 0)}
+	candidates := map[float64]bool{0: true}
+	for _, article := range articles {
+		if article.noNode && level > 0 {
+			continue
+		}
+		for _, confidence := range article.confidences[level] {
+			candidates[confidence] = true
+		}
+	}
+	values := make([]float64, 0, len(candidates))
+	for value := range candidates {
+		values = append(values, value)
+	}
+	sort.Float64s(values)
+	for _, value := range values {
+		metric := scoreAt(articles, level, value)
+		block.Candidates = append(block.Candidates, ThresholdMetrics{value, metric})
+		if !unavailable && block.Threshold == nil && metric.TopOnePrecision >= 0.85 {
+			v := value
+			block.Threshold = &v
+		}
+	}
+	return block
 }
 
 func ancestor(code string, level int, nodes map[string]Node) string {
@@ -187,6 +229,9 @@ func scoreAt(articles []scoredArticle, level int, threshold float64) Metrics {
 	var m Metrics
 	var topTotal, topCorrect int
 	for _, a := range articles {
+		if a.noNode && level > 0 {
+			continue
+		}
 		if a.topCode != "" && a.topConfidence >= threshold {
 			topTotal++
 			if a.truth[level][a.topMapped[level]] {
@@ -196,6 +241,12 @@ func scoreAt(articles []scoredArticle, level int, threshold float64) Metrics {
 		for code, confidence := range a.predictions[level] {
 			if confidence < threshold {
 				continue
+			}
+			if code != a.topMapped[level] {
+				m.AdditionalTotal++
+				if a.truth[level][code] {
+					m.AdditionalCorrect++
+				}
 			}
 			if a.truth[level][code] {
 				m.TruePositive++

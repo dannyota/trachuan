@@ -95,7 +95,9 @@ under the corpus rules.
    the union. Any other case (no such article, an empty or different heading)
    inherits nothing, goes to the LLM layer and is counted. No LLM is involved.
 3. LLM in batches over public legal text, after `chunk` and `embed` have run,
-   for articles that hold no seed or inherited node:
+   for articles that hold no seed or inherited node and are not fragments (see
+   the evaluation gate); a fragment has no subject of its own, so it keeps seeds
+   and inheritance only:
    - One request per document (title, scope article, table of contents, VBPL
      field) chooses from a menu of active level-2 nodes, each shown as
      `<level-1 name> > <level-2 name>`; a level-2 node with no provisions and no
@@ -181,7 +183,11 @@ precision: the model's highest-confidence node per article, mapped to the level
 measured, against the seed at that level. Precision over all pairs, which also
 judges additional nodes, is measured on the model-adjudicated multi-family set.
 The same sets tune prompts and thresholds and gate the release; every prompt or
-threshold change reruns them.
+threshold change reruns them. Each slice scores what the LLM layer classifies:
+the fragment rule below, applied mechanically to an entry's own text in the
+release by whole-sentence matching, excludes fragments from the scored entries,
+and the floors apply to the remaining entries. Every report states each number
+over all entries and over non-fragment entries, with the fragments listed.
 
 | Slice                                                  | Reference         | Metric                                                                               | Floor |
 | ------------------------------------------------------ | ----------------- | ------------------------------------------------------------------------------------ | ----- |

@@ -145,7 +145,7 @@ func countArticle(ctx context.Context, r Recipe, req ArticleRequest, count Token
 	if err != nil {
 		return 0, err
 	}
-	n, err := count(ctx, p)
+	n, err := countTokens(ctx, p, count)
 	if err != nil {
 		return 0, providerError(err)
 	}

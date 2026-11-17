@@ -73,3 +73,10 @@ classifier. Hard-cut subject filtering.
   nodes come only from seeds and inheritance. The two-step request is retired:
   its family step lost families (recall 0.923 against the document request's
   0.970) and chose several for 241 of 300 articles.
+- 2026-11-17: the LLM layer skips fragments, and evaluation scores
+  non-fragments. A fragment (an article whose text only states effect,
+  implementation, repeal or amendment) has no subject of its own: the package
+  places it by its document, and its text gives a classifier nothing to judge.
+  The seeded slice held 40 such articles of 300, so scoring them measured a case
+  production never sends. Every report still states the all-entries numbers
+  beside the non-fragment ones.

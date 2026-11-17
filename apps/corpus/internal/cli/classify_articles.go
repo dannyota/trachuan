@@ -93,8 +93,8 @@ func runClassifyArticlesWith(ctx context.Context, args []string, stdout, stderr 
 	if err != nil {
 		return fail(1, err)
 	}
-	if len(labels.Articles) != 300 {
-		return fail(1, fmt.Errorf("article pilot requires exactly 300 labeled articles"))
+	if n := len(labels.Articles); n > 300 {
+		return fail(1, fmt.Errorf("article pilot takes at most 300 labeled articles, got %d", n))
 	}
 	evidence, err := load(ctx, args[0], args[1], labels)
 	if err != nil {

@@ -31,7 +31,7 @@ func (r *Runner) prepareScreenBatch(ctx context.Context, o Options, docs []Docum
 		if buildErr != nil {
 			return nil, buildErr
 		}
-		n, countErr := r.Client.CountTokens(ctx, p)
+		n, countErr := countTokens(ctx, p, r.Client.CountTokens)
 		if countErr != nil {
 			return nil, providerError(countErr)
 		}

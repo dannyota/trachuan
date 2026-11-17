@@ -46,8 +46,9 @@
 - [x] Confirm current Batch and model prices on Anthropic's pricing page (2026-11-16, cited in the classify PRs).
 - [x] Screening pass inside the pilot budget (400 documents, 0.36 USD, 374 with two or more families): document requests only, for at most 400 documents drawn at random from those holding unseeded articles; it feeds the multi-family draw and measures nothing.
 - [x] Labeled set only, both `claude-haiku-5-5` and `claude-sonnet-5-5`; family recall 0.970 and 0.973; deepest recall stayed below 0.70 for both models and for a two-step trial, so the LLM layer's scope is level 2 (ADR 0004 History 2026-11-17). Pilot ledger 5.28 USD.
-- [ ] Level-2 run of Haiku v2 and Sonnet v2 on the 200 model-adjudicated articles (pre-call to the coordinator): level-2 recall, top-1 precision, and additional-node precision over both sets (floor 0.80); the coordinator then decides whether level 2 ships and with which model.
-- [ ] Post-2023 and multi-family references: Codex `gpt-6-astra` labels them blind under the labeling rule, the coordinator reads samples, and they are frozen (`corpus taxonomy freeze`).
+- [x] Level-2 run of Haiku v2 and Sonnet v2 on the 200 model-adjudicated articles (2026-11-17, 3.93 USD, ledger 9.21; no fragments in either set). Level 2, multi-family / post-2023: Haiku recall 0.809 / 0.861, top-1 0.760 / 0.867, pair precision 0.592 / 0.641, family recall 0.852 / 0.889; Sonnet recall 0.809 / 0.852, top-1 0.780 / 0.876, pair precision 0.547 / 0.626, family recall 0.826 / 0.880. Additional-node precision over both sets: Haiku 25/104 (0.240), Sonnet 22/120 (0.183), floor 0.80. Seeded slice, all 300 / non-fragment 260 (40 fragments), level 2: Haiku v2 recall 0.873 / 0.881, top-1 0.786 / 0.791; Sonnet v2 0.920 / 0.935, 0.810 / 0.813. No row passes: family recall caps recall (given the family, level-2 recall is 0.95 to 0.98), and additional nodes are mostly wrong; Sonnet is no better than Haiku at level 2.
+- [x] Post-2023 and multi-family references: Codex `gpt-6-astra` labels them blind under the labeling rule, the coordinator reads samples, and they are frozen (`corpus taxonomy freeze`).
+- [ ] Coordinator decides the next prompt trial before any further spend.
 
 ### 8.5 Full batch (paid, after the coordinator confirms the estimate)
 

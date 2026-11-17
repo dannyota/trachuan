@@ -62,6 +62,9 @@ func TestScreen_CreateFailureKeepsProviderSummary(t *testing.T) {
 			t.Fatalf("create error %q lacks %q", err, want)
 		}
 	}
+	if client.creates != 1 {
+		t.Fatalf("create calls %d", client.creates)
+	}
 	if strings.Contains(err.Error(), "free text") || ledger.rows[0].State != "uncertain" {
 		t.Fatalf("create failure state %q error %q", ledger.rows[0].State, err)
 	}
