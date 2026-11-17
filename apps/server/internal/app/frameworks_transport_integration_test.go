@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -61,23 +62,49 @@ type frameworkTransportLimiter struct{}
 
 func (frameworkTransportLimiter) Allow(int64, limits.Class) (bool, time.Duration) { return true, 0 }
 
-type frameworkBearer struct{}
+type frameworkBearer struct{ t *testing.T }
 
-func (frameworkBearer) RoundTrip(r *http.Request) (*http.Response, error) {
+func (b frameworkBearer) RoundTrip(r *http.Request) (*http.Response, error) {
 	r = r.Clone(r.Context())
 	r.Header.Set("Authorization", "Bearer trc_"+strings.Repeat("A", 43))
-	return http.DefaultTransport.RoundTrip(r)
+	var call struct {
+		Method string `json:"method"`
+		Params struct {
+			Arguments struct {
+				Corpus string `json:"corpus"`
+			} `json:"arguments"`
+		} `json:"params"`
+	}
+	if r.Body != nil {
+		raw, err := io.ReadAll(r.Body)
+		if err != nil {
+			return nil, err
+		}
+		if err = r.Body.Close(); err != nil {
+			return nil, err
+		}
+		r.Body = io.NopCloser(bytes.NewReader(raw))
+		_ = json.Unmarshal(raw, &call)
+	}
+	response, err := http.DefaultTransport.RoundTrip(r)
+	if err == nil && call.Method == "tools/call" && call.Params.Arguments.Corpus == "frameworks" && response.Header.Get("Cache-Control") != "no-store" {
+		b.t.Errorf("framework response Cache-Control=%q want no-store", response.Header.Get("Cache-Control"))
+	}
+	return response, err
 }
 
-func frameworkTransport(t *testing.T, engine *frameworkserve.Engine, auth *frameworkTransportAuth) (*mcp.ClientSession, *bytes.Buffer) {
+func frameworkTransport(t *testing.T, engine *frameworkserve.Engine, auth *frameworkTransportAuth, law ...mcpapi.Resolver) (*mcp.ClientSession, *bytes.Buffer) {
 	t.Helper()
 	var logs bytes.Buffer
 	cfg := mcpapi.Config{Frameworks: true, FrameworkResolver: frameworkTransportLease{engine}, FrameworkAccess: frameworkCaller(auth), Limiter: frameworkTransportLimiter{}, Caches: mcpapi.NewCaches(time.Now), Logger: slog.New(slog.NewTextHandler(&logs, nil))}
+	if len(law) > 0 {
+		cfg.Resolver = law[0]
+	}
 	verifier := &credential.Verifier{Store: auth, Audience: "https://example.test/mcp", Clock: func() time.Time { return time.Date(2098, 1, 1, 0, 0, 0, 0, time.UTC) }}
 	server := httptest.NewServer(credential.Middleware(verifier, mcpapi.New(cfg)))
 	t.Cleanup(server.Close)
 	client := mcp.NewClient(&mcp.Implementation{Name: "invented", Version: "1"}, nil)
-	session, err := client.Connect(t.Context(), &mcp.StreamableClientTransport{Endpoint: server.URL, HTTPClient: &http.Client{Transport: frameworkBearer{}}, DisableStandaloneSSE: true, MaxRetries: -1}, nil)
+	session, err := client.Connect(t.Context(), &mcp.StreamableClientTransport{Endpoint: server.URL, HTTPClient: &http.Client{Transport: frameworkBearer{t: t}}, DisableStandaloneSSE: true, MaxRetries: -1}, nil)
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, session.Close()) })
 	return session, &logs
