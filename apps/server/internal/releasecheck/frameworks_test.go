@@ -54,12 +54,22 @@ func TestFrameworksReleaseIdentity_RequiresSupportedSchemaAndMatchingName(t *tes
 	}{
 		{"frameworks_20990101", "20990101", 1, true},
 		{"frameworks_20990101_1", "20990101_1", 1, true},
+		{"frameworks_20990101_99", "20990101_99", 1, true},
+		{"frameworks_20990101_123", "20990101_123", 1, false},
 		{"frameworks_20990101", "20990102", 1, false},
 		{"frameworks_20990101", "20990101", 2, false},
 		{"corpus_vn_20990101", "20990101", 1, false},
 	} {
 		if validFrameworksIdentity(tc.name, tc.rel, tc.version) != tc.valid {
 			t.Fatalf("identity accepted incorrectly: %+v", tc)
+		}
+	}
+}
+
+func TestFrameworksDatabaseConfig_RejectsUnsupportedSuffix(t *testing.T) {
+	for _, name := range []string{"frameworks_20990101_", "frameworks_20990101_100", "frameworks_20990101_1234"} {
+		if _, err := frameworksDatabaseConfig("postgres://corpus_reader@localhost/{database}", name); err == nil {
+			t.Fatalf("configured unsupported suffix %s", name)
 		}
 	}
 }

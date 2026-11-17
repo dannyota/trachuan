@@ -32,7 +32,7 @@ func DescribeFrameworks(ctx context.Context, client *embedding.Client) (Framewor
 }
 
 func ValidFrameworksDatabase(name string) bool {
-	return regexp.MustCompile(`^frameworks_[0-9]{8}(_[0-9]+)?$`).MatchString(name)
+	return regexp.MustCompile(`^frameworks_[0-9]{8}(_[0-9]{1,2})?$`).MatchString(name)
 }
 
 func validFrameworksIdentity(name, rel string, version int) bool {

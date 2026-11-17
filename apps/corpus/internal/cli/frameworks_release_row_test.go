@@ -5,10 +5,12 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
 func TestFrameworksReleaseRow_WritesPrivateMetadataWithoutWorkshop(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
 	work := t.TempDir()
 	t.Setenv("FRAMEWORKS_WORK_DIR", work)
 	t.Setenv("CORPUS_DATABASE_URL", "invalid workshop must stay unread")
@@ -42,6 +44,7 @@ func TestFrameworksReleaseRow_WritesPrivateMetadataWithoutWorkshop(t *testing.T)
 }
 
 func TestFrameworksReleaseRow_RejectsTraversalAndSymlinkOutput(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
 	work := t.TempDir()
 	t.Setenv("FRAMEWORKS_WORK_DIR", work)
 	load := func(context.Context, string) ([]byte, error) { return []byte(`{}`), nil }
@@ -64,6 +67,60 @@ func TestFrameworksReleaseRow_RejectsTraversalAndSymlinkOutput(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(outside, "release.json")); !os.IsNotExist(err) {
 		t.Fatal("wrote outside work directory")
+	}
+}
+
+func TestFrameworksReleaseRow_RefusesSyncedWorkBeforeLoadingOrWriting(t *testing.T) {
+	for _, linked := range []bool{false, true} {
+		t.Run(map[bool]string{false: "direct", true: "symlink"}[linked], func(t *testing.T) {
+			home := t.TempDir()
+			t.Setenv("HOME", home)
+			synced := filepath.Join(home, "Dropbox", "work")
+			if err := os.MkdirAll(synced, 0700); err != nil {
+				t.Fatal(err)
+			}
+			work := synced
+			if linked {
+				work = filepath.Join(home, "work-link")
+				if err := os.Symlink(synced, work); err != nil {
+					t.Fatal(err)
+				}
+			}
+			t.Setenv("FRAMEWORKS_WORK_DIR", work)
+			loaded := false
+			load := func(context.Context, string) ([]byte, error) { loaded = true; return []byte(`{}`), nil }
+			var stderr bytes.Buffer
+			code := runFrameworksReleaseRowWith(t.Context(), "20990101", &stderr, load)
+			if code != 1 || !strings.Contains(stderr.String(), "sync folder refused") {
+				t.Fatal("accepted synced work directory")
+			}
+			if loaded {
+				t.Fatal("read metadata before refusing synced work directory")
+			}
+			if _, err := os.Stat(filepath.Join(synced, "20990101")); !os.IsNotExist(err) {
+				t.Fatal("created output in synced work directory")
+			}
+		})
+	}
+}
+
+func TestFrameworksReleaseRow_RejectsUnsupportedSuffixBeforeLoading(t *testing.T) {
+	for _, rel := range []string{"20990101_", "20990101_100", "20990101_1234"} {
+		var stderr bytes.Buffer
+		loaded := false
+		load := func(context.Context, string) ([]byte, error) { loaded = true; return []byte(`{}`), nil }
+		code := runFrameworksReleaseRowWith(t.Context(), rel, &stderr, load)
+		if code != 2 || loaded {
+			t.Fatalf("accepted unsupported suffix %s", rel)
+		}
+		if _, err := frameworksReleaseRowConfig("postgres://builder@localhost/postgres", rel); err == nil {
+			t.Fatalf("configured unsupported suffix %s", rel)
+		}
+	}
+	for _, rel := range []string{"20990101", "20990101_1", "20990101_99"} {
+		if !validFrameworksRelease(rel) {
+			t.Fatalf("refused supported suffix %s", rel)
+		}
 	}
 }
 

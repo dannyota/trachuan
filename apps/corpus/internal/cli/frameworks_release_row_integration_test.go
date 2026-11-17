@@ -16,6 +16,7 @@ import (
 )
 
 func TestFrameworksReleaseRow_InventedReleaseIgnoresWorkshop(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
 	ctx := t.Context()
 	admin, base, err := testpg.OpenAdministrator(ctx)
 	if err != nil {

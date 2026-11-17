@@ -42,7 +42,9 @@ func TestFrameworksActivationMigration_LegacyUpdaterAndKindChecks(t *testing.T) 
 	if _, err = conn.Exec(ctx, `INSERT INTO retired_release(country,db_name,retired_at,retain_until)
  VALUES('vn','invented_legacy_database',now(),now());
  INSERT INTO release_journal(country,rel,step,state,message,database_name)
- VALUES('vn','20990101','legacy','complete','invented','invented_legacy_database');`); err != nil {
+ VALUES('vn','20990101','legacy','complete','invented','invented_legacy_database');
+ INSERT INTO release_journal(country,rel,step,state,message,database_name,operation_id,mode)
+ VALUES('vn','20990101_123','pruned','complete','invented','corpus_vn_20990101_123',repeat('b',32),'prune');`); err != nil {
 		t.Fatal(err)
 	}
 	raw, err := migrations.FS.ReadFile("00012_frameworks_release_activation.sql")
@@ -86,8 +88,8 @@ func TestFrameworksActivationMigration_LegacyUpdaterAndKindChecks(t *testing.T) 
 		}
 	}
 	for _, kind := range []string{"frameworks", "law", "other"} {
-		for _, name := range []string{"frameworks_20990101_123", "corpus_vn_20990101", "auth"} {
-			valid := kind == "frameworks" && name == "frameworks_20990101_123" || kind == "law" && name == "corpus_vn_20990101"
+		for _, name := range []string{"frameworks_20990101", "frameworks_20990101_1", "frameworks_20990101_99", "frameworks_20990101_123", "corpus_vn_20990101", "corpus_vn_20990101_123", "auth"} {
+			valid := kind == "frameworks" && (name == "frameworks_20990101" || name == "frameworks_20990101_1" || name == "frameworks_20990101_99") || kind == "law" && name == "corpus_vn_20990101"
 			for _, sql := range []string{
 				`INSERT INTO retired_release(country,db_name,retired_at,retain_until,corpus_kind) VALUES('vn',$1,now(),now(),$2) ON CONFLICT(country,db_name) DO UPDATE SET corpus_kind=EXCLUDED.corpus_kind`,
 				`INSERT INTO release_journal(country,rel,step,state,message,operation_id,mode,database_name,corpus_kind) VALUES('vn','20990101','pruning','open','invented',repeat('d',32),'prune',$1,$2)`,
@@ -105,14 +107,14 @@ func TestFrameworksActivationMigration_LegacyUpdaterAndKindChecks(t *testing.T) 
 		}
 	}
 	for _, country := range []string{"vn", "us"} {
-		for _, name := range []string{"frameworks_20990101", "frameworks_20990101_123", "corpus_vn_20990101", "frameworks_20990101_bad"} {
+		for _, name := range []string{"frameworks_20990101", "frameworks_20990101_99", "frameworks_20990101_123", "corpus_vn_20990101", "frameworks_20990101_bad"} {
 			tx, beginErr := conn.Begin(ctx)
 			if beginErr != nil {
 				t.Fatal(beginErr)
 			}
 			_, insertErr := tx.Exec(ctx, `INSERT INTO frameworks_release VALUES($1,$2,now(),'invented')`, country, name)
 			_ = tx.Rollback(ctx)
-			valid := country == "vn" && (name == "frameworks_20990101" || name == "frameworks_20990101_123")
+			valid := country == "vn" && (name == "frameworks_20990101" || name == "frameworks_20990101_99")
 			if (insertErr == nil) != valid {
 				t.Fatalf("pointer country=%s name=%s accepted=%t", country, name, insertErr == nil)
 			}
@@ -121,6 +123,7 @@ func TestFrameworksActivationMigration_LegacyUpdaterAndKindChecks(t *testing.T) 
 	for _, change := range []string{
 		`operation_id='invalid'`, `mode=NULL`, `mode='invalid'`, `database_name=NULL`,
 		`database_name='auth'`, `expected_active_db='corpus_vn_20990101'`,
+		`expected_active_db='frameworks_20990101_123'`,
 		`manifest_hash=NULL`, `manifest_hash='invalid'`, `dump_sha256=NULL`,
 		`dump_sha256='invalid'`, `manifest=NULL`, `manifest='[]'`,
 	} {

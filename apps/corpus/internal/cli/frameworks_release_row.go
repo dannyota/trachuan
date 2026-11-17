@@ -10,11 +10,12 @@ import (
 	"path/filepath"
 	"regexp"
 
+	"danny.vn/trachuan/internal/frameworks/build"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func validFrameworksRelease(rel string) bool {
-	return regexp.MustCompile(`^[0-9]{8}(_[0-9]+)?$`).MatchString(rel)
+	return regexp.MustCompile(`^[0-9]{8}(_[0-9]{1,2})?$`).MatchString(rel)
 }
 
 func runFrameworksReleaseRow(ctx context.Context, rel string, stderr io.Writer) int {
@@ -31,6 +32,10 @@ func runFrameworksReleaseRowWith(ctx context.Context, rel string, stderr io.Writ
 	work := os.Getenv("FRAMEWORKS_WORK_DIR")
 	if work == "" {
 		return fail(1, errors.New("FRAMEWORKS_WORK_DIR is required"))
+	}
+	work, err := build.CheckedDirectory(work)
+	if err != nil {
+		return fail(1, err)
 	}
 	root, err := os.OpenRoot(work)
 	if err != nil {

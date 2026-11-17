@@ -67,6 +67,8 @@ func realPath(path string) (string, error) {
 	return current, nil
 }
 
+func CheckedDirectory(path string) (string, error) { return checkedDir(path) }
+
 func checkedDir(path string) (string, error) {
 	path, err := realPath(path)
 	if err != nil {
