@@ -214,3 +214,24 @@ func TestTaxonomyAndFilteredSearch_EngineResultsIntegration(t *testing.T) {
 		t.Fatalf("filtered search differs: %s", raw)
 	}
 }
+
+func TestPublicTaxonomyCodes_EngineTree(t *testing.T) {
+	engine := taxonomyIntegrationEngine(t)
+	h := newHarness(t)
+	h.resolver.engine = engine
+	w := httptest.NewRecorder()
+	NewPublicTaxonomyCodes(h.webConfig()).ServeHTTP(w, httptest.NewRequest("GET", "/api/v1/public/taxonomy/codes", nil))
+	var got struct {
+		Release string   `json:"release"`
+		Codes   []string `json:"codes"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil || w.Code != 200 || got.Release != "20991110_1" || !reflect.DeepEqual(got.Codes, []string{"1", "1.1"}) {
+		t.Fatalf("response %d %+v: %v", w.Code, got, err)
+	}
+	for _, code := range got.Codes {
+		page, err := engine.TaxonomyNode(t.Context(), code)
+		if err != nil || page.Release != got.Release {
+			t.Fatalf("%s: %+v %v", code, page, err)
+		}
+	}
+}

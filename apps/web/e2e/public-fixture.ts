@@ -11,7 +11,7 @@ export async function withPublicSite(available: boolean, run: (origin: string) =
       return
     }
     const path = new URL(request.url!, 'http://localhost').pathname
-    const data = path === '/api/v1/public/status' ? { release: '20990101_1', documents: 2, provisions: 4, nodes: 1 } : path === '/api/v1/public/taxonomy' ? { release: '20990101_1', nodes: [node], truncated: false } : path === '/api/v1/public/taxonomy/1' ? { release: '20990101_1', node, path: [node], documents: [] } : null
+    const data = path === '/api/v1/public/status' ? { release: '20990101_1', documents: 2, provisions: 4, nodes: 1 } : path === '/api/v1/public/taxonomy/codes' ? { release: '20990101_1', codes: ['1'] } : path === '/api/v1/public/taxonomy' ? { release: '20990101_1', nodes: [node], truncated: false } : path === '/api/v1/public/taxonomy/1' ? { release: '20990101_1', node, path: [node], documents: [] } : null
     response.writeHead(data ? 200 : 404, { 'content-type': 'application/json' })
     response.end(JSON.stringify(data))
   })

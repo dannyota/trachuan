@@ -110,7 +110,7 @@ test('Google-only reauth returns through login', async ({ page }) => {
   await expect(page).toHaveURL(/\/account/)
   await expect(page.getByText("To add a password, sign in again. You'll come back here.")).toBeVisible()
   await page.getByRole('button', { name: 'Sign in again' }).click()
-  await expect(page).toHaveURL(/\/login\?next=%2Faccount&reason=reauth/)
+  await expect(page).toHaveURL(url => url.pathname === '/login' && url.searchParams.get('next') === '/account' && url.searchParams.get('reason') === 'reauth')
 })
 
 for (const operation of ['recovery', 'remove'] as const) {

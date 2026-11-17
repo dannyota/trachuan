@@ -9,7 +9,7 @@ it('renders public coverage anonymously, caches it, and omits query and account 
     let calls = [];
     globalThis.fetch = async request => {
       calls.push({ path: new URL(request.url).pathname, cookie: request.headers.get('cookie') });
-      return new Response(JSON.stringify({ release: '20260101_1', documents: 12, provisions: 34, nodes: 2, gaps: { missing: 3 }, newest_source_date: '2026-01-01' }), { headers: { 'content-type': 'application/json' } });
+      return new Response(JSON.stringify(new URL(request.url).pathname.endsWith('/codes') ? { release: '20260101_1', codes: ['1'] } : { release: '20260101_1', documents: 12, provisions: 34, nodes: 2, gaps: { missing: 3 }, newest_source_date: '2026-01-01' }), { headers: { 'content-type': 'application/json' } });
     };
     const app = (await import('./.output/server/chunks/nitro/nitro.mjs')).g();
     const results = [];
@@ -20,7 +20,7 @@ it('renders public coverage anonymously, caches it, and omits query and account 
     console.log(JSON.stringify({ results, calls }));
   `
   const result = JSON.parse(execFileSync(process.execPath, ['--input-type=module', '-e', script], { encoding: 'utf8' }))
-  expect(result.calls).toEqual([{ path: '/api/v1/public/status', cookie: null }, { path: '/api/v1/public/status', cookie: null }])
+  expect(result.calls).toEqual([{ path: '/api/v1/public/status', cookie: null }, { path: '/api/v1/public/status', cookie: null }, { path: '/api/v1/public/status', cookie: null }, { path: '/api/v1/public/taxonomy/codes', cookie: null }])
   for (const page of result.results) {
     expect(page.status).toBe(200)
     expect(page.text).not.toContain('secret-query-text')

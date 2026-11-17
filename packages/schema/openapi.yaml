@@ -2184,6 +2184,41 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /api/v1/public/taxonomy/codes:
+    get:
+      tags: [web]
+      security: []
+      responses:
+        '200':
+          description: Success
+          headers:
+            Cache-Control:
+              schema: {type: string}
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaxonomyCodes'
+        '400':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Request failed
+          headers:
+            Retry-After:
+              schema: {type: integer}
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /api/v1/public/taxonomy/{code}:
     get:
       tags: [web]
@@ -2937,6 +2972,15 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/NodeEntry'
+    TaxonomyCodes:
+      type: object
+      additionalProperties: false
+      required: [release, codes]
+      properties:
+        release: {type: string}
+        codes:
+          type: array
+          items: {type: string}
     TaxonomyResult:
       type: object
       properties:
