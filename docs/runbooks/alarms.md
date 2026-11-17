@@ -5,20 +5,9 @@ Confirm the email subscription from the confirmation message. In the OCI
 Console, open Notifications, select `trachuan-alarms`, and check that the
 subscription is active. See [Oracle's subscription instructions][subscription].
 
-The primary configures the custom alarms after installing the host bundle.
-Thresholds follow [host budgets](../design/budgets-host.md#host-alarms-proposed)
-and the [backup design](../design/deployment.md#backups).
-
-| Signal                                           | Trigger                                               |
-| ------------------------------------------------ | ----------------------------------------------------- |
-| Boot and data filesystem use                     | Above 70% for 5 minutes, separately                   |
-| Memory utilization                               | Above 90% for 5 minutes                               |
-| Instance accessibility and infrastructure status | Nonzero for 1 minute                                  |
-| Host heartbeat or expected agent metric stream   | Absent for 5 minutes                                  |
-| External HTTPS: `/` and `/api/v1/public/status`  | Every vantage point failing for 5 minutes             |
-| Newest backup                                    | Last success older than 26 hours                      |
-| Data volume mount                                | `data_mounted` is 0                                   |
-| Backup job                                       | `backup_failed` is 1 or last-success metric is absent |
+The alarms, their conditions, how long each must persist and their severity are
+listed once in [host budgets](../design/budgets-host.md#host-alarms); they are
+defined in `deploy/oci/` and applied with OpenTofu, never created by hand.
 
 The external HTTPS alarms mean every vantage point failed for 5 minutes. In the
 OCI Console, open Health Checks and inspect the results page for

@@ -5,7 +5,7 @@ resource "oci_ons_notification_topic" "alarms" {
 }
 
 resource "oci_monitoring_alarm" "backup_job_failed" {
-  body                                          = "A backup job reported failed or unknown."
+  body                                          = "A backup job failed. Read backup.log in OCI Logging (log trachuan-host-jobs); the next scheduled job runs as usual."
   compartment_id                                = var.compartment_ocid
   destinations                                  = [oci_ons_notification_topic.alarms.id]
   display_name                                  = "trachuan backup job failed"
@@ -20,14 +20,14 @@ resource "oci_monitoring_alarm" "backup_job_failed" {
   notification_version                          = "1.X"
   pending_duration                              = "PT5M"
   query                                         = "backup_failed[5m].max() > 0"
-  repeat_notification_duration                  = "PT4H"
+  repeat_notification_duration                  = "PT24H"
   resolution                                    = "1m"
   rule_name                                     = "base"
   severity                                      = "CRITICAL"
 }
 
 resource "oci_monitoring_alarm" "instance_not_accessible" {
-  body                                          = "Instance accessibility status is nonzero."
+  body                                          = "OCI reports the instance not accessible for 5 minutes. Check the instance in the OCI console; the site is likely down."
   compartment_id                                = var.compartment_ocid
   destinations                                  = [oci_ons_notification_topic.alarms.id]
   display_name                                  = "trachuan instance not accessible"
@@ -40,7 +40,7 @@ resource "oci_monitoring_alarm" "instance_not_accessible" {
   namespace                                     = "oci_compute_instance_health"
   notification_title                            = "trachuan instance not accessible"
   notification_version                          = "1.X"
-  pending_duration                              = "PT1M"
+  pending_duration                              = "PT5M"
   query                                         = "instance_accessibility_status[1m].max() > 0"
   repeat_notification_duration                  = "PT4H"
   resolution                                    = "1m"
@@ -49,7 +49,7 @@ resource "oci_monitoring_alarm" "instance_not_accessible" {
 }
 
 resource "oci_monitoring_alarm" "data_volume_not_mounted" {
-  body                                          = "/srv/trachuan/data is not mounted."
+  body                                          = "/srv/trachuan/data has not been mounted for 5 minutes; the database cannot run."
   compartment_id                                = var.compartment_ocid
   destinations                                  = [oci_ons_notification_topic.alarms.id]
   display_name                                  = "trachuan data volume not mounted"
@@ -62,7 +62,7 @@ resource "oci_monitoring_alarm" "data_volume_not_mounted" {
   namespace                                     = "trachuan_host"
   notification_title                            = "trachuan data volume not mounted"
   notification_version                          = "1.X"
-  pending_duration                              = "PT2M"
+  pending_duration                              = "PT5M"
   query                                         = "data_mounted[1m].min() < 1"
   repeat_notification_duration                  = "PT4H"
   resolution                                    = "1m"
@@ -86,14 +86,14 @@ resource "oci_monitoring_alarm" "backup_result_absent" {
   notification_version                          = "1.X"
   pending_duration                              = "PT15M"
   query                                         = "backup_last_success_age_seconds[5m]{job = \"full\"}.absent()"
-  repeat_notification_duration                  = "PT4H"
+  repeat_notification_duration                  = "PT24H"
   resolution                                    = "1m"
   rule_name                                     = "base"
   severity                                      = "CRITICAL"
 }
 
 resource "oci_monitoring_alarm" "agent_metrics_absent" {
-  body                                          = "No agent metrics for 5 minutes: host down or agent stopped."
+  body                                          = "No compute agent metrics for 10 minutes: the host is down or the agent stopped."
   compartment_id                                = var.compartment_ocid
   destinations                                  = [oci_ons_notification_topic.alarms.id]
   display_name                                  = "trachuan agent metrics absent"
@@ -106,7 +106,7 @@ resource "oci_monitoring_alarm" "agent_metrics_absent" {
   namespace                                     = "oci_computeagent"
   notification_title                            = "trachuan agent metrics absent"
   notification_version                          = "1.X"
-  pending_duration                              = "PT5M"
+  pending_duration                              = "PT10M"
   query                                         = "MemoryUtilization[1m].absent()"
   repeat_notification_duration                  = "PT4H"
   resolution                                    = "1m"
@@ -130,7 +130,7 @@ resource "oci_ons_subscription" "alarm_email" {
 }
 
 resource "oci_monitoring_alarm" "memory_above_90pct" {
-  body                                          = "Host memory above 90% for 5 minutes."
+  body                                          = "Host memory above 90% for 15 minutes."
   compartment_id                                = var.compartment_ocid
   destinations                                  = [oci_ons_notification_topic.alarms.id]
   display_name                                  = "trachuan memory above 90%"
@@ -143,16 +143,16 @@ resource "oci_monitoring_alarm" "memory_above_90pct" {
   namespace                                     = "oci_computeagent"
   notification_title                            = "trachuan memory above 90%"
   notification_version                          = "1.X"
-  pending_duration                              = "PT5M"
+  pending_duration                              = "PT15M"
   query                                         = "MemoryUtilization[1m].mean() > 90"
-  repeat_notification_duration                  = "PT4H"
+  repeat_notification_duration                  = "PT24H"
   resolution                                    = "1m"
   rule_name                                     = "base"
-  severity                                      = "CRITICAL"
+  severity                                      = "WARNING"
 }
 
 resource "oci_monitoring_alarm" "heartbeat_absent" {
-  body                                          = "The host metrics timer has not reported for 5 minutes."
+  body                                          = "The host metrics timer has not reported for 10 minutes: the host is down or its timers stopped."
   compartment_id                                = var.compartment_ocid
   destinations                                  = [oci_ons_notification_topic.alarms.id]
   display_name                                  = "trachuan heartbeat absent"
@@ -165,7 +165,7 @@ resource "oci_monitoring_alarm" "heartbeat_absent" {
   namespace                                     = "trachuan_host"
   notification_title                            = "trachuan heartbeat absent"
   notification_version                          = "1.X"
-  pending_duration                              = "PT5M"
+  pending_duration                              = "PT10M"
   query                                         = "heartbeat[1m].absent()"
   repeat_notification_duration                  = "PT4H"
   resolution                                    = "1m"
@@ -189,10 +189,10 @@ resource "oci_monitoring_alarm" "deploy_result_absent" {
   notification_version                          = "1.X"
   pending_duration                              = "PT30M"
   query                                         = "deploy_last_success_age_seconds[10m].absent()"
-  repeat_notification_duration                  = "PT4H"
+  repeat_notification_duration                  = "PT24H"
   resolution                                    = "1m"
   rule_name                                     = "base"
-  severity                                      = "CRITICAL"
+  severity                                      = "WARNING"
 }
 
 resource "oci_monitoring_alarm" "backup_older_than_26h" {
@@ -211,14 +211,14 @@ resource "oci_monitoring_alarm" "backup_older_than_26h" {
   notification_version                          = "1.X"
   pending_duration                              = "PT10M"
   query                                         = "backup_last_success_age_seconds[5m]{job =~ \"full|diff\"}.grouping().min() > 93600"
-  repeat_notification_duration                  = "PT4H"
+  repeat_notification_duration                  = "PT24H"
   resolution                                    = "1m"
   rule_name                                     = "base"
   severity                                      = "CRITICAL"
 }
 
 resource "oci_monitoring_alarm" "deploy_failed" {
-  body                                          = "The host updater reported a failed deployment run; see /var/log/trachuan/deploy.log through OCI Logging."
+  body                                          = "Every host updater run for 30 minutes failed; production keeps serving the active release. Read deploy.log in OCI Logging. Single failed runs retry every 5 minutes and do not alert."
   compartment_id                                = var.compartment_ocid
   destinations                                  = [oci_ons_notification_topic.alarms.id]
   display_name                                  = "trachuan deploy failed"
@@ -231,16 +231,16 @@ resource "oci_monitoring_alarm" "deploy_failed" {
   namespace                                     = "trachuan_host"
   notification_title                            = "trachuan deploy failed"
   notification_version                          = "1.X"
-  pending_duration                              = "PT5M"
+  pending_duration                              = "PT30M"
   query                                         = "deploy_failed[5m].max() > 0"
-  repeat_notification_duration                  = "PT4H"
+  repeat_notification_duration                  = "PT24H"
   resolution                                    = "1m"
   rule_name                                     = "base"
-  severity                                      = "CRITICAL"
+  severity                                      = "WARNING"
 }
 
 resource "oci_monitoring_alarm" "filesystem_above_70pct" {
-  body                                          = "A host filesystem is above 70% used for 5 minutes."
+  body                                          = "A host filesystem has been above 70% used for 15 minutes; plan cleanup or a larger volume."
   compartment_id                                = var.compartment_ocid
   destinations                                  = [oci_ons_notification_topic.alarms.id]
   display_name                                  = "trachuan filesystem above 70%"
@@ -253,16 +253,16 @@ resource "oci_monitoring_alarm" "filesystem_above_70pct" {
   namespace                                     = "trachuan_host"
   notification_title                            = "trachuan filesystem above 70%"
   notification_version                          = "1.X"
-  pending_duration                              = "PT5M"
+  pending_duration                              = "PT15M"
   query                                         = "filesystem_used_percent[1m]{mount = \"/\"}.max() > 70 || filesystem_used_percent[1m]{mount = \"/srv/trachuan/data\"}.max() > 70"
-  repeat_notification_duration                  = "PT4H"
+  repeat_notification_duration                  = "PT24H"
   resolution                                    = "1m"
   rule_name                                     = "base"
-  severity                                      = "CRITICAL"
+  severity                                      = "WARNING"
 }
 
 resource "oci_monitoring_alarm" "infrastructure_status" {
-  body                                          = "Infrastructure instance status is nonzero."
+  body                                          = "OCI reports an infrastructure problem with the instance for 5 minutes. Check the instance in the OCI console."
   compartment_id                                = var.compartment_ocid
   destinations                                  = [oci_ons_notification_topic.alarms.id]
   display_name                                  = "trachuan infrastructure status"
@@ -275,7 +275,7 @@ resource "oci_monitoring_alarm" "infrastructure_status" {
   namespace                                     = "oci_compute_infrastructure_health"
   notification_title                            = "trachuan infrastructure status"
   notification_version                          = "1.X"
-  pending_duration                              = "PT1M"
+  pending_duration                              = "PT5M"
   query                                         = "instance_status[1m].max() > 0"
   repeat_notification_duration                  = "PT4H"
   resolution                                    = "1m"
