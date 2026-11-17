@@ -54,7 +54,7 @@ func runTaxonomyDrawWith(ctx context.Context, args []string, stderr io.Writer, l
 		return fail(1, fmt.Errorf("release has %d manual taxonomy assignments; seed provenance is incomplete", e.manualCount))
 	}
 	if opts["--slice"] == "multi-family" {
-		f, _, readErr := classify.ReadFamilyArtifact(opts["--families"], e.taxonomyHash, e.nodes)
+		f, _, readErr := classify.ReadFamilyArtifactForScore(opts["--families"], e.taxonomyHash, e.nodes)
 		if readErr != nil {
 			return fail(1, readErr)
 		}
