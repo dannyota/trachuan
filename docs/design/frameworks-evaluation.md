@@ -63,8 +63,9 @@ its order.
   rate; balanced accuracy is their mean.
 
 Every metric has its numerator and denominator, overall and per version. A
-metric with a zero denominator, or a run in which any case errored, is
-`unavailable`, and an unavailable gated metric fails.
+metric with a zero denominator, or one with an errored case among its gated
+cases, is `unavailable`, and an unavailable gated metric fails. `unverified`
+cases are diagnostic only: no gate, error, filter or floor counts them.
 
 ## Cohorts and callers
 
@@ -180,6 +181,9 @@ per-version counts of accepted, rejected, `unverified` and `out_of_release`
 cases; every metric per cohort, mode and version with numerators, denominators
 and the noise statement; `near_hits`; the per-case filter result; the
 calibration record's hash and threshold; the invariant check per caller and
-class; each floor with its value and result; the paired comparison; and the
-retrieval recipe status. It holds case ids, handles and counts, never question
-text or control text, and stays beside the dump, never in Git.
+class; each floor with its value and result; the paired comparison; the
+retrieval recipe status; and, per case, its id, adjudication, target handle, and
+per cohort and mode its rank or miss and its abstention outcome, so the next
+release can pair cases and recompute paired metrics. It holds case ids, handles
+and counts, never question text or control text, and stays beside the dump,
+never in Git.

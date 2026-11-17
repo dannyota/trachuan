@@ -151,8 +151,10 @@ active signed law release as a placeholder frameworks retrieval recipe, naming
 that release, with status `placeholder` in the release row; they depend on no
 framework text, but the law threshold was calibrated on law cohorts and means
 nothing for controls. `corpus_status` and `quality_gaps` report the status,
-`quality_pass` is false while it stands, and the first measured evaluation
-replaces the placeholder before any frameworks release is signed.
+`quality_pass` is false while it stands. A build whose snapshot holds a reviewed
+case file calibrates the threshold before it writes the release row and the
+dump, and the evaluation of that dump gates it, so the placeholder is never
+signed.
 
 ## Release and deployment
 
