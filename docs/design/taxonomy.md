@@ -205,18 +205,23 @@ the package places each article once (17 of 13,027 seeded articles on
 `vn/20261115_2`), so the multi-family slice is model-adjudicated: 100 unseeded
 articles from documents the classifier will see, half drawn from documents whose
 document-level request returns two or more level-2 codes and half at random,
-each labeled with every family that applies. The 17 seeded multi-family articles
-are reported without a floor. The coordinator's corrections are applied, then
-the set is frozen with a hash like the seeded set; the slice gates only against
-that frozen set. The custom-node slice does not apply while `custom.yaml` is
-empty. Seeds land on the original documents the package links, almost never on
-consolidated texts, so no consolidated article has an independent label to
-compare with (run `vn/20261115_2`: 0 testable articles). The inheritance slice
-is therefore model-adjudicated like the post-2023 one: Codex `gpt-6-astra`
-labels 100 inherited consolidated articles blind to the inherited nodes, the
-coordinator reads 20, and the set is frozen with a hash; with fewer than 100
-inherited articles the slice is unavailable. Build measures this slice against
-that frozen set, before it writes assignments; until the set exists the slice is
+each labeled with every family that applies. The post-2023 slice draws 100
+unseeded articles of primary documents issued on or after 2024-01-01, after the
+2023 codification package. Every model-adjudicated draw is seeded, keeps at most
+two articles per document, and gives the labeler each article's own text, its
+document's number and title, and the active tree, never seeds, inherited nodes
+or classifier output. The 17 seeded multi-family articles are reported without a
+floor. The coordinator's corrections are applied, then the set is frozen with a
+hash like the seeded set; the slice gates only against that frozen set. The
+custom-node slice does not apply while `custom.yaml` is empty. Seeds land on the
+original documents the package links, almost never on consolidated texts, so no
+consolidated article has an independent label to compare with (run
+`vn/20261115_2`: 0 testable articles). The inheritance slice is therefore
+model-adjudicated like the post-2023 one: Codex `gpt-6-astra` labels 100
+inherited consolidated articles blind to the inherited nodes, the coordinator
+reads 20, and the set is frozen with a hash; with fewer than 100 inherited
+articles the slice is unavailable. Build measures this slice against that frozen
+set, before it writes assignments; until the set exists the slice is
 unavailable: when the slice is unavailable or any inheritance row fails, build
 writes no `inherited` assignment and records why in the taxonomy stats, so the
 release serves seeds and overrides only; `corpus eval` reports the same rows.
