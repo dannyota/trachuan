@@ -4,7 +4,7 @@ import { expect, it } from 'vitest'
 import { publicSummary } from '../e2e/summary-data'
 
 function run(body: string) {
-  return JSON.parse(execFileSync(process.execPath, ['--input-type=module', '-e', `
+  const lines = execFileSync(process.execPath, ['--input-type=module', '-e', `
     import { Server } from 'node:http';
     Server.prototype.listen = function () { return this };
     process.env.NITRO_SHUTDOWN_DISABLED = '1';
@@ -41,7 +41,10 @@ function run(body: string) {
       return {status:response.status,headers:Object.fromEntries(response.headers),body:await response.text()};
     }
     ${body}
-  `], { encoding: 'utf8', timeout: 5000 }))
+  `], { encoding: 'utf8', timeout: 5000 }).trim().split('\n')
+  const result = JSON.parse(lines.pop()!)
+  for (const line of lines) expect(JSON.parse(line)).toMatchObject({ msg: 'summary render' })
+  return result
 }
 
 it('shares status across public renders until 30 seconds after request start', () => {

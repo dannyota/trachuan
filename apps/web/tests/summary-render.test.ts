@@ -4,7 +4,7 @@ import { expect, it } from 'vitest'
 import { publicSummary, forbiddenMarkers } from '../e2e/summary-data'
 
 function run(body: string) {
-  return JSON.parse(execFileSync(process.execPath, ['--input-type=module', '-e', `
+  const lines = execFileSync(process.execPath, ['--input-type=module', '-e', `
     import { Server } from 'node:http';
     import { hash } from './node_modules/nitropack/dist/runtime/internal/hash.mjs';
     Server.prototype.listen = function () { return this };
@@ -36,7 +36,9 @@ function run(body: string) {
       return {status:response.status,headers:Object.fromEntries(response.headers),body:await response.text()};
     }
     ${body}
-  `], { encoding: 'utf8', maxBuffer: 10 * 1024 * 1024, timeout: 5000 }))
+  `], { encoding: 'utf8', maxBuffer: 10 * 1024 * 1024, timeout: 5000 }).trim().split('\n')
+  const result = JSON.parse(lines.pop()!)
+  return { ...result, renders: lines.map(line => JSON.parse(line)) }
 }
 
 function decodedData(html: string): string {
@@ -316,4 +318,19 @@ it.each(['flag off', 'rollback', 'no active release', 'available'])('changes top
     expect(result.sitemap.body.includes('<sitemapindex')).toBe(state === 'available')
     expect(result.documents.status).toBe(state === 'available' ? 200 : 404)
   }
+})
+
+it('logs one line per summary render and none for a cache hit or another page', () => {
+  const result = run(`
+    await page('/vn/documents/vn:vbpl:1/summary');
+    await page('/vn/documents/vn:vbpl:1/summary');
+    await page('/');
+    await page('/vn/documents/vn:vbpl:9/summary');
+    await page('/frameworks/synthetic/summary');
+    console.log(JSON.stringify({}));
+  `)
+  expect(result.renders).toEqual([
+    { msg: 'summary render', time: '2099-01-01T16:59:59.000Z', path: '/vn/documents/vn:vbpl:1/summary' },
+    { msg: 'summary render', time: '2099-01-01T16:59:59.000Z', path: '/vn/documents/vn:vbpl:9/summary' },
+  ])
 })
