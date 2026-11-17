@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"flag"
+	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -45,15 +46,19 @@ func runAdminSession(ctx context.Context, args []string, queries adminStore) (re
 	if err != nil {
 		return errors.New("create session file failed")
 	}
-	closed, retainFile := false, false
+	closed, committed := false, false
+	cleanup := file
 	defer func() {
+		if !committed {
+			if clearErr := clearAdminSessionFile(cleanup); clearErr != nil {
+				result = clearErr
+			}
+		}
 		if !closed {
 			_ = file.Close()
 		}
-		if !retainFile {
-			if removeErr := os.Remove(*path); removeErr != nil {
-				result = errors.New("remove session file failed")
-			}
+		if cleanup != file {
+			_ = cleanup.Close()
 		}
 	}()
 	if modeErr := file.Chmod(0600); modeErr != nil {
@@ -62,6 +67,11 @@ func runAdminSession(ctx context.Context, args []string, queries adminStore) (re
 	info, statErr := file.Stat()
 	if statErr != nil || info.Mode().Perm() != 0600 {
 		return errors.New("verify session file mode failed")
+	}
+	cleanup, err = duplicateAdminSessionFile(file)
+	if err != nil {
+		cleanup = file
+		return errors.New("prepare session file cleanup failed")
 	}
 	db, ok := queries.(adminSessionStore)
 	if !ok {
@@ -89,16 +99,25 @@ func runAdminSession(ctx context.Context, args []string, queries adminStore) (re
 	})
 	if err != nil {
 		cleanupCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), authQueryDeadline)
-		_, revokeErr := db.RevokeSession(cleanupCtx, params.TokenHash)
+		_, _ = db.RevokeSession(cleanupCtx, params.TokenHash)
 		cancel()
-		if revokeErr != nil {
-			retainFile = true
-			return errors.New("revoke session failed; session file retained")
-		}
 		return errors.New("create session failed")
 	}
-	retainFile = true
+	committed = true
 	return nil
+}
+
+func clearAdminSessionFile(file *os.File) error {
+	if err := os.Remove(file.Name()); err == nil {
+		return nil
+	}
+	if err := file.Truncate(0); err != nil {
+		return fmt.Errorf("session file could not be cleared: %q", file.Name())
+	}
+	if err := file.Sync(); err != nil {
+		return fmt.Errorf("session file could not be cleared: %q", file.Name())
+	}
+	return errors.New("remove session file failed")
 }
 
 func checkSessionAccount(account store.Account) error {

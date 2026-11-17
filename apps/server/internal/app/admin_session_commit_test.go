@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -37,6 +38,7 @@ type adminSessionCommitFixture struct {
 	path, hash                     string
 	live, commitError, revokeError bool
 	cancel                         context.CancelFunc
+	afterRevoke                    func() error
 }
 
 func newAdminSessionCommitFixture(path string) *adminSessionCommitFixture {
@@ -79,6 +81,11 @@ func (s *adminSessionCommitFixture) RevokeSession(ctx context.Context, hash stri
 	if hash != s.hash || hash != hex.EncodeToString(digest[:]) {
 		return 0, errors.New("revocation targeted another session")
 	}
+	if s.afterRevoke != nil {
+		if changeErr := s.afterRevoke(); changeErr != nil {
+			return 0, changeErr
+		}
+	}
 	if s.revokeError {
 		return 0, errors.New("synthetic revocation failure")
 	}
@@ -112,16 +119,85 @@ func TestAdminSession_UncertainCommitRevokesBeforeRemovingFile(t *testing.T) {
 	}
 }
 
-func TestAdminSession_FailedReconciliationRetainsFile(t *testing.T) {
+func TestAdminSession_RevokeErrorStillRemovesFile(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "session")
 	s := newAdminSessionCommitFixture(path)
 	s.commitError, s.revokeError = true, true
 	var out, stderr bytes.Buffer
 	err := runAdmin(context.Background(), []string{"session", "create", "--account", "42", "--out", path}, s, &out)
-	if err == nil || exitCode(err, &stderr) != 1 || stderr.String() != "server: revoke session failed; session file retained\n" || out.Len() != 0 {
+	if err == nil || exitCode(err, &stderr) != 1 || stderr.String() != "server: create session failed\n" || out.Len() != 0 {
 		t.Fatal("reconciliation failure did not return a fixed error")
 	}
-	if data, readErr := os.ReadFile(path); readErr != nil || len(data) != 44 || !s.live {
-		t.Fatal("unreconciled session lost its file")
+	if _, statErr := os.Stat(path); !os.IsNotExist(statErr) {
+		t.Fatal("revocation failure left the session value on disk")
+	}
+}
+
+func TestAdminSession_RemoveErrorClearsHeldFile(t *testing.T) {
+	for _, revokeError := range []bool{false, true} {
+		t.Run(fmt.Sprintf("revoke-error-%v", revokeError), func(t *testing.T) {
+			parent := t.TempDir()
+			directory, moved := filepath.Join(parent, "original"), filepath.Join(parent, "moved")
+			if err := os.Mkdir(directory, 0700); err != nil {
+				t.Fatal(err)
+			}
+			path := filepath.Join(directory, "session")
+			s := newAdminSessionCommitFixture(path)
+			s.commitError, s.revokeError = true, revokeError
+			s.afterRevoke = func() error { return os.Rename(directory, moved) }
+			var out, stderr bytes.Buffer
+			err := runAdmin(context.Background(), []string{"session", "create", "--account", "42", "--out", path}, s, &out)
+			if err == nil || exitCode(err, &stderr) != 1 || stderr.String() != "server: remove session file failed\n" || out.Len() != 0 {
+				t.Fatal("removal failure did not return a fixed error")
+			}
+			if data, readErr := os.ReadFile(filepath.Join(moved, "session")); readErr != nil || len(data) != 0 {
+				t.Fatal("removal failure left a readable session value")
+			}
+		})
+	}
+}
+
+func TestAdminSession_SuccessWritesOnlyValue(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "session")
+	s := newAdminSessionCommitFixture(path)
+	var out, stderr bytes.Buffer
+	err := runAdmin(context.Background(), []string{"session", "create", "--account", "42", "--out", path}, s, &out)
+	if exitCode(err, &stderr) != 0 || out.Len() != 0 || stderr.Len() != 0 {
+		t.Fatal("successful session creation wrote diagnostics")
+	}
+	data, readErr := os.ReadFile(path)
+	if readErr != nil || len(data) != 44 || data[43] != '\n' {
+		t.Fatal("session file does not contain exactly a cookie value and newline")
+	}
+	if decoded, decodeErr := base64.RawURLEncoding.Strict().DecodeString(string(data[:43])); decodeErr != nil || len(decoded) != 32 {
+		t.Fatal("session value is not 32 bytes")
+	}
+	digest := sha256.Sum256(data[:43])
+	if hex.EncodeToString(digest[:]) != s.hash || !s.live {
+		t.Fatal("session file does not authenticate the committed session")
+	}
+}
+
+func TestAdminSession_ClearFailureReportsPath(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "session")
+	if err := os.WriteFile(path, []byte("synthetic-session-value\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	file, err := os.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = file.Close() }()
+	if err = os.Rename(path, path+".moved"); err != nil {
+		t.Fatal(err)
+	}
+	if err = os.Mkdir(path, 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err = os.WriteFile(filepath.Join(path, "entry"), nil, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if clearErr := clearAdminSessionFile(file); clearErr == nil || clearErr.Error() != fmt.Sprintf("session file could not be cleared: %q", path) {
+		t.Fatal("clearing failure did not name the path without its value")
 	}
 }
