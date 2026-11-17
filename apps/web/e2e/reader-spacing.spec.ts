@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 import { clientAddress } from './client-address'
 
 for (const colorScheme of ['light', 'dark'] as const) {
-  for (const width of [320, 390, 768, 1366]) {
+  for (const width of [320, 390, 768, 1024, 1366]) {
     test(`reader spacing at ${width} in ${colorScheme}`, async ({ page }, info) => {
       await page.setExtraHTTPHeaders({ 'X-Forwarded-For': clientAddress(info) })
       await page.setViewportSize({ width: 1366, height: 720 })
@@ -46,27 +46,30 @@ for (const colorScheme of ['light', 'dark'] as const) {
         const columnWidth = await page.locator('.reader-content').evaluate(element => element.clientWidth - parseFloat(getComputedStyle(element).paddingLeft) - parseFloat(getComputedStyle(element).paddingRight))
         expect(columnWidth).toBe(width - 32)
       }
-      await page.locator('.reader-top-marker').evaluate(element => window.scrollTo(0, window.scrollY + element.getBoundingClientRect().top + 10))
-      const button = page.locator('.reader-top')
-      await expect(button).toBeVisible()
-      const clearance = await page.locator('.reader-content').evaluate(element => parseFloat(getComputedStyle(element).paddingBottom))
-      const buttonSize = await button.evaluate(element => ({ height: element.getBoundingClientRect().height, bottom: parseFloat(getComputedStyle(element).bottom) }))
-      expect(clearance).toBeGreaterThanOrEqual(buttonSize.height + buttonSize.bottom + 16)
-      await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
-      const overlaps = await page.evaluate(() => {
-        const button = document.querySelector('.reader-top')!.getBoundingClientRect()
-        const nodes: Node[] = []
-        for (const selector of ['.reader-content', 'footer.site-footer']) {
-          const walker = document.createTreeWalker(document.querySelector(selector)!, NodeFilter.SHOW_TEXT)
-          while (walker.nextNode()) if (!walker.currentNode.parentElement?.closest('.reader-top')) nodes.push(walker.currentNode)
-        }
-        return nodes.some(element => {
-          const range = document.createRange()
-          range.selectNode(element)
-          return Array.from(range.getClientRects()).some(line => line.width > 0 && line.height > 0 && line.left < button.right && line.right > button.left && line.top < button.bottom && line.bottom > button.top)
+      await page.evaluate(() => window.scrollTo(0, 0))
+      await expect(page.locator('.reader-top:visible')).toHaveCount(0)
+      for (const position of ['middle', 'end'] as const) {
+        await page.evaluate(position => window.scrollTo(0, position === 'middle' ? document.documentElement.scrollHeight / 2 : document.documentElement.scrollHeight), position)
+        const button = page.locator('.reader-top:visible')
+        await expect(button).toBeVisible()
+        await expect(button).toHaveCount(1)
+        expect(await button.evaluate((element, selector) => !!element.closest(selector), width >= 1024 ? '.reader-toc-desktop' : '.reader-compact')).toBe(true)
+        const overlaps = await button.evaluate(element => {
+          const button = element.getBoundingClientRect()
+          const compact = document.querySelector<HTMLElement>('.reader-compact')!
+          const contentTop = getComputedStyle(compact).display === 'none' ? 0 : compact.getBoundingClientRect().bottom
+          return ['.reader-content', 'footer.site-footer'].some(selector => {
+            const walker = document.createTreeWalker(document.querySelector(selector)!, NodeFilter.SHOW_TEXT)
+            while (walker.nextNode()) {
+              const range = document.createRange()
+              range.selectNode(walker.currentNode)
+              if (Array.from(range.getClientRects()).some(line => line.width > 0 && line.height > 0 && line.left < button.right && line.right > button.left && Math.max(line.top, selector === '.reader-content' ? contentTop : 0) < button.bottom && line.bottom > button.top)) return true
+            }
+            return false
+          })
         })
-      })
-      expect(overlaps).toBe(false)
+        expect(overlaps).toBe(false)
+      }
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
     })
   }

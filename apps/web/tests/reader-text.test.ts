@@ -2,9 +2,19 @@
 import { mount, flushPromises } from '@vue/test-utils'
 import { afterEach, expect, it, vi } from 'vitest'
 import Reader from '../app/pages/vn/documents/[key].vue'
+import ReaderCompact from '../app/components/ReaderCompact.vue'
+import { ref } from 'vue'
 import { setupReader } from './reader-setup'
 
 afterEach(() => vi.unstubAllGlobals())
+it('shows the back-to-top action in the compact bar after the top marker', async () => {
+  setupReader([])
+  const wrapper = mount(ReaderCompact, { props: { units: [], position: { anchor: ref(''), article: ref('') }, showTop: false } })
+  expect(wrapper.find('.reader-top').exists()).toBe(false)
+  await wrapper.setProps({ showTop: true })
+  await wrapper.get('.reader-top').trigger('click')
+  expect(wrapper.emitted('top')).toHaveLength(1)
+})
 it('renders legal text literally', async () => {
   setupReader([{ data: { release: '20261111_1', item: { complete: true, units: [{ kind: 'provision', anchor: 'a', text: '<Điều 1> & text' }] } } }])
   const wrapper = mount(Reader)
