@@ -37,12 +37,18 @@ func runFrameworksReleaseRowWith(ctx context.Context, rel string, stderr io.Writ
 	if err != nil {
 		return fail(1, err)
 	}
+	directories := []string{rel, filepath.Join(rel, "release")}
+	for _, dir := range directories {
+		if _, err = build.CheckedDirectory(filepath.Join(work, dir)); err != nil {
+			return fail(1, err)
+		}
+	}
 	root, err := os.OpenRoot(work)
 	if err != nil {
 		return fail(1, errors.New("open frameworks work directory failed"))
 	}
 	defer func() { _ = root.Close() }()
-	for _, dir := range []string{rel, filepath.Join(rel, "release")} {
+	for _, dir := range directories {
 		if err = root.Mkdir(dir, 0700); err != nil && !errors.Is(err, os.ErrExist) {
 			return fail(1, errors.New("create frameworks release directory failed"))
 		}

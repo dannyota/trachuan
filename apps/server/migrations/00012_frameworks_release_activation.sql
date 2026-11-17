@@ -2,8 +2,8 @@
 ALTER TABLE release_journal
     ADD COLUMN corpus_kind text NOT NULL DEFAULT 'law' CHECK (corpus_kind IN ('law', 'frameworks')),
     ADD CONSTRAINT release_journal_kind CHECK (
-        (corpus_kind = 'law' AND database_name ~ '^corpus_[a-z]{2}_[0-9]{8}(_[0-9]{1,2})?$'
-            AND expected_active_db ~ '^corpus_[a-z]{2}_[0-9]{8}(_[0-9]{1,2})?$') OR
+        (corpus_kind = 'law' AND database_name ~ '^corpus_[a-z]{2}_[0-9]{8}(_[0-9]+)?$'
+            AND expected_active_db ~ '^corpus_[a-z]{2}_[0-9]{8}(_[0-9]+)?$') OR
         (corpus_kind = 'frameworks' AND database_name ~ '^frameworks_[0-9]{8}(_[0-9]{1,2})?$'
             AND expected_active_db ~ '^frameworks_[0-9]{8}(_[0-9]{1,2})?$')
     ) NOT VALID,
@@ -24,7 +24,7 @@ ALTER TABLE release_journal
 ALTER TABLE retired_release
     ADD COLUMN corpus_kind text NOT NULL DEFAULT 'law' CHECK (corpus_kind IN ('law', 'frameworks')),
     ADD CONSTRAINT retired_release_kind CHECK (
-        (corpus_kind = 'law' AND db_name ~ '^corpus_[a-z]{2}_[0-9]{8}(_[0-9]{1,2})?$') OR
+        (corpus_kind = 'law' AND db_name ~ '^corpus_[a-z]{2}_[0-9]{8}(_[0-9]+)?$') OR
         (corpus_kind = 'frameworks' AND db_name ~ '^frameworks_[0-9]{8}(_[0-9]{1,2})?$')
     ) NOT VALID;
 ALTER TABLE frameworks_release

@@ -5,6 +5,7 @@ package migrations_test
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"danny.vn/trachuan/apps/server/migrations"
@@ -89,7 +90,7 @@ func TestFrameworksActivationMigration_LegacyUpdaterAndKindChecks(t *testing.T) 
 	}
 	for _, kind := range []string{"frameworks", "law", "other"} {
 		for _, name := range []string{"frameworks_20990101", "frameworks_20990101_1", "frameworks_20990101_99", "frameworks_20990101_123", "corpus_vn_20990101", "corpus_vn_20990101_123", "auth"} {
-			valid := kind == "frameworks" && (name == "frameworks_20990101" || name == "frameworks_20990101_1" || name == "frameworks_20990101_99") || kind == "law" && name == "corpus_vn_20990101"
+			valid := kind == "frameworks" && (name == "frameworks_20990101" || name == "frameworks_20990101_1" || name == "frameworks_20990101_99") || kind == "law" && (name == "corpus_vn_20990101" || name == "corpus_vn_20990101_123")
 			for _, sql := range []string{
 				`INSERT INTO retired_release(country,db_name,retired_at,retain_until,corpus_kind) VALUES('vn',$1,now(),now(),$2) ON CONFLICT(country,db_name) DO UPDATE SET corpus_kind=EXCLUDED.corpus_kind`,
 				`INSERT INTO release_journal(country,rel,step,state,message,operation_id,mode,database_name,corpus_kind) VALUES('vn','20990101','pruning','open','invented',repeat('d',32),'prune',$1,$2)`,
@@ -148,6 +149,47 @@ func TestFrameworksActivationMigration_LegacyUpdaterAndKindChecks(t *testing.T) 
 	}
 	if _, err = conn.Exec(ctx, legacy); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestFrameworksActivationMigration_AcceptsLegacyUpdaterLongLawSuffix(t *testing.T) {
+	ctx := t.Context()
+	conn, err := pgx.Connect(ctx, testpg.NewDatabase(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = conn.Close(context.Background()) }()
+	for _, name := range []string{"00001_auth.sql", "00008_release_activation.sql", "00011_frameworks_release.sql", "00012_frameworks_release_activation.sql"} {
+		raw, readErr := migrations.FS.ReadFile(name)
+		if readErr != nil {
+			t.Fatal(readErr)
+		}
+		if _, err = conn.Exec(ctx, splitMigration(t, raw)[0]); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var row []byte
+	if err = conn.QueryRow(ctx, `INSERT INTO release_journal
+ (operation_id,country,rel,mode,database_name,manifest_hash,dump_sha256,expected_active_db,manifest,step,state,message)
+ VALUES(repeat('f',32),'vn','20990101_123','new','corpus_vn_20990101_123',repeat('a',64),repeat('b',64),'corpus_vn_20990101_124','{}','activated','complete','corpus activated')
+ RETURNING row_to_json(release_journal)`).Scan(&row); err != nil {
+		t.Fatal("legacy updater journal insert refused")
+	}
+	var kind, target, expected string
+	if err = conn.QueryRow(ctx, `SELECT corpus_kind,database_name,expected_active_db FROM release_journal WHERE operation_id=repeat('f',32)`).Scan(&kind, &target, &expected); err != nil || kind != "law" || target != "corpus_vn_20990101_123" || expected != "corpus_vn_20990101_124" {
+		t.Fatal("legacy updater journal identity changed")
+	}
+	for _, digest := range []string{"a", "b"} {
+		if _, err = conn.Exec(ctx, `INSERT INTO retired_release(country,db_name,retired_at,retain_until,dropped_at,dump_sha256)
+ VALUES('vn','corpus_vn_20990101_124',now(),now()+interval '7 days',NULL,repeat($1,64))
+ ON CONFLICT(country,db_name) DO UPDATE SET retired_at=EXCLUDED.retired_at,
+ retain_until=EXCLUDED.retain_until,dropped_at=NULL,dump_sha256=EXCLUDED.dump_sha256`, digest); err != nil {
+			t.Fatal("legacy updater retirement upsert refused")
+		}
+	}
+	var digest string
+	if err = conn.QueryRow(ctx, `SELECT corpus_kind,dump_sha256 FROM retired_release WHERE country='vn' AND db_name='corpus_vn_20990101_124'`).Scan(&kind, &digest); err != nil || kind != "law" || digest != strings.Repeat("b", 64) {
+		t.Fatal("legacy updater retirement conflict update changed identity or digest")
 	}
 }
 

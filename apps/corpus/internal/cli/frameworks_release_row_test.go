@@ -3,6 +3,7 @@ package cli
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -99,6 +100,69 @@ func TestFrameworksReleaseRow_RefusesSyncedWorkBeforeLoadingOrWriting(t *testing
 			}
 			if _, err := os.Stat(filepath.Join(synced, "20990101")); !os.IsNotExist(err) {
 				t.Fatal("created output in synced work directory")
+			}
+		})
+	}
+}
+
+func TestFrameworksReleaseRow_RefusesSyncedDescendantsBeforeLoadingOrWriting(t *testing.T) {
+	for _, tc := range []struct {
+		name, directory, kind string
+		exists                bool
+	}{
+		{"registered run", "20990101", "registered", true},
+		{"registered release", "20990101/release", "registered", true},
+		{"uncreated registered run", "20990101", "registered", false},
+		{"uncreated registered release", "20990101/release", "registered", false},
+		{"run marker", "20990101", "marker", true},
+		{"release marker", "20990101/release", "marker", true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			home := t.TempDir()
+			t.Setenv("HOME", home)
+			work := filepath.Join(home, "work")
+			if err := os.Mkdir(work, 0700); err != nil {
+				t.Fatal(err)
+			}
+			synced := filepath.Join(work, tc.directory)
+			if tc.exists {
+				if err := os.MkdirAll(synced, 0700); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if tc.kind == "registered" {
+				configDir := filepath.Join(home, ".dropbox")
+				if err := os.Mkdir(configDir, 0700); err != nil {
+					t.Fatal(err)
+				}
+				config, err := json.Marshal(map[string]any{"business": map[string]string{"path": synced}})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err = os.WriteFile(filepath.Join(configDir, "info.json"), config, 0600); err != nil {
+					t.Fatal(err)
+				}
+			} else if err := os.WriteFile(filepath.Join(synced, ".dropbox"), nil, 0600); err != nil {
+				t.Fatal(err)
+			}
+			t.Setenv("FRAMEWORKS_WORK_DIR", work)
+			loaded := false
+			load := func(context.Context, string) ([]byte, error) { loaded = true; return []byte(`{}`), nil }
+			var stderr bytes.Buffer
+			if code := runFrameworksReleaseRowWith(t.Context(), "20990101", &stderr, load); code != 1 || !strings.Contains(stderr.String(), "sync folder refused") {
+				t.Fatal("accepted synced descendant")
+			}
+			if loaded {
+				t.Fatal("read metadata before refusing synced descendant")
+			}
+			uncreated := filepath.Join(work, "20990101", "release", "release.json")
+			if !tc.exists {
+				uncreated = filepath.Join(work, "20990101")
+			} else if tc.directory == "20990101" {
+				uncreated = filepath.Join(work, "20990101", "release")
+			}
+			if _, err := os.Stat(uncreated); !os.IsNotExist(err) {
+				t.Fatal("created output before refusing synced descendant")
 			}
 		})
 	}
