@@ -68,12 +68,14 @@ manifest, host policy, activation, rollback and proofs are in
 Use regional OCI Vault secrets in vault `trachuan-vault` with the
 software-protected key `trachuan-secrets`. Each Vault secret has the name of the
 Podman secret it becomes: `google_client_secret`, `smtp_username`,
-`smtp_password`, `account_keys`, `postgres_password`, `auth_db_password`,
-`corpus_reader_password`, `activator_db_password`, `backup_s3_key`, and
-`backup_s3_key_secret`. `server_signup_emails` is retired with open sign-up: the
-updater prunes it from its records and no longer fetches it. The fetcher derives
-`server_auth_database_url` and `server_corpus_database_url` from the passwords
-as the [host runbook](../runbooks/host.md#create-secrets) does.
+`smtp_password`, `account_keys`, `server_frameworks_key`
+([frameworks release](frameworks-release.md#key-and-flag)), `postgres_password`,
+`auth_db_password`, `corpus_reader_password`, `activator_db_password`,
+`backup_s3_key`, and `backup_s3_key_secret`. `server_signup_emails` is retired
+with open sign-up: the updater prunes it from its records and no longer fetches
+it. The fetcher derives `server_auth_database_url` and
+`server_corpus_database_url` from the passwords as the
+[host runbook](../runbooks/host.md#create-secrets) does.
 
 The [updater](pull-deployment.md#updater) reconciles secrets at most hourly and
 before every activation, under its locks. Through the host's

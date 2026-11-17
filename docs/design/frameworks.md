@@ -159,7 +159,8 @@ signed.
 
 ## Release and deployment
 
-The corpus kind is part of release identity everywhere, not a channel name:
+The corpus kind is part of release identity everywhere, not a channel name; the
+path from upload to activation is [frameworks release](frameworks-release.md):
 
 - **Manifest.** The signed manifest is public like the law manifest; that is the
   one exception to "nothing anonymous". Its complete field list: `kind`,
