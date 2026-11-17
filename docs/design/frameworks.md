@@ -133,6 +133,9 @@ reviewed before serving work starts. Its fixed rules:
 
 ## Evaluation
 
+The cases, hits, cohorts, measured recipe, release invariant check and floors
+are in [frameworks evaluation](frameworks-evaluation.md).
+
 compliary's 205 golden cases are the starting cohort, re-adjudicated against
 this release. Floors are set from the first measured run and recorded here;
 compliary measured recall@8 of 86.3% without a framework filter and 93.2% with
