@@ -100,3 +100,37 @@ it('offers expansion only when the rendered text overflows four lines', async ()
   height.mockRestore()
   scroll.mockRestore()
 })
+
+it('hides only a whitespace-equivalent heading while collapsed and preserves the citation', async () => {
+  vi.stubGlobal('onUnmounted', () => {})
+  const writeText = vi.fn().mockResolvedValue(undefined)
+  vi.stubGlobal('navigator', { clipboard: { writeText } })
+  const height = vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(80)
+  const scroll = vi.spyOn(HTMLElement.prototype, 'scrollHeight', 'get').mockReturnValue(160)
+  const text = '  Điều  1.\tThuế  \r\nNội dung thuế áp dụng.'
+  const hit = { doc: 'vn:vbpl:1', handle: 'vn:vbpl:1#dieu-1', citation: 'Điều 1', path: [{ heading: 'Thuế' }], text, complete: true }
+  const documents = { 'vn:vbpl:1': { number: '1/2099', type: 'Luật', status: { current: true }, text_source: 'source_tree' as const, text_complete: true } }
+  const wrapper = mount(SearchResults, { props: { result: { abstain: false, hits: [hit], documents }, query: 'thuế áp dụng' }, global: { stubs: { NuxtLink: true } } })
+  await flushPromises()
+  expect(wrapper.get('.result-text').text()).toBe('Nội dung thuế áp dụng.')
+  expect(wrapper.get('mark').text()).toBe('thuế áp dụng')
+  await wrapper.get('.result-actions button').trigger('click')
+  expect(writeText).toHaveBeenCalledWith('Điều 1 Luật 1/2099')
+  await wrapper.get('.result-toggle').trigger('click')
+  expect(wrapper.get('.result-text').element.textContent).toBe(text)
+  expect(wrapper.get('mark').text()).toBe('thuế áp dụng')
+  await wrapper.get('.result-toggle').trigger('click')
+  expect(wrapper.get('.result-text').text()).toBe('Nội dung thuế áp dụng.')
+  wrapper.unmount()
+  height.mockRestore()
+  scroll.mockRestore()
+})
+
+it('shows the first line when its composition differs or it is another heading', async () => {
+  const hit = { citation: 'Điều 1', path: [{ heading: 'Thuế' }], text: 'Điều 1. Thuế\nNội dung thuế áp dụng.', complete: true }
+  const wrapper = mount(SearchResults, { props: { result: { abstain: false, hits: [hit] }, query: 'thuế áp dụng' }, global: { stubs: { NuxtLink: true } } })
+  expect(wrapper.get('.result-text').text()).toBe(hit.text)
+  expect(wrapper.get('mark').text()).toBe('thuế áp dụng')
+  await wrapper.setProps({ result: { abstain: false, hits: [{ ...hit, text: 'Một tiêu đề khác\nNội dung thuế áp dụng.' }] } })
+  expect(wrapper.get('.result-text').text()).toBe('Một tiêu đề khác\nNội dung thuế áp dụng.')
+})

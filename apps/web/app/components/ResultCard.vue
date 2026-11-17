@@ -11,7 +11,7 @@ import CopyButton from './CopyButton.vue'
 
 type Hit = components['schemas']['Hit']
 type Result = components['schemas']['SearchResult']
-const props = defineProps<{ hit: Hit, documents?: Result['documents'], nodes?: Result['nodes'], release?: string, currentRelease?: boolean, statusDate?: string, query?: string, rank?: number }>()
+const props = defineProps<{ hit: Hit, documents?: Result['documents'], nodes?: Result['nodes'], release?: string, currentRelease?: boolean, statusDate?: string, query?: string, rank?: number, home?: boolean }>()
 const language = useState<Language>('language', () => 'vi')
 const messages = computed(() => searchMessages(language.value))
 const doc = computed(() => props.documents?.[props.hit.doc || ''])
@@ -21,17 +21,25 @@ const link = computed(() => canLink.value ? readerLink(props.hit, linkRelease.va
 const anchor = computed(() => props.hit.handle?.split('#', 2)[1])
 const citation = computed(() => doc.value ? documentCitation(anchor.value, doc.value) : null)
 const heading = computed(() => [...(props.hit.path || [])].reverse().find(node => node.heading)?.heading)
+const shownHeading = computed(() => displayHeading(props.hit.citation, heading.value))
 const text = computed(() => props.hit.text ?? props.hit.snippet ?? '')
 const expanded = ref(false)
-const spans = computed(() => highlightSpans(text.value, props.query || ''))
+const visibleText = computed(() => {
+  if (props.home || expanded.value || !shownHeading.value) return text.value
+  const end = text.value.indexOf('\n')
+  const first = end < 0 ? text.value : text.value.slice(0, end)
+  const normalizeWhitespace = (value: string) => value.trim().replace(/\s+/g, ' ')
+  return normalizeWhitespace(first) === normalizeWhitespace(shownHeading.value) ? (end < 0 ? '' : text.value.slice(end + 1)) : text.value
+})
+const spans = computed(() => highlightSpans(visibleText.value, props.query || ''))
 const pieces = computed(() => {
   let position = 0
   const parts: { text: string, marked: boolean }[] = []
   for (const span of spans.value) {
-    parts.push({ text: text.value.slice(position, span.start), marked: false }, { text: text.value.slice(span.start, span.end), marked: true })
+    parts.push({ text: visibleText.value.slice(position, span.start), marked: false }, { text: visibleText.value.slice(span.start, span.end), marked: true })
     position = span.end
   }
-  parts.push({ text: text.value.slice(position), marked: false })
+  parts.push({ text: visibleText.value.slice(position), marked: false })
   return parts
 })
 const members = computed(() => {
@@ -73,28 +81,34 @@ function memberLink(memberAnchor: string | undefined) {
 </script>
 
 <template>
-  <article class="card result-card">
+  <article class="card result-card" :class="{ 'result-card-home': home }">
     <div class="result-card-head">
-      <ValidityStamp :status="doc?.status.class" /><span v-if="statusDate" class="result-byline">{{ statusAsOf(statusDate, doc?.source_url, language) }}</span>
-      <NuxtLink v-if="doc?.number && link" :to="link" class="num result-number">{{ doc.number }}</NuxtLink><span v-else-if="doc?.number" class="num">{{ doc.number }}</span>
+      <span class="result-status"><ValidityStamp :status="doc?.status.class" /><span v-if="statusDate" class="result-asof">{{ statusAsOf(statusDate, doc?.source_url, language) }}</span></span>
+      <NuxtLink v-if="doc?.number && link" :to="link" class="num result-number">{{ doc.number }}</NuxtLink><span v-else-if="doc?.number" class="num result-number">{{ doc.number }}</span>
       <span v-if="doc" class="result-byline">{{ hitByline(doc, language) }}</span>
+      <div v-if="!home" class="result-actions">
+        <NuxtLink v-if="link" :to="link">{{ messages.read }}</NuxtLink>
+        <CopyButton v-if="citation" :text="citation" :label="messages.copy" />
+        <a v-if="source" class="result-source" :href="source" target="_blank" rel="noopener noreferrer">vbpl.vn <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 3h8v8M13 3 3 13" /></svg></a>
+      </div>
       <span v-if="rank" class="result-rank">#{{ rank }}</span>
     </div>
     <div class="result-card-body">
-      <p v-if="doc?.title" class="result-title">{{ doc.title }}</p>
-      <h2>{{ displayHeading(hit.citation, heading) }}</h2>
+      <p v-if="doc" class="result-title"><span v-if="!home" class="result-mobile-byline">{{ hitByline(doc, language) }}<template v-if="hitByline(doc, language) && doc.title"> · </template></span>{{ doc.title }}</p>
+      <h2>{{ shownHeading }}</h2>
       <p v-if="members.length > 1" class="result-members">{{ messages.matched.replace('{n}', String(members.length)) }} <template v-for="(member, index) in members" :key="index"><NuxtLink v-if="memberLink(member.anchor)" :to="memberLink(member.anchor)!"><template v-if="index">, </template>{{ member.label }}</NuxtLink><span v-else><template v-if="index">, </template>{{ member.label }}</span></template></p>
-      <p v-if="text" ref="textElement" class="law-text result-text" :class="{ 'result-text--clamped': !expanded }"><template v-for="(piece, index) in pieces" :key="index"><mark v-if="piece.marked" :aria-label="`${messages.matchedWords}: ${piece.text}`">{{ piece.text }}</mark><template v-else>{{ piece.text }}</template></template></p>
+      <p v-if="visibleText" ref="textElement" class="law-text result-text" :class="{ 'result-text--clamped': !expanded }"><template v-for="(piece, index) in pieces" :key="index"><mark v-if="piece.marked" :aria-label="`${messages.matchedWords}: ${piece.text}`">{{ piece.text }}</mark><template v-else>{{ piece.text }}</template></template></p>
       <button v-if="canExpand" type="button" class="result-toggle" :aria-expanded="expanded" @click="expanded = !expanded">{{ expanded ? messages.collapse : messages.expand }}</button>
       <p v-for="(warning, index) in hit.warnings" :key="index" class="notice result-warning"><template v-if="warning.number && canLink && warningLink(warning, linkRelease)"><NuxtLink :to="warningLink(warning, linkRelease)!">{{ warning.number }}</NuxtLink>{{ warningSentence(warning, language).slice(warning.number.length) }}</template><template v-else>{{ warningSentence(warning, language) }}</template> {{ warningAdvice(warning.kind, language) }}</p>
       <p v-if="hit.warnings_omitted" class="notice result-warning"><NuxtLink v-if="link" :to="link">{{ messages.warningMore.replace('{n}', String(hit.warnings_omitted)) }}</NuxtLink><template v-else>{{ messages.warningMore.replace('{n}', String(hit.warnings_omitted)) }}</template></p>
       <ul v-if="hit.gaps?.length" class="result-gaps"><li v-for="(gap, index) in hit.gaps" :key="index">{{ gapCategory(gap.kind, language).name }}</li></ul>
     </div>
-    <footer class="result-card-footer">
+    <footer v-if="home" class="result-card-footer">
       <NuxtLink v-if="link" :to="link">{{ messages.read }}</NuxtLink>
       <CopyButton v-if="citation" :text="citation" :label="messages.copy" />
       <a v-if="source" class="result-source" :href="source" target="_blank" rel="noopener noreferrer">vbpl.vn <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 3h8v8M13 3 3 13" /></svg></a>
       <div class="result-nodes"><template v-for="code in hit.nodes" :key="code"><NuxtLink v-if="nodes?.[code]?.name" class="chip" :to="`/vn/topics/${code}`">{{ nodes[code]?.name }}</NuxtLink></template></div>
     </footer>
+    <div v-else class="result-nodes"><template v-for="code in hit.nodes" :key="code"><NuxtLink v-if="nodes?.[code]?.name" class="chip" :to="`/vn/topics/${code}`">{{ nodes[code]?.name }}</NuxtLink></template></div>
   </article>
 </template>

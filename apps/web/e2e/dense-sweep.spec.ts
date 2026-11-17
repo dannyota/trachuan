@@ -33,7 +33,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await page.route('**/api/v1/me', route => route.fulfill({ json: { id: 1, email: 'test@example.invalid', csrf_token: 'fixture' } }))
       let taxonomyFailed = true
       await page.route('**/api/v1/public/taxonomy**', route => taxonomyFailed ? route.fulfill({ status: 503 }) : route.fulfill({ json: { nodes: [{ code: '1', name: 'Fixture topic' }] } }))
-      await page.route('**/api/v1/search', route => route.fulfill({ json: { release: '20990101', abstain: false, hits: [{ handle: 'vn:vbpl:1#dieu-1', doc: 'vn:vbpl:1', citation: 'Điều 1', text: 'Fixture law', complete: true, nodes: ['1'] }], nodes: { '1': { name: 'Fixture topic' } }, documents: { 'vn:vbpl:1': { number: '1/2099', title: 'Fixture law', status: { class: 'in_force', current: true }, text_source: 'source_tree', text_complete: true, source_url: 'https://vbpl.vn/fixture' } } } }))
+      await page.route('**/api/v1/search', route => route.fulfill({ json: { release: '20990101', abstain: false, hits: [{ handle: 'vn:vbpl:1#dieu-1', doc: 'vn:vbpl:1', citation: 'Điều 1', text: 'Fixture law line one\nFixture law line two\nFixture law line three', complete: true, nodes: ['1'] }], nodes: { '1': { name: 'Fixture topic' } }, documents: { 'vn:vbpl:1': { number: documentNumber, type: 'Luật', issuer: 'Fixture issuer', title: 'Fixture law', status: { class: 'partial', current: true }, text_source: 'source_tree', text_complete: true, source_url: 'https://vbpl.vn/fixture' } } } }))
       await page.route('**/api/v1/documents/*', route => route.fulfill({ json: { release: '20990101', item: { complete: true, document: { number: documentNumber, title: 'Fixture law', status: { class: 'in_force', current: true }, text_source: 'none', text_complete: false, related: [{ dir: 'out', kind: 'legal_basis', number: '2/2099' }] }, units: [{ kind: 'provision', anchor: 'dieu-1', label: 'Điều 1', heading: articleHeading, text: 'Fixture law' }] } } }))
       await page.goto('/')
       await expect(page.getByRole('link', { name: /account|tài khoản/i })).toBeVisible()
@@ -64,8 +64,44 @@ for (const colorScheme of ['light', 'dark'] as const) {
       const [sourceBox, iconBox] = await Promise.all([source.boundingBox(), source.locator('svg').boundingBox()])
       expect(iconBox!.y + iconBox!.height).toBeLessThanOrEqual(sourceBox!.y + sourceBox!.height + 1)
       expect(iconBox!.x).toBeGreaterThan(sourceBox!.x)
-      expect(sourceBox!.height).toBeLessThan(32)
-      for (const link of await page.locator('.result-card-footer a:visible:not(.chip)').all()) await expect(link).toHaveCSS('text-decoration-line', 'underline')
+      expect(sourceBox!.height).toBeGreaterThanOrEqual(44)
+      const head = page.locator('.result-card-head')
+      const statusBox = (await head.locator('.result-status').boundingBox())!
+      const actionsBox = (await head.locator('.result-actions').boundingBox())!
+      if (width < 1200) expect(actionsBox.y).toBeGreaterThanOrEqual(statusBox.y + statusBox.height)
+      else {
+        expect(actionsBox.y).toBeLessThan(statusBox.y + statusBox.height)
+        expect(actionsBox.y + actionsBox.height).toBeGreaterThan(statusBox.y)
+      }
+      const resultNumber = head.locator('.result-number')
+      await expect(resultNumber).toHaveText(documentNumber)
+      await expect(resultNumber).not.toHaveCSS('text-overflow', 'ellipsis')
+      expect(await resultNumber.evaluate(el => el.scrollWidth)).toBe(await resultNumber.evaluate(el => el.clientWidth))
+      if (width >= 1200) expect(await resultNumber.evaluate(el => { const range = document.createRange(); range.selectNodeContents(el); return range.getClientRects().length })).toBe(1)
+      const fontSizes = await page.locator('.result-card').evaluate((card) => {
+        const walker = document.createTreeWalker(card, NodeFilter.SHOW_TEXT)
+        const sizes: number[] = []
+        while (walker.nextNode()) {
+          const node = walker.currentNode
+          const parent = node.parentElement!
+          if (node.textContent?.trim() && parent.getClientRects().length) sizes.push(parseFloat(getComputedStyle(parent).fontSize))
+        }
+        return sizes
+      })
+      expect(fontSizes.length).toBeGreaterThan(0)
+      for (const size of fontSizes) expect(size).toBeGreaterThanOrEqual(12)
+      await expect(page.locator('.result-card-footer')).toHaveCount(0)
+      for (const area of await page.locator('.result-card-head, .result-card-body, .result-nodes').all()) await expect(area).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+      for (const action of await head.locator('.result-actions a, .result-actions button').all()) {
+        expect((await action.boundingBox())!.height).toBeGreaterThanOrEqual(44)
+        await expect(action).toHaveCSS('text-decoration-line', 'underline')
+        await expect(action).toHaveCSS('font-size', '13px')
+      }
+      if (width === 1366) {
+        const text = page.locator('.result-text')
+        expect((await text.boundingBox())!.height / parseFloat(await text.evaluate(el => getComputedStyle(el).lineHeight))).toBeCloseTo(3, 0)
+        expect((await page.locator('.result-card').boundingBox())!.height).toBeLessThanOrEqual(220)
+      }
       await shapes(page)
       await page.locator('#search-query').focus()
       await page.keyboard.press('Tab')
