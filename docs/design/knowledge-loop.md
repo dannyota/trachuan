@@ -18,8 +18,11 @@ apart, and what a complete observation of a subject needs. A version that
 changes what a detector means sets a new semantics number; a bug fix keeps it.
 
 Existing gap kinds are registered as detectors of the stage that writes them and
-keep their names, rules and acceptance by kind. A gap kind moves to findings
-only by a named migration that turns its accepted gaps into review decisions.
+keep their names, rules and acceptance by kind. A gap-kind detector's subject is
+its stage item (stage and item key), its discriminator the gap detail, and its
+observation is complete when its stage completed the item. A gap kind moves to
+findings only by a named migration that turns its accepted gaps into review
+decisions.
 
 Cross-signal detectors do not run inside the stages. They run once, in the
 `evidence` stage after `eval`, over frozen inputs only. The same inputs give the
