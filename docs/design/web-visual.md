@@ -125,18 +125,22 @@ has a shadow. The reader's text has no container.
 
 One rule for the home sample, search result cards and the reader. Navigation is
 a link: underlined text, never a pill. An in-place action is a button: a filled
-or outline pill for a form's main action, or a ghost button (no border and no
-fill, `primary` text, `mist` behind it on hover) for a secondary action such as
-copying; a button is never underlined. Chips are the third kind: compact tags
-that name a topic or a relation, shaped as pills without an underline, and they
-may navigate. Every link and button is a target at least 44 px tall. Icons are
-inline SVG with `aria-hidden`, never text arrows.
+or outline pill for a form's main action, or a ghost button for a secondary
+action such as copying: no border and no fill, `ink` text after a leading icon
+that names the action, and `mist` behind it on hover and focus. A ghost button
+reads as a control by its icon, never by colour, so it keeps the colour rule
+that navy text never stands alone as an action. A button is never underlined.
+Chips are the third kind: compact tags that name a topic or a relation, shaped
+as pills without an underline, and they may navigate. Every link and button is a
+target at least 44 px tall. Icons are inline SVG with `aria-hidden`, never text
+arrows.
 
 - A result's actions: "Đọc trong văn bản" / "Read in document" is the primary
   link, on the left, with an inline arrow icon; "Sao chép trích dẫn" / "Copy
-  citation" is a ghost button on the right of the same row. After a successful
-  copy the button reads "Đã sao chép" / "Copied" with a check icon for 2
-  seconds; when the clipboard refuses, it shows the existing failure message.
+  citation" is a ghost button with a copy icon on the right of the same row.
+  After a successful copy the button reads "Đã sao chép" / "Copied" with a check
+  icon for 2 seconds; when the clipboard refuses, it shows the existing failure
+  message.
 - Below them, only when the document has an https source, a muted 13 px caption:
   "Nguồn:" / "Source:" and the source's host as a link with the external-link
   icon.
