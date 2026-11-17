@@ -122,7 +122,6 @@ go build -o "$tmp_dir/server" ./apps/server/cmd/server
 go build -o "$tmp_dir/fakegoogle" ./apps/server/cmd/fakegoogle
 go build -o "$tmp_dir/fakeembed" ./apps/server/cmd/fakeembed
 go build -tags integration -o "$tmp_dir/e2efixture" ./apps/server/cmd/e2efixture
-# psql variable substitution is performed by the input parser.
 printf 'CREATE DATABASE :"db"\n' | psql -X "$CORPUS_TEST_ADMIN_URL" -v ON_ERROR_STOP=1 -v db="$db_name"
 db_created=1
 require_available_port "$server_port" "e2e: port not owned by child"
@@ -145,12 +144,23 @@ export GOOGLE_CLIENT_SECRET=e2e-secret
 export E2E_SERVER_URL="$SERVER_PUBLIC_URL"
 export E2E_GOOGLE_URL="$SERVER_GOOGLE_ISSUER"
 "$tmp_dir/server" migrate
-read -r fixture_name fixture_key < <("$tmp_dir/e2efixture" create)
+if [[ "${SERVER_PUBLIC_SUMMARIES:-false}" == true ]]; then
+  read -r fixture_name fixture_key < <(E2E_SUMMARIES=1 "$tmp_dir/e2efixture" create)
+else
+  read -r fixture_name fixture_key < <(E2E_SUMMARIES=0 "$tmp_dir/e2efixture" create)
+fi
 if [[ ! "$fixture_name" =~ ^corpus_vn_2099[0-9]{4}(_[0-9]+)?$ || "$fixture_key" != "vn/${fixture_name#corpus_vn_}" ]]; then
   echo "e2e: invalid fixture identity" >&2
   exit 1
 fi
-printf "INSERT INTO corpus_release VALUES ('vn', :'db', now(), 'e2e')\n" | psql -X "$auth_url" -v ON_ERROR_STOP=1 -v db="$fixture_name"
+if [[ "${SERVER_PUBLIC_SUMMARIES:-false}" == true ]]; then
+  go build -tags integration -o "$tmp_dir/e2esummary" ./apps/corpus/cmd/e2esummary
+  "$tmp_dir/e2esummary" "$fixture_name"
+  printf "INSERT INTO corpus_release (country,active_db,activated_at,activated_by,summary_database,summary_projection,headings_approved) VALUES ('vn', :'db', now(), 'e2e', :'db', 1, true)\n" | psql -X "$auth_url" -v ON_ERROR_STOP=1 -v db="$fixture_name"
+  export SERVER_PUBLIC_SUMMARIES=true E2E_PUBLIC_SUMMARIES=1
+else
+  printf "INSERT INTO corpus_release VALUES ('vn', :'db', now(), 'e2e')\n" | psql -X "$auth_url" -v ON_ERROR_STOP=1 -v db="$fixture_name"
+fi
 require_available_port "$google_port" "e2e: port not owned by child"
 "$tmp_dir/fakegoogle" -listen "127.0.0.1:$google_port" -client-id "$GOOGLE_CLIENT_ID" -client-secret "$GOOGLE_CLIENT_SECRET" -redirect-uri "$SERVER_PUBLIC_URL/api/v1/auth/google/callback" >"$tmp_dir/google.log" 2>&1 &
 google_pid=$!

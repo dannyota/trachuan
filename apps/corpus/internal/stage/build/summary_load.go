@@ -10,6 +10,22 @@ import (
 )
 
 func (l *loader) loadSummaries(ctx context.Context, entries []source.HeadingExclusion) error {
+	stats, gaps, err := LoadSummaries(ctx, l.tx, entries, l.gaps)
+	if err != nil {
+		return err
+	}
+	l.counts.Summary = stats
+	l.gaps = gaps
+	return nil
+}
+
+func LoadSummaries(ctx context.Context, tx pgx.Tx, entries []source.HeadingExclusion, gaps []InventoryGap) (SummaryStats, []InventoryGap, error) {
+	l := loader{tx: tx, gaps: append([]InventoryGap(nil), gaps...)}
+	err := l.loadSummaryRows(ctx, entries)
+	return l.counts.Summary, l.gaps, err
+}
+
+func (l *loader) loadSummaryRows(ctx context.Context, entries []source.HeadingExclusion) error {
 	if err := CheckHeadingExclusions(ctx, l.tx, entries); err != nil {
 		return err
 	}
@@ -20,21 +36,26 @@ func (l *loader) loadSummaries(ctx context.Context, entries []source.HeadingExcl
 		}
 		excluded[e.Key][e.Anchor] = true
 	}
-	rows, err := l.tx.Query(ctx, `SELECT key,class,status_class,status_basis,is_current,validity_conflict,eff_from,eff_to,text_source,number,title,doc_type,issuer,to_char(issue_date,'YYYY-MM-DD'),text_complete,source_url,EXISTS(SELECT 1 FROM provision p WHERE p.document_id=d.id) FROM document d ORDER BY key COLLATE "C"`)
+	rows, err := l.tx.Query(ctx, `SELECT id,key,class,status_class,status_basis,is_current,validity_conflict,eff_from,eff_to,text_source,number,title,doc_type,issuer,to_char(issue_date,'YYYY-MM-DD'),text_complete,source_url,EXISTS(SELECT 1 FROM provision p WHERE p.document_id=d.id) FROM document d ORDER BY key COLLATE "C"`)
 	if err != nil {
 		return fmt.Errorf("query summary documents: %w", err)
 	}
-	documents, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (summaryDocument, error) {
-		var d summaryDocument
+	type documentRow struct {
+		id       int64
+		document summaryDocument
+	}
+	documents, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (documentRow, error) {
+		var result documentRow
+		d := &result.document
 		p := &d.Payload
-		scanErr := row.Scan(&d.Key, &d.Class, &d.StatusClass, &d.StatusBasis, &d.IsCurrent, &d.ValidityConflict, &d.EffFrom, &d.EffTo, &d.TextSource, &p.Number, &p.Title, &p.Type, &p.Issuer, &p.Issued, &p.TextComplete, &p.SourceURL, &p.HasText)
-		return d, scanErr
+		scanErr := row.Scan(&result.id, &d.Key, &d.Class, &d.StatusClass, &d.StatusBasis, &d.IsCurrent, &d.ValidityConflict, &d.EffFrom, &d.EffTo, &d.TextSource, &p.Number, &p.Title, &p.Type, &p.Issuer, &p.Issued, &p.TextComplete, &p.SourceURL, &p.HasText)
+		return result, scanErr
 	})
 	if err != nil {
 		return fmt.Errorf("read summary documents: %w", err)
 	}
-	for _, d := range documents {
-		id := l.docs[d.Key].id
+	for _, row := range documents {
+		id, d := row.id, row.document
 		if err = l.summaryParts(ctx, id, &d.Payload); err != nil {
 			return err
 		}
