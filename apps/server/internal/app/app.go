@@ -19,6 +19,7 @@ import (
 	"danny.vn/trachuan/apps/server/internal/oauth"
 	"danny.vn/trachuan/apps/server/internal/password"
 	"danny.vn/trachuan/apps/server/internal/passwordauth"
+	"danny.vn/trachuan/apps/server/internal/publicsummary"
 	"danny.vn/trachuan/apps/server/internal/release"
 	"danny.vn/trachuan/apps/server/internal/reports"
 	"danny.vn/trachuan/apps/server/internal/seal"
@@ -123,6 +124,8 @@ func readyCheck(ctx context.Context, auth, activeRelease func(context.Context) e
 func serve(ctx context.Context, cfg config, pool *pgxpool.Pool, queries *store.Queries, stderr io.Writer) error {
 	slog.New(slog.NewJSONHandler(stderr, nil)).Info("frameworks configuration", "enabled", cfg.frameworks)
 	clock := time.Now
+	summaryManager := publicsummary.NewManager(publicsummary.Metadata(pool), publicsummary.OpenPostgres(cfg.corpusURL), clock)
+	defer summaryManager.Close()
 	caches := mcpapi.NewCaches(clock)
 	vectors := embedcache.NewVectors(clock)
 	client := embedding.NewClient(cfg.embedderURL, &http.Client{Timeout: 2 * time.Second})
@@ -151,7 +154,7 @@ func serve(ctx context.Context, cfg config, pool *pgxpool.Pool, queries *store.Q
 	flows := &accountflow.Service{DB: pool, Ring: cfg.accountKeys, SignupEmails: cfg.signupEmails, Logger: tools.Logger}
 	passwordLogin.Flows, passwordLogin.Factors, passwordLogin.Enrollment = flows, flows, cfg.totpEnrollment
 	passwordLogin.Evict = func(id int64) { sessions.EvictAccount(id); verifier.EvictAccount(id) }
-	mux := newWebMux(webDeps{password: passwordLogin, store: bounded, reportStore: queries, sessions: sessions, login: login, verifier: verifier, tools: tools, loginLimit: newLoginLimiter(clock, cfg.trustedProxies), oauthDB: pool, oauthClients: cfg.oauthClients, publicURL: cfg.publicURL, mcpOrigins: cfg.mcpOrigins, mcpOriginMode: cfg.mcpOriginMode})
+	mux := newWebMux(webDeps{summaries: publicsummary.NewHandler(summaryManager, cfg.publicSummaries, clock), password: passwordLogin, store: bounded, reportStore: queries, sessions: sessions, login: login, verifier: verifier, tools: tools, loginLimit: newLoginLimiter(clock, cfg.trustedProxies), oauthDB: pool, oauthClients: cfg.oauthClients, publicURL: cfg.publicURL, mcpOrigins: cfg.mcpOrigins, mcpOriginMode: cfg.mcpOriginMode})
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) })
 	mux.Handle("GET /readyz", readiness(ctx, func(ctx context.Context) error {
 		return readyCheck(ctx, pool.Ping, func(ctx context.Context) error {
@@ -162,6 +165,8 @@ func serve(ctx context.Context, cfg config, pool *pgxpool.Pool, queries *store.Q
 			return resolveErr
 		})
 	}))
+	stopSummaries := watchPublicSummaries(ctx, summaryManager)
+	defer stopSummaries()
 	stopMail, err := startMail(ctx, cfg, queries, stderr)
 	if err != nil {
 		resolver.Close()

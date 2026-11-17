@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 import re
 
+from .deploy_corpus_heading import validate_headings
 from .deploy_io import canonical
 from .deploy_verify import flags, match, positive
 
@@ -19,8 +20,9 @@ def manifest(data, rules):
     keys = {'kind', 'version', 'repository', 'commit', 'country', 'rel', 'database',
             'sequence', 'previous', 'dump', 'report', 'build_artifact_sha256',
             'schema_version', 'extensions', 'recipes'}
-    if not isinstance(obj, dict) or set(obj) != keys:
+    if not isinstance(obj, dict) or not keys <= set(obj) or set(obj) - keys - {'heading_review', 'heading_evidence'}:
         raise ValueError('invalid corpus manifest fields')
+    validate_headings(obj)
     for key, value in dict(kind='trachuan.corpus-release', version=1,
                            repository=rules['repository'], country='vn').items():
         if type(obj[key]) is not type(value) or obj[key] != value:
@@ -32,6 +34,8 @@ def manifest(data, rules):
         raise ValueError('corpus database mismatch')
     for field in ('sequence', 'schema_version'):
         positive(obj[field], 'corpus ' + field)
+    if (obj['schema_version'] >= 8) != ('heading_evidence' in obj):
+        raise ValueError('heading evidence does not match schema version')
     dump = obj['dump']
     if not isinstance(dump, dict) or set(dump) != {'object', 'sha256', 'size'}:
         raise ValueError('invalid corpus dump fields')

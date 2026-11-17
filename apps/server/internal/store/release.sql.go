@@ -10,7 +10,7 @@ import (
 )
 
 const getActiveRelease = `-- name: GetActiveRelease :one
-SELECT country, active_db, activated_at, activated_by FROM corpus_release WHERE country = $1
+SELECT country, active_db, activated_at, activated_by, summary_database, summary_projection, headings_approved FROM corpus_release WHERE country = $1
 `
 
 func (q *Queries) GetActiveRelease(ctx context.Context, country string) (CorpusRelease, error) {
@@ -21,6 +21,9 @@ func (q *Queries) GetActiveRelease(ctx context.Context, country string) (CorpusR
 		&i.ActiveDb,
 		&i.ActivatedAt,
 		&i.ActivatedBy,
+		&i.SummaryDatabase,
+		&i.SummaryProjection,
+		&i.HeadingsApproved,
 	)
 	return i, err
 }

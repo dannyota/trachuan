@@ -11,6 +11,7 @@ import (
 	"danny.vn/trachuan/apps/server/internal/mcpapi"
 	"danny.vn/trachuan/apps/server/internal/oauth"
 	"danny.vn/trachuan/apps/server/internal/passwordauth"
+	"danny.vn/trachuan/apps/server/internal/publicsummary"
 	"danny.vn/trachuan/apps/server/internal/reportsapi"
 	"danny.vn/trachuan/apps/server/internal/webapi"
 	"danny.vn/trachuan/apps/server/internal/weblogin"
@@ -18,6 +19,7 @@ import (
 )
 
 type webDeps struct {
+	summaries     *publicsummary.Handler
 	password      *passwordauth.Handler
 	store         accountapi.Store
 	reportStore   reportsapi.Store
@@ -55,7 +57,13 @@ func newWebMux(d webDeps) *http.ServeMux {
 	corpus := webapi.New(webapi.Config{Tools: d.tools, Sessions: d.sessions})
 	publicLimit := newLoginLimiter(d.loginLimit.clock, d.loginLimit.proxies)
 	publicLimit.cost = time.Second
-	mux.Handle("GET /api/v1/public/status", publicLimit.middleware(webapi.NewPublicStatus(d.tools)))
+	summaries := d.summaries
+	if summaries == nil {
+		summaries = publicsummary.NewHandler(nil, false, d.loginLimit.clock)
+	}
+	mux.Handle("GET /api/v1/public/documents", summaries)
+	mux.Handle("GET /api/v1/public/documents/{key}", summaries)
+	mux.Handle("GET /api/v1/public/status", publicLimit.middleware(webapi.NewPublicStatus(d.tools, summaries.Available)))
 	taxonomy := publicLimit.middleware(webapi.NewPublicTaxonomy(d.tools))
 	mux.Handle("GET /api/v1/public/taxonomy", taxonomy)
 	mux.Handle("GET /api/v1/public/taxonomy/{code}", taxonomy)

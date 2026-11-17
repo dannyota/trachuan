@@ -2855,6 +2855,138 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/public/documents/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    key: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        ETag?: string;
+                        "Cache-Control"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PublicSummary"];
+                    };
+                };
+                /** @description Request failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PublicSummaryError"];
+                    };
+                };
+                /** @description Request failed */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PublicSummaryError"];
+                    };
+                };
+                /** @description Request failed */
+                503: {
+                    headers: {
+                        "Retry-After"?: number;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PublicSummaryError"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        ETag?: string;
+                        "Cache-Control"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PublicSummaryList"];
+                    };
+                };
+                /** @description Request failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PublicSummaryError"];
+                    };
+                };
+                /** @description Request failed */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PublicSummaryError"];
+                    };
+                };
+                /** @description Request failed */
+                503: {
+                    headers: {
+                        "Retry-After"?: number;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PublicSummaryError"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/public/status": {
         parameters: {
             query?: never;
@@ -2878,7 +3010,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["CorpusStatus"];
+                        "application/json": components["schemas"]["PublicStatus"];
                     };
                 };
                 /** @description Request failed */
@@ -3641,6 +3773,89 @@ export interface components {
             nodes?: components["schemas"]["NodeIndex"];
             release: string;
             items?: components["schemas"]["ItemResult"][];
+        };
+        PublicSummaryStatus: {
+            /** @enum {string} */
+            class: "in_force" | "partial" | "expired" | "not_yet" | "suspended" | "unknown";
+            current: boolean;
+            /** @constant */
+            basis: "source_status";
+            /** @enum {string} */
+            status_basis: "source_status" | "derived_from_consolidated" | "derived_from_text" | "manual_correction";
+            unresolved: boolean;
+        };
+        PublicSummaryDocument: {
+            key: string;
+            number: string;
+            title: string;
+            type: string;
+            issuer: string;
+            /** Format: date */
+            issued: string | null;
+            /** Format: date */
+            effective_from: string | null;
+            /** Format: date */
+            effective_to: string | null;
+            status: components["schemas"]["PublicSummaryStatus"];
+            gap_kinds: ("missing_effective_date" | "consolidated_status_unordered" | "consolidated_status_unresolved")[];
+            has_text: boolean;
+            text_complete: boolean;
+            source_url: string | null;
+        };
+        PublicSummaryRelation: {
+            /** @enum {string} */
+            kind: "repeals" | "implements" | "legal_basis" | "cites" | "suspends" | "consolidates" | "guided_by" | "amends_supplements" | "replaces" | "references" | "unknown";
+            /** @enum {string} */
+            direction: "incoming" | "outgoing";
+            key?: string;
+            number: string;
+            title?: string;
+        };
+        PublicSummaryNode: {
+            code: string;
+            name: string;
+        };
+        PublicSummaryOutline: {
+            /** @enum {string} */
+            kind: "phan" | "chuong" | "muc" | "dieu";
+            label: string;
+            anchor: string;
+            heading?: string;
+        };
+        PublicSummary: {
+            release: string;
+            /** @constant */
+            projection: 1;
+            /** Format: date */
+            status_date: string;
+            index: boolean;
+            document: components["schemas"]["PublicSummaryDocument"];
+            relations: components["schemas"]["PublicSummaryRelation"][];
+            relations_total: number;
+            nodes: components["schemas"]["PublicSummaryNode"][];
+            outline: components["schemas"]["PublicSummaryOutline"][];
+        };
+        PublicSummaryList: {
+            release: string;
+            /** @constant */
+            projection: 1;
+            total: number;
+            items: {
+                key: string;
+                index: boolean;
+            }[];
+        };
+        PublicSummaryError: {
+            error: {
+                /** @enum {string} */
+                code: "invalid_request" | "busy" | "unavailable" | "not_found" | "too_large";
+                message: string;
+            };
+        };
+        PublicStatus: components["schemas"]["CorpusStatus"] & {
+            features: {
+                public_summaries: boolean;
+            };
         };
         CorpusStatus: {
             doc_types?: components["schemas"]["Facet"][];

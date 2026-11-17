@@ -20,6 +20,7 @@ type config struct {
 	listen, authURL, corpusURL, embedderURL, audience, publicURL, googleID, googleSecret, googleIssuer string
 	strictDeployment                                                                                   bool
 	totpEnrollment                                                                                     bool
+	publicSummaries                                                                                    bool
 	frameworks                                                                                         bool
 	omitCompactRelated                                                                                 bool
 	trustedProxies                                                                                     []netip.Prefix
@@ -38,6 +39,15 @@ func loadConfig() (config, error) {
 		c.embedderURL = "http://127.0.0.1:8091"
 	}
 	var err error
+	if raw, present := os.LookupEnv("SERVER_PUBLIC_SUMMARIES"); present {
+		switch raw {
+		case "true":
+			c.publicSummaries = true
+		case "false":
+		default:
+			return config{}, errors.New("invalid SERVER_PUBLIC_SUMMARIES")
+		}
+	}
 	if raw, present := os.LookupEnv("SERVER_FRAMEWORKS"); present {
 		switch raw {
 		case "true":

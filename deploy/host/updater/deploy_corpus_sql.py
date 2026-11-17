@@ -1,6 +1,8 @@
 import json
 import re
 
+from .deploy_corpus_heading import headings_approved
+
 
 def literal(value):
     if value is None:
@@ -26,7 +28,8 @@ def journal(row, step):
             ','.join(literal(value[f]) for f in fields) + ') RETURNING row_to_json(release_journal);')
 
 
-def activate(row):
+def activate(row, projection=0):
+    approved = 'true' if projection == 1 and headings_approved(row['manifest']) else 'false'
     country, target, expected = (literal(row[k]) for k in ('country', 'database_name', 'expected_active_db'))
     retained = ('DELETE FROM retired_release WHERE country=' + country + ' AND db_name=' + target + ';'
                 if row['mode'] == 'retained' else '')
@@ -41,7 +44,8 @@ BEGIN
   IF previous IS DISTINCT FROM {expected} THEN
     RAISE EXCEPTION 'active corpus changed';
   END IF;
-  UPDATE corpus_release SET active_db={target},activated_at=now(),activated_by='activator'
+  UPDATE corpus_release SET active_db={target},activated_at=now(),activated_by='activator',
+    summary_database={target},summary_projection={projection},headings_approved={approved}
     WHERE country={country} AND active_db IS NOT DISTINCT FROM {expected};
   GET DIAGNOSTICS changed = ROW_COUNT;
   IF changed <> 1 THEN

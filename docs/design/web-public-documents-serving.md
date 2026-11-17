@@ -37,8 +37,14 @@ key outside the release has none.
 Vietnam civil date from the injected clock; it touches no other table and never
 the read path. Its schema is closed at every level:
 `{release, projection, status_date, index, document, relations, relations_total, nodes: [{code, name}], outline: [{kind, label, anchor, heading?}]}`,
-with `heading` only under the heading rule. It reads no cookie and no bearer
-token. Headers: a strong `ETag` over the body and
+with `heading` only under the heading rule. `document` is
+`{key, number, title, type, issuer, issued, effective_from, effective_to, status: {class, current, basis, status_basis, unresolved}, gap_kinds, has_text, text_complete, source_url}`:
+the status fields are the reader's validity stamp for `status_date` plus
+`unresolved` from `validity_conflict`; `gap_kinds` is the closed set
+`missing_effective_date`, `consolidated_status_unordered`,
+`consolidated_status_unresolved`; dates are null when unknown, and `source_url`
+is null unless it is https. Relations keep the row's fields. It reads no cookie
+and no bearer token. Headers: a strong `ETag` over the body and
 `Cache-Control: public, max-age=N, must-revalidate`, N the smaller of 300 and
 the seconds to the next Vietnam midnight.
 

@@ -155,6 +155,10 @@ func TestOperationOwnership_CoversContract(t *testing.T) {
 				default:
 					t.Errorf("%s %s is not covered by passwordauth factor handlers", method, path)
 				}
+			case "public-summaries":
+				if method != "get" || (path != "/api/v1/public/documents" && path != "/api/v1/public/documents/{key}") {
+					t.Errorf("%s %s is not covered by publicsummary", method, path)
+				}
 			case "account", "web", "reports":
 			default:
 				t.Errorf("%s %s has unknown owner %q", method, path, op.Tags[0])

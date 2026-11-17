@@ -1,6 +1,7 @@
 package webapi
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 
@@ -8,8 +9,7 @@ import (
 	"danny.vn/trachuan/apps/server/internal/mcpapi"
 )
 
-// NewPublicStatus serves corpus status without using credentials.
-func NewPublicStatus(cfg mcpapi.Config) http.Handler {
+func NewPublicStatus(cfg mcpapi.Config, summaries ...func(context.Context, string) (bool, error)) http.Handler {
 	a := &api{operations: mcpapi.NewOperations(cfg)}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		raw, err := a.status(r)
@@ -21,8 +21,32 @@ func NewPublicStatus(cfg mcpapi.Config) http.Handler {
 			}
 			return
 		}
+		var body map[string]json.RawMessage
+		if err = json.Unmarshal(raw, &body); err != nil {
+			apierror.Write(w, 503, "unavailable")
+			return
+		}
+		enabled := false
+		if len(summaries) > 0 && summaries[0] != nil {
+			var release string
+			if err = json.Unmarshal(body["release"], &release); err == nil {
+				enabled, err = summaries[0](r.Context(), release)
+			}
+			if err != nil {
+				apierror.Write(w, 503, "unavailable")
+				return
+			}
+		}
+		body["features"], _ = json.Marshal(struct {
+			PublicSummaries bool `json:"public_summaries"`
+		}{enabled})
+		raw, err = json.Marshal(body)
+		if err != nil {
+			apierror.Write(w, 503, "unavailable")
+			return
+		}
 		w.Header().Set("Content-Type", "application/json")
-		w.Header().Set("Cache-Control", "public, max-age=600")
+		w.Header().Set("Cache-Control", "public, max-age=60, must-revalidate")
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write(raw)
 	})
