@@ -16,6 +16,7 @@ import (
 
 type adminSessionStore interface {
 	withAdminSession(context.Context, int64, int32, func(*store.Queries) error) error
+	RevokeSession(context.Context, string) (int64, error)
 }
 
 func runAdminSession(ctx context.Context, args []string, queries adminStore) (result error) {
@@ -44,29 +45,36 @@ func runAdminSession(ctx context.Context, args []string, queries adminStore) (re
 	if err != nil {
 		return errors.New("create session file failed")
 	}
-	closed, committed := false, false
+	closed, retainFile := false, false
 	defer func() {
 		if !closed {
 			_ = file.Close()
 		}
-		if !committed {
+		if !retainFile {
 			if removeErr := os.Remove(*path); removeErr != nil {
 				result = errors.New("remove session file failed")
 			}
 		}
 	}()
+	if modeErr := file.Chmod(0600); modeErr != nil {
+		return errors.New("set session file mode failed")
+	}
+	info, statErr := file.Stat()
+	if statErr != nil || info.Mode().Perm() != 0600 {
+		return errors.New("verify session file mode failed")
+	}
 	db, ok := queries.(adminSessionStore)
 	if !ok {
 		return errors.New("session store unavailable")
 	}
 	expires := time.Now().Add(time.Duration(*hours) * time.Hour)
+	manager := &websession.Manager{}
+	token, params, valueErr := manager.NewSessionParams(expires)
+	if valueErr != nil {
+		return errors.New("create session failed")
+	}
+	params.AccountID, params.AuthEpoch = account.ID, account.AuthEpoch
 	err = db.withAdminSession(ctx, account.ID, account.AuthEpoch, func(q *store.Queries) error {
-		manager := &websession.Manager{}
-		token, params, valueErr := manager.NewSessionParams(expires)
-		if valueErr != nil {
-			return valueErr
-		}
-		params.AccountID, params.AuthEpoch = account.ID, account.AuthEpoch
 		if _, createErr := q.CreateSession(ctx, params); createErr != nil {
 			return createErr
 		}
@@ -80,9 +88,16 @@ func runAdminSession(ctx context.Context, args []string, queries adminStore) (re
 		return file.Close()
 	})
 	if err != nil {
+		cleanupCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), authQueryDeadline)
+		_, revokeErr := db.RevokeSession(cleanupCtx, params.TokenHash)
+		cancel()
+		if revokeErr != nil {
+			retainFile = true
+			return errors.New("revoke session failed; session file retained")
+		}
 		return errors.New("create session failed")
 	}
-	committed = true
+	retainFile = true
 	return nil
 }
 

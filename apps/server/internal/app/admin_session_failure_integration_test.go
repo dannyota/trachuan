@@ -30,20 +30,50 @@ func (s failingAdminSession) withAdminSession(ctx context.Context, id int64, epo
 	})
 }
 
-type failingSessionCommit struct{ transactionBeginner }
+type failingSessionCommit struct {
+	transactionBeginner
+	afterCommit bool
+}
 
 func (s failingSessionCommit) BeginTx(ctx context.Context, options pgx.TxOptions) (pgx.Tx, error) {
 	tx, err := s.transactionBeginner.BeginTx(ctx, options)
 	if err != nil {
 		return nil, err
 	}
-	return failedSessionTx{Tx: tx}, nil
+	return failedSessionTx{Tx: tx, afterCommit: s.afterCommit}, nil
 }
 
-type failedSessionTx struct{ pgx.Tx }
+type failedSessionTx struct {
+	pgx.Tx
+	afterCommit bool
+}
 
-func (failedSessionTx) Commit(context.Context) error {
+func (tx failedSessionTx) Commit(ctx context.Context) error {
+	if tx.afterCommit {
+		if err := tx.Tx.Commit(ctx); err != nil {
+			return err
+		}
+	}
 	return errors.New("synthetic commit failure")
+}
+
+func TestAdminSession_CommittedSessionRevokedAfterCommitError(t *testing.T) {
+	ctx, pool, q := adminSessionDatabase(t)
+	id := adminSessionAccount(t, ctx, "loadcheck:uncertain-commit")
+	db := credentialStore{Queries: q.Queries, db: failingSessionCommit{transactionBeginner: pool, afterCommit: true}}
+	path := filepath.Join(t.TempDir(), "session")
+	var out, stderr bytes.Buffer
+	err := runAdmin(ctx, []string{"session", "create", "--account", id, "--out", path}, db, &out)
+	if err == nil || exitCode(err, &stderr) != 1 || stderr.String() != "server: create session failed\n" || out.Len() != 0 {
+		t.Fatal("uncertain commit did not return a fixed error")
+	}
+	var total, live int
+	if queryErr := pool.QueryRow(ctx, `SELECT count(*),count(*) FILTER(WHERE revoked_at IS NULL) FROM web_session`).Scan(&total, &live); queryErr != nil || total != 1 || live != 0 {
+		t.Fatal("committed session was not revoked")
+	}
+	if _, statErr := os.Stat(path); !os.IsNotExist(statErr) {
+		t.Fatal("revoked session file was not removed")
+	}
 }
 
 func TestAdminSession_FailureRollsBackAndRemovesFile(t *testing.T) {
