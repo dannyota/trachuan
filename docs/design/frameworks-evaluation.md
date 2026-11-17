@@ -194,7 +194,10 @@ Later releases:
   fall;
 - added, rejected or re-targeted cases and newly in-release versions are cohort
   changes, reported apart from retrieval changes; they take effect only through
-  a review entry made before the build, never to admit a failing release;
+  a review entry made before the build, never to admit a failing release. A
+  version is newly in the release when this report counts any of its cases as
+  accepted, rejected or `unverified` and the previous report's per-version
+  counts have it only as `out_of_release` or not at all; case ids play no part;
 - a floor never falls below the previous release's floor unless a recorded
   cohort change explains it.
 
