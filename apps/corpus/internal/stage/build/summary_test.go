@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"unicode/utf8"
 )
 
 func summaryFixture() summaryDocument {
@@ -215,9 +216,10 @@ func TestSummary_HeadingWhitespace(t *testing.T) {
 
 func TestSummary_HeadingLengthAfterTrim(t *testing.T) {
 	d := summaryFixture()
-	d.Payload.Outline[1].Heading = " " + strings.Repeat("a", 300) + " "
+	want := strings.Repeat("ố", 300)
+	d.Payload.Outline[1].Heading = "\u00a0" + want + "\u3000"
 	got, _, err := makeUnitSummary(d, nil, nil)
-	if err != nil || got.Payload.Outline[1].Heading == "" {
-		t.Fatalf("trimmed 300 character heading omitted: %v", err)
+	if err != nil || got.Payload.Outline[1].Heading != want || utf8.RuneCountInString(got.Payload.Outline[1].Heading) != 300 {
+		t.Fatalf("stored heading=%q length=%d err=%v", got.Payload.Outline[1].Heading, utf8.RuneCountInString(got.Payload.Outline[1].Heading), err)
 	}
 }

@@ -79,11 +79,11 @@ func scanHeadingOmissions(ctx context.Context, db summaryReader, exclusions []so
 		if p.textSource != "source_tree" || structural[p.key] || (n.Kind != "chuong" && n.Kind != "dieu") || excluded[[2]string{p.key, n.Anchor}] || n.Heading == "" {
 			continue
 		}
-		o := headingOmission{Key: p.key, Anchor: n.Anchor, Length: utf8.RuneCountInString(n.Heading)}
+		o := headingOmission{Key: p.key, Anchor: n.Anchor, Length: utf8.RuneCountInString(strings.TrimSpace(n.Heading))}
 		switch {
 		case broken[p.key]:
 			o.reason = "sequence"
-		case utf8.RuneCountInString(strings.TrimSpace(n.Heading)) > 300:
+		case o.Length > 300:
 			o.reason = "length"
 		case headingShape(n.Heading) != "":
 			o.reason, o.shape = "shape", headingShape(n.Heading)

@@ -132,7 +132,8 @@ func makeSummary(ctx context.Context, db summarySizer, d summaryDocument, gaps [
 		if n.Kind != "phan" && n.Kind != "chuong" && n.Kind != "muc" && n.Kind != "dieu" {
 			continue
 		}
-		if !headings || (n.Kind != "chuong" && n.Kind != "dieu") || utf8.RuneCountInString(strings.TrimSpace(n.Heading)) > 300 || headingShape(n.Heading) != "" || excluded[n.Anchor] {
+		n.Heading = strings.TrimSpace(n.Heading)
+		if !headings || (n.Kind != "chuong" && n.Kind != "dieu") || utf8.RuneCountInString(n.Heading) > 300 || headingShape(n.Heading) != "" || excluded[n.Anchor] {
 			n.Heading = ""
 		}
 		outline = append(outline, n)

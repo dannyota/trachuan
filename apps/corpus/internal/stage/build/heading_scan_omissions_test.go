@@ -183,3 +183,27 @@ func TestHeadingScan_LengthAfterTrim(t *testing.T) {
 		t.Fatalf("trimmed 300 character heading reported: %s", b)
 	}
 }
+
+func TestHeadingScan_PaddingDoesNotAffectLongest(t *testing.T) {
+	r := headingScanReader{provisions: [][]any{{"doc", "source_tree", "dieu", "", "padded", strings.Repeat(" ", 40) + "x." + "\u3000"}}}
+	for i := 1; i <= 20; i++ {
+		r.provisions = append(r.provisions, []any{"doc", "source_tree", "dieu", "", fmt.Sprintf("a%02d", i), strings.Repeat("ố", i+1) + "."})
+	}
+	b, err := HeadingScan(context.Background(), r, "vn", "20990101_1", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got headingScanOutput
+	if err = json.Unmarshal(b, &got); err != nil {
+		t.Fatal(err)
+	}
+	report := got.Omitted["shape"]
+	if report.Count != 21 || len(report.Longest) != 20 {
+		t.Fatalf("report=%+v", report)
+	}
+	for i, item := range report.Longest {
+		if want := fmt.Sprintf("a%02d", 20-i); item.Anchor != want || item.Length != 22-i {
+			t.Errorf("item %d=%+v, want %s length %d", i, item, want, 22-i)
+		}
+	}
+}
