@@ -80,3 +80,11 @@ classifier. Hard-cut subject filtering.
   The seeded slice held 40 such articles of 300, so scoring them measured a case
   production never sends. Every report still states the all-entries numbers
   beside the non-fragment ones.
+- 2026-11-17: the LLM layer serves nothing for now. A trial in which each
+  article request chose from the full level-2 menu, returning one primary and at
+  most one additional node, did worse than the document-restricted prompt on
+  every slice (seeded top-1 0.687 against 0.791). Top-1 0.90 needed a confidence
+  threshold of 0.96, which left 99 to 100 percent of articles unassigned. A
+  split-half check gave the same result in both directions. Level 2 comes from
+  seeds and overrides only, as the design already allows, until a classifier
+  passes the floors with real coverage.
