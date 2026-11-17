@@ -63,10 +63,13 @@ ever reach such an account.
 such an account and refuses any account whose subject lacks the prefix, so it
 can never sign in as a real person. It writes the session value only into
 `FILE`, created new with mode `0600` and refused if it exists, never to standard
-output, and the session lasts at most one day. Anyone with a shell on the host
-can already write sessions into the database, so the command adds no privilege.
-After the window the accounts are blocked, which revokes their sessions. No
-owner action or real Google account is needed.
+output, and the session lasts at most one day. A failed command delivers no
+value: it revokes what it can and removes its file, and a session row that a
+commit with a lost outcome still leaves is unusable, because only its hash is
+stored, and ends within the day or when the account is blocked. Anyone with a
+shell on the host can already write sessions into the database, so the command
+adds no privilege. After the window the accounts are blocked, which revokes
+their sessions. No owner action or real Google account is needed.
 
 ## Sampling
 
