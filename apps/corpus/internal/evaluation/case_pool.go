@@ -89,6 +89,12 @@ func prefetchCase(ctx context.Context, engine Engine, input cohortInput, rejects
 	if (!input.legacy || !rejects[c.ID]) && (!result.product.Validation.Accepted || result.product.Vector == nil) {
 		return result
 	}
+	return collectPrefetch(ctx, engine, input, rejects, modes, recipe, policy, result)
+}
+
+func collectPrefetch(ctx context.Context, engine Engine, input cohortInput, rejects map[string]bool, modes []retrieval.Mode, recipe retrieval.Recipe, policy ValidityOverrides, result casePrefetch) casePrefetch {
+	c := input.c
+	force := inForceForCase(c, policy)
 	for _, cohort := range input.cohorts {
 		if cohort == "old_product" && rejects[c.ID] {
 			continue
@@ -97,9 +103,17 @@ func prefetchCase(ctx context.Context, engine Engine, input cohortInput, rejects
 		if cohort == "legacy" {
 			p = result.legacy
 		}
-		result.collects[cohort] = map[retrieval.Mode]caseCollect{}
+		if result.collects[cohort] == nil {
+			result.collects[cohort] = map[retrieval.Mode]caseCollect{}
+		}
 		var exact *retrieval.LexicalArms
 		for _, mode := range modes {
+			if previous, ok := result.collects[cohort][mode]; ok && previous.err == nil {
+				if mode == "exact" {
+					exact = &retrieval.LexicalArms{Primary: previous.arms.Primary.Lexical, NonCurrent: previous.arms.NonCurrent.Lexical, Depth: previous.arms.Depths.Lexical}
+				}
+				continue
+			}
 			p.Request.Mode = mode
 			depths := retrieval.Depths{Dense: recipe.DenseDepth, Lexical: recipe.LexicalDepth}
 			if mode == "exact" {
@@ -137,4 +151,32 @@ func prefetchCalibration(ctx context.Context, engine Engine, c Case, depths retr
 		result.arms, result.collectErr = engine.Collect(ctx, result.prepared, depths)
 	}
 	return result
+}
+
+func caseTimedOut(result casePrefetch) bool {
+	for _, modes := range result.collects {
+		for _, collected := range modes {
+			if sqlState(collected.err) == "57014" {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func prefetchCases(ctx context.Context, engine Engine, inputs []cohortInput, rejects map[string]bool, modes []retrieval.Mode, recipe retrieval.Recipe, policy ValidityOverrides, limit int) []casePrefetch {
+	pool := newOrderedPool(ctx, len(inputs), limit, func(ctx context.Context, i int) casePrefetch {
+		return prefetchCase(ctx, engine, inputs[i], rejects, modes, recipe, policy)
+	})
+	results := make([]casePrefetch, len(inputs))
+	for i := range inputs {
+		results[i] = pool.take(i)
+	}
+	pool.stop()
+	for i, input := range inputs {
+		if caseTimedOut(results[i]) {
+			results[i] = collectPrefetch(ctx, engine, input, rejects, modes, recipe, policy, results[i])
+		}
+	}
+	return results
 }

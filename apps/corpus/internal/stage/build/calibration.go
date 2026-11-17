@@ -20,7 +20,7 @@ func calibrate(ctx context.Context, cfg Config, db *pgxpool.Pool, release retrie
 	}
 	engine, err := retrieval.OpenDraft(ctx, db, cfg.Embedder, release, retrieval.Options{Profile: "evaluation", Now: func() time.Time { return date }})
 	if err != nil {
-		return evaluation.Calibration{}, fmt.Errorf("open draft corpus: %w", err)
+		return evaluation.Calibration{}, fmt.Errorf("open draft corpus: %w", evaluation.OfflineError(err))
 	}
 	result, err := evaluation.Calibrate(ctx, engine, cfg.Suite)
 	if err != nil {

@@ -15,6 +15,7 @@ import (
 	"danny.vn/trachuan/apps/server/internal/mcpapi"
 	"danny.vn/trachuan/apps/server/internal/websession"
 	"danny.vn/trachuan/internal/retrieval"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 func TestWeb_RejectsInvalidToolInputs(t *testing.T) {
@@ -114,6 +115,60 @@ func TestWeb_ErrorsAreFixedAndLogsExcludeInput(t *testing.T) {
 		}
 		if resolver.done.Load() != 1 {
 			t.Fatal("failure leaked lease")
+		}
+	}
+}
+
+type stateRetrievalError struct {
+	kind error
+	code string
+}
+
+func (e stateRetrievalError) Error() string { return "read dense candidates failed" }
+func (e stateRetrievalError) Unwrap() error { return e.kind }
+func (e stateRetrievalError) As(target any) bool {
+	if pg, ok := target.(**pgconn.PgError); ok && e.code != "" {
+		*pg = &pgconn.PgError{Code: e.code}
+		return true
+	}
+	return false
+}
+
+func TestWebAndMCP_SQLStateDoesNotChangePublicResponse(t *testing.T) {
+	for _, kind := range []error{retrieval.ErrUnavailable, retrieval.ErrReleaseGone} {
+		var webBody, mcpBody []byte
+		var status int
+		for i, code := range []string{"", "57014"} {
+			h := newHarness(t)
+			h.engine.err = stateRetrievalError{kind: kind, code: code}
+			response := webCall(h, "POST", "/api/v1/search", `{"country":"vn","query":"ngân hàng"}`)
+			mcpRequest := httptest.NewRequest("POST", "/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"search","arguments":{"country":"vn","query":"ngân hàng"}}}`))
+			mcpRequest.Header.Set("Authorization", "Bearer trc_"+strings.Repeat("A", 43))
+			mcpRequest.Header.Set("Content-Type", "application/json")
+			mcpRequest.Header.Set("Accept", "application/json, text/event-stream")
+			mcpResponse := httptest.NewRecorder()
+			h.mcp.ServeHTTP(mcpResponse, mcpRequest)
+			if mcpResponse.Code != 200 {
+				t.Fatalf("MCP status %d", mcpResponse.Code)
+			}
+			body := mcpResponse.Body.Bytes()
+			if i == 0 {
+				want := 503
+				if errors.Is(kind, retrieval.ErrReleaseGone) {
+					want = 409
+				}
+				if response.Code != want || !strings.Contains(response.Body.String(), `"error"`) || !strings.Contains(string(body), `"error"`) {
+					t.Fatalf("unexpected failure response: %d %s %s", response.Code, response.Body.String(), body)
+				}
+				status, webBody, mcpBody = response.Code, response.Body.Bytes(), body
+				continue
+			}
+			if response.Code != status || !bytes.Equal(response.Body.Bytes(), webBody) || !bytes.Equal(body, mcpBody) {
+				t.Fatalf("public response changed: web %d %s, mcp %s", response.Code, response.Body.String(), body)
+			}
+			if strings.Contains(string(body), "57014") || strings.Contains(response.Body.String(), "57014") {
+				t.Fatal("SQLSTATE exposed")
+			}
 		}
 	}
 }

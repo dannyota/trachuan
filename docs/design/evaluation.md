@@ -29,9 +29,15 @@ distinguish `evaluation_date` from nullable `request_as_of`. Use the evaluation
 deadline profile for every arm. Cases run three at a time within the item and
 their results merge in case order, so every report and cache field except
 `timings_ms` equals a serial run; `timings_ms` measures latency with three cases
-in flight. In ANN mode the lexical arm reuses the exact-mode lexical result cut
-to the recipe depth: its order (score descending, then chunk id) is total, so
-the prefix equals a fresh query.
+in flight. A case whose exact retrieval is cancelled by the statement timeout
+(SQLSTATE 57014) is retried once, alone, after the others, under the same
+deadline; a second timeout fails the run, naming the case and the code, and no
+other error is retried. A retry cannot change the result: exact arms read a
+release database that no longer changes, and their order is total. Errors carry
+the SQLSTATE; server retrieval keeps failing fast and keeps its public messages.
+In ANN mode the lexical arm reuses the exact-mode lexical result cut to the
+recipe depth: its order (score descending, then chunk id) is total, so the
+prefix equals a fresh query.
 
 The sibling clause merge follows the release recipe (recipe 3);
 `--merge-siblings` is rejected with a message naming the release recipe.
