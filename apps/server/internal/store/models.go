@@ -30,10 +30,13 @@ type AccountSecurityChange struct {
 }
 
 type CorpusRelease struct {
-	Country     string
-	ActiveDb    string
-	ActivatedAt time.Time
-	ActivatedBy string
+	Country           string
+	ActiveDb          string
+	ActivatedAt       time.Time
+	ActivatedBy       string
+	SummaryDatabase   *string
+	SummaryProjection int32
+	HeadingsApproved  bool
 }
 
 type EmailLink struct {

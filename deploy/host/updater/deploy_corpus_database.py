@@ -51,7 +51,13 @@ class Database:
         return json.loads(self.query(sql.journal(row, step)))
 
     def activate(self, row):
-        return json.loads(self.query(sql.activate(row)))
+        projection = 0
+        if row['manifest']['schema_version'] >= 8:
+            name = row['database_name']
+            if self.query("SELECT to_regclass('public.document_summary') IS NOT NULL;", name) == 't':
+                if self.query('SELECT NOT EXISTS(SELECT FROM document_summary WHERE projection <> 1);', name) == 't':
+                    projection = 1
+        return json.loads(self.query(sql.activate(row, projection)))
 
     def protected(self, name):
         sql.database(name)

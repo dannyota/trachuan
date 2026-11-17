@@ -1997,6 +1997,96 @@ paths:
         in: query
         required: false
         schema: *id001
+  /api/v1/public/documents/{key}:
+    get:
+      tags:
+      - public-summaries
+      security: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicSummary'
+          headers:
+            ETag:
+              schema:
+                type: string
+            Cache-Control:
+              schema:
+                type: string
+        '400':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicSummaryError'
+        '404':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicSummaryError'
+        '503':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicSummaryError'
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+      parameters:
+      - name: key
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 4
+          pattern: '^vn:'
+  /api/v1/public/documents:
+    get:
+      tags:
+      - public-summaries
+      security: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicSummaryList'
+          headers:
+            ETag:
+              schema:
+                type: string
+            Cache-Control:
+              schema:
+                type: string
+        '400':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicSummaryError'
+        '404':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicSummaryError'
+        '503':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicSummaryError'
+          headers:
+            Retry-After:
+              schema:
+                type: integer
   /api/v1/public/status:
     get:
       tags: [web]
@@ -2011,7 +2101,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CorpusStatus'
+                $ref: '#/components/schemas/PublicStatus'
         '400':
           description: Request failed
           content:
@@ -3124,6 +3214,292 @@ components:
             $ref: '#/components/schemas/ItemResult'
       required:
       - release
+    PublicSummaryStatus:
+      type: object
+      additionalProperties: false
+      properties:
+        class:
+          type: string
+          enum:
+          - in_force
+          - partial
+          - expired
+          - not_yet
+          - suspended
+          - unknown
+        current:
+          type: boolean
+        basis:
+          type: string
+          const: source_status
+        status_basis:
+          type: string
+          enum:
+          - source_status
+          - derived_from_consolidated
+          - derived_from_text
+          - manual_correction
+        unresolved:
+          type: boolean
+      required:
+      - class
+      - current
+      - basis
+      - status_basis
+      - unresolved
+    PublicSummaryDocument:
+      type: object
+      additionalProperties: false
+      properties:
+        key:
+          type: string
+          minLength: 4
+          pattern: '^vn:'
+        number:
+          type: string
+          maxLength: 200
+        title:
+          type: string
+          maxLength: 1000
+        type:
+          type: string
+          maxLength: 200
+        issuer:
+          type: string
+          maxLength: 200
+        issued:
+          type:
+          - string
+          - 'null'
+          format: date
+        effective_from:
+          type:
+          - string
+          - 'null'
+          format: date
+        effective_to:
+          type:
+          - string
+          - 'null'
+          format: date
+        status:
+          $ref: '#/components/schemas/PublicSummaryStatus'
+        gap_kinds:
+          type: array
+          items:
+            type: string
+            enum:
+            - missing_effective_date
+            - consolidated_status_unordered
+            - consolidated_status_unresolved
+          maxItems: 3
+        has_text:
+          type: boolean
+        text_complete:
+          type: boolean
+        source_url:
+          type:
+          - string
+          - 'null'
+          pattern: ^https://
+      required:
+      - key
+      - number
+      - title
+      - type
+      - issuer
+      - issued
+      - effective_from
+      - effective_to
+      - status
+      - gap_kinds
+      - has_text
+      - text_complete
+      - source_url
+    PublicSummaryRelation:
+      type: object
+      additionalProperties: false
+      properties:
+        kind:
+          type: string
+          enum:
+          - repeals
+          - implements
+          - legal_basis
+          - cites
+          - suspends
+          - consolidates
+          - guided_by
+          - amends_supplements
+          - replaces
+          - references
+          - unknown
+        direction:
+          type: string
+          enum:
+          - incoming
+          - outgoing
+        key:
+          type: string
+          minLength: 4
+          pattern: '^vn:'
+        number:
+          type: string
+          maxLength: 200
+        title:
+          type: string
+          maxLength: 1000
+      required:
+      - kind
+      - direction
+      - number
+    PublicSummaryNode:
+      type: object
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+          maxLength: 200
+      required:
+      - code
+      - name
+    PublicSummaryOutline:
+      type: object
+      additionalProperties: false
+      properties:
+        kind:
+          type: string
+          enum:
+          - phan
+          - chuong
+          - muc
+          - dieu
+        label:
+          type: string
+        anchor:
+          type: string
+        heading:
+          type: string
+          maxLength: 300
+      required:
+      - kind
+      - label
+      - anchor
+    PublicSummary:
+      type: object
+      additionalProperties: false
+      properties:
+        release:
+          type: string
+        projection:
+          type: integer
+          const: 1
+        status_date:
+          type: string
+          format: date
+        index:
+          type: boolean
+        document:
+          $ref: '#/components/schemas/PublicSummaryDocument'
+        relations:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicSummaryRelation'
+          maxItems: 50
+        relations_total:
+          type: integer
+          minimum: 0
+        nodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicSummaryNode'
+          maxItems: 10
+        outline:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicSummaryOutline'
+          maxItems: 1500
+      required:
+      - release
+      - projection
+      - status_date
+      - index
+      - document
+      - relations
+      - relations_total
+      - nodes
+      - outline
+    PublicSummaryList:
+      type: object
+      additionalProperties: false
+      properties:
+        release:
+          type: string
+        projection:
+          type: integer
+          const: 1
+        total:
+          type: integer
+          minimum: 0
+          maximum: 10000
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              key:
+                type: string
+                minLength: 4
+                pattern: '^vn:'
+              index:
+                type: boolean
+            required:
+            - key
+            - index
+          maxItems: 10000
+      required:
+      - release
+      - projection
+      - total
+      - items
+    PublicSummaryError:
+      type: object
+      additionalProperties: false
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          properties:
+            code:
+              type: string
+              enum:
+              - invalid_request
+              - busy
+              - unavailable
+              - not_found
+              - too_large
+            message:
+              type: string
+          required:
+          - code
+          - message
+      required:
+      - error
+    PublicStatus:
+      allOf:
+      - $ref: '#/components/schemas/CorpusStatus'
+      - type: object
+        properties:
+          features:
+            type: object
+            additionalProperties: false
+            required: [public_summaries]
+            properties:
+              public_summaries: {type: boolean}
+        required: [features]
     CorpusStatus:
       type: object
       properties:

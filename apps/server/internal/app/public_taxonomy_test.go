@@ -57,7 +57,11 @@ func TestPublicTaxonomy_MountedSharedIPLimit(t *testing.T) {
 	for i := 0; i < 60; i++ {
 		path := paths[i%len(paths)]
 		w := call(path, "192.0.2.1")
-		if w.Code != 200 || w.Header().Get("Cache-Control") != "public, max-age=600" {
+		wantCache := "public, max-age=600"
+		if path == "/api/v1/public/status" {
+			wantCache = "public, max-age=60, must-revalidate"
+		}
+		if w.Code != 200 || w.Header().Get("Cache-Control") != wantCache {
 			t.Fatalf("%s request %d: %d %s", path, i, w.Code, w.Body.String())
 		}
 	}
@@ -67,7 +71,11 @@ func TestPublicTaxonomy_MountedSharedIPLimit(t *testing.T) {
 			t.Fatalf("%s: %d %s", path, w.Code, w.Body.String())
 		}
 		w = call(path, "192.0.2.2")
-		if w.Code != 200 || w.Header().Get("Cache-Control") != "public, max-age=600" {
+		wantCache := "public, max-age=600"
+		if path == "/api/v1/public/status" {
+			wantCache = "public, max-age=60, must-revalidate"
+		}
+		if w.Code != 200 || w.Header().Get("Cache-Control") != wantCache {
 			t.Fatalf("other IP %s: %d %s", path, w.Code, w.Body.String())
 		}
 	}
