@@ -134,8 +134,9 @@ Chuẩn gives evidence from legal texts, not legal advice. Usage limits,
 suspension and account deletion."
 
 A topic name is cut on a word boundary so its title stays under 60, and a node
-description under 160; counts come from the taxonomy response. Topic names stay
-Vietnamese in both languages.
+description under 160; a name with no word boundary within its limit is replaced
+by the topic code, and such a description by the counts sentence; counts come
+from the taxonomy response. Topic names stay Vietnamese in both languages.
 
 ## English
 

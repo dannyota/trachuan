@@ -13,6 +13,11 @@ it('cuts long topic names and descriptions at word boundaries', () => {
     const fallback = topicSeo({ name: 'Chủ đề pháp luật '.repeat(30), documents: 1200, provisions: 3400 }, lang).description
     expect(fallback.length).toBeLessThanOrEqual(160)
     expect(fallback).toContain(lang === 'vi' ? '1.200 văn bản, 3.400 quy định.' : '1,200 documents, 3,400 provisions.')
+    const unbroken = topicSeo({ code: '12.3', name: 'x'.repeat(200), description: 'y'.repeat(200), documents: 1, provisions: 2 }, lang)
+    expect(unbroken.title).toBe(`12.3 · ${lang === 'vi' ? 'Chủ đề' : 'Topics'} · Tra Chuẩn`)
+    expect(unbroken.description).not.toMatch(/xxx|yyy/)
+    expect(unbroken.description).toContain('“12.3”')
+    expect(unbroken.description.length).toBeLessThanOrEqual(160)
   }
 })
 
