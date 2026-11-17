@@ -45,7 +45,6 @@ func guard(next http.Handler) http.Handler {
 			protocolError(w, http.StatusBadRequest, jsonrpc.CodeInvalidRequest, nil)
 			return
 		}
-		noStore := request.Method == "tools/call" && frameworkToolRequest(request.Params)
 		if request.Method == "subscriptions/listen" {
 			protocolError(w, http.StatusBadRequest, jsonrpc.CodeMethodNotFound, request.ID.Raw())
 			return
@@ -60,9 +59,6 @@ func guard(next http.Handler) http.Handler {
 			if key != "Mcp-Session-Id" {
 				w.Header()[key] = values
 			}
-		}
-		if noStore {
-			w.Header().Set("Cache-Control", "no-store")
 		}
 		status := buffered.status
 		if status == 0 {

@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -67,28 +66,9 @@ type frameworkBearer struct{ t *testing.T }
 func (b frameworkBearer) RoundTrip(r *http.Request) (*http.Response, error) {
 	r = r.Clone(r.Context())
 	r.Header.Set("Authorization", "Bearer trc_"+strings.Repeat("A", 43))
-	var call struct {
-		Method string `json:"method"`
-		Params struct {
-			Arguments struct {
-				Corpus string `json:"corpus"`
-			} `json:"arguments"`
-		} `json:"params"`
-	}
-	if r.Body != nil {
-		raw, err := io.ReadAll(r.Body)
-		if err != nil {
-			return nil, err
-		}
-		if err = r.Body.Close(); err != nil {
-			return nil, err
-		}
-		r.Body = io.NopCloser(bytes.NewReader(raw))
-		_ = json.Unmarshal(raw, &call)
-	}
 	response, err := http.DefaultTransport.RoundTrip(r)
-	if err == nil && call.Method == "tools/call" && call.Params.Arguments.Corpus == "frameworks" && response.Header.Get("Cache-Control") != "no-store" {
-		b.t.Errorf("framework response Cache-Control=%q want no-store", response.Header.Get("Cache-Control"))
+	if err == nil && response.Header.Get("Cache-Control") != "no-store" {
+		b.t.Errorf("MCP response Cache-Control=%q want no-store", response.Header.Get("Cache-Control"))
 	}
 	return response, err
 }
