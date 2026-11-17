@@ -29,6 +29,10 @@ type recipe struct {
 	} `json:"source"`
 }
 
+const retrievalRecipeVersion = 2
+
+func SupportedRetrievalRecipeVersions() []int { return []int{retrievalRecipeVersion} }
+
 func decodeRecipe(raw []byte, out any) error {
 	dec := json.NewDecoder(bytes.NewReader(raw))
 	dec.DisallowUnknownFields()
@@ -39,7 +43,7 @@ func decodeRecipe(raw []byte, out any) error {
 }
 
 func (r recipe) validate() error {
-	if r.Version != 2 || r.DenseDepth < 1 || r.DenseDepth > 200 || r.LexicalDepth < 1 || r.LexicalDepth > 100 || r.RRF.K < 1 || r.Abstention.Statistic != "first-hit-best-permitted-cosine" || r.Abstention.Threshold == nil || r.Source.Release == "" || r.Source.RecipeVersion != 3 {
+	if r.Version != retrievalRecipeVersion || r.DenseDepth < 1 || r.DenseDepth > 200 || r.LexicalDepth < 1 || r.LexicalDepth > 100 || r.RRF.K < 1 || r.Abstention.Statistic != "first-hit-best-permitted-cosine" || r.Abstention.Threshold == nil || r.Source.Release == "" || r.Source.RecipeVersion != 3 {
 		return ErrUnavailable
 	}
 	switch r.Status {

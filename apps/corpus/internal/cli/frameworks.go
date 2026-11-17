@@ -9,8 +9,11 @@ import (
 )
 
 func runFrameworks(ctx context.Context, args []string, out, errout io.Writer) int {
+	if len(args) == 2 && args[0] == "release-row" {
+		return runFrameworksReleaseRow(ctx, args[1], errout)
+	}
 	if len(args) != 2 || args[0] != "build" {
-		_, _ = fmt.Fprintln(errout, "usage: corpus frameworks build <rel>")
+		_, _ = fmt.Fprintln(errout, "usage: corpus frameworks build <rel> | corpus frameworks release-row <rel>")
 		return 2
 	}
 	if err := build.Run(ctx, args[1], out, newFrameworkEmbedder(), newFrameworkDatabase(), openFrameworkCalibration); err != nil {

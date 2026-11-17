@@ -9,9 +9,35 @@ import (
 	"strings"
 	"testing"
 
+	"danny.vn/trachuan/internal/corpusdb"
 	"danny.vn/trachuan/internal/embedding"
+	"danny.vn/trachuan/internal/retrieval"
 	"danny.vn/trachuan/internal/retrieval/lexical"
 )
+
+func TestDescribe_LawEncodingUnchanged(t *testing.T) {
+	recipe := embedding.QueryRecipe1()
+	running := embedding.Report{ProtocolVersion: 1, RecipeHash: recipe.Hash(), Recipe: recipe}
+	client := embedding.NewClient("http://embedder", &http.Client{Transport: recipeTransport{running}})
+	report, err := Describe(t.Context(), client)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := json.Marshal(report)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want, err := json.Marshal(struct {
+		SchemaVersions   []int              `json:"schema_versions"`
+		DenseQueryHash   string             `json:"dense_query_hash"`
+		RunningQuery     embedding.Report   `json:"running_query"`
+		LexicalRecipe    lexical.Recipe     `json:"lexical_recipe"`
+		RetrievalRecipes []retrieval.Recipe `json:"retrieval_recipes"`
+	}{corpusdb.SupportedSchemaVersions(), embedding.QueryRecipe1().Hash(), running, lexical.Recipe1(), []retrieval.Recipe{retrieval.Recipe2(), retrieval.Recipe3()}})
+	if err != nil || string(got) != string(want) {
+		t.Fatal("law report bytes changed")
+	}
+}
 
 type recipeTransport struct{ report embedding.Report }
 

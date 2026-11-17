@@ -6,8 +6,10 @@ import (
 	"regexp"
 	"strings"
 
+	schema "danny.vn/trachuan/internal/corpusdb/frameworks"
 	"danny.vn/trachuan/internal/embedding"
 	"danny.vn/trachuan/internal/frameworks/serve"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -36,7 +38,7 @@ func (r *Resolver) openFrameworks(ctx context.Context, name string, entry *cache
 	if r.EmbedderFor == nil {
 		return errors.New("missing frameworks embedder factory")
 	}
-	cfg, err := poolConfig(r.URLTemplate, name)
+	cfg, err := frameworksPoolConfig(r.URLTemplate, name)
 	if err != nil {
 		return err
 	}
@@ -64,4 +66,14 @@ func (r *Resolver) openFrameworks(ctx context.Context, name string, entry *cache
 	entry.frameworks = engine
 	r.mu.Unlock()
 	return nil
+}
+
+func frameworksPoolConfig(template, name string) (*pgxpool.Config, error) {
+	cfg, err := poolConfig(template, name)
+	if err != nil {
+		return nil, err
+	}
+	cfg.ConnConfig.RuntimeParams["default_transaction_read_only"] = "on"
+	cfg.AfterConnect = func(ctx context.Context, conn *pgx.Conn) error { return schema.CheckLogSettings(ctx, conn) }
+	return cfg, nil
 }

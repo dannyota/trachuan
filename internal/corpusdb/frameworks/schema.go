@@ -23,6 +23,9 @@ type DB interface {
 //go:embed schema.sql
 var schema string
 
+//go:embed views.sql
+var views string
+
 //go:embed versions.sql
 var versions string
 
@@ -32,11 +35,32 @@ var evidence string
 //go:embed indexes.sql
 var indexes string
 
-func rendered(dimensions int) (string, error) {
+func TablesSQL(dimensions int) (string, error) {
 	if dimensions != 1024 {
 		return "", fmt.Errorf("dimensions %d: %w", dimensions, ErrUnsupportedDimensions)
 	}
-	return strings.ReplaceAll(schema, "{{dimensions}}", "1024") + versions + evidence, nil
+	return strings.ReplaceAll(schema, "{{dimensions}}", "1024"), nil
+}
+
+func SupportedSchemaVersions() []int { return []int{SchemaVersion} }
+
+func ExecutableSQL(version int) (string, error) {
+	if version != SchemaVersion {
+		return "", fmt.Errorf("unsupported frameworks schema version %d", version)
+	}
+	return views + versions + evidence, nil
+}
+
+func rendered(dimensions int) (string, error) {
+	tables, err := TablesSQL(dimensions)
+	if err != nil {
+		return "", err
+	}
+	executable, err := ExecutableSQL(SchemaVersion)
+	if err != nil {
+		return "", err
+	}
+	return tables + executable, nil
 }
 
 func Apply(ctx context.Context, db DB, dimensions int) error {

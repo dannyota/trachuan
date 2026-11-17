@@ -94,16 +94,6 @@ CREATE TABLE IF NOT EXISTS public_posting (
  CONSTRAINT public_posting_chunk_fkey FOREIGN KEY (version_id,chunk_id) REFERENCES public_chunk(version_id,id)
 );
 
-CREATE OR REPLACE VIEW body_lexical_stats AS
- SELECT version_id, count(*) AS chunk_count, avg(token_count) AS avg_length
- FROM body_chunk GROUP BY version_id;
-CREATE OR REPLACE VIEW body_lexical_df AS
- SELECT version_id, token, count(*) AS df FROM body_posting GROUP BY version_id,token;
-CREATE OR REPLACE VIEW public_lexical_stats AS
- SELECT count(*) AS chunk_count, coalesce(avg(token_count),0) AS avg_length FROM public_chunk;
-CREATE OR REPLACE VIEW public_lexical_df AS
- SELECT token, count(*) AS df FROM public_posting GROUP BY token;
-
 CREATE TABLE IF NOT EXISTS control_mapping (
  id bigint PRIMARY KEY CONSTRAINT control_mapping_id_check CHECK (id > 0),
  from_code text COLLATE "C" NOT NULL CONSTRAINT control_mapping_from_code_check CHECK (from_code ~ '^[a-z][a-z0-9]*(-[a-z0-9]+)*$'),

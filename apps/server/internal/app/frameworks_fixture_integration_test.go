@@ -95,6 +95,10 @@ func frameworkFixture(t *testing.T, changed bool, logicalRelease string) (*frame
 	_, err = admin.Exec(ctx, "COMMENT ON DATABASE "+pgx.Identifier{name}.Sanitize()+" IS '{\"run_key\":\""+runKey+"\"}'")
 	require.NoError(t, err)
 	t.Cleanup(func() { testpg.DropCorpusDatabase(t, admin, name, runKey) })
+	for setting, value := range map[string]string{"log_min_messages": "panic", "log_min_error_statement": "panic", "log_min_duration_statement": "-1", "log_statement": "none"} {
+		_, err = admin.Exec(ctx, "ALTER DATABASE "+pgx.Identifier{name}.Sanitize()+" SET "+setting+" = '"+value+"'")
+		require.NoError(t, err)
+	}
 	base.Path = "/" + name
 	conn, err := pgx.Connect(ctx, base.String())
 	require.NoError(t, err)
