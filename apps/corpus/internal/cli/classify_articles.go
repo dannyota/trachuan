@@ -18,6 +18,7 @@ type articleOptions struct {
 	Options          classify.Options
 	Families, Labels string
 	MaxTokens        int64
+	Step             int
 }
 
 func withArticleMaxTokens(r classify.Recipe, maxTokens int64) (classify.Recipe, error) {
@@ -38,7 +39,7 @@ func parseArticleOptions(cc, rel string, args []string) (articleOptions, error) 
 	if _, err := build.DatabaseName(cc, rel); err != nil {
 		return o, err
 	}
-	flags, err := options(args, map[string]bool{"--families": true, "--select": true, "--recipe": true, "--out": true, "--budget": true, "--budget-usd": true, "--max-tokens": true, "--dry-run": false})
+	flags, err := options(args, map[string]bool{"--families": true, "--select": true, "--recipe": true, "--out": true, "--budget": true, "--budget-usd": true, "--max-tokens": true, "--dry-run": false, "--step": true, "--step-1": true})
 	if err != nil {
 		return o, err
 	}
@@ -47,6 +48,18 @@ func parseArticleOptions(cc, rel string, args []string) (articleOptions, error) 
 		if err != nil || o.MaxTokens < 1 || o.MaxTokens > 32000 {
 			return o, fmt.Errorf("--max-tokens must be an integer from 1 to 32000")
 		}
+	}
+	if value, set := flags["--step"]; set {
+		if value != "1" && value != "2" {
+			return o, fmt.Errorf("--step must be 1 or 2")
+		}
+		o.Step, _ = strconv.Atoi(value)
+		if flags["--recipe"] != "claude-haiku-5-5" {
+			return o, fmt.Errorf("two-step trial requires Haiku")
+		}
+	}
+	if (o.Step == 2) != (flags["--step-1"] != "") {
+		return o, fmt.Errorf("--step-1 FILE is required only with --step 2")
 	}
 	selection, ok := strings.CutPrefix(flags["--select"], "labels:")
 	if !ok || selection == "" || flags["--families"] == "" || flags["--out"] == "" {
@@ -59,7 +72,7 @@ func parseArticleOptions(cc, rel string, args []string) (articleOptions, error) 
 	if err != nil {
 		return o, err
 	}
-	o = articleOptions{Options: classify.Options{Country: cc, Release: rel, Recipe: recipe, Out: flags["--out"], Budget: "pilot", BudgetMicroUSD: 15000000, DryRun: flags["--dry-run"] == "true"}, Families: flags["--families"], Labels: selection, MaxTokens: o.MaxTokens}
+	o = articleOptions{Options: classify.Options{Country: cc, Release: rel, Recipe: recipe, Out: flags["--out"], Budget: "pilot", BudgetMicroUSD: 15000000, DryRun: flags["--dry-run"] == "true", Step1Artifact: flags["--step-1"]}, Families: flags["--families"], Labels: selection, MaxTokens: o.MaxTokens, Step: o.Step}
 	return o, nil
 }
 
@@ -70,7 +83,7 @@ func runClassifyArticles(ctx context.Context, args []string, stdout, stderr io.W
 func runClassifyArticlesWith(ctx context.Context, args []string, stdout, stderr io.Writer, load func(context.Context, string, string, taxonomy.Labels) (classificationEvidence, error)) int {
 	fail := func(code int, err error) int { _, _ = fmt.Fprintln(stderr, err); return code }
 	if len(args) < 2 {
-		return fail(2, fmt.Errorf("usage: corpus classify articles <cc> <rel> --families FILE --select labels:FILE --recipe MODEL --out DIR --budget pilot --budget-usd 15 [--max-tokens N] [--dry-run]"))
+		return fail(2, fmt.Errorf("usage: corpus classify articles <cc> <rel> --families FILE --select labels:FILE --recipe MODEL --out DIR --budget pilot --budget-usd 15 [--max-tokens N] [--step 1|2] [--step-1 FILE] [--dry-run]"))
 	}
 	o, err := parseArticleOptions(args[0], args[1], args[2:])
 	if err != nil {
@@ -101,6 +114,15 @@ func runClassifyArticlesWith(ctx context.Context, args []string, stdout, stderr 
 		return fail(1, err)
 	}
 	o.Options.Recipe, err = classify.NewArticleRecipe(families.Recipe, hash)
+	if err == nil && o.Step != 0 {
+		var step1Hash string
+		if o.Step == 2 {
+			_, step1Hash, err = classify.ReadStep1Artifact(o.Options.Step1Artifact, evidence.taxonomyHash, hash)
+		}
+		if err == nil {
+			o.Options.Recipe, err = classify.NewTwoStepArticleRecipe(families.Recipe, hash, o.Step, step1Hash)
+		}
+	}
 	if err == nil {
 		o.Options.Recipe, err = withArticleMaxTokens(o.Options.Recipe, o.MaxTokens)
 	}

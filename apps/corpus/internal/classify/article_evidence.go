@@ -101,6 +101,7 @@ func SelectArticles(provisions []ProvisionEvidence, labels []taxonomy.LabelArtic
 			parent := provisions[j]
 			if parent.Kind == "chuong" && strings.HasPrefix(p.Path, parent.Path+".") {
 				a.Chapter = parent.Path
+				a.ChapterHeading = parent.Heading
 				break
 			}
 		}

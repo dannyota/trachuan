@@ -10,12 +10,13 @@ type Node struct {
 }
 
 type Article struct {
-	DocumentKey string `json:"-"`
-	Anchor      string `json:"anchor"`
-	Heading     string `json:"heading"`
-	Text        string `json:"text"`
-	Chapter     string `json:"-"`
-	OwnText     string `json:"-"`
+	DocumentKey    string `json:"-"`
+	Anchor         string `json:"anchor"`
+	Heading        string `json:"heading"`
+	Text           string `json:"text"`
+	Chapter        string `json:"-"`
+	ChapterHeading string `json:"chapter_heading,omitempty"`
+	OwnText        string `json:"-"`
 }
 
 type ArticleRequest struct {
@@ -23,6 +24,8 @@ type ArticleRequest struct {
 	Articles    []Article `json:"articles"`
 	Nodes       []Node    `json:"allowed_subtrees"`
 	InputTokens int64     `json:"counted_input_tokens"`
+	Step        int       `json:"step,omitempty"`
+	Family      string    `json:"family,omitempty"`
 }
 
 type CodeConfidence struct {
@@ -31,9 +34,10 @@ type CodeConfidence struct {
 }
 
 type ArticleOutcome struct {
-	Outcome string           `json:"outcome"`
-	Codes   []CodeConfidence `json:"codes"`
-	Dropped []string         `json:"dropped_codes"`
+	Outcome        string           `json:"outcome"`
+	Codes          []CodeConfidence `json:"codes"`
+	Dropped        []string         `json:"dropped_codes"`
+	FailedFamilies *int             `json:"failed_families,omitempty"`
 }
 
 type ArticleRecord struct {

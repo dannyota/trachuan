@@ -84,8 +84,19 @@ func ValidateArticles(stop, text string, req ArticleRequest, nodes []Node) (map[
 		}
 	}
 	active := map[string]bool{}
+	var subtree map[string]bool
+	if req.Step == 2 {
+		subtree = map[string]bool{}
+		menu, menuErr := allowedNodes([]string{req.Family}, nodes)
+		if menuErr != nil {
+			return invalid, dropped
+		}
+		for _, n := range menu {
+			subtree[n.Code] = true
+		}
+	}
 	for _, n := range nodes {
-		if n.Active && n.Level >= 2 && n.Level <= 4 && (n.Origin == "phapdien" || n.Origin == "custom") {
+		if n.Active && n.Level >= 2 && n.Level <= 4 && (n.Origin == "phapdien" || n.Origin == "custom") && (req.Step != 1 || n.Level == 2) && (req.Step != 2 || subtree[n.Code]) {
 			active[n.Code] = true
 		}
 	}

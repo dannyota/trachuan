@@ -79,10 +79,12 @@ type Options struct {
 	DryRun           bool
 	LabelsFile       string
 	Selection        *DocumentSelection
+	Step1Artifact    string
 	article          *articleWork
 }
 
 type Summary struct {
+	Step            int    `json:"step,omitempty"`
 	Requests        int    `json:"requests"`
 	InputTokens     int64  `json:"counted_input_tokens"`
 	ReserveMicroUSD int64  `json:"reserve_micro_usd"`

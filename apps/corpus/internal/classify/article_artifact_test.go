@@ -67,15 +67,26 @@ func TestArticleArtifact_BindsInputsAndRejectsTampering(t *testing.T) {
 	}
 }
 
-func TestFamilyArtifact_RejectsOldPrompt(t *testing.T) {
+func TestFamilyArtifact_LegacyPromptRemainsRunnable(t *testing.T) {
 	r := articleRecipe(t).documentRecipe()
 	r.PromptVersion = 1
 	dir := t.TempDir()
 	if err := writeFamilies(dir, Submission{Recipe: r, Results: map[string]Outcome{"vn:vbpl:1": {Outcome: "ok", Codes: []string{"1.1"}}}}); err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err := ReadFamilyArtifact(filepath.Join(dir, "families.json"), r.TaxonomyHash, articleNodes()); err == nil {
-		t.Fatal("accepted old prompt artifact")
+	f, hash, err := ReadFamilyArtifact(filepath.Join(dir, "families.json"), r.TaxonomyHash, articleNodes())
+	if err != nil {
+		t.Fatal(err)
+	}
+	article, err := NewArticleRecipe(f.Recipe, hash)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = article.Validate(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = BuildArticleRequest(article, ArticleRequest{DocumentKey: "vn:vbpl:1", Articles: articleInputs(1, ""), Nodes: articleNodes()[1:4]}); err != nil {
+		t.Fatal(err)
 	}
 }
 
