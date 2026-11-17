@@ -2,7 +2,9 @@
 body { margin: 0; background: var(--color-page); color: var(--color-ink); font-size: 16px; line-height: 1.6; }
 h1, h2, h3, h4, h5, h6 { font-family: var(--font-sans); font-weight: 700; }
 a { color: var(--color-primary); text-decoration-line: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
-button { cursor: pointer; }
+button { cursor: pointer; text-decoration: none; }
+.ghost-button { display: inline-flex; align-items: center; gap: 4px; min-height: 44px; padding: 0; border: 0; background: transparent; color: var(--color-ink); font: inherit; text-decoration: none; }
+.ghost-button:hover, .ghost-button:focus-visible { background: var(--color-mist); }
 :focus-visible { outline: 3px solid var(--color-ring); outline-offset: 2px; }
 code, pre, kbd, samp { font-family: var(--font-mono); font-variant-ligatures: none; }
 .command-token { display: inline-block; max-width: 100%; overflow-wrap: anywhere; }

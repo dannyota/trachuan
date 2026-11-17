@@ -14,10 +14,10 @@
 .reader-content, .reader-rail { min-width: 0; overflow-wrap: anywhere; }
 .reader-toc-desktop h2 { margin: 0 10px 6px; font-size: 13px; }
 .reader-toc ul { padding: 0; margin: 0; list-style: none; }
-.reader-toc a, .reader-toc span { display: block; padding: 6px 10px; border-radius: var(--radius-sm); color: var(--color-ink-soft); font-size: 14px; line-height: 1.4; text-decoration: none; }
+.reader-toc a, .reader-toc span { display: block; padding: 6px 10px; border-radius: var(--radius-sm); color: var(--color-ink-soft); font-size: 14px; line-height: 1.4; text-decoration: underline; }
 .reader-toc-chapter a, .reader-toc-chapter span { padding-top: 14px; color: var(--color-muted); font-size: 12px; font-weight: 700; letter-spacing: .03em; }
 .reader-toc-section a, .reader-toc-section span { font-size: 13px; font-weight: 600; }
-.reader-toc a[aria-current] { background: var(--color-note); color: var(--color-primary); font-weight: 700; }
+.reader-toc a[aria-current] { color: var(--color-primary); font-weight: 700; }
 .reader-toc-mobile { display: none; }
 .reader-unit { display: flow-root; scroll-margin-top: var(--reader-stack-height, 73px); }
 .reader-unit h2 { margin: 0 0 12px; font-family: var(--font-serif); font-size: 20px; }
@@ -90,5 +90,9 @@
 .reader-file-name { overflow-wrap: anywhere; }
 .reader-file-value { display: inline-block; white-space: nowrap; }
 
-.reader-main button { min-height: 44px; border-radius: var(--radius-pill); }
+.reader-main button { min-height: 44px; }
+.reader-main a:not(.chip):not(.reader-relation-chip), .reader-source { min-height: 44px; }
+.reader-source { display: inline-flex; align-items: center; gap: 4px; }
+.reader-toc a { display: flex; align-items: center; color: var(--color-primary); }
+.reader-meta a, .reader-technical a { display: inline-flex; align-items: center; }
 .reader-main .chip, .reader-relation-chip { min-height: 24px; border-radius: var(--radius-pill); }

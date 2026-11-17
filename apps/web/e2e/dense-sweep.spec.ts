@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { clientAddress } from './client-address'
+import { checkControls } from './control-checks'
 
 async function navigate(page: Page, path: string) {
   await page.evaluate(path => (document.querySelector('#__nuxt') as unknown as { __vue_app__: { config: { globalProperties: { $router: { push: (path: string) => Promise<void> } } } } }).__vue_app__.config.globalProperties.$router.push(path), path)
@@ -12,7 +13,7 @@ async function shapes(page: Page) {
   for (const button of await buttons.all()) {
     const box = await button.boundingBox()
     expect(box!.height).toBeGreaterThanOrEqual(44)
-    expect(parseFloat(await button.evaluate(el => getComputedStyle(el).borderTopLeftRadius))).toBeGreaterThanOrEqual(box!.height / 2)
+    if (!await button.evaluate(el => el.classList.contains('ghost-button'))) expect(parseFloat(await button.evaluate(el => getComputedStyle(el).borderTopLeftRadius))).toBeGreaterThanOrEqual(box!.height / 2)
   }
   for (const chip of await page.locator('.chip:visible, .reader-relation-chip:visible').all()) {
     const box = await chip.boundingBox()
@@ -62,7 +63,8 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await expect(page.locator('.result-card')).toHaveCSS('border-top-left-radius', '16px')
       await expect(page.locator('.result-card-body h2')).toHaveCSS('font-family', /NotoSerif/)
       await expect(page.locator('.result-title')).toHaveCSS('font-family', /NotoSerif/)
-      const source = page.locator('.result-source')
+      await checkControls(page.locator('.result-card').first())
+      const source = page.locator('.result-source a')
       await expect(source).toBeVisible()
       const [sourceBox, iconBox] = await Promise.all([source.boundingBox(), source.locator('svg').boundingBox()])
       expect(iconBox!.y + iconBox!.height).toBeLessThanOrEqual(sourceBox!.y + sourceBox!.height + 1)
@@ -98,7 +100,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
       for (const area of await page.locator('.result-card-head, .result-card-body, .result-nodes').all()) await expect(area).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
       for (const action of await head.locator('.result-actions a, .result-actions button').all()) {
         expect((await action.boundingBox())!.height).toBeGreaterThanOrEqual(44)
-        await expect(action).toHaveCSS('text-decoration-line', 'underline')
+        await expect(action).toHaveCSS('text-decoration-line', await action.evaluate(el => el.tagName === 'A' ? 'underline' : 'none'))
         await expect(action).toHaveCSS('font-size', '13px')
       }
       if (width === 1366) {
@@ -138,6 +140,34 @@ for (const colorScheme of ['light', 'dark'] as const) {
         }
       }
       await shapes(page)
+    })
+  }
+}
+
+for (const colorScheme of ['light', 'dark'] as const) {
+  for (const width of [320, 390, 1366]) {
+    test(`result toggle and missing source at ${width} in ${colorScheme}`, async ({ page }, info) => {
+      await page.setExtraHTTPHeaders({ 'X-Forwarded-For': clientAddress(info) })
+      await page.setViewportSize({ width, height: 900 })
+      await page.emulateMedia({ colorScheme })
+      await page.route('**/api/v1/search', route => route.fulfill({ json: { release: '20990101', abstain: false, hits: [{ handle: 'vn:vbpl:1#dieu-1', doc: 'vn:vbpl:1', citation: 'Điều 1', text: 'Fixture text\n'.repeat(12), complete: true }], documents: { 'vn:vbpl:1': { number: '1/2099', title: 'Fixture law', status: { class: 'in_force', current: true }, text_source: 'source_tree', text_complete: true, source_url: 'http://example.invalid/fixture' } } } }))
+      await page.route('**/api/v1/me', route => route.fulfill({ json: { id: 1, email: 'test@example.invalid', csrf_token: 'fixture' } }))
+      await page.goto('/')
+      await page.waitForFunction(() => Boolean((document.querySelector('#__nuxt') as unknown as { __vue_app__?: unknown } | null)?.__vue_app__))
+      await navigate(page, '/vn/search')
+      await page.locator('#search-query').fill('Fixture')
+      await page.locator('.search-box').evaluate(form => (form as HTMLFormElement).requestSubmit())
+      const card = page.locator('.result-card').first()
+      await expect(card.locator('.result-source')).toHaveCount(0)
+      const toggle = card.locator('.result-toggle')
+      await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+      await expect(toggle.locator('svg path')).toHaveAttribute('d', 'm3 6 5 5 5-5')
+      await expect(toggle).toHaveCSS('border-top-width', '0px')
+      await expect(toggle).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+      await toggle.click()
+      await expect(toggle).toHaveAttribute('aria-expanded', 'true')
+      await expect(toggle.locator('svg path')).toHaveAttribute('d', 'm3 10 5-5 5 5')
+      await checkControls(card)
     })
   }
 }

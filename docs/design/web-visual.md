@@ -139,8 +139,10 @@ arrows.
   link, on the left, with an inline arrow icon; "Sao chép trích dẫn" / "Copy
   citation" is a ghost button with a copy icon on the right of the same row.
   After a successful copy the button reads "Đã sao chép" / "Copied" with a check
-  icon for 2 seconds; when the clipboard refuses, it shows the existing failure
-  message.
+  icon for 2 seconds; when the clipboard refuses, it reads "Chưa sao chép được"
+  / "Could not copy" with an alert icon for 2 seconds. The outcome stays inside
+  the button, so the row never reflows, and a hidden live region announces it,
+  the existing failure message included.
 - Below them, only when the document has an https source, a muted 13 px caption:
   "Nguồn:" / "Source:" and the source's host as a link with the external-link
   icon.
