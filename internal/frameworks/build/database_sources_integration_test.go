@@ -57,3 +57,7 @@ func TestRun_SupplementaryFilesStayInSnapshot(t *testing.T) {
 	require.True(t, structured)
 	require.True(t, complete)
 }
+
+func (db sourceTestDatabase) Evaluate(ctx context.Context, req EvaluationRequest, publish func(EvaluationResult) error) error {
+	return fakeDatabase{}.Evaluate(ctx, req, publish)
+}

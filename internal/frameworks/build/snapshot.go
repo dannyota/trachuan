@@ -97,12 +97,15 @@ func snapshot(ctx context.Context, dir, sourceDir string) (map[string]*string, e
 			}
 		}
 	}
+	if err = snapshotPublicFloors(dir); err != nil {
+		return nil, err
+	}
 	root, err := os.OpenRoot(sourceDir)
 	if err != nil {
 		return nil, hide("open private inputs", err)
 	}
 	defer func() { _ = root.Close() }()
-	for _, name := range optionalSnapshotInputs() {
+	for _, name := range optionalPrivateInputs() {
 		checked, err := checkedSourceFile(sourceDir, name)
 		if err != nil {
 			return nil, err
@@ -192,5 +195,20 @@ func snapshotInputs(dir string) (map[string]*string, error) {
 }
 
 func optionalSnapshotInputs() []string {
-	return []string{"trachuan/titles.csv", "trachuan/ocr-waivers.yaml", "trachuan/golden.csv", "trachuan/golden-review.yaml", "trachuan/floors.yaml"}
+	return append(optionalPrivateInputs(), "sources/frameworks-floors.yaml")
+}
+
+func optionalPrivateInputs() []string {
+	return []string{"trachuan/titles.csv", "trachuan/ocr-waivers.yaml", "trachuan/golden.csv", "trachuan/golden-review.yaml", "trachuan/floors.yaml", "trachuan/previous-report.json"}
+}
+
+func snapshotPublicFloors(dir string) error {
+	raw, err := optionalArtifact("sources/frameworks-floors.yaml")
+	if err != nil {
+		return err
+	}
+	if raw == nil {
+		return nil
+	}
+	return writeFile(dir, "sources/frameworks-floors.yaml", raw)
 }

@@ -4,13 +4,19 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"regexp"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 )
 
-func WithDatabase(ctx context.Context, cfg Config, name, marker string, owns func(string) bool, use func(context.Context, *pgx.Conn) error) (result error) {
+func WithDatabase(ctx context.Context, cfg Config, name, marker string, owns func(string) bool, use func(context.Context, *pgx.Conn) error) error {
+	return withOfflineDatabase(ctx, cfg, name, marker, owns, false, use)
+}
+
+func withOfflineDatabase(ctx context.Context, cfg Config, name, marker string, owns func(string) bool, temporary bool, use func(context.Context, *pgx.Conn) error) (result error) {
 	if !regexp.MustCompile(`^[a-z][a-z0-9_]{0,62}$`).MatchString(name) || cfg.BuilderURL == "" || cfg.Template == "" || marker == "" || owns == nil || !owns(marker) || use == nil {
 		return fmt.Errorf("invalid offline database configuration")
 	}
@@ -32,6 +38,15 @@ func WithDatabase(ctx context.Context, cfg Config, name, marker string, owns fun
 	defer cancel()
 	if err = recreateOwned(workCtx, admin, cfg, name, marker, owns, sessionGrace); err != nil {
 		return err
+	}
+	if temporary {
+		defer func() {
+			cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cleanupCancel()
+			if cleanupErr := dropOfflineOwned(cleanupCtx, admin, name, marker, owns); cleanupErr != nil {
+				result = errors.Join(result, cleanupErr)
+			}
+		}()
 	}
 	stop := watchLock(workCtx, admin, cancel, nil)
 	defer func() { result = watchError(result, stop()) }()

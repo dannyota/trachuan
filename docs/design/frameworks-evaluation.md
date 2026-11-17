@@ -87,10 +87,10 @@ The filter gate is per case: every positive that hits in `open` must hit in
 Two callers run every case: **free-only** (free versions readable, licensed
 versions reduced to their public fields) and **full** (every version readable).
 
-| Cohort     | Caller    | Cases                                          | Floors live in         |
-| ---------- | --------- | ---------------------------------------------- | ---------------------- |
-| `public`   | free-only | accepted positives on free versions, negatives | `frameworks.md`        |
-| `licensed` | full      | every accepted positive and negative           | `trachuan/floors.yaml` |
+| Cohort     | Caller    | Cases                                          | Floors live in                   |
+| ---------- | --------- | ---------------------------------------------- | -------------------------------- |
+| `public`   | free-only | accepted positives on free versions, negatives | `sources/frameworks-floors.yaml` |
+| `licensed` | full      | every accepted positive and negative           | `trachuan/floors.yaml`           |
 
 The `public` cohort depends only on free text and licensed public fields, so its
 metrics and floors may be published. The `licensed` cohort's ranking depends on
@@ -129,10 +129,11 @@ biases its abstention result; the report says so.
 ## Release invariant check
 
 The synthetic suite runs in CI. At `evaluate` the release is checked too, once
-per comparison caller: free-only, and, when the release has at least two
-licensed versions, one caller per licensed version that can read that version
-only (otherwise mixed coverage is `not_applicable`). For each caller a copy of
-the restored database is mutated in every version that caller cannot read:
+per comparison caller: free-only, and, when the release has licensed versions of
+at least two frameworks, one caller per such framework that can read that
+framework's licensed versions only, since entitlements are per framework code
+(otherwise mixed coverage is `not_applicable`). For each caller a copy of the
+restored database is mutated in every version that caller cannot read:
 
 | Private class    | Mutation                                                            |
 | ---------------- | ------------------------------------------------------------------- |
@@ -143,26 +144,46 @@ the restored database is mutated in every version that caller cannot read:
 | source files     | text source and completeness of its files changed                   |
 
 Public fields, public chunks and the public fields of edges stay unchanged. The
-caller must then get byte-identical responses on both copies for every case in
-both modes and every page of each, a read of every target with all
-continuations, the mappings of every target, `corpus_status`, every
-`quality_gaps` page, each operation twice (so a cache hit is covered), and a
-recalibration on the mutated copy must give the same threshold. A positive
-control per class shows the mutation took effect: the full caller sees a
-difference in each class (read text, search scores, evidence, text gaps,
-sources). Any failure, or a class with no observed difference, sets
-`quality_pass` false and names the operation, class and case id, never text.
+classes are mutated one at a time on the copy, in the table's order, and the
+comparison runs after each one, not only after the last, so leaks in two classes
+cannot cancel: a difference at any stage fails. At each stage the caller must
+get byte-identical responses on both copies for every case in both modes and
+every page of each, a read of every target with all continuations, the mappings
+of every target, `corpus_status`, every `quality_gaps` page, each operation
+twice (so a cache hit is covered), and a recalibration on the mutated copy must
+give the same threshold. A positive control per class shows the mutation took
+effect: the full caller sees a difference in each class (read text, search
+scores, evidence, text gaps, sources). Any failure, or a class with no observed
+difference, sets `quality_pass` false and names the operation, class and case
+id, never text.
 
 ## Floors
 
 Floors are adopted, not inferred. After the first measured run the coordinator
 reviews its numbers and records the baseline: recall@8 and MRR@8 per mode and
 the balanced abstention accuracy, each rounded down to the whole percent, for
-the `public` cohort in `frameworks.md` and for the `licensed` cohort in
-`floors.yaml`, each with the report's SHA-256. Until a baseline is recorded,
-`quality_pass` is false. The cohorts are small (33 free-version positives, 12
-licensed, 15 negatives), so one case moves recall by several points; the report
-states that next to every metric.
+the `public` cohort in `sources/frameworks-floors.yaml` (in Git) and for the
+`licensed` cohort in `floors.yaml`, each with the report's SHA-256. Until a
+baseline is recorded, `quality_pass` is false. The cohorts are small (33
+free-version positives, 12 licensed, 15 negatives), so one case moves recall by
+several points; the report states that next to every metric.
+
+Both floor files are closed YAML with the same shape: a `baselines` list whose
+entries have exactly `release`, `report_sha256`, `reviewer`, `date`,
+`cohort_change` (empty, or the recorded change that explains a lower floor) and
+`floors`, which holds `open` and `filtered`, each with `recall_at_8` and
+`mrr_at_8`, and `abstention_balanced_accuracy`, every value a whole percent. The
+last entry is in force; `evaluate` reads both files from the snapshot and fails
+when an entry lowers a floor below the one before it with an empty
+`cohort_change`.
+
+The previous signed report is a `snapshot` input:
+`FRAMEWORKS_SOURCE_DIR/trachuan/previous-report.json`, the active frameworks
+release's `report.json`, placed by the coordinator. When it is present, paired
+non-regression runs and gates `quality_pass`; when it is absent the report
+records `previous: null` and the comparison as `not_applicable`, and the
+uploader refuses such a report while a frameworks release is active
+([build](frameworks-build.md#gaps-and-signing)).
 
 Later releases:
 
@@ -173,7 +194,10 @@ Later releases:
   fall;
 - added, rejected or re-targeted cases and newly in-release versions are cohort
   changes, reported apart from retrieval changes; they take effect only through
-  a review entry made before the build, never to admit a failing release;
+  a review entry made before the build, never to admit a failing release. A
+  version is newly in the release when this report counts any of its cases as
+  accepted, rejected or `unverified` and the previous report's per-version
+  counts have it only as `out_of_release` or not at all; case ids play no part;
 - a floor never falls below the previous release's floor unless a recorded
   cohort change explains it.
 
