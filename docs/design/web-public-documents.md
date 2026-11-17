@@ -70,13 +70,28 @@ when all of these hold; otherwise the entry shows its label alone:
    `tree_text_partial`, `unknown_node_kind`, `invalid_ancestry`), `no_tree`,
    `text_source_ambiguous`, and any structure kind added later. The allowlist of
    harmless kinds is empty; adding a kind needs a measured sample and an
-   amendment.
-3. The heading is at most 300 characters; a longer one is omitted, not cut.
+   amendment. The document's chapter numbers, in outline order, also run from I
+   (or 1) up by one, restarting only at I; a document whose chapters skip,
+   repeat or carry a letter such as "Chương c" serves labels only.
+3. The heading is title-shaped: at most 300 characters; it does not end with
+   `.`, `:`, `;`, `?` or `!`; it has no `.` or `:` followed by whitespace and
+   more text; and it does not start with `-`, `+`, `•`, `*`, `–` or `—`. A
+   heading that fails is omitted, not cut.
 4. The heading is not in the exclusion list.
 5. The active release carries a matching heading approval.
 
 `phan` and `muc` entries always show labels only. Rules 1 to 4 decide the
 candidate headings that the build stores; rule 5 decides whether any are served.
+
+The chapter sequence and title shape close three source defects found in
+vn/20261117_5: articles without a title whose text the source put in the heading
+("Quyết định này có hiệu lực kể từ ngày ký."), chapter titles joined to their
+first paragraph, and points such as "c)" stored as chapters. Of 23,619 stored
+candidates, they omit 1,041 (4.4%): 371 in 40 documents with broken chapter
+sequences, 640 ending with a mark, 16 with an internal break and 14 with a
+leading marker. Real titles that end with a period, as in the 2000 Insurance
+Business Law, lose their heading too; that loss is accepted. Samples of what
+remains read as titles.
 
 ### Exclusions, scan and approval
 
@@ -88,11 +103,12 @@ candidate headings that the build stores; rule 5 decides whether any are served.
   candidate headings (rules 1 to 4, ignoring rule 5) and lists every one that is
   over 200 characters, ends with a sentence-final mark other than its own, or
   contains "phải", "được", "không được" or "có trách nhiệm". It also reports,
-  separately, the chapter and article headings that rule 3 omitted: their count
-  and the 20 longest by key, anchor and length, without text. Its output is kept
-  beside the build record with its SHA-256. The scan is triage, not proof: a
-  source title can still carry operative text it does not flag, a residual risk
-  the owner accepted on 2026-11-16.
+  separately, the chapter and article headings that rules 2 and 3 omitted for
+  chapter sequence, length or shape: their count per reason and the 20 longest
+  by key, anchor and length, without text. Its output is kept beside the build
+  record with its SHA-256. The scan is triage, not proof: a source title can
+  still carry operative text it does not flag, a residual risk the owner
+  accepted on 2026-11-16.
 - **Review record.** `sources/vn-heading-reviews.yaml`, closed schema
   `{release, projection, scan_sha256, exclusions_sha256, reviewer, date}`. The
   reviewer named in the entry writes it after reading that release's scan
