@@ -41,6 +41,10 @@ func TestMutation_ChangesCardinalityAndDetectsCountLeak(t *testing.T) {
 	fullBefore, err := observe(ctx, leaking, req, fullCaller())
 	require.NoError(t, err)
 	require.NoError(t, mutateClass(ctx, conn, freeCaller(), "body_index"))
+	mutated, closeMutated, err := fixtureOpener(ctx, conn, key)
+	require.NoError(t, err)
+	defer closeMutated()
+	leaking = chunkCountLeakEngine{Engine: mutated, conn: conn}
 	after, err := observe(ctx, leaking, req, freeCaller())
 	require.NoError(t, err)
 	fullAfter, err := observe(ctx, leaking, req, fullCaller())

@@ -17,7 +17,7 @@ func TestInvariant_SearchPreservesSQLCause(t *testing.T) {
 	engine, closeEngine, err := fixtureOpener(ctx, conn, []byte(strings.Repeat("k", 32)))
 	require.NoError(t, err)
 	defer closeEngine()
-	_, err = conn.Exec(ctx, `ALTER TABLE body_posting RENAME TO missing_body_posting`)
+	_, err = conn.Exec(ctx, `ALTER TABLE body_chunk RENAME TO missing_body_chunk`)
 	require.NoError(t, err)
 	_, _, err = observeSearch(ctx, engine, caseRequest(req.Cases[0], "open"), freeCaller(), req.Cases[0], "open", 0)
 	require.Error(t, err)
