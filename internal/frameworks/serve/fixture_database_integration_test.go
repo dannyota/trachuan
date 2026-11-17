@@ -87,6 +87,11 @@ func buildOperationsFixture(t *testing.T, changed bool) (*Engine, *queryTrace) {
 
 func buildFixtureMode(t *testing.T, changed, extended bool) (*Engine, *queryTrace) {
 	t.Helper()
+	return buildFixtureWithCases(t, changed, extended, false)
+}
+
+func buildFixtureWithCases(t *testing.T, changed, extended, calibrated bool) (*Engine, *queryTrace) {
+	t.Helper()
 	ctx := context.Background()
 	template := testpg.NewBuilder(t)
 	admin, base, err := testpg.OpenAdministrator(ctx)
@@ -104,8 +109,11 @@ func buildFixtureMode(t *testing.T, changed, extended bool) (*Engine, *queryTrac
 	require.NoError(t, err)
 	root := t.TempDir()
 	fixtureSources(t, root, changed)
+	if calibrated {
+		fixtureGoldenCases(t, root)
+	}
 	var progress bytes.Buffer
-	err = build.Run(ctx, "20990101", &progress, syntheticEmbedder{}, fixtureDatabase{conn: conn, changed: changed, extended: extended})
+	err = build.Run(ctx, "20990101", &progress, syntheticEmbedder{}, fixtureDatabase{conn: conn, changed: changed, extended: extended}, openFixtureCalibration)
 	var classes map[string]relationClass
 	if err == nil {
 		classes = readRelationClasses(t, conn)

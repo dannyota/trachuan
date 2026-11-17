@@ -102,7 +102,7 @@ func snapshot(ctx context.Context, dir, sourceDir string) (map[string]*string, e
 		return nil, hide("open private inputs", err)
 	}
 	defer func() { _ = root.Close() }()
-	for _, name := range []string{"trachuan/titles.csv", "trachuan/ocr-waivers.yaml"} {
+	for _, name := range optionalSnapshotInputs() {
 		checked, err := checkedSourceFile(sourceDir, name)
 		if err != nil {
 			return nil, err
@@ -155,11 +155,14 @@ func snapshotInputs(dir string) (map[string]*string, error) {
 	if _, err := outputHashes(dir); err != nil {
 		return nil, err
 	}
+	if err := validateGoldenReview(dir); err != nil {
+		return nil, err
+	}
 	reg, err := readRegistry(filepath.Join(dir, "sources/frameworks.yaml"))
 	if err != nil {
 		return nil, err
 	}
-	names := []string{"sources/frameworks.yaml", "gap-kinds.json", "trachuan/titles.csv", "trachuan/ocr-waivers.yaml"}
+	names := append([]string{"sources/frameworks.yaml", "gap-kinds.json"}, optionalSnapshotInputs()...)
 	for _, v := range releaseVersions(reg) {
 		for _, file := range v.Files {
 			names = append(names, "files/"+file.Path)
@@ -168,7 +171,14 @@ func snapshotInputs(dir string) (map[string]*string, error) {
 	inputs := map[string]*string{}
 	for _, name := range names {
 		data, err := readFile(filepath.Join(dir, name))
-		if errors.Is(err, fs.ErrNotExist) && (name == "trachuan/titles.csv" || name == "trachuan/ocr-waivers.yaml") {
+		if errors.Is(err, fs.ErrNotExist) {
+			optional := false
+			for _, candidate := range optionalSnapshotInputs() {
+				optional = optional || candidate == name
+			}
+			if !optional {
+				return nil, err
+			}
 			inputs[name] = nil
 			continue
 		}
@@ -179,4 +189,8 @@ func snapshotInputs(dir string) (map[string]*string, error) {
 		inputs[name] = &hash
 	}
 	return inputs, nil
+}
+
+func optionalSnapshotInputs() []string {
+	return []string{"trachuan/titles.csv", "trachuan/ocr-waivers.yaml", "trachuan/golden.csv", "trachuan/golden-review.yaml", "trachuan/floors.yaml"}
 }

@@ -17,9 +17,10 @@ type recipe struct {
 	LexicalDepth int                 `json:"lexical_depth"`
 	RRF          retrieval.RRFRecipe `json:"rrf"`
 	Abstention   struct {
-		Statistic string   `json:"statistic"`
-		Threshold *float64 `json:"threshold"`
-		Status    string   `json:"status"`
+		Statistic         string   `json:"statistic"`
+		Threshold         *float64 `json:"threshold"`
+		Status            string   `json:"status"`
+		CalibrationSHA256 string   `json:"calibration_sha256,omitempty"`
 	} `json:"abstention"`
 	Source struct {
 		Release           string `json:"release"`
@@ -38,7 +39,20 @@ func decodeRecipe(raw []byte, out any) error {
 }
 
 func (r recipe) validate() error {
-	if r.Version != 1 || r.Status != "placeholder" || r.DenseDepth < 1 || r.DenseDepth > 200 || r.LexicalDepth < 1 || r.LexicalDepth > 100 || r.RRF.K < 1 || r.Abstention.Statistic != "first-hit-best-permitted-cosine" || r.Abstention.Status != "bootstrap-from-law" || r.Abstention.Threshold == nil || r.Source.Release == "" || r.Source.RecipeVersion != 3 {
+	if r.Version != 1 || r.DenseDepth < 1 || r.DenseDepth > 200 || r.LexicalDepth < 1 || r.LexicalDepth > 100 || r.RRF.K < 1 || r.Abstention.Statistic != "first-hit-best-permitted-cosine" || r.Abstention.Threshold == nil || r.Source.Release == "" || r.Source.RecipeVersion != 3 {
+		return ErrUnavailable
+	}
+	switch r.Status {
+	case "placeholder":
+		if r.Abstention.Status != "bootstrap-from-law" || r.Abstention.CalibrationSHA256 != "" {
+			return ErrUnavailable
+		}
+	case "measured":
+		hash, err := hex.DecodeString(r.Abstention.CalibrationSHA256)
+		if r.Abstention.Status != "measured" || err != nil || len(hash) != 32 {
+			return ErrUnavailable
+		}
+	default:
 		return ErrUnavailable
 	}
 	hash, err := hex.DecodeString(r.Source.CalibrationSHA256)

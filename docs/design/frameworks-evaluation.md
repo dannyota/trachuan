@@ -18,7 +18,10 @@ its frozen copy. It adds `adjudication` (`accepted`, `rejected`,
 `out_of_release` or `unverified`) and `reason`. `golden-review.yaml` beside it
 holds one entry per change: release, reviewer (`coordinator`), date, the CSV's
 SHA-256 and the case ids added, rejected or re-targeted. A CSV whose hash has no
-entry fails `snapshot`.
+entry fails `snapshot`. The file is closed YAML: a `reviews` list whose entries
+have exactly `release`, `reviewer`, `date` (`YYYY-MM-DD`), `csv_sha256` (64
+lower-case hex), `added`, `rejected` and `retargeted` (lists of case ids) and
+`note` (one line).
 
 **Mapping a case to a control.** `framework_code` must be a registry code;
 `version_label` names a registered version by the

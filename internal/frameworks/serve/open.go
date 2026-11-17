@@ -73,6 +73,9 @@ func validStep(raw []byte, name string) bool {
 		return false
 	}
 	wantVersion := 1
+	if name == "snapshot" {
+		wantVersion = 2
+	}
 	if name == "relate" {
 		wantVersion = 4
 	}

@@ -35,7 +35,10 @@ type buildManifest struct {
 		SHA256 string `json:"sha256"`
 		Size   int64  `json:"size"`
 	} `json:"dump"`
-	Recipe recipe `json:"recipe"`
+	Recipe            recipe            `json:"recipe"`
+	RetrievalRecipe   map[string]any    `json:"retrieval_recipe"`
+	CalibrationSHA256 string            `json:"calibration_sha256,omitempty"`
+	CaseCounts        []GoldenCaseCount `json:"case_counts"`
 }
 
 func databaseRecipe() map[string]any {
@@ -45,7 +48,8 @@ func databaseRecipe() map[string]any {
 		"dense_recipe": denseRecipe(), "lexical_recipe": lexical.Recipe1(),
 		"gap_kinds": gapKinds(), "loader_version": 1,
 		"lexical_runtime":  lexicalRuntime(),
-		"retrieval_recipe": bootstrapRetrievalRecipe(),
+		"retrieval_recipe": bootstrapRetrievalRecipe(), "calibration": "public-free-only-open/1",
+		"query_recipe_hash": embedding.QueryRecipe1().Hash(),
 	}
 }
 
@@ -54,7 +58,7 @@ func denseRecipe() retrieval.DenseRecipe {
 	return retrieval.DenseRecipe{Version: 1, Model: document.Model, Dimensions: document.Dimensions, Document: document, DocumentHash: document.Hash(), Query: query, QueryHash: query.Hash()}
 }
 
-func buildStep(ctx context.Context, base, dir string, request DatabaseRequest, embedder Embedder, database Database, publish func() error) error {
+func buildStep(ctx context.Context, base, dir string, request DatabaseRequest, embedder Embedder, database Database, opener CalibrationOpener, publish func() error) error {
 	if database == nil {
 		return fmt.Errorf("database builder unavailable")
 	}
@@ -64,8 +68,17 @@ func buildStep(ctx context.Context, base, dir string, request DatabaseRequest, e
 	}
 	request.DumpPath = filepath.Join(dir, "frameworks.dump")
 	request.Runtime = lexicalRuntime()
+	if err = writeRows(dir, "cases.jsonl", data.cases); err != nil {
+		return err
+	}
+	calibrationHash, retrievalRecipe := "", bootstrapRetrievalRecipe()
 	err = database.Build(ctx, request, func(ctx context.Context, conn *pgx.Conn) error {
-		return loadDatabase(ctx, conn, base, request.Rel, data, embedder)
+		if loadErr := loadDatabase(ctx, conn, base, request.Rel, data, embedder); loadErr != nil {
+			return loadErr
+		}
+		var calibrationErr error
+		calibrationHash, retrievalRecipe, calibrationErr = calibrateBuild(ctx, conn, dir, data, opener)
+		return calibrationErr
 	}, func() error {
 		if contextErr := ctx.Err(); contextErr != nil {
 			return contextErr
@@ -84,7 +97,10 @@ func buildStep(ctx context.Context, base, dir string, request DatabaseRequest, e
 		if readErr != nil {
 			return readErr
 		}
-		m := buildManifest{Recipe: stepRecipe("build")}
+		if data.caseHash != "" && calibrationHash == "" {
+			return fmt.Errorf("reviewed cases were not calibrated")
+		}
+		m := buildManifest{Recipe: stepRecipe("build"), RetrievalRecipe: retrievalRecipe, CalibrationSHA256: calibrationHash, CaseCounts: CountGoldenCases(data.cases)}
 		m.Dump.SHA256, m.Dump.Size = digest(dump), int64(len(dump))
 		if syncErr := syncDump(request.DumpPath); syncErr != nil {
 			return syncErr
@@ -133,5 +149,5 @@ func validateBuild(dir string) error {
 	if !equalJSON(expected, actual) || m.Dump.Size != int64(len(dump)) || len(dump) == 0 || m.Dump.SHA256 != digest(dump) {
 		return fmt.Errorf("build manifest mismatch")
 	}
-	return nil
+	return validateCalibration(dir, m)
 }
