@@ -20,10 +20,15 @@ of swap and core dumps. It uses the Python standard library plus the OCI SDK the
 metrics publisher already uses.
 
 `install.sh` creates the user; grants it read ACLs on the result files the
-metrics user reads; creates `/srv/trachuan/state/watch/` and
-`/var/log/trachuan/watch/` owned by it, mode 0750; and adds `watch.log` to the
-logrotate file with `copytruncate`. The signed host bundle ships it like the
-other units ([pull deployment](pull-deployment.md)).
+metrics user reads and traversal (`--x`) on `/srv/trachuan/state` and
+`/var/log/trachuan`; creates `/srv/trachuan/state/watch/` and
+`/var/log/trachuan/watch/` owned by it, mode 0750; grants the metrics user `r-x`
+on the watch state directory and `r--` on `result.json`; and adds `watch.log` to
+the logrotate file with `copytruncate`. The OCI Logging source in
+`deploy/oci/logging.tf` adds the path `/var/log/trachuan/watch/*.log`, because
+its `/var/log/trachuan/*.log` pattern does not descend into subdirectories. The
+signed host bundle ships the units like the others
+([pull deployment](pull-deployment.md)).
 
 ## Signals
 
@@ -59,8 +64,11 @@ Two notices are events, not failures:
 - **Release live.** The active release is `release` and `sequence` from the
   deploy result when its status is `ok` or `current`; `current` keeps them after
   the activating run.
-- **Corpus live.** The active corpus is `rel` and `sequence` from `release.json`
-  when its status is `ok`, `current` or `verified`.
+- **Corpus live.** The active corpus is the `release` field of
+  `GET http://127.0.0.1:8080/api/v1/public/status`, the release the server
+  serves. `release.json` is not used for this: `verified` and `current` can
+  describe a manifest whose activation is disabled. A failed or non-200 status
+  read is indeterminate.
 
 An unreadable or malformed result file fails the run (see
 [watch health](#watch-health)) instead of guessing.
@@ -113,8 +121,8 @@ Due messages:
 Due messages go out 🔴 first, then 🟠, then 🟢, at most 20 in any rolling hour;
 the rest stay due. Delivery is one `sendMessage` call per message with a
 10-second timeout and no retry inside the run. A 429 stores
-`parameters.retry_after` as the retry deadline when it is an integer from 1 to
-3,600 seconds, otherwise 60 seconds, and no run sends before it
+`parameters.retry_after` as the retry deadline when it is a positive integer,
+otherwise 60 seconds, and no run sends before it
 ([ResponseParameters](https://core.telegram.org/bots/api#responseparameters)). A
 non-2xx status or `"ok": false` stops sending for the run.
 
@@ -141,9 +149,10 @@ repository may become public.
 Each run writes `/srv/trachuan/state/watch/result.json` (`ok` or `failed`,
 `last_success_at`, a fixed message) and one line per due message to
 `/var/log/trachuan/watch/watch.log`, which OCI Logging collects with the other
-host job logs. A run succeeds when it read every signal and either had nothing
-due, was waiting for a retry deadline, or delivered at least one message without
-an error.
+host job logs. A run succeeds when it read every signal and, after sending, has
+no message left due or had at least one message accepted. A run that leaves
+messages due without an acceptance, whether from a send error, a retry deadline
+or the rate limit, fails, so a long Telegram block ends in the watch alarm.
 
 The metrics publisher reports `watch_stale`: 0 when the result has a
 `last_success_at` under 1 hour old, and 1 when it is older, absent, never
@@ -156,9 +165,11 @@ including a watch that never succeeded after install.
 
 Unit tests run in CI with fixtures and fake Vault and Telegram clients: every
 signal's fire, hold, indeterminate, clear and reminder transitions; attempt
-counting by `started_at`; the readiness skip during a deploy; both events across
-`ok` then `current` and across a blocked delivery; the first run; the rate limit
-and its ordering; the retry deadline; a crash before and after the state write;
+counting by `started_at`; the readiness skip during a deploy; release live
+across `ok` then `current`; corpus live from the status endpoint, unchanged by a
+`verified` manifest with activation disabled; both events across a blocked
+delivery; the first run; the rate limit and its ordering; the retry deadline and
+run success while messages stay due; a crash before and after the state write;
 HTML escaping, the 160 character cap and the 4,096 character limit; ICT and UTC
 rendering across midnight; Vault failure; `watch_stale` for each result case;
 and that no log line, state file, result or raised error contains the token or
