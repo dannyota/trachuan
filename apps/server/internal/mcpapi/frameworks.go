@@ -37,6 +37,14 @@ type frameworkArguments struct {
 }
 
 func (cfg Config) frameworkCall(ctx context.Context, name string, raw json.RawMessage) (any, error) {
+	principal, ok := credential.FromContext(ctx)
+	if !ok {
+		return nil, serve.ErrUnavailable
+	}
+	return cfg.frameworkRequest(ctx, principal.AccountID, name, raw, "")
+}
+
+func (cfg Config) frameworkRequest(ctx context.Context, accountID int64, name string, raw json.RawMessage, expectedHandle string) (any, error) {
 	var in frameworkArguments
 	if json.Unmarshal(raw, &in) != nil {
 		return nil, serve.ErrInvalidRequest
@@ -50,8 +58,7 @@ func (cfg Config) frameworkCall(ctx context.Context, name string, raw json.RawMe
 			return nil, serve.ErrInvalidRequest
 		}
 	}
-	principal, ok := credential.FromContext(ctx)
-	if !ok || principal.AccountID <= 0 || cfg.FrameworkResolver == nil || cfg.FrameworkAccess == nil {
+	if accountID <= 0 || cfg.FrameworkResolver == nil || cfg.FrameworkAccess == nil {
 		return nil, serve.ErrUnavailable
 	}
 	lease, err := cfg.FrameworkResolver.ResolveFrameworks(ctx, in.Release)
@@ -64,7 +71,7 @@ func (cfg Config) frameworkCall(ctx context.Context, name string, raw json.RawMe
 	if lease.Engine == nil || lease.Done == nil {
 		return nil, serve.ErrUnavailable
 	}
-	caller, err := cfg.FrameworkAccess(ctx, principal.AccountID, lease.Engine.FrameworkCodes())
+	caller, err := cfg.FrameworkAccess(ctx, accountID, lease.Engine.FrameworkCodes())
 	if err != nil {
 		return nil, serve.ErrUnavailable
 	}
@@ -72,7 +79,7 @@ func (cfg Config) frameworkCall(ctx context.Context, name string, raw json.RawMe
 	case "search":
 		return lease.Engine.Search(ctx, serve.Request{Query: in.Query, Release: in.Release, Limit: in.Limit, Cursor: in.Cursor, Filters: map[string][]string{"frameworks": in.Frameworks, "versions": in.Versions}}, caller)
 	case "read":
-		return lease.Engine.Read(ctx, serve.ReadRequest{Release: in.Release, Items: in.Items}, caller)
+		return lease.Engine.Read(ctx, serve.ReadRequest{Release: in.Release, Items: in.Items, ExpectedHandle: expectedHandle}, caller)
 	case "corpus_status":
 		return lease.Engine.CorpusStatus(ctx, serve.StatusRequest{Release: in.Release}, caller)
 	case "quality_gaps":

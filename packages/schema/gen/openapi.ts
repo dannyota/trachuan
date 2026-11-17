@@ -3365,6 +3365,645 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/frameworks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    release?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        "Cache-Control"?: "no-store";
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["FrameworkStatusResult"];
+                    };
+                };
+                /** @description Request failed */
+                400: {
+                    headers: {
+                        "Cache-Control"?: "no-store";
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request failed */
+                401: {
+                    headers: {
+                        "Cache-Control"?: "no-store";
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request failed */
+                404: {
+                    headers: {
+                        "Cache-Control"?: "no-store";
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request failed */
+                409: {
+                    headers: {
+                        "Cache-Control"?: "no-store";
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request failed */
+                429: {
+                    headers: {
+                        "Cache-Control"?: "no-store";
+                        "Retry-After"?: number;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request failed */
+                503: {
+                    headers: {
+                        "Cache-Control"?: "no-store";
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/frameworks/versions/{handle}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    release?: string;
+                    next?: string;
+                };
+                header?: never;
+                path: {
+                    /** @description One URL-encoded segment, decoded once to a canonical version handle. */
+                    handle: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        "Cache-Control"?: "no-store";
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["FrameworkReadResult"];
+                    };
+                };
+                /** @description Request failed */
+                400: {
+                    headers: {
+                        "Cache-Control"?: "no-store";
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request failed */
+                401: {
+                    headers: {
+                        "Cache-Control"?: "no-store";
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request failed */
+                404: {
+                    headers: {
+                        "Cache-Control"?: "no-store";
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request failed */
+                409: {
+                    headers: {
+                        "Cache-Control"?: "no-store";
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request failed */
+                429: {
+                    headers: {
+                        "Cache-Control"?: "no-store";
+                        "Retry-After"?: number;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request failed */
+                503: {
+                    headers: {
+                        "Cache-Control"?: "no-store";
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/frameworks/controls/{handle}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    release?: string;
+                    next?: string;
+                };
+                header?: never;
+                path: {
+                    /** @description One URL-encoded segment, decoded once to a canonical control handle. */
+                    handle: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        "Cache-Control"?: "no-store";
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["FrameworkReadResult"];
+                    };
+                };
+                /** @description Request failed */
+                400: {
+                    headers: {
+                        "Cache-Control"?: "no-store";
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request failed */
+                401: {
+                    headers: {
+                        "Cache-Control"?: "no-store";
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request failed */
+                404: {
+                    headers: {
+                        "Cache-Control"?: "no-store";
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request failed */
+                409: {
+                    headers: {
+                        "Cache-Control"?: "no-store";
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request failed */
+                429: {
+                    headers: {
+                        "Cache-Control"?: "no-store";
+                        "Retry-After"?: number;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request failed */
+                503: {
+                    headers: {
+                        "Cache-Control"?: "no-store";
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/frameworks/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    "X-CSRF-Token": string;
+                    /** @description Required unless Referer supplies the same origin. */
+                    Origin?: string;
+                    Referer?: string;
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["FrameworkSearchInput"];
+                };
+            };
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        "Cache-Control"?: "no-store";
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["FrameworkSearchResult"];
+                    };
+                };
+                /** @description Request failed */
+                400: {
+                    headers: {
+                        "Cache-Control"?: "no-store";
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request failed */
+                401: {
+                    headers: {
+                        "Cache-Control"?: "no-store";
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request failed */
+                403: {
+                    headers: {
+                        "Cache-Control"?: "no-store";
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request failed */
+                404: {
+                    headers: {
+                        "Cache-Control"?: "no-store";
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request failed */
+                409: {
+                    headers: {
+                        "Cache-Control"?: "no-store";
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request failed */
+                413: {
+                    headers: {
+                        "Cache-Control"?: "no-store";
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request failed */
+                429: {
+                    headers: {
+                        "Cache-Control"?: "no-store";
+                        "Retry-After"?: number;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request failed */
+                503: {
+                    headers: {
+                        "Cache-Control"?: "no-store";
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/frameworks/mappings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Select handle alone, or from and to together. Arrays use repeated query parameters. Unknown parameters are rejected. */
+        get: {
+            parameters: {
+                query?: {
+                    release?: string;
+                    handle?: string;
+                    from?: string;
+                    to?: string;
+                    cursor?: string;
+                    relation?: ("equivalent" | "subset" | "superset" | "intersects" | "related")[];
+                    limit?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        "Cache-Control"?: "no-store";
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["FrameworkMappingsResult"];
+                    };
+                };
+                /** @description Request failed */
+                400: {
+                    headers: {
+                        "Cache-Control"?: "no-store";
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request failed */
+                401: {
+                    headers: {
+                        "Cache-Control"?: "no-store";
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request failed */
+                404: {
+                    headers: {
+                        "Cache-Control"?: "no-store";
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request failed */
+                409: {
+                    headers: {
+                        "Cache-Control"?: "no-store";
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request failed */
+                429: {
+                    headers: {
+                        "Cache-Control"?: "no-store";
+                        "Retry-After"?: number;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request failed */
+                503: {
+                    headers: {
+                        "Cache-Control"?: "no-store";
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/frameworks/gaps": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    release?: string;
+                    versions?: string[];
+                    kind?: string;
+                    cursor?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        "Cache-Control"?: "no-store";
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["FrameworkGapsResult"];
+                    };
+                };
+                /** @description Request failed */
+                400: {
+                    headers: {
+                        "Cache-Control"?: "no-store";
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request failed */
+                401: {
+                    headers: {
+                        "Cache-Control"?: "no-store";
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request failed */
+                404: {
+                    headers: {
+                        "Cache-Control"?: "no-store";
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request failed */
+                409: {
+                    headers: {
+                        "Cache-Control"?: "no-store";
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request failed */
+                429: {
+                    headers: {
+                        "Cache-Control"?: "no-store";
+                        "Retry-After"?: number;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Request failed */
+                503: {
+                    headers: {
+                        "Cache-Control"?: "no-store";
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -3488,7 +4127,7 @@ export interface components {
             factor?: boolean;
             error: {
                 /** @enum {string} */
-                code: "invalid_request" | "unauthenticated" | "reauth_required" | "reauth_failed" | "login_failed" | "factor_failed" | "link_invalid" | "password_rejected" | "csrf_rejected" | "account_blocked" | "not_found" | "release_expired" | "body_too_large" | "unsupported_media_type" | "token_limit" | "rate_limited" | "busy" | "unavailable" | "inference_failed" | "internal";
+                code: "invalid_request" | "invalid_handle" | "cursor_expired" | "unauthenticated" | "reauth_required" | "reauth_failed" | "login_failed" | "factor_failed" | "link_invalid" | "password_rejected" | "csrf_rejected" | "account_blocked" | "not_found" | "release_expired" | "body_too_large" | "unsupported_media_type" | "token_limit" | "rate_limited" | "busy" | "unavailable" | "inference_failed" | "internal";
                 message: string;
             };
         };
@@ -3940,6 +4579,172 @@ export interface components {
             };
             /** Format: date */
             newest_source_date?: string;
+        };
+        FrameworkLineage: {
+            supersedes?: string;
+            amends?: string;
+        };
+        Framework: {
+            code: string;
+            version: string;
+            name: string;
+            publisher: string;
+            /** @enum {string} */
+            access: "free" | "licensed";
+            readable: boolean;
+            lineage?: components["schemas"]["FrameworkLineage"];
+        };
+        FrameworkCounts: {
+            controls: number;
+            edges_resolved: number;
+            edges_unresolved: number;
+        };
+        FrameworkSourceStatus: {
+            name: string;
+            text_source: string;
+            text_complete: boolean;
+        };
+        FrameworkVersionStatus: {
+            controls: number;
+            edges_resolved: number;
+            edges_unresolved: number;
+            /** @enum {string} */
+            access: "free" | "licensed";
+            readable: boolean;
+            lineage?: components["schemas"]["FrameworkLineage"];
+            sources?: components["schemas"]["FrameworkSourceStatus"][];
+        };
+        FrameworkStatusResult: {
+            release: string;
+            access_set_version: string;
+            access_unavailable?: boolean;
+            /** @enum {string} */
+            retrieval_recipe_status: "placeholder" | "measured";
+            versions?: {
+                [key: string]: components["schemas"]["FrameworkVersionStatus"];
+            };
+            totals: components["schemas"]["FrameworkCounts"];
+        };
+        FrameworkGap: {
+            kind: string;
+            version: string;
+            subject?: string;
+            detail: string;
+        };
+        FrameworkGapsResult: {
+            release: string;
+            access_set_version: string;
+            access_unavailable?: boolean;
+            /** @enum {string} */
+            retrieval_recipe_status: "placeholder" | "measured";
+            gaps?: components["schemas"]["FrameworkGap"][];
+            next_cursor?: string;
+        };
+        FrameworkMappingEnd: {
+            handle?: string;
+            code?: string;
+            citation: string;
+            version: string;
+            title?: string;
+        };
+        FrameworkMappingEdge: {
+            from: components["schemas"]["FrameworkMappingEnd"];
+            to: components["schemas"]["FrameworkMappingEnd"];
+            /** @enum {string} */
+            relation: "equivalent" | "subset" | "superset" | "intersects" | "related";
+            source: string;
+            resolved: boolean;
+            evidence?: string;
+            evidence_truncated?: boolean;
+        };
+        FrameworkMappingsResult: {
+            release: string;
+            access_set_version: string;
+            access_unavailable?: boolean;
+            edges?: components["schemas"]["FrameworkMappingEdge"][];
+            next_cursor?: string;
+        };
+        FrameworkHit: {
+            handle: string;
+            citation: string;
+            kind: string;
+            title?: string;
+            status?: string;
+            path?: string[];
+            score?: number;
+            lookup?: boolean;
+            mappings: number;
+            text_withheld: boolean;
+            title_original?: string;
+            snippet?: string;
+        };
+        FrameworkSearchResult: {
+            release: string;
+            access_set_version: string;
+            access_unavailable?: boolean;
+            abstain: boolean;
+            reason?: string;
+            message?: string;
+            frameworks?: {
+                [key: string]: components["schemas"]["Framework"];
+            };
+            hits?: components["schemas"]["FrameworkHit"][];
+            gaps?: components["schemas"]["FrameworkGap"][];
+            next_cursor?: string;
+        };
+        FrameworkReadHead: {
+            handle: string;
+            citation: string;
+            kind: string;
+            path?: string[];
+            title?: string;
+            status?: string;
+            lineage?: components["schemas"]["FrameworkLineage"];
+            /** @enum {string} */
+            access: "free" | "licensed";
+            text_withheld: boolean;
+        };
+        FrameworkOutline: {
+            citation: string;
+            kind?: string;
+            title?: string;
+        };
+        FrameworkReadUnit: {
+            /** @enum {string} */
+            kind: "head" | "title_original" | "body" | "note" | "table" | "mapping" | "outline";
+            head?: components["schemas"]["FrameworkReadHead"];
+            version?: components["schemas"]["Framework"];
+            text?: string;
+            edge?: components["schemas"]["FrameworkMappingEdge"];
+            outline?: components["schemas"]["FrameworkOutline"];
+            part?: number;
+            parts?: number;
+        };
+        FrameworkReadItemResult: {
+            handle?: string;
+            units?: components["schemas"]["FrameworkReadUnit"][];
+            complete: boolean;
+            next?: string;
+            /** @enum {string} */
+            not_read?: "call_cap";
+            /** @enum {string} */
+            error?: "invalid_item" | "invalid_handle" | "not_found" | "release_expired" | "invalid_next" | "unit_too_large";
+        };
+        FrameworkReadResult: {
+            release: string;
+            access_set_version: string;
+            access_unavailable?: boolean;
+            items?: components["schemas"]["FrameworkReadItemResult"][];
+        };
+        FrameworkSearchInput: {
+            /** @enum {string} */
+            corpus: "frameworks";
+            release?: string;
+            query: string;
+            frameworks?: string[];
+            versions?: string[];
+            limit?: number;
+            cursor?: string;
         };
     };
     responses: never;

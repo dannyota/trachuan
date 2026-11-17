@@ -6,8 +6,9 @@ type ReadItem struct {
 }
 
 type ReadRequest struct {
-	Release string
-	Items   []ReadItem
+	Release        string
+	Items          []ReadItem
+	ExpectedHandle string
 }
 
 type ReadHead struct {

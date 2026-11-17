@@ -1,9 +1,9 @@
-// Package webapi serves the session-authenticated corpus routes.
 package webapi
 
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 	"time"
 
 	"danny.vn/trachuan/apps/server/internal/apierror"
@@ -12,8 +12,6 @@ import (
 	"danny.vn/trachuan/apps/server/internal/websession"
 )
 
-// Config supplies shared tool dependencies and the web session manager.
-// Tools.Limiter and Tools.Caches must be the instances supplied to /mcp.
 type Config struct {
 	Tools    mcpapi.Config
 	Sessions *websession.Manager
@@ -26,8 +24,19 @@ type api struct {
 
 type endpoint func(*http.Request) (json.RawMessage, error)
 
-// New constructs the corpus routes behind session and CSRF middleware.
 func New(cfg Config) http.Handler {
+	frameworks := newFrameworkRoutes(cfg)
+	law := newLawRoutes(cfg)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/v1/frameworks" || strings.HasPrefix(r.URL.Path, "/api/v1/frameworks/") {
+			frameworks.ServeHTTP(w, r)
+			return
+		}
+		law.ServeHTTP(w, r)
+	})
+}
+
+func newLawRoutes(cfg Config) http.Handler {
 	if cfg.Sessions == nil {
 		return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			apierror.Write(w, 503, "unavailable")
@@ -69,6 +78,11 @@ func (a *api) route(name string, class limits.Class, run endpoint) http.Handler 
 		raw, err := run(r)
 		if err != nil {
 			status, c := httpError(err)
+			if c == "rate_limited" {
+				code = c
+				apierror.RateLimited(w, 0)
+				return
+			}
 			fail(status, c)
 			return
 		}

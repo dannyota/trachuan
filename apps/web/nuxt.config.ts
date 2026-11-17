@@ -17,6 +17,8 @@ export default defineNuxtConfig({
   runtimeConfig: { trustedProxies: '', apiOrigin: 'http://127.0.0.1:8080', public: { siteOrigin: 'https://trachuan.vn' } },
   routeRules: {
     '/**': { headers: { 'Content-Security-Policy': APP_CSP } },
+    '/api/v1/frameworks': { cache: false, headers: { 'Cache-Control': 'no-store' } },
+    '/api/v1/frameworks/**': { cache: false, headers: { 'Cache-Control': 'no-store' } },
     '/': { cache },
     '/connect': { cache },
     '/sources': { cache },

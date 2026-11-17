@@ -55,6 +55,8 @@ func newWebMux(d webDeps) *http.ServeMux {
 	mux.Handle("GET /api/v1/me/reports", reportHandler)
 	mux.Handle("DELETE /api/v1/me/reports/{id}", reportHandler)
 	corpus := webapi.New(webapi.Config{Tools: d.tools, Sessions: d.sessions})
+	mux.Handle("/api/v1/frameworks", corpus)
+	mux.Handle("/api/v1/frameworks/", corpus)
 	publicLimit := newLoginLimiter(d.loginLimit.clock, d.loginLimit.proxies)
 	publicLimit.cost = time.Second
 	summaries := d.summaries
