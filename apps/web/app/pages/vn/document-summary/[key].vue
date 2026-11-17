@@ -32,7 +32,10 @@ const summary = computed(() => data.value?.kind === 'summary' ? data.value.summa
 if (data.value?.kind === 'missing') {
   if (context) context._renderResponse = { statusCode: 404, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-cache' }, body: notFoundDocument(language.value) }
   if (import.meta.client) await navigateTo(route.path, { external: true })
-} else if (!summary.value && event) setResponseStatus(event, 503)
+} else if (!summary.value && event) {
+  setResponseStatus(event, 503)
+  setResponseHeader(event, 'Cache-Control', 'no-cache')
+}
 if (event && !summary.value?.index) setResponseHeader(event, 'X-Robots-Tag', 'noindex')
 const head = computed(() => summary.value ? summarySeo(summary.value.document) : { title: shellMessages(language.value).unavailableTitle, description: '' })
 useHead(() => ({ title: head.value.title, meta: [...(summary.value ? [{ name: 'description', content: head.value.description }] : []), ...(!summary.value?.index ? [{ name: 'robots', content: 'noindex' }] : [])] }))
@@ -42,8 +45,8 @@ function retry() { window.location.reload() }
 </script>
 
 <template>
-  <div class="container page-content">
+  <div>
     <DocumentSummary v-if="summary" :summary="summary" />
-    <div v-else class="notice search-state" role="alert"><h1>{{ shellMessages(language).unavailableTitle }}</h1><p>{{ messagesFor(language).errors.unavailable }}</p><button class="btn btn-secondary" type="button" @click="retry">{{ shellMessages(language).retry }}</button></div>
+    <div v-else class="container page-content"><div class="notice search-state" role="alert"><h1>{{ shellMessages(language).unavailableTitle }}</h1><p>{{ messagesFor(language).errors.unavailable }}</p><button class="btn btn-secondary" type="button" @click="retry">{{ shellMessages(language).retry }}</button></div></div>
   </div>
 </template>

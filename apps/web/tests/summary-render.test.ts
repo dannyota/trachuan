@@ -6,11 +6,13 @@ import { publicSummary, forbiddenMarkers } from '../e2e/summary-data'
 function run(body: string) {
   return JSON.parse(execFileSync(process.execPath, ['--input-type=module', '-e', `
     import { Server } from 'node:http';
+    import { hash } from './node_modules/nitropack/dist/runtime/internal/hash.mjs';
     Server.prototype.listen = function () { return this };
     process.env.NITRO_SHUTDOWN_DISABLED = '1';
     const summary = ${JSON.stringify(publicSummary)};
     let available = true;
     let release = summary.release;
+    let summaryRelease = summary.release;
     let failed = false;
     let now = Date.parse('2099-01-01T16:59:59Z');
     Date.now = () => now;
@@ -24,8 +26,8 @@ function run(body: string) {
       if (path.endsWith('/codes')) return new Response(JSON.stringify({release,codes:['1']}), {headers});
       if (path.endsWith('/taxonomy/1')) return new Response(JSON.stringify({release,node:{code:'1',name:'Topic'},documents:[{key:'vn:vbpl:1',number:'1',title:'Title'}]}), {headers});
       if (path === '/api/v1/public/documents/vn:vbpl:9') return new Response('{}', {status:404,headers});
-      if (path.startsWith('/api/v1/public/documents/')) return new Response(JSON.stringify({...summary, release, status_date:new Date(now + 7 * 3600000).toISOString().slice(0,10)}), {headers});
-      if (path === '/api/v1/public/documents') return new Response(JSON.stringify({release,projection:1,total:1,items:[{key:'vn:vbpl:1',index:true}]}), {headers});
+      if (path.startsWith('/api/v1/public/documents/')) return new Response(JSON.stringify({...summary, release:summaryRelease, status_date:new Date(now + 7 * 3600000).toISOString().slice(0,10)}), {headers});
+      if (path === '/api/v1/public/documents') return new Response(JSON.stringify({release:summaryRelease,projection:1,total:1,items:[{key:'vn:vbpl:1',index:true}]}), {headers});
       return new Response(JSON.stringify({markers:${JSON.stringify(forbiddenMarkers)}}), {headers});
     };
     const { nitroApp: app } = await import('./tests/nitro-app.mjs');
@@ -35,6 +37,12 @@ function run(body: string) {
     }
     ${body}
   `], { encoding: 'utf8', maxBuffer: 10 * 1024 * 1024, timeout: 5000 }))
+}
+
+function decodedData(html: string): string {
+  const document = new Window().document
+  document.write(html)
+  return Buffer.from(document.getElementById('__NUXT_CSP_DATA__')!.getAttribute('content')!, 'base64').toString('utf8')
 }
 
 it('renders identical credential-independent HTML and escaped legislation without private payloads', () => {
@@ -74,6 +82,98 @@ it('renders identical credential-independent HTML and escaped legislation withou
   expect(result.pages[4].body).toContain('Read the full text')
   expect(result.calls.every((call: { path: string, cookie: null, credentials: string }) => /^\/api\/v1\/public\/(status|documents\/)/.test(call.path) && call.cookie === null && call.credentials === 'omit')).toBe(true)
   expect(result.calls).toHaveLength(4)
+})
+
+it.each([404, 503])('keeps a public %s error uncached even with its literal body ETag', (status) => {
+  const result = run(`
+    available = ${status !== 404};
+    failed = ${status === 503};
+    const first = await page('/vn/documents/vn:vbpl:1/summary');
+    const etag = first.headers.etag ?? 'W/"' + hash(first.body) + '"';
+    const repeated = await page('/vn/documents/vn:vbpl:1/summary', {'if-none-match':etag});
+    console.log(JSON.stringify({first,repeated}));
+  `)
+  for (const page of [result.first, result.repeated]) {
+    expect(page.status).toBe(status)
+    expect(page.headers.etag).toBeUndefined()
+    expect(page.headers['cache-control']).toBe('no-cache')
+    expect(page.body).toContain(status === 503 ? 'Bạn thử lại sau.' : 'Không có trang này.')
+  }
+})
+
+it('does not cache a status and summary release mismatch and recovers immediately', () => {
+  const result = run(`
+    release = '20990102_1';
+    const mismatch = await page('/vn/documents/vn:vbpl:1/summary');
+    summaryRelease = release;
+    const recovered = await page('/vn/documents/vn:vbpl:1/summary');
+    console.log(JSON.stringify({mismatch,recovered,calls}));
+  `)
+  expect(result.mismatch.status).toBe(503)
+  expect(result.mismatch.headers.etag).toBeUndefined()
+  expect(result.mismatch.headers['cache-control']).toBe('no-cache')
+  expect(result.mismatch.body).toContain('Bạn thử lại sau.')
+  expect(result.mismatch.body).not.toContain('Chương được duyệt')
+  expect(result.recovered.status).toBe(200)
+  expect(result.recovered.body).toContain('Chương được duyệt')
+  expect(decodedData(result.recovered.body)).toContain('"20990102_1"')
+  expect(result.calls).toHaveLength(4)
+})
+
+it('expires warm summaries through activation, rollback without capability and reactivation', () => {
+  const result = run(`
+    const initial = await page('/vn/documents/vn:vbpl:1/summary');
+    const warm = await page('/vn/documents/vn:vbpl:1/summary');
+    release = summaryRelease = '20990102_1';
+    now += 300001;
+    const activated = await page('/vn/documents/vn:vbpl:1/summary');
+    await page('/vn/documents/vn:vbpl:1/summary');
+    release = '20981201_1';
+    available = false;
+    now += 300001;
+    const rollback = await page('/vn/documents/vn:vbpl:1/summary', {'if-none-match':activated.headers.etag});
+    release = summaryRelease = '20990102_1';
+    available = true;
+    const reactivated = await page('/vn/documents/vn:vbpl:1/summary');
+    const finalWarm = await page('/vn/documents/vn:vbpl:1/summary');
+    console.log(JSON.stringify({initial,warm,activated,rollback,reactivated,finalWarm,calls}));
+  `)
+  expect(result.initial.status).toBe(200)
+  expect(result.warm.body).toBe(result.initial.body)
+  expect(result.activated.status).toBe(200)
+  expect(decodedData(result.activated.body)).toContain('"20990102_1"')
+  expect(result.activated.headers.etag).not.toBe(result.initial.headers.etag)
+  expect(result.rollback.status).toBe(404)
+  expect(result.rollback.headers.etag).toBeUndefined()
+  expect(result.rollback.body).toContain('Không có trang này.')
+  expect(result.reactivated.status).toBe(200)
+  expect(result.reactivated.body).toContain('Chương được duyệt')
+  expect(result.finalWarm.body).toBe(result.reactivated.body)
+  expect(result.calls).toHaveLength(7)
+})
+
+it('places identity, dates and text availability in the reader band and content in its text column', () => {
+  const result = run(`
+    summary.document.text_complete = false;
+    summary.document.effective_to = '2099-12-31';
+    console.log(JSON.stringify(await page('/vn/documents/vn:vbpl:1/summary')));
+  `)
+  const document = new Window().document
+  document.write(result.body)
+  const band = document.querySelector('.reader-identity')
+  expect(band).not.toBeNull()
+  expect(band!.querySelector('.stamp')).not.toBeNull()
+  expect(band?.querySelector('h1')?.textContent).toBe(publicSummary.document.title)
+  expect(band?.querySelector('.summary-read')?.textContent).toBe('Đọc toàn văn')
+  expect(band?.textContent).toContain('Nội dung văn bản chưa đầy đủ.')
+  const dates = band?.querySelector('.summary-dates')
+  expect(dates?.querySelectorAll('time')).toHaveLength(3)
+  expect(dates?.textContent).toBe('Ban hành 01/12/2098 · Hiệu lực từ 01/01/2099 · Hết hiệu lực 31/12/2099')
+  const content = document.querySelector('.reader .reader-content')
+  expect(content?.textContent).toContain('Chương được duyệt')
+  expect(content?.textContent).toContain('Văn bản liên quan')
+  expect(content?.textContent).toContain('Chủ đề mẫu')
+  expect(document.querySelector('.reader-unit')).toBeNull()
 })
 
 it('expires warm summaries at Vietnam midnight and availability changes within 300 seconds', () => {

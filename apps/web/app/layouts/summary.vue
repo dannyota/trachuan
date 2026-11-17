@@ -10,7 +10,7 @@ useHead(() => ({ htmlAttrs: { lang: language.value }, link: [{ rel: 'icon', type
   <div class="site-layout">
     <a class="skip-link" href="#main">{{ shellMessages(language).skip }}</a>
     <SummaryHeader />
-    <main id="main" tabindex="-1" class="site-main"><slot /></main>
+    <main id="main" tabindex="-1" class="site-main reader-main"><slot /></main>
     <SiteFooter />
   </div>
 </template>

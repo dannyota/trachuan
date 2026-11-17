@@ -20,6 +20,7 @@ it('mounts its language and navigation controls without a session store or accou
   expect(wrapper.text()).toContain('Topics')
   expect(wrapper.text()).toContain('Tiếng Việt')
   expect(wrapper.findAll('a').find(link => link.text() === 'Sign in')?.attributes('href')).toBe('/login?next=%2Fvn%2Fdocuments%2Fvn%3Avbpl%3A1%2Fsummary')
+  expect(wrapper.findAll('a').find(link => link.text() === 'Sign in')?.classes()).toEqual(['btn', 'btn-primary'])
   expect(fetch).not.toHaveBeenCalled()
   wrapper.unmount()
 })

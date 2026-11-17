@@ -36,7 +36,7 @@ onUnmounted(() => { document.removeEventListener('keydown', onKey); document.rem
         </nav>
         <div class="header-actions">
           <button type="button" class="language-button" @click="toggleLanguage">{{ messages.language }}</button>
-          <a :href="loginUrl(route.path)">
+          <a class="btn btn-primary" :href="loginUrl(route.path)">
             {{ messages.signIn }}
           </a>
         </div>

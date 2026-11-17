@@ -92,3 +92,50 @@ for (const stateName of ['available', 'flag off', 'rollback', 'no active release
     })
   })
 }
+
+for (const colorScheme of ['light', 'dark'] as const) {
+  for (const width of [320, 390, 1366]) {
+    test(`summary reader layout at ${width}px in ${colorScheme}`, async ({ browser }, testInfo) => {
+      await withSummarySite(async (origin, state) => {
+        const context = await browser.newContext({ viewport: { width, height: 900 }, colorScheme, extraHTTPHeaders: { 'X-Forwarded-For': clientAddress(testInfo) } })
+        try {
+          const page = await context.newPage()
+          const response = await page.goto(`${origin}/vn/documents/vn:vbpl:1/summary`)
+          expect(response?.status()).toBe(200)
+          await page.evaluate(async () => { await document.fonts.ready })
+          expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+          const band = page.locator('.reader-identity')
+          await expect(band).toHaveCSS('background-color', colorScheme === 'light' ? 'rgb(241, 244, 250)' : 'rgb(19, 26, 46)')
+          await expect(band.getByRole('heading', { level: 1 })).toHaveCSS('font-family', /NotoSerif/)
+          await expect(band.getByRole('link', { name: 'Đọc toàn văn', exact: true })).toBeVisible()
+          const content = page.locator('.reader .reader-content')
+          await expect(content).toContainText('Chương được duyệt')
+          await expect(content).toContainText('Văn bản liên quan')
+          await expect(content).toContainText('Chủ đề mẫu')
+          const contentBox = (await content.boundingBox())!
+          const readerBox = (await page.locator('.reader').boundingBox())!
+          expect(contentBox.x).toBeCloseTo(readerBox.x + (width >= 1024 ? 316 : 16), 0)
+          expect(contentBox.width).toBeCloseTo(readerBox.width - (width >= 1024 ? 632 : 32), 0)
+          if (width === 390) {
+            const dates = band.locator('.summary-dates')
+            await expect(dates).toHaveText('Ban hành 01/12/2098 · Hiệu lực từ 01/01/2099')
+            const positions = await dates.locator(':scope > span').evaluateAll(elements => elements.map(element => element.getBoundingClientRect().top))
+            expect(positions).toHaveLength(2)
+            expect(Math.max(...positions) - Math.min(...positions)).toBeLessThan(1)
+          }
+          if (width < 768) await page.locator('.menu-button').click()
+          const signIn = page.getByRole('banner').getByRole('link', { name: 'Đăng nhập', exact: true })
+          await expect(signIn).toBeVisible()
+          await expect(signIn).toHaveClass('btn btn-primary')
+          await expect(signIn).toHaveCSS('background-color', colorScheme === 'light' ? 'rgb(30, 58, 138)' : 'rgb(52, 81, 178)')
+          await expect(signIn).toHaveCSS('border-radius', '999px')
+          expect((await signIn.boundingBox())!.height).toBeGreaterThanOrEqual(44)
+          expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+          await expect(page.locator('.reader-unit')).toHaveCount(0)
+          expect(state.calls.every(call => call.path.startsWith('/api/v1/public/'))).toBe(true)
+          expect(state.calls.every(call => call.cookie === '')).toBe(true)
+        } finally { await context.close() }
+      })
+    })
+  }
+}
