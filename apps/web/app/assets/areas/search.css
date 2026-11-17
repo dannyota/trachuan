@@ -37,6 +37,8 @@
 .result-card-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 16px 20px 12px; }
 .result-number { color: var(--color-ink); font-size: 14px; }
 .result-byline, .result-title, .result-rank { color: var(--color-muted); font-size: 13px; }
+.result-title { font-family: var(--font-serif); }
+.result-source { display: inline-flex; align-items: center; gap: 4px; }
 .result-rank { margin-left: auto; }
 .result-card-body { display: flex; flex-direction: column; gap: 8px; padding: 0 20px 16px; }
 .result-card-body p { margin: 0; }
