@@ -107,3 +107,25 @@ resource "oci_monitoring_alarm" "secrets_failed" {
   rule_name                                     = "base"
   severity                                      = "WARNING"
 }
+
+resource "oci_monitoring_alarm" "telegram_watch_silent" {
+  body                                          = "No successful host watch run within an hour, or none since install; Telegram alerts may be blocked. Check watch.log in OCI Logging and docs/runbooks/alarms.md."
+  compartment_id                                = var.compartment_ocid
+  destinations                                  = [oci_ons_notification_topic.alarms.id]
+  display_name                                  = "Telegram watch silent"
+  evaluation_slack_duration                     = "PT3M"
+  is_enabled                                    = true
+  is_notifications_per_metric_dimension_enabled = false
+  message_format                                = "ONS_OPTIMIZED"
+  metric_compartment_id                         = var.compartment_ocid
+  metric_compartment_id_in_subtree              = false
+  namespace                                     = "trachuan_host"
+  notification_title                            = "Telegram watch silent"
+  notification_version                          = "1.X"
+  pending_duration                              = "PT10M"
+  query                                         = "watch_stale[5m].min() > 0"
+  repeat_notification_duration                  = "PT24H"
+  resolution                                    = "1m"
+  rule_name                                     = "base"
+  severity                                      = "WARNING"
+}

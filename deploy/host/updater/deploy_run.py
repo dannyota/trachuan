@@ -128,7 +128,7 @@ class Updater:
         self.step = 'rollback'
         Activator(state, self.store, self.host).activate(candidate, expected_schema=schema,
                                                        authorization=hash_value, rollback=auth)
-        result.write('ok', 'rollback', 'authorized rollback activated', hash_value, auth)
+        result.write('ok', 'rollback', 'authorized rollback activated', hash_value, candidate.manifest)
 
     def corpus(self, state, directory, mode, result):
         if (state.data['journal'] or {}).get('status') == 'stopped':

@@ -29,6 +29,45 @@ class InstallerTest(unittest.TestCase):
         for value in ("updater/install-packages.sh", "--uid-owner", "169.254.169.254", "--dport 80", "--query-rule", "--add-rule", "trachuan-metrics.timer"):
             self.assertIn(value, script)
 
+    def test_watch_units_hardening_and_bundle_installation(self):
+        service = configparser.ConfigParser(interpolation=None)
+        service.read(HOST / 'systemd/trachuan-watch.service')
+        self.assertIn('Service', service)
+        expected = dict(User='trachuan-watch', Type='oneshot', ProtectSystem='strict',
+                        ProtectHome='yes', PrivateTmp='yes', NoNewPrivileges='yes',
+                        LimitCORE='0', MemorySwapMax='0', TimeoutStartSec='45', MemoryMax='128M',
+                        ReadWritePaths='/srv/trachuan/state/watch /var/log/trachuan/watch',
+                        ExecStart='/usr/bin/python3 -I /usr/local/libexec/trachuan/watch.py')
+        for key, value in expected.items():
+            self.assertEqual(service['Service'][key], value)
+        timer = configparser.ConfigParser(interpolation=None)
+        timer.read(HOST / 'systemd/trachuan-watch.timer')
+        self.assertEqual(timer['Timer']['OnCalendar'], 'minutely')
+        self.assertEqual(timer['Timer']['Persistent'], 'false')
+        script = (HOST / 'install.sh').read_text()
+        for value in ('useradd --system --no-create-home --shell /sbin/nologin trachuan-watch',
+                      'trachuan-watch.timer', 'trachuan-watch:r--', 'trachuan-watch:--x',
+                      '/srv/trachuan/state/watch', '/var/log/trachuan/watch',
+                      '"$bundle/watch/watch.py"', 'trachuan-watch.*'):
+            self.assertIn(value, script)
+        for path in (HOST / 'watch').glob('*.py'):
+            if path.name == 'watch.py' or path.name.endswith('_test.py'):
+                continue
+            self.assertIn(path.name, script)
+        self.assertIn('/var/log/trachuan/watch/watch.log', (HOST/'logrotate-trachuan').read_text())
+
+    def test_watch_cloud_backstop_names_secrets_and_collects_logs(self):
+        oci = HOST.parent / 'oci'
+        policy = (oci/'iam.tf').read_text()
+        for name in ('telegram_bot_token', 'telegram_chat_id'):
+            self.assertIn("target.secret.name = '"+name+"'", policy)
+        self.assertIn('/var/log/trachuan/watch/*.log', (oci/'logging.tf').read_text())
+        alarms = (oci/'alarms-jobs.tf').read_text()
+        alarm = alarms.split('"telegram_watch_silent" {', 1)[-1]
+        for value in ('Telegram watch silent', 'watch_stale[5m].min() > 0',
+                      'PT10M', 'WARNING', 'PT24H', 'docs/runbooks/alarms.md'):
+            self.assertIn(value, alarm)
+
     def test_restore_directory_is_provisioned_before_rootless_use(self):
         source = (HOST / "install.sh").read_text()
         loop = re.search(r"for dir in ([^;]+); do\n(.*?)\ndone", source, re.S)

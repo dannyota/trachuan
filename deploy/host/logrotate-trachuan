@@ -7,7 +7,7 @@
     notifempty
     create 0640 root root
 }
-/var/log/trachuan/backup.log {
+/var/log/trachuan/backup.log /var/log/trachuan/watch/watch.log {
     daily
     rotate 30
     compress
