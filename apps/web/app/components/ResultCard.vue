@@ -93,7 +93,7 @@ function memberLink(memberAnchor: string | undefined) {
     <footer class="result-card-footer">
       <NuxtLink v-if="link" :to="link">{{ messages.read }}</NuxtLink>
       <CopyButton v-if="citation" :text="citation" :label="messages.copy" />
-      <a v-if="source" :href="source" target="_blank" rel="noopener noreferrer">vbpl.vn ↗</a>
+      <a v-if="source" :href="source" target="_blank" rel="noopener noreferrer">vbpl.vn <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 3h8v8M13 3 3 13" /></svg></a>
       <div class="result-nodes"><template v-for="code in hit.nodes" :key="code"><NuxtLink v-if="nodes?.[code]?.name" class="chip" :to="`/vn/topics/${code}`">{{ nodes[code]?.name }}</NuxtLink></template></div>
     </footer>
   </article>

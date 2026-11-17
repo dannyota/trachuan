@@ -55,6 +55,9 @@ async function checkChrome(page: Page, path: string, colorScheme: 'light' | 'dar
   const footer = page.locator('footer.site-footer')
   await expect(footer, path).toBeVisible()
   await expect(footer, path).toHaveCSS('background-color', colorScheme === 'light' ? 'rgb(15, 21, 36)' : 'rgb(19, 26, 46)')
+  for (const link of await page.locator('main a:visible:not(.btn):not(.chip), footer.site-footer a:visible:not(.site-logo)').all()) {
+    expect(await link.evaluate(element => getComputedStyle(element).textDecorationLine), path).toBe('underline')
+  }
 }
 
 for (const colorScheme of ['light', 'dark'] as const) for (const width of [360, 390, 768, 1366]) {

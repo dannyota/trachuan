@@ -1,4 +1,9 @@
 import { expect, test } from '@playwright/test'
+import { clientAddress } from './client-address'
+
+test.beforeEach(async ({ page }, info) => {
+  await page.setExtraHTTPHeaders({ 'X-Forwarded-For': clientAddress(info) })
+})
 
 test('opens mobile filters without a reactive loop and restores focus on Escape', async ({ page }) => {
   const errors: string[] = []

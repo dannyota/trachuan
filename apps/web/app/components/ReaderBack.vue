@@ -13,4 +13,4 @@ function back(event: MouseEvent) {
   } catch { return }
 }
 </script>
-<template><a href="/vn/search" class="reader-back" @click="back">{{ m.back }}</a></template>
+<template><a href="/vn/search" class="reader-back" @click="back"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 3 2 8l5 5M2 8h12" /></svg> {{ m.back }}</a></template>
