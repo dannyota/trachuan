@@ -32,7 +32,7 @@ const citation = computed(() => [props.document.type, props.document.number].fil
         <span>{{ m.release }} {{ formatRelease(release, language) }}</span>
         <span>{{ textSourceLabel(document.text_source, document.text_complete, document.source_url, language) }}</span>
       </div>
-      <div class="reader-actions"><a v-if="source" class="btn btn-secondary" :href="source" rel="noopener noreferrer">{{ m.source }}</a><CopyButton v-if="citation" :text="citation" :label="m.copyDocument" /></div>
+      <div class="reader-actions"><a v-if="source" class="btn btn-secondary" :href="source" rel="noopener noreferrer">{{ m.source }} <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 3h8v8M13 3 3 13" /></svg></a><CopyButton v-if="citation" :text="citation" :label="m.copyDocument" /></div>
     </div>
   </header>
 </template>

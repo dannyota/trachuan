@@ -1,7 +1,7 @@
 :root { color-scheme: light dark; font-family: var(--font-sans); }
 body { margin: 0; background: var(--color-page); color: var(--color-ink); font-size: 16px; line-height: 1.6; }
 h1, h2, h3, h4, h5, h6 { font-family: var(--font-sans); font-weight: 700; }
-a { color: var(--color-primary); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+a { color: var(--color-primary); text-decoration-line: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
 button { cursor: pointer; }
 :focus-visible { outline: 3px solid var(--color-ring); outline-offset: 2px; }
 code, pre, kbd, samp { font-family: var(--font-mono); font-variant-ligatures: none; }
@@ -13,7 +13,7 @@ code, pre, kbd, samp { font-family: var(--font-mono); font-variant-ligatures: no
 .btn-danger { background: var(--color-danger-bg); border-color: var(--color-danger-line); color: var(--color-danger); }
 .input { padding: 10px 12px; border: 1px solid var(--color-line-strong); border-radius: var(--radius-input); background: var(--color-card); color: var(--color-ink); }
 .card { background: var(--color-card); border: 1px solid var(--color-line); border-radius: var(--radius-lg); }
-.chip { display: inline-flex; padding: 5px 10px; border: 1px solid var(--color-line-strong); border-radius: var(--radius-pill); background: var(--color-card); }
+.chip { display: inline-flex; padding: 5px 10px; text-decoration: none; border: 1px solid var(--color-line-strong); border-radius: var(--radius-pill); background: var(--color-card); }
 .stamp { display: inline-flex; align-items: center; padding: 4px 10px; border: 1.5px solid currentColor; border-radius: var(--radius-sm); font-size: 12.5px; font-weight: 700; letter-spacing: .02em; text-transform: uppercase; }
 .stamp--in-force { color: var(--color-ink-in-force); background: var(--color-stamp-in-force-bg); }
 .stamp--partial { color: var(--color-ink-partial); background: var(--color-stamp-partial-bg); }

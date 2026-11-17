@@ -19,7 +19,7 @@
 .node-picker ul { display: grid; gap: 6px; max-height: 280px; overflow: auto; padding: 0; list-style: none; }
 .node-picker li { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
 .node-picker li label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.node-expand { display: inline-flex; flex: 0 0 32px; align-items: center; justify-content: center; min-height: 32px; color: var(--color-primary); }
+.node-expand { display: inline-flex; flex: 0 0 32px; align-items: center; justify-content: center; min-height: 44px; color: var(--color-primary); }
 .search-main { min-width: 0; min-height: 360px; }
 .search-results-pending { visibility: hidden; }
 .search-main, .search-filters, .search-mobile-chips { overflow-wrap: anywhere; }
@@ -33,22 +33,24 @@
 .ink-not-yet { color: var(--color-ink-not-yet); }
 .ink-expired { color: var(--color-ink-expired); }
 .ink-neutral { color: var(--color-ink-neutral); }
-.result-card { overflow: hidden; }
+.result-card { overflow: hidden; border-radius: 16px; }
 .result-card-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 16px 20px 12px; }
-.result-number { color: var(--color-ink); font-size: 14px; text-decoration: none; }
+.result-number { color: var(--color-ink); font-size: 14px; }
 .result-byline, .result-title, .result-rank { color: var(--color-muted); font-size: 13px; }
+.result-title { font-family: var(--font-serif); }
+.result-source { display: inline-flex; align-items: center; gap: 4px; }
 .result-rank { margin-left: auto; }
 .result-card-body { display: flex; flex-direction: column; gap: 8px; padding: 0 20px 16px; }
 .result-card-body p { margin: 0; }
-.result-card-body h2 { margin: 0; font-size: 18px; }
+.result-card-body h2 { margin: 0; font-family: var(--font-serif); font-size: 18px; }
 .result-members, .result-warning { font-size: 14px; }
 .result-text { font-size: 15.5px; line-height: 1.75; }
 .result-text--clamped { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 4; }
 .result-text mark { color: var(--color-highlight-ink); background: var(--color-highlight); }
 .result-gaps, .search-gaps { color: var(--color-muted); font-size: 13px; }
 .result-card-footer { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 20px; padding: 10px 20px; border-top: 1px solid var(--color-line); background: var(--color-surface); font-size: 14px; }
-.result-card-footer a { text-decoration: none; }
-.result-card-footer .btn { min-height: 32px; padding: 0; border: 0; background: transparent; color: var(--color-primary); font-weight: 400; }
+.result-card-footer a { text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.result-card-footer .btn { min-height: 44px; padding: 0; border: 0; background: transparent; color: var(--color-primary); font-weight: 400; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
 .result-nodes { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
 .result-nodes .chip { font-size: 12px; }
 .search-divider { display: flex; align-items: center; gap: 12px; margin: 0; color: var(--color-muted); font-size: 13px; text-align: center; }
@@ -92,3 +94,10 @@
   .result-card-footer { padding: 10px 14px; }
 }
 @media (prefers-reduced-motion: reduce) { .search-spinner { animation: none; } }
+
+.search-header button, .search-page button, .search-dialog button { min-height: 44px; border-radius: var(--radius-pill); }
+.search-page .chip, .search-header .chip, .search-dialog .chip, .search-page .relation-chip { min-height: 24px; border-radius: var(--radius-pill); }
+.search-header button.chip, .search-page button.chip, .search-dialog button.chip { min-height: 44px; }
+.search-filters label:has(input[type="checkbox"]) { display: flex; align-items: baseline; gap: 8px; }
+.search-filters input[type="checkbox"] { margin: 0; }
+.filter-error button { padding: 0; border: 0; background: transparent; color: inherit; font: inherit; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }

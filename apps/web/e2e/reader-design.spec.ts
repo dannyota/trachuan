@@ -11,7 +11,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
     await page.setViewportSize({ width: 390, height: 844 })
     await page.evaluate(() => (document.querySelector('#__nuxt') as unknown as { __vue_app__: { config: { globalProperties: { $router: { push: (path: string) => Promise<void> } } } } }).__vue_app__.config.globalProperties.$router.push('/vn/documents/vn:vbpl:1#dieu-1'))
     const target = page.locator('.reader-unit-target')
-    await expect(target).toHaveCSS('background-color', colorScheme === 'light' ? 'rgb(243, 245, 250)' : 'rgb(19, 26, 46)')
+    await expect(target).toHaveCSS('background-color', colorScheme === 'light' ? 'rgb(241, 244, 250)' : 'rgb(19, 26, 46)')
     await expect(target).toHaveCSS('border-left-width', '3px')
     await expect(target).toHaveCSS('border-left-color', colorScheme === 'light' ? 'rgb(30, 58, 138)' : 'rgb(157, 180, 245)')
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)

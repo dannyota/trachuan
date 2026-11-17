@@ -78,7 +78,7 @@ onMounted(loadRoots)
   <fieldset class="node-picker">
     <legend>{{ messages.searchNodes }}</legend>
     <label>{{ messages.searchNodeLookup }} <input v-model="lookup" class="input" type="search" autocomplete="off"></label>
-    <p v-if="failed" role="status">{{ messages.filtersUnavailable }} <button type="button" @click="retry">{{ messages.retry }}</button></p>
+    <p v-if="failed" class="filter-error" role="status">{{ messages.filtersUnavailable }} <button type="button" @click="retry">{{ messages.retry }}</button></p>
     <div class="node-selected"><button v-for="code in modelValue" :key="code" class="chip" type="button" @click="toggleSelection(code)">{{ nodes.find(node => node.code === code)?.name || messages.searchNodes }} ×</button></div>
     <p v-if="lookup && !failed && !matches.length">{{ searchMessages(language).noTopics }}</p>
     <ul><li v-for="node in matches" :key="node.code">
