@@ -199,7 +199,7 @@ func optionalSnapshotInputs() []string {
 }
 
 func optionalPrivateInputs() []string {
-	return []string{"trachuan/titles.csv", "trachuan/ocr-waivers.yaml", "trachuan/golden.csv", "trachuan/golden-review.yaml", "trachuan/floors.yaml"}
+	return []string{"trachuan/titles.csv", "trachuan/ocr-waivers.yaml", "trachuan/golden.csv", "trachuan/golden-review.yaml", "trachuan/floors.yaml", "trachuan/previous-report.json"}
 }
 
 func snapshotPublicFloors(dir string) error {

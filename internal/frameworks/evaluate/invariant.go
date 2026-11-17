@@ -33,7 +33,8 @@ func operationClass(op string) string {
 func compareInvariant(caller string, before, after, fullBefore, fullAfter []invariantObservation) InvariantCaller {
 	r := InvariantCaller{Caller: caller, Classes: map[string]InvariantClass{}, Calibration: "unavailable", Failures: []InvariantFailure{}, Pass: true}
 	positives := map[string]bool{}
-	original, mutated := privateObservations(fullBefore), privateObservations(fullAfter)
+	successfulBefore, successfulAfter := successfulObservations(fullBefore, fullAfter)
+	original, mutated := privateObservations(successfulBefore), privateObservations(successfulAfter)
 	for _, class := range privateClasses() {
 		positives[class] = !bytes.Equal(original[class], mutated[class])
 	}
@@ -44,6 +45,15 @@ func compareInvariant(caller string, before, after, fullBefore, fullAfter []inva
 			r.Failures = append(r.Failures, InvariantFailure{Operation: "positive_control", Class: class})
 		}
 	}
+	for _, observations := range [][]invariantObservation{before, after, fullBefore, fullAfter} {
+		for _, o := range observations {
+			if o.Error && !o.Diagnostic {
+				r.Pass = false
+				r.Failures = append(r.Failures, InvariantFailure{Operation: o.Operation, Class: operationClass(o.Operation), CaseID: o.CaseID, Mode: o.Mode, Page: o.Page, Repeat: o.Repeat})
+			}
+		}
+	}
+	before, after = successfulObservations(before, after)
 	if len(before) != len(after) {
 		r.Pass = false
 		r.Failures = append(r.Failures, InvariantFailure{Operation: "response_count", Class: "all"})

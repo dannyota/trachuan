@@ -23,14 +23,9 @@ type EvaluationReport struct {
 	Noise               string            `json:"noise"`
 	EvaluationResult
 	Floors       map[string]FloorResult `json:"floors"`
-	Previous     any                    `json:"previous"`
+	Previous     *previousReference     `json:"previous"`
 	PreviousDiff previousComparison     `json:"previous_diff"`
 	QualityPass  bool                   `json:"quality_pass"`
-}
-
-type previousComparison struct {
-	Status string `json:"status"`
-	Reason string `json:"reason"`
 }
 
 func optionalArtifact(path string) ([]byte, error) {
@@ -107,7 +102,12 @@ func evaluateStep(ctx context.Context, base, dir string, request DatabaseRequest
 	if err != nil {
 		return err
 	}
-	report := EvaluationReport{Version: 1, Release: request.Rel, DumpSHA256: built.Dump.SHA256, BuildManifestSHA256: digest(raw), RecipeHashes: recipes, CaseFileSHA256: data.caseHash, CaseCounts: CountGoldenCases(data.cases), CalibrationSHA256: built.CalibrationSHA256, Noise: "Small cohorts: one case moves recall by several percentage points. Abstention is biased by calibration on the scored public cohort.", Floors: map[string]FloorResult{}, PreviousDiff: previousComparison{"not_applicable", "The previous signed report input is not yet defined."}}
+	report := EvaluationReport{Version: 1, Release: request.Rel, DumpSHA256: built.Dump.SHA256, BuildManifestSHA256: digest(raw), RecipeHashes: recipes, CaseFileSHA256: data.caseHash, CaseCounts: CountGoldenCases(data.cases), CalibrationSHA256: built.CalibrationSHA256, Noise: "Small cohorts: one case moves recall by several percentage points. Abstention is biased by calibration on the scored public cohort.", Floors: map[string]FloorResult{}}
+	previous, previousCases, previousErr := readPreviousReport(base, request.Rel)
+	if previousErr != nil {
+		return previousErr
+	}
+	report.Previous = previous
 	if review != nil {
 		report.ReviewSHA256 = digest(review)
 	}
@@ -135,6 +135,7 @@ func evaluateStep(ctx context.Context, base, dir string, request DatabaseRequest
 		for _, cohort := range []string{"public", "licensed"} {
 			report.Floors[cohort] = checkFloors(baselines[cohort], floorHashes[cohort], result.Cohorts[cohort])
 		}
+		report.PreviousDiff = comparePrevious(previous, previousCases, result.Cases)
 		report.QualityPass = qualityPass(report)
 		if writeErr := writeJSON(dir, "report.json", report); writeErr != nil {
 			return writeErr
@@ -148,6 +149,13 @@ func evaluateStep(ctx context.Context, base, dir string, request DatabaseRequest
 }
 
 func qualityPass(r EvaluationReport) bool {
+	if r.Previous == nil {
+		if r.PreviousDiff.Status != "not_applicable" {
+			return false
+		}
+	} else if r.PreviousDiff.Status != "evaluated" || !r.PreviousDiff.Pass {
+		return false
+	}
 	if !r.Restored || r.RetrievalRecipeStatus != "measured" || r.CalibrationSHA256 == "" || r.Threshold == nil || !r.Invariant.Pass {
 		return false
 	}

@@ -80,8 +80,9 @@ func stepRecipe(step string) recipe {
 		version = 2
 		params["gap_kinds"] = gapKinds()
 		params["public_floors"] = "sources/frameworks-floors.yaml"
+		params["previous_report"] = "trachuan/previous-report.json"
 	case "evaluate":
-		params = map[string]any{"limit": 8, "metrics": 1, "invariant": 1, "floors": 1, "previous_report": "not_applicable"}
+		params = map[string]any{"limit": 8, "metrics": 1, "invariant": 2, "floors": 1, "previous_report": "paired-cases/1"}
 	case "build":
 		version = 2
 		params = databaseRecipe()

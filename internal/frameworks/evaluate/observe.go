@@ -17,6 +17,8 @@ type invariantObservation struct {
 	Scores                  []byte
 	Evidence                []byte
 	Text                    []byte
+	Error                   bool
+	Diagnostic              bool
 }
 
 func observe(ctx context.Context, e EvaluationEngine, req EvaluationRequest, caller serve.Caller) ([]invariantObservation, error) {
@@ -40,7 +42,7 @@ func observe(ctx context.Context, e EvaluationEngine, req EvaluationRequest, cal
 		if !bytes.Equal(raw, replayRaw) {
 			return &caseFailure{id, "invariant " + op + " cache response changed", nil}
 		}
-		all = append(all, invariantObservation{op, id, mode, page, 0, raw, s, v, t}, invariantObservation{op, id, mode, page, 1, replayRaw, s, v, t})
+		all = append(all, invariantObservation{Operation: op, CaseID: id, Mode: mode, Page: page, Repeat: 0, Value: raw, Scores: s, Evidence: v, Text: t}, invariantObservation{Operation: op, CaseID: id, Mode: mode, Page: page, Repeat: 1, Value: replayRaw, Scores: s, Evidence: v, Text: t})
 		return nil
 	}
 
@@ -52,36 +54,15 @@ func observe(ctx context.Context, e EvaluationEngine, req EvaluationRequest, cal
 			r := caseRequest(c, mode)
 			seen := map[string]bool{}
 			for page := 0; ; page++ {
-				response, err := e.Search(ctx, r, caller)
-				if err != nil {
-					if addErr := add("search", c.ID, mode, page, struct {
-						Response serve.Response
-						Error    string
-					}{response, err.Error()}, nil, nil, nil, func() (any, error) {
-						repeatedResponse, repeatedErr := e.Search(ctx, r, caller)
-						message := ""
-						if repeatedErr != nil {
-							message = repeatedErr.Error()
-						}
-						return struct {
-							Response serve.Response
-							Error    string
-						}{repeatedResponse, message}, nil
-					}); addErr != nil {
-						return nil, addErr
-					}
+				observations, response, searchErr := observeSearch(ctx, e, r, caller, c, mode, page)
+				if searchErr != nil {
+					return nil, searchErr
+				}
+				all = append(all, observations...)
+				if observations[0].Error {
 					break
 				}
-				scores := make([]any, 0, len(response.Hits))
-				for _, hit := range response.Hits {
-					scores = append(scores, struct {
-						Handle string
-						Score  *float64
-					}{hit.Handle, hit.Score})
-				}
-				if err = add("search", c.ID, mode, page, response, scores, nil, nil, func() (any, error) { return e.Search(ctx, r, caller) }); err != nil {
-					return nil, err
-				}
+
 				if response.NextCursor == "" {
 					break
 				}

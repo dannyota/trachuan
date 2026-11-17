@@ -25,7 +25,7 @@ func TestRun_EvaluatesAndSnapshotsPublicFloors(t *testing.T) {
 
 func TestEvaluationReport_QualityConditions(t *testing.T) {
 	threshold := .5
-	good := EvaluationReport{CalibrationSHA256: "hash", Threshold: &threshold, EvaluationResult: EvaluationResult{Restored: true, RetrievalRecipeStatus: "measured", Invariant: InvariantResult{Pass: true}, Cohorts: map[string]CohortMetrics{"public": {Filter: FilterGate{Pass: true}}, "licensed": {Filter: FilterGate{Pass: true}}}}, Floors: map[string]FloorResult{"public": {Pass: true}, "licensed": {Pass: true}}}
+	good := EvaluationReport{PreviousDiff: previousComparison{Status: "not_applicable", Pass: true}, CalibrationSHA256: "hash", Threshold: &threshold, EvaluationResult: EvaluationResult{Restored: true, RetrievalRecipeStatus: "measured", Invariant: InvariantResult{Pass: true}, Cohorts: map[string]CohortMetrics{"public": {Filter: FilterGate{Pass: true}}, "licensed": {Filter: FilterGate{Pass: true}}}}, Floors: map[string]FloorResult{"public": {Pass: true}, "licensed": {Pass: true}}}
 	require.True(t, qualityPass(good))
 	for _, change := range []func(*EvaluationReport){
 		func(r *EvaluationReport) { r.Restored = false }, func(r *EvaluationReport) { r.RetrievalRecipeStatus = "placeholder" }, func(r *EvaluationReport) { r.Invariant.Pass = false }, func(r *EvaluationReport) { r.CalibrationSHA256 = "" }, func(r *EvaluationReport) { r.Threshold = nil }, func(r *EvaluationReport) { r.Gaps = []GapTotal{{Blocks: true, Count: 1}} }, func(r *EvaluationReport) { r.Floors = map[string]FloorResult{} }, func(r *EvaluationReport) { r.Cohorts = map[string]CohortMetrics{} },
@@ -47,6 +47,7 @@ func TestEvaluationReport_ProvenanceAndMissingBaselines(t *testing.T) {
 	require.Equal(t, "no_baseline", r.Floors["public"].Status)
 	require.Equal(t, "no_baseline", r.Floors["licensed"].Status)
 	require.Equal(t, "not_applicable", r.PreviousDiff.Status)
+	require.Nil(t, r.Previous)
 	require.Contains(t, r.PreviousDiff.Reason, "input")
 	raw, err := os.ReadFile(filepath.Join(base, "build/build.json"))
 	require.NoError(t, err)
