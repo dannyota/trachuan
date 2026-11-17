@@ -16,6 +16,10 @@ export function safeNext(input: string): string {
     const release = new URLSearchParams(query).get('release')
     if (release && /^[0-9]{8}(?:_[0-9]+)?$/.test(release)) result += `?release=${release}`
   }
+  if (/^\/frameworks\/[^/]+\/[^/]+\/control$/.test(result)) {
+    const citation = new URLSearchParams(query).get('citation')
+    if (citation !== null) result += `?${new URLSearchParams({ citation })}`
+  }
   if (new TextEncoder().encode(result).length > 512 || !valid(result)) return '/'
   try {
     return valid(decodeURIComponent(result)) ? result : '/'

@@ -12,7 +12,7 @@ export default defineNitroPlugin((nitro) => {
       if (response.headersSent) return
       response.setHeader('Content-Security-Policy', APP_CSP)
       response.setHeader('Cache-Control', isPublic ? 'no-cache' : 'no-store')
-      if (isAccount) response.setHeader('X-Robots-Tag', 'noindex')
+      if (isAccount || page?.path.startsWith('/frameworks')) response.setHeader('X-Robots-Tag', 'noindex')
       if (!isPublic) return
       response.removeHeader('Last-Modified')
       if (response.statusCode >= 400) response.removeHeader('ETag')

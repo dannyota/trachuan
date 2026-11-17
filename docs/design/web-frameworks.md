@@ -17,7 +17,7 @@ field to another.
 | ------------------------------------------------ | --------------------------------------------------------- | ----------------------------------------------------- |
 | `/frameworks`                                    | every framework version of the release                    | `GET /api/v1/frameworks`                              |
 | `/frameworks/search`                             | search of the frameworks corpus                           | `POST /api/v1/frameworks/search`                      |
-| `/frameworks/{code}/{version}`                   | one version: head, outline, public gaps                   | `GET .../versions/{handle}`, `GET .../gaps?versions=` |
+| `/frameworks/{code}/{version}`                   | one version: head, outline, gaps                          | `GET .../versions/{handle}`, `GET .../gaps?versions=` |
 | `/frameworks/{code}/{version}/control?citation=` | one control: head, text when readable, mappings, children | `GET .../controls/{handle}`                           |
 
 Search has its own path, so a law search link never becomes a frameworks search.

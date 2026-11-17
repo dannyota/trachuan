@@ -2,6 +2,7 @@
 import type { components } from '@trachuan/schema/gen/openapi'
 import { ApiError, type Action } from '../../api/client'
 import { isNodeCode } from '../../utils/node-code'
+import { tabFrameworkProbe } from '../../utils/framework-probe'
 import { appendSearchPage } from '../../utils/search-results'
 import { errorMessage, messagesFor, shellMessages, type Language } from '../../../i18n'
 import { homeSuggestions } from '../../../i18n/home'
@@ -31,6 +32,7 @@ const nodes = ref<string[]>(initialNode ? [initialNode] : [])
 const nodeLabels = ref<Record<string, string>>({})
 const docTypes = ref<string[]>([])
 const issuers = ref<string[]>([])
+const showCorpus = ref(false)
 const facets = ref<components['schemas']['CorpusStatus'] | null>(null)
 const facetsFailed = ref(false)
 const query = ref('')
@@ -56,6 +58,7 @@ onMounted(() => {
     router.replace({ query: route.query.node === undefined ? {} : { node: route.query.node }, hash: route.hash })
   }
   loadFacets()
+  void tabFrameworkProbe(async () => (await filterApi.client.GET('/api/v1/frameworks')).response.status === 200).then((available) => { showCorpus.value = available })
   if (draft.draft) {
     query.value = draft.draft.query
     inForce.value = draft.draft.inForceOnly
@@ -162,6 +165,7 @@ async function runRequest(input: SearchInput, more: boolean) {
     <template #header>
       <div class="search-header">
         <form class="search-box" @submit.prevent="search()">
+          <CorpusControl v-if="showCorpus" current="law" />
           <label for="search-query" class="visually-hidden">{{ messages.searchQuery }}</label>
           <textarea id="search-query" v-model="query" class="input" rows="1" autocomplete="off" :placeholder="messages.searchQuery" @keydown="onQueryKeydown" />
           <button class="btn btn-primary" type="submit" :disabled="loading">{{ messages.searchSubmit }}</button>

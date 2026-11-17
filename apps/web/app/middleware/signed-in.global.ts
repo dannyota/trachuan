@@ -1,4 +1,5 @@
 import { loginUrl } from '../api/next'
+import { frameworkNext } from '../utils/framework-handles'
 import { ApiError } from '../api/client'
 
 export default defineNuxtRouteMiddleware(async (to) => {
@@ -14,5 +15,5 @@ export default defineNuxtRouteMiddleware(async (to) => {
       return
     }
   }
-  if (api.session.status === 'signed-out') return navigateTo(loginUrl(to.fullPath), { external: true })
+  if (api.session.status === 'signed-out') return navigateTo(loginUrl(to.path.startsWith('/frameworks') ? frameworkNext(to.fullPath) : to.fullPath), { external: true })
 })
