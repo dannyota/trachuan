@@ -70,7 +70,7 @@ func TestBuild_SummaryOmissionsSurviveResolveAndRestore(t *testing.T) {
 				t.Fatalf("summary counts=%v", record.Counts)
 			}
 			data, err := os.ReadFile(filepath.Join(f.env.Artifacts.Abs(f.art.Path), "heading-scan.json"))
-			if err != nil || !strings.Contains(string(data), `"rule_3_omitted":`) {
+			if err != nil || !strings.Contains(string(data), `"omitted":`) {
 				t.Fatalf("heading omission report missing: %v", err)
 			}
 			result, err := New(f.cfg).Resolve(ctx, f.env, f.run, f.item, f.art)

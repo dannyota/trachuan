@@ -52,7 +52,7 @@ func TestHeadingScan_RuleThreeStoredProvisionsWithoutSummary(t *testing.T) {
 		{"vn:vbpl:2", "chuong", "field-capped", 302},
 		{"vn:vbpl:3", "dieu", "row-capped", 303},
 	} {
-		_, err = tx.Exec(ctx, `INSERT INTO provision(id,document_id,node_id,kind,label,heading,ordinal,preorder,path,text,anchor) VALUES($1::bigint,$2,$3,$4,'Label',$5,$1::integer,$1::integer,('node_'||$1::text)::ltree,'Body',$3)`, i+1, docs[tc.key].id, tc.anchor, tc.kind, strings.Repeat("ố", tc.length))
+		_, err = tx.Exec(ctx, `INSERT INTO provision(id,document_id,node_id,kind,label,heading,ordinal,preorder,path,text,anchor) VALUES($1::bigint,$2,$3,$4,CASE WHEN $4='chuong' THEN 'Chương I' ELSE 'Label' END,$5,$1::integer,$1::integer,('node_'||$1::text)::ltree,'Body',$3)`, i+1, docs[tc.key].id, tc.anchor, tc.kind, strings.Repeat("ố", tc.length))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -77,12 +77,12 @@ func TestHeadingScan_RuleThreeStoredProvisionsWithoutSummary(t *testing.T) {
 	if err = json.Unmarshal(b, &got); err != nil {
 		t.Fatal(err)
 	}
-	if len(got.Items) != 1 || got.Items[0].Anchor != "at-cap" || got.Omitted.Count != 3 || len(got.Omitted.Longest) != 3 {
+	if len(got.Items) != 1 || got.Items[0].Anchor != "at-cap" || got.Omitted["length"].Count != 3 || len(got.Omitted["length"].Longest) != 3 {
 		t.Fatalf("scan=%s", b)
 	}
 	for i, anchor := range []string{"row-capped", "field-capped", "over-cap"} {
-		if got.Omitted.Longest[i].Anchor != anchor || got.Omitted.Longest[i].Length != 303-i {
-			t.Errorf("omission %d=%+v", i, got.Omitted.Longest[i])
+		if got.Omitted["length"].Longest[i].Anchor != anchor || got.Omitted["length"].Longest[i].Length != 303-i {
+			t.Errorf("omission %d=%+v", i, got.Omitted["length"].Longest[i])
 		}
 	}
 }

@@ -63,6 +63,22 @@ func encodeHeadingScan(cc, rel string, documents []summaryDocument, omissions []
 		Count   int               `json:"count"`
 		Longest []headingOmission `json:"longest"`
 	}
+	reports := map[string]omittedHeadings{}
+	shapeCounts := map[string]int{"end_mark": 0, "internal_break": 0, "leading_marker": 0}
+	for _, reason := range []string{"sequence", "length", "shape"} {
+		reports[reason] = omittedHeadings{Longest: []headingOmission{}}
+	}
+	for _, omission := range omissions {
+		report := reports[omission.reason]
+		report.Count++
+		if len(report.Longest) < 20 {
+			report.Longest = append(report.Longest, omission)
+		}
+		reports[omission.reason] = report
+		if omission.shape != "" {
+			shapeCounts[omission.shape]++
+		}
+	}
 	items := []candidate{}
 	slices.SortFunc(documents, func(a, b summaryDocument) int { return strings.Compare(a.Key, b.Key) })
 	for _, d := range documents {
@@ -76,13 +92,14 @@ func encodeHeadingScan(cc, rel string, documents []summaryDocument, omissions []
 		}
 	}
 	result := struct {
-		Country    string          `json:"country"`
-		Release    string          `json:"release"`
-		Projection int             `json:"projection"`
-		Matching   string          `json:"matching"`
-		Items      []candidate     `json:"items"`
-		Omitted    omittedHeadings `json:"rule_3_omitted"`
-	}{cc, rel, 1, "NFC; Unicode lowercase; words are maximal Unicode letter, mark or number runs; punctuation separates phrase words; final marks: . ! ? … 。", items, omittedHeadings{len(omissions), append([]headingOmission{}, omissions[:min(20, len(omissions))]...)}}
+		Country     string                     `json:"country"`
+		Release     string                     `json:"release"`
+		Projection  int                        `json:"projection"`
+		Matching    string                     `json:"matching"`
+		Items       []candidate                `json:"items"`
+		Omitted     map[string]omittedHeadings `json:"omitted"`
+		ShapeCounts map[string]int             `json:"shape_breakdown"`
+	}{cc, rel, 1, "NFC; Unicode lowercase; words are maximal Unicode letter, mark or number runs; punctuation separates phrase words; final marks: . ! ? … 。", items, reports, shapeCounts}
 	b, err := json.Marshal(result)
 	if err != nil {
 		return nil, fmt.Errorf("encode heading scan: %w", err)

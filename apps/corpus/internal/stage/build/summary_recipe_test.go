@@ -32,3 +32,29 @@ func TestBuildRecipe_RejectsPreBoundsArtifact(t *testing.T) {
 		})
 	}
 }
+
+func TestBuildRecipe_RejectsCorpus5Artifact(t *testing.T) {
+	for _, recipe2 := range []bool{false, true} {
+		t.Run(map[bool]string{false: "retrieval_3", true: "retrieval_2"}[recipe2], func(t *testing.T) {
+			binding := "current-fixture"
+			old := "c4470ce39542a486eed9165b1170d26b9a45a0794c9274448820d8b8ec0c7d1e"
+			if recipe2 {
+				old = "7c932fb05c63a3e7beeace43d59d73924d1d678f587b3da9963b64fe8bb1d521"
+			}
+			artifacts, art, run, cfg, _ := bindingArtifact(t, &binding, false, bindingOptions{recipe2: recipe2, buildRecipeHash: old})
+			if New(cfg).acceptsRecipeHash(run.Snapshot, old) {
+				t.Error("accepted corpus/5 recipe")
+			}
+			if _, _, err := verifyBuildArtifact(artifacts, art, run, cfg); err == nil || !strings.Contains(err.Error(), "build artifact identity mismatch") {
+				t.Errorf("corpus/5 artifact error=%v", err)
+			}
+			raw, err := json.Marshal(map[string]any{"items": []any{map[string]any{"stage": "build", "item_key": "vn/20990101", "state": "done", "path": art.Path, "input_hash": art.InputHash, "recipe_hash": old, "artifact_sha256": art.SHA256}}})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err = VerifyForRun(context.Background(), cfg, inventoryQueryStub{raw: raw}, artifacts, run); err == nil {
+				t.Error("adopted committed corpus/5 artifact")
+			}
+		})
+	}
+}

@@ -11,7 +11,7 @@ func TestBuildRecipe_ProjectionVersion(t *testing.T) {
 	if got == "32be8523e5288ab734afb45ed7d6ce3b0c45cdc51d78331438425bf11a10cb1a" {
 		t.Fatal("projection did not change build recipe")
 	}
-	if got != "0337efbe89fe48e1ab4b2210724d5aa3a40e54beb672dbb2a1fcdf388b4e73bb" {
+	if got != "95cbb432b1b52f0d42576c5c697df1185f44ca6262a6e370d645caa9bf4892b0" {
 		t.Fatalf("build recipe = %s", got)
 	}
 }

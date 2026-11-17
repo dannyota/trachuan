@@ -3,10 +3,12 @@ package build
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"regexp"
 	"strings"
 	"testing"
+	"unicode/utf8"
 )
 
 func summaryFixture() summaryDocument {
@@ -113,5 +115,111 @@ func TestSummary_PointersAndGaps(t *testing.T) {
 	b, _ := json.Marshal(r.GapKinds)
 	if string(b) != `["consolidated_status_unordered","consolidated_status_unresolved"]` {
 		t.Fatalf("gaps: %s", b)
+	}
+}
+
+func TestSummary_ChapterSequence(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		labels []string
+		valid  bool
+	}{
+		{"roman", []string{"I", "II", "III"}, true},
+		{"restart", []string{"I", "II", "I", "II"}, true},
+		{"letter", []string{"Chương c"}, false},
+		{"skip", []string{"I", "III"}, false},
+		{"repeat", []string{"I", "II", "II"}, false},
+		{"digits", []string{"1", "2"}, true},
+		{"arabic indic", []string{"١", "٢"}, false},
+		{"fullwidth", []string{"１", "２"}, false},
+		{"multiple periods", []string{"I.."}, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			d := summaryFixture()
+			d.Payload.Outline = nil
+			for _, label := range tc.labels {
+				d.Payload.Outline = append(d.Payload.Outline, summaryOutline{Kind: "chuong", Label: label, Heading: "Chapter"})
+			}
+			d.Payload.Outline = append(d.Payload.Outline, summaryOutline{Kind: "dieu", Heading: "Article"})
+			r, _, err := makeUnitSummary(d, nil, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, n := range r.Payload.Outline {
+				if (n.Heading != "") != tc.valid {
+					t.Errorf("%s: heading %q, valid %v", n.Label, n.Heading, tc.valid)
+				}
+			}
+		})
+	}
+}
+
+func TestSummary_HeadingShape(t *testing.T) {
+	cases := []struct {
+		heading string
+		valid   bool
+	}{{"Title)", true}, {"Title 2", true}, {"Title", true}}
+	for _, mark := range []string{".", ":", ";", "?", "!"} {
+		cases = append(cases, struct {
+			heading string
+			valid   bool
+		}{"Title" + mark, false})
+	}
+	for _, mark := range []string{".", ":"} {
+		for _, space := range []string{" ", "\u00a0", "\u2003"} {
+			cases = append(cases, struct {
+				heading string
+				valid   bool
+			}{"Title" + mark + space + "Text", false})
+		}
+	}
+	for _, mark := range []string{"-", "+", "•", "*", "–", "—"} {
+		cases = append(cases, struct {
+			heading string
+			valid   bool
+		}{mark + " Title", false})
+	}
+	for _, tc := range cases {
+		t.Run(tc.heading, func(t *testing.T) {
+			d := summaryFixture()
+			d.Payload.Outline[1].Heading = "  " + tc.heading + "  "
+			r, _, err := makeUnitSummary(d, nil, nil)
+			if err != nil || (r.Payload.Outline[1].Heading != "") != tc.valid {
+				t.Fatalf("heading %q: got %q, err %v", tc.heading, r.Payload.Outline[1].Heading, err)
+			}
+		})
+	}
+}
+
+func TestSummary_HeadingWhitespace(t *testing.T) {
+	for _, tc := range []struct {
+		heading string
+		valid   bool
+	}{
+		{"Title.\u00a0Text", false}, {"Title:\u3000Text", false},
+		{"\u00a0Title.\u3000", false}, {"Title.\u00a0\u3000Text", false},
+		{"Title.\u001cText", true}, {"Title.\u001dText", true},
+		{"Title.\u001eText", true}, {"Title.\u001fText", true},
+		{"Title.\u001c", true}, {"Title.\u001d", true},
+		{"Title.\u001e", true}, {"Title.\u001f", true},
+	} {
+		t.Run(fmt.Sprintf("%q", tc.heading), func(t *testing.T) {
+			d := summaryFixture()
+			d.Payload.Outline[1].Heading = tc.heading
+			got, _, err := makeUnitSummary(d, nil, nil)
+			if err != nil || (got.Payload.Outline[1].Heading != "") != tc.valid {
+				t.Fatalf("heading=%q err=%v", got.Payload.Outline[1].Heading, err)
+			}
+		})
+	}
+}
+
+func TestSummary_HeadingLengthAfterTrim(t *testing.T) {
+	d := summaryFixture()
+	want := strings.Repeat("ố", 300)
+	d.Payload.Outline[1].Heading = "\u00a0" + want + "\u3000"
+	got, _, err := makeUnitSummary(d, nil, nil)
+	if err != nil || got.Payload.Outline[1].Heading != want || utf8.RuneCountInString(got.Payload.Outline[1].Heading) != 300 {
+		t.Fatalf("stored heading=%q length=%d err=%v", got.Payload.Outline[1].Heading, utf8.RuneCountInString(got.Payload.Outline[1].Heading), err)
 	}
 }
