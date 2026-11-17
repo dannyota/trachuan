@@ -62,11 +62,11 @@ func runTaxonomyDrawWith(ctx context.Context, args []string, stderr io.Writer, l
 			e.articles[i].MultiFamily = len(f.Documents[e.articles[i].Key].Codes) >= 2
 		}
 	}
-	articles, err := taxonomy.DrawAdjudicated(e.articles, opts["--slice"], seed)
+	articles, skipped, err := taxonomy.DrawAdjudicatedWithSkipped(e.articles, opts["--slice"], seed)
 	if err != nil {
 		return fail(1, err)
 	}
-	packet := taxonomy.Packet{Country: args[0], Release: args[1], Slice: opts["--slice"], Seed: seed, DrawRule: taxonomy.AdjudicatedDrawRule, Articles: articles, Tree: e.tree}
+	packet := taxonomy.Packet{LabelingRule: taxonomy.LabelingRule, FragmentsSkipped: skipped, Country: args[0], Release: args[1], Slice: opts["--slice"], Seed: seed, DrawRule: taxonomy.AdjudicatedDrawRule, Articles: articles, Tree: e.tree}
 	if err = writeTaxonomyJSON(opts["--out"], packet); err != nil {
 		return fail(1, err)
 	}

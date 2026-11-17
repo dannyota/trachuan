@@ -14,7 +14,9 @@ func FreezePacket(packet Packet, labels []LabelArticle, labeler string) (FrozenL
 		return out, fmt.Errorf("invalid packet identity")
 	}
 	nodes := map[string]bool{}
+	levels := map[string]int{}
 	for _, n := range packet.Tree {
+		levels[n.Code] = n.Level
 		if n.Code == "" || nodes[n.Code] {
 			return out, fmt.Errorf("invalid packet tree")
 		}
@@ -30,6 +32,9 @@ func FreezePacket(packet Packet, labels []LabelArticle, labeler string) (FrozenL
 		}
 		if _, ok := byID[id]; ok {
 			return out, fmt.Errorf("duplicate article labels")
+		}
+		if a.NoNode && (len(a.Codes) != 1 || levels[a.Codes[0]] != 2) {
+			return out, fmt.Errorf("no_node requires exactly one level-2 code")
 		}
 		seen := map[string]bool{}
 		for _, c := range a.Codes {

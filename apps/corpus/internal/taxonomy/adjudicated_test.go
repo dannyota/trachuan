@@ -105,7 +105,7 @@ func TestFreeze_ValidationAndBlindPacket(t *testing.T) {
 func TestAdjudicatedDraw_RandomHalfIncludesRemainingMultiFamily(t *testing.T) {
 	var rows []DrawArticle
 	for i := 0; i < 200; i++ {
-		rows = append(rows, DrawArticle{PacketArticle: PacketArticle{Key: fmt.Sprintf("doc-%03d", i), Anchor: "dieu-1"}, Primary: true, MultiFamily: i < 100})
+		rows = append(rows, DrawArticle{PacketArticle: PacketArticle{Key: fmt.Sprintf("doc-%03d", i), Anchor: "dieu-1", Text: "operative text"}, Primary: true, MultiFamily: i < 100})
 	}
 	got, err := DrawAdjudicated(rows, "multi-family", 7)
 	if err != nil {
@@ -121,5 +121,30 @@ func TestAdjudicatedDraw_RandomHalfIncludesRemainingMultiFamily(t *testing.T) {
 	}
 	if count < 60 {
 		t.Fatalf("random half under-samples remaining multi-family articles: %d", count)
+	}
+}
+
+func TestFreeze_NoNode(t *testing.T) {
+	packet := Packet{Country: "vn", Release: "20990101", Slice: "post-2023", DrawRule: "rule", Articles: []PacketArticle{{Key: "doc", Anchor: "dieu-1", Text: "own", OwnTextSHA256: OwnTextSHA256("own")}}, Tree: []PacketNode{{Code: "1.1", Level: 2}, {Code: "1.1.c1", Level: 3}}}
+	for _, tt := range []struct {
+		codes []string
+		valid bool
+	}{{[]string{"1.1"}, true}, {[]string{"1.1.c1"}, false}, {[]string{"1.1", "1.1.c1"}, false}} {
+		raw, _ := json.Marshal(map[string]any{"document_key": "doc", "anchor": "dieu-1", "codes": tt.codes, "no_node": true})
+		var label LabelArticle
+		if err := json.Unmarshal(raw, &label); err != nil {
+			t.Fatal(err)
+		}
+		got, err := FreezePacket(packet, []LabelArticle{label}, "gpt-6-astra")
+		if (err == nil) != tt.valid {
+			t.Errorf("%v: %v", tt.codes, err)
+			continue
+		}
+		if tt.valid {
+			b, _ := json.Marshal(got)
+			if !strings.Contains(string(b), `"no_node":true`) {
+				t.Errorf("missing no_node: %s", b)
+			}
+		}
 	}
 }

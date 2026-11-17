@@ -8,6 +8,9 @@ import (
 
 const AdjudicatedDrawRule = "model-adjudicated/1"
 
+//nolint:misspell // The labeling rule must match the design verbatim.
+const LabelingRule = "Assign a node only when the article's own operative text regulates that subject. A mention, a cross-reference, the agency responsible, or a document type named in passing (a contract, a report, a copy, a licence) is not enough. One family is the default; add another family only when a substantive part of the article is about it."
+
 type PacketArticle struct {
 	Key           string `json:"document_key"`
 	Anchor        string `json:"anchor"`
@@ -23,13 +26,15 @@ type PacketNode struct {
 	Name       string `json:"name"`
 }
 type Packet struct {
-	Country  string          `json:"country"`
-	Release  string          `json:"release"`
-	Slice    string          `json:"slice"`
-	Seed     int64           `json:"seed"`
-	DrawRule string          `json:"draw_rule"`
-	Articles []PacketArticle `json:"articles"`
-	Tree     []PacketNode    `json:"tree"`
+	LabelingRule     string          `json:"labeling_rule"`
+	FragmentsSkipped int             `json:"fragments_skipped"`
+	Country          string          `json:"country"`
+	Release          string          `json:"release"`
+	Slice            string          `json:"slice"`
+	Seed             int64           `json:"seed"`
+	DrawRule         string          `json:"draw_rule"`
+	Articles         []PacketArticle `json:"articles"`
+	Tree             []PacketNode    `json:"tree"`
 }
 type DrawArticle struct {
 	PacketArticle
@@ -46,8 +51,13 @@ type FrozenLabels struct {
 }
 
 func DrawAdjudicated(rows []DrawArticle, slice string, seed int64) ([]PacketArticle, error) {
+	out, _, err := DrawAdjudicatedWithSkipped(rows, slice, seed)
+	return out, err
+}
+
+func DrawAdjudicatedWithSkipped(rows []DrawArticle, slice string, seed int64) ([]PacketArticle, int, error) {
 	if slice != "multi-family" && slice != "post-2023" && slice != "inheritance" {
-		return nil, fmt.Errorf("unknown slice %q", slice)
+		return nil, 0, fmt.Errorf("unknown slice %q", slice)
 	}
 	pool := make([]DrawArticle, 0, len(rows))
 	for _, a := range rows {
@@ -81,6 +91,14 @@ func DrawAdjudicated(rows []DrawArticle, slice string, seed int64) ([]PacketArti
 	counts := map[string]int{}
 	used := map[string]bool{}
 	out := make([]PacketArticle, 0, 100)
+	skipped := map[string]bool{}
+	fragment := func(a DrawArticle) bool {
+		if !IsFragment(a.Text) {
+			return false
+		}
+		skipped[a.Key+"\x00"+a.Anchor] = true
+		return true
+	}
 	take := func(a DrawArticle) {
 		counts[a.Key]++
 		used[a.Key+"\x00"+a.Anchor] = true
@@ -89,7 +107,7 @@ func DrawAdjudicated(rows []DrawArticle, slice string, seed int64) ([]PacketArti
 	}
 	if slice == "multi-family" {
 		for _, a := range pool {
-			if a.MultiFamily && counts[a.Key] < 2 {
+			if a.MultiFamily && counts[a.Key] < 2 && !fragment(a) {
 				take(a)
 				if len(out) == 50 {
 					break
@@ -97,14 +115,14 @@ func DrawAdjudicated(rows []DrawArticle, slice string, seed int64) ([]PacketArti
 			}
 		}
 		if len(out) < 50 {
-			return nil, fmt.Errorf("not enough multi-family eligible articles: got %d, need 50", len(out))
+			return nil, 0, fmt.Errorf("not enough multi-family eligible articles: got %d, need 50", len(out))
 		}
 	}
 	if slice == "multi-family" {
 		r.Shuffle(len(pool), func(i, j int) { pool[i], pool[j] = pool[j], pool[i] })
 	}
 	for _, a := range pool {
-		if counts[a.Key] >= 2 || used[a.Key+"\x00"+a.Anchor] {
+		if counts[a.Key] >= 2 || used[a.Key+"\x00"+a.Anchor] || fragment(a) {
 			continue
 		}
 		take(a)
@@ -113,7 +131,7 @@ func DrawAdjudicated(rows []DrawArticle, slice string, seed int64) ([]PacketArti
 		}
 	}
 	if len(out) < 100 {
-		return nil, fmt.Errorf("not enough eligible articles: got %d, need 100", len(out))
+		return nil, 0, fmt.Errorf("not enough eligible articles: got %d, need 100", len(out))
 	}
 	sort.Slice(out, func(i, j int) bool {
 		if out[i].Key == out[j].Key {
@@ -121,5 +139,5 @@ func DrawAdjudicated(rows []DrawArticle, slice string, seed int64) ([]PacketArti
 		}
 		return out[i].Key < out[j].Key
 	})
-	return out, nil
+	return out, len(skipped), nil
 }
