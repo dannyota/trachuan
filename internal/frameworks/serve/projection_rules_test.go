@@ -14,7 +14,7 @@ func projectionRules() map[string]statementRule {
  set_config('enable_indexscan','on',true),set_config('enable_bitmapscan','on',true)`},
 		{"projected", `SELECT id,version_id,control_id,ordinal,token_count,1-(embedding <=> $2::vector)
  FROM body_chunk WHERE version_id=ANY($1::bigint[])`},
-		{"public", `SELECT id,version_id,control_id,0,token_count,1-(embedding <=> $2::vector)
+		{"reduced", `SELECT id,version_id,control_id,0,token_count,1-(embedding <=> $2::vector)
  FROM public_chunk WHERE version_id=ANY($1::bigint[])`},
 		{"projected", `SELECT t.control_id,t.title_original,b.content FROM control_text t
  JOIN control c ON c.id=t.control_id JOIN body_chunk b ON b.control_id=c.id AND b.version_id=c.version_id

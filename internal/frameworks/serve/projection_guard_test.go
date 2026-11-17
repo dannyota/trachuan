@@ -38,13 +38,16 @@ func checkProjection(reads []queryRead, classes map[string]relationClass, readab
 		if err := checkRuleSources(rule, classes); err != nil {
 			return err
 		}
-		if rule.kind == "projected" {
+		if rule.kind == "projected" || rule.kind == "reduced" {
 			if !read.hasVersions {
-				return fmt.Errorf("private read without a bound version set")
+				return fmt.Errorf("read without a bound version set")
 			}
 			for _, id := range read.versions {
-				if !slices.Contains(readable, id) {
+				if rule.kind == "projected" && !slices.Contains(readable, id) {
 					return fmt.Errorf("private structure read for an unreadable version")
+				}
+				if rule.kind == "reduced" && slices.Contains(readable, id) {
+					return fmt.Errorf("public index read for a readable version")
 				}
 			}
 		}
@@ -114,8 +117,12 @@ func TestProjectionGuard_EnforcesBoundVersionsAndSchemaClasses(t *testing.T) {
 	require.Error(t, checkProjection([]queryRead{body}, classes, nil))
 	body.hasVersions = false
 	require.Error(t, checkProjection([]queryRead{body}, classes, []int64{3}))
-	public := queryRead{sql: publicDenseSQL}
+	public := queryRead{sql: publicDenseSQL, versions: []int64{1, 2}, hasVersions: true}
 	require.NoError(t, checkProjection([]queryRead{public}, classes, nil))
+	require.Error(t, checkProjection([]queryRead{public}, classes, []int64{1}))
+	public.hasVersions = false
+	require.Error(t, checkProjection([]queryRead{public}, classes, nil))
+	public.hasVersions = true
 	classes["public_chunk"] = textRelation
 	require.ErrorContains(t, checkProjection([]queryRead{public}, classes, nil), "unfiltered text-derived relation")
 	require.Error(t, checkProjection([]queryRead{public}, nil, nil))

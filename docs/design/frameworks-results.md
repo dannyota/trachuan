@@ -112,11 +112,10 @@ as version handles.
 
 **Ranking.** The frameworks retrieval recipe has the law recipe's structure
 ([retrieval recipe](retrieval-recipe.md)): two arms, one reciprocal-rank fusion
-and an abstention threshold. The candidates are the controls of the versions the
-filters allow, taken from the body index of a version the caller can read and
-from the public-field index (citation, our title, kind) of every other version.
-Each arm produces **one** rank list across versions, cut at the recipe's arm
-depth:
+and an abstention threshold. The candidates are the controls of every version of
+the release, taken from the body index of a version the caller can read and from
+the public-field index (citation, our title, kind) of every other version. Each
+arm produces **one** rank list across versions, cut at the recipe's arm depth:
 
 - **Dense**: cosine between the query vector and the candidate's vectors, by
   exact scan; a control's score is its best chunk (body chunks for readable
@@ -129,8 +128,16 @@ depth:
 Reciprocal-rank fusion runs once over the two lists, so no version gets a place
 by being best within itself. `score` is the fused score; ties break by framework
 code, then version order (newest first), then control order, so the order is
-total. As in the law recipe, abstention compares the top fused hit's best
-permitted cosine with the threshold, not the fused score, so a filter that
+total.
+
+The `frameworks[]` and `versions[]` filters apply after fusion (frameworks
+retrieval recipe version 2), so a filter never hides a hit the caller would see
+without it. A filtered search lists first the fused list's controls in versions
+the filters allow, in fused order; then, to fill, the controls of the same two
+arms restricted to the allowed versions, cut at the arm depths and fused, that
+are not already listed, in that order. A hit's `score` is its fused score in the
+list that placed it. As in the law recipe, abstention compares the first hit's
+best permitted cosine with the threshold, not the fused score, so a filter that
 leaves one control still abstains on an unrelated query.
 
 BM25 scores from different statistics are not on exactly one scale; the

@@ -46,6 +46,7 @@ func TestSearch_UnreadableTextInvariant(t *testing.T) {
 		{Query: "FW-ALPHA A-99"},
 		{Query: "quartz", Limit: 1, Filters: map[string][]string{"frameworks": {"fw-alpha", "fw-beta"}}},
 		{Query: "quartz", Limit: 1, Filters: map[string][]string{"versions": {"fw:fw-alpha:2", "fw:fw-gamma:1"}}},
+		{Query: "quartz", Limit: 1, Filters: map[string][]string{"frameworks": {"fw-alpha"}, "versions": {"fw:fw-alpha:2"}}},
 		{Query: "quartz", Filters: map[string][]string{"frameworks": {"fw-beta"}, "versions": {"fw:fw-alpha:2"}}},
 		{Query: "unrelated"},
 		{Query: "unrelated", Filters: map[string][]string{"versions": {"fw:fw-alpha:2"}}},
@@ -67,6 +68,10 @@ func TestSearch_UnreadableTextInvariant(t *testing.T) {
 					require.Equal(t, responseBytes(t, ra, ea), responseBytes(t, rb, eb), "query=%d page=%d", i, page)
 					traceA.assertProjection(t, a.project(caller).readable)
 					traceB.assertProjection(t, b.project(caller).readable)
+					if ea == nil && (len(ra.Hits) == 0 || ra.Hits[0].Lookup == nil) {
+						traceA.assertSearchScan(t, a.project(caller))
+						traceB.assertSearchScan(t, b.project(caller))
+					}
 					require.Equal(t, traceA.snapshot(), traceB.snapshot(), "projection read pattern differs")
 					if i < len(queries)-2 {
 						require.NoError(t, ea)

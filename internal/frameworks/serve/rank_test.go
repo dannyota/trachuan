@@ -8,7 +8,7 @@ import (
 )
 
 func rankRecipe() recipe {
-	r := recipe{Version: 1, Status: "placeholder", DenseDepth: 50, LexicalDepth: 50, RRF: retrieval.Recipe3().RRF}
+	r := recipe{Version: 2, Status: "placeholder", DenseDepth: 50, LexicalDepth: 50, RRF: retrieval.Recipe3().RRF}
 	threshold := 0.5297041131124263
 	r.Abstention.Statistic = "first-hit-best-permitted-cosine"
 	r.Abstention.Threshold = &threshold

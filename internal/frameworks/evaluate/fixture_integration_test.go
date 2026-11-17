@@ -60,7 +60,7 @@ func evaluationFixture(t *testing.T) (*pgx.Conn, EvaluationRequest) {
 		req.InputHashes[name] = hash
 	}
 	law := retrieval.Recipe3()
-	req.RetrievalRecipe = map[string]any{"version": 1, "status": "measured", "dense_depth": law.DenseDepth, "lexical_depth": law.LexicalDepth, "rrf": law.RRF, "abstention": map[string]any{"statistic": "first-hit-best-permitted-cosine", "threshold": .5, "status": "measured", "calibration_sha256": hash}, "source": map[string]any{"release": "vn/20990101", "recipe_version": 3, "calibration_sha256": hash}}
+	req.RetrievalRecipe = map[string]any{"version": 2, "status": "measured", "dense_depth": law.DenseDepth, "lexical_depth": law.LexicalDepth, "rrf": law.RRF, "abstention": map[string]any{"statistic": "first-hit-best-permitted-cosine", "threshold": .5, "status": "measured", "calibration_sha256": hash}, "source": map[string]any{"release": "vn/20990101", "recipe_version": 3, "calibration_sha256": hash}}
 	doc, query := embedding.DocumentRecipe1(), embedding.QueryRecipe1()
 	dense := retrieval.DenseRecipe{Version: 1, Model: doc.Model, Dimensions: doc.Dimensions, Document: doc, DocumentHash: doc.Hash(), Query: query, QueryHash: query.Hash()}
 	_, err = conn.Exec(ctx, `INSERT INTO release(singleton,kind,rel,schema_version,dense_recipe,chunk_recipe,lexical_recipe,retrieval_recipe,snapshot_recipe,parse_recipe,relate_recipe,embed_recipe,snapshot_input_hash,parse_input_hash,relate_input_hash,chunk_input_hash,embed_input_hash,framework_count,version_count,control_count,built_at) VALUES(true,'frameworks','20990101',1,$1,$2,$3,$4,$5,$6,$7,$8,$9,$9,$9,$9,$9,3,4,4,now())`, dense, steps["chunk"], lexical.Recipe1(), req.RetrievalRecipe, steps["snapshot"], steps["parse"], steps["relate"], steps["embed"], hash)
