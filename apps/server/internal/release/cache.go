@@ -148,6 +148,8 @@ func (r *Resolver) open(ctx context.Context, name string, entry *cacheEntry) (*r
 		if err != nil {
 			return nil, err
 		}
+		wait := r.readerWait(entry.name)
+		cfg.ConnConfig.Tracer = wait
 		pool, err := pgxpool.NewWithConfig(ctx, cfg)
 		if err != nil {
 			return nil, fmt.Errorf("create corpus pool: %w", err)
@@ -158,8 +160,11 @@ func (r *Resolver) open(ctx context.Context, name string, entry *cacheEntry) (*r
 			pool.Close()
 			return nil, ErrExpired
 		}
+		stopWait := make(chan struct{})
+		waitDone := make(chan struct{})
+		go func() { defer close(waitDone); wait.run(stopWait) }()
 		entry.pool = pool
-		entry.closePool = pool.Close
+		entry.closePool = func() { pool.Close(); close(stopWait); <-waitDone }
 		r.mu.Unlock()
 	}
 	options := r.Options
