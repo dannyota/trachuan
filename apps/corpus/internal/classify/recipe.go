@@ -36,7 +36,7 @@ func (r Recipe) validate(historical bool) error {
 	if r.Effort != "low" && r.Effort != "medium" && r.Effort != "high" && r.Effort != "xhigh" && r.Effort != "max" {
 		return fmt.Errorf("invalid classification effort")
 	}
-	if r.Version != 1 || (r.PromptVersion != 2 && (!historical || r.PromptVersion != 1)) || r.SchemaVersion != 2 || r.MaxTokens < 1 || r.MaxTokens > 32000 || r.InputBound < 1 || r.InputBound >= 100000 || r.F < 1 {
+	if r.Version != 1 || (r.PromptVersion != 2 && ((!historical && r.Article == nil) || r.PromptVersion != 1)) || r.SchemaVersion != 2 || r.MaxTokens < 1 || r.MaxTokens > 32000 || r.InputBound < 1 || r.InputBound >= 100000 || r.F < 1 {
 		return fmt.Errorf("invalid classification recipe")
 	}
 	h, err := hex.DecodeString(r.TaxonomyHash)

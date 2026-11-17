@@ -17,6 +17,9 @@ func BuildArticlePlan(ctx context.Context, r Recipe, articles []Article, familie
 	if r.Article == nil || len(articles) == 0 {
 		return plan, fmt.Errorf("article recipe and selected articles are required")
 	}
+	if r.Article.Step == 2 {
+		return buildArticleNodePlan(ctx, r, articles, families, nodes, count)
+	}
 	seen := map[string]bool{}
 	for start := 0; start < len(articles); {
 		a := articles[start]
@@ -48,6 +51,15 @@ func BuildArticlePlan(ctx context.Context, r Recipe, articles []Article, familie
 			menu, err := allowedNodes(family.Codes, nodes)
 			if err != nil {
 				return plan, err
+			}
+			if r.Article.Step == 1 {
+				familiesOnly := make([]Node, 0, len(family.Codes))
+				for _, n := range menu {
+					if n.Level == 2 {
+						familiesOnly = append(familiesOnly, n)
+					}
+				}
+				menu = familiesOnly
 			}
 			if err = splitArticles(ctx, r, group, menu, count, &plan); err != nil {
 				return plan, err
@@ -91,6 +103,14 @@ func splitArticles(ctx context.Context, r Recipe, group []Article, menu []Node, 
 	var current *ArticleRequest
 	for _, a := range group {
 		candidate := ArticleRequest{DocumentKey: a.DocumentKey, Articles: []Article{a}, Nodes: menu}
+		candidate.Step = r.Article.Step
+		if candidate.Step == 2 {
+			for _, n := range menu {
+				if n.Level == 2 {
+					candidate.Family = n.Code
+				}
+			}
+		}
 		if current != nil {
 			candidate.Articles = append(append([]Article(nil), current.Articles...), a)
 		}

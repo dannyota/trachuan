@@ -13,9 +13,17 @@ type articleWork struct {
 	families   FamilyArtifact
 	nodes      []Node
 	labelsHash string
+	choices    map[string]Outcome
 }
 
 func articleWorkHash(o Options) string {
+	if o.Recipe.Article.Step != 0 {
+		b, _ := json.Marshal(struct {
+			RunID                 int64
+			RecipeHash, InputHash string
+		}{o.RunID, o.Recipe.Hash(), articleInputHash(o.Country, o.Release, o.article.labelsHash, o.article.articles)})
+		return digest(b)
+	}
 	type selected struct{ DocumentKey, Anchor, Heading, Text, Chapter string }
 	selection := make([]selected, 0, len(o.article.articles))
 	for _, a := range o.article.articles {
@@ -36,19 +44,32 @@ func (r *Runner) Articles(ctx context.Context, o Options, labelsHash string, art
 	if err := ValidateArticleFamilies(articles, families); err != nil {
 		return Summary{}, err
 	}
+	choices := families.Documents
+	if o.Recipe.Article.Step == 2 {
+		var err error
+		choices, err = readArticleChoices(o, labelsHash, articles, families, nodes)
+		if err != nil {
+			return Summary{}, err
+		}
+	}
 	o.Documents = 1
-	o.article = &articleWork{articles: articles, families: families, nodes: nodes, labelsHash: labelsHash}
-	return r.screen(ctx, o, nil, nil, nil)
+	o.article = &articleWork{articles: articles, families: families, nodes: nodes, labelsHash: labelsHash, choices: choices}
+	summary, err := r.screen(ctx, o, nil, nil, nil)
+	summary.Step = o.Recipe.Article.Step
+	return summary, err
 }
 
 func (r *Runner) prepareArticleBatch(ctx context.Context, o Options) (*screenBatch, error) {
 	w := o.article
-	plan, err := BuildArticlePlan(ctx, o.Recipe, w.articles, w.families.Documents, w.nodes, r.Client.CountTokens)
+	plan, err := BuildArticlePlan(ctx, o.Recipe, w.articles, w.choices, w.nodes, r.Client.CountTokens)
 	if err != nil {
 		return nil, err
 	}
 	s := Submission{RunID: o.RunID, Country: o.Country, Release: o.Release, ScreenHash: screenHash(o), Recipe: o.Recipe, State: "preparing", CreatedAt: r.Now(), Budget: o.Budget, BudgetMicroUSD: o.BudgetMicroUSD, Results: map[string]Outcome{}}
 	meta := &ArticleMetadata{LabelsHash: w.labelsHash, Skipped: plan.Skipped}
+	if o.Recipe.Article.Step != 0 {
+		meta.InputHash = articleInputHash(o.Country, o.Release, w.labelsHash, w.articles)
+	}
 	var requests []batchapi.Request
 	size := len(`{"requests":[]}`)
 	var summary Summary
@@ -68,6 +89,9 @@ func (r *Runner) prepareArticleBatch(ctx context.Context, o Options) (*screenBat
 			return nil, fmt.Errorf("encode article request: %w", encodeErr)
 		}
 		item := Item{Key: fmt.Sprintf("%s/%s", req.DocumentKey, req.Articles[0].Anchor), RequestHash: digest(b), InputTokens: req.InputTokens, Article: &req}
+		if req.Step == 2 {
+			item.Key += "/" + req.Family
+		}
 		if i == 0 {
 			item.ArticleMeta = meta
 		}

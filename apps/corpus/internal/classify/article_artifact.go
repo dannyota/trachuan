@@ -23,6 +23,7 @@ type FamilyArtifact struct {
 type ArticleMetadata struct {
 	LabelsHash string          `json:"labels_sha256"`
 	Skipped    []ArticleRecord `json:"skipped"`
+	InputHash  string          `json:"input_sha256,omitempty"`
 }
 
 type ArticleArtifact struct {
@@ -36,6 +37,8 @@ type ArticleArtifact struct {
 	LabelsHash     string          `json:"labels_sha256"`
 	Articles       []ArticleRecord `json:"articles"`
 	DroppedAnchors int             `json:"dropped_anchors"`
+	InputHash      string          `json:"input_sha256,omitempty"`
+	Settled        bool            `json:"settled,omitempty"`
 }
 
 func readArtifact(path string, dst any) (string, error) {
@@ -54,7 +57,7 @@ func readArtifact(path string, dst any) (string, error) {
 }
 
 func ReadFamilyArtifact(path, taxonomyHash string, nodes []Node) (FamilyArtifact, string, error) {
-	return readFamilyArtifact(path, taxonomyHash, nodes, false)
+	return readFamilyArtifact(path, taxonomyHash, nodes, true)
 }
 
 func ReadFamilyArtifactForScore(path, taxonomyHash string, nodes []Node) (FamilyArtifact, string, error) {
@@ -101,24 +104,37 @@ func readArticleArtifact(path, taxonomyHash, familiesHash string, historical boo
 	if _, err := readArtifact(path, &a); err != nil {
 		return a, err
 	}
+	return a, validateArticleArtifact(a, taxonomyHash, familiesHash, historical)
+}
+
+func validateArticleArtifact(a ArticleArtifact, taxonomyHash, familiesHash string, historical bool) error {
 	if a.Version != 1 || a.Recipe.validate(historical) != nil || a.Recipe.Article == nil || a.RecipeHash != a.Recipe.Hash() || a.TaxonomyHash != taxonomyHash || a.Recipe.TaxonomyHash != taxonomyHash || a.FamiliesHash != familiesHash || a.Recipe.Article.FamiliesHash != familiesHash {
-		return a, fmt.Errorf("articles artifact recipe, taxonomy or families mismatch")
+		return fmt.Errorf("articles artifact recipe, taxonomy or families mismatch")
 	}
 	seen := map[string]bool{}
 	for _, record := range a.Articles {
 		key := record.DocumentKey + "/" + record.Anchor
 		if record.DocumentKey == "" || record.Anchor == "" || seen[key] {
-			return a, fmt.Errorf("invalid or duplicate article artifact identity")
+			return fmt.Errorf("invalid or duplicate article artifact identity")
 		}
 		seen[key] = true
 		if err := validateArticleOutcome(record.Outcome); err != nil {
-			return a, err
+			return err
+		}
+		if a.Recipe.Article.Step == 2 {
+			out := record.Outcome
+			if out.FailedFamilies == nil || out.Outcome == "too_long" || (out.Outcome == "no_family" && *out.FailedFamilies != 0) {
+				return fmt.Errorf("invalid final article family failure count or outcome")
+			}
 		}
 	}
-	return a, nil
+	return nil
 }
 
 func validateArticleOutcome(out ArticleOutcome) error {
+	if out.FailedFamilies != nil && *out.FailedFamilies < 0 {
+		return fmt.Errorf("negative failed family count")
+	}
 	switch out.Outcome {
 	case "ok":
 	case "no_family", "too_long", "invalid_response":
@@ -143,10 +159,17 @@ func writeArticles(dir string, s Submission) error {
 		return fmt.Errorf("article recipe is required")
 	}
 	a := ArticleArtifact{Version: 1, Country: s.Country, Release: s.Release, Recipe: s.Recipe, RecipeHash: s.Recipe.Hash(), TaxonomyHash: s.Recipe.TaxonomyHash, FamiliesHash: s.Recipe.Article.FamiliesHash, Articles: []ArticleRecord{}}
+	if s.Recipe.Article.Step != 0 {
+		if !s.Settled && s.ReserveMicroUSD != 0 {
+			return fmt.Errorf("article submission has not settled")
+		}
+		a.Settled = true
+	}
 	for _, item := range s.Items {
 		a.DroppedAnchors += s.Results[item.Key].DroppedAnchors
 		if item.ArticleMeta != nil {
 			a.LabelsHash = item.ArticleMeta.LabelsHash
+			a.InputHash = item.ArticleMeta.InputHash
 			a.Articles = append(a.Articles, item.ArticleMeta.Skipped...)
 		}
 		if item.Article == nil {
@@ -157,8 +180,15 @@ func writeArticles(dir string, s Submission) error {
 			if !ok {
 				out = emptyArticle("invalid_response")
 			}
+			if s.Recipe.Article.Step == 2 && out.Outcome != "ok" {
+				failed := 1
+				out.FailedFamilies = &failed
+			}
 			a.Articles = append(a.Articles, ArticleRecord{item.Article.DocumentKey, article.Anchor, out})
 		}
+	}
+	if s.Recipe.Article.Step == 2 {
+		a.Articles = mergeArticleFamilies(a.Articles)
 	}
 	sort.Slice(a.Articles, func(i, j int) bool {
 		if a.Articles[i].DocumentKey != a.Articles[j].DocumentKey {
