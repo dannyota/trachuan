@@ -43,10 +43,11 @@
 
 ### 8.4 Pilot (paid, small)
 
-- [ ] Confirm current Batch and model prices on Anthropic's pricing page.
-- [ ] Screening pass inside the pilot budget: document requests only, for at most 400 documents drawn at random from those holding unseeded articles; it feeds the multi-family draw and measures nothing.
-- [ ] Labeled set only, both `claude-haiku-5-5` and `claude-sonnet-5-5`; measure family recall of the document request first (start with `F` = 5), then iterate prompts until every applicable floor passes; report cost per 1,000 articles per model.
-- [ ] Post-2023 reference: Codex `gpt-6-astra` labels 100 post-2023 articles blind; the coordinator reads 20 before it gates.
+- [x] Confirm current Batch and model prices on Anthropic's pricing page (2026-11-16, cited in the classify PRs).
+- [x] Screening pass inside the pilot budget (400 documents, 0.36 USD, 374 with two or more families): document requests only, for at most 400 documents drawn at random from those holding unseeded articles; it feeds the multi-family draw and measures nothing.
+- [x] Labeled set only, both `claude-haiku-5-5` and `claude-sonnet-5-5`; family recall 0.970 and 0.973; deepest recall stayed below 0.70 for both models and for a two-step trial, so the LLM layer's scope is level 2 (ADR 0004 History 2026-11-17). Pilot ledger 5.28 USD.
+- [ ] Level-2 run of Haiku v2 and Sonnet v2 on the 200 model-adjudicated articles (pre-call to the coordinator): level-2 recall, top-1 precision, and additional-node precision over both sets (floor 0.80); the coordinator then decides whether level 2 ships and with which model.
+- [ ] Post-2023 and multi-family references: Codex `gpt-6-astra` labels them blind under the labeling rule, the coordinator reads samples, and they are frozen (`corpus taxonomy freeze`).
 
 ### 8.5 Full batch (paid, after the coordinator confirms the estimate)
 

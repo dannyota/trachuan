@@ -64,3 +64,12 @@ classifier. Hard-cut subject filtering.
   nodes with no provisions and no children (54 of 282), which removes all four
   duplicated level-2 names, including the empty 34.10 that took 34.11's
   documents.
+- 2026-11-17: reduced the LLM layer's scope to level 2. On the 300 masked seeded
+  articles (prompt v2), deepest-level recall was 0.583 for Haiku, 0.633 for
+  Sonnet and 0.650 for a two-step request that chose within one family's
+  subtree, all below 0.70; it reached 0.704 only when the family was already
+  right. This is a scope change, not a floor change: the floors are unchanged,
+  level 3 joins only when it passes them on every applicable slice, and deeper
+  nodes come only from seeds and inheritance. The two-step request is retired:
+  its family step lost families (recall 0.923 against the document request's
+  0.970) and chose several for 241 of 300 articles.

@@ -133,6 +133,10 @@ under the corpus rules.
      are part of the classification recipe. The threshold per level is
      calibrated on the seeded set to reach top-1 precision at least 0.85, then
      frozen in the release; below it, no assignment and a gap "unassigned".
+   - The LLM layer assigns level-2 nodes only: an article's LLM assignment is
+     the level-2 ancestor of each node it returns. Level 3 joins only when it
+     passes its floors on every applicable slice; nodes deeper than level 2
+     otherwise come only from seeds and inheritance.
 4. Manual overrides in `taxonomy/overrides.yaml`. An override names an active
    package node at level 2 or deeper or a custom node; any other code fails
    `corpus taxonomy check` and the build. An override whose document or anchor
@@ -195,7 +199,8 @@ threshold change reruns them.
 | the seeded articles with seeds in two or more families | seeded            | precision and recall over all pairs, reported                                        | none  |
 
 Every level that a release serves must have a floor in this table; a new level
-or slice is added here before it is served.
+or slice is added here before it is served. The level-3 and deepest rows still
+measure the LLM layer, but they gate nothing it serves until level 3 joins.
 
 A model-adjudicated reference is not owner-labeled: Codex `gpt-6-astra` labels
 the articles independently, blind to the classifier's output and candidates, and
