@@ -49,8 +49,8 @@ func TestCorrectionsCheck_ReleaseText(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() {
-		if err := os.Chdir(previous); err != nil {
-			t.Error(err)
+		if cleanupErr := os.Chdir(previous); cleanupErr != nil {
+			t.Error(cleanupErr)
 		}
 	})
 	path := filepath.Join("sources", "vn-corrections.yaml")

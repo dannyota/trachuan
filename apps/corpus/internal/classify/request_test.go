@@ -17,7 +17,7 @@ func TestRequest_CarriesDocumentAndFamilyMenu(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, s := range []string{d.Title, d.Scope, d.Fields[0], d.Contents[0], "1.1", "Synthetic family", "Synthetic topic", "at most 5", "adaptive"} {
+	for _, s := range []string{d.Title, d.Scope, d.Fields[0], d.Contents[0], "1.1", `Synthetic topic \\u003e Synthetic family`, "at most 5", "adaptive"} {
 		if !strings.Contains(string(b), s) {
 			t.Fatalf("missing %s", s)
 		}
@@ -72,5 +72,12 @@ func TestValidate_FamiliesAndFailures(t *testing.T) {
 				t.Fatalf("result %+v", got)
 			}
 		})
+	}
+}
+
+func TestValidate_DropsCodeOutsideMenu(t *testing.T) {
+	got := Validate("end_turn", `{"codes":["1.2","1.1"]}`, 5, []Family{{Code: "1.1"}})
+	if len(got.Dropped) != 1 || got.Dropped[0] != "1.2" || len(got.Codes) != 1 || got.Codes[0] != "1.1" {
+		t.Fatalf("result %+v", got)
 	}
 }

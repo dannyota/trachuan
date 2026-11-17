@@ -44,3 +44,15 @@ func TestReserve_RoundsUpAndRejectsTierCrossing(t *testing.T) {
 		t.Fatal("accepted upper tier input")
 	}
 }
+
+func TestRecipe_DocumentPromptVersion(t *testing.T) {
+	r, err := NewRecipe("claude-haiku-5-5", strings.Repeat("a", 64))
+	if err != nil {
+		t.Fatal(err)
+	}
+	old := r
+	old.PromptVersion = 1
+	if r.PromptVersion != 2 || r.Hash() == old.Hash() || old.Validate() == nil {
+		t.Fatalf("current %+v old %+v", r, old)
+	}
+}

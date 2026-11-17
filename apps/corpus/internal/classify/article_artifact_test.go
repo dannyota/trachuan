@@ -66,3 +66,44 @@ func TestArticleArtifact_BindsInputsAndRejectsTampering(t *testing.T) {
 		t.Fatal("accepted different families")
 	}
 }
+
+func TestFamilyArtifact_RejectsOldPrompt(t *testing.T) {
+	r := articleRecipe(t).documentRecipe()
+	r.PromptVersion = 1
+	dir := t.TempDir()
+	if err := writeFamilies(dir, Submission{Recipe: r, Results: map[string]Outcome{"vn:vbpl:1": {Outcome: "ok", Codes: []string{"1.1"}}}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := ReadFamilyArtifact(filepath.Join(dir, "families.json"), r.TaxonomyHash, articleNodes()); err == nil {
+		t.Fatal("accepted old prompt artifact")
+	}
+}
+
+func TestHistoricalArtifacts_AcceptedForScoring(t *testing.T) {
+	r := articleRecipe(t)
+	r.PromptVersion = 1
+	r.Article.SourceRecipeHash = r.documentRecipe().Hash()
+	dir := t.TempDir()
+	if err := writeFamilies(dir, Submission{Recipe: r.documentRecipe(), Results: map[string]Outcome{"vn:vbpl:1": {Outcome: "ok", Codes: []string{"1.1"}}}}); err != nil {
+		t.Fatal(err)
+	}
+	_, _, err := ReadFamilyArtifactForScore(filepath.Join(dir, "families.json"), r.TaxonomyHash, articleNodes())
+	if err != nil {
+		t.Fatal(err)
+	}
+	a := ArticleArtifact{Version: 1, Recipe: r, RecipeHash: r.Hash(), TaxonomyHash: r.TaxonomyHash, FamiliesHash: r.Article.FamiliesHash, Articles: []ArticleRecord{{DocumentKey: "vn:vbpl:1", Anchor: "dieu-1", Outcome: ArticleOutcome{Outcome: "ok", Codes: []CodeConfidence{{"1.1", 0.9}}}}}}
+	b, err := json.Marshal(a)
+	if err != nil {
+		t.Fatal(err)
+	}
+	articleDir := t.TempDir()
+	if err = writeOnce(filepath.Join(articleDir, "articles.json"), b); err != nil {
+		t.Fatal(err)
+	}
+	if err = writeOnce(filepath.Join(articleDir, "MANIFEST.sha256"), []byte(digest(b)+"  articles.json\n")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = ReadArticleArtifactForScore(filepath.Join(articleDir, "articles.json"), r.TaxonomyHash, r.Article.FamiliesHash); err != nil {
+		t.Fatal(err)
+	}
+}

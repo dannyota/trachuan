@@ -97,18 +97,21 @@ under the corpus rules.
 3. LLM in batches over public legal text, after `chunk` and `embed` have run,
    for articles that hold no seed or inherited node:
    - One request per document (title, scope article, table of contents, VBPL
-     field) returns a set of at most `F` active level-2 codes, `F` set in the
-     classification recipe and stated in the prompt; structured outputs cannot
-     bound an array's length, so a response with more than `F` codes is
-     `invalid_response`, and a code that is not an active level-2 node is
-     dropped and counted. The result is not an assignment: it is given as
-     document context to every article request of that document and fixes those
-     articles' allowed codes. A document whose request fails or keeps no code
-     yields no LLM assignment for its articles and gap `unassigned` with detail
-     `invalid_response` or `no_family`. The classification artifact keeps each
-     document's validated codes and outcome, hashed with the classification
-     recipe and the taxonomy; evaluation reads family recall from it and counts
-     an article of a failed or empty document as a miss.
+     field) chooses from a menu of active level-2 nodes, each shown as
+     `<level-1 name> > <level-2 name>`; a level-2 node with no provisions and no
+     children is left out of the menu. The request returns a set of at most `F`
+     active level-2 codes, `F` set in the classification recipe and stated in
+     the prompt; structured outputs cannot bound an array's length, so a
+     response with more than `F` codes is `invalid_response`, and a code that is
+     not an active level-2 node is dropped and counted. The result is not an
+     assignment: it is given as document context to every article request of
+     that document and fixes those articles' allowed codes. A document whose
+     request fails or keeps no code yields no LLM assignment for its articles
+     and gap `unassigned` with detail `invalid_response` or `no_family`. The
+     classification artifact keeps each document's validated codes and outcome,
+     hashed with the classification recipe and the taxonomy; evaluation reads
+     family recall from it and counts an article of a failed or empty document
+     as a miss.
    - One request per chapter with all its articles yields assignments for each
      article; a document without chapters is split into groups of up to 12
      articles in document order. The classification recipe sets a maximum input
@@ -128,8 +131,8 @@ under the corpus rules.
      schema or misses an article yields no assignment for those articles and gap
      `unassigned` with detail `invalid_response`. The model, effort and prompt
      are part of the classification recipe. The threshold per level is
-     calibrated on the labeled set to reach precision at least 0.85, then frozen
-     in the release; below it, no assignment and a gap "unassigned".
+     calibrated on the seeded set to reach top-1 precision at least 0.85, then
+     frozen in the release; below it, no assignment and a gap "unassigned".
 4. Manual overrides in `taxonomy/overrides.yaml`. An override names an active
    package node at level 2 or deeper or a custom node; any other code fails
    `corpus taxonomy check` and the build. An override whose document or anchor
@@ -168,15 +171,19 @@ every release that serves nodes must pass the filter gate in
 Before a release may publish assignments, `corpus eval` measures on a labeled
 set of seeded articles:
 
-Labels are sets, so every metric is micro precision and recall over (article,
-node) pairs. The same set tunes prompts and thresholds and gates the release;
-every prompt or threshold change reruns it.
+Recall is micro over (article, node) pairs. The seeded set holds one placement
+per article, while an article may take several nodes, so its precision is top-1
+precision: the model's highest-confidence node per article, mapped to the level
+measured, against the seed at that level. Precision over all pairs, which also
+judges additional nodes, is measured on the model-adjudicated multi-family set.
+The same sets tune prompts and thresholds and gate the release; every prompt or
+threshold change reruns them.
 
 | Slice                                                  | Reference         | Metric                                                                               | Floor |
 | ------------------------------------------------------ | ----------------- | ------------------------------------------------------------------------------------ | ----- |
-| 300 seeded articles, labels masked                     | seeded, masked    | precision and recall at level 2                                                      | 0.90  |
-| same                                                   | seeded, masked    | precision and recall at level 3                                                      | 0.80  |
-| same                                                   | seeded, masked    | precision and recall at the deepest level                                            | 0.75  |
+| 300 seeded articles, labels masked                     | seeded, masked    | recall and top-1 precision at level 2                                                | 0.90  |
+| same                                                   | seeded, masked    | recall and top-1 precision at level 3                                                | 0.80  |
+| same                                                   | seeded, masked    | recall and top-1 precision at the deepest level                                      | 0.75  |
 | 100 unseeded articles labeled with every family        | model-adjudicated | precision and recall over all pairs                                                  | 0.80  |
 | every LLM slice                                        | as the slice      | family recall (each true node's level-2 ancestor among the document request's codes) | 0.95  |
 | 100 post-2023 articles                                 | model-adjudicated | precision and recall at level 2                                                      | 0.85  |
