@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { homeGraph } from '../utils/structured-data'
 import { getCoverage } from '../api/coverage'
 import rawSample from '../data/sample-result.json'
 import sampleMeta from '../data/sample-result.meta.json'
@@ -20,6 +21,8 @@ const citation = doc ? documentCitation(hit?.handle?.split('#', 2)[1], doc) : nu
 let hasSource = false
 try { hasSource = new URL(doc?.source_url || '').protocol === 'https:' } catch { hasSource = false }
 const language = useState<Language>('language', () => 'vi')
+const origin = useRuntimeConfig().public.siteOrigin.replace(/\/$/, '')
+useStructuredData(() => homeGraph(origin, language.value))
 const messages = computed(() => messagesFor(language.value))
 const labels = computed(() => homeMessages(language.value))
 const route = useRoute()

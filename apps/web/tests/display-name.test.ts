@@ -19,11 +19,12 @@ it('renders localized page titles and the wordmark without search query text', (
   `
   const pages: string[] = JSON.parse(execFileSync(process.execPath, ['--input-type=module', '-e', script], { encoding: 'utf8' }))
   const titles = [
-    ['Tra cứu pháp luật', 'Kết nối trợ lý AI', 'Nguồn dữ liệu', 'Quyền riêng tư', 'Điều khoản', 'Đăng nhập', 'Tài khoản', 'Tra cứu', 'Văn bản'],
-    ['Legal research', 'Connect AI assistants', 'Sources', 'Privacy', 'Terms', 'Sign in', 'Account', 'Search', 'Document'],
+    ['Tra Chuẩn · Tra cứu nguyên văn pháp luật Việt Nam', 'Kết nối trợ lý AI qua MCP · Tra Chuẩn', 'Nguồn dữ liệu và phạm vi · Tra Chuẩn', 'Quyền riêng tư · Tra Chuẩn', 'Điều khoản sử dụng · Tra Chuẩn', 'Đăng nhập', 'Tài khoản', 'Tra cứu', 'Văn bản'],
+    ['Tra Chuẩn · Vietnamese law, word for word', 'Connect AI assistants over MCP · Tra Chuẩn', 'Sources and coverage · Tra Chuẩn', 'Privacy · Tra Chuẩn', 'Terms of use · Tra Chuẩn', 'Sign in', 'Account', 'Search', 'Document'],
   ]
   for (const [index, page] of pages.slice(0, 18).entries()) {
-    expect(page).toContain(`<title>${titles[Math.floor(index / 9)]![index % 9]} · Tra Chuẩn</title>`)
+    const title = titles[Math.floor(index / 9)]![index % 9]
+    expect(page).toContain(`<title>${index % 9 < 5 ? title : `${title} · Tra Chuẩn`}</title>`)
     expect(page).toMatch(/<a[^>]*class="[^"]*site-logo[^"]*"[^>]*>.*?<span>Tra Chuẩn<\/span><\/a>/)
     expect(page).not.toContain('private-search')
   }
@@ -38,5 +39,5 @@ it('renders localized page titles and the wordmark without search query text', (
     expect(pages[3 + offset]).toContain(copy.updated)
     expect(pages[4 + offset]).toContain(copy.updated)
   }
-  expect(pages[18]).toMatch(/^Tra Chuẩn \(trachuan\) provides evidence/)
+  expect(pages[18]).toMatch(/^# Tra Chuẩn\n\n> Tra Chuẩn \(trachuan\) provides evidence/)
 })

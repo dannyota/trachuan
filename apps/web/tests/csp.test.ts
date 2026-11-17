@@ -46,7 +46,7 @@ describe('built public responses', () => {
       window.document.write(page.html)
       for (const script of window.document.querySelectorAll('script')) {
         if (!script.hasAttribute('src') || script.textContent.trim()) {
-          expect(script.getAttribute('type'), page.route).toBe('application/json')
+          expect(['application/json', 'application/ld+json'], page.route).toContain(script.getAttribute('type'))
         }
       }
       await window.happyDOM.close()

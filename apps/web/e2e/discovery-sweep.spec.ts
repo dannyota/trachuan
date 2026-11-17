@@ -18,6 +18,13 @@ for (const available of [true, false]) {
         await expect(page.locator('h1')).toHaveCount(1)
         expect((await page.title()).normalize('NFC').length).toBeLessThanOrEqual(60)
         expect((await page.locator('meta[name="description"]').getAttribute('content'))!.normalize('NFC').length).toBeLessThanOrEqual(160)
+        const expectedTypes = path === '/' ? ['WebSite', 'Organization', 'WebApplication', 'Person'] : path === '/vn/topics/1' ? ['BreadcrumbList', 'ItemList'] : path === '/sources' && available ? ['Dataset'] : []
+        const blocks = page.locator('script[type="application/ld+json"]')
+        await expect(blocks).toHaveCount(expectedTypes.length ? 1 : 0)
+        if (expectedTypes.length) {
+          const graph = JSON.parse((await blocks.textContent())!)
+          expect(graph['@graph'].map((node: { '@type': string }) => node['@type'])).toEqual(expectedTypes)
+        }
         await expect(page.locator('html')).not.toHaveAttribute('data-csp-violation', 'true')
       }
       for (const path of ['/robots.txt', '/sitemap.xml']) expect((await context.request.get(`${origin}${path}`)).status()).toBe(200)

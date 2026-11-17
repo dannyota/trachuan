@@ -13,6 +13,8 @@ beforeEach(() => {
   vi.stubGlobal('ref', ref)
   vi.stubGlobal('onMounted', onMounted)
   vi.stubGlobal('useHead', () => {})
+  vi.stubGlobal('useRuntimeConfig', () => ({ public: { siteOrigin: 'https://trachuan.vn' } }))
+  vi.stubGlobal('useStructuredData', () => {})
   vi.stubGlobal('useRoute', () => ({ query: {} }))
   vi.stubGlobal('useApi', () => ({}))
   vi.stubGlobal('useAsyncData', async () => ({ data: ref({ status: null }) }))

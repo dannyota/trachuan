@@ -68,7 +68,7 @@ test('public revalidation uses ETags and preserves response headers', async ({ r
     })
     expect(mismatch.status(), path).toBe(200)
     expect(mismatch.headers()['last-modified'], path).toBeUndefined()
-    if (path === '/') expect(await mismatch.text()).toContain('Tra cứu pháp luật')
+    if (path === '/') expect(await mismatch.text()).toContain('Tra cứu nguyên văn pháp luật Việt Nam')
     const match = await request.get(path, { headers: { ...headers, 'If-None-Match': etag! } })
     expect(match.status(), path).toBe(304)
     expect(match.headers()['cache-control'], path).toBe('no-cache')

@@ -18,6 +18,8 @@ beforeEach(() => {
   vi.stubGlobal('onMounted', onMounted)
   vi.stubGlobal('onUnmounted', onUnmounted)
   vi.stubGlobal('useHead', () => {})
+  vi.stubGlobal('useRuntimeConfig', () => ({ public: { siteOrigin: 'https://trachuan.vn' } }))
+  vi.stubGlobal('useStructuredData', () => {})
   vi.stubGlobal('useRoute', () => ({ query: {} }))
   vi.stubGlobal('useApi', () => ({ session, client: { GET: get } }))
   vi.stubGlobal('useAsyncData', async () => ({ data: ref({ status: null }) }))
