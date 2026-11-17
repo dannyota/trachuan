@@ -4,11 +4,12 @@ package publicsummary
 
 import (
 	"context"
-	"danny.vn/trachuan/apps/server/internal/contracttest"
 	"errors"
 	"strings"
 	"testing"
 	"time"
+
+	"danny.vn/trachuan/apps/server/internal/contracttest"
 
 	"danny.vn/trachuan/internal/testpg"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -33,7 +34,12 @@ func TestPostgres_SummaryOnlyAndBoundedList(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	p := &postgresPool{pool: pool}
+	source, err := OpenPostgres(databaseURL)(ctx, "corpus_vn_20990101")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer source.Close()
+	p := source.(*postgresPool)
 	row, err := p.Row(ctx, "vn:vbpl:1")
 	if err != nil || row.Key != "vn:vbpl:1" || !row.Indexed || row.EffectiveFrom == nil || string(row.Payload) != "{}" {
 		t.Fatalf("summary: %+v %v", row, err)
@@ -64,8 +70,8 @@ func TestPostgres_SummaryOnlyAndBoundedList(t *testing.T) {
 		t.Fatal(err)
 	}
 	var timeout, readOnly string
-	publicPool := lease.entry.pool.(*postgresPool).pool
-	if err = publicPool.QueryRow(ctx, `SELECT current_setting('statement_timeout'),current_setting('default_transaction_read_only')`).Scan(&timeout, &readOnly); err != nil || timeout != "2s" || readOnly != "on" || publicPool.Config().MaxConns != 1 {
+	publicPool := lease.entry.pool.(*postgresPool).conn
+	if err = publicPool.QueryRow(ctx, `SELECT current_setting('statement_timeout'),current_setting('default_transaction_read_only')`).Scan(&timeout, &readOnly); err != nil || timeout != "2s" || readOnly != "on" || publicPool.Config().ConnectTimeout > 2*time.Second {
 		t.Fatalf("public connection limits: %s %s %v", timeout, readOnly, err)
 	}
 	lease.Done()

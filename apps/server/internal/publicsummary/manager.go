@@ -18,90 +18,100 @@ type Pool interface {
 }
 
 type Manager struct {
-	metadata func(context.Context) (Release, error)
-	open     func(context.Context, string) (Pool, error)
-	clock    func() time.Time
-	after    func(time.Duration, func())
-	mu       sync.Mutex
-	active   *entry
-	entries  map[*entry]bool
-	closed   bool
+	metadata     func(context.Context) (Release, error)
+	open         func(context.Context, string) (Pool, error)
+	clock        func() time.Time
+	after        func(time.Duration, func())
+	ctx          context.Context
+	cancel       context.CancelFunc
+	metadataSlot chan struct{}
+	resources    chan struct{}
+	mu           sync.Mutex
+	sequence     uint64
+	observed     uint64
+	active       *entry
+	entries      map[*entry]bool
+	closed       bool
 }
 
 type entry struct {
-	release Release
-	pool    Pool
-	cache   *cache.LRU[[]byte]
-	slot    chan struct{}
-	ctx     context.Context
-	cancel  context.CancelFunc
-	retired bool
-	refs    int
-	close   sync.Once
+	release  Release
+	pool     Pool
+	cache    *cache.LRU[[]byte]
+	slot     chan struct{}
+	ctx      context.Context
+	cancel   context.CancelFunc
+	ready    chan struct{}
+	openErr  error
+	reserved bool
+	retired  bool
+	refs     int
+	close    sync.Once
 }
 
 func NewManager(metadata func(context.Context) (Release, error), open func(context.Context, string) (Pool, error), clock func() time.Time) *Manager {
-	return &Manager{metadata: metadata, open: open, clock: clock, entries: make(map[*entry]bool), after: func(d time.Duration, f func()) { time.AfterFunc(d, f) }}
+	ctx, cancel := context.WithCancel(context.Background())
+	return &Manager{metadata: metadata, open: open, clock: clock, ctx: ctx, cancel: cancel, metadataSlot: make(chan struct{}, 1), resources: make(chan struct{}, 2), entries: make(map[*entry]bool), after: func(d time.Duration, f func()) { time.AfterFunc(d, f) }}
 }
 
 func (m *Manager) Resolve(ctx context.Context) (*Lease, error) {
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	stop := context.AfterFunc(m.ctx, cancel)
+	defer func() { stop(); cancel() }()
+	observation, err := m.readMetadata(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if err = ctx.Err(); err != nil {
+		return nil, err
+	}
+	e, err := m.observe(observation)
+	if err != nil {
+		return nil, err
+	}
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case <-e.ctx.Done():
+		return nil, ErrUnavailable
+	case <-e.ready:
+	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	if m.closed {
+	if m.closed || e.retired || m.active != e {
 		return nil, ErrUnavailable
 	}
-	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
-	defer cancel()
-	release, err := m.metadata(ctx)
-	if err != nil || !regexp.MustCompile(`^corpus_vn_[0-9]{8}(_[0-9]+)?$`).MatchString(release.Database) || release.ID != strings.TrimPrefix(release.Database, "corpus_vn_") {
-		if ctx.Err() == nil {
-			m.retireLocked()
-		}
-		if err != nil {
-			return nil, fmt.Errorf("resolve public release: %w", err)
-		}
+	if e.openErr != nil {
+		return nil, fmt.Errorf("open public release: %w", e.openErr)
+	}
+	e.refs++
+	return &Lease{Release: e.release, manager: m, entry: e}, nil
+}
+
+func (m *Manager) observe(o observation) (*entry, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.closed || o.sequence < m.observed {
 		return nil, ErrUnavailable
 	}
-	if m.active == nil || m.active.release != release {
+	m.observed = o.sequence
+	release := o.release
+	if o.err != nil || !regexp.MustCompile(`^corpus_vn_[0-9]{8}(_[0-9]+)?$`).MatchString(release.Database) || release.ID != strings.TrimPrefix(release.Database, "corpus_vn_") {
 		m.retireLocked()
-		var pool Pool
-		if release.Projection == 1 {
-			pool, err = m.open(ctx, release.Database)
-			if err != nil {
-				return nil, fmt.Errorf("open public release: %w", err)
-			}
+		if o.err != nil {
+			return nil, fmt.Errorf("resolve public release: %w", o.err)
 		}
-		work, cancelWork := context.WithCancel(context.Background())
-		m.active = &entry{release: release, pool: pool, cache: cache.New("summary_rows", 16<<20, 0, m.clock, func(b []byte) int { return len(b) }), slot: make(chan struct{}, 1), ctx: work, cancel: cancelWork}
-		m.entries[m.active] = true
+		return nil, ErrUnavailable
 	}
-	m.active.refs++
-	return &Lease{Release: release, manager: m, entry: m.active}, nil
-}
-
-func (m *Manager) retireLocked() {
-	old := m.active
-	if old == nil {
-		return
+	if m.active == nil || m.active.release != release || m.active.openErr != nil {
+		m.retireLocked()
+		work, cancel := context.WithCancel(m.ctx)
+		e := &entry{release: release, cache: cache.New("summary_rows", 16<<20, 0, m.clock, func(b []byte) int { return len(b) }), slot: make(chan struct{}, 1), ctx: work, cancel: cancel, ready: make(chan struct{})}
+		m.active = e
+		m.entries[e] = true
+		go m.openEntry(e)
 	}
-	old.retired = true
-	old.cache.Purge()
-	m.active = nil
-	if old.refs == 0 {
-		m.closeEntry(old)
-		return
-	}
-	m.after(5*time.Second, func() { m.mu.Lock(); defer m.mu.Unlock(); m.closeEntry(old) })
-}
-
-func (m *Manager) closeEntry(e *entry) {
-	e.close.Do(func() {
-		e.cancel()
-		if e.pool != nil {
-			e.pool.Close()
-		}
-	})
-	delete(m.entries, e)
+	return m.active, nil
 }
 
 func (m *Manager) Watch(ctx context.Context) {
@@ -121,17 +131,5 @@ func (m *Manager) watch(ctx context.Context, ticks <-chan time.Time) {
 			return
 		case <-ticks:
 		}
-	}
-}
-
-func (m *Manager) Close() {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.closed = true
-	m.active = nil
-	for e := range m.entries {
-		e.retired = true
-		e.cache.Purge()
-		m.closeEntry(e)
 	}
 }

@@ -56,11 +56,7 @@ func TestManager_RetiresOnActivationAndRollback(t *testing.T) {
 	default:
 	}
 	expire()
-	select {
-	case <-pools[0].closed:
-	default:
-		t.Fatal("old pool not closed at retirement deadline")
-	}
+	receivePromptly(t, pools[0].closed, "old pool not closed at retirement deadline")
 	first.Done()
 	current = Release{Database: "corpus_vn_20990101", ID: "20990101", Projection: 1}
 	rollback, err := m.Resolve(context.Background())
@@ -203,11 +199,7 @@ func TestManager_WatcherActivatesWithoutSummaryRequests(t *testing.T) {
 	changes <- Release{Database: "corpus_vn_20990102", ID: "20990102", Projection: 1}
 	ticks <- time.Time{}
 	<-opened
-	select {
-	case <-first.closed:
-	default:
-		t.Fatal("watcher kept old pool open")
-	}
+	receivePromptly(t, first.closed, "watcher kept old pool open")
 	cancel()
 	<-done
 }
@@ -242,11 +234,7 @@ func TestManager_RetirementCancelsInFlightQuery(t *testing.T) {
 	if err = <-result; !errors.Is(err, context.Canceled) {
 		t.Fatalf("retired query not cancelled: %v", err)
 	}
-	select {
-	case <-old.closed:
-	default:
-		t.Fatal("retired pool not closed")
-	}
+	receivePromptly(t, old.closed, "retired pool not closed")
 }
 
 func TestManager_CancelledRequestCannotRetireActiveRelease(t *testing.T) {
