@@ -93,14 +93,16 @@ bootstrap.
 
 ## Mode
 
-`retained` needs a `retired` entry no older than seven days with the manifest's
+`retained` needs a `retired` entry younger than seven days with the manifest's
 database and dump digest, and that OID in the catalog; the operation starts with
 that OID. Otherwise the operation is `new`. It requires `previous` to equal the
 pointer and, when `active` exists, `active` too, and it needs a target that is
 neither `active` nor in `retired`. When these do not hold the phase waits and
-spends nothing, because a forged pointer can cause them. A rollback to a
-database with no entry, such as one restored by hand, is the owner's manual
-swap. Only the newest accepted manifest starts an operation.
+spends nothing, because a forged pointer can cause them. A `retired` entry for
+the manifest's database with another dump digest is host data, so the manifest
+is refused and failed. A rollback to a database with no entry, such as one
+restored by hand, is the owner's manual swap. Only the newest accepted manifest
+starts an operation.
 
 ## Recovery
 
@@ -185,14 +187,15 @@ alarm. Each code is recorded in `alerts` with the time it was last seen and
 stays in the kind's result file, as the list `integrity`, for 24 hours after
 that, so a one-off event cannot be missed between runs.
 
-| Code                    | Raised when                                                                                                        |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `pointer_changed`       | on any run the pointer differs from a non-null `active`, other than by a `swapping` operation; or Mode waits on it |
-| `serving_database_gone` | the database `active` or the pointer's target names is missing or has another OID while it serves                  |
-| `active_cleared`        | reconciling rule 5 cleared `active`                                                                                |
-| `adoption_failed`       | a database failed an adoption check                                                                                |
-| `record_rebuilt`        | an unreadable file was rebuilt; seeding a missing file raises nothing                                              |
-| `journal_row_refused`   | a journal row failed its shape check, or `RETURNING` differed from the insert                                      |
+| Code                    | Raised when                                                                                        |
+| ----------------------- | -------------------------------------------------------------------------------------------------- |
+| `pointer_changed`       | on any run the pointer differs from a non-null `active`, other than by a `swapping` operation      |
+| `serving_database_gone` | the database `active` or the pointer's target names is missing or has another OID while it serves  |
+| `active_cleared`        | reconciling rule 5 cleared `active`                                                                |
+| `adoption_failed`       | a database failed an adoption check                                                                |
+| `record_rebuilt`        | an unreadable file was rebuilt; seeding a missing file raises nothing                              |
+| `journal_row_refused`   | a journal row failed its shape check, or `RETURNING` differed from the insert                      |
+| `lock_unavailable`      | a role other than `activator` holds the `activation` lock, or `activator` cannot connect to `auth` |
 
 The metrics timer publishes `release_integrity` with the `kind` dimension, 1
 while the list is not empty. The OCI alarm `release_integrity[1m].max() > 0` is

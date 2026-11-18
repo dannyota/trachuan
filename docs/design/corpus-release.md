@@ -161,13 +161,14 @@ to the same tables, data and reader grants as before.
 
 The server's tables, on PostgreSQL: a trigger, view or policy planted by
 `auth_owner` on each release table never runs as `activator`, in either state of
-the provisioner flag; forged or altered journal rows do not resume, finish,
-abort or redirect an operation or reach a command; new activation, retained
-reactivation, prune and crash recovery work from the host record, including each
-row of the recovery table with the record lost, unreadable or disagreeing with
-the journal; a table failure waits without spending the manifest; the lock
-excludes a concurrent run across versions; a forged pointer or table never drops
-the host's active or retired database; every alert code reaches the result, the
-metric and the watch; the first run seeds the file from a real state shape and
-leaves a retained `postgres`-owned database alone; and a deploy and a rollback
-across the change both complete.
+the provisioner flag; new activation, retained reactivation, prune and one crash
+recovery work from the host record; a table failure waits without spending the
+manifest; and the lock excludes a concurrent run. Unit tests against an
+in-memory host and tables: each row of the recovery table, with the record lost,
+unreadable or disagreeing with the journal; forged or altered journal rows that
+try to resume, finish, abort, redirect or reach a command; a forged pointer or
+table never dropping the host's active or retired database; every alert code
+reaching the result, the metric and the watch; the first run seeding the file
+from a real state shape and leaving a retained `postgres`-owned database alone;
+and a rollback and roll forward across the change. No test runs a real deploy or
+rollback across it.

@@ -100,14 +100,15 @@ In that case, put the pointer back or re-sign that release the same day, and no
 further step is needed. A failed `active-db` read, a pointer you did not set, or
 any other row in the check above is a compromise.
 
-| Code                    | Innocent explanation to rule out first                 |
-| ----------------------- | ------------------------------------------------------ |
-| `pointer_changed`       | your manual swap                                       |
-| `serving_database_gone` | none: serving is broken, treat as an incident          |
-| `active_cleared`        | you restored the cluster to an earlier time; re-sign   |
-| `adoption_failed`       | a re-signed release whose database you changed by hand |
-| `record_rebuilt`        | disk damage or your own edit of the file               |
-| `journal_row_refused`   | none                                                   |
+| Code                    | Innocent explanation to rule out first                                               |
+| ----------------------- | ------------------------------------------------------------------------------------ |
+| `pointer_changed`       | your manual swap                                                                     |
+| `serving_database_gone` | none: serving is broken, treat as an incident                                        |
+| `active_cleared`        | you restored the cluster to an earlier time; re-sign                                 |
+| `adoption_failed`       | a re-signed release whose database you changed by hand                               |
+| `record_rebuilt`        | disk damage or your own edit of the file                                             |
+| `journal_row_refused`   | none                                                                                 |
+| `lock_unavailable`      | your own session holding the lock or a revoked grant; otherwise treat as an incident |
 
 **If it may be a compromise:**
 

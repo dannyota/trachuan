@@ -71,13 +71,17 @@ there. These sessions send SQL on stdin, bound their output, and fix in the
 startup options `search_path`, statement, lock and idle-transaction timeouts,
 `default_transaction_read_only`, `standard_conforming_strings` and
 `client_encoding`, so a planted function or a database default can delay a step
-but not hold the updater's locks. `activator` keeps `CONNECT` on `auth` for the
-`activation` advisory lock, held with `idle_session_timeout` off in its startup
-options, and catalog reads. No `activator` statement there names an object
-outside `pg_catalog`, and `search_path` is `pg_catalog` from startup: that is
-the control. Its table, sequence and schema rights are revoked as well, so an
-honest missed path fails at once, but `auth_owner` can grant them back and
-nothing relies on the revoke.
+but not hold the updater's locks. In `auth`, `activator` only holds the
+`activation` advisory lock, with `idle_session_timeout` off in its startup
+options; its catalog reads, the ending of other backends and its drops run from
+database `postgres`, which the server does not own. No `activator` statement in
+`auth` names an object outside `pg_catalog`, and `search_path` is `pg_catalog`
+from startup: that is the control. A lock that another role holds, or a refused
+connection to `auth`, makes the phase wait and raises an
+[alert](activation-record.md#alerts); a lock still held by a leftover
+`activator` session only makes it wait. Its table, sequence and schema rights
+are revoked as well, so an honest missed path fails at once, but `auth_owner`
+can grant them back and nothing relies on the revoke.
 
 **The host holds the operation.** Commands are built from the
 [activation record](activation-record.md) and the manifest verified on the host.
