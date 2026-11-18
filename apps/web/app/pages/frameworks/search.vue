@@ -27,7 +27,7 @@ const { data: status, clear } = await useAsyncData('framework-search-status', as
 })
 onBeforeUnmount(clear)
 const codes = computed(() => [...new Set(Object.keys(status.value?.versions || {}).map(handle => handle.split(':')[1]).filter((code): code is string => !!code))])
-async function search(more = false, restart = false) {
+async function search(more = false, restart: false | 'release' | 'cursor' = false) {
   if (loading.value) return
   if (!more && !restart) { if (!query.value.trim()) return; submitted.value = query.value; selected.value = filter.value; notice.value = ''; action = api.captureAction() }
   if (!action) return
@@ -46,8 +46,10 @@ async function search(more = false, restart = false) {
   if (response.response.status === 404) { notFound(); return }
   if (!response.data) {
     const code: string = response.error?.error.code || 'unavailable'
-    if (more && code === 'cursor_expired') { notice.value = ''; result.value = undefined; await search(false, true); return }
+    if (more && code === 'cursor_expired') { notice.value = ''; result.value = undefined; await search(false, 'cursor'); return }
+    if (more && code === 'release_expired') { notice.value = ''; await search(false, 'release'); return }
     error.value = code
+    if (restart === 'release' && code === 'invalid_request' && result.value) result.value = { ...result.value, next_cursor: undefined }
     if (code === 'account_changed') result.value = undefined
     return
   }
