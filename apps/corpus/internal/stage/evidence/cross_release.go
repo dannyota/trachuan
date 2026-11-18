@@ -10,7 +10,7 @@ import (
 type releaseDocument struct {
 	ID                                                                                                   int64
 	Key, Number, NumberNorm, Title, StatusClass, TextSource, ExtractSHA256, Issuer, RawIssueDate, Source string
-	Baseline, ProvisionTargeted, TextRelation, Consolidated                                              bool
+	Baseline, ProvisionTargeted, TextRelation, Consolidated, HasProvisions                               bool
 }
 
 type releaseProvision struct {
@@ -37,7 +37,11 @@ type releaseData interface {
 	Articles(context.Context, func(int64, []releaseProvision) error) error
 	Anchors(context.Context, int64) ([]releaseAnchor, error)
 	ProvisionRelations(context.Context) (map[relationEnds][]int64, error)
+	PairRelations(context.Context, func(pairRelation) error) error
+	TextGaps(context.Context) (map[string]bool, error)
 }
+
+type pairRelation struct{ Source, Target, Kind, Method string }
 
 type queryer interface {
 	Query(context.Context, string, ...any) (pgx.Rows, error)
@@ -48,6 +52,7 @@ type sqlRelease struct{ q queryer }
 const documentsSQL = `SELECT d.id, d.key, d.number, d.number_norm, d.title, d.status_class, d.text_source, COALESCE(d.extract_sha256,''), d.issuer, d.raw_issue_date, d.source, d.is_consolidated,
  EXISTS (SELECT 1 FROM coverage_gap g WHERE g.stage='build' AND g.kind='baseline_served' AND g.item_key=d.key),
  EXISTS (SELECT 1 FROM relation r WHERE r.target_document_id=d.id AND r.target_provision_id IS NOT NULL),
+ EXISTS (SELECT 1 FROM provision p WHERE p.document_id=d.id),
  EXISTS (SELECT 1 FROM relation r WHERE r.source_document_id=d.id AND starts_with(r.method,'text_rule/'))
  FROM document d ORDER BY d.id`
 
@@ -59,7 +64,7 @@ func (s sqlRelease) Documents(ctx context.Context, fn func(releaseDocument) erro
 	defer rows.Close()
 	for rows.Next() {
 		var d releaseDocument
-		if err = rows.Scan(&d.ID, &d.Key, &d.Number, &d.NumberNorm, &d.Title, &d.StatusClass, &d.TextSource, &d.ExtractSHA256, &d.Issuer, &d.RawIssueDate, &d.Source, &d.Consolidated, &d.Baseline, &d.ProvisionTargeted, &d.TextRelation); err != nil {
+		if err = rows.Scan(&d.ID, &d.Key, &d.Number, &d.NumberNorm, &d.Title, &d.StatusClass, &d.TextSource, &d.ExtractSHA256, &d.Issuer, &d.RawIssueDate, &d.Source, &d.Consolidated, &d.Baseline, &d.ProvisionTargeted, &d.HasProvisions, &d.TextRelation); err != nil {
 			return fmt.Errorf("read documents: %w", err)
 		}
 		if err = fn(d); err != nil {
@@ -163,6 +168,43 @@ func (s sqlRelease) ProvisionRelations(ctx context.Context) (map[relationEnds][]
 	}
 	if err = rows.Err(); err != nil {
 		return nil, fmt.Errorf("read relations: %w", err)
+	}
+	return out, nil
+}
+
+func (s sqlRelease) PairRelations(ctx context.Context, fn func(pairRelation) error) error {
+	rows, err := s.q.Query(ctx, `SELECT source_key, target_key, kind, method FROM relation WHERE target_key IS NOT NULL AND source_document_id IS NOT NULL ORDER BY source_key, target_key, id`)
+	if err != nil {
+		return fmt.Errorf("read relation pairs: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var p pairRelation
+		if err = rows.Scan(&p.Source, &p.Target, &p.Kind, &p.Method); err != nil {
+			return fmt.Errorf("read relation pairs: %w", err)
+		}
+		if err = fn(p); err != nil {
+			return err
+		}
+	}
+	if err = rows.Err(); err != nil {
+		return fmt.Errorf("read relation pairs: %w", err)
+	}
+	return nil
+}
+
+func (s sqlRelease) TextGaps(ctx context.Context) (map[string]bool, error) {
+	rows, err := s.q.Query(ctx, `SELECT DISTINCT item_key FROM coverage_gap WHERE kind = ANY($1)`, textRowGapKinds())
+	if err != nil {
+		return nil, fmt.Errorf("read text gaps: %w", err)
+	}
+	keys, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		return nil, fmt.Errorf("read text gaps: %w", err)
+	}
+	out := make(map[string]bool, len(keys))
+	for _, key := range keys {
+		out[key] = true
 	}
 	return out, nil
 }

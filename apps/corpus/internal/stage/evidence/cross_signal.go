@@ -11,5 +11,5 @@ func specOf(id string) detector.Detector {
 }
 
 func CrossSignal() []Detector {
-	return []Detector{rawFieldDetector{}, partialDetector{}, claimDetector{}, waivedDetector{}}
+	return []Detector{rawFieldDetector{}, partialDetector{}, claimDetector{}, waivedDetector{}, kindDetector{}}
 }

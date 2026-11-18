@@ -18,6 +18,7 @@ type Count struct {
 	Classes       map[string]int
 	Observed      int
 	NotObservable int
+	Excluded      int
 	NotRun        string
 }
 
@@ -36,7 +37,7 @@ func CountFindings(ctx context.Context, in Inputs, detectors []Detector) []Count
 			counts = append(counts, count)
 			continue
 		}
-		count.Findings, count.Observed, count.NotObservable = len(obs.Findings), obs.Observed, obs.NotObservable
+		count.Findings, count.Observed, count.NotObservable, count.Excluded = len(obs.Findings), obs.Observed, obs.NotObservable, obs.Excluded
 		for _, f := range obs.Findings {
 			if f.Severity != "" {
 				if count.Classes == nil {

@@ -13,6 +13,7 @@ func TestCrossSignal_RegisteredWithDeclaredFields(t *testing.T) {
 		"raw_field_not_normalized":          {"document", Info},
 		"partial_without_provision_effect":  {"document", Info},
 		"unmatched_operative_claim":         {"claim", Review},
+		"relation_kind_disagreement":        {"relation", Review},
 		"waived_document_without_relations": {"document", Info},
 	}
 	for _, id := range CrossSignalIDs() {

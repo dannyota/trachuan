@@ -36,6 +36,7 @@ type Observation struct {
 	Findings           []Fired
 	Observed           int
 	NotObservable      int
+	Excluded           int
 	ObservedCompletely func(Subject) bool
 }
 
