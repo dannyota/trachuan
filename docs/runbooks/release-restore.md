@@ -106,10 +106,18 @@ podman exec trachuan-postgres bash /usr/local/bin/grant-corpus.sh "$DB"
 
 [Prewarm](#prewarm-a-corpus-database) `$DB`, then select it:
 
+`auth` belongs to `auth_owner`, so read and write it as that role, never as
+`postgres` ([database roles](../design/system.md#database-roles)):
+
 ```sh
-podman exec -i trachuan-postgres /usr/local/bin/postgres-admin.sh \
-  psql -X -v ON_ERROR_STOP=1 -U postgres -d auth -v database="$DB" <<'SQL'
-INSERT INTO corpus_release (country, active_db, activated_at, activated_by)
+auth_psql() {
+  podman exec -i trachuan-postgres sh -c 'export PGPASSWORD
+    PGPASSWORD=$(cat /run/secrets/auth_db_password)
+    exec env PGOPTIONS="-c search_path=pg_catalog,public" psql --no-password -X \
+      -h 127.0.0.1 -U auth_owner -d auth "$@"' sh "$@"
+}
+auth_psql -v ON_ERROR_STOP=1 -v database="$DB" <<'SQL'
+INSERT INTO public.corpus_release (country, active_db, activated_at, activated_by)
 VALUES ('vn', :'database', now(), 'owner')
 ON CONFLICT (country) DO UPDATE SET active_db = EXCLUDED.active_db,
 activated_at = EXCLUDED.activated_at, activated_by = EXCLUDED.activated_by;
@@ -139,11 +147,16 @@ row there and stays until it is dropped once by hand. Confirm it is not
 
 ```sh
 DB=corpus_vn_20261112_2
-podman exec -i trachuan-postgres /usr/local/bin/postgres-admin.sh psql -X -At \
-  -U postgres -d auth -v db="$DB" <<'SQL'
-SELECT (SELECT count(*) FROM corpus_release WHERE active_db = :'db'),
-       (SELECT count(*) FROM retired_release WHERE db_name = :'db'),
-       (SELECT count(*) FROM pg_stat_activity WHERE datname = :'db');
+auth_psql() {
+  podman exec -i trachuan-postgres sh -c 'export PGPASSWORD
+    PGPASSWORD=$(cat /run/secrets/auth_db_password)
+    exec env PGOPTIONS="-c search_path=pg_catalog,public" psql --no-password -X \
+      -h 127.0.0.1 -U auth_owner -d auth "$@"' sh "$@"
+}
+auth_psql -At -v db="$DB" <<'SQL'
+SELECT (SELECT count(*) FROM public.corpus_release WHERE active_db = :'db'),
+       (SELECT count(*) FROM public.retired_release WHERE db_name = :'db'),
+       (SELECT count(*) FROM pg_catalog.pg_stat_activity WHERE datname = :'db');
 SQL
 podman exec trachuan-postgres /usr/local/bin/postgres-admin.sh dropdb -U postgres "$DB"
 ```
