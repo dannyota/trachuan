@@ -1353,15 +1353,6 @@
     anchor: "dieu-7/khoan-4"
     quote: "Thông tư liên tịch số 132/2009/TTLT/BTC-BGDĐT ngày 29/6/2009 của Liên Bộ Tài chính - Bộ Giáo dục và Đào tạo"
   reviewed: "2026-11-18"
-- key: vn:vbpl:71267
-  number: "32/2012/TT-NHNN"
-  set: {eff_to: "2013-03-26"}
-  reason: "08/2013/TT-NHNN Điều 4 khoản 1 replaces the whole circular and takes effect on 2013-03-26, the target's first day out of force."
-  evidence:
-    key: vn:vbpl:30432
-    anchor: "dieu-4/khoan-1"
-    quote: "thay thế Thông tư số 32/2012/TT-NHNN ngày 21 tháng 12 năm 2012"
-  reviewed: "2026-11-18"
 - key: vn:vbpl:71272
   number: "33/2012/TT-NHNN"
   set: {eff_to: "2013-03-26"}

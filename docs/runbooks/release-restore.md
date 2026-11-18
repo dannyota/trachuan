@@ -68,7 +68,7 @@ bash scripts/corpus-upload.sh --dry-run "$CC" "$REL" "$UPLOAD" "$REPORT"
 bash scripts/corpus-upload.sh "$CC" "$REL" "$UPLOAD" "$REPORT"
 ```
 
-The older path is for `vn/20261118_1` only, whose run predates this rule: it has
+The older path is for `vn/20261118_2` only, whose run predates this rule: it has
 no decision, so evaluate with
 `corpus eval <cc> <rel> --out <directory> --previous <report.json>`, using the
 production release's uploaded report, and upload that report. Its `release.json`
@@ -108,7 +108,7 @@ retry and rollback working. Dispatching the same release again retries a failed
 activation. Signing an existing `<cc>-<rel>` again keeps every field of its
 signed manifest except `commit`, `sequence` and `heading_review`, and refuses
 before signing when the bucket's objects would change one. A release without
-selected report hashes below `vn/20261118_1` signs only when its manifest
+selected report hashes below `vn/20261118_2` signs only when its manifest
 already exists.
 
 When an earlier run pushed the release but failed to move `<cc>-production`, the
