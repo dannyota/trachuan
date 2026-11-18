@@ -81,7 +81,7 @@ def check_findings(findings, base, previous_rel):
         if entry is None or entry['severity'] == 'blocking':
             raise ValueError('open finding of a blocking or unlisted detector: ' + str(finding.get('key')))
         counts[entry['severity']] += 1
-    return predecessor, counts
+    return predecessor, counts, dict(new=len(findings['new']), gone=len(findings['gone']))
 
 
 def scan_lines(path, types, check_header):
@@ -155,7 +155,7 @@ def validate_sidecars(row, report, report_bytes, directory, dump_hash, build_has
                 report_sha256=prefixed(hashlib.sha256(report_bytes).hexdigest()))
     data = (directory / FINDINGS).read_bytes()
     digests = {FINDINGS: hashlib.sha256(data).hexdigest()}
-    predecessor_findings, counts = check_findings(decoded(data), base, previous_rel)
+    predecessor_findings, counts, changed = check_findings(decoded(data), base, previous_rel)
     digests[IDENTITY], _, _ = scan_lines(directory / IDENTITY, IDENTITY_TYPES, identity_header(base))
     digests[CHANGES], predecessor_identity, records = scan_lines(directory / CHANGES, CHANGE_TYPES, changes_header(base, previous_rel))
     if predecessor_identity == 'none' and records:
@@ -165,7 +165,7 @@ def validate_sidecars(row, report, report_bytes, directory, dump_hash, build_has
             raise ValueError(name + ' differs from release.json')
     return dict(evidence={RUN_FIELDS[name]: digests[name] for name in SIDECARS},
                 predecessor=dict(rel=previous_rel, findings_sha256=predecessor_findings, identity_sha256=predecessor_identity),
-                open=counts)
+                open=counts, changed=changed)
 
 
 def require_predecessor(sidecars, manifest):

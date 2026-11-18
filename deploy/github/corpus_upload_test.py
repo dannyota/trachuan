@@ -295,6 +295,7 @@ class CorpusUploadTest(unittest.TestCase):
         result = self.run_upload()
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn('Open findings allowed: review 0, info 0', result.stdout)
+        self.assertIn('Findings against 20990101_1: new 0, gone 0', result.stdout)
         calls = self.calls()
         self.assertEqual(sum('put-object' in call['args'] for call in calls), 7)
         for name in SIDECARS:

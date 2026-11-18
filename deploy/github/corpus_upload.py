@@ -95,6 +95,7 @@ def upload(country, rel, directory, report):
     row, candidate, _, sidecars = validated_inputs(country, rel, directory, report)
     if sidecars is not None:
         print('Open findings allowed: review {review}, info {info}'.format(**sidecars['open']))
+        print('Findings against {rel}: new {new}, gone {gone}'.format(rel=sidecars['predecessor']['rel'], **sidecars['changed']))
     with tempfile.TemporaryDirectory() as temporary:
         require_settled(candidate, Path(temporary))
         verified_previous(candidate, Path(temporary), client, release_row=row, sidecars=sidecars)

@@ -349,6 +349,7 @@ def main():
         row, report, _, sidecars = validated_inputs(args.country, args.rel, args.directory, args.report, signing=True)
         if sidecars is not None:
             print('Open findings allowed: review {review}, info {info}'.format(**sidecars['open']))
+            print('Findings against {rel}: new {new}, gone {gone}'.format(rel=sidecars['predecessor']['rel'], **sidecars['changed']))
         previous_report = check_remote(report, release_row=row, sidecars=sidecars)
         (args.directory / 'manifest.json').write_bytes(create(
             os.environ['GITHUB_SHA'], int(os.environ['GITHUB_RUN_NUMBER']),

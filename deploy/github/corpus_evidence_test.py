@@ -55,6 +55,7 @@ class EvidenceGateTest(unittest.TestCase):
         self.assertEqual(manifest['evidence'], expected)
         self.assertEqual(summary['evidence'], expected)
         self.assertEqual(summary['open'], dict(review=0, info=0))
+        self.assertEqual(summary['changed'], dict(new=0, gone=0))
         self.assertEqual(summary['predecessor'], dict(rel='20990101_1', findings_sha256='none', identity_sha256='none'))
         self.assertEqual(release_files(self.row), ('corpus.dump', 'MANIFEST.sha256', 'report.json', 'release.json') + SIDECARS)
 
@@ -154,6 +155,10 @@ class EvidenceGateTest(unittest.TestCase):
         write_evidence(self.path, self.row, self.report, findings=self.findings(detectors=detectors, findings=findings))
         self.assertEqual(self.upload()['open'], dict(review=2, info=1))
         self.sign()
+
+    def test_new_and_gone_findings_against_the_previous_release_are_counted(self):
+        write_evidence(self.path, self.row, self.report, findings=self.findings(new=['a', 'b'], gone=['c']))
+        self.assertEqual(self.upload()['changed'], dict(new=2, gone=1))
 
     def test_invalid_findings_shapes_refuse(self):
         mutations = [lambda f: f.update(schema=1), lambda f: f.pop('unmatched'), lambda f: f.update(extra=True),
