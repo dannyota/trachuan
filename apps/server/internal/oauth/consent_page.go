@@ -50,7 +50,7 @@ type consentPageData struct {
 
 func (p *consentPages) consent(w http.ResponseWriter, r *http.Request, client Client, row store.OauthRequest, handle, token string) {
 	en := r.URL.Query().Get("lang") == "en"
-	data := consentPageData{Lang: "vi", Title: "Cho phép truy cập · Tra Chuẩn", Name: client.Name, Token: token, Action: "/oauth/consent/" + handle, Toggle: "?lang=en", ToggleLabel: "English", RedirectLabel: "Máy chủ nhận quyền", ScopeLabel: "Quyền truy cập", NoteLabel: "Lưu ý", Prompt: "Cho phép ứng dụng truy cập tài khoản Tra Chuẩn của bạn?", Approve: "Cho phép", Deny: "Từ chối"}
+	data := consentPageData{Lang: "vi", Title: "Cho phép truy cập · Tra Chuẩn", Name: client.Name, Token: token, Action: "/oauth/consent/" + handle, Toggle: "?lang=en", ToggleLabel: "English", RedirectLabel: "Máy chủ nhận quyền", ScopeLabel: "Quyền truy cập", NoteLabel: "Lưu ý", Prompt: "Cho phép ứng dụng truy cập tài khoản Tra Chuẩn?", Approve: "Cho phép", Deny: "Từ chối"}
 	if en {
 		data.Lang = "en"
 		data.Title = "Authorize access · Tra Chuẩn"
@@ -88,7 +88,7 @@ func (p *consentPages) consent(w http.ResponseWriter, r *http.Request, client Cl
 }
 func (p *consentPages) failure(w http.ResponseWriter, r *http.Request, status int, code, redirect, state string) {
 	en := r.URL.Query().Get("lang") == "en"
-	data := consentPageData{Lang: "vi", Title: "Không thể cấp quyền truy cập · Tra Chuẩn", Error: code, Message: "Yêu cầu không hợp lệ hoặc đã hết hạn. Hãy thử kết nối lại từ ứng dụng.", Return: "Quay lại ứng dụng", Toggle: "?lang=en", ToggleLabel: "English"}
+	data := consentPageData{Lang: "vi", Title: "Chưa cấp được quyền truy cập · Tra Chuẩn", Error: code, Message: "Yêu cầu không hợp lệ hoặc đã hết hạn. Bạn thử kết nối lại từ ứng dụng.", Return: "Quay lại ứng dụng", Toggle: "?lang=en", ToggleLabel: "English"}
 	if en {
 		data.Lang = "en"
 		data.Title = "Cannot authorize access · Tra Chuẩn"
@@ -98,7 +98,7 @@ func (p *consentPages) failure(w http.ResponseWriter, r *http.Request, status in
 		data.ToggleLabel = "Tiếng Việt"
 	}
 	if code == "temporarily_unavailable" {
-		data.Message = "Dịch vụ tạm thời không khả dụng. Vui lòng thử lại."
+		data.Message = "Dịch vụ tạm thời chưa dùng được. Bạn thử lại sau."
 		if en {
 			data.Message = "The service is temporarily unavailable. Please try again."
 		}
@@ -107,7 +107,7 @@ func (p *consentPages) failure(w http.ResponseWriter, r *http.Request, status in
 	if code == "grant_limit" {
 		callbackCode = "access_denied"
 		data.Error = callbackCode
-		data.Message = "Bạn đã đạt giới hạn 20 ứng dụng. Hãy thu hồi quyền của một ứng dụng trước."
+		data.Message = "Bạn đã đạt giới hạn 20 ứng dụng. Thu hồi quyền của một ứng dụng rồi thử lại."
 		if en {
 			data.Message = "You have reached the limit of 20 applications. Please revoke a grant first."
 		}
