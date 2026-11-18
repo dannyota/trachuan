@@ -83,10 +83,22 @@ their sessions. No owner action or real Google account is needed.
   count per fixed bucket with the p50, p99 and maximum wait. The gate's p99 is
   taken over the bucket counts summed across the run, as the upper edge of the
   bucket that holds it.
-- PostgreSQL connections: client backends in `pg_stat_activity`, once a second.
-- CPU and memory: once a second, host CPU from `/proc/stat` (the MacBook uses
-  `ps`), and the RSS and CPU of the web, server and PostgreSQL processes; a
-  changed process or container start time marks a restart.
+- PostgreSQL connections: on A1 the host runs a loop, once a second, that
+  appends `<RFC3339 UTC> <count>` to `connections.txt`, the count of client
+  backends in `pg_stat_activity` read through `podman exec` into the PostgreSQL
+  container. On A1 the sampler runs without `--pg` and holds no database
+  connection. A malformed line fails the report; a last line cut short by
+  killing the loop is ignored.
+- CPU and memory: once a second, for web, server, queryembed, postgres and
+  caddy, from each service's cgroup v2 directory
+  (`app.slice/trachuan-<name>.service`): CPU is the `cpu.stat` `usage_usec`
+  delta over wall time (100 is one core), and memory is `memory.current` and
+  `memory.peak`. A falling counter or a directory that vanishes and returns is a
+  restart; CPU is then not reported for that second. Host CPU comes from
+  `/proc/stat` (the MacBook uses `ps`). `ps` only marks restarts, by a changed
+  process start time; its CPU is a lifetime average and feeds no gate. The
+  MacBook has no service cgroups, so the web and server memory gates are
+  `unavailable` locally.
 
 ## A1 window
 
@@ -98,18 +110,30 @@ window. The coordinator runs every host step:
    sessions; check `/api/v1/public/status`.
 2. Add `SERVER_PUBLIC_SUMMARIES=true` to `/srv/trachuan/host/server.env` and
    restart `trachuan-server`; status shows `public_summaries` true.
-3. Start the samplers, then run phases A to D. Phase D's activation is the
-   runbook's compare-and-swap rollback to the previous release and, after 60
-   seconds, back. Summary answers in those 60 seconds are not gated. The two
-   activations make the host watch send two "corpus live" Telegram messages;
-   they are expected, not an incident.
+3. Start the sampler and the connections loop, then run the phases. Phase D's
+   activation is the runbook's compare-and-swap rollback to the previous release
+   and, after 60 seconds, back. Summary answers in those 60 seconds are not
+   gated. The two activations make the host watch send two "corpus live"
+   Telegram messages; they are expected, not an incident. Phases may run as
+   separate invocations, each with its own `--out` directory: A, then D twice. A
+   report whose run has no phase A takes A's search and reader latencies from
+   `--baseline`, the A run's directory; with neither, the relative bounds are
+   `unavailable`. A sample counts toward the phase whose time window holds it;
+   one outside every phase is ignored. Host CPU is gated per phase in A to C on
+   the highest 60 s rolling mean of the 1 s samples (the phase mean when it has
+   fewer than 60), and recorded as `info` in D; the phase mean and the 1 s peak
+   are `info` rows. A service's memory peak for the run is the largest
+   `memory.current` in its phases, raised to the last sample's `memory.peak`
+   only when that is higher than the first sample's. Requests starting in the 60
+   s after an activation count toward the absolute latency bounds but not the
+   relative one.
 4. Remove the flag line, restart the server, and check status shows
    `public_summaries` false. Block the accounts and delete the session files.
    Check that the uptime alarms are OK.
 
 Abort the window by going to step 4 when any of these occurs: a signed-in
 request fails other than with its account's own limit; search p95 over one
-minute exceeds 2 s; host CPU stays above 90% for 60 seconds; web or server RSS
-passes 90% of its container limit; a container restarts; PostgreSQL connections
-pass 45; or a non-test request fails in the server log. During phase D, complete
-the activation back to `vn/20261117_7` first.
+minute exceeds 2 s; a service's `memory.current` passes 90% of its cgroup cap; a
+container restarts; PostgreSQL connections pass 45; or a non-test request fails
+in the server log. Host CPU is gated in the report, not an abort trigger. During
+phase D, complete the activation back to `vn/20261117_7` first.
