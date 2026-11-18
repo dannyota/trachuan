@@ -16,10 +16,11 @@ entries, except a `rebind`, and carries the output of
 With at least one entry, the build input hash gains the rules version
 `knowledge/1` and the SHA-256 of the file's bytes, read once per build, and the
 artifact gains those bytes as `knowledge.yaml` and the outcomes as
-`knowledge-report.json` (one record per effect or relation: applied, redundant,
-or stale with its reason). With no entries the input hash and the artifact are
-unchanged. `evidence` reads `knowledge.yaml` from the build artifact and treats
-its absence as no entries. No stage recipe changes.
+`knowledge-report.json` (an array of `{id, kind, target_key, outcome, reason}`,
+one per effect or relation; `outcome` is `applied`, `redundant` or `stale`, and
+only `stale` has a `reason`). With no entries the input hash and the artifact
+are unchanged. `evidence` reads `knowledge.yaml` from the build artifact and
+treats its absence as no entries. No stage recipe changes.
 
 Hashes in entries are `sha256:` and 64 lower-case hexadecimal characters
 ([conventions](release-evidence.md#conventions)). Lengths count Unicode code
@@ -72,9 +73,9 @@ Each kind has exactly these fields:
   `first_rel`) has one decision. A decision that matches no finding may be
   deleted: a returning finding is a new occurrence.
 - For `provision_effect`, `relation_kind` is `repeals`, `amends_supplements`,
-  `replaces` or `suspends`, and acting and target provisions differ. For
-  `relation` it is any kind of the relation table except `unknown` and
-  `consolidates`, and the two keys differ.
+  `replaces` or `suspends`, and the two documents differ, so an effect never
+  explains its own document. For `relation` it is any kind of the relation table
+  except `unknown` and `consolidates`, and the two keys differ.
 - `quote` has 10 to 200 characters. It is own text only, so where a list's verb
   sits in the parent, the review reads the parent and the validator does not.
   There is no URL field.
@@ -118,12 +119,14 @@ provision and different kinds. Identity is (acting provision, target provision,
 kind) for an effect and (acting key, target key, kind) for a relation.
 
 A **matching row** has a method other than `reviewed`. For an effect, its
-`source_provision_id` is the acting provision and its `target_node_id` is the
-target anchor. For a relation, it joins the two documents with both provision
-columns null. Run checks take each effect or relation in order, and the first
-case that applies decides, acting document first, then target. Cases marked
-"named" apply only to a document whose provision the entry names, so the target
-of a `relation` needs only a row, no baseline and its `number_norm`.
+`source_provision_id` is the acting provision and its `target_document_id` is
+the target document and its `target_node_id` is the target anchor. For a
+relation, it joins the two documents with both provision columns null. Run
+checks take each effect or relation in order, and the first case that applies
+decides; inside a case the acting document comes before the target, and
+dependency fields go in the listed order. Cases marked "named" apply only to a
+document whose provision the entry names, so the target of a `relation` needs
+only a row, no baseline and its `number_norm`.
 
 | Case                                                                                                        | Result                     |
 | ----------------------------------------------------------------------------------------------------------- | -------------------------- |

@@ -30,6 +30,11 @@ type recoveryFixture struct {
 
 func recoverySetup(t *testing.T, prepare ...func(*loadFixture)) recoveryFixture {
 	t.Helper()
+	return recoverySetupWith(t, func(*Config) {}, prepare...)
+}
+
+func recoverySetupWith(t *testing.T, configure func(*Config), prepare ...func(*loadFixture)) recoveryFixture {
+	t.Helper()
 	ctx := context.Background()
 	f := fixture(t)
 	f.indexed(t, "vn:vbpl:1", false)
@@ -51,6 +56,7 @@ func recoverySetup(t *testing.T, prepare ...func(*loadFixture)) recoveryFixture 
 	if err != nil {
 		t.Fatal(err)
 	}
+	configure(&cfg)
 	st := New(cfg)
 	env := stage.Env{DB: pool, Artifacts: f.artifacts}
 	items, err := st.Plan(ctx, env, f.run)

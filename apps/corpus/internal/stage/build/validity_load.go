@@ -64,15 +64,10 @@ func (l *loader) loadValidity(ctx context.Context, corrections []source.Correcti
 	if err != nil {
 		return validityResult{}, err
 	}
-	values := make([]validityDocument, 0, len(docs))
-	for _, d := range docs {
-		values = append(values, d)
-	}
-	result, err := runValidity(values, relations, entries, asOf)
+	result, err := deriveValidity(docs, relations, entries, asOf)
 	if err != nil {
 		return validityResult{}, fmt.Errorf("derive validity: %w", err)
 	}
-	result.partialDocuments = partialDocuments(docs, relations)
 	for _, d := range result.partialDocuments {
 		if len(d.Acting) == 0 {
 			l.addGap("build", d.Key, "partial_status_unexplained", d.StatusCode)
@@ -84,6 +79,19 @@ func (l *loader) loadValidity(ctx context.Context, corrections []source.Correcti
 	if err = l.writeValidity(ctx, result); err != nil {
 		return validityResult{}, err
 	}
+	return result, nil
+}
+
+func deriveValidity(docs map[string]validityDocument, relations []validityRelation, corrections map[string]source.Correction, asOf string) (validityResult, error) {
+	values := make([]validityDocument, 0, len(docs))
+	for _, d := range docs {
+		values = append(values, d)
+	}
+	result, err := runValidity(values, ruleRelations(relations), corrections, asOf)
+	if err != nil {
+		return validityResult{}, err
+	}
+	result.partialDocuments = partialDocuments(docs, relations)
 	return result, nil
 }
 
@@ -128,14 +136,14 @@ func (l *loader) readValidityProvisions(ctx context.Context, docs map[string]val
 	return nil
 }
 func (l *loader) readValidityRelations(ctx context.Context) ([]validityRelation, error) {
-	rows, err := l.tx.Query(ctx, `SELECT source_key,target_key,kind,id FROM relation WHERE source_document_id IS NOT NULL AND target_document_id IS NOT NULL ORDER BY id`)
+	rows, err := l.tx.Query(ctx, `SELECT source_key,target_key,kind,method,id FROM relation WHERE source_document_id IS NOT NULL AND target_document_id IS NOT NULL ORDER BY id`)
 	if err != nil {
 		return nil, fmt.Errorf("read validity relations: %w", err)
 	}
 	var rels []validityRelation
 	for rows.Next() {
 		var r validityRelation
-		if err = rows.Scan(&r.source, &r.target, &r.kind, &r.id); err != nil {
+		if err = rows.Scan(&r.source, &r.target, &r.kind, &r.method, &r.id); err != nil {
 			rows.Close()
 			return nil, fmt.Errorf("scan validity relation: %w", err)
 		}

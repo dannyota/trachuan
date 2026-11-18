@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"danny.vn/trachuan/apps/corpus/internal/artifact"
+	"danny.vn/trachuan/apps/corpus/internal/knowledge"
 	"danny.vn/trachuan/apps/corpus/internal/source"
 	"danny.vn/trachuan/apps/corpus/internal/stage/membership"
 	"danny.vn/trachuan/internal/embedding"
@@ -24,6 +25,7 @@ type Counts struct {
 	Taxonomy                                                                                                  TaxonomyStats
 	Summary                                                                                                   SummaryStats
 	validity                                                                                                  validityResult
+	knowledge                                                                                                 knowledge.Report
 }
 
 type loader struct {
@@ -48,6 +50,7 @@ type LoadOptions struct {
 	Pins              []source.Pin
 	CentralIssuers    map[string]string
 	Taxonomy          TaxonomyInput
+	Knowledge         KnowledgeInput
 	Durations         map[string]int64
 	verified          map[string]verifiedFetch
 }
@@ -136,6 +139,13 @@ func Load(ctx context.Context, conn *pgx.Conn, inv Inventory, artifacts artifact
 	timings.observe("load_relations", phaseStart)
 	if err = l.deriveConsolidated(ctx); err != nil {
 		return Counts{}, err
+	}
+	if !opts.Knowledge.Empty() {
+		phaseStart = time.Now()
+		if err = l.loadKnowledge(ctx, opts.Knowledge); err != nil {
+			return Counts{}, err
+		}
+		timings.observe("load_knowledge", phaseStart)
 	}
 	phaseStart = time.Now()
 	l.counts.validity, err = l.loadValidity(ctx, corrections, asOf)

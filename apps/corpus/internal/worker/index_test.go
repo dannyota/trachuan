@@ -1,12 +1,17 @@
 package worker
 
 import (
+	"context"
+	"os"
+	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
 	"danny.vn/trachuan/apps/corpus/internal/config"
 	"danny.vn/trachuan/apps/corpus/internal/evaluation"
+	"danny.vn/trachuan/apps/corpus/internal/workflow"
 	"danny.vn/trachuan/internal/embedding"
 )
 
@@ -46,5 +51,66 @@ func TestIndexDeps_ConfiguresBuildAndEval(t *testing.T) {
 		if time.Duration(timeout) != 2*time.Second {
 			t.Errorf("query timeout = %v, want 2s", time.Duration(timeout))
 		}
+	}
+}
+
+func TestIndexDeps_RequiresValidKnowledgeFile(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.Mkdir(filepath.Join(dir, "sources"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"vn-corrections.yaml", "vn-heading-exclusions.yaml"} {
+		if err := os.WriteFile(filepath.Join(dir, "sources", name), nil, 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	t.Chdir(dir)
+	cfg := config.Config{BuilderDatabaseURL: "postgres://builder", DatabaseDiskPath: "disk"}
+	if _, err := IndexDeps(context.Background(), cfg); err == nil || !strings.Contains(err.Error(), "load knowledge") {
+		t.Fatalf("missing file: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "sources", "vn-knowledge.yaml"), []byte("- { id: x }\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := IndexDeps(context.Background(), cfg); err == nil || !strings.Contains(err.Error(), "load knowledge") {
+		t.Fatalf("invalid file: %v", err)
+	}
+}
+
+const oneKnowledgeEntry = `- id: "decision-mau"
+  kind: "review_decision"
+  target: { finding: "sha256:1111111111111111111111111111111111111111111111111111111111111111" }
+  claim: { reason_code: "expected", reason: "Why it needs no change." }
+  depends: { fingerprint: "sha256:2222222222222222222222222222222222222222222222222222222222222222", semantics: 1, first_rel: "20991118_1" }
+  reviewed: { date: "2099-11-18", by: "primary", method: "human" }
+`
+
+func TestLoadSourceInputs_WiresKnowledgeWithoutDatabase(t *testing.T) {
+	for name, tc := range map[string]struct {
+		content string
+		empty   bool
+	}{"one entry": {oneKnowledgeEntry, false}, "no entries": {"[]\n", true}} {
+		t.Run(name, func(t *testing.T) {
+			dir := t.TempDir()
+			if err := os.Mkdir(filepath.Join(dir, "sources"), 0o700); err != nil {
+				t.Fatal(err)
+			}
+			for _, file := range []string{"vn-corrections.yaml", "vn-heading-exclusions.yaml", "vn-heading-reviews.yaml", "vn-ocr-waivers.yaml"} {
+				if err := os.WriteFile(filepath.Join(dir, "sources", file), nil, 0o600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if err := os.WriteFile(filepath.Join(dir, "sources", "vn-knowledge.yaml"), []byte(tc.content), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			t.Chdir(dir)
+			var deps workflow.Deps
+			if err := loadSourceInputs(&deps, config.Config{}); err != nil {
+				t.Fatal(err)
+			}
+			if deps.Build.Knowledge.Empty() != tc.empty || deps.Eval.Build.Knowledge.Empty() != tc.empty {
+				t.Fatalf("build empty=%v eval empty=%v, want %v", deps.Build.Knowledge.Empty(), deps.Eval.Build.Knowledge.Empty(), tc.empty)
+			}
+		})
 	}
 }
