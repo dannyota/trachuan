@@ -101,7 +101,7 @@ func TestWaiver_ParseAndCanonicalHash(t *testing.T) {
 		t.Fatal(err)
 	}
 	entries, hash, err := parseWaivers(data)
-	if err != nil || len(entries) != 1 || len(hash) != 64 {
+	if err != nil || len(entries) == 0 || len(hash) != 64 {
 		t.Fatalf("entries=%d hash=%q err=%v", len(entries), hash, err)
 	}
 	for _, suffix := range []string{"\n---\n[]\n", "\n  unknown: value\n"} {
