@@ -2,32 +2,29 @@ import unittest
 
 from updater import deploy_corpus_sql as law
 from updater.deploy_corpus_activate import Activation
-from updater.journal_row_test import BREAKOUT, KINDS, KindFixture, prune_row
+from updater.journal_row_test import BREAKOUT, KINDS, KindFixture, prune_row, stored
 
 
-STORED = dict(id=9, state='open', at='2026-11-14T00:00:00+00:00', message='stored', corpus_kind='law')
+STORED = dict(id=9, at='2026-11-14T00:00:00+00:00')
 CHANGES = dict(law=dict(operation_id='f' * 32, country='us', rel='20990103_1', mode='retained',
                         database_name='corpus_vn_20990103_1', manifest_hash='b' * 64, dump_sha256='c' * 64,
-                        expected_active_db='corpus_vn_20990100_1', step='validated', manifest={'rel': 'changed'}),
+                        expected_active_db='corpus_vn_20990100_1', step='validated', manifest={'rel': 'changed'},
+                        state='complete', message='forged', corpus_kind='frameworks'),
                frameworks=dict(operation_id='f' * 32, rel='20990103', mode='retained',
                                database_name='frameworks_20990103', manifest_hash='b' * 64, dump_sha256='c' * 64,
-                               expected_active_db='frameworks_20990100', step='validated', manifest={'rel': 'changed'}))
+                               expected_active_db='frameworks_20990100', step='validated', manifest={'rel': 'changed'},
+                               state='complete', message='forged', corpus_kind='law'))
 
 
 class ReturnedRowTest(KindFixture, unittest.TestCase):
-    def changes(self, name):
-        return dict(CHANGES[name]), dict(country=BREAKOUT)
-
     def test_append_refuses_a_change_in_any_single_field(self):
         for name, kind, _, row in KINDS:
             db = self.database(kind)
-            inserted = dict(row(), step='restoring')
-            valid, hostile = self.changes(name)
-            for field, value in {**valid, **{'country!': hostile['country']}}.items():
-                key = field.rstrip('!')
-                with self.subTest(kind=name, field=field):
+            inserted = stored(kind, row(), 'restoring')
+            for field, value in [*CHANGES[name].items(), ('country', BREAKOUT)]:
+                with self.subTest(kind=name, field=field, value=value):
                     self.calls.clear()
-                    self.journal_reply = dict(inserted, **{key: value})
+                    self.journal_reply = dict(inserted, **{field: value})
                     with self.assertRaises(law.JournalRefused) as raised:
                         db.append(row(), 'restoring')
                     self.assertEqual(str(raised.exception), 'invalid release journal row')
@@ -36,9 +33,8 @@ class ReturnedRowTest(KindFixture, unittest.TestCase):
     def test_activate_refuses_a_change_in_any_single_field(self):
         for name, kind, _, row in KINDS:
             db = self.database(kind)
-            inserted = dict(row(), step='activated')
-            changes = dict(self.changes(name)[0], step='checked')
-            for field, value in changes.items():
+            inserted = stored(kind, row(), 'activated')
+            for field, value in dict(CHANGES[name], step='checked', state='open').items():
                 with self.subTest(kind=name, field=field):
                     self.calls.clear()
                     self.journal_reply = dict(inserted, **{field: value})
@@ -46,10 +42,33 @@ class ReturnedRowTest(KindFixture, unittest.TestCase):
                         db.activate(row())
                     self.assertEqual(len(self.calls), 1)
 
+    def test_written_fields_must_be_present(self):
+        for name, kind, _, row in KINDS:
+            for field in ('state', 'message', 'corpus_kind'):
+                with self.subTest(kind=name, field=field):
+                    reply = stored(kind, row(), 'restoring')
+                    del reply[field]
+                    self.journal_reply = reply
+                    with self.assertRaises(law.JournalRefused):
+                        self.database(kind).append(row(), 'restoring')
+
+    def test_json_that_is_not_a_row_is_refused(self):
+        for name, kind, _, row in KINDS:
+            db = self.database(kind)
+            for reply in (None, [], [stored(kind, row(), 'restoring')], 'row', 7, True):
+                with self.subTest(kind=name, reply=reply):
+                    self.journal_reply = reply
+                    with self.assertRaises(law.JournalRefused) as raised:
+                        db.append(row(), 'restoring')
+                    self.assertEqual(str(raised.exception), 'invalid release journal row')
+                    self.journal_reply = reply
+                    with self.assertRaises(law.JournalRefused):
+                        db.activate(row())
+
     def test_null_returned_for_a_supplied_value_is_refused(self):
         for name, kind, _, row in KINDS:
             with self.subTest(kind=name):
-                self.journal_reply = dict(row(), step='restoring', expected_active_db=None)
+                self.journal_reply = dict(stored(kind, row(), 'restoring'), expected_active_db=None)
                 with self.assertRaises(law.JournalRefused):
                     self.database(kind).append(row(), 'restoring')
 
@@ -64,17 +83,17 @@ class ReturnedRowTest(KindFixture, unittest.TestCase):
         for name, kind, _, row in KINDS:
             db = self.database(kind)
             with self.subTest(kind=name):
-                self.journal_reply = dict(row(), step='restoring', **STORED)
+                self.journal_reply = dict(stored(kind, row(), 'restoring'), **STORED)
                 result = db.append(row(), 'restoring')
                 self.assertEqual(result, dict(row(), step='restoring'))
                 self.assertNotIn('id', result)
-                self.journal_reply = dict(row(), step='activated', **STORED)
+                self.journal_reply = dict(stored(kind, row(), 'activated'), **STORED)
                 self.assertEqual(db.activate(row()), dict(row(), step='activated'))
 
     def test_prune_rows_round_trip(self):
         for name, kind, _, row in KINDS:
             with self.subTest(kind=name):
-                self.journal_reply = dict(prune_row(row()), step='pruned', **STORED)
+                self.journal_reply = dict(stored(kind, prune_row(row()), 'pruned'), **STORED)
                 self.assertEqual(self.database(kind).append(prune_row(row()), 'pruned'),
                                  dict(prune_row(row()), step='pruned'))
 
@@ -92,8 +111,7 @@ class TamperedResumeTest(KindFixture, unittest.TestCase):
                 with self.subTest(kind=name, field=field):
                     self.calls.clear()
                     self.scripts.clear()
-                    self.journal_reply = dict(start, step='restoring', **{field: value}) if field != 'step' \
-                        else dict(start, step=value)
+                    self.journal_reply = dict(stored(kind, start, 'restoring'), **{field: value})
                     with self.assertRaises(law.JournalRefused):
                         engine.resume(start, '/d', 'image')
                     self.assertEqual(len(self.inserted()), 1)
@@ -107,7 +125,7 @@ class TamperedResumeTest(KindFixture, unittest.TestCase):
             with self.subTest(kind=name):
                 self.calls.clear()
                 self.scripts.clear()
-                self.journal_reply = dict(row(), step='aborted', rel=CHANGES[name]['rel'])
+                self.journal_reply = dict(stored(kind, row(), 'aborted'), rel=CHANGES[name]['rel'])
                 with self.assertRaises(law.JournalRefused):
                     engine.abort(row())
                 self.assertFalse(any('dropdb' in args or 'rm' in args for args in self.calls))
@@ -118,7 +136,7 @@ class TamperedResumeTest(KindFixture, unittest.TestCase):
             db = self.database(kind)
             with self.subTest(kind=name):
                 self.calls.clear()
-                self.journal_reply = dict(prune_row(row()), rel=CHANGES[name]['rel'])
+                self.journal_reply = dict(stored(kind, prune_row(row()), 'pruning'), rel=CHANGES[name]['rel'])
                 with self.assertRaises(law.JournalRefused):
                     db.append(prune_row(row()), 'pruning')
                 self.assertEqual(len(self.calls), 1)

@@ -21,6 +21,11 @@ FIELDS = ('country', 'database_name', 'expected_active_db')
 REFUSED = 'invalid release journal row'
 
 
+def stored(kind, row, step, **changes):
+    state = 'complete' if step in ('activated', 'reverted', 'aborted', 'pruned') else 'open'
+    return dict(row, step=step, state=state, message=kind.label + ' ' + step, corpus_kind=kind.name, **changes)
+
+
 def prune_row(row):
     return dict(row, mode='prune', manifest_hash=None, dump_sha256=None, expected_active_db=None, manifest=None,
                 step='pruning')

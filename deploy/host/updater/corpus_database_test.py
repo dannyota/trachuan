@@ -40,7 +40,8 @@ class CorpusDatabaseTest(unittest.TestCase):
         self.assertIn('SELECT active_db', kwargs['input'].decode())
 
     def test_cas_is_one_transaction_with_journal_and_nullable_old_digest(self):
-        self.response = json.dumps(dict(self.row, step='activated')).encode()
+        self.response = json.dumps(dict(self.row, step='activated', state='complete', message='corpus activated',
+                                        corpus_kind='law')).encode()
         self.db.activate(self.row)
         sql = self.calls[-1][1]['input'].decode()
         for word in ('BEGIN;', 'FOR UPDATE', 'IS DISTINCT FROM', 'retired_release',
@@ -50,7 +51,8 @@ class CorpusDatabaseTest(unittest.TestCase):
 
     def test_cas_checks_pointer_and_update_count_before_retirement(self):
         for mode in ('new', 'retained'):
-            self.response = json.dumps(dict(self.row, mode=mode, step='activated')).encode()
+            self.response = json.dumps(dict(self.row, mode=mode, step='activated', state='complete',
+                                            message='corpus activated', corpus_kind='law')).encode()
             self.db.activate(dict(self.row, mode=mode))
             sql = self.calls[-1][1]['input'].decode()
             with self.subTest(mode=mode):

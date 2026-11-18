@@ -43,6 +43,24 @@ GROUP BY corpus_kind
 ORDER BY corpus_kind;
 `
 
+const journalPointerQuery = `WITH names AS (
+  SELECT 'law'::text AS corpus_kind, 'pointer'::text AS source, active_db AS name FROM public.corpus_release
+  UNION ALL SELECT 'frameworks', 'pointer', active_db FROM public.frameworks_release
+  UNION ALL SELECT corpus_kind, 'retired', db_name FROM public.retired_release
+), kinds (corpus_kind, pattern) AS (
+  VALUES ('law'::text, '^corpus_[a-z]{2}_[0-9]{8}(?:_[1-9][0-9]*)?$'::text), ('frameworks', '^frameworks_[0-9]{8}(?:_[0-9]{1,2})?$')
+)
+SELECT k.corpus_kind,
+  pg_catalog.count(*) FILTER (WHERE n.source = 'pointer') AS pointer_rows,
+  pg_catalog.count(*) FILTER (WHERE n.source = 'pointer' AND (n.name ~ k.pattern) IS NOT TRUE) AS bad_active_db,
+  pg_catalog.count(*) FILTER (WHERE n.source = 'retired') AS retired_rows,
+  pg_catalog.count(*) FILTER (WHERE n.source = 'retired' AND (n.name ~ k.pattern) IS NOT TRUE) AS bad_retired_db_name
+FROM kinds k
+LEFT JOIN names n ON n.corpus_kind = k.corpus_kind
+GROUP BY k.corpus_kind
+ORDER BY k.corpus_kind;
+`
+
 const journalHarness = `import hashlib
 import json
 from pathlib import Path
@@ -143,6 +161,19 @@ def tampered(kind, db, log, digest, manifest, name, operation):
     return dict(refused=refused, inserts=len(inserts), after_insert=len(log) - 1 - inserts[-1], operation=operation)
 
 
+def literals(kind, db, digest, manifest, expected, operation):
+    body = dict(manifest, probe=target['probe'])
+    row = dict(operation_id=operation, country=kind.country({'country': 'vn'}), rel=manifest['rel'], mode='new',
+               database_name=manifest['database'], manifest_hash=digest, dump_sha256=manifest['dump']['sha256'],
+               expected_active_db=expected, manifest=body)
+    row = db.append(db.append(row, 'started'), 'checked')
+    db.activate(row)
+    found = {item['operation_id']: item for item in db.operations()}[operation]
+    if found['manifest'] != body or found['step'] != 'activated':
+        raise RuntimeError('journal manifest was misread')
+    return dict(operation=operation)
+
+
 result = {}
 with tempfile.TemporaryDirectory() as work:
     for name, kind, fixture, expected, pruned, successor, operation in KINDS:
@@ -151,6 +182,8 @@ with tempfile.TemporaryDirectory() as work:
         db = database(kind, work, log)
         if phase == 'roundtrip':
             result[name] = roundtrip(kind, db, digest, manifest, expected, pruned)
+        elif phase == 'literals':
+            result[name] = literals(kind, db, digest, manifest, expected, operation)
         else:
             result[name] = tampered(kind, db, log, digest, manifest, successor, operation)
 print(json.dumps(result))
@@ -196,14 +229,51 @@ func journalPsql(t *testing.T) string {
 	return path
 }
 
-func runJournalHarness(t *testing.T, config *pgx.ConnConfig, psql, phase string) map[string]journalResult {
+type journalFixture struct {
+	auth    *pgx.Conn
+	authURL string
+	config  *pgx.ConnConfig
+	psql    string
+}
+
+func newJournalFixture(t *testing.T) journalFixture {
 	t.Helper()
+	ctx := t.Context()
+	psql := journalPsql(t)
+	builder := testpg.NewBuilder(t)
+	authURL := testpg.NewDatabase(t)
+	if err := migrate.Up(ctx, authURL); err != nil {
+		t.Fatal(err)
+	}
+	auth, err := pgx.Connect(ctx, authURL)
+	if err != nil {
+		t.Fatal("connect fixture auth")
+	}
+	t.Cleanup(func() { _ = auth.Close(context.Background()) })
+	role := pgx.Identifier{builder.Role}.Sanitize()
+	if _, err = auth.Exec(ctx, "GRANT USAGE ON SCHEMA public TO "+role+"; GRANT SELECT,INSERT,UPDATE,DELETE ON corpus_release,release_journal,retired_release TO "+role+"; GRANT USAGE,SELECT ON SEQUENCE release_journal_id_seq TO "+role+"; GRANT SELECT,INSERT,UPDATE ON frameworks_release TO "+role); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = auth.Exec(ctx, `INSERT INTO corpus_release VALUES ('vn','corpus_vn_20990101_1',now(),'manual')`); err != nil {
+		t.Fatal(err)
+	}
+	config, err := pgx.ParseConfig(builder.URL)
+	if err != nil {
+		t.Fatal("parse synthetic activator configuration")
+	}
+	config.Database = auth.Config().Database
+	return journalFixture{auth: auth, authURL: authURL, config: config, psql: psql}
+}
+
+func runJournalHarness(t *testing.T, fixture journalFixture, phase, probe string) map[string]journalResult {
+	t.Helper()
+	config := fixture.config
 	root, err := filepath.Abs("../../../..")
 	if err != nil {
 		t.Fatal(err)
 	}
-	input, err := json.Marshal(map[string]any{"psql": psql, "host": config.Host, "port": config.Port,
-		"user": config.User, "database": config.Database})
+	input, err := json.Marshal(map[string]any{"psql": fixture.psql, "host": config.Host, "port": config.Port,
+		"user": config.User, "database": config.Database, "probe": probe})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -223,9 +293,9 @@ func runJournalHarness(t *testing.T, config *pgx.ConnConfig, psql, phase string)
 	return result
 }
 
-func journalCheckCounts(t *testing.T, conn *pgx.Conn) map[string]map[string]int64 {
+func journalCounts(t *testing.T, conn *pgx.Conn, query string) map[string]map[string]int64 {
 	t.Helper()
-	rows, err := conn.Query(t.Context(), journalCheckQuery)
+	rows, err := conn.Query(t.Context(), query)
 	if err != nil {
 		t.Fatalf("run journal check query: %v", err)
 	}
@@ -272,37 +342,29 @@ func assertJournalCounts(t *testing.T, counts map[string]map[string]int64, want 
 	}
 }
 
+func assertPointerCounts(t *testing.T, conn *pgx.Conn, want map[string]map[string]int64) {
+	t.Helper()
+	counts := journalCounts(t, conn, journalPointerQuery)
+	for kind, columns := range want {
+		for column, count := range columns {
+			if counts[kind][column] != count {
+				t.Errorf("%s %s = %d; want %d", kind, column, counts[kind][column], count)
+			}
+		}
+	}
+}
+
 func TestActivationJournal_RealPsqlRoundTripAndTamperedInsert(t *testing.T) {
 	ctx := t.Context()
-	psql := journalPsql(t)
-	builder := testpg.NewBuilder(t)
-	authURL := testpg.NewDatabase(t)
-	if err := migrate.Up(ctx, authURL); err != nil {
-		t.Fatal(err)
-	}
-	auth, err := pgx.Connect(ctx, authURL)
-	if err != nil {
-		t.Fatal("connect fixture auth")
-	}
-	t.Cleanup(func() { _ = auth.Close(context.Background()) })
-	role := pgx.Identifier{builder.Role}.Sanitize()
-	if _, err = auth.Exec(ctx, "GRANT USAGE ON SCHEMA public TO "+role+"; GRANT SELECT,INSERT,UPDATE,DELETE ON corpus_release,release_journal,retired_release TO "+role+"; GRANT USAGE,SELECT ON SEQUENCE release_journal_id_seq TO "+role+"; GRANT SELECT,INSERT,UPDATE ON frameworks_release TO "+role); err != nil {
-		t.Fatal(err)
-	}
-	if _, err = auth.Exec(ctx, `INSERT INTO corpus_release VALUES ('vn','corpus_vn_20990101_1',now(),'manual')`); err != nil {
-		t.Fatal(err)
-	}
-	config, err := pgx.ParseConfig(builder.URL)
-	if err != nil {
-		t.Fatal("parse synthetic activator configuration")
-	}
-	config.Database = auth.Config().Database
+	fixture := newJournalFixture(t)
+	auth := fixture.auth
+	var err error
 
 	steps := []string{"aborted", "activated", "checked", "created", "creating", "pruned", "pruning", "restored",
 		"restoring", "reverted", "started", "validated"}
 	active := map[string]string{"law": "corpus_vn_20990102_1", "frameworks": "frameworks_20990102"}
 	modes := map[string]string{"aborted": "retained", "activated": "new", "pruned": "prune", "reverted": "new"}
-	result := runJournalHarness(t, config, psql, "roundtrip")
+	result := runJournalHarness(t, fixture, "roundtrip", "")
 	for kind, want := range active {
 		got := result[kind]
 		if !slices.Equal(got.Steps, steps) {
@@ -321,13 +383,17 @@ func TestActivationJournal_RealPsqlRoundTripAndTamperedInsert(t *testing.T) {
 			}
 		}
 	}
-	assertJournalCounts(t, journalCheckCounts(t, auth), nil)
+	assertJournalCounts(t, journalCounts(t, auth, journalCheckQuery), nil)
+	assertPointerCounts(t, auth, map[string]map[string]int64{
+		"law":        {"pointer_rows": 1, "bad_active_db": 0, "retired_rows": 1, "bad_retired_db_name": 0},
+		"frameworks": {"pointer_rows": 1, "bad_active_db": 0, "retired_rows": 0, "bad_retired_db_name": 0},
+	})
 
 	if _, err = auth.Exec(ctx, `CREATE FUNCTION change_journal_country() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN NEW.country := 'zz'; RETURN NEW; END; $$;
 		CREATE TRIGGER change_journal_country BEFORE INSERT ON release_journal FOR EACH ROW EXECUTE FUNCTION change_journal_country();`); err != nil {
 		t.Fatal(err)
 	}
-	tampered := runJournalHarness(t, config, psql, "tampered")
+	tampered := runJournalHarness(t, fixture, "tampered", "")
 	for _, kind := range []string{"law", "frameworks"} {
 		got := tampered[kind]
 		if !got.Refused || got.Inserts != 1 || got.AfterInsert != 0 {
@@ -343,12 +409,74 @@ func TestActivationJournal_RealPsqlRoundTripAndTamperedInsert(t *testing.T) {
 		}
 	}
 	want := map[string]map[string]int64{"frameworks": {"bad_country": 1}}
-	assertJournalCounts(t, journalCheckCounts(t, auth), want)
+	assertJournalCounts(t, journalCounts(t, auth, journalCheckQuery), want)
 
 	if _, err = auth.Exec(ctx, `INSERT INTO release_journal (operation_id,country,rel,mode,database_name,step,state,message)
 		VALUES (repeat('e',32),'vn','not-a-release','prune','corpus_vn_20990104','started','open','fixture')`); err != nil {
 		t.Fatal(err)
 	}
 	want["law"] = map[string]int64{"bad_rel": 1}
-	assertJournalCounts(t, journalCheckCounts(t, auth), want)
+	assertJournalCounts(t, journalCounts(t, auth, journalCheckQuery), want)
+
+	if _, err = auth.Exec(ctx, `ALTER TABLE frameworks_release DROP CONSTRAINT frameworks_release_active_db;
+		ALTER TABLE retired_release DROP CONSTRAINT retired_release_kind;
+		INSERT INTO corpus_release VALUES ('zz','host=127.0.0.1 dbname=x',now(),'fixture');
+		UPDATE frameworks_release SET active_db='postgresql://127.0.0.1/x';
+		INSERT INTO retired_release (country,db_name,retired_at,retain_until,corpus_kind) VALUES
+			('vn','frameworks_20990101',now(),now(),'law'),('vn','corpus_vn_20990101',now(),now(),'frameworks');`); err != nil {
+		t.Fatal(err)
+	}
+	assertPointerCounts(t, auth, map[string]map[string]int64{
+		"law":        {"pointer_rows": 2, "bad_active_db": 1, "retired_rows": 2, "bad_retired_db_name": 1},
+		"frameworks": {"pointer_rows": 1, "bad_active_db": 1, "retired_rows": 1, "bad_retired_db_name": 1},
+	})
+}
+
+func TestActivationJournal_LiteralsSurviveStandardConformingStringsOff(t *testing.T) {
+	ctx := t.Context()
+	fixture := newJournalFixture(t)
+	database := pgx.Identifier{fixture.config.Database}.Sanitize()
+	if _, err := fixture.auth.Exec(ctx, "ALTER DATABASE "+database+" SET standard_conforming_strings = off"); err != nil {
+		t.Fatal(err)
+	}
+	session, err := pgx.Connect(ctx, fixture.authURL)
+	if err != nil {
+		t.Fatal("connect after changing the database setting")
+	}
+	defer func() { _ = session.Close(context.Background()) }()
+	var setting string
+	if err = session.QueryRow(ctx, `SHOW standard_conforming_strings`).Scan(&setting); err != nil {
+		t.Fatal(err)
+	}
+	if setting != "off" {
+		t.Fatalf("standard_conforming_strings = %q", setting)
+	}
+	marker := filepath.Join(t.TempDir(), "executed")
+	probe := `back\slash ' quote \' \! touch ` + marker + "\n"
+	result := runJournalHarness(t, fixture, "literals", probe)
+	for _, kind := range []string{"law", "frameworks"} {
+		var count int
+		var low, high string
+		if err = fixture.auth.QueryRow(ctx, `SELECT count(*), min(manifest->>'probe'), max(manifest->>'probe') FROM release_journal WHERE operation_id=$1`, result[kind].Operation).Scan(&count, &low, &high); err != nil {
+			t.Fatal(err)
+		}
+		if count != 3 || low != probe || high != probe {
+			t.Errorf("%s stored %d rows, probe %q to %q", kind, count, low, high)
+		}
+	}
+	if _, err = os.Stat(marker); !os.IsNotExist(err) {
+		t.Fatalf("psql ran a command from a manifest literal: %v", err)
+	}
+}
+
+func TestActivationJournal_RunbookKeepsTheCheckQueries(t *testing.T) {
+	runbook, err := os.ReadFile(filepath.Join("..", "..", "..", "..", "docs", "runbooks", "release-journal-check.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, query := range []string{journalCheckQuery, journalPointerQuery} {
+		if !strings.Contains(string(runbook), strings.TrimSpace(query)) {
+			t.Fatalf("runbook does not hold the query starting %q", strings.TrimSpace(query)[:30])
+		}
+	}
 }

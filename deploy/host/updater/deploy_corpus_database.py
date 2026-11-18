@@ -5,6 +5,7 @@ from . import deploy_corpus_sql as sql
 from .deploy_corpus_kind import LAW
 from .deploy_corpus_lock import AdvisoryLock
 from .deploy_corpus_verify import toc
+from .deploy_frameworks_sql import plain
 from .deploy_host import SCRAM_ONLY
 
 
@@ -63,7 +64,8 @@ class Database:
 
     def recorded(self, raw, row, step):
         inserted = dict(row, step=step)
-        sql.same_row(self.sql.journal_row(sql.journal_json(raw)), inserted)
+        expected = dict(inserted, corpus_kind=self.kind.name, **sql.written(step, self.kind.label))
+        sql.same_row(self.sql.journal_row(sql.journal_json(raw)), expected)
         return inserted
 
     def append(self, row, step):
@@ -129,10 +131,14 @@ class Database:
     def create(self, row):
         name, manifest = row['database_name'], row['manifest']
         sql.database(name)
+        extensions = manifest['extensions']
+        if not isinstance(extensions, dict):
+            raise ValueError('invalid manifest extensions')
+        statements = ';'.join('CREATE EXTENSION IF NOT EXISTS ' + plain(ext) + ' VERSION ' + sql.literal(version)
+                              for ext, version in extensions.items()) + ';'
         self.check_extensions(manifest)
         self.make(name)
-        self.host.psql(name, ';'.join('CREATE EXTENSION IF NOT EXISTS ' + ext + ' VERSION ' + sql.literal(version)
-                                      for ext, version in manifest['extensions'].items()) + ';')
+        self.host.psql(name, statements)
 
     def inspect(self, row, dump, image=None):
         self.check_extensions(row['manifest'])

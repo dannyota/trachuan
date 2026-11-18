@@ -98,6 +98,21 @@ class LawGuardTest(LawFixture, unittest.TestCase):
                 with self.subTest(path=name, value=value):
                     self.assert_refused(action, value)
 
+    def test_extension_names_are_plain_before_any_process(self):
+        for value in ('vector; DROP DATABASE auth', 'vector ', 'Vector', '1vector', '', "a'b", 'a"b', 'a-b', 'a' * 64):
+            with self.subTest(value=value):
+                row = dict(self.row, manifest=dict(self.m, extensions={value: '1.0'}))
+                self.assert_refused(lambda: self.db.create(row), value)
+
+    def test_extensions_must_be_an_object_before_any_process(self):
+        for value in (None, [], 'vector', 1):
+            with self.subTest(value=value):
+                row = dict(self.row, manifest=dict(self.m, extensions=value))
+                self.calls.clear()
+                with self.assertRaises(ValueError):
+                    self.db.create(row)
+                self.assertEqual(self.calls, [])
+
     def test_valid_name_reaches_each_client(self):
         for name, action in dict(self.row_paths(LAW_NAME), **self.name_paths(LAW_NAME)).items():
             with self.subTest(path=name):

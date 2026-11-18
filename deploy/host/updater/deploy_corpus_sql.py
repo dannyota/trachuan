@@ -76,7 +76,8 @@ def journal_json(raw):
 
 
 def same_row(returned, inserted):
-    if any(returned.get(field) != inserted.get(field) for field in ROW_FIELDS + ('step',)):
+    if any(returned.get(field) != inserted.get(field)
+           for field in ROW_FIELDS + ('step', 'state', 'message', 'corpus_kind')):
         raise JournalRefused(REFUSED)
 
 
@@ -124,10 +125,14 @@ def forget(name, corpus='law'):
     return 'DELETE FROM retired_release WHERE ' + kind(corpus) + ' AND db_name=' + literal(name) + ';'
 
 
-def journal(row, step, corpus='law', label='corpus'):
+def written(step, label='corpus'):
     terminal = step in ('activated', 'reverted', 'aborted', 'pruned')
+    return dict(state='complete' if terminal else 'open', message=label + ' ' + step)
+
+
+def journal(row, step, corpus='law', label='corpus'):
     fields = ROW_FIELDS + ('step', 'state', 'message')
-    value = dict(row, step=step, state='complete' if terminal else 'open', message=label + ' ' + step)
+    value = dict(row, step=step, **written(step, label))
     value['manifest'] = json.dumps(row['manifest'], separators=(',', ':')) if row['manifest'] else None
     if corpus != 'law':
         fields += ('corpus_kind',)
