@@ -10,6 +10,7 @@ Intended behavior of trachuan. Decisions with alternatives are in the
 | [data](data.md)                                                                  | Corpus and auth data models                                                                                      |
 | [workshop data](workshop-data.md)                                                | Workshop tables, scope contracts, relation support and expand observations                                       |
 | [findings and reviewed knowledge](knowledge-loop.md)                             | Detectors, findings, the reviewed-knowledge contract, intake                                                     |
+| [knowledge entries](knowledge-entries.md)                                        | File format of reviewed knowledge, provision dependencies, validator outcomes                                    |
 | [release evidence](release-evidence.md)                                          | `findings.json`, `identity.jsonl` and `changes.jsonl`: shapes, bindings and the release gate                     |
 | [retrieval](retrieval.md)                                                        | Query validation, ranking, validity, subject filter, release pinning, MCP tools, web API                         |
 | [taxonomy](taxonomy.md)                                                          | Subject tree import, classification layers, evaluation gate                                                      |
